@@ -5028,16 +5028,6 @@ enum struct material_type {
     specular_glossiness = 2,
 };
 
-/// Names for `material_type` enum.
-inline vector<pair<string, material_type>>& material_type_names() {
-    static auto names = vector<pair<string, material_type>>{
-        {"specular_roughness", material_type::specular_roughness},
-        {"metallic_roughness", material_type::metallic_roughness},
-        {"specular_glossiness", material_type::specular_glossiness},
-    };
-    return names;
-}
-
 /// Material for surfaces, lines and triangles.
 struct material {
     /// Name.
@@ -5123,9 +5113,9 @@ struct shape {
     vector<vec4f> tangsp;
 
     /// Number of times to subdivide.
-    int subdivision_level = 0;
+    int subdivision = 0;
     /// Whether to use Catmull-Clark subdivision.
-    bool subdivision_catmullclark = false;
+    bool catmullclark = false;
 };
 
 /// Group of shapes.
@@ -5223,17 +5213,6 @@ enum struct keyframe_type {
     /// Cubic Bezier interpolation.
     bezier = 3,
 };
-
-/// Names for `keyframe_type` enum.
-inline vector<pair<string, keyframe_type>>& keyframe_type_names() {
-    static auto names = vector<pair<string, keyframe_type>>{
-        {"linear", keyframe_type::linear},
-        {"step", keyframe_type::step},
-        {"bezier", keyframe_type::bezier},
-        {"catmullrom", keyframe_type::catmull_rom},
-    };
-    return names;
-}
 
 /// Keyframe data.
 struct animation {
@@ -5490,7 +5469,7 @@ struct test_camera_params {
 };
 
 /// Updates a test camera.
-void update_test_camera(
+void update_test_elem(
     const scene* scn, camera* cam, const test_camera_params& tcam);
 
 /// Test camera presets.
@@ -5528,27 +5507,6 @@ enum struct test_texture_type {
     sky,
 };
 
-/// Name for `test_texture` enum.
-inline vector<pair<string, test_texture_type>>& test_texture_names() {
-    static auto names = vector<pair<string, test_texture_type>>{
-        {"none", test_texture_type::none},
-        {"grid", test_texture_type::grid},
-        {"colored", test_texture_type::colored},
-        {"checker", test_texture_type::checker},
-        {"rcolored", test_texture_type::rcolored},
-        {"bump", test_texture_type::bump},
-        {"uv", test_texture_type::uv},
-        {"gamma", test_texture_type::gamma},
-        {"noise", test_texture_type::noise},
-        {"ridge", test_texture_type::ridge},
-        {"fbm", test_texture_type::fbm},
-        {"turbulence", test_texture_type::turbulence},
-        {"gammaf", test_texture_type::gammaf},
-        {"sky", test_texture_type::sky},
-    };
-    return names;
-}
-
 /// Test texture parameters.
 struct test_texture_params {
     /// Name.
@@ -5570,7 +5528,7 @@ struct test_texture_params {
 };
 
 /// Updates a test texture.
-void update_test_texture(
+void update_test_elem(
     const scene* scn, texture* txt, const test_texture_params& ttxt);
 
 /// Test texture presets.
@@ -5591,19 +5549,6 @@ enum struct test_material_type {
     /// Transparent (diffuse with opacity).
     transparent,
 };
-
-/// Name for `test_shape` enum.
-inline vector<pair<string, test_material_type>>& test_material_names() {
-    static auto names = vector<pair<string, test_material_type>>{
-        {"none", test_material_type::none},
-        {"emission", test_material_type::emission},
-        {"matte", test_material_type::matte},
-        {"plastic", test_material_type::plastic},
-        {"metal", test_material_type::metal},
-        {"transparent", test_material_type::transparent},
-    };
-    return names;
-}
 
 /// Test material parameters.
 struct test_material_params {
@@ -5626,7 +5571,7 @@ struct test_material_params {
 };
 
 /// Updates a test material.
-void update_test_material(
+void update_test_elem(
     const scene* scn, material* mat, const test_material_params& tmat);
 
 /// Test material presets.
@@ -5670,30 +5615,6 @@ enum struct test_shape_type {
     beziercircle,
 };
 
-/// Name for `test_shape` enum.
-inline vector<pair<string, test_shape_type>>& test_shape_names() {
-    static auto names = vector<pair<string, test_shape_type>>{
-        {"floor", test_shape_type::floor},
-        {"quad", test_shape_type::quad},
-        {"cube", test_shape_type::cube},
-        {"sphere", test_shape_type::sphere},
-        {"spherecube", test_shape_type::spherecube},
-        {"spherizedcube", test_shape_type::spherizedcube},
-        {"geosphere", test_shape_type::geosphere},
-        {"flipcapsphere", test_shape_type::flipcapsphere},
-        {"suzanne", test_shape_type::suzanne},
-        {"cubep", test_shape_type::cubep},
-        {"fvcube", test_shape_type::fvcube},
-        {"fvsphere", test_shape_type::fvsphere},
-        {"matball", test_shape_type::matball},
-        {"point", test_shape_type::point},
-        {"pointscube", test_shape_type::pointscube},
-        {"hairball", test_shape_type::hairball},
-        {"beziercircle", test_shape_type::beziercircle},
-    };
-    return names;
-}
-
 /// Test shape parameters.
 struct test_shape_params {
     /// Shape name (if not filled, assign a default based on type).
@@ -5721,7 +5642,7 @@ struct test_shape_params {
 };
 
 /// Updates a test shape, adding it to the scene if missing.
-void update_test_shape(
+void update_test_elem(
     const scene* scn, shape* shp, const test_shape_params& tshp);
 
 /// Test shape presets.
@@ -5740,7 +5661,7 @@ struct test_instance_params {
 };
 
 /// Updates a test instance.
-void update_test_instance(
+void update_test_elem(
     const scene* scn, instance* ist, const test_instance_params& tist);
 
 /// Test instance presets.
@@ -5763,7 +5684,7 @@ struct test_environment_params {
 };
 
 /// Updates a test instance.
-void update_test_environment(
+void update_test_elem(
     const scene* scn, environment* env, const test_environment_params& tenv);
 
 /// Test environment presets.
@@ -5792,7 +5713,7 @@ struct test_node_params {
 };
 
 /// Updates a test node.
-void update_test_node(
+void update_test_elem(
     const scene* scn, node* nde, const test_node_params& tndr);
 
 /// Test nodes presets.
@@ -5821,7 +5742,7 @@ struct test_animation_params {
 };
 
 /// Updates a test node.
-void update_test_animation(
+void update_test_elem(
     const scene* scn, animation_group* anm, const test_animation_params& tndr);
 
 /// Test nodes presets.
@@ -5973,20 +5894,6 @@ enum struct trace_shader_type {
     debug_texcoord,
 };
 
-/// Names for `trace_shader_type` enum.
-inline const vector<pair<string, trace_shader_type>>& trace_shader_names() {
-    static auto names = vector<pair<string, trace_shader_type>>{
-        {"path", trace_shader_type::pathtrace},
-        {"eye", trace_shader_type::eyelight},
-        {"direct", trace_shader_type::direct},
-        {"path_nomis", trace_shader_type::pathtrace_nomis},
-        {"normal", trace_shader_type::debug_normal},
-        {"albedo", trace_shader_type::debug_albedo},
-        {"texcoord", trace_shader_type::debug_texcoord},
-    };
-    return names;
-}
-
 /// Random number generator type.
 enum struct trace_rng_type {
     /// Uniform random numbers.
@@ -5994,14 +5901,6 @@ enum struct trace_rng_type {
     /// Stratified random numbers.
     stratified,
 };
-
-/// Names for `trace_rng_type` enum.
-inline const vector<pair<string, trace_rng_type>>& trace_rng_names() {
-    static auto names = vector<pair<string, trace_rng_type>>{
-        {"uniform", trace_rng_type::uniform},
-        {"stratified", trace_rng_type::stratified}};
-    return names;
-}
 
 /// Filter type.
 enum struct trace_filter_type {
@@ -6017,21 +5916,8 @@ enum struct trace_filter_type {
     mitchell = 5
 };
 
-/// Names for `trace_filter_type` enum.
-inline const vector<pair<string, trace_filter_type>>& trace_filter_names() {
-    static auto names =
-        vector<pair<string, trace_filter_type>>{{"box", trace_filter_type::box},
-            {"triangle", trace_filter_type::triangle},
-            {"cubic", trace_filter_type::cubic},
-            {"catmull-rom", trace_filter_type::catmull_rom},
-            {"mitchell", trace_filter_type::mitchell}};
-    return names;
-}
-
 /// Rendering params.
 struct trace_params {
-    /// Camera id (-1 for default).
-    int camera_id = -1;
     /// Image width.
     int width = 360;
     /// Image height.
@@ -6141,6 +6027,504 @@ void trace_async_start(const scene* scn, const camera* cam, const bvh_tree* bvh,
     vector<std::thread>& threads, bool& stop_flag, const trace_params& params);
 /// Stop the asynchronous renderer.
 void trace_async_stop(vector<std::thread>& threads, bool& stop_flag);
+
+/// @}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// REFLECTION SUPPORT
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+/// @defgroup refl Type reflection
+/// @{
+
+/// Names of enum values.
+template <typename T>
+inline const vector<pair<string, T>>& refl_enum_names();
+
+/// Names of enum values.
+template <typename T>
+inline const vector<pair<string, T>>& refl_enum_names(T v) {
+    return refl_enum_names<T>();
+}
+
+/// Names of enum values.
+template <>
+inline const vector<pair<string, material_type>>&
+refl_enum_names<material_type>() {
+    static auto names = vector<pair<string, material_type>>{
+        {"specular_roughness", material_type::specular_roughness},
+        {"metallic_roughness", material_type::metallic_roughness},
+        {"specular_glossiness", material_type::specular_glossiness},
+    };
+    return names;
+}
+
+/// Names of enum values.
+template <>
+inline const vector<pair<string, keyframe_type>>&
+refl_enum_names<keyframe_type>() {
+    static auto names = vector<pair<string, keyframe_type>>{
+        {"linear", keyframe_type::linear},
+        {"step", keyframe_type::step},
+        {"bezier", keyframe_type::bezier},
+        {"catmull_rom", keyframe_type::catmull_rom},
+    };
+    return names;
+}
+
+/// Names of enum values.
+template <>
+inline const vector<pair<string, test_texture_type>>&
+refl_enum_names<test_texture_type>() {
+    static auto names = vector<pair<string, test_texture_type>>{
+        {"none", test_texture_type::none},
+        {"grid", test_texture_type::grid},
+        {"colored", test_texture_type::colored},
+        {"checker", test_texture_type::checker},
+        {"rcolored", test_texture_type::rcolored},
+        {"bump", test_texture_type::bump},
+        {"uv", test_texture_type::uv},
+        {"gamma", test_texture_type::gamma},
+        {"noise", test_texture_type::noise},
+        {"ridge", test_texture_type::ridge},
+        {"fbm", test_texture_type::fbm},
+        {"turbulence", test_texture_type::turbulence},
+        {"gammaf", test_texture_type::gammaf},
+        {"sky", test_texture_type::sky},
+    };
+    return names;
+}
+
+/// Names of enum values.
+template <>
+inline const vector<pair<string, test_material_type>>&
+refl_enum_names<test_material_type>() {
+    static auto names = vector<pair<string, test_material_type>>{
+        {"none", test_material_type::none},
+        {"emission", test_material_type::emission},
+        {"matte", test_material_type::matte},
+        {"plastic", test_material_type::plastic},
+        {"metal", test_material_type::metal},
+        {"transparent", test_material_type::transparent},
+    };
+    return names;
+}
+
+/// Names of enum values.
+template <>
+inline const vector<pair<string, test_shape_type>>&
+refl_enum_names<test_shape_type>() {
+    static auto names = vector<pair<string, test_shape_type>>{
+        {"floor", test_shape_type::floor},
+        {"quad", test_shape_type::quad},
+        {"cube", test_shape_type::cube},
+        {"sphere", test_shape_type::sphere},
+        {"spherecube", test_shape_type::spherecube},
+        {"spherizedcube", test_shape_type::spherizedcube},
+        {"geosphere", test_shape_type::geosphere},
+        {"flipcapsphere", test_shape_type::flipcapsphere},
+        {"suzanne", test_shape_type::suzanne},
+        {"cubep", test_shape_type::cubep},
+        {"fvcube", test_shape_type::fvcube},
+        {"fvsphere", test_shape_type::fvsphere},
+        {"matball", test_shape_type::matball},
+        {"point", test_shape_type::point},
+        {"pointscube", test_shape_type::pointscube},
+        {"hairball", test_shape_type::hairball},
+        {"beziercircle", test_shape_type::beziercircle},
+    };
+    return names;
+}
+
+/// Names of enum values.
+template <>
+inline const vector<pair<string, trace_shader_type>>&
+refl_enum_names<trace_shader_type>() {
+    static auto names = vector<pair<string, trace_shader_type>>{
+        {"path", trace_shader_type::pathtrace},
+        {"eye", trace_shader_type::eyelight},
+        {"direct", trace_shader_type::direct},
+        {"path_nomis", trace_shader_type::pathtrace_nomis},
+        {"normal", trace_shader_type::debug_normal},
+        {"albedo", trace_shader_type::debug_albedo},
+        {"texcoord", trace_shader_type::debug_texcoord},
+    };
+    return names;
+}
+
+/// Names of enum values.
+template <>
+inline const vector<pair<string, trace_rng_type>>&
+refl_enum_names<trace_rng_type>() {
+    static auto names = vector<pair<string, trace_rng_type>>{
+        {"uniform", trace_rng_type::uniform},
+        {"stratified", trace_rng_type::stratified}};
+    return names;
+}
+
+/// Names of enum values.
+template <>
+inline const vector<pair<string, trace_filter_type>>&
+refl_enum_names<trace_filter_type>() {
+    static auto names = vector<pair<string, trace_filter_type>>{
+        {"box", trace_filter_type::box},
+        {"triangle", trace_filter_type::triangle},
+        {"cubic", trace_filter_type::cubic},
+        {"catmull-rom", trace_filter_type::catmull_rom},
+        {"mitchell", trace_filter_type::mitchell},
+    };
+    return names;
+}
+
+/// Stream read.
+template <typename T,
+    typename std::enable_if<std::is_enum<T>::value, int>::type = 0>
+inline ostream& operator<<(ostream& os, const T& a) {
+    return os << get_key(refl_enum_names(a), a);
+}
+/// Stream read.
+template <typename T,
+    typename std::enable_if<std::is_enum<T>::value, int>::type = 0>
+inline istream& operator>>(istream& is, T& a) {
+    auto str = string();
+    is >> str;
+    a = get_val(refl_enum_names(a), str);
+    return is;
+}
+
+/// Types of variable semantic
+enum struct refl_sem_type {
+    /// Generic value.
+    value = 0,
+    /// Name.
+    name = 1,
+    /// Path.
+    path = 2,
+    /// Object.
+    object = 3,
+    /// Reference.
+    reference = 4,
+    /// Color.
+    color = 5,
+};
+
+/// Semantic for reflected values
+struct refl_sem {
+    /// Type.
+    refl_sem_type type = refl_sem_type::value;
+    /// Minimum value for numeric types.
+    float min = 0;
+    /// Maximum value for numeric types.
+    float max = 0;
+};
+
+/// Visit struct elements.
+template <typename Visitor>
+inline void refl_visit_sem(texture& val, Visitor&& visitor) {
+    visitor("name", val.name, refl_sem{refl_sem_type::name});
+    visitor("path", val.path, refl_sem{refl_sem_type::path});
+    visitor("ldr", val.ldr, refl_sem{refl_sem_type::value});
+    visitor("hdr", val.hdr, refl_sem{refl_sem_type::value});
+}
+
+/// Visit struct elements.
+template <typename Visitor>
+inline void refl_visit_sem(texture_info& val, Visitor&& visitor) {
+    visitor("txt", val.txt, refl_sem{refl_sem_type::reference});
+    visitor("wrap_s", val.wrap_s, refl_sem{refl_sem_type::value});
+    visitor("wrap_t", val.wrap_t, refl_sem{refl_sem_type::value});
+    visitor("linear", val.linear, refl_sem{refl_sem_type::value});
+    visitor("mipmap", val.mipmap, refl_sem{refl_sem_type::value});
+    visitor("scale", val.scale, refl_sem{refl_sem_type::value, 0, 10});
+}
+
+/// Visit struct elements.
+template <typename Visitor>
+inline void refl_visit_sem(material& val, Visitor&& visitor) {
+    visitor("name", val.name, refl_sem{refl_sem_type::name});
+    visitor("double_sided", val.double_sided, refl_sem{refl_sem_type::value});
+    visitor("type", val.type, refl_sem{refl_sem_type::value});
+    visitor("ke", val.ke, refl_sem{refl_sem_type::color, 0, 1000});
+    visitor("kd", val.kd, refl_sem{refl_sem_type::color});
+    visitor("ks", val.ks, refl_sem{refl_sem_type::color});
+    visitor("kr", val.kr, refl_sem{refl_sem_type::color});
+    visitor("kt", val.kt, refl_sem{refl_sem_type::color});
+    visitor("rs", val.rs, refl_sem{refl_sem_type::value});
+    visitor("op", val.op, refl_sem{refl_sem_type::value});
+    visitor("ke_txt", val.ke_txt, refl_sem{refl_sem_type::value});
+    visitor("kd_txt", val.kd_txt, refl_sem{refl_sem_type::value});
+    visitor("ks_txt", val.ks_txt, refl_sem{refl_sem_type::value});
+    visitor("kr_txt", val.kr_txt, refl_sem{refl_sem_type::value});
+    visitor("kt_txt", val.kt_txt, refl_sem{refl_sem_type::value});
+    visitor("rs_txt", val.rs_txt, refl_sem{refl_sem_type::value});
+    visitor("bump_txt", val.bump_txt, refl_sem{refl_sem_type::value});
+    visitor("disp_txt", val.disp_txt, refl_sem{refl_sem_type::value});
+    visitor("norm_txt", val.norm_txt, refl_sem{refl_sem_type::value});
+    visitor("occ_txt", val.occ_txt, refl_sem{refl_sem_type::value});
+}
+
+/// Visit struct elements.
+template <typename Visitor>
+inline void refl_visit_sem(shape& val, Visitor&& visitor) {
+    visitor("name", val.name, refl_sem{refl_sem_type::name});
+    visitor("mat", val.mat, refl_sem{refl_sem_type::reference});
+    visitor("points", val.points, refl_sem{refl_sem_type::value});
+    visitor("lines", val.lines, refl_sem{refl_sem_type::value});
+    visitor("triangles", val.triangles, refl_sem{refl_sem_type::value});
+    visitor("quads", val.quads, refl_sem{refl_sem_type::value});
+    visitor("quads_pos", val.quads_pos, refl_sem{refl_sem_type::value});
+    visitor("quads_norm", val.quads_norm, refl_sem{refl_sem_type::value});
+    visitor(
+        "quads_texcoord", val.quads_texcoord, refl_sem{refl_sem_type::value});
+    visitor("beziers", val.beziers, refl_sem{refl_sem_type::value});
+    visitor("pos", val.pos, refl_sem{refl_sem_type::value});
+    visitor("norm", val.norm, refl_sem{refl_sem_type::value});
+    visitor("texcoord", val.texcoord, refl_sem{refl_sem_type::value});
+    visitor("texcoord1", val.texcoord1, refl_sem{refl_sem_type::value});
+    visitor("color", val.color, refl_sem{refl_sem_type::value});
+    visitor("radius", val.radius, refl_sem{refl_sem_type::value});
+    visitor("tangsp", val.tangsp, refl_sem{refl_sem_type::value});
+    visitor("subdivision", val.subdivision, refl_sem{refl_sem_type::value});
+    visitor("catmullclark", val.catmullclark, refl_sem{refl_sem_type::value});
+}
+
+/// Visit struct elements.
+template <typename Visitor>
+inline void refl_visit_sem(shape_group& val, Visitor&& visitor) {
+    visitor("name", val.name, refl_sem{refl_sem_type::name});
+    visitor("path", val.path, refl_sem{refl_sem_type::value});
+    visitor("shapes", val.shapes, refl_sem{refl_sem_type::object});
+}
+
+/// Visit struct elements.
+template <typename Visitor>
+inline void refl_visit_sem(instance& val, Visitor&& visitor) {
+    visitor("name", val.name, refl_sem{refl_sem_type::name});
+    visitor("frame", val.frame, refl_sem{refl_sem_type::value});
+    visitor("shp", val.shp, refl_sem{refl_sem_type::reference});
+}
+
+/// Visit struct elements.
+template <typename Visitor>
+inline void refl_visit_sem(camera& val, Visitor&& visitor) {
+    visitor("name", val.name, refl_sem{refl_sem_type::name});
+    visitor("frame", val.frame, refl_sem{refl_sem_type::value});
+    visitor("ortho", val.ortho, refl_sem{refl_sem_type::value});
+    visitor("yfov", val.yfov, refl_sem{refl_sem_type::value, 0.01f, 10});
+    visitor("aspect", val.aspect, refl_sem{refl_sem_type::value, 0.3f, 3.0f});
+    visitor("focus", val.focus, refl_sem{refl_sem_type::value, 0.0f, 10000.0f});
+    visitor("aperture", val.aperture, refl_sem{refl_sem_type::value, 0, 10});
+    visitor("near", val.near, refl_sem{refl_sem_type::value, 0.001f, 10.0f});
+    visitor("far", val.far, refl_sem{refl_sem_type::value, 1.0f, 10000.0f});
+}
+
+/// Visit struct elements.
+template <typename Visitor>
+inline void refl_visit_sem(environment& val, Visitor&& visitor) {
+    visitor("name", val.name, refl_sem{refl_sem_type::name});
+    visitor("frame", val.frame, refl_sem{refl_sem_type::value});
+    visitor("ke", val.ke, refl_sem{refl_sem_type::color, 0, 1000});
+    visitor("ke_txt", val.ke_txt, refl_sem{refl_sem_type::value});
+}
+
+/// Visit struct elements.
+template <typename Visitor>
+inline void refl_visit_sem(node& val, Visitor&& visitor) {
+    visitor("name", val.name, refl_sem{refl_sem_type::name});
+    visitor("parent", val.parent, refl_sem{refl_sem_type::reference});
+    visitor("frame", val.frame, refl_sem{refl_sem_type::value, -10, 10});
+    visitor("translation", val.translation,
+        refl_sem{refl_sem_type::value, -10, 10});
+    visitor("rotation", val.rotation, refl_sem{refl_sem_type::value});
+    visitor(
+        "scaling", val.scaling, refl_sem{refl_sem_type::value, .01f, 10.0f});
+    visitor("weights", val.weights, refl_sem{refl_sem_type::value});
+    visitor("cam", val.cam, refl_sem{refl_sem_type::reference});
+    visitor("ist", val.ist, refl_sem{refl_sem_type::reference});
+    visitor("env", val.env, refl_sem{refl_sem_type::reference});
+}
+
+/// Visit struct elements.
+template <typename Visitor>
+inline void refl_visit_sem(animation& val, Visitor&& visitor) {
+    visitor("name", val.name, refl_sem{refl_sem_type::name});
+    visitor("type", val.type, refl_sem{refl_sem_type::value});
+    visitor("times", val.times, refl_sem{refl_sem_type::value});
+    visitor("translation", val.translation,
+        refl_sem{refl_sem_type::value, -10, 10});
+    visitor("rotation", val.rotation, refl_sem{refl_sem_type::value});
+    visitor(
+        "scaling", val.scaling, refl_sem{refl_sem_type::value, 0.01f, 10.0f});
+    visitor("weights", val.weights, refl_sem{refl_sem_type::value});
+}
+
+/// Visit struct elements.
+template <typename Visitor>
+inline void refl_visit_sem(animation_group& val, Visitor&& visitor) {
+    visitor("name", val.name, refl_sem{refl_sem_type::name});
+    visitor("path", val.path, refl_sem{refl_sem_type::value});
+    visitor("animations", val.animations, refl_sem{refl_sem_type::object});
+    visitor("targets", val.targets, refl_sem{refl_sem_type::reference});
+}
+
+/// Visit struct elements.
+template <typename Visitor>
+inline void refl_visit_sem(scene& val, Visitor&& visitor) {
+    visitor("cameras", val.cameras, refl_sem{refl_sem_type::object});
+    visitor("shapes", val.shapes, refl_sem{refl_sem_type::object});
+    visitor("instances", val.instances, refl_sem{refl_sem_type::object});
+    visitor("environments", val.environments, refl_sem{refl_sem_type::object});
+    visitor("materials", val.materials, refl_sem{refl_sem_type::object});
+    visitor("textures", val.textures, refl_sem{refl_sem_type::object});
+    visitor("nodes", val.nodes, refl_sem{refl_sem_type::object});
+    visitor("animations", val.animations, refl_sem{refl_sem_type::object});
+}
+
+/// Visit struct elements.
+template <typename Visitor>
+inline void refl_visit_sem(test_camera_params& val, Visitor&& visitor) {
+    visitor("name", val.name, refl_sem{refl_sem_type::name});
+    visitor("from", val.from, refl_sem{refl_sem_type::value, -10, 10});
+    visitor("to", val.to, refl_sem{refl_sem_type::value, -10, 10});
+    visitor("yfov", val.yfov, refl_sem{refl_sem_type::value});
+    visitor("aspect", val.aspect, refl_sem{refl_sem_type::value});
+}
+
+/// Visit struct elements.
+template <typename Visitor>
+inline void refl_visit_sem(test_texture_params& val, Visitor&& visitor) {
+    visitor("name", val.name, refl_sem{refl_sem_type::name});
+    visitor("resolution", val.resolution,
+        refl_sem{refl_sem_type::value, 256, 1024});
+    visitor(
+        "tile_size", val.tile_size, refl_sem{refl_sem_type::value, -1, 256});
+    visitor(
+        "noise_scale", val.noise_scale, refl_sem{refl_sem_type::value, 0, 8});
+    visitor("sky_sunangle", val.sky_sunangle,
+        refl_sem{refl_sem_type::value, 0, pif});
+    visitor(
+        "bump_to_normal", val.bump_to_normal, refl_sem{refl_sem_type::value});
+    visitor(
+        "bump_scale", val.bump_scale, refl_sem{refl_sem_type::value, 1, 10});
+}
+
+/// Visit struct elements.
+template <typename Visitor>
+inline void refl_visit_sem(test_material_params& val, Visitor&& visitor) {
+    visitor("name", val.name, refl_sem{refl_sem_type::name});
+    visitor("type", val.type, refl_sem{refl_sem_type::value});
+    visitor("emission", val.emission, refl_sem{refl_sem_type::value, 1000});
+    visitor("color", val.color, refl_sem{refl_sem_type::value});
+    visitor("opacity", val.opacity, refl_sem{refl_sem_type::value});
+    visitor("roughness", val.roughness, refl_sem{refl_sem_type::value});
+    visitor("texture", val.texture, refl_sem{refl_sem_type::value});
+    visitor("normal", val.normal, refl_sem{refl_sem_type::value});
+}
+
+/// Visit struct elements.
+template <typename Visitor>
+inline void refl_visit_sem(test_shape_params& val, Visitor&& visitor) {
+    visitor("name", val.name, refl_sem{refl_sem_type::name});
+    visitor("type", val.type, refl_sem{refl_sem_type::value});
+    visitor("material", val.material, refl_sem{refl_sem_type::value});
+    visitor("interior", val.interior, refl_sem{refl_sem_type::value});
+    visitor(
+        "tesselation", val.tesselation, refl_sem{refl_sem_type::value, -1, 10});
+    visitor(
+        "subdivision", val.subdivision, refl_sem{refl_sem_type::value, -1, 10});
+    visitor("scale", val.scale, refl_sem{refl_sem_type::value, 0.01f, 10.0f});
+    visitor(
+        "radius", val.radius, refl_sem{refl_sem_type::value, 0.0001f, 0.01f});
+    visitor("faceted", val.faceted, refl_sem{refl_sem_type::value});
+    visitor("num", val.num, refl_sem{refl_sem_type::value, -1, 10000});
+}
+
+/// Visit struct elements.
+template <typename Visitor>
+inline void refl_visit_sem(test_instance_params& val, Visitor&& visitor) {
+    visitor("name", val.name, refl_sem{refl_sem_type::name});
+    visitor("shape", val.shape, refl_sem{refl_sem_type::value});
+    visitor("frame", val.frame, refl_sem{refl_sem_type::value});
+    visitor("rotation", val.rotation, refl_sem{refl_sem_type::value});
+}
+
+/// Visit struct elements.
+template <typename Visitor>
+inline void refl_visit_sem(test_environment_params& val, Visitor&& visitor) {
+    visitor("name", val.name, refl_sem{refl_sem_type::name});
+    visitor("emission", val.emission, refl_sem{refl_sem_type::value, 0, 1000});
+    visitor("color", val.color, refl_sem{refl_sem_type::value});
+    visitor("texture", val.texture, refl_sem{refl_sem_type::value});
+    visitor("frame", val.frame, refl_sem{refl_sem_type::value});
+    visitor("rotation", val.rotation, refl_sem{refl_sem_type::value});
+}
+
+/// Visit struct elements.
+template <typename Visitor>
+inline void refl_visit_sem(test_node_params& val, Visitor&& visitor) {
+    visitor("name", val.name, refl_sem{refl_sem_type::name});
+    visitor("parent", val.parent, refl_sem{refl_sem_type::value});
+    visitor("camera", val.camera, refl_sem{refl_sem_type::value});
+    visitor("instance", val.instance, refl_sem{refl_sem_type::value});
+    visitor("environment", val.environment, refl_sem{refl_sem_type::value});
+    visitor("frame", val.frame, refl_sem{refl_sem_type::value, -10, 10});
+    visitor("translation", val.translation,
+        refl_sem{refl_sem_type::value, -10, 10});
+    visitor("rotation", val.rotation, refl_sem{refl_sem_type::value});
+    visitor("scaling", val.scaling, refl_sem{refl_sem_type::value});
+}
+
+/// Visit struct elements.
+template <typename Visitor>
+inline void refl_visit_sem(test_animation_params& val, Visitor&& visitor) {
+    visitor("name", val.name, refl_sem{refl_sem_type::name});
+    visitor("bezier", val.bezier, refl_sem{refl_sem_type::value});
+    visitor("speed", val.speed, refl_sem{refl_sem_type::value});
+    visitor("scale", val.scale, refl_sem{refl_sem_type::value, 0.01f, 10});
+    visitor("times", val.times, refl_sem{refl_sem_type::value});
+    visitor("translation", val.translation,
+        refl_sem{refl_sem_type::value, -10, 10});
+    visitor("rotation", val.rotation, refl_sem{refl_sem_type::value});
+    visitor("scaling", val.scaling, refl_sem{refl_sem_type::value, 0.01f, 10});
+    visitor("nodes", val.nodes, refl_sem{refl_sem_type::value});
+}
+
+/// Visit struct elements.
+template <typename Visitor>
+inline void refl_visit_sem(test_scene_params& val, Visitor&& visitor) {
+    visitor("name", val.name, refl_sem{refl_sem_type::name});
+    visitor("cameras", val.cameras, refl_sem{refl_sem_type::value});
+    visitor("shapes", val.shapes, refl_sem{refl_sem_type::value});
+    visitor("instances", val.instances, refl_sem{refl_sem_type::value});
+    visitor("environments", val.environments, refl_sem{refl_sem_type::value});
+    visitor("materials", val.materials, refl_sem{refl_sem_type::value});
+    visitor("textures", val.textures, refl_sem{refl_sem_type::value});
+    visitor("nodes", val.nodes, refl_sem{refl_sem_type::value});
+    visitor("animations", val.animations, refl_sem{refl_sem_type::value});
+}
+
+/// Visit pointer elements.
+template <typename T, typename Visitor>
+inline void refl_visit_sem(T*& val, Visitor&& visitor) {
+    if (val) refl_visit_sem(*val, visitor);
+}
+
+/// Print scene visitor
+struct print_scene_visitor {
+    template <typename T, typename S>
+    void operator()(const char* name, vector<T*>& val, S sem) {
+        cout << name << ": " << val.size() << '\n';
+    }
+};
+
+/// Print a scene information using visitors.
+inline void print_info_visit(const scene* scn) {
+    auto visitor = print_scene_visitor();
+    refl_visit_sem((scene&)*scn, visitor);
+}
 
 /// @}
 
@@ -7862,313 +8246,44 @@ struct cmdline_parser {
     string _error;               // parse error
 };
 
-// cmdline implementation
-inline void _check_name(
-    cmdline_parser& parser, const string& name, const string& flag, bool opt) {
-    if (opt) {
-        if (name.size() < 3 || name[0] != '-' || name[1] != '-' ||
-            name[2] == '-')
-            throw runtime_error("bad name " + name);
-    } else {
-        if (name.size() < 1 || name[0] == '-')
-            throw runtime_error("bad name " + name);
-    }
-    if (find(parser._used_names.begin(), parser._used_names.end(), name) !=
-        parser._used_names.end())
-        throw runtime_error("already used " + name);
-    parser._used_names.push_back(name);
-    if (flag.empty()) return;
-    if (flag.size() < 2 || flag[0] != '-' || flag[1] == '-')
-        throw runtime_error("bad name " + flag);
-    if (find(parser._used_names.begin(), parser._used_names.end(), flag) !=
-        parser._used_names.end())
-        throw runtime_error("already used " + flag);
-    parser._used_names.push_back(flag);
-}
-
-// cmdline implementation
-template <typename T>
-inline void _add_usage_str(cmdline_parser& parser, const string& name,
-    const string& flag, bool opt, const string& metavar, const string& help,
-    const string& def, bool req, const vector<T>& choices) {
-    auto stream = stringstream();
-    stream << "  " << name;
-    if (!flag.empty()) stream << "/" << flag;
-    if (!metavar.empty()) stream << " " << metavar;
-    while (stream.str().length() < 32) stream << " ";
-    stream << help << " ";
-    if (!req) stream << "[" << def << "]";
-    if (req) stream << "(required)";
-    stream << "\n";
-    if (!choices.empty()) {
-        for (auto i = 0; i < 32; i++) stream << " ";
-        stream << "(";
-        auto first = true;
-        for (auto&& c : choices) {
-            if (!first) stream << ",";
-            stream << c;
-            first = false;
-        }
-        stream << ")";
-        stream << "\n";
-    }
-    if (opt)
-        parser._usage_opts += stream.str();
-    else
-        parser._usage_args += stream.str();
-}
-
-// cmdline implementation
-template <typename T>
-inline void _add_usage(cmdline_parser& parser, const string& name,
-    const string& flag, bool opt, bool flag_opt, const string& help,
-    const T& def, bool req, const vector<T>& choices) {
-    auto stream = stringstream();
-    stream << def;
-    _add_usage_str(parser, name, flag, opt, (flag_opt) ? "" : "<val>", help,
-        stream.str(), req, choices);
-}
-
-// cmdline implementation
-template <typename T>
-inline void _add_usage(cmdline_parser& parser, const string& name,
-    const string& flag, bool opt, const string& help, const vector<T>& def,
-    bool req, const vector<T>& choices) {
-    auto stream = stringstream();
-    auto first = true;
-    for (auto&& v : def) {
-        if (!first) stream << ",";
-        stream << v;
-        first = false;
-    }
-    _add_usage_str(
-        parser, name, flag, opt, "<val>*", help, stream.str(), req, choices);
-}
-
-// cmdline implementation
-inline void _set_error(cmdline_parser& parser, const string& err) {
-    if (parser._error.empty()) parser._error = err;
-}
-
 /// Check unused arguments.
-inline bool should_exit(cmdline_parser& parser) {
-    for (auto&& v : parser._to_parse) {
-        if (v[0] == '-')
-            _set_error(parser, "unknown option " + v);
-        else
-            _set_error(parser, "unknown argument " + v);
-    }
-    return !parser._error.empty();
-}
+inline bool should_exit(cmdline_parser& parser);
 
 /// Returns the usage string.
-inline string get_usage(const cmdline_parser& parser) {
-    auto str = string();
-    if (!parser._error.empty()) str += "error: " + parser._error + "\n\n";
-    str += parser._usage_prog;
-    if (!parser._usage_opts.empty()) str += " [options]";
-    if (!parser._usage_args.empty()) str += " <arguments>";
-    str += "\n";
-    // while (str.size() < 32) str += " ";
-    str += parser._usage_help + "\n\n";
-    if (!parser._usage_opts.empty())
-        str += "options:\n" + parser._usage_opts + "\n";
-    if (!parser._usage_args.empty())
-        str += "arguments:\n" + parser._usage_args + "\n";
-    return str;
-}
+inline string get_usage(const cmdline_parser& parser);
 
 /// Pase a flag from the command line.
 inline bool parse_flag(cmdline_parser& parser, const string& name,
-    const string& flag, const string& help, bool def = false,
-    bool req = false) {
-    // check names
-    _check_name(parser, name, flag, true);
-    // update usage
-    _add_usage(parser, name, flag, true, true, help, def, req, {});
-    // skip if error
-    if (!parser._error.empty()) return def;
-    // find location of option
-    auto pos = find(parser._to_parse.begin(), parser._to_parse.end(), name);
-    if (pos == parser._to_parse.end())
-        pos = find(parser._to_parse.begin(), parser._to_parse.end(), flag);
-    if (pos == parser._to_parse.end()) {
-        if (req) _set_error(parser, "missing required flag " + name);
-        return def;
-    }
-    // remove parsed arg
-    parser._to_parse.erase(pos, pos + 1);
-    // done
-    return !def;
-}
+    const string& flag, const string& help, bool def = false, bool req = false);
 
 /// Pase an option from the command line.
 template <typename T>
 inline T parse_opt(cmdline_parser& parser, const string& name,
     const string& flag, const string& help, const T& def = {}, bool req = false,
-    const vector<T>& choices = {}) {
-    // check names
-    _check_name(parser, name, flag, true);
-    // update usage
-    _add_usage(parser, name, flag, true, false, help, def, req, choices);
-    // skip if error
-    if (!parser._error.empty()) return def;
-    // find location of option
-    auto pos = find(parser._to_parse.begin(), parser._to_parse.end(), name);
-    if (pos == parser._to_parse.end())
-        pos = find(parser._to_parse.begin(), parser._to_parse.end(), flag);
-    if (pos == parser._to_parse.end()) {
-        if (req) _set_error(parser, "missing option " + name);
-        return def;
-    }
-    // check if value exists
-    if (pos == parser._to_parse.end() - 1) {
-        _set_error(parser, "no value for parameter " + name);
-        return def;
-    }
-    // get value
-    auto val = def;
-    const auto& arg = *(pos + 1);
-    // parse
-    auto stream = stringstream(arg);
-    stream >> val;
-    if (stream.fail()) {
-        _set_error(
-            parser, "incorrect value \"" + arg + "\" for option " + name);
-    }
-    // validate if necessary
-    if (!choices.empty()) {
-        if (find(choices.begin(), choices.end(), val) == choices.end())
-            _set_error(
-                parser, "incorrect value \"" + arg + "\" for option " + name);
-    }
-    // remove parsed arg
-    parser._to_parse.erase(pos, pos + 2);
-    // done
-    return val;
-}
+    const vector<T>& choices = {});
 
 /// Parse an enum option from the command line.
 template <typename T>
 inline T parse_opt(cmdline_parser& parser, const string& name,
     const string& flag, const string& help,
     const vector<pair<string, T>>& key_values, const T& def, bool req = false,
-    const vector<T>& choices = {}) {
-    auto keys = vector<string>{};
-    auto key_def = string();
-    for (auto&& kv : key_values) {
-        keys.push_back(kv.first);
-        if (kv.second == def) key_def = kv.first;
-    }
-    auto key = parse_opt<string>(parser, name, flag, help, key_def, req, keys);
-    if (!parser._error.empty()) return def;
-    auto val = def;
-    for (auto&& kv : key_values) {
-        if (kv.first == key) val = kv.second;
-    }
-    return val;
-}
+    const vector<T>& choices = {});
 
 // Parse positional argument from the command line.
 template <typename T>
 inline T parse_arg(cmdline_parser& parser, const string& name,
     const string& help, const T& def = {}, bool req = true,
-    const vector<T>& choices = {}) {
-    // check names
-    _check_name(parser, name, "", false);
-    // update usage
-    _add_usage(parser, name, "", false, false, help, def, req, choices);
-    // skip if error
-    if (!parser._error.empty()) return def;
-    // find location of argument
-    auto pos = std::find_if(parser._to_parse.begin(), parser._to_parse.end(),
-        [](const auto& s) { return s.size() > 0 && s[0] != '-'; });
-    if (pos == parser._to_parse.end()) {
-        if (req) _set_error(parser, "missing argument " + name);
-        return def;
-    }
-    // get value
-    auto val = def;
-    const auto& arg = *(pos);
-    // parse
-    auto stream = stringstream(arg);
-    stream >> val;
-    if (stream.fail()) {
-        _set_error(
-            parser, "incorrect value \"" + arg + "\" for argument " + name);
-    }
-    // validate if necessary
-    if (!choices.empty()) {
-        if (find(choices.begin(), choices.end(), val) == choices.end())
-            _set_error(
-                parser, "incorrect value \"" + arg + "\" for argument " + name);
-    }
-    // remove parsed arg
-    parser._to_parse.erase(pos, pos + 1);
-    // done
-    return val;
-}
+    const vector<T>& choices = {});
 
 // Parse all remaining positional argument from the command line.
 template <typename T>
 inline vector<T> parse_args(cmdline_parser& parser, const string& name,
     const string& help, const vector<T>& def = {}, bool req = true,
-    const vector<T>& choices = {}) {
-    // check names
-    _check_name(parser, name, "", false);
-    // update usage
-    _add_usage(parser, name, "", false, help, def, req, choices);
-    // skip if error
-    if (!parser._error.empty()) return def;
-    // search for all params
-    auto vals = vector<T>();
-    while (true) {
-        // find location of argument
-        auto pos =
-            std::find_if(parser._to_parse.begin(), parser._to_parse.end(),
-                [](const auto& s) { return s.size() > 0 && s[0] != '-'; });
-        if (pos == parser._to_parse.end()) break;
-        // get value
-        auto val = T{};
-        const auto& arg = *(pos);
-        // parse
-        auto stream = stringstream(arg);
-        stream >> val;
-        if (stream.fail()) {
-            _set_error(
-                parser, "incorrect value \"" + arg + "\" for argument " + name);
-        }
-        // validate if necessary
-        if (!choices.empty()) {
-            if (find(choices.begin(), choices.end(), val) == choices.end())
-                _set_error(parser,
-                    "incorrect value \"" + arg + "\" for argument " + name);
-        }
-        // remove parsed arg
-        parser._to_parse.erase(pos, pos + 1);
-        // append value
-        vals.push_back(val);
-    }
-    // check missing
-    if (vals.empty()) {
-        if (req) _set_error(parser, "missing argument " + name);
-        return def;
-    }
-    // done
-    return vals;
-}
+    const vector<T>& choices = {});
 
 /// Initialize a command line parser.
 inline cmdline_parser make_parser(
-    int argc, char** argv, const string& prog, const string& help) {
-    auto parser = cmdline_parser();
-    parser._to_parse = vector<string>(argv + 1, argv + argc);
-    parser._usage_prog = (prog.empty()) ? string(argv[0]) : prog;
-    parser._usage_help = help;
-    parser._usage =
-        parse_flag(parser, "--help", "-h", "prints and help message");
-    return parser;
-}
+    int argc, char** argv, const string& prog, const string& help);
 
 /// @}
 
@@ -9174,8 +9289,6 @@ void set_stdsurface_vert_skinning_off(gl_stdsurface_program& prog);
 
 /// Params for stdsurface drawing.
 struct gl_stdsurface_params {
-    /// Camera id (-1 for deafult).
-    int camera_id = -1;
     /// Image width.
     int width = 360;
     /// Image height.
@@ -9411,7 +9524,7 @@ inline bool draw_value_widget(gl_window* win, const string& lbl,
 }
 /// Value widget.
 inline bool draw_value_widget(gl_window* win, const string& lbl,
-    frame<float, 3>& val, float min = -1, float max = 1, float incr = 1) {
+    frame<float, 3>& val, float min = -10, float max = 10, float incr = 0.01f) {
     auto modx = draw_value_widget(win, lbl + ".x", val.x, -1, 1, 0.01f);
     auto mody = draw_value_widget(win, lbl + ".y", val.y, -1, 1, 0.01f);
     auto modz = draw_value_widget(win, lbl + ".z", val.z, -1, 1, 0.01f);
@@ -9421,9 +9534,9 @@ inline bool draw_value_widget(gl_window* win, const string& lbl,
 }
 /// Value widget.
 template <typename T, int N>
-inline bool draw_value_widget(
-    gl_window* win, const string& lbl, quat<T, N>& val, float incr = 1) {
-    auto mod = draw_value_widget(win, lbl, *(vec<T, N>*)&val, -1, 1, incr);
+inline bool draw_value_widget(gl_window* win, const string& lbl,
+    quat<T, N>& val, float min = -1, float max = 1, float incr = 0.01f) {
+    auto mod = draw_value_widget(win, lbl, *(vec<T, N>*)&val, min, max, incr);
     if (mod) val = normalize(val);
     return mod;
 }
@@ -9498,6 +9611,7 @@ inline bool draw_value_widget(gl_window* win, const string& lbl, T& val,
     draw_combo_widget_end(win);
     return val != old_val;
 }
+
 /// Combo widget
 template <typename T>
 inline bool draw_value_widget(gl_window* win, const string& lbl, T*& val,
@@ -9561,6 +9675,8 @@ void draw_groupid_widget_begin(gl_window* win, int gid);
 /// Group ids widget.
 void draw_groupid_widget_begin(gl_window* win, void* gid);
 /// Group ids widget.
+void draw_groupid_widget_begin(gl_window* win, const char* gid);
+/// Group ids widget.
 void draw_groupid_widget_end(gl_window* win);
 
 /// Tonemapping widgets.
@@ -9612,12 +9728,8 @@ inline void draw_imageinspect_widgets(gl_window* win, const string& lbl,
 
 /// Draws a widget that can selected the camera.
 inline bool draw_camera_widget(
-    gl_window* win, const string& lbl, scene* scn, camera* view, int& cam_idx) {
-    auto camera_names = vector<pair<string, int>>{};
-    camera_names.push_back({view->name, -1});
-    auto idx = 0;
-    for (auto cam : scn->cameras) camera_names.push_back({cam->name, idx++});
-    return draw_value_widget(win, lbl, cam_idx, camera_names);
+    gl_window* win, const string& lbl, camera*& cam, scene* scn, camera* view) {
+    return draw_value_widget(win, lbl, cam, scn->cameras, true, view);
 }
 
 /// Draws widgets for a whole scene. Used for quickly making demos.
@@ -9630,5 +9742,317 @@ bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
 }  // namespace ygl
 
 #endif
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR IMMEDIATE MODE COMMAND LINE PARSER
+// -----------------------------------------------------------------------------
+namespace ygl {
+// cmdline implementation
+inline void _check_name(
+    cmdline_parser& parser, const string& name, const string& flag, bool opt) {
+    if (opt) {
+        if (name.size() < 3 || name[0] != '-' || name[1] != '-' ||
+            name[2] == '-')
+            throw runtime_error("bad name " + name);
+    } else {
+        if (name.size() < 1 || name[0] == '-')
+            throw runtime_error("bad name " + name);
+    }
+    if (find(parser._used_names.begin(), parser._used_names.end(), name) !=
+        parser._used_names.end())
+        throw runtime_error("already used " + name);
+    parser._used_names.push_back(name);
+    if (flag.empty()) return;
+    if (flag.size() < 2 || flag[0] != '-' || flag[1] == '-')
+        throw runtime_error("bad name " + flag);
+    if (find(parser._used_names.begin(), parser._used_names.end(), flag) !=
+        parser._used_names.end())
+        throw runtime_error("already used " + flag);
+    parser._used_names.push_back(flag);
+}
+
+// cmdline implementation
+template <typename T>
+inline void _add_usage_str(cmdline_parser& parser, const string& name,
+    const string& flag, bool opt, const string& metavar, const string& help,
+    const string& def, bool req, const vector<T>& choices) {
+    auto stream = stringstream();
+    stream << "  " << name;
+    if (!flag.empty()) stream << "/" << flag;
+    if (!metavar.empty()) stream << " " << metavar;
+    while (stream.str().length() < 32) stream << " ";
+    stream << help << " ";
+    if (!req) stream << "[" << def << "]";
+    if (req) stream << "(required)";
+    stream << "\n";
+    if (!choices.empty()) {
+        for (auto i = 0; i < 32; i++) stream << " ";
+        stream << "(";
+        auto first = true;
+        for (auto&& c : choices) {
+            if (!first) stream << ",";
+            stream << c;
+            first = false;
+        }
+        stream << ")";
+        stream << "\n";
+    }
+    if (opt)
+        parser._usage_opts += stream.str();
+    else
+        parser._usage_args += stream.str();
+}
+
+// cmdline implementation
+template <typename T>
+inline void _add_usage(cmdline_parser& parser, const string& name,
+    const string& flag, bool opt, bool flag_opt, const string& help,
+    const T& def, bool req, const vector<T>& choices) {
+    auto stream = stringstream();
+    stream << def;
+    _add_usage_str(parser, name, flag, opt, (flag_opt) ? "" : "<val>", help,
+        stream.str(), req, choices);
+}
+
+// cmdline implementation
+template <typename T>
+inline void _add_usage(cmdline_parser& parser, const string& name,
+    const string& flag, bool opt, const string& help, const vector<T>& def,
+    bool req, const vector<T>& choices) {
+    auto stream = stringstream();
+    auto first = true;
+    for (auto&& v : def) {
+        if (!first) stream << ",";
+        stream << v;
+        first = false;
+    }
+    _add_usage_str(
+        parser, name, flag, opt, "<val>*", help, stream.str(), req, choices);
+}
+
+// cmdline implementation
+inline void _set_error(cmdline_parser& parser, const string& err) {
+    if (parser._error.empty()) parser._error = err;
+}
+
+// Check unused arguments.
+inline bool should_exit(cmdline_parser& parser) {
+    for (auto&& v : parser._to_parse) {
+        if (v[0] == '-')
+            _set_error(parser, "unknown option " + v);
+        else
+            _set_error(parser, "unknown argument " + v);
+    }
+    return !parser._error.empty();
+}
+
+// Returns the usage string.
+inline string get_usage(const cmdline_parser& parser) {
+    auto str = string();
+    if (!parser._error.empty()) str += "error: " + parser._error + "\n\n";
+    str += parser._usage_prog;
+    if (!parser._usage_opts.empty()) str += " [options]";
+    if (!parser._usage_args.empty()) str += " <arguments>";
+    str += "\n";
+    // while (str.size() < 32) str += " ";
+    str += parser._usage_help + "\n\n";
+    if (!parser._usage_opts.empty())
+        str += "options:\n" + parser._usage_opts + "\n";
+    if (!parser._usage_args.empty())
+        str += "arguments:\n" + parser._usage_args + "\n";
+    return str;
+}
+
+// Pase a flag from the command line.
+inline bool parse_flag(cmdline_parser& parser, const string& name,
+    const string& flag, const string& help, bool def, bool req) {
+    // check names
+    _check_name(parser, name, flag, true);
+    // update usage
+    _add_usage(parser, name, flag, true, true, help, def, req, {});
+    // skip if error
+    if (!parser._error.empty()) return def;
+    // find location of option
+    auto pos = find(parser._to_parse.begin(), parser._to_parse.end(), name);
+    if (pos == parser._to_parse.end())
+        pos = find(parser._to_parse.begin(), parser._to_parse.end(), flag);
+    if (pos == parser._to_parse.end()) {
+        if (req) _set_error(parser, "missing required flag " + name);
+        return def;
+    }
+    // remove parsed arg
+    parser._to_parse.erase(pos, pos + 1);
+    // done
+    return !def;
+}
+
+// Pase an option from the command line.
+template <typename T>
+inline T parse_opt(cmdline_parser& parser, const string& name,
+    const string& flag, const string& help, const T& def, bool req,
+    const vector<T>& choices) {
+    // check names
+    _check_name(parser, name, flag, true);
+    // update usage
+    _add_usage(parser, name, flag, true, false, help, def, req, choices);
+    // skip if error
+    if (!parser._error.empty()) return def;
+    // find location of option
+    auto pos = find(parser._to_parse.begin(), parser._to_parse.end(), name);
+    if (pos == parser._to_parse.end())
+        pos = find(parser._to_parse.begin(), parser._to_parse.end(), flag);
+    if (pos == parser._to_parse.end()) {
+        if (req) _set_error(parser, "missing option " + name);
+        return def;
+    }
+    // check if value exists
+    if (pos == parser._to_parse.end() - 1) {
+        _set_error(parser, "no value for parameter " + name);
+        return def;
+    }
+    // get value
+    auto val = def;
+    const auto& arg = *(pos + 1);
+    // parse
+    auto stream = stringstream(arg);
+    stream >> val;
+    if (stream.fail()) {
+        _set_error(
+            parser, "incorrect value \"" + arg + "\" for option " + name);
+    }
+    // validate if necessary
+    if (!choices.empty()) {
+        if (find(choices.begin(), choices.end(), val) == choices.end())
+            _set_error(
+                parser, "incorrect value \"" + arg + "\" for option " + name);
+    }
+    // remove parsed arg
+    parser._to_parse.erase(pos, pos + 2);
+    // done
+    return val;
+}
+
+// Parse an enum option from the command line.
+template <typename T>
+inline T parse_opt(cmdline_parser& parser, const string& name,
+    const string& flag, const string& help,
+    const vector<pair<string, T>>& key_values, const T& def, bool req,
+    const vector<T>& choices) {
+    auto keys = vector<string>{};
+    auto key_def = string();
+    for (auto&& kv : key_values) {
+        keys.push_back(kv.first);
+        if (kv.second == def) key_def = kv.first;
+    }
+    auto key = parse_opt<string>(parser, name, flag, help, key_def, req, keys);
+    if (!parser._error.empty()) return def;
+    auto val = def;
+    for (auto&& kv : key_values) {
+        if (kv.first == key) val = kv.second;
+    }
+    return val;
+}
+
+// Parse positional argument from the command line.
+template <typename T>
+inline T parse_arg(cmdline_parser& parser, const string& name,
+    const string& help, const T& def, bool req, const vector<T>& choices) {
+    // check names
+    _check_name(parser, name, "", false);
+    // update usage
+    _add_usage(parser, name, "", false, false, help, def, req, choices);
+    // skip if error
+    if (!parser._error.empty()) return def;
+    // find location of argument
+    auto pos = std::find_if(parser._to_parse.begin(), parser._to_parse.end(),
+        [](const auto& s) { return s.size() > 0 && s[0] != '-'; });
+    if (pos == parser._to_parse.end()) {
+        if (req) _set_error(parser, "missing argument " + name);
+        return def;
+    }
+    // get value
+    auto val = def;
+    const auto& arg = *(pos);
+    // parse
+    auto stream = stringstream(arg);
+    stream >> val;
+    if (stream.fail()) {
+        _set_error(
+            parser, "incorrect value \"" + arg + "\" for argument " + name);
+    }
+    // validate if necessary
+    if (!choices.empty()) {
+        if (find(choices.begin(), choices.end(), val) == choices.end())
+            _set_error(
+                parser, "incorrect value \"" + arg + "\" for argument " + name);
+    }
+    // remove parsed arg
+    parser._to_parse.erase(pos, pos + 1);
+    // done
+    return val;
+}
+
+// Parse all remaining positional argument from the command line.
+template <typename T>
+inline vector<T> parse_args(cmdline_parser& parser, const string& name,
+    const string& help, const vector<T>& def, bool req,
+    const vector<T>& choices) {
+    // check names
+    _check_name(parser, name, "", false);
+    // update usage
+    _add_usage(parser, name, "", false, help, def, req, choices);
+    // skip if error
+    if (!parser._error.empty()) return def;
+    // search for all params
+    auto vals = vector<T>();
+    while (true) {
+        // find location of argument
+        auto pos =
+            std::find_if(parser._to_parse.begin(), parser._to_parse.end(),
+                [](const auto& s) { return s.size() > 0 && s[0] != '-'; });
+        if (pos == parser._to_parse.end()) break;
+        // get value
+        auto val = T{};
+        const auto& arg = *(pos);
+        // parse
+        auto stream = stringstream(arg);
+        stream >> val;
+        if (stream.fail()) {
+            _set_error(
+                parser, "incorrect value \"" + arg + "\" for argument " + name);
+        }
+        // validate if necessary
+        if (!choices.empty()) {
+            if (find(choices.begin(), choices.end(), val) == choices.end())
+                _set_error(parser,
+                    "incorrect value \"" + arg + "\" for argument " + name);
+        }
+        // remove parsed arg
+        parser._to_parse.erase(pos, pos + 1);
+        // append value
+        vals.push_back(val);
+    }
+    // check missing
+    if (vals.empty()) {
+        if (req) _set_error(parser, "missing argument " + name);
+        return def;
+    }
+    // done
+    return vals;
+}
+
+// Initialize a command line parser.
+inline cmdline_parser make_parser(
+    int argc, char** argv, const string& prog, const string& help) {
+    auto parser = cmdline_parser();
+    parser._to_parse = vector<string>(argv + 1, argv + argc);
+    parser._usage_prog = (prog.empty()) ? string(argv[0]) : prog;
+    parser._usage_help = help;
+    parser._usage =
+        parse_flag(parser, "--help", "-h", "prints and help message");
+    return parser;
+}
+
+}  // namespace ygl
 
 #endif
