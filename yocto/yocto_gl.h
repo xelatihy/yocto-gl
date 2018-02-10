@@ -591,6 +591,7 @@
 /// - v 0.2.0: various bug fixes and improvement to OpenGL drawing and widgets
 /// - v 0.1.0: initial release after refactoring
 ///
+namespace ygl {}
 
 //
 // LICENSE:
@@ -745,7 +746,7 @@
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Imported math functions
+/// @defgroup stdmath Imported math functions
 /// @{
 
 /// Square root.
@@ -794,7 +795,7 @@ using std::isfinite;
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Imported containers and related functions
+/// @defgroup stdcontainers Imported containers and related functions
 /// @{
 
 /// String.
@@ -864,7 +865,7 @@ using namespace std::literals;
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Basic typedefs, math constants and functions
+/// @defgroup math Basic typedefs, math constants and functions
 /// @{
 
 /// Convenient typedef for bytes.
@@ -963,7 +964,7 @@ inline float byte_to_float(byte x) { return (float)x / 255.0f; }
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Fixed-size vectors
+/// @defgroup vec Fixed-size vectors
 /// @{
 
 /// Generic vector of N elements. This is used only to define template
@@ -1601,7 +1602,7 @@ struct hash<ygl::vec<T, N>> {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Fixed-size matrices
+/// @defgroup mat Fixed-size matrices
 /// @{
 
 /// Generic matrix of NxN elements. This is used only to define template
@@ -2046,7 +2047,7 @@ inline istream& operator>>(istream& is, mat<T, N>& a) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Rigid-body frames
+/// @defgroup frame Rigid-body frames
 /// @{
 
 /// Generic frame of N elements. This is used only to define template
@@ -2231,7 +2232,7 @@ inline istream& operator>>(istream& is, frame<T, N>& a) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Quaternions
+/// @defgroup quat Quaternions
 /// @{
 
 /// Generic quaternion of N elements. This is used only to define template
@@ -2402,7 +2403,7 @@ inline istream& operator>>(istream& is, quat<T, N>& a) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Axis-aligned bounding boxes
+/// @defgroup bbox Axis-aligned bounding boxes
 /// @{
 
 /// Axis aligned bounding box represented as a min/max vector pairs.
@@ -2598,7 +2599,7 @@ inline istream& operator>>(istream& is, bbox<T, N>& a) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Primitive bounding boxes
+/// @defgroup prim_bbox Primitive bounding boxes
 /// @{
 
 /// Point bounds.
@@ -2645,7 +2646,7 @@ inline bbox<T, 3> tetrahedron_bbox(const vec<T, 3>& v0, const vec<T, 3>& v1,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Rays
+/// @defgroup ray Rays
 /// @{
 
 /// Rays with origin, direction and min/max t value. Origin and directions are
@@ -2708,7 +2709,7 @@ inline istream& operator>>(istream& is, ray<T, N>& a) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Transforms
+/// @defgroup transform Transforms
 /// @{
 
 /// Transforms a point by a matrix.
@@ -3160,7 +3161,7 @@ inline mat<T, 4> compose_mat4(const vec<T, 3>& translation,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name User interface utilities
+/// @defgroup ui User interface utilities
 /// @{
 
 /// Turntable for UI navigation.
@@ -3181,7 +3182,7 @@ void camera_fps(frame3f& frame, const vec3f& transl, const vec2f& rotate);
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Random number generation
+/// @defgroup rng Random number generation
 /// @{
 
 /// PCG random numbers. A family of random number generators that supports
@@ -3377,7 +3378,7 @@ inline bool operator!=(const rng_pcg32& a, const rng_pcg32& b) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Monte Carlo sampling
+/// @defgroup montecarlo Monte Carlo sampling
 /// @{
 
 /// Sample an hemispherical direction with uniform distribution.
@@ -3490,7 +3491,7 @@ inline float sample_discrete_pdf(const vector<float>& cdf, int idx) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Hashing
+/// @defgroup hash Hashing
 /// @{
 
 /// Computes the i-th term of a permutation of l values keyed by p.
@@ -3568,7 +3569,7 @@ inline size_t hash_combine(size_t a, size_t b) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Perlin noise
+/// @defgroup noise Perlin noise
 /// @{
 
 // noise functions from stb_perlin.h
@@ -3600,7 +3601,7 @@ float perlin_turbulence_noise(const vec3f& p, float lacunarity = 2.0f,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Python-like iterators
+/// @defgroup python_iter Python-like iterators
 /// @{
 
 /// Implementation of Python-like range generator. Create it with the the
@@ -3659,6 +3660,8 @@ inline enumerate_generator<T> enumerate(vector<T>& vv) {
     return {(int)vv.size(), vv.data()};
 }
 
+/// @}
+
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
@@ -3666,7 +3669,7 @@ inline enumerate_generator<T> enumerate(vector<T>& vv) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Container operations
+/// @defgroup container_ops Container operations
 /// @{
 
 /// Append a vector to a vector.
@@ -3770,7 +3773,7 @@ inline bool contains(const unordered_set<K, V>& v, const K1& vv) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Geometry utilities
+/// @defgroup geom Geometry utilities
 /// @{
 
 /// Line tangent.
@@ -3968,7 +3971,7 @@ inline T interpolate_bezier_derivative(
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Animation utilities
+/// @defgroup anim Animation utilities
 /// @{
 
 /// Evalautes a keyframed value using step interpolation.
@@ -4039,7 +4042,7 @@ inline T eval_keyframed_bezier(
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Shape utilities
+/// @defgroup shape Shape utilities
 /// @{
 
 /// Compute per-vertex normals/tangents for lines, triangles and quads with
@@ -4183,7 +4186,7 @@ vector<T> facet_vert(const vector<T>& vert, const vector<int>& vmap);
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Shape sampling
+/// @defgroup shape_sampling Shape sampling
 /// @{
 
 /// Pick a point.
@@ -4240,7 +4243,7 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Example shapes
+/// @defgroup shape_example Example shapes
 /// @{
 
 /// Make a sphere. Returns quads, pos.
@@ -4368,7 +4371,7 @@ make_hair(int num, int tesselation, const vector<vec3i>& striangles,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Image containers
+/// @defgroup image Image containers
 /// @{
 
 /// Generic image container. Access pixels with at() or operator [].
@@ -4488,7 +4491,7 @@ inline image<vec<T, 4>> make_image(
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Image operations
+/// @defgroup image_ops Image operations
 /// @{
 
 /// Approximate conversion from srgb.
@@ -4553,7 +4556,7 @@ vec4b hsv_to_rgb(const vec4b& hsv);
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Example images
+/// @defgroup image_example Example images
 /// @{
 
 /// Make a grid image.
@@ -4621,7 +4624,7 @@ image4b make_turbulence_image(int resx, int resy, float scale = 1,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Image loading and saving
+/// @defgroup image_io Image loading and saving
 /// @{
 
 #if YGL_IMAGEIO
@@ -4714,7 +4717,7 @@ void resize_image(const image4b& img, image4b& res_img,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Ray-primitive intersection
+/// @defgroup intersect Ray-primitive intersection
 /// @{
 
 /// Intersect a ray with a point (approximate).
@@ -4757,7 +4760,7 @@ bool intersect_bbox(const ray3f& ray, const vec3f& ray_dinv,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Point-primitive overlap
+/// @defgroup overlap Point-primitive overlap
 /// @{
 
 /// Check if a point overlaps a position within a max distance.
@@ -4800,7 +4803,7 @@ bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2);
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Bounding volume hierarchy
+/// @defgroup bvh Bounding volume hierarchy
 /// @{
 
 /// Type of BVH node.
@@ -4969,7 +4972,7 @@ intersection_point overlap_bvh(
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Simple scene
+/// @defgroup scene Simple scene
 /// @{
 
 /// Texture containing either an LDR or HDR image.
@@ -5466,7 +5469,7 @@ void save_scene(
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Example scenes
+/// @defgroup scene_example Example scenes
 /// @{
 
 /// Makes the Cornell Box scene.
@@ -5879,7 +5882,7 @@ void save_test_scene(const string& filename, const test_scene_params& scn);
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Path-tracing support
+/// @defgroup trace_support Path-tracing support
 /// @{
 
 /// Phong exponent to roughness.
@@ -5949,7 +5952,7 @@ inline float filter_mitchell(float x) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Path tracing
+/// @defgroup trace Path tracing
 /// @{
 
 /// Type of rendering algorithm.
@@ -6148,7 +6151,7 @@ void trace_async_stop(vector<std::thread>& threads, bool& stop_flag);
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Wavefront OBJ
+/// @defgroup obj Wavefront OBJ
 /// @{
 
 /// Obj face vertex.
@@ -6432,7 +6435,7 @@ void save_obj(const string& filename, const obj_scene* model,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Khronos glTF
+/// @defgroup gltf Khronos glTF
 /// @{
 
 /// Generic buffer data.
@@ -7433,7 +7436,7 @@ struct accessor_view {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Svg
+/// @defgroup svg Svg
 /// @{
 
 /// Svg path.
@@ -7481,7 +7484,7 @@ void save_svg(const string& filename, const svg_scene* svg);
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name String, path and file functions
+/// @defgroup string_ops String, path and file functions
 /// @{
 
 /// Checks if a string starts with a prefix.
@@ -7773,7 +7776,7 @@ inline void println(const string& fmt, const Args&... args) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name File loading and saving
+/// @defgroup file_io File loading and saving
 /// @{
 
 /// Loads the contents of a binary file in an in-memory array.
@@ -7841,7 +7844,7 @@ inline void save_text(const string& filename, const string& str) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Immediate-mode command line parser
+/// @defgroup cmdline Immediate-mode command line parser
 /// @{
 
 /// Immediate mode command line parser (opaque type)
@@ -8176,7 +8179,7 @@ inline cmdline_parser make_parser(
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Simple logging
+/// @defgroup logger Simple logging
 /// @{
 
 /// Logger object. A logger can output messages to console an a file.
@@ -8291,7 +8294,7 @@ inline void log_fatal(const string& msg, const Args&... args) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name Simple timer
+/// @defgroup timer Simple timer
 /// @{
 
 /// A simple wrapper for std::chrono.
@@ -8336,7 +8339,7 @@ struct timer {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name OpenGL utilities
+/// @defgroup gl_util OpenGL utilities
 /// @{
 
 /// OpenGL shape element types.
@@ -8395,12 +8398,17 @@ void gl_set_viewport(const vec2i& v);
 /// Reads an image from the the framebuffer.
 void gl_read_imagef(float* pixels, int w, int h, int nc);
 
+/// @}
+
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
 // OPENGL TEXTURE FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace ygl {
+
+/// @defgroup gl_texture OpenGL textures
+/// @{
 
 /// OpenGL texture object. Members are not part of the public API.
 struct gl_texture {
@@ -8561,7 +8569,7 @@ struct gl_texture_info {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name OpenGL vertex array buffers
+/// @defgroup gl_vertex_buffer OpenGL vertex array buffers
 /// @{
 
 /// OpenGL vertex/element buffer. Members are not part of the public API.
@@ -8685,7 +8693,7 @@ void clear_vertex_buffer(gl_vertex_buffer& buf);
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name OpenGL element array buffers
+/// @defgroup gl_element_buffer OpenGL element array buffers
 /// @{
 
 /// OpenGL element array buffer. Members are not part of the public API.
@@ -8769,7 +8777,7 @@ void clear_element_buffer(gl_element_buffer& buf);
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name OpenGL programs
+/// @defgroup gl_program OpenGL programs
 /// @{
 
 /// OpenGL program. Members are not part of the public API.
@@ -8966,7 +8974,7 @@ void unbind_program(const gl_program& prog);
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name OpenGL scene shader support
+/// @defgroup gl_shape OpenGL scene shader support
 /// @{
 
 /// Vertex buffers for scene drawing. Members are not part of the public API.
@@ -9016,7 +9024,7 @@ void update_shapes(const scene* scn, unordered_map<shape*, gl_shape>& shapes,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name OpenGL image shader
+/// @defgroup gl_stdimage_program OpenGL image shader
 /// @{
 
 /// A shader for displaying images.  Members are not part of the public API.
@@ -9078,7 +9086,7 @@ inline void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name OpenGL surface shader
+/// @defgroup gl_stdsurface_program OpenGL surface shader
 /// @{
 
 /// Program to shade surfaces with a physically-based standard shader based on
@@ -9220,7 +9228,7 @@ struct GLFWwindow;
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name OpenGL window
+/// @defgroup gl_window OpenGL window
 /// @{
 
 // Forward declaration
@@ -9309,7 +9317,7 @@ bool handle_camera_navigation(gl_window* win, camera* cam, bool navigation_fps);
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @name OpenGL widgets
+/// @defgroup gl_widgets OpenGL widgets
 /// @{
 
 /// Initialize widgets.

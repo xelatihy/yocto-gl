@@ -2200,9 +2200,9 @@ Colums access via operator[].
 ~~~ .cpp
 template <typename T>
 struct mat<T, 4> {
-    mat<T, 4>(); 
-    explicit mat<T, 4>(float vv); 
-    mat<T, 4>(const vec<T, 4>& x, const vec<T, 4>& y, const vec<T, 4>& z, const vec<T, 4>& w); 
+    mat(); 
+    explicit mat(float vv); 
+    mat(const vec<T, 4>& x, const vec<T, 4>& y, const vec<T, 4>& z, const vec<T, 4>& w); 
     vec<T, 4>& operator[](int i); 
     const vec<T, 4>& operator[](int i) const; 
     vec<T, 4> x;
@@ -2216,9 +2216,9 @@ Matrix of 4x4 elements stored in column major format.
 Colums access via operator[].
 
 - Members:
-    - 4>():      Default constructor. Initializes to identity matrix.
-    - 4>():      Constructs a matrix with the given diagonal.
-    - 4>():      Constructs a matrix from its columns.
+    - mat():      Default constructor. Initializes to identity matrix.
+    - mat():      Constructs a matrix with the given diagonal.
+    - mat():      Constructs a matrix from its columns.
     - operator[]():      Column access.
     - operator[]():      Column access.
     - x:      Column data.
