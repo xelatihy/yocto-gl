@@ -33,6 +33,7 @@ using namespace ygl;
 struct app_state {
     scene* scn = nullptr;
     camera* view = nullptr;
+    camera* cam = nullptr;
     string filename;
     string imfilename;
     string outfilename;
@@ -73,7 +74,7 @@ inline void draw(gl_window* win) {
     gl_clear_buffers(app->params.background);
     gl_enable_depth_test(true);
     gl_enable_culling(app->params.cull_backface);
-    draw_stdsurface_scene(app->scn, app->view, app->prog, app->shapes,
+    draw_stdsurface_scene(app->scn, app->cam, app->prog, app->shapes,
         app->textures, app->lights, app->params);
 
     if (begin_widgets(win, "yview")) {
@@ -104,8 +105,7 @@ inline void draw(gl_window* win) {
             }
         }
         if (draw_header_widget(win, "view")) {
-            draw_camera_widget(
-                win, "camera", app->scn, app->view, app->params.camera_id);
+            draw_camera_widget(win, "camera", app->cam, app->scn, app->view);
             draw_value_widget(win, "wire", app->params.wireframe);
             draw_continue_widget(win);
             draw_value_widget(win, "edges", app->params.edges);
@@ -152,7 +152,7 @@ void run_ui(app_state* app) {
     // loop
     while (!should_close(win)) {
         // handle mouse and keyboard for navigation
-        if (app->params.camera_id < 0) {
+        if (app->cam == app->view) {
             handle_camera_navigation(win, app->view, app->navigation_fps);
         }
 
@@ -220,9 +220,12 @@ int main(int argc, char* argv[]) {
     // add missing data
     add_elements(app->scn);
 
+    // HACK
+    print_info_visit(app->scn);
+
     // view camera
-    app->view = make_view_camera(app->scn, app->params.camera_id);
-    app->params.camera_id = -1;
+    app->view = make_view_camera(app->scn, 0);
+    app->cam = app->view;
 
     // animation
     app->time_range = compute_animation_range(app->scn);
@@ -232,10 +235,7 @@ int main(int argc, char* argv[]) {
     app->lights = make_gl_lights(app->scn);
 
     // run ui
-    auto cam = (app->params.camera_id < 0) ?
-                   app->view :
-                   app->scn->cameras[app->params.camera_id];
-    app->params.width = (int)round(cam->aspect * app->params.height);
+    app->params.width = (int)round(app->cam->aspect * app->params.height);
     run_ui(app);
 
     // clear

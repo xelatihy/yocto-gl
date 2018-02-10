@@ -33,6 +33,7 @@ using namespace ygl;
 struct app_state {
     scene* scn = nullptr;
     camera* view = nullptr;
+    camera* cam = nullptr;
     bvh_tree* bvh = nullptr;
     string filename;
     string imfilename;
@@ -58,16 +59,15 @@ int main(int argc, char* argv[]) {
 
     // parse command line
     auto parser = make_parser(argc, argv, "ytrace", "offline oath tracing");
-    app->params.camera_id = 0;
     app->save_progressive =
         parse_flag(parser, "--save-progressive", "", "save progressive images");
     app->params.rtype = parse_opt(parser, "--random", "", "random type",
-        trace_rng_names(), trace_rng_type::stratified);
+        refl_enum_names<trace_rng_type>(), trace_rng_type::stratified);
     app->params.ftype = parse_opt(parser, "--filter", "", "filter type",
-        trace_filter_names(), trace_filter_type::box);
+        refl_enum_names<trace_filter_type>(), trace_filter_type::box);
     app->params.stype =
         parse_opt(parser, "--shader", "-S", "path estimator type",
-            trace_shader_names(), trace_shader_type::pathtrace);
+            refl_enum_names<trace_shader_type>(), trace_shader_type::pathtrace);
     app->params.envmap_invisible =
         parse_flag(parser, "--envmap-invisible", "", "envmap invisible");
     app->params.shadow_notransmission = parse_flag(
@@ -113,8 +113,8 @@ int main(int argc, char* argv[]) {
     add_elements(app->scn, opts);
 
     // view camera
-    app->view = make_view_camera(app->scn, app->params.camera_id);
-    app->params.camera_id = -1;
+    app->view = make_view_camera(app->scn, 0);
+    app->cam = app->view;
 
     // build bvh
     log_info("building bvh");
@@ -125,10 +125,7 @@ int main(int argc, char* argv[]) {
     app->lights = make_trace_lights(app->scn);
 
     // initialize rendering objects
-    auto cam = (app->params.camera_id < 0) ?
-                   app->view :
-                   app->scn->cameras[app->params.camera_id];
-    app->params.width = (int)round(cam->aspect * app->params.height);
+    app->params.width = (int)round(app->cam->aspect * app->params.height);
     app->img = image4f(app->params.width, app->params.height);
     app->pixels = make_trace_pixels(app->params);
 
@@ -145,7 +142,7 @@ int main(int argc, char* argv[]) {
                 imfilename, app->img, app->exposure, app->gamma, app->filmic);
         }
         log_info("rendering sample {}/{}", cur_sample, app->params.nsamples);
-        trace_samples(app->scn, cam, app->bvh, app->lights, app->img,
+        trace_samples(app->scn, app->cam, app->bvh, app->lights, app->img,
             app->pixels, app->params.batch_size, app->params);
     }
     log_info("rendering done");

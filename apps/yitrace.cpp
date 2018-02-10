@@ -33,6 +33,7 @@ using namespace ygl;
 struct app_state {
     scene* scn = nullptr;
     camera* view = nullptr;
+    camera* cam = nullptr;
     bvh_tree* bvh = nullptr;
     string filename;
     string imfilename;
@@ -72,7 +73,7 @@ void draw(gl_window* win) {
     app->imparams.win_size = window_size;
     draw_image(app->gl_prog, app->trace_texture, app->imparams);
 
-    auto edited = vector<bool>();
+    auto edited = 0;
     if (begin_widgets(win, "yitrace")) {
         draw_label_widget(win, "scene", app->filename);
         draw_label_widget(
@@ -80,16 +81,15 @@ void draw(gl_window* win) {
         draw_label_widget(win, "sample", app->pixels.at(0, 0).sample);
         if (draw_header_widget(win, "trace")) {
             draw_value_widget(win, "samples", app->params.nsamples, 1, 4096, 1);
-            edited.push_back(draw_value_widget(
-                win, "shader type", app->params.stype, trace_shader_names()));
-            edited.push_back(draw_value_widget(
-                win, "random type", app->params.rtype, trace_rng_names()));
-            edited.push_back(draw_value_widget(
-                win, "filter type", app->params.ftype, trace_filter_names()));
-            edited.push_back(draw_camera_widget(
-                win, "camera", app->scn, app->view, app->params.camera_id));
-            edited.push_back(
-                draw_value_widget(win, "update bvh", app->update_bvh));
+            edited += draw_value_widget(win, "shader type", app->params.stype,
+                refl_enum_names<trace_shader_type>());
+            edited += draw_value_widget(win, "random type", app->params.rtype,
+                refl_enum_names<trace_rng_type>());
+            edited += draw_value_widget(win, "filter type", app->params.ftype,
+                refl_enum_names<trace_filter_type>());
+            edited += draw_camera_widget(
+                win, "camera", app->cam, app->scn, app->view);
+            edited += draw_value_widget(win, "update bvh", app->update_bvh);
             draw_value_widget(win, "fps", app->navigation_fps);
         }
         if (draw_header_widget(win, "image")) {
@@ -97,13 +97,11 @@ void draw(gl_window* win) {
             draw_imageinspect_widgets(
                 win, "", app->img, {}, get_mouse_posf(win), app->imparams);
         }
-        edited.push_back(
-            draw_scene_widgets(win, "scene", app->scn, app->selection, {}));
+        edited +=
+            draw_scene_widgets(win, "scene", app->scn, app->selection, {});
     }
     end_widgets(win);
-    app->scene_updated =
-        app->scene_updated ||
-        std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
+    app->scene_updated = app->scene_updated || (bool)edited;
 
     swap_buffers(win);
 }
@@ -122,22 +120,16 @@ bool update(app_state* app) {
         pparams.height = app->params.height / app->params.block_size;
         pparams.nsamples = 1;
         pparams.ftype = trace_filter_type::box;
-        auto cam = (app->params.camera_id < 0) ?
-                       app->view :
-                       app->scn->cameras[app->params.camera_id];
         auto preview_pixels = make_trace_pixels(pparams);
         auto preview_img = image4f(pparams.width, pparams.height);
-        trace_samples(app->scn, cam, app->bvh, app->lights, preview_img,
+        trace_samples(app->scn, app->cam, app->bvh, app->lights, preview_img,
             preview_pixels, 1, pparams);
         resize_image(preview_img, app->img, resize_filter::box);
         update_texture(app->trace_texture, app->img);
 
         app->scene_updated = false;
     } else if (!app->rendering) {
-        auto cam = (app->params.camera_id < 0) ?
-                       app->view :
-                       app->scn->cameras[app->params.camera_id];
-        trace_async_start(app->scn, cam, app->bvh, app->lights, app->img,
+        trace_async_start(app->scn, app->cam, app->bvh, app->lights, app->img,
             app->pixels, app->async_threads, app->async_stop, app->params);
         app->rendering = true;
     }
@@ -161,7 +153,7 @@ void run_ui(app_state* app) {
     // loop
     while (!should_close(win)) {
         // handle mouse and keyboard for navigation
-        if (app->params.camera_id < 0) {
+        if (app->cam == app->view) {
             if (handle_camera_navigation(win, app->view, app->navigation_fps))
                 app->scene_updated = true;
         }
@@ -189,12 +181,12 @@ int main(int argc, char* argv[]) {
     app->save_progressive =
         parse_flag(parser, "--save-progressive", "", "save progressive images");
     app->params.rtype = parse_opt(parser, "--random", "", "random type",
-        trace_rng_names(), trace_rng_type::stratified);
+        refl_enum_names<trace_rng_type>(), trace_rng_type::stratified);
     app->params.ftype = parse_opt(parser, "--filter", "", "filter type",
-        trace_filter_names(), trace_filter_type::box);
+        refl_enum_names<trace_filter_type>(), trace_filter_type::box);
     app->params.stype =
         parse_opt(parser, "--shader", "-S", "path estimator type",
-            trace_shader_names(), trace_shader_type::pathtrace);
+            refl_enum_names<trace_shader_type>(), trace_shader_type::pathtrace);
     app->params.envmap_invisible =
         parse_flag(parser, "--envmap-invisible", "", "envmap invisible");
     app->params.shadow_notransmission = parse_flag(
@@ -237,8 +229,8 @@ int main(int argc, char* argv[]) {
     add_elements(app->scn, opts);
 
     // view camera
-    app->view = make_view_camera(app->scn, app->params.camera_id);
-    app->params.camera_id = -1;
+    app->view = make_view_camera(app->scn, 0);
+    app->cam = app->view;
 
     // build bvh
     log_info("building bvh");
@@ -256,10 +248,7 @@ int main(int argc, char* argv[]) {
     }
 
     // initialize rendering objects
-    auto cam = (app->params.camera_id < 0) ?
-                   app->view :
-                   app->scn->cameras[app->params.camera_id];
-    app->params.width = (int)round(cam->aspect * app->params.height);
+    app->params.width = (int)round(app->cam->aspect * app->params.height);
     app->img = image4f(app->params.width, app->params.height);
     app->pixels = make_trace_pixels(app->params);
     app->scene_updated = true;
