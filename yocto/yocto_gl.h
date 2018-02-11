@@ -9552,6 +9552,8 @@ void draw_tree_widget_color_end(gl_window* win);
 /// Image widget.
 void draw_image_widget(
     gl_window* win, int tid, const vec2i& size, const vec2i& imsize);
+/// Image widget.
+void draw_image_widget(gl_window* win, gl_texture& txt, const vec2i& size);
 
 /// Scroll region widget.
 void draw_scroll_widget_begin(
