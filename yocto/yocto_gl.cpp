@@ -13347,6 +13347,11 @@ void draw_image_widget(
     ImGui::Image((void*)(size_t)tid, {s.x, s.y});
 }
 
+// Image widget
+void draw_image_widget(gl_window* win, gl_texture& txt, const vec2i& size) {
+    draw_image_widget(win, get_texture_id(txt), size, {txt.width, txt.height});
+}
+
 // Scroll region
 void draw_scroll_widget_begin(
     gl_window* win, const string& lbl, int height, bool border) {
@@ -13557,10 +13562,7 @@ struct draw_elem_visitor {
     void preview(T* val) {}
     void preview(texture* txt) {
         if (!contains(gl_txt, txt)) return;
-        auto w = (!txt->ldr.empty()) ? txt->ldr.width() : txt->hdr.width(),
-             h = (!txt->ldr.empty()) ? txt->ldr.height() : txt->hdr.height();
-        draw_image_widget(
-            win, get_texture_id(gl_txt.at(txt)), {128, 128}, {w, h});
+        draw_image_widget(win, (gl_texture&)gl_txt.at(txt), {128, 128});
     }
 };
 
