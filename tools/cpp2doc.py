@@ -22,8 +22,8 @@ def make_doc(cpp, first_only=False):
     nlines = []
     groupname = ''
     for line in lines:
-        if '/// @name' in line:
-            groupname = line.replace('/// @name','').strip().replace(' ','_')
+        if '/// @defgroup' in line:
+            groupname = line.replace('/// @defgroup','').strip().partition(' ')[2].replace(' ','_')
             nlines += [ '/// Group ' + groupname + '\n' ]
         elif '/// @{' in line:
             nlines += [ '__group__ ' + groupname + '{ \n' ]

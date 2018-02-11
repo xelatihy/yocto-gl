@@ -443,8 +443,8 @@ inline void shade_scene(const ygl::gltf_scene_group* scns, shade_state* st,
         camera_view = ygl::frame_to_mat(ygl::inverse(ycam->frame));
         auto near = (ycam->near) ? ycam->near : 0.001f;
         if (ycam->far) {
-            camera_proj = ygl::perspective_mat(
-                ycam->yfov, ycam->aspect, near, ycam->far);
+            camera_proj =
+                ygl::perspective_mat(ycam->yfov, ycam->aspect, near, ycam->far);
         } else {
             camera_proj = ygl::perspective_mat(ycam->yfov, ycam->aspect, near);
         }

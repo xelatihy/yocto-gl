@@ -2065,7 +2065,7 @@ struct frame<T, 3> {
     /// Rotation and traslation constructor.
     frame(const mat<T, 3>& m, const vec<T, 3>& t)
         : x(m.x), y(m.y), z(m.z), o(t) {}
-    
+
     /// Element/column access
     vec<T, 3>& operator[](int i) { return (&x)[i]; }
     /// Element/column access
@@ -2161,17 +2161,25 @@ inline frame<T, 3> mat_to_frame(const mat<T, 4>& a) {
 }
 
 /// Frame origin.
-template<typename T, int N>
-vec<T, N>& frame_pos(frame<T, N>& a) { return a.o; }
+template <typename T, int N>
+vec<T, N>& frame_pos(frame<T, N>& a) {
+    return a.o;
+}
 /// Frame origin.
-template<typename T, int N>
-const vec<T, N>& frame_pos(const frame<T, N>& a) { return a.o; }
+template <typename T, int N>
+const vec<T, N>& frame_pos(const frame<T, N>& a) {
+    return a.o;
+}
 /// Frame rotation
-template<typename T, int N>
-mat<T, 3>& frame_rot(frame<T, N>& a) { return *(mat<T, 3>*)(&a.x); }
+template <typename T, int N>
+mat<T, 3>& frame_rot(frame<T, N>& a) {
+    return *(mat<T, 3>*)(&a.x);
+}
 /// Frame rotation
-template<typename T, int N>
-const mat<T, 3>& frame_rot(const frame<T, N>& a) { return *(mat<T, 3>*)(&a.x); }
+template <typename T, int N>
+const mat<T, 3>& frame_rot(const frame<T, N>& a) {
+    return *(mat<T, 3>*)(&a.x);
+}
 
 /// Frame equality.
 template <typename T>
@@ -2187,14 +2195,14 @@ inline bool operator!=(const frame<T, 3>& a, const frame<T, 3>& b) {
 /// Frame composition, equivalent to affine matrix product.
 template <typename T>
 inline frame<T, 3> operator*(const frame<T, 3>& a, const frame<T, 3>& b) {
-    return {mat<T, 3>{a.x,a.y,a.z} * mat<T, 3>{b.x,b.y,b.z},
-        mat<T, 3>{a.x,a.y,a.z} * b.o + a.o};
+    return {mat<T, 3>{a.x, a.y, a.z} * mat<T, 3>{b.x, b.y, b.z},
+        mat<T, 3>{a.x, a.y, a.z} * b.o + a.o};
 }
 
 /// Frame inverse, equivalent to rigid affine inverse.
 template <typename T>
 inline frame<T, 3> inverse(const frame<T, 3>& a) {
-    auto minv = transpose(mat<T, 3>{a.x,a.y,a.z});
+    auto minv = transpose(mat<T, 3>{a.x, a.y, a.z});
     return {minv, -(minv * a.o)};
 }
 
@@ -2803,7 +2811,7 @@ inline bbox<T, 3> transform_bbox(const frame<T, 3>& a, const bbox<T, 3>& b) {
     // find maximum extents, and store result into AABB b.
     // start by adding in translation
     auto c = bbox<T, 3>{a.o, a.o};
-    auto rot = mat<T, 3>{a.x,a.y,a.z};
+    auto rot = mat<T, 3>{a.x, a.y, a.z};
     // for all three axes
     for (auto i = 0; i < 3; i++) {
         // form extent by summing smaller and larger terms respectively
@@ -7632,8 +7640,8 @@ void save_binary_gltf(const string& filename, const glTF* gltf,
 /// Computes the local node transform and its inverse.
 inline mat4f node_transform(const glTFNode* node) {
     return frame_to_mat(translation_frame(node->translation) *
-                  rotation_frame(node->rotation) *
-                  scaling_frame(node->scale)) *
+                        rotation_frame(node->rotation) *
+                        scaling_frame(node->scale)) *
            node->matrix;
 }
 

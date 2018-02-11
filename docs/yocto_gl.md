@@ -1226,11 +1226,8 @@ struct vec<T, 4> {
     vec(); 
     explicit vec(T vv); 
     vec(T x, T y, T z, T w); 
-    vec(const vec<T, 3>& xyz, T w); 
     T& operator[](int i); 
     const T& operator[](int i) const; 
-    vec<T, 3>& xyz(); 
-    const vec<T, 3>& xyz() const; 
     T x;
     T y;
     T z;
@@ -1244,11 +1241,8 @@ Vector of 4 elements.
     - vec():      Default constructor.  Initializes to zeros.
     - vec():      Element constructor.
     - vec():      Element constructor.
-    - vec():      Constructor from smaller vector.
     - operator[]():      Element access.
     - operator[]():      Element access.
-    - xyz():      Access xyz components.
-    - xyz():      Access xyz components.
     - x:      Element data.
     - y:      Element data.
     - z:      Element data.
@@ -2754,13 +2748,8 @@ struct frame<T, 3> {
     frame(); 
     frame(const vec<T, 3>& x, const vec<T, 3>& y, const vec<T, 3>& z, const vec<T, 3>& o); 
     frame(const mat<T, 3>& m, const vec<T, 3>& t); 
-    frame(const mat<T, 4>& m); 
     vec<T, 3>& operator[](int i); 
     const vec<T, 3>& operator[](int i) const; 
-    vec<T, 3>& pos(); 
-    const vec<T, 3>& pos() const; 
-    mat<T, 3>& rot(); 
-    const mat<T, 3>& rot() const; 
     vec<T, 3> x;
     vec<T, 3> y;
     vec<T, 3> z;
@@ -2779,13 +2768,8 @@ Access rotation and position with pos() and rot().
     - frame():      Default constructor. Initializes to the identity frame.
     - frame():      Basic and origin constructor. Equavalent to columns of affine matrix.
     - frame():      Rotation and traslation constructor.
-    - frame():      conversion from matrix. Assumes the matrix is affine, so use with care.
     - operator[]():      Element/column access
     - operator[]():      Element/column access
-    - pos():      Frame origin.
-    - pos():      Frame origin.
-    - rot():      Frame rotation
-    - rot():      Frame rotation
     - x:      Axes and origin data
     - y:      Axes and origin data
     - z:      Axes and origin data
@@ -2881,23 +2865,59 @@ inline bool empty(frame<T, N>& a);
 
 Empty check (always false for useful for templated code).
 
-#### Function to_mat()
+#### Function frame_to_mat()
 
 ~~~ .cpp
 template <typename T>
-inline mat<T, 4> to_mat(const frame<T, 3>& a);
+inline mat<T, 4> frame_to_mat(const frame<T, 3>& a);
 ~~~
 
 Frame to matrix conversion.
 
-#### Function to_frame()
+#### Function mat_to_frame()
 
 ~~~ .cpp
 template <typename T>
-inline frame<T, 3> to_frame(const mat<T, 4>& a);
+inline frame<T, 3> mat_to_frame(const mat<T, 4>& a);
 ~~~
 
 Matrix to frame conversion.
+
+#### Function frame_pos()
+
+~~~ .cpp
+template <typename T, int N>
+vec<T, N>& frame_pos(frame<T, N>& a);
+~~~
+
+Frame origin.
+
+#### Function frame_pos()
+
+~~~ .cpp
+template <typename T, int N>
+const vec<T, N>& frame_pos(const frame<T, N>& a);
+~~~
+
+Frame origin.
+
+#### Function frame_rot()
+
+~~~ .cpp
+template <typename T, int N>
+mat<T, 3>& frame_rot(frame<T, N>& a);
+~~~
+
+Frame rotation
+
+#### Function frame_rot()
+
+~~~ .cpp
+template <typename T, int N>
+const mat<T, 3>& frame_rot(const frame<T, N>& a);
+~~~
+
+Frame rotation
 
 #### Function operator==()
 
@@ -3850,253 +3870,171 @@ inline bbox<T, N> transform_bbox_inverse(
 
 Inverse transforms a bbox by a frame, assuming a rigid transform.
 
-#### Function rotation_mat3()
-
-~~~ .cpp
-template <typename T, typename T1>
-inline mat<T, 3> rotation_mat3(const vec<T, 3>& axis, T1 angle);
-~~~
-
-Rotation matrix from axis-angle.
-
-#### Function translation_frame3()
+#### Function translation_frame()
 
 ~~~ .cpp
 template <typename T>
-inline frame<T, 3> translation_frame3(const vec<T, 3>& a);
+inline frame<T, 3> translation_frame(const vec<T, 3>& a);
 ~~~
 
 Translation affine transform.
 
-#### Function translation_mat4()
+#### Function scaling_frame()
 
 ~~~ .cpp
 template <typename T>
-inline mat<T, 4> translation_mat4(const vec<T, 3>& a);
-~~~
-
-Translation matrix.
-
-#### Function scaling_frame3()
-
-~~~ .cpp
-template <typename T>
-inline frame<T, 3> scaling_frame3(const vec<T, 3>& a);
+inline frame<T, 3> scaling_frame(const vec<T, 3>& a);
 ~~~
 
 Scaling affine transform; this is not rigid and here for symmatry of API.
 
-#### Function scaling_mat4()
+#### Function rotation_frame()
 
 ~~~ .cpp
-template <typename T>
-inline mat<T, 4> scaling_mat4(const vec<T, 3>& a);
-~~~
-
-Scaling matrix.
-
-#### Function rotation_frame3()
-
-~~~ .cpp
-template <typename T>
-inline frame<T, 3> rotation_frame3(const vec<T, 3>& axis, T angle);
+template <typename T, typename T1>
+inline frame<T, 3> rotation_frame(const vec<T, 3>& axis, T1 angle);
 ~~~
 
 Rotation affine transform.
 
-#### Function rotation_frame3()
+#### Function rotation_frame()
 
 ~~~ .cpp
 template <typename T>
-inline frame<T, 3> rotation_frame3(const quat<T, 4>& rot);
+inline frame<T, 3> rotation_frame(const quat<T, 4>& v);
 ~~~
 
 Rotation affine transform.
 
-#### Function rotation_mat4()
+#### Function lookat_frame()
 
 ~~~ .cpp
 template <typename T>
-inline mat<T, 4> rotation_mat4(const mat<T, 3>& rot);
-~~~
-
-Rotation matrix.
-
-#### Function rotation_mat4()
-
-~~~ .cpp
-template <typename T>
-inline mat<T, 4> rotation_mat4(const vec<T, 3>& axis, T angle);
-~~~
-
-Rotation matrix.
-
-#### Function rotation_axisangle4()
-
-~~~ .cpp
-template <typename T>
-inline pair<vec<T, 4>, T> rotation_axisangle4(const quat<T, 4>& a);
-~~~
-
-Quaternion axis-angle conversion.
-
-#### Function rotation_quat4()
-
-~~~ .cpp
-template <typename T>
-inline quat<T, 4> rotation_quat4(const vec<T, 3>& axis, T angle);
-~~~
-
-Axis-angle to quaternion conversion.
-
-#### Function rotation_mat3()
-
-~~~ .cpp
-template <typename T>
-inline mat<T, 3> rotation_mat3(const quat<T, 4>& v);
-~~~
-
-Quaterion to matrix conversion.
-
-#### Function rotation_mat4()
-
-~~~ .cpp
-template <typename T>
-inline mat<T, 4> rotation_mat4(const quat<T, 4>& v);
-~~~
-
-Quaternion to rotation matrix conversion.
-
-#### Function rotation_quat4()
-
-~~~ .cpp
-template <typename T>
-inline quat<T, 4> rotation_quat4(const mat<T, 3>& m_);
-~~~
-
-Rotation matrix to quaternion conversion.
-
-#### Function lookat_frame3()
-
-~~~ .cpp
-template <typename T>
-inline frame<T, 3> lookat_frame3(const vec<T, 3>& eye, const vec<T, 3>& center,
+inline frame<T, 3> lookat_frame(const vec<T, 3>& eye, const vec<T, 3>& center,
     const vec<T, 3>& up, bool inv_xz = false);
 ~~~
 
 OpenGL lookat frame. Z-axis can be inverted with inv_xz.
 
-#### Function lookat_mat4()
+#### Function frustum_mat()
 
 ~~~ .cpp
 template <typename T>
-inline mat<T, 4> lookat_mat4(
-    const vec<T, 3>& eye, const vec<T, 3>& center, const vec<T, 3>& up);
-~~~
-
-OpenGL lookat matrix.
-
-#### Function frustum_mat4()
-
-~~~ .cpp
-template <typename T>
-inline mat<T, 4> frustum_mat4(T l, T r, T b, T t, T n, T f);
+inline mat<T, 4> frustum_mat(T l, T r, T b, T t, T n, T f);
 ~~~
 
 OpenGL frustum matrix.
 
-#### Function ortho_mat4()
+#### Function ortho_mat()
 
 ~~~ .cpp
 template <typename T>
-inline mat<T, 4> ortho_mat4(T l, T r, T b, T t, T n, T f);
+inline mat<T, 4> ortho_mat(T l, T r, T b, T t, T n, T f);
 ~~~
 
 OpenGL orthographic matrix.
 
-#### Function ortho2d_mat4()
+#### Function ortho2d_mat()
 
 ~~~ .cpp
 template <typename T>
-inline mat<T, 4> ortho2d_mat4(T left, T right, T bottom, T top);
+inline mat<T, 4> ortho2d_mat(T left, T right, T bottom, T top);
 ~~~
 
 OpenGL orthographic 2D matrix.
 
-#### Function ortho_mat4()
+#### Function ortho_mat()
 
 ~~~ .cpp
 template <typename T>
-inline mat<T, 4> ortho_mat4(T xmag, T ymag, T near, T far);
+inline mat<T, 4> ortho_mat(T xmag, T ymag, T near, T far);
 ~~~
 
 OpenGL orthographic matrix.
 
-#### Function perspective_mat4()
+#### Function perspective_mat()
 
 ~~~ .cpp
 template <typename T>
-inline mat<T, 4> perspective_mat4(T fovy, T aspect, T near, T far);
+inline mat<T, 4> perspective_mat(T fovy, T aspect, T near, T far);
 ~~~
 
 OpenGL perspective matrix.
 
-#### Function perspective_mat4()
+#### Function perspective_mat()
 
 ~~~ .cpp
 template <typename T>
-inline mat<T, 4> perspective_mat4(T fovy, T aspect, T near);
+inline mat<T, 4> perspective_mat(T fovy, T aspect, T near);
 ~~~
 
 OpenGL infinite perspective matrix.
 
-#### Function decompose_mat4()
+#### Function rotation_axisangle()
 
 ~~~ .cpp
 template <typename T>
-inline void decompose_mat4(const mat<T, 4>& m, vec<T, 3>& translation,
-    mat<T, 3>& rotation, vec<T, 3>& scale);
+inline pair<vec<T, 4>, T> rotation_axisangle(const quat<T, 4>& a);
+~~~
+
+Rotation affine transform.
+
+#### Function rotation_quat()
+
+~~~ .cpp
+template <typename T>
+inline quat<T, 4> rotation_quat(const vec<T, 3>& axis, T angle);
+~~~
+
+Axis-angle to quaternion conversion.
+
+#### Function rotation_quat()
+
+~~~ .cpp
+template <typename T>
+inline quat<T, 4> rotation_quat(const mat<T, 3>& m_);
+~~~
+
+Rotation matrix to quaternion conversion.
+
+#### Function decompose_frame()
+
+~~~ .cpp
+template <typename T>
+inline tuple<vec<T, 3>, mat<T, 3>, vec<T, 3>> decompose_frame(
+    const frame<T, 3>& m);
+~~~
+
+Decompose an affine matrix into translation, rotation, scale.
+Assumes there is no shear.
+
+#### Function decompose_frame()
+
+~~~ .cpp
+template <typename T>
+inline tuple<vec<T, 3>, quat<T, 4>, vec<T, 3>> decompose_frame(
+    const frame<T, 3>& m);
 ~~~
 
 Decompose an affine matrix into translation, rotation, scale.
 Assumes there is no shear and the matrix is affine.
 
-#### Function to_quat4()
+#### Function compose_frame()
 
 ~~~ .cpp
 template <typename T>
-inline quat<T, 4> to_quat4(const mat<T, 3>& a);
-~~~
-
-Convert a rotation matrix to a quaternion.
-
-#### Function decompose_mat4()
-
-~~~ .cpp
-template <typename T>
-inline void decompose_mat4(const mat<T, 4>& m, vec<T, 3>& translation,
-    quat<T, 4>& rotation, vec<T, 3>& scale);
-~~~
-
-Decompose an affine matrix into translation, rotation, scale.
-Assumes there is no shear and the matrix is affine.
-
-#### Function compose_mat4()
-
-~~~ .cpp
-template <typename T>
-inline mat<T, 4> compose_mat4(const vec<T, 3>& translation,
+inline frame<T, 4> compose_frame(const vec<T, 3>& translation,
     const mat<T, 3>& rotation, const vec<T, 3>& scale);
 ~~~
 
 Decompose an affine matrix into translation, rotation, scale.
 Assumes there is no shear and the matrix is affine.
 
-#### Function compose_mat4()
+#### Function compose_frame()
 
 ~~~ .cpp
 template <typename T>
-inline mat<T, 4> compose_mat4(const vec<T, 3>& translation,
+inline frame<T, 4> compose_frame(const vec<T, 3>& translation,
     const quat<T, 4>& rotation, const vec<T, 3>& scale);
 ~~~
 
@@ -6538,14 +6476,6 @@ Material type.
     - specular_glossiness:      Diffuse and specular material (specular-glossness in glTF).
 
 
-#### Function material_type_names()
-
-~~~ .cpp
-inline vector<pair<string, material_type>>& material_type_names();
-~~~
-
-Names for `material_type` enum.
-
 #### Struct material
 
 ~~~ .cpp
@@ -6619,8 +6549,8 @@ struct shape {
     vector<vec4f> color;
     vector<float> radius;
     vector<vec4f> tangsp;
-    int subdivision_level = 0;
-    bool subdivision_catmullclark = false;
+    int subdivision = 0;
+    bool catmullclark = false;
 }
 ~~~
 
@@ -6645,8 +6575,8 @@ May contain only one of the points/lines/triangles/quads.
     - color:      Vertex color.
     - radius:      per-vertex radius.
     - tangsp:      Vertex tangent space.
-    - subdivision_level:      Number of times to subdivide.
-    - subdivision_catmullclark:      Whether to use Catmull-Clark subdivision.
+    - subdivision:      Number of times to subdivide.
+    - catmullclark:      Whether to use Catmull-Clark subdivision.
 
 
 #### Struct shape_group
@@ -6788,14 +6718,6 @@ Keyframe type.
     - catmull_rom:      Catmull-Rom interpolation.
     - bezier:      Cubic Bezier interpolation.
 
-
-#### Function keyframe_type_names()
-
-~~~ .cpp
-inline vector<pair<string, keyframe_type>>& keyframe_type_names();
-~~~
-
-Names for `keyframe_type` enum.
 
 #### Struct animation
 
@@ -7240,10 +7162,10 @@ Test camera parameters.
     - aspect:      Aspect ratio.
 
 
-#### Function update_test_camera()
+#### Function update_test_elem()
 
 ~~~ .cpp
-void update_test_camera(
+void update_test_elem(
     const scene* scn, camera* cam, const test_camera_params& tcam);
 ~~~
 
@@ -7297,14 +7219,6 @@ Test texture type.
     - sky:      Sky (HDR).
 
 
-#### Function test_texture_names()
-
-~~~ .cpp
-inline vector<pair<string, test_texture_type>>& test_texture_names();
-~~~
-
-Name for `test_texture` enum.
-
 #### Struct test_texture_params
 
 ~~~ .cpp
@@ -7333,10 +7247,10 @@ Test texture parameters.
     - bump_scale:      Bump to normal scale.
 
 
-#### Function update_test_texture()
+#### Function update_test_elem()
 
 ~~~ .cpp
-void update_test_texture(
+void update_test_elem(
     const scene* scn, texture* txt, const test_texture_params& ttxt);
 ~~~
 
@@ -7374,14 +7288,6 @@ Test material type.
     - transparent:      Transparent (diffuse with opacity).
 
 
-#### Function test_material_names()
-
-~~~ .cpp
-inline vector<pair<string, test_material_type>>& test_material_names();
-~~~
-
-Name for `test_shape` enum.
-
 #### Struct test_material_params
 
 ~~~ .cpp
@@ -7410,10 +7316,10 @@ Test material parameters.
     - normal:      Normal map.
 
 
-#### Function update_test_material()
+#### Function update_test_elem()
 
 ~~~ .cpp
-void update_test_material(
+void update_test_elem(
     const scene* scn, material* mat, const test_material_params& tmat);
 ~~~
 
@@ -7473,14 +7379,6 @@ Test shape type.
     - beziercircle:      Bezier circle.
 
 
-#### Function test_shape_names()
-
-~~~ .cpp
-inline vector<pair<string, test_shape_type>>& test_shape_names();
-~~~
-
-Name for `test_shape` enum.
-
 #### Struct test_shape_params
 
 ~~~ .cpp
@@ -7515,10 +7413,10 @@ Test shape parameters.
     - hair_params:      Hair generation params.
 
 
-#### Function update_test_shape()
+#### Function update_test_elem()
 
 ~~~ .cpp
-void update_test_shape(
+void update_test_elem(
     const scene* scn, shape* shp, const test_shape_params& tshp);
 ~~~
 
@@ -7552,10 +7450,10 @@ Test instance parameters.
     - rotation:      Rotation in Euler angles.
 
 
-#### Function update_test_instance()
+#### Function update_test_elem()
 
 ~~~ .cpp
-void update_test_instance(
+void update_test_elem(
     const scene* scn, instance* ist, const test_instance_params& tist);
 ~~~
 
@@ -7593,10 +7491,10 @@ Test environment parameters.
     - rotation:      Rotation around y axis.
 
 
-#### Function update_test_environment()
+#### Function update_test_elem()
 
 ~~~ .cpp
-void update_test_environment(
+void update_test_elem(
     const scene* scn, environment* env, const test_environment_params& tenv);
 ~~~
 
@@ -7640,10 +7538,10 @@ Test node parameters.
     - scaling:      Scaling.
 
 
-#### Function update_test_node()
+#### Function update_test_elem()
 
 ~~~ .cpp
-void update_test_node(
+void update_test_elem(
     const scene* scn, node* nde, const test_node_params& tndr);
 ~~~
 
@@ -7687,10 +7585,10 @@ Test animation parameters.
     - nodes:      Environment.
 
 
-#### Function update_test_animation()
+#### Function update_test_elem()
 
 ~~~ .cpp
-void update_test_animation(
+void update_test_elem(
     const scene* scn, animation_group* anm, const test_animation_params& tndr);
 ~~~
 
@@ -7921,14 +7819,6 @@ Type of rendering algorithm.
     - debug_texcoord:      Debug texcoord.
 
 
-#### Function trace_shader_names()
-
-~~~ .cpp
-inline const vector<pair<string, trace_shader_type>>& trace_shader_names();
-~~~
-
-Names for `trace_shader_type` enum.
-
 #### Enum trace_rng_type
 
 ~~~ .cpp
@@ -7944,14 +7834,6 @@ Random number generator type.
     - uniform:      Uniform random numbers.
     - stratified:      Stratified random numbers.
 
-
-#### Function trace_rng_names()
-
-~~~ .cpp
-inline const vector<pair<string, trace_rng_type>>& trace_rng_names();
-~~~
-
-Names for `trace_rng_type` enum.
 
 #### Enum trace_filter_type
 
@@ -7976,19 +7858,10 @@ Filter type.
     - mitchell:      Mitchell-Netrevalli.
 
 
-#### Function trace_filter_names()
-
-~~~ .cpp
-inline const vector<pair<string, trace_filter_type>>& trace_filter_names();
-~~~
-
-Names for `trace_filter_type` enum.
-
 #### Struct trace_params
 
 ~~~ .cpp
 struct trace_params {
-    int camera_id = -1;
     int width = 360;
     int height = 360;
     int nsamples = 256;
@@ -8012,7 +7885,6 @@ struct trace_params {
 Rendering params.
 
 - Members:
-    - camera_id:      Camera id (-1 for default).
     - width:      Image width.
     - height:      Image height.
     - nsamples:      Number of samples.
@@ -8036,7 +7908,8 @@ Rendering params.
 
 ~~~ .cpp
 struct trace_pixel {
-    vec4f acc = zero4f;
+    vec3f col = zero3f;
+    float alpha = 1;
     rng_pcg32 rng = rng_pcg32();
     int i = 0, j = 0;
     int sample = 0;
@@ -8050,7 +7923,8 @@ for uniform and stratified sequences. The members are not part of the
 the public API.
 
 - Members:
-    - acc:      Accumulated radiance and coverage.
+    - col:      Accumulated radiance.
+    - alpha:      Accumulated coverage.
     - rng:      Random number state.
     - i:      Pixel coordinates.
     - sample:      Number of samples computed.
@@ -8160,6 +8034,382 @@ void trace_async_stop(vector<std::thread>& threads, bool& stop_flag);
 ~~~
 
 Stop the asynchronous renderer.
+
+### Type reflection
+
+#### Function refl_enum_names()
+
+~~~ .cpp
+template <typename T>
+inline const vector<pair<string, T>>& refl_enum_names();
+~~~
+
+Names of enum values.
+
+#### Function refl_enum_names()
+
+~~~ .cpp
+template <typename T>
+inline const vector<pair<string, T>>& refl_enum_names(T v);
+~~~
+
+Names of enum values.
+
+#### Function refl_enum_names<material_type\>()
+
+~~~ .cpp
+template <>
+inline const vector<pair<string, material_type>>&
+refl_enum_names<material_type>();
+~~~
+
+Names of enum values.
+
+#### Function refl_enum_names<keyframe_type\>()
+
+~~~ .cpp
+template <>
+inline const vector<pair<string, keyframe_type>>&
+refl_enum_names<keyframe_type>();
+~~~
+
+Names of enum values.
+
+#### Function refl_enum_names<test_texture_type\>()
+
+~~~ .cpp
+template <>
+inline const vector<pair<string, test_texture_type>>&
+refl_enum_names<test_texture_type>();
+~~~
+
+Names of enum values.
+
+#### Function refl_enum_names<test_material_type\>()
+
+~~~ .cpp
+template <>
+inline const vector<pair<string, test_material_type>>&
+refl_enum_names<test_material_type>();
+~~~
+
+Names of enum values.
+
+#### Function refl_enum_names<test_shape_type\>()
+
+~~~ .cpp
+template <>
+inline const vector<pair<string, test_shape_type>>&
+refl_enum_names<test_shape_type>();
+~~~
+
+Names of enum values.
+
+#### Function refl_enum_names<trace_shader_type\>()
+
+~~~ .cpp
+template <>
+inline const vector<pair<string, trace_shader_type>>&
+refl_enum_names<trace_shader_type>();
+~~~
+
+Names of enum values.
+
+#### Function refl_enum_names<trace_rng_type\>()
+
+~~~ .cpp
+template <>
+inline const vector<pair<string, trace_rng_type>>&
+refl_enum_names<trace_rng_type>();
+~~~
+
+Names of enum values.
+
+#### Function refl_enum_names<trace_filter_type\>()
+
+~~~ .cpp
+template <>
+inline const vector<pair<string, trace_filter_type>>&
+refl_enum_names<trace_filter_type>();
+~~~
+
+Names of enum values.
+
+#### Function operator<<()
+
+~~~ .cpp
+template <typename T,
+    typename std::enable_if<std::is_enum<T>::value, int>::type = 0>
+inline ostream& operator<<(ostream& os, const T& a);
+~~~
+
+Stream read.
+
+#### Function operator\>\>()
+
+~~~ .cpp
+template <typename T,
+    typename std::enable_if<std::is_enum<T>::value, int>::type = 0>
+inline istream& operator>>(istream& is, T& a);
+~~~
+
+Stream read.
+
+#### Enum refl_sem_type
+
+~~~ .cpp
+enum struct refl_sem_type {
+    value = 0,
+    name = 1,
+    path = 2,
+    object = 3,
+    reference = 4,
+    color = 5,
+}
+~~~
+
+Types of variable semantic
+
+- Values:
+    - value:      Generic value.
+    - name:      Name.
+    - path:      Path.
+    - object:      Object.
+    - reference:      Reference.
+    - color:      Color.
+
+
+#### Struct refl_sem
+
+~~~ .cpp
+struct refl_sem {
+    refl_sem_type type = refl_sem_type::value;
+    float min = 0;
+    float max = 0;
+}
+~~~
+
+Semantic for reflected values
+
+- Members:
+    - type:      Type.
+    - min:      Minimum value for numeric types.
+    - max:      Maximum value for numeric types.
+
+
+#### Function refl_visit_sem()
+
+~~~ .cpp
+template <typename Visitor>
+inline void refl_visit_sem(texture& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function refl_visit_sem()
+
+~~~ .cpp
+template <typename Visitor>
+inline void refl_visit_sem(texture_info& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function refl_visit_sem()
+
+~~~ .cpp
+template <typename Visitor>
+inline void refl_visit_sem(material& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function refl_visit_sem()
+
+~~~ .cpp
+template <typename Visitor>
+inline void refl_visit_sem(shape& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function refl_visit_sem()
+
+~~~ .cpp
+template <typename Visitor>
+inline void refl_visit_sem(shape_group& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function refl_visit_sem()
+
+~~~ .cpp
+template <typename Visitor>
+inline void refl_visit_sem(instance& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function refl_visit_sem()
+
+~~~ .cpp
+template <typename Visitor>
+inline void refl_visit_sem(camera& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function refl_visit_sem()
+
+~~~ .cpp
+template <typename Visitor>
+inline void refl_visit_sem(environment& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function refl_visit_sem()
+
+~~~ .cpp
+template <typename Visitor>
+inline void refl_visit_sem(node& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function refl_visit_sem()
+
+~~~ .cpp
+template <typename Visitor>
+inline void refl_visit_sem(animation& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function refl_visit_sem()
+
+~~~ .cpp
+template <typename Visitor>
+inline void refl_visit_sem(animation_group& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function refl_visit_sem()
+
+~~~ .cpp
+template <typename Visitor>
+inline void refl_visit_sem(scene& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function refl_visit_sem()
+
+~~~ .cpp
+template <typename Visitor>
+inline void refl_visit_sem(test_camera_params& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function refl_visit_sem()
+
+~~~ .cpp
+template <typename Visitor>
+inline void refl_visit_sem(test_texture_params& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function refl_visit_sem()
+
+~~~ .cpp
+template <typename Visitor>
+inline void refl_visit_sem(test_material_params& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function refl_visit_sem()
+
+~~~ .cpp
+template <typename Visitor>
+inline void refl_visit_sem(test_shape_params& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function refl_visit_sem()
+
+~~~ .cpp
+template <typename Visitor>
+inline void refl_visit_sem(test_instance_params& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function refl_visit_sem()
+
+~~~ .cpp
+template <typename Visitor>
+inline void refl_visit_sem(test_environment_params& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function refl_visit_sem()
+
+~~~ .cpp
+template <typename Visitor>
+inline void refl_visit_sem(test_node_params& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function refl_visit_sem()
+
+~~~ .cpp
+template <typename Visitor>
+inline void refl_visit_sem(test_animation_params& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function refl_visit_sem()
+
+~~~ .cpp
+template <typename Visitor>
+inline void refl_visit_sem(test_scene_params& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function refl_visit_sem()
+
+~~~ .cpp
+template <typename T, typename Visitor>
+inline void refl_visit_sem(T*& val, Visitor&& visitor);
+~~~
+
+Visit pointer elements.
+
+#### Struct print_scene_visitor
+
+~~~ .cpp
+struct print_scene_visitor {
+~~~
+
+Print scene visitor
+
+#### Function print_info_visit()
+
+~~~ .cpp
+inline void print_info_visit(const scene* scn);
+~~~
+
+Print a scene information using visitors.
 
 ### Wavefront OBJ
 
@@ -9954,8 +10204,7 @@ Returns the usage string.
 
 ~~~ .cpp
 inline bool parse_flag(cmdline_parser& parser, const string& name,
-    const string& flag, const string& help, bool def = false,
-    bool req = false);
+    const string& flag, const string& help, bool def = false, bool req = false);
 ~~~
 
 Pase a flag from the command line.
@@ -10257,6 +10506,8 @@ void gl_read_imagef(float* pixels, int w, int h, int nc);
 ~~~
 
 Reads an image from the the framebuffer.
+
+### OpenGL textures
 
 #### Struct gl_texture
 
@@ -11362,7 +11613,6 @@ Disables vertex skinning.
 
 ~~~ .cpp
 struct gl_stdsurface_params {
-    int camera_id = -1;
     int width = 360;
     int height = 360;
     float exposure = 0;
@@ -11385,7 +11635,6 @@ struct gl_stdsurface_params {
 Params for stdsurface drawing.
 
 - Members:
-    - camera_id:      Camera id (-1 for deafult).
     - width:      Image width.
     - height:      Image height.
     - exposure:      Image exposure.
@@ -11538,14 +11787,6 @@ vec2i get_framebuffer_size(gl_window* win);
 ~~~
 
 Framebuffer size
-
-#### Function get_widget_size()
-
-~~~ .cpp
-inline int get_widget_size(gl_window* win);
-~~~
-
-Widgets
 
 #### Function get_mouse_button()
 
@@ -11793,7 +12034,7 @@ Value widget.
 
 ~~~ .cpp
 inline bool draw_value_widget(gl_window* win, const string& lbl,
-    frame<float, 3>& val, float min = -1, float max = 1, float incr = 1);
+    frame<float, 3>& val, float min = -10, float max = 10, float incr = 0.01f);
 ~~~
 
 Value widget.
@@ -11802,8 +12043,8 @@ Value widget.
 
 ~~~ .cpp
 template <typename T, int N>
-inline bool draw_value_widget(
-    gl_window* win, const string& lbl, quat<T, N>& val, float incr = 1);
+inline bool draw_value_widget(gl_window* win, const string& lbl,
+    quat<T, N>& val, float min = -1, float max = 1, float incr = 0.01f);
 ~~~
 
 Value widget.
@@ -12050,6 +12291,14 @@ void draw_groupid_widget_begin(gl_window* win, void* gid);
 
 Group ids widget.
 
+#### Function draw_groupid_widget_begin()
+
+~~~ .cpp
+void draw_groupid_widget_begin(gl_window* win, const char* gid);
+~~~
+
+Group ids widget.
+
 #### Function draw_groupid_widget_end()
 
 ~~~ .cpp
@@ -12090,7 +12339,7 @@ Image inspection widgets.
 
 ~~~ .cpp
 inline bool draw_camera_widget(
-    gl_window* win, const string& lbl, scene* scn, camera* view, int& cam_idx);
+    gl_window* win, const string& lbl, camera*& cam, scene* scn, camera* view);
 ~~~
 
 Draws a widget that can selected the camera.
