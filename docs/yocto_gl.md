@@ -592,371 +592,7 @@ and bug fixes are not reported here.
 
 ## API Documentation
 
-### Imported math functions
-
-#### Import sqrt
-
-~~~ .cpp
-using std::sqrt;
-~~~
-
-Square root.
-
-#### Import pow
-
-~~~ .cpp
-using std::pow;
-~~~
-
-Power.
-
-#### Import exp
-
-~~~ .cpp
-using std::exp;
-~~~
-
-Exponential.
-
-#### Import log
-
-~~~ .cpp
-using std::log;
-~~~
-
-Logarithm.
-
-#### Import log10
-
-~~~ .cpp
-using std::log10;
-~~~
-
-Logarithm.
-
-#### Import sin
-
-~~~ .cpp
-using std::sin;
-~~~
-
-Sine.
-
-#### Import cos
-
-~~~ .cpp
-using std::cos;
-~~~
-
-Cosine.
-
-#### Import tan
-
-~~~ .cpp
-using std::tan;
-~~~
-
-Tangent.
-
-#### Import asin
-
-~~~ .cpp
-using std::asin;
-~~~
-
-Arc sine.
-
-#### Import acos
-
-~~~ .cpp
-using std::acos;
-~~~
-
-Arc cosine.
-
-#### Import atan
-
-~~~ .cpp
-using std::atan;
-~~~
-
-Arc tangent.
-
-#### Import atan2
-
-~~~ .cpp
-using std::atan2;
-~~~
-
-Arc tangent.
-
-#### Import abs
-
-~~~ .cpp
-using std::abs;
-~~~
-
-Absolute value.
-
-#### Import fabs
-
-~~~ .cpp
-using std::fabs;
-~~~
-
-Floating point absolute value.
-
-#### Import floor
-
-~~~ .cpp
-using std::floor;
-~~~
-
-Floor.
-
-#### Import ceil
-
-~~~ .cpp
-using std::ceil;
-~~~
-
-Ceil.
-
-#### Import round
-
-~~~ .cpp
-using std::round;
-~~~
-
-Round.
-
-#### Import isfinite
-
-~~~ .cpp
-using std::isfinite;
-~~~
-
-Check if a value is finite.
-
-### Imported containers and related functions
-
-#### Import string
-
-~~~ .cpp
-using std::string;
-~~~
-
-String.
-
-#### Import vector
-
-~~~ .cpp
-using std::vector;
-~~~
-
-Vector.
-
-#### Import array
-
-~~~ .cpp
-using std::array;
-~~~
-
-Array.
-
-#### Import map
-
-~~~ .cpp
-using std::map;
-~~~
-
-Map.
-
-#### Import set
-
-~~~ .cpp
-using std::set;
-~~~
-
-Set.
-
-#### Import unordered_map
-
-~~~ .cpp
-using std::unordered_map;
-~~~
-
-Unordered map.
-
-#### Import unordered_set
-
-~~~ .cpp
-using std::unordered_set;
-~~~
-
-Unordered set.
-
-#### Import pair
-
-~~~ .cpp
-using std::pair;
-~~~
-
-Pair.
-
-#### Import tuple
-
-~~~ .cpp
-using std::tuple;
-~~~
-
-Tuple.
-
-#### Import unique_ptr
-
-~~~ .cpp
-using std::unique_ptr;
-~~~
-
-Unique pointer.
-
-#### Import function
-
-~~~ .cpp
-using std::function;
-~~~
-
-Function.
-
-#### Namespace using std::string_literals;
-
-String literals.
-
-#### Import numeric_limits
-
-~~~ .cpp
-using std::numeric_limits;
-~~~
-
-Numeric limits.
-
-#### Import initializer_list
-
-~~~ .cpp
-using std::initializer_list;
-~~~
-
-Initializer list.
-
-#### Import ostream
-
-~~~ .cpp
-using std::ostream;
-~~~
-
-Output stream.
-
-#### Import istream
-
-~~~ .cpp
-using std::istream;
-~~~
-
-Input stream.
-
-#### Import stringstream
-
-~~~ .cpp
-using std::stringstream;
-~~~
-
-String stream.
-
-#### Import fstream
-
-~~~ .cpp
-using std::fstream;
-~~~
-
-File stream.
-
-#### Import runtime_error
-
-~~~ .cpp
-using std::runtime_error;
-~~~
-
-Runtime error.
-
-#### Import exception
-
-~~~ .cpp
-using std::exception;
-~~~
-
-Exception.
-
-#### Import ios_base
-
-~~~ .cpp
-using std::ios_base;
-~~~
-
-Ios base.
-
-#### Import find
-
-~~~ .cpp
-using std::find;
-~~~
-
-Find algorithm.
-
-#### Import swap
-
-~~~ .cpp
-using std::swap;
-~~~
-
-Swap algorithm.
-
-#### Import getline
-
-~~~ .cpp
-using std::getline;
-~~~
-
-Get line from streams.
-
-#### Import to_string
-
-~~~ .cpp
-using std::to_string;
-~~~
-
-Convert to string.
-
-#### Import cout
-
-~~~ .cpp
-using std::cout;
-~~~
-
-Cout object for printing.
-
-#### Import tie
-
-~~~ .cpp
-using std::tie;
-~~~
-
-Tie function for tuple usage.
-
-#### Namespace using std::string_literals;::using std::literals;
-
-Makes literals available
-
-### Basic typedefs, math constants and functions
+### Basic math constants and functions
 
 #### Typedef byte
 
@@ -993,7 +629,7 @@ Pi (double).
 #### Constant flt_max
 
 ~~~ .cpp
-const auto flt_max = numeric_limits<float>::max();
+const auto flt_max = std::numeric_limits<float>::max();
 ~~~
 
 Shortcat for float max value.
@@ -1001,7 +637,7 @@ Shortcat for float max value.
 #### Constant flt_min
 
 ~~~ .cpp
-const auto flt_min = numeric_limits<float>::lowest();
+const auto flt_min = std::numeric_limits<float>::lowest();
 ~~~
 
 Shortcat for float min value.
@@ -1009,7 +645,7 @@ Shortcat for float min value.
 #### Constant flt_eps
 
 ~~~ .cpp
-const auto flt_eps = numeric_limits<float>::epsilon();
+const auto flt_eps = std::numeric_limits<float>::epsilon();
 ~~~
 
 Shortcat for float epsilon.
@@ -1017,7 +653,7 @@ Shortcat for float epsilon.
 #### Constant int_max
 
 ~~~ .cpp
-const auto int_max = numeric_limits<int>::max();
+const auto int_max = std::numeric_limits<int>::max();
 ~~~
 
 Shortcat for int max value.
@@ -1025,10 +661,136 @@ Shortcat for int max value.
 #### Constant int_min
 
 ~~~ .cpp
-const auto int_min = numeric_limits<int>::min();
+const auto int_min = std::numeric_limits<int>::min();
 ~~~
 
 Shortcat for int min value.
+
+#### Function sqrt()
+
+~~~ .cpp
+template <typename T>
+inline T sqrt(T a);
+~~~
+
+Square root.
+
+#### Function pow()
+
+~~~ .cpp
+template <typename T, typename T1>
+inline auto pow(T a, T1 b);
+~~~
+
+Power.
+
+#### Function exp()
+
+~~~ .cpp
+template <typename T>
+inline T exp(T a);
+~~~
+
+Exponential.
+
+#### Function log()
+
+~~~ .cpp
+template <typename T>
+inline T log(T a);
+~~~
+
+Logarithm.
+
+#### Function sin()
+
+~~~ .cpp
+template <typename T>
+inline T sin(T a);
+~~~
+
+Sine.
+
+#### Function cos()
+
+~~~ .cpp
+template <typename T>
+inline T cos(T a);
+~~~
+
+Cosine.
+
+#### Function tan()
+
+~~~ .cpp
+template <typename T>
+inline T tan(T a);
+~~~
+
+Tangent.
+
+#### Function asin()
+
+~~~ .cpp
+template <typename T>
+inline T asin(T a);
+~~~
+
+Arc sine.
+
+#### Function acos()
+
+~~~ .cpp
+template <typename T>
+inline T acos(T a);
+~~~
+
+Arc cosine.
+
+#### Function atan()
+
+~~~ .cpp
+template <typename T>
+inline T atan(T a);
+~~~
+
+Arc tangent.
+
+#### Function atan2()
+
+~~~ .cpp
+template <typename T, typename T1>
+inline auto atan2(T a, T1 b);
+~~~
+
+Arc tangent.
+
+#### Function abs()
+
+~~~ .cpp
+template <typename T>
+inline T abs(T a);
+~~~
+
+Absolute value.
+
+#### Function floor()
+
+~~~ .cpp
+template <typename T>
+inline T floor(T a);
+~~~
+
+Floor.
+
+#### Function round()
+
+~~~ .cpp
+template <typename T>
+inline T round(T a);
+~~~
+
+Round.
 
 #### Function min()
 
@@ -1043,7 +805,7 @@ Safe minimum value.
 
 ~~~ .cpp
 template <typename T>
-inline T min(initializer_list<T> vs);
+inline T min(std::initializer_list<T> vs);
 ~~~
 
 Safe minimum value.
@@ -1061,7 +823,7 @@ Safe maximum value.
 
 ~~~ .cpp
 template <typename T>
-inline T max(initializer_list<T> vs);
+inline T max(std::initializer_list<T> vs);
 ~~~
 
 Safe maximum value.
@@ -1126,6 +888,14 @@ inline float byte_to_float(byte x);
 ~~~
 
 Safe byte to float conversion.
+
+#### Namespace using std::string_literals;
+
+String literals.
+
+#### Namespace using std::string_literals;::using std::literals;
+
+Makes literals available
 
 ### Fixed-size vectors
 
@@ -2097,7 +1867,7 @@ Element-wise byte to float conversion.
 
 ~~~ .cpp
 template <typename T, int N>
-inline ostream& operator<<(ostream& os, const vec<T, N>& a);
+inline std::ostream& operator<<(std::ostream& os, const vec<T, N>& a);
 ~~~
 
 Stream write.
@@ -2106,7 +1876,7 @@ Stream write.
 
 ~~~ .cpp
 template <typename T, int N>
-inline istream& operator>>(istream& is, vec<T, N>& a);
+inline std::istream& operator>>(std::istream& is, vec<T, N>& a);
 ~~~
 
 Stream read.
@@ -2714,7 +2484,7 @@ Matrix inverse.
 
 ~~~ .cpp
 template <typename T, int N>
-inline ostream& operator<<(ostream& os, const mat<T, N>& a);
+inline std::ostream& operator<<(std::ostream& os, const mat<T, N>& a);
 ~~~
 
 Stream write.
@@ -2723,7 +2493,7 @@ Stream write.
 
 ~~~ .cpp
 template <typename T, int N>
-inline istream& operator>>(istream& is, mat<T, N>& a);
+inline std::istream& operator>>(std::istream& is, mat<T, N>& a);
 ~~~
 
 Stream read.
@@ -2959,7 +2729,7 @@ Frame inverse, equivalent to rigid affine inverse.
 
 ~~~ .cpp
 template <typename T, int N>
-inline ostream& operator<<(ostream& os, const frame<T, N>& a);
+inline std::ostream& operator<<(std::ostream& os, const frame<T, N>& a);
 ~~~
 
 Stream write.
@@ -2968,7 +2738,7 @@ Stream write.
 
 ~~~ .cpp
 template <typename T, int N>
-inline istream& operator>>(istream& is, frame<T, N>& a);
+inline std::istream& operator>>(std::istream& is, frame<T, N>& a);
 ~~~
 
 Stream read.
@@ -3200,7 +2970,7 @@ Quaternion spherical linear interpolation.
 
 ~~~ .cpp
 template <typename T, int N>
-inline ostream& operator<<(ostream& os, const quat<T, N>& a);
+inline std::ostream& operator<<(std::ostream& os, const quat<T, N>& a);
 ~~~
 
 Stream write.
@@ -3209,7 +2979,7 @@ Stream write.
 
 ~~~ .cpp
 template <typename T, int N>
-inline istream& operator>>(istream& is, quat<T, N>& a);
+inline std::istream& operator>>(std::istream& is, quat<T, N>& a);
 ~~~
 
 Stream read.
@@ -3471,7 +3241,7 @@ Initialize a bonding box from a list of points.
 
 ~~~ .cpp
 template <typename T, int N>
-inline bbox<T, N> make_bbox(const initializer_list<vec<T, N>>& v);
+inline bbox<T, N> make_bbox(const std::initializer_list<vec<T, N>>& v);
 ~~~
 
 Initialize a bonding box from a list of points.
@@ -3480,7 +3250,7 @@ Initialize a bonding box from a list of points.
 
 ~~~ .cpp
 template <typename T>
-inline array<vec<T, 2>, 4> bbox_corners(const bbox<T, 2>& a);
+inline std::array<vec<T, 2>, 4> bbox_corners(const bbox<T, 2>& a);
 ~~~
 
 Computes the corners of a bounding boxes.
@@ -3489,7 +3259,7 @@ Computes the corners of a bounding boxes.
 
 ~~~ .cpp
 template <typename T>
-inline array<vec<T, 3>, 8> bbox_corners(const bbox<T, 3>& a);
+inline std::array<vec<T, 3>, 8> bbox_corners(const bbox<T, 3>& a);
 ~~~
 
 Computes the corners of a bounding boxes.
@@ -3498,7 +3268,7 @@ Computes the corners of a bounding boxes.
 
 ~~~ .cpp
 template <typename T, int N>
-inline ostream& operator<<(ostream& os, const bbox<T, N>& a);
+inline std::ostream& operator<<(std::ostream& os, const bbox<T, N>& a);
 ~~~
 
 Stream write.
@@ -3507,7 +3277,7 @@ Stream write.
 
 ~~~ .cpp
 template <typename T, int N>
-inline istream& operator>>(istream& is, bbox<T, N>& a);
+inline std::istream& operator>>(std::istream& is, bbox<T, N>& a);
 ~~~
 
 Stream read.
@@ -3639,7 +3409,7 @@ Construct a ray segment using a default epsilon.
 
 ~~~ .cpp
 template <typename T, int N>
-inline ostream& operator<<(ostream& os, const ray<T, N>& a);
+inline std::ostream& operator<<(std::ostream& os, const ray<T, N>& a);
 ~~~
 
 Stream write.
@@ -3648,7 +3418,7 @@ Stream write.
 
 ~~~ .cpp
 template <typename T, int N>
-inline istream& operator>>(istream& is, ray<T, N>& a);
+inline std::istream& operator>>(std::istream& is, ray<T, N>& a);
 ~~~
 
 Stream read.
@@ -3974,7 +3744,7 @@ OpenGL infinite perspective matrix.
 
 ~~~ .cpp
 template <typename T>
-inline pair<vec<T, 4>, T> rotation_axisangle(const quat<T, 4>& a);
+inline std::pair<vec<T, 4>, T> rotation_axisangle(const quat<T, 4>& a);
 ~~~
 
 Rotation affine transform.
@@ -4001,7 +3771,7 @@ Rotation matrix to quaternion conversion.
 
 ~~~ .cpp
 template <typename T>
-inline tuple<vec<T, 3>, mat<T, 3>, vec<T, 3>> decompose_frame(
+inline std::tuple<vec<T, 3>, mat<T, 3>, vec<T, 3>> decompose_frame(
     const frame<T, 3>& m);
 ~~~
 
@@ -4012,7 +3782,7 @@ Assumes there is no shear.
 
 ~~~ .cpp
 template <typename T>
-inline tuple<vec<T, 3>, quat<T, 4>, vec<T, 3>> decompose_frame(
+inline std::tuple<vec<T, 3>, quat<T, 4>, vec<T, 3>> decompose_frame(
     const frame<T, 3>& m);
 ~~~
 
@@ -4223,7 +3993,7 @@ Random shuffle of a sequence.
 
 ~~~ .cpp
 template <typename T>
-inline void rng_shuffle(rng_pcg32& rng, vector<T>& vals);
+inline void rng_shuffle(rng_pcg32& rng, std::vector<T>& vals);
 ~~~
 
 Random shuffle of a sequence.
@@ -4387,7 +4157,7 @@ Pdf for uniform index sampling.
 #### Function sample_discrete()
 
 ~~~ .cpp
-inline int sample_discrete(const vector<float>& cdf, float r);
+inline int sample_discrete(const std::vector<float>& cdf, float r);
 ~~~
 
 Sample a discrete distribution represented by its cdf.
@@ -4395,7 +4165,7 @@ Sample a discrete distribution represented by its cdf.
 #### Function sample_discrete_pdf()
 
 ~~~ .cpp
-inline float sample_discrete_pdf(const vector<float>& cdf, int idx);
+inline float sample_discrete_pdf(const std::vector<float>& cdf, int idx);
 ~~~
 
 Pdf for uniform discrete distribution sampling.
@@ -4536,7 +4306,7 @@ Implemenetation of Python-like enumerate. Create it with the function
 
 ~~~ .cpp
 template <typename T>
-inline enumerate_generator<const T> enumerate(const vector<T>& vv);
+inline enumerate_generator<const T> enumerate(const std::vector<T>& vv);
 ~~~
 
 Python-like enumerate.
@@ -4545,7 +4315,7 @@ Python-like enumerate.
 
 ~~~ .cpp
 template <typename T>
-inline enumerate_generator<T> enumerate(vector<T>& vv);
+inline enumerate_generator<T> enumerate(std::vector<T>& vv);
 ~~~
 
 Python-like enumerate.
@@ -4556,7 +4326,7 @@ Python-like enumerate.
 
 ~~~ .cpp
 template <typename T>
-inline void append(vector<T>& v, const vector<T>& vv);
+inline void append(std::vector<T>& v, const std::vector<T>& vv);
 ~~~
 
 Append a vector to a vector.
@@ -4565,7 +4335,7 @@ Append a vector to a vector.
 
 ~~~ .cpp
 template <typename T>
-inline vector<T> join(const vector<T>& a, const vector<T>& b);
+inline std::vector<T> join(const std::vector<T>& a, const std::vector<T>& b);
 ~~~
 
 Append two vectors.
@@ -4574,7 +4344,7 @@ Append two vectors.
 
 ~~~ .cpp
 template <typename K, typename V>
-inline K get_key(const std::vector<pair<K, V>>& kvs, const V& v);
+inline K get_key(const std::vector<std::pair<K, V>>& kvs, const V& v);
 ~~~
 
 Get a key from a list of key-value pairs and its value.
@@ -4583,7 +4353,7 @@ Get a key from a list of key-value pairs and its value.
 
 ~~~ .cpp
 template <typename K, typename V>
-inline V get_value(const std::vector<pair<K, V>>& kvs, const K& k);
+inline V get_value(const std::vector<std::pair<K, V>>& kvs, const K& k);
 ~~~
 
 Get a value from a list of key-value pairs and its key.
@@ -4592,7 +4362,7 @@ Get a value from a list of key-value pairs and its key.
 
 ~~~ .cpp
 template <typename T>
-inline int find(const vector<T>& v, const T& vv);
+inline int find(const std::vector<T>& v, const T& vv);
 ~~~
 
 Find the position of a value in an array. Returns -1 if not found.
@@ -4602,7 +4372,7 @@ Wrapper for std::find().
 
 ~~~ .cpp
 template <typename T>
-inline int upper_bound(const vector<T>& v, const T& vv);
+inline int upper_bound(const std::vector<T>& v, const T& vv);
 ~~~
 
 Find the first array value that is greater than the argument.
@@ -4612,7 +4382,7 @@ Assumes that the array is sorted. Wrapper for std::upper_bound().
 
 ~~~ .cpp
 template <typename T>
-inline int lower_bound(const vector<T>& v, const T& vv);
+inline int lower_bound(const std::vector<T>& v, const T& vv);
 ~~~
 
 Find the first array value smaller that is greater or equal to the argument.
@@ -4622,7 +4392,7 @@ Assumes that the array is sorted. Wrapper for std::lower_bound().
 
 ~~~ .cpp
 template <typename T>
-inline bool contains(const vector<T>& v, const T& vv);
+inline bool contains(const std::vector<T>& v, const T& vv);
 ~~~
 
 Checks if a containers contains a value.
@@ -4631,7 +4401,7 @@ Checks if a containers contains a value.
 
 ~~~ .cpp
 template <typename K, typename V>
-inline bool contains(const map<K, V>& v, const K& vv);
+inline bool contains(const std::map<K, V>& v, const K& vv);
 ~~~
 
 Checks if a containers contains a value.
@@ -4640,7 +4410,7 @@ Checks if a containers contains a value.
 
 ~~~ .cpp
 template <typename K, typename V>
-inline bool contains(const unordered_map<K, V>& v, const K& vv);
+inline bool contains(const std::unordered_map<K, V>& v, const K& vv);
 ~~~
 
 Checks if a containers contains a value.
@@ -4649,7 +4419,7 @@ Checks if a containers contains a value.
 
 ~~~ .cpp
 template <typename K, typename V>
-inline bool contains(const set<K, V>& v, const K& vv);
+inline bool contains(const std::set<K, V>& v, const K& vv);
 ~~~
 
 Checks if a containers contains a value.
@@ -4658,7 +4428,7 @@ Checks if a containers contains a value.
 
 ~~~ .cpp
 template <typename K, typename V>
-inline bool contains(const unordered_set<K, V>& v, const K& vv);
+inline bool contains(const std::unordered_set<K, V>& v, const K& vv);
 ~~~
 
 Checks if a containers contains a value.
@@ -4667,7 +4437,7 @@ Checks if a containers contains a value.
 
 ~~~ .cpp
 template <typename K, typename V, typename K1>
-inline bool contains(const unordered_map<K, V>& v, const K1& vv);
+inline bool contains(const std::unordered_map<K, V>& v, const K1& vv);
 ~~~
 
 Checks if a containers contains a value.
@@ -4676,7 +4446,7 @@ Checks if a containers contains a value.
 
 ~~~ .cpp
 template <typename K, typename V, typename K1>
-inline bool contains(const unordered_set<K, V>& v, const K1& vv);
+inline bool contains(const std::unordered_set<K, V>& v, const K1& vv);
 ~~~
 
 Checks if a containers contains a value.
@@ -4687,7 +4457,7 @@ Checks if a containers contains a value.
 
 ~~~ .cpp
 template <typename T>
-inline const vector<pair<string, T>>& enum_names();
+inline const std::vector<std::pair<std::string, T>>& enum_names();
 ~~~
 
 Names of enum values. Specialized by enums that support reflection.
@@ -4696,7 +4466,7 @@ Names of enum values. Specialized by enums that support reflection.
 
 ~~~ .cpp
 template <typename T>
-inline const vector<pair<string, T>>& enum_names(T v);
+inline const std::vector<std::pair<std::string, T>>& enum_names(T v);
 ~~~
 
 Names of enum values.
@@ -4706,7 +4476,7 @@ Names of enum values.
 ~~~ .cpp
 template <typename T,
     typename std::enable_if<std::is_enum<T>::value, int>::type = 0>
-inline ostream& operator<<(ostream& os, const T& a);
+inline std::ostream& operator<<(std::ostream& os, const T& a);
 ~~~
 
 Stream write.
@@ -4716,7 +4486,7 @@ Stream write.
 ~~~ .cpp
 template <typename T,
     typename std::enable_if<std::is_enum<T>::value, int>::type = 0>
-inline istream& operator>>(istream& is, T& a);
+inline std::istream& operator>>(std::istream& is, T& a);
 ~~~
 
 Stream read.
@@ -4798,7 +4568,7 @@ Visit pointer elements.
 ~~~ .cpp
 template <typename T,
     typename std::enable_if<has_visitor<T>::value, int>::type = 0>
-inline ostream& operator<<(ostream& os, const T& a);
+inline std::ostream& operator<<(std::ostream& os, const T& a);
 ~~~
 
 Stream write.
@@ -4868,7 +4638,7 @@ tetrahedron volume
 #### Function triangle_tangents_fromuv()
 
 ~~~ .cpp
-inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& v0,
+inline std::pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& v0,
     const vec3f& v1, const vec3f& v2, const vec2f& uv0, const vec2f& uv1,
     const vec2f& uv2);
 ~~~
@@ -4882,7 +4652,7 @@ https://gist.github.com/aras-p/2843984
 
 ~~~ .cpp
 template <typename T>
-inline T interpolate_point(const vector<T>& vals, int p);
+inline T interpolate_point(const std::vector<T>& vals, int p);
 ~~~
 
 Copies of point value. Here only for completeness.
@@ -4900,7 +4670,7 @@ Interpolates values over a line parametrized from a to b by u. Same as lerp.
 
 ~~~ .cpp
 template <typename T, typename T1>
-inline T interpolate_line(const vector<T>& vals, const vec2i& l, T1 u);
+inline T interpolate_line(const std::vector<T>& vals, const vec2i& l, T1 u);
 ~~~
 
 Interpolates values over lines parametrized from a to b by u. Same as lerp.
@@ -4921,7 +4691,7 @@ Interpolates values over a triangle parametrized by u and v along the
 ~~~ .cpp
 template <typename T, typename T1>
 inline T interpolate_triangle(
-    const vector<T>& vals, const vec3i& t, const vec<T1, 2>& uv);
+    const std::vector<T>& vals, const vec3i& t, const vec<T1, 2>& uv);
 ~~~
 
 Interpolates values over triangles parametrized by u and v along the
@@ -4943,7 +4713,7 @@ Interpolates values over a quad parametrized by u and v along the
 ~~~ .cpp
 template <typename T, typename T1>
 inline T interpolate_quad(
-    const vector<T>& vals, const vec4i& t, const vec<T1, 2>& uv);
+    const std::vector<T>& vals, const vec4i& t, const vec<T1, 2>& uv);
 ~~~
 
 Interpolates values over quads parametrized by u and v along the
@@ -4981,7 +4751,7 @@ Interpolates values along a cubic Bezier segment parametrized by u.
 
 ~~~ .cpp
 template <typename T, typename T1>
-inline T interpolate_bezier(const vector<T>& vals, const vec4i& b, T1 u);
+inline T interpolate_bezier(const std::vector<T>& vals, const vec4i& b, T1 u);
 ~~~
 
 Interpolates values along cubic Bezier segments parametrized by u.
@@ -5001,7 +4771,7 @@ Computes the derivative of a cubic Bezier segment parametrized by u.
 ~~~ .cpp
 template <typename T, typename T1>
 inline T interpolate_bezier_derivative(
-    const vector<T>& vals, const vec4i& b, T1 u);
+    const std::vector<T>& vals, const vec4i& b, T1 u);
 ~~~
 
 Computes the derivative of a cubic Bezier segments parametrized by u.
@@ -5013,7 +4783,7 @@ Computes the derivative of a cubic Bezier segments parametrized by u.
 ~~~ .cpp
 template <typename T>
 inline T eval_keyframed_step(
-    const vector<float>& times, const vector<T>& vals, float time);
+    const std::vector<float>& times, const std::vector<T>& vals, float time);
 ~~~
 
 Evalautes a keyframed value using step interpolation.
@@ -5023,7 +4793,7 @@ Evalautes a keyframed value using step interpolation.
 ~~~ .cpp
 template <typename T>
 inline T eval_keyframed_linear(
-    const vector<float>& times, const vector<T>& vals, float time);
+    const std::vector<float>& times, const std::vector<T>& vals, float time);
 ~~~
 
 Evalautes a keyframed value using linear interpolation.
@@ -5033,7 +4803,7 @@ Evalautes a keyframed value using linear interpolation.
 ~~~ .cpp
 template <typename T>
 inline T eval_keyframed_bezier(
-    const vector<float>& times, const vector<T>& vals, float time);
+    const std::vector<float>& times, const std::vector<T>& vals, float time);
 ~~~
 
 Evalautes a keyframed value using Bezier interpolation.
@@ -5043,9 +4813,9 @@ Evalautes a keyframed value using Bezier interpolation.
 #### Function compute_normals()
 
 ~~~ .cpp
-vector<vec3f> compute_normals(const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads,
-    const vector<vec3f>& pos, bool weighted = true);
+std::vector<vec3f> compute_normals(const std::vector<vec2i>& lines,
+    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads,
+    const std::vector<vec3f>& pos, bool weighted = true);
 ~~~
 
 Compute per-vertex normals/tangents for lines, triangles and quads with
@@ -5055,9 +4825,9 @@ weighted by length/area.
 #### Function compute_tangent_frames()
 
 ~~~ .cpp
-vector<vec4f> compute_tangent_frames(const vector<vec3i>& triangles,
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec2f>& texcoord, bool weighted = true);
+std::vector<vec4f> compute_tangent_frames(const std::vector<vec3i>& triangles,
+    const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
+    const std::vector<vec2f>& texcoord, bool weighted = true);
 ~~~
 
 Compute per-vertex tangent frames for triangle meshes.
@@ -5069,10 +4839,10 @@ Tangent frame is useful in normal mapping.
 #### Function compute_skinning()
 
 ~~~ .cpp
-void compute_skinning(const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec4f>& weights, const vector<vec4i>& joints,
-    const vector<mat4f>& xforms, vector<vec3f>& skinned_pos,
-    vector<vec3f>& skinned_norm);
+void compute_skinning(const std::vector<vec3f>& pos,
+    const std::vector<vec3f>& norm, const std::vector<vec4f>& weights,
+    const std::vector<vec4i>& joints, const std::vector<mat4f>& xforms,
+    std::vector<vec3f>& skinned_pos, std::vector<vec3f>& skinned_norm);
 ~~~
 
 Apply skinning to vertex position and normals.
@@ -5080,10 +4850,10 @@ Apply skinning to vertex position and normals.
 #### Function compute_skinning()
 
 ~~~ .cpp
-void compute_skinning(const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec4f>& weights, const vector<vec4i>& joints,
-    const vector<frame3f>& xforms, vector<vec3f>& skinned_pos,
-    vector<vec3f>& skinned_norm);
+void compute_skinning(const std::vector<vec3f>& pos,
+    const std::vector<vec3f>& norm, const std::vector<vec4f>& weights,
+    const std::vector<vec4i>& joints, const std::vector<frame3f>& xforms,
+    std::vector<vec3f>& skinned_pos, std::vector<vec3f>& skinned_norm);
 ~~~
 
 Apply skinning.
@@ -5091,10 +4861,10 @@ Apply skinning.
 #### Function compute_matrix_skinning()
 
 ~~~ .cpp
-void compute_matrix_skinning(const vector<vec3f>& pos,
-    const vector<vec3f>& norm, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<mat4f>& xforms,
-    vector<vec3f>& skinned_pos, vector<vec3f>& skinned_norm);
+void compute_matrix_skinning(const std::vector<vec3f>& pos,
+    const std::vector<vec3f>& norm, const std::vector<vec4f>& weights,
+    const std::vector<vec4i>& joints, const std::vector<mat4f>& xforms,
+    std::vector<vec3f>& skinned_pos, std::vector<vec3f>& skinned_norm);
 ~~~
 
 Apply skinning as specified in Khronos glTF.
@@ -5102,8 +4872,8 @@ Apply skinning as specified in Khronos glTF.
 #### Function get_edges()
 
 ~~~ .cpp
-vector<vec2i> get_edges(const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads);
+std::vector<vec2i> get_edges(const std::vector<vec2i>& lines,
+    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads);
 ~~~
 
 Create an array of edges.
@@ -5111,8 +4881,8 @@ Create an array of edges.
 #### Function get_boundary_edges()
 
 ~~~ .cpp
-vector<vec2i> get_boundary_edges(const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads);
+std::vector<vec2i> get_boundary_edges(const std::vector<vec2i>& lines,
+    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads);
 ~~~
 
 Create an array of boundary edges. Lines are always considered boundaries.
@@ -5120,8 +4890,8 @@ Create an array of boundary edges. Lines are always considered boundaries.
 #### Function get_verts()
 
 ~~~ .cpp
-vector<int> get_verts(const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads);
+std::vector<int> get_verts(const std::vector<vec2i>& lines,
+    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads);
 ~~~
 
 Get a list of all unique vertices.
@@ -5129,8 +4899,8 @@ Get a list of all unique vertices.
 #### Function get_boundary_verts()
 
 ~~~ .cpp
-vector<int> get_boundary_verts(const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads);
+std::vector<int> get_boundary_verts(const std::vector<vec2i>& lines,
+    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads);
 ~~~
 
 Create an array of boundary vertices. Lines are always considered
@@ -5139,7 +4909,7 @@ boundaries.
 #### Function convert_quads_to_triangles()
 
 ~~~ .cpp
-vector<vec3i> convert_quads_to_triangles(const vector<vec4i>& quads);
+std::vector<vec3i> convert_quads_to_triangles(const std::vector<vec4i>& quads);
 ~~~
 
 Convert quads to triangles
@@ -5147,8 +4917,8 @@ Convert quads to triangles
 #### Function convert_quads_to_triangles()
 
 ~~~ .cpp
-vector<vec3i> convert_quads_to_triangles(
-    const vector<vec4i>& quads, int row_length);
+std::vector<vec3i> convert_quads_to_triangles(
+    const std::vector<vec4i>& quads, int row_length);
 ~~~
 
 Convert quads to triangles with a diamond-like topology.
@@ -5157,7 +4927,7 @@ Quads have to be consecutive one row after another.
 #### Function convert_bezier_to_lines()
 
 ~~~ .cpp
-vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers);
+std::vector<vec2i> convert_bezier_to_lines(const std::vector<vec4i>& beziers);
 ~~~
 
 Convert beziers to lines using 3 lines for each bezier.
@@ -5165,11 +4935,12 @@ Convert beziers to lines using 3 lines for each bezier.
 #### Function convert_face_varying()
 
 ~~~ .cpp
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-convert_face_varying(const vector<vec4i>& quads_pos,
-    const vector<vec4i>& quads_norm, const vector<vec4i>& quads_texcoord,
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec2f>& texcoord);
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
+convert_face_varying(const std::vector<vec4i>& quads_pos,
+    const std::vector<vec4i>& quads_norm,
+    const std::vector<vec4i>& quads_texcoord, const std::vector<vec3f>& pos,
+    const std::vector<vec3f>& norm, const std::vector<vec2f>& texcoord);
 ~~~
 
 Convert face-varying data to single primitives. Returns the quads indices
@@ -5178,9 +4949,11 @@ and filled vectors for pos, norm and texcoord.
 #### Function subdivide_elems_linear()
 
 ~~~ .cpp
-tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>, vector<vec2i>, vector<vec4i>>
-subdivide_elems_linear(const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads, int nverts);
+std::tuple<std::vector<vec2i>, std::vector<vec3i>, std::vector<vec4i>,
+    std::vector<vec2i>, std::vector<vec4i>>
+subdivide_elems_linear(const std::vector<vec2i>& lines,
+    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads,
+    int nverts);
 ~~~
 
 Tesselate lines, triangles and quads by splitting edges and faces for quads.
@@ -5191,8 +4964,8 @@ calculations.
 
 ~~~ .cpp
 template <typename T>
-vector<T> subdivide_vert_linear(const vector<T>& vert,
-    const vector<vec2i>& edges, const vector<vec4i>& faces,
+std::vector<T> subdivide_vert_linear(const std::vector<T>& vert,
+    const std::vector<vec2i>& edges, const std::vector<vec4i>& faces,
     bool normalized = false);
 ~~~
 
@@ -5203,9 +4976,9 @@ vecs and floats.
 
 ~~~ .cpp
 template <typename T>
-vector<T> subdivide_vert_catmullclark(const vector<vec4i>& quads,
-    const vector<T>& vert, const vector<vec2i>& crease_tlines,
-    const vector<int>& crease_tpoints, bool normalized = false);
+std::vector<T> subdivide_vert_catmullclark(const std::vector<vec4i>& quads,
+    const std::vector<T>& vert, const std::vector<vec2i>& crease_tlines,
+    const std::vector<int>& crease_tpoints, bool normalized = false);
 ~~~
 
 Performs the smoothing step of Catmull-Clark. Start with a tesselate quad
@@ -5218,8 +4991,8 @@ and floats.
 #### Function subdivide_bezier_recursive()
 
 ~~~ .cpp
-tuple<vector<vec4i>, vector<int>, vector<vec4i>> subdivide_bezier_recursive(
-    const vector<vec4i>& beziers, int nverts);
+std::tuple<std::vector<vec4i>, std::vector<int>, std::vector<vec4i>>
+subdivide_bezier_recursive(const std::vector<vec4i>& beziers, int nverts);
 ~~~
 
 Subdivide Bezier segments recursively by splitting each segment into two
@@ -5230,8 +5003,9 @@ calculations.
 
 ~~~ .cpp
 template <typename T>
-vector<T> subdivide_vert_bezier(const vector<T>& vert, const vector<int>& verts,
-    const vector<vec4i>& segments, bool normalized = false);
+std::vector<T> subdivide_vert_bezier(const std::vector<T>& vert,
+    const std::vector<int>& verts, const std::vector<vec4i>& segments,
+    bool normalized = false);
 ~~~
 
 Subdivide vertex properties for Bezier subdivision. This is implemente for
@@ -5240,8 +5014,8 @@ vecs and floats.
 #### Function make_uvquads()
 
 ~~~ .cpp
-tuple<vector<vec4i>, vector<vec2f>> make_uvquads(int usteps, int vsteps,
-    bool uwrap = false, bool vwrap = false, bool vpole0 = false,
+std::tuple<std::vector<vec4i>, std::vector<vec2f>> make_uvquads(int usteps,
+    int vsteps, bool uwrap = false, bool vwrap = false, bool vpole0 = false,
     bool vpole1 = false);
 ~~~
 
@@ -5251,7 +5025,8 @@ surface generation. Values cam wrap and have poles.
 #### Function make_uvlines()
 
 ~~~ .cpp
-tuple<vector<vec2i>, vector<vec2f>> make_uvlines(int num, int usteps);
+std::tuple<std::vector<vec2i>, std::vector<vec2f>> make_uvlines(
+    int num, int usteps);
 ~~~
 
 Generate parametric num lines of usteps segments.
@@ -5259,7 +5034,7 @@ Generate parametric num lines of usteps segments.
 #### Function make_uvpoints()
 
 ~~~ .cpp
-tuple<vector<int>, vector<vec2f>> make_uvpoints(int num);
+std::tuple<std::vector<int>, std::vector<vec2f>> make_uvpoints(int num);
 ~~~
 
 Generate a parametric point set. Mostly here for completeness.
@@ -5267,10 +5042,11 @@ Generate a parametric point set. Mostly here for completeness.
 #### Function merge_elems()
 
 ~~~ .cpp
-tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>> merge_elems(int nverts,
-    const vector<vec2i>& lines1, const vector<vec3i>& triangles1,
-    const vector<vec4i>& quads1, const vector<vec2i>& lines2,
-    const vector<vec3i>& triangles2, const vector<vec4i>& quads2);
+std::tuple<std::vector<vec2i>, std::vector<vec3i>, std::vector<vec4i>>
+merge_elems(int nverts, const std::vector<vec2i>& lines1,
+    const std::vector<vec3i>& triangles1, const std::vector<vec4i>& quads1,
+    const std::vector<vec2i>& lines2, const std::vector<vec3i>& triangles2,
+    const std::vector<vec4i>& quads2);
 ~~~
 
 Merge elements between shapes. The elements are merged by increasing the
@@ -5280,9 +5056,10 @@ Vertex data can then be concatenated successfully.
 #### Function facet_elems()
 
 ~~~ .cpp
-tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>, vector<int>> facet_elems(
-    const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads);
+std::tuple<std::vector<vec2i>, std::vector<vec3i>, std::vector<vec4i>,
+    std::vector<int>>
+facet_elems(const std::vector<vec2i>& lines,
+    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads);
 ~~~
 
 Unshare shape data by duplicating all vertex data for each element,
@@ -5293,7 +5070,8 @@ Returns the indices to copy from.
 
 ~~~ .cpp
 template <typename T>
-vector<T> facet_vert(const vector<T>& vert, const vector<int>& vmap);
+std::vector<T> facet_vert(
+    const std::vector<T>& vert, const std::vector<int>& vmap);
 ~~~
 
 Unshare vertices for faceting. This is implemented for vec and float types.
@@ -5311,7 +5089,7 @@ Pick a point.
 #### Function sample_points_cdf()
 
 ~~~ .cpp
-vector<float> sample_points_cdf(int npoints);
+std::vector<float> sample_points_cdf(int npoints);
 ~~~
 
 Compute a distribution for sampling points uniformly.
@@ -5319,7 +5097,7 @@ Compute a distribution for sampling points uniformly.
 #### Function sample_points()
 
 ~~~ .cpp
-inline int sample_points(const vector<float>& cdf, float re);
+inline int sample_points(const std::vector<float>& cdf, float re);
 ~~~
 
 Pick a point uniformly.
@@ -5327,8 +5105,8 @@ Pick a point uniformly.
 #### Function sample_lines_cdf()
 
 ~~~ .cpp
-vector<float> sample_lines_cdf(
-    const vector<vec2i>& lines, const vector<vec3f>& pos);
+std::vector<float> sample_lines_cdf(
+    const std::vector<vec2i>& lines, const std::vector<vec3f>& pos);
 ~~~
 
 Compute a distribution for sampling lines uniformly.
@@ -5336,8 +5114,8 @@ Compute a distribution for sampling lines uniformly.
 #### Function sample_lines()
 
 ~~~ .cpp
-inline pair<int, float> sample_lines(
-    const vector<float>& cdf, float re, float ru);
+inline std::pair<int, float> sample_lines(
+    const std::vector<float>& cdf, float re, float ru);
 ~~~
 
 Pick a point on lines uniformly.
@@ -5345,8 +5123,8 @@ Pick a point on lines uniformly.
 #### Function sample_triangles_cdf()
 
 ~~~ .cpp
-vector<float> sample_triangles_cdf(
-    const vector<vec3i>& triangles, const vector<vec3f>& pos);
+std::vector<float> sample_triangles_cdf(
+    const std::vector<vec3i>& triangles, const std::vector<vec3f>& pos);
 ~~~
 
 Compute a distribution for sampling triangle meshes uniformly.
@@ -5354,8 +5132,8 @@ Compute a distribution for sampling triangle meshes uniformly.
 #### Function sample_triangles()
 
 ~~~ .cpp
-inline pair<int, vec2f> sample_triangles(
-    const vector<float>& cdf, float re, const vec2f& ruv);
+inline std::pair<int, vec2f> sample_triangles(
+    const std::vector<float>& cdf, float re, const vec2f& ruv);
 ~~~
 
 Pick a point on a triangle mesh uniformly.
@@ -5363,8 +5141,8 @@ Pick a point on a triangle mesh uniformly.
 #### Function sample_quads_cdf()
 
 ~~~ .cpp
-vector<float> sample_quads_cdf(
-    const vector<vec4i>& quads, const vector<vec3f>& pos);
+std::vector<float> sample_quads_cdf(
+    const std::vector<vec4i>& quads, const std::vector<vec3f>& pos);
 ~~~
 
 Compute a distribution for sampling quad meshes uniformly.
@@ -5372,8 +5150,8 @@ Compute a distribution for sampling quad meshes uniformly.
 #### Function sample_quads()
 
 ~~~ .cpp
-inline pair<int, vec2f> sample_quads(
-    const vector<float>& cdf, float re, const vec2f& ruv);
+inline std::pair<int, vec2f> sample_quads(
+    const std::vector<float>& cdf, float re, const vec2f& ruv);
 ~~~
 
 Pick a point on a quad mesh uniformly.
@@ -5381,10 +5159,10 @@ Pick a point on a quad mesh uniformly.
 #### Function sample_triangles_points()
 
 ~~~ .cpp
-tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
-    const vector<vec3i>& triangles, const vector<vec3f>& pos,
-    const vector<vec3f>& norm, const vector<vec2f>& texcoord, int npoints,
-    uint64_t seed = 0);
+std::tuple<std::vector<vec3f>, std::vector<vec3f>, std::vector<vec2f>>
+sample_triangles_points(const std::vector<vec3i>& triangles,
+    const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
+    const std::vector<vec2f>& texcoord, int npoints, uint64_t seed = 0);
 ~~~
 
 Samples a set of points over a triangle mesh uniformly. Returns pos, norm
@@ -5395,7 +5173,7 @@ and tecoord of the sampled points.
 #### Function make_sphere()
 
 ~~~ .cpp
-tuple<vector<vec3i>, vector<vec3f>> make_sphere(int tesselation);
+std::tuple<std::vector<vec3i>, std::vector<vec3f>> make_sphere(int tesselation);
 ~~~
 
 Make a sphere. Returns quads, pos.
@@ -5403,7 +5181,8 @@ Make a sphere. Returns quads, pos.
 #### Function make_geodesicsphere()
 
 ~~~ .cpp
-tuple<vector<vec3i>, vector<vec3f>> make_geodesicsphere(int tesselation);
+std::tuple<std::vector<vec3i>, std::vector<vec3f>> make_geodesicsphere(
+    int tesselation);
 ~~~
 
 Make a geodesic sphere. Returns quads, pos.
@@ -5411,7 +5190,7 @@ Make a geodesic sphere. Returns quads, pos.
 #### Function make_cube()
 
 ~~~ .cpp
-tuple<vector<vec4i>, vector<vec3f>> make_cube(int tesselation);
+std::tuple<std::vector<vec4i>, std::vector<vec3f>> make_cube(int tesselation);
 ~~~
 
 Make a cube with unique vertices. This is watertight but has no
@@ -5420,8 +5199,9 @@ texture coordinates or normals. Returns quads, pos.
 #### Function make_uvsphere()
 
 ~~~ .cpp
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_uvsphere(
-    int tesselation, bool flipped = false);
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
+make_uvsphere(int tesselation, bool flipped = false);
 ~~~
 
 Make a sphere. This is not watertight. Returns quads, pos, norm, texcoord.
@@ -5429,7 +5209,8 @@ Make a sphere. This is not watertight. Returns quads, pos, norm, texcoord.
 #### Function make_uvhemisphere()
 
 ~~~ .cpp
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
 make_uvhemisphere(int tesselation, bool flipped = false);
 ~~~
 
@@ -5438,8 +5219,9 @@ Make a sphere. This is not watertight. Returns quads, pos, norm, texcoord.
 #### Function make_uvquad()
 
 ~~~ .cpp
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_uvquad(
-    int tesselation);
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
+make_uvquad(int tesselation);
 ~~~
 
 Make a quad. Returns quads, pos, norm, texcoord.
@@ -5447,8 +5229,8 @@ Make a quad. Returns quads, pos, norm, texcoord.
 #### Function make_fvsphere()
 
 ~~~ .cpp
-tuple<vector<vec4i>, vector<vec3f>, vector<vec4i>, vector<vec3f>, vector<vec4i>,
-    vector<vec2f>>
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec4i>,
+    std::vector<vec3f>, std::vector<vec4i>, std::vector<vec2f>>
 make_fvsphere(int tesselation);
 ~~~
 
@@ -5458,8 +5240,8 @@ coordinates. Returns (quads, pos), (quads, norm), (quads, texcoord).
 #### Function make_fvcube()
 
 ~~~ .cpp
-tuple<vector<vec4i>, vector<vec3f>, vector<vec4i>, vector<vec3f>, vector<vec4i>,
-    vector<vec2f>>
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec4i>,
+    std::vector<vec3f>, std::vector<vec4i>, std::vector<vec2f>>
 make_fvcube(int tesselation);
 ~~~
 
@@ -5469,7 +5251,8 @@ coordinates. Returns (quads, pos), (quads, norm), (quads, texcoord).
 #### Function make_suzanne()
 
 ~~~ .cpp
-tuple<vector<vec4i>, vector<vec3f>> make_suzanne(int tesselation);
+std::tuple<std::vector<vec4i>, std::vector<vec3f>> make_suzanne(
+    int tesselation);
 ~~~
 
 Make a suzanne monkey model for testing. Note that some quads are
@@ -5478,8 +5261,9 @@ degenerate. Returns quads, pos.
 #### Function make_uvcube()
 
 ~~~ .cpp
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_uvcube(
-    int tesselation);
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
+make_uvcube(int tesselation);
 ~~~
 
 Make a cube. This is not watertight. Returns quads, pos, norm, texcoord.
@@ -5487,7 +5271,8 @@ Make a cube. This is not watertight. Returns quads, pos, norm, texcoord.
 #### Function make_uvspherecube()
 
 ~~~ .cpp
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
 make_uvspherecube(int tesselation);
 ~~~
 
@@ -5497,7 +5282,8 @@ texcoord.
 #### Function make_uvspherizedcube()
 
 ~~~ .cpp
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
 make_uvspherizedcube(int tesselation, float radius);
 ~~~
 
@@ -5507,7 +5293,8 @@ Returns quads, pos, norm, texcoord.
 #### Function make_uvflipcapsphere()
 
 ~~~ .cpp
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
 make_uvflipcapsphere(int tesselation, float z, bool flipped = false);
 ~~~
 
@@ -5517,7 +5304,8 @@ norm, texcoord.
 #### Function make_uvcutsphere()
 
 ~~~ .cpp
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
 make_uvcutsphere(int tesselation, float z, bool flipped = false);
 ~~~
 
@@ -5559,7 +5347,8 @@ Make seashell params
 #### Function make_uvseashell()
 
 ~~~ .cpp
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
 make_uvseashell(int tesselation, const make_seashell_params& params);
 ~~~
 
@@ -5568,7 +5357,7 @@ Make a seashell. This is not watertight. Returns quads, pos, norm, texcoord.
 #### Function make_bezier_circle()
 
 ~~~ .cpp
-tuple<vector<vec4i>, vector<vec3f>> make_bezier_circle();
+std::tuple<std::vector<vec4i>, std::vector<vec3f>> make_bezier_circle();
 ~~~
 
 Make a bezier circle. Returns bezier, pos.
@@ -5600,10 +5389,11 @@ Parameters for the make hair function
 #### Function make_hair()
 
 ~~~ .cpp
-tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>
-make_hair(int num, int tesselation, const vector<vec3i>& striangles,
-    const vector<vec4i>& squads, const vector<vec3f>& spos,
-    const vector<vec3f>& snorm, const vector<vec2f>& stexcoord,
+std::tuple<std::vector<vec2i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>, std::vector<float>>
+make_hair(int num, int tesselation, const std::vector<vec3i>& striangles,
+    const std::vector<vec4i>& squads, const std::vector<vec3f>& spos,
+    const std::vector<vec3f>& snorm, const std::vector<vec2f>& stexcoord,
     const make_hair_params& params);
 ~~~
 
@@ -5624,7 +5414,7 @@ struct image {
     T& at(int i, int j); 
     const T& at(int i, int j) const; 
     int w, h;
-    vector<T> pixels;
+    std::vector<T> pixels;
 }
 ~~~
 
@@ -5971,7 +5761,7 @@ Make a noise image. Wrap works only if both resx and resy are powers of two.
 #### Function is_hdr_filename()
 
 ~~~ .cpp
-bool is_hdr_filename(const string& filename);
+bool is_hdr_filename(const std::string& filename);
 ~~~
 
 Check if an image is HDR based on filename.
@@ -5979,7 +5769,7 @@ Check if an image is HDR based on filename.
 #### Function load_image4b()
 
 ~~~ .cpp
-image4b load_image4b(const string& filename);
+image4b load_image4b(const std::string& filename);
 ~~~
 
 Loads a 4 channel ldr image.
@@ -5987,7 +5777,7 @@ Loads a 4 channel ldr image.
 #### Function load_image4f()
 
 ~~~ .cpp
-image4f load_image4f(const string& filename);
+image4f load_image4f(const std::string& filename);
 ~~~
 
 Loads a 4 channel hdr image.
@@ -5995,7 +5785,7 @@ Loads a 4 channel hdr image.
 #### Function save_image4b()
 
 ~~~ .cpp
-bool save_image4b(const string& filename, const image4b& img);
+bool save_image4b(const std::string& filename, const image4b& img);
 ~~~
 
 Saves a 4 channel ldr image.
@@ -6003,7 +5793,7 @@ Saves a 4 channel ldr image.
 #### Function save_image4f()
 
 ~~~ .cpp
-bool save_image4f(const string& filename, const image4f& img);
+bool save_image4f(const std::string& filename, const image4f& img);
 ~~~
 
 Saves a 4 channel hdr image.
@@ -6011,8 +5801,8 @@ Saves a 4 channel hdr image.
 #### Function load_imagef()
 
 ~~~ .cpp
-vector<float> load_imagef(
-    const string& filename, int& width, int& height, int& ncomp);
+std::vector<float> load_imagef(
+    const std::string& filename, int& width, int& height, int& ncomp);
 ~~~
 
 Loads an image with variable number of channels.
@@ -6020,8 +5810,8 @@ Loads an image with variable number of channels.
 #### Function load_image()
 
 ~~~ .cpp
-vector<byte> load_image(
-    const string& filename, int& width, int& height, int& ncomp);
+std::vector<byte> load_image(
+    const std::string& filename, int& width, int& height, int& ncomp);
 ~~~
 
 Loads an image with variable number of channels.
@@ -6029,8 +5819,8 @@ Loads an image with variable number of channels.
 #### Function load_imagef_from_memory()
 
 ~~~ .cpp
-vector<float> load_imagef_from_memory(const string& filename, const byte* data,
-    int length, int& width, int& height, int& ncomp);
+std::vector<float> load_imagef_from_memory(const std::string& filename,
+    const byte* data, int length, int& width, int& height, int& ncomp);
 ~~~
 
 Loads an image from memory with variable number of channels.
@@ -6038,8 +5828,8 @@ Loads an image from memory with variable number of channels.
 #### Function load_image_from_memory()
 
 ~~~ .cpp
-vector<byte> load_image_from_memory(const string& filename, const byte* data,
-    int length, int& width, int& height, int& ncomp);
+std::vector<byte> load_image_from_memory(const std::string& filename,
+    const byte* data, int length, int& width, int& height, int& ncomp);
 ~~~
 
 Loads an image from memory with variable number of channels.
@@ -6047,8 +5837,8 @@ Loads an image from memory with variable number of channels.
 #### Function save_imagef()
 
 ~~~ .cpp
-bool save_imagef(
-    const string& filename, int width, int height, int ncomp, const float* hdr);
+bool save_imagef(const std::string& filename, int width, int height, int ncomp,
+    const float* hdr);
 ~~~
 
 Saves an image with variable number of channels.
@@ -6056,8 +5846,8 @@ Saves an image with variable number of channels.
 #### Function save_image()
 
 ~~~ .cpp
-bool save_image(
-    const string& filename, int width, int height, int ncomp, const byte* ldr);
+bool save_image(const std::string& filename, int width, int height, int ncomp,
+    const byte* ldr);
 ~~~
 
 Saves an image with variable number of channels.
@@ -6065,7 +5855,7 @@ Saves an image with variable number of channels.
 #### Function save_image()
 
 ~~~ .cpp
-bool save_image(const string& filename, const image4f& hdr, float exposure,
+bool save_image(const std::string& filename, const image4f& hdr, float exposure,
     float gamma, bool filmic = false);
 ~~~
 
@@ -6357,17 +6147,17 @@ This is an internal data structure.
 
 ~~~ .cpp
 struct bvh_tree {
-    vector<bvh_node> nodes;
-    vector<int> sorted_prim;
+    std::vector<bvh_node> nodes;
+    std::vector<int> sorted_prim;
     bvh_node_type type = bvh_node_type::internal;
-    vector<vec3f> pos;
-    vector<float> radius;
-    vector<int> points;
-    vector<vec2i> lines;
-    vector<vec3i> triangles;
-    vector<vec4i> quads;
-    vector<bvh_instance> instances;
-    vector<bvh_tree*> shape_bvhs;
+    std::vector<vec3f> pos;
+    std::vector<float> radius;
+    std::vector<int> points;
+    std::vector<vec2i> lines;
+    std::vector<vec3i> triangles;
+    std::vector<vec4i> quads;
+    std::vector<bvh_instance> instances;
+    std::vector<bvh_tree*> shape_bvhs;
     bool own_shape_bvhs = false;
     ~bvh_tree(); 
 }
@@ -6402,10 +6192,10 @@ This is an internal data structure.
 #### Function make_bvh()
 
 ~~~ .cpp
-bvh_tree* make_bvh(const vector<int>& points, const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads,
-    const vector<vec3f>& pos, const vector<float>& radius, float def_radius,
-    bool equalsize);
+bvh_tree* make_bvh(const std::vector<int>& points,
+    const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
+    const std::vector<vec4i>& quads, const std::vector<vec3f>& pos,
+    const std::vector<float>& radius, float def_radius, bool equalsize);
 ~~~
 
 Build a shape BVH from a set of primitives.
@@ -6413,8 +6203,9 @@ Build a shape BVH from a set of primitives.
 #### Function make_bvh()
 
 ~~~ .cpp
-bvh_tree* make_bvh(const vector<bvh_instance>& instances,
-    const vector<bvh_tree*>& shape_bvhs, bool own_shape_bvhs, bool equal_size);
+bvh_tree* make_bvh(const std::vector<bvh_instance>& instances,
+    const std::vector<bvh_tree*>& shape_bvhs, bool own_shape_bvhs,
+    bool equal_size);
 ~~~
 
 Build a scene BVH from a set of shape instances.
@@ -6422,7 +6213,7 @@ Build a scene BVH from a set of shape instances.
 #### Function get_shape_bvhs()
 
 ~~~ .cpp
-inline const vector<bvh_tree*>& get_shape_bvhs(const bvh_tree* bvh);
+inline const std::vector<bvh_tree*>& get_shape_bvhs(const bvh_tree* bvh);
 ~~~
 
 Grab the shape BVHs
@@ -6430,8 +6221,8 @@ Grab the shape BVHs
 #### Function refit_bvh()
 
 ~~~ .cpp
-void refit_bvh(bvh_tree* bvh, const vector<vec3f>& pos,
-    const vector<float>& radius, float def_radius);
+void refit_bvh(bvh_tree* bvh, const std::vector<vec3f>& pos,
+    const std::vector<float>& radius, float def_radius);
 ~~~
 
 Update the node bounds for a shape bvh.
@@ -6439,8 +6230,8 @@ Update the node bounds for a shape bvh.
 #### Function refit_bvh()
 
 ~~~ .cpp
-void refit_bvh(bvh_tree* bvh, const vector<frame3f>& frames,
-    const vector<frame3f>& frames_inv);
+void refit_bvh(bvh_tree* bvh, const std::vector<frame3f>& frames,
+    const std::vector<frame3f>& frames_inv);
 ~~~
 
 Update the node bounds for a scene bvh
@@ -6518,8 +6309,8 @@ Finds the closest element with a bvh (convenience wrapper).
 
 ~~~ .cpp
 struct texture {
-    string name = "";
-    string path = "";
+    std::string name = "";
+    std::string path = "";
     image4b ldr = {};
     image4f hdr = {};
 }
@@ -6582,7 +6373,7 @@ Material type.
 
 ~~~ .cpp
 struct material {
-    string name = "";
+    std::string name = "";
     bool double_sided = false;
     material_type type = material_type::specular_roughness;
     vec3f ke = {0, 0, 0};
@@ -6634,23 +6425,23 @@ Material for surfaces, lines and triangles.
 
 ~~~ .cpp
 struct shape {
-    string name = "";
+    std::string name = "";
     material* mat = nullptr;
-    vector<int> points;
-    vector<vec2i> lines;
-    vector<vec3i> triangles;
-    vector<vec4i> quads;
-    vector<vec4i> quads_pos;
-    vector<vec4i> quads_norm;
-    vector<vec4i> quads_texcoord;
-    vector<vec4i> beziers;
-    vector<vec3f> pos;
-    vector<vec3f> norm;
-    vector<vec2f> texcoord;
-    vector<vec2f> texcoord1;
-    vector<vec4f> color;
-    vector<float> radius;
-    vector<vec4f> tangsp;
+    std::vector<int> points;
+    std::vector<vec2i> lines;
+    std::vector<vec3i> triangles;
+    std::vector<vec4i> quads;
+    std::vector<vec4i> quads_pos;
+    std::vector<vec4i> quads_norm;
+    std::vector<vec4i> quads_texcoord;
+    std::vector<vec4i> beziers;
+    std::vector<vec3f> pos;
+    std::vector<vec3f> norm;
+    std::vector<vec2f> texcoord;
+    std::vector<vec2f> texcoord1;
+    std::vector<vec4f> color;
+    std::vector<float> radius;
+    std::vector<vec4f> tangsp;
     int subdivision = 0;
     bool catmullclark = false;
 }
@@ -6685,9 +6476,9 @@ May contain only one of the points/lines/triangles/quads.
 
 ~~~ .cpp
 struct shape_group {
-    string name = "";
-    string path = "";
-    vector<shape*> shapes;
+    std::string name = "";
+    std::string path = "";
+    std::vector<shape*> shapes;
     ~shape_group(); 
 }
 ~~~
@@ -6721,7 +6512,7 @@ Shape instance.
 
 ~~~ .cpp
 struct camera {
-    string name = "";
+    std::string name = "";
     frame3f frame = identity_frame3f;
     bool ortho = false;
     float yfov = 2;
@@ -6751,7 +6542,7 @@ Camera.
 
 ~~~ .cpp
 struct environment {
-    string name = "";
+    std::string name = "";
     frame3f frame = identity_frame3f;
     vec3f ke = {0, 0, 0};
     texture_info ke_txt = {};
@@ -6771,7 +6562,7 @@ Envinonment map.
 
 ~~~ .cpp
 struct node {
-    string name = "";
+    std::string name = "";
     node* parent = nullptr;
     frame3f frame = identity_frame3f;
     vec3f translation = zero3f;
@@ -6781,7 +6572,7 @@ struct node {
     camera* cam = nullptr;
     instance* ist = nullptr;
     environment* env = nullptr;
-    vector<node*> children_ = {};
+    std::vector<node*> children_ = {};
 }
 ~~~
 
@@ -6853,8 +6644,8 @@ Keyframe data.
 struct animation_group {
     std::string name;
     std::string path = "";
-    vector<animation*> animations;
-    vector<pair<animation*, node*>> targets;
+    std::vector<animation*> animations;
+    std::vector<std::pair<animation*, node*>> targets;
 }
 ~~~
 
@@ -6871,14 +6662,14 @@ Animation made of multiple keyframed values.
 
 ~~~ .cpp
 struct scene {
-    vector<shape_group*> shapes = {};
-    vector<instance*> instances = {};
-    vector<material*> materials = {};
-    vector<texture*> textures = {};
-    vector<camera*> cameras = {};
-    vector<environment*> environments = {};
-    vector<node*> nodes = {};
-    vector<animation_group*> animations = {};
+    std::vector<shape_group*> shapes = {};
+    std::vector<instance*> instances = {};
+    std::vector<material*> materials = {};
+    std::vector<texture*> textures = {};
+    std::vector<camera*> cameras = {};
+    std::vector<environment*> environments = {};
+    std::vector<node*> nodes = {};
+    std::vector<animation_group*> animations = {};
 }
 ~~~
 
@@ -6988,7 +6779,8 @@ lens coordinates luv.
 
 ~~~ .cpp
 template <typename T>
-inline T* find_named_elem(const vector<T*>& elems, const string& name);
+inline T* find_named_elem(
+    const std::vector<T*>& elems, const std::string& name);
 ~~~
 
 Finds an element by name.
@@ -7195,7 +6987,7 @@ Loading options.
 #### Function load_scene()
 
 ~~~ .cpp
-scene* load_scene(const string& filename, const load_options& opts =;
+scene* load_scene(const std::string& filename, const load_options& opts =;
 ~~~
 
 Loads a scene. For now OBJ or glTF are supported.
@@ -7227,7 +7019,7 @@ Save options.
 
 ~~~ .cpp
 void save_scene(
-    const string& filename, const scene* scn, const save_options& opts);
+    const std::string& filename, const scene* scn, const save_options& opts);
 ~~~
 
 Saves a scene. For now OBJ and glTF are supported.
@@ -7238,7 +7030,8 @@ Saves a scene. For now OBJ and glTF are supported.
 
 ~~~ .cpp
 template <>
-inline const vector<pair<string, material_type>>& enum_names<material_type>();
+inline const std::vector<std::pair<std::string, material_type>>&
+enum_names<material_type>();
 ~~~
 
 Names of enum values.
@@ -7247,7 +7040,8 @@ Names of enum values.
 
 ~~~ .cpp
 template <>
-inline const vector<pair<string, keyframe_type>>& enum_names<keyframe_type>();
+inline const std::vector<std::pair<std::string, keyframe_type>>&
+enum_names<keyframe_type>();
 ~~~
 
 Names of enum values.
@@ -7374,7 +7168,7 @@ Makes the Cornell Box scene.
 
 ~~~ .cpp
 struct test_camera_params {
-    string name = "";
+    std::string name = "";
     vec3f from = {0, 0, -1};
     vec3f to = zero3f;
     float yfov = 45 * pif / 180;
@@ -7404,7 +7198,7 @@ Updates a test camera.
 #### Function test_camera_presets()
 
 ~~~ .cpp
-unordered_map<string, test_camera_params>& test_camera_presets();
+std::unordered_map<std::string, test_camera_params>& test_camera_presets();
 ~~~
 
 Test camera presets.
@@ -7453,7 +7247,7 @@ Test texture type.
 
 ~~~ .cpp
 struct test_texture_params {
-    string name = "";
+    std::string name = "";
     test_texture_type type = test_texture_type::none;
     int resolution = 512;
     int tile_size = 64;
@@ -7489,7 +7283,7 @@ Updates a test texture.
 #### Function test_texture_presets()
 
 ~~~ .cpp
-unordered_map<string, test_texture_params>& test_texture_presets();
+std::unordered_map<std::string, test_texture_params>& test_texture_presets();
 ~~~
 
 Test texture presets.
@@ -7522,14 +7316,14 @@ Test material type.
 
 ~~~ .cpp
 struct test_material_params {
-    string name = "";
+    std::string name = "";
     test_material_type type = test_material_type::matte;
     float emission = 1;
     vec3f color = {0.2, 0.2, 0.2};
     float opacity = 1;
     float roughness = 0.1;
-    string texture = "";
-    string normal = "";
+    std::string texture = "";
+    std::string normal = "";
 }
 ~~~
 
@@ -7558,7 +7352,7 @@ Updates a test material.
 #### Function test_material_presets()
 
 ~~~ .cpp
-unordered_map<string, test_material_params>& test_material_presets();
+std::unordered_map<std::string, test_material_params>& test_material_presets();
 ~~~
 
 Test material presets.
@@ -7613,10 +7407,10 @@ Test shape type.
 
 ~~~ .cpp
 struct test_shape_params {
-    string name = "";
+    std::string name = "";
     test_shape_type type = test_shape_type::sphere;
-    string material = "";
-    string interior = "";
+    std::string material = "";
+    std::string interior = "";
     int tesselation = -1;
     int subdivision = 0;
     float scale = 1;
@@ -7655,7 +7449,7 @@ Updates a test shape, adding it to the scene if missing.
 #### Function test_shape_presets()
 
 ~~~ .cpp
-unordered_map<string, test_shape_params>& test_shape_presets();
+std::unordered_map<std::string, test_shape_params>& test_shape_presets();
 ~~~
 
 Test shape presets.
@@ -7664,8 +7458,8 @@ Test shape presets.
 
 ~~~ .cpp
 struct test_instance_params {
-    string name = "";
-    string shape = "";
+    std::string name = "";
+    std::string shape = "";
     frame3f frame = identity_frame3f;
     vec3f rotation = zero3f;
 }
@@ -7692,7 +7486,7 @@ Updates a test instance.
 #### Function test_instance_presets()
 
 ~~~ .cpp
-unordered_map<string, test_instance_params>& test_instance_presets();
+std::unordered_map<std::string, test_instance_params>& test_instance_presets();
 ~~~
 
 Test instance presets.
@@ -7701,10 +7495,10 @@ Test instance presets.
 
 ~~~ .cpp
 struct test_environment_params {
-    string name = "";
+    std::string name = "";
     float emission = 1;
     vec3f color = {1, 1, 1};
-    string texture = "";
+    std::string texture = "";
     frame3f frame = identity_frame3f;
     float rotation = 0;
 }
@@ -7733,7 +7527,8 @@ Updates a test instance.
 #### Function test_environment_presets()
 
 ~~~ .cpp
-unordered_map<string, test_environment_params>& test_environment_presets();
+std::unordered_map<std::string, test_environment_params>&
+test_environment_presets();
 ~~~
 
 Test environment presets.
@@ -7742,11 +7537,11 @@ Test environment presets.
 
 ~~~ .cpp
 struct test_node_params {
-    string name = "";
-    string parent = "";
-    string camera = "";
-    string instance = "";
-    string environment = "";
+    std::string name = "";
+    std::string parent = "";
+    std::string camera = "";
+    std::string instance = "";
+    std::string environment = "";
     frame3f frame = identity_frame3f;
     vec3f translation = {0, 0, 0};
     quat4f rotation = {0, 0, 0, 1};
@@ -7780,7 +7575,7 @@ Updates a test node.
 #### Function test_node_presets()
 
 ~~~ .cpp
-unordered_map<string, test_node_params>& test_node_presets();
+std::unordered_map<std::string, test_node_params>& test_node_presets();
 ~~~
 
 Test nodes presets.
@@ -7789,15 +7584,15 @@ Test nodes presets.
 
 ~~~ .cpp
 struct test_animation_params {
-    string name = "";
+    std::string name = "";
     bool bezier = false;
     float speed = 1;
     float scale = 1;
-    vector<float> times = {};
-    vector<vec3f> translation = {};
-    vector<quat4f> rotation = {};
-    vector<vec3f> scaling = {};
-    vector<string> nodes = {};
+    std::vector<float> times = {};
+    std::vector<vec3f> translation = {};
+    std::vector<quat4f> rotation = {};
+    std::vector<vec3f> scaling = {};
+    std::vector<std::string> nodes = {};
 }
 ~~~
 
@@ -7827,7 +7622,7 @@ Updates a test node.
 #### Function test_node_presets()
 
 ~~~ .cpp
-unordered_map<string, test_node_params>& test_node_presets();
+std::unordered_map<std::string, test_node_params>& test_node_presets();
 ~~~
 
 Test nodes presets.
@@ -7836,15 +7631,15 @@ Test nodes presets.
 
 ~~~ .cpp
 struct test_scene_params {
-    string name;
-    vector<test_camera_params> cameras;
-    vector<test_texture_params> textures;
-    vector<test_material_params> materials;
-    vector<test_shape_params> shapes;
-    vector<test_instance_params> instances;
-    vector<test_environment_params> environments;
-    vector<test_node_params> nodes;
-    vector<test_animation_params> animations;
+    std::string name;
+    std::vector<test_camera_params> cameras;
+    std::vector<test_texture_params> textures;
+    std::vector<test_material_params> materials;
+    std::vector<test_shape_params> shapes;
+    std::vector<test_instance_params> instances;
+    std::vector<test_environment_params> environments;
+    std::vector<test_node_params> nodes;
+    std::vector<test_animation_params> animations;
 }
 ~~~
 
@@ -7866,7 +7661,7 @@ Test scene.
 
 ~~~ .cpp
 void update_test_scene(scene* scn, const test_scene_params& tscn,
-    const unordered_set<void*>& refresh =;
+    const std::unordered_set<void*>& refresh =;
 ~~~
 
 Updates a test scene, adding missing objects. Objects are only added and
@@ -7883,7 +7678,7 @@ Makes a test scene. Convenience wrapper around `update_test_scene()`.
 #### Function test_scene_presets()
 
 ~~~ .cpp
-unordered_map<string, test_scene_params>& test_scene_presets();
+std::unordered_map<std::string, test_scene_params>& test_scene_presets();
 ~~~
 
 Test scene presets.
@@ -7899,7 +7694,7 @@ Remove duplicates based on name.
 #### Function load_test_scene()
 
 ~~~ .cpp
-test_scene_params load_test_scene(const string& filename);
+test_scene_params load_test_scene(const std::string& filename);
 ~~~
 
 Load test scene.
@@ -7907,7 +7702,7 @@ Load test scene.
 #### Function save_test_scene()
 
 ~~~ .cpp
-void save_test_scene(const string& filename, const test_scene_params& scn);
+void save_test_scene(const std::string& filename, const test_scene_params& scn);
 ~~~
 
 Save test scene.
@@ -7918,7 +7713,7 @@ Save test scene.
 
 ~~~ .cpp
 template <>
-inline const vector<pair<string, test_texture_type>>&
+inline const std::vector<std::pair<std::string, test_texture_type>>&
 enum_names<test_texture_type>();
 ~~~
 
@@ -7928,7 +7723,7 @@ Names of enum values.
 
 ~~~ .cpp
 template <>
-inline const vector<pair<string, test_material_type>>&
+inline const std::vector<std::pair<std::string, test_material_type>>&
 enum_names<test_material_type>();
 ~~~
 
@@ -7938,7 +7733,7 @@ Names of enum values.
 
 ~~~ .cpp
 template <>
-inline const vector<pair<string, test_shape_type>>&
+inline const std::vector<std::pair<std::string, test_shape_type>>&
 enum_names<test_shape_type>();
 ~~~
 
@@ -8296,9 +8091,9 @@ the the public API.
 
 ~~~ .cpp
 struct trace_lights {
-    vector<trace_light> lights;
-    unordered_map<const shape*, vector<float>> shape_cdfs;
-    unordered_map<const shape*, float> shape_areas;
+    std::vector<trace_light> lights;
+    std::unordered_map<const shape*, std::vector<float>> shape_cdfs;
+    std::unordered_map<const shape*, float> shape_areas;
     bool empty() const; 
     int size() const; 
 }
@@ -8365,7 +8160,8 @@ Trace the whole image.
 ~~~ .cpp
 void trace_async_start(const scene* scn, const camera* cam, const bvh_tree* bvh,
     const trace_lights& lights, image4f& img, image<trace_pixel>& pixels,
-    vector<std::thread>& threads, bool& stop_flag, const trace_params& params);
+    std::vector<std::thread>& threads, bool& stop_flag,
+    const trace_params& params);
 ~~~
 
 Starts an anyncrhounous renderer.
@@ -8373,7 +8169,7 @@ Starts an anyncrhounous renderer.
 #### Function trace_async_stop()
 
 ~~~ .cpp
-void trace_async_stop(vector<std::thread>& threads, bool& stop_flag);
+void trace_async_stop(std::vector<std::thread>& threads, bool& stop_flag);
 ~~~
 
 Stop the asynchronous renderer.
@@ -8384,7 +8180,7 @@ Stop the asynchronous renderer.
 
 ~~~ .cpp
 template <>
-inline const vector<pair<string, trace_shader_type>>&
+inline const std::vector<std::pair<std::string, trace_shader_type>>&
 enum_names<trace_shader_type>();
 ~~~
 
@@ -8394,7 +8190,7 @@ Names of enum values.
 
 ~~~ .cpp
 template <>
-inline const vector<pair<string, trace_rng_type>>&
+inline const std::vector<std::pair<std::string, trace_rng_type>>&
 enum_names<trace_rng_type>();
 ~~~
 
@@ -8404,7 +8200,7 @@ Names of enum values.
 
 ~~~ .cpp
 template <>
-inline const vector<pair<string, trace_filter_type>>&
+inline const std::vector<std::pair<std::string, trace_filter_type>>&
 enum_names<trace_filter_type>();
 ~~~
 
@@ -8478,12 +8274,12 @@ Obj element vertex indices.
 
 ~~~ .cpp
 struct obj_group {
-    string matname;
-    string groupname;
+    std::string matname;
+    std::string groupname;
     bool smoothing = true;
-    vector<obj_vertex> verts;
-    vector<obj_element> elems;
-    unordered_map<string, vector<string>> props;
+    std::vector<obj_vertex> verts;
+    std::vector<obj_element> elems;
+    std::unordered_map<std::string, std::vector<std::string>> props;
 }
 ~~~
 
@@ -8502,9 +8298,9 @@ Obj element group.
 
 ~~~ .cpp
 struct obj_object {
-    string name;
-    vector<obj_group*> groups;
-    unordered_map<string, vector<string>> props;
+    std::string name;
+    std::vector<obj_group*> groups;
+    std::unordered_map<std::string, std::vector<std::string>> props;
     ~obj_object(); 
 }
 ~~~
@@ -8522,10 +8318,10 @@ Obj object.
 
 ~~~ .cpp
 struct obj_texture_info {
-    string path = "";
+    std::string path = "";
     bool clamp = false;
     float scale = 1;
-    unordered_map<string, vector<string>> props;
+    std::unordered_map<std::string, std::vector<std::string>> props;
 }
 ~~~
 
@@ -8542,12 +8338,12 @@ Obj texture information.
 
 ~~~ .cpp
 struct obj_texture {
-    string path;
+    std::string path;
     int width = 0;
     int height = 0;
     int ncomp = 0;
-    vector<uint8_t> datab;
-    vector<float> dataf;
+    std::vector<uint8_t> datab;
+    std::vector<float> dataf;
 }
 ~~~
 
@@ -8566,7 +8362,7 @@ Obj texture. Texture data is loaded only if desired.
 
 ~~~ .cpp
 struct obj_material {
-    string name;
+    std::string name;
     int illum = 0;
     vec3f ke = {0, 0, 0};
     vec3f ka = {0, 0, 0};
@@ -8589,7 +8385,7 @@ struct obj_material {
     obj_texture_info bump_txt;
     obj_texture_info disp_txt;
     obj_texture_info norm_txt;
-    unordered_map<string, vector<string>> props;
+    std::unordered_map<std::string, std::vector<std::string>> props;
 }
 ~~~
 
@@ -8626,7 +8422,7 @@ Obj material.
 
 ~~~ .cpp
 struct obj_camera {
-    string name;
+    std::string name;
     frame3f frame = identity_frame3f;
     bool ortho = false;
     float yfov = 2 * atan(0.5f);
@@ -8652,9 +8448,9 @@ Obj camera [extension].
 
 ~~~ .cpp
 struct obj_environment {
-    string name;
+    std::string name;
     frame3f frame = identity_frame3f;
-    string matname;
+    std::string matname;
 }
 ~~~
 
@@ -8670,11 +8466,11 @@ Obj environment [extension].
 
 ~~~ .cpp
 struct obj_node {
-    string name;
-    string parent;
-    string camname;
-    string objname;
-    string envname;
+    std::string name;
+    std::string parent;
+    std::string camname;
+    std::string objname;
+    std::string envname;
     frame3f frame = identity_frame3f;
     vec3f translation = zero3f;
     quat4f rotation = {0, 0, 0, 1};
@@ -8700,17 +8496,17 @@ Obj node [extension].
 
 ~~~ .cpp
 struct obj_scene {
-    vector<vec3f> pos;
-    vector<vec3f> norm;
-    vector<vec2f> texcoord;
-    vector<vec4f> color;
-    vector<float> radius;
-    vector<obj_object*> objects;
-    vector<obj_material*> materials;
-    vector<obj_texture*> textures;
-    vector<obj_camera*> cameras;
-    vector<obj_environment*> environments;
-    vector<obj_node*> nodes;
+    std::vector<vec3f> pos;
+    std::vector<vec3f> norm;
+    std::vector<vec2f> texcoord;
+    std::vector<vec4f> color;
+    std::vector<float> radius;
+    std::vector<obj_object*> objects;
+    std::vector<obj_material*> materials;
+    std::vector<obj_texture*> textures;
+    std::vector<obj_camera*> cameras;
+    std::vector<obj_environment*> environments;
+    std::vector<obj_node*> nodes;
     ~obj_scene(); 
 }
 ~~~
@@ -8735,7 +8531,7 @@ Obj scene.
 #### Function load_obj()
 
 ~~~ .cpp
-obj_scene* load_obj(const string& filename, bool load_textures = false,
+obj_scene* load_obj(const std::string& filename, bool load_textures = false,
     bool skip_missing = false, bool flip_texcoord = true, bool flip_tr = true);
 ~~~
 
@@ -8747,7 +8543,7 @@ Texture coordinates and material Tr are flipped if `flip_texcoord` and
 #### Function save_obj()
 
 ~~~ .cpp
-void save_obj(const string& filename, const obj_scene* model,
+void save_obj(const std::string& filename, const obj_scene* model,
     bool save_textures = false, bool skip_missing = false,
     bool flip_texcoord = true, bool flip_tr = true);
 ~~~
@@ -8762,7 +8558,7 @@ Texture coordinates and material Tr are flipped if `flip_texcoord` and
 #### Typedef buffer_data
 
 ~~~ .cpp
-using buffer_data = vector<unsigned char>;
+using buffer_data = std::vector<unsigned char>;
 ~~~
 
 Generic buffer data.
@@ -8774,8 +8570,8 @@ struct image_data {
     int width = 0;
     int height = 0;
     int ncomp = 0;
-    vector<uint8_t> datab;
-    vector<float> dataf;
+    std::vector<uint8_t> datab;
+    std::vector<float> dataf;
 }
 ~~~
 
@@ -8832,7 +8628,7 @@ Generic glTF object.
 
 ~~~ .cpp
 struct glTFChildOfRootProperty : glTFProperty {
-    string name = "";
+    std::string name = "";
 }
 ~~~
 
@@ -8959,8 +8755,8 @@ struct glTFAccessor : glTFChildOfRootProperty {
     bool normalized = false;
     int count = 0;
     glTFAccessorType type = glTFAccessorType::NotSet;
-    vector<float> max = {};
-    vector<float> min = {};
+    std::vector<float> max = {};
+    std::vector<float> min = {};
     glTFAccessorSparse* sparse = nullptr;
     ~glTFAccessor(); 
 }
@@ -9075,8 +8871,8 @@ define a keyframe graph (but not its target).
 
 ~~~ .cpp
 struct glTFAnimation : glTFChildOfRootProperty {
-    vector<glTFAnimationChannel*> channels = {};
-    vector<glTFAnimationSampler*> samplers = {};
+    std::vector<glTFAnimationChannel*> channels = {};
+    std::vector<glTFAnimationSampler*> samplers = {};
     glTFAnimationChannel* get(const glTFid<glTFAnimationChannel>& id) const; 
     glTFAnimationSampler* get(const glTFid<glTFAnimationSampler>& id) const; 
     ~glTFAnimation(); 
@@ -9101,10 +8897,10 @@ A keyframe animation.
 
 ~~~ .cpp
 struct glTFAsset : glTFProperty {
-    string copyright = "";
-    string generator = "";
-    string version = "";
-    string minVersion = "";
+    std::string copyright = "";
+    std::string generator = "";
+    std::string version = "";
+    std::string minVersion = "";
 }
 ~~~
 
@@ -9121,7 +8917,7 @@ Metadata about the glTF asset.
 
 ~~~ .cpp
 struct glTFBuffer : glTFChildOfRootProperty {
-    string uri = "";
+    std::string uri = "";
     int byteLength = 0;
     buffer_data data = {};
 }
@@ -9270,7 +9066,7 @@ Values for glTFImage::mimeType
 
 ~~~ .cpp
 struct glTFImage : glTFChildOfRootProperty {
-    string uri = "";
+    std::string uri = "";
     glTFImageMimeType mimeType = glTFImageMimeType::NotSet;
     glTFid<glTFBufferView> bufferView = {};
     image_data data = {};
@@ -9470,11 +9266,11 @@ Values for glTFMeshPrimitive::mode
 
 ~~~ .cpp
 struct glTFMeshPrimitive : glTFProperty {
-    map<string, glTFid<glTFAccessor>> attributes = {};
+    std::map<std::string, glTFid<glTFAccessor>> attributes = {};
     glTFid<glTFAccessor> indices = {};
     glTFid<glTFMaterial> material = {};
     glTFMeshPrimitiveMode mode = glTFMeshPrimitiveMode::Triangles;
-    vector<map<string, glTFid<glTFAccessor>>> targets = {};
+    std::vector<std::map<std::string, glTFid<glTFAccessor>>> targets = {};
 }
 ~~~
 
@@ -9496,8 +9292,8 @@ Geometry to be rendered with the given material.
 
 ~~~ .cpp
 struct glTFMesh : glTFChildOfRootProperty {
-    vector<glTFMeshPrimitive*> primitives = {};
-    vector<float> weights = {};
+    std::vector<glTFMeshPrimitive*> primitives = {};
+    std::vector<float> weights = {};
     ~glTFMesh(); 
 }
 ~~~
@@ -9517,14 +9313,14 @@ transform places the mesh in the scene.
 ~~~ .cpp
 struct glTFNode : glTFChildOfRootProperty {
     glTFid<glTFCamera> camera = {};
-    vector<glTFid<glTFNode>> children = {};
+    std::vector<glTFid<glTFNode>> children = {};
     glTFid<glTFSkin> skin = {};
     mat4f matrix = { {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1} };
     glTFid<glTFMesh> mesh = {};
     quat4f rotation = {0, 0, 0, 1};
     vec3f scale = {1, 1, 1};
     vec3f translation = {0, 0, 0};
-    vector<float> weights = {};
+    std::vector<float> weights = {};
 }
 ~~~
 
@@ -9633,7 +9429,7 @@ Texture sampler properties for filtering and wrapping modes.
 
 ~~~ .cpp
 struct glTFScene : glTFChildOfRootProperty {
-    vector<glTFid<glTFNode>> nodes = {};
+    std::vector<glTFid<glTFNode>> nodes = {};
 }
 ~~~
 
@@ -9649,7 +9445,7 @@ The root nodes of a scene.
 struct glTFSkin : glTFChildOfRootProperty {
     glTFid<glTFAccessor> inverseBindMatrices = {};
     glTFid<glTFNode> skeleton = {};
-    vector<glTFid<glTFNode>> joints = {};
+    std::vector<glTFid<glTFNode>> joints = {};
 }
 ~~~
 
@@ -9668,23 +9464,23 @@ Joints and matrices defining a skin.
 
 ~~~ .cpp
 struct glTF : glTFProperty {
-    vector<string> extensionsUsed = {};
-    vector<string> extensionsRequired = {};
-    vector<glTFAccessor*> accessors = {};
-    vector<glTFAnimation*> animations = {};
+    std::vector<std::string> extensionsUsed = {};
+    std::vector<std::string> extensionsRequired = {};
+    std::vector<glTFAccessor*> accessors = {};
+    std::vector<glTFAnimation*> animations = {};
     glTFAsset* asset = nullptr;
-    vector<glTFBuffer*> buffers = {};
-    vector<glTFBufferView*> bufferViews = {};
-    vector<glTFCamera*> cameras = {};
-    vector<glTFImage*> images = {};
-    vector<glTFMaterial*> materials = {};
-    vector<glTFMesh*> meshes = {};
-    vector<glTFNode*> nodes = {};
-    vector<glTFSampler*> samplers = {};
+    std::vector<glTFBuffer*> buffers = {};
+    std::vector<glTFBufferView*> bufferViews = {};
+    std::vector<glTFCamera*> cameras = {};
+    std::vector<glTFImage*> images = {};
+    std::vector<glTFMaterial*> materials = {};
+    std::vector<glTFMesh*> meshes = {};
+    std::vector<glTFNode*> nodes = {};
+    std::vector<glTFSampler*> samplers = {};
     glTFid<glTFScene> scene = {};
-    vector<glTFScene*> scenes = {};
-    vector<glTFSkin*> skins = {};
-    vector<glTFTexture*> textures = {};
+    std::vector<glTFScene*> scenes = {};
+    std::vector<glTFSkin*> skins = {};
+    std::vector<glTFTexture*> textures = {};
     glTFAccessor* get(const glTFid<glTFAccessor>& id) const; 
     glTFAnimation* get(const glTFid<glTFAnimation>& id) const; 
     glTFBuffer* get(const glTFid<glTFBuffer>& id) const; 
@@ -9741,7 +9537,7 @@ The root object for a glTF asset.
 #### Function load_gltf()
 
 ~~~ .cpp
-glTF* load_gltf(const string& filename, bool load_bin = true,
+glTF* load_gltf(const std::string& filename, bool load_bin = true,
     bool load_img = false, bool skip_missing = false);
 ~~~
 
@@ -9752,7 +9548,7 @@ is false.
 #### Function load_binary_gltf()
 
 ~~~ .cpp
-glTF* load_binary_gltf(const string& filename, bool load_bin = true,
+glTF* load_binary_gltf(const std::string& filename, bool load_bin = true,
     bool load_img = false, bool skip_missing = false);
 ~~~
 
@@ -9763,8 +9559,8 @@ if `load_bin` and `load_img` are true, reporting errors only if
 #### Function save_gltf()
 
 ~~~ .cpp
-void save_gltf(const string& filename, const glTF* gltf, bool save_bin = true,
-    bool save_img = false);
+void save_gltf(const std::string& filename, const glTF* gltf,
+    bool save_bin = true, bool save_img = false);
 ~~~
 
 Save a gltf file `filename` to disk. Save binaries and images only if
@@ -9773,7 +9569,7 @@ Save a gltf file `filename` to disk. Save binaries and images only if
 #### Function save_binary_gltf()
 
 ~~~ .cpp
-void save_binary_gltf(const string& filename, const glTF* gltf,
+void save_binary_gltf(const std::string& filename, const glTF* gltf,
     bool save_bin = true, bool save_img = false);
 ~~~
 
@@ -9834,7 +9630,7 @@ A view for gltf array buffers that allows for typed access.
 
 ~~~ .cpp
 struct svg_path {
-    vector<vec2f> pos;
+    std::vector<vec2f> pos;
 }
 ~~~
 
@@ -9848,7 +9644,7 @@ Svg path.
 
 ~~~ .cpp
 struct svg_shape {
-    vector<svg_path*> paths;
+    std::vector<svg_path*> paths;
     ~svg_shape(); 
 }
 ~~~
@@ -9864,7 +9660,7 @@ Svg shape.
 
 ~~~ .cpp
 struct svg_scene {
-    vector<svg_shape*> shapes;
+    std::vector<svg_shape*> shapes;
     ~svg_scene(); 
 }
 ~~~
@@ -9879,7 +9675,7 @@ Svg scene.
 #### Function load_svg()
 
 ~~~ .cpp
-svg_scene* load_svg(const string& filename);
+svg_scene* load_svg(const std::string& filename);
 ~~~
 
 Load an SVG.
@@ -9887,7 +9683,7 @@ Load an SVG.
 #### Function save_svg()
 
 ~~~ .cpp
-void save_svg(const string& filename, const svg_scene* svg);
+void save_svg(const std::string& filename, const svg_scene* svg);
 ~~~
 
 Save an SVG.
@@ -9897,7 +9693,7 @@ Save an SVG.
 #### Function startswith()
 
 ~~~ .cpp
-inline bool startswith(const string& str, const string& substr);
+inline bool startswith(const std::string& str, const std::string& substr);
 ~~~
 
 Checks if a string starts with a prefix.
@@ -9905,7 +9701,7 @@ Checks if a string starts with a prefix.
 #### Function endswith()
 
 ~~~ .cpp
-inline bool endswith(const string& str, const string& substr);
+inline bool endswith(const std::string& str, const std::string& substr);
 ~~~
 
 Checks if a string ends with a prefix.
@@ -9913,7 +9709,7 @@ Checks if a string ends with a prefix.
 #### Function contains()
 
 ~~~ .cpp
-inline bool contains(const string& str, const string& substr);
+inline bool contains(const std::string& str, const std::string& substr);
 ~~~
 
 Check is a string contains a substring.
@@ -9921,7 +9717,8 @@ Check is a string contains a substring.
 #### Function splitlines()
 
 ~~~ .cpp
-inline vector<string> splitlines(const string& str, bool keep_newline = false);
+inline std::vector<std::string> splitlines(
+    const std::string& str, bool keep_newline = false);
 ~~~
 
 Splits a string into lines at the '\n' character. The line
@@ -9931,7 +9728,8 @@ Window if keep_newline is true.
 #### Function partition()
 
 ~~~ .cpp
-inline vector<string> partition(const string& str, const string& split);
+inline std::vector<std::string> partition(
+    const std::string& str, const std::string& split);
 ~~~
 
 Partition the string.
@@ -9939,7 +9737,7 @@ Partition the string.
 #### Function split()
 
 ~~~ .cpp
-inline vector<string> split(const string& str);
+inline std::vector<std::string> split(const std::string& str);
 ~~~
 
 Splits the string.
@@ -9947,7 +9745,8 @@ Splits the string.
 #### Function split()
 
 ~~~ .cpp
-inline vector<string> split(const string& str, const string& substr);
+inline std::vector<std::string> split(
+    const std::string& str, const std::string& substr);
 ~~~
 
 Splits the string.
@@ -9955,7 +9754,7 @@ Splits the string.
 #### Function split()
 
 ~~~ .cpp
-inline vector<string> split(const string& str, char substr);
+inline std::vector<std::string> split(const std::string& str, char substr);
 ~~~
 
 Splits the string.
@@ -9963,7 +9762,7 @@ Splits the string.
 #### Function rstrip()
 
 ~~~ .cpp
-inline string rstrip(const string& str);
+inline std::string rstrip(const std::string& str);
 ~~~
 
 Strip the string.
@@ -9971,7 +9770,7 @@ Strip the string.
 #### Function lstrip()
 
 ~~~ .cpp
-inline string lstrip(const string& str);
+inline std::string lstrip(const std::string& str);
 ~~~
 
 Strip the string.
@@ -9979,7 +9778,7 @@ Strip the string.
 #### Function strip()
 
 ~~~ .cpp
-inline string strip(const string& str);
+inline std::string strip(const std::string& str);
 ~~~
 
 Strip the string.
@@ -9987,7 +9786,8 @@ Strip the string.
 #### Function join()
 
 ~~~ .cpp
-inline string join(const vector<string>& strs, const string& sep);
+inline std::string join(
+    const std::vector<std::string>& strs, const std::string& sep);
 ~~~
 
 Joins a list of string with a string as separator.
@@ -9995,7 +9795,7 @@ Joins a list of string with a string as separator.
 #### Function lower()
 
 ~~~ .cpp
-inline string lower(const string& str);
+inline std::string lower(const std::string& str);
 ~~~
 
 Converts an ASCII string to lowercase.
@@ -10003,7 +9803,7 @@ Converts an ASCII string to lowercase.
 #### Function upper()
 
 ~~~ .cpp
-inline string upper(const string& str);
+inline std::string upper(const std::string& str);
 ~~~
 
 Converts an ASCII string to uppercase.
@@ -10011,7 +9811,7 @@ Converts an ASCII string to uppercase.
 #### Function isspace()
 
 ~~~ .cpp
-inline bool isspace(const string& str);
+inline bool isspace(const std::string& str);
 ~~~
 
 Check if a string is space.
@@ -10019,7 +9819,8 @@ Check if a string is space.
 #### Function replace()
 
 ~~~ .cpp
-inline string replace(const string& str, const string& s1, const string& s2);
+inline std::string replace(
+    const std::string& str, const std::string& s1, const std::string& s2);
 ~~~
 
 Replace s1 with s2 in str.
@@ -10027,7 +9828,7 @@ Replace s1 with s2 in str.
 #### Function path_dirname()
 
 ~~~ .cpp
-inline string path_dirname(const string& filename);
+inline std::string path_dirname(const std::string& filename);
 ~~~
 
 Get directory name (including '/').
@@ -10035,7 +9836,7 @@ Get directory name (including '/').
 #### Function path_extension()
 
 ~~~ .cpp
-inline string path_extension(const string& filename);
+inline std::string path_extension(const std::string& filename);
 ~~~
 
 Get extension (including '.').
@@ -10043,7 +9844,7 @@ Get extension (including '.').
 #### Function path_basename()
 
 ~~~ .cpp
-inline string path_basename(const string& filename);
+inline std::string path_basename(const std::string& filename);
 ~~~
 
 Get file basename.
@@ -10051,7 +9852,7 @@ Get file basename.
 #### Function path_filename()
 
 ~~~ .cpp
-inline string path_filename(const string& filename);
+inline std::string path_filename(const std::string& filename);
 ~~~
 
 Get filename without directory (equiv to get_basename() +
@@ -10060,8 +9861,8 @@ get_extension()).
 #### Function replace_path_extension()
 
 ~~~ .cpp
-inline string replace_path_extension(
-    const string& filename, const string& ext);
+inline std::string replace_path_extension(
+    const std::string& filename, const std::string& ext);
 ~~~
 
 Replace extension.
@@ -10069,8 +9870,8 @@ Replace extension.
 #### Function prepend_path_extension()
 
 ~~~ .cpp
-inline string prepend_path_extension(
-    const string& filename, const string& prep);
+inline std::string prepend_path_extension(
+    const std::string& filename, const std::string& prep);
 ~~~
 
 Prepend a string to the extension.
@@ -10078,8 +9879,8 @@ Prepend a string to the extension.
 #### Function split_path()
 
 ~~~ .cpp
-inline void split_path(
-    const string& filename, string& dirname, string& basename, string& ext);
+inline void split_path(const std::string& filename, std::string& dirname,
+    std::string& basename, std::string& ext);
 ~~~
 
 Splits a path calling the above functions.
@@ -10087,7 +9888,7 @@ Splits a path calling the above functions.
 #### Function path_convert_eparator()
 
 ~~~ .cpp
-inline string path_convert_eparator(const string& path_);
+inline std::string path_convert_eparator(const std::string& path_);
 ~~~
 
 Convert from Windows to Unix/OsX path separator
@@ -10095,7 +9896,8 @@ Convert from Windows to Unix/OsX path separator
 #### Function format()
 
 ~~~ .cpp
-inline string format(const string& fmt, const vector<string>& args);
+inline std::string format(
+    const std::string& fmt, const std::vector<std::string>& args);
 ~~~
 
 Really-minimal Python like string format. The implementation is not fast
@@ -10105,7 +9907,7 @@ nor memory efficient. But it is good enough for some needs.
 
 ~~~ .cpp
 template <typename... Args>
-inline string format(const string& fmt, const Args&... args);
+inline std::string format(const std::string& fmt, const Args&... args);
 ~~~
 
 Really-minimal Python like string format. Internally uses streams for
@@ -10116,7 +9918,7 @@ is not fast nor memory efficient. But it is good enough for some needs.
 
 ~~~ .cpp
 template <typename... Args>
-inline void print(const string& fmt, const Args&... args);
+inline void print(const std::string& fmt, const Args&... args);
 ~~~
 
 Wrapper for the above function that prints to stdout.
@@ -10125,7 +9927,7 @@ Wrapper for the above function that prints to stdout.
 
 ~~~ .cpp
 template <typename... Args>
-inline void println(const string& fmt, const Args&... args);
+inline void println(const std::string& fmt, const Args&... args);
 ~~~
 
 Wrapper for the above function that prints to stdout with endline.
@@ -10135,7 +9937,7 @@ Wrapper for the above function that prints to stdout with endline.
 #### Function load_binary()
 
 ~~~ .cpp
-inline vector<unsigned char> load_binary(const string& filename);
+inline std::vector<unsigned char> load_binary(const std::string& filename);
 ~~~
 
 Loads the contents of a binary file in an in-memory array.
@@ -10143,7 +9945,7 @@ Loads the contents of a binary file in an in-memory array.
 #### Function load_text()
 
 ~~~ .cpp
-inline string load_text(const string& filename);
+inline std::string load_text(const std::string& filename);
 ~~~
 
 Loads the contents of a text file into a string.
@@ -10152,7 +9954,7 @@ Loads the contents of a text file into a string.
 
 ~~~ .cpp
 inline void save_binary(
-    const string& filename, const vector<unsigned char>& data);
+    const std::string& filename, const std::vector<unsigned char>& data);
 ~~~
 
 Saves binary data to a file.
@@ -10160,7 +9962,7 @@ Saves binary data to a file.
 #### Function save_text()
 
 ~~~ .cpp
-inline void save_text(const string& filename, const string& str);
+inline void save_text(const std::string& filename, const std::string& str);
 ~~~
 
 Saves a string to a text file.
@@ -10194,7 +9996,7 @@ Check unused arguments.
 #### Function get_usage()
 
 ~~~ .cpp
-inline string get_usage(const cmdline_parser& parser);
+inline std::string get_usage(const cmdline_parser& parser);
 ~~~
 
 Returns the usage string.
@@ -10202,8 +10004,9 @@ Returns the usage string.
 #### Function parse_flag()
 
 ~~~ .cpp
-inline bool parse_flag(cmdline_parser& parser, const string& name,
-    const string& flag, const string& help, bool def = false, bool req = false);
+inline bool parse_flag(cmdline_parser& parser, const std::string& name,
+    const std::string& flag, const std::string& help, bool def = false,
+    bool req = false);
 ~~~
 
 Pase a flag from the command line.
@@ -10212,8 +10015,8 @@ Pase a flag from the command line.
 
 ~~~ .cpp
 template <typename T>
-inline T parse_opt(cmdline_parser& parser, const string& name,
-    const string& flag, const string& help, const T& def =;
+inline T parse_opt(cmdline_parser& parser, const std::string& name,
+    const std::string& flag, const std::string& help, const T& def =;
 ~~~
 
 Pase an option from the command line.
@@ -10222,10 +10025,10 @@ Pase an option from the command line.
 
 ~~~ .cpp
 template <typename T>
-inline T parse_opt(cmdline_parser& parser, const string& name,
-    const string& flag, const string& help,
-    const vector<pair<string, T>>& key_values, const T& def, bool req = false,
-    const vector<T>& choices =;
+inline T parse_opt(cmdline_parser& parser, const std::string& name,
+    const std::string& flag, const std::string& help,
+    const std::vector<std::pair<std::string, T>>& key_values, const T& def,
+    bool req = false, const std::vector<T>& choices =;
 ~~~
 
 Parse an enum option from the command line.
@@ -10234,7 +10037,7 @@ Parse an enum option from the command line.
 
 ~~~ .cpp
 inline cmdline_parser make_parser(
-    int argc, char** argv, const string& prog, const string& help);
+    int argc, char** argv, const std::string& prog, const std::string& help);
 ~~~
 
 Initialize a command line parser.
@@ -10263,8 +10066,8 @@ Members are not part of the public API.
 #### Function make_logger()
 
 ~~~ .cpp
-inline logger* make_logger(const string& filename = "", bool console = true,
-    bool verbose = true, bool file_append = true);
+inline logger* make_logger(const std::string& filename = "",
+    bool console = true, bool verbose = true, bool file_append = true);
 ~~~
 
 Make a logger with an optional console stream, an optional file stram
@@ -10282,7 +10085,7 @@ Get the default logger.
 
 ~~~ .cpp
 template <typename... Args>
-inline void log_info(logger* lgr, const string& msg, const Args&... args);
+inline void log_info(logger* lgr, const std::string& msg, const Args&... args);
 ~~~
 
 Log an info message.
@@ -10291,7 +10094,8 @@ Log an info message.
 
 ~~~ .cpp
 template <typename... Args>
-inline void log_warning(logger* lgr, const string& msg, const Args&... args);
+inline void log_warning(
+    logger* lgr, const std::string& msg, const Args&... args);
 ~~~
 
 Log an info message.
@@ -10300,7 +10104,8 @@ Log an info message.
 
 ~~~ .cpp
 template <typename... Args>
-inline void log_error(logger* lgr, const string& msg, const Args&... args);
+inline void log_error(
+    logger* lgr, const std::string& msg, const Args&... args);
 ~~~
 
 Log an error message.
@@ -10309,7 +10114,8 @@ Log an error message.
 
 ~~~ .cpp
 template <typename... Args>
-inline void log_fatal(logger* lgr, const string& msg, const Args&... args);
+inline void log_fatal(
+    logger* lgr, const std::string& msg, const Args&... args);
 ~~~
 
 Log a fatal message and exit.
@@ -10318,7 +10124,7 @@ Log a fatal message and exit.
 
 ~~~ .cpp
 template <typename... Args>
-inline void log_info(const string& msg, const Args&... args);
+inline void log_info(const std::string& msg, const Args&... args);
 ~~~
 
 Logs a message to the default loggers.
@@ -10327,7 +10133,7 @@ Logs a message to the default loggers.
 
 ~~~ .cpp
 template <typename... Args>
-inline void log_error(const string& msg, const Args&... args);
+inline void log_error(const std::string& msg, const Args&... args);
 ~~~
 
 Logs a message to the default loggers.
@@ -10336,7 +10142,7 @@ Logs a message to the default loggers.
 
 ~~~ .cpp
 template <typename... Args>
-inline void log_fatal(const string& msg, const Args&... args);
+inline void log_fatal(const std::string& msg, const Args&... args);
 ~~~
 
 Logs a message to the default loggers.
@@ -10404,9 +10210,9 @@ OpenGL light types.
 
 ~~~ .cpp
 struct gl_lights {
-    vector<vec3f> pos;
-    vector<vec3f> ke;
-    vector<gl_light_type> type;
+    std::vector<vec3f> pos;
+    std::vector<vec3f> ke;
+    std::vector<gl_light_type> type;
 }
 ~~~
 
@@ -10737,8 +10543,8 @@ Updates the buffer with new data.
 #### Function update_vertex_buffer()
 
 ~~~ .cpp
-inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<float>& values, bool dynamic = false);
+inline void update_vertex_buffer(gl_vertex_buffer& buf,
+    const std::vector<float>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer with new data.
@@ -10746,8 +10552,8 @@ Updates the buffer with new data.
 #### Function update_vertex_buffer()
 
 ~~~ .cpp
-inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<vec2f>& values, bool dynamic = false);
+inline void update_vertex_buffer(gl_vertex_buffer& buf,
+    const std::vector<vec2f>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer with new data.
@@ -10755,8 +10561,8 @@ Updates the buffer with new data.
 #### Function update_vertex_buffer()
 
 ~~~ .cpp
-inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<vec3f>& values, bool dynamic = false);
+inline void update_vertex_buffer(gl_vertex_buffer& buf,
+    const std::vector<vec3f>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer with new data.
@@ -10764,8 +10570,8 @@ Updates the buffer with new data.
 #### Function update_vertex_buffer()
 
 ~~~ .cpp
-inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<vec4f>& values, bool dynamic = false);
+inline void update_vertex_buffer(gl_vertex_buffer& buf,
+    const std::vector<vec4f>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer with new data.
@@ -10773,8 +10579,8 @@ Updates the buffer with new data.
 #### Function update_vertex_buffer()
 
 ~~~ .cpp
-inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<int>& values, bool dynamic = false);
+inline void update_vertex_buffer(gl_vertex_buffer& buf,
+    const std::vector<int>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer with new data.
@@ -10782,8 +10588,8 @@ Updates the buffer with new data.
 #### Function update_vertex_buffer()
 
 ~~~ .cpp
-inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<vec2i>& values, bool dynamic = false);
+inline void update_vertex_buffer(gl_vertex_buffer& buf,
+    const std::vector<vec2i>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer with new data.
@@ -10791,8 +10597,8 @@ Updates the buffer with new data.
 #### Function update_vertex_buffer()
 
 ~~~ .cpp
-inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<vec3i>& values, bool dynamic = false);
+inline void update_vertex_buffer(gl_vertex_buffer& buf,
+    const std::vector<vec3i>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer with new data.
@@ -10800,8 +10606,8 @@ Updates the buffer with new data.
 #### Function update_vertex_buffer()
 
 ~~~ .cpp
-inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<vec4i>& values, bool dynamic = false);
+inline void update_vertex_buffer(gl_vertex_buffer& buf,
+    const std::vector<vec4i>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer with new data.
@@ -10811,7 +10617,7 @@ Updates the buffer with new data.
 ~~~ .cpp
 template <typename T>
 inline gl_vertex_buffer make_vertex_buffer(
-    const vector<T>& values, bool dynamic = false);
+    const std::vector<T>& values, bool dynamic = false);
 ~~~
 
 Make a buffer with new data.
@@ -10896,8 +10702,8 @@ Updates the buffer with new data.
 #### Function update_element_buffer()
 
 ~~~ .cpp
-inline void update_element_buffer(
-    gl_element_buffer& buf, const vector<int>& values, bool dynamic = false);
+inline void update_element_buffer(gl_element_buffer& buf,
+    const std::vector<int>& values, bool dynamic = false);
 ~~~
 
 Updates the bufferwith new data.
@@ -10905,8 +10711,8 @@ Updates the bufferwith new data.
 #### Function update_element_buffer()
 
 ~~~ .cpp
-inline void update_element_buffer(
-    gl_element_buffer& buf, const vector<vec2i>& values, bool dynamic = false);
+inline void update_element_buffer(gl_element_buffer& buf,
+    const std::vector<vec2i>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer with new data.
@@ -10914,8 +10720,8 @@ Updates the buffer with new data.
 #### Function update_element_buffer()
 
 ~~~ .cpp
-inline void update_element_buffer(
-    gl_element_buffer& buf, const vector<vec3i>& values, bool dynamic = false);
+inline void update_element_buffer(gl_element_buffer& buf,
+    const std::vector<vec3i>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer with new data.
@@ -10923,8 +10729,8 @@ Updates the buffer with new data.
 #### Function update_element_buffer()
 
 ~~~ .cpp
-inline void update_element_buffer(
-    gl_element_buffer& buf, const vector<vec4i>& values, bool dynamic = false);
+inline void update_element_buffer(gl_element_buffer& buf,
+    const std::vector<vec4i>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer with new data.
@@ -10934,7 +10740,7 @@ Updates the buffer with new data.
 ~~~ .cpp
 template <typename T>
 inline gl_element_buffer make_element_buffer(
-    const vector<T>& values, bool dynamic = false);
+    const std::vector<T>& values, bool dynamic = false);
 ~~~
 
 Make a buffer with new data.
@@ -10996,7 +10802,7 @@ OpenGL program. Members are not part of the public API.
 #### Function make_program()
 
 ~~~ .cpp
-gl_program make_program(const string& vertex, const string& fragment);
+gl_program make_program(const std::string& vertex, const std::string& fragment);
 ~~~
 
 Creates an OpenGL program from vertex and fragment code.
@@ -11012,7 +10818,8 @@ Destroys the program.
 #### Function get_program_uniform_location()
 
 ~~~ .cpp
-int get_program_uniform_location(const gl_program& prog, const string& name);
+int get_program_uniform_location(
+    const gl_program& prog, const std::string& name);
 ~~~
 
 Get uniform location.
@@ -11020,7 +10827,8 @@ Get uniform location.
 #### Function get_program_attrib_location()
 
 ~~~ .cpp
-int get_program_attrib_location(const gl_program& prog, const string& name);
+int get_program_attrib_location(
+    const gl_program& prog, const std::string& name);
 ~~~
 
 Get attribute location.
@@ -11028,7 +10836,8 @@ Get attribute location.
 #### Function get_program_uniforms_names()
 
 ~~~ .cpp
-vector<pair<string, int>> get_program_uniforms_names(const gl_program& prog);
+std::vector<std::pair<std::string, int>> get_program_uniforms_names(
+    const gl_program& prog);
 ~~~
 
 Get the names of all uniforms.
@@ -11036,7 +10845,8 @@ Get the names of all uniforms.
 #### Function get_program_attributes_names()
 
 ~~~ .cpp
-vector<pair<string, int>> get_program_attributes_names(const gl_program& prog);
+std::vector<std::pair<std::string, int>> get_program_attributes_names(
+    const gl_program& prog);
 ~~~
 
 Get the names of all attributes.
@@ -11168,7 +10978,7 @@ Set uniform array.
 ~~~ .cpp
 template <typename T>
 inline bool set_program_uniform(
-    gl_program& prog, const string& var, const T& val);
+    gl_program& prog, const std::string& var, const T& val);
 ~~~
 
 Set uniform value for names variable.
@@ -11178,7 +10988,7 @@ Set uniform value for names variable.
 ~~~ .cpp
 template <typename T>
 inline bool set_program_uniform(
-    gl_program& prog, const string& var, const T* val, int num);
+    gl_program& prog, const std::string& var, const T* val, int num);
 ~~~
 
 Set uniform array for names variable.
@@ -11204,8 +11014,8 @@ Set uniform texture with an additionasl texture enable flags.
 #### Function set_program_uniform_texture()
 
 ~~~ .cpp
-inline bool set_program_uniform_texture(gl_program& prog, const string& var,
-    const gl_texture_info& tinfo, uint tunit);
+inline bool set_program_uniform_texture(gl_program& prog,
+    const std::string& var, const gl_texture_info& tinfo, uint tunit);
 ~~~
 
 Set uniform texture.
@@ -11213,8 +11023,9 @@ Set uniform texture.
 #### Function set_program_uniform_texture()
 
 ~~~ .cpp
-inline bool set_program_uniform_texture(gl_program& prog, const string& var,
-    const string& varon, const gl_texture_info& tinfo, uint tunit);
+inline bool set_program_uniform_texture(gl_program& prog,
+    const std::string& var, const std::string& varon,
+    const gl_texture_info& tinfo, uint tunit);
 ~~~
 
 Set uniform texture with an additionasl texture enable flags.
@@ -11242,7 +11053,7 @@ Sets a constant `value` of `nc` components for the vertex attribute at
 
 ~~~ .cpp
 bool set_program_vertattr(
-    gl_program& prog, const string& var, const gl_vertex_buffer& buf);
+    gl_program& prog, const std::string& var, const gl_vertex_buffer& buf);
 ~~~
 
 Binds a buffer to a vertex attribute.
@@ -11271,7 +11082,7 @@ Binds a buffer or constant to a vertex attribute.
 
 ~~~ .cpp
 template <typename T, int N>
-inline bool set_program_vertattr(gl_program& prog, const string& var,
+inline bool set_program_vertattr(gl_program& prog, const std::string& var,
     const gl_vertex_buffer& buf, const vec<T, N>& def);
 ~~~
 
@@ -11330,7 +11141,7 @@ Initialize gl lights.
 #### Function clear_textures()
 
 ~~~ .cpp
-void clear_textures(unordered_map<texture*, gl_texture>& textures);
+void clear_textures(std::unordered_map<texture*, gl_texture>& textures);
 ~~~
 
 Clear scene textures on the GPU.
@@ -11338,7 +11149,7 @@ Clear scene textures on the GPU.
 #### Function clear_shapes()
 
 ~~~ .cpp
-void clear_shapes(unordered_map<shape*, gl_shape>& shapes);
+void clear_shapes(std::unordered_map<shape*, gl_shape>& shapes);
 ~~~
 
 Clear scene shapes on the GPU.
@@ -11347,8 +11158,8 @@ Clear scene shapes on the GPU.
 
 ~~~ .cpp
 void update_textures(const scene* scn,
-    unordered_map<texture*, gl_texture>& textures,
-    const unordered_set<texture*>& refresh =;
+    std::unordered_map<texture*, gl_texture>& textures,
+    const std::unordered_set<texture*>& refresh =;
 ~~~
 
 Update scene textures on the GPU.
@@ -11356,8 +11167,9 @@ Update scene textures on the GPU.
 #### Function update_shapes()
 
 ~~~ .cpp
-void update_shapes(const scene* scn, unordered_map<shape*, gl_shape>& shapes,
-    const unordered_set<shape*>& refresh =;
+void update_shapes(const scene* scn,
+    std::unordered_map<shape*, gl_shape>& shapes,
+    const std::unordered_set<shape*>& refresh =;
 ~~~
 
 Update scene shapes on the GPU.
@@ -11656,8 +11468,8 @@ Params for stdsurface drawing.
 
 ~~~ .cpp
 void draw_stdsurface_scene(const scene* scn, const camera* cam,
-    gl_stdsurface_program& prog, unordered_map<shape*, gl_shape>& shapes,
-    unordered_map<texture*, gl_texture>& textures, const gl_lights& lights,
+    gl_stdsurface_program& prog, std::unordered_map<shape*, gl_shape>& shapes,
+    std::unordered_map<texture*, gl_texture>& textures, const gl_lights& lights,
     const gl_stdsurface_params& params);
 ~~~
 
@@ -11700,8 +11512,8 @@ OpenGL window. Members are not part of the public API.
 #### Function make_window()
 
 ~~~ .cpp
-gl_window* make_window(
-    int width, int height, const string& title, void* user_pointer = nullptr);
+gl_window* make_window(int width, int height, const std::string& title,
+    void* user_pointer = nullptr);
 ~~~
 
 Initialize a window.
@@ -11734,7 +11546,7 @@ Gets the user poiner.
 #### Function set_window_title()
 
 ~~~ .cpp
-void set_window_title(gl_window* win, const string& title);
+void set_window_title(gl_window* win, const std::string& title);
 ~~~
 
 Set window title.
@@ -11822,7 +11634,7 @@ Check if a key is pressed (not all keys are supported)
 #### Function get_screenshot()
 
 ~~~ .cpp
-vector<vec4b> get_screenshot(
+std::vector<vec4b> get_screenshot(
     gl_window* win, vec2i& wh, bool flipy = true, bool back = false);
 ~~~
 
@@ -11831,7 +11643,7 @@ Read pixels
 #### Function save_screenshot()
 
 ~~~ .cpp
-inline void save_screenshot(gl_window* win, const string& imfilename);
+inline void save_screenshot(gl_window* win, const std::string& imfilename);
 ~~~
 
 Save a screenshot to disk
@@ -11858,7 +11670,7 @@ Initialize widgets.
 #### Function begin_widgets()
 
 ~~~ .cpp
-bool begin_widgets(gl_window* win, const string& title);
+bool begin_widgets(gl_window* win, const std::string& title);
 ~~~
 
 Begin draw widgets.
@@ -11914,7 +11726,8 @@ Continue line with next widget.
 #### Function draw_label_widget()
 
 ~~~ .cpp
-void draw_label_widget(gl_window* win, const string& lbl, const string& msg);
+void draw_label_widget(
+    gl_window* win, const std::string& lbl, const std::string& msg);
 ~~~
 
 Label widget.
@@ -11923,8 +11736,18 @@ Label widget.
 
 ~~~ .cpp
 template <typename... Args>
+inline void draw_label_widget(gl_window* win, const std::string& lbl,
+    const std::string& fmt, const Args&... args);
+~~~
+
+Label widget.
+
+#### Function draw_label_widget()
+
+~~~ .cpp
+template <typename T>
 inline void draw_label_widget(
-    gl_window* win, const string& lbl, const string& fmt, const Args&... args);
+    gl_window* win, const std::string& lbl, const T& val);
 ~~~
 
 Label widget.
@@ -11933,17 +11756,8 @@ Label widget.
 
 ~~~ .cpp
 template <typename T>
-inline void draw_label_widget(gl_window* win, const string& lbl, const T& val);
-~~~
-
-Label widget.
-
-#### Function draw_label_widget()
-
-~~~ .cpp
-template <typename T>
-inline void draw_label_widget(gl_window* win, const string& lbl,
-    const vector<T>& vals, bool skip_empty = false);
+inline void draw_label_widget(gl_window* win, const std::string& lbl,
+    const std::vector<T>& vals, bool skip_empty = false);
 ~~~
 
 Label widget.
@@ -11951,7 +11765,7 @@ Label widget.
 #### Function draw_value_widget()
 
 ~~~ .cpp
-bool draw_value_widget(gl_window* win, const string& lbl, bool& val);
+bool draw_value_widget(gl_window* win, const std::string& lbl, bool& val);
 ~~~
 
 Value widget
@@ -11959,7 +11773,8 @@ Value widget
 #### Function draw_value_widget()
 
 ~~~ .cpp
-bool draw_value_widget(gl_window* win, const string& lbl, string& str);
+bool draw_value_widget(
+    gl_window* win, const std::string& lbl, std::string& str);
 ~~~
 
 Value widget.
@@ -11967,7 +11782,25 @@ Value widget.
 #### Function draw_value_widget()
 
 ~~~ .cpp
-bool draw_value_widget(gl_window* win, const string& lbl, int* val, int ncomp,
+bool draw_value_widget(gl_window* win, const std::string& lbl, int* val,
+    int ncomp, int min = 0, int max = 1, int incr = 1);
+~~~
+
+Value widget.
+
+#### Function draw_value_widget()
+
+~~~ .cpp
+bool draw_value_widget(gl_window* win, const std::string& lbl, float* val,
+    int ncomp, float min = 0, float max = 1, float incr = 1);
+~~~
+
+Value widget.
+
+#### Function draw_value_widget()
+
+~~~ .cpp
+inline bool draw_value_widget(gl_window* win, const std::string& lbl, int& val,
     int min = 0, int max = 1, int incr = 1);
 ~~~
 
@@ -11976,26 +11809,8 @@ Value widget.
 #### Function draw_value_widget()
 
 ~~~ .cpp
-bool draw_value_widget(gl_window* win, const string& lbl, float* val, int ncomp,
-    float min = 0, float max = 1, float incr = 1);
-~~~
-
-Value widget.
-
-#### Function draw_value_widget()
-
-~~~ .cpp
-inline bool draw_value_widget(gl_window* win, const string& lbl, int& val,
-    int min = 0, int max = 1, int incr = 1);
-~~~
-
-Value widget.
-
-#### Function draw_value_widget()
-
-~~~ .cpp
-inline bool draw_value_widget(gl_window* win, const string& lbl, float& val,
-    float min = 0, float max = 1, float incr = 1);
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    float& val, float min = 0, float max = 1, float incr = 1);
 ~~~
 
 Value widget.
@@ -12004,7 +11819,7 @@ Value widget.
 
 ~~~ .cpp
 template <int N>
-inline bool draw_value_widget(gl_window* win, const string& lbl,
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
     vec<int, N>& val, int min = 0, int max = 1, int incr = 1);
 ~~~
 
@@ -12014,7 +11829,7 @@ Value widget.
 
 ~~~ .cpp
 template <int N>
-inline bool draw_value_widget(gl_window* win, const string& lbl,
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
     vec<float, N>& val, float min = 0, float max = 1, float incr = 0.01f);
 ~~~
 
@@ -12023,7 +11838,7 @@ Value widget.
 #### Function draw_value_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(gl_window* win, const string& lbl,
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
     mat<float, 4>& val, float min = 0, float max = 1, float incr = 0.01f);
 ~~~
 
@@ -12032,7 +11847,7 @@ Value widget.
 #### Function draw_value_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(gl_window* win, const string& lbl,
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
     frame<float, 3>& val, float min = -10, float max = 10, float incr = 0.01f);
 ~~~
 
@@ -12042,7 +11857,7 @@ Value widget.
 
 ~~~ .cpp
 template <typename T, int N>
-inline bool draw_value_widget(gl_window* win, const string& lbl,
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
     quat<T, N>& val, float min = -1, float max = 1, float incr = 0.01f);
 ~~~
 
@@ -12051,7 +11866,7 @@ Value widget.
 #### Function draw_color_widget()
 
 ~~~ .cpp
-bool draw_color_widget(gl_window* win, const string& lbl, vec4f& val);
+bool draw_color_widget(gl_window* win, const std::string& lbl, vec4f& val);
 ~~~
 
 Color widget.
@@ -12059,7 +11874,7 @@ Color widget.
 #### Function draw_color_widget()
 
 ~~~ .cpp
-bool draw_color_widget(gl_window* win, const string& lbl, vec4b& val);
+bool draw_color_widget(gl_window* win, const std::string& lbl, vec4b& val);
 ~~~
 
 Color widget.
@@ -12067,7 +11882,7 @@ Color widget.
 #### Function draw_color_widget()
 
 ~~~ .cpp
-bool draw_color_widget(gl_window* win, const string& lbl, vec3f& val);
+bool draw_color_widget(gl_window* win, const std::string& lbl, vec3f& val);
 ~~~
 
 Color widget.
@@ -12076,7 +11891,7 @@ Color widget.
 
 ~~~ .cpp
 bool draw_combo_widget_begin(
-    gl_window* win, const string& lbl, const string& label);
+    gl_window* win, const std::string& lbl, const std::string& label);
 ~~~
 
 Combo widget.
@@ -12085,7 +11900,7 @@ Combo widget.
 
 ~~~ .cpp
 bool draw_combo_widget_item(
-    gl_window* win, const string& label, int idx, bool selected);
+    gl_window* win, const std::string& label, int idx, bool selected);
 ~~~
 
 Combo widget.
@@ -12103,7 +11918,7 @@ Combo widget.
 ~~~ .cpp
 template <typename T>
 bool draw_combo_widget_item(
-    gl_window* win, const string& label, int idx, T& val, const T& item);
+    gl_window* win, const std::string& label, int idx, T& val, const T& item);
 ~~~
 
 Combo widget.
@@ -12112,9 +11927,9 @@ Combo widget.
 
 ~~~ .cpp
 template <typename T, typename T1>
-inline bool draw_value_widget(gl_window* win, const string& lbl, T& val,
-    const vector<T1>& vals, const function<T(const T1&)>& value_func,
-    const function<string(const T1&)>& label_func);
+inline bool draw_value_widget(gl_window* win, const std::string& lbl, T& val,
+    const std::vector<T1>& vals, const std::function<T(const T1&)>& value_func,
+    const std::function<std::string(const T1&)>& label_func);
 ~~~
 
 Combo widget.
@@ -12122,18 +11937,8 @@ Combo widget.
 #### Function draw_value_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(gl_window* win, const string& lbl, string& val,
-    const vector<string>& labels);
-~~~
-
-Combo widget.
-
-#### Function draw_value_widget()
-
-~~~ .cpp
-template <typename T>
-inline bool draw_value_widget(gl_window* win, const string& lbl, T& val,
-    const vector<pair<string, T>>& labels);
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    std::string& val, const std::vector<std::string>& labels);
 ~~~
 
 Combo widget.
@@ -12142,8 +11947,18 @@ Combo widget.
 
 ~~~ .cpp
 template <typename T>
-inline bool draw_value_widget(gl_window* win, const string& lbl, T*& val,
-    const vector<T*>& vals, bool extra = true, T* extra_val = nullptr);
+inline bool draw_value_widget(gl_window* win, const std::string& lbl, T& val,
+    const std::vector<std::pair<std::string, T>>& labels);
+~~~
+
+Combo widget.
+
+#### Function draw_value_widget()
+
+~~~ .cpp
+template <typename T>
+inline bool draw_value_widget(gl_window* win, const std::string& lbl, T*& val,
+    const std::vector<T*>& vals, bool extra = true, T* extra_val = nullptr);
 ~~~
 
 Combo widget
@@ -12151,7 +11966,7 @@ Combo widget
 #### Function draw_button_widget()
 
 ~~~ .cpp
-bool draw_button_widget(gl_window* win, const string& lbl);
+bool draw_button_widget(gl_window* win, const std::string& lbl);
 ~~~
 
 Button widget.
@@ -12159,7 +11974,7 @@ Button widget.
 #### Function draw_header_widget()
 
 ~~~ .cpp
-bool draw_header_widget(gl_window* win, const string& lbl);
+bool draw_header_widget(gl_window* win, const std::string& lbl);
 ~~~
 
 Collapsible header widget.
@@ -12167,7 +11982,7 @@ Collapsible header widget.
 #### Function draw_tree_widget_begin()
 
 ~~~ .cpp
-bool draw_tree_widget_begin(gl_window* win, const string& lbl);
+bool draw_tree_widget_begin(gl_window* win, const std::string& lbl);
 ~~~
 
 Start tree widget.
@@ -12184,7 +11999,7 @@ End tree widget.
 
 ~~~ .cpp
 bool draw_tree_widget_begin(
-    gl_window* win, const string& lbl, void*& selection, void* content);
+    gl_window* win, const std::string& lbl, void*& selection, void* content);
 ~~~
 
 Start selectable tree node widget.
@@ -12192,8 +12007,8 @@ Start selectable tree node widget.
 #### Function draw_tree_widget_begin()
 
 ~~~ .cpp
-bool draw_tree_widget_begin(gl_window* win, const string& lbl, void*& selection,
-    void* content, const vec4f& col);
+bool draw_tree_widget_begin(gl_window* win, const std::string& lbl,
+    void*& selection, void* content, const vec4f& col);
 ~~~
 
 Start selectable tree node widget.
@@ -12210,7 +12025,7 @@ End selectable tree node widget.
 
 ~~~ .cpp
 void draw_tree_widget_leaf(
-    gl_window* win, const string& lbl, void*& selection, void* content);
+    gl_window* win, const std::string& lbl, void*& selection, void* content);
 ~~~
 
 Selectable tree leaf nodewidget.
@@ -12218,8 +12033,8 @@ Selectable tree leaf nodewidget.
 #### Function draw_tree_widget_leaf()
 
 ~~~ .cpp
-void draw_tree_widget_leaf(gl_window* win, const string& lbl, void*& selection,
-    void* content, const vec4f& col);
+void draw_tree_widget_leaf(gl_window* win, const std::string& lbl,
+    void*& selection, void* content, const vec4f& col);
 ~~~
 
 Selectable tree leaf node widget.
@@ -12261,7 +12076,7 @@ Image widget.
 
 ~~~ .cpp
 void draw_scroll_widget_begin(
-    gl_window* win, const string& lbl, int height, bool border);
+    gl_window* win, const std::string& lbl, int height, bool border);
 ~~~
 
 Scroll region widget.
@@ -12317,7 +12132,7 @@ Group ids widget.
 #### Function draw_tonemap_widgets()
 
 ~~~ .cpp
-inline void draw_tonemap_widgets(gl_window* win, const string& lbl,
+inline void draw_tonemap_widgets(gl_window* win, const std::string& lbl,
     float& exposure, float& gamma, bool& filmic);
 ~~~
 
@@ -12326,7 +12141,7 @@ Tonemapping widgets.
 #### Function draw_imageview_widgets()
 
 ~~~ .cpp
-inline void draw_imageview_widgets(gl_window* win, const string& lbl,
+inline void draw_imageview_widgets(gl_window* win, const std::string& lbl,
     gl_stdimage_params& params, bool show_tonemap = true);
 ~~~
 
@@ -12335,7 +12150,7 @@ Image view widgets.
 #### Function draw_imageinspect_widgets()
 
 ~~~ .cpp
-inline void draw_imageinspect_widgets(gl_window* win, const string& lbl,
+inline void draw_imageinspect_widgets(gl_window* win, const std::string& lbl,
     const image4f& hdr, const image4b& ldr, const vec2f& mouse_pos,
     const gl_stdimage_params& params);
 ~~~
@@ -12345,8 +12160,8 @@ Image inspection widgets.
 #### Function draw_camera_widget()
 
 ~~~ .cpp
-inline bool draw_camera_widget(
-    gl_window* win, const string& lbl, camera*& cam, scene* scn, camera* view);
+inline bool draw_camera_widget(gl_window* win, const std::string& lbl,
+    camera*& cam, scene* scn, camera* view);
 ~~~
 
 Draws a widget that can selected the camera.
@@ -12354,8 +12169,8 @@ Draws a widget that can selected the camera.
 #### Function draw_scene_widgets()
 
 ~~~ .cpp
-bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
-    void*& selection, const unordered_map<texture*, gl_texture>& gl_txt,
+bool draw_scene_widgets(gl_window* win, const std::string& lbl, scene* scn,
+    void*& selection, const std::unordered_map<texture*, gl_texture>& gl_txt,
     test_scene_params* test_scn = nullptr);
 ~~~
 

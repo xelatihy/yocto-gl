@@ -504,10 +504,10 @@ namespace ygl {
 // Compute per-vertex normals/tangents for lines, triangles and quads with
 // positions pos. Weighted indicated whether the normals/tangents are
 // weighted by line length.
-vector<vec3f> compute_normals(const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads,
-    const vector<vec3f>& pos, bool weighted) {
-    auto norm = vector<vec3f>(pos.size(), zero3f);
+std::vector<vec3f> compute_normals(const std::vector<vec2i>& lines,
+    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads,
+    const std::vector<vec3f>& pos, bool weighted) {
+    auto norm = std::vector<vec3f>(pos.size(), zero3f);
     for (auto& l : lines) {
         auto n = pos[l.y] - pos[l.x];
         if (!weighted) n = normalize(n);
@@ -533,11 +533,11 @@ vector<vec3f> compute_normals(const vector<vec2i>& lines,
 // The first three components are the tangent with respect to the U texcoord.
 // The fourth component is the sign of the tangent wrt the V texcoord.
 // Tangent frame is useful in normal mapping.
-vector<vec4f> compute_tangent_frames(const vector<vec3i>& triangles,
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec2f>& texcoord, bool weighted) {
-    auto tangu = vector<vec3f>(pos.size(), zero3f);
-    auto tangv = vector<vec3f>(pos.size(), zero3f);
+std::vector<vec4f> compute_tangent_frames(const std::vector<vec3i>& triangles,
+    const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
+    const std::vector<vec2f>& texcoord, bool weighted) {
+    auto tangu = std::vector<vec3f>(pos.size(), zero3f);
+    auto tangv = std::vector<vec3f>(pos.size(), zero3f);
     for (auto& t : triangles) {
         auto tutv = triangle_tangents_fromuv(pos[t.x], pos[t.y], pos[t.z],
             texcoord[t.x], texcoord[t.y], texcoord[t.z]);
@@ -547,7 +547,7 @@ vector<vec4f> compute_tangent_frames(const vector<vec3i>& triangles,
     }
     for (auto& t : tangu) t = normalize(t);
     for (auto& t : tangv) t = normalize(t);
-    auto tangsp = vector<vec4f>(pos.size(), zero4f);
+    auto tangsp = std::vector<vec4f>(pos.size(), zero4f);
     for (auto i = 0; i < pos.size(); i++) {
         tangu[i] = orthonormalize(tangu[i], norm[i]);
         auto s = (dot(cross(norm[i], tangu[i]), tangv[i]) < 0) ? -1.0f : 1.0f;
@@ -557,10 +557,10 @@ vector<vec4f> compute_tangent_frames(const vector<vec3i>& triangles,
 }
 
 // Apply skinning
-void compute_skinning(const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec4f>& weights, const vector<vec4i>& joints,
-    const vector<mat4f>& xforms, vector<vec3f>& skinned_pos,
-    vector<vec3f>& skinned_norm) {
+void compute_skinning(const std::vector<vec3f>& pos,
+    const std::vector<vec3f>& norm, const std::vector<vec4f>& weights,
+    const std::vector<vec4i>& joints, const std::vector<mat4f>& xforms,
+    std::vector<vec3f>& skinned_pos, std::vector<vec3f>& skinned_norm) {
     skinned_pos.resize(pos.size());
     skinned_norm.resize(norm.size());
     for (auto i = 0; i < pos.size(); i++) {
@@ -580,10 +580,10 @@ void compute_skinning(const vector<vec3f>& pos, const vector<vec3f>& norm,
 }
 
 // Apply skinning
-void compute_skinning(const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec4f>& weights, const vector<vec4i>& joints,
-    const vector<frame3f>& xforms, vector<vec3f>& skinned_pos,
-    vector<vec3f>& skinned_norm) {
+void compute_skinning(const std::vector<vec3f>& pos,
+    const std::vector<vec3f>& norm, const std::vector<vec4f>& weights,
+    const std::vector<vec4i>& joints, const std::vector<frame3f>& xforms,
+    std::vector<vec3f>& skinned_pos, std::vector<vec3f>& skinned_norm) {
     skinned_pos.resize(pos.size());
     skinned_norm.resize(norm.size());
     for (auto i = 0; i < pos.size(); i++) {
@@ -603,10 +603,10 @@ void compute_skinning(const vector<vec3f>& pos, const vector<vec3f>& norm,
 }
 
 // Apply skinning as specified in Khronos glTF
-void compute_matrix_skinning(const vector<vec3f>& pos,
-    const vector<vec3f>& norm, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<mat4f>& xforms,
-    vector<vec3f>& skinned_pos, vector<vec3f>& skinned_norm) {
+void compute_matrix_skinning(const std::vector<vec3f>& pos,
+    const std::vector<vec3f>& norm, const std::vector<vec4f>& weights,
+    const std::vector<vec4i>& joints, const std::vector<mat4f>& xforms,
+    std::vector<vec3f>& skinned_pos, std::vector<vec3f>& skinned_norm) {
     skinned_pos.resize(pos.size());
     skinned_norm.resize(norm.size());
     for (auto i = 0; i < pos.size(); i++) {
@@ -620,10 +620,10 @@ void compute_matrix_skinning(const vector<vec3f>& pos,
 }
 
 // Create an array of edges.
-vector<vec2i> get_edges(const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads) {
-    auto edges = vector<vec2i>();
-    auto eset = unordered_set<vec2i>();
+std::vector<vec2i> get_edges(const std::vector<vec2i>& lines,
+    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads) {
+    auto edges = std::vector<vec2i>();
+    auto eset = std::unordered_set<vec2i>();
     for (auto e : lines) {
         e = {min(e.x, e.y), max(e.x, e.y)};
         if (!eset.insert(e).second) continue;
@@ -653,9 +653,9 @@ vector<vec2i> get_edges(const vector<vec2i>& lines,
 }
 
 // Create an array of boundary edges. Lines are always considered boundaries.
-vector<vec2i> get_boundary_edges(const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads) {
-    auto ecount = unordered_map<vec2i, int>();
+std::vector<vec2i> get_boundary_edges(const std::vector<vec2i>& lines,
+    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads) {
+    auto ecount = std::unordered_map<vec2i, int>();
 
     // lines are added manually later
     for (auto l : lines) { ecount.insert({l, 2}); }
@@ -686,10 +686,10 @@ vector<vec2i> get_boundary_edges(const vector<vec2i>& lines,
 }
 
 // Get a list of all unique vertices.
-vector<int> get_verts(const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads) {
-    auto verts = vector<int>();
-    auto vset = unordered_set<int>();
+std::vector<int> get_verts(const std::vector<vec2i>& lines,
+    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads) {
+    auto verts = std::vector<int>();
+    auto vset = std::unordered_set<int>();
     for (auto l : lines)
         for (auto vid : l)
             if (vset.insert(vid).second) verts.push_back(vid);
@@ -704,14 +704,14 @@ vector<int> get_verts(const vector<vec2i>& lines,
 
 // Create an array of boundary vertices. Lines are always considered
 // boundaries.
-vector<int> get_boundary_verts(const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads) {
+std::vector<int> get_boundary_verts(const std::vector<vec2i>& lines,
+    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads) {
     return get_verts(get_boundary_edges(lines, triangles, quads), {}, {});
 }
 
 // Convert quads to triangles
-vector<vec3i> convert_quads_to_triangles(const vector<vec4i>& quads) {
-    auto triangles = vector<vec3i>();
+std::vector<vec3i> convert_quads_to_triangles(const std::vector<vec4i>& quads) {
+    auto triangles = std::vector<vec3i>();
     triangles.reserve(quads.size() * 2);
     for (auto& q : quads) {
         triangles.push_back({q.x, q.y, q.w});
@@ -722,9 +722,9 @@ vector<vec3i> convert_quads_to_triangles(const vector<vec4i>& quads) {
 
 // Convert quads to triangles with a diamond-like topology.
 // Quads have to be consecutive one row after another.
-vector<vec3i> convert_quads_to_triangles(
-    const vector<vec4i>& quads, int row_length) {
-    auto triangles = vector<vec3i>();
+std::vector<vec3i> convert_quads_to_triangles(
+    const std::vector<vec4i>& quads, int row_length) {
+    auto triangles = std::vector<vec3i>();
     triangles.reserve(quads.size() * 2);
     for (auto& q : quads) {
         triangles.push_back({q.x, q.y, q.w});
@@ -751,8 +751,8 @@ vector<vec3i> convert_quads_to_triangles(
 }
 
 // Convert beziers to lines using 3 lines for each bezier.
-vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers) {
-    auto lines = vector<vec2i>();
+std::vector<vec2i> convert_bezier_to_lines(const std::vector<vec4i>& beziers) {
+    auto lines = std::vector<vec2i>();
     lines.reserve(beziers.size() * 3);
     for (auto& b : beziers) {
         lines.push_back({b.x, b.y});
@@ -764,14 +764,15 @@ vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers) {
 
 // Convert face varying data to single primitives. Returns the quads indices
 // and filled vectors for pos, norm and texcoord.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-convert_face_varying(const vector<vec4i>& quads_pos,
-    const vector<vec4i>& quads_norm, const vector<vec4i>& quads_texcoord,
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec2f>& texcoord) {
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
+convert_face_varying(const std::vector<vec4i>& quads_pos,
+    const std::vector<vec4i>& quads_norm,
+    const std::vector<vec4i>& quads_texcoord, const std::vector<vec3f>& pos,
+    const std::vector<vec3f>& norm, const std::vector<vec2f>& texcoord) {
     // make faces unique
-    unordered_map<vec3i, int> vert_map;
-    auto quads = vector<vec4i>(quads_pos.size());
+    std::unordered_map<vec3i, int> vert_map;
+    auto quads = std::vector<vec4i>(quads_pos.size());
     for (auto fid = 0; fid < quads_pos.size(); fid++) {
         for (auto c = 0; c < 4; c++) {
             auto v = vec3i{
@@ -788,17 +789,17 @@ convert_face_varying(const vector<vec4i>& quads_pos,
     }
 
     // fill vert data
-    auto qpos = vector<vec3f>();
+    auto qpos = std::vector<vec3f>();
     if (!pos.empty()) {
         qpos.resize(vert_map.size());
         for (auto& kv : vert_map) { qpos[kv.second] = pos[kv.first.x]; }
     }
-    auto qnorm = vector<vec3f>();
+    auto qnorm = std::vector<vec3f>();
     if (!norm.empty()) {
         qnorm.resize(vert_map.size());
         for (auto& kv : vert_map) { qnorm[kv.second] = norm[kv.first.y]; }
     }
-    auto qtexcoord = vector<vec2f>();
+    auto qtexcoord = std::vector<vec2f>();
     if (!texcoord.empty()) {
         qtexcoord.resize(vert_map.size());
         for (auto& kv : vert_map) {
@@ -818,12 +819,14 @@ inline vec4f _subdivide_normalize(const vec4f& x) { return normalize(x); }
 
 // Tesselate lines, triangles and quads by spolitting edges.
 // Returns the tesselated elements and dictionaries for vertex calculations.
-tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>, vector<vec2i>, vector<vec4i>>
-subdivide_elems_linear(const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads, int nverts) {
+std::tuple<std::vector<vec2i>, std::vector<vec3i>, std::vector<vec4i>,
+    std::vector<vec2i>, std::vector<vec4i>>
+subdivide_elems_linear(const std::vector<vec2i>& lines,
+    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads,
+    int nverts) {
     if (!nverts) return {};
-    auto emap = unordered_map<vec2i, int>();
-    auto edges = vector<vec2i>();
+    auto emap = std::unordered_map<vec2i, int>();
+    auto edges = std::vector<vec2i>();
     for (auto e : lines) {
         if (contains(emap, e)) continue;
         emap[{e.x, e.y}] = nverts + (int)edges.size();
@@ -849,14 +852,14 @@ subdivide_elems_linear(const vector<vec2i>& lines,
         }
     }
 
-    auto tlines = vector<vec2i>();
+    auto tlines = std::vector<vec2i>();
     tlines.reserve(lines.size() * 2);
     for (auto& l : lines) {
         tlines.push_back({l.x, emap.at(l)});
         tlines.push_back({emap.at(l), l.y});
     }
 
-    auto ttriangles = vector<vec3i>();
+    auto ttriangles = std::vector<vec3i>();
     ttriangles.reserve(triangles.size() * 4);
     for (auto& t : triangles) {
         ttriangles.push_back({t.x, emap.at({t.x, t.y}), emap.at({t.z, t.x})});
@@ -866,7 +869,7 @@ subdivide_elems_linear(const vector<vec2i>& lines,
             {emap.at({t.x, t.y}), emap.at({t.y, t.z}), emap.at({t.z, t.x})});
     }
 
-    auto tquads = vector<vec4i>();
+    auto tquads = std::vector<vec4i>();
     tquads.reserve(quads.size() * 4);
     for (auto fid = 0; fid < quads.size(); fid++) {
         auto& f = quads[fid];
@@ -896,11 +899,12 @@ subdivide_elems_linear(const vector<vec2i>& lines,
 
 // Subdivide vertex properties given the maps
 template <typename T>
-vector<T> subdivide_vert_linear(const vector<T>& vert,
-    const vector<vec2i>& edges, const vector<vec4i>& faces, bool normalized) {
+std::vector<T> subdivide_vert_linear(const std::vector<T>& vert,
+    const std::vector<vec2i>& edges, const std::vector<vec4i>& faces,
+    bool normalized) {
     if (vert.empty()) return {};
 
-    auto tvert = vector<T>();
+    auto tvert = std::vector<T>();
     tvert.reserve(vert.size() + edges.size() + faces.size());
 
     append(tvert, vert);
@@ -921,14 +925,18 @@ vector<T> subdivide_vert_linear(const vector<T>& vert,
 }
 
 // template instantiations
-template vector<float> subdivide_vert_linear(const vector<float>& vert,
-    const vector<vec2i>& edges, const vector<vec4i>& faces, bool normalized);
-template vector<vec2f> subdivide_vert_linear(const vector<vec2f>& vert,
-    const vector<vec2i>& edges, const vector<vec4i>& faces, bool normalized);
-template vector<vec3f> subdivide_vert_linear(const vector<vec3f>& vert,
-    const vector<vec2i>& edges, const vector<vec4i>& faces, bool normalized);
-template vector<vec4f> subdivide_vert_linear(const vector<vec4f>& vert,
-    const vector<vec2i>& edges, const vector<vec4i>& faces, bool normalized);
+template std::vector<float> subdivide_vert_linear(
+    const std::vector<float>& vert, const std::vector<vec2i>& edges,
+    const std::vector<vec4i>& faces, bool normalized);
+template std::vector<vec2f> subdivide_vert_linear(
+    const std::vector<vec2f>& vert, const std::vector<vec2i>& edges,
+    const std::vector<vec4i>& faces, bool normalized);
+template std::vector<vec3f> subdivide_vert_linear(
+    const std::vector<vec3f>& vert, const std::vector<vec2i>& edges,
+    const std::vector<vec4i>& faces, bool normalized);
+template std::vector<vec4f> subdivide_vert_linear(
+    const std::vector<vec4f>& vert, const std::vector<vec2i>& edges,
+    const std::vector<vec4i>& faces, bool normalized);
 
 // Performs the smoothing step of Catmull-Clark. Start with a tesselate quad
 // mesh obtained with subdivide_elems_linear() and subdivide_vert_linear(). To
@@ -936,20 +944,20 @@ template vector<vec4f> subdivide_vert_linear(const vector<vec4f>& vert,
 // and pass it as crease_lines. To fix the boundary entirely, just get the
 // boundary vertices and pass it as creases.
 template <typename T>
-vector<T> subdivide_vert_catmullclark(const vector<vec4i>& quads,
-    const vector<T>& vert, const vector<vec2i>& crease_tlines,
-    const vector<int>& crease_tpoints, bool normalized) {
+std::vector<T> subdivide_vert_catmullclark(const std::vector<vec4i>& quads,
+    const std::vector<T>& vert, const std::vector<vec2i>& crease_tlines,
+    const std::vector<int>& crease_tpoints, bool normalized) {
     if (quads.empty() || vert.empty()) return vert;
 
     // define vertex valence ---------------------------
-    auto val = vector<int>(vert.size(), 2);
+    auto val = std::vector<int>(vert.size(), 2);
     for (auto e : crease_tlines)
         for (auto vid : e) val[vid] = 1;
     for (auto vid : crease_tpoints) val[vid] = 0;
 
     // averaging pass ----------------------------------
-    auto tvert = vector<T>(vert.size(), T());
-    auto count = vector<int>(vert.size(), 0);
+    auto tvert = std::vector<T>(vert.size(), T());
+    auto count = std::vector<int>(vert.size(), 0);
     for (auto p : crease_tpoints) {
         auto c = vert[p];
         if (val[p] == 0) tvert[p] += c;
@@ -986,26 +994,30 @@ vector<T> subdivide_vert_catmullclark(const vector<vec4i>& quads,
 }
 
 // explicit instantiations
-template vector<float> subdivide_vert_catmullclark(const vector<vec4i>& quads,
-    const vector<float>& vert, const vector<vec2i>& crease_tlines,
-    const vector<int>& crease_tpoints, bool normalized);
-template vector<vec2f> subdivide_vert_catmullclark(const vector<vec4i>& quads,
-    const vector<vec2f>& vert, const vector<vec2i>& crease_tlines,
-    const vector<int>& crease_tpoints, bool normalized);
-template vector<vec3f> subdivide_vert_catmullclark(const vector<vec4i>& quads,
-    const vector<vec3f>& vert, const vector<vec2i>& crease_tlines,
-    const vector<int>& crease_tpoints, bool normalized);
-template vector<vec4f> subdivide_vert_catmullclark(const vector<vec4i>& quads,
-    const vector<vec4f>& vert, const vector<vec2i>& crease_tlines,
-    const vector<int>& crease_tpoints, bool normalized);
+template std::vector<float> subdivide_vert_catmullclark(
+    const std::vector<vec4i>& quads, const std::vector<float>& vert,
+    const std::vector<vec2i>& crease_tlines,
+    const std::vector<int>& crease_tpoints, bool normalized);
+template std::vector<vec2f> subdivide_vert_catmullclark(
+    const std::vector<vec4i>& quads, const std::vector<vec2f>& vert,
+    const std::vector<vec2i>& crease_tlines,
+    const std::vector<int>& crease_tpoints, bool normalized);
+template std::vector<vec3f> subdivide_vert_catmullclark(
+    const std::vector<vec4i>& quads, const std::vector<vec3f>& vert,
+    const std::vector<vec2i>& crease_tlines,
+    const std::vector<int>& crease_tpoints, bool normalized);
+template std::vector<vec4f> subdivide_vert_catmullclark(
+    const std::vector<vec4i>& quads, const std::vector<vec4f>& vert,
+    const std::vector<vec2i>& crease_tlines,
+    const std::vector<int>& crease_tpoints, bool normalized);
 
 // Subdivide bezier recursive by splitting each segment into two in the middle.
 // Returns the tesselated elements and dictionaries for vertex calculations.
-tuple<vector<vec4i>, vector<int>, vector<vec4i>> subdivide_bezier_recursive(
-    const vector<vec4i>& beziers, int nverts) {
+std::tuple<std::vector<vec4i>, std::vector<int>, std::vector<vec4i>>
+subdivide_bezier_recursive(const std::vector<vec4i>& beziers, int nverts) {
     if (!nverts) return {};
-    auto vmap = unordered_map<int, int>();
-    auto verts = vector<int>();
+    auto vmap = std::unordered_map<int, int>();
+    auto verts = std::vector<int>();
     for (auto& b : beziers) {
         if (!contains(vmap, b.x)) {
             vmap[b.x] = verts.size();
@@ -1016,7 +1028,7 @@ tuple<vector<vec4i>, vector<int>, vector<vec4i>> subdivide_bezier_recursive(
             verts.push_back(b.w);
         }
     }
-    auto tbeziers = vector<vec4i>();
+    auto tbeziers = std::vector<vec4i>();
     tbeziers.reserve(beziers.size() * 2);
     for (auto bid = 0; bid < beziers.size(); bid++) {
         auto& b = beziers[bid];
@@ -1029,11 +1041,12 @@ tuple<vector<vec4i>, vector<int>, vector<vec4i>> subdivide_bezier_recursive(
 
 // Subdivide vertex properties given the maps
 template <typename T>
-vector<T> subdivide_vert_bezier(const vector<T>& vert, const vector<int>& verts,
-    const vector<vec4i>& segments, bool normalized) {
+std::vector<T> subdivide_vert_bezier(const std::vector<T>& vert,
+    const std::vector<int>& verts, const std::vector<vec4i>& segments,
+    bool normalized) {
     if (vert.empty()) return {};
 
-    auto tvert = vector<T>();
+    auto tvert = std::vector<T>();
     tvert.reserve(verts.size() + segments.size() * 5);
 
     for (auto v : verts) tvert.push_back(vert[v]);
@@ -1056,18 +1069,22 @@ vector<T> subdivide_vert_bezier(const vector<T>& vert, const vector<int>& verts,
 }
 
 // template instantiations
-template vector<float> subdivide_vert_bezier(const vector<float>& vert,
-    const vector<int>& verts, const vector<vec4i>& segments, bool normalized);
-template vector<vec2f> subdivide_vert_bezier(const vector<vec2f>& vert,
-    const vector<int>& verts, const vector<vec4i>& segments, bool normalized);
-template vector<vec3f> subdivide_vert_bezier(const vector<vec3f>& vert,
-    const vector<int>& verts, const vector<vec4i>& segments, bool normalized);
-template vector<vec4f> subdivide_vert_bezier(const vector<vec4f>& vert,
-    const vector<int>& verts, const vector<vec4i>& segments, bool normalized);
+template std::vector<float> subdivide_vert_bezier(
+    const std::vector<float>& vert, const std::vector<int>& verts,
+    const std::vector<vec4i>& segments, bool normalized);
+template std::vector<vec2f> subdivide_vert_bezier(
+    const std::vector<vec2f>& vert, const std::vector<int>& verts,
+    const std::vector<vec4i>& segments, bool normalized);
+template std::vector<vec3f> subdivide_vert_bezier(
+    const std::vector<vec3f>& vert, const std::vector<int>& verts,
+    const std::vector<vec4i>& segments, bool normalized);
+template std::vector<vec4f> subdivide_vert_bezier(
+    const std::vector<vec4f>& vert, const std::vector<int>& verts,
+    const std::vector<vec4i>& segments, bool normalized);
 
 // Generate a rectangular grid of usteps x vsteps uv values for parametric
 // surface generation.
-tuple<vector<vec4i>, vector<vec2f>> make_uvquads(
+std::tuple<std::vector<vec4i>, std::vector<vec2f>> make_uvquads(
     int usteps, int vsteps, bool uwrap, bool vwrap, bool vpole0, bool vpole1) {
     auto uvert = (uwrap) ? usteps : usteps + 1;
     auto vvert = (vwrap) ? vsteps : vsteps + 1;
@@ -1077,14 +1094,14 @@ tuple<vector<vec4i>, vector<vec2f>> make_uvquads(
         return j * uvert + i;
     };
 
-    auto uv = vector<vec2f>(uvert * vvert);
+    auto uv = std::vector<vec2f>(uvert * vvert);
     for (auto j = 0; j < vvert; j++) {
         for (auto i = 0; i < uvert; i++) {
             uv[vid(i, j)] = {i / (float)usteps, j / (float)vsteps};
         }
     }
 
-    auto quads = vector<vec4i>(usteps * vsteps);
+    auto quads = std::vector<vec4i>(usteps * vsteps);
     for (auto j = 0; j < vsteps; j++) {
         for (auto i = 0; i < usteps; i++) {
             quads[j * usteps + i] = {
@@ -1093,8 +1110,8 @@ tuple<vector<vec4i>, vector<vec2f>> make_uvquads(
     }
 
     if (vpole0) {
-        if (vwrap) throw runtime_error("cannot have a pole with wrapping");
-        uv = vector<vec2f>(uv.begin() + uvert, uv.end());
+        if (vwrap) throw std::runtime_error("cannot have a pole with wrapping");
+        uv = std::vector<vec2f>(uv.begin() + uvert, uv.end());
         uv.insert(uv.begin(), {0, 0});
         for (auto& q : quads) {
             for (auto& vid : q) { vid = (vid < usteps) ? 0 : vid - uvert + 1; }
@@ -1103,9 +1120,9 @@ tuple<vector<vec4i>, vector<vec2f>> make_uvquads(
     }
 
     if (vpole1) {
-        if (vwrap) throw runtime_error("cannot have a pole with wrapping");
+        if (vwrap) throw std::runtime_error("cannot have a pole with wrapping");
         auto pid = (int)uv.size() - uvert;
-        uv = vector<vec2f>(uv.begin(), uv.end() - uvert);
+        uv = std::vector<vec2f>(uv.begin(), uv.end() - uvert);
         uv.insert(uv.end(), {0, 1});
         for (auto& q : quads) {
             for (auto& vid : q) { vid = (vid < pid) ? vid : pid; }
@@ -1116,16 +1133,17 @@ tuple<vector<vec4i>, vector<vec2f>> make_uvquads(
 }
 
 // Generate parametric num lines of usteps segments.
-tuple<vector<vec2i>, vector<vec2f>> make_uvlines(int num, int usteps) {
+std::tuple<std::vector<vec2i>, std::vector<vec2f>> make_uvlines(
+    int num, int usteps) {
     auto vid = [usteps](int i, int j) { return j * (usteps + 1) + i; };
-    auto uv = vector<vec2f>((usteps + 1) * num);
+    auto uv = std::vector<vec2f>((usteps + 1) * num);
     for (auto j = 0; j < num; j++) {
         for (auto i = 0; i <= usteps; i++) {
             uv[vid(i, j)] = {i / (float)usteps, j / (float)num};
         }
     }
 
-    auto lines = vector<vec2i>(usteps * num);
+    auto lines = std::vector<vec2i>(usteps * num);
     for (int j = 0; j < num; j++) {
         for (int i = 0; i < usteps; i++) {
             lines[j * usteps + i] = {vid(i, j), vid(i + 1, j)};
@@ -1136,11 +1154,11 @@ tuple<vector<vec2i>, vector<vec2f>> make_uvlines(int num, int usteps) {
 }
 
 // Generate a parametric point set. Mostly here for completeness.
-tuple<vector<int>, vector<vec2f>> make_uvpoints(int num) {
-    auto uv = vector<vec2f>(num);
+std::tuple<std::vector<int>, std::vector<vec2f>> make_uvpoints(int num) {
+    auto uv = std::vector<vec2f>(num);
     for (auto i = 0; i < num; i++) { uv[i] = {i / (float)num, 0}; }
 
-    auto points = vector<int>(num);
+    auto points = std::vector<int>(num);
     for (auto i = 0; i < num; i++) points[i] = i;
 
     return {points, uv};
@@ -1149,10 +1167,11 @@ tuple<vector<int>, vector<vec2f>> make_uvpoints(int num) {
 // Merge elements between shapes. The elements are merged by increasing the
 // array size of the second array by the number of vertices of the first.
 // Vertex data can then be concatenated successfully.
-tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>> merge_elems(int nverts,
-    const vector<vec2i>& lines1, const vector<vec3i>& triangles1,
-    const vector<vec4i>& quads1, const vector<vec2i>& lines2,
-    const vector<vec3i>& triangles2, const vector<vec4i>& quads2) {
+std::tuple<std::vector<vec2i>, std::vector<vec3i>, std::vector<vec4i>>
+merge_elems(int nverts, const std::vector<vec2i>& lines1,
+    const std::vector<vec3i>& triangles1, const std::vector<vec4i>& quads1,
+    const std::vector<vec2i>& lines2, const std::vector<vec3i>& triangles2,
+    const std::vector<vec4i>& quads2) {
     auto lines = join(lines1, lines2);
     auto triangles = join(triangles1, triangles2);
     auto quads = join(quads1, quads2);
@@ -1167,24 +1186,25 @@ tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>> merge_elems(int nverts,
 
 // Unshare shape data by duplicating all vertex data for each element,
 // giving a faceted look. Note that faceted tangents are not computed.
-tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>, vector<int>> facet_elems(
-    const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads) {
-    auto verts = vector<int>();
-    auto nlines = vector<vec2i>();
+std::tuple<std::vector<vec2i>, std::vector<vec3i>, std::vector<vec4i>,
+    std::vector<int>>
+facet_elems(const std::vector<vec2i>& lines,
+    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads) {
+    auto verts = std::vector<int>();
+    auto nlines = std::vector<vec2i>();
     for (auto l : lines) {
         nlines.push_back({(int)verts.size(), (int)verts.size() + 1});
         for (auto v : l) verts.push_back(v);
     }
 
-    auto ntriangles = vector<vec3i>();
+    auto ntriangles = std::vector<vec3i>();
     for (auto t : triangles) {
         ntriangles.push_back(
             {(int)verts.size(), (int)verts.size() + 1, (int)verts.size() + 2});
         for (auto v : t) verts.push_back(v);
     }
 
-    auto nquads = vector<vec4i>();
+    auto nquads = std::vector<vec4i>();
     for (auto q : quads) {
         if (q.z != q.w) {
             nquads.push_back({(int)verts.size(), (int)verts.size() + 1,
@@ -1202,22 +1222,23 @@ tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>, vector<int>> facet_elems(
 
 // Unshare vertices for faceting
 template <typename T>
-vector<T> facet_vert(const vector<T>& vert, const vector<int>& vmap) {
+std::vector<T> facet_vert(
+    const std::vector<T>& vert, const std::vector<int>& vmap) {
     if (vert.empty()) return vert;
-    auto tvert = vector<T>(vmap.size());
+    auto tvert = std::vector<T>(vmap.size());
     for (auto vid = 0; vid < vmap.size(); vid++) tvert[vid] = vert[vmap[vid]];
     return tvert;
 }
 
 // instantations
-template vector<float> facet_vert<float>(
-    const vector<float>& vert, const vector<int>& vmap);
-template vector<vec2f> facet_vert<vec2f>(
-    const vector<vec2f>& vert, const vector<int>& vmap);
-template vector<vec3f> facet_vert<vec3f>(
-    const vector<vec3f>& vert, const vector<int>& vmap);
-template vector<vec4f> facet_vert<vec4f>(
-    const vector<vec4f>& vert, const vector<int>& vmap);
+template std::vector<float> facet_vert<float>(
+    const std::vector<float>& vert, const std::vector<int>& vmap);
+template std::vector<vec2f> facet_vert<vec2f>(
+    const std::vector<vec2f>& vert, const std::vector<int>& vmap);
+template std::vector<vec3f> facet_vert<vec3f>(
+    const std::vector<vec3f>& vert, const std::vector<int>& vmap);
+template std::vector<vec4f> facet_vert<vec4f>(
+    const std::vector<vec4f>& vert, const std::vector<int>& vmap);
 
 }  // namespace ygl
 
@@ -1227,16 +1248,16 @@ template vector<vec4f> facet_vert<vec4f>(
 namespace ygl {
 
 // Compute a distribution for sampling points uniformly
-vector<float> sample_points_cdf(int npoints) {
-    auto cdf = vector<float>(npoints);
+std::vector<float> sample_points_cdf(int npoints) {
+    auto cdf = std::vector<float>(npoints);
     for (auto i = 0; i < npoints; i++) cdf[i] = i + 1;
     return cdf;
 }
 
 // Compute a distribution for sampling lines uniformly
-vector<float> sample_lines_cdf(
-    const vector<vec2i>& lines, const vector<vec3f>& pos) {
-    auto cdf = vector<float>(lines.size());
+std::vector<float> sample_lines_cdf(
+    const std::vector<vec2i>& lines, const std::vector<vec3f>& pos) {
+    auto cdf = std::vector<float>(lines.size());
     for (auto i = 0; i < lines.size(); i++)
         cdf[i] = length(pos[lines[i].x] - pos[lines[i].y]);
     for (auto i = 1; i < lines.size(); i++) cdf[i] += cdf[i - 1];
@@ -1244,9 +1265,9 @@ vector<float> sample_lines_cdf(
 }
 
 // Compute a distribution for sampling triangle meshes uniformly
-vector<float> sample_triangles_cdf(
-    const vector<vec3i>& triangles, const vector<vec3f>& pos) {
-    auto cdf = vector<float>(triangles.size());
+std::vector<float> sample_triangles_cdf(
+    const std::vector<vec3i>& triangles, const std::vector<vec3f>& pos) {
+    auto cdf = std::vector<float>(triangles.size());
     for (auto i = 0; i < triangles.size(); i++)
         cdf[i] = triangle_area(
             pos[triangles[i].x], pos[triangles[i].y], pos[triangles[i].z]);
@@ -1255,9 +1276,9 @@ vector<float> sample_triangles_cdf(
 }
 
 // Compute a distribution for sampling quad meshes uniformly
-vector<float> sample_quads_cdf(
-    const vector<vec4i>& quads, const vector<vec3f>& pos) {
-    auto cdf = vector<float>(quads.size());
+std::vector<float> sample_quads_cdf(
+    const std::vector<vec4i>& quads, const std::vector<vec3f>& pos) {
+    auto cdf = std::vector<float>(quads.size());
     for (auto i = 0; i < quads.size(); i++)
         cdf[i] = quad_area(
             pos[quads[i].x], pos[quads[i].y], pos[quads[i].z], pos[quads[i].w]);
@@ -1268,19 +1289,19 @@ vector<float> sample_quads_cdf(
 // Samples a set of points over a triangle mesh uniformly. The rng function
 // takes the point index and returns vec3f numbers uniform directibuted in
 // [0,1]^3. unorm and texcoord are optional.
-tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
-    const vector<vec3i>& triangles, const vector<vec3f>& pos,
-    const vector<vec3f>& norm, const vector<vec2f>& texcoord, int npoints,
-    uint64_t seed) {
-    auto sampled_pos = vector<vec3f>(npoints);
-    auto sampled_norm = vector<vec3f>(norm.empty() ? 0 : npoints);
-    auto sampled_texcoord = vector<vec2f>(texcoord.empty() ? 0 : npoints);
+std::tuple<std::vector<vec3f>, std::vector<vec3f>, std::vector<vec2f>>
+sample_triangles_points(const std::vector<vec3i>& triangles,
+    const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
+    const std::vector<vec2f>& texcoord, int npoints, uint64_t seed) {
+    auto sampled_pos = std::vector<vec3f>(npoints);
+    auto sampled_norm = std::vector<vec3f>(norm.empty() ? 0 : npoints);
+    auto sampled_texcoord = std::vector<vec2f>(texcoord.empty() ? 0 : npoints);
     auto cdf = sample_triangles_cdf(triangles, pos);
     auto rng = init_rng(seed);
     for (auto i = 0; i < npoints; i++) {
         auto eid = 0;
         auto euv = zero2f;
-        tie(eid, euv) = sample_triangles(
+        std::tie(eid, euv) = sample_triangles(
             cdf, next_rand1f(rng), {next_rand1f(rng), next_rand1f(rng)});
         auto t = triangles[eid];
         sampled_pos[i] =
@@ -1304,37 +1325,39 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
 namespace ygl {
 
 // check hdr extensions
-bool is_hdr_filename(const string& filename) {
+bool is_hdr_filename(const std::string& filename) {
     auto ext = path_extension(filename);
     return ext == ".hdr" || ext == ".exr";
 }
 
 // Loads an ldr image.
-image4b load_image4b(const string& filename) {
+image4b load_image4b(const std::string& filename) {
     auto w = 0, h = 0, c = 0;
-    auto pixels = unique_ptr<byte>(stbi_load(filename.c_str(), &w, &h, &c, 4));
+    auto pixels =
+        std::unique_ptr<byte>(stbi_load(filename.c_str(), &w, &h, &c, 4));
     if (!pixels) return {};
     return make_image(w, h, (vec4b*)pixels.get());
 }
 
 // Loads an hdr image.
-image4f load_image4f(const string& filename) {
+image4f load_image4f(const std::string& filename) {
     auto ext = path_extension(filename);
     auto w = 0, h = 0, c = 0;
-    auto pixels = unique_ptr<float>(nullptr);
+    auto pixels = std::unique_ptr<float>(nullptr);
     if (ext == ".exr") {
         auto pixels_ = (float*)nullptr;
         if (!LoadEXR(&pixels_, &w, &h, filename.c_str(), nullptr))
-            pixels = unique_ptr<float>(pixels_);
+            pixels = std::unique_ptr<float>(pixels_);
     } else {
-        pixels = unique_ptr<float>(stbi_loadf(filename.c_str(), &w, &h, &c, 4));
+        pixels =
+            std::unique_ptr<float>(stbi_loadf(filename.c_str(), &w, &h, &c, 4));
     }
     if (!pixels) return {};
     return make_image(w, h, (vec4f*)pixels.get());
 }
 
 // Saves an ldr image.
-bool save_image4b(const string& filename, const image4b& img) {
+bool save_image4b(const std::string& filename, const image4b& img) {
     if (path_extension(filename) == ".png") {
         return stbi_write_png(filename.c_str(), img.width(), img.height(), 4,
             (byte*)data(img), img.width() * 4);
@@ -1347,7 +1370,7 @@ bool save_image4b(const string& filename, const image4b& img) {
 }
 
 // Saves an hdr image.
-bool save_image4f(const string& filename, const image4f& img) {
+bool save_image4f(const std::string& filename, const image4f& img) {
     if (path_extension(filename) == ".hdr") {
         return stbi_write_hdr(
             filename.c_str(), img.width(), img.height(), 4, (float*)data(img));
@@ -1360,49 +1383,49 @@ bool save_image4f(const string& filename, const image4f& img) {
 }
 
 // Loads an image
-vector<float> load_imagef(
-    const string& filename, int& width, int& height, int& ncomp) {
+std::vector<float> load_imagef(
+    const std::string& filename, int& width, int& height, int& ncomp) {
     auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 0);
     if (!pixels) return {};
-    auto ret = vector<float>(pixels, pixels + width * height * ncomp);
+    auto ret = std::vector<float>(pixels, pixels + width * height * ncomp);
     free(pixels);
     return ret;
 }
 
 // Loads an image
-vector<byte> load_image(
-    const string& filename, int& width, int& height, int& ncomp) {
+std::vector<byte> load_image(
+    const std::string& filename, int& width, int& height, int& ncomp) {
     auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 0);
     if (!pixels) return {};
-    auto ret = vector<byte>(pixels, pixels + width * height * ncomp);
+    auto ret = std::vector<byte>(pixels, pixels + width * height * ncomp);
     free(pixels);
     return ret;
 }
 
 // Loads an image from memory.
-vector<float> load_imagef_from_memory(const string& filename, const byte* data,
-    int length, int& width, int& height, int& ncomp) {
+std::vector<float> load_imagef_from_memory(const std::string& filename,
+    const byte* data, int length, int& width, int& height, int& ncomp) {
     auto pixels =
         stbi_loadf_from_memory(data, length, &width, &height, &ncomp, 0);
     if (!pixels) return {};
-    auto ret = vector<float>(pixels, pixels + width * height * ncomp);
+    auto ret = std::vector<float>(pixels, pixels + width * height * ncomp);
     free(pixels);
     return ret;
 }
 
 // Loads an image from memory.
-vector<byte> load_image_from_memory(const string& filename, const byte* data,
-    int length, int& width, int& height, int& ncomp) {
+std::vector<byte> load_image_from_memory(const std::string& filename,
+    const byte* data, int length, int& width, int& height, int& ncomp) {
     auto pixels =
         stbi_load_from_memory(data, length, &width, &height, &ncomp, 0);
     if (!pixels) return {};
-    auto ret = vector<byte>(pixels, pixels + width * height * ncomp);
+    auto ret = std::vector<byte>(pixels, pixels + width * height * ncomp);
     free(pixels);
     return ret;
 }
 
 // Saves an image
-bool save_imagef(const string& filename, int width, int height, int ncomp,
+bool save_imagef(const std::string& filename, int width, int height, int ncomp,
     const float* hdr) {
     if (path_extension(filename) == ".hdr") {
         return stbi_write_hdr(filename.c_str(), width, height, ncomp, hdr);
@@ -1412,8 +1435,8 @@ bool save_imagef(const string& filename, int width, int height, int ncomp,
 }
 
 // Saves an image
-bool save_image(
-    const string& filename, int width, int height, int ncomp, const byte* ldr) {
+bool save_image(const std::string& filename, int width, int height, int ncomp,
+    const byte* ldr) {
     if (path_extension(filename) == ".png") {
         return stbi_write_png(
             filename.c_str(), width, height, ncomp, ldr, width * ncomp);
@@ -1425,7 +1448,7 @@ bool save_image(
 }
 
 // Save an HDR or LDR image with tonemapping based on filename
-bool save_image(const string& filename, const image4f& hdr, float exposure,
+bool save_image(const std::string& filename, const image4f& hdr, float exposure,
     float gamma, bool filmic) {
     if (is_hdr_filename(filename)) {
         return save_image4f(filename, hdr);
@@ -1438,7 +1461,7 @@ bool save_image(const string& filename, const image4f& hdr, float exposure,
 // Resize image.
 void resize_image(const image4f& img, image4f& res_img, resize_filter filter,
     resize_edge edge, bool premultiplied_alpha) {
-    static const auto filter_map = map<resize_filter, stbir_filter>{
+    static const auto filter_map = std::map<resize_filter, stbir_filter>{
         {resize_filter::def, STBIR_FILTER_DEFAULT},
         {resize_filter::box, STBIR_FILTER_BOX},
         {resize_filter::triangle, STBIR_FILTER_TRIANGLE},
@@ -1447,7 +1470,7 @@ void resize_image(const image4f& img, image4f& res_img, resize_filter filter,
         {resize_filter::mitchell, STBIR_FILTER_MITCHELL}};
 
     static const auto edge_map =
-        map<resize_edge, stbir_edge>{{resize_edge::def, STBIR_EDGE_CLAMP},
+        std::map<resize_edge, stbir_edge>{{resize_edge::def, STBIR_EDGE_CLAMP},
             {resize_edge::clamp, STBIR_EDGE_CLAMP},
             {resize_edge::reflect, STBIR_EDGE_REFLECT},
             {resize_edge::wrap, STBIR_EDGE_WRAP},
@@ -1465,7 +1488,7 @@ void resize_image(const image4f& img, image4f& res_img, resize_filter filter,
 // Resize image.
 void resize_image(const image4b& img, image4b& res_img, resize_filter filter,
     resize_edge edge, bool premultiplied_alpha) {
-    static const auto filter_map = map<resize_filter, stbir_filter>{
+    static const auto filter_map = std::map<resize_filter, stbir_filter>{
         {resize_filter::def, STBIR_FILTER_DEFAULT},
         {resize_filter::box, STBIR_FILTER_BOX},
         {resize_filter::triangle, STBIR_FILTER_TRIANGLE},
@@ -1474,7 +1497,7 @@ void resize_image(const image4b& img, image4b& res_img, resize_filter filter,
         {resize_filter::mitchell, STBIR_FILTER_MITCHELL}};
 
     static const auto edge_map =
-        map<resize_edge, stbir_edge>{{resize_edge::def, STBIR_EDGE_CLAMP},
+        std::map<resize_edge, stbir_edge>{{resize_edge::def, STBIR_EDGE_CLAMP},
             {resize_edge::clamp, STBIR_EDGE_CLAMP},
             {resize_edge::reflect, STBIR_EDGE_REFLECT},
             {resize_edge::wrap, STBIR_EDGE_WRAP},
@@ -2427,9 +2450,9 @@ const int bvh_minprims = 4;
 // or initializing it as a leaf. When splitting, the heuristic heuristic is
 // used and nodes added sequentially in the preallocated nodes array and
 // the number of nodes nnodes is updated.
-void make_bvh_node(vector<bvh_node>& nodes, int nodeid,
-    vector<int>& sorted_prims, int start, int end, const vector<bbox3f>& bboxes,
-    bvh_node_type type, bool equal_size) {
+void make_bvh_node(std::vector<bvh_node>& nodes, int nodeid,
+    std::vector<int>& sorted_prims, int start, int end,
+    const std::vector<bbox3f>& bboxes, bvh_node_type type, bool equal_size) {
     // compute node bounds
     auto& node = nodes.at(nodeid);
     node.bbox = invalid_bbox3f;
@@ -2505,14 +2528,14 @@ void make_bvh_node(vector<bvh_node>& nodes, int nodeid,
 }
 
 // Build a BVH node list and sorted primitive array
-tuple<vector<bvh_node>, vector<int>> make_bvh_nodes(
-    const vector<bbox3f>& bboxes, bvh_node_type type, bool equal_size) {
+std::tuple<std::vector<bvh_node>, std::vector<int>> make_bvh_nodes(
+    const std::vector<bbox3f>& bboxes, bvh_node_type type, bool equal_size) {
     // create an array of primitives to sort
-    auto sorted_prim = vector<int>(bboxes.size());
+    auto sorted_prim = std::vector<int>(bboxes.size());
     for (auto i = 0; i < bboxes.size(); i++) sorted_prim[i] = i;
 
     // allocate nodes (over-allocate now then shrink)
-    auto nodes = vector<bvh_node>();
+    auto nodes = std::vector<bvh_node>();
     nodes.reserve(sorted_prim.size() * 2);
 
     // start recursive splitting
@@ -2530,7 +2553,7 @@ tuple<vector<bvh_node>, vector<int>> make_bvh_nodes(
 // Build a BVH from the data already set
 void make_bvh_nodes(bvh_tree* bvh, bool equal_size) {
     // get the number of primitives and the primitive type
-    auto bboxes = vector<bbox3f>();
+    auto bboxes = std::vector<bbox3f>();
     if (!bvh->points.empty()) {
         for (auto& p : bvh->points) {
             bboxes.push_back(point_bbox(bvh->pos[p], bvh->radius[p]));
@@ -2567,7 +2590,7 @@ void make_bvh_nodes(bvh_tree* bvh, bool equal_size) {
     }
 
     // make node bvh
-    tie(bvh->nodes, bvh->sorted_prim) =
+    std::tie(bvh->nodes, bvh->sorted_prim) =
         make_bvh_nodes(bboxes, bvh->type, equal_size);
 
     // sort primitives
@@ -2586,10 +2609,10 @@ void make_bvh_nodes(bvh_tree* bvh, bool equal_size) {
 }
 
 // Build a BVH from a set of primitives.
-bvh_tree* make_bvh(const vector<int>& points, const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads,
-    const vector<vec3f>& pos, const vector<float>& radius, float def_radius,
-    bool equal_size) {
+bvh_tree* make_bvh(const std::vector<int>& points,
+    const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
+    const std::vector<vec4i>& quads, const std::vector<vec3f>& pos,
+    const std::vector<float>& radius, float def_radius, bool equal_size) {
     // allocate the bvh
     auto bvh = new bvh_tree();
 
@@ -2600,7 +2623,7 @@ bvh_tree* make_bvh(const vector<int>& points, const vector<vec2i>& lines,
     bvh->quads = quads;
     bvh->pos = pos;
     bvh->radius =
-        (radius.empty()) ? vector<float>(pos.size(), def_radius) : radius;
+        (radius.empty()) ? std::vector<float>(pos.size(), def_radius) : radius;
 
     // make bvh nodes
     make_bvh_nodes(bvh, equal_size);
@@ -2610,8 +2633,9 @@ bvh_tree* make_bvh(const vector<int>& points, const vector<vec2i>& lines,
 }
 
 // Build a BVH from a set of shape instances.
-bvh_tree* make_bvh(const vector<bvh_instance>& instances,
-    const vector<bvh_tree*>& shape_bvhs, bool own_shape_bvhs, bool equal_size) {
+bvh_tree* make_bvh(const std::vector<bvh_instance>& instances,
+    const std::vector<bvh_tree*>& shape_bvhs, bool own_shape_bvhs,
+    bool equal_size) {
     // allocate the bvh
     auto bvh = new bvh_tree();
 
@@ -2682,17 +2706,17 @@ void refit_bvh(bvh_tree* bvh, int nodeid) {
 }
 
 // Recursively recomputes the node bounds for a shape bvh
-void refit_bvh(bvh_tree* bvh, const vector<vec3f>& pos,
-    const vector<float>& radius, float def_radius) {
+void refit_bvh(bvh_tree* bvh, const std::vector<vec3f>& pos,
+    const std::vector<float>& radius, float def_radius) {
     bvh->pos = pos;
     bvh->radius =
-        (radius.empty()) ? vector<float>(pos.size(), def_radius) : radius;
+        (radius.empty()) ? std::vector<float>(pos.size(), def_radius) : radius;
     refit_bvh(bvh, 0);
 }
 
 // Recursively recomputes the node bounds for a scene bvh
-void refit_bvh(bvh_tree* bvh, const vector<frame3f>& frames,
-    const vector<frame3f>& frames_inv) {
+void refit_bvh(bvh_tree* bvh, const std::vector<frame3f>& frames,
+    const std::vector<frame3f>& frames_inv) {
     for (auto i = 0; i < frames.size(); i++) {
         bvh->instances[i].frame = frames[bvh->sorted_prim[i]];
         bvh->instances[i].frame_inv = frames_inv[bvh->sorted_prim[i]];
@@ -2718,7 +2742,7 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
     auto ray_dinv = vec3f{1, 1, 1} / ray.d;
     auto ray_dsign = vec3i{(ray_dinv.x < 0) ? 1 : 0, (ray_dinv.y < 0) ? 1 : 0,
         (ray_dinv.z < 0) ? 1 : 0};
-    auto ray_reverse = array<bool, 4>{
+    auto ray_reverse = std::array<bool, 4>{
         {(bool)ray_dsign.x, (bool)ray_dsign.y, (bool)ray_dsign.z, false}};
 
     // walking stack
@@ -2957,7 +2981,7 @@ intersection_point overlap_bvh(
     // Finds the overlap between BVH leaf nodes.
     template <typename OverlapElem>
     void overlap_bvh_elems(const bvh_tree* bvh1, const bvh_tree* bvh2,
-                           bool skip_duplicates, bool skip_self, vector<vec2i>& overlaps,
+                           bool skip_duplicates, bool skip_self, std::vector<vec2i>& overlaps,
                            const OverlapElem& overlap_elems) {
         // node stack
         vec2i node_stack[128];
@@ -3048,8 +3072,8 @@ scene::~scene() {
 
 // Shape value interpolated using barycentric coordinates
 template <typename T>
-T eval_elem(const shape* shp, const vector<T>& vals, int eid, const vec2f& euv,
-    const T& def) {
+T eval_elem(const shape* shp, const std::vector<T>& vals, int eid,
+    const vec2f& euv, const T& def) {
     if (vals.empty()) return def;
     if (!shp->triangles.empty()) {
         return interpolate_triangle(vals, shp->triangles[eid], euv);
@@ -3168,9 +3192,9 @@ ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv) {
 // Subdivides shape elements.
 void subdivide_shape_once(shape* shp, bool subdiv) {
     if (!shp->lines.empty() || !shp->triangles.empty() || !shp->quads.empty()) {
-        vector<vec2i> edges;
-        vector<vec4i> faces;
-        tie(shp->lines, shp->triangles, shp->quads, edges, faces) =
+        std::vector<vec2i> edges;
+        std::vector<vec4i> faces;
+        std::tie(shp->lines, shp->triangles, shp->quads, edges, faces) =
             subdivide_elems_linear(
                 shp->lines, shp->triangles, shp->quads, (int)shp->pos.size());
         shp->pos = subdivide_vert_linear(shp->pos, edges, faces);
@@ -3193,17 +3217,17 @@ void subdivide_shape_once(shape* shp, bool subdiv) {
             shp->norm = compute_normals({}, {}, shp->quads, shp->pos);
         }
     } else if (!shp->quads_pos.empty()) {
-        vector<vec2i> _lines;
-        vector<vec3i> _triangles;
-        vector<vec2i> edges;
-        vector<vec4i> faces;
-        tie(_lines, _triangles, shp->quads_pos, edges, faces) =
+        std::vector<vec2i> _lines;
+        std::vector<vec3i> _triangles;
+        std::vector<vec2i> edges;
+        std::vector<vec4i> faces;
+        std::tie(_lines, _triangles, shp->quads_pos, edges, faces) =
             subdivide_elems_linear({}, {}, shp->quads_pos, shp->pos.size());
         shp->pos = subdivide_vert_linear(shp->pos, edges, faces);
-        tie(_lines, _triangles, shp->quads_norm, edges, faces) =
+        std::tie(_lines, _triangles, shp->quads_norm, edges, faces) =
             subdivide_elems_linear({}, {}, shp->quads_norm, shp->norm.size());
         shp->norm = subdivide_vert_linear(shp->norm, edges, faces);
-        tie(_lines, _triangles, shp->quads_texcoord, edges, faces) =
+        std::tie(_lines, _triangles, shp->quads_texcoord, edges, faces) =
             subdivide_elems_linear(
                 {}, {}, shp->quads_texcoord, shp->texcoord.size());
         shp->texcoord = subdivide_vert_linear(shp->texcoord, edges, faces);
@@ -3217,9 +3241,9 @@ void subdivide_shape_once(shape* shp, bool subdiv) {
                     {}, get_boundary_verts({}, {}, shp->quads_texcoord));
         }
     } else if (!shp->beziers.empty()) {
-        vector<int> verts;
-        vector<vec4i> segments;
-        tie(shp->beziers, verts, segments) =
+        std::vector<int> verts;
+        std::vector<vec4i> segments;
+        std::tie(shp->beziers, verts, segments) =
             subdivide_bezier_recursive(shp->beziers, (int)shp->pos.size());
         shp->pos = subdivide_vert_bezier(shp->pos, verts, segments);
         shp->norm = subdivide_vert_bezier(shp->norm, verts, segments);
@@ -3232,8 +3256,8 @@ void subdivide_shape_once(shape* shp, bool subdiv) {
 // Facet a shape. Supports only non-facevarying shapes
 void facet_shape(shape* shp, bool recompute_normals) {
     if (!shp->lines.empty() || !shp->triangles.empty() || !shp->quads.empty()) {
-        vector<int> verts;
-        tie(shp->lines, shp->triangles, shp->quads, verts) =
+        std::vector<int> verts;
+        std::tie(shp->lines, shp->triangles, shp->quads, verts) =
             facet_elems(shp->lines, shp->triangles, shp->quads);
         shp->pos = facet_vert(shp->pos, verts);
         shp->norm = facet_vert(shp->norm, verts);
@@ -3257,7 +3281,7 @@ void tesselate_shape(shape* shp, bool subdivide,
         }
     }
     if (facevarying_to_sharedvertex && !shp->quads_pos.empty()) {
-        tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+        std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
             convert_face_varying(shp->quads_pos, shp->quads_norm,
                 shp->quads_texcoord, shp->pos, shp->norm, shp->texcoord);
         shp->quads_pos = {};
@@ -3288,7 +3312,7 @@ void tesselate_shapes(scene* scn, bool subdivide,
 
 // Update animation transforms
 void update_transforms(animation_group* agr, float time) {
-    auto interpolate = [](keyframe_type type, const vector<float>& times,
+    auto interpolate = [](keyframe_type type, const std::vector<float>& times,
                            const auto& vals, float time) {
         switch (type) {
             case keyframe_type::step:
@@ -3298,7 +3322,7 @@ void update_transforms(animation_group* agr, float time) {
             case keyframe_type::catmull_rom: return vals.at(0);
             case keyframe_type::bezier:
                 return eval_keyframed_bezier(times, vals, time);
-            default: throw runtime_error("should not have been here");
+            default: throw std::runtime_error("should not have been here");
         }
         return vals.at(0);
     };
@@ -3370,7 +3394,7 @@ void add_elements(scene* scn, const add_elements_options& opts) {
                 }
                 if (!shp->quads_pos.empty()) {
                     if (!shp->quads_norm.empty())
-                        throw runtime_error("bad normals");
+                        throw std::runtime_error("bad normals");
                     shp->quads_norm = shp->quads_pos;
                     shp->norm =
                         compute_normals({}, {}, shp->quads_pos, shp->pos);
@@ -3538,7 +3562,7 @@ bbox3f compute_bounds(const shape* shp) {
 
 // Updates the scene and scene's instances bounding boxes
 bbox3f compute_bounds(const scene* scn) {
-    auto shape_bboxes = unordered_map<shape_group*, bbox3f>();
+    auto shape_bboxes = std::unordered_map<shape_group*, bbox3f>();
     for (auto sgr : scn->shapes) {
         shape_bboxes[sgr] = invalid_bbox3f;
         for (auto shp : sgr->shapes) shape_bboxes[sgr] += compute_bounds(shp);
@@ -3591,8 +3615,8 @@ bvh_tree* make_bvh(const shape* shp, float def_radius, bool equalsize) {
 // Build a scene BVH
 bvh_tree* make_bvh(const scene* scn, float def_radius, bool equalsize) {
     // do shapes
-    auto shape_bvhs = vector<bvh_tree*>();
-    auto smap = unordered_map<shape*, bvh_tree*>();
+    auto shape_bvhs = std::vector<bvh_tree*>();
+    auto smap = std::unordered_map<shape*, bvh_tree*>();
     for (auto sgr : scn->shapes) {
         for (auto shp : sgr->shapes) {
             shape_bvhs.push_back(make_bvh(shp, def_radius, equalsize));
@@ -3601,7 +3625,7 @@ bvh_tree* make_bvh(const scene* scn, float def_radius, bool equalsize) {
     }
 
     // tree bvh
-    auto bists = vector<bvh_instance>();
+    auto bists = std::vector<bvh_instance>();
     for (auto iid = 0; iid < scn->instances.size(); iid++) {
         auto ist = scn->instances[iid];
         for (auto sid = 0; sid < ist->shp->shapes.size(); sid++) {
@@ -3635,8 +3659,8 @@ void refit_bvh(
             }
         }
     }
-    auto ist_frames = vector<frame3f>();
-    auto ist_frames_inv = vector<frame3f>();
+    auto ist_frames = std::vector<frame3f>();
+    auto ist_frames_inv = std::vector<frame3f>();
     for (auto ist : scn->instances) {
         ist_frames.push_back(ist->frame);
         ist_frames_inv.push_back(inverse(ist->frame));
@@ -3706,7 +3730,7 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
     };
 
     // convert textures
-    auto tmap = unordered_map<string, texture*>{{"", nullptr}};
+    auto tmap = std::unordered_map<std::string, texture*>{{"", nullptr}};
     for (auto otxt : obj->textures) {
         auto txt = new texture();
         txt->name = otxt->path;
@@ -3733,7 +3757,7 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
     };
 
     // convert materials and build textures
-    auto mmap = unordered_map<string, material*>{{"", nullptr}};
+    auto mmap = std::unordered_map<std::string, material*>{{"", nullptr}};
     for (auto omat : obj->materials) {
         auto mat = new material();
         mat->name = omat->name;
@@ -3787,7 +3811,7 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
     }
 
     // convert meshes
-    auto omap = unordered_map<string, shape_group*>{{"", nullptr}};
+    auto omap = std::unordered_map<std::string, shape_group*>{{"", nullptr}};
     for (auto omsh : obj->objects) {
         auto sgr = new shape_group();
         sgr->name = omsh->name;
@@ -3844,8 +3868,8 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
 
             if (!as_facevarying) {
                 // insert all vertices
-                unordered_map<obj_vertex, int, obj_vertex_hash> vert_map;
-                vector<int> vert_ids;
+                std::unordered_map<obj_vertex, int, obj_vertex_hash> vert_map;
+                std::vector<int> vert_ids;
                 for (auto& vert : oshp->verts) {
                     if (vert_map.find(vert) == vert_map.end()) {
                         auto s = (int)vert_map.size();
@@ -3894,7 +3918,7 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
                         } break;
                         case obj_element_type::bezier: {
                             if ((elem.size - 1) % 3)
-                                throw runtime_error("bad obj bezier");
+                                throw std::runtime_error("bad obj bezier");
                             for (auto i = elem.start + 1;
                                  i < elem.start + elem.size; i += 3) {
                                 shp->beziers.push_back(
@@ -3932,7 +3956,7 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
                 if (!oshp->smoothing && opts.obj_facet_non_smooth) {
                     auto faceted = new shape();
                     faceted->name = shp->name;
-                    auto pidx = vector<int>();
+                    auto pidx = std::vector<int>();
                     for (auto point : shp->points) {
                         faceted->points.push_back((int)pidx.size());
                         pidx.push_back(point);
@@ -3967,8 +3991,8 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
                 }
             } else {
                 // insert all vertices
-                unordered_map<int, int> pos_map, norm_map, texcoord_map;
-                vector<int> pos_ids, norm_ids, texcoord_ids;
+                std::unordered_map<int, int> pos_map, norm_map, texcoord_map;
+                std::vector<int> pos_ids, norm_ids, texcoord_ids;
                 for (auto& vert : oshp->verts) {
                     if (vert.pos >= 0) {
                         if (pos_map.find(vert.pos) == pos_map.end()) {
@@ -3978,7 +4002,7 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
                         pos_ids.push_back(pos_map.at(vert.pos));
                     } else {
                         if (!pos_ids.empty())
-                            throw runtime_error("malformed obj");
+                            throw std::runtime_error("malformed obj");
                     }
                     if (vert.norm >= 0) {
                         if (norm_map.find(vert.norm) == norm_map.end()) {
@@ -3988,7 +4012,7 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
                         norm_ids.push_back(norm_map.at(vert.norm));
                     } else {
                         if (!norm_ids.empty())
-                            throw runtime_error("malformed obj");
+                            throw std::runtime_error("malformed obj");
                     }
                     if (vert.texcoord >= 0) {
                         if (texcoord_map.find(vert.texcoord) ==
@@ -3999,7 +4023,7 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
                         texcoord_ids.push_back(texcoord_map.at(vert.texcoord));
                     } else {
                         if (!texcoord_ids.empty())
-                            throw runtime_error("malformed obj");
+                            throw std::runtime_error("malformed obj");
                     }
                 }
 
@@ -4076,7 +4100,7 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
     }
 
     // convert cameras
-    auto cmap = unordered_map<string, camera*>{{"", nullptr}};
+    auto cmap = std::unordered_map<std::string, camera*>{{"", nullptr}};
     for (auto ocam : obj->cameras) {
         auto cam = new camera();
         cam->name = ocam->name;
@@ -4091,8 +4115,8 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
     }
 
     // convert envs
-    unordered_set<material*> env_mat;
-    auto emap = unordered_map<string, environment*>{{"", nullptr}};
+    std::unordered_set<material*> env_mat;
+    auto emap = std::unordered_map<std::string, environment*>{{"", nullptr}};
     for (auto oenv : obj->environments) {
         auto env = new environment();
         env->name = oenv->name;
@@ -4169,10 +4193,11 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
 }
 
 // Load an obj scene
-scene* load_obj_scene(const string& filename, const load_options& opts) {
-    auto oscn = unique_ptr<obj_scene>(load_obj(filename, opts.load_textures,
-        opts.skip_missing, opts.obj_flip_texcoord, opts.obj_flip_tr));
-    auto scn = unique_ptr<scene>(obj_to_scene(oscn.get(), opts));
+scene* load_obj_scene(const std::string& filename, const load_options& opts) {
+    auto oscn =
+        std::unique_ptr<obj_scene>(load_obj(filename, opts.load_textures,
+            opts.skip_missing, opts.obj_flip_texcoord, opts.obj_flip_tr));
+    auto scn = std::unique_ptr<scene>(obj_to_scene(oscn.get(), opts));
     return scn.release();
 }
 
@@ -4290,7 +4315,7 @@ obj_scene* scene_to_obj(const scene* scn) {
             group->matname = (shp->mat) ? shp->mat->name : "";
             if (shp->subdivision)
                 group->props["subdivision"].push_back(
-                    to_string(shp->subdivision));
+                    std::to_string(shp->subdivision));
             if (shp->catmullclark) group->props["catmullclark"].push_back("1");
             for (auto point : shp->points) {
                 group->elems.push_back({(uint32_t)group->verts.size(),
@@ -4465,8 +4490,8 @@ obj_scene* scene_to_obj(const scene* scn) {
 
 // Save an obj scene
 void save_obj_scene(
-    const string& filename, const scene* scn, const save_options& opts) {
-    auto oscn = unique_ptr<obj_scene>(scene_to_obj(scn));
+    const std::string& filename, const scene* scn, const save_options& opts) {
+    auto oscn = std::unique_ptr<obj_scene>(scene_to_obj(scn));
     save_obj(filename, oscn.get(), opts.save_textures, opts.skip_missing,
         opts.obj_flip_texcoord, opts.obj_flip_tr);
 }
@@ -4482,8 +4507,8 @@ scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
     for (auto gtxt : gltf->images) {
         auto txt = new texture();
         txt->name = gtxt->name;
-        txt->path =
-            (startswith(gtxt->uri, "data:")) ? string("inlines") : gtxt->uri;
+        txt->path = (startswith(gtxt->uri, "data:")) ? std::string("inlines") :
+                                                       gtxt->uri;
         if (!gtxt->data.datab.empty()) {
             txt->ldr = make_image(gtxt->data.width, gtxt->data.height,
                 gtxt->data.ncomp, gtxt->data.datab.data(), vec4b{0, 0, 0, 255});
@@ -4566,7 +4591,7 @@ scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
         auto gid = 0;
         for (auto gprim : gmesh->primitives) {
             auto shp = new shape();
-            shp->name = gmesh->name + "_" + to_string(gid++);
+            shp->name = gmesh->name + "_" + std::to_string(gid++);
             if (gprim->material) {
                 shp->mat = scn->materials[(int)gprim->material];
             }
@@ -4718,7 +4743,7 @@ scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
     }
 
     // convert cameras
-    auto cameras = vector<camera>();
+    auto cameras = std::vector<camera>();
     for (auto gcam : gltf->cameras) {
         cameras.push_back({});
         auto cam = &cameras.back();
@@ -4782,7 +4807,7 @@ scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
 
     // keyframe type conversion
     static auto keyframe_types =
-        unordered_map<glTFAnimationSamplerInterpolation, keyframe_type>{
+        std::unordered_map<glTFAnimationSamplerInterpolation, keyframe_type>{
             {glTFAnimationSamplerInterpolation::NotSet, keyframe_type::linear},
             {glTFAnimationSamplerInterpolation::Linear, keyframe_type::linear},
             {glTFAnimationSamplerInterpolation::Step, keyframe_type::step},
@@ -4796,7 +4821,7 @@ scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
     for (auto ganm : gltf->animations) {
         auto agr = new animation_group();
         agr->name = ganm->name;
-        auto sampler_map = unordered_map<vec2i, animation*>();
+        auto sampler_map = std::unordered_map<vec2i, animation*>();
         for (auto gchannel : ganm->channels) {
             if (sampler_map.find({(int)gchannel->sampler,
                     (int)gchannel->target->path}) == sampler_map.end()) {
@@ -4851,7 +4876,7 @@ scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
                         }
                     } break;
                     default: {
-                        throw runtime_error("should not have gotten here");
+                        throw std::runtime_error("should not have gotten here");
                     }
                 }
                 sampler_map[{
@@ -4880,12 +4905,12 @@ scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
 }
 
 // Load an gltf scene
-scene* load_gltf_scene(const string& filename, const load_options& opts) {
-    auto gscn = unique_ptr<glTF>(
+scene* load_gltf_scene(const std::string& filename, const load_options& opts) {
+    auto gscn = std::unique_ptr<glTF>(
         load_gltf(filename, true, opts.load_textures, opts.skip_missing));
-    auto scn = unique_ptr<scene>(gltf_to_scene(gscn.get(), opts));
+    auto scn = std::unique_ptr<scene>(gltf_to_scene(gscn.get(), opts));
     if (!scn) {
-        throw runtime_error("could not convert gltf scene");
+        throw std::runtime_error("could not convert gltf scene");
         return nullptr;
     }
     return scn.release();
@@ -4893,8 +4918,8 @@ scene* load_gltf_scene(const string& filename, const load_options& opts) {
 
 // Unflattnes gltf
 glTF* scene_to_gltf(
-    const scene* scn, const string& buffer_uri, bool separate_buffers) {
-    auto gltf = unique_ptr<glTF>(new glTF());
+    const scene* scn, const std::string& buffer_uri, bool separate_buffers) {
+    auto gltf = std::unique_ptr<glTF>(new glTF());
 
     // add asset info
     gltf->asset = new glTFAsset();
@@ -5049,7 +5074,7 @@ glTF* scene_to_gltf(
     }
 
     // add buffer
-    auto add_buffer = [&gltf](const string& buffer_uri) {
+    auto add_buffer = [&gltf](const std::string& buffer_uri) {
         auto gbuffer = new glTFBuffer();
         gltf->buffers.push_back(gbuffer);
         gbuffer->uri = buffer_uri;
@@ -5061,7 +5086,7 @@ glTF* scene_to_gltf(
 
     // add an optional buffer
     auto add_opt_buffer = [&gbuffer_global, buffer_uri, &add_buffer,
-                              separate_buffers](const string& uri) {
+                              separate_buffers](const std::string& uri) {
         if (separate_buffers && uri != "") {
             return add_buffer(uri);
         } else {
@@ -5071,8 +5096,8 @@ glTF* scene_to_gltf(
     };
 
     // attribute handling
-    auto add_accessor = [&gltf, &index](glTFBuffer* gbuffer, const string& name,
-                            glTFAccessorType type,
+    auto add_accessor = [&gltf, &index](glTFBuffer* gbuffer,
+                            const std::string& name, glTFAccessorType type,
                             glTFAccessorComponentType ctype, int count,
                             int csize, const void* data, bool save_min_max) {
         gltf->bufferViews.push_back(new glTFBufferView());
@@ -5198,9 +5223,9 @@ glTF* scene_to_gltf(
                     (int*)triangles.data(), false);
                 gprim->mode = glTFMeshPrimitiveMode::Triangles;
             } else if (!shp->quads_pos.empty()) {
-                throw runtime_error("face varying not supported in glTF");
+                throw std::runtime_error("face varying not supported in glTF");
             } else {
-                throw runtime_error("empty mesh");
+                throw std::runtime_error("empty mesh");
             }
             gmesh->primitives.push_back(gprim);
         }
@@ -5266,7 +5291,7 @@ glTF* scene_to_gltf(
         }
 
         // root nodes
-        auto is_root = vector<bool>(gltf->nodes.size(), true);
+        auto is_root = std::vector<bool>(gltf->nodes.size(), true);
         for (auto idx = 0; idx < gltf->nodes.size(); idx++) {
             auto gnde = gltf->nodes.at(idx);
             for (auto idx1 = 0; idx1 < gnde->children.size(); idx1++) {
@@ -5302,7 +5327,7 @@ glTF* scene_to_gltf(
         auto gbuffer = add_opt_buffer(agr->path);
         auto count = 0;
         auto paths =
-            unordered_map<animation*, glTFAnimationChannelTargetPath>();
+            std::unordered_map<animation*, glTFAnimationChannelTargetPath>();
         for (auto anm : agr->animations) {
             auto aid = ganm->name + "_" + std::to_string(count++);
             auto gsmp = new glTFAnimationSampler();
@@ -5341,7 +5366,7 @@ glTF* scene_to_gltf(
                     (int)values.size(), sizeof(float), values.data(), false);
                 path = glTFAnimationChannelTargetPath::Weights;
             } else {
-                throw runtime_error("should not have gotten here");
+                throw std::runtime_error("should not have gotten here");
             }
             gsmp->interpolation = interpolation_map.at(anm->type);
             ganm->samplers.push_back(gsmp);
@@ -5368,9 +5393,9 @@ glTF* scene_to_gltf(
 
 // Save a gltf scene
 void save_gltf_scene(
-    const string& filename, const scene* scn, const save_options& opts) {
+    const std::string& filename, const scene* scn, const save_options& opts) {
     auto buffer_uri = path_basename(filename) + ".bin";
-    auto gscn = unique_ptr<glTF>(
+    auto gscn = std::unique_ptr<glTF>(
         scene_to_gltf(scn, buffer_uri, opts.gltf_separate_buffers));
     save_gltf(filename, gscn.get(), true, opts.save_textures);
 }
@@ -5386,7 +5411,7 @@ scene* svg_to_scene(const svg_scene* sscn, const load_options& opts) {
     for (auto sshp : sscn->shapes) {
         // TODO: recursive shape
         auto sgr = new shape_group();
-        sgr->name = "shape" + to_string(sid++);
+        sgr->name = "shape" + std::to_string(sid++);
         auto shp = new shape();
         shp->name = sgr->name;
         for (auto spth : sshp->paths) {
@@ -5418,16 +5443,16 @@ scene* svg_to_scene(const svg_scene* sscn, const load_options& opts) {
 }
 
 // Load an svg scene
-scene* load_svg_scene(const string& filename, const load_options& opts) {
-    auto sscn = unique_ptr<svg_scene>(load_svg(filename));
-    auto scn = unique_ptr<scene>(svg_to_scene(sscn.get(), opts));
+scene* load_svg_scene(const std::string& filename, const load_options& opts) {
+    auto sscn = std::unique_ptr<svg_scene>(load_svg(filename));
+    auto scn = std::unique_ptr<scene>(svg_to_scene(sscn.get(), opts));
     return scn.release();
 }
 
 #endif
 
 // Load a scene
-scene* load_scene(const string& filename, const load_options& opts) {
+scene* load_scene(const std::string& filename, const load_options& opts) {
     auto ext = path_extension(filename);
     if (ext == ".obj" || ext == ".OBJ") return load_obj_scene(filename, opts);
 #if YGL_GLTF
@@ -5437,13 +5462,13 @@ scene* load_scene(const string& filename, const load_options& opts) {
 #if YGL_SVG
     if (ext == ".svg" || ext == ".SVG") return load_svg_scene(filename, opts);
 #endif
-    throw runtime_error("unsupported extension " + ext);
+    throw std::runtime_error("unsupported extension " + ext);
     return nullptr;
 }
 
 // Save a scene
 void save_scene(
-    const string& filename, const scene* scn, const save_options& opts) {
+    const std::string& filename, const scene* scn, const save_options& opts) {
     auto ext = path_extension(filename);
     if (ext == ".obj" || ext == ".OBJ")
         return save_obj_scene(filename, scn, opts);
@@ -5451,7 +5476,7 @@ void save_scene(
     if (ext == ".gltf" || ext == ".GLTF")
         return save_gltf_scene(filename, scn, opts);
 #endif
-    throw runtime_error("unsupported extension " + ext);
+    throw std::runtime_error("unsupported extension " + ext);
 }
 
 }  // namespace ygl
@@ -5816,7 +5841,7 @@ float weight_brdfcos(const trace_point& pt, const vec3f& wo, const vec3f& wi,
 }
 
 // Picks a direction based on the BRDF
-tuple<vec3f, bool> sample_ggx_brdfcos(
+std::tuple<vec3f, bool> sample_ggx_brdfcos(
     const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
     auto weights = pt.brdf_weights();
     auto ndo = dot(pt.norm, wo);
@@ -5850,7 +5875,7 @@ tuple<vec3f, bool> sample_ggx_brdfcos(
 }
 
 // Picks a direction based on the BRDF
-tuple<vec3f, bool> sample_kajiyakay_brdfcos(
+std::tuple<vec3f, bool> sample_kajiyakay_brdfcos(
     const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
     auto weights = pt.brdf_weights();
     // diffuse and specular: samnple a uniform spherical direction
@@ -5869,7 +5894,7 @@ tuple<vec3f, bool> sample_kajiyakay_brdfcos(
 }
 
 // Picks a direction based on the BRDF
-tuple<vec3f, bool> sample_point_brdfcos(
+std::tuple<vec3f, bool> sample_point_brdfcos(
     const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
     auto weights = pt.brdf_weights();
     // diffuse and specular: samnple a uniform spherical direction
@@ -5889,7 +5914,7 @@ tuple<vec3f, bool> sample_point_brdfcos(
 }
 
 // Picks a direction based on the BRDF
-tuple<vec3f, bool> sample_brdfcos(
+std::tuple<vec3f, bool> sample_brdfcos(
     const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
     if (!pt.has_brdf()) return {zero3f, false};
     if (!pt.shp->triangles.empty())
@@ -6093,9 +6118,9 @@ trace_point sample_light(const trace_lights& lights, const trace_light& lgt,
         auto eid = 0;
         auto euv = zero2f;
         if (!shp->triangles.empty()) {
-            tie(eid, euv) = sample_triangles(cdf, rel, ruv);
+            std::tie(eid, euv) = sample_triangles(cdf, rel, ruv);
         } else if (!shp->lines.empty()) {
-            tie(eid, (float&)euv) = sample_lines(cdf, rel, ruv.x);
+            std::tie(eid, (float&)euv) = sample_lines(cdf, rel, ruv.x);
         } else if (!shp->lines.empty()) {
             eid = sample_points(cdf, rel);
         }
@@ -6200,7 +6225,7 @@ vec3f trace_path(const scene* scn, const bvh_tree* bvh,
         auto rbuv = sample_next2f(pxl, params.rtype, params.nsamples);
         auto bwi = zero3f;
         auto bdelta = false;
-        tie(bwi, bdelta) = sample_brdfcos(pt, wo, rbl, rbuv);
+        std::tie(bwi, bdelta) = sample_brdfcos(pt, wo, rbl, rbuv);
         auto bpt = intersect_scene(scn, bvh, make_ray(pt.pos, bwi));
         auto bw = weight_brdfcos(pt, wo, bwi, bdelta);
         auto bke = eval_emission(bpt, -bwi);
@@ -6282,7 +6307,7 @@ vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
         auto rbuv = sample_next2f(pxl, params.rtype, params.nsamples);
         auto bwi = zero3f;
         auto bdelta = false;
-        tie(bwi, bdelta) = sample_brdfcos(pt, wo, rbl, rbuv);
+        std::tie(bwi, bdelta) = sample_brdfcos(pt, wo, rbl, rbuv);
         weight *= eval_brdfcos(pt, wo, bwi, bdelta) *
                   weight_brdfcos(pt, wo, bwi, bdelta);
         if (weight == zero3f) break;
@@ -6340,7 +6365,7 @@ vec3f trace_path_hack(const scene* scn, const bvh_tree* bvh,
         // continue path
         auto bwi = zero3f;
         auto bdelta = false;
-        tie(bwi, bdelta) = sample_brdfcos(pt, wo,
+        std::tie(bwi, bdelta) = sample_brdfcos(pt, wo,
             sample_next1f(pxl, params.rtype, params.nsamples),
             sample_next2f(pxl, params.rtype, params.nsamples));
         weight *= eval_brdfcos(pt, wo, bwi, bdelta) *
@@ -6470,7 +6495,7 @@ using trace_shader = vec3f (*)(const scene* scn, const bvh_tree* bvh,
 using trace_filter = float (*)(float);
 
 // map to convert trace samplers
-static auto trace_shaders = unordered_map<trace_shader_type, trace_shader>{
+static auto trace_shaders = std::unordered_map<trace_shader_type, trace_shader>{
     {trace_shader_type::eyelight, trace_eyelight},
     {trace_shader_type::direct, trace_direct},
     {trace_shader_type::pathtrace, trace_path},
@@ -6481,7 +6506,7 @@ static auto trace_shaders = unordered_map<trace_shader_type, trace_shader>{
 };
 
 // map to convert trace filters
-static auto trace_filters = unordered_map<trace_filter_type, trace_filter>{
+static auto trace_filters = std::unordered_map<trace_filter_type, trace_filter>{
     {trace_filter_type::box, (trace_filter) nullptr},
     {trace_filter_type::triangle, filter_triangle},
     {trace_filter_type::cubic, filter_cubic},
@@ -6490,7 +6515,7 @@ static auto trace_filters = unordered_map<trace_filter_type, trace_filter>{
 };
 
 // map to convert trace filters
-static auto trace_filter_sizes = unordered_map<trace_filter_type, int>{
+static auto trace_filter_sizes = std::unordered_map<trace_filter_type, int>{
     {trace_filter_type::box, 0},
     {trace_filter_type::triangle, 1},
     {trace_filter_type::cubic, 2},
@@ -6528,7 +6553,7 @@ void trace_samples(const scene* scn, const camera* cam, const bvh_tree* bvh,
     auto shader = trace_shaders.at(params.stype);
     if (params.parallel) {
         auto nthreads = std::thread::hardware_concurrency();
-        auto threads = vector<std::thread>();
+        auto threads = std::vector<std::thread>();
         for (auto tid = 0; tid < std::thread::hardware_concurrency(); tid++) {
             threads.push_back(std::thread([=, &img, &pixels, &params]() {
                 for (auto j = tid; j < params.height; j += nthreads) {
@@ -6611,7 +6636,7 @@ void trace_samples_filtered(const scene* scn, const camera* cam,
     std::mutex image_mutex;
     if (params.parallel) {
         auto nthreads = std::thread::hardware_concurrency();
-        auto threads = vector<std::thread>();
+        auto threads = std::vector<std::thread>();
         for (auto tid = 0; tid < std::thread::hardware_concurrency(); tid++) {
             threads.push_back(
                 std::thread([=, &pixels, &params, &image_mutex]() {
@@ -6652,7 +6677,8 @@ void trace_samples_filtered(const scene* scn, const camera* cam,
 // Starts an anyncrhounous renderer.
 void trace_async_start(const scene* scn, const camera* cam, const bvh_tree* bvh,
     const trace_lights& lights, image4f& img, image<trace_pixel>& pixels,
-    vector<std::thread>& threads, bool& stop_flag, const trace_params& params) {
+    std::vector<std::thread>& threads, bool& stop_flag,
+    const trace_params& params) {
     pixels = make_trace_pixels(params);
     auto nthreads = std::thread::hardware_concurrency();
     for (auto tid = 0; tid < std::thread::hardware_concurrency(); tid++) {
@@ -6676,7 +6702,7 @@ void trace_async_start(const scene* scn, const camera* cam, const bvh_tree* bvh,
 }
 
 // Stop the asynchronous renderer.
-void trace_async_stop(vector<std::thread>& threads, bool& stop_flag) {
+void trace_async_stop(std::vector<std::thread>& threads, bool& stop_flag) {
     stop_flag = true;
     for (auto& t : threads) t.join();
     stop_flag = false;
@@ -6760,14 +6786,14 @@ obj_scene::~obj_scene() {
 }
 
 // Parse texture options and name
-istream& operator>>(istream& is, obj_texture_info& info) {
+std::istream& operator>>(std::istream& is, obj_texture_info& info) {
     // initialize
     info = obj_texture_info();
 
     // get tokens
-    auto tokens = vector<string>();
+    auto tokens = std::vector<std::string>();
     while (is) {
-        auto s = string();
+        auto s = std::string();
         is >> s;
         if (!s.empty()) tokens.push_back(s);
     }
@@ -6781,7 +6807,7 @@ istream& operator>>(istream& is, obj_texture_info& info) {
         if (c == '\\') c = '/';
 
     // texture options
-    auto last = string();
+    auto last = std::string();
     for (auto& tok : tokens) {
         if (tok == tokens.back()) break;
         if (tok[0] == '-') {
@@ -6813,14 +6839,14 @@ istream& operator>>(istream& is, obj_texture_info& info) {
 }
 
 // Load MTL
-vector<obj_material*> load_mtl(
-    const string& filename, bool flip_tr, vector<string>& textures) {
+std::vector<obj_material*> load_mtl(const std::string& filename, bool flip_tr,
+    std::vector<std::string>& textures) {
     // clear materials
-    auto materials = vector<obj_material*>();
+    auto materials = std::vector<obj_material*>();
 
     // open file
-    auto fs = fstream(filename, ios_base::in);
-    if (!fs) throw runtime_error("cannot open filename " + filename);
+    auto fs = std::fstream(filename, std::ios_base::in);
+    if (!fs) throw std::runtime_error("cannot open filename " + filename);
     // fs.exceptions(ios_base::failbit);
 
     // add a material preemptively to avoid crashes
@@ -6828,13 +6854,13 @@ vector<obj_material*> load_mtl(
     auto mat = materials.back();
 
     // read the file line by line
-    string line;
+    std::string line;
     auto linenum = 0;
     while (getline(fs, line)) {
         // prepare to parse
         linenum += 1;
-        auto ss = stringstream(line);
-        auto cmd = string();
+        auto ss = std::stringstream(line);
+        auto cmd = std::string();
         ss >> cmd;
 
         // skip empty and comments
@@ -6912,7 +6938,7 @@ vector<obj_material*> load_mtl(
 
     // create texture array
     textures = {};
-    auto texture_set = unordered_set<string>();
+    auto texture_set = std::unordered_set<std::string>();
     auto add_texture = [&texture_set, &textures](const obj_texture_info& info) {
         if (info.path == "") return;
         if (texture_set.find(info.path) != texture_set.end()) return;
@@ -6940,7 +6966,8 @@ vector<obj_material*> load_mtl(
 }
 
 // Loads textures for an scene.
-void load_textures(obj_scene* asset, const string& dirname, bool skip_missing) {
+void load_textures(
+    obj_scene* asset, const std::string& dirname, bool skip_missing) {
     for (auto txt : asset->textures) {
         auto filename = dirname + txt->path;
         for (auto& c : filename)
@@ -6956,20 +6983,20 @@ void load_textures(obj_scene* asset, const string& dirname, bool skip_missing) {
 #endif
         if (txt->datab.empty() && txt->dataf.empty()) {
             if (skip_missing) continue;
-            throw runtime_error("cannot laod image " + filename);
+            throw std::runtime_error("cannot laod image " + filename);
         }
     }
 }
 
 // Loads an OBJ
-obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
-    bool flip_texcoord, bool flip_tr) {
+obj_scene* load_obj(const std::string& filename, bool load_txt,
+    bool skip_missing, bool flip_texcoord, bool flip_tr) {
     // clear obj
-    auto asset = unique_ptr<obj_scene>(new obj_scene());
+    auto asset = std::unique_ptr<obj_scene>(new obj_scene());
 
     // open file
-    auto fs = fstream(filename, ios_base::in);
-    if (!fs) throw runtime_error("cannot open filename " + filename);
+    auto fs = std::fstream(filename, std::ios_base::in);
+    if (!fs) throw std::runtime_error("cannot open filename " + filename);
     // fs.exceptions(ios_base::failbit);
 
     // initializing obj
@@ -6977,28 +7004,29 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
     asset->objects.back()->groups.push_back(new obj_group());
 
     // current parsing value
-    auto matname = string();
-    auto mtllibs = vector<string>();
+    auto matname = std::string();
+    auto mtllibs = std::vector<std::string>();
     auto object = asset->objects.back();
     auto group = object->groups.back();
-    auto elems = vector<obj_vertex>();
+    auto elems = std::vector<obj_vertex>();
 
     // keep track of array lengths
     auto vert_size = obj_vertex{0, 0, 0, 0, 0};
 
     // elem type map
-    static auto elem_type_map = unordered_map<string, obj_element_type>{
-        {"f", obj_element_type::face}, {"l", obj_element_type::line},
-        {"p", obj_element_type::point}, {"b", obj_element_type::bezier}};
+    static auto elem_type_map =
+        std::unordered_map<std::string, obj_element_type>{
+            {"f", obj_element_type::face}, {"l", obj_element_type::line},
+            {"p", obj_element_type::point}, {"b", obj_element_type::bezier}};
 
     // read the file line by line
-    string line;
+    std::string line;
     auto linenum = 0;
     while (getline(fs, line)) {
         // prepare to parse
         linenum += 1;
-        auto ss = stringstream(line);
-        auto cmd = string();
+        auto ss = std::stringstream(line);
+        auto cmd = std::string();
         ss >> cmd;
 
         // skip empty and comments
@@ -7031,7 +7059,7 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
             group->elems.push_back(
                 {(uint32_t)group->verts.size(), elem_type_map.at(cmd), 0});
             while (true) {
-                auto tok = string();
+                auto tok = std::string();
                 ss >> tok;
                 if (tok.empty()) break;
                 auto toks = split(tok, "/");
@@ -7065,7 +7093,7 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
             ss >> group->groupname;
             group->matname = matname;
         } else if (cmd == "s") {
-            auto name = string();
+            auto name = std::string();
             ss >> name;
             auto smoothing = (name == "on");
             if (group->smoothing != smoothing) {
@@ -7077,19 +7105,19 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
                 group->smoothing = smoothing;
             }
         } else if (cmd == "gp") {
-            auto name = string();
+            auto name = std::string();
             ss >> name;
             while (true) {
-                auto tok = string();
+                auto tok = std::string();
                 ss >> tok;
                 if (tok.empty()) break;
                 group->props[name].push_back(tok);
             }
         } else if (cmd == "op") {
-            auto name = string();
+            auto name = std::string();
             ss >> name;
             while (true) {
-                auto tok = string();
+                auto tok = std::string();
                 ss >> tok;
                 if (tok.empty()) break;
                 object->props[name].push_back(tok);
@@ -7142,13 +7170,14 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
     asset->objects.erase(end, asset->objects.end());
 
     // parse materials
-    auto mtllibs_set = unordered_set<string>(mtllibs.begin(), mtllibs.end());
-    mtllibs = vector<string>{mtllibs_set.begin(), mtllibs_set.end()};
+    auto mtllibs_set =
+        std::unordered_set<std::string>(mtllibs.begin(), mtllibs.end());
+    mtllibs = std::vector<std::string>{mtllibs_set.begin(), mtllibs_set.end()};
     auto dirname = path_dirname(filename);
-    unordered_set<string> texture_set;
+    std::unordered_set<std::string> texture_set;
     for (auto mtllib : mtllibs) {
         auto mtlname = dirname + mtllib;
-        vector<string> textures;
+        std::vector<std::string> textures;
         auto materials = load_mtl(mtlname, flip_tr, textures);
         asset->materials.insert(
             asset->materials.end(), materials.begin(), materials.end());
@@ -7168,7 +7197,7 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
 }
 
 // write to stream
-inline ostream& operator<<(ostream& os, const obj_texture_info& v) {
+inline std::ostream& operator<<(std::ostream& os, const obj_texture_info& v) {
     for (auto&& kv : v.props) {
         os << kv.first << ' ';
         for (auto&& vv : kv.second) os << vv << ' ';
@@ -7179,7 +7208,7 @@ inline ostream& operator<<(ostream& os, const obj_texture_info& v) {
 }
 
 // write an OBJ vertex using only the indices that are active
-inline ostream& operator<<(ostream& os, const obj_vertex& vert) {
+inline std::ostream& operator<<(std::ostream& os, const obj_vertex& vert) {
     auto vert_ptr = &vert.pos;
     auto nto_write = 0;
     for (auto i = 0; i < 5; i++) {
@@ -7193,12 +7222,12 @@ inline ostream& operator<<(ostream& os, const obj_vertex& vert) {
 }
 
 // Save an MTL file
-void save_mtl(const string& filename, const vector<obj_material*>& materials,
-    bool flip_tr) {
+void save_mtl(const std::string& filename,
+    const std::vector<obj_material*>& materials, bool flip_tr) {
     // open file
-    auto fs = fstream(filename, ios_base::out);
-    if (!fs) throw runtime_error("cannot open filename " + filename);
-    fs.exceptions(ios_base::failbit);
+    auto fs = std::fstream(filename, std::ios_base::out);
+    if (!fs) throw std::runtime_error("cannot open filename " + filename);
+    fs.exceptions(std::ios_base::failbit);
 
     // for each material, dump all the values
     for (auto mat : materials) {
@@ -7240,7 +7269,7 @@ void save_mtl(const string& filename, const vector<obj_material*>& materials,
 
 // Loads textures for an scene.
 void save_textures(
-    const obj_scene* asset, const string& dirname, bool skip_missing) {
+    const obj_scene* asset, const std::string& dirname, bool skip_missing) {
     for (auto txt : asset->textures) {
         if (txt->datab.empty() && txt->dataf.empty()) continue;
         auto filename = dirname + txt->path;
@@ -7259,18 +7288,18 @@ void save_textures(
 #endif
         if (!ok) {
             if (skip_missing) continue;
-            throw runtime_error("cannot save image " + filename);
+            throw std::runtime_error("cannot save image " + filename);
         }
     }
 }
 
 // Save an OBJ
-void save_obj(const string& filename, const obj_scene* asset, bool save_txt,
-    bool skip_missing, bool flip_texcoord, bool flip_tr) {
+void save_obj(const std::string& filename, const obj_scene* asset,
+    bool save_txt, bool skip_missing, bool flip_texcoord, bool flip_tr) {
     // open file
-    auto fs = fstream(filename, ios_base::out);
-    if (!fs) throw runtime_error("cannot open filename " + filename);
-    fs.exceptions(ios_base::failbit);
+    auto fs = std::fstream(filename, std::ios_base::out);
+    if (!fs) throw std::runtime_error("cannot open filename " + filename);
+    fs.exceptions(std::ios_base::failbit);
 
     // linkup to mtl
     auto dirname = path_dirname(filename);
@@ -7317,7 +7346,7 @@ void save_obj(const string& filename, const obj_scene* asset, bool save_txt,
     for (auto& v : asset->radius) fs << "vr " << v << '\n';
 
     // save element data
-    static auto elem_labels = unordered_map<obj_element_type, string>{
+    static auto elem_labels = std::unordered_map<obj_element_type, std::string>{
         {obj_element_type::point, "p"}, {obj_element_type::line, "l"},
         {obj_element_type::face, "f"}, {obj_element_type::bezier, "b"}};
     for (auto object : asset->objects) {
@@ -7370,7 +7399,8 @@ using json = nlohmann::json;
 // Parse int function.
 void serialize(int& val, json& js, bool reading) {
     if (reading) {
-        if (!js.is_number_integer()) throw runtime_error("integer expected");
+        if (!js.is_number_integer())
+            throw std::runtime_error("integer expected");
         val = js;
     } else {
         js = val;
@@ -7380,7 +7410,7 @@ void serialize(int& val, json& js, bool reading) {
 // Parse float function.
 void serialize(float& val, json& js, bool reading) {
     if (reading) {
-        if (!js.is_number()) throw runtime_error("number expected");
+        if (!js.is_number()) throw std::runtime_error("number expected");
         val = js;
     } else {
         js = val;
@@ -7390,17 +7420,17 @@ void serialize(float& val, json& js, bool reading) {
 // Parse bool function.
 void serialize(bool& val, json& js, bool reading) {
     if (reading) {
-        if (!js.is_boolean()) throw runtime_error("bool expected");
+        if (!js.is_boolean()) throw std::runtime_error("bool expected");
         val = js;
     } else {
         js = val;
     }
 }
 
-// Parse std::string function.
-void serialize(string& val, json& js, bool reading) {
+// Parse string function.
+void serialize(std::string& val, json& js, bool reading) {
     if (reading) {
-        if (!js.is_string()) throw runtime_error("string expected");
+        if (!js.is_string()) throw std::runtime_error("string expected");
         val = js;
     } else {
         js = val;
@@ -7424,7 +7454,7 @@ void serialize(T*& val, json& js, bool reading) {
             val = nullptr;
             return;
         }
-        if (!js.is_object()) throw runtime_error("object expected");
+        if (!js.is_object()) throw std::runtime_error("object expected");
         if (!val) val = new T();
         serialize(*val, js, reading);
     } else {
@@ -7439,12 +7469,12 @@ void serialize(T*& val, json& js, bool reading) {
 
 // Parse support function.
 template <typename T>
-void serialize(vector<T>& vals, json& js, bool reading) {
+void serialize(std::vector<T>& vals, json& js, bool reading) {
     if (reading) {
-        if (!js.is_array()) throw runtime_error("array expected");
+        if (!js.is_array()) throw std::runtime_error("array expected");
         vals.resize(js.size());
         for (auto i = 0; i < js.size(); i++) {
-            // this is contrived to support for vector<bool>
+            // this is contrived to support for std::vector<bool>
             auto v = T();
             serialize(v, js[i], reading);
             vals[i] = v;
@@ -7458,10 +7488,10 @@ void serialize(vector<T>& vals, json& js, bool reading) {
 
 // Parse support function.
 template <typename T, size_t N>
-void serialize(array<T, N>& vals, json& js, bool reading) {
+void serialize(std::array<T, N>& vals, json& js, bool reading) {
     if (reading) {
-        if (!js.is_array()) throw runtime_error("array expected");
-        if (N != js.size()) throw runtime_error("wrong array size");
+        if (!js.is_array()) throw std::runtime_error("array expected");
+        if (N != js.size()) throw std::runtime_error("wrong array size");
         for (auto i = 0; i < N; i++) serialize(vals[i], js.at(i), reading);
     } else {
         js = json::array();
@@ -7471,9 +7501,9 @@ void serialize(array<T, N>& vals, json& js, bool reading) {
 
 // Parse support function.
 template <typename T>
-void serialize(map<string, T>& vals, json& js, bool reading) {
+void serialize(std::map<std::string, T>& vals, json& js, bool reading) {
     if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
+        if (!js.is_object()) throw std::runtime_error("object expected");
         for (auto kv = js.begin(); kv != js.end(); ++kv) {
             serialize(vals[kv.key()], kv.value(), reading);
         }
@@ -7485,8 +7515,8 @@ void serialize(map<string, T>& vals, json& js, bool reading) {
 
 // Parse support function.
 template <typename T, typename T1>
-void serialize(
-    T& val, json& js, bool reading, const vector<pair<T1, T>>& table) {
+void serialize(T& val, json& js, bool reading,
+    const std::vector<std::pair<T1, T>>& table) {
     if (reading) {
         auto v = T1();
         serialize(v, js, reading);
@@ -7498,7 +7528,7 @@ void serialize(
                 break;
             }
         }
-        if (!found) throw runtime_error("bad enum value");
+        if (!found) throw std::runtime_error("bad enum value");
     } else {
         auto found = false;
         auto v = T1();
@@ -7509,7 +7539,7 @@ void serialize(
                 break;
             }
         }
-        if (!found) throw runtime_error("invalid value");
+        if (!found) throw std::runtime_error("invalid value");
         serialize(v, js, reading);
     }
 }
@@ -7517,31 +7547,31 @@ void serialize(
 // Parse support function.
 template <typename T, int N>
 void serialize(vec<T, N>& vals, json& js, bool reading) {
-    serialize((array<T, N>&)vals, js, reading);
+    serialize((std::array<T, N>&)vals, js, reading);
 }
 
 // Parse support function.
 template <typename T, int N>
 void serialize(quat<T, N>& vals, json& js, bool reading) {
-    serialize((array<T, N>&)vals, js, reading);
+    serialize((std::array<T, N>&)vals, js, reading);
 }
 
 // Parse support function.
 template <typename T, int N>
 void serialize(mat<T, N>& vals, json& js, bool reading) {
-    serialize((array<T, N * N>&)vals, js, reading);
+    serialize((std::array<T, N * N>&)vals, js, reading);
 }
 
 // Parse support function.
 template <typename T, int N>
 void serialize(frame<T, N>& vals, json& js, bool reading) {
-    serialize((array<T, N*(N + 1)>&)vals, js, reading);
+    serialize((std::array<T, N*(N + 1)>&)vals, js, reading);
 }
 
 // Parse support function.
 void serialize_obj(json& js, bool reading) {
     if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
+        if (!js.is_object()) throw std::runtime_error("object expected");
     } else {
         if (!js.is_object()) js = json::object();
     }
@@ -7553,7 +7583,7 @@ void serialize_attr(T& val, json& js, const char* name, bool reading,
     bool required = true, const T& def = {}) {
     if (reading) {
         if (required) {
-            if (!js.count(name)) throw runtime_error("missing value");
+            if (!js.count(name)) throw std::runtime_error("missing value");
             serialize(val, js.at(name), reading);
         } else {
             if (!js.count(name))
@@ -7568,11 +7598,11 @@ void serialize_attr(T& val, json& js, const char* name, bool reading,
 
 // Dump support function.
 template <typename T>
-void serialize_attr(vector<T>& val, json& js, const char* name, bool reading,
-    bool required = true, const vector<T>& def = {}) {
+void serialize_attr(std::vector<T>& val, json& js, const char* name,
+    bool reading, bool required = true, const std::vector<T>& def = {}) {
     if (reading) {
         if (required) {
-            if (!js.count(name)) throw runtime_error("missing value");
+            if (!js.count(name)) throw std::runtime_error("missing value");
             serialize(val, js.at(name), reading);
         } else {
             if (!js.count(name))
@@ -7603,7 +7633,7 @@ bool operator!=(const glTFid<T>& a, const glTFid<T>& b) {
 template <typename T>
 void serialize(glTFid<T>& val, json& js, bool reading) {
     if (reading) {
-        if (!js.is_number_integer()) throw runtime_error("int expected");
+        if (!js.is_number_integer()) throw std::runtime_error("int expected");
         val = glTFid<T>((int)js);
     } else {
         js = (int)val;
@@ -7613,7 +7643,7 @@ void serialize(glTFid<T>& val, json& js, bool reading) {
 // Parses a glTFProperty object
 void serialize(glTFProperty& val, json& js, bool reading) {
     if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
+        if (!js.is_object()) throw std::runtime_error("object expected");
 #if YGL_GLTFJSON
         if (js.count("extensions"))
             serialize(val.extensions, js.at("extensions"), reading);
@@ -7639,11 +7669,12 @@ void serialize(glTFChildOfRootProperty& val, json& js, bool reading) {
 // Parse a glTFAccessorSparseIndicesComponentType enum
 void serialize(
     glTFAccessorSparseIndicesComponentType& val, json& js, bool reading) {
-    static vector<pair<int, glTFAccessorSparseIndicesComponentType>> table = {
-        {5121, glTFAccessorSparseIndicesComponentType::UnsignedByte},
-        {5123, glTFAccessorSparseIndicesComponentType::UnsignedShort},
-        {5125, glTFAccessorSparseIndicesComponentType::UnsignedInt},
-    };
+    static std::vector<std::pair<int, glTFAccessorSparseIndicesComponentType>>
+        table = {
+            {5121, glTFAccessorSparseIndicesComponentType::UnsignedByte},
+            {5123, glTFAccessorSparseIndicesComponentType::UnsignedShort},
+            {5125, glTFAccessorSparseIndicesComponentType::UnsignedInt},
+        };
     serialize(val, js, reading, table);
 }
 
@@ -7682,7 +7713,7 @@ void serialize(glTFAccessorSparse& val, json& js, bool reading) {
 }
 // Parse a glTFAccessorComponentType enum
 void serialize(glTFAccessorComponentType& val, json& js, bool reading) {
-    static vector<pair<int, glTFAccessorComponentType>> table = {
+    static std::vector<std::pair<int, glTFAccessorComponentType>> table = {
         {5120, glTFAccessorComponentType::Byte},
         {5121, glTFAccessorComponentType::UnsignedByte},
         {5122, glTFAccessorComponentType::Short},
@@ -7695,7 +7726,7 @@ void serialize(glTFAccessorComponentType& val, json& js, bool reading) {
 
 // Parse a glTFAccessorType enum
 void serialize(glTFAccessorType& val, json& js, bool reading) {
-    static vector<pair<string, glTFAccessorType>> table = {
+    static std::vector<std::pair<std::string, glTFAccessorType>> table = {
         {"SCALAR", glTFAccessorType::Scalar},
         {"VEC2", glTFAccessorType::Vec2},
         {"VEC3", glTFAccessorType::Vec3},
@@ -7728,12 +7759,13 @@ void serialize(glTFAccessor& val, json& js, bool reading) {
 }
 // Parse a glTFAnimationChannelTargetPath enum
 void serialize(glTFAnimationChannelTargetPath& val, json& js, bool reading) {
-    static vector<pair<string, glTFAnimationChannelTargetPath>> table = {
-        {"translation", glTFAnimationChannelTargetPath::Translation},
-        {"rotation", glTFAnimationChannelTargetPath::Rotation},
-        {"scale", glTFAnimationChannelTargetPath::Scale},
-        {"weights", glTFAnimationChannelTargetPath::Weights},
-    };
+    static std::vector<std::pair<std::string, glTFAnimationChannelTargetPath>>
+        table = {
+            {"translation", glTFAnimationChannelTargetPath::Translation},
+            {"rotation", glTFAnimationChannelTargetPath::Rotation},
+            {"scale", glTFAnimationChannelTargetPath::Scale},
+            {"weights", glTFAnimationChannelTargetPath::Weights},
+        };
     serialize(val, js, reading, table);
 }
 
@@ -7756,13 +7788,15 @@ void serialize(glTFAnimationChannel& val, json& js, bool reading) {
 }
 // Parse a glTFAnimationSamplerInterpolation enum
 void serialize(glTFAnimationSamplerInterpolation& val, json& js, bool reading) {
-    static vector<pair<string, glTFAnimationSamplerInterpolation>> table = {
-        {"LINEAR", glTFAnimationSamplerInterpolation::Linear},
-        {"STEP", glTFAnimationSamplerInterpolation::Step},
-        {"CATMULLROMSPLINE",
-            glTFAnimationSamplerInterpolation::CatmullRomSpline},
-        {"CUBICSPLINE", glTFAnimationSamplerInterpolation::CubicSpline},
-    };
+    static std::vector<
+        std::pair<std::string, glTFAnimationSamplerInterpolation>>
+        table = {
+            {"LINEAR", glTFAnimationSamplerInterpolation::Linear},
+            {"STEP", glTFAnimationSamplerInterpolation::Step},
+            {"CATMULLROMSPLINE",
+                glTFAnimationSamplerInterpolation::CatmullRomSpline},
+            {"CUBICSPLINE", glTFAnimationSamplerInterpolation::CubicSpline},
+        };
     serialize(val, js, reading, table);
 }
 
@@ -7811,7 +7845,7 @@ void serialize(glTFBuffer& val, json& js, bool reading) {
 }
 // Parse a glTFBufferViewTarget enum
 void serialize(glTFBufferViewTarget& val, json& js, bool reading) {
-    static vector<pair<int, glTFBufferViewTarget>> table = {
+    static std::vector<std::pair<int, glTFBufferViewTarget>> table = {
         {34962, glTFBufferViewTarget::ArrayBuffer},
         {34963, glTFBufferViewTarget::ElementArrayBuffer},
     };
@@ -7857,7 +7891,7 @@ void serialize(glTFCameraPerspective& val, json& js, bool reading) {
 }
 // Parse a glTFCameraType enum
 void serialize(glTFCameraType& val, json& js, bool reading) {
-    static vector<pair<string, glTFCameraType>> table = {
+    static std::vector<std::pair<std::string, glTFCameraType>> table = {
         {"perspective", glTFCameraType::Perspective},
         {"orthographic", glTFCameraType::Orthographic},
     };
@@ -7877,7 +7911,7 @@ void serialize(glTFCamera& val, json& js, bool reading) {
 }
 // Parse a glTFImageMimeType enum
 void serialize(glTFImageMimeType& val, json& js, bool reading) {
-    static vector<pair<string, glTFImageMimeType>> table = {
+    static std::vector<std::pair<std::string, glTFImageMimeType>> table = {
         {"image/jpeg", glTFImageMimeType::ImageJpeg},
         {"image/png", glTFImageMimeType::ImagePng},
     };
@@ -7965,7 +7999,7 @@ void serialize(glTFMaterialPbrSpecularGlossiness& val, json& js, bool reading) {
 }
 // Parse a glTFMaterialAlphaMode enum
 void serialize(glTFMaterialAlphaMode& val, json& js, bool reading) {
-    static vector<pair<string, glTFMaterialAlphaMode>> table = {
+    static std::vector<std::pair<std::string, glTFMaterialAlphaMode>> table = {
         {"OPAQUE", glTFMaterialAlphaMode::Opaque},
         {"MASK", glTFMaterialAlphaMode::Mask},
         {"BLEND", glTFMaterialAlphaMode::Blend},
@@ -8012,7 +8046,7 @@ void serialize(glTFMaterial& val, json& js, bool reading) {
 }
 // Parse a glTFMeshPrimitiveMode enum
 void serialize(glTFMeshPrimitiveMode& val, json& js, bool reading) {
-    static vector<pair<int, glTFMeshPrimitiveMode>> table = {
+    static std::vector<std::pair<int, glTFMeshPrimitiveMode>> table = {
         {0, glTFMeshPrimitiveMode::Points},
         {1, glTFMeshPrimitiveMode::Lines},
         {2, glTFMeshPrimitiveMode::LineLoop},
@@ -8065,7 +8099,7 @@ void serialize(glTFNode& val, json& js, bool reading) {
 }
 // Parse a glTFSamplerMagFilter enum
 void serialize(glTFSamplerMagFilter& val, json& js, bool reading) {
-    static vector<pair<int, glTFSamplerMagFilter>> table = {
+    static std::vector<std::pair<int, glTFSamplerMagFilter>> table = {
         {9728, glTFSamplerMagFilter::Nearest},
         {9729, glTFSamplerMagFilter::Linear},
     };
@@ -8074,7 +8108,7 @@ void serialize(glTFSamplerMagFilter& val, json& js, bool reading) {
 
 // Parse a glTFSamplerMinFilter enum
 void serialize(glTFSamplerMinFilter& val, json& js, bool reading) {
-    static vector<pair<int, glTFSamplerMinFilter>> table = {
+    static std::vector<std::pair<int, glTFSamplerMinFilter>> table = {
         {9728, glTFSamplerMinFilter::Nearest},
         {9729, glTFSamplerMinFilter::Linear},
         {9984, glTFSamplerMinFilter::NearestMipmapNearest},
@@ -8087,7 +8121,7 @@ void serialize(glTFSamplerMinFilter& val, json& js, bool reading) {
 
 // Parse a glTFSamplerWrapS enum
 void serialize(glTFSamplerWrapS& val, json& js, bool reading) {
-    static vector<pair<int, glTFSamplerWrapS>> table = {
+    static std::vector<std::pair<int, glTFSamplerWrapS>> table = {
         {33071, glTFSamplerWrapS::ClampToEdge},
         {33648, glTFSamplerWrapS::MirroredRepeat},
         {10497, glTFSamplerWrapS::Repeat},
@@ -8097,7 +8131,7 @@ void serialize(glTFSamplerWrapS& val, json& js, bool reading) {
 
 // Parse a glTFSamplerWrapT enum
 void serialize(glTFSamplerWrapT& val, json& js, bool reading) {
-    static vector<pair<int, glTFSamplerWrapT>> table = {
+    static std::vector<std::pair<int, glTFSamplerWrapT>> table = {
         {33071, glTFSamplerWrapT::ClampToEdge},
         {33648, glTFSamplerWrapT::MirroredRepeat},
         {10497, glTFSamplerWrapT::Repeat},
@@ -8170,14 +8204,14 @@ void serialize(glTF& val, json& js, bool reading) {
 // #codegen end func
 
 // Encode in base64
-string base64_encode(
+std::string base64_encode(
     unsigned char const* bytes_to_encode, unsigned int in_len) {
-    static const string base64_chars =
+    static const std::string base64_chars =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         "abcdefghijklmnopqrstuvwxyz"
         "0123456789+/";
 
-    string ret;
+    std::string ret;
     int i = 0;
     int j = 0;
     unsigned char char_array_3[3];
@@ -8217,8 +8251,8 @@ string base64_encode(
 }
 
 // Decode from base64
-string base64_decode(string const& encoded_string) {
-    static const string base64_chars =
+std::string base64_decode(std::string const& encoded_string) {
+    static const std::string base64_chars =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         "abcdefghijklmnopqrstuvwxyz"
         "0123456789+/";
@@ -8232,7 +8266,7 @@ string base64_decode(string const& encoded_string) {
     int j = 0;
     int in_ = 0;
     unsigned char char_array_4[4], char_array_3[3];
-    string ret;
+    std::string ret;
 
     while (in_len-- && (encoded_string[in_] != '=') &&
            is_base64(encoded_string[in_])) {
@@ -8272,7 +8306,7 @@ string base64_decode(string const& encoded_string) {
 }
 
 // Load buffer data.
-void load_buffers(glTF* gltf, const string& dirname, bool skip_missing) {
+void load_buffers(glTF* gltf, const std::string& dirname, bool skip_missing) {
     for (auto buffer : gltf->buffers) {
         if (buffer->uri == "") continue;
         try {
@@ -8281,25 +8315,25 @@ void load_buffers(glTF* gltf, const string& dirname, bool skip_missing) {
                 auto pos = buffer->uri.find(',');
                 if (pos == buffer->uri.npos) {
                     if (skip_missing) continue;
-                    throw runtime_error("could not decode base64 data");
+                    throw std::runtime_error("could not decode base64 data");
                 }
                 // decode
                 auto data = base64_decode(buffer->uri.substr(pos + 1));
                 buffer->data =
-                    vector<unsigned char>((unsigned char*)data.c_str(),
+                    std::vector<unsigned char>((unsigned char*)data.c_str(),
                         (unsigned char*)data.c_str() + data.length());
             } else {
                 buffer->data =
                     load_binary(path_convert_eparator(dirname + buffer->uri));
                 if (buffer->data.empty()) {
                     if (skip_missing) continue;
-                    throw runtime_error(
+                    throw std::runtime_error(
                         "could not load binary file " +
                         path_convert_eparator(dirname + buffer->uri));
                 }
             }
             if (buffer->byteLength != buffer->data.size()) {
-                throw runtime_error("mismatched buffer size");
+                throw std::runtime_error("mismatched buffer size");
             }
         } catch (const std::exception&) {
             if (skip_missing) continue;
@@ -8309,13 +8343,13 @@ void load_buffers(glTF* gltf, const string& dirname, bool skip_missing) {
 }
 
 // Loads images.
-void load_images(glTF* gltf, const string& dirname, bool skip_missing) {
+void load_images(glTF* gltf, const std::string& dirname, bool skip_missing) {
     for (auto image : gltf->images) {
         image->data = image_data();
-        auto filename = string();
+        auto filename = std::string();
 #if YGL_IMAGEIO
         if (image->bufferView || startswith(image->uri, "data:")) {
-            auto buffer = string();
+            auto buffer = std::string();
             auto data = (unsigned char*)nullptr;
             auto data_size = 0;
             if (image->bufferView) {
@@ -8323,7 +8357,7 @@ void load_images(glTF* gltf, const string& dirname, bool skip_missing) {
                 auto buffer = gltf->get(view->buffer);
                 if (!view || !buffer || view->byteStride) {
                     if (skip_missing) continue;
-                    throw runtime_error("invalid image buffer view");
+                    throw std::runtime_error("invalid image buffer view");
                 }
                 if (image->mimeType == glTFImageMimeType::ImagePng)
                     filename = "internal_data.png";
@@ -8331,7 +8365,7 @@ void load_images(glTF* gltf, const string& dirname, bool skip_missing) {
                     filename = "internal_data.jpg";
                 else {
                     if (skip_missing) continue;
-                    throw runtime_error("unsupported image format");
+                    throw std::runtime_error("unsupported image format");
                 }
                 data = buffer->data.data() + view->byteOffset;
                 data_size = view->byteLength;
@@ -8340,16 +8374,17 @@ void load_images(glTF* gltf, const string& dirname, bool skip_missing) {
                 auto pos = image->uri.find(',');
                 if (pos == image->uri.npos) {
                     if (skip_missing) continue;
-                    throw runtime_error("could not decode base64 data");
+                    throw std::runtime_error("could not decode base64 data");
                 }
                 auto header = image->uri.substr(0, pos);
                 for (auto format : {"png", "jpg", "jpeg", "tga", "ppm", "hdr"})
                     if (header.find(format) != header.npos)
-                        filename = string("fake.") + format;
+                        filename = std::string("fake.") + format;
                 if (is_hdr_filename(filename)) {
                     if (skip_missing) continue;
-                    throw runtime_error("unsupported embedded image format " +
-                                        header.substr(0, pos));
+                    throw std::runtime_error(
+                        "unsupported embedded image format " +
+                        header.substr(0, pos));
                 }
                 // decode
                 buffer = base64_decode(image->uri.substr(pos + 1));
@@ -8378,34 +8413,34 @@ void load_images(glTF* gltf, const string& dirname, bool skip_missing) {
 #endif
         if (image->data.dataf.empty() && image->data.datab.empty()) {
             if (skip_missing) continue;
-            throw runtime_error("cannot load image " + filename);
+            throw std::runtime_error("cannot load image " + filename);
         }
     }
 }
 
 // Loads a gltf.
-glTF* load_gltf(
-    const string& filename, bool load_bin, bool load_image, bool skip_missing) {
+glTF* load_gltf(const std::string& filename, bool load_bin, bool load_image,
+    bool skip_missing) {
     // clear data
-    auto gltf = unique_ptr<glTF>(new glTF());
+    auto gltf = std::unique_ptr<glTF>(new glTF());
 
     // load json
     std::ifstream stream(filename.c_str());
-    if (!stream) throw runtime_error("could not load json " + filename);
+    if (!stream) throw std::runtime_error("could not load json " + filename);
     auto js = json();
     try {
         stream >> js;
-    } catch (const exception& e) {
-        throw runtime_error(
-            string("could not load json with error ") + e.what());
+    } catch (const std::exception& e) {
+        throw std::runtime_error(
+            std::string("could not load json with error ") + e.what());
     }
 
     // parse json
     auto gltf_ = gltf.get();
     try {
         serialize(gltf_, js, true);
-    } catch (const exception& e) {
-        throw runtime_error("error parsing gltf " + string(e.what()));
+    } catch (const std::exception& e) {
+        throw std::runtime_error("error parsing gltf " + std::string(e.what()));
     }
 
     // load external resources
@@ -8418,11 +8453,13 @@ glTF* load_gltf(
 }
 
 // Save buffer data.
-void save_buffers(const glTF* gltf, const string& dirname, bool skip_missing) {
+void save_buffers(
+    const glTF* gltf, const std::string& dirname, bool skip_missing) {
     for (auto buffer : gltf->buffers) {
         try {
             if (startswith(buffer->uri, "data:")) {
-                throw runtime_error("saving of embedded data not supported");
+                throw std::runtime_error(
+                    "saving of embedded data not supported");
             }
             save_binary(dirname + buffer->uri, buffer->data);
         } catch (const std::exception&) {
@@ -8433,11 +8470,13 @@ void save_buffers(const glTF* gltf, const string& dirname, bool skip_missing) {
 }
 
 // Save images.
-void save_images(const glTF* gltf, const string& dirname, bool skip_missing) {
+void save_images(
+    const glTF* gltf, const std::string& dirname, bool skip_missing) {
     for (auto image : gltf->images) {
         try {
             if (startswith(image->uri, "data:")) {
-                throw runtime_error("saving of embedded data not supported");
+                throw std::runtime_error(
+                    "saving of embedded data not supported");
             }
             auto filename = dirname + image->uri;
             auto ok = false;
@@ -8452,7 +8491,9 @@ void save_images(const glTF* gltf, const string& dirname, bool skip_missing) {
                         image->data.ncomp, image->data.dataf.data());
             }
 #endif
-            if (!ok) { throw runtime_error("cannot save image " + filename); }
+            if (!ok) {
+                throw std::runtime_error("cannot save image " + filename);
+            }
         } catch (const std::exception&) {
             if (skip_missing) continue;
             throw;
@@ -8461,8 +8502,8 @@ void save_images(const glTF* gltf, const string& dirname, bool skip_missing) {
 }
 
 // Saves a gltf.
-void save_gltf(
-    const string& filename, const glTF* gltf, bool save_bin, bool save_image) {
+void save_gltf(const std::string& filename, const glTF* gltf, bool save_bin,
+    bool save_image) {
     // dumps json
     auto js = json();
     serialize((glTF*&)gltf, js, false);
@@ -8480,44 +8521,44 @@ void save_gltf(
 template <typename T>
 void gltf_fread(FILE* f, T* v, int count) {
     if (fread(v, sizeof(T), count, f) != count)
-        throw runtime_error("could not read binary file");
+        throw std::runtime_error("could not read binary file");
 }
 
 // writing shortcut
 template <typename T>
 void gltf_fwrite(FILE* f, const T* v, int count) {
     if (fwrite(v, sizeof(T), count, f) != count)
-        runtime_error("could not write binary file");
+        std::runtime_error("could not write binary file");
 }
 
 // Loads a binary gltf.
-glTF* load_binary_gltf(
-    const string& filename, bool load_bin, bool load_image, bool skip_missing) {
+glTF* load_binary_gltf(const std::string& filename, bool load_bin,
+    bool load_image, bool skip_missing) {
     // clear data
-    auto gltf = unique_ptr<glTF>(new glTF());
+    auto gltf = std::unique_ptr<glTF>(new glTF());
 
     // opens binary file
     auto f = fopen(filename.c_str(), "rb");
-    if (!f) throw runtime_error("could not load binary file " + filename);
+    if (!f) throw std::runtime_error("could not load binary file " + filename);
 
     // read magic
     uint32_t magic;
     gltf_fread(f, &magic, 1);
-    if (magic != 0x46546C67) throw runtime_error("corrupted glb format");
+    if (magic != 0x46546C67) throw std::runtime_error("corrupted glb format");
 
     // read version
     uint32_t version;
     gltf_fread(f, &version, 1);
     if (version != 1 && version != 2)
-        throw runtime_error("unsupported glb version");
+        throw std::runtime_error("unsupported glb version");
 
     // read length
     uint32_t length;
     gltf_fread(f, &length, 1);
 
     // data
-    auto json_bytes = vector<char>();
-    auto buffer_bytes = vector<unsigned char>();
+    auto json_bytes = std::vector<char>();
+    auto buffer_bytes = std::vector<unsigned char>();
     uint32_t buffer_length = 0;
 
     if (version == 1) {
@@ -8544,7 +8585,7 @@ glTF* load_binary_gltf(
         gltf_fread(f, &json_length, 1);
         gltf_fread(f, &json_format, 1);
         if (json_format != 0x4E4F534A) {
-            throw runtime_error("corrupt binary format");
+            throw std::runtime_error("corrupt binary format");
             return nullptr;
         }
 
@@ -8557,7 +8598,7 @@ glTF* load_binary_gltf(
         gltf_fread(f, &buffer_length, 1);
         gltf_fread(f, &buffer_format, 1);
         if (buffer_format != 0x004E4942)
-            throw runtime_error("corrupt binary format");
+            throw std::runtime_error("corrupt binary format");
 
         // read buffer bytes
         if (load_bin) {
@@ -8571,17 +8612,18 @@ glTF* load_binary_gltf(
     try {
         json_bytes.push_back(0);
         js = json::parse(json_bytes.data());
-    } catch (const exception& e) {
-        throw runtime_error(
-            string("could not load json with error ") + e.what());
+    } catch (const std::exception& e) {
+        throw std::runtime_error(
+            std::string("could not load json with error ") + e.what());
     }
 
     // parse json
     auto gltf_ = gltf.get();
     try {
         serialize(gltf_, js, true);
-    } catch (const exception& e) {
-        throw runtime_error("cannot parse gltf json " + string(e.what()));
+    } catch (const std::exception& e) {
+        throw std::runtime_error(
+            "cannot parse gltf json " + std::string(e.what()));
         return nullptr;
     }
 
@@ -8604,11 +8646,11 @@ glTF* load_binary_gltf(
 }
 
 // Saves a binary gltf.
-void save_binary_gltf(
-    const string& filename, const glTF* gltf, bool save_bin, bool save_image) {
+void save_binary_gltf(const std::string& filename, const glTF* gltf,
+    bool save_bin, bool save_image) {
     // opens binary file
     auto f = fopen(filename.c_str(), "wb");
-    if (!f) throw runtime_error("could not write binary file");
+    if (!f) throw std::runtime_error("could not write binary file");
 
     // dumps json
     auto js = json();
@@ -8672,7 +8714,7 @@ accessor_view::accessor_view(const glTF* gltf, const glTFAccessor* accessor) {
         buffer->data.size() - (_data - buffer->data.data());
     auto view_bytes = _size * _stride;
     _valid = remaining_buffer_bytes >= view_bytes;
-    if (!_valid) throw runtime_error("corrupted glTF accessor view");
+    if (!_valid) throw std::runtime_error("corrupted glTF accessor view");
 }
 
 float accessor_view::get(int idx, int c) const {
@@ -8693,7 +8735,7 @@ float accessor_view::get(int idx, int c) const {
             case glTFAccessorComponentType::UnsignedInt:
                 return (float)(*(unsigned int*)valb);
             case glTFAccessorComponentType::NotSet:
-                throw runtime_error("bad enum value");
+                throw std::runtime_error("bad enum value");
                 break;
         }
 
@@ -8712,7 +8754,7 @@ float accessor_view::get(int idx, int c) const {
             case glTFAccessorComponentType::UnsignedInt:
                 return (float)(max((float)(c / 2147483647.0), -1.0f));
             case glTFAccessorComponentType::NotSet:
-                throw runtime_error("bad enum value");
+                throw std::runtime_error("bad enum value");
                 break;
         }
     }
@@ -8734,7 +8776,7 @@ int accessor_view::geti(int idx, int c) const {
         case glTFAccessorComponentType::UnsignedInt:
             return (int)(*(unsigned int*)valb);
         case glTFAccessorComponentType::NotSet:
-            throw runtime_error("bad enum value");
+            throw std::runtime_error("bad enum value");
             break;
     }
     return 0;
@@ -8777,9 +8819,9 @@ int accessor_view::_ctype_size(glTFAccessorComponentType componentType) {
 namespace ygl {
 
 // Load SVG
-svg_scene* load_svg(const string& filename) {
+svg_scene* load_svg(const std::string& filename) {
     auto svg = nsvgParseFromFile(filename.c_str(), "mm", 96);
-    if (!svg) throw runtime_error("cannot load SVG");
+    if (!svg) throw std::runtime_error("cannot load SVG");
     auto scn = new svg_scene();
     for (auto shape = svg->shapes; shape != nullptr; shape = shape->next) {
         auto shp = new svg_shape();
@@ -8798,8 +8840,8 @@ svg_scene* load_svg(const string& filename) {
 }
 
 // Save SVG
-void save_svg(const string& filename, const vector<svg_path>& paths) {
-    throw runtime_error("not implemented yet");
+void save_svg(const std::string& filename, const std::vector<svg_path>& paths) {
+    throw std::runtime_error("not implemented yet");
 }
 
 }  // namespace ygl
@@ -8812,14 +8854,15 @@ void save_svg(const string& filename, const vector<svg_path>& paths) {
 namespace ygl {
 
 // Make a sphere. This is not watertight.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_uvsphere(
-    int tesselation, bool flipped) {
-    auto quads = vector<vec4i>();
-    auto texcoord = vector<vec2f>();
-    tie(quads, texcoord) =
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
+make_uvsphere(int tesselation, bool flipped) {
+    auto quads = std::vector<vec4i>();
+    auto texcoord = std::vector<vec2f>();
+    std::tie(quads, texcoord) =
         make_uvquads(pow2(tesselation + 2), pow2(tesselation + 1));
-    auto pos = vector<vec3f>(texcoord.size());
-    auto norm = vector<vec3f>(texcoord.size());
+    auto pos = std::vector<vec3f>(texcoord.size());
+    auto norm = std::vector<vec3f>(texcoord.size());
     if (!flipped) {
         for (auto i = 0; i < texcoord.size(); i++) {
             auto uv = texcoord[i];
@@ -8840,23 +8883,24 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_uvsphere(
 }
 
 // Make a geodesic sphere.
-tuple<vector<vec3i>, vector<vec3f>> make_geodesicsphere(int tesselation) {
+std::tuple<std::vector<vec3i>, std::vector<vec3f>> make_geodesicsphere(
+    int tesselation) {
     // https://stackoverflow.com/questions/17705621/algorithm-for-a-geodesic-sphere
     const float X = 0.525731112119133606f;
     const float Z = 0.850650808352039932f;
-    auto pos = vector<vec3f>{{-X, 0.0, Z}, {X, 0.0, Z}, {-X, 0.0, -Z},
+    auto pos = std::vector<vec3f>{{-X, 0.0, Z}, {X, 0.0, Z}, {-X, 0.0, -Z},
         {X, 0.0, -Z}, {0.0, Z, X}, {0.0, Z, -X}, {0.0, -Z, X}, {0.0, -Z, -X},
         {Z, X, 0.0}, {-Z, X, 0.0}, {Z, -X, 0.0}, {-Z, -X, 0.0}};
-    auto triangles = vector<vec3i>{{0, 1, 4}, {0, 4, 9}, {9, 4, 5}, {4, 8, 5},
-        {4, 1, 8}, {8, 1, 10}, {8, 10, 3}, {5, 8, 3}, {5, 3, 2}, {2, 3, 7},
-        {7, 3, 10}, {7, 10, 6}, {7, 6, 11}, {11, 6, 0}, {0, 6, 1}, {6, 10, 1},
-        {9, 11, 0}, {9, 2, 11}, {9, 5, 2}, {7, 11, 2}};
+    auto triangles = std::vector<vec3i>{{0, 1, 4}, {0, 4, 9}, {9, 4, 5},
+        {4, 8, 5}, {4, 1, 8}, {8, 1, 10}, {8, 10, 3}, {5, 8, 3}, {5, 3, 2},
+        {2, 3, 7}, {7, 3, 10}, {7, 10, 6}, {7, 6, 11}, {11, 6, 0}, {0, 6, 1},
+        {6, 10, 1}, {9, 11, 0}, {9, 2, 11}, {9, 5, 2}, {7, 11, 2}};
     for (auto l = 0; l < tesselation - 2; l++) {
-        vector<vec2i> _lines;
-        vector<vec4i> _quads;
-        vector<vec2i> edges;
-        vector<vec4i> faces;
-        tie(_lines, triangles, _quads, edges, faces) =
+        std::vector<vec2i> _lines;
+        std::vector<vec4i> _quads;
+        std::vector<vec2i> edges;
+        std::vector<vec4i> faces;
+        std::tie(_lines, triangles, _quads, edges, faces) =
             subdivide_elems_linear({}, triangles, {}, (int)pos.size());
         pos = subdivide_vert_linear(pos, edges, faces);
     }
@@ -8865,14 +8909,15 @@ tuple<vector<vec3i>, vector<vec3f>> make_geodesicsphere(int tesselation) {
 }
 
 // Make a sphere. This is not watertight.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
 make_uvhemisphere(int tesselation, bool flipped) {
-    auto quads = vector<vec4i>();
-    auto texcoord = vector<vec2f>();
-    tie(quads, texcoord) =
+    auto quads = std::vector<vec4i>();
+    auto texcoord = std::vector<vec2f>();
+    std::tie(quads, texcoord) =
         make_uvquads(pow2(tesselation + 2), pow2(tesselation));
-    auto pos = vector<vec3f>(texcoord.size());
-    auto norm = vector<vec3f>(texcoord.size());
+    auto pos = std::vector<vec3f>(texcoord.size());
+    auto norm = std::vector<vec3f>(texcoord.size());
     if (!flipped) {
         for (auto i = 0; i < texcoord.size(); i++) {
             auto uv = texcoord[i];
@@ -8893,13 +8938,15 @@ make_uvhemisphere(int tesselation, bool flipped) {
 }
 
 // Make a quad.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_uvquad(
-    int tesselation) {
-    auto quads = vector<vec4i>();
-    auto texcoord = vector<vec2f>();
-    tie(quads, texcoord) = make_uvquads(pow2(tesselation), pow2(tesselation));
-    auto pos = vector<vec3f>(texcoord.size());
-    auto norm = vector<vec3f>(texcoord.size());
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
+make_uvquad(int tesselation) {
+    auto quads = std::vector<vec4i>();
+    auto texcoord = std::vector<vec2f>();
+    std::tie(quads, texcoord) =
+        make_uvquads(pow2(tesselation), pow2(tesselation));
+    auto pos = std::vector<vec3f>(texcoord.size());
+    auto norm = std::vector<vec3f>(texcoord.size());
     for (auto i = 0; i < texcoord.size(); i++) {
         auto uv = texcoord[i];
         pos[i] = {(-1 + uv.x * 2), (-1 + uv.y * 2), 0};
@@ -8910,20 +8957,21 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_uvquad(
 
 // Make a cube with unique vertices. This is watertight but has no
 // texture coordinates or normals.
-tuple<vector<vec4i>, vector<vec3f>> make_cube(int tesselation) {
-    static auto pos = vector<vec3f>{{-1, -1, -1}, {-1, +1, -1}, {+1, +1, -1},
-        {+1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {+1, +1, +1}, {+1, -1, +1}};
-    static auto quads = vector<vec4i>{{0, 1, 2, 3}, {7, 6, 5, 4}, {4, 5, 1, 0},
-        {6, 7, 3, 2}, {2, 1, 5, 6}, {0, 3, 7, 4}};
+std::tuple<std::vector<vec4i>, std::vector<vec3f>> make_cube(int tesselation) {
+    static auto pos = std::vector<vec3f>{{-1, -1, -1}, {-1, +1, -1},
+        {+1, +1, -1}, {+1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {+1, +1, +1},
+        {+1, -1, +1}};
+    static auto quads = std::vector<vec4i>{{0, 1, 2, 3}, {7, 6, 5, 4},
+        {4, 5, 1, 0}, {6, 7, 3, 2}, {2, 1, 5, 6}, {0, 3, 7, 4}};
 
     auto tpos = pos;
     auto tquads = quads;
     for (auto l = 0; l < tesselation; l++) {
-        auto lines = vector<vec2i>();
-        auto triangles = vector<vec3i>();
-        auto edges = vector<vec2i>();
-        auto faces = vector<vec4i>();
-        tie(lines, triangles, tquads, edges, faces) =
+        auto lines = std::vector<vec2i>();
+        auto triangles = std::vector<vec3i>();
+        auto edges = std::vector<vec2i>();
+        auto faces = std::vector<vec4i>();
+        std::tie(lines, triangles, tquads, edges, faces) =
             subdivide_elems_linear({}, {}, tquads, (int)tpos.size());
         tpos = subdivide_vert_linear(tpos, edges, faces);
     }
@@ -8933,25 +8981,26 @@ tuple<vector<vec4i>, vector<vec3f>> make_cube(int tesselation) {
 
 // Make a facevarying cube with unique vertices but different texture
 // coordinates.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec4i>, vector<vec3f>, vector<vec4i>,
-    vector<vec2f>>
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec4i>,
+    std::vector<vec3f>, std::vector<vec4i>, std::vector<vec2f>>
 make_fvcube(int tesselation) {
-    static auto pos = vector<vec3f>{{-1, -1, -1}, {-1, +1, -1}, {+1, +1, -1},
-        {+1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {+1, +1, +1}, {+1, -1, +1}};
-    static auto quads_pos = vector<vec4i>{{0, 1, 2, 3}, {7, 6, 5, 4},
+    static auto pos = std::vector<vec3f>{{-1, -1, -1}, {-1, +1, -1},
+        {+1, +1, -1}, {+1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {+1, +1, +1},
+        {+1, -1, +1}};
+    static auto quads_pos = std::vector<vec4i>{{0, 1, 2, 3}, {7, 6, 5, 4},
         {4, 5, 1, 0}, {6, 7, 3, 2}, {2, 1, 5, 6}, {0, 3, 7, 4}};
-    static auto norm = vector<vec3f>{{0, 0, -1}, {0, 0, -1}, {0, 0, -1},
+    static auto norm = std::vector<vec3f>{{0, 0, -1}, {0, 0, -1}, {0, 0, -1},
         {0, 0, -1}, {0, 0, +1}, {0, 0, +1}, {0, 0, +1}, {0, 0, +1}, {-1, 0, 0},
         {-1, 0, 0}, {-1, 0, 0}, {-1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0},
         {+1, 0, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, -1, 0},
         {0, -1, 0}, {0, -1, 0}, {0, -1, 0}};
-    static auto quads_norm = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
+    static auto quads_norm = std::vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
         {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19}, {20, 21, 22, 23}};
-    static auto texcoord = vector<vec2f>{{0, 0}, {1, 0}, {1, 1}, {0, 1}, {0, 0},
+    static auto texcoord = std::vector<vec2f>{{0, 0}, {1, 0}, {1, 1}, {0, 1},
+        {0, 0}, {1, 0}, {1, 1}, {0, 1}, {0, 0}, {1, 0}, {1, 1}, {0, 1}, {0, 0},
         {1, 0}, {1, 1}, {0, 1}, {0, 0}, {1, 0}, {1, 1}, {0, 1}, {0, 0}, {1, 0},
-        {1, 1}, {0, 1}, {0, 0}, {1, 0}, {1, 1}, {0, 1}, {0, 0}, {1, 0}, {1, 1},
-        {0, 1}};
-    static auto quads_texcoord = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
+        {1, 1}, {0, 1}};
+    static auto quads_texcoord = std::vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
         {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19}, {20, 21, 22, 23}};
 
     if (!tesselation)
@@ -8962,17 +9011,17 @@ make_fvcube(int tesselation) {
     auto tquads_pos = quads_pos, tquads_norm = quads_norm,
          tquads_texcoord = quads_texcoord;
     for (auto l = 0; l < tesselation; l++) {
-        auto lines = vector<vec2i>();
-        auto triangles = vector<vec3i>();
-        auto edges = vector<vec2i>();
-        auto faces = vector<vec4i>();
-        tie(lines, triangles, tquads_pos, edges, faces) =
+        auto lines = std::vector<vec2i>();
+        auto triangles = std::vector<vec3i>();
+        auto edges = std::vector<vec2i>();
+        auto faces = std::vector<vec4i>();
+        std::tie(lines, triangles, tquads_pos, edges, faces) =
             subdivide_elems_linear({}, {}, tquads_pos, (int)tpos.size());
         tpos = subdivide_vert_linear(tpos, edges, faces);
-        tie(lines, triangles, tquads_norm, edges, faces) =
+        std::tie(lines, triangles, tquads_norm, edges, faces) =
             subdivide_elems_linear({}, {}, tquads_norm, (int)tnorm.size());
         tnorm = subdivide_vert_linear(tnorm, edges, faces);
-        tie(lines, triangles, tquads_texcoord, edges, faces) =
+        std::tie(lines, triangles, tquads_texcoord, edges, faces) =
             subdivide_elems_linear(
                 {}, {}, tquads_texcoord, (int)ttexcoord.size());
         ttexcoord = subdivide_vert_linear(ttexcoord, edges, faces);
@@ -8983,15 +9032,16 @@ make_fvcube(int tesselation) {
 
 // Make a facevarying sphere with unique vertices but different texture
 // coordinates.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec4i>, vector<vec3f>, vector<vec4i>,
-    vector<vec2f>>
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec4i>,
+    std::vector<vec3f>, std::vector<vec4i>, std::vector<vec2f>>
 make_fvsphere(int tesselation) {
     auto usteps = pow2(tesselation + 2), vsteps = pow2(tesselation + 1);
-    auto qpos = vector<vec4i>(), qtexcoord = vector<vec4i>();
-    auto uvpos = vector<vec2f>(), texcoord = vector<vec2f>();
-    tie(qpos, uvpos) = make_uvquads(usteps, vsteps, true, false, true, true);
-    tie(qtexcoord, texcoord) = make_uvquads(usteps, vsteps);
-    auto pos = vector<vec3f>(uvpos.size());
+    auto qpos = std::vector<vec4i>(), qtexcoord = std::vector<vec4i>();
+    auto uvpos = std::vector<vec2f>(), texcoord = std::vector<vec2f>();
+    std::tie(qpos, uvpos) =
+        make_uvquads(usteps, vsteps, true, false, true, true);
+    std::tie(qtexcoord, texcoord) = make_uvquads(usteps, vsteps);
+    auto pos = std::vector<vec3f>(uvpos.size());
     for (auto i = 0; i < uvpos.size(); i++) {
         auto uv = uvpos[i];
         auto a = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
@@ -9002,8 +9052,9 @@ make_fvsphere(int tesselation) {
 
 // Make a suzanne monkey model for testing. Note that some quads are
 // degenerate.
-tuple<vector<vec4i>, vector<vec3f>> make_suzanne(int tesselation) {
-    static auto suzanne_pos = vector<vec3f>{{0.4375, 0.1640625, 0.765625},
+std::tuple<std::vector<vec4i>, std::vector<vec3f>> make_suzanne(
+    int tesselation) {
+    static auto suzanne_pos = std::vector<vec3f>{{0.4375, 0.1640625, 0.765625},
         {-0.4375, 0.1640625, 0.765625}, {0.5, 0.09375, 0.6875},
         {-0.5, 0.09375, 0.6875}, {0.546875, 0.0546875, 0.578125},
         {-0.546875, 0.0546875, 0.578125}, {0.3515625, -0.0234375, 0.6171875},
@@ -9259,27 +9310,27 @@ tuple<vector<vec4i>, vector<vec3f>> make_suzanne(int tesselation) {
         {-1.0390625, -0.0859375, -0.4921875}, {0.7890625, -0.125, -0.328125},
         {-0.7890625, -0.125, -0.328125}, {0.859375, 0.3828125, -0.3828125},
         {-0.859375, 0.3828125, -0.3828125}};
-    static auto suzanne_triangles = vector<vec3i>{{60, 64, 48}, {49, 65, 61},
-        {62, 64, 60}, {61, 65, 63}, {60, 58, 62}, {63, 59, 61}, {60, 56, 58},
-        {59, 57, 61}, {60, 54, 56}, {57, 55, 61}, {60, 52, 54}, {55, 53, 61},
-        {60, 50, 52}, {53, 51, 61}, {60, 48, 50}, {51, 49, 61}, {224, 228, 226},
-        {227, 229, 225}, {72, 283, 73}, {73, 284, 72}, {341, 347, 383},
-        {384, 348, 342}, {299, 345, 343}, {344, 346, 300}, {323, 379, 351},
-        {352, 380, 324}, {441, 443, 445}, {446, 444, 442}, {463, 491, 465},
-        {466, 492, 464}, {495, 497, 499}, {500, 498, 496}};
-    static auto suzanne_quads = vector<vec4i>{{46, 0, 2, 44}, {3, 1, 47, 45},
-        {44, 2, 4, 42}, {5, 3, 45, 43}, {2, 8, 6, 4}, {7, 9, 3, 5},
-        {0, 10, 8, 2}, {9, 11, 1, 3}, {10, 12, 14, 8}, {15, 13, 11, 9},
-        {8, 14, 16, 6}, {17, 15, 9, 7}, {14, 20, 18, 16}, {19, 21, 15, 17},
-        {12, 22, 20, 14}, {21, 23, 13, 15}, {22, 24, 26, 20}, {27, 25, 23, 21},
-        {20, 26, 28, 18}, {29, 27, 21, 19}, {26, 32, 30, 28}, {31, 33, 27, 29},
-        {24, 34, 32, 26}, {33, 35, 25, 27}, {34, 36, 38, 32}, {39, 37, 35, 33},
-        {32, 38, 40, 30}, {41, 39, 33, 31}, {38, 44, 42, 40}, {43, 45, 39, 41},
-        {36, 46, 44, 38}, {45, 47, 37, 39}, {46, 36, 50, 48}, {51, 37, 47, 49},
-        {36, 34, 52, 50}, {53, 35, 37, 51}, {34, 24, 54, 52}, {55, 25, 35, 53},
-        {24, 22, 56, 54}, {57, 23, 25, 55}, {22, 12, 58, 56}, {59, 13, 23, 57},
-        {12, 10, 62, 58}, {63, 11, 13, 59}, {10, 0, 64, 62}, {65, 1, 11, 63},
-        {0, 46, 48, 64}, {49, 47, 1, 65}, {88, 173, 175, 90},
+    static auto suzanne_triangles = std::vector<vec3i>{{60, 64, 48},
+        {49, 65, 61}, {62, 64, 60}, {61, 65, 63}, {60, 58, 62}, {63, 59, 61},
+        {60, 56, 58}, {59, 57, 61}, {60, 54, 56}, {57, 55, 61}, {60, 52, 54},
+        {55, 53, 61}, {60, 50, 52}, {53, 51, 61}, {60, 48, 50}, {51, 49, 61},
+        {224, 228, 226}, {227, 229, 225}, {72, 283, 73}, {73, 284, 72},
+        {341, 347, 383}, {384, 348, 342}, {299, 345, 343}, {344, 346, 300},
+        {323, 379, 351}, {352, 380, 324}, {441, 443, 445}, {446, 444, 442},
+        {463, 491, 465}, {466, 492, 464}, {495, 497, 499}, {500, 498, 496}};
+    static auto suzanne_quads = std::vector<vec4i>{{46, 0, 2, 44},
+        {3, 1, 47, 45}, {44, 2, 4, 42}, {5, 3, 45, 43}, {2, 8, 6, 4},
+        {7, 9, 3, 5}, {0, 10, 8, 2}, {9, 11, 1, 3}, {10, 12, 14, 8},
+        {15, 13, 11, 9}, {8, 14, 16, 6}, {17, 15, 9, 7}, {14, 20, 18, 16},
+        {19, 21, 15, 17}, {12, 22, 20, 14}, {21, 23, 13, 15}, {22, 24, 26, 20},
+        {27, 25, 23, 21}, {20, 26, 28, 18}, {29, 27, 21, 19}, {26, 32, 30, 28},
+        {31, 33, 27, 29}, {24, 34, 32, 26}, {33, 35, 25, 27}, {34, 36, 38, 32},
+        {39, 37, 35, 33}, {32, 38, 40, 30}, {41, 39, 33, 31}, {38, 44, 42, 40},
+        {43, 45, 39, 41}, {36, 46, 44, 38}, {45, 47, 37, 39}, {46, 36, 50, 48},
+        {51, 37, 47, 49}, {36, 34, 52, 50}, {53, 35, 37, 51}, {34, 24, 54, 52},
+        {55, 25, 35, 53}, {24, 22, 56, 54}, {57, 23, 25, 55}, {22, 12, 58, 56},
+        {59, 13, 23, 57}, {12, 10, 62, 58}, {63, 11, 13, 59}, {10, 0, 64, 62},
+        {65, 1, 11, 63}, {0, 46, 48, 64}, {49, 47, 1, 65}, {88, 173, 175, 90},
         {175, 174, 89, 90}, {86, 171, 173, 88}, {174, 172, 87, 89},
         {84, 169, 171, 86}, {172, 170, 85, 87}, {82, 167, 169, 84},
         {170, 168, 83, 85}, {80, 165, 167, 82}, {168, 166, 81, 83},
@@ -9431,11 +9482,11 @@ tuple<vector<vec4i>, vector<vec3f>> make_suzanne(int tesselation) {
     if (!tesselation) return {tquads, tpos};
 
     for (auto l = 0; l < tesselation; l++) {
-        auto lines = vector<vec2i>();
-        auto triangles = vector<vec3i>();
-        auto edges = vector<vec2i>();
-        auto faces = vector<vec4i>();
-        tie(lines, triangles, tquads, edges, faces) =
+        auto lines = std::vector<vec2i>();
+        auto triangles = std::vector<vec3i>();
+        auto edges = std::vector<vec2i>();
+        auto faces = std::vector<vec4i>();
+        std::tie(lines, triangles, tquads, edges, faces) =
             subdivide_elems_linear({}, {}, tquads, (int)tpos.size());
         tpos = subdivide_vert_linear(tpos, edges, faces);
     }
@@ -9444,22 +9495,23 @@ tuple<vector<vec4i>, vector<vec3f>> make_suzanne(int tesselation) {
 }
 
 // Make a cube with uv. This is not watertight.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_uvcube(
-    int tesselation) {
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
+make_uvcube(int tesselation) {
     frame3f frames[6] = {frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 1}},
         frame3f{{-1, 0, 0}, {0, 1, 0}, {0, 0, -1}, {0, 0, -1}},
         frame3f{{-1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 1, 0}},
         frame3f{{1, 0, 0}, {0, 0, 1}, {0, -1, 0}, {0, -1, 0}},
         frame3f{{0, 1, 0}, {0, 0, 1}, {1, 0, 0}, {1, 0, 0}},
         frame3f{{0, -1, 0}, {0, 0, 1}, {-1, 0, 0}, {-1, 0, 0}}};
-    vector<vec3f> quad_pos, quad_norm;
-    vector<vec2f> quad_texcoord;
-    vector<vec4i> quad_quads;
-    tie(quad_quads, quad_pos, quad_norm, quad_texcoord) =
+    std::vector<vec3f> quad_pos, quad_norm;
+    std::vector<vec2f> quad_texcoord;
+    std::vector<vec4i> quad_quads;
+    std::tie(quad_quads, quad_pos, quad_norm, quad_texcoord) =
         make_uvquad(tesselation);
-    vector<vec3f> pos, norm;
-    vector<vec2f> texcoord;
-    vector<vec4i> quads;
+    std::vector<vec3f> pos, norm;
+    std::vector<vec2f> texcoord;
+    std::vector<vec4i> quads;
     for (auto i = 0; i < 6; i++) {
         pos.insert(pos.end(), quad_pos.begin(), quad_pos.end());
         norm.insert(norm.end(), quad_norm.begin(), quad_norm.end());
@@ -9487,12 +9539,13 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_uvcube(
 }
 
 // Make a sphere from a cube. This is not watertight.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
 make_uvspherecube(int tesselation) {
-    vector<vec3f> pos, norm;
-    vector<vec2f> texcoord;
-    vector<vec4i> quads;
-    tie(quads, pos, norm, texcoord) = make_uvcube(tesselation);
+    std::vector<vec3f> pos, norm;
+    std::vector<vec2f> texcoord;
+    std::vector<vec4i> quads;
+    std::tie(quads, pos, norm, texcoord) = make_uvcube(tesselation);
     for (auto i = 0; i < pos.size(); i++) {
         pos[i] = normalize(pos[i]);
         norm[i] = normalize(pos[i]);
@@ -9501,12 +9554,13 @@ make_uvspherecube(int tesselation) {
 }
 
 // Make a cube than stretch it towards a sphere. This is not watertight.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
 make_uvspherizedcube(int tesselation, float radius) {
-    vector<vec3f> pos, norm;
-    vector<vec2f> texcoord;
-    vector<vec4i> quads;
-    tie(quads, pos, norm, texcoord) = make_uvcube(tesselation);
+    std::vector<vec3f> pos, norm;
+    std::vector<vec2f> texcoord;
+    std::vector<vec4i> quads;
+    std::tie(quads, pos, norm, texcoord) = make_uvcube(tesselation);
     for (auto i = 0; i < pos.size(); i++) {
         norm[i] = normalize(pos[i]);
         pos[i] *= 1 - radius;
@@ -9517,12 +9571,13 @@ make_uvspherizedcube(int tesselation, float radius) {
 }
 
 // Make a flipped sphere. This is not watertight.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
 make_uvflipcapsphere(int tesselation, float z, bool flipped) {
-    vector<vec3f> pos, norm;
-    vector<vec2f> texcoord;
-    vector<vec4i> quads;
-    tie(quads, pos, norm, texcoord) = make_uvsphere(tesselation, flipped);
+    std::vector<vec3f> pos, norm;
+    std::vector<vec2f> texcoord;
+    std::vector<vec4i> quads;
+    std::tie(quads, pos, norm, texcoord) = make_uvsphere(tesselation, flipped);
     for (auto i = 0; i < pos.size(); i++) {
         if (pos[i].z > z) {
             pos[i].z = 2 * z - pos[i].z;
@@ -9538,14 +9593,15 @@ make_uvflipcapsphere(int tesselation, float z, bool flipped) {
 }
 
 // Make a cutout sphere. This is not watertight.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
 make_uvcutsphere(int tesselation, float z, bool flipped) {
-    auto quads = vector<vec4i>();
-    auto texcoord = vector<vec2f>();
-    tie(quads, texcoord) =
+    auto quads = std::vector<vec4i>();
+    auto texcoord = std::vector<vec2f>();
+    std::tie(quads, texcoord) =
         make_uvquads(pow2(tesselation + 2), pow2(tesselation + 1));
-    auto pos = vector<vec3f>(texcoord.size());
-    auto norm = vector<vec3f>(texcoord.size());
+    auto pos = std::vector<vec3f>(texcoord.size());
+    auto norm = std::vector<vec3f>(texcoord.size());
     if (!flipped) {
         for (auto i = 0; i < texcoord.size(); i++) {
             auto uv = texcoord[i];
@@ -9568,7 +9624,8 @@ make_uvcutsphere(int tesselation, float z, bool flipped) {
 }
 
 // Make a seashell. This is not watertight. Returns quads, pos, norm, texcoord.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
 make_uvseashell(int tesselation, const make_seashell_params& params) {
     auto R = params.spiral_revolutions;
     auto D = -1.0f;
@@ -9584,11 +9641,11 @@ make_uvseashell(int tesselation, const make_seashell_params& params) {
 
     auto cot_a = 1 / tan(a);
 
-    auto quads = vector<vec4i>();
-    auto texcoord = vector<vec2f>();
-    tie(quads, texcoord) = make_uvquads(
+    auto quads = std::vector<vec4i>();
+    auto texcoord = std::vector<vec2f>();
+    std::tie(quads, texcoord) = make_uvquads(
         pow2(tesselation + 2), pow2(tesselation + 1 + (int)round(R)));
-    auto pos = vector<vec3f>(texcoord.size());
+    auto pos = std::vector<vec3f>(texcoord.size());
     for (auto i = 0; i < texcoord.size(); i++) {
         auto uv = texcoord[i];
         auto s = uv.x * 2 * pif;
@@ -9616,36 +9673,37 @@ make_uvseashell(int tesselation, const make_seashell_params& params) {
 }
 
 // Make a bezier circle. Returns bezier, pos.
-tuple<vector<vec4i>, vector<vec3f>> make_bezier_circle() {
+std::tuple<std::vector<vec4i>, std::vector<vec3f>> make_bezier_circle() {
     // constant from http://spencermortensen.com/articles/bezier-circle/
     static auto c = 0.551915024494f;
-    static auto pos = vector<vec3f>{{1, 0, 0}, {1, c, 0}, {c, 1, 0}, {0, 1, 0},
-        {-c, 1, 0}, {-1, c, 0}, {-1, 0, 0}, {-1, -c, 0}, {-c, -1, 0},
+    static auto pos = std::vector<vec3f>{{1, 0, 0}, {1, c, 0}, {c, 1, 0},
+        {0, 1, 0}, {-c, 1, 0}, {-1, c, 0}, {-1, 0, 0}, {-1, -c, 0}, {-c, -1, 0},
         {0, -1, 0}, {c, -1, 0}, {1, -c, 0}};
-    static auto bezier =
-        vector<vec4i>{{0, 1, 2, 3}, {3, 4, 5, 6}, {6, 7, 8, 9}, {9, 10, 11, 0}};
+    static auto bezier = std::vector<vec4i>{
+        {0, 1, 2, 3}, {3, 4, 5, 6}, {6, 7, 8, 9}, {9, 10, 11, 0}};
     return {bezier, pos};
 }
 
 // Make a hair ball around a shape
-tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>
-make_hair(int num, int tesselation, const vector<vec3i>& striangles,
-    const vector<vec4i>& squads, const vector<vec3f>& spos,
-    const vector<vec3f>& snorm, const vector<vec2f>& stexcoord,
+std::tuple<std::vector<vec2i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>, std::vector<float>>
+make_hair(int num, int tesselation, const std::vector<vec3i>& striangles,
+    const std::vector<vec4i>& squads, const std::vector<vec3f>& spos,
+    const std::vector<vec3f>& snorm, const std::vector<vec2f>& stexcoord,
     const make_hair_params& params) {
-    vector<vec3f> bpos;
-    vector<vec3f> bnorm;
-    vector<vec2f> btexcoord;
-    tie(bpos, bnorm, btexcoord) = sample_triangles_points(
+    std::vector<vec3f> bpos;
+    std::vector<vec3f> bnorm;
+    std::vector<vec2f> btexcoord;
+    std::tie(bpos, bnorm, btexcoord) = sample_triangles_points(
         join(striangles, convert_quads_to_triangles(squads)), spos, snorm,
         stexcoord, num, params.seed);
 
     auto rng = init_rng(params.seed, 3);
-    auto blen = vector<float>(bpos.size());
+    auto blen = std::vector<float>(bpos.size());
     for (auto& l : blen)
         l = lerp(params.length.x, params.length.y, next_rand1f(rng));
 
-    auto cidx = vector<int>();
+    auto cidx = std::vector<int>();
     if (params.clump.x > 0) {
         for (auto bidx = 0; bidx < bpos.size(); bidx++) {
             cidx.push_back(0);
@@ -9661,12 +9719,12 @@ make_hair(int num, int tesselation, const vector<vec3i>& striangles,
     }
 
     auto usteps = pow2(tesselation);
-    auto lines = vector<vec2i>();
-    auto texcoord = vector<vec2f>();
-    tie(lines, texcoord) = make_uvlines(num, usteps);
-    auto pos = vector<vec3f>(texcoord.size());
-    auto norm = vector<vec3f>(texcoord.size());
-    auto radius = vector<float>(texcoord.size());
+    auto lines = std::vector<vec2i>();
+    auto texcoord = std::vector<vec2f>();
+    std::tie(lines, texcoord) = make_uvlines(num, usteps);
+    auto pos = std::vector<vec3f>(texcoord.size());
+    auto norm = std::vector<vec3f>(texcoord.size());
+    auto radius = std::vector<float>(texcoord.size());
     for (auto i = 0; i < texcoord.size(); i++) {
         auto u = texcoord[i].x;
         auto bidx = i / (usteps + 1);
@@ -9706,7 +9764,7 @@ namespace ygl {
 // http://graphics.cs.williams.edu/data
 // http://www.graphics.cornell.edu/online/box/data.html
 scene* make_cornell_box_scene() {
-    auto make_camera = [](string name, vec3f from, vec3f to, float yfov,
+    auto make_camera = [](std::string name, vec3f from, vec3f to, float yfov,
                            float aperture, float aspect = 16.0f / 9.0f) {
         auto cam = new camera();
         cam->name = name;
@@ -9718,7 +9776,7 @@ scene* make_cornell_box_scene() {
         return cam;
     };
 
-    auto make_instance = [](string name, shape_group* shp, vec3f pos,
+    auto make_instance = [](std::string name, shape_group* shp, vec3f pos,
                              vec3f rot = {0, 0, 0}) {
         auto ist = new instance();
         ist->name = name;
@@ -9730,31 +9788,33 @@ scene* make_cornell_box_scene() {
         return ist;
     };
 
-    auto make_quad = [](string name, material* mat, float scale = 1) {
+    auto make_quad = [](std::string name, material* mat, float scale = 1) {
         auto sgr = new shape_group();
         sgr->name = name;
         auto shp = new shape();
         shp->mat = mat;
         shp->name = name;
-        tie(shp->quads, shp->pos, shp->norm, shp->texcoord) = make_uvquad(0);
+        std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+            make_uvquad(0);
         for (auto& p : shp->pos) p *= scale;
         sgr->shapes.push_back(shp);
         return sgr;
     };
 
-    auto make_box = [](string name, material* mat, vec3f scale) {
+    auto make_box = [](std::string name, material* mat, vec3f scale) {
         auto sgr = new shape_group();
         sgr->name = name;
         auto shp = new shape();
         shp->mat = mat;
         shp->name = name;
-        tie(shp->quads, shp->pos, shp->norm, shp->texcoord) = make_uvcube(0);
+        std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+            make_uvcube(0);
         for (auto& p : shp->pos) p *= scale;
         sgr->shapes.push_back(shp);
         return sgr;
     };
 
-    auto make_material = [](string name, vec3f kd, vec3f ke = {0, 0, 0}) {
+    auto make_material = [](std::string name, vec3f kd, vec3f ke = {0, 0, 0}) {
         auto mat = new material();
         mat->type = material_type::specular_roughness;
         mat->name = name;
@@ -9804,31 +9864,33 @@ scene* make_cornell_box_scene() {
 //
 // Make standard shape. Public API described above.
 //
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
 make_uvhollowcutsphere(int tesselation, float radius) {
-    auto quads = vector<vec4i>();
-    auto pos = vector<vec3f>();
-    auto norm = vector<vec3f>();
-    auto texcoord = vector<vec2f>();
+    auto quads = std::vector<vec4i>();
+    auto pos = std::vector<vec3f>();
+    auto norm = std::vector<vec3f>();
+    auto texcoord = std::vector<vec2f>();
 
-    vector<vec3f> mpos, mnorm;
-    vector<vec2f> mtexcoord;
-    vector<vec4i> mquads;
-    vector<vec2i> _aux1;
-    vector<vec3i> _aux2;
+    std::vector<vec3f> mpos, mnorm;
+    std::vector<vec2f> mtexcoord;
+    std::vector<vec4i> mquads;
+    std::vector<vec2i> _aux1;
+    std::vector<vec3i> _aux2;
 
-    tie(mquads, mpos, mnorm, mtexcoord) = make_uvcutsphere(tesselation, radius);
+    std::tie(mquads, mpos, mnorm, mtexcoord) =
+        make_uvcutsphere(tesselation, radius);
     for (auto& uv : mtexcoord) uv.y *= radius;
-    tie(_aux1, _aux2, quads) =
+    std::tie(_aux1, _aux2, quads) =
         merge_elems((int)pos.size(), {}, {}, quads, {}, {}, mquads);
     append(pos, mpos);
     append(norm, mnorm);
     append(texcoord, mtexcoord);
 
-    tie(mquads, mpos, mnorm, mtexcoord) =
+    std::tie(mquads, mpos, mnorm, mtexcoord) =
         make_uvcutsphere(tesselation, radius, true);
     for (auto& p : mpos) p *= radius;
-    tie(_aux1, _aux2, quads) =
+    std::tie(_aux1, _aux2, quads) =
         merge_elems((int)pos.size(), {}, {}, quads, {}, {}, mquads);
     append(pos, mpos);
     append(norm, mnorm);
@@ -9837,7 +9899,7 @@ make_uvhollowcutsphere(int tesselation, float radius) {
     // dpdu = [- s r s0 s1, s r c0 s1, 0] === [- s0, c0, 0]
     // dpdv = [s c0 s1, s s0 s1, s c1] === [c0 s1, s0 s1, c1]
     // n = [c0 c1, - s0 c1, s1]
-    tie(mquads, mtexcoord) =
+    std::tie(mquads, mtexcoord) =
         make_uvquads(pow2(tesselation + 2), pow2(tesselation + 1));
     mpos.resize(mtexcoord.size());
     mnorm.resize(mtexcoord.size());
@@ -9850,7 +9912,7 @@ make_uvhollowcutsphere(int tesselation, float radius) {
         mnorm[i] = {-cos(a[0]) * cos(a[1]), -sin(a[0]) * cos(a[1]), sin(a[1])};
         mtexcoord[i] = {uv[0], radius + (1 - radius) * uv[1]};
     }
-    tie(_aux1, _aux2, quads) =
+    std::tie(_aux1, _aux2, quads) =
         merge_elems((int)pos.size(), {}, {}, quads, {}, {}, mquads);
     append(pos, mpos);
     append(norm, mnorm);
@@ -9861,40 +9923,42 @@ make_uvhollowcutsphere(int tesselation, float radius) {
 //
 // Make standard shape. Public API described above.
 //
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
 make_uvhollowcutsphere1(int tesselation, float radius) {
-    auto quads = vector<vec4i>();
-    auto pos = vector<vec3f>();
-    auto norm = vector<vec3f>();
-    auto texcoord = vector<vec2f>();
+    auto quads = std::vector<vec4i>();
+    auto pos = std::vector<vec3f>();
+    auto norm = std::vector<vec3f>();
+    auto texcoord = std::vector<vec2f>();
 
-    vector<vec3f> mpos, mnorm;
-    vector<vec2f> mtexcoord;
-    vector<vec4i> mquads;
-    vector<vec2i> _aux1;
-    vector<vec3i> _aux2;
+    std::vector<vec3f> mpos, mnorm;
+    std::vector<vec2f> mtexcoord;
+    std::vector<vec4i> mquads;
+    std::vector<vec2i> _aux1;
+    std::vector<vec3i> _aux2;
 
-    tie(mquads, mpos, mnorm, mtexcoord) = make_uvcutsphere(tesselation, radius);
+    std::tie(mquads, mpos, mnorm, mtexcoord) =
+        make_uvcutsphere(tesselation, radius);
     for (auto& uv : mtexcoord) uv.y *= radius;
     for (auto i = (pow2(tesselation + 2) + 1) * pow2(tesselation + 1);
          i < mnorm.size(); i++)
         mnorm[i] = normalize(mnorm[i] + vec3f{0, 0, 1});
-    tie(_aux1, _aux2, quads) =
+    std::tie(_aux1, _aux2, quads) =
         merge_elems((int)pos.size(), {}, {}, quads, {}, {}, mquads);
     append(pos, mpos);
     append(norm, mnorm);
     append(texcoord, mtexcoord);
 
-    tie(mquads, mpos, mnorm, mtexcoord) =
+    std::tie(mquads, mpos, mnorm, mtexcoord) =
         make_uvcutsphere(tesselation, radius * 1.05f, true);
     for (auto& p : mpos) p *= 0.8f;
-    tie(_aux1, _aux2, quads) =
+    std::tie(_aux1, _aux2, quads) =
         merge_elems((int)pos.size(), {}, {}, quads, {}, {}, mquads);
     append(pos, mpos);
     append(norm, mnorm);
     append(texcoord, mtexcoord);
 
-    tie(mquads, mtexcoord) =
+    std::tie(mquads, mtexcoord) =
         make_uvquads(pow2(tesselation + 2), pow2(tesselation + 1) / 4);
     mpos.resize(mtexcoord.size());
     mnorm.resize(mtexcoord.size());
@@ -9910,7 +9974,7 @@ make_uvhollowcutsphere1(int tesselation, float radius) {
     }
     for (auto i = 0; i < (pow2(tesselation + 2) + 1); i++)
         mnorm[i] = normalize(mnorm[i] + vec3f{0, 0, 1});
-    tie(_aux1, _aux2, quads) =
+    std::tie(_aux1, _aux2, quads) =
         merge_elems((int)pos.size(), {}, {}, quads, {}, {}, mquads);
     append(pos, mpos);
     append(norm, mnorm);
@@ -9928,7 +9992,7 @@ namespace ygl {
 // Makes/updates a test texture
 void update_test_elem(
     const scene* scn, texture* txt, const test_texture_params& ttxt) {
-    if (ttxt.name == "") throw runtime_error("cannot use empty name");
+    if (ttxt.name == "") throw std::runtime_error("cannot use empty name");
 
     txt->name = ttxt.name;
     txt->path = "";
@@ -9981,7 +10045,7 @@ void update_test_elem(
         case test_texture_type::sky: {
             txt->hdr = make_sunsky_image(ttxt.resolution, ttxt.sky_sunangle);
         } break;
-        default: throw runtime_error("should not have gotten here");
+        default: throw std::runtime_error("should not have gotten here");
     }
 
     if (ttxt.bump_to_normal) {
@@ -9995,7 +10059,7 @@ void update_test_elem(
 // Makes/updates a test material
 void update_test_elem(
     const scene* scn, material* mat, const test_material_params& tmat) {
-    if (tmat.name == "") throw runtime_error("cannot use empty name");
+    if (tmat.name == "") throw std::runtime_error("cannot use empty name");
 
     auto txt = find_named_elem(scn->textures, tmat.texture);
     auto norm = find_named_elem(scn->textures, tmat.normal);
@@ -10039,7 +10103,7 @@ void update_test_elem(
             mat->op = tmat.opacity;
             mat->kd_txt.txt = txt;
         } break;
-        default: throw runtime_error("should not have gotten here");
+        default: throw std::runtime_error("should not have gotten here");
     }
 
     mat->norm_txt.txt = norm;
@@ -10048,7 +10112,7 @@ void update_test_elem(
 // Makes/updates a test shape
 void update_test_elem(
     const scene* scn, shape_group* sgr, const test_shape_params& tshp) {
-    if (tshp.name == "") throw runtime_error("cannot use empty name");
+    if (tshp.name == "") throw std::runtime_error("cannot use empty name");
     auto nshapes = 1;
     if (tshp.type == test_shape_type::matball ||
         tshp.type == test_shape_type::hairball)
@@ -10063,7 +10127,8 @@ void update_test_elem(
     sgr->name = tshp.name;
     auto sid = 0;
     for (auto shp : sgr->shapes) {
-        shp->name = tshp.name + ((sid > 0) ? to_string(sid++) : string(""));
+        shp->name =
+            tshp.name + ((sid > 0) ? std::to_string(sid++) : std::string(""));
         shp->mat = find_named_elem(scn->materials, tshp.material);
         shp->pos = {};
         shp->norm = {};
@@ -10084,7 +10149,7 @@ void update_test_elem(
     auto shp = sgr->shapes.front();
     switch (tshp.type) {
         case test_shape_type::floor: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+            std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
                 make_uvquad((tshp.tesselation < 0) ? 5 : tshp.tesselation);
             for (auto& p : shp->pos) p = {-p.x, p.z, p.y};
             for (auto& n : shp->norm) n = {n.x, n.z, n.y};
@@ -10092,60 +10157,60 @@ void update_test_elem(
             for (auto& uv : shp->texcoord) uv *= 20;
         } break;
         case test_shape_type::quad: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+            std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
                 make_uvquad((tshp.tesselation < 0) ? 0 : tshp.tesselation);
         } break;
         case test_shape_type::cube: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+            std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
                 make_uvcube((tshp.tesselation < 0) ? 0 : tshp.tesselation);
         } break;
         case test_shape_type::sphere: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+            std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
                 make_uvsphere((tshp.tesselation < 0) ? 5 : tshp.tesselation);
         } break;
         case test_shape_type::spherecube: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+            std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
                 make_uvspherecube(
                     (tshp.tesselation < 0) ? 4 : tshp.tesselation);
         } break;
         case test_shape_type::spherizedcube: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+            std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
                 make_uvspherizedcube(
                     (tshp.tesselation < 0) ? 4 : tshp.tesselation, 0.75f);
         } break;
         case test_shape_type::geosphere: {
-            tie(shp->triangles, shp->pos) = make_geodesicsphere(
+            std::tie(shp->triangles, shp->pos) = make_geodesicsphere(
                 (tshp.tesselation < 0) ? 5 : tshp.tesselation);
             shp->norm = shp->pos;
         } break;
         case test_shape_type::flipcapsphere: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+            std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
                 make_uvflipcapsphere(
                     (tshp.tesselation < 0) ? 5 : tshp.tesselation, 0.75f);
         } break;
         case test_shape_type::suzanne: {
-            tie(shp->quads, shp->pos) =
+            std::tie(shp->quads, shp->pos) =
                 make_suzanne((tshp.tesselation < 0) ? 0 : tshp.tesselation);
         } break;
         case test_shape_type::cubep: {
-            tie(shp->quads, shp->pos) =
+            std::tie(shp->quads, shp->pos) =
                 make_cube((tshp.tesselation < 0) ? 0 : tshp.tesselation);
         } break;
         case test_shape_type::fvcube: {
-            tie(shp->quads_pos, shp->pos, shp->quads_norm, shp->norm,
+            std::tie(shp->quads_pos, shp->pos, shp->quads_norm, shp->norm,
                 shp->quads_texcoord, shp->texcoord) =
                 make_fvcube((tshp.tesselation < 0) ? 0 : tshp.tesselation);
         } break;
         case test_shape_type::fvsphere: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+            std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
                 make_uvsphere((tshp.tesselation < 0) ? 5 : tshp.tesselation);
         } break;
         case test_shape_type::matball: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+            std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
                 make_uvflipcapsphere(
                     (tshp.tesselation < 0) ? 5 : tshp.tesselation, 0.75f);
             auto shp1 = sgr->shapes.at(1);
-            tie(shp1->quads, shp1->pos, shp1->norm, shp1->texcoord) =
+            std::tie(shp1->quads, shp1->pos, shp1->norm, shp1->texcoord) =
                 make_uvsphere((tshp.tesselation < 0) ? 5 : tshp.tesselation);
             for (auto& p : shp1->pos) p *= 0.8f;
             shp1->mat = find_named_elem(scn->materials, tshp.interior);
@@ -10159,7 +10224,7 @@ void update_test_elem(
         case test_shape_type::pointscube: {
             auto npoints = (tshp.num < 0) ? 64 * 64 * 16 : tshp.num;
             auto radius = (tshp.radius < 0) ? 0.0025f : tshp.radius;
-            tie(shp->points, shp->texcoord) = make_uvpoints(npoints);
+            std::tie(shp->points, shp->texcoord) = make_uvpoints(npoints);
             shp->pos.reserve(shp->texcoord.size());
             shp->norm.resize(shp->texcoord.size(), {0, 0, 1});
             shp->radius.resize(shp->texcoord.size(), radius);
@@ -10171,21 +10236,21 @@ void update_test_elem(
         } break;
         case test_shape_type::hairball: {
             auto shp1 = sgr->shapes.at(1);
-            tie(shp1->quads, shp1->pos, shp1->norm, shp1->texcoord) =
+            std::tie(shp1->quads, shp1->pos, shp1->norm, shp1->texcoord) =
                 make_uvspherecube(5);
             shp1->mat = find_named_elem(scn->materials, tshp.interior);
             auto nhairs = (tshp.num < 0) ? 65536 : tshp.num;
             // auto radius = (tshp.radius < 0) ? vec2f{0.001f, 0.0001f} :
             //                                   vec2f{tshp.radius, 0.0001f};
-            tie(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius) =
-                make_hair(nhairs, 2, {}, shp1->quads, shp1->pos, shp1->norm,
-                    shp1->texcoord, tshp.hair_params);
+            std::tie(shp->lines, shp->pos, shp->norm, shp->texcoord,
+                shp->radius) = make_hair(nhairs, 2, {}, shp1->quads, shp1->pos,
+                shp1->norm, shp1->texcoord, tshp.hair_params);
         } break;
         case test_shape_type::beziercircle: {
-            tie(shp->beziers, shp->pos) = make_bezier_circle();
+            std::tie(shp->beziers, shp->pos) = make_bezier_circle();
             shp->subdivision = 2;
         } break;
-        default: throw runtime_error("should not have gotten here");
+        default: throw std::runtime_error("should not have gotten here");
     }
 
     if (tshp.scale != 1) {
@@ -10202,7 +10267,7 @@ void update_test_elem(
 // Makes/updates a test shape.
 void update_test_elem(
     const scene* scn, instance* ist, const test_instance_params& tist) {
-    if (tist.name == "") throw runtime_error("cannot use empty name");
+    if (tist.name == "") throw std::runtime_error("cannot use empty name");
     ist->name = tist.name;
     ist->frame = tist.frame;
     if (tist.rotation != zero3f) {
@@ -10218,7 +10283,7 @@ void update_test_elem(
 // Makes/updates a test shape
 void update_test_elem(
     const scene* scn, camera* cam, const test_camera_params& tcam) {
-    if (tcam.name == "") throw runtime_error("cannot use empty name");
+    if (tcam.name == "") throw std::runtime_error("cannot use empty name");
     cam->name = tcam.name;
     cam->frame = lookat_frame(tcam.from, tcam.to, vec3f{0, 1, 0});
     cam->yfov = tcam.yfov;
@@ -10232,7 +10297,7 @@ void update_test_elem(
 // Makes/updates a test shape
 void update_test_elem(
     const scene* scn, environment* env, const test_environment_params& tenv) {
-    if (tenv.name == "") throw runtime_error("cannot use empty name");
+    if (tenv.name == "") throw std::runtime_error("cannot use empty name");
     env->name = tenv.name;
     env->frame = identity_frame3f;
     if (tenv.rotation) {
@@ -10245,7 +10310,7 @@ void update_test_elem(
 // Makes/updates a test shape
 void update_test_elem(
     const scene* scn, node* nde, const test_node_params& tnde) {
-    if (tnde.name == "") throw runtime_error("cannot use empty name");
+    if (tnde.name == "") throw std::runtime_error("cannot use empty name");
     nde->name = tnde.name;
     nde->frame = tnde.frame;
     nde->translation = tnde.translation;
@@ -10259,7 +10324,7 @@ void update_test_elem(
 // Makes/updates a test animation
 void update_test_elem(
     const scene* scn, animation_group* agr, const test_animation_params& tanm) {
-    if (tanm.name == "") throw runtime_error("cannot use empty name");
+    if (tanm.name == "") throw std::runtime_error("cannot use empty name");
     if (agr->animations.size() != 1) {
         for (auto v : agr->animations) delete v;
         agr->animations.clear();
@@ -10283,9 +10348,9 @@ void update_test_elem(
 
 // Update test elements
 template <typename T, typename T1>
-void update_test_scene_elem(scene* scn, vector<T*>& elems,
-    const vector<T1>& telems, const unordered_set<void*>& refresh) {
-    auto emap = unordered_map<string, T*>();
+void update_test_scene_elem(scene* scn, std::vector<T*>& elems,
+    const std::vector<T1>& telems, const std::unordered_set<void*>& refresh) {
+    auto emap = std::unordered_map<std::string, T*>();
     for (auto elem : elems) emap[elem->name] = elem;
     for (auto& telem : telems) {
         if (!contains(emap, telem.name)) {
@@ -10300,7 +10365,7 @@ void update_test_scene_elem(scene* scn, vector<T*>& elems,
 
 // Makes/updates a test scene
 void update_test_scene(scene* scn, const test_scene_params& params,
-    const unordered_set<void*>& refresh) {
+    const std::unordered_set<void*>& refresh) {
     update_test_scene_elem(scn, scn->cameras, params.cameras, refresh);
     update_test_scene_elem(scn, scn->textures, params.textures, refresh);
     update_test_scene_elem(scn, scn->materials, params.materials, refresh);
@@ -10314,12 +10379,12 @@ void update_test_scene(scene* scn, const test_scene_params& params,
 
 // remove duplicate elems
 template <typename T>
-void remove_duplicate_elems(vector<T>& telems) {
-    auto names = unordered_set<string>();
+void remove_duplicate_elems(std::vector<T>& telems) {
+    auto names = std::unordered_set<std::string>();
     for (auto& elem : telems) names.insert(elem.name);
     if (names.size() == telems.size()) return;
     names.clear();
-    auto ntelems = vector<T>();
+    auto ntelems = std::vector<T>();
     ntelems.reserve(names.size());
     for (auto& elem : telems) {
         if (contains(names, elem.name)) continue;
@@ -10339,11 +10404,13 @@ void remove_duplicates(test_scene_params& scn) {
     remove_duplicate_elems(scn.environments);
 }
 
-unordered_map<string, test_texture_params>& test_texture_presets() {
-    static auto presets = unordered_map<string, test_texture_params>();
+std::unordered_map<std::string, test_texture_params>& test_texture_presets() {
+    static auto presets =
+        std::unordered_map<std::string, test_texture_params>();
     if (!presets.empty()) return presets;
 
-    auto make_test_texture = [](const string& name, test_texture_type type) {
+    auto make_test_texture = [](const std::string& name,
+                                 test_texture_type type) {
         auto params = test_texture_params();
         params.name = name;
         params.type = type;
@@ -10391,12 +10458,14 @@ unordered_map<string, test_texture_params>& test_texture_presets() {
     return presets;
 }
 
-unordered_map<string, test_material_params>& test_material_presets() {
-    static auto presets = unordered_map<string, test_material_params>();
+std::unordered_map<std::string, test_material_params>& test_material_presets() {
+    static auto presets =
+        std::unordered_map<std::string, test_material_params>();
     if (!presets.empty()) return presets;
 
-    auto make_test_material = [](const string& name, test_material_type type,
-                                  const vec3f& color, float roughness = 1) {
+    auto make_test_material = [](const std::string& name,
+                                  test_material_type type, const vec3f& color,
+                                  float roughness = 1) {
         auto params = test_material_params();
         params.name = name;
         params.type = type;
@@ -10404,16 +10473,17 @@ unordered_map<string, test_material_params>& test_material_presets() {
         params.roughness = roughness;
         return params;
     };
-    auto make_test_materialt = [](const string& name, test_material_type type,
-                                   const string& txt, float roughness = 1) {
-        auto params = test_material_params();
-        params.name = name;
-        params.type = type;
-        params.color = {1, 1, 1};
-        params.roughness = roughness;
-        params.texture = txt;
-        return params;
-    };
+    auto make_test_materialt =
+        [](const std::string& name, test_material_type type,
+            const std::string& txt, float roughness = 1) {
+            auto params = test_material_params();
+            params.name = name;
+            params.type = type;
+            params.color = {1, 1, 1};
+            params.roughness = roughness;
+            params.texture = txt;
+            return params;
+        };
 
     auto emission = test_material_type::emission;
     auto matte = test_material_type::matte;
@@ -10433,7 +10503,7 @@ unordered_map<string, test_material_params>& test_material_presets() {
     auto rough = 0.25f;
     auto sharp = 0.05f;
 
-    auto params = vector<test_material_params>();
+    auto params = std::vector<test_material_params>();
 
     presets["matte_floor"] = make_test_materialt("matte_floor", matte, "grid");
 
@@ -10488,11 +10558,11 @@ unordered_map<string, test_material_params>& test_material_presets() {
     return presets;
 }
 
-unordered_map<string, test_shape_params>& test_shape_presets() {
-    static auto presets = unordered_map<string, test_shape_params>();
+std::unordered_map<std::string, test_shape_params>& test_shape_presets() {
+    static auto presets = std::unordered_map<std::string, test_shape_params>();
     if (!presets.empty()) return presets;
 
-    auto make_test_shape = [](const string& name, test_shape_type type,
+    auto make_test_shape = [](const std::string& name, test_shape_type type,
                                int tesselation = -1, int subdivision = 0,
                                bool faceted = false) {
         auto params = test_shape_params();
@@ -10559,11 +10629,14 @@ unordered_map<string, test_shape_params>& test_shape_presets() {
     return presets;
 }
 
-unordered_map<string, test_environment_params>& test_environment_presets() {
-    static auto presets = unordered_map<string, test_environment_params>();
+std::unordered_map<std::string, test_environment_params>&
+test_environment_presets() {
+    static auto presets =
+        std::unordered_map<std::string, test_environment_params>();
     if (!presets.empty()) return presets;
 
-    auto make_test_environment = [](const string& name, const string& texture) {
+    auto make_test_environment = [](const std::string& name,
+                                     const std::string& texture) {
         auto params = test_environment_params();
         params.name = name;
         params.color = {1, 1, 1};
@@ -10578,25 +10651,28 @@ unordered_map<string, test_environment_params>& test_environment_presets() {
     return presets;
 }
 
-unordered_map<string, test_animation_params>& test_animation_presets() {
-    static auto presets = unordered_map<string, test_animation_params>();
+std::unordered_map<std::string, test_animation_params>&
+test_animation_presets() {
+    static auto presets =
+        std::unordered_map<std::string, test_animation_params>();
     if (!presets.empty()) return presets;
 
-    auto make_test_animation =
-        [](const string& name, bool bezier, const vector<float>& times,
-            const vector<vec3f>& translation, const vector<quat4f>& rotation,
-            const vector<vec3f>& scaling) {
-            auto params = test_animation_params();
-            params.name = name;
-            params.speed = 1;
-            params.scale = 1;
-            params.bezier = bezier;
-            params.times = times;
-            params.translation = translation;
-            params.rotation = rotation;
-            params.scaling = scaling;
-            return params;
-        };
+    auto make_test_animation = [](const std::string& name, bool bezier,
+                                   const std::vector<float>& times,
+                                   const std::vector<vec3f>& translation,
+                                   const std::vector<quat4f>& rotation,
+                                   const std::vector<vec3f>& scaling) {
+        auto params = test_animation_params();
+        params.name = name;
+        params.speed = 1;
+        params.scale = 1;
+        params.bezier = bezier;
+        params.times = times;
+        params.translation = translation;
+        params.rotation = rotation;
+        params.scaling = scaling;
+        return params;
+    };
 
     presets["bounce"] = make_test_animation(
         "bounce", false, {0, 1, 2}, {{0, 0, 0}, {0, 1, 0}, {0, 0, 0}}, {}, {});
@@ -10611,11 +10687,11 @@ unordered_map<string, test_animation_params>& test_animation_presets() {
     return presets;
 }
 
-unordered_map<string, test_camera_params>& test_camera_presets() {
-    static auto presets = unordered_map<string, test_camera_params>();
+std::unordered_map<std::string, test_camera_params>& test_camera_presets() {
+    static auto presets = std::unordered_map<std::string, test_camera_params>();
     if (!presets.empty()) return presets;
 
-    auto make_test_camera = [](const string& name, const vec3f& from,
+    auto make_test_camera = [](const std::string& name, const vec3f& from,
                                 const vec3f& to, float yfov, float aspect) {
         auto params = test_camera_params();
         params.name = name;
@@ -10636,16 +10712,17 @@ unordered_map<string, test_camera_params>& test_camera_presets() {
     return presets;
 }
 
-unordered_map<string, test_scene_params>& test_scene_presets() {
-    static auto presets = unordered_map<string, test_scene_params>();
+std::unordered_map<std::string, test_scene_params>& test_scene_presets() {
+    static auto presets = std::unordered_map<std::string, test_scene_params>();
     if (!presets.empty()) return presets;
 
-    auto make_test_scene = [](const string& name) {
+    auto make_test_scene = [](const std::string& name) {
         auto params = test_scene_params();
         params.name = name;
         return params;
     };
-    auto make_test_instance = [](const string& name, const string& shape,
+    auto make_test_instance = [](const std::string& name,
+                                  const std::string& shape,
                                   const vec3f& pos = {0, 0, 0}) {
         auto params = test_instance_params();
         params.name = name;
@@ -10670,110 +10747,113 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
         presets["environments"].environments.push_back(env_kv.second);
 
     // simple scenes shared functions
-    auto make_simple_scene = [&](const string& name,
-                                 const vector<string>& shapes,
-                                 const vector<string>& mats,
-                                 const string& lights, bool nodes = false,
-                                 const vector<string>& animations = {}) {
-        auto pos = vector<vec3f>{{-2.50f, 1, 0}, {0, 1, 0}, {+2.50f, 1, 0}};
-        auto params = make_test_scene(name);
-        params.cameras.push_back(test_camera_presets().at("cam3"));
-        params.materials.push_back(test_material_presets().at("matte_floor"));
-        if (params.materials.back().texture != "")
-            params.textures.push_back(
-                test_texture_presets().at(params.materials.back().texture));
-        params.shapes.push_back(test_shape_presets().at("floor"));
-        params.shapes.back().material = params.materials.back().name;
-        params.instances.push_back(
-            make_test_instance("floor", "floor", {0, 0, 0}));
-        for (auto i = 0; i < shapes.size(); i++) {
-            auto name = "obj" + to_string(i + 1);
-            params.materials.push_back(test_material_presets().at(mats[i]));
-            params.shapes.push_back(test_shape_presets().at(shapes[i]));
-            params.shapes.back().name = name;
-            params.shapes.back().material = mats[i];
-            if (params.shapes.back().type == test_shape_type::hairball ||
-                params.shapes.back().type == test_shape_type::matball) {
-                params.materials.push_back(
-                    test_material_presets().at("matte_gray"));
-                params.shapes.back().interior = "matte_gray";
-            }
-            params.instances.push_back(make_test_instance(name, name, pos[i]));
-            if (!animations.empty()) {
-                params.animations.push_back(
-                    test_animation_presets().at(animations[i]));
-                params.animations.back().nodes.push_back(name);
-            }
-        }
-        if (lights == "pointlights" || lights == "arealights" ||
-            lights == "arealights1") {
-            auto emission = 120;
-            auto shp = "point";
-            auto mat = "pointlight";
-            auto pos = vector<vec3f>{{-2, 10, 8}, {+2, 10, 8}};
-            auto scale = 1.0f;
-            if (lights == "arealights") {
-                emission = 8;
-                shp = "quad";
-                mat = "arealight";
-                pos = {{0, 16, 0}, {0, 16, 16}};
-                scale = 8;
-            }
-            if (lights == "arealights1") {
-                emission = 80;
-                shp = "quad";
-                mat = "arealight";
-                pos = {{-4, 5, 8}, {+4, 5, 8}};
-                scale = 2;
-            }
-            for (auto i = 0; i < 2; i++) {
-                auto name = "light" + to_string(i + 1);
-                params.materials.push_back(test_material_presets().at(mat));
-                params.materials.back().name = name;
-                params.materials.back().emission = emission;
-                params.shapes.push_back(test_shape_presets().at(shp));
+    auto make_simple_scene =
+        [&](const std::string& name, const std::vector<std::string>& shapes,
+            const std::vector<std::string>& mats, const std::string& lights,
+            bool nodes = false,
+            const std::vector<std::string>& animations = {}) {
+            auto pos =
+                std::vector<vec3f>{{-2.50f, 1, 0}, {0, 1, 0}, {+2.50f, 1, 0}};
+            auto params = make_test_scene(name);
+            params.cameras.push_back(test_camera_presets().at("cam3"));
+            params.materials.push_back(
+                test_material_presets().at("matte_floor"));
+            if (params.materials.back().texture != "")
+                params.textures.push_back(
+                    test_texture_presets().at(params.materials.back().texture));
+            params.shapes.push_back(test_shape_presets().at("floor"));
+            params.shapes.back().material = params.materials.back().name;
+            params.instances.push_back(
+                make_test_instance("floor", "floor", {0, 0, 0}));
+            for (auto i = 0; i < shapes.size(); i++) {
+                auto name = "obj" + std::to_string(i + 1);
+                params.materials.push_back(test_material_presets().at(mats[i]));
+                params.shapes.push_back(test_shape_presets().at(shapes[i]));
                 params.shapes.back().name = name;
-                params.shapes.back().material = name;
-                params.shapes.back().scale = scale;
+                params.shapes.back().material = mats[i];
+                if (params.shapes.back().type == test_shape_type::hairball ||
+                    params.shapes.back().type == test_shape_type::matball) {
+                    params.materials.push_back(
+                        test_material_presets().at("matte_gray"));
+                    params.shapes.back().interior = "matte_gray";
+                }
                 params.instances.push_back(
                     make_test_instance(name, name, pos[i]));
-                if (lights == "arealights" || lights == "arealights1")
-                    params.instances.back().frame =
-                        lookat_frame(pos[i], {0, 1, 0}, {0, 0, 1}, true);
+                if (!animations.empty()) {
+                    params.animations.push_back(
+                        test_animation_presets().at(animations[i]));
+                    params.animations.back().nodes.push_back(name);
+                }
             }
-        }
-        if (lights == "envlights") {
-            params.environments.push_back(
-                test_environment_presets().at("sky1"));
-            params.environments.back().frame =
-                lookat_frame(pos[1], pos[1] + vec3f{0, 0, 1}, {0, 1, 0}, true);
-            params.textures.push_back(test_texture_presets().at("sky1"));
-        }
-        if (!animations.empty() || nodes) {
-            for (auto& cam : params.cameras) {
-                auto nde = test_node_params();
-                nde.name = cam.name;
-                nde.frame = lookat_frame(cam.from, cam.to, vec3f{0, 1, 0});
-                nde.camera = cam.name;
-                params.nodes.push_back(nde);
+            if (lights == "pointlights" || lights == "arealights" ||
+                lights == "arealights1") {
+                auto emission = 120;
+                auto shp = "point";
+                auto mat = "pointlight";
+                auto pos = std::vector<vec3f>{{-2, 10, 8}, {+2, 10, 8}};
+                auto scale = 1.0f;
+                if (lights == "arealights") {
+                    emission = 8;
+                    shp = "quad";
+                    mat = "arealight";
+                    pos = {{0, 16, 0}, {0, 16, 16}};
+                    scale = 8;
+                }
+                if (lights == "arealights1") {
+                    emission = 80;
+                    shp = "quad";
+                    mat = "arealight";
+                    pos = {{-4, 5, 8}, {+4, 5, 8}};
+                    scale = 2;
+                }
+                for (auto i = 0; i < 2; i++) {
+                    auto name = "light" + std::to_string(i + 1);
+                    params.materials.push_back(test_material_presets().at(mat));
+                    params.materials.back().name = name;
+                    params.materials.back().emission = emission;
+                    params.shapes.push_back(test_shape_presets().at(shp));
+                    params.shapes.back().name = name;
+                    params.shapes.back().material = name;
+                    params.shapes.back().scale = scale;
+                    params.instances.push_back(
+                        make_test_instance(name, name, pos[i]));
+                    if (lights == "arealights" || lights == "arealights1")
+                        params.instances.back().frame =
+                            lookat_frame(pos[i], {0, 1, 0}, {0, 0, 1}, true);
+                }
             }
-            for (auto& ist : params.instances) {
-                auto nde = test_node_params();
-                nde.name = ist.name;
-                nde.frame = ist.frame;
-                nde.instance = ist.name;
-                params.nodes.push_back(nde);
+            if (lights == "envlights") {
+                params.environments.push_back(
+                    test_environment_presets().at("sky1"));
+                params.environments.back().frame = lookat_frame(
+                    pos[1], pos[1] + vec3f{0, 0, 1}, {0, 1, 0}, true);
+                params.textures.push_back(test_texture_presets().at("sky1"));
             }
-            for (auto& env : params.environments) {
-                auto nde = test_node_params();
-                nde.name = env.name;
-                nde.frame = env.frame;
-                nde.environment = env.name;
-                params.nodes.push_back(nde);
+            if (!animations.empty() || nodes) {
+                for (auto& cam : params.cameras) {
+                    auto nde = test_node_params();
+                    nde.name = cam.name;
+                    nde.frame = lookat_frame(cam.from, cam.to, vec3f{0, 1, 0});
+                    nde.camera = cam.name;
+                    params.nodes.push_back(nde);
+                }
+                for (auto& ist : params.instances) {
+                    auto nde = test_node_params();
+                    nde.name = ist.name;
+                    nde.frame = ist.frame;
+                    nde.instance = ist.name;
+                    params.nodes.push_back(nde);
+                }
+                for (auto& env : params.environments) {
+                    auto nde = test_node_params();
+                    nde.name = env.name;
+                    nde.frame = env.frame;
+                    nde.environment = env.name;
+                    params.nodes.push_back(nde);
+                }
             }
-        }
-        return params;
-    };
+            return params;
+        };
 
     // plane only
     presets["plane_pl"] = make_simple_scene("plane_pl", {}, {}, "pointlights");
@@ -10858,7 +10938,7 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
         "pointlights", true, {"bounce", "scale", "rotation"});
 
     // instances shared functions
-    auto make_random_scene = [&](const string& name, const vec2i& num,
+    auto make_random_scene = [&](const std::string& name, const vec2i& num,
                                  const bbox2f& bbox, uint32_t seed = 13) {
         auto rscale = 0.9f * 0.25f *
                       min((bbox.max.x - bbox.min.x) / num.x,
@@ -10870,7 +10950,7 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
         params.shapes.push_back(test_shape_presets().at("floor"));
         params.instances.push_back(
             make_test_instance("floor", "floor", {0, 0, 0}));
-        auto shapes = vector<string>();
+        auto shapes = std::vector<std::string>();
         for (auto mat : {"plastic_red", "plastic_green", "plastic_blue"})
             params.materials.push_back(test_material_presets().at(mat));
         for (auto shp : {"sphere", "flipcapsphere", "cube"}) {
@@ -10896,14 +10976,14 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
                                      (j + 0.45f + 0.1f * rpos.y) / num.y,
                 };
                 params.instances.push_back(
-                    make_test_instance("instance" + to_string(count++),
+                    make_test_instance("instance" + std::to_string(count++),
                         shapes[next_rand1i(rng, (int)shapes.size())], pos));
             }
         }
 
-        auto pos = vector<vec3f>{{-2, 10, 8}, {+2, 10, 8}};
+        auto pos = std::vector<vec3f>{{-2, 10, 8}, {+2, 10, 8}};
         for (auto i = 0; i < 2; i++) {
-            auto name = "light" + to_string(i + 1);
+            auto name = "light" + std::to_string(i + 1);
             params.materials.push_back(
                 test_material_presets().at("pointlight"));
             params.materials.back().name = name;
@@ -10925,7 +11005,7 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
 
 #if 0
         else if (otype == "normdisp") {
-            auto mat = vector<material*>{
+            auto mat = std::vector<material*>{
                 add_test_material(scn, test_material_type::plastic_bumped),
                 add_test_material(scn, test_material_type::plastic_bumped)};
             add_test_instance(scn, "obj01",
@@ -10938,7 +11018,7 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
     // add missing textures
     for (auto& kv : presets) {
         auto& preset = kv.second;
-        auto used = unordered_set<string>();
+        auto used = std::unordered_set<std::string>();
         for (auto& mat : preset.materials) used.insert(mat.texture);
         for (auto& mat : preset.materials) used.insert(mat.normal);
         for (auto& env : preset.environments) used.insert(env.texture);
@@ -11069,24 +11149,25 @@ void serialize(test_scene_params& val, json& js, bool reading) {
 }
 
 // Load test scene
-test_scene_params load_test_scene(const string& filename) {
+test_scene_params load_test_scene(const std::string& filename) {
     // load json
     std::ifstream stream(filename.c_str());
-    if (!stream) throw runtime_error("could not load json " + filename);
+    if (!stream) throw std::runtime_error("could not load json " + filename);
     auto js = json();
     try {
         stream >> js;
-    } catch (const exception& e) {
-        throw runtime_error(
-            string("could not load json with error ") + e.what());
+    } catch (const std::exception& e) {
+        throw std::runtime_error(
+            std::string("could not load json with error ") + e.what());
     }
 
     // clear data
     auto scn = test_scene_params();
     try {
         serialize(scn, js, true);
-    } catch (const exception& e) {
-        throw runtime_error("error parsing test scene " + string(e.what()));
+    } catch (const std::exception& e) {
+        throw std::runtime_error(
+            "error parsing test scene " + std::string(e.what()));
     }
 
     // done
@@ -11094,7 +11175,8 @@ test_scene_params load_test_scene(const string& filename) {
 }
 
 // Save test scene
-void save_test_scene(const string& filename, const test_scene_params& scn) {
+void save_test_scene(
+    const std::string& filename, const test_scene_params& scn) {
     auto js = json();
     serialize((test_scene_params&)scn, js, false);
     save_text(filename, js.dump(2));
@@ -11444,7 +11526,8 @@ namespace ygl {
 // Creates and OpenGL program from vertex and fragment code. Returns the
 // program id. Optionally return vertex and fragment shader ids. A VAO is
 // created.
-gl_program make_program(const string& vertex, const string& fragment) {
+gl_program make_program(
+    const std::string& vertex, const std::string& fragment) {
     auto prog = gl_program();
 
     assert(gl_check_error());
@@ -11463,7 +11546,8 @@ gl_program make_program(const string& vertex, const string& fragment) {
     glGetShaderiv(prog.vid, GL_COMPILE_STATUS, &errflags);
     if (!errflags) {
         glGetShaderInfoLog(prog.vid, 10000, 0, errbuf);
-        throw runtime_error(string("shader not compiled\n\n") + errbuf);
+        throw std::runtime_error(
+            std::string("shader not compiled\n\n") + errbuf);
     }
     assert(glGetError() == GL_NO_ERROR);
 
@@ -11475,7 +11559,8 @@ gl_program make_program(const string& vertex, const string& fragment) {
     glGetShaderiv(prog.fid, GL_COMPILE_STATUS, &errflags);
     if (!errflags) {
         glGetShaderInfoLog(prog.fid, 10000, 0, errbuf);
-        throw runtime_error(string("shader not compiled\n\n") + errbuf);
+        throw std::runtime_error(
+            std::string("shader not compiled\n\n") + errbuf);
     }
     assert(glGetError() == GL_NO_ERROR);
 
@@ -11488,12 +11573,14 @@ gl_program make_program(const string& vertex, const string& fragment) {
     glGetProgramiv(prog.pid, GL_LINK_STATUS, &errflags);
     if (!errflags) {
         glGetProgramInfoLog(prog.pid, 10000, 0, errbuf);
-        throw runtime_error(string("program not linked\n\n") + errbuf);
+        throw std::runtime_error(
+            std::string("program not linked\n\n") + errbuf);
     }
     glGetProgramiv(prog.pid, GL_VALIDATE_STATUS, &errflags);
     if (!errflags) {
         glGetProgramInfoLog(prog.pid, 10000, 0, errbuf);
-        throw runtime_error(string("program not linked\n\n") + errbuf);
+        throw std::runtime_error(
+            std::string("program not linked\n\n") + errbuf);
     }
     assert(gl_check_error());
 
@@ -11520,26 +11607,29 @@ void clear_program(gl_program& prog) {
 }
 
 // Get uniform location (simple GL wrapper that avoids GL includes)
-int get_program_uniform_location(const gl_program& prog, const string& name) {
+int get_program_uniform_location(
+    const gl_program& prog, const std::string& name) {
     assert(gl_check_error());
     return glGetUniformLocation(prog.pid, name.c_str());
     assert(gl_check_error());
 }
 
 // Get uniform location (simple GL wrapper that avoids GL includes)
-int get_program_attrib_location(const gl_program& prog, const string& name) {
+int get_program_attrib_location(
+    const gl_program& prog, const std::string& name) {
     assert(gl_check_error());
     return glGetAttribLocation(prog.pid, name.c_str());
     assert(gl_check_error());
 }
 
 // Get the names of all uniforms
-vector<pair<string, int>> get_program_uniforms_names(const gl_program& prog) {
+std::vector<std::pair<std::string, int>> get_program_uniforms_names(
+    const gl_program& prog) {
     auto num = 0;
     assert(gl_check_error());
     glGetProgramiv(prog.pid, GL_ACTIVE_UNIFORMS, &num);
     assert(gl_check_error());
-    auto names = vector<pair<string, int>>();
+    auto names = std::vector<std::pair<std::string, int>>();
     for (auto i = 0; i < num; i++) {
         char name[4096];
         auto size = 0, length = 0;
@@ -11557,12 +11647,13 @@ vector<pair<string, int>> get_program_uniforms_names(const gl_program& prog) {
 }
 
 // Get the names of all attributes
-vector<pair<string, int>> get_program_attributes_names(const gl_program& prog) {
+std::vector<std::pair<std::string, int>> get_program_attributes_names(
+    const gl_program& prog) {
     auto num = 0;
     assert(gl_check_error());
     glGetProgramiv(prog.pid, GL_ACTIVE_ATTRIBUTES, &num);
     assert(gl_check_error());
-    auto names = vector<pair<string, int>>();
+    auto names = std::vector<std::pair<std::string, int>>();
     for (auto i = 0; i < num; i++) {
         char name[4096];
         auto size = 0;
@@ -11621,10 +11712,10 @@ bool set_program_uniform(
 bool set_program_uniform_texture(
     gl_program& prog, int pos, const gl_texture_info& tinfo, uint tunit) {
     static const auto wrap_mode_map =
-        map<gl_texture_wrap, uint>{{gl_texture_wrap::repeat, GL_REPEAT},
+        std::map<gl_texture_wrap, uint>{{gl_texture_wrap::repeat, GL_REPEAT},
             {gl_texture_wrap::clamp, GL_CLAMP_TO_EDGE},
             {gl_texture_wrap::mirror, GL_MIRRORED_REPEAT}};
-    static const auto filter_mode_map = map<gl_texture_filter, uint>{
+    static const auto filter_mode_map = std::map<gl_texture_filter, uint>{
         {gl_texture_filter::nearest, GL_NEAREST},
         {gl_texture_filter::linear, GL_LINEAR},
         {gl_texture_filter::nearest_mipmap_nearest, GL_NEAREST_MIPMAP_NEAREST},
@@ -11697,7 +11788,7 @@ bool set_program_vertattr(gl_program& prog, int pos, const int* value, int nc) {
 // Sets a vartex attribute for program pid and variable var to the buffer
 // bid. The attribute has nc components and per-vertex values values.
 bool set_program_vertattr(
-    gl_program& prog, const string& var, const gl_vertex_buffer& buf) {
+    gl_program& prog, const std::string& var, const gl_vertex_buffer& buf) {
     assert(gl_check_error());
     int pos = glGetAttribLocation(prog.pid, var.c_str());
     if (pos < 0) return false;
@@ -11782,21 +11873,21 @@ void clear_shape(gl_shape& shp) {
 }
 
 // Clear scene textures on the GPU.
-void clear_textures(unordered_map<texture*, gl_texture>& gtextures) {
+void clear_textures(std::unordered_map<texture*, gl_texture>& gtextures) {
     for (auto& kv : gtextures) clear_texture(kv.second);
     gtextures.clear();
 }
 
 // Clear scene shapes on the GPU.
-void clear_shapes(unordered_map<shape*, gl_shape>& gshapes) {
+void clear_shapes(std::unordered_map<shape*, gl_shape>& gshapes) {
     for (auto& kv : gshapes) clear_shape(kv.second);
     gshapes.clear();
 }
 
 // Init shading
 void update_textures(const scene* scn,
-    unordered_map<texture*, gl_texture>& gtextures,
-    const unordered_set<texture*>& refresh, bool clear) {
+    std::unordered_map<texture*, gl_texture>& gtextures,
+    const std::unordered_set<texture*>& refresh, bool clear) {
     if (clear) clear_textures(gtextures);
     for (auto txt : scn->textures) {
         if (gtextures.find(txt) == gtextures.end()) {
@@ -11815,9 +11906,10 @@ void update_textures(const scene* scn,
 }
 
 // Init shading
-void update_shapes(const scene* scn, unordered_map<shape*, gl_shape>& gshapes,
-    const unordered_set<shape*>& refresh,
-    const unordered_set<shape_group*>& refreshg, bool clear) {
+void update_shapes(const scene* scn,
+    std::unordered_map<shape*, gl_shape>& gshapes,
+    const std::unordered_set<shape*>& refresh,
+    const std::unordered_set<shape_group*>& refreshg, bool clear) {
     if (clear) clear_shapes(gshapes);
     for (auto sgr : scn->shapes) {
         for (auto shp : sgr->shapes) {
@@ -11830,11 +11922,11 @@ void update_shapes(const scene* scn, unordered_map<shape*, gl_shape>& gshapes,
             }
             auto& gshp = gshapes.at(shp);
             if (!shp->quads_pos.empty()) {
-                auto pos = vector<vec3f>();
-                auto norm = vector<vec3f>();
-                auto texcoord = vector<vec2f>();
-                auto quads = vector<vec4i>();
-                tie(quads, pos, norm, texcoord) = convert_face_varying(
+                auto pos = std::vector<vec3f>();
+                auto norm = std::vector<vec3f>();
+                auto texcoord = std::vector<vec2f>();
+                auto quads = std::vector<vec4i>();
+                std::tie(quads, pos, norm, texcoord) = convert_face_varying(
                     shp->quads_pos, shp->quads_norm, shp->quads_texcoord,
                     shp->pos, shp->norm, shp->texcoord);
                 update_vertex_buffer(gshp.pos, pos);
@@ -11844,8 +11936,8 @@ void update_shapes(const scene* scn, unordered_map<shape*, gl_shape>& gshapes,
                     gshp.quads, convert_quads_to_triangles(quads));
                 update_element_buffer(
                     gshp.edges, get_edges({}, {}, shp->quads));
-                update_vertex_buffer(gshp.color, vector<vec4f>{});
-                update_vertex_buffer(gshp.tangsp, vector<vec4f>{});
+                update_vertex_buffer(gshp.color, std::vector<vec4f>{});
+                update_vertex_buffer(gshp.tangsp, std::vector<vec4f>{});
             } else {
                 update_vertex_buffer(gshp.pos, shp->pos);
                 update_vertex_buffer(gshp.norm, shp->norm);
@@ -11916,7 +12008,7 @@ namespace ygl {
 
 // Initialize the program. Call with true only after the GL is initialized.
 gl_stdimage_program make_stdimage_program() {
-    string _header =
+    std::string _header =
         R"(
         #version 330
 
@@ -11930,7 +12022,7 @@ gl_stdimage_program make_stdimage_program() {
 
         )";
 
-    string _vert =
+    std::string _vert =
         R"(
         layout(location = 0) in vec2 vert_texcoord;
 
@@ -11947,7 +12039,7 @@ gl_stdimage_program make_stdimage_program() {
 
         )";
 
-    string _frag_tonemap =
+    std::string _frag_tonemap =
         R"(
         struct Tonemap {
             bool filmic;
@@ -11978,7 +12070,7 @@ gl_stdimage_program make_stdimage_program() {
 
         )";
 
-    string _frag_main =
+    std::string _frag_main =
         R"(
         in vec2 texcoord;
         out vec4 color;
@@ -11995,8 +12087,9 @@ gl_stdimage_program make_stdimage_program() {
         make_program(_header + _vert, _header + _frag_tonemap + _frag_main);
 
     prog.vbo = make_vertex_buffer(
-        vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}}, false);
-    prog.ebo = make_element_buffer(vector<vec3i>{{0, 1, 2}, {0, 2, 3}}, false);
+        std::vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}}, false);
+    prog.ebo =
+        make_element_buffer(std::vector<vec3i>{{0, 1, 2}, {0, 2, 3}}, false);
     return prog;
 }
 
@@ -12045,13 +12138,13 @@ gl_stdsurface_program make_stdsurface_program() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Woverlength-strings"
 #endif
-    string _vert_header =
+    std::string _vert_header =
         R"(
         #version 330
 
         )";
 
-    string _vert_skinning =
+    std::string _vert_skinning =
         R"(
         #define SKIN_NONE 0
         #define SKIN_STD 1
@@ -12098,7 +12191,7 @@ gl_stdsurface_program make_stdsurface_program() {
         }
         )";
 
-    string _vert_main =
+    std::string _vert_main =
         R"(
         layout(location = 0) in vec3 vert_pos;            // vertex position (in mesh coordinate frame)
         layout(location = 1) in vec3 vert_norm;           // vertex normal (in mesh coordinate frame)
@@ -12151,7 +12244,7 @@ gl_stdsurface_program make_stdsurface_program() {
         }
         )";
 
-    string _frag_header =
+    std::string _frag_header =
         R"(
         #version 330
 
@@ -12159,7 +12252,7 @@ gl_stdsurface_program make_stdsurface_program() {
 
         )";
 
-    string _frag_tonemap =
+    std::string _frag_tonemap =
         R"(
         struct Tonemap {
             bool filmic;       // tonemap type (TM_...)
@@ -12190,7 +12283,7 @@ gl_stdsurface_program make_stdsurface_program() {
 
         )";
 
-    string _frag_lighting =
+    std::string _frag_lighting =
         R"(
         struct Lighting {
             bool eyelight;        // eyelight shading
@@ -12221,7 +12314,7 @@ gl_stdsurface_program make_stdsurface_program() {
 
         )";
 
-    string _frag_brdf =
+    std::string _frag_brdf =
         R"(
         struct Brdf {
             int type;
@@ -12274,7 +12367,7 @@ gl_stdsurface_program make_stdsurface_program() {
 
         )";
 
-    string _frag_material =
+    std::string _frag_material =
         R"(
         struct Material {
             int type;         // material type
@@ -12373,7 +12466,7 @@ gl_stdsurface_program make_stdsurface_program() {
 
         )";
 
-    string _frag_main =
+    std::string _frag_main =
         R"(
         in vec3 pos;                   // [from vertex shader] position in world space
         in vec3 norm;                  // [from vertex shader] normal in world space (need normalization)
@@ -12629,7 +12722,7 @@ void set_stdsurface_material(gl_stdsurface_program& prog, material_type type,
     static auto alpha_cutout_id =
         get_program_uniform_location(prog.prog, "material.alpha_cutout");
 
-    static auto mtypes = unordered_map<material_type, int>{
+    static auto mtypes = std::unordered_map<material_type, int>{
         {material_type::specular_roughness, 1},
         {material_type::metallic_roughness, 2},
         {material_type::specular_glossiness, 3}};
@@ -12752,8 +12845,8 @@ void set_stdsurface_vert_skinning_off(gl_stdsurface_program& prog) {
 // Draw a shape
 void draw_stdsurface_shape(const shape* shp, const mat4f& xform,
     bool highlighted, gl_stdsurface_program& prog,
-    unordered_map<shape*, gl_shape>& shapes,
-    unordered_map<texture*, gl_texture>& textures,
+    std::unordered_map<shape*, gl_shape>& shapes,
+    std::unordered_map<texture*, gl_texture>& textures,
     const gl_stdsurface_params& params) {
     static auto default_material = material();
     default_material.kd = {0.2f, 0.2f, 0.2f};
@@ -12810,8 +12903,8 @@ void draw_stdsurface_shape(const shape* shp, const mat4f& xform,
 
 // Display a scene
 void draw_stdsurface_scene(const scene* scn, const camera* cam,
-    gl_stdsurface_program& prog, unordered_map<shape*, gl_shape>& shapes,
-    unordered_map<texture*, gl_texture>& textures, const gl_lights& lights,
+    gl_stdsurface_program& prog, std::unordered_map<shape*, gl_shape>& shapes,
+    std::unordered_map<texture*, gl_texture>& textures, const gl_lights& lights,
     const gl_stdsurface_params& params) {
     // begin frame
     gl_enable_depth_test(true);
@@ -12899,13 +12992,13 @@ void _glfw_refresh_cb(GLFWwindow* gwin) {
 
 // Initialize gl_window
 gl_window* make_window(
-    int width, int height, const string& title, void* user_pointer) {
+    int width, int height, const std::string& title, void* user_pointer) {
     auto win = new gl_window();
     // gl_window
     win->user_pointer = user_pointer;
 
     // gl_window
-    if (!glfwInit()) throw runtime_error("cannot open gl_window");
+    if (!glfwInit()) throw std::runtime_error("cannot open gl_window");
 
     // profile creation
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -12958,7 +13051,7 @@ void clear_window(gl_window* win) {
 }
 
 // Set gl_window title
-void set_window_title(gl_window* win, const string& title) {
+void set_window_title(gl_window* win, const std::string& title) {
     glfwSetWindowTitle(win->gwin, title.c_str());
 }
 
@@ -13038,13 +13131,14 @@ vec2i get_framebuffer_size(gl_window* win) {
 }
 
 // Read pixels
-vector<vec4b> get_screenshot(gl_window* win, vec2i& wh, bool flipy, bool back) {
+std::vector<vec4b> get_screenshot(
+    gl_window* win, vec2i& wh, bool flipy, bool back) {
     wh = get_framebuffer_size(win);
-    auto pixels = vector<vec4b>(wh[0] * wh[1]);
+    auto pixels = std::vector<vec4b>(wh[0] * wh[1]);
     glReadBuffer((back) ? GL_BACK : GL_FRONT);
     glReadPixels(0, 0, wh[0], wh[1], GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
     if (flipy) {
-        vector<vec4b> line(wh[0]);
+        std::vector<vec4b> line(wh[0]);
         for (int j = 0; j < wh[1] / 2; j++) {
             memcpy(line.data(), pixels.data() + j * wh[0] * 4, wh[0] * 4);
             memcpy(pixels.data() + j * wh[0] * 4,
@@ -13139,7 +13233,7 @@ void init_widgets(gl_window* win, bool light_style, bool alt_font) {
 }
 
 // Begin draw widget
-bool begin_widgets(gl_window* win, const string& title) {
+bool begin_widgets(gl_window* win, const std::string& title) {
     static bool first_time = true;
     ImGui_ImplGlfwGL3_NewFrame();
     if (first_time) {
@@ -13181,14 +13275,16 @@ void draw_indent_widget_end(gl_window* win) { ImGui::Unindent(); }
 void draw_continue_widget(gl_window* win) { ImGui::SameLine(); }
 
 // Label widget
-void draw_label_widget(gl_window* win, const string& lbl, const string& msg) {
+void draw_label_widget(
+    gl_window* win, const std::string& lbl, const std::string& msg) {
     ImGui::LabelText(lbl.c_str(), "%s", msg.c_str());
 }
 
 // Value widget
-bool draw_value_widget(gl_window* win, const string& lbl, string& str) {
+bool draw_value_widget(
+    gl_window* win, const std::string& lbl, std::string& str) {
     char buf[4096];
-    if (str.length() >= 4096) throw runtime_error("bad memory");
+    if (str.length() >= 4096) throw std::runtime_error("bad memory");
     memcpy(buf, str.c_str(), str.size());
     buf[str.size()] = 0;
     auto ret = ImGui::InputText(lbl.c_str(), buf, 4096);
@@ -13197,41 +13293,45 @@ bool draw_value_widget(gl_window* win, const string& lbl, string& str) {
 }
 
 // Value widget
-bool draw_value_widget(gl_window* win, const string& lbl, int* val, int ncomp,
-    int min, int max, int incr) {
+bool draw_value_widget(gl_window* win, const std::string& lbl, int* val,
+    int ncomp, int min, int max, int incr) {
     switch (ncomp) {
         case 1: return ImGui::SliderInt(lbl.c_str(), val, min, max);
         case 2: return ImGui::SliderInt2(lbl.c_str(), val, min, max);
         case 3: return ImGui::SliderInt3(lbl.c_str(), val, min, max);
         case 4: return ImGui::SliderInt4(lbl.c_str(), val, min, max);
-        default: throw runtime_error("bad number of components"); return false;
+        default:
+            throw std::runtime_error("bad number of components");
+            return false;
     }
 }
 
 // Value widget
-bool draw_value_widget(gl_window* win, const string& lbl, float* val, int ncomp,
-    float min, float max, float incr) {
+bool draw_value_widget(gl_window* win, const std::string& lbl, float* val,
+    int ncomp, float min, float max, float incr) {
     switch (ncomp) {
         case 1: return ImGui::SliderFloat(lbl.c_str(), val, min, max);
         case 2: return ImGui::SliderFloat2(lbl.c_str(), val, min, max);
         case 3: return ImGui::SliderFloat3(lbl.c_str(), val, min, max);
         case 4: return ImGui::SliderFloat4(lbl.c_str(), val, min, max);
-        default: throw runtime_error("bad number of components"); return false;
+        default:
+            throw std::runtime_error("bad number of components");
+            return false;
     }
 }
 
 // Color widget
-bool draw_color_widget(gl_window* win, const string& lbl, vec4f& val) {
+bool draw_color_widget(gl_window* win, const std::string& lbl, vec4f& val) {
     return ImGui::ColorEdit4(lbl.c_str(), (float*)&val.x);
 }
 
 // Color widget
-bool draw_color_widget(gl_window* win, const string& lbl, vec3f& val) {
+bool draw_color_widget(gl_window* win, const std::string& lbl, vec3f& val) {
     return ImGui::ColorEdit3(lbl.c_str(), (float*)&val.x);
 }
 
 // Color widget
-bool draw_color_widget(gl_window* win, const string& lbl, vec4b& val) {
+bool draw_color_widget(gl_window* win, const std::string& lbl, vec4b& val) {
     auto valf = ImGui::ColorConvertU32ToFloat4(*(uint32_t*)&val);
     if (ImGui::ColorEdit4(lbl.c_str(), &valf.x)) {
         auto valb = ImGui::ColorConvertFloat4ToU32(valf);
@@ -13242,19 +13342,19 @@ bool draw_color_widget(gl_window* win, const string& lbl, vec4b& val) {
 }
 
 // Bool widget
-bool draw_value_widget(gl_window* win, const string& lbl, bool& val) {
+bool draw_value_widget(gl_window* win, const std::string& lbl, bool& val) {
     return ImGui::Checkbox(lbl.c_str(), &val);
 }
 
 // Combo widget
 bool draw_combo_widget_begin(
-    gl_window* win, const string& lbl, const string& label) {
+    gl_window* win, const std::string& lbl, const std::string& label) {
     return ImGui::BeginCombo(lbl.c_str(), label.c_str());
 }
 
 // Combo widget
 bool draw_combo_widget_item(
-    gl_window* win, const string& label, int idx, bool selected) {
+    gl_window* win, const std::string& label, int idx, bool selected) {
     ImGui::PushID((void*)(intptr_t)idx);
     auto clicked = ImGui::Selectable(label.c_str(), selected);
     if (selected) ImGui::SetItemDefaultFocus();
@@ -13266,17 +13366,17 @@ bool draw_combo_widget_item(
 void draw_combo_widget_end(gl_window* win) { ImGui::EndCombo(); }
 
 // Button widget
-bool draw_button_widget(gl_window* win, const string& lbl) {
+bool draw_button_widget(gl_window* win, const std::string& lbl) {
     return ImGui::Button(lbl.c_str());
 }
 
 // Collapsible header
-bool draw_header_widget(gl_window* win, const string& lbl) {
+bool draw_header_widget(gl_window* win, const std::string& lbl) {
     return ImGui::CollapsingHeader(lbl.c_str());
 }
 
 // Start tree node
-bool draw_tree_widget_begin(gl_window* win, const string& lbl) {
+bool draw_tree_widget_begin(gl_window* win, const std::string& lbl) {
     return ImGui::TreeNode(lbl.c_str());
 }
 
@@ -13285,7 +13385,7 @@ void draw_tree_widget_end(gl_window* win) { ImGui::TreePop(); }
 
 // Start selectable tree node
 bool draw_tree_widget_begin(
-    gl_window* win, const string& lbl, void*& selection, void* content) {
+    gl_window* win, const std::string& lbl, void*& selection, void* content) {
     ImGuiTreeNodeFlags node_flags =
         ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
     if (selection == content) node_flags |= ImGuiTreeNodeFlags_Selected;
@@ -13295,8 +13395,8 @@ bool draw_tree_widget_begin(
 }
 
 // Start selectable tree node
-bool draw_tree_widget_begin(gl_window* win, const string& lbl, void*& selection,
-    void* content, const vec4f& col) {
+bool draw_tree_widget_begin(gl_window* win, const std::string& lbl,
+    void*& selection, void* content, const vec4f& col) {
     ImGui::PushStyleColor(ImGuiCol_Text, {col.x, col.y, col.z, col.w});
     auto ret = draw_tree_widget_begin(win, lbl, selection, content);
     ImGui::PopStyleColor();
@@ -13308,7 +13408,7 @@ void draw_tree_widget_end(gl_window* win, void* content) { ImGui::TreePop(); }
 
 // Selectable tree leaf node
 void draw_tree_widget_leaf(
-    gl_window* win, const string& lbl, void*& selection, void* content) {
+    gl_window* win, const std::string& lbl, void*& selection, void* content) {
     ImGuiTreeNodeFlags node_flags =
         ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
     if (selection == content) node_flags |= ImGuiTreeNodeFlags_Selected;
@@ -13317,8 +13417,8 @@ void draw_tree_widget_leaf(
 }
 
 // Selectable tree leaf node
-void draw_tree_widget_leaf(gl_window* win, const string& lbl, void*& selection,
-    void* content, const vec4f& col) {
+void draw_tree_widget_leaf(gl_window* win, const std::string& lbl,
+    void*& selection, void* content, const vec4f& col) {
     ImGui::PushStyleColor(ImGuiCol_Text, {col.x, col.y, col.z, col.w});
     draw_tree_widget_leaf(win, lbl, selection, content);
     ImGui::PopStyleColor();
@@ -13359,7 +13459,7 @@ void draw_image_widget(gl_window* win, gl_texture& txt, const vec2i& size) {
 
 // Scroll region
 void draw_scroll_widget_begin(
-    gl_window* win, const string& lbl, int height, bool border) {
+    gl_window* win, const std::string& lbl, int height, bool border) {
     ImGui::BeginChild(lbl.c_str(), ImVec2(0, height), border);
 }
 // Scroll region
@@ -13408,7 +13508,8 @@ struct draw_tree_visitor {
     }
 
     template <typename T>
-    void operator()(const char* name, vector<T*>& val, const visit_sem& sem) {
+    void operator()(
+        const char* name, std::vector<T*>& val, const visit_sem& sem) {
         if (draw_tree_widget_begin(win, name)) {
             for (auto v : val) (*this)("", v, sem);
             draw_tree_widget_end(win);
@@ -13419,7 +13520,8 @@ struct draw_tree_visitor {
     void operator()(const char* name, T*& val, const visit_sem& sem) {
         if (!val) return;
         auto lbl = val->name;
-        if (!string(name).empty()) lbl = string(name) + ": " + val->name;
+        if (!std::string(name).empty())
+            lbl = std::string(name) + ": " + val->name;
         if (draw_tree_widget_begin(win, lbl, selection, val)) {
             visit(val, *this);
             draw_tree_widget_end(win);
@@ -13432,8 +13534,8 @@ struct draw_tree_visitor {
 };
 
 template <typename T>
-void draw_scene_tree_widgets(gl_window* win, const string& lbl,
-    const vector<T*>& elems, void*& selection) {
+void draw_scene_tree_widgets(gl_window* win, const std::string& lbl,
+    const std::vector<T*>& elems, void*& selection) {
     if (draw_tree_widget_begin(win, lbl)) {
         for (auto elem : elems) {
             auto visitor = draw_tree_visitor{win, selection};
@@ -13444,7 +13546,7 @@ void draw_scene_tree_widgets(gl_window* win, const string& lbl,
 }
 
 void draw_tree_widgets(
-    gl_window* win, const string& lbl, scene* scn, void*& selection) {
+    gl_window* win, const std::string& lbl, scene* scn, void*& selection) {
     auto visitor = draw_tree_visitor{win, selection};
     visitor(lbl.c_str(), scn, visit_sem{visit_sem_type::object});
 }
@@ -13455,7 +13557,7 @@ struct draw_elem_visitor {
     scene* scn = nullptr;
     test_scene_params* test_scn;
     void*& selection;
-    const unordered_map<texture*, gl_texture>& gl_txt;
+    const std::unordered_map<texture*, gl_texture>& gl_txt;
     int edited = 0;
 
     void operator()(const char* name, bool& val, const visit_sem& sem) {
@@ -13480,7 +13582,7 @@ struct draw_elem_visitor {
             edited += draw_color_widget(win, name, val);
         }
     }
-    void operator()(const char* name, string& val, const visit_sem&) {
+    void operator()(const char* name, std::string& val, const visit_sem&) {
         edited += (int)draw_value_widget(win, name, val);
     }
     template <typename T,
@@ -13512,19 +13614,20 @@ struct draw_elem_visitor {
     }
 
     template <typename T>
-    void operator()(const char* name, vector<T*>& val, const visit_sem& sem) {
+    void operator()(
+        const char* name, std::vector<T*>& val, const visit_sem& sem) {
         if (sem.type != visit_sem_type::reference) {
             for (auto idx = 0; idx < val.size(); idx++) visit(val[idx], *this);
         }
     }
     template <typename T>
-    void operator()(const char* name, vector<T>& val, const visit_sem&) {
+    void operator()(const char* name, std::vector<T>& val, const visit_sem&) {
         if (val.empty()) return;
         draw_label_widget(win, name, (int)val.size());
     }
     template <typename T1, typename T2>
-    void operator()(
-        const char* name, vector<pair<T1*, T2*>>& val, const visit_sem&) {
+    void operator()(const char* name, std::vector<std::pair<T1*, T2*>>& val,
+        const visit_sem&) {
         // TODO
     }
 
@@ -13545,20 +13648,22 @@ struct draw_elem_visitor {
     }
 
     template <typename T>
-    const vector<T*>& elems(T* aux) {
-        static auto v = vector<T*>();
+    const std::vector<T*>& elems(T* aux) {
+        static auto v = std::vector<T*>();
         return v;
     }
-    const vector<texture*>& elems(texture* aux) { return scn->textures; }
-    const vector<shape_group*>& elems(shape_group* aux) { return scn->shapes; }
-    const vector<camera*> elems(camera* aux) { return scn->cameras; }
-    const vector<material*> elems(material* aux) { return scn->materials; }
-    const vector<instance*> elems(instance* aux) { return scn->instances; }
-    const vector<environment*> elems(environment* aux) {
+    const std::vector<texture*>& elems(texture* aux) { return scn->textures; }
+    const std::vector<shape_group*>& elems(shape_group* aux) {
+        return scn->shapes;
+    }
+    const std::vector<camera*> elems(camera* aux) { return scn->cameras; }
+    const std::vector<material*> elems(material* aux) { return scn->materials; }
+    const std::vector<instance*> elems(instance* aux) { return scn->instances; }
+    const std::vector<environment*> elems(environment* aux) {
         return scn->environments;
     }
-    const vector<node*> elems(node* aux) { return scn->nodes; }
-    const vector<animation_group*> elems(animation_group* aux) {
+    const std::vector<node*> elems(node* aux) { return scn->nodes; }
+    const std::vector<animation_group*> elems(animation_group* aux) {
         return scn->animations;
     }
 
@@ -13572,7 +13677,7 @@ struct draw_elem_visitor {
 
 template <typename T>
 bool draw_elem_widgets(gl_window* win, scene* scn, T* val, void*& selection,
-    const unordered_map<texture*, gl_texture>& gl_txt) {
+    const std::unordered_map<texture*, gl_texture>& gl_txt) {
     auto visitor = draw_elem_visitor{win, scn, nullptr, selection, gl_txt};
     visitor("", val, visit_sem{visit_sem_type::object});
     return (bool)visitor.edited;
@@ -13580,7 +13685,7 @@ bool draw_elem_widgets(gl_window* win, scene* scn, T* val, void*& selection,
 
 template <typename T>
 bool draw_elem_widgets(gl_window* win, test_scene_params* scn, T* val,
-    void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
+    void*& selection, const std::unordered_map<texture*, gl_texture>& gl_txt) {
     auto visitor = draw_elem_visitor{win, nullptr, scn, selection, gl_txt};
     visitor("", val, visit_sem{visit_sem_type::object});
     return (bool)visitor.edited;
@@ -13588,9 +13693,9 @@ bool draw_elem_widgets(gl_window* win, test_scene_params* scn, T* val,
 
 template <typename T, typename T1>
 bool draw_selected_elem_widgets(gl_window* win, scene* scn,
-    test_scene_params* test_scn, const vector<T*>& elems,
-    vector<T1>& test_elems, void*& selection,
-    const unordered_map<texture*, gl_texture>& gl_txt) {
+    test_scene_params* test_scn, const std::vector<T*>& elems,
+    std::vector<T1>& test_elems, void*& selection,
+    const std::unordered_map<texture*, gl_texture>& gl_txt) {
     auto selected = (T*)nullptr;
     for (auto elem : elems)
         if (elem == selection) {
@@ -13611,11 +13716,11 @@ bool draw_selected_elem_widgets(gl_window* win, scene* scn,
 }
 
 template <typename T, typename T1>
-bool draw_add_elem_widgets(gl_window* win, scene* scn, const string& lbl,
-    vector<T*>& elems, vector<T1>& test_elems, void*& selection) {
+bool draw_add_elem_widgets(gl_window* win, scene* scn, const std::string& lbl,
+    std::vector<T*>& elems, std::vector<T1>& test_elems, void*& selection) {
     static auto count = 0;
     if (draw_button_widget(win, "add " + lbl)) {
-        auto name = lbl + "_" + to_string(count++);
+        auto name = lbl + "_" + std::to_string(count++);
         elems.push_back(new T());
         elems.back()->name = name;
         test_elems.push_back(T1());
@@ -13628,8 +13733,8 @@ bool draw_add_elem_widgets(gl_window* win, scene* scn, const string& lbl,
     return false;
 }
 
-bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
-    void*& selection, const unordered_map<texture*, gl_texture>& gl_txt,
+bool draw_scene_widgets(gl_window* win, const std::string& lbl, scene* scn,
+    void*& selection, const std::unordered_map<texture*, gl_texture>& gl_txt,
     test_scene_params* test_scn) {
     static auto test_scn_def = test_scene_params();
 
