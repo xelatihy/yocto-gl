@@ -1042,8 +1042,6 @@ struct vec<T, 4> {
     explicit vec(T vv) : x(vv), y(vv), z(vv), w(vv) {}
     /// Element constructor.
     vec(T x, T y, T z, T w) : x{x}, y{y}, z{z}, w{w} {}
-    /// Constructor from smaller vector.
-    vec(const vec<T, 3>& xyz, T w) : x{xyz.x}, y{xyz.y}, z{xyz.z}, w{w} {}
 
     /// Element access.
     T& operator[](int i) { return (&x)[i]; }
@@ -5866,8 +5864,10 @@ struct trace_params {
 /// for uniform and stratified sequences. The members are not part of the
 /// the public API.
 struct trace_pixel {
-    /// Accumulated radiance and coverage.
-    vec4f acc = zero4f;
+    /// Accumulated radiance.
+    vec3f col = zero3f;
+    /// Accumulated coverage.
+    float alpha = 1;
     /// Random number state.
     rng_pcg32 rng = rng_pcg32();
     /// Pixel coordinates.

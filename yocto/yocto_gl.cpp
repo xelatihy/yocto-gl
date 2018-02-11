@@ -80,6 +80,9 @@
 //
 // - consider uniforming texture info.
 //
+// - make image a pure structure
+// - make vec/mat/etc with no constructors
+//
 // - envmap along z
 // - spherical/cartesian conversion
 //
@@ -1923,7 +1926,8 @@ image4f make_sunsky_image(
             auto w =
                 vec3f(cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta));
             auto gamma = acos(clamp(dot(w, wSun), -1.0f, 1.0f));
-            img[{i, j}] = {sky(theta, gamma) + sun(theta, gamma), 1};
+            auto col = sky(theta, gamma) + sun(theta, gamma);
+            img[{i, j}] = {col.x, col.y, col.z, 1};
         }
     }
 
@@ -5974,7 +5978,6 @@ trace_point eval_point(
     }
 
     // sample reflectance
-    auto kd = zero4f, ks = zero4f, kt = zero4f;
     switch (mat->type) {
         case material_type::specular_roughness: {
             pt.kd = mat->kd * kx;
@@ -6510,7 +6513,8 @@ void trace_sample(const scene* scn, const camera* cam, const bvh_tree* bvh,
         return;
     }
     if (params.pixel_clamp > 0) l = clamplen(l, params.pixel_clamp);
-    pxl.acc += {l, 1};
+    pxl.col += l;
+    pxl.alpha += 1;
 }
 
 // Trace the next nsamples.
@@ -6529,7 +6533,8 @@ void trace_samples(const scene* scn, const camera* cam, const bvh_tree* bvh,
                         for (auto s = 0; s < nsamples; s++)
                             trace_sample(
                                 scn, cam, bvh, lights, pxl, shader, params);
-                        img.at(i, j) = pxl.acc / pxl.sample;
+                        img.at(i, j) = vec4f{pxl.col.x,pxl.col.y,pxl.col.z,pxl.alpha};
+                        img.at(i, j) /= pxl.sample;
                     }
                 }
             }));
@@ -6543,7 +6548,8 @@ void trace_samples(const scene* scn, const camera* cam, const bvh_tree* bvh,
                 auto& pxl = pixels.at(i, j);
                 for (auto s = 0; s < params.nsamples; s++)
                     trace_sample(scn, cam, bvh, lights, pxl, shader, params);
-                img.at(i, j) = pxl.acc / pxl.sample;
+                img.at(i, j) = vec4f{pxl.col.x,pxl.col.y,pxl.col.z,pxl.alpha};
+                img.at(i, j) /= pxl.sample;
             }
         }
     }
@@ -6570,7 +6576,8 @@ void trace_sample_filtered(const scene* scn, const camera* cam,
     }
     if (params.pixel_clamp > 0) l = clamplen(l, params.pixel_clamp);
     if (params.ftype == trace_filter_type::box) {
-        pxl.acc += {l, 1};
+        pxl.col += l;
+        pxl.alpha += 1;
         pxl.weight += 1;
     } else {
         std::lock_guard<std::mutex> lock(image_mutex);
@@ -6580,7 +6587,8 @@ void trace_sample_filtered(const scene* scn, const camera* cam,
                  fi <= min(params.width - 1, pxl.i + filter_size); fi++) {
                 auto w = filter((fi - pxl.i) - uv.x + 0.5f) *
                          filter((fj - pxl.j) - uv.y + 0.5f);
-                pxl.acc += {l * w, w};
+                pxl.col += l * w;
+                pxl.alpha += w;
                 pxl.weight += w;
             }
         }
@@ -6628,7 +6636,9 @@ void trace_samples_filtered(const scene* scn, const camera* cam,
     }
     for (auto j = 0; j < params.height; j++) {
         for (auto i = 0; i < params.width; i++) {
-            img.at(i, j) = pixels.at(i, j).acc / pixels.at(i, j).weight;
+            auto& pxl = pixels.at(i, j);
+            img.at(i, j) = {pxl.col.x, pxl.col.y, pxl.col.z, pxl.alpha};
+            img.at(i, j) /= pxl.weight;
         }
     }
 }
@@ -6649,7 +6659,8 @@ void trace_async_start(const scene* scn, const camera* cam, const bvh_tree* bvh,
                         auto& pxl = pixels.at(i, j);
                         trace_sample(
                             scn, cam, bvh, lights, pxl, shader, params);
-                        img.at(i, j) = pxl.acc / pxl.sample;
+                        img.at(i, j) = {pxl.col.x,pxl.col.y,pxl.col.z,pxl.alpha};
+                        img.at(i, j) /= pxl.sample;
                     }
                 }
             }
