@@ -230,7 +230,7 @@ void camera_turntable(frame3f& frame, float& focus, const vec2f& rotate,
             vec3f{sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi)};
         auto new_center = frame.o - frame.z * focus;
         auto new_o = new_center + new_z * focus;
-        frame = lookat_frame3(new_o, new_center, {0, 1, 0});
+        frame = lookat_frame(new_o, new_center, {0, 1, 0});
         focus = length(new_o - new_center);
     }
 
@@ -252,8 +252,8 @@ void camera_fps(frame3f& frame, const vec3f& transl, const vec2f& rotate) {
     auto z = orthonormalize(frame.z, y);
     auto x = cross(y, z);
 
-    frame.rot() = rotation_mat3(vec3f{1, 0, 0}, rotate.y) * frame.rot() *
-                  rotation_mat3(vec3f{0, 1, 0}, rotate.x);
+    frame.rot() = rotation_frame(vec3f{1, 0, 0}, rotate.y).rot() * frame.rot() *
+                  rotation_frame(vec3f{0, 1, 0}, rotate.x).rot();
     frame.pos() += transl.x * x + transl.y * y + transl.z * z;
 }
 
@@ -3317,8 +3317,8 @@ void update_transforms(animation_group* agr, float time) {
 
 // Update node transforms
 void update_transforms(node* nde, const frame3f& parent = identity_frame3f) {
-    auto frame = parent * nde->frame * translation_frame3(nde->translation) *
-                 rotation_frame3(nde->rotation) * scaling_frame3(nde->scaling);
+    auto frame = parent * nde->frame * translation_frame(nde->translation) *
+                 rotation_frame(nde->rotation) * scaling_frame(nde->scaling);
     if (nde->ist) nde->ist->frame = frame;
     if (nde->cam) nde->cam->frame = frame;
     if (nde->env) nde->env->frame = frame;
@@ -3484,7 +3484,7 @@ camera* make_view_camera(const scene* scn, int camera_id) {
         auto from = camera_dir * bbox_msize + bbox_center;
         auto to = bbox_center;
         auto up = vec3f{0, 1, 0};
-        cam->frame = lookat_frame3(from, to, up);
+        cam->frame = lookat_frame(from, to, up);
         cam->ortho = false;
         cam->aspect = 16.0f / 9.0f;
         cam->yfov = 2 * atanf(0.5f);
@@ -9650,7 +9650,7 @@ scene* make_cornell_box_scene() {
                            float aperture, float aspect = 16.0f / 9.0f) {
         auto cam = new camera();
         cam->name = name;
-        cam->frame = lookat_frame3(from, to, {0, 1, 0});
+        cam->frame = lookat_frame(from, to, {0, 1, 0});
         cam->aperture = aperture;
         cam->focus = length(from - to);
         cam->yfov = yfov * pif / 180;
@@ -9663,10 +9663,11 @@ scene* make_cornell_box_scene() {
         auto ist = new instance();
         ist->name = name;
         ist->shp = shp;
-        ist->frame = {rotation_mat3(vec3f{0, 0, 1}, rot[2] * pif / 180) *
-                          rotation_mat3(vec3f{0, 1, 0}, rot[1] * pif / 180) *
-                          rotation_mat3(vec3f{1, 0, 0}, rot[0] * pif / 180),
-            pos};
+        ist->frame.rot() =
+            rotation_frame(vec3f{0, 0, 1}, rot[2] * pif / 180).rot() *
+            rotation_frame(vec3f{0, 1, 0}, rot[1] * pif / 180).rot() *
+            rotation_frame(vec3f{1, 0, 0}, rot[0] * pif / 180).rot();
+        ist->frame.pos() = pos;
         return ist;
     };
 
@@ -10146,9 +10147,10 @@ void update_test_elem(
     ist->name = tist.name;
     ist->frame = tist.frame;
     if (tist.rotation != zero3f) {
-        auto rot = rotation_mat3(vec3f{0, 0, 1}, tist.rotation.z * pif / 180) *
-                   rotation_mat3(vec3f{0, 1, 0}, tist.rotation.y * pif / 180) *
-                   rotation_mat3(vec3f{1, 0, 0}, tist.rotation.x * pif / 180);
+        auto rot =
+            rotation_frame(vec3f{0, 0, 1}, tist.rotation.z * pif / 180).rot() *
+            rotation_frame(vec3f{0, 1, 0}, tist.rotation.y * pif / 180).rot() *
+            rotation_frame(vec3f{1, 0, 0}, tist.rotation.x * pif / 180).rot();
         ist->frame.rot() = ist->frame.rot() * rot;
     }
     ist->shp = find_named_elem(scn->shapes, tist.shape);
@@ -10159,7 +10161,7 @@ void update_test_elem(
     const scene* scn, camera* cam, const test_camera_params& tcam) {
     if (tcam.name == "") throw runtime_error("cannot use empty name");
     cam->name = tcam.name;
-    cam->frame = lookat_frame3(tcam.from, tcam.to, vec3f{0, 1, 0});
+    cam->frame = lookat_frame(tcam.from, tcam.to, vec3f{0, 1, 0});
     cam->yfov = tcam.yfov;
     cam->aspect = tcam.aspect;
     cam->near = 0.01f;
@@ -10175,7 +10177,7 @@ void update_test_elem(
     env->name = tenv.name;
     env->frame = identity_frame3f;
     if (tenv.rotation) {
-        env->frame = rotation_frame3({0, 1, 0}, tenv.rotation);
+        env->frame = rotation_frame(vec3f{0, 1, 0}, tenv.rotation);
     }
     env->ke = tenv.emission * tenv.color;
     env->ke_txt.txt = find_named_elem(scn->textures, tenv.texture);
@@ -10542,9 +10544,9 @@ unordered_map<string, test_animation_params>& test_animation_presets() {
     presets["scale"] = make_test_animation("scale", false, {0, 1, 2}, {}, {},
         {{1, 1, 1}, {0.1f, 0.1f, 0.1f}, {1, 1, 1}});
     presets["rotation"] = make_test_animation("rotation", false, {0, 1, 2}, {},
-        {rotation_quat4<float>({0, 1, 0}, 0),
-            rotation_quat4<float>({0, 1, 0}, pif),
-            rotation_quat4<float>({0, 1, 0}, 0)},
+        {rotation_quat<float>({0, 1, 0}, 0),
+            rotation_quat<float>({0, 1, 0}, pif),
+            rotation_quat<float>({0, 1, 0}, 0)},
         {});
 
     return presets;
@@ -10678,21 +10680,21 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
                     make_test_instance(name, name, pos[i]));
                 if (lights == "arealights" || lights == "arealights1")
                     params.instances.back().frame =
-                        lookat_frame3(pos[i], {0, 1, 0}, {0, 0, 1}, true);
+                        lookat_frame(pos[i], {0, 1, 0}, {0, 0, 1}, true);
             }
         }
         if (lights == "envlights") {
             params.environments.push_back(
                 test_environment_presets().at("sky1"));
             params.environments.back().frame =
-                lookat_frame3(pos[1], pos[1] + vec3f{0, 0, 1}, {0, 1, 0}, true);
+                lookat_frame(pos[1], pos[1] + vec3f{0, 0, 1}, {0, 1, 0}, true);
             params.textures.push_back(test_texture_presets().at("sky1"));
         }
         if (!animations.empty() || nodes) {
             for (auto& cam : params.cameras) {
                 auto nde = test_node_params();
                 nde.name = cam.name;
-                nde.frame = lookat_frame3(cam.from, cam.to, vec3f{0, 1, 0});
+                nde.frame = lookat_frame(cam.from, cam.to, vec3f{0, 1, 0});
                 nde.camera = cam.name;
                 params.nodes.push_back(nde);
             }
@@ -12760,7 +12762,7 @@ void draw_stdsurface_scene(const scene* scn, const camera* cam,
 
     auto camera_xform = to_mat(cam->frame);
     auto camera_view = to_mat(inverse(cam->frame));
-    auto camera_proj = perspective_mat4(cam->yfov,
+    auto camera_proj = perspective_mat(cam->yfov,
         (float)params.width / (float)params.height, cam->near, cam->far);
 
     begin_stdsurface_frame(prog, params.camera_lights, params.exposure,

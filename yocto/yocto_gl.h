@@ -2874,9 +2874,19 @@ inline bbox<T, N> transform_bbox_inverse(
     return transform_bbox(inverse(a), b);
 }
 
-/// Rotation matrix from axis-angle.
+/// Translation affine transform.
+template <typename T>
+inline frame<T, 3> translation_frame(const vec<T, 3>& a) {
+    return {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, a};
+}
+/// Scaling affine transform; this is not rigid and here for symmatry of API.
+template <typename T>
+inline frame<T, 3> scaling_frame(const vec<T, 3>& a) {
+    return {{a.x, 0, 0}, {0, a.y, 0}, {0, 0, a.z}, {0, 0, 0}};
+}
+/// Rotation affine transform.
 template <typename T, typename T1>
-inline mat<T, 3> rotation_mat3(const vec<T, 3>& axis, T1 angle) {
+inline frame<T, 3> rotation_frame(const vec<T, 3>& axis, T1 angle) {
     auto s = sin(angle), c = cos(angle);
     auto vv = normalize(axis);
     return {{c + (1 - c) * vv.x * vv.x, (1 - c) * vv.x * vv.y + s * vv.z,
@@ -2884,87 +2894,95 @@ inline mat<T, 3> rotation_mat3(const vec<T, 3>& axis, T1 angle) {
         {(1 - c) * vv.x * vv.y - s * vv.z, c + (1 - c) * vv.y * vv.y,
             (1 - c) * vv.y * vv.z + s * vv.x},
         {(1 - c) * vv.x * vv.z + s * vv.y, (1 - c) * vv.y * vv.z - s * vv.x,
-            c + (1 - c) * vv.z * vv.z}};
-}
-
-/// Translation affine transform.
-template <typename T>
-inline frame<T, 3> translation_frame3(const vec<T, 3>& a) {
-    return {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, a};
-}
-/// Translation matrix.
-template <typename T>
-inline mat<T, 4> translation_mat4(const vec<T, 3>& a) {
-    return to_mat(translation_frame3(a));
-}
-
-/// Scaling affine transform; this is not rigid and here for symmatry of API.
-template <typename T>
-inline frame<T, 3> scaling_frame3(const vec<T, 3>& a) {
-    return {{a.x, 0, 0}, {0, a.y, 0}, {0, 0, a.z}, {0, 0, 0}};
-}
-/// Scaling matrix.
-template <typename T>
-inline mat<T, 4> scaling_mat4(const vec<T, 3>& a) {
-    return to_mat<T>(scaling_frame3(a));
-}
-
-/// Rotation affine transform.
-template <typename T>
-inline frame<T, 3> rotation_frame3(const vec<T, 3>& axis, T angle) {
-    return {rotation_mat3(axis, angle), {0, 0, 0}};
+            c + (1 - c) * vv.z * vv.z},
+        {0, 0, 0}};
 }
 /// Rotation affine transform.
 template <typename T>
-inline frame<T, 3> rotation_frame3(const quat<T, 4>& rot) {
-    return {rotation_mat3(rot), {0, 0, 0}};
-}
-/// Rotation matrix.
-template <typename T>
-inline mat<T, 4> rotation_mat4(const mat<T, 3>& rot) {
-    return mat<T, 4>{{rot.x.x, rot.x.y, rot.x.z, 0},
-        {rot.y.x, rot.y.y, rot.y.z, 0}, {rot.z.x, rot.z.y, rot.z.z, 0},
-        {0, 0, 0, 1}};
-}
-/// Rotation matrix.
-template <typename T>
-inline mat<T, 4> rotation_mat4(const vec<T, 3>& axis, T angle) {
-    return rotation_mat4(rotation_frame3(axis, angle).rot());
-}
-
-/// Quaternion axis-angle conversion.
-template <typename T>
-inline pair<vec<T, 4>, T> rotation_axisangle4(const quat<T, 4>& a) {
-    return {normalize(vec<T, 3>{a.x, a.y, a.z}), 2 * acos(a.w)};
-}
-/// Axis-angle to quaternion conversion.
-template <typename T>
-inline quat<T, 4> rotation_quat4(const vec<T, 3>& axis, T angle) {
-    auto len = length(axis);
-    if (!len) return {0, 0, 0, 1};
-    return quat<T, 4>{sin(angle / 2) * axis.x / len,
-        sin(angle / 2) * axis.y / len, sin(angle / 2) * axis.z / len,
-        cos(angle / 2)};
-}
-/// Quaterion to matrix conversion.
-template <typename T>
-inline mat<T, 3> rotation_mat3(const quat<T, 4>& v) {
+inline frame<T, 3> rotation_frame(const quat<T, 4>& v) {
     return {{v.w * v.w + v.x * v.x - v.y * v.y - v.z * v.z,
                 (v.x * v.y + v.z * v.w) * 2, (v.z * v.x - v.y * v.w) * 2},
         {(v.x * v.y - v.z * v.w) * 2,
             v.w * v.w - v.x * v.x + v.y * v.y - v.z * v.z,
             (v.y * v.z + v.x * v.w) * 2},
         {(v.z * v.x + v.y * v.w) * 2, (v.y * v.z - v.x * v.w) * 2,
-            v.w * v.w - v.x * v.x - v.y * v.y + v.z * v.z}};
+            v.w * v.w - v.x * v.x - v.y * v.y + v.z * v.z},
+        {0, 0, 0}};
 }
-/// Quaternion to rotation matrix conversion.
+/// OpenGL lookat frame. Z-axis can be inverted with inv_xz.
 template <typename T>
-inline mat<T, 4> rotation_mat4(const quat<T, 4>& v) {
-    return rotation_mat4(rotation_mat3(v));
+inline frame<T, 3> lookat_frame(const vec<T, 3>& eye, const vec<T, 3>& center,
+    const vec<T, 3>& up, bool inv_xz = false) {
+    auto w = normalize(eye - center);
+    auto u = normalize(cross(up, w));
+    auto v = normalize(cross(w, u));
+    if (inv_xz) {
+        w = -w;
+        u = -u;
+    }
+    return {u, v, w, eye};
+}
+
+/// OpenGL frustum matrix.
+template <typename T>
+inline mat<T, 4> frustum_mat(T l, T r, T b, T t, T n, T f) {
+    return {{2 * n / (r - l), 0, 0, 0}, {0, 2 * n / (t - b), 0, 0},
+        {(r + l) / (r - l), (t + b) / (t - b), -(f + n) / (f - n), -1},
+        {0, 0, -2 * f * n / (f - n), 0}};
+}
+/// OpenGL orthographic matrix.
+template <typename T>
+inline mat<T, 4> ortho_mat(T l, T r, T b, T t, T n, T f) {
+    return {{2 / (r - l), 0, 0, 0}, {0, 2 / (t - b), 0, 0},
+        {0, 0, -2 / (f - n), 0},
+        {-(r + l) / (r - l), -(t + b) / (t - b), -(f + n) / (f - n), 1}};
+}
+
+/// OpenGL orthographic 2D matrix.
+template <typename T>
+inline mat<T, 4> ortho2d_mat(T left, T right, T bottom, T top) {
+    return ortho_mat(left, right, bottom, top, (T)-1, (T)1);
+}
+/// OpenGL orthographic matrix.
+template <typename T>
+inline mat<T, 4> ortho_mat(T xmag, T ymag, T near, T far) {
+    return {{1 / xmag, 0, 0, 0}, {0, 1 / ymag, 0, 0},
+        {0, 0, 2 / (near - far), 0}, {0, 0, (far + near) / (near - far), 1}};
+}
+
+/// OpenGL perspective matrix.
+template <typename T>
+inline mat<T, 4> perspective_mat(T fovy, T aspect, T near, T far) {
+    auto tg = tan(fovy / 2);
+    return {{1 / (aspect * tg), 0, 0, 0}, {0, 1 / tg, 0, 0},
+        {0, 0, (far + near) / (near - far), -1},
+        {0, 0, 2 * far * near / (near - far), 0}};
+}
+/// OpenGL infinite perspective matrix.
+template <typename T>
+inline mat<T, 4> perspective_mat(T fovy, T aspect, T near) {
+    auto tg = tan(fovy / 2);
+    return {{1 / (aspect * tg), 0, 0, 0}, {0, 1 / tg, 0, 0}, {0, 0, -1, -1},
+        {0, 0, 2 * near, 0}};
+}
+
+/// Rotation affine transform.
+template <typename T>
+inline pair<vec<T, 4>, T> rotation_axisangle(const quat<T, 4>& a) {
+    return {normalize(vec<T, 3>{a.x, a.y, a.z}), 2 * acos(a.w)};
+}
+/// Axis-angle to quaternion conversion.
+template <typename T>
+inline quat<T, 4> rotation_quat(const vec<T, 3>& axis, T angle) {
+    auto len = length(axis);
+    if (!len) return {0, 0, 0, 1};
+    return quat<T, 4>{sin(angle / 2) * axis.x / len,
+        sin(angle / 2) * axis.y / len, sin(angle / 2) * axis.z / len,
+        cos(angle / 2)};
 }
 /// Rotation matrix to quaternion conversion.
 template <typename T>
-inline quat<T, 4> rotation_quat4(const mat<T, 3>& m_) {
+inline quat<T, 4> rotation_quat(const mat<T, 3>& m_) {
     // http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/index.htm
     auto q = quat<T, 4>();
     auto m = transpose(m_);
@@ -3011,145 +3029,41 @@ inline quat<T, 4> rotation_quat4(const mat<T, 3>& m_) {
     return q;
 }
 
-/// OpenGL lookat frame. Z-axis can be inverted with inv_xz.
+/// Decompose an affine matrix into translation, rotation, scale.
+/// Assumes there is no shear.
 template <typename T>
-inline frame<T, 3> lookat_frame3(const vec<T, 3>& eye, const vec<T, 3>& center,
-    const vec<T, 3>& up, bool inv_xz = false) {
-    auto w = normalize(eye - center);
-    auto u = normalize(cross(up, w));
-    auto v = normalize(cross(w, u));
-    if (inv_xz) {
-        w = -w;
-        u = -u;
-    }
-    return {u, v, w, eye};
-}
-
-/// OpenGL lookat matrix.
-template <typename T>
-inline mat<T, 4> lookat_mat4(
-    const vec<T, 3>& eye, const vec<T, 3>& center, const vec<T, 3>& up) {
-    return to_mat(lookat_frame3(eye, center, up));
-}
-
-/// OpenGL frustum matrix.
-template <typename T>
-inline mat<T, 4> frustum_mat4(T l, T r, T b, T t, T n, T f) {
-    return {{2 * n / (r - l), 0, 0, 0}, {0, 2 * n / (t - b), 0, 0},
-        {(r + l) / (r - l), (t + b) / (t - b), -(f + n) / (f - n), -1},
-        {0, 0, -2 * f * n / (f - n), 0}};
-}
-/// OpenGL orthographic matrix.
-template <typename T>
-inline mat<T, 4> ortho_mat4(T l, T r, T b, T t, T n, T f) {
-    return {{2 / (r - l), 0, 0, 0}, {0, 2 / (t - b), 0, 0},
-        {0, 0, -2 / (f - n), 0},
-        {-(r + l) / (r - l), -(t + b) / (t - b), -(f + n) / (f - n), 1}};
-}
-
-/// OpenGL orthographic 2D matrix.
-template <typename T>
-inline mat<T, 4> ortho2d_mat4(T left, T right, T bottom, T top) {
-    return ortho_mat4(left, right, bottom, top, (T)-1, (T)1);
-}
-/// OpenGL orthographic matrix.
-template <typename T>
-inline mat<T, 4> ortho_mat4(T xmag, T ymag, T near, T far) {
-    return {{1 / xmag, 0, 0, 0}, {0, 1 / ymag, 0, 0},
-        {0, 0, 2 / (near - far), 0}, {0, 0, (far + near) / (near - far), 1}};
-}
-
-/// OpenGL perspective matrix.
-template <typename T>
-inline mat<T, 4> perspective_mat4(T fovy, T aspect, T near, T far) {
-    auto tg = tan(fovy / 2);
-    return {{1 / (aspect * tg), 0, 0, 0}, {0, 1 / tg, 0, 0},
-        {0, 0, (far + near) / (near - far), -1},
-        {0, 0, 2 * far * near / (near - far), 0}};
-}
-/// OpenGL infinite perspective matrix.
-template <typename T>
-inline mat<T, 4> perspective_mat4(T fovy, T aspect, T near) {
-    auto tg = tan(fovy / 2);
-    return {{1 / (aspect * tg), 0, 0, 0}, {0, 1 / tg, 0, 0}, {0, 0, -1, -1},
-        {0, 0, 2 * near, 0}};
+inline tuple<vec<T, 3>, mat<T, 3>, vec<T, 3>> decompose_frame(
+    const frame<T, 3>& m) {
+    return {m.o, {normalize(m.x), normalize(m.y), normalize(m.z)},
+        {length(m.x), length(m.y), length(m.z)}};
 }
 
 /// Decompose an affine matrix into translation, rotation, scale.
 /// Assumes there is no shear and the matrix is affine.
 template <typename T>
-inline void decompose_mat4(const mat<T, 4>& m, vec<T, 3>& translation,
-    mat<T, 3>& rotation, vec<T, 3>& scale) {
-    translation = {m.w.x, m.w.y, m.w.z};
-    rotation.x = {m.x.x, m.x.y, m.x.z};
-    rotation.y = {m.y.x, m.y.y, m.y.z};
-    rotation.z = {m.z.x, m.z.y, m.z.z};
-    scale = {length(rotation.x), length(rotation.y), length(rotation.z)};
-    rotation = {
-        normalize(rotation.x), normalize(rotation.y), normalize(rotation.z)};
-}
-
-/// Convert a rotation matrix to a quaternion.
-template <typename T>
-inline quat<T, 4> to_quat4(const mat<T, 3>& a) {
-    auto q = quat<T, 4>();
-    // from
-    // http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/
-    float trace = a[0][0] + a[1][1] + a[2][2];
-    if (trace > 0) {  // I changed M_EPSILON to 0
-        float s = 0.5f / sqrtf(trace + 1.0f);
-        q.w = 0.25f / s;
-        q.x = (a[1][2] - a[2][1]) * s;
-        q.y = (a[2][0] - a[0][2]) * s;
-        q.z = (a[0][1] - a[1][0]) * s;
-    } else {
-        if (a[0][0] > a[1][1] && a[0][0] > a[2][2]) {
-            float s = 2.0f * sqrt(1.0f + a[0][0] - a[1][1] - a[2][2]);
-            q.w = (a[1][2] - a[2][1]) / s;
-            q.x = 0.25f * s;
-            q.y = (a[1][0] + a[0][1]) / s;
-            q.z = (a[2][0] + a[0][2]) / s;
-        } else if (a[1][1] > a[2][2]) {
-            float s = 2.0f * sqrtf(1.0f + a[1][1] - a[0][0] - a[2][2]);
-            q.w = (a[2][0] - a[0][2]) / s;
-            q.x = (a[1][0] + a[0][1]) / s;
-            q.y = 0.25f * s;
-            q.z = (a[2][1] + a[1][2]) / s;
-        } else {
-            float s = 2.0f * sqrtf(1.0f + a[2][2] - a[0][0] - a[1][1]);
-            q.w = (a[0][1] - a[1][0]) / s;
-            q.x = (a[2][0] + a[0][2]) / s;
-            q.y = (a[2][1] + a[1][2]) / s;
-            q.z = 0.25f * s;
-        }
-    }
-    return q;
-}
-
-/// Decompose an affine matrix into translation, rotation, scale.
-/// Assumes there is no shear and the matrix is affine.
-template <typename T>
-inline void decompose_mat4(const mat<T, 4>& m, vec<T, 3>& translation,
-    quat<T, 4>& rotation, vec<T, 3>& scale) {
-    auto rot_matrix = mat<T, 3>();
-    decompose_mat4(m, translation, rot_matrix, scale);
-    rotation = to_quat4(rot_matrix);
+inline tuple<vec<T, 3>, quat<T, 4>, vec<T, 3>> decompose_frame(
+    const frame<T, 3>& m) {
+    auto pos = vec<T, 3>();
+    auto rot = mat<T, 3>();
+    auto scl = vec<T, 3>();
+    tie(pos, rot, scl) = decompose_frame(m);
+    return {pos, to_quat(rot), scl};
 }
 /// Decompose an affine matrix into translation, rotation, scale.
 /// Assumes there is no shear and the matrix is affine.
 template <typename T>
-inline mat<T, 4> compose_mat4(const vec<T, 3>& translation,
+inline frame<T, 4> compose_frame(const vec<T, 3>& translation,
     const mat<T, 3>& rotation, const vec<T, 3>& scale) {
-    return translation_mat4(translation) * scaling_mat4(scale) *
-           rotation_mat4(rotation);
+    return translation_frame(translation) * scaling_frame(scale) *
+           rotation_frame(rotation);
 }
 /// Decompose an affine matrix into translation, rotation, scale.
 /// Assumes there is no shear and the matrix is affine.
 template <typename T>
-inline mat<T, 4> compose_mat4(const vec<T, 3>& translation,
+inline frame<T, 4> compose_frame(const vec<T, 3>& translation,
     const quat<T, 4>& rotation, const vec<T, 3>& scale) {
-    return translation_mat4(translation) * scaling_mat4(scale) *
-           rotation_mat4(rotation);
+    return translation_frame(translation) * scaling_frame(scale) *
+           rotation_frame(rotation);
 }
 
 /// @}
@@ -7723,8 +7637,10 @@ void save_binary_gltf(const string& filename, const glTF* gltf,
 
 /// Computes the local node transform and its inverse.
 inline mat4f node_transform(const glTFNode* node) {
-    return translation_mat4(node->translation) * rotation_mat4(node->rotation) *
-           scaling_mat4(node->scale) * node->matrix;
+    return to_mat(translation_frame(node->translation) *
+                  rotation_frame(node->rotation) *
+                  scaling_frame(node->scale)) *
+           node->matrix;
 }
 
 /// A view for gltf array buffers that allows for typed access.
