@@ -78,7 +78,10 @@
 //
 // ## Next
 //
-// - cleanup defgroups
+// - consider using a simple variant type for serialization
+// - visitor for params
+// - serialization with visitor
+// - cmdline with visitor
 //
 // - consider uniforming texture info
 //
@@ -88,10 +91,6 @@
 // - color widget with limits
 // - add angle semantic
 // - update glTF generated documentation.
-//
-// - visitor for params
-// - serialization with visitor
-// - cmdline with visitor
 //
 // - move combo widget implementation.
 //
