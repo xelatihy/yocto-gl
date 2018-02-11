@@ -4887,18 +4887,6 @@ struct texture {
     image4b ldr = {};
     /// If loaded, hdr image.
     image4f hdr = {};
-
-    /// If loaded, whether it is empty.
-    bool empty() const { return ldr.empty() && hdr.empty(); }
-    /// If loaded, whether it is ldr.
-    bool is_ldr() const { return !ldr.empty(); }
-    /// If loaded, whether it is hdr.
-    bool is_hdr() const { return !hdr.empty(); }
-
-    /// If loaded, get texture width.
-    int width() const { return (is_ldr()) ? ldr.width() : hdr.width(); }
-    /// If loaded, get texture height.
-    int height() const { return (is_ldr()) ? ldr.height() : hdr.height(); }
 };
 
 /// Texture information to use for lookup.
