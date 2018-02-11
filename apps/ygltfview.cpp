@@ -159,7 +159,7 @@ inline bool load_scene(
         auto from = camera_dir * bbox_msize + center;
         auto to = center;
         auto up = ygl::vec3f{0, 1, 0};
-        scn->view_cam->frame = ygl::lookat_frame3(from, to, up);
+        scn->view_cam->frame = ygl::lookat_frame(from, to, up);
         scn->view_cam->aspect = 16.0f / 9.0f;
         scn->view_cam->yfov = 2 * atanf(0.5f);
         scn->view_cam->aperture = 0;
@@ -426,15 +426,15 @@ inline void shade_scene(const ygl::gltf_scene_group* scns, shade_state* st,
         if (gcam->cam->ortho) {
             auto near = (gcam->cam->near) ? gcam->cam->near : 0.001f;
             auto far = (gcam->cam->far) ? gcam->cam->far : 10000;
-            camera_proj = ygl::ortho2d_mat4(gcam->cam->yfov * gcam->cam->aspect,
+            camera_proj = ygl::ortho2d_mat(gcam->cam->yfov * gcam->cam->aspect,
                 gcam->cam->yfov, near, far);
         } else {
             auto near = (gcam->cam->near) ? gcam->cam->near : 0.001f;
             if (gcam->cam->far) {
-                camera_proj = ygl::perspective_mat4(
+                camera_proj = ygl::perspective_mat(
                     gcam->cam->yfov, gcam->cam->aspect, near, gcam->cam->far);
             } else {
-                camera_proj = ygl::perspective_mat4(
+                camera_proj = ygl::perspective_mat(
                     gcam->cam->yfov, gcam->cam->aspect, 0.01f);
             }
         }
@@ -443,10 +443,10 @@ inline void shade_scene(const ygl::gltf_scene_group* scns, shade_state* st,
         camera_view = ygl::to_mat(ygl::inverse(ycam->frame));
         auto near = (ycam->near) ? ycam->near : 0.001f;
         if (ycam->far) {
-            camera_proj = ygl::perspective_mat4(
+            camera_proj = ygl::perspective_mat(
                 ycam->yfov, ycam->aspect, near, ycam->far);
         } else {
-            camera_proj = ygl::perspective_mat4(ycam->yfov, ycam->aspect, near);
+            camera_proj = ygl::perspective_mat(ycam->yfov, ycam->aspect, near);
         }
     }
 
