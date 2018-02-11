@@ -1050,11 +1050,6 @@ struct vec<T, 4> {
     /// Element access.
     const T& operator[](int i) const { return (&x)[i]; }
 
-    /// Access xyz components.
-    vec<T, 3>& xyz() { return *(vec<T, 3>*)&x; }
-    /// Access xyz components.
-    const vec<T, 3>& xyz() const { return *(vec<T, 3>*)&x; }
-
     /// Element data.
     T x;
     /// Element data.
