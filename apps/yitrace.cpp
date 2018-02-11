@@ -27,30 +27,30 @@
 //
 
 #include "../yocto/yocto_gl.h"
-using namespace ygl;
+using namespace std::literals;
 
 // Application state
 struct app_state {
-    scene* scn = nullptr;
-    camera* view = nullptr;
-    camera* cam = nullptr;
-    bvh_tree* bvh = nullptr;
-    string filename;
-    string imfilename;
-    image4f img;
-    image<trace_pixel> pixels;
-    trace_lights lights;
-    trace_params params;
-    vector<std::thread> async_threads;
+    ygl::scene* scn = nullptr;
+    ygl::camera* view = nullptr;
+    ygl::camera* cam = nullptr;
+    ygl::bvh_tree* bvh = nullptr;
+    std::string filename;
+    std::string imfilename;
+    ygl::image4f img;
+    ygl::image<ygl::trace_pixel> pixels;
+    ygl::trace_lights lights;
+    ygl::trace_params params;
+    std::vector<std::thread> async_threads;
     bool async_stop = false;
     bool scene_updated = false;
     bool update_bvh = false;
     bool navigation_fps = false;
     bool save_progressive = false;
     bool rendering = false;
-    gl_stdimage_params imparams = {};
-    gl_texture trace_texture = {};
-    gl_stdimage_program gl_prog = {};
+    ygl::gl_stdimage_params imparams = {};
+    ygl::gl_texture trace_texture = {};
+    ygl::gl_stdimage_program gl_prog = {};
     void* selection = nullptr;
 
     ~app_state() {
@@ -60,7 +60,7 @@ struct app_state {
     }
 };
 
-void draw(gl_window* win) {
+void draw(ygl::gl_window* win) {
     auto app = (app_state*)get_user_pointer(win);
 
     // update texture
@@ -69,68 +69,71 @@ void draw(gl_window* win) {
     // draw image
     auto window_size = get_window_size(win);
     auto framebuffer_size = get_framebuffer_size(win);
-    gl_set_viewport(framebuffer_size);
+    ygl::gl_set_viewport(framebuffer_size);
     app->imparams.win_size = window_size;
-    draw_image(app->gl_prog, app->trace_texture, app->imparams);
+    ygl::draw_image(app->gl_prog, app->trace_texture, app->imparams);
 
     auto edited = 0;
-    if (begin_widgets(win, "yitrace")) {
-        draw_label_widget(win, "scene", app->filename);
-        draw_label_widget(
+    if (ygl::begin_widgets(win, "yitrace")) {
+        ygl::draw_label_widget(win, "scene", app->filename);
+        ygl::draw_label_widget(
             win, "size", "{} x {}", app->params.width, app->params.height);
-        draw_label_widget(win, "sample", app->pixels.at(0, 0).sample);
-        if (draw_header_widget(win, "trace")) {
-            draw_value_widget(win, "samples", app->params.nsamples, 1, 4096, 1);
-            edited += draw_value_widget(win, "shader type", app->params.stype,
-                enum_names<trace_shader_type>());
-            edited += draw_value_widget(win, "random type", app->params.rtype,
-                enum_names<trace_rng_type>());
-            edited += draw_value_widget(win, "filter type", app->params.ftype,
-                enum_names<trace_filter_type>());
-            edited += draw_camera_widget(
+        ygl::draw_label_widget(win, "sample", app->pixels.at(0, 0).sample);
+        if (ygl::draw_header_widget(win, "trace")) {
+            ygl::draw_value_widget(
+                win, "samples", app->params.nsamples, 1, 4096, 1);
+            edited += ygl::draw_value_widget(win, "shader type",
+                app->params.stype, ygl::enum_names<ygl::trace_shader_type>());
+            edited += ygl::draw_value_widget(win, "random type",
+                app->params.rtype, ygl::enum_names<ygl::trace_rng_type>());
+            edited += ygl::draw_value_widget(win, "filter type",
+                app->params.ftype, ygl::enum_names<ygl::trace_filter_type>());
+            edited += ygl::draw_camera_widget(
                 win, "camera", app->cam, app->scn, app->view);
-            edited += draw_value_widget(win, "update bvh", app->update_bvh);
-            draw_value_widget(win, "fps", app->navigation_fps);
+            edited +=
+                ygl::draw_value_widget(win, "update bvh", app->update_bvh);
+            ygl::draw_value_widget(win, "fps", app->navigation_fps);
         }
-        if (draw_header_widget(win, "image")) {
-            draw_imageview_widgets(win, "", app->imparams);
-            draw_imageinspect_widgets(
+        if (ygl::draw_header_widget(win, "image")) {
+            ygl::draw_imageview_widgets(win, "", app->imparams);
+            ygl::draw_imageinspect_widgets(
                 win, "", app->img, {}, get_mouse_posf(win), app->imparams);
         }
         edited +=
-            draw_scene_widgets(win, "scene", app->scn, app->selection, {});
+            ygl::draw_scene_widgets(win, "scene", app->scn, app->selection, {});
     }
-    end_widgets(win);
+    ygl::end_widgets(win);
     app->scene_updated = app->scene_updated || (bool)edited;
 
-    swap_buffers(win);
+    ygl::swap_buffers(win);
 }
 
 bool update(app_state* app) {
     if (app->scene_updated) {
-        trace_async_stop(app->async_threads, app->async_stop);
+        ygl::trace_async_stop(app->async_threads, app->async_stop);
         app->rendering = false;
 
         // update BVH
-        if (app->update_bvh) refit_bvh(app->bvh, app->scn, false);
+        if (app->update_bvh) ygl::refit_bvh(app->bvh, app->scn, false);
 
         // render preview
         auto pparams = app->params;
         pparams.width = app->params.width / app->params.block_size;
         pparams.height = app->params.height / app->params.block_size;
         pparams.nsamples = 1;
-        pparams.ftype = trace_filter_type::box;
+        pparams.ftype = ygl::trace_filter_type::box;
         auto preview_pixels = make_trace_pixels(pparams);
-        auto preview_img = image4f(pparams.width, pparams.height);
-        trace_samples(app->scn, app->cam, app->bvh, app->lights, preview_img,
-            preview_pixels, 1, pparams);
-        resize_image(preview_img, app->img, resize_filter::box);
-        update_texture(app->trace_texture, app->img);
+        auto preview_img = ygl::image4f(pparams.width, pparams.height);
+        ygl::trace_samples(app->scn, app->cam, app->bvh, app->lights,
+            preview_img, preview_pixels, 1, pparams);
+        ygl::resize_image(preview_img, app->img, ygl::resize_filter::box);
+        ygl::update_texture(app->trace_texture, app->img);
 
         app->scene_updated = false;
     } else if (!app->rendering) {
-        trace_async_start(app->scn, app->cam, app->bvh, app->lights, app->img,
-            app->pixels, app->async_threads, app->async_stop, app->params);
+        ygl::trace_async_start(app->scn, app->cam, app->bvh, app->lights,
+            app->img, app->pixels, app->async_threads, app->async_stop,
+            app->params);
         app->rendering = true;
     }
     return true;
@@ -139,22 +142,23 @@ bool update(app_state* app) {
 // run ui loop
 void run_ui(app_state* app) {
     // window
-    auto win = make_window(app->params.width, app->params.height,
+    auto win = ygl::make_window(app->params.width, app->params.height,
         "yitrace | " + app->filename, app);
-    set_window_callbacks(win, nullptr, nullptr, draw);
+    ygl::set_window_callbacks(win, nullptr, nullptr, draw);
 
     // load textures
-    app->gl_prog = make_stdimage_program();
-    app->trace_texture = make_texture(app->img, false, false, true);
+    app->gl_prog = ygl::make_stdimage_program();
+    app->trace_texture = ygl::make_texture(app->img, false, false, true);
 
     // init widget
-    init_widgets(win);
+    ygl::init_widgets(win);
 
     // loop
-    while (!should_close(win)) {
+    while (!ygl::should_close(win)) {
         // handle mouse and keyboard for navigation
         if (app->cam == app->view) {
-            if (handle_camera_navigation(win, app->view, app->navigation_fps))
+            if (ygl::handle_camera_navigation(
+                    win, app->view, app->navigation_fps))
                 app->scene_updated = true;
         }
 
@@ -165,10 +169,10 @@ void run_ui(app_state* app) {
         update(app);
 
         // event hadling
-        poll_events(win);
+        ygl::poll_events(win);
     }
 
-    clear_window(win);
+    ygl::clear_window(win);
 }
 
 int main(int argc, char* argv[]) {
@@ -176,88 +180,91 @@ int main(int argc, char* argv[]) {
     auto app = new app_state();
 
     // parse command line
-    auto parser =
-        make_parser(argc, argv, "yitrace", "path trace images interactively");
-    app->save_progressive =
-        parse_flag(parser, "--save-progressive", "", "save progressive images");
-    app->params.rtype = parse_opt(parser, "--random", "", "random type",
-        enum_names<trace_rng_type>(), trace_rng_type::stratified);
-    app->params.ftype = parse_opt(parser, "--filter", "", "filter type",
-        enum_names<trace_filter_type>(), trace_filter_type::box);
-    app->params.stype =
-        parse_opt(parser, "--shader", "-S", "path estimator type",
-            enum_names<trace_shader_type>(), trace_shader_type::pathtrace);
+    auto parser = ygl::make_parser(
+        argc, argv, "yitrace", "path trace images interactively");
+    app->save_progressive = ygl::parse_flag(
+        parser, "--save-progressive", "", "save progressive images");
+    app->params.rtype = ygl::parse_opt(parser, "--random", "", "random type",
+        ygl::enum_names<ygl::trace_rng_type>(),
+        ygl::trace_rng_type::stratified);
+    app->params.ftype = ygl::parse_opt(parser, "--filter", "", "filter type",
+        ygl::enum_names<ygl::trace_filter_type>(), ygl::trace_filter_type::box);
+    app->params.stype = ygl::parse_opt(parser, "--shader", "-S",
+        "path estimator type", ygl::enum_names<ygl::trace_shader_type>(),
+        ygl::trace_shader_type::pathtrace);
     app->params.envmap_invisible =
-        parse_flag(parser, "--envmap-invisible", "", "envmap invisible");
-    app->params.shadow_notransmission = parse_flag(
+        ygl::parse_flag(parser, "--envmap-invisible", "", "envmap invisible");
+    app->params.shadow_notransmission = ygl::parse_flag(
         parser, "--shadow-notransmission", "", "shadow without transmission");
     app->params.block_size =
-        parse_opt(parser, "--block-size", "", "block size", 32);
+        ygl::parse_opt(parser, "--block-size", "", "block size", 32);
     app->params.batch_size =
-        parse_opt(parser, "--batch-size", "", "batch size", 16);
+        ygl::parse_opt(parser, "--batch-size", "", "batch size", 16);
     app->params.nsamples =
-        parse_opt(parser, "--samples", "-s", "image samples", 256);
+        ygl::parse_opt(parser, "--samples", "-s", "image samples", 256);
     app->imparams.exposure =
-        parse_opt(parser, "--exposure", "-e", "hdr image exposure", 0.0f);
+        ygl::parse_opt(parser, "--exposure", "-e", "hdr image exposure", 0.0f);
     app->imparams.gamma =
-        parse_opt(parser, "--gamma", "-g", "hdr image gamma", 2.2f);
+        ygl::parse_opt(parser, "--gamma", "-g", "hdr image gamma", 2.2f);
     app->imparams.filmic =
-        parse_flag(parser, "--filmic", "-F", "hdr image filmic");
+        ygl::parse_flag(parser, "--filmic", "-F", "hdr image filmic");
     app->params.height =
-        parse_opt(parser, "--resolution", "-r", "image resolution", 540);
-    auto amb = parse_opt(parser, "--ambient", "", "ambient factor", 0.0f);
-    auto camera_lights =
-        parse_flag(parser, "--camera-lights", "-c", "enable camera lights");
+        ygl::parse_opt(parser, "--resolution", "-r", "image resolution", 540);
+    auto amb = ygl::parse_opt(parser, "--ambient", "", "ambient factor", 0.0f);
+    auto camera_lights = ygl::parse_flag(
+        parser, "--camera-lights", "-c", "enable camera lights");
     app->params.ambient = {amb, amb, amb};
-    if (camera_lights) { app->params.stype = trace_shader_type::eyelight; }
-    app->imfilename =
-        parse_opt(parser, "--output-image", "-o", "image filename", "out.hdr"s);
-    app->filename = parse_arg(parser, "scene", "scene filename", ""s);
-    if (should_exit(parser)) {
+    if (camera_lights) { app->params.stype = ygl::trace_shader_type::eyelight; }
+    app->imfilename = ygl::parse_opt(
+        parser, "--output-image", "-o", "image filename", "out.hdr"s);
+    app->filename = ygl::parse_arg(parser, "scene", "scene filename", ""s);
+    if (ygl::should_exit(parser)) {
         printf("%s\n", get_usage(parser).c_str());
         exit(1);
     }
 
     // setting up rendering
-    log_info("loading scene {}", app->filename);
+    ygl::log_info("loading scene {}", app->filename);
     try {
-        app->scn = load_scene(app->filename);
-    } catch (exception e) { log_fatal("cannot load scene {}", app->filename); }
+        app->scn = ygl::load_scene(app->filename);
+    } catch (std::exception e) {
+        ygl::log_fatal("cannot load scene {}", app->filename);
+    }
 
     // add elements
-    auto opts = add_elements_options();
-    add_elements(app->scn, opts);
+    auto opts = ygl::add_elements_options();
+    ygl::add_elements(app->scn, opts);
 
     // view camera
-    app->view = make_view_camera(app->scn, 0);
+    app->view = ygl::make_view_camera(app->scn, 0);
     app->cam = app->view;
 
     // build bvh
-    log_info("building bvh");
-    app->bvh = make_bvh(app->scn);
+    ygl::log_info("building bvh");
+    app->bvh = ygl::make_bvh(app->scn);
 
     // init renderer
-    log_info("initializing tracer");
-    app->lights = make_trace_lights(app->scn);
+    ygl::log_info("initializing tracer");
+    app->lights = ygl::make_trace_lights(app->scn);
 
     // fix renderer type if no lights
     if (app->lights.empty() &&
-        app->params.stype != trace_shader_type::eyelight) {
-        log_info("no lights presents, switching to eyelight shader");
-        app->params.stype = trace_shader_type::eyelight;
+        app->params.stype != ygl::trace_shader_type::eyelight) {
+        ygl::log_info("no lights presents, switching to eyelight shader");
+        app->params.stype = ygl::trace_shader_type::eyelight;
     }
 
     // initialize rendering objects
     app->params.width = (int)round(app->cam->aspect * app->params.height);
-    app->img = image4f(app->params.width, app->params.height);
-    app->pixels = make_trace_pixels(app->params);
+    app->img = ygl::image4f(app->params.width, app->params.height);
+    app->pixels = ygl::make_trace_pixels(app->params);
     app->scene_updated = true;
 
     // run interactive
     run_ui(app);
 
     // cleanup
-    trace_async_stop(app->async_threads, app->async_stop);
+    ygl::trace_async_stop(app->async_threads, app->async_stop);
     delete app;
 
     // done

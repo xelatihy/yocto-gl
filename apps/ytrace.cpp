@@ -27,23 +27,23 @@
 //
 
 #include "../yocto/yocto_gl.h"
-using namespace ygl;
+using namespace std::literals;
 
 // Application state
 struct app_state {
-    scene* scn = nullptr;
-    camera* view = nullptr;
-    camera* cam = nullptr;
-    bvh_tree* bvh = nullptr;
-    string filename;
-    string imfilename;
-    image4f img;
-    image<trace_pixel> pixels;
-    trace_params params;
-    trace_lights lights;
+    ygl::scene* scn = nullptr;
+    ygl::camera* view = nullptr;
+    ygl::camera* cam = nullptr;
+    ygl::bvh_tree* bvh = nullptr;
+    std::string filename;
+    std::string imfilename;
+    ygl::image4f img;
+    ygl::image<ygl::trace_pixel> pixels;
+    ygl::trace_params params;
+    ygl::trace_lights lights;
     float exposure = 0, gamma = 2.2f;
     bool filmic = false;
-    vec4f background = {0, 0, 0, 0};
+    ygl::vec4f background = {0, 0, 0, 0};
     bool save_progressive = false;
 
     ~app_state() {
@@ -58,58 +58,62 @@ int main(int argc, char* argv[]) {
     auto app = new app_state();
 
     // parse command line
-    auto parser = make_parser(argc, argv, "ytrace", "offline oath tracing");
-    app->save_progressive =
-        parse_flag(parser, "--save-progressive", "", "save progressive images");
-    app->params.rtype = parse_opt(parser, "--random", "", "random type",
-        enum_names<trace_rng_type>(), trace_rng_type::stratified);
-    app->params.ftype = parse_opt(parser, "--filter", "", "filter type",
-        enum_names<trace_filter_type>(), trace_filter_type::box);
-    app->params.stype =
-        parse_opt(parser, "--shader", "-S", "path estimator type",
-            enum_names<trace_shader_type>(), trace_shader_type::pathtrace);
+    auto parser =
+        ygl::make_parser(argc, argv, "ytrace", "offline oath tracing");
+    app->save_progressive = ygl::parse_flag(
+        parser, "--save-progressive", "", "save progressive images");
+    app->params.rtype = ygl::parse_opt(parser, "--random", "", "random type",
+        ygl::enum_names<ygl::trace_rng_type>(),
+        ygl::trace_rng_type::stratified);
+    app->params.ftype = ygl::parse_opt(parser, "--filter", "", "filter type",
+        ygl::enum_names<ygl::trace_filter_type>(), ygl::trace_filter_type::box);
+    app->params.stype = ygl::parse_opt(parser, "--shader", "-S",
+        "path estimator type", ygl::enum_names<ygl::trace_shader_type>(),
+        ygl::trace_shader_type::pathtrace);
     app->params.envmap_invisible =
-        parse_flag(parser, "--envmap-invisible", "", "envmap invisible");
-    app->params.shadow_notransmission = parse_flag(
+        ygl::parse_flag(parser, "--envmap-invisible", "", "envmap invisible");
+    app->params.shadow_notransmission = ygl::parse_flag(
         parser, "--shadow-notransmission", "", "shadow without transmission");
     app->params.block_size =
-        parse_opt(parser, "--block-size", "", "block size", 32);
+        ygl::parse_opt(parser, "--block-size", "", "block size", 32);
     app->params.batch_size =
-        parse_opt(parser, "--batch-size", "", "batch size", 16);
+        ygl::parse_opt(parser, "--batch-size", "", "batch size", 16);
     app->params.nsamples =
-        parse_opt(parser, "--samples", "-s", "image samples", 256);
+        ygl::parse_opt(parser, "--samples", "-s", "image samples", 256);
     app->params.parallel =
-        !parse_flag(parser, "--no-parallel", "", "so not run in parallel");
+        !ygl::parse_flag(parser, "--no-parallel", "", "so not run in parallel");
     app->exposure =
-        parse_opt(parser, "--exposure", "-e", "hdr image exposure", 0.0f);
-    app->gamma = parse_opt(parser, "--gamma", "-g", "hdr image gamma", 2.2f);
-    app->filmic = parse_flag(parser, "--filmic", "-F", "hdr filmic output");
+        ygl::parse_opt(parser, "--exposure", "-e", "hdr image exposure", 0.0f);
+    app->gamma =
+        ygl::parse_opt(parser, "--gamma", "-g", "hdr image gamma", 2.2f);
+    app->filmic =
+        ygl::parse_flag(parser, "--filmic", "-F", "hdr filmic output");
     app->params.height =
-        parse_opt(parser, "--resolution", "-r", "image resolution", 540);
-    auto amb = parse_opt(parser, "--ambient", "", "ambient factor", 0.0f);
-    auto camera_lights =
-        parse_flag(parser, "--camera-lights", "-c", "enable camera lights");
+        ygl::parse_opt(parser, "--resolution", "-r", "image resolution", 540);
+    auto amb = ygl::parse_opt(parser, "--ambient", "", "ambient factor", 0.0f);
+    auto camera_lights = ygl::parse_flag(
+        parser, "--camera-lights", "-c", "enable camera lights");
     app->params.ambient = {amb, amb, amb};
-    if (camera_lights) { app->params.stype = trace_shader_type::eyelight; }
-    app->imfilename =
-        parse_opt(parser, "--output-image", "-o", "image filename", "out.hdr"s);
-    app->filename = parse_arg(parser, "scene", "scene filename", ""s);
-    if (should_exit(parser)) {
+    if (camera_lights) { app->params.stype = ygl::trace_shader_type::eyelight; }
+    app->imfilename = ygl::parse_opt(
+        parser, "--output-image", "-o", "image filename", "out.hdr"s);
+    app->filename = ygl::parse_arg(parser, "scene", "scene filename", ""s);
+    if (ygl::should_exit(parser)) {
         printf("%s\n", get_usage(parser).c_str());
         exit(1);
     }
 
     // setting up rendering
-    log_info("loading scene {}", app->filename);
+    ygl::log_info("loading scene {}", app->filename);
     try {
-        app->scn = load_scene(app->filename);
-    } catch (exception e) {
-        log_fatal("cannot load scene {}", app->filename);
+        app->scn = ygl::load_scene(app->filename);
+    } catch (std::exception e) {
+        ygl::log_fatal("cannot load scene {}", app->filename);
         return 1;
     }
 
     // add elements
-    auto opts = add_elements_options();
+    auto opts = ygl::add_elements_options();
     add_elements(app->scn, opts);
 
     // view camera
@@ -117,39 +121,41 @@ int main(int argc, char* argv[]) {
     app->cam = app->view;
 
     // build bvh
-    log_info("building bvh");
+    ygl::log_info("building bvh");
     app->bvh = make_bvh(app->scn);
 
     // init renderer
-    log_info("initializing tracer");
+    ygl::log_info("initializing tracer");
     app->lights = make_trace_lights(app->scn);
 
     // initialize rendering objects
     app->params.width = (int)round(app->cam->aspect * app->params.height);
-    app->img = image4f(app->params.width, app->params.height);
+    app->img = ygl::image4f(app->params.width, app->params.height);
     app->pixels = make_trace_pixels(app->params);
 
     // render
-    log_info("starting renderer");
+    ygl::log_info("starting renderer");
     for (auto cur_sample = 0; cur_sample < app->params.nsamples;
          cur_sample += app->params.batch_size) {
         if (app->save_progressive && cur_sample) {
-            auto imfilename = format("{}{}.{}{}", path_dirname(app->imfilename),
-                path_basename(app->imfilename), cur_sample,
-                path_extension(app->imfilename));
-            log_info("saving image {}", imfilename);
+            auto imfilename =
+                ygl::format("{}{}.{}{}", ygl::path_dirname(app->imfilename),
+                    ygl::path_basename(app->imfilename), cur_sample,
+                    ygl::path_extension(app->imfilename));
+            ygl::log_info("saving image {}", imfilename);
             save_image(
                 imfilename, app->img, app->exposure, app->gamma, app->filmic);
         }
-        log_info("rendering sample {}/{}", cur_sample, app->params.nsamples);
+        ygl::log_info(
+            "rendering sample {}/{}", cur_sample, app->params.nsamples);
         trace_samples(app->scn, app->cam, app->bvh, app->lights, app->img,
             app->pixels, app->params.batch_size, app->params);
     }
-    log_info("rendering done");
+    ygl::log_info("rendering done");
 
     // save image
-    log_info("saving image {}", app->imfilename);
-    save_image(
+    ygl::log_info("saving image {}", app->imfilename);
+    ygl::save_image(
         app->imfilename, app->img, app->exposure, app->gamma, app->filmic);
 
     // cleanup

@@ -27,18 +27,17 @@
 //
 
 #include "../yocto/yocto_gl.h"
-using namespace ygl;
 
 // Generic image that contains either an HDR or an LDR image, giving access
 // to both. This is helpful when writing viewers or generic image
 // manipulation code
 struct gimage {
     /// image path
-    string filename;
+    std::string filename;
     /// HDR image content
-    image4f hdr;
+    ygl::image4f hdr;
     /// LDR image content
-    image4b ldr;
+    ygl::image4b ldr;
 
     /// image width
     int width() const {
@@ -56,69 +55,70 @@ struct gimage {
 };
 
 // Loads a generic image
-inline gimage load_gimage(const string& filename) {
+inline gimage load_gimage(const std::string& filename) {
     auto img = gimage();
     img.filename = filename;
-    if (is_hdr_filename(filename)) {
-        img.hdr = load_image4f(filename);
+    if (ygl::is_hdr_filename(filename)) {
+        img.hdr = ygl::load_image4f(filename);
     } else {
-        img.ldr = load_image4b(filename);
+        img.ldr = ygl::load_image4b(filename);
     }
     if (img.hdr.empty() && img.ldr.empty()) {
-        throw runtime_error("cannot load image " + img.filename);
+        throw std::runtime_error("cannot load image " + img.filename);
     }
     return img;
 }
 
 struct app_state {
-    vector<gimage*> imgs;
+    std::vector<gimage*> imgs;
     int cur_img = 0;
 
-    gl_stdimage_program gl_prog = {};
-    unordered_map<gimage*, gl_texture> gl_txt = {};
-    gl_stdimage_params params;
+    ygl::gl_stdimage_program gl_prog = {};
+    std::unordered_map<gimage*, ygl::gl_texture> gl_txt = {};
+    ygl::gl_stdimage_params params;
 
     ~app_state() {
         for (auto v : imgs) delete v;
     }
 };
 
-void draw(gl_window* win) {
+void draw(ygl::gl_window* win) {
     auto app = (app_state*)get_user_pointer(win);
     auto img = app->imgs[app->cur_img];
     auto window_size = get_window_size(win);
     auto framebuffer_size = get_framebuffer_size(win);
-    gl_set_viewport(framebuffer_size);
+    ygl::gl_set_viewport(framebuffer_size);
     app->params.win_size = window_size;
-    draw_image(app->gl_prog, app->gl_txt.at(img), app->params);
+    ygl::draw_image(app->gl_prog, app->gl_txt.at(img), app->params);
 
-    if (begin_widgets(win, "yimview")) {
-        draw_label_widget(win, "filename", img->filename);
-        draw_label_widget(win, "size", "{} x {}", img->width(), img->height());
-        draw_imageview_widgets(win, "", app->params, !img->hdr.empty());
-        draw_imageinspect_widgets(
+    if (ygl::begin_widgets(win, "yimview")) {
+        ygl::draw_label_widget(win, "filename", img->filename);
+        ygl::draw_label_widget(
+            win, "size", "{} x {}", img->width(), img->height());
+        ygl::draw_imageview_widgets(win, "", app->params, !img->hdr.empty());
+        ygl::draw_imageinspect_widgets(
             win, "", img->hdr, img->ldr, get_mouse_posf(win), app->params);
     }
-    end_widgets(win);
+    ygl::end_widgets(win);
 
-    swap_buffers(win);
+    ygl::swap_buffers(win);
 }
 
 void run_ui(app_state* app) {
     // window
-    auto win = make_window(
+    auto win = ygl::make_window(
         app->imgs[0]->width(), app->imgs[0]->height(), "yimview", app);
-    set_window_callbacks(win, nullptr, nullptr, draw);
+    ygl::set_window_callbacks(win, nullptr, nullptr, draw);
 
     // window values
     int mouse_button = 0;
-    vec2f mouse_pos, mouse_last;
+    ygl::vec2f mouse_pos, mouse_last;
 
     // init widgets
-    init_widgets(win);
+    ygl::init_widgets(win);
 
     // load textures
-    app->gl_prog = make_stdimage_program();
+    app->gl_prog = ygl::make_stdimage_program();
     for (auto img : app->imgs) {
         if (!img->hdr.empty()) {
             app->gl_txt[img] = make_texture(img->hdr, false, false, true);
@@ -129,16 +129,17 @@ void run_ui(app_state* app) {
 
     while (!should_close(win)) {
         mouse_last = mouse_pos;
-        mouse_pos = get_mouse_posf(win);
-        mouse_button = get_mouse_button(win);
+        mouse_pos = ygl::get_mouse_posf(win);
+        mouse_button = ygl::get_mouse_button(win);
 
         auto img = app->imgs[app->cur_img];
-        set_window_title(win, format("yimview | {} | {}x{}", img->filename,
-                                  img->width(), img->height()));
+        ygl::set_window_title(
+            win, ygl::format("yimview | {} | {}x{}", img->filename,
+                     img->width(), img->height()));
 
         // handle mouse
         if (mouse_button && mouse_pos != mouse_last &&
-            !get_widget_active(win)) {
+            !ygl::get_widget_active(win)) {
             switch (mouse_button) {
                 case 1: app->params.offset += mouse_pos - mouse_last; break;
                 case 2:
@@ -153,10 +154,10 @@ void run_ui(app_state* app) {
         draw(win);
 
         // event hadling
-        wait_events(win);
+        ygl::wait_events(win);
     }
 
-    clear_window(win);
+    ygl::clear_window(win);
     delete win;
 }
 
@@ -164,24 +165,24 @@ int main(int argc, char* argv[]) {
     auto app = new app_state();
 
     // command line params
-    auto parser = make_parser(argc, argv, "yimview", "view images");
+    auto parser = ygl::make_parser(argc, argv, "yimview", "view images");
     app->params.exposure =
-        parse_opt(parser, "--exposure", "-e", "hdr image exposure", 0.0f);
+        ygl::parse_opt(parser, "--exposure", "-e", "hdr image exposure", 0.0f);
     app->params.gamma =
-        parse_opt(parser, "--gamma", "-g", "hdr image gamma", 2.2f);
+        ygl::parse_opt(parser, "--gamma", "-g", "hdr image gamma", 2.2f);
     app->params.filmic =
-        parse_flag(parser, "--filmic", "-F", "hdr image filmic");
-    auto filenames =
-        parse_args(parser, "image", "image filename", vector<string>{});
+        ygl::parse_flag(parser, "--filmic", "-F", "hdr image filmic");
+    auto filenames = ygl::parse_args(
+        parser, "image", "image filename", std::vector<std::string>{});
     // check parsing
-    if (should_exit(parser)) {
+    if (ygl::should_exit(parser)) {
         printf("%s\n", get_usage(parser).c_str());
         exit(1);
     }
 
     // loading images
     for (auto filename : filenames) {
-        log_info("loading {}", filename);
+        ygl::log_info("loading {}", filename);
         app->imgs.push_back(new gimage(load_gimage(filename)));
     }
 

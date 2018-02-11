@@ -27,9 +27,9 @@
 //
 
 #include "../yocto/yocto_gl.h"
-using namespace ygl;
+using namespace std::literals;
 
-void mkdir(const string& dir) {
+void mkdir(const std::string& dir) {
 #ifndef _MSC_VER
     system(("mkdir -p " + dir).c_str());
 #else
@@ -40,7 +40,7 @@ void mkdir(const string& dir) {
 #endif
 }
 
-void rmdir(const string& dir) {
+void rmdir(const std::string& dir) {
 #ifndef _MSC_VER
     auto rcmd = "rm -rf " + dir;
     system(rcmd.c_str());
@@ -50,39 +50,40 @@ void rmdir(const string& dir) {
 #endif
 }
 
-void save_test_scene(const string& sname, const string& basedir) {
+void save_test_scene(const std::string& sname, const std::string& basedir) {
     auto dirname = basedir + "/" + sname + "/";
     try {
         mkdir(dirname);
         auto test_scn = (sname == "cornell_box") ?
-                            test_scene_params() :
-                            test_scene_presets().at(sname);
+                            ygl::test_scene_params() :
+                            ygl::test_scene_presets().at(sname);
         printf("generating %s scenes ...\n", sname.c_str());
-        auto scn = (sname == "cornell_box") ?
-                       make_cornell_box_scene() :
-                       make_test_scene(test_scene_presets().at(sname));
+        auto scn =
+            (sname == "cornell_box") ?
+                ygl::make_cornell_box_scene() :
+                ygl::make_test_scene(ygl::test_scene_presets().at(sname));
         printf("saving %s scenes ...\n", sname.c_str());
         if (sname == "textures") {
             for (auto txt : scn->textures) {
                 if (!txt->hdr.empty())
-                    save_image4f(dirname + txt->path, txt->hdr);
+                    ygl::save_image4f(dirname + txt->path, txt->hdr);
                 if (!txt->ldr.empty())
-                    save_image4b(dirname + txt->path, txt->ldr);
+                    ygl::save_image4b(dirname + txt->path, txt->ldr);
             }
         } else if (sname == "shapes") {
             for (auto sgr : scn->shapes) {
-                auto sscn = new scene();
-                auto ssgr = new shape_group();
+                auto sscn = new ygl::scene();
+                auto ssgr = new ygl::shape_group();
                 ssgr->name = sgr->name;
                 for (auto shp : sgr->shapes) {
-                    auto sshp = new shape(*shp);
+                    auto sshp = new ygl::shape(*shp);
                     sshp->mat = nullptr;
                     ssgr->shapes.push_back(sshp);
                 }
                 sscn->shapes.push_back(ssgr);
-                auto shp_name = partition(sgr->name, "_")[0];
-                auto opts = save_options();
-                save_scene(dirname + shp_name + ".obj", sscn, opts);
+                auto shp_name = ygl::partition(sgr->name, "_")[0];
+                auto opts = ygl::save_options();
+                ygl::save_scene(dirname + shp_name + ".obj", sscn, opts);
                 delete sscn;
             }
         } else {
@@ -91,31 +92,32 @@ void save_test_scene(const string& sname, const string& basedir) {
                 for (auto shp : sgr->shapes)
                     facevarying = facevarying || !shp->quads_pos.empty();
 
-            auto opts = save_options();
+            auto opts = ygl::save_options();
             opts.save_textures = true;
             if (!facevarying) save_scene(dirname + sname + ".gltf", scn, opts);
-            if (!startswith(sname, "instance")) flatten_instances(scn);
-            save_scene(dirname + sname + ".obj", scn, opts);
-            save_test_scene(dirname + sname + ".json", test_scn);
+            if (!ygl::startswith(sname, "instance"))
+                ygl::flatten_instances(scn);
+            ygl::save_scene(dirname + sname + ".obj", scn, opts);
+            ygl::save_test_scene(dirname + sname + ".json", test_scn);
         }
         delete scn;
-    } catch (exception& e) { log_fatal("error {}", e.what()); }
+    } catch (std::exception& e) { ygl::log_fatal("error {}", e.what()); }
 }
 
 int main(int argc, char* argv[]) {
     // put together scene names
-    auto scene_names = vector<string>{"cornell_box"};
-    for (auto& kv : test_scene_presets()) scene_names.push_back(kv.first);
+    auto scene_names = std::vector<std::string>{"cornell_box"};
+    for (auto& kv : ygl::test_scene_presets()) scene_names.push_back(kv.first);
 
     // command line params
-    auto parser = make_parser(argc, argv, "ytestgen", "make tests");
-    auto scene = parse_opt(
+    auto parser = ygl::make_parser(argc, argv, "ytestgen", "make tests");
+    auto scene = ygl::parse_opt(
         parser, "--scene", "-s", "scene name", ""s, false, scene_names);
-    auto clean = parse_flag(parser, "--clean", "-c", "clean directory");
+    auto clean = ygl::parse_flag(parser, "--clean", "-c", "clean directory");
     auto dirname =
-        parse_opt(parser, "--dirname", "-d", "directory name", "tests"s);
+        ygl::parse_opt(parser, "--dirname", "-d", "directory name", "tests"s);
     auto no_parallel =
-        parse_flag(parser, "--no-parallel", "", "do not run in parallel");
+        ygl::parse_flag(parser, "--no-parallel", "", "do not run in parallel");
     if (should_exit(parser)) {
         printf("%s\n", get_usage(parser).c_str());
         exit(1);
@@ -130,7 +132,7 @@ int main(int argc, char* argv[]) {
     } else if (no_parallel) {
         for (auto scn : scene_names) save_test_scene(scn, dirname);
     } else {
-        auto threads = vector<std::thread>();
+        auto threads = std::vector<std::thread>();
         for (auto scene_name : scene_names) {
             threads.push_back(std::thread([scene_name, dirname]() {
                 save_test_scene(scene_name, dirname);

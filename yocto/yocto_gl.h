@@ -742,130 +742,11 @@ namespace ygl {}
 #define YGL_FAST_RANDFLOAT 1
 
 // -----------------------------------------------------------------------------
-// IMPORTED MATH FUNCTIONS
+// BASIC MATH CONSTANTS AND FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @defgroup stdmath Imported math functions
-/// @{
-
-/// Square root.
-using std::sqrt;
-/// Power.
-using std::pow;
-/// Exponential.
-using std::exp;
-/// Logarithm.
-using std::log;
-/// Logarithm.
-using std::log10;
-/// Sine.
-using std::sin;
-/// Cosine.
-using std::cos;
-/// Tangent.
-using std::tan;
-/// Arc sine.
-using std::asin;
-/// Arc cosine.
-using std::acos;
-/// Arc tangent.
-using std::atan;
-/// Arc tangent.
-using std::atan2;
-/// Absolute value.
-using std::abs;
-/// Floating point absolute value.
-using std::fabs;
-/// Floor.
-using std::floor;
-/// Ceil.
-using std::ceil;
-/// Round.
-using std::round;
-/// Check if a value is finite.
-using std::isfinite;
-
-/// @}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// IMPORTED CONTAINERS AND RELATED FUNCTIONS
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-/// @defgroup stdcontainers Imported containers and related functions
-/// @{
-
-/// String.
-using std::string;
-/// Vector.
-using std::vector;
-/// Array.
-using std::array;
-/// Map.
-using std::map;
-/// Set.
-using std::set;
-/// Unordered map.
-using std::unordered_map;
-/// Unordered set.
-using std::unordered_set;
-/// Pair.
-using std::pair;
-/// Tuple.
-using std::tuple;
-/// Unique pointer.
-using std::unique_ptr;
-/// Function.
-using std::function;
-/// String literals.
-using namespace std::string_literals;
-/// Numeric limits.
-using std::numeric_limits;
-/// Initializer list.
-using std::initializer_list;
-/// Output stream.
-using std::ostream;
-/// Input stream.
-using std::istream;
-/// String stream.
-using std::stringstream;
-/// File stream.
-using std::fstream;
-/// Runtime error.
-using std::runtime_error;
-/// Exception.
-using std::exception;
-/// Ios base.
-using std::ios_base;
-/// Find algorithm.
-using std::find;
-/// Swap algorithm.
-using std::swap;
-/// Get line from streams.
-using std::getline;
-/// Convert to string.
-using std::to_string;
-/// Cout object for printing.
-using std::cout;
-/// Tie function for tuple usage.
-using std::tie;
-
-/// Makes literals available
-using namespace std::literals;
-
-/// @}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// BASIC TYPEDEFS, MATH CONSTANTS AND FUNCTIONS
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-/// @defgroup math Basic typedefs, math constants and functions
+/// @defgroup math Basic math constants and functions
 /// @{
 
 /// Convenient typedef for bytes.
@@ -880,15 +761,86 @@ const auto pif = 3.14159265f;
 const auto pi = 3.1415926535897932384626433832795;
 
 /// Shortcat for float max value.
-const auto flt_max = numeric_limits<float>::max();
+const auto flt_max = std::numeric_limits<float>::max();
 /// Shortcat for float min value.
-const auto flt_min = numeric_limits<float>::lowest();
+const auto flt_min = std::numeric_limits<float>::lowest();
 /// Shortcat for float epsilon.
-const auto flt_eps = numeric_limits<float>::epsilon();
+const auto flt_eps = std::numeric_limits<float>::epsilon();
 /// Shortcat for int max value.
-const auto int_max = numeric_limits<int>::max();
+const auto int_max = std::numeric_limits<int>::max();
 /// Shortcat for int min value.
-const auto int_min = numeric_limits<int>::min();
+const auto int_min = std::numeric_limits<int>::min();
+
+/// Square root.
+template <typename T>
+inline T sqrt(T a) {
+    return std::sqrt(a);
+}
+/// Power.
+template <typename T, typename T1>
+inline auto pow(T a, T1 b) {
+    return std::pow(a, b);
+}
+/// Exponential.
+template <typename T>
+inline T exp(T a) {
+    return std::exp(a);
+}
+/// Logarithm.
+template <typename T>
+inline T log(T a) {
+    return std::log(a);
+}
+/// Sine.
+template <typename T>
+inline T sin(T a) {
+    return std::sin(a);
+}
+/// Cosine.
+template <typename T>
+inline T cos(T a) {
+    return std::cos(a);
+}
+/// Tangent.
+template <typename T>
+inline T tan(T a) {
+    return std::tan(a);
+}
+/// Arc sine.
+template <typename T>
+inline T asin(T a) {
+    return std::asin(a);
+}
+/// Arc cosine.
+template <typename T>
+inline T acos(T a) {
+    return std::acos(a);
+}
+/// Arc tangent.
+template <typename T>
+inline T atan(T a) {
+    return std::atan(a);
+}
+/// Arc tangent.
+template <typename T, typename T1>
+inline auto atan2(T a, T1 b) {
+    return std::atan2(a, b);
+}
+/// Absolute value.
+template <typename T>
+inline T abs(T a) {
+    return (a >= 0) ? a : -a;
+}
+/// Floor.
+template <typename T>
+inline T floor(T a) {
+    return std::floor(a);
+}
+/// Round.
+template <typename T>
+inline T round(T a) {
+    return std::round(a);
+}
 
 /// Safe minimum value.
 template <typename T>
@@ -897,21 +849,19 @@ inline T min(T x, T y) {
 }
 /// Safe minimum value.
 template <typename T>
-inline T min(initializer_list<T> vs) {
+inline T min(std::initializer_list<T> vs) {
     auto m = int_max;
     for (auto v : vs) m = min(m, v);
     return m;
 }
-
 /// Safe maximum value.
 template <typename T>
 inline T max(T x, T y) {
     return (x > y) ? x : y;
 }
-
 /// Safe maximum value.
 template <typename T>
-inline T max(initializer_list<T> vs) {
+inline T max(std::initializer_list<T> vs) {
     auto m = int_min;
     for (auto v : vs) m = max(m, v);
     return m;
@@ -951,9 +901,13 @@ inline int fastfloor(float x) {
 inline byte float_to_byte(float x) {
     return (byte)max(0, min(int(x * 256), 255));
 }
-
 /// Safe byte to float conversion.
 inline float byte_to_float(byte x) { return (float)x / 255.0f; }
+
+/// String literals.
+using namespace std::string_literals;
+/// Makes literals available
+using namespace std::literals;
 
 /// @}
 
@@ -1506,7 +1460,7 @@ inline vec<T, N> clamplen(const vec<T, N>& x, T1 max) {
 /// Index of minimum element.
 template <typename T, int N>
 inline int min_element(const vec<T, N>& a) {
-    auto v = numeric_limits<T>::max();
+    auto v = std::numeric_limits<T>::max();
     auto pos = -1;
     for (auto i = 0; i < N; i++) {
         if (v > a[i]) {
@@ -1525,7 +1479,7 @@ inline T min_element_value(const vec<T, N>& a) {
 /// Index of maximum element.
 template <typename T, int N>
 inline int max_element(const vec<T, N>& a) {
-    auto v = numeric_limits<T>::lowest();
+    auto v = std::numeric_limits<T>::lowest();
     auto pos = -1;
     for (auto i = 0; i < N; i++) {
         if (v < a[i]) {
@@ -1554,7 +1508,7 @@ inline vec4f byte_to_float(const vec4b& a) {
 
 /// Stream write.
 template <typename T, int N>
-inline ostream& operator<<(ostream& os, const vec<T, N>& a) {
+inline std::ostream& operator<<(std::ostream& os, const vec<T, N>& a) {
     for (auto i = 0; i < N; i++) {
         if (i) os << ' ';
         os << data(a)[i];
@@ -1563,7 +1517,7 @@ inline ostream& operator<<(ostream& os, const vec<T, N>& a) {
 }
 /// Stream read.
 template <typename T, int N>
-inline istream& operator>>(istream& is, vec<T, N>& a) {
+inline std::istream& operator>>(std::istream& is, vec<T, N>& a) {
     for (auto i = 0; i < N; i++) is >> data(a)[i];
     return is;
 }
@@ -2017,7 +1971,7 @@ inline mat<T, N> inverse(const mat<T, N>& a) {
 
 /// Stream write.
 template <typename T, int N>
-inline ostream& operator<<(ostream& os, const mat<T, N>& a) {
+inline std::ostream& operator<<(std::ostream& os, const mat<T, N>& a) {
     for (auto i = 0; i < N; i++) {
         if (i) os << ' ';
         os << data(a)[i];
@@ -2026,7 +1980,7 @@ inline ostream& operator<<(ostream& os, const mat<T, N>& a) {
 }
 /// Stream read.
 template <typename T, int N>
-inline istream& operator>>(istream& is, mat<T, N>& a) {
+inline std::istream& operator>>(std::istream& is, mat<T, N>& a) {
     for (auto i = 0; i < N; i++) is >> data(a)[i];
     return is;
 }
@@ -2208,7 +2162,7 @@ inline frame<T, 3> inverse(const frame<T, 3>& a) {
 
 /// Stream write.
 template <typename T, int N>
-inline ostream& operator<<(ostream& os, const frame<T, N>& a) {
+inline std::ostream& operator<<(std::ostream& os, const frame<T, N>& a) {
     for (auto i = 0; i < N + 1; i++) {
         if (i) os << ' ';
         os << data(a)[i];
@@ -2217,7 +2171,7 @@ inline ostream& operator<<(ostream& os, const frame<T, N>& a) {
 }
 /// Stream read.
 template <typename T, int N>
-inline istream& operator>>(istream& is, frame<T, N>& a) {
+inline std::istream& operator>>(std::istream& is, frame<T, N>& a) {
     for (auto i = 0; i < N + 1; i++) is >> data(a)[i];
     return is;
 }
@@ -2379,7 +2333,7 @@ inline quat<T, 4> slerp(const quat<T, 4>& a, const quat<T, 4>& b, T1 t) {
 
 /// Stream write.
 template <typename T, int N>
-inline ostream& operator<<(ostream& os, const quat<T, N>& a) {
+inline std::ostream& operator<<(std::ostream& os, const quat<T, N>& a) {
     for (auto i = 0; i < N; i++) {
         if (i) os << ' ';
         os << data(a)[i];
@@ -2388,7 +2342,7 @@ inline ostream& operator<<(ostream& os, const quat<T, N>& a) {
 }
 /// Stream read.
 template <typename T, int N>
-inline istream& operator>>(istream& is, quat<T, N>& a) {
+inline std::istream& operator>>(std::istream& is, quat<T, N>& a) {
     for (auto i = 0; i < N; i++) is >> data(a)[i];
     return is;
 }
@@ -2557,7 +2511,7 @@ inline bbox<T, N> make_bbox(int count, const vec<T, N>* v) {
 }
 /// Initialize a bonding box from a list of points.
 template <typename T, int N>
-inline bbox<T, N> make_bbox(const initializer_list<vec<T, N>>& v) {
+inline bbox<T, N> make_bbox(const std::initializer_list<vec<T, N>>& v) {
     auto a = bbox<T, N>();
     for (auto&& vv : v) a += vv;
     return a;
@@ -2565,13 +2519,13 @@ inline bbox<T, N> make_bbox(const initializer_list<vec<T, N>>& v) {
 
 /// Computes the corners of a bounding boxes.
 template <typename T>
-inline array<vec<T, 2>, 4> bbox_corners(const bbox<T, 2>& a) {
+inline std::array<vec<T, 2>, 4> bbox_corners(const bbox<T, 2>& a) {
     return {{{a.min.x, a.min.y}, {a.min.x, a.min.y}, {a.min.x, a.max.y},
         {a.min.x, a.max.y}}};
 }
 /// Computes the corners of a bounding boxes.
 template <typename T>
-inline array<vec<T, 3>, 8> bbox_corners(const bbox<T, 3>& a) {
+inline std::array<vec<T, 3>, 8> bbox_corners(const bbox<T, 3>& a) {
     return {{{a.min.x, a.min.y, a.min.z}, {a.min.x, a.min.y, a.max.z},
         {a.min.x, a.max.y, a.min.z}, {a.min.x, a.max.y, a.max.z},
         {a.max.x, a.min.y, a.min.z}, {a.max.x, a.min.y, a.max.z},
@@ -2580,12 +2534,12 @@ inline array<vec<T, 3>, 8> bbox_corners(const bbox<T, 3>& a) {
 
 /// Stream write.
 template <typename T, int N>
-inline ostream& operator<<(ostream& os, const bbox<T, N>& a) {
+inline std::ostream& operator<<(std::ostream& os, const bbox<T, N>& a) {
     return os << a.min << ' ' << a.max;
 }
 /// Stream read.
 template <typename T, int N>
-inline istream& operator>>(istream& is, bbox<T, N>& a) {
+inline std::istream& operator>>(std::istream& is, bbox<T, N>& a) {
     return is >> a.min >> a.max;
 }
 
@@ -2690,12 +2644,12 @@ inline ray<T, N> make_segment(
 
 /// Stream write.
 template <typename T, int N>
-inline ostream& operator<<(ostream& os, const ray<T, N>& a) {
+inline std::ostream& operator<<(std::ostream& os, const ray<T, N>& a) {
     return os << a.o << ' ' << a.d << ' ' << a.tmin << ' ' << a.tmax;
 }
 /// Stream read.
 template <typename T, int N>
-inline istream& operator>>(istream& is, ray<T, N>& a) {
+inline std::istream& operator>>(std::istream& is, ray<T, N>& a) {
     return is >> a.o >> a.d >> a.tmin >> a.tmax;
 }
 
@@ -2968,7 +2922,7 @@ inline mat<T, 4> perspective_mat(T fovy, T aspect, T near) {
 
 /// Rotation affine transform.
 template <typename T>
-inline pair<vec<T, 4>, T> rotation_axisangle(const quat<T, 4>& a) {
+inline std::pair<vec<T, 4>, T> rotation_axisangle(const quat<T, 4>& a) {
     return {normalize(vec<T, 3>{a.x, a.y, a.z}), 2 * acos(a.w)};
 }
 /// Axis-angle to quaternion conversion.
@@ -3032,7 +2986,7 @@ inline quat<T, 4> rotation_quat(const mat<T, 3>& m_) {
 /// Decompose an affine matrix into translation, rotation, scale.
 /// Assumes there is no shear.
 template <typename T>
-inline tuple<vec<T, 3>, mat<T, 3>, vec<T, 3>> decompose_frame(
+inline std::tuple<vec<T, 3>, mat<T, 3>, vec<T, 3>> decompose_frame(
     const frame<T, 3>& m) {
     return {m.o, {normalize(m.x), normalize(m.y), normalize(m.z)},
         {length(m.x), length(m.y), length(m.z)}};
@@ -3041,7 +2995,7 @@ inline tuple<vec<T, 3>, mat<T, 3>, vec<T, 3>> decompose_frame(
 /// Decompose an affine matrix into translation, rotation, scale.
 /// Assumes there is no shear and the matrix is affine.
 template <typename T>
-inline tuple<vec<T, 3>, quat<T, 4>, vec<T, 3>> decompose_frame(
+inline std::tuple<vec<T, 3>, quat<T, 4>, vec<T, 3>> decompose_frame(
     const frame<T, 3>& m) {
     auto pos = vec<T, 3>();
     auto rot = mat<T, 3>();
@@ -3270,7 +3224,7 @@ inline void rng_shuffle(rng_pcg32& rng, T* vals, int num) {
 
 /// Random shuffle of a sequence.
 template <typename T>
-inline void rng_shuffle(rng_pcg32& rng, vector<T>& vals) {
+inline void rng_shuffle(rng_pcg32& rng, std::vector<T>& vals) {
     rng_shuffle(rng, vals.data(), vals.size());
 }
 
@@ -3382,7 +3336,7 @@ inline int sample_index(int size, float r) {
 inline float sample_index_pdf(int size) { return 1.0f / size; }
 
 /// Sample a discrete distribution represented by its cdf.
-inline int sample_discrete(const vector<float>& cdf, float r) {
+inline int sample_discrete(const std::vector<float>& cdf, float r) {
     // todo: implement binary search better
     r = clamp(r * cdf.back(), 0.0f, cdf.back() - 0.00001f);
     for (auto i = 1; i < cdf.size(); i++) {
@@ -3391,7 +3345,7 @@ inline int sample_discrete(const vector<float>& cdf, float r) {
     return (int)cdf.size() - 1;
 }
 /// Pdf for uniform discrete distribution sampling.
-inline float sample_discrete_pdf(const vector<float>& cdf, int idx) {
+inline float sample_discrete_pdf(const std::vector<float>& cdf, int idx) {
     if (idx == 0) return cdf.at(0);
     return cdf.at(idx) - cdf.at(idx - 1);
 }
@@ -3553,7 +3507,7 @@ struct enumerate_generator {
         iterator(int pos, T* data) : _pos(pos), _data(data) {}
         bool operator!=(const iterator& a) const { return _pos < a._pos; }
         iterator& operator++() { _pos += 1; _data += 1; return *this; }
-        pair<int, T&> operator*() const { return {_pos, *_data}; }
+        std::pair<int, T&> operator*() const { return {_pos, *_data}; }
         private: int _pos; T* _data;
     };
     enumerate_generator(int max, T* data) : _max(max), _data(data) {}
@@ -3565,12 +3519,12 @@ struct enumerate_generator {
 
 /// Python-like enumerate.
 template <typename T>
-inline enumerate_generator<const T> enumerate(const vector<T>& vv) {
+inline enumerate_generator<const T> enumerate(const std::vector<T>& vv) {
     return {(int)vv.size(), vv.data()};
 }
 /// Python-like enumerate.
 template <typename T>
-inline enumerate_generator<T> enumerate(vector<T>& vv) {
+inline enumerate_generator<T> enumerate(std::vector<T>& vv) {
     return {(int)vv.size(), vv.data()};
 }
 
@@ -3588,13 +3542,13 @@ namespace ygl {
 
 /// Append a vector to a vector.
 template <typename T>
-inline void append(vector<T>& v, const vector<T>& vv) {
+inline void append(std::vector<T>& v, const std::vector<T>& vv) {
     v.insert(v.end(), vv.begin(), vv.end());
 }
 /// Append two vectors.
 template <typename T>
-inline vector<T> join(const vector<T>& a, const vector<T>& b) {
-    auto v = vector<T>();
+inline std::vector<T> join(const std::vector<T>& a, const std::vector<T>& b) {
+    auto v = std::vector<T>();
     append(v, a);
     append(v, b);
     return v;
@@ -3602,23 +3556,23 @@ inline vector<T> join(const vector<T>& a, const vector<T>& b) {
 
 /// Get a key from a list of key-value pairs and its value.
 template <typename K, typename V>
-inline K get_key(const std::vector<pair<K, V>>& kvs, const V& v) {
+inline K get_key(const std::vector<std::pair<K, V>>& kvs, const V& v) {
     for (auto& kv : kvs)
         if (kv.second == v) return kv.first;
-    throw runtime_error("key not found");
+    throw std::runtime_error("key not found");
 }
 /// Get a value from a list of key-value pairs and its key.
 template <typename K, typename V>
-inline V get_value(const std::vector<pair<K, V>>& kvs, const K& k) {
+inline V get_value(const std::vector<std::pair<K, V>>& kvs, const K& k) {
     for (auto& kv : kvs)
         if (kv.first == k) return kv.second;
-    throw runtime_error("key not found");
+    throw std::runtime_error("key not found");
 }
 
 /// Find the position of a value in an array. Returns -1 if not found.
 /// Wrapper for std::find().
 template <typename T>
-inline int find(const vector<T>& v, const T& vv) {
+inline int find(const std::vector<T>& v, const T& vv) {
     auto pos = find(v.begin(), v.end(), vv);
     if (pos == v.end()) return -1;
     return pos = v.begin();
@@ -3627,7 +3581,7 @@ inline int find(const vector<T>& v, const T& vv) {
 /// Find the first array value that is greater than the argument.
 /// Assumes that the array is sorted. Wrapper for std::upper_bound().
 template <typename T>
-inline int upper_bound(const vector<T>& v, const T& vv) {
+inline int upper_bound(const std::vector<T>& v, const T& vv) {
     for (auto i = 0; i < v.size(); i++)
         if (v[i] > vv) return i;
     return (int)v.size();
@@ -3636,7 +3590,7 @@ inline int upper_bound(const vector<T>& v, const T& vv) {
 /// Find the first array value smaller that is greater or equal to the argument.
 /// Assumes that the array is sorted. Wrapper for std::lower_bound().
 template <typename T>
-inline int lower_bound(const vector<T>& v, const T& vv) {
+inline int lower_bound(const std::vector<T>& v, const T& vv) {
     for (auto i = 0; i < v.size(); i++)
         if (v[i] >= vv) return i;
     return (int)v.size();
@@ -3644,37 +3598,37 @@ inline int lower_bound(const vector<T>& v, const T& vv) {
 
 /// Checks if a containers contains a value.
 template <typename T>
-inline bool contains(const vector<T>& v, const T& vv) {
+inline bool contains(const std::vector<T>& v, const T& vv) {
     return find(v.begin(), v.end(), vv) != v.end();
 }
 /// Checks if a containers contains a value.
 template <typename K, typename V>
-inline bool contains(const map<K, V>& v, const K& vv) {
+inline bool contains(const std::map<K, V>& v, const K& vv) {
     return v.find(vv) != v.end();
 }
 /// Checks if a containers contains a value.
 template <typename K, typename V>
-inline bool contains(const unordered_map<K, V>& v, const K& vv) {
+inline bool contains(const std::unordered_map<K, V>& v, const K& vv) {
     return v.find(vv) != v.end();
 }
 /// Checks if a containers contains a value.
 template <typename K, typename V>
-inline bool contains(const set<K, V>& v, const K& vv) {
+inline bool contains(const std::set<K, V>& v, const K& vv) {
     return v.find(vv) != v.end();
 }
 /// Checks if a containers contains a value.
 template <typename K, typename V>
-inline bool contains(const unordered_set<K, V>& v, const K& vv) {
+inline bool contains(const std::unordered_set<K, V>& v, const K& vv) {
     return v.find(vv) != v.end();
 }
 /// Checks if a containers contains a value.
 template <typename K, typename V, typename K1>
-inline bool contains(const unordered_map<K, V>& v, const K1& vv) {
+inline bool contains(const std::unordered_map<K, V>& v, const K1& vv) {
     return v.find(vv) != v.end();
 }
 /// Checks if a containers contains a value.
 template <typename K, typename V, typename K1>
-inline bool contains(const unordered_set<K, V>& v, const K1& vv) {
+inline bool contains(const std::unordered_set<K, V>& v, const K1& vv) {
     return v.find(vv) != v.end();
 }
 
@@ -3699,27 +3653,27 @@ struct _always_false {
 
 /// Names of enum values. Specialized by enums that support reflection.
 template <typename T>
-inline const vector<pair<string, T>>& enum_names() {
+inline const std::vector<std::pair<std::string, T>>& enum_names() {
     static_assert(_always_false<T>::value, "Specialize this function.");
 }
 
 /// Names of enum values.
 template <typename T>
-inline const vector<pair<string, T>>& enum_names(T v) {
+inline const std::vector<std::pair<std::string, T>>& enum_names(T v) {
     return enum_names<T>();
 }
 
 /// Stream write.
 template <typename T,
     typename std::enable_if<std::is_enum<T>::value, int>::type = 0>
-inline ostream& operator<<(ostream& os, const T& a) {
+inline std::ostream& operator<<(std::ostream& os, const T& a) {
     return os << get_key(enum_names(a), a);
 }
 /// Stream read.
 template <typename T,
     typename std::enable_if<std::is_enum<T>::value, int>::type = 0>
-inline istream& operator>>(istream& is, T& a) {
-    auto str = string();
+inline std::istream& operator>>(std::istream& is, T& a) {
+    auto str = std::string();
     is >> str;
     a = get_val(enum_names(a), str);
     return is;
@@ -3773,7 +3727,7 @@ inline void visit(T*& val, Visitor&& visitor) {
 /// Stream write.
 template <typename T,
     typename std::enable_if<has_visitor<T>::value, int>::type = 0>
-inline ostream& operator<<(ostream& os, const T& a) {
+inline std::ostream& operator<<(std::ostream& os, const T& a) {
     visit(a, [&os](auto& name, auto& val, auto&) {
         os << name << ": " << val << "\n";
     });
@@ -3831,7 +3785,7 @@ inline float tetrahedron_volume(
 /// not the normal). Follows the definition in
 /// http://www.terathon.com/code/tangent.html and
 /// https://gist.github.com/aras-p/2843984
-inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& v0,
+inline std::pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& v0,
     const vec3f& v1, const vec3f& v2, const vec2f& uv0, const vec2f& uv1,
     const vec2f& uv2) {
     // normal points up from texture space
@@ -3856,7 +3810,7 @@ inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& v0,
 
 /// Copies of point value. Here only for completeness.
 template <typename T>
-inline T interpolate_point(const vector<T>& vals, int p) {
+inline T interpolate_point(const std::vector<T>& vals, int p) {
     if (vals.empty()) return T();
     return vals[p];
 }
@@ -3868,7 +3822,7 @@ inline T interpolate_line(const T& v0, const T& v1, const T1 u) {
 }
 /// Interpolates values over lines parametrized from a to b by u. Same as lerp.
 template <typename T, typename T1>
-inline T interpolate_line(const vector<T>& vals, const vec2i& l, T1 u) {
+inline T interpolate_line(const std::vector<T>& vals, const vec2i& l, T1 u) {
     if (vals.empty()) return T();
     return vals[l.x] * (1 - u) + vals[l.y] * u;
 }
@@ -3884,7 +3838,7 @@ inline T interpolate_triangle(
 /// (v1-v0) and (v2-v0) directions. Same as barycentric interpolation.
 template <typename T, typename T1>
 inline T interpolate_triangle(
-    const vector<T>& vals, const vec3i& t, const vec<T1, 2>& uv) {
+    const std::vector<T>& vals, const vec3i& t, const vec<T1, 2>& uv) {
     if (vals.empty()) return T();
     return vals[t.x] * (1 - uv.x - uv.y) + vals[t.y] * uv.x + vals[t.z] * uv.y;
 }
@@ -3901,7 +3855,7 @@ inline T interpolate_triangle(
 /// (v1-v0) and (v2-v1) direction. Same as bilear interpolation.
 template <typename T, typename T1>
 inline T interpolate_quad(
-    const vector<T>& vals, const vec4i& t, const vec<T1, 2>& uv) {
+    const std::vector<T>& vals, const vec4i& t, const vec<T1, 2>& uv) {
     if (vals.empty()) return T();
     return vals[t.x] * (1 - uv.x) * (1 - uv.y) + vals[t.y] * uv.x * (1 - uv.y) +
            vals[t.z] * uv.x * uv.y + vals[t.w] * (1 - uv.x) * uv.y;
@@ -3957,7 +3911,7 @@ inline T interpolate_bezier(
 }
 /// Interpolates values along cubic Bezier segments parametrized by u.
 template <typename T, typename T1>
-inline T interpolate_bezier(const vector<T>& vals, const vec4i& b, T1 u) {
+inline T interpolate_bezier(const std::vector<T>& vals, const vec4i& b, T1 u) {
     if (vals.empty()) return T();
     return eval_bezier(vals[b.x], vals[b.y], vals[b.z], vals[b.w], u);
 }
@@ -3971,7 +3925,7 @@ inline T interpolate_bezier_derivative(
 /// Computes the derivative of a cubic Bezier segments parametrized by u.
 template <typename T, typename T1>
 inline T interpolate_bezier_derivative(
-    const vector<T>& vals, const vec4i& b, T1 u) {
+    const std::vector<T>& vals, const vec4i& b, T1 u) {
     if (vals.empty()) return T();
     return interpolate_bezier_derivative(
         vals[b.x], vals[b.y], vals[b.z], vals[b.w], u);
@@ -3992,7 +3946,7 @@ namespace ygl {
 /// Evalautes a keyframed value using step interpolation.
 template <typename T>
 inline T eval_keyframed_step(
-    const vector<float>& times, const vector<T>& vals, float time) {
+    const std::vector<float>& times, const std::vector<T>& vals, float time) {
     if (time <= times.front()) return vals.front();
     if (time >= times.back()) return vals.back();
     time = clamp(time, times.front(), times.back() - 0.001f);
@@ -4014,7 +3968,7 @@ inline quat<T, 4> eval_keyframed_lerp(
 /// Evalautes a keyframed value using linear interpolation.
 template <typename T>
 inline T eval_keyframed_linear(
-    const vector<float>& times, const vector<T>& vals, float time) {
+    const std::vector<float>& times, const std::vector<T>& vals, float time) {
     if (time <= times.front()) return vals.front();
     if (time >= times.back()) return vals.back();
     time = clamp(time, times.front(), times.back() - 0.001f);
@@ -4038,7 +3992,7 @@ inline quat<T, 4> eval_keyframed_cubic(const quat<T, 4>& a, const quat<T, 4>& b,
 /// Evalautes a keyframed value using Bezier interpolation.
 template <typename T>
 inline T eval_keyframed_bezier(
-    const vector<float>& times, const vector<T>& vals, float time) {
+    const std::vector<float>& times, const std::vector<T>& vals, float time) {
     if (time <= times.front()) return vals.front();
     if (time >= times.back()) return vals.back();
     time = clamp(time, times.front(), times.back() - 0.001f);
@@ -4063,80 +4017,83 @@ namespace ygl {
 /// Compute per-vertex normals/tangents for lines, triangles and quads with
 /// positions pos. Weighted indicated whether the normals/tangents are
 /// weighted by length/area.
-vector<vec3f> compute_normals(const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads,
-    const vector<vec3f>& pos, bool weighted = true);
+std::vector<vec3f> compute_normals(const std::vector<vec2i>& lines,
+    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads,
+    const std::vector<vec3f>& pos, bool weighted = true);
 
 /// Compute per-vertex tangent frames for triangle meshes.
 /// Tangent space is defined by a four component vector.
 /// The first three components are the tangent with respect to the u texcoord.
 /// The fourth component is the sign of the tangent wrt the v texcoord.
 /// Tangent frame is useful in normal mapping.
-vector<vec4f> compute_tangent_frames(const vector<vec3i>& triangles,
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec2f>& texcoord, bool weighted = true);
+std::vector<vec4f> compute_tangent_frames(const std::vector<vec3i>& triangles,
+    const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
+    const std::vector<vec2f>& texcoord, bool weighted = true);
 
 /// Apply skinning to vertex position and normals.
-void compute_skinning(const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec4f>& weights, const vector<vec4i>& joints,
-    const vector<mat4f>& xforms, vector<vec3f>& skinned_pos,
-    vector<vec3f>& skinned_norm);
+void compute_skinning(const std::vector<vec3f>& pos,
+    const std::vector<vec3f>& norm, const std::vector<vec4f>& weights,
+    const std::vector<vec4i>& joints, const std::vector<mat4f>& xforms,
+    std::vector<vec3f>& skinned_pos, std::vector<vec3f>& skinned_norm);
 /// Apply skinning.
-void compute_skinning(const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec4f>& weights, const vector<vec4i>& joints,
-    const vector<frame3f>& xforms, vector<vec3f>& skinned_pos,
-    vector<vec3f>& skinned_norm);
+void compute_skinning(const std::vector<vec3f>& pos,
+    const std::vector<vec3f>& norm, const std::vector<vec4f>& weights,
+    const std::vector<vec4i>& joints, const std::vector<frame3f>& xforms,
+    std::vector<vec3f>& skinned_pos, std::vector<vec3f>& skinned_norm);
 /// Apply skinning as specified in Khronos glTF.
-void compute_matrix_skinning(const vector<vec3f>& pos,
-    const vector<vec3f>& norm, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<mat4f>& xforms,
-    vector<vec3f>& skinned_pos, vector<vec3f>& skinned_norm);
+void compute_matrix_skinning(const std::vector<vec3f>& pos,
+    const std::vector<vec3f>& norm, const std::vector<vec4f>& weights,
+    const std::vector<vec4i>& joints, const std::vector<mat4f>& xforms,
+    std::vector<vec3f>& skinned_pos, std::vector<vec3f>& skinned_norm);
 
 /// Create an array of edges.
-vector<vec2i> get_edges(const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads);
+std::vector<vec2i> get_edges(const std::vector<vec2i>& lines,
+    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads);
 /// Create an array of boundary edges. Lines are always considered boundaries.
-vector<vec2i> get_boundary_edges(const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads);
+std::vector<vec2i> get_boundary_edges(const std::vector<vec2i>& lines,
+    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads);
 
 /// Get a list of all unique vertices.
-vector<int> get_verts(const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads);
+std::vector<int> get_verts(const std::vector<vec2i>& lines,
+    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads);
 /// Create an array of boundary vertices. Lines are always considered
 /// boundaries.
-vector<int> get_boundary_verts(const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads);
+std::vector<int> get_boundary_verts(const std::vector<vec2i>& lines,
+    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads);
 
 /// Convert quads to triangles
-vector<vec3i> convert_quads_to_triangles(const vector<vec4i>& quads);
+std::vector<vec3i> convert_quads_to_triangles(const std::vector<vec4i>& quads);
 /// Convert quads to triangles with a diamond-like topology.
 /// Quads have to be consecutive one row after another.
-vector<vec3i> convert_quads_to_triangles(
-    const vector<vec4i>& quads, int row_length);
+std::vector<vec3i> convert_quads_to_triangles(
+    const std::vector<vec4i>& quads, int row_length);
 
 /// Convert beziers to lines using 3 lines for each bezier.
-vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers);
+std::vector<vec2i> convert_bezier_to_lines(const std::vector<vec4i>& beziers);
 
 /// Convert face-varying data to single primitives. Returns the quads indices
 /// and filled vectors for pos, norm and texcoord.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-convert_face_varying(const vector<vec4i>& quads_pos,
-    const vector<vec4i>& quads_norm, const vector<vec4i>& quads_texcoord,
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec2f>& texcoord);
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
+convert_face_varying(const std::vector<vec4i>& quads_pos,
+    const std::vector<vec4i>& quads_norm,
+    const std::vector<vec4i>& quads_texcoord, const std::vector<vec3f>& pos,
+    const std::vector<vec3f>& norm, const std::vector<vec2f>& texcoord);
 
 /// Tesselate lines, triangles and quads by splitting edges and faces for quads.
 /// Returns the tesselated elements and edge and face array for vertex
 /// calculations.
-tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>, vector<vec2i>, vector<vec4i>>
-subdivide_elems_linear(const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads, int nverts);
+std::tuple<std::vector<vec2i>, std::vector<vec3i>, std::vector<vec4i>,
+    std::vector<vec2i>, std::vector<vec4i>>
+subdivide_elems_linear(const std::vector<vec2i>& lines,
+    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads,
+    int nverts);
 
 /// Subdivide vertex properties for edges and faces. This is implemented for
 /// vecs and floats.
 template <typename T>
-vector<T> subdivide_vert_linear(const vector<T>& vert,
-    const vector<vec2i>& edges, const vector<vec4i>& faces,
+std::vector<T> subdivide_vert_linear(const std::vector<T>& vert,
+    const std::vector<vec2i>& edges, const std::vector<vec4i>& faces,
     bool normalized = false);
 
 /// Performs the smoothing step of Catmull-Clark. Start with a tesselate quad
@@ -4146,51 +4103,56 @@ vector<T> subdivide_vert_linear(const vector<T>& vert,
 /// boundary vertices and pass it as creases. This is implemented for vecs
 /// and floats.
 template <typename T>
-vector<T> subdivide_vert_catmullclark(const vector<vec4i>& quads,
-    const vector<T>& vert, const vector<vec2i>& crease_tlines,
-    const vector<int>& crease_tpoints, bool normalized = false);
+std::vector<T> subdivide_vert_catmullclark(const std::vector<vec4i>& quads,
+    const std::vector<T>& vert, const std::vector<vec2i>& crease_tlines,
+    const std::vector<int>& crease_tpoints, bool normalized = false);
 
 /// Subdivide Bezier segments recursively by splitting each segment into two
 /// in the middle. Returns the tesselated elements and dictionaries for vertex
 /// calculations.
-tuple<vector<vec4i>, vector<int>, vector<vec4i>> subdivide_bezier_recursive(
-    const vector<vec4i>& beziers, int nverts);
+std::tuple<std::vector<vec4i>, std::vector<int>, std::vector<vec4i>>
+subdivide_bezier_recursive(const std::vector<vec4i>& beziers, int nverts);
 /// Subdivide vertex properties for Bezier subdivision. This is implemente for
 /// vecs and floats.
 template <typename T>
-vector<T> subdivide_vert_bezier(const vector<T>& vert, const vector<int>& verts,
-    const vector<vec4i>& segments, bool normalized = false);
+std::vector<T> subdivide_vert_bezier(const std::vector<T>& vert,
+    const std::vector<int>& verts, const std::vector<vec4i>& segments,
+    bool normalized = false);
 
 /// Generate a rectangular grid of usteps x vsteps uv values for parametric
 /// surface generation. Values cam wrap and have poles.
-tuple<vector<vec4i>, vector<vec2f>> make_uvquads(int usteps, int vsteps,
-    bool uwrap = false, bool vwrap = false, bool vpole0 = false,
+std::tuple<std::vector<vec4i>, std::vector<vec2f>> make_uvquads(int usteps,
+    int vsteps, bool uwrap = false, bool vwrap = false, bool vpole0 = false,
     bool vpole1 = false);
 
 /// Generate parametric num lines of usteps segments.
-tuple<vector<vec2i>, vector<vec2f>> make_uvlines(int num, int usteps);
+std::tuple<std::vector<vec2i>, std::vector<vec2f>> make_uvlines(
+    int num, int usteps);
 
 /// Generate a parametric point set. Mostly here for completeness.
-tuple<vector<int>, vector<vec2f>> make_uvpoints(int num);
+std::tuple<std::vector<int>, std::vector<vec2f>> make_uvpoints(int num);
 
 /// Merge elements between shapes. The elements are merged by increasing the
 /// array size of the second array by the number of vertices of the first.
 /// Vertex data can then be concatenated successfully.
-tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>> merge_elems(int nverts,
-    const vector<vec2i>& lines1, const vector<vec3i>& triangles1,
-    const vector<vec4i>& quads1, const vector<vec2i>& lines2,
-    const vector<vec3i>& triangles2, const vector<vec4i>& quads2);
+std::tuple<std::vector<vec2i>, std::vector<vec3i>, std::vector<vec4i>>
+merge_elems(int nverts, const std::vector<vec2i>& lines1,
+    const std::vector<vec3i>& triangles1, const std::vector<vec4i>& quads1,
+    const std::vector<vec2i>& lines2, const std::vector<vec3i>& triangles2,
+    const std::vector<vec4i>& quads2);
 
 /// Unshare shape data by duplicating all vertex data for each element,
 /// giving a faceted look. Note that faceted tangents are not computed.
 /// Returns the indices to copy from.
-tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>, vector<int>> facet_elems(
-    const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads);
+std::tuple<std::vector<vec2i>, std::vector<vec3i>, std::vector<vec4i>,
+    std::vector<int>>
+facet_elems(const std::vector<vec2i>& lines,
+    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads);
 
 /// Unshare vertices for faceting. This is implemented for vec and float types.
 template <typename T>
-vector<T> facet_vert(const vector<T>& vert, const vector<int>& vmap);
+std::vector<T> facet_vert(
+    const std::vector<T>& vert, const std::vector<int>& vmap);
 
 /// @}
 
@@ -4209,45 +4171,45 @@ inline int sample_points(int npoints, float re) {
     return sample_index(npoints, re);
 }
 /// Compute a distribution for sampling points uniformly.
-vector<float> sample_points_cdf(int npoints);
+std::vector<float> sample_points_cdf(int npoints);
 /// Pick a point uniformly.
-inline int sample_points(const vector<float>& cdf, float re) {
+inline int sample_points(const std::vector<float>& cdf, float re) {
     return sample_discrete(cdf, re);
 }
 
 /// Compute a distribution for sampling lines uniformly.
-vector<float> sample_lines_cdf(
-    const vector<vec2i>& lines, const vector<vec3f>& pos);
+std::vector<float> sample_lines_cdf(
+    const std::vector<vec2i>& lines, const std::vector<vec3f>& pos);
 /// Pick a point on lines uniformly.
-inline pair<int, float> sample_lines(
-    const vector<float>& cdf, float re, float ru) {
+inline std::pair<int, float> sample_lines(
+    const std::vector<float>& cdf, float re, float ru) {
     return {sample_discrete(cdf, re), ru};
 }
 
 /// Compute a distribution for sampling triangle meshes uniformly.
-vector<float> sample_triangles_cdf(
-    const vector<vec3i>& triangles, const vector<vec3f>& pos);
+std::vector<float> sample_triangles_cdf(
+    const std::vector<vec3i>& triangles, const std::vector<vec3f>& pos);
 /// Pick a point on a triangle mesh uniformly.
-inline pair<int, vec2f> sample_triangles(
-    const vector<float>& cdf, float re, const vec2f& ruv) {
+inline std::pair<int, vec2f> sample_triangles(
+    const std::vector<float>& cdf, float re, const vec2f& ruv) {
     return {sample_discrete(cdf, re), sample_triangle(ruv)};
 }
 
 /// Compute a distribution for sampling quad meshes uniformly.
-vector<float> sample_quads_cdf(
-    const vector<vec4i>& quads, const vector<vec3f>& pos);
+std::vector<float> sample_quads_cdf(
+    const std::vector<vec4i>& quads, const std::vector<vec3f>& pos);
 /// Pick a point on a quad mesh uniformly.
-inline pair<int, vec2f> sample_quads(
-    const vector<float>& cdf, float re, const vec2f& ruv) {
+inline std::pair<int, vec2f> sample_quads(
+    const std::vector<float>& cdf, float re, const vec2f& ruv) {
     return {sample_discrete(cdf, re), ruv};
 }
 
 /// Samples a set of points over a triangle mesh uniformly. Returns pos, norm
 /// and tecoord of the sampled points.
-tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
-    const vector<vec3i>& triangles, const vector<vec3f>& pos,
-    const vector<vec3f>& norm, const vector<vec2f>& texcoord, int npoints,
-    uint64_t seed = 0);
+std::tuple<std::vector<vec3f>, std::vector<vec3f>, std::vector<vec2f>>
+sample_triangles_points(const std::vector<vec3i>& triangles,
+    const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
+    const std::vector<vec2f>& texcoord, int npoints, uint64_t seed = 0);
 
 /// @}
 
@@ -4262,65 +4224,75 @@ namespace ygl {
 /// @{
 
 /// Make a sphere. Returns quads, pos.
-tuple<vector<vec3i>, vector<vec3f>> make_sphere(int tesselation);
+std::tuple<std::vector<vec3i>, std::vector<vec3f>> make_sphere(int tesselation);
 
 /// Make a geodesic sphere. Returns quads, pos.
-tuple<vector<vec3i>, vector<vec3f>> make_geodesicsphere(int tesselation);
+std::tuple<std::vector<vec3i>, std::vector<vec3f>> make_geodesicsphere(
+    int tesselation);
 
 /// Make a cube with unique vertices. This is watertight but has no
 /// texture coordinates or normals. Returns quads, pos.
-tuple<vector<vec4i>, vector<vec3f>> make_cube(int tesselation);
+std::tuple<std::vector<vec4i>, std::vector<vec3f>> make_cube(int tesselation);
 
 /// Make a sphere. This is not watertight. Returns quads, pos, norm, texcoord.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_uvsphere(
-    int tesselation, bool flipped = false);
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
+make_uvsphere(int tesselation, bool flipped = false);
 
 /// Make a sphere. This is not watertight. Returns quads, pos, norm, texcoord.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
 make_uvhemisphere(int tesselation, bool flipped = false);
 
 /// Make a quad. Returns quads, pos, norm, texcoord.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_uvquad(
-    int tesselation);
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
+make_uvquad(int tesselation);
 
 /// Make a facevarying sphere with unique vertices but different texture
 /// coordinates. Returns (quads, pos), (quads, norm), (quads, texcoord).
-tuple<vector<vec4i>, vector<vec3f>, vector<vec4i>, vector<vec3f>, vector<vec4i>,
-    vector<vec2f>>
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec4i>,
+    std::vector<vec3f>, std::vector<vec4i>, std::vector<vec2f>>
 make_fvsphere(int tesselation);
 
 /// Make a facevarying cube with unique vertices but different texture
 /// coordinates. Returns (quads, pos), (quads, norm), (quads, texcoord).
-tuple<vector<vec4i>, vector<vec3f>, vector<vec4i>, vector<vec3f>, vector<vec4i>,
-    vector<vec2f>>
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec4i>,
+    std::vector<vec3f>, std::vector<vec4i>, std::vector<vec2f>>
 make_fvcube(int tesselation);
 
 /// Make a suzanne monkey model for testing. Note that some quads are
 /// degenerate. Returns quads, pos.
-tuple<vector<vec4i>, vector<vec3f>> make_suzanne(int tesselation);
+std::tuple<std::vector<vec4i>, std::vector<vec3f>> make_suzanne(
+    int tesselation);
 
 /// Make a cube. This is not watertight. Returns quads, pos, norm, texcoord.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_uvcube(
-    int tesselation);
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
+make_uvcube(int tesselation);
 
 /// Make a sphere from a cube. This is not watertight. Returns quads, pos, norm,
 /// texcoord.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
 make_uvspherecube(int tesselation);
 
 /// Make a cube than stretch it towards a sphere. This is not watertight.
 /// Returns quads, pos, norm, texcoord.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
 make_uvspherizedcube(int tesselation, float radius);
 
 /// Make a sphere with caps flipped. This is not watertight. Returns quads, pos,
 /// norm, texcoord.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
 make_uvflipcapsphere(int tesselation, float z, bool flipped = false);
 
 /// Make a cutout sphere. This is not watertight. Returns quads, pos, norm,
 /// texcoord.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
 make_uvcutsphere(int tesselation, float z, bool flipped = false);
 
 /// Make seashell params
@@ -4348,11 +4320,12 @@ struct make_seashell_params {
 };
 
 /// Make a seashell. This is not watertight. Returns quads, pos, norm, texcoord.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>>
 make_uvseashell(int tesselation, const make_seashell_params& params);
 
 /// Make a bezier circle. Returns bezier, pos.
-tuple<vector<vec4i>, vector<vec3f>> make_bezier_circle();
+std::tuple<std::vector<vec4i>, std::vector<vec3f>> make_bezier_circle();
 
 /// Parameters for the make hair function
 struct make_hair_params {
@@ -4371,10 +4344,11 @@ struct make_hair_params {
 };
 
 /// Make a hair ball around a shape. Returns lines, pos, norm, texcoord, radius.
-tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>
-make_hair(int num, int tesselation, const vector<vec3i>& striangles,
-    const vector<vec4i>& squads, const vector<vec3f>& spos,
-    const vector<vec3f>& snorm, const vector<vec2f>& stexcoord,
+std::tuple<std::vector<vec2i>, std::vector<vec3f>, std::vector<vec3f>,
+    std::vector<vec2f>, std::vector<float>>
+make_hair(int num, int tesselation, const std::vector<vec3i>& striangles,
+    const std::vector<vec4i>& squads, const std::vector<vec3f>& spos,
+    const std::vector<vec3f>& snorm, const std::vector<vec2f>& stexcoord,
     const make_hair_params& params);
 
 /// @}
@@ -4413,7 +4387,7 @@ struct image {
     /// Width and height [private].
     int w, h;
     /// Pixels [private].
-    vector<T> pixels;
+    std::vector<T> pixels;
 };
 
 /// HDR image
@@ -4633,41 +4607,41 @@ namespace ygl {
 #if YGL_IMAGEIO
 
 /// Check if an image is HDR based on filename.
-bool is_hdr_filename(const string& filename);
+bool is_hdr_filename(const std::string& filename);
 
 /// Loads a 4 channel ldr image.
-image4b load_image4b(const string& filename);
+image4b load_image4b(const std::string& filename);
 /// Loads a 4 channel hdr image.
-image4f load_image4f(const string& filename);
+image4f load_image4f(const std::string& filename);
 
 /// Saves a 4 channel ldr image.
-bool save_image4b(const string& filename, const image4b& img);
+bool save_image4b(const std::string& filename, const image4b& img);
 /// Saves a 4 channel hdr image.
-bool save_image4f(const string& filename, const image4f& img);
+bool save_image4f(const std::string& filename, const image4f& img);
 
 /// Loads an image with variable number of channels.
-vector<float> load_imagef(
-    const string& filename, int& width, int& height, int& ncomp);
+std::vector<float> load_imagef(
+    const std::string& filename, int& width, int& height, int& ncomp);
 /// Loads an image with variable number of channels.
-vector<byte> load_image(
-    const string& filename, int& width, int& height, int& ncomp);
+std::vector<byte> load_image(
+    const std::string& filename, int& width, int& height, int& ncomp);
 
 /// Loads an image from memory with variable number of channels.
-vector<float> load_imagef_from_memory(const string& filename, const byte* data,
-    int length, int& width, int& height, int& ncomp);
+std::vector<float> load_imagef_from_memory(const std::string& filename,
+    const byte* data, int length, int& width, int& height, int& ncomp);
 /// Loads an image from memory with variable number of channels.
-vector<byte> load_image_from_memory(const string& filename, const byte* data,
-    int length, int& width, int& height, int& ncomp);
+std::vector<byte> load_image_from_memory(const std::string& filename,
+    const byte* data, int length, int& width, int& height, int& ncomp);
 
 /// Saves an image with variable number of channels.
-bool save_imagef(
-    const string& filename, int width, int height, int ncomp, const float* hdr);
+bool save_imagef(const std::string& filename, int width, int height, int ncomp,
+    const float* hdr);
 /// Saves an image with variable number of channels.
-bool save_image(
-    const string& filename, int width, int height, int ncomp, const byte* ldr);
+bool save_image(const std::string& filename, int width, int height, int ncomp,
+    const byte* ldr);
 
 /// Save a 4 channel HDR or LDR image with tonemapping based on filename.
-bool save_image(const string& filename, const image4f& hdr, float exposure,
+bool save_image(const std::string& filename, const image4f& hdr, float exposure,
     float gamma, bool filmic = false);
 
 /// Filter type for resizing.
@@ -4875,29 +4849,29 @@ struct bvh_instance {
 /// This is an internal data structure.
 struct bvh_tree {
     /// Sorted array of internal nodes.
-    vector<bvh_node> nodes;
+    std::vector<bvh_node> nodes;
     /// Sorted array of elements.
-    vector<int> sorted_prim;
+    std::vector<int> sorted_prim;
     /// Leaf element type.
     bvh_node_type type = bvh_node_type::internal;
 
     /// Positions for shape BVHs.
-    vector<vec3f> pos;
+    std::vector<vec3f> pos;
     /// Radius for shape BVHs.
-    vector<float> radius;
+    std::vector<float> radius;
     /// Points for shape BVHs.
-    vector<int> points;
+    std::vector<int> points;
     /// Lines for shape BVHs.
-    vector<vec2i> lines;
+    std::vector<vec2i> lines;
     /// Triangles for shape BVHs.
-    vector<vec3i> triangles;
+    std::vector<vec3i> triangles;
     /// Quads for shape BVHs.
-    vector<vec4i> quads;
+    std::vector<vec4i> quads;
 
     /// Instance ids (iid, sid, shape bvh index).
-    vector<bvh_instance> instances;
+    std::vector<bvh_instance> instances;
     /// Shape BVHs.
-    vector<bvh_tree*> shape_bvhs;
+    std::vector<bvh_tree*> shape_bvhs;
     /// Whether it owns the memory of the shape BVHs.
     bool own_shape_bvhs = false;
 
@@ -4906,25 +4880,26 @@ struct bvh_tree {
 };
 
 /// Build a shape BVH from a set of primitives.
-bvh_tree* make_bvh(const vector<int>& points, const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads,
-    const vector<vec3f>& pos, const vector<float>& radius, float def_radius,
-    bool equalsize);
+bvh_tree* make_bvh(const std::vector<int>& points,
+    const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
+    const std::vector<vec4i>& quads, const std::vector<vec3f>& pos,
+    const std::vector<float>& radius, float def_radius, bool equalsize);
 /// Build a scene BVH from a set of shape instances.
-bvh_tree* make_bvh(const vector<bvh_instance>& instances,
-    const vector<bvh_tree*>& shape_bvhs, bool own_shape_bvhs, bool equal_size);
+bvh_tree* make_bvh(const std::vector<bvh_instance>& instances,
+    const std::vector<bvh_tree*>& shape_bvhs, bool own_shape_bvhs,
+    bool equal_size);
 
 /// Grab the shape BVHs
-inline const vector<bvh_tree*>& get_shape_bvhs(const bvh_tree* bvh) {
+inline const std::vector<bvh_tree*>& get_shape_bvhs(const bvh_tree* bvh) {
     return bvh->shape_bvhs;
 }
 
 /// Update the node bounds for a shape bvh.
-void refit_bvh(bvh_tree* bvh, const vector<vec3f>& pos,
-    const vector<float>& radius, float def_radius);
+void refit_bvh(bvh_tree* bvh, const std::vector<vec3f>& pos,
+    const std::vector<float>& radius, float def_radius);
 /// Update the node bounds for a scene bvh
-void refit_bvh(bvh_tree* bvh, const vector<frame3f>& frames,
-    const vector<frame3f>& frames_inv);
+void refit_bvh(bvh_tree* bvh, const std::vector<frame3f>& frames,
+    const std::vector<frame3f>& frames_inv);
 
 /// Intersect ray with a bvh returning either the first or any intersection
 /// depending on `find_any`. Returns the ray distance `ray_t`, the instance
@@ -4981,9 +4956,9 @@ namespace ygl {
 /// Texture containing either an LDR or HDR image.
 struct texture {
     /// Name.
-    string name = "";
+    std::string name = "";
     /// Path.
-    string path = "";
+    std::string path = "";
     /// If loaded, ldr image.
     image4b ldr = {};
     /// If loaded, hdr image.
@@ -5022,7 +4997,7 @@ enum struct material_type {
 /// Material for surfaces, lines and triangles.
 struct material {
     /// Name.
-    string name = "";
+    std::string name = "";
     /// Double-sided rendering.
     bool double_sided = false;
     /// Material type.
@@ -5067,41 +5042,41 @@ struct material {
 /// May contain only one of the points/lines/triangles/quads.
 struct shape {
     /// Name.
-    string name = "";
+    std::string name = "";
     /// Material.
     material* mat = nullptr;
 
     /// Points.
-    vector<int> points;
+    std::vector<int> points;
     /// Lines.
-    vector<vec2i> lines;
+    std::vector<vec2i> lines;
     /// Triangles.
-    vector<vec3i> triangles;
+    std::vector<vec3i> triangles;
     /// Quads.
-    vector<vec4i> quads;
+    std::vector<vec4i> quads;
     /// Face-varying indices for position.
-    vector<vec4i> quads_pos;
+    std::vector<vec4i> quads_pos;
     /// Face-varying indices for normal.
-    vector<vec4i> quads_norm;
+    std::vector<vec4i> quads_norm;
     /// Face-varying indices for texcoord.
-    vector<vec4i> quads_texcoord;
+    std::vector<vec4i> quads_texcoord;
     /// Bezier.
-    vector<vec4i> beziers;
+    std::vector<vec4i> beziers;
 
     /// Vertex position.
-    vector<vec3f> pos;
+    std::vector<vec3f> pos;
     /// Vertex normals.
-    vector<vec3f> norm;
+    std::vector<vec3f> norm;
     /// Vertex texcoord.
-    vector<vec2f> texcoord;
+    std::vector<vec2f> texcoord;
     /// Vertex second texcoord.
-    vector<vec2f> texcoord1;
+    std::vector<vec2f> texcoord1;
     /// Vertex color.
-    vector<vec4f> color;
+    std::vector<vec4f> color;
     /// per-vertex radius.
-    vector<float> radius;
+    std::vector<float> radius;
     /// Vertex tangent space.
-    vector<vec4f> tangsp;
+    std::vector<vec4f> tangsp;
 
     /// Number of times to subdivide.
     int subdivision = 0;
@@ -5112,11 +5087,11 @@ struct shape {
 /// Group of shapes.
 struct shape_group {
     /// Name.
-    string name = "";
+    std::string name = "";
     /// Path used for saving in glTF.
-    string path = "";
+    std::string path = "";
     /// Shapes.
-    vector<shape*> shapes;
+    std::vector<shape*> shapes;
 
     /// Cleanup.
     ~shape_group();
@@ -5125,7 +5100,7 @@ struct shape_group {
 /// Shape instance.
 struct instance {
     // Name.
-    string name = "";
+    std::string name = "";
     /// Transform frame.
     frame3f frame = identity_frame3f;
     /// Shape instance.
@@ -5135,7 +5110,7 @@ struct instance {
 /// Camera.
 struct camera {
     /// Name.
-    string name = "";
+    std::string name = "";
     /// Transform frame.
     frame3f frame = identity_frame3f;
     /// Orthographic camera.
@@ -5157,7 +5132,7 @@ struct camera {
 /// Envinonment map.
 struct environment {
     /// Name.
-    string name = "";
+    std::string name = "";
     /// Transform frame.
     frame3f frame = identity_frame3f;
     /// Emission coefficient.
@@ -5169,7 +5144,7 @@ struct environment {
 /// Node in a transform hierarchy.
 struct node {
     /// Name.
-    string name = "";
+    std::string name = "";
     /// Parent node.
     node* parent = nullptr;
     /// Transform frame.
@@ -5190,7 +5165,7 @@ struct node {
     environment* env = nullptr;
 
     /// Child nodes. This is a computed value only stored for convenience.
-    vector<node*> children_ = {};
+    std::vector<node*> children_ = {};
 };
 
 /// Keyframe type.
@@ -5230,9 +5205,9 @@ struct animation_group {
     /// Path  used when writing files on disk with glTF.
     std::string path = "";
     /// Keyframed values.
-    vector<animation*> animations;
+    std::vector<animation*> animations;
     /// Binds keyframe values to nodes.
-    vector<pair<animation*, node*>> targets;
+    std::vector<std::pair<animation*, node*>> targets;
 
     // Cleanup
     ~animation_group();
@@ -5248,22 +5223,22 @@ struct animation_group {
 /// updates node transformations only if defined.
 struct scene {
     /// Shapes.
-    vector<shape_group*> shapes = {};
+    std::vector<shape_group*> shapes = {};
     /// Shape instances.
-    vector<instance*> instances = {};
+    std::vector<instance*> instances = {};
     /// Materials.
-    vector<material*> materials = {};
+    std::vector<material*> materials = {};
     /// Textures.
-    vector<texture*> textures = {};
+    std::vector<texture*> textures = {};
     /// Cameras.
-    vector<camera*> cameras = {};
+    std::vector<camera*> cameras = {};
     /// Environments.
-    vector<environment*> environments = {};
+    std::vector<environment*> environments = {};
 
     /// Node hierarchy.
-    vector<node*> nodes = {};
+    std::vector<node*> nodes = {};
     /// Node animations.
-    vector<animation_group*> animations = {};
+    std::vector<animation_group*> animations = {};
 
     // Cleanup.
     ~scene();
@@ -5295,7 +5270,8 @@ ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv);
 
 /// Finds an element by name.
 template <typename T>
-inline T* find_named_elem(const vector<T*>& elems, const string& name) {
+inline T* find_named_elem(
+    const std::vector<T*>& elems, const std::string& name) {
     if (name == "") return nullptr;
     for (auto elem : elems)
         if (elem->name == name) return elem;
@@ -5303,7 +5279,7 @@ inline T* find_named_elem(const vector<T*>& elems, const string& name) {
 }
 // Adds a named element or return the one with that name.
 template <typename T>
-inline T* add_named_elem(vector<T*>& elems, const string& name) {
+inline T* add_named_elem(std::vector<T*>& elems, const std::string& name) {
     for (auto elem : elems)
         if (elem->name == name) return elem;
     auto elem = new T();
@@ -5410,7 +5386,7 @@ struct load_options {
 
 /// Loads a scene. For now OBJ or glTF are supported.
 /// Throws an exception if an error occurs.
-scene* load_scene(const string& filename, const load_options& opts = {});
+scene* load_scene(const std::string& filename, const load_options& opts = {});
 
 /// Save options.
 struct save_options {
@@ -5428,7 +5404,7 @@ struct save_options {
 
 /// Saves a scene. For now OBJ and glTF are supported.
 void save_scene(
-    const string& filename, const scene* scn, const save_options& opts);
+    const std::string& filename, const scene* scn, const save_options& opts);
 
 /// @}
 
@@ -5444,8 +5420,9 @@ namespace ygl {
 
 /// Names of enum values.
 template <>
-inline const vector<pair<string, material_type>>& enum_names<material_type>() {
-    static auto names = vector<pair<string, material_type>>{
+inline const std::vector<std::pair<std::string, material_type>>&
+enum_names<material_type>() {
+    static auto names = std::vector<std::pair<std::string, material_type>>{
         {"specular_roughness", material_type::specular_roughness},
         {"metallic_roughness", material_type::metallic_roughness},
         {"specular_glossiness", material_type::specular_glossiness},
@@ -5455,8 +5432,9 @@ inline const vector<pair<string, material_type>>& enum_names<material_type>() {
 
 /// Names of enum values.
 template <>
-inline const vector<pair<string, keyframe_type>>& enum_names<keyframe_type>() {
-    static auto names = vector<pair<string, keyframe_type>>{
+inline const std::vector<std::pair<std::string, keyframe_type>>&
+enum_names<keyframe_type>() {
+    static auto names = std::vector<std::pair<std::string, keyframe_type>>{
         {"linear", keyframe_type::linear},
         {"step", keyframe_type::step},
         {"bezier", keyframe_type::bezier},
@@ -5647,7 +5625,7 @@ scene* make_cornell_box_scene();
 /// Test camera parameters.
 struct test_camera_params {
     /// Name.
-    string name = "";
+    std::string name = "";
     /// From point.
     vec3f from = {0, 0, -1};
     /// To point.
@@ -5663,7 +5641,7 @@ void update_test_elem(
     const scene* scn, camera* cam, const test_camera_params& tcam);
 
 /// Test camera presets.
-unordered_map<string, test_camera_params>& test_camera_presets();
+std::unordered_map<std::string, test_camera_params>& test_camera_presets();
 
 /// Test texture type.
 enum struct test_texture_type {
@@ -5700,7 +5678,7 @@ enum struct test_texture_type {
 /// Test texture parameters.
 struct test_texture_params {
     /// Name.
-    string name = "";
+    std::string name = "";
     /// Type.
     test_texture_type type = test_texture_type::none;
     /// Resolution.
@@ -5722,7 +5700,7 @@ void update_test_elem(
     const scene* scn, texture* txt, const test_texture_params& ttxt);
 
 /// Test texture presets.
-unordered_map<string, test_texture_params>& test_texture_presets();
+std::unordered_map<std::string, test_texture_params>& test_texture_presets();
 
 /// Test material type.
 enum struct test_material_type {
@@ -5743,7 +5721,7 @@ enum struct test_material_type {
 /// Test material parameters.
 struct test_material_params {
     /// Name.
-    string name = "";
+    std::string name = "";
     /// Type.
     test_material_type type = test_material_type::matte;
     /// Emission strenght.
@@ -5755,9 +5733,9 @@ struct test_material_params {
     /// Roughness.
     float roughness = 0.1;
     /// Base texture.
-    string texture = "";
+    std::string texture = "";
     /// Normal map.
-    string normal = "";
+    std::string normal = "";
 };
 
 /// Updates a test material.
@@ -5765,7 +5743,7 @@ void update_test_elem(
     const scene* scn, material* mat, const test_material_params& tmat);
 
 /// Test material presets.
-unordered_map<string, test_material_params>& test_material_presets();
+std::unordered_map<std::string, test_material_params>& test_material_presets();
 
 /// Test shape type.
 enum struct test_shape_type {
@@ -5808,13 +5786,13 @@ enum struct test_shape_type {
 /// Test shape parameters.
 struct test_shape_params {
     /// Shape name (if not filled, assign a default based on type).
-    string name = "";
+    std::string name = "";
     /// Shape type.
     test_shape_type type = test_shape_type::sphere;
     /// Material name.
-    string material = "";
+    std::string material = "";
     /// Interior material name.
-    string interior = "";
+    std::string interior = "";
     /// Level of shape tesselatation (-1 for default).
     int tesselation = -1;
     /// Level of shape tesselation for subdivision surfaces.
@@ -5836,14 +5814,14 @@ void update_test_elem(
     const scene* scn, shape* shp, const test_shape_params& tshp);
 
 /// Test shape presets.
-unordered_map<string, test_shape_params>& test_shape_presets();
+std::unordered_map<std::string, test_shape_params>& test_shape_presets();
 
 /// Test instance parameters.
 struct test_instance_params {
     /// Name (if not filled, assign a default one).
-    string name = "";
+    std::string name = "";
     /// Shape name.
-    string shape = "";
+    std::string shape = "";
     /// Base frame.
     frame3f frame = identity_frame3f;
     /// Rotation in Euler angles.
@@ -5855,18 +5833,18 @@ void update_test_elem(
     const scene* scn, instance* ist, const test_instance_params& tist);
 
 /// Test instance presets.
-unordered_map<string, test_instance_params>& test_instance_presets();
+std::unordered_map<std::string, test_instance_params>& test_instance_presets();
 
 /// Test environment parameters.
 struct test_environment_params {
     /// Name.
-    string name = "";
+    std::string name = "";
     /// Emission strenght.
     float emission = 1;
     /// Emission color.
     vec3f color = {1, 1, 1};
     /// Emission texture.
-    string texture = "";
+    std::string texture = "";
     /// Frame.
     frame3f frame = identity_frame3f;
     /// Rotation around y axis.
@@ -5878,20 +5856,21 @@ void update_test_elem(
     const scene* scn, environment* env, const test_environment_params& tenv);
 
 /// Test environment presets.
-unordered_map<string, test_environment_params>& test_environment_presets();
+std::unordered_map<std::string, test_environment_params>&
+test_environment_presets();
 
 /// Test node parameters.
 struct test_node_params {
     /// Name.
-    string name = "";
+    std::string name = "";
     /// Parent node.
-    string parent = "";
+    std::string parent = "";
     /// Camera.
-    string camera = "";
+    std::string camera = "";
     /// Instance.
-    string instance = "";
+    std::string instance = "";
     /// Environment.
-    string environment = "";
+    std::string environment = "";
     /// Frame.
     frame3f frame = identity_frame3f;
     /// Translation.
@@ -5907,12 +5886,12 @@ void update_test_elem(
     const scene* scn, node* nde, const test_node_params& tndr);
 
 /// Test nodes presets.
-unordered_map<string, test_node_params>& test_node_presets();
+std::unordered_map<std::string, test_node_params>& test_node_presets();
 
 /// Test animation parameters.
 struct test_animation_params {
     /// Name.
-    string name = "";
+    std::string name = "";
     /// Linear or bezier.
     bool bezier = false;
     /// Animation speed.
@@ -5920,15 +5899,15 @@ struct test_animation_params {
     /// Animation scale.
     float scale = 1;
     /// Keyframes times.
-    vector<float> times = {};
+    std::vector<float> times = {};
     /// Translation keyframes.
-    vector<vec3f> translation = {};
+    std::vector<vec3f> translation = {};
     /// Rotation keyframes.
-    vector<quat4f> rotation = {};
+    std::vector<quat4f> rotation = {};
     /// Scale keyframes.
-    vector<vec3f> scaling = {};
+    std::vector<vec3f> scaling = {};
     /// Environment.
-    vector<string> nodes = {};
+    std::vector<std::string> nodes = {};
 };
 
 /// Updates a test node.
@@ -5936,34 +5915,34 @@ void update_test_elem(
     const scene* scn, animation_group* anm, const test_animation_params& tndr);
 
 /// Test nodes presets.
-unordered_map<string, test_node_params>& test_node_presets();
+std::unordered_map<std::string, test_node_params>& test_node_presets();
 
 /// Test scene.
 struct test_scene_params {
     /// Name.
-    string name;
+    std::string name;
     /// Cameras.
-    vector<test_camera_params> cameras;
+    std::vector<test_camera_params> cameras;
     /// Textures.
-    vector<test_texture_params> textures;
+    std::vector<test_texture_params> textures;
     /// Materials.
-    vector<test_material_params> materials;
+    std::vector<test_material_params> materials;
     /// Shapes.
-    vector<test_shape_params> shapes;
+    std::vector<test_shape_params> shapes;
     /// Instances.
-    vector<test_instance_params> instances;
+    std::vector<test_instance_params> instances;
     /// Environmennts.
-    vector<test_environment_params> environments;
+    std::vector<test_environment_params> environments;
     /// Nodes.
-    vector<test_node_params> nodes;
+    std::vector<test_node_params> nodes;
     /// Animations.
-    vector<test_animation_params> animations;
+    std::vector<test_animation_params> animations;
 };
 
 /// Updates a test scene, adding missing objects. Objects are only added and
 /// never removed.
 void update_test_scene(scene* scn, const test_scene_params& tscn,
-    const unordered_set<void*>& refresh = {});
+    const std::unordered_set<void*>& refresh = {});
 
 /// Makes a test scene. Convenience wrapper around `update_test_scene()`.
 inline scene* make_test_scene(const test_scene_params& tscn) {
@@ -5973,16 +5952,16 @@ inline scene* make_test_scene(const test_scene_params& tscn) {
 }
 
 /// Test scene presets.
-unordered_map<string, test_scene_params>& test_scene_presets();
+std::unordered_map<std::string, test_scene_params>& test_scene_presets();
 
 /// Remove duplicates based on name.
 void remove_duplicates(test_scene_params& tscn);
 
 /// Load test scene.
-test_scene_params load_test_scene(const string& filename);
+test_scene_params load_test_scene(const std::string& filename);
 
 /// Save test scene.
-void save_test_scene(const string& filename, const test_scene_params& scn);
+void save_test_scene(const std::string& filename, const test_scene_params& scn);
 
 /// @}
 
@@ -5998,9 +5977,9 @@ namespace ygl {
 
 /// Names of enum values.
 template <>
-inline const vector<pair<string, test_texture_type>>&
+inline const std::vector<std::pair<std::string, test_texture_type>>&
 enum_names<test_texture_type>() {
-    static auto names = vector<pair<string, test_texture_type>>{
+    static auto names = std::vector<std::pair<std::string, test_texture_type>>{
         {"none", test_texture_type::none},
         {"grid", test_texture_type::grid},
         {"colored", test_texture_type::colored},
@@ -6021,9 +6000,9 @@ enum_names<test_texture_type>() {
 
 /// Names of enum values.
 template <>
-inline const vector<pair<string, test_material_type>>&
+inline const std::vector<std::pair<std::string, test_material_type>>&
 enum_names<test_material_type>() {
-    static auto names = vector<pair<string, test_material_type>>{
+    static auto names = std::vector<std::pair<std::string, test_material_type>>{
         {"none", test_material_type::none},
         {"emission", test_material_type::emission},
         {"matte", test_material_type::matte},
@@ -6036,9 +6015,9 @@ enum_names<test_material_type>() {
 
 /// Names of enum values.
 template <>
-inline const vector<pair<string, test_shape_type>>&
+inline const std::vector<std::pair<std::string, test_shape_type>>&
 enum_names<test_shape_type>() {
-    static auto names = vector<pair<string, test_shape_type>>{
+    static auto names = std::vector<std::pair<std::string, test_shape_type>>{
         {"floor", test_shape_type::floor},
         {"quad", test_shape_type::quad},
         {"cube", test_shape_type::cube},
@@ -6378,11 +6357,11 @@ struct trace_light {
 /// the the public API.
 struct trace_lights {
     /// Shape instances.
-    vector<trace_light> lights;
+    std::vector<trace_light> lights;
     /// Shape cdfs.
-    unordered_map<const shape*, vector<float>> shape_cdfs;
+    std::unordered_map<const shape*, std::vector<float>> shape_cdfs;
     /// Shape areas.
-    unordered_map<const shape*, float> shape_areas;
+    std::unordered_map<const shape*, float> shape_areas;
     /// Check whether there are any lights.
     bool empty() const { return lights.empty(); }
     /// Number of lights.
@@ -6417,9 +6396,10 @@ inline image4f trace_image(const scene* scn, const camera* cam,
 /// Starts an anyncrhounous renderer.
 void trace_async_start(const scene* scn, const camera* cam, const bvh_tree* bvh,
     const trace_lights& lights, image4f& img, image<trace_pixel>& pixels,
-    vector<std::thread>& threads, bool& stop_flag, const trace_params& params);
+    std::vector<std::thread>& threads, bool& stop_flag,
+    const trace_params& params);
 /// Stop the asynchronous renderer.
-void trace_async_stop(vector<std::thread>& threads, bool& stop_flag);
+void trace_async_stop(std::vector<std::thread>& threads, bool& stop_flag);
 
 /// @}
 
@@ -6435,9 +6415,9 @@ namespace ygl {
 
 /// Names of enum values.
 template <>
-inline const vector<pair<string, trace_shader_type>>&
+inline const std::vector<std::pair<std::string, trace_shader_type>>&
 enum_names<trace_shader_type>() {
-    static auto names = vector<pair<string, trace_shader_type>>{
+    static auto names = std::vector<std::pair<std::string, trace_shader_type>>{
         {"path", trace_shader_type::pathtrace},
         {"eye", trace_shader_type::eyelight},
         {"direct", trace_shader_type::direct},
@@ -6451,9 +6431,9 @@ enum_names<trace_shader_type>() {
 
 /// Names of enum values.
 template <>
-inline const vector<pair<string, trace_rng_type>>&
+inline const std::vector<std::pair<std::string, trace_rng_type>>&
 enum_names<trace_rng_type>() {
-    static auto names = vector<pair<string, trace_rng_type>>{
+    static auto names = std::vector<std::pair<std::string, trace_rng_type>>{
         {"uniform", trace_rng_type::uniform},
         {"stratified", trace_rng_type::stratified}};
     return names;
@@ -6461,9 +6441,9 @@ enum_names<trace_rng_type>() {
 
 /// Names of enum values.
 template <>
-inline const vector<pair<string, trace_filter_type>>&
+inline const std::vector<std::pair<std::string, trace_filter_type>>&
 enum_names<trace_filter_type>() {
-    static auto names = vector<pair<string, trace_filter_type>>{
+    static auto names = std::vector<std::pair<std::string, trace_filter_type>>{
         {"box", trace_filter_type::box},
         {"triangle", trace_filter_type::triangle},
         {"cubic", trace_filter_type::cubic},
@@ -6539,27 +6519,27 @@ struct obj_element {
 /// Obj element group.
 struct obj_group {
     /// Material name.
-    string matname;
+    std::string matname;
     /// Group name.
-    string groupname;
+    std::string groupname;
     /// Smoothing.
     bool smoothing = true;
     /// Element vertices.
-    vector<obj_vertex> verts;
+    std::vector<obj_vertex> verts;
     /// Element faces.
-    vector<obj_element> elems;
+    std::vector<obj_element> elems;
     /// Properties not explicitly handled [extension].
-    unordered_map<string, vector<string>> props;
+    std::unordered_map<std::string, std::vector<std::string>> props;
 };
 
 /// Obj object.
 struct obj_object {
     /// Name.
-    string name;
+    std::string name;
     /// Element groups.
-    vector<obj_group*> groups;
+    std::vector<obj_group*> groups;
     /// Properties not explicitly handled [extension].
-    unordered_map<string, vector<string>> props;
+    std::unordered_map<std::string, std::vector<std::string>> props;
 
     /// Cleanup.
     ~obj_object();
@@ -6568,13 +6548,13 @@ struct obj_object {
 /// Obj texture information.
 struct obj_texture_info {
     /// File path.
-    string path = "";
+    std::string path = "";
     /// Whether to clamp to the edge.
     bool clamp = false;
     /// Scale for bump and displacement.
     float scale = 1;
     /// Properties not explicitly handled.
-    unordered_map<string, vector<string>> props;
+    std::unordered_map<std::string, std::vector<std::string>> props;
 };
 
 // Comparison for texture info.
@@ -6587,7 +6567,7 @@ inline bool operator==(const obj_texture_info& a, const obj_texture_info& b) {
 /// Obj texture. Texture data is loaded only if desired.
 struct obj_texture {
     /// File path.
-    string path;
+    std::string path;
     /// Width.
     int width = 0;
     /// Height.
@@ -6595,15 +6575,15 @@ struct obj_texture {
     /// Number of Channels.
     int ncomp = 0;
     /// Buffer data for LDR images.
-    vector<uint8_t> datab;
+    std::vector<uint8_t> datab;
     /// Buffer data for HDR images.
-    vector<float> dataf;
+    std::vector<float> dataf;
 };
 
 /// Obj material.
 struct obj_material {
     /// Name.
-    string name;
+    std::string name;
     /// MTL illum mode.
     int illum = 0;
 
@@ -6652,13 +6632,13 @@ struct obj_material {
     obj_texture_info norm_txt;
 
     /// Properties not explicitly handled.
-    unordered_map<string, vector<string>> props;
+    std::unordered_map<std::string, std::vector<std::string>> props;
 };
 
 /// Obj camera [extension].
 struct obj_camera {
     /// Camera name.
-    string name;
+    std::string name;
     /// Transform frame (affine matrix).
     frame3f frame = identity_frame3f;
     /// Orthografic camera.
@@ -6676,25 +6656,25 @@ struct obj_camera {
 /// Obj environment [extension].
 struct obj_environment {
     /// Environment name.
-    string name;
+    std::string name;
     /// Transform frame (affine matrix).
     frame3f frame = identity_frame3f;
     /// Material name.
-    string matname;
+    std::string matname;
 };
 
 /// Obj node [extension].
 struct obj_node {
     /// Node name.
-    string name;
+    std::string name;
     /// Node parent.
-    string parent;
+    std::string parent;
     /// Camera name.
-    string camname;
+    std::string camname;
     /// Instance name.
-    string objname;
+    std::string objname;
     /// Environment name.
-    string envname;
+    std::string envname;
     /// Transform frame (affine matrix).
     frame3f frame = identity_frame3f;
     /// Translation.
@@ -6708,28 +6688,28 @@ struct obj_node {
 /// Obj scene.
 struct obj_scene {
     /// Vertex positions.
-    vector<vec3f> pos;
+    std::vector<vec3f> pos;
     /// Vertex normals.
-    vector<vec3f> norm;
+    std::vector<vec3f> norm;
     /// Vertex texcoord.
-    vector<vec2f> texcoord;
+    std::vector<vec2f> texcoord;
     /// Vertex color [extension].
-    vector<vec4f> color;
+    std::vector<vec4f> color;
     /// Vertex radius [extension].
-    vector<float> radius;
+    std::vector<float> radius;
 
     /// Objects.
-    vector<obj_object*> objects;
+    std::vector<obj_object*> objects;
     /// Materials.
-    vector<obj_material*> materials;
+    std::vector<obj_material*> materials;
     /// Textures.
-    vector<obj_texture*> textures;
+    std::vector<obj_texture*> textures;
     /// Cameras [extension].
-    vector<obj_camera*> cameras;
+    std::vector<obj_camera*> cameras;
     /// Environments [extension].
-    vector<obj_environment*> environments;
+    std::vector<obj_environment*> environments;
     /// Nodes [extension].
-    vector<obj_node*> nodes;
+    std::vector<obj_node*> nodes;
 
     /// Cleanup.
     ~obj_scene();
@@ -6739,14 +6719,14 @@ struct obj_scene {
 /// and report errors only if `skip_missing` is false.
 /// Texture coordinates and material Tr are flipped if `flip_texcoord` and
 /// `flip_tp` are respectively true.
-obj_scene* load_obj(const string& filename, bool load_textures = false,
+obj_scene* load_obj(const std::string& filename, bool load_textures = false,
     bool skip_missing = false, bool flip_texcoord = true, bool flip_tr = true);
 
 /// Save an OBJ to file `filename`. Save textures if `save_textures` is true,
 /// and report errors only if `skip_missing` is false.
 /// Texture coordinates and material Tr are flipped if `flip_texcoord` and
 /// `flip_tp` are respectively true.
-void save_obj(const string& filename, const obj_scene* model,
+void save_obj(const std::string& filename, const obj_scene* model,
     bool save_textures = false, bool skip_missing = false,
     bool flip_texcoord = true, bool flip_tr = true);
 
@@ -6770,7 +6750,7 @@ namespace ygl {
 /// @{
 
 /// Generic buffer data.
-using buffer_data = vector<unsigned char>;
+using buffer_data = std::vector<unsigned char>;
 
 /// Generic image data.
 struct image_data {
@@ -6781,9 +6761,9 @@ struct image_data {
     /// Number of Channels.
     int ncomp = 0;
     /// Buffer data for 8-bit images.
-    vector<uint8_t> datab;
+    std::vector<uint8_t> datab;
     /// Buffer data for float images.
-    vector<float> dataf;
+    std::vector<float> dataf;
 };
 
 /// Id for glTF references.
@@ -6852,7 +6832,7 @@ struct glTF;
 /// Generic glTF named object
 struct glTFChildOfRootProperty : glTFProperty {
     /// The user-defined name of this object.
-    string name = "";
+    std::string name = "";
 };
 
 /// Values for glTFAccessorSparseIndices::componentType
@@ -6968,9 +6948,9 @@ struct glTFAccessor : glTFChildOfRootProperty {
     /// Specifies if the attribute is a scalar, vector, or matrix. [required]
     glTFAccessorType type = glTFAccessorType::NotSet;
     /// Maximum value of each component in this attribute.
-    vector<float> max = {};
+    std::vector<float> max = {};
     /// Minimum value of each component in this attribute.
-    vector<float> min = {};
+    std::vector<float> min = {};
     /// Sparse storage of attributes that deviate from their initialization
     /// value.
     glTFAccessorSparse* sparse = nullptr;
@@ -7064,11 +7044,11 @@ struct glTFAnimation : glTFChildOfRootProperty {
     /// An array of channels, each of which targets an animation's sampler at a
     /// node's property. Different channels of the same animation can't have
     /// equal targets. [required]
-    vector<glTFAnimationChannel*> channels = {};
+    std::vector<glTFAnimationChannel*> channels = {};
     /// An array of samplers that combines input and output accessors with an
     /// interpolation algorithm to define a keyframe graph (but not its target).
     /// [required]
-    vector<glTFAnimationSampler*> samplers = {};
+    std::vector<glTFAnimationSampler*> samplers = {};
 
     /// typed access for nodes
     glTFAnimationChannel* get(const glTFid<glTFAnimationChannel>& id) const {
@@ -7092,19 +7072,19 @@ struct glTFAnimation : glTFChildOfRootProperty {
 /// Metadata about the glTF asset.
 struct glTFAsset : glTFProperty {
     /// A copyright message suitable for display to credit the content creator.
-    string copyright = "";
+    std::string copyright = "";
     /// Tool that generated this glTF model.  Useful for debugging.
-    string generator = "";
+    std::string generator = "";
     /// The glTF version that this asset targets. [required]
-    string version = "";
+    std::string version = "";
     /// The minimum glTF version that this asset targets.
-    string minVersion = "";
+    std::string minVersion = "";
 };
 
 /// A buffer points to binary geometry, animation, or skins.
 struct glTFBuffer : glTFChildOfRootProperty {
     /// The uri of the buffer.
-    string uri = "";
+    std::string uri = "";
     /// The length of the buffer in bytes. [required]
     int byteLength = 0;
     /// Stores buffer content after loading. [required]
@@ -7206,7 +7186,7 @@ enum class glTFImageMimeType {
 /// `bufferView` index. `mimeType` is required in the latter case.
 struct glTFImage : glTFChildOfRootProperty {
     /// The uri of the image.
-    string uri = "";
+    std::string uri = "";
     /// The image's MIME type.
     glTFImageMimeType mimeType = glTFImageMimeType::NotSet;
     /// The index of the bufferView that contains the image. Use this instead of
@@ -7365,7 +7345,7 @@ struct glTFMeshPrimitive : glTFProperty {
     /// A dictionary object, where each key corresponds to mesh attribute
     /// semantic and each value is the index of the accessor containing
     /// attribute's data. [required]
-    map<string, glTFid<glTFAccessor>> attributes = {};
+    std::map<std::string, glTFid<glTFAccessor>> attributes = {};
     /// The index of the accessor that contains the indices.
     glTFid<glTFAccessor> indices = {};
     /// The index of the material to apply to this primitive when rendering.
@@ -7375,7 +7355,7 @@ struct glTFMeshPrimitive : glTFProperty {
     /// An array of Morph Targets, each  Morph Target is a dictionary mapping
     /// attributes (only `POSITION`, `NORMAL`, and `TANGENT` supported) to their
     /// deviations in the Morph Target.
-    vector<map<string, glTFid<glTFAccessor>>> targets = {};
+    std::vector<std::map<std::string, glTFid<glTFAccessor>>> targets = {};
 };
 
 /// A set of primitives to be rendered.  A node can contain one mesh.  A node's
@@ -7383,9 +7363,9 @@ struct glTFMeshPrimitive : glTFProperty {
 struct glTFMesh : glTFChildOfRootProperty {
     /// An array of primitives, each defining geometry to be rendered with a
     /// material. [required]
-    vector<glTFMeshPrimitive*> primitives = {};
+    std::vector<glTFMeshPrimitive*> primitives = {};
     /// Array of weights to be applied to the Morph Targets.
-    vector<float> weights = {};
+    std::vector<float> weights = {};
 
     /// Cleanup
     ~glTFMesh() {
@@ -7408,7 +7388,7 @@ struct glTFNode : glTFChildOfRootProperty {
     /// The index of the camera referenced by this node.
     glTFid<glTFCamera> camera = {};
     /// The indices of this node's children.
-    vector<glTFid<glTFNode>> children = {};
+    std::vector<glTFid<glTFNode>> children = {};
     /// The index of the skin referenced by this node.
     glTFid<glTFSkin> skin = {};
     /// A floating-point 4x4 transformation matrix stored in column-major order.
@@ -7424,7 +7404,7 @@ struct glTFNode : glTFChildOfRootProperty {
     vec3f translation = {0, 0, 0};
     /// The weights of the instantiated Morph Target. Number of elements must
     /// match number of Morph Targets of used mesh.
-    vector<float> weights = {};
+    std::vector<float> weights = {};
 };
 
 /// Values for glTFSampler::magFilter
@@ -7494,7 +7474,7 @@ struct glTFSampler : glTFChildOfRootProperty {
 /// The root nodes of a scene.
 struct glTFScene : glTFChildOfRootProperty {
     /// The indices of each root node.
-    vector<glTFid<glTFNode>> nodes = {};
+    std::vector<glTFid<glTFNode>> nodes = {};
 };
 
 /// Joints and matrices defining a skin.
@@ -7507,45 +7487,45 @@ struct glTFSkin : glTFChildOfRootProperty {
     /// transforms resolve to scene root.
     glTFid<glTFNode> skeleton = {};
     /// Indices of skeleton nodes, used as joints in this skin. [required]
-    vector<glTFid<glTFNode>> joints = {};
+    std::vector<glTFid<glTFNode>> joints = {};
 };
 
 /// The root object for a glTF asset.
 struct glTF : glTFProperty {
     /// Names of glTF extensions used somewhere in this asset.
-    vector<string> extensionsUsed = {};
+    std::vector<std::string> extensionsUsed = {};
     /// Names of glTF extensions required to properly load this asset.
-    vector<string> extensionsRequired = {};
+    std::vector<std::string> extensionsRequired = {};
     /// An array of accessors.
-    vector<glTFAccessor*> accessors = {};
+    std::vector<glTFAccessor*> accessors = {};
     /// An array of keyframe animations.
-    vector<glTFAnimation*> animations = {};
+    std::vector<glTFAnimation*> animations = {};
     /// Metadata about the glTF asset. [required]
     glTFAsset* asset = nullptr;
     /// An array of buffers.
-    vector<glTFBuffer*> buffers = {};
+    std::vector<glTFBuffer*> buffers = {};
     /// An array of bufferViews.
-    vector<glTFBufferView*> bufferViews = {};
+    std::vector<glTFBufferView*> bufferViews = {};
     /// An array of cameras.
-    vector<glTFCamera*> cameras = {};
+    std::vector<glTFCamera*> cameras = {};
     /// An array of images.
-    vector<glTFImage*> images = {};
+    std::vector<glTFImage*> images = {};
     /// An array of materials.
-    vector<glTFMaterial*> materials = {};
+    std::vector<glTFMaterial*> materials = {};
     /// An array of meshes.
-    vector<glTFMesh*> meshes = {};
+    std::vector<glTFMesh*> meshes = {};
     /// An array of nodes.
-    vector<glTFNode*> nodes = {};
+    std::vector<glTFNode*> nodes = {};
     /// An array of samplers.
-    vector<glTFSampler*> samplers = {};
+    std::vector<glTFSampler*> samplers = {};
     /// The index of the default scene.
     glTFid<glTFScene> scene = {};
     /// An array of scenes.
-    vector<glTFScene*> scenes = {};
+    std::vector<glTFScene*> scenes = {};
     /// An array of skins.
-    vector<glTFSkin*> skins = {};
+    std::vector<glTFSkin*> skins = {};
     /// An array of textures.
-    vector<glTFTexture*> textures = {};
+    std::vector<glTFTexture*> textures = {};
 
     /// typed access for nodes
     glTFAccessor* get(const glTFid<glTFAccessor>& id) const {
@@ -7649,23 +7629,23 @@ struct glTF : glTFProperty {
 /// Load a gltf file `filename` from disk. Load binaries and images only if
 /// `load_bin` and `load_img` are true, reporting errors only if `skip_missing`
 /// is false.
-glTF* load_gltf(const string& filename, bool load_bin = true,
+glTF* load_gltf(const std::string& filename, bool load_bin = true,
     bool load_img = false, bool skip_missing = false);
 
 /// Load a binary gltf file `filename` from disk. Load binaries and images only
 /// if `load_bin` and `load_img` are true, reporting errors only if
 /// `skip_missing` is false.
-glTF* load_binary_gltf(const string& filename, bool load_bin = true,
+glTF* load_binary_gltf(const std::string& filename, bool load_bin = true,
     bool load_img = false, bool skip_missing = false);
 
 /// Save a gltf file `filename` to disk. Save binaries and images only if
 /// `save_bin` and `save_img` are true.
-void save_gltf(const string& filename, const glTF* gltf, bool save_bin = true,
-    bool save_img = false);
+void save_gltf(const std::string& filename, const glTF* gltf,
+    bool save_bin = true, bool save_img = false);
 
 /// Save a gltf file `filename` to disk. Save binaries and images only if
 /// `save_bin` and `save_img` are true.
-void save_binary_gltf(const string& filename, const glTF* gltf,
+void save_binary_gltf(const std::string& filename, const glTF* gltf,
     bool save_bin = true, bool save_img = false);
 
 /// Computes the local node transform and its inverse.
@@ -7775,13 +7755,13 @@ namespace ygl {
 /// Svg path.
 struct svg_path {
     /// Path vertices.
-    vector<vec2f> pos;
+    std::vector<vec2f> pos;
 };
 
 /// Svg shape.
 struct svg_shape {
     /// Paths.
-    vector<svg_path*> paths;
+    std::vector<svg_path*> paths;
 
     /// Cleanup.
     ~svg_shape() {
@@ -7792,7 +7772,7 @@ struct svg_shape {
 /// Svg scene.
 struct svg_scene {
     /// Shapes
-    vector<svg_shape*> shapes;
+    std::vector<svg_shape*> shapes;
 
     /// Cleanup.
     ~svg_scene() {
@@ -7801,10 +7781,10 @@ struct svg_scene {
 };
 
 /// Load an SVG.
-svg_scene* load_svg(const string& filename);
+svg_scene* load_svg(const std::string& filename);
 
 /// Save an SVG.
-void save_svg(const string& filename, const svg_scene* svg);
+void save_svg(const std::string& filename, const svg_scene* svg);
 
 /// @}
 
@@ -7821,7 +7801,7 @@ namespace ygl {
 /// @{
 
 /// Checks if a string starts with a prefix.
-inline bool startswith(const string& str, const string& substr) {
+inline bool startswith(const std::string& str, const std::string& substr) {
     if (str.length() < substr.length()) return false;
     for (auto i = 0; i < substr.length(); i++)
         if (str[i] != substr[i]) return false;
@@ -7829,7 +7809,7 @@ inline bool startswith(const string& str, const string& substr) {
 }
 
 /// Checks if a string ends with a prefix.
-inline bool endswith(const string& str, const string& substr) {
+inline bool endswith(const std::string& str, const std::string& substr) {
     if (str.length() < substr.length()) return false;
     auto offset = str.length() - substr.length();
     for (auto i = 0; i < substr.length(); i++)
@@ -7838,41 +7818,43 @@ inline bool endswith(const string& str, const string& substr) {
 }
 
 /// Check is a string contains a substring.
-inline bool contains(const string& str, const string& substr) {
+inline bool contains(const std::string& str, const std::string& substr) {
     return str.find(substr) != str.npos;
 }
 
 /// Splits a string into lines at the '\n' character. The line
 /// terminator is kept if keep_newline. This function does not work on
 /// Window if keep_newline is true.
-inline vector<string> splitlines(const string& str, bool keep_newline = false) {
+inline std::vector<std::string> splitlines(
+    const std::string& str, bool keep_newline = false) {
     if (str.empty()) return {};
-    auto lines = vector<string>();
-    auto line = vector<char>();
+    auto lines = std::vector<std::string>();
+    auto line = std::vector<char>();
     for (auto c : str) {
         if (c == '\n') {
             if (keep_newline) line.push_back(c);
-            lines.push_back(string(line.begin(), line.end()));
+            lines.push_back(std::string(line.begin(), line.end()));
             line.clear();
         } else {
             line.push_back(c);
         }
     }
-    if (!line.empty()) lines.push_back(string(line.begin(), line.end()));
+    if (!line.empty()) lines.push_back(std::string(line.begin(), line.end()));
     return lines;
 }
 
 /// Partition the string.
-inline vector<string> partition(const string& str, const string& split) {
+inline std::vector<std::string> partition(
+    const std::string& str, const std::string& split) {
     auto pos = str.find(split);
     if (pos == str.npos) return {str, "", ""};
     return {str.substr(0, pos), split, str.substr(pos + split.length())};
 }
 
 /// Splits the string.
-inline vector<string> split(const string& str) {
+inline std::vector<std::string> split(const std::string& str) {
     if (str.empty()) return {};
-    auto ret = vector<string>();
+    auto ret = std::vector<std::string>();
     auto lpos = (size_t)0;
     while (lpos != str.npos) {
         auto pos = str.find_first_of(" \t\n\r", lpos);
@@ -7888,9 +7870,10 @@ inline vector<string> split(const string& str) {
 }
 
 /// Splits the string.
-inline vector<string> split(const string& str, const string& substr) {
+inline std::vector<std::string> split(
+    const std::string& str, const std::string& substr) {
     if (str.empty()) return {};
-    auto ret = vector<string>();
+    auto ret = std::vector<std::string>();
     auto lpos = (size_t)0;
     while (lpos != str.npos) {
         auto pos = str.find(substr, lpos);
@@ -7906,9 +7889,9 @@ inline vector<string> split(const string& str, const string& substr) {
 }
 
 /// Splits the string.
-inline vector<string> split(const string& str, char substr) {
+inline std::vector<std::string> split(const std::string& str, char substr) {
     if (str.empty()) return {};
-    auto ret = vector<string>();
+    auto ret = std::vector<std::string>();
     auto lpos = (size_t)0;
     while (lpos != str.npos) {
         auto pos = str.find(substr, lpos);
@@ -7924,25 +7907,26 @@ inline vector<string> split(const string& str, char substr) {
 }
 
 /// Strip the string.
-inline string rstrip(const string& str) {
+inline std::string rstrip(const std::string& str) {
     auto pos = str.find_last_not_of(" \t\r\n");
     if (pos == str.npos) return "";
     return str.substr(0, pos + 1);
 }
 
 /// Strip the string.
-inline string lstrip(const string& str) {
+inline std::string lstrip(const std::string& str) {
     auto pos = str.find_first_not_of(" \t\r\n");
     if (pos == str.npos) return "";
     return str.substr(pos);
 }
 
 /// Strip the string.
-inline string strip(const string& str) { return rstrip(lstrip(str)); }
+inline std::string strip(const std::string& str) { return rstrip(lstrip(str)); }
 
 /// Joins a list of string with a string as separator.
-inline string join(const vector<string>& strs, const string& sep) {
-    auto ret = string();
+inline std::string join(
+    const std::vector<std::string>& strs, const std::string& sep) {
+    auto ret = std::string();
     auto first = true;
     for (auto& str : strs) {
         if (!first) ret += sep;
@@ -7953,21 +7937,21 @@ inline string join(const vector<string>& strs, const string& sep) {
 }
 
 /// Converts an ASCII string to lowercase.
-inline string lower(const string& str) {
+inline std::string lower(const std::string& str) {
     auto s = str;
     for (auto& c : s) c = tolower(c);
     return s;
 }
 
 /// Converts an ASCII string to uppercase.
-inline string upper(const string& str) {
+inline std::string upper(const std::string& str) {
     auto s = str;
     for (auto& c : s) c = toupper(c);
     return s;
 }
 
 /// Check if a string is space.
-inline bool isspace(const string& str) {
+inline bool isspace(const std::string& str) {
     for (auto c : str) {
         if (c != ' ' && c != '\n' && c != '\t' && c != '\r') return false;
     }
@@ -7975,8 +7959,9 @@ inline bool isspace(const string& str) {
 }
 
 /// Replace s1 with s2 in str.
-inline string replace(const string& str, const string& s1, const string& s2) {
-    auto s = string();
+inline std::string replace(
+    const std::string& str, const std::string& s1, const std::string& s2) {
+    auto s = std::string();
     auto last = 0;
     auto pos = (int)str.find(s1);
     while (pos != str.npos) {
@@ -7990,22 +7975,22 @@ inline string replace(const string& str, const string& s1, const string& s2) {
 }
 
 /// Get directory name (including '/').
-inline string path_dirname(const string& filename) {
+inline std::string path_dirname(const std::string& filename) {
     auto pos = filename.rfind('/');
-    if (pos == string::npos) pos = filename.rfind('\\');
-    if (pos == string::npos) return "";
+    if (pos == std::string::npos) pos = filename.rfind('\\');
+    if (pos == std::string::npos) return "";
     return filename.substr(0, pos + 1);
 }
 
 /// Get extension (including '.').
-inline string path_extension(const string& filename) {
+inline std::string path_extension(const std::string& filename) {
     auto pos = filename.rfind('.');
-    if (pos == string::npos) return "";
+    if (pos == std::string::npos) return "";
     return filename.substr(pos);
 }
 
 /// Get file basename.
-inline string path_basename(const string& filename) {
+inline std::string path_basename(const std::string& filename) {
     auto dirname = path_dirname(filename);
     auto extension = path_extension(filename);
     return filename.substr(
@@ -8014,33 +7999,33 @@ inline string path_basename(const string& filename) {
 
 /// Get filename without directory (equiv to get_basename() +
 /// get_extension()).
-inline string path_filename(const string& filename) {
+inline std::string path_filename(const std::string& filename) {
     return path_basename(filename) + path_extension(filename);
 }
 
 /// Replace extension.
-inline string replace_path_extension(
-    const string& filename, const string& ext) {
+inline std::string replace_path_extension(
+    const std::string& filename, const std::string& ext) {
     return path_dirname(filename) + path_basename(filename) + ext;
 }
 
 /// Prepend a string to the extension.
-inline string prepend_path_extension(
-    const string& filename, const string& prep) {
+inline std::string prepend_path_extension(
+    const std::string& filename, const std::string& prep) {
     return path_dirname(filename) + path_basename(filename) + prep +
            path_extension(filename);
 }
 
 /// Splits a path calling the above functions.
-inline void split_path(
-    const string& filename, string& dirname, string& basename, string& ext) {
+inline void split_path(const std::string& filename, std::string& dirname,
+    std::string& basename, std::string& ext) {
     dirname = path_dirname(filename);
     basename = path_basename(filename);
     ext = path_extension(filename);
 }
 
 /// Convert from Windows to Unix/OsX path separator
-inline string path_convert_eparator(const string& path_) {
+inline std::string path_convert_eparator(const std::string& path_) {
     auto path = path_;
     for (auto& c : path)
         if (c == '\\') c = '/';
@@ -8049,16 +8034,17 @@ inline string path_convert_eparator(const string& path_) {
 
 /// Really-minimal Python like string format. The implementation is not fast
 /// nor memory efficient. But it is good enough for some needs.
-inline string format(const string& fmt, const vector<string>& args) {
+inline std::string format(
+    const std::string& fmt, const std::vector<std::string>& args) {
     auto open = false;
     auto cur = 0;
-    auto str = string();
+    auto str = std::string();
     for (auto c : fmt) {
         if (c == '{') {
             str += args[cur++];
             open = true;
         } else if (c == '}') {
-            if (!open) throw runtime_error("bad format");
+            if (!open) throw std::runtime_error("bad format");
             open = false;
         } else {
             str += c;
@@ -8068,11 +8054,11 @@ inline string format(const string& fmt, const vector<string>& args) {
 }
 
 // Implementation of the function below.
-inline void _format_one(vector<string>& vals) {}
+inline void _format_one(std::vector<std::string>& vals) {}
 template <typename Arg, typename... Args>
 inline void _format_one(
-    vector<string>& vals, const Arg& arg, const Args&... args) {
-    auto stream = stringstream();
+    std::vector<std::string>& vals, const Arg& arg, const Args&... args) {
+    auto stream = std::stringstream();
     stream << arg;
     vals.push_back(stream.str());
     _format_one(vals, args...);
@@ -8082,21 +8068,21 @@ inline void _format_one(
 /// generality and supports for now only the '{}' operator. The implementation
 /// is not fast nor memory efficient. But it is good enough for some needs.
 template <typename... Args>
-inline string format(const string& fmt, const Args&... args) {
-    auto vals = vector<string>();
+inline std::string format(const std::string& fmt, const Args&... args) {
+    auto vals = std::vector<std::string>();
     _format_one(vals, args...);
     return format(fmt, vals);
 }
 
 /// Wrapper for the above function that prints to stdout.
 template <typename... Args>
-inline void print(const string& fmt, const Args&... args) {
+inline void print(const std::string& fmt, const Args&... args) {
     printf("%s", format(fmt, args...).c_str());
 }
 
 /// Wrapper for the above function that prints to stdout with endline.
 template <typename... Args>
-inline void println(const string& fmt, const Args&... args) {
+inline void println(const std::string& fmt, const Args&... args) {
     printf("%s\n", format(fmt, args...).c_str());
 }
 
@@ -8113,56 +8099,57 @@ namespace ygl {
 /// @{
 
 /// Loads the contents of a binary file in an in-memory array.
-inline vector<unsigned char> load_binary(const string& filename) {
+inline std::vector<unsigned char> load_binary(const std::string& filename) {
     // http://stackoverflow.com/questions/116038/what-is-the-best-way-to-read-an-entire-file-into-a-stdstring-in-c
-    fstream fs(filename, ios_base::in | ios_base::binary | std::ios::ate);
-    if (fs.fail()) throw runtime_error("cannot read file " + filename);
+    std::fstream fs(
+        filename, std::ios_base::in | std::ios_base::binary | std::ios::ate);
+    if (fs.fail()) throw std::runtime_error("cannot read file " + filename);
     fs.seekg(0, std::ios::end);
-    auto buf = vector<unsigned char>(fs.tellg());
+    auto buf = std::vector<unsigned char>(fs.tellg());
     fs.seekg(0);
     fs.read((char*)buf.data(), buf.size());
     if (fs.fail() || fs.bad())
-        throw runtime_error("cannot read file " + filename);
+        throw std::runtime_error("cannot read file " + filename);
     return buf;
 }
 
 /// Loads the contents of a text file into a string.
-inline string load_text(const string& filename) {
-    fstream fs(filename, ios_base::in);
-    if (fs.fail()) throw runtime_error("cannot read file " + filename);
-    stringstream ss;
+inline std::string load_text(const std::string& filename) {
+    std::fstream fs(filename, std::ios_base::in);
+    if (fs.fail()) throw std::runtime_error("cannot read file " + filename);
+    std::stringstream ss;
     ss << fs.rdbuf();
-    if (fs.fail()) throw runtime_error("cannot read file " + filename);
+    if (fs.fail()) throw std::runtime_error("cannot read file " + filename);
     return ss.str();
 }
 
 /// Saves binary data to a file.
 inline void save_binary(
-    const string& filename, const vector<unsigned char>& data) {
+    const std::string& filename, const std::vector<unsigned char>& data) {
 #if YGL_IOSTREAM
     fstream fs(filename, ios_base::out | ios_base::binary);
-    if (fs.fail()) throw runtime_error("cannot write file " + filename);
+    if (fs.fail()) throw std::runtime_error("cannot write file " + filename);
     fs.write((const char*)data.data(), data.size());
     if (fs.fail() || fs.bad())
-        throw runtime_error("cannot write file " + filename);
+        throw std::runtime_error("cannot write file " + filename);
 #else
     auto f = fopen(filename.c_str(), "wb");
-    if (!f) throw runtime_error("cannot write file " + filename);
+    if (!f) throw std::runtime_error("cannot write file " + filename);
     fwrite(data.data(), 1, (int)data.size(), f);
     fclose(f);
 #endif
 }
 
 /// Saves a string to a text file.
-inline void save_text(const string& filename, const string& str) {
+inline void save_text(const std::string& filename, const std::string& str) {
 #if YGL_IOSTREAM
     fstream fs(filename, ios_base::out);
-    if (fs.fail()) throw runtime_error("cannot write file " + filename);
+    if (fs.fail()) throw std::runtime_error("cannot write file " + filename);
     fs << str;
-    if (fs.fail()) throw runtime_error("cannot write file " + filename);
+    if (fs.fail()) throw std::runtime_error("cannot write file " + filename);
 #else
     auto f = fopen(filename.c_str(), "wt");
-    if (!f) throw runtime_error("cannot write file " + filename);
+    if (!f) throw std::runtime_error("cannot write file " + filename);
     fwrite(str.c_str(), 1, (int)str.size(), f);
     fclose(f);
 #endif
@@ -8185,54 +8172,56 @@ struct cmdline_parser;
 
 /// Immediate mode command line parser. Members are not part of the public API.
 struct cmdline_parser {
-    vector<string> _to_parse;    // args left to parse
-    vector<string> _used_names;  // used names for check
-    string _usage_prog;          // usage prog line
-    string _usage_help;          // usage help line
-    string _usage_opts;          // usage option lines
-    string _usage_args;          // usage argument lines
-    bool _usage = false;         // help option triggered
-    string _error;               // parse error
+    std::vector<std::string> _to_parse;    // args left to parse
+    std::vector<std::string> _used_names;  // used names for check
+    std::string _usage_prog;               // usage prog line
+    std::string _usage_help;               // usage help line
+    std::string _usage_opts;               // usage option lines
+    std::string _usage_args;               // usage argument lines
+    bool _usage = false;                   // help option triggered
+    std::string _error;                    // parse error
 };
 
 /// Check unused arguments.
 inline bool should_exit(cmdline_parser& parser);
 
 /// Returns the usage string.
-inline string get_usage(const cmdline_parser& parser);
+inline std::string get_usage(const cmdline_parser& parser);
 
 /// Pase a flag from the command line.
-inline bool parse_flag(cmdline_parser& parser, const string& name,
-    const string& flag, const string& help, bool def = false, bool req = false);
+inline bool parse_flag(cmdline_parser& parser, const std::string& name,
+    const std::string& flag, const std::string& help, bool def = false,
+    bool req = false);
 
 /// Pase an option from the command line.
 template <typename T>
-inline T parse_opt(cmdline_parser& parser, const string& name,
-    const string& flag, const string& help, const T& def = {}, bool req = false,
-    const vector<T>& choices = {});
+inline T parse_opt(cmdline_parser& parser, const std::string& name,
+    const std::string& flag, const std::string& help, const T& def = {},
+    bool req = false, const std::vector<T>& choices = {});
 
 /// Parse an enum option from the command line.
 template <typename T>
-inline T parse_opt(cmdline_parser& parser, const string& name,
-    const string& flag, const string& help,
-    const vector<pair<string, T>>& key_values, const T& def, bool req = false,
-    const vector<T>& choices = {});
+inline T parse_opt(cmdline_parser& parser, const std::string& name,
+    const std::string& flag, const std::string& help,
+    const std::vector<std::pair<std::string, T>>& key_values, const T& def,
+    bool req = false, const std::vector<T>& choices = {});
 
 // Parse positional argument from the command line.
 template <typename T>
-inline T parse_arg(cmdline_parser& parser, const string& name,
-    const string& help, const T& def = {}, bool req = true,
-    const vector<T>& choices = {});
+inline T parse_arg(cmdline_parser& parser, const std::string& name,
+    const std::string& help, const T& def = {}, bool req = true,
+    const std::vector<T>& choices = {});
 
 // Parse all remaining positional argument from the command line.
 template <typename T>
-inline vector<T> parse_args(cmdline_parser& parser, const string& name,
-    const string& help, const vector<T>& def = {}, bool req = true,
-    const vector<T>& choices = {});
+inline std::vector<T> parse_args(cmdline_parser& parser,
+    const std::string& name, const std::string& help,
+    const std::vector<T>& def = {}, bool req = true,
+    const std::vector<T>& choices = {});
 
 /// Initialize a command line parser.
 inline cmdline_parser make_parser(
-    int argc, char** argv, const string& prog, const string& help);
+    int argc, char** argv, const std::string& prog, const std::string& help);
 
 /// @}
 
@@ -8264,8 +8253,8 @@ struct logger {
 
 /// Make a logger with an optional console stream, an optional file stram
 /// and the specified verbosity level.
-inline logger* make_logger(const string& filename = "", bool console = true,
-    bool verbose = true, bool file_append = true) {
+inline logger* make_logger(const std::string& filename = "",
+    bool console = true, bool verbose = true, bool file_append = true) {
     auto lgr = new logger();
     lgr->_verbose = verbose;
     lgr->_console = console;
@@ -8273,7 +8262,8 @@ inline logger* make_logger(const string& filename = "", bool console = true,
         lgr->_file = nullptr;
     } else {
         lgr->_file = fopen(filename.c_str(), (file_append) ? "at" : "wt");
-        if (!lgr->_file) throw runtime_error("could not open file " + filename);
+        if (!lgr->_file)
+            throw std::runtime_error("could not open file " + filename);
     }
     return lgr;
 }
@@ -8285,7 +8275,7 @@ inline logger* get_default_logger() {
 }
 
 // Log a message. Used internally.
-inline void _log_msg(logger* lgr, const string& msg, const char* type) {
+inline void _log_msg(logger* lgr, const std::string& msg, const char* type) {
     char time_buf[1024];
     auto tm = time(nullptr);
     auto ttm = localtime(&tm);  // TODO: use thread safe version
@@ -8306,46 +8296,49 @@ inline void _log_msg(logger* lgr, const string& msg, const char* type) {
 
 /// Log an info message.
 template <typename... Args>
-inline void log_info(logger* lgr, const string& msg, const Args&... args) {
+inline void log_info(logger* lgr, const std::string& msg, const Args&... args) {
     if (!lgr->_verbose) return;
     _log_msg(lgr, format(msg, args...), "INFO ");
 }
 
 /// Log an info message.
 template <typename... Args>
-inline void log_warning(logger* lgr, const string& msg, const Args&... args) {
+inline void log_warning(
+    logger* lgr, const std::string& msg, const Args&... args) {
     if (!lgr->_verbose) return;
     _log_msg(lgr, format(msg, args...), "WARN ");
 }
 
 /// Log an error message.
 template <typename... Args>
-inline void log_error(logger* lgr, const string& msg, const Args&... args) {
+inline void log_error(
+    logger* lgr, const std::string& msg, const Args&... args) {
     _log_msg(lgr, format(msg, args...), "ERROR");
 }
 
 /// Log a fatal message and exit.
 template <typename... Args>
-inline void log_fatal(logger* lgr, const string& msg, const Args&... args) {
+inline void log_fatal(
+    logger* lgr, const std::string& msg, const Args&... args) {
     _log_msg(lgr, format(msg, args...), "FATAL");
     exit(1);
 }
 
 /// Logs a message to the default loggers.
 template <typename... Args>
-inline void log_info(const string& msg, const Args&... args) {
+inline void log_info(const std::string& msg, const Args&... args) {
     log_info(get_default_logger(), msg, args...);
 }
 
 /// Logs a message to the default loggers.
 template <typename... Args>
-inline void log_error(const string& msg, const Args&... args) {
+inline void log_error(const std::string& msg, const Args&... args) {
     log_error(get_default_logger(), msg, args...);
 }
 
 /// Logs a message to the default loggers.
 template <typename... Args>
-inline void log_fatal(const string& msg, const Args&... args) {
+inline void log_fatal(const std::string& msg, const Args&... args) {
     log_fatal(get_default_logger(), msg, args...);
 }
 
@@ -8427,11 +8420,11 @@ enum struct gl_light_type : int {
 /// OpenGL lights
 struct gl_lights {
     /// light positions.
-    vector<vec3f> pos;
+    std::vector<vec3f> pos;
     /// Light intensities.
-    vector<vec3f> ke;
+    std::vector<vec3f> ke;
     /// Light types.
-    vector<gl_light_type> type;
+    std::vector<gl_light_type> type;
 };
 
 /// Checks for GL error and then prints.
@@ -8665,55 +8658,55 @@ inline void update_vertex_buffer(gl_vertex_buffer& buf, int num, int ncomp,
 }
 
 /// Updates the buffer with new data.
-inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<float>& values, bool dynamic = false) {
+inline void update_vertex_buffer(gl_vertex_buffer& buf,
+    const std::vector<float>& values, bool dynamic = false) {
     update_vertex_buffer(buf, values.size(), 1, values.data(), dynamic);
 }
 
 /// Updates the buffer with new data.
-inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<vec2f>& values, bool dynamic = false) {
+inline void update_vertex_buffer(gl_vertex_buffer& buf,
+    const std::vector<vec2f>& values, bool dynamic = false) {
     update_vertex_buffer(
         buf, values.size(), 2, (const float*)values.data(), dynamic);
 }
 
 /// Updates the buffer with new data.
-inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<vec3f>& values, bool dynamic = false) {
+inline void update_vertex_buffer(gl_vertex_buffer& buf,
+    const std::vector<vec3f>& values, bool dynamic = false) {
     update_vertex_buffer(
         buf, values.size(), 3, (const float*)values.data(), dynamic);
 }
 
 /// Updates the buffer with new data.
-inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<vec4f>& values, bool dynamic = false) {
+inline void update_vertex_buffer(gl_vertex_buffer& buf,
+    const std::vector<vec4f>& values, bool dynamic = false) {
     update_vertex_buffer(
         buf, values.size(), 4, (const float*)values.data(), dynamic);
 }
 
 /// Updates the buffer with new data.
-inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<int>& values, bool dynamic = false) {
+inline void update_vertex_buffer(gl_vertex_buffer& buf,
+    const std::vector<int>& values, bool dynamic = false) {
     update_vertex_buffer(buf, values.size(), 1, values.data(), dynamic);
 }
 
 /// Updates the buffer with new data.
-inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<vec2i>& values, bool dynamic = false) {
+inline void update_vertex_buffer(gl_vertex_buffer& buf,
+    const std::vector<vec2i>& values, bool dynamic = false) {
     update_vertex_buffer(
         buf, values.size(), 2, (const int*)values.data(), dynamic);
 }
 
 /// Updates the buffer with new data.
-inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<vec3i>& values, bool dynamic = false) {
+inline void update_vertex_buffer(gl_vertex_buffer& buf,
+    const std::vector<vec3i>& values, bool dynamic = false) {
     update_vertex_buffer(
         buf, values.size(), 3, (const int*)values.data(), dynamic);
 }
 
 /// Updates the buffer with new data.
-inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<vec4i>& values, bool dynamic = false) {
+inline void update_vertex_buffer(gl_vertex_buffer& buf,
+    const std::vector<vec4i>& values, bool dynamic = false) {
     update_vertex_buffer(
         buf, values.size(), 4, (const int*)values.data(), dynamic);
 }
@@ -8721,7 +8714,7 @@ inline void update_vertex_buffer(
 /// Make a buffer with new data.
 template <typename T>
 inline gl_vertex_buffer make_vertex_buffer(
-    const vector<T>& values, bool dynamic = false) {
+    const std::vector<T>& values, bool dynamic = false) {
     auto buf = gl_vertex_buffer();
     update_vertex_buffer(buf, values, dynamic);
     return buf;
@@ -8781,28 +8774,28 @@ inline void update_element_buffer(gl_element_buffer& buf, int num, int ncomp,
 }
 
 /// Updates the bufferwith new data.
-inline void update_element_buffer(
-    gl_element_buffer& buf, const vector<int>& values, bool dynamic = false) {
+inline void update_element_buffer(gl_element_buffer& buf,
+    const std::vector<int>& values, bool dynamic = false) {
     update_element_buffer(buf, values.size(), 1, values.data(), dynamic);
 }
 
 /// Updates the buffer with new data.
-inline void update_element_buffer(
-    gl_element_buffer& buf, const vector<vec2i>& values, bool dynamic = false) {
+inline void update_element_buffer(gl_element_buffer& buf,
+    const std::vector<vec2i>& values, bool dynamic = false) {
     update_element_buffer(
         buf, values.size(), 2, (const int*)values.data(), dynamic);
 }
 
 /// Updates the buffer with new data.
-inline void update_element_buffer(
-    gl_element_buffer& buf, const vector<vec3i>& values, bool dynamic = false) {
+inline void update_element_buffer(gl_element_buffer& buf,
+    const std::vector<vec3i>& values, bool dynamic = false) {
     update_element_buffer(
         buf, values.size(), 3, (const int*)values.data(), dynamic);
 }
 
 /// Updates the buffer with new data.
-inline void update_element_buffer(
-    gl_element_buffer& buf, const vector<vec4i>& values, bool dynamic = false) {
+inline void update_element_buffer(gl_element_buffer& buf,
+    const std::vector<vec4i>& values, bool dynamic = false) {
     update_element_buffer(
         buf, values.size(), 4, (const int*)values.data(), dynamic);
 }
@@ -8810,7 +8803,7 @@ inline void update_element_buffer(
 /// Make a buffer with new data.
 template <typename T>
 inline gl_element_buffer make_element_buffer(
-    const vector<T>& values, bool dynamic = false) {
+    const std::vector<T>& values, bool dynamic = false) {
     auto buf = gl_element_buffer();
     update_element_buffer(buf, values, dynamic);
     return buf;
@@ -8857,20 +8850,24 @@ struct gl_program {
 };
 
 /// Creates an OpenGL program from vertex and fragment code.
-gl_program make_program(const string& vertex, const string& fragment);
+gl_program make_program(const std::string& vertex, const std::string& fragment);
 
 /// Destroys the program.
 void clear_program(gl_program& prog);
 
 /// Get uniform location.
-int get_program_uniform_location(const gl_program& prog, const string& name);
+int get_program_uniform_location(
+    const gl_program& prog, const std::string& name);
 /// Get attribute location.
-int get_program_attrib_location(const gl_program& prog, const string& name);
+int get_program_attrib_location(
+    const gl_program& prog, const std::string& name);
 
 /// Get the names of all uniforms.
-vector<pair<string, int>> get_program_uniforms_names(const gl_program& prog);
+std::vector<std::pair<std::string, int>> get_program_uniforms_names(
+    const gl_program& prog);
 /// Get the names of all attributes.
-vector<pair<string, int>> get_program_attributes_names(const gl_program& prog);
+std::vector<std::pair<std::string, int>> get_program_attributes_names(
+    const gl_program& prog);
 
 /// Set uniform integer values `val` for program `prog` and variable `pos`.
 /// The values have `nc` number of components (1-4) and `count` elements.
@@ -8946,7 +8943,7 @@ inline bool set_program_uniform(
 /// Set uniform value for names variable.
 template <typename T>
 inline bool set_program_uniform(
-    gl_program& prog, const string& var, const T& val) {
+    gl_program& prog, const std::string& var, const T& val) {
     auto loc = get_program_uniform_location(prog, var);
     if (loc < 0) return false;
     return set_program_uniform(prog, loc, val);
@@ -8954,7 +8951,7 @@ inline bool set_program_uniform(
 /// Set uniform array for names variable.
 template <typename T>
 inline bool set_program_uniform(
-    gl_program& prog, const string& var, const T* val, int num) {
+    gl_program& prog, const std::string& var, const T* val, int num) {
     auto loc = get_program_uniform_location(prog, var);
     if (loc < 0) return false;
     return set_program_uniform(loc, val, num);
@@ -8973,15 +8970,16 @@ inline bool set_program_uniform_texture(gl_program& prog, int var, int varon,
 }
 
 /// Set uniform texture.
-inline bool set_program_uniform_texture(gl_program& prog, const string& var,
-    const gl_texture_info& tinfo, uint tunit) {
+inline bool set_program_uniform_texture(gl_program& prog,
+    const std::string& var, const gl_texture_info& tinfo, uint tunit) {
     auto loc = get_program_uniform_location(prog, var);
     if (loc < 0) return false;
     return set_program_uniform_texture(prog, loc, tinfo, tunit);
 }
 /// Set uniform texture with an additionasl texture enable flags.
-inline bool set_program_uniform_texture(gl_program& prog, const string& var,
-    const string& varon, const gl_texture_info& tinfo, uint tunit) {
+inline bool set_program_uniform_texture(gl_program& prog,
+    const std::string& var, const std::string& varon,
+    const gl_texture_info& tinfo, uint tunit) {
     auto loc = get_program_uniform_location(prog, var);
     if (loc < 0) return false;
     auto locon = get_program_uniform_location(prog, varon);
@@ -8999,7 +8997,7 @@ bool set_program_vertattr(gl_program& prog, int pos, const int* value, int nc);
 
 /// Binds a buffer to a vertex attribute.
 bool set_program_vertattr(
-    gl_program& prog, const string& var, const gl_vertex_buffer& buf);
+    gl_program& prog, const std::string& var, const gl_vertex_buffer& buf);
 
 /// Binds a buffer to a vertex attribute, or a constant value if the buffer is
 /// empty.
@@ -9014,7 +9012,7 @@ inline bool set_program_vertattr(gl_program& prog, int var,
 }
 /// Binds a buffer or constant to a vertex attribute.
 template <typename T, int N>
-inline bool set_program_vertattr(gl_program& prog, const string& var,
+inline bool set_program_vertattr(gl_program& prog, const std::string& var,
     const gl_vertex_buffer& buf, const vec<T, N>& def) {
     auto loc = get_program_attrib_location(prog, var);
     if (loc < 0) return false;
@@ -9064,20 +9062,21 @@ void clear_shape(gl_shape& shp);
 gl_lights make_gl_lights(const scene* scn);
 
 /// Clear scene textures on the GPU.
-void clear_textures(unordered_map<texture*, gl_texture>& textures);
+void clear_textures(std::unordered_map<texture*, gl_texture>& textures);
 
 /// Clear scene shapes on the GPU.
-void clear_shapes(unordered_map<shape*, gl_shape>& shapes);
+void clear_shapes(std::unordered_map<shape*, gl_shape>& shapes);
 
 /// Update scene textures on the GPU.
 void update_textures(const scene* scn,
-    unordered_map<texture*, gl_texture>& textures,
-    const unordered_set<texture*>& refresh = {}, bool clear = false);
+    std::unordered_map<texture*, gl_texture>& textures,
+    const std::unordered_set<texture*>& refresh = {}, bool clear = false);
 
 /// Update scene shapes on the GPU.
-void update_shapes(const scene* scn, unordered_map<shape*, gl_shape>& shapes,
-    const unordered_set<shape*>& refresh = {},
-    const unordered_set<shape_group*>& refreshg = {}, bool clear = false);
+void update_shapes(const scene* scn,
+    std::unordered_map<shape*, gl_shape>& shapes,
+    const std::unordered_set<shape*>& refresh = {},
+    const std::unordered_set<shape_group*>& refreshg = {}, bool clear = false);
 
 /// @}
 
@@ -9274,8 +9273,8 @@ struct gl_stdsurface_params {
 
 /// Draw scene with stdsurface program.
 void draw_stdsurface_scene(const scene* scn, const camera* cam,
-    gl_stdsurface_program& prog, unordered_map<shape*, gl_shape>& shapes,
-    unordered_map<texture*, gl_texture>& textures, const gl_lights& lights,
+    gl_stdsurface_program& prog, std::unordered_map<shape*, gl_shape>& shapes,
+    std::unordered_map<texture*, gl_texture>& textures, const gl_lights& lights,
     const gl_stdsurface_params& params);
 
 /// @}
@@ -9314,8 +9313,8 @@ struct gl_window {
 };
 
 /// Initialize a window.
-gl_window* make_window(
-    int width, int height, const string& title, void* user_pointer = nullptr);
+gl_window* make_window(int width, int height, const std::string& title,
+    void* user_pointer = nullptr);
 
 /// Set window callbacks.
 void set_window_callbacks(gl_window* win, gl_text_callback text_cb,
@@ -9328,7 +9327,7 @@ void clear_window(gl_window* win);
 inline void* get_user_pointer(gl_window* win) { return win->user_pointer; }
 
 /// Set window title.
-void set_window_title(gl_window* win, const string& title);
+void set_window_title(gl_window* win, const std::string& title);
 
 /// Wait events
 void wait_events(gl_window* win);
@@ -9355,10 +9354,10 @@ vec2f get_mouse_posf(gl_window* win);
 bool get_key(gl_window* win, int key);
 
 /// Read pixels
-vector<vec4b> get_screenshot(
+std::vector<vec4b> get_screenshot(
     gl_window* win, vec2i& wh, bool flipy = true, bool back = false);
 /// Save a screenshot to disk
-inline void save_screenshot(gl_window* win, const string& imfilename) {
+inline void save_screenshot(gl_window* win, const std::string& imfilename) {
     auto wh = vec2i{0, 0};
     auto pixels = get_screenshot(win, wh);
     save_image(imfilename, wh.x, wh.y, 4, (unsigned char*)pixels.data());
@@ -9384,7 +9383,7 @@ void init_widgets(
     gl_window* win, bool light_style = false, bool extra_font = true);
 
 /// Begin draw widgets.
-bool begin_widgets(gl_window* win, const string& title);
+bool begin_widgets(gl_window* win, const std::string& title);
 /// End draw widgets.
 void end_widgets(gl_window* win);
 
@@ -9402,65 +9401,68 @@ void draw_indent_widget_end(gl_window* win);
 void draw_continue_widget(gl_window* win);
 
 /// Label widget.
-void draw_label_widget(gl_window* win, const string& lbl, const string& msg);
+void draw_label_widget(
+    gl_window* win, const std::string& lbl, const std::string& msg);
 
 /// Label widget.
 template <typename... Args>
-inline void draw_label_widget(
-    gl_window* win, const string& lbl, const string& fmt, const Args&... args) {
+inline void draw_label_widget(gl_window* win, const std::string& lbl,
+    const std::string& fmt, const Args&... args) {
     auto msg = format(fmt, args...);
     draw_label_widget(win, lbl, msg);
 }
 /// Label widget.
 template <typename T>
-inline void draw_label_widget(gl_window* win, const string& lbl, const T& val) {
-    auto sst = stringstream();
+inline void draw_label_widget(
+    gl_window* win, const std::string& lbl, const T& val) {
+    auto sst = std::stringstream();
     sst << val;
     return draw_label_widget(win, lbl, sst.str());
 }
 /// Label widget.
 template <typename T>
-inline void draw_label_widget(gl_window* win, const string& lbl,
-    const vector<T>& vals, bool skip_empty = false) {
+inline void draw_label_widget(gl_window* win, const std::string& lbl,
+    const std::vector<T>& vals, bool skip_empty = false) {
     if (skip_empty && vals.empty()) return;
     draw_label_widget(win, lbl, (int)vals.size());
 };
 
 /// Value widget
-bool draw_value_widget(gl_window* win, const string& lbl, bool& val);
+bool draw_value_widget(gl_window* win, const std::string& lbl, bool& val);
 /// Value widget.
-bool draw_value_widget(gl_window* win, const string& lbl, string& str);
+bool draw_value_widget(
+    gl_window* win, const std::string& lbl, std::string& str);
 /// Value widget.
-bool draw_value_widget(gl_window* win, const string& lbl, int* val, int ncomp,
-    int min = 0, int max = 1, int incr = 1);
+bool draw_value_widget(gl_window* win, const std::string& lbl, int* val,
+    int ncomp, int min = 0, int max = 1, int incr = 1);
 /// Value widget.
-bool draw_value_widget(gl_window* win, const string& lbl, float* val, int ncomp,
-    float min = 0, float max = 1, float incr = 1);
+bool draw_value_widget(gl_window* win, const std::string& lbl, float* val,
+    int ncomp, float min = 0, float max = 1, float incr = 1);
 /// Value widget.
-inline bool draw_value_widget(gl_window* win, const string& lbl, int& val,
+inline bool draw_value_widget(gl_window* win, const std::string& lbl, int& val,
     int min = 0, int max = 1, int incr = 1) {
     return draw_value_widget(win, lbl, &val, 1, min, max, incr);
 }
 /// Value widget.
-inline bool draw_value_widget(gl_window* win, const string& lbl, float& val,
-    float min = 0, float max = 1, float incr = 1) {
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    float& val, float min = 0, float max = 1, float incr = 1) {
     return draw_value_widget(win, lbl, &val, 1, min, max, incr);
 }
 
 /// Value widget.
 template <int N>
-inline bool draw_value_widget(gl_window* win, const string& lbl,
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
     vec<int, N>& val, int min = 0, int max = 1, int incr = 1) {
     return draw_value_widget(win, lbl, data(val), N, min, max, incr);
 }
 /// Value widget.
 template <int N>
-inline bool draw_value_widget(gl_window* win, const string& lbl,
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
     vec<float, N>& val, float min = 0, float max = 1, float incr = 0.01f) {
     return draw_value_widget(win, lbl, data(val), N, min, max, incr);
 }
 /// Value widget.
-inline bool draw_value_widget(gl_window* win, const string& lbl,
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
     mat<float, 4>& val, float min = 0, float max = 1, float incr = 0.01f) {
     auto modx = draw_value_widget(win, lbl + ".x", val.x, min, max, incr);
     auto mody = draw_value_widget(win, lbl + ".y", val.y, min, max, incr);
@@ -9469,7 +9471,7 @@ inline bool draw_value_widget(gl_window* win, const string& lbl,
     return modx || mody || modz || modw;
 }
 /// Value widget.
-inline bool draw_value_widget(gl_window* win, const string& lbl,
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
     frame<float, 3>& val, float min = -10, float max = 10, float incr = 0.01f) {
     auto modx = draw_value_widget(win, lbl + ".x", val.x, -1, 1, 0.01f);
     auto mody = draw_value_widget(win, lbl + ".y", val.y, -1, 1, 0.01f);
@@ -9480,7 +9482,7 @@ inline bool draw_value_widget(gl_window* win, const string& lbl,
 }
 /// Value widget.
 template <typename T, int N>
-inline bool draw_value_widget(gl_window* win, const string& lbl,
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
     quat<T, N>& val, float min = -1, float max = 1, float incr = 0.01f) {
     auto mod = draw_value_widget(win, lbl, *(vec<T, N>*)&val, min, max, incr);
     if (mod) val = normalize(val);
@@ -9488,24 +9490,24 @@ inline bool draw_value_widget(gl_window* win, const string& lbl,
 }
 
 /// Color widget.
-bool draw_color_widget(gl_window* win, const string& lbl, vec4f& val);
+bool draw_color_widget(gl_window* win, const std::string& lbl, vec4f& val);
 /// Color widget.
-bool draw_color_widget(gl_window* win, const string& lbl, vec4b& val);
+bool draw_color_widget(gl_window* win, const std::string& lbl, vec4b& val);
 /// Color widget.
-bool draw_color_widget(gl_window* win, const string& lbl, vec3f& val);
+bool draw_color_widget(gl_window* win, const std::string& lbl, vec3f& val);
 
 /// Combo widget.
 bool draw_combo_widget_begin(
-    gl_window* win, const string& lbl, const string& label);
+    gl_window* win, const std::string& lbl, const std::string& label);
 /// Combo widget.
 bool draw_combo_widget_item(
-    gl_window* win, const string& label, int idx, bool selected);
+    gl_window* win, const std::string& label, int idx, bool selected);
 /// Combo widget.
 void draw_combo_widget_end(gl_window* win);
 /// Combo widget.
 template <typename T>
 bool draw_combo_widget_item(
-    gl_window* win, const string& label, int idx, T& val, const T& item) {
+    gl_window* win, const std::string& label, int idx, T& val, const T& item) {
     auto selected = draw_combo_widget_item(win, label, idx, val == item);
     if (selected) val = item;
     return selected;
@@ -9513,10 +9515,10 @@ bool draw_combo_widget_item(
 
 /// Combo widget.
 template <typename T, typename T1>
-inline bool draw_value_widget(gl_window* win, const string& lbl, T& val,
-    const vector<T1>& vals, const function<T(const T1&)>& value_func,
-    const function<string(const T1&)>& label_func) {
-    auto label = string();
+inline bool draw_value_widget(gl_window* win, const std::string& lbl, T& val,
+    const std::vector<T1>& vals, const std::function<T(const T1&)>& value_func,
+    const std::function<std::string(const T1&)>& label_func) {
+    auto label = std::string();
     for (auto& v : vals)
         if (value_func(v) == val) label = label_func(v);
     if (!draw_combo_widget_begin(win, lbl, label)) return false;
@@ -9532,8 +9534,8 @@ inline bool draw_value_widget(gl_window* win, const string& lbl, T& val,
     return changed;
 }
 /// Combo widget.
-inline bool draw_value_widget(gl_window* win, const string& lbl, string& val,
-    const vector<string>& labels) {
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    std::string& val, const std::vector<std::string>& labels) {
     if (!draw_combo_widget_begin(win, lbl, val)) return false;
     auto old_val = val;
     for (auto i = 0; i < labels.size(); i++) {
@@ -9544,9 +9546,9 @@ inline bool draw_value_widget(gl_window* win, const string& lbl, string& val,
 }
 /// Combo widget.
 template <typename T>
-inline bool draw_value_widget(gl_window* win, const string& lbl, T& val,
-    const vector<pair<string, T>>& labels) {
-    auto label = string();
+inline bool draw_value_widget(gl_window* win, const std::string& lbl, T& val,
+    const std::vector<std::pair<std::string, T>>& labels) {
+    auto label = std::string();
     for (auto& kv : labels)
         if (kv.second == val) label = kv.first;
     if (!draw_combo_widget_begin(win, lbl, label)) return false;
@@ -9560,8 +9562,8 @@ inline bool draw_value_widget(gl_window* win, const string& lbl, T& val,
 
 /// Combo widget
 template <typename T>
-inline bool draw_value_widget(gl_window* win, const string& lbl, T*& val,
-    const vector<T*>& vals, bool extra = true, T* extra_val = nullptr) {
+inline bool draw_value_widget(gl_window* win, const std::string& lbl, T*& val,
+    const std::vector<T*>& vals, bool extra = true, T* extra_val = nullptr) {
     if (!draw_combo_widget_begin(win, lbl, (val) ? val->name : "<none>"))
         return false;
     auto old_val = val;
@@ -9576,29 +9578,29 @@ inline bool draw_value_widget(gl_window* win, const string& lbl, T*& val,
 }
 
 /// Button widget.
-bool draw_button_widget(gl_window* win, const string& lbl);
+bool draw_button_widget(gl_window* win, const std::string& lbl);
 
 /// Collapsible header widget.
-bool draw_header_widget(gl_window* win, const string& lbl);
+bool draw_header_widget(gl_window* win, const std::string& lbl);
 
 /// Start tree widget.
-bool draw_tree_widget_begin(gl_window* win, const string& lbl);
+bool draw_tree_widget_begin(gl_window* win, const std::string& lbl);
 /// End tree widget.
 void draw_tree_widget_end(gl_window* win);
 /// Start selectable tree node widget.
 bool draw_tree_widget_begin(
-    gl_window* win, const string& lbl, void*& selection, void* content);
+    gl_window* win, const std::string& lbl, void*& selection, void* content);
 /// Start selectable tree node widget.
-bool draw_tree_widget_begin(gl_window* win, const string& lbl, void*& selection,
-    void* content, const vec4f& col);
+bool draw_tree_widget_begin(gl_window* win, const std::string& lbl,
+    void*& selection, void* content, const vec4f& col);
 /// End selectable tree node widget.
 void draw_tree_widget_end(gl_window* win, void* content);
 /// Selectable tree leaf nodewidget.
 void draw_tree_widget_leaf(
-    gl_window* win, const string& lbl, void*& selection, void* content);
+    gl_window* win, const std::string& lbl, void*& selection, void* content);
 /// Selectable tree leaf node widget.
-void draw_tree_widget_leaf(gl_window* win, const string& lbl, void*& selection,
-    void* content, const vec4f& col);
+void draw_tree_widget_leaf(gl_window* win, const std::string& lbl,
+    void*& selection, void* content, const vec4f& col);
 /// Text color widget.
 void draw_tree_widget_color_begin(gl_window* win, const vec4f& color);
 /// Text color widget.
@@ -9612,7 +9614,7 @@ void draw_image_widget(gl_window* win, gl_texture& txt, const vec2i& size);
 
 /// Scroll region widget.
 void draw_scroll_widget_begin(
-    gl_window* win, const string& lbl, int height, bool border);
+    gl_window* win, const std::string& lbl, int height, bool border);
 /// Scroll region widget.
 void draw_scroll_widget_end(gl_window* win);
 /// Scroll region widget.
@@ -9628,7 +9630,7 @@ void draw_groupid_widget_begin(gl_window* win, const char* gid);
 void draw_groupid_widget_end(gl_window* win);
 
 /// Tonemapping widgets.
-inline void draw_tonemap_widgets(gl_window* win, const string& lbl,
+inline void draw_tonemap_widgets(gl_window* win, const std::string& lbl,
     float& exposure, float& gamma, bool& filmic) {
     draw_value_widget(win, lbl + "exposure", exposure, -20, 20, 1);
     draw_value_widget(win, lbl + "gamma", gamma, 0.1, 5, 0.1);
@@ -9636,7 +9638,7 @@ inline void draw_tonemap_widgets(gl_window* win, const string& lbl,
 }
 
 /// Image view widgets.
-inline void draw_imageview_widgets(gl_window* win, const string& lbl,
+inline void draw_imageview_widgets(gl_window* win, const std::string& lbl,
     gl_stdimage_params& params, bool show_tonemap = true) {
     draw_value_widget(win, lbl + "offset", params.offset);
     draw_value_widget(win, lbl + "zoom", params.zoom);
@@ -9648,7 +9650,7 @@ inline void draw_imageview_widgets(gl_window* win, const string& lbl,
 }
 
 /// Image inspection widgets.
-inline void draw_imageinspect_widgets(gl_window* win, const string& lbl,
+inline void draw_imageinspect_widgets(gl_window* win, const std::string& lbl,
     const image4f& hdr, const image4b& ldr, const vec2f& mouse_pos,
     const gl_stdimage_params& params) {
     auto xy = (mouse_pos - params.offset) / params.zoom;
@@ -9675,14 +9677,14 @@ inline void draw_imageinspect_widgets(gl_window* win, const string& lbl,
 }
 
 /// Draws a widget that can selected the camera.
-inline bool draw_camera_widget(
-    gl_window* win, const string& lbl, camera*& cam, scene* scn, camera* view) {
+inline bool draw_camera_widget(gl_window* win, const std::string& lbl,
+    camera*& cam, scene* scn, camera* view) {
     return draw_value_widget(win, lbl, cam, scn->cameras, true, view);
 }
 
 /// Draws widgets for a whole scene. Used for quickly making demos.
-bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
-    void*& selection, const unordered_map<texture*, gl_texture>& gl_txt,
+bool draw_scene_widgets(gl_window* win, const std::string& lbl, scene* scn,
+    void*& selection, const std::unordered_map<texture*, gl_texture>& gl_txt,
     test_scene_params* test_scn = nullptr);
 
 /// @}
@@ -9696,35 +9698,36 @@ bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
 // -----------------------------------------------------------------------------
 namespace ygl {
 // cmdline implementation
-inline void _check_name(
-    cmdline_parser& parser, const string& name, const string& flag, bool opt) {
+inline void _check_name(cmdline_parser& parser, const std::string& name,
+    const std::string& flag, bool opt) {
     if (opt) {
         if (name.size() < 3 || name[0] != '-' || name[1] != '-' ||
             name[2] == '-')
-            throw runtime_error("bad name " + name);
+            throw std::runtime_error("bad name " + name);
     } else {
         if (name.size() < 1 || name[0] == '-')
-            throw runtime_error("bad name " + name);
+            throw std::runtime_error("bad name " + name);
     }
     if (find(parser._used_names.begin(), parser._used_names.end(), name) !=
         parser._used_names.end())
-        throw runtime_error("already used " + name);
+        throw std::runtime_error("already used " + name);
     parser._used_names.push_back(name);
     if (flag.empty()) return;
     if (flag.size() < 2 || flag[0] != '-' || flag[1] == '-')
-        throw runtime_error("bad name " + flag);
+        throw std::runtime_error("bad name " + flag);
     if (find(parser._used_names.begin(), parser._used_names.end(), flag) !=
         parser._used_names.end())
-        throw runtime_error("already used " + flag);
+        throw std::runtime_error("already used " + flag);
     parser._used_names.push_back(flag);
 }
 
 // cmdline implementation
 template <typename T>
-inline void _add_usage_str(cmdline_parser& parser, const string& name,
-    const string& flag, bool opt, const string& metavar, const string& help,
-    const string& def, bool req, const vector<T>& choices) {
-    auto stream = stringstream();
+inline void _add_usage_str(cmdline_parser& parser, const std::string& name,
+    const std::string& flag, bool opt, const std::string& metavar,
+    const std::string& help, const std::string& def, bool req,
+    const std::vector<T>& choices) {
+    auto stream = std::stringstream();
     stream << "  " << name;
     if (!flag.empty()) stream << "/" << flag;
     if (!metavar.empty()) stream << " " << metavar;
@@ -9753,10 +9756,10 @@ inline void _add_usage_str(cmdline_parser& parser, const string& name,
 
 // cmdline implementation
 template <typename T>
-inline void _add_usage(cmdline_parser& parser, const string& name,
-    const string& flag, bool opt, bool flag_opt, const string& help,
-    const T& def, bool req, const vector<T>& choices) {
-    auto stream = stringstream();
+inline void _add_usage(cmdline_parser& parser, const std::string& name,
+    const std::string& flag, bool opt, bool flag_opt, const std::string& help,
+    const T& def, bool req, const std::vector<T>& choices) {
+    auto stream = std::stringstream();
     stream << def;
     _add_usage_str(parser, name, flag, opt, (flag_opt) ? "" : "<val>", help,
         stream.str(), req, choices);
@@ -9764,10 +9767,10 @@ inline void _add_usage(cmdline_parser& parser, const string& name,
 
 // cmdline implementation
 template <typename T>
-inline void _add_usage(cmdline_parser& parser, const string& name,
-    const string& flag, bool opt, const string& help, const vector<T>& def,
-    bool req, const vector<T>& choices) {
-    auto stream = stringstream();
+inline void _add_usage(cmdline_parser& parser, const std::string& name,
+    const std::string& flag, bool opt, const std::string& help,
+    const std::vector<T>& def, bool req, const std::vector<T>& choices) {
+    auto stream = std::stringstream();
     auto first = true;
     for (auto&& v : def) {
         if (!first) stream << ",";
@@ -9779,7 +9782,7 @@ inline void _add_usage(cmdline_parser& parser, const string& name,
 }
 
 // cmdline implementation
-inline void _set_error(cmdline_parser& parser, const string& err) {
+inline void _set_error(cmdline_parser& parser, const std::string& err) {
     if (parser._error.empty()) parser._error = err;
 }
 
@@ -9795,8 +9798,8 @@ inline bool should_exit(cmdline_parser& parser) {
 }
 
 // Returns the usage string.
-inline string get_usage(const cmdline_parser& parser) {
-    auto str = string();
+inline std::string get_usage(const cmdline_parser& parser) {
+    auto str = std::string();
     if (!parser._error.empty()) str += "error: " + parser._error + "\n\n";
     str += parser._usage_prog;
     if (!parser._usage_opts.empty()) str += " [options]";
@@ -9812,8 +9815,8 @@ inline string get_usage(const cmdline_parser& parser) {
 }
 
 // Pase a flag from the command line.
-inline bool parse_flag(cmdline_parser& parser, const string& name,
-    const string& flag, const string& help, bool def, bool req) {
+inline bool parse_flag(cmdline_parser& parser, const std::string& name,
+    const std::string& flag, const std::string& help, bool def, bool req) {
     // check names
     _check_name(parser, name, flag, true);
     // update usage
@@ -9836,9 +9839,9 @@ inline bool parse_flag(cmdline_parser& parser, const string& name,
 
 // Pase an option from the command line.
 template <typename T>
-inline T parse_opt(cmdline_parser& parser, const string& name,
-    const string& flag, const string& help, const T& def, bool req,
-    const vector<T>& choices) {
+inline T parse_opt(cmdline_parser& parser, const std::string& name,
+    const std::string& flag, const std::string& help, const T& def, bool req,
+    const std::vector<T>& choices) {
     // check names
     _check_name(parser, name, flag, true);
     // update usage
@@ -9862,7 +9865,7 @@ inline T parse_opt(cmdline_parser& parser, const string& name,
     auto val = def;
     const auto& arg = *(pos + 1);
     // parse
-    auto stream = stringstream(arg);
+    auto stream = std::stringstream(arg);
     stream >> val;
     if (stream.fail()) {
         _set_error(
@@ -9882,17 +9885,18 @@ inline T parse_opt(cmdline_parser& parser, const string& name,
 
 // Parse an enum option from the command line.
 template <typename T>
-inline T parse_opt(cmdline_parser& parser, const string& name,
-    const string& flag, const string& help,
-    const vector<pair<string, T>>& key_values, const T& def, bool req,
-    const vector<T>& choices) {
-    auto keys = vector<string>{};
-    auto key_def = string();
+inline T parse_opt(cmdline_parser& parser, const std::string& name,
+    const std::string& flag, const std::string& help,
+    const std::vector<std::pair<std::string, T>>& key_values, const T& def,
+    bool req, const std::vector<T>& choices) {
+    auto keys = std::vector<std::string>{};
+    auto key_def = std::string();
     for (auto&& kv : key_values) {
         keys.push_back(kv.first);
         if (kv.second == def) key_def = kv.first;
     }
-    auto key = parse_opt<string>(parser, name, flag, help, key_def, req, keys);
+    auto key =
+        parse_opt<std::string>(parser, name, flag, help, key_def, req, keys);
     if (!parser._error.empty()) return def;
     auto val = def;
     for (auto&& kv : key_values) {
@@ -9903,8 +9907,9 @@ inline T parse_opt(cmdline_parser& parser, const string& name,
 
 // Parse positional argument from the command line.
 template <typename T>
-inline T parse_arg(cmdline_parser& parser, const string& name,
-    const string& help, const T& def, bool req, const vector<T>& choices) {
+inline T parse_arg(cmdline_parser& parser, const std::string& name,
+    const std::string& help, const T& def, bool req,
+    const std::vector<T>& choices) {
     // check names
     _check_name(parser, name, "", false);
     // update usage
@@ -9922,7 +9927,7 @@ inline T parse_arg(cmdline_parser& parser, const string& name,
     auto val = def;
     const auto& arg = *(pos);
     // parse
-    auto stream = stringstream(arg);
+    auto stream = std::stringstream(arg);
     stream >> val;
     if (stream.fail()) {
         _set_error(
@@ -9942,9 +9947,9 @@ inline T parse_arg(cmdline_parser& parser, const string& name,
 
 // Parse all remaining positional argument from the command line.
 template <typename T>
-inline vector<T> parse_args(cmdline_parser& parser, const string& name,
-    const string& help, const vector<T>& def, bool req,
-    const vector<T>& choices) {
+inline std::vector<T> parse_args(cmdline_parser& parser,
+    const std::string& name, const std::string& help, const std::vector<T>& def,
+    bool req, const std::vector<T>& choices) {
     // check names
     _check_name(parser, name, "", false);
     // update usage
@@ -9952,7 +9957,7 @@ inline vector<T> parse_args(cmdline_parser& parser, const string& name,
     // skip if error
     if (!parser._error.empty()) return def;
     // search for all params
-    auto vals = vector<T>();
+    auto vals = std::vector<T>();
     while (true) {
         // find location of argument
         auto pos =
@@ -9963,7 +9968,7 @@ inline vector<T> parse_args(cmdline_parser& parser, const string& name,
         auto val = T{};
         const auto& arg = *(pos);
         // parse
-        auto stream = stringstream(arg);
+        auto stream = std::stringstream(arg);
         stream >> val;
         if (stream.fail()) {
             _set_error(
@@ -9991,10 +9996,10 @@ inline vector<T> parse_args(cmdline_parser& parser, const string& name,
 
 // Initialize a command line parser.
 inline cmdline_parser make_parser(
-    int argc, char** argv, const string& prog, const string& help) {
+    int argc, char** argv, const std::string& prog, const std::string& help) {
     auto parser = cmdline_parser();
-    parser._to_parse = vector<string>(argv + 1, argv + argc);
-    parser._usage_prog = (prog.empty()) ? string(argv[0]) : prog;
+    parser._to_parse = std::vector<std::string>(argv + 1, argv + argc);
+    parser._usage_prog = (prog.empty()) ? std::string(argv[0]) : prog;
     parser._usage_help = help;
     parser._usage =
         parse_flag(parser, "--help", "-h", "prints and help message");
