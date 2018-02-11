@@ -1622,7 +1622,8 @@ void add_spec_gloss(gltf_scene_group* scns) {
                             auto jj = (int)(v * mr->base_txt->ldr.height());
                             base = mr->base_txt->ldr[{ii, jj}];
                         } else {
-                            base = linear_to_srgb(vec4f(mr->base, mr->opacity));
+                            base = linear_to_srgb(vec4f(mr->base.x, mr->base.y,
+                                                        mr->base.z, mr->opacity));
                         }
                         if (mr->metallic_txt) {
                             auto ii = (int)(u * mr->metallic_txt->ldr.width());
@@ -1636,11 +1637,12 @@ void add_spec_gloss(gltf_scene_group* scns) {
                         auto km_txt = srgb_to_linear(metallic);
                         auto kb = vec3f{kb_txt.x, kb_txt.y, kb_txt.z};
                         auto km = km_txt.z;
+                        auto kd = kb * (1-km);
+                        auto ks = kb * km + vec3f{(1 - km) * 0.04f};
                         diff->ldr[{i, j}] =
-                        linear_to_srgb({kb * (1 - km), kb_txt.w});
+                        linear_to_srgb({kd.x, kd.y, kd.z, kb_txt.w});
                         spec->ldr[{i, j}] = linear_to_srgb(
-                            {kb * km + vec3f{(1 - km) * 0.04f},
-                                1 - km_txt.y});
+                            {ks.x, ks.y, ks.z, 1 - km_txt.y});
                     }
                 }
                 txts[mr_txt] = {diff, spec};
