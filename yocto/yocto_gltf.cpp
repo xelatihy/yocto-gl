@@ -35,7 +35,7 @@ namespace ygl {
 
 // Math support
 inline mat4f node_transform(const gltf_node* node) {
-    return to_mat(translation_frame(node->translation) * rotation_frame(node->rotation) *
+    return frame_to_mat(translation_frame(node->translation) * rotation_frame(node->rotation) *
            scaling_frame(node->scale)) * node->matrix;
 }
 
@@ -1334,7 +1334,7 @@ void add_default_cameras(gltf_scene_group* scns) {
             cam->aperture = 0;
             cam->focus = length(to - from);
             auto node = new gltf_node();
-            node->matrix = to_mat(lookat_frame(from, to, up));
+            node->matrix = frame_to_mat(lookat_frame(from, to, up));
             node->cam = cam;
             node->name = cam->name;
             scns->cameras.push_back(cam);
