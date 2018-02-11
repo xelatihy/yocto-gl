@@ -78,25 +78,33 @@
 //
 // ## Next
 //
-// - consider uniforming texture info.
+// - move type support
+// - cleanup defgroups
 //
-// - make image a pure structure
-// - make vec/mat/etc with no constructors
+// - consider uniforming texture info
 //
 // - envmap along z
 // - spherical/cartesian conversion
 //
 // - rename refl_enum_names to something else
 // - color widget with limits
-// - serialization with visitor
 // - add angle semantic
 // - update glTF generated documentation.
-// - move cmdline implementation.
+//
+// - visitor for params
+// - serialization with visitor
+// - cmdline with visitor
 //
 // - move combo widget implementation.
+//
 // - check ranom shuffle
 // - check random number generation for float/double
-// - visitors
+//
+// ## Maybe
+//
+// - make image a simple structure
+//     - get_pixel, make_image
+// - remove constructors and accessors from vec/mat/frame
 //
 // ## Trace
 //
