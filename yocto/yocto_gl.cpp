@@ -3104,13 +3104,13 @@ vec4f eval_texture(const texture_info& info, const vec2f& texcoord, bool srgb,
 
     // get texture
     auto txt = info.txt;
-    assert(txt->hdr || txt->ldr);
+    assert(!txt->hdr.empty() || !txt->ldr.empty());
 
     auto lookup = [&def, &txt, &srgb](int i, int j) {
-        if (txt->ldr)
+        if (!txt->ldr.empty())
             return (srgb) ? srgb_to_linear(txt->ldr.at(i, j)) :
                             byte_to_float(txt->ldr.at(i, j));
-        else if (txt->hdr)
+        else if (!txt->hdr.empty())
             return txt->hdr.at(i, j);
         else
             return def;
@@ -3395,7 +3395,7 @@ void add_elements(scene* scn, const add_elements_options& opts) {
 
     if (opts.texture_data) {
         for (auto txt : scn->textures) {
-            if (!txt->hdr && !txt->ldr) {
+            if (txt->hdr.empty() && txt->ldr.empty()) {
                 printf("unable to load texture %s\n", txt->path.c_str());
                 txt->ldr = image4b(1, 1, {255, 255, 255, 255});
             }
@@ -4187,7 +4187,7 @@ obj_scene* scene_to_obj(const scene* scn) {
     for (auto txt : scn->textures) {
         auto otxt = new obj_texture();
         otxt->path = txt->path;
-        if (txt->hdr) {
+        if (!txt->hdr.empty()) {
             otxt->width = txt->hdr.width();
             otxt->height = txt->hdr.height();
             otxt->ncomp = 4;
@@ -4195,7 +4195,7 @@ obj_scene* scene_to_obj(const scene* scn) {
                 (float*)data(txt->hdr) +
                     txt->hdr.width() * txt->hdr.height() * 4);
         }
-        if (txt->ldr) {
+        if (!txt->ldr.empty()) {
             otxt->width = txt->ldr.width();
             otxt->height = txt->ldr.height();
             otxt->ncomp = 4;
@@ -4923,7 +4923,7 @@ glTF* scene_to_gltf(
     for (auto txt : scn->textures) {
         auto gimg = new glTFImage();
         gimg->uri = txt->path;
-        if (txt->hdr) {
+        if (!txt->hdr.empty()) {
             gimg->data.width = txt->hdr.width();
             gimg->data.height = txt->hdr.height();
             gimg->data.ncomp = 4;
@@ -4931,7 +4931,7 @@ glTF* scene_to_gltf(
                 (float*)data(txt->hdr) +
                     txt->hdr.width() * txt->hdr.height() * 4);
         }
-        if (txt->ldr) {
+        if (!txt->ldr.empty()) {
             gimg->data.width = txt->ldr.width();
             gimg->data.height = txt->ldr.height();
             gimg->data.ncomp = 4;
@@ -9982,8 +9982,8 @@ void update_test_elem(
         txt->ldr = bump_to_normal_map(txt->ldr, ttxt.bump_scale);
     }
 
-    if (txt->ldr) txt->path = ttxt.name + ".png";
-    if (txt->hdr) txt->path = ttxt.name + ".hdr";
+    if (!txt->ldr.empty()) txt->path = ttxt.name + ".png";
+    if (!txt->hdr.empty()) txt->path = ttxt.name + ".hdr";
 }
 
 // Makes/updates a test material
@@ -11799,9 +11799,9 @@ void update_textures(const scene* scn,
             if (refresh.find(txt) == refresh.end()) continue;
         }
         auto& gtxt = gtextures.at(txt);
-        if (txt->hdr) {
+        if (!txt->hdr.empty()) {
             update_texture(gtxt, txt->hdr, true, true, true);
-        } else if (txt->ldr) {
+        } else if (!txt->ldr.empty()) {
             update_texture(gtxt, txt->ldr, true, true, true);
         } else
             assert(false);

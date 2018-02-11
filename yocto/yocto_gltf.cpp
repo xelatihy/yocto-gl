@@ -668,7 +668,7 @@ glTF* scenes_to_gltf(const gltf_scene_group* scns,
     for (auto txt : scns->textures) {
         auto gimg = new glTFImage();
         gimg->uri = txt->path;
-        if (txt->hdr) {
+        if (!txt->hdr.empty()) {
             gimg->data.width = txt->hdr.width();
             gimg->data.height = txt->hdr.height();
             gimg->data.ncomp = 4;
@@ -676,7 +676,7 @@ glTF* scenes_to_gltf(const gltf_scene_group* scns,
                 (uint8_t*)data(txt->hdr) +
                     txt->hdr.width() * txt->hdr.height() * 4);
         }
-        if (txt->ldr) {
+        if (!txt->ldr.empty()) {
             gimg->data.width = txt->ldr.width();
             gimg->data.height = txt->ldr.height();
             gimg->data.ncomp = 4;
@@ -935,7 +935,7 @@ glTF* scenes_to_gltf(const gltf_scene_group* scns,
                 joints_short.reserve(gprim->skin_joints.size());
                 for (auto&& j : gprim->skin_joints)
                     joints_short.push_back(
-                        {(ushort)j.x, (ushort)j.y, (ushort)j.z, (ushort)j.w});
+                        {{(ushort)j.x, (ushort)j.y, (ushort)j.z, (ushort)j.w}});
                 prim->attributes["JOINTS_0"] = add_accessor(gbuffer,
                     pid + "_skin_joints", glTFAccessorType::Vec4,
                     glTFAccessorComponentType::UnsignedShort,
@@ -1232,7 +1232,7 @@ void add_radius(gltf_scene_group* scn, float radius) {
 // Add missing data to the scene.
 void add_texture_data(gltf_scene_group* scn) {
     for (auto txt : scn->textures) {
-        if (!txt->hdr && !txt->ldr) {
+        if (txt->hdr.empty() && txt->ldr.empty()) {
             printf("unable to load texture %s\n", txt->path.c_str());
             txt->ldr = image4b(1, 1, {255, 255, 255, 255});
         }

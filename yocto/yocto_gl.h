@@ -4303,8 +4303,6 @@ struct image {
     int height() const { return h; }
     /// check for empty
     bool empty() const { return w == 0 || h == 0; }
-    /// check for empty
-    explicit operator bool() const { return w != 0 && h != 0; }
 
     /// Element access
     T& at(int i, int j) { return pixels.at(j * w + i); }
@@ -9612,14 +9610,14 @@ inline void draw_imageinspect_widgets(gl_window* win, const string& lbl,
     auto i = (int)round(xy.x), j = (int)round(xy.y);
     auto v4f = zero4f;
     auto v4b = zero4b;
-    if (hdr) {
+    if (!hdr.empty()) {
         auto w = hdr.width(), h = hdr.height();
         if (i >= 0 && i < w && j >= 0 && j < h) {
             v4f = hdr.at(i, j);
             v4b = linear_to_srgb(hdr.at(i, j));
         }
     }
-    if (ldr) {
+    if (!ldr.empty()) {
         auto w = ldr.width(), h = ldr.height();
         if (i >= 0 && i < w && j >= 0 && j < h) {
             v4f = srgb_to_linear(ldr.at(i, j));
