@@ -1632,13 +1632,15 @@ void add_spec_gloss(gltf_scene_group* scns) {
                             metallic = linear_to_srgb(
                                 vec4f(1, mr->roughness, mr->metallic, 1));
                         }
-                        auto kb = srgb_to_linear(base);
-                        auto km = srgb_to_linear(metallic);
+                        auto kb_txt = srgb_to_linear(base);
+                        auto km_txt = srgb_to_linear(metallic);
+                        auto kb = vec3f{kb_txt.x, kb_txt.y, kb_txt.z};
+                        auto km = km_txt.z;
                         diff->ldr[{i, j}] =
-                            linear_to_srgb({kb.xyz() * (1 - km.z), kb.w});
+                        linear_to_srgb({kb * (1 - km), kb_txt.w});
                         spec->ldr[{i, j}] = linear_to_srgb(
-                            {kb.xyz() * km.z + vec3f{(1 - km.z) * 0.04f},
-                                1 - km.y});
+                            {kb * km + vec3f{(1 - km) * 0.04f},
+                                1 - km_txt.y});
                     }
                 }
                 txts[mr_txt] = {diff, spec};

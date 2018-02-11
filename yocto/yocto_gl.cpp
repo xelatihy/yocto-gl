@@ -78,12 +78,10 @@
 //
 // ## Next
 //
-// - remove widget size.
 // - consider uniforming texture info.
-// - transforms
-//    - use only transform -> frame
-//    - can always to combined with to_mat
-//    - make it clear how to do quaternion conversion
+//
+// - envmap along z
+// - spherical/cartesian conversion
 //
 // - rename refl_enum_names to something else
 // - color widget with limits
@@ -1188,7 +1186,7 @@ tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>, vector<int>> facet_elems(
         } else {
             nquads.push_back({(int)verts.size(), (int)verts.size() + 1,
                 (int)verts.size() + 2, (int)verts.size() + 2});
-            for (auto v : q.xyz()) verts.push_back(v);
+            for (auto v : {q.x, q.y, q.z}) verts.push_back(v);
         }
     }
 
@@ -1522,14 +1520,13 @@ image4b tonemap_image(
     auto scale = pow(2.0f, exposure);
     for (auto j = 0; j < hdr.height(); j++) {
         for (auto i = 0; i < hdr.width(); i++) {
-            auto h = hdr[{i, j}];
-            h.xyz() *= scale;
+            auto h = hdr[{i, j}] * vec4f{scale, scale, scale, 1};
             if (filmic) {
-                h.xyz() = {tonemap_filmic(h.x), tonemap_filmic(h.y),
-                    tonemap_filmic(h.z)};
+                h = {tonemap_filmic(h.x), tonemap_filmic(h.y),
+                    tonemap_filmic(h.z), h.w};
             } else {
-                h.xyz() = {pow(h.x, 1 / gamma), pow(h.y, 1 / gamma),
-                    pow(h.z, 1 / gamma)};
+                h = {pow(h.x, 1 / gamma), pow(h.y, 1 / gamma),
+                    pow(h.z, 1 / gamma), h.w};
             }
             ldr[{i, j}] = float_to_byte(h);
         }
@@ -4331,7 +4328,7 @@ obj_scene* scene_to_obj(const scene* scn) {
                     {(uint32_t)group->verts.size(), obj_element_type::face,
                         (uint16_t)((quad.z == quad.w) ? 3 : 4)});
                 if (group->elems.back().size == 3) {
-                    for (auto vid : quad.xyz()) {
+                    for (auto vid : {quad.x,quad.y,quad.z}) {
                         auto vert = obj_vertex{-1, -1, -1, -1, -1};
                         if (!shp->pos.empty()) vert.pos = offset.pos + vid;
                         if (!shp->texcoord.empty())
@@ -5636,6 +5633,7 @@ struct trace_point {
     vec3f ks = {0, 0, 0};              // specular
     float rs = 0;                      // specular roughness
     vec3f kt = {0, 0, 0};              // transmission (thin glass)
+    float op = 1.0f;                   // opacity
     bool has_brdf() const { return shp && kd + ks + kt != zero3f; }
     vec3f rho() const { return kd + ks + kt; }
     vec3f brdf_weights() const {
@@ -5907,7 +5905,8 @@ trace_point eval_point(const environment* env, const vec3f& wo) {
         auto theta = acos(clamp(w.y, -1.0f, 1.0f));
         auto phi = atan2(w.z, w.x);
         auto texcoord = vec2f{0.5f + phi / (2 * pif), theta / pif};
-        pt.ke *= eval_texture(env->ke_txt, texcoord).xyz();
+        auto txt = eval_texture(env->ke_txt, texcoord);
+        pt.ke *= {txt.x,txt.y,txt.z};
     }
     return pt;
 }
@@ -5936,8 +5935,8 @@ trace_point eval_point(
     if (mat->norm_txt) {
         auto tangsp = eval_tangsp(pt.shp, eid, euv);
         auto txt =
-            eval_texture(mat->norm_txt, pt.texcoord, false).xyz() * 2.0f -
-            vec3f{1, 1, 1};
+            eval_texture(mat->norm_txt, pt.texcoord, false) * 2.0f -
+            vec4f{1};
         auto ntxt = normalize(vec3f{txt.x, -txt.y, txt.z});
         auto frame = make_frame_fromzx(
             {0, 0, 0}, pt.norm, {tangsp.x, tangsp.y, tangsp.z});
@@ -5952,60 +5951,101 @@ trace_point eval_point(
     // correct for double sided
     if (mat->double_sided && dot(pt.norm, wo) < 0) pt.norm = -pt.norm;
 
-    // handle color
-    auto kx_scale = vec4f{1, 1, 1, 1};
-    if (!pt.shp->color.empty()) kx_scale *= eval_color(pt.shp, eid, euv);
-
+    // initialized material values
+    auto kx = vec3f{1,1,1};
+    pt.op = 1;
+    if(!pt.shp->color.empty()) {
+        auto col = eval_color(pt.shp, eid, euv);
+        kx *= {col.x,col.y,col.z};
+        pt.op *= col.w;
+    }
+    
     // handle occlusion
-    if (mat->occ_txt)
-        kx_scale.xyz() *= eval_texture(mat->occ_txt, pt.texcoord).xyz();
-
+    if(mat->occ_txt) {
+        auto txt = eval_texture(mat->occ_txt, pt.texcoord);
+        kx *= {txt.x,txt.y,txt.z};
+    }
+    
     // sample emission
-    pt.ke =
-        mat->ke * kx_scale.xyz() * eval_texture(mat->ke_txt, pt.texcoord).xyz();
+    pt.ke = mat->ke * kx;
+    if(mat->ke_txt) {
+        auto txt = eval_texture(mat->ke_txt, pt.texcoord);
+        pt.ke *= {txt.x,txt.y,txt.z};
+    }
 
     // sample reflectance
     auto kd = zero4f, ks = zero4f, kt = zero4f;
     switch (mat->type) {
         case material_type::specular_roughness: {
-            kd = vec4f{mat->kd, mat->op} * kx_scale *
-                 eval_texture(mat->kd_txt, pt.texcoord);
-            ks = vec4f{mat->ks, mat->rs} * vec4f{kx_scale.xyz(), 1} *
-                 eval_texture(mat->ks_txt, pt.texcoord);
-            kt = vec4f{mat->kt, mat->rs} * vec4f{kx_scale.xyz(), 1} *
-                 eval_texture(mat->kt_txt, pt.texcoord);
+            pt.kd = mat->kd * kx;
+            if(mat->kd_txt) {
+                auto txt = eval_texture(mat->kd_txt, pt.texcoord);
+                pt.kd *= {txt.x,txt.y,txt.z};
+                pt.op *= txt.w;
+            }
+            pt.ks = mat->ks * kx;
+            pt.rs = mat->rs;
+            if(mat->ks_txt) {
+                auto txt = eval_texture(mat->ks_txt, pt.texcoord);
+                pt.ks *= {txt.x,txt.y,txt.z};
+            }
+            pt.kt = mat->kt * kx;
+            if(mat->kt_txt) {
+                auto txt = eval_texture(mat->kt_txt, pt.texcoord);
+                pt.kt *= {txt.x,txt.y,txt.z};
+            }
         } break;
         case material_type::metallic_roughness: {
-            auto kb = vec4f{mat->kd, mat->op} * kx_scale *
-                      eval_texture(mat->kd_txt, pt.texcoord);
-            auto km = vec2f{mat->ks.x, mat->rs};
-            if (mat->ks_txt) {
-                auto ks_txt = eval_texture(mat->ks_txt, pt.texcoord);
-                km.x *= ks_txt.y;
-                km.y *= ks_txt.z;
+            auto kb = mat->kd * kx;
+            if(mat->kd_txt) {
+                auto txt = eval_texture(mat->kd_txt, pt.texcoord);
+                kb *= {txt.x,txt.y,txt.z};
+                pt.op *= txt.w;
             }
-            kd = vec4f{kb.xyz() * (1 - km.x), kb.w};
-            ks =
-                vec4f{kb.xyz() * km.x + vec3f{0.04f, 0.04f, 0.04f} * (1 - km.x),
-                    km.y};
+            auto km = mat->ks.x;
+            pt.rs = mat->rs;
+            if (mat->ks_txt) {
+                auto txt = eval_texture(mat->ks_txt, pt.texcoord);
+                km *= txt.y;
+                pt.rs *= txt.z;
+            }
+            pt.kd = kb * (1 - km);
+            pt.ks = kb * km + vec3f{0.04f} * (1 - km);
         } break;
         case material_type::specular_glossiness: {
-            kd = vec4f{mat->kd, mat->op} * kx_scale *
-                 eval_texture(mat->kd_txt, pt.texcoord);
-            ks = vec4f{mat->ks, mat->rs} * vec4f{kx_scale.xyz(), 1} *
-                 eval_texture(mat->ks_txt, pt.texcoord);
-            ks.w = 1 - ks.w;  // glossiness -> roughness
+            pt.kd = mat->kd * kx;
+            if(mat->kd_txt) {
+                auto txt = eval_texture(mat->kd_txt, pt.texcoord);
+                pt.kd *= {txt.x,txt.y,txt.z};
+                pt.op *= txt.w;
+            }
+            pt.ks = mat->ks * kx;
+            pt.rs = mat->rs;
+            if(mat->ks_txt) {
+                auto txt = eval_texture(mat->ks_txt, pt.texcoord);
+                pt.ks *= {txt.x,txt.y,txt.z};
+                pt.rs *= txt.w;
+            }
+            pt.rs = 1-pt.rs; // glossiness -> roughnes
+            pt.kt = mat->kt * kx;
+            if(mat->kt_txt) {
+                auto txt = eval_texture(mat->kt_txt, pt.texcoord);
+                pt.kt *= {txt.x,txt.y,txt.z};
+            }
         } break;
     }
 
-    // TODO: fix emission for opacity
-
     // set up final values
-    pt.kd = kd.xyz() * kd.w;
-    pt.ks = (ks.xyz() != zero3f && ks.w < 0.9999f) ? ks.xyz() * kd.w : zero3f;
-    pt.rs = (ks.xyz() != zero3f && ks.w < 0.9999f) ? ks.w * ks.w : 0;
-    pt.kt = {1 - kd.w, 1 - kd.w, 1 - kd.w};
-    if (kt.xyz() != zero3f) pt.kt *= kt.xyz();
+    pt.ke *= pt.op;
+    pt.kd *= pt.op;
+    if(pt.ks != zero3f && pt.rs <  0.9999f) {
+        pt.ks *= pt.op;
+        pt.rs = pt.rs*pt.rs;
+    } else {
+        pt.ks = zero3f;
+        pt.rs = 0;
+    }
+    if(pt.kt == zero3f) pt.kt = vec3f{1 - pt.op};
 
     // done
     return pt;
