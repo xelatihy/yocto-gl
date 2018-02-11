@@ -82,11 +82,11 @@ void draw(gl_window* win) {
         if (draw_header_widget(win, "trace")) {
             draw_value_widget(win, "samples", app->params.nsamples, 1, 4096, 1);
             edited += draw_value_widget(win, "shader type", app->params.stype,
-                refl_enum_names<trace_shader_type>());
+                enum_names<trace_shader_type>());
             edited += draw_value_widget(win, "random type", app->params.rtype,
-                refl_enum_names<trace_rng_type>());
+                enum_names<trace_rng_type>());
             edited += draw_value_widget(win, "filter type", app->params.ftype,
-                refl_enum_names<trace_filter_type>());
+                enum_names<trace_filter_type>());
             edited += draw_camera_widget(
                 win, "camera", app->cam, app->scn, app->view);
             edited += draw_value_widget(win, "update bvh", app->update_bvh);
@@ -181,12 +181,12 @@ int main(int argc, char* argv[]) {
     app->save_progressive =
         parse_flag(parser, "--save-progressive", "", "save progressive images");
     app->params.rtype = parse_opt(parser, "--random", "", "random type",
-        refl_enum_names<trace_rng_type>(), trace_rng_type::stratified);
+        enum_names<trace_rng_type>(), trace_rng_type::stratified);
     app->params.ftype = parse_opt(parser, "--filter", "", "filter type",
-        refl_enum_names<trace_filter_type>(), trace_filter_type::box);
+        enum_names<trace_filter_type>(), trace_filter_type::box);
     app->params.stype =
         parse_opt(parser, "--shader", "-S", "path estimator type",
-            refl_enum_names<trace_shader_type>(), trace_shader_type::pathtrace);
+            enum_names<trace_shader_type>(), trace_shader_type::pathtrace);
     app->params.envmap_invisible =
         parse_flag(parser, "--envmap-invisible", "", "envmap invisible");
     app->params.shadow_notransmission = parse_flag(

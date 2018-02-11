@@ -78,7 +78,6 @@
 //
 // ## Next
 //
-// - move type support
 // - cleanup defgroups
 //
 // - consider uniforming texture info
@@ -86,7 +85,6 @@
 // - envmap along z
 // - spherical/cartesian conversion
 //
-// - rename refl_enum_names to something else
 // - color widget with limits
 // - add angle semantic
 // - update glTF generated documentation.
@@ -10970,7 +10968,7 @@ void serialize(test_camera_params& val, json& js, bool reading) {
 
 // Parses a test_camera object
 void serialize(test_texture_type& val, json& js, bool reading) {
-    serialize(val, js, reading, refl_enum_names(val));
+    serialize(val, js, reading, enum_names(val));
 }
 
 // Parses a test_camera object
@@ -10994,7 +10992,7 @@ void serialize(test_texture_params& val, json& js, bool reading) {
 
 // Parses a test_camera object
 void serialize(test_material_type& val, json& js, bool reading) {
-    serialize(val, js, reading, refl_enum_names(val));
+    serialize(val, js, reading, enum_names(val));
 }
 
 // Parses a test_camera object
@@ -11014,7 +11012,7 @@ void serialize(test_material_params& val, json& js, bool reading) {
 
 // Parses a test_camera object
 void serialize(test_shape_type& val, json& js, bool reading) {
-    serialize(val, js, reading, refl_enum_names(val));
+    serialize(val, js, reading, enum_names(val));
 }
 
 // Parses a test_camera object
@@ -13405,13 +13403,13 @@ struct draw_tree_visitor {
     void*& selection;
 
     template <typename T>
-    void operator()(const char* name, T& val, const refl_sem&) {}
-    void operator()(const char* name, texture_info& val, const refl_sem&) {
-        (*this)(name, val.txt, refl_sem{refl_sem_type::reference});
+    void operator()(const char* name, T& val, const visit_sem&) {}
+    void operator()(const char* name, texture_info& val, const visit_sem&) {
+        (*this)(name, val.txt, visit_sem{visit_sem_type::reference});
     }
 
     template <typename T>
-    void operator()(const char* name, vector<T*>& val, const refl_sem& sem) {
+    void operator()(const char* name, vector<T*>& val, const visit_sem& sem) {
         if (draw_tree_widget_begin(win, name)) {
             for (auto v : val) (*this)("", v, sem);
             draw_tree_widget_end(win);
@@ -13419,18 +13417,18 @@ struct draw_tree_visitor {
     }
 
     template <typename T>
-    void operator()(const char* name, T*& val, const refl_sem& sem) {
+    void operator()(const char* name, T*& val, const visit_sem& sem) {
         if (!val) return;
         auto lbl = val->name;
         if (!string(name).empty()) lbl = string(name) + ": " + val->name;
         if (draw_tree_widget_begin(win, lbl, selection, val)) {
-            refl_visit_sem(val, *this);
+            visit(val, *this);
             draw_tree_widget_end(win);
         }
     }
 
-    void operator()(const char* name, scene*& val, const refl_sem& sem) {
-        refl_visit_sem(val, *this);
+    void operator()(const char* name, scene*& val, const visit_sem& sem) {
+        visit(val, *this);
     }
 };
 
@@ -13440,7 +13438,7 @@ void draw_scene_tree_widgets(gl_window* win, const string& lbl,
     if (draw_tree_widget_begin(win, lbl)) {
         for (auto elem : elems) {
             auto visitor = draw_tree_visitor{win, selection};
-            visitor("", elem, refl_sem{refl_sem_type::object});
+            visitor("", elem, visit_sem{visit_sem_type::object});
         }
         draw_tree_widget_end(win);
     }
@@ -13449,7 +13447,7 @@ void draw_scene_tree_widgets(gl_window* win, const string& lbl,
 void draw_tree_widgets(
     gl_window* win, const string& lbl, scene* scn, void*& selection) {
     auto visitor = draw_tree_visitor{win, selection};
-    visitor(lbl.c_str(), scn, refl_sem{refl_sem_type::object});
+    visitor(lbl.c_str(), scn, visit_sem{visit_sem_type::object});
 }
 
 // Implementation of draw elements
@@ -13461,19 +13459,19 @@ struct draw_elem_visitor {
     const unordered_map<texture*, gl_texture>& gl_txt;
     int edited = 0;
 
-    void operator()(const char* name, bool& val, const refl_sem& sem) {
+    void operator()(const char* name, bool& val, const visit_sem& sem) {
         edited += (int)draw_value_widget(win, name, val);
     }
     template <typename T,
         typename std::enable_if<!std::is_enum<T>::value, int>::type = 0>
-    void operator()(const char* name, T& val, const refl_sem& sem) {
+    void operator()(const char* name, T& val, const visit_sem& sem) {
         if (sem.min == sem.max)
             edited += (int)draw_value_widget(win, name, val);
         else
             edited += (int)draw_value_widget(win, name, val, sem.min, sem.max);
     }
-    void operator()(const char* name, vec3f& val, const refl_sem& sem) {
-        if (sem.type != refl_sem_type::color) {
+    void operator()(const char* name, vec3f& val, const visit_sem& sem) {
+        if (sem.type != visit_sem_type::color) {
             if (sem.min == sem.max)
                 edited += (int)draw_value_widget(win, name, val);
             else
@@ -13483,18 +13481,18 @@ struct draw_elem_visitor {
             edited += draw_color_widget(win, name, val);
         }
     }
-    void operator()(const char* name, string& val, const refl_sem&) {
+    void operator()(const char* name, string& val, const visit_sem&) {
         edited += (int)draw_value_widget(win, name, val);
     }
     template <typename T,
         typename std::enable_if<std::is_enum<T>::value, int>::type = 0>
-    void operator()(const char* name, T& val, const refl_sem&) {
-        edited += (int)draw_value_widget(win, name, val, refl_enum_names(val));
+    void operator()(const char* name, T& val, const visit_sem&) {
+        edited += (int)draw_value_widget(win, name, val, enum_names(val));
     }
 
-    void operator()(const char* name, texture_info& val, const refl_sem&) {
+    void operator()(const char* name, texture_info& val, const visit_sem&) {
         draw_groupid_widget_begin(win, name);
-        operator()(name, val.txt, refl_sem{refl_sem_type::reference});
+        operator()(name, val.txt, visit_sem{visit_sem_type::reference});
         if (val.txt) {
             edited += draw_value_widget(win, "wrap s", val.wrap_s);
             draw_continue_widget(win);
@@ -13508,33 +13506,32 @@ struct draw_elem_visitor {
     }
 
     template <typename T>
-    void operator()(const char* name, image<T>& val, const refl_sem&) {
+    void operator()(const char* name, image<T>& val, const visit_sem&) {
         if (empty(val)) return;
         auto size = format("{} x {}", val.width(), val.height());
         draw_label_widget(win, name, size);
     }
 
     template <typename T>
-    void operator()(const char* name, vector<T*>& val, const refl_sem& sem) {
-        if (sem.type != refl_sem_type::reference) {
-            for (auto idx = 0; idx < val.size(); idx++)
-                refl_visit_sem(val[idx], *this);
+    void operator()(const char* name, vector<T*>& val, const visit_sem& sem) {
+        if (sem.type != visit_sem_type::reference) {
+            for (auto idx = 0; idx < val.size(); idx++) visit(val[idx], *this);
         }
     }
     template <typename T>
-    void operator()(const char* name, vector<T>& val, const refl_sem&) {
+    void operator()(const char* name, vector<T>& val, const visit_sem&) {
         if (val.empty()) return;
         draw_label_widget(win, name, (int)val.size());
     }
     template <typename T1, typename T2>
     void operator()(
-        const char* name, vector<pair<T1*, T2*>>& val, const refl_sem&) {
+        const char* name, vector<pair<T1*, T2*>>& val, const visit_sem&) {
         // TODO
     }
 
     template <typename T>
-    void operator()(const char* name, T*& val, const refl_sem& sem) {
-        if (sem.type == refl_sem_type::reference) {
+    void operator()(const char* name, T*& val, const visit_sem& sem) {
+        if (sem.type == visit_sem_type::reference) {
             edited += draw_value_widget(win, name, val, elems(val));
         } else {
             if (!val) return;
@@ -13542,7 +13539,7 @@ struct draw_elem_visitor {
             draw_separator_widget(win);
             draw_groupid_widget_begin(win, val);
             draw_separator_widget(win);
-            refl_visit_sem(*val, *this);
+            visit(*val, *this);
             preview(val);
             draw_groupid_widget_end(win);
         }
@@ -13578,7 +13575,7 @@ template <typename T>
 bool draw_elem_widgets(gl_window* win, scene* scn, T* val, void*& selection,
     const unordered_map<texture*, gl_texture>& gl_txt) {
     auto visitor = draw_elem_visitor{win, scn, nullptr, selection, gl_txt};
-    visitor("", val, refl_sem{refl_sem_type::object});
+    visitor("", val, visit_sem{visit_sem_type::object});
     return (bool)visitor.edited;
 }
 
@@ -13586,7 +13583,7 @@ template <typename T>
 bool draw_elem_widgets(gl_window* win, test_scene_params* scn, T* val,
     void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
     auto visitor = draw_elem_visitor{win, nullptr, scn, selection, gl_txt};
-    visitor("", val, refl_sem{refl_sem_type::object});
+    visitor("", val, visit_sem{visit_sem_type::object});
     return (bool)visitor.edited;
 }
 
@@ -13607,10 +13604,10 @@ bool draw_selected_elem_widgets(gl_window* win, scene* scn,
         if (test_elem.name == selected->name) test_selected = &test_elem;
     auto visitor = draw_elem_visitor{win, scn, test_scn, selection, gl_txt};
     if (test_selected) {
-        visitor("", test_selected, refl_sem{refl_sem_type::object});
+        visitor("", test_selected, visit_sem{visit_sem_type::object});
         if (visitor.edited) update_test_elem(scn, selected, *test_selected);
     }
-    visitor("", selected, refl_sem{refl_sem_type::object});
+    visitor("", selected, visit_sem{visit_sem_type::object});
     return (bool)visitor.edited;
 }
 

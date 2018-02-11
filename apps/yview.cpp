@@ -220,9 +220,6 @@ int main(int argc, char* argv[]) {
     // add missing data
     add_elements(app->scn);
 
-    // HACK
-    print_info_visit(app->scn);
-
     // view camera
     app->view = make_view_camera(app->scn, 0);
     app->cam = app->view;

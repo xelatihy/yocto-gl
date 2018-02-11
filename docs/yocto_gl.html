@@ -55,41 +55,44 @@
 <li><a href="#toc36"> Perlin noise</a></li>
 <li><a href="#toc37"> Python-like iterators</a></li>
 <li><a href="#toc38"> Container operations</a></li>
-<li><a href="#toc39"> Geometry utilities</a></li>
-<li><a href="#toc40"> Animation utilities</a></li>
-<li><a href="#toc41"> Shape utilities</a></li>
-<li><a href="#toc42"> Shape sampling</a></li>
-<li><a href="#toc43"> Example shapes</a></li>
-<li><a href="#toc44"> Image containers</a></li>
-<li><a href="#toc45"> Image operations</a></li>
-<li><a href="#toc46"> Example images</a></li>
-<li><a href="#toc47"> Image loading and saving</a></li>
-<li><a href="#toc48"> Ray-primitive intersection</a></li>
-<li><a href="#toc49"> Point-primitive overlap</a></li>
-<li><a href="#toc50"> Bounding volume hierarchy</a></li>
-<li><a href="#toc51"> Simple scene</a></li>
-<li><a href="#toc52"> Example scenes</a></li>
-<li><a href="#toc53"> Path-tracing support</a></li>
-<li><a href="#toc54"> Path tracing</a></li>
-<li><a href="#toc55"> Type reflection</a></li>
-<li><a href="#toc56"> Wavefront OBJ</a></li>
-<li><a href="#toc57"> Khronos glTF</a></li>
-<li><a href="#toc58"> Svg</a></li>
-<li><a href="#toc59"> String, path and file functions</a></li>
-<li><a href="#toc60"> File loading and saving</a></li>
-<li><a href="#toc61"> Immediate-mode command line parser</a></li>
-<li><a href="#toc62"> Simple logging</a></li>
-<li><a href="#toc63"> Simple timer</a></li>
-<li><a href="#toc64"> OpenGL utilities</a></li>
-<li><a href="#toc65"> OpenGL textures</a></li>
-<li><a href="#toc66"> OpenGL vertex array buffers</a></li>
-<li><a href="#toc67"> OpenGL element array buffers</a></li>
-<li><a href="#toc68"> OpenGL programs</a></li>
-<li><a href="#toc69"> OpenGL scene shader support</a></li>
-<li><a href="#toc70"> OpenGL image shader</a></li>
-<li><a href="#toc71"> OpenGL surface shader</a></li>
-<li><a href="#toc72"> OpenGL window</a></li>
-<li><a href="#toc73"> OpenGL widgets</a></li>
+<li><a href="#toc39"> Type support</a></li>
+<li><a href="#toc40"> Geometry utilities</a></li>
+<li><a href="#toc41"> Animation utilities</a></li>
+<li><a href="#toc42"> Shape utilities</a></li>
+<li><a href="#toc43"> Shape sampling</a></li>
+<li><a href="#toc44"> Example shapes</a></li>
+<li><a href="#toc45"> Image containers</a></li>
+<li><a href="#toc46"> Image operations</a></li>
+<li><a href="#toc47"> Example images</a></li>
+<li><a href="#toc48"> Image loading and saving</a></li>
+<li><a href="#toc49"> Ray-primitive intersection</a></li>
+<li><a href="#toc50"> Point-primitive overlap</a></li>
+<li><a href="#toc51"> Bounding volume hierarchy</a></li>
+<li><a href="#toc52"> Simple scene</a></li>
+<li><a href="#toc53"> Scene type support</a></li>
+<li><a href="#toc54"> Example scenes</a></li>
+<li><a href="#toc55"> Example scenes type support</a></li>
+<li><a href="#toc56"> Path-tracing support</a></li>
+<li><a href="#toc57"> Path tracing</a></li>
+<li><a href="#toc58"> Path tracing type support</a></li>
+<li><a href="#toc59"> Wavefront OBJ</a></li>
+<li><a href="#toc60"> Khronos glTF</a></li>
+<li><a href="#toc61"> Svg</a></li>
+<li><a href="#toc62"> String, path and file functions</a></li>
+<li><a href="#toc63"> File loading and saving</a></li>
+<li><a href="#toc64"> Immediate-mode command line parser</a></li>
+<li><a href="#toc65"> Simple logging</a></li>
+<li><a href="#toc66"> Simple timer</a></li>
+<li><a href="#toc67"> OpenGL utilities</a></li>
+<li><a href="#toc68"> OpenGL textures</a></li>
+<li><a href="#toc69"> OpenGL vertex array buffers</a></li>
+<li><a href="#toc70"> OpenGL element array buffers</a></li>
+<li><a href="#toc71"> OpenGL programs</a></li>
+<li><a href="#toc72"> OpenGL scene shader support</a></li>
+<li><a href="#toc73"> OpenGL image shader</a></li>
+<li><a href="#toc74"> OpenGL surface shader</a></li>
+<li><a href="#toc75"> OpenGL window</a></li>
+<li><a href="#toc76"> OpenGL widgets</a></li>
 </ul>
 </li>
 <li><a href="yocto_gl.html#api">API Documentation</a></li>
@@ -3906,6 +3909,112 @@ Assumes that the array is sorted. Wrapper for std::lower_bound().</p>
 
 <p>Checks if a containers contains a value.</p>
 <p><a id="toc39"></a></p>
+<h3>Type support</h3>
+<h4>Function enum_names()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">T</span><span class="o">&gt;&gt;&amp;</span> <span class="n">enum_names</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Names of enum values. Specialized by enums that support reflection.</p>
+<h4>Function enum_names()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">T</span><span class="o">&gt;&gt;&amp;</span> <span class="n">enum_names</span><span class="p">(</span><span class="n">T</span> <span class="n">v</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Names of enum values.</p>
+<h4>Function operator&lt;&lt;()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span>
+    <span class="k">typename</span> <span class="n">std</span><span class="o">::</span><span class="n">enable_if</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">is_enum</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;::</span><span class="n">value</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;::</span><span class="n">type</span> <span class="o">=</span> <span class="mi">0</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">ostream</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">&lt;&lt;</span><span class="p">(</span><span class="n">ostream</span><span class="o">&amp;</span> <span class="n">os</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">a</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Stream write.</p>
+<h4>Function operator>>()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span>
+    <span class="k">typename</span> <span class="n">std</span><span class="o">::</span><span class="n">enable_if</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">is_enum</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;::</span><span class="n">value</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;::</span><span class="n">type</span> <span class="o">=</span> <span class="mi">0</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">istream</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">&gt;&gt;</span><span class="p">(</span><span class="n">istream</span><span class="o">&amp;</span> <span class="n">is</span><span class="p">,</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">a</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Stream read.</p>
+<h4>Enum visit_sem_type</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">visit_sem_type</span> <span class="p">{</span>
+    <span class="n">value</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="n">object</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="n">reference</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+    <span class="n">color</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Types of variable semantic</p>
+<ul>
+<li>Values:<ul>
+<li>value:      Generic value.</li>
+<li>name:      Name.</li>
+<li>path:      Path.</li>
+<li>object:      Object.</li>
+<li>reference:      Reference.</li>
+<li>color:      Color.</li>
+</ul>
+</li>
+</ul>
+<h4>Struct visit_sem</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">visit_sem</span> <span class="p">{</span>
+    <span class="n">visit_sem_type</span> <span class="n">type</span> <span class="o">=</span> <span class="n">visit_sem_type</span><span class="o">::</span><span class="n">value</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Semantic for reflected values</p>
+<ul>
+<li>Members:<ul>
+<li>type:      Type.</li>
+<li>min:      Minimum value for numeric types.</li>
+<li>max:      Maximum value for numeric types.</li>
+</ul>
+</li>
+</ul>
+<h4>Struct has_visitor</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">class</span> <span class="nc">T</span><span class="o">&gt;</span>
+<span class="k">struct</span> <span class="nl">has_visitor</span> <span class="p">:</span> <span class="n">std</span><span class="o">::</span><span class="n">false_type</span> <span class="p">{};</span>
+</code></pre></div>
+
+
+<p>Type trait to enable visitors.</p>
+<h4>Function visit()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">T</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements. Calls <code>visitor(name,val.var,sem)</code> for each variable
+of a structure, where <code>name</code> is the name of the variable, <code>var</code> is the
+variable and <code>sem</code> is one a <code>visit_sem</code> value.
+Implemented by structures that support reflection.</p>
+<h4>Function visit()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">T</span><span class="o">*&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit pointer elements.</p>
+<h4>Function operator&lt;&lt;()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span>
+    <span class="k">typename</span> <span class="n">std</span><span class="o">::</span><span class="n">enable_if</span><span class="o">&lt;</span><span class="n">has_visitor</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;::</span><span class="n">value</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;::</span><span class="n">type</span> <span class="o">=</span> <span class="mi">0</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">ostream</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">&lt;&lt;</span><span class="p">(</span><span class="n">ostream</span><span class="o">&amp;</span> <span class="n">os</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">a</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Stream write.</p>
+<p><a id="toc40"></a></p>
 <h3>Geometry utilities</h3>
 <h4>Function line_tangent()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vec3f</span> <span class="nf">line_tangent</span><span class="p">(</span><span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v0</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v1</span><span class="p">);</span>
@@ -4066,7 +4175,7 @@ https://gist.github.com/aras-p/2843984</p>
 
 
 <p>Computes the derivative of a cubic Bezier segments parametrized by u.</p>
-<p><a id="toc40"></a></p>
+<p><a id="toc41"></a></p>
 <h3>Animation utilities</h3>
 <h4>Function eval_keyframed_step()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
@@ -4092,7 +4201,7 @@ https://gist.github.com/aras-p/2843984</p>
 
 
 <p>Evalautes a keyframed value using Bezier interpolation.</p>
-<p><a id="toc41"></a></p>
+<p><a id="toc42"></a></p>
 <h3>Shape utilities</h3>
 <h4>Function compute_normals()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span> <span class="n">compute_normals</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines</span><span class="p">,</span>
@@ -4304,7 +4413,7 @@ Returns the indices to copy from.</p>
 
 
 <p>Unshare vertices for faceting. This is implemented for vec and float types.</p>
-<p><a id="toc42"></a></p>
+<p><a id="toc43"></a></p>
 <h3>Shape sampling</h3>
 <h4>Function sample_points()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="nf">sample_points</span><span class="p">(</span><span class="kt">int</span> <span class="n">npoints</span><span class="p">,</span> <span class="kt">float</span> <span class="n">re</span><span class="p">);</span>
@@ -4376,7 +4485,7 @@ Returns the indices to copy from.</p>
 
 <p>Samples a set of points over a triangle mesh uniformly. Returns pos, norm
 and tecoord of the sampled points.</p>
-<p><a id="toc43"></a></p>
+<p><a id="toc44"></a></p>
 <h3>Example shapes</h3>
 <h4>Function make_sphere()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&gt;</span> <span class="n">make_sphere</span><span class="p">(</span><span class="kt">int</span> <span class="n">tesselation</span><span class="p">);</span>
@@ -4561,7 +4670,7 @@ texcoord.</p>
 
 
 <p>Make a hair ball around a shape. Returns lines, pos, norm, texcoord, radius.</p>
-<p><a id="toc44"></a></p>
+<p><a id="toc45"></a></p>
 <h3>Image containers</h3>
 <h4>Struct image</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
@@ -4571,11 +4680,6 @@ texcoord.</p>
     <span class="kt">int</span> <span class="nf">width</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
     <span class="kt">int</span> <span class="nf">height</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
     <span class="kt">bool</span> <span class="nf">empty</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
-    <span class="k">explicit</span> <span class="k">operator</span> <span class="nf">bool</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
-    <span class="n">T</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">ij</span><span class="p">);</span> 
-    <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">ij</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
-    <span class="n">T</span><span class="o">&amp;</span> <span class="n">at</span><span class="p">(</span><span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">ij</span><span class="p">);</span> 
-    <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">at</span><span class="p">(</span><span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">ij</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
     <span class="n">T</span><span class="o">&amp;</span> <span class="n">at</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span><span class="p">,</span> <span class="kt">int</span> <span class="n">j</span><span class="p">);</span> 
     <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">at</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span><span class="p">,</span> <span class="kt">int</span> <span class="n">j</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
     <span class="kt">int</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">;</span>
@@ -4592,11 +4696,6 @@ texcoord.</p>
 <li>width():      width</li>
 <li>height():      height</li>
 <li>empty():      check for empty</li>
-<li>operator bool():      check for empty</li>
-<li>operator<a href=""></a>:      Element access</li>
-<li>operator<a href=""></a>:      Element access</li>
-<li>at():      Element access</li>
-<li>at():      Element access</li>
 <li>at():      Element access</li>
 <li>at():      Element access</li>
 <li>h:      Width and height [private].</li>
@@ -4687,7 +4786,7 @@ texcoord.</p>
 
 
 <p>Create a 4 channel image with the given number of channels</p>
-<p><a id="toc45"></a></p>
+<p><a id="toc46"></a></p>
 <h3>Image operations</h3>
 <h4>Function srgb_to_linear()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vec4f</span> <span class="nf">srgb_to_linear</span><span class="p">(</span><span class="k">const</span> <span class="n">vec4b</span><span class="o">&amp;</span> <span class="n">srgb</span><span class="p">);</span>
@@ -4750,7 +4849,7 @@ texcoord.</p>
 
 
 <p>Converts HSV to RGB.</p>
-<p><a id="toc46"></a></p>
+<p><a id="toc47"></a></p>
 <h3>Example images</h3>
 <h4>Function make_grid_image()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">image4b</span> <span class="n">make_grid_image</span><span class="p">(</span><span class="kt">int</span> <span class="n">width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">height</span><span class="p">,</span> <span class="kt">int</span> <span class="n">tile</span> <span class="o">=</span> <span class="mi">64</span><span class="p">,</span>
@@ -4854,7 +4953,7 @@ in [1.7,10] with or without sun.</p>
 
 
 <p>Make a noise image. Wrap works only if both resx and resy are powers of two.</p>
-<p><a id="toc47"></a></p>
+<p><a id="toc48"></a></p>
 <h3>Image loading and saving</h3>
 <h4>Function is_hdr_filename()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">is_hdr_filename</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
@@ -4999,7 +5098,7 @@ in [1.7,10] with or without sun.</p>
 
 
 <p>Resize an image.</p>
-<p><a id="toc48"></a></p>
+<p><a id="toc49"></a></p>
 <h3>Ray-primitive intersection</h3>
 <h4>Function intersect_point()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">intersect_point</span><span class="p">(</span><span class="k">const</span> <span class="n">ray3f</span><span class="o">&amp;</span> <span class="n">ray</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">p</span><span class="p">,</span> <span class="kt">float</span> <span class="n">r</span><span class="p">,</span> <span class="kt">float</span><span class="o">&amp;</span> <span class="n">ray_t</span><span class="p">);</span>
@@ -5050,7 +5149,7 @@ to 1. This is equivalent to Intel's Embree.</p>
 <p>Intersect a ray with a axis-aligned bounding box, implemented as
 "Robust BVH Ray Traversal" by T. Ize published at
 http://jcgt.org/published/0002/02/02/paper.pdf</p>
-<p><a id="toc49"></a></p>
+<p><a id="toc50"></a></p>
 <h3>Point-primitive overlap</h3>
 <h4>Function overlap_point()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">overlap_point</span><span class="p">(</span>
@@ -5107,7 +5206,7 @@ http://jcgt.org/published/0002/02/02/paper.pdf</p>
 
 
 <p>Check if two bouning boxes overlap.</p>
-<p><a id="toc50"></a></p>
+<p><a id="toc51"></a></p>
 <h3>Bounding volume hierarchy</h3>
 <h4>Enum bvh_node_type : uint32_t</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="nl">bvh_node_type</span> <span class="p">:</span> <span class="kt">uint32_t</span> <span class="p">{</span>
@@ -5326,7 +5425,7 @@ coordinates <code>euv</code>.</p>
 
 
 <p>Finds the closest element with a bvh (convenience wrapper).</p>
-<p><a id="toc51"></a></p>
+<p><a id="toc52"></a></p>
 <h3>Simple scene</h3>
 <h4>Struct texture</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">texture</span> <span class="p">{</span>
@@ -5334,11 +5433,6 @@ coordinates <code>euv</code>.</p>
     <span class="n">string</span> <span class="n">path</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="n">image4b</span> <span class="n">ldr</span> <span class="o">=</span> <span class="p">{};</span>
     <span class="n">image4f</span> <span class="n">hdr</span> <span class="o">=</span> <span class="p">{};</span>
-    <span class="kt">bool</span> <span class="nf">empty</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
-    <span class="kt">bool</span> <span class="nf">is_ldr</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
-    <span class="kt">bool</span> <span class="nf">is_hdr</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
-    <span class="kt">int</span> <span class="nf">width</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
-    <span class="kt">int</span> <span class="nf">height</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
 <span class="p">}</span>
 </code></pre></div>
 
@@ -5350,11 +5444,6 @@ coordinates <code>euv</code>.</p>
 <li>path:      Path.</li>
 <li>ldr:      If loaded, ldr image.</li>
 <li>hdr:      If loaded, hdr image.</li>
-<li>empty():      If loaded, whether it is empty.</li>
-<li>is_ldr():      If loaded, whether it is ldr.</li>
-<li>is_hdr():      If loaded, whether it is hdr.</li>
-<li>width():      If loaded, get texture width.</li>
-<li>height():      If loaded, get texture height.</li>
 </ul>
 </li>
 </ul>
@@ -5996,7 +6085,107 @@ Throws an exception if an error occurs.</p>
 
 
 <p>Saves a scene. For now OBJ and glTF are supported.</p>
-<p><a id="toc52"></a></p>
+<p><a id="toc53"></a></p>
+<h3>Scene type support</h3>
+<h4>Function enum_names&lt;material_type>()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;&gt;</span>
+<span class="kr">inline</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">material_type</span><span class="o">&gt;&gt;&amp;</span> <span class="n">enum_names</span><span class="o">&lt;</span><span class="n">material_type</span><span class="o">&gt;</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Names of enum values.</p>
+<h4>Function enum_names&lt;keyframe_type>()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;&gt;</span>
+<span class="kr">inline</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">keyframe_type</span><span class="o">&gt;&gt;&amp;</span> <span class="n">enum_names</span><span class="o">&lt;</span><span class="n">keyframe_type</span><span class="o">&gt;</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Names of enum values.</p>
+<h4>Function visit()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">texture</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function visit()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function visit()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">material</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function visit()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">shape</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function visit()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">shape_group</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function visit()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">instance</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function visit()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">camera</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function visit()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">environment</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function visit()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">node</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function visit()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">animation</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function visit()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">animation_group</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function visit()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">scene</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<p><a id="toc54"></a></p>
 <h3>Example scenes</h3>
 <h4>Function make_cornell_box_scene()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">scene</span><span class="o">*</span> <span class="nf">make_cornell_box_scene</span><span class="p">();</span>
@@ -6502,7 +6691,96 @@ never removed.</p>
 
 
 <p>Save test scene.</p>
-<p><a id="toc53"></a></p>
+<p><a id="toc55"></a></p>
+<h3>Example scenes type support</h3>
+<h4>Function enum_names&lt;test_texture_type>()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;&gt;</span>
+<span class="kr">inline</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">test_texture_type</span><span class="o">&gt;&gt;&amp;</span>
+<span class="n">enum_names</span><span class="o">&lt;</span><span class="n">test_texture_type</span><span class="o">&gt;</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Names of enum values.</p>
+<h4>Function enum_names&lt;test_material_type>()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;&gt;</span>
+<span class="kr">inline</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">test_material_type</span><span class="o">&gt;&gt;&amp;</span>
+<span class="n">enum_names</span><span class="o">&lt;</span><span class="n">test_material_type</span><span class="o">&gt;</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Names of enum values.</p>
+<h4>Function enum_names&lt;test_shape_type>()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;&gt;</span>
+<span class="kr">inline</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">test_shape_type</span><span class="o">&gt;&gt;&amp;</span>
+<span class="n">enum_names</span><span class="o">&lt;</span><span class="n">test_shape_type</span><span class="o">&gt;</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Names of enum values.</p>
+<h4>Function visit()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">test_camera_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function visit()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">test_texture_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function visit()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">test_material_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function visit()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">test_shape_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function visit()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">test_instance_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function visit()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">test_environment_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function visit()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">test_node_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function visit()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">test_animation_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function visit()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">test_scene_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<p><a id="toc56"></a></p>
 <h3>Path-tracing support</h3>
 <h4>Function specular_exponent_to_roughness()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">float</span> <span class="nf">specular_exponent_to_roughness</span><span class="p">(</span><span class="kt">float</span> <span class="n">n</span><span class="p">);</span>
@@ -6585,7 +6863,7 @@ This is a hack, but works better than not doing it.</p>
 
 
 <p>Mitchell filter. Ppublic domain from stb_image_resize.</p>
-<p><a id="toc54"></a></p>
+<p><a id="toc57"></a></p>
 <h3>Path tracing</h3>
 <h4>Enum trace_shader_type</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">trace_shader_type</span> <span class="p">{</span>
@@ -6815,311 +7093,33 @@ the the public API.</p>
 
 
 <p>Stop the asynchronous renderer.</p>
-<p><a id="toc55"></a></p>
-<h3>Type reflection</h3>
-<h4>Function refl_enum_names()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">T</span><span class="o">&gt;&gt;&amp;</span> <span class="n">refl_enum_names</span><span class="p">();</span>
-</code></pre></div>
-
-
-<p>Names of enum values.</p>
-<h4>Function refl_enum_names()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">T</span><span class="o">&gt;&gt;&amp;</span> <span class="n">refl_enum_names</span><span class="p">(</span><span class="n">T</span> <span class="n">v</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Names of enum values.</p>
-<h4>Function refl_enum_names&lt;material_type>()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;&gt;</span>
-<span class="kr">inline</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">material_type</span><span class="o">&gt;&gt;&amp;</span>
-<span class="n">refl_enum_names</span><span class="o">&lt;</span><span class="n">material_type</span><span class="o">&gt;</span><span class="p">();</span>
-</code></pre></div>
-
-
-<p>Names of enum values.</p>
-<h4>Function refl_enum_names&lt;keyframe_type>()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;&gt;</span>
-<span class="kr">inline</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">keyframe_type</span><span class="o">&gt;&gt;&amp;</span>
-<span class="n">refl_enum_names</span><span class="o">&lt;</span><span class="n">keyframe_type</span><span class="o">&gt;</span><span class="p">();</span>
-</code></pre></div>
-
-
-<p>Names of enum values.</p>
-<h4>Function refl_enum_names&lt;test_texture_type>()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;&gt;</span>
-<span class="kr">inline</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">test_texture_type</span><span class="o">&gt;&gt;&amp;</span>
-<span class="n">refl_enum_names</span><span class="o">&lt;</span><span class="n">test_texture_type</span><span class="o">&gt;</span><span class="p">();</span>
-</code></pre></div>
-
-
-<p>Names of enum values.</p>
-<h4>Function refl_enum_names&lt;test_material_type>()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;&gt;</span>
-<span class="kr">inline</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">test_material_type</span><span class="o">&gt;&gt;&amp;</span>
-<span class="n">refl_enum_names</span><span class="o">&lt;</span><span class="n">test_material_type</span><span class="o">&gt;</span><span class="p">();</span>
-</code></pre></div>
-
-
-<p>Names of enum values.</p>
-<h4>Function refl_enum_names&lt;test_shape_type>()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;&gt;</span>
-<span class="kr">inline</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">test_shape_type</span><span class="o">&gt;&gt;&amp;</span>
-<span class="n">refl_enum_names</span><span class="o">&lt;</span><span class="n">test_shape_type</span><span class="o">&gt;</span><span class="p">();</span>
-</code></pre></div>
-
-
-<p>Names of enum values.</p>
-<h4>Function refl_enum_names&lt;trace_shader_type>()</h4>
+<p><a id="toc58"></a></p>
+<h3>Path tracing type support</h3>
+<h4>Function enum_names&lt;trace_shader_type>()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;&gt;</span>
 <span class="kr">inline</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">trace_shader_type</span><span class="o">&gt;&gt;&amp;</span>
-<span class="n">refl_enum_names</span><span class="o">&lt;</span><span class="n">trace_shader_type</span><span class="o">&gt;</span><span class="p">();</span>
+<span class="n">enum_names</span><span class="o">&lt;</span><span class="n">trace_shader_type</span><span class="o">&gt;</span><span class="p">();</span>
 </code></pre></div>
 
 
 <p>Names of enum values.</p>
-<h4>Function refl_enum_names&lt;trace_rng_type>()</h4>
+<h4>Function enum_names&lt;trace_rng_type>()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;&gt;</span>
 <span class="kr">inline</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">trace_rng_type</span><span class="o">&gt;&gt;&amp;</span>
-<span class="n">refl_enum_names</span><span class="o">&lt;</span><span class="n">trace_rng_type</span><span class="o">&gt;</span><span class="p">();</span>
+<span class="n">enum_names</span><span class="o">&lt;</span><span class="n">trace_rng_type</span><span class="o">&gt;</span><span class="p">();</span>
 </code></pre></div>
 
 
 <p>Names of enum values.</p>
-<h4>Function refl_enum_names&lt;trace_filter_type>()</h4>
+<h4>Function enum_names&lt;trace_filter_type>()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;&gt;</span>
 <span class="kr">inline</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">trace_filter_type</span><span class="o">&gt;&gt;&amp;</span>
-<span class="n">refl_enum_names</span><span class="o">&lt;</span><span class="n">trace_filter_type</span><span class="o">&gt;</span><span class="p">();</span>
+<span class="n">enum_names</span><span class="o">&lt;</span><span class="n">trace_filter_type</span><span class="o">&gt;</span><span class="p">();</span>
 </code></pre></div>
 
 
 <p>Names of enum values.</p>
-<h4>Function operator&lt;&lt;()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span>
-    <span class="k">typename</span> <span class="n">std</span><span class="o">::</span><span class="n">enable_if</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">is_enum</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;::</span><span class="n">value</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;::</span><span class="n">type</span> <span class="o">=</span> <span class="mi">0</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">ostream</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">&lt;&lt;</span><span class="p">(</span><span class="n">ostream</span><span class="o">&amp;</span> <span class="n">os</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">a</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Stream read.</p>
-<h4>Function operator>>()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span>
-    <span class="k">typename</span> <span class="n">std</span><span class="o">::</span><span class="n">enable_if</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">is_enum</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;::</span><span class="n">value</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;::</span><span class="n">type</span> <span class="o">=</span> <span class="mi">0</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">istream</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">&gt;&gt;</span><span class="p">(</span><span class="n">istream</span><span class="o">&amp;</span> <span class="n">is</span><span class="p">,</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">a</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Stream read.</p>
-<h4>Enum refl_sem_type</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">refl_sem_type</span> <span class="p">{</span>
-    <span class="n">value</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
-    <span class="n">name</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
-    <span class="n">path</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
-    <span class="n">object</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
-    <span class="n">reference</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
-    <span class="n">color</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
-<span class="p">}</span>
-</code></pre></div>
-
-
-<p>Types of variable semantic</p>
-<ul>
-<li>Values:<ul>
-<li>value:      Generic value.</li>
-<li>name:      Name.</li>
-<li>path:      Path.</li>
-<li>object:      Object.</li>
-<li>reference:      Reference.</li>
-<li>color:      Color.</li>
-</ul>
-</li>
-</ul>
-<h4>Struct refl_sem</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">refl_sem</span> <span class="p">{</span>
-    <span class="n">refl_sem_type</span> <span class="n">type</span> <span class="o">=</span> <span class="n">refl_sem_type</span><span class="o">::</span><span class="n">value</span><span class="p">;</span>
-    <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-    <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-<span class="p">}</span>
-</code></pre></div>
-
-
-<p>Semantic for reflected values</p>
-<ul>
-<li>Members:<ul>
-<li>type:      Type.</li>
-<li>min:      Minimum value for numeric types.</li>
-<li>max:      Maximum value for numeric types.</li>
-</ul>
-</li>
-</ul>
-<h4>Function refl_visit_sem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">texture</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Visit struct elements.</p>
-<h4>Function refl_visit_sem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Visit struct elements.</p>
-<h4>Function refl_visit_sem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">material</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Visit struct elements.</p>
-<h4>Function refl_visit_sem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">shape</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Visit struct elements.</p>
-<h4>Function refl_visit_sem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">shape_group</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Visit struct elements.</p>
-<h4>Function refl_visit_sem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">instance</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Visit struct elements.</p>
-<h4>Function refl_visit_sem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">camera</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Visit struct elements.</p>
-<h4>Function refl_visit_sem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">environment</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Visit struct elements.</p>
-<h4>Function refl_visit_sem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">node</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Visit struct elements.</p>
-<h4>Function refl_visit_sem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">animation</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Visit struct elements.</p>
-<h4>Function refl_visit_sem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">animation_group</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Visit struct elements.</p>
-<h4>Function refl_visit_sem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">scene</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Visit struct elements.</p>
-<h4>Function refl_visit_sem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">test_camera_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Visit struct elements.</p>
-<h4>Function refl_visit_sem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">test_texture_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Visit struct elements.</p>
-<h4>Function refl_visit_sem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">test_material_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Visit struct elements.</p>
-<h4>Function refl_visit_sem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">test_shape_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Visit struct elements.</p>
-<h4>Function refl_visit_sem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">test_instance_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Visit struct elements.</p>
-<h4>Function refl_visit_sem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">test_environment_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Visit struct elements.</p>
-<h4>Function refl_visit_sem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">test_node_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Visit struct elements.</p>
-<h4>Function refl_visit_sem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">test_animation_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Visit struct elements.</p>
-<h4>Function refl_visit_sem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">test_scene_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Visit struct elements.</p>
-<h4>Function refl_visit_sem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">T</span><span class="o">*&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Visit pointer elements.</p>
-<h4>Struct print_scene_visitor</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">print_scene_visitor</span> <span class="p">{</span>
-</code></pre></div>
-
-
-<p>Print scene visitor</p>
-<h4>Function print_info_visit()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">print_info_visit</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Print a scene information using visitors.</p>
-<p><a id="toc56"></a></p>
+<p><a id="toc59"></a></p>
 <h3>Wavefront OBJ</h3>
 <h4>Struct obj_vertex</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">obj_vertex</span> <span class="p">{</span>
@@ -7462,7 +7462,7 @@ Texture coordinates and material Tr are flipped if <code>flip_texcoord</code> an
 and report errors only if <code>skip_missing</code> is false.
 Texture coordinates and material Tr are flipped if <code>flip_texcoord</code> and
 <code>flip_tp</code> are respectively true.</p>
-<p><a id="toc57"></a></p>
+<p><a id="toc60"></a></p>
 <h3>Khronos glTF</h3>
 <h4>Typedef buffer_data</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">buffer_data</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;</span><span class="p">;</span>
@@ -8521,7 +8521,7 @@ if <code>load_bin</code> and <code>load_img</code> are true, reporting errors on
 </ul>
 </li>
 </ul>
-<p><a id="toc58"></a></p>
+<p><a id="toc61"></a></p>
 <h3>Svg</h3>
 <h4>Struct svg_path</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">svg_path</span> <span class="p">{</span>
@@ -8581,7 +8581,7 @@ if <code>load_bin</code> and <code>load_img</code> are true, reporting errors on
 
 
 <p>Save an SVG.</p>
-<p><a id="toc59"></a></p>
+<p><a id="toc62"></a></p>
 <h3>String, path and file functions</h3>
 <h4>Function startswith()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">startswith</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">substr</span><span class="p">);</span>
@@ -8763,7 +8763,7 @@ is not fast nor memory efficient. But it is good enough for some needs.</p>
 
 
 <p>Wrapper for the above function that prints to stdout with endline.</p>
-<p><a id="toc60"></a></p>
+<p><a id="toc63"></a></p>
 <h3>File loading and saving</h3>
 <h4>Function load_binary()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;</span> <span class="n">load_binary</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
@@ -8790,7 +8790,7 @@ is not fast nor memory efficient. But it is good enough for some needs.</p>
 
 
 <p>Saves a string to a text file.</p>
-<p><a id="toc61"></a></p>
+<p><a id="toc64"></a></p>
 <h3>Immediate-mode command line parser</h3>
 <h4>Struct cmdline_parser</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">cmdline_parser</span><span class="p">;</span>
@@ -8848,7 +8848,7 @@ is not fast nor memory efficient. But it is good enough for some needs.</p>
 
 
 <p>Initialize a command line parser.</p>
-<p><a id="toc62"></a></p>
+<p><a id="toc65"></a></p>
 <h3>Simple logging</h3>
 <h4>Struct logger</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">logger</span> <span class="p">{</span>
@@ -8932,7 +8932,7 @@ and the specified verbosity level.</p>
 
 
 <p>Logs a message to the default loggers.</p>
-<p><a id="toc63"></a></p>
+<p><a id="toc66"></a></p>
 <h3>Simple timer</h3>
 <h4>Struct timer</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">timer</span> <span class="p">{</span>
@@ -8954,7 +8954,7 @@ and the specified verbosity level.</p>
 </ul>
 </li>
 </ul>
-<p><a id="toc64"></a></p>
+<p><a id="toc67"></a></p>
 <h3>OpenGL utilities</h3>
 <h4>Enum gl_elem_type : int</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="nl">gl_elem_type</span> <span class="p">:</span> <span class="kt">int</span> <span class="p">{</span>
@@ -9075,7 +9075,7 @@ and the specified verbosity level.</p>
 
 
 <p>Reads an image from the the framebuffer.</p>
-<p><a id="toc65"></a></p>
+<p><a id="toc68"></a></p>
 <h3>OpenGL textures</h3>
 <h4>Struct gl_texture</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_texture</span> <span class="p">{</span>
@@ -9247,7 +9247,7 @@ Internally use float if as_float and filtering if filter.</p>
 </ul>
 </li>
 </ul>
-<p><a id="toc66"></a></p>
+<p><a id="toc69"></a></p>
 <h3>OpenGL vertex array buffers</h3>
 <h4>Struct gl_vertex_buffer</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_vertex_buffer</span> <span class="p">{</span>
@@ -9369,7 +9369,7 @@ Internally use float if as_float and filtering if filter.</p>
 
 
 <p>Destroys the buffer.</p>
-<p><a id="toc67"></a></p>
+<p><a id="toc70"></a></p>
 <h3>OpenGL element array buffers</h3>
 <h4>Struct gl_element_buffer</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_element_buffer</span> <span class="p">{</span>
@@ -9456,7 +9456,7 @@ Internally use float if as_float and filtering if filter.</p>
 
 
 <p>Destroys the buffer</p>
-<p><a id="toc68"></a></p>
+<p><a id="toc71"></a></p>
 <h3>OpenGL programs</h3>
 <h4>Struct gl_program</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_program</span> <span class="p">{</span>
@@ -9718,7 +9718,7 @@ empty.</p>
 
 
 <p>Unbind a program.</p>
-<p><a id="toc69"></a></p>
+<p><a id="toc72"></a></p>
 <h3>OpenGL scene shader support</h3>
 <h4>Struct gl_shape</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_shape</span> <span class="p">{</span>
@@ -9765,7 +9765,7 @@ empty.</p>
 
 
 <p>Update scene shapes on the GPU.</p>
-<p><a id="toc70"></a></p>
+<p><a id="toc73"></a></p>
 <h3>OpenGL image shader</h3>
 <h4>Struct gl_stdimage_program</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_stdimage_program</span> <span class="p">{</span>
@@ -9837,7 +9837,7 @@ empty.</p>
 
 
 <p>Draws an image texture the stdimage program.</p>
-<p><a id="toc71"></a></p>
+<p><a id="toc74"></a></p>
 <h3>OpenGL surface shader</h3>
 <h4>Struct gl_stdsurface_program</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_stdsurface_program</span> <span class="p">{</span>
@@ -10026,7 +10026,7 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 
 
 <p>Draw scene with stdsurface program.</p>
-<p><a id="toc72"></a></p>
+<p><a id="toc75"></a></p>
 <h3>OpenGL window</h3>
 <h4>Function void()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">typedef</span> <span class="nf">void</span> <span class="p">(</span><span class="o">*</span><span class="n">gl_text_callback</span><span class="p">)(</span><span class="n">gl_window</span><span class="o">*</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span><span class="p">);</span>
@@ -10163,7 +10163,7 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 
 
 <p>Handle camera navigation.</p>
-<p><a id="toc73"></a></p>
+<p><a id="toc76"></a></p>
 <h3>OpenGL widgets</h3>
 <h4>Function init_widgets()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">init_widgets</span><span class="p">(</span>
@@ -10472,6 +10472,12 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 <h4>Function draw_image_widget()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_image_widget</span><span class="p">(</span>
     <span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="kt">int</span> <span class="n">tid</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">size</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">imsize</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Image widget.</p>
+<h4>Function draw_image_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_image_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="n">gl_texture</span><span class="o">&amp;</span> <span class="n">txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">size</span><span class="p">);</span>
 </code></pre></div>
 
 

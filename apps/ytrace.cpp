@@ -62,12 +62,12 @@ int main(int argc, char* argv[]) {
     app->save_progressive =
         parse_flag(parser, "--save-progressive", "", "save progressive images");
     app->params.rtype = parse_opt(parser, "--random", "", "random type",
-        refl_enum_names<trace_rng_type>(), trace_rng_type::stratified);
+        enum_names<trace_rng_type>(), trace_rng_type::stratified);
     app->params.ftype = parse_opt(parser, "--filter", "", "filter type",
-        refl_enum_names<trace_filter_type>(), trace_filter_type::box);
+        enum_names<trace_filter_type>(), trace_filter_type::box);
     app->params.stype =
         parse_opt(parser, "--shader", "-S", "path estimator type",
-            refl_enum_names<trace_shader_type>(), trace_shader_type::pathtrace);
+            enum_names<trace_shader_type>(), trace_shader_type::pathtrace);
     app->params.envmap_invisible =
         parse_flag(parser, "--envmap-invisible", "", "envmap invisible");
     app->params.shadow_notransmission = parse_flag(

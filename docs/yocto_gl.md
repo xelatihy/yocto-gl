@@ -4681,6 +4681,128 @@ inline bool contains(const unordered_set<K, V>& v, const K1& vv);
 
 Checks if a containers contains a value.
 
+### Type support
+
+#### Function enum_names()
+
+~~~ .cpp
+template <typename T>
+inline const vector<pair<string, T>>& enum_names();
+~~~
+
+Names of enum values. Specialized by enums that support reflection.
+
+#### Function enum_names()
+
+~~~ .cpp
+template <typename T>
+inline const vector<pair<string, T>>& enum_names(T v);
+~~~
+
+Names of enum values.
+
+#### Function operator<<()
+
+~~~ .cpp
+template <typename T,
+    typename std::enable_if<std::is_enum<T>::value, int>::type = 0>
+inline ostream& operator<<(ostream& os, const T& a);
+~~~
+
+Stream write.
+
+#### Function operator\>\>()
+
+~~~ .cpp
+template <typename T,
+    typename std::enable_if<std::is_enum<T>::value, int>::type = 0>
+inline istream& operator>>(istream& is, T& a);
+~~~
+
+Stream read.
+
+#### Enum visit_sem_type
+
+~~~ .cpp
+enum struct visit_sem_type {
+    value = 0,
+    name = 1,
+    path = 2,
+    object = 3,
+    reference = 4,
+    color = 5,
+}
+~~~
+
+Types of variable semantic
+
+- Values:
+    - value:      Generic value.
+    - name:      Name.
+    - path:      Path.
+    - object:      Object.
+    - reference:      Reference.
+    - color:      Color.
+
+
+#### Struct visit_sem
+
+~~~ .cpp
+struct visit_sem {
+    visit_sem_type type = visit_sem_type::value;
+    float min = 0;
+    float max = 0;
+}
+~~~
+
+Semantic for reflected values
+
+- Members:
+    - type:      Type.
+    - min:      Minimum value for numeric types.
+    - max:      Maximum value for numeric types.
+
+
+#### Struct has_visitor
+
+~~~ .cpp
+template <class T>
+struct has_visitor : std::false_type {};
+~~~
+
+Type trait to enable visitors.
+
+#### Function visit()
+
+~~~ .cpp
+template <typename T, typename Visitor>
+inline void visit(T& val, Visitor&& visitor);
+~~~
+
+Visit struct elements. Calls `visitor(name,val.var,sem)` for each variable
+of a structure, where `name` is the name of the variable, `var` is the
+variable and `sem` is one a `visit_sem` value.
+Implemented by structures that support reflection.
+
+#### Function visit()
+
+~~~ .cpp
+template <typename T, typename Visitor>
+inline void visit(T*& val, Visitor&& visitor);
+~~~
+
+Visit pointer elements.
+
+#### Function operator<<()
+
+~~~ .cpp
+template <typename T,
+    typename std::enable_if<has_visitor<T>::value, int>::type = 0>
+inline ostream& operator<<(ostream& os, const T& a);
+~~~
+
+Stream write.
+
 ### Geometry utilities
 
 #### Function line_tangent()
@@ -5499,11 +5621,6 @@ struct image {
     int width() const; 
     int height() const; 
     bool empty() const; 
-    explicit operator bool() const; 
-    T& operator[](const vec2i& ij); 
-    const T& operator[](const vec2i& ij) const; 
-    T& at(const vec2i& ij); 
-    const T& at(const vec2i& ij) const; 
     T& at(int i, int j); 
     const T& at(int i, int j) const; 
     int w, h;
@@ -5519,11 +5636,6 @@ Generic image container. Access pixels with at() or operator [].
     - width():      width
     - height():      height
     - empty():      check for empty
-    - operator bool():      check for empty
-    - operator[]():      Element access
-    - operator[]():      Element access
-    - at():      Element access
-    - at():      Element access
     - at():      Element access
     - at():      Element access
     - h:      Width and height [private].
@@ -6410,11 +6522,6 @@ struct texture {
     string path = "";
     image4b ldr = {};
     image4f hdr = {};
-    bool empty() const; 
-    bool is_ldr() const; 
-    bool is_hdr() const; 
-    int width() const; 
-    int height() const; 
 }
 ~~~
 
@@ -6425,11 +6532,6 @@ Texture containing either an LDR or HDR image.
     - path:      Path.
     - ldr:      If loaded, ldr image.
     - hdr:      If loaded, hdr image.
-    - empty():      If loaded, whether it is empty.
-    - is_ldr():      If loaded, whether it is ldr.
-    - is_hdr():      If loaded, whether it is hdr.
-    - width():      If loaded, get texture width.
-    - height():      If loaded, get texture height.
 
 
 #### Struct texture_info
@@ -7130,6 +7232,134 @@ void save_scene(
 
 Saves a scene. For now OBJ and glTF are supported.
 
+### Scene type support
+
+#### Function enum_names<material_type\>()
+
+~~~ .cpp
+template <>
+inline const vector<pair<string, material_type>>& enum_names<material_type>();
+~~~
+
+Names of enum values.
+
+#### Function enum_names<keyframe_type\>()
+
+~~~ .cpp
+template <>
+inline const vector<pair<string, keyframe_type>>& enum_names<keyframe_type>();
+~~~
+
+Names of enum values.
+
+#### Function visit()
+
+~~~ .cpp
+template <typename Visitor>
+inline void visit(texture& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function visit()
+
+~~~ .cpp
+template <typename Visitor>
+inline void visit(texture_info& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function visit()
+
+~~~ .cpp
+template <typename Visitor>
+inline void visit(material& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function visit()
+
+~~~ .cpp
+template <typename Visitor>
+inline void visit(shape& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function visit()
+
+~~~ .cpp
+template <typename Visitor>
+inline void visit(shape_group& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function visit()
+
+~~~ .cpp
+template <typename Visitor>
+inline void visit(instance& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function visit()
+
+~~~ .cpp
+template <typename Visitor>
+inline void visit(camera& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function visit()
+
+~~~ .cpp
+template <typename Visitor>
+inline void visit(environment& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function visit()
+
+~~~ .cpp
+template <typename Visitor>
+inline void visit(node& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function visit()
+
+~~~ .cpp
+template <typename Visitor>
+inline void visit(animation& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function visit()
+
+~~~ .cpp
+template <typename Visitor>
+inline void visit(animation_group& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function visit()
+
+~~~ .cpp
+template <typename Visitor>
+inline void visit(scene& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
 ### Example scenes
 
 #### Function make_cornell_box_scene()
@@ -7682,6 +7912,119 @@ void save_test_scene(const string& filename, const test_scene_params& scn);
 
 Save test scene.
 
+### Example scenes type support
+
+#### Function enum_names<test_texture_type\>()
+
+~~~ .cpp
+template <>
+inline const vector<pair<string, test_texture_type>>&
+enum_names<test_texture_type>();
+~~~
+
+Names of enum values.
+
+#### Function enum_names<test_material_type\>()
+
+~~~ .cpp
+template <>
+inline const vector<pair<string, test_material_type>>&
+enum_names<test_material_type>();
+~~~
+
+Names of enum values.
+
+#### Function enum_names<test_shape_type\>()
+
+~~~ .cpp
+template <>
+inline const vector<pair<string, test_shape_type>>&
+enum_names<test_shape_type>();
+~~~
+
+Names of enum values.
+
+#### Function visit()
+
+~~~ .cpp
+template <typename Visitor>
+inline void visit(test_camera_params& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function visit()
+
+~~~ .cpp
+template <typename Visitor>
+inline void visit(test_texture_params& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function visit()
+
+~~~ .cpp
+template <typename Visitor>
+inline void visit(test_material_params& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function visit()
+
+~~~ .cpp
+template <typename Visitor>
+inline void visit(test_shape_params& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function visit()
+
+~~~ .cpp
+template <typename Visitor>
+inline void visit(test_instance_params& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function visit()
+
+~~~ .cpp
+template <typename Visitor>
+inline void visit(test_environment_params& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function visit()
+
+~~~ .cpp
+template <typename Visitor>
+inline void visit(test_node_params& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function visit()
+
+~~~ .cpp
+template <typename Visitor>
+inline void visit(test_animation_params& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function visit()
+
+~~~ .cpp
+template <typename Visitor>
+inline void visit(test_scene_params& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
 ### Path-tracing support
 
 #### Function specular_exponent_to_roughness()
@@ -8035,381 +8378,37 @@ void trace_async_stop(vector<std::thread>& threads, bool& stop_flag);
 
 Stop the asynchronous renderer.
 
-### Type reflection
+### Path tracing type support
 
-#### Function refl_enum_names()
-
-~~~ .cpp
-template <typename T>
-inline const vector<pair<string, T>>& refl_enum_names();
-~~~
-
-Names of enum values.
-
-#### Function refl_enum_names()
-
-~~~ .cpp
-template <typename T>
-inline const vector<pair<string, T>>& refl_enum_names(T v);
-~~~
-
-Names of enum values.
-
-#### Function refl_enum_names<material_type\>()
-
-~~~ .cpp
-template <>
-inline const vector<pair<string, material_type>>&
-refl_enum_names<material_type>();
-~~~
-
-Names of enum values.
-
-#### Function refl_enum_names<keyframe_type\>()
-
-~~~ .cpp
-template <>
-inline const vector<pair<string, keyframe_type>>&
-refl_enum_names<keyframe_type>();
-~~~
-
-Names of enum values.
-
-#### Function refl_enum_names<test_texture_type\>()
-
-~~~ .cpp
-template <>
-inline const vector<pair<string, test_texture_type>>&
-refl_enum_names<test_texture_type>();
-~~~
-
-Names of enum values.
-
-#### Function refl_enum_names<test_material_type\>()
-
-~~~ .cpp
-template <>
-inline const vector<pair<string, test_material_type>>&
-refl_enum_names<test_material_type>();
-~~~
-
-Names of enum values.
-
-#### Function refl_enum_names<test_shape_type\>()
-
-~~~ .cpp
-template <>
-inline const vector<pair<string, test_shape_type>>&
-refl_enum_names<test_shape_type>();
-~~~
-
-Names of enum values.
-
-#### Function refl_enum_names<trace_shader_type\>()
+#### Function enum_names<trace_shader_type\>()
 
 ~~~ .cpp
 template <>
 inline const vector<pair<string, trace_shader_type>>&
-refl_enum_names<trace_shader_type>();
+enum_names<trace_shader_type>();
 ~~~
 
 Names of enum values.
 
-#### Function refl_enum_names<trace_rng_type\>()
+#### Function enum_names<trace_rng_type\>()
 
 ~~~ .cpp
 template <>
 inline const vector<pair<string, trace_rng_type>>&
-refl_enum_names<trace_rng_type>();
+enum_names<trace_rng_type>();
 ~~~
 
 Names of enum values.
 
-#### Function refl_enum_names<trace_filter_type\>()
+#### Function enum_names<trace_filter_type\>()
 
 ~~~ .cpp
 template <>
 inline const vector<pair<string, trace_filter_type>>&
-refl_enum_names<trace_filter_type>();
+enum_names<trace_filter_type>();
 ~~~
 
 Names of enum values.
-
-#### Function operator<<()
-
-~~~ .cpp
-template <typename T,
-    typename std::enable_if<std::is_enum<T>::value, int>::type = 0>
-inline ostream& operator<<(ostream& os, const T& a);
-~~~
-
-Stream read.
-
-#### Function operator\>\>()
-
-~~~ .cpp
-template <typename T,
-    typename std::enable_if<std::is_enum<T>::value, int>::type = 0>
-inline istream& operator>>(istream& is, T& a);
-~~~
-
-Stream read.
-
-#### Enum refl_sem_type
-
-~~~ .cpp
-enum struct refl_sem_type {
-    value = 0,
-    name = 1,
-    path = 2,
-    object = 3,
-    reference = 4,
-    color = 5,
-}
-~~~
-
-Types of variable semantic
-
-- Values:
-    - value:      Generic value.
-    - name:      Name.
-    - path:      Path.
-    - object:      Object.
-    - reference:      Reference.
-    - color:      Color.
-
-
-#### Struct refl_sem
-
-~~~ .cpp
-struct refl_sem {
-    refl_sem_type type = refl_sem_type::value;
-    float min = 0;
-    float max = 0;
-}
-~~~
-
-Semantic for reflected values
-
-- Members:
-    - type:      Type.
-    - min:      Minimum value for numeric types.
-    - max:      Maximum value for numeric types.
-
-
-#### Function refl_visit_sem()
-
-~~~ .cpp
-template <typename Visitor>
-inline void refl_visit_sem(texture& val, Visitor&& visitor);
-~~~
-
-Visit struct elements.
-
-#### Function refl_visit_sem()
-
-~~~ .cpp
-template <typename Visitor>
-inline void refl_visit_sem(texture_info& val, Visitor&& visitor);
-~~~
-
-Visit struct elements.
-
-#### Function refl_visit_sem()
-
-~~~ .cpp
-template <typename Visitor>
-inline void refl_visit_sem(material& val, Visitor&& visitor);
-~~~
-
-Visit struct elements.
-
-#### Function refl_visit_sem()
-
-~~~ .cpp
-template <typename Visitor>
-inline void refl_visit_sem(shape& val, Visitor&& visitor);
-~~~
-
-Visit struct elements.
-
-#### Function refl_visit_sem()
-
-~~~ .cpp
-template <typename Visitor>
-inline void refl_visit_sem(shape_group& val, Visitor&& visitor);
-~~~
-
-Visit struct elements.
-
-#### Function refl_visit_sem()
-
-~~~ .cpp
-template <typename Visitor>
-inline void refl_visit_sem(instance& val, Visitor&& visitor);
-~~~
-
-Visit struct elements.
-
-#### Function refl_visit_sem()
-
-~~~ .cpp
-template <typename Visitor>
-inline void refl_visit_sem(camera& val, Visitor&& visitor);
-~~~
-
-Visit struct elements.
-
-#### Function refl_visit_sem()
-
-~~~ .cpp
-template <typename Visitor>
-inline void refl_visit_sem(environment& val, Visitor&& visitor);
-~~~
-
-Visit struct elements.
-
-#### Function refl_visit_sem()
-
-~~~ .cpp
-template <typename Visitor>
-inline void refl_visit_sem(node& val, Visitor&& visitor);
-~~~
-
-Visit struct elements.
-
-#### Function refl_visit_sem()
-
-~~~ .cpp
-template <typename Visitor>
-inline void refl_visit_sem(animation& val, Visitor&& visitor);
-~~~
-
-Visit struct elements.
-
-#### Function refl_visit_sem()
-
-~~~ .cpp
-template <typename Visitor>
-inline void refl_visit_sem(animation_group& val, Visitor&& visitor);
-~~~
-
-Visit struct elements.
-
-#### Function refl_visit_sem()
-
-~~~ .cpp
-template <typename Visitor>
-inline void refl_visit_sem(scene& val, Visitor&& visitor);
-~~~
-
-Visit struct elements.
-
-#### Function refl_visit_sem()
-
-~~~ .cpp
-template <typename Visitor>
-inline void refl_visit_sem(test_camera_params& val, Visitor&& visitor);
-~~~
-
-Visit struct elements.
-
-#### Function refl_visit_sem()
-
-~~~ .cpp
-template <typename Visitor>
-inline void refl_visit_sem(test_texture_params& val, Visitor&& visitor);
-~~~
-
-Visit struct elements.
-
-#### Function refl_visit_sem()
-
-~~~ .cpp
-template <typename Visitor>
-inline void refl_visit_sem(test_material_params& val, Visitor&& visitor);
-~~~
-
-Visit struct elements.
-
-#### Function refl_visit_sem()
-
-~~~ .cpp
-template <typename Visitor>
-inline void refl_visit_sem(test_shape_params& val, Visitor&& visitor);
-~~~
-
-Visit struct elements.
-
-#### Function refl_visit_sem()
-
-~~~ .cpp
-template <typename Visitor>
-inline void refl_visit_sem(test_instance_params& val, Visitor&& visitor);
-~~~
-
-Visit struct elements.
-
-#### Function refl_visit_sem()
-
-~~~ .cpp
-template <typename Visitor>
-inline void refl_visit_sem(test_environment_params& val, Visitor&& visitor);
-~~~
-
-Visit struct elements.
-
-#### Function refl_visit_sem()
-
-~~~ .cpp
-template <typename Visitor>
-inline void refl_visit_sem(test_node_params& val, Visitor&& visitor);
-~~~
-
-Visit struct elements.
-
-#### Function refl_visit_sem()
-
-~~~ .cpp
-template <typename Visitor>
-inline void refl_visit_sem(test_animation_params& val, Visitor&& visitor);
-~~~
-
-Visit struct elements.
-
-#### Function refl_visit_sem()
-
-~~~ .cpp
-template <typename Visitor>
-inline void refl_visit_sem(test_scene_params& val, Visitor&& visitor);
-~~~
-
-Visit struct elements.
-
-#### Function refl_visit_sem()
-
-~~~ .cpp
-template <typename T, typename Visitor>
-inline void refl_visit_sem(T*& val, Visitor&& visitor);
-~~~
-
-Visit pointer elements.
-
-#### Struct print_scene_visitor
-
-~~~ .cpp
-struct print_scene_visitor {
-~~~
-
-Print scene visitor
-
-#### Function print_info_visit()
-
-~~~ .cpp
-inline void print_info_visit(const scene* scn);
-~~~
-
-Print a scene information using visitors.
 
 ### Wavefront OBJ
 
@@ -12246,6 +12245,14 @@ Text color widget.
 ~~~ .cpp
 void draw_image_widget(
     gl_window* win, int tid, const vec2i& size, const vec2i& imsize);
+~~~
+
+Image widget.
+
+#### Function draw_image_widget()
+
+~~~ .cpp
+void draw_image_widget(gl_window* win, gl_texture& txt, const vec2i& size);
 ~~~
 
 Image widget.
