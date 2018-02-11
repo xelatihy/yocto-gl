@@ -236,9 +236,9 @@ inline void update_shade_state(
     st->txt[nullptr] = {};
     for (auto txt : sc->textures) {
         if (st->txt.find(txt) != st->txt.end()) continue;
-        if (txt->hdr) {
+        if (!txt->hdr.empty()) {
             st->txt[txt] = ygl::make_texture(txt->hdr, true, true, true);
-        } else if (txt->ldr) {
+        } else if (!txt->ldr.empty()) {
             st->txt[txt] = ygl::make_texture(txt->ldr, true, true, true);
         } else
             assert(false);
@@ -674,7 +674,7 @@ void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
     draw_separator_widget(win);
     draw_label_widget(win, "path", txt->path);
     auto str = ygl::format("{} x {} @ 4 {}", txt->width(), txt->height(),
-        (txt->ldr) ? "byte" : "float");
+        (!txt->ldr.empty()) ? "byte" : "float");
     draw_label_widget(win, "size", str);
     if (state->txt.find(txt) != state->txt.end()) {
         draw_image_widget(win, get_texture_id(state->txt.at(txt)), {128, 128},

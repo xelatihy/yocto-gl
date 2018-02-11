@@ -64,8 +64,10 @@ void save_test_scene(const string& sname, const string& basedir) {
         printf("saving %s scenes ...\n", sname.c_str());
         if (sname == "textures") {
             for (auto txt : scn->textures) {
-                if (txt->hdr) save_image4f(dirname + txt->path, txt->hdr);
-                if (txt->ldr) save_image4b(dirname + txt->path, txt->ldr);
+                if (!txt->hdr.empty())
+                    save_image4f(dirname + txt->path, txt->hdr);
+                if (!txt->ldr.empty())
+                    save_image4b(dirname + txt->path, txt->ldr);
             }
         } else if (sname == "shapes") {
             for (auto sgr : scn->shapes) {

@@ -40,20 +40,17 @@ struct gimage {
     /// LDR image content
     image4b ldr;
 
-    /// Check if the image is valid
-    operator bool() const { return hdr || ldr; }
-
     /// image width
     int width() const {
-        if (hdr) return hdr.width();
-        if (ldr) return ldr.width();
+        if (!hdr.empty()) return hdr.width();
+        if (!ldr.empty()) return ldr.width();
         return 0;
     }
 
     /// image height
     int height() const {
-        if (hdr) return hdr.height();
-        if (ldr) return ldr.height();
+        if (!hdr.empty()) return hdr.height();
+        if (!ldr.empty()) return ldr.height();
         return 0;
     }
 };
@@ -67,7 +64,9 @@ inline gimage load_gimage(const string& filename) {
     } else {
         img.ldr = load_image4b(filename);
     }
-    if (!img) { throw runtime_error("cannot load image " + img.filename); }
+    if (img.hdr.empty() && img.ldr.empty()) {
+        throw runtime_error("cannot load image " + img.filename);
+    }
     return img;
 }
 
@@ -96,7 +95,7 @@ void draw(gl_window* win) {
     if (begin_widgets(win, "yimview")) {
         draw_label_widget(win, "filename", img->filename);
         draw_label_widget(win, "size", "{} x {}", img->width(), img->height());
-        draw_imageview_widgets(win, "", app->params, (bool)img->hdr);
+        draw_imageview_widgets(win, "", app->params, !img->hdr.empty());
         draw_imageinspect_widgets(
             win, "", img->hdr, img->ldr, get_mouse_posf(win), app->params);
     }
@@ -121,9 +120,9 @@ void run_ui(app_state* app) {
     // load textures
     app->gl_prog = make_stdimage_program();
     for (auto img : app->imgs) {
-        if (img->hdr) {
+        if (!img->hdr.empty()) {
             app->gl_txt[img] = make_texture(img->hdr, false, false, true);
-        } else if (img->ldr) {
+        } else if (!img->ldr.empty()) {
             app->gl_txt[img] = make_texture(img->ldr, false, false, true);
         }
     }

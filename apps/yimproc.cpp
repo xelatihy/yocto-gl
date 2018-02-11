@@ -32,14 +32,14 @@ using namespace ygl;
 // Load hdr
 image4f load_hdr(const string& filename) {
     auto img = load_image4f(filename);
-    if (!img) log_fatal("cannot load image {}", filename);
+    if (img.empty()) log_fatal("cannot load image {}", filename);
     return img;
 }
 
 // Load ldr
 image4b load_ldr(const string& filename) {
     auto img = load_image4b(filename);
-    if (!img) log_fatal("cannot load image {}", filename);
+    if (img.empty()) log_fatal("cannot load image {}", filename);
     return img;
 }
 
