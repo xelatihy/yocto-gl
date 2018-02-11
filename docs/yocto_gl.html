@@ -71,23 +71,25 @@
 <li><a href="#toc52"> Example scenes</a></li>
 <li><a href="#toc53"> Path-tracing support</a></li>
 <li><a href="#toc54"> Path tracing</a></li>
-<li><a href="#toc55"> Wavefront OBJ</a></li>
-<li><a href="#toc56"> Khronos glTF</a></li>
-<li><a href="#toc57"> Svg</a></li>
-<li><a href="#toc58"> String, path and file functions</a></li>
-<li><a href="#toc59"> File loading and saving</a></li>
-<li><a href="#toc60"> Immediate-mode command line parser</a></li>
-<li><a href="#toc61"> Simple logging</a></li>
-<li><a href="#toc62"> Simple timer</a></li>
-<li><a href="#toc63"> OpenGL utilities</a></li>
-<li><a href="#toc64"> OpenGL vertex array buffers</a></li>
-<li><a href="#toc65"> OpenGL element array buffers</a></li>
-<li><a href="#toc66"> OpenGL programs</a></li>
-<li><a href="#toc67"> OpenGL scene shader support</a></li>
-<li><a href="#toc68"> OpenGL image shader</a></li>
-<li><a href="#toc69"> OpenGL surface shader</a></li>
-<li><a href="#toc70"> OpenGL window</a></li>
-<li><a href="#toc71"> OpenGL widgets</a></li>
+<li><a href="#toc55"> Type reflection</a></li>
+<li><a href="#toc56"> Wavefront OBJ</a></li>
+<li><a href="#toc57"> Khronos glTF</a></li>
+<li><a href="#toc58"> Svg</a></li>
+<li><a href="#toc59"> String, path and file functions</a></li>
+<li><a href="#toc60"> File loading and saving</a></li>
+<li><a href="#toc61"> Immediate-mode command line parser</a></li>
+<li><a href="#toc62"> Simple logging</a></li>
+<li><a href="#toc63"> Simple timer</a></li>
+<li><a href="#toc64"> OpenGL utilities</a></li>
+<li><a href="#toc65"> OpenGL textures</a></li>
+<li><a href="#toc66"> OpenGL vertex array buffers</a></li>
+<li><a href="#toc67"> OpenGL element array buffers</a></li>
+<li><a href="#toc68"> OpenGL programs</a></li>
+<li><a href="#toc69"> OpenGL scene shader support</a></li>
+<li><a href="#toc70"> OpenGL image shader</a></li>
+<li><a href="#toc71"> OpenGL surface shader</a></li>
+<li><a href="#toc72"> OpenGL window</a></li>
+<li><a href="#toc73"> OpenGL widgets</a></li>
 </ul>
 </li>
 <li><a href="yocto_gl.html#api">API Documentation</a></li>
@@ -1162,11 +1164,8 @@ specializations for small fixed sized vectors.</p>
     <span class="n">vec</span><span class="p">();</span> 
     <span class="k">explicit</span> <span class="nf">vec</span><span class="p">(</span><span class="n">T</span> <span class="n">vv</span><span class="p">);</span> 
     <span class="n">vec</span><span class="p">(</span><span class="n">T</span> <span class="n">x</span><span class="p">,</span> <span class="n">T</span> <span class="n">y</span><span class="p">,</span> <span class="n">T</span> <span class="n">z</span><span class="p">,</span> <span class="n">T</span> <span class="n">w</span><span class="p">);</span> 
-    <span class="n">vec</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">xyz</span><span class="p">,</span> <span class="n">T</span> <span class="n">w</span><span class="p">);</span> 
     <span class="n">T</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">);</span> 
     <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
-    <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">xyz</span><span class="p">();</span> 
-    <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">xyz</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
     <span class="n">T</span> <span class="n">x</span><span class="p">;</span>
     <span class="n">T</span> <span class="n">y</span><span class="p">;</span>
     <span class="n">T</span> <span class="n">z</span><span class="p">;</span>
@@ -1181,11 +1180,8 @@ specializations for small fixed sized vectors.</p>
 <li>vec():      Default constructor.  Initializes to zeros.</li>
 <li>vec():      Element constructor.</li>
 <li>vec():      Element constructor.</li>
-<li>vec():      Constructor from smaller vector.</li>
 <li>operator<a href=""></a>:      Element access.</li>
 <li>operator<a href=""></a>:      Element access.</li>
-<li>xyz():      Access xyz components.</li>
-<li>xyz():      Access xyz components.</li>
 <li>x:      Element data.</li>
 <li>y:      Element data.</li>
 <li>z:      Element data.</li>
@@ -2374,13 +2370,8 @@ specializations for small fixed sized frames.</p>
     <span class="n">frame</span><span class="p">();</span> 
     <span class="n">frame</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">x</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">y</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">z</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">o</span><span class="p">);</span> 
     <span class="n">frame</span><span class="p">(</span><span class="k">const</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">m</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">t</span><span class="p">);</span> 
-    <span class="n">frame</span><span class="p">(</span><span class="k">const</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">m</span><span class="p">);</span> 
     <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">);</span> 
     <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
-    <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">();</span> 
-    <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
-    <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">rot</span><span class="p">();</span> 
-    <span class="k">const</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">rot</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
     <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">x</span><span class="p">;</span>
     <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">y</span><span class="p">;</span>
     <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">z</span><span class="p">;</span>
@@ -2400,13 +2391,8 @@ Access rotation and position with pos() and rot().</p>
 <li>frame():      Default constructor. Initializes to the identity frame.</li>
 <li>frame():      Basic and origin constructor. Equavalent to columns of affine matrix.</li>
 <li>frame():      Rotation and traslation constructor.</li>
-<li>frame():      conversion from matrix. Assumes the matrix is affine, so use with care.</li>
 <li>operator<a href=""></a>:      Element/column access</li>
 <li>operator<a href=""></a>:      Element/column access</li>
-<li>pos():      Frame origin.</li>
-<li>pos():      Frame origin.</li>
-<li>rot():      Frame rotation</li>
-<li>rot():      Frame rotation</li>
 <li>x:      Axes and origin data</li>
 <li>y:      Axes and origin data</li>
 <li>z:      Axes and origin data</li>
@@ -2483,20 +2469,48 @@ Access rotation and position with pos() and rot().</p>
 
 
 <p>Empty check (always false for useful for templated code).</p>
-<h4>Function to_mat()</h4>
+<h4>Function frame_to_mat()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">to_mat</span><span class="p">(</span><span class="k">const</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">frame_to_mat</span><span class="p">(</span><span class="k">const</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Frame to matrix conversion.</p>
-<h4>Function to_frame()</h4>
+<h4>Function mat_to_frame()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">to_frame</span><span class="p">(</span><span class="k">const</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">mat_to_frame</span><span class="p">(</span><span class="k">const</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Matrix to frame conversion.</p>
+<h4>Function frame_pos()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">frame_pos</span><span class="p">(</span><span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Frame origin.</p>
+<h4>Function frame_pos()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">frame_pos</span><span class="p">(</span><span class="k">const</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Frame origin.</p>
+<h4>Function frame_rot()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">frame_rot</span><span class="p">(</span><span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Frame rotation</p>
+<h4>Function frame_rot()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="k">const</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">frame_rot</span><span class="p">(</span><span class="k">const</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Frame rotation</p>
 <h4>Function operator==()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="kt">bool</span> <span class="k">operator</span><span class="o">==</span><span class="p">(</span><span class="k">const</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
@@ -3258,199 +3272,135 @@ of N-elements.</p>
 
 
 <p>Inverse transforms a bbox by a frame, assuming a rigid transform.</p>
-<h4>Function rotation_mat3()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">rotation_mat3</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">axis</span><span class="p">,</span> <span class="n">T1</span> <span class="n">angle</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Rotation matrix from axis-angle.</p>
-<h4>Function translation_frame3()</h4>
+<h4>Function translation_frame()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">translation_frame3</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">translation_frame</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Translation affine transform.</p>
-<h4>Function translation_mat4()</h4>
+<h4>Function scaling_frame()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">translation_mat4</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Translation matrix.</p>
-<h4>Function scaling_frame3()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">scaling_frame3</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">scaling_frame</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Scaling affine transform; this is not rigid and here for symmatry of API.</p>
-<h4>Function scaling_mat4()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">scaling_mat4</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Scaling matrix.</p>
-<h4>Function rotation_frame3()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">rotation_frame3</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">axis</span><span class="p">,</span> <span class="n">T</span> <span class="n">angle</span><span class="p">);</span>
+<h4>Function rotation_frame()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">rotation_frame</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">axis</span><span class="p">,</span> <span class="n">T1</span> <span class="n">angle</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Rotation affine transform.</p>
-<h4>Function rotation_frame3()</h4>
+<h4>Function rotation_frame()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">rotation_frame3</span><span class="p">(</span><span class="k">const</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">rot</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">rotation_frame</span><span class="p">(</span><span class="k">const</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">v</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Rotation affine transform.</p>
-<h4>Function rotation_mat4()</h4>
+<h4>Function lookat_frame()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">rotation_mat4</span><span class="p">(</span><span class="k">const</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">rot</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Rotation matrix.</p>
-<h4>Function rotation_mat4()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">rotation_mat4</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">axis</span><span class="p">,</span> <span class="n">T</span> <span class="n">angle</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Rotation matrix.</p>
-<h4>Function rotation_axisangle4()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">pair</span><span class="o">&lt;</span><span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">T</span><span class="o">&gt;</span> <span class="n">rotation_axisangle4</span><span class="p">(</span><span class="k">const</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Quaternion axis-angle conversion.</p>
-<h4>Function rotation_quat4()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">rotation_quat4</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">axis</span><span class="p">,</span> <span class="n">T</span> <span class="n">angle</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Axis-angle to quaternion conversion.</p>
-<h4>Function rotation_mat3()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">rotation_mat3</span><span class="p">(</span><span class="k">const</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">v</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Quaterion to matrix conversion.</p>
-<h4>Function rotation_mat4()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">rotation_mat4</span><span class="p">(</span><span class="k">const</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">v</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Quaternion to rotation matrix conversion.</p>
-<h4>Function rotation_quat4()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">rotation_quat4</span><span class="p">(</span><span class="k">const</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">m_</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Rotation matrix to quaternion conversion.</p>
-<h4>Function lookat_frame3()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">lookat_frame3</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">eye</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">center</span><span class="p">,</span>
+<span class="kr">inline</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">lookat_frame</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">eye</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">center</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">up</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">inv_xz</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>OpenGL lookat frame. Z-axis can be inverted with inv_xz.</p>
-<h4>Function lookat_mat4()</h4>
+<h4>Function frustum_mat()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">lookat_mat4</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">eye</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">center</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">up</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>OpenGL lookat matrix.</p>
-<h4>Function frustum_mat4()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">frustum_mat4</span><span class="p">(</span><span class="n">T</span> <span class="n">l</span><span class="p">,</span> <span class="n">T</span> <span class="n">r</span><span class="p">,</span> <span class="n">T</span> <span class="n">b</span><span class="p">,</span> <span class="n">T</span> <span class="n">t</span><span class="p">,</span> <span class="n">T</span> <span class="n">n</span><span class="p">,</span> <span class="n">T</span> <span class="n">f</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">frustum_mat</span><span class="p">(</span><span class="n">T</span> <span class="n">l</span><span class="p">,</span> <span class="n">T</span> <span class="n">r</span><span class="p">,</span> <span class="n">T</span> <span class="n">b</span><span class="p">,</span> <span class="n">T</span> <span class="n">t</span><span class="p">,</span> <span class="n">T</span> <span class="n">n</span><span class="p">,</span> <span class="n">T</span> <span class="n">f</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>OpenGL frustum matrix.</p>
-<h4>Function ortho_mat4()</h4>
+<h4>Function ortho_mat()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">ortho_mat4</span><span class="p">(</span><span class="n">T</span> <span class="n">l</span><span class="p">,</span> <span class="n">T</span> <span class="n">r</span><span class="p">,</span> <span class="n">T</span> <span class="n">b</span><span class="p">,</span> <span class="n">T</span> <span class="n">t</span><span class="p">,</span> <span class="n">T</span> <span class="n">n</span><span class="p">,</span> <span class="n">T</span> <span class="n">f</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">ortho_mat</span><span class="p">(</span><span class="n">T</span> <span class="n">l</span><span class="p">,</span> <span class="n">T</span> <span class="n">r</span><span class="p">,</span> <span class="n">T</span> <span class="n">b</span><span class="p">,</span> <span class="n">T</span> <span class="n">t</span><span class="p">,</span> <span class="n">T</span> <span class="n">n</span><span class="p">,</span> <span class="n">T</span> <span class="n">f</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>OpenGL orthographic matrix.</p>
-<h4>Function ortho2d_mat4()</h4>
+<h4>Function ortho2d_mat()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">ortho2d_mat4</span><span class="p">(</span><span class="n">T</span> <span class="n">left</span><span class="p">,</span> <span class="n">T</span> <span class="n">right</span><span class="p">,</span> <span class="n">T</span> <span class="n">bottom</span><span class="p">,</span> <span class="n">T</span> <span class="n">top</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">ortho2d_mat</span><span class="p">(</span><span class="n">T</span> <span class="n">left</span><span class="p">,</span> <span class="n">T</span> <span class="n">right</span><span class="p">,</span> <span class="n">T</span> <span class="n">bottom</span><span class="p">,</span> <span class="n">T</span> <span class="n">top</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>OpenGL orthographic 2D matrix.</p>
-<h4>Function ortho_mat4()</h4>
+<h4>Function ortho_mat()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">ortho_mat4</span><span class="p">(</span><span class="n">T</span> <span class="n">xmag</span><span class="p">,</span> <span class="n">T</span> <span class="n">ymag</span><span class="p">,</span> <span class="n">T</span> <span class="n">near</span><span class="p">,</span> <span class="n">T</span> <span class="n">far</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">ortho_mat</span><span class="p">(</span><span class="n">T</span> <span class="n">xmag</span><span class="p">,</span> <span class="n">T</span> <span class="n">ymag</span><span class="p">,</span> <span class="n">T</span> <span class="n">near</span><span class="p">,</span> <span class="n">T</span> <span class="n">far</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>OpenGL orthographic matrix.</p>
-<h4>Function perspective_mat4()</h4>
+<h4>Function perspective_mat()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">perspective_mat4</span><span class="p">(</span><span class="n">T</span> <span class="n">fovy</span><span class="p">,</span> <span class="n">T</span> <span class="n">aspect</span><span class="p">,</span> <span class="n">T</span> <span class="n">near</span><span class="p">,</span> <span class="n">T</span> <span class="n">far</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">perspective_mat</span><span class="p">(</span><span class="n">T</span> <span class="n">fovy</span><span class="p">,</span> <span class="n">T</span> <span class="n">aspect</span><span class="p">,</span> <span class="n">T</span> <span class="n">near</span><span class="p">,</span> <span class="n">T</span> <span class="n">far</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>OpenGL perspective matrix.</p>
-<h4>Function perspective_mat4()</h4>
+<h4>Function perspective_mat()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">perspective_mat4</span><span class="p">(</span><span class="n">T</span> <span class="n">fovy</span><span class="p">,</span> <span class="n">T</span> <span class="n">aspect</span><span class="p">,</span> <span class="n">T</span> <span class="n">near</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">perspective_mat</span><span class="p">(</span><span class="n">T</span> <span class="n">fovy</span><span class="p">,</span> <span class="n">T</span> <span class="n">aspect</span><span class="p">,</span> <span class="n">T</span> <span class="n">near</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>OpenGL infinite perspective matrix.</p>
-<h4>Function decompose_mat4()</h4>
+<h4>Function rotation_axisangle()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">decompose_mat4</span><span class="p">(</span><span class="k">const</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">m</span><span class="p">,</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">translation</span><span class="p">,</span>
-    <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">rotation</span><span class="p">,</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">scale</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="n">pair</span><span class="o">&lt;</span><span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">T</span><span class="o">&gt;</span> <span class="n">rotation_axisangle</span><span class="p">(</span><span class="k">const</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Rotation affine transform.</p>
+<h4>Function rotation_quat()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">rotation_quat</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">axis</span><span class="p">,</span> <span class="n">T</span> <span class="n">angle</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Axis-angle to quaternion conversion.</p>
+<h4>Function rotation_quat()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">rotation_quat</span><span class="p">(</span><span class="k">const</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">m_</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Rotation matrix to quaternion conversion.</p>
+<h4>Function decompose_frame()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">tuple</span><span class="o">&lt;</span><span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&gt;</span> <span class="n">decompose_frame</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">m</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Decompose an affine matrix into translation, rotation, scale.
+Assumes there is no shear.</p>
+<h4>Function decompose_frame()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">tuple</span><span class="o">&lt;</span><span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&gt;</span> <span class="n">decompose_frame</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">m</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Decompose an affine matrix into translation, rotation, scale.
 Assumes there is no shear and the matrix is affine.</p>
-<h4>Function to_quat4()</h4>
+<h4>Function compose_frame()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">to_quat4</span><span class="p">(</span><span class="k">const</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Convert a rotation matrix to a quaternion.</p>
-<h4>Function decompose_mat4()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">decompose_mat4</span><span class="p">(</span><span class="k">const</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">m</span><span class="p">,</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">translation</span><span class="p">,</span>
-    <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">rotation</span><span class="p">,</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">scale</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Decompose an affine matrix into translation, rotation, scale.
-Assumes there is no shear and the matrix is affine.</p>
-<h4>Function compose_mat4()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">compose_mat4</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">translation</span><span class="p">,</span>
+<span class="kr">inline</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">compose_frame</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">translation</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">rotation</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">scale</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Decompose an affine matrix into translation, rotation, scale.
 Assumes there is no shear and the matrix is affine.</p>
-<h4>Function compose_mat4()</h4>
+<h4>Function compose_frame()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">compose_mat4</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">translation</span><span class="p">,</span>
+<span class="kr">inline</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">compose_frame</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">translation</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">rotation</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">scale</span><span class="p">);</span>
 </code></pre></div>
 
@@ -5452,12 +5402,6 @@ coordinates <code>euv</code>.</p>
 </ul>
 </li>
 </ul>
-<h4>Function material_type_names()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">material_type</span><span class="o">&gt;&gt;&amp;</span> <span class="n">material_type_names</span><span class="p">();</span>
-</code></pre></div>
-
-
-<p>Names for <code>material_type</code> enum.</p>
 <h4>Struct material</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">material</span> <span class="p">{</span>
     <span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
@@ -5529,8 +5473,8 @@ coordinates <code>euv</code>.</p>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;</span> <span class="n">color</span><span class="p">;</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">radius</span><span class="p">;</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;</span> <span class="n">tangsp</span><span class="p">;</span>
-    <span class="kt">int</span> <span class="n">subdivision_level</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-    <span class="kt">bool</span> <span class="n">subdivision_catmullclark</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">subdivision</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">catmullclark</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -5556,8 +5500,8 @@ May contain only one of the points/lines/triangles/quads.</p>
 <li>color:      Vertex color.</li>
 <li>radius:      per-vertex radius.</li>
 <li>tangsp:      Vertex tangent space.</li>
-<li>subdivision_level:      Number of times to subdivide.</li>
-<li>subdivision_catmullclark:      Whether to use Catmull-Clark subdivision.</li>
+<li>subdivision:      Number of times to subdivide.</li>
+<li>catmullclark:      Whether to use Catmull-Clark subdivision.</li>
 </ul>
 </li>
 </ul>
@@ -5701,12 +5645,6 @@ May contain only one of the points/lines/triangles/quads.</p>
 </ul>
 </li>
 </ul>
-<h4>Function keyframe_type_names()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">keyframe_type</span><span class="o">&gt;&gt;&amp;</span> <span class="n">keyframe_type_names</span><span class="p">();</span>
-</code></pre></div>
-
-
-<p>Names for <code>keyframe_type</code> enum.</p>
 <h4>Struct animation</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">animation</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span><span class="p">;</span>
@@ -6088,8 +6026,8 @@ Throws an exception if an error occurs.</p>
 </ul>
 </li>
 </ul>
-<h4>Function update_test_camera()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_camera</span><span class="p">(</span>
+<h4>Function update_test_elem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">camera</span><span class="o">*</span> <span class="n">cam</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_camera_params</span><span class="o">&amp;</span> <span class="n">tcam</span><span class="p">);</span>
 </code></pre></div>
 
@@ -6141,12 +6079,6 @@ Throws an exception if an error occurs.</p>
 </ul>
 </li>
 </ul>
-<h4>Function test_texture_names()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">test_texture_type</span><span class="o">&gt;&gt;&amp;</span> <span class="n">test_texture_names</span><span class="p">();</span>
-</code></pre></div>
-
-
-<p>Name for <code>test_texture</code> enum.</p>
 <h4>Struct test_texture_params</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">test_texture_params</span> <span class="p">{</span>
     <span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
@@ -6175,8 +6107,8 @@ Throws an exception if an error occurs.</p>
 </ul>
 </li>
 </ul>
-<h4>Function update_test_texture()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_texture</span><span class="p">(</span>
+<h4>Function update_test_elem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">texture</span><span class="o">*</span> <span class="n">txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_texture_params</span><span class="o">&amp;</span> <span class="n">ttxt</span><span class="p">);</span>
 </code></pre></div>
 
@@ -6212,12 +6144,6 @@ Throws an exception if an error occurs.</p>
 </ul>
 </li>
 </ul>
-<h4>Function test_material_names()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">test_material_type</span><span class="o">&gt;&gt;&amp;</span> <span class="n">test_material_names</span><span class="p">();</span>
-</code></pre></div>
-
-
-<p>Name for <code>test_shape</code> enum.</p>
 <h4>Struct test_material_params</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">test_material_params</span> <span class="p">{</span>
     <span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
@@ -6246,8 +6172,8 @@ Throws an exception if an error occurs.</p>
 </ul>
 </li>
 </ul>
-<h4>Function update_test_material()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_material</span><span class="p">(</span>
+<h4>Function update_test_elem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">material</span><span class="o">*</span> <span class="n">mat</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_material_params</span><span class="o">&amp;</span> <span class="n">tmat</span><span class="p">);</span>
 </code></pre></div>
 
@@ -6305,12 +6231,6 @@ Throws an exception if an error occurs.</p>
 </ul>
 </li>
 </ul>
-<h4>Function test_shape_names()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">test_shape_type</span><span class="o">&gt;&gt;&amp;</span> <span class="n">test_shape_names</span><span class="p">();</span>
-</code></pre></div>
-
-
-<p>Name for <code>test_shape</code> enum.</p>
 <h4>Struct test_shape_params</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">test_shape_params</span> <span class="p">{</span>
     <span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
@@ -6345,8 +6265,8 @@ Throws an exception if an error occurs.</p>
 </ul>
 </li>
 </ul>
-<h4>Function update_test_shape()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_shape</span><span class="p">(</span>
+<h4>Function update_test_elem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_shape_params</span><span class="o">&amp;</span> <span class="n">tshp</span><span class="p">);</span>
 </code></pre></div>
 
@@ -6378,8 +6298,8 @@ Throws an exception if an error occurs.</p>
 </ul>
 </li>
 </ul>
-<h4>Function update_test_instance()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_instance</span><span class="p">(</span>
+<h4>Function update_test_elem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">instance</span><span class="o">*</span> <span class="n">ist</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_instance_params</span><span class="o">&amp;</span> <span class="n">tist</span><span class="p">);</span>
 </code></pre></div>
 
@@ -6415,8 +6335,8 @@ Throws an exception if an error occurs.</p>
 </ul>
 </li>
 </ul>
-<h4>Function update_test_environment()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_environment</span><span class="p">(</span>
+<h4>Function update_test_elem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">environment</span><span class="o">*</span> <span class="n">env</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_environment_params</span><span class="o">&amp;</span> <span class="n">tenv</span><span class="p">);</span>
 </code></pre></div>
 
@@ -6458,8 +6378,8 @@ Throws an exception if an error occurs.</p>
 </ul>
 </li>
 </ul>
-<h4>Function update_test_node()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_node</span><span class="p">(</span>
+<h4>Function update_test_elem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">node</span><span class="o">*</span> <span class="n">nde</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_node_params</span><span class="o">&amp;</span> <span class="n">tndr</span><span class="p">);</span>
 </code></pre></div>
 
@@ -6501,8 +6421,8 @@ Throws an exception if an error occurs.</p>
 </ul>
 </li>
 </ul>
-<h4>Function update_test_animation()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_animation</span><span class="p">(</span>
+<h4>Function update_test_elem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">animation_group</span><span class="o">*</span> <span class="n">anm</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_animation_params</span><span class="o">&amp;</span> <span class="n">tndr</span><span class="p">);</span>
 </code></pre></div>
 
@@ -6693,12 +6613,6 @@ This is a hack, but works better than not doing it.</p>
 </ul>
 </li>
 </ul>
-<h4>Function trace_shader_names()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">trace_shader_type</span><span class="o">&gt;&gt;&amp;</span> <span class="n">trace_shader_names</span><span class="p">();</span>
-</code></pre></div>
-
-
-<p>Names for <code>trace_shader_type</code> enum.</p>
 <h4>Enum trace_rng_type</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">trace_rng_type</span> <span class="p">{</span>
     <span class="n">uniform</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
@@ -6715,12 +6629,6 @@ This is a hack, but works better than not doing it.</p>
 </ul>
 </li>
 </ul>
-<h4>Function trace_rng_names()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">trace_rng_type</span><span class="o">&gt;&gt;&amp;</span> <span class="n">trace_rng_names</span><span class="p">();</span>
-</code></pre></div>
-
-
-<p>Names for <code>trace_rng_type</code> enum.</p>
 <h4>Enum trace_filter_type</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">trace_filter_type</span> <span class="p">{</span>
     <span class="n">box</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
@@ -6744,15 +6652,8 @@ This is a hack, but works better than not doing it.</p>
 </ul>
 </li>
 </ul>
-<h4>Function trace_filter_names()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">trace_filter_type</span><span class="o">&gt;&gt;&amp;</span> <span class="n">trace_filter_names</span><span class="p">();</span>
-</code></pre></div>
-
-
-<p>Names for <code>trace_filter_type</code> enum.</p>
 <h4>Struct trace_params</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">trace_params</span> <span class="p">{</span>
-    <span class="kt">int</span> <span class="n">camera_id</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
     <span class="kt">int</span> <span class="n">width</span> <span class="o">=</span> <span class="mi">360</span><span class="p">;</span>
     <span class="kt">int</span> <span class="n">height</span> <span class="o">=</span> <span class="mi">360</span><span class="p">;</span>
     <span class="kt">int</span> <span class="n">nsamples</span> <span class="o">=</span> <span class="mi">256</span><span class="p">;</span>
@@ -6777,7 +6678,6 @@ This is a hack, but works better than not doing it.</p>
 <p>Rendering params.</p>
 <ul>
 <li>Members:<ul>
-<li>camera_id:      Camera id (-1 for default).</li>
 <li>width:      Image width.</li>
 <li>height:      Image height.</li>
 <li>nsamples:      Number of samples.</li>
@@ -6800,7 +6700,8 @@ This is a hack, but works better than not doing it.</p>
 </ul>
 <h4>Struct trace_pixel</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">trace_pixel</span> <span class="p">{</span>
-    <span class="n">vec4f</span> <span class="n">acc</span> <span class="o">=</span> <span class="n">zero4f</span><span class="p">;</span>
+    <span class="n">vec3f</span> <span class="n">col</span> <span class="o">=</span> <span class="n">zero3f</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">alpha</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
     <span class="n">rng_pcg32</span> <span class="n">rng</span> <span class="o">=</span> <span class="n">rng_pcg32</span><span class="p">();</span>
     <span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">j</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
     <span class="kt">int</span> <span class="n">sample</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
@@ -6815,7 +6716,8 @@ for uniform and stratified sequences. The members are not part of the
 the public API.</p>
 <ul>
 <li>Members:<ul>
-<li>acc:      Accumulated radiance and coverage.</li>
+<li>col:      Accumulated radiance.</li>
+<li>alpha:      Accumulated coverage.</li>
 <li>rng:      Random number state.</li>
 <li>i:      Pixel coordinates.</li>
 <li>sample:      Number of samples computed.</li>
@@ -6914,6 +6816,310 @@ the the public API.</p>
 
 <p>Stop the asynchronous renderer.</p>
 <p><a id="toc55"></a></p>
+<h3>Type reflection</h3>
+<h4>Function refl_enum_names()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">T</span><span class="o">&gt;&gt;&amp;</span> <span class="n">refl_enum_names</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Names of enum values.</p>
+<h4>Function refl_enum_names()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">T</span><span class="o">&gt;&gt;&amp;</span> <span class="n">refl_enum_names</span><span class="p">(</span><span class="n">T</span> <span class="n">v</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Names of enum values.</p>
+<h4>Function refl_enum_names&lt;material_type>()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;&gt;</span>
+<span class="kr">inline</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">material_type</span><span class="o">&gt;&gt;&amp;</span>
+<span class="n">refl_enum_names</span><span class="o">&lt;</span><span class="n">material_type</span><span class="o">&gt;</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Names of enum values.</p>
+<h4>Function refl_enum_names&lt;keyframe_type>()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;&gt;</span>
+<span class="kr">inline</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">keyframe_type</span><span class="o">&gt;&gt;&amp;</span>
+<span class="n">refl_enum_names</span><span class="o">&lt;</span><span class="n">keyframe_type</span><span class="o">&gt;</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Names of enum values.</p>
+<h4>Function refl_enum_names&lt;test_texture_type>()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;&gt;</span>
+<span class="kr">inline</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">test_texture_type</span><span class="o">&gt;&gt;&amp;</span>
+<span class="n">refl_enum_names</span><span class="o">&lt;</span><span class="n">test_texture_type</span><span class="o">&gt;</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Names of enum values.</p>
+<h4>Function refl_enum_names&lt;test_material_type>()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;&gt;</span>
+<span class="kr">inline</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">test_material_type</span><span class="o">&gt;&gt;&amp;</span>
+<span class="n">refl_enum_names</span><span class="o">&lt;</span><span class="n">test_material_type</span><span class="o">&gt;</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Names of enum values.</p>
+<h4>Function refl_enum_names&lt;test_shape_type>()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;&gt;</span>
+<span class="kr">inline</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">test_shape_type</span><span class="o">&gt;&gt;&amp;</span>
+<span class="n">refl_enum_names</span><span class="o">&lt;</span><span class="n">test_shape_type</span><span class="o">&gt;</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Names of enum values.</p>
+<h4>Function refl_enum_names&lt;trace_shader_type>()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;&gt;</span>
+<span class="kr">inline</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">trace_shader_type</span><span class="o">&gt;&gt;&amp;</span>
+<span class="n">refl_enum_names</span><span class="o">&lt;</span><span class="n">trace_shader_type</span><span class="o">&gt;</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Names of enum values.</p>
+<h4>Function refl_enum_names&lt;trace_rng_type>()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;&gt;</span>
+<span class="kr">inline</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">trace_rng_type</span><span class="o">&gt;&gt;&amp;</span>
+<span class="n">refl_enum_names</span><span class="o">&lt;</span><span class="n">trace_rng_type</span><span class="o">&gt;</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Names of enum values.</p>
+<h4>Function refl_enum_names&lt;trace_filter_type>()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;&gt;</span>
+<span class="kr">inline</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">trace_filter_type</span><span class="o">&gt;&gt;&amp;</span>
+<span class="n">refl_enum_names</span><span class="o">&lt;</span><span class="n">trace_filter_type</span><span class="o">&gt;</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Names of enum values.</p>
+<h4>Function operator&lt;&lt;()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span>
+    <span class="k">typename</span> <span class="n">std</span><span class="o">::</span><span class="n">enable_if</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">is_enum</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;::</span><span class="n">value</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;::</span><span class="n">type</span> <span class="o">=</span> <span class="mi">0</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">ostream</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">&lt;&lt;</span><span class="p">(</span><span class="n">ostream</span><span class="o">&amp;</span> <span class="n">os</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">a</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Stream read.</p>
+<h4>Function operator>>()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span>
+    <span class="k">typename</span> <span class="n">std</span><span class="o">::</span><span class="n">enable_if</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">is_enum</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;::</span><span class="n">value</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;::</span><span class="n">type</span> <span class="o">=</span> <span class="mi">0</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">istream</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">&gt;&gt;</span><span class="p">(</span><span class="n">istream</span><span class="o">&amp;</span> <span class="n">is</span><span class="p">,</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">a</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Stream read.</p>
+<h4>Enum refl_sem_type</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">refl_sem_type</span> <span class="p">{</span>
+    <span class="n">value</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="n">object</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="n">reference</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+    <span class="n">color</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Types of variable semantic</p>
+<ul>
+<li>Values:<ul>
+<li>value:      Generic value.</li>
+<li>name:      Name.</li>
+<li>path:      Path.</li>
+<li>object:      Object.</li>
+<li>reference:      Reference.</li>
+<li>color:      Color.</li>
+</ul>
+</li>
+</ul>
+<h4>Struct refl_sem</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">refl_sem</span> <span class="p">{</span>
+    <span class="n">refl_sem_type</span> <span class="n">type</span> <span class="o">=</span> <span class="n">refl_sem_type</span><span class="o">::</span><span class="n">value</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Semantic for reflected values</p>
+<ul>
+<li>Members:<ul>
+<li>type:      Type.</li>
+<li>min:      Minimum value for numeric types.</li>
+<li>max:      Maximum value for numeric types.</li>
+</ul>
+</li>
+</ul>
+<h4>Function refl_visit_sem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">texture</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function refl_visit_sem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function refl_visit_sem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">material</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function refl_visit_sem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">shape</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function refl_visit_sem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">shape_group</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function refl_visit_sem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">instance</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function refl_visit_sem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">camera</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function refl_visit_sem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">environment</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function refl_visit_sem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">node</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function refl_visit_sem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">animation</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function refl_visit_sem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">animation_group</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function refl_visit_sem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">scene</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function refl_visit_sem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">test_camera_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function refl_visit_sem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">test_texture_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function refl_visit_sem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">test_material_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function refl_visit_sem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">test_shape_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function refl_visit_sem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">test_instance_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function refl_visit_sem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">test_environment_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function refl_visit_sem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">test_node_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function refl_visit_sem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">test_animation_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function refl_visit_sem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">test_scene_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function refl_visit_sem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">refl_visit_sem</span><span class="p">(</span><span class="n">T</span><span class="o">*&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit pointer elements.</p>
+<h4>Struct print_scene_visitor</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">print_scene_visitor</span> <span class="p">{</span>
+</code></pre></div>
+
+
+<p>Print scene visitor</p>
+<h4>Function print_info_visit()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">print_info_visit</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Print a scene information using visitors.</p>
+<p><a id="toc56"></a></p>
 <h3>Wavefront OBJ</h3>
 <h4>Struct obj_vertex</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">obj_vertex</span> <span class="p">{</span>
@@ -7256,7 +7462,7 @@ Texture coordinates and material Tr are flipped if <code>flip_texcoord</code> an
 and report errors only if <code>skip_missing</code> is false.
 Texture coordinates and material Tr are flipped if <code>flip_texcoord</code> and
 <code>flip_tp</code> are respectively true.</p>
-<p><a id="toc56"></a></p>
+<p><a id="toc57"></a></p>
 <h3>Khronos glTF</h3>
 <h4>Typedef buffer_data</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">buffer_data</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;</span><span class="p">;</span>
@@ -8315,7 +8521,7 @@ if <code>load_bin</code> and <code>load_img</code> are true, reporting errors on
 </ul>
 </li>
 </ul>
-<p><a id="toc57"></a></p>
+<p><a id="toc58"></a></p>
 <h3>Svg</h3>
 <h4>Struct svg_path</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">svg_path</span> <span class="p">{</span>
@@ -8375,7 +8581,7 @@ if <code>load_bin</code> and <code>load_img</code> are true, reporting errors on
 
 
 <p>Save an SVG.</p>
-<p><a id="toc58"></a></p>
+<p><a id="toc59"></a></p>
 <h3>String, path and file functions</h3>
 <h4>Function startswith()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">startswith</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">substr</span><span class="p">);</span>
@@ -8557,7 +8763,7 @@ is not fast nor memory efficient. But it is good enough for some needs.</p>
 
 
 <p>Wrapper for the above function that prints to stdout with endline.</p>
-<p><a id="toc59"></a></p>
+<p><a id="toc60"></a></p>
 <h3>File loading and saving</h3>
 <h4>Function load_binary()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;</span> <span class="n">load_binary</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
@@ -8584,7 +8790,7 @@ is not fast nor memory efficient. But it is good enough for some needs.</p>
 
 
 <p>Saves a string to a text file.</p>
-<p><a id="toc60"></a></p>
+<p><a id="toc61"></a></p>
 <h3>Immediate-mode command line parser</h3>
 <h4>Struct cmdline_parser</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">cmdline_parser</span><span class="p">;</span>
@@ -8612,8 +8818,7 @@ is not fast nor memory efficient. But it is good enough for some needs.</p>
 <p>Returns the usage string.</p>
 <h4>Function parse_flag()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">parse_flag</span><span class="p">(</span><span class="n">cmdline_parser</span><span class="o">&amp;</span> <span class="n">parser</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">flag</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">def</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
-    <span class="kt">bool</span> <span class="n">req</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">flag</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">def</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">req</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -8643,7 +8848,7 @@ is not fast nor memory efficient. But it is good enough for some needs.</p>
 
 
 <p>Initialize a command line parser.</p>
-<p><a id="toc61"></a></p>
+<p><a id="toc62"></a></p>
 <h3>Simple logging</h3>
 <h4>Struct logger</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">logger</span> <span class="p">{</span>
@@ -8727,7 +8932,7 @@ and the specified verbosity level.</p>
 
 
 <p>Logs a message to the default loggers.</p>
-<p><a id="toc62"></a></p>
+<p><a id="toc63"></a></p>
 <h3>Simple timer</h3>
 <h4>Struct timer</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">timer</span> <span class="p">{</span>
@@ -8749,7 +8954,7 @@ and the specified verbosity level.</p>
 </ul>
 </li>
 </ul>
-<p><a id="toc63"></a></p>
+<p><a id="toc64"></a></p>
 <h3>OpenGL utilities</h3>
 <h4>Enum gl_elem_type : int</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="nl">gl_elem_type</span> <span class="p">:</span> <span class="kt">int</span> <span class="p">{</span>
@@ -8870,6 +9075,8 @@ and the specified verbosity level.</p>
 
 
 <p>Reads an image from the the framebuffer.</p>
+<p><a id="toc65"></a></p>
+<h3>OpenGL textures</h3>
 <h4>Struct gl_texture</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_texture</span> <span class="p">{</span>
 </code></pre></div>
@@ -9040,7 +9247,7 @@ Internally use float if as_float and filtering if filter.</p>
 </ul>
 </li>
 </ul>
-<p><a id="toc64"></a></p>
+<p><a id="toc66"></a></p>
 <h3>OpenGL vertex array buffers</h3>
 <h4>Struct gl_vertex_buffer</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_vertex_buffer</span> <span class="p">{</span>
@@ -9162,7 +9369,7 @@ Internally use float if as_float and filtering if filter.</p>
 
 
 <p>Destroys the buffer.</p>
-<p><a id="toc65"></a></p>
+<p><a id="toc67"></a></p>
 <h3>OpenGL element array buffers</h3>
 <h4>Struct gl_element_buffer</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_element_buffer</span> <span class="p">{</span>
@@ -9249,7 +9456,7 @@ Internally use float if as_float and filtering if filter.</p>
 
 
 <p>Destroys the buffer</p>
-<p><a id="toc66"></a></p>
+<p><a id="toc68"></a></p>
 <h3>OpenGL programs</h3>
 <h4>Struct gl_program</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_program</span> <span class="p">{</span>
@@ -9511,7 +9718,7 @@ empty.</p>
 
 
 <p>Unbind a program.</p>
-<p><a id="toc67"></a></p>
+<p><a id="toc69"></a></p>
 <h3>OpenGL scene shader support</h3>
 <h4>Struct gl_shape</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_shape</span> <span class="p">{</span>
@@ -9558,7 +9765,7 @@ empty.</p>
 
 
 <p>Update scene shapes on the GPU.</p>
-<p><a id="toc68"></a></p>
+<p><a id="toc70"></a></p>
 <h3>OpenGL image shader</h3>
 <h4>Struct gl_stdimage_program</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_stdimage_program</span> <span class="p">{</span>
@@ -9630,7 +9837,7 @@ empty.</p>
 
 
 <p>Draws an image texture the stdimage program.</p>
-<p><a id="toc69"></a></p>
+<p><a id="toc71"></a></p>
 <h3>OpenGL surface shader</h3>
 <h4>Struct gl_stdsurface_program</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_stdsurface_program</span> <span class="p">{</span>
@@ -9768,7 +9975,6 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 <p>Disables vertex skinning.</p>
 <h4>Struct gl_stdsurface_params</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_stdsurface_params</span> <span class="p">{</span>
-    <span class="kt">int</span> <span class="n">camera_id</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
     <span class="kt">int</span> <span class="n">width</span> <span class="o">=</span> <span class="mi">360</span><span class="p">;</span>
     <span class="kt">int</span> <span class="n">height</span> <span class="o">=</span> <span class="mi">360</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">exposure</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
@@ -9792,7 +9998,6 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 <p>Params for stdsurface drawing.</p>
 <ul>
 <li>Members:<ul>
-<li>camera_id:      Camera id (-1 for deafult).</li>
 <li>width:      Image width.</li>
 <li>height:      Image height.</li>
 <li>exposure:      Image exposure.</li>
@@ -9821,7 +10026,7 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 
 
 <p>Draw scene with stdsurface program.</p>
-<p><a id="toc70"></a></p>
+<p><a id="toc72"></a></p>
 <h3>OpenGL window</h3>
 <h4>Function void()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">typedef</span> <span class="nf">void</span> <span class="p">(</span><span class="o">*</span><span class="n">gl_text_callback</span><span class="p">)(</span><span class="n">gl_window</span><span class="o">*</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span><span class="p">);</span>
@@ -9915,12 +10120,6 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 
 
 <p>Framebuffer size</p>
-<h4>Function get_widget_size()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="nf">get_widget_size</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Widgets</p>
 <h4>Function get_mouse_button()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">get_mouse_button</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">);</span>
 </code></pre></div>
@@ -9964,7 +10163,7 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 
 
 <p>Handle camera navigation.</p>
-<p><a id="toc71"></a></p>
+<p><a id="toc73"></a></p>
 <h3>OpenGL widgets</h3>
 <h4>Function init_widgets()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">init_widgets</span><span class="p">(</span>
@@ -10109,15 +10308,15 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 <p>Value widget.</p>
 <h4>Function draw_value_widget()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
-    <span class="n">frame</span><span class="o">&lt;</span><span class="kt">float</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="kt">float</span> <span class="n">incr</span> <span class="o">=</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="n">frame</span><span class="o">&lt;</span><span class="kt">float</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span> <span class="kt">float</span> <span class="n">incr</span> <span class="o">=</span> <span class="mf">0.01f</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Value widget.</p>
 <h4>Function draw_value_widget()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">draw_value_widget</span><span class="p">(</span>
-    <span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="kt">float</span> <span class="n">incr</span> <span class="o">=</span> <span class="mi">1</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
+    <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="kt">float</span> <span class="n">incr</span> <span class="o">=</span> <span class="mf">0.01f</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -10308,6 +10507,12 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 
 
 <p>Group ids widget.</p>
+<h4>Function draw_groupid_widget_begin()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_groupid_widget_begin</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">gid</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Group ids widget.</p>
 <h4>Function draw_groupid_widget_end()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_groupid_widget_end</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">);</span>
 </code></pre></div>
@@ -10338,7 +10543,7 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 <p>Image inspection widgets.</p>
 <h4>Function draw_camera_widget()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">draw_camera_widget</span><span class="p">(</span>
-    <span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">camera</span><span class="o">*</span> <span class="n">view</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">cam_idx</span><span class="p">);</span>
+    <span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">camera</span><span class="o">*&amp;</span> <span class="n">cam</span><span class="p">,</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">camera</span><span class="o">*</span> <span class="n">view</span><span class="p">);</span>
 </code></pre></div>
 
 

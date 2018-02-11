@@ -252,12 +252,11 @@ void camera_fps(frame3f& frame, const vec3f& transl, const vec2f& rotate) {
     auto y = vec3f{0, 1, 0};
     auto z = orthonormalize(frame.z, y);
     auto x = cross(y, z);
-    
-    frame = {
-        frame_rot(rotation_frame(vec3f{1, 0, 0}, rotate.y)) * frame_rot(frame) *
-        frame_rot(rotation_frame(vec3f{0, 1, 0}, rotate.x)),
-        frame.o + transl.x * x + transl.y * y + transl.z * z
-    };
+
+    frame = {frame_rot(rotation_frame(vec3f{1, 0, 0}, rotate.y)) *
+                 frame_rot(frame) *
+                 frame_rot(rotation_frame(vec3f{0, 1, 0}, rotate.x)),
+        frame.o + transl.x * x + transl.y * y + transl.z * z};
 }
 
 }  // namespace ygl
@@ -4332,7 +4331,7 @@ obj_scene* scene_to_obj(const scene* scn) {
                     {(uint32_t)group->verts.size(), obj_element_type::face,
                         (uint16_t)((quad.z == quad.w) ? 3 : 4)});
                 if (group->elems.back().size == 3) {
-                    for (auto vid : {quad.x,quad.y,quad.z}) {
+                    for (auto vid : {quad.x, quad.y, quad.z}) {
                         auto vert = obj_vertex{-1, -1, -1, -1, -1};
                         if (!shp->pos.empty()) vert.pos = offset.pos + vid;
                         if (!shp->texcoord.empty())
@@ -5910,7 +5909,7 @@ trace_point eval_point(const environment* env, const vec3f& wo) {
         auto phi = atan2(w.z, w.x);
         auto texcoord = vec2f{0.5f + phi / (2 * pif), theta / pif};
         auto txt = eval_texture(env->ke_txt, texcoord);
-        pt.ke *= {txt.x,txt.y,txt.z};
+        pt.ke *= {txt.x, txt.y, txt.z};
     }
     return pt;
 }
@@ -5939,8 +5938,7 @@ trace_point eval_point(
     if (mat->norm_txt) {
         auto tangsp = eval_tangsp(pt.shp, eid, euv);
         auto txt =
-            eval_texture(mat->norm_txt, pt.texcoord, false) * 2.0f -
-            vec4f{1};
+            eval_texture(mat->norm_txt, pt.texcoord, false) * 2.0f - vec4f{1};
         auto ntxt = normalize(vec3f{txt.x, -txt.y, txt.z});
         auto frame = make_frame_fromzx(
             {0, 0, 0}, pt.norm, {tangsp.x, tangsp.y, tangsp.z});
@@ -5956,53 +5954,53 @@ trace_point eval_point(
     if (mat->double_sided && dot(pt.norm, wo) < 0) pt.norm = -pt.norm;
 
     // initialized material values
-    auto kx = vec3f{1,1,1};
+    auto kx = vec3f{1, 1, 1};
     pt.op = 1;
-    if(!pt.shp->color.empty()) {
+    if (!pt.shp->color.empty()) {
         auto col = eval_color(pt.shp, eid, euv);
-        kx *= {col.x,col.y,col.z};
+        kx *= {col.x, col.y, col.z};
         pt.op *= col.w;
     }
-    
+
     // handle occlusion
-    if(mat->occ_txt) {
+    if (mat->occ_txt) {
         auto txt = eval_texture(mat->occ_txt, pt.texcoord);
-        kx *= {txt.x,txt.y,txt.z};
+        kx *= {txt.x, txt.y, txt.z};
     }
-    
+
     // sample emission
     pt.ke = mat->ke * kx;
-    if(mat->ke_txt) {
+    if (mat->ke_txt) {
         auto txt = eval_texture(mat->ke_txt, pt.texcoord);
-        pt.ke *= {txt.x,txt.y,txt.z};
+        pt.ke *= {txt.x, txt.y, txt.z};
     }
 
     // sample reflectance
     switch (mat->type) {
         case material_type::specular_roughness: {
             pt.kd = mat->kd * kx;
-            if(mat->kd_txt) {
+            if (mat->kd_txt) {
                 auto txt = eval_texture(mat->kd_txt, pt.texcoord);
-                pt.kd *= {txt.x,txt.y,txt.z};
+                pt.kd *= {txt.x, txt.y, txt.z};
                 pt.op *= txt.w;
             }
             pt.ks = mat->ks * kx;
             pt.rs = mat->rs;
-            if(mat->ks_txt) {
+            if (mat->ks_txt) {
                 auto txt = eval_texture(mat->ks_txt, pt.texcoord);
-                pt.ks *= {txt.x,txt.y,txt.z};
+                pt.ks *= {txt.x, txt.y, txt.z};
             }
             pt.kt = mat->kt * kx;
-            if(mat->kt_txt) {
+            if (mat->kt_txt) {
                 auto txt = eval_texture(mat->kt_txt, pt.texcoord);
-                pt.kt *= {txt.x,txt.y,txt.z};
+                pt.kt *= {txt.x, txt.y, txt.z};
             }
         } break;
         case material_type::metallic_roughness: {
             auto kb = mat->kd * kx;
-            if(mat->kd_txt) {
+            if (mat->kd_txt) {
                 auto txt = eval_texture(mat->kd_txt, pt.texcoord);
-                kb *= {txt.x,txt.y,txt.z};
+                kb *= {txt.x, txt.y, txt.z};
                 pt.op *= txt.w;
             }
             auto km = mat->ks.x;
@@ -6017,23 +6015,23 @@ trace_point eval_point(
         } break;
         case material_type::specular_glossiness: {
             pt.kd = mat->kd * kx;
-            if(mat->kd_txt) {
+            if (mat->kd_txt) {
                 auto txt = eval_texture(mat->kd_txt, pt.texcoord);
-                pt.kd *= {txt.x,txt.y,txt.z};
+                pt.kd *= {txt.x, txt.y, txt.z};
                 pt.op *= txt.w;
             }
             pt.ks = mat->ks * kx;
             pt.rs = mat->rs;
-            if(mat->ks_txt) {
+            if (mat->ks_txt) {
                 auto txt = eval_texture(mat->ks_txt, pt.texcoord);
-                pt.ks *= {txt.x,txt.y,txt.z};
+                pt.ks *= {txt.x, txt.y, txt.z};
                 pt.rs *= txt.w;
             }
-            pt.rs = 1-pt.rs; // glossiness -> roughnes
+            pt.rs = 1 - pt.rs;  // glossiness -> roughnes
             pt.kt = mat->kt * kx;
-            if(mat->kt_txt) {
+            if (mat->kt_txt) {
                 auto txt = eval_texture(mat->kt_txt, pt.texcoord);
-                pt.kt *= {txt.x,txt.y,txt.z};
+                pt.kt *= {txt.x, txt.y, txt.z};
             }
         } break;
     }
@@ -6041,14 +6039,14 @@ trace_point eval_point(
     // set up final values
     pt.ke *= pt.op;
     pt.kd *= pt.op;
-    if(pt.ks != zero3f && pt.rs <  0.9999f) {
+    if (pt.ks != zero3f && pt.rs < 0.9999f) {
         pt.ks *= pt.op;
-        pt.rs = pt.rs*pt.rs;
+        pt.rs = pt.rs * pt.rs;
     } else {
         pt.ks = zero3f;
         pt.rs = 0;
     }
-    if(pt.kt == zero3f) pt.kt = vec3f{1 - pt.op};
+    if (pt.kt == zero3f) pt.kt = vec3f{1 - pt.op};
 
     // done
     return pt;
@@ -6533,7 +6531,8 @@ void trace_samples(const scene* scn, const camera* cam, const bvh_tree* bvh,
                         for (auto s = 0; s < nsamples; s++)
                             trace_sample(
                                 scn, cam, bvh, lights, pxl, shader, params);
-                        img.at(i, j) = vec4f{pxl.col.x,pxl.col.y,pxl.col.z,pxl.alpha};
+                        img.at(i, j) =
+                            vec4f{pxl.col.x, pxl.col.y, pxl.col.z, pxl.alpha};
                         img.at(i, j) /= pxl.sample;
                     }
                 }
@@ -6548,7 +6547,8 @@ void trace_samples(const scene* scn, const camera* cam, const bvh_tree* bvh,
                 auto& pxl = pixels.at(i, j);
                 for (auto s = 0; s < params.nsamples; s++)
                     trace_sample(scn, cam, bvh, lights, pxl, shader, params);
-                img.at(i, j) = vec4f{pxl.col.x,pxl.col.y,pxl.col.z,pxl.alpha};
+                img.at(i, j) =
+                    vec4f{pxl.col.x, pxl.col.y, pxl.col.z, pxl.alpha};
                 img.at(i, j) /= pxl.sample;
             }
         }
@@ -6659,7 +6659,8 @@ void trace_async_start(const scene* scn, const camera* cam, const bvh_tree* bvh,
                         auto& pxl = pixels.at(i, j);
                         trace_sample(
                             scn, cam, bvh, lights, pxl, shader, params);
-                        img.at(i, j) = {pxl.col.x,pxl.col.y,pxl.col.z,pxl.alpha};
+                        img.at(i, j) = {
+                            pxl.col.x, pxl.col.y, pxl.col.z, pxl.alpha};
                         img.at(i, j) /= pxl.sample;
                     }
                 }
@@ -9717,9 +9718,9 @@ scene* make_cornell_box_scene() {
         ist->name = name;
         ist->shp = shp;
         ist->frame = translation_frame(pos) *
-            rotation_frame(vec3f{0, 0, 1}, rot[2] * pif / 180) *
-            rotation_frame(vec3f{0, 1, 0}, rot[1] * pif / 180) *
-            rotation_frame(vec3f{1, 0, 0}, rot[0] * pif / 180);
+                     rotation_frame(vec3f{0, 0, 1}, rot[2] * pif / 180) *
+                     rotation_frame(vec3f{0, 1, 0}, rot[1] * pif / 180) *
+                     rotation_frame(vec3f{1, 0, 0}, rot[0] * pif / 180);
         return ist;
     };
 
@@ -10199,7 +10200,8 @@ void update_test_elem(
     ist->name = tist.name;
     ist->frame = tist.frame;
     if (tist.rotation != zero3f) {
-        ist->frame = tist.frame *
+        ist->frame =
+            tist.frame *
             rotation_frame(vec3f{0, 0, 1}, tist.rotation.z * pif / 180) *
             rotation_frame(vec3f{0, 1, 0}, tist.rotation.y * pif / 180) *
             rotation_frame(vec3f{1, 0, 0}, tist.rotation.x * pif / 180);
