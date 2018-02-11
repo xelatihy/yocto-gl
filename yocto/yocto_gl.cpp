@@ -3117,7 +3117,8 @@ vec4f eval_texture(const texture_info& info, const vec2f& texcoord, bool srgb,
     };
 
     // get image width/height
-    auto w = txt->width(), h = txt->height();
+    auto w = (!txt->ldr.empty()) ? txt->ldr.width() : txt->hdr.width(),
+         h = (!txt->ldr.empty()) ? txt->ldr.height() : txt->hdr.height();
 
     // get coordinates normalized for tiling
     auto s = 0.0f, t = 0.0f;
@@ -13555,10 +13556,11 @@ struct draw_elem_visitor {
     template <typename T>
     void preview(T* val) {}
     void preview(texture* txt) {
-        if (contains(gl_txt, txt)) {
-            draw_image_widget(win, get_texture_id(gl_txt.at(txt)), {128, 128},
-                {txt->width(), txt->height()});
-        }
+        if (!contains(gl_txt, txt)) return;
+        auto w = (!txt->ldr.empty()) ? txt->ldr.width() : txt->hdr.width(),
+             h = (!txt->ldr.empty()) ? txt->ldr.height() : txt->hdr.height();
+        draw_image_widget(
+            win, get_texture_id(gl_txt.at(txt)), {128, 128}, {w, h});
     }
 };
 
