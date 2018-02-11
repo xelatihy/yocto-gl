@@ -78,21 +78,21 @@
 //
 // ## Next
 //
+// - remove widget size.
+// - consider uniforming texture info.
+// - transforms
+//    - use only transform -> frame
+//    - can always to combined with to_mat
+//    - make it clear how to do quaternion conversion
+//
 // - rename refl_enum_names to something else
 // - color widget with limits
 // - serialization with visitor
 // - add angle semantic
 // - update glTF generated documentation.
 // - move cmdline implementation.
-// - consider removing add_elements
-// - consider merging load/save options.
-// - consider uniforming texture info.
-// - remove widget size.
+//
 // - move combo widget implementation.
-// - transforms
-//    - use only transform -> frame
-//    - can always to combined with to_mat
-//    - make it clear how to do quaternion conversion
 // - check ranom shuffle
 // - check random number generation for float/double
 // - visitors
@@ -13061,9 +13061,9 @@ void init_widgets(gl_window* win, bool light_style, bool alt_font) {
     ImGui_ImplGlfwGL3_Init(win->gwin, false);
     ImGui::GetStyle().WindowRounding = 0;
     ImGui::GetIO().IniFilename = nullptr;
-    ImGui::SetNextWindowPos({0, 0});
     auto size = get_window_size(win);
-    ImGui::SetNextWindowSize({(float)win->widget_width, (float)size[1]});
+    ImGui::SetNextWindowPos({(float)size[0] - 320, 0});
+    ImGui::SetNextWindowSize({(float)320, (float)size[1]});
     if (light_style) ImGui::StyleColorsLight();
     if (alt_font) {
         ImGuiIO& io = ImGui::GetIO();
@@ -13081,15 +13081,10 @@ void init_widgets(gl_window* win, bool light_style, bool alt_font) {
 bool begin_widgets(gl_window* win, const string& title) {
     static bool first_time = true;
     ImGui_ImplGlfwGL3_NewFrame();
-    // ImGui::SetNextWindowSize({(float)win->widget_width, (float)size[1]});
-    // ImGui::SetNextWindowPos({(float)(size[0] - win->widget_width),
-    // (float)0});
-    // auto flags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
-    // ImGui::Begin(title.c_str(), nullptr, flags);
     if (first_time) {
-        ImGui::SetNextWindowPos({0, 0});
         auto size = get_window_size(win);
-        ImGui::SetNextWindowSize({(float)win->widget_width, (float)size[1]});
+        ImGui::SetNextWindowPos({(float)size[0] - 320, 0});
+        ImGui::SetNextWindowSize({(float)320, (float)size[1]});
         ImGui::SetNextWindowCollapsed(true);
         first_time = false;
     }

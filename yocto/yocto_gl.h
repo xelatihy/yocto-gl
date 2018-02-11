@@ -9358,7 +9358,6 @@ typedef void (*gl_refresh_callback)(gl_window*);
 struct gl_window {
     GLFWwindow* gwin = nullptr;
     void* user_pointer = nullptr;
-    int widget_width = 320;
     bool widget_enabled = false;
     gl_text_callback text_cb = nullptr;
     gl_mouse_callback mouse_cb = nullptr;
@@ -9396,8 +9395,6 @@ bool should_close(gl_window* win);
 vec2i get_window_size(gl_window* win);
 /// Framebuffer size
 vec2i get_framebuffer_size(gl_window* win);
-/// Widgets
-inline int get_widget_size(gl_window* win) { return win->widget_width; }
 
 /// Mouse button
 int get_mouse_button(gl_window* win);
