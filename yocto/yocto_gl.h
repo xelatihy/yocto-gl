@@ -2072,13 +2072,7 @@ struct frame<T, 3> {
     /// Rotation and traslation constructor.
     frame(const mat<T, 3>& m, const vec<T, 3>& t)
         : x(m.x), y(m.y), z(m.z), o(t) {}
-    /// conversion from matrix. Assumes the matrix is affine, so use with care.
-    frame(const mat<T, 4>& m)
-        : x(m.x.x, m.x.y, m.x.z)
-        , y(m.y.x, m.y.y, m.y.z)
-        , z(m.z.x, m.z.y, m.z.z)
-        , o(m.w.x, m.w.y, m.w.z) {}
-
+    
     /// Element/column access
     vec<T, 3>& operator[](int i) { return (&x)[i]; }
     /// Element/column access
@@ -2172,13 +2166,13 @@ inline frame<T, 3> make_frame_fromzx(
 
 /// Frame to matrix conversion.
 template <typename T>
-inline mat<T, 4> to_mat(const frame<T, 3>& a) {
+inline mat<T, 4> frame_to_mat(const frame<T, 3>& a) {
     return {{a.x.x, a.x.y, a.x.z, 0}, {a.y.x, a.y.y, a.y.z, 0},
         {a.z.x, a.z.y, a.z.z, 0}, {a.o.x, a.o.y, a.o.z, 1}};
 }
 /// Matrix to frame conversion.
 template <typename T>
-inline frame<T, 3> to_frame(const mat<T, 4>& a) {
+inline frame<T, 3> mat_to_frame(const mat<T, 4>& a) {
     return {{a.x.x, a.x.y, a.x.z}, {a.y.x, a.y.y, a.y.z}, {a.z.x, a.z.y, a.z.z},
         {a.w.x, a.w.y, a.w.z}};
 }
@@ -3047,7 +3041,7 @@ inline tuple<vec<T, 3>, quat<T, 4>, vec<T, 3>> decompose_frame(
     auto rot = mat<T, 3>();
     auto scl = vec<T, 3>();
     tie(pos, rot, scl) = decompose_frame(m);
-    return {pos, to_quat(rot), scl};
+    return {pos, rotation_quat(rot), scl};
 }
 /// Decompose an affine matrix into translation, rotation, scale.
 /// Assumes there is no shear and the matrix is affine.
@@ -7637,7 +7631,7 @@ void save_binary_gltf(const string& filename, const glTF* gltf,
 
 /// Computes the local node transform and its inverse.
 inline mat4f node_transform(const glTFNode* node) {
-    return to_mat(translation_frame(node->translation) *
+    return frame_to_mat(translation_frame(node->translation) *
                   rotation_frame(node->rotation) *
                   scaling_frame(node->scale)) *
            node->matrix;

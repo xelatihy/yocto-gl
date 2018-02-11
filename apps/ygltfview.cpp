@@ -137,7 +137,7 @@ inline bool load_scene(
     if (!ygl::get_camera_nodes(scn->gscn->default_scene).empty()) {
         auto cam = ygl::get_camera_nodes(scn->gscn->default_scene)[0];
         scn->view_cam = new ygl::camera();
-        scn->view_cam->frame = ygl::to_frame(ygl::mat4f(cam->xform()));
+        scn->view_cam->frame = ygl::mat_to_frame(ygl::mat4f(cam->xform()));
         scn->view_cam->yfov = cam->cam->yfov;
         scn->view_cam->aspect = cam->cam->aspect;
         scn->view_cam->near = cam->cam->near;
@@ -439,8 +439,8 @@ inline void shade_scene(const ygl::gltf_scene_group* scns, shade_state* st,
             }
         }
     } else {
-        camera_xform = ygl::to_mat(ycam->frame);
-        camera_view = ygl::to_mat(ygl::inverse(ycam->frame));
+        camera_xform = ygl::frame_to_mat(ycam->frame);
+        camera_view = ygl::frame_to_mat(ygl::inverse(ycam->frame));
         auto near = (ycam->near) ? ycam->near : 0.001f;
         if (ycam->far) {
             camera_proj = ygl::perspective_mat(

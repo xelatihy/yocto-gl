@@ -4428,7 +4428,7 @@ obj_scene* scene_to_obj(const scene* scn) {
             if (nde->cam) onde->camname = nde->cam->name;
             if (nde->ist) onde->objname = nde->ist->name;
             if (nde->env) onde->envname = nde->env->name;
-            onde->frame = to_mat(nde->frame);
+            onde->frame = nde->frame;
             onde->translation = nde->translation;
             onde->rotation = nde->rotation;
             onde->scaling = nde->scaling;
@@ -4758,7 +4758,7 @@ scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
         nde->translation = gnde->translation;
         nde->rotation = gnde->rotation;
         nde->scaling = gnde->scale;
-        nde->frame = to_frame(gnde->matrix);
+        nde->frame = mat_to_frame(gnde->matrix);
 #if 0
         nde->weights = gnde->weights;
 #endif
@@ -5206,7 +5206,7 @@ glTF* scene_to_gltf(
             auto gnode = new glTFNode();
             gnode->name = ist->name;
             gnode->mesh = glTFid<glTFMesh>(index(scn->shapes, ist->shp));
-            gnode->matrix = to_mat(ist->frame);
+            gnode->matrix = frame_to_mat(ist->frame);
             gltf->nodes.push_back(gnode);
         }
 
@@ -5215,7 +5215,7 @@ glTF* scene_to_gltf(
             auto gnode = new glTFNode();
             gnode->name = cam->name;
             gnode->camera = glTFid<glTFCamera>(index(scn->cameras, cam));
-            gnode->matrix = to_mat(cam->frame);
+            gnode->matrix = frame_to_mat(cam->frame);
             gltf->nodes.push_back(gnode);
         }
 
@@ -5242,7 +5242,7 @@ glTF* scene_to_gltf(
                 gnode->mesh =
                     glTFid<glTFMesh>(index(scn->shapes, nde->ist->shp));
             }
-            gnode->matrix = to_mat(nde->frame);
+            gnode->matrix = frame_to_mat(nde->frame);
             gnode->translation = nde->translation;
             gnode->rotation = nde->rotation;
             gnode->scale = nde->scaling;
@@ -12760,8 +12760,8 @@ void draw_stdsurface_scene(const scene* scn, const camera* cam,
     gl_enable_wireframe(params.wireframe);
     gl_set_viewport({params.width, params.height});
 
-    auto camera_xform = to_mat(cam->frame);
-    auto camera_view = to_mat(inverse(cam->frame));
+    auto camera_xform = frame_to_mat(cam->frame);
+    auto camera_view = frame_to_mat(inverse(cam->frame));
     auto camera_proj = perspective_mat(cam->yfov,
         (float)params.width / (float)params.height, cam->near, cam->far);
 
@@ -12775,7 +12775,7 @@ void draw_stdsurface_scene(const scene* scn, const camera* cam,
     if (!scn->instances.empty()) {
         for (auto ist : scn->instances) {
             for (auto shp : ist->shp->shapes) {
-                draw_stdsurface_shape(shp, to_mat(ist->frame),
+                draw_stdsurface_shape(shp, frame_to_mat(ist->frame),
                     (ist == params.highlighted ||
                         ist->shp == params.highlighted),
                     prog, shapes, textures, params);
