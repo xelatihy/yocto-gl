@@ -2078,16 +2078,6 @@ struct frame<T, 3> {
     /// Element/column access
     const vec<T, 3>& operator[](int i) const { return (&x)[i]; }
 
-    /// Frame origin.
-    vec<T, 3>& pos() { return o; }
-    /// Frame origin.
-    const vec<T, 3>& pos() const { return o; }
-
-    /// Frame rotation
-    mat<T, 3>& rot() { return *(mat<T, 3>*)(&x); }
-    /// Frame rotation
-    const mat<T, 3>& rot() const { return *(mat<T, 3>*)(&x); }
-
     /// Axes and origin data
     vec<T, 3> x;
     /// Axes and origin data
@@ -2177,6 +2167,19 @@ inline frame<T, 3> mat_to_frame(const mat<T, 4>& a) {
         {a.w.x, a.w.y, a.w.z}};
 }
 
+/// Frame origin.
+template<typename T, int N>
+vec<T, N>& frame_pos(frame<T, N>& a) { return a.o; }
+/// Frame origin.
+template<typename T, int N>
+const vec<T, N>& frame_pos(const frame<T, N>& a) { return a.o; }
+/// Frame rotation
+template<typename T, int N>
+mat<T, 3>& frame_rot(frame<T, N>& a) { return *(mat<T, 3>*)(&a.x); }
+/// Frame rotation
+template<typename T, int N>
+const mat<T, 3>& frame_rot(const frame<T, N>& a) { return *(mat<T, 3>*)(&a.x); }
+
 /// Frame equality.
 template <typename T>
 inline bool operator==(const frame<T, 3>& a, const frame<T, 3>& b) {
@@ -2191,14 +2194,15 @@ inline bool operator!=(const frame<T, 3>& a, const frame<T, 3>& b) {
 /// Frame composition, equivalent to affine matrix product.
 template <typename T>
 inline frame<T, 3> operator*(const frame<T, 3>& a, const frame<T, 3>& b) {
-    return {a.rot() * b.rot(), a.rot() * b.pos() + a.pos()};
+    return {mat<T, 3>{a.x,a.y,a.z} * mat<T, 3>{b.x,b.y,b.z},
+        mat<T, 3>{a.x,a.y,a.z} * b.o + a.o};
 }
 
 /// Frame inverse, equivalent to rigid affine inverse.
 template <typename T>
 inline frame<T, 3> inverse(const frame<T, 3>& a) {
-    auto minv = transpose(a.rot());
-    return {minv, -(minv * a.pos())};
+    auto minv = transpose(mat<T, 3>{a.x,a.y,a.z});
+    return {minv, -(minv * a.o)};
 }
 
 /// Stream write.
@@ -2805,13 +2809,14 @@ inline bbox<T, 3> transform_bbox(const frame<T, 3>& a, const bbox<T, 3>& b) {
     // Transform AABB a by the matrix m and translation t,
     // find maximum extents, and store result into AABB b.
     // start by adding in translation
-    auto c = bbox<T, 3>{a.pos(), a.pos()};
+    auto c = bbox<T, 3>{a.o, a.o};
+    auto rot = mat<T, 3>{a.x,a.y,a.z};
     // for all three axes
     for (auto i = 0; i < 3; i++) {
         // form extent by summing smaller and larger terms respectively
         for (auto j = 0; j < 3; j++) {
-            auto e = a.rot()[j][i] * b.min[j];
-            auto f = a.rot()[j][i] * b.max[j];
+            auto e = rot[j][i] * b.min[j];
+            auto f = rot[j][i] * b.max[j];
             if (e < f) {
                 c.min[i] += e;
                 c.max[i] += f;

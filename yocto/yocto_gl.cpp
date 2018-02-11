@@ -251,10 +251,12 @@ void camera_fps(frame3f& frame, const vec3f& transl, const vec2f& rotate) {
     auto y = vec3f{0, 1, 0};
     auto z = orthonormalize(frame.z, y);
     auto x = cross(y, z);
-
-    frame.rot() = rotation_frame(vec3f{1, 0, 0}, rotate.y).rot() * frame.rot() *
-                  rotation_frame(vec3f{0, 1, 0}, rotate.x).rot();
-    frame.pos() += transl.x * x + transl.y * y + transl.z * z;
+    
+    frame = {
+        frame_rot(rotation_frame(vec3f{1, 0, 0}, rotate.y)) * frame_rot(frame) *
+        frame_rot(rotation_frame(vec3f{0, 1, 0}, rotate.x)),
+        frame.o + transl.x * x + transl.y * y + transl.z * z
+    };
 }
 
 }  // namespace ygl
@@ -9663,11 +9665,10 @@ scene* make_cornell_box_scene() {
         auto ist = new instance();
         ist->name = name;
         ist->shp = shp;
-        ist->frame.rot() =
-            rotation_frame(vec3f{0, 0, 1}, rot[2] * pif / 180).rot() *
-            rotation_frame(vec3f{0, 1, 0}, rot[1] * pif / 180).rot() *
-            rotation_frame(vec3f{1, 0, 0}, rot[0] * pif / 180).rot();
-        ist->frame.pos() = pos;
+        ist->frame = translation_frame(pos) *
+            rotation_frame(vec3f{0, 0, 1}, rot[2] * pif / 180) *
+            rotation_frame(vec3f{0, 1, 0}, rot[1] * pif / 180) *
+            rotation_frame(vec3f{1, 0, 0}, rot[0] * pif / 180);
         return ist;
     };
 
@@ -10147,11 +10148,10 @@ void update_test_elem(
     ist->name = tist.name;
     ist->frame = tist.frame;
     if (tist.rotation != zero3f) {
-        auto rot =
-            rotation_frame(vec3f{0, 0, 1}, tist.rotation.z * pif / 180).rot() *
-            rotation_frame(vec3f{0, 1, 0}, tist.rotation.y * pif / 180).rot() *
-            rotation_frame(vec3f{1, 0, 0}, tist.rotation.x * pif / 180).rot();
-        ist->frame.rot() = ist->frame.rot() * rot;
+        ist->frame = tist.frame *
+            rotation_frame(vec3f{0, 0, 1}, tist.rotation.z * pif / 180) *
+            rotation_frame(vec3f{0, 1, 0}, tist.rotation.y * pif / 180) *
+            rotation_frame(vec3f{1, 0, 0}, tist.rotation.x * pif / 180);
     }
     ist->shp = find_named_elem(scn->shapes, tist.shape);
 }
