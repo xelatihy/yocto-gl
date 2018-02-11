@@ -1522,7 +1522,7 @@ image4b tonemap_image(
     auto scale = pow(2.0f, exposure);
     for (auto j = 0; j < hdr.height(); j++) {
         for (auto i = 0; i < hdr.width(); i++) {
-            auto h = hdr[{i, j}] * vec4f{scale, scale, scale, 1};
+            auto h = hdr.at(i, j) * vec4f{scale, scale, scale, 1};
             if (filmic) {
                 h = {tonemap_filmic(h.x), tonemap_filmic(h.y),
                     tonemap_filmic(h.z), h.w};
@@ -1530,7 +1530,7 @@ image4b tonemap_image(
                 h = {pow(h.x, 1 / gamma), pow(h.y, 1 / gamma),
                     pow(h.z, 1 / gamma), h.w};
             }
-            ldr[{i, j}] = float_to_byte(h);
+            ldr.at(i, j) = float_to_byte(h);
         }
     }
     return ldr;
@@ -1926,7 +1926,7 @@ image4f make_sunsky_image(
                 vec3f(cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta));
             auto gamma = acos(clamp(dot(w, wSun), -1.0f, 1.0f));
             auto col = sky(theta, gamma) + sun(theta, gamma);
-            img[{i, j}] = {col.x, col.y, col.z, 1};
+            img.at(i, j) = {col.x, col.y, col.z, 1};
         }
     }
 
@@ -1942,7 +1942,7 @@ image4b make_noise_image(int resx, int resy, float scale, bool wrap) {
             auto p = vec3f{i / (float)resx, j / (float)resy, 0.5f} * scale;
             auto g = perlin_noise(p, wrap3i);
             g = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
-            img[{i, j}] = float_to_byte({g, g, g, 1});
+            img.at(i, j) = float_to_byte({g, g, g, 1});
         }
     }
     return img;
@@ -1958,7 +1958,7 @@ image4b make_fbm_image(int resx, int resy, float scale, float lacunarity,
             auto p = vec3f{i / (float)resx, j / (float)resy, 0.5f} * scale;
             auto g = perlin_fbm_noise(p, lacunarity, gain, octaves, wrap3i);
             g = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
-            img[{i, j}] = float_to_byte({g, g, g, 1});
+            img.at(i, j) = float_to_byte({g, g, g, 1});
         }
     }
     return img;
@@ -1975,7 +1975,7 @@ image4b make_ridge_image(int resx, int resy, float scale, float lacunarity,
             auto g = perlin_ridge_noise(
                 p, lacunarity, gain, offset, octaves, wrap3i);
             g = clamp(g, 0.0f, 1.0f);
-            img[{i, j}] = float_to_byte({g, g, g, 1});
+            img.at(i, j) = float_to_byte({g, g, g, 1});
         }
     }
     return img;
@@ -1992,7 +1992,7 @@ image4b make_turbulence_image(int resx, int resy, float scale, float lacunarity,
             auto g =
                 perlin_turbulence_noise(p, lacunarity, gain, octaves, wrap3i);
             g = clamp(g, 0.0f, 1.0f);
-            img[{i, j}] = float_to_byte({g, g, g, 1});
+            img.at(i, j) = float_to_byte({g, g, g, 1});
         }
     }
     return img;
@@ -3108,10 +3108,10 @@ vec4f eval_texture(const texture_info& info, const vec2f& texcoord, bool srgb,
 
     auto lookup = [&def, &txt, &srgb](int i, int j) {
         if (txt->ldr)
-            return (srgb) ? srgb_to_linear(txt->ldr[{i, j}]) :
-                            byte_to_float(txt->ldr[{i, j}]);
+            return (srgb) ? srgb_to_linear(txt->ldr.at(i, j)) :
+                            byte_to_float(txt->ldr.at(i, j));
         else if (txt->hdr)
-            return txt->hdr[{i, j}];
+            return txt->hdr.at(i, j);
         else
             return def;
     };

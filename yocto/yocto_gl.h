@@ -4307,16 +4307,6 @@ struct image {
     explicit operator bool() const { return w != 0 && h != 0; }
 
     /// Element access
-    T& operator[](const vec2i& ij) { return pixels[ij.y * w + ij.x]; }
-    /// Element access
-    const T& operator[](const vec2i& ij) const {
-        return pixels[ij.y * w + ij.x];
-    }
-    /// Element access
-    T& at(const vec2i& ij) { return pixels.at(ij.y * w + ij.x); }
-    /// Element access
-    const T& at(const vec2i& ij) const { return pixels.at(ij.y * w + ij.x); }
-    /// Element access
     T& at(int i, int j) { return pixels.at(j * w + i); }
     /// Element access
     const T& at(int i, int j) const { return pixels.at(j * w + i); }
@@ -9619,24 +9609,24 @@ inline void draw_imageinspect_widgets(gl_window* win, const string& lbl,
     const image4f& hdr, const image4b& ldr, const vec2f& mouse_pos,
     const gl_stdimage_params& params) {
     auto xy = (mouse_pos - params.offset) / params.zoom;
-    auto ij = vec2i{(int)round(xy.x), (int)round(xy.y)};
+    auto i = (int)round(xy.x), j = (int)round(xy.y);
     auto v4f = zero4f;
     auto v4b = zero4b;
     if (hdr) {
-        auto wh = vec2i{hdr.width(), hdr.height()};
-        if (ij.x >= 0 && ij.x < wh.x && ij.y >= 0 && ij.y < wh.y) {
-            v4f = hdr.at(ij);
-            v4b = linear_to_srgb(hdr.at(ij));
+        auto w = hdr.width(), h = hdr.height();
+        if (i >= 0 && i < w && j >= 0 && j < h) {
+            v4f = hdr.at(i, j);
+            v4b = linear_to_srgb(hdr.at(i, j));
         }
     }
     if (ldr) {
-        auto wh = vec2i{ldr.width(), ldr.height()};
-        if (ij.x >= 0 && ij.x < wh.x && ij.y >= 0 && ij.y < wh.y) {
-            v4f = srgb_to_linear(ldr.at(ij));
-            v4b = ldr.at(ij);
+        auto w = ldr.width(), h = ldr.height();
+        if (i >= 0 && i < w && j >= 0 && j < h) {
+            v4f = srgb_to_linear(ldr.at(i, j));
+            v4b = ldr.at(i, j);
         }
     }
-    draw_label_widget(win, lbl + "mouse pos", ij);
+    draw_label_widget(win, lbl + "mouse pos", vec2i{i, j});
     draw_label_widget(win, lbl + "hdr val", v4f);
     draw_label_widget(win, lbl + "ldr val", v4b);
 }
