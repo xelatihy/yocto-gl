@@ -67,7 +67,7 @@ inline void draw(ygl::gl_window* win) {
     app->lights = ygl::make_gl_lights(app->scn);
     ygl::update_textures(app->scn, app->textures);
     ygl::update_shapes(app->scn, app->shapes);
-    if (app->lights.pos.empty()) app->params.camera_lights = true;
+    if (app->lights.pos.empty()) app->params.eyelight = true;
 
     app->params.highlighted = app->selection;
 
@@ -106,23 +106,16 @@ inline void draw(ygl::gl_window* win) {
             }
         }
         if (ygl::draw_header_widget(win, "view")) {
-            ygl::draw_camera_widget(
+            ygl::draw_camera_selection_widget(
                 win, "camera", app->cam, app->scn, app->view);
-            ygl::draw_value_widget(win, "wire", app->params.wireframe);
-            ygl::draw_continue_widget(win);
-            ygl::draw_value_widget(win, "edges", app->params.edges);
-            ygl::draw_continue_widget(win);
-            ygl::draw_value_widget(win, "cutout", app->params.cutout);
-            ygl::draw_continue_widget(win);
             ygl::draw_value_widget(win, "fps", app->navigation_fps);
-            ygl::draw_tonemap_widgets(win, "", app->params.exposure,
-                app->params.gamma, app->params.filmic);
             if (app->time_range != ygl::zero2f) {
                 ygl::draw_value_widget(win, "time", app->time,
                     app->time_range.x, app->time_range.y);
                 ygl::draw_value_widget(win, "animate", app->animate);
             }
         }
+        ygl::draw_params_widgets(win, "params", app->params);
         if (ygl::draw_scene_widgets(win, "scene", app->scn, app->selection,
                 app->textures, &app->edit_params)) {
             ygl::update_textures(
@@ -183,25 +176,14 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser =
         ygl::make_parser(argc, argv, "yview", "views scenes inteactively");
-    app->params.exposure =
-        ygl::parse_opt(parser, "--exposure", "-e", "hdr image exposure", 0.0f);
-    app->params.gamma =
-        ygl::parse_opt(parser, "--gamma", "-g", "hdr image gamma", 2.2f);
-    app->params.filmic =
-        ygl::parse_flag(parser, "--filmic", "-F", "hdr filmic output");
-    app->params.height =
-        ygl::parse_opt(parser, "--resolution", "-r", "image resolution", 540);
-    auto amb = ygl::parse_opt(parser, "--ambient", "", "ambient factor", 0.0f);
-    app->params.ambient = {amb, amb, amb};
-    app->params.camera_lights = ygl::parse_flag(
-        parser, "--camera-lights", "-c", "enable camera lights");
+    app->params = ygl::parse_params(parser, "", app->params);
     auto preserve_quads = ygl::parse_flag(
-        parser, "--preserve-quads", "-q", "preserve quads on load");
-    auto preserve_facevarying = ygl::parse_flag(
-        parser, "--preserve-facevarying", "-f", "preserve facevarying on load");
+        parser, "--preserve-quads", "-q", "Preserve quads on load");
+    auto preserve_facevarying = ygl::parse_flag(parser,
+        "--preserve-facevarying", "-f", "Preserve facevarying on load");
     app->imfilename = ygl::parse_opt(
-        parser, "--output-image", "-o", "image filename", "out.hdr"s);
-    app->filename = ygl::parse_arg(parser, "scene", "scene filename", ""s);
+        parser, "--output-image", "-o", "Image filename", "out.hdr"s);
+    app->filename = ygl::parse_arg(parser, "scene", "Scene filename", ""s);
     if (ygl::should_exit(parser)) {
         printf("%s\n", get_usage(parser).c_str());
         exit(1);

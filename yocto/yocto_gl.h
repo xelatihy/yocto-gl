@@ -3647,9 +3647,7 @@ namespace ygl {
 // Implementation from
 // https://stackoverflow.com/questions/3926637/how-to-intentionally-cause-a-compile-time-error-on-template-instantiation
 template <typename T>
-struct _always_false {
-    enum { value = false };
-};
+struct _always_false : std::false_type {};
 
 /// Names of enum values. Specialized by enums that support reflection.
 template <typename T>
@@ -3693,12 +3691,16 @@ enum struct visit_sem_type {
     reference = 4,
     /// Color.
     color = 5,
+    /// Generic value not editable in ui.
+    constui = 6,
 };
 
 /// Semantic for reflected values
 struct visit_sem {
     /// Type.
     visit_sem_type type = visit_sem_type::value;
+    /// Help.
+    const std::string help = "";
     /// Minimum value for numeric types.
     float min = 0;
     /// Maximum value for numeric types.
@@ -5267,6 +5269,9 @@ vec4f eval_texture(const texture_info& info, const vec2f& texcoord,
 /// Generates a ray from a camera for image plane coordinate uv and the
 /// lens coordinates luv.
 ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv);
+/// Synchronizes a camera aspect with image width and height. Set image
+/// values any one is 0 or less. Set camera aspect otherwise.
+void sync_camera_aspect(camera* cam, int& width, int& height);
 
 /// Finds an element by name.
 template <typename T>
@@ -5446,165 +5451,238 @@ enum_names<keyframe_type>() {
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(texture& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::name});
-    visitor("path", val.path, visit_sem{visit_sem_type::path});
-    visitor("ldr", val.ldr, visit_sem{visit_sem_type::value});
-    visitor("hdr", val.hdr, visit_sem{visit_sem_type::value});
+    visitor("name", val.name, visit_sem{visit_sem_type::name, "Name"});
+    visitor("path", val.path, visit_sem{visit_sem_type::path, "Path"});
+    visitor("ldr", val.ldr, visit_sem{visit_sem_type::value, "Ldr image"});
+    visitor("hdr", val.hdr, visit_sem{visit_sem_type::value, "Hdr image"});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(texture_info& val, Visitor&& visitor) {
-    visitor("txt", val.txt, visit_sem{visit_sem_type::reference});
-    visitor("wrap_s", val.wrap_s, visit_sem{visit_sem_type::value});
-    visitor("wrap_t", val.wrap_t, visit_sem{visit_sem_type::value});
-    visitor("linear", val.linear, visit_sem{visit_sem_type::value});
-    visitor("mipmap", val.mipmap, visit_sem{visit_sem_type::value});
-    visitor("scale", val.scale, visit_sem{visit_sem_type::value, 0, 10});
+    visitor("txt", val.txt, visit_sem{visit_sem_type::reference, "Texture"});
+    visitor("wrap_s", val.wrap_s,
+        visit_sem{visit_sem_type::value, "Wrap s coordinate"});
+    visitor("wrap_t", val.wrap_t,
+        visit_sem{visit_sem_type::value, "Wrap t coordinate"});
+    visitor("linear", val.linear,
+        visit_sem{visit_sem_type::value, "Linear interpolation"});
+    visitor("mipmap", val.mipmap,
+        visit_sem{visit_sem_type::value, "Enable mipmapping"});
+    visitor("scale", val.scale,
+        visit_sem{visit_sem_type::value,
+            "Texture scale for bump, normal and displacement", 0, 10});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(material& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::name});
-    visitor("double_sided", val.double_sided, visit_sem{visit_sem_type::value});
-    visitor("type", val.type, visit_sem{visit_sem_type::value});
-    visitor("ke", val.ke, visit_sem{visit_sem_type::color, 0, 1000});
-    visitor("kd", val.kd, visit_sem{visit_sem_type::color});
-    visitor("ks", val.ks, visit_sem{visit_sem_type::color});
-    visitor("kr", val.kr, visit_sem{visit_sem_type::color});
-    visitor("kt", val.kt, visit_sem{visit_sem_type::color});
-    visitor("rs", val.rs, visit_sem{visit_sem_type::value});
-    visitor("op", val.op, visit_sem{visit_sem_type::value});
-    visitor("ke_txt", val.ke_txt, visit_sem{visit_sem_type::value});
-    visitor("kd_txt", val.kd_txt, visit_sem{visit_sem_type::value});
-    visitor("ks_txt", val.ks_txt, visit_sem{visit_sem_type::value});
-    visitor("kr_txt", val.kr_txt, visit_sem{visit_sem_type::value});
-    visitor("kt_txt", val.kt_txt, visit_sem{visit_sem_type::value});
-    visitor("rs_txt", val.rs_txt, visit_sem{visit_sem_type::value});
-    visitor("bump_txt", val.bump_txt, visit_sem{visit_sem_type::value});
-    visitor("disp_txt", val.disp_txt, visit_sem{visit_sem_type::value});
-    visitor("norm_txt", val.norm_txt, visit_sem{visit_sem_type::value});
-    visitor("occ_txt", val.occ_txt, visit_sem{visit_sem_type::value});
+    visitor("name", val.name, visit_sem{visit_sem_type::name, "Name"});
+    visitor("double_sided", val.double_sided,
+        visit_sem{visit_sem_type::value, "Double-sided rendering"});
+    visitor(
+        "type", val.type, visit_sem{visit_sem_type::value, "Material type"});
+    visitor("ke", val.ke,
+        visit_sem{visit_sem_type::color, "Emission coefficient", 0, 1000});
+    visitor("kd", val.kd,
+        visit_sem{visit_sem_type::color, "Diffuse/Base coefficient"});
+    visitor("ks", val.ks,
+        visit_sem{visit_sem_type::color, "Specualr/Metallic coefficient"});
+    visitor("kr", val.kr,
+        visit_sem{visit_sem_type::color, "Reflection/Clear-coat coefficient"});
+    visitor("kt", val.kt,
+        visit_sem{visit_sem_type::color, "Transmission coefficient"});
+    visitor("rs", val.rs,
+        visit_sem{visit_sem_type::value, "Specular roughness coefficient"});
+    visitor(
+        "op", val.op, visit_sem{visit_sem_type::value, "Opacity coefficient"});
+    visitor("ke_txt", val.ke_txt,
+        visit_sem{visit_sem_type::value, "Emission texture"});
+    visitor("kd_txt", val.kd_txt,
+        visit_sem{visit_sem_type::value, "Diffuse/Base texture"});
+    visitor("ks_txt", val.ks_txt,
+        visit_sem{visit_sem_type::value, "Specualr/Metallic texture"});
+    visitor("kr_txt", val.kr_txt,
+        visit_sem{visit_sem_type::value, "Reflection/Clear-coat texture"});
+    visitor("kt_txt", val.kt_txt,
+        visit_sem{visit_sem_type::value, "Transmission texture"});
+    visitor("rs_txt", val.rs_txt,
+        visit_sem{visit_sem_type::value, "Specular roughness texture"});
+    visitor("bump_txt", val.bump_txt,
+        visit_sem{visit_sem_type::value, "Bump map texture"});
+    visitor("disp_txt", val.disp_txt,
+        visit_sem{visit_sem_type::value, "Displacment map texture"});
+    visitor("norm_txt", val.norm_txt,
+        visit_sem{visit_sem_type::value, "Normal map texture"});
+    visitor("occ_txt", val.occ_txt,
+        visit_sem{visit_sem_type::value, "Occlusion texture"});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(shape& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::name});
-    visitor("mat", val.mat, visit_sem{visit_sem_type::reference});
-    visitor("points", val.points, visit_sem{visit_sem_type::value});
-    visitor("lines", val.lines, visit_sem{visit_sem_type::value});
-    visitor("triangles", val.triangles, visit_sem{visit_sem_type::value});
-    visitor("quads", val.quads, visit_sem{visit_sem_type::value});
-    visitor("quads_pos", val.quads_pos, visit_sem{visit_sem_type::value});
-    visitor("quads_norm", val.quads_norm, visit_sem{visit_sem_type::value});
+    visitor("name", val.name, visit_sem{visit_sem_type::name, "Name"});
+    visitor("mat", val.mat, visit_sem{visit_sem_type::reference, "Material"});
+    visitor("points", val.points,
+        visit_sem{visit_sem_type::value, "Point indices"});
     visitor(
-        "quads_texcoord", val.quads_texcoord, visit_sem{visit_sem_type::value});
-    visitor("beziers", val.beziers, visit_sem{visit_sem_type::value});
-    visitor("pos", val.pos, visit_sem{visit_sem_type::value});
-    visitor("norm", val.norm, visit_sem{visit_sem_type::value});
-    visitor("texcoord", val.texcoord, visit_sem{visit_sem_type::value});
-    visitor("texcoord1", val.texcoord1, visit_sem{visit_sem_type::value});
-    visitor("color", val.color, visit_sem{visit_sem_type::value});
-    visitor("radius", val.radius, visit_sem{visit_sem_type::value});
-    visitor("tangsp", val.tangsp, visit_sem{visit_sem_type::value});
-    visitor("subdivision", val.subdivision, visit_sem{visit_sem_type::value});
-    visitor("catmullclark", val.catmullclark, visit_sem{visit_sem_type::value});
+        "lines", val.lines, visit_sem{visit_sem_type::value, "Line indices"});
+    visitor("triangles", val.triangles,
+        visit_sem{visit_sem_type::value, "Triangle indices"});
+    visitor(
+        "quads", val.quads, visit_sem{visit_sem_type::value, "Quad indices"});
+    visitor("quads_pos", val.quads_pos, visit_sem{visit_sem_type::value,
+        "Quad indices for facevarying positions"});
+    visitor("quads_norm", val.quads_norm,
+        visit_sem{
+            visit_sem_type::value, "Quad indices for facevarying normals"});
+    visitor("quads_texcoord", val.quads_texcoord,
+        visit_sem{visit_sem_type::value,
+            "Quad indices for facevarying texture coordinates"});
+    visitor("beziers", val.beziers,
+        visit_sem{visit_sem_type::value, "Bezier segments indices"});
+    visitor(
+        "pos", val.pos, visit_sem{visit_sem_type::value, "Vertex positions"});
+    visitor(
+        "norm", val.norm, visit_sem{visit_sem_type::value, "Vertex normals"});
+    visitor("texcoord", val.texcoord,
+        visit_sem{visit_sem_type::value, "Vertex texture coordinates"});
+    visitor("texcoord1", val.texcoord1,
+        visit_sem{visit_sem_type::value, "Vertex second texture coordinates"});
+    visitor(
+        "color", val.color, visit_sem{visit_sem_type::value, "Vertex colors"});
+    visitor(
+        "radius", val.radius, visit_sem{visit_sem_type::value, "Vertex radia"});
+    visitor("tangsp", val.tangsp,
+        visit_sem{visit_sem_type::value, "Vertex trangent spaces"});
+    visitor("subdivision", val.subdivision,
+        visit_sem{visit_sem_type::value, "Number of time to subdivide"});
+    visitor("catmullclark", val.catmullclark,
+        visit_sem{
+            visit_sem_type::value, "Subdivide using Catmull-Clark rules"});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(shape_group& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::name});
-    visitor("path", val.path, visit_sem{visit_sem_type::value});
-    visitor("shapes", val.shapes, visit_sem{visit_sem_type::object});
+    visitor("name", val.name, visit_sem{visit_sem_type::name, "Name"});
+    visitor("path", val.path, visit_sem{visit_sem_type::value, "Path"});
+    visitor("shapes", val.shapes, visit_sem{visit_sem_type::object, "Shapes"});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(instance& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::name});
-    visitor("frame", val.frame, visit_sem{visit_sem_type::value});
-    visitor("shp", val.shp, visit_sem{visit_sem_type::reference});
+    visitor("name", val.name, visit_sem{visit_sem_type::name, "Name"});
+    visitor("frame", val.frame,
+        visit_sem{visit_sem_type::value, "Coordinate frame/Transform"});
+    visitor("shp", val.shp, visit_sem{visit_sem_type::reference, "Shape"});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(camera& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::name});
-    visitor("frame", val.frame, visit_sem{visit_sem_type::value});
-    visitor("ortho", val.ortho, visit_sem{visit_sem_type::value});
-    visitor("yfov", val.yfov, visit_sem{visit_sem_type::value, 0.01f, 10});
-    visitor("aspect", val.aspect, visit_sem{visit_sem_type::value, 0.3f, 3.0f});
-    visitor(
-        "focus", val.focus, visit_sem{visit_sem_type::value, 0.0f, 10000.0f});
-    visitor("aperture", val.aperture, visit_sem{visit_sem_type::value, 0, 10});
-    visitor("near", val.near, visit_sem{visit_sem_type::value, 0.001f, 10.0f});
-    visitor("far", val.far, visit_sem{visit_sem_type::value, 1.0f, 10000.0f});
+    visitor("name", val.name, visit_sem{visit_sem_type::name, "Name"});
+    visitor("frame", val.frame,
+        visit_sem{visit_sem_type::value, "Coordinate frame/Transform"});
+    visitor("ortho", val.ortho,
+        visit_sem{visit_sem_type::value, "Orthographic camera"});
+    visitor("yfov", val.yfov,
+        visit_sem{visit_sem_type::value, "Vertical field of view", 0.01f, 10});
+    visitor("aspect", val.aspect,
+        visit_sem{visit_sem_type::value, "Aspect ratio", 0.3f, 3.0f});
+    visitor("focus", val.focus,
+        visit_sem{visit_sem_type::value, "Focus distance", 0.0f, 10000.0f});
+    visitor("aperture", val.aperture,
+        visit_sem{visit_sem_type::value, "Aperture", 0, 10});
+    visitor("near", val.near,
+        visit_sem{visit_sem_type::value, "Near distance", 0.001f, 10.0f});
+    visitor("far", val.far,
+        visit_sem{visit_sem_type::value, "Far distance", 1.0f, 10000.0f});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(environment& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::name});
-    visitor("frame", val.frame, visit_sem{visit_sem_type::value});
-    visitor("ke", val.ke, visit_sem{visit_sem_type::color, 0, 1000});
-    visitor("ke_txt", val.ke_txt, visit_sem{visit_sem_type::value});
+    visitor("name", val.name, visit_sem{visit_sem_type::name, "Name"});
+    visitor("frame", val.frame,
+        visit_sem{visit_sem_type::value, "Coordinate frame/Transform"});
+    visitor("ke", val.ke,
+        visit_sem{visit_sem_type::color, "Emission coefficient", 0, 1000});
+    visitor("ke_txt", val.ke_txt,
+        visit_sem{visit_sem_type::value, "Emission texture"});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(node& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::name});
-    visitor("parent", val.parent, visit_sem{visit_sem_type::reference});
-    visitor("frame", val.frame, visit_sem{visit_sem_type::value, -10, 10});
+    visitor("name", val.name, visit_sem{visit_sem_type::name, "Name"});
+    visitor("parent", val.parent,
+        visit_sem{visit_sem_type::reference, "Node parent"});
+    visitor("frame", val.frame,
+        visit_sem{
+            visit_sem_type::value, "Coordinate frame/Transform", -10, 10});
     visitor("translation", val.translation,
-        visit_sem{visit_sem_type::value, -10, 10});
-    visitor("rotation", val.rotation, visit_sem{visit_sem_type::value});
+        visit_sem{visit_sem_type::value, "Translation", -10, 10});
     visitor(
-        "scaling", val.scaling, visit_sem{visit_sem_type::value, .01f, 10.0f});
-    visitor("weights", val.weights, visit_sem{visit_sem_type::value});
-    visitor("cam", val.cam, visit_sem{visit_sem_type::reference});
-    visitor("ist", val.ist, visit_sem{visit_sem_type::reference});
-    visitor("env", val.env, visit_sem{visit_sem_type::reference});
+        "rotation", val.rotation, visit_sem{visit_sem_type::value, "Rotation"});
+    visitor("scaling", val.scaling,
+        visit_sem{visit_sem_type::value, "Scaling", .01f, 10.0f});
+    visitor("weights", val.weights,
+        visit_sem{visit_sem_type::value, "Morph weights"});
+    visitor("cam", val.cam, visit_sem{visit_sem_type::reference, "Camera"});
+    visitor("ist", val.ist, visit_sem{visit_sem_type::reference, "Istance"});
+    visitor(
+        "env", val.env, visit_sem{visit_sem_type::reference, "Environment"});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(animation& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::name});
-    visitor("type", val.type, visit_sem{visit_sem_type::value});
-    visitor("times", val.times, visit_sem{visit_sem_type::value});
-    visitor("translation", val.translation,
-        visit_sem{visit_sem_type::value, -10, 10});
-    visitor("rotation", val.rotation, visit_sem{visit_sem_type::value});
+    visitor("name", val.name, visit_sem{visit_sem_type::name, "Name"});
+    visitor("type", val.type,
+        visit_sem{visit_sem_type::value, "Interpolation type"});
     visitor(
-        "scaling", val.scaling, visit_sem{visit_sem_type::value, 0.01f, 10.0f});
-    visitor("weights", val.weights, visit_sem{visit_sem_type::value});
+        "times", val.times, visit_sem{visit_sem_type::value, "Keyframe times"});
+    visitor("translation", val.translation,
+        visit_sem{visit_sem_type::value, "Translation", -10, 10});
+    visitor(
+        "rotation", val.rotation, visit_sem{visit_sem_type::value, "Rotation"});
+    visitor("scaling", val.scaling,
+        visit_sem{visit_sem_type::value, "Scaling", 0.01f, 10.0f});
+    visitor("weights", val.weights,
+        visit_sem{visit_sem_type::value, "Morph weights"});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(animation_group& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::name});
-    visitor("path", val.path, visit_sem{visit_sem_type::value});
-    visitor("animations", val.animations, visit_sem{visit_sem_type::object});
-    visitor("targets", val.targets, visit_sem{visit_sem_type::reference});
+    visitor("name", val.name, visit_sem{visit_sem_type::name, "Name"});
+    visitor("path", val.path, visit_sem{visit_sem_type::value, "Path"});
+    visitor("animations", val.animations,
+        visit_sem{visit_sem_type::object, "Animations"});
+    visitor("targets", val.targets,
+        visit_sem{
+            visit_sem_type::reference, "Binding betwene animations and nodes"});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(scene& val, Visitor&& visitor) {
-    visitor("cameras", val.cameras, visit_sem{visit_sem_type::object});
-    visitor("shapes", val.shapes, visit_sem{visit_sem_type::object});
-    visitor("instances", val.instances, visit_sem{visit_sem_type::object});
     visitor(
-        "environments", val.environments, visit_sem{visit_sem_type::object});
-    visitor("materials", val.materials, visit_sem{visit_sem_type::object});
-    visitor("textures", val.textures, visit_sem{visit_sem_type::object});
-    visitor("nodes", val.nodes, visit_sem{visit_sem_type::object});
-    visitor("animations", val.animations, visit_sem{visit_sem_type::object});
+        "cameras", val.cameras, visit_sem{visit_sem_type::object, "Cameras"});
+    visitor("shapes", val.shapes, visit_sem{visit_sem_type::object, "Shapes"});
+    visitor("instances", val.instances,
+        visit_sem{visit_sem_type::object, "Instances"});
+    visitor("environments", val.environments,
+        visit_sem{visit_sem_type::object, "Environments"});
+    visitor("materials", val.materials,
+        visit_sem{visit_sem_type::object, "Materials"});
+    visitor("textures", val.textures,
+        visit_sem{visit_sem_type::object, "Textures"});
+    visitor("nodes", val.nodes, visit_sem{visit_sem_type::object, "Nodes"});
+    visitor("animations", val.animations,
+        visit_sem{visit_sem_type::object, "Animations"});
 }
 
 /// @}
@@ -6042,126 +6120,168 @@ enum_names<test_shape_type>() {
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(test_camera_params& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::name});
-    visitor("from", val.from, visit_sem{visit_sem_type::value, -10, 10});
-    visitor("to", val.to, visit_sem{visit_sem_type::value, -10, 10});
-    visitor("yfov", val.yfov, visit_sem{visit_sem_type::value});
-    visitor("aspect", val.aspect, visit_sem{visit_sem_type::value});
+    visitor("name", val.name, visit_sem{visit_sem_type::name, "Name"});
+    visitor("from", val.from,
+        visit_sem{visit_sem_type::value, "From point", -10, 10});
+    visitor(
+        "to", val.to, visit_sem{visit_sem_type::value, "To point", -10, 10});
+    visitor("yfov", val.yfov,
+        visit_sem{visit_sem_type::value, "Vertical field of view"});
+    visitor("aspect", val.aspect,
+        visit_sem{visit_sem_type::value, "Vertical aspect ratio"});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(test_texture_params& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::name});
+    visitor("name", val.name, visit_sem{visit_sem_type::name, "Name"});
     visitor("resolution", val.resolution,
-        visit_sem{visit_sem_type::value, 256, 1024});
-    visitor(
-        "tile_size", val.tile_size, visit_sem{visit_sem_type::value, -1, 256});
-    visitor(
-        "noise_scale", val.noise_scale, visit_sem{visit_sem_type::value, 0, 8});
+        visit_sem{visit_sem_type::value, "Resolution", 256, 1024});
+    visitor("tile_size", val.tile_size,
+        visit_sem{visit_sem_type::value, "Tile size", -1, 256});
+    visitor("noise_scale", val.noise_scale,
+        visit_sem{visit_sem_type::value, "Noise scale", 0, 8});
     visitor("sky_sunangle", val.sky_sunangle,
-        visit_sem{visit_sem_type::value, 0, pif});
-    visitor(
-        "bump_to_normal", val.bump_to_normal, visit_sem{visit_sem_type::value});
-    visitor(
-        "bump_scale", val.bump_scale, visit_sem{visit_sem_type::value, 1, 10});
+        visit_sem{visit_sem_type::value, "Sjun sky angle", 0, pif});
+    visitor("bump_to_normal", val.bump_to_normal,
+        visit_sem{visit_sem_type::value, "Bump to normal conversion"});
+    visitor("bump_scale", val.bump_scale,
+        visit_sem{visit_sem_type::value, "Bump to normal scale", 1, 10});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(test_material_params& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::name});
-    visitor("type", val.type, visit_sem{visit_sem_type::value});
-    visitor("emission", val.emission, visit_sem{visit_sem_type::value, 1000});
-    visitor("color", val.color, visit_sem{visit_sem_type::value});
-    visitor("opacity", val.opacity, visit_sem{visit_sem_type::value});
-    visitor("roughness", val.roughness, visit_sem{visit_sem_type::value});
-    visitor("texture", val.texture, visit_sem{visit_sem_type::value});
-    visitor("normal", val.normal, visit_sem{visit_sem_type::value});
+    visitor("name", val.name, visit_sem{visit_sem_type::name, "Name"});
+    visitor("type", val.type, visit_sem{visit_sem_type::value, "Type"});
+    visitor("emission", val.emission,
+        visit_sem{visit_sem_type::value, "Emission scale", 0, 1000});
+    visitor("color", val.color, visit_sem{visit_sem_type::value, "Base color"});
+    visitor(
+        "opacity", val.opacity, visit_sem{visit_sem_type::value, "Opacity"});
+    visitor("roughness", val.roughness,
+        visit_sem{visit_sem_type::value, "Roughness"});
+    visitor("texture", val.texture,
+        visit_sem{visit_sem_type::value, "Base texture name"});
+    visitor("normal", val.normal,
+        visit_sem{visit_sem_type::value, "Normal map name"});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(test_shape_params& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::name});
-    visitor("type", val.type, visit_sem{visit_sem_type::value});
-    visitor("material", val.material, visit_sem{visit_sem_type::value});
-    visitor("interior", val.interior, visit_sem{visit_sem_type::value});
+    visitor("name", val.name, visit_sem{visit_sem_type::name, "Name"});
+    visitor("type", val.type, visit_sem{visit_sem_type::value, "Type"});
+    visitor("material", val.material,
+        visit_sem{visit_sem_type::value, "Material name"});
+    visitor("interior", val.interior,
+        visit_sem{visit_sem_type::value, "Interior material name"});
     visitor("tesselation", val.tesselation,
-        visit_sem{visit_sem_type::value, -1, 10});
+        visit_sem{
+            visit_sem_type::value, "Tesselation level (-1 default)", -1, 10});
     visitor("subdivision", val.subdivision,
-        visit_sem{visit_sem_type::value, -1, 10});
-    visitor("scale", val.scale, visit_sem{visit_sem_type::value, 0.01f, 10.0f});
+        visit_sem{
+            visit_sem_type::value, "Subdivision level (-1 default)", -1, 10});
+    visitor("scale", val.scale,
+        visit_sem{visit_sem_type::value, "Scale", 0.01f, 10.0f});
+    visitor("radius", val.radius,
+        visit_sem{visit_sem_type::value, "Radius for points and lines", 0.0001f,
+            0.01f});
     visitor(
-        "radius", val.radius, visit_sem{visit_sem_type::value, 0.0001f, 0.01f});
-    visitor("faceted", val.faceted, visit_sem{visit_sem_type::value});
-    visitor("num", val.num, visit_sem{visit_sem_type::value, -1, 10000});
+        "faceted", val.faceted, visit_sem{visit_sem_type::value, "Faceted"});
+    visitor("num", val.num,
+        visit_sem{
+            visit_sem_type::value, "Numer of points and lines", -1, 10000});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(test_instance_params& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::name});
-    visitor("shape", val.shape, visit_sem{visit_sem_type::value});
-    visitor("frame", val.frame, visit_sem{visit_sem_type::value});
-    visitor("rotation", val.rotation, visit_sem{visit_sem_type::value});
+    visitor("name", val.name, visit_sem{visit_sem_type::name, "Name"});
+    visitor("shape", val.shape, visit_sem{visit_sem_type::value, "Shape"});
+    visitor("frame", val.frame,
+        visit_sem{visit_sem_type::value, "Coordinate frame / transform"});
+    visitor(
+        "rotation", val.rotation, visit_sem{visit_sem_type::value, "Rotation"});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(test_environment_params& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::name});
+    visitor("name", val.name, visit_sem{visit_sem_type::name, "Name"});
+    visitor("emission", val.emission,
+        visit_sem{visit_sem_type::value, "Emission corfficient", 0, 1000});
+    visitor("color", val.color, visit_sem{visit_sem_type::value, "Base color"});
+    visitor("texture", val.texture,
+        visit_sem{visit_sem_type::value, "Emission texture"});
+    visitor("frame", val.frame,
+        visit_sem{visit_sem_type::value, "Coordinate frame / transform"});
     visitor(
-        "emission", val.emission, visit_sem{visit_sem_type::value, 0, 1000});
-    visitor("color", val.color, visit_sem{visit_sem_type::value});
-    visitor("texture", val.texture, visit_sem{visit_sem_type::value});
-    visitor("frame", val.frame, visit_sem{visit_sem_type::value});
-    visitor("rotation", val.rotation, visit_sem{visit_sem_type::value});
+        "rotation", val.rotation, visit_sem{visit_sem_type::value, "Rotation"});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(test_node_params& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::name});
-    visitor("parent", val.parent, visit_sem{visit_sem_type::value});
-    visitor("camera", val.camera, visit_sem{visit_sem_type::value});
-    visitor("instance", val.instance, visit_sem{visit_sem_type::value});
-    visitor("environment", val.environment, visit_sem{visit_sem_type::value});
-    visitor("frame", val.frame, visit_sem{visit_sem_type::value, -10, 10});
+    visitor("name", val.name, visit_sem{visit_sem_type::name, "Name"});
+    visitor("parent", val.parent,
+        visit_sem{visit_sem_type::value, "Parent node name"});
+    visitor(
+        "camera", val.camera, visit_sem{visit_sem_type::value, "Camera name"});
+    visitor("instance", val.instance,
+        visit_sem{visit_sem_type::value, "Instance name"});
+    visitor("environment", val.environment,
+        visit_sem{visit_sem_type::value, "Environment name"});
+    visitor("frame", val.frame,
+        visit_sem{
+            visit_sem_type::value, "Coordinate frame / transform", -10, 10});
     visitor("translation", val.translation,
-        visit_sem{visit_sem_type::value, -10, 10});
-    visitor("rotation", val.rotation, visit_sem{visit_sem_type::value});
-    visitor("scaling", val.scaling, visit_sem{visit_sem_type::value});
+        visit_sem{visit_sem_type::value, "Translation", -10, 10});
+    visitor(
+        "rotation", val.rotation, visit_sem{visit_sem_type::value, "Rotation"});
+    visitor(
+        "scaling", val.scaling, visit_sem{visit_sem_type::value, "Scaling"});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(test_animation_params& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::name});
-    visitor("bezier", val.bezier, visit_sem{visit_sem_type::value});
-    visitor("speed", val.speed, visit_sem{visit_sem_type::value});
-    visitor("scale", val.scale, visit_sem{visit_sem_type::value, 0.01f, 10});
-    visitor("times", val.times, visit_sem{visit_sem_type::value});
-    visitor("translation", val.translation,
-        visit_sem{visit_sem_type::value, -10, 10});
-    visitor("rotation", val.rotation, visit_sem{visit_sem_type::value});
+    visitor("name", val.name, visit_sem{visit_sem_type::name, "Name"});
+    visitor("bezier", val.bezier,
+        visit_sem{visit_sem_type::value, "Bezier interpolation"});
+    visitor("speed", val.speed, visit_sem{visit_sem_type::value, "Speed"});
+    visitor("scale", val.scale,
+        visit_sem{visit_sem_type::value, "Scale", 0.01f, 10});
     visitor(
-        "scaling", val.scaling, visit_sem{visit_sem_type::value, 0.01f, 10});
-    visitor("nodes", val.nodes, visit_sem{visit_sem_type::value});
+        "times", val.times, visit_sem{visit_sem_type::value, "Keyframe times"});
+    visitor("translation", val.translation,
+        visit_sem{visit_sem_type::value, "Keyframe translations", -10, 10});
+    visitor("rotation", val.rotation,
+        visit_sem{visit_sem_type::value, "Keyframe rotations"});
+    visitor("scaling", val.scaling,
+        visit_sem{visit_sem_type::value, "Keyframe scalings", 0.01f, 10});
+    visitor("nodes", val.nodes,
+        visit_sem{visit_sem_type::value, "Target node names"});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(test_scene_params& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::name});
-    visitor("cameras", val.cameras, visit_sem{visit_sem_type::value});
-    visitor("shapes", val.shapes, visit_sem{visit_sem_type::value});
-    visitor("instances", val.instances, visit_sem{visit_sem_type::value});
-    visitor("environments", val.environments, visit_sem{visit_sem_type::value});
-    visitor("materials", val.materials, visit_sem{visit_sem_type::value});
-    visitor("textures", val.textures, visit_sem{visit_sem_type::value});
-    visitor("nodes", val.nodes, visit_sem{visit_sem_type::value});
-    visitor("animations", val.animations, visit_sem{visit_sem_type::value});
+    visitor("name", val.name, visit_sem{visit_sem_type::name, "Name"});
+    visitor(
+        "cameras", val.cameras, visit_sem{visit_sem_type::value, "Cameras"});
+    visitor("shapes", val.shapes, visit_sem{visit_sem_type::value, "Shapes"});
+    visitor("instances", val.instances,
+        visit_sem{visit_sem_type::value, "Instances"});
+    visitor("environments", val.environments,
+        visit_sem{visit_sem_type::value, "Environments"});
+    visitor("materials", val.materials,
+        visit_sem{visit_sem_type::value, "Materials"});
+    visitor(
+        "textures", val.textures, visit_sem{visit_sem_type::value, "Textures"});
+    visitor("nodes", val.nodes, visit_sem{visit_sem_type::value, "Nodes"});
+    visitor("animations", val.animations,
+        visit_sem{visit_sem_type::value, "Animations"});
 }
 
 /// @}
@@ -6295,13 +6415,13 @@ struct trace_params {
     /// Number of samples.
     int nsamples = 256;
     /// Sampler type.
-    trace_shader_type stype = trace_shader_type::pathtrace;
-    /// Wheter to test transmission in shadows.
-    bool shadow_notransmission = false;
+    trace_shader_type shader = trace_shader_type::pathtrace;
     /// Random number generation type.
-    trace_rng_type rtype = trace_rng_type::stratified;
+    trace_rng_type rng = trace_rng_type::stratified;
     /// Filter type.
-    trace_filter_type ftype = trace_filter_type::box;
+    trace_filter_type filter = trace_filter_type::box;
+    /// Wheter to test transmission in shadows.
+    bool notransmission = false;
     /// Ambient lighting.
     vec3f ambient = {0, 0, 0};
     /// View environment map.
@@ -6451,6 +6571,42 @@ enum_names<trace_filter_type>() {
         {"mitchell", trace_filter_type::mitchell},
     };
     return names;
+}
+
+/// Visit struct elements.
+template <typename Visitor>
+inline void visit(trace_params& val, Visitor&& visitor) {
+    visitor("width", val.width,
+        visit_sem{visit_sem_type::constui, "Image width", 256, 4096});
+    visitor("height", val.height,
+        visit_sem{visit_sem_type::constui, "Image height", 256, 4096});
+    visitor("nsamples", val.nsamples,
+        visit_sem{visit_sem_type::constui, "Number of samples", 256, 4096});
+    visitor(
+        "shader", val.shader, visit_sem{visit_sem_type::value, "Shader type"});
+    visitor("rng", val.rng,
+        visit_sem{visit_sem_type::value, "Rnadom number type"});
+    visitor("filter", val.filter, visit_sem{visit_sem_type::value, "Filer type"});
+    visitor("notransmission", val.notransmission,
+        visit_sem{visit_sem_type::value, "Disable tranmission in shadows"});
+    visitor(
+        "ambient", val.ambient, visit_sem{visit_sem_type::value, "Ambient"});
+    visitor("envmap_invisible", val.envmap_invisible,
+        visit_sem{visit_sem_type::value, "Environment map invisible in view"});
+    visitor("min_depth", val.min_depth,
+        visit_sem{visit_sem_type::value, "Min bounces", 0, 100});
+    visitor("max_depth", val.max_depth,
+        visit_sem{visit_sem_type::value, "Max bounces", 0, 100});
+    visitor("pixel_clamp", val.pixel_clamp,
+        visit_sem{visit_sem_type::value, "Pixel clamp", 0, 1000});
+    visitor("parallel", val.parallel,
+        visit_sem{visit_sem_type::value, "Parallel rendering"});
+    visitor("seed", val.seed,
+        visit_sem{visit_sem_type::value, "Random seed", 0, 10000});
+    visitor("block_size", val.block_size,
+        visit_sem{visit_sem_type::value, "Block size", 0, 128});
+    visitor("batch_size", val.batch_size,
+        visit_sem{visit_sem_type::value, "Batch size", 0, 128});
 }
 
 /// @}
@@ -8219,6 +8375,11 @@ inline std::vector<T> parse_args(cmdline_parser& parser,
     const std::vector<T>& def = {}, bool req = true,
     const std::vector<T>& choices = {});
 
+/// Parse options generated with a visit over the parameters
+template <typename T>
+inline T parse_params(cmdline_parser& parser, const std::string& name,
+    const T& def = {}, bool req = false);
+
 /// Initialize a command line parser.
 inline cmdline_parser make_parser(
     int argc, char** argv, const std::string& prog, const std::string& help);
@@ -9104,20 +9265,22 @@ struct gl_stdimage_program {
 gl_stdimage_program make_stdimage_program();
 
 /// Draws an image texture the stdimage program.
-void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
-    const vec2i& win_size, const vec2f& offset, float zoom, float exposure,
+void draw_image(gl_stdimage_program& prog, const gl_texture& txt, int win_width,
+    int win_height, const vec2f& offset, float zoom, float exposure,
     float gamma, bool filmic);
 
 /// Draws an image texture the stdimage program.
 inline void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
-    const vec2i& win_size, const vec2f& offset, float zoom) {
-    draw_image(prog, txt, win_size, offset, zoom, 0, 1, false);
+    int win_width, int win_height, const vec2f& offset, float zoom) {
+    draw_image(prog, txt, win_width, win_height, offset, zoom, 0, 1, false);
 }
 
 /// Params for stdimage drawing.
 struct gl_stdimage_params {
-    /// Window size.
-    vec2i win_size = {0, 0};
+    /// Window width.
+    int width = 0;
+    /// Window height.
+    int height = 0;
     /// Image offset.
     vec2f offset = {0, 0};
     /// Image zoom.
@@ -9130,14 +9293,14 @@ struct gl_stdimage_params {
     bool filmic = false;
     /// Image background.
     vec4f background = zero4f;
-};
+};  // namespace ygl
 
 /// Draws an image texture the stdimage program.
 inline void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
     const gl_stdimage_params& params, bool clear_background = true) {
     if (clear_background) gl_clear_buffers(params.background);
-    draw_image(prog, txt, params.win_size, params.offset, params.zoom,
-        params.exposure, params.gamma, params.filmic);
+    draw_image(prog, txt, params.width, params.height, params.offset,
+        params.zoom, params.exposure, params.gamma, params.filmic);
 }
 
 /// @}
@@ -9256,7 +9419,7 @@ struct gl_stdsurface_params {
     /// Draw with an alpha cutout for binary transparency.
     bool cutout = false;
     /// Camera light mode.
-    bool camera_lights = false;
+    bool eyelight = false;
     /// Window background.
     vec4f background = {0, 0, 0, 0};
     /// Ambient illumination.
@@ -9276,6 +9439,75 @@ void draw_stdsurface_scene(const scene* scn, const camera* cam,
     gl_stdsurface_program& prog, std::unordered_map<shape*, gl_shape>& shapes,
     std::unordered_map<texture*, gl_texture>& textures, const gl_lights& lights,
     const gl_stdsurface_params& params);
+
+/// @}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// OPENGL STANDARD SHADER TYPE SUPPORT
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+/// @defgroup gl_stdprogram_type OpenGL standard shaders type support
+/// @{
+
+/// Visit struct elements.
+template <typename Visitor>
+inline void visit(gl_stdimage_params& val, Visitor&& visitor) {
+    visitor("width", val.width,
+        visit_sem{visit_sem_type::constui, "Image width", 0, 4096});
+    visitor("height", val.height,
+        visit_sem{visit_sem_type::constui, "Image height", 0, 4096});
+    visitor("offset", val.offset,
+        visit_sem{visit_sem_type::value, "Image offset", -4096, 4096});
+    visitor("zoom", val.zoom,
+        visit_sem{visit_sem_type::value, "Image zoom", 0.00f, 10.0f});
+    visitor("exposure", val.exposure,
+        visit_sem{visit_sem_type::value, "Hdr exposure", -10, 10});
+    visitor("gamma", val.gamma,
+        visit_sem{visit_sem_type::value, "Hdr gamma", 0.01f, 4.0f});
+    visitor(
+        "filmic", val.filmic, visit_sem{visit_sem_type::value, "Hdr filmic"});
+    visitor("background", val.background,
+        visit_sem{visit_sem_type::color, "Image background"});
+}
+
+/// Visit struct elements.
+template <typename Visitor>
+inline void visit(gl_stdsurface_params& val, Visitor&& visitor) {
+    visitor("width", val.width,
+        visit_sem{visit_sem_type::constui, "Image width", 0, 4096});
+    visitor("height", val.height,
+        visit_sem{visit_sem_type::constui, "Image height", 0, 4096});
+    visitor("exposure", val.exposure,
+        visit_sem{visit_sem_type::value, "Hdr exposure", -10, 10});
+    visitor("gamma", val.gamma,
+        visit_sem{visit_sem_type::value, "Hdr gamma", 0.01f, 4.0f});
+    visitor(
+        "filmic", val.filmic, visit_sem{visit_sem_type::value, "Hdr filmic"});
+    visitor("wireframe", val.wireframe,
+        visit_sem{visit_sem_type::value, "Draw in wireframe"});
+    visitor("edges", val.edges, visit_sem{visit_sem_type::value, "Draw edges"});
+    visitor(
+        "cutout", val.cutout, visit_sem{visit_sem_type::value, "Draw cutout"});
+    visitor("eyelight", val.eyelight,
+        visit_sem{visit_sem_type::value, "Eye light shading"});
+    visitor("background", val.background,
+        visit_sem{visit_sem_type::color, "Background color"});
+    visitor("ambient", val.ambient,
+        visit_sem{visit_sem_type::color, "Ambient coefficient"});
+    visitor("highlighted", val.highlighted,
+        visit_sem{visit_sem_type::value, "Highlighted object"});
+    visitor("highlight_color", val.highlight_color,
+        visit_sem{visit_sem_type::value, "Highlighted color"});
+    visitor("edge_color", val.edge_color,
+        visit_sem{visit_sem_type::color, "Edge color"});
+    visitor("edge_offset", val.edge_offset,
+        visit_sem{visit_sem_type::value, "Edge offset"});
+    visitor("cull_backface", val.cull_backface,
+        visit_sem{visit_sem_type::value, "Cull backface"});
+}
 
 /// @}
 
@@ -9403,91 +9635,52 @@ void draw_continue_widget(gl_window* win);
 /// Label widget.
 void draw_label_widget(
     gl_window* win, const std::string& lbl, const std::string& msg);
-
 /// Label widget.
 template <typename... Args>
 inline void draw_label_widget(gl_window* win, const std::string& lbl,
-    const std::string& fmt, const Args&... args) {
-    auto msg = format(fmt, args...);
-    draw_label_widget(win, lbl, msg);
-}
+    const std::string& fmt, const Args&... args);
 /// Label widget.
 template <typename T>
 inline void draw_label_widget(
-    gl_window* win, const std::string& lbl, const T& val) {
-    auto sst = std::stringstream();
-    sst << val;
-    return draw_label_widget(win, lbl, sst.str());
-}
-/// Label widget.
-template <typename T>
-inline void draw_label_widget(gl_window* win, const std::string& lbl,
-    const std::vector<T>& vals, bool skip_empty = false) {
-    if (skip_empty && vals.empty()) return;
-    draw_label_widget(win, lbl, (int)vals.size());
-};
+    gl_window* win, const std::string& lbl, const T& val);
 
-/// Value widget
-bool draw_value_widget(gl_window* win, const std::string& lbl, bool& val);
-/// Value widget.
-bool draw_value_widget(
-    gl_window* win, const std::string& lbl, std::string& str);
-/// Value widget.
-bool draw_value_widget(gl_window* win, const std::string& lbl, int* val,
-    int ncomp, int min = 0, int max = 1, int incr = 1);
-/// Value widget.
-bool draw_value_widget(gl_window* win, const std::string& lbl, float* val,
-    int ncomp, float min = 0, float max = 1, float incr = 1);
-/// Value widget.
-inline bool draw_value_widget(gl_window* win, const std::string& lbl, int& val,
-    int min = 0, int max = 1, int incr = 1) {
-    return draw_value_widget(win, lbl, &val, 1, min, max, incr);
-}
-/// Value widget.
-inline bool draw_value_widget(gl_window* win, const std::string& lbl,
-    float& val, float min = 0, float max = 1, float incr = 1) {
-    return draw_value_widget(win, lbl, &val, 1, min, max, incr);
-}
-
-/// Value widget.
-template <int N>
-inline bool draw_value_widget(gl_window* win, const std::string& lbl,
-    vec<int, N>& val, int min = 0, int max = 1, int incr = 1) {
-    return draw_value_widget(win, lbl, data(val), N, min, max, incr);
-}
-/// Value widget.
-template <int N>
-inline bool draw_value_widget(gl_window* win, const std::string& lbl,
-    vec<float, N>& val, float min = 0, float max = 1, float incr = 0.01f) {
-    return draw_value_widget(win, lbl, data(val), N, min, max, incr);
-}
-/// Value widget.
-inline bool draw_value_widget(gl_window* win, const std::string& lbl,
-    mat<float, 4>& val, float min = 0, float max = 1, float incr = 0.01f) {
-    auto modx = draw_value_widget(win, lbl + ".x", val.x, min, max, incr);
-    auto mody = draw_value_widget(win, lbl + ".y", val.y, min, max, incr);
-    auto modz = draw_value_widget(win, lbl + ".z", val.z, min, max, incr);
-    auto modw = draw_value_widget(win, lbl + ".w", val.w, min, max, incr);
-    return modx || mody || modz || modw;
-}
-/// Value widget.
-inline bool draw_value_widget(gl_window* win, const std::string& lbl,
-    frame<float, 3>& val, float min = -10, float max = 10, float incr = 0.01f) {
-    auto modx = draw_value_widget(win, lbl + ".x", val.x, -1, 1, 0.01f);
-    auto mody = draw_value_widget(win, lbl + ".y", val.y, -1, 1, 0.01f);
-    auto modz = draw_value_widget(win, lbl + ".z", val.z, -1, 1, 0.01f);
-    auto modo = draw_value_widget(win, lbl + ".o", val.o, min, max, incr);
-    // TODO: orthonormalize
-    return modx || mody || modz || modo;
-}
-/// Value widget.
-template <typename T, int N>
-inline bool draw_value_widget(gl_window* win, const std::string& lbl,
-    quat<T, N>& val, float min = -1, float max = 1, float incr = 0.01f) {
-    auto mod = draw_value_widget(win, lbl, *(vec<T, N>*)&val, min, max, incr);
-    if (mod) val = normalize(val);
-    return mod;
-}
+/// Checkbox widget
+bool draw_checkbox_widget(gl_window* win, const std::string& lbl, bool& val);
+/// Text widget.
+bool draw_text_widget(gl_window* win, const std::string& lbl, std::string& str);
+/// Slider widget.
+bool draw_slider_widget(
+    gl_window* win, const std::string& lbl, int& val, int min = 0, int max = 1);
+/// Slider widget.
+bool draw_slider_widget(gl_window* win, const std::string& lbl, vec2i& val,
+    int min = 0, int max = 1);
+/// Slider widget.
+bool draw_slider_widget(gl_window* win, const std::string& lbl, vec3i& val,
+    int min = 0, int max = 1);
+/// Slider widget.
+bool draw_slider_widget(gl_window* win, const std::string& lbl, vec4i& val,
+    int min = 0, int max = 1);
+/// Slider widget.
+bool draw_slider_widget(gl_window* win, const std::string& lbl, float& val,
+    float min = 0, float max = 1);
+/// Slider widget.
+bool draw_slider_widget(gl_window* win, const std::string& lbl, vec2f& val,
+    float min = 0, float max = 1);
+/// Slider widget.
+bool draw_slider_widget(gl_window* win, const std::string& lbl, vec3f& val,
+    float min = 0, float max = 1);
+/// Slider widget.
+bool draw_slider_widget(gl_window* win, const std::string& lbl, vec4f& val,
+    float min = 0, float max = 1);
+/// Slider widget.
+bool draw_slider_widget(gl_window* win, const std::string& lbl,
+    mat<float, 4>& val, float min = 0, float max = 1);
+/// Slider widget.
+bool draw_slider_widget(gl_window* win, const std::string& lbl,
+    frame<float, 3>& val, float min = -10, float max = 10);
+/// Slider widget.
+bool draw_slider_widget(gl_window* win, const std::string& lbl, quat4f& val,
+    float min = -1, float max = 1);
 
 /// Color widget.
 bool draw_color_widget(gl_window* win, const std::string& lbl, vec4f& val);
@@ -9515,67 +9708,20 @@ bool draw_combo_widget_item(
 
 /// Combo widget.
 template <typename T, typename T1>
-inline bool draw_value_widget(gl_window* win, const std::string& lbl, T& val,
+inline bool draw_combo_widget(gl_window* win, const std::string& lbl, T& val,
     const std::vector<T1>& vals, const std::function<T(const T1&)>& value_func,
-    const std::function<std::string(const T1&)>& label_func) {
-    auto label = std::string();
-    for (auto& v : vals)
-        if (value_func(v) == val) label = label_func(v);
-    if (!draw_combo_widget_begin(win, lbl, label)) return false;
-    auto changed = false;
-    for (auto i = 0; i < vals.size(); i++) {
-        auto selected = val == value_func(vals[i]);
-        if (draw_combo_widget_item(win, label_func(vals[i]), i, selected)) {
-            val = value_func(vals[i]);
-            changed = true;
-        }
-    }
-    draw_combo_widget_end(win);
-    return changed;
-}
+    const std::function<std::string(const T1&)>& label_func);
 /// Combo widget.
-inline bool draw_value_widget(gl_window* win, const std::string& lbl,
-    std::string& val, const std::vector<std::string>& labels) {
-    if (!draw_combo_widget_begin(win, lbl, val)) return false;
-    auto old_val = val;
-    for (auto i = 0; i < labels.size(); i++) {
-        draw_combo_widget_item(win, labels[i], i, val, labels[i]);
-    }
-    draw_combo_widget_end(win);
-    return val != old_val;
-}
+inline bool draw_combo_widget(gl_window* win, const std::string& lbl,
+    std::string& val, const std::vector<std::string>& labels);
 /// Combo widget.
 template <typename T>
-inline bool draw_value_widget(gl_window* win, const std::string& lbl, T& val,
-    const std::vector<std::pair<std::string, T>>& labels) {
-    auto label = std::string();
-    for (auto& kv : labels)
-        if (kv.second == val) label = kv.first;
-    if (!draw_combo_widget_begin(win, lbl, label)) return false;
-    auto old_val = val;
-    for (auto i = 0; i < labels.size(); i++) {
-        draw_combo_widget_item(win, labels[i].first, i, val, labels[i].second);
-    }
-    draw_combo_widget_end(win);
-    return val != old_val;
-}
-
+inline bool draw_combo_widget(gl_window* win, const std::string& lbl, T& val,
+    const std::vector<std::pair<std::string, T>>& labels);
 /// Combo widget
 template <typename T>
-inline bool draw_value_widget(gl_window* win, const std::string& lbl, T*& val,
-    const std::vector<T*>& vals, bool extra = true, T* extra_val = nullptr) {
-    if (!draw_combo_widget_begin(win, lbl, (val) ? val->name : "<none>"))
-        return false;
-    auto old_val = val;
-    if (extra)
-        draw_combo_widget_item(
-            win, (extra_val) ? extra_val->name : "<none>", -1, val, extra_val);
-    for (auto i = 0; i < vals.size(); i++) {
-        draw_combo_widget_item(win, vals[i]->name, i, val, vals[i]);
-    }
-    draw_combo_widget_end(win);
-    return val != old_val;
-}
+inline bool draw_combo_widget(gl_window* win, const std::string& lbl, T*& val,
+    const std::vector<T*>& vals, bool extra = true, T* extra_val = nullptr);
 
 /// Button widget.
 bool draw_button_widget(gl_window* win, const std::string& lbl);
@@ -9629,58 +9775,142 @@ void draw_groupid_widget_begin(gl_window* win, const char* gid);
 /// Group ids widget.
 void draw_groupid_widget_end(gl_window* win);
 
-/// Tonemapping widgets.
-inline void draw_tonemap_widgets(gl_window* win, const std::string& lbl,
-    float& exposure, float& gamma, bool& filmic) {
-    draw_value_widget(win, lbl + "exposure", exposure, -20, 20, 1);
-    draw_value_widget(win, lbl + "gamma", gamma, 0.1, 5, 0.1);
-    draw_value_widget(win, lbl + "filmic", filmic);
+/// Generic widget used for templated code. Min, max and color are ignored.
+inline bool draw_value_widget(gl_window* win, const std::string& lbl, bool& val,
+    float min = 0, float max = 0, bool color = false) {
+    return draw_checkbox_widget(win, lbl, val);
 }
+/// Generic widget used for templated code. Min, max and color are ignored.
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    std::string& val, float min = 0, float max = 0, bool color = false) {
+    return draw_text_widget(win, lbl, val);
+}
+/// Generic widget used for templated code. Uses min and max,
+/// or a deafult range when their are the same. Color is ignored.
+inline bool draw_value_widget(gl_window* win, const std::string& lbl, int& val,
+    float min = 0, float max = 0, bool color = false) {
+    return (min != max) ?
+               draw_slider_widget(win, lbl, val, (int)min, (int)max) :
+               draw_slider_widget(win, lbl, val, 0, 10);
+}
+/// Generic widget used for templated code. Uses min and max,
+/// or a deafult range when their are the same. Color is ignored.
+template <typename T, int N>
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    vec<int, N>& val, float min = 0, float max = 0, bool color = false) {
+    return (min != max) ?
+               draw_slider_widget(win, lbl, val, (int)min, (int)max) :
+               draw_slider_widget(win, lbl, val, 0, 10);
+}
+/// Generic widget used for templated code. Uses min and max,
+/// or a deafult range when their are the same. Color is ignored.
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    float& val, float min = 0, float max = 0, bool color = false) {
+    return (min != max) ?
+               draw_slider_widget(win, lbl, val, (float)min, (float)max) :
+               draw_slider_widget(win, lbl, val, 0, 1);
+}
+/// Generic widget used for templated code. Uses min and max,
+/// or a deafult range when their are the same. Color is ignored.
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    vec2f& val, float min = 0, float max = 0, bool color = false) {
+    return (min != max) ?
+               draw_slider_widget(win, lbl, val, (float)min, (float)max) :
+               draw_slider_widget(win, lbl, val, 0, 1);
+}
+/// Generic widget used for templated code. Uses min and max,
+/// or a deafult range when their are the same.
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    vec3f& val, float min = 0, float max = 0, bool color = false) {
+    if (!color) {
+        return (min != max) ?
+                   draw_slider_widget(win, lbl, val, (float)min, (float)max) :
+                   draw_slider_widget(win, lbl, val, 0, 1);
+    } else {
+        // TODO: min/max
+        return draw_color_widget(win, lbl, val);
+    }
+}
+/// Generic widget used for templated code. Uses min and max,
+/// or a deafult range when their are the same.
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    vec4f& val, float min = 0, float max = 0, bool color = false) {
+    if (!color) {
+        return (min != max) ?
+                   draw_slider_widget(win, lbl, val, (float)min, (float)max) :
+                   draw_slider_widget(win, lbl, val, 0, 1);
+    } else {
+        // TODO: min/max
+        return draw_color_widget(win, lbl, val);
+    }
+}
+/// Generic widget used for templated code. Uses min and max for frame origin,
+/// or a deafult range when their are the same. Color is ignored.
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    frame3f& val, float min = 0, float max = 0, bool color = false) {
+    return (min != max) ?
+               draw_slider_widget(win, lbl, val, (float)min, (float)max) :
+               draw_slider_widget(win, lbl, val, 0, 1);
+}
+/// Generic widget used for templated code. Uses min and max,
+/// or a deafult range when their are the same. Color is ignored.
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    mat4f& val, float min = 0, float max = 0, bool color = false) {
+    return (min != max) ?
+               draw_slider_widget(win, lbl, val, (float)min, (float)max) :
+               draw_slider_widget(win, lbl, val, 0, 1);
+}
+/// Generic widget used for templated code. Uses min and max,
+/// or a deafult range when their are the same. Color is ignored.
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    quat4f& val, float min = 0, float max = 0, bool color = false) {
+    return (min != max) ?
+               draw_slider_widget(win, lbl, val, (float)min, (float)max) :
+               draw_slider_widget(win, lbl, val, 0, 1);
+}
+/// Generic widget used for templated code. Min, max and color are ignored.
+template <typename T,
+    typename std::enable_if<std::is_enum<T>::value, int>::type = 0>
+inline bool draw_value_widget(gl_window* win, const std::string& lbl, T& val,
+    float min = 0, float max = 0, bool color = false) {
+    return draw_combo_widget(win, lbl, val, enum_names(val));
+}
+/// Generic widget used for templated code. Internally convert to int loosing
+/// precision. See the int version.
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    uint32_t& val, float min = 0, float max = 0, bool color = false) {
+    return (min != max) ?
+               draw_slider_widget(win, lbl, (int&)val, (int)min, (int)max) :
+               draw_slider_widget(win, lbl, (int&)val, 0, 10);
+}
+
+/// Tonemapping widgets.
+void draw_tonemap_widgets(gl_window* win, const std::string& lbl,
+    float& exposure, float& gamma, bool& filmic);
 
 /// Image view widgets.
-inline void draw_imageview_widgets(gl_window* win, const std::string& lbl,
-    gl_stdimage_params& params, bool show_tonemap = true) {
-    draw_value_widget(win, lbl + "offset", params.offset);
-    draw_value_widget(win, lbl + "zoom", params.zoom);
-    draw_color_widget(win, lbl + "background", params.background);
-    if (show_tonemap) {
-        draw_tonemap_widgets(
-            win, lbl, params.exposure, params.gamma, params.filmic);
-    }
-}
+void draw_imageview_widgets(gl_window* win, const std::string& lbl,
+    gl_stdimage_params& params, bool show_tonemap = true);
 
 /// Image inspection widgets.
-inline void draw_imageinspect_widgets(gl_window* win, const std::string& lbl,
+void draw_imageinspect_widgets(gl_window* win, const std::string& lbl,
     const image4f& hdr, const image4b& ldr, const vec2f& mouse_pos,
-    const gl_stdimage_params& params) {
-    auto xy = (mouse_pos - params.offset) / params.zoom;
-    auto i = (int)round(xy.x), j = (int)round(xy.y);
-    auto v4f = zero4f;
-    auto v4b = zero4b;
-    if (!hdr.empty()) {
-        auto w = hdr.width(), h = hdr.height();
-        if (i >= 0 && i < w && j >= 0 && j < h) {
-            v4f = hdr.at(i, j);
-            v4b = linear_to_srgb(hdr.at(i, j));
-        }
-    }
-    if (!ldr.empty()) {
-        auto w = ldr.width(), h = ldr.height();
-        if (i >= 0 && i < w && j >= 0 && j < h) {
-            v4f = srgb_to_linear(ldr.at(i, j));
-            v4b = ldr.at(i, j);
-        }
-    }
-    draw_label_widget(win, lbl + "mouse pos", vec2i{i, j});
-    draw_label_widget(win, lbl + "hdr val", v4f);
-    draw_label_widget(win, lbl + "ldr val", v4b);
-}
+    const gl_stdimage_params& params);
+
+/// Draws a widget that sets params in non-recursive trivial structures.
+/// Internally uses visit to implement the view.
+template <typename T>
+inline bool draw_params_widgets(
+    gl_window* win, const std::string& lbl, T& params);
 
 /// Draws a widget that can selected the camera.
-inline bool draw_camera_widget(gl_window* win, const std::string& lbl,
+inline bool draw_camera_selection_widget(gl_window* win, const std::string& lbl,
     camera*& cam, scene* scn, camera* view) {
-    return draw_value_widget(win, lbl, cam, scn->cameras, true, view);
+    return draw_combo_widget(win, lbl, cam, scn->cameras, true, view);
 }
+
+/// Draws widgets for a camera. Used for quickly making demos.
+bool draw_camera_widgets(gl_window* win, const std::string& lbl, camera* cam);
 
 /// Draws widgets for a whole scene. Used for quickly making demos.
 bool draw_scene_widgets(gl_window* win, const std::string& lbl, scene* scn,
@@ -9994,6 +10224,45 @@ inline std::vector<T> parse_args(cmdline_parser& parser,
     return vals;
 }
 
+// Visitor that implements cmdline parsing
+struct cmdline_visitor {
+    cmdline_parser& parser;
+    std::string prefix = "";
+    bool req = false;
+
+    template <typename T,
+        typename std::enable_if<!std::is_enum<T>::value, int>::type = 0>
+    inline void operator()(const char* name, T& val, const visit_sem& sem) {
+        auto long_name = "--"s;
+        if (!prefix.empty()) long_name += prefix + "-";
+        long_name += name;
+        for (auto& c : long_name)
+            if (c == '_') c = '-';
+        val = parse_opt(parser, long_name, "", sem.help, val, req);
+    }
+    template <typename T,
+        typename std::enable_if<std::is_enum<T>::value, int>::type = 0>
+    inline void operator()(const char* name, T& val, const visit_sem& sem) {
+        auto long_name = "--"s;
+        if (!prefix.empty()) long_name += prefix + "-";
+        long_name += name;
+        for (auto& c : long_name)
+            if (c == '_') c = '-';
+        val = parse_opt(
+            parser, long_name, "", sem.help, enum_names(val), val, req);
+    }
+};
+
+// Parse options generated with a visit over the parameters
+template <typename T>
+inline T parse_params(
+    cmdline_parser& parser, const std::string& name, const T& def, bool req) {
+    auto visitor = cmdline_visitor{parser, name, req};
+    auto params = def;
+    visit(params, visitor);
+    return def;
+}
+
 // Initialize a command line parser.
 inline cmdline_parser make_parser(
     int argc, char** argv, const std::string& prog, const std::string& help) {
@@ -10004,6 +10273,132 @@ inline cmdline_parser make_parser(
     parser._usage =
         parse_flag(parser, "--help", "-h", "prints and help message");
     return parser;
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR OPENGL WIDGETS
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Label widget.
+template <typename... Args>
+inline void draw_label_widget(gl_window* win, const std::string& lbl,
+    const std::string& fmt, const Args&... args) {
+    auto msg = format(fmt, args...);
+    draw_label_widget(win, lbl, msg);
+}
+// Label widget.
+template <typename T>
+inline void draw_label_widget(
+    gl_window* win, const std::string& lbl, const T& val) {
+    auto sst = std::stringstream();
+    sst << val;
+    return draw_label_widget(win, lbl, sst.str());
+}
+
+// Combo widget.
+template <typename T, typename T1>
+inline bool draw_combo_widget(gl_window* win, const std::string& lbl, T& val,
+    const std::vector<T1>& vals, const std::function<T(const T1&)>& value_func,
+    const std::function<std::string(const T1&)>& label_func) {
+    auto label = std::string();
+    for (auto& v : vals)
+        if (value_func(v) == val) label = label_func(v);
+    if (!draw_combo_widget_begin(win, lbl, label)) return false;
+    auto changed = false;
+    for (auto i = 0; i < vals.size(); i++) {
+        auto selected = val == value_func(vals[i]);
+        if (draw_combo_widget_item(win, label_func(vals[i]), i, selected)) {
+            val = value_func(vals[i]);
+            changed = true;
+        }
+    }
+    draw_combo_widget_end(win);
+    return changed;
+}
+
+// Combo widget.
+inline bool draw_combo_widget(gl_window* win, const std::string& lbl,
+    std::string& val, const std::vector<std::string>& labels) {
+    if (!draw_combo_widget_begin(win, lbl, val)) return false;
+    auto old_val = val;
+    for (auto i = 0; i < labels.size(); i++) {
+        draw_combo_widget_item(win, labels[i], i, val, labels[i]);
+    }
+    draw_combo_widget_end(win);
+    return val != old_val;
+}
+
+// Combo widget.
+template <typename T>
+inline bool draw_combo_widget(gl_window* win, const std::string& lbl, T& val,
+    const std::vector<std::pair<std::string, T>>& labels) {
+    auto label = std::string();
+    for (auto& kv : labels)
+        if (kv.second == val) label = kv.first;
+    if (!draw_combo_widget_begin(win, lbl, label)) return false;
+    auto old_val = val;
+    for (auto i = 0; i < labels.size(); i++) {
+        draw_combo_widget_item(win, labels[i].first, i, val, labels[i].second);
+    }
+    draw_combo_widget_end(win);
+    return val != old_val;
+}
+
+// Combo widget
+template <typename T>
+inline bool draw_combo_widget(gl_window* win, const std::string& lbl, T*& val,
+    const std::vector<T*>& vals, bool extra, T* extra_val) {
+    if (!draw_combo_widget_begin(win, lbl, (val) ? val->name : "<none>"))
+        return false;
+    auto old_val = val;
+    if (extra)
+        draw_combo_widget_item(
+            win, (extra_val) ? extra_val->name : "<none>", -1, val, extra_val);
+    for (auto i = 0; i < vals.size(); i++) {
+        draw_combo_widget_item(win, vals[i]->name, i, val, vals[i]);
+    }
+    draw_combo_widget_end(win);
+    return val != old_val;
+}
+
+// Params visitor
+struct draw_params_visitor {
+    gl_window* win = nullptr;
+    int edited = 0;
+
+    template <typename T>
+    void operator()(const char* name, T& val, const visit_sem& sem) {
+        auto lbl = std::string(name);
+        for (auto& c : lbl)
+            if (c == '_') c = ' ';
+        if (sem.type == visit_sem_type::constui) {
+            draw_label_widget(win, lbl, val);
+        } else {
+            edited += draw_value_widget(win, lbl, val, sem.min, sem.max,
+                sem.type == visit_sem_type::color);
+        }
+    }
+
+    template <typename T>
+    void operator()(const char* name, T* val, const visit_sem& sem) {}
+};
+
+// Draws a widget that sets params in non-recursive trivial structures.
+// Internally uses visit to implement the view.
+template <typename T>
+inline bool draw_params_widgets(
+    gl_window* win, const std::string& lbl, T& params) {
+    if (draw_header_widget(win, lbl)) {
+        draw_groupid_widget_begin(win, &params);
+        auto visitor = draw_params_visitor{win};
+        visit(params, visitor);
+        draw_groupid_widget_end(win);
+        return visitor.edited;
+    }
+    return false;
 }
 
 }  // namespace ygl

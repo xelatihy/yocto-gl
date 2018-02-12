@@ -6163,7 +6163,7 @@ trace_point intersect_scene(
 // Test occlusion
 vec3f eval_transmission(const scene* scn, const bvh_tree* bvh,
     const trace_point& pt, const trace_point& lpt, const trace_params& params) {
-    if (params.shadow_notransmission) {
+    if (params.notransmission) {
         auto ray = make_segment(pt.pos, lpt.pos);
         return (intersect_bvh(bvh, ray, true)) ? zero3f : vec3f{1, 1, 1};
     } else {
@@ -6205,9 +6205,9 @@ vec3f trace_path(const scene* scn, const bvh_tree* bvh,
         if (emission) l += weight * eval_emission(pt, wo);
 
         // direct – light
-        auto rll = sample_next1f(pxl, params.rtype, params.nsamples);
-        auto rle = sample_next1f(pxl, params.rtype, params.nsamples);
-        auto rluv = sample_next2f(pxl, params.rtype, params.nsamples);
+        auto rll = sample_next1f(pxl, params.rng, params.nsamples);
+        auto rle = sample_next1f(pxl, params.rng, params.nsamples);
+        auto rluv = sample_next2f(pxl, params.rng, params.nsamples);
         auto& lgt = lights.lights[(int)(rll * lights.lights.size())];
         auto lpt = sample_light(lights, lgt, pt, rle, rluv);
         auto lw = weight_light(lights, lpt, pt) * (float)lights.size();
@@ -6221,8 +6221,8 @@ vec3f trace_path(const scene* scn, const bvh_tree* bvh,
         }
 
         // direct – brdf
-        auto rbl = sample_next1f(pxl, params.rtype, params.nsamples);
-        auto rbuv = sample_next2f(pxl, params.rtype, params.nsamples);
+        auto rbl = sample_next1f(pxl, params.rng, params.nsamples);
+        auto rbuv = sample_next2f(pxl, params.rng, params.nsamples);
         auto bwi = zero3f;
         auto bdelta = false;
         std::tie(bwi, bdelta) = sample_brdfcos(pt, wo, rbl, rbuv);
@@ -6246,7 +6246,7 @@ vec3f trace_path(const scene* scn, const bvh_tree* bvh,
         // roussian roulette
         if (bounce > 2) {
             auto rrprob = 1.0f - min(max_element_value(pt.rho()), 0.95f);
-            if (sample_next1f(pxl, params.rtype, params.nsamples) < rrprob)
+            if (sample_next1f(pxl, params.rng, params.nsamples) < rrprob)
                 break;
             weight *= 1 / (1 - rrprob);
         }
@@ -6279,9 +6279,9 @@ vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
         if (emission) l += weight * eval_emission(pt, wo);
 
         // direct
-        auto rll = sample_next1f(pxl, params.rtype, params.nsamples);
-        auto rle = sample_next1f(pxl, params.rtype, params.nsamples);
-        auto rluv = sample_next2f(pxl, params.rtype, params.nsamples);
+        auto rll = sample_next1f(pxl, params.rng, params.nsamples);
+        auto rle = sample_next1f(pxl, params.rng, params.nsamples);
+        auto rluv = sample_next2f(pxl, params.rng, params.nsamples);
         auto& lgt = lights.lights[(int)(rll * lights.lights.size())];
         auto lpt = sample_light(lights, lgt, pt, rle, rluv);
         auto lwi = normalize(lpt.pos - pt.pos);
@@ -6297,14 +6297,14 @@ vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
         // roussian roulette
         if (bounce > 2) {
             auto rrprob = 1.0f - min(max_element_value(pt.rho()), 0.95f);
-            if (sample_next1f(pxl, params.rtype, params.nsamples) < rrprob)
+            if (sample_next1f(pxl, params.rng, params.nsamples) < rrprob)
                 break;
             weight *= 1 / (1 - rrprob);
         }
 
         // continue path
-        auto rbl = sample_next1f(pxl, params.rtype, params.nsamples);
-        auto rbuv = sample_next2f(pxl, params.rtype, params.nsamples);
+        auto rbl = sample_next1f(pxl, params.rng, params.nsamples);
+        auto rbuv = sample_next2f(pxl, params.rng, params.nsamples);
         auto bwi = zero3f;
         auto bdelta = false;
         std::tie(bwi, bdelta) = sample_brdfcos(pt, wo, rbl, rbuv);
@@ -6339,9 +6339,9 @@ vec3f trace_path_hack(const scene* scn, const bvh_tree* bvh,
     auto weight = vec3f{1, 1, 1};
     for (auto bounce = 0; bounce < params.max_depth; bounce++) {
         // direct
-        auto rll = sample_next1f(pxl, params.rtype, params.nsamples);
-        auto rle = sample_next1f(pxl, params.rtype, params.nsamples);
-        auto rluv = sample_next2f(pxl, params.rtype, params.nsamples);
+        auto rll = sample_next1f(pxl, params.rng, params.nsamples);
+        auto rle = sample_next1f(pxl, params.rng, params.nsamples);
+        auto rluv = sample_next2f(pxl, params.rng, params.nsamples);
         auto& lgt = lights.lights[(int)(rll * lights.lights.size())];
         auto lpt = sample_light(lights, lgt, pt, rle, rluv);
         auto lwi = normalize(lpt.pos - pt.pos);
@@ -6357,7 +6357,7 @@ vec3f trace_path_hack(const scene* scn, const bvh_tree* bvh,
         // roussian roulette
         if (bounce > 2) {
             auto rrprob = 1.0f - min(max_element_value(pt.rho()), 0.95f);
-            if (sample_next1f(pxl, params.rtype, params.nsamples) < rrprob)
+            if (sample_next1f(pxl, params.rng, params.nsamples) < rrprob)
                 break;
             weight *= 1 / (1 - rrprob);
         }
@@ -6366,8 +6366,8 @@ vec3f trace_path_hack(const scene* scn, const bvh_tree* bvh,
         auto bwi = zero3f;
         auto bdelta = false;
         std::tie(bwi, bdelta) = sample_brdfcos(pt, wo,
-            sample_next1f(pxl, params.rtype, params.nsamples),
-            sample_next2f(pxl, params.rtype, params.nsamples));
+            sample_next1f(pxl, params.rng, params.nsamples),
+            sample_next2f(pxl, params.rng, params.nsamples));
         weight *= eval_brdfcos(pt, wo, bwi, bdelta) *
                   weight_brdfcos(pt, wo, bwi, bdelta);
         if (weight == zero3f) break;
@@ -6396,8 +6396,8 @@ vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
 
     // direct
     for (auto& lgt : lights.lights) {
-        auto rle = sample_next1f(pxl, params.rtype, params.nsamples);
-        auto rluv = sample_next2f(pxl, params.rtype, params.nsamples);
+        auto rle = sample_next1f(pxl, params.rng, params.nsamples);
+        auto rluv = sample_next2f(pxl, params.rng, params.nsamples);
         auto lpt = sample_light(lights, lgt, pt, rle, rluv);
         auto lwi = normalize(lpt.pos - pt.pos);
         auto ld = eval_emission(lpt, -lwi) * eval_brdfcos(pt, wo, lwi) *
@@ -6529,8 +6529,8 @@ void trace_sample(const scene* scn, const camera* cam, const bvh_tree* bvh,
     const trace_params& params) {
     pxl.sample += 1;
     pxl.dimension = 0;
-    auto crn = sample_next2f(pxl, params.rtype, params.nsamples);
-    auto lrn = sample_next2f(pxl, params.rtype, params.nsamples);
+    auto crn = sample_next2f(pxl, params.rng, params.nsamples);
+    auto lrn = sample_next2f(pxl, params.rng, params.nsamples);
     auto uv = vec2f{
         (pxl.i + crn.x) / params.width, 1 - (pxl.j + crn.y) / params.height};
     auto ray = eval_camera_ray(cam, uv, lrn);
@@ -6550,7 +6550,7 @@ void trace_sample(const scene* scn, const camera* cam, const bvh_tree* bvh,
 void trace_samples(const scene* scn, const camera* cam, const bvh_tree* bvh,
     const trace_lights& lights, image4f& img, image<trace_pixel>& pixels,
     int nsamples, const trace_params& params) {
-    auto shader = trace_shaders.at(params.stype);
+    auto shader = trace_shaders.at(params.shader);
     if (params.parallel) {
         auto nthreads = std::thread::hardware_concurrency();
         auto threads = std::vector<std::thread>();
@@ -6572,7 +6572,7 @@ void trace_samples(const scene* scn, const camera* cam, const bvh_tree* bvh,
         for (auto& t : threads) t.join();
         threads.clear();
     } else {
-        auto shader = trace_shaders.at(params.stype);
+        auto shader = trace_shaders.at(params.shader);
         for (auto j = 0; j < params.height; j++) {
             for (auto i = 0; i < params.width; i++) {
                 auto& pxl = pixels.at(i, j);
@@ -6593,8 +6593,8 @@ void trace_sample_filtered(const scene* scn, const camera* cam,
     std::mutex& image_mutex, const trace_params& params) {
     pxl.sample += 1;
     pxl.dimension = 0;
-    auto crn = sample_next2f(pxl, params.rtype, params.nsamples);
-    auto lrn = sample_next2f(pxl, params.rtype, params.nsamples);
+    auto crn = sample_next2f(pxl, params.rng, params.nsamples);
+    auto lrn = sample_next2f(pxl, params.rng, params.nsamples);
     auto uv = vec2f{
         (pxl.i + crn.x) / params.width, 1 - (pxl.j + crn.y) / params.height};
     auto ray = eval_camera_ray(cam, uv, lrn);
@@ -6606,7 +6606,7 @@ void trace_sample_filtered(const scene* scn, const camera* cam,
         return;
     }
     if (params.pixel_clamp > 0) l = clamplen(l, params.pixel_clamp);
-    if (params.ftype == trace_filter_type::box) {
+    if (params.filter == trace_filter_type::box) {
         pxl.col += l;
         pxl.alpha += 1;
         pxl.weight += 1;
@@ -6630,9 +6630,9 @@ void trace_sample_filtered(const scene* scn, const camera* cam,
 void trace_samples_filtered(const scene* scn, const camera* cam,
     const bvh_tree* bvh, const trace_lights& lights, image4f& img,
     image<trace_pixel>& pixels, int nsamples, const trace_params& params) {
-    auto shader = trace_shaders.at(params.stype);
-    auto filter = trace_filters.at(params.ftype);
-    auto filter_size = trace_filter_sizes.at(params.ftype);
+    auto shader = trace_shaders.at(params.shader);
+    auto filter = trace_filters.at(params.filter);
+    auto filter_size = trace_filter_sizes.at(params.filter);
     std::mutex image_mutex;
     if (params.parallel) {
         auto nthreads = std::thread::hardware_concurrency();
@@ -6683,7 +6683,7 @@ void trace_async_start(const scene* scn, const camera* cam, const bvh_tree* bvh,
     auto nthreads = std::thread::hardware_concurrency();
     for (auto tid = 0; tid < std::thread::hardware_concurrency(); tid++) {
         threads.push_back(std::thread([=, &img, &pixels, &stop_flag]() {
-            auto shader = trace_shaders.at(params.stype);
+            auto shader = trace_shaders.at(params.shader);
             for (auto s = 0; s < params.nsamples; s++) {
                 for (auto j = tid; j < params.height; j += nthreads) {
                     for (auto i = 0; i < params.width; i++) {
@@ -12094,8 +12094,8 @@ gl_stdimage_program make_stdimage_program() {
 }
 
 // Draws the stdimage program.
-void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
-    const vec2i& win_size, const vec2f& offset, float zoom, float exposure,
+void draw_image(gl_stdimage_program& prog, const gl_texture& txt, int win_width,
+    int win_height, const vec2f& offset, float zoom, float exposure,
     float gamma, bool filmic) {
     assert(is_texture_valid(txt));
 
@@ -12107,7 +12107,7 @@ void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
     bind_texture(txt, 0);
     set_program_uniform(prog.prog, "zoom", zoom);
     set_program_uniform(
-        prog.prog, "win_size", vec2f{(float)win_size.x, (float)win_size.y});
+        prog.prog, "win_size", vec2f{(float)win_width, (float)win_height});
     set_program_uniform(prog.prog, "offset", offset);
     set_program_uniform(prog.prog, "tonemap.filmic", filmic);
     set_program_uniform(prog.prog, "tonemap.exposure", exposure);
@@ -12917,10 +12917,10 @@ void draw_stdsurface_scene(const scene* scn, const camera* cam,
     auto camera_proj = perspective_mat(cam->yfov,
         (float)params.width / (float)params.height, cam->near, cam->far);
 
-    begin_stdsurface_frame(prog, params.camera_lights, params.exposure,
-        params.gamma, params.filmic, camera_xform, camera_view, camera_proj);
+    begin_stdsurface_frame(prog, params.eyelight, params.exposure, params.gamma,
+        params.filmic, camera_xform, camera_view, camera_proj);
 
-    if (!params.camera_lights) {
+    if (!params.eyelight) {
         set_stdsurface_lights(prog, params.ambient, lights);
     }
 
@@ -13281,7 +13281,7 @@ void draw_label_widget(
 }
 
 // Value widget
-bool draw_value_widget(
+bool draw_text_widget(
     gl_window* win, const std::string& lbl, std::string& str) {
     char buf[4096];
     if (str.length() >= 4096) throw std::runtime_error("bad memory");
@@ -13293,43 +13293,82 @@ bool draw_value_widget(
 }
 
 // Value widget
-bool draw_value_widget(gl_window* win, const std::string& lbl, int* val,
-    int ncomp, int min, int max, int incr) {
-    switch (ncomp) {
-        case 1: return ImGui::SliderInt(lbl.c_str(), val, min, max);
-        case 2: return ImGui::SliderInt2(lbl.c_str(), val, min, max);
-        case 3: return ImGui::SliderInt3(lbl.c_str(), val, min, max);
-        case 4: return ImGui::SliderInt4(lbl.c_str(), val, min, max);
-        default:
-            throw std::runtime_error("bad number of components");
-            return false;
-    }
+bool draw_slider_widget(
+    gl_window* win, const std::string& lbl, int& val, int min, int max) {
+    return ImGui::SliderInt(lbl.c_str(), &val, min, max);
+}
+// Value widget
+bool draw_slider_widget(
+    gl_window* win, const std::string& lbl, vec2i& val, int min, int max) {
+    return ImGui::SliderInt2(lbl.c_str(), &val.x, min, max);
+}
+// Value widget
+bool draw_slider_widget(
+    gl_window* win, const std::string& lbl, vec3i& val, int min, int max) {
+    return ImGui::SliderInt3(lbl.c_str(), &val.x, min, max);
+}
+// Value widget
+bool draw_slider_widget(
+    gl_window* win, const std::string& lbl, vec4i& val, int min, int max) {
+    return ImGui::SliderInt4(lbl.c_str(), &val.x, min, max);
 }
 
 // Value widget
-bool draw_value_widget(gl_window* win, const std::string& lbl, float* val,
-    int ncomp, float min, float max, float incr) {
-    switch (ncomp) {
-        case 1: return ImGui::SliderFloat(lbl.c_str(), val, min, max);
-        case 2: return ImGui::SliderFloat2(lbl.c_str(), val, min, max);
-        case 3: return ImGui::SliderFloat3(lbl.c_str(), val, min, max);
-        case 4: return ImGui::SliderFloat4(lbl.c_str(), val, min, max);
-        default:
-            throw std::runtime_error("bad number of components");
-            return false;
-    }
+bool draw_slider_widget(
+    gl_window* win, const std::string& lbl, float& val, float min, float max) {
+    return ImGui::SliderFloat(lbl.c_str(), &val, min, max);
+}
+// Value widget
+bool draw_slider_widget(
+    gl_window* win, const std::string& lbl, vec2f& val, float min, float max) {
+    return ImGui::SliderFloat2(lbl.c_str(), &val.x, min, max);
+}
+// Value widget
+bool draw_slider_widget(
+    gl_window* win, const std::string& lbl, vec3f& val, float min, float max) {
+    return ImGui::SliderFloat3(lbl.c_str(), &val.x, min, max);
+}
+// Value widget
+bool draw_slider_widget(
+    gl_window* win, const std::string& lbl, vec4f& val, float min, float max) {
+    return ImGui::SliderFloat4(lbl.c_str(), &val.x, min, max);
+}
+
+// Slider widget.
+bool draw_slider_widget(gl_window* win, const std::string& lbl,
+    mat<float, 4>& val, float min, float max) {
+    auto modx = draw_slider_widget(win, lbl + ".x", val.x, min, max);
+    auto mody = draw_slider_widget(win, lbl + ".y", val.y, min, max);
+    auto modz = draw_slider_widget(win, lbl + ".z", val.z, min, max);
+    auto modw = draw_slider_widget(win, lbl + ".w", val.w, min, max);
+    return modx || mody || modz || modw;
+}
+// Slider widget.
+bool draw_slider_widget(gl_window* win, const std::string& lbl,
+    frame<float, 3>& val, float min, float max) {
+    auto modx = draw_slider_widget(win, lbl + ".x", val.x, -1, 1);
+    auto mody = draw_slider_widget(win, lbl + ".y", val.y, -1, 1);
+    auto modz = draw_slider_widget(win, lbl + ".z", val.z, -1, 1);
+    auto modo = draw_slider_widget(win, lbl + ".o", val.o, min, max);
+    // TODO: orthonormalize
+    return modx || mody || modz || modo;
+}
+// Slider widget
+bool draw_slider_widget(
+    gl_window* win, const std::string& lbl, quat4f& val, float min, float max) {
+    auto mod = ImGui::SliderFloat4(lbl.c_str(), &val.x, min, max);
+    if (mod) val = normalize(val);
+    return mod;
 }
 
 // Color widget
 bool draw_color_widget(gl_window* win, const std::string& lbl, vec4f& val) {
     return ImGui::ColorEdit4(lbl.c_str(), (float*)&val.x);
 }
-
 // Color widget
 bool draw_color_widget(gl_window* win, const std::string& lbl, vec3f& val) {
     return ImGui::ColorEdit3(lbl.c_str(), (float*)&val.x);
 }
-
 // Color widget
 bool draw_color_widget(gl_window* win, const std::string& lbl, vec4b& val) {
     auto valf = ImGui::ColorConvertU32ToFloat4(*(uint32_t*)&val);
@@ -13342,7 +13381,7 @@ bool draw_color_widget(gl_window* win, const std::string& lbl, vec4b& val) {
 }
 
 // Bool widget
-bool draw_value_widget(gl_window* win, const std::string& lbl, bool& val) {
+bool draw_checkbox_widget(gl_window* win, const std::string& lbl, bool& val) {
     return ImGui::Checkbox(lbl.c_str(), &val);
 }
 
@@ -13489,6 +13528,53 @@ void draw_tree_widget_color_begin(gl_window* win, const vec4f& color) {
 // Text color
 void draw_tree_widget_color_end(gl_window* win) { ImGui::PopStyleColor(); }
 
+// Tonemapping widgets.
+void draw_tonemap_widgets(gl_window* win, const std::string& lbl,
+    float& exposure, float& gamma, bool& filmic) {
+    draw_slider_widget(win, lbl + "exposure", exposure, -10, 10);
+    draw_slider_widget(win, lbl + "gamma", gamma, 0.1, 5);
+    draw_checkbox_widget(win, lbl + "filmic", filmic);
+}
+
+// Image view widgets.
+void draw_imageview_widgets(gl_window* win, const std::string& lbl,
+    gl_stdimage_params& params, bool show_tonemap) {
+    draw_slider_widget(win, lbl + "offset", params.offset);
+    draw_slider_widget(win, lbl + "zoom", params.zoom);
+    draw_color_widget(win, lbl + "background", params.background);
+    if (show_tonemap) {
+        draw_tonemap_widgets(
+            win, lbl, params.exposure, params.gamma, params.filmic);
+    }
+}
+
+// Image inspection widgets.
+void draw_imageinspect_widgets(gl_window* win, const std::string& lbl,
+    const image4f& hdr, const image4b& ldr, const vec2f& mouse_pos,
+    const gl_stdimage_params& params) {
+    auto xy = (mouse_pos - params.offset) / params.zoom;
+    auto i = (int)round(xy.x), j = (int)round(xy.y);
+    auto v4f = zero4f;
+    auto v4b = zero4b;
+    if (!hdr.empty()) {
+        auto w = hdr.width(), h = hdr.height();
+        if (i >= 0 && i < w && j >= 0 && j < h) {
+            v4f = hdr.at(i, j);
+            v4b = linear_to_srgb(hdr.at(i, j));
+        }
+    }
+    if (!ldr.empty()) {
+        auto w = ldr.width(), h = ldr.height();
+        if (i >= 0 && i < w && j >= 0 && j < h) {
+            v4f = srgb_to_linear(ldr.at(i, j));
+            v4b = ldr.at(i, j);
+        }
+    }
+    draw_label_widget(win, lbl + "mouse pos", vec2i{i, j});
+    draw_label_widget(win, lbl + "hdr val", v4f);
+    draw_label_widget(win, lbl + "ldr val", v4b);
+}
+
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
@@ -13557,38 +13643,13 @@ struct draw_elem_visitor {
     scene* scn = nullptr;
     test_scene_params* test_scn;
     void*& selection;
-    const std::unordered_map<texture*, gl_texture>& gl_txt;
+    const std::unordered_map<texture*, gl_texture>* gl_txt;
     int edited = 0;
 
-    void operator()(const char* name, bool& val, const visit_sem& sem) {
-        edited += (int)draw_value_widget(win, name, val);
-    }
-    template <typename T,
-        typename std::enable_if<!std::is_enum<T>::value, int>::type = 0>
+    template <typename T>
     void operator()(const char* name, T& val, const visit_sem& sem) {
-        if (sem.min == sem.max)
-            edited += (int)draw_value_widget(win, name, val);
-        else
-            edited += (int)draw_value_widget(win, name, val, sem.min, sem.max);
-    }
-    void operator()(const char* name, vec3f& val, const visit_sem& sem) {
-        if (sem.type != visit_sem_type::color) {
-            if (sem.min == sem.max)
-                edited += (int)draw_value_widget(win, name, val);
-            else
-                edited +=
-                    (int)draw_value_widget(win, name, val, sem.min, sem.max);
-        } else {
-            edited += draw_color_widget(win, name, val);
-        }
-    }
-    void operator()(const char* name, std::string& val, const visit_sem&) {
-        edited += (int)draw_value_widget(win, name, val);
-    }
-    template <typename T,
-        typename std::enable_if<std::is_enum<T>::value, int>::type = 0>
-    void operator()(const char* name, T& val, const visit_sem&) {
-        edited += (int)draw_value_widget(win, name, val, enum_names(val));
+        draw_value_widget(win, name, val, sem.min, sem.max,
+            sem.type == visit_sem_type::color);
     }
 
     void operator()(const char* name, texture_info& val, const visit_sem&) {
@@ -13634,7 +13695,7 @@ struct draw_elem_visitor {
     template <typename T>
     void operator()(const char* name, T*& val, const visit_sem& sem) {
         if (sem.type == visit_sem_type::reference) {
-            edited += draw_value_widget(win, name, val, elems(val));
+            edited += draw_combo_widget(win, name, val, elems(val));
         } else {
             if (!val) return;
             // TODO: fix this separator
@@ -13670,15 +13731,16 @@ struct draw_elem_visitor {
     template <typename T>
     void preview(T* val) {}
     void preview(texture* txt) {
-        if (!contains(gl_txt, txt)) return;
-        draw_image_widget(win, (gl_texture&)gl_txt.at(txt), {128, 128});
+        if (!gl_txt) return;
+        if (!contains(*gl_txt, txt)) return;
+        draw_image_widget(win, (gl_texture&)gl_txt->at(txt), {128, 128});
     }
 };
 
 template <typename T>
 bool draw_elem_widgets(gl_window* win, scene* scn, T* val, void*& selection,
     const std::unordered_map<texture*, gl_texture>& gl_txt) {
-    auto visitor = draw_elem_visitor{win, scn, nullptr, selection, gl_txt};
+    auto visitor = draw_elem_visitor{win, scn, nullptr, selection, &gl_txt};
     visitor("", val, visit_sem{visit_sem_type::object});
     return (bool)visitor.edited;
 }
@@ -13686,7 +13748,7 @@ bool draw_elem_widgets(gl_window* win, scene* scn, T* val, void*& selection,
 template <typename T>
 bool draw_elem_widgets(gl_window* win, test_scene_params* scn, T* val,
     void*& selection, const std::unordered_map<texture*, gl_texture>& gl_txt) {
-    auto visitor = draw_elem_visitor{win, nullptr, scn, selection, gl_txt};
+    auto visitor = draw_elem_visitor{win, nullptr, scn, selection, &gl_txt};
     visitor("", val, visit_sem{visit_sem_type::object});
     return (bool)visitor.edited;
 }
@@ -13706,7 +13768,7 @@ bool draw_selected_elem_widgets(gl_window* win, scene* scn,
     auto test_selected = (T1*)nullptr;
     for (auto& test_elem : test_elems)
         if (test_elem.name == selected->name) test_selected = &test_elem;
-    auto visitor = draw_elem_visitor{win, scn, test_scn, selection, gl_txt};
+    auto visitor = draw_elem_visitor{win, scn, test_scn, selection, &gl_txt};
     if (test_selected) {
         visitor("", test_selected, visit_sem{visit_sem_type::object});
         if (visitor.edited) update_test_elem(scn, selected, *test_selected);
@@ -13733,12 +13795,29 @@ bool draw_add_elem_widgets(gl_window* win, scene* scn, const std::string& lbl,
     return false;
 }
 
+bool draw_camera_widgets(gl_window* win, const std::string& lbl, camera* cam) {
+    if (!cam) return false;
+    if (draw_header_widget(win, lbl)) {
+        draw_groupid_widget_begin(win, cam);
+        auto selection = (void*)nullptr;
+        auto visitor =
+            draw_elem_visitor{win, nullptr, nullptr, selection, nullptr};
+        visit(cam, visitor);
+        draw_groupid_widget_end(win);
+        return visitor.edited;
+    } else {
+        return false;
+    }
+}
+
 bool draw_scene_widgets(gl_window* win, const std::string& lbl, scene* scn,
     void*& selection, const std::unordered_map<texture*, gl_texture>& gl_txt,
     test_scene_params* test_scn) {
     static auto test_scn_def = test_scene_params();
 
+    if (!scn) return false;
     if (draw_header_widget(win, lbl)) {
+        draw_groupid_widget_begin(win, scn);
         // draw_scroll_widget_begin(win, "model", 240, false);
         draw_tree_widgets(win, "", scn, selection);
         // draw_scroll_widget_end(win);
@@ -13789,6 +13868,7 @@ bool draw_scene_widgets(gl_window* win, const std::string& lbl, scene* scn,
             win, scn, test_scn, scn->nodes, test_scn->nodes, selection, gl_txt);
         edited += draw_selected_elem_widgets(win, scn, test_scn,
             scn->animations, test_scn->animations, selection, gl_txt);
+        draw_groupid_widget_end(win);
         return edited;
     } else
         return false;

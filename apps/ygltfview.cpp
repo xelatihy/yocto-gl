@@ -712,10 +712,10 @@ void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
 
     draw_indent_widget_begin(win);
 
-    draw_value_widget(win, "wrap s", info->wrap_s, wrap_names);
-    draw_value_widget(win, "wrap t", info->wrap_t, wrap_names);
-    draw_value_widget(win, "filter mag", info->filter_mag, filter_mag_names);
-    draw_value_widget(win, "filter min", info->filter_min, filter_min_names);
+    draw_combo_widget(win, "wrap s", info->wrap_s, wrap_names);
+    draw_combo_widget(win, "wrap t", info->wrap_t, wrap_names);
+    draw_combo_widget(win, "filter mag", info->filter_mag, filter_mag_names);
+    draw_combo_widget(win, "filter min", info->filter_min, filter_min_names);
 
     draw_indent_widget_end(win);
 }
@@ -731,10 +731,10 @@ void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
     draw_value_widget(win, "mr opacity", mat->opacity, 0, 1);
     draw_value_widget(win, "mr metallic", mat->metallic, 0, 1);
     draw_value_widget(win, "mr roughness", mat->roughness, 0, 1);
-    draw_value_widget(win, "mr base txt", mat->base_txt, txt_names);
+    draw_combo_widget(win, "mr base txt", mat->base_txt, txt_names);
     if (mat->base_txt && mat->base_txt_info)
         draw_elem_widgets(win, gscn, mat->base_txt_info, selection, state);
-    draw_value_widget(win, "mr metallic txt", mat->metallic_txt, txt_names);
+    draw_combo_widget(win, "mr metallic txt", mat->metallic_txt, txt_names);
     if (mat->metallic_txt && mat->metallic_txt_info)
         draw_elem_widgets(win, gscn, mat->metallic_txt_info, selection, state);
 }
@@ -750,10 +750,10 @@ void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
     draw_value_widget(win, "sg opacity", mat->opacity, 0, 1);
     draw_value_widget(win, "sg specular", mat->specular, 0, 1);
     draw_value_widget(win, "sg glossiness", mat->glossiness, 0, 1);
-    draw_value_widget(win, "sg diffuse txt", mat->diffuse_txt, txt_names);
+    draw_combo_widget(win, "sg diffuse txt", mat->diffuse_txt, txt_names);
     if (mat->diffuse_txt && mat->diffuse_txt_info)
         draw_elem_widgets(win, gscn, mat->diffuse_txt_info, selection, state);
-    draw_value_widget(win, "sg specular txt", mat->specular_txt, txt_names);
+    draw_combo_widget(win, "sg specular txt", mat->specular_txt, txt_names);
     if (mat->specular_txt && mat->specular_txt_info)
         draw_elem_widgets(win, gscn, mat->specular_txt_info, selection, state);
 }
@@ -769,13 +769,13 @@ void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
     draw_separator_widget(win);
     draw_label_widget(win, "name", mat->name);
     draw_value_widget(win, "emission", mat->emission, 0, 1000);
-    draw_value_widget(win, "emission txt", mat->emission_txt, txt_names);
+    draw_combo_widget(win, "emission txt", mat->emission_txt, txt_names);
     if (mat->emission_txt && mat->emission_txt_info)
         draw_elem_widgets(win, gscn, mat->emission_txt_info, selection, state);
-    draw_value_widget(win, "normal txt", mat->normal_txt, txt_names);
+    draw_combo_widget(win, "normal txt", mat->normal_txt, txt_names);
     if (mat->normal_txt && mat->normal_txt_info)
         draw_elem_widgets(win, gscn, mat->normal_txt_info, selection, state);
-    draw_value_widget(win, "occlusion txt", mat->occlusion_txt, txt_names);
+    draw_combo_widget(win, "occlusion txt", mat->occlusion_txt, txt_names);
     if (mat->occlusion_txt && mat->occlusion_txt_info)
         draw_elem_widgets(win, gscn, mat->occlusion_txt_info, selection, state);
     if (mat->metallic_roughness) {
@@ -809,7 +809,7 @@ void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
 
     draw_separator_widget(win);
     draw_label_widget(win, "name", shp->name);
-    draw_value_widget(win, "material", shp->mat, mat_names);
+    draw_combo_widget(win, "material", shp->mat, mat_names);
     draw_label_widget(win, "verts", (int)shp->pos.size());
     if (!shp->triangles.empty())
         draw_label_widget(win, "triangles", (int)shp->triangles.size());
@@ -859,7 +859,7 @@ void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
     draw_label_widget(win, "num rotation", (int)anim->rotation.size());
     draw_label_widget(win, "num scale", (int)anim->scale.size());
     auto selected_node = (ygl::gltf_node*)nullptr;
-    draw_value_widget(win, "", selected_node, node_names);
+    draw_combo_widget(win, "", selected_node, node_names);
 }
 
 void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
@@ -893,8 +893,8 @@ void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
 
     draw_separator_widget(win);
     draw_label_widget(win, "name", node->name);
-    draw_value_widget(win, "mesh", node->msh, msh_names);
-    draw_value_widget(win, "cam", node->cam, cam_names);
+    draw_combo_widget(win, "mesh", node->msh, msh_names);
+    draw_combo_widget(win, "cam", node->cam, cam_names);
     draw_value_widget(win, "translation", node->translation, -10, 10);
     draw_value_widget(win, "rotation", node->rotation);
     draw_value_widget(win, "scale", node->scale, 0.01f, 10);
@@ -968,7 +968,7 @@ void draw_widgets(ygl::gl_window* win) {
             for (auto cam : ygl::get_camera_nodes(scn->gscn->default_scene)) {
                 camera_names.push_back({cam->name, cam});
             }
-            if (draw_value_widget(win, "camera", scn->gcam, camera_names))
+            if (draw_combo_widget(win, "camera", scn->gcam, camera_names))
                 scn->scene_updated = true;
         }
         draw_value_widget(win, "wire", scn->wireframe);
@@ -976,7 +976,7 @@ void draw_widgets(ygl::gl_window* win) {
         draw_value_widget(win, "cutout", scn->alpha_cutout);
         draw_value_widget(win, "fps", scn->navigation_fps);
         draw_value_widget(win, "hdr exposure", scn->exposure, -20, 20, 1);
-        draw_value_widget(win, "hdr gamma", scn->gamma, 0.1, 5, 0.1);
+        draw_value_widget(win, "hdr gamma", scn->gamma, 0.1, 5);
         draw_value_widget(win, "hdr filmic", scn->filmic);
         if (draw_header_widget(win, "view cam")) {
             auto cam = scn->view_cam;
