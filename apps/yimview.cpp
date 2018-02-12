@@ -88,7 +88,8 @@ void draw(ygl::gl_window* win) {
     auto window_size = get_window_size(win);
     auto framebuffer_size = get_framebuffer_size(win);
     ygl::gl_set_viewport(framebuffer_size);
-    app->params.win_size = window_size;
+    app->params.width = window_size.x;
+    app->params.height = window_size.y;
     ygl::draw_image(app->gl_prog, app->gl_txt.at(img), app->params);
 
     if (ygl::begin_widgets(win, "yimview")) {

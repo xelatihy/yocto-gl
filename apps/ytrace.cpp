@@ -59,45 +59,13 @@ int main(int argc, char* argv[]) {
 
     // parse command line
     auto parser =
-        ygl::make_parser(argc, argv, "ytrace", "offline oath tracing");
+        ygl::make_parser(argc, argv, "ytrace", "Offline oath tracing");
+    app->params = ygl::parse_params(parser, "", app->params);
     app->save_progressive = ygl::parse_flag(
-        parser, "--save-progressive", "", "save progressive images");
-    app->params.rtype = ygl::parse_opt(parser, "--random", "", "random type",
-        ygl::enum_names<ygl::trace_rng_type>(),
-        ygl::trace_rng_type::stratified);
-    app->params.ftype = ygl::parse_opt(parser, "--filter", "", "filter type",
-        ygl::enum_names<ygl::trace_filter_type>(), ygl::trace_filter_type::box);
-    app->params.stype = ygl::parse_opt(parser, "--shader", "-S",
-        "path estimator type", ygl::enum_names<ygl::trace_shader_type>(),
-        ygl::trace_shader_type::pathtrace);
-    app->params.envmap_invisible =
-        ygl::parse_flag(parser, "--envmap-invisible", "", "envmap invisible");
-    app->params.shadow_notransmission = ygl::parse_flag(
-        parser, "--shadow-notransmission", "", "shadow without transmission");
-    app->params.block_size =
-        ygl::parse_opt(parser, "--block-size", "", "block size", 32);
-    app->params.batch_size =
-        ygl::parse_opt(parser, "--batch-size", "", "batch size", 16);
-    app->params.nsamples =
-        ygl::parse_opt(parser, "--samples", "-s", "image samples", 256);
-    app->params.parallel =
-        !ygl::parse_flag(parser, "--no-parallel", "", "so not run in parallel");
-    app->exposure =
-        ygl::parse_opt(parser, "--exposure", "-e", "hdr image exposure", 0.0f);
-    app->gamma =
-        ygl::parse_opt(parser, "--gamma", "-g", "hdr image gamma", 2.2f);
-    app->filmic =
-        ygl::parse_flag(parser, "--filmic", "-F", "hdr filmic output");
-    app->params.height =
-        ygl::parse_opt(parser, "--resolution", "-r", "image resolution", 540);
-    auto amb = ygl::parse_opt(parser, "--ambient", "", "ambient factor", 0.0f);
-    auto camera_lights = ygl::parse_flag(
-        parser, "--camera-lights", "-c", "enable camera lights");
-    app->params.ambient = {amb, amb, amb};
-    if (camera_lights) { app->params.stype = ygl::trace_shader_type::eyelight; }
+        parser, "--save-progressive", "", "Save progressive images");
     app->imfilename = ygl::parse_opt(
-        parser, "--output-image", "-o", "image filename", "out.hdr"s);
-    app->filename = ygl::parse_arg(parser, "scene", "scene filename", ""s);
+        parser, "--output-image", "-o", "Image filename", "out.hdr"s);
+    app->filename = ygl::parse_arg(parser, "scene", "Scene filename", ""s);
     if (ygl::should_exit(parser)) {
         printf("%s\n", get_usage(parser).c_str());
         exit(1);

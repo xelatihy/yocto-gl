@@ -70,7 +70,8 @@ void draw(ygl::gl_window* win) {
     auto window_size = get_window_size(win);
     auto framebuffer_size = get_framebuffer_size(win);
     ygl::gl_set_viewport(framebuffer_size);
-    app->imparams.win_size = window_size;
+    app->imparams.width = window_size.x;
+    app->imparams.height = window_size.y;
     ygl::draw_image(app->gl_prog, app->trace_texture, app->imparams);
 
     auto edited = 0;
@@ -83,12 +84,12 @@ void draw(ygl::gl_window* win) {
             ygl::draw_value_widget(
                 win, "samples", app->params.nsamples, 1, 4096, 1);
             edited += ygl::draw_value_widget(win, "shader type",
-                app->params.stype, ygl::enum_names<ygl::trace_shader_type>());
+                app->params.shader);
             edited += ygl::draw_value_widget(win, "random type",
-                app->params.rtype, ygl::enum_names<ygl::trace_rng_type>());
+                app->params.rng);
             edited += ygl::draw_value_widget(win, "filter type",
-                app->params.ftype, ygl::enum_names<ygl::trace_filter_type>());
-            edited += ygl::draw_camera_widget(
+                app->params.filter);
+            edited += ygl::draw_camera_selection_widget(
                 win, "camera", app->cam, app->scn, app->view);
             edited +=
                 ygl::draw_value_widget(win, "update bvh", app->update_bvh);
@@ -99,6 +100,8 @@ void draw(ygl::gl_window* win) {
             ygl::draw_imageinspect_widgets(
                 win, "", app->img, {}, get_mouse_posf(win), app->imparams);
         }
+        ygl::draw_params_widgets(win, "image params", app->imparams);
+        edited += ygl::draw_params_widgets(win, "params", app->params);
         edited +=
             ygl::draw_scene_widgets(win, "scene", app->scn, app->selection, {});
     }
@@ -121,7 +124,7 @@ bool update(app_state* app) {
         pparams.width = app->params.width / app->params.block_size;
         pparams.height = app->params.height / app->params.block_size;
         pparams.nsamples = 1;
-        pparams.ftype = ygl::trace_filter_type::box;
+        pparams.filter = ygl::trace_filter_type::box;
         auto preview_pixels = make_trace_pixels(pparams);
         auto preview_img = ygl::image4f(pparams.width, pparams.height);
         ygl::trace_samples(app->scn, app->cam, app->bvh, app->lights,
@@ -181,43 +184,19 @@ int main(int argc, char* argv[]) {
 
     // parse command line
     auto parser = ygl::make_parser(
-        argc, argv, "yitrace", "path trace images interactively");
+        argc, argv, "yitrace", "Path trace images interactively");
+    app->params = ygl::parse_params(parser, "", app->params);
     app->save_progressive = ygl::parse_flag(
-        parser, "--save-progressive", "", "save progressive images");
-    app->params.rtype = ygl::parse_opt(parser, "--random", "", "random type",
-        ygl::enum_names<ygl::trace_rng_type>(),
-        ygl::trace_rng_type::stratified);
-    app->params.ftype = ygl::parse_opt(parser, "--filter", "", "filter type",
-        ygl::enum_names<ygl::trace_filter_type>(), ygl::trace_filter_type::box);
-    app->params.stype = ygl::parse_opt(parser, "--shader", "-S",
-        "path estimator type", ygl::enum_names<ygl::trace_shader_type>(),
-        ygl::trace_shader_type::pathtrace);
-    app->params.envmap_invisible =
-        ygl::parse_flag(parser, "--envmap-invisible", "", "envmap invisible");
-    app->params.shadow_notransmission = ygl::parse_flag(
-        parser, "--shadow-notransmission", "", "shadow without transmission");
-    app->params.block_size =
-        ygl::parse_opt(parser, "--block-size", "", "block size", 32);
-    app->params.batch_size =
-        ygl::parse_opt(parser, "--batch-size", "", "batch size", 16);
-    app->params.nsamples =
-        ygl::parse_opt(parser, "--samples", "-s", "image samples", 256);
+        parser, "--save-progressive", "", "Save progressive images");
     app->imparams.exposure =
-        ygl::parse_opt(parser, "--exposure", "-e", "hdr image exposure", 0.0f);
+        ygl::parse_opt(parser, "--exposure", "", "Hdr image exposure", 0.0f);
     app->imparams.gamma =
-        ygl::parse_opt(parser, "--gamma", "-g", "hdr image gamma", 2.2f);
+        ygl::parse_opt(parser, "--gamma", "", "Hdr image gamma", 2.2f);
     app->imparams.filmic =
-        ygl::parse_flag(parser, "--filmic", "-F", "hdr image filmic");
-    app->params.height =
-        ygl::parse_opt(parser, "--resolution", "-r", "image resolution", 540);
-    auto amb = ygl::parse_opt(parser, "--ambient", "", "ambient factor", 0.0f);
-    auto camera_lights = ygl::parse_flag(
-        parser, "--camera-lights", "-c", "enable camera lights");
-    app->params.ambient = {amb, amb, amb};
-    if (camera_lights) { app->params.stype = ygl::trace_shader_type::eyelight; }
+        ygl::parse_flag(parser, "--filmic", "", "Hdr image filmic");
     app->imfilename = ygl::parse_opt(
-        parser, "--output-image", "-o", "image filename", "out.hdr"s);
-    app->filename = ygl::parse_arg(parser, "scene", "scene filename", ""s);
+        parser, "--output-image", "-o", "Image filename", "out.hdr"s);
+    app->filename = ygl::parse_arg(parser, "scene", "Scene filename", ""s);
     if (ygl::should_exit(parser)) {
         printf("%s\n", get_usage(parser).c_str());
         exit(1);
@@ -249,9 +228,9 @@ int main(int argc, char* argv[]) {
 
     // fix renderer type if no lights
     if (app->lights.empty() &&
-        app->params.stype != ygl::trace_shader_type::eyelight) {
+        app->params.shader != ygl::trace_shader_type::eyelight) {
         ygl::log_info("no lights presents, switching to eyelight shader");
-        app->params.stype = ygl::trace_shader_type::eyelight;
+        app->params.shader = ygl::trace_shader_type::eyelight;
     }
 
     // initialize rendering objects
