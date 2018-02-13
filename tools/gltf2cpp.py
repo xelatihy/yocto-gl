@@ -247,7 +247,7 @@ funcs += mustache.render(parse_fmt, {'types': schemas})
 funcs += '\n\n';
 
 # substitute
-substitute('yocto/yocto_gl.h', types, 'type')
-substitute('yocto/yocto_gl.cpp', funcs, 'func')
+substitute('yocto/yocto_gl.h', types, 'gltf-type')
+substitute('yocto/yocto_gl.cpp', funcs, 'gltf-func')
 os.system('/usr/local/bin/clang-format -i -style=file yocto/yocto_gl.h')
 os.system('/usr/local/bin/clang-format -i -style=file yocto/yocto_gl.cpp')
