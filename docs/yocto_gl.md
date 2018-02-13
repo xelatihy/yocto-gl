@@ -4322,6 +4322,153 @@ Python-like enumerate.
 
 ### Container operations
 
+#### Struct optional
+
+~~~ .cpp
+template <typename T>
+struct optional {
+    optional(); 
+    optional(const T& v); 
+    operator bool() const; 
+    T& operator*(); 
+    const T& operator*() const; 
+    T* operator->(); 
+    const T* operator->() const; 
+    T& value(); 
+    const T& value() const; 
+    T value_or(const T& v); 
+    bool def = false;
+    T val = {};
+}
+~~~
+
+Simple optional with a semantic similar to std::optional. This will be
+removed upon switching to std::optional.
+
+- Members:
+    - optional():      Construct an empty optional.
+    - optional():      Construct an optional that contains a value.
+    - operator bool():      Check if the value is defined.
+    - operator*():      Access the underlying value.
+    - operator*():      Access the underlying value.
+    - operator->():      Access the underlying value members.
+    - operator->():      Access the underlying value members.
+    - value():      Access the underlying value.
+    - value():      Access the underlying value.
+    - value_or():      Access the underlying value or a default one.
+    - def:      Whether the value is defined
+    - val:      The value stored
+
+
+#### Function operator==()
+
+~~~ .cpp
+template <typename T>
+inline bool operator==(const optional<T>& a, const optional<T>& b);
+~~~
+
+Optional equality
+
+#### Function operator!=()
+
+~~~ .cpp
+template <typename T>
+inline bool operator!=(const optional<T>& a, const optional<T>& b);
+~~~
+
+Optional inequality
+
+#### Function make_optional()
+
+~~~ .cpp
+template <typename T>
+inline optional<T> make_optional(const T& v);
+~~~
+
+Creates an optional.
+
+#### Function make_optional()
+
+~~~ .cpp
+template <typename T, typename... Args>
+inline optional<T> make_optional(Args&&... args);
+~~~
+
+Creates an optional.
+
+#### Enum basic_variant_type
+
+~~~ .cpp
+enum struct basic_variant_type {
+    none,
+    boolean,
+    integer,
+    number,
+    string,
+}
+~~~
+
+The type of the basic variant.
+
+- Values:
+    - none:      None variant to indicate uninitialized type.
+    - boolean:      Boolean variant.
+    - integer:      Integer variant.
+    - number:      Number variant.
+    - string:      String variant.
+
+
+#### Struct basic_variant
+
+~~~ .cpp
+struct basic_variant {
+    basic_variant_type type = basic_variant_type::none;
+    int integer = 0;
+    float number = 0;
+    std::string string = "";
+    bool boolean = false;
+    basic_variant(); 
+    basic_variant(int v); 
+    basic_variant(float v); 
+    basic_variant(const std::string& v); 
+    basic_variant(bool v); 
+}
+~~~
+
+Simple variant implementation used to store untyped data easily.
+Makes no attempt to mimick complex interface. Models the basic types helds
+in JSON, without using recursion. Right now the implementation is
+inefficient, but very simple.
+
+- Members:
+    - type:      Type.
+    - integer:      Integer value.
+    - number:      Number variant.
+    - string:      String variant.
+    - boolean:      Boolean value.
+    - basic_variant():      Default constructor.
+    - basic_variant():      Integer constructor.
+    - basic_variant():      Number constructor.
+    - basic_variant():      String constructor.
+    - basic_variant():      Boolean constructor.
+
+
+#### Function operator<<()
+
+~~~ .cpp
+inline std::ostream& operator<<(std::ostream& os, const basic_variant& a);
+~~~
+
+Stream write.
+
+#### Function operator\>\>()
+
+~~~ .cpp
+inline std::istream& operator>>(std::istream& is, basic_variant& a);
+~~~
+
+Stream read.
+
 #### Function append()
 
 ~~~ .cpp
@@ -4491,20 +4638,21 @@ inline std::istream& operator>>(std::istream& is, T& a);
 
 Stream read.
 
-#### Enum visit_sem_type
+#### Enum visit_var_type
 
 ~~~ .cpp
-enum struct visit_sem_type {
+enum struct visit_var_type {
     value = 0,
     name = 1,
     path = 2,
     object = 3,
     reference = 4,
     color = 5,
+    noneditable = 6,
 }
 ~~~
 
-Types of variable semantic
+Types of variable semantic for `visit()`.
 
 - Values:
     - value:      Generic value.
@@ -4513,24 +4661,31 @@ Types of variable semantic
     - object:      Object.
     - reference:      Reference.
     - color:      Color.
+    - noneditable:      Generic value not editable.
 
 
-#### Struct visit_sem
+#### Struct visit_var
 
 ~~~ .cpp
-struct visit_sem {
-    visit_sem_type type = visit_sem_type::value;
+struct visit_var {
+    const std::string name = "";
+    visit_var_type type = visit_var_type::value;
+    const std::string help = "";
     float min = 0;
     float max = 0;
+    std::string short_name = "";
 }
 ~~~
 
-Semantic for reflected values
+Variable description for reflected values in `visit()`.
 
 - Members:
+    - name:      Name.
     - type:      Type.
+    - help:      Help.
     - min:      Minimum value for numeric types.
     - max:      Maximum value for numeric types.
+    - short_name:      Short name
 
 
 #### Struct has_visitor
@@ -5398,6 +5553,17 @@ make_hair(int num, int tesselation, const std::vector<vec3i>& striangles,
 ~~~
 
 Make a hair ball around a shape. Returns lines, pos, norm, texcoord, radius.
+
+### Example shape type support
+
+#### Function visit()
+
+~~~ .cpp
+template <typename Visitor>
+inline void visit(make_hair_params& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
 
 ### Image containers
 
@@ -6305,6 +6471,38 @@ Finds the closest element with a bvh (convenience wrapper).
 
 ### Simple scene
 
+#### Struct camera
+
+~~~ .cpp
+struct camera {
+    std::string name = "";
+    frame3f frame = identity_frame3f;
+    bool ortho = false;
+    float yfov = 2;
+    float aspect = 16.0f / 9.0f;
+    float focus = 1;
+    float aperture = 0;
+    float near = 0.01f;
+    float far = 10000;
+    std::unordered_map<std::string, basic_variant> props;
+}
+~~~
+
+Camera.
+
+- Members:
+    - name:      Name.
+    - frame:      Transform frame.
+    - ortho:      Orthographic camera.
+    - yfov:      Vertical field of view. @refl_uilimits(0.1,10)
+    - aspect:      Aspect ratio. @refl_uilimits(1,3)
+    - focus:      Focus distance. @refl_uilimits(0.01,1000)
+    - aperture:      Lens aperture. @refl_uilimits(0,5)
+    - near:      Near plane distance. @refl_uilimits(0.01,10)
+    - far:      Far plane distance. @refl_uilimits(10,10000)
+    - props:      Application specific properties.
+
+
 #### Struct texture
 
 ~~~ .cpp
@@ -6321,34 +6519,30 @@ Texture containing either an LDR or HDR image.
 - Members:
     - name:      Name.
     - path:      Path.
-    - ldr:      If loaded, ldr image.
-    - hdr:      If loaded, hdr image.
+    - ldr:      Ldr image.
+    - hdr:      Hdr image.
 
 
 #### Struct texture_info
 
 ~~~ .cpp
 struct texture_info {
-    texture* txt = nullptr;
     bool wrap_s = true;
     bool wrap_t = true;
     bool linear = true;
     bool mipmap = true;
     float scale = 1;
-    operator bool() const; 
 }
 ~~~
 
 Texture information to use for lookup.
 
 - Members:
-    - txt:      Texture pointer.
     - wrap_s:      Wrap s coordinate.
     - wrap_t:      Wrap t coordinate.
     - linear:      Linear interpolation.
     - mipmap:      Mipmaping.
-    - scale:      Texture strength (occlusion and normal).
-    - operator bool():      Check whether the texture is present.
+    - scale:      Texture strength (occlusion and normal). @refl_uilimits(0,10)
 
 
 #### Enum material_type
@@ -6383,16 +6577,27 @@ struct material {
     vec3f kt = {0, 0, 0};
     float rs = 0.0001;
     float op = 1;
-    texture_info ke_txt = {};
-    texture_info kd_txt = {};
-    texture_info ks_txt = {};
-    texture_info kr_txt = {};
-    texture_info kt_txt = {};
-    texture_info rs_txt = {};
-    texture_info bump_txt = {};
-    texture_info disp_txt = {};
-    texture_info norm_txt = {};
-    texture_info occ_txt = {};
+    texture* ke_txt = nullptr;
+    texture* kd_txt = nullptr;
+    texture* ks_txt = nullptr;
+    texture* kr_txt = nullptr;
+    texture* kt_txt = nullptr;
+    texture* rs_txt = nullptr;
+    texture* bump_txt = nullptr;
+    texture* disp_txt = nullptr;
+    texture* norm_txt = nullptr;
+    texture* occ_txt = nullptr;
+    optional<texture_info> ke_txt_info = {};
+    optional<texture_info> kd_txt_info = {};
+    optional<texture_info> ks_txt_info = {};
+    optional<texture_info> kr_txt_info = {};
+    optional<texture_info> kt_txt_info = {};
+    optional<texture_info> rs_txt_info = {};
+    optional<texture_info> bump_txt_info = {};
+    optional<texture_info> disp_txt_info = {};
+    optional<texture_info> norm_txt_info = {};
+    optional<texture_info> occ_txt_info = {};
+    std::unordered_map<std::string, basic_variant> props;
 }
 ~~~
 
@@ -6402,23 +6607,34 @@ Material for surfaces, lines and triangles.
     - name:      Name.
     - double_sided:      Double-sided rendering.
     - type:      Material type.
-    - ke:      Emission color.
-    - kd:      Diffuse color / base color.
-    - ks:      Specular color / metallic factor.
-    - kr:      Clear coat reflection.
-    - kt:      Transmission color.
+    - ke:      Emission color. @refl_semantic(color) refl_uilimits(0,10000)
+    - kd:      Diffuse color / base color. @refl_semantic(color)
+    - ks:      Specular color / metallic factor. @refl_semantic(color)
+    - kr:      Clear coat reflection. @refl_semantic(color)
+    - kt:      Transmission color. @refl_semantic(color)
     - rs:      Roughness.
     - op:      Opacity.
-    - ke_txt:      Emission texture.
-    - kd_txt:      Diffuse texture.
-    - ks_txt:      Specular texture.
-    - kr_txt:      Clear coat reflection texture.
-    - kt_txt:      Transmission texture.
-    - rs_txt:      Roughness texture.
-    - bump_txt:      Bump map texture (heighfield).
-    - disp_txt:      Displacement map texture (heighfield).
-    - norm_txt:      Normal texture.
-    - occ_txt:      Occlusion texture.
+    - ke_txt:      Emission texture. @refl_semantic(reference)
+    - kd_txt:      Diffuse texture. @refl_semantic(reference)
+    - ks_txt:      Specular texture. @refl_semantic(reference)
+    - kr_txt:      Clear coat reflection texture. @refl_semantic(reference)
+    - kt_txt:      Transmission texture. @refl_semantic(reference)
+    - rs_txt:      Roughness texture. @refl_semantic(reference)
+    - bump_txt:      Bump map texture (heighfield). @refl_semantic(reference)
+    - disp_txt:      Displacement map texture (heighfield). @refl_semantic(reference)
+    - norm_txt:      Normal texture. @refl_semantic(reference)
+    - occ_txt:      Occlusion texture. @refl_semantic(reference)
+    - ke_txt_info:      Emission texture info.
+    - kd_txt_info:      Diffuse texture info.
+    - ks_txt_info:      Specular texture info.
+    - kr_txt_info:      Clear coat reflection texture info.
+    - kt_txt_info:      Transmission texture info.
+    - rs_txt_info:      Roughness texture info.
+    - bump_txt_info:      Bump map texture (heighfield) info.
+    - disp_txt_info:      Displacement map texture (heighfield) info.
+    - norm_txt_info:      Normal texture info.
+    - occ_txt_info:      Occlusion texture info.
+    - props:      Application specific properties.
 
 
 #### Struct shape
@@ -6452,7 +6668,7 @@ May contain only one of the points/lines/triangles/quads.
 
 - Members:
     - name:      Name.
-    - mat:      Material.
+    - mat:      Material. @refl_semantic(reference)
     - points:      Points.
     - lines:      Lines.
     - triangles:      Triangles.
@@ -6479,6 +6695,7 @@ struct shape_group {
     std::string name = "";
     std::string path = "";
     std::vector<shape*> shapes;
+    std::unordered_map<std::string, basic_variant> props;
     ~shape_group(); 
 }
 ~~~
@@ -6489,6 +6706,7 @@ Group of shapes.
     - name:      Name.
     - path:      Path used for saving in glTF.
     - shapes:      Shapes.
+    - props:      Application specific properties.
     - ~shape_group():      Cleanup.
 
 
@@ -6496,46 +6714,20 @@ Group of shapes.
 
 ~~~ .cpp
 struct instance {
+    std::string name = "";
     frame3f frame = identity_frame3f;
     shape_group* shp = nullptr;
+    std::unordered_map<std::string, basic_variant> props;
 }
 ~~~
 
 Shape instance.
 
 - Members:
-    - frame:      Transform frame.
-    - shp:      Shape instance.
-
-
-#### Struct camera
-
-~~~ .cpp
-struct camera {
-    std::string name = "";
-    frame3f frame = identity_frame3f;
-    bool ortho = false;
-    float yfov = 2;
-    float aspect = 16.0f / 9.0f;
-    float focus = 1;
-    float aperture = 0;
-    float near = 0.01f;
-    float far = 10000;
-}
-~~~
-
-Camera.
-
-- Members:
     - name:      Name.
     - frame:      Transform frame.
-    - ortho:      Orthographic camera.
-    - yfov:      Vertical field of view.
-    - aspect:      Aspect ratio.
-    - focus:      Focus distance.
-    - aperture:      Lens aperture.
-    - near:      Near plane distance.
-    - far:      Far plane distance.
+    - shp:      Shape instance. @refl_semantic(reference)
+    - props:      Application specific properties.
 
 
 #### Struct environment
@@ -6545,7 +6737,9 @@ struct environment {
     std::string name = "";
     frame3f frame = identity_frame3f;
     vec3f ke = {0, 0, 0};
-    texture_info ke_txt = {};
+    texture* ke_txt = nullptr;
+    optional<texture_info> ke_txt_info = {};
+    std::unordered_map<std::string, basic_variant> props;
 }
 ~~~
 
@@ -6554,8 +6748,10 @@ Envinonment map.
 - Members:
     - name:      Name.
     - frame:      Transform frame.
-    - ke:      Emission coefficient.
-    - ke_txt:      Emission texture.
+    - ke:      Emission coefficient. @refl_uilimits(0,10000)
+    - ke_txt:      Emission texture. @refl_semantic(reference)
+    - ke_txt_info:      Emission texture info.
+    - props:      Application specific properties.
 
 
 #### Struct node
@@ -6572,6 +6768,7 @@ struct node {
     camera* cam = nullptr;
     instance* ist = nullptr;
     environment* env = nullptr;
+    std::unordered_map<std::string, basic_variant> props;
     std::vector<node*> children_ = {};
 }
 ~~~
@@ -6580,15 +6777,16 @@ Node in a transform hierarchy.
 
 - Members:
     - name:      Name.
-    - parent:      Parent node.
+    - parent:      Parent node. @refl_semantic(reference)
     - frame:      Transform frame.
     - translation:      Translation.
     - rotation:      Rotation.
-    - scaling:      Scaling.
+    - scaling:      Scaling. @refl_uilimits(0.0001,1000)
     - weights:      Weights for morphing.
-    - cam:      Camera the node points to.
-    - ist:      Instance the node points to.
-    - env:      Environment the node points to.
+    - cam:      Camera the node points to. @refl_semantic(reference)
+    - ist:      Instance the node points to. @refl_semantic(reference)
+    - env:      Environment the node points to. @refl_semantic(reference)
+    - props:      Application specific properties.
     - children_:      Child nodes. This is a computed value only stored for convenience.
 
 
@@ -6634,7 +6832,7 @@ Keyframe data.
     - times:      Times.
     - translation:      Translation.
     - rotation:      Rotation.
-    - scaling:      Scaling.
+    - scaling:      Scaling. @refl_uilimits(0.0001,1000)
     - weights:      Weights for morphing.
 
 
@@ -6646,6 +6844,7 @@ struct animation_group {
     std::string path = "";
     std::vector<animation*> animations;
     std::vector<std::pair<animation*, node*>> targets;
+    std::unordered_map<std::string, basic_variant> props;
 }
 ~~~
 
@@ -6655,7 +6854,8 @@ Animation made of multiple keyframed values.
     - name:      Name.
     - path:      Path  used when writing files on disk with glTF.
     - animations:      Keyframed values.
-    - targets:      Binds keyframe values to nodes.
+    - targets:      Binds keyframe values to nodes. @refl_semantic(reference)
+    - props:      Application specific properties.
 
 
 #### Struct scene
@@ -6670,6 +6870,7 @@ struct scene {
     std::vector<environment*> environments = {};
     std::vector<node*> nodes = {};
     std::vector<animation_group*> animations = {};
+    std::unordered_map<std::string, basic_variant> props;
 }
 ~~~
 
@@ -6691,6 +6892,7 @@ updates node transformations only if defined.
     - environments:      Environments.
     - nodes:      Node hierarchy.
     - animations:      Node animations.
+    - props:      Application specific properties.
 
 
 #### Function eval_pos()
@@ -6760,8 +6962,18 @@ Instance normal interpolated using barycentric coordinates.
 #### Function eval_texture()
 
 ~~~ .cpp
-vec4f eval_texture(const texture_info& info, const vec2f& texcoord,
-    bool srgb = true, const vec4f& def =;
+vec4f eval_texture(const texture* txt, const texture_info& info,
+    const vec2f& texcoord, bool srgb = true, const vec4f& def =;
+~~~
+
+Evaluate a texture.
+
+#### Function eval_texture()
+
+~~~ .cpp
+inline vec4f eval_texture(const texture* txt,
+    const optional<texture_info>& info, const vec2f& texcoord, bool srgb = true,
+    const vec4f& def =;
 ~~~
 
 Evaluate a texture.
@@ -6772,8 +6984,28 @@ Evaluate a texture.
 ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv);
 ~~~
 
-Generates a ray from a camera for image plane coordinate uv and the
-lens coordinates luv.
+Generates a ray from a camera for image plane coordinate `uv` and the
+lens coordinates `luv`.
+
+#### Function eval_camera_ray()
+
+~~~ .cpp
+ray3f eval_camera_ray(const camera* cam, const vec2i& ij, int res,
+    const vec2f& puv, const vec2f& luv);
+~~~
+
+Generates a ray from a camera for pixel coordinates `ij`, the resolution
+`res`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and
+the image resolution `res`.
+
+#### Function sync_camera_aspect()
+
+~~~ .cpp
+void sync_camera_aspect(camera* cam, int& width, int& height);
+~~~
+
+Synchronizes a camera aspect with image width and height. Set image
+values any one is 0 or less. Set camera aspect otherwise.
 
 #### Function find_named_elem()
 
@@ -7050,6 +7282,15 @@ Names of enum values.
 
 ~~~ .cpp
 template <typename Visitor>
+inline void visit(camera& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function visit()
+
+~~~ .cpp
+template <typename Visitor>
 inline void visit(texture& val, Visitor&& visitor);
 ~~~
 
@@ -7104,15 +7345,6 @@ Visit struct elements.
 
 ~~~ .cpp
 template <typename Visitor>
-inline void visit(camera& val, Visitor&& visitor);
-~~~
-
-Visit struct elements.
-
-#### Function visit()
-
-~~~ .cpp
-template <typename Visitor>
 inline void visit(environment& val, Visitor&& visitor);
 ~~~
 
@@ -7156,14 +7388,6 @@ Visit struct elements.
 
 ### Example scenes
 
-#### Function make_cornell_box_scene()
-
-~~~ .cpp
-scene* make_cornell_box_scene();
-~~~
-
-Makes the Cornell Box scene.
-
 #### Struct test_camera_params
 
 ~~~ .cpp
@@ -7180,28 +7404,11 @@ Test camera parameters.
 
 - Members:
     - name:      Name.
-    - from:      From point.
-    - to:      To point.
-    - yfov:      Field of view.
-    - aspect:      Aspect ratio.
+    - from:      From point. @refl_uilimits(-10,10)
+    - to:      To point. @refl_uilimits(-10,10)
+    - yfov:      Field of view. @refl_uilimits(0.01,10)
+    - aspect:      Aspect ratio. @refl_uilimits(1,3)
 
-
-#### Function update_test_elem()
-
-~~~ .cpp
-void update_test_elem(
-    const scene* scn, camera* cam, const test_camera_params& tcam);
-~~~
-
-Updates a test camera.
-
-#### Function test_camera_presets()
-
-~~~ .cpp
-std::unordered_map<std::string, test_camera_params>& test_camera_presets();
-~~~
-
-Test camera presets.
 
 #### Enum test_texture_type
 
@@ -7263,30 +7470,13 @@ Test texture parameters.
 - Members:
     - name:      Name.
     - type:      Type.
-    - resolution:      Resolution.
-    - tile_size:      Tile size for grid-like textures.
-    - noise_scale:      Noise scale for noise-like textures.
-    - sky_sunangle:      Sun angle for sunsky-like textures.
+    - resolution:      Resolution. @refl_uilimits(256,4096)
+    - tile_size:      Tile size for grid-like textures. @refl_uilimits(16,128)
+    - noise_scale:      Noise scale for noise-like textures. @refl_uilimits(0.1,16)
+    - sky_sunangle:      Sun angle for sunsky-like textures. @refl_uilimits(0,1.57) @refl_uiangle
     - bump_to_normal:      Convert to normal map.
-    - bump_scale:      Bump to normal scale.
+    - bump_scale:      Bump to normal scale. @refl_uilimits(1,10)
 
-
-#### Function update_test_elem()
-
-~~~ .cpp
-void update_test_elem(
-    const scene* scn, texture* txt, const test_texture_params& ttxt);
-~~~
-
-Updates a test texture.
-
-#### Function test_texture_presets()
-
-~~~ .cpp
-std::unordered_map<std::string, test_texture_params>& test_texture_presets();
-~~~
-
-Test texture presets.
 
 #### Enum test_material_type
 
@@ -7332,30 +7522,13 @@ Test material parameters.
 - Members:
     - name:      Name.
     - type:      Type.
-    - emission:      Emission strenght.
-    - color:      Base color.
+    - emission:      Emission strenght. @refl_uilimits(0,10000)
+    - color:      Base color. @refl_semantic(color)
     - opacity:      Opacity (only for supported materials).
     - roughness:      Roughness.
     - texture:      Base texture.
     - normal:      Normal map.
 
-
-#### Function update_test_elem()
-
-~~~ .cpp
-void update_test_elem(
-    const scene* scn, material* mat, const test_material_params& tmat);
-~~~
-
-Updates a test material.
-
-#### Function test_material_presets()
-
-~~~ .cpp
-std::unordered_map<std::string, test_material_params>& test_material_presets();
-~~~
-
-Test material presets.
 
 #### Enum test_shape_type
 
@@ -7417,7 +7590,7 @@ struct test_shape_params {
     float radius = -1;
     bool faceted = false;
     int num = -1;
-    make_hair_params hair_params = {};
+    optional<make_hair_params> hair_params = {};
 }
 ~~~
 
@@ -7428,31 +7601,16 @@ Test shape parameters.
     - type:      Shape type.
     - material:      Material name.
     - interior:      Interior material name.
-    - tesselation:      Level of shape tesselatation (-1 for default).
+    - tesselation:      Level of shape tesselatation (-1 for default). @refl_uilimits(-1,10)
     - subdivision:      Level of shape tesselation for subdivision surfaces.
-    - scale:      Shape scale.
-    - radius:      Radius for points and lines.
+     @refl_uilimits(-1,10)
+    - scale:      Shape scale. @refl_uilimits(0.01,10)
+    - radius:      Radius for points and lines. @refl_uilimits(0.0001,0.01)
     - faceted:      Faceted shape.
     - num:      Number of elements for points and lines (-1 for default).
+     @refl_uilimits(-1,10000)
     - hair_params:      Hair generation params.
 
-
-#### Function update_test_elem()
-
-~~~ .cpp
-void update_test_elem(
-    const scene* scn, shape* shp, const test_shape_params& tshp);
-~~~
-
-Updates a test shape, adding it to the scene if missing.
-
-#### Function test_shape_presets()
-
-~~~ .cpp
-std::unordered_map<std::string, test_shape_params>& test_shape_presets();
-~~~
-
-Test shape presets.
 
 #### Struct test_instance_params
 
@@ -7474,23 +7632,6 @@ Test instance parameters.
     - rotation:      Rotation in Euler angles.
 
 
-#### Function update_test_elem()
-
-~~~ .cpp
-void update_test_elem(
-    const scene* scn, instance* ist, const test_instance_params& tist);
-~~~
-
-Updates a test instance.
-
-#### Function test_instance_presets()
-
-~~~ .cpp
-std::unordered_map<std::string, test_instance_params>& test_instance_presets();
-~~~
-
-Test instance presets.
-
 #### Struct test_environment_params
 
 ~~~ .cpp
@@ -7508,30 +7649,12 @@ Test environment parameters.
 
 - Members:
     - name:      Name.
-    - emission:      Emission strenght.
-    - color:      Emission color.
+    - emission:      Emission strenght. @refl_uilimits(0,10000)
+    - color:      Emission color. @refl_semantic(color)
     - texture:      Emission texture.
     - frame:      Frame.
-    - rotation:      Rotation around y axis.
+    - rotation:      Rotation around y axis. @refl_uilimits(0,6.28)
 
-
-#### Function update_test_elem()
-
-~~~ .cpp
-void update_test_elem(
-    const scene* scn, environment* env, const test_environment_params& tenv);
-~~~
-
-Updates a test instance.
-
-#### Function test_environment_presets()
-
-~~~ .cpp
-std::unordered_map<std::string, test_environment_params>&
-test_environment_presets();
-~~~
-
-Test environment presets.
 
 #### Struct test_node_params
 
@@ -7558,27 +7681,10 @@ Test node parameters.
     - instance:      Instance.
     - environment:      Environment.
     - frame:      Frame.
-    - translation:      Translation.
+    - translation:      Translation. @refl_uilimits(-10,10)
     - rotation:      Roation.
-    - scaling:      Scaling.
+    - scaling:      Scaling. @refl_uilimits(0.01,10)
 
-
-#### Function update_test_elem()
-
-~~~ .cpp
-void update_test_elem(
-    const scene* scn, node* nde, const test_node_params& tndr);
-~~~
-
-Updates a test node.
-
-#### Function test_node_presets()
-
-~~~ .cpp
-std::unordered_map<std::string, test_node_params>& test_node_presets();
-~~~
-
-Test nodes presets.
 
 #### Struct test_animation_params
 
@@ -7601,31 +7707,14 @@ Test animation parameters.
 - Members:
     - name:      Name.
     - bezier:      Linear or bezier.
-    - speed:      Animation speed.
-    - scale:      Animation scale.
+    - speed:      Animation speed. @refl_uilimits(0.01,10)
+    - scale:      Animation scale. @refl_uilimits(0.01,10)
     - times:      Keyframes times.
-    - translation:      Translation keyframes.
+    - translation:      Translation keyframes. @refl_uilimits(-10,10)
     - rotation:      Rotation keyframes.
-    - scaling:      Scale keyframes.
+    - scaling:      Scale keyframes. @refl_uilimits(0.01,10)
     - nodes:      Environment.
 
-
-#### Function update_test_elem()
-
-~~~ .cpp
-void update_test_elem(
-    const scene* scn, animation_group* anm, const test_animation_params& tndr);
-~~~
-
-Updates a test node.
-
-#### Function test_node_presets()
-
-~~~ .cpp
-std::unordered_map<std::string, test_node_params>& test_node_presets();
-~~~
-
-Test nodes presets.
 
 #### Struct test_scene_params
 
@@ -7656,6 +7745,151 @@ Test scene.
     - nodes:      Nodes.
     - animations:      Animations.
 
+
+#### Function make_cornell_box_scene()
+
+~~~ .cpp
+scene* make_cornell_box_scene();
+~~~
+
+Makes the Cornell Box scene.
+
+#### Function update_test_elem()
+
+~~~ .cpp
+void update_test_elem(
+    const scene* scn, camera* cam, const test_camera_params& tcam);
+~~~
+
+Updates a test camera.
+
+#### Function test_camera_presets()
+
+~~~ .cpp
+std::unordered_map<std::string, test_camera_params>& test_camera_presets();
+~~~
+
+Test camera presets.
+
+#### Function update_test_elem()
+
+~~~ .cpp
+void update_test_elem(
+    const scene* scn, texture* txt, const test_texture_params& ttxt);
+~~~
+
+Updates a test texture.
+
+#### Function test_texture_presets()
+
+~~~ .cpp
+std::unordered_map<std::string, test_texture_params>& test_texture_presets();
+~~~
+
+Test texture presets.
+
+#### Function update_test_elem()
+
+~~~ .cpp
+void update_test_elem(
+    const scene* scn, material* mat, const test_material_params& tmat);
+~~~
+
+Updates a test material.
+
+#### Function test_material_presets()
+
+~~~ .cpp
+std::unordered_map<std::string, test_material_params>& test_material_presets();
+~~~
+
+Test material presets.
+
+#### Function update_test_elem()
+
+~~~ .cpp
+void update_test_elem(
+    const scene* scn, shape* shp, const test_shape_params& tshp);
+~~~
+
+Updates a test shape, adding it to the scene if missing.
+
+#### Function test_shape_presets()
+
+~~~ .cpp
+std::unordered_map<std::string, test_shape_params>& test_shape_presets();
+~~~
+
+Test shape presets.
+
+#### Function update_test_elem()
+
+~~~ .cpp
+void update_test_elem(
+    const scene* scn, instance* ist, const test_instance_params& tist);
+~~~
+
+Updates a test instance.
+
+#### Function test_instance_presets()
+
+~~~ .cpp
+std::unordered_map<std::string, test_instance_params>& test_instance_presets();
+~~~
+
+Test instance presets.
+
+#### Function update_test_elem()
+
+~~~ .cpp
+void update_test_elem(
+    const scene* scn, environment* env, const test_environment_params& tenv);
+~~~
+
+Updates a test instance.
+
+#### Function test_environment_presets()
+
+~~~ .cpp
+std::unordered_map<std::string, test_environment_params>&
+test_environment_presets();
+~~~
+
+Test environment presets.
+
+#### Function update_test_elem()
+
+~~~ .cpp
+void update_test_elem(
+    const scene* scn, node* nde, const test_node_params& tndr);
+~~~
+
+Updates a test node.
+
+#### Function test_node_presets()
+
+~~~ .cpp
+std::unordered_map<std::string, test_node_params>& test_node_presets();
+~~~
+
+Test nodes presets.
+
+#### Function update_test_elem()
+
+~~~ .cpp
+void update_test_elem(
+    const scene* scn, animation_group* anm, const test_animation_params& tndr);
+~~~
+
+Updates a test node.
+
+#### Function test_node_presets()
+
+~~~ .cpp
+std::unordered_map<std::string, test_node_params>& test_node_presets();
+~~~
+
+Test nodes presets.
 
 #### Function update_test_scene()
 
@@ -7949,9 +8183,9 @@ Type of rendering algorithm.
 
 - Values:
     - pathtrace:      Pathtrace.
-    - eyelight:      Eye light for quick previews.
+    - eyelight:      Eye light for previews.
     - direct:      Direct illumination.
-    - pathtrace_nomis:      Pathtrace without MIS, usedful ony for debugging.
+    - pathtrace_nomis:      Pathtrace without MIS.
     - debug_normal:      Debug normal.
     - debug_albedo:      Debug albedo.
     - debug_texcoord:      Debug texcoord.
@@ -8000,13 +8234,12 @@ Filter type.
 
 ~~~ .cpp
 struct trace_params {
-    int width = 360;
-    int height = 360;
+    int resolution = 512;
     int nsamples = 256;
-    trace_shader_type stype = trace_shader_type::pathtrace;
-    bool shadow_notransmission = false;
-    trace_rng_type rtype = trace_rng_type::stratified;
-    trace_filter_type ftype = trace_filter_type::box;
+    trace_shader_type shader = trace_shader_type::pathtrace;
+    trace_rng_type rng = trace_rng_type::stratified;
+    trace_filter_type filter = trace_filter_type::box;
+    bool notransmission = false;
     vec3f ambient = {0, 0, 0};
     bool envmap_invisible = false;
     int min_depth = 3;
@@ -8015,31 +8248,26 @@ struct trace_params {
     float ray_eps = 1e-4f;
     bool parallel = true;
     uint32_t seed = 0;
-    int block_size = 32;
-    int batch_size = 16;
 }
 ~~~
 
 Rendering params.
 
 - Members:
-    - width:      Image width.
-    - height:      Image height.
-    - nsamples:      Number of samples.
-    - stype:      Sampler type.
-    - shadow_notransmission:      Wheter to test transmission in shadows.
-    - rtype:      Random number generation type.
-    - ftype:      Filter type.
-    - ambient:      Ambient lighting.
+    - resolution:      Image vertical resolution. @refl_uilimits(256,4096)
+    - nsamples:      Number of samples. @refl_uilimits(16,4096) @refl_shortname(s)
+    - shader:      Sampler type. @refl_shortname(S)
+    - rng:      Random number generation type. @refl_shortname(R)
+    - filter:      Filter type.
+    - notransmission:      Wheter to test transmission in shadows.
+    - ambient:      Ambient lighting. @refl_semantic(color)
     - envmap_invisible:      View environment map.
-    - min_depth:      Minimum ray depth.
-    - max_depth:      Maximum ray depth.
-    - pixel_clamp:      Final pixel clamping.
-    - ray_eps:      Ray intersection epsilon.
+    - min_depth:      Minimum ray depth. @refl_uilimits(1,10)
+    - max_depth:      Maximum ray depth. @refl_uilimits(1,10)
+    - pixel_clamp:      Final pixel clamping. @refl_uilimits(1,10)
+    - ray_eps:      Ray intersection epsilon. @refl_uilimits(0.0001,0.001)
     - parallel:      Parallel execution.
-    - seed:      Seed for the random number generators.
-    - block_size:      Block size for parallel batches (probably leave it as is).
-    - batch_size:      Batch size for progressive rendering.
+    - seed:      Seed for the random number generators. @refl_uilimits(0,1000)
 
 
 #### Struct trace_pixel
@@ -8113,7 +8341,8 @@ the the public API.
 #### Function make_trace_pixels()
 
 ~~~ .cpp
-image<trace_pixel> make_trace_pixels(const trace_params& params);
+image<trace_pixel> make_trace_pixels(
+    const image4f& img, const trace_params& params);
 ~~~
 
 Initialize trace pixels.
@@ -8205,6 +8434,15 @@ enum_names<trace_filter_type>();
 ~~~
 
 Names of enum values.
+
+#### Function visit()
+
+~~~ .cpp
+template <typename Visitor>
+inline void visit(trace_params& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
 
 ### Wavefront OBJ
 
@@ -9972,14 +10210,6 @@ Saves a string to a text file.
 #### Struct cmdline_parser
 
 ~~~ .cpp
-struct cmdline_parser;
-~~~
-
-Immediate mode command line parser (opaque type)
-
-#### Struct cmdline_parser
-
-~~~ .cpp
 struct cmdline_parser {
 ~~~
 
@@ -10032,6 +10262,37 @@ inline T parse_opt(cmdline_parser& parser, const std::string& name,
 ~~~
 
 Parse an enum option from the command line.
+
+#### Function parse_arg()
+
+~~~ .cpp
+template <typename T>
+inline T parse_arg(cmdline_parser& parser, const std::string& name,
+    const std::string& help, const T& def =;
+~~~
+
+Parse positional argument from the command line.
+
+#### Function parse_args()
+
+~~~ .cpp
+template <typename T>
+inline std::vector<T> parse_args(cmdline_parser& parser,
+    const std::string& name, const std::string& help,
+    const std::vector<T>& def =;
+~~~
+
+Parse all remaining positional argument from the command line.
+
+#### Function parse_params()
+
+~~~ .cpp
+template <typename T>
+inline T parse_params(cmdline_parser& parser, const std::string& name,
+    const T& def =;
+~~~
+
+Parse options generated with a visit over the parameters
 
 #### Function make_parser()
 
@@ -11223,7 +11484,6 @@ Draws an image texture the stdimage program.
 
 ~~~ .cpp
 struct gl_stdimage_params {
-    vec2i win_size = {0, 0};
     vec2f offset = {0, 0};
     float zoom = 1;
     float exposure = 1;
@@ -11236,20 +11496,20 @@ struct gl_stdimage_params {
 Params for stdimage drawing.
 
 - Members:
-    - win_size:      Window size.
-    - offset:      Image offset.
-    - zoom:      Image zoom.
-    - exposure:      Tonemap exposure.
-    - gamma:      Tonemap gamma.
-    - filmic:      Tonemap filmic.
-    - background:      Image background.
+    - offset:      Image offset. @refl_uilimits(-4096, 4096)
+    - zoom:      Image zoom. @refl_uilimits(0.01, 10)
+    - exposure:      Hdr exposure. @refl_uilimits(-10, 10) @refl_shortname(e)
+    - gamma:      Hdr gamma. @refl_uilimits(0.1,3) @refl_shortname(g)
+    - filmic:      Hdr filmic tonemapping. @refl_shortname(F)
+    - background:      Image background. @refl_semantic(color)
 
 
 #### Function draw_image()
 
 ~~~ .cpp
 inline void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
-    const gl_stdimage_params& params, bool clear_background = true);
+    const vec2i& win_size, const gl_stdimage_params& params,
+    bool clear_background = true);
 ~~~
 
 Draws an image texture the stdimage program.
@@ -11424,8 +11684,7 @@ Disables vertex skinning.
 
 ~~~ .cpp
 struct gl_stdsurface_params {
-    int width = 360;
-    int height = 360;
+    int resolution = 512;
     float exposure = 0;
     float gamma = 2.2f;
     bool filmic = false;
@@ -11433,7 +11692,7 @@ struct gl_stdsurface_params {
     bool edges = false;
     float edge_offset = 0.01f;
     bool cutout = false;
-    bool camera_lights = false;
+    bool eyelight = false;
     vec4f background = {0, 0, 0, 0};
     vec3f ambient = {0, 0, 0};
     void* highlighted = nullptr;
@@ -11446,21 +11705,20 @@ struct gl_stdsurface_params {
 Params for stdsurface drawing.
 
 - Members:
-    - width:      Image width.
-    - height:      Image height.
-    - exposure:      Image exposure.
-    - gamma:      Image gamma.
-    - filmic:      Image filmic tonemapping.
+    - resolution:      Image resolution. @refl_uilimits(256, 4096)
+    - exposure:      Image exposure. @refl_uilimits(-10, 10) @refl_shortname(e)
+    - gamma:      Image gamma. @refl_uilimits(0.1, 3) @refl_shortname(g)
+    - filmic:      Image filmic tonemapping. @refl_shortname(F)
     - wireframe:      Draw as wireframe.
     - edges:      Draw with overlaid edges
-    - edge_offset:      Offset for edges.
-    - cutout:      Draw with an alpha cutout for binary transparency.
-    - camera_lights:      Camera light mode.
-    - background:      Window background.
-    - ambient:      Ambient illumination.
-    - highlighted:      Highlighted object.
-    - highlight_color:      Highlight color.
-    - edge_color:      Edge color.
+    - edge_offset:      Offset for edges. @refl_uilimits(0, 0.1)
+    - cutout:      Draw with for binary transparency.
+    - eyelight:      Camera light mode.
+    - background:      Window background. @refl_semantic(color)
+    - ambient:      Ambient illumination. @refl_semantic(color)
+    - highlighted:      Highlighted object. @refl_semantic(noneditable)
+    - highlight_color:      Highlight color. @refl_semantic(color)
+    - edge_color:      Edge color. @refl_semantic(color)
     - cull_backface:      Cull back face.
 
 
@@ -11470,10 +11728,30 @@ Params for stdsurface drawing.
 void draw_stdsurface_scene(const scene* scn, const camera* cam,
     gl_stdsurface_program& prog, std::unordered_map<shape*, gl_shape>& shapes,
     std::unordered_map<texture*, gl_texture>& textures, const gl_lights& lights,
-    const gl_stdsurface_params& params);
+    const vec2i& viewport_size, const gl_stdsurface_params& params);
 ~~~
 
 Draw scene with stdsurface program.
+
+### OpenGL standard shaders type support
+
+#### Function visit()
+
+~~~ .cpp
+template <typename Visitor>
+inline void visit(gl_stdimage_params& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function visit()
+
+~~~ .cpp
+template <typename Visitor>
+inline void visit(gl_stdsurface_params& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
 
 ### OpenGL window
 
@@ -11752,116 +12030,120 @@ inline void draw_label_widget(
 
 Label widget.
 
-#### Function draw_label_widget()
+#### Function draw_checkbox_widget()
 
 ~~~ .cpp
-template <typename T>
-inline void draw_label_widget(gl_window* win, const std::string& lbl,
-    const std::vector<T>& vals, bool skip_empty = false);
+bool draw_checkbox_widget(gl_window* win, const std::string& lbl, bool& val);
 ~~~
 
-Label widget.
+Checkbox widget
 
-#### Function draw_value_widget()
+#### Function draw_text_widget()
 
 ~~~ .cpp
-bool draw_value_widget(gl_window* win, const std::string& lbl, bool& val);
+bool draw_text_widget(gl_window* win, const std::string& lbl, std::string& str);
 ~~~
 
-Value widget
+Text widget.
 
-#### Function draw_value_widget()
+#### Function draw_slider_widget()
 
 ~~~ .cpp
-bool draw_value_widget(
-    gl_window* win, const std::string& lbl, std::string& str);
+bool draw_slider_widget(
+    gl_window* win, const std::string& lbl, int& val, int min = 0, int max = 1);
 ~~~
 
-Value widget.
+Slider widget.
 
-#### Function draw_value_widget()
+#### Function draw_slider_widget()
 
 ~~~ .cpp
-bool draw_value_widget(gl_window* win, const std::string& lbl, int* val,
-    int ncomp, int min = 0, int max = 1, int incr = 1);
+bool draw_slider_widget(gl_window* win, const std::string& lbl, vec2i& val,
+    int min = 0, int max = 1);
 ~~~
 
-Value widget.
+Slider widget.
 
-#### Function draw_value_widget()
+#### Function draw_slider_widget()
 
 ~~~ .cpp
-bool draw_value_widget(gl_window* win, const std::string& lbl, float* val,
-    int ncomp, float min = 0, float max = 1, float incr = 1);
+bool draw_slider_widget(gl_window* win, const std::string& lbl, vec3i& val,
+    int min = 0, int max = 1);
 ~~~
 
-Value widget.
+Slider widget.
 
-#### Function draw_value_widget()
+#### Function draw_slider_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(gl_window* win, const std::string& lbl, int& val,
-    int min = 0, int max = 1, int incr = 1);
+bool draw_slider_widget(gl_window* win, const std::string& lbl, vec4i& val,
+    int min = 0, int max = 1);
 ~~~
 
-Value widget.
+Slider widget.
 
-#### Function draw_value_widget()
+#### Function draw_slider_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(gl_window* win, const std::string& lbl,
-    float& val, float min = 0, float max = 1, float incr = 1);
+bool draw_slider_widget(gl_window* win, const std::string& lbl, float& val,
+    float min = 0, float max = 1);
 ~~~
 
-Value widget.
+Slider widget.
 
-#### Function draw_value_widget()
+#### Function draw_slider_widget()
 
 ~~~ .cpp
-template <int N>
-inline bool draw_value_widget(gl_window* win, const std::string& lbl,
-    vec<int, N>& val, int min = 0, int max = 1, int incr = 1);
+bool draw_slider_widget(gl_window* win, const std::string& lbl, vec2f& val,
+    float min = 0, float max = 1);
 ~~~
 
-Value widget.
+Slider widget.
 
-#### Function draw_value_widget()
+#### Function draw_slider_widget()
 
 ~~~ .cpp
-template <int N>
-inline bool draw_value_widget(gl_window* win, const std::string& lbl,
-    vec<float, N>& val, float min = 0, float max = 1, float incr = 0.01f);
+bool draw_slider_widget(gl_window* win, const std::string& lbl, vec3f& val,
+    float min = 0, float max = 1);
 ~~~
 
-Value widget.
+Slider widget.
 
-#### Function draw_value_widget()
+#### Function draw_slider_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(gl_window* win, const std::string& lbl,
-    mat<float, 4>& val, float min = 0, float max = 1, float incr = 0.01f);
+bool draw_slider_widget(gl_window* win, const std::string& lbl, vec4f& val,
+    float min = 0, float max = 1);
 ~~~
 
-Value widget.
+Slider widget.
 
-#### Function draw_value_widget()
+#### Function draw_slider_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(gl_window* win, const std::string& lbl,
-    frame<float, 3>& val, float min = -10, float max = 10, float incr = 0.01f);
+bool draw_slider_widget(gl_window* win, const std::string& lbl,
+    mat<float, 4>& val, float min = 0, float max = 1);
 ~~~
 
-Value widget.
+Slider widget.
 
-#### Function draw_value_widget()
+#### Function draw_slider_widget()
 
 ~~~ .cpp
-template <typename T, int N>
-inline bool draw_value_widget(gl_window* win, const std::string& lbl,
-    quat<T, N>& val, float min = -1, float max = 1, float incr = 0.01f);
+bool draw_slider_widget(gl_window* win, const std::string& lbl,
+    frame<float, 3>& val, float min = -10, float max = 10);
 ~~~
 
-Value widget.
+Slider widget.
+
+#### Function draw_slider_widget()
+
+~~~ .cpp
+bool draw_slider_widget(gl_window* win, const std::string& lbl, quat4f& val,
+    float min = -1, float max = 1);
+~~~
+
+Slider widget.
 
 #### Function draw_color_widget()
 
@@ -11923,41 +12205,41 @@ bool draw_combo_widget_item(
 
 Combo widget.
 
-#### Function draw_value_widget()
+#### Function draw_combo_widget()
 
 ~~~ .cpp
 template <typename T, typename T1>
-inline bool draw_value_widget(gl_window* win, const std::string& lbl, T& val,
+inline bool draw_combo_widget(gl_window* win, const std::string& lbl, T& val,
     const std::vector<T1>& vals, const std::function<T(const T1&)>& value_func,
     const std::function<std::string(const T1&)>& label_func);
 ~~~
 
 Combo widget.
 
-#### Function draw_value_widget()
+#### Function draw_combo_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+inline bool draw_combo_widget(gl_window* win, const std::string& lbl,
     std::string& val, const std::vector<std::string>& labels);
 ~~~
 
 Combo widget.
 
-#### Function draw_value_widget()
+#### Function draw_combo_widget()
 
 ~~~ .cpp
 template <typename T>
-inline bool draw_value_widget(gl_window* win, const std::string& lbl, T& val,
+inline bool draw_combo_widget(gl_window* win, const std::string& lbl, T& val,
     const std::vector<std::pair<std::string, T>>& labels);
 ~~~
 
 Combo widget.
 
-#### Function draw_value_widget()
+#### Function draw_combo_widget()
 
 ~~~ .cpp
 template <typename T>
-inline bool draw_value_widget(gl_window* win, const std::string& lbl, T*& val,
+inline bool draw_combo_widget(gl_window* win, const std::string& lbl, T*& val,
     const std::vector<T*>& vals, bool extra = true, T* extra_val = nullptr);
 ~~~
 
@@ -12129,42 +12411,173 @@ void draw_groupid_widget_end(gl_window* win);
 
 Group ids widget.
 
-#### Function draw_tonemap_widgets()
+#### Function draw_value_widget()
 
 ~~~ .cpp
-inline void draw_tonemap_widgets(gl_window* win, const std::string& lbl,
-    float& exposure, float& gamma, bool& filmic);
+inline bool draw_value_widget(gl_window* win, const std::string& lbl, bool& val,
+    float min = 0, float max = 0, bool color = false);
 ~~~
 
-Tonemapping widgets.
+Generic widget used for templated code. Min, max and color are ignored.
 
-#### Function draw_imageview_widgets()
+#### Function draw_value_widget()
 
 ~~~ .cpp
-inline void draw_imageview_widgets(gl_window* win, const std::string& lbl,
-    gl_stdimage_params& params, bool show_tonemap = true);
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    std::string& val, float min = 0, float max = 0, bool color = false);
 ~~~
 
-Image view widgets.
+Generic widget used for templated code. Min, max and color are ignored.
+
+#### Function draw_value_widget()
+
+~~~ .cpp
+inline bool draw_value_widget(gl_window* win, const std::string& lbl, int& val,
+    float min = 0, float max = 0, bool color = false);
+~~~
+
+Generic widget used for templated code. Uses min and max,
+or a deafult range when their are the same. Color is ignored.
+
+#### Function draw_value_widget()
+
+~~~ .cpp
+template <typename T, int N>
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    vec<int, N>& val, float min = 0, float max = 0, bool color = false);
+~~~
+
+Generic widget used for templated code. Uses min and max,
+or a deafult range when their are the same. Color is ignored.
+
+#### Function draw_value_widget()
+
+~~~ .cpp
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    float& val, float min = 0, float max = 0, bool color = false);
+~~~
+
+Generic widget used for templated code. Uses min and max,
+or a deafult range when their are the same. Color is ignored.
+
+#### Function draw_value_widget()
+
+~~~ .cpp
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    vec2f& val, float min = 0, float max = 0, bool color = false);
+~~~
+
+Generic widget used for templated code. Uses min and max,
+or a deafult range when their are the same. Color is ignored.
+
+#### Function draw_value_widget()
+
+~~~ .cpp
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    vec3f& val, float min = 0, float max = 0, bool color = false);
+~~~
+
+Generic widget used for templated code. Uses min and max,
+or a deafult range when their are the same.
+
+#### Function draw_value_widget()
+
+~~~ .cpp
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    vec4f& val, float min = 0, float max = 0, bool color = false);
+~~~
+
+Generic widget used for templated code. Uses min and max,
+or a deafult range when their are the same.
+
+#### Function draw_value_widget()
+
+~~~ .cpp
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    frame3f& val, float min = 0, float max = 0, bool color = false);
+~~~
+
+Generic widget used for templated code. Uses min and max for frame origin,
+or a deafult range when their are the same. Color is ignored.
+
+#### Function draw_value_widget()
+
+~~~ .cpp
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    mat4f& val, float min = 0, float max = 0, bool color = false);
+~~~
+
+Generic widget used for templated code. Uses min and max,
+or a deafult range when their are the same. Color is ignored.
+
+#### Function draw_value_widget()
+
+~~~ .cpp
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    quat4f& val, float min = 0, float max = 0, bool color = false);
+~~~
+
+Generic widget used for templated code. Uses min and max,
+or a deafult range when their are the same. Color is ignored.
+
+#### Constant int\>::type
+
+~~~ .cpp
+template <typename T,
+    typename std::enable_if<std::is_enum<T>::value, int>::type = 0>
+inline bool draw_value_widget(gl_window* win, const std::string& lbl, T& val,
+    float min = 0, float max = 0, bool color = false) {
+~~~
+
+Generic widget used for templated code. Min, max and color are ignored.
+
+#### Function draw_value_widget()
+
+~~~ .cpp
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    uint32_t& val, float min = 0, float max = 0, bool color = false);
+~~~
+
+Generic widget used for templated code. Internally convert to int loosing
+precision. See the int version.
 
 #### Function draw_imageinspect_widgets()
 
 ~~~ .cpp
-inline void draw_imageinspect_widgets(gl_window* win, const std::string& lbl,
+void draw_imageinspect_widgets(gl_window* win, const std::string& lbl,
     const image4f& hdr, const image4b& ldr, const vec2f& mouse_pos,
     const gl_stdimage_params& params);
 ~~~
 
 Image inspection widgets.
 
-#### Function draw_camera_widget()
+#### Function draw_params_widgets()
 
 ~~~ .cpp
-inline bool draw_camera_widget(gl_window* win, const std::string& lbl,
+template <typename T>
+inline bool draw_params_widgets(
+    gl_window* win, const std::string& lbl, T& params);
+~~~
+
+Draws a widget that sets params in non-recursive trivial structures.
+Internally uses visit to implement the view.
+
+#### Function draw_camera_selection_widget()
+
+~~~ .cpp
+inline bool draw_camera_selection_widget(gl_window* win, const std::string& lbl,
     camera*& cam, scene* scn, camera* view);
 ~~~
 
 Draws a widget that can selected the camera.
+
+#### Function draw_camera_widgets()
+
+~~~ .cpp
+bool draw_camera_widgets(gl_window* win, const std::string& lbl, camera* cam);
+~~~
+
+Draws widgets for a camera. Used for quickly making demos.
 
 #### Function draw_scene_widgets()
 

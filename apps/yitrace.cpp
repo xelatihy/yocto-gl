@@ -37,6 +37,7 @@ struct app_state {
     ygl::bvh_tree* bvh = nullptr;
     std::string filename;
     std::string imfilename;
+    int resolution = 512;
     ygl::image4f img;
     ygl::image<ygl::trace_pixel> pixels;
     ygl::trace_lights lights;
@@ -46,7 +47,7 @@ struct app_state {
     bool scene_updated = false;
     bool update_bvh = false;
     bool navigation_fps = false;
-    bool save_progressive = false;
+    int preview_res = 64;
     bool rendering = false;
     ygl::gl_stdimage_params imparams = {};
     ygl::gl_texture trace_texture = {};
@@ -70,40 +71,34 @@ void draw(ygl::gl_window* win) {
     auto window_size = get_window_size(win);
     auto framebuffer_size = get_framebuffer_size(win);
     ygl::gl_set_viewport(framebuffer_size);
-    app->imparams.width = window_size.x;
-    app->imparams.height = window_size.y;
-    ygl::draw_image(app->gl_prog, app->trace_texture, app->imparams);
+    ygl::draw_image(
+        app->gl_prog, app->trace_texture, window_size, app->imparams);
 
     auto edited = 0;
     if (ygl::begin_widgets(win, "yitrace")) {
-        ygl::draw_label_widget(win, "scene", app->filename);
-        ygl::draw_label_widget(
-            win, "size", "{} x {}", app->params.width, app->params.height);
-        ygl::draw_label_widget(win, "sample", app->pixels.at(0, 0).sample);
         if (ygl::draw_header_widget(win, "trace")) {
-            ygl::draw_value_widget(
-                win, "samples", app->params.nsamples, 1, 4096, 1);
-            edited += ygl::draw_value_widget(win, "shader type",
-                app->params.shader);
-            edited += ygl::draw_value_widget(win, "random type",
-                app->params.rng);
-            edited += ygl::draw_value_widget(win, "filter type",
-                app->params.filter);
+            ygl::draw_label_widget(win, "scene", app->filename);
+            ygl::draw_label_widget(
+                win, "size", "{} x {}", app->img.width(), app->img.height());
+            ygl::draw_label_widget(win, "sample", app->pixels.at(0, 0).sample);
             edited += ygl::draw_camera_selection_widget(
                 win, "camera", app->cam, app->scn, app->view);
             edited +=
                 ygl::draw_value_widget(win, "update bvh", app->update_bvh);
             ygl::draw_value_widget(win, "fps", app->navigation_fps);
         }
+        if (ygl::draw_header_widget(win, "params")) {
+            edited += ygl::draw_params_widgets(win, "", app->params);
+        }
         if (ygl::draw_header_widget(win, "image")) {
-            ygl::draw_imageview_widgets(win, "", app->imparams);
+            ygl::draw_params_widgets(win, "", app->imparams);
             ygl::draw_imageinspect_widgets(
                 win, "", app->img, {}, get_mouse_posf(win), app->imparams);
         }
-        ygl::draw_params_widgets(win, "image params", app->imparams);
-        edited += ygl::draw_params_widgets(win, "params", app->params);
-        edited +=
-            ygl::draw_scene_widgets(win, "scene", app->scn, app->selection, {});
+        if (ygl::draw_header_widget(win, "scene")) {
+            edited +=
+                ygl::draw_scene_widgets(win, "", app->scn, app->selection, {});
+        }
     }
     ygl::end_widgets(win);
     app->scene_updated = app->scene_updated || (bool)edited;
@@ -121,15 +116,15 @@ bool update(app_state* app) {
 
         // render preview
         auto pparams = app->params;
-        pparams.width = app->params.width / app->params.block_size;
-        pparams.height = app->params.height / app->params.block_size;
         pparams.nsamples = 1;
         pparams.filter = ygl::trace_filter_type::box;
-        auto preview_pixels = make_trace_pixels(pparams);
-        auto preview_img = ygl::image4f(pparams.width, pparams.height);
-        ygl::trace_samples(app->scn, app->cam, app->bvh, app->lights,
-            preview_img, preview_pixels, 1, pparams);
-        ygl::resize_image(preview_img, app->img, ygl::resize_filter::box);
+        auto pimg =
+            ygl::image4f((int)std::round(app->cam->aspect * app->preview_res),
+                app->preview_res);
+        auto ppixels = make_trace_pixels(pimg, pparams);
+        ygl::trace_samples(app->scn, app->cam, app->bvh, app->lights, pimg,
+            ppixels, 1, pparams);
+        ygl::resize_image(pimg, app->img, ygl::resize_filter::box);
         ygl::update_texture(app->trace_texture, app->img);
 
         app->scene_updated = false;
@@ -145,8 +140,8 @@ bool update(app_state* app) {
 // run ui loop
 void run_ui(app_state* app) {
     // window
-    auto win = ygl::make_window(app->params.width, app->params.height,
-        "yitrace | " + app->filename, app);
+    auto win = ygl::make_window(
+        app->img.width(), app->img.height(), "yitrace | " + app->filename, app);
     ygl::set_window_callbacks(win, nullptr, nullptr, draw);
 
     // load textures
@@ -186,14 +181,9 @@ int main(int argc, char* argv[]) {
     auto parser = ygl::make_parser(
         argc, argv, "yitrace", "Path trace images interactively");
     app->params = ygl::parse_params(parser, "", app->params);
-    app->save_progressive = ygl::parse_flag(
-        parser, "--save-progressive", "", "Save progressive images");
-    app->imparams.exposure =
-        ygl::parse_opt(parser, "--exposure", "", "Hdr image exposure", 0.0f);
-    app->imparams.gamma =
-        ygl::parse_opt(parser, "--gamma", "", "Hdr image gamma", 2.2f);
-    app->imparams.filmic =
-        ygl::parse_flag(parser, "--filmic", "", "Hdr image filmic");
+    app->imparams = ygl::parse_params(parser, "", app->imparams);
+    app->preview_res =
+        ygl::parse_opt(parser, "--preview-res", "", "preview resolution", 32);
     app->imfilename = ygl::parse_opt(
         parser, "--output-image", "-o", "Image filename", "out.hdr"s);
     app->filename = ygl::parse_arg(parser, "scene", "Scene filename", ""s);
@@ -234,9 +224,10 @@ int main(int argc, char* argv[]) {
     }
 
     // initialize rendering objects
-    app->params.width = (int)round(app->cam->aspect * app->params.height);
-    app->img = ygl::image4f(app->params.width, app->params.height);
-    app->pixels = ygl::make_trace_pixels(app->params);
+    app->img =
+        ygl::image4f((int)round(app->cam->aspect * app->params.resolution),
+            app->params.resolution);
+    app->pixels = ygl::make_trace_pixels(app->img, app->params);
     app->scene_updated = true;
 
     // run interactive

@@ -59,38 +59,40 @@
 <li><a href="#toc40"> Shape utilities</a></li>
 <li><a href="#toc41"> Shape sampling</a></li>
 <li><a href="#toc42"> Example shapes</a></li>
-<li><a href="#toc43"> Image containers</a></li>
-<li><a href="#toc44"> Image operations</a></li>
-<li><a href="#toc45"> Example images</a></li>
-<li><a href="#toc46"> Image loading and saving</a></li>
-<li><a href="#toc47"> Ray-primitive intersection</a></li>
-<li><a href="#toc48"> Point-primitive overlap</a></li>
-<li><a href="#toc49"> Bounding volume hierarchy</a></li>
-<li><a href="#toc50"> Simple scene</a></li>
-<li><a href="#toc51"> Scene type support</a></li>
-<li><a href="#toc52"> Example scenes</a></li>
-<li><a href="#toc53"> Example scenes type support</a></li>
-<li><a href="#toc54"> Path-tracing support</a></li>
-<li><a href="#toc55"> Path tracing</a></li>
-<li><a href="#toc56"> Path tracing type support</a></li>
-<li><a href="#toc57"> Wavefront OBJ</a></li>
-<li><a href="#toc58"> Khronos glTF</a></li>
-<li><a href="#toc59"> Svg</a></li>
-<li><a href="#toc60"> String, path and file functions</a></li>
-<li><a href="#toc61"> File loading and saving</a></li>
-<li><a href="#toc62"> Immediate-mode command line parser</a></li>
-<li><a href="#toc63"> Simple logging</a></li>
-<li><a href="#toc64"> Simple timer</a></li>
-<li><a href="#toc65"> OpenGL utilities</a></li>
-<li><a href="#toc66"> OpenGL textures</a></li>
-<li><a href="#toc67"> OpenGL vertex array buffers</a></li>
-<li><a href="#toc68"> OpenGL element array buffers</a></li>
-<li><a href="#toc69"> OpenGL programs</a></li>
-<li><a href="#toc70"> OpenGL scene shader support</a></li>
-<li><a href="#toc71"> OpenGL image shader</a></li>
-<li><a href="#toc72"> OpenGL surface shader</a></li>
-<li><a href="#toc73"> OpenGL window</a></li>
-<li><a href="#toc74"> OpenGL widgets</a></li>
+<li><a href="#toc43"> Example shape type support</a></li>
+<li><a href="#toc44"> Image containers</a></li>
+<li><a href="#toc45"> Image operations</a></li>
+<li><a href="#toc46"> Example images</a></li>
+<li><a href="#toc47"> Image loading and saving</a></li>
+<li><a href="#toc48"> Ray-primitive intersection</a></li>
+<li><a href="#toc49"> Point-primitive overlap</a></li>
+<li><a href="#toc50"> Bounding volume hierarchy</a></li>
+<li><a href="#toc51"> Simple scene</a></li>
+<li><a href="#toc52"> Scene type support</a></li>
+<li><a href="#toc53"> Example scenes</a></li>
+<li><a href="#toc54"> Example scenes type support</a></li>
+<li><a href="#toc55"> Path-tracing support</a></li>
+<li><a href="#toc56"> Path tracing</a></li>
+<li><a href="#toc57"> Path tracing type support</a></li>
+<li><a href="#toc58"> Wavefront OBJ</a></li>
+<li><a href="#toc59"> Khronos glTF</a></li>
+<li><a href="#toc60"> Svg</a></li>
+<li><a href="#toc61"> String, path and file functions</a></li>
+<li><a href="#toc62"> File loading and saving</a></li>
+<li><a href="#toc63"> Immediate-mode command line parser</a></li>
+<li><a href="#toc64"> Simple logging</a></li>
+<li><a href="#toc65"> Simple timer</a></li>
+<li><a href="#toc66"> OpenGL utilities</a></li>
+<li><a href="#toc67"> OpenGL textures</a></li>
+<li><a href="#toc68"> OpenGL vertex array buffers</a></li>
+<li><a href="#toc69"> OpenGL element array buffers</a></li>
+<li><a href="#toc70"> OpenGL programs</a></li>
+<li><a href="#toc71"> OpenGL scene shader support</a></li>
+<li><a href="#toc72"> OpenGL image shader</a></li>
+<li><a href="#toc73"> OpenGL surface shader</a></li>
+<li><a href="#toc74"> OpenGL standard shaders type support</a></li>
+<li><a href="#toc75"> OpenGL window</a></li>
+<li><a href="#toc76"> OpenGL widgets</a></li>
 </ul>
 </li>
 <li><a href="yocto_gl.html#api">API Documentation</a></li>
@@ -3635,6 +3637,141 @@ offset=1.0 (used to invert the ridges).</p>
 <p>Python-like enumerate.</p>
 <p><a id="toc36"></a></p>
 <h3>Container operations</h3>
+<h4>Struct optional</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="k">struct</span> <span class="n">optional</span> <span class="p">{</span>
+    <span class="n">optional</span><span class="p">();</span> 
+    <span class="n">optional</span><span class="p">(</span><span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">v</span><span class="p">);</span> 
+    <span class="k">operator</span> <span class="nf">bool</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="n">T</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">*</span><span class="p">();</span> 
+    <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">*</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="n">T</span><span class="o">*</span> <span class="k">operator</span><span class="o">-&gt;</span><span class="p">();</span> 
+    <span class="k">const</span> <span class="n">T</span><span class="o">*</span> <span class="k">operator</span><span class="o">-&gt;</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="n">T</span><span class="o">&amp;</span> <span class="n">value</span><span class="p">();</span> 
+    <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">value</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="n">T</span> <span class="nf">value_or</span><span class="p">(</span><span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">v</span><span class="p">);</span> 
+    <span class="kt">bool</span> <span class="n">def</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="n">T</span> <span class="n">val</span> <span class="o">=</span> <span class="p">{};</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Simple optional with a semantic similar to std::optional. This will be
+removed upon switching to std::optional.</p>
+<ul>
+<li>Members:<ul>
+<li>optional():      Construct an empty optional.</li>
+<li>optional():      Construct an optional that contains a value.</li>
+<li>operator bool():      Check if the value is defined.</li>
+<li>operator*():      Access the underlying value.</li>
+<li>operator*():      Access the underlying value.</li>
+<li>operator-&gt;():      Access the underlying value members.</li>
+<li>operator-&gt;():      Access the underlying value members.</li>
+<li>value():      Access the underlying value.</li>
+<li>value():      Access the underlying value.</li>
+<li>value_or():      Access the underlying value or a default one.</li>
+<li>def:      Whether the value is defined</li>
+<li>val:      The value stored</li>
+</ul>
+</li>
+</ul>
+<h4>Function operator==()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="k">operator</span><span class="o">==</span><span class="p">(</span><span class="k">const</span> <span class="n">optional</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">optional</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Optional equality</p>
+<h4>Function operator!=()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="k">operator</span><span class="o">!=</span><span class="p">(</span><span class="k">const</span> <span class="n">optional</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">optional</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Optional inequality</p>
+<h4>Function make_optional()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">optional</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">make_optional</span><span class="p">(</span><span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">v</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Creates an optional.</p>
+<h4>Function make_optional()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span><span class="p">...</span> <span class="n">Args</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">optional</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">make_optional</span><span class="p">(</span><span class="n">Args</span><span class="o">&amp;&amp;</span><span class="p">...</span> <span class="n">args</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Creates an optional.</p>
+<h4>Enum basic_variant_type</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">basic_variant_type</span> <span class="p">{</span>
+    <span class="n">none</span><span class="p">,</span>
+    <span class="n">boolean</span><span class="p">,</span>
+    <span class="n">integer</span><span class="p">,</span>
+    <span class="n">number</span><span class="p">,</span>
+    <span class="n">string</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>The type of the basic variant.</p>
+<ul>
+<li>Values:<ul>
+<li>none:      None variant to indicate uninitialized type.</li>
+<li>boolean:      Boolean variant.</li>
+<li>integer:      Integer variant.</li>
+<li>number:      Number variant.</li>
+<li>string:      String variant.</li>
+</ul>
+</li>
+</ul>
+<h4>Struct basic_variant</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">basic_variant</span> <span class="p">{</span>
+    <span class="n">basic_variant_type</span> <span class="n">type</span> <span class="o">=</span> <span class="n">basic_variant_type</span><span class="o">::</span><span class="n">none</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">integer</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">number</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">string</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">boolean</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="n">basic_variant</span><span class="p">();</span> 
+    <span class="n">basic_variant</span><span class="p">(</span><span class="kt">int</span> <span class="n">v</span><span class="p">);</span> 
+    <span class="n">basic_variant</span><span class="p">(</span><span class="kt">float</span> <span class="n">v</span><span class="p">);</span> 
+    <span class="n">basic_variant</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">v</span><span class="p">);</span> 
+    <span class="n">basic_variant</span><span class="p">(</span><span class="kt">bool</span> <span class="n">v</span><span class="p">);</span> 
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Simple variant implementation used to store untyped data easily.
+Makes no attempt to mimick complex interface. Models the basic types helds
+in JSON, without using recursion. Right now the implementation is
+inefficient, but very simple.</p>
+<ul>
+<li>Members:<ul>
+<li>type:      Type.</li>
+<li>integer:      Integer value.</li>
+<li>number:      Number variant.</li>
+<li>string:      String variant.</li>
+<li>boolean:      Boolean value.</li>
+<li>basic_variant():      Default constructor.</li>
+<li>basic_variant():      Integer constructor.</li>
+<li>basic_variant():      Number constructor.</li>
+<li>basic_variant():      String constructor.</li>
+<li>basic_variant():      Boolean constructor.</li>
+</ul>
+</li>
+</ul>
+<h4>Function operator&lt;&lt;()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">ostream</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">&lt;&lt;</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">ostream</span><span class="o">&amp;</span> <span class="n">os</span><span class="p">,</span> <span class="k">const</span> <span class="n">basic_variant</span><span class="o">&amp;</span> <span class="n">a</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Stream write.</p>
+<h4>Function operator>>()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">istream</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">&gt;&gt;</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">istream</span><span class="o">&amp;</span> <span class="n">is</span><span class="p">,</span> <span class="n">basic_variant</span><span class="o">&amp;</span> <span class="n">a</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Stream read.</p>
 <h4>Function append()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="kt">void</span> <span class="n">append</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">v</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vv</span><span class="p">);</span>
@@ -3768,19 +3905,20 @@ Assumes that the array is sorted. Wrapper for std::lower_bound().</p>
 
 
 <p>Stream read.</p>
-<h4>Enum visit_sem_type</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">visit_sem_type</span> <span class="p">{</span>
+<h4>Enum visit_var_type</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">visit_var_type</span> <span class="p">{</span>
     <span class="n">value</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
     <span class="n">name</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
     <span class="n">path</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
     <span class="n">object</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
     <span class="n">reference</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
     <span class="n">color</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+    <span class="n">noneditable</span> <span class="o">=</span> <span class="mi">6</span><span class="p">,</span>
 <span class="p">}</span>
 </code></pre></div>
 
 
-<p>Types of variable semantic</p>
+<p>Types of variable semantic for <code>visit()</code>.</p>
 <ul>
 <li>Values:<ul>
 <li>value:      Generic value.</li>
@@ -3789,24 +3927,31 @@ Assumes that the array is sorted. Wrapper for std::lower_bound().</p>
 <li>object:      Object.</li>
 <li>reference:      Reference.</li>
 <li>color:      Color.</li>
+<li>noneditable:      Generic value not editable.</li>
 </ul>
 </li>
 </ul>
-<h4>Struct visit_sem</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">visit_sem</span> <span class="p">{</span>
-    <span class="n">visit_sem_type</span> <span class="n">type</span> <span class="o">=</span> <span class="n">visit_sem_type</span><span class="o">::</span><span class="n">value</span><span class="p">;</span>
+<h4>Struct visit_var</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">visit_var</span> <span class="p">{</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
+    <span class="n">visit_var_type</span> <span class="n">type</span> <span class="o">=</span> <span class="n">visit_var_type</span><span class="o">::</span><span class="n">value</span><span class="p">;</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">help</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">short_name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
 
-<p>Semantic for reflected values</p>
+<p>Variable description for reflected values in <code>visit()</code>.</p>
 <ul>
 <li>Members:<ul>
+<li>name:      Name.</li>
 <li>type:      Type.</li>
+<li>help:      Help.</li>
 <li>min:      Minimum value for numeric types.</li>
 <li>max:      Maximum value for numeric types.</li>
+<li>short_name:      Short name</li>
 </ul>
 </li>
 </ul>
@@ -4519,6 +4664,15 @@ texcoord.</p>
 
 <p>Make a hair ball around a shape. Returns lines, pos, norm, texcoord, radius.</p>
 <p><a id="toc43"></a></p>
+<h3>Example shape type support</h3>
+<h4>Function visit()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">make_hair_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<p><a id="toc44"></a></p>
 <h3>Image containers</h3>
 <h4>Struct image</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
@@ -4634,7 +4788,7 @@ texcoord.</p>
 
 
 <p>Create a 4 channel image with the given number of channels</p>
-<p><a id="toc44"></a></p>
+<p><a id="toc45"></a></p>
 <h3>Image operations</h3>
 <h4>Function srgb_to_linear()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vec4f</span> <span class="nf">srgb_to_linear</span><span class="p">(</span><span class="k">const</span> <span class="n">vec4b</span><span class="o">&amp;</span> <span class="n">srgb</span><span class="p">);</span>
@@ -4697,7 +4851,7 @@ texcoord.</p>
 
 
 <p>Converts HSV to RGB.</p>
-<p><a id="toc45"></a></p>
+<p><a id="toc46"></a></p>
 <h3>Example images</h3>
 <h4>Function make_grid_image()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">image4b</span> <span class="n">make_grid_image</span><span class="p">(</span><span class="kt">int</span> <span class="n">width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">height</span><span class="p">,</span> <span class="kt">int</span> <span class="n">tile</span> <span class="o">=</span> <span class="mi">64</span><span class="p">,</span>
@@ -4801,7 +4955,7 @@ in [1.7,10] with or without sun.</p>
 
 
 <p>Make a noise image. Wrap works only if both resx and resy are powers of two.</p>
-<p><a id="toc46"></a></p>
+<p><a id="toc47"></a></p>
 <h3>Image loading and saving</h3>
 <h4>Function is_hdr_filename()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">is_hdr_filename</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
@@ -4946,7 +5100,7 @@ in [1.7,10] with or without sun.</p>
 
 
 <p>Resize an image.</p>
-<p><a id="toc47"></a></p>
+<p><a id="toc48"></a></p>
 <h3>Ray-primitive intersection</h3>
 <h4>Function intersect_point()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">intersect_point</span><span class="p">(</span><span class="k">const</span> <span class="n">ray3f</span><span class="o">&amp;</span> <span class="n">ray</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">p</span><span class="p">,</span> <span class="kt">float</span> <span class="n">r</span><span class="p">,</span> <span class="kt">float</span><span class="o">&amp;</span> <span class="n">ray_t</span><span class="p">);</span>
@@ -4997,7 +5151,7 @@ to 1. This is equivalent to Intel's Embree.</p>
 <p>Intersect a ray with a axis-aligned bounding box, implemented as
 "Robust BVH Ray Traversal" by T. Ize published at
 http://jcgt.org/published/0002/02/02/paper.pdf</p>
-<p><a id="toc48"></a></p>
+<p><a id="toc49"></a></p>
 <h3>Point-primitive overlap</h3>
 <h4>Function overlap_point()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">overlap_point</span><span class="p">(</span>
@@ -5054,7 +5208,7 @@ http://jcgt.org/published/0002/02/02/paper.pdf</p>
 
 
 <p>Check if two bouning boxes overlap.</p>
-<p><a id="toc49"></a></p>
+<p><a id="toc50"></a></p>
 <h3>Bounding volume hierarchy</h3>
 <h4>Enum bvh_node_type : uint32_t</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="nl">bvh_node_type</span> <span class="p">:</span> <span class="kt">uint32_t</span> <span class="p">{</span>
@@ -5274,8 +5428,40 @@ coordinates <code>euv</code>.</p>
 
 
 <p>Finds the closest element with a bvh (convenience wrapper).</p>
-<p><a id="toc50"></a></p>
+<p><a id="toc51"></a></p>
 <h3>Simple scene</h3>
+<h4>Struct camera</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">camera</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
+    <span class="n">frame3f</span> <span class="n">frame</span> <span class="o">=</span> <span class="n">identity_frame3f</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">ortho</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">yfov</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">aspect</span> <span class="o">=</span> <span class="mf">16.0f</span> <span class="o">/</span> <span class="mf">9.0f</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">focus</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">aperture</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">near</span> <span class="o">=</span> <span class="mf">0.01f</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">far</span> <span class="o">=</span> <span class="mi">10000</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">basic_variant</span><span class="o">&gt;</span> <span class="n">props</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Camera.</p>
+<ul>
+<li>Members:<ul>
+<li>name:      Name.</li>
+<li>frame:      Transform frame.</li>
+<li>ortho:      Orthographic camera.</li>
+<li>yfov:      Vertical field of view. @refl_uilimits(0.1,10)</li>
+<li>aspect:      Aspect ratio. @refl_uilimits(1,3)</li>
+<li>focus:      Focus distance. @refl_uilimits(0.01,1000)</li>
+<li>aperture:      Lens aperture. @refl_uilimits(0,5)</li>
+<li>near:      Near plane distance. @refl_uilimits(0.01,10)</li>
+<li>far:      Far plane distance. @refl_uilimits(10,10000)</li>
+<li>props:      Application specific properties.</li>
+</ul>
+</li>
+</ul>
 <h4>Struct texture</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">texture</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
@@ -5291,20 +5477,18 @@ coordinates <code>euv</code>.</p>
 <li>Members:<ul>
 <li>name:      Name.</li>
 <li>path:      Path.</li>
-<li>ldr:      If loaded, ldr image.</li>
-<li>hdr:      If loaded, hdr image.</li>
+<li>ldr:      Ldr image.</li>
+<li>hdr:      Hdr image.</li>
 </ul>
 </li>
 </ul>
 <h4>Struct texture_info</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">texture_info</span> <span class="p">{</span>
-    <span class="n">texture</span><span class="o">*</span> <span class="n">txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">wrap_s</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">wrap_t</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">linear</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">mipmap</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">scale</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
-    <span class="k">operator</span> <span class="nf">bool</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
 <span class="p">}</span>
 </code></pre></div>
 
@@ -5312,13 +5496,11 @@ coordinates <code>euv</code>.</p>
 <p>Texture information to use for lookup.</p>
 <ul>
 <li>Members:<ul>
-<li>txt:      Texture pointer.</li>
 <li>wrap_s:      Wrap s coordinate.</li>
 <li>wrap_t:      Wrap t coordinate.</li>
 <li>linear:      Linear interpolation.</li>
 <li>mipmap:      Mipmaping.</li>
-<li>scale:      Texture strength (occlusion and normal).</li>
-<li>operator bool():      Check whether the texture is present.</li>
+<li>scale:      Texture strength (occlusion and normal). @refl_uilimits(0,10)</li>
 </ul>
 </li>
 </ul>
@@ -5352,16 +5534,27 @@ coordinates <code>euv</code>.</p>
     <span class="n">vec3f</span> <span class="n">kt</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
     <span class="kt">float</span> <span class="n">rs</span> <span class="o">=</span> <span class="mf">0.0001</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">op</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
-    <span class="n">texture_info</span> <span class="n">ke_txt</span> <span class="o">=</span> <span class="p">{};</span>
-    <span class="n">texture_info</span> <span class="n">kd_txt</span> <span class="o">=</span> <span class="p">{};</span>
-    <span class="n">texture_info</span> <span class="n">ks_txt</span> <span class="o">=</span> <span class="p">{};</span>
-    <span class="n">texture_info</span> <span class="n">kr_txt</span> <span class="o">=</span> <span class="p">{};</span>
-    <span class="n">texture_info</span> <span class="n">kt_txt</span> <span class="o">=</span> <span class="p">{};</span>
-    <span class="n">texture_info</span> <span class="n">rs_txt</span> <span class="o">=</span> <span class="p">{};</span>
-    <span class="n">texture_info</span> <span class="n">bump_txt</span> <span class="o">=</span> <span class="p">{};</span>
-    <span class="n">texture_info</span> <span class="n">disp_txt</span> <span class="o">=</span> <span class="p">{};</span>
-    <span class="n">texture_info</span> <span class="n">norm_txt</span> <span class="o">=</span> <span class="p">{};</span>
-    <span class="n">texture_info</span> <span class="n">occ_txt</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">texture</span><span class="o">*</span> <span class="n">ke_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">texture</span><span class="o">*</span> <span class="n">kd_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">texture</span><span class="o">*</span> <span class="n">ks_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">texture</span><span class="o">*</span> <span class="n">kr_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">texture</span><span class="o">*</span> <span class="n">kt_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">texture</span><span class="o">*</span> <span class="n">rs_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">texture</span><span class="o">*</span> <span class="n">bump_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">texture</span><span class="o">*</span> <span class="n">disp_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">texture</span><span class="o">*</span> <span class="n">norm_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">texture</span><span class="o">*</span> <span class="n">occ_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">optional</span><span class="o">&lt;</span><span class="n">texture_info</span><span class="o">&gt;</span> <span class="n">ke_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">optional</span><span class="o">&lt;</span><span class="n">texture_info</span><span class="o">&gt;</span> <span class="n">kd_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">optional</span><span class="o">&lt;</span><span class="n">texture_info</span><span class="o">&gt;</span> <span class="n">ks_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">optional</span><span class="o">&lt;</span><span class="n">texture_info</span><span class="o">&gt;</span> <span class="n">kr_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">optional</span><span class="o">&lt;</span><span class="n">texture_info</span><span class="o">&gt;</span> <span class="n">kt_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">optional</span><span class="o">&lt;</span><span class="n">texture_info</span><span class="o">&gt;</span> <span class="n">rs_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">optional</span><span class="o">&lt;</span><span class="n">texture_info</span><span class="o">&gt;</span> <span class="n">bump_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">optional</span><span class="o">&lt;</span><span class="n">texture_info</span><span class="o">&gt;</span> <span class="n">disp_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">optional</span><span class="o">&lt;</span><span class="n">texture_info</span><span class="o">&gt;</span> <span class="n">norm_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">optional</span><span class="o">&lt;</span><span class="n">texture_info</span><span class="o">&gt;</span> <span class="n">occ_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">basic_variant</span><span class="o">&gt;</span> <span class="n">props</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -5372,23 +5565,34 @@ coordinates <code>euv</code>.</p>
 <li>name:      Name.</li>
 <li>double_sided:      Double-sided rendering.</li>
 <li>type:      Material type.</li>
-<li>ke:      Emission color.</li>
-<li>kd:      Diffuse color / base color.</li>
-<li>ks:      Specular color / metallic factor.</li>
-<li>kr:      Clear coat reflection.</li>
-<li>kt:      Transmission color.</li>
+<li>ke:      Emission color. @refl_semantic(color) refl_uilimits(0,10000)</li>
+<li>kd:      Diffuse color / base color. @refl_semantic(color)</li>
+<li>ks:      Specular color / metallic factor. @refl_semantic(color)</li>
+<li>kr:      Clear coat reflection. @refl_semantic(color)</li>
+<li>kt:      Transmission color. @refl_semantic(color)</li>
 <li>rs:      Roughness.</li>
 <li>op:      Opacity.</li>
-<li>ke_txt:      Emission texture.</li>
-<li>kd_txt:      Diffuse texture.</li>
-<li>ks_txt:      Specular texture.</li>
-<li>kr_txt:      Clear coat reflection texture.</li>
-<li>kt_txt:      Transmission texture.</li>
-<li>rs_txt:      Roughness texture.</li>
-<li>bump_txt:      Bump map texture (heighfield).</li>
-<li>disp_txt:      Displacement map texture (heighfield).</li>
-<li>norm_txt:      Normal texture.</li>
-<li>occ_txt:      Occlusion texture.</li>
+<li>ke_txt:      Emission texture. @refl_semantic(reference)</li>
+<li>kd_txt:      Diffuse texture. @refl_semantic(reference)</li>
+<li>ks_txt:      Specular texture. @refl_semantic(reference)</li>
+<li>kr_txt:      Clear coat reflection texture. @refl_semantic(reference)</li>
+<li>kt_txt:      Transmission texture. @refl_semantic(reference)</li>
+<li>rs_txt:      Roughness texture. @refl_semantic(reference)</li>
+<li>bump_txt:      Bump map texture (heighfield). @refl_semantic(reference)</li>
+<li>disp_txt:      Displacement map texture (heighfield). @refl_semantic(reference)</li>
+<li>norm_txt:      Normal texture. @refl_semantic(reference)</li>
+<li>occ_txt:      Occlusion texture. @refl_semantic(reference)</li>
+<li>ke_txt_info:      Emission texture info.</li>
+<li>kd_txt_info:      Diffuse texture info.</li>
+<li>ks_txt_info:      Specular texture info.</li>
+<li>kr_txt_info:      Clear coat reflection texture info.</li>
+<li>kt_txt_info:      Transmission texture info.</li>
+<li>rs_txt_info:      Roughness texture info.</li>
+<li>bump_txt_info:      Bump map texture (heighfield) info.</li>
+<li>disp_txt_info:      Displacement map texture (heighfield) info.</li>
+<li>norm_txt_info:      Normal texture info.</li>
+<li>occ_txt_info:      Occlusion texture info.</li>
+<li>props:      Application specific properties.</li>
 </ul>
 </li>
 </ul>
@@ -5422,7 +5626,7 @@ May contain only one of the points/lines/triangles/quads.</p>
 <ul>
 <li>Members:<ul>
 <li>name:      Name.</li>
-<li>mat:      Material.</li>
+<li>mat:      Material. @refl_semantic(reference)</li>
 <li>points:      Points.</li>
 <li>lines:      Lines.</li>
 <li>triangles:      Triangles.</li>
@@ -5448,6 +5652,7 @@ May contain only one of the points/lines/triangles/quads.</p>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">path</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">*&gt;</span> <span class="n">shapes</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">basic_variant</span><span class="o">&gt;</span> <span class="n">props</span><span class="p">;</span>
     <span class="o">~</span><span class="n">shape_group</span><span class="p">();</span> 
 <span class="p">}</span>
 </code></pre></div>
@@ -5459,14 +5664,17 @@ May contain only one of the points/lines/triangles/quads.</p>
 <li>name:      Name.</li>
 <li>path:      Path used for saving in glTF.</li>
 <li>shapes:      Shapes.</li>
+<li>props:      Application specific properties.</li>
 <li>~shape_group():      Cleanup.</li>
 </ul>
 </li>
 </ul>
 <h4>Struct instance</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">instance</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="n">frame3f</span> <span class="n">frame</span> <span class="o">=</span> <span class="n">identity_frame3f</span><span class="p">;</span>
     <span class="n">shape_group</span><span class="o">*</span> <span class="n">shp</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">basic_variant</span><span class="o">&gt;</span> <span class="n">props</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -5474,38 +5682,10 @@ May contain only one of the points/lines/triangles/quads.</p>
 <p>Shape instance.</p>
 <ul>
 <li>Members:<ul>
-<li>frame:      Transform frame.</li>
-<li>shp:      Shape instance.</li>
-</ul>
-</li>
-</ul>
-<h4>Struct camera</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">camera</span> <span class="p">{</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
-    <span class="n">frame3f</span> <span class="n">frame</span> <span class="o">=</span> <span class="n">identity_frame3f</span><span class="p">;</span>
-    <span class="kt">bool</span> <span class="n">ortho</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
-    <span class="kt">float</span> <span class="n">yfov</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span>
-    <span class="kt">float</span> <span class="n">aspect</span> <span class="o">=</span> <span class="mf">16.0f</span> <span class="o">/</span> <span class="mf">9.0f</span><span class="p">;</span>
-    <span class="kt">float</span> <span class="n">focus</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
-    <span class="kt">float</span> <span class="n">aperture</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-    <span class="kt">float</span> <span class="n">near</span> <span class="o">=</span> <span class="mf">0.01f</span><span class="p">;</span>
-    <span class="kt">float</span> <span class="n">far</span> <span class="o">=</span> <span class="mi">10000</span><span class="p">;</span>
-<span class="p">}</span>
-</code></pre></div>
-
-
-<p>Camera.</p>
-<ul>
-<li>Members:<ul>
 <li>name:      Name.</li>
 <li>frame:      Transform frame.</li>
-<li>ortho:      Orthographic camera.</li>
-<li>yfov:      Vertical field of view.</li>
-<li>aspect:      Aspect ratio.</li>
-<li>focus:      Focus distance.</li>
-<li>aperture:      Lens aperture.</li>
-<li>near:      Near plane distance.</li>
-<li>far:      Far plane distance.</li>
+<li>shp:      Shape instance. @refl_semantic(reference)</li>
+<li>props:      Application specific properties.</li>
 </ul>
 </li>
 </ul>
@@ -5514,7 +5694,9 @@ May contain only one of the points/lines/triangles/quads.</p>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="n">frame3f</span> <span class="n">frame</span> <span class="o">=</span> <span class="n">identity_frame3f</span><span class="p">;</span>
     <span class="n">vec3f</span> <span class="n">ke</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
-    <span class="n">texture_info</span> <span class="n">ke_txt</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">texture</span><span class="o">*</span> <span class="n">ke_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">optional</span><span class="o">&lt;</span><span class="n">texture_info</span><span class="o">&gt;</span> <span class="n">ke_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">basic_variant</span><span class="o">&gt;</span> <span class="n">props</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -5524,8 +5706,10 @@ May contain only one of the points/lines/triangles/quads.</p>
 <li>Members:<ul>
 <li>name:      Name.</li>
 <li>frame:      Transform frame.</li>
-<li>ke:      Emission coefficient.</li>
-<li>ke_txt:      Emission texture.</li>
+<li>ke:      Emission coefficient. @refl_uilimits(0,10000)</li>
+<li>ke_txt:      Emission texture. @refl_semantic(reference)</li>
+<li>ke_txt_info:      Emission texture info.</li>
+<li>props:      Application specific properties.</li>
 </ul>
 </li>
 </ul>
@@ -5541,6 +5725,7 @@ May contain only one of the points/lines/triangles/quads.</p>
     <span class="n">camera</span><span class="o">*</span> <span class="n">cam</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
     <span class="n">instance</span><span class="o">*</span> <span class="n">ist</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
     <span class="n">environment</span><span class="o">*</span> <span class="n">env</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">basic_variant</span><span class="o">&gt;</span> <span class="n">props</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">node</span><span class="o">*&gt;</span> <span class="n">children_</span> <span class="o">=</span> <span class="p">{};</span>
 <span class="p">}</span>
 </code></pre></div>
@@ -5550,15 +5735,16 @@ May contain only one of the points/lines/triangles/quads.</p>
 <ul>
 <li>Members:<ul>
 <li>name:      Name.</li>
-<li>parent:      Parent node.</li>
+<li>parent:      Parent node. @refl_semantic(reference)</li>
 <li>frame:      Transform frame.</li>
 <li>translation:      Translation.</li>
 <li>rotation:      Rotation.</li>
-<li>scaling:      Scaling.</li>
+<li>scaling:      Scaling. @refl_uilimits(0.0001,1000)</li>
 <li>weights:      Weights for morphing.</li>
-<li>cam:      Camera the node points to.</li>
-<li>ist:      Instance the node points to.</li>
-<li>env:      Environment the node points to.</li>
+<li>cam:      Camera the node points to. @refl_semantic(reference)</li>
+<li>ist:      Instance the node points to. @refl_semantic(reference)</li>
+<li>env:      Environment the node points to. @refl_semantic(reference)</li>
+<li>props:      Application specific properties.</li>
 <li>children_:      Child nodes. This is a computed value only stored for convenience.</li>
 </ul>
 </li>
@@ -5604,7 +5790,7 @@ May contain only one of the points/lines/triangles/quads.</p>
 <li>times:      Times.</li>
 <li>translation:      Translation.</li>
 <li>rotation:      Rotation.</li>
-<li>scaling:      Scaling.</li>
+<li>scaling:      Scaling. @refl_uilimits(0.0001,1000)</li>
 <li>weights:      Weights for morphing.</li>
 </ul>
 </li>
@@ -5615,6 +5801,7 @@ May contain only one of the points/lines/triangles/quads.</p>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">path</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">animation</span><span class="o">*&gt;</span> <span class="n">animations</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">animation</span><span class="o">*</span><span class="p">,</span> <span class="n">node</span><span class="o">*&gt;&gt;</span> <span class="n">targets</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">basic_variant</span><span class="o">&gt;</span> <span class="n">props</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -5625,7 +5812,8 @@ May contain only one of the points/lines/triangles/quads.</p>
 <li>name:      Name.</li>
 <li>path:      Path  used when writing files on disk with glTF.</li>
 <li>animations:      Keyframed values.</li>
-<li>targets:      Binds keyframe values to nodes.</li>
+<li>targets:      Binds keyframe values to nodes. @refl_semantic(reference)</li>
+<li>props:      Application specific properties.</li>
 </ul>
 </li>
 </ul>
@@ -5639,6 +5827,7 @@ May contain only one of the points/lines/triangles/quads.</p>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">environment</span><span class="o">*&gt;</span> <span class="n">environments</span> <span class="o">=</span> <span class="p">{};</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">node</span><span class="o">*&gt;</span> <span class="n">nodes</span> <span class="o">=</span> <span class="p">{};</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">animation_group</span><span class="o">*&gt;</span> <span class="n">animations</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">basic_variant</span><span class="o">&gt;</span> <span class="n">props</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -5661,6 +5850,7 @@ updates node transformations only if defined.</p>
 <li>environments:      Environments.</li>
 <li>nodes:      Node hierarchy.</li>
 <li>animations:      Node animations.</li>
+<li>props:      Application specific properties.</li>
 </ul>
 </li>
 </ul>
@@ -5713,8 +5903,16 @@ updates node transformations only if defined.</p>
 
 <p>Instance normal interpolated using barycentric coordinates.</p>
 <h4>Function eval_texture()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">vec4f</span> <span class="n">eval_texture</span><span class="p">(</span><span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">info</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">texcoord</span><span class="p">,</span>
-    <span class="kt">bool</span> <span class="n">srgb</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">def</span> <span class="o">=</span><span class="p">;</span>
+<div class="codehilite"><pre><code><span></span><span class="n">vec4f</span> <span class="n">eval_texture</span><span class="p">(</span><span class="k">const</span> <span class="n">texture</span><span class="o">*</span> <span class="n">txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">info</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">texcoord</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">srgb</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">def</span> <span class="o">=</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Evaluate a texture.</p>
+<h4>Function eval_texture()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vec4f</span> <span class="n">eval_texture</span><span class="p">(</span><span class="k">const</span> <span class="n">texture</span><span class="o">*</span> <span class="n">txt</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">optional</span><span class="o">&lt;</span><span class="n">texture_info</span><span class="o">&gt;&amp;</span> <span class="n">info</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">texcoord</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">srgb</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">def</span> <span class="o">=</span><span class="p">;</span>
 </code></pre></div>
 
 
@@ -5724,8 +5922,24 @@ updates node transformations only if defined.</p>
 </code></pre></div>
 
 
-<p>Generates a ray from a camera for image plane coordinate uv and the
-lens coordinates luv.</p>
+<p>Generates a ray from a camera for image plane coordinate <code>uv</code> and the
+lens coordinates <code>luv</code>.</p>
+<h4>Function eval_camera_ray()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">ray3f</span> <span class="nf">eval_camera_ray</span><span class="p">(</span><span class="k">const</span> <span class="n">camera</span><span class="o">*</span> <span class="n">cam</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">ij</span><span class="p">,</span> <span class="kt">int</span> <span class="n">res</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">puv</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">luv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Generates a ray from a camera for pixel coordinates <code>ij</code>, the resolution
+<code>res</code>, the sub-pixel coordinates <code>puv</code> and the lens coordinates <code>luv</code> and
+the image resolution <code>res</code>.</p>
+<h4>Function sync_camera_aspect()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">sync_camera_aspect</span><span class="p">(</span><span class="n">camera</span><span class="o">*</span> <span class="n">cam</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">width</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">height</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Synchronizes a camera aspect with image width and height. Set image
+values any one is 0 or less. Set camera aspect otherwise.</p>
 <h4>Function find_named_elem()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">T</span><span class="o">*</span> <span class="n">find_named_elem</span><span class="p">(</span>
@@ -5935,7 +6149,7 @@ Throws an exception if an error occurs.</p>
 
 
 <p>Saves a scene. For now OBJ and glTF are supported.</p>
-<p><a id="toc51"></a></p>
+<p><a id="toc52"></a></p>
 <h3>Scene type support</h3>
 <h4>Function enum_names&lt;material_type>()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;&gt;</span>
@@ -5953,6 +6167,13 @@ Throws an exception if an error occurs.</p>
 
 
 <p>Names of enum values.</p>
+<h4>Function visit()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">camera</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
 <h4>Function visit()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">texture</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
@@ -5997,13 +6218,6 @@ Throws an exception if an error occurs.</p>
 <p>Visit struct elements.</p>
 <h4>Function visit()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">camera</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Visit struct elements.</p>
-<h4>Function visit()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">environment</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
 </code></pre></div>
 
@@ -6037,14 +6251,8 @@ Throws an exception if an error occurs.</p>
 
 
 <p>Visit struct elements.</p>
-<p><a id="toc52"></a></p>
+<p><a id="toc53"></a></p>
 <h3>Example scenes</h3>
-<h4>Function make_cornell_box_scene()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">scene</span><span class="o">*</span> <span class="nf">make_cornell_box_scene</span><span class="p">();</span>
-</code></pre></div>
-
-
-<p>Makes the Cornell Box scene.</p>
 <h4>Struct test_camera_params</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">test_camera_params</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
@@ -6060,26 +6268,13 @@ Throws an exception if an error occurs.</p>
 <ul>
 <li>Members:<ul>
 <li>name:      Name.</li>
-<li>from:      From point.</li>
-<li>to:      To point.</li>
-<li>yfov:      Field of view.</li>
-<li>aspect:      Aspect ratio.</li>
+<li>from:      From point. @refl_uilimits(-10,10)</li>
+<li>to:      To point. @refl_uilimits(-10,10)</li>
+<li>yfov:      Field of view. @refl_uilimits(0.01,10)</li>
+<li>aspect:      Aspect ratio. @refl_uilimits(1,3)</li>
 </ul>
 </li>
 </ul>
-<h4>Function update_test_elem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">camera</span><span class="o">*</span> <span class="n">cam</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_camera_params</span><span class="o">&amp;</span> <span class="n">tcam</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Updates a test camera.</p>
-<h4>Function test_camera_presets()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">test_camera_params</span><span class="o">&gt;&amp;</span> <span class="n">test_camera_presets</span><span class="p">();</span>
-</code></pre></div>
-
-
-<p>Test camera presets.</p>
 <h4>Enum test_texture_type</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">test_texture_type</span> <span class="p">{</span>
     <span class="n">none</span><span class="p">,</span>
@@ -6139,28 +6334,15 @@ Throws an exception if an error occurs.</p>
 <li>Members:<ul>
 <li>name:      Name.</li>
 <li>type:      Type.</li>
-<li>resolution:      Resolution.</li>
-<li>tile_size:      Tile size for grid-like textures.</li>
-<li>noise_scale:      Noise scale for noise-like textures.</li>
-<li>sky_sunangle:      Sun angle for sunsky-like textures.</li>
+<li>resolution:      Resolution. @refl_uilimits(256,4096)</li>
+<li>tile_size:      Tile size for grid-like textures. @refl_uilimits(16,128)</li>
+<li>noise_scale:      Noise scale for noise-like textures. @refl_uilimits(0.1,16)</li>
+<li>sky_sunangle:      Sun angle for sunsky-like textures. @refl_uilimits(0,1.57) @refl_uiangle</li>
 <li>bump_to_normal:      Convert to normal map.</li>
-<li>bump_scale:      Bump to normal scale.</li>
+<li>bump_scale:      Bump to normal scale. @refl_uilimits(1,10)</li>
 </ul>
 </li>
 </ul>
-<h4>Function update_test_elem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">texture</span><span class="o">*</span> <span class="n">txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_texture_params</span><span class="o">&amp;</span> <span class="n">ttxt</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Updates a test texture.</p>
-<h4>Function test_texture_presets()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">test_texture_params</span><span class="o">&gt;&amp;</span> <span class="n">test_texture_presets</span><span class="p">();</span>
-</code></pre></div>
-
-
-<p>Test texture presets.</p>
 <h4>Enum test_material_type</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">test_material_type</span> <span class="p">{</span>
     <span class="n">none</span><span class="p">,</span>
@@ -6204,8 +6386,8 @@ Throws an exception if an error occurs.</p>
 <li>Members:<ul>
 <li>name:      Name.</li>
 <li>type:      Type.</li>
-<li>emission:      Emission strenght.</li>
-<li>color:      Base color.</li>
+<li>emission:      Emission strenght. @refl_uilimits(0,10000)</li>
+<li>color:      Base color. @refl_semantic(color)</li>
 <li>opacity:      Opacity (only for supported materials).</li>
 <li>roughness:      Roughness.</li>
 <li>texture:      Base texture.</li>
@@ -6213,19 +6395,6 @@ Throws an exception if an error occurs.</p>
 </ul>
 </li>
 </ul>
-<h4>Function update_test_elem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">material</span><span class="o">*</span> <span class="n">mat</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_material_params</span><span class="o">&amp;</span> <span class="n">tmat</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Updates a test material.</p>
-<h4>Function test_material_presets()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">test_material_params</span><span class="o">&gt;&amp;</span> <span class="n">test_material_presets</span><span class="p">();</span>
-</code></pre></div>
-
-
-<p>Test material presets.</p>
 <h4>Enum test_shape_type</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">test_shape_type</span> <span class="p">{</span>
     <span class="n">floor</span><span class="p">,</span>
@@ -6284,7 +6453,7 @@ Throws an exception if an error occurs.</p>
     <span class="kt">float</span> <span class="n">radius</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">faceted</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="kt">int</span> <span class="n">num</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
-    <span class="n">make_hair_params</span> <span class="n">hair_params</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">optional</span><span class="o">&lt;</span><span class="n">make_hair_params</span><span class="o">&gt;</span> <span class="n">hair_params</span> <span class="o">=</span> <span class="p">{};</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -6296,29 +6465,18 @@ Throws an exception if an error occurs.</p>
 <li>type:      Shape type.</li>
 <li>material:      Material name.</li>
 <li>interior:      Interior material name.</li>
-<li>tesselation:      Level of shape tesselatation (-1 for default).</li>
-<li>subdivision:      Level of shape tesselation for subdivision surfaces.</li>
-<li>scale:      Shape scale.</li>
-<li>radius:      Radius for points and lines.</li>
+<li>tesselation:      Level of shape tesselatation (-1 for default). @refl_uilimits(-1,10)</li>
+<li>subdivision:      Level of shape tesselation for subdivision surfaces.
+ @refl_uilimits(-1,10)</li>
+<li>scale:      Shape scale. @refl_uilimits(0.01,10)</li>
+<li>radius:      Radius for points and lines. @refl_uilimits(0.0001,0.01)</li>
 <li>faceted:      Faceted shape.</li>
-<li>num:      Number of elements for points and lines (-1 for default).</li>
+<li>num:      Number of elements for points and lines (-1 for default).
+ @refl_uilimits(-1,10000)</li>
 <li>hair_params:      Hair generation params.</li>
 </ul>
 </li>
 </ul>
-<h4>Function update_test_elem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_shape_params</span><span class="o">&amp;</span> <span class="n">tshp</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Updates a test shape, adding it to the scene if missing.</p>
-<h4>Function test_shape_presets()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">test_shape_params</span><span class="o">&gt;&amp;</span> <span class="n">test_shape_presets</span><span class="p">();</span>
-</code></pre></div>
-
-
-<p>Test shape presets.</p>
 <h4>Struct test_instance_params</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">test_instance_params</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
@@ -6339,19 +6497,6 @@ Throws an exception if an error occurs.</p>
 </ul>
 </li>
 </ul>
-<h4>Function update_test_elem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">instance</span><span class="o">*</span> <span class="n">ist</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_instance_params</span><span class="o">&amp;</span> <span class="n">tist</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Updates a test instance.</p>
-<h4>Function test_instance_presets()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">test_instance_params</span><span class="o">&gt;&amp;</span> <span class="n">test_instance_presets</span><span class="p">();</span>
-</code></pre></div>
-
-
-<p>Test instance presets.</p>
 <h4>Struct test_environment_params</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">test_environment_params</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
@@ -6368,28 +6513,14 @@ Throws an exception if an error occurs.</p>
 <ul>
 <li>Members:<ul>
 <li>name:      Name.</li>
-<li>emission:      Emission strenght.</li>
-<li>color:      Emission color.</li>
+<li>emission:      Emission strenght. @refl_uilimits(0,10000)</li>
+<li>color:      Emission color. @refl_semantic(color)</li>
 <li>texture:      Emission texture.</li>
 <li>frame:      Frame.</li>
-<li>rotation:      Rotation around y axis.</li>
+<li>rotation:      Rotation around y axis. @refl_uilimits(0,6.28)</li>
 </ul>
 </li>
 </ul>
-<h4>Function update_test_elem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">environment</span><span class="o">*</span> <span class="n">env</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_environment_params</span><span class="o">&amp;</span> <span class="n">tenv</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Updates a test instance.</p>
-<h4>Function test_environment_presets()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">test_environment_params</span><span class="o">&gt;&amp;</span>
-<span class="n">test_environment_presets</span><span class="p">();</span>
-</code></pre></div>
-
-
-<p>Test environment presets.</p>
 <h4>Struct test_node_params</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">test_node_params</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
@@ -6414,25 +6545,12 @@ Throws an exception if an error occurs.</p>
 <li>instance:      Instance.</li>
 <li>environment:      Environment.</li>
 <li>frame:      Frame.</li>
-<li>translation:      Translation.</li>
+<li>translation:      Translation. @refl_uilimits(-10,10)</li>
 <li>rotation:      Roation.</li>
-<li>scaling:      Scaling.</li>
+<li>scaling:      Scaling. @refl_uilimits(0.01,10)</li>
 </ul>
 </li>
 </ul>
-<h4>Function update_test_elem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">node</span><span class="o">*</span> <span class="n">nde</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_node_params</span><span class="o">&amp;</span> <span class="n">tndr</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Updates a test node.</p>
-<h4>Function test_node_presets()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">test_node_params</span><span class="o">&gt;&amp;</span> <span class="n">test_node_presets</span><span class="p">();</span>
-</code></pre></div>
-
-
-<p>Test nodes presets.</p>
 <h4>Struct test_animation_params</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">test_animation_params</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
@@ -6453,29 +6571,16 @@ Throws an exception if an error occurs.</p>
 <li>Members:<ul>
 <li>name:      Name.</li>
 <li>bezier:      Linear or bezier.</li>
-<li>speed:      Animation speed.</li>
-<li>scale:      Animation scale.</li>
+<li>speed:      Animation speed. @refl_uilimits(0.01,10)</li>
+<li>scale:      Animation scale. @refl_uilimits(0.01,10)</li>
 <li>times:      Keyframes times.</li>
-<li>translation:      Translation keyframes.</li>
+<li>translation:      Translation keyframes. @refl_uilimits(-10,10)</li>
 <li>rotation:      Rotation keyframes.</li>
-<li>scaling:      Scale keyframes.</li>
+<li>scaling:      Scale keyframes. @refl_uilimits(0.01,10)</li>
 <li>nodes:      Environment.</li>
 </ul>
 </li>
 </ul>
-<h4>Function update_test_elem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">animation_group</span><span class="o">*</span> <span class="n">anm</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_animation_params</span><span class="o">&amp;</span> <span class="n">tndr</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Updates a test node.</p>
-<h4>Function test_node_presets()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">test_node_params</span><span class="o">&gt;&amp;</span> <span class="n">test_node_presets</span><span class="p">();</span>
-</code></pre></div>
-
-
-<p>Test nodes presets.</p>
 <h4>Struct test_scene_params</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">test_scene_params</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span><span class="p">;</span>
@@ -6506,6 +6611,117 @@ Throws an exception if an error occurs.</p>
 </ul>
 </li>
 </ul>
+<h4>Function make_cornell_box_scene()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">scene</span><span class="o">*</span> <span class="nf">make_cornell_box_scene</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Makes the Cornell Box scene.</p>
+<h4>Function update_test_elem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">camera</span><span class="o">*</span> <span class="n">cam</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_camera_params</span><span class="o">&amp;</span> <span class="n">tcam</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Updates a test camera.</p>
+<h4>Function test_camera_presets()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">test_camera_params</span><span class="o">&gt;&amp;</span> <span class="n">test_camera_presets</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Test camera presets.</p>
+<h4>Function update_test_elem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">texture</span><span class="o">*</span> <span class="n">txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_texture_params</span><span class="o">&amp;</span> <span class="n">ttxt</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Updates a test texture.</p>
+<h4>Function test_texture_presets()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">test_texture_params</span><span class="o">&gt;&amp;</span> <span class="n">test_texture_presets</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Test texture presets.</p>
+<h4>Function update_test_elem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">material</span><span class="o">*</span> <span class="n">mat</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_material_params</span><span class="o">&amp;</span> <span class="n">tmat</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Updates a test material.</p>
+<h4>Function test_material_presets()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">test_material_params</span><span class="o">&gt;&amp;</span> <span class="n">test_material_presets</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Test material presets.</p>
+<h4>Function update_test_elem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_shape_params</span><span class="o">&amp;</span> <span class="n">tshp</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Updates a test shape, adding it to the scene if missing.</p>
+<h4>Function test_shape_presets()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">test_shape_params</span><span class="o">&gt;&amp;</span> <span class="n">test_shape_presets</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Test shape presets.</p>
+<h4>Function update_test_elem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">instance</span><span class="o">*</span> <span class="n">ist</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_instance_params</span><span class="o">&amp;</span> <span class="n">tist</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Updates a test instance.</p>
+<h4>Function test_instance_presets()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">test_instance_params</span><span class="o">&gt;&amp;</span> <span class="n">test_instance_presets</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Test instance presets.</p>
+<h4>Function update_test_elem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">environment</span><span class="o">*</span> <span class="n">env</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_environment_params</span><span class="o">&amp;</span> <span class="n">tenv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Updates a test instance.</p>
+<h4>Function test_environment_presets()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">test_environment_params</span><span class="o">&gt;&amp;</span>
+<span class="n">test_environment_presets</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Test environment presets.</p>
+<h4>Function update_test_elem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">node</span><span class="o">*</span> <span class="n">nde</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_node_params</span><span class="o">&amp;</span> <span class="n">tndr</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Updates a test node.</p>
+<h4>Function test_node_presets()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">test_node_params</span><span class="o">&gt;&amp;</span> <span class="n">test_node_presets</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Test nodes presets.</p>
+<h4>Function update_test_elem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">animation_group</span><span class="o">*</span> <span class="n">anm</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_animation_params</span><span class="o">&amp;</span> <span class="n">tndr</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Updates a test node.</p>
+<h4>Function test_node_presets()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">test_node_params</span><span class="o">&gt;&amp;</span> <span class="n">test_node_presets</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Test nodes presets.</p>
 <h4>Function update_test_scene()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="n">update_test_scene</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_scene_params</span><span class="o">&amp;</span> <span class="n">tscn</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">unordered_set</span><span class="o">&lt;</span><span class="kt">void</span><span class="o">*&gt;&amp;</span> <span class="n">refresh</span> <span class="o">=</span><span class="p">;</span>
@@ -6544,7 +6760,7 @@ never removed.</p>
 
 
 <p>Save test scene.</p>
-<p><a id="toc53"></a></p>
+<p><a id="toc54"></a></p>
 <h3>Example scenes type support</h3>
 <h4>Function enum_names&lt;test_texture_type>()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;&gt;</span>
@@ -6633,7 +6849,7 @@ never removed.</p>
 
 
 <p>Visit struct elements.</p>
-<p><a id="toc54"></a></p>
+<p><a id="toc55"></a></p>
 <h3>Path-tracing support</h3>
 <h4>Function specular_exponent_to_roughness()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">float</span> <span class="nf">specular_exponent_to_roughness</span><span class="p">(</span><span class="kt">float</span> <span class="n">n</span><span class="p">);</span>
@@ -6716,7 +6932,7 @@ This is a hack, but works better than not doing it.</p>
 
 
 <p>Mitchell filter. Ppublic domain from stb_image_resize.</p>
-<p><a id="toc55"></a></p>
+<p><a id="toc56"></a></p>
 <h3>Path tracing</h3>
 <h4>Enum trace_shader_type</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">trace_shader_type</span> <span class="p">{</span>
@@ -6735,9 +6951,9 @@ This is a hack, but works better than not doing it.</p>
 <ul>
 <li>Values:<ul>
 <li>pathtrace:      Pathtrace.</li>
-<li>eyelight:      Eye light for quick previews.</li>
+<li>eyelight:      Eye light for previews.</li>
 <li>direct:      Direct illumination.</li>
-<li>pathtrace_nomis:      Pathtrace without MIS, usedful ony for debugging.</li>
+<li>pathtrace_nomis:      Pathtrace without MIS.</li>
 <li>debug_normal:      Debug normal.</li>
 <li>debug_albedo:      Debug albedo.</li>
 <li>debug_texcoord:      Debug texcoord.</li>
@@ -6785,13 +7001,12 @@ This is a hack, but works better than not doing it.</p>
 </ul>
 <h4>Struct trace_params</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">trace_params</span> <span class="p">{</span>
-    <span class="kt">int</span> <span class="n">width</span> <span class="o">=</span> <span class="mi">360</span><span class="p">;</span>
-    <span class="kt">int</span> <span class="n">height</span> <span class="o">=</span> <span class="mi">360</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">resolution</span> <span class="o">=</span> <span class="mi">512</span><span class="p">;</span>
     <span class="kt">int</span> <span class="n">nsamples</span> <span class="o">=</span> <span class="mi">256</span><span class="p">;</span>
-    <span class="n">trace_shader_type</span> <span class="n">stype</span> <span class="o">=</span> <span class="n">trace_shader_type</span><span class="o">::</span><span class="n">pathtrace</span><span class="p">;</span>
-    <span class="kt">bool</span> <span class="n">shadow_notransmission</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
-    <span class="n">trace_rng_type</span> <span class="n">rtype</span> <span class="o">=</span> <span class="n">trace_rng_type</span><span class="o">::</span><span class="n">stratified</span><span class="p">;</span>
-    <span class="n">trace_filter_type</span> <span class="n">ftype</span> <span class="o">=</span> <span class="n">trace_filter_type</span><span class="o">::</span><span class="n">box</span><span class="p">;</span>
+    <span class="n">trace_shader_type</span> <span class="n">shader</span> <span class="o">=</span> <span class="n">trace_shader_type</span><span class="o">::</span><span class="n">pathtrace</span><span class="p">;</span>
+    <span class="n">trace_rng_type</span> <span class="n">rng</span> <span class="o">=</span> <span class="n">trace_rng_type</span><span class="o">::</span><span class="n">stratified</span><span class="p">;</span>
+    <span class="n">trace_filter_type</span> <span class="n">filter</span> <span class="o">=</span> <span class="n">trace_filter_type</span><span class="o">::</span><span class="n">box</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">notransmission</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="n">vec3f</span> <span class="n">ambient</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
     <span class="kt">bool</span> <span class="n">envmap_invisible</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="kt">int</span> <span class="n">min_depth</span> <span class="o">=</span> <span class="mi">3</span><span class="p">;</span>
@@ -6800,8 +7015,6 @@ This is a hack, but works better than not doing it.</p>
     <span class="kt">float</span> <span class="n">ray_eps</span> <span class="o">=</span> <span class="mf">1e-4</span><span class="n">f</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">parallel</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
     <span class="kt">uint32_t</span> <span class="n">seed</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-    <span class="kt">int</span> <span class="n">block_size</span> <span class="o">=</span> <span class="mi">32</span><span class="p">;</span>
-    <span class="kt">int</span> <span class="n">batch_size</span> <span class="o">=</span> <span class="mi">16</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -6809,23 +7022,20 @@ This is a hack, but works better than not doing it.</p>
 <p>Rendering params.</p>
 <ul>
 <li>Members:<ul>
-<li>width:      Image width.</li>
-<li>height:      Image height.</li>
-<li>nsamples:      Number of samples.</li>
-<li>stype:      Sampler type.</li>
-<li>shadow_notransmission:      Wheter to test transmission in shadows.</li>
-<li>rtype:      Random number generation type.</li>
-<li>ftype:      Filter type.</li>
-<li>ambient:      Ambient lighting.</li>
+<li>resolution:      Image vertical resolution. @refl_uilimits(256,4096)</li>
+<li>nsamples:      Number of samples. @refl_uilimits(16,4096) @refl_shortname(s)</li>
+<li>shader:      Sampler type. @refl_shortname(S)</li>
+<li>rng:      Random number generation type. @refl_shortname(R)</li>
+<li>filter:      Filter type.</li>
+<li>notransmission:      Wheter to test transmission in shadows.</li>
+<li>ambient:      Ambient lighting. @refl_semantic(color)</li>
 <li>envmap_invisible:      View environment map.</li>
-<li>min_depth:      Minimum ray depth.</li>
-<li>max_depth:      Maximum ray depth.</li>
-<li>pixel_clamp:      Final pixel clamping.</li>
-<li>ray_eps:      Ray intersection epsilon.</li>
+<li>min_depth:      Minimum ray depth. @refl_uilimits(1,10)</li>
+<li>max_depth:      Maximum ray depth. @refl_uilimits(1,10)</li>
+<li>pixel_clamp:      Final pixel clamping. @refl_uilimits(1,10)</li>
+<li>ray_eps:      Ray intersection epsilon. @refl_uilimits(0.0001,0.001)</li>
 <li>parallel:      Parallel execution.</li>
-<li>seed:      Seed for the random number generators.</li>
-<li>block_size:      Block size for parallel batches (probably leave it as is).</li>
-<li>batch_size:      Batch size for progressive rendering.</li>
+<li>seed:      Seed for the random number generators. @refl_uilimits(0,1000)</li>
 </ul>
 </li>
 </ul>
@@ -6898,7 +7108,8 @@ the the public API.</p>
 </li>
 </ul>
 <h4>Function make_trace_pixels()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">image</span><span class="o">&lt;</span><span class="n">trace_pixel</span><span class="o">&gt;</span> <span class="n">make_trace_pixels</span><span class="p">(</span><span class="k">const</span> <span class="n">trace_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">image</span><span class="o">&lt;</span><span class="n">trace_pixel</span><span class="o">&gt;</span> <span class="n">make_trace_pixels</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">image4f</span><span class="o">&amp;</span> <span class="n">img</span><span class="p">,</span> <span class="k">const</span> <span class="n">trace_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -6947,7 +7158,7 @@ the the public API.</p>
 
 
 <p>Stop the asynchronous renderer.</p>
-<p><a id="toc56"></a></p>
+<p><a id="toc57"></a></p>
 <h3>Path tracing type support</h3>
 <h4>Function enum_names&lt;trace_shader_type>()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;&gt;</span>
@@ -6973,7 +7184,14 @@ the the public API.</p>
 
 
 <p>Names of enum values.</p>
-<p><a id="toc57"></a></p>
+<h4>Function visit()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">trace_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<p><a id="toc58"></a></p>
 <h3>Wavefront OBJ</h3>
 <h4>Struct obj_vertex</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">obj_vertex</span> <span class="p">{</span>
@@ -7316,7 +7534,7 @@ Texture coordinates and material Tr are flipped if <code>flip_texcoord</code> an
 and report errors only if <code>skip_missing</code> is false.
 Texture coordinates and material Tr are flipped if <code>flip_texcoord</code> and
 <code>flip_tp</code> are respectively true.</p>
-<p><a id="toc58"></a></p>
+<p><a id="toc59"></a></p>
 <h3>Khronos glTF</h3>
 <h4>Typedef buffer_data</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">buffer_data</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;</span><span class="p">;</span>
@@ -8375,7 +8593,7 @@ if <code>load_bin</code> and <code>load_img</code> are true, reporting errors on
 </ul>
 </li>
 </ul>
-<p><a id="toc59"></a></p>
+<p><a id="toc60"></a></p>
 <h3>Svg</h3>
 <h4>Struct svg_path</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">svg_path</span> <span class="p">{</span>
@@ -8435,7 +8653,7 @@ if <code>load_bin</code> and <code>load_img</code> are true, reporting errors on
 
 
 <p>Save an SVG.</p>
-<p><a id="toc60"></a></p>
+<p><a id="toc61"></a></p>
 <h3>String, path and file functions</h3>
 <h4>Function startswith()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">startswith</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">substr</span><span class="p">);</span>
@@ -8623,7 +8841,7 @@ is not fast nor memory efficient. But it is good enough for some needs.</p>
 
 
 <p>Wrapper for the above function that prints to stdout with endline.</p>
-<p><a id="toc61"></a></p>
+<p><a id="toc62"></a></p>
 <h3>File loading and saving</h3>
 <h4>Function load_binary()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;</span> <span class="n">load_binary</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
@@ -8650,14 +8868,8 @@ is not fast nor memory efficient. But it is good enough for some needs.</p>
 
 
 <p>Saves a string to a text file.</p>
-<p><a id="toc62"></a></p>
+<p><a id="toc63"></a></p>
 <h3>Immediate-mode command line parser</h3>
-<h4>Struct cmdline_parser</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">cmdline_parser</span><span class="p">;</span>
-</code></pre></div>
-
-
-<p>Immediate mode command line parser (opaque type)</p>
 <h4>Struct cmdline_parser</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">cmdline_parser</span> <span class="p">{</span>
 </code></pre></div>
@@ -8702,6 +8914,31 @@ is not fast nor memory efficient. But it is good enough for some needs.</p>
 
 
 <p>Parse an enum option from the command line.</p>
+<h4>Function parse_arg()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">T</span> <span class="n">parse_arg</span><span class="p">(</span><span class="n">cmdline_parser</span><span class="o">&amp;</span> <span class="n">parser</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">def</span> <span class="o">=</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Parse positional argument from the command line.</p>
+<h4>Function parse_args()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">parse_args</span><span class="p">(</span><span class="n">cmdline_parser</span><span class="o">&amp;</span> <span class="n">parser</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">def</span> <span class="o">=</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Parse all remaining positional argument from the command line.</p>
+<h4>Function parse_params()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">T</span> <span class="n">parse_params</span><span class="p">(</span><span class="n">cmdline_parser</span><span class="o">&amp;</span> <span class="n">parser</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">def</span> <span class="o">=</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Parse options generated with a visit over the parameters</p>
 <h4>Function make_parser()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">cmdline_parser</span> <span class="nf">make_parser</span><span class="p">(</span>
     <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span><span class="o">**</span> <span class="n">argv</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">);</span>
@@ -8709,7 +8946,7 @@ is not fast nor memory efficient. But it is good enough for some needs.</p>
 
 
 <p>Initialize a command line parser.</p>
-<p><a id="toc63"></a></p>
+<p><a id="toc64"></a></p>
 <h3>Simple logging</h3>
 <h4>Struct logger</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">logger</span> <span class="p">{</span>
@@ -8796,7 +9033,7 @@ and the specified verbosity level.</p>
 
 
 <p>Logs a message to the default loggers.</p>
-<p><a id="toc64"></a></p>
+<p><a id="toc65"></a></p>
 <h3>Simple timer</h3>
 <h4>Struct timer</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">timer</span> <span class="p">{</span>
@@ -8818,7 +9055,7 @@ and the specified verbosity level.</p>
 </ul>
 </li>
 </ul>
-<p><a id="toc65"></a></p>
+<p><a id="toc66"></a></p>
 <h3>OpenGL utilities</h3>
 <h4>Enum gl_elem_type : int</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="nl">gl_elem_type</span> <span class="p">:</span> <span class="kt">int</span> <span class="p">{</span>
@@ -8939,7 +9176,7 @@ and the specified verbosity level.</p>
 
 
 <p>Reads an image from the the framebuffer.</p>
-<p><a id="toc66"></a></p>
+<p><a id="toc67"></a></p>
 <h3>OpenGL textures</h3>
 <h4>Struct gl_texture</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_texture</span> <span class="p">{</span>
@@ -9111,7 +9348,7 @@ Internally use float if as_float and filtering if filter.</p>
 </ul>
 </li>
 </ul>
-<p><a id="toc67"></a></p>
+<p><a id="toc68"></a></p>
 <h3>OpenGL vertex array buffers</h3>
 <h4>Struct gl_vertex_buffer</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_vertex_buffer</span> <span class="p">{</span>
@@ -9233,7 +9470,7 @@ Internally use float if as_float and filtering if filter.</p>
 
 
 <p>Destroys the buffer.</p>
-<p><a id="toc68"></a></p>
+<p><a id="toc69"></a></p>
 <h3>OpenGL element array buffers</h3>
 <h4>Struct gl_element_buffer</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_element_buffer</span> <span class="p">{</span>
@@ -9320,7 +9557,7 @@ Internally use float if as_float and filtering if filter.</p>
 
 
 <p>Destroys the buffer</p>
-<p><a id="toc69"></a></p>
+<p><a id="toc70"></a></p>
 <h3>OpenGL programs</h3>
 <h4>Struct gl_program</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_program</span> <span class="p">{</span>
@@ -9587,7 +9824,7 @@ empty.</p>
 
 
 <p>Unbind a program.</p>
-<p><a id="toc70"></a></p>
+<p><a id="toc71"></a></p>
 <h3>OpenGL scene shader support</h3>
 <h4>Struct gl_shape</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_shape</span> <span class="p">{</span>
@@ -9635,7 +9872,7 @@ empty.</p>
 
 
 <p>Update scene shapes on the GPU.</p>
-<p><a id="toc71"></a></p>
+<p><a id="toc72"></a></p>
 <h3>OpenGL image shader</h3>
 <h4>Struct gl_stdimage_program</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_stdimage_program</span> <span class="p">{</span>
@@ -9676,7 +9913,6 @@ empty.</p>
 <p>Draws an image texture the stdimage program.</p>
 <h4>Struct gl_stdimage_params</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_stdimage_params</span> <span class="p">{</span>
-    <span class="n">vec2i</span> <span class="n">win_size</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
     <span class="n">vec2f</span> <span class="n">offset</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
     <span class="kt">float</span> <span class="n">zoom</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">exposure</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
@@ -9690,24 +9926,24 @@ empty.</p>
 <p>Params for stdimage drawing.</p>
 <ul>
 <li>Members:<ul>
-<li>win_size:      Window size.</li>
-<li>offset:      Image offset.</li>
-<li>zoom:      Image zoom.</li>
-<li>exposure:      Tonemap exposure.</li>
-<li>gamma:      Tonemap gamma.</li>
-<li>filmic:      Tonemap filmic.</li>
-<li>background:      Image background.</li>
+<li>offset:      Image offset. @refl_uilimits(-4096, 4096)</li>
+<li>zoom:      Image zoom. @refl_uilimits(0.01, 10)</li>
+<li>exposure:      Hdr exposure. @refl_uilimits(-10, 10) @refl_shortname(e)</li>
+<li>gamma:      Hdr gamma. @refl_uilimits(0.1,3) @refl_shortname(g)</li>
+<li>filmic:      Hdr filmic tonemapping. @refl_shortname(F)</li>
+<li>background:      Image background. @refl_semantic(color)</li>
 </ul>
 </li>
 </ul>
 <h4>Function draw_image()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">draw_image</span><span class="p">(</span><span class="n">gl_stdimage_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_texture</span><span class="o">&amp;</span> <span class="n">txt</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">gl_stdimage_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">clear_background</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">win_size</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_stdimage_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">clear_background</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Draws an image texture the stdimage program.</p>
-<p><a id="toc72"></a></p>
+<p><a id="toc73"></a></p>
 <h3>OpenGL surface shader</h3>
 <h4>Struct gl_stdsurface_program</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_stdsurface_program</span> <span class="p">{</span>
@@ -9845,8 +10081,7 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 <p>Disables vertex skinning.</p>
 <h4>Struct gl_stdsurface_params</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_stdsurface_params</span> <span class="p">{</span>
-    <span class="kt">int</span> <span class="n">width</span> <span class="o">=</span> <span class="mi">360</span><span class="p">;</span>
-    <span class="kt">int</span> <span class="n">height</span> <span class="o">=</span> <span class="mi">360</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">resolution</span> <span class="o">=</span> <span class="mi">512</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">exposure</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">gamma</span> <span class="o">=</span> <span class="mf">2.2f</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">filmic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
@@ -9854,7 +10089,7 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
     <span class="kt">bool</span> <span class="n">edges</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">edge_offset</span> <span class="o">=</span> <span class="mf">0.01f</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">cutout</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
-    <span class="kt">bool</span> <span class="n">camera_lights</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">eyelight</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="n">vec4f</span> <span class="n">background</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
     <span class="n">vec3f</span> <span class="n">ambient</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
     <span class="kt">void</span><span class="o">*</span> <span class="n">highlighted</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
@@ -9868,21 +10103,20 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 <p>Params for stdsurface drawing.</p>
 <ul>
 <li>Members:<ul>
-<li>width:      Image width.</li>
-<li>height:      Image height.</li>
-<li>exposure:      Image exposure.</li>
-<li>gamma:      Image gamma.</li>
-<li>filmic:      Image filmic tonemapping.</li>
+<li>resolution:      Image resolution. @refl_uilimits(256, 4096)</li>
+<li>exposure:      Image exposure. @refl_uilimits(-10, 10) @refl_shortname(e)</li>
+<li>gamma:      Image gamma. @refl_uilimits(0.1, 3) @refl_shortname(g)</li>
+<li>filmic:      Image filmic tonemapping. @refl_shortname(F)</li>
 <li>wireframe:      Draw as wireframe.</li>
 <li>edges:      Draw with overlaid edges</li>
-<li>edge_offset:      Offset for edges.</li>
-<li>cutout:      Draw with an alpha cutout for binary transparency.</li>
-<li>camera_lights:      Camera light mode.</li>
-<li>background:      Window background.</li>
-<li>ambient:      Ambient illumination.</li>
-<li>highlighted:      Highlighted object.</li>
-<li>highlight_color:      Highlight color.</li>
-<li>edge_color:      Edge color.</li>
+<li>edge_offset:      Offset for edges. @refl_uilimits(0, 0.1)</li>
+<li>cutout:      Draw with for binary transparency.</li>
+<li>eyelight:      Camera light mode.</li>
+<li>background:      Window background. @refl_semantic(color)</li>
+<li>ambient:      Ambient illumination. @refl_semantic(color)</li>
+<li>highlighted:      Highlighted object. @refl_semantic(noneditable)</li>
+<li>highlight_color:      Highlight color. @refl_semantic(color)</li>
+<li>edge_color:      Edge color. @refl_semantic(color)</li>
 <li>cull_backface:      Cull back face.</li>
 </ul>
 </li>
@@ -9891,12 +10125,28 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_stdsurface_scene</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">camera</span><span class="o">*</span> <span class="n">cam</span><span class="p">,</span>
     <span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">*</span><span class="p">,</span> <span class="n">gl_shape</span><span class="o">&gt;&amp;</span> <span class="n">shapes</span><span class="p">,</span>
     <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">*</span><span class="p">,</span> <span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">textures</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_lights</span><span class="o">&amp;</span> <span class="n">lights</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">gl_stdsurface_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">viewport_size</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_stdsurface_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Draw scene with stdsurface program.</p>
-<p><a id="toc73"></a></p>
+<p><a id="toc74"></a></p>
+<h3>OpenGL standard shaders type support</h3>
+<h4>Function visit()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">gl_stdimage_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<h4>Function visit()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">gl_stdsurface_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
+<p><a id="toc75"></a></p>
 <h3>OpenGL window</h3>
 <h4>Function void()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">typedef</span> <span class="nf">void</span> <span class="p">(</span><span class="o">*</span><span class="n">gl_text_callback</span><span class="p">)(</span><span class="n">gl_window</span><span class="o">*</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span><span class="p">);</span>
@@ -10033,7 +10283,7 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 
 
 <p>Handle camera navigation.</p>
-<p><a id="toc74"></a></p>
+<p><a id="toc76"></a></p>
 <h3>OpenGL widgets</h3>
 <h4>Function init_widgets()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">init_widgets</span><span class="p">(</span>
@@ -10107,93 +10357,95 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 
 
 <p>Label widget.</p>
-<h4>Function draw_label_widget()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">draw_label_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vals</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">skip_empty</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+<h4>Function draw_checkbox_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_checkbox_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="kt">bool</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Label widget.</p>
-<h4>Function draw_value_widget()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="kt">bool</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">);</span>
+<p>Checkbox widget</p>
+<h4>Function draw_text_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_text_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Value widget</p>
-<h4>Function draw_value_widget()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_value_widget</span><span class="p">(</span>
-    <span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">);</span>
+<p>Text widget.</p>
+<h4>Function draw_slider_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_slider_widget</span><span class="p">(</span>
+    <span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">int</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">1</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Value widget.</p>
-<h4>Function draw_value_widget()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="kt">int</span><span class="o">*</span> <span class="n">val</span><span class="p">,</span>
-    <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span> <span class="kt">int</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">int</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="kt">int</span> <span class="n">incr</span> <span class="o">=</span> <span class="mi">1</span><span class="p">);</span>
+<p>Slider widget.</p>
+<h4>Function draw_slider_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_slider_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">int</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">1</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Value widget.</p>
-<h4>Function draw_value_widget()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="kt">float</span><span class="o">*</span> <span class="n">val</span><span class="p">,</span>
-    <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span> <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="kt">float</span> <span class="n">incr</span> <span class="o">=</span> <span class="mi">1</span><span class="p">);</span>
+<p>Slider widget.</p>
+<h4>Function draw_slider_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_slider_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">vec3i</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">int</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">1</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Value widget.</p>
-<h4>Function draw_value_widget()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span>
-    <span class="kt">int</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">int</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="kt">int</span> <span class="n">incr</span> <span class="o">=</span> <span class="mi">1</span><span class="p">);</span>
+<p>Slider widget.</p>
+<h4>Function draw_slider_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_slider_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">vec4i</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">int</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">1</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Value widget.</p>
-<h4>Function draw_value_widget()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
-    <span class="kt">float</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="kt">float</span> <span class="n">incr</span> <span class="o">=</span> <span class="mi">1</span><span class="p">);</span>
+<p>Slider widget.</p>
+<h4>Function draw_slider_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_slider_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="kt">float</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span>
+    <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">1</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Value widget.</p>
-<h4>Function draw_value_widget()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
-    <span class="n">vec</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">int</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="kt">int</span> <span class="n">incr</span> <span class="o">=</span> <span class="mi">1</span><span class="p">);</span>
+<p>Slider widget.</p>
+<h4>Function draw_slider_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_slider_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span>
+    <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">1</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Value widget.</p>
-<h4>Function draw_value_widget()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
-    <span class="n">vec</span><span class="o">&lt;</span><span class="kt">float</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="kt">float</span> <span class="n">incr</span> <span class="o">=</span> <span class="mf">0.01f</span><span class="p">);</span>
+<p>Slider widget.</p>
+<h4>Function draw_slider_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_slider_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span>
+    <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">1</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Value widget.</p>
-<h4>Function draw_value_widget()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
-    <span class="n">mat</span><span class="o">&lt;</span><span class="kt">float</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="kt">float</span> <span class="n">incr</span> <span class="o">=</span> <span class="mf">0.01f</span><span class="p">);</span>
+<p>Slider widget.</p>
+<h4>Function draw_slider_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_slider_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span>
+    <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">1</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Value widget.</p>
-<h4>Function draw_value_widget()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
-    <span class="n">frame</span><span class="o">&lt;</span><span class="kt">float</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span> <span class="kt">float</span> <span class="n">incr</span> <span class="o">=</span> <span class="mf">0.01f</span><span class="p">);</span>
+<p>Slider widget.</p>
+<h4>Function draw_slider_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_slider_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
+    <span class="n">mat</span><span class="o">&lt;</span><span class="kt">float</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">1</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Value widget.</p>
-<h4>Function draw_value_widget()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
-    <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="kt">float</span> <span class="n">incr</span> <span class="o">=</span> <span class="mf">0.01f</span><span class="p">);</span>
+<p>Slider widget.</p>
+<h4>Function draw_slider_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_slider_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
+    <span class="n">frame</span><span class="o">&lt;</span><span class="kt">float</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">10</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Value widget.</p>
+<p>Slider widget.</p>
+<h4>Function draw_slider_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_slider_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">quat4f</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span>
+    <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">1</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Slider widget.</p>
 <h4>Function draw_color_widget()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_color_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">);</span>
 </code></pre></div>
@@ -10240,33 +10492,33 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 
 
 <p>Combo widget.</p>
-<h4>Function draw_value_widget()</h4>
+<h4>Function draw_combo_widget()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">draw_combo_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T1</span><span class="o">&gt;&amp;</span> <span class="n">vals</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">function</span><span class="o">&lt;</span><span class="n">T</span><span class="p">(</span><span class="k">const</span> <span class="n">T1</span><span class="o">&amp;</span><span class="p">)</span><span class="o">&gt;&amp;</span> <span class="n">value_func</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">function</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">(</span><span class="k">const</span> <span class="n">T1</span><span class="o">&amp;</span><span class="p">)</span><span class="o">&gt;&amp;</span> <span class="n">label_func</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Combo widget.</p>
-<h4>Function draw_value_widget()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
+<h4>Function draw_combo_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">draw_combo_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;&amp;</span> <span class="n">labels</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Combo widget.</p>
-<h4>Function draw_value_widget()</h4>
+<h4>Function draw_combo_widget()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">draw_combo_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">T</span><span class="o">&gt;&gt;&amp;</span> <span class="n">labels</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Combo widget.</p>
-<h4>Function draw_value_widget()</h4>
+<h4>Function draw_combo_widget()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">T</span><span class="o">*&amp;</span> <span class="n">val</span><span class="p">,</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">draw_combo_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">T</span><span class="o">*&amp;</span> <span class="n">val</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">*&gt;&amp;</span> <span class="n">vals</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">extra</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span> <span class="n">T</span><span class="o">*</span> <span class="n">extra_val</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
 </code></pre></div>
 
@@ -10398,35 +10650,140 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 
 
 <p>Group ids widget.</p>
-<h4>Function draw_tonemap_widgets()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">draw_tonemap_widgets</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
-    <span class="kt">float</span><span class="o">&amp;</span> <span class="n">exposure</span><span class="p">,</span> <span class="kt">float</span><span class="o">&amp;</span> <span class="n">gamma</span><span class="p">,</span> <span class="kt">bool</span><span class="o">&amp;</span> <span class="n">filmic</span><span class="p">);</span>
+<h4>Function draw_value_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="kt">bool</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span>
+    <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">color</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Tonemapping widgets.</p>
-<h4>Function draw_imageview_widgets()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">draw_imageview_widgets</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
-    <span class="n">gl_stdimage_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">show_tonemap</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
+<p>Generic widget used for templated code. Min, max and color are ignored.</p>
+<h4>Function draw_value_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">color</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Image view widgets.</p>
+<p>Generic widget used for templated code. Min, max and color are ignored.</p>
+<h4>Function draw_value_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span>
+    <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">color</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Generic widget used for templated code. Uses min and max,
+or a deafult range when their are the same. Color is ignored.</p>
+<h4>Function draw_value_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
+    <span class="n">vec</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">color</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Generic widget used for templated code. Uses min and max,
+or a deafult range when their are the same. Color is ignored.</p>
+<h4>Function draw_value_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
+    <span class="kt">float</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">color</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Generic widget used for templated code. Uses min and max,
+or a deafult range when their are the same. Color is ignored.</p>
+<h4>Function draw_value_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
+    <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">color</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Generic widget used for templated code. Uses min and max,
+or a deafult range when their are the same. Color is ignored.</p>
+<h4>Function draw_value_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
+    <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">color</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Generic widget used for templated code. Uses min and max,
+or a deafult range when their are the same.</p>
+<h4>Function draw_value_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
+    <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">color</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Generic widget used for templated code. Uses min and max,
+or a deafult range when their are the same.</p>
+<h4>Function draw_value_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
+    <span class="n">frame3f</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">color</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Generic widget used for templated code. Uses min and max for frame origin,
+or a deafult range when their are the same. Color is ignored.</p>
+<h4>Function draw_value_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
+    <span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">color</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Generic widget used for templated code. Uses min and max,
+or a deafult range when their are the same. Color is ignored.</p>
+<h4>Function draw_value_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
+    <span class="n">quat4f</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">color</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Generic widget used for templated code. Uses min and max,
+or a deafult range when their are the same. Color is ignored.</p>
+<h4>Constant int>::type</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span>
+    <span class="k">typename</span> <span class="n">std</span><span class="o">::</span><span class="n">enable_if</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">is_enum</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;::</span><span class="n">value</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;::</span><span class="n">type</span> <span class="o">=</span> <span class="mi">0</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span>
+    <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">color</span> <span class="o">=</span> <span class="nb">false</span><span class="p">)</span> <span class="p">{</span>
+</code></pre></div>
+
+
+<p>Generic widget used for templated code. Min, max and color are ignored.</p>
+<h4>Function draw_value_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
+    <span class="kt">uint32_t</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">color</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Generic widget used for templated code. Internally convert to int loosing
+precision. See the int version.</p>
 <h4>Function draw_imageinspect_widgets()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">draw_imageinspect_widgets</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_imageinspect_widgets</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">image4f</span><span class="o">&amp;</span> <span class="n">hdr</span><span class="p">,</span> <span class="k">const</span> <span class="n">image4b</span><span class="o">&amp;</span> <span class="n">ldr</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">mouse_pos</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">gl_stdimage_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Image inspection widgets.</p>
-<h4>Function draw_camera_widget()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">draw_camera_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
+<h4>Function draw_params_widgets()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">draw_params_widgets</span><span class="p">(</span>
+    <span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Draws a widget that sets params in non-recursive trivial structures.
+Internally uses visit to implement the view.</p>
+<h4>Function draw_camera_selection_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">draw_camera_selection_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
     <span class="n">camera</span><span class="o">*&amp;</span> <span class="n">cam</span><span class="p">,</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">camera</span><span class="o">*</span> <span class="n">view</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Draws a widget that can selected the camera.</p>
+<h4>Function draw_camera_widgets()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_camera_widgets</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">camera</span><span class="o">*</span> <span class="n">cam</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Draws widgets for a camera. Used for quickly making demos.</p>
 <h4>Function draw_scene_widgets()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_scene_widgets</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span>
     <span class="kt">void</span><span class="o">*&amp;</span> <span class="n">selection</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">*</span><span class="p">,</span> <span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">gl_txt</span><span class="p">,</span>

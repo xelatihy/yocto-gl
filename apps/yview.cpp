@@ -60,8 +60,7 @@ inline void draw(ygl::gl_window* win) {
     auto app = (app_state*)get_user_pointer(win);
 
     auto framebuffer_size = get_framebuffer_size(win);
-    app->params.width = framebuffer_size.x;
-    app->params.height = framebuffer_size.y;
+    app->params.resolution = framebuffer_size.y;
 
     ygl::update_transforms(app->scn, app->time);
     app->lights = ygl::make_gl_lights(app->scn);
@@ -75,10 +74,10 @@ inline void draw(ygl::gl_window* win) {
     ygl::gl_enable_depth_test(true);
     ygl::gl_enable_culling(app->params.cull_backface);
     ygl::draw_stdsurface_scene(app->scn, app->cam, app->prog, app->shapes,
-        app->textures, app->lights, app->params);
+        app->textures, app->lights, framebuffer_size, app->params);
 
     if (ygl::begin_widgets(win, "yview")) {
-        if (ygl::draw_header_widget(win, "file")) {
+        if (ygl::draw_header_widget(win, "view")) {
             ygl::draw_value_widget(win, "scene", app->filename);
             if (ygl::draw_button_widget(win, "new")) {
                 app->edit_params = ygl::test_scene_presets().at("plane_al");
@@ -104,8 +103,6 @@ inline void draw(ygl::gl_window* win) {
                     ygl::replace_path_extension(app->filename, ".json"),
                     app->edit_params);
             }
-        }
-        if (ygl::draw_header_widget(win, "view")) {
             ygl::draw_camera_selection_widget(
                 win, "camera", app->cam, app->scn, app->view);
             ygl::draw_value_widget(win, "fps", app->navigation_fps);
@@ -115,14 +112,18 @@ inline void draw(ygl::gl_window* win) {
                 ygl::draw_value_widget(win, "animate", app->animate);
             }
         }
-        ygl::draw_params_widgets(win, "params", app->params);
-        if (ygl::draw_scene_widgets(win, "scene", app->scn, app->selection,
-                app->textures, &app->edit_params)) {
-            ygl::update_textures(
-                app->scn, app->textures, {(ygl::texture*)app->selection});
-            ygl::update_shapes(app->scn, app->shapes,
-                {(ygl::shape*)app->selection},
-                {(ygl::shape_group*)app->selection});
+        if (ygl::draw_header_widget(win, "params")) {
+            ygl::draw_params_widgets(win, "", app->params);
+        }
+        if (ygl::draw_header_widget(win, "scene")) {
+            if (ygl::draw_scene_widgets(win, "", app->scn, app->selection,
+                    app->textures, &app->edit_params)) {
+                ygl::update_textures(
+                    app->scn, app->textures, {(ygl::texture*)app->selection});
+                ygl::update_shapes(app->scn, app->shapes,
+                    {(ygl::shape*)app->selection},
+                    {(ygl::shape_group*)app->selection});
+            }
         }
     }
     ygl::end_widgets(win);
@@ -134,7 +135,8 @@ inline void draw(ygl::gl_window* win) {
 void run_ui(app_state* app) {
     // window
     auto win = ygl::make_window(
-        app->params.width, app->params.height, "yview | " + app->filename, app);
+        (int)std::round(app->cam->aspect * app->params.resolution),
+        app->params.resolution, "yview | " + app->filename, app);
     ygl::set_window_callbacks(win, nullptr, nullptr, draw);
 
     // load textures and vbos
@@ -179,8 +181,8 @@ int main(int argc, char* argv[]) {
     app->params = ygl::parse_params(parser, "", app->params);
     auto preserve_quads = ygl::parse_flag(
         parser, "--preserve-quads", "-q", "Preserve quads on load");
-    auto preserve_facevarying = ygl::parse_flag(parser,
-        "--preserve-facevarying", "-f", "Preserve facevarying on load");
+    auto preserve_facevarying = ygl::parse_flag(
+        parser, "--preserve-facevarying", "-f", "Preserve facevarying on load");
     app->imfilename = ygl::parse_opt(
         parser, "--output-image", "-o", "Image filename", "out.hdr"s);
     app->filename = ygl::parse_arg(parser, "scene", "Scene filename", ""s);
@@ -220,7 +222,6 @@ int main(int argc, char* argv[]) {
     app->lights = ygl::make_gl_lights(app->scn);
 
     // run ui
-    app->params.width = (int)round(app->cam->aspect * app->params.height);
     run_ui(app);
 
     // clear

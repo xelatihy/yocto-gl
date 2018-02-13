@@ -81,14 +81,6 @@
 // - persist props
 // - share texture info accross GPU/tracer/scene
 // - make texture info more complete with mirroring and mipmapping
-// - cleanup visitor
-//     - check ytrace cmdline
-//     - check yitrace cmdline
-//     - check yview cmdline
-//     - check yimview cmdline
-//     - check yitrace ui
-//     - check yview ui
-//     - check yimview ui
 // - tonemap params to put everywhere
 //
 // - serialization with visitor
@@ -3195,6 +3187,16 @@ ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv) {
         h * cam->focus * (uv.y - 0.5f), -cam->focus};
     return ray3f(transform_point(cam->frame, o),
         transform_direction(cam->frame, normalize(q - o)));
+}
+
+// Generates a ray from a camera for pixel coordinates `ij`, the resolution
+// `res`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and the
+// image resolution `res`.
+ray3f eval_camera_ray(const camera* cam, const vec2i& ij, int res,
+    const vec2f& puv, const vec2f& luv) {
+    auto uv =
+        vec2f{(ij.x + puv.x) / (cam->aspect * res), (1 - ij.y - puv.y) / res};
+    return eval_camera_ray(cam, uv, luv);
 }
 
 // Subdivides shape elements.
@@ -6588,8 +6590,8 @@ void trace_sample(const scene* scn, const camera* cam, const bvh_tree* bvh,
     pxl.dimension = 0;
     auto crn = sample_next2f(pxl, params.rng, params.nsamples);
     auto lrn = sample_next2f(pxl, params.rng, params.nsamples);
-    auto uv = vec2f{
-        (pxl.i + crn.x) / params.width, 1 - (pxl.j + crn.y) / params.height};
+    auto uv = vec2f{(pxl.i + crn.x) / (cam->aspect * params.resolution),
+        1 - (pxl.j + crn.y) / params.resolution};
     auto ray = eval_camera_ray(cam, uv, lrn);
     auto pt = intersect_scene(scn, bvh, ray);
     if (!pt.shp && params.envmap_invisible) return;
@@ -6613,8 +6615,8 @@ void trace_samples(const scene* scn, const camera* cam, const bvh_tree* bvh,
         auto threads = std::vector<std::thread>();
         for (auto tid = 0; tid < std::thread::hardware_concurrency(); tid++) {
             threads.push_back(std::thread([=, &img, &pixels, &params]() {
-                for (auto j = tid; j < params.height; j += nthreads) {
-                    for (auto i = 0; i < params.width; i++) {
+                for (auto j = tid; j < img.height(); j += nthreads) {
+                    for (auto i = 0; i < img.width(); i++) {
                         auto& pxl = pixels.at(i, j);
                         for (auto s = 0; s < nsamples; s++)
                             trace_sample(
@@ -6630,8 +6632,8 @@ void trace_samples(const scene* scn, const camera* cam, const bvh_tree* bvh,
         threads.clear();
     } else {
         auto shader = trace_shaders.at(params.shader);
-        for (auto j = 0; j < params.height; j++) {
-            for (auto i = 0; i < params.width; i++) {
+        for (auto j = 0; j < img.height(); j++) {
+            for (auto i = 0; i < img.width(); i++) {
                 auto& pxl = pixels.at(i, j);
                 for (auto s = 0; s < params.nsamples; s++)
                     trace_sample(scn, cam, bvh, lights, pxl, shader, params);
@@ -6645,15 +6647,15 @@ void trace_samples(const scene* scn, const camera* cam, const bvh_tree* bvh,
 
 // Trace a filtered sample of samples
 void trace_sample_filtered(const scene* scn, const camera* cam,
-    const bvh_tree* bvh, const trace_lights& lights, trace_pixel& pxl,
-    trace_shader shader, trace_filter filter, int filter_size,
+    const bvh_tree* bvh, const trace_lights& lights, image4f& img,
+    trace_pixel& pxl, trace_shader shader, trace_filter filter, int filter_size,
     std::mutex& image_mutex, const trace_params& params) {
     pxl.sample += 1;
     pxl.dimension = 0;
     auto crn = sample_next2f(pxl, params.rng, params.nsamples);
     auto lrn = sample_next2f(pxl, params.rng, params.nsamples);
-    auto uv = vec2f{
-        (pxl.i + crn.x) / params.width, 1 - (pxl.j + crn.y) / params.height};
+    auto uv = vec2f{(pxl.i + crn.x) / (cam->aspect * params.resolution),
+        1 - (pxl.j + crn.y) / params.resolution};
     auto ray = eval_camera_ray(cam, uv, lrn);
     auto pt = intersect_scene(scn, bvh, ray);
     if (!pt.shp && params.envmap_invisible) return;
@@ -6670,9 +6672,9 @@ void trace_sample_filtered(const scene* scn, const camera* cam,
     } else {
         std::lock_guard<std::mutex> lock(image_mutex);
         for (auto fj = max(0, pxl.j - filter_size);
-             fj <= min(params.height - 1, pxl.j + filter_size); fj++) {
+             fj <= min(img.height() - 1, pxl.j + filter_size); fj++) {
             for (auto fi = max(0, pxl.i - filter_size);
-                 fi <= min(params.width - 1, pxl.i + filter_size); fi++) {
+                 fi <= min(img.width() - 1, pxl.i + filter_size); fi++) {
                 auto w = filter((fi - pxl.i) - uv.x + 0.5f) *
                          filter((fj - pxl.j) - uv.y + 0.5f);
                 pxl.col += l * w;
@@ -6696,13 +6698,13 @@ void trace_samples_filtered(const scene* scn, const camera* cam,
         auto threads = std::vector<std::thread>();
         for (auto tid = 0; tid < std::thread::hardware_concurrency(); tid++) {
             threads.push_back(
-                std::thread([=, &pixels, &params, &image_mutex]() {
-                    for (auto j = tid; j < params.height; j += nthreads) {
-                        for (auto i = 0; i < params.width; i++) {
+                std::thread([=, &pixels, &params, &image_mutex, &img]() {
+                    for (auto j = tid; j < img.height(); j += nthreads) {
+                        for (auto i = 0; i < img.width(); i++) {
                             auto& pxl = pixels.at(i, j);
                             for (auto s = 0; s < nsamples; s++) {
                                 trace_sample_filtered(scn, cam, bvh, lights,
-                                    pxl, shader, filter, filter_size,
+                                    img, pxl, shader, filter, filter_size,
                                     image_mutex, params);
                             }
                         }
@@ -6712,18 +6714,18 @@ void trace_samples_filtered(const scene* scn, const camera* cam,
         for (auto& t : threads) t.join();
         threads.clear();
     } else {
-        for (auto j = 0; j < params.height; j++) {
-            for (auto i = 0; i < params.width; i++) {
+        for (auto j = 0; j < img.height(); j++) {
+            for (auto i = 0; i < img.width(); i++) {
                 auto& pxl = pixels.at(i, j);
                 for (auto s = 0; s < params.nsamples; s++) {
-                    trace_sample_filtered(scn, cam, bvh, lights, pxl, shader,
-                        filter, filter_size, image_mutex, params);
+                    trace_sample_filtered(scn, cam, bvh, lights, img, pxl,
+                        shader, filter, filter_size, image_mutex, params);
                 }
             }
         }
     }
-    for (auto j = 0; j < params.height; j++) {
-        for (auto i = 0; i < params.width; i++) {
+    for (auto j = 0; j < img.height(); j++) {
+        for (auto i = 0; i < img.width(); i++) {
             auto& pxl = pixels.at(i, j);
             img.at(i, j) = {pxl.col.x, pxl.col.y, pxl.col.z, pxl.alpha};
             img.at(i, j) /= pxl.weight;
@@ -6736,14 +6738,14 @@ void trace_async_start(const scene* scn, const camera* cam, const bvh_tree* bvh,
     const trace_lights& lights, image4f& img, image<trace_pixel>& pixels,
     std::vector<std::thread>& threads, bool& stop_flag,
     const trace_params& params) {
-    pixels = make_trace_pixels(params);
+    pixels = make_trace_pixels(img, params);
     auto nthreads = std::thread::hardware_concurrency();
     for (auto tid = 0; tid < std::thread::hardware_concurrency(); tid++) {
         threads.push_back(std::thread([=, &img, &pixels, &stop_flag]() {
             auto shader = trace_shaders.at(params.shader);
             for (auto s = 0; s < params.nsamples; s++) {
-                for (auto j = tid; j < params.height; j += nthreads) {
-                    for (auto i = 0; i < params.width; i++) {
+                for (auto j = tid; j < img.height(); j += nthreads) {
+                    for (auto i = 0; i < img.width(); i++) {
                         if (stop_flag) return;
                         auto& pxl = pixels.at(i, j);
                         trace_sample(
@@ -6800,14 +6802,15 @@ trace_lights make_trace_lights(const scene* scn) {
 }
 
 // Initialize a rendering state
-image<trace_pixel> make_trace_pixels(const trace_params& params) {
-    auto pixels = image<trace_pixel>(params.width, params.height);
-    for (auto j = 0; j < params.height; j++) {
-        for (auto i = 0; i < params.width; i++) {
+image<trace_pixel> make_trace_pixels(
+    const image4f& img, const trace_params& params) {
+    auto pixels = image<trace_pixel>(img.width(), img.height());
+    for (auto j = 0; j < img.height(); j++) {
+        for (auto i = 0; i < img.width(); i++) {
             auto pxl = trace_pixel();
             pxl.i = i;
             pxl.j = j;
-            pxl.rng = init_rng(params.seed, (j * params.width + i) * 2 + 1);
+            pxl.rng = init_rng(params.seed, (j * img.width() + i) * 2 + 1);
             pixels.at(i, j) = pxl;
         }
     }
@@ -12155,8 +12158,8 @@ gl_stdimage_program make_stdimage_program() {
 }
 
 // Draws the stdimage program.
-void draw_image(gl_stdimage_program& prog, const gl_texture& txt, int win_width,
-    int win_height, const vec2f& offset, float zoom, float exposure,
+void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
+    const vec2i& win_size, const vec2f& offset, float zoom, float exposure,
     float gamma, bool filmic) {
     assert(is_texture_valid(txt));
 
@@ -12168,7 +12171,7 @@ void draw_image(gl_stdimage_program& prog, const gl_texture& txt, int win_width,
     bind_texture(txt, 0);
     set_program_uniform(prog.prog, "zoom", zoom);
     set_program_uniform(
-        prog.prog, "win_size", vec2f{(float)win_width, (float)win_height});
+        prog.prog, "win_size", vec2f{(float)win_size.x, (float)win_size.y});
     set_program_uniform(prog.prog, "offset", offset);
     set_program_uniform(prog.prog, "tonemap.filmic", filmic);
     set_program_uniform(prog.prog, "tonemap.exposure", exposure);
@@ -12966,17 +12969,17 @@ void draw_stdsurface_shape(const shape* shp, const mat4f& xform,
 void draw_stdsurface_scene(const scene* scn, const camera* cam,
     gl_stdsurface_program& prog, std::unordered_map<shape*, gl_shape>& shapes,
     std::unordered_map<texture*, gl_texture>& textures, const gl_lights& lights,
-    const gl_stdsurface_params& params) {
+    const vec2i& viewport_size, const gl_stdsurface_params& params) {
     // begin frame
     gl_enable_depth_test(true);
     gl_enable_culling(params.cull_backface);
     gl_enable_wireframe(params.wireframe);
-    gl_set_viewport({params.width, params.height});
+    gl_set_viewport(viewport_size);
 
     auto camera_xform = frame_to_mat(cam->frame);
     auto camera_view = frame_to_mat(inverse(cam->frame));
     auto camera_proj = perspective_mat(cam->yfov,
-        (float)params.width / (float)params.height, cam->near, cam->far);
+        (float)viewport_size.x / (float)viewport_size.y, cam->near, cam->far);
 
     begin_stdsurface_frame(prog, params.eyelight, params.exposure, params.gamma,
         params.filmic, camera_xform, camera_view, camera_proj);
@@ -13589,26 +13592,6 @@ void draw_tree_widget_color_begin(gl_window* win, const vec4f& color) {
 // Text color
 void draw_tree_widget_color_end(gl_window* win) { ImGui::PopStyleColor(); }
 
-// Tonemapping widgets.
-void draw_tonemap_widgets(gl_window* win, const std::string& lbl,
-    float& exposure, float& gamma, bool& filmic) {
-    draw_slider_widget(win, lbl + "exposure", exposure, -10, 10);
-    draw_slider_widget(win, lbl + "gamma", gamma, 0.1, 5);
-    draw_checkbox_widget(win, lbl + "filmic", filmic);
-}
-
-// Image view widgets.
-void draw_imageview_widgets(gl_window* win, const std::string& lbl,
-    gl_stdimage_params& params, bool show_tonemap) {
-    draw_slider_widget(win, lbl + "offset", params.offset);
-    draw_slider_widget(win, lbl + "zoom", params.zoom);
-    draw_color_widget(win, lbl + "background", params.background);
-    if (show_tonemap) {
-        draw_tonemap_widgets(
-            win, lbl, params.exposure, params.gamma, params.filmic);
-    }
-}
-
 // Image inspection widgets.
 void draw_imageinspect_widgets(gl_window* win, const std::string& lbl,
     const image4f& hdr, const image4b& ldr, const vec2f& mouse_pos,
@@ -13623,17 +13606,21 @@ void draw_imageinspect_widgets(gl_window* win, const std::string& lbl,
             v4f = hdr.at(i, j);
             v4b = linear_to_srgb(hdr.at(i, j));
         }
-    }
-    if (!ldr.empty()) {
+    } else if (!ldr.empty()) {
         auto w = ldr.width(), h = ldr.height();
         if (i >= 0 && i < w && j >= 0 && j < h) {
             v4f = srgb_to_linear(ldr.at(i, j));
             v4b = ldr.at(i, j);
         }
     }
-    draw_label_widget(win, lbl + "mouse pos", vec2i{i, j});
-    draw_label_widget(win, lbl + "hdr val", v4f);
-    draw_label_widget(win, lbl + "ldr val", v4b);
+    char buf[1024];
+    sprintf(buf, "%5d %5d", i, j);
+    draw_label_widget(win, lbl + "mouse pos", buf);
+    sprintf(buf, "%4.4g %4.4g %4.4g %4.4g", v4f.x, v4f.y, v4f.z, v4f.w);
+    draw_label_widget(win, lbl + "hdr val", buf);
+    sprintf(
+        buf, "%3d %3d %3d %3d", (int)v4b.x, (int)v4b.y, (int)v4b.z, (int)v4b.w);
+    draw_label_widget(win, lbl + "ldr val", buf);
 }
 
 }  // namespace ygl
@@ -13649,32 +13636,29 @@ struct draw_tree_visitor {
     void*& selection;
 
     template <typename T>
-    void operator()(const char* name, T& val, const visit_sem&) {}
-    void operator()(
-        const char* name, texture_info*& val, const visit_sem& sem) {}
+    void operator()(T& val, const visit_var&) {}
+    void operator()(texture_info*& val, const visit_var&) {}
 
     template <typename T>
-    void operator()(
-        const char* name, std::vector<T*>& val, const visit_sem& sem) {
-        if (draw_tree_widget_begin(win, name)) {
-            for (auto v : val) (*this)("", v, sem);
+    void operator()(std::vector<T*>& val, const visit_var& var) {
+        if (draw_tree_widget_begin(win, var.name)) {
+            for (auto v : val) (*this)(v, var);
             draw_tree_widget_end(win);
         }
     }
 
     template <typename T>
-    void operator()(const char* name, T*& val, const visit_sem& sem) {
+    void operator()(T*& val, const visit_var& var) {
         if (!val) return;
         auto lbl = val->name;
-        if (!std::string(name).empty())
-            lbl = std::string(name) + ": " + val->name;
+        if (!var.name.empty()) lbl = var.name + ": " + val->name;
         if (draw_tree_widget_begin(win, lbl, selection, val)) {
             visit(val, *this);
             draw_tree_widget_end(win);
         }
     }
 
-    void operator()(const char* name, scene*& val, const visit_sem& sem) {
+    void operator()(const char* name, scene*& val, const visit_var& var) {
         visit(val, *this);
     }
 };
@@ -13685,7 +13669,7 @@ void draw_scene_tree_widgets(gl_window* win, const std::string& lbl,
     if (draw_tree_widget_begin(win, lbl)) {
         for (auto elem : elems) {
             auto visitor = draw_tree_visitor{win, selection};
-            visitor("", elem, visit_sem{visit_sem_type::object});
+            visitor("", elem, visit_var{"", visit_var_type::object});
         }
         draw_tree_widget_end(win);
     }
@@ -13694,7 +13678,7 @@ void draw_scene_tree_widgets(gl_window* win, const std::string& lbl,
 void draw_tree_widgets(
     gl_window* win, const std::string& lbl, scene* scn, void*& selection) {
     auto visitor = draw_tree_visitor{win, selection};
-    visitor(lbl.c_str(), scn, visit_sem{visit_sem_type::object});
+    visitor(lbl.c_str(), scn, visit_var{"", visit_var_type::object});
 }
 
 // Implementation of draw elements
@@ -13707,33 +13691,34 @@ struct draw_elem_visitor {
     int edited = 0;
 
     template <typename T>
-    void operator()(const char* name, T& val, const visit_sem& sem) {
-        draw_value_widget(win, name, val, sem.min, sem.max,
-            sem.type == visit_sem_type::color);
+    void operator()(T& val, const visit_var& var) {
+        draw_value_widget(win, var.name, val, var.min, var.max,
+            var.type == visit_var_type::color);
     }
 
-    void operator()(const char* name,
-        std::unordered_map<std::string, basic_variant>& val,
-        const visit_sem& sem) {
+    void operator()(std::unordered_map<std::string, basic_variant>& val,
+        const visit_var& var) {
         for (auto& kv : val) {
-            draw_label_widget(win, name + " "s + kv.first, kv.second);
+            draw_label_widget(win, var.name + " " + kv.first, kv.second);
         }
     }
 
     template <typename T>
-    void operator()(const char* name, optional<T>& val, const visit_sem& sem) {
+    void operator()(optional<T>& val, const visit_var& var) {
         if (!val) {
-            if (draw_button_widget(win, std::string("add ") + name)) val = T{};
+            if (draw_button_widget(win, std::string("add ") + var.name))
+                val = T{};
         } else {
             visit(*val, *this);
-            if (draw_button_widget(win, std::string("del ") + name)) val = {};
+            if (draw_button_widget(win, std::string("del ") + var.name))
+                val = {};
         }
     }
 
-    void operator()(const char* name, texture_info& val, const visit_sem&) {
-        auto lbl = std::string(name);
+    void operator()(texture_info& val, const visit_var& var) {
+        auto lbl = var.name;
         lbl = lbl.substr(0, lbl.size() - 4) + " ";
-        draw_groupid_widget_begin(win, name);
+        draw_groupid_widget_begin(win, &val);
         edited += draw_value_widget(win, lbl + "wrap s", val.wrap_s);
         draw_continue_widget(win);
         edited += draw_value_widget(win, lbl + "wrap t", val.wrap_t);
@@ -13745,34 +13730,32 @@ struct draw_elem_visitor {
     }
 
     template <typename T>
-    void operator()(const char* name, image<T>& val, const visit_sem&) {
+    void operator()(image<T>& val, const visit_var& var) {
         if (empty(val)) return;
         auto size = format("{} x {}", val.width(), val.height());
-        draw_label_widget(win, name, size);
+        draw_label_widget(win, var.name, size);
     }
 
     template <typename T>
-    void operator()(
-        const char* name, std::vector<T*>& val, const visit_sem& sem) {
-        if (sem.type != visit_sem_type::reference) {
+    void operator()(std::vector<T*>& val, const visit_var& var) {
+        if (var.type != visit_var_type::reference) {
             for (auto idx = 0; idx < val.size(); idx++) visit(val[idx], *this);
         }
     }
     template <typename T>
-    void operator()(const char* name, std::vector<T>& val, const visit_sem&) {
+    void operator()(std::vector<T>& val, const visit_var& var) {
         if (val.empty()) return;
-        draw_label_widget(win, name, (int)val.size());
+        draw_label_widget(win, var.name, (int)val.size());
     }
     template <typename T1, typename T2>
-    void operator()(const char* name, std::vector<std::pair<T1*, T2*>>& val,
-        const visit_sem&) {
+    void operator()(std::vector<std::pair<T1*, T2*>>& val, const visit_var&) {
         // TODO
     }
 
     template <typename T>
-    void operator()(const char* name, T*& val, const visit_sem& sem) {
-        if (sem.type == visit_sem_type::reference) {
-            edited += draw_combo_widget(win, name, val, elems(val));
+    void operator()(T*& val, const visit_var& var) {
+        if (var.type == visit_var_type::reference) {
+            edited += draw_combo_widget(win, var.name, val, elems(val));
         } else {
             if (!val) return;
             // TODO: fix this separator
@@ -13818,7 +13801,7 @@ template <typename T>
 bool draw_elem_widgets(gl_window* win, scene* scn, T* val, void*& selection,
     const std::unordered_map<texture*, gl_texture>& gl_txt) {
     auto visitor = draw_elem_visitor{win, scn, nullptr, selection, &gl_txt};
-    visitor("", val, visit_sem{visit_sem_type::object});
+    visitor("", val, visit_var{"", visit_var_type::object});
     return (bool)visitor.edited;
 }
 
@@ -13826,7 +13809,7 @@ template <typename T>
 bool draw_elem_widgets(gl_window* win, test_scene_params* scn, T* val,
     void*& selection, const std::unordered_map<texture*, gl_texture>& gl_txt) {
     auto visitor = draw_elem_visitor{win, nullptr, scn, selection, &gl_txt};
-    visitor("", val, visit_sem{visit_sem_type::object});
+    visitor("", val, visit_var{"", visit_var_type::object});
     return (bool)visitor.edited;
 }
 
@@ -13847,10 +13830,10 @@ bool draw_selected_elem_widgets(gl_window* win, scene* scn,
         if (test_elem.name == selected->name) test_selected = &test_elem;
     auto visitor = draw_elem_visitor{win, scn, test_scn, selection, &gl_txt};
     if (test_selected) {
-        visitor("", test_selected, visit_sem{visit_sem_type::object});
+        visitor(test_selected, visit_var{"", visit_var_type::object});
         if (visitor.edited) update_test_elem(scn, selected, *test_selected);
     }
-    visitor("", selected, visit_sem{visit_sem_type::object});
+    visitor(selected, visit_var{"", visit_var_type::object});
     return (bool)visitor.edited;
 }
 
@@ -13893,62 +13876,59 @@ bool draw_scene_widgets(gl_window* win, const std::string& lbl, scene* scn,
     static auto test_scn_def = test_scene_params();
 
     if (!scn) return false;
-    if (draw_header_widget(win, lbl)) {
-        draw_groupid_widget_begin(win, scn);
-        // draw_scroll_widget_begin(win, "model", 240, false);
-        draw_tree_widgets(win, "", scn, selection);
-        // draw_scroll_widget_end(win);
+    if (!lbl.empty() && !draw_header_widget(win, lbl)) return false;
+    draw_groupid_widget_begin(win, scn);
+    // draw_scroll_widget_begin(win, "model", 240, false);
+    draw_tree_widgets(win, "", scn, selection);
+    // draw_scroll_widget_end(win);
 
-        auto edited = 0;
+    auto edited = 0;
 
-        if (test_scn) {
-            edited += draw_add_elem_widgets(
-                win, scn, "cam", scn->cameras, test_scn->cameras, selection);
-            edited += draw_add_elem_widgets(
-                win, scn, "txt", scn->textures, test_scn->textures, selection);
-            edited += draw_add_elem_widgets(win, scn, "mat", scn->materials,
-                test_scn->materials, selection);
-            auto last_edited = edited;
-            edited += draw_add_elem_widgets(
-                win, scn, "shp", scn->shapes, test_scn->shapes, selection);
-            if (edited != last_edited) {
-                scn->instances.push_back(new instance());
-                scn->instances.back()->name = scn->shapes.back()->name;
-                scn->instances.back()->shp = scn->shapes.back();
-                test_scn->instances.push_back(test_instance_params());
-                test_scn->instances.back().name = scn->instances.back()->name;
-                test_scn->instances.back().shape =
-                    scn->instances.back()->shp->name;
-            }
-            edited += draw_add_elem_widgets(win, scn, "ist", scn->instances,
-                test_scn->instances, selection);
-            edited += draw_add_elem_widgets(win, scn, "env", scn->environments,
-                test_scn->environments, selection);
-            edited += draw_add_elem_widgets(win, scn, "anim", scn->animations,
-                test_scn->animations, selection);
+    if (test_scn) {
+        edited += draw_add_elem_widgets(
+            win, scn, "cam", scn->cameras, test_scn->cameras, selection);
+        edited += draw_add_elem_widgets(
+            win, scn, "txt", scn->textures, test_scn->textures, selection);
+        edited += draw_add_elem_widgets(
+            win, scn, "mat", scn->materials, test_scn->materials, selection);
+        auto last_edited = edited;
+        edited += draw_add_elem_widgets(
+            win, scn, "shp", scn->shapes, test_scn->shapes, selection);
+        if (edited != last_edited) {
+            scn->instances.push_back(new instance());
+            scn->instances.back()->name = scn->shapes.back()->name;
+            scn->instances.back()->shp = scn->shapes.back();
+            test_scn->instances.push_back(test_instance_params());
+            test_scn->instances.back().name = scn->instances.back()->name;
+            test_scn->instances.back().shape = scn->instances.back()->shp->name;
         }
+        edited += draw_add_elem_widgets(
+            win, scn, "ist", scn->instances, test_scn->instances, selection);
+        edited += draw_add_elem_widgets(win, scn, "env", scn->environments,
+            test_scn->environments, selection);
+        edited += draw_add_elem_widgets(
+            win, scn, "anim", scn->animations, test_scn->animations, selection);
+    }
 
-        auto test_scn_res = (test_scn) ? test_scn : &test_scn_def;
-        edited += draw_selected_elem_widgets(win, scn, test_scn, scn->cameras,
-            test_scn_res->cameras, selection, gl_txt);
-        edited += draw_selected_elem_widgets(win, scn, test_scn, scn->textures,
-            test_scn_res->textures, selection, gl_txt);
-        edited += draw_selected_elem_widgets(win, scn, test_scn, scn->materials,
-            test_scn_res->materials, selection, gl_txt);
-        edited += draw_selected_elem_widgets(win, scn, test_scn, scn->shapes,
-            test_scn_res->shapes, selection, gl_txt);
-        edited += draw_selected_elem_widgets(win, scn, test_scn, scn->instances,
-            test_scn_res->instances, selection, gl_txt);
-        edited += draw_selected_elem_widgets(win, scn, test_scn,
-            scn->environments, test_scn->environments, selection, gl_txt);
-        edited += draw_selected_elem_widgets(
-            win, scn, test_scn, scn->nodes, test_scn->nodes, selection, gl_txt);
-        edited += draw_selected_elem_widgets(win, scn, test_scn,
-            scn->animations, test_scn->animations, selection, gl_txt);
-        draw_groupid_widget_end(win);
-        return edited;
-    } else
-        return false;
+    auto test_scn_res = (test_scn) ? test_scn : &test_scn_def;
+    edited += draw_selected_elem_widgets(win, scn, test_scn, scn->cameras,
+        test_scn_res->cameras, selection, gl_txt);
+    edited += draw_selected_elem_widgets(win, scn, test_scn, scn->textures,
+        test_scn_res->textures, selection, gl_txt);
+    edited += draw_selected_elem_widgets(win, scn, test_scn, scn->materials,
+        test_scn_res->materials, selection, gl_txt);
+    edited += draw_selected_elem_widgets(win, scn, test_scn, scn->shapes,
+        test_scn_res->shapes, selection, gl_txt);
+    edited += draw_selected_elem_widgets(win, scn, test_scn, scn->instances,
+        test_scn_res->instances, selection, gl_txt);
+    edited += draw_selected_elem_widgets(win, scn, test_scn, scn->environments,
+        test_scn->environments, selection, gl_txt);
+    edited += draw_selected_elem_widgets(
+        win, scn, test_scn, scn->nodes, test_scn->nodes, selection, gl_txt);
+    edited += draw_selected_elem_widgets(win, scn, test_scn, scn->animations,
+        test_scn->animations, selection, gl_txt);
+    draw_groupid_widget_end(win);
+    return edited;
 }
 
 }  // namespace ygl

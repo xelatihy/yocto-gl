@@ -65,17 +65,19 @@ def parse(cpp):
             curm = None
     enums = [ t for t in types if t['enum'] ]
     structs = [ t for t in types if not t['enum'] ]
+    def parse_docval(doc,tag,default):
+        if tag in doc:
+            val = doc.partition(tag+'(')[2].partition(')')[0]
+            doc = doc.partition(tag+'(')[0] + doc.partition(tag+'(')[2].partition(')')[2]
+            return doc, val
+        else:
+            return doc, default
     for struct in structs:
         for mem in struct['members']:
             doc = mem['mem_doc']
-            if '@refl_semantic' in doc:
-                mem['mem_semantic'] = doc.partition('@refl_semantic(')[2].partition(')')[0]
-                doc = doc.partition('@refl_semantic(')[0] + doc.partition('@refl_semantic(')[2].partition(')')[2]
-            else:
-                mem['mem_semantic'] = 'value'
-            if '@refl_uilimits' in doc:
-                mem['mem_uilimits'] = doc.partition('@refl_uilimits(')[2].partition(')')[0]
-                doc = doc.partition('@refl_uilimits(')[0] + doc.partition('@refl_uilimits(')[2].partition(')')[2]
+            doc, mem['mem_semantic'] = parse_docval(doc,'@refl_semantic','value')
+            doc, mem['mem_uilimits'] = parse_docval(doc,'@refl_uilimits','0,0')
+            doc, mem['mem_shortname'] = parse_docval(doc,'@refl_shortname','')
             while '  ' in doc:
                 doc = doc.replace('  ', ' ')
             doc = doc.strip()
@@ -103,8 +105,8 @@ enum_names<{{name}}>() {
 template <typename Visitor>
 inline void visit({{name}}& val, Visitor&& visitor) {
     {{#members}}
-    visitor("{{mem_name}}", val.{{mem_name}}, visit_sem{
-        visit_sem_type::{{mem_semantic}},"{{mem_doc}}"{{#mem_uilimits}},{{mem_uilimits}}{{/mem_uilimits}}});
+    visitor(val.{{mem_name}}, visit_var{"{{mem_name}}",
+        visit_var_type::{{mem_semantic}},"{{mem_doc}}",{{mem_uilimits}},"{{mem_shortname}}"});
     {{/members}}
 }
 
