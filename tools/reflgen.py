@@ -122,7 +122,7 @@ def gen_refl(cpp):
 filename = 'yocto/yocto_gl.h'
 
 with open(filename) as f: cpp = f.read()
-for tag in ['scene','test-scene','trace','glstdimage','glstdsurface']:
+for tag in ['scene','test-scene','trace','glstdimage','glstdsurface','shapeexample']:
     decl = extract(cpp, 'refl-'+tag)
     refl = gen_refl(decl)
     cpp = substitute(cpp, refl, 'reflgen-'+tag)

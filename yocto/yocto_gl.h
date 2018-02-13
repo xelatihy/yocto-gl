@@ -4329,6 +4329,8 @@ make_uvseashell(int tesselation, const make_seashell_params& params);
 /// Make a bezier circle. Returns bezier, pos.
 std::tuple<std::vector<vec4i>, std::vector<vec3f>> make_bezier_circle();
 
+// #codegen begin refl-shapeexample
+
 /// Parameters for the make hair function
 struct make_hair_params {
     /// minimum and maximum length
@@ -4345,6 +4347,8 @@ struct make_hair_params {
     uint32_t seed = 0;
 };
 
+// #codegen end refl-shapeexample
+
 /// Make a hair ball around a shape. Returns lines, pos, norm, texcoord, radius.
 std::tuple<std::vector<vec2i>, std::vector<vec3f>, std::vector<vec3f>,
     std::vector<vec2f>, std::vector<float>>
@@ -4352,6 +4356,41 @@ make_hair(int num, int tesselation, const std::vector<vec3i>& striangles,
     const std::vector<vec4i>& squads, const std::vector<vec3f>& spos,
     const std::vector<vec3f>& snorm, const std::vector<vec2f>& stexcoord,
     const make_hair_params& params);
+
+/// @}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// EXAMPLE SHAPES TYPE SUPPORT
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+/// @defgroup shape_example_type Example shape type support
+/// @{
+
+// #codegen begin reflgen-shapeexample
+
+/// Visit struct elements.
+template <typename Visitor>
+inline void visit(make_hair_params& val, Visitor&& visitor) {
+    visitor("length", val.length,
+        visit_sem{visit_sem_type::value, "minimum and maximum length"});
+    visitor("radius", val.radius,
+        visit_sem{visit_sem_type::value,
+            "minimum and maximum radius from base to tip"});
+    visitor("noise", val.noise,
+        visit_sem{
+            visit_sem_type::value, "noise added to hair (strength/scale)"});
+    visitor("clump", val.clump,
+        visit_sem{
+            visit_sem_type::value, "clump added to hair (number/strength)"});
+    visitor(
+        "rotation", val.rotation, visit_sem{visit_sem_type::value, "rotation"});
+    visitor("seed", val.seed, visit_sem{visit_sem_type::value, "random seed"});
+}
+
+// #codegen end reflgen-shapeexample
 
 /// @}
 
@@ -4993,8 +5032,6 @@ struct texture {
 
 /// Texture information to use for lookup.
 struct texture_info {
-    /// Texture pointer. @refl_semantic(reference)
-    texture* txt = nullptr;
     /// Wrap s coordinate.
     bool wrap_s = true;
     /// Wrap t coordinate.
@@ -5025,6 +5062,7 @@ struct material {
     bool double_sided = false;
     /// Material type.
     material_type type = material_type::specular_roughness;
+
     /// Emission color. @refl_semantic(color) refl_uilimits(0,10000)
     vec3f ke = {0, 0, 0};
     /// Diffuse color / base color. @refl_semantic(color)
@@ -5039,26 +5077,51 @@ struct material {
     float rs = 0.0001;
     /// Opacity.
     float op = 1;
-    /// Emission texture.
-    texture_info ke_txt = {};
-    /// Diffuse texture.
-    texture_info kd_txt = {};
-    /// Specular texture.
-    texture_info ks_txt = {};
-    /// Clear coat reflection texture.
-    texture_info kr_txt = {};
-    /// Transmission texture.
-    texture_info kt_txt = {};
-    /// Roughness texture.
-    texture_info rs_txt = {};
-    /// Bump map texture (heighfield).
-    texture_info bump_txt = {};
-    /// Displacement map texture (heighfield).
-    texture_info disp_txt = {};
-    /// Normal texture.
-    texture_info norm_txt = {};
-    /// Occlusion texture.
-    texture_info occ_txt = {};
+
+    /// Emission texture. @refl_semantic(reference)
+    texture* ke_txt = nullptr;
+    /// Diffuse texture. @refl_semantic(reference)
+    texture* kd_txt = nullptr;
+    /// Specular texture. @refl_semantic(reference)
+    texture* ks_txt = nullptr;
+    /// Clear coat reflection texture. @refl_semantic(reference)
+    texture* kr_txt = nullptr;
+    /// Transmission texture. @refl_semantic(reference)
+    texture* kt_txt = nullptr;
+    /// Roughness texture. @refl_semantic(reference)
+    texture* rs_txt = nullptr;
+    /// Bump map texture (heighfield). @refl_semantic(reference)
+    texture* bump_txt = nullptr;
+    /// Displacement map texture (heighfield). @refl_semantic(reference)
+    texture* disp_txt = nullptr;
+    /// Normal texture. @refl_semantic(reference)
+    texture* norm_txt = nullptr;
+    /// Occlusion texture. @refl_semantic(reference)
+    texture* occ_txt = nullptr;
+
+    /// Emission texture info.
+    texture_info* ke_txt_info = nullptr;
+    /// Diffuse texture info.
+    texture_info* kd_txt_info = nullptr;
+    /// Specular texture info.
+    texture_info* ks_txt_info = nullptr;
+    /// Clear coat reflection texture info.
+    texture_info* kr_txt_info = nullptr;
+    /// Transmission texture info.
+    texture_info* kt_txt_info = nullptr;
+    /// Roughness texture info.
+    texture_info* rs_txt_info = nullptr;
+    /// Bump map texture (heighfield) info.
+    texture_info* bump_txt_info = nullptr;
+    /// Displacement map texture (heighfield) info.
+    texture_info* disp_txt_info = nullptr;
+    /// Normal texture info.
+    texture_info* norm_txt_info = nullptr;
+    /// Occlusion texture info.
+    texture_info* occ_txt_info = nullptr;
+    
+    /// Cleanup
+    ~material();
 };
 
 /// Shape data represented as an indexed array.
@@ -5138,8 +5201,13 @@ struct environment {
     frame3f frame = identity_frame3f;
     /// Emission coefficient. @refl_uilimits(0,10000)
     vec3f ke = {0, 0, 0};
-    /// Emission texture.
-    texture_info ke_txt = {};
+    /// Emission texture. @refl_semantic(reference)
+    texture* ke_txt = nullptr;
+    /// Emission texture info.
+    texture_info* ke_txt_info = nullptr;
+    
+    /// Cleanup
+    ~environment();
 };
 
 /// Node in a transform hierarchy.
@@ -5265,8 +5333,8 @@ vec3f eval_pos(const instance* ist, int sid, int eid, const vec2f& euv);
 vec3f eval_norm(const instance* ist, int sid, int eid, const vec2f& euv);
 
 /// Evaluate a texture.
-vec4f eval_texture(const texture_info& info, const vec2f& texcoord,
-    bool srgb = true, const vec4f& def = {1, 1, 1, 1});
+vec4f eval_texture(const texture* txt, const texture_info* info,
+    const vec2f& texcoord, bool srgb = true, const vec4f& def = {1, 1, 1, 1});
 /// Generates a ray from a camera for image plane coordinate uv and the
 /// lens coordinates luv.
 ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv);
@@ -5485,8 +5553,6 @@ inline void visit(texture& val, Visitor&& visitor) {
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(texture_info& val, Visitor&& visitor) {
-    visitor("txt", val.txt,
-        visit_sem{visit_sem_type::reference, "Texture pointer."});
     visitor("wrap_s", val.wrap_s,
         visit_sem{visit_sem_type::value, "Wrap s coordinate."});
     visitor("wrap_t", val.wrap_t,
@@ -5522,26 +5588,49 @@ inline void visit(material& val, Visitor&& visitor) {
     visitor("rs", val.rs, visit_sem{visit_sem_type::value, "Roughness."});
     visitor("op", val.op, visit_sem{visit_sem_type::value, "Opacity."});
     visitor("ke_txt", val.ke_txt,
-        visit_sem{visit_sem_type::value, "Emission texture."});
+        visit_sem{visit_sem_type::reference, "Emission texture."});
     visitor("kd_txt", val.kd_txt,
-        visit_sem{visit_sem_type::value, "Diffuse texture."});
+        visit_sem{visit_sem_type::reference, "Diffuse texture."});
     visitor("ks_txt", val.ks_txt,
-        visit_sem{visit_sem_type::value, "Specular texture."});
+        visit_sem{visit_sem_type::reference, "Specular texture."});
     visitor("kr_txt", val.kr_txt,
-        visit_sem{visit_sem_type::value, "Clear coat reflection texture."});
+        visit_sem{visit_sem_type::reference, "Clear coat reflection texture."});
     visitor("kt_txt", val.kt_txt,
-        visit_sem{visit_sem_type::value, "Transmission texture."});
+        visit_sem{visit_sem_type::reference, "Transmission texture."});
     visitor("rs_txt", val.rs_txt,
-        visit_sem{visit_sem_type::value, "Roughness texture."});
+        visit_sem{visit_sem_type::reference, "Roughness texture."});
     visitor("bump_txt", val.bump_txt,
-        visit_sem{visit_sem_type::value, "Bump map texture (heighfield)."});
+        visit_sem{visit_sem_type::reference, "Bump map texture (heighfield)."});
     visitor("disp_txt", val.disp_txt,
-        visit_sem{
-            visit_sem_type::value, "Displacement map texture (heighfield)."});
+        visit_sem{visit_sem_type::reference,
+            "Displacement map texture (heighfield)."});
     visitor("norm_txt", val.norm_txt,
-        visit_sem{visit_sem_type::value, "Normal texture."});
+        visit_sem{visit_sem_type::reference, "Normal texture."});
     visitor("occ_txt", val.occ_txt,
-        visit_sem{visit_sem_type::value, "Occlusion texture."});
+        visit_sem{visit_sem_type::reference, "Occlusion texture."});
+    visitor("ke_txt_info", val.ke_txt_info,
+        visit_sem{visit_sem_type::value, "Emission texture info."});
+    visitor("kd_txt_info", val.kd_txt_info,
+        visit_sem{visit_sem_type::value, "Diffuse texture info."});
+    visitor("ks_txt_info", val.ks_txt_info,
+        visit_sem{visit_sem_type::value, "Specular texture info."});
+    visitor("kr_txt_info", val.kr_txt_info,
+        visit_sem{
+            visit_sem_type::value, "Clear coat reflection texture info."});
+    visitor("kt_txt_info", val.kt_txt_info,
+        visit_sem{visit_sem_type::value, "Transmission texture info."});
+    visitor("rs_txt_info", val.rs_txt_info,
+        visit_sem{visit_sem_type::value, "Roughness texture info."});
+    visitor("bump_txt_info", val.bump_txt_info,
+        visit_sem{
+            visit_sem_type::value, "Bump map texture (heighfield) info."});
+    visitor("disp_txt_info", val.disp_txt_info,
+        visit_sem{visit_sem_type::value,
+            "Displacement map texture (heighfield) info."});
+    visitor("norm_txt_info", val.norm_txt_info,
+        visit_sem{visit_sem_type::value, "Normal texture info."});
+    visitor("occ_txt_info", val.occ_txt_info,
+        visit_sem{visit_sem_type::value, "Occlusion texture info."});
 }
 
 /// Visit struct elements.
@@ -5612,7 +5701,9 @@ inline void visit(environment& val, Visitor&& visitor) {
     visitor("ke", val.ke,
         visit_sem{visit_sem_type::value, "Emission coefficient.", 0, 10000});
     visitor("ke_txt", val.ke_txt,
-        visit_sem{visit_sem_type::value, "Emission texture."});
+        visit_sem{visit_sem_type::reference, "Emission texture."});
+    visitor("ke_txt_info", val.ke_txt_info,
+        visit_sem{visit_sem_type::value, "Emission texture info."});
 }
 
 /// Visit struct elements.
@@ -5876,7 +5967,10 @@ struct test_shape_params {
     /// @refl_uilimits(-1,10000)
     int num = -1;
     /// Hair generation params.
-    make_hair_params hair_params = {};
+    make_hair_params* hair_params = nullptr;
+
+    /// Cleanup
+    ~test_shape_params();
 };
 
 /// Test instance parameters.
@@ -6223,14 +6317,14 @@ inline void visit(test_shape_params& val, Visitor&& visitor) {
             10000});
     visitor("hair_params", val.hair_params,
         visit_sem{visit_sem_type::value, "Hair generation params."});
+    visitor("name", val.name,
+        visit_sem{visit_sem_type::value,
+            "Cleanup Name (if not filled, assign a default one)."});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(test_instance_params& val, Visitor&& visitor) {
-    visitor("name", val.name,
-        visit_sem{visit_sem_type::value,
-            "Name (if not filled, assign a default one)."});
     visitor(
         "shape", val.shape, visit_sem{visit_sem_type::value, "Shape name."});
     visitor(
