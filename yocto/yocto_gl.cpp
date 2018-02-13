@@ -7622,7 +7622,7 @@ void serialize_attr(std::vector<T>& val, json& js, const char* name,
     }
 }
 
-// #codegen begin func ---------------------------------------------------------
+// #codegen begin gltf-func ----------------------------------------------------
 
 // Check for default value
 template <typename T>
@@ -8208,7 +8208,7 @@ void serialize(glTF& val, json& js, bool reading) {
     serialize_attr(val.textures, js, "textures", reading, false, def.textures);
 }
 
-// #codegen end func
+// #codegen end gltf-func
 
 // Encode in base64
 std::string base64_encode(
