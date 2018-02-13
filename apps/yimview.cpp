@@ -88,15 +88,14 @@ void draw(ygl::gl_window* win) {
     auto window_size = get_window_size(win);
     auto framebuffer_size = get_framebuffer_size(win);
     ygl::gl_set_viewport(framebuffer_size);
-    app->params.width = window_size.x;
-    app->params.height = window_size.y;
-    ygl::draw_image(app->gl_prog, app->gl_txt.at(img), app->params);
+    ygl::draw_image(
+        app->gl_prog, app->gl_txt.at(img), window_size, app->params);
 
     if (ygl::begin_widgets(win, "yimview")) {
         ygl::draw_label_widget(win, "filename", img->filename);
         ygl::draw_label_widget(
             win, "size", "{} x {}", img->width(), img->height());
-        ygl::draw_imageview_widgets(win, "", app->params, !img->hdr.empty());
+        ygl::draw_params_widgets(win, "", app->params);
         ygl::draw_imageinspect_widgets(
             win, "", img->hdr, img->ldr, get_mouse_posf(win), app->params);
     }
@@ -167,12 +166,7 @@ int main(int argc, char* argv[]) {
 
     // command line params
     auto parser = ygl::make_parser(argc, argv, "yimview", "view images");
-    app->params.exposure =
-        ygl::parse_opt(parser, "--exposure", "-e", "hdr image exposure", 0.0f);
-    app->params.gamma =
-        ygl::parse_opt(parser, "--gamma", "-g", "hdr image gamma", 2.2f);
-    app->params.filmic =
-        ygl::parse_flag(parser, "--filmic", "-F", "hdr image filmic");
+    app->params = ygl::parse_params(parser, "", app->params);
     auto filenames = ygl::parse_args(
         parser, "image", "image filename", std::vector<std::string>{});
     // check parsing

@@ -3822,8 +3822,8 @@ inline std::istream& operator>>(std::istream& is, T& a) {
     return is;
 }
 
-/// Types of variable semantic
-enum struct visit_sem_type {
+/// Types of variable semantic for `visit()`.
+enum struct visit_var_type {
     /// Generic value.
     value = 0,
     /// Name.
@@ -3836,20 +3836,24 @@ enum struct visit_sem_type {
     reference = 4,
     /// Color.
     color = 5,
-    /// Generic value not editable in ui.
-    constui = 6,
+    /// Generic value not editable.
+    noneditable = 6,
 };
 
-/// Semantic for reflected values
-struct visit_sem {
+/// Variable description for reflected values in `visit()`.
+struct visit_var {
+    /// Name.
+    const std::string name = "";
     /// Type.
-    visit_sem_type type = visit_sem_type::value;
+    visit_var_type type = visit_var_type::value;
     /// Help.
     const std::string help = "";
     /// Minimum value for numeric types.
     float min = 0;
     /// Maximum value for numeric types.
     float max = 0;
+    /// Short name
+    std::string short_name = "";
 };
 
 /// Type trait to enable visitors.
@@ -4519,20 +4523,19 @@ namespace ygl {
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(make_hair_params& val, Visitor&& visitor) {
-    visitor("length", val.length,
-        visit_sem{visit_sem_type::value, "minimum and maximum length"});
-    visitor("radius", val.radius,
-        visit_sem{visit_sem_type::value,
-            "minimum and maximum radius from base to tip"});
-    visitor("noise", val.noise,
-        visit_sem{
-            visit_sem_type::value, "noise added to hair (strength/scale)"});
-    visitor("clump", val.clump,
-        visit_sem{
-            visit_sem_type::value, "clump added to hair (number/strength)"});
-    visitor(
-        "rotation", val.rotation, visit_sem{visit_sem_type::value, "rotation"});
-    visitor("seed", val.seed, visit_sem{visit_sem_type::value, "random seed"});
+    visitor(val.length, visit_var{"length", visit_var_type::value,
+                            "minimum and maximum length", 0, 0, ""});
+    visitor(val.radius,
+        visit_var{"radius", visit_var_type::value,
+            "minimum and maximum radius from base to tip", 0, 0, ""});
+    visitor(val.noise, visit_var{"noise", visit_var_type::value,
+                           "noise added to hair (strength/scale)", 0, 0, ""});
+    visitor(val.clump, visit_var{"clump", visit_var_type::value,
+                           "clump added to hair (number/strength)", 0, 0, ""});
+    visitor(val.rotation,
+        visit_var{"rotation", visit_var_type::value, "rotation", 0, 0, ""});
+    visitor(val.seed,
+        visit_var{"seed", visit_var_type::value, "random seed", 0, 0, ""});
 }
 
 // #codegen end reflgen-shapeexample
@@ -5500,9 +5503,14 @@ inline vec4f eval_texture(const texture* txt,
     static auto def_info = texture_info();
     return eval_texture(txt, (info) ? *info : def_info, texcoord, srgb, def);
 }
-/// Generates a ray from a camera for image plane coordinate uv and the
-/// lens coordinates luv.
+/// Generates a ray from a camera for image plane coordinate `uv` and the
+/// lens coordinates `luv`.
 ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv);
+/// Generates a ray from a camera for pixel coordinates `ij`, the resolution
+/// `res`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and
+/// the image resolution `res`.
+ray3f eval_camera_ray(const camera* cam, const vec2i& ij, int res,
+    const vec2f& puv, const vec2f& luv);
 /// Synchronizes a camera aspect with image width and height. Set image
 /// values any one is 0 or less. Set camera aspect otherwise.
 void sync_camera_aspect(camera* cam, int& width, int& height);
@@ -5687,284 +5695,303 @@ enum_names<keyframe_type>() {
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(camera& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::value, "Name."});
-    visitor("frame", val.frame,
-        visit_sem{visit_sem_type::value, "Transform frame."});
-    visitor("ortho", val.ortho,
-        visit_sem{visit_sem_type::value, "Orthographic camera."});
-    visitor("yfov", val.yfov,
-        visit_sem{visit_sem_type::value, "Vertical field of view.", 0.1, 10});
-    visitor("aspect", val.aspect,
-        visit_sem{visit_sem_type::value, "Aspect ratio.", 1, 3});
-    visitor("focus", val.focus,
-        visit_sem{visit_sem_type::value, "Focus distance.", 0.01, 1000});
-    visitor("aperture", val.aperture,
-        visit_sem{visit_sem_type::value, "Lens aperture.", 0, 5});
-    visitor("near", val.near,
-        visit_sem{visit_sem_type::value, "Near plane distance.", 0.01, 10});
-    visitor("far", val.far,
-        visit_sem{visit_sem_type::value, "Far plane distance.", 10, 10000});
-    visitor("props", val.props,
-        visit_sem{visit_sem_type::value, "Application specific properties."});
+    visitor(
+        val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
+    visitor(val.frame, visit_var{"frame", visit_var_type::value,
+                           "Transform frame.", 0, 0, ""});
+    visitor(val.ortho, visit_var{"ortho", visit_var_type::value,
+                           "Orthographic camera.", 0, 0, ""});
+    visitor(val.yfov, visit_var{"yfov", visit_var_type::value,
+                          "Vertical field of view.", 0.1, 10, ""});
+    visitor(val.aspect,
+        visit_var{"aspect", visit_var_type::value, "Aspect ratio.", 1, 3, ""});
+    visitor(val.focus, visit_var{"focus", visit_var_type::value,
+                           "Focus distance.", 0.01, 1000, ""});
+    visitor(val.aperture, visit_var{"aperture", visit_var_type::value,
+                              "Lens aperture.", 0, 5, ""});
+    visitor(val.near, visit_var{"near", visit_var_type::value,
+                          "Near plane distance.", 0.01, 10, ""});
+    visitor(val.far, visit_var{"far", visit_var_type::value,
+                         "Far plane distance.", 10, 10000, ""});
+    visitor(val.props, visit_var{"props", visit_var_type::value,
+                           "Application specific properties.", 0, 0, ""});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(texture& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::value, "Name."});
-    visitor("path", val.path, visit_sem{visit_sem_type::value, "Path."});
-    visitor("ldr", val.ldr, visit_sem{visit_sem_type::value, "Ldr image."});
-    visitor("hdr", val.hdr, visit_sem{visit_sem_type::value, "Hdr image."});
+    visitor(
+        val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
+    visitor(
+        val.path, visit_var{"path", visit_var_type::value, "Path.", 0, 0, ""});
+    visitor(val.ldr,
+        visit_var{"ldr", visit_var_type::value, "Ldr image.", 0, 0, ""});
+    visitor(val.hdr,
+        visit_var{"hdr", visit_var_type::value, "Hdr image.", 0, 0, ""});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(texture_info& val, Visitor&& visitor) {
-    visitor("wrap_s", val.wrap_s,
-        visit_sem{visit_sem_type::value, "Wrap s coordinate."});
-    visitor("wrap_t", val.wrap_t,
-        visit_sem{visit_sem_type::value, "Wrap t coordinate."});
-    visitor("linear", val.linear,
-        visit_sem{visit_sem_type::value, "Linear interpolation."});
+    visitor(val.wrap_s, visit_var{"wrap_s", visit_var_type::value,
+                            "Wrap s coordinate.", 0, 0, ""});
+    visitor(val.wrap_t, visit_var{"wrap_t", visit_var_type::value,
+                            "Wrap t coordinate.", 0, 0, ""});
+    visitor(val.linear, visit_var{"linear", visit_var_type::value,
+                            "Linear interpolation.", 0, 0, ""});
+    visitor(val.mipmap,
+        visit_var{"mipmap", visit_var_type::value, "Mipmaping.", 0, 0, ""});
     visitor(
-        "mipmap", val.mipmap, visit_sem{visit_sem_type::value, "Mipmaping."});
-    visitor("scale", val.scale,
-        visit_sem{visit_sem_type::value,
-            "Texture strength (occlusion and normal).", 0, 10});
+        val.scale, visit_var{"scale", visit_var_type::value,
+                       "Texture strength (occlusion and normal).", 0, 10, ""});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(material& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::value, "Name."});
-    visitor("double_sided", val.double_sided,
-        visit_sem{visit_sem_type::value, "Double-sided rendering."});
     visitor(
-        "type", val.type, visit_sem{visit_sem_type::value, "Material type."});
-    visitor("ke", val.ke,
-        visit_sem{
-            visit_sem_type::color, "Emission color. refl_uilimits(0,10000)"});
-    visitor("kd", val.kd,
-        visit_sem{visit_sem_type::color, "Diffuse color / base color."});
-    visitor("ks", val.ks,
-        visit_sem{visit_sem_type::color, "Specular color / metallic factor."});
-    visitor("kr", val.kr,
-        visit_sem{visit_sem_type::color, "Clear coat reflection."});
+        val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
+    visitor(val.double_sided, visit_var{"double_sided", visit_var_type::value,
+                                  "Double-sided rendering.", 0, 0, ""});
+    visitor(val.type,
+        visit_var{"type", visit_var_type::value, "Material type.", 0, 0, ""});
+    visitor(val.ke, visit_var{"ke", visit_var_type::color,
+                        "Emission color. refl_uilimits(0,10000)", 0, 0, ""});
+    visitor(val.kd, visit_var{"kd", visit_var_type::color,
+                        "Diffuse color / base color.", 0, 0, ""});
+    visitor(val.ks, visit_var{"ks", visit_var_type::color,
+                        "Specular color / metallic factor.", 0, 0, ""});
+    visitor(val.kr, visit_var{"kr", visit_var_type::color,
+                        "Clear coat reflection.", 0, 0, ""});
+    visitor(val.kt, visit_var{"kt", visit_var_type::color,
+                        "Transmission color.", 0, 0, ""});
     visitor(
-        "kt", val.kt, visit_sem{visit_sem_type::color, "Transmission color."});
-    visitor("rs", val.rs, visit_sem{visit_sem_type::value, "Roughness."});
-    visitor("op", val.op, visit_sem{visit_sem_type::value, "Opacity."});
-    visitor("ke_txt", val.ke_txt,
-        visit_sem{visit_sem_type::reference, "Emission texture."});
-    visitor("kd_txt", val.kd_txt,
-        visit_sem{visit_sem_type::reference, "Diffuse texture."});
-    visitor("ks_txt", val.ks_txt,
-        visit_sem{visit_sem_type::reference, "Specular texture."});
-    visitor("kr_txt", val.kr_txt,
-        visit_sem{visit_sem_type::reference, "Clear coat reflection texture."});
-    visitor("kt_txt", val.kt_txt,
-        visit_sem{visit_sem_type::reference, "Transmission texture."});
-    visitor("rs_txt", val.rs_txt,
-        visit_sem{visit_sem_type::reference, "Roughness texture."});
-    visitor("bump_txt", val.bump_txt,
-        visit_sem{visit_sem_type::reference, "Bump map texture (heighfield)."});
-    visitor("disp_txt", val.disp_txt,
-        visit_sem{visit_sem_type::reference,
-            "Displacement map texture (heighfield)."});
-    visitor("norm_txt", val.norm_txt,
-        visit_sem{visit_sem_type::reference, "Normal texture."});
-    visitor("occ_txt", val.occ_txt,
-        visit_sem{visit_sem_type::reference, "Occlusion texture."});
-    visitor("ke_txt_info", val.ke_txt_info,
-        visit_sem{visit_sem_type::value, "Emission texture info."});
-    visitor("kd_txt_info", val.kd_txt_info,
-        visit_sem{visit_sem_type::value, "Diffuse texture info."});
-    visitor("ks_txt_info", val.ks_txt_info,
-        visit_sem{visit_sem_type::value, "Specular texture info."});
-    visitor("kr_txt_info", val.kr_txt_info,
-        visit_sem{
-            visit_sem_type::value, "Clear coat reflection texture info."});
-    visitor("kt_txt_info", val.kt_txt_info,
-        visit_sem{visit_sem_type::value, "Transmission texture info."});
-    visitor("rs_txt_info", val.rs_txt_info,
-        visit_sem{visit_sem_type::value, "Roughness texture info."});
-    visitor("bump_txt_info", val.bump_txt_info,
-        visit_sem{
-            visit_sem_type::value, "Bump map texture (heighfield) info."});
-    visitor("disp_txt_info", val.disp_txt_info,
-        visit_sem{visit_sem_type::value,
-            "Displacement map texture (heighfield) info."});
-    visitor("norm_txt_info", val.norm_txt_info,
-        visit_sem{visit_sem_type::value, "Normal texture info."});
-    visitor("occ_txt_info", val.occ_txt_info,
-        visit_sem{visit_sem_type::value, "Occlusion texture info."});
-    visitor("props", val.props,
-        visit_sem{visit_sem_type::value, "Application specific properties."});
+        val.rs, visit_var{"rs", visit_var_type::value, "Roughness.", 0, 0, ""});
+    visitor(
+        val.op, visit_var{"op", visit_var_type::value, "Opacity.", 0, 0, ""});
+    visitor(val.ke_txt, visit_var{"ke_txt", visit_var_type::reference,
+                            "Emission texture.", 0, 0, ""});
+    visitor(val.kd_txt, visit_var{"kd_txt", visit_var_type::reference,
+                            "Diffuse texture.", 0, 0, ""});
+    visitor(val.ks_txt, visit_var{"ks_txt", visit_var_type::reference,
+                            "Specular texture.", 0, 0, ""});
+    visitor(val.kr_txt, visit_var{"kr_txt", visit_var_type::reference,
+                            "Clear coat reflection texture.", 0, 0, ""});
+    visitor(val.kt_txt, visit_var{"kt_txt", visit_var_type::reference,
+                            "Transmission texture.", 0, 0, ""});
+    visitor(val.rs_txt, visit_var{"rs_txt", visit_var_type::reference,
+                            "Roughness texture.", 0, 0, ""});
+    visitor(val.bump_txt, visit_var{"bump_txt", visit_var_type::reference,
+                              "Bump map texture (heighfield).", 0, 0, ""});
+    visitor(
+        val.disp_txt, visit_var{"disp_txt", visit_var_type::reference,
+                          "Displacement map texture (heighfield).", 0, 0, ""});
+    visitor(val.norm_txt, visit_var{"norm_txt", visit_var_type::reference,
+                              "Normal texture.", 0, 0, ""});
+    visitor(val.occ_txt, visit_var{"occ_txt", visit_var_type::reference,
+                             "Occlusion texture.", 0, 0, ""});
+    visitor(val.ke_txt_info, visit_var{"ke_txt_info", visit_var_type::value,
+                                 "Emission texture info.", 0, 0, ""});
+    visitor(val.kd_txt_info, visit_var{"kd_txt_info", visit_var_type::value,
+                                 "Diffuse texture info.", 0, 0, ""});
+    visitor(val.ks_txt_info, visit_var{"ks_txt_info", visit_var_type::value,
+                                 "Specular texture info.", 0, 0, ""});
+    visitor(
+        val.kr_txt_info, visit_var{"kr_txt_info", visit_var_type::value,
+                             "Clear coat reflection texture info.", 0, 0, ""});
+    visitor(val.kt_txt_info, visit_var{"kt_txt_info", visit_var_type::value,
+                                 "Transmission texture info.", 0, 0, ""});
+    visitor(val.rs_txt_info, visit_var{"rs_txt_info", visit_var_type::value,
+                                 "Roughness texture info.", 0, 0, ""});
+    visitor(val.bump_txt_info,
+        visit_var{"bump_txt_info", visit_var_type::value,
+            "Bump map texture (heighfield) info.", 0, 0, ""});
+    visitor(val.disp_txt_info,
+        visit_var{"disp_txt_info", visit_var_type::value,
+            "Displacement map texture (heighfield) info.", 0, 0, ""});
+    visitor(val.norm_txt_info, visit_var{"norm_txt_info", visit_var_type::value,
+                                   "Normal texture info.", 0, 0, ""});
+    visitor(val.occ_txt_info, visit_var{"occ_txt_info", visit_var_type::value,
+                                  "Occlusion texture info.", 0, 0, ""});
+    visitor(val.props, visit_var{"props", visit_var_type::value,
+                           "Application specific properties.", 0, 0, ""});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(shape& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::value, "Name."});
-    visitor("mat", val.mat, visit_sem{visit_sem_type::reference, "Material."});
-    visitor("points", val.points, visit_sem{visit_sem_type::value, "Points."});
-    visitor("lines", val.lines, visit_sem{visit_sem_type::value, "Lines."});
-    visitor("triangles", val.triangles,
-        visit_sem{visit_sem_type::value, "Triangles."});
-    visitor("quads", val.quads, visit_sem{visit_sem_type::value, "Quads."});
-    visitor("quads_pos", val.quads_pos,
-        visit_sem{visit_sem_type::value, "Face-varying indices for position."});
-    visitor("quads_norm", val.quads_norm,
-        visit_sem{visit_sem_type::value, "Face-varying indices for normal."});
-    visitor("quads_texcoord", val.quads_texcoord,
-        visit_sem{visit_sem_type::value, "Face-varying indices for texcoord."});
     visitor(
-        "beziers", val.beziers, visit_sem{visit_sem_type::value, "Bezier."});
-    visitor(
-        "pos", val.pos, visit_sem{visit_sem_type::value, "Vertex position."});
-    visitor(
-        "norm", val.norm, visit_sem{visit_sem_type::value, "Vertex normals."});
-    visitor("texcoord", val.texcoord,
-        visit_sem{visit_sem_type::value, "Vertex texcoord."});
-    visitor("texcoord1", val.texcoord1,
-        visit_sem{visit_sem_type::value, "Vertex second texcoord."});
-    visitor(
-        "color", val.color, visit_sem{visit_sem_type::value, "Vertex color."});
-    visitor("radius", val.radius,
-        visit_sem{visit_sem_type::value, "per-vertex radius."});
-    visitor("tangsp", val.tangsp,
-        visit_sem{visit_sem_type::value, "Vertex tangent space."});
-    visitor("subdivision", val.subdivision,
-        visit_sem{visit_sem_type::value, "Number of times to subdivide."});
-    visitor("catmullclark", val.catmullclark,
-        visit_sem{visit_sem_type::value,
-            "Whether to use Catmull-Clark subdivision."});
+        val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
+    visitor(val.mat,
+        visit_var{"mat", visit_var_type::reference, "Material.", 0, 0, ""});
+    visitor(val.points,
+        visit_var{"points", visit_var_type::value, "Points.", 0, 0, ""});
+    visitor(val.lines,
+        visit_var{"lines", visit_var_type::value, "Lines.", 0, 0, ""});
+    visitor(val.triangles,
+        visit_var{"triangles", visit_var_type::value, "Triangles.", 0, 0, ""});
+    visitor(val.quads,
+        visit_var{"quads", visit_var_type::value, "Quads.", 0, 0, ""});
+    visitor(val.quads_pos, visit_var{"quads_pos", visit_var_type::value,
+                               "Face-varying indices for position.", 0, 0, ""});
+    visitor(val.quads_norm, visit_var{"quads_norm", visit_var_type::value,
+                                "Face-varying indices for normal.", 0, 0, ""});
+    visitor(val.quads_texcoord,
+        visit_var{"quads_texcoord", visit_var_type::value,
+            "Face-varying indices for texcoord.", 0, 0, ""});
+    visitor(val.beziers,
+        visit_var{"beziers", visit_var_type::value, "Bezier.", 0, 0, ""});
+    visitor(val.pos,
+        visit_var{"pos", visit_var_type::value, "Vertex position.", 0, 0, ""});
+    visitor(val.norm,
+        visit_var{"norm", visit_var_type::value, "Vertex normals.", 0, 0, ""});
+    visitor(val.texcoord, visit_var{"texcoord", visit_var_type::value,
+                              "Vertex texcoord.", 0, 0, ""});
+    visitor(val.texcoord1, visit_var{"texcoord1", visit_var_type::value,
+                               "Vertex second texcoord.", 0, 0, ""});
+    visitor(val.color,
+        visit_var{"color", visit_var_type::value, "Vertex color.", 0, 0, ""});
+    visitor(val.radius, visit_var{"radius", visit_var_type::value,
+                            "per-vertex radius.", 0, 0, ""});
+    visitor(val.tangsp, visit_var{"tangsp", visit_var_type::value,
+                            "Vertex tangent space.", 0, 0, ""});
+    visitor(val.subdivision, visit_var{"subdivision", visit_var_type::value,
+                                 "Number of times to subdivide.", 0, 0, ""});
+    visitor(val.catmullclark,
+        visit_var{"catmullclark", visit_var_type::value,
+            "Whether to use Catmull-Clark subdivision.", 0, 0, ""});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(shape_group& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::value, "Name."});
-    visitor("path", val.path,
-        visit_sem{visit_sem_type::value, "Path used for saving in glTF."});
-    visitor("shapes", val.shapes, visit_sem{visit_sem_type::value, "Shapes."});
-    visitor("props", val.props,
-        visit_sem{visit_sem_type::value, "Application specific properties."});
     visitor(
-        "name", val.name, visit_sem{visit_sem_type::value, "Cleanup. Name."});
+        val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
+    visitor(val.path, visit_var{"path", visit_var_type::value,
+                          "Path used for saving in glTF.", 0, 0, ""});
+    visitor(val.shapes,
+        visit_var{"shapes", visit_var_type::value, "Shapes.", 0, 0, ""});
+    visitor(val.props, visit_var{"props", visit_var_type::value,
+                           "Application specific properties.", 0, 0, ""});
+    visitor(val.name,
+        visit_var{"name", visit_var_type::value, "Cleanup. Name.", 0, 0, ""});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(instance& val, Visitor&& visitor) {
-    visitor("frame", val.frame,
-        visit_sem{visit_sem_type::value, "Transform frame."});
-    visitor("shp", val.shp,
-        visit_sem{visit_sem_type::reference, "Shape instance."});
-    visitor("props", val.props,
-        visit_sem{visit_sem_type::value, "Application specific properties."});
+    visitor(val.frame, visit_var{"frame", visit_var_type::value,
+                           "Transform frame.", 0, 0, ""});
+    visitor(val.shp, visit_var{"shp", visit_var_type::reference,
+                         "Shape instance.", 0, 0, ""});
+    visitor(val.props, visit_var{"props", visit_var_type::value,
+                           "Application specific properties.", 0, 0, ""});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(environment& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::value, "Name."});
-    visitor("frame", val.frame,
-        visit_sem{visit_sem_type::value, "Transform frame."});
-    visitor("ke", val.ke,
-        visit_sem{visit_sem_type::value, "Emission coefficient.", 0, 10000});
-    visitor("ke_txt", val.ke_txt,
-        visit_sem{visit_sem_type::reference, "Emission texture."});
-    visitor("ke_txt_info", val.ke_txt_info,
-        visit_sem{visit_sem_type::value, "Emission texture info."});
-    visitor("props", val.props,
-        visit_sem{visit_sem_type::value, "Application specific properties."});
+    visitor(
+        val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
+    visitor(val.frame, visit_var{"frame", visit_var_type::value,
+                           "Transform frame.", 0, 0, ""});
+    visitor(val.ke, visit_var{"ke", visit_var_type::value,
+                        "Emission coefficient.", 0, 10000, ""});
+    visitor(val.ke_txt, visit_var{"ke_txt", visit_var_type::reference,
+                            "Emission texture.", 0, 0, ""});
+    visitor(val.ke_txt_info, visit_var{"ke_txt_info", visit_var_type::value,
+                                 "Emission texture info.", 0, 0, ""});
+    visitor(val.props, visit_var{"props", visit_var_type::value,
+                           "Application specific properties.", 0, 0, ""});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(node& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::value, "Name."});
-    visitor("parent", val.parent,
-        visit_sem{visit_sem_type::reference, "Parent node."});
-    visitor("frame", val.frame,
-        visit_sem{visit_sem_type::value, "Transform frame."});
-    visitor("translation", val.translation,
-        visit_sem{visit_sem_type::value, "Translation."});
-    visitor("rotation", val.rotation,
-        visit_sem{visit_sem_type::value, "Rotation."});
-    visitor("scaling", val.scaling,
-        visit_sem{visit_sem_type::value, "Scaling.", 0.0001, 1000});
-    visitor("weights", val.weights,
-        visit_sem{visit_sem_type::value, "Weights for morphing."});
-    visitor("cam", val.cam,
-        visit_sem{visit_sem_type::reference, "Camera the node points to."});
-    visitor("ist", val.ist,
-        visit_sem{visit_sem_type::reference, "Instance the node points to."});
-    visitor("env", val.env,
-        visit_sem{
-            visit_sem_type::reference, "Environment the node points to."});
-    visitor("props", val.props,
-        visit_sem{visit_sem_type::value, "Application specific properties."});
-    visitor("children_", val.children_,
-        visit_sem{visit_sem_type::value,
-            "Child nodes. This is a computed value only stored for "
-            "convenience."});
+    visitor(
+        val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
+    visitor(val.parent, visit_var{"parent", visit_var_type::reference,
+                            "Parent node.", 0, 0, ""});
+    visitor(val.frame, visit_var{"frame", visit_var_type::value,
+                           "Transform frame.", 0, 0, ""});
+    visitor(val.translation, visit_var{"translation", visit_var_type::value,
+                                 "Translation.", 0, 0, ""});
+    visitor(val.rotation,
+        visit_var{"rotation", visit_var_type::value, "Rotation.", 0, 0, ""});
+    visitor(val.scaling, visit_var{"scaling", visit_var_type::value, "Scaling.",
+                             0.0001, 1000, ""});
+    visitor(val.weights, visit_var{"weights", visit_var_type::value,
+                             "Weights for morphing.", 0, 0, ""});
+    visitor(val.cam, visit_var{"cam", visit_var_type::reference,
+                         "Camera the node points to.", 0, 0, ""});
+    visitor(val.ist, visit_var{"ist", visit_var_type::reference,
+                         "Instance the node points to.", 0, 0, ""});
+    visitor(val.env, visit_var{"env", visit_var_type::reference,
+                         "Environment the node points to.", 0, 0, ""});
+    visitor(val.props, visit_var{"props", visit_var_type::value,
+                           "Application specific properties.", 0, 0, ""});
+    visitor(val.children_, visit_var{"children_", visit_var_type::value,
+                               "Child nodes. This is a computed value only "
+                               "stored for convenience.",
+                               0, 0, ""});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(animation& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::value, "Name."});
     visitor(
-        "type", val.type, visit_sem{visit_sem_type::value, "Interpolation."});
-    visitor("times", val.times, visit_sem{visit_sem_type::value, "Times."});
-    visitor("translation", val.translation,
-        visit_sem{visit_sem_type::value, "Translation."});
-    visitor("rotation", val.rotation,
-        visit_sem{visit_sem_type::value, "Rotation."});
-    visitor("scaling", val.scaling,
-        visit_sem{visit_sem_type::value, "Scaling.", 0.0001, 1000});
-    visitor("weights", val.weights,
-        visit_sem{visit_sem_type::value, "Weights for morphing."});
+        val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
+    visitor(val.type,
+        visit_var{"type", visit_var_type::value, "Interpolation.", 0, 0, ""});
+    visitor(val.times,
+        visit_var{"times", visit_var_type::value, "Times.", 0, 0, ""});
+    visitor(val.translation, visit_var{"translation", visit_var_type::value,
+                                 "Translation.", 0, 0, ""});
+    visitor(val.rotation,
+        visit_var{"rotation", visit_var_type::value, "Rotation.", 0, 0, ""});
+    visitor(val.scaling, visit_var{"scaling", visit_var_type::value, "Scaling.",
+                             0.0001, 1000, ""});
+    visitor(val.weights, visit_var{"weights", visit_var_type::value,
+                             "Weights for morphing.", 0, 0, ""});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(animation_group& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::value, "Name."});
-    visitor("path", val.path,
-        visit_sem{visit_sem_type::value,
-            "Path used when writing files on disk with glTF."});
-    visitor("animations", val.animations,
-        visit_sem{visit_sem_type::value, "Keyframed values."});
-    visitor("targets", val.targets,
-        visit_sem{
-            visit_sem_type::reference, "Binds keyframe values to nodes."});
-    visitor("props", val.props,
-        visit_sem{visit_sem_type::value, "Application specific properties."});
+    visitor(
+        val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
+    visitor(val.path,
+        visit_var{"path", visit_var_type::value,
+            "Path used when writing files on disk with glTF.", 0, 0, ""});
+    visitor(val.animations, visit_var{"animations", visit_var_type::value,
+                                "Keyframed values.", 0, 0, ""});
+    visitor(val.targets, visit_var{"targets", visit_var_type::reference,
+                             "Binds keyframe values to nodes.", 0, 0, ""});
+    visitor(val.props, visit_var{"props", visit_var_type::value,
+                           "Application specific properties.", 0, 0, ""});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(scene& val, Visitor&& visitor) {
-    visitor("shapes", val.shapes, visit_sem{visit_sem_type::value, "Shapes."});
-    visitor("instances", val.instances,
-        visit_sem{visit_sem_type::value, "Shape instances."});
-    visitor("materials", val.materials,
-        visit_sem{visit_sem_type::value, "Materials."});
-    visitor("textures", val.textures,
-        visit_sem{visit_sem_type::value, "Textures."});
-    visitor(
-        "cameras", val.cameras, visit_sem{visit_sem_type::value, "Cameras."});
-    visitor("environments", val.environments,
-        visit_sem{visit_sem_type::value, "Environments."});
-    visitor("nodes", val.nodes,
-        visit_sem{visit_sem_type::value, "Node hierarchy."});
-    visitor("animations", val.animations,
-        visit_sem{visit_sem_type::value, "Node animations."});
-    visitor("props", val.props,
-        visit_sem{visit_sem_type::value, "Application specific properties."});
+    visitor(val.shapes,
+        visit_var{"shapes", visit_var_type::value, "Shapes.", 0, 0, ""});
+    visitor(val.instances, visit_var{"instances", visit_var_type::value,
+                               "Shape instances.", 0, 0, ""});
+    visitor(val.materials,
+        visit_var{"materials", visit_var_type::value, "Materials.", 0, 0, ""});
+    visitor(val.textures,
+        visit_var{"textures", visit_var_type::value, "Textures.", 0, 0, ""});
+    visitor(val.cameras,
+        visit_var{"cameras", visit_var_type::value, "Cameras.", 0, 0, ""});
+    visitor(val.environments, visit_var{"environments", visit_var_type::value,
+                                  "Environments.", 0, 0, ""});
+    visitor(val.nodes,
+        visit_var{"nodes", visit_var_type::value, "Node hierarchy.", 0, 0, ""});
+    visitor(val.animations, visit_var{"animations", visit_var_type::value,
+                                "Node animations.", 0, 0, ""});
+    visitor(val.props, visit_var{"props", visit_var_type::value,
+                           "Application specific properties.", 0, 0, ""});
 }
 
 // #codegen end reflgen-scene
@@ -6412,180 +6439,197 @@ enum_names<test_shape_type>() {
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(test_camera_params& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::value, "Name."});
-    visitor("from", val.from,
-        visit_sem{visit_sem_type::value, "From point.", -10, 10});
     visitor(
-        "to", val.to, visit_sem{visit_sem_type::value, "To point.", -10, 10});
-    visitor("yfov", val.yfov,
-        visit_sem{visit_sem_type::value, "Field of view.", 0.01, 10});
-    visitor("aspect", val.aspect,
-        visit_sem{visit_sem_type::value, "Aspect ratio.", 1, 3});
+        val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
+    visitor(val.from,
+        visit_var{"from", visit_var_type::value, "From point.", -10, 10, ""});
+    visitor(val.to,
+        visit_var{"to", visit_var_type::value, "To point.", -10, 10, ""});
+    visitor(val.yfov, visit_var{"yfov", visit_var_type::value, "Field of view.",
+                          0.01, 10, ""});
+    visitor(val.aspect,
+        visit_var{"aspect", visit_var_type::value, "Aspect ratio.", 1, 3, ""});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(test_texture_params& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::value, "Name."});
-    visitor("type", val.type, visit_sem{visit_sem_type::value, "Type."});
-    visitor("resolution", val.resolution,
-        visit_sem{visit_sem_type::value, "Resolution.", 256, 4096});
-    visitor("tile_size", val.tile_size,
-        visit_sem{visit_sem_type::value, "Tile size for grid-like textures.",
-            16, 128});
-    visitor("noise_scale", val.noise_scale,
-        visit_sem{visit_sem_type::value, "Noise scale for noise-like textures.",
-            0.1, 16});
-    visitor("sky_sunangle", val.sky_sunangle,
-        visit_sem{visit_sem_type::value,
-            "Sun angle for sunsky-like textures. @refl_uiangle", 0, 1.57});
-    visitor("bump_to_normal", val.bump_to_normal,
-        visit_sem{visit_sem_type::value, "Convert to normal map."});
-    visitor("bump_scale", val.bump_scale,
-        visit_sem{visit_sem_type::value, "Bump to normal scale.", 1, 10});
+    visitor(
+        val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
+    visitor(
+        val.type, visit_var{"type", visit_var_type::value, "Type.", 0, 0, ""});
+    visitor(val.resolution, visit_var{"resolution", visit_var_type::value,
+                                "Resolution.", 256, 4096, ""});
+    visitor(
+        val.tile_size, visit_var{"tile_size", visit_var_type::value,
+                           "Tile size for grid-like textures.", 16, 128, ""});
+    visitor(val.noise_scale,
+        visit_var{"noise_scale", visit_var_type::value,
+            "Noise scale for noise-like textures.", 0.1, 16, ""});
+    visitor(val.sky_sunangle,
+        visit_var{"sky_sunangle", visit_var_type::value,
+            "Sun angle for sunsky-like textures. @refl_uiangle", 0, 1.57, ""});
+    visitor(
+        val.bump_to_normal, visit_var{"bump_to_normal", visit_var_type::value,
+                                "Convert to normal map.", 0, 0, ""});
+    visitor(val.bump_scale, visit_var{"bump_scale", visit_var_type::value,
+                                "Bump to normal scale.", 1, 10, ""});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(test_material_params& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::value, "Name."});
-    visitor("type", val.type, visit_sem{visit_sem_type::value, "Type."});
-    visitor("emission", val.emission,
-        visit_sem{visit_sem_type::value, "Emission strenght.", 0, 10000});
     visitor(
-        "color", val.color, visit_sem{visit_sem_type::color, "Base color."});
-    visitor("opacity", val.opacity,
-        visit_sem{
-            visit_sem_type::value, "Opacity (only for supported materials)."});
-    visitor("roughness", val.roughness,
-        visit_sem{visit_sem_type::value, "Roughness."});
-    visitor("texture", val.texture,
-        visit_sem{visit_sem_type::value, "Base texture."});
+        val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
     visitor(
-        "normal", val.normal, visit_sem{visit_sem_type::value, "Normal map."});
+        val.type, visit_var{"type", visit_var_type::value, "Type.", 0, 0, ""});
+    visitor(val.emission, visit_var{"emission", visit_var_type::value,
+                              "Emission strenght.", 0, 10000, ""});
+    visitor(val.color,
+        visit_var{"color", visit_var_type::color, "Base color.", 0, 0, ""});
+    visitor(
+        val.opacity, visit_var{"opacity", visit_var_type::value,
+                         "Opacity (only for supported materials).", 0, 0, ""});
+    visitor(val.roughness,
+        visit_var{"roughness", visit_var_type::value, "Roughness.", 0, 0, ""});
+    visitor(val.texture,
+        visit_var{"texture", visit_var_type::value, "Base texture.", 0, 0, ""});
+    visitor(val.normal,
+        visit_var{"normal", visit_var_type::value, "Normal map.", 0, 0, ""});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(test_shape_params& val, Visitor&& visitor) {
-    visitor("name", val.name,
-        visit_sem{visit_sem_type::value,
-            "Shape name (if not filled, assign a default based on type)."});
-    visitor("type", val.type, visit_sem{visit_sem_type::value, "Shape type."});
-    visitor("material", val.material,
-        visit_sem{visit_sem_type::value, "Material name."});
-    visitor("interior", val.interior,
-        visit_sem{visit_sem_type::value, "Interior material name."});
-    visitor("tesselation", val.tesselation,
-        visit_sem{visit_sem_type::value,
-            "Level of shape tesselatation (-1 for default).", -1, 10});
-    visitor("subdivision", val.subdivision,
-        visit_sem{visit_sem_type::value,
-            "Level of shape tesselation for subdivision surfaces.", -1, 10});
-    visitor("scale", val.scale,
-        visit_sem{visit_sem_type::value, "Shape scale.", 0.01, 10});
-    visitor("radius", val.radius,
-        visit_sem{visit_sem_type::value, "Radius for points and lines.", 0.0001,
-            0.01});
-    visitor("faceted", val.faceted,
-        visit_sem{visit_sem_type::value, "Faceted shape."});
-    visitor("num", val.num,
-        visit_sem{visit_sem_type::value,
+    visitor(val.name,
+        visit_var{"name", visit_var_type::value,
+            "Shape name (if not filled, assign a default based on type).", 0, 0,
+            ""});
+    visitor(val.type,
+        visit_var{"type", visit_var_type::value, "Shape type.", 0, 0, ""});
+    visitor(val.material, visit_var{"material", visit_var_type::value,
+                              "Material name.", 0, 0, ""});
+    visitor(val.interior, visit_var{"interior", visit_var_type::value,
+                              "Interior material name.", 0, 0, ""});
+    visitor(val.tesselation,
+        visit_var{"tesselation", visit_var_type::value,
+            "Level of shape tesselatation (-1 for default).", -1, 10, ""});
+    visitor(val.subdivision,
+        visit_var{"subdivision", visit_var_type::value,
+            "Level of shape tesselation for subdivision surfaces.", -1, 10,
+            ""});
+    visitor(val.scale, visit_var{"scale", visit_var_type::value, "Shape scale.",
+                           0.01, 10, ""});
+    visitor(val.radius, visit_var{"radius", visit_var_type::value,
+                            "Radius for points and lines.", 0.0001, 0.01, ""});
+    visitor(val.faceted, visit_var{"faceted", visit_var_type::value,
+                             "Faceted shape.", 0, 0, ""});
+    visitor(val.num,
+        visit_var{"num", visit_var_type::value,
             "Number of elements for points and lines (-1 for default).", -1,
-            10000});
-    visitor("hair_params", val.hair_params,
-        visit_sem{visit_sem_type::value, "Hair generation params."});
+            10000, ""});
+    visitor(val.hair_params, visit_var{"hair_params", visit_var_type::value,
+                                 "Hair generation params.", 0, 0, ""});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(test_instance_params& val, Visitor&& visitor) {
-    visitor("name", val.name,
-        visit_sem{visit_sem_type::value,
-            "Name (if not filled, assign a default one)."});
     visitor(
-        "shape", val.shape, visit_sem{visit_sem_type::value, "Shape name."});
-    visitor(
-        "frame", val.frame, visit_sem{visit_sem_type::value, "Base frame."});
-    visitor("rotation", val.rotation,
-        visit_sem{visit_sem_type::value, "Rotation in Euler angles."});
+        val.name, visit_var{"name", visit_var_type::value,
+                      "Name (if not filled, assign a default one).", 0, 0, ""});
+    visitor(val.shape,
+        visit_var{"shape", visit_var_type::value, "Shape name.", 0, 0, ""});
+    visitor(val.frame,
+        visit_var{"frame", visit_var_type::value, "Base frame.", 0, 0, ""});
+    visitor(val.rotation, visit_var{"rotation", visit_var_type::value,
+                              "Rotation in Euler angles.", 0, 0, ""});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(test_environment_params& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::value, "Name."});
-    visitor("emission", val.emission,
-        visit_sem{visit_sem_type::value, "Emission strenght.", 0, 10000});
-    visitor("color", val.color,
-        visit_sem{visit_sem_type::color, "Emission color."});
-    visitor("texture", val.texture,
-        visit_sem{visit_sem_type::value, "Emission texture."});
-    visitor("frame", val.frame, visit_sem{visit_sem_type::value, "Frame."});
-    visitor("rotation", val.rotation,
-        visit_sem{visit_sem_type::value, "Rotation around y axis.", 0, 6.28});
+    visitor(
+        val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
+    visitor(val.emission, visit_var{"emission", visit_var_type::value,
+                              "Emission strenght.", 0, 10000, ""});
+    visitor(val.color,
+        visit_var{"color", visit_var_type::color, "Emission color.", 0, 0, ""});
+    visitor(val.texture, visit_var{"texture", visit_var_type::value,
+                             "Emission texture.", 0, 0, ""});
+    visitor(val.frame,
+        visit_var{"frame", visit_var_type::value, "Frame.", 0, 0, ""});
+    visitor(val.rotation, visit_var{"rotation", visit_var_type::value,
+                              "Rotation around y axis.", 0, 6.28, ""});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(test_node_params& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::value, "Name."});
     visitor(
-        "parent", val.parent, visit_sem{visit_sem_type::value, "Parent node."});
-    visitor("camera", val.camera, visit_sem{visit_sem_type::value, "Camera."});
-    visitor("instance", val.instance,
-        visit_sem{visit_sem_type::value, "Instance."});
-    visitor("environment", val.environment,
-        visit_sem{visit_sem_type::value, "Environment."});
-    visitor("frame", val.frame, visit_sem{visit_sem_type::value, "Frame."});
-    visitor("translation", val.translation,
-        visit_sem{visit_sem_type::value, "Translation.", -10, 10});
-    visitor(
-        "rotation", val.rotation, visit_sem{visit_sem_type::value, "Roation."});
-    visitor("scaling", val.scaling,
-        visit_sem{visit_sem_type::value, "Scaling.", 0.01, 10});
+        val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
+    visitor(val.parent,
+        visit_var{"parent", visit_var_type::value, "Parent node.", 0, 0, ""});
+    visitor(val.camera,
+        visit_var{"camera", visit_var_type::value, "Camera.", 0, 0, ""});
+    visitor(val.instance,
+        visit_var{"instance", visit_var_type::value, "Instance.", 0, 0, ""});
+    visitor(val.environment, visit_var{"environment", visit_var_type::value,
+                                 "Environment.", 0, 0, ""});
+    visitor(val.frame,
+        visit_var{"frame", visit_var_type::value, "Frame.", 0, 0, ""});
+    visitor(val.translation, visit_var{"translation", visit_var_type::value,
+                                 "Translation.", -10, 10, ""});
+    visitor(val.rotation,
+        visit_var{"rotation", visit_var_type::value, "Roation.", 0, 0, ""});
+    visitor(val.scaling,
+        visit_var{"scaling", visit_var_type::value, "Scaling.", 0.01, 10, ""});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(test_animation_params& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::value, "Name."});
-    visitor("bezier", val.bezier,
-        visit_sem{visit_sem_type::value, "Linear or bezier."});
-    visitor("speed", val.speed,
-        visit_sem{visit_sem_type::value, "Animation speed.", 0.01, 10});
-    visitor("scale", val.scale,
-        visit_sem{visit_sem_type::value, "Animation scale.", 0.01, 10});
-    visitor("times", val.times,
-        visit_sem{visit_sem_type::value, "Keyframes times."});
-    visitor("translation", val.translation,
-        visit_sem{visit_sem_type::value, "Translation keyframes.", -10, 10});
-    visitor("rotation", val.rotation,
-        visit_sem{visit_sem_type::value, "Rotation keyframes."});
-    visitor("scaling", val.scaling,
-        visit_sem{visit_sem_type::value, "Scale keyframes.", 0.01, 10});
     visitor(
-        "nodes", val.nodes, visit_sem{visit_sem_type::value, "Environment."});
+        val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
+    visitor(val.bezier, visit_var{"bezier", visit_var_type::value,
+                            "Linear or bezier.", 0, 0, ""});
+    visitor(val.speed, visit_var{"speed", visit_var_type::value,
+                           "Animation speed.", 0.01, 10, ""});
+    visitor(val.scale, visit_var{"scale", visit_var_type::value,
+                           "Animation scale.", 0.01, 10, ""});
+    visitor(val.times, visit_var{"times", visit_var_type::value,
+                           "Keyframes times.", 0, 0, ""});
+    visitor(val.translation, visit_var{"translation", visit_var_type::value,
+                                 "Translation keyframes.", -10, 10, ""});
+    visitor(val.rotation, visit_var{"rotation", visit_var_type::value,
+                              "Rotation keyframes.", 0, 0, ""});
+    visitor(val.scaling, visit_var{"scaling", visit_var_type::value,
+                             "Scale keyframes.", 0.01, 10, ""});
+    visitor(val.nodes,
+        visit_var{"nodes", visit_var_type::value, "Environment.", 0, 0, ""});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(test_scene_params& val, Visitor&& visitor) {
-    visitor("name", val.name, visit_sem{visit_sem_type::value, "Name."});
     visitor(
-        "cameras", val.cameras, visit_sem{visit_sem_type::value, "Cameras."});
-    visitor("textures", val.textures,
-        visit_sem{visit_sem_type::value, "Textures."});
-    visitor("materials", val.materials,
-        visit_sem{visit_sem_type::value, "Materials."});
-    visitor("shapes", val.shapes, visit_sem{visit_sem_type::value, "Shapes."});
-    visitor("instances", val.instances,
-        visit_sem{visit_sem_type::value, "Instances."});
-    visitor("environments", val.environments,
-        visit_sem{visit_sem_type::value, "Environmennts."});
-    visitor("nodes", val.nodes, visit_sem{visit_sem_type::value, "Nodes."});
-    visitor("animations", val.animations,
-        visit_sem{visit_sem_type::value, "Animations."});
+        val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
+    visitor(val.cameras,
+        visit_var{"cameras", visit_var_type::value, "Cameras.", 0, 0, ""});
+    visitor(val.textures,
+        visit_var{"textures", visit_var_type::value, "Textures.", 0, 0, ""});
+    visitor(val.materials,
+        visit_var{"materials", visit_var_type::value, "Materials.", 0, 0, ""});
+    visitor(val.shapes,
+        visit_var{"shapes", visit_var_type::value, "Shapes.", 0, 0, ""});
+    visitor(val.instances,
+        visit_var{"instances", visit_var_type::value, "Instances.", 0, 0, ""});
+    visitor(val.environments, visit_var{"environments", visit_var_type::value,
+                                  "Environmennts.", 0, 0, ""});
+    visitor(val.nodes,
+        visit_var{"nodes", visit_var_type::value, "Nodes.", 0, 0, ""});
+    visitor(val.animations, visit_var{"animations", visit_var_type::value,
+                                "Animations.", 0, 0, ""});
 }
 
 // #codegen end reflgen-test-scene
@@ -6716,15 +6760,13 @@ enum struct trace_filter_type {
 
 /// Rendering params.
 struct trace_params {
-    /// Image width. @refl_uilimits(256,4096)
-    int width = 360;
-    /// Image height. @refl_uilimits(256,4096)
-    int height = 360;
-    /// Number of samples. @refl_uilimits(16,4096)
+    /// Image vertical resolution. @refl_uilimits(256,4096)
+    int resolution = 512;
+    /// Number of samples. @refl_uilimits(16,4096) @refl_shortname(s)
     int nsamples = 256;
-    /// Sampler type.
+    /// Sampler type. @refl_shortname(S)
     trace_shader_type shader = trace_shader_type::pathtrace;
-    /// Random number generation type.
+    /// Random number generation type. @refl_shortname(R)
     trace_rng_type rng = trace_rng_type::stratified;
     /// Filter type.
     trace_filter_type filter = trace_filter_type::box;
@@ -6746,10 +6788,6 @@ struct trace_params {
     bool parallel = true;
     /// Seed for the random number generators. @refl_uilimits(0,1000)
     uint32_t seed = 0;
-    /// Block size for parallel batches (probably leave it as is).
-    int block_size = 32;
-    /// Batch size for progressive rendering.
-    int batch_size = 16;
 };
 
 // #codegen end refl-trace
@@ -6799,7 +6837,8 @@ struct trace_lights {
 };
 
 /// Initialize trace pixels.
-image<trace_pixel> make_trace_pixels(const trace_params& params);
+image<trace_pixel> make_trace_pixels(
+    const image4f& img, const trace_params& params);
 /// Initialize trace lights.
 trace_lights make_trace_lights(const scene* scn);
 
@@ -6816,8 +6855,9 @@ void trace_samples_filtered(const scene* scn, const camera* cam,
 /// Trace the whole image.
 inline image4f trace_image(const scene* scn, const camera* cam,
     const bvh_tree* bvh, const trace_params& params) {
-    auto img = image4f(params.width, params.height);
-    auto pixels = make_trace_pixels(params);
+    auto img = image4f(
+        (int)std::round(cam->aspect * params.resolution), params.resolution);
+    auto pixels = make_trace_pixels(img, params);
     auto lights = make_trace_lights(scn);
     trace_samples(scn, cam, bvh, lights, img, pixels, params.nsamples, params);
     return img;
@@ -6889,45 +6929,37 @@ enum_names<trace_filter_type>() {
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(trace_params& val, Visitor&& visitor) {
-    visitor("width", val.width,
-        visit_sem{visit_sem_type::value, "Image width.", 256, 4096});
-    visitor("height", val.height,
-        visit_sem{visit_sem_type::value, "Image height.", 256, 4096});
-    visitor("nsamples", val.nsamples,
-        visit_sem{visit_sem_type::value, "Number of samples.", 16, 4096});
-    visitor("shader", val.shader,
-        visit_sem{visit_sem_type::value, "Sampler type."});
-    visitor("rng", val.rng,
-        visit_sem{visit_sem_type::value, "Random number generation type."});
+    visitor(val.resolution, visit_var{"resolution", visit_var_type::value,
+                                "Image vertical resolution.", 256, 4096, ""});
+    visitor(val.nsamples, visit_var{"nsamples", visit_var_type::value,
+                              "Number of samples.", 16, 4096, "s"});
+    visitor(val.shader,
+        visit_var{"shader", visit_var_type::value, "Sampler type.", 0, 0, "S"});
+    visitor(val.rng, visit_var{"rng", visit_var_type::value,
+                         "Random number generation type.", 0, 0, "R"});
+    visitor(val.filter,
+        visit_var{"filter", visit_var_type::value, "Filter type.", 0, 0, ""});
+    visitor(val.notransmission,
+        visit_var{"notransmission", visit_var_type::value,
+            "Wheter to test transmission in shadows.", 0, 0, ""});
+    visitor(val.ambient, visit_var{"ambient", visit_var_type::color,
+                             "Ambient lighting.", 0, 0, ""});
+    visitor(val.envmap_invisible,
+        visit_var{"envmap_invisible", visit_var_type::value,
+            "View environment map.", 0, 0, ""});
+    visitor(val.min_depth, visit_var{"min_depth", visit_var_type::value,
+                               "Minimum ray depth.", 1, 10, ""});
+    visitor(val.max_depth, visit_var{"max_depth", visit_var_type::value,
+                               "Maximum ray depth.", 1, 10, ""});
+    visitor(val.pixel_clamp, visit_var{"pixel_clamp", visit_var_type::value,
+                                 "Final pixel clamping.", 1, 10, ""});
+    visitor(val.ray_eps, visit_var{"ray_eps", visit_var_type::value,
+                             "Ray intersection epsilon.", 0.0001, 0.001, ""});
+    visitor(val.parallel, visit_var{"parallel", visit_var_type::value,
+                              "Parallel execution.", 0, 0, ""});
     visitor(
-        "filter", val.filter, visit_sem{visit_sem_type::value, "Filter type."});
-    visitor("notransmission", val.notransmission,
-        visit_sem{
-            visit_sem_type::value, "Wheter to test transmission in shadows."});
-    visitor("ambient", val.ambient,
-        visit_sem{visit_sem_type::color, "Ambient lighting."});
-    visitor("envmap_invisible", val.envmap_invisible,
-        visit_sem{visit_sem_type::value, "View environment map."});
-    visitor("min_depth", val.min_depth,
-        visit_sem{visit_sem_type::value, "Minimum ray depth.", 1, 10});
-    visitor("max_depth", val.max_depth,
-        visit_sem{visit_sem_type::value, "Maximum ray depth.", 1, 10});
-    visitor("pixel_clamp", val.pixel_clamp,
-        visit_sem{visit_sem_type::value, "Final pixel clamping.", 1, 10});
-    visitor("ray_eps", val.ray_eps,
-        visit_sem{
-            visit_sem_type::value, "Ray intersection epsilon.", 0.0001, 0.001});
-    visitor("parallel", val.parallel,
-        visit_sem{visit_sem_type::value, "Parallel execution."});
-    visitor("seed", val.seed,
-        visit_sem{visit_sem_type::value,
-            "Seed for the random number generators.", 0, 1000});
-    visitor("block_size", val.block_size,
-        visit_sem{visit_sem_type::value,
-            "Block size for parallel batches (probably leave it as is)."});
-    visitor("batch_size", val.batch_size,
-        visit_sem{
-            visit_sem_type::value, "Batch size for progressive rendering."});
+        val.seed, visit_var{"seed", visit_var_type::value,
+                      "Seed for the random number generators.", 0, 1000, ""});
 }
 
 // #codegen end reflgen-trace
@@ -8646,9 +8678,6 @@ namespace ygl {
 /// @defgroup cmdline Immediate-mode command line parser
 /// @{
 
-/// Immediate mode command line parser (opaque type)
-struct cmdline_parser;
-
 /// Immediate mode command line parser. Members are not part of the public API.
 struct cmdline_parser {
     std::vector<std::string> _to_parse;    // args left to parse
@@ -8685,13 +8714,13 @@ inline T parse_opt(cmdline_parser& parser, const std::string& name,
     const std::vector<std::pair<std::string, T>>& key_values, const T& def,
     bool req = false, const std::vector<T>& choices = {});
 
-// Parse positional argument from the command line.
+/// Parse positional argument from the command line.
 template <typename T>
 inline T parse_arg(cmdline_parser& parser, const std::string& name,
     const std::string& help, const T& def = {}, bool req = true,
     const std::vector<T>& choices = {});
 
-// Parse all remaining positional argument from the command line.
+/// Parse all remaining positional argument from the command line.
 template <typename T>
 inline std::vector<T> parse_args(cmdline_parser& parser,
     const std::string& name, const std::string& help,
@@ -9588,33 +9617,29 @@ struct gl_stdimage_program {
 gl_stdimage_program make_stdimage_program();
 
 /// Draws an image texture the stdimage program.
-void draw_image(gl_stdimage_program& prog, const gl_texture& txt, int win_width,
-    int win_height, const vec2f& offset, float zoom, float exposure,
+void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
+    const vec2i& win_size, const vec2f& offset, float zoom, float exposure,
     float gamma, bool filmic);
 
 /// Draws an image texture the stdimage program.
 inline void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
-    int win_width, int win_height, const vec2f& offset, float zoom) {
-    draw_image(prog, txt, win_width, win_height, offset, zoom, 0, 1, false);
+    const vec2i& win_size, const vec2f& offset, float zoom) {
+    draw_image(prog, txt, win_size, offset, zoom, 0, 1, false);
 }
 
 // #codegen begin refl-glstdimage
 
 /// Params for stdimage drawing.
 struct gl_stdimage_params {
-    /// Window width. @refl_uilimits(256, 4096)
-    int width = 0;
-    /// Window height. @refl_uilimits(256, 4096)
-    int height = 0;
     /// Image offset. @refl_uilimits(-4096, 4096)
     vec2f offset = {0, 0};
     /// Image zoom. @refl_uilimits(0.01, 10)
     float zoom = 1;
-    /// Hdr exposure. @refl_uilimits(-10, 10)
+    /// Hdr exposure. @refl_uilimits(-10, 10) @refl_shortname(e)
     float exposure = 1;
-    /// Hdr gamma. @refl_uilimits(0.1,3)
+    /// Hdr gamma. @refl_uilimits(0.1,3) @refl_shortname(g)
     float gamma = 2.2f;
-    /// Hdr filmic tonemapping.
+    /// Hdr filmic tonemapping. @refl_shortname(F)
     bool filmic = false;
     /// Image background. @refl_semantic(color)
     vec4f background = zero4f;
@@ -9624,10 +9649,11 @@ struct gl_stdimage_params {
 
 /// Draws an image texture the stdimage program.
 inline void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
-    const gl_stdimage_params& params, bool clear_background = true) {
+    const vec2i& win_size, const gl_stdimage_params& params,
+    bool clear_background = true) {
     if (clear_background) gl_clear_buffers(params.background);
-    draw_image(prog, txt, params.width, params.height, params.offset,
-        params.zoom, params.exposure, params.gamma, params.filmic);
+    draw_image(prog, txt, win_size, params.offset, params.zoom, params.exposure,
+        params.gamma, params.filmic);
 }
 
 /// @}
@@ -9729,15 +9755,13 @@ void set_stdsurface_vert_skinning_off(gl_stdsurface_program& prog);
 
 /// Params for stdsurface drawing.
 struct gl_stdsurface_params {
-    /// Image width. @refl_uilimits(256, 4096)
-    int width = 360;
-    /// Image height. @refl_uilimits(256, 4096)
-    int height = 360;
-    /// Image exposure. @refl_uilimits(-10, 10)
+    /// Image resolution. @refl_uilimits(256, 4096)
+    int resolution = 512;
+    /// Image exposure. @refl_uilimits(-10, 10) @refl_shortname(e)
     float exposure = 0;
-    /// Image gamma. @refl_uilimits(0.1, 3)
+    /// Image gamma. @refl_uilimits(0.1, 3) @refl_shortname(g)
     float gamma = 2.2f;
-    /// Image filmic tonemapping.
+    /// Image filmic tonemapping. @refl_shortname(F)
     bool filmic = false;
     /// Draw as wireframe.
     bool wireframe = false;
@@ -9745,7 +9769,7 @@ struct gl_stdsurface_params {
     bool edges = false;
     /// Offset for edges. @refl_uilimits(0, 0.1)
     float edge_offset = 0.01f;
-    /// Draw with an alpha cutout for binary transparency.
+    /// Draw with for binary transparency.
     bool cutout = false;
     /// Camera light mode.
     bool eyelight = false;
@@ -9753,7 +9777,7 @@ struct gl_stdsurface_params {
     vec4f background = {0, 0, 0, 0};
     /// Ambient illumination. @refl_semantic(color)
     vec3f ambient = {0, 0, 0};
-    /// Highlighted object.
+    /// Highlighted object. @refl_semantic(noneditable)
     void* highlighted = nullptr;
     /// Highlight color. @refl_semantic(color)
     vec3f highlight_color = {1, 1, 0};
@@ -9769,7 +9793,7 @@ struct gl_stdsurface_params {
 void draw_stdsurface_scene(const scene* scn, const camera* cam,
     gl_stdsurface_program& prog, std::unordered_map<shape*, gl_shape>& shapes,
     std::unordered_map<texture*, gl_texture>& textures, const gl_lights& lights,
-    const gl_stdsurface_params& params);
+    const vec2i& viewport_size, const gl_stdsurface_params& params);
 
 /// @}
 
@@ -9788,22 +9812,18 @@ namespace ygl {
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(gl_stdimage_params& val, Visitor&& visitor) {
-    visitor("width", val.width,
-        visit_sem{visit_sem_type::value, "Window width.", 256, 4096});
-    visitor("height", val.height,
-        visit_sem{visit_sem_type::value, "Window height.", 256, 4096});
-    visitor("offset", val.offset,
-        visit_sem{visit_sem_type::value, "Image offset.", -4096, 4096});
-    visitor("zoom", val.zoom,
-        visit_sem{visit_sem_type::value, "Image zoom.", 0.01, 10});
-    visitor("exposure", val.exposure,
-        visit_sem{visit_sem_type::value, "Hdr exposure.", -10, 10});
-    visitor("gamma", val.gamma,
-        visit_sem{visit_sem_type::value, "Hdr gamma.", 0.1, 3});
-    visitor("filmic", val.filmic,
-        visit_sem{visit_sem_type::value, "Hdr filmic tonemapping."});
-    visitor("background", val.background,
-        visit_sem{visit_sem_type::color, "Image background."});
+    visitor(val.offset, visit_var{"offset", visit_var_type::value,
+                            "Image offset.", -4096, 4096, ""});
+    visitor(val.zoom,
+        visit_var{"zoom", visit_var_type::value, "Image zoom.", 0.01, 10, ""});
+    visitor(val.exposure, visit_var{"exposure", visit_var_type::value,
+                              "Hdr exposure.", -10, 10, "e"});
+    visitor(val.gamma,
+        visit_var{"gamma", visit_var_type::value, "Hdr gamma.", 0.1, 3, "g"});
+    visitor(val.filmic, visit_var{"filmic", visit_var_type::value,
+                            "Hdr filmic tonemapping.", 0, 0, "F"});
+    visitor(val.background, visit_var{"background", visit_var_type::color,
+                                "Image background.", 0, 0, ""});
 }
 
 // #codegen end reflgen-glstdimage
@@ -9813,39 +9833,38 @@ inline void visit(gl_stdimage_params& val, Visitor&& visitor) {
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(gl_stdsurface_params& val, Visitor&& visitor) {
-    visitor("width", val.width,
-        visit_sem{visit_sem_type::value, "Image width.", 256, 4096});
-    visitor("height", val.height,
-        visit_sem{visit_sem_type::value, "Image height.", 256, 4096});
-    visitor("exposure", val.exposure,
-        visit_sem{visit_sem_type::value, "Image exposure.", -10, 10});
-    visitor("gamma", val.gamma,
-        visit_sem{visit_sem_type::value, "Image gamma.", 0.1, 3});
-    visitor("filmic", val.filmic,
-        visit_sem{visit_sem_type::value, "Image filmic tonemapping."});
-    visitor("wireframe", val.wireframe,
-        visit_sem{visit_sem_type::value, "Draw as wireframe."});
-    visitor("edges", val.edges,
-        visit_sem{visit_sem_type::value, "Draw with overlaid edges"});
-    visitor("edge_offset", val.edge_offset,
-        visit_sem{visit_sem_type::value, "Offset for edges.", 0, 0.1});
-    visitor("cutout", val.cutout,
-        visit_sem{visit_sem_type::value,
-            "Draw with an alpha cutout for binary transparency."});
-    visitor("eyelight", val.eyelight,
-        visit_sem{visit_sem_type::value, "Camera light mode."});
-    visitor("background", val.background,
-        visit_sem{visit_sem_type::color, "Window background."});
-    visitor("ambient", val.ambient,
-        visit_sem{visit_sem_type::color, "Ambient illumination."});
-    visitor("highlighted", val.highlighted,
-        visit_sem{visit_sem_type::value, "Highlighted object."});
-    visitor("highlight_color", val.highlight_color,
-        visit_sem{visit_sem_type::color, "Highlight color."});
-    visitor("edge_color", val.edge_color,
-        visit_sem{visit_sem_type::color, "Edge color."});
-    visitor("cull_backface", val.cull_backface,
-        visit_sem{visit_sem_type::value, "Cull back face."});
+    visitor(val.resolution, visit_var{"resolution", visit_var_type::value,
+                                "Image resolution.", 256, 4096, ""});
+    visitor(val.exposure, visit_var{"exposure", visit_var_type::value,
+                              "Image exposure.", -10, 10, "e"});
+    visitor(val.gamma,
+        visit_var{"gamma", visit_var_type::value, "Image gamma.", 0.1, 3, "g"});
+    visitor(val.filmic, visit_var{"filmic", visit_var_type::value,
+                            "Image filmic tonemapping.", 0, 0, "F"});
+    visitor(val.wireframe, visit_var{"wireframe", visit_var_type::value,
+                               "Draw as wireframe.", 0, 0, ""});
+    visitor(val.edges, visit_var{"edges", visit_var_type::value,
+                           "Draw with overlaid edges", 0, 0, ""});
+    visitor(val.edge_offset, visit_var{"edge_offset", visit_var_type::value,
+                                 "Offset for edges.", 0, 0.1, ""});
+    visitor(val.cutout, visit_var{"cutout", visit_var_type::value,
+                            "Draw with for binary transparency.", 0, 0, ""});
+    visitor(val.eyelight, visit_var{"eyelight", visit_var_type::value,
+                              "Camera light mode.", 0, 0, ""});
+    visitor(val.background, visit_var{"background", visit_var_type::color,
+                                "Window background.", 0, 0, ""});
+    visitor(val.ambient, visit_var{"ambient", visit_var_type::color,
+                             "Ambient illumination.", 0, 0, ""});
+    visitor(
+        val.highlighted, visit_var{"highlighted", visit_var_type::noneditable,
+                             "Highlighted object.", 0, 0, ""});
+    visitor(
+        val.highlight_color, visit_var{"highlight_color", visit_var_type::color,
+                                 "Highlight color.", 0, 0, ""});
+    visitor(val.edge_color, visit_var{"edge_color", visit_var_type::color,
+                                "Edge color.", 0, 0, ""});
+    visitor(val.cull_backface, visit_var{"cull_backface", visit_var_type::value,
+                                   "Cull back face.", 0, 0, ""});
 }
 
 // #codegen end reflgen-glstdsurface
@@ -10225,14 +10244,6 @@ inline bool draw_value_widget(gl_window* win, const std::string& lbl,
                draw_slider_widget(win, lbl, (int&)val, 0, 10);
 }
 
-/// Tonemapping widgets.
-void draw_tonemap_widgets(gl_window* win, const std::string& lbl,
-    float& exposure, float& gamma, bool& filmic);
-
-/// Image view widgets.
-void draw_imageview_widgets(gl_window* win, const std::string& lbl,
-    gl_stdimage_params& params, bool show_tonemap = true);
-
 /// Image inspection widgets.
 void draw_imageinspect_widgets(gl_window* win, const std::string& lbl,
     const image4f& hdr, const image4b& ldr, const vec2f& mouse_pos,
@@ -10304,7 +10315,7 @@ inline void _add_usage_str(cmdline_parser& parser, const std::string& name,
     if (!metavar.empty()) stream << " " << metavar;
     while (stream.str().length() < 32) stream << " ";
     stream << help << " ";
-    if (!req) stream << "[" << def << "]";
+    if (!req && !def.empty()) stream << "[" << def << "]";
     if (req) stream << "(required)";
     stream << "\n";
     if (!choices.empty()) {
@@ -10337,6 +10348,14 @@ inline void _add_usage(cmdline_parser& parser, const std::string& name,
 }
 
 // cmdline implementation
+inline void _add_usage(cmdline_parser& parser, const std::string& name,
+    const std::string& flag, bool opt, bool flag_opt, const std::string& help,
+    bool def, bool req, const std::vector<bool>& choices) {
+    _add_usage_str(parser, name, flag, opt, (flag_opt) ? "" : "<val>", help,
+        (def) ? "true" : "false", req, choices);
+}
+
+// cmdline implementation
 template <typename T>
 inline void _add_usage(cmdline_parser& parser, const std::string& name,
     const std::string& flag, bool opt, const std::string& help,
@@ -10365,7 +10384,7 @@ inline bool should_exit(cmdline_parser& parser) {
         else
             _set_error(parser, "unknown argument " + v);
     }
-    return !parser._error.empty();
+    return parser._usage || !parser._error.empty();
 }
 
 // Returns the usage string.
@@ -10571,26 +10590,37 @@ struct cmdline_visitor {
     std::string prefix = "";
     bool req = false;
 
-    template <typename T,
-        typename std::enable_if<!std::is_enum<T>::value, int>::type = 0>
-    inline void operator()(const char* name, T& val, const visit_sem& sem) {
+    inline std::string fix_name(const std::string& name) {
         auto long_name = "--"s;
         if (!prefix.empty()) long_name += prefix + "-";
         long_name += name;
         for (auto& c : long_name)
             if (c == '_') c = '-';
-        val = parse_opt(parser, long_name, "", sem.help, val, req);
+        return long_name;
+    }
+
+    inline std::string fix_short(const std::string& name) {
+        return (name.empty()) ? "" : "-" + name;
+    }
+
+    inline void operator()(bool& val, const visit_var& var) {
+        if (var.type == visit_var_type::noneditable) return;
+        val = parse_flag(parser, fix_name(var.name), fix_short(var.short_name),
+            var.help, val, req);
+    }
+    template <typename T,
+        typename std::enable_if<!std::is_enum<T>::value, int>::type = 0>
+    inline void operator()(T& val, const visit_var& var) {
+        if (var.type == visit_var_type::noneditable) return;
+        val = parse_opt(parser, fix_name(var.name), fix_short(var.short_name),
+            var.help, val, req);
     }
     template <typename T,
         typename std::enable_if<std::is_enum<T>::value, int>::type = 0>
-    inline void operator()(const char* name, T& val, const visit_sem& sem) {
-        auto long_name = "--"s;
-        if (!prefix.empty()) long_name += prefix + "-";
-        long_name += name;
-        for (auto& c : long_name)
-            if (c == '_') c = '-';
-        val = parse_opt(
-            parser, long_name, "", sem.help, enum_names(val), val, req);
+    inline void operator()(T& val, const visit_var& var) {
+        if (var.type == visit_var_type::noneditable) return;
+        val = parse_opt(parser, fix_name(var.name), fix_short(var.short_name),
+            var.help, enum_names(val), val, req);
     }
 };
 
@@ -10711,20 +10741,20 @@ struct draw_params_visitor {
     int edited = 0;
 
     template <typename T>
-    void operator()(const char* name, T& val, const visit_sem& sem) {
-        auto lbl = std::string(name);
+    void operator()(T& val, const visit_var& var) {
+        auto lbl = var.name;
         for (auto& c : lbl)
             if (c == '_') c = ' ';
-        if (sem.type == visit_sem_type::constui) {
+        if (var.type == visit_var_type::noneditable) {
             draw_label_widget(win, lbl, val);
         } else {
-            edited += draw_value_widget(win, lbl, val, sem.min, sem.max,
-                sem.type == visit_sem_type::color);
+            edited += draw_value_widget(win, lbl, val, var.min, var.max,
+                var.type == visit_var_type::color);
         }
     }
 
     template <typename T>
-    void operator()(const char* name, T* val, const visit_sem& sem) {}
+    void operator()(T* val, const visit_var& var) {}
 };
 
 // Draws a widget that sets params in non-recursive trivial structures.
@@ -10732,14 +10762,12 @@ struct draw_params_visitor {
 template <typename T>
 inline bool draw_params_widgets(
     gl_window* win, const std::string& lbl, T& params) {
-    if (draw_header_widget(win, lbl)) {
-        draw_groupid_widget_begin(win, &params);
-        auto visitor = draw_params_visitor{win};
-        visit(params, visitor);
-        draw_groupid_widget_end(win);
-        return visitor.edited;
-    }
-    return false;
+    if (!lbl.empty() && !draw_header_widget(win, lbl)) return false;
+    draw_groupid_widget_begin(win, &params);
+    auto visitor = draw_params_visitor{win};
+    visit(params, visitor);
+    draw_groupid_widget_end(win);
+    return visitor.edited;
 }
 
 }  // namespace ygl
