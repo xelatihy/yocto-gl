@@ -5,7 +5,7 @@
     "description": "Generic glTF object",
     "properties": {
         "extensions": {
-            "type": "map<string, json>",
+            "type": "std::map<std::string, json>",
             "description": "Extensions."
         },
         "extras": {

@@ -6,7 +6,7 @@
     "base": "glTFChildOfRootProperty",
     "properties": {
         "nodes": {
-            "type": "vector<glTFid<glTFNode>>",
+            "type": "std::vector<glTFid<glTFNode>>",
             "description": "The indices of each root node.",
             "uniqueItems": true,
             "minItems": 1

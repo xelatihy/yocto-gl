@@ -6,7 +6,7 @@
     "allOf": [ { "$ref": "glTFChildOfRootProperty.schema.json" } ],
     "properties": {
         "uri": {
-            "type": "string",
+            "type": "std::string",
             "description": "The uri of the image.",
             "format": "uriref",
             "gltf_detailedDescription": "The uri of the image.  Relative paths are relative to the .gltf file.  Instead of referencing an external file, the uri can also be a data-uri.  The image format must be jpg or png.",
@@ -21,7 +21,7 @@
                     "enum": [ "image/png" ]
                 },
                 {
-                    "type": "string"
+                    "type": "std::string"
                 }
             ],
             "description": "The image's MIME type."

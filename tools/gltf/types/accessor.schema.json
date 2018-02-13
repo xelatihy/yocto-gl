@@ -43,14 +43,14 @@
             "is_enum": true
         },
         "max": {
-            "type": "vector<float>",
+            "type": "std::vector<float>",
             "description": "Maximum value of each component in this attribute.",
             "minItems": 1,
             "maxItems": 16,
             "gltf_detailedDescription": "Maximum value of each component in this attribute.  Array elements must be treated as having the same data type as accessor's `componentType`. Both min and max arrays have the same length.  The length is determined by the value of the type property; it can be 1, 2, 3, 4, 9, or 16.\n\n`normalized` property has no effect on array values: they always correspond to the actual values stored in the buffer. When accessor is sparse, this property must contain max values of accessor data with sparse substitution applied."
         },
         "min": {
-            "type": "vector<float>",
+            "type": "std::vector<float>",
             "description": "Minimum value of each component in this attribute.",
             "minItems": 1,
             "maxItems": 16,
@@ -96,7 +96,7 @@
         {
             "name": "glTFAccessorType",
             "description": "Values for glTFAccessor::type",
-            "item": "string",
+            "item": "std::string",
             "values": [
                 {
                     "enum": "SCALAR",

@@ -68,7 +68,7 @@ bool operator!=(const glTFid<T>& a, const glTFid<T>& b) {
 template <typename T>
 void serialize(glTFid<T>& val, json& js, bool reading) {
     if(reading) {
-        if (!js.is_number_integer()) throw runtime_error("int expected");
+        if (!js.is_number_integer()) throw std::runtime_error("int expected");
         val = glTFid<T>((int)js);
     } else {
         js = (int)val;
@@ -78,7 +78,7 @@ void serialize(glTFid<T>& val, json& js, bool reading) {
 // Parses a glTFProperty object
 void serialize(glTFProperty& val, json& js, bool reading) {
     if(reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
+        if (!js.is_object()) throw std::runtime_error("object expected");
 #if YGL_GLTFJSON
         if(js.count("extensions")) serialize(val.extensions, js.at("extensions"), reading);
         if(js.count("extras")) serialize(val.extras, js.at("extras"), reading);
@@ -99,7 +99,7 @@ parse_fmt = '''
 {{#enums}}
 // Parse a {{name}} enum
 void serialize({{name}}& val, json& js, bool reading) {
-    static vector<pair<{{item}}, {{name}}>> table = { {{#values}} { {{enum}}, {{name}}::{{label}} },{{/values}} };
+    static std::vector<std::pair<{{item}}, {{name}}>> table = { {{#values}} { {{enum}}, {{name}}::{{label}} },{{/values}} };
     serialize(val, js, reading, table);
 }
 
@@ -201,10 +201,10 @@ def fix_schema(js):
         vjs['required'] = 'required' in js and vjs['name'] in js['required']
         if '*' in vjs['type']:
             js['destructor'] = True
-            if 'vector<' in vjs['type']: vjs['is_ptrarray'] = True
+            if 'std::vector<' in vjs['type']: vjs['is_ptrarray'] = True
             else: vjs['is_ptr'] = True
         if 'extension' in vjs: js['has_extensions'] = True
-        defaults = { 'int': '0', 'float': '0', 'string': '""' }
+        defaults = { 'int': '0', 'float': '0', 'std::string': '""' }
         if 'default' not in vjs:
             if 'vector' not in vjs['type'] and '*' in vjs['type']:
                 vjs['default'] = 'nullptr'
@@ -218,7 +218,7 @@ def fix_schema(js):
             vjs['default'] = vjs['type'] + '::' + vjs['default']
         else:
             vjs['default'] = str(vjs['default']).replace('.0','').replace('[','{').replace(']','}').replace('False','false')
-        if 'vector<' in vjs['type'] or 'map<' in vjs['type']:
+        if 'std::vector<' in vjs['type'] or 'std::map<' in vjs['type']:
             vjs['def_check'] = '!' + 'val.' + vjs['name'] + '.empty()'
         elif 'glTFid<' in vjs['type']:
             vjs['def_check'] = 'val.' + vjs['name'] + '.is_valid()'

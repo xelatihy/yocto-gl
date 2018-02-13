@@ -6,13 +6,13 @@
     "base": "glTFChildOfRootProperty",
     "properties": {
         "channels": {
-            "type": "vector<glTFAnimationChannel*>",
+            "type": "std::vector<glTFAnimationChannel*>",
             "description": "An array of channels, each of which targets an animation's sampler at a node's property. Different channels of the same animation can't have equal targets.",
             "minItems": 1,
             "item": "glTFAnimationChannel"
         },
         "samplers": {
-            "type": "vector<glTFAnimationSampler*>",
+            "type": "std::vector<glTFAnimationSampler*>",
             "description": "An array of samplers that combines input and output accessors with an interpolation algorithm to define a keyframe graph (but not its target).",
             "minItems": 1,
             "item": "glTFAnimationSampler"

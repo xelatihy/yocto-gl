@@ -91,7 +91,7 @@
                     "enum": [ "MAT4" ]
                 },
                 {
-                    "type": "string"
+                    "type": "std::string"
                 }
             ]
         },

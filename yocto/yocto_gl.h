@@ -5531,8 +5531,9 @@ inline void visit(shape& val, Visitor&& visitor) {
         visit_sem{visit_sem_type::value, "Triangle indices"});
     visitor(
         "quads", val.quads, visit_sem{visit_sem_type::value, "Quad indices"});
-    visitor("quads_pos", val.quads_pos, visit_sem{visit_sem_type::value,
-        "Quad indices for facevarying positions"});
+    visitor("quads_pos", val.quads_pos,
+        visit_sem{
+            visit_sem_type::value, "Quad indices for facevarying positions"});
     visitor("quads_norm", val.quads_norm,
         visit_sem{
             visit_sem_type::value, "Quad indices for facevarying normals"});
@@ -6584,9 +6585,10 @@ inline void visit(trace_params& val, Visitor&& visitor) {
         visit_sem{visit_sem_type::constui, "Number of samples", 256, 4096});
     visitor(
         "shader", val.shader, visit_sem{visit_sem_type::value, "Shader type"});
-    visitor("rng", val.rng,
-        visit_sem{visit_sem_type::value, "Rnadom number type"});
-    visitor("filter", val.filter, visit_sem{visit_sem_type::value, "Filer type"});
+    visitor(
+        "rng", val.rng, visit_sem{visit_sem_type::value, "Rnadom number type"});
+    visitor(
+        "filter", val.filter, visit_sem{visit_sem_type::value, "Filer type"});
     visitor("notransmission", val.notransmission,
         visit_sem{visit_sem_type::value, "Disable tranmission in shadows"});
     visitor(

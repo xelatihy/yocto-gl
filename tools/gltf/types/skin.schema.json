@@ -14,7 +14,7 @@
             "description": "The index of the node used as a skeleton root. When undefined, joints transforms resolve to scene root."
         },
         "joints": {
-            "type": "vector<glTFid<glTFNode>>",
+            "type": "std::vector<glTFid<glTFNode>>",
             "description": "Indices of skeleton nodes, used as joints in this skin.",
             "uniqueItems": true,
             "minItems": 1,

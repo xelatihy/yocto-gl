@@ -9,7 +9,7 @@
             "type": "array",
             "description": "Names of glTF extensions used somewhere in this asset.",
             "items": {
-                "type": "string"
+                "type": "std::string"
             },
             "uniqueItems": true,
             "minItems": 1
@@ -18,7 +18,7 @@
             "type": "array",
             "description": "Names of glTF extensions required to properly load this asset.",
             "items": {
-                "type": "string"
+                "type": "std::string"
             },
             "uniqueItems": true,
             "minItems": 1
