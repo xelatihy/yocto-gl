@@ -3540,6 +3540,151 @@ namespace ygl {
 /// @defgroup container_ops Container operations
 /// @{
 
+/// Simple optional with a semantic similar to std::optional. This will be
+/// removed upon switching to std::optional.
+template <typename T>
+struct optional {
+    /// Construct an empty optional.
+    optional() : def(false), val{} {}
+    /// Construct an optional that contains a value.
+    optional(const T& v) : def(true), val{v} {}
+
+    /// Check if the value is defined.
+    operator bool() const { return def; }
+
+    /// Access the underlying value.
+    T& operator*() { return val; }
+    /// Access the underlying value.
+    const T& operator*() const { return val; }
+    /// Access the underlying value members.
+    T* operator->() { return &val; }
+    /// Access the underlying value members.
+    const T* operator->() const { return &val; }
+
+    /// Access the underlying value.
+    T& value() { return val; }
+    /// Access the underlying value.
+    const T& value() const { return val; }
+    /// Access the underlying value or a default one.
+    T value_or(const T& v) { return (def) ? val : v; }
+
+   private:
+    /// Whether the value is defined
+    bool def = false;
+    /// The value stored
+    T val = {};
+};
+
+/// Optional equality
+template <typename T>
+inline bool operator==(const optional<T>& a, const optional<T>& b) {
+    if (!a && !b) return true;
+    if ((!a && b) || (a && !b)) return false;
+    return a.value() == b.value();
+}
+/// Optional inequality
+template <typename T>
+inline bool operator!=(const optional<T>& a, const optional<T>& b) {
+    return !(a == b);
+}
+
+/// Creates an optional.
+template <typename T>
+inline optional<T> make_optional(const T& v) {
+    return optional<T>{v};
+}
+/// Creates an optional.
+template <typename T, typename... Args>
+inline optional<T> make_optional(Args&&... args) {
+    return optional<T>{T{args...}};
+}
+
+/// The type of the basic variant.
+enum struct basic_variant_type {
+    /// None variant to indicate uninitialized type.
+    none,
+    /// Boolean variant.
+    boolean,
+    /// Integer variant.
+    integer,
+    /// Number variant.
+    number,
+    /// String variant.
+    string,
+};
+
+/// Simple variant implementation used to store untyped data easily.
+/// Makes no attempt to mimick complex interface. Models the basic types helds
+/// in JSON, without using recursion. Right now the implementation is
+/// inefficient, but very simple.
+struct basic_variant {
+    /// Type.
+    basic_variant_type type = basic_variant_type::none;
+    /// Integer value.
+    int integer = 0;
+    /// Number variant.
+    float number = 0;
+    /// String variant.
+    std::string string = "";
+    /// Boolean value.
+    bool boolean = false;
+
+    /// Default constructor.
+    basic_variant() {}
+    /// Integer constructor.
+    basic_variant(int v) : type(basic_variant_type::integer), integer(v) {}
+    /// Number constructor.
+    basic_variant(float v) : type(basic_variant_type::number), number(v) {}
+    /// String constructor.
+    basic_variant(const std::string& v)
+        : type(basic_variant_type::string), string(v) {}
+    /// Boolean constructor.
+    basic_variant(bool v) : type(basic_variant_type::boolean), boolean(v) {}
+};
+
+/// Stream write.
+inline std::ostream& operator<<(std::ostream& os, const basic_variant& a) {
+    switch (a.type) {
+        case basic_variant_type::none: return os << "null";
+        case basic_variant_type::integer: return os << a.integer;
+        case basic_variant_type::number: return os << a.number;
+        case basic_variant_type::string: return os << a.string;
+        case basic_variant_type::boolean:
+            return os << ((a.boolean) ? "true" : "false");
+    }
+}
+/// Stream read.
+inline std::istream& operator>>(std::istream& is, basic_variant& a) {
+    //clang-format off
+    a = basic_variant();
+    auto str = std::string();
+    is >> str;
+    if (str.empty()) return is;
+    if (str.size() > 1 && str.front() == '"' && str.back() == '"') {
+        a = str.substr(1, str.length() - 2);
+        return is;
+    }
+    if (str == "true") {
+        a = true;
+        return is;
+    }
+    if (str == "false") {
+        a = false;
+        return is;
+    }
+    try {
+        a = std::stoi(str);
+        return is;
+    } catch (std::invalid_argument&) {}
+    try {
+        a = std::stof(str);
+        return is;
+    } catch (std::invalid_argument&) {}
+    a = str;
+    return is;
+    //clang-format on
+}
+
 /// Append a vector to a vector.
 template <typename T>
 inline void append(std::vector<T>& v, const std::vector<T>& vv) {
@@ -5016,6 +5161,8 @@ struct camera {
     float near = 0.01f;
     /// Far plane distance. @refl_uilimits(10,10000)
     float far = 10000;
+    /// Application specific properties.
+    std::unordered_map<std::string, basic_variant> props;
 };
 
 /// Texture containing either an LDR or HDR image.
@@ -5100,28 +5247,28 @@ struct material {
     texture* occ_txt = nullptr;
 
     /// Emission texture info.
-    texture_info* ke_txt_info = nullptr;
+    optional<texture_info> ke_txt_info = {};
     /// Diffuse texture info.
-    texture_info* kd_txt_info = nullptr;
+    optional<texture_info> kd_txt_info = {};
     /// Specular texture info.
-    texture_info* ks_txt_info = nullptr;
+    optional<texture_info> ks_txt_info = {};
     /// Clear coat reflection texture info.
-    texture_info* kr_txt_info = nullptr;
+    optional<texture_info> kr_txt_info = {};
     /// Transmission texture info.
-    texture_info* kt_txt_info = nullptr;
+    optional<texture_info> kt_txt_info = {};
     /// Roughness texture info.
-    texture_info* rs_txt_info = nullptr;
+    optional<texture_info> rs_txt_info = {};
     /// Bump map texture (heighfield) info.
-    texture_info* bump_txt_info = nullptr;
+    optional<texture_info> bump_txt_info = {};
     /// Displacement map texture (heighfield) info.
-    texture_info* disp_txt_info = nullptr;
+    optional<texture_info> disp_txt_info = {};
     /// Normal texture info.
-    texture_info* norm_txt_info = nullptr;
+    optional<texture_info> norm_txt_info = {};
     /// Occlusion texture info.
-    texture_info* occ_txt_info = nullptr;
-    
-    /// Cleanup
-    ~material();
+    optional<texture_info> occ_txt_info = {};
+
+    /// Application specific properties.
+    std::unordered_map<std::string, basic_variant> props;
 };
 
 /// Shape data represented as an indexed array.
@@ -5179,6 +5326,9 @@ struct shape_group {
     /// Shapes.
     std::vector<shape*> shapes;
 
+    /// Application specific properties.
+    std::unordered_map<std::string, basic_variant> props;
+
     /// Cleanup.
     ~shape_group();
 };
@@ -5191,6 +5341,8 @@ struct instance {
     frame3f frame = identity_frame3f;
     /// Shape instance. @refl_semantic(reference)
     shape_group* shp = nullptr;
+    /// Application specific properties.
+    std::unordered_map<std::string, basic_variant> props;
 };
 
 /// Envinonment map.
@@ -5204,10 +5356,9 @@ struct environment {
     /// Emission texture. @refl_semantic(reference)
     texture* ke_txt = nullptr;
     /// Emission texture info.
-    texture_info* ke_txt_info = nullptr;
-    
-    /// Cleanup
-    ~environment();
+    optional<texture_info> ke_txt_info = {};
+    /// Application specific properties.
+    std::unordered_map<std::string, basic_variant> props;
 };
 
 /// Node in a transform hierarchy.
@@ -5232,6 +5383,8 @@ struct node {
     instance* ist = nullptr;
     /// Environment the node points to. @refl_semantic(reference)
     environment* env = nullptr;
+    /// Application specific properties.
+    std::unordered_map<std::string, basic_variant> props;
 
     /// Child nodes. This is a computed value only stored for convenience.
     std::vector<node*> children_ = {};
@@ -5277,6 +5430,8 @@ struct animation_group {
     std::vector<animation*> animations;
     /// Binds keyframe values to nodes. @refl_semantic(reference)
     std::vector<std::pair<animation*, node*>> targets;
+    /// Application specific properties.
+    std::unordered_map<std::string, basic_variant> props;
 
     // Cleanup
     ~animation_group();
@@ -5309,6 +5464,9 @@ struct scene {
     /// Node animations.
     std::vector<animation_group*> animations = {};
 
+    /// Application specific properties.
+    std::unordered_map<std::string, basic_variant> props;
+
     // Cleanup.
     ~scene();
 };
@@ -5333,8 +5491,15 @@ vec3f eval_pos(const instance* ist, int sid, int eid, const vec2f& euv);
 vec3f eval_norm(const instance* ist, int sid, int eid, const vec2f& euv);
 
 /// Evaluate a texture.
-vec4f eval_texture(const texture* txt, const texture_info* info,
+vec4f eval_texture(const texture* txt, const texture_info& info,
     const vec2f& texcoord, bool srgb = true, const vec4f& def = {1, 1, 1, 1});
+/// Evaluate a texture.
+inline vec4f eval_texture(const texture* txt,
+    const optional<texture_info>& info, const vec2f& texcoord, bool srgb = true,
+    const vec4f& def = {1, 1, 1, 1}) {
+    static auto def_info = texture_info();
+    return eval_texture(txt, (info) ? *info : def_info, texcoord, srgb, def);
+}
 /// Generates a ray from a camera for image plane coordinate uv and the
 /// lens coordinates luv.
 ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv);
@@ -5539,6 +5704,8 @@ inline void visit(camera& val, Visitor&& visitor) {
         visit_sem{visit_sem_type::value, "Near plane distance.", 0.01, 10});
     visitor("far", val.far,
         visit_sem{visit_sem_type::value, "Far plane distance.", 10, 10000});
+    visitor("props", val.props,
+        visit_sem{visit_sem_type::value, "Application specific properties."});
 }
 
 /// Visit struct elements.
@@ -5631,6 +5798,8 @@ inline void visit(material& val, Visitor&& visitor) {
         visit_sem{visit_sem_type::value, "Normal texture info."});
     visitor("occ_txt_info", val.occ_txt_info,
         visit_sem{visit_sem_type::value, "Occlusion texture info."});
+    visitor("props", val.props,
+        visit_sem{visit_sem_type::value, "Application specific properties."});
 }
 
 /// Visit struct elements.
@@ -5679,6 +5848,8 @@ inline void visit(shape_group& val, Visitor&& visitor) {
     visitor("path", val.path,
         visit_sem{visit_sem_type::value, "Path used for saving in glTF."});
     visitor("shapes", val.shapes, visit_sem{visit_sem_type::value, "Shapes."});
+    visitor("props", val.props,
+        visit_sem{visit_sem_type::value, "Application specific properties."});
     visitor(
         "name", val.name, visit_sem{visit_sem_type::value, "Cleanup. Name."});
 }
@@ -5690,6 +5861,8 @@ inline void visit(instance& val, Visitor&& visitor) {
         visit_sem{visit_sem_type::value, "Transform frame."});
     visitor("shp", val.shp,
         visit_sem{visit_sem_type::reference, "Shape instance."});
+    visitor("props", val.props,
+        visit_sem{visit_sem_type::value, "Application specific properties."});
 }
 
 /// Visit struct elements.
@@ -5704,6 +5877,8 @@ inline void visit(environment& val, Visitor&& visitor) {
         visit_sem{visit_sem_type::reference, "Emission texture."});
     visitor("ke_txt_info", val.ke_txt_info,
         visit_sem{visit_sem_type::value, "Emission texture info."});
+    visitor("props", val.props,
+        visit_sem{visit_sem_type::value, "Application specific properties."});
 }
 
 /// Visit struct elements.
@@ -5729,6 +5904,8 @@ inline void visit(node& val, Visitor&& visitor) {
     visitor("env", val.env,
         visit_sem{
             visit_sem_type::reference, "Environment the node points to."});
+    visitor("props", val.props,
+        visit_sem{visit_sem_type::value, "Application specific properties."});
     visitor("children_", val.children_,
         visit_sem{visit_sem_type::value,
             "Child nodes. This is a computed value only stored for "
@@ -5764,6 +5941,8 @@ inline void visit(animation_group& val, Visitor&& visitor) {
     visitor("targets", val.targets,
         visit_sem{
             visit_sem_type::reference, "Binds keyframe values to nodes."});
+    visitor("props", val.props,
+        visit_sem{visit_sem_type::value, "Application specific properties."});
 }
 
 /// Visit struct elements.
@@ -5784,6 +5963,8 @@ inline void visit(scene& val, Visitor&& visitor) {
         visit_sem{visit_sem_type::value, "Node hierarchy."});
     visitor("animations", val.animations,
         visit_sem{visit_sem_type::value, "Node animations."});
+    visitor("props", val.props,
+        visit_sem{visit_sem_type::value, "Application specific properties."});
 }
 
 // #codegen end reflgen-scene
@@ -5967,10 +6148,7 @@ struct test_shape_params {
     /// @refl_uilimits(-1,10000)
     int num = -1;
     /// Hair generation params.
-    make_hair_params* hair_params = nullptr;
-
-    /// Cleanup
-    ~test_shape_params();
+    optional<make_hair_params> hair_params = {};
 };
 
 /// Test instance parameters.
@@ -6317,14 +6495,14 @@ inline void visit(test_shape_params& val, Visitor&& visitor) {
             10000});
     visitor("hair_params", val.hair_params,
         visit_sem{visit_sem_type::value, "Hair generation params."});
-    visitor("name", val.name,
-        visit_sem{visit_sem_type::value,
-            "Cleanup Name (if not filled, assign a default one)."});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(test_instance_params& val, Visitor&& visitor) {
+    visitor("name", val.name,
+        visit_sem{visit_sem_type::value,
+            "Name (if not filled, assign a default one)."});
     visitor(
         "shape", val.shape, visit_sem{visit_sem_type::value, "Shape name."});
     visitor(
@@ -7039,7 +7217,7 @@ void save_obj(const std::string& filename, const obj_scene* model,
 
 // include json for glTF
 #if YGL_GLTFJSON
-#include "json.hpp"
+#include "ext/json.hpp"
 #endif
 
 // -----------------------------------------------------------------------------
