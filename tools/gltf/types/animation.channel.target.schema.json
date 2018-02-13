@@ -19,7 +19,7 @@
         {
             "description": "Values for glTFAnimationChannelTarget::path",
             "name": "glTFAnimationChannelTargetPath",
-            "item": "string",
+            "item": "std::string",
             "values": [
                 {
                     "enum": "translation",

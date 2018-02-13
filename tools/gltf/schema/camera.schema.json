@@ -24,7 +24,7 @@
                     "enum": [ "orthographic" ]
                 },
                 {
-                    "type": "string"
+                    "type": "std::string"
                 }
             ]
         },

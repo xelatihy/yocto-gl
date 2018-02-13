@@ -10,7 +10,7 @@
             "description": "The index of the camera referenced by this node."
         },
         "children": {
-            "type": "vector<glTFid<glTFNode>>",
+            "type": "std::vector<glTFid<glTFNode>>",
             "description": "The indices of this node's children.",
             "uniqueItems": true,
             "minItems": 1
@@ -46,7 +46,7 @@
             "default": [ 0.0, 0.0, 0.0 ]
         },
         "weights": {
-            "type": "vector<float>",
+            "type": "std::vector<float>",
             "description": "The weights of the instantiated Morph Target. Number of elements must match number of Morph Targets of used mesh.",
             "minItems": 1
         }

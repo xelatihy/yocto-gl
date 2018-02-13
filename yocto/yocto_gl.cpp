@@ -78,23 +78,33 @@
 //
 // ## Next
 //
+// - update glTF generator
+// - cleanup visitor
+//     - check ytrace cmdline
+//     - check yitrace cmdline
+//     - check yview cmdline
+//     - check yimview cmdline
+//     - check yitrace ui
+//     - check yview ui
+//     - check yimview ui
+// - tonemap params to put everywhere
+//
 // - consider using a simple variant type for serialization
-// - visitor for params
 // - serialization with visitor
-// - cmdline with visitor
+//     - decide if exposing json is reasonable
+//       for now this is just a matter of compilation time
+//       later it is best to use a variant type
 //
 // - consider uniforming texture info
 //
 // - envmap along z
 // - spherical/cartesian conversion
 //
-// - color widget with limits
 // - add angle semantic
-// - update glTF generated documentation.
 //
 // - move combo widget implementation.
 //
-// - check ranom shuffle
+// - check random shuffle
 // - check random number generation for float/double
 //
 // ## Maybe
@@ -6246,8 +6256,7 @@ vec3f trace_path(const scene* scn, const bvh_tree* bvh,
         // roussian roulette
         if (bounce > 2) {
             auto rrprob = 1.0f - min(max_element_value(pt.rho()), 0.95f);
-            if (sample_next1f(pxl, params.rng, params.nsamples) < rrprob)
-                break;
+            if (sample_next1f(pxl, params.rng, params.nsamples) < rrprob) break;
             weight *= 1 / (1 - rrprob);
         }
 
@@ -6297,8 +6306,7 @@ vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
         // roussian roulette
         if (bounce > 2) {
             auto rrprob = 1.0f - min(max_element_value(pt.rho()), 0.95f);
-            if (sample_next1f(pxl, params.rng, params.nsamples) < rrprob)
-                break;
+            if (sample_next1f(pxl, params.rng, params.nsamples) < rrprob) break;
             weight *= 1 / (1 - rrprob);
         }
 
@@ -6357,8 +6365,7 @@ vec3f trace_path_hack(const scene* scn, const bvh_tree* bvh,
         // roussian roulette
         if (bounce > 2) {
             auto rrprob = 1.0f - min(max_element_value(pt.rho()), 0.95f);
-            if (sample_next1f(pxl, params.rng, params.nsamples) < rrprob)
-                break;
+            if (sample_next1f(pxl, params.rng, params.nsamples) < rrprob) break;
             weight *= 1 / (1 - rrprob);
         }
 
