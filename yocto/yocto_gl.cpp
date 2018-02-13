@@ -78,6 +78,9 @@
 //
 // ## Next
 //
+// - consider optional
+// - obj split texture info
+// - cleanup texture info
 // - update glTF generator
 // - cleanup visitor
 //     - check ytrace cmdline
@@ -3059,6 +3062,25 @@ intersection_point overlap_bvh(
 namespace ygl {
 
 // cleanup
+material::~material() {
+    if(ke_txt_info) delete ke_txt_info;
+    if(kd_txt_info) delete kd_txt_info;
+    if(ks_txt_info) delete ks_txt_info;
+    if(kr_txt_info) delete kr_txt_info;
+    if(kt_txt_info) delete kt_txt_info;
+    if(rs_txt_info) delete rs_txt_info;
+    if(bump_txt_info) delete bump_txt_info;
+    if(disp_txt_info) delete disp_txt_info;
+    if(norm_txt_info) delete norm_txt_info;
+    if(occ_txt_info) delete occ_txt_info;
+}
+
+// cleanup
+environment::~environment() {
+    if(ke_txt_info) delete ke_txt_info;
+}
+    
+// cleanup
 shape_group::~shape_group() {
     for (auto v : shapes) delete v;
 }
@@ -3137,13 +3159,14 @@ vec3f eval_norm(const instance* ist, int sid, int eid, const vec2f& euv) {
 }
 
 // Evaluate a texture
-vec4f eval_texture(const texture_info& info, const vec2f& texcoord, bool srgb,
+vec4f eval_texture(const texture* txt, const texture_info* info_,
+                   const vec2f& texcoord, bool srgb,
     const vec4f& def) {
-    if (!info.txt) return def;
-
-    // get texture
-    auto txt = info.txt;
+    static auto def_info = texture_info();
+    if (!txt) return def;
     assert(!txt->hdr.empty() || !txt->ldr.empty());
+    
+    auto info = (info_) ? info_ : &def_info;
 
     auto lookup = [&def, &txt, &srgb](int i, int j) {
         if (!txt->ldr.empty())
@@ -3161,13 +3184,13 @@ vec4f eval_texture(const texture_info& info, const vec2f& texcoord, bool srgb,
 
     // get coordinates normalized for tiling
     auto s = 0.0f, t = 0.0f;
-    if (!info.wrap_s) {
+    if (!info->wrap_s) {
         s = clamp(texcoord.x, 0.0f, 1.0f) * w;
     } else {
         s = std::fmod(texcoord.x, 1.0f) * w;
         if (s < 0) s += w;
     }
-    if (!info.wrap_t) {
+    if (!info->wrap_t) {
         t = clamp(texcoord.y, 0.0f, 1.0f) * h;
     } else {
         t = std::fmod(texcoord.y, 1.0f) * h;
@@ -3180,7 +3203,7 @@ vec4f eval_texture(const texture_info& info, const vec2f& texcoord, bool srgb,
     auto u = s - i, v = t - j;
 
     // nearest lookup
-    if (!info.linear) return lookup(i, j);
+    if (!info->linear) return lookup(i, j);
 
     // handle interpolation
     return lookup(i, j) * (1 - u) * (1 - v) + lookup(i, jj) * (1 - u) * v +
@@ -3419,7 +3442,7 @@ void add_elements(scene* scn, const add_elements_options& opts) {
                 if (!shp->tangsp.empty()) continue;
                 if (shp->texcoord.empty()) continue;
                 if (!shp->mat) continue;
-                if (!(shp->mat->norm_txt.txt || shp->mat->bump_txt.txt))
+                if (!(shp->mat->norm_txt || shp->mat->bump_txt))
                     continue;
                 if (!shp->triangles.empty()) {
                     shp->tangsp = compute_tangent_frames(
@@ -3756,16 +3779,15 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
         tmap[txt->path] = txt;
     }
 
-    auto add_texture = [&tmap](const obj_texture_info& oinfo) {
-        auto info = texture_info();
-        if (oinfo.path == "") return info;
-        info.txt = tmap.at(oinfo.path);
-        info.wrap_s = !oinfo.clamp;
-        info.wrap_t = !oinfo.clamp;
-        info.scale = oinfo.scale;
+    auto make_texture_info = [&tmap](const obj_texture_info& oinfo) -> texture_info* {
+        if (oinfo.path == "") return nullptr;
+        auto info = new texture_info();
+        info->wrap_s = !oinfo.clamp;
+        info->wrap_t = !oinfo.clamp;
+        info->scale = oinfo.scale;
         return info;
     };
-
+    
     // convert materials and build textures
     auto mmap = std::unordered_map<std::string, material*>{{"", nullptr}};
     for (auto omat : obj->materials) {
@@ -3779,15 +3801,24 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
         mat->kt = omat->kt;
         mat->rs = (omat->ns >= 1e6f) ? 0 : pow(2 / (omat->ns + 2), 1 / 4.0f);
         mat->op = omat->op;
-        mat->ke_txt = add_texture(omat->ke_txt);
-        mat->kd_txt = add_texture(omat->kd_txt);
-        mat->ks_txt = add_texture(omat->ks_txt);
-        mat->kr_txt = add_texture(omat->kr_txt);
-        mat->kt_txt = add_texture(omat->kt_txt);
-        mat->rs_txt = add_texture(omat->ns_txt);
-        mat->norm_txt = add_texture(omat->norm_txt);
-        mat->bump_txt = add_texture(omat->bump_txt);
-        mat->disp_txt = add_texture(omat->disp_txt);
+        mat->ke_txt = tmap.at(omat->ke_txt.path);
+        mat->kd_txt = tmap.at(omat->kd_txt.path);
+        mat->ks_txt = tmap.at(omat->ks_txt.path);
+        mat->kr_txt = tmap.at(omat->kr_txt.path);
+        mat->kt_txt = tmap.at(omat->kt_txt.path);
+        mat->rs_txt = tmap.at(omat->ns_txt.path);
+        mat->norm_txt = tmap.at(omat->norm_txt.path);
+        mat->bump_txt = tmap.at(omat->bump_txt.path);
+        mat->disp_txt = tmap.at(omat->disp_txt.path);
+        mat->ke_txt_info = make_texture_info(omat->ke_txt);
+        mat->kd_txt_info = make_texture_info(omat->kd_txt);
+        mat->ks_txt_info = make_texture_info(omat->ks_txt);
+        mat->kr_txt_info = make_texture_info(omat->kr_txt);
+        mat->kt_txt_info = make_texture_info(omat->kt_txt);
+        mat->rs_txt_info = make_texture_info(omat->ns_txt);
+        mat->norm_txt_info = make_texture_info(omat->norm_txt);
+        mat->bump_txt_info = make_texture_info(omat->bump_txt);
+        mat->disp_txt_info = make_texture_info(omat->disp_txt);
         switch (omat->illum) {
             case 0:  // Color on and Ambient off
             case 1:  // Color on and Ambient on
@@ -4215,12 +4246,13 @@ scene* load_obj_scene(const std::string& filename, const load_options& opts) {
 obj_scene* scene_to_obj(const scene* scn) {
     auto obj = new obj_scene();
 
-    auto add_texture = [](const texture_info& info, bool bump = false) {
+    auto make_texture_info = [](const texture* txt, const texture_info* info, bool bump = false) {
         auto oinfo = obj_texture_info();
-        if (!info.txt) return oinfo;
-        oinfo.path = info.txt->path;
-        oinfo.clamp = !info.wrap_s && !info.wrap_t;
-        if (bump) oinfo.scale = info.scale;
+        if (!txt) return oinfo;
+        oinfo.path = txt->path;
+        if(!info) return oinfo;
+        oinfo.clamp = !info->wrap_s && !info->wrap_t;
+        if (bump) oinfo.scale = info->scale;
         return oinfo;
     };
 
@@ -4252,7 +4284,7 @@ obj_scene* scene_to_obj(const scene* scn) {
         auto omat = new obj_material();
         omat->name = mat->name;
         omat->ke = {mat->ke.x, mat->ke.y, mat->ke.z};
-        omat->ke_txt = add_texture(mat->ke_txt);
+        omat->ke_txt = make_texture_info(mat->ke_txt, mat->ke_txt_info);
         switch (mat->type) {
             case material_type::specular_roughness: {
                 omat->kd = {mat->kd.x, mat->kd.y, mat->kd.z};
@@ -4261,10 +4293,10 @@ obj_scene* scene_to_obj(const scene* scn) {
                 omat->kt = {mat->kt.x, mat->kt.y, mat->kt.z};
                 omat->ns = (mat->rs) ? 2 / pow(mat->rs, 4.0f) - 2 : 1e6;
                 omat->op = mat->op;
-                omat->kd_txt = add_texture(mat->kd_txt);
-                omat->ks_txt = add_texture(mat->ks_txt);
-                omat->kr_txt = add_texture(mat->kr_txt);
-                omat->kt_txt = add_texture(mat->kt_txt);
+                omat->kd_txt = make_texture_info(mat->kd_txt, mat->kd_txt_info);
+                omat->ks_txt = make_texture_info(mat->ks_txt, mat->ks_txt_info);
+                omat->kr_txt = make_texture_info(mat->kr_txt, mat->kr_txt_info);
+                omat->kt_txt = make_texture_info(mat->kt_txt, mat->kt_txt_info);
             } break;
             case material_type::metallic_roughness: {
                 if (mat->rs == 1 && mat->ks.x == 0) {
@@ -4281,9 +4313,9 @@ obj_scene* scene_to_obj(const scene* scn) {
                 }
                 omat->op = mat->op;
                 if (mat->ks.x < 0.5f) {
-                    omat->kd_txt = add_texture(mat->kd_txt);
+                    omat->kd_txt = make_texture_info(mat->kd_txt, mat->kd_txt_info);
                 } else {
-                    omat->ks_txt = add_texture(mat->ks_txt);
+                    omat->ks_txt = make_texture_info(mat->ks_txt, mat->ks_txt_info);
                 }
             } break;
             case material_type::specular_glossiness: {
@@ -4291,13 +4323,13 @@ obj_scene* scene_to_obj(const scene* scn) {
                 omat->ks = {mat->ks.x, mat->ks.y, mat->ks.z};
                 omat->ns = (mat->rs) ? 2 / pow(1 - mat->rs, 4.0f) - 2 : 1e6;
                 omat->op = mat->op;
-                omat->kd_txt = add_texture(mat->kd_txt);
-                omat->ks_txt = add_texture(mat->ks_txt);
+                omat->kd_txt = make_texture_info(mat->kd_txt, mat->kd_txt_info);
+                omat->ks_txt = make_texture_info(mat->ks_txt, mat->ks_txt_info);
             } break;
         }
-        omat->bump_txt = add_texture(mat->bump_txt, true);
-        omat->disp_txt = add_texture(mat->disp_txt, true);
-        omat->norm_txt = add_texture(mat->norm_txt, true);
+        omat->bump_txt = make_texture_info(mat->bump_txt, mat->bump_txt_info, true);
+        omat->disp_txt = make_texture_info(mat->disp_txt, mat->disp_txt_info, true);
+        omat->norm_txt = make_texture_info(mat->norm_txt, mat->norm_txt_info, true);
         if (mat->op < 1 || mat->kt != zero3f) {
             omat->illum = 4;
         } else {
@@ -4455,7 +4487,7 @@ obj_scene* scene_to_obj(const scene* scn) {
         auto omat = new obj_material();
         omat->name = env->name + "_mat";
         omat->ke = env->ke;
-        omat->ke_txt = add_texture(env->ke_txt);
+        omat->ke_txt = make_texture_info(env->ke_txt, env->ke_txt_info);
         oenv->name = env->name;
         oenv->matname = omat->name;
         oenv->frame = env->frame;
@@ -4530,40 +4562,48 @@ scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
     }
 
     // add a texture
-    auto add_texture = [gltf, scn](glTFTextureInfo* ginfo, bool normal = false,
-                           bool occlusion = false) {
-        auto info = texture_info();
-        if (!ginfo) return info;
+    auto get_texture = [gltf, scn](glTFTextureInfo* ginfo) -> texture* {
+        if (!ginfo) return nullptr;
         auto gtxt = gltf->get(ginfo->index);
-        if (!gtxt || !gtxt->source) return info;
+        if (!gtxt || !gtxt->source) return nullptr;
+        return scn->textures.at((int)gtxt->source);
+    };
+
+    // add a texture
+    auto make_texture_info = [gltf, scn](glTFTextureInfo* ginfo, bool normal = false,
+                                   bool occlusion = false) -> texture_info* {
+        if (!ginfo) return nullptr;
+        auto gtxt = gltf->get(ginfo->index);
+        if (!gtxt || !gtxt->source) return nullptr;
         auto txt = scn->textures.at((int)gtxt->source);
-        if (!txt) return info;
-        info.txt = scn->textures.at((int)gtxt->source);
+        if (!txt) return nullptr;
+        auto info = new texture_info();
         auto gsmp = gltf->get(gtxt->sampler);
         if (gsmp) {
-            info.linear = gsmp->magFilter != glTFSamplerMagFilter::Nearest;
-            info.mipmap = gsmp->minFilter != glTFSamplerMinFilter::Linear &&
-                          gsmp->minFilter != glTFSamplerMinFilter::Nearest;
-            info.wrap_s = gsmp->wrapS != glTFSamplerWrapS::ClampToEdge;
-            info.wrap_t = gsmp->wrapT != glTFSamplerWrapT::ClampToEdge;
+            info->linear = gsmp->magFilter != glTFSamplerMagFilter::Nearest;
+            info->mipmap = gsmp->minFilter != glTFSamplerMinFilter::Linear &&
+            gsmp->minFilter != glTFSamplerMinFilter::Nearest;
+            info->wrap_s = gsmp->wrapS != glTFSamplerWrapS::ClampToEdge;
+            info->wrap_t = gsmp->wrapT != glTFSamplerWrapT::ClampToEdge;
         }
         if (normal) {
             auto ninfo = (glTFMaterialNormalTextureInfo*)ginfo;
-            info.scale = ninfo->scale;
+            info->scale = ninfo->scale;
         }
         if (occlusion) {
             auto ninfo = (glTFMaterialOcclusionTextureInfo*)ginfo;
-            info.scale = ninfo->strength;
+            info->scale = ninfo->strength;
         }
         return info;
     };
-
+    
     // convert materials
     for (auto gmat : gltf->materials) {
         auto mat = new material();
         mat->name = gmat->name;
         mat->ke = gmat->emissiveFactor;
-        mat->ke_txt = add_texture(gmat->emissiveTexture);
+        mat->ke_txt = get_texture(gmat->emissiveTexture);
+        mat->ke_txt_info = make_texture_info(gmat->emissiveTexture);
         if (gmat->pbrMetallicRoughness) {
             mat->type = material_type::metallic_roughness;
             auto gmr = gmat->pbrMetallicRoughness;
@@ -4573,8 +4613,10 @@ scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
             mat->ks = {
                 gmr->metallicFactor, gmr->metallicFactor, gmr->metallicFactor};
             mat->rs = gmr->roughnessFactor;
-            mat->kd_txt = add_texture(gmr->baseColorTexture);
-            mat->ks_txt = add_texture(gmr->metallicRoughnessTexture);
+            mat->kd_txt = get_texture(gmr->baseColorTexture);
+            mat->kd_txt_info = make_texture_info(gmr->baseColorTexture);
+            mat->ks_txt = get_texture(gmr->metallicRoughnessTexture);
+            mat->ks_txt_info = make_texture_info(gmr->metallicRoughnessTexture);
         }
         if (gmat->pbrSpecularGlossiness) {
             mat->type = material_type::specular_glossiness;
@@ -4584,11 +4626,15 @@ scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
             mat->op = gsg->diffuseFactor[3];
             mat->ks = gsg->specularFactor;
             mat->rs = gsg->glossinessFactor;
-            mat->kd_txt = add_texture(gsg->diffuseTexture);
-            mat->ks_txt = add_texture(gsg->specularGlossinessTexture);
+            mat->kd_txt = get_texture(gsg->diffuseTexture);
+            mat->kd_txt_info = make_texture_info(gsg->diffuseTexture);
+            mat->ks_txt = get_texture(gsg->specularGlossinessTexture);
+            mat->ks_txt_info = make_texture_info(gsg->specularGlossinessTexture);
         }
-        mat->norm_txt = add_texture(gmat->normalTexture, true, false);
-        mat->occ_txt = add_texture(gmat->occlusionTexture, false, true);
+        mat->norm_txt = get_texture(gmat->normalTexture);
+        mat->norm_txt_info = make_texture_info(gmat->normalTexture, true, false);
+        mat->occ_txt = get_texture(gmat->occlusionTexture);
+        mat->occ_txt_info = make_texture_info(gmat->occlusionTexture, false, true);
         mat->double_sided = gmat->doubleSided;
         scn->materials.push_back(mat);
     }
@@ -4991,27 +5037,28 @@ glTF* scene_to_gltf(
     };
 
     // add a texture and sampler
-    auto add_texture = [&gltf, &index, scn](const texture_info& info,
-                           bool norm = false, bool occ = false) {
-        if (!info.txt) return (glTFTextureInfo*)nullptr;
+    auto add_texture_info = [&gltf, &index, scn](const texture* txt,
+                                                 const texture_info* info,
+                                                 bool norm = false, bool occ = false) {
+        if (!txt) return (glTFTextureInfo*)nullptr;
         auto gtxt = new glTFTexture();
-        gtxt->name = info.txt->name;
-        gtxt->source = glTFid<glTFImage>(index(scn->textures, info.txt));
+        gtxt->name = txt->name;
+        gtxt->source = glTFid<glTFImage>(index(scn->textures, txt));
 
         // check if it is default
-        auto is_default =
-            info.wrap_s && info.wrap_t && info.linear && info.mipmap;
+        auto is_default = !info || (
+            info->wrap_s && info->wrap_t && info->linear && info->mipmap);
 
         if (!is_default) {
             auto gsmp = new glTFSampler();
-            gsmp->wrapS = (info.wrap_s) ? glTFSamplerWrapS::Repeat :
+            gsmp->wrapS = (info->wrap_s) ? glTFSamplerWrapS::Repeat :
                                           glTFSamplerWrapS::ClampToEdge;
-            gsmp->wrapT = (info.wrap_t) ? glTFSamplerWrapT::Repeat :
+            gsmp->wrapT = (info->wrap_t) ? glTFSamplerWrapT::Repeat :
                                           glTFSamplerWrapT::ClampToEdge;
-            gsmp->minFilter = (info.mipmap) ?
+            gsmp->minFilter = (info->mipmap) ?
                                   glTFSamplerMinFilter::LinearMipmapLinear :
                                   glTFSamplerMinFilter::Nearest;
-            gsmp->magFilter = (info.linear) ? glTFSamplerMagFilter::Linear :
+            gsmp->magFilter = (info->linear) ? glTFSamplerMagFilter::Linear :
                                               glTFSamplerMagFilter::Nearest;
             gtxt->sampler = glTFid<glTFSampler>((int)gltf->samplers.size());
             gltf->samplers.push_back(gsmp);
@@ -5020,12 +5067,12 @@ glTF* scene_to_gltf(
         if (norm) {
             auto ginfo = new glTFMaterialNormalTextureInfo();
             ginfo->index = glTFid<glTFTexture>{(int)gltf->textures.size() - 1};
-            ginfo->scale = info.scale;
+            ginfo->scale = (info) ? info->scale : 1;
             return (glTFTextureInfo*)ginfo;
         } else if (occ) {
             auto ginfo = new glTFMaterialOcclusionTextureInfo();
             ginfo->index = glTFid<glTFTexture>{(int)gltf->textures.size() - 1};
-            ginfo->strength = info.scale;
+            ginfo->strength = (info) ? info->scale : 1;
             return (glTFTextureInfo*)ginfo;
         } else {
             auto ginfo = new glTFTextureInfo();
@@ -5039,7 +5086,7 @@ glTF* scene_to_gltf(
         auto gmat = new glTFMaterial();
         gmat->name = mat->name;
         gmat->emissiveFactor = mat->ke;
-        gmat->emissiveTexture = add_texture(mat->ke_txt);
+        gmat->emissiveTexture = add_texture_info(mat->ke_txt, mat->ke_txt_info);
         switch (mat->type) {
             case material_type::specular_roughness: {
                 gmat->pbrSpecularGlossiness =
@@ -5049,8 +5096,8 @@ glTF* scene_to_gltf(
                     mat->kd[0], mat->kd[1], mat->kd[2], mat->op};
                 gsg->specularFactor = mat->ks;
                 gsg->glossinessFactor = 1 - mat->rs;
-                gsg->diffuseTexture = add_texture(mat->kd_txt);
-                gsg->specularGlossinessTexture = add_texture(mat->ks_txt);
+                gsg->diffuseTexture = add_texture_info(mat->kd_txt, mat->kd_txt_info);
+                gsg->specularGlossinessTexture = add_texture_info(mat->ks_txt, mat->ks_txt_info);
             } break;
             case material_type::metallic_roughness: {
                 gmat->pbrMetallicRoughness =
@@ -5060,8 +5107,8 @@ glTF* scene_to_gltf(
                     mat->kd.x, mat->kd.y, mat->kd.z, mat->op};
                 gmr->metallicFactor = mat->ks.x;
                 gmr->roughnessFactor = mat->rs;
-                gmr->baseColorTexture = add_texture(mat->kd_txt);
-                gmr->metallicRoughnessTexture = add_texture(mat->ks_txt);
+                gmr->baseColorTexture = add_texture_info(mat->kd_txt, mat->kd_txt_info);
+                gmr->metallicRoughnessTexture = add_texture_info(mat->ks_txt, mat->ks_txt_info);
             } break;
             case material_type::specular_glossiness: {
                 gmat->pbrSpecularGlossiness =
@@ -5071,14 +5118,14 @@ glTF* scene_to_gltf(
                     mat->kd[0], mat->kd[1], mat->kd[2], mat->op};
                 gsg->specularFactor = mat->ks;
                 gsg->glossinessFactor = mat->rs;
-                gsg->diffuseTexture = add_texture(mat->kd_txt);
-                gsg->specularGlossinessTexture = add_texture(mat->ks_txt);
+                gsg->diffuseTexture = add_texture_info(mat->kd_txt,mat->kd_txt_info);
+                gsg->specularGlossinessTexture = add_texture_info(mat->ks_txt,mat->ks_txt_info);
             } break;
         }
-        gmat->normalTexture = (glTFMaterialNormalTextureInfo*)add_texture(
-            mat->norm_txt, true, false);
-        gmat->occlusionTexture = (glTFMaterialOcclusionTextureInfo*)add_texture(
-            mat->occ_txt, false, true);
+        gmat->normalTexture = (glTFMaterialNormalTextureInfo*)add_texture_info(
+            mat->norm_txt, mat->norm_txt_info, true, false);
+        gmat->occlusionTexture = (glTFMaterialOcclusionTextureInfo*)add_texture_info(
+            mat->occ_txt, mat->occ_txt_info, false, true);
         gmat->doubleSided = mat->double_sided;
         gltf->materials.push_back(gmat);
     }
@@ -5949,7 +5996,7 @@ trace_point eval_point(const environment* env, const vec3f& wo) {
         auto theta = acos(clamp(w.y, -1.0f, 1.0f));
         auto phi = atan2(w.z, w.x);
         auto texcoord = vec2f{0.5f + phi / (2 * pif), theta / pif};
-        auto txt = eval_texture(env->ke_txt, texcoord);
+        auto txt = eval_texture(env->ke_txt, env->ke_txt_info, texcoord);
         pt.ke *= {txt.x, txt.y, txt.z};
     }
     return pt;
@@ -5979,7 +6026,7 @@ trace_point eval_point(
     if (mat->norm_txt) {
         auto tangsp = eval_tangsp(pt.shp, eid, euv);
         auto txt =
-            eval_texture(mat->norm_txt, pt.texcoord, false) * 2.0f - vec4f{1};
+            eval_texture(mat->norm_txt, mat->norm_txt_info, pt.texcoord, false) * 2.0f - vec4f{1};
         auto ntxt = normalize(vec3f{txt.x, -txt.y, txt.z});
         auto frame = make_frame_fromzx(
             {0, 0, 0}, pt.norm, {tangsp.x, tangsp.y, tangsp.z});
@@ -6005,14 +6052,14 @@ trace_point eval_point(
 
     // handle occlusion
     if (mat->occ_txt) {
-        auto txt = eval_texture(mat->occ_txt, pt.texcoord);
+        auto txt = eval_texture(mat->occ_txt, mat->occ_txt_info, pt.texcoord);
         kx *= {txt.x, txt.y, txt.z};
     }
 
     // sample emission
     pt.ke = mat->ke * kx;
     if (mat->ke_txt) {
-        auto txt = eval_texture(mat->ke_txt, pt.texcoord);
+        auto txt = eval_texture(mat->ke_txt, mat->ke_txt_info, pt.texcoord);
         pt.ke *= {txt.x, txt.y, txt.z};
     }
 
@@ -6021,33 +6068,33 @@ trace_point eval_point(
         case material_type::specular_roughness: {
             pt.kd = mat->kd * kx;
             if (mat->kd_txt) {
-                auto txt = eval_texture(mat->kd_txt, pt.texcoord);
+                auto txt = eval_texture(mat->kd_txt, mat->kd_txt_info, pt.texcoord);
                 pt.kd *= {txt.x, txt.y, txt.z};
                 pt.op *= txt.w;
             }
             pt.ks = mat->ks * kx;
             pt.rs = mat->rs;
             if (mat->ks_txt) {
-                auto txt = eval_texture(mat->ks_txt, pt.texcoord);
+                auto txt = eval_texture(mat->ks_txt, mat->ks_txt_info, pt.texcoord);
                 pt.ks *= {txt.x, txt.y, txt.z};
             }
             pt.kt = mat->kt * kx;
             if (mat->kt_txt) {
-                auto txt = eval_texture(mat->kt_txt, pt.texcoord);
+                auto txt = eval_texture(mat->kt_txt, mat->kt_txt_info, pt.texcoord);
                 pt.kt *= {txt.x, txt.y, txt.z};
             }
         } break;
         case material_type::metallic_roughness: {
             auto kb = mat->kd * kx;
             if (mat->kd_txt) {
-                auto txt = eval_texture(mat->kd_txt, pt.texcoord);
+                auto txt = eval_texture(mat->kd_txt, mat->kd_txt_info, pt.texcoord);
                 kb *= {txt.x, txt.y, txt.z};
                 pt.op *= txt.w;
             }
             auto km = mat->ks.x;
             pt.rs = mat->rs;
             if (mat->ks_txt) {
-                auto txt = eval_texture(mat->ks_txt, pt.texcoord);
+                auto txt = eval_texture(mat->ks_txt, mat->ks_txt_info, pt.texcoord);
                 km *= txt.y;
                 pt.rs *= txt.z;
             }
@@ -6057,21 +6104,21 @@ trace_point eval_point(
         case material_type::specular_glossiness: {
             pt.kd = mat->kd * kx;
             if (mat->kd_txt) {
-                auto txt = eval_texture(mat->kd_txt, pt.texcoord);
+                auto txt = eval_texture(mat->kd_txt, mat->kd_txt_info, pt.texcoord);
                 pt.kd *= {txt.x, txt.y, txt.z};
                 pt.op *= txt.w;
             }
             pt.ks = mat->ks * kx;
             pt.rs = mat->rs;
             if (mat->ks_txt) {
-                auto txt = eval_texture(mat->ks_txt, pt.texcoord);
+                auto txt = eval_texture(mat->ks_txt, mat->ks_txt_info, pt.texcoord);
                 pt.ks *= {txt.x, txt.y, txt.z};
                 pt.rs *= txt.w;
             }
             pt.rs = 1 - pt.rs;  // glossiness -> roughnes
             pt.kt = mat->kt * kx;
             if (mat->kt_txt) {
-                auto txt = eval_texture(mat->kt_txt, pt.texcoord);
+                auto txt = eval_texture(mat->kt_txt, mat->kt_txt_info, pt.texcoord);
                 pt.kt *= {txt.x, txt.y, txt.z};
             }
         } break;
@@ -9995,6 +10042,11 @@ make_uvhollowcutsphere1(int tesselation, float radius) {
 // EXAMPLE SCENES
 // -----------------------------------------------------------------------------
 namespace ygl {
+    
+// Cleanup
+test_shape_params::~test_shape_params() {
+    if(hair_params) delete hair_params;
+}
 
 // Makes/updates a test texture
 void update_test_elem(
@@ -10078,42 +10130,42 @@ void update_test_elem(
     mat->rs = 1;
     mat->kr = zero3f;
     mat->kt = zero3f;
-    mat->ke_txt.txt = nullptr;
-    mat->kd_txt.txt = nullptr;
-    mat->ks_txt.txt = nullptr;
-    mat->kr_txt.txt = nullptr;
-    mat->kt_txt.txt = nullptr;
+    mat->ke_txt = nullptr;
+    mat->kd_txt = nullptr;
+    mat->ks_txt = nullptr;
+    mat->kr_txt = nullptr;
+    mat->kt_txt = nullptr;
 
     switch (tmat.type) {
         case test_material_type::none: break;
         case test_material_type::emission: {
             mat->ke = tmat.emission * tmat.color;
-            mat->ke_txt.txt = txt;
+            mat->ke_txt = txt;
         } break;
         case test_material_type::matte: {
             mat->kd = tmat.color;
-            mat->kd_txt.txt = txt;
+            mat->kd_txt = txt;
         } break;
         case test_material_type::plastic: {
             mat->kd = tmat.color;
             mat->ks = {0.04f, 0.04f, 0.04f};
             mat->rs = tmat.roughness;
-            mat->kd_txt.txt = txt;
+            mat->kd_txt = txt;
         } break;
         case test_material_type::metal: {
             mat->ks = tmat.color;
             mat->rs = tmat.roughness;
-            mat->ks_txt.txt = txt;
+            mat->ks_txt = txt;
         } break;
         case test_material_type::transparent: {
             mat->kd = tmat.color;
             mat->op = tmat.opacity;
-            mat->kd_txt.txt = txt;
+            mat->kd_txt = txt;
         } break;
         default: throw std::runtime_error("should not have gotten here");
     }
 
-    mat->norm_txt.txt = norm;
+    mat->norm_txt = norm;
 }
 
 // Makes/updates a test shape
@@ -10251,7 +10303,7 @@ void update_test_elem(
             //                                   vec2f{tshp.radius, 0.0001f};
             std::tie(shp->lines, shp->pos, shp->norm, shp->texcoord,
                 shp->radius) = make_hair(nhairs, 2, {}, shp1->quads, shp1->pos,
-                shp1->norm, shp1->texcoord, tshp.hair_params);
+                                         shp1->norm, shp1->texcoord, (tshp.hair_params) ? *tshp.hair_params : make_hair_params());
         } break;
         case test_shape_type::beziercircle: {
             std::tie(shp->beziers, shp->pos) = make_bezier_circle();
@@ -10311,7 +10363,7 @@ void update_test_elem(
         env->frame = rotation_frame(vec3f{0, 1, 0}, tenv.rotation);
     }
     env->ke = tenv.emission * tenv.color;
-    env->ke_txt.txt = find_named_elem(scn->textures, tenv.texture);
+    env->ke_txt = find_named_elem(scn->textures, tenv.texture);
 }
 
 // Makes/updates a test shape
@@ -10614,18 +10666,21 @@ std::unordered_map<std::string, test_shape_params>& test_shape_presets() {
         make_test_shape("pointscube", test_shape_type::pointscube);
     presets["hairball1"] =
         make_test_shape("hairball1", test_shape_type::hairball);
-    presets["hairball1"].hair_params.radius = {0.001f, 0.0001f};
-    presets["hairball1"].hair_params.length = {0.1f, 0.1f};
-    presets["hairball1"].hair_params.noise = {0.5f, 8};
+    presets["hairball1"].hair_params = new make_hair_params();
+    presets["hairball1"].hair_params->radius = {0.001f, 0.0001f};
+    presets["hairball1"].hair_params->length = {0.1f, 0.1f};
+    presets["hairball1"].hair_params->noise = {0.5f, 8};
+    presets["hairball2"].hair_params = new make_hair_params();
     presets["hairball2"] =
         make_test_shape("hairball2", test_shape_type::hairball);
-    presets["hairball2"].hair_params.radius = {0.001f, 0.0001f};
-    presets["hairball2"].hair_params.length = {0.1f, 0.1f};
-    presets["hairball2"].hair_params.clump = {0.5f, 128};
+    presets["hairball2"].hair_params->radius = {0.001f, 0.0001f};
+    presets["hairball2"].hair_params->length = {0.1f, 0.1f};
+    presets["hairball2"].hair_params->clump = {0.5f, 128};
+    presets["hairball3"].hair_params = new make_hair_params();
     presets["hairball3"] =
         make_test_shape("hairball3", test_shape_type::hairball);
-    presets["hairball3"].hair_params.radius = {0.001f, 0.0001f};
-    presets["hairball3"].hair_params.length = {0.1f, 0.1f};
+    presets["hairball3"].hair_params->radius = {0.001f, 0.0001f};
+    presets["hairball3"].hair_params->length = {0.1f, 0.1f};
     presets["hairballi"] =
         make_test_shape("hairballi", test_shape_type::sphere);
     presets["hairballi"].scale = 0.8f;
@@ -12864,9 +12919,9 @@ void draw_stdsurface_shape(const shape* shp, const mat4f& xform,
     if (!shp->lines.empty()) etype = gl_elem_type::line;
     if (!shp->points.empty()) etype = gl_elem_type::point;
 
-    auto txt = [&textures](texture_info& info) -> gl_texture_info {
-        if (!info.txt) return {};
-        return textures.at(info.txt);
+    auto txt = [&textures](texture* txt) -> gl_texture_info {
+        if (!txt) return {};
+        return textures.at(txt);
     };
 
     auto mat = (shp->mat) ? shp->mat : &default_material;
@@ -13596,9 +13651,7 @@ struct draw_tree_visitor {
 
     template <typename T>
     void operator()(const char* name, T& val, const visit_sem&) {}
-    void operator()(const char* name, texture_info& val, const visit_sem&) {
-        (*this)(name, val.txt, visit_sem{visit_sem_type::reference});
-    }
+    void operator()(const char* name, texture_info*& val, const visit_sem& sem) { }
 
     template <typename T>
     void operator()(
@@ -13608,7 +13661,7 @@ struct draw_tree_visitor {
             draw_tree_widget_end(win);
         }
     }
-
+    
     template <typename T>
     void operator()(const char* name, T*& val, const visit_sem& sem) {
         if (!val) return;
@@ -13661,16 +13714,13 @@ struct draw_elem_visitor {
 
     void operator()(const char* name, texture_info& val, const visit_sem&) {
         draw_groupid_widget_begin(win, name);
-        operator()(name, val.txt, visit_sem{visit_sem_type::reference});
-        if (val.txt) {
-            edited += draw_value_widget(win, "wrap s", val.wrap_s);
-            draw_continue_widget(win);
-            edited += draw_value_widget(win, "wrap t", val.wrap_t);
-            draw_continue_widget(win);
-            edited += draw_value_widget(win, "linear", val.linear);
-            draw_continue_widget(win);
-            edited += draw_value_widget(win, "mipmap", val.mipmap);
-        }
+        edited += draw_value_widget(win, "wrap s", val.wrap_s);
+        draw_continue_widget(win);
+        edited += draw_value_widget(win, "wrap t", val.wrap_t);
+        draw_continue_widget(win);
+        edited += draw_value_widget(win, "linear", val.linear);
+        draw_continue_widget(win);
+        edited += draw_value_widget(win, "mipmap", val.mipmap);
         draw_groupid_widget_end(win);
     }
 
@@ -13697,6 +13747,28 @@ struct draw_elem_visitor {
     void operator()(const char* name, std::vector<std::pair<T1*, T2*>>& val,
         const visit_sem&) {
         // TODO
+    }
+
+    void operator()(const char* name, make_hair_params*& val, const visit_sem& sem) {
+        if (!val) return;
+        // TODO: fix this separator
+        draw_separator_widget(win);
+        draw_groupid_widget_begin(win, val);
+        draw_separator_widget(win);
+        visit(*val, *this);
+        preview(val);
+        draw_groupid_widget_end(win);
+    }
+    
+    void operator()(const char* name, texture_info*& val, const visit_sem& sem) {
+        if (!val) return;
+        // TODO: fix this separator
+        draw_separator_widget(win);
+        draw_groupid_widget_begin(win, val);
+        draw_separator_widget(win);
+        visit(*val, *this);
+        preview(val);
+        draw_groupid_widget_end(win);
     }
 
     template <typename T>
