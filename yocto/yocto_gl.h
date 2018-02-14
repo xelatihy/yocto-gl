@@ -841,6 +841,11 @@ template <typename T>
 inline T round(T a) {
     return std::round(a);
 }
+/// Check if value is finite.
+template <typename T>
+inline bool isfinite(T a) {
+    return std::isfinite(a);
+}
 
 /// Safe minimum value.
 template <typename T>
