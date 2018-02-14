@@ -56,6 +56,10 @@ def docs():
     os.system('./tools/cpp2doc.py')
 
 @run.command()
+def doxygen():
+    os.system('doxygen ./tools/Doxyfile')
+    
+@run.command()
 @click.argument('msg', required=True, default='')
 def commit(msg=''):
     os.system('./tools/build.py format')

@@ -6068,7 +6068,7 @@ struct test_texture_params {
     int tile_size = 64;
     /// Noise scale for noise-like textures. @refl_uilimits(0.1,16)
     int noise_scale = 8;
-    /// Sun angle for sunsky-like textures. @refl_uilimits(0,1.57) @refl_uiangle
+    /// Sun angle for sunsky-like textures. @refl_uilimits(0,1.57)
     float sky_sunangle = pif / 4;
     /// Convert to normal map.
     bool bump_to_normal = false;
@@ -6468,7 +6468,7 @@ inline void visit(test_texture_params& val, Visitor&& visitor) {
             "Noise scale for noise-like textures.", 0.1, 16, ""});
     visitor(val.sky_sunangle,
         visit_var{"sky_sunangle", visit_var_type::value,
-            "Sun angle for sunsky-like textures. @refl_uiangle", 0, 1.57, ""});
+            "Sun angle for sunsky-like textures.", 0, 1.57, ""});
     visitor(
         val.bump_to_normal, visit_var{"bump_to_normal", visit_var_type::value,
                                 "Convert to normal map.", 0, 0, ""});
