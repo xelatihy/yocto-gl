@@ -224,29 +224,25 @@
 /// 3. evaluate Bezier curves and derivatives with `eval_bezier()` and
 ///    `eval_bezier_derivative()`
 /// 4. compute smooth normals and tangents with `compute_normals()`
+////   `compute_tangents()`
 /// 5. compute tangent frames from texture coordinates with
 ///    `compute_tangent_space()`
 /// 6. compute skinning with `compute_skinning()` and
 ///    `compute_matrix_skinning()`
-/// 6. shape creation with `make_points()`, `make_lines()`, `make_uvgrid()`
-/// 7. element merging with `marge_elems()`
-/// 8. facet elements with `facet_elems()`
+/// 6. create shapes with `make_points()`, `make_lines()`, `make_uvgrid()`
+/// 7. merge element with `marge_lines()`, `marge_triangles()`, `marge_quads()`
+/// 8. facet elements with `facet_lines()`, `facet_triangles()`, `facet_quads()`
 /// 9. shape sampling with `sample_points()`, `sample_lines()`,
 ///    `sample_triangles()`; initialize the sampling CDFs with
 ///    `sample_points_cdf()`, `sample_lines_cdf()`, `sample_triangles_cdf()`
 /// 10. samnple a could of point over a surface with `sample_triangles_points()`
-/// 11. get edges and boundaries with `get_edges()` and `get_boundary_edges()`
+/// 11. get edges and boundaries with `get_edges()`
 /// 12. convert quads to triangles with `convert_quads_to_triangles()`
 /// 13. convert face varying to vertex shared representations with
 ///     `convert_face_varying()`
-/// 14. subdivide elements by edge splits with `subdivide_elems_linear()` and
-///     `subdivide_vert_linear()`; for an easier interface use
-///     `subdivide_lines_linear()`, `subdivide_triangles_linear()`,
-///     `subdivide_quads_linear()`
-/// 15. Catmull-Clark subdivision surface with `subdivide_vert_catmullclark()`
-///     with support for edge and vertex creasing
-/// 16. subdivide Bezier with `subdivide_bezier_recursive()` and
-///     `subdivide_vert_bezier()`
+/// 14. subdivide elements by edge splits with `subdivide_lines()`,
+///     `subdivide_triangles()`, `subdivide_quads()`, `subdivide_beziers()`
+/// 15. Catmull-Clark subdivision surface with `subdivide_catmullclark()`
 /// 17. example shapes: `make_cube()`, `make_uvsphere()`, `make_uvhemisphere()`,
 ///     `make_uvquad()`, `make_uvcube()`, `make_fvcube()`, `make_hair()`,
 ///     `make_suzanne()`
@@ -4170,21 +4166,28 @@ namespace ygl {
 /// @defgroup shape Shape utilities
 /// @{
 
-/// Compute per-vertex normals/tangents for lines, triangles and quads with
-/// positions pos. Weighted indicated whether the normals/tangents are
-/// weighted by length/area.
-std::vector<vec3f> compute_normals(const std::vector<vec2i>& lines,
-    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads,
-    const std::vector<vec3f>& pos, bool weighted = true);
+/// Compute per-vertex tangents for lines.
+void compute_tangents(const std::vector<vec2i>& lines,
+    const std::vector<vec3f>& pos, std::vector<vec3f>& tang,
+    bool weighted = true);
+/// Compute per-vertex normals for triangles.
+void compute_normals(const std::vector<vec3i>& triangles,
+    const std::vector<vec3f>& pos, std::vector<vec3f>& norm,
+    bool weighted = true);
+/// Compute per-vertex normals for quads.
+void compute_normals(const std::vector<vec4i>& quads,
+    const std::vector<vec3f>& pos, std::vector<vec3f>& norm,
+    bool weighted = true);
 
 /// Compute per-vertex tangent frames for triangle meshes.
 /// Tangent space is defined by a four component vector.
 /// The first three components are the tangent with respect to the u texcoord.
 /// The fourth component is the sign of the tangent wrt the v texcoord.
 /// Tangent frame is useful in normal mapping.
-std::vector<vec4f> compute_tangent_frames(const std::vector<vec3i>& triangles,
+void compute_tangent_frames(const std::vector<vec3i>& triangles,
     const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
-    const std::vector<vec2f>& texcoord, bool weighted = true);
+    const std::vector<vec2f>& texcoord, std::vector<vec4f>& tangsp,
+    bool weighted = true);
 
 /// Apply skinning to vertex position and normals.
 void compute_skinning(const std::vector<vec3f>& pos,
@@ -4204,17 +4207,6 @@ void compute_matrix_skinning(const std::vector<vec3f>& pos,
 
 /// Create an array of edges.
 std::vector<vec2i> get_edges(const std::vector<vec2i>& lines,
-    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads);
-/// Create an array of boundary edges. Lines are always considered boundaries.
-std::vector<vec2i> get_boundary_edges(const std::vector<vec2i>& lines,
-    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads);
-
-/// Get a list of all unique vertices.
-std::vector<int> get_verts(const std::vector<vec2i>& lines,
-    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads);
-/// Create an array of boundary vertices. Lines are always considered
-/// boundaries.
-std::vector<int> get_boundary_verts(const std::vector<vec2i>& lines,
     const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads);
 
 /// Convert quads to triangles
@@ -4236,79 +4228,90 @@ convert_face_varying(const std::vector<vec4i>& quads_pos,
     const std::vector<vec4i>& quads_texcoord, const std::vector<vec3f>& pos,
     const std::vector<vec3f>& norm, const std::vector<vec2f>& texcoord);
 
-/// Tesselate lines, triangles and quads by splitting edges and faces for quads.
-/// Returns the tesselated elements and edge and face array for vertex
-/// calculations.
-std::tuple<std::vector<vec2i>, std::vector<vec3i>, std::vector<vec4i>,
-    std::vector<vec2i>, std::vector<vec4i>>
-subdivide_elems_linear(const std::vector<vec2i>& lines,
-    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads,
-    int nverts);
-
-/// Subdivide vertex properties for edges and faces. This is implemented for
-/// vecs and floats.
+/// Subdivide lines by splitting each line in half.
 template <typename T>
-std::vector<T> subdivide_vert_linear(const std::vector<T>& vert,
-    const std::vector<vec2i>& edges, const std::vector<vec4i>& faces,
-    bool normalized = false);
-
-/// Performs the smoothing step of Catmull-Clark. Start with a tesselate quad
-/// mesh obtained with subdivide_elems_linear() and subdivide_vert_linear(). To
-/// handle open meshes with boundary, get the boundary from make_boundary_edge()
-/// and pass it as crease_lines. To fix the boundary entirely, just get the
-/// boundary vertices and pass it as creases. This is implemented for vecs
-/// and floats.
+void subdivide_lines(
+    std::vector<vec2i>& lines, std::vector<T>& vert, bool update_lines = true);
+/// Subdivide lines by splitting each line in half.
+void subdivide_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
+    std::vector<vec3f>& tang, std::vector<vec2f>& texcoord,
+    std::vector<vec4f>& color, std::vector<float>& radius);
+/// Subdivide triangle by splitting each triangle in four, creating new
+/// vertices for each edge.
 template <typename T>
-std::vector<T> subdivide_vert_catmullclark(const std::vector<vec4i>& quads,
-    const std::vector<T>& vert, const std::vector<vec2i>& crease_tlines,
-    const std::vector<int>& crease_tpoints, bool normalized = false);
-
-/// Subdivide Bezier segments recursively by splitting each segment into two
-/// in the middle. Returns the tesselated elements and dictionaries for vertex
-/// calculations.
-std::tuple<std::vector<vec4i>, std::vector<int>, std::vector<vec4i>>
-subdivide_bezier_recursive(const std::vector<vec4i>& beziers, int nverts);
-/// Subdivide vertex properties for Bezier subdivision. This is implemente for
-/// vecs and floats.
+void subdivide_triangles(std::vector<vec3i>& triangles, std::vector<T>& vert,
+    bool update_triangles = true);
+/// Subdivide triangle by splitting each triangle in four, creating new
+/// vertices for each edge.
+void subdivide_triangles(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<vec4f>& color, std::vector<float>& radius);
+/// Subdivide quads by splitting each quads in four, creating new
+/// vertices for each edge and for each face.
 template <typename T>
-std::vector<T> subdivide_vert_bezier(const std::vector<T>& vert,
-    const std::vector<int>& verts, const std::vector<vec4i>& segments,
-    bool normalized = false);
+void subdivide_quads(
+    std::vector<vec4i>& quads, std::vector<T>& vert, bool update_quads = true);
+/// Subdivide quads by splitting each quads in four, creating new
+/// vertices for each edge and for each face.
+void subdivide_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<vec4f>& color, std::vector<float>& radius);
+/// Subdivide beziers by splitting each segment in two.
+template <typename T>
+void subdivide_beziers(std::vector<vec4i>& beziers, std::vector<T>& vert,
+    bool update_beziers = true);
+/// Subdivide beziers by splitting each segment in two.
+void subdivide_beziers(std::vector<vec4i>& beziers, std::vector<vec3f>& pos,
+    std::vector<vec3f>& tang, std::vector<vec2f>& texcoord,
+    std::vector<vec4f>& color, std::vector<float>& radius);
+/// Subdivide quads using Carmull-Clark subdivision rules.
+template <typename T>
+void subdivide_catmullclark(std::vector<vec4i>& beziers, std::vector<T>& vert,
+    bool update_quads = true);
+/// Subdivide quads using Carmull-Clark subdivision rules.
+void subdivide_catmullclark(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& tang, std::vector<vec2f>& texcoord,
+    std::vector<vec4f>& color, std::vector<float>& radius);
 
 /// Generate a rectangular grid of usteps x vsteps uv values for parametric
 /// surface generation. Values cam wrap and have poles.
-std::tuple<std::vector<vec4i>, std::vector<vec2f>> make_uvquads(int usteps,
-    int vsteps, bool uwrap = false, bool vwrap = false, bool vpole0 = false,
-    bool vpole1 = false);
+void make_quads_uv(std::vector<vec4i>& quads, std::vector<vec2f>& uvs,
+    int usteps, int vsteps, bool uwrap = false, bool vwrap = false,
+    bool vpole0 = false, bool vpole1 = false);
 
 /// Generate parametric num lines of usteps segments.
-std::tuple<std::vector<vec2i>, std::vector<vec2f>> make_uvlines(
-    int num, int usteps);
+void make_lines_uv(
+    std::vector<vec2i>& lines, std::vector<vec2f>& uvs, int num, int usteps);
 
 /// Generate a parametric point set. Mostly here for completeness.
-std::tuple<std::vector<int>, std::vector<vec2f>> make_uvpoints(int num);
+void make_points_uv(std::vector<int>& quads, std::vector<vec2f>& uvs, int num);
 
-/// Merge elements between shapes. The elements are merged by increasing the
+/// Merge lines between shapes. The elements are merged by increasing the
 /// array size of the second array by the number of vertices of the first.
 /// Vertex data can then be concatenated successfully.
-std::tuple<std::vector<vec2i>, std::vector<vec3i>, std::vector<vec4i>>
-merge_elems(int nverts, const std::vector<vec2i>& lines1,
-    const std::vector<vec3i>& triangles1, const std::vector<vec4i>& quads1,
-    const std::vector<vec2i>& lines2, const std::vector<vec3i>& triangles2,
-    const std::vector<vec4i>& quads2);
+void merge_lines(std::vector<vec2i>& lines, const std::vector<vec2i>& lines1);
+/// Merge triangles between shapes. The elements are merged by increasing the
+/// array size of the second array by the number of vertices of the first.
+/// Vertex data can then be concatenated successfully.
+void merge_triangles(
+    std::vector<vec3i>& triangles, const std::vector<vec3i>& triangles1);
+/// Merge quads between shapes. The elements are merged by increasing the
+/// array size of the second array by the number of vertices of the first.
+/// Vertex data can then be concatenated successfully.
+void merge_quads(std::vector<vec4i>& quads, const std::vector<vec4i>& quads1);
 
-/// Unshare shape data by duplicating all vertex data for each element,
-/// giving a faceted look. Note that faceted tangents are not computed.
-/// Returns the indices to copy from.
-std::tuple<std::vector<vec2i>, std::vector<vec3i>, std::vector<vec4i>,
-    std::vector<int>>
-facet_elems(const std::vector<vec2i>& lines,
-    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads);
-
-/// Unshare vertices for faceting. This is implemented for vec and float types.
-template <typename T>
-std::vector<T> facet_vert(
-    const std::vector<T>& vert, const std::vector<int>& vmap);
+/// Duplicate vertex data for each line index, giving a faceted look.
+void facet_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<vec4f>& color, std::vector<float>& radius);
+/// Duplicate vertex data for each triangle index, giving a faceted look.
+void facet_triangles(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<vec4f>& color, std::vector<float>& radius);
+/// Duplicate vertex data for each quad index, giving a faceted look.
+void facet_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<vec4f>& color, std::vector<float>& radius);
 
 /// @}
 
@@ -4379,77 +4382,74 @@ namespace ygl {
 /// @defgroup shape_example Example shapes
 /// @{
 
-/// Make a sphere. Returns quads, pos.
-std::tuple<std::vector<vec3i>, std::vector<vec3f>> make_sphere(int tesselation);
+/// Make a sphere.
+void make_sphere(
+    std::vector<vec4i>& quads, std::vector<vec3f>& pos, int tesselation);
 
-/// Make a geodesic sphere. Returns quads, pos.
-std::tuple<std::vector<vec3i>, std::vector<vec3f>> make_geodesicsphere(
-    int tesselation);
+/// Make a geodesic sphere.
+void make_geodesicsphere(
+    std::vector<vec3i>& triangles, std::vector<vec3f>& pos, int tesselation);
 
 /// Make a cube with unique vertices. This is watertight but has no
-/// texture coordinates or normals. Returns quads, pos.
-std::tuple<std::vector<vec4i>, std::vector<vec3f>> make_cube(int tesselation);
+/// texture coordinates or normals.
+void make_cube(
+    std::vector<vec4i>& quads, std::vector<vec3f>& pos, int tesselation);
 
-/// Make a sphere. This is not watertight. Returns quads, pos, norm, texcoord.
-std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
-    std::vector<vec2f>>
-make_uvsphere(int tesselation, bool flipped = false);
+/// Make a sphere. This is not watertight.
+void make_uvsphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
+    bool flipped = false);
 
-/// Make a sphere. This is not watertight. Returns quads, pos, norm, texcoord.
-std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
-    std::vector<vec2f>>
-make_uvhemisphere(int tesselation, bool flipped = false);
+/// Make a sphere. This is not watertight.
+void make_uvhemisphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
+    bool flipped = false);
 
-/// Make a quad. Returns quads, pos, norm, texcoord.
-std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
-    std::vector<vec2f>>
-make_uvquad(int tesselation);
+/// Make a quad.
+void make_uvquad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation);
 
 /// Make a facevarying sphere with unique vertices but different texture
-/// coordinates. Returns (quads, pos), (quads, norm), (quads, texcoord).
-std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec4i>,
-    std::vector<vec3f>, std::vector<vec4i>, std::vector<vec2f>>
-make_fvsphere(int tesselation);
+/// coordinates.
+void make_fvsphere(std::vector<vec4i>& quads_pos, std::vector<vec3f>& pos,
+    std::vector<vec4i>& quads_norm, std::vector<vec3f>& norm,
+    std::vector<vec4i>& quads_texcoord, std::vector<vec2f>& texcoord,
+    int tesselation);
 
 /// Make a facevarying cube with unique vertices but different texture
-/// coordinates. Returns (quads, pos), (quads, norm), (quads, texcoord).
-std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec4i>,
-    std::vector<vec3f>, std::vector<vec4i>, std::vector<vec2f>>
-make_fvcube(int tesselation);
+/// coordinates.
+void make_fvcube(std::vector<vec4i>& quads_pos, std::vector<vec3f>& pos,
+    std::vector<vec4i>& quads_norm, std::vector<vec3f>& norm,
+    std::vector<vec4i>& quads_texcoord, std::vector<vec2f>& texcoord,
+    int tesselation);
 
 /// Make a suzanne monkey model for testing. Note that some quads are
 /// degenerate. Returns quads, pos.
-std::tuple<std::vector<vec4i>, std::vector<vec3f>> make_suzanne(
-    int tesselation);
+void make_suzanne(
+    std::vector<vec4i>& quads, std::vector<vec3f>& pos, int tesselation);
 
-/// Make a cube. This is not watertight. Returns quads, pos, norm, texcoord.
-std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
-    std::vector<vec2f>>
-make_uvcube(int tesselation);
+/// Make a cube. This is not watertight.
+void make_uvcube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation);
 
-/// Make a sphere from a cube. This is not watertight. Returns quads, pos, norm,
-/// texcoord.
-std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
-    std::vector<vec2f>>
-make_uvspherecube(int tesselation);
+/// Make a sphere from a cube. This is not watertight.
+void make_uvspherecube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation);
 
 /// Make a cube than stretch it towards a sphere. This is not watertight.
-/// Returns quads, pos, norm, texcoord.
-std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
-    std::vector<vec2f>>
-make_uvspherizedcube(int tesselation, float radius);
+void make_uvspherizedcube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
+    float radius);
 
-/// Make a sphere with caps flipped. This is not watertight. Returns quads, pos,
-/// norm, texcoord.
-std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
-    std::vector<vec2f>>
-make_uvflipcapsphere(int tesselation, float z, bool flipped = false);
+/// Make a sphere with caps flipped. This is not watertight.
+void make_uvflipcapsphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
+    float z, bool flipped = false);
 
-/// Make a cutout sphere. This is not watertight. Returns quads, pos, norm,
-/// texcoord.
-std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
-    std::vector<vec2f>>
-make_uvcutsphere(int tesselation, float z, bool flipped = false);
+/// Make a cutout sphere. This is not watertight.
+void make_uvcutsphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
+    float z, bool flipped = false);
 
 /// Make seashell params
 struct make_seashell_params {
@@ -4476,12 +4476,12 @@ struct make_seashell_params {
 };
 
 /// Make a seashell. This is not watertight. Returns quads, pos, norm, texcoord.
-std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
-    std::vector<vec2f>>
-make_uvseashell(int tesselation, const make_seashell_params& params);
+void make_uvseashell(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
+    const make_seashell_params& params);
 
 /// Make a bezier circle. Returns bezier, pos.
-std::tuple<std::vector<vec4i>, std::vector<vec3f>> make_bezier_circle();
+void make_bezier_circle(std::vector<vec4i>& beziers, std::vector<vec3f>& pos);
 
 // #codegen begin refl-shapeexample
 
@@ -4503,13 +4503,13 @@ struct make_hair_params {
 
 // #codegen end refl-shapeexample
 
-/// Make a hair ball around a shape. Returns lines, pos, norm, texcoord, radius.
-std::tuple<std::vector<vec2i>, std::vector<vec3f>, std::vector<vec3f>,
-    std::vector<vec2f>, std::vector<float>>
-make_hair(int num, int tesselation, const std::vector<vec3i>& striangles,
-    const std::vector<vec4i>& squads, const std::vector<vec3f>& spos,
-    const std::vector<vec3f>& snorm, const std::vector<vec2f>& stexcoord,
-    const make_hair_params& params);
+/// Make a hair ball around a shape.
+void make_hair(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
+    std::vector<vec3f>& tang, std::vector<vec2f>& texcoord,
+    std::vector<float>& radius, int num, int tesselation,
+    const std::vector<vec3i>& striangles, const std::vector<vec4i>& squads,
+    const std::vector<vec3f>& spos, const std::vector<vec3f>& snorm,
+    const std::vector<vec2f>& stexcoord, const make_hair_params& params);
 
 /// @}
 
@@ -5540,10 +5540,13 @@ inline T* add_named_elem(std::vector<T*>& elems, const std::string& name) {
     return elem;
 }
 
+/// Update the normals of a shape.  Supports only non-facevarying shapes.
+void compute_normals(shape* shp);
 /// Subdivides shape elements. Apply subdivision surface rules if subdivide
 /// is true.
 void subdivide_shape_once(shape* shp, bool subdiv = false);
-/// Facet a shape. Supports only non-facevarying shapes.
+/// Facet a shape elements by duplicating vertices. Supports only
+/// non-facevarying shapes.
 void facet_shape(shape* shp, bool recompute_normals = true);
 /// Tesselate a shape into basic primitives.
 void tesselate_shape(shape* shp, bool subdivide,

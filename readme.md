@@ -223,29 +223,25 @@ manipulation useful to support scene viewing and path tracing.
 3. evaluate Bezier curves and derivatives with `eval_bezier()` and
    `eval_bezier_derivative()`
 4. compute smooth normals and tangents with `compute_normals()`
+/  `compute_tangents()`
 5. compute tangent frames from texture coordinates with
    `compute_tangent_space()`
 6. compute skinning with `compute_skinning()` and
    `compute_matrix_skinning()`
-6. shape creation with `make_points()`, `make_lines()`, `make_uvgrid()`
-7. element merging with `marge_elems()`
-8. facet elements with `facet_elems()`
+6. create shapes with `make_points()`, `make_lines()`, `make_uvgrid()`
+7. merge element with `marge_lines()`, `marge_triangles()`, `marge_quads()`
+8. facet elements with `facet_lines()`, `facet_triangles()`, `facet_quads()`
 9. shape sampling with `sample_points()`, `sample_lines()`,
    `sample_triangles()`; initialize the sampling CDFs with
    `sample_points_cdf()`, `sample_lines_cdf()`, `sample_triangles_cdf()`
 10. samnple a could of point over a surface with `sample_triangles_points()`
-11. get edges and boundaries with `get_edges()` and `get_boundary_edges()`
+11. get edges and boundaries with `get_edges()`
 12. convert quads to triangles with `convert_quads_to_triangles()`
 13. convert face varying to vertex shared representations with
     `convert_face_varying()`
-14. subdivide elements by edge splits with `subdivide_elems_linear()` and
-    `subdivide_vert_linear()`; for an easier interface use
-    `subdivide_lines_linear()`, `subdivide_triangles_linear()`,
-    `subdivide_quads_linear()`
-15. Catmull-Clark subdivision surface with `subdivide_vert_catmullclark()`
-    with support for edge and vertex creasing
-16. subdivide Bezier with `subdivide_bezier_recursive()` and
-    `subdivide_vert_bezier()`
+14. subdivide elements by edge splits with `subdivide_lines()`,
+    `subdivide_triangles()`, `subdivide_quads()`, `subdivide_beziers()`
+15. Catmull-Clark subdivision surface with `subdivide_catmullclark()`
 17. example shapes: `make_cube()`, `make_uvsphere()`, `make_uvhemisphere()`,
     `make_uvquad()`, `make_uvcube()`, `make_fvcube()`, `make_hair()`,
     `make_suzanne()`

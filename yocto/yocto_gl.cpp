@@ -76,35 +76,67 @@
 //
 // # Todo
 //
-// ## Next
+// ## Tesselation
 //
-// - persist props
+// - go back to tesselation via callbacks
+//     - consider tesselation of one parameter at a time
+// - consider higher level merge functions
+// - facet with templates
+// - what to do with face varying
+// - update convert functions to new api (?)
+// - cleanup tesselation in shape
+//     - remove tesselate once
+//     - tesselation uses only internal levels
+//
+// ## Apps
+//
+// - typed selection
+// - update lists
+// - yView: shade should split init and update
+//
+// ## Math
+//
+// - frame inverse with flag
+// - spherical/cartesian conversion
+// - make stronger the assumption on the use of frames
+//     - frame inversion
+//     - documentation
+// - check random shuffle
+// - check random number generation for float/double
+// - check rotation and decompoaition of rotations
+//    - see euclideanspace.com
+//
+// ## Scene
+//
 // - share texture info accross GPU/tracer/scene
 // - make texture info more complete with mirroring and mipmapping
+// - persist props
+// - envmap along z
+//
+// ## Image
+//
 // - tonemap params to put everywhere
+// - consider other tone reproduction code
+// - maybe: make image a simple structure
+//     - get_pixel, make_image
+// - remove constructors and accessors from vec/mat/frame
+//
+// ## Low-level code
 //
 // - serialization with visitor
 //     - decide if exposing json is reasonable
 //       for now this is just a matter of compilation time
 //       later it is best to use a variant type
 //
-// - consider uniforming texture info
-//
-// - envmap along z
-// - spherical/cartesian conversion
+// ## Ui
 //
 // - add angle semantic
-//
-// - move combo widget implementation.
-//
-// - check random shuffle
-// - check random number generation for float/double
+// - add rotation
+// - add frame editing with decomposition
+// - add labels 2,3,4
 //
 // ## Maybe
 //
-// - make image a simple structure
-//     - get_pixel, make_image
-// - remove constructors and accessors from vec/mat/frame
 //
 // ## Trace
 //
@@ -132,23 +164,12 @@
 // - simplify build functions: can we avoid preallocating nodes?
 // - maybe put axis with internal
 // - simplify partition and nth_element function
-//
-// ## Tesselation
-//
-// - tesselation functions using stencils
-// - cleanup tesselation in shape
-//     - remove tesselate once
-//     - tesselation uses only internal levels
+//     - include wrapper functions
 //
 // ## Simple denoiser
 //
 // - joint bilateral denoiser
 // - non-local means denoiser
-//
-// ## Infrastructure
-//
-// - check rotation and decompoaition of rotations
-//    - see euclideanspace.com
 //
 // ## Apps
 //
@@ -504,23 +525,37 @@ float perlin_turbulence_noise(const vec3f& p, float lacunarity, float gain,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Compute per-vertex normals/tangents for lines, triangles and quads with
-// positions pos. Weighted indicated whether the normals/tangents are
-// weighted by line length.
-std::vector<vec3f> compute_normals(const std::vector<vec2i>& lines,
-    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads,
-    const std::vector<vec3f>& pos, bool weighted) {
-    auto norm = std::vector<vec3f>(pos.size(), zero3f);
+// Compute per-vertex tangents for lines.
+void compute_tangents(const std::vector<vec2i>& lines,
+    const std::vector<vec3f>& pos, std::vector<vec3f>& norm, bool weighted) {
+    norm.resize(pos.size());
+    for (auto& n : norm) n = zero3f;
     for (auto& l : lines) {
         auto n = pos[l.y] - pos[l.x];
         if (!weighted) n = normalize(n);
         for (auto vid : l) norm[vid] += n;
     }
+    for (auto& n : norm) n = normalize(n);
+}
+
+// Compute per-vertex normals for triangles.
+void compute_normals(const std::vector<vec3i>& triangles,
+    const std::vector<vec3f>& pos, std::vector<vec3f>& norm, bool weighted) {
+    norm.resize(pos.size());
+    for (auto& n : norm) n = zero3f;
     for (auto& t : triangles) {
         auto n = cross(pos[t.y] - pos[t.x], pos[t.z] - pos[t.x]);
         if (!weighted) n = normalize(n);
         for (auto vid : t) norm[vid] += n;
     }
+    for (auto& n : norm) n = normalize(n);
+}
+
+// Compute per-vertex normals for quads.
+void compute_normals(const std::vector<vec4i>& quads,
+    const std::vector<vec3f>& pos, std::vector<vec3f>& norm, bool weighted) {
+    norm.resize(pos.size());
+    for (auto& n : norm) n = zero3f;
     for (auto& q : quads) {
         auto n = cross(pos[q.y] - pos[q.x], pos[q.w] - pos[q.x]) +
                  cross(pos[q.w] - pos[q.z], pos[q.x] - pos[q.z]);
@@ -528,7 +563,6 @@ std::vector<vec3f> compute_normals(const std::vector<vec2i>& lines,
         for (auto vid : q) norm[vid] += n;
     }
     for (auto& n : norm) n = normalize(n);
-    return norm;
 }
 
 // Compute per-vertex tangent frame for triangle meshes.
@@ -536,9 +570,10 @@ std::vector<vec3f> compute_normals(const std::vector<vec2i>& lines,
 // The first three components are the tangent with respect to the U texcoord.
 // The fourth component is the sign of the tangent wrt the V texcoord.
 // Tangent frame is useful in normal mapping.
-std::vector<vec4f> compute_tangent_frames(const std::vector<vec3i>& triangles,
+void compute_tangent_frames(const std::vector<vec3i>& triangles,
     const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
-    const std::vector<vec2f>& texcoord, bool weighted) {
+    const std::vector<vec2f>& texcoord, std::vector<vec4f>& tangsp,
+    bool weighted) {
     auto tangu = std::vector<vec3f>(pos.size(), zero3f);
     auto tangv = std::vector<vec3f>(pos.size(), zero3f);
     for (auto& t : triangles) {
@@ -550,13 +585,13 @@ std::vector<vec4f> compute_tangent_frames(const std::vector<vec3i>& triangles,
     }
     for (auto& t : tangu) t = normalize(t);
     for (auto& t : tangv) t = normalize(t);
-    auto tangsp = std::vector<vec4f>(pos.size(), zero4f);
+    tangsp.resize(pos.size());
+    for (auto& t : tangsp) t = zero4f;
     for (auto i = 0; i < pos.size(); i++) {
         tangu[i] = orthonormalize(tangu[i], norm[i]);
         auto s = (dot(cross(norm[i], tangu[i]), tangv[i]) < 0) ? -1.0f : 1.0f;
         tangsp[i] = {tangu[i].x, tangu[i].y, tangu[i].z, s};
     }
-    return tangsp;
 }
 
 // Apply skinning
@@ -653,63 +688,6 @@ std::vector<vec2i> get_edges(const std::vector<vec2i>& lines,
     }
 
     return edges;
-}
-
-// Create an array of boundary edges. Lines are always considered boundaries.
-std::vector<vec2i> get_boundary_edges(const std::vector<vec2i>& lines,
-    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads) {
-    auto ecount = std::unordered_map<vec2i, int>();
-
-    // lines are added manually later
-    for (auto l : lines) { ecount.insert({l, 2}); }
-    for (auto t : triangles) {
-        for (auto e : {vec2i{t.x, t.y}, vec2i{t.y, t.z}, vec2i{t.z, t.x}}) {
-            e = {min(e.x, e.y), max(e.x, e.y)};
-            auto ins = ecount.insert({e, 1});
-            if (!ins.second) ins.first->second += 1;
-        }
-    }
-    for (auto q : quads) {
-        for (auto e : {vec2i{q.x, q.y}, vec2i{q.y, q.z}, vec2i{q.z, q.w},
-                 vec2i{q.w, q.x}}) {
-            if (e.x == e.y) continue;
-            e = {min(e.x, e.y), max(e.x, e.y)};
-            auto ins = ecount.insert({e, 1});
-            if (!ins.second) ins.first->second += 1;
-        }
-    }
-
-    auto boundary = lines;
-    for (auto ec : ecount) {
-        if (ec.second > 1) continue;
-        boundary.push_back(ec.first);
-    }
-
-    return boundary;
-}
-
-// Get a list of all unique vertices.
-std::vector<int> get_verts(const std::vector<vec2i>& lines,
-    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads) {
-    auto verts = std::vector<int>();
-    auto vset = std::unordered_set<int>();
-    for (auto l : lines)
-        for (auto vid : l)
-            if (vset.insert(vid).second) verts.push_back(vid);
-    for (auto t : triangles)
-        for (auto vid : t)
-            if (vset.insert(vid).second) verts.push_back(vid);
-    for (auto q : quads)
-        for (auto vid : q)
-            if (vset.insert(vid).second) verts.push_back(vid);
-    return verts;
-}
-
-// Create an array of boundary vertices. Lines are always considered
-// boundaries.
-std::vector<int> get_boundary_verts(const std::vector<vec2i>& lines,
-    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads) {
-    return get_verts(get_boundary_edges(lines, triangles, quads), {}, {});
 }
 
 // Convert quads to triangles
@@ -820,204 +798,10 @@ inline vec2f _subdivide_normalize(const vec2f& x) { return normalize(x); }
 inline vec3f _subdivide_normalize(const vec3f& x) { return normalize(x); }
 inline vec4f _subdivide_normalize(const vec4f& x) { return normalize(x); }
 
-// Tesselate lines, triangles and quads by spolitting edges.
-// Returns the tesselated elements and dictionaries for vertex calculations.
-std::tuple<std::vector<vec2i>, std::vector<vec3i>, std::vector<vec4i>,
-    std::vector<vec2i>, std::vector<vec4i>>
-subdivide_elems_linear(const std::vector<vec2i>& lines,
-    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads,
-    int nverts) {
-    if (!nverts) return {};
-    auto emap = std::unordered_map<vec2i, int>();
-    auto edges = std::vector<vec2i>();
-    for (auto e : lines) {
-        if (contains(emap, e)) continue;
-        emap[{e.x, e.y}] = nverts + (int)edges.size();
-        emap[{e.y, e.x}] = nverts + (int)edges.size();
-        edges.push_back(e);
-    }
-    for (auto& t : triangles) {
-        for (auto e : {vec2i{t.x, t.y}, vec2i{t.y, t.z}, vec2i{t.z, t.x}}) {
-            if (contains(emap, e)) continue;
-            emap[{e.x, e.y}] = nverts + (int)edges.size();
-            emap[{e.y, e.x}] = nverts + (int)edges.size();
-            edges.push_back(e);
-        }
-    }
-    for (auto& q : quads) {
-        for (auto e : {vec2i{q.x, q.y}, vec2i{q.y, q.z}, vec2i{q.z, q.w},
-                 vec2i{q.w, q.x}}) {
-            if (e.x == e.y) continue;
-            if (contains(emap, e)) continue;
-            emap[{e.x, e.y}] = nverts + (int)edges.size();
-            emap[{e.y, e.x}] = nverts + (int)edges.size();
-            edges.push_back(e);
-        }
-    }
-
-    auto tlines = std::vector<vec2i>();
-    tlines.reserve(lines.size() * 2);
-    for (auto& l : lines) {
-        tlines.push_back({l.x, emap.at(l)});
-        tlines.push_back({emap.at(l), l.y});
-    }
-
-    auto ttriangles = std::vector<vec3i>();
-    ttriangles.reserve(triangles.size() * 4);
-    for (auto& t : triangles) {
-        ttriangles.push_back({t.x, emap.at({t.x, t.y}), emap.at({t.z, t.x})});
-        ttriangles.push_back({t.y, emap.at({t.y, t.z}), emap.at({t.x, t.y})});
-        ttriangles.push_back({t.z, emap.at({t.z, t.x}), emap.at({t.y, t.z})});
-        ttriangles.push_back(
-            {emap.at({t.x, t.y}), emap.at({t.y, t.z}), emap.at({t.z, t.x})});
-    }
-
-    auto tquads = std::vector<vec4i>();
-    tquads.reserve(quads.size() * 4);
-    for (auto fid = 0; fid < quads.size(); fid++) {
-        auto& f = quads[fid];
-        auto fvert = nverts + (int)edges.size() + fid;
-        if (f.z != f.w) {
-            tquads.push_back(
-                {f.x, emap.at({f.x, f.y}), fvert, emap.at({f.w, f.x})});
-            tquads.push_back(
-                {f.y, emap.at({f.y, f.z}), fvert, emap.at({f.x, f.y})});
-            tquads.push_back(
-                {f.z, emap.at({f.z, f.w}), fvert, emap.at({f.y, f.z})});
-            tquads.push_back(
-                {f.w, emap.at({f.w, f.x}), fvert, emap.at({f.z, f.w})});
-        } else {
-            tquads.push_back(
-                {f.x, emap.at({f.x, f.y}), fvert, emap.at({f.z, f.x})});
-            tquads.push_back(
-                {f.y, emap.at({f.y, f.z}), fvert, emap.at({f.x, f.y})});
-            tquads.push_back(
-                {f.z, emap.at({f.z, f.x}), fvert, emap.at({f.y, f.z})});
-        }
-    }
-    tquads.shrink_to_fit();
-
-    return {tlines, ttriangles, tquads, edges, quads};
-}
-
-// Subdivide vertex properties given the maps
-template <typename T>
-std::vector<T> subdivide_vert_linear(const std::vector<T>& vert,
-    const std::vector<vec2i>& edges, const std::vector<vec4i>& faces,
-    bool normalized) {
-    if (vert.empty()) return {};
-
-    auto tvert = std::vector<T>();
-    tvert.reserve(vert.size() + edges.size() + faces.size());
-
-    append(tvert, vert);
-    for (auto e : edges) tvert.push_back((vert[e.x] + vert[e.y]) / 2);
-    for (auto f : faces) {
-        if (f.z != f.w)
-            tvert.push_back(
-                (vert[f.x] + vert[f.y] + vert[f.z] + vert[f.w]) / 4);
-        else
-            tvert.push_back((vert[f.x] + vert[f.y] + vert[f.z]) / 3);
-    }
-
-    if (normalized) {
-        for (auto& n : tvert) n = _subdivide_normalize(n);
-    }
-
-    return tvert;
-}
-
-// template instantiations
-template std::vector<float> subdivide_vert_linear(
-    const std::vector<float>& vert, const std::vector<vec2i>& edges,
-    const std::vector<vec4i>& faces, bool normalized);
-template std::vector<vec2f> subdivide_vert_linear(
-    const std::vector<vec2f>& vert, const std::vector<vec2i>& edges,
-    const std::vector<vec4i>& faces, bool normalized);
-template std::vector<vec3f> subdivide_vert_linear(
-    const std::vector<vec3f>& vert, const std::vector<vec2i>& edges,
-    const std::vector<vec4i>& faces, bool normalized);
-template std::vector<vec4f> subdivide_vert_linear(
-    const std::vector<vec4f>& vert, const std::vector<vec2i>& edges,
-    const std::vector<vec4i>& faces, bool normalized);
-
-// Performs the smoothing step of Catmull-Clark. Start with a tesselate quad
-// mesh obtained with subdivide_elems_linear() and subdivide_vert_linear(). To
-// handle open meshes with boundary, get the boundary from make_boundary_edge()
-// and pass it as crease_lines. To fix the boundary entirely, just get the
-// boundary vertices and pass it as creases.
-template <typename T>
-std::vector<T> subdivide_vert_catmullclark(const std::vector<vec4i>& quads,
-    const std::vector<T>& vert, const std::vector<vec2i>& crease_tlines,
-    const std::vector<int>& crease_tpoints, bool normalized) {
-    if (quads.empty() || vert.empty()) return vert;
-
-    // define vertex valence ---------------------------
-    auto val = std::vector<int>(vert.size(), 2);
-    for (auto e : crease_tlines)
-        for (auto vid : e) val[vid] = 1;
-    for (auto vid : crease_tpoints) val[vid] = 0;
-
-    // averaging pass ----------------------------------
-    auto tvert = std::vector<T>(vert.size(), T());
-    auto count = std::vector<int>(vert.size(), 0);
-    for (auto p : crease_tpoints) {
-        auto c = vert[p];
-        if (val[p] == 0) tvert[p] += c;
-        if (val[p] == 0) count[p] += 1;
-    }
-    for (auto e : crease_tlines) {
-        auto c = (vert[e.x] + vert[e.y]) / 2.0f;
-        for (auto vid : e) {
-            if (val[vid] == 1) tvert[vid] += c;
-            if (val[vid] == 1) count[vid] += 1;
-        }
-    }
-    for (auto& f : quads) {
-        auto c = (vert[f.x] + vert[f.y] + vert[f.z] + vert[f.w]) / 4.0f;
-        for (auto vid : f) {
-            if (val[vid] == 2) tvert[vid] += c;
-            if (val[vid] == 2) count[vid] += 1;
-        }
-    }
-    for (auto i = 0; i < vert.size(); i++) { tvert[i] /= (float)count[i]; }
-
-    // correction pass ----------------------------------
-    // p = p + (avg_p - p) * (4/avg_count)
-    for (auto i = 0; i < vert.size(); i++) {
-        if (val[i] != 2) continue;
-        tvert[i] = vert[i] + (tvert[i] - vert[i]) * (4.0f / count[i]);
-    }
-
-    if (normalized) {
-        for (auto& v : tvert) v = _subdivide_normalize(v);
-    }
-
-    return tvert;
-}
-
-// explicit instantiations
-template std::vector<float> subdivide_vert_catmullclark(
-    const std::vector<vec4i>& quads, const std::vector<float>& vert,
-    const std::vector<vec2i>& crease_tlines,
-    const std::vector<int>& crease_tpoints, bool normalized);
-template std::vector<vec2f> subdivide_vert_catmullclark(
-    const std::vector<vec4i>& quads, const std::vector<vec2f>& vert,
-    const std::vector<vec2i>& crease_tlines,
-    const std::vector<int>& crease_tpoints, bool normalized);
-template std::vector<vec3f> subdivide_vert_catmullclark(
-    const std::vector<vec4i>& quads, const std::vector<vec3f>& vert,
-    const std::vector<vec2i>& crease_tlines,
-    const std::vector<int>& crease_tpoints, bool normalized);
-template std::vector<vec4f> subdivide_vert_catmullclark(
-    const std::vector<vec4i>& quads, const std::vector<vec4f>& vert,
-    const std::vector<vec2i>& crease_tlines,
-    const std::vector<int>& crease_tpoints, bool normalized);
-
 // Subdivide bezier recursive by splitting each segment into two in the middle.
 // Returns the tesselated elements and dictionaries for vertex calculations.
 std::tuple<std::vector<vec4i>, std::vector<int>, std::vector<vec4i>>
-subdivide_bezier_recursive(const std::vector<vec4i>& beziers, int nverts) {
+subdivide_bezier_recursive_(const std::vector<vec4i>& beziers, int nverts) {
     if (!nverts) return {};
     auto vmap = std::unordered_map<int, int>();
     auto verts = std::vector<int>();
@@ -1044,7 +828,7 @@ subdivide_bezier_recursive(const std::vector<vec4i>& beziers, int nverts) {
 
 // Subdivide vertex properties given the maps
 template <typename T>
-std::vector<T> subdivide_vert_bezier(const std::vector<T>& vert,
+std::vector<T> subdivide_vert_bezier_(const std::vector<T>& vert,
     const std::vector<int>& verts, const std::vector<vec4i>& segments,
     bool normalized) {
     if (vert.empty()) return {};
@@ -1071,23 +855,293 @@ std::vector<T> subdivide_vert_bezier(const std::vector<T>& vert,
     return tvert;
 }
 
-// template instantiations
-template std::vector<float> subdivide_vert_bezier(
-    const std::vector<float>& vert, const std::vector<int>& verts,
-    const std::vector<vec4i>& segments, bool normalized);
-template std::vector<vec2f> subdivide_vert_bezier(
-    const std::vector<vec2f>& vert, const std::vector<int>& verts,
-    const std::vector<vec4i>& segments, bool normalized);
-template std::vector<vec3f> subdivide_vert_bezier(
-    const std::vector<vec3f>& vert, const std::vector<int>& verts,
-    const std::vector<vec4i>& segments, bool normalized);
-template std::vector<vec4f> subdivide_vert_bezier(
-    const std::vector<vec4f>& vert, const std::vector<int>& verts,
-    const std::vector<vec4i>& segments, bool normalized);
+// Subdivide lines.
+template <typename T>
+void subdivide_lines(
+    std::vector<vec2i>& lines, std::vector<T>& vert, bool update_lines) {
+    if (lines.empty() || vert.empty()) return;
+
+    auto tvert = vert;
+    auto tlines = std::vector<vec2i>();
+    for (auto& l : lines) {
+        tlines.push_back({l.x, (int)tvert.size()});
+        tlines.push_back({(int)tvert.size(), l.y});
+        tvert.push_back((vert[l.x] + vert[l.y]) / 2);
+    }
+
+    std::swap(vert, tvert);
+    if (update_lines) std::swap(lines, tlines);
+}
+
+// Subdivide triangle.
+template <typename T>
+void subdivide_triangles(std::vector<vec3i>& triangles, std::vector<T>& vert,
+    bool update_triangles) {
+    if (triangles.empty() || vert.empty()) return;
+
+    auto tvert = vert;
+    auto ttriangles = std::vector<vec3i>();
+    auto emap = std::unordered_map<vec2i, int>();
+    for (auto& t : triangles) {
+        for (auto e : {vec2i{t.x, t.y}, vec2i{t.y, t.z}, vec2i{t.z, t.x}}) {
+            if (contains(emap, e)) continue;
+            emap[{e.x, e.y}] = (int)tvert.size();
+            emap[{e.y, e.x}] = (int)tvert.size();
+            tvert.push_back((vert[e.x] + vert[e.y]) / 2);
+        }
+        ttriangles.push_back({t.x, emap.at({t.x, t.y}), emap.at({t.z, t.x})});
+        ttriangles.push_back({t.y, emap.at({t.y, t.z}), emap.at({t.x, t.y})});
+        ttriangles.push_back({t.z, emap.at({t.z, t.x}), emap.at({t.y, t.z})});
+        ttriangles.push_back(
+            {emap.at({t.x, t.y}), emap.at({t.y, t.z}), emap.at({t.z, t.x})});
+    }
+
+    std::swap(vert, tvert);
+    if (update_triangles) std::swap(triangles, ttriangles);
+}
+
+// Subdivide quads.
+template <typename T>
+void subdivide_quads(
+    std::vector<vec4i>& quads, std::vector<T>& vert, bool update_quads) {
+    if (quads.empty() || vert.empty()) return;
+
+    auto tvert = vert;
+    auto tquads = std::vector<vec4i>();
+    auto emap = std::unordered_map<vec2i, int>();
+    for (auto& q : quads) {
+        for (auto e : {vec2i{q.x, q.y}, vec2i{q.y, q.z}, vec2i{q.z, q.w},
+                 vec2i{q.w, q.x}}) {
+            if (e.x == e.y) continue;
+            if (contains(emap, e)) continue;
+            emap[{e.x, e.y}] = (int)tvert.size();
+            emap[{e.y, e.x}] = (int)tvert.size();
+            tvert.push_back((vert[e.x] + vert[e.y]) / 2);
+        }
+        if (q.z != q.w) {
+            tquads.push_back({q.x, emap.at({q.x, q.y}), (int)tvert.size(),
+                emap.at({q.w, q.x})});
+            tquads.push_back({q.y, emap.at({q.y, q.z}), (int)tvert.size(),
+                emap.at({q.x, q.y})});
+            tquads.push_back({q.z, emap.at({q.z, q.w}), (int)tvert.size(),
+                emap.at({q.y, q.z})});
+            tquads.push_back({q.w, emap.at({q.w, q.x}), (int)tvert.size(),
+                emap.at({q.z, q.w})});
+            tvert.push_back(
+                (vert[q.x] + vert[q.y] + vert[q.z] + vert[q.w]) / 4);
+        } else {
+            tquads.push_back({q.x, emap.at({q.x, q.y}), (int)tvert.size(),
+                emap.at({q.z, q.x})});
+            tquads.push_back({q.y, emap.at({q.y, q.z}), (int)tvert.size(),
+                emap.at({q.x, q.y})});
+            tquads.push_back({q.z, emap.at({q.z, q.x}), (int)tvert.size(),
+                emap.at({q.y, q.z})});
+            tvert.push_back((vert[q.x] + vert[q.y] + vert[q.y]) / 3);
+        }
+    }
+
+    std::swap(vert, tvert);
+    if (update_quads) std::swap(quads, tquads);
+}
+
+// Subdivide beziers.
+template <typename T>
+void subdivide_beziers(
+    std::vector<vec4i>& beziers, std::vector<T>& vert, bool update_beziers) {
+    if (beziers.empty() || vert.empty()) return;
+
+    auto vmap = std::unordered_map<int, int>();
+    auto tvert = std::vector<T>();
+    auto tbeziers = std::vector<vec4i>();
+    for (auto& b : beziers) {
+        if (!contains(vmap, b.x)) {
+            vmap[b.x] = (int)tvert.size();
+            tvert.push_back(vert[b.x]);
+        }
+        if (!contains(vmap, b.w)) {
+            vmap[b.w] = (int)tvert.size();
+            tvert.push_back(vert[b.w]);
+        }
+        auto bo = (int)tvert.size();
+        tbeziers.push_back({vmap.at(b.x), bo + 0, bo + 1, bo + 2});
+        tbeziers.push_back({bo + 2, bo + 3, bo + 4, vmap.at(b.w)});
+        tvert.push_back(vert[b.x] / 2 + vert[b.y] / 2);
+        tvert.push_back(vert[b.x] / 4 + vert[b.y] / 2 + vert[b.z] / 4);
+        tvert.push_back(vert[b.x] / 8 + 3 * vert[b.y] / 8 + 3 * vert[b.z] / 8 +
+                        vert[b.w] / 8);
+        tvert.push_back(vert[b.y] / 4 + vert[b.z] / 2 + vert[b.w] / 4);
+        tvert.push_back(vert[b.z] / 2 + vert[b.w] / 2);
+    }
+
+    std::swap(vert, tvert);
+    if (update_beziers) std::swap(beziers, tbeziers);
+}
+
+// Subdivide catmullclark.
+template <typename T>
+void subdivide_catmullclark(
+    std::vector<vec4i>& quads, std::vector<T>& vert, bool update_quads) {
+    if (quads.empty() || vert.empty()) return;
+
+    auto tvert = vert;
+    auto tquads = std::vector<vec4i>();
+    auto emap = std::unordered_map<vec2i, int>();
+    for (auto& q : quads) {
+        for (auto e : {vec2i{q.x, q.y}, vec2i{q.y, q.z}, vec2i{q.z, q.w},
+                 vec2i{q.w, q.x}}) {
+            if (e.x == e.y) continue;
+            if (contains(emap, e)) continue;
+            emap[{e.x, e.y}] = (int)tvert.size();
+            emap[{e.y, e.x}] = (int)tvert.size();
+            tvert.push_back((vert[e.x] + vert[e.y]) / 2);
+        }
+        if (q.z != q.w) {
+            tquads.push_back({q.x, emap.at({q.x, q.y}), (int)tvert.size(),
+                emap.at({q.w, q.x})});
+            tquads.push_back({q.y, emap.at({q.y, q.z}), (int)tvert.size(),
+                emap.at({q.x, q.y})});
+            tquads.push_back({q.z, emap.at({q.z, q.w}), (int)tvert.size(),
+                emap.at({q.y, q.z})});
+            tquads.push_back({q.w, emap.at({q.w, q.x}), (int)tvert.size(),
+                emap.at({q.z, q.w})});
+            tvert.push_back(
+                (vert[q.x] + vert[q.y] + vert[q.z] + vert[q.w]) / 4);
+        } else {
+            tquads.push_back({q.x, emap.at({q.x, q.y}), (int)tvert.size(),
+                emap.at({q.z, q.x})});
+            tquads.push_back({q.y, emap.at({q.y, q.z}), (int)tvert.size(),
+                emap.at({q.x, q.y})});
+            tquads.push_back({q.z, emap.at({q.z, q.x}), (int)tvert.size(),
+                emap.at({q.y, q.z})});
+            tvert.push_back((vert[q.x] + vert[q.y] + vert[q.y]) / 3);
+        }
+    }
+
+    auto tboundary = std::vector<vec2i>();
+    for (auto e_kv : emap) {
+        auto e = e_kv.first;
+        auto v = e_kv.second;
+        if (contains(emap, {e.y, e.x})) continue;
+        tboundary.push_back({e.x, v});
+        tboundary.push_back({v, e.y});
+    }
+
+    // setup
+    auto tcrease_edges = tboundary;
+    auto tcrease_verts = std::vector<int>();
+
+    // define vertex valence ---------------------------
+    auto tvert_val = std::vector<int>(tvert.size(), 2);
+    for (auto e : tcrease_edges)
+        for (auto vid : e) tvert_val[vid] = 1;
+    for (auto vid : tcrease_verts) tvert_val[vid] = 0;
+
+    // averaging pass ----------------------------------
+    auto avert = std::vector<T>(tvert.size(), T());
+    auto acount = std::vector<int>(tvert.size(), 0);
+    for (auto p : tcrease_verts) {
+        if (tvert_val[p] != 0) continue;
+        avert[p] += tvert[p];
+        acount[p] += 1;
+    }
+    for (auto e : tcrease_edges) {
+        auto c = (tvert[e.x] + tvert[e.y]) / 2.0f;
+        for (auto vid : e) {
+            if (tvert_val[vid] != 1) continue;
+            avert[vid] += c;
+            acount[vid] += 1;
+        }
+    }
+    for (auto& q : tquads) {
+        auto c = (tvert[q.x] + tvert[q.y] + tvert[q.z] + tvert[q.w]) / 4.0f;
+        for (auto vid : q) {
+            if (tvert_val[vid] != 2) continue;
+            avert[vid] += c;
+            acount[vid] += 1;
+        }
+    }
+    for (auto i = 0; i < tvert.size(); i++) avert[i] /= (float)acount[i];
+
+    // correction pass ----------------------------------
+    // p = p + (avg_p - p) * (4/avg_count)
+    for (auto i = 0; i < tvert.size(); i++) {
+        if (tvert_val[i] != 2) continue;
+        avert[i] = tvert[i] + (avert[i] - tvert[i]) * (4.0f / acount[i]);
+    }
+    tvert = avert;
+
+    std::swap(vert, tvert);
+    if (update_quads) std::swap(quads, tquads);
+}
+
+// Subdivide lines by splitting each line in half.
+void subdivide_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<vec4f>& color, std::vector<float>& radius) {
+    if (lines.empty()) return;
+    subdivide_lines(lines, norm, false);
+    for (auto& n : norm) n = normalize(n);
+    subdivide_lines(lines, texcoord, false);
+    subdivide_lines(lines, color, false);
+    subdivide_lines(lines, radius, false);
+    subdivide_lines(lines, pos);
+}
+
+// Subdivide triangles.
+void subdivide_triangles(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<vec4f>& color, std::vector<float>& radius) {
+    if (triangles.empty()) return;
+    subdivide_triangles(triangles, norm, false);
+    for (auto& n : norm) n = normalize(n);
+    subdivide_triangles(triangles, texcoord, false);
+    subdivide_triangles(triangles, color, false);
+    subdivide_triangles(triangles, radius, false);
+    subdivide_triangles(triangles, pos);
+}
+
+// Subdivide quads.
+void subdivide_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<vec4f>& color, std::vector<float>& radius) {
+    if (quads.empty()) return;
+    subdivide_quads(quads, norm, false);
+    for (auto& n : norm) n = normalize(n);
+    subdivide_quads(quads, texcoord, false);
+    subdivide_quads(quads, color, false);
+    subdivide_quads(quads, radius, false);
+    subdivide_quads(quads, pos);
+}
+
+// Subdivide beziers.
+void subdivide_beziers(std::vector<vec4i>& beziers, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<vec4f>& color, std::vector<float>& radius) {
+    if (beziers.empty()) return;
+    subdivide_beziers(beziers, norm, false);
+    for (auto& n : norm) n = normalize(n);
+    subdivide_beziers(beziers, texcoord, false);
+    subdivide_beziers(beziers, color, false);
+    subdivide_beziers(beziers, radius, false);
+    subdivide_beziers(beziers, pos);
+}
+
+// Subdivide quads.
+void subdivide_catmullclark(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<vec4f>& color, std::vector<float>& radius) {
+    if (quads.empty()) return;
+    subdivide_catmullclark(quads, norm, false);
+    for (auto& n : norm) n = normalize(n);
+    subdivide_catmullclark(quads, texcoord, false);
+    subdivide_catmullclark(quads, color, false);
+    subdivide_catmullclark(quads, radius, false);
+    subdivide_catmullclark(quads, pos);
+}
 
 // Generate a rectangular grid of usteps x vsteps uv values for parametric
 // surface generation.
-std::tuple<std::vector<vec4i>, std::vector<vec2f>> make_uvquads(
+void make_quads_uv(std::vector<vec4i>& quads, std::vector<vec2f>& uv,
     int usteps, int vsteps, bool uwrap, bool vwrap, bool vpole0, bool vpole1) {
     auto uvert = (uwrap) ? usteps : usteps + 1;
     auto vvert = (vwrap) ? vsteps : vsteps + 1;
@@ -1097,14 +1151,14 @@ std::tuple<std::vector<vec4i>, std::vector<vec2f>> make_uvquads(
         return j * uvert + i;
     };
 
-    auto uv = std::vector<vec2f>(uvert * vvert);
+    uv = std::vector<vec2f>(uvert * vvert);
     for (auto j = 0; j < vvert; j++) {
         for (auto i = 0; i < uvert; i++) {
             uv[vid(i, j)] = {i / (float)usteps, j / (float)vsteps};
         }
     }
 
-    auto quads = std::vector<vec4i>(usteps * vsteps);
+    quads = std::vector<vec4i>(usteps * vsteps);
     for (auto j = 0; j < vsteps; j++) {
         for (auto i = 0; i < usteps; i++) {
             quads[j * usteps + i] = {
@@ -1131,96 +1185,142 @@ std::tuple<std::vector<vec4i>, std::vector<vec2f>> make_uvquads(
             for (auto& vid : q) { vid = (vid < pid) ? vid : pid; }
         }
     }
-
-    return {quads, uv};
 }
 
 // Generate parametric num lines of usteps segments.
-std::tuple<std::vector<vec2i>, std::vector<vec2f>> make_uvlines(
-    int num, int usteps) {
+void make_lines_uv(
+    std::vector<vec2i>& lines, std::vector<vec2f>& uv, int num, int usteps) {
     auto vid = [usteps](int i, int j) { return j * (usteps + 1) + i; };
-    auto uv = std::vector<vec2f>((usteps + 1) * num);
+    uv = std::vector<vec2f>((usteps + 1) * num);
     for (auto j = 0; j < num; j++) {
         for (auto i = 0; i <= usteps; i++) {
             uv[vid(i, j)] = {i / (float)usteps, j / (float)num};
         }
     }
 
-    auto lines = std::vector<vec2i>(usteps * num);
+    lines = std::vector<vec2i>(usteps * num);
     for (int j = 0; j < num; j++) {
         for (int i = 0; i < usteps; i++) {
             lines[j * usteps + i] = {vid(i, j), vid(i + 1, j)};
         }
     }
-
-    return {lines, uv};
 }
 
 // Generate a parametric point set. Mostly here for completeness.
-std::tuple<std::vector<int>, std::vector<vec2f>> make_uvpoints(int num) {
-    auto uv = std::vector<vec2f>(num);
+void make_points_uv(std::vector<int>& points, std::vector<vec2f>& uv, int num) {
+    uv = std::vector<vec2f>(num);
     for (auto i = 0; i < num; i++) { uv[i] = {i / (float)num, 0}; }
 
-    auto points = std::vector<int>(num);
+    points = std::vector<int>(num);
     for (auto i = 0; i < num; i++) points[i] = i;
-
-    return {points, uv};
 }
 
-// Merge elements between shapes. The elements are merged by increasing the
+// Merge lines between shapes.
+void merge_lines(std::vector<vec2i>& lines, const std::vector<vec2i>& lines1) {
+    auto nverts = 0;
+    for (auto& l : lines) nverts = max(nverts, max_element(l));
+    for (auto& l : lines1) lines.push_back({l.x + nverts, l.y + nverts});
+}
+// Merge triangles between shapes. The elements are merged by increasing the
 // array size of the second array by the number of vertices of the first.
 // Vertex data can then be concatenated successfully.
-std::tuple<std::vector<vec2i>, std::vector<vec3i>, std::vector<vec4i>>
-merge_elems(int nverts, const std::vector<vec2i>& lines1,
-    const std::vector<vec3i>& triangles1, const std::vector<vec4i>& quads1,
-    const std::vector<vec2i>& lines2, const std::vector<vec3i>& triangles2,
-    const std::vector<vec4i>& quads2) {
-    auto lines = join(lines1, lines2);
-    auto triangles = join(triangles1, triangles2);
-    auto quads = join(quads1, quads2);
-    for (auto i = lines1.size(); i < lines.size(); i++)
-        lines[i] += {nverts, nverts};
-    for (auto i = triangles1.size(); i < triangles.size(); i++)
-        triangles[i] += {nverts, nverts, nverts};
-    for (auto i = quads1.size(); i < quads.size(); i++)
-        quads[i] += {nverts, nverts, nverts, nverts};
-    return {lines, triangles, quads};
+void merge_triangles(
+    std::vector<vec3i>& triangles, const std::vector<vec3i>& triangles1) {
+    auto nverts = 0;
+    for (auto& t : triangles) nverts = max(nverts, max_element(t));
+    for (auto& t : triangles1)
+        triangles.push_back({t.x + nverts, t.y + nverts, t.z + nverts});
+}
+// Merge quads between shapes. The elements are merged by increasing the
+// array size of the second array by the number of vertices of the first.
+// Vertex data can then be concatenated successfully.
+void merge_quads(std::vector<vec4i>& quads, const std::vector<vec4i>& quads1) {
+    auto nverts = 0;
+    for (auto& q : quads) nverts = max(nverts, max_element(q));
+    for (auto& q : quads1)
+        quads.push_back(
+            {q.x + nverts, q.y + nverts, q.z + nverts, q.w + nverts});
 }
 
-// Unshare shape data by duplicating all vertex data for each element,
-// giving a faceted look. Note that faceted tangents are not computed.
-std::tuple<std::vector<vec2i>, std::vector<vec3i>, std::vector<vec4i>,
-    std::vector<int>>
-facet_elems(const std::vector<vec2i>& lines,
-    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads) {
-    auto verts = std::vector<int>();
-    auto nlines = std::vector<vec2i>();
-    for (auto l : lines) {
-        nlines.push_back({(int)verts.size(), (int)verts.size() + 1});
-        for (auto v : l) verts.push_back(v);
-    }
-
-    auto ntriangles = std::vector<vec3i>();
-    for (auto t : triangles) {
-        ntriangles.push_back(
-            {(int)verts.size(), (int)verts.size() + 1, (int)verts.size() + 2});
-        for (auto v : t) verts.push_back(v);
-    }
-
-    auto nquads = std::vector<vec4i>();
-    for (auto q : quads) {
-        if (q.z != q.w) {
-            nquads.push_back({(int)verts.size(), (int)verts.size() + 1,
-                (int)verts.size() + 2, (int)verts.size() + 3});
-            for (auto v : q) verts.push_back(v);
-        } else {
-            nquads.push_back({(int)verts.size(), (int)verts.size() + 1,
-                (int)verts.size() + 2, (int)verts.size() + 2});
-            for (auto v : {q.x, q.y, q.z}) verts.push_back(v);
+// Unshare line data.
+void facet_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<vec4f>& color, std::vector<float>& radius) {
+    auto facet_vert = [&lines](auto& vert) {
+        if (vert.empty()) return;
+        auto tvert = vert;
+        tvert.resize(lines.size() * 2);
+        for (auto i = 0; i < lines.size(); i++) {
+            tvert[2 * i + 0] = vert[lines[i].x];
+            tvert[2 * i + 1] = vert[lines[i].y];
         }
-    }
+        std::swap(vert, tvert);
+    };
 
-    return {nlines, ntriangles, nquads, verts};
+    facet_vert(pos);
+    facet_vert(norm);
+    facet_vert(texcoord);
+    facet_vert(color);
+    facet_vert(radius);
+
+    auto tlines = std::vector<vec2i>(lines.size());
+    for (auto i = 0; i < lines.size(); i++) tlines[i] = {i * 2 + 0, i * 2 + 1};
+    std::swap(lines, tlines);
+}
+// Unshare triangle data.
+void facet_triangles(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<vec4f>& color, std::vector<float>& radius) {
+    auto facet_vert = [&triangles](auto& vert) {
+        if (vert.empty()) return;
+        auto tvert = vert;
+        tvert.resize(triangles.size() * 3);
+        for (auto i = 0; i < triangles.size(); i++) {
+            tvert[3 * i + 0] = vert[triangles[i].x];
+            tvert[3 * i + 1] = vert[triangles[i].y];
+            tvert[3 * i + 2] = vert[triangles[i].z];
+        }
+        std::swap(vert, tvert);
+    };
+
+    facet_vert(pos);
+    facet_vert(norm);
+    facet_vert(texcoord);
+    facet_vert(color);
+    facet_vert(radius);
+
+    auto ttriangles = std::vector<vec3i>(triangles.size());
+    for (auto i = 0; i < triangles.size(); i++)
+        ttriangles[i] = {i * 3 + 0, i * 3 + 1, i * 3 + 2};
+    std::swap(triangles, ttriangles);
+}
+// Unshare quad data.
+void facet_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<vec4f>& color, std::vector<float>& radius) {
+    auto facet_vert = [&quads](auto& vert) {
+        if (vert.empty()) return;
+        auto tvert = vert;
+        tvert.resize(quads.size() * 4);
+        for (auto i = 0; i < quads.size(); i++) {
+            tvert[4 * i + 0] = vert[quads[i].x];
+            tvert[4 * i + 1] = vert[quads[i].y];
+            tvert[4 * i + 2] = vert[quads[i].z];
+            tvert[4 * i + 3] = vert[quads[i].z];
+        }
+        std::swap(vert, tvert);
+    };
+
+    facet_vert(pos);
+    facet_vert(norm);
+    facet_vert(texcoord);
+    facet_vert(color);
+    facet_vert(radius);
+
+    auto tquads = std::vector<vec4i>(quads.size());
+    for (auto i = 0; i < quads.size(); i++)
+        tquads[i] = {i * 4 + 0, i * 4 + 1, i * 4 + 2, i * 4 + 3};
+    std::swap(quads, tquads);
 }
 
 // Unshare vertices for faceting
@@ -3201,83 +3301,60 @@ ray3f eval_camera_ray(const camera* cam, const vec2i& ij, int res,
 
 // Subdivides shape elements.
 void subdivide_shape_once(shape* shp, bool subdiv) {
-    if (!shp->lines.empty() || !shp->triangles.empty() || !shp->quads.empty()) {
-        std::vector<vec2i> edges;
-        std::vector<vec4i> faces;
-        std::tie(shp->lines, shp->triangles, shp->quads, edges, faces) =
-            subdivide_elems_linear(
-                shp->lines, shp->triangles, shp->quads, (int)shp->pos.size());
-        shp->pos = subdivide_vert_linear(shp->pos, edges, faces);
-        shp->norm = subdivide_vert_linear(shp->norm, edges, faces);
-        shp->texcoord = subdivide_vert_linear(shp->texcoord, edges, faces);
-        shp->color = subdivide_vert_linear(shp->color, edges, faces);
-        shp->radius = subdivide_vert_linear(shp->radius, edges, faces);
-        if (subdiv && !shp->quads.empty()) {
-            auto boundary = get_boundary_edges({}, {}, shp->quads);
-            shp->pos =
-                subdivide_vert_catmullclark(shp->quads, shp->pos, boundary, {});
-            shp->norm = subdivide_vert_catmullclark(
-                shp->quads, shp->norm, boundary, {});
-            shp->texcoord = subdivide_vert_catmullclark(
-                shp->quads, shp->texcoord, boundary, {});
-            shp->color = subdivide_vert_catmullclark(
-                shp->quads, shp->color, boundary, {});
-            shp->radius = subdivide_vert_catmullclark(
-                shp->quads, shp->radius, boundary, {});
-            shp->norm = compute_normals({}, {}, shp->quads, shp->pos);
-        }
-    } else if (!shp->quads_pos.empty()) {
-        std::vector<vec2i> _lines;
-        std::vector<vec3i> _triangles;
-        std::vector<vec2i> edges;
-        std::vector<vec4i> faces;
-        std::tie(_lines, _triangles, shp->quads_pos, edges, faces) =
-            subdivide_elems_linear({}, {}, shp->quads_pos, shp->pos.size());
-        shp->pos = subdivide_vert_linear(shp->pos, edges, faces);
-        std::tie(_lines, _triangles, shp->quads_norm, edges, faces) =
-            subdivide_elems_linear({}, {}, shp->quads_norm, shp->norm.size());
-        shp->norm = subdivide_vert_linear(shp->norm, edges, faces);
-        std::tie(_lines, _triangles, shp->quads_texcoord, edges, faces) =
-            subdivide_elems_linear(
-                {}, {}, shp->quads_texcoord, shp->texcoord.size());
-        shp->texcoord = subdivide_vert_linear(shp->texcoord, edges, faces);
-        if (subdiv) {
-            shp->pos = subdivide_vert_catmullclark(shp->quads_pos, shp->pos,
-                get_boundary_edges({}, {}, shp->quads_pos), {});
-            shp->norm = subdivide_vert_catmullclark(shp->quads_norm, shp->norm,
-                get_boundary_edges({}, {}, shp->quads_norm), {});
-            shp->texcoord =
-                subdivide_vert_catmullclark(shp->quads_texcoord, shp->texcoord,
-                    {}, get_boundary_verts({}, {}, shp->quads_texcoord));
-        }
+    if (!shp->lines.empty()) {
+        subdivide_lines(shp->lines, shp->pos, shp->norm, shp->texcoord,
+            shp->color, shp->radius);
+    } else if (!shp->triangles.empty()) {
+        subdivide_triangles(shp->triangles, shp->pos, shp->norm, shp->texcoord,
+            shp->color, shp->radius);
+    } else if (!shp->quads.empty() && !subdiv) {
+        subdivide_quads(shp->quads, shp->pos, shp->norm, shp->texcoord,
+            shp->color, shp->radius);
+    } else if (!shp->quads.empty() && subdiv) {
+        subdivide_catmullclark(shp->quads, shp->pos, shp->norm, shp->texcoord,
+            shp->color, shp->radius);
+    } else if (!shp->quads_pos.empty() && !subdiv) {
+        subdivide_quads(shp->quads_pos, shp->pos);
+        subdivide_quads(shp->quads_norm, shp->norm);
+        subdivide_quads(shp->quads_texcoord, shp->texcoord);
+    } else if (!shp->quads_pos.empty() && subdiv) {
+        subdivide_catmullclark(shp->quads_pos, shp->pos);
+        subdivide_catmullclark(shp->quads_norm, shp->norm);
+        subdivide_catmullclark(shp->quads_texcoord, shp->texcoord);
     } else if (!shp->beziers.empty()) {
-        std::vector<int> verts;
-        std::vector<vec4i> segments;
-        std::tie(shp->beziers, verts, segments) =
-            subdivide_bezier_recursive(shp->beziers, (int)shp->pos.size());
-        shp->pos = subdivide_vert_bezier(shp->pos, verts, segments);
-        shp->norm = subdivide_vert_bezier(shp->norm, verts, segments);
-        shp->texcoord = subdivide_vert_bezier(shp->texcoord, verts, segments);
-        shp->color = subdivide_vert_bezier(shp->color, verts, segments);
-        shp->radius = subdivide_vert_bezier(shp->radius, verts, segments);
+        subdivide_beziers(shp->beziers, shp->pos, shp->norm, shp->texcoord,
+            shp->color, shp->radius);
+    }
+}
+
+// Compute shape normals. Supports only non-facevarying shapes.
+void compute_normals(shape* shp) {
+    if (!shp->points.empty()) {
+        shp->norm.assign(shp->pos.size(), {0, 0, 1});
+    } else if (!shp->lines.empty()) {
+        compute_tangents(shp->lines, shp->pos, shp->norm);
+    } else if (!shp->triangles.empty()) {
+        compute_normals(shp->triangles, shp->pos, shp->norm);
+    } else if (!shp->quads.empty()) {
+        compute_normals(shp->quads, shp->pos, shp->norm);
     }
 }
 
 // Facet a shape. Supports only non-facevarying shapes
 void facet_shape(shape* shp, bool recompute_normals) {
-    if (!shp->lines.empty() || !shp->triangles.empty() || !shp->quads.empty()) {
+    if (!shp->lines.empty()) {
+        facet_lines(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->color,
+            shp->radius);
+        if (recompute_normals) compute_normals(shp);
+    } else if (!shp->triangles.empty()) {
+        facet_triangles(shp->triangles, shp->pos, shp->norm, shp->texcoord,
+            shp->color, shp->radius);
+        if (recompute_normals) compute_normals(shp);
+    } else if (!shp->quads.empty()) {
         std::vector<int> verts;
-        std::tie(shp->lines, shp->triangles, shp->quads, verts) =
-            facet_elems(shp->lines, shp->triangles, shp->quads);
-        shp->pos = facet_vert(shp->pos, verts);
-        shp->norm = facet_vert(shp->norm, verts);
-        shp->texcoord = facet_vert(shp->texcoord, verts);
-        shp->color = facet_vert(shp->color, verts);
-        shp->radius = facet_vert(shp->radius, verts);
-        if (recompute_normals) {
-            shp->norm = compute_normals(
-                shp->lines, shp->triangles, shp->quads, shp->pos);
-        }
+        facet_quads(shp->quads, shp->pos, shp->norm, shp->texcoord, shp->color,
+            shp->radius);
+        if (recompute_normals) compute_normals(shp);
     }
 }
 
@@ -3399,15 +3476,13 @@ void add_elements(scene* scn, const add_elements_options& opts) {
                 shp->norm.resize(shp->pos.size(), {0, 0, 1});
                 if (!shp->lines.empty() || !shp->triangles.empty() ||
                     !shp->quads.empty()) {
-                    shp->norm = compute_normals(
-                        shp->lines, shp->triangles, shp->quads, shp->pos);
+                    compute_normals(shp);
                 }
                 if (!shp->quads_pos.empty()) {
                     if (!shp->quads_norm.empty())
                         throw std::runtime_error("bad normals");
                     shp->quads_norm = shp->quads_pos;
-                    shp->norm =
-                        compute_normals({}, {}, shp->quads_pos, shp->pos);
+                    compute_normals(shp->quads_pos, shp->pos, shp->norm);
                 }
             }
         }
@@ -3421,12 +3496,12 @@ void add_elements(scene* scn, const add_elements_options& opts) {
                 if (!shp->mat) continue;
                 if (!(shp->mat->norm_txt || shp->mat->bump_txt)) continue;
                 if (!shp->triangles.empty()) {
-                    shp->tangsp = compute_tangent_frames(
-                        shp->triangles, shp->pos, shp->norm, shp->texcoord);
+                    compute_tangent_frames(shp->triangles, shp->pos, shp->norm,
+                        shp->texcoord, shp->tangsp);
                 } else if (!shp->quads.empty()) {
                     auto triangles = convert_quads_to_triangles(shp->quads);
-                    shp->tangsp = compute_tangent_frames(
-                        triangles, shp->pos, shp->norm, shp->texcoord);
+                    compute_tangent_frames(triangles, shp->pos, shp->norm,
+                        shp->texcoord, shp->tangsp);
                 }
             }
         }
@@ -3511,7 +3586,8 @@ void add_elements(scene* scn, const add_elements_options& opts) {
     }
 }
 
-// Make a view camera either copying a given one or building a default one.
+// Make a view camera either copying a given one or building a
+// default one.
 camera* make_view_camera(const scene* scn, int camera_id) {
     if (scn->cameras.empty()) {
         auto bbox = compute_bounds(scn);
@@ -3562,7 +3638,8 @@ void merge_into(scene* merge_into, scene* merge_from) {
     merge_from->environments.clear();
 }
 
-// Computes a shape bounding box (quick computation that ignores radius)
+// Computes a shape bounding box (quick computation that ignores
+// radius)
 bbox3f compute_bounds(const shape* shp) {
     auto bbox = invalid_bbox3f;
     for (auto p : shp->pos) bbox += vec3f(p);
@@ -3849,7 +3926,8 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
                     (bool)atoi(oshp->props.at("catmullclark").at(1).c_str());
             }
 
-            // check to see if this shuold be face-varying or flat quads
+            // check to see if this shuold be face-varying or flat
+            // quads
             auto as_facevarying = false, as_quads = false;
             if (opts.preserve_quads || opts.preserve_facevarying) {
                 auto face_max = 0;
@@ -3863,7 +3941,8 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
                 }
                 as_quads = opts.preserve_quads && face_max > 3;
                 as_facevarying = opts.preserve_facevarying && face_max > 2;
-                // in case of facevarying, check if there is really need for it
+                // in case of facevarying, check if there is really
+                // need for it
                 if (as_facevarying) {
                     auto need_facevarying = false;
                     for (auto& elem : oshp->elems) {
@@ -5706,8 +5785,8 @@ vec2f sample_next2f(trace_pixel& pxl, trace_rng_type type, int nsamples) {
     }
 }
 
-// Surface point with geometry and material data. Supports point on envmap too.
-// This is the key data manipulated in the path tracer.
+// Surface point with geometry and material data. Supports point on
+// envmap too. This is the key data manipulated in the path tracer.
 struct trace_point {
     const shape* shp = nullptr;        // shape
     const environment* env = nullptr;  // environment
@@ -5740,8 +5819,8 @@ vec3f eval_emission(const trace_point& pt, const vec3f& wo) {
 
 // Evaluates the BRDF scaled by the cosine of the incoming direction.
 // - ggx from [Heitz 2014] and [Walter 2007] and [Lagarde 2014]
-// "Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs"
-// http://jcgt.org/published/0003/02/03/
+// "Understanding the Masking-Shadowing Function in Microfacet-Based
+// BRDFs" http://jcgt.org/published/0003/02/03/
 // - "Microfacet Models for Refraction through Rough Surfaces" EGSR 07
 // https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf
 vec3f eval_ggx_brdfcos(const trace_point& pt, const vec3f& wo, const vec3f& wi,
@@ -5979,7 +6058,8 @@ std::tuple<vec3f, bool> sample_brdfcos(
         return {zero3f, false};
 }
 
-// Create a point for an environment map. Resolves material with textures.
+// Create a point for an environment map. Resolves material with
+// textures.
 trace_point eval_point(const environment* env, const vec3f& wo) {
     auto pt = trace_point();
     pt.env = env;
@@ -5997,7 +6077,8 @@ trace_point eval_point(const environment* env, const vec3f& wo) {
     return pt;
 }
 
-// Create a point for a shape. Resolves geometry and material with textures.
+// Create a point for a shape. Resolves geometry and material with
+// textures.
 trace_point eval_point(
     const instance* ist, int sid, int eid, const vec2f& euv, const vec3f& wo) {
     // default material
@@ -7675,7 +7756,8 @@ void serialize_attr(std::vector<T>& val, json& js, const char* name,
     }
 }
 
-// #codegen begin gltf-func ----------------------------------------------------
+// #codegen begin gltf-func
+// ----------------------------------------------------
 
 // Check for default value
 template <typename T>
@@ -8780,7 +8862,8 @@ accessor_view::accessor_view(const glTF* gltf, const glTFAccessor* accessor) {
 float accessor_view::get(int idx, int c) const {
     auto i = min(max(c, 0), ncomp() - 1);
     auto valb = _data + _stride * idx + i * _ctype_size(_ctype);
-    // use double for integer conversion to attempt to maintain precision
+    // use double for integer conversion to attempt to maintain
+    // precision
     if (!_normalize) {
         switch (_ctype) {
             case glTFAccessorComponentType::Float:
@@ -8824,7 +8907,8 @@ float accessor_view::get(int idx, int c) const {
 int accessor_view::geti(int idx, int c) const {
     auto i = min(max(c, 0), ncomp() - 1);
     auto valb = _data + _stride * idx + i * _ctype_size(_ctype);
-    // use double for integer conversion to attempt to maintain precision
+    // use double for integer conversion to attempt to maintain
+    // precision
     switch (_ctype) {
         case glTFAccessorComponentType::Float: return (int)(*(float*)valb);
         case glTFAccessorComponentType::Byte: return (int)(*(char*)valb);
@@ -8914,15 +8998,13 @@ void save_svg(const std::string& filename, const std::vector<svg_path>& paths) {
 namespace ygl {
 
 // Make a sphere. This is not watertight.
-std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
-    std::vector<vec2f>>
-make_uvsphere(int tesselation, bool flipped) {
-    auto quads = std::vector<vec4i>();
-    auto texcoord = std::vector<vec2f>();
-    std::tie(quads, texcoord) =
-        make_uvquads(pow2(tesselation + 2), pow2(tesselation + 1));
-    auto pos = std::vector<vec3f>(texcoord.size());
-    auto norm = std::vector<vec3f>(texcoord.size());
+void make_uvsphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
+    bool flipped) {
+    make_quads_uv(
+        quads, texcoord, pow2(tesselation + 2), pow2(tesselation + 1));
+    pos = std::vector<vec3f>(texcoord.size());
+    norm = std::vector<vec3f>(texcoord.size());
     if (!flipped) {
         for (auto i = 0; i < texcoord.size(); i++) {
             auto uv = texcoord[i];
@@ -8939,45 +9021,33 @@ make_uvsphere(int tesselation, bool flipped) {
             texcoord[i] = {uv.x, 1 - uv.y};
         }
     }
-    return {quads, pos, norm, texcoord};
 }
 
 // Make a geodesic sphere.
-std::tuple<std::vector<vec3i>, std::vector<vec3f>> make_geodesicsphere(
-    int tesselation) {
+void make_geodesicsphere(
+    std::vector<vec3i>& triangles, std::vector<vec3f>& pos, int tesselation) {
     // https://stackoverflow.com/questions/17705621/algorithm-for-a-geodesic-sphere
     const float X = 0.525731112119133606f;
     const float Z = 0.850650808352039932f;
-    auto pos = std::vector<vec3f>{{-X, 0.0, Z}, {X, 0.0, Z}, {-X, 0.0, -Z},
+    pos = std::vector<vec3f>{{-X, 0.0, Z}, {X, 0.0, Z}, {-X, 0.0, -Z},
         {X, 0.0, -Z}, {0.0, Z, X}, {0.0, Z, -X}, {0.0, -Z, X}, {0.0, -Z, -X},
         {Z, X, 0.0}, {-Z, X, 0.0}, {Z, -X, 0.0}, {-Z, -X, 0.0}};
-    auto triangles = std::vector<vec3i>{{0, 1, 4}, {0, 4, 9}, {9, 4, 5},
-        {4, 8, 5}, {4, 1, 8}, {8, 1, 10}, {8, 10, 3}, {5, 8, 3}, {5, 3, 2},
-        {2, 3, 7}, {7, 3, 10}, {7, 10, 6}, {7, 6, 11}, {11, 6, 0}, {0, 6, 1},
-        {6, 10, 1}, {9, 11, 0}, {9, 2, 11}, {9, 5, 2}, {7, 11, 2}};
-    for (auto l = 0; l < tesselation - 2; l++) {
-        std::vector<vec2i> _lines;
-        std::vector<vec4i> _quads;
-        std::vector<vec2i> edges;
-        std::vector<vec4i> faces;
-        std::tie(_lines, triangles, _quads, edges, faces) =
-            subdivide_elems_linear({}, triangles, {}, (int)pos.size());
-        pos = subdivide_vert_linear(pos, edges, faces);
-    }
+    triangles = std::vector<vec3i>{{0, 1, 4}, {0, 4, 9}, {9, 4, 5}, {4, 8, 5},
+        {4, 1, 8}, {8, 1, 10}, {8, 10, 3}, {5, 8, 3}, {5, 3, 2}, {2, 3, 7},
+        {7, 3, 10}, {7, 10, 6}, {7, 6, 11}, {11, 6, 0}, {0, 6, 1}, {6, 10, 1},
+        {9, 11, 0}, {9, 2, 11}, {9, 5, 2}, {7, 11, 2}};
+    for (auto l = 0; l < max(0, tesselation - 2); l++)
+        subdivide_triangles(triangles, pos);
     for (auto& p : pos) p = normalize(p);
-    return {triangles, pos};
 }
 
 // Make a sphere. This is not watertight.
-std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
-    std::vector<vec2f>>
-make_uvhemisphere(int tesselation, bool flipped) {
-    auto quads = std::vector<vec4i>();
-    auto texcoord = std::vector<vec2f>();
-    std::tie(quads, texcoord) =
-        make_uvquads(pow2(tesselation + 2), pow2(tesselation));
-    auto pos = std::vector<vec3f>(texcoord.size());
-    auto norm = std::vector<vec3f>(texcoord.size());
+void make_uvhemisphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
+    bool flipped) {
+    make_quads_uv(quads, texcoord, pow2(tesselation + 2), pow2(tesselation));
+    pos = std::vector<vec3f>(texcoord.size());
+    norm = std::vector<vec3f>(texcoord.size());
     if (!flipped) {
         for (auto i = 0; i < texcoord.size(); i++) {
             auto uv = texcoord[i];
@@ -8994,126 +9064,86 @@ make_uvhemisphere(int tesselation, bool flipped) {
             texcoord[i] = {uv.x, 1 - uv.y};
         }
     }
-    return {quads, pos, norm, texcoord};
 }
 
 // Make a quad.
-std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
-    std::vector<vec2f>>
-make_uvquad(int tesselation) {
-    auto quads = std::vector<vec4i>();
-    auto texcoord = std::vector<vec2f>();
-    std::tie(quads, texcoord) =
-        make_uvquads(pow2(tesselation), pow2(tesselation));
-    auto pos = std::vector<vec3f>(texcoord.size());
-    auto norm = std::vector<vec3f>(texcoord.size());
+void make_uvquad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation) {
+    make_quads_uv(quads, texcoord, pow2(tesselation), pow2(tesselation));
+    pos = std::vector<vec3f>(texcoord.size());
+    norm = std::vector<vec3f>(texcoord.size());
     for (auto i = 0; i < texcoord.size(); i++) {
         auto uv = texcoord[i];
         pos[i] = {(-1 + uv.x * 2), (-1 + uv.y * 2), 0};
         norm[i] = {0, 0, 1};
     }
-    return {quads, pos, norm, texcoord};
 }
 
 // Make a cube with unique vertices. This is watertight but has no
 // texture coordinates or normals.
-std::tuple<std::vector<vec4i>, std::vector<vec3f>> make_cube(int tesselation) {
-    static auto pos = std::vector<vec3f>{{-1, -1, -1}, {-1, +1, -1},
-        {+1, +1, -1}, {+1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {+1, +1, +1},
-        {+1, -1, +1}};
-    static auto quads = std::vector<vec4i>{{0, 1, 2, 3}, {7, 6, 5, 4},
-        {4, 5, 1, 0}, {6, 7, 3, 2}, {2, 1, 5, 6}, {0, 3, 7, 4}};
+void make_cube(
+    std::vector<vec4i>& quads, std::vector<vec3f>& pos, int tesselation) {
+    pos = std::vector<vec3f>{{-1, -1, -1}, {-1, +1, -1}, {+1, +1, -1},
+        {+1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {+1, +1, +1}, {+1, -1, +1}};
+    quads = std::vector<vec4i>{{0, 1, 2, 3}, {7, 6, 5, 4}, {4, 5, 1, 0},
+        {6, 7, 3, 2}, {2, 1, 5, 6}, {0, 3, 7, 4}};
 
-    auto tpos = pos;
-    auto tquads = quads;
-    for (auto l = 0; l < tesselation; l++) {
-        auto lines = std::vector<vec2i>();
-        auto triangles = std::vector<vec3i>();
-        auto edges = std::vector<vec2i>();
-        auto faces = std::vector<vec4i>();
-        std::tie(lines, triangles, tquads, edges, faces) =
-            subdivide_elems_linear({}, {}, tquads, (int)tpos.size());
-        tpos = subdivide_vert_linear(tpos, edges, faces);
-    }
-
-    return {tquads, tpos};
+    for (auto l = 0; l < tesselation; l++) subdivide_quads(quads, pos);
 }
 
 // Make a facevarying cube with unique vertices but different texture
 // coordinates.
-std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec4i>,
-    std::vector<vec3f>, std::vector<vec4i>, std::vector<vec2f>>
-make_fvcube(int tesselation) {
-    static auto pos = std::vector<vec3f>{{-1, -1, -1}, {-1, +1, -1},
-        {+1, +1, -1}, {+1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {+1, +1, +1},
-        {+1, -1, +1}};
-    static auto quads_pos = std::vector<vec4i>{{0, 1, 2, 3}, {7, 6, 5, 4},
-        {4, 5, 1, 0}, {6, 7, 3, 2}, {2, 1, 5, 6}, {0, 3, 7, 4}};
-    static auto norm = std::vector<vec3f>{{0, 0, -1}, {0, 0, -1}, {0, 0, -1},
-        {0, 0, -1}, {0, 0, +1}, {0, 0, +1}, {0, 0, +1}, {0, 0, +1}, {-1, 0, 0},
-        {-1, 0, 0}, {-1, 0, 0}, {-1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0},
-        {+1, 0, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, -1, 0},
-        {0, -1, 0}, {0, -1, 0}, {0, -1, 0}};
-    static auto quads_norm = std::vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
-        {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19}, {20, 21, 22, 23}};
-    static auto texcoord = std::vector<vec2f>{{0, 0}, {1, 0}, {1, 1}, {0, 1},
-        {0, 0}, {1, 0}, {1, 1}, {0, 1}, {0, 0}, {1, 0}, {1, 1}, {0, 1}, {0, 0},
+void make_fvcube(std::vector<vec4i>& quads_pos, std::vector<vec3f>& pos,
+    std::vector<vec4i>& quads_norm, std::vector<vec3f>& norm,
+    std::vector<vec4i>& quads_texcoord, std::vector<vec2f>& texcoord,
+    int tesselation) {
+    pos = std::vector<vec3f>{{-1, -1, -1}, {-1, +1, -1}, {+1, +1, -1},
+        {+1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {+1, +1, +1}, {+1, -1, +1}};
+    quads_pos = std::vector<vec4i>{{0, 1, 2, 3}, {7, 6, 5, 4}, {4, 5, 1, 0},
+        {6, 7, 3, 2}, {2, 1, 5, 6}, {0, 3, 7, 4}};
+    norm = std::vector<vec3f>{{0, 0, -1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1},
+        {0, 0, +1}, {0, 0, +1}, {0, 0, +1}, {0, 0, +1}, {-1, 0, 0}, {-1, 0, 0},
+        {-1, 0, 0}, {-1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0},
+        {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, -1, 0}, {0, -1, 0},
+        {0, -1, 0}, {0, -1, 0}};
+    quads_norm = std::vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7}, {8, 9, 10, 11},
+        {12, 13, 14, 15}, {16, 17, 18, 19}, {20, 21, 22, 23}};
+    texcoord = std::vector<vec2f>{{0, 0}, {1, 0}, {1, 1}, {0, 1}, {0, 0},
         {1, 0}, {1, 1}, {0, 1}, {0, 0}, {1, 0}, {1, 1}, {0, 1}, {0, 0}, {1, 0},
-        {1, 1}, {0, 1}};
-    static auto quads_texcoord = std::vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
+        {1, 1}, {0, 1}, {0, 0}, {1, 0}, {1, 1}, {0, 1}, {0, 0}, {1, 0}, {1, 1},
+        {0, 1}};
+    quads_texcoord = std::vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
         {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19}, {20, 21, 22, 23}};
 
-    if (!tesselation)
-        return {quads_pos, pos, quads_norm, norm, quads_texcoord, texcoord};
-
-    auto tpos = pos, tnorm = norm;
-    auto ttexcoord = texcoord;
-    auto tquads_pos = quads_pos, tquads_norm = quads_norm,
-         tquads_texcoord = quads_texcoord;
     for (auto l = 0; l < tesselation; l++) {
-        auto lines = std::vector<vec2i>();
-        auto triangles = std::vector<vec3i>();
-        auto edges = std::vector<vec2i>();
-        auto faces = std::vector<vec4i>();
-        std::tie(lines, triangles, tquads_pos, edges, faces) =
-            subdivide_elems_linear({}, {}, tquads_pos, (int)tpos.size());
-        tpos = subdivide_vert_linear(tpos, edges, faces);
-        std::tie(lines, triangles, tquads_norm, edges, faces) =
-            subdivide_elems_linear({}, {}, tquads_norm, (int)tnorm.size());
-        tnorm = subdivide_vert_linear(tnorm, edges, faces);
-        std::tie(lines, triangles, tquads_texcoord, edges, faces) =
-            subdivide_elems_linear(
-                {}, {}, tquads_texcoord, (int)ttexcoord.size());
-        ttexcoord = subdivide_vert_linear(ttexcoord, edges, faces);
+        subdivide_quads(quads_pos, pos);
+        subdivide_quads(quads_norm, norm);
+        subdivide_quads(quads_texcoord, texcoord);
     }
-
-    return {tquads_pos, tpos, tquads_norm, tnorm, tquads_texcoord, ttexcoord};
 }
 
 // Make a facevarying sphere with unique vertices but different texture
 // coordinates.
-std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec4i>,
-    std::vector<vec3f>, std::vector<vec4i>, std::vector<vec2f>>
-make_fvsphere(int tesselation) {
+void make_fvsphere(std::vector<vec4i>& quads_pos, std::vector<vec3f>& pos,
+    std::vector<vec4i>& quads_norm, std::vector<vec3f>& norm,
+    std::vector<vec4i>& quads_texcoord, std::vector<vec2f>& texcoord,
+    int tesselation) {
     auto usteps = pow2(tesselation + 2), vsteps = pow2(tesselation + 1);
-    auto qpos = std::vector<vec4i>(), qtexcoord = std::vector<vec4i>();
-    auto uvpos = std::vector<vec2f>(), texcoord = std::vector<vec2f>();
-    std::tie(qpos, uvpos) =
-        make_uvquads(usteps, vsteps, true, false, true, true);
-    std::tie(qtexcoord, texcoord) = make_uvquads(usteps, vsteps);
-    auto pos = std::vector<vec3f>(uvpos.size());
+    auto uvpos = std::vector<vec2f>();
+    make_quads_uv(quads_pos, uvpos, usteps, vsteps, true, false, true, true);
+    make_quads_uv(quads_texcoord, texcoord, usteps, vsteps);
+    pos = std::vector<vec3f>(uvpos.size());
     for (auto i = 0; i < uvpos.size(); i++) {
         auto uv = uvpos[i];
         auto a = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
         pos[i] = {cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
     }
-    return {qpos, pos, qpos, pos, qtexcoord, texcoord};
 }
 
 // Make a suzanne monkey model for testing. Note that some quads are
 // degenerate.
-std::tuple<std::vector<vec4i>, std::vector<vec3f>> make_suzanne(
-    int tesselation) {
+void make_suzanne(
+    std::vector<vec4i>& quads, std::vector<vec3f>& pos, int tesselation) {
     static auto suzanne_pos = std::vector<vec3f>{{0.4375, 0.1640625, 0.765625},
         {-0.4375, 0.1640625, 0.765625}, {0.5, 0.09375, 0.6875},
         {-0.5, 0.09375, 0.6875}, {0.546875, 0.0546875, 0.578125},
@@ -9532,32 +9562,16 @@ std::tuple<std::vector<vec4i>, std::vector<vec3f>> make_suzanne(
         {388, 382, 314, 506}, {313, 505, 503, 321}, {504, 506, 314, 322},
         {319, 321, 503, 389}, {504, 322, 320, 390}};
 
-    auto tpos = suzanne_pos;
-    auto tquads = suzanne_quads;
-    tquads.reserve(suzanne_quads.size() + suzanne_triangles.size());
-    for (auto& t : suzanne_triangles) {
-        tquads.push_back({t.x, t.y, t.z, t.z});
-    }
+    pos = suzanne_pos;
+    quads = suzanne_quads;
+    for (auto& t : suzanne_triangles) { quads.push_back({t.x, t.y, t.z, t.z}); }
 
-    if (!tesselation) return {tquads, tpos};
-
-    for (auto l = 0; l < tesselation; l++) {
-        auto lines = std::vector<vec2i>();
-        auto triangles = std::vector<vec3i>();
-        auto edges = std::vector<vec2i>();
-        auto faces = std::vector<vec4i>();
-        std::tie(lines, triangles, tquads, edges, faces) =
-            subdivide_elems_linear({}, {}, tquads, (int)tpos.size());
-        tpos = subdivide_vert_linear(tpos, edges, faces);
-    }
-
-    return {tquads, tpos};
+    for (auto l = 0; l < tesselation; l++) subdivide_quads(quads, pos);
 }
 
 // Make a cube with uv. This is not watertight.
-std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
-    std::vector<vec2f>>
-make_uvcube(int tesselation) {
+void make_uvcube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation) {
     frame3f frames[6] = {frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 1}},
         frame3f{{-1, 0, 0}, {0, 1, 0}, {0, 0, -1}, {0, 0, -1}},
         frame3f{{-1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 1, 0}},
@@ -9567,11 +9581,7 @@ make_uvcube(int tesselation) {
     std::vector<vec3f> quad_pos, quad_norm;
     std::vector<vec2f> quad_texcoord;
     std::vector<vec4i> quad_quads;
-    std::tie(quad_quads, quad_pos, quad_norm, quad_texcoord) =
-        make_uvquad(tesselation);
-    std::vector<vec3f> pos, norm;
-    std::vector<vec2f> texcoord;
-    std::vector<vec4i> quads;
+    make_uvquad(quad_quads, quad_pos, quad_norm, quad_texcoord, tesselation);
     for (auto i = 0; i < 6; i++) {
         pos.insert(pos.end(), quad_pos.begin(), quad_pos.end());
         norm.insert(norm.end(), quad_norm.begin(), quad_norm.end());
@@ -9595,49 +9605,36 @@ make_uvcube(int tesselation) {
             quads[j].w += quad_verts * i;
         }
     }
-    return {quads, pos, norm, texcoord};
 }
 
 // Make a sphere from a cube. This is not watertight.
-std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
-    std::vector<vec2f>>
-make_uvspherecube(int tesselation) {
-    std::vector<vec3f> pos, norm;
-    std::vector<vec2f> texcoord;
-    std::vector<vec4i> quads;
-    std::tie(quads, pos, norm, texcoord) = make_uvcube(tesselation);
+void make_uvspherecube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation) {
+    make_uvcube(quads, pos, norm, texcoord, tesselation);
     for (auto i = 0; i < pos.size(); i++) {
         pos[i] = normalize(pos[i]);
         norm[i] = normalize(pos[i]);
     }
-    return {quads, pos, norm, texcoord};
 }
 
 // Make a cube than stretch it towards a sphere. This is not watertight.
-std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
-    std::vector<vec2f>>
-make_uvspherizedcube(int tesselation, float radius) {
-    std::vector<vec3f> pos, norm;
-    std::vector<vec2f> texcoord;
-    std::vector<vec4i> quads;
-    std::tie(quads, pos, norm, texcoord) = make_uvcube(tesselation);
+void make_uvspherizedcube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
+    float radius) {
+    make_uvcube(quads, pos, norm, texcoord, tesselation);
     for (auto i = 0; i < pos.size(); i++) {
         norm[i] = normalize(pos[i]);
         pos[i] *= 1 - radius;
         pos[i] += norm[i] * radius;
     }
-    norm = compute_normals({}, {}, quads, pos, true);
-    return {quads, pos, norm, texcoord};
+    compute_normals(quads, pos, norm);
 }
 
 // Make a flipped sphere. This is not watertight.
-std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
-    std::vector<vec2f>>
-make_uvflipcapsphere(int tesselation, float z, bool flipped) {
-    std::vector<vec3f> pos, norm;
-    std::vector<vec2f> texcoord;
-    std::vector<vec4i> quads;
-    std::tie(quads, pos, norm, texcoord) = make_uvsphere(tesselation, flipped);
+void make_uvflipcapsphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
+    float z, bool flipped) {
+    make_uvsphere(quads, pos, norm, texcoord, tesselation, flipped);
     for (auto i = 0; i < pos.size(); i++) {
         if (pos[i].z > z) {
             pos[i].z = 2 * z - pos[i].z;
@@ -9649,19 +9646,16 @@ make_uvflipcapsphere(int tesselation, float z, bool flipped) {
             norm[i].y = -norm[i].y;
         }
     }
-    return {quads, pos, norm, texcoord};
 }
 
 // Make a cutout sphere. This is not watertight.
-std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
-    std::vector<vec2f>>
-make_uvcutsphere(int tesselation, float z, bool flipped) {
-    auto quads = std::vector<vec4i>();
-    auto texcoord = std::vector<vec2f>();
-    std::tie(quads, texcoord) =
-        make_uvquads(pow2(tesselation + 2), pow2(tesselation + 1));
-    auto pos = std::vector<vec3f>(texcoord.size());
-    auto norm = std::vector<vec3f>(texcoord.size());
+void make_uvcutsphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
+    float z, bool flipped) {
+    make_quads_uv(
+        quads, texcoord, pow2(tesselation + 2), pow2(tesselation + 1));
+    pos = std::vector<vec3f>(texcoord.size());
+    norm = std::vector<vec3f>(texcoord.size());
     if (!flipped) {
         for (auto i = 0; i < texcoord.size(); i++) {
             auto uv = texcoord[i];
@@ -9680,13 +9674,13 @@ make_uvcutsphere(int tesselation, float z, bool flipped) {
             texcoord[i] = {uv.x, (1 - uv.y)};
         }
     }
-    return {quads, pos, norm, texcoord};
 }
 
-// Make a seashell. This is not watertight. Returns quads, pos, norm, texcoord.
-std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
-    std::vector<vec2f>>
-make_uvseashell(int tesselation, const make_seashell_params& params) {
+// Make a seashell. This is not watertight. Returns quads, pos, norm,
+// texcoord.
+void make_uvseashell(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
+    const make_seashell_params& params) {
     auto R = params.spiral_revolutions;
     auto D = -1.0f;
     auto a = params.spiral_angle;
@@ -9701,11 +9695,9 @@ make_uvseashell(int tesselation, const make_seashell_params& params) {
 
     auto cot_a = 1 / tan(a);
 
-    auto quads = std::vector<vec4i>();
-    auto texcoord = std::vector<vec2f>();
-    std::tie(quads, texcoord) = make_uvquads(
-        pow2(tesselation + 2), pow2(tesselation + 1 + (int)round(R)));
-    auto pos = std::vector<vec3f>(texcoord.size());
+    make_quads_uv(quads, texcoord, pow2(tesselation + 2),
+        pow2(tesselation + 1 + (int)round(R)));
+    pos = std::vector<vec3f>(texcoord.size());
     for (auto i = 0; i < texcoord.size(); i++) {
         auto uv = texcoord[i];
         auto s = uv.x * 2 * pif;
@@ -9728,29 +9720,28 @@ make_uvseashell(int tesselation, const make_seashell_params& params) {
             (-A * cos(b) + cos(O.z) * sin(s + O.x) * re) * exp(t * cot_a);
         texcoord[i] = {uv.x, uv.y * R};
     }
-    auto norm = compute_normals({}, {}, quads, pos);
-    return {quads, pos, norm, texcoord};
+    norm = std::vector<vec3f>();
+    compute_normals(quads, pos, norm);
 }
 
 // Make a bezier circle. Returns bezier, pos.
-std::tuple<std::vector<vec4i>, std::vector<vec3f>> make_bezier_circle() {
+void make_bezier_circle(std::vector<vec4i>& beziers, std::vector<vec3f>& pos) {
     // constant from http://spencermortensen.com/articles/bezier-circle/
-    static auto c = 0.551915024494f;
-    static auto pos = std::vector<vec3f>{{1, 0, 0}, {1, c, 0}, {c, 1, 0},
-        {0, 1, 0}, {-c, 1, 0}, {-1, c, 0}, {-1, 0, 0}, {-1, -c, 0}, {-c, -1, 0},
+    auto c = 0.551915024494f;
+    pos = std::vector<vec3f>{{1, 0, 0}, {1, c, 0}, {c, 1, 0}, {0, 1, 0},
+        {-c, 1, 0}, {-1, c, 0}, {-1, 0, 0}, {-1, -c, 0}, {-c, -1, 0},
         {0, -1, 0}, {c, -1, 0}, {1, -c, 0}};
-    static auto bezier = std::vector<vec4i>{
+    beziers = std::vector<vec4i>{
         {0, 1, 2, 3}, {3, 4, 5, 6}, {6, 7, 8, 9}, {9, 10, 11, 0}};
-    return {bezier, pos};
 }
 
 // Make a hair ball around a shape
-std::tuple<std::vector<vec2i>, std::vector<vec3f>, std::vector<vec3f>,
-    std::vector<vec2f>, std::vector<float>>
-make_hair(int num, int tesselation, const std::vector<vec3i>& striangles,
-    const std::vector<vec4i>& squads, const std::vector<vec3f>& spos,
-    const std::vector<vec3f>& snorm, const std::vector<vec2f>& stexcoord,
-    const make_hair_params& params) {
+void make_hair(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<float>& radius, int num, int tesselation,
+    const std::vector<vec3i>& striangles, const std::vector<vec4i>& squads,
+    const std::vector<vec3f>& spos, const std::vector<vec3f>& snorm,
+    const std::vector<vec2f>& stexcoord, const make_hair_params& params) {
     std::vector<vec3f> bpos;
     std::vector<vec3f> bnorm;
     std::vector<vec2f> btexcoord;
@@ -9779,12 +9770,10 @@ make_hair(int num, int tesselation, const std::vector<vec3i>& striangles,
     }
 
     auto usteps = pow2(tesselation);
-    auto lines = std::vector<vec2i>();
-    auto texcoord = std::vector<vec2f>();
-    std::tie(lines, texcoord) = make_uvlines(num, usteps);
-    auto pos = std::vector<vec3f>(texcoord.size());
-    auto norm = std::vector<vec3f>(texcoord.size());
-    auto radius = std::vector<float>(texcoord.size());
+    make_lines_uv(lines, texcoord, num, usteps);
+    pos = std::vector<vec3f>(texcoord.size());
+    norm = std::vector<vec3f>(texcoord.size());
+    radius = std::vector<float>(texcoord.size());
     for (auto i = 0; i < texcoord.size(); i++) {
         auto u = texcoord[i].x;
         auto bidx = i / (usteps + 1);
@@ -9808,9 +9797,7 @@ make_hair(int num, int tesselation, const std::vector<vec3i>& striangles,
     }
 
     if (params.clump.x > 0 || params.noise.x > 0 || params.rotation.x > 0)
-        norm = compute_normals(lines, {}, {}, pos);
-
-    return {lines, pos, norm, texcoord, radius};
+        compute_tangents(lines, pos, norm);
 }
 
 }  // namespace ygl
@@ -9854,8 +9841,7 @@ scene* make_cornell_box_scene() {
         auto shp = new shape();
         shp->mat = mat;
         shp->name = name;
-        std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-            make_uvquad(0);
+        make_uvquad(shp->quads, shp->pos, shp->norm, shp->texcoord, 0);
         for (auto& p : shp->pos) p *= scale;
         sgr->shapes.push_back(shp);
         return sgr;
@@ -9867,8 +9853,7 @@ scene* make_cornell_box_scene() {
         auto shp = new shape();
         shp->mat = mat;
         shp->name = name;
-        std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-            make_uvcube(0);
+        make_uvcube(shp->quads, shp->pos, shp->norm, shp->texcoord, 0);
         for (auto& p : shp->pos) p *= scale;
         sgr->shapes.push_back(shp);
         return sgr;
@@ -9921,37 +9906,23 @@ scene* make_cornell_box_scene() {
     return scn;
 }
 
-//
-// Make standard shape. Public API described above.
-//
-std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
-    std::vector<vec2f>>
-make_uvhollowcutsphere(int tesselation, float radius) {
-    auto quads = std::vector<vec4i>();
-    auto pos = std::vector<vec3f>();
-    auto norm = std::vector<vec3f>();
-    auto texcoord = std::vector<vec2f>();
-
+// Make standard shape.
+void make_uvhollowcutsphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
+    float radius) {
     std::vector<vec3f> mpos, mnorm;
     std::vector<vec2f> mtexcoord;
     std::vector<vec4i> mquads;
-    std::vector<vec2i> _aux1;
-    std::vector<vec3i> _aux2;
-
-    std::tie(mquads, mpos, mnorm, mtexcoord) =
-        make_uvcutsphere(tesselation, radius);
+    make_uvcutsphere(mquads, mpos, mnorm, mtexcoord, tesselation, radius);
     for (auto& uv : mtexcoord) uv.y *= radius;
-    std::tie(_aux1, _aux2, quads) =
-        merge_elems((int)pos.size(), {}, {}, quads, {}, {}, mquads);
+    merge_quads(quads, mquads);
     append(pos, mpos);
     append(norm, mnorm);
     append(texcoord, mtexcoord);
 
-    std::tie(mquads, mpos, mnorm, mtexcoord) =
-        make_uvcutsphere(tesselation, radius, true);
+    make_uvcutsphere(mquads, mpos, mnorm, mtexcoord, tesselation, radius, true);
     for (auto& p : mpos) p *= radius;
-    std::tie(_aux1, _aux2, quads) =
-        merge_elems((int)pos.size(), {}, {}, quads, {}, {}, mquads);
+    merge_quads(quads, mquads);
     append(pos, mpos);
     append(norm, mnorm);
     append(texcoord, mtexcoord);
@@ -9959,8 +9930,8 @@ make_uvhollowcutsphere(int tesselation, float radius) {
     // dpdu = [- s r s0 s1, s r c0 s1, 0] === [- s0, c0, 0]
     // dpdv = [s c0 s1, s s0 s1, s c1] === [c0 s1, s0 s1, c1]
     // n = [c0 c1, - s0 c1, s1]
-    std::tie(mquads, mtexcoord) =
-        make_uvquads(pow2(tesselation + 2), pow2(tesselation + 1));
+    make_quads_uv(
+        mquads, mtexcoord, pow2(tesselation + 2), pow2(tesselation + 1));
     mpos.resize(mtexcoord.size());
     mnorm.resize(mtexcoord.size());
     for (auto i = 0; i < mtexcoord.size(); i++) {
@@ -9972,54 +9943,42 @@ make_uvhollowcutsphere(int tesselation, float radius) {
         mnorm[i] = {-cos(a[0]) * cos(a[1]), -sin(a[0]) * cos(a[1]), sin(a[1])};
         mtexcoord[i] = {uv[0], radius + (1 - radius) * uv[1]};
     }
-    std::tie(_aux1, _aux2, quads) =
-        merge_elems((int)pos.size(), {}, {}, quads, {}, {}, mquads);
+    merge_quads(quads, mquads);
     append(pos, mpos);
     append(norm, mnorm);
     append(texcoord, mtexcoord);
-    return {quads, pos, norm, texcoord};
 }
 
-//
-// Make standard shape. Public API described above.
-//
-std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
-    std::vector<vec2f>>
-make_uvhollowcutsphere1(int tesselation, float radius) {
-    auto quads = std::vector<vec4i>();
-    auto pos = std::vector<vec3f>();
-    auto norm = std::vector<vec3f>();
-    auto texcoord = std::vector<vec2f>();
-
+// Make standard shape.
+void make_uvhollowcutsphere1(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
+    float radius) {
     std::vector<vec3f> mpos, mnorm;
     std::vector<vec2f> mtexcoord;
     std::vector<vec4i> mquads;
     std::vector<vec2i> _aux1;
     std::vector<vec3i> _aux2;
 
-    std::tie(mquads, mpos, mnorm, mtexcoord) =
-        make_uvcutsphere(tesselation, radius);
+    make_uvcutsphere(mquads, mpos, mnorm, mtexcoord, tesselation, radius);
     for (auto& uv : mtexcoord) uv.y *= radius;
     for (auto i = (pow2(tesselation + 2) + 1) * pow2(tesselation + 1);
          i < mnorm.size(); i++)
         mnorm[i] = normalize(mnorm[i] + vec3f{0, 0, 1});
-    std::tie(_aux1, _aux2, quads) =
-        merge_elems((int)pos.size(), {}, {}, quads, {}, {}, mquads);
+    merge_quads(quads, mquads);
     append(pos, mpos);
     append(norm, mnorm);
     append(texcoord, mtexcoord);
 
-    std::tie(mquads, mpos, mnorm, mtexcoord) =
-        make_uvcutsphere(tesselation, radius * 1.05f, true);
+    make_uvcutsphere(
+        mquads, mpos, mnorm, mtexcoord, tesselation, radius * 1.05f, true);
     for (auto& p : mpos) p *= 0.8f;
-    std::tie(_aux1, _aux2, quads) =
-        merge_elems((int)pos.size(), {}, {}, quads, {}, {}, mquads);
+    merge_quads(quads, mquads);
     append(pos, mpos);
     append(norm, mnorm);
     append(texcoord, mtexcoord);
 
-    std::tie(mquads, mtexcoord) =
-        make_uvquads(pow2(tesselation + 2), pow2(tesselation + 1) / 4);
+    make_quads_uv(
+        mquads, mtexcoord, pow2(tesselation + 2), pow2(tesselation + 1) / 4);
     mpos.resize(mtexcoord.size());
     mnorm.resize(mtexcoord.size());
     for (auto i = 0; i < mtexcoord.size(); i++) {
@@ -10034,12 +9993,10 @@ make_uvhollowcutsphere1(int tesselation, float radius) {
     }
     for (auto i = 0; i < (pow2(tesselation + 2) + 1); i++)
         mnorm[i] = normalize(mnorm[i] + vec3f{0, 0, 1});
-    std::tie(_aux1, _aux2, quads) =
-        merge_elems((int)pos.size(), {}, {}, quads, {}, {}, mquads);
+    merge_quads(quads, mquads);
     append(pos, mpos);
     append(norm, mnorm);
     append(texcoord, mtexcoord);
-    return {quads, pos, norm, texcoord};
 }
 
 }  // namespace ygl
@@ -10209,69 +10166,65 @@ void update_test_elem(
     auto shp = sgr->shapes.front();
     switch (tshp.type) {
         case test_shape_type::floor: {
-            std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvquad((tshp.tesselation < 0) ? 5 : tshp.tesselation);
+            make_uvquad(shp->quads, shp->pos, shp->norm, shp->texcoord,
+                (tshp.tesselation < 0) ? 5 : tshp.tesselation);
             for (auto& p : shp->pos) p = {-p.x, p.z, p.y};
             for (auto& n : shp->norm) n = {n.x, n.z, n.y};
             for (auto& p : shp->pos) p *= 20;
             for (auto& uv : shp->texcoord) uv *= 20;
         } break;
         case test_shape_type::quad: {
-            std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvquad((tshp.tesselation < 0) ? 0 : tshp.tesselation);
+            make_uvquad(shp->quads, shp->pos, shp->norm, shp->texcoord,
+                (tshp.tesselation < 0) ? 0 : tshp.tesselation);
         } break;
         case test_shape_type::cube: {
-            std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvcube((tshp.tesselation < 0) ? 0 : tshp.tesselation);
+            make_uvcube(shp->quads, shp->pos, shp->norm, shp->texcoord,
+                (tshp.tesselation < 0) ? 0 : tshp.tesselation);
         } break;
         case test_shape_type::sphere: {
-            std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvsphere((tshp.tesselation < 0) ? 5 : tshp.tesselation);
+            make_uvsphere(shp->quads, shp->pos, shp->norm, shp->texcoord,
+                (tshp.tesselation < 0) ? 5 : tshp.tesselation);
         } break;
         case test_shape_type::spherecube: {
-            std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvspherecube(
-                    (tshp.tesselation < 0) ? 4 : tshp.tesselation);
+            make_uvspherecube(shp->quads, shp->pos, shp->norm, shp->texcoord,
+                (tshp.tesselation < 0) ? 4 : tshp.tesselation);
         } break;
         case test_shape_type::spherizedcube: {
-            std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvspherizedcube(
-                    (tshp.tesselation < 0) ? 4 : tshp.tesselation, 0.75f);
+            make_uvspherizedcube(shp->quads, shp->pos, shp->norm, shp->texcoord,
+                (tshp.tesselation < 0) ? 4 : tshp.tesselation, 0.75f);
         } break;
         case test_shape_type::geosphere: {
-            std::tie(shp->triangles, shp->pos) = make_geodesicsphere(
+            make_geodesicsphere(shp->triangles, shp->pos,
                 (tshp.tesselation < 0) ? 5 : tshp.tesselation);
             shp->norm = shp->pos;
         } break;
         case test_shape_type::flipcapsphere: {
-            std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvflipcapsphere(
-                    (tshp.tesselation < 0) ? 5 : tshp.tesselation, 0.75f);
+            make_uvflipcapsphere(shp->quads, shp->pos, shp->norm, shp->texcoord,
+                (tshp.tesselation < 0) ? 5 : tshp.tesselation, 0.75f);
         } break;
         case test_shape_type::suzanne: {
-            std::tie(shp->quads, shp->pos) =
-                make_suzanne((tshp.tesselation < 0) ? 0 : tshp.tesselation);
+            make_suzanne(shp->quads, shp->pos,
+                (tshp.tesselation < 0) ? 0 : tshp.tesselation);
         } break;
         case test_shape_type::cubep: {
-            std::tie(shp->quads, shp->pos) =
-                make_cube((tshp.tesselation < 0) ? 0 : tshp.tesselation);
+            make_cube(shp->quads, shp->pos,
+                (tshp.tesselation < 0) ? 0 : tshp.tesselation);
         } break;
         case test_shape_type::fvcube: {
-            std::tie(shp->quads_pos, shp->pos, shp->quads_norm, shp->norm,
-                shp->quads_texcoord, shp->texcoord) =
-                make_fvcube((tshp.tesselation < 0) ? 0 : tshp.tesselation);
+            make_fvcube(shp->quads_pos, shp->pos, shp->quads_norm, shp->norm,
+                shp->quads_texcoord, shp->texcoord,
+                (tshp.tesselation < 0) ? 0 : tshp.tesselation);
         } break;
         case test_shape_type::fvsphere: {
-            std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvsphere((tshp.tesselation < 0) ? 5 : tshp.tesselation);
+            make_uvsphere(shp->quads, shp->pos, shp->norm, shp->texcoord,
+                (tshp.tesselation < 0) ? 5 : tshp.tesselation);
         } break;
         case test_shape_type::matball: {
-            std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvflipcapsphere(
-                    (tshp.tesselation < 0) ? 5 : tshp.tesselation, 0.75f);
+            make_uvflipcapsphere(shp->quads, shp->pos, shp->norm, shp->texcoord,
+                (tshp.tesselation < 0) ? 5 : tshp.tesselation, 0.75f);
             auto shp1 = sgr->shapes.at(1);
-            std::tie(shp1->quads, shp1->pos, shp1->norm, shp1->texcoord) =
-                make_uvsphere((tshp.tesselation < 0) ? 5 : tshp.tesselation);
+            make_uvsphere(shp1->quads, shp1->pos, shp1->norm, shp1->texcoord,
+                (tshp.tesselation < 0) ? 5 : tshp.tesselation);
             for (auto& p : shp1->pos) p *= 0.8f;
             shp1->mat = find_named_elem(scn->materials, tshp.interior);
         } break;
@@ -10284,7 +10237,7 @@ void update_test_elem(
         case test_shape_type::pointscube: {
             auto npoints = (tshp.num < 0) ? 64 * 64 * 16 : tshp.num;
             auto radius = (tshp.radius < 0) ? 0.0025f : tshp.radius;
-            std::tie(shp->points, shp->texcoord) = make_uvpoints(npoints);
+            make_points_uv(shp->points, shp->texcoord, npoints);
             shp->pos.reserve(shp->texcoord.size());
             shp->norm.resize(shp->texcoord.size(), {0, 0, 1});
             shp->radius.resize(shp->texcoord.size(), radius);
@@ -10296,19 +10249,21 @@ void update_test_elem(
         } break;
         case test_shape_type::hairball: {
             auto shp1 = sgr->shapes.at(1);
-            std::tie(shp1->quads, shp1->pos, shp1->norm, shp1->texcoord) =
-                make_uvspherecube(5);
+            make_uvspherecube(
+                shp1->quads, shp1->pos, shp1->norm, shp1->texcoord, 5);
             shp1->mat = find_named_elem(scn->materials, tshp.interior);
             auto nhairs = (tshp.num < 0) ? 65536 : tshp.num;
-            // auto radius = (tshp.radius < 0) ? vec2f{0.001f, 0.0001f} :
-            //                                   vec2f{tshp.radius, 0.0001f};
-            std::tie(shp->lines, shp->pos, shp->norm, shp->texcoord,
-                shp->radius) = make_hair(nhairs, 2, {}, shp1->quads, shp1->pos,
-                shp1->norm, shp1->texcoord,
+            // auto radius = (tshp.radius < 0) ? vec2f{0.001f, 0.0001f}
+            // :
+            //                                   vec2f{tshp.radius,
+            //                                   0.0001f};
+            make_hair(shp->lines, shp->pos, shp->norm, shp->texcoord,
+                shp->radius, nhairs, 2, {}, shp1->quads, shp1->pos, shp1->norm,
+                shp1->texcoord,
                 (tshp.hair_params) ? *tshp.hair_params : make_hair_params());
         } break;
         case test_shape_type::beziercircle: {
-            std::tie(shp->beziers, shp->pos) = make_bezier_circle();
+            make_bezier_circle(shp->beziers, shp->pos);
             shp->subdivision = 2;
         } break;
         default: throw std::runtime_error("should not have gotten here");
@@ -11588,8 +11543,8 @@ void clear_element_buffer(gl_element_buffer& buf) {
 namespace ygl {
 
 // Creates and OpenGL program from vertex and fragment code. Returns the
-// program id. Optionally return vertex and fragment shader ids. A VAO is
-// created.
+// program id. Optionally return vertex and fragment shader ids. A VAO
+// is created.
 gl_program make_program(
     const std::string& vertex, const std::string& fragment) {
     auto prog = gl_program();
@@ -11771,8 +11726,8 @@ bool set_program_uniform(
     return true;
 }
 
-// Set uniform texture id tid and unit tunit for program pid and variable
-// var.
+// Set uniform texture id tid and unit tunit for program pid and
+// variable var.
 bool set_program_uniform_texture(
     gl_program& prog, int pos, const gl_texture_info& tinfo, uint tunit) {
     static const auto wrap_mode_map =
@@ -11849,8 +11804,9 @@ bool set_program_vertattr(gl_program& prog, int pos, const int* value, int nc) {
     return true;
 }
 
-// Sets a vartex attribute for program pid and variable var to the buffer
-// bid. The attribute has nc components and per-vertex values values.
+// Sets a vartex attribute for program pid and variable var to the
+// buffer bid. The attribute has nc components and per-vertex values
+// values.
 bool set_program_vertattr(
     gl_program& prog, const std::string& var, const gl_vertex_buffer& buf) {
     assert(gl_check_error());
@@ -11867,9 +11823,9 @@ bool set_program_vertattr(
     return true;
 }
 
-// Sets a vartex attribute for program pid and variable var. The attribute
-// has nc components and either buffer bid or a single value def
-// (if bid is zero). Convenience wrapper to above functions.
+// Sets a vartex attribute for program pid and variable var. The
+// attribute has nc components and either buffer bid or a single value
+// def (if bid is zero). Convenience wrapper to above functions.
 bool set_program_vertattr(gl_program& prog, int pos,
     const gl_vertex_buffer& buf, int nc, const float* def) {
     assert(nc >= 1 && nc <= 4);
@@ -12070,7 +12026,8 @@ gl_lights make_gl_lights(const scene* scn) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Initialize the program. Call with true only after the GL is initialized.
+// Initialize the program. Call with true only after the GL is
+// initialized.
 gl_stdimage_program make_stdimage_program() {
     std::string _header =
         R"(
@@ -12623,9 +12580,9 @@ gl_stdsurface_program make_stdsurface_program() {
     return prog;
 }
 
-// Starts a frame by setting exposure/gamma values, camera transforms and
-// projection. Sets also whether to use full shading or a quick eyelight
-// preview.
+// Starts a frame by setting exposure/gamma values, camera transforms
+// and projection. Sets also whether to use full shading or a quick
+// eyelight preview.
 void begin_stdsurface_frame(gl_stdsurface_program& prog, bool shade_eyelight,
     float tonemap_exposure, float tonemap_gamma, bool tonemap_filmic,
     const mat4f& camera_xform, const mat4f& camera_xform_inv,
@@ -12834,7 +12791,8 @@ void set_stdsurface_constmaterial(
 }
 
 // Set vertex data with buffers for position pos, normals norm, texture
-// coordinates texcoord, per-vertex color color and tangent space tangsp.
+// coordinates texcoord, per-vertex color color and tangent space
+// tangsp.
 void set_stdsurface_vert(gl_stdsurface_program& prog,
     const gl_vertex_buffer& pos, const gl_vertex_buffer& norm,
     const gl_vertex_buffer& texcoord, const gl_vertex_buffer& color,

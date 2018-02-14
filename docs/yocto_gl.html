@@ -294,30 +294,26 @@ manipulation useful to support scene viewing and path tracing.</p>
    <code>eval_triangle()</code> and <code>eval_quad()</code></li>
 <li>evaluate Bezier curves and derivatives with <code>eval_bezier()</code> and
    <code>eval_bezier_derivative()</code></li>
-<li>compute smooth normals and tangents with <code>compute_normals()</code></li>
+<li>compute smooth normals and tangents with <code>compute_normals()</code>
+/  <code>compute_tangents()</code></li>
 <li>compute tangent frames from texture coordinates with
    <code>compute_tangent_space()</code></li>
 <li>compute skinning with <code>compute_skinning()</code> and
    <code>compute_matrix_skinning()</code></li>
-<li>shape creation with <code>make_points()</code>, <code>make_lines()</code>, <code>make_uvgrid()</code></li>
-<li>element merging with <code>marge_elems()</code></li>
-<li>facet elements with <code>facet_elems()</code></li>
+<li>create shapes with <code>make_points()</code>, <code>make_lines()</code>, <code>make_uvgrid()</code></li>
+<li>merge element with <code>marge_lines()</code>, <code>marge_triangles()</code>, <code>marge_quads()</code></li>
+<li>facet elements with <code>facet_lines()</code>, <code>facet_triangles()</code>, <code>facet_quads()</code></li>
 <li>shape sampling with <code>sample_points()</code>, <code>sample_lines()</code>,
    <code>sample_triangles()</code>; initialize the sampling CDFs with
    <code>sample_points_cdf()</code>, <code>sample_lines_cdf()</code>, <code>sample_triangles_cdf()</code></li>
 <li>samnple a could of point over a surface with <code>sample_triangles_points()</code></li>
-<li>get edges and boundaries with <code>get_edges()</code> and <code>get_boundary_edges()</code></li>
+<li>get edges and boundaries with <code>get_edges()</code></li>
 <li>convert quads to triangles with <code>convert_quads_to_triangles()</code></li>
 <li>convert face varying to vertex shared representations with
     <code>convert_face_varying()</code></li>
-<li>subdivide elements by edge splits with <code>subdivide_elems_linear()</code> and
-    <code>subdivide_vert_linear()</code>; for an easier interface use
-    <code>subdivide_lines_linear()</code>, <code>subdivide_triangles_linear()</code>,
-    <code>subdivide_quads_linear()</code></li>
-<li>Catmull-Clark subdivision surface with <code>subdivide_vert_catmullclark()</code>
-    with support for edge and vertex creasing</li>
-<li>subdivide Bezier with <code>subdivide_bezier_recursive()</code> and
-    <code>subdivide_vert_bezier()</code></li>
+<li>subdivide elements by edge splits with <code>subdivide_lines()</code>,
+    <code>subdivide_triangles()</code>, <code>subdivide_quads()</code>, <code>subdivide_beziers()</code></li>
+<li>Catmull-Clark subdivision surface with <code>subdivide_catmullclark()</code></li>
 <li>example shapes: <code>make_cube()</code>, <code>make_uvsphere()</code>, <code>make_uvhemisphere()</code>,
     <code>make_uvquad()</code>, <code>make_uvcube()</code>, <code>make_fvcube()</code>, <code>make_hair()</code>,
     <code>make_suzanne()</code></li>
@@ -823,6 +819,13 @@ and bug fixes are not reported here.</p>
 
 
 <p>Round.</p>
+<h4>Function isfinite()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">isfinite</span><span class="p">(</span><span class="n">T</span> <span class="n">a</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Check if value is finite.</p>
 <h4>Function min()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">T</span> <span class="n">min</span><span class="p">(</span><span class="n">T</span> <span class="n">x</span><span class="p">,</span> <span class="n">T</span> <span class="n">y</span><span class="p">);</span>
@@ -4176,20 +4179,35 @@ https://gist.github.com/aras-p/2843984</p>
 <p>Evalautes a keyframed value using Bezier interpolation.</p>
 <p><a id="toc40"></a></p>
 <h3>Shape utilities</h3>
-<h4>Function compute_normals()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span> <span class="n">compute_normals</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">triangles</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">weighted</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
+<h4>Function compute_tangents()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">compute_tangents</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">tang</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">weighted</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Compute per-vertex normals/tangents for lines, triangles and quads with
-positions pos. Weighted indicated whether the normals/tangents are
-weighted by length/area.</p>
+<p>Compute per-vertex tangents for lines.</p>
+<h4>Function compute_normals()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">compute_normals</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">triangles</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">weighted</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Compute per-vertex normals for triangles.</p>
+<h4>Function compute_normals()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">compute_normals</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">weighted</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Compute per-vertex normals for quads.</p>
 <h4>Function compute_tangent_frames()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;</span> <span class="n">compute_tangent_frames</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">triangles</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">compute_tangent_frames</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">triangles</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">weighted</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;&amp;</span> <span class="n">tangsp</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">weighted</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -4232,28 +4250,6 @@ Tangent frame is useful in normal mapping.</p>
 
 
 <p>Create an array of edges.</p>
-<h4>Function get_boundary_edges()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;</span> <span class="n">get_boundary_edges</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">triangles</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Create an array of boundary edges. Lines are always considered boundaries.</p>
-<h4>Function get_verts()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">get_verts</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">triangles</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Get a list of all unique vertices.</p>
-<h4>Function get_boundary_verts()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">get_boundary_verts</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">triangles</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Create an array of boundary vertices. Lines are always considered
-boundaries.</p>
 <h4>Function convert_quads_to_triangles()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span> <span class="n">convert_quads_to_triangles</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">);</span>
 </code></pre></div>
@@ -4286,114 +4282,161 @@ Quads have to be consecutive one row after another.</p>
 
 <p>Convert face-varying data to single primitives. Returns the quads indices
 and filled vectors for pos, norm and texcoord.</p>
-<h4>Function subdivide_elems_linear()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&gt;</span>
-<span class="n">subdivide_elems_linear</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">triangles</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span>
-    <span class="kt">int</span> <span class="n">nverts</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Tesselate lines, triangles and quads by splitting edges and faces for quads.
-Returns the tesselated elements and edge and face array for vertex
-calculations.</p>
-<h4>Function subdivide_vert_linear()</h4>
+<h4>Function subdivide_lines()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">subdivide_vert_linear</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vert</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">edges</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">faces</span><span class="p">,</span>
-    <span class="kt">bool</span> <span class="n">normalized</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+<span class="kt">void</span> <span class="n">subdivide_lines</span><span class="p">(</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vert</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">update_lines</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Subdivide vertex properties for edges and faces. This is implemented for
-vecs and floats.</p>
-<h4>Function subdivide_vert_catmullclark()</h4>
+<p>Subdivide lines by splitting each line in half.</p>
+<h4>Function subdivide_lines()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">subdivide_lines</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">tang</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;&amp;</span> <span class="n">color</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">radius</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Subdivide lines by splitting each line in half.</p>
+<h4>Function subdivide_triangles()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">subdivide_vert_catmullclark</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vert</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">crease_tlines</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">crease_tpoints</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">normalized</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+<span class="kt">void</span> <span class="n">subdivide_triangles</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">triangles</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vert</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">update_triangles</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Performs the smoothing step of Catmull-Clark. Start with a tesselate quad
-mesh obtained with subdivide_elems_linear() and subdivide_vert_linear(). To
-handle open meshes with boundary, get the boundary from make_boundary_edge()
-and pass it as crease_lines. To fix the boundary entirely, just get the
-boundary vertices and pass it as creases. This is implemented for vecs
-and floats.</p>
-<h4>Function subdivide_bezier_recursive()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&gt;</span>
-<span class="n">subdivide_bezier_recursive</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">beziers</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nverts</span><span class="p">);</span>
+<p>Subdivide triangle by splitting each triangle in four, creating new
+vertices for each edge.</p>
+<h4>Function subdivide_triangles()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">subdivide_triangles</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">triangles</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;&amp;</span> <span class="n">color</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">radius</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Subdivide Bezier segments recursively by splitting each segment into two
-in the middle. Returns the tesselated elements and dictionaries for vertex
-calculations.</p>
-<h4>Function subdivide_vert_bezier()</h4>
+<p>Subdivide triangle by splitting each triangle in four, creating new
+vertices for each edge.</p>
+<h4>Function subdivide_quads()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">subdivide_vert_bezier</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vert</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">verts</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">segments</span><span class="p">,</span>
-    <span class="kt">bool</span> <span class="n">normalized</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+<span class="kt">void</span> <span class="n">subdivide_quads</span><span class="p">(</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vert</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">update_quads</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Subdivide vertex properties for Bezier subdivision. This is implemente for
-vecs and floats.</p>
-<h4>Function make_uvquads()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&gt;</span> <span class="n">make_uvquads</span><span class="p">(</span><span class="kt">int</span> <span class="n">usteps</span><span class="p">,</span>
-    <span class="kt">int</span> <span class="n">vsteps</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">uwrap</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">vwrap</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">vpole0</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
-    <span class="kt">bool</span> <span class="n">vpole1</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+<p>Subdivide quads by splitting each quads in four, creating new
+vertices for each edge and for each face.</p>
+<h4>Function subdivide_quads()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">subdivide_quads</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;&amp;</span> <span class="n">color</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">radius</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Subdivide quads by splitting each quads in four, creating new
+vertices for each edge and for each face.</p>
+<h4>Function subdivide_beziers()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kt">void</span> <span class="n">subdivide_beziers</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">beziers</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vert</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">update_beziers</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Subdivide beziers by splitting each segment in two.</p>
+<h4>Function subdivide_beziers()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">subdivide_beziers</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">beziers</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">tang</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;&amp;</span> <span class="n">color</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">radius</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Subdivide beziers by splitting each segment in two.</p>
+<h4>Function subdivide_catmullclark()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kt">void</span> <span class="n">subdivide_catmullclark</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">beziers</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vert</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">update_quads</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Subdivide quads using Carmull-Clark subdivision rules.</p>
+<h4>Function subdivide_catmullclark()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">subdivide_catmullclark</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">tang</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;&amp;</span> <span class="n">color</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">radius</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Subdivide quads using Carmull-Clark subdivision rules.</p>
+<h4>Function make_quads_uv()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">make_quads_uv</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">uvs</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">usteps</span><span class="p">,</span> <span class="kt">int</span> <span class="n">vsteps</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">uwrap</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">vwrap</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">vpole0</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">vpole1</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Generate a rectangular grid of usteps x vsteps uv values for parametric
 surface generation. Values cam wrap and have poles.</p>
-<h4>Function make_uvlines()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&gt;</span> <span class="n">make_uvlines</span><span class="p">(</span>
-    <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">usteps</span><span class="p">);</span>
+<h4>Function make_lines_uv()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">make_lines_uv</span><span class="p">(</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">uvs</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">usteps</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Generate parametric num lines of usteps segments.</p>
-<h4>Function make_uvpoints()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&gt;</span> <span class="n">make_uvpoints</span><span class="p">(</span><span class="kt">int</span> <span class="n">num</span><span class="p">);</span>
+<h4>Function make_points_uv()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">make_points_uv</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">uvs</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Generate a parametric point set. Mostly here for completeness.</p>
-<h4>Function merge_elems()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&gt;</span>
-<span class="n">merge_elems</span><span class="p">(</span><span class="kt">int</span> <span class="n">nverts</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines1</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">triangles1</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads1</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines2</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">triangles2</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads2</span><span class="p">);</span>
+<h4>Function merge_lines()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">merge_lines</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines1</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Merge elements between shapes. The elements are merged by increasing the
+<p>Merge lines between shapes. The elements are merged by increasing the
 array size of the second array by the number of vertices of the first.
 Vertex data can then be concatenated successfully.</p>
-<h4>Function facet_elems()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&gt;</span>
-<span class="n">facet_elems</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">triangles</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">);</span>
+<h4>Function merge_triangles()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">merge_triangles</span><span class="p">(</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">triangles</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">triangles1</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Unshare shape data by duplicating all vertex data for each element,
-giving a faceted look. Note that faceted tangents are not computed.
-Returns the indices to copy from.</p>
-<h4>Function facet_vert()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">facet_vert</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vert</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">vmap</span><span class="p">);</span>
+<p>Merge triangles between shapes. The elements are merged by increasing the
+array size of the second array by the number of vertices of the first.
+Vertex data can then be concatenated successfully.</p>
+<h4>Function merge_quads()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">merge_quads</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads1</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Unshare vertices for faceting. This is implemented for vec and float types.</p>
+<p>Merge quads between shapes. The elements are merged by increasing the
+array size of the second array by the number of vertices of the first.
+Vertex data can then be concatenated successfully.</p>
+<h4>Function facet_lines()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">facet_lines</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;&amp;</span> <span class="n">color</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">radius</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Duplicate vertex data for each line index, giving a faceted look.</p>
+<h4>Function facet_triangles()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">facet_triangles</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">triangles</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;&amp;</span> <span class="n">color</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">radius</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Duplicate vertex data for each triangle index, giving a faceted look.</p>
+<h4>Function facet_quads()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">facet_quads</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;&amp;</span> <span class="n">color</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">radius</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Duplicate vertex data for each quad index, giving a faceted look.</p>
 <p><a id="toc41"></a></p>
 <h3>Shape sampling</h3>
 <h4>Function sample_points()</h4>
@@ -4469,119 +4512,116 @@ and tecoord of the sampled points.</p>
 <p><a id="toc42"></a></p>
 <h3>Example shapes</h3>
 <h4>Function make_sphere()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&gt;</span> <span class="n">make_sphere</span><span class="p">(</span><span class="kt">int</span> <span class="n">tesselation</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">make_sphere</span><span class="p">(</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span> <span class="kt">int</span> <span class="n">tesselation</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Make a sphere. Returns quads, pos.</p>
+<p>Make a sphere.</p>
 <h4>Function make_geodesicsphere()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&gt;</span> <span class="n">make_geodesicsphere</span><span class="p">(</span>
-    <span class="kt">int</span> <span class="n">tesselation</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">make_geodesicsphere</span><span class="p">(</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">triangles</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span> <span class="kt">int</span> <span class="n">tesselation</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Make a geodesic sphere. Returns quads, pos.</p>
+<p>Make a geodesic sphere.</p>
 <h4>Function make_cube()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&gt;</span> <span class="n">make_cube</span><span class="p">(</span><span class="kt">int</span> <span class="n">tesselation</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">make_cube</span><span class="p">(</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span> <span class="kt">int</span> <span class="n">tesselation</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Make a cube with unique vertices. This is watertight but has no
-texture coordinates or normals. Returns quads, pos.</p>
+texture coordinates or normals.</p>
 <h4>Function make_uvsphere()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&gt;</span>
-<span class="n">make_uvsphere</span><span class="p">(</span><span class="kt">int</span> <span class="n">tesselation</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">flipped</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">make_uvsphere</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span> <span class="kt">int</span> <span class="n">tesselation</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">flipped</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Make a sphere. This is not watertight. Returns quads, pos, norm, texcoord.</p>
+<p>Make a sphere. This is not watertight.</p>
 <h4>Function make_uvhemisphere()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&gt;</span>
-<span class="n">make_uvhemisphere</span><span class="p">(</span><span class="kt">int</span> <span class="n">tesselation</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">flipped</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">make_uvhemisphere</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span> <span class="kt">int</span> <span class="n">tesselation</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">flipped</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Make a sphere. This is not watertight. Returns quads, pos, norm, texcoord.</p>
+<p>Make a sphere. This is not watertight.</p>
 <h4>Function make_uvquad()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&gt;</span>
-<span class="n">make_uvquad</span><span class="p">(</span><span class="kt">int</span> <span class="n">tesselation</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">make_uvquad</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span> <span class="kt">int</span> <span class="n">tesselation</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Make a quad. Returns quads, pos, norm, texcoord.</p>
+<p>Make a quad.</p>
 <h4>Function make_fvsphere()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&gt;</span>
-<span class="n">make_fvsphere</span><span class="p">(</span><span class="kt">int</span> <span class="n">tesselation</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">make_fvsphere</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads_pos</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads_norm</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads_texcoord</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">tesselation</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Make a facevarying sphere with unique vertices but different texture
-coordinates. Returns (quads, pos), (quads, norm), (quads, texcoord).</p>
+coordinates.</p>
 <h4>Function make_fvcube()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&gt;</span>
-<span class="n">make_fvcube</span><span class="p">(</span><span class="kt">int</span> <span class="n">tesselation</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">make_fvcube</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads_pos</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads_norm</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads_texcoord</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">tesselation</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Make a facevarying cube with unique vertices but different texture
-coordinates. Returns (quads, pos), (quads, norm), (quads, texcoord).</p>
+coordinates.</p>
 <h4>Function make_suzanne()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&gt;</span> <span class="n">make_suzanne</span><span class="p">(</span>
-    <span class="kt">int</span> <span class="n">tesselation</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">make_suzanne</span><span class="p">(</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span> <span class="kt">int</span> <span class="n">tesselation</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Make a suzanne monkey model for testing. Note that some quads are
 degenerate. Returns quads, pos.</p>
 <h4>Function make_uvcube()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&gt;</span>
-<span class="n">make_uvcube</span><span class="p">(</span><span class="kt">int</span> <span class="n">tesselation</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">make_uvcube</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span> <span class="kt">int</span> <span class="n">tesselation</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Make a cube. This is not watertight. Returns quads, pos, norm, texcoord.</p>
+<p>Make a cube. This is not watertight.</p>
 <h4>Function make_uvspherecube()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&gt;</span>
-<span class="n">make_uvspherecube</span><span class="p">(</span><span class="kt">int</span> <span class="n">tesselation</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">make_uvspherecube</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span> <span class="kt">int</span> <span class="n">tesselation</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Make a sphere from a cube. This is not watertight. Returns quads, pos, norm,
-texcoord.</p>
+<p>Make a sphere from a cube. This is not watertight.</p>
 <h4>Function make_uvspherizedcube()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&gt;</span>
-<span class="n">make_uvspherizedcube</span><span class="p">(</span><span class="kt">int</span> <span class="n">tesselation</span><span class="p">,</span> <span class="kt">float</span> <span class="n">radius</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">make_uvspherizedcube</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span> <span class="kt">int</span> <span class="n">tesselation</span><span class="p">,</span>
+    <span class="kt">float</span> <span class="n">radius</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Make a cube than stretch it towards a sphere. This is not watertight.
-Returns quads, pos, norm, texcoord.</p>
+<p>Make a cube than stretch it towards a sphere. This is not watertight.</p>
 <h4>Function make_uvflipcapsphere()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&gt;</span>
-<span class="n">make_uvflipcapsphere</span><span class="p">(</span><span class="kt">int</span> <span class="n">tesselation</span><span class="p">,</span> <span class="kt">float</span> <span class="n">z</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">flipped</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">make_uvflipcapsphere</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span> <span class="kt">int</span> <span class="n">tesselation</span><span class="p">,</span>
+    <span class="kt">float</span> <span class="n">z</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">flipped</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Make a sphere with caps flipped. This is not watertight. Returns quads, pos,
-norm, texcoord.</p>
+<p>Make a sphere with caps flipped. This is not watertight.</p>
 <h4>Function make_uvcutsphere()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&gt;</span>
-<span class="n">make_uvcutsphere</span><span class="p">(</span><span class="kt">int</span> <span class="n">tesselation</span><span class="p">,</span> <span class="kt">float</span> <span class="n">z</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">flipped</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">make_uvcutsphere</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span> <span class="kt">int</span> <span class="n">tesselation</span><span class="p">,</span>
+    <span class="kt">float</span> <span class="n">z</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">flipped</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Make a cutout sphere. This is not watertight. Returns quads, pos, norm,
-texcoord.</p>
+<p>Make a cutout sphere. This is not watertight.</p>
 <h4>Struct make_seashell_params</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">make_seashell_params</span> <span class="p">{</span>
     <span class="kt">float</span> <span class="n">spiral_revolutions</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span>
@@ -4615,15 +4655,15 @@ texcoord.</p>
 </li>
 </ul>
 <h4>Function make_uvseashell()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&gt;</span>
-<span class="n">make_uvseashell</span><span class="p">(</span><span class="kt">int</span> <span class="n">tesselation</span><span class="p">,</span> <span class="k">const</span> <span class="n">make_seashell_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">make_uvseashell</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span> <span class="kt">int</span> <span class="n">tesselation</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">make_seashell_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Make a seashell. This is not watertight. Returns quads, pos, norm, texcoord.</p>
 <h4>Function make_bezier_circle()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&gt;</span> <span class="n">make_bezier_circle</span><span class="p">();</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">make_bezier_circle</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">beziers</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -4653,16 +4693,16 @@ texcoord.</p>
 </li>
 </ul>
 <h4>Function make_hair()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&gt;</span>
-<span class="n">make_hair</span><span class="p">(</span><span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">tesselation</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">striangles</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">squads</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">spos</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">snorm</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">stexcoord</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">make_hair_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">make_hair</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">tang</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">radius</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">tesselation</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">striangles</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">squads</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">spos</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">snorm</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">stexcoord</span><span class="p">,</span> <span class="k">const</span> <span class="n">make_hair_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Make a hair ball around a shape. Returns lines, pos, norm, texcoord, radius.</p>
+<p>Make a hair ball around a shape.</p>
 <p><a id="toc43"></a></p>
 <h3>Example shape type support</h3>
 <h4>Function visit()</h4>
@@ -5948,6 +5988,12 @@ values any one is 0 or less. Set camera aspect otherwise.</p>
 
 
 <p>Finds an element by name.</p>
+<h4>Function compute_normals()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">compute_normals</span><span class="p">(</span><span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Update the normals of a shape.  Supports only non-facevarying shapes.</p>
 <h4>Function subdivide_shape_once()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">subdivide_shape_once</span><span class="p">(</span><span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">subdiv</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
@@ -5960,7 +6006,8 @@ is true.</p>
 </code></pre></div>
 
 
-<p>Facet a shape. Supports only non-facevarying shapes.</p>
+<p>Facet a shape elements by duplicating vertices. Supports only
+non-facevarying shapes.</p>
 <h4>Function tesselate_shape()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">tesselate_shape</span><span class="p">(</span><span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">subdivide</span><span class="p">,</span>
     <span class="kt">bool</span> <span class="n">facevarying_to_sharedvertex</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">quads_to_triangles</span><span class="p">,</span>
@@ -6337,7 +6384,7 @@ Throws an exception if an error occurs.</p>
 <li>resolution:      Resolution. @refl_uilimits(256,4096)</li>
 <li>tile_size:      Tile size for grid-like textures. @refl_uilimits(16,128)</li>
 <li>noise_scale:      Noise scale for noise-like textures. @refl_uilimits(0.1,16)</li>
-<li>sky_sunangle:      Sun angle for sunsky-like textures. @refl_uilimits(0,1.57) @refl_uiangle</li>
+<li>sky_sunangle:      Sun angle for sunsky-like textures. @refl_uilimits(0,1.57)</li>
 <li>bump_to_normal:      Convert to normal map.</li>
 <li>bump_scale:      Bump to normal scale. @refl_uilimits(1,10)</li>
 </ul>
