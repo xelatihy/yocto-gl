@@ -13635,10 +13635,16 @@ struct draw_tree_visitor {
     gl_window* win = nullptr;
     void*& selection;
 
+    // constructor
+    draw_tree_visitor(gl_window* win_, void*& selection_)
+        : win(win_), selection(selection_) {}
+
+    // generic callback
     template <typename T>
     void operator()(T& val, const visit_var&) {}
+    // callback for texture_info
     void operator()(texture_info*& val, const visit_var&) {}
-
+    // callback for array
     template <typename T>
     void operator()(std::vector<T*>& val, const visit_var& var) {
         if (draw_tree_widget_begin(win, var.name)) {
@@ -13646,7 +13652,7 @@ struct draw_tree_visitor {
             draw_tree_widget_end(win);
         }
     }
-
+    // callback for pointer
     template <typename T>
     void operator()(T*& val, const visit_var& var) {
         if (!val) return;
@@ -13657,7 +13663,7 @@ struct draw_tree_visitor {
             draw_tree_widget_end(win);
         }
     }
-
+    // callback for scene
     void operator()(const char* name, scene*& val, const visit_var& var) {
         visit(val, *this);
     }
@@ -13689,6 +13695,16 @@ struct draw_elem_visitor {
     void*& selection;
     const std::unordered_map<texture*, gl_texture>* gl_txt;
     int edited = 0;
+
+    // constructor
+    draw_elem_visitor(gl_window* win_, scene* scn_,
+        test_scene_params* test_scn_, void*& selection_,
+        const std::unordered_map<texture*, gl_texture>* gl_txt_)
+        : win(win_)
+        , scn(scn_)
+        , test_scn(test_scn_)
+        , selection(selection_)
+        , gl_txt(gl_txt_) {}
 
     template <typename T>
     void operator()(T& val, const visit_var& var) {
