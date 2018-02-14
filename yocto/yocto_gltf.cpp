@@ -1194,9 +1194,11 @@ void add_normals(gltf_scene_group* scn) {
         for (auto shp : msh->shapes) {
             if (!shp->norm.empty()) continue;
             shp->norm.resize(shp->pos.size(), {0, 0, 1});
-            if (!shp->lines.empty() || !shp->triangles.empty()) {
-                shp->norm =
-                    compute_normals(shp->lines, shp->triangles, {}, shp->pos);
+            if (!shp->lines.empty()) {
+                compute_tangents(shp->lines, shp->pos, shp->norm);
+            }
+            if (!shp->triangles.empty()) {
+                compute_normals(shp->triangles, shp->pos, shp->norm);
             }
         }
     }
@@ -1211,9 +1213,8 @@ void add_tangent_space(gltf_scene_group* scn) {
             if (!shp->tangsp.empty() || shp->texcoord.empty() ||
                 !shp->mat->normal_txt)
                 continue;
-            shp->tangsp.resize(shp->pos.size());
-            shp->tangsp = compute_tangent_frames(
-                shp->triangles, shp->pos, shp->norm, shp->texcoord);
+            compute_tangent_frames(shp->triangles, shp->pos, shp->norm,
+                shp->texcoord, shp->tangsp);
         }
     }
 }

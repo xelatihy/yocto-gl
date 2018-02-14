@@ -53,7 +53,7 @@ void validate_texture_paths(ygl::scene* obj, const std::string& filename) {
 int main(int argc, char** argv) {
     // command line params
     auto parser =
-        ygl::make_parser(argc, argv, "yobj2gltf", "converts obj to gltf");
+        ygl::make_parser(argc, argv, "yscnproc", "converts obj to gltf");
     auto textures =
         ygl::parse_flag(parser, "--textures", "-t", "process textures");
     auto no_flipy_texcoord = ygl::parse_flag(

@@ -235,30 +235,26 @@ manipulation useful to support scene viewing and path tracing.</p>
    <code>eval_triangle()</code> and <code>eval_quad()</code></li>
 <li>evaluate Bezier curves and derivatives with <code>eval_bezier()</code> and
    <code>eval_bezier_derivative()</code></li>
-<li>compute smooth normals and tangents with <code>compute_normals()</code></li>
+<li>compute smooth normals and tangents with <code>compute_normals()</code>
+/  <code>compute_tangents()</code></li>
 <li>compute tangent frames from texture coordinates with
    <code>compute_tangent_space()</code></li>
 <li>compute skinning with <code>compute_skinning()</code> and
    <code>compute_matrix_skinning()</code></li>
-<li>shape creation with <code>make_points()</code>, <code>make_lines()</code>, <code>make_uvgrid()</code></li>
-<li>element merging with <code>marge_elems()</code></li>
-<li>facet elements with <code>facet_elems()</code></li>
+<li>create shapes with <code>make_points()</code>, <code>make_lines()</code>, <code>make_uvgrid()</code></li>
+<li>merge element with <code>marge_lines()</code>, <code>marge_triangles()</code>, <code>marge_quads()</code></li>
+<li>facet elements with <code>facet_lines()</code>, <code>facet_triangles()</code>, <code>facet_quads()</code></li>
 <li>shape sampling with <code>sample_points()</code>, <code>sample_lines()</code>,
    <code>sample_triangles()</code>; initialize the sampling CDFs with
    <code>sample_points_cdf()</code>, <code>sample_lines_cdf()</code>, <code>sample_triangles_cdf()</code></li>
 <li>samnple a could of point over a surface with <code>sample_triangles_points()</code></li>
-<li>get edges and boundaries with <code>get_edges()</code> and <code>get_boundary_edges()</code></li>
+<li>get edges and boundaries with <code>get_edges()</code></li>
 <li>convert quads to triangles with <code>convert_quads_to_triangles()</code></li>
 <li>convert face varying to vertex shared representations with
     <code>convert_face_varying()</code></li>
-<li>subdivide elements by edge splits with <code>subdivide_elems_linear()</code> and
-    <code>subdivide_vert_linear()</code>; for an easier interface use
-    <code>subdivide_lines_linear()</code>, <code>subdivide_triangles_linear()</code>,
-    <code>subdivide_quads_linear()</code></li>
-<li>Catmull-Clark subdivision surface with <code>subdivide_vert_catmullclark()</code>
-    with support for edge and vertex creasing</li>
-<li>subdivide Bezier with <code>subdivide_bezier_recursive()</code> and
-    <code>subdivide_vert_bezier()</code></li>
+<li>subdivide elements by edge splits with <code>subdivide_lines()</code>,
+    <code>subdivide_triangles()</code>, <code>subdivide_quads()</code>, <code>subdivide_beziers()</code></li>
+<li>Catmull-Clark subdivision surface with <code>subdivide_catmullclark()</code></li>
 <li>example shapes: <code>make_cube()</code>, <code>make_uvsphere()</code>, <code>make_uvhemisphere()</code>,
     <code>make_uvquad()</code>, <code>make_uvcube()</code>, <code>make_fvcube()</code>, <code>make_hair()</code>,
     <code>make_suzanne()</code></li>
