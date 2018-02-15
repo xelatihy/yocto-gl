@@ -43,7 +43,8 @@ struct app_state {
     std::unordered_map<ygl::shape*, ygl::gl_shape> shapes;
     ygl::gl_lights lights;
     bool navigation_fps = false;
-    void* selection = nullptr;
+    ygl::scene_selection selection = {};
+    std::vector<ygl::scene_selection> update_list;
     ygl::test_scene_params edit_params;
     float time = 0;
     ygl::vec2f time_range = ygl::zero2f;
@@ -62,13 +63,30 @@ inline void draw(ygl::gl_window* win) {
     auto framebuffer_size = get_framebuffer_size(win);
     app->params.resolution = framebuffer_size.y;
 
-    ygl::update_transforms(app->scn, app->time);
-    app->lights = ygl::make_gl_lights(app->scn);
-    ygl::update_textures(app->scn, app->textures);
-    ygl::update_shapes(app->scn, app->shapes);
-    if (app->lights.pos.empty()) app->params.eyelight = true;
+    static auto last_time = 0.0f;
+    for (auto& sel : app->update_list) {
+        if (sel.txt) {
+            ygl::update_textures(app->scn, app->textures, {app->selection.txt});
+        }
+        if (sel.sgr) {
+            ygl::update_shapes(app->scn, app->shapes, {}, {app->selection.sgr});
+        }
+        if (sel.shp) {
+            ygl::update_shapes(app->scn, app->shapes, {app->selection.shp}, {});
+        }
+        if (sel.nde || sel.anm || sel.agr || app->time != last_time) {
+            ygl::update_transforms(app->scn, app->time);
+            last_time = app->time;
+        }
+        if (sel.shp || sel.sgr || sel.mat || sel.nde) {
+            app->lights = ygl::make_gl_lights(app->scn);
+            if (app->lights.pos.empty()) app->params.eyelight = true;
+        }
+    }
+    app->update_list.clear();
 
-    app->params.highlighted = app->selection;
+    // TODO: fix highlighting
+    //    app->params.highlighted = app->selection;
 
     ygl::gl_clear_buffers(app->params.background);
     ygl::gl_enable_depth_test(true);
@@ -116,14 +134,8 @@ inline void draw(ygl::gl_window* win) {
             ygl::draw_params_widgets(win, "", app->params);
         }
         if (ygl::draw_header_widget(win, "scene")) {
-            if (ygl::draw_scene_widgets(win, "", app->scn, app->selection,
-                    app->textures, &app->edit_params)) {
-                ygl::update_textures(
-                    app->scn, app->textures, {(ygl::texture*)app->selection});
-                ygl::update_shapes(app->scn, app->shapes,
-                    {(ygl::shape*)app->selection},
-                    {(ygl::shape_group*)app->selection});
-            }
+            ygl::draw_scene_widgets(win, "", app->scn, app->selection,
+                app->update_list, app->textures, &app->edit_params);
         }
     }
     ygl::end_widgets(win);
@@ -143,6 +155,9 @@ void run_ui(app_state* app) {
     app->prog = ygl::make_stdsurface_program();
     ygl::update_textures(app->scn, app->textures);
     ygl::update_shapes(app->scn, app->shapes);
+    ygl::update_transforms(app->scn, app->time);
+    app->lights = ygl::make_gl_lights(app->scn);
+    if (app->lights.pos.empty()) app->params.eyelight = true;
 
     // init widget
     ygl::init_widgets(win);

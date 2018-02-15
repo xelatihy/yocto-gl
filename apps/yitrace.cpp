@@ -45,14 +45,14 @@ struct app_state {
     std::vector<std::thread> async_threads;
     bool async_stop = false;
     bool scene_updated = false;
-    bool update_bvh = false;
     bool navigation_fps = false;
     int preview_res = 64;
     bool rendering = false;
     ygl::gl_stdimage_params imparams = {};
     ygl::gl_texture trace_texture = {};
     ygl::gl_stdimage_program gl_prog = {};
-    void* selection = nullptr;
+    ygl::scene_selection selection = {};
+    std::vector<ygl::scene_selection> update_list;
 
     ~app_state() {
         if (scn) delete scn;
@@ -83,12 +83,12 @@ void draw(ygl::gl_window* win) {
             ygl::draw_label_widget(win, "sample", app->pixels.at(0, 0).sample);
             edited += ygl::draw_camera_selection_widget(
                 win, "camera", app->cam, app->scn, app->view);
-            edited +=
-                ygl::draw_value_widget(win, "update bvh", app->update_bvh);
             ygl::draw_value_widget(win, "fps", app->navigation_fps);
         }
         if (ygl::draw_header_widget(win, "params")) {
-            edited += ygl::draw_params_widgets(win, "", app->params);
+            if (ygl::draw_params_widgets(win, "", app->params)) {
+                app->scene_updated = true;
+            }
         }
         if (ygl::draw_header_widget(win, "image")) {
             ygl::draw_params_widgets(win, "", app->imparams);
@@ -96,23 +96,32 @@ void draw(ygl::gl_window* win) {
                 win, "", app->img, {}, get_mouse_posf(win), app->imparams);
         }
         if (ygl::draw_header_widget(win, "scene")) {
-            edited +=
-                ygl::draw_scene_widgets(win, "", app->scn, app->selection, {});
+            if (ygl::draw_scene_widgets(
+                    win, "", app->scn, app->selection, app->update_list, {}))
+                app->scene_updated = true;
         }
     }
     ygl::end_widgets(win);
-    app->scene_updated = app->scene_updated || (bool)edited;
 
     ygl::swap_buffers(win);
 }
 
 bool update(app_state* app) {
-    if (app->scene_updated) {
+    if (app->scene_updated || !app->update_list.empty()) {
         ygl::trace_async_stop(app->async_threads, app->async_stop);
         app->rendering = false;
 
         // update BVH
-        if (app->update_bvh) ygl::refit_bvh(app->bvh, app->scn, false);
+        for (auto sel : app->update_list) {
+            if (sel.ist || sel.sgr) {
+                ygl::refit_bvh(app->bvh, app->scn, false);
+            }
+            if (sel.nde) {
+                ygl::update_transforms(app->scn, 0);
+                ygl::refit_bvh(app->bvh, app->scn, false);
+            }
+        }
+        app->update_list.clear();
 
         // render preview
         auto pparams = app->params;

@@ -3541,151 +3541,6 @@ namespace ygl {
 /// @defgroup container_ops Container operations
 /// @{
 
-/// Simple optional with a semantic similar to std::optional. This will be
-/// removed upon switching to std::optional.
-template <typename T>
-struct optional {
-    /// Construct an empty optional.
-    optional() : def(false), val{} {}
-    /// Construct an optional that contains a value.
-    optional(const T& v) : def(true), val{v} {}
-
-    /// Check if the value is defined.
-    operator bool() const { return def; }
-
-    /// Access the underlying value.
-    T& operator*() { return val; }
-    /// Access the underlying value.
-    const T& operator*() const { return val; }
-    /// Access the underlying value members.
-    T* operator->() { return &val; }
-    /// Access the underlying value members.
-    const T* operator->() const { return &val; }
-
-    /// Access the underlying value.
-    T& value() { return val; }
-    /// Access the underlying value.
-    const T& value() const { return val; }
-    /// Access the underlying value or a default one.
-    T value_or(const T& v) { return (def) ? val : v; }
-
-   private:
-    /// Whether the value is defined
-    bool def = false;
-    /// The value stored
-    T val = {};
-};
-
-/// Optional equality
-template <typename T>
-inline bool operator==(const optional<T>& a, const optional<T>& b) {
-    if (!a && !b) return true;
-    if ((!a && b) || (a && !b)) return false;
-    return a.value() == b.value();
-}
-/// Optional inequality
-template <typename T>
-inline bool operator!=(const optional<T>& a, const optional<T>& b) {
-    return !(a == b);
-}
-
-/// Creates an optional.
-template <typename T>
-inline optional<T> make_optional(const T& v) {
-    return optional<T>{v};
-}
-/// Creates an optional.
-template <typename T, typename... Args>
-inline optional<T> make_optional(Args&&... args) {
-    return optional<T>{T{args...}};
-}
-
-/// The type of the basic variant.
-enum struct basic_variant_type {
-    /// None variant to indicate uninitialized type.
-    none,
-    /// Boolean variant.
-    boolean,
-    /// Integer variant.
-    integer,
-    /// Number variant.
-    number,
-    /// String variant.
-    string,
-};
-
-/// Simple variant implementation used to store untyped data easily.
-/// Makes no attempt to mimick complex interface. Models the basic types helds
-/// in JSON, without using recursion. Right now the implementation is
-/// inefficient, but very simple.
-struct basic_variant {
-    /// Type.
-    basic_variant_type type = basic_variant_type::none;
-    /// Integer value.
-    int integer = 0;
-    /// Number variant.
-    float number = 0;
-    /// String variant.
-    std::string string = "";
-    /// Boolean value.
-    bool boolean = false;
-
-    /// Default constructor.
-    basic_variant() {}
-    /// Integer constructor.
-    basic_variant(int v) : type(basic_variant_type::integer), integer(v) {}
-    /// Number constructor.
-    basic_variant(float v) : type(basic_variant_type::number), number(v) {}
-    /// String constructor.
-    basic_variant(const std::string& v)
-        : type(basic_variant_type::string), string(v) {}
-    /// Boolean constructor.
-    basic_variant(bool v) : type(basic_variant_type::boolean), boolean(v) {}
-};
-
-/// Stream write.
-inline std::ostream& operator<<(std::ostream& os, const basic_variant& a) {
-    switch (a.type) {
-        case basic_variant_type::none: return os << "null";
-        case basic_variant_type::integer: return os << a.integer;
-        case basic_variant_type::number: return os << a.number;
-        case basic_variant_type::string: return os << a.string;
-        case basic_variant_type::boolean:
-            return os << ((a.boolean) ? "true" : "false");
-    }
-}
-/// Stream read.
-inline std::istream& operator>>(std::istream& is, basic_variant& a) {
-    //clang-format off
-    a = basic_variant();
-    auto str = std::string();
-    is >> str;
-    if (str.empty()) return is;
-    if (str.size() > 1 && str.front() == '"' && str.back() == '"') {
-        a = str.substr(1, str.length() - 2);
-        return is;
-    }
-    if (str == "true") {
-        a = true;
-        return is;
-    }
-    if (str == "false") {
-        a = false;
-        return is;
-    }
-    try {
-        a = std::stoi(str);
-        return is;
-    } catch (std::invalid_argument&) {}
-    try {
-        a = std::stof(str);
-        return is;
-    } catch (std::invalid_argument&) {}
-    a = str;
-    return is;
-    //clang-format on
-}
-
 /// Append a vector to a vector.
 template <typename T>
 inline void append(std::vector<T>& v, const std::vector<T>& vv) {
@@ -3777,18 +3632,6 @@ template <typename K, typename V, typename K1>
 inline bool contains(const std::unordered_set<K, V>& v, const K1& vv) {
     return v.find(vv) != v.end();
 }
-
-/// @}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// TYPE SUPPORT
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-/// @defgroup type Type support
-/// @{
 
 // Implementation from
 // https://stackoverflow.com/questions/3926637/how-to-intentionally-cause-a-compile-time-error-on-template-instantiation
@@ -4511,18 +4354,6 @@ void make_hair(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
     const std::vector<vec3f>& spos, const std::vector<vec3f>& snorm,
     const std::vector<vec2f>& stexcoord, const make_hair_params& params);
 
-/// @}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// EXAMPLE SHAPES TYPE SUPPORT
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-/// @defgroup shape_example_type Example shape type support
-/// @{
-
 // #codegen begin reflgen-shapeexample
 
 /// Visit struct elements.
@@ -5170,7 +5001,9 @@ struct camera {
     /// Far plane distance. @refl_uilimits(10,10000)
     float far = 10000;
     /// Application specific properties.
-    std::unordered_map<std::string, basic_variant> props;
+    std::unordered_map<std::string, std::string> sprops;
+    /// Application specific properties.
+    std::unordered_map<std::string, vec4f> fprops;
 };
 
 /// Texture containing either an LDR or HDR image.
@@ -5255,28 +5088,25 @@ struct material {
     texture* occ_txt = nullptr;
 
     /// Emission texture info.
-    optional<texture_info> ke_txt_info = {};
+    texture_info ke_txt_info = {};
     /// Diffuse texture info.
-    optional<texture_info> kd_txt_info = {};
+    texture_info kd_txt_info = {};
     /// Specular texture info.
-    optional<texture_info> ks_txt_info = {};
+    texture_info ks_txt_info = {};
     /// Clear coat reflection texture info.
-    optional<texture_info> kr_txt_info = {};
+    texture_info kr_txt_info = {};
     /// Transmission texture info.
-    optional<texture_info> kt_txt_info = {};
+    texture_info kt_txt_info = {};
     /// Roughness texture info.
-    optional<texture_info> rs_txt_info = {};
+    texture_info rs_txt_info = {};
     /// Bump map texture (heighfield) info.
-    optional<texture_info> bump_txt_info = {};
+    texture_info bump_txt_info = {};
     /// Displacement map texture (heighfield) info.
-    optional<texture_info> disp_txt_info = {};
+    texture_info disp_txt_info = {};
     /// Normal texture info.
-    optional<texture_info> norm_txt_info = {};
+    texture_info norm_txt_info = {};
     /// Occlusion texture info.
-    optional<texture_info> occ_txt_info = {};
-
-    /// Application specific properties.
-    std::unordered_map<std::string, basic_variant> props;
+    texture_info occ_txt_info = {};
 };
 
 /// Shape data represented as an indexed array.
@@ -5334,9 +5164,6 @@ struct shape_group {
     /// Shapes.
     std::vector<shape*> shapes;
 
-    /// Application specific properties.
-    std::unordered_map<std::string, basic_variant> props;
-
     /// Cleanup.
     ~shape_group();
 };
@@ -5349,8 +5176,6 @@ struct instance {
     frame3f frame = identity_frame3f;
     /// Shape instance. @refl_semantic(reference)
     shape_group* shp = nullptr;
-    /// Application specific properties.
-    std::unordered_map<std::string, basic_variant> props;
 };
 
 /// Envinonment map.
@@ -5364,9 +5189,7 @@ struct environment {
     /// Emission texture. @refl_semantic(reference)
     texture* ke_txt = nullptr;
     /// Emission texture info.
-    optional<texture_info> ke_txt_info = {};
-    /// Application specific properties.
-    std::unordered_map<std::string, basic_variant> props;
+    texture_info ke_txt_info = {};
 };
 
 /// Node in a transform hierarchy.
@@ -5391,8 +5214,6 @@ struct node {
     instance* ist = nullptr;
     /// Environment the node points to. @refl_semantic(reference)
     environment* env = nullptr;
-    /// Application specific properties.
-    std::unordered_map<std::string, basic_variant> props;
 
     /// Child nodes. This is a computed value only stored for convenience.
     std::vector<node*> children_ = {};
@@ -5438,8 +5259,6 @@ struct animation_group {
     std::vector<animation*> animations;
     /// Binds keyframe values to nodes. @refl_semantic(reference)
     std::vector<std::pair<animation*, node*>> targets;
-    /// Application specific properties.
-    std::unordered_map<std::string, basic_variant> props;
 
     // Cleanup
     ~animation_group();
@@ -5472,9 +5291,6 @@ struct scene {
     /// Node animations.
     std::vector<animation_group*> animations = {};
 
-    /// Application specific properties.
-    std::unordered_map<std::string, basic_variant> props;
-
     // Cleanup.
     ~scene();
 };
@@ -5501,13 +5317,6 @@ vec3f eval_norm(const instance* ist, int sid, int eid, const vec2f& euv);
 /// Evaluate a texture.
 vec4f eval_texture(const texture* txt, const texture_info& info,
     const vec2f& texcoord, bool srgb = true, const vec4f& def = {1, 1, 1, 1});
-/// Evaluate a texture.
-inline vec4f eval_texture(const texture* txt,
-    const optional<texture_info>& info, const vec2f& texcoord, bool srgb = true,
-    const vec4f& def = {1, 1, 1, 1}) {
-    static auto def_info = texture_info();
-    return eval_texture(txt, (info) ? *info : def_info, texcoord, srgb, def);
-}
 /// Generates a ray from a camera for image plane coordinate `uv` and the
 /// lens coordinates `luv`.
 ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv);
@@ -5661,18 +5470,6 @@ struct save_options {
 void save_scene(
     const std::string& filename, const scene* scn, const save_options& opts);
 
-/// @}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// SCENE TYPE SUPPORT
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-/// @defgroup scene_type Scene type support
-/// @{
-
 // #codegen begin reflgen-scene
 
 /// Names of enum values.
@@ -5721,8 +5518,6 @@ inline void visit(camera& val, Visitor&& visitor) {
                           "Near plane distance.", 0.01, 10, ""});
     visitor(val.far, visit_var{"far", visit_var_type::value,
                          "Far plane distance.", 10, 10000, ""});
-    visitor(val.props, visit_var{"props", visit_var_type::value,
-                           "Application specific properties.", 0, 0, ""});
 }
 
 /// Visit struct elements.
@@ -5821,8 +5616,6 @@ inline void visit(material& val, Visitor&& visitor) {
                                    "Normal texture info.", 0, 0, ""});
     visitor(val.occ_txt_info, visit_var{"occ_txt_info", visit_var_type::value,
                                   "Occlusion texture info.", 0, 0, ""});
-    visitor(val.props, visit_var{"props", visit_var_type::value,
-                           "Application specific properties.", 0, 0, ""});
 }
 
 /// Visit struct elements.
@@ -5879,10 +5672,6 @@ inline void visit(shape_group& val, Visitor&& visitor) {
                           "Path used for saving in glTF.", 0, 0, ""});
     visitor(val.shapes,
         visit_var{"shapes", visit_var_type::value, "Shapes.", 0, 0, ""});
-    visitor(val.props, visit_var{"props", visit_var_type::value,
-                           "Application specific properties.", 0, 0, ""});
-    visitor(val.name,
-        visit_var{"name", visit_var_type::value, "Cleanup. Name.", 0, 0, ""});
 }
 
 /// Visit struct elements.
@@ -5892,8 +5681,6 @@ inline void visit(instance& val, Visitor&& visitor) {
                            "Transform frame.", 0, 0, ""});
     visitor(val.shp, visit_var{"shp", visit_var_type::reference,
                          "Shape instance.", 0, 0, ""});
-    visitor(val.props, visit_var{"props", visit_var_type::value,
-                           "Application specific properties.", 0, 0, ""});
 }
 
 /// Visit struct elements.
@@ -5909,8 +5696,6 @@ inline void visit(environment& val, Visitor&& visitor) {
                             "Emission texture.", 0, 0, ""});
     visitor(val.ke_txt_info, visit_var{"ke_txt_info", visit_var_type::value,
                                  "Emission texture info.", 0, 0, ""});
-    visitor(val.props, visit_var{"props", visit_var_type::value,
-                           "Application specific properties.", 0, 0, ""});
 }
 
 /// Visit struct elements.
@@ -5936,8 +5721,6 @@ inline void visit(node& val, Visitor&& visitor) {
                          "Instance the node points to.", 0, 0, ""});
     visitor(val.env, visit_var{"env", visit_var_type::reference,
                          "Environment the node points to.", 0, 0, ""});
-    visitor(val.props, visit_var{"props", visit_var_type::value,
-                           "Application specific properties.", 0, 0, ""});
     visitor(val.children_, visit_var{"children_", visit_var_type::value,
                                "Child nodes. This is a computed value only "
                                "stored for convenience.",
@@ -5975,8 +5758,6 @@ inline void visit(animation_group& val, Visitor&& visitor) {
                                 "Keyframed values.", 0, 0, ""});
     visitor(val.targets, visit_var{"targets", visit_var_type::reference,
                              "Binds keyframe values to nodes.", 0, 0, ""});
-    visitor(val.props, visit_var{"props", visit_var_type::value,
-                           "Application specific properties.", 0, 0, ""});
 }
 
 /// Visit struct elements.
@@ -5998,8 +5779,6 @@ inline void visit(scene& val, Visitor&& visitor) {
         visit_var{"nodes", visit_var_type::value, "Node hierarchy.", 0, 0, ""});
     visitor(val.animations, visit_var{"animations", visit_var_type::value,
                                 "Node animations.", 0, 0, ""});
-    visitor(val.props, visit_var{"props", visit_var_type::value,
-                           "Application specific properties.", 0, 0, ""});
 }
 
 // #codegen end reflgen-scene
@@ -6183,7 +5962,7 @@ struct test_shape_params {
     /// @refl_uilimits(-1,10000)
     int num = -1;
     /// Hair generation params.
-    optional<make_hair_params> hair_params = {};
+    make_hair_params hair_params = {};
 };
 
 /// Test instance parameters.
@@ -6365,18 +6144,6 @@ test_scene_params load_test_scene(const std::string& filename);
 
 /// Save test scene.
 void save_test_scene(const std::string& filename, const test_scene_params& scn);
-
-/// @}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// EXAMPLE SCENE TYPE SUPPORT
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-/// @defgroup scene_example_type Example scenes type support
-/// @{
 
 // #codegen begin reflgen-test-scene
 
@@ -6878,18 +6645,6 @@ void trace_async_start(const scene* scn, const camera* cam, const bvh_tree* bvh,
     const trace_params& params);
 /// Stop the asynchronous renderer.
 void trace_async_stop(std::vector<std::thread>& threads, bool& stop_flag);
-
-/// @}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// PATH TRACING TYPE SUPPORT
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-/// @defgroup trace_type Path tracing type support
-/// @{
 
 // #codegen begin reflgen-trace
 
@@ -9803,18 +9558,6 @@ void draw_stdsurface_scene(const scene* scn, const camera* cam,
     std::unordered_map<texture*, gl_texture>& textures, const gl_lights& lights,
     const vec2i& viewport_size, const gl_stdsurface_params& params);
 
-/// @}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// OPENGL STANDARD SHADER TYPE SUPPORT
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-/// @defgroup gl_stdprogram_type OpenGL standard shaders type support
-/// @{
-
 // #codegen begin reflgen-glstdimage
 
 /// Visit struct elements.
@@ -10263,6 +10006,18 @@ template <typename T>
 inline bool draw_params_widgets(
     gl_window* win, const std::string& lbl, T& params);
 
+/// @}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// OPENGL WIDGETS FOR SCENE
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+/// @defgroup gl_widgets OpenGL widgets for scene
+/// @{
+
 /// Draws a widget that can selected the camera.
 inline bool draw_camera_selection_widget(gl_window* win, const std::string& lbl,
     camera*& cam, scene* scn, camera* view) {
@@ -10272,9 +10027,39 @@ inline bool draw_camera_selection_widget(gl_window* win, const std::string& lbl,
 /// Draws widgets for a camera. Used for quickly making demos.
 bool draw_camera_widgets(gl_window* win, const std::string& lbl, camera* cam);
 
+/// Scene selection
+struct scene_selection {
+    /// Selected camera
+    camera* cam = nullptr;
+    /// Selected shape group
+    shape_group* sgr = nullptr;
+    /// Selected shape
+    shape* shp = nullptr;
+    /// Selected material
+    material* mat = nullptr;
+    /// Selected texture
+    texture* txt = nullptr;
+    /// Selected instance
+    instance* ist = nullptr;
+    /// Selected environment
+    environment* env = nullptr;
+    /// Selected node
+    node* nde = nullptr;
+    /// Selected animation group
+    animation_group* agr = nullptr;
+    /// Selected animation
+    animation* anm = nullptr;
+};
+
+/// Clear selection
+inline void clear_selection(scene_selection& sel) {
+    memset(&sel, 0, sizeof(sel));
+}
+
 /// Draws widgets for a whole scene. Used for quickly making demos.
 bool draw_scene_widgets(gl_window* win, const std::string& lbl, scene* scn,
-    void*& selection, const std::unordered_map<texture*, gl_texture>& gl_txt,
+    scene_selection& sel, std::vector<ygl::scene_selection>& update_list,
+    const std::unordered_map<texture*, gl_texture>& gl_txt,
     test_scene_params* test_scn = nullptr);
 
 /// @}

@@ -3832,10 +3832,9 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
         tmap[txt->path] = txt;
     }
 
-    auto make_texture_info =
-        [&tmap](const obj_texture_info& oinfo) -> optional<texture_info> {
-        if (oinfo.path == "") return {};
+    auto make_texture_info = [&tmap](const obj_texture_info& oinfo) {
         auto info = texture_info();
+        if (oinfo.path == "") return info;
         info.wrap_s = !oinfo.clamp;
         info.wrap_t = !oinfo.clamp;
         info.scale = oinfo.scale;
@@ -4302,15 +4301,13 @@ scene* load_obj_scene(const std::string& filename, const load_options& opts) {
 obj_scene* scene_to_obj(const scene* scn) {
     auto obj = new obj_scene();
 
-    auto make_texture_info = [](const texture* txt,
-                                 const optional<texture_info>& info,
+    auto make_texture_info = [](const texture* txt, const texture_info& info,
                                  bool bump = false) {
         auto oinfo = obj_texture_info();
         if (!txt) return oinfo;
         oinfo.path = txt->path;
-        if (!info) return oinfo;
-        oinfo.clamp = !info->wrap_s && !info->wrap_t;
-        if (bump) oinfo.scale = info->scale;
+        oinfo.clamp = !info.wrap_s && !info.wrap_t;
+        if (bump) oinfo.scale = info.scale;
         return oinfo;
     };
 
@@ -4633,30 +4630,29 @@ scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
     };
 
     // add a texture
-    auto make_texture_info =
-        [gltf, scn](glTFTextureInfo* ginfo, bool normal = false,
-            bool occlusion = false) -> optional<texture_info> {
-        if (!ginfo) return {};
+    auto make_texture_info = [gltf, scn](glTFTextureInfo* ginfo,
+                                 bool normal = false, bool occlusion = false) {
+        auto info = texture_info();
+        if (!ginfo) return info;
         auto gtxt = gltf->get(ginfo->index);
-        if (!gtxt || !gtxt->source) return {};
+        if (!gtxt || !gtxt->source) return info;
         auto txt = scn->textures.at((int)gtxt->source);
-        if (!txt) return {};
-        auto info = make_optional(texture_info());
+        if (!txt) return info;
         auto gsmp = gltf->get(gtxt->sampler);
         if (gsmp) {
-            info->linear = gsmp->magFilter != glTFSamplerMagFilter::Nearest;
-            info->mipmap = gsmp->minFilter != glTFSamplerMinFilter::Linear &&
-                           gsmp->minFilter != glTFSamplerMinFilter::Nearest;
-            info->wrap_s = gsmp->wrapS != glTFSamplerWrapS::ClampToEdge;
-            info->wrap_t = gsmp->wrapT != glTFSamplerWrapT::ClampToEdge;
+            info.linear = gsmp->magFilter != glTFSamplerMagFilter::Nearest;
+            info.mipmap = gsmp->minFilter != glTFSamplerMinFilter::Linear &&
+                          gsmp->minFilter != glTFSamplerMinFilter::Nearest;
+            info.wrap_s = gsmp->wrapS != glTFSamplerWrapS::ClampToEdge;
+            info.wrap_t = gsmp->wrapT != glTFSamplerWrapT::ClampToEdge;
         }
         if (normal) {
             auto ninfo = (glTFMaterialNormalTextureInfo*)ginfo;
-            info->scale = ninfo->scale;
+            info.scale = ninfo->scale;
         }
         if (occlusion) {
             auto ninfo = (glTFMaterialOcclusionTextureInfo*)ginfo;
-            info->scale = ninfo->strength;
+            info.scale = ninfo->strength;
         }
         return info;
     };
@@ -5105,28 +5101,27 @@ glTF* scene_to_gltf(
 
     // add a texture and sampler
     auto add_texture_info = [&gltf, &index, scn](const texture* txt,
-                                const optional<texture_info>& info,
-                                bool norm = false, bool occ = false) {
+                                const texture_info& info, bool norm = false,
+                                bool occ = false) {
         if (!txt) return (glTFTextureInfo*)nullptr;
         auto gtxt = new glTFTexture();
         gtxt->name = txt->name;
         gtxt->source = glTFid<glTFImage>(index(scn->textures, txt));
 
         // check if it is default
-        auto is_default = !info || (info->wrap_s && info->wrap_t &&
-                                       info->linear && info->mipmap);
-
+        auto is_default =
+            info.wrap_s && info.wrap_t && info.linear && info.mipmap;
         if (!is_default) {
             auto gsmp = new glTFSampler();
-            gsmp->wrapS = (info->wrap_s) ? glTFSamplerWrapS::Repeat :
-                                           glTFSamplerWrapS::ClampToEdge;
-            gsmp->wrapT = (info->wrap_t) ? glTFSamplerWrapT::Repeat :
-                                           glTFSamplerWrapT::ClampToEdge;
-            gsmp->minFilter = (info->mipmap) ?
+            gsmp->wrapS = (info.wrap_s) ? glTFSamplerWrapS::Repeat :
+                                          glTFSamplerWrapS::ClampToEdge;
+            gsmp->wrapT = (info.wrap_t) ? glTFSamplerWrapT::Repeat :
+                                          glTFSamplerWrapT::ClampToEdge;
+            gsmp->minFilter = (info.mipmap) ?
                                   glTFSamplerMinFilter::LinearMipmapLinear :
                                   glTFSamplerMinFilter::Nearest;
-            gsmp->magFilter = (info->linear) ? glTFSamplerMagFilter::Linear :
-                                               glTFSamplerMagFilter::Nearest;
+            gsmp->magFilter = (info.linear) ? glTFSamplerMagFilter::Linear :
+                                              glTFSamplerMagFilter::Nearest;
             gtxt->sampler = glTFid<glTFSampler>((int)gltf->samplers.size());
             gltf->samplers.push_back(gsmp);
         }
@@ -5134,12 +5129,12 @@ glTF* scene_to_gltf(
         if (norm) {
             auto ginfo = new glTFMaterialNormalTextureInfo();
             ginfo->index = glTFid<glTFTexture>{(int)gltf->textures.size() - 1};
-            ginfo->scale = (info) ? info->scale : 1;
+            ginfo->scale = info.scale;
             return (glTFTextureInfo*)ginfo;
         } else if (occ) {
             auto ginfo = new glTFMaterialOcclusionTextureInfo();
             ginfo->index = glTFid<glTFTexture>{(int)gltf->textures.size() - 1};
-            ginfo->strength = (info) ? info->scale : 1;
+            ginfo->strength = info.scale;
             return (glTFTextureInfo*)ginfo;
         } else {
             auto ginfo = new glTFTextureInfo();
@@ -10259,8 +10254,7 @@ void update_test_elem(
             //                                   0.0001f};
             make_hair(shp->lines, shp->pos, shp->norm, shp->texcoord,
                 shp->radius, nhairs, 2, {}, shp1->quads, shp1->pos, shp1->norm,
-                shp1->texcoord,
-                (tshp.hair_params) ? *tshp.hair_params : make_hair_params());
+                shp1->texcoord, tshp.hair_params);
         } break;
         case test_shape_type::beziercircle: {
             make_bezier_circle(shp->beziers, shp->pos);
@@ -10623,21 +10617,20 @@ std::unordered_map<std::string, test_shape_params>& test_shape_presets() {
         make_test_shape("pointscube", test_shape_type::pointscube);
     presets["hairball1"] =
         make_test_shape("hairball1", test_shape_type::hairball);
-    presets["hairball1"].hair_params = make_hair_params();
-    presets["hairball1"].hair_params->radius = {0.001f, 0.0001f};
-    presets["hairball1"].hair_params->length = {0.1f, 0.1f};
-    presets["hairball1"].hair_params->noise = {0.5f, 8};
+    presets["hairball1"].hair_params.radius = {0.001f, 0.0001f};
+    presets["hairball1"].hair_params.length = {0.1f, 0.1f};
+    presets["hairball1"].hair_params.noise = {0.5f, 8};
     presets["hairball2"].hair_params = make_hair_params();
     presets["hairball2"] =
         make_test_shape("hairball2", test_shape_type::hairball);
-    presets["hairball2"].hair_params->radius = {0.001f, 0.0001f};
-    presets["hairball2"].hair_params->length = {0.1f, 0.1f};
-    presets["hairball2"].hair_params->clump = {0.5f, 128};
+    presets["hairball2"].hair_params.radius = {0.001f, 0.0001f};
+    presets["hairball2"].hair_params.length = {0.1f, 0.1f};
+    presets["hairball2"].hair_params.clump = {0.5f, 128};
     presets["hairball3"].hair_params = make_hair_params();
     presets["hairball3"] =
         make_test_shape("hairball3", test_shape_type::hairball);
-    presets["hairball3"].hair_params->radius = {0.001f, 0.0001f};
-    presets["hairball3"].hair_params->length = {0.1f, 0.1f};
+    presets["hairball3"].hair_params.radius = {0.001f, 0.0001f};
+    presets["hairball3"].hair_params.length = {0.1f, 0.1f};
     presets["hairballi"] =
         make_test_shape("hairballi", test_shape_type::sphere);
     presets["hairballi"].scale = 0.8f;
@@ -13588,20 +13581,108 @@ void draw_imageinspect_widgets(gl_window* win, const std::string& lbl,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+// Implementation of draw camera
+struct draw_camera_visitor {
+    gl_window* win = nullptr;
+    int edited = 0;
+
+    // constructor
+    draw_camera_visitor(gl_window* win_) : win(win_) {}
+
+    template <typename T>
+    void operator()(T& val, const visit_var& var) {
+        edited += draw_value_widget(win, var.name, val, var.min, var.max,
+            var.type == visit_var_type::color);
+    }
+
+    template <typename T>
+    void operator()(
+        T* val, const visit_var& var = visit_var{"", visit_var_type::object}) {
+        if (!val) return;
+        // TODO: fix this separator
+        draw_separator_widget(win);
+        draw_groupid_widget_begin(win, val);
+        draw_separator_widget(win);
+        visit(*val, *this);
+        draw_groupid_widget_end(win);
+    }
+};
+
+// Implementation of camera selection
+bool draw_camera_widgets(gl_window* win, const std::string& lbl, camera* cam) {
+    if (!cam) return false;
+    if (draw_header_widget(win, lbl)) {
+        draw_groupid_widget_begin(win, cam);
+        auto visitor = draw_camera_visitor{win};
+        visitor(cam);
+        draw_groupid_widget_end(win);
+        return visitor.edited;
+    } else {
+        return false;
+    }
+}
+
+// get typed selection
+template <typename T>
+inline T*& get_typed_selection(scene_selection& sel) {
+    return nullptr;
+}
+template <>
+inline camera*& get_typed_selection<camera>(scene_selection& sel) {
+    return sel.cam;
+}
+template <>
+inline shape_group*& get_typed_selection<shape_group>(scene_selection& sel) {
+    return sel.sgr;
+}
+template <>
+inline shape*& get_typed_selection<shape>(scene_selection& sel) {
+    return sel.shp;
+}
+template <>
+inline material*& get_typed_selection<material>(scene_selection& sel) {
+    return sel.mat;
+}
+template <>
+inline texture*& get_typed_selection<texture>(scene_selection& sel) {
+    return sel.txt;
+}
+template <>
+inline instance*& get_typed_selection<instance>(scene_selection& sel) {
+    return sel.ist;
+}
+template <>
+inline environment*& get_typed_selection<environment>(scene_selection& sel) {
+    return sel.env;
+}
+template <>
+inline node*& get_typed_selection<node>(scene_selection& sel) {
+    return sel.nde;
+}
+template <>
+inline animation_group*& get_typed_selection<animation_group>(
+    scene_selection& sel) {
+    return sel.agr;
+}
+template <>
+inline animation*& get_typed_selection<animation>(scene_selection& sel) {
+    return sel.anm;
+}
+
 // Implementation of draw tree
 struct draw_tree_visitor {
     gl_window* win = nullptr;
-    void*& selection;
+    scene_selection& sel;
 
     // constructor
-    draw_tree_visitor(gl_window* win_, void*& selection_)
-        : win(win_), selection(selection_) {}
+    draw_tree_visitor(gl_window* win_, scene_selection& sel_)
+        : win(win_), sel(sel_) {}
 
     // generic callback
     template <typename T>
     void operator()(T& val, const visit_var&) {}
     // callback for texture_info
-    void operator()(texture_info*& val, const visit_var&) {}
+    void operator()(texture_info* val, const visit_var&) {}
     // callback for array
     template <typename T>
     void operator()(std::vector<T*>& val, const visit_var& var) {
@@ -13612,96 +13693,46 @@ struct draw_tree_visitor {
     }
     // callback for pointer
     template <typename T>
-    void operator()(T*& val, const visit_var& var) {
+    void operator()(T* val, const visit_var& var) {
         if (!val) return;
         auto lbl = val->name;
         if (!var.name.empty()) lbl = var.name + ": " + val->name;
-        if (draw_tree_widget_begin(win, lbl, selection, val)) {
+        void* selection = get_typed_selection<T>(sel);
+        auto open = draw_tree_widget_begin(win, lbl, selection, val);
+        if (selection == val) {
+            clear_selection(sel);
+            get_typed_selection<T>(sel) = val;
+        }
+        if (open) {
             visit(val, *this);
             draw_tree_widget_end(win);
         }
     }
-    // callback for scene
-    void operator()(const char* name, scene*& val, const visit_var& var) {
-        visit(val, *this);
-    }
+    // callback for pointer
+    void operator()(scene* val, const visit_var& var) { visit(val, *this); }
 };
-
-template <typename T>
-void draw_scene_tree_widgets(gl_window* win, const std::string& lbl,
-    const std::vector<T*>& elems, void*& selection) {
-    if (draw_tree_widget_begin(win, lbl)) {
-        for (auto elem : elems) {
-            auto visitor = draw_tree_visitor{win, selection};
-            visitor("", elem, visit_var{"", visit_var_type::object});
-        }
-        draw_tree_widget_end(win);
-    }
-}
-
-void draw_tree_widgets(
-    gl_window* win, const std::string& lbl, scene* scn, void*& selection) {
-    auto visitor = draw_tree_visitor{win, selection};
-    visitor(lbl.c_str(), scn, visit_var{"", visit_var_type::object});
-}
 
 // Implementation of draw elements
 struct draw_elem_visitor {
     gl_window* win = nullptr;
     scene* scn = nullptr;
-    test_scene_params* test_scn;
-    void*& selection;
+    scene_selection& sel;
     const std::unordered_map<texture*, gl_texture>* gl_txt;
     int edited = 0;
 
     // constructor
-    draw_elem_visitor(gl_window* win_, scene* scn_,
-        test_scene_params* test_scn_, void*& selection_,
+    draw_elem_visitor(gl_window* win_, scene* scn_, scene_selection& sel_,
         const std::unordered_map<texture*, gl_texture>* gl_txt_)
-        : win(win_)
-        , scn(scn_)
-        , test_scn(test_scn_)
-        , selection(selection_)
-        , gl_txt(gl_txt_) {}
+        : win(win_), scn(scn_), sel(sel_), gl_txt(gl_txt_) {}
 
     template <typename T>
     void operator()(T& val, const visit_var& var) {
-        draw_value_widget(win, var.name, val, var.min, var.max,
+        edited += draw_value_widget(win, var.name, val, var.min, var.max,
             var.type == visit_var_type::color);
     }
 
-    void operator()(std::unordered_map<std::string, basic_variant>& val,
-        const visit_var& var) {
-        for (auto& kv : val) {
-            draw_label_widget(win, var.name + " " + kv.first, kv.second);
-        }
-    }
-
-    template <typename T>
-    void operator()(optional<T>& val, const visit_var& var) {
-        if (!val) {
-            if (draw_button_widget(win, std::string("add ") + var.name))
-                val = T{};
-        } else {
-            visit(*val, *this);
-            if (draw_button_widget(win, std::string("del ") + var.name))
-                val = {};
-        }
-    }
-
-    void operator()(texture_info& val, const visit_var& var) {
-        auto lbl = var.name;
-        lbl = lbl.substr(0, lbl.size() - 4) + " ";
-        draw_groupid_widget_begin(win, &val);
-        edited += draw_value_widget(win, lbl + "wrap s", val.wrap_s);
-        draw_continue_widget(win);
-        edited += draw_value_widget(win, lbl + "wrap t", val.wrap_t);
-        draw_continue_widget(win);
-        edited += draw_value_widget(win, lbl + "linear", val.linear);
-        draw_continue_widget(win);
-        edited += draw_value_widget(win, lbl + "mipmap", val.mipmap);
-        draw_groupid_widget_end(win);
-    }
+    void operator()(texture_info& val, const visit_var& var) {}
+    void operator()(make_hair_params& val, const visit_var& var) {}
 
     template <typename T>
     void operator()(image<T>& val, const visit_var& var) {
@@ -13727,7 +13758,9 @@ struct draw_elem_visitor {
     }
 
     template <typename T>
-    void operator()(T*& val, const visit_var& var) {
+    void operator()(
+        T* val, const visit_var& var = visit_var{"", visit_var_type::object}) {
+        if (!val) return;
         if (var.type == visit_var_type::reference) {
             edited += draw_combo_widget(win, var.name, val, elems(val));
         } else {
@@ -13740,6 +13773,20 @@ struct draw_elem_visitor {
             preview(val);
             draw_groupid_widget_end(win);
         }
+    }
+
+    template <typename T, typename TT>
+    void operator()(T* elem, std::vector<TT>& telems) {
+        if (!elem) return;
+        auto telem = (TT*)nullptr;
+        for (auto& te : telems)
+            if (te.name == elem->name) telem = &te;
+        if (telem) {
+            auto last = edited;
+            operator()(telem);
+            if (last != edited) update_test_elem(scn, elem, *telem);
+        }
+        operator()(elem);
     }
 
     template <typename T>
@@ -13771,49 +13818,10 @@ struct draw_elem_visitor {
     }
 };
 
-template <typename T>
-bool draw_elem_widgets(gl_window* win, scene* scn, T* val, void*& selection,
-    const std::unordered_map<texture*, gl_texture>& gl_txt) {
-    auto visitor = draw_elem_visitor{win, scn, nullptr, selection, &gl_txt};
-    visitor("", val, visit_var{"", visit_var_type::object});
-    return (bool)visitor.edited;
-}
-
-template <typename T>
-bool draw_elem_widgets(gl_window* win, test_scene_params* scn, T* val,
-    void*& selection, const std::unordered_map<texture*, gl_texture>& gl_txt) {
-    auto visitor = draw_elem_visitor{win, nullptr, scn, selection, &gl_txt};
-    visitor("", val, visit_var{"", visit_var_type::object});
-    return (bool)visitor.edited;
-}
-
 template <typename T, typename T1>
-bool draw_selected_elem_widgets(gl_window* win, scene* scn,
-    test_scene_params* test_scn, const std::vector<T*>& elems,
-    std::vector<T1>& test_elems, void*& selection,
-    const std::unordered_map<texture*, gl_texture>& gl_txt) {
-    auto selected = (T*)nullptr;
-    for (auto elem : elems)
-        if (elem == selection) {
-            selected = elem;
-            break;
-        }
-    if (!selected) return false;
-    auto test_selected = (T1*)nullptr;
-    for (auto& test_elem : test_elems)
-        if (test_elem.name == selected->name) test_selected = &test_elem;
-    auto visitor = draw_elem_visitor{win, scn, test_scn, selection, &gl_txt};
-    if (test_selected) {
-        visitor(test_selected, visit_var{"", visit_var_type::object});
-        if (visitor.edited) update_test_elem(scn, selected, *test_selected);
-    }
-    visitor(selected, visit_var{"", visit_var_type::object});
-    return (bool)visitor.edited;
-}
-
-template <typename T, typename T1>
-bool draw_add_elem_widgets(gl_window* win, scene* scn, const std::string& lbl,
-    std::vector<T*>& elems, std::vector<T1>& test_elems, void*& selection) {
+inline bool draw_add_elem_widgets(gl_window* win, scene* scn,
+    const std::string& lbl, std::vector<T*>& elems, std::vector<T1>& test_elems,
+    scene_selection& sel, std::vector<ygl::scene_selection>& update_list) {
     static auto count = 0;
     if (draw_button_widget(win, "add " + lbl)) {
         auto name = lbl + "_" + std::to_string(count++);
@@ -13821,7 +13829,9 @@ bool draw_add_elem_widgets(gl_window* win, scene* scn, const std::string& lbl,
         elems.back()->name = name;
         test_elems.push_back(T1());
         test_elems.back().name = name;
-        selection = elems.back();
+        clear_selection(sel);
+        get_typed_selection<T>(sel) = elems.back();
+        update_list.push_back(sel);
         update_test_elem(scn, elems.back(), test_elems.back());
         return true;
     }
@@ -13829,23 +13839,9 @@ bool draw_add_elem_widgets(gl_window* win, scene* scn, const std::string& lbl,
     return false;
 }
 
-bool draw_camera_widgets(gl_window* win, const std::string& lbl, camera* cam) {
-    if (!cam) return false;
-    if (draw_header_widget(win, lbl)) {
-        draw_groupid_widget_begin(win, cam);
-        auto selection = (void*)nullptr;
-        auto visitor =
-            draw_elem_visitor{win, nullptr, nullptr, selection, nullptr};
-        visit(cam, visitor);
-        draw_groupid_widget_end(win);
-        return visitor.edited;
-    } else {
-        return false;
-    }
-}
-
 bool draw_scene_widgets(gl_window* win, const std::string& lbl, scene* scn,
-    void*& selection, const std::unordered_map<texture*, gl_texture>& gl_txt,
+    scene_selection& sel, std::vector<ygl::scene_selection>& update_list,
+    const std::unordered_map<texture*, gl_texture>& gl_txt,
     test_scene_params* test_scn) {
     static auto test_scn_def = test_scene_params();
 
@@ -13853,56 +13849,55 @@ bool draw_scene_widgets(gl_window* win, const std::string& lbl, scene* scn,
     if (!lbl.empty() && !draw_header_widget(win, lbl)) return false;
     draw_groupid_widget_begin(win, scn);
     // draw_scroll_widget_begin(win, "model", 240, false);
-    draw_tree_widgets(win, "", scn, selection);
+    auto tree_visitor = draw_tree_visitor{win, sel};
+    tree_visitor(scn, visit_var{"", visit_var_type::object});
     // draw_scroll_widget_end(win);
 
-    auto edited = 0;
-
+    auto update_len = update_list.size();
     if (test_scn) {
-        edited += draw_add_elem_widgets(
-            win, scn, "cam", scn->cameras, test_scn->cameras, selection);
-        edited += draw_add_elem_widgets(
-            win, scn, "txt", scn->textures, test_scn->textures, selection);
-        edited += draw_add_elem_widgets(
-            win, scn, "mat", scn->materials, test_scn->materials, selection);
-        auto last_edited = edited;
-        edited += draw_add_elem_widgets(
-            win, scn, "shp", scn->shapes, test_scn->shapes, selection);
-        if (edited != last_edited) {
+        draw_add_elem_widgets(
+            win, scn, "cam", scn->cameras, test_scn->cameras, sel, update_list);
+        draw_add_elem_widgets(win, scn, "txt", scn->textures,
+            test_scn->textures, sel, update_list);
+        draw_add_elem_widgets(win, scn, "mat", scn->materials,
+            test_scn->materials, sel, update_list);
+        auto shp_add = draw_add_elem_widgets(
+            win, scn, "shp", scn->shapes, test_scn->shapes, sel, update_list);
+        if (shp_add) {
             scn->instances.push_back(new instance());
             scn->instances.back()->name = scn->shapes.back()->name;
             scn->instances.back()->shp = scn->shapes.back();
             test_scn->instances.push_back(test_instance_params());
             test_scn->instances.back().name = scn->instances.back()->name;
             test_scn->instances.back().shape = scn->instances.back()->shp->name;
+            update_list.push_back({});
+            update_list.back().ist = scn->instances.back();
         }
-        edited += draw_add_elem_widgets(
-            win, scn, "ist", scn->instances, test_scn->instances, selection);
-        edited += draw_add_elem_widgets(win, scn, "env", scn->environments,
-            test_scn->environments, selection);
-        edited += draw_add_elem_widgets(
-            win, scn, "anim", scn->animations, test_scn->animations, selection);
+        draw_add_elem_widgets(win, scn, "ist", scn->instances,
+            test_scn->instances, sel, update_list);
+        draw_add_elem_widgets(win, scn, "env", scn->environments,
+            test_scn->environments, sel, update_list);
+        draw_add_elem_widgets(win, scn, "anim", scn->animations,
+            test_scn->animations, sel, update_list);
     }
 
     auto test_scn_res = (test_scn) ? test_scn : &test_scn_def;
-    edited += draw_selected_elem_widgets(win, scn, test_scn, scn->cameras,
-        test_scn_res->cameras, selection, gl_txt);
-    edited += draw_selected_elem_widgets(win, scn, test_scn, scn->textures,
-        test_scn_res->textures, selection, gl_txt);
-    edited += draw_selected_elem_widgets(win, scn, test_scn, scn->materials,
-        test_scn_res->materials, selection, gl_txt);
-    edited += draw_selected_elem_widgets(win, scn, test_scn, scn->shapes,
-        test_scn_res->shapes, selection, gl_txt);
-    edited += draw_selected_elem_widgets(win, scn, test_scn, scn->instances,
-        test_scn_res->instances, selection, gl_txt);
-    edited += draw_selected_elem_widgets(win, scn, test_scn, scn->environments,
-        test_scn->environments, selection, gl_txt);
-    edited += draw_selected_elem_widgets(
-        win, scn, test_scn, scn->nodes, test_scn->nodes, selection, gl_txt);
-    edited += draw_selected_elem_widgets(win, scn, test_scn, scn->animations,
-        test_scn->animations, selection, gl_txt);
+    auto elem_visitor = draw_elem_visitor{win, scn, sel, &gl_txt};
+    elem_visitor(sel.cam, test_scn_res->cameras);
+    elem_visitor(sel.shp);
+    elem_visitor(sel.sgr, test_scn_res->shapes);
+    elem_visitor(sel.sgr);
+    elem_visitor(sel.ist, test_scn_res->instances);
+    elem_visitor(sel.txt, test_scn_res->textures);
+    elem_visitor(sel.mat, test_scn_res->materials);
+    elem_visitor(sel.env, test_scn_res->environments);
+    elem_visitor(sel.nde, test_scn_res->nodes);
+    elem_visitor(sel.anm);
+    elem_visitor(sel.agr, test_scn_res->animations);
+    if (elem_visitor.edited) update_list.push_back(sel);
+
     draw_groupid_widget_end(win);
-    return edited;
+    return update_list.size() != update_len;
 }
 
 }  // namespace ygl
