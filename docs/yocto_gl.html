@@ -3752,7 +3752,7 @@ Assumes that the array is sorted. Wrapper for std::lower_bound().</p>
 <p>Names of enum values.</p>
 <h4>Function operator&lt;&lt;()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span>
-    <span class="k">typename</span> <span class="n">std</span><span class="o">::</span><span class="n">enable_if</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">is_enum</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;::</span><span class="n">value</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;::</span><span class="n">type</span> <span class="o">=</span> <span class="mi">0</span><span class="o">&gt;</span>
+    <span class="k">typename</span> <span class="n">std</span><span class="o">::</span><span class="n">enable_if_t</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">is_enum</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;::</span><span class="n">value</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;</span> <span class="o">=</span> <span class="mi">0</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">ostream</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">&lt;&lt;</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">ostream</span><span class="o">&amp;</span> <span class="n">os</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">a</span><span class="p">);</span>
 </code></pre></div>
 
@@ -3760,7 +3760,7 @@ Assumes that the array is sorted. Wrapper for std::lower_bound().</p>
 <p>Stream write.</p>
 <h4>Function operator>>()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span>
-    <span class="k">typename</span> <span class="n">std</span><span class="o">::</span><span class="n">enable_if</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">is_enum</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;::</span><span class="n">value</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;::</span><span class="n">type</span> <span class="o">=</span> <span class="mi">0</span><span class="o">&gt;</span>
+    <span class="k">typename</span> <span class="n">std</span><span class="o">::</span><span class="n">enable_if_t</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">is_enum</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;::</span><span class="n">value</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;</span> <span class="o">=</span> <span class="mi">0</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">istream</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">&gt;&gt;</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">istream</span><span class="o">&amp;</span> <span class="n">is</span><span class="p">,</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">a</span><span class="p">);</span>
 </code></pre></div>
 
@@ -3841,8 +3841,7 @@ Implemented by structures that support reflection.</p>
 
 <p>Visit pointer elements.</p>
 <h4>Function operator&lt;&lt;()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span>
-    <span class="k">typename</span> <span class="n">std</span><span class="o">::</span><span class="n">enable_if</span><span class="o">&lt;</span><span class="n">has_visitor</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;::</span><span class="n">value</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;::</span><span class="n">type</span> <span class="o">=</span> <span class="mi">0</span><span class="o">&gt;</span>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">std</span><span class="o">::</span><span class="n">enable_if_t</span><span class="o">&lt;</span><span class="n">has_visitor</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;::</span><span class="n">value</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;</span> <span class="o">=</span> <span class="mi">0</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">ostream</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">&lt;&lt;</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">ostream</span><span class="o">&amp;</span> <span class="n">os</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">a</span><span class="p">);</span>
 </code></pre></div>
 
@@ -5337,8 +5336,6 @@ coordinates <code>euv</code>.</p>
     <span class="kt">float</span> <span class="n">aperture</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">near</span> <span class="o">=</span> <span class="mf">0.01f</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">far</span> <span class="o">=</span> <span class="mi">10000</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">sprops</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">vec4f</span><span class="o">&gt;</span> <span class="n">fprops</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -5355,8 +5352,6 @@ coordinates <code>euv</code>.</p>
 <li>aperture:      Lens aperture. @refl_uilimits(0,5)</li>
 <li>near:      Near plane distance. @refl_uilimits(0.01,10)</li>
 <li>far:      Far plane distance. @refl_uilimits(10,10000)</li>
-<li>sprops:      Application specific properties.</li>
-<li>fprops:      Application specific properties.</li>
 </ul>
 </li>
 </ul>
@@ -5442,16 +5437,17 @@ coordinates <code>euv</code>.</p>
     <span class="n">texture</span><span class="o">*</span> <span class="n">disp_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
     <span class="n">texture</span><span class="o">*</span> <span class="n">norm_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
     <span class="n">texture</span><span class="o">*</span> <span class="n">occ_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">texture_info</span> <span class="n">ke_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
-    <span class="n">texture_info</span> <span class="n">kd_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
-    <span class="n">texture_info</span> <span class="n">ks_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
-    <span class="n">texture_info</span> <span class="n">kr_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
-    <span class="n">texture_info</span> <span class="n">kt_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
-    <span class="n">texture_info</span> <span class="n">rs_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
-    <span class="n">texture_info</span> <span class="n">bump_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
-    <span class="n">texture_info</span> <span class="n">disp_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
-    <span class="n">texture_info</span> <span class="n">norm_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
-    <span class="n">texture_info</span> <span class="n">occ_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">texture_info</span><span class="o">*</span> <span class="n">ke_txt_info</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">texture_info</span><span class="o">*</span> <span class="n">kd_txt_info</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">texture_info</span><span class="o">*</span> <span class="n">ks_txt_info</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">texture_info</span><span class="o">*</span> <span class="n">kr_txt_info</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">texture_info</span><span class="o">*</span> <span class="n">kt_txt_info</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">texture_info</span><span class="o">*</span> <span class="n">rs_txt_info</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">texture_info</span><span class="o">*</span> <span class="n">bump_txt_info</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">texture_info</span><span class="o">*</span> <span class="n">disp_txt_info</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">texture_info</span><span class="o">*</span> <span class="n">norm_txt_info</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">texture_info</span><span class="o">*</span> <span class="n">occ_txt_info</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="o">~</span><span class="n">material</span><span class="p">();</span> 
 <span class="p">}</span>
 </code></pre></div>
 
@@ -5489,6 +5485,7 @@ coordinates <code>euv</code>.</p>
 <li>disp_txt_info:      Displacement map texture (heighfield) info.</li>
 <li>norm_txt_info:      Normal texture info.</li>
 <li>occ_txt_info:      Occlusion texture info.</li>
+<li>~material():      Cleanup.</li>
 </ul>
 </li>
 </ul>
@@ -5517,8 +5514,8 @@ coordinates <code>euv</code>.</p>
 </code></pre></div>
 
 
-<p>Shape data represented as an indexed array.
-May contain only one of the points/lines/triangles/quads.</p>
+<p>Shape data represented as an indexed array. May contain only one of the
+points/lines/triangles/quads.</p>
 <ul>
 <li>Members:<ul>
 <li>name:      Name.</li>
@@ -5587,7 +5584,7 @@ May contain only one of the points/lines/triangles/quads.</p>
     <span class="n">frame3f</span> <span class="n">frame</span> <span class="o">=</span> <span class="n">identity_frame3f</span><span class="p">;</span>
     <span class="n">vec3f</span> <span class="n">ke</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
     <span class="n">texture</span><span class="o">*</span> <span class="n">ke_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">texture_info</span> <span class="n">ke_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">texture_info</span><span class="o">*</span> <span class="n">ke_txt_info</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -5689,6 +5686,7 @@ May contain only one of the points/lines/triangles/quads.</p>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">path</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">animation</span><span class="o">*&gt;</span> <span class="n">animations</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">animation</span><span class="o">*</span><span class="p">,</span> <span class="n">node</span><span class="o">*&gt;&gt;</span> <span class="n">targets</span><span class="p">;</span>
+    <span class="o">~</span><span class="n">animation_group</span><span class="p">();</span> 
 <span class="p">}</span>
 </code></pre></div>
 
@@ -5700,6 +5698,7 @@ May contain only one of the points/lines/triangles/quads.</p>
 <li>path:      Path  used when writing files on disk with glTF.</li>
 <li>animations:      Keyframed values.</li>
 <li>targets:      Binds keyframe values to nodes. @refl_semantic(reference)</li>
+<li>~animation_group():      Cleanup.</li>
 </ul>
 </li>
 </ul>
@@ -5713,6 +5712,7 @@ May contain only one of the points/lines/triangles/quads.</p>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">environment</span><span class="o">*&gt;</span> <span class="n">environments</span> <span class="o">=</span> <span class="p">{};</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">node</span><span class="o">*&gt;</span> <span class="n">nodes</span> <span class="o">=</span> <span class="p">{};</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">animation_group</span><span class="o">*&gt;</span> <span class="n">animations</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="o">~</span><span class="n">scene</span><span class="p">();</span> 
 <span class="p">}</span>
 </code></pre></div>
 
@@ -5735,6 +5735,7 @@ updates node transformations only if defined.</p>
 <li>environments:      Environments.</li>
 <li>nodes:      Node hierarchy.</li>
 <li>animations:      Node animations.</li>
+<li>~scene():      Cleanup.</li>
 </ul>
 </li>
 </ul>
@@ -5788,6 +5789,13 @@ updates node transformations only if defined.</p>
 <p>Instance normal interpolated using barycentric coordinates.</p>
 <h4>Function eval_texture()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">vec4f</span> <span class="n">eval_texture</span><span class="p">(</span><span class="k">const</span> <span class="n">texture</span><span class="o">*</span> <span class="n">txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">info</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">texcoord</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">srgb</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">def</span> <span class="o">=</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Evaluate a texture.</p>
+<h4>Function eval_texture()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vec4f</span> <span class="n">eval_texture</span><span class="p">(</span><span class="k">const</span> <span class="n">texture</span><span class="o">*</span> <span class="n">txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">*</span> <span class="n">info</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">texcoord</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">srgb</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">def</span> <span class="o">=</span><span class="p">;</span>
 </code></pre></div>
 
@@ -6134,8 +6142,8 @@ Throws an exception if an error occurs.</p>
 <p>Visit struct elements.</p>
 <p><a id="toc50"></a></p>
 <h3>Example scenes</h3>
-<h4>Struct test_camera_params</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">test_camera_params</span> <span class="p">{</span>
+<h4>Struct proc_camera</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">proc_camera</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="n">vec3f</span> <span class="n">from</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">};</span>
     <span class="n">vec3f</span> <span class="n">to</span> <span class="o">=</span> <span class="n">zero3f</span><span class="p">;</span>
@@ -6145,7 +6153,7 @@ Throws an exception if an error occurs.</p>
 </code></pre></div>
 
 
-<p>Test camera parameters.</p>
+<p>Procedural camera parameters.</p>
 <ul>
 <li>Members:<ul>
 <li>name:      Name.</li>
@@ -6156,8 +6164,8 @@ Throws an exception if an error occurs.</p>
 </ul>
 </li>
 </ul>
-<h4>Enum test_texture_type</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">test_texture_type</span> <span class="p">{</span>
+<h4>Enum proc_texture_type</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">proc_texture_type</span> <span class="p">{</span>
     <span class="n">none</span><span class="p">,</span>
     <span class="n">grid</span><span class="p">,</span>
     <span class="n">checker</span><span class="p">,</span>
@@ -6176,7 +6184,7 @@ Throws an exception if an error occurs.</p>
 </code></pre></div>
 
 
-<p>Test texture type.</p>
+<p>Procedural texture type.</p>
 <ul>
 <li>Values:<ul>
 <li>none:      None (empty texture).</li>
@@ -6196,10 +6204,10 @@ Throws an exception if an error occurs.</p>
 </ul>
 </li>
 </ul>
-<h4>Struct test_texture_params</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">test_texture_params</span> <span class="p">{</span>
+<h4>Struct proc_texture</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">proc_texture</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
-    <span class="n">test_texture_type</span> <span class="n">type</span> <span class="o">=</span> <span class="n">test_texture_type</span><span class="o">::</span><span class="n">none</span><span class="p">;</span>
+    <span class="n">proc_texture_type</span> <span class="n">type</span> <span class="o">=</span> <span class="n">proc_texture_type</span><span class="o">::</span><span class="n">none</span><span class="p">;</span>
     <span class="kt">int</span> <span class="n">resolution</span> <span class="o">=</span> <span class="mi">512</span><span class="p">;</span>
     <span class="kt">int</span> <span class="n">tile_size</span> <span class="o">=</span> <span class="mi">64</span><span class="p">;</span>
     <span class="kt">int</span> <span class="n">noise_scale</span> <span class="o">=</span> <span class="mi">8</span><span class="p">;</span>
@@ -6210,7 +6218,7 @@ Throws an exception if an error occurs.</p>
 </code></pre></div>
 
 
-<p>Test texture parameters.</p>
+<p>Procedural texture parameters.</p>
 <ul>
 <li>Members:<ul>
 <li>name:      Name.</li>
@@ -6224,8 +6232,8 @@ Throws an exception if an error occurs.</p>
 </ul>
 </li>
 </ul>
-<h4>Enum test_material_type</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">test_material_type</span> <span class="p">{</span>
+<h4>Enum proc_material_type</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">proc_material_type</span> <span class="p">{</span>
     <span class="n">none</span><span class="p">,</span>
     <span class="n">emission</span><span class="p">,</span>
     <span class="n">matte</span><span class="p">,</span>
@@ -6236,7 +6244,7 @@ Throws an exception if an error occurs.</p>
 </code></pre></div>
 
 
-<p>Test material type.</p>
+<p>Procedural material type.</p>
 <ul>
 <li>Values:<ul>
 <li>none:      None (empty material).</li>
@@ -6248,10 +6256,10 @@ Throws an exception if an error occurs.</p>
 </ul>
 </li>
 </ul>
-<h4>Struct test_material_params</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">test_material_params</span> <span class="p">{</span>
+<h4>Struct proc_material</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">proc_material</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
-    <span class="n">test_material_type</span> <span class="n">type</span> <span class="o">=</span> <span class="n">test_material_type</span><span class="o">::</span><span class="n">matte</span><span class="p">;</span>
+    <span class="n">proc_material_type</span> <span class="n">type</span> <span class="o">=</span> <span class="n">proc_material_type</span><span class="o">::</span><span class="n">matte</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">emission</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
     <span class="n">vec3f</span> <span class="n">color</span> <span class="o">=</span> <span class="p">{</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">};</span>
     <span class="kt">float</span> <span class="n">opacity</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
@@ -6262,7 +6270,7 @@ Throws an exception if an error occurs.</p>
 </code></pre></div>
 
 
-<p>Test material parameters.</p>
+<p>Procedural material parameters.</p>
 <ul>
 <li>Members:<ul>
 <li>name:      Name.</li>
@@ -6276,8 +6284,8 @@ Throws an exception if an error occurs.</p>
 </ul>
 </li>
 </ul>
-<h4>Enum test_shape_type</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">test_shape_type</span> <span class="p">{</span>
+<h4>Enum proc_shape_type</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">proc_shape_type</span> <span class="p">{</span>
     <span class="n">floor</span><span class="p">,</span>
     <span class="n">quad</span><span class="p">,</span>
     <span class="n">cube</span><span class="p">,</span>
@@ -6299,7 +6307,7 @@ Throws an exception if an error occurs.</p>
 </code></pre></div>
 
 
-<p>Test shape type.</p>
+<p>Procedural shape type.</p>
 <ul>
 <li>Values:<ul>
 <li>floor:      Floor (shared vertex, 20x20 size).</li>
@@ -6322,10 +6330,10 @@ Throws an exception if an error occurs.</p>
 </ul>
 </li>
 </ul>
-<h4>Struct test_shape_params</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">test_shape_params</span> <span class="p">{</span>
+<h4>Struct proc_shape</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">proc_shape</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
-    <span class="n">test_shape_type</span> <span class="n">type</span> <span class="o">=</span> <span class="n">test_shape_type</span><span class="o">::</span><span class="n">sphere</span><span class="p">;</span>
+    <span class="n">proc_shape_type</span> <span class="n">type</span> <span class="o">=</span> <span class="n">proc_shape_type</span><span class="o">::</span><span class="n">sphere</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">material</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">interior</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="kt">int</span> <span class="n">tesselation</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
@@ -6334,12 +6342,13 @@ Throws an exception if an error occurs.</p>
     <span class="kt">float</span> <span class="n">radius</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">faceted</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="kt">int</span> <span class="n">num</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
-    <span class="n">make_hair_params</span> <span class="n">hair_params</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">make_hair_params</span><span class="o">*</span> <span class="n">hair_params</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="o">~</span><span class="n">proc_shape</span><span class="p">();</span> 
 <span class="p">}</span>
 </code></pre></div>
 
 
-<p>Test shape parameters.</p>
+<p>Procedural shape parameters.</p>
 <ul>
 <li>Members:<ul>
 <li>name:      Shape name (if not filled, assign a default based on type).</li>
@@ -6355,11 +6364,12 @@ Throws an exception if an error occurs.</p>
 <li>num:      Number of elements for points and lines (-1 for default).
  @refl_uilimits(-1,10000)</li>
 <li>hair_params:      Hair generation params.</li>
+<li>~proc_shape():      Cleanup</li>
 </ul>
 </li>
 </ul>
-<h4>Struct test_instance_params</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">test_instance_params</span> <span class="p">{</span>
+<h4>Struct proc_instance</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">proc_instance</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">shape</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="n">frame3f</span> <span class="n">frame</span> <span class="o">=</span> <span class="n">identity_frame3f</span><span class="p">;</span>
@@ -6368,7 +6378,7 @@ Throws an exception if an error occurs.</p>
 </code></pre></div>
 
 
-<p>Test instance parameters.</p>
+<p>Procedural instance parameters.</p>
 <ul>
 <li>Members:<ul>
 <li>name:      Name (if not filled, assign a default one).</li>
@@ -6378,8 +6388,8 @@ Throws an exception if an error occurs.</p>
 </ul>
 </li>
 </ul>
-<h4>Struct test_environment_params</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">test_environment_params</span> <span class="p">{</span>
+<h4>Struct proc_environment</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">proc_environment</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">emission</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
     <span class="n">vec3f</span> <span class="n">color</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">};</span>
@@ -6390,7 +6400,7 @@ Throws an exception if an error occurs.</p>
 </code></pre></div>
 
 
-<p>Test environment parameters.</p>
+<p>Procedural environment parameters.</p>
 <ul>
 <li>Members:<ul>
 <li>name:      Name.</li>
@@ -6402,8 +6412,8 @@ Throws an exception if an error occurs.</p>
 </ul>
 </li>
 </ul>
-<h4>Struct test_node_params</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">test_node_params</span> <span class="p">{</span>
+<h4>Struct proc_node</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">proc_node</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">parent</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">camera</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
@@ -6417,7 +6427,7 @@ Throws an exception if an error occurs.</p>
 </code></pre></div>
 
 
-<p>Test node parameters.</p>
+<p>Procedural node parameters.</p>
 <ul>
 <li>Members:<ul>
 <li>name:      Name.</li>
@@ -6432,8 +6442,8 @@ Throws an exception if an error occurs.</p>
 </ul>
 </li>
 </ul>
-<h4>Struct test_animation_params</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">test_animation_params</span> <span class="p">{</span>
+<h4>Struct proc_animation</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">proc_animation</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">bezier</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">speed</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
@@ -6447,7 +6457,7 @@ Throws an exception if an error occurs.</p>
 </code></pre></div>
 
 
-<p>Test animation parameters.</p>
+<p>Procedural animation parameters.</p>
 <ul>
 <li>Members:<ul>
 <li>name:      Name.</li>
@@ -6462,22 +6472,23 @@ Throws an exception if an error occurs.</p>
 </ul>
 </li>
 </ul>
-<h4>Struct test_scene_params</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">test_scene_params</span> <span class="p">{</span>
+<h4>Struct proc_scene</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">proc_scene</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">test_camera_params</span><span class="o">&gt;</span> <span class="n">cameras</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">test_texture_params</span><span class="o">&gt;</span> <span class="n">textures</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">test_material_params</span><span class="o">&gt;</span> <span class="n">materials</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">test_shape_params</span><span class="o">&gt;</span> <span class="n">shapes</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">test_instance_params</span><span class="o">&gt;</span> <span class="n">instances</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">test_environment_params</span><span class="o">&gt;</span> <span class="n">environments</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">test_node_params</span><span class="o">&gt;</span> <span class="n">nodes</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">test_animation_params</span><span class="o">&gt;</span> <span class="n">animations</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">proc_camera</span><span class="o">*&gt;</span> <span class="n">cameras</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">proc_texture</span><span class="o">*&gt;</span> <span class="n">textures</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">proc_material</span><span class="o">*&gt;</span> <span class="n">materials</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">proc_shape</span><span class="o">*&gt;</span> <span class="n">shapes</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">proc_instance</span><span class="o">*&gt;</span> <span class="n">instances</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">proc_environment</span><span class="o">*&gt;</span> <span class="n">environments</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">proc_node</span><span class="o">*&gt;</span> <span class="n">nodes</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">proc_animation</span><span class="o">*&gt;</span> <span class="n">animations</span><span class="p">;</span>
+    <span class="o">~</span><span class="n">proc_scene</span><span class="p">();</span> 
 <span class="p">}</span>
 </code></pre></div>
 
 
-<p>Test scene.</p>
+<p>Procedural scene.</p>
 <ul>
 <li>Members:<ul>
 <li>name:      Name.</li>
@@ -6489,6 +6500,7 @@ Throws an exception if an error occurs.</p>
 <li>environments:      Environmennts.</li>
 <li>nodes:      Nodes.</li>
 <li>animations:      Animations.</li>
+<li>~proc_scene():      Cleanup.</li>
 </ul>
 </li>
 </ul>
@@ -6498,232 +6510,227 @@ Throws an exception if an error occurs.</p>
 
 
 <p>Makes the Cornell Box scene.</p>
-<h4>Function update_test_elem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">camera</span><span class="o">*</span> <span class="n">cam</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_camera_params</span><span class="o">&amp;</span> <span class="n">tcam</span><span class="p">);</span>
+<h4>Function update_proc_elem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_proc_elem</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">camera</span><span class="o">*</span> <span class="n">cam</span><span class="p">,</span> <span class="k">const</span> <span class="n">proc_camera</span><span class="o">*</span> <span class="n">tcam</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Updates a test camera.</p>
-<h4>Function test_camera_presets()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">test_camera_params</span><span class="o">&gt;&amp;</span> <span class="n">test_camera_presets</span><span class="p">();</span>
+<p>Updates a procesural camera.</p>
+<h4>Function update_proc_elem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_proc_elem</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">texture</span><span class="o">*</span> <span class="n">txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">proc_texture</span><span class="o">*</span> <span class="n">ttxt</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Test camera presets.</p>
-<h4>Function update_test_elem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">texture</span><span class="o">*</span> <span class="n">txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_texture_params</span><span class="o">&amp;</span> <span class="n">ttxt</span><span class="p">);</span>
+<p>Updates a procedural texture.</p>
+<h4>Function update_proc_elem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_proc_elem</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">material</span><span class="o">*</span> <span class="n">mat</span><span class="p">,</span> <span class="k">const</span> <span class="n">proc_material</span><span class="o">*</span> <span class="n">tmat</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Updates a test texture.</p>
-<h4>Function test_texture_presets()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">test_texture_params</span><span class="o">&gt;&amp;</span> <span class="n">test_texture_presets</span><span class="p">();</span>
+<p>Updates a procedural material.</p>
+<h4>Function update_proc_elem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_proc_elem</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">,</span> <span class="k">const</span> <span class="n">proc_shape</span><span class="o">*</span> <span class="n">tshp</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Test texture presets.</p>
-<h4>Function update_test_elem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">material</span><span class="o">*</span> <span class="n">mat</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_material_params</span><span class="o">&amp;</span> <span class="n">tmat</span><span class="p">);</span>
+<p>Updates a procedural shape, adding it to the scene if missing.</p>
+<h4>Function update_proc_elem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_proc_elem</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">instance</span><span class="o">*</span> <span class="n">ist</span><span class="p">,</span> <span class="k">const</span> <span class="n">proc_instance</span><span class="o">*</span> <span class="n">tist</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Updates a test material.</p>
-<h4>Function test_material_presets()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">test_material_params</span><span class="o">&gt;&amp;</span> <span class="n">test_material_presets</span><span class="p">();</span>
+<p>Updates a procedural instance.</p>
+<h4>Function update_proc_elem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_proc_elem</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">environment</span><span class="o">*</span> <span class="n">env</span><span class="p">,</span> <span class="k">const</span> <span class="n">proc_environment</span><span class="o">*</span> <span class="n">tenv</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Test material presets.</p>
-<h4>Function update_test_elem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_shape_params</span><span class="o">&amp;</span> <span class="n">tshp</span><span class="p">);</span>
+<p>Updates a procedural instance.</p>
+<h4>Function update_proc_elem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_proc_elem</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">node</span><span class="o">*</span> <span class="n">nde</span><span class="p">,</span> <span class="k">const</span> <span class="n">proc_node</span><span class="o">*</span> <span class="n">tndr</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Updates a test shape, adding it to the scene if missing.</p>
-<h4>Function test_shape_presets()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">test_shape_params</span><span class="o">&gt;&amp;</span> <span class="n">test_shape_presets</span><span class="p">();</span>
+<p>Updates a procedural node.</p>
+<h4>Function update_proc_elem()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_proc_elem</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">animation_group</span><span class="o">*</span> <span class="n">anm</span><span class="p">,</span> <span class="k">const</span> <span class="n">proc_animation</span><span class="o">*</span> <span class="n">tndr</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Test shape presets.</p>
-<h4>Function update_test_elem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">instance</span><span class="o">*</span> <span class="n">ist</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_instance_params</span><span class="o">&amp;</span> <span class="n">tist</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Updates a test instance.</p>
-<h4>Function test_instance_presets()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">test_instance_params</span><span class="o">&gt;&amp;</span> <span class="n">test_instance_presets</span><span class="p">();</span>
-</code></pre></div>
-
-
-<p>Test instance presets.</p>
-<h4>Function update_test_elem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">environment</span><span class="o">*</span> <span class="n">env</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_environment_params</span><span class="o">&amp;</span> <span class="n">tenv</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Updates a test instance.</p>
-<h4>Function test_environment_presets()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">test_environment_params</span><span class="o">&gt;&amp;</span>
-<span class="n">test_environment_presets</span><span class="p">();</span>
-</code></pre></div>
-
-
-<p>Test environment presets.</p>
-<h4>Function update_test_elem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">node</span><span class="o">*</span> <span class="n">nde</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_node_params</span><span class="o">&amp;</span> <span class="n">tndr</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Updates a test node.</p>
-<h4>Function test_node_presets()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">test_node_params</span><span class="o">&gt;&amp;</span> <span class="n">test_node_presets</span><span class="p">();</span>
-</code></pre></div>
-
-
-<p>Test nodes presets.</p>
-<h4>Function update_test_elem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_elem</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">animation_group</span><span class="o">*</span> <span class="n">anm</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_animation_params</span><span class="o">&amp;</span> <span class="n">tndr</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Updates a test node.</p>
-<h4>Function test_node_presets()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">test_node_params</span><span class="o">&gt;&amp;</span> <span class="n">test_node_presets</span><span class="p">();</span>
-</code></pre></div>
-
-
-<p>Test nodes presets.</p>
-<h4>Function update_test_scene()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="n">update_test_scene</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_scene_params</span><span class="o">&amp;</span> <span class="n">tscn</span><span class="p">,</span>
+<p>Updates a procedural animation.</p>
+<h4>Function update_proc_elems()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="n">update_proc_elems</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">proc_scene</span><span class="o">*</span> <span class="n">tscn</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">unordered_set</span><span class="o">&lt;</span><span class="kt">void</span><span class="o">*&gt;&amp;</span> <span class="n">refresh</span> <span class="o">=</span><span class="p">;</span>
 </code></pre></div>
 
 
-<p>Updates a test scene, adding missing objects. Objects are only added and
-never removed.</p>
-<h4>Function make_test_scene()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">scene</span><span class="o">*</span> <span class="nf">make_test_scene</span><span class="p">(</span><span class="k">const</span> <span class="n">test_scene_params</span><span class="o">&amp;</span> <span class="n">tscn</span><span class="p">);</span>
+<p>Updates a procedural scene, adding missing objects. Objects are only added
+and never removed.</p>
+<h4>Function make_proc_elems()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">scene</span><span class="o">*</span> <span class="nf">make_proc_elems</span><span class="p">(</span><span class="k">const</span> <span class="n">proc_scene</span><span class="o">*</span> <span class="n">tscn</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Makes a test scene. Convenience wrapper around <code>update_test_scene()</code>.</p>
-<h4>Function test_scene_presets()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">test_scene_params</span><span class="o">&gt;&amp;</span> <span class="n">test_scene_presets</span><span class="p">();</span>
+<h4>Function proc_camera_presets()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">proc_camera</span><span class="o">*&gt;&amp;</span> <span class="n">proc_camera_presets</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Procedural camera presets.</p>
+<h4>Function proc_texture_presets()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">proc_texture</span><span class="o">*&gt;&amp;</span> <span class="n">proc_texture_presets</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Procedural texture presets.</p>
+<h4>Function proc_material_presets()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">proc_material</span><span class="o">*&gt;&amp;</span> <span class="n">proc_material_presets</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Procedural material presets.</p>
+<h4>Function proc_shape_presets()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">proc_shape</span><span class="o">*&gt;&amp;</span> <span class="n">proc_shape_presets</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Procedural shape presets.</p>
+<h4>Function proc_instance_presets()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">proc_instance</span><span class="o">*&gt;&amp;</span> <span class="n">proc_instance_presets</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Procedural instance presets.</p>
+<h4>Function proc_environment_presets()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">proc_environment</span><span class="o">*&gt;&amp;</span> <span class="n">proc_environment_presets</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Procedural environment presets.</p>
+<h4>Function proc_node_presets()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">proc_node</span><span class="o">*&gt;&amp;</span> <span class="n">proc_node_presets</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Procedural nodes presets.</p>
+<h4>Function proc_animation_presets()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">proc_animation</span><span class="o">*&gt;&amp;</span> <span class="n">proc_animation_presets</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Procedural animation presets.</p>
+<h4>Function proc_scene_presets()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">proc_scene</span><span class="o">*&gt;&amp;</span> <span class="n">proc_scene_presets</span><span class="p">();</span>
 </code></pre></div>
 
 
 <p>Test scene presets.</p>
 <h4>Function remove_duplicates()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">remove_duplicates</span><span class="p">(</span><span class="n">test_scene_params</span><span class="o">&amp;</span> <span class="n">tscn</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">remove_duplicates</span><span class="p">(</span><span class="n">proc_scene</span><span class="o">*</span> <span class="n">tscn</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Remove duplicates based on name.</p>
-<h4>Function load_test_scene()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">test_scene_params</span> <span class="nf">load_test_scene</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
+<h4>Function load_proc_scene()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">proc_scene</span><span class="o">*</span> <span class="nf">load_proc_scene</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Load test scene.</p>
-<h4>Function save_test_scene()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">save_test_scene</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_scene_params</span><span class="o">&amp;</span> <span class="n">scn</span><span class="p">);</span>
+<h4>Function save_proc_scene()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">save_proc_scene</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">proc_scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Save test scene.</p>
-<h4>Function enum_names&lt;test_texture_type>()</h4>
+<h4>Function enum_names&lt;proc_texture_type>()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;&gt;</span>
-<span class="kr">inline</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">test_texture_type</span><span class="o">&gt;&gt;&amp;</span>
-<span class="n">enum_names</span><span class="o">&lt;</span><span class="n">test_texture_type</span><span class="o">&gt;</span><span class="p">();</span>
+<span class="kr">inline</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">proc_texture_type</span><span class="o">&gt;&gt;&amp;</span>
+<span class="n">enum_names</span><span class="o">&lt;</span><span class="n">proc_texture_type</span><span class="o">&gt;</span><span class="p">();</span>
 </code></pre></div>
 
 
 <p>Names of enum values.</p>
-<h4>Function enum_names&lt;test_material_type>()</h4>
+<h4>Function enum_names&lt;proc_material_type>()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;&gt;</span>
-<span class="kr">inline</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">test_material_type</span><span class="o">&gt;&gt;&amp;</span>
-<span class="n">enum_names</span><span class="o">&lt;</span><span class="n">test_material_type</span><span class="o">&gt;</span><span class="p">();</span>
+<span class="kr">inline</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">proc_material_type</span><span class="o">&gt;&gt;&amp;</span>
+<span class="n">enum_names</span><span class="o">&lt;</span><span class="n">proc_material_type</span><span class="o">&gt;</span><span class="p">();</span>
 </code></pre></div>
 
 
 <p>Names of enum values.</p>
-<h4>Function enum_names&lt;test_shape_type>()</h4>
+<h4>Function enum_names&lt;proc_shape_type>()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;&gt;</span>
-<span class="kr">inline</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">test_shape_type</span><span class="o">&gt;&gt;&amp;</span>
-<span class="n">enum_names</span><span class="o">&lt;</span><span class="n">test_shape_type</span><span class="o">&gt;</span><span class="p">();</span>
+<span class="kr">inline</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">proc_shape_type</span><span class="o">&gt;&gt;&amp;</span>
+<span class="n">enum_names</span><span class="o">&lt;</span><span class="n">proc_shape_type</span><span class="o">&gt;</span><span class="p">();</span>
 </code></pre></div>
 
 
 <p>Names of enum values.</p>
 <h4>Function visit()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">test_camera_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">proc_camera</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Visit struct elements.</p>
 <h4>Function visit()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">test_texture_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">proc_texture</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Visit struct elements.</p>
 <h4>Function visit()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">test_material_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">proc_material</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Visit struct elements.</p>
 <h4>Function visit()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">test_shape_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">proc_shape</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Visit struct elements.</p>
 <h4>Function visit()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">test_instance_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">proc_instance</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Visit struct elements.</p>
 <h4>Function visit()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">test_environment_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">proc_environment</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Visit struct elements.</p>
 <h4>Function visit()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">test_node_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">proc_node</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Visit struct elements.</p>
 <h4>Function visit()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">test_animation_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">proc_animation</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Visit struct elements.</p>
 <h4>Function visit()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">test_scene_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">proc_scene</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -9979,7 +9986,6 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
     <span class="kt">bool</span> <span class="n">eyelight</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="n">vec4f</span> <span class="n">background</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
     <span class="n">vec3f</span> <span class="n">ambient</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
-    <span class="kt">void</span><span class="o">*</span> <span class="n">highlighted</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
     <span class="n">vec3f</span> <span class="n">highlight_color</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
     <span class="n">vec3f</span> <span class="n">edge_color</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
     <span class="kt">bool</span> <span class="n">cull_backface</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
@@ -10001,7 +10007,6 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 <li>eyelight:      Camera light mode.</li>
 <li>background:      Window background. @refl_semantic(color)</li>
 <li>ambient:      Ambient illumination. @refl_semantic(color)</li>
-<li>highlighted:      Highlighted object. @refl_semantic(noneditable)</li>
 <li>highlight_color:      Highlight color. @refl_semantic(color)</li>
 <li>edge_color:      Edge color. @refl_semantic(color)</li>
 <li>cull_backface:      Cull back face.</li>
@@ -10012,7 +10017,8 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_stdsurface_scene</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">camera</span><span class="o">*</span> <span class="n">cam</span><span class="p">,</span>
     <span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">*</span><span class="p">,</span> <span class="n">gl_shape</span><span class="o">&gt;&amp;</span> <span class="n">shapes</span><span class="p">,</span>
     <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">*</span><span class="p">,</span> <span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">textures</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_lights</span><span class="o">&amp;</span> <span class="n">lights</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">viewport_size</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_stdsurface_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">viewport_size</span><span class="p">,</span> <span class="kt">void</span><span class="o">*</span> <span class="n">highlighted</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">gl_stdsurface_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -10622,9 +10628,9 @@ or a deafult range when their are the same. Color is ignored.</p>
 
 <p>Generic widget used for templated code. Uses min and max,
 or a deafult range when their are the same. Color is ignored.</p>
-<h4>Constant int>::type</h4>
+<h4>Constant int></h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span>
-    <span class="k">typename</span> <span class="n">std</span><span class="o">::</span><span class="n">enable_if</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">is_enum</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;::</span><span class="n">value</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;::</span><span class="n">type</span> <span class="o">=</span> <span class="mi">0</span><span class="o">&gt;</span>
+    <span class="k">typename</span> <span class="n">std</span><span class="o">::</span><span class="n">enable_if_t</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">is_enum</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;::</span><span class="n">value</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;</span> <span class="o">=</span> <span class="mi">0</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="kt">bool</span> <span class="n">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span>
     <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">color</span> <span class="o">=</span> <span class="nb">false</span><span class="p">)</span> <span class="p">{</span>
 </code></pre></div>
@@ -10709,11 +10715,17 @@ Internally uses visit to implement the view.</p>
 
 
 <p>Clear selection</p>
+<h4>Function get_untyped_selection()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span><span class="o">*</span> <span class="nf">get_untyped_selection</span><span class="p">(</span><span class="n">scene_selection</span><span class="o">&amp;</span> <span class="n">sel</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>GVet untyped selection</p>
 <h4>Function draw_scene_widgets()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_scene_widgets</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span>
     <span class="n">scene_selection</span><span class="o">&amp;</span> <span class="n">sel</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ygl</span><span class="o">::</span><span class="n">scene_selection</span><span class="o">&gt;&amp;</span> <span class="n">update_list</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">*</span><span class="p">,</span> <span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">gl_txt</span><span class="p">,</span>
-    <span class="n">test_scene_params</span><span class="o">*</span> <span class="n">test_scn</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
+    <span class="n">proc_scene</span><span class="o">*</span> <span class="n">test_scn</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
 </code></pre></div>
 
 

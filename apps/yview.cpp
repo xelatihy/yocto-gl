@@ -45,7 +45,7 @@ struct app_state {
     bool navigation_fps = false;
     ygl::scene_selection selection = {};
     std::vector<ygl::scene_selection> update_list;
-    ygl::test_scene_params edit_params;
+    ygl::proc_scene* pscn = nullptr;
     float time = 0;
     ygl::vec2f time_range = ygl::zero2f;
     bool animate = false;
@@ -53,6 +53,7 @@ struct app_state {
     ~app_state() {
         if (scn) delete scn;
         if (view) delete view;
+        if (pscn) delete pscn;
     }
 };
 
@@ -89,18 +90,20 @@ inline void draw(ygl::gl_window* win) {
     ygl::gl_enable_depth_test(true);
     ygl::gl_enable_culling(app->params.cull_backface);
     ygl::draw_stdsurface_scene(app->scn, app->cam, app->prog, app->shapes,
-        app->textures, app->lights, framebuffer_size, get_untyped_selection(app->selection), app->params);
+        app->textures, app->lights, framebuffer_size,
+        get_untyped_selection(app->selection), app->params);
 
     if (ygl::begin_widgets(win, "yview")) {
         if (ygl::draw_header_widget(win, "view")) {
             ygl::draw_value_widget(win, "scene", app->filename);
             if (ygl::draw_button_widget(win, "new")) {
-                app->edit_params = ygl::test_scene_presets().at("plane_al");
+                delete app->pscn;
+                app->pscn = ygl::proc_scene_presets().at("plane_al");
                 delete app->scn;
                 app->scn = new ygl::scene();
                 ygl::clear_gl_shapes(app->shapes);
                 ygl::clear_gl_textures(app->textures);
-                ygl::update_test_scene(app->scn, app->edit_params);
+                ygl::update_proc_elems(app->scn, app->pscn);
                 app->textures = ygl::make_gl_textures(app->scn);
                 app->shapes = ygl::make_gl_shapes(app->scn);
             }
@@ -118,9 +121,9 @@ inline void draw(ygl::gl_window* win) {
             }
             ygl::draw_continue_widget(win);
             if (draw_button_widget(win, "save proc")) {
-                ygl::save_test_scene(
+                ygl::save_proc_scene(
                     ygl::replace_path_extension(app->filename, ".json"),
-                    app->edit_params);
+                    app->pscn);
             }
             ygl::draw_camera_selection_widget(
                 win, "camera", app->cam, app->scn, app->view);
@@ -136,7 +139,7 @@ inline void draw(ygl::gl_window* win) {
         }
         if (ygl::draw_header_widget(win, "scene")) {
             ygl::draw_scene_widgets(win, "", app->scn, app->selection,
-                app->update_list, app->textures, &app->edit_params);
+                app->update_list, app->textures, app->pscn);
         }
     }
     ygl::end_widgets(win);
@@ -236,6 +239,9 @@ int main(int argc, char* argv[]) {
 
     // lights
     app->lights = ygl::make_gl_lights(app->scn);
+
+    // editing
+    app->pscn = new ygl::proc_scene();
 
     // run ui
     run_ui(app);

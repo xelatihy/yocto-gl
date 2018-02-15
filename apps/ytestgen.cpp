@@ -55,13 +55,13 @@ void save_test_scene(const std::string& sname, const std::string& basedir) {
     try {
         mkdir(dirname);
         auto test_scn = (sname == "cornell_box") ?
-                            ygl::test_scene_params() :
-                            ygl::test_scene_presets().at(sname);
+                            (ygl::proc_scene*)nullptr :
+                            ygl::proc_scene_presets().at(sname);
         printf("generating %s scenes ...\n", sname.c_str());
         auto scn =
             (sname == "cornell_box") ?
                 ygl::make_cornell_box_scene() :
-                ygl::make_test_scene(ygl::test_scene_presets().at(sname));
+                ygl::make_proc_elems(ygl::proc_scene_presets().at(sname));
         printf("saving %s scenes ...\n", sname.c_str());
         if (sname == "textures") {
             for (auto txt : scn->textures) {
@@ -98,7 +98,8 @@ void save_test_scene(const std::string& sname, const std::string& basedir) {
             if (!ygl::startswith(sname, "instance"))
                 ygl::flatten_instances(scn);
             ygl::save_scene(dirname + sname + ".obj", scn, opts);
-            ygl::save_test_scene(dirname + sname + ".json", test_scn);
+            if (test_scn)
+                ygl::save_proc_scene(dirname + sname + ".json", test_scn);
         }
         delete scn;
     } catch (std::exception& e) { ygl::log_fatal("error {}", e.what()); }
@@ -107,7 +108,7 @@ void save_test_scene(const std::string& sname, const std::string& basedir) {
 int main(int argc, char* argv[]) {
     // put together scene names
     auto scene_names = std::vector<std::string>{"cornell_box"};
-    for (auto& kv : ygl::test_scene_presets()) scene_names.push_back(kv.first);
+    for (auto& kv : ygl::proc_scene_presets()) scene_names.push_back(kv.first);
 
     // command line params
     auto parser = ygl::make_parser(argc, argv, "ytestgen", "make tests");
