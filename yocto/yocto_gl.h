@@ -5000,10 +5000,6 @@ struct camera {
     float near = 0.01f;
     /// Far plane distance. @refl_uilimits(10,10000)
     float far = 10000;
-    /// Application specific properties.
-    std::unordered_map<std::string, std::string> sprops;
-    /// Application specific properties.
-    std::unordered_map<std::string, vec4f> fprops;
 };
 
 /// Texture containing either an LDR or HDR image.
@@ -5672,6 +5668,8 @@ inline void visit(shape_group& val, Visitor&& visitor) {
                           "Path used for saving in glTF.", 0, 0, ""});
     visitor(val.shapes,
         visit_var{"shapes", visit_var_type::value, "Shapes.", 0, 0, ""});
+    visitor(val.name,
+        visit_var{"name", visit_var_type::value, "Cleanup. Name.", 0, 0, ""});
 }
 
 /// Visit struct elements.
@@ -9543,8 +9541,6 @@ struct gl_stdsurface_params {
     vec4f background = {0, 0, 0, 0};
     /// Ambient illumination. @refl_semantic(color)
     vec3f ambient = {0, 0, 0};
-    /// Highlighted object. @refl_semantic(noneditable)
-    void* highlighted = nullptr;
     /// Highlight color. @refl_semantic(color)
     vec3f highlight_color = {1, 1, 0};
     /// Edge color. @refl_semantic(color)
@@ -9559,7 +9555,8 @@ struct gl_stdsurface_params {
 void draw_stdsurface_scene(const scene* scn, const camera* cam,
     gl_stdsurface_program& prog, std::unordered_map<shape*, gl_shape>& shapes,
     std::unordered_map<texture*, gl_texture>& textures, const gl_lights& lights,
-    const vec2i& viewport_size, const gl_stdsurface_params& params);
+    const vec2i& viewport_size, void* highlighted,
+    const gl_stdsurface_params& params);
 
 // #codegen begin reflgen-glstdimage
 
@@ -9609,9 +9606,6 @@ inline void visit(gl_stdsurface_params& val, Visitor&& visitor) {
                                 "Window background.", 0, 0, ""});
     visitor(val.ambient, visit_var{"ambient", visit_var_type::color,
                              "Ambient illumination.", 0, 0, ""});
-    visitor(
-        val.highlighted, visit_var{"highlighted", visit_var_type::noneditable,
-                             "Highlighted object.", 0, 0, ""});
     visitor(
         val.highlight_color, visit_var{"highlight_color", visit_var_type::color,
                                  "Highlight color.", 0, 0, ""});
@@ -10057,6 +10051,14 @@ struct scene_selection {
 /// Clear selection
 inline void clear_selection(scene_selection& sel) {
     memset(&sel, 0, sizeof(sel));
+}
+    
+/// GVet untyped selection
+inline void* get_untyped_selection(scene_selection& sel) {
+    for(auto i = 0; i < sizeof(scene_selection) / sizeof(void*); i ++) {
+        if(((void**)&sel)[i]) return ((void**)&sel)[i];
+    }
+    return nullptr;
 }
 
 /// Draws widgets for a whole scene. Used for quickly making demos.
