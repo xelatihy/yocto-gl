@@ -9709,8 +9709,8 @@ empty.</p>
 
 
 <p>Vertex buffers for scene drawing. Members are not part of the public API.</p>
-<h4>Function clear_shape()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">clear_shape</span><span class="p">(</span><span class="n">gl_shape</span><span class="o">&amp;</span> <span class="n">shp</span><span class="p">);</span>
+<h4>Function clear_gl_shape()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">clear_gl_shape</span><span class="p">(</span><span class="n">gl_shape</span><span class="o">&amp;</span> <span class="n">shp</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -9721,30 +9721,40 @@ empty.</p>
 
 
 <p>Initialize gl lights.</p>
-<h4>Function clear_textures()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">clear_textures</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">*</span><span class="p">,</span> <span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">textures</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Clear scene textures on the GPU.</p>
-<h4>Function clear_shapes()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">clear_shapes</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">*</span><span class="p">,</span> <span class="n">gl_shape</span><span class="o">&gt;&amp;</span> <span class="n">shapes</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Clear scene shapes on the GPU.</p>
-<h4>Function update_textures()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="n">update_textures</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">*</span><span class="p">,</span> <span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">textures</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">unordered_set</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">*&gt;&amp;</span> <span class="n">refresh</span> <span class="o">=</span><span class="p">;</span>
+<h4>Function make_gl_textures()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">*</span><span class="p">,</span> <span class="n">gl_texture</span><span class="o">&gt;</span> <span class="n">make_gl_textures</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Update scene textures on the GPU.</p>
-<h4>Function update_shapes()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="n">update_shapes</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">*</span><span class="p">,</span> <span class="n">gl_shape</span><span class="o">&gt;&amp;</span> <span class="n">shapes</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">unordered_set</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">*&gt;&amp;</span> <span class="n">refresh</span> <span class="o">=</span><span class="p">;</span>
+<h4>Function make_gl_shapes()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">*</span><span class="p">,</span> <span class="n">gl_shape</span><span class="o">&gt;</span> <span class="n">make_gl_shapes</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Update scene shapes on the GPU.</p>
+<h4>Function clear_gl_textures()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">clear_gl_textures</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">*</span><span class="p">,</span> <span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">textures</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Clear scene textures on the GPU.</p>
+<h4>Function clear_gl_shapes()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">clear_gl_shapes</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">*</span><span class="p">,</span> <span class="n">gl_shape</span><span class="o">&gt;&amp;</span> <span class="n">shapes</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Clear scene shapes on the GPU.</p>
+<h4>Function update_gl_texture()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_gl_texture</span><span class="p">(</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">*</span><span class="p">,</span> <span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">textures</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture</span><span class="o">*</span> <span class="n">txt</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Update scene textures on the GPU.</p>
+<h4>Function update_gl_shape()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_gl_shape</span><span class="p">(</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">*</span><span class="p">,</span> <span class="n">gl_shape</span><span class="o">&gt;&amp;</span> <span class="n">shapes</span><span class="p">,</span> <span class="k">const</span> <span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">);</span>
 </code></pre></div>
 
 

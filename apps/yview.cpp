@@ -66,14 +66,14 @@ inline void draw(ygl::gl_window* win) {
     static auto last_time = 0.0f;
     for (auto& sel : app->update_list) {
         if (sel.txt) {
-            ygl::update_textures(app->scn, app->textures, {app->selection.txt});
+            ygl::update_gl_texture(app->textures, app->selection.txt);
         }
         if (sel.sgr) {
-            ygl::update_shapes(app->scn, app->shapes, {}, {app->selection.sgr});
+            for (auto shp : app->selection.sgr->shapes) {
+                ygl::update_gl_shape(app->shapes, shp);
+            }
         }
-        if (sel.shp) {
-            ygl::update_shapes(app->scn, app->shapes, {app->selection.shp}, {});
-        }
+        if (sel.shp) { ygl::update_gl_shape(app->shapes, app->selection.shp); }
         if (sel.nde || sel.anm || sel.agr || app->time != last_time) {
             ygl::update_transforms(app->scn, app->time);
             last_time = app->time;
@@ -101,15 +101,19 @@ inline void draw(ygl::gl_window* win) {
                 app->edit_params = ygl::test_scene_presets().at("plane_al");
                 delete app->scn;
                 app->scn = new ygl::scene();
+                ygl::clear_gl_shapes(app->shapes);
+                ygl::clear_gl_textures(app->textures);
                 ygl::update_test_scene(app->scn, app->edit_params);
-                ygl::update_textures(app->scn, app->textures, {}, true);
-                ygl::update_shapes(app->scn, app->shapes, {}, {}, true);
+                app->textures = ygl::make_gl_textures(app->scn);
+                app->shapes = ygl::make_gl_shapes(app->scn);
             }
             ygl::draw_continue_widget(win);
             if (ygl::draw_button_widget(win, "load")) {
                 app->scn = ygl::load_scene(app->filename, {});
-                ygl::update_textures(app->scn, app->textures, {}, true);
-                ygl::update_shapes(app->scn, app->shapes, {}, {}, true);
+                ygl::clear_gl_shapes(app->shapes);
+                ygl::clear_gl_textures(app->textures);
+                app->textures = ygl::make_gl_textures(app->scn);
+                app->shapes = ygl::make_gl_shapes(app->scn);
             }
             ygl::draw_continue_widget(win);
             if (ygl::draw_button_widget(win, "save")) {
@@ -153,8 +157,8 @@ void run_ui(app_state* app) {
 
     // load textures and vbos
     app->prog = ygl::make_stdsurface_program();
-    ygl::update_textures(app->scn, app->textures);
-    ygl::update_shapes(app->scn, app->shapes);
+    app->textures = ygl::make_gl_textures(app->scn);
+    app->shapes = ygl::make_gl_shapes(app->scn);
     ygl::update_transforms(app->scn, app->time);
     app->lights = ygl::make_gl_lights(app->scn);
     if (app->lights.pos.empty()) app->params.eyelight = true;

@@ -9332,27 +9332,30 @@ struct gl_shape {
 };
 
 /// Clear shape.
-void clear_shape(gl_shape& shp);
+void clear_gl_shape(gl_shape& shp);
 
 /// Initialize gl lights.
 gl_lights make_gl_lights(const scene* scn);
 
-/// Clear scene textures on the GPU.
-void clear_textures(std::unordered_map<texture*, gl_texture>& textures);
-
-/// Clear scene shapes on the GPU.
-void clear_shapes(std::unordered_map<shape*, gl_shape>& shapes);
-
 /// Update scene textures on the GPU.
-void update_textures(const scene* scn,
-    std::unordered_map<texture*, gl_texture>& textures,
-    const std::unordered_set<texture*>& refresh = {}, bool clear = false);
+std::unordered_map<texture*, gl_texture> make_gl_textures(const scene* scn);
 
 /// Update scene shapes on the GPU.
-void update_shapes(const scene* scn,
-    std::unordered_map<shape*, gl_shape>& shapes,
-    const std::unordered_set<shape*>& refresh = {},
-    const std::unordered_set<shape_group*>& refreshg = {}, bool clear = false);
+std::unordered_map<shape*, gl_shape> make_gl_shapes(const scene* scn);
+
+/// Clear scene textures on the GPU.
+void clear_gl_textures(std::unordered_map<texture*, gl_texture>& textures);
+
+/// Clear scene shapes on the GPU.
+void clear_gl_shapes(std::unordered_map<shape*, gl_shape>& shapes);
+
+/// Update scene textures on the GPU.
+void update_gl_texture(
+    std::unordered_map<texture*, gl_texture>& textures, const texture* txt);
+
+/// Update scene shapes on the GPU.
+void update_gl_shape(
+    std::unordered_map<shape*, gl_shape>& shapes, const shape* shp);
 
 /// @}
 
