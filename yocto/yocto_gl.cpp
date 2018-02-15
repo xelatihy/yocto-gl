@@ -12914,7 +12914,8 @@ void draw_stdsurface_shape(const shape* shp, const mat4f& xform,
 void draw_stdsurface_scene(const scene* scn, const camera* cam,
     gl_stdsurface_program& prog, std::unordered_map<shape*, gl_shape>& shapes,
     std::unordered_map<texture*, gl_texture>& textures, const gl_lights& lights,
-    const vec2i& viewport_size, const gl_stdsurface_params& params) {
+    const vec2i& viewport_size, void* highlighted,
+    const gl_stdsurface_params& params) {
     // begin frame
     gl_enable_depth_test(true);
     gl_enable_culling(params.cull_backface);
@@ -12937,8 +12938,8 @@ void draw_stdsurface_scene(const scene* scn, const camera* cam,
         for (auto ist : scn->instances) {
             for (auto shp : ist->shp->shapes) {
                 draw_stdsurface_shape(shp, frame_to_mat(ist->frame),
-                    (ist == params.highlighted ||
-                        ist->shp == params.highlighted),
+                    ist == highlighted || ist->shp == highlighted ||
+                        shp == highlighted,
                     prog, shapes, textures, params);
             }
         }
@@ -12946,7 +12947,8 @@ void draw_stdsurface_scene(const scene* scn, const camera* cam,
         for (auto sgr : scn->shapes) {
             for (auto shp : sgr->shapes) {
                 draw_stdsurface_shape(shp, identity_mat4f,
-                    shp == params.highlighted, prog, shapes, textures, params);
+                    sgr == highlighted || shp == highlighted, prog, shapes,
+                    textures, params);
             }
         }
     }

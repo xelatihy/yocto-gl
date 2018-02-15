@@ -85,14 +85,11 @@ inline void draw(ygl::gl_window* win) {
     }
     app->update_list.clear();
 
-    // TODO: fix highlighting
-    //    app->params.highlighted = app->selection;
-
     ygl::gl_clear_buffers(app->params.background);
     ygl::gl_enable_depth_test(true);
     ygl::gl_enable_culling(app->params.cull_backface);
     ygl::draw_stdsurface_scene(app->scn, app->cam, app->prog, app->shapes,
-        app->textures, app->lights, framebuffer_size, app->params);
+        app->textures, app->lights, framebuffer_size, get_untyped_selection(app->selection), app->params);
 
     if (ygl::begin_widgets(win, "yview")) {
         if (ygl::draw_header_widget(win, "view")) {
