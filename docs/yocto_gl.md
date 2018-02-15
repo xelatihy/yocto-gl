@@ -4327,153 +4327,6 @@ Python-like enumerate.
 
 ### Container operations
 
-#### Struct optional
-
-~~~ .cpp
-template <typename T>
-struct optional {
-    optional(); 
-    optional(const T& v); 
-    operator bool() const; 
-    T& operator*(); 
-    const T& operator*() const; 
-    T* operator->(); 
-    const T* operator->() const; 
-    T& value(); 
-    const T& value() const; 
-    T value_or(const T& v); 
-    bool def = false;
-    T val = {};
-}
-~~~
-
-Simple optional with a semantic similar to std::optional. This will be
-removed upon switching to std::optional.
-
-- Members:
-    - optional():      Construct an empty optional.
-    - optional():      Construct an optional that contains a value.
-    - operator bool():      Check if the value is defined.
-    - operator*():      Access the underlying value.
-    - operator*():      Access the underlying value.
-    - operator->():      Access the underlying value members.
-    - operator->():      Access the underlying value members.
-    - value():      Access the underlying value.
-    - value():      Access the underlying value.
-    - value_or():      Access the underlying value or a default one.
-    - def:      Whether the value is defined
-    - val:      The value stored
-
-
-#### Function operator==()
-
-~~~ .cpp
-template <typename T>
-inline bool operator==(const optional<T>& a, const optional<T>& b);
-~~~
-
-Optional equality
-
-#### Function operator!=()
-
-~~~ .cpp
-template <typename T>
-inline bool operator!=(const optional<T>& a, const optional<T>& b);
-~~~
-
-Optional inequality
-
-#### Function make_optional()
-
-~~~ .cpp
-template <typename T>
-inline optional<T> make_optional(const T& v);
-~~~
-
-Creates an optional.
-
-#### Function make_optional()
-
-~~~ .cpp
-template <typename T, typename... Args>
-inline optional<T> make_optional(Args&&... args);
-~~~
-
-Creates an optional.
-
-#### Enum basic_variant_type
-
-~~~ .cpp
-enum struct basic_variant_type {
-    none,
-    boolean,
-    integer,
-    number,
-    string,
-}
-~~~
-
-The type of the basic variant.
-
-- Values:
-    - none:      None variant to indicate uninitialized type.
-    - boolean:      Boolean variant.
-    - integer:      Integer variant.
-    - number:      Number variant.
-    - string:      String variant.
-
-
-#### Struct basic_variant
-
-~~~ .cpp
-struct basic_variant {
-    basic_variant_type type = basic_variant_type::none;
-    int integer = 0;
-    float number = 0;
-    std::string string = "";
-    bool boolean = false;
-    basic_variant(); 
-    basic_variant(int v); 
-    basic_variant(float v); 
-    basic_variant(const std::string& v); 
-    basic_variant(bool v); 
-}
-~~~
-
-Simple variant implementation used to store untyped data easily.
-Makes no attempt to mimick complex interface. Models the basic types helds
-in JSON, without using recursion. Right now the implementation is
-inefficient, but very simple.
-
-- Members:
-    - type:      Type.
-    - integer:      Integer value.
-    - number:      Number variant.
-    - string:      String variant.
-    - boolean:      Boolean value.
-    - basic_variant():      Default constructor.
-    - basic_variant():      Integer constructor.
-    - basic_variant():      Number constructor.
-    - basic_variant():      String constructor.
-    - basic_variant():      Boolean constructor.
-
-
-#### Function operator<<()
-
-~~~ .cpp
-inline std::ostream& operator<<(std::ostream& os, const basic_variant& a);
-~~~
-
-Stream write.
-
-#### Function operator\>\>()
-
-~~~ .cpp
-inline std::istream& operator>>(std::istream& is, basic_variant& a);
-~~~
-
-Stream read.
-
 #### Function append()
 
 ~~~ .cpp
@@ -4602,8 +4455,6 @@ inline bool contains(const std::unordered_set<K, V>& v, const K1& vv);
 ~~~
 
 Checks if a containers contains a value.
-
-### Type support
 
 #### Function enum_names()
 
@@ -5610,8 +5461,6 @@ void make_hair(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
 
 Make a hair ball around a shape.
 
-### Example shape type support
-
 #### Function visit()
 
 ~~~ .cpp
@@ -6540,7 +6389,8 @@ struct camera {
     float aperture = 0;
     float near = 0.01f;
     float far = 10000;
-    std::unordered_map<std::string, basic_variant> props;
+    std::unordered_map<std::string, std::string> sprops;
+    std::unordered_map<std::string, vec4f> fprops;
 }
 ~~~
 
@@ -6556,7 +6406,8 @@ Camera.
     - aperture:      Lens aperture. @refl_uilimits(0,5)
     - near:      Near plane distance. @refl_uilimits(0.01,10)
     - far:      Far plane distance. @refl_uilimits(10,10000)
-    - props:      Application specific properties.
+    - sprops:      Application specific properties.
+    - fprops:      Application specific properties.
 
 
 #### Struct texture
@@ -6643,17 +6494,16 @@ struct material {
     texture* disp_txt = nullptr;
     texture* norm_txt = nullptr;
     texture* occ_txt = nullptr;
-    optional<texture_info> ke_txt_info = {};
-    optional<texture_info> kd_txt_info = {};
-    optional<texture_info> ks_txt_info = {};
-    optional<texture_info> kr_txt_info = {};
-    optional<texture_info> kt_txt_info = {};
-    optional<texture_info> rs_txt_info = {};
-    optional<texture_info> bump_txt_info = {};
-    optional<texture_info> disp_txt_info = {};
-    optional<texture_info> norm_txt_info = {};
-    optional<texture_info> occ_txt_info = {};
-    std::unordered_map<std::string, basic_variant> props;
+    texture_info ke_txt_info = {};
+    texture_info kd_txt_info = {};
+    texture_info ks_txt_info = {};
+    texture_info kr_txt_info = {};
+    texture_info kt_txt_info = {};
+    texture_info rs_txt_info = {};
+    texture_info bump_txt_info = {};
+    texture_info disp_txt_info = {};
+    texture_info norm_txt_info = {};
+    texture_info occ_txt_info = {};
 }
 ~~~
 
@@ -6690,7 +6540,6 @@ Material for surfaces, lines and triangles.
     - disp_txt_info:      Displacement map texture (heighfield) info.
     - norm_txt_info:      Normal texture info.
     - occ_txt_info:      Occlusion texture info.
-    - props:      Application specific properties.
 
 
 #### Struct shape
@@ -6751,7 +6600,6 @@ struct shape_group {
     std::string name = "";
     std::string path = "";
     std::vector<shape*> shapes;
-    std::unordered_map<std::string, basic_variant> props;
     ~shape_group(); 
 }
 ~~~
@@ -6762,7 +6610,6 @@ Group of shapes.
     - name:      Name.
     - path:      Path used for saving in glTF.
     - shapes:      Shapes.
-    - props:      Application specific properties.
     - ~shape_group():      Cleanup.
 
 
@@ -6773,7 +6620,6 @@ struct instance {
     std::string name = "";
     frame3f frame = identity_frame3f;
     shape_group* shp = nullptr;
-    std::unordered_map<std::string, basic_variant> props;
 }
 ~~~
 
@@ -6783,7 +6629,6 @@ Shape instance.
     - name:      Name.
     - frame:      Transform frame.
     - shp:      Shape instance. @refl_semantic(reference)
-    - props:      Application specific properties.
 
 
 #### Struct environment
@@ -6794,8 +6639,7 @@ struct environment {
     frame3f frame = identity_frame3f;
     vec3f ke = {0, 0, 0};
     texture* ke_txt = nullptr;
-    optional<texture_info> ke_txt_info = {};
-    std::unordered_map<std::string, basic_variant> props;
+    texture_info ke_txt_info = {};
 }
 ~~~
 
@@ -6807,7 +6651,6 @@ Envinonment map.
     - ke:      Emission coefficient. @refl_uilimits(0,10000)
     - ke_txt:      Emission texture. @refl_semantic(reference)
     - ke_txt_info:      Emission texture info.
-    - props:      Application specific properties.
 
 
 #### Struct node
@@ -6824,7 +6667,6 @@ struct node {
     camera* cam = nullptr;
     instance* ist = nullptr;
     environment* env = nullptr;
-    std::unordered_map<std::string, basic_variant> props;
     std::vector<node*> children_ = {};
 }
 ~~~
@@ -6842,7 +6684,6 @@ Node in a transform hierarchy.
     - cam:      Camera the node points to. @refl_semantic(reference)
     - ist:      Instance the node points to. @refl_semantic(reference)
     - env:      Environment the node points to. @refl_semantic(reference)
-    - props:      Application specific properties.
     - children_:      Child nodes. This is a computed value only stored for convenience.
 
 
@@ -6900,7 +6741,6 @@ struct animation_group {
     std::string path = "";
     std::vector<animation*> animations;
     std::vector<std::pair<animation*, node*>> targets;
-    std::unordered_map<std::string, basic_variant> props;
 }
 ~~~
 
@@ -6911,7 +6751,6 @@ Animation made of multiple keyframed values.
     - path:      Path  used when writing files on disk with glTF.
     - animations:      Keyframed values.
     - targets:      Binds keyframe values to nodes. @refl_semantic(reference)
-    - props:      Application specific properties.
 
 
 #### Struct scene
@@ -6926,7 +6765,6 @@ struct scene {
     std::vector<environment*> environments = {};
     std::vector<node*> nodes = {};
     std::vector<animation_group*> animations = {};
-    std::unordered_map<std::string, basic_variant> props;
 }
 ~~~
 
@@ -6948,7 +6786,6 @@ updates node transformations only if defined.
     - environments:      Environments.
     - nodes:      Node hierarchy.
     - animations:      Node animations.
-    - props:      Application specific properties.
 
 
 #### Function eval_pos()
@@ -7020,16 +6857,6 @@ Instance normal interpolated using barycentric coordinates.
 ~~~ .cpp
 vec4f eval_texture(const texture* txt, const texture_info& info,
     const vec2f& texcoord, bool srgb = true, const vec4f& def =;
-~~~
-
-Evaluate a texture.
-
-#### Function eval_texture()
-
-~~~ .cpp
-inline vec4f eval_texture(const texture* txt,
-    const optional<texture_info>& info, const vec2f& texcoord, bool srgb = true,
-    const vec4f& def =;
 ~~~
 
 Evaluate a texture.
@@ -7320,8 +7147,6 @@ void save_scene(
 ~~~
 
 Saves a scene. For now OBJ and glTF are supported.
-
-### Scene type support
 
 #### Function enum_names<material_type\>()
 
@@ -7655,7 +7480,7 @@ struct test_shape_params {
     float radius = -1;
     bool faceted = false;
     int num = -1;
-    optional<make_hair_params> hair_params = {};
+    make_hair_params hair_params = {};
 }
 ~~~
 
@@ -8005,8 +7830,6 @@ void save_test_scene(const std::string& filename, const test_scene_params& scn);
 ~~~
 
 Save test scene.
-
-### Example scenes type support
 
 #### Function enum_names<test_texture_type\>()
 
@@ -8467,8 +8290,6 @@ void trace_async_stop(std::vector<std::thread>& threads, bool& stop_flag);
 ~~~
 
 Stop the asynchronous renderer.
-
-### Path tracing type support
 
 #### Function enum_names<trace_shader_type\>()
 
@@ -11798,8 +11619,6 @@ void draw_stdsurface_scene(const scene* scn, const camera* cam,
 
 Draw scene with stdsurface program.
 
-### OpenGL standard shaders type support
-
 #### Function visit()
 
 ~~~ .cpp
@@ -12627,6 +12446,8 @@ inline bool draw_params_widgets(
 Draws a widget that sets params in non-recursive trivial structures.
 Internally uses visit to implement the view.
 
+### OpenGL widgets for scene
+
 #### Function draw_camera_selection_widget()
 
 ~~~ .cpp
@@ -12644,11 +12465,52 @@ bool draw_camera_widgets(gl_window* win, const std::string& lbl, camera* cam);
 
 Draws widgets for a camera. Used for quickly making demos.
 
+#### Struct scene_selection
+
+~~~ .cpp
+struct scene_selection {
+    camera* cam = nullptr;
+    shape_group* sgr = nullptr;
+    shape* shp = nullptr;
+    material* mat = nullptr;
+    texture* txt = nullptr;
+    instance* ist = nullptr;
+    environment* env = nullptr;
+    node* nde = nullptr;
+    animation_group* agr = nullptr;
+    animation* anm = nullptr;
+}
+~~~
+
+Scene selection
+
+- Members:
+    - cam:      Selected camera
+    - sgr:      Selected shape group
+    - shp:      Selected shape
+    - mat:      Selected material
+    - txt:      Selected texture
+    - ist:      Selected instance
+    - env:      Selected environment
+    - nde:      Selected node
+    - agr:      Selected animation group
+    - anm:      Selected animation
+
+
+#### Function clear_selection()
+
+~~~ .cpp
+inline void clear_selection(scene_selection& sel);
+~~~
+
+Clear selection
+
 #### Function draw_scene_widgets()
 
 ~~~ .cpp
 bool draw_scene_widgets(gl_window* win, const std::string& lbl, scene* scn,
-    void*& selection, const std::unordered_map<texture*, gl_texture>& gl_txt,
+    scene_selection& sel, std::vector<ygl::scene_selection>& update_list,
+    const std::unordered_map<texture*, gl_texture>& gl_txt,
     test_scene_params* test_scn = nullptr);
 ~~~
 
