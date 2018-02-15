@@ -11885,90 +11885,84 @@ void clear_shape(gl_shape& shp) {
     clear_element_buffer(shp.edges);
 }
 
+// Init shading
+void update_gl_texture(
+    std::unordered_map<texture*, gl_texture>& gtextures, const texture* txt) {
+    if (gtextures.find((texture*)txt) == gtextures.end())
+        gtextures[(texture*)txt] = gl_texture();
+    auto& gtxt = gtextures.at((texture*)txt);
+    if (!txt->hdr.empty()) {
+        update_texture(gtxt, txt->hdr, true, true, true);
+    } else if (!txt->ldr.empty()) {
+        update_texture(gtxt, txt->ldr, true, true, true);
+    } else
+        assert(false);
+}
+
+// Update shading
+std::unordered_map<texture*, gl_texture> make_gl_textures(const scene* scn) {
+    auto gtextures = std::unordered_map<texture*, gl_texture>();
+    for (auto txt : scn->textures) update_gl_texture(gtextures, txt);
+    return gtextures;
+}
+
+// Update shading
+void update_gl_shape(
+    std::unordered_map<shape*, gl_shape>& gshapes, const shape* shp) {
+    if (gshapes.find((shape*)shp) == gshapes.end())
+        gshapes[(shape*)shp] = gl_shape();
+    auto& gshp = gshapes.at((shape*)shp);
+    if (!shp->quads_pos.empty()) {
+        auto pos = std::vector<vec3f>();
+        auto norm = std::vector<vec3f>();
+        auto texcoord = std::vector<vec2f>();
+        auto quads = std::vector<vec4i>();
+        std::tie(quads, pos, norm, texcoord) =
+            convert_face_varying(shp->quads_pos, shp->quads_norm,
+                shp->quads_texcoord, shp->pos, shp->norm, shp->texcoord);
+        update_vertex_buffer(gshp.pos, pos);
+        update_vertex_buffer(gshp.norm, norm);
+        update_vertex_buffer(gshp.texcoord, texcoord);
+        update_element_buffer(gshp.quads, convert_quads_to_triangles(quads));
+        update_element_buffer(gshp.edges, get_edges({}, {}, shp->quads));
+        update_vertex_buffer(gshp.color, std::vector<vec4f>{});
+        update_vertex_buffer(gshp.tangsp, std::vector<vec4f>{});
+    } else {
+        update_vertex_buffer(gshp.pos, shp->pos);
+        update_vertex_buffer(gshp.norm, shp->norm);
+        update_vertex_buffer(gshp.texcoord, shp->texcoord);
+        update_vertex_buffer(gshp.color, shp->color);
+        update_vertex_buffer(gshp.tangsp, shp->tangsp);
+        update_element_buffer(gshp.points, shp->points);
+        update_element_buffer(gshp.lines, shp->lines);
+        update_element_buffer(gshp.triangles, shp->triangles);
+        update_element_buffer(
+            gshp.quads, convert_quads_to_triangles(shp->quads));
+        update_element_buffer(
+            gshp.beziers, convert_bezier_to_lines(shp->beziers));
+        update_element_buffer(
+            gshp.edges, get_edges({}, shp->triangles, shp->quads));
+    }
+}
+
+// Init shading
+std::unordered_map<shape*, gl_shape> make_gl_shapes(const scene* scn) {
+    auto gshapes = std::unordered_map<shape*, gl_shape>();
+    for (auto sgr : scn->shapes)
+        for (auto shp : sgr->shapes) update_gl_shape(gshapes, shp);
+    return gshapes;
+}
+
 // Clear scene textures on the GPU.
-void clear_textures(std::unordered_map<texture*, gl_texture>& gtextures) {
+void clear_gl_textures(std::unordered_map<texture*, gl_texture>& gtextures) {
     for (auto& kv : gtextures) clear_texture(kv.second);
     gtextures.clear();
 }
 
 // Clear scene shapes on the GPU.
-void clear_shapes(std::unordered_map<shape*, gl_shape>& gshapes) {
+void clear_gl_shapes(std::unordered_map<shape*, gl_shape>& gshapes) {
     for (auto& kv : gshapes) clear_shape(kv.second);
     gshapes.clear();
-}
-
-// Init shading
-void update_textures(const scene* scn,
-    std::unordered_map<texture*, gl_texture>& gtextures,
-    const std::unordered_set<texture*>& refresh, bool clear) {
-    if (clear) clear_textures(gtextures);
-    for (auto txt : scn->textures) {
-        if (gtextures.find(txt) == gtextures.end()) {
-            gtextures[txt] = gl_texture();
-        } else {
-            if (refresh.find(txt) == refresh.end()) continue;
-        }
-        auto& gtxt = gtextures.at(txt);
-        if (!txt->hdr.empty()) {
-            update_texture(gtxt, txt->hdr, true, true, true);
-        } else if (!txt->ldr.empty()) {
-            update_texture(gtxt, txt->ldr, true, true, true);
-        } else
-            assert(false);
-    }
-}
-
-// Init shading
-void update_shapes(const scene* scn,
-    std::unordered_map<shape*, gl_shape>& gshapes,
-    const std::unordered_set<shape*>& refresh,
-    const std::unordered_set<shape_group*>& refreshg, bool clear) {
-    if (clear) clear_shapes(gshapes);
-    for (auto sgr : scn->shapes) {
-        for (auto shp : sgr->shapes) {
-            if (gshapes.find(shp) == gshapes.end()) {
-                gshapes[shp] = gl_shape();
-            } else {
-                if (refresh.find(shp) == refresh.end() &&
-                    refreshg.find(sgr) == refreshg.end())
-                    continue;
-            }
-            auto& gshp = gshapes.at(shp);
-            if (!shp->quads_pos.empty()) {
-                auto pos = std::vector<vec3f>();
-                auto norm = std::vector<vec3f>();
-                auto texcoord = std::vector<vec2f>();
-                auto quads = std::vector<vec4i>();
-                std::tie(quads, pos, norm, texcoord) = convert_face_varying(
-                    shp->quads_pos, shp->quads_norm, shp->quads_texcoord,
-                    shp->pos, shp->norm, shp->texcoord);
-                update_vertex_buffer(gshp.pos, pos);
-                update_vertex_buffer(gshp.norm, norm);
-                update_vertex_buffer(gshp.texcoord, texcoord);
-                update_element_buffer(
-                    gshp.quads, convert_quads_to_triangles(quads));
-                update_element_buffer(
-                    gshp.edges, get_edges({}, {}, shp->quads));
-                update_vertex_buffer(gshp.color, std::vector<vec4f>{});
-                update_vertex_buffer(gshp.tangsp, std::vector<vec4f>{});
-            } else {
-                update_vertex_buffer(gshp.pos, shp->pos);
-                update_vertex_buffer(gshp.norm, shp->norm);
-                update_vertex_buffer(gshp.texcoord, shp->texcoord);
-                update_vertex_buffer(gshp.color, shp->color);
-                update_vertex_buffer(gshp.tangsp, shp->tangsp);
-                update_element_buffer(gshp.points, shp->points);
-                update_element_buffer(gshp.lines, shp->lines);
-                update_element_buffer(gshp.triangles, shp->triangles);
-                update_element_buffer(
-                    gshp.quads, convert_quads_to_triangles(shp->quads));
-                update_element_buffer(
-                    gshp.beziers, convert_bezier_to_lines(shp->beziers));
-                update_element_buffer(
-                    gshp.edges, get_edges({}, shp->triangles, shp->quads));
-            }
-        }
-    }
 }
 
 // Initialize gl lights

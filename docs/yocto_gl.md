@@ -11269,10 +11269,10 @@ struct gl_shape {
 
 Vertex buffers for scene drawing. Members are not part of the public API.
 
-#### Function clear_shape()
+#### Function clear_gl_shape()
 
 ~~~ .cpp
-void clear_shape(gl_shape& shp);
+void clear_gl_shape(gl_shape& shp);
 ~~~
 
 Clear shape.
@@ -11285,38 +11285,52 @@ gl_lights make_gl_lights(const scene* scn);
 
 Initialize gl lights.
 
-#### Function clear_textures()
+#### Function make_gl_textures()
 
 ~~~ .cpp
-void clear_textures(std::unordered_map<texture*, gl_texture>& textures);
-~~~
-
-Clear scene textures on the GPU.
-
-#### Function clear_shapes()
-
-~~~ .cpp
-void clear_shapes(std::unordered_map<shape*, gl_shape>& shapes);
-~~~
-
-Clear scene shapes on the GPU.
-
-#### Function update_textures()
-
-~~~ .cpp
-void update_textures(const scene* scn,
-    std::unordered_map<texture*, gl_texture>& textures,
-    const std::unordered_set<texture*>& refresh =;
+std::unordered_map<texture*, gl_texture> make_gl_textures(const scene* scn);
 ~~~
 
 Update scene textures on the GPU.
 
-#### Function update_shapes()
+#### Function make_gl_shapes()
 
 ~~~ .cpp
-void update_shapes(const scene* scn,
-    std::unordered_map<shape*, gl_shape>& shapes,
-    const std::unordered_set<shape*>& refresh =;
+std::unordered_map<shape*, gl_shape> make_gl_shapes(const scene* scn);
+~~~
+
+Update scene shapes on the GPU.
+
+#### Function clear_gl_textures()
+
+~~~ .cpp
+void clear_gl_textures(std::unordered_map<texture*, gl_texture>& textures);
+~~~
+
+Clear scene textures on the GPU.
+
+#### Function clear_gl_shapes()
+
+~~~ .cpp
+void clear_gl_shapes(std::unordered_map<shape*, gl_shape>& shapes);
+~~~
+
+Clear scene shapes on the GPU.
+
+#### Function update_gl_texture()
+
+~~~ .cpp
+void update_gl_texture(
+    std::unordered_map<texture*, gl_texture>& textures, const texture* txt);
+~~~
+
+Update scene textures on the GPU.
+
+#### Function update_gl_shape()
+
+~~~ .cpp
+void update_gl_shape(
+    std::unordered_map<shape*, gl_shape>& shapes, const shape* shp);
 ~~~
 
 Update scene shapes on the GPU.
