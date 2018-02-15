@@ -3652,13 +3652,13 @@ inline const std::vector<std::pair<std::string, T>>& enum_names(T v) {
 
 /// Stream write.
 template <typename T,
-    typename std::enable_if<std::is_enum<T>::value, int>::type = 0>
+    typename std::enable_if_t<std::is_enum<T>::value, int> = 0>
 inline std::ostream& operator<<(std::ostream& os, const T& a) {
     return os << get_key(enum_names(a), a);
 }
 /// Stream read.
 template <typename T,
-    typename std::enable_if<std::is_enum<T>::value, int>::type = 0>
+    typename std::enable_if_t<std::is_enum<T>::value, int> = 0>
 inline std::istream& operator>>(std::istream& is, T& a) {
     auto str = std::string();
     is >> str;
@@ -3720,8 +3720,7 @@ inline void visit(T*& val, Visitor&& visitor) {
 }
 
 /// Stream write.
-template <typename T,
-    typename std::enable_if<has_visitor<T>::value, int>::type = 0>
+template <typename T, typename std::enable_if_t<has_visitor<T>::value, int> = 0>
 inline std::ostream& operator<<(std::ostream& os, const T& a) {
     visit(a, [&os](auto& name, auto& val, auto&) {
         os << name << ": " << val << "\n";
@@ -5003,6 +5002,7 @@ struct camera {
 };
 
 /// Texture containing either an LDR or HDR image.
+///
 struct texture {
     /// Name.
     std::string name = "";
@@ -5084,29 +5084,32 @@ struct material {
     texture* occ_txt = nullptr;
 
     /// Emission texture info.
-    texture_info ke_txt_info = {};
+    texture_info* ke_txt_info = nullptr;
     /// Diffuse texture info.
-    texture_info kd_txt_info = {};
+    texture_info* kd_txt_info = nullptr;
     /// Specular texture info.
-    texture_info ks_txt_info = {};
+    texture_info* ks_txt_info = nullptr;
     /// Clear coat reflection texture info.
-    texture_info kr_txt_info = {};
+    texture_info* kr_txt_info = nullptr;
     /// Transmission texture info.
-    texture_info kt_txt_info = {};
+    texture_info* kt_txt_info = nullptr;
     /// Roughness texture info.
-    texture_info rs_txt_info = {};
+    texture_info* rs_txt_info = nullptr;
     /// Bump map texture (heighfield) info.
-    texture_info bump_txt_info = {};
+    texture_info* bump_txt_info = nullptr;
     /// Displacement map texture (heighfield) info.
-    texture_info disp_txt_info = {};
+    texture_info* disp_txt_info = nullptr;
     /// Normal texture info.
-    texture_info norm_txt_info = {};
+    texture_info* norm_txt_info = nullptr;
     /// Occlusion texture info.
-    texture_info occ_txt_info = {};
+    texture_info* occ_txt_info = nullptr;
+
+    /// Cleanup.
+    ~material();
 };
 
-/// Shape data represented as an indexed array.
-/// May contain only one of the points/lines/triangles/quads.
+/// Shape data represented as an indexed array. May contain only one of the
+/// points/lines/triangles/quads.
 struct shape {
     /// Name.
     std::string name = "";
@@ -5185,7 +5188,10 @@ struct environment {
     /// Emission texture. @refl_semantic(reference)
     texture* ke_txt = nullptr;
     /// Emission texture info.
-    texture_info ke_txt_info = {};
+    texture_info* ke_txt_info = nullptr;
+
+    // Cleanup
+    environment();
 };
 
 /// Node in a transform hierarchy.
@@ -5246,6 +5252,7 @@ struct animation {
 };
 
 /// Animation made of multiple keyframed values.
+///
 struct animation_group {
     /// Name.
     std::string name;
@@ -5256,7 +5263,7 @@ struct animation_group {
     /// Binds keyframe values to nodes. @refl_semantic(reference)
     std::vector<std::pair<animation*, node*>> targets;
 
-    // Cleanup
+    /// Cleanup.
     ~animation_group();
 };
 
@@ -5287,7 +5294,7 @@ struct scene {
     /// Node animations.
     std::vector<animation_group*> animations = {};
 
-    // Cleanup.
+    /// Cleanup.
     ~scene();
 };
 
@@ -5313,6 +5320,12 @@ vec3f eval_norm(const instance* ist, int sid, int eid, const vec2f& euv);
 /// Evaluate a texture.
 vec4f eval_texture(const texture* txt, const texture_info& info,
     const vec2f& texcoord, bool srgb = true, const vec4f& def = {1, 1, 1, 1});
+/// Evaluate a texture.
+inline vec4f eval_texture(const texture* txt, const texture_info* info,
+    const vec2f& texcoord, bool srgb = true, const vec4f& def = {1, 1, 1, 1}) {
+    return eval_texture(
+        txt, (info) ? *info : texture_info(), texcoord, srgb, def);
+}
 /// Generates a ray from a camera for image plane coordinate `uv` and the
 /// lens coordinates `luv`.
 ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv);
@@ -5668,13 +5681,13 @@ inline void visit(shape_group& val, Visitor&& visitor) {
                           "Path used for saving in glTF.", 0, 0, ""});
     visitor(val.shapes,
         visit_var{"shapes", visit_var_type::value, "Shapes.", 0, 0, ""});
-    visitor(val.name,
-        visit_var{"name", visit_var_type::value, "Cleanup. Name.", 0, 0, ""});
 }
 
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(instance& val, Visitor&& visitor) {
+    visitor(
+        val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
     visitor(val.frame, visit_var{"frame", visit_var_type::value,
                            "Transform frame.", 0, 0, ""});
     visitor(val.shp, visit_var{"shp", visit_var_type::reference,
@@ -5793,10 +5806,10 @@ namespace ygl {
 /// @defgroup scene_example Example scenes
 /// @{
 
-// #codegen begin refl-test-scene
+// #codegen begin refl-proc-scene
 
-/// Test camera parameters.
-struct test_camera_params {
+/// Procedural camera parameters.
+struct proc_camera {
     /// Name.
     std::string name = "";
     /// From point. @refl_uilimits(-10,10)
@@ -5809,8 +5822,8 @@ struct test_camera_params {
     float aspect = 1;
 };
 
-/// Test texture type.
-enum struct test_texture_type {
+/// Procedural texture type.
+enum struct proc_texture_type {
     /// None (empty texture).
     none,
     /// Grid image.
@@ -5841,12 +5854,12 @@ enum struct test_texture_type {
     sky,
 };
 
-/// Test texture parameters.
-struct test_texture_params {
+/// Procedural texture parameters.
+struct proc_texture {
     /// Name.
     std::string name = "";
     /// Type.
-    test_texture_type type = test_texture_type::none;
+    proc_texture_type type = proc_texture_type::none;
     /// Resolution. @refl_uilimits(256,4096)
     int resolution = 512;
     /// Tile size for grid-like textures. @refl_uilimits(16,128)
@@ -5861,8 +5874,8 @@ struct test_texture_params {
     float bump_scale = 4;
 };
 
-/// Test material type.
-enum struct test_material_type {
+/// Procedural material type.
+enum struct proc_material_type {
     /// None (empty material).
     none,
     /// Emission.
@@ -5877,12 +5890,12 @@ enum struct test_material_type {
     transparent,
 };
 
-/// Test material parameters.
-struct test_material_params {
+/// Procedural material parameters.
+struct proc_material {
     /// Name.
     std::string name = "";
     /// Type.
-    test_material_type type = test_material_type::matte;
+    proc_material_type type = proc_material_type::matte;
     /// Emission strenght. @refl_uilimits(0,10000)
     float emission = 1;
     /// Base color. @refl_semantic(color)
@@ -5897,8 +5910,8 @@ struct test_material_params {
     std::string normal = "";
 };
 
-/// Test shape type.
-enum struct test_shape_type {
+/// Procedural shape type.
+enum struct proc_shape_type {
     /// Floor (shared vertex, 20x20 size).
     floor,
     /// Quad (shared vertex).
@@ -5935,12 +5948,12 @@ enum struct test_shape_type {
     beziercircle,
 };
 
-/// Test shape parameters.
-struct test_shape_params {
+/// Procedural shape parameters.
+struct proc_shape {
     /// Shape name (if not filled, assign a default based on type).
     std::string name = "";
     /// Shape type.
-    test_shape_type type = test_shape_type::sphere;
+    proc_shape_type type = proc_shape_type::sphere;
     /// Material name.
     std::string material = "";
     /// Interior material name.
@@ -5960,11 +5973,14 @@ struct test_shape_params {
     /// @refl_uilimits(-1,10000)
     int num = -1;
     /// Hair generation params.
-    make_hair_params hair_params = {};
+    make_hair_params* hair_params = nullptr;
+
+    /// Cleanup
+    ~proc_shape();
 };
 
-/// Test instance parameters.
-struct test_instance_params {
+/// Procedural instance parameters.
+struct proc_instance {
     /// Name (if not filled, assign a default one).
     std::string name = "";
     /// Shape name.
@@ -5975,8 +5991,8 @@ struct test_instance_params {
     vec3f rotation = zero3f;
 };
 
-/// Test environment parameters.
-struct test_environment_params {
+/// Procedural environment parameters.
+struct proc_environment {
     /// Name.
     std::string name = "";
     /// Emission strenght. @refl_uilimits(0,10000)
@@ -5991,8 +6007,8 @@ struct test_environment_params {
     float rotation = 0;
 };
 
-/// Test node parameters.
-struct test_node_params {
+/// Procedural node parameters.
+struct proc_node {
     /// Name.
     std::string name = "";
     /// Parent node.
@@ -6013,8 +6029,8 @@ struct test_node_params {
     vec3f scaling = {1, 1, 1};
 };
 
-/// Test animation parameters.
-struct test_animation_params {
+/// Procedural animation parameters.
+struct proc_animation {
     /// Name.
     std::string name = "";
     /// Linear or bezier.
@@ -6035,183 +6051,164 @@ struct test_animation_params {
     std::vector<std::string> nodes = {};
 };
 
-/// Test scene.
-struct test_scene_params {
+/// Procedural scene.
+struct proc_scene {
     /// Name.
     std::string name;
     /// Cameras.
-    std::vector<test_camera_params> cameras;
+    std::vector<proc_camera*> cameras;
     /// Textures.
-    std::vector<test_texture_params> textures;
+    std::vector<proc_texture*> textures;
     /// Materials.
-    std::vector<test_material_params> materials;
+    std::vector<proc_material*> materials;
     /// Shapes.
-    std::vector<test_shape_params> shapes;
+    std::vector<proc_shape*> shapes;
     /// Instances.
-    std::vector<test_instance_params> instances;
+    std::vector<proc_instance*> instances;
     /// Environmennts.
-    std::vector<test_environment_params> environments;
+    std::vector<proc_environment*> environments;
     /// Nodes.
-    std::vector<test_node_params> nodes;
+    std::vector<proc_node*> nodes;
     /// Animations.
-    std::vector<test_animation_params> animations;
+    std::vector<proc_animation*> animations;
+
+    /// Cleanup.
+    ~proc_scene();
 };
 
-// #codegen end refl-test-scene
+// #codegen end refl-proc-scene
 
 /// Makes the Cornell Box scene.
 scene* make_cornell_box_scene();
 
-/// Updates a test camera.
-void update_test_elem(
-    const scene* scn, camera* cam, const test_camera_params& tcam);
-
-/// Test camera presets.
-std::unordered_map<std::string, test_camera_params>& test_camera_presets();
-
-/// Updates a test texture.
-void update_test_elem(
-    const scene* scn, texture* txt, const test_texture_params& ttxt);
-
-/// Test texture presets.
-std::unordered_map<std::string, test_texture_params>& test_texture_presets();
-
-/// Updates a test material.
-void update_test_elem(
-    const scene* scn, material* mat, const test_material_params& tmat);
-
-/// Test material presets.
-std::unordered_map<std::string, test_material_params>& test_material_presets();
-
-/// Updates a test shape, adding it to the scene if missing.
-void update_test_elem(
-    const scene* scn, shape* shp, const test_shape_params& tshp);
-
-/// Test shape presets.
-std::unordered_map<std::string, test_shape_params>& test_shape_presets();
-
-/// Updates a test instance.
-void update_test_elem(
-    const scene* scn, instance* ist, const test_instance_params& tist);
-
-/// Test instance presets.
-std::unordered_map<std::string, test_instance_params>& test_instance_presets();
-
-/// Updates a test instance.
-void update_test_elem(
-    const scene* scn, environment* env, const test_environment_params& tenv);
-
-/// Test environment presets.
-std::unordered_map<std::string, test_environment_params>&
-test_environment_presets();
-
-/// Updates a test node.
-void update_test_elem(
-    const scene* scn, node* nde, const test_node_params& tndr);
-
-/// Test nodes presets.
-std::unordered_map<std::string, test_node_params>& test_node_presets();
-
-/// Updates a test node.
-void update_test_elem(
-    const scene* scn, animation_group* anm, const test_animation_params& tndr);
-
-/// Test nodes presets.
-std::unordered_map<std::string, test_node_params>& test_node_presets();
-
-/// Updates a test scene, adding missing objects. Objects are only added and
-/// never removed.
-void update_test_scene(scene* scn, const test_scene_params& tscn,
+/// Updates a procesural camera.
+void update_proc_elem(const scene* scn, camera* cam, const proc_camera* tcam);
+/// Updates a procedural texture.
+void update_proc_elem(const scene* scn, texture* txt, const proc_texture* ttxt);
+/// Updates a procedural material.
+void update_proc_elem(
+    const scene* scn, material* mat, const proc_material* tmat);
+/// Updates a procedural shape, adding it to the scene if missing.
+void update_proc_elem(const scene* scn, shape* shp, const proc_shape* tshp);
+/// Updates a procedural instance.
+void update_proc_elem(
+    const scene* scn, instance* ist, const proc_instance* tist);
+/// Updates a procedural instance.
+void update_proc_elem(
+    const scene* scn, environment* env, const proc_environment* tenv);
+/// Updates a procedural node.
+void update_proc_elem(const scene* scn, node* nde, const proc_node* tndr);
+/// Updates a procedural animation.
+void update_proc_elem(
+    const scene* scn, animation_group* anm, const proc_animation* tndr);
+/// Updates a procedural scene, adding missing objects. Objects are only added
+/// and never removed.
+void update_proc_elems(scene* scn, const proc_scene* tscn,
     const std::unordered_set<void*>& refresh = {});
-
 /// Makes a test scene. Convenience wrapper around `update_test_scene()`.
-inline scene* make_test_scene(const test_scene_params& tscn) {
+inline scene* make_proc_elems(const proc_scene* tscn) {
     auto scn = new scene();
-    update_test_scene(scn, tscn);
+    update_proc_elems(scn, tscn);
     return scn;
 }
 
+/// Procedural camera presets.
+std::unordered_map<std::string, proc_camera*>& proc_camera_presets();
+/// Procedural texture presets.
+std::unordered_map<std::string, proc_texture*>& proc_texture_presets();
+/// Procedural material presets.
+std::unordered_map<std::string, proc_material*>& proc_material_presets();
+/// Procedural shape presets.
+std::unordered_map<std::string, proc_shape*>& proc_shape_presets();
+/// Procedural instance presets.
+std::unordered_map<std::string, proc_instance*>& proc_instance_presets();
+/// Procedural environment presets.
+std::unordered_map<std::string, proc_environment*>& proc_environment_presets();
+/// Procedural nodes presets.
+std::unordered_map<std::string, proc_node*>& proc_node_presets();
+/// Procedural animation presets.
+std::unordered_map<std::string, proc_animation*>& proc_animation_presets();
 /// Test scene presets.
-std::unordered_map<std::string, test_scene_params>& test_scene_presets();
+std::unordered_map<std::string, proc_scene*>& proc_scene_presets();
 
 /// Remove duplicates based on name.
-void remove_duplicates(test_scene_params& tscn);
+void remove_duplicates(proc_scene* tscn);
 
 /// Load test scene.
-test_scene_params load_test_scene(const std::string& filename);
+proc_scene* load_proc_scene(const std::string& filename);
 
 /// Save test scene.
-void save_test_scene(const std::string& filename, const test_scene_params& scn);
+void save_proc_scene(const std::string& filename, const proc_scene* scn);
 
-// #codegen begin reflgen-test-scene
+// #codegen begin reflgen-proc-scene
 
 /// Names of enum values.
 template <>
-inline const std::vector<std::pair<std::string, test_texture_type>>&
-enum_names<test_texture_type>() {
-    static auto names = std::vector<std::pair<std::string, test_texture_type>>{
-        {"none", test_texture_type::none},
-        {"grid", test_texture_type::grid},
-        {"checker", test_texture_type::checker},
-        {"colored", test_texture_type::colored},
-        {"rcolored", test_texture_type::rcolored},
-        {"bump", test_texture_type::bump},
-        {"uv", test_texture_type::uv},
-        {"gamma", test_texture_type::gamma},
-        {"noise", test_texture_type::noise},
-        {"ridge", test_texture_type::ridge},
-        {"fbm", test_texture_type::fbm},
-        {"turbulence", test_texture_type::turbulence},
-        {"gammaf", test_texture_type::gammaf},
-        {"sky", test_texture_type::sky},
+inline const std::vector<std::pair<std::string, proc_texture_type>>&
+enum_names<proc_texture_type>() {
+    static auto names = std::vector<std::pair<std::string, proc_texture_type>>{
+        {"none", proc_texture_type::none},
+        {"grid", proc_texture_type::grid},
+        {"checker", proc_texture_type::checker},
+        {"colored", proc_texture_type::colored},
+        {"rcolored", proc_texture_type::rcolored},
+        {"bump", proc_texture_type::bump},
+        {"uv", proc_texture_type::uv},
+        {"gamma", proc_texture_type::gamma},
+        {"noise", proc_texture_type::noise},
+        {"ridge", proc_texture_type::ridge},
+        {"fbm", proc_texture_type::fbm},
+        {"turbulence", proc_texture_type::turbulence},
+        {"gammaf", proc_texture_type::gammaf},
+        {"sky", proc_texture_type::sky},
     };
     return names;
 }
 
 /// Names of enum values.
 template <>
-inline const std::vector<std::pair<std::string, test_material_type>>&
-enum_names<test_material_type>() {
-    static auto names = std::vector<std::pair<std::string, test_material_type>>{
-        {"none", test_material_type::none},
-        {"emission", test_material_type::emission},
-        {"matte", test_material_type::matte},
-        {"plastic", test_material_type::plastic},
-        {"metal", test_material_type::metal},
-        {"transparent", test_material_type::transparent},
+inline const std::vector<std::pair<std::string, proc_material_type>>&
+enum_names<proc_material_type>() {
+    static auto names = std::vector<std::pair<std::string, proc_material_type>>{
+        {"none", proc_material_type::none},
+        {"emission", proc_material_type::emission},
+        {"matte", proc_material_type::matte},
+        {"plastic", proc_material_type::plastic},
+        {"metal", proc_material_type::metal},
+        {"transparent", proc_material_type::transparent},
     };
     return names;
 }
 
 /// Names of enum values.
 template <>
-inline const std::vector<std::pair<std::string, test_shape_type>>&
-enum_names<test_shape_type>() {
-    static auto names = std::vector<std::pair<std::string, test_shape_type>>{
-        {"floor", test_shape_type::floor},
-        {"quad", test_shape_type::quad},
-        {"cube", test_shape_type::cube},
-        {"sphere", test_shape_type::sphere},
-        {"spherecube", test_shape_type::spherecube},
-        {"spherizedcube", test_shape_type::spherizedcube},
-        {"geosphere", test_shape_type::geosphere},
-        {"flipcapsphere", test_shape_type::flipcapsphere},
-        {"suzanne", test_shape_type::suzanne},
-        {"cubep", test_shape_type::cubep},
-        {"fvcube", test_shape_type::fvcube},
-        {"fvsphere", test_shape_type::fvsphere},
-        {"matball", test_shape_type::matball},
-        {"point", test_shape_type::point},
-        {"pointscube", test_shape_type::pointscube},
-        {"hairball", test_shape_type::hairball},
-        {"beziercircle", test_shape_type::beziercircle},
+inline const std::vector<std::pair<std::string, proc_shape_type>>&
+enum_names<proc_shape_type>() {
+    static auto names = std::vector<std::pair<std::string, proc_shape_type>>{
+        {"floor", proc_shape_type::floor},
+        {"quad", proc_shape_type::quad},
+        {"cube", proc_shape_type::cube},
+        {"sphere", proc_shape_type::sphere},
+        {"spherecube", proc_shape_type::spherecube},
+        {"spherizedcube", proc_shape_type::spherizedcube},
+        {"geosphere", proc_shape_type::geosphere},
+        {"flipcapsphere", proc_shape_type::flipcapsphere},
+        {"suzanne", proc_shape_type::suzanne},
+        {"cubep", proc_shape_type::cubep},
+        {"fvcube", proc_shape_type::fvcube},
+        {"fvsphere", proc_shape_type::fvsphere},
+        {"matball", proc_shape_type::matball},
+        {"point", proc_shape_type::point},
+        {"pointscube", proc_shape_type::pointscube},
+        {"hairball", proc_shape_type::hairball},
+        {"beziercircle", proc_shape_type::beziercircle},
     };
     return names;
 }
 
 /// Visit struct elements.
 template <typename Visitor>
-inline void visit(test_camera_params& val, Visitor&& visitor) {
+inline void visit(proc_camera& val, Visitor&& visitor) {
     visitor(
         val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
     visitor(val.from,
@@ -6226,7 +6223,7 @@ inline void visit(test_camera_params& val, Visitor&& visitor) {
 
 /// Visit struct elements.
 template <typename Visitor>
-inline void visit(test_texture_params& val, Visitor&& visitor) {
+inline void visit(proc_texture& val, Visitor&& visitor) {
     visitor(
         val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
     visitor(
@@ -6251,7 +6248,7 @@ inline void visit(test_texture_params& val, Visitor&& visitor) {
 
 /// Visit struct elements.
 template <typename Visitor>
-inline void visit(test_material_params& val, Visitor&& visitor) {
+inline void visit(proc_material& val, Visitor&& visitor) {
     visitor(
         val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
     visitor(
@@ -6273,7 +6270,7 @@ inline void visit(test_material_params& val, Visitor&& visitor) {
 
 /// Visit struct elements.
 template <typename Visitor>
-inline void visit(test_shape_params& val, Visitor&& visitor) {
+inline void visit(proc_shape& val, Visitor&& visitor) {
     visitor(val.name,
         visit_var{"name", visit_var_type::value,
             "Shape name (if not filled, assign a default based on type).", 0, 0,
@@ -6307,7 +6304,7 @@ inline void visit(test_shape_params& val, Visitor&& visitor) {
 
 /// Visit struct elements.
 template <typename Visitor>
-inline void visit(test_instance_params& val, Visitor&& visitor) {
+inline void visit(proc_instance& val, Visitor&& visitor) {
     visitor(
         val.name, visit_var{"name", visit_var_type::value,
                       "Name (if not filled, assign a default one).", 0, 0, ""});
@@ -6321,7 +6318,7 @@ inline void visit(test_instance_params& val, Visitor&& visitor) {
 
 /// Visit struct elements.
 template <typename Visitor>
-inline void visit(test_environment_params& val, Visitor&& visitor) {
+inline void visit(proc_environment& val, Visitor&& visitor) {
     visitor(
         val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
     visitor(val.emission, visit_var{"emission", visit_var_type::value,
@@ -6338,7 +6335,7 @@ inline void visit(test_environment_params& val, Visitor&& visitor) {
 
 /// Visit struct elements.
 template <typename Visitor>
-inline void visit(test_node_params& val, Visitor&& visitor) {
+inline void visit(proc_node& val, Visitor&& visitor) {
     visitor(
         val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
     visitor(val.parent,
@@ -6361,7 +6358,7 @@ inline void visit(test_node_params& val, Visitor&& visitor) {
 
 /// Visit struct elements.
 template <typename Visitor>
-inline void visit(test_animation_params& val, Visitor&& visitor) {
+inline void visit(proc_animation& val, Visitor&& visitor) {
     visitor(
         val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
     visitor(val.bezier, visit_var{"bezier", visit_var_type::value,
@@ -6384,7 +6381,7 @@ inline void visit(test_animation_params& val, Visitor&& visitor) {
 
 /// Visit struct elements.
 template <typename Visitor>
-inline void visit(test_scene_params& val, Visitor&& visitor) {
+inline void visit(proc_scene& val, Visitor&& visitor) {
     visitor(
         val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
     visitor(val.cameras,
@@ -6405,7 +6402,7 @@ inline void visit(test_scene_params& val, Visitor&& visitor) {
                                 "Animations.", 0, 0, ""});
 }
 
-// #codegen end reflgen-test-scene
+// #codegen end reflgen-proc-scene
 
 /// @}
 
@@ -9978,7 +9975,7 @@ inline bool draw_value_widget(gl_window* win, const std::string& lbl,
 }
 /// Generic widget used for templated code. Min, max and color are ignored.
 template <typename T,
-    typename std::enable_if<std::is_enum<T>::value, int>::type = 0>
+    typename std::enable_if_t<std::is_enum<T>::value, int> = 0>
 inline bool draw_value_widget(gl_window* win, const std::string& lbl, T& val,
     float min = 0, float max = 0, bool color = false) {
     return draw_combo_widget(win, lbl, val, enum_names(val));
@@ -10052,11 +10049,11 @@ struct scene_selection {
 inline void clear_selection(scene_selection& sel) {
     memset(&sel, 0, sizeof(sel));
 }
-    
+
 /// GVet untyped selection
 inline void* get_untyped_selection(scene_selection& sel) {
-    for(auto i = 0; i < sizeof(scene_selection) / sizeof(void*); i ++) {
-        if(((void**)&sel)[i]) return ((void**)&sel)[i];
+    for (auto i = 0; i < sizeof(scene_selection) / sizeof(void*); i++) {
+        if (((void**)&sel)[i]) return ((void**)&sel)[i];
     }
     return nullptr;
 }
@@ -10065,7 +10062,7 @@ inline void* get_untyped_selection(scene_selection& sel) {
 bool draw_scene_widgets(gl_window* win, const std::string& lbl, scene* scn,
     scene_selection& sel, std::vector<ygl::scene_selection>& update_list,
     const std::unordered_map<texture*, gl_texture>& gl_txt,
-    test_scene_params* test_scn = nullptr);
+    proc_scene* test_scn = nullptr);
 
 /// @}
 
@@ -10407,14 +10404,14 @@ struct cmdline_visitor {
             var.help, val, req);
     }
     template <typename T,
-        typename std::enable_if<!std::is_enum<T>::value, int>::type = 0>
+        typename std::enable_if_t<!std::is_enum<T>::value, int> = 0>
     inline void operator()(T& val, const visit_var& var) {
         if (var.type == visit_var_type::noneditable) return;
         val = parse_opt(parser, fix_name(var.name), fix_short(var.short_name),
             var.help, val, req);
     }
     template <typename T,
-        typename std::enable_if<std::is_enum<T>::value, int>::type = 0>
+        typename std::enable_if_t<std::is_enum<T>::value, int> = 0>
     inline void operator()(T& val, const visit_var& var) {
         if (var.type == visit_var_type::noneditable) return;
         val = parse_opt(parser, fix_name(var.name), fix_short(var.short_name),

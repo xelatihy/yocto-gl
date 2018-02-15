@@ -4478,7 +4478,7 @@ Names of enum values.
 
 ~~~ .cpp
 template <typename T,
-    typename std::enable_if<std::is_enum<T>::value, int>::type = 0>
+    typename std::enable_if_t<std::is_enum<T>::value, int> = 0>
 inline std::ostream& operator<<(std::ostream& os, const T& a);
 ~~~
 
@@ -4488,7 +4488,7 @@ Stream write.
 
 ~~~ .cpp
 template <typename T,
-    typename std::enable_if<std::is_enum<T>::value, int>::type = 0>
+    typename std::enable_if_t<std::is_enum<T>::value, int> = 0>
 inline std::istream& operator>>(std::istream& is, T& a);
 ~~~
 
@@ -4577,8 +4577,7 @@ Visit pointer elements.
 #### Function operator<<()
 
 ~~~ .cpp
-template <typename T,
-    typename std::enable_if<has_visitor<T>::value, int>::type = 0>
+template <typename T, typename std::enable_if_t<has_visitor<T>::value, int> = 0>
 inline std::ostream& operator<<(std::ostream& os, const T& a);
 ~~~
 
@@ -6389,8 +6388,6 @@ struct camera {
     float aperture = 0;
     float near = 0.01f;
     float far = 10000;
-    std::unordered_map<std::string, std::string> sprops;
-    std::unordered_map<std::string, vec4f> fprops;
 }
 ~~~
 
@@ -6406,8 +6403,6 @@ Camera.
     - aperture:      Lens aperture. @refl_uilimits(0,5)
     - near:      Near plane distance. @refl_uilimits(0.01,10)
     - far:      Far plane distance. @refl_uilimits(10,10000)
-    - sprops:      Application specific properties.
-    - fprops:      Application specific properties.
 
 
 #### Struct texture
@@ -6494,16 +6489,17 @@ struct material {
     texture* disp_txt = nullptr;
     texture* norm_txt = nullptr;
     texture* occ_txt = nullptr;
-    texture_info ke_txt_info = {};
-    texture_info kd_txt_info = {};
-    texture_info ks_txt_info = {};
-    texture_info kr_txt_info = {};
-    texture_info kt_txt_info = {};
-    texture_info rs_txt_info = {};
-    texture_info bump_txt_info = {};
-    texture_info disp_txt_info = {};
-    texture_info norm_txt_info = {};
-    texture_info occ_txt_info = {};
+    texture_info* ke_txt_info = nullptr;
+    texture_info* kd_txt_info = nullptr;
+    texture_info* ks_txt_info = nullptr;
+    texture_info* kr_txt_info = nullptr;
+    texture_info* kt_txt_info = nullptr;
+    texture_info* rs_txt_info = nullptr;
+    texture_info* bump_txt_info = nullptr;
+    texture_info* disp_txt_info = nullptr;
+    texture_info* norm_txt_info = nullptr;
+    texture_info* occ_txt_info = nullptr;
+    ~material(); 
 }
 ~~~
 
@@ -6540,6 +6536,7 @@ Material for surfaces, lines and triangles.
     - disp_txt_info:      Displacement map texture (heighfield) info.
     - norm_txt_info:      Normal texture info.
     - occ_txt_info:      Occlusion texture info.
+    - ~material():      Cleanup.
 
 
 #### Struct shape
@@ -6568,8 +6565,8 @@ struct shape {
 }
 ~~~
 
-Shape data represented as an indexed array.
-May contain only one of the points/lines/triangles/quads.
+Shape data represented as an indexed array. May contain only one of the
+points/lines/triangles/quads.
 
 - Members:
     - name:      Name.
@@ -6639,7 +6636,7 @@ struct environment {
     frame3f frame = identity_frame3f;
     vec3f ke = {0, 0, 0};
     texture* ke_txt = nullptr;
-    texture_info ke_txt_info = {};
+    texture_info* ke_txt_info = nullptr;
 }
 ~~~
 
@@ -6741,6 +6738,7 @@ struct animation_group {
     std::string path = "";
     std::vector<animation*> animations;
     std::vector<std::pair<animation*, node*>> targets;
+    ~animation_group(); 
 }
 ~~~
 
@@ -6751,6 +6749,7 @@ Animation made of multiple keyframed values.
     - path:      Path  used when writing files on disk with glTF.
     - animations:      Keyframed values.
     - targets:      Binds keyframe values to nodes. @refl_semantic(reference)
+    - ~animation_group():      Cleanup.
 
 
 #### Struct scene
@@ -6765,6 +6764,7 @@ struct scene {
     std::vector<environment*> environments = {};
     std::vector<node*> nodes = {};
     std::vector<animation_group*> animations = {};
+    ~scene(); 
 }
 ~~~
 
@@ -6786,6 +6786,7 @@ updates node transformations only if defined.
     - environments:      Environments.
     - nodes:      Node hierarchy.
     - animations:      Node animations.
+    - ~scene():      Cleanup.
 
 
 #### Function eval_pos()
@@ -6856,6 +6857,15 @@ Instance normal interpolated using barycentric coordinates.
 
 ~~~ .cpp
 vec4f eval_texture(const texture* txt, const texture_info& info,
+    const vec2f& texcoord, bool srgb = true, const vec4f& def =;
+~~~
+
+Evaluate a texture.
+
+#### Function eval_texture()
+
+~~~ .cpp
+inline vec4f eval_texture(const texture* txt, const texture_info* info,
     const vec2f& texcoord, bool srgb = true, const vec4f& def =;
 ~~~
 
@@ -7278,10 +7288,10 @@ Visit struct elements.
 
 ### Example scenes
 
-#### Struct test_camera_params
+#### Struct proc_camera
 
 ~~~ .cpp
-struct test_camera_params {
+struct proc_camera {
     std::string name = "";
     vec3f from = {0, 0, -1};
     vec3f to = zero3f;
@@ -7290,7 +7300,7 @@ struct test_camera_params {
 }
 ~~~
 
-Test camera parameters.
+Procedural camera parameters.
 
 - Members:
     - name:      Name.
@@ -7300,10 +7310,10 @@ Test camera parameters.
     - aspect:      Aspect ratio. @refl_uilimits(1,3)
 
 
-#### Enum test_texture_type
+#### Enum proc_texture_type
 
 ~~~ .cpp
-enum struct test_texture_type {
+enum struct proc_texture_type {
     none,
     grid,
     checker,
@@ -7321,7 +7331,7 @@ enum struct test_texture_type {
 }
 ~~~
 
-Test texture type.
+Procedural texture type.
 
 - Values:
     - none:      None (empty texture).
@@ -7340,12 +7350,12 @@ Test texture type.
     - sky:      Sky (HDR).
 
 
-#### Struct test_texture_params
+#### Struct proc_texture
 
 ~~~ .cpp
-struct test_texture_params {
+struct proc_texture {
     std::string name = "";
-    test_texture_type type = test_texture_type::none;
+    proc_texture_type type = proc_texture_type::none;
     int resolution = 512;
     int tile_size = 64;
     int noise_scale = 8;
@@ -7355,7 +7365,7 @@ struct test_texture_params {
 }
 ~~~
 
-Test texture parameters.
+Procedural texture parameters.
 
 - Members:
     - name:      Name.
@@ -7368,10 +7378,10 @@ Test texture parameters.
     - bump_scale:      Bump to normal scale. @refl_uilimits(1,10)
 
 
-#### Enum test_material_type
+#### Enum proc_material_type
 
 ~~~ .cpp
-enum struct test_material_type {
+enum struct proc_material_type {
     none,
     emission,
     matte,
@@ -7381,7 +7391,7 @@ enum struct test_material_type {
 }
 ~~~
 
-Test material type.
+Procedural material type.
 
 - Values:
     - none:      None (empty material).
@@ -7392,12 +7402,12 @@ Test material type.
     - transparent:      Transparent (diffuse with opacity).
 
 
-#### Struct test_material_params
+#### Struct proc_material
 
 ~~~ .cpp
-struct test_material_params {
+struct proc_material {
     std::string name = "";
-    test_material_type type = test_material_type::matte;
+    proc_material_type type = proc_material_type::matte;
     float emission = 1;
     vec3f color = {0.2, 0.2, 0.2};
     float opacity = 1;
@@ -7407,7 +7417,7 @@ struct test_material_params {
 }
 ~~~
 
-Test material parameters.
+Procedural material parameters.
 
 - Members:
     - name:      Name.
@@ -7420,10 +7430,10 @@ Test material parameters.
     - normal:      Normal map.
 
 
-#### Enum test_shape_type
+#### Enum proc_shape_type
 
 ~~~ .cpp
-enum struct test_shape_type {
+enum struct proc_shape_type {
     floor,
     quad,
     cube,
@@ -7444,7 +7454,7 @@ enum struct test_shape_type {
 }
 ~~~
 
-Test shape type.
+Procedural shape type.
 
 - Values:
     - floor:      Floor (shared vertex, 20x20 size).
@@ -7466,12 +7476,12 @@ Test shape type.
     - beziercircle:      Bezier circle.
 
 
-#### Struct test_shape_params
+#### Struct proc_shape
 
 ~~~ .cpp
-struct test_shape_params {
+struct proc_shape {
     std::string name = "";
-    test_shape_type type = test_shape_type::sphere;
+    proc_shape_type type = proc_shape_type::sphere;
     std::string material = "";
     std::string interior = "";
     int tesselation = -1;
@@ -7480,11 +7490,12 @@ struct test_shape_params {
     float radius = -1;
     bool faceted = false;
     int num = -1;
-    make_hair_params hair_params = {};
+    make_hair_params* hair_params = nullptr;
+    ~proc_shape(); 
 }
 ~~~
 
-Test shape parameters.
+Procedural shape parameters.
 
 - Members:
     - name:      Shape name (if not filled, assign a default based on type).
@@ -7500,12 +7511,13 @@ Test shape parameters.
     - num:      Number of elements for points and lines (-1 for default).
      @refl_uilimits(-1,10000)
     - hair_params:      Hair generation params.
+    - ~proc_shape():      Cleanup
 
 
-#### Struct test_instance_params
+#### Struct proc_instance
 
 ~~~ .cpp
-struct test_instance_params {
+struct proc_instance {
     std::string name = "";
     std::string shape = "";
     frame3f frame = identity_frame3f;
@@ -7513,7 +7525,7 @@ struct test_instance_params {
 }
 ~~~
 
-Test instance parameters.
+Procedural instance parameters.
 
 - Members:
     - name:      Name (if not filled, assign a default one).
@@ -7522,10 +7534,10 @@ Test instance parameters.
     - rotation:      Rotation in Euler angles.
 
 
-#### Struct test_environment_params
+#### Struct proc_environment
 
 ~~~ .cpp
-struct test_environment_params {
+struct proc_environment {
     std::string name = "";
     float emission = 1;
     vec3f color = {1, 1, 1};
@@ -7535,7 +7547,7 @@ struct test_environment_params {
 }
 ~~~
 
-Test environment parameters.
+Procedural environment parameters.
 
 - Members:
     - name:      Name.
@@ -7546,10 +7558,10 @@ Test environment parameters.
     - rotation:      Rotation around y axis. @refl_uilimits(0,6.28)
 
 
-#### Struct test_node_params
+#### Struct proc_node
 
 ~~~ .cpp
-struct test_node_params {
+struct proc_node {
     std::string name = "";
     std::string parent = "";
     std::string camera = "";
@@ -7562,7 +7574,7 @@ struct test_node_params {
 }
 ~~~
 
-Test node parameters.
+Procedural node parameters.
 
 - Members:
     - name:      Name.
@@ -7576,10 +7588,10 @@ Test node parameters.
     - scaling:      Scaling. @refl_uilimits(0.01,10)
 
 
-#### Struct test_animation_params
+#### Struct proc_animation
 
 ~~~ .cpp
-struct test_animation_params {
+struct proc_animation {
     std::string name = "";
     bool bezier = false;
     float speed = 1;
@@ -7592,7 +7604,7 @@ struct test_animation_params {
 }
 ~~~
 
-Test animation parameters.
+Procedural animation parameters.
 
 - Members:
     - name:      Name.
@@ -7606,23 +7618,24 @@ Test animation parameters.
     - nodes:      Environment.
 
 
-#### Struct test_scene_params
+#### Struct proc_scene
 
 ~~~ .cpp
-struct test_scene_params {
+struct proc_scene {
     std::string name;
-    std::vector<test_camera_params> cameras;
-    std::vector<test_texture_params> textures;
-    std::vector<test_material_params> materials;
-    std::vector<test_shape_params> shapes;
-    std::vector<test_instance_params> instances;
-    std::vector<test_environment_params> environments;
-    std::vector<test_node_params> nodes;
-    std::vector<test_animation_params> animations;
+    std::vector<proc_camera*> cameras;
+    std::vector<proc_texture*> textures;
+    std::vector<proc_material*> materials;
+    std::vector<proc_shape*> shapes;
+    std::vector<proc_instance*> instances;
+    std::vector<proc_environment*> environments;
+    std::vector<proc_node*> nodes;
+    std::vector<proc_animation*> animations;
+    ~proc_scene(); 
 }
 ~~~
 
-Test scene.
+Procedural scene.
 
 - Members:
     - name:      Name.
@@ -7634,6 +7647,7 @@ Test scene.
     - environments:      Environmennts.
     - nodes:      Nodes.
     - animations:      Animations.
+    - ~proc_scene():      Cleanup.
 
 
 #### Function make_cornell_box_scene()
@@ -7644,165 +7658,160 @@ scene* make_cornell_box_scene();
 
 Makes the Cornell Box scene.
 
-#### Function update_test_elem()
+#### Function update_proc_elem()
 
 ~~~ .cpp
-void update_test_elem(
-    const scene* scn, camera* cam, const test_camera_params& tcam);
+void update_proc_elem(const scene* scn, camera* cam, const proc_camera* tcam);
 ~~~
 
-Updates a test camera.
+Updates a procesural camera.
 
-#### Function test_camera_presets()
+#### Function update_proc_elem()
 
 ~~~ .cpp
-std::unordered_map<std::string, test_camera_params>& test_camera_presets();
+void update_proc_elem(const scene* scn, texture* txt, const proc_texture* ttxt);
 ~~~
 
-Test camera presets.
+Updates a procedural texture.
 
-#### Function update_test_elem()
+#### Function update_proc_elem()
 
 ~~~ .cpp
-void update_test_elem(
-    const scene* scn, texture* txt, const test_texture_params& ttxt);
+void update_proc_elem(
+    const scene* scn, material* mat, const proc_material* tmat);
 ~~~
 
-Updates a test texture.
+Updates a procedural material.
 
-#### Function test_texture_presets()
+#### Function update_proc_elem()
 
 ~~~ .cpp
-std::unordered_map<std::string, test_texture_params>& test_texture_presets();
+void update_proc_elem(const scene* scn, shape* shp, const proc_shape* tshp);
 ~~~
 
-Test texture presets.
+Updates a procedural shape, adding it to the scene if missing.
 
-#### Function update_test_elem()
+#### Function update_proc_elem()
 
 ~~~ .cpp
-void update_test_elem(
-    const scene* scn, material* mat, const test_material_params& tmat);
+void update_proc_elem(
+    const scene* scn, instance* ist, const proc_instance* tist);
 ~~~
 
-Updates a test material.
+Updates a procedural instance.
 
-#### Function test_material_presets()
+#### Function update_proc_elem()
 
 ~~~ .cpp
-std::unordered_map<std::string, test_material_params>& test_material_presets();
+void update_proc_elem(
+    const scene* scn, environment* env, const proc_environment* tenv);
 ~~~
 
-Test material presets.
+Updates a procedural instance.
 
-#### Function update_test_elem()
+#### Function update_proc_elem()
 
 ~~~ .cpp
-void update_test_elem(
-    const scene* scn, shape* shp, const test_shape_params& tshp);
+void update_proc_elem(const scene* scn, node* nde, const proc_node* tndr);
 ~~~
 
-Updates a test shape, adding it to the scene if missing.
+Updates a procedural node.
 
-#### Function test_shape_presets()
+#### Function update_proc_elem()
 
 ~~~ .cpp
-std::unordered_map<std::string, test_shape_params>& test_shape_presets();
+void update_proc_elem(
+    const scene* scn, animation_group* anm, const proc_animation* tndr);
 ~~~
 
-Test shape presets.
+Updates a procedural animation.
 
-#### Function update_test_elem()
-
-~~~ .cpp
-void update_test_elem(
-    const scene* scn, instance* ist, const test_instance_params& tist);
-~~~
-
-Updates a test instance.
-
-#### Function test_instance_presets()
+#### Function update_proc_elems()
 
 ~~~ .cpp
-std::unordered_map<std::string, test_instance_params>& test_instance_presets();
-~~~
-
-Test instance presets.
-
-#### Function update_test_elem()
-
-~~~ .cpp
-void update_test_elem(
-    const scene* scn, environment* env, const test_environment_params& tenv);
-~~~
-
-Updates a test instance.
-
-#### Function test_environment_presets()
-
-~~~ .cpp
-std::unordered_map<std::string, test_environment_params>&
-test_environment_presets();
-~~~
-
-Test environment presets.
-
-#### Function update_test_elem()
-
-~~~ .cpp
-void update_test_elem(
-    const scene* scn, node* nde, const test_node_params& tndr);
-~~~
-
-Updates a test node.
-
-#### Function test_node_presets()
-
-~~~ .cpp
-std::unordered_map<std::string, test_node_params>& test_node_presets();
-~~~
-
-Test nodes presets.
-
-#### Function update_test_elem()
-
-~~~ .cpp
-void update_test_elem(
-    const scene* scn, animation_group* anm, const test_animation_params& tndr);
-~~~
-
-Updates a test node.
-
-#### Function test_node_presets()
-
-~~~ .cpp
-std::unordered_map<std::string, test_node_params>& test_node_presets();
-~~~
-
-Test nodes presets.
-
-#### Function update_test_scene()
-
-~~~ .cpp
-void update_test_scene(scene* scn, const test_scene_params& tscn,
+void update_proc_elems(scene* scn, const proc_scene* tscn,
     const std::unordered_set<void*>& refresh =;
 ~~~
 
-Updates a test scene, adding missing objects. Objects are only added and
-never removed.
+Updates a procedural scene, adding missing objects. Objects are only added
+and never removed.
 
-#### Function make_test_scene()
+#### Function make_proc_elems()
 
 ~~~ .cpp
-inline scene* make_test_scene(const test_scene_params& tscn);
+inline scene* make_proc_elems(const proc_scene* tscn);
 ~~~
 
 Makes a test scene. Convenience wrapper around `update_test_scene()`.
 
-#### Function test_scene_presets()
+#### Function proc_camera_presets()
 
 ~~~ .cpp
-std::unordered_map<std::string, test_scene_params>& test_scene_presets();
+std::unordered_map<std::string, proc_camera*>& proc_camera_presets();
+~~~
+
+Procedural camera presets.
+
+#### Function proc_texture_presets()
+
+~~~ .cpp
+std::unordered_map<std::string, proc_texture*>& proc_texture_presets();
+~~~
+
+Procedural texture presets.
+
+#### Function proc_material_presets()
+
+~~~ .cpp
+std::unordered_map<std::string, proc_material*>& proc_material_presets();
+~~~
+
+Procedural material presets.
+
+#### Function proc_shape_presets()
+
+~~~ .cpp
+std::unordered_map<std::string, proc_shape*>& proc_shape_presets();
+~~~
+
+Procedural shape presets.
+
+#### Function proc_instance_presets()
+
+~~~ .cpp
+std::unordered_map<std::string, proc_instance*>& proc_instance_presets();
+~~~
+
+Procedural instance presets.
+
+#### Function proc_environment_presets()
+
+~~~ .cpp
+std::unordered_map<std::string, proc_environment*>& proc_environment_presets();
+~~~
+
+Procedural environment presets.
+
+#### Function proc_node_presets()
+
+~~~ .cpp
+std::unordered_map<std::string, proc_node*>& proc_node_presets();
+~~~
+
+Procedural nodes presets.
+
+#### Function proc_animation_presets()
+
+~~~ .cpp
+std::unordered_map<std::string, proc_animation*>& proc_animation_presets();
+~~~
+
+Procedural animation presets.
+
+#### Function proc_scene_presets()
+
+~~~ .cpp
+std::unordered_map<std::string, proc_scene*>& proc_scene_presets();
 ~~~
 
 Test scene presets.
@@ -7810,53 +7819,53 @@ Test scene presets.
 #### Function remove_duplicates()
 
 ~~~ .cpp
-void remove_duplicates(test_scene_params& tscn);
+void remove_duplicates(proc_scene* tscn);
 ~~~
 
 Remove duplicates based on name.
 
-#### Function load_test_scene()
+#### Function load_proc_scene()
 
 ~~~ .cpp
-test_scene_params load_test_scene(const std::string& filename);
+proc_scene* load_proc_scene(const std::string& filename);
 ~~~
 
 Load test scene.
 
-#### Function save_test_scene()
+#### Function save_proc_scene()
 
 ~~~ .cpp
-void save_test_scene(const std::string& filename, const test_scene_params& scn);
+void save_proc_scene(const std::string& filename, const proc_scene* scn);
 ~~~
 
 Save test scene.
 
-#### Function enum_names<test_texture_type\>()
+#### Function enum_names<proc_texture_type\>()
 
 ~~~ .cpp
 template <>
-inline const std::vector<std::pair<std::string, test_texture_type>>&
-enum_names<test_texture_type>();
+inline const std::vector<std::pair<std::string, proc_texture_type>>&
+enum_names<proc_texture_type>();
 ~~~
 
 Names of enum values.
 
-#### Function enum_names<test_material_type\>()
+#### Function enum_names<proc_material_type\>()
 
 ~~~ .cpp
 template <>
-inline const std::vector<std::pair<std::string, test_material_type>>&
-enum_names<test_material_type>();
+inline const std::vector<std::pair<std::string, proc_material_type>>&
+enum_names<proc_material_type>();
 ~~~
 
 Names of enum values.
 
-#### Function enum_names<test_shape_type\>()
+#### Function enum_names<proc_shape_type\>()
 
 ~~~ .cpp
 template <>
-inline const std::vector<std::pair<std::string, test_shape_type>>&
-enum_names<test_shape_type>();
+inline const std::vector<std::pair<std::string, proc_shape_type>>&
+enum_names<proc_shape_type>();
 ~~~
 
 Names of enum values.
@@ -7865,7 +7874,7 @@ Names of enum values.
 
 ~~~ .cpp
 template <typename Visitor>
-inline void visit(test_camera_params& val, Visitor&& visitor);
+inline void visit(proc_camera& val, Visitor&& visitor);
 ~~~
 
 Visit struct elements.
@@ -7874,7 +7883,7 @@ Visit struct elements.
 
 ~~~ .cpp
 template <typename Visitor>
-inline void visit(test_texture_params& val, Visitor&& visitor);
+inline void visit(proc_texture& val, Visitor&& visitor);
 ~~~
 
 Visit struct elements.
@@ -7883,7 +7892,7 @@ Visit struct elements.
 
 ~~~ .cpp
 template <typename Visitor>
-inline void visit(test_material_params& val, Visitor&& visitor);
+inline void visit(proc_material& val, Visitor&& visitor);
 ~~~
 
 Visit struct elements.
@@ -7892,7 +7901,7 @@ Visit struct elements.
 
 ~~~ .cpp
 template <typename Visitor>
-inline void visit(test_shape_params& val, Visitor&& visitor);
+inline void visit(proc_shape& val, Visitor&& visitor);
 ~~~
 
 Visit struct elements.
@@ -7901,7 +7910,7 @@ Visit struct elements.
 
 ~~~ .cpp
 template <typename Visitor>
-inline void visit(test_instance_params& val, Visitor&& visitor);
+inline void visit(proc_instance& val, Visitor&& visitor);
 ~~~
 
 Visit struct elements.
@@ -7910,7 +7919,7 @@ Visit struct elements.
 
 ~~~ .cpp
 template <typename Visitor>
-inline void visit(test_environment_params& val, Visitor&& visitor);
+inline void visit(proc_environment& val, Visitor&& visitor);
 ~~~
 
 Visit struct elements.
@@ -7919,7 +7928,7 @@ Visit struct elements.
 
 ~~~ .cpp
 template <typename Visitor>
-inline void visit(test_node_params& val, Visitor&& visitor);
+inline void visit(proc_node& val, Visitor&& visitor);
 ~~~
 
 Visit struct elements.
@@ -7928,7 +7937,7 @@ Visit struct elements.
 
 ~~~ .cpp
 template <typename Visitor>
-inline void visit(test_animation_params& val, Visitor&& visitor);
+inline void visit(proc_animation& val, Visitor&& visitor);
 ~~~
 
 Visit struct elements.
@@ -7937,7 +7946,7 @@ Visit struct elements.
 
 ~~~ .cpp
 template <typename Visitor>
-inline void visit(test_scene_params& val, Visitor&& visitor);
+inline void visit(proc_scene& val, Visitor&& visitor);
 ~~~
 
 Visit struct elements.
@@ -11595,7 +11604,6 @@ struct gl_stdsurface_params {
     bool eyelight = false;
     vec4f background = {0, 0, 0, 0};
     vec3f ambient = {0, 0, 0};
-    void* highlighted = nullptr;
     vec3f highlight_color = {1, 1, 0};
     vec3f edge_color = {0, 0, 0};
     bool cull_backface = true;
@@ -11616,7 +11624,6 @@ Params for stdsurface drawing.
     - eyelight:      Camera light mode.
     - background:      Window background. @refl_semantic(color)
     - ambient:      Ambient illumination. @refl_semantic(color)
-    - highlighted:      Highlighted object. @refl_semantic(noneditable)
     - highlight_color:      Highlight color. @refl_semantic(color)
     - edge_color:      Edge color. @refl_semantic(color)
     - cull_backface:      Cull back face.
@@ -11628,7 +11635,8 @@ Params for stdsurface drawing.
 void draw_stdsurface_scene(const scene* scn, const camera* cam,
     gl_stdsurface_program& prog, std::unordered_map<shape*, gl_shape>& shapes,
     std::unordered_map<texture*, gl_texture>& textures, const gl_lights& lights,
-    const vec2i& viewport_size, const gl_stdsurface_params& params);
+    const vec2i& viewport_size, void* highlighted,
+    const gl_stdsurface_params& params);
 ~~~
 
 Draw scene with stdsurface program.
@@ -12418,11 +12426,11 @@ inline bool draw_value_widget(gl_window* win, const std::string& lbl,
 Generic widget used for templated code. Uses min and max,
 or a deafult range when their are the same. Color is ignored.
 
-#### Constant int\>::type
+#### Constant int\>
 
 ~~~ .cpp
 template <typename T,
-    typename std::enable_if<std::is_enum<T>::value, int>::type = 0>
+    typename std::enable_if_t<std::is_enum<T>::value, int> = 0>
 inline bool draw_value_widget(gl_window* win, const std::string& lbl, T& val,
     float min = 0, float max = 0, bool color = false) {
 ~~~
@@ -12519,13 +12527,21 @@ inline void clear_selection(scene_selection& sel);
 
 Clear selection
 
+#### Function get_untyped_selection()
+
+~~~ .cpp
+inline void* get_untyped_selection(scene_selection& sel);
+~~~
+
+GVet untyped selection
+
 #### Function draw_scene_widgets()
 
 ~~~ .cpp
 bool draw_scene_widgets(gl_window* win, const std::string& lbl, scene* scn,
     scene_selection& sel, std::vector<ygl::scene_selection>& update_list,
     const std::unordered_map<texture*, gl_texture>& gl_txt,
-    test_scene_params* test_scn = nullptr);
+    proc_scene* test_scn = nullptr);
 ~~~
 
 Draws widgets for a whole scene. Used for quickly making demos.

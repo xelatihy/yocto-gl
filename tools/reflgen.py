@@ -37,7 +37,12 @@ def parse(cpp):
     cur = None
     curm = None
     for line in cpp.splitlines():
-        if line.isspace() or line.startswith('    // ') or line.startswith('    ~') or line.startswith('        ') or line.startswith('    }'):
+        if line.isspace() or line.startswith('    // ') or line.startswith('        ') or line.startswith('    }'):
+            continue
+        elif line.startswith('    ~'):
+            if not curm['mem_name']:
+                cur['members'].pop()
+                curm = None
             continue
         elif line.startswith('/// '):
             if not cur:
