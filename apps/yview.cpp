@@ -26,96 +26,168 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#define YGL_OPENGL 1
 #include "../yocto/yocto_gl.h"
-using namespace ygl;
+using namespace std::literals;
 
 // Application state
 struct app_state {
-    scene* scn = nullptr;
-    string filename;
-    string imfilename;
-    string outfilename;
-    gl_stdsurface_params shparams = {};
-    gl_stdsurface_state* shstate = nullptr;
+    ygl::scene* scn = nullptr;
+    ygl::camera* view = nullptr;
+    ygl::camera* cam = nullptr;
+    std::string filename;
+    std::string imfilename;
+    std::string outfilename;
+    ygl::gl_stdsurface_params params = {};
+    ygl::gl_stdsurface_program prog;
+    std::unordered_map<ygl::texture*, ygl::gl_texture> textures;
+    std::unordered_map<ygl::shape*, ygl::gl_shape> shapes;
+    ygl::gl_lights lights;
     bool navigation_fps = false;
-    void* selection = nullptr;
+    ygl::scene_selection selection = {};
+    std::vector<ygl::scene_selection> update_list;
+    ygl::proc_scene* pscn = nullptr;
+    float time = 0;
+    ygl::vec2f time_range = ygl::zero2f;
+    bool animate = false;
 
     ~app_state() {
-        if (shstate) delete shstate;
         if (scn) delete scn;
+        if (view) delete view;
+        if (pscn) delete pscn;
     }
 };
 
 // draw with shading
-inline void draw(gl_window* win) {
+inline void draw(ygl::gl_window* win) {
     auto app = (app_state*)get_user_pointer(win);
 
     auto framebuffer_size = get_framebuffer_size(win);
-    app->shparams.width = framebuffer_size.x;
-    app->shparams.height = framebuffer_size.y;
-    auto cam = app->scn->cameras[app->shparams.camera_id];
-    cam->aspect = (float)framebuffer_size.x / (float)framebuffer_size.y;
+    app->params.resolution = framebuffer_size.y;
 
-    update_lights(app->scn, false, false);
-    update_stdsurface_state(app->shstate, app->scn, app->shparams);
-    if (app->shstate->lights_pos.empty()) app->shparams.camera_lights = true;
-
-    app->shparams.highlighted = app->selection;
-
-    gl_clear_buffers(app->shparams.background);
-    gl_enable_depth_test(true);
-    gl_enable_culling(app->shparams.cull_backface);
-    draw_stdsurface_scene(app->shstate, app->scn, app->shparams);
-
-    if (begin_widgets(win, "yview")) {
-        draw_label_widget(win, "scene", app->filename);
-        draw_camera_widget(win, "camera", app->scn, app->shparams.camera_id);
-        draw_value_widget(win, "wire", app->shparams.wireframe);
-        draw_continue_widget(win);
-        draw_value_widget(win, "edges", app->shparams.edges);
-        draw_continue_widget(win);
-        draw_value_widget(win, "cutout", app->shparams.cutout);
-        draw_continue_widget(win);
-        draw_value_widget(win, "fps", app->navigation_fps);
-        draw_tonemap_widgets(win, "", app->shparams.exposure,
-            app->shparams.gamma, app->shparams.filmic);
-        draw_scene_widgets(
-            win, "scene", app->scn, app->selection, app->shstate->txt);
+    static auto last_time = 0.0f;
+    for (auto& sel : app->update_list) {
+        if (sel.txt) {
+            ygl::update_gl_texture(app->textures, app->selection.txt);
+        }
+        if (sel.sgr) {
+            for (auto shp : app->selection.sgr->shapes) {
+                ygl::update_gl_shape(app->shapes, shp);
+            }
+        }
+        if (sel.shp) { ygl::update_gl_shape(app->shapes, app->selection.shp); }
+        if (sel.nde || sel.anm || sel.agr || app->time != last_time) {
+            ygl::update_transforms(app->scn, app->time);
+            last_time = app->time;
+        }
+        if (sel.shp || sel.sgr || sel.mat || sel.nde) {
+            app->lights = ygl::make_gl_lights(app->scn);
+            if (app->lights.pos.empty()) app->params.eyelight = true;
+        }
     }
-    end_widgets(win);
+    app->update_list.clear();
 
-    swap_buffers(win);
+    ygl::gl_clear_buffers(app->params.background);
+    ygl::gl_enable_depth_test(true);
+    ygl::gl_enable_culling(app->params.cull_backface);
+    ygl::draw_stdsurface_scene(app->scn, app->cam, app->prog, app->shapes,
+        app->textures, app->lights, framebuffer_size,
+        get_untyped_selection(app->selection), app->params);
+
+    if (ygl::begin_widgets(win, "yview")) {
+        if (ygl::draw_header_widget(win, "view")) {
+            ygl::draw_value_widget(win, "scene", app->filename);
+            if (ygl::draw_button_widget(win, "new")) {
+                delete app->pscn;
+                app->pscn = ygl::proc_scene_presets().at("plane_al");
+                delete app->scn;
+                app->scn = new ygl::scene();
+                ygl::clear_gl_shapes(app->shapes);
+                ygl::clear_gl_textures(app->textures);
+                ygl::update_proc_elems(app->scn, app->pscn);
+                app->textures = ygl::make_gl_textures(app->scn);
+                app->shapes = ygl::make_gl_shapes(app->scn);
+            }
+            ygl::draw_continue_widget(win);
+            if (ygl::draw_button_widget(win, "load")) {
+                app->scn = ygl::load_scene(app->filename, {});
+                ygl::clear_gl_shapes(app->shapes);
+                ygl::clear_gl_textures(app->textures);
+                app->textures = ygl::make_gl_textures(app->scn);
+                app->shapes = ygl::make_gl_shapes(app->scn);
+            }
+            ygl::draw_continue_widget(win);
+            if (ygl::draw_button_widget(win, "save")) {
+                ygl::save_scene(app->filename, app->scn, {});
+            }
+            ygl::draw_continue_widget(win);
+            if (draw_button_widget(win, "save proc")) {
+                ygl::save_proc_scene(
+                    ygl::replace_path_extension(app->filename, ".json"),
+                    app->pscn);
+            }
+            ygl::draw_camera_selection_widget(
+                win, "camera", app->cam, app->scn, app->view);
+            ygl::draw_value_widget(win, "fps", app->navigation_fps);
+            if (app->time_range != ygl::zero2f) {
+                ygl::draw_value_widget(win, "time", app->time,
+                    app->time_range.x, app->time_range.y);
+                ygl::draw_value_widget(win, "animate", app->animate);
+            }
+        }
+        if (ygl::draw_header_widget(win, "params")) {
+            ygl::draw_params_widgets(win, "", app->params);
+        }
+        if (ygl::draw_header_widget(win, "scene")) {
+            ygl::draw_scene_widgets(win, "", app->scn, app->selection,
+                app->update_list, app->textures, app->pscn);
+        }
+    }
+    ygl::end_widgets(win);
+
+    ygl::swap_buffers(win);
 }
 
 // run ui loop
 void run_ui(app_state* app) {
     // window
-    auto win = make_window(app->shparams.width, app->shparams.height,
-        "yview | " + app->filename, app);
-    set_window_callbacks(win, nullptr, nullptr, draw);
+    auto win = ygl::make_window(
+        (int)std::round(app->cam->aspect * app->params.resolution),
+        app->params.resolution, "yview | " + app->filename, app);
+    ygl::set_window_callbacks(win, nullptr, nullptr, draw);
 
     // load textures and vbos
-    app->shstate = make_stdsurface_state();
-    update_stdsurface_state(app->shstate, app->scn, app->shparams);
+    app->prog = ygl::make_stdsurface_program();
+    app->textures = ygl::make_gl_textures(app->scn);
+    app->shapes = ygl::make_gl_shapes(app->scn);
+    ygl::update_transforms(app->scn, app->time);
+    app->lights = ygl::make_gl_lights(app->scn);
+    if (app->lights.pos.empty()) app->params.eyelight = true;
 
     // init widget
-    init_widgets(win);
+    ygl::init_widgets(win);
 
     // loop
     while (!should_close(win)) {
         // handle mouse and keyboard for navigation
-        auto cam = app->scn->cameras[app->shparams.camera_id];
-        handle_camera_navigation(win, cam, app->navigation_fps);
+        if (app->cam == app->view) {
+            ygl::handle_camera_navigation(win, app->view, app->navigation_fps);
+        }
+
+        // animation
+        if (app->animate) {
+            app->time += 1 / 60.0f;
+            if (app->time < app->time_range.x || app->time > app->time_range.y)
+                app->time = app->time_range.x;
+        }
 
         // draw
         draw(win);
 
         // event hadling
-        poll_events(win);
+        ygl::poll_events(win);
     }
 
-    clear_window(win);
+    ygl::clear_window(win);
 }
 
 int main(int argc, char* argv[]) {
@@ -123,55 +195,55 @@ int main(int argc, char* argv[]) {
     auto app = new app_state();
 
     // parse command line
-    auto parser = make_parser(argc, argv, "yview", "views scenes inteactively");
-    app->shparams.exposure =
-        parse_opt(parser, "--exposure", "-e", "hdr image exposure", 0.0f);
-    app->shparams.gamma =
-        parse_opt(parser, "--gamma", "-g", "hdr image gamma", 2.2f);
-    app->shparams.filmic =
-        parse_flag(parser, "--filmic", "-F", "hdr filmic output");
-    app->shparams.height =
-        parse_opt(parser, "--resolution", "-r", "image resolution", 540);
-    auto amb = parse_opt(parser, "--ambient", "", "ambient factor", 0.0f);
-    app->shparams.ambient = {amb, amb, amb};
-    app->shparams.camera_lights =
-        parse_flag(parser, "--camera-lights", "-c", "enable camera lights");
-    auto log_filename = parse_opt(parser, "--log", "", "log to disk", ""s);
-    if (log_filename != "") add_file_stream(log_filename, true);
-    auto preserve_quads =
-        parse_flag(parser, "--preserve-quads", "-q", "preserve quads on load");
-    auto preserve_facevarying = parse_flag(
-        parser, "--preserve-facevarying", "-f", "preserve facevarying on load");
-    app->imfilename =
-        parse_opt(parser, "--output-image", "-o", "image filename", "out.hdr"s);
-    app->filename = parse_arg(parser, "scene", "scene filename", ""s);
-    if (should_exit(parser)) {
+    auto parser =
+        ygl::make_parser(argc, argv, "yview", "views scenes inteactively");
+    app->params = ygl::parse_params(parser, "", app->params);
+    auto preserve_quads = ygl::parse_flag(
+        parser, "--preserve-quads", "-q", "Preserve quads on load");
+    auto preserve_facevarying = ygl::parse_flag(
+        parser, "--preserve-facevarying", "-f", "Preserve facevarying on load");
+    app->imfilename = ygl::parse_opt(
+        parser, "--output-image", "-o", "Image filename", "out.hdr"s);
+    app->filename = ygl::parse_arg(parser, "scene", "Scene filename", ""s);
+    if (ygl::should_exit(parser)) {
         printf("%s\n", get_usage(parser).c_str());
         exit(1);
     }
 
     // scene loading
-    log_info("loading scene {}", app->filename);
+    ygl::log_info("loading scene {}", app->filename);
     try {
-        auto opts = load_options();
+        auto opts = ygl::load_options();
         opts.preserve_quads = preserve_quads;
         opts.preserve_facevarying = preserve_facevarying;
+        opts.preserve_hierarchy = true;
         app->scn = load_scene(app->filename, opts);
-    } catch (exception e) { log_fatal("cannot load scene {}", app->filename); }
+    } catch (std::exception e) {
+        ygl::log_fatal("cannot load scene {}", app->filename);
+    }
 
     // tesselate input shapes
-    tesselate_shapes(app->scn, true, !preserve_facevarying,
+    ygl::tesselate_shapes(app->scn, true, !preserve_facevarying,
         !preserve_quads && !preserve_facevarying, false);
 
     // add missing data
-    add_elements(app->scn);
+    ygl::add_elements(app->scn);
 
-    // light
-    update_lights(app->scn, false, false);
+    // view camera
+    app->view = ygl::make_view_camera(app->scn, 0);
+    app->cam = app->view;
+
+    // animation
+    app->time_range = ygl::compute_animation_range(app->scn);
+    app->time = app->time_range.x;
+
+    // lights
+    app->lights = ygl::make_gl_lights(app->scn);
+
+    // editing
+    app->pscn = new ygl::proc_scene();
 
     // run ui
-    auto cam = app->scn->cameras[app->shparams.camera_id];
-    app->shparams.width = (int)round(cam->aspect * app->shparams.height);
     run_ui(app);
 
     // clear

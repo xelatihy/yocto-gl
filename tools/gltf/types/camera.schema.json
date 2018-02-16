@@ -24,7 +24,7 @@
         {
             "description": "Values for glTFCamera::type",
             "name": "glTFCameraType",
-            "item": "string",
+            "item": "std::string",
             "values": [
                 {
                     "enum": "perspective",

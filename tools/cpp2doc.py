@@ -18,7 +18,21 @@ def make_doc(cpp, first_only=False):
     first = True
     indented = False
     enum_last = False
-    for line in cpp.splitlines(True):
+    lines = cpp.splitlines(True)
+    nlines = []
+    groupname = ''
+    for line in lines:
+        if '/// @defgroup' in line:
+            groupname = line.replace('/// @defgroup','').strip().partition(' ')[2].replace(' ','_')
+            nlines += [ '/// Group ' + groupname + '\n' ]
+        elif '/// @{' in line:
+            nlines += [ '__group__ ' + groupname + '{ \n' ]
+        elif '/// @}' in line:
+            pass
+        else:
+            nlines += [ line ]
+    lines = nlines
+    for line in lines:
         if cur_item:
             if '///' in line:
                 cur_item.comment += line
@@ -78,6 +92,12 @@ def make_doc(cpp, first_only=False):
                 item.name = main_namespace + "::" + item.name
             item.decl = ""
             item.comment = clean_comment(item.comment)
+        elif "__group__" in item.decl:
+            item.type = "Group"
+            item.name = item.decl
+            item.name = item.name.replace("__group__ ", "").replace("{", "").replace("_", " ").strip()
+            item.decl = ""
+            item.comment = clean_comment(item.comment)
         elif "using " in item.decl:
             if " = " in item.decl:
                 item.type = "Typedef"
@@ -85,8 +105,8 @@ def make_doc(cpp, first_only=False):
                 item.name = item.name.partition(" = ")[0].replace("using ", "").strip()
                 item.comment = clean_comment(item.comment)
             else:
-                item.type = "Function Alias"
-                item.name = item.decl.partition("::")[2].replace(";", "").strip() + "()"
+                item.type = "Import"
+                item.name = item.decl.partition("::")[2].replace(";", "").strip()
                 item.comment = clean_comment(item.comment)
         elif 'enum ' in item.decl:
             item.type = "Enum"
@@ -160,10 +180,15 @@ def make_doc(cpp, first_only=False):
     md = ''
     first = True
     for item in items:
+        if item.type == 'Group':
+            md += '### '
+            md += item.name
+            md += '\n\n'
+            continue
         if item.name != "":
             md += "#### "
             md += item.type + " "
-            md += item.name.replace("<", " <").replace(">", " \\>")
+            md += item.name.replace('<','<').replace('>','\\>')
             # md += item.name
             md += "\n\n"
         if item.decl != "":
@@ -175,6 +200,16 @@ def make_doc(cpp, first_only=False):
             if first_only: return md
             md += "## API Documentation\n\n"
             first = False
+
+    def remove_attag(md, tag):
+        while tag in md:
+            md = md.partition(tag+'(')[0] + md.partition(tag+'(')[2].partition(')')[2]
+        return md
+
+    # remove refl_XXX
+    md = remove_attag(md, '@refl_uilimits')
+    md = remove_attag(md, '@refl_semantic')
+    md = remove_attag(md, '@refl_shortname')
     return md
 
 template = '''
@@ -188,12 +223,10 @@ template = '''
     </head>
     <body>
     <header>
-        <nav>
-            <img src="images/logo_white.png">
-            <a href="index.html">about</a>
-            <a href="yocto_gl.html">api</a>
-            <a href="https://github.com/xelatihy/yocto-gl">github</a>
-        </nav>
+        <!-- a href="index.html">about</a -->
+        <!-- a href="yocto_gl.html">api</a -->
+        <!-- a href="https://github.com/xelatihy/yocto-gl">github</a -->
+        $toc$
     </header>
     <article>
     $body$
@@ -203,9 +236,41 @@ template = '''
     </html>
 '''
 
-def make_html(md):
+def make_toc(md, about_page, api_page, github_page, twitter_page):
+    toc = ''
+    nmd = ''
+    num = 0
+    toc += '[Yocto/GL](' + about_page + ') [![](images/github-logo.png)](' + github_page + ') + [![](images/twitter-logo.png)](' + twitter_page + ')\n\n'
+    for line in md.splitlines():
+        if line.startswith('# ') or line.startswith('## ') or  line.startswith('### '):
+            link = 'toc' + str(num)
+            num += 1
+            if  line.startswith('### '):
+                toc += '    - '
+            else:
+                toc += '- '
+            if line.startswith('# '):
+                title = 'About'
+            else:
+                title = line[3:]
+            toc += '[' + title + '](#' + link + ')' + '\n'
+            if 'API ' in title:
+                nmd += '<a id="api"></a>\n\n'
+            nmd += '<a id="' + link + '"></a>\n\n'
+            nmd += line + '\n'
+        else:
+            nmd += line + '\n'
+    if api_page:
+        toc += '- [API Documentation](' + api_page + '#api)\n'
+    return toc, nmd
+
+def make_html(md, about_page, api_page, github_page, twitter_page):
+    toc, md = make_toc(md, about_page, api_page, github_page, twitter_page)
     import markdown, glob
     html = markdown.markdown(md, ['markdown.extensions.extra',
+                     'markdown.extensions.codehilite'],
+                     output_format='html5')
+    htmltoc = markdown.markdown(toc, ['markdown.extensions.extra',
                      'markdown.extensions.codehilite'],
                      output_format='html5')
     html = html.replace('<pre>', '<pre><code>')
@@ -214,17 +279,19 @@ def make_html(md):
         link = link.replace('docs/','')
         hlink = link.replace('.md', '.html')
         html = html.replace(link, hlink)
+        htmltoc = htmltoc.replace(link, hlink)
     while '<p><img' in html:
         before, _, remainder = html.partition('<p><img')
         middle, _, after = remainder.partition('</p>')
         html = before + '<figure><img' + middle + '</figure>' + after
-    html = template.replace('$body$', html)
+    html = template.replace('$body$', html).replace('$toc$', htmltoc)
     return html
 
 for filename in ["yocto/yocto_gl.h", "yocto/yocto_gltf.h"]:
+    twitter_link = 'https://twitter.com/intent/tweet?text=Check%20out&url=https%3A%2F%2Fgoo.gl%2FYvQvBr&hashtags=yocto-gl&via=xelatihy'
     with open(filename) as f: cpp = f.read()
     md = make_doc(cpp)
-    html = make_html(md)
+    html = make_html(md, 'index.html', 'yocto_gl.html', 'https://github.com/xelatihy/yocto-gl', twitter_link)
     filename_md = filename.replace(".h", ".md").replace("yocto/", "docs/")
     with open(filename_md, 'wt') as f: f.write(md)
     filename_html = filename_md.replace(".md", ".html")
@@ -233,7 +300,7 @@ for filename in ["yocto/yocto_gl.h", "yocto/yocto_gltf.h"]:
 for filename in ["yocto/yocto_gl.h"]:
     with open(filename) as f: cpp = f.read()
     md = make_doc(cpp, True)
-    html = make_html(md)
+    html = make_html(md, 'index.html', 'yocto_gl.html', 'https://github.com/xelatihy/yocto-gl', twitter_link)
     filename_md = filename.replace(".h", ".md").replace("yocto/", "docs/")
     with open('readme.md', 'wt') as f: f.write(md)
     with open('docs/index.html', 'wt') as f: f.write(html)

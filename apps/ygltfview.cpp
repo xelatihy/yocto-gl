@@ -26,7 +26,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#define YGL_OPENGL 1
 #include "../yocto/yocto_gl.h"
 #include "../yocto/yocto_gltf.h"
 using ygl::log_info;
@@ -48,15 +47,10 @@ struct shape_vbo {
 
 // OpenGL state
 struct shade_state {
-    // shade state
     ygl::gl_stdsurface_program prog = {};
     std::map<void*, ygl::gl_texture> txt;
     std::map<void*, shape_vbo> vbo;
-
-    // lights
-    std::vector<ygl::vec3f> lights_pos;
-    std::vector<ygl::vec3f> lights_ke;
-    std::vector<ygl::gl_ltype> lights_ltype;
+    ygl::gl_lights lights;
 };
 
 // Application state
@@ -143,7 +137,7 @@ inline bool load_scene(
     if (!ygl::get_camera_nodes(scn->gscn->default_scene).empty()) {
         auto cam = ygl::get_camera_nodes(scn->gscn->default_scene)[0];
         scn->view_cam = new ygl::camera();
-        scn->view_cam->frame = ygl::to_frame3f(ygl::mat4f(cam->xform()));
+        scn->view_cam->frame = ygl::mat_to_frame(ygl::mat4f(cam->xform()));
         scn->view_cam->yfov = cam->cam->yfov;
         scn->view_cam->aspect = cam->cam->aspect;
         scn->view_cam->near = cam->cam->near;
@@ -165,7 +159,7 @@ inline bool load_scene(
         auto from = camera_dir * bbox_msize + center;
         auto to = center;
         auto up = ygl::vec3f{0, 1, 0};
-        scn->view_cam->frame = ygl::lookat_frame3f(from, to, up);
+        scn->view_cam->frame = ygl::lookat_frame(from, to, up);
         scn->view_cam->aspect = 16.0f / 9.0f;
         scn->view_cam->yfov = 2 * atanf(0.5f);
         scn->view_cam->aperture = 0;
@@ -197,9 +191,9 @@ inline bool load_scene(
 // Init shading
 inline void update_shade_lights(
     shade_state* st, const ygl::gltf_scene_group* scn) {
-    st->lights_pos.clear();
-    st->lights_ke.clear();
-    st->lights_ltype.clear();
+    st->lights.pos.clear();
+    st->lights.ke.clear();
+    st->lights.type.clear();
 
     auto instances = ygl::get_mesh_nodes(scn->default_scene);
 
@@ -210,11 +204,11 @@ inline void update_shade_lights(
                 auto mat = shp->mat;
                 if (mat->emission == ygl::zero3f) continue;
                 for (auto p : shp->points) {
-                    if (st->lights_pos.size() >= 16) break;
-                    st->lights_pos.push_back(ygl::transform_point(
+                    if (st->lights.pos.size() >= 16) break;
+                    st->lights.pos.push_back(ygl::transform_point(
                         ygl::mat4f(ist->xform()), shp->pos[p]));
-                    st->lights_ke.push_back(mat->emission);
-                    st->lights_ltype.push_back(ygl::gl_ltype::point);
+                    st->lights.ke.push_back(mat->emission);
+                    st->lights.type.push_back(ygl::gl_light_type::point);
                 }
             }
         }
@@ -225,10 +219,10 @@ inline void update_shade_lights(
                 auto mat = shp->mat;
                 if (mat->emission == ygl::zero3f) continue;
                 for (auto p : shp->points) {
-                    if (st->lights_pos.size() >= 16) break;
-                    st->lights_pos.push_back(shp->pos[p]);
-                    st->lights_ke.push_back(mat->emission);
-                    st->lights_ltype.push_back(ygl::gl_ltype::point);
+                    if (st->lights.pos.size() >= 16) break;
+                    st->lights.pos.push_back(shp->pos[p]);
+                    st->lights.ke.push_back(mat->emission);
+                    st->lights.type.push_back(ygl::gl_light_type::point);
                 }
             }
         }
@@ -242,9 +236,9 @@ inline void update_shade_state(
     st->txt[nullptr] = {};
     for (auto txt : sc->textures) {
         if (st->txt.find(txt) != st->txt.end()) continue;
-        if (txt->hdr) {
+        if (!txt->hdr.empty()) {
             st->txt[txt] = ygl::make_texture(txt->hdr, true, true, true);
-        } else if (txt->ldr) {
+        } else if (!txt->ldr.empty()) {
             st->txt[txt] = ygl::make_texture(txt->ldr, true, true, true);
         } else
             assert(false);
@@ -311,9 +305,9 @@ inline void shade_mesh(const ygl::gltf_mesh* msh, const ygl::gltf_skin* sk,
     for (auto shp : msh->shapes) {
         begin_stdsurface_shape(st->prog, xform);
 
-        auto etype = ygl::gl_etype::triangle;
-        if (!shp->lines.empty()) etype = ygl::gl_etype::line;
-        if (!shp->points.empty()) etype = ygl::gl_etype::point;
+        auto etype = ygl::gl_elem_type::triangle;
+        if (!shp->lines.empty()) etype = ygl::gl_elem_type::line;
+        if (!shp->points.empty()) etype = ygl::gl_elem_type::point;
 
         set_stdsurface_highlight(
             st->prog, (highlighted) ? ygl::vec4f{1, 1, 0, 1} : ygl::zero4f);
@@ -399,11 +393,9 @@ inline void shade_mesh(const ygl::gltf_mesh* msh, const ygl::gltf_skin* sk,
 
             assert(ygl::gl_check_error());
             ygl::gl_line_width(2);
-            ygl::gl_enable_edges(true);
             draw_elems(vbo.points);
             draw_elems(vbo.lines);
             draw_elems(vbo.triangles);
-            ygl::gl_enable_edges(false);
             ygl::gl_line_width(1);
             assert(ygl::gl_check_error());
         }
@@ -434,29 +426,27 @@ inline void shade_scene(const ygl::gltf_scene_group* scns, shade_state* st,
         if (gcam->cam->ortho) {
             auto near = (gcam->cam->near) ? gcam->cam->near : 0.001f;
             auto far = (gcam->cam->far) ? gcam->cam->far : 10000;
-            camera_proj =
-                ygl::ortho2d_mat4f(gcam->cam->yfov * gcam->cam->aspect,
-                    gcam->cam->yfov, near, far);
+            camera_proj = ygl::ortho2d_mat(gcam->cam->yfov * gcam->cam->aspect,
+                gcam->cam->yfov, near, far);
         } else {
             auto near = (gcam->cam->near) ? gcam->cam->near : 0.001f;
             if (gcam->cam->far) {
-                camera_proj = ygl::perspective_mat4f(
+                camera_proj = ygl::perspective_mat(
                     gcam->cam->yfov, gcam->cam->aspect, near, gcam->cam->far);
             } else {
-                camera_proj = ygl::perspective_mat4f(
+                camera_proj = ygl::perspective_mat(
                     gcam->cam->yfov, gcam->cam->aspect, 0.01f);
             }
         }
     } else {
-        camera_xform = ygl::to_mat4f(ycam->frame);
-        camera_view = ygl::to_mat4f(ygl::inverse(ycam->frame));
+        camera_xform = ygl::frame_to_mat(ycam->frame);
+        camera_view = ygl::frame_to_mat(ygl::inverse(ycam->frame));
         auto near = (ycam->near) ? ycam->near : 0.001f;
         if (ycam->far) {
-            camera_proj = ygl::perspective_mat4f(
-                ycam->yfov, ycam->aspect, near, ycam->far);
-        } else {
             camera_proj =
-                ygl::perspective_mat4f(ycam->yfov, ycam->aspect, near);
+                ygl::perspective_mat(ycam->yfov, ycam->aspect, near, ycam->far);
+        } else {
+            camera_proj = ygl::perspective_mat(ycam->yfov, ycam->aspect, near);
         }
     }
 
@@ -465,9 +455,7 @@ inline void shade_scene(const ygl::gltf_scene_group* scns, shade_state* st,
 
     if (!camera_lights) {
         update_shade_lights(st, scns);
-        set_stdsurface_lights(st->prog, amb, (int)st->lights_pos.size(),
-            st->lights_pos.data(), st->lights_ke.data(),
-            st->lights_ltype.data());
+        set_stdsurface_lights(st->prog, amb, st->lights);
     }
 
     auto instances = ygl::get_mesh_nodes(scns->default_scene);
@@ -686,7 +674,7 @@ void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
     draw_separator_widget(win);
     draw_label_widget(win, "path", txt->path);
     auto str = ygl::format("{} x {} @ 4 {}", txt->width(), txt->height(),
-        (txt->ldr) ? "byte" : "float");
+        (!txt->ldr.empty()) ? "byte" : "float");
     draw_label_widget(win, "size", str);
     if (state->txt.find(txt) != state->txt.end()) {
         draw_image_widget(win, get_texture_id(state->txt.at(txt)), {128, 128},
@@ -724,10 +712,10 @@ void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
 
     draw_indent_widget_begin(win);
 
-    draw_value_widget(win, "wrap s", info->wrap_s, wrap_names);
-    draw_value_widget(win, "wrap t", info->wrap_t, wrap_names);
-    draw_value_widget(win, "filter mag", info->filter_mag, filter_mag_names);
-    draw_value_widget(win, "filter min", info->filter_min, filter_min_names);
+    draw_combo_widget(win, "wrap s", info->wrap_s, wrap_names);
+    draw_combo_widget(win, "wrap t", info->wrap_t, wrap_names);
+    draw_combo_widget(win, "filter mag", info->filter_mag, filter_mag_names);
+    draw_combo_widget(win, "filter min", info->filter_min, filter_min_names);
 
     draw_indent_widget_end(win);
 }
@@ -743,10 +731,10 @@ void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
     draw_value_widget(win, "mr opacity", mat->opacity, 0, 1);
     draw_value_widget(win, "mr metallic", mat->metallic, 0, 1);
     draw_value_widget(win, "mr roughness", mat->roughness, 0, 1);
-    draw_value_widget(win, "mr base txt", mat->base_txt, txt_names);
+    draw_combo_widget(win, "mr base txt", mat->base_txt, txt_names);
     if (mat->base_txt && mat->base_txt_info)
         draw_elem_widgets(win, gscn, mat->base_txt_info, selection, state);
-    draw_value_widget(win, "mr metallic txt", mat->metallic_txt, txt_names);
+    draw_combo_widget(win, "mr metallic txt", mat->metallic_txt, txt_names);
     if (mat->metallic_txt && mat->metallic_txt_info)
         draw_elem_widgets(win, gscn, mat->metallic_txt_info, selection, state);
 }
@@ -762,10 +750,10 @@ void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
     draw_value_widget(win, "sg opacity", mat->opacity, 0, 1);
     draw_value_widget(win, "sg specular", mat->specular, 0, 1);
     draw_value_widget(win, "sg glossiness", mat->glossiness, 0, 1);
-    draw_value_widget(win, "sg diffuse txt", mat->diffuse_txt, txt_names);
+    draw_combo_widget(win, "sg diffuse txt", mat->diffuse_txt, txt_names);
     if (mat->diffuse_txt && mat->diffuse_txt_info)
         draw_elem_widgets(win, gscn, mat->diffuse_txt_info, selection, state);
-    draw_value_widget(win, "sg specular txt", mat->specular_txt, txt_names);
+    draw_combo_widget(win, "sg specular txt", mat->specular_txt, txt_names);
     if (mat->specular_txt && mat->specular_txt_info)
         draw_elem_widgets(win, gscn, mat->specular_txt_info, selection, state);
 }
@@ -781,13 +769,13 @@ void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
     draw_separator_widget(win);
     draw_label_widget(win, "name", mat->name);
     draw_value_widget(win, "emission", mat->emission, 0, 1000);
-    draw_value_widget(win, "emission txt", mat->emission_txt, txt_names);
+    draw_combo_widget(win, "emission txt", mat->emission_txt, txt_names);
     if (mat->emission_txt && mat->emission_txt_info)
         draw_elem_widgets(win, gscn, mat->emission_txt_info, selection, state);
-    draw_value_widget(win, "normal txt", mat->normal_txt, txt_names);
+    draw_combo_widget(win, "normal txt", mat->normal_txt, txt_names);
     if (mat->normal_txt && mat->normal_txt_info)
         draw_elem_widgets(win, gscn, mat->normal_txt_info, selection, state);
-    draw_value_widget(win, "occlusion txt", mat->occlusion_txt, txt_names);
+    draw_combo_widget(win, "occlusion txt", mat->occlusion_txt, txt_names);
     if (mat->occlusion_txt && mat->occlusion_txt_info)
         draw_elem_widgets(win, gscn, mat->occlusion_txt_info, selection, state);
     if (mat->metallic_roughness) {
@@ -821,7 +809,7 @@ void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
 
     draw_separator_widget(win);
     draw_label_widget(win, "name", shp->name);
-    draw_value_widget(win, "material", shp->mat, mat_names);
+    draw_combo_widget(win, "material", shp->mat, mat_names);
     draw_label_widget(win, "verts", (int)shp->pos.size());
     if (!shp->triangles.empty())
         draw_label_widget(win, "triangles", (int)shp->triangles.size());
@@ -871,7 +859,7 @@ void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
     draw_label_widget(win, "num rotation", (int)anim->rotation.size());
     draw_label_widget(win, "num scale", (int)anim->scale.size());
     auto selected_node = (ygl::gltf_node*)nullptr;
-    draw_value_widget(win, "", selected_node, node_names);
+    draw_combo_widget(win, "", selected_node, node_names);
 }
 
 void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
@@ -905,11 +893,11 @@ void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
 
     draw_separator_widget(win);
     draw_label_widget(win, "name", node->name);
-    draw_value_widget(win, "mesh", node->msh, msh_names);
-    draw_value_widget(win, "cam", node->cam, cam_names);
+    draw_combo_widget(win, "mesh", node->msh, msh_names);
+    draw_combo_widget(win, "cam", node->cam, cam_names);
     draw_value_widget(win, "translation", node->translation, -10, 10);
     draw_value_widget(win, "rotation", node->rotation);
-    draw_value_widget(win, "scale", node->scale, 0.01, 10);
+    draw_value_widget(win, "scale", node->scale, 0.01f, 10);
     draw_value_widget(win, "matrix", node->matrix, -10, 10);
 }
 
@@ -980,7 +968,7 @@ void draw_widgets(ygl::gl_window* win) {
             for (auto cam : ygl::get_camera_nodes(scn->gscn->default_scene)) {
                 camera_names.push_back({cam->name, cam});
             }
-            if (draw_value_widget(win, "camera", scn->gcam, camera_names))
+            if (draw_combo_widget(win, "camera", scn->gcam, camera_names))
                 scn->scene_updated = true;
         }
         draw_value_widget(win, "wire", scn->wireframe);
@@ -988,7 +976,7 @@ void draw_widgets(ygl::gl_window* win) {
         draw_value_widget(win, "cutout", scn->alpha_cutout);
         draw_value_widget(win, "fps", scn->navigation_fps);
         draw_value_widget(win, "hdr exposure", scn->exposure, -20, 20, 1);
-        draw_value_widget(win, "hdr gamma", scn->gamma, 0.1, 5, 0.1);
+        draw_value_widget(win, "hdr gamma", scn->gamma, 0.1, 5);
         draw_value_widget(win, "hdr filmic", scn->filmic);
         if (draw_header_widget(win, "view cam")) {
             auto cam = scn->view_cam;
@@ -1033,10 +1021,6 @@ void parse_cmdline(app_state* scene, int argc, char** argv, const char* name,
     scene->add_spec_gloss = parse_flag(
         parser, "--add-spec-gloss", "", "add spec-gloss to gltf", false);
 
-    // logging
-    auto log_filename = parse_opt(parser, "--log", "", "log to disk", ""s);
-    if (log_filename != "") ygl::add_file_stream(log_filename, true);
-
     // params
     scene->imfilename =
         parse_opt(parser, "--output-image", "-o", "image filename", "out.hdr"s);
@@ -1071,7 +1055,7 @@ void shade_draw(ygl::gl_window* win) {
     draw_scene(win);
     draw_widgets(win);
     swap_buffers(win);
-    if (scn->shstate->lights_pos.empty()) scn->camera_lights = true;
+    if (scn->shstate->lights.pos.empty()) scn->camera_lights = true;
 }
 
 bool update(app_state* scn) {

@@ -52,282 +52,80 @@ struct {{name}} {{#base}}: {{base}}{{/base}} {
 '''
 
 parse_func = '''
-// Parse int function.
-inline void serialize_from_json(int& val, const json& js) {
-    if (!js.is_number_integer()) throw runtime_error("integer expected");
-    val = js;
-}
-
-// Parse float function.
-inline void serialize_from_json(float& val, const json& js) {
-    if (!js.is_number()) throw runtime_error("number expected");
-    val = js;
-}
-
-// Parse bool function.
-inline void serialize_from_json(bool& val, const json& js) {
-    if (!js.is_boolean()) throw runtime_error("bool expected");
-    val = js;
-}
-
-// Parse std::string function.
-inline void serialize_from_json(string& val, const json& js) {
-    if (!js.is_string()) throw runtime_error("string expected");
-    val = js;
-}
-
-// Parse json function.
-inline void serialize_from_json(json& val, const json& js) { val = js; }
-
-// Parse support function.
+// Check for default value
 template <typename T>
-inline void serialize_from_json(T*& val, const json& js) {
-    if (js.is_null()) { val = nullptr; return; }
-    if (!js.is_object()) throw runtime_error("object expected");
-    if (!val) val = new T();
-    serialize_from_json(*val, js);
+bool operator==(const glTFid<T>& a, const glTFid<T>& b) {
+    return (int)a == (int)b;
 }
 
-// Parse support function.
+// Check for default value
 template <typename T>
-inline void serialize_from_json(vector<T>& vals, const json& js) {
-    if (!js.is_array()) throw runtime_error("array expected");
-    vals.resize(js.size());
-    for (auto i = 0; i < js.size(); i++) {
-        // this is contrived to support for vector<bool>
-        auto v = T();
-        serialize_from_json(v, js[i]);
-        vals[i] = v;
-    }
-}
-
-// Parse support function.
-template <typename T>
-inline void serialize_from_json(map<string, T>& vals, const json& js) {
-    if (!js.is_object()) throw runtime_error("object expected");
-    for (auto kv = js.begin(); kv != js.end(); ++kv) {
-        serialize_from_json(vals[kv.key()], kv.value());
-    }
-}
-
-// Parse support function.
-template<typename T, size_t N>
-inline void serialize_from_json(array<T, N>& vals, const json& js) {
-    if (!js.is_array()) throw runtime_error("array expected");
-    if (N != js.size()) throw runtime_error("wrong array size");
-    for (auto i = 0; i < N; i++) serialize_from_json(vals[i], js.at(i));
-}
-
-// Parse support function.
-template<typename T, typename T1>
-inline void serialize_from_json(T& val, const json& js, const vector<pair<T1, T>>& table) {
-    auto v = T1();
-    serialize_from_json(v, js);
-    auto found = false;
-    for(auto& kv : table) { if(kv.first == v) { val = kv.second; found = true; break; } }
-    if(!found) throw runtime_error("bad enum value");
-}
-
-// Parse support function.
-inline void serialize_from_json(vec2f& vals, const json& js) {
-    serialize_from_json((array<float, 2>&)vals, js);
-}
-
-// Parse support function.
-inline void serialize_from_json(vec3f& vals, const json& js) {
-    serialize_from_json((array<float, 3>&)vals, js);
-}
-
-// Parse support function.
-inline void serialize_from_json(vec4f& vals, const json& js) {
-    serialize_from_json((array<float, 4>&)vals, js);
-}
-
-// Parse support function.
-inline void serialize_from_json(quat4f& vals, const json& js) {
-    serialize_from_json((array<float, 4>&)vals, js);
-}
-
-// Parse support function.
-inline void serialize_from_json(mat4f& vals, const json& js) {
-    serialize_from_json((array<float, 16>&)vals, js);
+bool operator!=(const glTFid<T>& a, const glTFid<T>& b) {
+    return (int)a != (int)b;
 }
 
 // Parse id function.
 template <typename T>
-inline void serialize_from_json(glTFid<T>& val, const json& js) {
-    if (!js.is_number_integer()) throw runtime_error("int expected");
-    val = glTFid<T>((int)js);
+void serialize(glTFid<T>& val, json& js, bool reading) {
+    if(reading) {
+        if (!js.is_number_integer()) throw std::runtime_error("int expected");
+        val = glTFid<T>((int)js);
+    } else {
+        js = (int)val;
+    }
 }
 
 // Parses a glTFProperty object
-inline void serialize_from_json(glTFProperty& val, const json& js) {
-    if (!js.is_object()) throw runtime_error("object expected");
+void serialize(glTFProperty& val, json& js, bool reading) {
+    if(reading) {
+        if (!js.is_object()) throw std::runtime_error("object expected");
 #if YGL_GLTFJSON
-    if(js.count("extensions")) serialize_from_json(val.extensions, js.at("extensions"));
-    if(js.count("extras")) serialize_from_json(val.extras, js.at("extras"));
+        if(js.count("extensions")) serialize(val.extensions, js.at("extensions"), reading);
+        if(js.count("extras")) serialize(val.extras, js.at("extras"), reading);
 #endif
+    } else {
+        if (!js.is_object()) js = json::object();
+ #if YGL_GLTFJSON
+        if (!val.extensions.empty()) serialize(val.extensions, js["extensions"], reading);
+        if (!val.extras.is_null()) serialize(val.extras, js["extras"], reading);
+ #endif
+    }
 }
+
 '''
 
 parse_fmt = '''
 {{#types}}
 {{#enums}}
 // Parse a {{name}} enum
-inline void serialize_from_json({{name}}& val, const json& js) {
-    static vector<pair<{{item}}, {{name}}>> table = { {{#values}} { {{enum}}, {{name}}::{{label}} },{{/values}} };
-    serialize_from_json(val, js, table);
+void serialize({{name}}& val, json& js, bool reading) {
+    static std::vector<std::pair<{{item}}, {{name}}>> table = { {{#values}} { {{enum}}, {{name}}::{{label}} },{{/values}} };
+    serialize(val, js, reading, table);
 }
 
 {{/enums}}
 
 // Parses a {{name}} object
-inline void serialize_from_json({{name}}& val, const json& js) {
-    if (!js.is_object()) throw runtime_error("object expected");
-    {{#base}}serialize_from_json(({{base}}&)val, js);{{/base}}
-    {{#properties}}{{^extension}}{{#required}}if (!js.count("{{name}}")) throw runtime_error("missing value");{{/required}}{{^required}}if (js.count("{{name}}")) {{/required}}serialize_from_json(val.{{name}}, js.at("{{name}}"));{{/extension}}{{/properties}}
-    {{#has_extensions}}
-    if (js.count("extensions")) {
-        auto& js_ext = js["extensions"];
-        {{#properties}}{{#extension}}if (js_ext.count("{{extension}}")) serialize_from_json(val.{{name}}, js_ext.at("{{extension}}"));{{/extension}}{{/properties}}
-    }
-    {{/has_extensions}}
-}
-{{/types}}
-'''
-
-dump_func = '''
-// Converts int to json.
-inline void serialize_to_json(int val, json& js) { js = val; }
-
-// Converts float to json.
-inline void serialize_to_json(float val, json& js) { js = val; }
-
-// Converts bool to json.
-inline void serialize_to_json(bool val, json& js) { js = val; }
-
-// Converts string to json.
-inline void serialize_to_json(const string& val, json& js) { js = val; }
-
-// Converts json to json.
-inline void serialize_to_json(const json& val, json& js) { js = val; }
-
-// Dump support function.
-template<typename T>
-inline void serialize_to_json(const T* val, json& js) {
-    if (!val) { js = nullptr; return; }
-    if (!js.is_object()) js = json::object();
-    serialize_to_json(*val, js);
-}
-
-// Dump support function.
-template<typename T, size_t N>
-inline void serialize_to_json(const array<T, N>& vals, json& js) {
-    js = json::array();
-    for (auto i = 0; i < N; i++) serialize_to_json(vals[i], js[i]);
-}
-
-// Dump support function.
-template <typename T>
-inline void serialize_to_json(const vector<T>& vals, json& js) {
-    js = json::array();
-    for (auto i = 0; i < vals.size(); i++) serialize_to_json(vals[i], js[i]);
-}
-
-// Dump support function.
-template <typename T>
-inline void serialize_to_json(const map<string, T>& vals, json& js) {
-    js = json::object();
-    for (auto& kv : vals) serialize_to_json(kv.second, js[kv.first]);
-}
-
-// Dump support function.
-template<typename T, typename T1>
-inline void serialize_to_json(const T& val, json& js, const vector<pair<T1, T>>& table) {
-    auto found = false;
-    auto v = T1();
-    for(auto& kv : table) { if(kv.second == val) { v = kv.first; found = true; break; } }
-    if(!found) throw runtime_error("invalid value");
-    serialize_to_json(v, js);
-}
-
-// Dump support function.
-inline void serialize_to_json(const vec2f& vals, json& js) {
-    serialize_to_json((const array<float, 2>&)vals, js);
-}
-
-// Dump support function.
-inline void serialize_to_json(const vec3f& vals, json& js) {
-    serialize_to_json((const array<float, 3>&)vals, js);
-}
-
-// Dump support function.
-inline void serialize_to_json(const vec4f& vals, json& js) {
-    serialize_to_json((const array<float, 4>&)vals, js);
-}
-
-// Dump support function.
-inline void serialize_to_json(const quat4f& vals, json& js) {
-    serialize_to_json((const array<float, 4>&)vals, js);
-}
-
-// Dump support function.
-inline void serialize_to_json(const mat4f& vals, json& js) {
-    serialize_to_json((const array<float, 16>&)vals, js);
-}
-
-// Converts glTFid to json.
-template <typename T>
-inline void serialize_to_json(const glTFid<T>& val, json& js) {
-    js = (int)val;
-}
-
-// Check for default value
-template <typename T>
-inline bool operator==(const glTFid<T>& a, const glTFid<T>& b) {
-    return (int)a == (int)b;
-}
-
-// Check for default value
-template <typename T>
-inline bool operator!=(const glTFid<T>& a, const glTFid<T>& b) {
-    return (int)a != (int)b;
-}
-
-// Converts a glTFProperty object to JSON
-inline void serialize_to_json(const glTFProperty& val, json& js) {
-    if (!js.is_object()) js = json::object();
-#if YGL_GLTFJSON
-    if (!val.extensions.empty()) serialize_to_json(val.extensions, js["extensions"]);
-    if (!val.extras.is_null()) dump_attr(val.extras, "extras", js);
-#endif
-}
-
-'''
-
-dump_fmt = '''
-{{#types}}
-{{#enums}}
-// Converts a {{name}} enum to JSON
-inline void serialize_to_json(const {{name}}& val, json& js) {
-    static vector<pair<{{item}}, {{name}}>> table = { {{#values}} { {{enum}}, {{name}}::{{label}} },{{/values}} };
-    serialize_to_json(val, js, table);
-}
-
-{{/enums}}
-
-// Converts a {{name}} object to JSON
-inline void serialize_to_json(const {{name}}& val, json& js) {
+void serialize({{name}}& val, json& js, bool reading) {
     static auto def = {{name}}();
-    if (!js.is_object()) js = json::object();
-    {{#base}}serialize_to_json((const {{base}}&)val, js);{{/base}}
-    {{#properties}}{{^extension}}{{^required}}if (val.{{name}} != def.{{name}}) {{/required}}serialize_to_json(val.{{name}}, js["{{name}}"]);{{/extension}}{{/properties}}
+    serialize_obj(js, reading);
+    {{#base}}serialize(({{base}}&)val, js, reading);{{/base}}
+    {{#properties}}{{^extension}}serialize_attr(val.{{name}}, js, "{{name}}", reading, {{#required}}true{{/required}}{{^required}}false{{/required}}, def.{{name}});{{/extension}}{{/properties}}
+    {{#has_extensions}}
+    if(reading) {
+        if (js.count("extensions")) {
+            auto& js_ext = js["extensions"];
+            {{#properties}}{{#extension}}serialize_attr(val.{{name}}, js_ext, "{{extension}}", reading, false, def.{{name}});{{/extension}}{{/properties}}
+        }
+    } else {
     {{#properties}}{{#extension}}
     if ({{def_check}}) {
         auto& js_ext = js["extensions"];
-        serialize_to_json(val.{{name}}, js_ext["{{extension}}"]);
+        serialize_attr(val.{{name}}, js_ext, "{{extension}}", reading, false, def.{{name}});
     }
     {{/extension}}{{/properties}}
+    }
+    {{/has_extensions}}
 }
 {{/types}}
 '''
@@ -403,10 +201,10 @@ def fix_schema(js):
         vjs['required'] = 'required' in js and vjs['name'] in js['required']
         if '*' in vjs['type']:
             js['destructor'] = True
-            if 'vector<' in vjs['type']: vjs['is_ptrarray'] = True
+            if 'std::vector<' in vjs['type']: vjs['is_ptrarray'] = True
             else: vjs['is_ptr'] = True
         if 'extension' in vjs: js['has_extensions'] = True
-        defaults = { 'int': '0', 'float': '0', 'string': '""' }
+        defaults = { 'int': '0', 'float': '0', 'std::string': '""' }
         if 'default' not in vjs:
             if 'vector' not in vjs['type'] and '*' in vjs['type']:
                 vjs['default'] = 'nullptr'
@@ -420,7 +218,7 @@ def fix_schema(js):
             vjs['default'] = vjs['type'] + '::' + vjs['default']
         else:
             vjs['default'] = str(vjs['default']).replace('.0','').replace('[','{').replace(']','}').replace('False','false')
-        if 'vector<' in vjs['type'] or 'map<' in vjs['type']:
+        if 'std::vector<' in vjs['type'] or 'std::map<' in vjs['type']:
             vjs['def_check'] = '!' + 'val.' + vjs['name'] + '.empty()'
         elif 'glTFid<' in vjs['type']:
             vjs['def_check'] = 'val.' + vjs['name'] + '.is_valid()'
@@ -447,11 +245,9 @@ funcs = ''
 funcs += parse_func + '\n\n';
 funcs += mustache.render(parse_fmt, {'types': schemas})
 funcs += '\n\n';
-funcs += dump_func + '\n\n';
-funcs += mustache.render(dump_fmt, {'types': schemas})
 
 # substitute
-substitute('yocto/yocto_gl.h', types, 'type')
-substitute('yocto/yocto_gl.cpp', funcs, 'func')
+substitute('yocto/yocto_gl.h', types, 'gltf-type')
+substitute('yocto/yocto_gl.cpp', funcs, 'gltf-func')
 os.system('/usr/local/bin/clang-format -i -style=file yocto/yocto_gl.h')
 os.system('/usr/local/bin/clang-format -i -style=file yocto/yocto_gl.cpp')

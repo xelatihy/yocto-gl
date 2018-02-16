@@ -6,12 +6,12 @@
     "base": "glTFChildOfRootProperty",
     "properties": {
         "primitives": {
-            "type": "vector<glTFMeshPrimitive*>",
+            "type": "std::vector<glTFMeshPrimitive*>",
             "description": "An array of primitives, each defining geometry to be rendered with a material.",
             "minItems": 1
         },
         "weights": {
-            "type": "vector<float>",
+            "type": "std::vector<float>",
             "description": "Array of weights to be applied to the Morph Targets.",
             "minItems": 1
         }
