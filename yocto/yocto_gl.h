@@ -6628,7 +6628,7 @@ enum struct trace_filter_type {
 
 /// Rendering params.
 struct trace_params {
-    /// Image vertical resolution. @refl_uilimits(256,4096)
+    /// Image vertical resolution. @refl_uilimits(256,4096) @refl_shortname(r)
     int resolution = 512;
     /// Number of samples. @refl_uilimits(16,4096) @refl_shortname(s)
     int nsamples = 256;
@@ -6786,7 +6786,7 @@ enum_names<trace_filter_type>() {
 template <typename Visitor>
 inline void visit(trace_params& val, Visitor&& visitor) {
     visitor(val.resolution, visit_var{"resolution", visit_var_type::value,
-                                "Image vertical resolution.", 256, 4096, ""});
+                                "Image vertical resolution.", 256, 4096, "r"});
     visitor(val.nsamples, visit_var{"nsamples", visit_var_type::value,
                               "Number of samples.", 16, 4096, "s"});
     visitor(val.shader,
@@ -9542,7 +9542,7 @@ void set_stdsurface_vert_skinning_off(gl_stdsurface_program& prog);
 
 /// Params for stdsurface drawing.
 struct gl_stdsurface_params {
-    /// Image resolution. @refl_uilimits(256, 4096)
+    /// Image resolution. @refl_uilimits(256, 4096) @refl_shortname(r)
     int resolution = 512;
     /// Image exposure. @refl_uilimits(-10, 10) @refl_shortname(e)
     float exposure = 0;
@@ -9608,7 +9608,7 @@ inline void visit(gl_stdimage_params& val, Visitor&& visitor) {
 template <typename Visitor>
 inline void visit(gl_stdsurface_params& val, Visitor&& visitor) {
     visitor(val.resolution, visit_var{"resolution", visit_var_type::value,
-                                "Image resolution.", 256, 4096, ""});
+                                "Image resolution.", 256, 4096, "r"});
     visitor(val.exposure, visit_var{"exposure", visit_var_type::value,
                               "Image exposure.", -10, 10, "e"});
     visitor(val.gamma,
@@ -10441,7 +10441,7 @@ inline T parse_params(
     auto visitor = cmdline_visitor{parser, name, req};
     auto params = def;
     visit(params, visitor);
-    return def;
+    return params;
 }
 
 // Initialize a command line parser.

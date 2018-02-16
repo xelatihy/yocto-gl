@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
     auto parser =
         ygl::make_parser(argc, argv, "ytrace", "Offline oath tracing");
     app->params = ygl::parse_params(parser, "", app->params);
-    app->batch_size = ygl::parse_flag(parser, "--batch-size", "",
+    app->batch_size = ygl::parse_opt(parser, "--batch-size", "",
         "Compute images in <val> samples batches", 16);
     app->save_batch = ygl::parse_flag(
         parser, "--save-batch", "", "Save images progressively");
