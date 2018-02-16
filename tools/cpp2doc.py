@@ -200,6 +200,16 @@ def make_doc(cpp, first_only=False):
             if first_only: return md
             md += "## API Documentation\n\n"
             first = False
+
+    def remove_attag(md, tag):
+        while tag in md:
+            md = md.partition(tag+'(')[0] + md.partition(tag+'(')[2].partition(')')[2]
+        return md
+
+    # remove refl_XXX
+    md = remove_attag(md, '@refl_uilimits')
+    md = remove_attag(md, '@refl_semantic')
+    md = remove_attag(md, '@refl_shortname')
     return md
 
 template = '''
