@@ -4116,17 +4116,93 @@ void subdivide_catmullclark(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     std::vector<vec4f>& color, std::vector<float>& radius);
 
 /// Generate a rectangular grid of usteps x vsteps uv values for parametric
-/// surface generation. Values cam wrap and have poles.
+/// surface generation. Values cam wrap and have poles.points
 void make_quads_uv(std::vector<vec4i>& quads, std::vector<vec2f>& uvs,
     int usteps, int vsteps, bool uwrap = false, bool vwrap = false,
     bool vpole0 = false, bool vpole1 = false);
-
 /// Generate parametric num lines of usteps segments.
 void make_lines_uv(
     std::vector<vec2i>& lines, std::vector<vec2f>& uvs, int num, int usteps);
-
 /// Generate a parametric point set. Mostly here for completeness.
-void make_points_uv(std::vector<int>& quads, std::vector<vec2f>& uvs, int num);
+void make_points_uv(std::vector<int>& points, std::vector<vec2f>& uvs, int num);
+
+/// Generate a rectangular grid of usteps x vsteps uv values for parametric
+/// surface generation. Values cam wrap and have poles.
+template <typename T, typename F>
+inline void make_quads(std::vector<vec4i>& quads, std::vector<T>& vert,
+    int usteps, int vsteps, F&& vert_cb, bool uwrap = false, bool vwrap = false,
+    bool vpole0 = false, bool vpole1 = false) {
+    auto uv = std::vector<vec2f>();
+    make_quads_uv(quads, uv, usteps, vsteps, uwrap, vwrap, vpole0, vpole1);
+    vert.resize(uv.size());
+    for (auto i = 0; i < uv.size(); i++) vert[i] = vert_cb(uv[i]);
+}
+/// Generate parametric num lines of usteps segments.
+template <typename T, typename F>
+inline void make_lines(std::vector<vec2i>& lines, std::vector<T>& vert, int num,
+    int usteps, F&& vert_cb) {
+    auto uv = std::vector<vec2f>();
+    make_lines_uv(lines, uv, num, usteps);
+    vert.resize(uv.size());
+    for (auto i = 0; i < uv.size(); i++) vert[i] = vert_cb(uv[i]);
+}
+/// Generate a parametric point set. Mostly here for completeness.
+template <typename T, typename F>
+inline void make_points(
+    std::vector<int>& points, std::vector<T>& vert, int num, F&& vert_cb) {
+    auto uv = std::vector<vec2f>();
+    make_points_uv(points, uv, num);
+    vert.resize(uv.size());
+    for (auto i = 0; i < uv.size(); i++) vert[i] = vert_cb(uv[i].x);
+}
+
+/// Generate a rectangular grid of usteps x vsteps uv with callbacks for
+/// position, normal and texcoord.
+template <typename F>
+inline void make_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int usteps,
+    int vsteps, F&& vert_cb) {
+    auto uv = std::vector<vec2f>();
+    make_quads_uv(quads, uv, usteps, vsteps);
+    pos.resize(uv.size());
+    norm.resize(uv.size());
+    texcoord.resize(uv.size());
+    for (auto i = 0; i < uv.size(); i++) {
+        vert_cb(uv[i], pos[i], norm[i], texcoord[i]);
+    }
+}
+/// Generate parametric num lines of usteps segments with callbacks for
+/// position, tangent, texcoord, and radius.
+template <typename F>
+inline void make_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<float>& radius, int num, int usteps, F&& vert_cb) {
+    auto uv = std::vector<vec2f>();
+    make_lines_uv(lines, uv, num, usteps);
+    pos.resize(uv.size());
+    norm.resize(uv.size());
+    texcoord.resize(uv.size());
+    radius.resize(uv.size());
+    for (auto i = 0; i < uv.size(); i++) {
+        vert_cb(uv[i], pos[i], norm[i], texcoord[i], radius[i]);
+    }
+}
+/// Generate a parametric point set with callbacks for position, tangent,
+/// texcoord, and radius.
+template <typename F>
+inline void make_points(std::vector<int>& points, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<float>& radius, int num, F&& vert_cb) {
+    auto uv = std::vector<vec2f>();
+    make_points_uv(points, uv, num);
+    pos.resize(uv.size());
+    norm.resize(uv.size());
+    texcoord.resize(uv.size());
+    radius.resize(uv.size());
+    for (auto i = 0; i < uv.size(); i++) {
+        vert_cb(uv[i], pos[i], norm[i], texcoord[i], radius[i]);
+    }
+}
 
 /// Merge lines between shapes. The elements are merged by increasing the
 /// array size of the second array by the number of vertices of the first.
@@ -4141,15 +4217,34 @@ void merge_triangles(
 /// array size of the second array by the number of vertices of the first.
 /// Vertex data can then be concatenated successfully.
 void merge_quads(std::vector<vec4i>& quads, const std::vector<vec4i>& quads1);
+/// Merge quads between shapes.
+    inline void merge_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos, std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const std::vector<vec4i>& quads1, const std::vector<vec3f>& pos1, const std::vector<vec3f>& norm1, const std::vector<vec2f>& texcoord1) {
+        merge_quads(quads, quads1);
+        append(pos, pos1);
+        append(norm, norm1);
+        append(texcoord, texcoord1);
+    }
 
+/// Duplicate vertex data for each line index, giving a faceted look.
+template <typename T>
+void facet_lines(
+    std::vector<vec2i>& lines, std::vector<T>& vert, bool upgrade_lines = true);
 /// Duplicate vertex data for each line index, giving a faceted look.
 void facet_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
     std::vector<vec4f>& color, std::vector<float>& radius);
 /// Duplicate vertex data for each triangle index, giving a faceted look.
+template <typename T>
+void facet_triangles(std::vector<vec3i>& triangles, std::vector<T>& vert,
+    bool upgrade_triangles = true);
+/// Duplicate vertex data for each triangle index, giving a faceted look.
 void facet_triangles(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
     std::vector<vec4f>& color, std::vector<float>& radius);
+/// Duplicate vertex data for each quad index, giving a faceted look.
+template <typename T>
+void facet_quads(
+    std::vector<vec4i>& quads, std::vector<T>& vert, bool upgrade_quads = true);
 /// Duplicate vertex data for each quad index, giving a faceted look.
 void facet_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
@@ -10074,6 +10169,7 @@ bool draw_scene_widgets(gl_window* win, const std::string& lbl, scene* scn,
 // IMPLEMENTATION FOR IMMEDIATE MODE COMMAND LINE PARSER
 // -----------------------------------------------------------------------------
 namespace ygl {
+
 // cmdline implementation
 inline void _check_name(cmdline_parser& parser, const std::string& name,
     const std::string& flag, bool opt) {
