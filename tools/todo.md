@@ -3,15 +3,19 @@
 This file contains notes on future improvements of Yocto.
 Please consider this to be just development notes and not any real planning.
 
-## Bugs
-
-- samples in trace
-- batch samples in trace
-
 ## Next
 
 - constexpr
 - setup tests
+    - regenerate tests one scene at a time
+        - report error on scene generation
+    - add quiet mode to applications
+    - report fatal errors in commands
+    - image compression with pngquant
+    - lightweight image check with command line diff
+    - make results file by filtering applications output
+    - output filters applications output
+    - consider a tool to run tests
 
 ## Tests
 

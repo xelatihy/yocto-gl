@@ -57,12 +57,12 @@ void save_test_scene(const std::string& sname, const std::string& basedir) {
         auto test_scn = (sname == "cornell_box") ?
                             (ygl::proc_scene*)nullptr :
                             ygl::proc_scene_presets().at(sname);
-        printf("generating %s scenes ...\n", sname.c_str());
+        ygl::log_info("generating scene {}", sname);
         auto scn =
             (sname == "cornell_box") ?
                 ygl::make_cornell_box_scene() :
                 ygl::make_proc_elems(ygl::proc_scene_presets().at(sname));
-        printf("saving %s scenes ...\n", sname.c_str());
+        ygl::log_info("saving scene {}", sname);
         if (sname == "textures") {
             for (auto txt : scn->textures) {
                 if (!txt->hdr.empty())
@@ -119,13 +119,22 @@ int main(int argc, char* argv[]) {
         ygl::parse_opt(parser, "--dirname", "-d", "directory name", "tests"s);
     auto no_parallel =
         ygl::parse_flag(parser, "--no-parallel", "", "do not run in parallel");
+    auto quiet =
+        ygl::parse_flag(parser, "--quiet", "-q", "Print only errors messages");
     if (should_exit(parser)) {
         printf("%s\n", get_usage(parser).c_str());
         exit(1);
     }
 
+    // setup logger
+    if (quiet) ygl::get_default_logger()->verbose = false;
+
     // make directories
-    if (clean) rmdir(dirname);
+    if (clean) {
+        rmdir(dirname);
+        ygl::log_info("cleaning directory {}", dirname);
+    }
+    ygl::log_info("creating directory {}", dirname);
     mkdir(dirname);
 
     if (scene != "") {

@@ -46,6 +46,7 @@ struct app_state {
     ygl::vec4f background = {0, 0, 0, 0};
     bool save_batch = false;
     int batch_size = 16;
+    bool quiet = false;
 
     ~app_state() {
         if (scn) delete scn;
@@ -66,6 +67,8 @@ int main(int argc, char* argv[]) {
         "Compute images in <val> samples batches", 16);
     app->save_batch = ygl::parse_flag(
         parser, "--save-batch", "", "Save images progressively");
+    app->quiet =
+        ygl::parse_flag(parser, "--quiet", "-q", "Print only errors messages");
     app->imfilename = ygl::parse_opt(
         parser, "--output-image", "-o", "Image filename", "out.hdr"s);
     app->filename = ygl::parse_arg(parser, "scene", "Scene filename", ""s);
@@ -73,6 +76,9 @@ int main(int argc, char* argv[]) {
         printf("%s\n", get_usage(parser).c_str());
         exit(1);
     }
+
+    // setup logger
+    if (app->quiet) ygl::get_default_logger()->verbose = false;
 
     // setting up rendering
     ygl::log_info("loading scene {}", app->filename);

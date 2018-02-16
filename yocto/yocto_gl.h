@@ -533,7 +533,7 @@
 ///    `save_text()` and `save_binary()`
 /// 4. simple logger with support for console and file streams:
 ///     1. create a `logger`
-///     2. add more streams with `add_console_stream()` or `add_file_stream()`
+///     2. add more streams with `addconsole_stream()` or `add_file_stream()`
 ///     3. write log messages with `log_msg()` and its variants
 ///     4. you can also use a global default logger with the free functions
 ///        `log_XXX()`
@@ -8605,18 +8605,17 @@ namespace ygl {
 /// @{
 
 /// Logger object. A logger can output messages to console an a file.
-/// Members are not part of the public API.
 struct logger {
     /// whether to output verbose
-    bool _verbose = true;
+    bool verbose = true;
     /// whether to output to console
-    bool _console = true;
+    bool console = true;
     /// file stream for stream output
-    FILE* _file = nullptr;
+    FILE* file = nullptr;
 
     // cleanup
     ~logger() {
-        if (_file) fclose(_file);
+        if (file) fclose(file);
     }
 };
 
@@ -8625,13 +8624,13 @@ struct logger {
 inline logger* make_logger(const std::string& filename = "",
     bool console = true, bool verbose = true, bool file_append = true) {
     auto lgr = new logger();
-    lgr->_verbose = verbose;
-    lgr->_console = console;
+    lgr->verbose = verbose;
+    lgr->console = console;
     if (filename.empty()) {
-        lgr->_file = nullptr;
+        lgr->file = nullptr;
     } else {
-        lgr->_file = fopen(filename.c_str(), (file_append) ? "at" : "wt");
-        if (!lgr->_file)
+        lgr->file = fopen(filename.c_str(), (file_append) ? "at" : "wt");
+        if (!lgr->file)
             throw std::runtime_error("could not open file " + filename);
     }
     return lgr;
@@ -8650,23 +8649,23 @@ inline void _log_msg(logger* lgr, const std::string& msg, const char* type) {
     auto ttm = localtime(&tm);  // TODO: use thread safe version
 
     // short message for console
-    if (lgr->_console) {
+    if (lgr->console) {
         strftime(time_buf, 1024, "%H:%M:%S", ttm);
         printf("%s %s %s\n", time_buf, type, msg.c_str());
         fflush(stdout);
     }
 
     // long message for file
-    if (lgr->_file) {
+    if (lgr->file) {
         strftime(time_buf, 1024, "%Y-%m-%d %H:%M:%S", ttm);
-        fprintf(lgr->_file, "%s %s %s\n", time_buf, type, msg.c_str());
+        fprintf(lgr->file, "%s %s %s\n", time_buf, type, msg.c_str());
     }
 }
 
 /// Log an info message.
 template <typename... Args>
 inline void log_info(logger* lgr, const std::string& msg, const Args&... args) {
-    if (!lgr->_verbose) return;
+    if (!lgr->verbose) return;
     _log_msg(lgr, format(msg, args...), "INFO ");
 }
 
@@ -8674,7 +8673,7 @@ inline void log_info(logger* lgr, const std::string& msg, const Args&... args) {
 template <typename... Args>
 inline void log_warning(
     logger* lgr, const std::string& msg, const Args&... args) {
-    if (!lgr->_verbose) return;
+    if (!lgr->verbose) return;
     _log_msg(lgr, format(msg, args...), "WARN ");
 }
 
