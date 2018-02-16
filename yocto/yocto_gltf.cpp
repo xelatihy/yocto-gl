@@ -35,8 +35,9 @@ namespace ygl {
 
 // Math support
 inline mat4f node_transform(const gltf_node* node) {
-    return translation_mat4f(node->translation) *
-           rotation_mat4f(node->rotation) * scaling_mat4f(node->scale) *
+    return frame_to_mat(translation_frame(node->translation) *
+                        rotation_frame(node->rotation) *
+                        scaling_frame(node->scale)) *
            node->matrix;
 }
 
@@ -667,20 +668,20 @@ glTF* scenes_to_gltf(const gltf_scene_group* scns,
     for (auto txt : scns->textures) {
         auto gimg = new glTFImage();
         gimg->uri = txt->path;
-        if (txt->hdr) {
+        if (!txt->hdr.empty()) {
             gimg->data.width = txt->hdr.width();
             gimg->data.height = txt->hdr.height();
             gimg->data.ncomp = 4;
-            gimg->data.dataf.assign((uint8_t*)txt->hdr.data(),
-                (uint8_t*)txt->hdr.data() +
+            gimg->data.dataf.assign((uint8_t*)data(txt->hdr),
+                (uint8_t*)data(txt->hdr) +
                     txt->hdr.width() * txt->hdr.height() * 4);
         }
-        if (txt->ldr) {
+        if (!txt->ldr.empty()) {
             gimg->data.width = txt->ldr.width();
             gimg->data.height = txt->ldr.height();
             gimg->data.ncomp = 4;
-            gimg->data.datab.assign((uint8_t*)txt->ldr.data(),
-                (uint8_t*)txt->ldr.data() +
+            gimg->data.datab.assign((uint8_t*)data(txt->ldr),
+                (uint8_t*)data(txt->ldr) +
                     txt->ldr.width() * txt->ldr.height() * 4);
         }
         gltf->images.push_back(gimg);
@@ -857,9 +858,9 @@ glTF* scenes_to_gltf(const gltf_scene_group* scns,
             ctype == glTFAccessorComponentType::Float) {
             switch (type) {
                 case glTFAccessorType::Scalar: {
-                    auto bbox = make_bbox(count, (float*)data);
-                    accessor->min = {bbox.min};
-                    accessor->max = {bbox.max};
+                    auto bbox = make_bbox(count, (vec1f*)data);
+                    accessor->min = {bbox.min.x};
+                    accessor->max = {bbox.max.x};
                 } break;
                 case glTFAccessorType::Vec2: {
                     auto bbox = make_bbox(count, (vec2f*)data);
@@ -934,7 +935,7 @@ glTF* scenes_to_gltf(const gltf_scene_group* scns,
                 joints_short.reserve(gprim->skin_joints.size());
                 for (auto&& j : gprim->skin_joints)
                     joints_short.push_back(
-                        {(ushort)j.x, (ushort)j.y, (ushort)j.z, (ushort)j.w});
+                        {{(ushort)j.x, (ushort)j.y, (ushort)j.z, (ushort)j.w}});
                 prim->attributes["JOINTS_0"] = add_accessor(gbuffer,
                     pid + "_skin_joints", glTFAccessorType::Vec4,
                     glTFAccessorComponentType::UnsignedShort,
@@ -1193,9 +1194,11 @@ void add_normals(gltf_scene_group* scn) {
         for (auto shp : msh->shapes) {
             if (!shp->norm.empty()) continue;
             shp->norm.resize(shp->pos.size(), {0, 0, 1});
-            if (!shp->lines.empty() || !shp->triangles.empty()) {
-                shp->norm =
-                    compute_normals(shp->lines, shp->triangles, {}, shp->pos);
+            if (!shp->lines.empty()) {
+                compute_tangents(shp->lines, shp->pos, shp->norm);
+            }
+            if (!shp->triangles.empty()) {
+                compute_normals(shp->triangles, shp->pos, shp->norm);
             }
         }
     }
@@ -1210,9 +1213,8 @@ void add_tangent_space(gltf_scene_group* scn) {
             if (!shp->tangsp.empty() || shp->texcoord.empty() ||
                 !shp->mat->normal_txt)
                 continue;
-            shp->tangsp.resize(shp->pos.size());
-            shp->tangsp = compute_tangent_frames(
-                shp->triangles, shp->pos, shp->norm, shp->texcoord);
+            compute_tangent_frames(shp->triangles, shp->pos, shp->norm,
+                shp->texcoord, shp->tangsp);
         }
     }
 }
@@ -1231,7 +1233,7 @@ void add_radius(gltf_scene_group* scn, float radius) {
 // Add missing data to the scene.
 void add_texture_data(gltf_scene_group* scn) {
     for (auto txt : scn->textures) {
-        if (!txt->hdr && !txt->ldr) {
+        if (txt->hdr.empty() && txt->ldr.empty()) {
             printf("unable to load texture %s\n", txt->path.c_str());
             txt->ldr = image4b(1, 1, {255, 255, 255, 255});
         }
@@ -1335,7 +1337,7 @@ void add_default_cameras(gltf_scene_group* scns) {
             cam->aperture = 0;
             cam->focus = length(to - from);
             auto node = new gltf_node();
-            node->matrix = to_mat4f(lookat_frame3f(from, to, up));
+            node->matrix = frame_to_mat(lookat_frame(from, to, up));
             node->cam = cam;
             node->name = cam->name;
             scns->cameras.push_back(cam);
@@ -1610,9 +1612,9 @@ void add_spec_gloss(gltf_scene_group* scns) {
                     h = max(h, mr->metallic_txt->height());
                 }
                 auto diff = new gltf_texture();
-                diff->ldr.resize(w, h);
+                diff->ldr = image4b(w, h);
                 auto spec = new gltf_texture();
-                spec->ldr.resize(w, h);
+                spec->ldr = image4b(w, h);
                 for (auto j = 0; j < h; j++) {
                     for (auto i = 0; i < w; i++) {
                         auto u = i / (float)w, v = j / (float)h;
@@ -1621,25 +1623,29 @@ void add_spec_gloss(gltf_scene_group* scns) {
                         if (mr->base_txt) {
                             auto ii = (int)(u * mr->base_txt->ldr.width());
                             auto jj = (int)(v * mr->base_txt->ldr.height());
-                            base = mr->base_txt->ldr[{ii, jj}];
+                            base = mr->base_txt->ldr.at(ii, jj);
                         } else {
-                            base = linear_to_srgb(vec4f(mr->base, mr->opacity));
+                            base = linear_to_srgb(vec4f(mr->base.x, mr->base.y,
+                                mr->base.z, mr->opacity));
                         }
                         if (mr->metallic_txt) {
                             auto ii = (int)(u * mr->metallic_txt->ldr.width());
                             auto jj = (int)(v * mr->metallic_txt->ldr.height());
-                            metallic = mr->metallic_txt->ldr[{ii, jj}];
+                            metallic = mr->metallic_txt->ldr.at(ii, jj);
                         } else {
                             metallic = linear_to_srgb(
                                 vec4f(1, mr->roughness, mr->metallic, 1));
                         }
-                        auto kb = srgb_to_linear(base);
-                        auto km = srgb_to_linear(metallic);
-                        diff->ldr[{i, j}] =
-                            linear_to_srgb({kb.xyz() * (1 - km.z), kb.w});
-                        spec->ldr[{i, j}] = linear_to_srgb(
-                            {kb.xyz() * km.z + vec3f{(1 - km.z) * 0.04f},
-                                1 - km.y});
+                        auto kb_txt = srgb_to_linear(base);
+                        auto km_txt = srgb_to_linear(metallic);
+                        auto kb = vec3f{kb_txt.x, kb_txt.y, kb_txt.z};
+                        auto km = km_txt.z;
+                        auto kd = kb * (1 - km);
+                        auto ks = kb * km + vec3f{(1 - km) * 0.04f};
+                        diff->ldr.at(i, j) =
+                            linear_to_srgb({kd.x, kd.y, kd.z, kb_txt.w});
+                        spec->ldr.at(i, j) =
+                            linear_to_srgb({ks.x, ks.y, ks.z, 1 - km_txt.y});
                     }
                 }
                 txts[mr_txt] = {diff, spec};

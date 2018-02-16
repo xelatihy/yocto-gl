@@ -104,14 +104,14 @@ struct gltf_texture {
 
     /// get texture width
     int width() const {
-        if (ldr) return ldr.width();
-        if (hdr) return hdr.width();
+        if (!ldr.empty()) return ldr.width();
+        if (!hdr.empty()) return hdr.width();
         return 0;
     }
     /// get texture height
     int height() const {
-        if (ldr) return ldr.height();
-        if (hdr) return hdr.height();
+        if (!ldr.empty()) return ldr.height();
+        if (!hdr.empty()) return hdr.height();
         return 0;
     }
 };

@@ -43,7 +43,7 @@
             "gltf_detailedDescription": "The material's alpha rendering mode enumeration specifying the interpretation of the alpha value of the main factor and texture.",
             "type": "glTFMaterialAlphaMode",
             "is_enum": true,
-            "item": "string"
+            "item": "std::string"
         },
         "alphaCutoff": {
             "type": "float",
@@ -63,7 +63,7 @@
             {
             "description": "Values for glTFMaterial::alphaMode",
             "name": "glTFMaterialAlphaMode",
-            "item": "string",
+            "item": "std::string",
             "values": [
                 {
                     "enum": "OPAQUE",
