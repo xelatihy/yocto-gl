@@ -5060,7 +5060,7 @@ void make_quads_uv(std::vector<vec4i>& quads, std::vector<vec2f>& uvs,
 ~~~
 
 Generate a rectangular grid of usteps x vsteps uv values for parametric
-surface generation. Values cam wrap and have poles.
+surface generation. Values cam wrap and have poles.points
 
 #### Function make_lines_uv()
 
@@ -5074,10 +5074,78 @@ Generate parametric num lines of usteps segments.
 #### Function make_points_uv()
 
 ~~~ .cpp
-void make_points_uv(std::vector<int>& quads, std::vector<vec2f>& uvs, int num);
+void make_points_uv(std::vector<int>& points, std::vector<vec2f>& uvs, int num);
 ~~~
 
 Generate a parametric point set. Mostly here for completeness.
+
+#### Function make_quads()
+
+~~~ .cpp
+template <typename T, typename F>
+inline void make_quads(std::vector<vec4i>& quads, std::vector<T>& vert,
+    int usteps, int vsteps, F&& vert_cb, bool uwrap = false, bool vwrap = false,
+    bool vpole0 = false, bool vpole1 = false);
+~~~
+
+Generate a rectangular grid of usteps x vsteps uv values for parametric
+surface generation. Values cam wrap and have poles.
+
+#### Function make_lines()
+
+~~~ .cpp
+template <typename T, typename F>
+inline void make_lines(std::vector<vec2i>& lines, std::vector<T>& vert, int num,
+    int usteps, F&& vert_cb);
+~~~
+
+Generate parametric num lines of usteps segments.
+
+#### Function make_points()
+
+~~~ .cpp
+template <typename T, typename F>
+inline void make_points(
+    std::vector<int>& points, std::vector<T>& vert, int num, F&& vert_cb);
+~~~
+
+Generate a parametric point set. Mostly here for completeness.
+
+#### Function make_quads()
+
+~~~ .cpp
+template <typename F>
+inline void make_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int usteps,
+    int vsteps, F&& vert_cb);
+~~~
+
+Generate a rectangular grid of usteps x vsteps uv with callbacks for
+position, normal and texcoord.
+
+#### Function make_lines()
+
+~~~ .cpp
+template <typename F>
+inline void make_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<float>& radius, int num, int usteps, F&& vert_cb);
+~~~
+
+Generate parametric num lines of usteps segments with callbacks for
+position, tangent, texcoord, and radius.
+
+#### Function make_points()
+
+~~~ .cpp
+template <typename F>
+inline void make_points(std::vector<int>& points, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<float>& radius, int num, F&& vert_cb);
+~~~
+
+Generate a parametric point set with callbacks for position, tangent,
+texcoord, and radius.
 
 #### Function merge_lines()
 
@@ -5110,6 +5178,27 @@ Merge quads between shapes. The elements are merged by increasing the
 array size of the second array by the number of vertices of the first.
 Vertex data can then be concatenated successfully.
 
+#### Function merge_quads()
+
+~~~ .cpp
+inline void merge_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    const std::vector<vec4i>& quads1, const std::vector<vec3f>& pos1,
+    const std::vector<vec3f>& norm1, const std::vector<vec2f>& texcoord1);
+~~~
+
+Merge quads between shapes.
+
+#### Function facet_lines()
+
+~~~ .cpp
+template <typename T>
+void facet_lines(
+    std::vector<vec2i>& lines, std::vector<T>& vert, bool upgrade_lines = true);
+~~~
+
+Duplicate vertex data for each line index, giving a faceted look.
+
 #### Function facet_lines()
 
 ~~~ .cpp
@@ -5123,12 +5212,32 @@ Duplicate vertex data for each line index, giving a faceted look.
 #### Function facet_triangles()
 
 ~~~ .cpp
+template <typename T>
+void facet_triangles(std::vector<vec3i>& triangles, std::vector<T>& vert,
+    bool upgrade_triangles = true);
+~~~
+
+Duplicate vertex data for each triangle index, giving a faceted look.
+
+#### Function facet_triangles()
+
+~~~ .cpp
 void facet_triangles(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
     std::vector<vec4f>& color, std::vector<float>& radius);
 ~~~
 
 Duplicate vertex data for each triangle index, giving a faceted look.
+
+#### Function facet_quads()
+
+~~~ .cpp
+template <typename T>
+void facet_quads(
+    std::vector<vec4i>& quads, std::vector<T>& vert, bool upgrade_quads = true);
+~~~
+
+Duplicate vertex data for each quad index, giving a faceted look.
 
 #### Function facet_quads()
 
@@ -6397,12 +6506,12 @@ Camera.
     - name:      Name.
     - frame:      Transform frame.
     - ortho:      Orthographic camera.
-    - yfov:      Vertical field of view. @refl_uilimits(0.1,10)
-    - aspect:      Aspect ratio. @refl_uilimits(1,3)
-    - focus:      Focus distance. @refl_uilimits(0.01,1000)
-    - aperture:      Lens aperture. @refl_uilimits(0,5)
-    - near:      Near plane distance. @refl_uilimits(0.01,10)
-    - far:      Far plane distance. @refl_uilimits(10,10000)
+    - yfov:      Vertical field of view. 
+    - aspect:      Aspect ratio. 
+    - focus:      Focus distance. 
+    - aperture:      Lens aperture. 
+    - near:      Near plane distance. 
+    - far:      Far plane distance. 
 
 
 #### Struct texture
@@ -6444,7 +6553,7 @@ Texture information to use for lookup.
     - wrap_t:      Wrap t coordinate.
     - linear:      Linear interpolation.
     - mipmap:      Mipmaping.
-    - scale:      Texture strength (occlusion and normal). @refl_uilimits(0,10)
+    - scale:      Texture strength (occlusion and normal). 
 
 
 #### Enum material_type
@@ -6509,23 +6618,23 @@ Material for surfaces, lines and triangles.
     - name:      Name.
     - double_sided:      Double-sided rendering.
     - type:      Material type.
-    - ke:      Emission color. @refl_semantic(color) refl_uilimits(0,10000)
-    - kd:      Diffuse color / base color. @refl_semantic(color)
-    - ks:      Specular color / metallic factor. @refl_semantic(color)
-    - kr:      Clear coat reflection. @refl_semantic(color)
-    - kt:      Transmission color. @refl_semantic(color)
+    - ke:      Emission color.  refl_uilimits(0,10000)
+    - kd:      Diffuse color / base color. 
+    - ks:      Specular color / metallic factor. 
+    - kr:      Clear coat reflection. 
+    - kt:      Transmission color. 
     - rs:      Roughness.
     - op:      Opacity.
-    - ke_txt:      Emission texture. @refl_semantic(reference)
-    - kd_txt:      Diffuse texture. @refl_semantic(reference)
-    - ks_txt:      Specular texture. @refl_semantic(reference)
-    - kr_txt:      Clear coat reflection texture. @refl_semantic(reference)
-    - kt_txt:      Transmission texture. @refl_semantic(reference)
-    - rs_txt:      Roughness texture. @refl_semantic(reference)
-    - bump_txt:      Bump map texture (heighfield). @refl_semantic(reference)
-    - disp_txt:      Displacement map texture (heighfield). @refl_semantic(reference)
-    - norm_txt:      Normal texture. @refl_semantic(reference)
-    - occ_txt:      Occlusion texture. @refl_semantic(reference)
+    - ke_txt:      Emission texture. 
+    - kd_txt:      Diffuse texture. 
+    - ks_txt:      Specular texture. 
+    - kr_txt:      Clear coat reflection texture. 
+    - kt_txt:      Transmission texture. 
+    - rs_txt:      Roughness texture. 
+    - bump_txt:      Bump map texture (heighfield). 
+    - disp_txt:      Displacement map texture (heighfield). 
+    - norm_txt:      Normal texture. 
+    - occ_txt:      Occlusion texture. 
     - ke_txt_info:      Emission texture info.
     - kd_txt_info:      Diffuse texture info.
     - ks_txt_info:      Specular texture info.
@@ -6570,7 +6679,7 @@ points/lines/triangles/quads.
 
 - Members:
     - name:      Name.
-    - mat:      Material. @refl_semantic(reference)
+    - mat:      Material. 
     - points:      Points.
     - lines:      Lines.
     - triangles:      Triangles.
@@ -6625,7 +6734,7 @@ Shape instance.
 - Members:
     - name:      Name.
     - frame:      Transform frame.
-    - shp:      Shape instance. @refl_semantic(reference)
+    - shp:      Shape instance. 
 
 
 #### Struct environment
@@ -6645,8 +6754,8 @@ Envinonment map.
 - Members:
     - name:      Name.
     - frame:      Transform frame.
-    - ke:      Emission coefficient. @refl_uilimits(0,10000)
-    - ke_txt:      Emission texture. @refl_semantic(reference)
+    - ke:      Emission coefficient. 
+    - ke_txt:      Emission texture. 
     - ke_txt_info:      Emission texture info.
 
 
@@ -6672,15 +6781,15 @@ Node in a transform hierarchy.
 
 - Members:
     - name:      Name.
-    - parent:      Parent node. @refl_semantic(reference)
+    - parent:      Parent node. 
     - frame:      Transform frame.
     - translation:      Translation.
     - rotation:      Rotation.
-    - scaling:      Scaling. @refl_uilimits(0.0001,1000)
+    - scaling:      Scaling. 
     - weights:      Weights for morphing.
-    - cam:      Camera the node points to. @refl_semantic(reference)
-    - ist:      Instance the node points to. @refl_semantic(reference)
-    - env:      Environment the node points to. @refl_semantic(reference)
+    - cam:      Camera the node points to. 
+    - ist:      Instance the node points to. 
+    - env:      Environment the node points to. 
     - children_:      Child nodes. This is a computed value only stored for convenience.
 
 
@@ -6726,7 +6835,7 @@ Keyframe data.
     - times:      Times.
     - translation:      Translation.
     - rotation:      Rotation.
-    - scaling:      Scaling. @refl_uilimits(0.0001,1000)
+    - scaling:      Scaling. 
     - weights:      Weights for morphing.
 
 
@@ -6748,7 +6857,7 @@ Animation made of multiple keyframed values.
     - name:      Name.
     - path:      Path  used when writing files on disk with glTF.
     - animations:      Keyframed values.
-    - targets:      Binds keyframe values to nodes. @refl_semantic(reference)
+    - targets:      Binds keyframe values to nodes. 
     - ~animation_group():      Cleanup.
 
 
@@ -7304,10 +7413,10 @@ Procedural camera parameters.
 
 - Members:
     - name:      Name.
-    - from:      From point. @refl_uilimits(-10,10)
-    - to:      To point. @refl_uilimits(-10,10)
-    - yfov:      Field of view. @refl_uilimits(0.01,10)
-    - aspect:      Aspect ratio. @refl_uilimits(1,3)
+    - from:      From point. 
+    - to:      To point. 
+    - yfov:      Field of view. 
+    - aspect:      Aspect ratio. 
 
 
 #### Enum proc_texture_type
@@ -7370,12 +7479,12 @@ Procedural texture parameters.
 - Members:
     - name:      Name.
     - type:      Type.
-    - resolution:      Resolution. @refl_uilimits(256,4096)
-    - tile_size:      Tile size for grid-like textures. @refl_uilimits(16,128)
-    - noise_scale:      Noise scale for noise-like textures. @refl_uilimits(0.1,16)
-    - sky_sunangle:      Sun angle for sunsky-like textures. @refl_uilimits(0,1.57)
+    - resolution:      Resolution. 
+    - tile_size:      Tile size for grid-like textures. 
+    - noise_scale:      Noise scale for noise-like textures. 
+    - sky_sunangle:      Sun angle for sunsky-like textures. 
     - bump_to_normal:      Convert to normal map.
-    - bump_scale:      Bump to normal scale. @refl_uilimits(1,10)
+    - bump_scale:      Bump to normal scale. 
 
 
 #### Enum proc_material_type
@@ -7422,8 +7531,8 @@ Procedural material parameters.
 - Members:
     - name:      Name.
     - type:      Type.
-    - emission:      Emission strenght. @refl_uilimits(0,10000)
-    - color:      Base color. @refl_semantic(color)
+    - emission:      Emission strenght. 
+    - color:      Base color. 
     - opacity:      Opacity (only for supported materials).
     - roughness:      Roughness.
     - texture:      Base texture.
@@ -7502,14 +7611,14 @@ Procedural shape parameters.
     - type:      Shape type.
     - material:      Material name.
     - interior:      Interior material name.
-    - tesselation:      Level of shape tesselatation (-1 for default). @refl_uilimits(-1,10)
+    - tesselation:      Level of shape tesselatation (-1 for default). 
     - subdivision:      Level of shape tesselation for subdivision surfaces.
-     @refl_uilimits(-1,10)
-    - scale:      Shape scale. @refl_uilimits(0.01,10)
-    - radius:      Radius for points and lines. @refl_uilimits(0.0001,0.01)
+     
+    - scale:      Shape scale. 
+    - radius:      Radius for points and lines. 
     - faceted:      Faceted shape.
     - num:      Number of elements for points and lines (-1 for default).
-     @refl_uilimits(-1,10000)
+     
     - hair_params:      Hair generation params.
     - ~proc_shape():      Cleanup
 
@@ -7551,11 +7660,11 @@ Procedural environment parameters.
 
 - Members:
     - name:      Name.
-    - emission:      Emission strenght. @refl_uilimits(0,10000)
-    - color:      Emission color. @refl_semantic(color)
+    - emission:      Emission strenght. 
+    - color:      Emission color. 
     - texture:      Emission texture.
     - frame:      Frame.
-    - rotation:      Rotation around y axis. @refl_uilimits(0,6.28)
+    - rotation:      Rotation around y axis. 
 
 
 #### Struct proc_node
@@ -7583,9 +7692,9 @@ Procedural node parameters.
     - instance:      Instance.
     - environment:      Environment.
     - frame:      Frame.
-    - translation:      Translation. @refl_uilimits(-10,10)
+    - translation:      Translation. 
     - rotation:      Roation.
-    - scaling:      Scaling. @refl_uilimits(0.01,10)
+    - scaling:      Scaling. 
 
 
 #### Struct proc_animation
@@ -7609,12 +7718,12 @@ Procedural animation parameters.
 - Members:
     - name:      Name.
     - bezier:      Linear or bezier.
-    - speed:      Animation speed. @refl_uilimits(0.01,10)
-    - scale:      Animation scale. @refl_uilimits(0.01,10)
+    - speed:      Animation speed. 
+    - scale:      Animation scale. 
     - times:      Keyframes times.
-    - translation:      Translation keyframes. @refl_uilimits(-10,10)
+    - translation:      Translation keyframes. 
     - rotation:      Rotation keyframes.
-    - scaling:      Scale keyframes. @refl_uilimits(0.01,10)
+    - scaling:      Scale keyframes. 
     - nodes:      Environment.
 
 
@@ -8151,20 +8260,20 @@ struct trace_params {
 Rendering params.
 
 - Members:
-    - resolution:      Image vertical resolution. @refl_uilimits(256,4096)
-    - nsamples:      Number of samples. @refl_uilimits(16,4096) @refl_shortname(s)
-    - shader:      Sampler type. @refl_shortname(S)
-    - rng:      Random number generation type. @refl_shortname(R)
+    - resolution:      Image vertical resolution. 
+    - nsamples:      Number of samples.  
+    - shader:      Sampler type. 
+    - rng:      Random number generation type. 
     - filter:      Filter type.
     - notransmission:      Wheter to test transmission in shadows.
-    - ambient:      Ambient lighting. @refl_semantic(color)
+    - ambient:      Ambient lighting. 
     - envmap_invisible:      View environment map.
-    - min_depth:      Minimum ray depth. @refl_uilimits(1,10)
-    - max_depth:      Maximum ray depth. @refl_uilimits(1,10)
-    - pixel_clamp:      Final pixel clamping. @refl_uilimits(1,10)
-    - ray_eps:      Ray intersection epsilon. @refl_uilimits(0.0001,0.001)
+    - min_depth:      Minimum ray depth. 
+    - max_depth:      Maximum ray depth. 
+    - pixel_clamp:      Final pixel clamping. 
+    - ray_eps:      Ray intersection epsilon. 
     - parallel:      Parallel execution.
-    - seed:      Seed for the random number generators. @refl_uilimits(0,1000)
+    - seed:      Seed for the random number generators. 
 
 
 #### Struct trace_pixel
@@ -10325,7 +10434,7 @@ A simple wrapper for std::chrono.
     - elapsed():      Elapsed time.
 
 
-### OpenGL utilities
+### OpenGL objects and utilities
 
 #### Enum gl_elem_type : int
 
@@ -10467,8 +10576,6 @@ void gl_read_imagef(float* pixels, int w, int h, int nc);
 ~~~
 
 Reads an image from the the framebuffer.
-
-### OpenGL textures
 
 #### Struct gl_texture
 
@@ -10668,8 +10775,6 @@ OpenGL texture parameters.
     - gl_texture_info():      Constructor from texture id only.
 
 
-### OpenGL vertex array buffers
-
 #### Struct gl_vertex_buffer
 
 ~~~ .cpp
@@ -10826,8 +10931,6 @@ void clear_vertex_buffer(gl_vertex_buffer& buf);
 
 Destroys the buffer.
 
-### OpenGL element array buffers
-
 #### Struct gl_element_buffer
 
 ~~~ .cpp
@@ -10932,8 +11035,6 @@ void clear_element_buffer(gl_element_buffer& buf);
 ~~~
 
 Destroys the buffer
-
-### OpenGL programs
 
 #### Struct gl_program
 
@@ -11268,7 +11369,7 @@ void unbind_program(const gl_program& prog);
 
 Unbind a program.
 
-### OpenGL scene shader support
+### OpenGL default shaders
 
 #### Struct gl_shape
 
@@ -11344,8 +11445,6 @@ void update_gl_shape(
 
 Update scene shapes on the GPU.
 
-### OpenGL image shader
-
 #### Struct gl_stdimage_program
 
 ~~~ .cpp
@@ -11405,12 +11504,12 @@ struct gl_stdimage_params {
 Params for stdimage drawing.
 
 - Members:
-    - offset:      Image offset. @refl_uilimits(-4096, 4096)
-    - zoom:      Image zoom. @refl_uilimits(0.01, 10)
-    - exposure:      Hdr exposure. @refl_uilimits(-10, 10) @refl_shortname(e)
-    - gamma:      Hdr gamma. @refl_uilimits(0.1,3) @refl_shortname(g)
-    - filmic:      Hdr filmic tonemapping. @refl_shortname(F)
-    - background:      Image background. @refl_semantic(color)
+    - offset:      Image offset. 
+    - zoom:      Image zoom. 
+    - exposure:      Hdr exposure.  
+    - gamma:      Hdr gamma.  
+    - filmic:      Hdr filmic tonemapping. 
+    - background:      Image background. 
 
 
 #### Function draw_image()
@@ -11422,8 +11521,6 @@ inline void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
 ~~~
 
 Draws an image texture the stdimage program.
-
-### OpenGL surface shader
 
 #### Struct gl_stdsurface_program
 
@@ -11613,19 +11710,19 @@ struct gl_stdsurface_params {
 Params for stdsurface drawing.
 
 - Members:
-    - resolution:      Image resolution. @refl_uilimits(256, 4096)
-    - exposure:      Image exposure. @refl_uilimits(-10, 10) @refl_shortname(e)
-    - gamma:      Image gamma. @refl_uilimits(0.1, 3) @refl_shortname(g)
-    - filmic:      Image filmic tonemapping. @refl_shortname(F)
+    - resolution:      Image resolution. 
+    - exposure:      Image exposure.  
+    - gamma:      Image gamma.  
+    - filmic:      Image filmic tonemapping. 
     - wireframe:      Draw as wireframe.
     - edges:      Draw with overlaid edges
-    - edge_offset:      Offset for edges. @refl_uilimits(0, 0.1)
+    - edge_offset:      Offset for edges. 
     - cutout:      Draw with for binary transparency.
     - eyelight:      Camera light mode.
-    - background:      Window background. @refl_semantic(color)
-    - ambient:      Ambient illumination. @refl_semantic(color)
-    - highlight_color:      Highlight color. @refl_semantic(color)
-    - edge_color:      Edge color. @refl_semantic(color)
+    - background:      Window background. 
+    - ambient:      Ambient illumination. 
+    - highlight_color:      Highlight color. 
+    - edge_color:      Edge color. 
     - cull_backface:      Cull back face.
 
 
@@ -12467,8 +12564,6 @@ inline bool draw_params_widgets(
 
 Draws a widget that sets params in non-recursive trivial structures.
 Internally uses visit to implement the view.
-
-### OpenGL widgets for scene
 
 #### Function draw_camera_selection_widget()
 

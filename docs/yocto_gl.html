@@ -77,17 +77,10 @@
 <li><a href="#toc58"> Immediate-mode command line parser</a></li>
 <li><a href="#toc59"> Simple logging</a></li>
 <li><a href="#toc60"> Simple timer</a></li>
-<li><a href="#toc61"> OpenGL utilities</a></li>
-<li><a href="#toc62"> OpenGL textures</a></li>
-<li><a href="#toc63"> OpenGL vertex array buffers</a></li>
-<li><a href="#toc64"> OpenGL element array buffers</a></li>
-<li><a href="#toc65"> OpenGL programs</a></li>
-<li><a href="#toc66"> OpenGL scene shader support</a></li>
-<li><a href="#toc67"> OpenGL image shader</a></li>
-<li><a href="#toc68"> OpenGL surface shader</a></li>
-<li><a href="#toc69"> OpenGL window</a></li>
-<li><a href="#toc70"> OpenGL widgets</a></li>
-<li><a href="#toc71"> OpenGL widgets for scene</a></li>
+<li><a href="#toc61"> OpenGL objects and utilities</a></li>
+<li><a href="#toc62"> OpenGL default shaders</a></li>
+<li><a href="#toc63"> OpenGL window</a></li>
+<li><a href="#toc64"> OpenGL widgets</a></li>
 </ul>
 </li>
 <li><a href="yocto_gl.html#api">API Documentation</a></li>
@@ -4231,7 +4224,7 @@ vertices for each edge and for each face.</p>
 
 
 <p>Generate a rectangular grid of usteps x vsteps uv values for parametric
-surface generation. Values cam wrap and have poles.</p>
+surface generation. Values cam wrap and have poles.points</p>
 <h4>Function make_lines_uv()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">make_lines_uv</span><span class="p">(</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">uvs</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">usteps</span><span class="p">);</span>
@@ -4240,11 +4233,67 @@ surface generation. Values cam wrap and have poles.</p>
 
 <p>Generate parametric num lines of usteps segments.</p>
 <h4>Function make_points_uv()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">make_points_uv</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">uvs</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">make_points_uv</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">points</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">uvs</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Generate a parametric point set. Mostly here for completeness.</p>
+<h4>Function make_quads()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">F</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">make_quads</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vert</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">usteps</span><span class="p">,</span> <span class="kt">int</span> <span class="n">vsteps</span><span class="p">,</span> <span class="n">F</span><span class="o">&amp;&amp;</span> <span class="n">vert_cb</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">uwrap</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">vwrap</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">vpole0</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">vpole1</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Generate a rectangular grid of usteps x vsteps uv values for parametric
+surface generation. Values cam wrap and have poles.</p>
+<h4>Function make_lines()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">F</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">make_lines</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vert</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">usteps</span><span class="p">,</span> <span class="n">F</span><span class="o">&amp;&amp;</span> <span class="n">vert_cb</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Generate parametric num lines of usteps segments.</p>
+<h4>Function make_points()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">F</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">make_points</span><span class="p">(</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">points</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vert</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="n">F</span><span class="o">&amp;&amp;</span> <span class="n">vert_cb</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Generate a parametric point set. Mostly here for completeness.</p>
+<h4>Function make_quads()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">F</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">make_quads</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span> <span class="kt">int</span> <span class="n">usteps</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">vsteps</span><span class="p">,</span> <span class="n">F</span><span class="o">&amp;&amp;</span> <span class="n">vert_cb</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Generate a rectangular grid of usteps x vsteps uv with callbacks for
+position, normal and texcoord.</p>
+<h4>Function make_lines()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">F</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">make_lines</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">radius</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">usteps</span><span class="p">,</span> <span class="n">F</span><span class="o">&amp;&amp;</span> <span class="n">vert_cb</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Generate parametric num lines of usteps segments with callbacks for
+position, tangent, texcoord, and radius.</p>
+<h4>Function make_points()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">F</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">make_points</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">points</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">radius</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="n">F</span><span class="o">&amp;&amp;</span> <span class="n">vert_cb</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Generate a parametric point set with callbacks for position, tangent,
+texcoord, and radius.</p>
 <h4>Function merge_lines()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">merge_lines</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines1</span><span class="p">);</span>
 </code></pre></div>
@@ -4270,6 +4319,23 @@ Vertex data can then be concatenated successfully.</p>
 <p>Merge quads between shapes. The elements are merged by increasing the
 array size of the second array by the number of vertices of the first.
 Vertex data can then be concatenated successfully.</p>
+<h4>Function merge_quads()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">merge_quads</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads1</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos1</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm1</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord1</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Merge quads between shapes.</p>
+<h4>Function facet_lines()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kt">void</span> <span class="n">facet_lines</span><span class="p">(</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vert</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">upgrade_lines</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Duplicate vertex data for each line index, giving a faceted look.</p>
 <h4>Function facet_lines()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">facet_lines</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span>
@@ -4279,6 +4345,14 @@ Vertex data can then be concatenated successfully.</p>
 
 <p>Duplicate vertex data for each line index, giving a faceted look.</p>
 <h4>Function facet_triangles()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kt">void</span> <span class="n">facet_triangles</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">triangles</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vert</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">upgrade_triangles</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Duplicate vertex data for each triangle index, giving a faceted look.</p>
+<h4>Function facet_triangles()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">facet_triangles</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">triangles</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;&amp;</span> <span class="n">color</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">radius</span><span class="p">);</span>
@@ -4286,6 +4360,14 @@ Vertex data can then be concatenated successfully.</p>
 
 
 <p>Duplicate vertex data for each triangle index, giving a faceted look.</p>
+<h4>Function facet_quads()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kt">void</span> <span class="n">facet_quads</span><span class="p">(</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vert</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">upgrade_quads</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Duplicate vertex data for each quad index, giving a faceted look.</p>
 <h4>Function facet_quads()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">facet_quads</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span>
@@ -5346,12 +5428,12 @@ coordinates <code>euv</code>.</p>
 <li>name:      Name.</li>
 <li>frame:      Transform frame.</li>
 <li>ortho:      Orthographic camera.</li>
-<li>yfov:      Vertical field of view. @refl_uilimits(0.1,10)</li>
-<li>aspect:      Aspect ratio. @refl_uilimits(1,3)</li>
-<li>focus:      Focus distance. @refl_uilimits(0.01,1000)</li>
-<li>aperture:      Lens aperture. @refl_uilimits(0,5)</li>
-<li>near:      Near plane distance. @refl_uilimits(0.01,10)</li>
-<li>far:      Far plane distance. @refl_uilimits(10,10000)</li>
+<li>yfov:      Vertical field of view. </li>
+<li>aspect:      Aspect ratio. </li>
+<li>focus:      Focus distance. </li>
+<li>aperture:      Lens aperture. </li>
+<li>near:      Near plane distance. </li>
+<li>far:      Far plane distance. </li>
 </ul>
 </li>
 </ul>
@@ -5393,7 +5475,7 @@ coordinates <code>euv</code>.</p>
 <li>wrap_t:      Wrap t coordinate.</li>
 <li>linear:      Linear interpolation.</li>
 <li>mipmap:      Mipmaping.</li>
-<li>scale:      Texture strength (occlusion and normal). @refl_uilimits(0,10)</li>
+<li>scale:      Texture strength (occlusion and normal). </li>
 </ul>
 </li>
 </ul>
@@ -5458,23 +5540,23 @@ coordinates <code>euv</code>.</p>
 <li>name:      Name.</li>
 <li>double_sided:      Double-sided rendering.</li>
 <li>type:      Material type.</li>
-<li>ke:      Emission color. @refl_semantic(color) refl_uilimits(0,10000)</li>
-<li>kd:      Diffuse color / base color. @refl_semantic(color)</li>
-<li>ks:      Specular color / metallic factor. @refl_semantic(color)</li>
-<li>kr:      Clear coat reflection. @refl_semantic(color)</li>
-<li>kt:      Transmission color. @refl_semantic(color)</li>
+<li>ke:      Emission color.  refl_uilimits(0,10000)</li>
+<li>kd:      Diffuse color / base color. </li>
+<li>ks:      Specular color / metallic factor. </li>
+<li>kr:      Clear coat reflection. </li>
+<li>kt:      Transmission color. </li>
 <li>rs:      Roughness.</li>
 <li>op:      Opacity.</li>
-<li>ke_txt:      Emission texture. @refl_semantic(reference)</li>
-<li>kd_txt:      Diffuse texture. @refl_semantic(reference)</li>
-<li>ks_txt:      Specular texture. @refl_semantic(reference)</li>
-<li>kr_txt:      Clear coat reflection texture. @refl_semantic(reference)</li>
-<li>kt_txt:      Transmission texture. @refl_semantic(reference)</li>
-<li>rs_txt:      Roughness texture. @refl_semantic(reference)</li>
-<li>bump_txt:      Bump map texture (heighfield). @refl_semantic(reference)</li>
-<li>disp_txt:      Displacement map texture (heighfield). @refl_semantic(reference)</li>
-<li>norm_txt:      Normal texture. @refl_semantic(reference)</li>
-<li>occ_txt:      Occlusion texture. @refl_semantic(reference)</li>
+<li>ke_txt:      Emission texture. </li>
+<li>kd_txt:      Diffuse texture. </li>
+<li>ks_txt:      Specular texture. </li>
+<li>kr_txt:      Clear coat reflection texture. </li>
+<li>kt_txt:      Transmission texture. </li>
+<li>rs_txt:      Roughness texture. </li>
+<li>bump_txt:      Bump map texture (heighfield). </li>
+<li>disp_txt:      Displacement map texture (heighfield). </li>
+<li>norm_txt:      Normal texture. </li>
+<li>occ_txt:      Occlusion texture. </li>
 <li>ke_txt_info:      Emission texture info.</li>
 <li>kd_txt_info:      Diffuse texture info.</li>
 <li>ks_txt_info:      Specular texture info.</li>
@@ -5519,7 +5601,7 @@ points/lines/triangles/quads.</p>
 <ul>
 <li>Members:<ul>
 <li>name:      Name.</li>
-<li>mat:      Material. @refl_semantic(reference)</li>
+<li>mat:      Material. </li>
 <li>points:      Points.</li>
 <li>lines:      Lines.</li>
 <li>triangles:      Triangles.</li>
@@ -5574,7 +5656,7 @@ points/lines/triangles/quads.</p>
 <li>Members:<ul>
 <li>name:      Name.</li>
 <li>frame:      Transform frame.</li>
-<li>shp:      Shape instance. @refl_semantic(reference)</li>
+<li>shp:      Shape instance. </li>
 </ul>
 </li>
 </ul>
@@ -5594,8 +5676,8 @@ points/lines/triangles/quads.</p>
 <li>Members:<ul>
 <li>name:      Name.</li>
 <li>frame:      Transform frame.</li>
-<li>ke:      Emission coefficient. @refl_uilimits(0,10000)</li>
-<li>ke_txt:      Emission texture. @refl_semantic(reference)</li>
+<li>ke:      Emission coefficient. </li>
+<li>ke_txt:      Emission texture. </li>
 <li>ke_txt_info:      Emission texture info.</li>
 </ul>
 </li>
@@ -5621,15 +5703,15 @@ points/lines/triangles/quads.</p>
 <ul>
 <li>Members:<ul>
 <li>name:      Name.</li>
-<li>parent:      Parent node. @refl_semantic(reference)</li>
+<li>parent:      Parent node. </li>
 <li>frame:      Transform frame.</li>
 <li>translation:      Translation.</li>
 <li>rotation:      Rotation.</li>
-<li>scaling:      Scaling. @refl_uilimits(0.0001,1000)</li>
+<li>scaling:      Scaling. </li>
 <li>weights:      Weights for morphing.</li>
-<li>cam:      Camera the node points to. @refl_semantic(reference)</li>
-<li>ist:      Instance the node points to. @refl_semantic(reference)</li>
-<li>env:      Environment the node points to. @refl_semantic(reference)</li>
+<li>cam:      Camera the node points to. </li>
+<li>ist:      Instance the node points to. </li>
+<li>env:      Environment the node points to. </li>
 <li>children_:      Child nodes. This is a computed value only stored for convenience.</li>
 </ul>
 </li>
@@ -5675,7 +5757,7 @@ points/lines/triangles/quads.</p>
 <li>times:      Times.</li>
 <li>translation:      Translation.</li>
 <li>rotation:      Rotation.</li>
-<li>scaling:      Scaling. @refl_uilimits(0.0001,1000)</li>
+<li>scaling:      Scaling. </li>
 <li>weights:      Weights for morphing.</li>
 </ul>
 </li>
@@ -5697,7 +5779,7 @@ points/lines/triangles/quads.</p>
 <li>name:      Name.</li>
 <li>path:      Path  used when writing files on disk with glTF.</li>
 <li>animations:      Keyframed values.</li>
-<li>targets:      Binds keyframe values to nodes. @refl_semantic(reference)</li>
+<li>targets:      Binds keyframe values to nodes. </li>
 <li>~animation_group():      Cleanup.</li>
 </ul>
 </li>
@@ -6157,10 +6239,10 @@ Throws an exception if an error occurs.</p>
 <ul>
 <li>Members:<ul>
 <li>name:      Name.</li>
-<li>from:      From point. @refl_uilimits(-10,10)</li>
-<li>to:      To point. @refl_uilimits(-10,10)</li>
-<li>yfov:      Field of view. @refl_uilimits(0.01,10)</li>
-<li>aspect:      Aspect ratio. @refl_uilimits(1,3)</li>
+<li>from:      From point. </li>
+<li>to:      To point. </li>
+<li>yfov:      Field of view. </li>
+<li>aspect:      Aspect ratio. </li>
 </ul>
 </li>
 </ul>
@@ -6223,12 +6305,12 @@ Throws an exception if an error occurs.</p>
 <li>Members:<ul>
 <li>name:      Name.</li>
 <li>type:      Type.</li>
-<li>resolution:      Resolution. @refl_uilimits(256,4096)</li>
-<li>tile_size:      Tile size for grid-like textures. @refl_uilimits(16,128)</li>
-<li>noise_scale:      Noise scale for noise-like textures. @refl_uilimits(0.1,16)</li>
-<li>sky_sunangle:      Sun angle for sunsky-like textures. @refl_uilimits(0,1.57)</li>
+<li>resolution:      Resolution. </li>
+<li>tile_size:      Tile size for grid-like textures. </li>
+<li>noise_scale:      Noise scale for noise-like textures. </li>
+<li>sky_sunangle:      Sun angle for sunsky-like textures. </li>
 <li>bump_to_normal:      Convert to normal map.</li>
-<li>bump_scale:      Bump to normal scale. @refl_uilimits(1,10)</li>
+<li>bump_scale:      Bump to normal scale. </li>
 </ul>
 </li>
 </ul>
@@ -6275,8 +6357,8 @@ Throws an exception if an error occurs.</p>
 <li>Members:<ul>
 <li>name:      Name.</li>
 <li>type:      Type.</li>
-<li>emission:      Emission strenght. @refl_uilimits(0,10000)</li>
-<li>color:      Base color. @refl_semantic(color)</li>
+<li>emission:      Emission strenght. </li>
+<li>color:      Base color. </li>
 <li>opacity:      Opacity (only for supported materials).</li>
 <li>roughness:      Roughness.</li>
 <li>texture:      Base texture.</li>
@@ -6350,20 +6432,28 @@ Throws an exception if an error occurs.</p>
 
 <p>Procedural shape parameters.</p>
 <ul>
-<li>Members:<ul>
+<li>
+<p>Members:</p>
+<ul>
 <li>name:      Shape name (if not filled, assign a default based on type).</li>
 <li>type:      Shape type.</li>
 <li>material:      Material name.</li>
 <li>interior:      Interior material name.</li>
-<li>tesselation:      Level of shape tesselatation (-1 for default). @refl_uilimits(-1,10)</li>
-<li>subdivision:      Level of shape tesselation for subdivision surfaces.
- @refl_uilimits(-1,10)</li>
-<li>scale:      Shape scale. @refl_uilimits(0.01,10)</li>
-<li>radius:      Radius for points and lines. @refl_uilimits(0.0001,0.01)</li>
+<li>tesselation:      Level of shape tesselatation (-1 for default). </li>
+<li>
+<p>subdivision:      Level of shape tesselation for subdivision surfaces.</p>
+</li>
+<li>
+<p>scale:      Shape scale. </p>
+</li>
+<li>radius:      Radius for points and lines. </li>
 <li>faceted:      Faceted shape.</li>
-<li>num:      Number of elements for points and lines (-1 for default).
- @refl_uilimits(-1,10000)</li>
-<li>hair_params:      Hair generation params.</li>
+<li>
+<p>num:      Number of elements for points and lines (-1 for default).</p>
+</li>
+<li>
+<p>hair_params:      Hair generation params.</p>
+</li>
 <li>~proc_shape():      Cleanup</li>
 </ul>
 </li>
@@ -6404,11 +6494,11 @@ Throws an exception if an error occurs.</p>
 <ul>
 <li>Members:<ul>
 <li>name:      Name.</li>
-<li>emission:      Emission strenght. @refl_uilimits(0,10000)</li>
-<li>color:      Emission color. @refl_semantic(color)</li>
+<li>emission:      Emission strenght. </li>
+<li>color:      Emission color. </li>
 <li>texture:      Emission texture.</li>
 <li>frame:      Frame.</li>
-<li>rotation:      Rotation around y axis. @refl_uilimits(0,6.28)</li>
+<li>rotation:      Rotation around y axis. </li>
 </ul>
 </li>
 </ul>
@@ -6436,9 +6526,9 @@ Throws an exception if an error occurs.</p>
 <li>instance:      Instance.</li>
 <li>environment:      Environment.</li>
 <li>frame:      Frame.</li>
-<li>translation:      Translation. @refl_uilimits(-10,10)</li>
+<li>translation:      Translation. </li>
 <li>rotation:      Roation.</li>
-<li>scaling:      Scaling. @refl_uilimits(0.01,10)</li>
+<li>scaling:      Scaling. </li>
 </ul>
 </li>
 </ul>
@@ -6462,12 +6552,12 @@ Throws an exception if an error occurs.</p>
 <li>Members:<ul>
 <li>name:      Name.</li>
 <li>bezier:      Linear or bezier.</li>
-<li>speed:      Animation speed. @refl_uilimits(0.01,10)</li>
-<li>scale:      Animation scale. @refl_uilimits(0.01,10)</li>
+<li>speed:      Animation speed. </li>
+<li>scale:      Animation scale. </li>
 <li>times:      Keyframes times.</li>
-<li>translation:      Translation keyframes. @refl_uilimits(-10,10)</li>
+<li>translation:      Translation keyframes. </li>
 <li>rotation:      Rotation keyframes.</li>
-<li>scaling:      Scale keyframes. @refl_uilimits(0.01,10)</li>
+<li>scaling:      Scale keyframes. </li>
 <li>nodes:      Environment.</li>
 </ul>
 </li>
@@ -6908,20 +6998,20 @@ This is a hack, but works better than not doing it.</p>
 <p>Rendering params.</p>
 <ul>
 <li>Members:<ul>
-<li>resolution:      Image vertical resolution. @refl_uilimits(256,4096)</li>
-<li>nsamples:      Number of samples. @refl_uilimits(16,4096) @refl_shortname(s)</li>
-<li>shader:      Sampler type. @refl_shortname(S)</li>
-<li>rng:      Random number generation type. @refl_shortname(R)</li>
+<li>resolution:      Image vertical resolution. </li>
+<li>nsamples:      Number of samples.  </li>
+<li>shader:      Sampler type. </li>
+<li>rng:      Random number generation type. </li>
 <li>filter:      Filter type.</li>
 <li>notransmission:      Wheter to test transmission in shadows.</li>
-<li>ambient:      Ambient lighting. @refl_semantic(color)</li>
+<li>ambient:      Ambient lighting. </li>
 <li>envmap_invisible:      View environment map.</li>
-<li>min_depth:      Minimum ray depth. @refl_uilimits(1,10)</li>
-<li>max_depth:      Maximum ray depth. @refl_uilimits(1,10)</li>
-<li>pixel_clamp:      Final pixel clamping. @refl_uilimits(1,10)</li>
-<li>ray_eps:      Ray intersection epsilon. @refl_uilimits(0.0001,0.001)</li>
+<li>min_depth:      Minimum ray depth. </li>
+<li>max_depth:      Maximum ray depth. </li>
+<li>pixel_clamp:      Final pixel clamping. </li>
+<li>ray_eps:      Ray intersection epsilon. </li>
 <li>parallel:      Parallel execution.</li>
-<li>seed:      Seed for the random number generators. @refl_uilimits(0,1000)</li>
+<li>seed:      Seed for the random number generators. </li>
 </ul>
 </li>
 </ul>
@@ -8940,7 +9030,7 @@ and the specified verbosity level.</p>
 </li>
 </ul>
 <p><a id="toc61"></a></p>
-<h3>OpenGL utilities</h3>
+<h3>OpenGL objects and utilities</h3>
 <h4>Enum gl_elem_type : int</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="nl">gl_elem_type</span> <span class="p">:</span> <span class="kt">int</span> <span class="p">{</span>
     <span class="n">point</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
@@ -9060,8 +9150,6 @@ and the specified verbosity level.</p>
 
 
 <p>Reads an image from the the framebuffer.</p>
-<p><a id="toc62"></a></p>
-<h3>OpenGL textures</h3>
 <h4>Struct gl_texture</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_texture</span> <span class="p">{</span>
 </code></pre></div>
@@ -9232,8 +9320,6 @@ Internally use float if as_float and filtering if filter.</p>
 </ul>
 </li>
 </ul>
-<p><a id="toc63"></a></p>
-<h3>OpenGL vertex array buffers</h3>
 <h4>Struct gl_vertex_buffer</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_vertex_buffer</span> <span class="p">{</span>
 </code></pre></div>
@@ -9354,8 +9440,6 @@ Internally use float if as_float and filtering if filter.</p>
 
 
 <p>Destroys the buffer.</p>
-<p><a id="toc64"></a></p>
-<h3>OpenGL element array buffers</h3>
 <h4>Struct gl_element_buffer</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_element_buffer</span> <span class="p">{</span>
     <span class="n">uint</span> <span class="n">bid</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
@@ -9441,8 +9525,6 @@ Internally use float if as_float and filtering if filter.</p>
 
 
 <p>Destroys the buffer</p>
-<p><a id="toc65"></a></p>
-<h3>OpenGL programs</h3>
 <h4>Struct gl_program</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_program</span> <span class="p">{</span>
     <span class="n">uint</span> <span class="n">pid</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
@@ -9708,8 +9790,8 @@ empty.</p>
 
 
 <p>Unbind a program.</p>
-<p><a id="toc66"></a></p>
-<h3>OpenGL scene shader support</h3>
+<p><a id="toc62"></a></p>
+<h3>OpenGL default shaders</h3>
 <h4>Struct gl_shape</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_shape</span> <span class="p">{</span>
 </code></pre></div>
@@ -9766,8 +9848,6 @@ empty.</p>
 
 
 <p>Update scene shapes on the GPU.</p>
-<p><a id="toc67"></a></p>
-<h3>OpenGL image shader</h3>
 <h4>Struct gl_stdimage_program</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_stdimage_program</span> <span class="p">{</span>
     <span class="n">gl_program</span> <span class="n">prog</span> <span class="o">=</span> <span class="p">{};</span>
@@ -9820,12 +9900,12 @@ empty.</p>
 <p>Params for stdimage drawing.</p>
 <ul>
 <li>Members:<ul>
-<li>offset:      Image offset. @refl_uilimits(-4096, 4096)</li>
-<li>zoom:      Image zoom. @refl_uilimits(0.01, 10)</li>
-<li>exposure:      Hdr exposure. @refl_uilimits(-10, 10) @refl_shortname(e)</li>
-<li>gamma:      Hdr gamma. @refl_uilimits(0.1,3) @refl_shortname(g)</li>
-<li>filmic:      Hdr filmic tonemapping. @refl_shortname(F)</li>
-<li>background:      Image background. @refl_semantic(color)</li>
+<li>offset:      Image offset. </li>
+<li>zoom:      Image zoom. </li>
+<li>exposure:      Hdr exposure.  </li>
+<li>gamma:      Hdr gamma.  </li>
+<li>filmic:      Hdr filmic tonemapping. </li>
+<li>background:      Image background. </li>
 </ul>
 </li>
 </ul>
@@ -9837,8 +9917,6 @@ empty.</p>
 
 
 <p>Draws an image texture the stdimage program.</p>
-<p><a id="toc68"></a></p>
-<h3>OpenGL surface shader</h3>
 <h4>Struct gl_stdsurface_program</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_stdsurface_program</span> <span class="p">{</span>
     <span class="n">gl_program</span> <span class="n">prog</span> <span class="o">=</span> <span class="p">{};</span>
@@ -9996,19 +10074,19 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 <p>Params for stdsurface drawing.</p>
 <ul>
 <li>Members:<ul>
-<li>resolution:      Image resolution. @refl_uilimits(256, 4096)</li>
-<li>exposure:      Image exposure. @refl_uilimits(-10, 10) @refl_shortname(e)</li>
-<li>gamma:      Image gamma. @refl_uilimits(0.1, 3) @refl_shortname(g)</li>
-<li>filmic:      Image filmic tonemapping. @refl_shortname(F)</li>
+<li>resolution:      Image resolution. </li>
+<li>exposure:      Image exposure.  </li>
+<li>gamma:      Image gamma.  </li>
+<li>filmic:      Image filmic tonemapping. </li>
 <li>wireframe:      Draw as wireframe.</li>
 <li>edges:      Draw with overlaid edges</li>
-<li>edge_offset:      Offset for edges. @refl_uilimits(0, 0.1)</li>
+<li>edge_offset:      Offset for edges. </li>
 <li>cutout:      Draw with for binary transparency.</li>
 <li>eyelight:      Camera light mode.</li>
-<li>background:      Window background. @refl_semantic(color)</li>
-<li>ambient:      Ambient illumination. @refl_semantic(color)</li>
-<li>highlight_color:      Highlight color. @refl_semantic(color)</li>
-<li>edge_color:      Edge color. @refl_semantic(color)</li>
+<li>background:      Window background. </li>
+<li>ambient:      Ambient illumination. </li>
+<li>highlight_color:      Highlight color. </li>
+<li>edge_color:      Edge color. </li>
 <li>cull_backface:      Cull back face.</li>
 </ul>
 </li>
@@ -10037,7 +10115,7 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 
 
 <p>Visit struct elements.</p>
-<p><a id="toc69"></a></p>
+<p><a id="toc63"></a></p>
 <h3>OpenGL window</h3>
 <h4>Function void()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">typedef</span> <span class="nf">void</span> <span class="p">(</span><span class="o">*</span><span class="n">gl_text_callback</span><span class="p">)(</span><span class="n">gl_window</span><span class="o">*</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span><span class="p">);</span>
@@ -10174,7 +10252,7 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 
 
 <p>Handle camera navigation.</p>
-<p><a id="toc70"></a></p>
+<p><a id="toc64"></a></p>
 <h3>OpenGL widgets</h3>
 <h4>Function init_widgets()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">init_widgets</span><span class="p">(</span>
@@ -10662,8 +10740,6 @@ precision. See the int version.</p>
 
 <p>Draws a widget that sets params in non-recursive trivial structures.
 Internally uses visit to implement the view.</p>
-<p><a id="toc71"></a></p>
-<h3>OpenGL widgets for scene</h3>
 <h4>Function draw_camera_selection_widget()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">draw_camera_selection_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
     <span class="n">camera</span><span class="o">*&amp;</span> <span class="n">cam</span><span class="p">,</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">camera</span><span class="o">*</span> <span class="n">view</span><span class="p">);</span>

@@ -9893,8 +9893,7 @@ void make_uvhollowcutsphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
             auto r = (1 - uv[1]) + uv[1] * radius;
             pos = {r * cos(a[0]) * sin(a[1]), r * sin(a[0]) * sin(a[1]),
                 r * cos(a[1])};
-            norm = {
-                -cos(a[0]) * cos(a[1]), -sin(a[0]) * cos(a[1]), sin(a[1])};
+            norm = {-cos(a[0]) * cos(a[1]), -sin(a[0]) * cos(a[1]), sin(a[1])};
             texcoord = vec2f{uv[0], radius + (1 - radius) * uv[1]};
         });
     merge_quads(quads, pos, norm, texcoord, mquads, mpos, mnorm, mtexcoord);
@@ -9924,7 +9923,7 @@ void make_uvhollowcutsphere1(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
 
     make_quads(mquads, mpos, mnorm, mtexcoord, pow2(tesselation + 2),
         pow2(tesselation + 1) / 4,
-               [=](auto uv, auto& pos, auto& norm, auto& texcoord) {
+        [=](auto uv, auto& pos, auto& norm, auto& texcoord) {
             auto p = 1 - acos(radius) / pif;
             auto v = p + uv[1] * (1 - p);
             auto a = vec2f{2 * pif * uv[0], pif * (1 - v)};

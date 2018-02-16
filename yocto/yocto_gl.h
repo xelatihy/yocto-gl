@@ -4218,12 +4218,15 @@ void merge_triangles(
 /// Vertex data can then be concatenated successfully.
 void merge_quads(std::vector<vec4i>& quads, const std::vector<vec4i>& quads1);
 /// Merge quads between shapes.
-    inline void merge_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos, std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const std::vector<vec4i>& quads1, const std::vector<vec3f>& pos1, const std::vector<vec3f>& norm1, const std::vector<vec2f>& texcoord1) {
-        merge_quads(quads, quads1);
-        append(pos, pos1);
-        append(norm, norm1);
-        append(texcoord, texcoord1);
-    }
+inline void merge_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    const std::vector<vec4i>& quads1, const std::vector<vec3f>& pos1,
+    const std::vector<vec3f>& norm1, const std::vector<vec2f>& texcoord1) {
+    merge_quads(quads, quads1);
+    append(pos, pos1);
+    append(norm, norm1);
+    append(texcoord, texcoord1);
+}
 
 /// Duplicate vertex data for each line index, giving a faceted look.
 template <typename T>
@@ -8758,11 +8761,11 @@ struct timer {
 #if YGL_OPENGL
 
 // -----------------------------------------------------------------------------
-// OPENGL FUNCTIONS
+// OPENGL OBJECTS AND FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @defgroup gl_util OpenGL utilities
+/// @defgroup gl_util OpenGL objects and utilities
 /// @{
 
 /// OpenGL shape element types.
@@ -8820,18 +8823,6 @@ void gl_set_viewport(const vec2i& v);
 
 /// Reads an image from the the framebuffer.
 void gl_read_imagef(float* pixels, int w, int h, int nc);
-
-/// @}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// OPENGL TEXTURE FUNCTIONS
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-/// @defgroup gl_texture OpenGL textures
-/// @{
 
 /// OpenGL texture object. Members are not part of the public API.
 struct gl_texture {
@@ -8983,18 +8974,6 @@ struct gl_texture_info {
     gl_texture_info(const gl_texture& tid) : txt(tid) {}
 };
 
-/// @}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// OPENGL VERTEX ARRAY BUFFER
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-/// @defgroup gl_vertex_buffer OpenGL vertex array buffers
-/// @{
-
 /// OpenGL vertex/element buffer. Members are not part of the public API.
 struct gl_vertex_buffer {
     // Buffer id.
@@ -9107,18 +9086,6 @@ inline bool is_vertex_buffer_valid(const gl_vertex_buffer& buf) {
 /// Destroys the buffer.
 void clear_vertex_buffer(gl_vertex_buffer& buf);
 
-/// @}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// OPENGL VERTEX ELEMENTS BUFFER
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-/// @defgroup gl_element_buffer OpenGL element array buffers
-/// @{
-
 /// OpenGL element array buffer. Members are not part of the public API.
 struct gl_element_buffer {
     /// Buffer id.
@@ -9190,18 +9157,6 @@ inline bool is_element_buffer_valid(const gl_element_buffer& buf) {
 
 /// Destroys the buffer
 void clear_element_buffer(gl_element_buffer& buf);
-
-/// @}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// OPENGL PROGRAM FUNCTIONS
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-/// @defgroup gl_program OpenGL programs
-/// @{
 
 /// OpenGL program. Members are not part of the public API.
 struct gl_program {
@@ -9402,7 +9357,7 @@ void unbind_program(const gl_program& prog);
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @defgroup gl_shape OpenGL scene shader support
+/// @defgroup gl_shader OpenGL default shaders
 /// @{
 
 /// Vertex buffers for scene drawing. Members are not part of the public API.
@@ -9446,18 +9401,6 @@ void update_gl_texture(
 /// Update scene shapes on the GPU.
 void update_gl_shape(
     std::unordered_map<shape*, gl_shape>& shapes, const shape* shp);
-
-/// @}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// OPENGL IMAGE SHADER FUNCTIONS
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-/// @defgroup gl_stdimage_program OpenGL image shader
-/// @{
 
 /// A shader for displaying images.  Members are not part of the public API.
 struct gl_stdimage_program {
@@ -9511,18 +9454,6 @@ inline void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
     draw_image(prog, txt, win_size, params.offset, params.zoom, params.exposure,
         params.gamma, params.filmic);
 }
-
-/// @}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// OPENGL STANDARD SURFACE SHADER FUNCTIONS
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-/// @defgroup gl_stdsurface_program OpenGL surface shader
-/// @{
 
 /// Program to shade surfaces with a physically-based standard shader based on
 /// Phong/GGX. Members are not part of public API.
@@ -10094,18 +10025,6 @@ void draw_imageinspect_widgets(gl_window* win, const std::string& lbl,
 template <typename T>
 inline bool draw_params_widgets(
     gl_window* win, const std::string& lbl, T& params);
-
-/// @}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// OPENGL WIDGETS FOR SCENE
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-/// @defgroup gl_widgets OpenGL widgets for scene
-/// @{
 
 /// Draws a widget that can selected the camera.
 inline bool draw_camera_selection_widget(gl_window* win, const std::string& lbl,
