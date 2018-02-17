@@ -35,7 +35,7 @@
 /// - OpenGL utilities to manage textures, buffers and prograrms
 /// - OpenGL shader for image viewing and GGX microfacet and hair rendering
 ///
-/// The current version is 0.3.5.
+/// The current version is 0.3.6.
 ///
 /// ## Credits
 ///
@@ -692,14 +692,14 @@ namespace ygl {}
 #define YGL_OPENGL 1
 #endif
 
+// enable fast OBJ parsing
+#ifndef YGL_FASTOBJ
+#define YGL_FASTOBJ 1
+#endif
+
 // enable explicit json objects in glTF
 #ifndef YGL_GLTFJSON
 #define YGL_GLTFJSON 0
-#endif
-
-// use iostream for whole file operations
-#ifndef YGL_IOSTREAM
-#define YGL_IOSTREAM 0
 #endif
 
 // -----------------------------------------------------------------------------
@@ -8466,59 +8466,50 @@ namespace ygl {
 
 /// Loads the contents of a binary file in an in-memory array.
 inline std::vector<unsigned char> load_binary(const std::string& filename) {
-    // http://stackoverflow.com/questions/116038/what-is-the-best-way-to-read-an-entire-file-into-a-stdstring-in-c
-    std::fstream fs(
-        filename, std::ios_base::in | std::ios_base::binary | std::ios::ate);
-    if (fs.fail()) throw std::runtime_error("cannot read file " + filename);
-    fs.seekg(0, std::ios::end);
-    auto buf = std::vector<unsigned char>(fs.tellg());
-    fs.seekg(0);
-    fs.read((char*)buf.data(), buf.size());
-    if (fs.fail() || fs.bad())
+    // https://stackoverflow.com/questions/174531/easiest-way-to-get-files-contents-in-c
+    auto f = fopen(filename.c_str(), "rb");
+    if (!f) throw std::runtime_error("cannot read file " + filename);
+    fseek(f, 0, SEEK_END);
+    auto len = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    auto buf = std::vector<unsigned char>(len);
+    if (fread(buf.data(), 1, len, f) != len)
         throw std::runtime_error("cannot read file " + filename);
+    fclose(f);
     return buf;
 }
 
 /// Loads the contents of a text file into a string.
 inline std::string load_text(const std::string& filename) {
-    std::fstream fs(filename, std::ios_base::in);
-    if (fs.fail()) throw std::runtime_error("cannot read file " + filename);
-    std::stringstream ss;
-    ss << fs.rdbuf();
-    if (fs.fail()) throw std::runtime_error("cannot read file " + filename);
-    return ss.str();
+    auto buf = load_binary(filename);
+#ifndef _WIN32
+    auto nbuf = std::vector<unsigned char>();
+    nbuf.resize(buf.size());
+    auto bug_ptr = (char*)buf.data();
+    for (auto i = 0; i < buf.size(); i++) {
+        if (bug_ptr[i] == '\r') continue;
+        nbuf.push_back(bug_ptr[i]);
+    }
+    buf = nbuf;
+#endif
+    return std::string((char*)buf.data(), (char*)buf.data() + buf.size());
 }
 
 /// Saves binary data to a file.
 inline void save_binary(
     const std::string& filename, const std::vector<unsigned char>& data) {
-#if YGL_IOSTREAM
-    fstream fs(filename, ios_base::out | ios_base::binary);
-    if (fs.fail()) throw std::runtime_error("cannot write file " + filename);
-    fs.write((const char*)data.data(), data.size());
-    if (fs.fail() || fs.bad())
-        throw std::runtime_error("cannot write file " + filename);
-#else
     auto f = fopen(filename.c_str(), "wb");
     if (!f) throw std::runtime_error("cannot write file " + filename);
     fwrite(data.data(), 1, (int)data.size(), f);
     fclose(f);
-#endif
 }
 
 /// Saves a string to a text file.
 inline void save_text(const std::string& filename, const std::string& str) {
-#if YGL_IOSTREAM
-    fstream fs(filename, ios_base::out);
-    if (fs.fail()) throw std::runtime_error("cannot write file " + filename);
-    fs << str;
-    if (fs.fail()) throw std::runtime_error("cannot write file " + filename);
-#else
     auto f = fopen(filename.c_str(), "wt");
     if (!f) throw std::runtime_error("cannot write file " + filename);
     fwrite(str.c_str(), 1, (int)str.size(), f);
     fclose(f);
-#endif
 }
 
 /// @}

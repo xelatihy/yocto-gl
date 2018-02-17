@@ -6796,21 +6796,216 @@ obj_scene::~obj_scene() {
         if (v) delete v;
 }
 
+// skip whitespace
+inline void obj_skipws(char*& s) {
+    while (*s == ' ') s++;
+}
+
+// skip a string if matched
+inline bool obj_streq(const char* s, const char* str) {
+    while (*s == *str && *s && *str) {
+        s++;
+        str++;
+    }
+    return *s == *str;
+}
+
+#if YGL_FASTOBJ
+
+// parse base value
+inline void obj_parse_base(char*& s, int& val) {
+    val = 0;
+    auto sn = (*s == '-') ? -1 : 1;
+    if (*s == '-' || *s == '+') s++;
+    while (*s >= '0' && *s <= '9') val = val * 10 + (*s++ - '0');
+    val *= sn;
+}
+
+// parse base value
+inline void obj_parse_base(char*& s, float& val) {
+    //    auto ss = s; auto sss = ss;
+    auto mantissa = 0, fractional = 0, fractional_length = 0, exponent = 0;
+    auto sn = (*s == '-') ? -1 : 1;
+    if (*s == '-' || *s == '+') s++;
+    while (*s >= '0' && *s <= '9') mantissa = mantissa * 10 + (*s++ - '0');
+    if (*s == '.') {
+        s++;
+        while (*s >= '0' && *s <= '9') {
+            fractional = fractional * 10 + (*s++ - '0');
+            fractional_length++;
+        }
+    }
+    mantissa *= sn;
+    fractional *= sn;
+    if (*s == 'e' || *s == 'E') {
+        s++;
+        auto en = (*s == '-') ? -1 : 1;
+        if (*s == '-' || *s == '+') s++;
+        while (*s >= '0' && *s <= '9') exponent = exponent * 10 + (*s++ - '0');
+        exponent *= en;
+    }
+    auto dval = (double)mantissa;
+    if (fractional)
+        dval += fractional * std::pow(10.0, -(double)fractional_length);
+    if (exponent) dval *= std::pow(10.0, (double)exponent);
+    val = (float)dval;
+#if 0
+    auto cval = val;
+    sscanf(ss, "%f", &cval);
+    if(abs(val - cval) > 0.01f) {
+        printf("- %g %g %s\n", val, cval, sss);
+    }
+    auto len = 0;
+    sscanf(s, "%f%n", &val, &len);
+    s += len;
+#endif
+}
+
+// parse base value
+inline void obj_parse_base(char*& s, char* val) {
+    while (*s && *s != ' ') *val++ = *s++;
+    *val = 0;
+}
+
+// parse base value
+inline void obj_parse_base(char*& s, std::string& val) {
+    char buf[4096];
+    obj_parse_base(s, buf);
+    val = buf;
+}
+
+#else
+
+// parse base value
+inline void obj_parse_base(char*& s, int& val) {
+    auto len = 0;
+    sscanf(s, "%d%n", &val, &len);
+    s += len;
+}
+
+// parse base value
+inline void obj_parse_base(char*& s, float& val) {
+    auto len = 0;
+    sscanf(s, "%f%n", &val, &len);
+    s += len;
+}
+
+// parse base value
+inline void obj_parse_base(char*& s, std::string& val) {
+    char buf[4096];
+    auto len = 0;
+    sscanf(s, "%s%n", buf, &len);
+    if (len) {
+        s += len;
+        val = buf;
+    } else {
+        val = "";
+    }
+}
+
+// parse base value
+inline void obj_parse_base(char*& s, char* val) {
+    auto len = 0;
+    sscanf(s, "%s%n", val, &len);
+    s += len;
+}
+
+#endif
+
+// parse value
+inline void obj_parse(char*& s, int& val) {
+    obj_skipws(s);
+    obj_parse_base(s, val);
+}
+
+// parse value
+inline void obj_parse(char*& s, float& val) {
+    obj_skipws(s);
+    obj_parse_base(s, val);
+}
+
+// parse value
+inline void obj_parse(char*& s, bool& val) {
+    auto i = 0;
+    obj_parse(s, i);
+    val = i;
+}
+
+// parse value
+inline void obj_parse(char*& s, std::string& val) {
+    obj_skipws(s);
+    obj_parse_base(s, val);
+}
+
+// parse value
+inline void obj_parse(char*& s, char* val) {
+    obj_skipws(s);
+    obj_parse_base(s, val);
+}
+
+// parse value
+template <typename T, int N>
+inline void obj_parse(char*& s, vec<T, N>& val) {
+    for (auto i = 0; i < N; i++) obj_parse(s, (&val.x)[i]);
+}
+
+// parse value
+template <typename T, int N>
+inline void obj_parse(char*& s, quat<T, N>& val) {
+    for (auto i = 0; i < N; i++) obj_parse(s, (&val.x)[i]);
+}
+
+// parse value
+template <typename T, int N>
+inline void obj_parse(char*& s, frame<T, N>& val) {
+    for (auto i = 0; i < N * (N + 1); i++) obj_parse(s, (&val.x.x)[i]);
+}
+
+// parse value
+inline void obj_parse(char*& s, obj_vertex& val, const obj_vertex& vert_size) {
+    char buf[1024];
+    obj_skipws(s);
+    obj_parse_base(s, buf);
+    val = obj_vertex{-1, -1, -1, -1, -1};
+    auto v = &val.pos;
+    auto vs = &vert_size.pos;
+    auto i = 0;
+    auto sb = buf;
+    while (i < 5 && *sb) {
+        obj_parse_base(sb, v[i]);
+        v[i] = (v[i] < 0) ? vs[i] + v[i] : v[i] - 1;
+        if (*sb != '/') break;
+        while (*sb == '/') {
+            sb++;
+            i++;
+        }
+    }
+}
+
+// clear the whitespace
+inline void obj_convertws(char* s) {
+    while (*s) {
+        if (*s == '\t' || *s == '\r' || *s == '\n') *s = ' ';
+        s++;
+    }
+}
+
 // Parse texture options and name
-std::istream& operator>>(std::istream& is, obj_texture_info& info) {
+inline void obj_parse(char*& s, obj_texture_info& info) {
     // initialize
     info = obj_texture_info();
 
     // get tokens
     auto tokens = std::vector<std::string>();
-    while (is) {
-        auto s = std::string();
-        is >> s;
-        if (!s.empty()) tokens.push_back(s);
+    obj_skipws(s);
+    while (*s) {
+        tokens.push_back("");
+        obj_parse(s, tokens.back());
+        obj_skipws(s);
     }
 
     // exit if no tokens
-    if (tokens.empty()) return is;
+    if (tokens.empty()) return;
 
     // texture name
     info.path = tokens.back();
@@ -6845,8 +7040,6 @@ std::istream& operator>>(std::istream& is, obj_texture_info& info) {
         info.scale = std::atof(bm_str.c_str());
         info.props.erase("-bm");
     }
-
-    return is;
 }
 
 // Load MTL
@@ -6856,90 +7049,103 @@ std::vector<obj_material*> load_mtl(const std::string& filename, bool flip_tr,
     auto materials = std::vector<obj_material*>();
 
     // open file
-    auto fs = std::fstream(filename, std::ios_base::in);
+    auto fs = fopen(filename.c_str(), "rt");
     if (!fs) throw std::runtime_error("cannot open filename " + filename);
-    // fs.exceptions(ios_base::failbit);
 
     // add a material preemptively to avoid crashes
     materials.push_back(new obj_material());
     auto mat = materials.back();
 
     // read the file line by line
-    std::string line;
+    char line[4096];
+    char cmd[1024];
     auto linenum = 0;
-    while (getline(fs, line)) {
+    while (fgets(line, sizeof(line), fs)) {
         // prepare to parse
         linenum += 1;
-        auto ss = std::stringstream(line);
-        auto cmd = std::string();
-        ss >> cmd;
+        auto ss = line;
+        obj_convertws(ss);
+        obj_skipws(ss);
 
         // skip empty and comments
-        if (cmd.empty() || cmd[0] == '#') continue;
+        if (!ss[0] || ss[0] == '#') continue;
+
+        // get command
+        obj_parse(ss, cmd);
 
         // possible token values
-        if (cmd == "newmtl") {
+        if (obj_streq(cmd, "newmtl")) {
             materials.push_back(new obj_material());
             mat = materials.back();
-            ss >> mat->name;
-        } else if (cmd == "illum") {
-            ss >> mat->illum;
-        } else if (cmd == "Ke") {
-            ss >> mat->ke;
-        } else if (cmd == "Ka") {
-            ss >> mat->ka;
-        } else if (cmd == "Kd") {
-            ss >> mat->kd;
-        } else if (cmd == "Ks") {
-            ss >> mat->ks;
-        } else if (cmd == "Kr") {
-            ss >> mat->kr;
-        } else if (cmd == "Kt" || cmd == "Tf") {
+            obj_parse(ss, mat->name);
+        } else if (obj_streq(cmd, "illum")) {
+            obj_parse(ss, mat->illum);
+        } else if (obj_streq(cmd, "Ke")) {
+            obj_parse(ss, mat->ke);
+        } else if (obj_streq(cmd, "Ka")) {
+            obj_parse(ss, mat->ka);
+        } else if (obj_streq(cmd, "Kd")) {
+            obj_parse(ss, mat->kd);
+        } else if (obj_streq(cmd, "Ks")) {
+            obj_parse(ss, mat->ks);
+        } else if (obj_streq(cmd, "Kr")) {
+            obj_parse(ss, mat->kr);
+        } else if (obj_streq(cmd, "Kt") || obj_streq(cmd, "Tf")) {
             auto ntok = 0;
-            while (ss && ntok < 3) ss >> mat->kt[ntok++];
+            obj_skipws(ss);
+            while (*ss && ntok < 3) {
+                obj_parse(ss, mat->kt[ntok++]);
+                obj_skipws(ss);
+            }
             if (ntok < 3) mat->kt = {mat->kt.x, mat->kt.x, mat->kt.x};
-        } else if (cmd == "Tr") {
+        } else if (obj_streq(cmd, "Tr")) {
             auto ntok = 0;
-            while (ss) ss >> mat->kt[ntok++];
+            obj_skipws(ss);
+            while (*ss && ntok < 3) {
+                obj_parse(ss, mat->kt[ntok++]);
+                obj_skipws(ss);
+            }
             if (ntok < 3) {
                 materials.back()->op = (flip_tr) ? 1 - mat->kt.x : mat->kt.x;
                 mat->kt = {0, 0, 0};
             }
-        } else if (cmd == "Ns") {
-            ss >> mat->ns;
-        } else if (cmd == "d") {
-            ss >> mat->op;
-        } else if (cmd == "Ni") {
-            ss >> mat->ior;
-        } else if (cmd == "map_Ke") {
-            ss >> mat->ke_txt;
-        } else if (cmd == "map_Ka") {
-            ss >> mat->ka_txt;
-        } else if (cmd == "map_Kd") {
-            ss >> mat->kd_txt;
-        } else if (cmd == "map_Ks") {
-            ss >> mat->ks_txt;
-        } else if (cmd == "map_Kr") {
-            ss >> mat->kr_txt;
-        } else if (cmd == "map_Tr") {
-            ss >> mat->kt_txt;
-        } else if (cmd == "map_Ns") {
-            ss >> mat->ns_txt;
-        } else if (cmd == "map_d") {
-            ss >> mat->op_txt;
-        } else if (cmd == "map_Ni") {
-            ss >> mat->ior_txt;
-        } else if (cmd == "map_bump" || cmd == "bump") {
-            ss >> mat->bump_txt;
-        } else if (cmd == "map_disp" || cmd == "disp") {
-            ss >> mat->disp_txt;
-        } else if (cmd == "map_norm" || cmd == "norm") {
-            ss >> mat->norm_txt;
+        } else if (obj_streq(cmd, "Ns")) {
+            obj_parse(ss, mat->ns);
+        } else if (obj_streq(cmd, "d")) {
+            obj_parse(ss, mat->op);
+        } else if (obj_streq(cmd, "Ni")) {
+            obj_parse(ss, mat->ior);
+        } else if (obj_streq(cmd, "map_Ke")) {
+            obj_parse(ss, mat->ke_txt);
+        } else if (obj_streq(cmd, "map_Ka")) {
+            obj_parse(ss, mat->ka_txt);
+        } else if (obj_streq(cmd, "map_Kd")) {
+            obj_parse(ss, mat->kd_txt);
+        } else if (obj_streq(cmd, "map_Ks")) {
+            obj_parse(ss, mat->ks_txt);
+        } else if (obj_streq(cmd, "map_Kr")) {
+            obj_parse(ss, mat->kr_txt);
+        } else if (obj_streq(cmd, "map_Tr")) {
+            obj_parse(ss, mat->kt_txt);
+        } else if (obj_streq(cmd, "map_Ns")) {
+            obj_parse(ss, mat->ns_txt);
+        } else if (obj_streq(cmd, "map_d")) {
+            obj_parse(ss, mat->op_txt);
+        } else if (obj_streq(cmd, "map_Ni")) {
+            obj_parse(ss, mat->ior_txt);
+        } else if (obj_streq(cmd, "map_bump") || obj_streq(cmd, "bump")) {
+            obj_parse(ss, mat->bump_txt);
+        } else if (obj_streq(cmd, "map_disp") || obj_streq(cmd, "disp")) {
+            obj_parse(ss, mat->disp_txt);
+        } else if (obj_streq(cmd, "map_norm") || obj_streq(cmd, "norm")) {
+            obj_parse(ss, mat->norm_txt);
         } else {
             // copy into strings
-            while (ss) {
+            obj_skipws(ss);
+            while (*ss) {
                 mat->props[cmd].push_back("");
-                ss >> mat->props[cmd].back();
+                obj_parse(ss, mat->props[cmd].back());
+                obj_skipws(ss);
             }
         }
     }
@@ -6971,6 +7177,9 @@ std::vector<obj_material*> load_mtl(const std::string& filename, bool flip_tr,
         add_texture(mat->disp_txt);
         add_texture(mat->norm_txt);
     }
+
+    // clone
+    fclose(fs);
 
     // done
     return materials;
@@ -7006,9 +7215,8 @@ obj_scene* load_obj(const std::string& filename, bool load_txt,
     auto asset = std::unique_ptr<obj_scene>(new obj_scene());
 
     // open file
-    auto fs = std::fstream(filename, std::ios_base::in);
+    auto fs = fopen(filename.c_str(), "rt");
     if (!fs) throw std::runtime_error("cannot open filename " + filename);
-    // fs.exceptions(ios_base::failbit);
 
     // initializing obj
     asset->objects.push_back(new obj_object());
@@ -7031,81 +7239,77 @@ obj_scene* load_obj(const std::string& filename, bool load_txt,
             {"p", obj_element_type::point}, {"b", obj_element_type::bezier}};
 
     // read the file line by line
-    std::string line;
+    char line[4096];
+    char cmd[1024];
     auto linenum = 0;
-    while (getline(fs, line)) {
+    while (fgets(line, sizeof(line), fs)) {
         // prepare to parse
         linenum += 1;
-        auto ss = std::stringstream(line);
-        auto cmd = std::string();
-        ss >> cmd;
+        auto ss = line;
+        obj_convertws(ss);
+        obj_skipws(ss);
 
         // skip empty and comments
-        if (cmd.empty() || cmd[0] == '#') continue;
+        if (!ss[0] || ss[0] == '#') continue;
+
+        // get command
+        obj_parse(ss, cmd);
 
         // possible token values
-        if (cmd == "v") {
+        if (obj_streq(cmd, "v")) {
             vert_size.pos += 1;
             asset->pos.push_back(zero3f);
-            ss >> asset->pos.back();
-        } else if (cmd == "vn") {
+            obj_parse(ss, asset->pos.back());
+        } else if (obj_streq(cmd, "vn")) {
             vert_size.norm += 1;
             asset->norm.push_back(zero3f);
-            ss >> asset->norm.back();
-        } else if (cmd == "vt") {
+            obj_parse(ss, asset->norm.back());
+        } else if (obj_streq(cmd, "vt")) {
             vert_size.texcoord += 1;
             asset->texcoord.push_back(zero2f);
-            ss >> asset->texcoord.back();
+            obj_parse(ss, asset->texcoord.back());
             if (flip_texcoord)
                 asset->texcoord.back().y = 1 - asset->texcoord.back().y;
-        } else if (cmd == "vc") {
+        } else if (obj_streq(cmd, "vc")) {
             vert_size.color += 1;
             asset->color.push_back(vec4f{0, 0, 0, 1});
-            ss >> asset->color.back();
-        } else if (cmd == "vr") {
+            obj_parse(ss, asset->color.back());
+        } else if (obj_streq(cmd, "vr")) {
             vert_size.radius += 1;
             asset->radius.push_back(0);
-            ss >> asset->radius.back();
-        } else if (cmd == "f" || cmd == "l" || cmd == "p" || cmd == "b") {
+            obj_parse(ss, asset->radius.back());
+        } else if (obj_streq(cmd, "f") || obj_streq(cmd, "l") ||
+                   obj_streq(cmd, "p") || obj_streq(cmd, "b")) {
             group->elems.push_back(
                 {(uint32_t)group->verts.size(), elem_type_map.at(cmd), 0});
-            while (true) {
-                auto tok = std::string();
-                ss >> tok;
-                if (tok.empty()) break;
-                auto toks = split(tok, "/");
-                if (toks.empty()) break;
-                auto vert = obj_vertex{-1, -1, -1, -1, -1};
-                auto v = &vert.pos;
-                auto vs = &vert_size.pos;
-                for (auto i = 0; i < min(5, (int)toks.size()); i++) {
-                    if (toks[i].empty()) continue;
-                    v[i] = (int)atoi(toks[i].c_str());
-                    v[i] = (v[i] < 0) ? vs[i] + v[i] : v[i] - 1;
-                }
+            obj_skipws(ss);
+            while (*ss) {
+                auto vert = obj_vertex();
+                obj_parse(ss, vert, vert_size);
+                obj_skipws(ss);
                 group->verts.push_back(vert);
                 group->elems.back().size += 1;
             }
-        } else if (cmd == "o") {
+        } else if (obj_streq(cmd, "o")) {
             asset->objects.push_back(new obj_object());
             object = asset->objects.back();
-            ss >> object->name;
+            obj_parse(ss, object->name);
             object->groups.push_back(new obj_group());
             group = object->groups.back();
             group->matname = matname;
-        } else if (cmd == "usemtl") {
-            ss >> matname;
+        } else if (obj_streq(cmd, "usemtl")) {
+            obj_parse(ss, matname);
             object->groups.push_back(new obj_group());
             group = object->groups.back();
             group->matname = matname;
-        } else if (cmd == "g") {
+        } else if (obj_streq(cmd, "g")) {
             object->groups.push_back(new obj_group());
             group = object->groups.back();
-            ss >> group->groupname;
+            obj_parse(ss, group->groupname);
             group->matname = matname;
-        } else if (cmd == "s") {
+        } else if (obj_streq(cmd, "s")) {
             auto name = std::string();
-            ss >> name;
+            obj_parse(ss, name);
             auto smoothing = (name == "on");
             if (group->smoothing != smoothing) {
                 auto gname = group->groupname;
@@ -7115,41 +7319,56 @@ obj_scene* load_obj(const std::string& filename, bool load_txt,
                 group->groupname = gname;
                 group->smoothing = smoothing;
             }
-        } else if (cmd == "gp") {
+        } else if (obj_streq(cmd, "gp")) {
             auto name = std::string();
-            ss >> name;
-            while (true) {
+            obj_parse(ss, name);
+            obj_skipws(ss);
+            while (*ss) {
                 auto tok = std::string();
-                ss >> tok;
-                if (tok.empty()) break;
+                obj_parse(ss, tok);
+                obj_skipws(ss);
                 group->props[name].push_back(tok);
             }
-        } else if (cmd == "op") {
+        } else if (obj_streq(cmd, "op")) {
             auto name = std::string();
-            ss >> name;
-            while (true) {
+            obj_parse(ss, name);
+            obj_skipws(ss);
+            while (*ss) {
                 auto tok = std::string();
-                ss >> tok;
-                if (tok.empty()) break;
+                obj_parse(ss, tok);
+                obj_skipws(ss);
                 object->props[name].push_back(tok);
             }
-        } else if (cmd == "mtllib") {
+        } else if (obj_streq(cmd, "mtllib")) {
             mtllibs.push_back("");
-            ss >> mtllibs.back();
-        } else if (cmd == "c") {
+            obj_parse(ss, mtllibs.back());
+        } else if (obj_streq(cmd, "c")) {
             auto cam = new obj_camera();
-            ss >> cam->name >> cam->ortho >> cam->yfov >> cam->aspect >>
-                cam->aperture >> cam->focus >> cam->frame;
+            obj_parse(ss, cam->name);
+            obj_parse(ss, cam->ortho);
+            obj_parse(ss, cam->yfov);
+            obj_parse(ss, cam->aspect);
+            obj_parse(ss, cam->aperture);
+            obj_parse(ss, cam->focus);
+            obj_parse(ss, cam->frame);
             asset->cameras.push_back(cam);
-        } else if (cmd == "e") {
+        } else if (obj_streq(cmd, "e")) {
             auto env = new obj_environment();
-            ss >> env->name >> env->matname >> env->frame;
+            obj_parse(ss, env->name);
+            obj_parse(ss, env->matname);
+            obj_parse(ss, env->frame);
             asset->environments.push_back(env);
-        } else if (cmd == "n") {
+        } else if (obj_streq(cmd, "n")) {
             auto nde = new obj_node();
-            ss >> nde->name >> nde->parent >> nde->camname >> nde->objname >>
-                nde->envname >> nde->frame >> nde->translation >>
-                nde->rotation >> nde->scaling;
+            obj_parse(ss, nde->name);
+            obj_parse(ss, nde->parent);
+            obj_parse(ss, nde->camname);
+            obj_parse(ss, nde->objname);
+            obj_parse(ss, nde->envname);
+            obj_parse(ss, nde->frame);
+            obj_parse(ss, nde->translation);
+            obj_parse(ss, nde->rotation);
+            obj_parse(ss, nde->scaling);
             if (nde->parent == "\"\"") nde->parent = "";
             if (nde->camname == "\"\"") nde->camname = "";
             if (nde->objname == "\"\"") nde->objname = "";
@@ -7203,79 +7422,198 @@ obj_scene* load_obj(const std::string& filename, bool load_txt,
     // load textures
     if (load_txt) load_textures(asset.get(), dirname, skip_missing);
 
+    // close file
+    fclose(fs);
+
     // done
     return asset.release();
 }
 
-// write to stream
-inline std::ostream& operator<<(std::ostream& os, const obj_texture_info& v) {
-    for (auto&& kv : v.props) {
-        os << kv.first << ' ';
-        for (auto&& vv : kv.second) os << vv << ' ';
-    }
-    if (v.clamp) os << "-clamp on ";
-    os << v.path;
-    return os;
+// Dumps a value
+inline void obj_dump(char*& s, char* val) {
+    while (*val) *s++ = *val++;
+}
+// Dumps a value
+inline void obj_dump(char*& s, const char* val) {
+    while (*val) *s++ = *val++;
+}
+// Dumps a value
+inline void obj_dump(char*& s, const std::string& val) {
+    auto val_ = val.c_str();
+    while (*val_) *s++ = *val_++;
 }
 
-// write an OBJ vertex using only the indices that are active
-inline std::ostream& operator<<(std::ostream& os, const obj_vertex& vert) {
-    auto vert_ptr = &vert.pos;
+#if YGL_FASTOBJ
+// Dumps a value
+inline void obj_dump(char*& s, int val) {
+    static auto digits = "0123456789";
+    if (val < 0) {
+        *s++ = '-';
+        val = -val;
+    }
+    char buf[64];
+    buf[sizeof(buf) - 1] = 0;
+    auto ss = buf + sizeof(buf) - 2;
+    while (val >= 10) {
+        *--ss = digits[val % 10];
+        val /= 10;
+    }
+    *--ss = digits[val];
+    while (*ss) *s++ = *ss++;
+}
+#else
+// Dumps a value
+inline void obj_dump(char*& s, int val) { s += sprintf(s, "%d", val); }
+#endif
+
+// Dumps a value
+inline void obj_dump(char*& s, float val) { s += sprintf(s, "%g", val); }
+// Dumps a value
+template <typename T, int N>
+inline void obj_dump(char*& s, const vec<T, N>& val) {
+    for (auto i = 0; i < N; i++) {
+        if (i) *s++ = ' ';
+        obj_dump(s, (&val.x)[i]);
+    }
+}
+// Dumps a value
+template <typename T, int N>
+inline void obj_dump(char*& s, const quat<T, N>& val) {
+    for (auto i = 0; i < N; i++) {
+        if (i) *s++ = ' ';
+        obj_dump(s, (&val.x)[i]);
+    }
+}
+// Dumps a value
+template <typename T, int N>
+inline void obj_dump(char*& s, const frame<T, N>& val) {
+    for (auto i = 0; i < N * (N + 1); i++) {
+        if (i) *s++ = ' ';
+        obj_dump(s, (&val.x.x)[i]);
+    }
+}
+
+// Dumps a value
+inline void obj_dump(char*& s, const obj_vertex& val) {
+    auto vert_ptr = &val.pos;
     auto nto_write = 0;
     for (auto i = 0; i < 5; i++) {
         if (vert_ptr[i] >= 0) nto_write = i + 1;
     }
     for (auto i = 0; i < nto_write; i++) {
-        if (i) os << '/';
-        if (vert_ptr[i] >= 0) os << vert_ptr[i] + 1;
+        if (i) *s++ = '/';
+        if (vert_ptr[i] >= 0) s += sprintf(s, "%d", vert_ptr[i] + 1);
     }
-    return os;
+}
+
+// Dumps a value
+inline void obj_dump(char*& s, const std::vector<std::string>& vals) {
+    for (auto i = 0; i < vals.size(); i++) {
+        if (i) *s++ = ' ';
+        obj_dump(s, vals[i]);
+    }
+}
+
+// Dumps a value
+inline void obj_dump(char*& s, const obj_texture_info& v) {
+    for (auto&& kv : v.props) {
+        obj_dump(s, kv.first);
+        *s++ = ' ';
+        for (auto&& vv : kv.second) {
+            obj_dump(s, vv);
+            *s++ = ' ';
+        }
+    }
+    if (v.clamp) obj_dump(s, "-clamp on ");
+    obj_dump(s, v.path);
+}
+
+// Dumps a line
+template <typename T>
+inline void obj_dump_line(FILE* fs, const char* lbl, const T& val) {
+    char buf[4096];
+    buf[0] = 0;
+    auto s = buf;
+    obj_dump(s, lbl);
+    *s++ = ' ';
+    obj_dump(s, val);
+    *s++ = '\n';
+    *s = 0;
+    fputs(buf, fs);
+}
+
+// Dumps a line
+inline void obj_dump_line(
+    FILE* fs, const char* lbl, const obj_vertex* vals, int count) {
+    char buf[4096];
+    buf[0] = 0;
+    auto s = buf;
+    obj_dump(s, lbl);
+    for (auto i = 0; i < count; i++) {
+        *s++ = ' ';
+        obj_dump(s, vals[i]);
+    }
+    *s++ = '\n';
+    *s = 0;
+    fputs(buf, fs);
+}
+
+// Dumps a line
+template <typename T>
+inline void obj_dump_sp(FILE* fs, const T& val) {
+    char buf[4096];
+    buf[0] = 0;
+    auto s = buf;
+    obj_dump(s, val);
+    *s++ = ' ';
+    *s = 0;
+    fputs(buf, fs);
 }
 
 // Save an MTL file
 void save_mtl(const std::string& filename,
     const std::vector<obj_material*>& materials, bool flip_tr) {
     // open file
-    auto fs = std::fstream(filename, std::ios_base::out);
+    auto fs = fopen(filename.c_str(), "wt");
     if (!fs) throw std::runtime_error("cannot open filename " + filename);
-    fs.exceptions(std::ios_base::failbit);
 
     // for each material, dump all the values
     for (auto mat : materials) {
-        fs << "newmtl " << mat->name << '\n';
-        fs << "  illum " << mat->illum << '\n';
-        if (mat->ke != zero3f) fs << "  Ke " << mat->ke << '\n';
-        if (mat->ka != zero3f) fs << "  Ka " << mat->ka << '\n';
-        if (mat->kd != zero3f) fs << "  Kd " << mat->kd << '\n';
-        if (mat->ks != zero3f) fs << "  Ks " << mat->ks << '\n';
-        if (mat->kr != zero3f) fs << "  Kr " << mat->kr << '\n';
-        if (mat->kt != zero3f) fs << "  Kt " << mat->kt << '\n';
-        if (mat->kt != zero3f) fs << "  Tf " << mat->kt << '\n';
-        if (mat->ns != 0.0f) fs << "  Ns " << mat->ns << '\n';
-        if (mat->op != 1.0f) fs << "  d " << mat->op << '\n';
-        if (mat->ior != 0.0f) fs << "  Ni " << mat->ior << '\n';
-        if (mat->ke_txt.path != "") fs << "  map_Ke " << mat->ke_txt << '\n';
-        if (mat->ka_txt.path != "") fs << "  map_Ka " << mat->ka_txt << '\n';
-        if (mat->kd_txt.path != "") fs << "  map_Kd " << mat->kd_txt << '\n';
-        if (mat->ks_txt.path != "") fs << "  map_Ks " << mat->ks_txt << '\n';
-        if (mat->kr_txt.path != "") fs << "  map_Kr " << mat->kr_txt << '\n';
-        if (mat->kt_txt.path != "") fs << "  map_Kt " << mat->kt_txt << '\n';
-        if (mat->ns_txt.path != "") fs << "  map_Ns " << mat->ns_txt << '\n';
-        if (mat->op_txt.path != "") fs << "  map_d  " << mat->op_txt << '\n';
-        if (mat->ior_txt.path != "") fs << "  map_Ni " << mat->ior_txt << '\n';
+        obj_dump_line(fs, "newmtl", mat->name);
+        obj_dump_line(fs, "  illum", mat->illum);
+        if (mat->ke != zero3f) obj_dump_line(fs, "  Ke", mat->ke);
+        if (mat->ka != zero3f) obj_dump_line(fs, "  Ka", mat->ka);
+        if (mat->kd != zero3f) obj_dump_line(fs, "  Kd", mat->kd);
+        if (mat->ks != zero3f) obj_dump_line(fs, "  Ks", mat->ks);
+        if (mat->kr != zero3f) obj_dump_line(fs, "  Kr", mat->kr);
+        if (mat->kt != zero3f) obj_dump_line(fs, "  Kt", mat->kt);
+        if (mat->kt != zero3f) obj_dump_line(fs, "  Tf", mat->kt);
+        if (mat->ns != 0.0f) obj_dump_line(fs, "  Ns", mat->ns);
+        if (mat->op != 1.0f) obj_dump_line(fs, "  d", mat->op);
+        if (mat->ior != 0.0f) obj_dump_line(fs, "  Ni", mat->ior);
+        if (mat->ke_txt.path != "") obj_dump_line(fs, "  map_Ke", mat->ke_txt);
+        if (mat->ka_txt.path != "") obj_dump_line(fs, "  map_Ka", mat->ka_txt);
+        if (mat->kd_txt.path != "") obj_dump_line(fs, "  map_Kd", mat->kd_txt);
+        if (mat->ks_txt.path != "") obj_dump_line(fs, "  map_Ks", mat->ks_txt);
+        if (mat->kr_txt.path != "") obj_dump_line(fs, "  map_Kr", mat->kr_txt);
+        if (mat->kt_txt.path != "") obj_dump_line(fs, "  map_Kt", mat->kt_txt);
+        if (mat->ns_txt.path != "") obj_dump_line(fs, "  map_Ns", mat->ns_txt);
+        if (mat->op_txt.path != "") obj_dump_line(fs, "  map_d ", mat->op_txt);
+        if (mat->ior_txt.path != "")
+            obj_dump_line(fs, "  map_Ni", mat->ior_txt);
         if (mat->bump_txt.path != "")
-            fs << "  map_bump " << mat->bump_txt << '\n';
+            obj_dump_line(fs, "  map_bump", mat->bump_txt);
         if (mat->disp_txt.path != "")
-            fs << "  map_disp " << mat->disp_txt << '\n';
+            obj_dump_line(fs, "  map_disp", mat->disp_txt);
         if (mat->norm_txt.path != "")
-            fs << "  map_norm " << mat->norm_txt << '\n';
+            obj_dump_line(fs, "  map_norm", mat->norm_txt);
         for (auto&& kv : mat->props) {
-            fs << "  " << kv.first;
-            for (auto&& v : kv.second) fs << " " << v;
-            fs << '\n';
+            obj_dump_line(fs, ("  " + kv.first + ' ').c_str(), kv.second);
         }
-        fs << '\n';
+        fputs("\n", fs);
     }
+
+    fclose(fs);
 }
 
 // Loads textures for an scene.
@@ -7308,84 +7646,92 @@ void save_textures(
 void save_obj(const std::string& filename, const obj_scene* asset,
     bool save_txt, bool skip_missing, bool flip_texcoord, bool flip_tr) {
     // open file
-    auto fs = std::fstream(filename, std::ios_base::out);
+    auto fs = fopen(filename.c_str(), "wt");
     if (!fs) throw std::runtime_error("cannot open filename " + filename);
-    fs.exceptions(std::ios_base::failbit);
 
     // linkup to mtl
     auto dirname = path_dirname(filename);
     auto basename = filename.substr(dirname.length());
     basename = basename.substr(0, basename.length() - 4);
     if (!asset->materials.empty()) {
-        fs << "mtllib " << basename << ".mtl" << '\n';
+        obj_dump_line(fs, "mtllib", basename + ".mtl");
     }
 
     // save cameras
     for (auto cam : asset->cameras) {
-        fs << "c " << ' ' << cam->name << ' ' << cam->ortho << ' ' << cam->yfov
-           << ' ' << cam->aspect << ' ' << cam->aperture << ' ' << cam->focus
-           << ' ' << cam->frame << '\n';
+        obj_dump_sp(fs, "c");
+        obj_dump_sp(fs, cam->name);
+        obj_dump_sp(fs, cam->ortho);
+        obj_dump_sp(fs, cam->yfov);
+        obj_dump_sp(fs, cam->aspect);
+        obj_dump_sp(fs, cam->aperture);
+        obj_dump_sp(fs, cam->focus);
+        obj_dump_sp(fs, cam->frame);
+        obj_dump_sp(fs, "\n");
     }
 
     // save envs
     for (auto env : asset->environments) {
-        fs << "e " << env->name << ' ' << env->matname << ' ' << env->frame
-           << '\n';
+        obj_dump_sp(fs, "e");
+        obj_dump_sp(fs, env->name);
+        obj_dump_sp(fs, env->matname);
+        obj_dump_sp(fs, env->frame);
+        obj_dump_sp(fs, "\n");
     }
 
     // save nodes
     for (auto nde : asset->nodes) {
-        fs << "n " << nde->name << ' '
-           << ((nde->parent.empty()) ? "\"\""s : nde->parent) << ' '
-           << ((nde->camname.empty()) ? "\"\""s : nde->camname) << ' '
-           << ((nde->objname.empty()) ? "\"\""s : nde->objname) << ' '
-           << ((nde->envname.empty()) ? "\"\""s : nde->envname) << ' '
-           << nde->frame << ' ' << nde->translation << ' ' << nde->rotation
-           << ' ' << nde->scaling << '\n';
+        obj_dump_sp(fs, "n");
+        obj_dump_sp(fs, nde->name);
+        obj_dump_sp(fs, (nde->parent.empty()) ? "\"\""s : nde->parent);
+        obj_dump_sp(fs, (nde->camname.empty()) ? "\"\""s : nde->camname);
+        obj_dump_sp(fs, (nde->objname.empty()) ? "\"\""s : nde->objname);
+        obj_dump_sp(fs, (nde->envname.empty()) ? "\"\""s : nde->envname);
+        obj_dump_sp(fs, nde->frame);
+        obj_dump_sp(fs, nde->translation);
+        obj_dump_sp(fs, nde->rotation);
+        obj_dump_sp(fs, nde->scaling);
+        obj_dump_sp(fs, "\n");
     }
 
     // save all vertex data
-    for (auto& v : asset->pos) fs << "v " << v << '\n';
+    for (auto& v : asset->pos) obj_dump_line(fs, "v", v);
     if (flip_texcoord) {
         for (auto& v : asset->texcoord)
-            fs << "vt " << vec2f{v.x, 1 - v.y} << '\n';
+            obj_dump_line(fs, "vt", vec2f{v.x, 1 - v.y});
     } else {
-        for (auto& v : asset->texcoord) fs << "vt " << v << '\n';
+        for (auto& v : asset->texcoord) obj_dump_line(fs, "vt", v);
     }
-    for (auto& v : asset->norm) fs << "vn " << v << '\n';
-    for (auto& v : asset->color) fs << "vc " << v << '\n';
-    for (auto& v : asset->radius) fs << "vr " << v << '\n';
+    for (auto& v : asset->norm) obj_dump_line(fs, "vn", v);
+    for (auto& v : asset->color) obj_dump_line(fs, "vc", v);
+    for (auto& v : asset->radius) obj_dump_line(fs, "vr", v);
 
     // save element data
     static auto elem_labels = std::unordered_map<obj_element_type, std::string>{
         {obj_element_type::point, "p"}, {obj_element_type::line, "l"},
         {obj_element_type::face, "f"}, {obj_element_type::bezier, "b"}};
     for (auto object : asset->objects) {
-        fs << "o " << object->name << '\n';
+        obj_dump_line(fs, "o", object->name);
         for (auto& kv : object->props) {
-            fs << "op " << kv.first;
-            for (auto& v : kv.second) fs << ' ' << v;
-            fs << '\n';
+            obj_dump_line(fs, "op", join({kv.first}, kv.second));
         }
         for (auto group : object->groups) {
             if (!group->matname.empty())
-                fs << "usemtl " << group->matname << '\n';
+                obj_dump_line(fs, "usemtl", group->matname);
             if (!group->groupname.empty())
-                fs << "g " << group->groupname << '\n';
-            if (!group->smoothing) fs << "s off" << '\n';
+                obj_dump_line(fs, "g", group->groupname);
+            if (!group->smoothing) obj_dump_line(fs, "s", "off");
             for (auto& kv : group->props) {
-                fs << "gp " << kv.first;
-                for (auto& v : kv.second) fs << ' ' << v;
-                fs << '\n';
+                obj_dump_line(fs, "gp", join({kv.first}, kv.second));
             }
             for (auto elem : group->elems) {
-                fs << elem_labels.at(elem.type) << ' ';
-                for (auto i = elem.start; i < elem.start + elem.size; i++)
-                    fs << group->verts[i] << ' ';
-                fs << '\n';
+                obj_dump_line(fs, elem_labels.at(elem.type).c_str(),
+                    group->verts.data() + elem.start, elem.size);
             }
         }
     }
+
+    fclose(fs);
 
     // save materials
     if (!asset->materials.empty())
