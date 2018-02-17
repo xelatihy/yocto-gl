@@ -123,8 +123,7 @@ and released under the MIT license. Features include:</p>
 <li>OpenGL utilities to manage textures, buffers and prograrms</li>
 <li>OpenGL shader for image viewing and GGX microfacet and hair rendering</li>
 </ul>
-<p>The current version is 0.1.0. You can access the previous multi-file version
-with tag "v0.0.1" in this repository.</p>
+<p>The current version is 0.3.5.</p>
 <p><a id="toc1"></a></p>
 <h2>Credits</h2>
 <p>This library includes code from the PCG random number generator,
@@ -588,7 +587,7 @@ manipulating files.</p>
    <code>save_text()</code> and <code>save_binary()</code></li>
 <li>simple logger with support for console and file streams:<ol>
 <li>create a <code>logger</code></li>
-<li>add more streams with <code>add_console_stream()</code> or <code>add_file_stream()</code></li>
+<li>add more streams with <code>addconsole_stream()</code> or <code>add_file_stream()</code></li>
 <li>write log messages with <code>log_msg()</code> and its variants</li>
 <li>you can also use a global default logger with the free functions
    <code>log_XXX()</code></li>
@@ -6998,7 +6997,7 @@ This is a hack, but works better than not doing it.</p>
 <p>Rendering params.</p>
 <ul>
 <li>Members:<ul>
-<li>resolution:      Image vertical resolution. </li>
+<li>resolution:      Image vertical resolution.  </li>
 <li>nsamples:      Number of samples.  </li>
 <li>shader:      Sampler type. </li>
 <li>rng:      Random number generation type. </li>
@@ -8924,20 +8923,19 @@ is not fast nor memory efficient. But it is good enough for some needs.</p>
 <h3>Simple logging</h3>
 <h4>Struct logger</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">logger</span> <span class="p">{</span>
-    <span class="kt">bool</span> <span class="n">_verbose</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
-    <span class="kt">bool</span> <span class="n">_console</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
-    <span class="kt">FILE</span><span class="o">*</span> <span class="n">_file</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">verbose</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">console</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+    <span class="kt">FILE</span><span class="o">*</span> <span class="n">file</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
 
-<p>Logger object. A logger can output messages to console an a file.
-Members are not part of the public API.</p>
+<p>Logger object. A logger can output messages to console an a file.</p>
 <ul>
 <li>Members:<ul>
-<li>_verbose:      whether to output verbose</li>
-<li>_console:      whether to output to console</li>
-<li>_file:      file stream for stream output</li>
+<li>verbose:      whether to output verbose</li>
+<li>console:      whether to output to console</li>
+<li>file:      file stream for stream output</li>
 </ul>
 </li>
 </ul>
@@ -10074,7 +10072,7 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 <p>Params for stdsurface drawing.</p>
 <ul>
 <li>Members:<ul>
-<li>resolution:      Image resolution. </li>
+<li>resolution:      Image resolution.  </li>
 <li>exposure:      Image exposure.  </li>
 <li>gamma:      Image gamma.  </li>
 <li>filmic:      Image filmic tonemapping. </li>

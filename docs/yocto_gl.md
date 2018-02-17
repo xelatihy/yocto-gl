@@ -34,8 +34,7 @@ and released under the MIT license. Features include:
 - OpenGL utilities to manage textures, buffers and prograrms
 - OpenGL shader for image viewing and GGX microfacet and hair rendering
 
-The current version is 0.1.0. You can access the previous multi-file version
-with tag "v0.0.1" in this repository.
+The current version is 0.3.5.
 
 ## Credits
 
@@ -532,7 +531,7 @@ manipulating files.
    `save_text()` and `save_binary()`
 4. simple logger with support for console and file streams:
     1. create a `logger`
-    2. add more streams with `add_console_stream()` or `add_file_stream()`
+    2. add more streams with `addconsole_stream()` or `add_file_stream()`
     3. write log messages with `log_msg()` and its variants
     4. you can also use a global default logger with the free functions
        `log_XXX()`
@@ -8260,7 +8259,7 @@ struct trace_params {
 Rendering params.
 
 - Members:
-    - resolution:      Image vertical resolution. 
+    - resolution:      Image vertical resolution.  
     - nsamples:      Number of samples.  
     - shader:      Sampler type. 
     - rng:      Random number generation type. 
@@ -10313,19 +10312,18 @@ Initialize a command line parser.
 
 ~~~ .cpp
 struct logger {
-    bool _verbose = true;
-    bool _console = true;
-    FILE* _file = nullptr;
+    bool verbose = true;
+    bool console = true;
+    FILE* file = nullptr;
 }
 ~~~
 
 Logger object. A logger can output messages to console an a file.
-Members are not part of the public API.
 
 - Members:
-    - _verbose:      whether to output verbose
-    - _console:      whether to output to console
-    - _file:      file stream for stream output
+    - verbose:      whether to output verbose
+    - console:      whether to output to console
+    - file:      file stream for stream output
 
 
 #### Function make_logger()
@@ -11710,7 +11708,7 @@ struct gl_stdsurface_params {
 Params for stdsurface drawing.
 
 - Members:
-    - resolution:      Image resolution. 
+    - resolution:      Image resolution.  
     - exposure:      Image exposure.  
     - gamma:      Image gamma.  
     - filmic:      Image filmic tonemapping. 

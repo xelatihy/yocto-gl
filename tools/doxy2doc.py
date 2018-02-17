@@ -3,91 +3,207 @@
 ## This is not complete. Only here as reference.
 
 import xml.etree.ElementTree as et
-import textwrap
+import json, subprocess, pystache
+from collections import OrderedDict as odict
 
-dirname = 'build/doxygen/xml/'
+dir_xml = 'build/doxygen/xml'
+dir_json = 'build/doxygen/json'
+dir_md = 'build/doxygen/md'
 
-def unescape(txt):
-    return txt.replace('&lt;','<').replace('&gt;','>').replace('&amp;','&').replace('&quot;','"').replace('&apos;','\'')
+def xml2dict(xml,
+             array_tags=['memberdef','sectiondef','param'],
+             text_tags=['briefdescription'],
+             del_tags=['collaborationgraph','location','includes','detaileddescription','listofallmembers','inbodydescription']):
+    tag = xml.tag
+    text = xml.text if xml.text else ''
+    tail = xml.tail if xml.tail else ''
+    attr = xml.attrib
+    children = list(xml)
+    if tag in text_tags:
+        s = text
+        for st in xml.itertext():
+            s += st
+        s += tail
+        s = s.replace('\n',' ').strip()
+        return tag, s
+    if children or attr:
+        js = odict()
+        for k, v in attr.items(): js[k] = v
+        cjs = odict()
+        for child in children:
+            k, v = xml2dict(child)
+            if k in del_tags: continue
+            if k not in cjs: cjs[k] = []
+            cjs[k] += [v]
+        for k, v in cjs.items():
+            if k in array_tags:
+                js[k] = v
+            else:
+                js[k] = v if len(v) > 1 else v[0]
+        return tag, js
+    else:
+        return tag, (text + tail).strip()
 
-def descr2md(xml):
-    txt = ''
-    for t in xml.itertext():
-        txt += t
-    txt = unescape(txt)
-    txt = txt.replace('\n',' ').replace('  ', ' ').strip()
-    txt = textwrap.fill(txt)
-    return txt
+def xml2json(xmlpath,jsonpath):
+    xml = et.parse(xmlpath).getroot()
+    _, js = xml2dict(xml)
+    with open(jsonpath, 'wt') as f:
+        json.dump(js, f, indent=2)
 
-def doc2md(xml):
-    return unescape(xml.text)
+index_xml = et.parse(f'{dir_xml}/index.xml').getroot()
+group_names = [ e.attrib['refid'] for e in index_xml if e.attrib['kind'] == 'group' ]
 
-def code2md(text, indent='    '):
-    text = unescape(text)
-    text = text.replace(' *&','*& ').replace(' *','* ').replace(' &','& ').replace('< ','<').replace(' >','>').replace('* ,','*,')
-    return ''.join(indent + l + '\n' for l in textwrap.wrap(text,78-len(indent)))
+subprocess.run(f'rm -rf {dir_json} && mkdir -p {dir_json}', shell=True)
+groups = [ ]
+for name in group_names:
+    xml = et.parse(f'{dir_xml}/{name}.xml').getroot()
+    group = xml2dict(xml)[1]['compounddef']
+    if 'sectiondef' not in group:
+        group['sectiondef'] = []
+    class_names = [ e.attrib['refid'] for e in xml.iter('innerclass') ]
+    if not class_names: continue
+    group['innerclasses'] = [ ]
+    for cname in class_names:
+        cxml = et.parse(f'{dir_xml}/{cname}.xml').getroot()
+        group['innerclasses'] += [ xml2dict(cxml)[1]['compounddef'] ]
+    with open(f'{dir_json}/{name}.json', 'wt') as f: json.dump(group, f, indent=2)
+    groups += [ group ]
 
-def template2md(xml):
-    tmp_xml = elem_xml.find('templateparamlist')
-    if tmp_xml:
-        return code2md('template<' + ', '.join(e.text for e in tmp_xml.iter('type')) + '>')
-    return ''
-
-index_xml = et.parse(dirname + 'index.xml').getroot()
-groups = [ e.attrib['refid'] for e in index_xml if e.attrib['kind'] == 'group' ]
-
-md = ''
+fgroups = [ ]
 for group in groups:
-    group_xml = et.parse(dirname + group + '.xml').getroot().find('compounddef')
-    md += '### ' + doc2md(group_xml.find('title')) + '\n\n'
-    for section_xml in group_xml.iter('sectiondef'):
-        for elem_xml in section_xml.iter('memberdef'):
-            if elem_xml.attrib['kind'] != 'enum': continue
-            md += '#### Enum ' + doc2md(elem_xml.find('name')) + '\n\n'
-            md += code2md('enum struct '+doc2md(elem_xml.find('name'))+' {')+'\n'
-            for item_xml in elem_xml.iter('enumvalue'):
-                if item_xml.find('initializer'):
-                    md += code2md(item_xml.find('name').text + ' ' + item_xml.find('initializer').text + ',',indent='        ')
-                else:
-                    md += code2md(item_xml.find('name').text + ',', '        ')
-            md += code2md('}')+'\n'
-            md += descr2md(elem_xml.find('briefdescription')) + '\n\n'
-            md += 'Members:\n'
-            for item_xml in elem_xml.iter('enumvalue'):
-                md += '    - ' + item_xml.find('name').text + ': ' + descr2md(item_xml.find('briefdescription')) +'\n'
-            md += '\n'
-    for class_ref in group_xml.iter('innerclass'):
-        struct_xml = et.parse(dirname + class_ref.attrib['refid'] + '.xml').getroot()
-        for elem_xml in section_xml.iter('compounddef'):
-            md += '#### Struct ' + doc2md(elem_xml.find('compoundname')) + '\n\n'
-            md += template2md(elem_xml.find('templateparamlist'))
-            md += code2md('enum struct '+doc2md(elem_xml.find('name'))+' {')+'\n'
-            for item_xml in elem_xml.iter('enumvalue'):
-                if item_xml.find('initializer'):
-                    md += code2md(item_xml.find('name').text + ' ' + item_xml.find('initializer').text + ',',indent='        ')
-                else:
-                    md += code2md(item_xml.find('name').text + ',', '        ')
-            md += code2md('}')+'\n'
-        pass
-    for section_xml in group_xml.iter('sectiondef'):
-        for elem_xml in section_xml.iter('memberdef'):
-            if elem_xml.attrib['kind'] != 'typedef': continue
-            md += '#### Typedef ' + doc2md(elem_xml.find('name')) + '\n\n'
-            md += template2md(elem_xml.find('templateparamlist'))
-            md += code2md(elem_xml.find('definition').text + ';').replace('typedef ', '') + '\n'
-            md += descr2md(elem_xml.find('briefdescription')) + '\n\n'
-    for section_xml in group_xml.iter('sectiondef'):
-        for elem_xml in section_xml.iter('memberdef'):
-            if elem_xml.attrib['kind'] != 'variable': continue
-            md += '#### Constant ' + doc2md(elem_xml.find('name')) + '\n\n'
-            md += code2md(elem_xml.find('definition').text + ' = ' + elem_xml.find('initializer').text + ';') + '\n'
-            md += descr2md(elem_xml.find('briefdescription')) + '\n\n'
-    for section_xml in group_xml.iter('sectiondef'):
-        for elem_xml in section_xml.iter('memberdef'):
-            if elem_xml.attrib['kind'] != 'function': continue
-            md += '#### Function ' + doc2md(elem_xml.find('name')) + '()\n\n'
-            md += template2md(elem_xml.find('templateparamlist'))
-            md += code2md(elem_xml.find('definition').text + elem_xml.find('argsstring').text + ';') + '\n'
-            md += descr2md(elem_xml.find('briefdescription')) + '\n\n'
+    name = group['compoundname']
+    print(f'{name}')
+    fgroup = odict()
+    fgroup['compoundname'] = group['compoundname']
+    fgroup['title'] = group['title']
+    fgroup['enum'] = [ ]
+    fgroup['declstruct'] = [ ]
+    fgroup['struct'] = [ ]
+    fgroup['function'] = [ ]
+    fgroup['variable'] = [ ]
+    fgroup['typedef'] = [ ]
+    for section in group['sectiondef']:
+        for member in section['memberdef']:
+            mname = member['name']
+            print(f'    {mname}')
+            print('        ' + member['kind'])
+            fgroup[member['kind']] += [ member ]
+    for struct in group['innerclasses']:
+        fstruct = struct
+        print(fstruct['compoundname'])
+        if 'sectiondef' in fstruct:
+            fstruct['function'] = [ ]
+            fstruct['variable'] = [ ]
+            for section in struct['sectiondef']:
+                for member in section['memberdef']:
+                    mname = member['name']
+                    print(f'    {mname}')
+                    print('        ' + member['kind'])
+                    fstruct[member['kind']] += [ member ]
+            fgroup['struct'] += [ fstruct ]
+            del fstruct['sectiondef']
+        else:
+            fgroup['declstruct'] += [ fstruct ]
+    with open(f'{dir_json}/filtered__{name}.json', 'wt') as f: json.dump(fgroup, f, indent=2)
+    fgroups += [ fgroup ]
 
-with open('docs/doc.md', 'wt') as f: f.write(md)
+doc_fmt = '''
+### {{title}}
+
+{{#declstruct}}
+#### Struct {{compoundname}}
+
+    struct {{name}}
+
+{{briefdescription}}
+
+{{/declstruct}}
+
+{{#struct}}
+#### Struct {{compoundname}}
+
+    {{#templateparamlist}}template<{{#param}}{{type}}{{#declname}} {{declname}}{{/declname}}, {{/param}}>{{/templateparamlist}}
+    struct {{name}} {
+        {{#function}}
+        {{#templateparamlist}}template<{{#param}}{{type}}{{#declname}} {{declname}}{{/declname}}, {{/param}}>{{/templateparamlist}}
+        {{type}} {{name}}{{argsstring}};
+        {{/function}}
+        {{#variable}}
+        {{name}}{{#initializer}} {{initializer}}{{/initializer}};
+        {{/variable}}
+    };
+
+{{briefdescription}}
+
+Members:
+    {{#function}}
+    - `{{name}}`: {{briefdescription}}
+    {{/function}}
+    {{#variable}}
+    - `{{name}}`: {{briefdescription}}
+    {{/variable}}
+
+{{/struct}}
+
+{{#enum}}
+#### Enum `{{name}}`
+
+    enum struct {{name}} {
+        {{#enumvalue}}
+        {{name}}{{#initializer}} {{initializer}}{{/initializer}},
+        {{/enumvalue}}
+    }
+
+{{briefdescription}}
+
+Members:
+{{#enumvalue}}
+    - `{{name}}`: {{briefdescription}}
+{{/enumvalue}}
+
+{{/enum}}
+
+{{#typedef}}
+#### Typedef `{{name}}`
+
+    using {{name}} = {{type}}
+
+{{briefdescription}}
+
+{{/typedef}}
+
+{{#variable}}
+#### Constant `{{name}}`
+
+    {{type}} {{name}} {{initializer}}
+
+{{briefdescription}}
+
+{{/variable}}
+
+{{#function}}
+#### Function `{{name}}()`
+
+    {{#templateparamlist}}template<{{#param}}{{type}}{{#declname}} {{declname}}{{/declname}}, {{/param}}>{{/templateparamlist}}
+    {{type}} {{name}}{{argsstring}};
+
+{{briefdescription}}
+
+{{/function}}
+'''
+
+def format_code(md):
+    nmd = ''
+    for line in md.splitlines():
+        if line.startswith('    '):
+            line = line.replace('< ','<').replace(' >','>').replace(' *','* ').replace(' &','& ').replace(',>','>')
+        nmd += line + '\n'
+    return nmd
+
+mustache = pystache.Renderer(escape=lambda x: x)
+subprocess.run(f'rm -rf {dir_md} && mkdir -p {dir_md}', shell=True)
+for fgroup in fgroups:
+    name = fgroup['compoundname']
+    md = mustache.render(doc_fmt, **fgroup)
+    md = format_code(md)
+    with open(f'{dir_md}/{name}.md', 'wt') as f: f.write(md)
