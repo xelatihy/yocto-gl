@@ -5,6 +5,45 @@ Please consider this to be just development notes and not any real planning.
 
 ## Next
 
+- test scene with splits for lights
+    - scene presets splits per view
+    - tools load multiple scenes and merge them into one
+
+## Scene Import
+
+- PBR in OBJ
+    - http://exocortex.com/blog/extending_wavefront_mtl_to_support_pbr
+    - Pr/map_Pr (roughness) // new
+    - Pm/map_Pm (metallic) // new
+    - Ps/map_Ps (sheen) // new
+    - Pc (clearcoat thickness) // new
+    - Pcr (clearcoat roughness) // new
+    - Ke/map_Ke (emissive) // new
+    - aniso (anisotropy) // new
+    - anisor (anisotropy rotation) // new
+- filmic tonemapping from tungsten
+- obj
+    - decide whether to put it in eval_norm (probably not)
+    - insert facet shape call after loading?
+    - tesselate may create smoothed vertices or during vbo creation
+    - trace respect smoothing
+- trace
+    - bug in reflection delta
+    - remove wo from point
+    - double sided rendering in the brdf and emission
+    - envmap point is just a point far away and normal pointing in
+    - SAH based build
+- double sided option in render params
+    - this forces double sided over the material settings
+- doule sided in scene <-> glTF
+- bug in light detection
+    - check mcguire car
+- cutout not working on yview
+- consider double sided by default
+    - check pbrt
+- consider cutout by default
+- add cutout to trace
+
 - add print scene info button to yview/ytrace
 - add view cam settings
 - add bbox to trace
@@ -12,6 +51,11 @@ Please consider this to be just development notes and not any real planning.
 - better default material
 - better eyelight
 - add prefiltered look to trace/view ?
+
+## BVH
+
+- SAH based build
+- simplify build code
 
 ## Deployment
 

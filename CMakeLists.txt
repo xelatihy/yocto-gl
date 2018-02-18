@@ -4,6 +4,7 @@ project (yocto-gl)
 
 option(YOCTO_OPENGL "Build OpenGL apps" ON)
 option(YOCTO_EXPERIMENTAL "Build experimental apps" OFF)
+option(YOCTO_TOOLS "Build tools apps" OFF)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED on)
@@ -81,3 +82,11 @@ if(YOCTO_OPENGL)
     target_link_libraries(ygltfview yocto_gl)
     target_link_libraries(yimview yocto_gl)
 endif(YOCTO_OPENGL)
+
+if(YOCTO_TOOLS)
+    add_executable(ytungsten tools/converters/ytungsten.cpp)
+    add_executable(ypbrt tools/converters/ypbrt.cpp)
+
+    target_link_libraries(ytungsten yocto_gl)
+    target_link_libraries(ypbrt yocto_gl)
+endif(YOCTO_TOOLS)

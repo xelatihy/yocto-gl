@@ -76,7 +76,6 @@ void draw(ygl::gl_window* win) {
     ygl::draw_image(app->gl_prog, app->trace_texture, window_size,
         app->imparams, app->tmparams);
 
-    auto edited = 0;
     if (ygl::begin_widgets(win, "yitrace")) {
         if (ygl::draw_header_widget(win, "trace")) {
             ygl::draw_groupid_widget_begin(win, app);
@@ -84,8 +83,11 @@ void draw(ygl::gl_window* win) {
             ygl::draw_label_widget(
                 win, "size", "{} x {}", app->img.width(), app->img.height());
             ygl::draw_label_widget(win, "sample", app->pixels.at(0, 0).sample);
-            edited += ygl::draw_camera_selection_widget(
-                win, "camera", app->cam, app->scn, app->view);
+            if (ygl::draw_camera_selection_widget(
+                    win, "camera", app->cam, app->scn, app->view))
+                app->scene_updated = true;
+            if (ygl::draw_camera_widgets(win, "camera", app->cam))
+                app->scene_updated = true;
             ygl::draw_value_widget(win, "fps", app->navigation_fps);
             if (ygl::draw_button_widget(win, "print stats"))
                 std::cout << ygl::compute_stats(app->scn);
@@ -202,6 +204,8 @@ int main(int argc, char* argv[]) {
     app->imparams = ygl::parse_params(parser, "", app->imparams);
     app->preview_res =
         ygl::parse_opt(parser, "--preview-res", "", "preview resolution", 64);
+    auto double_sided =
+        ygl::parse_flag(parser, "--double-sided", "", "Double sided rendering");
     app->quiet =
         ygl::parse_flag(parser, "--quiet", "-q", "Print only errors messages");
     app->imfilename = ygl::parse_opt(
@@ -230,6 +234,11 @@ int main(int argc, char* argv[]) {
     // view camera
     app->view = ygl::make_view_camera(app->scn, 0);
     app->cam = app->view;
+
+    // fix double sided materials
+    if (double_sided) {
+        for (auto m : app->scn->materials) m->double_sided = true;
+    }
 
     // build bvh
     ygl::log_info("building bvh");

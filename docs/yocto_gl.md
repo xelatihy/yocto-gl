@@ -3106,11 +3106,11 @@ inline vec<T, N> bbox_center(const bbox<T, N>& a);
 
 Bounding box center.
 
-#### Function bbox_diagonal()
+#### Function bbox_size()
 
 ~~~ .cpp
 template <typename T, int N>
-inline vec<T, N> bbox_diagonal(const bbox<T, N>& a);
+inline vec<T, N> bbox_size(const bbox<T, N>& a);
 ~~~
 
 Bounding box diagonal.

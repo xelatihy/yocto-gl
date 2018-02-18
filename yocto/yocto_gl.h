@@ -1323,7 +1323,7 @@ inline vec<T, N>& operator+=(vec<T, N>& a, const vec<T, N>& b) {
 }
 /// Vector assignment.
 template <typename T, int N>
-inline vec<T, N>& operator-=(vec<T, 2>& a, const vec<T, N>& b) {
+inline vec<T, N>& operator-=(vec<T, N>& a, const vec<T, N>& b) {
     return a = a - b;
 }
 /// Vector assignment.
@@ -2414,7 +2414,7 @@ inline vec<T, N> bbox_center(const bbox<T, N>& a) {
 }
 /// Bounding box diagonal.
 template <typename T, int N>
-inline vec<T, N> bbox_diagonal(const bbox<T, N>& a) {
+inline vec<T, N> bbox_size(const bbox<T, N>& a) {
     return a.max - a.min;
 }
 
@@ -5273,6 +5273,8 @@ struct shape {
     /// Vertex tangent space.
     std::vector<vec4f> tangsp;
 
+    /// Whether normal smoothing or faceting is used
+    bool faceted = false;
     /// Number of times to subdivide.
     int subdivision = 0;
     /// Whether to use Catmull-Clark subdivision.
@@ -5567,8 +5569,6 @@ struct load_options {
     bool skip_missing = true;
     /// Whether to flip the v coordinate in OBJ.
     bool obj_flip_texcoord = true;
-    /// Duplicate vertices if smoothing off in OBJ.
-    bool obj_facet_non_smooth = false;
     /// Whether to flip tr in OBJ.
     bool obj_flip_tr = true;
     /// Whether to preserve quads.
@@ -6732,7 +6732,7 @@ struct trace_params {
     trace_rng_type rng = trace_rng_type::stratified;
     /// Filter type.
     trace_filter_type filter = trace_filter_type::box;
-    /// Wheter to test transmission in shadows.
+    /// Whether to test transmission in shadows.
     bool notransmission = false;
     /// Ambient lighting. @refl_semantic(color)
     vec3f ambient = {0, 0, 0};
@@ -6779,6 +6779,8 @@ struct trace_pixel {
 struct trace_light {
     /// Instance pointer for instance lights.
     const instance* ist = nullptr;
+    /// Shape index for instance lights
+    int sid = 0;
     /// Environment pointer for environment lights.
     const environment* env = nullptr;
 };
@@ -8577,13 +8579,12 @@ inline std::vector<unsigned char> load_binary(const std::string& filename) {
 /// Loads the contents of a text file into a string.
 inline std::string load_text(const std::string& filename) {
     auto buf = load_binary(filename);
-#ifndef _WIN32
+#ifdef _WIN32
     auto nbuf = std::vector<unsigned char>();
-    nbuf.resize(buf.size());
-    auto bug_ptr = (char*)buf.data();
+    nbuf.reserve(buf.size());
     for (auto i = 0; i < buf.size(); i++) {
-        if (bug_ptr[i] == '\r') continue;
-        nbuf.push_back(bug_ptr[i]);
+        if (buf[i] == '\r') continue;
+        nbuf.push_back(buf[i]);
     }
     buf = nbuf;
 #endif
@@ -8595,15 +8596,19 @@ inline void save_binary(
     const std::string& filename, const std::vector<unsigned char>& data) {
     auto f = fopen(filename.c_str(), "wb");
     if (!f) throw std::runtime_error("cannot write file " + filename);
-    fwrite(data.data(), 1, (int)data.size(), f);
+    auto num = fwrite(data.data(), 1, data.size(), f);
+    if (num != data.size())
+        throw std::runtime_error("cannot write file " + filename);
     fclose(f);
 }
 
 /// Saves a string to a text file.
 inline void save_text(const std::string& filename, const std::string& str) {
-    auto f = fopen(filename.c_str(), "wt");
+    auto f = fopen(filename.c_str(), "wb");
     if (!f) throw std::runtime_error("cannot write file " + filename);
-    fwrite(str.c_str(), 1, (int)str.size(), f);
+    auto num = fwrite(str.c_str(), 1, str.size(), f);
+    if (num != str.size())
+        throw std::runtime_error("cannot write file " + filename);
     fclose(f);
 }
 
@@ -8781,6 +8786,12 @@ inline void log_fatal(
 template <typename... Args>
 inline void log_info(const std::string& msg, const Args&... args) {
     log_info(get_default_logger(), msg, args...);
+}
+
+/// Logs a message to the default loggers.
+template <typename... Args>
+inline void log_warning(const std::string& msg, const Args&... args) {
+    log_warning(get_default_logger(), msg, args...);
 }
 
 /// Logs a message to the default loggers.
@@ -9626,7 +9637,7 @@ struct gl_stdsurface_params {
     bool wireframe = false;
     /// Draw with overlaid edges
     bool edges = false;
-    /// Offset for edges. @refl_uilimits(0, 0.1)
+    /// Offset for edges. @refl_uilimits(0,0.1)
     float edge_offset = 0.01f;
     /// Draw with for binary transparency.
     bool cutout = false;
@@ -9641,7 +9652,7 @@ struct gl_stdsurface_params {
     /// Edge color. @refl_semantic(color)
     vec3f edge_color = {0, 0, 0};
     /// Cull back face.
-    bool cull_backface = true;
+    bool cull_backface = false;
 };
 
 // #codegen end refl-glstdsurface
