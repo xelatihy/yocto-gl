@@ -478,17 +478,6 @@ inline void shade_scene(const ygl::gltf_scene_group* scns, shade_state* st,
     ygl::gl_enable_wireframe(false);
 }
 
-void save_screenshot(ygl::gl_window* win, const std::string& imfilename) {
-    if (ygl::path_extension(imfilename) != ".png") {
-        printf("supports only png screenshots");
-        return;
-    }
-
-    auto wh = ygl::vec2i{0, 0};
-    auto pixels = get_screenshot(win, wh);
-    ygl::save_image(imfilename, wh.x, wh.y, 4, (unsigned char*)pixels.data());
-}
-
 void draw_scene(ygl::gl_window* win) {
     auto scn = (app_state*)get_user_pointer(win);
     auto window_size = get_window_size(win);

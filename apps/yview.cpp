@@ -51,6 +51,8 @@ struct app_state {
     ygl::vec2f time_range = ygl::zero2f;
     bool animate = false;
     bool quiet = false;
+    bool screenshot_and_exit = false;
+    bool no_widgets = false;
 
     ~app_state() {
         if (scn) delete scn;
@@ -94,6 +96,11 @@ inline void draw(ygl::gl_window* win) {
     ygl::draw_stdsurface_scene(app->scn, app->cam, app->prog, app->shapes,
         app->textures, app->lights, framebuffer_size,
         get_untyped_selection(app->selection), app->params, app->tmparams);
+
+    if (app->no_widgets) {
+        ygl::swap_buffers(win);
+        return;
+    }
 
     if (ygl::begin_widgets(win, "yview")) {
         if (ygl::draw_header_widget(win, "view")) {
@@ -186,6 +193,13 @@ void run_ui(app_state* app) {
         // draw
         draw(win);
 
+        // check if exiting is needed
+        if (app->screenshot_and_exit) {
+            ygl::log_info("taking screenshot and exiting...");
+            ygl::save_screenshot(win, app->imfilename);
+            break;
+        }
+
         // event hadling
         ygl::poll_events(win);
     }
@@ -203,13 +217,17 @@ int main(int argc, char* argv[]) {
     app->params = ygl::parse_params(parser, "", app->params);
     app->tmparams = ygl::parse_params(parser, "", app->tmparams);
     auto preserve_quads = ygl::parse_flag(
-        parser, "--preserve-quads", "-q", "Preserve quads on load");
+        parser, "--preserve-quads", "", "Preserve quads on load");
     auto preserve_facevarying = ygl::parse_flag(
-        parser, "--preserve-facevarying", "-f", "Preserve facevarying on load");
+        parser, "--preserve-facevarying", "", "Preserve facevarying on load");
     app->quiet =
         ygl::parse_flag(parser, "--quiet", "-q", "Print only errors messages");
+    app->screenshot_and_exit = ygl::parse_flag(
+        parser, "--screenshot-and-exit", "", "Take a screenshot and exit");
+    app->no_widgets =
+        ygl::parse_flag(parser, "--no-widgets", "", "Disable widgets");
     app->imfilename = ygl::parse_opt(
-        parser, "--output-image", "-o", "Image filename", "out.hdr"s);
+        parser, "--output-image", "-o", "Image filename", "out.png"s);
     app->filename = ygl::parse_arg(parser, "scene", "Scene filename", ""s);
     if (ygl::should_exit(parser)) {
         printf("%s\n", get_usage(parser).c_str());

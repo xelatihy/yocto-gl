@@ -34,7 +34,7 @@ and released under the MIT license. Features include:
 - OpenGL utilities to manage textures, buffers and prograrms
 - OpenGL shader for image viewing and GGX microfacet and hair rendering
 
-The current version is 0.3.7.
+The current version is 0.3.8.
 
 ## Credits
 
@@ -5795,7 +5795,7 @@ Converts HSV to RGB.
 
 ~~~ .cpp
 struct tonemap_params {
-    float exposure = 1;
+    float exposure = 0;
     float gamma = 2.2f;
     bool filmic = false;
 }
@@ -11924,11 +11924,10 @@ bool get_key(gl_window* win, int key);
 
 Check if a key is pressed (not all keys are supported)
 
-#### Function get_screenshot()
+#### Function take_screenshot4b()
 
 ~~~ .cpp
-std::vector<vec4b> get_screenshot(
-    gl_window* win, vec2i& wh, bool flipy = true, bool back = false);
+image4b take_screenshot4b(gl_window* win, bool flipy = true, bool back = false);
 ~~~
 
 Read pixels
