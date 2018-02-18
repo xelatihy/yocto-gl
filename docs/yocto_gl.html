@@ -123,7 +123,7 @@ and released under the MIT license. Features include:</p>
 <li>OpenGL utilities to manage textures, buffers and prograrms</li>
 <li>OpenGL shader for image viewing and GGX microfacet and hair rendering</li>
 </ul>
-<p>The current version is 0.3.9.</p>
+<p>The current version is 0.3.10.</p>
 <p><a id="toc1"></a></p>
 <h2>Credits</h2>
 <p>This library includes code from the PCG random number generator,
@@ -5998,7 +5998,7 @@ non-facevarying shapes.</p>
 
 <p>Computes a shape bounding box using a quick computation that ignores radius.</p>
 <h4>Function compute_bounds()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">bbox3f</span> <span class="nf">compute_bounds</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">bbox3f</span> <span class="nf">compute_bounds</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">skip_emitting</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -6009,12 +6009,6 @@ non-facevarying shapes.</p>
 
 
 <p>Flatten scene instances into separate shapes.</p>
-<h4>Function print_info()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">print_info</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Print scene information.</p>
 <h4>Function make_bvh()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">bvh_tree</span><span class="o">*</span> <span class="nf">make_bvh</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">,</span> <span class="kt">float</span> <span class="n">def_radius</span> <span class="o">=</span> <span class="mf">0.001f</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">equalsize</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
@@ -6145,6 +6139,86 @@ Throws an exception if an error occurs.</p>
 
 
 <p>Saves a scene. For now OBJ and glTF are supported.</p>
+<h4>Struct scene_stats</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">scene_stats</span> <span class="p">{</span>
+    <span class="kt">uint64_t</span> <span class="n">num_cameras</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">uint64_t</span> <span class="n">num_shape_groups</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">uint64_t</span> <span class="n">num_shapes</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">uint64_t</span> <span class="n">num_instances</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">uint64_t</span> <span class="n">num_materials</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">uint64_t</span> <span class="n">num_textures</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">uint64_t</span> <span class="n">num_environments</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">uint64_t</span> <span class="n">num_nodes</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">uint64_t</span> <span class="n">num_animation_groups</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">uint64_t</span> <span class="n">num_animations</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">uint64_t</span> <span class="n">elem_points</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">uint64_t</span> <span class="n">elem_lines</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">uint64_t</span> <span class="n">elem_triangles</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">uint64_t</span> <span class="n">elem_quads</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">uint64_t</span> <span class="n">vert_pos</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">uint64_t</span> <span class="n">vert_norm</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">uint64_t</span> <span class="n">vert_texcoord</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">uint64_t</span> <span class="n">vert_color</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">uint64_t</span> <span class="n">vert_radius</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">uint64_t</span> <span class="n">vert_tangsp</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">uint64_t</span> <span class="n">texel_ldrs</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">uint64_t</span> <span class="n">texel_hdrs</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">uint64_t</span> <span class="n">memory_ldrs</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">uint64_t</span> <span class="n">memory_hdrs</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">uint64_t</span> <span class="n">memory_elems</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">uint64_t</span> <span class="n">memory_verts</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">bbox3f</span> <span class="n">bbox_scn</span> <span class="o">=</span> <span class="n">invalid_bbox3f</span><span class="p">;</span>
+    <span class="n">bbox3f</span> <span class="n">bbox_nolights</span> <span class="o">=</span> <span class="n">invalid_bbox3f</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Scene statistics</p>
+<ul>
+<li>Members:<ul>
+<li>num_cameras:      Number of cameras.</li>
+<li>num_shape_groups:      Number of shape groups.</li>
+<li>num_shapes:      Number of shapes.</li>
+<li>num_instances:      Number of instances.</li>
+<li>num_materials:      Number of materials.</li>
+<li>num_textures:      Number of textures.</li>
+<li>num_environments:      Number of environments.</li>
+<li>num_nodes:      Number of nodes.</li>
+<li>num_animation_groups:      Number of animation groups.</li>
+<li>num_animations:      Number of animations.</li>
+<li>elem_points:      Number of points.</li>
+<li>elem_lines:      Number of lines.</li>
+<li>elem_triangles:      Number of triangles.</li>
+<li>elem_quads:      Number of quads.</li>
+<li>vert_pos:      Number of verts.</li>
+<li>vert_norm:      Number of norms.</li>
+<li>vert_texcoord:      Number of texcoords.</li>
+<li>vert_color:      Number of color.</li>
+<li>vert_radius:      Number of radius.</li>
+<li>vert_tangsp:      Number of tangent space.</li>
+<li>texel_ldrs:      Number of ldr texels</li>
+<li>texel_hdrs:      Number of hdr texels</li>
+<li>memory_ldrs:      Number of ldr texels</li>
+<li>memory_hdrs:      Number of hdr texels</li>
+<li>memory_elems:      Shape elements memory in bytes</li>
+<li>memory_verts:      Shape vertex memory in bytes</li>
+<li>bbox_scn:      Scene bounding bbox</li>
+<li>bbox_nolights:      Scene bounding box without emitting objects</li>
+</ul>
+</li>
+</ul>
+<h4>Function compute_stats()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">scene_stats</span> <span class="nf">compute_stats</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Get scene statistics.</p>
+<h4>Function operator&lt;&lt;()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">ostream</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">&lt;&lt;</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">ostream</span><span class="o">&amp;</span> <span class="n">os</span><span class="p">,</span> <span class="k">const</span> <span class="n">scene_stats</span><span class="o">&amp;</span> <span class="n">stats</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Stream write.</p>
 <h4>Function enum_names&lt;material_type>()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;&gt;</span>
 <span class="kr">inline</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">material_type</span><span class="o">&gt;&gt;&amp;</span>
@@ -10347,6 +10421,13 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 
 
 <p>Text widget.</p>
+<h4>Function draw_multilinetext_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_multilinetext_widget</span><span class="p">(</span>
+    <span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Multiline text widget.</p>
 <h4>Function draw_slider_widget()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_slider_widget</span><span class="p">(</span>
     <span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">int</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">1</span><span class="p">);</span>

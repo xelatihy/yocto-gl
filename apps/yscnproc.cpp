@@ -115,7 +115,7 @@ int main(int argc, char** argv) {
         if (info) {
             printf("information ------------------------\n");
             printf("filename: %s\n", filename.c_str());
-            ygl::print_info(to_merge.get());
+            std::cout << ygl::compute_stats(to_merge.get());
         }
 
         // merge the scene into the other
@@ -130,7 +130,7 @@ int main(int argc, char** argv) {
     if (info && filenames.size() > 1) {
         printf("information ------------------------\n");
         printf("merged\n");
-        ygl::print_info(scn.get());
+        std::cout << ygl::compute_stats(scn.get());
     }
 
     // add missing elements
@@ -185,7 +185,7 @@ int main(int argc, char** argv) {
     if (info && scale != 1.0f) {
         printf("post-correction information -------\n");
         printf("output: %s\n", output.c_str());
-        ygl::print_info(scn.get());
+        std::cout << ygl::compute_stats(scn.get());
     }
 
     // make a directory if needed
@@ -211,7 +211,7 @@ int main(int argc, char** argv) {
         auto vscn = std::unique_ptr<ygl::scene>(ygl::load_scene(output));
         if (info) {
             printf("validate information -----------------\n");
-            ygl::print_info(vscn.get());
+            std::cout << ygl::compute_stats(vscn.get());
         }
     }
 
