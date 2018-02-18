@@ -35,7 +35,7 @@
 /// - OpenGL utilities to manage textures, buffers and prograrms
 /// - OpenGL shader for image viewing and GGX microfacet and hair rendering
 ///
-/// The current version is 0.3.7.
+/// The current version is 0.3.8.
 ///
 /// ## Credits
 ///
@@ -4646,7 +4646,7 @@ vec4b hsv_to_rgb(const vec4b& hsv);
 /// Tone mapping parameters
 struct tonemap_params {
     /// Hdr exposure. @refl_uilimits(-10,10) @refl_shortname(e)
-    float exposure = 1;
+    float exposure = 0;
     /// Hdr gamma. @refl_uilimits(0.1,3) @refl_shortname(g)
     float gamma = 2.2f;
     /// Hdr filmic tonemapping. @refl_shortname(F)
@@ -9710,13 +9710,10 @@ vec2f get_mouse_posf(gl_window* win);
 bool get_key(gl_window* win, int key);
 
 /// Read pixels
-std::vector<vec4b> get_screenshot(
-    gl_window* win, vec2i& wh, bool flipy = true, bool back = false);
+image4b take_screenshot4b(gl_window* win, bool flipy = true, bool back = false);
 /// Save a screenshot to disk
 inline void save_screenshot(gl_window* win, const std::string& imfilename) {
-    auto wh = vec2i{0, 0};
-    auto pixels = get_screenshot(win, wh);
-    save_image(imfilename, wh.x, wh.y, 4, (unsigned char*)pixels.data());
+    save_image4b(imfilename, take_screenshot4b(win));
 }
 
 /// Handle camera navigation.

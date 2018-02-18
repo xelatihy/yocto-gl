@@ -123,7 +123,7 @@ and released under the MIT license. Features include:</p>
 <li>OpenGL utilities to manage textures, buffers and prograrms</li>
 <li>OpenGL shader for image viewing and GGX microfacet and hair rendering</li>
 </ul>
-<p>The current version is 0.3.7.</p>
+<p>The current version is 0.3.8.</p>
 <p><a id="toc1"></a></p>
 <h2>Credits</h2>
 <p>This library includes code from the PCG random number generator,
@@ -4822,7 +4822,7 @@ degenerate. Returns quads, pos.</p>
 <p>Converts HSV to RGB.</p>
 <h4>Struct tonemap_params</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">tonemap_params</span> <span class="p">{</span>
-    <span class="kt">float</span> <span class="n">exposure</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">exposure</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">gamma</span> <span class="o">=</span> <span class="mf">2.2f</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">filmic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
 <span class="p">}</span>
@@ -10243,9 +10243,8 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 
 
 <p>Check if a key is pressed (not all keys are supported)</p>
-<h4>Function get_screenshot()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4b</span><span class="o">&gt;</span> <span class="n">get_screenshot</span><span class="p">(</span>
-    <span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">wh</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">flipy</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">back</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+<h4>Function take_screenshot4b()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">image4b</span> <span class="nf">take_screenshot4b</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">flipy</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">back</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 

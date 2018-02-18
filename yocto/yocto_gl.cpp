@@ -13375,23 +13375,20 @@ vec2i get_framebuffer_size(gl_window* win) {
 }
 
 // Read pixels
-std::vector<vec4b> get_screenshot(
-    gl_window* win, vec2i& wh, bool flipy, bool back) {
-    wh = get_framebuffer_size(win);
-    auto pixels = std::vector<vec4b>(wh[0] * wh[1]);
+image4b take_screenshot4b(gl_window* win, bool flipy, bool back) {
+    auto wh = get_framebuffer_size(win);
+    auto img = image4b(wh.x, wh.y);
     glReadBuffer((back) ? GL_BACK : GL_FRONT);
-    glReadPixels(0, 0, wh[0], wh[1], GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+    glReadPixels(
+        0, 0, img.width(), img.height(), GL_RGBA, GL_UNSIGNED_BYTE, data(img));
     if (flipy) {
-        std::vector<vec4b> line(wh[0]);
-        for (int j = 0; j < wh[1] / 2; j++) {
-            memcpy(line.data(), pixels.data() + j * wh[0] * 4, wh[0] * 4);
-            memcpy(pixels.data() + j * wh[0] * 4,
-                pixels.data() + (wh[1] - 1 - j) * wh[0] * 4, wh[0] * 4);
-            memcpy(pixels.data() + (wh[1] - 1 - j) * wh[0] * 4, line.data(),
-                wh[0] * 4);
+        for (int j = 0; j < img.height() / 2; j++) {
+            for (auto i = 0; i < img.width(); i++) {
+                std::swap(img.at(i, j), img.at(i, img.height() - 1 - j));
+            }
         }
     }
-    return pixels;
+    return img;
 }
 
 // Handles camera navigation
