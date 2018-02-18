@@ -11108,6 +11108,9 @@ std::unordered_map<std::string, proc_scene*>& proc_scene_presets() {
     // basic shapes
     presets["basic_pl"] = make_simple_scene("basic_pl",
         {"flipcapsphere", "spherecube", "spherizedcube"},
+        {"plastic_red", "plastic_green", "plastic_blue"}, "pointlights");
+    presets["basic_al"] = make_simple_scene("basic_al",
+        {"flipcapsphere", "spherecube", "spherizedcube"},
         {"plastic_red", "plastic_green", "plastic_blue"}, "arealights");
 
     // simple shapes

@@ -35,7 +35,7 @@
 /// - OpenGL utilities to manage textures, buffers and prograrms
 /// - OpenGL shader for image viewing and GGX microfacet and hair rendering
 ///
-/// The current version is 0.3.8.
+/// The current version is 0.3.9.
 ///
 /// ## Credits
 ///
