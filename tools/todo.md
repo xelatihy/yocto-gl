@@ -19,20 +19,11 @@ Please consider this to be just development notes and not any real planning.
 
 ## Deployment
 
+- shorter doc formatting similar to sphinx
 - Doxygen and Sphynx
 - insert SHA and version number
 - consider amalgamation for yocto
 - consider amalgamation for ext
-
-## Obj
-
-- testure info use <</>> operators
-    - print before texture path
-    - parse up to last argument
-- faster OBJ
-    - stop using iostreams (darn it)
-    - output using fmt or copy its methods?
-    - maintain a << API but use custom parsing code
 
 ## Tests
 
