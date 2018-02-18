@@ -1,4 +1,3 @@
-
 # Yocto/GL: Tiny C++ Library for Physically-based Graphics
 
 Yocto/GL is a collection utilities for building physically-based graphics
@@ -35,7 +34,7 @@ and released under the MIT license. Features include:
 - OpenGL utilities to manage textures, buffers and prograrms
 - OpenGL shader for image viewing and GGX microfacet and hair rendering
 
-The current version is 0.3.6.
+The current version is 0.3.7.
 
 ## Credits
 
@@ -223,7 +222,7 @@ manipulation useful to support scene viewing and path tracing.
 3. evaluate Bezier curves and derivatives with `eval_bezier()` and
    `eval_bezier_derivative()`
 4. compute smooth normals and tangents with `compute_normals()`
-/   `compute_tangents()`
+/  `compute_tangents()`
 5. compute tangent frames from texture coordinates with
    `compute_tangent_space()`
 6. compute skinning with `compute_skinning()` and

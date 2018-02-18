@@ -1402,12 +1402,12 @@ bool save_image(const std::string& filename, int width, int height, int ncomp,
 }
 
 // Save an HDR or LDR image with tonemapping based on filename
-bool save_image(const std::string& filename, const image4f& hdr, float exposure,
-    float gamma, bool filmic) {
+bool save_image(const std::string& filename, const image4f& hdr,
+    const tonemap_params& params) {
     if (is_hdr_filename(filename)) {
         return save_image4f(filename, hdr);
     } else {
-        auto ldr = tonemap_image(hdr, exposure, gamma, filmic);
+        auto ldr = tonemap_image(hdr, params);
         return save_image4b(filename, ldr);
     }
 }
@@ -1498,19 +1498,19 @@ inline float tonemap_filmic(float x) {
 #endif
 
 // Tone mapping HDR to LDR images.
-image4b tonemap_image(
-    const image4f& hdr, float exposure, float gamma, bool filmic) {
+image4b tonemap_image(const image4f& hdr, const tonemap_params& params) {
     auto ldr = image4b(hdr.width(), hdr.height());
-    auto scale = pow(2.0f, exposure);
+    auto scale = pow(2.0f, params.exposure);
+    auto inv_gamma = 1 / params.gamma;
     for (auto j = 0; j < hdr.height(); j++) {
         for (auto i = 0; i < hdr.width(); i++) {
             auto h = hdr.at(i, j) * vec4f{scale, scale, scale, 1};
-            if (filmic) {
+            if (params.filmic) {
                 h = {tonemap_filmic(h.x), tonemap_filmic(h.y),
                     tonemap_filmic(h.z), h.w};
             } else {
-                h = {pow(h.x, 1 / gamma), pow(h.y, 1 / gamma),
-                    pow(h.z, 1 / gamma), h.w};
+                h = {pow(h.x, inv_gamma), pow(h.y, inv_gamma),
+                    pow(h.z, inv_gamma), h.w};
             }
             ldr.at(i, j) = float_to_byte(h);
         }
@@ -13147,7 +13147,7 @@ void draw_stdsurface_scene(const scene* scn, const camera* cam,
     gl_stdsurface_program& prog, std::unordered_map<shape*, gl_shape>& shapes,
     std::unordered_map<texture*, gl_texture>& textures, const gl_lights& lights,
     const vec2i& viewport_size, void* highlighted,
-    const gl_stdsurface_params& params) {
+    const gl_stdsurface_params& params, const tonemap_params& tmparams) {
     // begin frame
     gl_enable_depth_test(true);
     gl_enable_culling(params.cull_backface);
@@ -13159,8 +13159,9 @@ void draw_stdsurface_scene(const scene* scn, const camera* cam,
     auto camera_proj = perspective_mat(cam->yfov,
         (float)viewport_size.x / (float)viewport_size.y, cam->near, cam->far);
 
-    begin_stdsurface_frame(prog, params.eyelight, params.exposure, params.gamma,
-        params.filmic, camera_xform, camera_view, camera_proj);
+    begin_stdsurface_frame(prog, params.eyelight, tmparams.exposure,
+        tmparams.gamma, tmparams.filmic, camera_xform, camera_view,
+        camera_proj);
 
     if (!params.eyelight) {
         set_stdsurface_lights(prog, params.ambient, lights);

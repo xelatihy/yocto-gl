@@ -38,6 +38,7 @@ struct app_state {
     std::string imfilename;
     std::string outfilename;
     ygl::gl_stdsurface_params params = {};
+    ygl::tonemap_params tmparams = {};
     ygl::gl_stdsurface_program prog;
     std::unordered_map<ygl::texture*, ygl::gl_texture> textures;
     std::unordered_map<ygl::shape*, ygl::gl_shape> shapes;
@@ -49,6 +50,7 @@ struct app_state {
     float time = 0;
     ygl::vec2f time_range = ygl::zero2f;
     bool animate = false;
+    bool quiet = false;
 
     ~app_state() {
         if (scn) delete scn;
@@ -91,7 +93,7 @@ inline void draw(ygl::gl_window* win) {
     ygl::gl_enable_culling(app->params.cull_backface);
     ygl::draw_stdsurface_scene(app->scn, app->cam, app->prog, app->shapes,
         app->textures, app->lights, framebuffer_size,
-        get_untyped_selection(app->selection), app->params);
+        get_untyped_selection(app->selection), app->params, app->tmparams);
 
     if (ygl::begin_widgets(win, "yview")) {
         if (ygl::draw_header_widget(win, "view")) {
@@ -136,6 +138,7 @@ inline void draw(ygl::gl_window* win) {
         }
         if (ygl::draw_header_widget(win, "params")) {
             ygl::draw_params_widgets(win, "", app->params);
+            ygl::draw_params_widgets(win, "", app->tmparams);
         }
         if (ygl::draw_header_widget(win, "scene")) {
             ygl::draw_scene_widgets(win, "", app->scn, app->selection,
@@ -198,10 +201,13 @@ int main(int argc, char* argv[]) {
     auto parser =
         ygl::make_parser(argc, argv, "yview", "views scenes inteactively");
     app->params = ygl::parse_params(parser, "", app->params);
+    app->tmparams = ygl::parse_params(parser, "", app->tmparams);
     auto preserve_quads = ygl::parse_flag(
         parser, "--preserve-quads", "-q", "Preserve quads on load");
     auto preserve_facevarying = ygl::parse_flag(
         parser, "--preserve-facevarying", "-f", "Preserve facevarying on load");
+    app->quiet =
+        ygl::parse_flag(parser, "--quiet", "-q", "Print only errors messages");
     app->imfilename = ygl::parse_opt(
         parser, "--output-image", "-o", "Image filename", "out.hdr"s);
     app->filename = ygl::parse_arg(parser, "scene", "Scene filename", ""s);
@@ -209,6 +215,9 @@ int main(int argc, char* argv[]) {
         printf("%s\n", get_usage(parser).c_str());
         exit(1);
     }
+
+    // setup logger
+    if (app->quiet) ygl::get_default_logger()->verbose = false;
 
     // scene loading
     ygl::log_info("loading scene {}", app->filename);

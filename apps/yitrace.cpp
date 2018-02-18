@@ -49,10 +49,12 @@ struct app_state {
     int preview_res = 64;
     bool rendering = false;
     ygl::gl_stdimage_params imparams = {};
+    ygl::tonemap_params tmparams = {};
     ygl::gl_texture trace_texture = {};
     ygl::gl_stdimage_program gl_prog = {};
     ygl::scene_selection selection = {};
     std::vector<ygl::scene_selection> update_list;
+    bool quiet = false;
 
     ~app_state() {
         if (scn) delete scn;
@@ -71,8 +73,8 @@ void draw(ygl::gl_window* win) {
     auto window_size = get_window_size(win);
     auto framebuffer_size = get_framebuffer_size(win);
     ygl::gl_set_viewport(framebuffer_size);
-    ygl::draw_image(
-        app->gl_prog, app->trace_texture, window_size, app->imparams);
+    ygl::draw_image(app->gl_prog, app->trace_texture, window_size,
+        app->imparams, app->tmparams);
 
     auto edited = 0;
     if (ygl::begin_widgets(win, "yitrace")) {
@@ -92,6 +94,7 @@ void draw(ygl::gl_window* win) {
         }
         if (ygl::draw_header_widget(win, "image")) {
             ygl::draw_params_widgets(win, "", app->imparams);
+            ygl::draw_params_widgets(win, "", app->tmparams);
             ygl::draw_imageinspect_widgets(
                 win, "", app->img, {}, get_mouse_posf(win), app->imparams);
         }
@@ -190,9 +193,12 @@ int main(int argc, char* argv[]) {
     auto parser = ygl::make_parser(
         argc, argv, "yitrace", "Path trace images interactively");
     app->params = ygl::parse_params(parser, "", app->params);
+    app->tmparams = ygl::parse_params(parser, "", app->tmparams);
     app->imparams = ygl::parse_params(parser, "", app->imparams);
     app->preview_res =
         ygl::parse_opt(parser, "--preview-res", "", "preview resolution", 32);
+    app->quiet =
+        ygl::parse_flag(parser, "--quiet", "-q", "Print only errors messages");
     app->imfilename = ygl::parse_opt(
         parser, "--output-image", "-o", "Image filename", "out.hdr"s);
     app->filename = ygl::parse_arg(parser, "scene", "Scene filename", ""s);
@@ -200,6 +206,9 @@ int main(int argc, char* argv[]) {
         printf("%s\n", get_usage(parser).c_str());
         exit(1);
     }
+
+    // setup logger
+    if (app->quiet) ygl::get_default_logger()->verbose = false;
 
     // setting up rendering
     ygl::log_info("loading scene {}", app->filename);

@@ -35,7 +35,7 @@
 /// - OpenGL utilities to manage textures, buffers and prograrms
 /// - OpenGL shader for image viewing and GGX microfacet and hair rendering
 ///
-/// The current version is 0.3.6.
+/// The current version is 0.3.7.
 ///
 /// ## Credits
 ///
@@ -4632,10 +4632,6 @@ inline vec3f rgb_to_xyz(const vec3f& rgb) {
         0.0193339f * rgb.x + 0.1191920f * rgb.y + 0.9503041f * rgb.z};
 }
 
-/// Tone mapping HDR to LDR images.
-image4b tonemap_image(
-    const image4f& hdr, float exposure, float gamma, bool filmic = false);
-
 /// Image over operator.
 void image_over(vec4f* img, int width, int height, int nlayers, vec4f** layers);
 
@@ -4644,6 +4640,38 @@ void image_over(vec4b* img, int width, int height, int nlayers, vec4b** layers);
 
 /// Converts HSV to RGB.
 vec4b hsv_to_rgb(const vec4b& hsv);
+
+// #codegen begin refl-tonemap
+
+/// Tone mapping parameters
+struct tonemap_params {
+    /// Hdr exposure. @refl_uilimits(-10,10) @refl_shortname(e)
+    float exposure = 1;
+    /// Hdr gamma. @refl_uilimits(0.1,3) @refl_shortname(g)
+    float gamma = 2.2f;
+    /// Hdr filmic tonemapping. @refl_shortname(F)
+    bool filmic = false;
+};
+
+// #codegen end refl-tonemap
+
+/// Tone mapping HDR to LDR images.
+image4b tonemap_image(const image4f& hdr, const tonemap_params& params);
+
+// #codegen begin reflgen-tonemap
+
+/// Visit struct elements.
+template <typename Visitor>
+inline void visit(tonemap_params& val, Visitor&& visitor) {
+    visitor(val.exposure, visit_var{"exposure", visit_var_type::value,
+                              "Hdr exposure.", -10, 10, "e"});
+    visitor(val.gamma,
+        visit_var{"gamma", visit_var_type::value, "Hdr gamma.", 0.1, 3, "g"});
+    visitor(val.filmic, visit_var{"filmic", visit_var_type::value,
+                            "Hdr filmic tonemapping.", 0, 0, "F"});
+}
+
+// #codegen end reflgen-tonemap
 
 /// @}
 
@@ -4762,8 +4790,8 @@ bool save_image(const std::string& filename, int width, int height, int ncomp,
     const byte* ldr);
 
 /// Save a 4 channel HDR or LDR image with tonemapping based on filename.
-bool save_image(const std::string& filename, const image4f& hdr, float exposure,
-    float gamma, bool filmic = false);
+bool save_image(const std::string& filename, const image4f& hdr,
+    const tonemap_params& params);
 
 /// Filter type for resizing.
 enum struct resize_filter {
@@ -9423,12 +9451,6 @@ struct gl_stdimage_params {
     vec2f offset = {0, 0};
     /// Image zoom. @refl_uilimits(0.01, 10)
     float zoom = 1;
-    /// Hdr exposure. @refl_uilimits(-10, 10) @refl_shortname(e)
-    float exposure = 1;
-    /// Hdr gamma. @refl_uilimits(0.1,3) @refl_shortname(g)
-    float gamma = 2.2f;
-    /// Hdr filmic tonemapping. @refl_shortname(F)
-    bool filmic = false;
     /// Image background. @refl_semantic(color)
     vec4f background = zero4f;
 };  // namespace ygl
@@ -9438,10 +9460,10 @@ struct gl_stdimage_params {
 /// Draws an image texture the stdimage program.
 inline void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
     const vec2i& win_size, const gl_stdimage_params& params,
-    bool clear_background = true) {
+    const tonemap_params& tmparams, bool clear_background = true) {
     if (clear_background) gl_clear_buffers(params.background);
-    draw_image(prog, txt, win_size, params.offset, params.zoom, params.exposure,
-        params.gamma, params.filmic);
+    draw_image(prog, txt, win_size, params.offset, params.zoom,
+        tmparams.exposure, tmparams.gamma, tmparams.filmic);
 }
 
 /// Program to shade surfaces with a physically-based standard shader based on
@@ -9533,12 +9555,6 @@ void set_stdsurface_vert_skinning_off(gl_stdsurface_program& prog);
 struct gl_stdsurface_params {
     /// Image resolution. @refl_uilimits(256, 4096) @refl_shortname(r)
     int resolution = 512;
-    /// Image exposure. @refl_uilimits(-10, 10) @refl_shortname(e)
-    float exposure = 0;
-    /// Image gamma. @refl_uilimits(0.1, 3) @refl_shortname(g)
-    float gamma = 2.2f;
-    /// Image filmic tonemapping. @refl_shortname(F)
-    bool filmic = false;
     /// Draw as wireframe.
     bool wireframe = false;
     /// Draw with overlaid edges
@@ -9568,7 +9584,7 @@ void draw_stdsurface_scene(const scene* scn, const camera* cam,
     gl_stdsurface_program& prog, std::unordered_map<shape*, gl_shape>& shapes,
     std::unordered_map<texture*, gl_texture>& textures, const gl_lights& lights,
     const vec2i& viewport_size, void* highlighted,
-    const gl_stdsurface_params& params);
+    const gl_stdsurface_params& params, const tonemap_params& tmparams);
 
 // #codegen begin reflgen-glstdimage
 
@@ -9579,12 +9595,6 @@ inline void visit(gl_stdimage_params& val, Visitor&& visitor) {
                             "Image offset.", -4096, 4096, ""});
     visitor(val.zoom,
         visit_var{"zoom", visit_var_type::value, "Image zoom.", 0.01, 10, ""});
-    visitor(val.exposure, visit_var{"exposure", visit_var_type::value,
-                              "Hdr exposure.", -10, 10, "e"});
-    visitor(val.gamma,
-        visit_var{"gamma", visit_var_type::value, "Hdr gamma.", 0.1, 3, "g"});
-    visitor(val.filmic, visit_var{"filmic", visit_var_type::value,
-                            "Hdr filmic tonemapping.", 0, 0, "F"});
     visitor(val.background, visit_var{"background", visit_var_type::color,
                                 "Image background.", 0, 0, ""});
 }
@@ -9598,12 +9608,6 @@ template <typename Visitor>
 inline void visit(gl_stdsurface_params& val, Visitor&& visitor) {
     visitor(val.resolution, visit_var{"resolution", visit_var_type::value,
                                 "Image resolution.", 256, 4096, "r"});
-    visitor(val.exposure, visit_var{"exposure", visit_var_type::value,
-                              "Image exposure.", -10, 10, "e"});
-    visitor(val.gamma,
-        visit_var{"gamma", visit_var_type::value, "Image gamma.", 0.1, 3, "g"});
-    visitor(val.filmic, visit_var{"filmic", visit_var_type::value,
-                            "Image filmic tonemapping.", 0, 0, "F"});
     visitor(val.wireframe, visit_var{"wireframe", visit_var_type::value,
                                "Draw as wireframe.", 0, 0, ""});
     visitor(val.edges, visit_var{"edges", visit_var_type::value,
