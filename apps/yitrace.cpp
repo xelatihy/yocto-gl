@@ -128,6 +128,7 @@ bool update(app_state* app) {
 
         // render preview
         auto pparams = app->params;
+        pparams.resolution = app->preview_res;
         pparams.nsamples = 1;
         pparams.filter = ygl::trace_filter_type::box;
         auto pimg =
@@ -196,7 +197,7 @@ int main(int argc, char* argv[]) {
     app->tmparams = ygl::parse_params(parser, "", app->tmparams);
     app->imparams = ygl::parse_params(parser, "", app->imparams);
     app->preview_res =
-        ygl::parse_opt(parser, "--preview-res", "", "preview resolution", 32);
+        ygl::parse_opt(parser, "--preview-res", "", "preview resolution", 64);
     app->quiet =
         ygl::parse_flag(parser, "--quiet", "-q", "Print only errors messages");
     app->imfilename = ygl::parse_opt(
