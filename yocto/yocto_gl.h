@@ -35,7 +35,7 @@
 /// - OpenGL utilities to manage textures, buffers and prograrms
 /// - OpenGL shader for image viewing and GGX microfacet and hair rendering
 ///
-/// The current version is 0.3.9.
+/// The current version is 0.3.10.
 ///
 /// ## Credits
 ///
@@ -5511,13 +5511,10 @@ camera* make_view_camera(const scene* scn, int camera_id);
 /// Computes a shape bounding box using a quick computation that ignores radius.
 bbox3f compute_bounds(const shape* shp);
 /// Compute a scene bounding box.
-bbox3f compute_bounds(const scene* scn);
+bbox3f compute_bounds(const scene* scn, bool skip_emitting = false);
 
 /// Flatten scene instances into separate shapes.
 void flatten_instances(scene* scn);
-
-/// Print scene information.
-void print_info(const scene* scn);
 
 /// Build a shape BVH.
 bvh_tree* make_bvh(
@@ -5603,6 +5600,76 @@ struct save_options {
 /// Saves a scene. For now OBJ and glTF are supported.
 void save_scene(
     const std::string& filename, const scene* scn, const save_options& opts);
+
+/// Scene statistics
+struct scene_stats {
+    /// Number of cameras.
+    uint64_t num_cameras = 0;
+    /// Number of shape groups.
+    uint64_t num_shape_groups = 0;
+    /// Number of shapes.
+    uint64_t num_shapes = 0;
+    /// Number of instances.
+    uint64_t num_instances = 0;
+    /// Number of materials.
+    uint64_t num_materials = 0;
+    /// Number of textures.
+    uint64_t num_textures = 0;
+    /// Number of environments.
+    uint64_t num_environments = 0;
+    /// Number of nodes.
+    uint64_t num_nodes = 0;
+    /// Number of animation groups.
+    uint64_t num_animation_groups = 0;
+    /// Number of animations.
+    uint64_t num_animations = 0;
+
+    /// Number of points.
+    uint64_t elem_points = 0;
+    /// Number of lines.
+    uint64_t elem_lines = 0;
+    /// Number of triangles.
+    uint64_t elem_triangles = 0;
+    /// Number of quads.
+    uint64_t elem_quads = 0;
+    /// Number of verts.
+    uint64_t vert_pos = 0;
+    /// Number of norms.
+    uint64_t vert_norm = 0;
+    /// Number of texcoords.
+    uint64_t vert_texcoord = 0;
+    /// Number of color.
+    uint64_t vert_color = 0;
+    /// Number of radius.
+    uint64_t vert_radius = 0;
+    /// Number of tangent space.
+    uint64_t vert_tangsp = 0;
+
+    /// Number of ldr texels
+    uint64_t texel_ldrs = 0;
+    /// Number of hdr texels
+    uint64_t texel_hdrs = 0;
+
+    /// Number of ldr texels
+    uint64_t memory_ldrs = 0;
+    /// Number of hdr texels
+    uint64_t memory_hdrs = 0;
+    /// Shape elements memory in bytes
+    uint64_t memory_elems = 0;
+    /// Shape vertex memory in bytes
+    uint64_t memory_verts = 0;
+
+    /// Scene bounding bbox
+    bbox3f bbox_scn = invalid_bbox3f;
+    /// Scene bounding box without emitting objects
+    bbox3f bbox_nolights = invalid_bbox3f;
+};
+
+/// Get scene statistics.
+scene_stats compute_stats(const scene* scn);
+
+/// Stream write.
+std::ostream& operator<<(std::ostream& os, const scene_stats& stats);
 
 // #codegen begin reflgen-scene
 
@@ -9769,6 +9836,9 @@ inline void draw_label_widget(
 bool draw_checkbox_widget(gl_window* win, const std::string& lbl, bool& val);
 /// Text widget.
 bool draw_text_widget(gl_window* win, const std::string& lbl, std::string& str);
+/// Multiline text widget.
+bool draw_multilinetext_widget(
+    gl_window* win, const std::string& lbl, std::string& str);
 /// Slider widget.
 bool draw_slider_widget(
     gl_window* win, const std::string& lbl, int& val, int min = 0, int max = 1);
@@ -9971,7 +10041,7 @@ inline bool draw_value_widget(gl_window* win, const std::string& lbl,
     frame3f& val, float min = 0, float max = 0, bool color = false) {
     return (min != max) ?
                draw_slider_widget(win, lbl, val, (float)min, (float)max) :
-               draw_slider_widget(win, lbl, val, 0, 1);
+               draw_slider_widget(win, lbl, val, -10, 10);
 }
 /// Generic widget used for templated code. Uses min and max,
 /// or a deafult range when their are the same. Color is ignored.
@@ -9979,7 +10049,7 @@ inline bool draw_value_widget(gl_window* win, const std::string& lbl,
     mat4f& val, float min = 0, float max = 0, bool color = false) {
     return (min != max) ?
                draw_slider_widget(win, lbl, val, (float)min, (float)max) :
-               draw_slider_widget(win, lbl, val, 0, 1);
+               draw_slider_widget(win, lbl, val, -10, 10);
 }
 /// Generic widget used for templated code. Uses min and max,
 /// or a deafult range when their are the same. Color is ignored.
@@ -9987,7 +10057,7 @@ inline bool draw_value_widget(gl_window* win, const std::string& lbl,
     quat4f& val, float min = 0, float max = 0, bool color = false) {
     return (min != max) ?
                draw_slider_widget(win, lbl, val, (float)min, (float)max) :
-               draw_slider_widget(win, lbl, val, 0, 1);
+               draw_slider_widget(win, lbl, val, -1, 1);
 }
 /// Generic widget used for templated code. Min, max and color are ignored.
 template <typename T,

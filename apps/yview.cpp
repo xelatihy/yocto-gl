@@ -83,7 +83,7 @@ inline void draw(ygl::gl_window* win) {
             ygl::update_transforms(app->scn, app->time);
             last_time = app->time;
         }
-        if (sel.shp || sel.sgr || sel.mat || sel.nde) {
+        if (sel.shp || sel.sgr || sel.mat || sel.ist || sel.nde) {
             app->lights = ygl::make_gl_lights(app->scn);
             if (app->lights.pos.empty()) app->params.eyelight = true;
         }
@@ -104,6 +104,7 @@ inline void draw(ygl::gl_window* win) {
 
     if (ygl::begin_widgets(win, "yview")) {
         if (ygl::draw_header_widget(win, "view")) {
+            ygl::draw_groupid_widget_begin(win, app);
             ygl::draw_value_widget(win, "scene", app->filename);
             if (ygl::draw_button_widget(win, "new")) {
                 delete app->pscn;
@@ -142,6 +143,9 @@ inline void draw(ygl::gl_window* win) {
                     app->time_range.x, app->time_range.y);
                 ygl::draw_value_widget(win, "animate", app->animate);
             }
+            if (ygl::draw_button_widget(win, "print stats"))
+                std::cout << ygl::compute_stats(app->scn);
+            ygl::draw_groupid_widget_end(win);
         }
         if (ygl::draw_header_widget(win, "params")) {
             ygl::draw_params_widgets(win, "", app->params);
@@ -266,9 +270,6 @@ int main(int argc, char* argv[]) {
 
     // lights
     app->lights = ygl::make_gl_lights(app->scn);
-
-    // editing
-    app->pscn = new ygl::proc_scene();
 
     // run ui
     run_ui(app);

@@ -34,7 +34,7 @@ and released under the MIT license. Features include:
 - OpenGL utilities to manage textures, buffers and prograrms
 - OpenGL shader for image viewing and GGX microfacet and hair rendering
 
-The current version is 0.3.9.
+The current version is 0.3.10.
 
 ## Credits
 
@@ -7125,7 +7125,7 @@ Computes a shape bounding box using a quick computation that ignores radius.
 #### Function compute_bounds()
 
 ~~~ .cpp
-bbox3f compute_bounds(const scene* scn);
+bbox3f compute_bounds(const scene* scn, bool skip_emitting = false);
 ~~~
 
 Compute a scene bounding box.
@@ -7137,14 +7137,6 @@ void flatten_instances(scene* scn);
 ~~~
 
 Flatten scene instances into separate shapes.
-
-#### Function print_info()
-
-~~~ .cpp
-void print_info(const scene* scn);
-~~~
-
-Print scene information.
 
 #### Function make_bvh()
 
@@ -7291,6 +7283,90 @@ void save_scene(
 ~~~
 
 Saves a scene. For now OBJ and glTF are supported.
+
+#### Struct scene_stats
+
+~~~ .cpp
+struct scene_stats {
+    uint64_t num_cameras = 0;
+    uint64_t num_shape_groups = 0;
+    uint64_t num_shapes = 0;
+    uint64_t num_instances = 0;
+    uint64_t num_materials = 0;
+    uint64_t num_textures = 0;
+    uint64_t num_environments = 0;
+    uint64_t num_nodes = 0;
+    uint64_t num_animation_groups = 0;
+    uint64_t num_animations = 0;
+    uint64_t elem_points = 0;
+    uint64_t elem_lines = 0;
+    uint64_t elem_triangles = 0;
+    uint64_t elem_quads = 0;
+    uint64_t vert_pos = 0;
+    uint64_t vert_norm = 0;
+    uint64_t vert_texcoord = 0;
+    uint64_t vert_color = 0;
+    uint64_t vert_radius = 0;
+    uint64_t vert_tangsp = 0;
+    uint64_t texel_ldrs = 0;
+    uint64_t texel_hdrs = 0;
+    uint64_t memory_ldrs = 0;
+    uint64_t memory_hdrs = 0;
+    uint64_t memory_elems = 0;
+    uint64_t memory_verts = 0;
+    bbox3f bbox_scn = invalid_bbox3f;
+    bbox3f bbox_nolights = invalid_bbox3f;
+}
+~~~
+
+Scene statistics
+
+- Members:
+    - num_cameras:      Number of cameras.
+    - num_shape_groups:      Number of shape groups.
+    - num_shapes:      Number of shapes.
+    - num_instances:      Number of instances.
+    - num_materials:      Number of materials.
+    - num_textures:      Number of textures.
+    - num_environments:      Number of environments.
+    - num_nodes:      Number of nodes.
+    - num_animation_groups:      Number of animation groups.
+    - num_animations:      Number of animations.
+    - elem_points:      Number of points.
+    - elem_lines:      Number of lines.
+    - elem_triangles:      Number of triangles.
+    - elem_quads:      Number of quads.
+    - vert_pos:      Number of verts.
+    - vert_norm:      Number of norms.
+    - vert_texcoord:      Number of texcoords.
+    - vert_color:      Number of color.
+    - vert_radius:      Number of radius.
+    - vert_tangsp:      Number of tangent space.
+    - texel_ldrs:      Number of ldr texels
+    - texel_hdrs:      Number of hdr texels
+    - memory_ldrs:      Number of ldr texels
+    - memory_hdrs:      Number of hdr texels
+    - memory_elems:      Shape elements memory in bytes
+    - memory_verts:      Shape vertex memory in bytes
+    - bbox_scn:      Scene bounding bbox
+    - bbox_nolights:      Scene bounding box without emitting objects
+
+
+#### Function compute_stats()
+
+~~~ .cpp
+scene_stats compute_stats(const scene* scn);
+~~~
+
+Get scene statistics.
+
+#### Function operator<<()
+
+~~~ .cpp
+std::ostream& operator<<(std::ostream& os, const scene_stats& stats);
+~~~
+
+Stream write.
 
 #### Function enum_names<material_type\>()
 
@@ -12059,6 +12135,15 @@ bool draw_text_widget(gl_window* win, const std::string& lbl, std::string& str);
 ~~~
 
 Text widget.
+
+#### Function draw_multilinetext_widget()
+
+~~~ .cpp
+bool draw_multilinetext_widget(
+    gl_window* win, const std::string& lbl, std::string& str);
+~~~
+
+Multiline text widget.
 
 #### Function draw_slider_widget()
 

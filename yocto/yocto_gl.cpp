@@ -3517,11 +3517,14 @@ bbox3f compute_bounds(const shape* shp) {
 }
 
 // Updates the scene and scene's instances bounding boxes
-bbox3f compute_bounds(const scene* scn) {
+bbox3f compute_bounds(const scene* scn, bool skip_emitting) {
     auto shape_bboxes = std::unordered_map<shape_group*, bbox3f>();
     for (auto sgr : scn->shapes) {
         shape_bboxes[sgr] = invalid_bbox3f;
-        for (auto shp : sgr->shapes) shape_bboxes[sgr] += compute_bounds(shp);
+        for (auto shp : sgr->shapes) {
+            if (skip_emitting && shp->mat && shp->mat->ke != zero3f) continue;
+            shape_bboxes[sgr] += compute_bounds(shp);
+        }
     }
     auto bbox = invalid_bbox3f;
     if (!scn->instances.empty()) {
@@ -3624,47 +3627,117 @@ void refit_bvh(
     refit_bvh(bvh, ist_frames, ist_frames_inv);
 }
 
-// Print scene info (call update bounds bes before)
-void print_info(const scene* scn) {
-    auto nverts = 0, nnorms = 0, ntexcoords = 0, npoints = 0, nlines = 0,
-         ntriangles = 0, nquads = 0;
+// Compute stats.
+scene_stats compute_stats(const scene* scn) {
+    auto stats = scene_stats();
+    stats.num_cameras = scn->cameras.size();
+    stats.num_shape_groups = scn->shapes.size();
+    stats.num_instances = scn->instances.size();
+    stats.num_materials = scn->materials.size();
+    stats.num_textures = scn->textures.size();
+    stats.num_environments = scn->environments.size();
+    stats.num_nodes = scn->nodes.size();
+    stats.num_animation_groups = scn->animations.size();
+
     for (auto sgr : scn->shapes) {
+        stats.num_shapes += sgr->shapes.size();
         for (auto shp : sgr->shapes) {
-            nverts += shp->pos.size();
-            nnorms += shp->norm.size();
-            ntexcoords += shp->texcoord.size();
-            npoints += shp->points.size();
-            nlines += shp->lines.size();
-            ntriangles += shp->triangles.size();
-            nquads += shp->quads.size();
+            stats.elem_points += shp->points.size();
+            stats.elem_lines += shp->lines.size();
+            stats.elem_triangles += shp->triangles.size();
+            stats.elem_quads += shp->quads.size();
+            stats.vert_pos += shp->pos.size();
+            stats.vert_norm += shp->norm.size();
+            stats.vert_texcoord += shp->texcoord.size();
+            stats.vert_color += shp->color.size();
+            stats.vert_radius += shp->radius.size();
+            stats.vert_tangsp += shp->tangsp.size();
         }
     }
+    stats.memory_elems =
+        stats.elem_points * sizeof(int) + stats.elem_lines * sizeof(vec2i) +
+        stats.elem_triangles * sizeof(vec3i) + stats.elem_quads * sizeof(vec4i);
+    stats.memory_verts =
+        stats.vert_pos * sizeof(vec3f) + stats.vert_norm * sizeof(vec3f) +
+        stats.vert_texcoord * sizeof(vec3f) + stats.vert_color * sizeof(vec4f) +
+        stats.vert_tangsp * sizeof(vec4f) + stats.vert_radius * sizeof(float);
 
-    auto bbox = compute_bounds(scn);
-    auto bboxc = vec3f{(bbox.max[0] + bbox.min[0]) / 2,
-        (bbox.max[1] + bbox.min[1]) / 2, (bbox.max[2] + bbox.min[2]) / 2};
-    auto bboxs = vec3f{bbox.max[0] - bbox.min[0], bbox.max[1] - bbox.min[1],
-        bbox.max[2] - bbox.min[2]};
+    for (auto agr : scn->animations) {
+        stats.num_animations += agr->animations.size();
+    }
 
-    printf("number of cameras:      %d\n", (int)scn->cameras.size());
-    printf("number of shapes:       %d\n", (int)scn->shapes.size());
-    printf("number of instances:    %d\n", (int)scn->instances.size());
-    printf("number of materials:    %d\n", (int)scn->materials.size());
-    printf("number of textures:     %d\n", (int)scn->textures.size());
-    printf("number of environments: %d\n", (int)scn->environments.size());
-    printf("number of vertices:     %d\n", nverts);
-    printf("number of normals:      %d\n", nnorms);
-    printf("number of texcoords:    %d\n", ntexcoords);
-    printf("number of points:       %d\n", npoints);
-    printf("number of lines:        %d\n", nlines);
-    printf("number of triangles:    %d\n", ntriangles);
-    printf("number of quads:        %d\n", nquads);
-    printf("\n");
-    printf("bbox min:    %g %g %g\n", bbox.min[0], bbox.min[1], bbox.min[2]);
-    printf("bbox max:    %g %g %g\n", bbox.max[0], bbox.max[1], bbox.max[2]);
-    printf("bbox center: %g %g %g\n", bboxc[0], bboxc[1], bboxc[2]);
-    printf("bbox size:   %g %g %g\n", bboxs[0], bboxs[1], bboxs[2]);
-    printf("\n");
+    for (auto txt : scn->textures) {
+        stats.texel_ldrs = txt->ldr.width() * txt->ldr.height();
+        stats.texel_hdrs = txt->hdr.width() * txt->hdr.height();
+    }
+    stats.memory_ldrs = stats.texel_ldrs * sizeof(vec4b);
+    stats.memory_hdrs = stats.texel_hdrs * sizeof(vec4f);
+
+    stats.bbox_scn = compute_bounds(scn);
+    stats.bbox_nolights = compute_bounds(scn, true);
+
+    return stats;
+}
+
+// Stream out
+std::ostream& operator<<(std::ostream& os, const scene_stats& stats) {
+    os << "num_cameras"
+       << ": " << stats.num_cameras << "\n";
+    os << "num_shape_groups"
+       << ": " << stats.num_shape_groups << "\n";
+    os << "num_shapes"
+       << ": " << stats.num_shapes << "\n";
+    os << "num_instances"
+       << ": " << stats.num_instances << "\n";
+    os << "num_materials"
+       << ": " << stats.num_materials << "\n";
+    os << "num_textures"
+       << ": " << stats.num_textures << "\n";
+    os << "num_environments"
+       << ": " << stats.num_environments << "\n";
+    os << "num_nodes"
+       << ": " << stats.num_nodes << "\n";
+    os << "num_animation_groups"
+       << ": " << stats.num_animation_groups << "\n";
+    os << "num_animations"
+       << ": " << stats.num_animations << "\n";
+    os << "elem_points"
+       << ": " << stats.elem_points << "\n";
+    os << "elem_lines"
+       << ": " << stats.elem_lines << "\n";
+    os << "elem_triangles"
+       << ": " << stats.elem_triangles << "\n";
+    os << "elem_quads"
+       << ": " << stats.elem_quads << "\n";
+    os << "vert_pos"
+       << ": " << stats.vert_pos << "\n";
+    os << "vert_norm"
+       << ": " << stats.vert_norm << "\n";
+    os << "vert_texcoord"
+       << ": " << stats.vert_texcoord << "\n";
+    os << "vert_color"
+       << ": " << stats.vert_color << "\n";
+    os << "vert_radius"
+       << ": " << stats.vert_radius << "\n";
+    os << "vert_tangsp"
+       << ": " << stats.vert_tangsp << "\n";
+    os << "texel_ldrs"
+       << ": " << stats.texel_ldrs << "\n";
+    os << "texel_hdrs"
+       << ": " << stats.texel_hdrs << "\n";
+    os << "memory_ldrs"
+       << ": " << stats.memory_ldrs << "\n";
+    os << "memory_hdrs"
+       << ": " << stats.memory_hdrs << "\n";
+    os << "memory_elems"
+       << ": " << stats.memory_elems << "\n";
+    os << "memory_verts"
+       << ": " << stats.memory_verts << "\n";
+    os << "bbox_scn"
+       << ": " << stats.bbox_scn << "\n";
+    os << "bbox_nolights"
+       << ": " << stats.bbox_nolights << "\n";
+    return os;
 }
 
 // Flattens an scene
@@ -13537,6 +13610,29 @@ bool draw_text_widget(
 }
 
 // Value widget
+bool draw_multilinetext_widget(
+    gl_window* win, const std::string& lbl, std::string& str) {
+    char sbuf[8192];
+    std::vector<char> dbuf;
+    char* buf = nullptr;
+    int buf_size = 0;
+    if (str.size() > sizeof(sbuf) / 2) {
+        dbuf.resize(str.size() * 2);
+        buf = dbuf.data();
+        buf_size = dbuf.size();
+    } else {
+        buf = sbuf;
+        buf_size = sizeof(sbuf);
+    }
+    memcpy(buf, str.c_str(), str.size());
+    buf[str.size()] = 0;
+    std::cout << str;
+    auto ret = ImGui::InputTextMultiline(lbl.c_str(), buf, buf_size);
+    str = buf;
+    return ret;
+}
+
+// Value widget
 bool draw_slider_widget(
     gl_window* win, const std::string& lbl, int& val, int min, int max) {
     return ImGui::SliderInt(lbl.c_str(), &val, min, max);
@@ -13988,8 +14084,7 @@ struct draw_elem_visitor {
 
     template <typename T>
     void operator()(
-        T* val, const visit_var& var = visit_var{"", visit_var_type::object}) {
-        if (!val) return;
+        T*& val, const visit_var& var = visit_var{"", visit_var_type::object}) {
         if (var.type == visit_var_type::reference) {
             edited += draw_combo_widget(win, var.name, val, elems(val));
         } else {

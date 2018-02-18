@@ -5,9 +5,13 @@ Please consider this to be just development notes and not any real planning.
 
 ## Next
 
-- setup tests
-    - yview test
-    - more ytrace
+- add print scene info button to yview/ytrace
+- add view cam settings
+- add bbox to trace
+- add builtin envmap to trace
+- better default material
+- better eyelight
+- add prefiltered look to trace/view ?
 
 ## Deployment
 
