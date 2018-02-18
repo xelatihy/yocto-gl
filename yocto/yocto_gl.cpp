@@ -2428,7 +2428,7 @@ void make_bvh_node(std::vector<bvh_node>& nodes, int nodeid,
         auto centroid_bbox = invalid_bbox3f;
         for (auto i = start; i < end; i++)
             centroid_bbox += bbox_center(bboxes[sorted_prims[i]]);
-        auto centroid_size = bbox_diagonal(centroid_bbox);
+        auto centroid_size = bbox_size(centroid_bbox);
 
         // check if it is not possible to split
         if (centroid_size != zero3f) {
@@ -2460,23 +2460,22 @@ void make_bvh_node(std::vector<bvh_node>& nodes, int nodeid,
                     });
             }
 
-            // check correctness
-            assert(axis >= 0 && mid > 0);
-            assert(mid > start && mid < end);
-
-            // makes an internal node
-            node.type = bvh_node_type::internal;
-            // perform the splits by preallocating the child nodes and recurring
-            node.axis = axis;
-            node.start = (int)nodes.size();
-            node.count = 2;
-            nodes.emplace_back();
-            nodes.emplace_back();
-            // build child nodes
-            make_bvh_node(nodes, node.start, sorted_prims, start, mid, bboxes,
-                type, equal_size);
-            make_bvh_node(nodes, node.start + 1, sorted_prims, mid, end, bboxes,
-                type, equal_size);
+            // check whether we were able to split
+            if (mid > start && mid < end) {
+                // makes an internal node
+                node.type = bvh_node_type::internal;
+                // perform the splits by preallocating children and recurring
+                node.axis = axis;
+                node.start = (int)nodes.size();
+                node.count = 2;
+                nodes.emplace_back();
+                nodes.emplace_back();
+                // build child nodes
+                make_bvh_node(nodes, node.start, sorted_prims, start, mid,
+                    bboxes, type, equal_size);
+                make_bvh_node(nodes, node.start + 1, sorted_prims, mid, end,
+                    bboxes, type, equal_size);
+            }
         }
     }
 }
@@ -3681,62 +3680,40 @@ scene_stats compute_stats(const scene* scn) {
 
 // Stream out
 std::ostream& operator<<(std::ostream& os, const scene_stats& stats) {
-    os << "num_cameras"
-       << ": " << stats.num_cameras << "\n";
-    os << "num_shape_groups"
-       << ": " << stats.num_shape_groups << "\n";
-    os << "num_shapes"
-       << ": " << stats.num_shapes << "\n";
-    os << "num_instances"
-       << ": " << stats.num_instances << "\n";
-    os << "num_materials"
-       << ": " << stats.num_materials << "\n";
-    os << "num_textures"
-       << ": " << stats.num_textures << "\n";
-    os << "num_environments"
-       << ": " << stats.num_environments << "\n";
-    os << "num_nodes"
-       << ": " << stats.num_nodes << "\n";
-    os << "num_animation_groups"
-       << ": " << stats.num_animation_groups << "\n";
-    os << "num_animations"
-       << ": " << stats.num_animations << "\n";
-    os << "elem_points"
-       << ": " << stats.elem_points << "\n";
-    os << "elem_lines"
-       << ": " << stats.elem_lines << "\n";
-    os << "elem_triangles"
-       << ": " << stats.elem_triangles << "\n";
-    os << "elem_quads"
-       << ": " << stats.elem_quads << "\n";
-    os << "vert_pos"
-       << ": " << stats.vert_pos << "\n";
-    os << "vert_norm"
-       << ": " << stats.vert_norm << "\n";
-    os << "vert_texcoord"
-       << ": " << stats.vert_texcoord << "\n";
-    os << "vert_color"
-       << ": " << stats.vert_color << "\n";
-    os << "vert_radius"
-       << ": " << stats.vert_radius << "\n";
-    os << "vert_tangsp"
-       << ": " << stats.vert_tangsp << "\n";
-    os << "texel_ldrs"
-       << ": " << stats.texel_ldrs << "\n";
-    os << "texel_hdrs"
-       << ": " << stats.texel_hdrs << "\n";
-    os << "memory_ldrs"
-       << ": " << stats.memory_ldrs << "\n";
-    os << "memory_hdrs"
-       << ": " << stats.memory_hdrs << "\n";
-    os << "memory_elems"
-       << ": " << stats.memory_elems << "\n";
-    os << "memory_verts"
-       << ": " << stats.memory_verts << "\n";
-    os << "bbox_scn"
-       << ": " << stats.bbox_scn << "\n";
-    os << "bbox_nolights"
-       << ": " << stats.bbox_nolights << "\n";
+    os << "num_cameras: " << stats.num_cameras << "\n";
+    os << "num_shape_groups: " << stats.num_shape_groups << "\n";
+    os << "num_shapes: " << stats.num_shapes << "\n";
+    os << "num_instances: " << stats.num_instances << "\n";
+    os << "num_materials: " << stats.num_materials << "\n";
+    os << "num_textures: " << stats.num_textures << "\n";
+    os << "num_environments: " << stats.num_environments << "\n";
+    os << "num_nodes: " << stats.num_nodes << "\n";
+    os << "num_animation_groups: " << stats.num_animation_groups << "\n";
+    os << "num_animations: " << stats.num_animations << "\n";
+    os << "elem_points: " << stats.elem_points << "\n";
+    os << "elem_lines: " << stats.elem_lines << "\n";
+    os << "elem_triangles: " << stats.elem_triangles << "\n";
+    os << "elem_quads: " << stats.elem_quads << "\n";
+    os << "vert_pos: " << stats.vert_pos << "\n";
+    os << "vert_norm: " << stats.vert_norm << "\n";
+    os << "vert_texcoord: " << stats.vert_texcoord << "\n";
+    os << "vert_color: " << stats.vert_color << "\n";
+    os << "vert_radius: " << stats.vert_radius << "\n";
+    os << "vert_tangsp: " << stats.vert_tangsp << "\n";
+    os << "texel_ldrs: " << stats.texel_ldrs << "\n";
+    os << "texel_hdrs: " << stats.texel_hdrs << "\n";
+    os << "memory_ldrs: " << stats.memory_ldrs << "\n";
+    os << "memory_hdrs: " << stats.memory_hdrs << "\n";
+    os << "memory_elems: " << stats.memory_elems << "\n";
+    os << "memory_verts: " << stats.memory_verts << "\n";
+    os << "bbox_scn: " << stats.bbox_scn << "\n";
+    os << "bbox_nolights: " << stats.bbox_nolights << "\n";
+
+    os << "bbox_min   : " << stats.bbox_scn.min << "\n";
+    os << "bbox_max   : " << stats.bbox_scn.max << "\n";
+    os << "bbox_size  : " << bbox_size(stats.bbox_scn) << "\n";
+    os << "bbox_center: " << bbox_center(stats.bbox_scn) << "\n";
+
     return os;
 }
 
@@ -3859,6 +3836,7 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
             auto shp = new shape();
             shp->name = oshp->groupname;
             shp->mat = mmap[oshp->matname];
+            shp->faceted = !oshp->smoothing;
             if (oshp->props.find("subdivision") != oshp->props.end()) {
                 shp->subdivision =
                     atoi(oshp->props.at("subdivision").at(0).c_str());
@@ -3990,44 +3968,6 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
                     if (v.radius >= 0 && vert.radius >= 0)
                         shp->radius[idx] = obj->radius[vert.radius];
                 }
-
-                // fix smoothing
-                if (!oshp->smoothing && opts.obj_facet_non_smooth) {
-                    auto faceted = new shape();
-                    faceted->name = shp->name;
-                    auto pidx = std::vector<int>();
-                    for (auto point : shp->points) {
-                        faceted->points.push_back((int)pidx.size());
-                        pidx.push_back(point);
-                    }
-                    for (auto line : shp->lines) {
-                        faceted->lines.push_back(
-                            {(int)pidx.size() + 0, (int)pidx.size() + 1});
-                        pidx.push_back(line.x);
-                        pidx.push_back(line.y);
-                    }
-                    for (auto triangle : shp->triangles) {
-                        faceted->triangles.push_back({(int)pidx.size() + 0,
-                            (int)pidx.size() + 1, (int)pidx.size() + 2});
-                        pidx.push_back(triangle.x);
-                        pidx.push_back(triangle.y);
-                        pidx.push_back(triangle.z);
-                    }
-                    for (auto idx : pidx) {
-                        if (!shp->pos.empty())
-                            faceted->pos.push_back(shp->pos[idx]);
-                        if (!shp->norm.empty())
-                            faceted->norm.push_back(shp->norm[idx]);
-                        if (!shp->texcoord.empty())
-                            faceted->texcoord.push_back(shp->texcoord[idx]);
-                        if (!shp->color.empty())
-                            faceted->color.push_back(shp->color[idx]);
-                        if (!shp->radius.empty())
-                            faceted->radius.push_back(shp->radius[idx]);
-                    }
-                    delete shp;
-                    shp = faceted;
-                }
             } else {
                 // insert all vertices
                 std::unordered_map<int, int> pos_map, norm_map, texcoord_map;
@@ -4128,9 +4068,6 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
                 for (auto& kv : norm_map) {
                     shp->norm[kv.second] = obj->norm[kv.first];
                 }
-
-                // fix smoothing
-                if (!oshp->smoothing && opts.obj_facet_non_smooth) {}
             }
             sgr->shapes.push_back(shp);
         }
@@ -5742,6 +5679,7 @@ struct trace_point {
     float rs = 0;                      // specular roughness
     vec3f kt = {0, 0, 0};              // transmission (thin glass)
     float op = 1.0f;                   // opacity
+    bool double_sided = false;         // double sided rendering
     bool has_brdf() const { return shp && kd + ks + kt != zero3f; }
     vec3f rho() const { return kd + ks + kt; }
     vec3f brdf_weights() const {
@@ -6001,8 +5939,7 @@ std::tuple<vec3f, bool> sample_brdfcos(
         return {zero3f, false};
 }
 
-// Create a point for an environment map. Resolves material with
-// textures.
+// Create a point for an environment map. Resolves material with textures.
 trace_point eval_point(const environment* env, const vec3f& wo) {
     auto pt = trace_point();
     pt.env = env;
@@ -6020,8 +5957,7 @@ trace_point eval_point(const environment* env, const vec3f& wo) {
     return pt;
 }
 
-// Create a point for a shape. Resolves geometry and material with
-// textures.
+// Create a point for a shape. Resolves geometry and material with textures.
 trace_point eval_point(
     const instance* ist, int sid, int eid, const vec2f& euv, const vec3f& wo) {
     // default material
@@ -6159,6 +6095,7 @@ trace_point eval_point(
     if (pt.ks != zero3f && pt.rs < 0.9999f) {
         pt.ks *= pt.op;
         pt.rs = pt.rs * pt.rs;
+        pt.rs = clamp(pt.rs, 0.02f * 0.02f, 1.0f);
     } else {
         pt.ks = zero3f;
         pt.rs = 0;
@@ -6199,7 +6136,7 @@ float weight_lights(
 trace_point sample_light(const trace_lights& lights, const trace_light& lgt,
     const trace_point& pt, float rel, const vec2f& ruv) {
     if (lgt.ist) {
-        auto shp = lgt.ist->shp->shapes.at(0);
+        auto shp = lgt.ist->shp->shapes.at(lgt.sid);
         auto& cdf = lights.shape_cdfs.at(shp);
         auto eid = 0;
         auto euv = zero2f;
@@ -6210,7 +6147,7 @@ trace_point sample_light(const trace_lights& lights, const trace_light& lgt,
         } else if (!shp->lines.empty()) {
             eid = sample_points(cdf, rel);
         }
-        return eval_point(lgt.ist, 0, eid, euv, zero3f);
+        return eval_point(lgt.ist, lgt.sid, eid, euv, zero3f);
     }
     if (lgt.env) {
         auto z = -1 + 2 * ruv.y;
@@ -6230,8 +6167,7 @@ trace_point sample_lights(const trace_lights& lights, const trace_point& pt,
     return sample_light(lights, lgt, pt, rne, ruv);
 }
 
-// Intersects a ray with the scn and return the point (or env
-// point).
+// Intersects a ray with the scn and return the point (or env point).
 trace_point intersect_scene(
     const scene* scn, const bvh_tree* bvh, const ray3f& ray) {
     auto iid = 0, sid = 0, eid = 0;
@@ -6246,7 +6182,7 @@ trace_point intersect_scene(
     }
 }
 
-// Test occlusion
+// Test occlusion.
 vec3f eval_transmission(const scene* scn, const bvh_tree* bvh,
     const trace_point& pt, const trace_point& lpt, const trace_params& params) {
     if (params.notransmission) {
@@ -6266,7 +6202,7 @@ vec3f eval_transmission(const scene* scn, const bvh_tree* bvh,
     }
 }
 
-// Mis weight
+// Mis weight.
 float weight_mis(float w0, float w1) {
     if (!w0 || !w1) return 1;
     return (1 / w0) / (1 / w0 + 1 / w1);
@@ -6796,22 +6732,28 @@ void trace_async_stop(std::vector<std::thread>& threads, bool& stop_flag) {
 trace_lights make_trace_lights(const scene* scn) {
     auto lights = trace_lights();
     for (auto ist : scn->instances) {
-        auto shp = ist->shp->shapes.at(0);
-        if (!shp->mat) continue;
-        if (shp->mat->ke == zero3f) continue;
-        auto lgt = trace_light();
-        lgt.ist = ist;
-        lights.lights.push_back(lgt);
-        if (!contains(lights.shape_cdfs, shp)) {
-            if (!shp->points.empty()) {
-                lights.shape_cdfs[shp] = sample_points_cdf(shp->points.size());
-            } else if (!shp->lines.empty()) {
-                lights.shape_cdfs[shp] = sample_lines_cdf(shp->lines, shp->pos);
-            } else if (!shp->triangles.empty()) {
-                lights.shape_cdfs[shp] =
-                    sample_triangles_cdf(shp->triangles, shp->pos);
+        if (!ist->shp) continue;
+        for (auto sid = 0; sid < ist->shp->shapes.size(); sid++) {
+            auto shp = ist->shp->shapes.at(sid);
+            if (!shp->mat) continue;
+            if (shp->mat->ke == zero3f) continue;
+            auto lgt = trace_light();
+            lgt.ist = ist;
+            lgt.sid = sid;
+            lights.lights.push_back(lgt);
+            if (!contains(lights.shape_cdfs, shp)) {
+                if (!shp->points.empty()) {
+                    lights.shape_cdfs[shp] =
+                        sample_points_cdf(shp->points.size());
+                } else if (!shp->lines.empty()) {
+                    lights.shape_cdfs[shp] =
+                        sample_lines_cdf(shp->lines, shp->pos);
+                } else if (!shp->triangles.empty()) {
+                    lights.shape_cdfs[shp] =
+                        sample_triangles_cdf(shp->triangles, shp->pos);
+                }
+                lights.shape_areas[shp] = lights.shape_cdfs[shp].back();
             }
-            lights.shape_areas[shp] = lights.shape_cdfs[shp].back();
         }
     }
 
@@ -7516,29 +7458,8 @@ inline void obj_dump(char*& s, const std::string& val) {
     while (*val_) *s++ = *val_++;
 }
 
-#if YGL_FASTOBJ
-// Dumps a value
-inline void obj_dump(char*& s, int val) {
-    static auto digits = "0123456789";
-    if (val < 0) {
-        *s++ = '-';
-        val = -val;
-    }
-    char buf[64];
-    buf[sizeof(buf) - 1] = 0;
-    auto ss = buf + sizeof(buf) - 2;
-    while (val >= 10) {
-        *--ss = digits[val % 10];
-        val /= 10;
-    }
-    *--ss = digits[val];
-    while (*ss) *s++ = *ss++;
-}
-#else
 // Dumps a value
 inline void obj_dump(char*& s, int val) { s += sprintf(s, "%d", val); }
-#endif
-
 // Dumps a value
 inline void obj_dump(char*& s, float val) { s += sprintf(s, "%g", val); }
 // Dumps a value
@@ -7661,9 +7582,10 @@ void save_mtl(const std::string& filename,
         if (mat->kr != zero3f) obj_dump_line(fs, "  Kr", mat->kr);
         if (mat->kt != zero3f) obj_dump_line(fs, "  Kt", mat->kt);
         if (mat->kt != zero3f) obj_dump_line(fs, "  Tf", mat->kt);
-        if (mat->ns != 0.0f) obj_dump_line(fs, "  Ns", mat->ns);
+        if (mat->ns != 0.0f)
+            obj_dump_line(fs, "  Ns", (int)clamp(mat->ns, 0.0f, 1000000000.0f));
         if (mat->op != 1.0f) obj_dump_line(fs, "  d", mat->op);
-        if (mat->ior != 0.0f) obj_dump_line(fs, "  Ni", mat->ior);
+        if (mat->ior != 1.0f) obj_dump_line(fs, "  Ni", mat->ior);
         if (mat->ke_txt.path != "") obj_dump_line(fs, "  map_Ke", mat->ke_txt);
         if (mat->ka_txt.path != "") obj_dump_line(fs, "  map_Ka", mat->ka_txt);
         if (mat->kd_txt.path != "") obj_dump_line(fs, "  map_Kd", mat->kd_txt);
@@ -13936,15 +13858,20 @@ struct draw_camera_visitor {
 // Implementation of camera selection
 bool draw_camera_widgets(gl_window* win, const std::string& lbl, camera* cam) {
     if (!cam) return false;
-    if (draw_header_widget(win, lbl)) {
-        draw_groupid_widget_begin(win, cam);
-        auto visitor = draw_camera_visitor{win};
-        visitor(cam);
-        draw_groupid_widget_end(win);
-        return visitor.edited;
-    } else {
-        return false;
-    }
+    auto edited = false;
+    auto from = cam->frame.o;
+    auto to = cam->frame.o - cam->frame.z * cam->focus;
+    edited += draw_value_widget(win, lbl + " name", cam->name);
+    edited += draw_value_widget(win, lbl + " from", from, -10, 10);
+    edited += draw_value_widget(win, lbl + " to", to, -10, 10);
+    edited += draw_value_widget(win, lbl + " yfov", cam->yfov, 0.1, 10);
+    edited += draw_value_widget(win, lbl + " aspect", cam->aspect, 1, 3);
+    edited += draw_value_widget(win, lbl + " aperture", cam->aperture, 0, 1);
+    edited += draw_value_widget(win, lbl + " focus", cam->focus, 0.1, 100);
+    edited += draw_value_widget(win, lbl + " near", cam->near, 0.01f, 1);
+    edited += draw_value_widget(win, lbl + " far", cam->far, 1, 1000);
+    if (edited) cam->frame = lookat_frame(from, to, {0, 1, 0});
+    return edited;
 }
 
 // get typed selection

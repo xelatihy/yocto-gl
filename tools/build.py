@@ -6,7 +6,7 @@
 import click, os, platform, markdown, glob, textwrap
 
 def build(target, dirname, buildtype, cmakeopts=''):
-    os.system('mkdir -p build/{dirname}; cd build/{dirname}; cmake ../../ -GNinja -DCMAKE_BUILD_TYPE={buildtype} -DYOCTO_EXPERIMENTAL=ON {cmakeopts}; cmake --build . {target}'.format(target=target, dirname=dirname, buildtype=buildtype, cmakeopts=cmakeopts))
+    os.system('mkdir -p build/{dirname}; cd build/{dirname}; cmake ../../ -GNinja -DCMAKE_BUILD_TYPE={buildtype} -DYOCTO_EXPERIMENTAL=ON -DYOCTO_TOOLS=ON {cmakeopts}; cmake --build . {target}'.format(target=target, dirname=dirname, buildtype=buildtype, cmakeopts=cmakeopts))
     os.system('ln -Ffs {dirname} build/latest'.format(dirname=dirname))
 
 @click.group()
@@ -40,7 +40,7 @@ def gcc(target=''):
 
 @run.command()
 def xcode():
-    os.system('mkdir -p build/xcode; cd build/xcode; cmake -G Xcode -DYOCTO_EXPERIMENTAL=ON ../../; open yocto-gl.xcodeproj')
+    os.system('mkdir -p build/xcode; cd build/xcode; cmake -G Xcode -DYOCTO_EXPERIMENTAL=ON -DYOCTO_TOOLS=ON ../../; open yocto-gl.xcodeproj')
 
 @run.command()
 def clean():

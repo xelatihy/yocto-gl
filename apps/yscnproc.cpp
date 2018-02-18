@@ -60,8 +60,8 @@ int main(int argc, char** argv) {
         parser, "--no-flipy-texcoord", "", "texcoord vertical flipping");
     auto no_flip_opacity =
         ygl::parse_flag(parser, "--no-flip-opacity", "", "flip opacity");
-    auto facet_non_smooth = ygl::parse_flag(
-        parser, "--facet-non-smooth", "", "facet non smooth surfaces");
+    // auto facet_non_smooth = ygl::parse_flag(
+    //     parser, "--facet-non-smooth", "", "facet non smooth surfaces");
     auto scale = ygl::parse_opt(parser, "--scale", "", "scale the model", 1.0f);
     auto flipyz =
         ygl::parse_flag(parser, "--flipyz", "", "flip y and z coords");
@@ -99,7 +99,6 @@ int main(int argc, char** argv) {
             opts.load_textures = textures;
             opts.obj_flip_texcoord = !no_flipy_texcoord;
             opts.obj_flip_tr = !no_flip_opacity;
-            opts.obj_facet_non_smooth = facet_non_smooth;
             opts.preserve_quads = true;
             to_merge = std::unique_ptr<ygl::scene>(load_scene(filename, opts));
 

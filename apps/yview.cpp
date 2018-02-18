@@ -137,6 +137,7 @@ inline void draw(ygl::gl_window* win) {
             }
             ygl::draw_camera_selection_widget(
                 win, "camera", app->cam, app->scn, app->view);
+            ygl::draw_camera_widgets(win, "camera", app->cam);
             ygl::draw_value_widget(win, "fps", app->navigation_fps);
             if (app->time_range != ygl::zero2f) {
                 ygl::draw_value_widget(win, "time", app->time,
@@ -224,6 +225,8 @@ int main(int argc, char* argv[]) {
         parser, "--preserve-quads", "", "Preserve quads on load");
     auto preserve_facevarying = ygl::parse_flag(
         parser, "--preserve-facevarying", "", "Preserve facevarying on load");
+    auto double_sided =
+        ygl::parse_flag(parser, "--double-sided", "", "Double sided rendering");
     app->quiet =
         ygl::parse_flag(parser, "--quiet", "-q", "Print only errors messages");
     app->screenshot_and_exit = ygl::parse_flag(
@@ -259,6 +262,11 @@ int main(int argc, char* argv[]) {
 
     // add missing data
     ygl::add_elements(app->scn);
+
+    // fix double sided materials
+    if (double_sided) {
+        for (auto m : app->scn->materials) m->double_sided = true;
+    }
 
     // view camera
     app->view = ygl::make_view_camera(app->scn, 0);
