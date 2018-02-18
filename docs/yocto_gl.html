@@ -123,7 +123,7 @@ and released under the MIT license. Features include:</p>
 <li>OpenGL utilities to manage textures, buffers and prograrms</li>
 <li>OpenGL shader for image viewing and GGX microfacet and hair rendering</li>
 </ul>
-<p>The current version is 0.3.6.</p>
+<p>The current version is 0.3.7.</p>
 <p><a id="toc1"></a></p>
 <h2>Credits</h2>
 <p>This library includes code from the PCG random number generator,
@@ -4802,13 +4802,6 @@ degenerate. Returns quads, pos.</p>
 
 
 <p>Convert between CIE XYZ and RGB</p>
-<h4>Function tonemap_image()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">image4b</span> <span class="nf">tonemap_image</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">image4f</span><span class="o">&amp;</span> <span class="n">hdr</span><span class="p">,</span> <span class="kt">float</span> <span class="n">exposure</span><span class="p">,</span> <span class="kt">float</span> <span class="n">gamma</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">filmic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Tone mapping HDR to LDR images.</p>
 <h4>Function image_over()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">image_over</span><span class="p">(</span><span class="n">vec4f</span><span class="o">*</span> <span class="n">img</span><span class="p">,</span> <span class="kt">int</span> <span class="n">width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">height</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nlayers</span><span class="p">,</span> <span class="n">vec4f</span><span class="o">**</span> <span class="n">layers</span><span class="p">);</span>
 </code></pre></div>
@@ -4827,6 +4820,37 @@ degenerate. Returns quads, pos.</p>
 
 
 <p>Converts HSV to RGB.</p>
+<h4>Struct tonemap_params</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">tonemap_params</span> <span class="p">{</span>
+    <span class="kt">float</span> <span class="n">exposure</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">gamma</span> <span class="o">=</span> <span class="mf">2.2f</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">filmic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Tone mapping parameters</p>
+<ul>
+<li>Members:<ul>
+<li>exposure:      Hdr exposure.  </li>
+<li>gamma:      Hdr gamma.  </li>
+<li>filmic:      Hdr filmic tonemapping. </li>
+</ul>
+</li>
+</ul>
+<h4>Function tonemap_image()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">image4b</span> <span class="nf">tonemap_image</span><span class="p">(</span><span class="k">const</span> <span class="n">image4f</span><span class="o">&amp;</span> <span class="n">hdr</span><span class="p">,</span> <span class="k">const</span> <span class="n">tonemap_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Tone mapping HDR to LDR images.</p>
+<h4>Function visit()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">tonemap_params</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Visit struct elements.</p>
 <p><a id="toc44"></a></p>
 <h3>Example images</h3>
 <h4>Function make_grid_image()</h4>
@@ -5006,8 +5030,8 @@ in [1.7,10] with or without sun.</p>
 
 <p>Saves an image with variable number of channels.</p>
 <h4>Function save_image()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">save_image</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">image4f</span><span class="o">&amp;</span> <span class="n">hdr</span><span class="p">,</span> <span class="kt">float</span> <span class="n">exposure</span><span class="p">,</span>
-    <span class="kt">float</span> <span class="n">gamma</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">filmic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">save_image</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">image4f</span><span class="o">&amp;</span> <span class="n">hdr</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">tonemap_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -9887,9 +9911,6 @@ empty.</p>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_stdimage_params</span> <span class="p">{</span>
     <span class="n">vec2f</span> <span class="n">offset</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
     <span class="kt">float</span> <span class="n">zoom</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
-    <span class="kt">float</span> <span class="n">exposure</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
-    <span class="kt">float</span> <span class="n">gamma</span> <span class="o">=</span> <span class="mf">2.2f</span><span class="p">;</span>
-    <span class="kt">bool</span> <span class="n">filmic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="n">vec4f</span> <span class="n">background</span> <span class="o">=</span> <span class="n">zero4f</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
@@ -9900,9 +9921,6 @@ empty.</p>
 <li>Members:<ul>
 <li>offset:      Image offset. </li>
 <li>zoom:      Image zoom. </li>
-<li>exposure:      Hdr exposure.  </li>
-<li>gamma:      Hdr gamma.  </li>
-<li>filmic:      Hdr filmic tonemapping. </li>
 <li>background:      Image background. </li>
 </ul>
 </li>
@@ -9910,7 +9928,7 @@ empty.</p>
 <h4>Function draw_image()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">draw_image</span><span class="p">(</span><span class="n">gl_stdimage_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_texture</span><span class="o">&amp;</span> <span class="n">txt</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">win_size</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_stdimage_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">,</span>
-    <span class="kt">bool</span> <span class="n">clear_background</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">tonemap_params</span><span class="o">&amp;</span> <span class="n">tmparams</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">clear_background</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -10052,9 +10070,6 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 <h4>Struct gl_stdsurface_params</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_stdsurface_params</span> <span class="p">{</span>
     <span class="kt">int</span> <span class="n">resolution</span> <span class="o">=</span> <span class="mi">512</span><span class="p">;</span>
-    <span class="kt">float</span> <span class="n">exposure</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-    <span class="kt">float</span> <span class="n">gamma</span> <span class="o">=</span> <span class="mf">2.2f</span><span class="p">;</span>
-    <span class="kt">bool</span> <span class="n">filmic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">wireframe</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">edges</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">edge_offset</span> <span class="o">=</span> <span class="mf">0.01f</span><span class="p">;</span>
@@ -10073,9 +10088,6 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 <ul>
 <li>Members:<ul>
 <li>resolution:      Image resolution.  </li>
-<li>exposure:      Image exposure.  </li>
-<li>gamma:      Image gamma.  </li>
-<li>filmic:      Image filmic tonemapping. </li>
 <li>wireframe:      Draw as wireframe.</li>
 <li>edges:      Draw with overlaid edges</li>
 <li>edge_offset:      Offset for edges. </li>
@@ -10094,7 +10106,7 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
     <span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">*</span><span class="p">,</span> <span class="n">gl_shape</span><span class="o">&gt;&amp;</span> <span class="n">shapes</span><span class="p">,</span>
     <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">*</span><span class="p">,</span> <span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">textures</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_lights</span><span class="o">&amp;</span> <span class="n">lights</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">viewport_size</span><span class="p">,</span> <span class="kt">void</span><span class="o">*</span> <span class="n">highlighted</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">gl_stdsurface_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">gl_stdsurface_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">,</span> <span class="k">const</span> <span class="n">tonemap_params</span><span class="o">&amp;</span> <span class="n">tmparams</span><span class="p">);</span>
 </code></pre></div>
 
 

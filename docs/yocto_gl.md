@@ -34,7 +34,7 @@ and released under the MIT license. Features include:
 - OpenGL utilities to manage textures, buffers and prograrms
 - OpenGL shader for image viewing and GGX microfacet and hair rendering
 
-The current version is 0.3.6.
+The current version is 0.3.7.
 
 ## Credits
 
@@ -5767,15 +5767,6 @@ inline vec3f rgb_to_xyz(const vec3f& rgb);
 
 Convert between CIE XYZ and RGB
 
-#### Function tonemap_image()
-
-~~~ .cpp
-image4b tonemap_image(
-    const image4f& hdr, float exposure, float gamma, bool filmic = false);
-~~~
-
-Tone mapping HDR to LDR images.
-
 #### Function image_over()
 
 ~~~ .cpp
@@ -5799,6 +5790,41 @@ vec4b hsv_to_rgb(const vec4b& hsv);
 ~~~
 
 Converts HSV to RGB.
+
+#### Struct tonemap_params
+
+~~~ .cpp
+struct tonemap_params {
+    float exposure = 1;
+    float gamma = 2.2f;
+    bool filmic = false;
+}
+~~~
+
+Tone mapping parameters
+
+- Members:
+    - exposure:      Hdr exposure.  
+    - gamma:      Hdr gamma.  
+    - filmic:      Hdr filmic tonemapping. 
+
+
+#### Function tonemap_image()
+
+~~~ .cpp
+image4b tonemap_image(const image4f& hdr, const tonemap_params& params);
+~~~
+
+Tone mapping HDR to LDR images.
+
+#### Function visit()
+
+~~~ .cpp
+template <typename Visitor>
+inline void visit(tonemap_params& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
 
 ### Example images
 
@@ -6033,8 +6059,8 @@ Saves an image with variable number of channels.
 #### Function save_image()
 
 ~~~ .cpp
-bool save_image(const std::string& filename, const image4f& hdr, float exposure,
-    float gamma, bool filmic = false);
+bool save_image(const std::string& filename, const image4f& hdr,
+    const tonemap_params& params);
 ~~~
 
 Save a 4 channel HDR or LDR image with tonemapping based on filename.
@@ -11492,9 +11518,6 @@ Draws an image texture the stdimage program.
 struct gl_stdimage_params {
     vec2f offset = {0, 0};
     float zoom = 1;
-    float exposure = 1;
-    float gamma = 2.2f;
-    bool filmic = false;
     vec4f background = zero4f;
 }
 ~~~
@@ -11504,9 +11527,6 @@ Params for stdimage drawing.
 - Members:
     - offset:      Image offset. 
     - zoom:      Image zoom. 
-    - exposure:      Hdr exposure.  
-    - gamma:      Hdr gamma.  
-    - filmic:      Hdr filmic tonemapping. 
     - background:      Image background. 
 
 
@@ -11515,7 +11535,7 @@ Params for stdimage drawing.
 ~~~ .cpp
 inline void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
     const vec2i& win_size, const gl_stdimage_params& params,
-    bool clear_background = true);
+    const tonemap_params& tmparams, bool clear_background = true);
 ~~~
 
 Draws an image texture the stdimage program.
@@ -11689,9 +11709,6 @@ Disables vertex skinning.
 ~~~ .cpp
 struct gl_stdsurface_params {
     int resolution = 512;
-    float exposure = 0;
-    float gamma = 2.2f;
-    bool filmic = false;
     bool wireframe = false;
     bool edges = false;
     float edge_offset = 0.01f;
@@ -11709,9 +11726,6 @@ Params for stdsurface drawing.
 
 - Members:
     - resolution:      Image resolution.  
-    - exposure:      Image exposure.  
-    - gamma:      Image gamma.  
-    - filmic:      Image filmic tonemapping. 
     - wireframe:      Draw as wireframe.
     - edges:      Draw with overlaid edges
     - edge_offset:      Offset for edges. 
@@ -11731,7 +11745,7 @@ void draw_stdsurface_scene(const scene* scn, const camera* cam,
     gl_stdsurface_program& prog, std::unordered_map<shape*, gl_shape>& shapes,
     std::unordered_map<texture*, gl_texture>& textures, const gl_lights& lights,
     const vec2i& viewport_size, void* highlighted,
-    const gl_stdsurface_params& params);
+    const gl_stdsurface_params& params, const tonemap_params& tmparams);
 ~~~
 
 Draw scene with stdsurface program.

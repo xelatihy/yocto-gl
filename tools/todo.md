@@ -5,31 +5,20 @@ Please consider this to be just development notes and not any real planning.
 
 ## Next
 
-- constexpr
 - setup tests
-    - regenerate tests one scene at a time
-        - report error on scene generation
-    - add quiet mode to applications
-    - report fatal errors in commands
-    - image compression with pngquant
-    - lightweight image check with command line diff
-    - make results file by filtering applications output
-    - output filters applications output
-    - consider a tool to run tests
+    - yview test
+    - more ytrace
 
 ## Deployment
 
-- shorter doc formatting similar to sphinx
-- Doxygen and Sphynx
-- insert SHA and version number
-- consider amalgamation for yocto
-- consider amalgamation for ext
+- shorter doc formatting
+- postponed: Doxygen and Sphynx
+- postponed: consider amalgamation for yocto and ext
 
-## Tests
+## Math
 
-- make test suite script
-    - consider fast tests and long tests
-    - can we test easily yView?
+- consider constexpr
+- consider types without constructors
 
 ## Scenes
 
@@ -42,7 +31,7 @@ Please consider this to be just development notes and not any real planning.
     - converted GLTF
 - consider putting OBJ extensions into its own files?
 
-## Shade uses render buffers
+## Postponed: Shade uses render buffers
 
 - implement a framebuffer
 - hardcode textures inside it

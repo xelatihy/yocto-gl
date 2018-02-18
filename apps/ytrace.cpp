@@ -40,9 +40,9 @@ struct app_state {
     ygl::image4f img;
     ygl::image<ygl::trace_pixel> pixels;
     ygl::trace_params params;
+    ygl::tonemap_params tmparams;
     ygl::trace_lights lights;
-    float exposure = 0, gamma = 2.2f;
-    bool filmic = false;
+    ygl::tonemap_params tonemap;
     ygl::vec4f background = {0, 0, 0, 0};
     bool save_batch = false;
     int batch_size = 16;
@@ -63,6 +63,7 @@ int main(int argc, char* argv[]) {
     auto parser =
         ygl::make_parser(argc, argv, "ytrace", "Offline oath tracing");
     app->params = ygl::parse_params(parser, "", app->params);
+    app->tmparams = ygl::parse_params(parser, "", app->tmparams);
     app->batch_size = ygl::parse_opt(parser, "--batch-size", "",
         "Compute images in <val> samples batches", 16);
     app->save_batch = ygl::parse_flag(
@@ -121,8 +122,7 @@ int main(int argc, char* argv[]) {
                     ygl::path_basename(app->imfilename), cur_sample,
                     ygl::path_extension(app->imfilename));
             ygl::log_info("saving image {}", imfilename);
-            save_image(
-                imfilename, app->img, app->exposure, app->gamma, app->filmic);
+            save_image(imfilename, app->img, app->tonemap);
         }
         ygl::log_info(
             "rendering sample {}/{}", cur_sample, app->params.nsamples);
@@ -133,8 +133,7 @@ int main(int argc, char* argv[]) {
 
     // save image
     ygl::log_info("saving image {}", app->imfilename);
-    ygl::save_image(
-        app->imfilename, app->img, app->exposure, app->gamma, app->filmic);
+    ygl::save_image(app->imfilename, app->img, app->tonemap);
 
     // cleanup
     delete app;

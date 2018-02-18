@@ -76,6 +76,7 @@ struct app_state {
     ygl::gl_stdimage_program gl_prog = {};
     std::unordered_map<gimage*, ygl::gl_texture> gl_txt = {};
     ygl::gl_stdimage_params params;
+    ygl::tonemap_params tmparams;
 
     ~app_state() {
         for (auto v : imgs) delete v;
@@ -88,14 +89,15 @@ void draw(ygl::gl_window* win) {
     auto window_size = get_window_size(win);
     auto framebuffer_size = get_framebuffer_size(win);
     ygl::gl_set_viewport(framebuffer_size);
-    ygl::draw_image(
-        app->gl_prog, app->gl_txt.at(img), window_size, app->params);
+    ygl::draw_image(app->gl_prog, app->gl_txt.at(img), window_size, app->params,
+        app->tmparams);
 
     if (ygl::begin_widgets(win, "yimview")) {
         ygl::draw_label_widget(win, "filename", img->filename);
         ygl::draw_label_widget(
             win, "size", "{} x {}", img->width(), img->height());
         ygl::draw_params_widgets(win, "", app->params);
+        ygl::draw_params_widgets(win, "", app->tmparams);
         ygl::draw_imageinspect_widgets(
             win, "", img->hdr, img->ldr, get_mouse_posf(win), app->params);
     }
@@ -167,6 +169,7 @@ int main(int argc, char* argv[]) {
     // command line params
     auto parser = ygl::make_parser(argc, argv, "yimview", "view images");
     app->params = ygl::parse_params(parser, "", app->params);
+    app->tmparams = ygl::parse_params(parser, "", app->tmparams);
     auto filenames = ygl::parse_args(
         parser, "image", "image filename", std::vector<std::string>{});
     // check parsing

@@ -198,10 +198,7 @@ int main(int argc, char* argv[]) {
             save_ldr(output, out);
         }
     } else if (command == "tonemap") {
-        auto exposure =
-            ygl::parse_opt(parser, "--exposure", "-e", "hdr exposure", 0.0f);
-        auto gamma = ygl::parse_opt(parser, "--gamma", "-g", "hdr gamma", 2.2f);
-        auto filmic = ygl::parse_flag(parser, "--filmic", "-F", "hdr filmic");
+        auto params = ygl::parse_params(parser, "", ygl::tonemap_params());
         auto filename =
             ygl::parse_arg(parser, "filename", "input image filename", ""s);
         // check parsing
@@ -211,7 +208,7 @@ int main(int argc, char* argv[]) {
         }
 
         auto img = load_hdr(filename);
-        auto out = tonemap_image(img, exposure, gamma, filmic);
+        auto out = tonemap_image(img, params);
         save_ldr(output, out);
     } else if (command == "bilateral") {
         auto spatial_sigma =
