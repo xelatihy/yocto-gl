@@ -3540,6 +3540,34 @@ namespace ygl {
 /// @defgroup container_ops Container operations
 /// @{
 
+/// Optional value with an API similar to C++17 std::optional. This is a
+/// placeholder used until we switch to the new API.
+template <typename T>
+struct optional {
+    /// Construct to an empty optional.
+    optional() : val{}, valid{false} {}
+    /// Construct to a valid optional.
+    optional(const T& v) : val{v}, valid{true} {}
+
+    /// Check if the optional is valid.
+    explicit operator bool() const { return valid; }
+    /// Check if the optional is valid.
+    bool has_value() const { return valid; }
+
+    /// Data access.
+    T* operator->() { return &val; }
+    /// Data access.
+    const T* operator->() const { return &val; }
+    /// Data access.
+    T& operator*() { return val; }
+    /// Data access.
+    const T& operator*() const { return val; }
+
+   private:
+    T val;
+    bool valid = false;
+};
+
 /// Append a vector to a vector.
 template <typename T>
 inline void append(std::vector<T>& v, const std::vector<T>& vv) {
@@ -5209,28 +5237,25 @@ struct material {
     texture* occ_txt = nullptr;
 
     /// Emission texture info.
-    texture_info* ke_txt_info = nullptr;
+    optional<texture_info> ke_txt_info = {};
     /// Diffuse texture info.
-    texture_info* kd_txt_info = nullptr;
+    optional<texture_info> kd_txt_info = {};
     /// Specular texture info.
-    texture_info* ks_txt_info = nullptr;
+    optional<texture_info> ks_txt_info = {};
     /// Clear coat reflection texture info.
-    texture_info* kr_txt_info = nullptr;
+    optional<texture_info> kr_txt_info = {};
     /// Transmission texture info.
-    texture_info* kt_txt_info = nullptr;
+    optional<texture_info> kt_txt_info = {};
     /// Roughness texture info.
-    texture_info* rs_txt_info = nullptr;
+    optional<texture_info> rs_txt_info = {};
     /// Bump map texture (heighfield) info.
-    texture_info* bump_txt_info = nullptr;
+    optional<texture_info> bump_txt_info = {};
     /// Displacement map texture (heighfield) info.
-    texture_info* disp_txt_info = nullptr;
+    optional<texture_info> disp_txt_info = {};
     /// Normal texture info.
-    texture_info* norm_txt_info = nullptr;
+    optional<texture_info> norm_txt_info = {};
     /// Occlusion texture info.
-    texture_info* occ_txt_info = nullptr;
-
-    /// Cleanup.
-    ~material();
+    optional<texture_info> occ_txt_info = {};
 };
 
 /// Shape data represented as an indexed array. May contain only one of the
@@ -5315,10 +5340,7 @@ struct environment {
     /// Emission texture. @refl_semantic(reference)
     texture* ke_txt = nullptr;
     /// Emission texture info.
-    texture_info* ke_txt_info = nullptr;
-
-    // Cleanup
-    environment();
+    optional<texture_info> ke_txt_info = {};
 };
 
 /// Node in a transform hierarchy.
@@ -5448,7 +5470,7 @@ vec3f eval_norm(const instance* ist, int sid, int eid, const vec2f& euv);
 vec4f eval_texture(const texture* txt, const texture_info& info,
     const vec2f& texcoord, bool srgb = true, const vec4f& def = {1, 1, 1, 1});
 /// Evaluate a texture.
-inline vec4f eval_texture(const texture* txt, const texture_info* info,
+inline vec4f eval_texture(const texture* txt, const optional<texture_info> info,
     const vec2f& texcoord, bool srgb = true, const vec4f& def = {1, 1, 1, 1}) {
     return eval_texture(
         txt, (info) ? *info : texture_info(), texcoord, srgb, def);
@@ -6165,10 +6187,7 @@ struct proc_shape {
     /// @refl_uilimits(-1,10000)
     int num = -1;
     /// Hair generation params.
-    make_hair_params* hair_params = nullptr;
-
-    /// Cleanup
-    ~proc_shape();
+    optional<make_hair_params> hair_params = {};
 };
 
 /// Procedural instance parameters.
@@ -6323,7 +6342,8 @@ std::vector<proc_animation*>& proc_animation_presets();
 /// Test scene presets.
 std::vector<proc_scene*>& proc_scene_presets();
 /// Test scene presets split into objects and lighting and cameras.
-std::vector<std::pair<proc_scene*, std::vector<proc_scene*>>>& proc_split_scene_presets();
+std::vector<std::pair<proc_scene*, std::vector<proc_scene*>>>&
+proc_split_scene_presets();
 
 /// Remove duplicates based on name.
 void remove_duplicates(proc_scene* tscn);

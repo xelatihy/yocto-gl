@@ -3002,25 +3002,6 @@ intersection_point overlap_bvh(
 namespace ygl {
 
 // cleanup
-material::~material() {
-    if (ke_txt_info) delete ke_txt_info;
-    if (kd_txt_info) delete kd_txt_info;
-    if (ks_txt_info) delete ks_txt_info;
-    if (kr_txt_info) delete kr_txt_info;
-    if (kt_txt_info) delete kt_txt_info;
-    if (rs_txt_info) delete rs_txt_info;
-    if (bump_txt_info) delete bump_txt_info;
-    if (disp_txt_info) delete disp_txt_info;
-    if (norm_txt_info) delete norm_txt_info;
-    if (occ_txt_info) delete occ_txt_info;
-}
-
-// cleanup
-environment::environment() {
-    if (ke_txt_info) delete ke_txt_info;
-}
-
-// cleanup
 shape_group::~shape_group() {
     for (auto v : shapes) delete v;
 }
@@ -3746,9 +3727,10 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
         tmap[txt->path] = txt;
     }
 
-    auto make_texture_info = [&tmap](const obj_texture_info& oinfo) {
-        if (oinfo.path == "") return (texture_info*)nullptr;
-        auto info = new texture_info();
+    auto make_texture_info =
+        [&tmap](const obj_texture_info& oinfo) -> optional<texture_info> {
+        if (oinfo.path == "") return optional<texture_info>();
+        auto info = optional<texture_info>(texture_info());
         info->wrap_s = !oinfo.clamp;
         info->wrap_t = !oinfo.clamp;
         info->scale = oinfo.scale;
@@ -4175,7 +4157,8 @@ scene* load_obj_scene(const std::string& filename, const load_options& opts) {
 obj_scene* scene_to_obj(const scene* scn) {
     auto obj = new obj_scene();
 
-    auto make_texture_info = [](const texture* txt, const texture_info* info,
+    auto make_texture_info = [](const texture* txt,
+                                 const optional<texture_info>& info,
                                  bool bump = false) {
         auto oinfo = obj_texture_info();
         if (!txt) return oinfo;
@@ -4505,16 +4488,16 @@ scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
     };
 
     // add a texture
-    auto make_texture_info = [gltf, scn](glTFTextureInfo* ginfo,
-                                 bool normal = false, bool occlusion = false) {
-        auto info = (texture_info*)nullptr;
-        if (!ginfo) return info;
+    auto make_texture_info =
+        [gltf, scn](glTFTextureInfo* ginfo, bool normal = false,
+            bool occlusion = false) -> optional<texture_info> {
+        if (!ginfo) return {};
         auto gtxt = gltf->get(ginfo->index);
-        if (!gtxt || !gtxt->source) return info;
+        if (!gtxt || !gtxt->source) return {};
         auto txt = scn->textures.at((int)gtxt->source);
-        if (!txt) return info;
+        if (!txt) return {};
         auto gsmp = gltf->get(gtxt->sampler);
-        info = new texture_info();
+        auto info = optional<texture_info>(texture_info());
         if (gsmp) {
             info->linear = gsmp->magFilter != glTFSamplerMagFilter::Nearest;
             info->mipmap = gsmp->minFilter != glTFSamplerMinFilter::Linear &&
@@ -4977,8 +4960,8 @@ glTF* scene_to_gltf(
 
     // add a texture and sampler
     auto add_texture_info = [&gltf, &index, scn](const texture* txt,
-                                const texture_info* info, bool norm = false,
-                                bool occ = false) {
+                                const optional<texture_info>& info,
+                                bool norm = false, bool occ = false) {
         if (!txt) return (glTFTextureInfo*)nullptr;
         auto gtxt = new glTFTexture();
         gtxt->name = txt->name;
@@ -10190,11 +10173,6 @@ void make_uvhollowcutsphere1(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
 namespace ygl {
 
 // cleanup
-proc_shape::~proc_shape() {
-    if (hair_params) delete hair_params;
-}
-
-// cleanup
 proc_scene::~proc_scene() {
     for (auto v : cameras) delete v;
     for (auto v : textures) delete v;
@@ -10811,17 +10789,17 @@ std::vector<proc_shape*>& proc_shape_presets() {
     presets.push_back(
         make_test_shape("pointscube", proc_shape_type::pointscube));
     presets.push_back(make_test_shape("hairball1", proc_shape_type::hairball));
-    presets.back()->hair_params = new make_hair_params();
+    presets.back()->hair_params = optional<make_hair_params>{make_hair_params()};
     presets.back()->hair_params->radius = {0.001f, 0.0001f};
     presets.back()->hair_params->length = {0.1f, 0.1f};
     presets.back()->hair_params->noise = {0.5f, 8};
     presets.push_back(make_test_shape("hairball2", proc_shape_type::hairball));
-    presets.back()->hair_params = new make_hair_params();
+    presets.back()->hair_params = optional<make_hair_params>{make_hair_params()};
     presets.back()->hair_params->radius = {0.001f, 0.0001f};
     presets.back()->hair_params->length = {0.1f, 0.1f};
     presets.back()->hair_params->clump = {0.5f, 128};
     presets.push_back(make_test_shape("hairball3", proc_shape_type::hairball));
-    presets.back()->hair_params = new make_hair_params();
+    presets.back()->hair_params = optional<make_hair_params>{make_hair_params()};
     presets.back()->hair_params->radius = {0.001f, 0.0001f};
     presets.back()->hair_params->length = {0.1f, 0.1f};
     presets.push_back(make_test_shape("hairballi", proc_shape_type::sphere));
@@ -10936,12 +10914,9 @@ std::vector<proc_scene*>& proc_scene_presets() {
         throw std::runtime_error("missing texture preset " + name);
     };
     auto make_shape_preset = [](const std::string& name) {
-        auto npshp = (proc_shape*)nullptr;
         for (auto p : proc_shape_presets())
-            if (p->name == name) npshp = new proc_shape(*p);
-        if (npshp->hair_params)
-            npshp->hair_params = new make_hair_params(*npshp->hair_params);
-        return npshp;
+            if (p->name == name) return new proc_shape(*p);
+        return (proc_shape*)nullptr;
     };
     auto make_environment_preset = [](const std::string& name) {
         for (auto p : proc_environment_presets())
@@ -11293,12 +11268,9 @@ proc_split_scene_presets() {
         throw std::runtime_error("missing texture preset " + name);
     };
     auto make_shape_preset = [](const std::string& name) {
-        auto npshp = (proc_shape*)nullptr;
         for (auto p : proc_shape_presets())
-            if (p->name == name) npshp = new proc_shape(*p);
-        if (npshp->hair_params)
-            npshp->hair_params = new make_hair_params(*npshp->hair_params);
-        return npshp;
+            if (p->name == name) return new proc_shape(*p);
+        return (proc_shape*)nullptr;
     };
     auto make_environment_preset = [](const std::string& name) {
         for (auto p : proc_environment_presets())
@@ -14378,8 +14350,21 @@ struct draw_elem_visitor {
             var.type == visit_var_type::color);
     }
 
-    void operator()(texture_info* val, const visit_var& var) {}
-    void operator()(make_hair_params* val, const visit_var& var) {}
+    template<typename T>
+    void operator()(optional<T>& val, const visit_var& var) {
+        if(!val) {
+            if(draw_button_widget(win, "add " + var.name)) {
+                val = optional<T>{T{}};
+            }
+        } else {
+            draw_groupid_widget_begin(win, &val);
+            visit(*val, *this);
+            if(draw_button_widget(win, "del " + var.name)) {
+                val = {};
+            }
+            draw_groupid_widget_end(win);
+        }
+    }
 
     template <typename T>
     void operator()(image<T>& val, const visit_var& var) {
