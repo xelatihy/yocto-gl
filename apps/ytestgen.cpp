@@ -50,8 +50,8 @@ void rmdir(const std::string& dir) {
 #endif
 }
 
-void save_scene(
-    ygl::scene* scn, const std::string& sname, const std::string& dirname) {
+void save_scene(const std::shared_ptr<ygl::scene>& scn,
+    const std::string& sname, const std::string& dirname) {
     auto facevarying = false;
     for (auto sgr : scn->shapes)
         for (auto shp : sgr->shapes)
@@ -74,8 +74,8 @@ void save_test_scene(const std::string& sname, const std::string& basedir) {
             save_scene(scn, sname, dirname);
             return;
         }
-        auto test_scns =
-            std::vector<std::pair<ygl::proc_scene*, ygl::scene*>>();
+        auto test_scns = std::vector<std::pair<std::shared_ptr<ygl::proc_scene>,
+            std::shared_ptr<ygl::scene>>>();
         for (auto& preset : ygl::proc_split_scene_presets()) {
             if (preset.first->name != sname) continue;
             test_scns.push_back(
@@ -96,11 +96,11 @@ void save_test_scene(const std::string& sname, const std::string& basedir) {
         } else if (sname == "shapes") {
             auto scn = test_scns.front().second;
             for (auto sgr : scn->shapes) {
-                auto sscn = new ygl::scene();
-                auto ssgr = new ygl::shape_group();
+                auto sscn = std::make_shared<ygl::scene>();
+                auto ssgr = std::make_shared<ygl::shape_group>();
                 ssgr->name = sgr->name;
                 for (auto shp : sgr->shapes) {
-                    auto sshp = new ygl::shape(*shp);
+                    auto sshp = std::make_shared<ygl::shape>(*shp);
                     sshp->mat = nullptr;
                     ssgr->shapes.push_back(sshp);
                 }
@@ -108,7 +108,6 @@ void save_test_scene(const std::string& sname, const std::string& basedir) {
                 auto shp_name = ygl::partition(sgr->name, "_")[0];
                 auto opts = ygl::save_options();
                 ygl::save_scene(dirname + shp_name + ".obj", sscn, opts);
-                delete sscn;
             }
         } else {
             for (auto& test_scn : test_scns) {
@@ -116,7 +115,6 @@ void save_test_scene(const std::string& sname, const std::string& basedir) {
                 ygl::save_proc_scene(dirname + sname + ".json", test_scn.first);
             }
         }
-        for (auto test_scn : test_scns) delete test_scn.second;
     } catch (std::exception& e) { ygl::log_fatal("error {}", e.what()); }
 }
 

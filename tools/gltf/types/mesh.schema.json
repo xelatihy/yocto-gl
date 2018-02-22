@@ -6,7 +6,7 @@
     "base": "glTFChildOfRootProperty",
     "properties": {
         "primitives": {
-            "type": "std::vector<glTFMeshPrimitive*>",
+            "type": "std::vector<std::shared_ptr<glTFMeshPrimitive>>",
             "description": "An array of primitives, each defining geometry to be rendered with a material.",
             "minItems": 1
         },

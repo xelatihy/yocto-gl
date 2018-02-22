@@ -224,9 +224,9 @@ frame3f xform_to_frame(const json& js, float* focus = nullptr) {
 
 #endif
 
-shape* make_shape(const std::string& type) {
+std::shared_ptr<shape> make_shape(const std::string& type) {
     static auto tcount = std::unordered_map<std::string, int>();
-    auto shp = new shape();
+    auto shp = std::make_shared<shape>();
     shp->name = type + std::to_string(tcount[type]++);
     if (type == "quad") {
         shp->pos = {
@@ -248,7 +248,7 @@ shape* make_shape(const std::string& type) {
     return shp;
 }
 
-shape* load_wo3(const std::string& filename) {
+std::shared_ptr<shape> load_wo3(const std::string& filename) {
     auto fs = fopen(filename.c_str(), "rb");
     if (!fs) throw std::runtime_error("cannot open file " + filename);
 
@@ -277,7 +277,7 @@ shape* load_wo3(const std::string& filename) {
 
     fclose(fs);
 
-    auto shp = new shape();
+    auto shp = std::make_shared<shape>();
     shp->name = path_basename(filename);
     for (auto& vert : verts) {
         shp->pos.push_back(vert.pos);
@@ -289,11 +289,11 @@ shape* load_wo3(const std::string& filename) {
     return shp;
 }
 
-texture* add_texture(const std::string& path, scene* scn) {
-    if (path == "") return (texture*)nullptr;
+std::shared_ptr<texture> add_texture(const std::string& path, const std::shared_ptr<scene>& scn) {
+    if (path == "") return nullptr;
     for (auto t : scn->textures)
         if (t->path == path) return t;
-    auto txt = new texture();
+    auto txt = std::make_shared<texture>();
     txt->name = path;
     txt->path = path;
     scn->textures.push_back(txt);
@@ -322,9 +322,9 @@ auto metal_ior = std::unordered_map<std::string, std::pair<vec3f, vec3f>>{
     {"W", {vec3f(4.3707029924f, 3.3002972445f, 2.9982666528f),
               vec3f(3.5006778591f, 2.6048652781f, 2.2731930614f)}}};
 
-material* add_bsdf(const json& js, scene* scn) {
+std::shared_ptr<material> add_bsdf(const json& js, const std::shared_ptr<scene>& scn) {
     static auto count = 0;
-    auto mat = new material();
+    auto mat = std::make_shared<material>();
     if (js.count("name"))
         mat->name = js.at("name");
     else
@@ -332,10 +332,10 @@ material* add_bsdf(const json& js, scene* scn) {
     mat->double_sided = true;
     auto type = js.at("type").get<std::string>();
     auto albedo = vec3f{1, 1, 1};
-    auto albedo_txt = (texture*)nullptr;
-    auto bump = (texture*)nullptr;
+    auto albedo_txt = std::shared_ptr<texture>();
+    auto bump_txt = std::shared_ptr<texture>();
     auto alpha = vec3f{1, 1, 1};
-    auto alpha_txt = (texture*)nullptr;
+    auto alpha_txt = std::shared_ptr<texture>();
     if (js.count("albedo")) {
         auto& jalbedo = js.at("albedo");
         if (jalbedo.is_string()) {
@@ -353,21 +353,21 @@ material* add_bsdf(const json& js, scene* scn) {
         }
     }
     if (js.count("bump")) {
-        bump = add_texture(js.at("bump").get<std::string>(), scn);
+        bump_txt = add_texture(js.at("bump").get<std::string>(), scn);
     }
     if (type == "null") {
         mat->kd = zero3f;
     } else if (type == "lambert") {
         mat->kd = albedo;
         mat->kd_txt = albedo_txt;
-        mat->bump_txt = bump;
+        mat->bump_txt = bump_txt;
     } else if (type == "plastic" || type == "rough_plastic") {
         mat->kd = albedo;
         mat->kd_txt = albedo_txt;
         mat->ks = vec3f{0.04f, 0.04f, 0.04f};
         mat->rs =
             (js.count("roughness")) ? sqrt(js.at("roughness").get<float>()) : 0;
-        mat->bump_txt = bump;
+        mat->bump_txt = bump_txt;
     } else if (type == "conductor" || type == "rough_conductor") {
         if (js.count("material")) {
             auto ctype = js.at("material").get<std::string>();
@@ -378,16 +378,15 @@ material* add_bsdf(const json& js, scene* scn) {
             mat->ks = albedo;
         }
         mat->rs = (js.count("roughness")) ? js.at("roughness").get<float>() : 0;
-        mat->bump_txt = bump;
+        mat->bump_txt = bump_txt;
     } else if (type == "mirror") {
         mat->ks = albedo;
         mat->rs = 0;
-        mat->bump_txt = bump;
+        mat->bump_txt = bump_txt;
     } else if (type == "transparency") {
         auto base_bsdf = add_bsdf(js.at("base"), scn);
         base_bsdf->op = alpha.x;
         if (alpha_txt) log_warning("missing alpha texture");
-        delete mat;
         mat = base_bsdf;
         // base_bsdf->op_txt = alpha_txt;
     } else if (type == "thinsheet" || type == "dielectric" ||
@@ -396,7 +395,7 @@ material* add_bsdf(const json& js, scene* scn) {
         mat->rs = (js.count("roughness")) ? js.at("roughness").get<float>() : 0;
         mat->kt = albedo;
         mat->kt_txt = albedo_txt;
-        mat->bump_txt = bump;
+        mat->bump_txt = bump_txt;
     } else {
         println("Cannot handle {} material", type);
     }
@@ -404,8 +403,8 @@ material* add_bsdf(const json& js, scene* scn) {
     return mat;
 }
 
-material* add_material(const json& js, scene* scn) {
-    auto mat = (material*)nullptr;
+std::shared_ptr<material> add_material(const json& js, const std::shared_ptr<scene>& scn) {
+    auto mat = std::shared_ptr<material>();
     auto jbsdf = js.at("bsdf");
     if (jbsdf.is_string()) {
         auto name = jbsdf.get<std::string>();
@@ -420,7 +419,7 @@ material* add_material(const json& js, scene* scn) {
     return mat;
 }
 
-scene* load_tungsten(
+std::shared_ptr<scene> load_tungsten(
     const std::string& filename, const std::string& meshdirname) {
     auto dirname = path_dirname(filename);
     auto meshdir = (meshdirname == "") ? dirname : meshdirname;
@@ -438,12 +437,12 @@ scene* load_tungsten(
     }
 
     // create scene
-    auto scn = new scene();
+    auto scn = std::make_shared<scene>();
 
     // convert cameras
     if (js.count("camera")) {
         auto& jcam = js.at("camera");
-        auto cam = new camera();
+        auto cam = std::make_shared<camera>();
         cam->name = "cam";
         if (jcam.count("transform")) {
             cam->frame = xform_to_frame(jcam.at("transform"), &cam->focus);
@@ -480,7 +479,7 @@ scene* load_tungsten(
             auto frame = identity_frame3f;
             if (!jprim.at("transform").empty())
                 frame = xform_to_frame(jprim.at("transform"));
-            auto shp = (shape*)nullptr;
+            auto shp = std::shared_ptr<shape>{};
             if (type == "mesh") {
                 auto path = jprim.at("file").get<std::string>();
                 if (path_extension(path) == ".obj") {
@@ -512,7 +511,7 @@ scene* load_tungsten(
                 for (auto& n : shp->norm) n = transform_direction(frame, n);
             }
             shp->mat = add_material(jprim, scn);
-            auto sgr = new shape_group();
+            auto sgr = std::make_shared<shape_group>();
             sgr->shapes.push_back(shp);
             sgr->name = sgr->shapes.at(0)->name;
             scn->shapes.push_back(sgr);

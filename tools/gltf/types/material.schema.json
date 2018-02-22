@@ -6,26 +6,26 @@
     "base": "glTFChildOfRootProperty",
     "properties": {
         "pbrMetallicRoughness": {
-            "type": "glTFMaterialPbrMetallicRoughness*",
+            "type": "std::shared_ptr<glTFMaterialPbrMetallicRoughness>",
             "description": "A set of parameter values that are used to define the metallic-roughness material model from Physically-Based Rendering (PBR) methodology. When not specified, all the default values of `pbrMetallicRoughness` apply."
         },
         "pbrSpecularGlossiness": {
-            "type": "glTFMaterialPbrSpecularGlossiness*",
+            "type": "std::shared_ptr<glTFMaterialPbrSpecularGlossiness>",
             "description": "A set of parameter values that are used to define the specular-glossiness material model from Physically-Based Rendering (PBR) methodology. When not specified, all the default values of `pbrMetallicRoughness` apply.",
             "extension": "KHR_materials_pbrSpecularGlossiness"
         },
         "normalTexture": {
-            "type": "glTFMaterialNormalTextureInfo*",
+            "type": "std::shared_ptr<glTFMaterialNormalTextureInfo>",
             "description": "The normal map texture.",
             "gltf_detailedDescription": "A tangent space normal map. The texture contains RGB components in linear space. Each texel represents the XYZ components of a normal vector in tangent space. Red [0 to 255] maps to X [-1 to 1]. Green [0 to 255] maps to Y [-1 to 1]. Blue [128 to 255] maps to Z [1/255 to 1]. The normal vectors use OpenGL conventions where +X is right and +Y is up. +Z points toward the viewer."
         },
         "occlusionTexture": {
-            "type": "glTFMaterialOcclusionTextureInfo*",
+            "type": "std::shared_ptr<glTFMaterialOcclusionTextureInfo>",
             "description": "The occlusion map texture.",
             "gltf_detailedDescription": "The occlusion map texture. The occlusion values are sampled from the R channel. Higher values indicate areas that should receive full indirect lighting and lower values indicate no indirect lighting. These values are linear. If other channels are present (GBA), they are ignored for occlusion calculations."
         },
         "emissiveTexture": {
-            "type": "glTFTextureInfo*",
+            "type": "std::shared_ptr<glTFTextureInfo>",
             "description": "The emissive map texture.",
             "gltf_detailedDescription": "The emissive map controls the color and intensity of the light being emitted by the material. This texture contains RGB components in sRGB color space. If a fourth component (A) is present, it is ignored."
         },

@@ -91,16 +91,16 @@ int main(int argc, char** argv) {
     }
 
     // load obj
-    auto scn = std::unique_ptr<ygl::scene>(new ygl::scene());
+    auto scn = std::make_shared<ygl::scene>();
     for (auto filename : filenames) {
-        auto to_merge = std::unique_ptr<ygl::scene>(nullptr);
+        auto to_merge = std::shared_ptr<ygl::scene>(nullptr);
         try {
             auto opts = ygl::load_options();
             opts.load_textures = textures;
             opts.obj_flip_texcoord = !no_flipy_texcoord;
             opts.obj_flip_tr = !no_flip_opacity;
             opts.preserve_quads = true;
-            to_merge = std::unique_ptr<ygl::scene>(load_scene(filename, opts));
+            to_merge = load_scene(filename, opts);
 
         } catch (const std::exception& e) {
             ygl::log_fatal("unable to load file %s with error {}\n",
@@ -114,12 +114,12 @@ int main(int argc, char** argv) {
         if (info) {
             printf("information ------------------------\n");
             printf("filename: %s\n", filename.c_str());
-            std::cout << ygl::compute_stats(to_merge.get());
+            std::cout << ygl::compute_stats(to_merge);
         }
 
         // merge the scene into the other
         if (filenames.size() > 1) {
-            ygl::merge_into(scn.get(), to_merge.get());
+            ygl::merge_into(scn, to_merge);
         } else {
             swap(scn, to_merge);
         }
@@ -129,7 +129,7 @@ int main(int argc, char** argv) {
     if (info && filenames.size() > 1) {
         printf("information ------------------------\n");
         printf("merged\n");
-        std::cout << ygl::compute_stats(scn.get());
+        std::cout << ygl::compute_stats(scn);
     }
 
     // add missing elements
@@ -139,7 +139,7 @@ int main(int argc, char** argv) {
         opts.smooth_normals = add_normals;
         opts.shape_instances = add_scene;
         opts.default_paths = true;
-        ygl::add_elements(scn.get(), opts);
+        ygl::add_elements(scn, opts);
     }
 
     // process geometry
@@ -184,7 +184,7 @@ int main(int argc, char** argv) {
     if (info && scale != 1.0f) {
         printf("post-correction information -------\n");
         printf("output: %s\n", output.c_str());
-        std::cout << ygl::compute_stats(scn.get());
+        std::cout << ygl::compute_stats(scn);
     }
 
     // make a directory if needed
@@ -199,7 +199,7 @@ int main(int argc, char** argv) {
         auto opts = ygl::save_options();
         opts.save_textures = textures;
         opts.gltf_separate_buffers = save_separate_buffers;
-        ygl::save_scene(output, scn.get(), opts);
+        ygl::save_scene(output, scn, opts);
     } catch (const std::exception& e) {
         ygl::log_fatal("unable to save scene %s with error {}\n",
             output.c_str(), e.what());
@@ -207,10 +207,10 @@ int main(int argc, char** argv) {
 
     // validate
     if (validate) {
-        auto vscn = std::unique_ptr<ygl::scene>(ygl::load_scene(output));
+        auto vscn = ygl::load_scene(output);
         if (info) {
             printf("validate information -----------------\n");
-            std::cout << ygl::compute_stats(vscn.get());
+            std::cout << ygl::compute_stats(vscn);
         }
     }
 

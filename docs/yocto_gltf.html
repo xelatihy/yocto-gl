@@ -181,11 +181,10 @@ fully implemented yet (waiting for official demo models).</p>
     <span class="kt">float</span> <span class="n">opacity</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">metallic</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">roughness</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-    <span class="n">gltf_texture</span><span class="o">*</span> <span class="n">base_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">gltf_texture</span><span class="o">*</span> <span class="n">metallic_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">gltf_texture_info</span><span class="o">*</span> <span class="n">base_txt_info</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">gltf_texture_info</span><span class="o">*</span> <span class="n">metallic_txt_info</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="o">~</span><span class="n">gltf_material_metallic_roughness</span><span class="p">();</span> 
+    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_texture</span><span class="o">&gt;</span> <span class="n">base_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_texture</span><span class="o">&gt;</span> <span class="n">metallic_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_texture_info</span><span class="o">&gt;</span> <span class="n">base_txt_info</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_texture_info</span><span class="o">&gt;</span> <span class="n">metallic_txt_info</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -201,7 +200,6 @@ fully implemented yet (waiting for official demo models).</p>
 <li>metallic_txt:      metallic-roughness texture (n/a, roughness, metallic, n/a)</li>
 <li>base_txt_info:      texture information for base_txt</li>
 <li>metallic_txt_info:      texture information for metallic_txt</li>
-<li>~gltf_material_metallic_roughness():      cleanup</li>
 </ul>
 </li>
 </ul>
@@ -211,11 +209,10 @@ fully implemented yet (waiting for official demo models).</p>
     <span class="kt">float</span> <span class="n">opacity</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
     <span class="n">vec3f</span> <span class="n">specular</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
     <span class="kt">float</span> <span class="n">glossiness</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
-    <span class="n">gltf_texture</span><span class="o">*</span> <span class="n">diffuse_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">gltf_texture</span><span class="o">*</span> <span class="n">specular_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">gltf_texture_info</span><span class="o">*</span> <span class="n">diffuse_txt_info</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">gltf_texture_info</span><span class="o">*</span> <span class="n">specular_txt_info</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="o">~</span><span class="n">gltf_material_specular_glossiness</span><span class="p">();</span> 
+    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_texture</span><span class="o">&gt;</span> <span class="n">diffuse_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_texture</span><span class="o">&gt;</span> <span class="n">specular_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_texture_info</span><span class="o">&gt;</span> <span class="n">diffuse_txt_info</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_texture_info</span><span class="o">&gt;</span> <span class="n">specular_txt_info</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -231,7 +228,6 @@ fully implemented yet (waiting for official demo models).</p>
 <li>specular_txt:      specular-glossiness texture (spec.x, spec.y, spec.z, gloss)</li>
 <li>diffuse_txt_info:      texture information for base_txt</li>
 <li>specular_txt_info:      texture information for metallic_txt</li>
-<li>~gltf_material_specular_glossiness():      cleanup</li>
 </ul>
 </li>
 </ul>
@@ -239,16 +235,17 @@ fully implemented yet (waiting for official demo models).</p>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gltf_material</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="n">vec3f</span> <span class="n">emission</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
-    <span class="n">gltf_texture</span><span class="o">*</span> <span class="n">emission_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">gltf_texture_info</span><span class="o">*</span> <span class="n">emission_txt_info</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">gltf_material_metallic_roughness</span><span class="o">*</span> <span class="n">metallic_roughness</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">gltf_material_specular_glossiness</span><span class="o">*</span> <span class="n">specular_glossiness</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">gltf_texture</span><span class="o">*</span> <span class="n">occlusion_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">gltf_texture</span><span class="o">*</span> <span class="n">normal_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">gltf_texture_info</span><span class="o">*</span> <span class="n">occlusion_txt_info</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">gltf_texture_info</span><span class="o">*</span> <span class="n">normal_txt_info</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_texture</span><span class="o">&gt;</span> <span class="n">emission_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_texture_info</span><span class="o">&gt;</span> <span class="n">emission_txt_info</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_material_metallic_roughness</span><span class="o">&gt;</span> <span class="n">metallic_roughness</span> <span class="o">=</span>
+        <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_material_specular_glossiness</span><span class="o">&gt;</span> <span class="n">specular_glossiness</span> <span class="o">=</span>
+        <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_texture</span><span class="o">&gt;</span> <span class="n">occlusion_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_texture</span><span class="o">&gt;</span> <span class="n">normal_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_texture_info</span><span class="o">&gt;</span> <span class="n">occlusion_txt_info</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_texture_info</span><span class="o">&gt;</span> <span class="n">normal_txt_info</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">double_sided</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
-    <span class="o">~</span><span class="n">gltf_material</span><span class="p">();</span> 
 <span class="p">}</span>
 </code></pre></div>
 
@@ -272,7 +269,6 @@ avoid.</p>
 <li>occlusion_txt_info:      texture information for collusion_txt</li>
 <li>normal_txt_info:      texture information for normal_txt</li>
 <li>double_sided:      double sided</li>
-<li>~gltf_material():      cleanup</li>
 </ul>
 </li>
 </ul>
@@ -299,7 +295,7 @@ avoid.</p>
 <h4>Struct gltf_shape</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gltf_shape</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
-    <span class="n">gltf_material</span><span class="o">*</span> <span class="n">mat</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_material</span><span class="o">&gt;</span> <span class="n">mat</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span> <span class="n">pos</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span> <span class="n">norm</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span> <span class="n">texcoord</span><span class="p">;</span>
@@ -312,8 +308,7 @@ avoid.</p>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">points</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;</span> <span class="n">lines</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span> <span class="n">triangles</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">gltf_shape_morph</span><span class="o">*&gt;</span> <span class="n">morph_targets</span><span class="p">;</span>
-    <span class="o">~</span><span class="n">gltf_shape</span><span class="p">();</span> 
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_shape_morph</span><span class="o">&gt;&gt;</span> <span class="n">morph_targets</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -336,7 +331,6 @@ avoid.</p>
 <li>lines:      line elements</li>
 <li>triangles:      triangle elements</li>
 <li>morph_targets:      morph targets</li>
-<li>~gltf_shape():      cleanup</li>
 </ul>
 </li>
 </ul>
@@ -344,8 +338,7 @@ avoid.</p>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gltf_mesh</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">path</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">gltf_shape</span><span class="o">*&gt;</span> <span class="n">shapes</span><span class="p">;</span>
-    <span class="o">~</span><span class="n">gltf_mesh</span><span class="p">();</span> 
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_shape</span><span class="o">&gt;&gt;</span> <span class="n">shapes</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -356,23 +349,22 @@ avoid.</p>
 <li>name:      name</li>
 <li>path:      path (only used when writing files on disk with glTF)</li>
 <li>shapes:      primitives references</li>
-<li>~gltf_mesh():      cleanup</li>
 </ul>
 </li>
 </ul>
 <h4>Struct gltf_node</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gltf_node</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
-    <span class="n">gltf_camera</span><span class="o">*</span> <span class="n">cam</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">gltf_mesh</span><span class="o">*</span> <span class="n">msh</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">gltf_skin</span><span class="o">*</span> <span class="n">skn</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">gltf_node</span><span class="o">*&gt;</span> <span class="n">children</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_camera</span><span class="o">&gt;</span> <span class="n">cam</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_mesh</span><span class="o">&gt;</span> <span class="n">msh</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_skin</span><span class="o">&gt;</span> <span class="n">skn</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_node</span><span class="o">&gt;&gt;</span> <span class="n">children</span><span class="p">;</span>
     <span class="n">mat4f</span> <span class="n">matrix</span> <span class="o">=</span> <span class="n">identity_mat4f</span><span class="p">;</span>
     <span class="n">quat4f</span> <span class="n">rotation</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">};</span>
     <span class="n">vec3f</span> <span class="n">scale</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">};</span>
     <span class="n">vec3f</span> <span class="n">translation</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">morph_weights</span><span class="p">;</span>
-    <span class="n">gltf_node</span><span class="o">*</span> <span class="n">parent</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">weak_ptr</span><span class="o">&lt;</span><span class="n">gltf_node</span><span class="o">&gt;</span> <span class="n">parent</span> <span class="o">=</span> <span class="p">{};</span>
     <span class="n">mat4f</span> <span class="nf">xform</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
     <span class="n">mat4f</span> <span class="nf">local_xform</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
     <span class="n">mat4f</span> <span class="nf">skin_xform</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
@@ -430,7 +422,7 @@ avoid.</p>
 <h4>Struct gltf_animation</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gltf_animation</span> <span class="p">{</span>
     <span class="n">gltf_animation_interpolation</span> <span class="n">interp</span> <span class="o">=</span> <span class="n">gltf_animation_interpolation</span><span class="o">::</span><span class="n">step</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">gltf_node</span><span class="o">*&gt;</span> <span class="n">nodes</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_node</span><span class="o">&gt;&gt;</span> <span class="n">nodes</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">time</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span> <span class="n">translation</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">quat4f</span><span class="o">&gt;</span> <span class="n">rotation</span><span class="p">;</span>
@@ -457,8 +449,7 @@ avoid.</p>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gltf_animation_group</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">path</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">gltf_animation</span><span class="o">*&gt;</span> <span class="n">animations</span><span class="p">;</span>
-    <span class="o">~</span><span class="n">gltf_animation_group</span><span class="p">();</span> 
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_animation</span><span class="o">&gt;&gt;</span> <span class="n">animations</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -469,7 +460,6 @@ avoid.</p>
 <li>name:      Name</li>
 <li>path:      path (only used when writing files on disk with glTF)</li>
 <li>animations:      Times</li>
-<li>~gltf_animation_group():      cleanup</li>
 </ul>
 </li>
 </ul>
@@ -478,8 +468,8 @@ avoid.</p>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">path</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">mat4f</span><span class="o">&gt;</span> <span class="n">pose_matrices</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">gltf_node</span><span class="o">*&gt;</span> <span class="n">joints</span><span class="p">;</span>
-    <span class="n">gltf_node</span><span class="o">*</span> <span class="n">root</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_node</span><span class="o">&gt;&gt;</span> <span class="n">joints</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_node</span><span class="o">&gt;</span> <span class="n">root</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -498,7 +488,7 @@ avoid.</p>
 <h4>Struct gltf_scene</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gltf_scene</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">gltf_node</span><span class="o">*&gt;</span> <span class="n">nodes</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_node</span><span class="o">&gt;&gt;</span> <span class="n">nodes</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -513,16 +503,15 @@ avoid.</p>
 </ul>
 <h4>Struct gltf_scene_group</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gltf_scene_group</span> <span class="p">{</span>
-    <span class="n">gltf_scene</span><span class="o">*</span> <span class="n">default_scene</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">gltf_camera</span><span class="o">*&gt;</span> <span class="n">cameras</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">gltf_material</span><span class="o">*&gt;</span> <span class="n">materials</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">gltf_texture</span><span class="o">*&gt;</span> <span class="n">textures</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">gltf_mesh</span><span class="o">*&gt;</span> <span class="n">meshes</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">gltf_scene</span><span class="o">*&gt;</span> <span class="n">scenes</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">gltf_node</span><span class="o">*&gt;</span> <span class="n">nodes</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">gltf_animation_group</span><span class="o">*&gt;</span> <span class="n">animations</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">gltf_skin</span><span class="o">*&gt;</span> <span class="n">skins</span><span class="p">;</span>
-    <span class="o">~</span><span class="n">gltf_scene_group</span><span class="p">();</span> 
+    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_scene</span><span class="o">&gt;</span> <span class="n">default_scene</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_camera</span><span class="o">&gt;&gt;</span> <span class="n">cameras</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_material</span><span class="o">&gt;&gt;</span> <span class="n">materials</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_texture</span><span class="o">&gt;&gt;</span> <span class="n">textures</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_mesh</span><span class="o">&gt;&gt;</span> <span class="n">meshes</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_scene</span><span class="o">&gt;&gt;</span> <span class="n">scenes</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_node</span><span class="o">&gt;&gt;</span> <span class="n">nodes</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_animation_group</span><span class="o">&gt;&gt;</span> <span class="n">animations</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_skin</span><span class="o">&gt;&gt;</span> <span class="n">skins</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -540,12 +529,11 @@ Scenes and nodes are missing for mesh-only assets.</p>
 <li>nodes:      nodes</li>
 <li>animations:      nodes</li>
 <li>skins:      skins</li>
-<li>~gltf_scene_group():      cleanup</li>
 </ul>
 </li>
 </ul>
 <h4>Function load_scenes()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">gltf_scene_group</span><span class="o">*</span> <span class="nf">load_scenes</span><span class="p">(</span>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_scene_group</span><span class="o">&gt;</span> <span class="n">load_scenes</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">load_textures</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">skip_missing</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
 </code></pre></div>
 
@@ -565,7 +553,7 @@ Scenes and nodes are missing for mesh-only assets.</p>
 </ul>
 <h4>Function save_scenes()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">save_scenes</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">buffer_uri</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">gltf_scene_group</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">save_textures</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_scene_group</span><span class="o">&gt;&amp;</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">save_textures</span><span class="p">,</span>
     <span class="kt">bool</span> <span class="n">separate_buffers</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
@@ -582,50 +570,54 @@ Scenes and nodes are missing for mesh-only assets.</p>
 </li>
 </ul>
 <h4>Function update_node_hierarchy()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_node_hierarchy</span><span class="p">(</span><span class="n">gltf_scene_group</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_node_hierarchy</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_scene_group</span><span class="o">&gt;&amp;</span> <span class="n">scn</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Update node hierarchy</p>
 <h4>Function update_transforms()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_transforms</span><span class="p">(</span><span class="n">gltf_scene_group</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_transforms</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_scene_group</span><span class="o">&gt;&amp;</span> <span class="n">scn</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Update node trasforms</p>
 <h4>Function update_animated_transforms()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_animated_transforms</span><span class="p">(</span><span class="n">gltf_scene_group</span><span class="o">*</span> <span class="n">scns</span><span class="p">,</span> <span class="kt">float</span> <span class="n">time</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_animated_transforms</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_scene_group</span><span class="o">&gt;&amp;</span> <span class="n">scns</span><span class="p">,</span> <span class="kt">float</span> <span class="n">time</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Update animated node</p>
 <h4>Function get_mesh_nodes()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">gltf_node</span><span class="o">*&gt;</span> <span class="n">get_mesh_nodes</span><span class="p">(</span><span class="k">const</span> <span class="n">gltf_scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_node</span><span class="o">&gt;&gt;</span> <span class="n">get_mesh_nodes</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_scene</span><span class="o">&gt;&amp;</span> <span class="n">scn</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Get a list of nodes with meshes</p>
 <h4>Function get_camera_nodes()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">gltf_node</span><span class="o">*&gt;</span> <span class="n">get_camera_nodes</span><span class="p">(</span><span class="k">const</span> <span class="n">gltf_scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_node</span><span class="o">&gt;&gt;</span> <span class="n">get_camera_nodes</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_scene</span><span class="o">&gt;&amp;</span> <span class="n">scn</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Get a list of nodes with cameras</p>
 <h4>Function get_animation_bounds()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">vec2f</span> <span class="nf">get_animation_bounds</span><span class="p">(</span><span class="k">const</span> <span class="n">gltf_scene_group</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">vec2f</span> <span class="nf">get_animation_bounds</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_scene_group</span><span class="o">&gt;&amp;</span> <span class="n">scn</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Animation times</p>
 <h4>Function get_skin_transforms()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">mat4f</span><span class="o">&gt;</span> <span class="n">get_skin_transforms</span><span class="p">(</span><span class="k">const</span> <span class="n">gltf_skin</span><span class="o">*</span> <span class="n">sk</span><span class="p">,</span> <span class="k">const</span> <span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">xform</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">mat4f</span><span class="o">&gt;</span> <span class="n">get_skin_transforms</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_skin</span><span class="o">&gt;&amp;</span> <span class="n">sk</span><span class="p">,</span> <span class="k">const</span> <span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">xform</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Skin transforms (local-to-object) from the node transform that instances the
 skin</p>
 <h4>Function compute_morphing_deformation()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">compute_morphing_deformation</span><span class="p">(</span><span class="k">const</span> <span class="n">gltf_shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">compute_morphing_deformation</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_shape</span><span class="o">&gt;&amp;</span> <span class="n">shp</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">weights</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;&amp;</span> <span class="n">tangsp</span><span class="p">);</span>
 </code></pre></div>
@@ -633,80 +625,82 @@ skin</p>
 
 <p>Compute shape morphing</p>
 <h4>Function compute_scene_bounds()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">bbox3f</span> <span class="nf">compute_scene_bounds</span><span class="p">(</span><span class="k">const</span> <span class="n">gltf_scene_group</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">bbox3f</span> <span class="nf">compute_scene_bounds</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_scene_group</span><span class="o">&gt;&amp;</span> <span class="n">scn</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Computes a scene bounding box</p>
 <h4>Function add_normals()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">add_normals</span><span class="p">(</span><span class="n">gltf_scene_group</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">add_normals</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_scene_group</span><span class="o">&gt;&amp;</span> <span class="n">scn</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Add missing data to the scene.</p>
 <h4>Function add_radius()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">add_radius</span><span class="p">(</span><span class="n">gltf_scene_group</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">float</span> <span class="n">radius</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">add_radius</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_scene_group</span><span class="o">&gt;&amp;</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">float</span> <span class="n">radius</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Add missing data to the scene.</p>
 <h4>Function add_tangent_space()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">add_tangent_space</span><span class="p">(</span><span class="n">gltf_scene_group</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">add_tangent_space</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_scene_group</span><span class="o">&gt;&amp;</span> <span class="n">scn</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Add missing data to the scene.</p>
 <h4>Function add_nodes()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">add_nodes</span><span class="p">(</span><span class="n">gltf_scene_group</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">add_nodes</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_scene_group</span><span class="o">&gt;&amp;</span> <span class="n">scn</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Add missing data to the scene.</p>
 <h4>Function add_scene()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">add_scene</span><span class="p">(</span><span class="n">gltf_scene_group</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">add_scene</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_scene_group</span><span class="o">&gt;&amp;</span> <span class="n">scn</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Add missing data to the scene.</p>
 <h4>Function add_texture_data()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">add_texture_data</span><span class="p">(</span><span class="n">gltf_scene_group</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">add_texture_data</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_scene_group</span><span class="o">&gt;&amp;</span> <span class="n">scn</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Add missing data to the scene.</p>
 <h4>Function add_names()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">add_names</span><span class="p">(</span><span class="n">gltf_scene_group</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">add_names</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_scene_group</span><span class="o">&gt;&amp;</span> <span class="n">scn</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Add missing data to the scene.</p>
 <h4>Function add_default_cameras()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">add_default_cameras</span><span class="p">(</span><span class="n">gltf_scene_group</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">add_default_cameras</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_scene_group</span><span class="o">&gt;&amp;</span> <span class="n">scn</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Add a default camera that views the entire scene.</p>
 <h4>Function add_unique_path_names()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">add_unique_path_names</span><span class="p">(</span>
-    <span class="n">gltf_scene_group</span><span class="o">*</span> <span class="n">scns</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">buffer_uri</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">add_unique_path_names</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_scene_group</span><span class="o">&gt;&amp;</span> <span class="n">scns</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">buffer_uri</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set unique path names for outputting separate buffers</p>
 <h4>Function add_spec_gloss()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">add_spec_gloss</span><span class="p">(</span><span class="n">gltf_scene_group</span><span class="o">*</span> <span class="n">scns</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">add_spec_gloss</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_scene_group</span><span class="o">&gt;&amp;</span> <span class="n">scns</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Convert materials to spec gloss</p>
 <h4>Function gltf_to_scenes()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">gltf_scene_group</span><span class="o">*</span> <span class="nf">gltf_to_scenes</span><span class="p">(</span><span class="k">const</span> <span class="n">glTF</span><span class="o">*</span> <span class="n">gltf</span><span class="p">,</span> <span class="kt">int</span> <span class="n">scene_idx</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_scene_group</span><span class="o">&gt;</span> <span class="n">gltf_to_scenes</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">glTF</span><span class="o">&gt;&amp;</span> <span class="n">gltf</span><span class="p">,</span> <span class="kt">int</span> <span class="n">scene_idx</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Convert a gltf asset to flattened group of scene.</p>
 <h4>Function scenes_to_gltf()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">glTF</span><span class="o">*</span> <span class="nf">scenes_to_gltf</span><span class="p">(</span><span class="k">const</span> <span class="n">gltf_scene_group</span><span class="o">*</span> <span class="n">fl_gltf</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">glTF</span><span class="o">&gt;</span> <span class="n">scenes_to_gltf</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gltf_scene_group</span><span class="o">&gt;&amp;</span> <span class="n">fl_gltf</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">buffer_uri</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">separate_buffers</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
@@ -716,7 +710,7 @@ creates a separate buffer for each each and animation and
 prepend buffer_uri to its name.</p>
 <h4>Function validate_gltf()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;&gt;</span> <span class="n">validate_gltf</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">glTF</span><span class="o">*</span> <span class="n">gltf</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">glTF</span><span class="o">&gt;&amp;</span> <span class="n">gltf</span><span class="p">);</span>
 </code></pre></div>
 
 

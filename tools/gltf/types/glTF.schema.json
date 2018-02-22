@@ -18,72 +18,72 @@
             "minItems": 1
         },
         "accessors": {
-            "type": "std::vector<glTFAccessor*>",
+            "type": "std::vector<std::shared_ptr<glTFAccessor>>",
             "item": "glTFAccessor",
             "description": "An array of accessors.",
             "minItems": 1,
             "gltf_detailedDescription": "An array of accessors.  An accessor is a typed view into a bufferView."
         },
         "animations": {
-            "type": "std::vector<glTFAnimation*>",
+            "type": "std::vector<std::shared_ptr<glTFAnimation>>",
             "item": "glTFAnimation",
             "description": "An array of keyframe animations.",
             "minItems": 1
         },
         "asset": {
-            "type": "glTFAsset*",
+            "type": "std::shared_ptr<glTFAsset>",
             "description": "Metadata about the glTF asset."
         },
         "buffers": {
-            "type": "std::vector<glTFBuffer*>",
+            "type": "std::vector<std::shared_ptr<glTFBuffer>>",
             "item": "glTFBuffer",
             "description": "An array of buffers.",
             "minItems": 1,
             "gltf_detailedDescription": "An array of buffers.  A buffer points to binary geometry, animation, or skins."
         },
         "bufferViews": {
-            "type": "std::vector<glTFBufferView*>",
+            "type": "std::vector<std::shared_ptr<glTFBufferView>>",
             "item": "glTFBufferView",
             "description": "An array of bufferViews.",
             "minItems": 1,
             "gltf_detailedDescription": "An array of bufferViews.  A bufferView is a view into a buffer generally representing a subset of the buffer."
         },
         "cameras": {
-            "type": "std::vector<glTFCamera*>",
+            "type": "std::vector<std::shared_ptr<glTFCamera>>",
             "item": "glTFCamera",
             "description": "An array of cameras.",
             "minItems": 1,
             "gltf_detailedDescription": "An array of cameras.  A camera defines a projection matrix."
         },
         "images": {
-            "type": "std::vector<glTFImage*>",
+            "type": "std::vector<std::shared_ptr<glTFImage>>",
             "item": "glTFImage",
             "description": "An array of images.",
             "minItems": 1,
             "gltf_detailedDescription": "An array of images.  An image defines data used to create a texture."
         },
         "materials": {
-            "type": "std::vector<glTFMaterial*>",
+            "type": "std::vector<std::shared_ptr<glTFMaterial>>",
             "item": "glTFMaterial",
             "description": "An array of materials.",
             "minItems": 1,
             "gltf_detailedDescription": "An array of materials.  A material defines the appearance of a primitive."
         },
         "meshes": {
-            "type": "std::vector<glTFMesh*>",
+            "type": "std::vector<std::shared_ptr<glTFMesh>>",
             "item": "glTFMesh",
             "description": "An array of meshes.",
             "minItems": 1,
             "gltf_detailedDescription": "An array of meshes.  A mesh is a set of primitives to be rendered."
         },
         "nodes": {
-            "type": "std::vector<glTFNode*>",
+            "type": "std::vector<std::shared_ptr<glTFNode>>",
             "item": "glTFNode",
             "description": "An array of nodes.",
             "minItems": 1
         },
         "samplers": {
-            "type": "std::vector<glTFSampler*>",
+            "type": "std::vector<std::shared_ptr<glTFSampler>>",
             "item": "glTFSampler",
             "description": "An array of samplers.",
             "minItems": 1,
@@ -94,20 +94,20 @@
             "description": "The index of the default scene."
         },
         "scenes": {
-            "type": "std::vector<glTFScene*>",
+            "type": "std::vector<std::shared_ptr<glTFScene>>",
             "item": "glTFScene",
             "description": "An array of scenes.",
             "minItems": 1
         },
         "skins": {
-            "type": "std::vector<glTFSkin*>",
+            "type": "std::vector<std::shared_ptr<glTFSkin>>",
             "item": "glTFSkin",
             "description": "An array of skins.",
             "minItems": 1,
             "gltf_detailedDescription": "An array of skins.  A skin is defined by joints and matrices."
         },
         "textures": {
-            "type": "std::vector<glTFTexture*>",
+            "type": "std::vector<std::shared_ptr<glTFTexture>>",
             "item": "glTFTexture",
             "description": "An array of textures.",
             "minItems": 1

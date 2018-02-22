@@ -55,36 +55,32 @@ struct gimage {
 };
 
 // Loads a generic image
-inline gimage load_gimage(const std::string& filename) {
-    auto img = gimage();
-    img.filename = filename;
+inline std::shared_ptr<gimage> load_gimage(const std::string& filename) {
+    auto img = std::make_shared<gimage>();
+    img->filename = filename;
     if (ygl::is_hdr_filename(filename)) {
-        img.hdr = ygl::load_image4f(filename);
+        img->hdr = ygl::load_image4f(filename);
     } else {
-        img.ldr = ygl::load_image4b(filename);
+        img->ldr = ygl::load_image4b(filename);
     }
-    if (img.hdr.empty() && img.ldr.empty()) {
-        throw std::runtime_error("cannot load image " + img.filename);
+    if (img->hdr.empty() && img->ldr.empty()) {
+        throw std::runtime_error("cannot load image " + img->filename);
     }
     return img;
 }
 
 struct app_state {
-    std::vector<gimage*> imgs;
+    std::vector<std::shared_ptr<gimage>> imgs;
     int cur_img = 0;
 
     ygl::gl_stdimage_program gl_prog = {};
-    std::unordered_map<gimage*, ygl::gl_texture> gl_txt = {};
+    std::unordered_map<std::shared_ptr<gimage>, ygl::gl_texture> gl_txt = {};
     ygl::gl_stdimage_params params;
     ygl::tonemap_params tmparams;
-
-    ~app_state() {
-        for (auto v : imgs) delete v;
-    }
 };
 
-void draw(ygl::gl_window* win) {
-    auto app = (app_state*)get_user_pointer(win);
+void draw(const std::shared_ptr<ygl::gl_window>& win,
+    const std::shared_ptr<app_state>& app) {
     auto img = app->imgs[app->cur_img];
     auto window_size = get_window_size(win);
     auto framebuffer_size = get_framebuffer_size(win);
@@ -106,11 +102,12 @@ void draw(ygl::gl_window* win) {
     ygl::swap_buffers(win);
 }
 
-void run_ui(app_state* app) {
+void run_ui(const std::shared_ptr<app_state>& app) {
     // window
     auto win = ygl::make_window(
-        app->imgs[0]->width(), app->imgs[0]->height(), "yimview", app);
-    ygl::set_window_callbacks(win, nullptr, nullptr, draw);
+        app->imgs[0]->width(), app->imgs[0]->height(), "yimview");
+    ygl::set_window_callbacks(
+        win, nullptr, nullptr, [app, win]() { draw(win, app); });
 
     // window values
     int mouse_button = 0;
@@ -153,18 +150,15 @@ void run_ui(app_state* app) {
         }
 
         // draw
-        draw(win);
+        draw(win, app);
 
         // event hadling
         ygl::wait_events(win);
     }
-
-    ygl::clear_window(win);
-    delete win;
 }
 
 int main(int argc, char* argv[]) {
-    auto app = new app_state();
+    auto app = std::make_shared<app_state>();
 
     // command line params
     auto parser = ygl::make_parser(argc, argv, "yimview", "view images");
@@ -181,13 +175,12 @@ int main(int argc, char* argv[]) {
     // loading images
     for (auto filename : filenames) {
         ygl::log_info("loading {}", filename);
-        app->imgs.push_back(new gimage(load_gimage(filename)));
+        app->imgs.push_back(load_gimage(filename));
     }
 
     // run ui
     run_ui(app);
 
     // done
-    delete app;
     return 0;
 }

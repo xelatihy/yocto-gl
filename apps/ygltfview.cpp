@@ -48,21 +48,21 @@ struct shape_vbo {
 // OpenGL state
 struct shade_state {
     ygl::gl_stdsurface_program prog = {};
-    std::map<void*, ygl::gl_texture> txt;
-    std::map<void*, shape_vbo> vbo;
+    std::map<std::shared_ptr<void>, ygl::gl_texture> txt;
+    std::map<std::shared_ptr<void>, shape_vbo> vbo;
     ygl::gl_lights lights;
 };
 
 // Application state
 struct app_state {
     // scene data
-    ygl::gltf_scene_group* gscn = nullptr;
+    std::shared_ptr<ygl::gltf_scene_group> gscn = nullptr;
 
     // view camera
-    ygl::camera* view_cam = nullptr;
+    std::shared_ptr<ygl::camera> view_cam = nullptr;
 
     // view/scene selection
-    ygl::gltf_node* gcam = nullptr;
+    std::shared_ptr<ygl::gltf_node> gcam = nullptr;
 
     // time and animation
     float time = 0;
@@ -95,23 +95,18 @@ struct app_state {
     // shade
     bool wireframe = false, edges = false;
     bool alpha_cutout = true;
-    shade_state* shstate = nullptr;
+    std::shared_ptr<shade_state> shstate = nullptr;
 
     // navigation
     bool navigation_fps = false;
 
     // editing support
-    void* selection = nullptr;
-
-    ~app_state() {
-        if (shstate) delete shstate;
-        if (view_cam) delete view_cam;
-    }
+    std::shared_ptr<void> selection = nullptr;
 };
 
 // loads a scene either OBJ or GLTF
-inline bool load_scene(
-    app_state* scn, const std::string& filename, bool instances, bool radius) {
+inline bool load_scene(const std::shared_ptr<app_state>& scn,
+    const std::string& filename, bool instances, bool radius) {
     // load scene
     auto ext = ygl::path_extension(filename);
     try {
@@ -136,7 +131,7 @@ inline bool load_scene(
     }
     if (!ygl::get_camera_nodes(scn->gscn->default_scene).empty()) {
         auto cam = ygl::get_camera_nodes(scn->gscn->default_scene)[0];
-        scn->view_cam = new ygl::camera();
+        scn->view_cam = std::make_shared<ygl::camera>();
         scn->view_cam->frame = ygl::mat_to_frame(ygl::mat4f(cam->xform()));
         scn->view_cam->yfov = cam->cam->yfov;
         scn->view_cam->aspect = cam->cam->aspect;
@@ -154,7 +149,7 @@ inline bool load_scene(
         auto bbox_msize = length(bbox_size) / 2;
         // auto bbox_msize =
         //     ygl::max(bbox_size[0], ygl::max(bbox_size[1], bbox_size[2]));
-        scn->view_cam = new ygl::camera();
+        scn->view_cam = std::make_shared<ygl::camera>();
         auto camera_dir = ygl::vec3f{1.5f, 0.8f, 1.5f};
         auto from = camera_dir * bbox_msize + center;
         auto to = center;
@@ -189,8 +184,8 @@ inline bool load_scene(
 }
 
 // Init shading
-inline void update_shade_lights(
-    shade_state* st, const ygl::gltf_scene_group* scn) {
+inline void update_shade_lights(const std::shared_ptr<shade_state>& st,
+    const std::shared_ptr<ygl::gltf_scene_group>& scn) {
     st->lights.pos.clear();
     st->lights.ke.clear();
     st->lights.type.clear();
@@ -230,8 +225,8 @@ inline void update_shade_lights(
 }
 
 // Init shading
-inline void update_shade_state(
-    const ygl::gltf_scene_group* sc, shade_state* st) {
+inline void update_shade_state(const std::shared_ptr<ygl::gltf_scene_group>& sc,
+    const std::shared_ptr<shade_state>& st) {
     if (!is_program_valid(st->prog)) st->prog = ygl::make_stdsurface_program();
     st->txt[nullptr] = {};
     for (auto txt : sc->textures) {
@@ -279,18 +274,21 @@ inline void update_shade_state(
 }
 
 // Draw a mesh
-inline void shade_mesh(const ygl::gltf_mesh* msh, const ygl::gltf_skin* sk,
-    const std::vector<float>& morph_weights, shade_state* st,
-    const ygl::mat4f& xform, bool highlighted, bool edges, bool wireframe,
-    bool cutout) {
-    static auto default_material = ygl::gltf_material();
-    default_material.metallic_roughness =
-        new ygl::gltf_material_metallic_roughness();
-    default_material.metallic_roughness->base = {0.2f, 0.2f, 0.2f};
+inline void shade_mesh(const std::shared_ptr<ygl::gltf_mesh>& msh,
+    const std::shared_ptr<ygl::gltf_skin>& sk,
+    const std::vector<float>& morph_weights,
+    const std::shared_ptr<shade_state>& st, const ygl::mat4f& xform,
+    bool highlighted, bool edges, bool wireframe, bool cutout) {
+    static auto default_material = std::make_shared<ygl::gltf_material>();
+    if (!default_material->metallic_roughness) {
+        default_material->metallic_roughness =
+            std::make_shared<ygl::gltf_material_metallic_roughness>();
+        default_material->metallic_roughness->base = {0.2f, 0.2f, 0.2f};
+    }
 
-    auto txt_info =
-        [st](ygl::gltf_texture* gtxt,
-            const ygl::gltf_texture_info* ginfo) -> ygl::gl_texture_info {
+    auto txt_info = [st](const std::shared_ptr<ygl::gltf_texture>& gtxt,
+                        const std::shared_ptr<ygl::gltf_texture_info>& ginfo)
+        -> ygl::gl_texture_info {
         auto info = ygl::gl_texture_info();
         if (!gtxt) return info;
         info.txt = st->txt.at(gtxt);
@@ -312,7 +310,7 @@ inline void shade_mesh(const ygl::gltf_mesh* msh, const ygl::gltf_skin* sk,
         set_stdsurface_highlight(
             st->prog, (highlighted) ? ygl::vec4f{1, 1, 0, 1} : ygl::zero4f);
 
-        auto mat = (shp->mat) ? shp->mat : &default_material;
+        auto mat = (shp->mat) ? shp->mat : default_material;
         float op = 1;
         if (mat->specular_glossiness) {
             auto sg = mat->specular_glossiness;
@@ -405,11 +403,13 @@ inline void shade_mesh(const ygl::gltf_mesh* msh, const ygl::gltf_skin* sk,
 }
 
 // Display a scene
-inline void shade_scene(const ygl::gltf_scene_group* scns, shade_state* st,
-    const ygl::camera* ycam, const ygl::gltf_node* gcam, void* selection,
-    const ygl::vec4f& background, float exposure, float gamma, bool filmic,
-    bool wireframe, bool edges, bool cutout, bool camera_lights,
-    const ygl::vec3f& amb) {
+inline void shade_scene(const std::shared_ptr<ygl::gltf_scene_group>& scns,
+    const std::shared_ptr<shade_state>& st,
+    const std::shared_ptr<ygl::camera>& ycam,
+    const std::shared_ptr<ygl::gltf_node>& gcam,
+    const std::shared_ptr<void>& selection, const ygl::vec4f& background,
+    float exposure, float gamma, bool filmic, bool wireframe, bool edges,
+    bool cutout, bool camera_lights, const ygl::vec3f& amb) {
     // update state
     update_shade_state(scns, st);
 
@@ -478,8 +478,8 @@ inline void shade_scene(const ygl::gltf_scene_group* scns, shade_state* st,
     ygl::gl_enable_wireframe(false);
 }
 
-void draw_scene(ygl::gl_window* win) {
-    auto scn = (app_state*)get_user_pointer(win);
+void draw_scene(const std::shared_ptr<ygl::gl_window>& win,
+    const std::shared_ptr<app_state>& scn) {
     auto window_size = get_window_size(win);
     auto aspect = (float)window_size.x / (float)window_size.y;
     scn->view_cam->aspect = aspect;
@@ -490,33 +490,40 @@ void draw_scene(ygl::gl_window* win) {
         scn->amb);
 }
 
-void draw_tree_widgets(ygl::gl_window* win, const std::string& lbl,
-    ygl::gltf_camera* cam, void*& selection) {
+void draw_tree_widgets(const std::shared_ptr<ygl::gl_window>& win,
+    const std::string& lbl, const std::shared_ptr<ygl::gltf_camera>& cam,
+    std::shared_ptr<void>& selection) {
     draw_tree_widget_leaf(win, lbl + cam->name, selection, cam);
 }
 
-void draw_tree_widgets(ygl::gl_window* win, const std::string& lbl,
-    ygl::gltf_texture* txt, void*& selection) {
+void draw_tree_widgets(const std::shared_ptr<ygl::gl_window>& win,
+    const std::string& lbl, const std::shared_ptr<ygl::gltf_texture>& txt,
+    std::shared_ptr<void>& selection) {
     draw_tree_widget_leaf(win, lbl + txt->path, selection, txt);
 }
 
-void draw_tree_widgets(ygl::gl_window* win, const std::string& lbl,
-    ygl::gltf_material_metallic_roughness* mat, void*& selection) {
+void draw_tree_widgets(const std::shared_ptr<ygl::gl_window>& win,
+    const std::string& lbl,
+    const std::shared_ptr<ygl::gltf_material_metallic_roughness>& mat,
+    std::shared_ptr<void>& selection) {
     if (mat->base_txt) draw_tree_widgets(win, "kb: ", mat->base_txt, selection);
     if (mat->metallic_txt)
         draw_tree_widgets(win, "km: ", mat->metallic_txt, selection);
 }
 
-void draw_tree_widgets(ygl::gl_window* win, const std::string& lbl,
-    ygl::gltf_material_specular_glossiness* mat, void*& selection) {
+void draw_tree_widgets(const std::shared_ptr<ygl::gl_window>& win,
+    const std::string& lbl,
+    const std::shared_ptr<ygl::gltf_material_specular_glossiness>& mat,
+    std::shared_ptr<void>& selection) {
     if (mat->diffuse_txt)
         draw_tree_widgets(win, "kd: ", mat->diffuse_txt, selection);
     if (mat->specular_txt)
         draw_tree_widgets(win, "ks: ", mat->specular_txt, selection);
 }
 
-void draw_tree_widgets(ygl::gl_window* win, const std::string& lbl,
-    ygl::gltf_material* mat, void*& selection) {
+void draw_tree_widgets(const std::shared_ptr<ygl::gl_window>& win,
+    const std::string& lbl, const std::shared_ptr<ygl::gltf_material>& mat,
+    std::shared_ptr<void>& selection) {
     if (draw_tree_widget_begin(win, lbl + mat->name, selection, mat)) {
         if (mat->emission_txt)
             draw_tree_widgets(win, "ke: ", mat->emission_txt, selection);
@@ -532,16 +539,18 @@ void draw_tree_widgets(ygl::gl_window* win, const std::string& lbl,
     }
 }
 
-void draw_tree_widgets(ygl::gl_window* win, const std::string& lbl,
-    ygl::gltf_shape* shp, void*& selection) {
+void draw_tree_widgets(const std::shared_ptr<ygl::gl_window>& win,
+    const std::string& lbl, const std::shared_ptr<ygl::gltf_shape>& shp,
+    std::shared_ptr<void>& selection) {
     if (draw_tree_widget_begin(win, lbl + shp->name, selection, shp)) {
         if (shp->mat) draw_tree_widgets(win, "mat: ", shp->mat, selection);
         draw_tree_widget_end(win);
     }
 }
 
-void draw_tree_widgets(ygl::gl_window* win, const std::string& lbl,
-    ygl::gltf_mesh* msh, void*& selection) {
+void draw_tree_widgets(const std::shared_ptr<ygl::gl_window>& win,
+    const std::string& lbl, const std::shared_ptr<ygl::gltf_mesh>& msh,
+    std::shared_ptr<void>& selection) {
     if (draw_tree_widget_begin(win, lbl + msh->name, selection, msh)) {
         auto sid = 0;
         for (auto shp : msh->shapes) {
@@ -552,8 +561,9 @@ void draw_tree_widgets(ygl::gl_window* win, const std::string& lbl,
     }
 }
 
-void draw_tree_widgets(ygl::gl_window* win, const std::string& lbl,
-    ygl::gltf_node* node, void*& selection) {
+void draw_tree_widgets(const std::shared_ptr<ygl::gl_window>& win,
+    const std::string& lbl, const std::shared_ptr<ygl::gltf_node>& node,
+    std::shared_ptr<void>& selection) {
     if (draw_tree_widget_begin(win, lbl + node->name, selection, node)) {
         if (node->msh) draw_tree_widgets(win, "mesh: ", node->msh, selection);
         if (node->cam) draw_tree_widgets(win, "cam: ", node->cam, selection);
@@ -563,8 +573,9 @@ void draw_tree_widgets(ygl::gl_window* win, const std::string& lbl,
     }
 }
 
-void draw_tree_widgets(ygl::gl_window* win, const std::string& lbl,
-    ygl::gltf_scene* scn, void*& selection) {
+void draw_tree_widgets(const std::shared_ptr<ygl::gl_window>& win,
+    const std::string& lbl, const std::shared_ptr<ygl::gltf_scene>& scn,
+    std::shared_ptr<void>& selection) {
     if (draw_tree_widget_begin(win, lbl + scn->name, selection, scn)) {
         for (auto node : scn->nodes)
             draw_tree_widgets(win, "", node, selection);
@@ -572,8 +583,9 @@ void draw_tree_widgets(ygl::gl_window* win, const std::string& lbl,
     }
 }
 
-void draw_tree_widgets(ygl::gl_window* win, const std::string& lbl,
-    ygl::gltf_animation* anim, void*& selection) {
+void draw_tree_widgets(const std::shared_ptr<ygl::gl_window>& win,
+    const std::string& lbl, const std::shared_ptr<ygl::gltf_animation>& anim,
+    std::shared_ptr<void>& selection) {
     if (draw_tree_widget_begin(win, lbl, selection, anim)) {
         auto sid = 0;
         for (auto node : anim->nodes) {
@@ -584,8 +596,10 @@ void draw_tree_widgets(ygl::gl_window* win, const std::string& lbl,
     }
 }
 
-void draw_tree_widgets(ygl::gl_window* win, const std::string& lbl,
-    ygl::gltf_animation_group* anims, void*& selection) {
+void draw_tree_widgets(const std::shared_ptr<ygl::gl_window>& win,
+    const std::string& lbl,
+    const std::shared_ptr<ygl::gltf_animation_group>& anims,
+    std::shared_ptr<void>& selection) {
     if (draw_tree_widget_begin(win, lbl + anims->name, selection, anims)) {
         auto sid = 0;
         for (auto anim : anims->animations) {
@@ -596,16 +610,18 @@ void draw_tree_widgets(ygl::gl_window* win, const std::string& lbl,
     }
 }
 
-void draw_tree_widgets(ygl::gl_window* win, const std::string& lbl,
-    ygl::gltf_skin* skin, void*& selection) {
+void draw_tree_widgets(const std::shared_ptr<ygl::gl_window>& win,
+    const std::string& lbl, const std::shared_ptr<ygl::gltf_skin>& skin,
+    std::shared_ptr<void>& selection) {
     if (draw_tree_widget_begin(win, lbl + skin->name, selection, skin)) {
         draw_tree_widgets(win, "skeleton", skin->root, selection);
         draw_tree_widget_end(win);
     }
 }
 
-void draw_tree_widgets(ygl::gl_window* win, const std::string& lbl,
-    ygl::gltf_scene_group* oscn, void*& selection) {
+void draw_tree_widgets(const std::shared_ptr<ygl::gl_window>& win,
+    const std::string& lbl, const std::shared_ptr<ygl::gltf_scene_group>& oscn,
+    std::shared_ptr<void>& selection) {
     if (draw_tree_widget_begin(win, lbl + "scenes")) {
         for (auto scn : oscn->scenes)
             draw_tree_widgets(win, "", scn, selection);
@@ -626,7 +642,8 @@ void draw_tree_widgets(ygl::gl_window* win, const std::string& lbl,
 
     if (draw_tree_widget_begin(win, lbl + "nodes")) {
         for (auto node : oscn->nodes) {
-            if (!node->parent) draw_tree_widgets(win, "", node, selection);
+            if (!node->parent.lock())
+                draw_tree_widgets(win, "", node, selection);
         }
         draw_tree_widget_end(win);
     }
@@ -656,8 +673,11 @@ void draw_tree_widgets(ygl::gl_window* win, const std::string& lbl,
     }
 }
 
-void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
-    ygl::gltf_texture* txt, void*& selection, const shade_state* state) {
+void draw_elem_widgets(const std::shared_ptr<ygl::gl_window>& win,
+    std::shared_ptr<ygl::gltf_scene_group>& gscn,
+    const std::shared_ptr<ygl::gltf_texture>& txt,
+    std::shared_ptr<void>& selection,
+    const std::shared_ptr<shade_state>& state) {
     if (selection != txt) return;
 
     draw_separator_widget(win);
@@ -671,8 +691,11 @@ void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
     }
 }
 
-void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
-    ygl::gltf_texture_info* info, void*& selection, const shade_state* state) {
+void draw_elem_widgets(const std::shared_ptr<ygl::gl_window>& win,
+    std::shared_ptr<ygl::gltf_scene_group>& gscn,
+    const std::shared_ptr<ygl::gltf_texture_info>& info,
+    std::shared_ptr<void>& selection,
+    const std::shared_ptr<shade_state>& state) {
     static const auto wrap_names =
         std::vector<std::pair<std::string, ygl::gltf_texture_wrap>>{
             {"repeat", ygl::gltf_texture_wrap::repeat},
@@ -709,11 +732,14 @@ void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
     draw_indent_widget_end(win);
 }
 
-void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
-    ygl::gltf_material_metallic_roughness* mat, void*& selection,
-    const shade_state* state) {
-    auto txt_names = std::vector<std::pair<std::string, ygl::gltf_texture*>>{
-        {"<none>", nullptr}};
+void draw_elem_widgets(const std::shared_ptr<ygl::gl_window>& win,
+    std::shared_ptr<ygl::gltf_scene_group>& gscn,
+    const std::shared_ptr<ygl::gltf_material_metallic_roughness>& mat,
+    std::shared_ptr<void>& selection,
+    const std::shared_ptr<shade_state>& state) {
+    auto txt_names =
+        std::vector<std::pair<std::string, std::shared_ptr<ygl::gltf_texture>>>{
+            {"<none>", nullptr}};
     for (auto txt : gscn->textures) txt_names.push_back({txt->path, txt});
 
     draw_value_widget(win, "mr base", mat->base, 0, 1);
@@ -728,11 +754,14 @@ void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
         draw_elem_widgets(win, gscn, mat->metallic_txt_info, selection, state);
 }
 
-void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
-    ygl::gltf_material_specular_glossiness* mat, void*& selection,
-    const shade_state* state) {
-    auto txt_names = std::vector<std::pair<std::string, ygl::gltf_texture*>>{
-        {"<none>", nullptr}};
+void draw_elem_widgets(const std::shared_ptr<ygl::gl_window>& win,
+    std::shared_ptr<ygl::gltf_scene_group>& gscn,
+    const std::shared_ptr<ygl::gltf_material_specular_glossiness>& mat,
+    std::shared_ptr<void>& selection,
+    const std::shared_ptr<shade_state>& state) {
+    auto txt_names =
+        std::vector<std::pair<std::string, std::shared_ptr<ygl::gltf_texture>>>{
+            {"<none>", nullptr}};
     for (auto txt : gscn->textures) txt_names.push_back({txt->path, txt});
 
     draw_value_widget(win, "sg diffuse", mat->diffuse, 0, 1);
@@ -747,12 +776,16 @@ void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
         draw_elem_widgets(win, gscn, mat->specular_txt_info, selection, state);
 }
 
-void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
-    ygl::gltf_material* mat, void*& selection, const shade_state* state) {
+void draw_elem_widgets(const std::shared_ptr<ygl::gl_window>& win,
+    std::shared_ptr<ygl::gltf_scene_group>& gscn,
+    const std::shared_ptr<ygl::gltf_material>& mat,
+    std::shared_ptr<void>& selection,
+    const std::shared_ptr<shade_state>& state) {
     if (selection != mat) return;
 
-    auto txt_names = std::vector<std::pair<std::string, ygl::gltf_texture*>>{
-        {"<none>", nullptr}};
+    auto txt_names =
+        std::vector<std::pair<std::string, std::shared_ptr<ygl::gltf_texture>>>{
+            {"<none>", nullptr}};
     for (auto txt : gscn->textures) txt_names.push_back({txt->path, txt});
 
     draw_separator_widget(win);
@@ -773,7 +806,7 @@ void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
     } else {
         if (draw_button_widget(win, "add metallic roughness")) {
             mat->metallic_roughness =
-                new ygl::gltf_material_metallic_roughness();
+                std::make_shared<ygl::gltf_material_metallic_roughness>();
         }
     }
     if (mat->specular_glossiness) {
@@ -783,16 +816,20 @@ void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
     } else {
         if (draw_button_widget(win, "add specular glossiness")) {
             mat->specular_glossiness =
-                new ygl::gltf_material_specular_glossiness();
+                std::make_shared<ygl::gltf_material_specular_glossiness>();
         }
     }
 }
 
-void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
-    ygl::gltf_shape* shp, void*& selection, const shade_state* state) {
+void draw_elem_widgets(const std::shared_ptr<ygl::gl_window>& win,
+    std::shared_ptr<ygl::gltf_scene_group>& gscn,
+    const std::shared_ptr<ygl::gltf_shape>& shp,
+    std::shared_ptr<void>& selection,
+    const std::shared_ptr<shade_state>& state) {
     if (selection != shp) return;
 
-    auto mat_names = std::vector<std::pair<std::string, ygl::gltf_material*>>{
+    auto mat_names = std::vector<
+        std::pair<std::string, std::shared_ptr<ygl::gltf_material>>>{
         {"<none>", nullptr}};
     for (auto mat : gscn->materials) mat_names.push_back({mat->name, mat});
 
@@ -808,8 +845,11 @@ void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
         draw_label_widget(win, "points", (int)shp->points.size());
 }
 
-void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
-    ygl::gltf_mesh* msh, void*& selection, const shade_state* state) {
+void draw_elem_widgets(const std::shared_ptr<ygl::gl_window>& win,
+    std::shared_ptr<ygl::gltf_scene_group>& gscn,
+    const std::shared_ptr<ygl::gltf_mesh>& msh,
+    std::shared_ptr<void>& selection,
+    const std::shared_ptr<shade_state>& state) {
     if (selection != msh) return;
     draw_separator_widget(win);
     draw_label_widget(win, "name", msh->name);
@@ -818,8 +858,11 @@ void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
     }
 }
 
-void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
-    ygl::gltf_camera* cam, void*& selection, const shade_state* state) {
+void draw_elem_widgets(const std::shared_ptr<ygl::gl_window>& win,
+    std::shared_ptr<ygl::gltf_scene_group>& gscn,
+    const std::shared_ptr<ygl::gltf_camera>& cam,
+    std::shared_ptr<void>& selection,
+    const std::shared_ptr<shade_state>& state) {
     if (selection != cam) return;
     draw_separator_widget(win);
     draw_label_widget(win, "name", cam->name);
@@ -829,8 +872,11 @@ void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
     draw_value_widget(win, "aperture", cam->aperture, 0, 1);
 }
 
-void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
-    ygl::gltf_animation* anim, void*& selection, const shade_state* state) {
+void draw_elem_widgets(const std::shared_ptr<ygl::gl_window>& win,
+    std::shared_ptr<ygl::gltf_scene_group>& gscn,
+    const std::shared_ptr<ygl::gltf_animation>& anim,
+    std::shared_ptr<void>& selection,
+    const std::shared_ptr<shade_state>& state) {
     if (selection != anim) return;
     auto interp_name = std::map<ygl::gltf_animation_interpolation, std::string>{
         {ygl::gltf_animation_interpolation::step, "step"},
@@ -838,8 +884,9 @@ void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
         {ygl::gltf_animation_interpolation::catmull_rom, "catmull-rom spline"},
         {ygl::gltf_animation_interpolation::cubic, "cubic spline"},
     };
-    auto node_names = std::vector<std::pair<std::string, ygl::gltf_node*>>{
-        {"<none>", nullptr}};
+    auto node_names =
+        std::vector<std::pair<std::string, std::shared_ptr<ygl::gltf_node>>>{
+            {"<none>", nullptr}};
     for (auto node : gscn->nodes) node_names.push_back({node->name, node});
     draw_separator_widget(win);
     draw_label_widget(win, "interpolation", interp_name.at(anim->interp));
@@ -847,13 +894,15 @@ void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
     draw_label_widget(win, "num translation", (int)anim->translation.size());
     draw_label_widget(win, "num rotation", (int)anim->rotation.size());
     draw_label_widget(win, "num scale", (int)anim->scale.size());
-    auto selected_node = (ygl::gltf_node*)nullptr;
+    auto selected_node = (std::shared_ptr<ygl::gltf_node>)nullptr;
     draw_combo_widget(win, "", selected_node, node_names);
 }
 
-void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
-    ygl::gltf_animation_group* anims, void*& selection,
-    const shade_state* state) {
+void draw_elem_widgets(const std::shared_ptr<ygl::gl_window>& win,
+    std::shared_ptr<ygl::gltf_scene_group>& gscn,
+    const std::shared_ptr<ygl::gltf_animation_group>& anims,
+    std::shared_ptr<void>& selection,
+    const std::shared_ptr<shade_state>& state) {
     if (selection != anims) return;
     draw_separator_widget(win);
     draw_label_widget(win, "name", anims->name);
@@ -862,22 +911,30 @@ void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
     }
 }
 
-void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
-    ygl::gltf_skin* skin, void*& selection, const shade_state* state) {
+void draw_elem_widgets(const std::shared_ptr<ygl::gl_window>& win,
+    std::shared_ptr<ygl::gltf_scene_group>& gscn,
+    const std::shared_ptr<ygl::gltf_skin>& skin,
+    std::shared_ptr<void>& selection,
+    const std::shared_ptr<shade_state>& state) {
     if (selection != skin) return;
     draw_separator_widget(win);
     draw_label_widget(win, "name", skin->name);
 }
 
-void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
-    ygl::gltf_node* node, void*& selection, const shade_state* state) {
+void draw_elem_widgets(const std::shared_ptr<ygl::gl_window>& win,
+    std::shared_ptr<ygl::gltf_scene_group>& gscn,
+    const std::shared_ptr<ygl::gltf_node>& node,
+    std::shared_ptr<void>& selection,
+    const std::shared_ptr<shade_state>& state) {
     if (selection != node) return;
 
-    auto msh_names = std::vector<std::pair<std::string, ygl::gltf_mesh*>>{
-        {"<none>", nullptr}};
+    auto msh_names =
+        std::vector<std::pair<std::string, std::shared_ptr<ygl::gltf_mesh>>>{
+            {"<none>", nullptr}};
     for (auto msh : gscn->meshes) msh_names.push_back({msh->name, msh});
-    auto cam_names = std::vector<std::pair<std::string, ygl::gltf_camera*>>{
-        {"<none>", nullptr}};
+    auto cam_names =
+        std::vector<std::pair<std::string, std::shared_ptr<ygl::gltf_camera>>>{
+            {"<none>", nullptr}};
     for (auto cam : gscn->cameras) cam_names.push_back({cam->name, cam});
 
     draw_separator_widget(win);
@@ -890,8 +947,10 @@ void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
     draw_value_widget(win, "matrix", node->matrix, -10, 10);
 }
 
-void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
-    void*& selection, const shade_state* state) {
+void draw_elem_widgets(const std::shared_ptr<ygl::gl_window>& win,
+    std::shared_ptr<ygl::gltf_scene_group>& gscn,
+    std::shared_ptr<void>& selection,
+    const std::shared_ptr<shade_state>& state) {
     for (auto cam : gscn->cameras) {
         draw_elem_widgets(win, gscn, cam, selection, state);
     }
@@ -927,8 +986,10 @@ void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
     }
 }
 
-void draw_scene_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
-    void*& selection, const shade_state* state) {
+void draw_scene_widgets(const std::shared_ptr<ygl::gl_window>& win,
+    std::shared_ptr<ygl::gltf_scene_group>& gscn,
+    std::shared_ptr<void>& selection,
+    const std::shared_ptr<shade_state>& state) {
     draw_scroll_widget_begin(win, "model", 240, false);
     draw_tree_widgets(win, "", gscn, selection);
     draw_scroll_widget_end(win);
@@ -936,13 +997,13 @@ void draw_scene_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
 }
 
 #ifndef YSCENE_SIMULATE_HACK
-void simulate_step(app_state* scene) {}
+void simulate_step(const std::shared_ptr<app_state>& scene) {}
 #else
-void simulate_step(app_state* scene);
+void simulate_step(const std::shared_ptr<app_state>& scene);
 #endif
 
-void draw_widgets(ygl::gl_window* win) {
-    auto scn = (app_state*)get_user_pointer(win);
+void draw_widgets(const std::shared_ptr<ygl::gl_window>& win,
+    const std::shared_ptr<app_state>& scn) {
     if (begin_widgets(win, "yview")) {
         draw_label_widget(win, "scene", scn->filename);
         if (scn->time_range != ygl::zero2f) {
@@ -951,9 +1012,9 @@ void draw_widgets(ygl::gl_window* win) {
             draw_value_widget(win, "play animation", scn->animate);
         }
         if (scn->gscn->default_scene) {
-            auto camera_names =
-                std::vector<std::pair<std::string, ygl::gltf_node*>>{
-                    {"<view>", nullptr}};
+            auto camera_names = std::vector<
+                std::pair<std::string, std::shared_ptr<ygl::gltf_node>>>{
+                {"<view>", nullptr}};
             for (auto cam : ygl::get_camera_nodes(scn->gscn->default_scene)) {
                 camera_names.push_back({cam->name, cam});
             }
@@ -982,8 +1043,8 @@ void draw_widgets(ygl::gl_window* win) {
     end_widgets(win);
 }
 
-void parse_cmdline(app_state* scene, int argc, char** argv, const char* name,
-    const char* help, bool simulation, bool trace) {
+void parse_cmdline(std::shared_ptr<app_state>& scene, int argc, char** argv,
+    const char* name, const char* help, bool simulation, bool trace) {
     using namespace std::string_literals;
 
     // parse command line
@@ -1023,15 +1084,15 @@ void parse_cmdline(app_state* scene, int argc, char** argv, const char* name,
 }
 
 // init draw with shading
-void shade_init(ygl::gl_window* win) {
-    auto scn = (app_state*)get_user_pointer(win);
-    scn->shstate = new shade_state();
+void shade_init(const std::shared_ptr<ygl::gl_window>& win,
+    const std::shared_ptr<app_state>& scn) {
+    scn->shstate = std::make_shared<shade_state>();
     update_shade_state(scn->gscn, scn->shstate);
 }
 
 // draw with shading
-void shade_draw(ygl::gl_window* win) {
-    auto scn = (app_state*)get_user_pointer(win);
+void shade_draw(const std::shared_ptr<ygl::gl_window>& win,
+    const std::shared_ptr<app_state>& scn) {
     if (scn->gscn) {
         ygl::update_animated_transforms(scn->gscn, scn->time);
         ygl::update_transforms(scn->gscn);
@@ -1041,13 +1102,13 @@ void shade_draw(ygl::gl_window* win) {
     ygl::gl_set_viewport(fwh);
 
     ygl::gl_clear_buffers();
-    draw_scene(win);
-    draw_widgets(win);
+    draw_scene(win, scn);
+    draw_widgets(win, scn);
     swap_buffers(win);
     if (scn->shstate->lights.pos.empty()) scn->camera_lights = true;
 }
 
-bool update(app_state* scn) {
+bool update(const std::shared_ptr<app_state>& scn) {
     // advance time
     if (scn->animate && scn->time_range != ygl::zero2f) {
         if (scn->time >= scn->time_range.y) {
@@ -1061,13 +1122,14 @@ bool update(app_state* scn) {
 }
 
 // run ui loop
-void run_ui(app_state* app, int w, int h) {
+void run_ui(const std::shared_ptr<app_state>& app, int w, int h) {
     // window
-    auto win = ygl::make_window(w, h, "ygltfview | " + app->filename, app);
-    set_window_callbacks(win, nullptr, nullptr, shade_draw);
+    auto win = ygl::make_window(w, h, "ygltfview | " + app->filename);
+    set_window_callbacks(
+        win, nullptr, nullptr, [win, app]() { shade_draw(win, app); });
 
     // load textures
-    shade_init(win);
+    shade_init(win, app);
 
     // init widget
     init_widgets(win);
@@ -1080,7 +1142,7 @@ void run_ui(app_state* app, int w, int h) {
         }
 
         // draw
-        shade_draw(win);
+        shade_draw(win, app);
 
         // update
         update(app);
@@ -1088,12 +1150,10 @@ void run_ui(app_state* app, int w, int h) {
         // event hadling
         poll_events(win);
     }
-
-    clear_window(win);
 }
 
-void draw_custom_widgets(ygl::gl_window* win) {
-    auto scn = (app_state*)get_user_pointer(win);
+void draw_custom_widgets(const std::shared_ptr<ygl::gl_window>& win,
+    const std::shared_ptr<app_state>& scn) {
     if (scn->time_range != ygl::zero2f) {
         draw_value_widget(
             win, "time", scn->time, scn->time_range.x, scn->time_range.y);
@@ -1103,7 +1163,7 @@ void draw_custom_widgets(ygl::gl_window* win) {
 
 int main(int argc, char* argv[]) {
     // create empty scene
-    auto scn = new app_state();
+    auto scn = std::make_shared<app_state>();
 
     // params
     parse_cmdline(
@@ -1117,9 +1177,6 @@ int main(int argc, char* argv[]) {
     auto width = (int)std::round(scn->view_cam->aspect * scn->resolution);
     auto height = scn->resolution;
     run_ui(scn, width, height);
-
-    // clear
-    delete scn;
 
     // done
     return 0;
