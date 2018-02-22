@@ -161,11 +161,10 @@ struct gltf_material_metallic_roughness {
     float opacity = 1;
     float metallic = 0;
     float roughness = 0;
-    gltf_texture* base_txt = nullptr;
-    gltf_texture* metallic_txt = nullptr;
-    gltf_texture_info* base_txt_info = nullptr;
-    gltf_texture_info* metallic_txt_info = nullptr;
-    ~gltf_material_metallic_roughness(); 
+    std::shared_ptr<gltf_texture> base_txt = nullptr;
+    std::shared_ptr<gltf_texture> metallic_txt = nullptr;
+    std::shared_ptr<gltf_texture_info> base_txt_info = nullptr;
+    std::shared_ptr<gltf_texture_info> metallic_txt_info = nullptr;
 }
 ~~~
 
@@ -180,7 +179,6 @@ Material PBR metallic roughness
     - metallic_txt:      metallic-roughness texture (n/a, roughness, metallic, n/a)
     - base_txt_info:      texture information for base_txt
     - metallic_txt_info:      texture information for metallic_txt
-    - ~gltf_material_metallic_roughness():      cleanup
 
 
 #### Struct gltf_material_specular_glossiness
@@ -191,11 +189,10 @@ struct gltf_material_specular_glossiness {
     float opacity = 1;
     vec3f specular = {0, 0, 0};
     float glossiness = 1;
-    gltf_texture* diffuse_txt = nullptr;
-    gltf_texture* specular_txt = nullptr;
-    gltf_texture_info* diffuse_txt_info = nullptr;
-    gltf_texture_info* specular_txt_info = nullptr;
-    ~gltf_material_specular_glossiness(); 
+    std::shared_ptr<gltf_texture> diffuse_txt = nullptr;
+    std::shared_ptr<gltf_texture> specular_txt = nullptr;
+    std::shared_ptr<gltf_texture_info> diffuse_txt_info = nullptr;
+    std::shared_ptr<gltf_texture_info> specular_txt_info = nullptr;
 }
 ~~~
 
@@ -210,7 +207,6 @@ Material PBR specular glossiness
     - specular_txt:      specular-glossiness texture (spec.x, spec.y, spec.z, gloss)
     - diffuse_txt_info:      texture information for base_txt
     - specular_txt_info:      texture information for metallic_txt
-    - ~gltf_material_specular_glossiness():      cleanup
 
 
 #### Struct gltf_material
@@ -219,16 +215,17 @@ Material PBR specular glossiness
 struct gltf_material {
     std::string name = "";
     vec3f emission = {0, 0, 0};
-    gltf_texture* emission_txt = nullptr;
-    gltf_texture_info* emission_txt_info = nullptr;
-    gltf_material_metallic_roughness* metallic_roughness = nullptr;
-    gltf_material_specular_glossiness* specular_glossiness = nullptr;
-    gltf_texture* occlusion_txt = nullptr;
-    gltf_texture* normal_txt = nullptr;
-    gltf_texture_info* occlusion_txt_info = nullptr;
-    gltf_texture_info* normal_txt_info = nullptr;
+    std::shared_ptr<gltf_texture> emission_txt = nullptr;
+    std::shared_ptr<gltf_texture_info> emission_txt_info = nullptr;
+    std::shared_ptr<gltf_material_metallic_roughness> metallic_roughness =
+        nullptr;
+    std::shared_ptr<gltf_material_specular_glossiness> specular_glossiness =
+        nullptr;
+    std::shared_ptr<gltf_texture> occlusion_txt = nullptr;
+    std::shared_ptr<gltf_texture> normal_txt = nullptr;
+    std::shared_ptr<gltf_texture_info> occlusion_txt_info = nullptr;
+    std::shared_ptr<gltf_texture_info> normal_txt_info = nullptr;
     bool double_sided = true;
-    ~gltf_material(); 
 }
 ~~~
 
@@ -252,7 +249,6 @@ avoid.
     - occlusion_txt_info:      texture information for collusion_txt
     - normal_txt_info:      texture information for normal_txt
     - double_sided:      double sided
-    - ~gltf_material():      cleanup
 
 
 #### Struct gltf_shape_morph
@@ -281,7 +277,7 @@ Morph information for shapes
 
 struct gltf_shape {
     std::string name = "";
-    gltf_material* mat = nullptr;
+    std::shared_ptr<gltf_material> mat = nullptr;
     std::vector<vec3f> pos;
     std::vector<vec3f> norm;
     std::vector<vec2f> texcoord;
@@ -294,8 +290,7 @@ struct gltf_shape {
     std::vector<int> points;
     std::vector<vec2i> lines;
     std::vector<vec3i> triangles;
-    std::vector<gltf_shape_morph*> morph_targets;
-    ~gltf_shape(); 
+    std::vector<std::shared_ptr<gltf_shape_morph>> morph_targets;
 }
 ~~~
 
@@ -317,7 +312,6 @@ Primitives
     - lines:      line elements
     - triangles:      triangle elements
     - morph_targets:      morph targets
-    - ~gltf_shape():      cleanup
 
 
 #### Struct gltf_mesh
@@ -326,8 +320,7 @@ Primitives
 struct gltf_mesh {
     std::string name = "";
     std::string path = "";
-    std::vector<gltf_shape*> shapes;
-    ~gltf_mesh(); 
+    std::vector<std::shared_ptr<gltf_shape>> shapes;
 }
 ~~~
 
@@ -337,7 +330,6 @@ Gltf mesh.
     - name:      name
     - path:      path (only used when writing files on disk with glTF)
     - shapes:      primitives references
-    - ~gltf_mesh():      cleanup
 
 
 #### Struct gltf_node
@@ -345,16 +337,16 @@ Gltf mesh.
 ~~~ .cpp
 struct gltf_node {
     std::string name = "";
-    gltf_camera* cam = nullptr;
-    gltf_mesh* msh = nullptr;
-    gltf_skin* skn = nullptr;
-    std::vector<gltf_node*> children;
+    std::shared_ptr<gltf_camera> cam = nullptr;
+    std::shared_ptr<gltf_mesh> msh = nullptr;
+    std::shared_ptr<gltf_skin> skn = nullptr;
+    std::vector<std::shared_ptr<gltf_node>> children;
     mat4f matrix = identity_mat4f;
     quat4f rotation = {0, 0, 0, 1};
     vec3f scale = {1, 1, 1};
     vec3f translation = {0, 0, 0};
     std::vector<float> morph_weights;
-    gltf_node* parent = nullptr;
+    std::weak_ptr<gltf_node> parent = {};
     mat4f xform() const; 
     mat4f local_xform() const; 
     mat4f skin_xform() const; 
@@ -412,7 +404,7 @@ Animation Interpolation
 ~~~ .cpp
 struct gltf_animation {
     gltf_animation_interpolation interp = gltf_animation_interpolation::step;
-    std::vector<gltf_node*> nodes;
+    std::vector<std::shared_ptr<gltf_node>> nodes;
     std::vector<float> time;
     std::vector<vec3f> translation;
     std::vector<quat4f> rotation;
@@ -439,8 +431,7 @@ Keyframe data.
 struct gltf_animation_group {
     std::string name;
     std::string path = "";
-    std::vector<gltf_animation*> animations;
-    ~gltf_animation_group(); 
+    std::vector<std::shared_ptr<gltf_animation>> animations;
 }
 ~~~
 
@@ -450,7 +441,6 @@ Animation
     - name:      Name
     - path:      path (only used when writing files on disk with glTF)
     - animations:      Times
-    - ~gltf_animation_group():      cleanup
 
 
 #### Struct gltf_skin
@@ -460,8 +450,8 @@ struct gltf_skin {
     std::string name = "";
     std::string path = "";
     std::vector<mat4f> pose_matrices;
-    std::vector<gltf_node*> joints;
-    gltf_node* root = nullptr;
+    std::vector<std::shared_ptr<gltf_node>> joints;
+    std::shared_ptr<gltf_node> root = nullptr;
 }
 ~~~
 
@@ -480,7 +470,7 @@ Skin
 ~~~ .cpp
 struct gltf_scene {
     std::string name = "";
-    std::vector<gltf_node*> nodes;
+    std::vector<std::shared_ptr<gltf_node>> nodes;
 }
 ~~~
 
@@ -495,16 +485,15 @@ Gltf scene
 
 ~~~ .cpp
 struct gltf_scene_group {
-    gltf_scene* default_scene = nullptr;
-    std::vector<gltf_camera*> cameras;
-    std::vector<gltf_material*> materials;
-    std::vector<gltf_texture*> textures;
-    std::vector<gltf_mesh*> meshes;
-    std::vector<gltf_scene*> scenes;
-    std::vector<gltf_node*> nodes;
-    std::vector<gltf_animation_group*> animations;
-    std::vector<gltf_skin*> skins;
-    ~gltf_scene_group(); 
+    std::shared_ptr<gltf_scene> default_scene = nullptr;
+    std::vector<std::shared_ptr<gltf_camera>> cameras;
+    std::vector<std::shared_ptr<gltf_material>> materials;
+    std::vector<std::shared_ptr<gltf_texture>> textures;
+    std::vector<std::shared_ptr<gltf_mesh>> meshes;
+    std::vector<std::shared_ptr<gltf_scene>> scenes;
+    std::vector<std::shared_ptr<gltf_node>> nodes;
+    std::vector<std::shared_ptr<gltf_animation_group>> animations;
+    std::vector<std::shared_ptr<gltf_skin>> skins;
 }
 ~~~
 
@@ -521,13 +510,12 @@ Scenes and nodes are missing for mesh-only assets.
     - nodes:      nodes
     - animations:      nodes
     - skins:      skins
-    - ~gltf_scene_group():      cleanup
 
 
 #### Function load_scenes()
 
 ~~~ .cpp
-gltf_scene_group* load_scenes(
+std::shared_ptr<gltf_scene_group> load_scenes(
     const std::string& filename, bool load_textures, bool skip_missing = true);
 ~~~
 
@@ -544,7 +532,7 @@ Load scene
 
 ~~~ .cpp
 void save_scenes(const std::string& filename, const std::string& buffer_uri,
-    const gltf_scene_group* scn, bool save_textures,
+    const std::shared_ptr<gltf_scene_group>& scn, bool save_textures,
     bool separate_buffers = false);
 ~~~
 
@@ -560,7 +548,7 @@ Save scene
 #### Function update_node_hierarchy()
 
 ~~~ .cpp
-void update_node_hierarchy(gltf_scene_group* scn);
+void update_node_hierarchy(const std::shared_ptr<gltf_scene_group>& scn);
 ~~~
 
 Update node hierarchy
@@ -568,7 +556,7 @@ Update node hierarchy
 #### Function update_transforms()
 
 ~~~ .cpp
-void update_transforms(gltf_scene_group* scn);
+void update_transforms(const std::shared_ptr<gltf_scene_group>& scn);
 ~~~
 
 Update node trasforms
@@ -576,7 +564,8 @@ Update node trasforms
 #### Function update_animated_transforms()
 
 ~~~ .cpp
-void update_animated_transforms(gltf_scene_group* scns, float time);
+void update_animated_transforms(
+    const std::shared_ptr<gltf_scene_group>& scns, float time);
 ~~~
 
 Update animated node
@@ -584,7 +573,8 @@ Update animated node
 #### Function get_mesh_nodes()
 
 ~~~ .cpp
-std::vector<gltf_node*> get_mesh_nodes(const gltf_scene* scn);
+std::vector<std::shared_ptr<gltf_node>> get_mesh_nodes(
+    const std::shared_ptr<gltf_scene>& scn);
 ~~~
 
 Get a list of nodes with meshes
@@ -592,7 +582,8 @@ Get a list of nodes with meshes
 #### Function get_camera_nodes()
 
 ~~~ .cpp
-std::vector<gltf_node*> get_camera_nodes(const gltf_scene* scn);
+std::vector<std::shared_ptr<gltf_node>> get_camera_nodes(
+    const std::shared_ptr<gltf_scene>& scn);
 ~~~
 
 Get a list of nodes with cameras
@@ -600,7 +591,7 @@ Get a list of nodes with cameras
 #### Function get_animation_bounds()
 
 ~~~ .cpp
-vec2f get_animation_bounds(const gltf_scene_group* scn);
+vec2f get_animation_bounds(const std::shared_ptr<gltf_scene_group>& scn);
 ~~~
 
 Animation times
@@ -608,7 +599,8 @@ Animation times
 #### Function get_skin_transforms()
 
 ~~~ .cpp
-std::vector<mat4f> get_skin_transforms(const gltf_skin* sk, const mat4f& xform);
+std::vector<mat4f> get_skin_transforms(
+    const std::shared_ptr<gltf_skin>& sk, const mat4f& xform);
 ~~~
 
 Skin transforms (local-to-object) from the node transform that instances the
@@ -617,7 +609,7 @@ skin
 #### Function compute_morphing_deformation()
 
 ~~~ .cpp
-void compute_morphing_deformation(const gltf_shape* shp,
+void compute_morphing_deformation(const std::shared_ptr<gltf_shape>& shp,
     const std::vector<float>& weights, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec4f>& tangsp);
 ~~~
@@ -627,7 +619,7 @@ Compute shape morphing
 #### Function compute_scene_bounds()
 
 ~~~ .cpp
-bbox3f compute_scene_bounds(const gltf_scene_group* scn);
+bbox3f compute_scene_bounds(const std::shared_ptr<gltf_scene_group>& scn);
 ~~~
 
 Computes a scene bounding box
@@ -635,7 +627,7 @@ Computes a scene bounding box
 #### Function add_normals()
 
 ~~~ .cpp
-void add_normals(gltf_scene_group* scn);
+void add_normals(const std::shared_ptr<gltf_scene_group>& scn);
 ~~~
 
 Add missing data to the scene.
@@ -643,7 +635,7 @@ Add missing data to the scene.
 #### Function add_radius()
 
 ~~~ .cpp
-void add_radius(gltf_scene_group* scn, float radius);
+void add_radius(const std::shared_ptr<gltf_scene_group>& scn, float radius);
 ~~~
 
 Add missing data to the scene.
@@ -651,7 +643,7 @@ Add missing data to the scene.
 #### Function add_tangent_space()
 
 ~~~ .cpp
-void add_tangent_space(gltf_scene_group* scn);
+void add_tangent_space(const std::shared_ptr<gltf_scene_group>& scn);
 ~~~
 
 Add missing data to the scene.
@@ -659,7 +651,7 @@ Add missing data to the scene.
 #### Function add_nodes()
 
 ~~~ .cpp
-void add_nodes(gltf_scene_group* scn);
+void add_nodes(const std::shared_ptr<gltf_scene_group>& scn);
 ~~~
 
 Add missing data to the scene.
@@ -667,7 +659,7 @@ Add missing data to the scene.
 #### Function add_scene()
 
 ~~~ .cpp
-void add_scene(gltf_scene_group* scn);
+void add_scene(const std::shared_ptr<gltf_scene_group>& scn);
 ~~~
 
 Add missing data to the scene.
@@ -675,7 +667,7 @@ Add missing data to the scene.
 #### Function add_texture_data()
 
 ~~~ .cpp
-void add_texture_data(gltf_scene_group* scn);
+void add_texture_data(const std::shared_ptr<gltf_scene_group>& scn);
 ~~~
 
 Add missing data to the scene.
@@ -683,7 +675,7 @@ Add missing data to the scene.
 #### Function add_names()
 
 ~~~ .cpp
-void add_names(gltf_scene_group* scn);
+void add_names(const std::shared_ptr<gltf_scene_group>& scn);
 ~~~
 
 Add missing data to the scene.
@@ -691,7 +683,7 @@ Add missing data to the scene.
 #### Function add_default_cameras()
 
 ~~~ .cpp
-void add_default_cameras(gltf_scene_group* scn);
+void add_default_cameras(const std::shared_ptr<gltf_scene_group>& scn);
 ~~~
 
 Add a default camera that views the entire scene.
@@ -699,8 +691,8 @@ Add a default camera that views the entire scene.
 #### Function add_unique_path_names()
 
 ~~~ .cpp
-void add_unique_path_names(
-    gltf_scene_group* scns, const std::string& buffer_uri);
+void add_unique_path_names(const std::shared_ptr<gltf_scene_group>& scns,
+    const std::string& buffer_uri);
 ~~~
 
 Set unique path names for outputting separate buffers
@@ -708,7 +700,7 @@ Set unique path names for outputting separate buffers
 #### Function add_spec_gloss()
 
 ~~~ .cpp
-void add_spec_gloss(gltf_scene_group* scns);
+void add_spec_gloss(const std::shared_ptr<gltf_scene_group>& scns);
 ~~~
 
 Convert materials to spec gloss
@@ -716,7 +708,8 @@ Convert materials to spec gloss
 #### Function gltf_to_scenes()
 
 ~~~ .cpp
-gltf_scene_group* gltf_to_scenes(const glTF* gltf, int scene_idx = -1);
+std::shared_ptr<gltf_scene_group> gltf_to_scenes(
+    const std::shared_ptr<glTF>& gltf, int scene_idx = -1);
 ~~~
 
 Convert a gltf asset to flattened group of scene.
@@ -724,7 +717,8 @@ Convert a gltf asset to flattened group of scene.
 #### Function scenes_to_gltf()
 
 ~~~ .cpp
-glTF* scenes_to_gltf(const gltf_scene_group* fl_gltf,
+std::shared_ptr<glTF> scenes_to_gltf(
+    const std::shared_ptr<gltf_scene_group>& fl_gltf,
     const std::string& buffer_uri, bool separate_buffers = false);
 ~~~
 
@@ -736,7 +730,7 @@ prepend buffer_uri to its name.
 
 ~~~ .cpp
 std::vector<std::pair<std::string, std::string>> validate_gltf(
-    const glTF* gltf);
+    const std::shared_ptr<glTF>& gltf);
 ~~~
 
 Validate a gltf. Missing many validation as of this version.

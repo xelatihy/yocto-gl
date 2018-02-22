@@ -37,16 +37,10 @@ struct {{name}} {{#base}}: {{base}}{{/base}} {
 {{/extra_properties}}
 {{#has_getters}}{{#properties}}{{#is_ptrarray}}
 /// typed access for nodes
-{{item}}* get(const glTFid<{{item}}>& id) const {
+std::shared_ptr<{{item}}> get(const glTFid<{{item}}>& id) const {
     if (!id) return nullptr;
     return {{name}}.at((int)id);
 }{{/is_ptrarray}}{{/properties}}{{/has_getters}}
-{{#destructor}}
-/// Cleanup
-~{{name}}() {
-{{#properties}}{{#is_ptr}}if ({{name}}) delete {{name}};{{/is_ptr}}{{#is_ptrarray}}for(auto v : {{name}}) if(v) delete v;{{/is_ptrarray}}{{/properties}}
-}
-{{/destructor}}
 };
 {{/types}}
 '''
@@ -199,16 +193,14 @@ def fix_schema(js):
             if 'description' not in vv: vv['description'] = vv['label']
     for vjs in js['properties']:
         vjs['required'] = 'required' in js and vjs['name'] in js['required']
-        if '*' in vjs['type']:
+        if 'std::shared_ptr<' in vjs['type']:
             js['destructor'] = True
             if 'std::vector<' in vjs['type']: vjs['is_ptrarray'] = True
             else: vjs['is_ptr'] = True
         if 'extension' in vjs: js['has_extensions'] = True
         defaults = { 'int': '0', 'float': '0', 'std::string': '""' }
         if 'default' not in vjs:
-            if 'vector' not in vjs['type'] and '*' in vjs['type']:
-                vjs['default'] = 'nullptr'
-            elif 'is_enum' in vjs:
+            if 'is_enum' in vjs:
                 vjs['default'] = vjs['type']+'::NotSet'
             elif vjs['type'] in defaults:
                 vjs['default'] = defaults[vjs['type']]

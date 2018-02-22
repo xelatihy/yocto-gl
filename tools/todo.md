@@ -5,9 +5,9 @@ Please consider this to be just development notes and not any real planning.
 
 ## Next
 
-- test scene with splits for lights
-    - scene presets splits per view
-    - tools load multiple scenes and merge them into one
+- shared_ptr
+- gltf shared prt
+- selection for hilighting
 
 ## Scene Import
 

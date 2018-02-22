@@ -6,11 +6,11 @@
     "base": "glTFChildOfRootProperty",
     "properties": {
         "orthographic": {
-            "type": "glTFCameraOrthographic*",
+            "type": "std::shared_ptr<glTFCameraOrthographic>",
             "description": "An orthographic camera containing properties to create an orthographic projection matrix."
         },
         "perspective": {
-            "type": "glTFCameraPerspective*",
+            "type": "std::shared_ptr<glTFCameraPerspective>",
             "description": "A perspective camera containing properties to create a perspective projection matrix."
         },
         "type": {
