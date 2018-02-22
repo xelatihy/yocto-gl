@@ -210,7 +210,8 @@ int main(int argc, char* argv[]) {
         ygl::parse_flag(parser, "--quiet", "-q", "Print only errors messages");
     app->imfilename = ygl::parse_opt(
         parser, "--output-image", "-o", "Image filename", "out.hdr"s);
-    app->filename = ygl::parse_arg(parser, "scene", "Scene filename", ""s);
+    auto filenames = ygl::parse_args(parser, "scenes", "Scene filenames",
+                                     std::vector<std::string>());
     if (ygl::should_exit(parser)) {
         printf("%s\n", get_usage(parser).c_str());
         exit(1);
@@ -219,13 +220,20 @@ int main(int argc, char* argv[]) {
     // setup logger
     if (app->quiet) ygl::get_default_logger()->verbose = false;
 
-    // setting up rendering
-    ygl::log_info("loading scene {}", app->filename);
-    try {
-        app->scn = ygl::load_scene(app->filename);
-    } catch (std::exception e) {
-        ygl::log_fatal("cannot load scene {}", app->filename);
+    // scene loading
+    app->scn = new ygl::scene();
+    for(auto filename : filenames) {
+        try {
+            ygl::log_info("loading scene {}", filename);
+            auto scn = load_scene(filename, ygl::load_options());
+            ygl::merge_into(app->scn, scn);
+            delete scn;
+        } catch (std::exception e) {
+            ygl::log_fatal("cannot load scene {}", filename);
+        }
     }
+    app->filename = filenames.front();
+
 
     // add elements
     auto opts = ygl::add_elements_options();

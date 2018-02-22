@@ -6305,23 +6305,25 @@ inline scene* make_proc_elems(const proc_scene* tscn) {
 }
 
 /// Procedural camera presets.
-std::unordered_map<std::string, proc_camera*>& proc_camera_presets();
+std::vector<proc_camera*>& proc_camera_presets();
 /// Procedural texture presets.
-std::unordered_map<std::string, proc_texture*>& proc_texture_presets();
+std::vector<proc_texture*>& proc_texture_presets();
 /// Procedural material presets.
-std::unordered_map<std::string, proc_material*>& proc_material_presets();
+std::vector<proc_material*>& proc_material_presets();
 /// Procedural shape presets.
-std::unordered_map<std::string, proc_shape*>& proc_shape_presets();
+std::vector<proc_shape*>& proc_shape_presets();
 /// Procedural instance presets.
-std::unordered_map<std::string, proc_instance*>& proc_instance_presets();
+std::vector<proc_instance*>& proc_instance_presets();
 /// Procedural environment presets.
-std::unordered_map<std::string, proc_environment*>& proc_environment_presets();
+std::vector<proc_environment*>& proc_environment_presets();
 /// Procedural nodes presets.
-std::unordered_map<std::string, proc_node*>& proc_node_presets();
+std::vector<proc_node*>& proc_node_presets();
 /// Procedural animation presets.
-std::unordered_map<std::string, proc_animation*>& proc_animation_presets();
+std::vector<proc_animation*>& proc_animation_presets();
 /// Test scene presets.
-std::unordered_map<std::string, proc_scene*>& proc_scene_presets();
+std::vector<proc_scene*>& proc_scene_presets();
+/// Test scene presets split into objects and lighting and cameras.
+std::vector<std::pair<proc_scene*, std::vector<proc_scene*>>>& proc_split_scene_presets();
 
 /// Remove duplicates based on name.
 void remove_duplicates(proc_scene* tscn);

@@ -108,7 +108,7 @@ inline void draw(ygl::gl_window* win) {
             ygl::draw_value_widget(win, "scene", app->filename);
             if (ygl::draw_button_widget(win, "new")) {
                 delete app->pscn;
-                app->pscn = ygl::proc_scene_presets().at("plane_al");
+                app->pscn = new ygl::proc_scene();
                 delete app->scn;
                 app->scn = new ygl::scene();
                 ygl::clear_gl_shapes(app->shapes);
@@ -235,7 +235,8 @@ int main(int argc, char* argv[]) {
         ygl::parse_flag(parser, "--no-widgets", "", "Disable widgets");
     app->imfilename = ygl::parse_opt(
         parser, "--output-image", "-o", "Image filename", "out.png"s);
-    app->filename = ygl::parse_arg(parser, "scene", "Scene filename", ""s);
+    auto filenames = ygl::parse_args(parser, "scenes", "Scene filenames",
+                                     std::vector<std::string>());
     if (ygl::should_exit(parser)) {
         printf("%s\n", get_usage(parser).c_str());
         exit(1);
@@ -245,17 +246,23 @@ int main(int argc, char* argv[]) {
     if (app->quiet) ygl::get_default_logger()->verbose = false;
 
     // scene loading
-    ygl::log_info("loading scene {}", app->filename);
-    try {
-        auto opts = ygl::load_options();
-        opts.preserve_quads = preserve_quads;
-        opts.preserve_facevarying = preserve_facevarying;
-        opts.preserve_hierarchy = true;
-        app->scn = load_scene(app->filename, opts);
-    } catch (std::exception e) {
-        ygl::log_fatal("cannot load scene {}", app->filename);
+    app->scn = new ygl::scene();
+    for(auto filename : filenames) {
+        try {
+            ygl::log_info("loading scene {}", filename);
+            auto opts = ygl::load_options();
+            opts.preserve_quads = preserve_quads;
+            opts.preserve_facevarying = preserve_facevarying;
+            opts.preserve_hierarchy = true;
+            auto scn = load_scene(filename, opts);
+            ygl::merge_into(app->scn, scn);
+            delete scn;
+        } catch (std::exception e) {
+            ygl::log_fatal("cannot load scene {}", filename);
+        }
     }
-
+    app->filename = filenames.front();
+    
     // tesselate input shapes
     ygl::tesselate_shapes(app->scn, true, !preserve_facevarying,
         !preserve_quads && !preserve_facevarying, false);

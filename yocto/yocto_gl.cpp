@@ -3487,24 +3487,18 @@ camera* make_view_camera(const scene* scn, int camera_id) {
 
 // Merge scene into one another
 void merge_into(scene* merge_into, scene* merge_from) {
-    merge_into->cameras.insert(merge_from->cameras.begin(),
-        merge_from->cameras.end(), merge_into->cameras.end());
-    merge_from->cameras.clear();
-    merge_into->textures.insert(merge_from->textures.begin(),
-        merge_from->textures.end(), merge_into->textures.end());
-    merge_from->textures.clear();
-    merge_into->materials.insert(merge_from->materials.begin(),
-        merge_from->materials.end(), merge_into->materials.end());
-    merge_from->materials.clear();
-    merge_into->shapes.insert(merge_from->shapes.begin(),
-        merge_from->shapes.end(), merge_into->shapes.end());
-    merge_from->shapes.clear();
-    merge_into->instances.insert(merge_from->instances.begin(),
-        merge_from->instances.end(), merge_into->instances.end());
-    merge_from->instances.clear();
-    merge_into->environments.insert(merge_from->environments.begin(),
-        merge_from->environments.end(), merge_into->environments.end());
-    merge_from->environments.clear();
+    auto merge = [](auto& v1, auto& v2) {
+        v1.insert(v1.end(), v2.begin(), v2.end());
+        v2.clear();
+    };
+    merge(merge_into->cameras, merge_from->cameras);
+    merge(merge_into->textures, merge_from->textures);
+    merge(merge_into->materials, merge_from->materials);
+    merge(merge_into->shapes, merge_from->shapes);
+    merge(merge_into->instances, merge_from->instances);
+    merge(merge_into->environments, merge_from->environments);
+    merge(merge_into->nodes, merge_from->nodes);
+    merge(merge_into->animations, merge_from->animations);
 }
 
 // Computes a shape bounding box (quick computation that ignores
@@ -10628,8 +10622,8 @@ void remove_duplicates(proc_scene* scn) {
     remove_duplicate_elems(scn->environments);
 }
 
-std::unordered_map<std::string, proc_texture*>& proc_texture_presets() {
-    static auto presets = std::unordered_map<std::string, proc_texture*>();
+std::vector<proc_texture*>& proc_texture_presets() {
+    static auto presets = std::vector<proc_texture*>();
     if (!presets.empty()) return presets;
 
     auto make_test_texture = [](const std::string& name,
@@ -10640,49 +10634,47 @@ std::unordered_map<std::string, proc_texture*>& proc_texture_presets() {
         return params;
     };
 
-    presets["grid"] = make_test_texture("grid", proc_texture_type::grid);
-    presets["checker"] =
-        make_test_texture("checker", proc_texture_type::checker);
-    presets["colored"] =
-        make_test_texture("colored", proc_texture_type::colored);
-    presets["rcolored"] =
-        make_test_texture("rcolored", proc_texture_type::rcolored);
-    presets["bump"] = make_test_texture("bump", proc_texture_type::bump);
-    presets["bump"]->tile_size = 32;
-    presets["tgrid"] = make_test_texture("tgrid", proc_texture_type::bump);
-    presets["tgrid"]->tile_size = 32;
-    presets["uv"] = make_test_texture("uv", proc_texture_type::uv);
-    presets["gamma"] = make_test_texture("gamma", proc_texture_type::gamma);
-    presets["gridn"] = make_test_texture("gridn", proc_texture_type::grid);
-    presets["gridn"]->bump_to_normal = true;
-    presets["gridn"]->bump_to_normal = true;
-    presets["gridn"]->bump_scale = 4;
-    presets["tgridn"] = make_test_texture("tgridn", proc_texture_type::grid);
-    presets["tgridn"]->tile_size = 32;
-    presets["tgridn"]->bump_to_normal = true;
-    presets["tgridn"]->bump_to_normal = true;
-    presets["tgridn"]->bump_scale = 4;
-    presets["bumpn"] = make_test_texture("bumpn", proc_texture_type::bump);
-    presets["bumpn"]->tile_size = 32;
-    presets["bumpn"]->bump_to_normal = true;
-    presets["bumpn"]->bump_scale = 4;
-    presets["noise"] = make_test_texture("noise", proc_texture_type::noise);
-    presets["ridge"] = make_test_texture("ridge", proc_texture_type::ridge);
-    presets["fbm"] = make_test_texture("fbm", proc_texture_type::fbm);
-    presets["turbulence"] =
-        make_test_texture("turbulence", proc_texture_type::turbulence);
+    presets.push_back(make_test_texture("grid", proc_texture_type::grid));
+    presets.push_back(make_test_texture("checker", proc_texture_type::checker));
+    presets.push_back(make_test_texture("colored", proc_texture_type::colored));
+    presets.push_back(
+        make_test_texture("rcolored", proc_texture_type::rcolored));
+    presets.push_back(make_test_texture("bump", proc_texture_type::bump));
+    presets.back()->tile_size = 32;
+    presets.push_back(make_test_texture("tgrid", proc_texture_type::bump));
+    presets.back()->tile_size = 32;
+    presets.push_back(make_test_texture("uv", proc_texture_type::uv));
+    presets.push_back(make_test_texture("gamma", proc_texture_type::gamma));
+    presets.push_back(make_test_texture("gridn", proc_texture_type::grid));
+    presets.back()->bump_to_normal = true;
+    presets.back()->bump_to_normal = true;
+    presets.back()->bump_scale = 4;
+    presets.push_back(make_test_texture("tgridn", proc_texture_type::grid));
+    presets.back()->tile_size = 32;
+    presets.back()->bump_to_normal = true;
+    presets.back()->bump_to_normal = true;
+    presets.back()->bump_scale = 4;
+    presets.push_back(make_test_texture("bumpn", proc_texture_type::bump));
+    presets.back()->tile_size = 32;
+    presets.back()->bump_to_normal = true;
+    presets.back()->bump_scale = 4;
+    presets.push_back(make_test_texture("noise", proc_texture_type::noise));
+    presets.push_back(make_test_texture("ridge", proc_texture_type::ridge));
+    presets.push_back(make_test_texture("fbm", proc_texture_type::fbm));
+    presets.push_back(
+        make_test_texture("turbulence", proc_texture_type::turbulence));
 
-    presets["gammaf"] = make_test_texture("gammaf", proc_texture_type::gammaf);
-    presets["sky1"] = make_test_texture("sky1", proc_texture_type::sky);
-    presets["sky1"]->sky_sunangle = pif / 4;
-    presets["sky2"] = make_test_texture("sky2", proc_texture_type::sky);
-    presets["sky2"]->sky_sunangle = pif / 2;
+    presets.push_back(make_test_texture("gammaf", proc_texture_type::gammaf));
+    presets.push_back(make_test_texture("sky1", proc_texture_type::sky));
+    presets.back()->sky_sunangle = pif / 4;
+    presets.push_back(make_test_texture("sky2", proc_texture_type::sky));
+    presets.back()->sky_sunangle = pif / 2;
 
     return presets;
 }
 
-std::unordered_map<std::string, proc_material*>& proc_material_presets() {
-    static auto presets = std::unordered_map<std::string, proc_material*>();
+std::vector<proc_material*>& proc_material_presets() {
+    static auto presets = std::vector<proc_material*>();
     if (!presets.empty()) return presets;
 
     auto make_test_material = [](const std::string& name,
@@ -10727,61 +10719,53 @@ std::unordered_map<std::string, proc_material*>& proc_material_presets() {
 
     auto params = std::vector<proc_material>();
 
-    presets["matte_floor"] = make_test_materialt("matte_floor", matte, "grid");
+    presets.push_back(make_test_materialt("matte_floor", matte, "grid"));
 
-    presets["matte_gray"] = make_test_material("matte_gray", matte, gray);
-    presets["matte_red"] = make_test_material("matte_red", matte, red);
-    presets["matte_green"] = make_test_material("matte_green", matte, green);
-    presets["matte_blue"] = make_test_material("matte_blue", matte, blue);
-    presets["matte_grid"] = make_test_materialt("matte_grid", matte, "grid");
-    presets["matte_colored"] =
-        make_test_materialt("matte_colored", matte, "colored");
-    presets["matte_uv"] = make_test_materialt("matte_uv", matte, "uv");
+    presets.push_back(make_test_material("matte_gray", matte, gray));
+    presets.push_back(make_test_material("matte_red", matte, red));
+    presets.push_back(make_test_material("matte_green", matte, green));
+    presets.push_back(make_test_material("matte_blue", matte, blue));
+    presets.push_back(make_test_materialt("matte_grid", matte, "grid"));
+    presets.push_back(make_test_materialt("matte_colored", matte, "colored"));
+    presets.push_back(make_test_materialt("matte_uv", matte, "uv"));
 
-    presets["plastic_red"] =
-        make_test_material("plastic_red", plastic, red, rough);
-    presets["plastic_green"] =
-        make_test_material("plastic_green", plastic, green, rough);
-    presets["plastic_blue"] =
-        make_test_material("plastic_blue", plastic, blue, sharp);
-    presets["plastic_colored"] =
-        make_test_materialt("plastic_colored", plastic, "colored", rough);
-    presets["plastic_blue_bumped"] =
-        make_test_material("plastic_blue_bumped", plastic, blue, sharp);
-    presets["plastic_blue_bumped"]->normal = "bumpn";
-    presets["plastic_colored_bumped"] = make_test_materialt(
-        "plastic_colored_bumped", plastic, "colored", rough);
-    presets["plastic_colored_bumped"]->normal = "bumpn";
+    presets.push_back(make_test_material("plastic_red", plastic, red, rough));
+    presets.push_back(
+        make_test_material("plastic_green", plastic, green, rough));
+    presets.push_back(make_test_material("plastic_blue", plastic, blue, sharp));
+    presets.push_back(
+        make_test_materialt("plastic_colored", plastic, "colored", rough));
+    presets.push_back(
+        make_test_material("plastic_blue_bumped", plastic, blue, sharp));
+    presets.back()->normal = "bumpn";
+    presets.push_back(make_test_materialt(
+        "plastic_colored_bumped", plastic, "colored", rough));
+    presets.back()->normal = "bumpn";
 
-    presets["silver_sharp"] =
-        make_test_material("silver_sharp", metal, lgray, sharp);
-    presets["silver_rough"] =
-        make_test_material("silver_rough", metal, lgray, rough);
-    presets["gold_sharp"] =
-        make_test_material("gold_sharp", metal, gold, sharp);
-    presets["gold_rough"] =
-        make_test_material("gold_rough", metal, gold, rough);
+    presets.push_back(make_test_material("silver_sharp", metal, lgray, sharp));
+    presets.push_back(make_test_material("silver_rough", metal, lgray, rough));
+    presets.push_back(make_test_material("gold_sharp", metal, gold, sharp));
+    presets.push_back(make_test_material("gold_rough", metal, gold, rough));
 
-    presets["transparent_red"] =
-        make_test_material("transparent_red", transparent, red);
-    presets["transparent_red"]->opacity = 0.9f;
-    presets["transparent_green"] =
-        make_test_material("transparent_green", transparent, green);
-    presets["transparent_green"]->opacity = 0.5f;
-    presets["transparent_blue"] =
-        make_test_material("transparent_blue", transparent, blue);
-    presets["transparent_blue"]->opacity = 0.2f;
+    presets.push_back(make_test_material("transparent_red", transparent, red));
+    presets.back()->opacity = 0.9f;
+    presets.push_back(
+        make_test_material("transparent_green", transparent, green));
+    presets.back()->opacity = 0.5f;
+    presets.push_back(
+        make_test_material("transparent_blue", transparent, blue));
+    presets.back()->opacity = 0.2f;
 
-    presets["pointlight"] = make_test_material("pointlight", emission, white);
-    presets["pointlight"]->emission = 80;
-    presets["arealight"] = make_test_material("arealight", emission, white);
-    presets["arealight"]->emission = 80;
+    presets.push_back(make_test_material("pointlight", emission, white));
+    presets.back()->emission = 80;
+    presets.push_back(make_test_material("arealight", emission, white));
+    presets.back()->emission = 80;
 
     return presets;
 }
 
-std::unordered_map<std::string, proc_shape*>& proc_shape_presets() {
-    static auto presets = std::unordered_map<std::string, proc_shape*>();
+std::vector<proc_shape*>& proc_shape_presets() {
+    static auto presets = std::vector<proc_shape*>();
     if (!presets.empty()) return presets;
 
     auto make_test_shape = [](const std::string& name, proc_shape_type type,
@@ -10796,66 +10780,61 @@ std::unordered_map<std::string, proc_shape*>& proc_shape_presets() {
         return params;
     };
 
-    presets["floor"] = make_test_shape("floor", proc_shape_type::floor);
-    presets["quad"] = make_test_shape("quad", proc_shape_type::quad);
-    presets["cube"] = make_test_shape("cube", proc_shape_type::cube);
-    presets["sphere"] = make_test_shape("sphere", proc_shape_type::sphere);
-    presets["spherecube"] =
-        make_test_shape("spherecube", proc_shape_type::spherecube);
-    presets["spherizedcube"] =
-        make_test_shape("spherizedcube", proc_shape_type::spherizedcube);
-    presets["flipcapsphere"] =
-        make_test_shape("flipcapsphere", proc_shape_type::flipcapsphere);
-    presets["geosphere"] =
-        make_test_shape("geosphere", proc_shape_type::geosphere, 5);
-    presets["geospheref"] =
-        make_test_shape("geospheref", proc_shape_type::geosphere, 5, 0, true);
-    presets["geospherel"] =
-        make_test_shape("geospherel", proc_shape_type::geosphere, 4, 0, true);
-    presets["cubep"] = make_test_shape("cubep", proc_shape_type::cubep);
-    presets["cubes"] = make_test_shape("cubes", proc_shape_type::cubep, 0, 4);
-    presets["suzanne"] = make_test_shape("suzanne", proc_shape_type::suzanne);
-    presets["suzannes"] =
-        make_test_shape("suzannes", proc_shape_type::suzanne, 0, 2);
-    presets["cubefv"] = make_test_shape("cubefv", proc_shape_type::fvcube);
-    presets["cubefvs"] =
-        make_test_shape("cubefvs", proc_shape_type::fvcube, 0, 4);
-    presets["spherefv"] =
-        make_test_shape("spherefv", proc_shape_type::fvsphere);
-    presets["matball"] = make_test_shape("matball", proc_shape_type::matball);
-    presets["matballi"] = make_test_shape("matballi", proc_shape_type::sphere);
-    presets["matballi"]->scale = 0.8f;
-    presets["pointscube"] =
-        make_test_shape("pointscube", proc_shape_type::pointscube);
-    presets["hairball1"] =
-        make_test_shape("hairball1", proc_shape_type::hairball);
-    presets["hairball1"]->hair_params = new make_hair_params();
-    presets["hairball1"]->hair_params->radius = {0.001f, 0.0001f};
-    presets["hairball1"]->hair_params->length = {0.1f, 0.1f};
-    presets["hairball1"]->hair_params->noise = {0.5f, 8};
-    presets["hairball2"] =
-        make_test_shape("hairball2", proc_shape_type::hairball);
-    presets["hairball2"]->hair_params = new make_hair_params();
-    presets["hairball2"]->hair_params->radius = {0.001f, 0.0001f};
-    presets["hairball2"]->hair_params->length = {0.1f, 0.1f};
-    presets["hairball2"]->hair_params->clump = {0.5f, 128};
-    presets["hairball3"] =
-        make_test_shape("hairball3", proc_shape_type::hairball);
-    presets["hairball3"]->hair_params = new make_hair_params();
-    presets["hairball3"]->hair_params->radius = {0.001f, 0.0001f};
-    presets["hairball3"]->hair_params->length = {0.1f, 0.1f};
-    presets["hairballi"] =
-        make_test_shape("hairballi", proc_shape_type::sphere);
-    presets["hairballi"]->scale = 0.8f;
-    presets["beziercircle"] =
-        make_test_shape("beziercircle", proc_shape_type::beziercircle);
-    presets["point"] = make_test_shape("point", proc_shape_type::point);
+    presets.push_back(make_test_shape("floor", proc_shape_type::floor));
+    presets.push_back(make_test_shape("quad", proc_shape_type::quad));
+    presets.push_back(make_test_shape("cube", proc_shape_type::cube));
+    presets.push_back(make_test_shape("sphere", proc_shape_type::sphere));
+    presets.push_back(
+        make_test_shape("spherecube", proc_shape_type::spherecube));
+    presets.push_back(
+        make_test_shape("spherizedcube", proc_shape_type::spherizedcube));
+    presets.push_back(
+        make_test_shape("flipcapsphere", proc_shape_type::flipcapsphere));
+    presets.push_back(
+        make_test_shape("geosphere", proc_shape_type::geosphere, 5));
+    presets.push_back(
+        make_test_shape("geospheref", proc_shape_type::geosphere, 5, 0, true));
+    presets.push_back(
+        make_test_shape("geospherel", proc_shape_type::geosphere, 4, 0, true));
+    presets.push_back(make_test_shape("cubep", proc_shape_type::cubep));
+    presets.push_back(make_test_shape("cubes", proc_shape_type::cubep, 0, 4));
+    presets.push_back(make_test_shape("suzanne", proc_shape_type::suzanne));
+    presets.push_back(
+        make_test_shape("suzannes", proc_shape_type::suzanne, 0, 2));
+    presets.push_back(make_test_shape("cubefv", proc_shape_type::fvcube));
+    presets.push_back(
+        make_test_shape("cubefvs", proc_shape_type::fvcube, 0, 4));
+    presets.push_back(make_test_shape("spherefv", proc_shape_type::fvsphere));
+    presets.push_back(make_test_shape("matball", proc_shape_type::matball));
+    presets.push_back(make_test_shape("matballi", proc_shape_type::sphere));
+    presets.back()->scale = 0.8f;
+    presets.push_back(
+        make_test_shape("pointscube", proc_shape_type::pointscube));
+    presets.push_back(make_test_shape("hairball1", proc_shape_type::hairball));
+    presets.back()->hair_params = new make_hair_params();
+    presets.back()->hair_params->radius = {0.001f, 0.0001f};
+    presets.back()->hair_params->length = {0.1f, 0.1f};
+    presets.back()->hair_params->noise = {0.5f, 8};
+    presets.push_back(make_test_shape("hairball2", proc_shape_type::hairball));
+    presets.back()->hair_params = new make_hair_params();
+    presets.back()->hair_params->radius = {0.001f, 0.0001f};
+    presets.back()->hair_params->length = {0.1f, 0.1f};
+    presets.back()->hair_params->clump = {0.5f, 128};
+    presets.push_back(make_test_shape("hairball3", proc_shape_type::hairball));
+    presets.back()->hair_params = new make_hair_params();
+    presets.back()->hair_params->radius = {0.001f, 0.0001f};
+    presets.back()->hair_params->length = {0.1f, 0.1f};
+    presets.push_back(make_test_shape("hairballi", proc_shape_type::sphere));
+    presets.back()->scale = 0.8f;
+    presets.push_back(
+        make_test_shape("beziercircle", proc_shape_type::beziercircle));
+    presets.push_back(make_test_shape("point", proc_shape_type::point));
 
     return presets;
 }
 
-std::unordered_map<std::string, proc_environment*>& proc_environment_presets() {
-    static auto presets = std::unordered_map<std::string, proc_environment*>();
+std::vector<proc_environment*>& proc_environment_presets() {
+    static auto presets = std::vector<proc_environment*>();
     if (!presets.empty()) return presets;
 
     auto make_test_environment = [](const std::string& name,
@@ -10867,15 +10846,15 @@ std::unordered_map<std::string, proc_environment*>& proc_environment_presets() {
         return params;
     };
 
-    presets["const"] = make_test_environment("const", "");
-    presets["sky1"] = make_test_environment("sky1", "sky1");
-    presets["sky2"] = make_test_environment("sky2", "sky2");
+    presets.push_back(make_test_environment("const", ""));
+    presets.push_back(make_test_environment("sky1", "sky1"));
+    presets.push_back(make_test_environment("sky2", "sky2"));
 
     return presets;
 }
 
-std::unordered_map<std::string, proc_animation*>& proc_animation_presets() {
-    static auto presets = std::unordered_map<std::string, proc_animation*>();
+std::vector<proc_animation*>& proc_animation_presets() {
+    static auto presets = std::vector<proc_animation*>();
     if (!presets.empty()) return presets;
 
     auto make_test_animation = [](const std::string& name, bool bezier,
@@ -10895,21 +10874,21 @@ std::unordered_map<std::string, proc_animation*>& proc_animation_presets() {
         return params;
     };
 
-    presets["bounce"] = make_test_animation(
-        "bounce", false, {0, 1, 2}, {{0, 0, 0}, {0, 1, 0}, {0, 0, 0}}, {}, {});
-    presets["scale"] = make_test_animation("scale", false, {0, 1, 2}, {}, {},
-        {{1, 1, 1}, {0.1f, 0.1f, 0.1f}, {1, 1, 1}});
-    presets["rotation"] = make_test_animation("rotation", false, {0, 1, 2}, {},
+    presets.push_back(make_test_animation(
+        "bounce", false, {0, 1, 2}, {{0, 0, 0}, {0, 1, 0}, {0, 0, 0}}, {}, {}));
+    presets.push_back(make_test_animation("scale", false, {0, 1, 2}, {}, {},
+        {{1, 1, 1}, {0.1f, 0.1f, 0.1f}, {1, 1, 1}}));
+    presets.push_back(make_test_animation("rotation", false, {0, 1, 2}, {},
         {rotation_quat<float>({0, 1, 0}, 0),
             rotation_quat<float>({0, 1, 0}, pif),
             rotation_quat<float>({0, 1, 0}, 0)},
-        {});
+        {}));
 
     return presets;
 }
 
-std::unordered_map<std::string, proc_camera*>& proc_camera_presets() {
-    static auto presets = std::unordered_map<std::string, proc_camera*>();
+std::vector<proc_camera*>& proc_camera_presets() {
+    static auto presets = std::vector<proc_camera*>();
     if (!presets.empty()) return presets;
 
     auto make_test_camera = [](const std::string& name, const vec3f& from,
@@ -10923,18 +10902,18 @@ std::unordered_map<std::string, proc_camera*>& proc_camera_presets() {
         return params;
     };
 
-    presets["cam1"] =
-        make_test_camera("cam1", {0, 4, 10}, {0, 1, 0}, 15 * pif / 180, 1);
-    presets["cam2"] = make_test_camera(
-        "cam2", {0, 4, 10}, {0, 1, 0}, 15 * pif / 180, 16.0f / 9.0f);
-    presets["cam3"] = make_test_camera(
-        "cam3", {0, 6, 24}, {0, 1, 0}, 7.5f * pif / 180, 2.35f / 1.0f);
+    presets.push_back(
+        make_test_camera("cam1", {0, 4, 10}, {0, 1, 0}, 15 * pif / 180, 1));
+    presets.push_back(make_test_camera(
+        "cam2", {0, 4, 10}, {0, 1, 0}, 15 * pif / 180, 16.0f / 9.0f));
+    presets.push_back(make_test_camera(
+        "cam3", {0, 6, 24}, {0, 1, 0}, 7.5f * pif / 180, 2.35f / 1.0f));
 
     return presets;
 }
 
-std::unordered_map<std::string, proc_scene*>& proc_scene_presets() {
-    static auto presets = std::unordered_map<std::string, proc_scene*>();
+std::vector<proc_scene*>& proc_scene_presets() {
+    static auto presets = std::vector<proc_scene*>();
     if (!presets.empty()) return presets;
 
     auto make_test_scene = [](const std::string& name) {
@@ -10952,43 +10931,54 @@ std::unordered_map<std::string, proc_scene*>& proc_scene_presets() {
         return params;
     };
     auto make_texture_preset = [](const std::string& name) {
-        return new proc_texture(*proc_texture_presets().at(name));
+        for (auto p : proc_texture_presets())
+            if (p->name == name) return new proc_texture(*p);
+        throw std::runtime_error("missing texture preset " + name);
     };
     auto make_shape_preset = [](const std::string& name) {
-        auto npshp = new proc_shape(*proc_shape_presets().at(name));
+        auto npshp = (proc_shape*)nullptr;
+        for (auto p : proc_shape_presets())
+            if (p->name == name) npshp = new proc_shape(*p);
         if (npshp->hair_params)
             npshp->hair_params = new make_hair_params(*npshp->hair_params);
         return npshp;
     };
     auto make_environment_preset = [](const std::string& name) {
-        return new proc_environment(*proc_environment_presets().at(name));
+        for (auto p : proc_environment_presets())
+            if (p->name == name) return new proc_environment(*p);
+        return (proc_environment*)nullptr;
     };
     auto make_camera_preset = [](const std::string& name) {
-        return new proc_camera(*proc_camera_presets().at(name));
+        for (auto p : proc_camera_presets())
+            if (p->name == name) return new proc_camera(*p);
+        return (proc_camera*)nullptr;
     };
     auto make_material_preset = [](const std::string& name) {
-        return new proc_material(*proc_material_presets().at(name));
+        for (auto p : proc_material_presets())
+            if (p->name == name) return new proc_material(*p);
+        return (proc_material*)nullptr;
     };
     auto make_animation_preset = [](const std::string& name) {
-        return new proc_animation(*proc_animation_presets().at(name));
+        for (auto p : proc_animation_presets())
+            if (p->name == name) return new proc_animation(*p);
+        return (proc_animation*)nullptr;
     };
 
     // textures
-    presets["textures"] = make_test_scene("textures");
-    for (auto& txt_kv : proc_texture_presets())
-        presets["textures"]->textures.push_back(
-            make_texture_preset(txt_kv.first));
+    presets.push_back(make_test_scene("textures"));
+    for (auto txt : proc_texture_presets())
+        presets.back()->textures.push_back(make_texture_preset(txt->name));
 
     // shapes
-    presets["shapes"] = make_test_scene("shapes");
-    for (auto& shp_kv : proc_shape_presets())
-        presets["shapes"]->shapes.push_back(make_shape_preset(shp_kv.first));
+    presets.push_back(make_test_scene("shapes"));
+    for (auto shp : proc_shape_presets())
+        presets.back()->shapes.push_back(make_shape_preset(shp->name));
 
     // envmap
-    presets["environments"] = make_test_scene("envmaps");
-    for (auto& env_kv : proc_environment_presets())
-        presets["environments"]->environments.push_back(
-            make_environment_preset(env_kv.first));
+    presets.push_back(make_test_scene("envmaps"));
+    for (auto env : proc_environment_presets())
+        presets.back()->environments.push_back(
+            make_environment_preset(env->name));
 
     // simple scenes shared functions
     auto make_simple_scene = [&](const std::string& name,
@@ -11097,89 +11087,90 @@ std::unordered_map<std::string, proc_scene*>& proc_scene_presets() {
     };
 
     // plane only
-    presets["plane_pl"] = make_simple_scene("plane_pl", {}, {}, "pointlights");
-    presets["plane_al"] = make_simple_scene("plane_al", {}, {}, "arealights");
+    presets.push_back(make_simple_scene("plane_pl", {}, {}, "pointlights"));
+    presets.push_back(make_simple_scene("plane_al", {}, {}, "arealights"));
 
     // basic shapes
-    presets["basic_pl"] = make_simple_scene("basic_pl",
+    presets.push_back(make_simple_scene("basic_pl",
         {"flipcapsphere", "spherecube", "spherizedcube"},
-        {"plastic_red", "plastic_green", "plastic_blue"}, "pointlights");
-    presets["basic_al"] = make_simple_scene("basic_al",
+        {"plastic_red", "plastic_green", "plastic_blue"}, "pointlights"));
+    presets.push_back(make_simple_scene("basic_al",
         {"flipcapsphere", "spherecube", "spherizedcube"},
-        {"plastic_red", "plastic_green", "plastic_blue"}, "arealights");
+        {"plastic_red", "plastic_green", "plastic_blue"}, "arealights"));
 
     // simple shapes
-    presets["simple_pl"] = make_simple_scene("simple_pl",
+    presets.push_back(make_simple_scene("simple_pl",
         {"flipcapsphere", "spherecube", "spherizedcube"},
         {"plastic_colored", "plastic_colored", "plastic_colored"},
-        "pointlights");
-    presets["simple_al"] = make_simple_scene("simple_al",
+        "pointlights"));
+    presets.push_back(make_simple_scene("simple_al",
         {"flipcapsphere", "spherecube", "spherizedcube"},
         {"plastic_colored", "plastic_colored", "plastic_colored"},
-        "arealights");
-    presets["simple_el"] = make_simple_scene("simple_el",
+        "arealights"));
+    presets.push_back(make_simple_scene("simple_el",
         {"flipcapsphere", "spherecube", "spherizedcube"},
-        {"plastic_colored", "plastic_colored", "plastic_colored"}, "envlights");
+        {"plastic_colored", "plastic_colored", "plastic_colored"},
+        "envlights"));
 
     // transparent shapes
-    presets["transparent_al"] =
+    presets.push_back(
         make_simple_scene("transparent_al", {"quad", "quad", "quad"},
             {"transparent_red", "transparent_green", "transparent_blue"},
-            "arealights");
+            "arealights"));
 
     // points shapes
-    presets["points_al"] = make_simple_scene("transparent_al",
+    presets.push_back(make_simple_scene("transparent_al",
         {"pointscube", "pointscube", "pointscube"},
-        {"matte_gray", "matte_gray", "matte_gray"}, "arealights");
+        {"matte_gray", "matte_gray", "matte_gray"}, "arealights"));
 
     // lines shapes
-    presets["lines_al"] =
+    presets.push_back(
         make_simple_scene("lines_al", {"hairball1", "hairball2", "hairball3"},
-            {"matte_gray", "matte_gray", "matte_gray"}, "arealights");
+            {"matte_gray", "matte_gray", "matte_gray"}, "arealights"));
 
     // subdiv shapes
-    presets["subdiv_al"] =
+    presets.push_back(
         make_simple_scene("subdiv_al", {"cubes", "suzannes", "suzannes"},
-            {"plastic_red", "plastic_green", "plastic_blue"}, "arealights");
+            {"plastic_red", "plastic_green", "plastic_blue"}, "arealights"));
 
     // plastics shapes
-    presets["plastics_al"] =
+    presets.push_back(
         make_simple_scene("plastics_al", {"matball", "matball", "matball"},
             {"matte_green", "plastic_green", "plastic_colored"}, "arealights",
-            true);
-    presets["plastics_el"] =
+            true));
+    presets.push_back(
         make_simple_scene("plastics_el", {"matball", "matball", "matball"},
-            {"matte_green", "plastic_green", "plastic_colored"}, "envlights");
+            {"matte_green", "plastic_green", "plastic_colored"}, "envlights"));
 
     // metals shapes
-    presets["metals_al"] =
+    presets.push_back(
         make_simple_scene("metals_al", {"matball", "matball", "matball"},
-            {"gold_rough", "gold_sharp", "silver_sharp"}, "arealights");
-    presets["metals_el"] =
+            {"gold_rough", "gold_sharp", "silver_sharp"}, "arealights"));
+    presets.push_back(
         make_simple_scene("metals_el", {"matball", "matball", "matball"},
-            {"gold_rough", "gold_sharp", "silver_sharp"}, "envlights");
+            {"gold_rough", "gold_sharp", "silver_sharp"}, "envlights"));
 
     // tesselation shapes
-    presets["tesselation_pl"] = make_simple_scene("tesselation_pl",
+    presets.push_back(make_simple_scene("tesselation_pl",
         {"geospherel", "geospheref", "geosphere"},
-        {"matte_gray", "matte_gray", "matte_gray"}, "pointlights");
+        {"matte_gray", "matte_gray", "matte_gray"}, "pointlights"));
 
     // textureuv shapes
-    presets["textureuv_pl"] = make_simple_scene("textureuv_pl",
+    presets.push_back(make_simple_scene("textureuv_pl",
         {"flipcapsphere", "flipcapsphere", "flipcapsphere"},
-        {"matte_green", "matte_colored", "matte_uv"}, "pointlights");
+        {"matte_green", "matte_colored", "matte_uv"}, "pointlights"));
 
     // normalmap shapes
-    presets["normalmap_pl"] = make_simple_scene("normalmap_pl",
+    presets.push_back(make_simple_scene("normalmap_pl",
         {"flipcapsphere", "flipcapsphere", "flipcapsphere"},
         {"plastic_blue", "plastic_blue_bumped", "plastic_colored_bumped"},
-        "pointlights");
+        "pointlights"));
 
     // animated shapes
-    presets["animated_pl"] = make_simple_scene("animated_pl",
+    presets.push_back(make_simple_scene("animated_pl",
         {"flipcapsphere", "spherecube", "spherizedcube"},
         {"plastic_colored", "plastic_colored", "plastic_colored"},
-        "pointlights", true, {"bounce", "scale", "rotation"});
+        "pointlights", true, {"bounce", "scale", "rotation"}));
 
     // instances shared functions
     auto make_random_scene = [&](const std::string& name, const vec2i& num,
@@ -11189,8 +11180,8 @@ std::unordered_map<std::string, proc_scene*>& proc_scene_presets() {
                           (bbox.max.x - bbox.min.x) / num.y);
 
         auto params = make_test_scene(name);
-        params->cameras.push_back(proc_camera_presets().at("cam3"));
-        params->materials.push_back(proc_material_presets().at("matte_floor"));
+        params->cameras.push_back(make_camera_preset("cam3"));
+        params->materials.push_back(make_material_preset("matte_floor"));
         params->shapes.push_back(make_shape_preset("floor"));
         params->instances.push_back(
             make_test_instance("floor", "floor", {0, 0, 0}));
@@ -11241,10 +11232,10 @@ std::unordered_map<std::string, proc_scene*>& proc_scene_presets() {
     };
 
     // instances
-    presets["instances_pl"] =
-        make_random_scene("instances_pl", {10, 10}, {{-3, -3}, {3, 3}});
-    presets["instancel_pl"] =
-        make_random_scene("instancel_pl", {100, 100}, {{-3, -3}, {3, 3}});
+    presets.push_back(
+        make_random_scene("instances_pl", {10, 10}, {{-3, -3}, {3, 3}}));
+    presets.push_back(
+        make_random_scene("instancel_pl", {100, 100}, {{-3, -3}, {3, 3}}));
 
 #if 0
         else if (otype == "normdisp") {
@@ -11259,8 +11250,7 @@ std::unordered_map<std::string, proc_scene*>& proc_scene_presets() {
 #endif
 
     // add missing textures
-    for (auto kv : presets) {
-        auto preset = kv.second;
+    for (auto preset : presets) {
         auto used = std::unordered_set<std::string>();
         for (auto mat : preset->materials) used.insert(mat->texture);
         for (auto mat : preset->materials) used.insert(mat->normal);
@@ -11272,7 +11262,412 @@ std::unordered_map<std::string, proc_scene*>& proc_scene_presets() {
     }
 
     // remove duplicates
-    for (auto& kv : presets) remove_duplicates(kv.second);
+    for (auto preset : presets) remove_duplicates(preset);
+
+    return presets;
+}
+
+std::vector<std::pair<proc_scene*, std::vector<proc_scene*>>>&
+proc_split_scene_presets() {
+    static auto presets =
+        std::vector<std::pair<proc_scene*, std::vector<proc_scene*>>>();
+    if (!presets.empty()) return presets;
+
+    auto make_test_scene = [](const std::string& name) {
+        auto params = new proc_scene();
+        params->name = name;
+        return params;
+    };
+    auto make_test_instance = [](const std::string& name,
+                                  const std::string& shape,
+                                  const vec3f& pos = {0, 0, 0}) {
+        auto params = new proc_instance();
+        params->name = name;
+        params->shape = shape;
+        params->frame.o = pos;
+        return params;
+    };
+    auto make_texture_preset = [](const std::string& name) {
+        for (auto p : proc_texture_presets())
+            if (p->name == name) return new proc_texture(*p);
+        throw std::runtime_error("missing texture preset " + name);
+    };
+    auto make_shape_preset = [](const std::string& name) {
+        auto npshp = (proc_shape*)nullptr;
+        for (auto p : proc_shape_presets())
+            if (p->name == name) npshp = new proc_shape(*p);
+        if (npshp->hair_params)
+            npshp->hair_params = new make_hair_params(*npshp->hair_params);
+        return npshp;
+    };
+    auto make_environment_preset = [](const std::string& name) {
+        for (auto p : proc_environment_presets())
+            if (p->name == name) return new proc_environment(*p);
+        return (proc_environment*)nullptr;
+    };
+    auto make_camera_preset = [](const std::string& name) {
+        for (auto p : proc_camera_presets())
+            if (p->name == name) return new proc_camera(*p);
+        return (proc_camera*)nullptr;
+    };
+    auto make_material_preset = [](const std::string& name) {
+        for (auto p : proc_material_presets())
+            if (p->name == name) return new proc_material(*p);
+        return (proc_material*)nullptr;
+    };
+    auto make_animation_preset = [](const std::string& name) {
+        for (auto p : proc_animation_presets())
+            if (p->name == name) return new proc_animation(*p);
+        return (proc_animation*)nullptr;
+    };
+
+    // textures
+    presets.push_back({make_test_scene("textures"), {}});
+    for (auto txt : proc_texture_presets())
+        presets.back().first->textures.push_back(
+            make_texture_preset(txt->name));
+
+    // shapes
+    presets.push_back({make_test_scene("shapes"), {}});
+    for (auto shp : proc_shape_presets())
+        presets.back().first->shapes.push_back(make_shape_preset(shp->name));
+
+    // envmap
+    presets.push_back({make_test_scene("envmaps"), {}});
+    for (auto env : proc_environment_presets())
+        presets.back().first->environments.push_back(
+            make_environment_preset(env->name));
+
+    // simple scenes shared functions
+    auto make_simple_scene = [&](const std::string& name,
+                                 const std::vector<std::string>& shapes,
+                                 const std::vector<std::string>& mats,
+                                 bool nodes = false,
+                                 const std::vector<std::string>& animations =
+                                     {}) {
+        auto pos =
+            std::vector<vec3f>{{-2.50f, 1, 0}, {0, 1, 0}, {+2.50f, 1, 0}};
+        auto params = make_test_scene(name);
+        params->cameras.push_back(make_camera_preset("cam3"));
+        params->materials.push_back(make_material_preset("matte_floor"));
+        if (params->materials.back()->texture != "")
+            params->textures.push_back(
+                make_texture_preset(params->materials.back()->texture));
+        params->shapes.push_back(make_shape_preset("floor"));
+        params->shapes.back()->material = params->materials.back()->name;
+        params->instances.push_back(
+            make_test_instance("floor", "floor", {0, 0, 0}));
+        for (auto i = 0; i < shapes.size(); i++) {
+            auto name = "obj" + std::to_string(i + 1);
+            params->materials.push_back(make_material_preset(mats[i]));
+            params->shapes.push_back(make_shape_preset(shapes[i]));
+            params->shapes.back()->name = name;
+            params->shapes.back()->material = mats[i];
+            if (params->shapes.back()->type == proc_shape_type::hairball ||
+                params->shapes.back()->type == proc_shape_type::matball) {
+                params->materials.push_back(make_material_preset("matte_gray"));
+                params->shapes.back()->interior = "matte_gray";
+            }
+            params->instances.push_back(make_test_instance(name, name, pos[i]));
+            if (!animations.empty()) {
+                params->animations.push_back(
+                    make_animation_preset(animations[i]));
+                params->animations.back()->nodes.push_back(name);
+            }
+        }
+        if (!animations.empty() || nodes) {
+            for (auto cam : params->cameras) {
+                auto nde = new proc_node();
+                nde->name = cam->name;
+                nde->frame = lookat_frame(cam->from, cam->to, vec3f{0, 1, 0});
+                nde->camera = cam->name;
+                params->nodes.push_back(nde);
+            }
+            for (auto ist : params->instances) {
+                auto nde = new proc_node();
+                nde->name = ist->name;
+                nde->frame = ist->frame;
+                nde->instance = ist->name;
+                params->nodes.push_back(nde);
+            }
+            for (auto env : params->environments) {
+                auto nde = new proc_node();
+                nde->name = env->name;
+                nde->frame = env->frame;
+                nde->environment = env->name;
+                params->nodes.push_back(nde);
+            }
+        }
+        return params;
+    };
+
+    // simple scenes shared functions
+    auto make_simple_scene_views = [&](bool nodes = false) {
+        auto views = std::vector<proc_scene*>();
+        auto pos =
+            std::vector<vec3f>{{-2.50f, 1, 0}, {0, 1, 0}, {+2.50f, 1, 0}};
+        for (auto lights : {"pointlights"s, "arealights"s, "envlights"s}) {
+            auto params = make_test_scene(lights);
+            params->cameras.push_back(make_camera_preset("cam3"));
+            if (lights == "pointlights" || lights == "arealights" ||
+                lights == "arealights1") {
+                auto emission = 120;
+                auto shp = "point";
+                auto mat = "pointlight";
+                auto pos = std::vector<vec3f>{{-2, 10, 8}, {+2, 10, 8}};
+                auto scale = 1.0f;
+                if (lights == "arealights") {
+                    emission = 8;
+                    shp = "quad";
+                    mat = "arealight";
+                    pos = {{0, 16, 0}, {0, 16, 16}};
+                    scale = 8;
+                }
+                if (lights == "arealights1") {
+                    emission = 80;
+                    shp = "quad";
+                    mat = "arealight";
+                    pos = {{-4, 5, 8}, {+4, 5, 8}};
+                    scale = 2;
+                }
+                for (auto i = 0; i < 2; i++) {
+                    auto name = "light" + std::to_string(i + 1);
+                    params->materials.push_back(make_material_preset(mat));
+                    params->materials.back()->name = name;
+                    params->materials.back()->emission = emission;
+                    params->shapes.push_back(make_shape_preset(shp));
+                    params->shapes.back()->name = name;
+                    params->shapes.back()->material = name;
+                    params->shapes.back()->scale = scale;
+                    params->instances.push_back(
+                        make_test_instance(name, name, pos[i]));
+                    if (lights == "arealights" || lights == "arealights1")
+                        params->instances.back()->frame =
+                            lookat_frame(pos[i], {0, 1, 0}, {0, 0, 1}, true);
+                }
+            }
+            if (lights == "envlights") {
+                params->environments.push_back(make_environment_preset("sky1"));
+                params->environments.back()->frame = lookat_frame(
+                    pos[1], pos[1] + vec3f{0, 0, 1}, {0, 1, 0}, true);
+                params->textures.push_back(make_texture_preset("sky1"));
+            }
+            if (nodes) {
+                for (auto cam : params->cameras) {
+                    auto nde = new proc_node();
+                    nde->name = cam->name;
+                    nde->frame =
+                        lookat_frame(cam->from, cam->to, vec3f{0, 1, 0});
+                    nde->camera = cam->name;
+                    params->nodes.push_back(nde);
+                }
+                for (auto ist : params->instances) {
+                    auto nde = new proc_node();
+                    nde->name = ist->name;
+                    nde->frame = ist->frame;
+                    nde->instance = ist->name;
+                    params->nodes.push_back(nde);
+                }
+                for (auto env : params->environments) {
+                    auto nde = new proc_node();
+                    nde->name = env->name;
+                    nde->frame = env->frame;
+                    nde->environment = env->name;
+                    params->nodes.push_back(nde);
+                }
+            }
+            views.push_back(params);
+        }
+        return views;
+    };
+
+    // plane only
+    presets.push_back(
+        {make_simple_scene("plane", {}, {}), make_simple_scene_views()});
+
+    // basic shapes
+    presets.push_back({make_simple_scene("basic",
+                           {"flipcapsphere", "spherecube", "spherizedcube"},
+                           {"plastic_red", "plastic_green", "plastic_blue"}),
+        make_simple_scene_views()});
+
+    // simple shapes
+    presets.push_back(
+        {make_simple_scene("simple",
+             {"flipcapsphere", "spherecube", "spherizedcube"},
+             {"plastic_colored", "plastic_colored", "plastic_colored"}),
+            make_simple_scene_views()});
+
+    // transparent shapes
+    presets.push_back(
+        {make_simple_scene("transparent", {"quad", "quad", "quad"},
+             {"transparent_red", "transparent_green", "transparent_blue"}),
+            make_simple_scene_views()});
+
+    // lines shapes
+    presets.push_back(
+        {make_simple_scene("lines", {"hairball1", "hairball2", "hairball3"},
+             {"matte_gray", "matte_gray", "matte_gray"}),
+            make_simple_scene_views()});
+
+    // subdiv shapes
+    presets.push_back(
+        {make_simple_scene("subdiv", {"cubes", "suzannes", "suzannes"},
+             {"plastic_red", "plastic_green", "plastic_blue"}),
+            make_simple_scene_views()});
+
+    // plastics shapes
+    presets.push_back(
+        {make_simple_scene("plastics", {"matball", "matball", "matball"},
+             {"matte_green", "plastic_green", "plastic_colored"}, true),
+            make_simple_scene_views()});
+
+    // metals shapes
+    presets.push_back(
+        {make_simple_scene("metals", {"matball", "matball", "matball"},
+             {"gold_rough", "gold_sharp", "silver_sharp"}),
+            make_simple_scene_views()});
+
+    // tesselation shapes
+    presets.push_back({make_simple_scene("tesselation",
+                           {"geospherel", "geospheref", "geosphere"},
+                           {"matte_gray", "matte_gray", "matte_gray"}),
+        make_simple_scene_views()});
+
+    // textureuv shapes
+    presets.push_back({make_simple_scene("textureuv",
+                           {"flipcapsphere", "flipcapsphere", "flipcapsphere"},
+                           {"matte_green", "matte_colored", "matte_uv"}),
+        make_simple_scene_views()});
+
+    // normalmap shapes
+    presets.push_back(
+        {make_simple_scene("normalmap",
+             {"flipcapsphere", "flipcapsphere", "flipcapsphere"},
+             {"plastic_blue", "plastic_blue_bumped", "plastic_colored_bumped"}),
+            make_simple_scene_views()});
+
+    // animated shapes
+    presets.push_back(
+        {make_simple_scene("animated",
+             {"flipcapsphere", "spherecube", "spherizedcube"},
+             {"plastic_colored", "plastic_colored", "plastic_colored"}, true,
+             {"bounce", "scale", "rotation"}),
+            make_simple_scene_views(true)});
+
+    // instances shared functions
+    auto make_random_scene = [&](const std::string& name, const vec2i& num,
+                                 const bbox2f& bbox, uint32_t seed = 13) {
+        auto rscale = 0.9f * 0.25f *
+                      min((bbox.max.x - bbox.min.x) / num.x,
+                          (bbox.max.x - bbox.min.x) / num.y);
+
+        auto params = make_test_scene(name);
+        params->cameras.push_back(make_camera_preset("cam3"));
+        params->materials.push_back(make_material_preset("matte_floor"));
+        params->shapes.push_back(make_shape_preset("floor"));
+        params->instances.push_back(
+            make_test_instance("floor", "floor", {0, 0, 0}));
+        auto shapes = std::vector<std::string>();
+        for (auto mat : {"plastic_red", "plastic_green", "plastic_blue"})
+            params->materials.push_back(make_material_preset(mat));
+        for (auto shp : {"sphere", "flipcapsphere", "cube"}) {
+            for (auto mat : {"plastic_red", "plastic_green", "plastic_blue"}) {
+                params->shapes.push_back(make_shape_preset(shp));
+                params->shapes.back()->name += "_"s + mat;
+                params->shapes.back()->material = mat;
+                params->shapes.back()->scale *= rscale;
+                shapes.push_back(params->shapes.back()->name);
+            }
+        }
+
+        auto rng = init_rng(seed, 7);
+        auto count = 0;
+        for (auto j = 0; j < num.y; j++) {
+            for (auto i = 0; i < num.x; i++) {
+                auto rpos = next_rand2f(rng);
+                auto pos = vec3f{
+                    bbox.min.x + (bbox.max.x - bbox.min.x) *
+                                     (i + 0.45f + 0.1f * rpos.x) / num.x,
+                    rscale,
+                    bbox.min.y + (bbox.max.y - bbox.min.y) *
+                                     (j + 0.45f + 0.1f * rpos.y) / num.y,
+                };
+                params->instances.push_back(
+                    make_test_instance("instance" + std::to_string(count++),
+                        shapes[next_rand1i(rng, (int)shapes.size())], pos));
+            }
+        }
+
+        return params;
+    };
+
+    // instances shared functions
+    auto make_random_scene_views = [&]() {
+        auto views = std::vector<proc_scene*>();
+        for (auto name : {"pointlights"s}) {
+            auto params = make_test_scene(name);
+            params->cameras.push_back(make_camera_preset("cam3"));
+            auto pos = std::vector<vec3f>{{-2, 10, 8}, {+2, 10, 8}};
+            for (auto i = 0; i < 2; i++) {
+                auto name = "light" + std::to_string(i + 1);
+                params->materials.push_back(make_material_preset("pointlight"));
+                params->materials.back()->name = name;
+                params->materials.back()->emission = 80;
+                params->shapes.push_back(make_shape_preset("point"));
+                params->shapes.back()->name = name;
+                params->shapes.back()->material = name;
+                params->instances.push_back(
+                    make_test_instance(name, name, pos[i]));
+            }
+            views.push_back(params);
+        }
+        return views;
+    };
+
+    // instances
+    presets.push_back(
+        {make_random_scene("instances", {10, 10}, {{-3, -3}, {3, 3}}),
+            make_random_scene_views()});
+    presets.push_back(
+        {make_random_scene("instancel", {100, 100}, {{-3, -3}, {3, 3}}),
+            make_random_scene_views()});
+
+#if 0
+    else if (otype == "normdisp") {
+        auto mat = std::vector<material*>{
+            add_test_material(scn, test_material_type::plastic_bumped),
+            add_test_material(scn, test_material_type::plastic_bumped)};
+        add_test_instance(scn, "obj01",
+                          add_uvspherecube(scn, "base_obj01", mat[0], 4), {-1.25f, 1, 0});
+        add_test_instance(scn, "obj03",
+                          add_uvspherecube(scn, "subdiv_02_obj02", mat[1], 4), {1.25f, 1, 0});
+    }
+#endif
+
+    // add missing textures
+    auto add_textures = [&](proc_scene* preset) {
+        auto used = std::unordered_set<std::string>();
+        for (auto mat : preset->materials) used.insert(mat->texture);
+        for (auto mat : preset->materials) used.insert(mat->normal);
+        for (auto env : preset->environments) used.insert(env->texture);
+        used.erase("");
+        for (auto txt : preset->textures) used.erase(txt->name);
+        for (auto txt : used)
+            preset->textures.push_back(make_texture_preset(txt));
+    };
+
+    // add missing textures
+    for (auto& preset : presets) {
+        add_textures(preset.first);
+        for (auto& view : preset.second) add_textures(view);
+    }
+
+    // remove duplicates
+    for (auto& preset : presets) {
+        remove_duplicates(preset.first);
+        for (auto view : preset.second) remove_duplicates(view);
+    }
 
     return presets;
 }

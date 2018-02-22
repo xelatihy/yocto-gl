@@ -50,20 +50,43 @@ void rmdir(const std::string& dir) {
 #endif
 }
 
+void save_scene(
+    ygl::scene* scn, const std::string& sname, const std::string& dirname) {
+    auto facevarying = false;
+    for (auto sgr : scn->shapes)
+        for (auto shp : sgr->shapes)
+            facevarying = facevarying || !shp->quads_pos.empty();
+
+    auto opts = ygl::save_options();
+    opts.save_textures = true;
+    if (!facevarying) save_scene(dirname + sname + ".gltf", scn, opts);
+    if (!ygl::startswith(sname, "instance")) ygl::flatten_instances(scn);
+    ygl::save_scene(dirname + sname + ".obj", scn, opts);
+}
+
 void save_test_scene(const std::string& sname, const std::string& basedir) {
     auto dirname = basedir + "/" + sname + "/";
     try {
         mkdir(dirname);
-        auto test_scn = (sname == "cornell_box") ?
-                            (ygl::proc_scene*)nullptr :
-                            ygl::proc_scene_presets().at(sname);
         ygl::log_info("generating scene {}", sname);
-        auto scn =
-            (sname == "cornell_box") ?
-                ygl::make_cornell_box_scene() :
-                ygl::make_proc_elems(ygl::proc_scene_presets().at(sname));
+        if (sname == "cornell_box") {
+            auto scn = ygl::make_cornell_box_scene();
+            save_scene(scn, sname, dirname);
+            return;
+        }
+        auto test_scns =
+            std::vector<std::pair<ygl::proc_scene*, ygl::scene*>>();
+        for (auto& preset : ygl::proc_split_scene_presets()) {
+            if (preset.first->name != sname) continue;
+            test_scns.push_back(
+                {preset.first, ygl::make_proc_elems(preset.first)});
+            for (auto& view : preset.second) {
+                test_scns.push_back({view, ygl::make_proc_elems(view)});
+            }
+        }
         ygl::log_info("saving scene {}", sname);
         if (sname == "textures") {
+            auto scn = test_scns.front().second;
             for (auto txt : scn->textures) {
                 if (!txt->hdr.empty())
                     ygl::save_image4f(dirname + txt->path, txt->hdr);
@@ -71,6 +94,7 @@ void save_test_scene(const std::string& sname, const std::string& basedir) {
                     ygl::save_image4b(dirname + txt->path, txt->ldr);
             }
         } else if (sname == "shapes") {
+            auto scn = test_scns.front().second;
             for (auto sgr : scn->shapes) {
                 auto sscn = new ygl::scene();
                 auto ssgr = new ygl::shape_group();
@@ -87,28 +111,20 @@ void save_test_scene(const std::string& sname, const std::string& basedir) {
                 delete sscn;
             }
         } else {
-            auto facevarying = false;
-            for (auto sgr : scn->shapes)
-                for (auto shp : sgr->shapes)
-                    facevarying = facevarying || !shp->quads_pos.empty();
-
-            auto opts = ygl::save_options();
-            opts.save_textures = true;
-            if (!facevarying) save_scene(dirname + sname + ".gltf", scn, opts);
-            if (!ygl::startswith(sname, "instance"))
-                ygl::flatten_instances(scn);
-            ygl::save_scene(dirname + sname + ".obj", scn, opts);
-            if (test_scn)
-                ygl::save_proc_scene(dirname + sname + ".json", test_scn);
+            for (auto& test_scn : test_scns) {
+                save_scene(test_scn.second, test_scn.first->name, dirname);
+                ygl::save_proc_scene(dirname + sname + ".json", test_scn.first);
+            }
         }
-        delete scn;
+        for (auto test_scn : test_scns) delete test_scn.second;
     } catch (std::exception& e) { ygl::log_fatal("error {}", e.what()); }
 }
 
 int main(int argc, char* argv[]) {
     // put together scene names
     auto scene_names = std::vector<std::string>{"cornell_box"};
-    for (auto& kv : ygl::proc_scene_presets()) scene_names.push_back(kv.first);
+    for (auto preset : ygl::proc_split_scene_presets())
+        scene_names.push_back(preset.first->name);
 
     // command line params
     auto parser = ygl::make_parser(argc, argv, "ytestgen", "make tests");
