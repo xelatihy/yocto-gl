@@ -57,6 +57,7 @@ struct app_state {
     bool quiet = false;
     bool screenshot_and_exit = false;
     bool no_widgets = false;
+    std::unordered_map<std::string, std::string> inspector_highlights;
 };
 
 // draw with shading
@@ -108,7 +109,7 @@ inline void draw(const std::shared_ptr<ygl::gl_window>& win,
 
     if (ygl::begin_widgets(win, "yview")) {
         if (ygl::draw_header_widget(win, "view")) {
-            ygl::draw_groupid_widget_begin(win, app);
+            ygl::draw_groupid_widget_push(win, app);
             ygl::draw_value_widget(win, "scene", app->filename);
             if (ygl::draw_button_widget(win, "new")) {
                 app->pscn = std::make_shared<ygl::proc_scene>();
@@ -148,7 +149,7 @@ inline void draw(const std::shared_ptr<ygl::gl_window>& win,
             }
             if (ygl::draw_button_widget(win, "print stats"))
                 std::cout << ygl::compute_stats(app->scn);
-            ygl::draw_groupid_widget_end(win);
+            ygl::draw_groupid_widget_pop(win);
         }
         if (ygl::draw_header_widget(win, "params")) {
             ygl::draw_params_widgets(win, "", app->params);
@@ -156,7 +157,8 @@ inline void draw(const std::shared_ptr<ygl::gl_window>& win,
         }
         if (ygl::draw_header_widget(win, "scene")) {
             ygl::draw_scene_widgets(win, "", app->scn, app->selection,
-                app->update_list, app->textures, app->pscn);
+                app->update_list, app->textures, app->pscn,
+                app->inspector_highlights);
         }
     }
     ygl::end_widgets(win);
@@ -234,6 +236,8 @@ int main(int argc, char* argv[]) {
         parser, "--screenshot-and-exit", "", "Take a screenshot and exit");
     app->no_widgets =
         ygl::parse_flag(parser, "--no-widgets", "", "Disable widgets");
+    auto highlight_filename =
+        ygl::parse_opt(parser, "--highlights", "", "Highlight filename", ""s);
     app->imfilename = ygl::parse_opt(
         parser, "--output-image", "-o", "Image filename", "out.png"s);
     auto filenames = ygl::parse_args(
@@ -245,6 +249,16 @@ int main(int argc, char* argv[]) {
 
     // setup logger
     if (app->quiet) ygl::get_default_logger()->verbose = false;
+
+    // fix hilights
+    if (!highlight_filename.empty()) {
+        try {
+            app->inspector_highlights =
+                ygl::load_ini(highlight_filename).at("");
+        } catch (std::exception e) {
+            ygl::log_fatal("cannot load highlihgt file {}", highlight_filename);
+        }
+    }
 
     // scene loading
     app->scn = std::make_shared<ygl::scene>();

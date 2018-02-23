@@ -8524,55 +8524,27 @@ namespace ygl {
 /// @{
 
 /// Loads the contents of a binary file in an in-memory array.
-inline std::vector<unsigned char> load_binary(const std::string& filename) {
-    // https://stackoverflow.com/questions/174531/easiest-way-to-get-files-contents-in-c
-    auto f = fopen(filename.c_str(), "rb");
-    if (!f) throw std::runtime_error("cannot read file " + filename);
-    fseek(f, 0, SEEK_END);
-    auto len = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    auto buf = std::vector<unsigned char>(len);
-    if (fread(buf.data(), 1, len, f) != len)
-        throw std::runtime_error("cannot read file " + filename);
-    fclose(f);
-    return buf;
-}
+std::vector<unsigned char> load_binary(const std::string& filename);
 
 /// Loads the contents of a text file into a string.
-inline std::string load_text(const std::string& filename) {
-    auto buf = load_binary(filename);
-#ifdef _WIN32
-    auto nbuf = std::vector<unsigned char>();
-    nbuf.reserve(buf.size());
-    for (auto i = 0; i < buf.size(); i++) {
-        if (buf[i] == '\r') continue;
-        nbuf.push_back(buf[i]);
-    }
-    buf = nbuf;
-#endif
-    return std::string((char*)buf.data(), (char*)buf.data() + buf.size());
-}
+std::string load_text(const std::string& filename);
 
 /// Saves binary data to a file.
-inline void save_binary(
-    const std::string& filename, const std::vector<unsigned char>& data) {
-    auto f = fopen(filename.c_str(), "wb");
-    if (!f) throw std::runtime_error("cannot write file " + filename);
-    auto num = fwrite(data.data(), 1, data.size(), f);
-    if (num != data.size())
-        throw std::runtime_error("cannot write file " + filename);
-    fclose(f);
-}
+void save_binary(
+    const std::string& filename, const std::vector<unsigned char>& data);
 
 /// Saves a string to a text file.
-inline void save_text(const std::string& filename, const std::string& str) {
-    auto f = fopen(filename.c_str(), "wb");
-    if (!f) throw std::runtime_error("cannot write file " + filename);
-    auto num = fwrite(str.c_str(), 1, str.size(), f);
-    if (num != str.size())
-        throw std::runtime_error("cannot write file " + filename);
-    fclose(f);
-}
+void save_text(const std::string& filename, const std::string& str);
+
+/// Load INI file. The implementation does not handle escaping and
+/// very limited error checking.
+std::unordered_map<std::string, std::unordered_map<std::string, std::string>>
+load_ini(const std::string& filename);
+
+/// Save INI file. The implementation does not handle escaping.
+void save_ini(const std::string& filename,
+    std::unordered_map<std::string,
+        std::unordered_map<std::string, std::string>>& values);
 
 /// @}
 
@@ -9990,9 +9962,6 @@ void draw_tree_widget_end(const std::shared_ptr<gl_window>& win);
 bool draw_tree_widget_begin(const std::shared_ptr<gl_window>& win,
     const std::string& lbl, void*& selection, void* content);
 /// Start selectable tree node widget.
-bool draw_tree_widget_begin(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, void*& selection, void* content, const vec4f& col);
-/// Start selectable tree node widget.
 template <typename T>
 inline bool draw_tree_widget_begin(const std::shared_ptr<gl_window>& win,
     const std::string& lbl, std::shared_ptr<void>& selection,
@@ -10029,11 +9998,6 @@ inline void draw_tree_widget_leaf(const std::shared_ptr<gl_window>& win,
 /// Selectable tree leaf node widget.
 void draw_tree_widget_leaf(const std::shared_ptr<gl_window>& win,
     const std::string& lbl, void*& selection, void* content, const vec4f& col);
-/// Text color widget.
-void draw_tree_widget_color_begin(
-    const std::shared_ptr<gl_window>& win, const vec4f& color);
-/// Text color widget.
-void draw_tree_widget_color_end(const std::shared_ptr<gl_window>& win);
 
 /// Image widget.
 void draw_image_widget(const std::shared_ptr<gl_window>& win, int tid,
@@ -10051,18 +10015,23 @@ void draw_scroll_widget_end(const std::shared_ptr<gl_window>& win);
 void draw_scroll_widget_here(const std::shared_ptr<gl_window>& win);
 
 /// Group ids widget.
-void draw_groupid_widget_begin(const std::shared_ptr<gl_window>& win, int gid);
+void draw_groupid_widget_push(const std::shared_ptr<gl_window>& win, int gid);
 /// Group ids widget.
-void draw_groupid_widget_begin(
-    const std::shared_ptr<gl_window>& win, void* gid);
+void draw_groupid_widget_push(const std::shared_ptr<gl_window>& win, void* gid);
 /// Group ids widget.
-void draw_groupid_widget_begin(
+void draw_groupid_widget_push(
     const std::shared_ptr<gl_window>& win, const std::shared_ptr<void>& gid);
 /// Group ids widget.
-void draw_groupid_widget_begin(
+void draw_groupid_widget_push(
     const std::shared_ptr<gl_window>& win, const char* gid);
 /// Group ids widget.
-void draw_groupid_widget_end(const std::shared_ptr<gl_window>& win);
+void draw_groupid_widget_pop(const std::shared_ptr<gl_window>& win);
+
+/// Widget style.
+void draw_style_widget_push(
+    const std::shared_ptr<gl_window>& win, const vec4f& color);
+/// Widget style.
+void draw_style_widget_pop(const std::shared_ptr<gl_window>& win);
 
 /// Generic widget used for templated code. Min, max and color are ignored.
 inline bool draw_value_widget(const std::shared_ptr<gl_window>& win,
@@ -10249,7 +10218,9 @@ bool draw_scene_widgets(const std::shared_ptr<gl_window>& win,
     scene_selection& sel, std::vector<ygl::scene_selection>& update_list,
     const std::unordered_map<std::shared_ptr<texture>,
         std::shared_ptr<gl_texture>>& gl_txt,
-    const std::shared_ptr<proc_scene>& test_scn = nullptr);
+    const std::shared_ptr<proc_scene>& test_scn = nullptr,
+    const std::unordered_map<std::string, std::string>& inspector_highlights =
+        {});
 
 /// @}
 
@@ -10769,10 +10740,10 @@ template <typename T>
 inline bool draw_params_widgets(
     const std::shared_ptr<gl_window>& win, const std::string& lbl, T& params) {
     if (!lbl.empty() && !draw_header_widget(win, lbl)) return false;
-    draw_groupid_widget_begin(win, &params);
+    draw_groupid_widget_push(win, &params);
     auto visitor = draw_params_visitor{win};
     visit(params, visitor);
-    draw_groupid_widget_end(win);
+    draw_groupid_widget_pop(win);
     return visitor.edited;
 }
 
