@@ -7911,6 +7911,22 @@ Procedural scene.
     - animations:      Animations.
 
 
+#### Struct proc_split_scene
+
+~~~ .cpp
+struct proc_split_scene {
+    std::shared_ptr<proc_scene> scn;
+    std::vector<std::shared_ptr<proc_scene>> views;
+}
+~~~
+
+Procedural scene with objects and lights split into separate groups.
+
+- Members:
+    - scn:      Scene shapes.
+    - views:      Scene lights and cameras split into different configurations.
+
+
 #### Function make_cornell_box_scene()
 
 ~~~ .cpp
@@ -8092,9 +8108,7 @@ Test scene presets.
 #### Function proc_split_scene_presets()
 
 ~~~ .cpp
-std::vector<std::pair<std::shared_ptr<proc_scene>,
-    std::vector<std::shared_ptr<proc_scene>>>>&
-proc_split_scene_presets();
+std::vector<std::shared_ptr<proc_split_scene>>& proc_split_scene_presets();
 ~~~
 
 Test scene presets split into objects and lighting and cameras.

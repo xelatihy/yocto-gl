@@ -6738,6 +6738,22 @@ Throws an exception if an error occurs.</p>
 </ul>
 </li>
 </ul>
+<h4>Struct proc_split_scene</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">proc_split_scene</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">proc_scene</span><span class="o">&gt;</span> <span class="n">scn</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">proc_scene</span><span class="o">&gt;&gt;</span> <span class="n">views</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Procedural scene with objects and lights split into separate groups.</p>
+<ul>
+<li>Members:<ul>
+<li>scn:      Scene shapes.</li>
+<li>views:      Scene lights and cameras split into different configurations.</li>
+</ul>
+</li>
+</ul>
 <h4>Function make_cornell_box_scene()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">scene</span><span class="o">&gt;</span> <span class="n">make_cornell_box_scene</span><span class="p">();</span>
 </code></pre></div>
@@ -6877,9 +6893,7 @@ and never removed.</p>
 
 <p>Test scene presets.</p>
 <h4>Function proc_split_scene_presets()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">proc_scene</span><span class="o">&gt;</span><span class="p">,</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">proc_scene</span><span class="o">&gt;&gt;&gt;&gt;&amp;</span>
-<span class="n">proc_split_scene_presets</span><span class="p">();</span>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">proc_split_scene</span><span class="o">&gt;&gt;&amp;</span> <span class="n">proc_split_scene_presets</span><span class="p">();</span>
 </code></pre></div>
 
 
