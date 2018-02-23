@@ -10990,16 +10990,13 @@ Internally uses visit to implement the view.</p>
 <p>Draws widgets for a camera. Used for quickly making demos.</p>
 <h4>Struct scene_selection</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">scene_selection</span> <span class="p">{</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">camera</span><span class="o">&gt;</span> <span class="n">cam</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">shape_group</span><span class="o">&gt;</span> <span class="n">sgr</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">&gt;</span> <span class="n">shp</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">material</span><span class="o">&gt;</span> <span class="n">mat</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">&gt;</span> <span class="n">txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">instance</span><span class="o">&gt;</span> <span class="n">ist</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">environment</span><span class="o">&gt;</span> <span class="n">env</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">node</span><span class="o">&gt;</span> <span class="n">nde</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">animation_group</span><span class="o">&gt;</span> <span class="n">agr</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">animation</span><span class="o">&gt;</span> <span class="n">anm</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span> <span class="n">scene_selection</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">=</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">val</span><span class="p">);</span> 
+    <span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span> <span class="kt">bool</span> <span class="n">is</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">get</span><span class="p">();</span> 
+    <span class="kt">void</span><span class="o">*</span> <span class="nf">get_raw</span><span class="p">();</span> 
+    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="kt">void</span><span class="o">&gt;</span> <span class="n">get_untyped</span><span class="p">();</span> 
+    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="kt">void</span><span class="o">&gt;</span> <span class="n">ptr</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">type_info</span><span class="o">*</span> <span class="n">tinfo</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -11007,31 +11004,16 @@ Internally uses visit to implement the view.</p>
 <p>Scene selection</p>
 <ul>
 <li>Members:<ul>
-<li>cam:      Selected camera</li>
-<li>sgr:      Selected shape group</li>
-<li>shp:      Selected shape</li>
-<li>mat:      Selected material</li>
-<li>txt:      Selected texture</li>
-<li>ist:      Selected instance</li>
-<li>env:      Selected environment</li>
-<li>nde:      Selected node</li>
-<li>agr:      Selected animation group</li>
-<li>anm:      Selected animation</li>
+<li>operator=():      Assignment operator.</li>
+<li>is():      Check if points to type T.</li>
+<li>get():      Gets a pointer cast to the specific type.</li>
+<li>get_raw():      Get the raw untyped pointer.</li>
+<li>get_untyped():      Get untyped.</li>
+<li>ptr:      Selected pointer.</li>
+<li>tinfo:      Type information of the pointerd to object.</li>
 </ul>
 </li>
 </ul>
-<h4>Function clear_selection()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">clear_selection</span><span class="p">(</span><span class="n">scene_selection</span><span class="o">&amp;</span> <span class="n">sel</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Clear selection</p>
-<h4>Function get_untyped_selection()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="kt">void</span><span class="o">&gt;</span> <span class="n">get_untyped_selection</span><span class="p">(</span><span class="n">scene_selection</span><span class="o">&amp;</span> <span class="n">sel</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>GVet untyped selection</p>
 <h4>Function draw_scene_widgets()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_scene_widgets</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_window</span><span class="o">&gt;&amp;</span> <span class="n">win</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">scene</span><span class="o">&gt;&amp;</span> <span class="n">scn</span><span class="p">,</span>

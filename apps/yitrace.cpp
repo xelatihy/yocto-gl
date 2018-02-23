@@ -115,10 +115,10 @@ bool update(const std::shared_ptr<app_state>& app) {
 
         // update BVH
         for (auto sel : app->update_list) {
-            if (sel.ist || sel.sgr) {
+            if (sel.is<ygl::instance>() || sel.is<ygl::shape_group>()) {
                 ygl::refit_bvh(app->bvh, app->scn, false);
             }
-            if (sel.nde) {
+            if (sel.is<ygl::node>()) {
                 ygl::update_transforms(app->scn, 0);
                 ygl::refit_bvh(app->bvh, app->scn, false);
             }
