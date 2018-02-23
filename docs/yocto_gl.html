@@ -9311,93 +9311,90 @@ and the specified verbosity level.</p>
 
 <p>OpenGL texture object. Members are not part of the public API.</p>
 <h4>Function update_texture()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_texture</span><span class="p">(</span><span class="n">gl_texture</span><span class="o">&amp;</span> <span class="n">txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">h</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">,</span>
-    <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">pixels</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">linear</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">as_float</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_texture</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">h</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">nc</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">pixels</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">linear</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">as_float</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates a texture with pixels values of size w, h with nc number of
 components (1-4). Internally use float if as_float and filtering if filter.</p>
 <h4>Function update_texture()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_texture</span><span class="p">(</span><span class="n">gl_texture</span><span class="o">&amp;</span> <span class="n">txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">h</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">,</span>
-    <span class="k">const</span> <span class="kt">unsigned</span> <span class="kt">char</span><span class="o">*</span> <span class="n">pixels</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">linear</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">as_srgb</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_texture</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">h</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">nc</span><span class="p">,</span> <span class="k">const</span> <span class="kt">unsigned</span> <span class="kt">char</span><span class="o">*</span> <span class="n">pixels</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">linear</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">as_srgb</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates a texture with pixels values of size w, h with nc number of
 components (1-4). Internally use float if as_float and filtering if filter.</p>
 <h4>Function update_texture()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_texture</span><span class="p">(</span><span class="n">gl_texture</span><span class="o">&amp;</span> <span class="n">txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">image4f</span><span class="o">&amp;</span> <span class="n">img</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">linear</span><span class="p">,</span>
-    <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">as_float</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_texture</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">txt</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">image4f</span><span class="o">&amp;</span> <span class="n">img</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">linear</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">as_float</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates a texture with pixels values from an image.
 Internally use float if as_float and filtering if filter.</p>
 <h4>Function update_texture()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_texture</span><span class="p">(</span><span class="n">gl_texture</span><span class="o">&amp;</span> <span class="n">txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">image4b</span><span class="o">&amp;</span> <span class="n">img</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">linear</span><span class="p">,</span>
-    <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">as_srgb</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_texture</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">txt</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">image4b</span><span class="o">&amp;</span> <span class="n">img</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">linear</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">as_srgb</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates a texture with pixels values from an image.
 Internally use float if as_float and filtering if filter.</p>
 <h4>Function update_texture()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_texture</span><span class="p">(</span><span class="n">gl_texture</span><span class="o">&amp;</span> <span class="n">txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">image4f</span><span class="o">&amp;</span> <span class="n">img</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_texture</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">image4f</span><span class="o">&amp;</span> <span class="n">img</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates a texture with pixels values from an image.</p>
 <h4>Function update_texture()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_texture</span><span class="p">(</span><span class="n">gl_texture</span><span class="o">&amp;</span> <span class="n">txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">image4b</span><span class="o">&amp;</span> <span class="n">img</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_texture</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">image4b</span><span class="o">&amp;</span> <span class="n">img</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates a texture with pixels values from an image.</p>
 <h4>Function make_texture()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">gl_texture</span> <span class="nf">make_texture</span><span class="p">(</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;</span> <span class="n">make_texture</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">image4f</span><span class="o">&amp;</span> <span class="n">img</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">linear</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">as_float</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Creates a texture from an image. Convenience wrapper to update_texture().</p>
 <h4>Function make_texture()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">gl_texture</span> <span class="nf">make_texture</span><span class="p">(</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;</span> <span class="n">make_texture</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">image4b</span><span class="o">&amp;</span> <span class="n">img</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">linear</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">as_srgb</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Creates a texture from an image. Convenience wrapper to update_texture().</p>
 <h4>Function bind_texture()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">bind_texture</span><span class="p">(</span><span class="k">const</span> <span class="n">gl_texture</span><span class="o">&amp;</span> <span class="n">txt</span><span class="p">,</span> <span class="n">uint</span> <span class="n">unit</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">bind_texture</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">txt</span><span class="p">,</span> <span class="n">uint</span> <span class="n">unit</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Binds a texture to a texture unit.</p>
 <h4>Function unbind_texture()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">unbind_texture</span><span class="p">(</span><span class="k">const</span> <span class="n">gl_texture</span><span class="o">&amp;</span> <span class="n">txt</span><span class="p">,</span> <span class="n">uint</span> <span class="n">unit</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">unbind_texture</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">txt</span><span class="p">,</span> <span class="n">uint</span> <span class="n">unit</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Unbinds a texture.</p>
 <h4>Function get_texture_id()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">uint</span> <span class="nf">get_texture_id</span><span class="p">(</span><span class="k">const</span> <span class="n">gl_texture</span><span class="o">&amp;</span> <span class="n">txt</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">uint</span> <span class="nf">get_texture_id</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">txt</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Get texture id.</p>
 <h4>Function is_texture_valid()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">is_texture_valid</span><span class="p">(</span><span class="k">const</span> <span class="n">gl_texture</span><span class="o">&amp;</span> <span class="n">txt</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">is_texture_valid</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">txt</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Check if defined.</p>
-<h4>Function clear_texture()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">clear_texture</span><span class="p">(</span><span class="n">gl_texture</span><span class="o">&amp;</span> <span class="n">txt</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Destroys the texture tid.</p>
 <h4>Enum gl_texture_wrap</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">gl_texture_wrap</span> <span class="p">{</span>
     <span class="n">not_set</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
@@ -9446,15 +9443,12 @@ Internally use float if as_float and filtering if filter.</p>
 </ul>
 <h4>Struct gl_texture_info</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_texture_info</span> <span class="p">{</span>
-    <span class="n">gl_texture</span> <span class="n">txt</span> <span class="o">=</span> <span class="p">{};</span>
     <span class="kt">int</span> <span class="n">texcoord</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">scale</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
     <span class="n">gl_texture_wrap</span> <span class="n">wrap_s</span> <span class="o">=</span> <span class="n">gl_texture_wrap</span><span class="o">::</span><span class="n">not_set</span><span class="p">;</span>
     <span class="n">gl_texture_wrap</span> <span class="n">wrap_t</span> <span class="o">=</span> <span class="n">gl_texture_wrap</span><span class="o">::</span><span class="n">not_set</span><span class="p">;</span>
     <span class="n">gl_texture_filter</span> <span class="n">filter_mag</span> <span class="o">=</span> <span class="n">gl_texture_filter</span><span class="o">::</span><span class="n">not_set</span><span class="p">;</span>
     <span class="n">gl_texture_filter</span> <span class="n">filter_min</span> <span class="o">=</span> <span class="n">gl_texture_filter</span><span class="o">::</span><span class="n">not_set</span><span class="p">;</span>
-    <span class="n">gl_texture_info</span><span class="p">();</span> 
-    <span class="n">gl_texture_info</span><span class="p">(</span><span class="k">const</span> <span class="n">gl_texture</span><span class="o">&amp;</span> <span class="n">tid</span><span class="p">);</span> 
 <span class="p">}</span>
 </code></pre></div>
 
@@ -9462,15 +9456,12 @@ Internally use float if as_float and filtering if filter.</p>
 <p>OpenGL texture parameters.</p>
 <ul>
 <li>Members:<ul>
-<li>txt:      Texture.</li>
 <li>texcoord:      Texture coordinate set.</li>
 <li>scale:      Texture strength/scale (used by some models).</li>
 <li>wrap_s:      Wrap s mode.</li>
 <li>wrap_t:      Wrap t mode</li>
 <li>filter_mag:      Filter mag mode.</li>
 <li>filter_min:      Filter min mode.</li>
-<li>gl_texture_info():      Default constructor.</li>
-<li>gl_texture_info():      Constructor from texture id only.</li>
 </ul>
 </li>
 </ul>
@@ -9481,70 +9472,70 @@ Internally use float if as_float and filtering if filter.</p>
 
 <p>OpenGL vertex/element buffer. Members are not part of the public API.</p>
 <h4>Function update_vertex_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span><span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span>
-    <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_vertex_buffer</span><span class="o">&gt;&amp;</span> <span class="n">buf</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates the buffer with new data.</p>
 <h4>Function update_vertex_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span><span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span>
-    <span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_vertex_buffer</span><span class="o">&gt;&amp;</span> <span class="n">buf</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates the buffer with new data.</p>
 <h4>Function update_vertex_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span><span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_vertex_buffer</span><span class="o">&gt;&amp;</span> <span class="n">buf</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates the buffer with new data.</p>
 <h4>Function update_vertex_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span><span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_vertex_buffer</span><span class="o">&gt;&amp;</span> <span class="n">buf</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates the buffer with new data.</p>
 <h4>Function update_vertex_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span><span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_vertex_buffer</span><span class="o">&gt;&amp;</span> <span class="n">buf</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates the buffer with new data.</p>
 <h4>Function update_vertex_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span><span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_vertex_buffer</span><span class="o">&gt;&amp;</span> <span class="n">buf</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates the buffer with new data.</p>
 <h4>Function update_vertex_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span><span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_vertex_buffer</span><span class="o">&gt;&amp;</span> <span class="n">buf</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates the buffer with new data.</p>
 <h4>Function update_vertex_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span><span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_vertex_buffer</span><span class="o">&gt;&amp;</span> <span class="n">buf</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates the buffer with new data.</p>
 <h4>Function update_vertex_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span><span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_vertex_buffer</span><span class="o">&gt;&amp;</span> <span class="n">buf</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates the buffer with new data.</p>
 <h4>Function update_vertex_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span><span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_vertex_buffer</span><span class="o">&gt;&amp;</span> <span class="n">buf</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
@@ -9552,20 +9543,22 @@ Internally use float if as_float and filtering if filter.</p>
 <p>Updates the buffer with new data.</p>
 <h4>Function make_vertex_buffer()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">gl_vertex_buffer</span> <span class="n">make_vertex_buffer</span><span class="p">(</span>
+<span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_vertex_buffer</span><span class="o">&gt;</span> <span class="n">make_vertex_buffer</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Make a buffer with new data.</p>
 <h4>Function bind_vertex_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">bind_vertex_buffer</span><span class="p">(</span><span class="k">const</span> <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="n">uint</span> <span class="n">vattr</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">bind_vertex_buffer</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_vertex_buffer</span><span class="o">&gt;&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="n">uint</span> <span class="n">vattr</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Bind the buffer at a particular attribute location.</p>
 <h4>Function unbind_vertex_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">unbind_vertex_buffer</span><span class="p">(</span><span class="k">const</span> <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="n">uint</span> <span class="n">vattr</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">unbind_vertex_buffer</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_vertex_buffer</span><span class="o">&gt;&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="n">uint</span> <span class="n">vattr</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -9577,23 +9570,18 @@ Internally use float if as_float and filtering if filter.</p>
 
 <p>Unbind the buffer.</p>
 <h4>Function get_vertex_buffer_id()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">uint</span> <span class="nf">get_vertex_buffer_id</span><span class="p">(</span><span class="k">const</span> <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">uint</span> <span class="nf">get_vertex_buffer_id</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_vertex_buffer</span><span class="o">&gt;&amp;</span> <span class="n">buf</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Get buffer id.</p>
 <h4>Function is_vertex_buffer_valid()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">is_vertex_buffer_valid</span><span class="p">(</span><span class="k">const</span> <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">is_vertex_buffer_valid</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_vertex_buffer</span><span class="o">&gt;&amp;</span> <span class="n">buf</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Check if defined.</p>
-<h4>Function clear_vertex_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">clear_vertex_buffer</span><span class="p">(</span><span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Destroys the buffer.</p>
 <h4>Struct gl_element_buffer</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_element_buffer</span> <span class="p">{</span>
     <span class="n">uint</span> <span class="n">bid</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
@@ -9613,35 +9601,35 @@ Internally use float if as_float and filtering if filter.</p>
 </li>
 </ul>
 <h4>Function update_element_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_element_buffer</span><span class="p">(</span><span class="n">gl_element_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span>
-    <span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_element_buffer</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_element_buffer</span><span class="o">&gt;&amp;</span> <span class="n">buf</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates the buffer with new data.</p>
 <h4>Function update_element_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_element_buffer</span><span class="p">(</span><span class="n">gl_element_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_element_buffer</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_element_buffer</span><span class="o">&gt;&amp;</span> <span class="n">buf</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates the bufferwith new data.</p>
 <h4>Function update_element_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_element_buffer</span><span class="p">(</span><span class="n">gl_element_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_element_buffer</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_element_buffer</span><span class="o">&gt;&amp;</span> <span class="n">buf</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates the buffer with new data.</p>
 <h4>Function update_element_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_element_buffer</span><span class="p">(</span><span class="n">gl_element_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_element_buffer</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_element_buffer</span><span class="o">&gt;&amp;</span> <span class="n">buf</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates the buffer with new data.</p>
 <h4>Function update_element_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_element_buffer</span><span class="p">(</span><span class="n">gl_element_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_element_buffer</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_element_buffer</span><span class="o">&gt;&amp;</span> <span class="n">buf</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
@@ -9649,42 +9637,39 @@ Internally use float if as_float and filtering if filter.</p>
 <p>Updates the buffer with new data.</p>
 <h4>Function make_element_buffer()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">gl_element_buffer</span> <span class="n">make_element_buffer</span><span class="p">(</span>
+<span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_element_buffer</span><span class="o">&gt;</span> <span class="n">make_element_buffer</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Make a buffer with new data.</p>
 <h4>Function draw_elems()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_elems</span><span class="p">(</span><span class="k">const</span> <span class="n">gl_element_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_elems</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_element_buffer</span><span class="o">&gt;&amp;</span> <span class="n">buf</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Draws elements.</p>
 <h4>Function get_element_buffer_id()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">uint</span> <span class="nf">get_element_buffer_id</span><span class="p">(</span><span class="k">const</span> <span class="n">gl_element_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">uint</span> <span class="nf">get_element_buffer_id</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_element_buffer</span><span class="o">&gt;&amp;</span> <span class="n">buf</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Get id</p>
 <h4>Function is_element_buffer_valid()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">is_element_buffer_valid</span><span class="p">(</span><span class="k">const</span> <span class="n">gl_element_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">is_element_buffer_valid</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_element_buffer</span><span class="o">&gt;&amp;</span> <span class="n">buf</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Check if defined</p>
-<h4>Function clear_element_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">clear_element_buffer</span><span class="p">(</span><span class="n">gl_element_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Destroys the buffer</p>
 <h4>Struct gl_program</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_program</span> <span class="p">{</span>
     <span class="n">uint</span> <span class="n">pid</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
     <span class="n">uint</span> <span class="n">vid</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
     <span class="n">uint</span> <span class="n">fid</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
     <span class="n">uint</span> <span class="n">vao</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="o">~</span><span class="n">gl_program</span><span class="p">();</span> 
 <span class="p">}</span>
 </code></pre></div>
 
@@ -9696,79 +9681,78 @@ Internally use float if as_float and filtering if filter.</p>
 <li>vid:      Vertex shader id.</li>
 <li>fid:      Fragment shader id.</li>
 <li>vao:      Vertex array object.</li>
+<li>~gl_program():      Cleanup.</li>
 </ul>
 </li>
 </ul>
 <h4>Function make_program()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">gl_program</span> <span class="nf">make_program</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">vertex</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">fragment</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;</span> <span class="n">make_program</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">vertex</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">fragment</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Creates an OpenGL program from vertex and fragment code.</p>
-<h4>Function clear_program()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">clear_program</span><span class="p">(</span><span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Destroys the program.</p>
 <h4>Function get_program_uniform_location()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">get_program_uniform_location</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Get uniform location.</p>
 <h4>Function get_program_attrib_location()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">get_program_attrib_location</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Get attribute location.</p>
 <h4>Function get_program_uniforms_names()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;&gt;</span> <span class="n">get_program_uniforms_names</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Get the names of all uniforms.</p>
 <h4>Function get_program_attributes_names()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;&gt;</span> <span class="n">get_program_attributes_names</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Get the names of all attributes.</p>
 <h4>Function set_program_uniform()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_program_uniform</span><span class="p">(</span>
-    <span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">pos</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span> <span class="kt">int</span> <span class="n">count</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_program_uniform</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span> <span class="kt">int</span> <span class="n">count</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set uniform integer values <code>val</code> for program <code>prog</code> and variable <code>pos</code>.
 The values have <code>nc</code> number of components (1-4) and <code>count</code> elements.</p>
 <h4>Function set_program_uniform()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_program_uniform</span><span class="p">(</span>
-    <span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">pos</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span> <span class="kt">int</span> <span class="n">count</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_program_uniform</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span> <span class="kt">int</span> <span class="n">count</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set uniform float values <code>val</code> for program <code>prog</code> and variable <code>pos</code>.
 The values have <code>nc</code> number of components (1-4) and <code>count</code> elements.</p>
 <h4>Function set_program_uniform()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">set_program_uniform</span><span class="p">(</span><span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">val</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">set_program_uniform</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">val</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set uniform value.</p>
 <h4>Function set_program_uniform()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">set_program_uniform</span><span class="p">(</span><span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="kt">int</span> <span class="n">val</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">set_program_uniform</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="kt">int</span> <span class="n">val</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set uniform value.</p>
 <h4>Function set_program_uniform()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">set_program_uniform</span><span class="p">(</span><span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="kt">float</span> <span class="n">val</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">set_program_uniform</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="kt">float</span> <span class="n">val</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -9776,7 +9760,7 @@ The values have <code>nc</code> number of components (1-4) and <code>count</code
 <h4>Function set_program_uniform()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="kt">bool</span> <span class="n">set_program_uniform</span><span class="p">(</span>
-    <span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">val</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">val</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -9784,7 +9768,7 @@ The values have <code>nc</code> number of components (1-4) and <code>count</code
 <h4>Function set_program_uniform()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="kt">bool</span> <span class="n">set_program_uniform</span><span class="p">(</span>
-    <span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">val</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">val</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -9792,104 +9776,101 @@ The values have <code>nc</code> number of components (1-4) and <code>count</code
 <h4>Function set_program_uniform()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="kt">bool</span> <span class="n">set_program_uniform</span><span class="p">(</span>
-    <span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">val</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">val</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set uniform value.</p>
 <h4>Function set_program_uniform()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">set_program_uniform</span><span class="p">(</span>
-    <span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set uniform array.</p>
 <h4>Function set_program_uniform()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">set_program_uniform</span><span class="p">(</span>
-    <span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">set_program_uniform</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set uniform array.</p>
 <h4>Function set_program_uniform()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">set_program_uniform</span><span class="p">(</span>
-    <span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">set_program_uniform</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set uniform array.</p>
 <h4>Function set_program_uniform()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">set_program_uniform</span><span class="p">(</span>
-    <span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">set_program_uniform</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set uniform array.</p>
 <h4>Function set_program_uniform()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">set_program_uniform</span><span class="p">(</span>
-    <span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">set_program_uniform</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set uniform array.</p>
 <h4>Function set_program_uniform()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">set_program_uniform</span><span class="p">(</span>
-    <span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">set_program_uniform</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set uniform value for names variable.</p>
 <h4>Function set_program_uniform()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">set_program_uniform</span><span class="p">(</span>
-    <span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">set_program_uniform</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set uniform array for names variable.</p>
 <h4>Function set_program_uniform_texture()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_program_uniform_texture</span><span class="p">(</span>
-    <span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">pos</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_texture_info</span><span class="o">&amp;</span> <span class="n">tinfo</span><span class="p">,</span> <span class="n">uint</span> <span class="n">tunit</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_program_uniform_texture</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">pos</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">txt</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">gl_texture_info</span><span class="o">&amp;</span> <span class="n">tinfo</span><span class="p">,</span> <span class="n">uint</span> <span class="n">tunit</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set uniform texture.</p>
 <h4>Function set_program_uniform_texture()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">set_program_uniform_texture</span><span class="p">(</span><span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="kt">int</span> <span class="n">varon</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">set_program_uniform_texture</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="kt">int</span> <span class="n">varon</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">txt</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">gl_texture_info</span><span class="o">&amp;</span> <span class="n">tinfo</span><span class="p">,</span> <span class="n">uint</span> <span class="n">tunit</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set uniform texture with an additionasl texture enable flags.</p>
 <h4>Function set_program_uniform_texture()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">set_program_uniform_texture</span><span class="p">(</span><span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_texture_info</span><span class="o">&amp;</span> <span class="n">tinfo</span><span class="p">,</span> <span class="n">uint</span> <span class="n">tunit</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">set_program_uniform_texture</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">txt</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">gl_texture_info</span><span class="o">&amp;</span> <span class="n">tinfo</span><span class="p">,</span> <span class="n">uint</span> <span class="n">tunit</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set uniform texture.</p>
 <h4>Function set_program_uniform_texture()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">set_program_uniform_texture</span><span class="p">(</span><span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">set_program_uniform_texture</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">varon</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">gl_texture_info</span><span class="o">&amp;</span> <span class="n">tinfo</span><span class="p">,</span> <span class="n">uint</span> <span class="n">tunit</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_texture_info</span><span class="o">&amp;</span> <span class="n">tinfo</span><span class="p">,</span>
+    <span class="n">uint</span> <span class="n">tunit</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set uniform texture with an additionasl texture enable flags.</p>
 <h4>Function set_program_vertattr()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_program_vertattr</span><span class="p">(</span>
-    <span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">pos</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">value</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Sets a constant <code>value</code> of <code>nc</code> components for the vertex attribute at
-<code>pos</code> location.</p>
-<h4>Function set_program_vertattr()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_program_vertattr</span><span class="p">(</span><span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">pos</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">value</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_program_vertattr</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">value</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -9897,14 +9878,22 @@ The values have <code>nc</code> number of components (1-4) and <code>count</code
 <code>pos</code> location.</p>
 <h4>Function set_program_vertattr()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_program_vertattr</span><span class="p">(</span>
-    <span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">pos</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">value</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets a constant <code>value</code> of <code>nc</code> components for the vertex attribute at
+<code>pos</code> location.</p>
+<h4>Function set_program_vertattr()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_program_vertattr</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_vertex_buffer</span><span class="o">&gt;&amp;</span> <span class="n">buf</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Binds a buffer to a vertex attribute.</p>
 <h4>Function set_program_vertattr()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_program_vertattr</span><span class="p">(</span><span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">pos</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">def</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_program_vertattr</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_vertex_buffer</span><span class="o">&gt;&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">def</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -9912,34 +9901,36 @@ The values have <code>nc</code> number of components (1-4) and <code>count</code
 empty.</p>
 <h4>Function set_program_vertattr()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">set_program_vertattr</span><span class="p">(</span><span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">def</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">set_program_vertattr</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_vertex_buffer</span><span class="o">&gt;&amp;</span> <span class="n">buf</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">def</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Binds a buffer or constant to a vertex attribute.</p>
 <h4>Function set_program_vertattr()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">set_program_vertattr</span><span class="p">(</span><span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">def</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">set_program_vertattr</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_vertex_buffer</span><span class="o">&gt;&amp;</span> <span class="n">buf</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">def</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Binds a buffer or constant to a vertex attribute.</p>
 <h4>Function is_program_valid()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">is_program_valid</span><span class="p">(</span><span class="k">const</span> <span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">is_program_valid</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Check whether the program is valid.</p>
 <h4>Function bind_program()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">bind_program</span><span class="p">(</span><span class="k">const</span> <span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">bind_program</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Binds a program.</p>
 <h4>Function unbind_program()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">unbind_program</span><span class="p">(</span><span class="k">const</span> <span class="n">gl_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">unbind_program</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -9952,66 +9943,44 @@ empty.</p>
 
 
 <p>Vertex buffers for scene drawing. Members are not part of the public API.</p>
-<h4>Function clear_gl_shape()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">clear_gl_shape</span><span class="p">(</span><span class="n">gl_shape</span><span class="o">&amp;</span> <span class="n">shp</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Clear shape.</p>
 <h4>Function make_gl_lights()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">gl_lights</span> <span class="nf">make_gl_lights</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">scene</span><span class="o">&gt;&amp;</span> <span class="n">scn</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Initialize gl lights.</p>
-<h4>Function make_gl_textures()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">gl_texture</span><span class="o">&gt;</span> <span class="n">make_gl_textures</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">scene</span><span class="o">&gt;&amp;</span> <span class="n">scn</span><span class="p">);</span>
+<h4>Function update_gl_texture()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_gl_texture</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">&gt;&amp;</span> <span class="n">txt</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">gtxt</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Update scene textures on the GPU.</p>
-<h4>Function make_gl_shapes()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">gl_shape</span><span class="o">&gt;</span> <span class="n">make_gl_shapes</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">scene</span><span class="o">&gt;&amp;</span> <span class="n">scn</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Update scene shapes on the GPU.</p>
-<h4>Function clear_gl_textures()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">clear_gl_textures</span><span class="p">(</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">textures</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Clear scene textures on the GPU.</p>
-<h4>Function clear_gl_shapes()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">clear_gl_shapes</span><span class="p">(</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">gl_shape</span><span class="o">&gt;&amp;</span> <span class="n">shapes</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Clear scene shapes on the GPU.</p>
-<h4>Function update_gl_texture()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_gl_texture</span><span class="p">(</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">textures</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">&gt;&amp;</span> <span class="n">txt</span><span class="p">);</span>
+<h4>Function make_gl_textures()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&gt;</span>
+<span class="n">make_gl_textures</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">scene</span><span class="o">&gt;&amp;</span> <span class="n">scn</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Update scene textures on the GPU.</p>
 <h4>Function update_gl_shape()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_gl_shape</span><span class="p">(</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">gl_shape</span><span class="o">&gt;&amp;</span> <span class="n">shapes</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">&gt;&amp;</span> <span class="n">shp</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">&gt;&amp;</span> <span class="n">shp</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_shape</span><span class="o">&gt;&amp;</span> <span class="n">gshp</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Update scene shapes on the GPU.</p>
+<h4>Function make_gl_shapes()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_shape</span><span class="o">&gt;&gt;</span>
+<span class="n">make_gl_shapes</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">scene</span><span class="o">&gt;&amp;</span> <span class="n">scn</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Update scene shapes on the GPU.</p>
 <h4>Struct gl_stdimage_program</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_stdimage_program</span> <span class="p">{</span>
-    <span class="n">gl_program</span> <span class="n">prog</span> <span class="o">=</span> <span class="p">{};</span>
-    <span class="n">gl_vertex_buffer</span> <span class="n">vbo</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;</span> <span class="n">prog</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_vertex_buffer</span><span class="o">&gt;</span> <span class="n">vbo</span> <span class="o">=</span> <span class="p">{};</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -10025,22 +9994,23 @@ empty.</p>
 </li>
 </ul>
 <h4>Function make_stdimage_program()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">gl_stdimage_program</span> <span class="nf">make_stdimage_program</span><span class="p">();</span>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_stdimage_program</span><span class="o">&gt;</span> <span class="n">make_stdimage_program</span><span class="p">();</span>
 </code></pre></div>
 
 
 <p>Initialize a stdimage program.</p>
 <h4>Function draw_image()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_image</span><span class="p">(</span><span class="n">gl_stdimage_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_texture</span><span class="o">&amp;</span> <span class="n">txt</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">win_size</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">offset</span><span class="p">,</span> <span class="kt">float</span> <span class="n">zoom</span><span class="p">,</span> <span class="kt">float</span> <span class="n">exposure</span><span class="p">,</span>
-    <span class="kt">float</span> <span class="n">gamma</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">filmic</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_image</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_stdimage_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">win_size</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">offset</span><span class="p">,</span> <span class="kt">float</span> <span class="n">zoom</span><span class="p">,</span> <span class="kt">float</span> <span class="n">exposure</span><span class="p">,</span> <span class="kt">float</span> <span class="n">gamma</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">filmic</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Draws an image texture the stdimage program.</p>
 <h4>Function draw_image()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">draw_image</span><span class="p">(</span><span class="n">gl_stdimage_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_texture</span><span class="o">&amp;</span> <span class="n">txt</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">win_size</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">offset</span><span class="p">,</span> <span class="kt">float</span> <span class="n">zoom</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">draw_image</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_stdimage_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">win_size</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">offset</span><span class="p">,</span> <span class="kt">float</span> <span class="n">zoom</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -10064,16 +10034,17 @@ empty.</p>
 </li>
 </ul>
 <h4>Function draw_image()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">draw_image</span><span class="p">(</span><span class="n">gl_stdimage_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_texture</span><span class="o">&amp;</span> <span class="n">txt</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">win_size</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_stdimage_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">tonemap_params</span><span class="o">&amp;</span> <span class="n">tmparams</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">clear_background</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">draw_image</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_stdimage_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">win_size</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">gl_stdimage_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">,</span> <span class="k">const</span> <span class="n">tonemap_params</span><span class="o">&amp;</span> <span class="n">tmparams</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">clear_background</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Draws an image texture the stdimage program.</p>
 <h4>Struct gl_stdsurface_program</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_stdsurface_program</span> <span class="p">{</span>
-    <span class="n">gl_program</span> <span class="n">prog</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_program</span><span class="o">&gt;</span> <span class="n">prog</span> <span class="o">=</span> <span class="p">{};</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -10087,22 +10058,23 @@ Phong/GGX. Members are not part of public API.</p>
 </li>
 </ul>
 <h4>Function make_stdsurface_program()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">gl_stdsurface_program</span> <span class="nf">make_stdsurface_program</span><span class="p">();</span>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_stdsurface_program</span><span class="o">&gt;</span> <span class="n">make_stdsurface_program</span><span class="p">();</span>
 </code></pre></div>
 
 
 <p>Initialize a stdsurface shader.</p>
 <h4>Function is_program_valid()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">is_program_valid</span><span class="p">(</span><span class="k">const</span> <span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">is_program_valid</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_stdsurface_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Check if the program is valid.</p>
 <h4>Function begin_stdsurface_frame()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">begin_stdsurface_frame</span><span class="p">(</span><span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">shade_eyelight</span><span class="p">,</span>
-    <span class="kt">float</span> <span class="n">tonemap_exposure</span><span class="p">,</span> <span class="kt">float</span> <span class="n">tonemap_gamma</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">tonemap_filmic</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">camera_xform</span><span class="p">,</span> <span class="k">const</span> <span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">camera_xform_inv</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">camera_proj</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">begin_stdsurface_frame</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_stdsurface_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">shade_eyelight</span><span class="p">,</span> <span class="kt">float</span> <span class="n">tonemap_exposure</span><span class="p">,</span> <span class="kt">float</span> <span class="n">tonemap_gamma</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">tonemap_filmic</span><span class="p">,</span> <span class="k">const</span> <span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">camera_xform</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">camera_xform_inv</span><span class="p">,</span> <span class="k">const</span> <span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">camera_proj</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -10110,53 +10082,79 @@ Phong/GGX. Members are not part of public API.</p>
 projection. Sets also whether to use full shading or a quick eye light
 preview.</p>
 <h4>Function end_stdsurface_frame()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">end_stdsurface_frame</span><span class="p">(</span><span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">end_stdsurface_frame</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_stdsurface_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Ends a frame.</p>
 <h4>Function set_stdsurface_lights()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_stdsurface_lights</span><span class="p">(</span>
-    <span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">amb</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_lights</span><span class="o">&amp;</span> <span class="n">lights</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_stdsurface_lights</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_stdsurface_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">amb</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_lights</span><span class="o">&amp;</span> <span class="n">lights</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set shading lights and ambient.</p>
 <h4>Function begin_stdsurface_shape()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">begin_stdsurface_shape</span><span class="p">(</span>
-    <span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">xform</span><span class="p">,</span> <span class="kt">float</span> <span class="n">normal_offset</span> <span class="o">=</span> <span class="mi">0</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">begin_stdsurface_shape</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_stdsurface_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">xform</span><span class="p">,</span> <span class="kt">float</span> <span class="n">normal_offset</span> <span class="o">=</span> <span class="mi">0</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Begins drawing a shape with transform <code>xform</code>.</p>
 <h4>Function end_stdsurface_shape()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">end_stdsurface_shape</span><span class="p">(</span><span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">end_stdsurface_shape</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_stdsurface_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>End shade drawing.</p>
 <h4>Function set_stdsurface_normaloffset()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_stdsurface_normaloffset</span><span class="p">(</span>
-    <span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">float</span> <span class="n">normal_offset</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_stdsurface_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">float</span> <span class="n">normal_offset</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Sets normal offset.</p>
 <h4>Function set_stdsurface_highlight()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_stdsurface_highlight</span><span class="p">(</span>
-    <span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">highlight</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_stdsurface_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">highlight</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set the object as highlighted.</p>
 <h4>Function set_stdsurface_material()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_stdsurface_material</span><span class="p">(</span><span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="n">material_type</span> <span class="n">type</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_stdsurface_material</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_stdsurface_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span>
+    <span class="n">material_type</span> <span class="n">type</span><span class="p">,</span> <span class="n">gl_elem_type</span> <span class="n">etype</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kd</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ks</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">ke_txt</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">kd_txt</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">ks_txt</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">rs_txt</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">norm_txt</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">occ_txt</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">gl_texture_info</span><span class="o">&amp;</span> <span class="n">ke_txt_info</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_texture_info</span><span class="o">&amp;</span> <span class="n">kd_txt_info</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">gl_texture_info</span><span class="o">&amp;</span> <span class="n">ks_txt_info</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_texture_info</span><span class="o">&amp;</span> <span class="n">rs_txt_info</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">gl_texture_info</span><span class="o">&amp;</span> <span class="n">norm_txt_info</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_texture_info</span><span class="o">&amp;</span> <span class="n">occ_txt_info</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">use_phong</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">double_sided</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">alpha_cutout</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set material values with emission <code>ke</code>, diffuse <code>kd</code>, specular <code>ks</code> and
+specular roughness <code>rs</code>, opacity <code>op</code>. Indicates textures ids with the
+correspoinding <code>XXX_txt</code> variables. Sets also normal and occlusion
+maps. Works for points/lines/triangles indicated by <code>etype</code>, (diffuse for
+points, Kajiya-Kay for lines, GGX/Phong for triangles). Material <code>type</code>
+matches the scene material type.</p>
+<h4>Function set_stdsurface_material()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">set_stdsurface_material</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_stdsurface_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="n">material_type</span> <span class="n">type</span><span class="p">,</span>
     <span class="n">gl_elem_type</span> <span class="n">etype</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kd</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ks</span><span class="p">,</span>
-    <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_texture_info</span><span class="o">&amp;</span> <span class="n">ke_txt</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">gl_texture_info</span><span class="o">&amp;</span> <span class="n">kd_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_texture_info</span><span class="o">&amp;</span> <span class="n">ks_txt</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">gl_texture_info</span><span class="o">&amp;</span> <span class="n">rs_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_texture_info</span><span class="o">&amp;</span> <span class="n">norm_txt</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">gl_texture_info</span><span class="o">&amp;</span> <span class="n">occ_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">double_sided</span><span class="p">,</span>
-    <span class="kt">bool</span> <span class="n">alpha_cutout</span><span class="p">);</span>
+    <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">ke_txt</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">kd_txt</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">ks_txt</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">rs_txt</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">norm_txt</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">occ_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">double_sided</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">alpha_cutout</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -10168,39 +10166,47 @@ points, Kajiya-Kay for lines, GGX/Phong for triangles). Material <code>type</cod
 matches the scene material type.</p>
 <h4>Function set_stdsurface_constmaterial()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_stdsurface_constmaterial</span><span class="p">(</span>
-    <span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_stdsurface_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span>
+    <span class="kt">float</span> <span class="n">op</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set constant material with emission <code>ke</code> and opacity <code>op</code>.</p>
 <h4>Function set_stdsurface_vert()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_stdsurface_vert</span><span class="p">(</span><span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">pos</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">norm</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">texcoord</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">color</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">tangsp</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_stdsurface_vert</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_stdsurface_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_vertex_buffer</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_vertex_buffer</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_vertex_buffer</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_vertex_buffer</span><span class="o">&gt;&amp;</span> <span class="n">color</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_vertex_buffer</span><span class="o">&gt;&amp;</span> <span class="n">tangsp</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set vertex data with buffers for position pos, normals norm, texture
 coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 <h4>Function set_stdsurface_vert_skinning()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_stdsurface_vert_skinning</span><span class="p">(</span><span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">weights</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">joints</span><span class="p">,</span>
-    <span class="kt">int</span> <span class="n">nxforms</span><span class="p">,</span> <span class="k">const</span> <span class="n">mat4f</span><span class="o">*</span> <span class="n">xforms</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_stdsurface_vert_skinning</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_stdsurface_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_vertex_buffer</span><span class="o">&gt;&amp;</span> <span class="n">weights</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_vertex_buffer</span><span class="o">&gt;&amp;</span> <span class="n">joints</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nxforms</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">mat4f</span><span class="o">*</span> <span class="n">xforms</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set vertex data with buffers for skinning.</p>
 <h4>Function set_stdsurface_vert_gltf_skinning()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_stdsurface_vert_gltf_skinning</span><span class="p">(</span><span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">weights</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">joints</span><span class="p">,</span>
-    <span class="kt">int</span> <span class="n">nxforms</span><span class="p">,</span> <span class="k">const</span> <span class="n">mat4f</span><span class="o">*</span> <span class="n">xforms</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_stdsurface_vert_gltf_skinning</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_stdsurface_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_vertex_buffer</span><span class="o">&gt;&amp;</span> <span class="n">weights</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_vertex_buffer</span><span class="o">&gt;&amp;</span> <span class="n">joints</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nxforms</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">mat4f</span><span class="o">*</span> <span class="n">xforms</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set vertex data with buffers for skinning.</p>
 <h4>Function set_stdsurface_vert_skinning_off()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_stdsurface_vert_skinning_off</span><span class="p">(</span><span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_stdsurface_vert_skinning_off</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_stdsurface_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -10241,9 +10247,12 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 </ul>
 <h4>Function draw_stdsurface_scene()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_stdsurface_scene</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">scene</span><span class="o">&gt;&amp;</span> <span class="n">scn</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">camera</span><span class="o">&gt;&amp;</span> <span class="n">cam</span><span class="p">,</span> <span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">gl_shape</span><span class="o">&gt;&amp;</span> <span class="n">shapes</span><span class="p">,</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">textures</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">camera</span><span class="o">&gt;&amp;</span> <span class="n">cam</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_stdsurface_program</span><span class="o">&gt;&amp;</span> <span class="n">prog</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_shape</span><span class="o">&gt;&gt;&amp;</span>
+        <span class="n">shapes</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&gt;&amp;</span>
+        <span class="n">textures</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">gl_lights</span><span class="o">&amp;</span> <span class="n">lights</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">viewport_size</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="kt">void</span><span class="o">&gt;&amp;</span> <span class="n">highlighted</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">gl_stdsurface_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">,</span> <span class="k">const</span> <span class="n">tonemap_params</span><span class="o">&amp;</span> <span class="n">tmparams</span><span class="p">);</span>
@@ -11027,7 +11036,8 @@ Internally uses visit to implement the view.</p>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_scene_widgets</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_window</span><span class="o">&gt;&amp;</span> <span class="n">win</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">scene</span><span class="o">&gt;&amp;</span> <span class="n">scn</span><span class="p">,</span>
     <span class="n">scene_selection</span><span class="o">&amp;</span> <span class="n">sel</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ygl</span><span class="o">::</span><span class="n">scene_selection</span><span class="o">&gt;&amp;</span> <span class="n">update_list</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">gl_txt</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">&gt;</span><span class="p">,</span>
+        <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&gt;&amp;</span> <span class="n">gl_txt</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">proc_scene</span><span class="o">&gt;&amp;</span> <span class="n">test_scn</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
 </code></pre></div>
 

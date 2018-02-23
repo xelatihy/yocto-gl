@@ -73,8 +73,10 @@ struct app_state {
     std::vector<std::shared_ptr<gimage>> imgs;
     int cur_img = 0;
 
-    ygl::gl_stdimage_program gl_prog = {};
-    std::unordered_map<std::shared_ptr<gimage>, ygl::gl_texture> gl_txt = {};
+    std::shared_ptr<ygl::gl_stdimage_program> gl_prog = {};
+    std::unordered_map<std::shared_ptr<gimage>,
+        std::shared_ptr<ygl::gl_texture>>
+        gl_txt = {};
     ygl::gl_stdimage_params params;
     ygl::tonemap_params tmparams;
 };

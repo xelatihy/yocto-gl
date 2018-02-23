@@ -8903,84 +8903,92 @@ struct gl_texture {
     bool mipmap = true;
     // Linear interpolation.
     bool linear = true;
+
+    // Cleanup.
+    ~gl_texture();
 };
 
 // Implementation of update_texture.
-void _update_texture(gl_texture& txt, int w, int h, int nc, const void* pixels,
-    bool floats, bool linear, bool mipmap, bool as_float, bool as_srgb);
+void _update_texture(const std::shared_ptr<gl_texture>& txt, int w, int h,
+    int nc, const void* pixels, bool floats, bool linear, bool mipmap,
+    bool as_float, bool as_srgb);
 
 /// Updates a texture with pixels values of size w, h with nc number of
 /// components (1-4). Internally use float if as_float and filtering if filter.
-inline void update_texture(gl_texture& txt, int w, int h, int nc,
-    const float* pixels, bool linear, bool mipmap, bool as_float) {
+inline void update_texture(const std::shared_ptr<gl_texture>& txt, int w, int h,
+    int nc, const float* pixels, bool linear, bool mipmap, bool as_float) {
     _update_texture(
         txt, w, h, nc, pixels, true, linear, mipmap, as_float, false);
 }
 
 /// Updates a texture with pixels values of size w, h with nc number of
 /// components (1-4). Internally use float if as_float and filtering if filter.
-inline void update_texture(gl_texture& txt, int w, int h, int nc,
-    const unsigned char* pixels, bool linear, bool mipmap, bool as_srgb) {
+inline void update_texture(const std::shared_ptr<gl_texture>& txt, int w, int h,
+    int nc, const unsigned char* pixels, bool linear, bool mipmap,
+    bool as_srgb) {
     _update_texture(
         txt, w, h, nc, pixels, false, linear, mipmap, false, as_srgb);
 }
 
 /// Updates a texture with pixels values from an image.
 /// Internally use float if as_float and filtering if filter.
-inline void update_texture(gl_texture& txt, const image4f& img, bool linear,
-    bool mipmap, bool as_float) {
+inline void update_texture(const std::shared_ptr<gl_texture>& txt,
+    const image4f& img, bool linear, bool mipmap, bool as_float) {
     update_texture(txt, img.width(), img.height(), 4, (const float*)data(img),
         linear, mipmap, as_float);
 }
 
 /// Updates a texture with pixels values from an image.
 /// Internally use float if as_float and filtering if filter.
-inline void update_texture(gl_texture& txt, const image4b& img, bool linear,
-    bool mipmap, bool as_srgb) {
+inline void update_texture(const std::shared_ptr<gl_texture>& txt,
+    const image4b& img, bool linear, bool mipmap, bool as_srgb) {
     update_texture(txt, img.width(), img.height(), 4,
         (const unsigned char*)data(img), linear, mipmap, as_srgb);
 }
 
 /// Updates a texture with pixels values from an image.
-inline void update_texture(gl_texture& txt, const image4f& img) {
-    update_texture(txt, img, txt.linear, txt.mipmap, txt.as_float);
+inline void update_texture(
+    const std::shared_ptr<gl_texture>& txt, const image4f& img) {
+    update_texture(txt, img, txt->linear, txt->mipmap, txt->as_float);
 }
 
 /// Updates a texture with pixels values from an image.
-inline void update_texture(gl_texture& txt, const image4b& img) {
-    update_texture(txt, img, txt.linear, txt.mipmap, txt.as_srgb);
+inline void update_texture(
+    const std::shared_ptr<gl_texture>& txt, const image4b& img) {
+    update_texture(txt, img, txt->linear, txt->mipmap, txt->as_srgb);
 }
 
 /// Creates a texture from an image. Convenience wrapper to update_texture().
-inline gl_texture make_texture(
+inline std::shared_ptr<gl_texture> make_texture(
     const image4f& img, bool linear, bool mipmap, bool as_float) {
-    auto txt = gl_texture();
+    auto txt = std::make_shared<gl_texture>();
     update_texture(txt, img, linear, mipmap, as_float);
     return txt;
 }
 
 /// Creates a texture from an image. Convenience wrapper to update_texture().
-inline gl_texture make_texture(
+inline std::shared_ptr<gl_texture> make_texture(
     const image4b& img, bool linear, bool mipmap, bool as_srgb) {
-    auto txt = gl_texture();
+    auto txt = std::make_shared<gl_texture>();
     update_texture(txt, img, linear, mipmap, as_srgb);
     return txt;
 }
 
 /// Binds a texture to a texture unit.
-void bind_texture(const gl_texture& txt, uint unit);
+void bind_texture(const std::shared_ptr<gl_texture>& txt, uint unit);
 
 /// Unbinds a texture.
-void unbind_texture(const gl_texture& txt, uint unit);
+void unbind_texture(const std::shared_ptr<gl_texture>& txt, uint unit);
 
 /// Get texture id.
-inline uint get_texture_id(const gl_texture& txt) { return txt.tid; }
+inline uint get_texture_id(const std::shared_ptr<gl_texture>& txt) {
+    return txt->tid;
+}
 
 /// Check if defined.
-inline bool is_texture_valid(const gl_texture& txt) { return (bool)txt.tid; }
-
-/// Destroys the texture tid.
-void clear_texture(gl_texture& txt);
+inline bool is_texture_valid(const std::shared_ptr<gl_texture>& txt) {
+    return (bool)txt->tid;
+}
 
 /// Wrap values for OpenGL texture.
 enum struct gl_texture_wrap {
@@ -9014,8 +9022,6 @@ enum struct gl_texture_filter {
 
 /// OpenGL texture parameters.
 struct gl_texture_info {
-    /// Texture.
-    gl_texture txt = {};
     /// Texture coordinate set.
     int texcoord = 0;
     /// Texture strength/scale (used by some models).
@@ -9028,11 +9034,6 @@ struct gl_texture_info {
     gl_texture_filter filter_mag = gl_texture_filter::not_set;
     /// Filter min mode.
     gl_texture_filter filter_min = gl_texture_filter::not_set;
-
-    /// Default constructor.
-    gl_texture_info() {}
-    /// Constructor from texture id only.
-    gl_texture_info(const gl_texture& tid) : txt(tid) {}
 };
 
 /// OpenGL vertex/element buffer. Members are not part of the public API.
@@ -9045,73 +9046,76 @@ struct gl_vertex_buffer {
     int ncomp = 0;
     // Whether it is floats.
     bool as_float = true;
+
+    // Cleanup.
+    ~gl_vertex_buffer();
 };
 
 // Updates the bufferwith new data.
-void _update_vertex_buffer(gl_vertex_buffer& buf, int n, int nc,
-    const void* values, bool as_float, bool dynamic);
+void _update_vertex_buffer(const std::shared_ptr<gl_vertex_buffer>& buf, int n,
+    int nc, const void* values, bool as_float, bool dynamic);
 
 /// Updates the buffer with new data.
-inline void update_vertex_buffer(gl_vertex_buffer& buf, int num, int ncomp,
-    const float* values, bool dynamic = false) {
+inline void update_vertex_buffer(const std::shared_ptr<gl_vertex_buffer>& buf,
+    int num, int ncomp, const float* values, bool dynamic = false) {
     _update_vertex_buffer(buf, num, ncomp, values, true, dynamic);
 }
 
 /// Updates the buffer with new data.
-inline void update_vertex_buffer(gl_vertex_buffer& buf, int num, int ncomp,
-    const int* values, bool dynamic = false) {
+inline void update_vertex_buffer(const std::shared_ptr<gl_vertex_buffer>& buf,
+    int num, int ncomp, const int* values, bool dynamic = false) {
     _update_vertex_buffer(buf, num, ncomp, values, false, dynamic);
 }
 
 /// Updates the buffer with new data.
-inline void update_vertex_buffer(gl_vertex_buffer& buf,
+inline void update_vertex_buffer(const std::shared_ptr<gl_vertex_buffer>& buf,
     const std::vector<float>& values, bool dynamic = false) {
     update_vertex_buffer(buf, values.size(), 1, values.data(), dynamic);
 }
 
 /// Updates the buffer with new data.
-inline void update_vertex_buffer(gl_vertex_buffer& buf,
+inline void update_vertex_buffer(const std::shared_ptr<gl_vertex_buffer>& buf,
     const std::vector<vec2f>& values, bool dynamic = false) {
     update_vertex_buffer(
         buf, values.size(), 2, (const float*)values.data(), dynamic);
 }
 
 /// Updates the buffer with new data.
-inline void update_vertex_buffer(gl_vertex_buffer& buf,
+inline void update_vertex_buffer(const std::shared_ptr<gl_vertex_buffer>& buf,
     const std::vector<vec3f>& values, bool dynamic = false) {
     update_vertex_buffer(
         buf, values.size(), 3, (const float*)values.data(), dynamic);
 }
 
 /// Updates the buffer with new data.
-inline void update_vertex_buffer(gl_vertex_buffer& buf,
+inline void update_vertex_buffer(const std::shared_ptr<gl_vertex_buffer>& buf,
     const std::vector<vec4f>& values, bool dynamic = false) {
     update_vertex_buffer(
         buf, values.size(), 4, (const float*)values.data(), dynamic);
 }
 
 /// Updates the buffer with new data.
-inline void update_vertex_buffer(gl_vertex_buffer& buf,
+inline void update_vertex_buffer(const std::shared_ptr<gl_vertex_buffer>& buf,
     const std::vector<int>& values, bool dynamic = false) {
     update_vertex_buffer(buf, values.size(), 1, values.data(), dynamic);
 }
 
 /// Updates the buffer with new data.
-inline void update_vertex_buffer(gl_vertex_buffer& buf,
+inline void update_vertex_buffer(const std::shared_ptr<gl_vertex_buffer>& buf,
     const std::vector<vec2i>& values, bool dynamic = false) {
     update_vertex_buffer(
         buf, values.size(), 2, (const int*)values.data(), dynamic);
 }
 
 /// Updates the buffer with new data.
-inline void update_vertex_buffer(gl_vertex_buffer& buf,
+inline void update_vertex_buffer(const std::shared_ptr<gl_vertex_buffer>& buf,
     const std::vector<vec3i>& values, bool dynamic = false) {
     update_vertex_buffer(
         buf, values.size(), 3, (const int*)values.data(), dynamic);
 }
 
 /// Updates the buffer with new data.
-inline void update_vertex_buffer(gl_vertex_buffer& buf,
+inline void update_vertex_buffer(const std::shared_ptr<gl_vertex_buffer>& buf,
     const std::vector<vec4i>& values, bool dynamic = false) {
     update_vertex_buffer(
         buf, values.size(), 4, (const int*)values.data(), dynamic);
@@ -9119,33 +9123,33 @@ inline void update_vertex_buffer(gl_vertex_buffer& buf,
 
 /// Make a buffer with new data.
 template <typename T>
-inline gl_vertex_buffer make_vertex_buffer(
+inline std::shared_ptr<gl_vertex_buffer> make_vertex_buffer(
     const std::vector<T>& values, bool dynamic = false) {
-    auto buf = gl_vertex_buffer();
+    auto buf = std::make_shared<gl_vertex_buffer>();
     update_vertex_buffer(buf, values, dynamic);
     return buf;
 }
 
 /// Bind the buffer at a particular attribute location.
-void bind_vertex_buffer(const gl_vertex_buffer& buf, uint vattr);
+void bind_vertex_buffer(
+    const std::shared_ptr<gl_vertex_buffer>& buf, uint vattr);
 
 /// Unbind the buffer.
-void unbind_vertex_buffer(const gl_vertex_buffer& buf, uint vattr);
+void unbind_vertex_buffer(
+    const std::shared_ptr<gl_vertex_buffer>& buf, uint vattr);
 /// Unbind the buffer.
 void unbind_vertex_buffer(uint vattr);
 
 /// Get buffer id.
-inline uint get_vertex_buffer_id(const gl_vertex_buffer& buf) {
-    return buf.bid;
+inline uint get_vertex_buffer_id(const std::shared_ptr<gl_vertex_buffer>& buf) {
+    return buf->bid;
 }
 
 /// Check if defined.
-inline bool is_vertex_buffer_valid(const gl_vertex_buffer& buf) {
-    return (bool)buf.bid;
+inline bool is_vertex_buffer_valid(
+    const std::shared_ptr<gl_vertex_buffer>& buf) {
+    return (bool)buf->bid;
 }
-
-/// Destroys the buffer.
-void clear_vertex_buffer(gl_vertex_buffer& buf);
 
 /// OpenGL element array buffer. Members are not part of the public API.
 struct gl_element_buffer {
@@ -9158,37 +9162,37 @@ struct gl_element_buffer {
 };
 
 // Updates the bufferwith new data.
-void _update_element_buffer(
-    gl_element_buffer& buf, int n, int nc, const int* values, bool dynamic);
+void _update_element_buffer(const std::shared_ptr<gl_element_buffer>& buf,
+    int n, int nc, const int* values, bool dynamic);
 
 /// Updates the buffer with new data.
-inline void update_element_buffer(gl_element_buffer& buf, int num, int ncomp,
-    const int* values, bool dynamic = false) {
+inline void update_element_buffer(const std::shared_ptr<gl_element_buffer>& buf,
+    int num, int ncomp, const int* values, bool dynamic = false) {
     _update_element_buffer(buf, num, ncomp, values, dynamic);
 }
 
 /// Updates the bufferwith new data.
-inline void update_element_buffer(gl_element_buffer& buf,
+inline void update_element_buffer(const std::shared_ptr<gl_element_buffer>& buf,
     const std::vector<int>& values, bool dynamic = false) {
     update_element_buffer(buf, values.size(), 1, values.data(), dynamic);
 }
 
 /// Updates the buffer with new data.
-inline void update_element_buffer(gl_element_buffer& buf,
+inline void update_element_buffer(const std::shared_ptr<gl_element_buffer>& buf,
     const std::vector<vec2i>& values, bool dynamic = false) {
     update_element_buffer(
         buf, values.size(), 2, (const int*)values.data(), dynamic);
 }
 
 /// Updates the buffer with new data.
-inline void update_element_buffer(gl_element_buffer& buf,
+inline void update_element_buffer(const std::shared_ptr<gl_element_buffer>& buf,
     const std::vector<vec3i>& values, bool dynamic = false) {
     update_element_buffer(
         buf, values.size(), 3, (const int*)values.data(), dynamic);
 }
 
 /// Updates the buffer with new data.
-inline void update_element_buffer(gl_element_buffer& buf,
+inline void update_element_buffer(const std::shared_ptr<gl_element_buffer>& buf,
     const std::vector<vec4i>& values, bool dynamic = false) {
     update_element_buffer(
         buf, values.size(), 4, (const int*)values.data(), dynamic);
@@ -9196,28 +9200,27 @@ inline void update_element_buffer(gl_element_buffer& buf,
 
 /// Make a buffer with new data.
 template <typename T>
-inline gl_element_buffer make_element_buffer(
+inline std::shared_ptr<gl_element_buffer> make_element_buffer(
     const std::vector<T>& values, bool dynamic = false) {
-    auto buf = gl_element_buffer();
+    auto buf = std::make_shared<gl_element_buffer>();
     update_element_buffer(buf, values, dynamic);
     return buf;
 }
 
 /// Draws elements.
-void draw_elems(const gl_element_buffer& buf);
+void draw_elems(const std::shared_ptr<gl_element_buffer>& buf);
 
 /// Get id
-inline uint get_element_buffer_id(const gl_element_buffer& buf) {
-    return buf.bid;
+inline uint get_element_buffer_id(
+    const std::shared_ptr<gl_element_buffer>& buf) {
+    return buf->bid;
 }
 
 /// Check if defined
-inline bool is_element_buffer_valid(const gl_element_buffer& buf) {
-    return (bool)buf.bid;
+inline bool is_element_buffer_valid(
+    const std::shared_ptr<gl_element_buffer>& buf) {
+    return (bool)buf->bid;
 }
-
-/// Destroys the buffer
-void clear_element_buffer(gl_element_buffer& buf);
 
 /// OpenGL program. Members are not part of the public API.
 struct gl_program {
@@ -9229,185 +9232,199 @@ struct gl_program {
     uint fid = 0;
     /// Vertex array object.
     uint vao = 0;
+
+    /// Cleanup.
+    ~gl_program();
 };
 
 /// Creates an OpenGL program from vertex and fragment code.
-gl_program make_program(const std::string& vertex, const std::string& fragment);
-
-/// Destroys the program.
-void clear_program(gl_program& prog);
+std::shared_ptr<gl_program> make_program(
+    const std::string& vertex, const std::string& fragment);
 
 /// Get uniform location.
 int get_program_uniform_location(
-    const gl_program& prog, const std::string& name);
+    const std::shared_ptr<gl_program>& prog, const std::string& name);
 /// Get attribute location.
 int get_program_attrib_location(
-    const gl_program& prog, const std::string& name);
+    const std::shared_ptr<gl_program>& prog, const std::string& name);
 
 /// Get the names of all uniforms.
 std::vector<std::pair<std::string, int>> get_program_uniforms_names(
-    const gl_program& prog);
+    const std::shared_ptr<gl_program>& prog);
 /// Get the names of all attributes.
 std::vector<std::pair<std::string, int>> get_program_attributes_names(
-    const gl_program& prog);
+    const std::shared_ptr<gl_program>& prog);
 
 /// Set uniform integer values `val` for program `prog` and variable `pos`.
 /// The values have `nc` number of components (1-4) and `count` elements.
-bool set_program_uniform(
-    gl_program& prog, int pos, const int* val, int ncomp, int count);
+bool set_program_uniform(const std::shared_ptr<gl_program>& prog, int pos,
+    const int* val, int ncomp, int count);
 
 /// Set uniform float values `val` for program `prog` and variable `pos`.
 /// The values have `nc` number of components (1-4) and `count` elements.
-bool set_program_uniform(
-    gl_program& prog, int pos, const float* val, int ncomp, int count);
+bool set_program_uniform(const std::shared_ptr<gl_program>& prog, int pos,
+    const float* val, int ncomp, int count);
 
 /// Set uniform value.
-inline bool set_program_uniform(gl_program& prog, int var, bool val) {
+inline bool set_program_uniform(
+    const std::shared_ptr<gl_program>& prog, int var, bool val) {
     auto vali = (int)val;
     return set_program_uniform(prog, var, &vali, 1, 1);
 }
 /// Set uniform value.
-inline bool set_program_uniform(gl_program& prog, int var, int val) {
+inline bool set_program_uniform(
+    const std::shared_ptr<gl_program>& prog, int var, int val) {
     return set_program_uniform(prog, var, &val, 1, 1);
 }
 /// Set uniform value.
-inline bool set_program_uniform(gl_program& prog, int var, float val) {
+inline bool set_program_uniform(
+    const std::shared_ptr<gl_program>& prog, int var, float val) {
     return set_program_uniform(prog, var, &val, 1, 1);
 }
 /// Set uniform value.
 template <typename T, int N>
 inline bool set_program_uniform(
-    gl_program& prog, int var, const vec<T, N>& val) {
+    const std::shared_ptr<gl_program>& prog, int var, const vec<T, N>& val) {
     return set_program_uniform(prog, var, data(val), N, 1);
 }
 /// Set uniform value.
 template <typename T>
 inline bool set_program_uniform(
-    gl_program& prog, int var, const mat<T, 4>& val) {
+    const std::shared_ptr<gl_program>& prog, int var, const mat<T, 4>& val) {
     return set_program_uniform(prog, var, (T*)data(val), 16, 1);
 }
 /// Set uniform value.
 template <typename T>
 inline bool set_program_uniform(
-    gl_program& prog, int var, const frame<T, 3>& val) {
+    const std::shared_ptr<gl_program>& prog, int var, const frame<T, 3>& val) {
     return set_program_uniform(prog, var, (T*)data(val), 12, 1);
 }
 
 /// Set uniform array.
 inline bool set_program_uniform(
-    gl_program& prog, int var, const int* val, int num) {
+    const std::shared_ptr<gl_program>& prog, int var, const int* val, int num) {
     return set_program_uniform(prog, var, val, 1, num);
 }
 /// Set uniform array.
-inline bool set_program_uniform(
-    gl_program& prog, int var, const float* val, int num) {
+inline bool set_program_uniform(const std::shared_ptr<gl_program>& prog,
+    int var, const float* val, int num) {
     return set_program_uniform(prog, var, val, 1, num);
 }
 /// Set uniform array.
 template <typename T, int N>
-inline bool set_program_uniform(
-    gl_program& prog, int var, const vec<T, N>* val, int num) {
+inline bool set_program_uniform(const std::shared_ptr<gl_program>& prog,
+    int var, const vec<T, N>* val, int num) {
     return set_program_uniform(prog, var, (T*)val, N, num);
 }
 /// Set uniform array.
 template <typename T>
-inline bool set_program_uniform(
-    gl_program& prog, int var, const mat<T, 4>* val, int num) {
+inline bool set_program_uniform(const std::shared_ptr<gl_program>& prog,
+    int var, const mat<T, 4>* val, int num) {
     return set_program_uniform(prog, var, (T*)val, 16, num);
 }
 /// Set uniform array.
 template <typename T>
-inline bool set_program_uniform(
-    gl_program& prog, int var, const frame<T, 3>* val, int num) {
+inline bool set_program_uniform(const std::shared_ptr<gl_program>& prog,
+    int var, const frame<T, 3>* val, int num) {
     return set_program_uniform(prog, var, (T*)val, 12, num);
 }
 
 /// Set uniform value for names variable.
 template <typename T>
-inline bool set_program_uniform(
-    gl_program& prog, const std::string& var, const T& val) {
+inline bool set_program_uniform(const std::shared_ptr<gl_program>& prog,
+    const std::string& var, const T& val) {
     auto loc = get_program_uniform_location(prog, var);
     if (loc < 0) return false;
     return set_program_uniform(prog, loc, val);
 }
 /// Set uniform array for names variable.
 template <typename T>
-inline bool set_program_uniform(
-    gl_program& prog, const std::string& var, const T* val, int num) {
+inline bool set_program_uniform(const std::shared_ptr<gl_program>& prog,
+    const std::string& var, const T* val, int num) {
     auto loc = get_program_uniform_location(prog, var);
     if (loc < 0) return false;
     return set_program_uniform(loc, val, num);
 }
 
 /// Set uniform texture.
-bool set_program_uniform_texture(
-    gl_program& prog, int pos, const gl_texture_info& tinfo, uint tunit);
+bool set_program_uniform_texture(const std::shared_ptr<gl_program>& prog,
+    int pos, const std::shared_ptr<gl_texture>& txt,
+    const gl_texture_info& tinfo, uint tunit);
 /// Set uniform texture with an additionasl texture enable flags.
-inline bool set_program_uniform_texture(gl_program& prog, int var, int varon,
+inline bool set_program_uniform_texture(const std::shared_ptr<gl_program>& prog,
+    int var, int varon, const std::shared_ptr<gl_texture>& txt,
     const gl_texture_info& tinfo, uint tunit) {
-    if (!set_program_uniform_texture(prog, var, tinfo, tunit)) return false;
-    if (!set_program_uniform(prog, varon, is_texture_valid(tinfo.txt)))
+    if (!set_program_uniform_texture(prog, var, txt, tinfo, tunit))
+        return false;
+    if (!set_program_uniform(prog, varon, txt && is_texture_valid(txt)))
         return false;
     return true;
 }
 
 /// Set uniform texture.
-inline bool set_program_uniform_texture(gl_program& prog,
-    const std::string& var, const gl_texture_info& tinfo, uint tunit) {
+inline bool set_program_uniform_texture(const std::shared_ptr<gl_program>& prog,
+    const std::string& var, const std::shared_ptr<gl_texture>& txt,
+    const gl_texture_info& tinfo, uint tunit) {
     auto loc = get_program_uniform_location(prog, var);
     if (loc < 0) return false;
-    return set_program_uniform_texture(prog, loc, tinfo, tunit);
+    return set_program_uniform_texture(prog, loc, txt, tinfo, tunit);
 }
 /// Set uniform texture with an additionasl texture enable flags.
-inline bool set_program_uniform_texture(gl_program& prog,
+inline bool set_program_uniform_texture(const std::shared_ptr<gl_program>& prog,
     const std::string& var, const std::string& varon,
-    const gl_texture_info& tinfo, uint tunit) {
+    const std::shared_ptr<gl_texture>& txt, const gl_texture_info& tinfo,
+    uint tunit) {
     auto loc = get_program_uniform_location(prog, var);
     if (loc < 0) return false;
     auto locon = get_program_uniform_location(prog, varon);
     if (locon < 0) return false;
-    return set_program_uniform_texture(prog, loc, locon, tinfo, tunit);
+    return set_program_uniform_texture(prog, loc, locon, txt, tinfo, tunit);
 }
 
 /// Sets a constant `value` of `nc` components for the vertex attribute at
 /// `pos` location.
-bool set_program_vertattr(
-    gl_program& prog, int pos, const float* value, int nc);
+bool set_program_vertattr(const std::shared_ptr<gl_program>& prog, int pos,
+    const float* value, int nc);
 /// Sets a constant `value` of `nc` components for the vertex attribute at
 /// `pos` location.
-bool set_program_vertattr(gl_program& prog, int pos, const int* value, int nc);
+bool set_program_vertattr(
+    const std::shared_ptr<gl_program>& prog, int pos, const int* value, int nc);
 
 /// Binds a buffer to a vertex attribute.
-bool set_program_vertattr(
-    gl_program& prog, const std::string& var, const gl_vertex_buffer& buf);
+bool set_program_vertattr(const std::shared_ptr<gl_program>& prog,
+    const std::string& var, const std::shared_ptr<gl_vertex_buffer>& buf);
 
 /// Binds a buffer to a vertex attribute, or a constant value if the buffer is
 /// empty.
-bool set_program_vertattr(gl_program& prog, int pos,
-    const gl_vertex_buffer& buf, int nc, const float* def);
+bool set_program_vertattr(const std::shared_ptr<gl_program>& prog, int pos,
+    const std::shared_ptr<gl_vertex_buffer>& buf, int nc, const float* def);
 
 /// Binds a buffer or constant to a vertex attribute.
 template <typename T, int N>
-inline bool set_program_vertattr(gl_program& prog, int var,
-    const gl_vertex_buffer& buf, const vec<T, N>& def) {
+inline bool set_program_vertattr(const std::shared_ptr<gl_program>& prog,
+    int var, const std::shared_ptr<gl_vertex_buffer>& buf,
+    const vec<T, N>& def) {
     return set_program_vertattr(prog, var, buf, N, data(def));
 }
 /// Binds a buffer or constant to a vertex attribute.
 template <typename T, int N>
-inline bool set_program_vertattr(gl_program& prog, const std::string& var,
-    const gl_vertex_buffer& buf, const vec<T, N>& def) {
+inline bool set_program_vertattr(const std::shared_ptr<gl_program>& prog,
+    const std::string& var, const std::shared_ptr<gl_vertex_buffer>& buf,
+    const vec<T, N>& def) {
     auto loc = get_program_attrib_location(prog, var);
     if (loc < 0) return false;
     return set_program_vertattr(prog, loc, buf, def);
 }
 
 /// Check whether the program is valid.
-inline bool is_program_valid(const gl_program& prog) { return (bool)prog.pid; }
+inline bool is_program_valid(const std::shared_ptr<gl_program>& prog) {
+    return (bool)prog->pid;
+}
 
 /// Binds a program.
-void bind_program(const gl_program& prog);
+void bind_program(const std::shared_ptr<gl_program>& prog);
 /// Unbind a program.
-void unbind_program(const gl_program& prog);
+void unbind_program(const std::shared_ptr<gl_program>& prog);
 
 /// @}
 
@@ -9423,73 +9440,72 @@ namespace ygl {
 
 /// Vertex buffers for scene drawing. Members are not part of the public API.
 struct gl_shape {
-    gl_vertex_buffer pos = {};         // position
-    gl_vertex_buffer norm = {};        // normals
-    gl_vertex_buffer texcoord = {};    // texcoord
-    gl_vertex_buffer texcoord1 = {};   // texcoord (sond version)
-    gl_vertex_buffer color = {};       // color
-    gl_vertex_buffer tangsp = {};      // tangent space
-    gl_element_buffer points = {};     // point elements
-    gl_element_buffer lines = {};      // line elements
-    gl_element_buffer triangles = {};  // triangle elements
-    gl_element_buffer quads = {};      // quad elements (as 2 triangles)
-    gl_element_buffer beziers = {};    // bezier elements (as 3 lines)
-    gl_element_buffer edges = {};      // edge elements
+    std::shared_ptr<gl_vertex_buffer> pos = {};         // position
+    std::shared_ptr<gl_vertex_buffer> norm = {};        // normals
+    std::shared_ptr<gl_vertex_buffer> texcoord = {};    // texcoord
+    std::shared_ptr<gl_vertex_buffer> texcoord1 = {};   // texcoord
+    std::shared_ptr<gl_vertex_buffer> color = {};       // color
+    std::shared_ptr<gl_vertex_buffer> tangsp = {};      // tangent space
+    std::shared_ptr<gl_element_buffer> points = {};     // point elements
+    std::shared_ptr<gl_element_buffer> lines = {};      // line elements
+    std::shared_ptr<gl_element_buffer> triangles = {};  // triangle elements
+    std::shared_ptr<gl_element_buffer> quads = {};      // quad elements as tris
+    std::shared_ptr<gl_element_buffer> beziers = {};    // bezier elements as l.
+    std::shared_ptr<gl_element_buffer> edges = {};      // edge elements
 };
-
-/// Clear shape.
-void clear_gl_shape(gl_shape& shp);
 
 /// Initialize gl lights.
 gl_lights make_gl_lights(const std::shared_ptr<scene>& scn);
 
 /// Update scene textures on the GPU.
-std::unordered_map<std::shared_ptr<texture>, gl_texture> make_gl_textures(
-    const std::shared_ptr<scene>& scn);
-
-/// Update scene shapes on the GPU.
-std::unordered_map<std::shared_ptr<shape>, gl_shape> make_gl_shapes(
-    const std::shared_ptr<scene>& scn);
-
-/// Clear scene textures on the GPU.
-void clear_gl_textures(
-    std::unordered_map<std::shared_ptr<texture>, gl_texture>& textures);
-
-/// Clear scene shapes on the GPU.
-void clear_gl_shapes(
-    std::unordered_map<std::shared_ptr<shape>, gl_shape>& shapes);
+void update_gl_texture(
+    const std::shared_ptr<texture>& txt, std::shared_ptr<gl_texture>& gtxt);
 
 /// Update scene textures on the GPU.
-void update_gl_texture(
-    std::unordered_map<std::shared_ptr<texture>, gl_texture>& textures,
-    const std::shared_ptr<texture>& txt);
+inline std::unordered_map<std::shared_ptr<texture>, std::shared_ptr<gl_texture>>
+make_gl_textures(const std::shared_ptr<scene>& scn) {
+    auto gtextures = std::unordered_map<std::shared_ptr<texture>,
+        std::shared_ptr<gl_texture>>();
+    for (auto txt : scn->textures) update_gl_texture(txt, gtextures[txt]);
+    return gtextures;
+}
 
 /// Update scene shapes on the GPU.
 void update_gl_shape(
-    std::unordered_map<std::shared_ptr<shape>, gl_shape>& shapes,
-    const std::shared_ptr<shape>& shp);
+    const std::shared_ptr<shape>& shp, std::shared_ptr<gl_shape>& gshp);
+
+/// Update scene shapes on the GPU.
+inline std::unordered_map<std::shared_ptr<shape>, std::shared_ptr<gl_shape>>
+make_gl_shapes(const std::shared_ptr<scene>& scn) {
+    auto gshapes =
+        std::unordered_map<std::shared_ptr<shape>, std::shared_ptr<gl_shape>>();
+    for (auto sgr : scn->shapes)
+        for (auto shp : sgr->shapes) update_gl_shape(shp, gshapes[shp]);
+    return gshapes;
+}
 
 /// A shader for displaying images.  Members are not part of the public API.
 struct gl_stdimage_program {
     /// Program.
-    gl_program prog = {};
+    std::shared_ptr<gl_program> prog = {};
     /// Vertex array.
-    gl_vertex_buffer vbo = {};
+    std::shared_ptr<gl_vertex_buffer> vbo = {};
     // Element array.
-    gl_element_buffer ebo = {};
+    std::shared_ptr<gl_element_buffer> ebo = {};
 };
 
 /// Initialize a stdimage program.
-gl_stdimage_program make_stdimage_program();
+std::shared_ptr<gl_stdimage_program> make_stdimage_program();
 
 /// Draws an image texture the stdimage program.
-void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
-    const vec2i& win_size, const vec2f& offset, float zoom, float exposure,
-    float gamma, bool filmic);
+void draw_image(const std::shared_ptr<gl_stdimage_program>& prog,
+    const std::shared_ptr<gl_texture>& txt, const vec2i& win_size,
+    const vec2f& offset, float zoom, float exposure, float gamma, bool filmic);
 
 /// Draws an image texture the stdimage program.
-inline void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
-    const vec2i& win_size, const vec2f& offset, float zoom) {
+inline void draw_image(const std::shared_ptr<gl_stdimage_program>& prog,
+    const std::shared_ptr<gl_texture>& txt, const vec2i& win_size,
+    const vec2f& offset, float zoom) {
     draw_image(prog, txt, win_size, offset, zoom, 0, 1, false);
 }
 
@@ -9503,14 +9519,15 @@ struct gl_stdimage_params {
     float zoom = 1;
     /// Image background. @refl_semantic(color)
     vec4f background = zero4f;
-};  // namespace ygl
+};
 
 // #codegen end refl-glstdimage
 
 /// Draws an image texture the stdimage program.
-inline void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
-    const vec2i& win_size, const gl_stdimage_params& params,
-    const tonemap_params& tmparams, bool clear_background = true) {
+inline void draw_image(const std::shared_ptr<gl_stdimage_program>& prog,
+    const std::shared_ptr<gl_texture>& txt, const vec2i& win_size,
+    const gl_stdimage_params& params, const tonemap_params& tmparams,
+    bool clear_background = true) {
     if (clear_background) gl_clear_buffers(params.background);
     draw_image(prog, txt, win_size, params.offset, params.zoom,
         tmparams.exposure, tmparams.gamma, tmparams.filmic);
@@ -9520,46 +9537,47 @@ inline void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
 /// Phong/GGX. Members are not part of public API.
 struct gl_stdsurface_program {
     /// Program.
-    gl_program prog = {};
+    std::shared_ptr<gl_program> prog = {};
 };
 
 /// Initialize a stdsurface shader.
-gl_stdsurface_program make_stdsurface_program();
+std::shared_ptr<gl_stdsurface_program> make_stdsurface_program();
 
 /// Check if the program is valid.
-inline bool is_program_valid(const gl_stdsurface_program& prog) {
-    return is_program_valid(prog.prog);
+inline bool is_program_valid(
+    const std::shared_ptr<gl_stdsurface_program>& prog) {
+    return prog->prog && is_program_valid(prog->prog);
 }
 
 /// Starts a frame by setting exposure/gamma values, camera transforms and
 /// projection. Sets also whether to use full shading or a quick eye light
 /// preview.
-void begin_stdsurface_frame(gl_stdsurface_program& prog, bool shade_eyelight,
-    float tonemap_exposure, float tonemap_gamma, bool tonemap_filmic,
-    const mat4f& camera_xform, const mat4f& camera_xform_inv,
-    const mat4f& camera_proj);
+void begin_stdsurface_frame(const std::shared_ptr<gl_stdsurface_program>& prog,
+    bool shade_eyelight, float tonemap_exposure, float tonemap_gamma,
+    bool tonemap_filmic, const mat4f& camera_xform,
+    const mat4f& camera_xform_inv, const mat4f& camera_proj);
 
 /// Ends a frame.
-void end_stdsurface_frame(gl_stdsurface_program& prog);
+void end_stdsurface_frame(const std::shared_ptr<gl_stdsurface_program>& prog);
 
 /// Set shading lights and ambient.
-void set_stdsurface_lights(
-    gl_stdsurface_program& prog, const vec3f& amb, const gl_lights& lights);
+void set_stdsurface_lights(const std::shared_ptr<gl_stdsurface_program>& prog,
+    const vec3f& amb, const gl_lights& lights);
 
 /// Begins drawing a shape with transform `xform`.
-void begin_stdsurface_shape(
-    gl_stdsurface_program& prog, const mat4f& xform, float normal_offset = 0);
+void begin_stdsurface_shape(const std::shared_ptr<gl_stdsurface_program>& prog,
+    const mat4f& xform, float normal_offset = 0);
 
 /// End shade drawing.
-void end_stdsurface_shape(gl_stdsurface_program& prog);
+void end_stdsurface_shape(const std::shared_ptr<gl_stdsurface_program>& prog);
 
 /// Sets normal offset.
 void set_stdsurface_normaloffset(
-    gl_stdsurface_program& prog, float normal_offset);
+    const std::shared_ptr<gl_stdsurface_program>& prog, float normal_offset);
 
 /// Set the object as highlighted.
 void set_stdsurface_highlight(
-    gl_stdsurface_program& prog, const vec4f& highlight);
+    const std::shared_ptr<gl_stdsurface_program>& prog, const vec4f& highlight);
 
 /// Set material values with emission `ke`, diffuse `kd`, specular `ks` and
 /// specular roughness `rs`, opacity `op`. Indicates textures ids with the
@@ -9567,37 +9585,72 @@ void set_stdsurface_highlight(
 /// maps. Works for points/lines/triangles indicated by `etype`, (diffuse for
 /// points, Kajiya-Kay for lines, GGX/Phong for triangles). Material `type`
 /// matches the scene material type.
-void set_stdsurface_material(gl_stdsurface_program& prog, material_type type,
+void set_stdsurface_material(const std::shared_ptr<gl_stdsurface_program>& prog,
+    material_type type, gl_elem_type etype, const vec3f& ke, const vec3f& kd,
+    const vec3f& ks, float rs, float op,
+    const std::shared_ptr<gl_texture>& ke_txt,
+    const std::shared_ptr<gl_texture>& kd_txt,
+    const std::shared_ptr<gl_texture>& ks_txt,
+    const std::shared_ptr<gl_texture>& rs_txt,
+    const std::shared_ptr<gl_texture>& norm_txt,
+    const std::shared_ptr<gl_texture>& occ_txt,
+    const gl_texture_info& ke_txt_info, const gl_texture_info& kd_txt_info,
+    const gl_texture_info& ks_txt_info, const gl_texture_info& rs_txt_info,
+    const gl_texture_info& norm_txt_info, const gl_texture_info& occ_txt_info,
+    bool use_phong, bool double_sided, bool alpha_cutout);
+
+/// Set material values with emission `ke`, diffuse `kd`, specular `ks` and
+/// specular roughness `rs`, opacity `op`. Indicates textures ids with the
+/// correspoinding `XXX_txt` variables. Sets also normal and occlusion
+/// maps. Works for points/lines/triangles indicated by `etype`, (diffuse for
+/// points, Kajiya-Kay for lines, GGX/Phong for triangles). Material `type`
+/// matches the scene material type.
+inline void set_stdsurface_material(
+    const std::shared_ptr<gl_stdsurface_program>& prog, material_type type,
     gl_elem_type etype, const vec3f& ke, const vec3f& kd, const vec3f& ks,
-    float rs, float op, const gl_texture_info& ke_txt,
-    const gl_texture_info& kd_txt, const gl_texture_info& ks_txt,
-    const gl_texture_info& rs_txt, const gl_texture_info& norm_txt,
-    const gl_texture_info& occ_txt, bool use_phong, bool double_sided,
-    bool alpha_cutout);
+    float rs, float op, const std::shared_ptr<gl_texture>& ke_txt,
+    const std::shared_ptr<gl_texture>& kd_txt,
+    const std::shared_ptr<gl_texture>& ks_txt,
+    const std::shared_ptr<gl_texture>& rs_txt,
+    const std::shared_ptr<gl_texture>& norm_txt,
+    const std::shared_ptr<gl_texture>& occ_txt, bool use_phong,
+    bool double_sided, bool alpha_cutout) {
+    set_stdsurface_material(prog, type, etype, ke, kd, ks, rs, op, ke_txt,
+        kd_txt, ks_txt, rs_txt, norm_txt, occ_txt, {}, {}, {}, {}, {}, {},
+        use_phong, double_sided, alpha_cutout);
+}
 
 /// Set constant material with emission `ke` and opacity `op`.
 void set_stdsurface_constmaterial(
-    gl_stdsurface_program& prog, const vec3f& ke, float op);
+    const std::shared_ptr<gl_stdsurface_program>& prog, const vec3f& ke,
+    float op);
 
 /// Set vertex data with buffers for position pos, normals norm, texture
 /// coordinates texcoord, per-vertex color color and tangent space tangsp.
-void set_stdsurface_vert(gl_stdsurface_program& prog,
-    const gl_vertex_buffer& pos, const gl_vertex_buffer& norm,
-    const gl_vertex_buffer& texcoord, const gl_vertex_buffer& color,
-    const gl_vertex_buffer& tangsp);
+void set_stdsurface_vert(const std::shared_ptr<gl_stdsurface_program>& prog,
+    const std::shared_ptr<gl_vertex_buffer>& pos,
+    const std::shared_ptr<gl_vertex_buffer>& norm,
+    const std::shared_ptr<gl_vertex_buffer>& texcoord,
+    const std::shared_ptr<gl_vertex_buffer>& color,
+    const std::shared_ptr<gl_vertex_buffer>& tangsp);
 
 /// Set vertex data with buffers for skinning.
-void set_stdsurface_vert_skinning(gl_stdsurface_program& prog,
-    const gl_vertex_buffer& weights, const gl_vertex_buffer& joints,
-    int nxforms, const mat4f* xforms);
+void set_stdsurface_vert_skinning(
+    const std::shared_ptr<gl_stdsurface_program>& prog,
+    const std::shared_ptr<gl_vertex_buffer>& weights,
+    const std::shared_ptr<gl_vertex_buffer>& joints, int nxforms,
+    const mat4f* xforms);
 
 /// Set vertex data with buffers for skinning.
-void set_stdsurface_vert_gltf_skinning(gl_stdsurface_program& prog,
-    const gl_vertex_buffer& weights, const gl_vertex_buffer& joints,
-    int nxforms, const mat4f* xforms);
+void set_stdsurface_vert_gltf_skinning(
+    const std::shared_ptr<gl_stdsurface_program>& prog,
+    const std::shared_ptr<gl_vertex_buffer>& weights,
+    const std::shared_ptr<gl_vertex_buffer>& joints, int nxforms,
+    const mat4f* xforms);
 
 /// Disables vertex skinning.
-void set_stdsurface_vert_skinning_off(gl_stdsurface_program& prog);
+void set_stdsurface_vert_skinning_off(
+    const std::shared_ptr<gl_stdsurface_program>& prog);
 
 // #codegen begin refl-glstdsurface
 
@@ -9631,9 +9684,12 @@ struct gl_stdsurface_params {
 
 /// Draw scene with stdsurface program.
 void draw_stdsurface_scene(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<camera>& cam, gl_stdsurface_program& prog,
-    std::unordered_map<std::shared_ptr<shape>, gl_shape>& shapes,
-    std::unordered_map<std::shared_ptr<texture>, gl_texture>& textures,
+    const std::shared_ptr<camera>& cam,
+    const std::shared_ptr<gl_stdsurface_program>& prog,
+    std::unordered_map<std::shared_ptr<shape>, std::shared_ptr<gl_shape>>&
+        shapes,
+    std::unordered_map<std::shared_ptr<texture>, std::shared_ptr<gl_texture>>&
+        textures,
     const gl_lights& lights, const vec2i& viewport_size,
     const std::shared_ptr<void>& highlighted,
     const gl_stdsurface_params& params, const tonemap_params& tmparams);
@@ -10194,7 +10250,8 @@ inline std::shared_ptr<void> get_untyped_selection(scene_selection& sel) {
 bool draw_scene_widgets(const std::shared_ptr<gl_window>& win,
     const std::string& lbl, const std::shared_ptr<scene>& scn,
     scene_selection& sel, std::vector<ygl::scene_selection>& update_list,
-    const std::unordered_map<std::shared_ptr<texture>, gl_texture>& gl_txt,
+    const std::unordered_map<std::shared_ptr<texture>,
+        std::shared_ptr<gl_texture>>& gl_txt,
     const std::shared_ptr<proc_scene>& test_scn = nullptr);
 
 /// @}
