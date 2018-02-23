@@ -6304,6 +6304,14 @@ struct proc_scene {
     std::vector<std::shared_ptr<proc_animation>> animations;
 };
 
+/// Procedural scene with objects and lights split into separate groups.
+struct proc_split_scene {
+    /// Scene shapes.
+    std::shared_ptr<proc_scene> scn;
+    /// Scene lights and cameras split into different configurations.
+    std::vector<std::shared_ptr<proc_scene>> views;
+};
+
 // #codegen end refl-proc-scene
 
 /// Makes the Cornell Box scene.
@@ -6371,9 +6379,7 @@ std::vector<std::shared_ptr<proc_animation>>& proc_animation_presets();
 /// Test scene presets.
 std::vector<std::shared_ptr<proc_scene>>& proc_scene_presets();
 /// Test scene presets split into objects and lighting and cameras.
-std::vector<std::pair<std::shared_ptr<proc_scene>,
-    std::vector<std::shared_ptr<proc_scene>>>>&
-proc_split_scene_presets();
+std::vector<std::shared_ptr<proc_split_scene>>& proc_split_scene_presets();
 
 /// Remove duplicates based on name.
 void remove_duplicates(const std::shared_ptr<proc_scene>& tscn);

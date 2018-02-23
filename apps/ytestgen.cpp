@@ -51,7 +51,7 @@ void rmdir(const std::string& dir) {
 }
 
 void save_scene(const std::shared_ptr<ygl::scene>& scn,
-    const std::string& sname, const std::string& dirname) {
+    const std::string& sname, const std::string& dirname, bool flatten_obj) {
     auto facevarying = false;
     for (auto sgr : scn->shapes)
         for (auto shp : sgr->shapes)
@@ -60,7 +60,7 @@ void save_scene(const std::shared_ptr<ygl::scene>& scn,
     auto opts = ygl::save_options();
     opts.save_textures = true;
     if (!facevarying) save_scene(dirname + sname + ".gltf", scn, opts);
-    if (!ygl::startswith(sname, "instance")) ygl::flatten_instances(scn);
+    if (flatten_obj) ygl::flatten_instances(scn);
     ygl::save_scene(dirname + sname + ".obj", scn, opts);
 }
 
@@ -71,16 +71,16 @@ void save_test_scene(const std::string& sname, const std::string& basedir) {
         ygl::log_info("generating scene {}", sname);
         if (sname == "cornell_box") {
             auto scn = ygl::make_cornell_box_scene();
-            save_scene(scn, sname, dirname);
+            save_scene(scn, sname, dirname, true);
             return;
         }
         auto test_scns = std::vector<std::pair<std::shared_ptr<ygl::proc_scene>,
             std::shared_ptr<ygl::scene>>>();
         for (auto& preset : ygl::proc_split_scene_presets()) {
-            if (preset.first->name != sname) continue;
+            if (preset->scn->name != sname) continue;
             test_scns.push_back(
-                {preset.first, ygl::make_proc_elems(preset.first)});
-            for (auto& view : preset.second) {
+                {preset->scn, ygl::make_proc_elems(preset->scn)});
+            for (auto& view : preset->views) {
                 test_scns.push_back({view, ygl::make_proc_elems(view)});
             }
         }
@@ -110,9 +110,14 @@ void save_test_scene(const std::string& sname, const std::string& basedir) {
                 ygl::save_scene(dirname + shp_name + ".obj", sscn, opts);
             }
         } else {
+            auto count = 0;
             for (auto& test_scn : test_scns) {
-                save_scene(test_scn.second, test_scn.first->name, dirname);
-                ygl::save_proc_scene(dirname + sname + ".json", test_scn.first);
+                auto name = "scene"s;
+                if (count) name = "view"s + std::to_string(count);
+                count += 1;
+                save_scene(test_scn.second, name, dirname,
+                    !ygl::startswith(sname, "instance"));
+                ygl::save_proc_scene(dirname + name + ".json", test_scn.first);
             }
         }
     } catch (std::exception& e) { ygl::log_fatal("error {}", e.what()); }
@@ -122,7 +127,7 @@ int main(int argc, char* argv[]) {
     // put together scene names
     auto scene_names = std::vector<std::string>{"cornell_box"};
     for (auto preset : ygl::proc_split_scene_presets())
-        scene_names.push_back(preset.first->name);
+        scene_names.push_back(preset->scn->name);
 
     // command line params
     auto parser = ygl::make_parser(argc, argv, "ytestgen", "make tests");
