@@ -50,8 +50,8 @@ struct app_state {
     bool rendering = false;
     ygl::gl_stdimage_params imparams = {};
     ygl::tonemap_params tmparams = {};
-    ygl::gl_texture trace_texture = {};
-    ygl::gl_stdimage_program gl_prog = {};
+    std::shared_ptr<ygl::gl_texture> trace_texture = {};
+    std::shared_ptr<ygl::gl_stdimage_program> gl_prog = {};
     ygl::scene_selection selection = {};
     std::vector<ygl::scene_selection> update_list;
     bool quiet = false;

@@ -39,9 +39,13 @@ struct app_state {
     std::string outfilename;
     ygl::gl_stdsurface_params params = {};
     ygl::tonemap_params tmparams = {};
-    ygl::gl_stdsurface_program prog;
-    std::unordered_map<std::shared_ptr<ygl::texture>, ygl::gl_texture> textures;
-    std::unordered_map<std::shared_ptr<ygl::shape>, ygl::gl_shape> shapes;
+    std::shared_ptr<ygl::gl_stdsurface_program> prog;
+    std::unordered_map<std::shared_ptr<ygl::texture>,
+        std::shared_ptr<ygl::gl_texture>>
+        textures;
+    std::unordered_map<std::shared_ptr<ygl::shape>,
+        std::shared_ptr<ygl::gl_shape>>
+        shapes;
     ygl::gl_lights lights;
     bool navigation_fps = false;
     ygl::scene_selection selection = {};
@@ -64,14 +68,18 @@ inline void draw(const std::shared_ptr<ygl::gl_window>& win,
     static auto last_time = 0.0f;
     for (auto& sel : app->update_list) {
         if (sel.txt) {
-            ygl::update_gl_texture(app->textures, app->selection.txt);
+            ygl::update_gl_texture(
+                app->selection.txt, app->textures[app->selection.txt]);
         }
         if (sel.sgr) {
             for (auto shp : app->selection.sgr->shapes) {
-                ygl::update_gl_shape(app->shapes, shp);
+                ygl::update_gl_shape(shp, app->shapes[shp]);
             }
         }
-        if (sel.shp) { ygl::update_gl_shape(app->shapes, app->selection.shp); }
+        if (sel.shp) {
+            ygl::update_gl_shape(
+                app->selection.shp, app->shapes[app->selection.shp]);
+        }
         if (sel.nde || sel.anm || sel.agr || app->time != last_time) {
             ygl::update_transforms(app->scn, app->time);
             last_time = app->time;
@@ -102,8 +110,8 @@ inline void draw(const std::shared_ptr<ygl::gl_window>& win,
             if (ygl::draw_button_widget(win, "new")) {
                 app->pscn = std::make_shared<ygl::proc_scene>();
                 app->scn = std::make_shared<ygl::scene>();
-                ygl::clear_gl_shapes(app->shapes);
-                ygl::clear_gl_textures(app->textures);
+                app->shapes.clear();
+                app->textures.clear();
                 ygl::update_proc_elems(app->scn, app->pscn);
                 app->textures = ygl::make_gl_textures(app->scn);
                 app->shapes = ygl::make_gl_shapes(app->scn);
@@ -111,8 +119,8 @@ inline void draw(const std::shared_ptr<ygl::gl_window>& win,
             ygl::draw_continue_widget(win);
             if (ygl::draw_button_widget(win, "load")) {
                 app->scn = ygl::load_scene(app->filename, {});
-                ygl::clear_gl_shapes(app->shapes);
-                ygl::clear_gl_textures(app->textures);
+                app->textures.clear();
+                app->shapes.clear();
                 app->textures = ygl::make_gl_textures(app->scn);
                 app->shapes = ygl::make_gl_shapes(app->scn);
             }

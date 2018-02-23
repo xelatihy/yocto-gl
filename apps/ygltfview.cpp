@@ -32,24 +32,24 @@ using ygl::log_info;
 
 // OpenGL shape vbo
 struct shape_vbo {
-    ygl::gl_vertex_buffer pos = {};
-    ygl::gl_vertex_buffer norm = {};
-    ygl::gl_vertex_buffer texcoord = {};
-    ygl::gl_vertex_buffer texcoord1 = {};
-    ygl::gl_vertex_buffer color = {};
-    ygl::gl_vertex_buffer tangsp = {};
-    ygl::gl_vertex_buffer skin_joints = {};
-    ygl::gl_vertex_buffer skin_weights = {};
-    ygl::gl_element_buffer points = {};
-    ygl::gl_element_buffer lines = {};
-    ygl::gl_element_buffer triangles = {};
+    std::shared_ptr<ygl::gl_vertex_buffer> pos = {};
+    std::shared_ptr<ygl::gl_vertex_buffer> norm = {};
+    std::shared_ptr<ygl::gl_vertex_buffer> texcoord = {};
+    std::shared_ptr<ygl::gl_vertex_buffer> texcoord1 = {};
+    std::shared_ptr<ygl::gl_vertex_buffer> color = {};
+    std::shared_ptr<ygl::gl_vertex_buffer> tangsp = {};
+    std::shared_ptr<ygl::gl_vertex_buffer> skin_joints = {};
+    std::shared_ptr<ygl::gl_vertex_buffer> skin_weights = {};
+    std::shared_ptr<ygl::gl_element_buffer> points = {};
+    std::shared_ptr<ygl::gl_element_buffer> lines = {};
+    std::shared_ptr<ygl::gl_element_buffer> triangles = {};
 };
 
 // OpenGL state
 struct shade_state {
-    ygl::gl_stdsurface_program prog = {};
-    std::map<std::shared_ptr<void>, ygl::gl_texture> txt;
-    std::map<std::shared_ptr<void>, shape_vbo> vbo;
+    std::shared_ptr<ygl::gl_stdsurface_program> prog = {};
+    std::map<std::shared_ptr<void>, std::shared_ptr<ygl::gl_texture>> txt;
+    std::map<std::shared_ptr<void>, std::shared_ptr<shape_vbo>> vbo;
     ygl::gl_lights lights;
 };
 
@@ -241,33 +241,34 @@ inline void update_shade_state(const std::shared_ptr<ygl::gltf_scene_group>& sc,
     for (auto mesh : sc->meshes) {
         for (auto shape : mesh->shapes) {
             if (st->vbo.find(shape) != st->vbo.end()) continue;
-            st->vbo[shape] = shape_vbo();
+            st->vbo[shape] = std::make_shared<shape_vbo>();
             if (!shape->pos.empty())
-                st->vbo[shape].pos = ygl::make_vertex_buffer(shape->pos);
+                st->vbo[shape]->pos = ygl::make_vertex_buffer(shape->pos);
             if (!shape->norm.empty())
-                st->vbo[shape].norm = ygl::make_vertex_buffer(shape->norm);
+                st->vbo[shape]->norm = ygl::make_vertex_buffer(shape->norm);
             if (!shape->texcoord.empty())
-                st->vbo[shape].texcoord =
+                st->vbo[shape]->texcoord =
                     ygl::make_vertex_buffer(shape->texcoord);
             if (!shape->texcoord1.empty())
-                st->vbo[shape].texcoord1 =
+                st->vbo[shape]->texcoord1 =
                     ygl::make_vertex_buffer(shape->texcoord1);
             if (!shape->color.empty())
-                st->vbo[shape].color = ygl::make_vertex_buffer(shape->color);
+                st->vbo[shape]->color = ygl::make_vertex_buffer(shape->color);
             if (!shape->tangsp.empty())
-                st->vbo[shape].tangsp = ygl::make_vertex_buffer(shape->tangsp);
+                st->vbo[shape]->tangsp = ygl::make_vertex_buffer(shape->tangsp);
             if (!shape->skin_weights.empty())
-                st->vbo[shape].skin_weights =
+                st->vbo[shape]->skin_weights =
                     ygl::make_vertex_buffer(shape->skin_weights);
             if (!shape->skin_joints.empty())
-                st->vbo[shape].skin_joints =
+                st->vbo[shape]->skin_joints =
                     ygl::make_vertex_buffer(shape->skin_joints);
             if (!shape->points.empty())
-                st->vbo[shape].points = ygl::make_element_buffer(shape->points);
+                st->vbo[shape]->points =
+                    ygl::make_element_buffer(shape->points);
             if (!shape->lines.empty())
-                st->vbo[shape].lines = ygl::make_element_buffer(shape->lines);
+                st->vbo[shape]->lines = ygl::make_element_buffer(shape->lines);
             if (!shape->triangles.empty())
-                st->vbo[shape].triangles =
+                st->vbo[shape]->triangles =
                     ygl::make_element_buffer(shape->triangles);
         }
     }
@@ -286,13 +287,15 @@ inline void shade_mesh(const std::shared_ptr<ygl::gltf_mesh>& msh,
         default_material->metallic_roughness->base = {0.2f, 0.2f, 0.2f};
     }
 
-    auto txt_info = [st](const std::shared_ptr<ygl::gltf_texture>& gtxt,
-                        const std::shared_ptr<ygl::gltf_texture_info>& ginfo)
+    auto txt = [st](const std::shared_ptr<ygl::gltf_texture>& gtxt)
+        -> std::shared_ptr<ygl::gl_texture> {
+        if (!gtxt) return nullptr;
+        return st->txt.at(gtxt);
+    };
+
+    auto txt_info = [st](const std::shared_ptr<ygl::gltf_texture_info>& ginfo)
         -> ygl::gl_texture_info {
         auto info = ygl::gl_texture_info();
-        if (!gtxt) return info;
-        info.txt = st->txt.at(gtxt);
-        if (!ginfo) return info;
         info.wrap_s = (ygl::gl_texture_wrap)ginfo->wrap_s;
         info.wrap_t = (ygl::gl_texture_wrap)ginfo->wrap_t;
         info.filter_min = (ygl::gl_texture_filter)ginfo->filter_min;
@@ -318,36 +321,38 @@ inline void shade_mesh(const std::shared_ptr<ygl::gltf_mesh>& msh,
             set_stdsurface_material(st->prog,
                 ygl::material_type::specular_glossiness, etype, mat->emission,
                 sg->diffuse, sg->specular, sg->glossiness, sg->opacity,
-                txt_info(mat->emission_txt, mat->emission_txt_info),
-                txt_info(sg->diffuse_txt, sg->diffuse_txt_info),
-                txt_info(sg->specular_txt, sg->specular_txt_info), {},
-                txt_info(mat->normal_txt, mat->normal_txt_info),
-                txt_info(mat->occlusion_txt, mat->occlusion_txt_info), false,
-                mat->double_sided, cutout);
+                txt(mat->emission_txt), txt(sg->diffuse_txt),
+                txt(sg->specular_txt), {}, txt(mat->normal_txt),
+                txt(mat->occlusion_txt), txt_info(mat->emission_txt_info),
+                txt_info(sg->diffuse_txt_info), txt_info(sg->specular_txt_info),
+                {}, txt_info(mat->normal_txt_info),
+                txt_info(mat->occlusion_txt_info), false, mat->double_sided,
+                cutout);
         } else if (mat->metallic_roughness) {
             auto mr = mat->metallic_roughness;
             op = mr->opacity;
             set_stdsurface_material(st->prog,
                 ygl::material_type::metallic_roughness, etype, mat->emission,
                 mr->base, {mr->metallic, mr->metallic, mr->metallic},
-                mr->roughness, mr->opacity,
-                txt_info(mat->emission_txt, mat->emission_txt_info),
-                txt_info(mr->base_txt, mr->base_txt_info),
-                txt_info(mr->metallic_txt, mr->metallic_txt_info), {},
-                txt_info(mat->normal_txt, mat->normal_txt_info),
-                txt_info(mat->occlusion_txt, mat->occlusion_txt_info), false,
-                mat->double_sided, cutout);
+                mr->roughness, mr->opacity, txt(mat->emission_txt),
+                txt(mr->base_txt), txt(mr->metallic_txt), {},
+                txt(mat->normal_txt), txt(mat->occlusion_txt),
+                txt_info(mat->emission_txt_info), txt_info(mr->base_txt_info),
+                txt_info(mr->metallic_txt_info), {},
+                txt_info(mat->normal_txt_info),
+                txt_info(mat->occlusion_txt_info), false, mat->double_sided,
+                cutout);
         } else {
             set_stdsurface_material(st->prog,
                 ygl::material_type::specular_roughness, etype, mat->emission,
-                ygl::zero3f, ygl::zero3f, 0.5f, 1,
-                txt_info(mat->emission_txt, mat->emission_txt_info), {}, {}, {},
-                {}, {}, false, mat->double_sided, cutout);
+                ygl::zero3f, ygl::zero3f, 0.5f, 1, txt(mat->emission_txt), {},
+                {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, false,
+                mat->double_sided, cutout);
         }
 
         auto vbo = st->vbo.at(shp);
-        set_stdsurface_vert(
-            st->prog, vbo.pos, vbo.norm, vbo.texcoord, vbo.color, vbo.tangsp);
+        set_stdsurface_vert(st->prog, vbo->pos, vbo->norm, vbo->texcoord,
+            vbo->color, vbo->tangsp);
         if (sk) {
             auto skin_xforms = ygl::get_skin_transforms(sk, xform);
 #if 0
@@ -360,25 +365,25 @@ inline void shade_mesh(const std::shared_ptr<ygl::gltf_mesh>& msh,
             //     shp->skin_joints, skin_xforms, skinned_pos, skinned_norm);
             ygl::compute_matrix_skinning(shp->pos, shp->norm, shp->skin_weights,
                 shp->skin_joints, skin_xforms, skinned_pos, skinned_norm);
-            update_vertex_buffer(vbo.pos, skinned_pos);
-            update_vertex_buffer(vbo.norm, skinned_norm);
+            update_vertex_buffer(vbo->pos, skinned_pos);
+            update_vertex_buffer(vbo->norm, skinned_norm);
 #endif
         } else if (!morph_weights.empty() && !shp->morph_targets.empty()) {
             std::vector<ygl::vec3f> morph_pos, morph_norm;
             std::vector<ygl::vec4f> morph_tang;
             ygl::compute_morphing_deformation(
                 shp, morph_weights, morph_pos, morph_norm, morph_tang);
-            update_vertex_buffer(vbo.pos, morph_pos);
-            update_vertex_buffer(vbo.norm, morph_norm);
+            update_vertex_buffer(vbo->pos, morph_pos);
+            update_vertex_buffer(vbo->norm, morph_norm);
         } else {
             set_stdsurface_vert_skinning_off(st->prog);
         }
 
         ygl::gl_enable_culling(!mat->double_sided);
 
-        draw_elems(vbo.points);
-        draw_elems(vbo.lines);
-        draw_elems(vbo.triangles);
+        draw_elems(vbo->points);
+        draw_elems(vbo->lines);
+        draw_elems(vbo->triangles);
 
         ygl::gl_enable_culling(false);
 
@@ -391,9 +396,9 @@ inline void shade_mesh(const std::shared_ptr<ygl::gltf_mesh>& msh,
 
             assert(ygl::gl_check_error());
             ygl::gl_line_width(2);
-            draw_elems(vbo.points);
-            draw_elems(vbo.lines);
-            draw_elems(vbo.triangles);
+            draw_elems(vbo->points);
+            draw_elems(vbo->lines);
+            draw_elems(vbo->triangles);
             ygl::gl_line_width(1);
             assert(ygl::gl_check_error());
         }

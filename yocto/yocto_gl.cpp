@@ -11939,19 +11939,20 @@ void gl_read_imagef(float* pixels, int w, int h, int nc) {
 namespace ygl {
 
 // Implementation of update_texture.
-void _update_texture(gl_texture& txt, int w, int h, int nc, const void* pixels,
-    bool floats, bool linear, bool mipmap, bool as_float, bool as_srgb) {
-    auto refresh = !txt.tid || txt.width != w || txt.height != h ||
-                   txt.ncomp != nc || txt.as_float != as_float ||
-                   txt.as_srgb != as_srgb || txt.mipmap != mipmap ||
-                   txt.linear != linear;
-    txt.width = w;
-    txt.height = h;
-    txt.ncomp = nc;
-    txt.as_float = as_float;
-    txt.as_srgb = as_srgb;
-    txt.mipmap = mipmap;
-    txt.linear = linear;
+void _update_texture(const std::shared_ptr<gl_texture>& txt, int w, int h,
+    int nc, const void* pixels, bool floats, bool linear, bool mipmap,
+    bool as_float, bool as_srgb) {
+    auto refresh = !txt->tid || txt->width != w || txt->height != h ||
+                   txt->ncomp != nc || txt->as_float != as_float ||
+                   txt->as_srgb != as_srgb || txt->mipmap != mipmap ||
+                   txt->linear != linear;
+    txt->width = w;
+    txt->height = h;
+    txt->ncomp = nc;
+    txt->as_float = as_float;
+    txt->as_srgb = as_srgb;
+    txt->mipmap = mipmap;
+    txt->linear = linear;
     assert(!as_srgb || !as_float);
     assert(gl_check_error());
     if (w * h) {
@@ -11961,8 +11962,8 @@ void _update_texture(gl_texture& txt, int w, int h, int nc, const void* pixels,
         int* formats =
             (as_float) ? formats_f : ((as_srgb) ? formats_sub : formats_ub);
         assert(gl_check_error());
-        if (!txt.tid) glGenTextures(1, &txt.tid);
-        glBindTexture(GL_TEXTURE_2D, txt.tid);
+        if (!txt->tid) glGenTextures(1, &txt->tid);
+        glBindTexture(GL_TEXTURE_2D, txt->tid);
         if (refresh) {
             glTexImage2D(GL_TEXTURE_2D, 0, formats[nc - 1], w, h, 0,
                 formats_ub[nc - 1], (floats) ? GL_FLOAT : GL_UNSIGNED_BYTE,
@@ -11983,10 +11984,10 @@ void _update_texture(gl_texture& txt, int w, int h, int nc, const void* pixels,
         }
         glBindTexture(GL_TEXTURE_2D, 0);
     } else {
-        if (txt.tid) {
-            glBindTexture(GL_TEXTURE_2D, txt.tid);
-            glDeleteTextures(1, &txt.tid);
-            txt.tid = 0;
+        if (txt->tid) {
+            glBindTexture(GL_TEXTURE_2D, txt->tid);
+            glDeleteTextures(1, &txt->tid);
+            txt->tid = 0;
             glBindTexture(GL_TEXTURE_2D, 0);
         }
     }
@@ -11994,24 +11995,27 @@ void _update_texture(gl_texture& txt, int w, int h, int nc, const void* pixels,
 }
 
 // Binds a texture to a texture unit
-void bind_texture(const gl_texture& txt, uint unit) {
+void bind_texture(const std::shared_ptr<gl_texture>& txt, uint unit) {
     glActiveTexture(GL_TEXTURE0 + unit);
-    glBindTexture(GL_TEXTURE_2D, txt.tid);
+    glBindTexture(GL_TEXTURE_2D, txt->tid);
 }
 
 // Unbinds
-void unbind_texture(const gl_texture& txt, uint unit) {
+void unbind_texture(const std::shared_ptr<gl_texture>& txt, uint unit) {
     glActiveTexture(GL_TEXTURE0 + unit);
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 // Destroys the texture tid.
-void clear_texture(gl_texture& txt) {
+void clear_texture(gl_texture* txt) {
     assert(gl_check_error());
-    glDeleteTextures(1, &txt.tid);
-    txt.tid = 0;
+    glDeleteTextures(1, &txt->tid);
+    txt->tid = 0;
     assert(gl_check_error());
 }
+
+// Clear texture.
+gl_texture::~gl_texture() { clear_texture(this); }
 
 }  // namespace ygl
 
@@ -12021,34 +12025,34 @@ void clear_texture(gl_texture& txt) {
 namespace ygl {
 
 // Updates the buffer with new data.
-void _update_vertex_buffer(gl_vertex_buffer& buf, int n, int nc,
-    const void* values, bool as_float, bool dynamic) {
-    auto resize =
-        !buf.bid || n * nc != buf.num * buf.ncomp || as_float != buf.as_float;
-    buf.num = n;
-    buf.ncomp = nc;
-    buf.as_float = as_float;
+void _update_vertex_buffer(const std::shared_ptr<gl_vertex_buffer>& buf, int n,
+    int nc, const void* values, bool as_float, bool dynamic) {
+    auto resize = !buf->bid || n * nc != buf->num * buf->ncomp ||
+                  as_float != buf->as_float;
+    buf->num = n;
+    buf->ncomp = nc;
+    buf->as_float = as_float;
     assert(gl_check_error());
     if (n) {
-        if (!buf.bid) glGenBuffers(1, &buf.bid);
-        glBindBuffer(GL_ARRAY_BUFFER, buf.bid);
+        if (!buf->bid) glGenBuffers(1, &buf->bid);
+        glBindBuffer(GL_ARRAY_BUFFER, buf->bid);
         if (resize) {
             glBufferData(GL_ARRAY_BUFFER,
-                buf.num * buf.ncomp *
+                buf->num * buf->ncomp *
                     ((as_float) ? sizeof(float) : sizeof(int)),
                 values, (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
         } else {
             glBufferSubData(GL_ARRAY_BUFFER, 0,
-                buf.num * buf.ncomp *
+                buf->num * buf->ncomp *
                     ((as_float) ? sizeof(float) : sizeof(int)),
                 values);
         }
         glBindBuffer(GL_ARRAY_BUFFER, 0);
     } else {
-        if (buf.bid) {
-            glBindBuffer(GL_ARRAY_BUFFER, buf.bid);
-            glDeleteBuffers(1, &buf.bid);
-            buf.bid = 0;
+        if (buf->bid) {
+            glBindBuffer(GL_ARRAY_BUFFER, buf->bid);
+            glDeleteBuffers(1, &buf->bid);
+            buf->bid = 0;
             glBindBuffer(GL_ARRAY_BUFFER, 0);
         }
     }
@@ -12056,15 +12060,17 @@ void _update_vertex_buffer(gl_vertex_buffer& buf, int n, int nc,
 }
 
 // Bind the buffer at a particular attribute location
-void bind_vertex_buffer(const gl_vertex_buffer& buf, uint vattr) {
+void bind_vertex_buffer(
+    const std::shared_ptr<gl_vertex_buffer>& buf, uint vattr) {
     glEnableVertexAttribArray(vattr);
-    glBindBuffer(GL_ARRAY_BUFFER, buf.bid);
-    glVertexAttribPointer(vattr, buf.ncomp, GL_FLOAT, false, 0, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, buf->bid);
+    glVertexAttribPointer(vattr, buf->ncomp, GL_FLOAT, false, 0, 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 // Unbind the buffer
-void unbind_vertex_buffer(const gl_vertex_buffer& buf, uint vattr) {
+void unbind_vertex_buffer(
+    const std::shared_ptr<gl_vertex_buffer>& buf, uint vattr) {
     glDisableVertexAttribArray(vattr);
 }
 
@@ -12072,12 +12078,15 @@ void unbind_vertex_buffer(const gl_vertex_buffer& buf, uint vattr) {
 void unbind_vertex_buffer(uint vattr) { glDisableVertexAttribArray(vattr); }
 
 // Destroys the buffer
-void clear_vertex_buffer(gl_vertex_buffer& buf) {
+void clear_vertex_buffer(gl_vertex_buffer* buf) {
     assert(gl_check_error());
-    glDeleteBuffers(1, &buf.bid);
-    buf.bid = 0;
+    glDeleteBuffers(1, &buf->bid);
+    buf->bid = 0;
     assert(gl_check_error());
 }
+
+// Clears the buffers.
+gl_vertex_buffer::~gl_vertex_buffer() { clear_vertex_buffer(this); }
 
 }  // namespace ygl
 
@@ -12087,29 +12096,29 @@ void clear_vertex_buffer(gl_vertex_buffer& buf) {
 namespace ygl {
 
 // Updates the buffer bid with new data.
-void _update_element_buffer(
-    gl_element_buffer& buf, int n, int nc, const int* values, bool dynamic) {
-    auto resize = !buf.bid || n * nc != buf.num * buf.ncomp;
-    buf.num = n;
-    buf.ncomp = nc;
+void _update_element_buffer(const std::shared_ptr<gl_element_buffer>& buf,
+    int n, int nc, const int* values, bool dynamic) {
+    auto resize = !buf->bid || n * nc != buf->num * buf->ncomp;
+    buf->num = n;
+    buf->ncomp = nc;
     assert(gl_check_error());
     if (n) {
-        if (!buf.bid) glGenBuffers(1, &buf.bid);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf.bid);
+        if (!buf->bid) glGenBuffers(1, &buf->bid);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf->bid);
         if (resize) {
             glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                buf.num * buf.ncomp * sizeof(int), values,
+                buf->num * buf->ncomp * sizeof(int), values,
                 (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
         } else {
             glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0,
-                buf.num * buf.ncomp * sizeof(int), values);
+                buf->num * buf->ncomp * sizeof(int), values);
         }
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     } else {
-        if (buf.bid) {
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf.bid);
-            glDeleteBuffers(1, &buf.bid);
-            buf.bid = 0;
+        if (buf->bid) {
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf->bid);
+            glDeleteBuffers(1, &buf->bid);
+            buf->bid = 0;
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
         }
     }
@@ -12117,28 +12126,28 @@ void _update_element_buffer(
 }
 
 // Draws elements.
-void draw_elems(const gl_element_buffer& buf) {
-    if (!buf.bid) return;
+void draw_elems(const std::shared_ptr<gl_element_buffer>& buf) {
+    if (!buf || !buf->bid) return;
     assert(gl_check_error());
     int mode = 0;
-    switch (buf.ncomp) {
+    switch (buf->ncomp) {
         case 1: mode = GL_POINTS; break;
         case 2: mode = GL_LINES; break;
         case 3: mode = GL_TRIANGLES; break;
         case 4: mode = GL_QUADS; break;
         default: assert(false);
     };
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf.bid);
-    glDrawElements(mode, buf.ncomp * buf.num, GL_UNSIGNED_INT, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf->bid);
+    glDrawElements(mode, buf->ncomp * buf->num, GL_UNSIGNED_INT, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     assert(gl_check_error());
 }
 
 // Destroys the buffer
-void clear_element_buffer(gl_element_buffer& buf) {
+void clear_element_buffer(const std::shared_ptr<gl_element_buffer>& buf) {
     assert(gl_check_error());
-    glDeleteBuffers(1, &buf.bid);
-    buf.bid = 0;
+    glDeleteBuffers(1, &buf->bid);
+    buf->bid = 0;
     assert(gl_check_error());
 }
 
@@ -12152,59 +12161,59 @@ namespace ygl {
 // Creates and OpenGL program from vertex and fragment code. Returns the
 // program id. Optionally return vertex and fragment shader ids. A VAO
 // is created.
-gl_program make_program(
+std::shared_ptr<gl_program> make_program(
     const std::string& vertex, const std::string& fragment) {
-    auto prog = gl_program();
+    auto prog = std::make_shared<gl_program>();
 
     assert(gl_check_error());
-    glGenVertexArrays(1, &prog.vao);
-    glBindVertexArray(prog.vao);
+    glGenVertexArrays(1, &prog->vao);
+    glBindVertexArray(prog->vao);
     assert(gl_check_error());
 
     int errflags;
     char errbuf[10000];
 
     // create vertex
-    prog.vid = glCreateShader(GL_VERTEX_SHADER);
+    prog->vid = glCreateShader(GL_VERTEX_SHADER);
     const char* vertex_str = vertex.c_str();
-    glShaderSource(prog.vid, 1, &vertex_str, NULL);
-    glCompileShader(prog.vid);
-    glGetShaderiv(prog.vid, GL_COMPILE_STATUS, &errflags);
+    glShaderSource(prog->vid, 1, &vertex_str, NULL);
+    glCompileShader(prog->vid);
+    glGetShaderiv(prog->vid, GL_COMPILE_STATUS, &errflags);
     if (!errflags) {
-        glGetShaderInfoLog(prog.vid, 10000, 0, errbuf);
+        glGetShaderInfoLog(prog->vid, 10000, 0, errbuf);
         throw std::runtime_error(
             std::string("shader not compiled\n\n") + errbuf);
     }
     assert(glGetError() == GL_NO_ERROR);
 
     // create fragment
-    prog.fid = glCreateShader(GL_FRAGMENT_SHADER);
+    prog->fid = glCreateShader(GL_FRAGMENT_SHADER);
     const char* fragment_str = fragment.c_str();
-    glShaderSource(prog.fid, 1, &fragment_str, NULL);
-    glCompileShader(prog.fid);
-    glGetShaderiv(prog.fid, GL_COMPILE_STATUS, &errflags);
+    glShaderSource(prog->fid, 1, &fragment_str, NULL);
+    glCompileShader(prog->fid);
+    glGetShaderiv(prog->fid, GL_COMPILE_STATUS, &errflags);
     if (!errflags) {
-        glGetShaderInfoLog(prog.fid, 10000, 0, errbuf);
+        glGetShaderInfoLog(prog->fid, 10000, 0, errbuf);
         throw std::runtime_error(
             std::string("shader not compiled\n\n") + errbuf);
     }
     assert(glGetError() == GL_NO_ERROR);
 
     // create program
-    prog.pid = glCreateProgram();
-    glAttachShader(prog.pid, prog.vid);
-    glAttachShader(prog.pid, prog.fid);
-    glLinkProgram(prog.pid);
-    glValidateProgram(prog.pid);
-    glGetProgramiv(prog.pid, GL_LINK_STATUS, &errflags);
+    prog->pid = glCreateProgram();
+    glAttachShader(prog->pid, prog->vid);
+    glAttachShader(prog->pid, prog->fid);
+    glLinkProgram(prog->pid);
+    glValidateProgram(prog->pid);
+    glGetProgramiv(prog->pid, GL_LINK_STATUS, &errflags);
     if (!errflags) {
-        glGetProgramInfoLog(prog.pid, 10000, 0, errbuf);
+        glGetProgramInfoLog(prog->pid, 10000, 0, errbuf);
         throw std::runtime_error(
             std::string("program not linked\n\n") + errbuf);
     }
-    glGetProgramiv(prog.pid, GL_VALIDATE_STATUS, &errflags);
+    glGetProgramiv(prog->pid, GL_VALIDATE_STATUS, &errflags);
     if (!errflags) {
-        glGetProgramInfoLog(prog.pid, 10000, 0, errbuf);
+        glGetProgramInfoLog(prog->pid, 10000, 0, errbuf);
         throw std::runtime_error(
             std::string("program not linked\n\n") + errbuf);
     }
@@ -12217,54 +12226,57 @@ gl_program make_program(
 }
 
 // Destroys the program pid and optionally the sahders vid and fid.
-void clear_program(gl_program& prog) {
+void clear_program(gl_program* prog) {
     assert(gl_check_error());
-    glDetachShader(prog.pid, prog.vid);
-    glDeleteShader(prog.vid);
-    prog.vid = 0;
-    glDetachShader(prog.pid, prog.fid);
-    glDeleteShader(prog.fid);
-    prog.fid = 0;
-    glDeleteProgram(prog.pid);
-    prog.pid = 0;
-    glDeleteVertexArrays(1, &prog.vao);
-    prog.vao = 0;
+    glDetachShader(prog->pid, prog->vid);
+    glDeleteShader(prog->vid);
+    prog->vid = 0;
+    glDetachShader(prog->pid, prog->fid);
+    glDeleteShader(prog->fid);
+    prog->fid = 0;
+    glDeleteProgram(prog->pid);
+    prog->pid = 0;
+    glDeleteVertexArrays(1, &prog->vao);
+    prog->vao = 0;
     assert(gl_check_error());
 }
 
+// Clear program
+gl_program::~gl_program() { clear_program(this); }
+
 // Get uniform location (simple GL wrapper that avoids GL includes)
 int get_program_uniform_location(
-    const gl_program& prog, const std::string& name) {
+    const std::shared_ptr<gl_program>& prog, const std::string& name) {
     assert(gl_check_error());
-    return glGetUniformLocation(prog.pid, name.c_str());
+    return glGetUniformLocation(prog->pid, name.c_str());
     assert(gl_check_error());
 }
 
 // Get uniform location (simple GL wrapper that avoids GL includes)
 int get_program_attrib_location(
-    const gl_program& prog, const std::string& name) {
+    const std::shared_ptr<gl_program>& prog, const std::string& name) {
     assert(gl_check_error());
-    return glGetAttribLocation(prog.pid, name.c_str());
+    return glGetAttribLocation(prog->pid, name.c_str());
     assert(gl_check_error());
 }
 
 // Get the names of all uniforms
 std::vector<std::pair<std::string, int>> get_program_uniforms_names(
-    const gl_program& prog) {
+    const std::shared_ptr<gl_program>& prog) {
     auto num = 0;
     assert(gl_check_error());
-    glGetProgramiv(prog.pid, GL_ACTIVE_UNIFORMS, &num);
+    glGetProgramiv(prog->pid, GL_ACTIVE_UNIFORMS, &num);
     assert(gl_check_error());
     auto names = std::vector<std::pair<std::string, int>>();
     for (auto i = 0; i < num; i++) {
         char name[4096];
         auto size = 0, length = 0;
         GLenum type;
-        glGetActiveUniform(prog.pid, i, 4096, &length, &size, &type, name);
+        glGetActiveUniform(prog->pid, i, 4096, &length, &size, &type, name);
         if (length > 3 && name[length - 1] == ']' && name[length - 2] == '0' &&
             name[length - 3] == '[')
             name[length - 3] = 0;
-        auto loc = glGetUniformLocation(prog.pid, name);
+        auto loc = glGetUniformLocation(prog->pid, name);
         if (loc < 0) continue;
         names.push_back({name, loc});
         assert(gl_check_error());
@@ -12274,18 +12286,18 @@ std::vector<std::pair<std::string, int>> get_program_uniforms_names(
 
 // Get the names of all attributes
 std::vector<std::pair<std::string, int>> get_program_attributes_names(
-    const gl_program& prog) {
+    const std::shared_ptr<gl_program>& prog) {
     auto num = 0;
     assert(gl_check_error());
-    glGetProgramiv(prog.pid, GL_ACTIVE_ATTRIBUTES, &num);
+    glGetProgramiv(prog->pid, GL_ACTIVE_ATTRIBUTES, &num);
     assert(gl_check_error());
     auto names = std::vector<std::pair<std::string, int>>();
     for (auto i = 0; i < num; i++) {
         char name[4096];
         auto size = 0;
         GLenum type;
-        glGetActiveAttrib(prog.pid, i, 4096, nullptr, &size, &type, name);
-        auto loc = glGetAttribLocation(prog.pid, name);
+        glGetActiveAttrib(prog->pid, i, 4096, nullptr, &size, &type, name);
+        auto loc = glGetAttribLocation(prog->pid, name);
         if (loc < 0) continue;
         names.push_back({name, loc});
         assert(gl_check_error());
@@ -12296,8 +12308,8 @@ std::vector<std::pair<std::string, int>> get_program_attributes_names(
 // Set uniform integer values val for program pid and variable loc.
 // The values have nc number of components (1-4) and count elements
 // (for arrays).
-bool set_program_uniform(
-    gl_program& prog, int pos, const int* val, int ncomp, int count) {
+bool set_program_uniform(const std::shared_ptr<gl_program>& prog, int pos,
+    const int* val, int ncomp, int count) {
     assert(ncomp >= 1 && ncomp <= 4);
     assert(gl_check_error());
     if (pos < 0) return false;
@@ -12315,8 +12327,8 @@ bool set_program_uniform(
 // Set uniform float values val for program pid and variable var.
 // The values have nc number of components (1-4) and count elements
 // (for arrays).
-bool set_program_uniform(
-    gl_program& prog, int pos, const float* val, int ncomp, int count) {
+bool set_program_uniform(const std::shared_ptr<gl_program>& prog, int pos,
+    const float* val, int ncomp, int count) {
     assert((ncomp >= 1 && ncomp <= 4) || (ncomp == 16) || (ncomp == 12));
     assert(gl_check_error());
     if (pos < 0) return false;
@@ -12335,8 +12347,9 @@ bool set_program_uniform(
 
 // Set uniform texture id tid and unit tunit for program pid and
 // variable var.
-bool set_program_uniform_texture(
-    gl_program& prog, int pos, const gl_texture_info& tinfo, uint tunit) {
+bool set_program_uniform_texture(const std::shared_ptr<gl_program>& prog,
+    int pos, const std::shared_ptr<gl_texture>& txt,
+    const gl_texture_info& tinfo, uint tunit) {
     static const auto wrap_mode_map =
         std::map<gl_texture_wrap, uint>{{gl_texture_wrap::repeat, GL_REPEAT},
             {gl_texture_wrap::clamp, GL_CLAMP_TO_EDGE},
@@ -12351,8 +12364,8 @@ bool set_program_uniform_texture(
 
     assert(gl_check_error());
     if (pos < 0) return false;
-    if (is_texture_valid(tinfo.txt)) {
-        bind_texture(tinfo.txt, tunit);
+    if (txt && is_texture_valid(txt)) {
+        bind_texture(txt, tunit);
         if (tinfo.wrap_s != gl_texture_wrap::not_set)
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
                 wrap_mode_map.at(tinfo.wrap_s));
@@ -12367,7 +12380,7 @@ bool set_program_uniform_texture(
                 filter_mode_map.at(tinfo.filter_mag));
         glUniform1i(pos, tunit);
     } else {
-        unbind_texture(tinfo.txt, tunit);
+        unbind_texture(txt, tunit);
         glUniform1i(pos, tunit);
     }
     assert(gl_check_error());
@@ -12376,8 +12389,8 @@ bool set_program_uniform_texture(
 
 // Sets a constant value for a vertex attribute for program pid and
 // variable var. The attribute has nc components.
-bool set_program_vertattr(
-    gl_program& prog, int pos, const float* value, int nc) {
+bool set_program_vertattr(const std::shared_ptr<gl_program>& prog, int pos,
+    const float* value, int nc) {
     assert(nc >= 1 && nc <= 4);
     assert(gl_check_error());
     if (pos < 0) return false;
@@ -12395,7 +12408,8 @@ bool set_program_vertattr(
 
 // Sets a constant value for a vertex attribute for program pid and
 // variable var. The attribute has nc components.
-bool set_program_vertattr(gl_program& prog, int pos, const int* value, int nc) {
+bool set_program_vertattr(const std::shared_ptr<gl_program>& prog, int pos,
+    const int* value, int nc) {
     assert(nc >= 1 && nc <= 4);
     assert(gl_check_error());
     if (pos < 0) return false;
@@ -12414,10 +12428,10 @@ bool set_program_vertattr(gl_program& prog, int pos, const int* value, int nc) {
 // Sets a vartex attribute for program pid and variable var to the
 // buffer bid. The attribute has nc components and per-vertex values
 // values.
-bool set_program_vertattr(
-    gl_program& prog, const std::string& var, const gl_vertex_buffer& buf) {
+bool set_program_vertattr(const std::shared_ptr<gl_program>& prog,
+    const std::string& var, const std::shared_ptr<gl_vertex_buffer>& buf) {
     assert(gl_check_error());
-    int pos = glGetAttribLocation(prog.pid, var.c_str());
+    int pos = glGetAttribLocation(prog->pid, var.c_str());
     if (pos < 0) return false;
     if (is_vertex_buffer_valid(buf)) {
         glEnableVertexAttribArray(pos);
@@ -12433,12 +12447,12 @@ bool set_program_vertattr(
 // Sets a vartex attribute for program pid and variable var. The
 // attribute has nc components and either buffer bid or a single value
 // def (if bid is zero). Convenience wrapper to above functions.
-bool set_program_vertattr(gl_program& prog, int pos,
-    const gl_vertex_buffer& buf, int nc, const float* def) {
+bool set_program_vertattr(const std::shared_ptr<gl_program>& prog, int pos,
+    const std::shared_ptr<gl_vertex_buffer>& buf, int nc, const float* def) {
     assert(nc >= 1 && nc <= 4);
     assert(gl_check_error());
     if (pos < 0) return false;
-    if (is_vertex_buffer_valid(buf)) {
+    if (buf && is_vertex_buffer_valid(buf)) {
         assert(gl_check_error());
         glEnableVertexAttribArray(pos);
         assert(gl_check_error());
@@ -12462,16 +12476,16 @@ bool set_program_vertattr(gl_program& prog, int pos,
 }
 
 // Binds a program
-void bind_program(const gl_program& prog) {
+void bind_program(const std::shared_ptr<gl_program>& prog) {
     assert(gl_check_error());
-    if (!prog.pid) return;
-    glBindVertexArray(prog.vao);
-    glUseProgram(prog.pid);
+    if (!prog->pid) return;
+    glBindVertexArray(prog->vao);
+    glUseProgram(prog->pid);
     assert(gl_check_error());
 }
 
 // Unbind a program
-void unbind_program(const gl_program& prog) {
+void unbind_program(const std::shared_ptr<gl_program>& prog) {
     assert(gl_check_error());
     glUseProgram(0);
     glBindVertexArray(0);
@@ -12485,102 +12499,84 @@ void unbind_program(const gl_program& prog) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Clear gl state
-void clear_shape(gl_shape& shp) {
-    clear_vertex_buffer(shp.pos);
-    clear_vertex_buffer(shp.norm);
-    clear_vertex_buffer(shp.texcoord);
-    clear_vertex_buffer(shp.color);
-    clear_vertex_buffer(shp.tangsp);
-    clear_element_buffer(shp.points);
-    clear_element_buffer(shp.lines);
-    clear_element_buffer(shp.triangles);
-    clear_element_buffer(shp.quads);
-    clear_element_buffer(shp.edges);
-}
-
 // Init shading
 void update_gl_texture(
-    std::unordered_map<std::shared_ptr<texture>, gl_texture>& gtextures,
-    const std::shared_ptr<texture>& txt) {
-    if (gtextures.find(txt) == gtextures.end()) gtextures[txt] = gl_texture();
-    auto& gtxt = gtextures.at(txt);
-    if (!txt->hdr.empty()) {
-        update_texture(gtxt, txt->hdr, true, true, true);
-    } else if (!txt->ldr.empty()) {
-        update_texture(gtxt, txt->ldr, true, true, true);
-    } else
-        assert(false);
-}
-
-// Update shading
-std::unordered_map<std::shared_ptr<texture>, gl_texture> make_gl_textures(
-    const std::shared_ptr<scene>& scn) {
-    auto gtextures = std::unordered_map<std::shared_ptr<texture>, gl_texture>();
-    for (auto txt : scn->textures) update_gl_texture(gtextures, txt);
-    return gtextures;
+    const std::shared_ptr<texture>& txt, std::shared_ptr<gl_texture>& gtxt) {
+    if (!txt) {
+        gtxt = nullptr;
+    } else {
+        if (!gtxt) gtxt = std::make_shared<gl_texture>();
+        if (!txt->hdr.empty()) {
+            update_texture(gtxt, txt->hdr, true, true, true);
+        } else if (!txt->ldr.empty()) {
+            update_texture(gtxt, txt->ldr, true, true, true);
+        } else
+            assert(false);
+    }
 }
 
 // Update shading
 void update_gl_shape(
-    std::unordered_map<std::shared_ptr<shape>, gl_shape>& gshapes,
-    const std::shared_ptr<shape>& shp) {
-    if (gshapes.find(shp) == gshapes.end()) gshapes[shp] = gl_shape();
-    auto& gshp = gshapes.at(shp);
-    if (!shp->quads_pos.empty()) {
-        auto pos = std::vector<vec3f>();
-        auto norm = std::vector<vec3f>();
-        auto texcoord = std::vector<vec2f>();
-        auto quads = std::vector<vec4i>();
-        std::tie(quads, pos, norm, texcoord) =
-            convert_face_varying(shp->quads_pos, shp->quads_norm,
-                shp->quads_texcoord, shp->pos, shp->norm, shp->texcoord);
-        update_vertex_buffer(gshp.pos, pos);
-        update_vertex_buffer(gshp.norm, norm);
-        update_vertex_buffer(gshp.texcoord, texcoord);
-        update_element_buffer(gshp.quads, convert_quads_to_triangles(quads));
-        update_element_buffer(gshp.edges, get_edges({}, {}, shp->quads));
-        update_vertex_buffer(gshp.color, std::vector<vec4f>{});
-        update_vertex_buffer(gshp.tangsp, std::vector<vec4f>{});
+    const std::shared_ptr<shape>& shp, std::shared_ptr<gl_shape>& gshp) {
+    auto update_vert_buffer = [](auto& buf, const auto& vert) {
+        if (vert.empty()) {
+            if (buf) buf = nullptr;
+        } else {
+            buf = std::make_shared<gl_vertex_buffer>();
+            update_vertex_buffer(buf, vert);
+        }
+    };
+    auto update_elem_buffer = [](auto& buf, const auto& elem) {
+        if (elem.empty()) {
+            if (buf) buf = nullptr;
+        } else {
+            buf = std::make_shared<gl_element_buffer>();
+            update_element_buffer(buf, elem);
+        }
+    };
+    if (!shp) {
+        gshp = nullptr;
     } else {
-        update_vertex_buffer(gshp.pos, shp->pos);
-        update_vertex_buffer(gshp.norm, shp->norm);
-        update_vertex_buffer(gshp.texcoord, shp->texcoord);
-        update_vertex_buffer(gshp.color, shp->color);
-        update_vertex_buffer(gshp.tangsp, shp->tangsp);
-        update_element_buffer(gshp.points, shp->points);
-        update_element_buffer(gshp.lines, shp->lines);
-        update_element_buffer(gshp.triangles, shp->triangles);
-        update_element_buffer(
-            gshp.quads, convert_quads_to_triangles(shp->quads));
-        update_element_buffer(
-            gshp.beziers, convert_bezier_to_lines(shp->beziers));
-        update_element_buffer(
-            gshp.edges, get_edges({}, shp->triangles, shp->quads));
+        if (!gshp) gshp = std::make_shared<gl_shape>();
+        if (!shp->quads_pos.empty()) {
+            auto pos = std::vector<vec3f>();
+            auto norm = std::vector<vec3f>();
+            auto texcoord = std::vector<vec2f>();
+            auto quads = std::vector<vec4i>();
+            std::tie(quads, pos, norm, texcoord) =
+                convert_face_varying(shp->quads_pos, shp->quads_norm,
+                    shp->quads_texcoord, shp->pos, shp->norm, shp->texcoord);
+            update_vert_buffer(gshp->pos, pos);
+            update_vert_buffer(gshp->norm, norm);
+            update_vert_buffer(gshp->texcoord, texcoord);
+            update_elem_buffer(gshp->quads, convert_quads_to_triangles(quads));
+            update_elem_buffer(gshp->edges, get_edges({}, {}, shp->quads));
+            update_vert_buffer(gshp->color, std::vector<vec4f>{});
+            update_vert_buffer(gshp->tangsp, std::vector<vec4f>{});
+        } else {
+            update_vert_buffer(gshp->pos, shp->pos);
+            update_vert_buffer(gshp->norm, shp->norm);
+            update_vert_buffer(gshp->texcoord, shp->texcoord);
+            update_vert_buffer(gshp->color, shp->color);
+            update_vert_buffer(gshp->tangsp, shp->tangsp);
+            update_elem_buffer(gshp->points, shp->points);
+            update_elem_buffer(gshp->lines, shp->lines);
+            update_elem_buffer(gshp->triangles, shp->triangles);
+            update_elem_buffer(
+                gshp->quads, convert_quads_to_triangles(shp->quads));
+            update_elem_buffer(
+                gshp->beziers, convert_bezier_to_lines(shp->beziers));
+            update_elem_buffer(
+                gshp->edges, get_edges({}, shp->triangles, shp->quads));
+        }
     }
 }
 
 // Init shading
-std::unordered_map<std::shared_ptr<shape>, gl_shape> make_gl_shapes(
-    const std::shared_ptr<scene>& scn) {
-    auto gshapes = std::unordered_map<std::shared_ptr<shape>, gl_shape>();
-    for (auto sgr : scn->shapes)
-        for (auto shp : sgr->shapes) update_gl_shape(gshapes, shp);
-    return gshapes;
-}
-
-// Clear scene textures on the GPU.
-void clear_gl_textures(
-    std::unordered_map<std::shared_ptr<texture>, gl_texture>& gtextures) {
-    for (auto& kv : gtextures) clear_texture(kv.second);
-    gtextures.clear();
-}
-
-// Clear scene shapes on the GPU.
-void clear_gl_shapes(
-    std::unordered_map<std::shared_ptr<shape>, gl_shape>& gshapes) {
-    for (auto& kv : gshapes) clear_shape(kv.second);
-    gshapes.clear();
+std::shared_ptr<gl_shape> make_gl_shape(const std::shared_ptr<shape>& shp) {
+    auto gshp = std::make_shared<gl_shape>();
+    update_gl_shape(shp, gshp);
+    return gshp;
 }
 
 // Initialize gl lights
@@ -12631,9 +12627,8 @@ gl_lights make_gl_lights(const std::shared_ptr<scene>& scn) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Initialize the program. Call with true only after the GL is
-// initialized.
-gl_stdimage_program make_stdimage_program() {
+// Initialize the program. Call with true only after the GL is initialized.
+std::shared_ptr<gl_stdimage_program> make_stdimage_program() {
     std::string _header =
         R"(
         #version 330
@@ -12708,42 +12703,42 @@ gl_stdimage_program make_stdimage_program() {
         }
         )";
 
-    auto prog = gl_stdimage_program();
-    prog.prog =
+    auto prog = std::make_shared<gl_stdimage_program>();
+    prog->prog =
         make_program(_header + _vert, _header + _frag_tonemap + _frag_main);
 
-    prog.vbo = make_vertex_buffer(
+    prog->vbo = make_vertex_buffer(
         std::vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}}, false);
-    prog.ebo =
+    prog->ebo =
         make_element_buffer(std::vector<vec3i>{{0, 1, 2}, {0, 2, 3}}, false);
     return prog;
 }
 
 // Draws the stdimage program.
-void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
-    const vec2i& win_size, const vec2f& offset, float zoom, float exposure,
-    float gamma, bool filmic) {
+void draw_image(const std::shared_ptr<gl_stdimage_program>& prog,
+    const std::shared_ptr<gl_texture>& txt, const vec2i& win_size,
+    const vec2f& offset, float zoom, float exposure, float gamma, bool filmic) {
     assert(is_texture_valid(txt));
 
-    bind_program(prog.prog);
+    bind_program(prog->prog);
 
     gl_enable_blending(true);
     gl_set_blend_over();
 
     bind_texture(txt, 0);
-    set_program_uniform(prog.prog, "zoom", zoom);
+    set_program_uniform(prog->prog, "zoom", zoom);
     set_program_uniform(
-        prog.prog, "win_size", vec2f{(float)win_size.x, (float)win_size.y});
-    set_program_uniform(prog.prog, "offset", offset);
-    set_program_uniform(prog.prog, "tonemap.filmic", filmic);
-    set_program_uniform(prog.prog, "tonemap.exposure", exposure);
-    set_program_uniform(prog.prog, "tonemap.gamma", gamma);
-    set_program_uniform_texture(prog.prog, "img", txt, 0);
+        prog->prog, "win_size", vec2f{(float)win_size.x, (float)win_size.y});
+    set_program_uniform(prog->prog, "offset", offset);
+    set_program_uniform(prog->prog, "tonemap.filmic", filmic);
+    set_program_uniform(prog->prog, "tonemap.exposure", exposure);
+    set_program_uniform(prog->prog, "tonemap.gamma", gamma);
+    set_program_uniform_texture(prog->prog, "img", txt, {}, 0);
 
-    set_program_vertattr(prog.prog, "vert_texcoord", prog.vbo, vec2f{0, 0});
-    draw_elems(prog.ebo);
+    set_program_vertattr(prog->prog, "vert_texcoord", prog->vbo, vec2f{0, 0});
+    draw_elems(prog->ebo);
 
-    unbind_program(prog.prog);
+    unbind_program(prog->prog);
 
     gl_enable_blending(false);
 
@@ -12759,7 +12754,7 @@ namespace ygl {
 
 // Initialize a standard shader. Call with true only after the gl has
 // been initialized
-gl_stdsurface_program make_stdsurface_program() {
+std::shared_ptr<gl_stdsurface_program> make_stdsurface_program() {
 #ifndef _WIN32
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Woverlength-strings"
@@ -13177,8 +13172,8 @@ gl_stdsurface_program make_stdsurface_program() {
 #endif
 
     assert(gl_check_error());
-    auto prog = gl_stdsurface_program();
-    prog.prog = make_program(_vert_header + _vert_skinning + _vert_main,
+    auto prog = std::make_shared<gl_stdsurface_program>();
+    prog->prog = make_program(_vert_header + _vert_skinning + _vert_main,
         _frag_header + _frag_tonemap + _frag_lighting + _frag_brdf +
             _frag_material + _frag_main);
     assert(gl_check_error());
@@ -13188,40 +13183,40 @@ gl_stdsurface_program make_stdsurface_program() {
 // Starts a frame by setting exposure/gamma values, camera transforms
 // and projection. Sets also whether to use full shading or a quick
 // eyelight preview.
-void begin_stdsurface_frame(gl_stdsurface_program& prog, bool shade_eyelight,
-    float tonemap_exposure, float tonemap_gamma, bool tonemap_filmic,
-    const mat4f& camera_xform, const mat4f& camera_xform_inv,
-    const mat4f& camera_proj) {
+void begin_stdsurface_frame(const std::shared_ptr<gl_stdsurface_program>& prog,
+    bool shade_eyelight, float tonemap_exposure, float tonemap_gamma,
+    bool tonemap_filmic, const mat4f& camera_xform,
+    const mat4f& camera_xform_inv, const mat4f& camera_proj) {
     static auto eyelight_id =
-        get_program_uniform_location(prog.prog, "lighting.eyelight");
+        get_program_uniform_location(prog->prog, "lighting.eyelight");
     static auto exposure_id =
-        get_program_uniform_location(prog.prog, "tonemap.exposure");
+        get_program_uniform_location(prog->prog, "tonemap.exposure");
     static auto gamma_id =
-        get_program_uniform_location(prog.prog, "tonemap.gamma");
+        get_program_uniform_location(prog->prog, "tonemap.gamma");
     static auto filmic_id =
-        get_program_uniform_location(prog.prog, "tonemap.filmic");
+        get_program_uniform_location(prog->prog, "tonemap.filmic");
     static auto xform_id =
-        get_program_uniform_location(prog.prog, "camera.xform");
+        get_program_uniform_location(prog->prog, "camera.xform");
     static auto xform_inv_id =
-        get_program_uniform_location(prog.prog, "camera.xform_inv");
+        get_program_uniform_location(prog->prog, "camera.xform_inv");
     static auto proj_id =
-        get_program_uniform_location(prog.prog, "camera.proj");
+        get_program_uniform_location(prog->prog, "camera.proj");
     assert(gl_check_error());
-    bind_program(prog.prog);
-    set_program_uniform(prog.prog, eyelight_id, shade_eyelight);
-    set_program_uniform(prog.prog, exposure_id, tonemap_exposure);
-    set_program_uniform(prog.prog, gamma_id, tonemap_gamma);
-    set_program_uniform(prog.prog, filmic_id, tonemap_filmic);
-    set_program_uniform(prog.prog, xform_id, camera_xform);
-    set_program_uniform(prog.prog, xform_inv_id, camera_xform_inv);
-    set_program_uniform(prog.prog, proj_id, camera_proj);
+    bind_program(prog->prog);
+    set_program_uniform(prog->prog, eyelight_id, shade_eyelight);
+    set_program_uniform(prog->prog, exposure_id, tonemap_exposure);
+    set_program_uniform(prog->prog, gamma_id, tonemap_gamma);
+    set_program_uniform(prog->prog, filmic_id, tonemap_filmic);
+    set_program_uniform(prog->prog, xform_id, camera_xform);
+    set_program_uniform(prog->prog, xform_inv_id, camera_xform_inv);
+    set_program_uniform(prog->prog, proj_id, camera_proj);
     assert(gl_check_error());
 }
 
 // Ends a frame.
-void end_stdsurface_frame(gl_stdsurface_program& prog) {
+void end_stdsurface_frame(const std::shared_ptr<gl_stdsurface_program>& prog) {
     assert(gl_check_error());
-    unbind_program(prog.prog);
+    unbind_program(prog->prog);
     //    glBindVertexArray(0);
     //    glUseProgram(0);
     assert(gl_check_error());
@@ -13229,45 +13224,45 @@ void end_stdsurface_frame(gl_stdsurface_program& prog) {
 
 // Set num lights with position pos, color ke, type ltype. Also set the
 // ambient illumination amb.
-void set_stdsurface_lights(
-    gl_stdsurface_program& prog, const vec3f& amb, const gl_lights& lights) {
+void set_stdsurface_lights(const std::shared_ptr<gl_stdsurface_program>& prog,
+    const vec3f& amb, const gl_lights& lights) {
     static auto amb_id =
-        get_program_uniform_location(prog.prog, "lighting.amb");
+        get_program_uniform_location(prog->prog, "lighting.amb");
     static auto lnum_id =
-        get_program_uniform_location(prog.prog, "lighting.lnum");
+        get_program_uniform_location(prog->prog, "lighting.lnum");
     static auto lpos_id =
-        get_program_uniform_location(prog.prog, "lighting.lpos");
+        get_program_uniform_location(prog->prog, "lighting.lpos");
     static auto lke_id =
-        get_program_uniform_location(prog.prog, "lighting.lke");
+        get_program_uniform_location(prog->prog, "lighting.lke");
     static auto ltype_id =
-        get_program_uniform_location(prog.prog, "lighting.ltype");
+        get_program_uniform_location(prog->prog, "lighting.ltype");
     assert(gl_check_error());
-    set_program_uniform(prog.prog, amb_id, amb);
-    set_program_uniform(prog.prog, lnum_id, (int)lights.pos.size());
+    set_program_uniform(prog->prog, amb_id, amb);
+    set_program_uniform(prog->prog, lnum_id, (int)lights.pos.size());
     set_program_uniform(
-        prog.prog, lpos_id, lights.pos.data(), (int)lights.pos.size());
+        prog->prog, lpos_id, lights.pos.data(), (int)lights.pos.size());
     set_program_uniform(
-        prog.prog, lke_id, lights.ke.data(), (int)lights.pos.size());
+        prog->prog, lke_id, lights.ke.data(), (int)lights.pos.size());
     set_program_uniform(
-        prog.prog, ltype_id, (int*)lights.type.data(), (int)lights.pos.size());
+        prog->prog, ltype_id, (int*)lights.type.data(), (int)lights.pos.size());
     assert(gl_check_error());
 }
 
 // Begins drawing a shape with transform xform.
-void begin_stdsurface_shape(
-    gl_stdsurface_program& prog, const mat4f& xform, float normal_offset) {
+void begin_stdsurface_shape(const std::shared_ptr<gl_stdsurface_program>& prog,
+    const mat4f& xform, float normal_offset) {
     static auto xform_id =
-        get_program_uniform_location(prog.prog, "shape_xform");
+        get_program_uniform_location(prog->prog, "shape_xform");
     static auto normal_offset_id =
-        get_program_uniform_location(prog.prog, "shape_normal_offset");
+        get_program_uniform_location(prog->prog, "shape_normal_offset");
     assert(gl_check_error());
-    set_program_uniform(prog.prog, xform_id, xform);
-    set_program_uniform(prog.prog, normal_offset_id, normal_offset);
+    set_program_uniform(prog->prog, xform_id, xform);
+    set_program_uniform(prog->prog, normal_offset_id, normal_offset);
     assert(gl_check_error());
 }
 
 // End shade drawing.
-void end_stdsurface_shape(gl_stdsurface_program& prog) {
+void end_stdsurface_shape(const std::shared_ptr<gl_stdsurface_program>& prog) {
     assert(gl_check_error());
     for (int i = 0; i < 16; i++) unbind_vertex_buffer(i);
     assert(gl_check_error());
@@ -13275,20 +13270,21 @@ void end_stdsurface_shape(gl_stdsurface_program& prog) {
 
 // Sets normal offset.
 void set_stdsurface_normaloffset(
-    gl_stdsurface_program& prog, float normal_offset) {
+    const std::shared_ptr<gl_stdsurface_program>& prog, float normal_offset) {
     static auto normal_offset_id =
-        get_program_uniform_location(prog.prog, "shape_normal_offset");
+        get_program_uniform_location(prog->prog, "shape_normal_offset");
     assert(gl_check_error());
-    set_program_uniform(prog.prog, normal_offset_id, normal_offset);
+    set_program_uniform(prog->prog, normal_offset_id, normal_offset);
     assert(gl_check_error());
 }
 
 // Set the object as highlighted.
 void set_stdsurface_highlight(
-    gl_stdsurface_program& prog, const vec4f& highlight) {
+    const std::shared_ptr<gl_stdsurface_program>& prog,
+    const vec4f& highlight) {
     static auto highlight_id =
-        get_program_uniform_location(prog.prog, "highlight");
-    set_program_uniform(prog.prog, highlight_id, highlight);
+        get_program_uniform_location(prog->prog, "highlight");
+    set_program_uniform(prog->prog, highlight_id, highlight);
 }
 
 // Set material values with emission ke, diffuse kd, specular ks and
@@ -13297,56 +13293,62 @@ void set_stdsurface_highlight(
 // maps. Works for points/lines/triangles (diffuse for points,
 // Kajiya-Kay for lines, GGX/Phong for triangles).
 // Material type matches the scene material type.
-void set_stdsurface_material(gl_stdsurface_program& prog, material_type type,
-    gl_elem_type etype, const vec3f& ke, const vec3f& kd, const vec3f& ks,
-    float rs, float op, const gl_texture_info& ke_txt,
-    const gl_texture_info& kd_txt, const gl_texture_info& ks_txt,
-    const gl_texture_info& rs_txt, const gl_texture_info& norm_txt,
-    const gl_texture_info& occ_txt, bool use_phong, bool double_sided,
-    bool alpha_cutout) {
+void set_stdsurface_material(const std::shared_ptr<gl_stdsurface_program>& prog,
+    material_type type, gl_elem_type etype, const vec3f& ke, const vec3f& kd,
+    const vec3f& ks, float rs, float op,
+    const std::shared_ptr<gl_texture>& ke_txt,
+    const std::shared_ptr<gl_texture>& kd_txt,
+    const std::shared_ptr<gl_texture>& ks_txt,
+    const std::shared_ptr<gl_texture>& rs_txt,
+    const std::shared_ptr<gl_texture>& norm_txt,
+    const std::shared_ptr<gl_texture>& occ_txt,
+    const gl_texture_info& ke_txt_info, const gl_texture_info& kd_txt_info,
+    const gl_texture_info& ks_txt_info, const gl_texture_info& rs_txt_info,
+    const gl_texture_info& norm_txt_info, const gl_texture_info& occ_txt_info,
+    bool use_phong, bool double_sided, bool alpha_cutout) {
     static auto mtype_id =
-        get_program_uniform_location(prog.prog, "material.type");
+        get_program_uniform_location(prog->prog, "material.type");
     static auto etype_id =
-        get_program_uniform_location(prog.prog, "material.etype");
-    static auto ke_id = get_program_uniform_location(prog.prog, "material.ke");
-    static auto kd_id = get_program_uniform_location(prog.prog, "material.kd");
-    static auto ks_id = get_program_uniform_location(prog.prog, "material.ks");
-    static auto rs_id = get_program_uniform_location(prog.prog, "material.rs");
-    static auto op_id = get_program_uniform_location(prog.prog, "material.op");
+        get_program_uniform_location(prog->prog, "material.etype");
+    static auto ke_id = get_program_uniform_location(prog->prog, "material.ke");
+    static auto kd_id = get_program_uniform_location(prog->prog, "material.kd");
+    static auto ks_id = get_program_uniform_location(prog->prog, "material.ks");
+    static auto rs_id = get_program_uniform_location(prog->prog, "material.rs");
+    static auto op_id = get_program_uniform_location(prog->prog, "material.op");
     static auto ke_txt_id =
-        get_program_uniform_location(prog.prog, "material.txt_ke");
+        get_program_uniform_location(prog->prog, "material.txt_ke");
     static auto ke_txt_on_id =
-        get_program_uniform_location(prog.prog, "material.txt_ke_on");
+        get_program_uniform_location(prog->prog, "material.txt_ke_on");
     static auto kd_txt_id =
-        get_program_uniform_location(prog.prog, "material.txt_kd");
+        get_program_uniform_location(prog->prog, "material.txt_kd");
     static auto kd_txt_on_id =
-        get_program_uniform_location(prog.prog, "material.txt_kd_on");
+        get_program_uniform_location(prog->prog, "material.txt_kd_on");
     static auto ks_txt_id =
-        get_program_uniform_location(prog.prog, "material.txt_ks");
+        get_program_uniform_location(prog->prog, "material.txt_ks");
     static auto ks_txt_on_id =
-        get_program_uniform_location(prog.prog, "material.txt_ks_on");
+        get_program_uniform_location(prog->prog, "material.txt_ks_on");
     static auto rs_txt_id =
-        get_program_uniform_location(prog.prog, "material.txt_rs");
+        get_program_uniform_location(prog->prog, "material.txt_rs");
     static auto rs_txt_on_id =
-        get_program_uniform_location(prog.prog, "material.txt_rs_on");
+        get_program_uniform_location(prog->prog, "material.txt_rs_on");
     static auto norm_txt_id =
-        get_program_uniform_location(prog.prog, "material.txt_norm");
+        get_program_uniform_location(prog->prog, "material.txt_norm");
     static auto norm_txt_on_id =
-        get_program_uniform_location(prog.prog, "material.txt_norm_on");
+        get_program_uniform_location(prog->prog, "material.txt_norm_on");
     static auto occ_txt_id =
-        get_program_uniform_location(prog.prog, "material.txt_occ");
+        get_program_uniform_location(prog->prog, "material.txt_occ");
     static auto occ_txt_on_id =
-        get_program_uniform_location(prog.prog, "material.txt_occ_on");
+        get_program_uniform_location(prog->prog, "material.txt_occ_on");
     static auto norm_scale_id =
-        get_program_uniform_location(prog.prog, "material.norm_scale");
+        get_program_uniform_location(prog->prog, "material.norm_scale");
     static auto occ_scale_id =
-        get_program_uniform_location(prog.prog, "material.occ_scale");
+        get_program_uniform_location(prog->prog, "material.occ_scale");
     static auto use_phong_id =
-        get_program_uniform_location(prog.prog, "material.use_phong");
+        get_program_uniform_location(prog->prog, "material.use_phong");
     static auto double_sided_id =
-        get_program_uniform_location(prog.prog, "material.double_sided");
+        get_program_uniform_location(prog->prog, "material.double_sided");
     static auto alpha_cutout_id =
-        get_program_uniform_location(prog.prog, "material.alpha_cutout");
+        get_program_uniform_location(prog->prog, "material.alpha_cutout");
 
     static auto mtypes = std::unordered_map<material_type, int>{
         {material_type::specular_roughness, 1},
@@ -13354,126 +13356,142 @@ void set_stdsurface_material(gl_stdsurface_program& prog, material_type type,
         {material_type::specular_glossiness, 3}};
 
     assert(gl_check_error());
-    set_program_uniform(prog.prog, mtype_id, mtypes.at(type));
-    set_program_uniform(prog.prog, etype_id, (int)etype);
-    set_program_uniform(prog.prog, ke_id, ke);
-    set_program_uniform(prog.prog, kd_id, kd);
-    set_program_uniform(prog.prog, ks_id, ks);
-    set_program_uniform(prog.prog, rs_id, rs);
-    set_program_uniform(prog.prog, op_id, op);
-    set_program_uniform_texture(prog.prog, ke_txt_id, ke_txt_on_id, ke_txt, 0);
-    set_program_uniform_texture(prog.prog, kd_txt_id, kd_txt_on_id, kd_txt, 1);
-    set_program_uniform_texture(prog.prog, ks_txt_id, ks_txt_on_id, ks_txt, 2);
-    set_program_uniform_texture(prog.prog, rs_txt_id, rs_txt_on_id, rs_txt, 3);
+    set_program_uniform(prog->prog, mtype_id, mtypes.at(type));
+    set_program_uniform(prog->prog, etype_id, (int)etype);
+    set_program_uniform(prog->prog, ke_id, ke);
+    set_program_uniform(prog->prog, kd_id, kd);
+    set_program_uniform(prog->prog, ks_id, ks);
+    set_program_uniform(prog->prog, rs_id, rs);
+    set_program_uniform(prog->prog, op_id, op);
     set_program_uniform_texture(
-        prog.prog, norm_txt_id, norm_txt_on_id, norm_txt, 4);
+        prog->prog, ke_txt_id, ke_txt_on_id, ke_txt, ke_txt_info, 0);
     set_program_uniform_texture(
-        prog.prog, occ_txt_id, occ_txt_on_id, occ_txt, 5);
-    set_program_uniform(prog.prog, norm_scale_id, norm_txt.scale);
-    set_program_uniform(prog.prog, occ_scale_id, occ_txt.scale);
-    set_program_uniform(prog.prog, use_phong_id, use_phong);
-    set_program_uniform(prog.prog, double_sided_id, double_sided);
-    set_program_uniform(prog.prog, alpha_cutout_id, alpha_cutout);
+        prog->prog, kd_txt_id, kd_txt_on_id, kd_txt, kd_txt_info, 1);
+    set_program_uniform_texture(
+        prog->prog, ks_txt_id, ks_txt_on_id, ks_txt, ks_txt_info, 2);
+    set_program_uniform_texture(
+        prog->prog, rs_txt_id, rs_txt_on_id, rs_txt, rs_txt_info, 3);
+    set_program_uniform_texture(
+        prog->prog, norm_txt_id, norm_txt_on_id, norm_txt, norm_txt_info, 4);
+    set_program_uniform_texture(
+        prog->prog, occ_txt_id, occ_txt_on_id, occ_txt, occ_txt_info, 5);
+    set_program_uniform(prog->prog, norm_scale_id, norm_txt_info.scale);
+    set_program_uniform(prog->prog, occ_scale_id, occ_txt_info.scale);
+    set_program_uniform(prog->prog, use_phong_id, use_phong);
+    set_program_uniform(prog->prog, double_sided_id, double_sided);
+    set_program_uniform(prog->prog, alpha_cutout_id, alpha_cutout);
     assert(gl_check_error());
 }
 
 // Set constant material values with emission ke.
 void set_stdsurface_constmaterial(
-    gl_stdsurface_program& prog, const vec3f& ke, float op) {
+    const std::shared_ptr<gl_stdsurface_program>& prog, const vec3f& ke,
+    float op) {
     static auto mtype_id =
-        get_program_uniform_location(prog.prog, "material.type");
+        get_program_uniform_location(prog->prog, "material.type");
     static auto etype_id =
-        get_program_uniform_location(prog.prog, "material.etype");
-    static auto ke_id = get_program_uniform_location(prog.prog, "material.ke");
-    static auto op_id = get_program_uniform_location(prog.prog, "material.op");
+        get_program_uniform_location(prog->prog, "material.etype");
+    static auto ke_id = get_program_uniform_location(prog->prog, "material.ke");
+    static auto op_id = get_program_uniform_location(prog->prog, "material.op");
 
     assert(gl_check_error());
-    set_program_uniform(prog.prog, mtype_id, 0);
-    set_program_uniform(prog.prog, etype_id, 0);
-    set_program_uniform(prog.prog, ke_id, ke);
-    set_program_uniform(prog.prog, op_id, op);
+    set_program_uniform(prog->prog, mtype_id, 0);
+    set_program_uniform(prog->prog, etype_id, 0);
+    set_program_uniform(prog->prog, ke_id, ke);
+    set_program_uniform(prog->prog, op_id, op);
     assert(gl_check_error());
 }
 
 // Set vertex data with buffers for position pos, normals norm, texture
 // coordinates texcoord, per-vertex color color and tangent space
 // tangsp.
-void set_stdsurface_vert(gl_stdsurface_program& prog,
-    const gl_vertex_buffer& pos, const gl_vertex_buffer& norm,
-    const gl_vertex_buffer& texcoord, const gl_vertex_buffer& color,
-    const gl_vertex_buffer& tangsp) {
-    static auto pos_id = get_program_attrib_location(prog.prog, "vert_pos");
-    static auto norm_id = get_program_attrib_location(prog.prog, "vert_norm");
+void set_stdsurface_vert(const std::shared_ptr<gl_stdsurface_program>& prog,
+    const std::shared_ptr<gl_vertex_buffer>& pos,
+    const std::shared_ptr<gl_vertex_buffer>& norm,
+    const std::shared_ptr<gl_vertex_buffer>& texcoord,
+    const std::shared_ptr<gl_vertex_buffer>& color,
+    const std::shared_ptr<gl_vertex_buffer>& tangsp) {
+    static auto pos_id = get_program_attrib_location(prog->prog, "vert_pos");
+    static auto norm_id = get_program_attrib_location(prog->prog, "vert_norm");
     static auto texcoord_id =
-        get_program_attrib_location(prog.prog, "vert_texcoord");
-    static auto color_id = get_program_attrib_location(prog.prog, "vert_color");
+        get_program_attrib_location(prog->prog, "vert_texcoord");
+    static auto color_id =
+        get_program_attrib_location(prog->prog, "vert_color");
     static auto tangsp_id =
-        get_program_attrib_location(prog.prog, "vert_tangsp");
+        get_program_attrib_location(prog->prog, "vert_tangsp");
     assert(gl_check_error());
-    set_program_vertattr(prog.prog, pos_id, pos, zero3f);
-    set_program_vertattr(prog.prog, norm_id, norm, zero3f);
-    set_program_vertattr(prog.prog, texcoord_id, texcoord, zero2f);
-    set_program_vertattr(prog.prog, color_id, color, vec4f{1, 1, 1, 1});
-    set_program_vertattr(prog.prog, tangsp_id, tangsp, zero4f);
+    set_program_vertattr(prog->prog, pos_id, pos, zero3f);
+    set_program_vertattr(prog->prog, norm_id, norm, zero3f);
+    set_program_vertattr(prog->prog, texcoord_id, texcoord, zero2f);
+    set_program_vertattr(prog->prog, color_id, color, vec4f{1, 1, 1, 1});
+    set_program_vertattr(prog->prog, tangsp_id, tangsp, zero4f);
     assert(gl_check_error());
 }
 
 // Set vertex data with buffers for skinning.
-void set_stdsurface_vert_skinning(gl_stdsurface_program& prog,
-    const gl_vertex_buffer& weights, const gl_vertex_buffer& joints,
-    int nxforms, const mat4f* xforms) {
-    static auto type_id = get_program_uniform_location(prog.prog, "skin_type");
+void set_stdsurface_vert_skinning(
+    const std::shared_ptr<gl_stdsurface_program>& prog,
+    const std::shared_ptr<gl_vertex_buffer>& weights,
+    const std::shared_ptr<gl_vertex_buffer>& joints, int nxforms,
+    const mat4f* xforms) {
+    static auto type_id = get_program_uniform_location(prog->prog, "skin_type");
     static auto xforms_id =
-        get_program_uniform_location(prog.prog, "skin_xforms");
+        get_program_uniform_location(prog->prog, "skin_xforms");
     static auto weights_id =
-        get_program_attrib_location(prog.prog, "vert_skin_weights");
+        get_program_attrib_location(prog->prog, "vert_skin_weights");
     static auto joints_id =
-        get_program_attrib_location(prog.prog, "vert_skin_joints");
+        get_program_attrib_location(prog->prog, "vert_skin_joints");
     int type = 1;
-    set_program_uniform(prog.prog, type_id, type);
-    set_program_uniform(prog.prog, xforms_id, xforms, min(nxforms, 32));
-    set_program_vertattr(prog.prog, weights_id, weights, zero4f);
-    set_program_vertattr(prog.prog, joints_id, joints, zero4f);
+    set_program_uniform(prog->prog, type_id, type);
+    set_program_uniform(prog->prog, xforms_id, xforms, min(nxforms, 32));
+    set_program_vertattr(prog->prog, weights_id, weights, zero4f);
+    set_program_vertattr(prog->prog, joints_id, joints, zero4f);
 }
 
 // Set vertex data with buffers for skinning.
-void set_stdsurface_vert_gltf_skinning(gl_stdsurface_program& prog,
-    const gl_vertex_buffer& weights, const gl_vertex_buffer& joints,
-    int nxforms, const mat4f* xforms) {
-    static auto type_id = get_program_uniform_location(prog.prog, "skin_type");
+void set_stdsurface_vert_gltf_skinning(
+    const std::shared_ptr<gl_stdsurface_program>& prog,
+    const std::shared_ptr<gl_vertex_buffer>& weights,
+    const std::shared_ptr<gl_vertex_buffer>& joints, int nxforms,
+    const mat4f* xforms) {
+    static auto type_id = get_program_uniform_location(prog->prog, "skin_type");
     static auto xforms_id =
-        get_program_uniform_location(prog.prog, "skin_xforms");
+        get_program_uniform_location(prog->prog, "skin_xforms");
     static auto weights_id =
-        get_program_attrib_location(prog.prog, "vert_skin_weights");
+        get_program_attrib_location(prog->prog, "vert_skin_weights");
     static auto joints_id =
-        get_program_attrib_location(prog.prog, "vert_skin_joints");
+        get_program_attrib_location(prog->prog, "vert_skin_joints");
     int type = 2;
-    set_program_uniform(prog.prog, type_id, type);
-    set_program_uniform(prog.prog, xforms_id, xforms, min(nxforms, 32));
-    set_program_vertattr(prog.prog, weights_id, weights, zero4f);
-    set_program_vertattr(prog.prog, joints_id, joints, zero4f);
+    set_program_uniform(prog->prog, type_id, type);
+    set_program_uniform(prog->prog, xforms_id, xforms, min(nxforms, 32));
+    set_program_vertattr(prog->prog, weights_id, weights, zero4f);
+    set_program_vertattr(prog->prog, joints_id, joints, zero4f);
 }
 
 // Disables vertex skinning.
-void set_stdsurface_vert_skinning_off(gl_stdsurface_program& prog) {
-    static auto type_id = get_program_uniform_location(prog.prog, "skin_type");
-    // static auto xforms_id = get_program_uniform_location(prog.prog,
+void set_stdsurface_vert_skinning_off(
+    const std::shared_ptr<gl_stdsurface_program>& prog) {
+    static auto type_id = get_program_uniform_location(prog->prog, "skin_type");
+    // static auto xforms_id = get_program_uniform_location(prog->prog,
     // "skin_xforms");
     static auto weights_id =
-        get_program_attrib_location(prog.prog, "vert_skin_weights");
+        get_program_attrib_location(prog->prog, "vert_skin_weights");
     static auto joints_id =
-        get_program_attrib_location(prog.prog, "vert_skin_joints");
+        get_program_attrib_location(prog->prog, "vert_skin_joints");
     int type = 0;
-    set_program_uniform(prog.prog, type_id, type);
-    set_program_vertattr(prog.prog, weights_id, {}, zero4f);
-    set_program_vertattr(prog.prog, joints_id, {}, zero4f);
+    set_program_uniform(prog->prog, type_id, type);
+    set_program_vertattr(prog->prog, weights_id, {}, zero4f);
+    set_program_vertattr(prog->prog, joints_id, {}, zero4f);
 }
 
 // Draw a shape
 void draw_stdsurface_shape(const std::shared_ptr<shape>& shp,
-    const mat4f& xform, bool highlighted, gl_stdsurface_program& prog,
-    std::unordered_map<std::shared_ptr<shape>, gl_shape>& shapes,
-    std::unordered_map<std::shared_ptr<texture>, gl_texture>& textures,
+    const mat4f& xform, bool highlighted,
+    const std::shared_ptr<gl_stdsurface_program>& prog,
+    std::unordered_map<std::shared_ptr<shape>, std::shared_ptr<gl_shape>>&
+        shapes,
+    std::unordered_map<std::shared_ptr<texture>, std::shared_ptr<gl_texture>>&
+        textures,
     const gl_stdsurface_params& params) {
     static auto default_material = std::make_shared<material>();
     default_material->kd = {0.2f, 0.2f, 0.2f};
@@ -13484,8 +13502,8 @@ void draw_stdsurface_shape(const std::shared_ptr<shape>& shp,
     if (!shp->lines.empty()) etype = gl_elem_type::line;
     if (!shp->points.empty()) etype = gl_elem_type::point;
 
-    auto txt = [&textures](
-                   const std::shared_ptr<texture>& txt) -> gl_texture_info {
+    auto txt = [&textures](const std::shared_ptr<texture>& txt)
+        -> std::shared_ptr<gl_texture> {
         if (!txt) return {};
         return textures.at(txt);
     };
@@ -13498,13 +13516,13 @@ void draw_stdsurface_shape(const std::shared_ptr<shape>& shp,
 
     auto& gshp = shapes.at(shp);
     set_stdsurface_vert(
-        prog, gshp.pos, gshp.norm, gshp.texcoord, gshp.color, gshp.tangsp);
+        prog, gshp->pos, gshp->norm, gshp->texcoord, gshp->color, gshp->tangsp);
 
-    draw_elems(gshp.points);
-    draw_elems(gshp.lines);
-    draw_elems(gshp.triangles);
-    draw_elems(gshp.quads);
-    draw_elems(gshp.beziers);
+    draw_elems(gshp->points);
+    draw_elems(gshp->lines);
+    draw_elems(gshp->triangles);
+    draw_elems(gshp->quads);
+    draw_elems(gshp->beziers);
 
     if ((params.edges && !params.wireframe) || highlighted) {
         gl_enable_culling(false);
@@ -13512,18 +13530,18 @@ void draw_stdsurface_shape(const std::shared_ptr<shape>& shp,
             (highlighted) ? params.highlight_color : params.edge_color,
             (highlighted) ? 1 : mat->op);
         set_stdsurface_normaloffset(prog, params.edge_offset);
-        draw_elems(gshp.edges);
+        draw_elems(gshp->edges);
         gl_enable_culling(params.cull_backface);
     }
 
     if (highlighted && false) {
         set_stdsurface_constmaterial(prog, params.highlight_color, 1);
         set_stdsurface_normaloffset(prog, params.edge_offset);
-        draw_elems(gshp.points);
-        draw_elems(gshp.lines);
-        draw_elems(gshp.triangles);
-        draw_elems(gshp.quads);
-        draw_elems(gshp.beziers);
+        draw_elems(gshp->points);
+        draw_elems(gshp->lines);
+        draw_elems(gshp->triangles);
+        draw_elems(gshp->quads);
+        draw_elems(gshp->beziers);
     }
 
     end_stdsurface_shape(prog);
@@ -13531,9 +13549,12 @@ void draw_stdsurface_shape(const std::shared_ptr<shape>& shp,
 
 // Display a scene
 void draw_stdsurface_scene(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<camera>& cam, gl_stdsurface_program& prog,
-    std::unordered_map<std::shared_ptr<shape>, gl_shape>& shapes,
-    std::unordered_map<std::shared_ptr<texture>, gl_texture>& textures,
+    const std::shared_ptr<camera>& cam,
+    const std::shared_ptr<gl_stdsurface_program>& prog,
+    std::unordered_map<std::shared_ptr<shape>, std::shared_ptr<gl_shape>>&
+        shapes,
+    std::unordered_map<std::shared_ptr<texture>, std::shared_ptr<gl_texture>>&
+        textures,
     const gl_lights& lights, const vec2i& viewport_size,
     const std::shared_ptr<void>& highlighted,
     const gl_stdsurface_params& params, const tonemap_params& tmparams) {
@@ -14173,9 +14194,10 @@ void draw_image_widget(const std::shared_ptr<gl_window>& win, int tid,
 }
 
 // Image widget
-void draw_image_widget(
-    const std::shared_ptr<gl_window>& win, gl_texture& txt, const vec2i& size) {
-    draw_image_widget(win, get_texture_id(txt), size, {txt.width, txt.height});
+void draw_image_widget(const std::shared_ptr<gl_window>& win,
+    const std::shared_ptr<gl_texture>& txt, const vec2i& size) {
+    draw_image_widget(
+        win, get_texture_id(txt), size, {txt->width, txt->height});
 }
 
 // Scroll region
@@ -14421,13 +14443,15 @@ struct draw_elem_visitor {
     std::shared_ptr<gl_window> win = nullptr;
     std::shared_ptr<scene> scn = nullptr;
     scene_selection& sel;
-    const std::unordered_map<std::shared_ptr<texture>, gl_texture>& gl_txt;
+    const std::unordered_map<std::shared_ptr<texture>,
+        std::shared_ptr<gl_texture>>& gl_txt;
     int edited = 0;
 
     // constructor
     draw_elem_visitor(const std::shared_ptr<gl_window>& win_,
         const std::shared_ptr<scene>& scn_, scene_selection& sel_,
-        const std::unordered_map<std::shared_ptr<texture>, gl_texture>& gl_txt_)
+        const std::unordered_map<std::shared_ptr<texture>,
+            std::shared_ptr<gl_texture>>& gl_txt_)
         : win(win_), scn(scn_), sel(sel_), gl_txt(gl_txt_) {}
 
     template <typename T>
@@ -14585,7 +14609,8 @@ struct draw_elem_visitor {
     void preview(const std::shared_ptr<T>& val) {}
     void preview(const std::shared_ptr<texture>& txt) {
         if (!contains(gl_txt, txt)) return;
-        draw_image_widget(win, (gl_texture&)gl_txt.at(txt), {128, 128});
+        draw_image_widget(win,
+            (const std::shared_ptr<gl_texture>&)gl_txt.at(txt), {128, 128});
     }
 };
 
@@ -14615,7 +14640,8 @@ inline bool draw_add_elem_widgets(const std::shared_ptr<gl_window>& win,
 bool draw_scene_widgets(const std::shared_ptr<gl_window>& win,
     const std::string& lbl, const std::shared_ptr<scene>& scn,
     scene_selection& sel, std::vector<ygl::scene_selection>& update_list,
-    const std::unordered_map<std::shared_ptr<texture>, gl_texture>& gl_txt,
+    const std::unordered_map<std::shared_ptr<texture>,
+        std::shared_ptr<gl_texture>>& gl_txt,
     const std::shared_ptr<proc_scene>& test_scn) {
     static auto test_scn_def = std::make_shared<proc_scene>();
 
