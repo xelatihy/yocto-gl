@@ -71,7 +71,7 @@ void draw(const std::shared_ptr<ygl::gl_window>& win,
 
     if (ygl::begin_widgets(win, "yitrace")) {
         if (ygl::draw_header_widget(win, "trace")) {
-            ygl::draw_groupid_widget_begin(win, app);
+            ygl::draw_groupid_widget_push(win, app);
             ygl::draw_label_widget(win, "scene", app->filename);
             ygl::draw_label_widget(
                 win, "size", "{} x {}", app->img.width(), app->img.height());
@@ -84,7 +84,7 @@ void draw(const std::shared_ptr<ygl::gl_window>& win,
             ygl::draw_value_widget(win, "fps", app->navigation_fps);
             if (ygl::draw_button_widget(win, "print stats"))
                 std::cout << ygl::compute_stats(app->scn);
-            ygl::draw_groupid_widget_end(win);
+            ygl::draw_groupid_widget_pop(win);
         }
         if (ygl::draw_header_widget(win, "params")) {
             if (ygl::draw_params_widgets(win, "", app->params)) {

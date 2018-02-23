@@ -105,6 +105,106 @@ const unsigned int* imgui_extrafont_compressed_data();
 #endif
 
 // -----------------------------------------------------------------------------
+// FILE LOADING AND SAVING
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Loads the contents of a binary file in an in-memory array.
+std::vector<unsigned char> load_binary(const std::string& filename) {
+    // https://stackoverflow.com/questions/174531/easiest-way-to-get-files-contents-in-c
+    auto f = fopen(filename.c_str(), "rb");
+    if (!f) throw std::runtime_error("cannot read file " + filename);
+    fseek(f, 0, SEEK_END);
+    auto len = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    auto buf = std::vector<unsigned char>(len);
+    if (fread(buf.data(), 1, len, f) != len)
+        throw std::runtime_error("cannot read file " + filename);
+    fclose(f);
+    return buf;
+}
+
+// Loads the contents of a text file into a string.
+std::string load_text(const std::string& filename) {
+    auto buf = load_binary(filename);
+#ifdef _WIN32
+    auto nbuf = std::vector<unsigned char>();
+    nbuf.reserve(buf.size());
+    for (auto i = 0; i < buf.size(); i++) {
+        if (buf[i] == '\r') continue;
+        nbuf.push_back(buf[i]);
+    }
+    buf = nbuf;
+#endif
+    return std::string((char*)buf.data(), (char*)buf.data() + buf.size());
+}
+
+// Saves binary data to a file.
+void save_binary(
+    const std::string& filename, const std::vector<unsigned char>& data) {
+    auto f = fopen(filename.c_str(), "wb");
+    if (!f) throw std::runtime_error("cannot write file " + filename);
+    auto num = fwrite(data.data(), 1, data.size(), f);
+    if (num != data.size())
+        throw std::runtime_error("cannot write file " + filename);
+    fclose(f);
+}
+
+// Saves a string to a text file.
+void save_text(const std::string& filename, const std::string& str) {
+    auto f = fopen(filename.c_str(), "wb");
+    if (!f) throw std::runtime_error("cannot write file " + filename);
+    auto num = fwrite(str.c_str(), 1, str.size(), f);
+    if (num != str.size())
+        throw std::runtime_error("cannot write file " + filename);
+    fclose(f);
+}
+
+// Load INI file. The implementation does not handle escaping.
+std::unordered_map<std::string, std::unordered_map<std::string, std::string>>
+load_ini(const std::string& filename) {
+    auto txt = load_text(filename);
+    auto lines = splitlines(txt, false);
+    auto ret = std::unordered_map<std::string,
+        std::unordered_map<std::string, std::string>>();
+    auto cur_group = ""s;
+    ret[""] = {};
+    for (auto line : lines) {
+        line = strip(line);
+        if (line.empty()) continue;
+        if (line.front() == ';') continue;
+        if (line.front() == '#') continue;
+        if (line.front() == '[') {
+            if (line.back() != ']') throw std::runtime_error("bad INI format");
+            cur_group = line.substr(1, line.length() - 2);
+            ret[cur_group] = {};
+        } else if (line.find('=') != line.npos) {
+            auto var = line.substr(0, line.find('='));
+            auto val = line.substr(line.find('=') + 1);
+            ret[cur_group][var] = val;
+        } else {
+            throw std::runtime_error("bad INI format");
+        }
+    }
+    return ret;
+}
+
+// Save INI file. The implementation does not handle escaping.
+void save_ini(const std::string& filename,
+    std::unordered_map<std::string,
+        std::unordered_map<std::string, std::string>>& values) {
+    auto txt = ""s;
+    for (auto& gkv : values) {
+        txt += "[" + gkv.first + "]\n\n";
+        for (auto& vkv : gkv.second) txt += vkv.first + "=" + vkv.second + "\n";
+        txt += "\n";
+    }
+    save_text(filename, txt);
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR UI UTILITIES
 // -----------------------------------------------------------------------------
 namespace ygl {
@@ -14132,15 +14232,6 @@ bool draw_tree_widget_begin(const std::shared_ptr<gl_window>& win,
     return open;
 }
 
-// Start selectable tree node
-bool draw_tree_widget_begin(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, void*& selection, void* content, const vec4f& col) {
-    ImGui::PushStyleColor(ImGuiCol_Text, {col.x, col.y, col.z, col.w});
-    auto ret = draw_tree_widget_begin(win, lbl, selection, content);
-    ImGui::PopStyleColor();
-    return ret;
-}
-
 // End selectable tree node
 void draw_tree_widget_end(
     const std::shared_ptr<gl_window>& win, void* content) {
@@ -14215,38 +14306,37 @@ void draw_scroll_widget_here(const std::shared_ptr<gl_window>& win) {
 }
 
 // Group ids
-void draw_groupid_widget_begin(const std::shared_ptr<gl_window>& win, int gid) {
+void draw_groupid_widget_push(const std::shared_ptr<gl_window>& win, int gid) {
     ImGui::PushID(gid);
 }
 // Group ids
-void draw_groupid_widget_begin(
+void draw_groupid_widget_push(
     const std::shared_ptr<gl_window>& win, void* gid) {
     ImGui::PushID(gid);
 }
 // Group ids
-void draw_groupid_widget_begin(
+void draw_groupid_widget_push(
     const std::shared_ptr<gl_window>& win, const std::shared_ptr<void>& gid) {
     ImGui::PushID(gid.get());
 }
 // Group ids
-void draw_groupid_widget_begin(
+void draw_groupid_widget_push(
     const std::shared_ptr<gl_window>& win, const char* gid) {
     ImGui::PushID(gid);
 }
 // Group ids
-void draw_groupid_widget_end(const std::shared_ptr<gl_window>& win) {
+void draw_groupid_widget_pop(const std::shared_ptr<gl_window>& win) {
     ImGui::PopID();
 }
 
-// Text color
-void draw_tree_widget_color_begin(
-    const std::shared_ptr<gl_window>& win, const vec4f& color) {
-    ImGui::PushStyleColor(
-        ImGuiCol_Text, {color[0], color[1], color[2], color[3]});
+// Widget style
+void draw_style_widget_push(
+    const std::shared_ptr<gl_window>& win, const vec4f& col) {
+    ImGui::PushStyleColor(ImGuiCol_Text, {col.x, col.y, col.z, col.w});
 }
 
-// Text color
-void draw_tree_widget_color_end(const std::shared_ptr<gl_window>& win) {
+// Widget style
+void draw_style_widget_pop(const std::shared_ptr<gl_window>& win) {
     ImGui::PopStyleColor();
 }
 
@@ -14308,10 +14398,10 @@ struct draw_camera_visitor {
         if (!val) return;
         // TODO: fix this separator
         draw_separator_widget(win);
-        draw_groupid_widget_begin(win, val);
+        draw_groupid_widget_push(win, val);
         draw_separator_widget(win);
         visit(*val, *this);
-        draw_groupid_widget_end(win);
+        draw_groupid_widget_pop(win);
     }
 };
 
@@ -14335,15 +14425,28 @@ bool draw_camera_widgets(const std::shared_ptr<gl_window>& win,
     return edited;
 }
 
+static const std::unordered_map<std::string, vec4f>
+    draw_visitor_highlight_colors = {{"red", {1, 0.5f, 0.5f, 1}},
+        {"green", {0.5f, 1, 0.5f, 1}}, {"blue", {0.5f, 0.5f, 1, 1}}};
+
 // Implementation of draw tree
 struct draw_tree_visitor {
     std::shared_ptr<gl_window> win = nullptr;
     scene_selection& sel;
+    const std::unordered_map<std::string, std::string>& highlights;
 
     // constructor
-    draw_tree_visitor(
-        const std::shared_ptr<gl_window>& win_, scene_selection& sel_)
-        : win(win_), sel(sel_) {}
+    draw_tree_visitor(const std::shared_ptr<gl_window>& win_,
+        scene_selection& sel_,
+        const std::unordered_map<std::string, std::string>& hi_)
+        : win(win_), sel(sel_), highlights(hi_) {}
+
+    vec4f get_highlight_color(const std::string& name) {
+        if (!highlights.empty() && contains(highlights, name)) {
+            return draw_visitor_highlight_colors.at(highlights.at(name));
+        }
+        return zero4f;
+    }
 
     // generic callback
     template <typename T>
@@ -14367,7 +14470,10 @@ struct draw_tree_visitor {
         auto lbl = val->name;
         if (!var.name.empty()) lbl = var.name + ": " + val->name;
         auto selection = sel.get_raw();
+        auto color = get_highlight_color(val->name);
+        if (color != zero4f) draw_style_widget_push(win, color);
         auto open = draw_tree_widget_begin(win, lbl, selection, val.get());
+        if (color != zero4f) draw_style_widget_pop(win);
         if (selection == val.get()) sel = val;
         if (open) {
             visit(val, *this);
@@ -14387,19 +14493,34 @@ struct draw_elem_visitor {
     scene_selection& sel;
     const std::unordered_map<std::shared_ptr<texture>,
         std::shared_ptr<gl_texture>>& gl_txt;
+    const std::unordered_map<std::string, std::string>& highlights;
     int edited = 0;
+    std::string elem_name = "";
 
     // constructor
     draw_elem_visitor(const std::shared_ptr<gl_window>& win_,
         const std::shared_ptr<scene>& scn_, scene_selection& sel_,
         const std::unordered_map<std::shared_ptr<texture>,
-            std::shared_ptr<gl_texture>>& gl_txt_)
-        : win(win_), scn(scn_), sel(sel_), gl_txt(gl_txt_) {}
+            std::shared_ptr<gl_texture>>& gl_txt_,
+        const std::unordered_map<std::string, std::string>& hi_)
+        : win(win_), scn(scn_), sel(sel_), gl_txt(gl_txt_), highlights(hi_) {}
+
+    vec4f get_highlight_color(const std::string& name) {
+        if (!highlights.empty() &&
+            contains(highlights, elem_name + "___" + name)) {
+            return draw_visitor_highlight_colors.at(
+                highlights.at(elem_name + "___" + name));
+        }
+        return zero4f;
+    }
 
     template <typename T>
     void operator()(T& val, const visit_var& var) {
+        auto color = get_highlight_color(var.name);
+        if (color != zero4f) draw_style_widget_push(win, color);
         edited += draw_value_widget(win, var.name, val, var.min, var.max,
             var.type == visit_var_type::color);
+        if (color != zero4f) draw_style_widget_pop(win);
     }
 
     template <typename T>
@@ -14409,18 +14530,21 @@ struct draw_elem_visitor {
                 val = optional<T>{T{}};
             }
         } else {
-            draw_groupid_widget_begin(win, &val);
+            draw_groupid_widget_push(win, &val);
             visit(*val, *this);
             if (draw_button_widget(win, "del " + var.name)) { val = {}; }
-            draw_groupid_widget_end(win);
+            draw_groupid_widget_pop(win);
         }
     }
 
     template <typename T>
     void operator()(image<T>& val, const visit_var& var) {
         if (empty(val)) return;
+        auto color = get_highlight_color(var.name);
+        if (color != zero4f) draw_style_widget_push(win, color);
         auto size = format("{} x {}", val.width(), val.height());
         draw_label_widget(win, var.name, size);
+        if (color != zero4f) draw_style_widget_pop(win);
     }
 
     template <typename T>
@@ -14433,7 +14557,10 @@ struct draw_elem_visitor {
     template <typename T>
     void operator()(std::vector<T>& val, const visit_var& var) {
         if (val.empty()) return;
+        auto color = get_highlight_color(var.name);
+        if (color != zero4f) draw_style_widget_push(win, color);
         draw_label_widget(win, var.name, (int)val.size());
+        if (color != zero4f) draw_style_widget_pop(win);
     }
     template <typename T1, typename T2>
     void operator()(
@@ -14448,19 +14575,24 @@ struct draw_elem_visitor {
         if (!val) return;
         // TODO: fix this separator
         draw_separator_widget(win);
-        draw_groupid_widget_begin(win, val);
+        draw_groupid_widget_push(win, val);
         draw_separator_widget(win);
+        if (var.type != visit_var_type::reference) elem_name = val->name;
         visit(*val, *this);
         preview(val);
-        draw_groupid_widget_end(win);
+        draw_groupid_widget_pop(win);
     }
 
     template <typename T>
     void operator()(std::shared_ptr<T>& val,
         const visit_var& var = visit_var{"", visit_var_type::object}) {
         if (var.type == visit_var_type::reference) {
+            auto color = get_highlight_color(var.name);
+            if (color != zero4f) draw_style_widget_push(win, color);
             edited += draw_combo_widget(win, var.name, val, elems(val));
+            if (color != zero4f) draw_style_widget_pop(win);
         } else {
+            elem_name = val->name;
             operator()((const std::shared_ptr<T>&)val, var);
         }
     }
@@ -14572,14 +14704,15 @@ bool draw_scene_widgets(const std::shared_ptr<gl_window>& win,
     scene_selection& sel, std::vector<ygl::scene_selection>& update_list,
     const std::unordered_map<std::shared_ptr<texture>,
         std::shared_ptr<gl_texture>>& gl_txt,
-    const std::shared_ptr<proc_scene>& test_scn) {
+    const std::shared_ptr<proc_scene>& test_scn,
+    const std::unordered_map<std::string, std::string>& inspector_highlights) {
     static auto test_scn_def = std::make_shared<proc_scene>();
 
     if (!scn) return false;
     if (!lbl.empty() && !draw_header_widget(win, lbl)) return false;
-    draw_groupid_widget_begin(win, scn);
+    draw_groupid_widget_push(win, scn);
     // draw_scroll_widget_begin(win, "model", 240, false);
-    auto tree_visitor = draw_tree_visitor{win, sel};
+    auto tree_visitor = draw_tree_visitor{win, sel, inspector_highlights};
     tree_visitor(scn, visit_var{"", visit_var_type::object});
     // draw_scroll_widget_end(win);
 
@@ -14613,7 +14746,8 @@ bool draw_scene_widgets(const std::shared_ptr<gl_window>& win,
     }
 
     auto test_scn_res = (test_scn) ? test_scn : test_scn_def;
-    auto elem_visitor = draw_elem_visitor{win, scn, sel, gl_txt};
+    auto elem_visitor =
+        draw_elem_visitor{win, scn, sel, gl_txt, inspector_highlights};
     if (sel.is<camera>())
         elem_visitor(sel.get<camera>(), test_scn_res->cameras);
     if (sel.is<shape>()) elem_visitor(sel.get<shape>());
@@ -14633,7 +14767,7 @@ bool draw_scene_widgets(const std::shared_ptr<gl_window>& win,
         elem_visitor(sel.get<animation_group>(), test_scn_res->animations);
     if (elem_visitor.edited) update_list.push_back(sel);
 
-    draw_groupid_widget_end(win);
+    draw_groupid_widget_pop(win);
     return update_list.size() != update_len;
 }
 

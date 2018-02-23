@@ -10336,7 +10336,7 @@ Wrapper for the above function that prints to stdout with endline.
 #### Function load_binary()
 
 ~~~ .cpp
-inline std::vector<unsigned char> load_binary(const std::string& filename);
+std::vector<unsigned char> load_binary(const std::string& filename);
 ~~~
 
 Loads the contents of a binary file in an in-memory array.
@@ -10344,7 +10344,7 @@ Loads the contents of a binary file in an in-memory array.
 #### Function load_text()
 
 ~~~ .cpp
-inline std::string load_text(const std::string& filename);
+std::string load_text(const std::string& filename);
 ~~~
 
 Loads the contents of a text file into a string.
@@ -10352,7 +10352,7 @@ Loads the contents of a text file into a string.
 #### Function save_binary()
 
 ~~~ .cpp
-inline void save_binary(
+void save_binary(
     const std::string& filename, const std::vector<unsigned char>& data);
 ~~~
 
@@ -10361,10 +10361,30 @@ Saves binary data to a file.
 #### Function save_text()
 
 ~~~ .cpp
-inline void save_text(const std::string& filename, const std::string& str);
+void save_text(const std::string& filename, const std::string& str);
 ~~~
 
 Saves a string to a text file.
+
+#### Function load_ini()
+
+~~~ .cpp
+std::unordered_map<std::string, std::unordered_map<std::string, std::string>>
+load_ini(const std::string& filename);
+~~~
+
+Load INI file. The implementation does not handle escaping and
+very limited error checking.
+
+#### Function save_ini()
+
+~~~ .cpp
+void save_ini(const std::string& filename,
+    std::unordered_map<std::string,
+        std::unordered_map<std::string, std::string>>& values);
+~~~
+
+Save INI file. The implementation does not handle escaping.
 
 ### Immediate-mode command line parser
 
@@ -12474,15 +12494,6 @@ Start selectable tree node widget.
 #### Function draw_tree_widget_begin()
 
 ~~~ .cpp
-bool draw_tree_widget_begin(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, void*& selection, void* content, const vec4f& col);
-~~~
-
-Start selectable tree node widget.
-
-#### Function draw_tree_widget_begin()
-
-~~~ .cpp
 template <typename T>
 inline bool draw_tree_widget_begin(const std::shared_ptr<gl_window>& win,
     const std::string& lbl, std::shared_ptr<void>& selection,
@@ -12539,23 +12550,6 @@ void draw_tree_widget_leaf(const std::shared_ptr<gl_window>& win,
 
 Selectable tree leaf node widget.
 
-#### Function draw_tree_widget_color_begin()
-
-~~~ .cpp
-void draw_tree_widget_color_begin(
-    const std::shared_ptr<gl_window>& win, const vec4f& color);
-~~~
-
-Text color widget.
-
-#### Function draw_tree_widget_color_end()
-
-~~~ .cpp
-void draw_tree_widget_color_end(const std::shared_ptr<gl_window>& win);
-~~~
-
-Text color widget.
-
 #### Function draw_image_widget()
 
 ~~~ .cpp
@@ -12599,48 +12593,64 @@ void draw_scroll_widget_here(const std::shared_ptr<gl_window>& win);
 
 Scroll region widget.
 
-#### Function draw_groupid_widget_begin()
+#### Function draw_groupid_widget_push()
 
 ~~~ .cpp
-void draw_groupid_widget_begin(const std::shared_ptr<gl_window>& win, int gid);
+void draw_groupid_widget_push(const std::shared_ptr<gl_window>& win, int gid);
 ~~~
 
 Group ids widget.
 
-#### Function draw_groupid_widget_begin()
+#### Function draw_groupid_widget_push()
 
 ~~~ .cpp
-void draw_groupid_widget_begin(
-    const std::shared_ptr<gl_window>& win, void* gid);
+void draw_groupid_widget_push(const std::shared_ptr<gl_window>& win, void* gid);
 ~~~
 
 Group ids widget.
 
-#### Function draw_groupid_widget_begin()
+#### Function draw_groupid_widget_push()
 
 ~~~ .cpp
-void draw_groupid_widget_begin(
+void draw_groupid_widget_push(
     const std::shared_ptr<gl_window>& win, const std::shared_ptr<void>& gid);
 ~~~
 
 Group ids widget.
 
-#### Function draw_groupid_widget_begin()
+#### Function draw_groupid_widget_push()
 
 ~~~ .cpp
-void draw_groupid_widget_begin(
+void draw_groupid_widget_push(
     const std::shared_ptr<gl_window>& win, const char* gid);
 ~~~
 
 Group ids widget.
 
-#### Function draw_groupid_widget_end()
+#### Function draw_groupid_widget_pop()
 
 ~~~ .cpp
-void draw_groupid_widget_end(const std::shared_ptr<gl_window>& win);
+void draw_groupid_widget_pop(const std::shared_ptr<gl_window>& win);
 ~~~
 
 Group ids widget.
+
+#### Function draw_style_widget_push()
+
+~~~ .cpp
+void draw_style_widget_push(
+    const std::shared_ptr<gl_window>& win, const vec4f& color);
+~~~
+
+Widget style.
+
+#### Function draw_style_widget_pop()
+
+~~~ .cpp
+void draw_style_widget_pop(const std::shared_ptr<gl_window>& win);
+~~~
+
+Widget style.
 
 #### Function draw_value_widget()
 
@@ -12859,7 +12869,9 @@ bool draw_scene_widgets(const std::shared_ptr<gl_window>& win,
     scene_selection& sel, std::vector<ygl::scene_selection>& update_list,
     const std::unordered_map<std::shared_ptr<texture>,
         std::shared_ptr<gl_texture>>& gl_txt,
-    const std::shared_ptr<proc_scene>& test_scn = nullptr);
+    const std::shared_ptr<proc_scene>& test_scn = nullptr,
+    const std::unordered_map<std::string, std::string>& inspector_highlights =
+       ;
 ~~~
 
 Draws widgets for a whole scene. Used for quickly making demos.

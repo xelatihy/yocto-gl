@@ -8965,30 +8965,46 @@ is not fast nor memory efficient. But it is good enough for some needs.</p>
 <p><a id="toc57"></a></p>
 <h3>File loading and saving</h3>
 <h4>Function load_binary()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;</span> <span class="n">load_binary</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;</span> <span class="n">load_binary</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Loads the contents of a binary file in an in-memory array.</p>
 <h4>Function load_text()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">load_text</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">load_text</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Loads the contents of a text file into a string.</p>
 <h4>Function save_binary()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">save_binary</span><span class="p">(</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">save_binary</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;&amp;</span> <span class="n">data</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Saves binary data to a file.</p>
 <h4>Function save_text()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">save_text</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">save_text</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Saves a string to a text file.</p>
+<h4>Function load_ini()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;&gt;</span>
+<span class="n">load_ini</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Load INI file. The implementation does not handle escaping and
+very limited error checking.</p>
+<h4>Function save_ini()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">save_ini</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span>
+        <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;&gt;&amp;</span> <span class="n">values</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Save INI file. The implementation does not handle escaping.</p>
 <p><a id="toc58"></a></p>
 <h3>Immediate-mode command line parser</h3>
 <h4>Struct cmdline_parser</h4>
@@ -10707,13 +10723,6 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 
 <p>Start selectable tree node widget.</p>
 <h4>Function draw_tree_widget_begin()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_tree_widget_begin</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_window</span><span class="o">&gt;&amp;</span> <span class="n">win</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="kt">void</span><span class="o">*&amp;</span> <span class="n">selection</span><span class="p">,</span> <span class="kt">void</span><span class="o">*</span> <span class="n">content</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">col</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Start selectable tree node widget.</p>
-<h4>Function draw_tree_widget_begin()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="kt">bool</span> <span class="n">draw_tree_widget_begin</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_window</span><span class="o">&gt;&amp;</span> <span class="n">win</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="kt">void</span><span class="o">&gt;&amp;</span> <span class="n">selection</span><span class="p">,</span>
@@ -10760,19 +10769,6 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 
 
 <p>Selectable tree leaf node widget.</p>
-<h4>Function draw_tree_widget_color_begin()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_tree_widget_color_begin</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_window</span><span class="o">&gt;&amp;</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">color</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Text color widget.</p>
-<h4>Function draw_tree_widget_color_end()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_tree_widget_color_end</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_window</span><span class="o">&gt;&amp;</span> <span class="n">win</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Text color widget.</p>
 <h4>Function draw_image_widget()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_image_widget</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_window</span><span class="o">&gt;&amp;</span> <span class="n">win</span><span class="p">,</span> <span class="kt">int</span> <span class="n">tid</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">size</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">imsize</span><span class="p">);</span>
@@ -10806,39 +10802,51 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 
 
 <p>Scroll region widget.</p>
-<h4>Function draw_groupid_widget_begin()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_groupid_widget_begin</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_window</span><span class="o">&gt;&amp;</span> <span class="n">win</span><span class="p">,</span> <span class="kt">int</span> <span class="n">gid</span><span class="p">);</span>
+<h4>Function draw_groupid_widget_push()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_groupid_widget_push</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_window</span><span class="o">&gt;&amp;</span> <span class="n">win</span><span class="p">,</span> <span class="kt">int</span> <span class="n">gid</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Group ids widget.</p>
-<h4>Function draw_groupid_widget_begin()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_groupid_widget_begin</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_window</span><span class="o">&gt;&amp;</span> <span class="n">win</span><span class="p">,</span> <span class="kt">void</span><span class="o">*</span> <span class="n">gid</span><span class="p">);</span>
+<h4>Function draw_groupid_widget_push()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_groupid_widget_push</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_window</span><span class="o">&gt;&amp;</span> <span class="n">win</span><span class="p">,</span> <span class="kt">void</span><span class="o">*</span> <span class="n">gid</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Group ids widget.</p>
-<h4>Function draw_groupid_widget_begin()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_groupid_widget_begin</span><span class="p">(</span>
+<h4>Function draw_groupid_widget_push()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_groupid_widget_push</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_window</span><span class="o">&gt;&amp;</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="kt">void</span><span class="o">&gt;&amp;</span> <span class="n">gid</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Group ids widget.</p>
-<h4>Function draw_groupid_widget_begin()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_groupid_widget_begin</span><span class="p">(</span>
+<h4>Function draw_groupid_widget_push()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_groupid_widget_push</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_window</span><span class="o">&gt;&amp;</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">gid</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Group ids widget.</p>
-<h4>Function draw_groupid_widget_end()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_groupid_widget_end</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_window</span><span class="o">&gt;&amp;</span> <span class="n">win</span><span class="p">);</span>
+<h4>Function draw_groupid_widget_pop()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_groupid_widget_pop</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_window</span><span class="o">&gt;&amp;</span> <span class="n">win</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Group ids widget.</p>
+<h4>Function draw_style_widget_push()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_style_widget_push</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_window</span><span class="o">&gt;&amp;</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">color</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Widget style.</p>
+<h4>Function draw_style_widget_pop()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_style_widget_pop</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_window</span><span class="o">&gt;&amp;</span> <span class="n">win</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Widget style.</p>
 <h4>Function draw_value_widget()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">draw_value_widget</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_window</span><span class="o">&gt;&amp;</span> <span class="n">win</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="kt">bool</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="kt">float</span> <span class="n">min</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
@@ -11015,12 +11023,14 @@ Internally uses visit to implement the view.</p>
 </li>
 </ul>
 <h4>Function draw_scene_widgets()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_scene_widgets</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_window</span><span class="o">&gt;&amp;</span> <span class="n">win</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="n">draw_scene_widgets</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_window</span><span class="o">&gt;&amp;</span> <span class="n">win</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">scene</span><span class="o">&gt;&amp;</span> <span class="n">scn</span><span class="p">,</span>
     <span class="n">scene_selection</span><span class="o">&amp;</span> <span class="n">sel</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ygl</span><span class="o">::</span><span class="n">scene_selection</span><span class="o">&gt;&amp;</span> <span class="n">update_list</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">&gt;</span><span class="p">,</span>
         <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">gl_texture</span><span class="o">&gt;&gt;&amp;</span> <span class="n">gl_txt</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">proc_scene</span><span class="o">&gt;&amp;</span> <span class="n">test_scn</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">proc_scene</span><span class="o">&gt;&amp;</span> <span class="n">test_scn</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;&amp;</span> <span class="n">inspector_highlights</span> <span class="o">=</span>
+       <span class="p">;</span>
 </code></pre></div>
 
 
