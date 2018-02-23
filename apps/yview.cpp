@@ -67,24 +67,27 @@ inline void draw(const std::shared_ptr<ygl::gl_window>& win,
 
     static auto last_time = 0.0f;
     for (auto& sel : app->update_list) {
-        if (sel.txt) {
-            ygl::update_gl_texture(
-                app->selection.txt, app->textures[app->selection.txt]);
+        if (sel.is<ygl::texture>()) {
+            ygl::update_gl_texture(sel.get<ygl::texture>(),
+                app->textures[sel.get<ygl::texture>()]);
         }
-        if (sel.sgr) {
-            for (auto shp : app->selection.sgr->shapes) {
+        if (sel.is<ygl::shape_group>()) {
+            for (auto shp : sel.get<ygl::shape_group>()->shapes) {
                 ygl::update_gl_shape(shp, app->shapes[shp]);
             }
         }
-        if (sel.shp) {
+        if (sel.is<ygl::shape>()) {
             ygl::update_gl_shape(
-                app->selection.shp, app->shapes[app->selection.shp]);
+                sel.get<ygl::shape>(), app->shapes[sel.get<ygl::shape>()]);
         }
-        if (sel.nde || sel.anm || sel.agr || app->time != last_time) {
+        if (sel.is<ygl::node>() || sel.is<ygl::animation>() ||
+            sel.is<ygl::animation_group>() || app->time != last_time) {
             ygl::update_transforms(app->scn, app->time);
             last_time = app->time;
         }
-        if (sel.shp || sel.sgr || sel.mat || sel.ist || sel.nde) {
+        if (sel.is<ygl::shape>() || sel.is<ygl::shape_group>() ||
+            sel.is<ygl::material>() || sel.is<ygl::instance>() ||
+            sel.is<ygl::node>()) {
             app->lights = ygl::make_gl_lights(app->scn);
             if (app->lights.pos.empty()) app->params.eyelight = true;
         }
@@ -96,7 +99,7 @@ inline void draw(const std::shared_ptr<ygl::gl_window>& win,
     ygl::gl_enable_culling(app->params.cull_backface);
     ygl::draw_stdsurface_scene(app->scn, app->cam, app->prog, app->shapes,
         app->textures, app->lights, framebuffer_size,
-        get_untyped_selection(app->selection), app->params, app->tmparams);
+        app->selection.get_untyped(), app->params, app->tmparams);
 
     if (app->no_widgets) {
         ygl::swap_buffers(win);

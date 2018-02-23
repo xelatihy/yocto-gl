@@ -730,6 +730,7 @@ namespace ygl {}
 #include <string>
 #include <thread>
 #include <tuple>
+#include <typeinfo>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -10209,42 +10210,38 @@ bool draw_camera_widgets(const std::shared_ptr<gl_window>& win,
 
 /// Scene selection
 struct scene_selection {
-    /// Selected camera
-    std::shared_ptr<camera> cam = nullptr;
-    /// Selected shape group
-    std::shared_ptr<shape_group> sgr = nullptr;
-    /// Selected shape
-    std::shared_ptr<shape> shp = nullptr;
-    /// Selected material
-    std::shared_ptr<material> mat = nullptr;
-    /// Selected texture
-    std::shared_ptr<texture> txt = nullptr;
-    /// Selected instance
-    std::shared_ptr<instance> ist = nullptr;
-    /// Selected environment
-    std::shared_ptr<environment> env = nullptr;
-    /// Selected node
-    std::shared_ptr<node> nde = nullptr;
-    /// Selected animation group
-    std::shared_ptr<animation_group> agr = nullptr;
-    /// Selected animation
-    std::shared_ptr<animation> anm = nullptr;
-};
-
-/// Clear selection
-inline void clear_selection(scene_selection& sel) {
-    memset(&sel, 0, sizeof(sel));
-}
-
-/// GVet untyped selection
-inline std::shared_ptr<void> get_untyped_selection(scene_selection& sel) {
-    for (auto i = 0;
-         i < sizeof(scene_selection) / sizeof(std::shared_ptr<void>); i++) {
-        if (((std::shared_ptr<void>*)&sel)[i])
-            return ((std::shared_ptr<void>*)&sel)[i];
+    /// Assignment operator.
+    template <typename T>
+    scene_selection& operator=(const std::shared_ptr<T>& val) {
+        ptr = val;
+        tinfo = &typeid(T);
+        return *this;
     }
-    return nullptr;
-}
+
+    /// Check if points to type T.
+    template <typename T>
+    bool is() const {
+        return &typeid(T) == tinfo;
+    }
+
+    /// Gets a pointer cast to the specific type.
+    template <typename T>
+    std::shared_ptr<T> get() {
+        return (is<T>()) ? std::static_pointer_cast<T>(ptr) : nullptr;
+    }
+
+    /// Get the raw untyped pointer.
+    void* get_raw() { return ptr.get(); }
+
+    /// Get untyped.
+    std::shared_ptr<void> get_untyped() { return ptr; }
+
+   private:
+    /// Selected pointer.
+    std::shared_ptr<void> ptr = nullptr;
+    /// Type information of the pointerd to object.
+    const std::type_info* tinfo = nullptr;
+};
 
 /// Draws widgets for a whole scene. Used for quickly making demos.
 bool draw_scene_widgets(const std::shared_ptr<gl_window>& win,

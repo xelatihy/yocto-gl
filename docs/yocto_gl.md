@@ -12829,49 +12829,27 @@ Draws widgets for a camera. Used for quickly making demos.
 
 ~~~ .cpp
 struct scene_selection {
-    std::shared_ptr<camera> cam = nullptr;
-    std::shared_ptr<shape_group> sgr = nullptr;
-    std::shared_ptr<shape> shp = nullptr;
-    std::shared_ptr<material> mat = nullptr;
-    std::shared_ptr<texture> txt = nullptr;
-    std::shared_ptr<instance> ist = nullptr;
-    std::shared_ptr<environment> env = nullptr;
-    std::shared_ptr<node> nde = nullptr;
-    std::shared_ptr<animation_group> agr = nullptr;
-    std::shared_ptr<animation> anm = nullptr;
+    template <typename T> scene_selection& operator=(const std::shared_ptr<T>& val); 
+    template <typename T> bool is() const; 
+    template <typename T> std::shared_ptr<T> get(); 
+    void* get_raw(); 
+    std::shared_ptr<void> get_untyped(); 
+    std::shared_ptr<void> ptr = nullptr;
+    const std::type_info* tinfo = nullptr;
 }
 ~~~
 
 Scene selection
 
 - Members:
-    - cam:      Selected camera
-    - sgr:      Selected shape group
-    - shp:      Selected shape
-    - mat:      Selected material
-    - txt:      Selected texture
-    - ist:      Selected instance
-    - env:      Selected environment
-    - nde:      Selected node
-    - agr:      Selected animation group
-    - anm:      Selected animation
+    - operator=():      Assignment operator.
+    - is():      Check if points to type T.
+    - get():      Gets a pointer cast to the specific type.
+    - get_raw():      Get the raw untyped pointer.
+    - get_untyped():      Get untyped.
+    - ptr:      Selected pointer.
+    - tinfo:      Type information of the pointerd to object.
 
-
-#### Function clear_selection()
-
-~~~ .cpp
-inline void clear_selection(scene_selection& sel);
-~~~
-
-Clear selection
-
-#### Function get_untyped_selection()
-
-~~~ .cpp
-inline std::shared_ptr<void> get_untyped_selection(scene_selection& sel);
-~~~
-
-GVet untyped selection
 
 #### Function draw_scene_widgets()
 

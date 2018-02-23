@@ -14335,61 +14335,6 @@ bool draw_camera_widgets(const std::shared_ptr<gl_window>& win,
     return edited;
 }
 
-// get typed selection
-template <typename T>
-inline std::shared_ptr<T>& get_typed_selection(scene_selection& sel) {
-    return std::shared_ptr<T>{};
-}
-template <>
-inline std::shared_ptr<camera>& get_typed_selection<camera>(
-    scene_selection& sel) {
-    return sel.cam;
-}
-template <>
-inline std::shared_ptr<shape_group>& get_typed_selection<shape_group>(
-    scene_selection& sel) {
-    return sel.sgr;
-}
-template <>
-inline std::shared_ptr<shape>& get_typed_selection<shape>(
-    scene_selection& sel) {
-    return sel.shp;
-}
-template <>
-inline std::shared_ptr<material>& get_typed_selection<material>(
-    scene_selection& sel) {
-    return sel.mat;
-}
-template <>
-inline std::shared_ptr<texture>& get_typed_selection<texture>(
-    scene_selection& sel) {
-    return sel.txt;
-}
-template <>
-inline std::shared_ptr<instance>& get_typed_selection<instance>(
-    scene_selection& sel) {
-    return sel.ist;
-}
-template <>
-inline std::shared_ptr<environment>& get_typed_selection<environment>(
-    scene_selection& sel) {
-    return sel.env;
-}
-template <>
-inline std::shared_ptr<node>& get_typed_selection<node>(scene_selection& sel) {
-    return sel.nde;
-}
-template <>
-inline std::shared_ptr<animation_group>& get_typed_selection<animation_group>(
-    scene_selection& sel) {
-    return sel.agr;
-}
-template <>
-inline std::shared_ptr<animation>& get_typed_selection<animation>(
-    scene_selection& sel) {
-    return sel.anm;
-}
-
 // Implementation of draw tree
 struct draw_tree_visitor {
     std::shared_ptr<gl_window> win = nullptr;
@@ -14421,12 +14366,9 @@ struct draw_tree_visitor {
         if (!val) return;
         auto lbl = val->name;
         if (!var.name.empty()) lbl = var.name + ": " + val->name;
-        auto selection = get_typed_selection<T>(sel);
-        auto open = draw_tree_widget_begin(win, lbl, selection, val);
-        if (selection == val) {
-            clear_selection(sel);
-            get_typed_selection<T>(sel) = val;
-        }
+        auto selection = sel.get_raw();
+        auto open = draw_tree_widget_begin(win, lbl, selection, val.get());
+        if (selection == val.get()) sel = val;
         if (open) {
             visit(val, *this);
             draw_tree_widget_end(win);
@@ -14501,20 +14443,16 @@ struct draw_elem_visitor {
     }
 
     template <typename T>
-    void operator()(const std::shared_ptr<T>&& val,
+    void operator()(const std::shared_ptr<T>& val,
         const visit_var& var = visit_var{"", visit_var_type::object}) {
-        if (var.type == visit_var_type::reference) {
-            edited += draw_combo_widget(win, var.name, val, elems(val));
-        } else {
-            if (!val) return;
-            // TODO: fix this separator
-            draw_separator_widget(win);
-            draw_groupid_widget_begin(win, val);
-            draw_separator_widget(win);
-            visit(*val, *this);
-            preview(val);
-            draw_groupid_widget_end(win);
-        }
+        if (!val) return;
+        // TODO: fix this separator
+        draw_separator_widget(win);
+        draw_groupid_widget_begin(win, val);
+        draw_separator_widget(win);
+        visit(*val, *this);
+        preview(val);
+        draw_groupid_widget_end(win);
     }
 
     template <typename T>
@@ -14523,14 +14461,7 @@ struct draw_elem_visitor {
         if (var.type == visit_var_type::reference) {
             edited += draw_combo_widget(win, var.name, val, elems(val));
         } else {
-            if (!val) return;
-            // TODO: fix this separator
-            draw_separator_widget(win);
-            draw_groupid_widget_begin(win, val);
-            draw_separator_widget(win);
-            visit(*val, *this);
-            preview(val);
-            draw_groupid_widget_end(win);
+            operator()((const std::shared_ptr<T>&)val, var);
         }
     }
 
@@ -14627,8 +14558,7 @@ inline bool draw_add_elem_widgets(const std::shared_ptr<gl_window>& win,
         elems.back()->name = name;
         proc_elems.push_back(std::make_shared<T1>());
         proc_elems.back()->name = name;
-        clear_selection(sel);
-        get_typed_selection<T>(sel) = elems.back();
+        sel = elems.back();
         update_list.push_back(sel);
         update_proc_elem(scn, elems.back(), proc_elems.back());
         return true;
@@ -14672,7 +14602,7 @@ bool draw_scene_widgets(const std::shared_ptr<gl_window>& win,
             test_scn->instances.back()->shape =
                 scn->instances.back()->shp->name;
             update_list.push_back({});
-            update_list.back().ist = scn->instances.back();
+            update_list.back() = scn->instances.back();
         }
         draw_add_elem_widgets(win, scn, "ist", scn->instances,
             test_scn->instances, sel, update_list);
@@ -14684,17 +14614,23 @@ bool draw_scene_widgets(const std::shared_ptr<gl_window>& win,
 
     auto test_scn_res = (test_scn) ? test_scn : test_scn_def;
     auto elem_visitor = draw_elem_visitor{win, scn, sel, gl_txt};
-    elem_visitor(sel.cam, test_scn_res->cameras);
-    elem_visitor(sel.shp);
-    elem_visitor(sel.sgr, test_scn_res->shapes);
-    elem_visitor(sel.sgr);
-    elem_visitor(sel.ist, test_scn_res->instances);
-    elem_visitor(sel.txt, test_scn_res->textures);
-    elem_visitor(sel.mat, test_scn_res->materials);
-    elem_visitor(sel.env, test_scn_res->environments);
-    elem_visitor(sel.nde, test_scn_res->nodes);
-    elem_visitor(sel.anm);
-    elem_visitor(sel.agr, test_scn_res->animations);
+    if (sel.is<camera>())
+        elem_visitor(sel.get<camera>(), test_scn_res->cameras);
+    if (sel.is<shape>()) elem_visitor(sel.get<shape>());
+    if (sel.is<shape_group>())
+        elem_visitor(sel.get<shape_group>(), test_scn_res->shapes);
+    if (sel.is<instance>())
+        elem_visitor(sel.get<instance>(), test_scn_res->instances);
+    if (sel.is<texture>())
+        elem_visitor(sel.get<texture>(), test_scn_res->textures);
+    if (sel.is<material>())
+        elem_visitor(sel.get<material>(), test_scn_res->materials);
+    if (sel.is<environment>())
+        elem_visitor(sel.get<environment>(), test_scn_res->environments);
+    if (sel.is<node>()) elem_visitor(sel.get<node>(), test_scn_res->nodes);
+    if (sel.is<animation>()) elem_visitor(sel.get<animation>());
+    if (sel.is<animation_group>())
+        elem_visitor(sel.get<animation_group>(), test_scn_res->animations);
     if (elem_visitor.edited) update_list.push_back(sel);
 
     draw_groupid_widget_end(win);
