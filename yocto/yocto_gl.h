@@ -5085,15 +5085,15 @@ struct camera {
     frame3f frame = identity_frame3f;
     /// Orthographic camera.
     bool ortho = false;
-    /// Vertical field of view. @refl_uilimits(0.1,10)
+    /// Vertical field of view. @refl_uilimits(0.1f,10)
     float yfov = 2;
     /// Aspect ratio. @refl_uilimits(1,3)
     float aspect = 16.0f / 9.0f;
-    /// Focus distance. @refl_uilimits(0.01,1000)
+    /// Focus distance. @refl_uilimits(0.01f,1000)
     float focus = 1;
     /// Lens aperture. @refl_uilimits(0,5)
     float aperture = 0;
-    /// Near plane distance. @refl_uilimits(0.01,10)
+    /// Near plane distance. @refl_uilimits(0.01f,10)
     float near = 0.01f;
     /// Far plane distance. @refl_uilimits(10,10000)
     float far = 10000;
@@ -5304,7 +5304,7 @@ struct node {
     vec3f translation = zero3f;
     /// Rotation.
     quat4f rotation = {0, 0, 0, 1};
-    /// Scaling. @refl_uilimits(0.0001,1000)
+    /// Scaling. @refl_uilimits(0.0001f,1000)
     vec3f scaling = {1, 1, 1};
     /// Weights for morphing.
     std::vector<float> weights = {};
@@ -5343,7 +5343,7 @@ struct animation {
     std::vector<vec3f> translation;
     /// Rotation.
     std::vector<quat4f> rotation;
-    /// Scaling. @refl_uilimits(0.0001,1000)
+    /// Scaling. @refl_uilimits(0.0001f,1000)
     std::vector<vec3f> scaling;
     /// Weights for morphing.
     std::vector<std::vector<float>> weights;
@@ -5614,15 +5614,15 @@ inline void visit(camera& val, Visitor&& visitor) {
     visitor(val.ortho, visit_var{"ortho", visit_var_type::value,
                            "Orthographic camera.", 0, 0, ""});
     visitor(val.yfov, visit_var{"yfov", visit_var_type::value,
-                          "Vertical field of view.", 0.1, 10, ""});
+                          "Vertical field of view.", 0.1f, 10, ""});
     visitor(val.aspect,
         visit_var{"aspect", visit_var_type::value, "Aspect ratio.", 1, 3, ""});
     visitor(val.focus, visit_var{"focus", visit_var_type::value,
-                           "Focus distance.", 0.01, 1000, ""});
+                           "Focus distance.", 0.01f, 1000, ""});
     visitor(val.aperture, visit_var{"aperture", visit_var_type::value,
                               "Lens aperture.", 0, 5, ""});
     visitor(val.near, visit_var{"near", visit_var_type::value,
-                          "Near plane distance.", 0.01, 10, ""});
+                          "Near plane distance.", 0.01f, 10, ""});
     visitor(val.far, visit_var{"far", visit_var_type::value,
                          "Far plane distance.", 10, 10000, ""});
 }
@@ -5821,7 +5821,7 @@ inline void visit(node& val, Visitor&& visitor) {
     visitor(val.rotation,
         visit_var{"rotation", visit_var_type::value, "Rotation.", 0, 0, ""});
     visitor(val.scaling, visit_var{"scaling", visit_var_type::value, "Scaling.",
-                             0.0001, 1000, ""});
+                             0.0001f, 1000, ""});
     visitor(val.weights, visit_var{"weights", visit_var_type::value,
                              "Weights for morphing.", 0, 0, ""});
     visitor(val.cam, visit_var{"cam", visit_var_type::reference,
@@ -5850,7 +5850,7 @@ inline void visit(animation& val, Visitor&& visitor) {
     visitor(val.rotation,
         visit_var{"rotation", visit_var_type::value, "Rotation.", 0, 0, ""});
     visitor(val.scaling, visit_var{"scaling", visit_var_type::value, "Scaling.",
-                             0.0001, 1000, ""});
+                             0.0001f, 1000, ""});
     visitor(val.weights, visit_var{"weights", visit_var_type::value,
                              "Weights for morphing.", 0, 0, ""});
 }
@@ -5914,7 +5914,7 @@ struct proc_camera {
     vec3f from = {0, 0, -1};
     /// To point. @refl_uilimits(-10,10)
     vec3f to = zero3f;
-    /// Field of view. @refl_uilimits(0.01,10)
+    /// Field of view. @refl_uilimits(0.01f,10)
     float yfov = 45 * pif / 180;
     /// Aspect ratio. @refl_uilimits(1,3)
     float aspect = 1;
@@ -5962,7 +5962,7 @@ struct proc_texture {
     int resolution = 512;
     /// Tile size for grid-like textures. @refl_uilimits(16,128)
     int tile_size = 64;
-    /// Noise scale for noise-like textures. @refl_uilimits(0.1,16)
+    /// Noise scale for noise-like textures. @refl_uilimits(0.1f,16)
     int noise_scale = 8;
     /// Sun angle for sunsky-like textures. @refl_uilimits(0,1.57)
     float sky_sunangle = pif / 4;
@@ -6061,9 +6061,9 @@ struct proc_shape {
     /// Level of shape tesselation for subdivision surfaces.
     /// @refl_uilimits(-1,10)
     int subdivision = 0;
-    /// Shape scale. @refl_uilimits(0.01,10)
+    /// Shape scale. @refl_uilimits(0.01f,10)
     float scale = 1;
-    /// Radius for points and lines. @refl_uilimits(0.0001,0.01)
+    /// Radius for points and lines. @refl_uilimits(0.0001f,0.01)
     float radius = -1;
     /// Faceted shape.
     bool faceted = false;
@@ -6123,7 +6123,7 @@ struct proc_node {
     vec3f translation = {0, 0, 0};
     /// Roation.
     quat4f rotation = {0, 0, 0, 1};
-    /// Scaling. @refl_uilimits(0.01,10)
+    /// Scaling. @refl_uilimits(0.01f,10)
     vec3f scaling = {1, 1, 1};
 };
 
@@ -6133,9 +6133,9 @@ struct proc_animation {
     std::string name = "";
     /// Linear or bezier.
     bool bezier = false;
-    /// Animation speed. @refl_uilimits(0.01,10)
+    /// Animation speed. @refl_uilimits(0.01f,10)
     float speed = 1;
-    /// Animation scale. @refl_uilimits(0.01,10)
+    /// Animation scale. @refl_uilimits(0.01f,10)
     float scale = 1;
     /// Keyframes times.
     std::vector<float> times = {};
@@ -6143,7 +6143,7 @@ struct proc_animation {
     std::vector<vec3f> translation = {};
     /// Rotation keyframes.
     std::vector<quat4f> rotation = {};
-    /// Scale keyframes. @refl_uilimits(0.01,10)
+    /// Scale keyframes. @refl_uilimits(0.01f,10)
     std::vector<vec3f> scaling = {};
     /// Environment.
     std::vector<std::string> nodes = {};
@@ -6314,7 +6314,7 @@ inline void visit(proc_camera& val, Visitor&& visitor) {
     visitor(val.to,
         visit_var{"to", visit_var_type::value, "To point.", -10, 10, ""});
     visitor(val.yfov, visit_var{"yfov", visit_var_type::value, "Field of view.",
-                          0.01, 10, ""});
+                          0.01f, 10, ""});
     visitor(val.aspect,
         visit_var{"aspect", visit_var_type::value, "Aspect ratio.", 1, 3, ""});
 }
@@ -6333,10 +6333,10 @@ inline void visit(proc_texture& val, Visitor&& visitor) {
                            "Tile size for grid-like textures.", 16, 128, ""});
     visitor(val.noise_scale,
         visit_var{"noise_scale", visit_var_type::value,
-            "Noise scale for noise-like textures.", 0.1, 16, ""});
+            "Noise scale for noise-like textures.", 0.1f, 16, ""});
     visitor(val.sky_sunangle,
         visit_var{"sky_sunangle", visit_var_type::value,
-            "Sun angle for sunsky-like textures.", 0, 1.57, ""});
+            "Sun angle for sunsky-like textures.", 0, 1.57f, ""});
     visitor(
         val.bump_to_normal, visit_var{"bump_to_normal", visit_var_type::value,
                                 "Convert to normal map.", 0, 0, ""});
@@ -6387,9 +6387,9 @@ inline void visit(proc_shape& val, Visitor&& visitor) {
             "Level of shape tesselation for subdivision surfaces.", -1, 10,
             ""});
     visitor(val.scale, visit_var{"scale", visit_var_type::value, "Shape scale.",
-                           0.01, 10, ""});
+                           0.01f, 10, ""});
     visitor(val.radius, visit_var{"radius", visit_var_type::value,
-                            "Radius for points and lines.", 0.0001, 0.01, ""});
+                            "Radius for points and lines.", 0.0001f, 0.01f, ""});
     visitor(val.faceted, visit_var{"faceted", visit_var_type::value,
                              "Faceted shape.", 0, 0, ""});
     visitor(val.num,
@@ -6428,7 +6428,7 @@ inline void visit(proc_environment& val, Visitor&& visitor) {
     visitor(val.frame,
         visit_var{"frame", visit_var_type::value, "Frame.", 0, 0, ""});
     visitor(val.rotation, visit_var{"rotation", visit_var_type::value,
-                              "Rotation around y axis.", 0, 6.28, ""});
+                              "Rotation around y axis.", 0, 6.28f, ""});
 }
 
 /// Visit struct elements.
@@ -6451,7 +6451,7 @@ inline void visit(proc_node& val, Visitor&& visitor) {
     visitor(val.rotation,
         visit_var{"rotation", visit_var_type::value, "Roation.", 0, 0, ""});
     visitor(val.scaling,
-        visit_var{"scaling", visit_var_type::value, "Scaling.", 0.01, 10, ""});
+        visit_var{"scaling", visit_var_type::value, "Scaling.", 0.01f, 10, ""});
 }
 
 /// Visit struct elements.
@@ -6462,9 +6462,9 @@ inline void visit(proc_animation& val, Visitor&& visitor) {
     visitor(val.bezier, visit_var{"bezier", visit_var_type::value,
                             "Linear or bezier.", 0, 0, ""});
     visitor(val.speed, visit_var{"speed", visit_var_type::value,
-                           "Animation speed.", 0.01, 10, ""});
+                           "Animation speed.", 0.01f, 10, ""});
     visitor(val.scale, visit_var{"scale", visit_var_type::value,
-                           "Animation scale.", 0.01, 10, ""});
+                           "Animation scale.", 0.01f, 10, ""});
     visitor(val.times, visit_var{"times", visit_var_type::value,
                            "Keyframes times.", 0, 0, ""});
     visitor(val.translation, visit_var{"translation", visit_var_type::value,
@@ -6472,7 +6472,7 @@ inline void visit(proc_animation& val, Visitor&& visitor) {
     visitor(val.rotation, visit_var{"rotation", visit_var_type::value,
                               "Rotation keyframes.", 0, 0, ""});
     visitor(val.scaling, visit_var{"scaling", visit_var_type::value,
-                             "Scale keyframes.", 0.01, 10, ""});
+                             "Scale keyframes.", 0.01f, 10, ""});
     visitor(val.nodes,
         visit_var{"nodes", visit_var_type::value, "Environment.", 0, 0, ""});
 }
@@ -6650,7 +6650,7 @@ struct trace_params {
     int max_depth = 8;
     /// Final pixel clamping. @refl_uilimits(1,10)
     float pixel_clamp = 10;
-    /// Ray intersection epsilon. @refl_uilimits(0.0001,0.001)
+    /// Ray intersection epsilon. @refl_uilimits(0.0001f,0.001)
     float ray_eps = 1e-4f;
     /// Parallel execution.
     bool parallel = true;
@@ -6810,7 +6810,7 @@ inline void visit(trace_params& val, Visitor&& visitor) {
     visitor(val.pixel_clamp, visit_var{"pixel_clamp", visit_var_type::value,
                                  "Final pixel clamping.", 1, 10, ""});
     visitor(val.ray_eps, visit_var{"ray_eps", visit_var_type::value,
-                             "Ray intersection epsilon.", 0.0001, 0.001, ""});
+                             "Ray intersection epsilon.", 0.0001f, 0.001f, ""});
     visitor(val.parallel, visit_var{"parallel", visit_var_type::value,
                               "Parallel execution.", 0, 0, ""});
     visitor(
@@ -9432,11 +9432,11 @@ inline void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
 struct gl_stdimage_params {
     /// Image offset. @refl_uilimits(-4096, 4096)
     vec2f offset = {0, 0};
-    /// Image zoom. @refl_uilimits(0.01, 10)
+    /// Image zoom. @refl_uilimits(0.01f, 10)
     float zoom = 1;
     /// Hdr exposure. @refl_uilimits(-10, 10) @refl_shortname(e)
     float exposure = 1;
-    /// Hdr gamma. @refl_uilimits(0.1,3) @refl_shortname(g)
+    /// Hdr gamma. @refl_uilimits(0.1f,3) @refl_shortname(g)
     float gamma = 2.2f;
     /// Hdr filmic tonemapping. @refl_shortname(F)
     bool filmic = false;
@@ -9546,7 +9546,7 @@ struct gl_stdsurface_params {
     int resolution = 512;
     /// Image exposure. @refl_uilimits(-10, 10) @refl_shortname(e)
     float exposure = 0;
-    /// Image gamma. @refl_uilimits(0.1, 3) @refl_shortname(g)
+    /// Image gamma. @refl_uilimits(0.1f, 3) @refl_shortname(g)
     float gamma = 2.2f;
     /// Image filmic tonemapping. @refl_shortname(F)
     bool filmic = false;
@@ -9589,11 +9589,11 @@ inline void visit(gl_stdimage_params& val, Visitor&& visitor) {
     visitor(val.offset, visit_var{"offset", visit_var_type::value,
                             "Image offset.", -4096, 4096, ""});
     visitor(val.zoom,
-        visit_var{"zoom", visit_var_type::value, "Image zoom.", 0.01, 10, ""});
+        visit_var{"zoom", visit_var_type::value, "Image zoom.", 0.01f, 10, ""});
     visitor(val.exposure, visit_var{"exposure", visit_var_type::value,
                               "Hdr exposure.", -10, 10, "e"});
     visitor(val.gamma,
-        visit_var{"gamma", visit_var_type::value, "Hdr gamma.", 0.1, 3, "g"});
+        visit_var{"gamma", visit_var_type::value, "Hdr gamma.", 0.1f, 3, "g"});
     visitor(val.filmic, visit_var{"filmic", visit_var_type::value,
                             "Hdr filmic tonemapping.", 0, 0, "F"});
     visitor(val.background, visit_var{"background", visit_var_type::color,
@@ -9612,7 +9612,7 @@ inline void visit(gl_stdsurface_params& val, Visitor&& visitor) {
     visitor(val.exposure, visit_var{"exposure", visit_var_type::value,
                               "Image exposure.", -10, 10, "e"});
     visitor(val.gamma,
-        visit_var{"gamma", visit_var_type::value, "Image gamma.", 0.1, 3, "g"});
+        visit_var{"gamma", visit_var_type::value, "Image gamma.", 0.1f, 3, "g"});
     visitor(val.filmic, visit_var{"filmic", visit_var_type::value,
                             "Image filmic tonemapping.", 0, 0, "F"});
     visitor(val.wireframe, visit_var{"wireframe", visit_var_type::value,
@@ -9620,7 +9620,7 @@ inline void visit(gl_stdsurface_params& val, Visitor&& visitor) {
     visitor(val.edges, visit_var{"edges", visit_var_type::value,
                            "Draw with overlaid edges", 0, 0, ""});
     visitor(val.edge_offset, visit_var{"edge_offset", visit_var_type::value,
-                                 "Offset for edges.", 0, 0.1, ""});
+                                 "Offset for edges.", 0, 0.1f, ""});
     visitor(val.cutout, visit_var{"cutout", visit_var_type::value,
                             "Draw with for binary transparency.", 0, 0, ""});
     visitor(val.eyelight, visit_var{"eyelight", visit_var_type::value,
