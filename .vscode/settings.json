@@ -1,0 +1,5 @@
+{
+    "python.pythonPath": "/usr/local/bin/python3",
+    "C_Cpp.clang_format_path": "/usr/local/bin/clang-format",
+    "clang.cxxflags": ["-std=c++14", "-I/usr/local/include"]
+}

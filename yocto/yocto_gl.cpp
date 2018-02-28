@@ -105,6 +105,42 @@ const unsigned int* imgui_extrafont_compressed_data();
 #endif
 
 // -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR MONETACARLO SAMPLING FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace ygl {
+// Make a one-dimensional distribution for sampling.
+distribution1f make_distribution(const std::vector<float>& weights) {
+    auto dist = distribution1f();
+    dist.weights = weights;
+    dist.cdf = weights;
+    for (auto i = 1; i < weights.size(); i++) dist.cdf[i] += dist.cdf[i - 1];
+    return dist;
+}
+
+// Sample a discrete distribution.
+int sample_distribution_discrete(const distribution1f& dist, float r) {
+    // todo: implement binary search better
+    r = clamp(r * dist.cdf.back(), 0.0f, dist.cdf.back() - 0.00001f);
+    for (auto i = 0; i < dist.cdf.size(); i++) {
+        if (dist.cdf[i] > r) return i;
+    }
+    return (int)dist.cdf.size() - 1;
+}
+
+// Sample a discrete distribution.
+float sample_distribution_discrete_pdf(const distribution1f& dist, int idx) {
+    if (idx == 0) return dist.cdf.at(0);
+    return 1 / (dist.cdf.at(idx) - dist.cdf.at(idx - 1));
+}
+
+// Get the total weight of a distribution.
+float sample_distribution_weightsum(const distribution1f& dist) {
+    return dist.cdf.back();
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
 // FILE LOADING AND SAVING
 // -----------------------------------------------------------------------------
 namespace ygl {
@@ -1301,45 +1337,6 @@ template std::vector<vec4f> facet_vert<vec4f>(
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Compute a distribution for sampling points uniformly
-std::vector<float> sample_points_cdf(int npoints) {
-    auto cdf = std::vector<float>(npoints);
-    for (auto i = 0; i < npoints; i++) cdf[i] = i + 1;
-    return cdf;
-}
-
-// Compute a distribution for sampling lines uniformly
-std::vector<float> sample_lines_cdf(
-    const std::vector<vec2i>& lines, const std::vector<vec3f>& pos) {
-    auto cdf = std::vector<float>(lines.size());
-    for (auto i = 0; i < lines.size(); i++)
-        cdf[i] = length(pos[lines[i].x] - pos[lines[i].y]);
-    for (auto i = 1; i < lines.size(); i++) cdf[i] += cdf[i - 1];
-    return cdf;
-}
-
-// Compute a distribution for sampling triangle meshes uniformly
-std::vector<float> sample_triangles_cdf(
-    const std::vector<vec3i>& triangles, const std::vector<vec3f>& pos) {
-    auto cdf = std::vector<float>(triangles.size());
-    for (auto i = 0; i < triangles.size(); i++)
-        cdf[i] = triangle_area(
-            pos[triangles[i].x], pos[triangles[i].y], pos[triangles[i].z]);
-    for (auto i = 1; i < triangles.size(); i++) cdf[i] += cdf[i - 1];
-    return cdf;
-}
-
-// Compute a distribution for sampling quad meshes uniformly
-std::vector<float> sample_quads_cdf(
-    const std::vector<vec4i>& quads, const std::vector<vec3f>& pos) {
-    auto cdf = std::vector<float>(quads.size());
-    for (auto i = 0; i < quads.size(); i++)
-        cdf[i] = quad_area(
-            pos[quads[i].x], pos[quads[i].y], pos[quads[i].z], pos[quads[i].w]);
-    for (auto i = 1; i < quads.size(); i++) cdf[i] += cdf[i - 1];
-    return cdf;
-}
-
 // Samples a set of points over a triangle mesh uniformly. The rng function
 // takes the point index and returns vec3f numbers uniform directibuted in
 // [0,1]^3. unorm and texcoord are optional.
@@ -1350,13 +1347,13 @@ sample_triangles_points(const std::vector<vec3i>& triangles,
     auto sampled_pos = std::vector<vec3f>(npoints);
     auto sampled_norm = std::vector<vec3f>(norm.empty() ? 0 : npoints);
     auto sampled_texcoord = std::vector<vec2f>(texcoord.empty() ? 0 : npoints);
-    auto cdf = sample_triangles_cdf(triangles, pos);
+    auto dst = make_triangle_distribution(triangles, pos);
     auto rng = init_rng(seed);
     for (auto i = 0; i < npoints; i++) {
         auto eid = 0;
         auto euv = zero2f;
         std::tie(eid, euv) = sample_triangles(
-            cdf, next_rand1f(rng), {next_rand1f(rng), next_rand1f(rng)});
+            dst, next_rand1f(rng), {next_rand1f(rng), next_rand1f(rng)});
         auto t = triangles[eid];
         sampled_pos[i] =
             interpolate_triangle(pos[t.x], pos[t.y], pos[t.z], euv);
@@ -3157,6 +3154,28 @@ vec3f eval_norm(
         ist->frame, normalize(eval_elem(shp, shp->norm, eid, euv, {0, 0, 1})));
 }
 
+// Environment position interpolated using uv parametrization.
+vec3f eval_pos(const std::shared_ptr<environment>& env, const vec2f& uv) {
+    return transform_point(env->frame,
+        sphericaly_to_cartesian(
+            vec3f{uv.x * pif * 2, uv.y * pif, environment_distance}));
+}
+// Environment normal interpolated using uv parametrization.
+vec3f eval_norm(const std::shared_ptr<environment>& env, const vec2f& uv) {
+    return transform_direction(env->frame,
+        -sphericaly_to_cartesian(vec3f{uv.x * pif * 2, uv.y * pif, 1.0f}));
+}
+// Environment texture coordinates from uv parametrization.
+vec2f eval_texcoord(const std::shared_ptr<environment>& env, const vec2f& uv) {
+    return uv;
+}
+// Evaluate uv parameters for environment.
+vec2f eval_uv(const std::shared_ptr<environment>& env, const vec3f& w) {
+    auto wl = transform_direction_inverse(env->frame, w);
+    auto sh = cartesian_to_sphericaly(wl);
+    return {sh.x / (2 * pif), sh.y / pif};
+}
+
 // Evaluate a texture
 vec4f eval_texture(const std::shared_ptr<texture>& txt,
     const texture_info& info, const vec2f& texcoord, bool srgb,
@@ -3227,6 +3246,37 @@ ray3f eval_camera_ray(const std::shared_ptr<camera>& cam, const vec2i& ij,
     auto uv =
         vec2f{(ij.x + puv.x) / (cam->aspect * res), (1 - ij.y - puv.y) / res};
     return eval_camera_ray(cam, uv, luv);
+}
+
+// Generate a distribution for sampling a shape uniformly based on area/length.
+distribution1f make_shape_distribution(const std::shared_ptr<shape>& shp) {
+    if (!shp->triangles.empty()) {
+        return make_triangle_distribution(shp->triangles, shp->pos);
+    } else if (!shp->lines.empty()) {
+        return make_line_distribution(shp->lines, shp->pos);
+    } else if (!shp->points.empty()) {
+        return make_point_distribution(shp->points.size());
+    } else if (!shp->quads.empty()) {
+        return make_quad_distribution(shp->quads, shp->pos);
+    } else {
+        return make_point_distribution(shp->pos.size());
+    }
+}
+
+// Sample a shape based on a distribution.
+std::pair<int, vec2f> sample_shape(const std::shared_ptr<shape>& shp,
+    const distribution1f& dst, float re, const vec2f& ruv) {
+    if (!shp->triangles.empty()) {
+        return sample_triangles(dst, re, ruv);
+    } else if (!shp->lines.empty()) {
+        return {sample_lines(dst, re, ruv.x).first, ruv};
+    } else if (!shp->points.empty()) {
+        return {sample_points(dst, re), ruv};
+    } else if (!shp->quads.empty()) {
+        return sample_quads(dst, re, ruv);
+    } else {
+        return {sample_points(dst, re), ruv};
+    }
 }
 
 // Subdivides shape elements.
@@ -5751,26 +5801,36 @@ struct trace_point {
     vec3f ke = zero3f;                           // emission
     vec3f kd = {0, 0, 0};                        // diffuse
     vec3f ks = {0, 0, 0};                        // specular
+    vec3f ksg = {1, 1, 1};                       // specular at grazing
     float rs = 0;                                // specular roughness
-    vec3f kt = {0, 0, 0};                        // transmission (thin glass)
-    float op = 1.0f;                             // opacity
+    vec3f kr = {0, 0, 0};                        // clear coat
+    vec3f krg = {1, 1, 1};                       // clear coat at grazing
+    vec3f ktr = {0, 0, 0};                       // transmission for thin glass
+    vec3f kto = {0, 0, 0};                       // transmission for opacity
     bool double_sided = false;                   // double sided rendering
-    bool has_brdf() const { return shp && kd + ks + kt != zero3f; }
-    vec3f rho() const { return kd + ks + kt; }
-    vec3f brdf_weights() const {
-        auto w = vec3f{max_element_value(kd), max_element_value(ks),
-            max_element_value(kt)};
-        auto sw = w.x + w.y + w.z;
-        if (!sw) return zero3f;
-        return w / sw;
-    }
 };
+
+// Evaluates the BRDF albedo at normal incidence
+vec3f eval_brdf_albedo(const trace_point& pt) {
+    return pt.kd + pt.ks + pt.kr + pt.ktr + pt.kto;
+}
+
+// Evaluates the weights of each BRDF lobe
+std::array<float, 5> eval_brdf_weights(const trace_point& pt) {
+    auto w = std::array<float, 5>{{max_element_value(pt.kd),
+        max_element_value(pt.ks), max_element_value(pt.kr),
+        max_element_value(pt.ktr), max_element_value(pt.kto)}};
+    auto s = w[0] + w[1] + w[2] + w[3] + w[4];
+    if (!s) return w;
+    return {{w[0] / s, w[1] / s, w[2] / s, w[3] / s, w[4] / s}};
+}
 
 // Evaluates emission.
 vec3f eval_emission(const trace_point& pt, const vec3f& wo) {
-    if (pt.shp && !pt.shp->triangles.empty() && dot(pt.norm, wo) <= 0)
-        return zero3f;
-    return pt.ke;
+    if (!pt.shp || pt.shp->triangles.empty() || pt.double_sided ||
+        dot(pt.norm, wo) >= 0)
+        return pt.ke;
+    return zero3f;
 }
 
 // Evaluates the BRDF scaled by the cosine of the incoming direction.
@@ -5779,13 +5839,15 @@ vec3f eval_emission(const trace_point& pt, const vec3f& wo) {
 // BRDFs" http://jcgt.org/published/0003/02/03/
 // - "Microfacet Models for Refraction through Rough Surfaces" EGSR 07
 // https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf
-vec3f eval_ggx_brdfcos(const trace_point& pt, const vec3f& wo, const vec3f& wi,
-    bool delta = false) {
+vec3f eval_surface_brdfcos(const trace_point& pt, const vec3f& wo,
+    const vec3f& wi, bool delta = false) {
     auto brdfcos = zero3f;
     auto wh = normalize(wo + wi);
+    auto wn = pt.norm;
+    if (pt.double_sided && dot(wo, wn) < 0) wn = -wn;
 
-    auto ndo = dot(pt.norm, wo), ndi = dot(pt.norm, wi),
-         ndh = clamp(dot(wh, pt.norm), -1.0f, 1.0f);
+    auto ndo = dot(wn, wo), ndi = dot(wn, wi),
+         ndh = clamp(dot(wh, wn), -1.0f, 1.0f);
 
     if (ndi > 0 && ndo > 0) {
         brdfcos += pt.kd * ndi / pif;
@@ -5800,7 +5862,7 @@ vec3f eval_ggx_brdfcos(const trace_point& pt, const vec3f& wo, const vec3f& wi,
             brdfcos += ks;
         }
     }
-    if (wo == -wi && delta) brdfcos += pt.kt;
+    if (wo == -wi && delta) brdfcos += pt.ktr + pt.kto;
 
     assert(isfinite(brdfcos.x) && isfinite(brdfcos.y) && isfinite(brdfcos.z));
     return brdfcos;
@@ -5808,13 +5870,14 @@ vec3f eval_ggx_brdfcos(const trace_point& pt, const vec3f& wo, const vec3f& wi,
 
 // Evaluates the BRDF scaled by the cosine of the incoming direction.
 // - uses Kajiya-Kay for hair
-vec3f eval_kajiyakay_brdfcos(const trace_point& pt, const vec3f& wo,
+vec3f eval_curve_brdfcos(const trace_point& pt, const vec3f& wo,
     const vec3f& wi, bool delta = false) {
     auto brdfcos = zero3f;
     auto wh = normalize(wo + wi);
+    auto wn = pt.norm;
 
-    auto ndo = dot(pt.norm, wo), ndi = dot(pt.norm, wi),
-         ndh = clamp(dot(pt.norm, wh), 0.0f, 1.0f);
+    auto ndo = dot(wn, wo), ndi = dot(wn, wi),
+         ndh = clamp(dot(wn, wh), 0.0f, 1.0f);
     auto so = sqrt(clamp(1 - ndo * ndo, 0.0f, 1.0f)),
          si = sqrt(clamp(1 - ndi * ndi, 0.0f, 1.0f)),
          sh = sqrt(clamp(1 - ndh * ndh, 0.0f, 1.0f));
@@ -5827,7 +5890,7 @@ vec3f eval_kajiyakay_brdfcos(const trace_point& pt, const vec3f& wo,
             brdfcos += pt.ks * si * d / (4.0f * si * so);
         }
     }
-    if (wo == -wi && delta) brdfcos += pt.kt;
+    if (wo == -wi && delta) brdfcos += pt.kto;
 
     assert(isfinite(brdfcos.x) && isfinite(brdfcos.y) && isfinite(brdfcos.z));
     return brdfcos;
@@ -5841,7 +5904,7 @@ vec3f eval_point_brdfcos(const trace_point& pt, const vec3f& wo,
 
     auto ido = dot(wo, wi);
     brdfcos += pt.kd * (2 * ido + 1) / (2 * pif);
-    if (wo == -wi && delta) brdfcos += pt.kt;
+    if (wo == -wi && delta) brdfcos += pt.kto;
 
     assert(isfinite(brdfcos.x) && isfinite(brdfcos.y) && isfinite(brdfcos.z));
     return brdfcos;
@@ -5850,35 +5913,39 @@ vec3f eval_point_brdfcos(const trace_point& pt, const vec3f& wo,
 // Evaluates the BRDF scaled by the cosine of the incoming direction.
 vec3f eval_brdfcos(const trace_point& pt, const vec3f& wo, const vec3f& wi,
     bool delta = false) {
-    if (!pt.has_brdf()) return zero3f;
-    if (!pt.shp->triangles.empty())
-        return eval_ggx_brdfcos(pt, wo, wi, delta);
-    else if (!pt.shp->lines.empty())
-        return eval_kajiyakay_brdfcos(pt, wo, wi, delta);
-    else if (!pt.shp->points.empty())
+    if (eval_brdf_albedo(pt) == zero3f) return zero3f;
+    if (!pt.shp->triangles.empty()) {
+        return eval_surface_brdfcos(pt, wo, wi, delta);
+    } else if (!pt.shp->lines.empty()) {
+        return eval_curve_brdfcos(pt, wo, wi, delta);
+    } else if (!pt.shp->points.empty()) {
         return eval_point_brdfcos(pt, wo, wi, delta);
-    else
+    } else {
         return zero3f;
+    }
 }
 
 // Compute the weight for sampling the BRDF
-float weight_ggx_brdfcos(const trace_point& pt, const vec3f& wo,
+float weight_surface_brdfcos(const trace_point& pt, const vec3f& wo,
     const vec3f& wi, bool delta = false) {
-    auto weights = pt.brdf_weights();
+    auto weights = eval_brdf_weights(pt);
     auto wh = normalize(wi + wo);
-    auto ndo = dot(pt.norm, wo), ndi = dot(pt.norm, wi), ndh = dot(pt.norm, wh);
+    auto wn = pt.norm;
+    if (pt.double_sided && dot(wo, wn) < 0) wn = -wn;
+
+    auto ndo = dot(wn, wo), ndi = dot(wn, wi), ndh = dot(wn, wh);
 
     auto pdf = 0.0f;
     if (ndo > 0 && ndi > 0) {
-        pdf += weights.x * ndi / pif;
+        pdf += weights[0] * ndi / pif;
         if (ndh > 0 && pt.rs) {
             auto d = sample_ggx_pdf(pt.rs, ndh);
             auto hdo = dot(wo, wh);
-            pdf += weights.y * d / (4 * hdo);
+            pdf += weights[1] * d / (4 * hdo);
         }
-        if (!pt.rs && delta) pdf += weights.y;
+        if (!pt.rs && delta) pdf += weights[1];
     }
-    if (wi == -wo && delta) pdf += weights.z;
+    if (wi == -wo && delta) pdf += weights[3] + weights[4];
 
     assert(isfinite(pdf));
     if (!pdf) return 0;
@@ -5886,13 +5953,13 @@ float weight_ggx_brdfcos(const trace_point& pt, const vec3f& wo,
 }
 
 // Compute the weight for sampling the BRDF
-float weight_kajiyakay_brdfcos(const trace_point& pt, const vec3f& wo,
+float weight_curve_brdfcos(const trace_point& pt, const vec3f& wo,
     const vec3f& wi, bool delta = false) {
-    auto weights = pt.brdf_weights();
+    auto weights = eval_brdf_weights(pt);
 
     auto pdf = 0.0f;
-    pdf += (weights.x + weights.y) / (4 * pif);
-    if (wi == -wo && delta) pdf += weights.z;
+    pdf += (weights[0] + weights[1] + weights[2]) / (4 * pif);
+    if (wi == -wo && delta) pdf += weights[3] + weights[4];
 
     assert(isfinite(pdf));
     if (!pdf) return 0;
@@ -5902,11 +5969,11 @@ float weight_kajiyakay_brdfcos(const trace_point& pt, const vec3f& wo,
 // Compute the weight for sampling the BRDF
 float weight_point_brdfcos(const trace_point& pt, const vec3f& wo,
     const vec3f& wi, bool delta = false) {
-    auto weights = pt.brdf_weights();
+    auto weights = eval_brdf_weights(pt);
 
     auto pdf = 0.0f;
-    pdf += (weights.x + weights.y) / (4 * pif);
-    if (wi == -wo && delta) pdf += weights.z;
+    pdf += (weights[0] + weights[1] + weights[2]) / (4 * pif);
+    if (wi == -wo && delta) pdf += weights[3] + weights[4];
 
     assert(isfinite(pdf));
     if (!pdf) return 0;
@@ -5916,44 +5983,49 @@ float weight_point_brdfcos(const trace_point& pt, const vec3f& wo,
 // Compute the weight for sampling the BRDF
 float weight_brdfcos(const trace_point& pt, const vec3f& wo, const vec3f& wi,
     bool delta = false) {
-    if (!pt.has_brdf()) return 0;
-    if (!pt.shp->triangles.empty())
-        return weight_ggx_brdfcos(pt, wo, wi, delta);
-    else if (!pt.shp->lines.empty())
-        return weight_kajiyakay_brdfcos(pt, wo, wi, delta);
-    else if (!pt.shp->points.empty())
+    if (eval_brdf_albedo(pt) == zero3f) return 0;
+    if (!pt.shp->triangles.empty()) {
+        return weight_surface_brdfcos(pt, wo, wi, delta);
+    } else if (!pt.shp->lines.empty()) {
+        return weight_curve_brdfcos(pt, wo, wi, delta);
+    } else if (!pt.shp->points.empty()) {
         return weight_point_brdfcos(pt, wo, wi, delta);
-    else
+    } else {
         return 0;
+    }
 }
 
 // Picks a direction based on the BRDF
-std::tuple<vec3f, bool> sample_ggx_brdfcos(
+std::tuple<vec3f, bool> sample_surface_brdfcos(
     const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
-    auto weights = pt.brdf_weights();
+    auto weights = eval_brdf_weights(pt);
+    auto lid = sample_index(weights, rnl);
+    auto wn = pt.norm;
+    if (pt.double_sided && dot(wo, wn) < 0) wn = -wn;
+
     auto ndo = dot(pt.norm, wo);
     if (ndo <= 0) return {zero3f, false};
 
     // sample according to diffuse
-    if (rnl < weights.x) {
-        auto fp = make_frame_fromz(pt.pos, pt.norm);
+    if (lid == 0) {
+        auto fp = make_frame_fromz(pt.pos, wn);
         auto rz = sqrtf(rn.y), rr = sqrtf(1 - rz * rz), rphi = 2 * pif * rn.x;
         auto wi_local = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
         return {transform_direction(fp, wi_local), false};
     }
     // sample according to specular GGX
-    else if (rnl < weights.x + weights.y && pt.rs) {
+    else if (lid == 1 && pt.rs) {
         auto fp = make_frame_fromz(pt.pos, pt.norm);
         auto wh_local = sample_ggx(pt.rs, rn);
         auto wh = transform_direction(fp, wh_local);
         return {normalize(wh * 2.0f * dot(wo, wh) - wo), false};
     }
     // sample according to specular mirror
-    else if (rnl < weights.x + weights.y && !pt.rs) {
+    else if (lid == 1 && !pt.rs) {
         return {normalize(pt.norm * 2.0f * dot(wo, pt.norm) - wo), true};
     }
     // transmission hack
-    else if (rnl < weights.x + weights.y + weights.z) {
+    else if (lid == 3 || lid == 4) {
         return {-wo, true};
     } else
         assert(false);
@@ -5962,18 +6034,21 @@ std::tuple<vec3f, bool> sample_ggx_brdfcos(
 }
 
 // Picks a direction based on the BRDF
-std::tuple<vec3f, bool> sample_kajiyakay_brdfcos(
+std::tuple<vec3f, bool> sample_curve_brdfcos(
     const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
-    auto weights = pt.brdf_weights();
+    auto weights = eval_brdf_weights(pt);
+    auto lid = sample_index(weights, rnl);
+    auto wn = pt.norm;
+
     // diffuse and specular: samnple a uniform spherical direction
-    if (rnl < weights.x + weights.y) {
-        auto fp = make_frame_fromz(pt.pos, pt.norm);
+    if (lid == 0 || lid == 1 || lid == 2) {
+        auto fp = make_frame_fromz(pt.pos, wn);
         auto rz = 2 * rn.y - 1, rr = sqrtf(1 - rz * rz), rphi = 2 * pif * rn.x;
         auto wi_local = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
         return {transform_direction(fp, wi_local), false};
     }
     // transmission hack
-    else if (rnl < weights.x + weights.y + weights.z) {
+    else if (lid == 3 || lid == 4) {
         return {-wo, true};
     } else
         assert(false);
@@ -5983,16 +6058,18 @@ std::tuple<vec3f, bool> sample_kajiyakay_brdfcos(
 // Picks a direction based on the BRDF
 std::tuple<vec3f, bool> sample_point_brdfcos(
     const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
-    auto weights = pt.brdf_weights();
+    auto weights = eval_brdf_weights(pt);
+    auto lid = sample_index(weights, rnl);
+    auto wn = pt.norm;
     // diffuse and specular: samnple a uniform spherical direction
-    if (rnl < weights.x + weights.y) {
-        auto fp = make_frame_fromz(pt.pos, pt.norm);
+    if (lid == 0 || lid == 1 || lid == 2) {
+        auto fp = make_frame_fromz(pt.pos, wn);
         auto rz = 2 * rn.y - 1, rr = sqrtf(1 - rz * rz), rphi = 2 * pif * rn.x;
         auto wi_local = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
         return {transform_direction(fp, wi_local), false};
     }
     // transmission hack
-    else if (rnl < weights.x + weights.y + weights.z) {
+    else if (lid == 3 || lid == 4) {
         // continue ray direction
         return {-wo, true};
     } else
@@ -6003,39 +6080,38 @@ std::tuple<vec3f, bool> sample_point_brdfcos(
 // Picks a direction based on the BRDF
 std::tuple<vec3f, bool> sample_brdfcos(
     const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
-    if (!pt.has_brdf()) return {zero3f, false};
-    if (!pt.shp->triangles.empty())
-        return sample_ggx_brdfcos(pt, wo, rnl, rn);
-    else if (!pt.shp->lines.empty())
-        return sample_kajiyakay_brdfcos(pt, wo, rnl, rn);
-    else if (!pt.shp->points.empty())
+    if (eval_brdf_albedo(pt) == zero3f) return {zero3f, false};
+    if (!pt.shp->triangles.empty()) {
+        return sample_surface_brdfcos(pt, wo, rnl, rn);
+    } else if (!pt.shp->lines.empty()) {
+        return sample_curve_brdfcos(pt, wo, rnl, rn);
+    } else if (!pt.shp->points.empty()) {
         return sample_point_brdfcos(pt, wo, rnl, rn);
-    else
+    } else {
         return {zero3f, false};
+    }
 }
 
 // Create a point for an environment map. Resolves material with textures.
-trace_point eval_point(
-    const std::shared_ptr<environment>& env, const vec3f& wo) {
+trace_point eval_trace_point(
+    const std::shared_ptr<environment>& env, const vec2f& uv) {
     auto pt = trace_point();
     pt.env = env;
-    pt.pos = wo * flt_max;
-    pt.norm = -wo;
+    pt.pos = eval_pos(env, uv);
+    pt.norm = eval_norm(env, uv);
+    pt.texcoord = eval_texcoord(env, uv);
+
     pt.ke = env->ke;
     if (env->ke_txt) {
-        auto w = transform_direction_inverse(env->frame, -wo);
-        auto theta = acos(clamp(w.y, -1.0f, 1.0f));
-        auto phi = atan2(w.z, w.x);
-        auto texcoord = vec2f{0.5f + phi / (2 * pif), theta / pif};
-        auto txt = eval_texture(env->ke_txt, env->ke_txt_info, texcoord);
+        auto txt = eval_texture(env->ke_txt, env->ke_txt_info, pt.texcoord);
         pt.ke *= {txt.x, txt.y, txt.z};
     }
     return pt;
 }
 
 // Create a point for a shape. Resolves geometry and material with textures.
-trace_point eval_point(const std::shared_ptr<instance>& ist, int sid, int eid,
-    const vec2f& euv, const vec3f& wo) {
+trace_point eval_trace_point(
+    const std::shared_ptr<instance>& ist, int sid, int eid, const vec2f& euv) {
     // default material
     static auto def_material = (std::shared_ptr<material>)nullptr;
     if (!def_material) {
@@ -6050,6 +6126,7 @@ trace_point eval_point(const std::shared_ptr<instance>& ist, int sid, int eid,
     pt.pos = eval_pos(pt.shp, eid, euv);
     pt.norm = eval_norm(pt.shp, eid, euv);
     pt.texcoord = eval_texcoord(pt.shp, eid, euv);
+
     // shortcuts
     auto mat = (pt.shp->mat) ? pt.shp->mat : def_material;
 
@@ -6071,16 +6148,16 @@ trace_point eval_point(const std::shared_ptr<instance>& ist, int sid, int eid,
     pt.pos = transform_point(ist->frame, pt.pos);
     pt.norm = transform_direction(ist->frame, pt.norm);
 
-    // correct for double sided
-    if (mat->double_sided && dot(pt.norm, wo) < 0) pt.norm = -pt.norm;
+    // double-sided
+    pt.double_sided = mat->double_sided;
 
     // initialized material values
     auto kx = vec3f{1, 1, 1};
-    pt.op = 1;
+    auto op = 1;
     if (!pt.shp->color.empty()) {
         auto col = eval_color(pt.shp, eid, euv);
         kx *= {col.x, col.y, col.z};
-        pt.op *= col.w;
+        op *= col.w;
     }
 
     // handle occlusion
@@ -6104,7 +6181,7 @@ trace_point eval_point(const std::shared_ptr<instance>& ist, int sid, int eid,
                 auto txt =
                     eval_texture(mat->kd_txt, mat->kd_txt_info, pt.texcoord);
                 pt.kd *= {txt.x, txt.y, txt.z};
-                pt.op *= txt.w;
+                op *= txt.w;
             }
             pt.ks = mat->ks * kx;
             pt.rs = mat->rs;
@@ -6113,11 +6190,17 @@ trace_point eval_point(const std::shared_ptr<instance>& ist, int sid, int eid,
                     eval_texture(mat->ks_txt, mat->ks_txt_info, pt.texcoord);
                 pt.ks *= {txt.x, txt.y, txt.z};
             }
-            pt.kt = mat->kt * kx;
+            pt.kr = mat->kr * kx;
+            if (mat->kr_txt) {
+                auto txt =
+                    eval_texture(mat->kr_txt, mat->kr_txt_info, pt.texcoord);
+                pt.kr *= {txt.x, txt.y, txt.z};
+            }
+            pt.ktr = mat->kt * kx;
             if (mat->kt_txt) {
                 auto txt =
                     eval_texture(mat->kt_txt, mat->kt_txt_info, pt.texcoord);
-                pt.kt *= {txt.x, txt.y, txt.z};
+                pt.ktr *= {txt.x, txt.y, txt.z};
             }
         } break;
         case material_type::metallic_roughness: {
@@ -6126,7 +6209,7 @@ trace_point eval_point(const std::shared_ptr<instance>& ist, int sid, int eid,
                 auto txt =
                     eval_texture(mat->kd_txt, mat->kd_txt_info, pt.texcoord);
                 kb *= {txt.x, txt.y, txt.z};
-                pt.op *= txt.w;
+                op *= txt.w;
             }
             auto km = mat->ks.x;
             pt.rs = mat->rs;
@@ -6145,7 +6228,7 @@ trace_point eval_point(const std::shared_ptr<instance>& ist, int sid, int eid,
                 auto txt =
                     eval_texture(mat->kd_txt, mat->kd_txt_info, pt.texcoord);
                 pt.kd *= {txt.x, txt.y, txt.z};
-                pt.op *= txt.w;
+                op *= txt.w;
             }
             pt.ks = mat->ks * kx;
             pt.rs = mat->rs;
@@ -6156,27 +6239,36 @@ trace_point eval_point(const std::shared_ptr<instance>& ist, int sid, int eid,
                 pt.rs *= txt.w;
             }
             pt.rs = 1 - pt.rs;  // glossiness -> roughnes
-            pt.kt = mat->kt * kx;
+            pt.kr = mat->kr * kx;
+            if (mat->kr_txt) {
+                auto txt =
+                    eval_texture(mat->kr_txt, mat->kr_txt_info, pt.texcoord);
+                pt.kr *= {txt.x, txt.y, txt.z};
+            }
+            pt.ktr = mat->kt * kx;
             if (mat->kt_txt) {
                 auto txt =
                     eval_texture(mat->kt_txt, mat->kt_txt_info, pt.texcoord);
-                pt.kt *= {txt.x, txt.y, txt.z};
+                pt.ktr *= {txt.x, txt.y, txt.z};
             }
         } break;
     }
 
     // set up final values
-    pt.ke *= pt.op;
-    pt.kd *= pt.op;
+    pt.ke *= op;
+    pt.kd *= op;
     if (pt.ks != zero3f && pt.rs < 0.9999f) {
-        pt.ks *= pt.op;
+        pt.ks *= op;
+        pt.ksg *= op;
         pt.rs = pt.rs * pt.rs;
         pt.rs = clamp(pt.rs, 0.02f * 0.02f, 1.0f);
     } else {
         pt.ks = zero3f;
         pt.rs = 0;
     }
-    if (pt.kt == zero3f) pt.kt = vec3f{1 - pt.op};
+    pt.kr *= op;
+    pt.ktr *= op;
+    pt.kto = {1.0f - op, 1.0f - op, 1.0f - op};
 
     // done
     return pt;
@@ -6187,7 +6279,8 @@ float weight_light(
     const trace_lights& lights, const trace_point& lpt, const trace_point& pt) {
     if (lpt.shp) {
         auto dist = length(lpt.pos - pt.pos);
-        auto area = lights.shape_areas.at(lpt.shp);
+        auto area =
+            sample_distribution_weightsum(lights.shape_distribs.at(lpt.shp));
         if (!lpt.shp->triangles.empty()) {
             return area * abs(dot(lpt.norm, normalize(lpt.pos - pt.pos))) /
                    (dist * dist);
@@ -6197,8 +6290,11 @@ float weight_light(
         } else if (!lpt.shp->points.empty()) {
             return area / (dist * dist);
         }
+    } else if (lpt.env) {
+        return 4 * pif;
+    } else {
+        throw std::runtime_error("should not have gotten here");
     }
-    if (lpt.env) { return 4 * pif; }
     return 0;
 }
 
@@ -6213,24 +6309,22 @@ trace_point sample_light(const trace_lights& lights, const trace_light& lgt,
     const trace_point& pt, float rel, const vec2f& ruv) {
     if (lgt.ist) {
         auto shp = lgt.ist->shp->shapes.at(lgt.sid);
-        auto& cdf = lights.shape_cdfs.at(shp);
+        auto& dst = lights.shape_distribs.at(shp);
         auto eid = 0;
         auto euv = zero2f;
         if (!shp->triangles.empty()) {
-            std::tie(eid, euv) = sample_triangles(cdf, rel, ruv);
+            std::tie(eid, euv) = sample_triangles(dst, rel, ruv);
         } else if (!shp->lines.empty()) {
-            std::tie(eid, (float&)euv) = sample_lines(cdf, rel, ruv.x);
+            std::tie(eid, euv.x) = sample_lines(dst, rel, ruv.x);
         } else if (!shp->lines.empty()) {
-            eid = sample_points(cdf, rel);
+            eid = sample_points(dst, rel);
         }
-        return eval_point(lgt.ist, lgt.sid, eid, euv, zero3f);
-    }
-    if (lgt.env) {
-        auto z = -1 + 2 * ruv.y;
-        auto rr = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
-        auto phi = 2 * pif * ruv.x;
-        auto wo = vec3f{cos(phi) * rr, z, sin(phi) * rr};
-        return eval_point(lgt.env, wo);
+        return eval_trace_point(lgt.ist, lgt.sid, eid, euv);
+    } else if (lgt.env) {
+        // BUG: this is not uniform sampling
+        return eval_trace_point(lgt.env, ruv);
+    } else {
+        throw std::runtime_error("should not have gotten here");
     }
     return {};
 }
@@ -6238,8 +6332,8 @@ trace_point sample_light(const trace_lights& lights, const trace_light& lgt,
 // Picks a point on a light.
 trace_point sample_lights(const trace_lights& lights, const trace_point& pt,
     float rnl, float rne, const vec2f& ruv) {
-    auto& lgt = lights.lights.at(
-        clamp((int)(rnl * lights.lights.size()), 0, (int)lights.lights.size()));
+    auto lidx = sample_distribution_discrete(lights.light_distrib, rnl);
+    auto& lgt = lights.lights.at(lidx);
     return sample_light(lights, lgt, pt, rne, ruv);
 }
 
@@ -6250,9 +6344,10 @@ trace_point intersect_scene(const std::shared_ptr<scene>& scn,
     auto euv = zero2f;
     auto ray_t = 0.0f;
     if (intersect_bvh(bvh, ray, false, ray_t, iid, sid, eid, euv)) {
-        return eval_point(scn->instances[iid], sid, eid, euv, -ray.d);
+        return eval_trace_point(scn->instances[iid], sid, eid, euv);
     } else if (!scn->environments.empty()) {
-        return eval_point(scn->environments[0], -ray.d);
+        return eval_trace_point(
+            scn->environments[0], eval_uv(scn->environments[0], ray.d));
     } else {
         return {};
     }
@@ -6272,7 +6367,7 @@ vec3f eval_transmission(const std::shared_ptr<scene>& scn,
             auto ray = make_segment(cpt.pos, lpt.pos);
             cpt = intersect_scene(scn, bvh, ray);
             if (!cpt.shp) break;
-            weight *= cpt.kt;
+            weight *= cpt.ktr + cpt.kto;
             if (weight == zero3f) break;
         }
         return weight;
@@ -6295,7 +6390,7 @@ vec3f trace_path(const std::shared_ptr<scene>& scn,
 
     // emission
     auto l = eval_emission(pt, wo);
-    if (!pt.has_brdf() || lights.empty()) return l;
+    if (eval_brdf_albedo(pt) == zero3f || lights.empty()) return l;
 
     // trace path
     auto weight = vec3f{1, 1, 1};
@@ -6304,13 +6399,18 @@ vec3f trace_path(const std::shared_ptr<scene>& scn,
         // emission
         if (emission) l += weight * eval_emission(pt, wo);
 
+        // early exit
+        if (eval_brdf_albedo(pt) == zero3f) break;
+
         // direct – light
         auto rll = sample_next1f(pxl, params.rng, params.nsamples);
         auto rle = sample_next1f(pxl, params.rng, params.nsamples);
         auto rluv = sample_next2f(pxl, params.rng, params.nsamples);
-        auto& lgt = lights.lights[(int)(rll * lights.lights.size())];
+        auto& lgt = lights.lights[sample_distribution_discrete(
+            lights.light_distrib, rll)];
         auto lpt = sample_light(lights, lgt, pt, rle, rluv);
-        auto lw = weight_light(lights, lpt, pt) * (float)lights.size();
+        auto lw = weight_light(lights, lpt, pt) *
+                  sample_distribution_weightsum(lights.light_distrib);
         auto lwi = normalize(lpt.pos - pt.pos);
         auto lke = eval_emission(lpt, -lwi);
         auto lbc = eval_brdfcos(pt, wo, lwi);
@@ -6332,12 +6432,12 @@ vec3f trace_path(const std::shared_ptr<scene>& scn,
         auto bbc = eval_brdfcos(pt, wo, bwi, bdelta);
         auto bld = bke * bbc * bw;
         if (bld != zero3f) {
+            // TODO: possible BUG; check for light distribution weight here
             l += weight * bld * weight_mis(bw, weight_light(lights, bpt, pt));
         }
 
         // skip recursion if path ends
         if (bounce == params.max_depth - 1) break;
-        if (!bpt.has_brdf()) break;
 
         // continue path
         weight *= eval_brdfcos(pt, wo, bwi) * weight_brdfcos(pt, wo, bwi);
@@ -6345,7 +6445,8 @@ vec3f trace_path(const std::shared_ptr<scene>& scn,
 
         // roussian roulette
         if (bounce > 2) {
-            auto rrprob = 1.0f - min(max_element_value(pt.rho()), 0.95f);
+            auto rrprob =
+                1.0f - min(max_element_value(eval_brdf_albedo(pt)), 0.95f);
             if (sample_next1f(pxl, params.rng, params.nsamples) < rrprob) break;
             weight *= 1 / (1 - rrprob);
         }
@@ -6367,9 +6468,8 @@ vec3f trace_path_nomis(const std::shared_ptr<scene>& scn,
     // emission
     auto pt = pt_;
     auto wo = wo_;
-
     auto l = eval_emission(pt, wo);
-    if (!pt.has_brdf() || lights.empty()) return l;
+    if (eval_brdf_albedo(pt) == zero3f || lights.empty()) return l;
 
     // trace path
     auto weight = vec3f{1, 1, 1};
@@ -6378,15 +6478,20 @@ vec3f trace_path_nomis(const std::shared_ptr<scene>& scn,
         // emission
         if (emission) l += weight * eval_emission(pt, wo);
 
+        // early exit
+        if (eval_brdf_albedo(pt) == zero3f) break;
+
         // direct
         auto rll = sample_next1f(pxl, params.rng, params.nsamples);
         auto rle = sample_next1f(pxl, params.rng, params.nsamples);
         auto rluv = sample_next2f(pxl, params.rng, params.nsamples);
-        auto& lgt = lights.lights[(int)(rll * lights.lights.size())];
+        auto& lgt = lights.lights[sample_distribution_discrete(
+            lights.light_distrib, rll)];
         auto lpt = sample_light(lights, lgt, pt, rle, rluv);
         auto lwi = normalize(lpt.pos - pt.pos);
         auto ld = eval_emission(lpt, -lwi) * eval_brdfcos(pt, wo, lwi) *
-                  weight_light(lights, lpt, pt) * (float)lights.size();
+                  weight_light(lights, lpt, pt) *
+                  sample_distribution_weightsum(lights.light_distrib);
         if (ld != zero3f) {
             l += weight * ld * eval_transmission(scn, bvh, pt, lpt, params);
         }
@@ -6396,7 +6501,8 @@ vec3f trace_path_nomis(const std::shared_ptr<scene>& scn,
 
         // roussian roulette
         if (bounce > 2) {
-            auto rrprob = 1.0f - min(max_element_value(pt.rho()), 0.95f);
+            auto rrprob =
+                1.0f - min(max_element_value(eval_brdf_albedo(pt)), 0.95f);
             if (sample_next1f(pxl, params.rng, params.nsamples) < rrprob) break;
             weight *= 1 / (1 - rrprob);
         }
@@ -6413,7 +6519,6 @@ vec3f trace_path_nomis(const std::shared_ptr<scene>& scn,
 
         auto bpt = intersect_scene(scn, bvh, make_ray(pt.pos, bwi));
         emission = false;
-        if (!bpt.has_brdf()) break;
 
         // continue path
         pt = bpt;
@@ -6433,20 +6538,25 @@ vec3f trace_path_hack(const std::shared_ptr<scene>& scn,
 
     // emission
     auto l = eval_emission(pt, wo);
-    if (!pt.has_brdf() || lights.empty()) return l;
+    if (eval_brdf_albedo(pt) == zero3f || lights.empty()) return l;
 
     // trace path
     auto weight = vec3f{1, 1, 1};
     for (auto bounce = 0; bounce < params.max_depth; bounce++) {
+        // early exit
+        if (eval_brdf_albedo(pt) == zero3f) break;
+
         // direct
         auto rll = sample_next1f(pxl, params.rng, params.nsamples);
         auto rle = sample_next1f(pxl, params.rng, params.nsamples);
         auto rluv = sample_next2f(pxl, params.rng, params.nsamples);
-        auto& lgt = lights.lights[(int)(rll * lights.lights.size())];
+        auto& lgt = lights.lights[sample_distribution_discrete(
+            lights.light_distrib, rll)];
         auto lpt = sample_light(lights, lgt, pt, rle, rluv);
         auto lwi = normalize(lpt.pos - pt.pos);
         auto ld = eval_emission(lpt, -lwi) * eval_brdfcos(pt, wo, -lwi) *
-                  weight_light(lights, lpt, pt) * (float)lights.size();
+                  weight_light(lights, lpt, pt) *
+                  sample_distribution_weightsum(lights.light_distrib);
         if (ld != zero3f) {
             l += weight * ld * eval_transmission(scn, bvh, pt, lpt, params);
         }
@@ -6456,7 +6566,8 @@ vec3f trace_path_hack(const std::shared_ptr<scene>& scn,
 
         // roussian roulette
         if (bounce > 2) {
-            auto rrprob = 1.0f - min(max_element_value(pt.rho()), 0.95f);
+            auto rrprob =
+                1.0f - min(max_element_value(eval_brdf_albedo(pt)), 0.95f);
             if (sample_next1f(pxl, params.rng, params.nsamples) < rrprob) break;
             weight *= 1 / (1 - rrprob);
         }
@@ -6472,7 +6583,6 @@ vec3f trace_path_hack(const std::shared_ptr<scene>& scn,
         if (weight == zero3f) break;
 
         auto bpt = intersect_scene(scn, bvh, make_ray(pt.pos, bwi));
-        if (!bpt.has_brdf()) break;
 
         // continue path
         pt = bpt;
@@ -6489,10 +6599,10 @@ vec3f trace_direct(const std::shared_ptr<scene>& scn,
     const trace_params& params) {
     // emission
     auto l = eval_emission(pt, wo);
-    if (!pt.has_brdf()) return l;
+    if (eval_brdf_albedo(pt) == zero3f || lights.empty()) return l;
 
     // ambient
-    l += params.ambient * pt.rho();
+    l += params.ambient * eval_brdf_albedo(pt);
 
     // direct
     for (auto& lgt : lights.lights) {
@@ -6518,9 +6628,9 @@ vec3f trace_direct(const std::shared_ptr<scene>& scn,
     }
 
     // opacity
-    if (pt.kt != zero3f) {
+    if (pt.ktr + pt.kto != zero3f) {
         auto opt = intersect_scene(scn, bvh, make_ray(pt.pos, -wo));
-        l += pt.kt *
+        l += (pt.ktr + pt.kto) *
              trace_direct(scn, bvh, lights, opt, wo, bounce + 1, pxl, params);
     }
 
@@ -6543,16 +6653,16 @@ vec3f trace_eyelight(const std::shared_ptr<scene>& scn,
     const trace_params& params) {
     // emission
     auto l = eval_emission(pt, wo);
-    if (!pt.has_brdf()) return l;
+    if (eval_brdf_albedo(pt) == zero3f) return l;
 
     // brdf*light
     l += eval_brdfcos(pt, wo, wo) * pif;
 
     // opacity
     if (bounce >= params.max_depth) return l;
-    if (pt.kt != zero3f) {
+    if (pt.ktr + pt.kto != zero3f) {
         auto opt = intersect_scene(scn, bvh, make_ray(pt.pos, -wo));
-        l += pt.kt *
+        l += (pt.ktr + pt.kto) *
              trace_eyelight(scn, bvh, lights, opt, wo, bounce + 1, pxl, params);
     }
 
@@ -6581,7 +6691,7 @@ vec3f trace_debug_albedo(const std::shared_ptr<scene>& scn,
     const std::shared_ptr<bvh_tree>& bvh, const trace_lights& lights,
     const trace_point& pt, const vec3f& wo, trace_pixel& pxl,
     const trace_params& params) {
-    return pt.rho();
+    return eval_brdf_albedo(pt);
 }
 
 // Debug previewing.
@@ -6834,19 +6944,8 @@ trace_lights make_trace_lights(const std::shared_ptr<scene>& scn) {
             lgt.ist = ist;
             lgt.sid = sid;
             lights.lights.push_back(lgt);
-            if (!contains(lights.shape_cdfs, shp)) {
-                if (!shp->points.empty()) {
-                    lights.shape_cdfs[shp] =
-                        sample_points_cdf(shp->points.size());
-                } else if (!shp->lines.empty()) {
-                    lights.shape_cdfs[shp] =
-                        sample_lines_cdf(shp->lines, shp->pos);
-                } else if (!shp->triangles.empty()) {
-                    lights.shape_cdfs[shp] =
-                        sample_triangles_cdf(shp->triangles, shp->pos);
-                }
-                lights.shape_areas[shp] = lights.shape_cdfs[shp].back();
-            }
+            if (!contains(lights.shape_distribs, shp))
+                lights.shape_distribs[shp] = make_shape_distribution(shp);
         }
     }
 
@@ -6856,6 +6955,9 @@ trace_lights make_trace_lights(const std::shared_ptr<scene>& scn) {
         lgt.env = env;
         lights.lights.push_back(lgt);
     }
+
+    lights.light_distrib =
+        make_distribution(lights.lights.size(), [](auto) { return 1; });
 
     return lights;
 }
@@ -10602,10 +10704,7 @@ void update_proc_elem(const std::shared_ptr<scene>& scn,
     const std::shared_ptr<proc_environment>& penv) {
     if (penv->name == "") throw std::runtime_error("cannot use empty name");
     env->name = penv->name;
-    env->frame = identity_frame3f;
-    if (penv->rotation) {
-        env->frame = rotation_frame(vec3f{0, 1, 0}, penv->rotation);
-    }
+    env->frame = penv->frame * rotation_frame(vec3f{0, 1, 0}, penv->rotation);
     env->ke = penv->emission * penv->color;
     env->ke_txt = find_named_elem(scn->textures, penv->texture);
 }
@@ -11146,8 +11245,6 @@ std::vector<std::shared_ptr<proc_scene>>& proc_scene_presets() {
         }
         if (lights == "envlights") {
             params->environments.push_back(make_environment_preset("sky1"));
-            params->environments.back()->frame =
-                lookat_frame(pos[1], pos[1] + vec3f{0, 0, 1}, {0, 1, 0}, true);
             params->textures.push_back(make_texture_preset("sky1"));
         }
         if (!animations.empty() || nodes) {
@@ -11513,8 +11610,6 @@ std::vector<std::shared_ptr<proc_split_scene>>& proc_split_scene_presets() {
             }
             if (lights == "envlights") {
                 view->environments.push_back(make_environment_preset("sky1"));
-                view->environments.back()->frame = lookat_frame(
-                    pos[1], pos[1] + vec3f{0, 0, 1}, {0, 1, 0}, true);
                 view->textures.push_back(make_texture_preset("sky1"));
             }
             views.push_back(view);

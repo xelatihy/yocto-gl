@@ -3,11 +3,41 @@
 This file contains notes on future improvements of Yocto.
 Please consider this to be just development notes and not any real planning.
 
-## Next
+## Trace
 
-- shared_ptr
-- gltf shared prt
-- selection for hilighting
+- envlight parametrization
+    - bad weight for envmap
+    - bad envmap rendering
+- fast distribution sampling
+- fresnel in brdf
+    - rescale fresnel with roughness
+    - fresnel in coefficients
+    - fresnel in weights
+- add shape methods
+    - surface/curve/point
+    - quads/points/triangles etc
+- try hard to eliminate deltas
+    - I do not think they actually work right
+    - put stringent epsilons
+- path tracer with mis
+    - possible bug in light weight
+
+## Refactor
+
+- shape with type
+- make make_basis
+- facet_shape and friends are not virtual in API
+- span
+- material in shape_group
+- cleanup
+    - make_vec
+    - generic transform with make_vec and project_homogeneous
+
+## Internal
+
+- move away from special functions in BVH
+    - always use sort
+    - provide a sort buffer
 
 ## Scene Import
 
@@ -67,6 +97,7 @@ Please consider this to be just development notes and not any real planning.
 
 - consider constexpr
 - consider types without constructors
+- consider removing const refs
 
 ## Scenes
 
