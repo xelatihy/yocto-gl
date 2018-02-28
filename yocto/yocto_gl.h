@@ -1999,17 +1999,44 @@ namespace ygl {
 /// @defgroup frame Rigid-body frames
 /// @{
 
-/// Generic frame of N elements. This is used only to define template
-/// specializations for small fixed sized frames.
-template <typename T, int N>
-struct frame;
-
 /// Rigid transforms stored as a column-major affine matrix.
 /// In memory, this representation is equivalent to storing an NxN rotation
 /// followed by a Nx1 translation. Viewed this way, the representation allows
 /// also to retrive the axis of the coordinate frame as the first N columns and
 /// the translation as the (N+1)-th column. Colums access via operator[].
 /// Access rotation and position with pos() and rot().
+template <typename T, int N>
+struct frame;
+
+/// Rigid transforms stored as a column-major affine matrix.
+/// Specialization for 2 dimensional frames.
+template <typename T>
+struct frame<T, 2> {
+    /// Default constructor. Initializes to the identity frame.
+    frame() : x{1, 0}, y{0, 1}, o{0, 0} {}
+    /// Basic and origin constructor. Equavalent to columns of affine matrix.
+    frame(const vec<T, 2>& x, const vec<T, 2>& y,
+          const vec<T, 2>& o)
+            : x(x), y(y), o(o) {}
+    /// Rotation and traslation constructor.
+    frame(const mat<T, 2>& m, const vec<T, 2>& t)
+            : x(m.x), y(m.y), o(t) {}
+
+    /// Element/column access
+    vec<T, 2>& operator[](int i) { return (&x)[i]; }
+    /// Element/column access
+    const vec<T, 2>& operator[](int i) const { return (&x)[i]; }
+
+    /// Axes and origin data
+    vec<T, 2> x;
+    /// Axes and origin data
+    vec<T, 2> y;
+    /// Axes and origin data
+    vec<T, 2> o;
+};
+
+/// Rigid transforms stored as a column-major affine matrix.
+/// Specialization for 3 dimensional frames.
 template <typename T>
 struct frame<T, 3> {
     /// Default constructor. Initializes to the identity frame.
@@ -2037,9 +2064,14 @@ struct frame<T, 3> {
     vec<T, 3> o;
 };
 
+/// 2-dimensional float frame.
+using frame2f = frame<float, 2>;
 /// 3-dimensional float frame.
 using frame3f = frame<float, 3>;
 
+/// Indentity frame.
+const auto identity_frame2f =
+        frame2f{{1, 0}, {0, 1}, {0, 0}};
 /// Indentity frame.
 const auto identity_frame3f =
     frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
@@ -2101,6 +2133,18 @@ inline frame<T, 3> make_frame_fromzx(
     auto x = orthonormalize(x_, z);
     auto y = normalize(cross(z, x));
     return {x, y, z, o};
+}
+
+/// Frame to matrix conversion.
+template <typename T>
+inline mat<T, 3> frame_to_mat(const frame<T, 2>& a) {
+    return {{a.x.x, a.x.y, 0}, {a.y.x, a.y.y, 0},
+            {a.o.x, a.o.y, 1}};
+}
+/// Matrix to frame conversion.
+template <typename T>
+inline frame<T, 2> mat_to_frame(const mat<T, 3>& a) {
+    return {{a.x.x, a.x.y}, {a.y.x, a.y.y}, {a.z.x, a.z.y}};
 }
 
 /// Frame to matrix conversion.
@@ -2315,7 +2359,7 @@ inline quat<T, 4> conjugate(const quat<T, 4>& v) {
 /// Quaternion inverse.
 template <typename T>
 inline quat<T, 4> inverse(const quat<T, 4>& v) {
-    return conjugate(v) / dot(vec<T, 4>(v), vec<T, 4>(v));
+    return conjugate(v) / dot(vec<T, 4>{v}, vec<T, 4>{v});
 }
 
 /// Quaternion normalization.
@@ -2329,8 +2373,8 @@ inline quat<T, 4> normalize(const quat<T, 4>& v) {
 /// Quaternion spherical linear interpolation.
 template <typename T, typename T1>
 inline quat<T, 4> slerp(const quat<T, 4>& a, const quat<T, 4>& b, T1 t) {
-    return (quat<T, 4>)slerp(vec<T, 4>(a),
-        dot(vec<T, 4>(a), vec<T, 4>(b)) < 0 ? -vec<T, 4>(b) : vec<T, 4>(b), t);
+    return quat<T, 4>{slerp(vec<T, 4>{a},
+        dot(vec<T, 4>{a}, vec<T, 4>{b}) < 0 ? -vec<T, 4>{b} : vec<T, 4>{b}, t)};
 }
 
 /// Stream write.
@@ -2670,9 +2714,9 @@ namespace ygl {
 /// Transforms a point by a matrix.
 template <typename T>
 inline vec<T, 2> transform_point(const mat<T, 3>& a, const vec<T, 2>& b) {
-    auto vb = vec<T, 2>{b.x, b.y, 1};
+    auto vb = vec<T, 3>{b.x, b.y, 1};
     auto tvb = a * vb;
-    return vec<T, 2>{tvb.x, tvb.y} / tvb.w;
+    return vec<T, 2>{tvb.x, tvb.y} / tvb.z;
 }
 /// Transforms a point by a matrix.
 template <typename T>
@@ -2684,7 +2728,7 @@ inline vec<T, 3> transform_point(const mat<T, 4>& a, const vec<T, 3>& b) {
 /// Transforms a vector by a matrix.
 template <typename T>
 inline vec<T, 2> transform_vector(const mat<T, 3>& a, const vec<T, 2>& b) {
-    auto vb = vec<T, 2>{b.x, b.y, 0};
+    auto vb = vec<T, 3>{b.x, b.y, 0};
     auto tvb = a * vb;
     return vec<T, 2>{tvb.x, tvb.y} / tvb.z;
 }
@@ -2743,7 +2787,7 @@ inline vec<T, N> transform_direction(const frame<T, N>& a, const vec<T, N>& b) {
 /// Transforms a frame by a frame, i.e. an affine transform.
 template <typename T, int N>
 inline frame<T, N> transform_frame(const frame<T, N>& a, const frame<T, N>& b) {
-    return {a.rot() * b.rot(), a.rot() * b.pos() + a.pos()};
+    return {frame_rot(a) * frame_rot(b), frame_rot(a) * frame_pos(b) + frame_pos(a)};
 }
 /// Transforms a ray by a frame, i.e. an affine transform.
 template <typename T, int N>
@@ -2864,6 +2908,11 @@ inline frame<T, 3> rotation_frame(const quat<T, 4>& v) {
         {(v.z * v.x + v.y * v.w) * 2, (v.y * v.z - v.x * v.w) * 2,
             v.w * v.w - v.x * v.x - v.y * v.y + v.z * v.z},
         {0, 0, 0}};
+}
+/// Rotation affine transform.
+template <typename T, typename T1>
+inline frame<T, 3> rotation_frame(const mat<T, 3>& rot) {
+        return {rot.x, rot.y, rot.z, {0,0,0}};
 }
 /// OpenGL lookat frame. Z-axis can be inverted with inv_xz.
 template <typename T>
@@ -2988,27 +3037,25 @@ inline quat<T, 4> rotation_quat(const mat<T, 3>& m_) {
 /// Decompose an affine matrix into translation, rotation, scale.
 /// Assumes there is no shear.
 template <typename T>
-inline std::tuple<vec<T, 3>, mat<T, 3>, vec<T, 3>> decompose_frame(
-    const frame<T, 3>& m) {
-    return {m.o, {normalize(m.x), normalize(m.y), normalize(m.z)},
-        {length(m.x), length(m.y), length(m.z)}};
+inline void decompose_frame(const frame<T, 3>& m, vec<T, 3>& pos, mat<T, 3>& rot, vec<T, 3>& scale) {
+    pos = m.o;
+        rot = {normalize(m.x), normalize(m.y), normalize(m.z)};
+        scale = {length(m.x), length(m.y), length(m.z)};
 }
 
 /// Decompose an affine matrix into translation, rotation, scale.
 /// Assumes there is no shear and the matrix is affine.
 template <typename T>
 inline std::tuple<vec<T, 3>, quat<T, 4>, vec<T, 3>> decompose_frame(
-    const frame<T, 3>& m) {
-    auto pos = vec<T, 3>();
-    auto rot = mat<T, 3>();
-    auto scl = vec<T, 3>();
-    tie(pos, rot, scl) = decompose_frame(m);
-    return {pos, rotation_quat(rot), scl};
+    const frame<T, 3>& m, vec<T, 3>& pos, quat<T, 4>& rot, vec<T, 3>& scale) {
+    auto rotm = mat<T, 3>();
+    decompose_frame(m, pos, rotm, scale);
+    rot = rotation_quat(rotm);
 }
 /// Decompose an affine matrix into translation, rotation, scale.
 /// Assumes there is no shear and the matrix is affine.
 template <typename T>
-inline frame<T, 4> compose_frame(const vec<T, 3>& translation,
+inline frame<T, 3> compose_frame(const vec<T, 3>& translation,
     const mat<T, 3>& rotation, const vec<T, 3>& scale) {
     return translation_frame(translation) * scaling_frame(scale) *
            rotation_frame(rotation);
@@ -3016,7 +3063,7 @@ inline frame<T, 4> compose_frame(const vec<T, 3>& translation,
 /// Decompose an affine matrix into translation, rotation, scale.
 /// Assumes there is no shear and the matrix is affine.
 template <typename T>
-inline frame<T, 4> compose_frame(const vec<T, 3>& translation,
+inline frame<T, 3> compose_frame(const vec<T, 3>& translation,
     const quat<T, 4>& rotation, const vec<T, 3>& scale) {
     return translation_frame(translation) * scaling_frame(scale) *
            rotation_frame(rotation);
@@ -3221,7 +3268,7 @@ inline void rng_shuffle(rng_pcg32& rng, T* vals, int num) {
     // Draw uniformly distributed permutation and permute the
     // given STL container
     for (auto i = num - 1; i > 0; --i)
-        swap(vals[i], vals[next_rand1i(rng, (uint32_t)i)]);
+        std::swap(vals[i], vals[next_rand1i(rng, (uint32_t)i)]);
 }
 
 /// Random shuffle of a sequence.
@@ -3603,7 +3650,7 @@ inline V get_value(const std::vector<std::pair<K, V>>& kvs, const K& k) {
 /// Wrapper for std::find().
 template <typename T>
 inline int find(const std::vector<T>& v, const T& vv) {
-    auto pos = find(v.begin(), v.end(), vv);
+    auto pos = std::find(v.begin(), v.end(), vv);
     if (pos == v.end()) return -1;
     return pos = v.begin();
 }
@@ -3629,7 +3676,7 @@ inline int lower_bound(const std::vector<T>& v, const T& vv) {
 /// Checks if a containers contains a value.
 template <typename T>
 inline bool contains(const std::vector<T>& v, const T& vv) {
-    return find(v.begin(), v.end(), vv) != v.end();
+    return std::find(v.begin(), v.end(), vv) != v.end();
 }
 /// Checks if a containers contains a value.
 template <typename K, typename V>
@@ -3691,7 +3738,7 @@ template <typename T,
 inline std::istream& operator>>(std::istream& is, T& a) {
     auto str = std::string();
     is >> str;
-    a = get_val(enum_names(a), str);
+    a = get_value(enum_names(a), str);
     return is;
 }
 
@@ -3948,7 +3995,7 @@ inline T interpolate_bezier(
 template <typename T, typename T1>
 inline T interpolate_bezier(const std::vector<T>& vals, const vec4i& b, T1 u) {
     if (vals.empty()) return T();
-    return eval_bezier(vals[b.x], vals[b.y], vals[b.z], vals[b.w], u);
+    return interpolate_bezier(vals[b.x], vals[b.y], vals[b.z], vals[b.w], u);
 }
 /// Computes the derivative of a cubic Bezier segment parametrized by u.
 template <typename T, typename T1>
