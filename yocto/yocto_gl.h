@@ -1440,11 +1440,13 @@ template <typename T, typename T1>
 inline vec<T, 2> clamp(const vec<T, 2>& x, T1 min, T1 max) {
     return {clamp(x.x, min, max), clamp(x.y, min, max)};
 }
+
 /// Component-wise clamp.
 template <typename T, typename T1>
 inline vec<T, 3> clamp(const vec<T, 3>& x, T1 min, T1 max) {
     return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max)};
 }
+
 /// Component-wise clamp.
 template <typename T, typename T1>
 inline vec<T, 4> clamp(const vec<T, 4>& x, T1 min, T1 max) {
@@ -1472,6 +1474,7 @@ inline int min_element(const vec<T, N>& a) {
     }
     return pos;
 }
+
 /// Value of minimum element.
 template <typename T, int N>
 inline T min_element_value(const vec<T, N>& a) {
@@ -1491,6 +1494,7 @@ inline int max_element(const vec<T, N>& a) {
     }
     return pos;
 }
+
 /// Value of maximum element.
 template <typename T, int N>
 inline T max_element_value(const vec<T, N>& a) {
@@ -1502,10 +1506,47 @@ inline vec4b float_to_byte(const vec4f& a) {
     return {float_to_byte(a.x), float_to_byte(a.y), float_to_byte(a.z),
         float_to_byte(a.w)};
 }
+
 /// Element-wise byte to float conversion.
 inline vec4f byte_to_float(const vec4b& a) {
     return {byte_to_float(a.x), byte_to_float(a.y), byte_to_float(a.z),
         byte_to_float(a.w)};
+}
+
+/// Cartesian to spherical coordinates with theta aligned along z.
+/// Spherical coordinates are phi, theta, r.
+template <typename T>
+inline vec<T, 3> cartesian_to_spherical(const vec<T, 3>& p) {
+    auto r = length(p);
+    if (!r) return {0, 0, 0};
+    auto r2 = length(vec<T, 2>{p.x, p.y});
+    return {atan2(p.y / r2, p.x / r2), acos(clamp(p.z / r, -1.0f, 1.0f)), r};
+}
+
+/// Spherical to cartesian coordinates with theta aligned along z.
+/// Spherical coordinates are phi, theta, r.
+template <typename T>
+inline vec<T, 3> spherical_to_cartesian(const vec<T, 3>& s) {
+    return {
+        cos(s.x) * sin(s.y) * s.z, sin(s.x) * sin(s.y) * s.z, cos(s.y) * s.z};
+}
+
+/// Cartesian to spherical coordinates with theta aligned along y.
+/// Spherical coordinates are phi, theta, r.
+template <typename T>
+inline vec<T, 3> cartesian_to_sphericaly(const vec<T, 3>& p) {
+    auto r = length(p);
+    if (!r) return {0, 0, 0};
+    auto r2 = length(vec<T, 2>{p.x, p.z});
+    return {atan2(p.z / r2, p.x / r2), acos(clamp(p.y / r, -1.0f, 1.0f)), r};
+}
+
+/// Spherical to cartesian coordinates with theta aligned along y.
+/// Spherical coordinates are phi, theta, r.
+template <typename T>
+inline vec<T, 3> sphericaly_to_cartesian(const vec<T, 3>& s) {
+    return {
+        cos(s.x) * sin(s.y) * s.z, cos(s.y) * s.z, sin(s.x) * sin(s.y) * s.z};
 }
 
 /// Stream write.
@@ -1517,6 +1558,7 @@ inline std::ostream& operator<<(std::ostream& os, const vec<T, N>& a) {
     }
     return os;
 }
+
 /// Stream read.
 template <typename T, int N>
 inline std::istream& operator>>(std::istream& is, vec<T, N>& a) {
@@ -2015,12 +2057,10 @@ struct frame<T, 2> {
     /// Default constructor. Initializes to the identity frame.
     frame() : x{1, 0}, y{0, 1}, o{0, 0} {}
     /// Basic and origin constructor. Equavalent to columns of affine matrix.
-    frame(const vec<T, 2>& x, const vec<T, 2>& y,
-          const vec<T, 2>& o)
-            : x(x), y(y), o(o) {}
+    frame(const vec<T, 2>& x, const vec<T, 2>& y, const vec<T, 2>& o)
+        : x(x), y(y), o(o) {}
     /// Rotation and traslation constructor.
-    frame(const mat<T, 2>& m, const vec<T, 2>& t)
-            : x(m.x), y(m.y), o(t) {}
+    frame(const mat<T, 2>& m, const vec<T, 2>& t) : x(m.x), y(m.y), o(t) {}
 
     /// Element/column access
     vec<T, 2>& operator[](int i) { return (&x)[i]; }
@@ -2070,8 +2110,7 @@ using frame2f = frame<float, 2>;
 using frame3f = frame<float, 3>;
 
 /// Indentity frame.
-const auto identity_frame2f =
-        frame2f{{1, 0}, {0, 1}, {0, 0}};
+const auto identity_frame2f = frame2f{{1, 0}, {0, 1}, {0, 0}};
 /// Indentity frame.
 const auto identity_frame3f =
     frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
@@ -2117,29 +2156,43 @@ inline bool empty(frame<T, N>& a) {
     return false;
 }
 
-// Initializes a frame from origin and z.
+/// Initializes a basis from z.
 template <typename T>
-inline frame<T, 3> make_frame_fromz(const vec<T, 3>& o, const vec<T, 3>& z_) {
+inline mat<T, 3> make_basis_fromz(const vec<T, 3>& z_) {
     auto z = normalize(z_);
     auto x = normalize(orthogonal(z));
     auto y = normalize(cross(z, x));
-    return {x, y, z, o};
+    return {x, y, z};
 }
-// Initializes a frame3 from origin, z and x.
+
+/// Initializes a basis from z and x.
 template <typename T>
-inline frame<T, 3> make_frame_fromzx(
-    const vec<T, 3>& o, const vec<T, 3>& z_, const vec<T, 3>& x_) {
+inline mat<T, 3> make_basis_fromzx(const vec<T, 3>& z_, const vec<T, 3>& x_) {
     auto z = normalize(z_);
     auto x = orthonormalize(x_, z);
     auto y = normalize(cross(z, x));
-    return {x, y, z, o};
+    return {x, y, z};
+}
+
+/// Initializes a frame from origin and z.
+template <typename T>
+inline frame<T, 3> make_frame_fromz(const vec<T, 3>& o, const vec<T, 3>& z) {
+    auto m = make_basis_fromz(z);
+    return {m.x, m.y, m.z, o};
+}
+
+/// Initializes a frame3 from origin, z and x.
+template <typename T>
+inline frame<T, 3> make_frame_fromzx(
+    const vec<T, 3>& o, const vec<T, 3>& z, const vec<T, 3>& x) {
+    auto m = make_basis_fromzx(z, x);
+    return {m.x, m.y, m.z, o};
 }
 
 /// Frame to matrix conversion.
 template <typename T>
 inline mat<T, 3> frame_to_mat(const frame<T, 2>& a) {
-    return {{a.x.x, a.x.y, 0}, {a.y.x, a.y.y, 0},
-            {a.o.x, a.o.y, 1}};
+    return {{a.x.x, a.x.y, 0}, {a.y.x, a.y.y, 0}, {a.o.x, a.o.y, 1}};
 }
 /// Matrix to frame conversion.
 template <typename T>
@@ -2718,6 +2771,7 @@ inline vec<T, 2> transform_point(const mat<T, 3>& a, const vec<T, 2>& b) {
     auto tvb = a * vb;
     return vec<T, 2>{tvb.x, tvb.y} / tvb.z;
 }
+
 /// Transforms a point by a matrix.
 template <typename T>
 inline vec<T, 3> transform_point(const mat<T, 4>& a, const vec<T, 3>& b) {
@@ -2725,6 +2779,19 @@ inline vec<T, 3> transform_point(const mat<T, 4>& a, const vec<T, 3>& b) {
     auto tvb = a * vb;
     return vec<T, 3>{tvb.x, tvb.y, tvb.z} / tvb.w;
 }
+
+/// Transforms a point by a frame, i.e. an affine transform.
+template <typename T>
+inline vec<T, 2> transform_point(const frame<T, 2>& a, const vec<T, 2>& b) {
+    return a.x * b.x + a.y * b.y + a.o;
+}
+
+/// Transforms a point by a frame, i.e. an affine transform.
+template <typename T>
+inline vec<T, 3> transform_point(const frame<T, 3>& a, const vec<T, 3>& b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z + a.o;
+}
+
 /// Transforms a vector by a matrix.
 template <typename T>
 inline vec<T, 2> transform_vector(const mat<T, 3>& a, const vec<T, 2>& b) {
@@ -2732,6 +2799,13 @@ inline vec<T, 2> transform_vector(const mat<T, 3>& a, const vec<T, 2>& b) {
     auto tvb = a * vb;
     return vec<T, 2>{tvb.x, tvb.y} / tvb.z;
 }
+
+/// Transforms a vector by a matrix.
+template <typename T>
+inline vec<T, 3> transform_vector(const mat<T, 3>& a, const vec<T, 3>& b) {
+    return a * b;
+}
+
 /// Transforms a vector by a matrix.
 template <typename T>
 inline vec<T, 3> transform_vector(const mat<T, 4>& a, const vec<T, 3>& b) {
@@ -2739,70 +2813,40 @@ inline vec<T, 3> transform_vector(const mat<T, 4>& a, const vec<T, 3>& b) {
     auto tvb = a * vb;
     return vec<T, 3>{tvb.x, tvb.y, tvb.z};
 }
-/// Transforms a direction by a matrix.
-template <typename T, int N>
-inline vec<T, N> transform_direction(
-    const mat<T, N + 1>& a, const vec<T, N>& b) {
+
+/// Transforms a vector by a frame, i.e. an affine transform.
+template <typename T>
+inline vec<T, 2> transform_vector(const frame<T, 2>& a, const vec<T, 2>& b) {
+    return a.x * b.x + a.y * b.y;
+}
+
+/// Transforms a vector by a frame, i.e. an affine transform.
+template <typename T>
+inline vec<T, 3> transform_vector(const frame<T, 3>& a, const vec<T, 3>& b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+/// Transforms a direction by transforming a vector and then normalizing it.
+template <typename TT, typename T, int N>
+inline vec<T, N> transform_direction(const TT& a, const vec<T, N>& b) {
     return normalize(transform_vector(a, b));
 }
-/// Transforms a ray by a matrix, leaving the direction not normalized.
-template <typename T, int N>
-inline ray<T, N> transform_ray(const mat<T, N + 1>& a, const ray<T, N>& b) {
+
+/// Transforms a ray, leaving the direction not normalized.
+template <typename TT, typename T, int N>
+inline ray<T, N> transform_ray(const TT& a, const ray<T, N>& b) {
     return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
-/// transforms a bbox by a matrix
-template <typename T, int N>
-inline bbox<T, N> transform_bbox(const mat<T, N + 1>& a, const bbox<T, N>& b) {
+
+/// Transforms a bbox.
+template <typename TT, typename T, int N>
+inline bbox<T, N> transform_bbox(const TT& a, const bbox<T, N>& b) {
     auto corners = bbox_corners(b);
     auto xformed = bbox<T, N>();
     for (auto& corner : corners) xformed += transform_point(a, corner);
     return xformed;
 }
 
-/// Transforms a point by a frame, i.e. an affine transform.
-template <typename T>
-inline vec<T, 2> transform_point(const frame<T, 2>& a, const vec<T, 2>& b) {
-    return a.x * b.x + a.y * b.y + a.o;
-}
-/// Transforms a point by a frame, i.e. an affine transform.
-template <typename T>
-inline vec<T, 3> transform_point(const frame<T, 3>& a, const vec<T, 3>& b) {
-    return a.x * b.x + a.y * b.y + a.z * b.z + a.o;
-}
-/// Transforms a vector by a frame, i.e. an affine transform.
-template <typename T>
-inline vec<T, 2> transform_vector(const frame<T, 2>& a, const vec<T, 2>& b) {
-    return a.x * b.x + a.y * b.y;
-}
-/// Transforms a vector by a frame, i.e. an affine transform.
-template <typename T>
-inline vec<T, 3> transform_vector(const frame<T, 3>& a, const vec<T, 3>& b) {
-    return a.x * b.x + a.y * b.y + a.z * b.z;
-}
-/// Transforms a direction by a frame, i.e. an affine transform.
-template <typename T, int N>
-inline vec<T, N> transform_direction(const frame<T, N>& a, const vec<T, N>& b) {
-    return normalize(transform_vector(a, b));
-}
-/// Transforms a frame by a frame, i.e. an affine transform.
-template <typename T, int N>
-inline frame<T, N> transform_frame(const frame<T, N>& a, const frame<T, N>& b) {
-    return {frame_rot(a) * frame_rot(b), frame_rot(a) * frame_pos(b) + frame_pos(a)};
-}
-/// Transforms a ray by a frame, i.e. an affine transform.
-template <typename T, int N>
-inline ray<T, N> transform_ray(const frame<T, 3>& a, const ray<T, N>& b) {
-    return {
-        transform_point(a, b.o), transform_direction(a, b.d), b.tmin, b.tmax};
-}
-/// Transforms a bbox by a frame, i.e. an affine transform.
-template <typename T, int N>
-inline bbox<T, N> transform_bbox(const frame<T, N>& a, const bbox<T, N>& b) {
-    auto corners = bbox_corners(b);
-    auto xformed = bbox<T, N>();
-    for (auto& corner : corners) xformed += transform_point(a, corner);
-    return xformed;
-}
 /// Transforms a bbox by a frame, i.e. an affine transform.
 template <typename T>
 inline bbox<T, 3> transform_bbox(const frame<T, 3>& a, const bbox<T, 3>& b) {
@@ -2836,30 +2880,35 @@ inline vec<T, 2> transform_point_inverse(
     const frame<T, 2>& a, const vec<T, 2>& b) {
     return {dot(b - a.o, a.x), dot(b - a.o, a.y)};
 }
+
 /// Inverse transforms a point by a frame, assuming a rigid transform.
 template <typename T>
 inline vec<T, 3> transform_point_inverse(
     const frame<T, 3>& a, const vec<T, 3>& b) {
     return {dot(b - a.o, a.x), dot(b - a.o, a.y), dot(b - a.o, a.z)};
 }
+
 /// Inverse transforms a vector by a frame, assuming a rigid transform.
 template <typename T>
 inline vec<T, 2> transform_vector_inverse(
     const frame<T, 2>& a, const vec<T, 2>& b) {
     return {dot(b, a.x), dot(b, a.y)};
 }
+
 /// Inverse transforms a vector by a frame, assuming a rigid transform.
 template <typename T>
 inline vec<T, 3> transform_vector_inverse(
     const frame<T, 3>& a, const vec<T, 3>& b) {
     return {dot(b, a.x), dot(b, a.y), dot(b, a.z)};
 }
+
 /// Inverse transforms a direction by a frame, assuming a rigid transform.
 template <typename T, int N>
 inline vec<T, N> transform_direction_inverse(
     const frame<T, N>& a, const vec<T, N>& b) {
     return normalize(transform_vector_inverse(a, b));
 }
+
 /// Inverse transforms a direction by a frame, assuming a rigid transform.
 template <typename T, int N>
 inline ray<T, N> transform_ray_inverse(
@@ -2867,6 +2916,7 @@ inline ray<T, N> transform_ray_inverse(
     return {transform_point_inverse(a, b.o),
         transform_direction_inverse(a, b.d), b.tmin, b.tmax};
 }
+
 /// Inverse transforms a bbox by a frame, assuming a rigid transform.
 template <typename T, int N>
 inline bbox<T, N> transform_bbox_inverse(
@@ -2912,7 +2962,7 @@ inline frame<T, 3> rotation_frame(const quat<T, 4>& v) {
 /// Rotation affine transform.
 template <typename T, typename T1>
 inline frame<T, 3> rotation_frame(const mat<T, 3>& rot) {
-        return {rot.x, rot.y, rot.z, {0,0,0}};
+    return {rot.x, rot.y, rot.z, {0, 0, 0}};
 }
 /// OpenGL lookat frame. Z-axis can be inverted with inv_xz.
 template <typename T>
@@ -3037,10 +3087,11 @@ inline quat<T, 4> rotation_quat(const mat<T, 3>& m_) {
 /// Decompose an affine matrix into translation, rotation, scale.
 /// Assumes there is no shear.
 template <typename T>
-inline void decompose_frame(const frame<T, 3>& m, vec<T, 3>& pos, mat<T, 3>& rot, vec<T, 3>& scale) {
+inline void decompose_frame(
+    const frame<T, 3>& m, vec<T, 3>& pos, mat<T, 3>& rot, vec<T, 3>& scale) {
     pos = m.o;
-        rot = {normalize(m.x), normalize(m.y), normalize(m.z)};
-        scale = {length(m.x), length(m.y), length(m.z)};
+    rot = {normalize(m.x), normalize(m.y), normalize(m.z)};
+    scale = {length(m.x), length(m.y), length(m.z)};
 }
 
 /// Decompose an affine matrix into translation, rotation, scale.
@@ -3320,6 +3371,14 @@ inline vec3f sample_sphere(const vec2f& ruv) {
 /// Pdf for uniform spherical direction.
 inline float sample_sphere_pdf(const vec3f& w) { return 1 / (4 * pif); }
 
+/// Sample spherical coordinates uniformly.
+inline vec2f sample_spherical(const vec2f& ruv) {
+    // BUG: FIXME this is not uniform at all!!!!
+    return vec2f(ruv.x, ruv.y);
+}
+/// Pdf for uniform spherical direction.
+inline float sample_spherical_pdf(const vec2f& w) { return 1 / (4 * pif); }
+
 /// Sample an hemispherical direction with cosine distribution.
 inline vec3f sample_hemisphere_cosine(const vec2f& ruv) {
     auto z = sqrt(ruv.y);
@@ -3384,8 +3443,64 @@ inline int sample_index(int size, float r) {
 /// Pdf for uniform index sampling.
 inline float sample_index_pdf(int size) { return 1.0f / size; }
 
+/// Pick an index with probability proportional to the given weights.
+/// The sum of the weights is expected to be normalized to 1.
+/// This is inefficient for large numbers. Use distributions for that.
+template <size_t N>
+inline int sample_index(const std::array<float, N>& weights, float r) {
+    auto sum = 0.0f;
+    for (auto i = 0; i < weights.size(); i++) {
+        sum += weights[i];
+        if (r > sum) return i;
+    }
+    return (int)weights.size() - 1;
+}
+
+/// Distribution for sampling of elements with probability proportional
+/// to the input weights. Uses inverse CDF sampling in its implementation.
+/// Initialize the distribution with `make_distribution()` and use
+/// `sample_distribution_discrete()` and `sample_distribution_discrete_pdf()`
+/// to obtain sampled values and their weights. Use
+/// `sample_distribution_total_weight()` for total weight.
+/// This type is not strictly needed, but helpful to enforce type safety when
+/// passing distributions around.
+struct distribution1f {
+    /// Element weights. This is redundant since `weights[i] = cdf[i]-cdf[i-1]`.
+    std::vector<float> weights;
+    /// Element cdf. This is not-normalized, so total weight is `cdf.back()`.
+    std::vector<float> cdf;
+};
+
+/// Make a one-dimensional distribution for sampling.
+distribution1f make_distribution(const std::vector<float>& weights);
+
+/// Make a one-dimensional distribution for sampling.
+template <typename F>
+inline distribution1f make_distribution(int num, F&& func) {
+    auto weights = std::vector<float>(num);
+    for (auto i = 0; i < num; i++) weights[i] = func(i);
+    return make_distribution(weights);
+}
+
+/// Sample a discrete distribution.
+int sample_distribution_discrete(const distribution1f& dist, float r);
+
+/// Pdf for smapling a discrete distribution.
+float sample_distribution_discrete_pdf(const distribution1f& dist, int idx);
+
+/// Get the total weight of a distribution.
+float sample_distribution_weightsum(const distribution1f& dist);
+
+/// PDF for sampling a discrete distribution.
+template <int N>
+inline int sample_distribution_discrete_pdf(
+    const std::array<float, N>& weights, int idx) {
+    return sample_distribution_discrete_pdf(
+        weights.size(), weights.data(), idx);
+}
+
 /// Sample a discrete distribution represented by its cdf.
-inline int sample_discrete(const std::vector<float>& cdf, float r) {
+inline int sample_discrete_(const std::vector<float>& cdf, float r) {
     // todo: implement binary search better
     r = clamp(r * cdf.back(), 0.0f, cdf.back() - 0.00001f);
     for (auto i = 1; i < cdf.size(); i++) {
@@ -3394,7 +3509,7 @@ inline int sample_discrete(const std::vector<float>& cdf, float r) {
     return (int)cdf.size() - 1;
 }
 /// Pdf for uniform discrete distribution sampling.
-inline float sample_discrete_pdf(const std::vector<float>& cdf, int idx) {
+inline float sample_discrete_pdf_(const std::vector<float>& cdf, int idx) {
     if (idx == 0) return cdf.at(0);
     return cdf.at(idx) - cdf.at(idx - 1);
 }
@@ -4358,37 +4473,59 @@ inline int sample_points(int npoints, float re) {
     return sample_index(npoints, re);
 }
 /// Compute a distribution for sampling points uniformly.
-std::vector<float> sample_points_cdf(int npoints);
+inline distribution1f make_point_distribution(int npoints) {
+    return make_distribution(npoints, [](auto) { return 1; });
+}
+
 /// Pick a point uniformly.
-inline int sample_points(const std::vector<float>& cdf, float re) {
-    return sample_discrete(cdf, re);
+inline int sample_points(const distribution1f& dst, float re) {
+    return sample_distribution_discrete(dst, re);
 }
 
 /// Compute a distribution for sampling lines uniformly.
-std::vector<float> sample_lines_cdf(
-    const std::vector<vec2i>& lines, const std::vector<vec3f>& pos);
+inline distribution1f make_line_distribution(
+    const std::vector<vec2i>& lines, const std::vector<vec3f>& pos) {
+    return make_distribution((int)lines.size(), [&lines, &pos](auto idx) {
+        auto l = lines[idx];
+        return line_length(pos[l.x], pos[l.y]);
+    });
+}
+
 /// Pick a point on lines uniformly.
 inline std::pair<int, float> sample_lines(
-    const std::vector<float>& cdf, float re, float ru) {
-    return {sample_discrete(cdf, re), ru};
+    const distribution1f& dst, float re, float ru) {
+    return {sample_distribution_discrete(dst, re), ru};
 }
 
 /// Compute a distribution for sampling triangle meshes uniformly.
-std::vector<float> sample_triangles_cdf(
-    const std::vector<vec3i>& triangles, const std::vector<vec3f>& pos);
+inline distribution1f make_triangle_distribution(
+    const std::vector<vec3i>& triangles, const std::vector<vec3f>& pos) {
+    return make_distribution(
+        (int)triangles.size(), [&triangles, &pos](auto idx) {
+            auto t = triangles[idx];
+            return triangle_area(pos[t.x], pos[t.y], pos[t.z]);
+        });
+}
+
 /// Pick a point on a triangle mesh uniformly.
 inline std::pair<int, vec2f> sample_triangles(
-    const std::vector<float>& cdf, float re, const vec2f& ruv) {
-    return {sample_discrete(cdf, re), sample_triangle(ruv)};
+    const distribution1f& dst, float re, const vec2f& ruv) {
+    return {sample_distribution_discrete(dst, re), sample_triangle(ruv)};
 }
 
 /// Compute a distribution for sampling quad meshes uniformly.
-std::vector<float> sample_quads_cdf(
-    const std::vector<vec4i>& quads, const std::vector<vec3f>& pos);
+inline distribution1f make_quad_distribution(
+    const std::vector<vec4i>& quads, const std::vector<vec3f>& pos) {
+    return make_distribution((int)quads.size(), [&quads, &pos](auto idx) {
+        auto q = quads[idx];
+        return quad_area(pos[q.x], pos[q.y], pos[q.z], pos[q.w]);
+    });
+}
+
 /// Pick a point on a quad mesh uniformly.
 inline std::pair<int, vec2f> sample_quads(
-    const std::vector<float>& cdf, float re, const vec2f& ruv) {
-    return {sample_discrete(cdf, re), ruv};
+    const distribution1f& dst, float re, const vec2f& ruv) {
+    return {sample_distribution_discrete(dst, re), ruv};
 }
 
 /// Samples a set of points over a triangle mesh uniformly. Returns pos, norm
@@ -5384,6 +5521,9 @@ struct instance {
     std::shared_ptr<shape_group> shp = nullptr;
 };
 
+/// Distance at which we set environment map positions.
+const auto environment_distance = 1000000.0f;
+
 /// Envinonment map.
 struct environment {
     /// Name.
@@ -5456,7 +5596,6 @@ struct animation {
 };
 
 /// Animation made of multiple keyframed values.
-///
 struct animation_group {
     /// Name.
     std::string name;
@@ -5519,6 +5658,15 @@ vec3f eval_pos(
 vec3f eval_norm(
     const std::shared_ptr<instance>& ist, int sid, int eid, const vec2f& euv);
 
+/// Environment position interpolated using uv parametrization.
+vec3f eval_pos(const std::shared_ptr<environment>& env, const vec2f& uv);
+/// Environment normal interpolated using uv parametrization.
+vec3f eval_norm(const std::shared_ptr<environment>& env, const vec2f& uv);
+/// Environment texture coordinates from uv parametrization.
+vec2f eval_texcoord(const std::shared_ptr<environment>& env, const vec2f& uv);
+/// Evaluate uv parameters for environment.
+vec2f eval_uv(const std::shared_ptr<environment>& env, const vec3f& w);
+
 /// Evaluate a texture.
 vec4f eval_texture(const std::shared_ptr<texture>& txt,
     const texture_info& info, const vec2f& texcoord, bool srgb = true,
@@ -5543,6 +5691,16 @@ ray3f eval_camera_ray(const std::shared_ptr<camera>& cam, const vec2i& ij,
 /// values any one is 0 or less. Set camera aspect otherwise.
 void sync_camera_aspect(
     const std::shared_ptr<camera>& cam, int& width, int& height);
+
+/// Generate a distribution for sampling a shape uniformly based on area/length.
+distribution1f make_shape_distribution(const std::shared_ptr<shape>& shp);
+/// Sample a shape based on a distribution.
+std::pair<int, vec2f> sample_shape(const std::shared_ptr<shape>& shp,
+    const distribution1f& dst, float re, const vec2f& ruv);
+
+/// Sample an environment uniformly.
+vec2f sample_environment(
+    const std::shared_ptr<environment>& env, const vec2f& ruv);
 
 /// Finds an element by name.
 template <typename T>
@@ -6896,10 +7054,10 @@ struct trace_light {
 struct trace_lights {
     /// Shape instances.
     std::vector<trace_light> lights;
-    /// Shape cdfs.
-    std::unordered_map<std::shared_ptr<shape>, std::vector<float>> shape_cdfs;
-    /// Shape areas.
-    std::unordered_map<std::shared_ptr<shape>, float> shape_areas;
+    /// Shape distributions.
+    std::unordered_map<std::shared_ptr<shape>, distribution1f> shape_distribs;
+    /// Lights distribution.
+    distribution1f light_distrib;
     /// Check whether there are any lights.
     bool empty() const { return lights.empty(); }
     /// Number of lights.

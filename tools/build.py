@@ -25,6 +25,11 @@ def release(target=''):
 
 @run.command()
 @click.argument('target', required=False, default='')
+def debug(target=''):
+    build(target, 'debug', 'Debug')
+
+@run.command()
+@click.argument('target', required=False, default='')
 def nogl(target=''):
     build(target, 'nogl', 'Release', '-DYOCTO_OPENGL=OFF')
 

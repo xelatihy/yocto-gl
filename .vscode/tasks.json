@@ -1,0 +1,22 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "release",
+            "type": "shell",
+            "command": "./tools/build.py release",
+            "group": "build"
+        },
+        {
+            "label": "debug",
+            "type": "shell",
+            "command": "./tools/build.py debug",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }    
+        }
+    ]
+}
