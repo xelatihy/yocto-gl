@@ -20,7 +20,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 # compile flags
 if(APPLE)
-    add_definitions(-Wno-missing-braces)
+    add_definitions(-Wall)
 endif(APPLE)
 if(MSVC)
     add_definitions(/D_CRT_SECURE_NO_WARNINGS /wd4018 /wd4244 /wd4305 /wd4800 /wd4267)
