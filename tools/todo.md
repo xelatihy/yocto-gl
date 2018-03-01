@@ -5,9 +5,17 @@ Please consider this to be just development notes and not any real planning.
 
 ## Trace
 
+- environment map with material
+- remove instances from tracer
+    - handle environments as missing shape or as a special shape
+    - add special shape types: inf sphere (env) distant points
+    - handle light as frame + shape (none for env) + ke + ke_txt
 - envlight parametrization
     - bad weight for envmap
     - bad envmap rendering
+- trace options
+    - no mis
+    - no env lights
 - fast distribution sampling
 - fresnel in brdf
     - rescale fresnel with roughness

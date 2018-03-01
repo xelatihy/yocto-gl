@@ -3093,21 +3093,58 @@ intersection_point overlap_bvh(const std::shared_ptr<bvh_tree>& bvh,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+// Synchronizes shape element type.
+shape_elem_type get_shape_type(const std::shared_ptr<shape>& shp) {
+    if (!shp->triangles.empty()) {
+        return shape_elem_type::triangles;
+    } else if (!shp->lines.empty()) {
+        return shape_elem_type::lines;
+    } else if (!shp->points.empty()) {
+        return shape_elem_type::points;
+    } else if (!shp->quads.empty()) {
+        return shape_elem_type::quads;
+    } else if (!shp->beziers.empty()) {
+        return shape_elem_type::beziers;
+    } else if (!shp->quads_pos.empty()) {
+        return shape_elem_type::facevarying;
+    } else if (!shp->pos.empty()) {
+        return shape_elem_type::vertices;
+    } else {
+        return shape_elem_type::none;
+    }
+}
+
 // Shape value interpolated using barycentric coordinates
 template <typename T>
 T eval_elem(const std::shared_ptr<shape>& shp, const std::vector<T>& vals,
     int eid, const vec2f& euv, const T& def) {
     if (vals.empty()) return def;
-    if (!shp->triangles.empty()) {
-        return interpolate_triangle(vals, shp->triangles[eid], euv);
-    } else if (!shp->lines.empty()) {
-        return interpolate_line(vals, shp->lines[eid], euv.x);
-    } else if (!shp->points.empty()) {
-        return interpolate_point(vals, shp->points[eid]);
-    } else if (!shp->quads.empty()) {
-        return interpolate_quad(vals, shp->quads[eid], euv);
-    } else {
-        return vals[eid];  // points
+    switch (get_shape_type(shp)) {
+        case shape_elem_type::none: {
+            throw std::runtime_error("type not supported");
+        } break;
+        case shape_elem_type::triangles: {
+            return interpolate_triangle(vals, shp->triangles[eid], euv);
+        } break;
+        case shape_elem_type::lines: {
+            return interpolate_line(vals, shp->lines[eid], euv.x);
+        } break;
+        case shape_elem_type::points: {
+            return interpolate_point(vals, shp->points[eid]);
+        } break;
+        case shape_elem_type::quads: {
+            return interpolate_quad(vals, shp->quads[eid], euv);
+        } break;
+        case shape_elem_type::beziers: {
+            return interpolate_bezier(vals, shp->beziers[eid], euv.x);
+        } break;
+        case shape_elem_type::vertices: {
+            return vals[eid];
+        } break;
+        case shape_elem_type::facevarying: {
+            throw std::runtime_error("should not have gotten here");
+            return def;
+        } break;
     }
 }
 
@@ -3250,92 +3287,161 @@ ray3f eval_camera_ray(const std::shared_ptr<camera>& cam, const vec2i& ij,
 
 // Generate a distribution for sampling a shape uniformly based on area/length.
 distribution1f make_shape_distribution(const std::shared_ptr<shape>& shp) {
-    if (!shp->triangles.empty()) {
-        return make_triangle_distribution(shp->triangles, shp->pos);
-    } else if (!shp->lines.empty()) {
-        return make_line_distribution(shp->lines, shp->pos);
-    } else if (!shp->points.empty()) {
-        return make_point_distribution(shp->points.size());
-    } else if (!shp->quads.empty()) {
-        return make_quad_distribution(shp->quads, shp->pos);
-    } else {
-        return make_point_distribution(shp->pos.size());
+    switch (get_shape_type(shp)) {
+        case shape_elem_type::none: {
+            throw std::runtime_error("type not supported");
+        } break;
+        case shape_elem_type::triangles: {
+            return make_triangle_distribution(shp->triangles, shp->pos);
+        } break;
+        case shape_elem_type::lines: {
+            return make_line_distribution(shp->lines, shp->pos);
+        } break;
+        case shape_elem_type::points: {
+            return make_point_distribution(shp->points.size());
+        } break;
+        case shape_elem_type::quads: {
+            return make_quad_distribution(shp->quads, shp->pos);
+        } break;
+        case shape_elem_type::beziers: {
+            throw std::runtime_error("type not supported");
+        } break;
+        case shape_elem_type::vertices: {
+            return make_point_distribution(shp->pos.size());
+        } break;
+        case shape_elem_type::facevarying: {
+            return make_quad_distribution(shp->quads_pos, shp->pos);
+        } break;
     }
 }
 
 // Sample a shape based on a distribution.
 std::pair<int, vec2f> sample_shape(const std::shared_ptr<shape>& shp,
     const distribution1f& dst, float re, const vec2f& ruv) {
-    if (!shp->triangles.empty()) {
-        return sample_triangles(dst, re, ruv);
-    } else if (!shp->lines.empty()) {
-        return {sample_lines(dst, re, ruv.x).first, ruv};
-    } else if (!shp->points.empty()) {
-        return {sample_points(dst, re), ruv};
-    } else if (!shp->quads.empty()) {
-        return sample_quads(dst, re, ruv);
-    } else {
-        return {sample_points(dst, re), ruv};
+    switch (get_shape_type(shp)) {
+        case shape_elem_type::none: {
+            throw std::runtime_error("type not supported");
+        } break;
+        case shape_elem_type::triangles: {
+            return sample_triangles(dst, re, ruv);
+        } break;
+        case shape_elem_type::lines: {
+            return {sample_lines(dst, re, ruv.x).first, ruv};
+        } break;
+        case shape_elem_type::points: {
+            return {sample_points(dst, re), ruv};
+        } break;
+        case shape_elem_type::quads: {
+            return sample_quads(dst, re, ruv);
+        } break;
+        case shape_elem_type::beziers: {
+            throw std::runtime_error("type not supported");
+        } break;
+        case shape_elem_type::vertices: {
+            return {sample_points(dst, re), ruv};
+        } break;
+        case shape_elem_type::facevarying: {
+            return sample_quads(dst, re, ruv);
+        } break;
     }
 }
 
 // Subdivides shape elements.
 void subdivide_shape_once(const std::shared_ptr<shape>& shp, bool subdiv) {
-    if (!shp->lines.empty()) {
-        subdivide_lines(shp->lines, shp->pos, shp->norm, shp->texcoord,
-            shp->color, shp->radius);
-    } else if (!shp->triangles.empty()) {
-        subdivide_triangles(shp->triangles, shp->pos, shp->norm, shp->texcoord,
-            shp->color, shp->radius);
-    } else if (!shp->quads.empty() && !subdiv) {
-        subdivide_quads(shp->quads, shp->pos, shp->norm, shp->texcoord,
-            shp->color, shp->radius);
-    } else if (!shp->quads.empty() && subdiv) {
-        subdivide_catmullclark(shp->quads, shp->pos, shp->norm, shp->texcoord,
-            shp->color, shp->radius);
-    } else if (!shp->quads_pos.empty() && !subdiv) {
-        subdivide_quads(shp->quads_pos, shp->pos);
-        subdivide_quads(shp->quads_norm, shp->norm);
-        subdivide_quads(shp->quads_texcoord, shp->texcoord);
-    } else if (!shp->quads_pos.empty() && subdiv) {
-        subdivide_catmullclark(shp->quads_pos, shp->pos);
-        subdivide_catmullclark(shp->quads_norm, shp->norm);
-        subdivide_catmullclark(shp->quads_texcoord, shp->texcoord);
-    } else if (!shp->beziers.empty()) {
-        subdivide_beziers(shp->beziers, shp->pos, shp->norm, shp->texcoord,
-            shp->color, shp->radius);
+    switch (get_shape_type(shp)) {
+        case shape_elem_type::none: break;
+        case shape_elem_type::points: break;
+        case shape_elem_type::vertices: break;
+        case shape_elem_type::triangles: {
+            subdivide_triangles(shp->triangles, shp->pos, shp->norm,
+                shp->texcoord, shp->color, shp->radius);
+        } break;
+        case shape_elem_type::lines: {
+            subdivide_lines(shp->lines, shp->pos, shp->norm, shp->texcoord,
+                shp->color, shp->radius);
+        } break;
+        case shape_elem_type::quads: {
+            if (!subdiv) {
+                subdivide_quads(shp->quads, shp->pos, shp->norm, shp->texcoord,
+                    shp->color, shp->radius);
+            } else {
+                subdivide_catmullclark(shp->quads, shp->pos, shp->norm,
+                    shp->texcoord, shp->color, shp->radius);
+            }
+        } break;
+        case shape_elem_type::beziers: {
+            subdivide_beziers(shp->beziers, shp->pos, shp->norm, shp->texcoord,
+                shp->color, shp->radius);
+        } break;
+        case shape_elem_type::facevarying: {
+            if (!subdiv) {
+                subdivide_quads(shp->quads_pos, shp->pos);
+                subdivide_quads(shp->quads_norm, shp->norm);
+                subdivide_quads(shp->quads_texcoord, shp->texcoord);
+            } else {
+                subdivide_catmullclark(shp->quads_pos, shp->pos);
+                subdivide_catmullclark(shp->quads_norm, shp->norm);
+                subdivide_catmullclark(shp->quads_texcoord, shp->texcoord);
+            }
+        } break;
     }
 }
 
 // Compute shape normals. Supports only non-facevarying shapes.
 void compute_normals(const std::shared_ptr<shape>& shp) {
-    if (!shp->points.empty()) {
-        shp->norm.assign(shp->pos.size(), {0, 0, 1});
-    } else if (!shp->lines.empty()) {
-        compute_tangents(shp->lines, shp->pos, shp->norm);
-    } else if (!shp->triangles.empty()) {
-        compute_normals(shp->triangles, shp->pos, shp->norm);
-    } else if (!shp->quads.empty()) {
-        compute_normals(shp->quads, shp->pos, shp->norm);
+    switch (get_shape_type(shp)) {
+        case shape_elem_type::none: break;
+        case shape_elem_type::points: {
+            shp->norm.assign(shp->pos.size(), {0, 0, 1});
+        } break;
+        case shape_elem_type::vertices: {
+            shp->norm.assign(shp->pos.size(), {0, 0, 1});
+        } break;
+        case shape_elem_type::triangles: {
+            compute_normals(shp->triangles, shp->pos, shp->norm);
+        } break;
+        case shape_elem_type::lines: {
+            compute_tangents(shp->lines, shp->pos, shp->norm);
+        } break;
+        case shape_elem_type::quads: {
+            compute_normals(shp->quads, shp->pos, shp->norm);
+        } break;
+        case shape_elem_type::beziers: {
+            throw std::runtime_error("type not supported");
+        } break;
+        case shape_elem_type::facevarying: {
+            throw std::runtime_error("type not supported");
+        } break;
     }
 }
 
 // Facet a shape. Supports only non-facevarying shapes
 void facet_shape(const std::shared_ptr<shape>& shp, bool recompute_normals) {
-    if (!shp->lines.empty()) {
-        facet_lines(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->color,
-            shp->radius);
-        if (recompute_normals) compute_normals(shp);
-    } else if (!shp->triangles.empty()) {
-        facet_triangles(shp->triangles, shp->pos, shp->norm, shp->texcoord,
-            shp->color, shp->radius);
-        if (recompute_normals) compute_normals(shp);
-    } else if (!shp->quads.empty()) {
-        std::vector<int> verts;
-        facet_quads(shp->quads, shp->pos, shp->norm, shp->texcoord, shp->color,
-            shp->radius);
-        if (recompute_normals) compute_normals(shp);
+    switch (get_shape_type(shp)) {
+        case shape_elem_type::none: break;
+        case shape_elem_type::points: break;
+        case shape_elem_type::vertices: break;
+        case shape_elem_type::triangles: {
+            facet_triangles(shp->triangles, shp->pos, shp->norm, shp->texcoord,
+                shp->color, shp->radius);
+        } break;
+        case shape_elem_type::lines: {
+            facet_lines(shp->lines, shp->pos, shp->norm, shp->texcoord,
+                shp->color, shp->radius);
+        } break;
+        case shape_elem_type::quads: {
+            std::vector<int> verts;
+            facet_quads(shp->quads, shp->pos, shp->norm, shp->texcoord,
+                shp->color, shp->radius);
+        } break;
+        case shape_elem_type::beziers: {
+            throw std::runtime_error("type not supported");
+        } break;
+        case shape_elem_type::facevarying: {
+            throw std::runtime_error("type not supported");
+        } break;
     }
+    if (recompute_normals) compute_normals(shp);
 }
 
 // Tesselate a shape into basic primitives
@@ -3347,21 +3453,25 @@ void tesselate_shape(const std::shared_ptr<shape>& shp, bool subdivide,
             subdivide_shape_once(shp, shp->catmullclark);
         }
     }
-    if (facevarying_to_sharedvertex && !shp->quads_pos.empty()) {
+    auto type = get_shape_type(shp);
+    if (facevarying_to_sharedvertex && type == shape_elem_type::facevarying) {
         std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
             convert_face_varying(shp->quads_pos, shp->quads_norm,
                 shp->quads_texcoord, shp->pos, shp->norm, shp->texcoord);
         shp->quads_pos = {};
         shp->quads_norm = {};
         shp->quads_texcoord = {};
+        type = get_shape_type(shp);
     }
-    if (quads_to_triangles && !shp->quads.empty()) {
+    if (quads_to_triangles && type == shape_elem_type::quads) {
         shp->triangles = convert_quads_to_triangles(shp->quads);
         shp->quads = {};
+        type = get_shape_type(shp);
     }
-    if (bezier_to_lines && !shp->beziers.empty()) {
+    if (bezier_to_lines && type == shape_elem_type::beziers) {
         shp->lines = convert_bezier_to_lines(shp->beziers);
         shp->beziers = {};
+        type = get_shape_type(shp);
     }
 }
 
@@ -3456,16 +3566,16 @@ void add_elements(
         for (auto sgr : scn->shapes) {
             for (auto shp : sgr->shapes) {
                 if (!shp->norm.empty()) continue;
-                shp->norm.resize(shp->pos.size(), {0, 0, 1});
-                if (!shp->lines.empty() || !shp->triangles.empty() ||
-                    !shp->quads.empty()) {
-                    compute_normals(shp);
-                }
-                if (!shp->quads_pos.empty()) {
+                auto type = get_shape_type(shp);
+                if (type == shape_elem_type::facevarying) {
                     if (!shp->quads_norm.empty())
                         throw std::runtime_error("bad normals");
                     shp->quads_norm = shp->quads_pos;
                     compute_normals(shp->quads_pos, shp->pos, shp->norm);
+                } else if (type == shape_elem_type::beziers) {
+                    shp->norm.resize(shp->pos.size(), {0, 0, 1});
+                } else {
+                    compute_normals(shp);
                 }
             }
         }
@@ -3478,13 +3588,16 @@ void add_elements(
                 if (shp->texcoord.empty()) continue;
                 if (!shp->mat) continue;
                 if (!(shp->mat->norm_txt || shp->mat->bump_txt)) continue;
-                if (!shp->triangles.empty()) {
+                auto type = get_shape_type(shp);
+                if (type == shape_elem_type::triangles) {
                     compute_tangent_frames(shp->triangles, shp->pos, shp->norm,
                         shp->texcoord, shp->tangsp);
-                } else if (!shp->quads.empty()) {
+                } else if (type == shape_elem_type::quads) {
                     auto triangles = convert_quads_to_triangles(shp->quads);
                     compute_tangent_frames(triangles, shp->pos, shp->norm,
                         shp->texcoord, shp->tangsp);
+                } else {
+                    throw std::runtime_error("type not supported");
                 }
             }
         }
@@ -5790,24 +5903,34 @@ vec2f sample_next2f(trace_pixel& pxl, trace_rng_type type, int nsamples) {
     }
 }
 
+// Type of point.
+enum struct trace_point_type {
+    none = 0,         // unitialized point
+    point = 1,        // point
+    curve = 2,        // curve
+    surface = 3,      // surface
+    environment = 4,  // environment
+};
+
 // Surface point with geometry and material data. Supports point on
 // envmap too. This is the key data manipulated in the path tracer.
 struct trace_point {
-    std::shared_ptr<shape> shp = nullptr;        // shape
-    std::shared_ptr<environment> env = nullptr;  // environment
-    vec3f pos = zero3f;                          // pos
-    vec3f norm = {0, 0, 1};                      // norm
-    vec2f texcoord = zero2f;                     // texcoord
-    vec3f ke = zero3f;                           // emission
-    vec3f kd = {0, 0, 0};                        // diffuse
-    vec3f ks = {0, 0, 0};                        // specular
-    vec3f ksg = {1, 1, 1};                       // specular at grazing
-    float rs = 0;                                // specular roughness
-    vec3f kr = {0, 0, 0};                        // clear coat
-    vec3f krg = {1, 1, 1};                       // clear coat at grazing
-    vec3f ktr = {0, 0, 0};                       // transmission for thin glass
-    vec3f kto = {0, 0, 0};                       // transmission for opacity
-    bool double_sided = false;                   // double sided rendering
+    std::shared_ptr<shape> shp = nullptr;            // shape
+    std::shared_ptr<environment> env = nullptr;      // environment
+    trace_point_type type = trace_point_type::none;  // type
+    vec3f pos = zero3f;                              // pos
+    vec3f norm = {0, 0, 1};                          // norm
+    vec2f texcoord = zero2f;                         // texcoord
+    vec3f ke = zero3f;                               // emission
+    vec3f kd = {0, 0, 0};                            // diffuse
+    vec3f ks = {0, 0, 0};                            // specular
+    vec3f ksg = {1, 1, 1};                           // specular at grazing
+    float rs = 0;                                    // specular roughness
+    vec3f kr = {0, 0, 0};                            // clear coat
+    vec3f krg = {1, 1, 1};                           // clear coat at grazing
+    vec3f ktr = {0, 0, 0};                           // thin glass transmission
+    vec3f kto = {0, 0, 0};                           // opacity transmission
+    bool double_sided = false;                       // double sided
 };
 
 // Evaluates the BRDF albedo at normal incidence
@@ -5827,7 +5950,7 @@ std::array<float, 5> eval_brdf_weights(const trace_point& pt) {
 
 // Evaluates emission.
 vec3f eval_emission(const trace_point& pt, const vec3f& wo) {
-    if (!pt.shp || pt.shp->triangles.empty() || pt.double_sided ||
+    if (pt.type != trace_point_type::surface || pt.double_sided ||
         dot(pt.norm, wo) >= 0)
         return pt.ke;
     return zero3f;
@@ -5914,14 +6037,15 @@ vec3f eval_point_brdfcos(const trace_point& pt, const vec3f& wo,
 vec3f eval_brdfcos(const trace_point& pt, const vec3f& wo, const vec3f& wi,
     bool delta = false) {
     if (eval_brdf_albedo(pt) == zero3f) return zero3f;
-    if (!pt.shp->triangles.empty()) {
-        return eval_surface_brdfcos(pt, wo, wi, delta);
-    } else if (!pt.shp->lines.empty()) {
-        return eval_curve_brdfcos(pt, wo, wi, delta);
-    } else if (!pt.shp->points.empty()) {
-        return eval_point_brdfcos(pt, wo, wi, delta);
-    } else {
-        return zero3f;
+    switch (pt.type) {
+        case trace_point_type::none: return zero3f;
+        case trace_point_type::surface:
+            return eval_surface_brdfcos(pt, wo, wi, delta);
+        case trace_point_type::curve:
+            return eval_curve_brdfcos(pt, wo, wi, delta);
+        case trace_point_type::point:
+            return eval_point_brdfcos(pt, wo, wi, delta);
+        case trace_point_type::environment: return zero3f;
     }
 }
 
@@ -5984,14 +6108,15 @@ float weight_point_brdfcos(const trace_point& pt, const vec3f& wo,
 float weight_brdfcos(const trace_point& pt, const vec3f& wo, const vec3f& wi,
     bool delta = false) {
     if (eval_brdf_albedo(pt) == zero3f) return 0;
-    if (!pt.shp->triangles.empty()) {
-        return weight_surface_brdfcos(pt, wo, wi, delta);
-    } else if (!pt.shp->lines.empty()) {
-        return weight_curve_brdfcos(pt, wo, wi, delta);
-    } else if (!pt.shp->points.empty()) {
-        return weight_point_brdfcos(pt, wo, wi, delta);
-    } else {
-        return 0;
+    switch (pt.type) {
+        case trace_point_type::none: return 0;
+        case trace_point_type::surface:
+            return weight_surface_brdfcos(pt, wo, wi, delta);
+        case trace_point_type::curve:
+            return weight_curve_brdfcos(pt, wo, wi, delta);
+        case trace_point_type::point:
+            return weight_point_brdfcos(pt, wo, wi, delta);
+        case trace_point_type::environment: return 0;
     }
 }
 
@@ -6081,14 +6206,15 @@ std::tuple<vec3f, bool> sample_point_brdfcos(
 std::tuple<vec3f, bool> sample_brdfcos(
     const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
     if (eval_brdf_albedo(pt) == zero3f) return {zero3f, false};
-    if (!pt.shp->triangles.empty()) {
-        return sample_surface_brdfcos(pt, wo, rnl, rn);
-    } else if (!pt.shp->lines.empty()) {
-        return sample_curve_brdfcos(pt, wo, rnl, rn);
-    } else if (!pt.shp->points.empty()) {
-        return sample_point_brdfcos(pt, wo, rnl, rn);
-    } else {
-        return {zero3f, false};
+    switch (pt.type) {
+        case trace_point_type::none: return {zero3f, false};
+        case trace_point_type::surface:
+            return sample_surface_brdfcos(pt, wo, rnl, rn);
+        case trace_point_type::curve:
+            return sample_curve_brdfcos(pt, wo, rnl, rn);
+        case trace_point_type::point:
+            return sample_point_brdfcos(pt, wo, rnl, rn);
+        case trace_point_type::environment: return {zero3f, false};
     }
 }
 
@@ -6097,6 +6223,8 @@ trace_point eval_trace_point(
     const std::shared_ptr<environment>& env, const vec2f& uv) {
     auto pt = trace_point();
     pt.env = env;
+    pt.type = trace_point_type::environment;
+
     pt.pos = eval_pos(env, uv);
     pt.norm = eval_norm(env, uv);
     pt.texcoord = eval_texcoord(env, uv);
@@ -6122,7 +6250,29 @@ trace_point eval_trace_point(
 
     // point
     auto pt = trace_point();
+
+    // shape
     pt.shp = ist->shp->shapes.at(sid);
+    switch (get_shape_type(pt.shp)) {
+        case shape_elem_type::none: {
+            return pt;
+        } break;
+        case shape_elem_type::points:
+        case shape_elem_type::vertices: {
+            pt.type = trace_point_type::point;
+        } break;
+        case shape_elem_type::lines:
+        case shape_elem_type::beziers: {
+            pt.type = trace_point_type::curve;
+        } break;
+        case shape_elem_type::triangles:
+        case shape_elem_type::quads:
+        case shape_elem_type::facevarying: {
+            pt.type = trace_point_type::surface;
+        } break;
+    }
+
+    // shape values
     pt.pos = eval_pos(pt.shp, eid, euv);
     pt.norm = eval_norm(pt.shp, eid, euv);
     pt.texcoord = eval_texcoord(pt.shp, eid, euv);
@@ -6277,23 +6427,29 @@ trace_point eval_trace_point(
 // Sample weight for a light point.
 float weight_light(
     const trace_lights& lights, const trace_point& lpt, const trace_point& pt) {
-    if (lpt.shp) {
-        auto dist = length(lpt.pos - pt.pos);
-        auto area =
-            sample_distribution_weightsum(lights.shape_distribs.at(lpt.shp));
-        if (!lpt.shp->triangles.empty()) {
+    switch (lpt.type) {
+        case trace_point_type::none: {
+            throw std::runtime_error("should not have gotten here");
+        } break;
+        case trace_point_type::point: {
+            auto area = sample_distribution_weightsum(
+                lights.shape_distribs.at(lpt.shp));
+            auto dist = length(lpt.pos - pt.pos);
+            return area / (dist * dist);
+        } break;
+        case trace_point_type::curve: {
+            throw std::runtime_error("not implemented yet");
+        } break;
+        case trace_point_type::surface: {
+            auto area = sample_distribution_weightsum(
+                lights.shape_distribs.at(lpt.shp));
+            auto dist = length(lpt.pos - pt.pos);
             return area * abs(dot(lpt.norm, normalize(lpt.pos - pt.pos))) /
                    (dist * dist);
-        } else if (!lpt.shp->lines.empty()) {
-            // TODO: fixme
-            return 0;
-        } else if (!lpt.shp->points.empty()) {
-            return area / (dist * dist);
-        }
-    } else if (lpt.env) {
-        return 4 * pif;
-    } else {
-        throw std::runtime_error("should not have gotten here");
+        } break;
+        case trace_point_type::environment: {
+            return 4 * pif;
+        } break;
     }
     return 0;
 }
@@ -6310,16 +6466,8 @@ trace_point sample_light(const trace_lights& lights, const trace_light& lgt,
     if (lgt.ist) {
         auto shp = lgt.ist->shp->shapes.at(lgt.sid);
         auto& dst = lights.shape_distribs.at(shp);
-        auto eid = 0;
-        auto euv = zero2f;
-        if (!shp->triangles.empty()) {
-            std::tie(eid, euv) = sample_triangles(dst, rel, ruv);
-        } else if (!shp->lines.empty()) {
-            std::tie(eid, euv.x) = sample_lines(dst, rel, ruv.x);
-        } else if (!shp->lines.empty()) {
-            eid = sample_points(dst, rel);
-        }
-        return eval_trace_point(lgt.ist, lgt.sid, eid, euv);
+        auto sample = sample_shape(shp, dst, rel, ruv);
+        return eval_trace_point(lgt.ist, lgt.sid, sample.first, sample.second);
     } else if (lgt.env) {
         // BUG: this is not uniform sampling
         return eval_trace_point(lgt.env, ruv);

@@ -5638,6 +5638,29 @@ struct scene {
 
 // #codegen end refl-scene
 
+/// Shape elements type.
+enum struct shape_elem_type {
+    /// Empty.
+    none = 0,
+    /// Points.
+    points = 1,
+    /// Lines.
+    lines = 2,
+    /// Triangles.
+    triangles = 3,
+    /// Quads.
+    quads = 4,
+    /// Beziers.
+    beziers = 5,
+    /// Vertices.
+    vertices = 8,
+    /// Facevarying.
+    facevarying = 9,
+};
+
+/// Get shape element type.
+shape_elem_type get_shape_type(const std::shared_ptr<shape>& shp);
+
 /// Shape position interpolated using barycentric coordinates.
 vec3f eval_pos(const std::shared_ptr<shape>& shp, int eid, const vec2f& euv);
 /// Shape normal interpolated using barycentric coordinates.
@@ -7041,7 +7064,7 @@ struct trace_pixel {
 /// Trace light as either instances or environments. The members are not part of
 /// the the public API.
 struct trace_light {
-    /// Instance pointer for instance lights.
+    /// Shape pointer.
     std::shared_ptr<instance> ist = nullptr;
     /// Shape index for instance lights
     int sid = 0;
