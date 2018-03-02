@@ -5507,18 +5507,10 @@ struct shape_group {
     std::string name = "";
     /// Path used for saving in glTF.
     std::string path = "";
+    /// Frame.
+    frame3f frame = identity_frame3f;
     /// Shapes.
     std::vector<std::shared_ptr<shape>> shapes;
-};
-
-/// Shape instance.
-struct instance {
-    /// Name.
-    std::string name = "";
-    /// Transform frame.
-    frame3f frame = identity_frame3f;
-    /// Shape instance. @refl_semantic(reference)
-    std::shared_ptr<shape_group> shp = nullptr;
 };
 
 /// Distance at which we set environment map positions.
@@ -5544,8 +5536,8 @@ struct node {
     std::string name = "";
     /// Parent node. @refl_semantic(reference)
     std::shared_ptr<node> parent = nullptr;
-    /// Transform frame.
-    frame3f frame = identity_frame3f;
+    /// Local frame.
+    frame3f local = identity_frame3f;
     /// Translation.
     vec3f translation = zero3f;
     /// Rotation.
@@ -5556,11 +5548,13 @@ struct node {
     std::vector<float> weights = {};
     /// Camera the node points to. @refl_semantic(reference)
     std::shared_ptr<camera> cam = nullptr;
-    /// Instance the node points to. @refl_semantic(reference)
-    std::shared_ptr<instance> ist = nullptr;
+    /// Shape the node points to. @refl_semantic(reference)
+    std::shared_ptr<shape_group> shp = nullptr;
     /// Environment the node points to. @refl_semantic(reference)
     std::shared_ptr<environment> env = nullptr;
 
+    /// Transform frame. This is a computed value only stored for convenience.
+    frame3f frame_ = identity_frame3f;
     /// Child nodes. This is a computed value only stored for convenience.
     std::vector<std::weak_ptr<node>> children_ = {};
 };
@@ -5619,8 +5613,6 @@ struct animation_group {
 struct scene {
     /// Shapes.
     std::vector<std::shared_ptr<shape_group>> shapes = {};
-    /// Shape instances.
-    std::vector<std::shared_ptr<instance>> instances = {};
     /// Materials.
     std::vector<std::shared_ptr<material>> materials = {};
     /// Textures.
@@ -5675,11 +5667,11 @@ float eval_radius(const std::shared_ptr<shape>& shp, int eid, const vec2f& euv);
 /// Shape tangent space interpolated using barycentric coordinates.
 vec4f eval_tangsp(const std::shared_ptr<shape>& shp, int eid, const vec2f& euv);
 /// Instance position interpolated using barycentric coordinates.
-vec3f eval_pos(
-    const std::shared_ptr<instance>& ist, int sid, int eid, const vec2f& euv);
+vec3f eval_pos(const std::shared_ptr<shape_group>& shp, int sid, int eid,
+    const vec2f& euv);
 /// Instance normal interpolated using barycentric coordinates.
-vec3f eval_norm(
-    const std::shared_ptr<instance>& ist, int sid, int eid, const vec2f& euv);
+vec3f eval_norm(const std::shared_ptr<shape_group>& shp, int sid, int eid,
+    const vec2f& euv);
 
 /// Environment position interpolated using uv parametrization.
 vec3f eval_pos(const std::shared_ptr<environment>& env, const vec2f& uv);
@@ -5806,12 +5798,12 @@ struct add_elements_options {
     bool tangent_space = true;
     /// Add empty texture data.
     bool texture_data = true;
-    /// Add instances.
-    bool shape_instances = true;
+    /// Add hierarchy.
+    bool node_hierarchy = false;
     /// Add default names.
     bool default_names = true;
     /// Add default paths.
-    bool default_paths = true;
+    bool default_paths = false;
 
     /// Initialize to no elements.
     static add_elements_options none() {
@@ -5844,8 +5836,6 @@ struct load_options {
     bool preserve_quads = false;
     /// Whether to preserve face-varying faces.
     bool preserve_facevarying = false;
-    /// Whether to preserve node hierarchy.
-    bool preserve_hierarchy = false;
 };
 
 /// Loads a scene. For now OBJ or glTF are supported.
@@ -6127,6 +6117,9 @@ inline void visit(shape& val, Visitor&& visitor) {
                             "per-vertex radius.", 0, 0, ""});
     visitor(val.tangsp, visit_var{"tangsp", visit_var_type::value,
                             "Vertex tangent space.", 0, 0, ""});
+    visitor(val.faceted,
+        visit_var{"faceted", visit_var_type::value,
+            "Whether normal smoothing or faceting is used", 0, 0, ""});
     visitor(val.subdivision, visit_var{"subdivision", visit_var_type::value,
                                  "Number of times to subdivide.", 0, 0, ""});
     visitor(val.catmullclark,
@@ -6141,19 +6134,10 @@ inline void visit(shape_group& val, Visitor&& visitor) {
         val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
     visitor(val.path, visit_var{"path", visit_var_type::value,
                           "Path used for saving in glTF.", 0, 0, ""});
+    visitor(val.frame,
+        visit_var{"frame", visit_var_type::value, "Frame.", 0, 0, ""});
     visitor(val.shapes,
         visit_var{"shapes", visit_var_type::value, "Shapes.", 0, 0, ""});
-}
-
-/// Visit struct elements.
-template <typename Visitor>
-inline void visit(instance& val, Visitor&& visitor) {
-    visitor(
-        val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
-    visitor(val.frame, visit_var{"frame", visit_var_type::value,
-                           "Transform frame.", 0, 0, ""});
-    visitor(val.shp, visit_var{"shp", visit_var_type::reference,
-                         "Shape instance.", 0, 0, ""});
 }
 
 /// Visit struct elements.
@@ -6178,8 +6162,8 @@ inline void visit(node& val, Visitor&& visitor) {
         val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
     visitor(val.parent, visit_var{"parent", visit_var_type::reference,
                             "Parent node.", 0, 0, ""});
-    visitor(val.frame, visit_var{"frame", visit_var_type::value,
-                           "Transform frame.", 0, 0, ""});
+    visitor(val.local,
+        visit_var{"local", visit_var_type::value, "Local frame.", 0, 0, ""});
     visitor(val.translation, visit_var{"translation", visit_var_type::value,
                                  "Translation.", 0, 0, ""});
     visitor(val.rotation,
@@ -6190,10 +6174,14 @@ inline void visit(node& val, Visitor&& visitor) {
                              "Weights for morphing.", 0, 0, ""});
     visitor(val.cam, visit_var{"cam", visit_var_type::reference,
                          "Camera the node points to.", 0, 0, ""});
-    visitor(val.ist, visit_var{"ist", visit_var_type::reference,
-                         "Instance the node points to.", 0, 0, ""});
+    visitor(val.shp, visit_var{"shp", visit_var_type::reference,
+                         "Shape the node points to.", 0, 0, ""});
     visitor(val.env, visit_var{"env", visit_var_type::reference,
                          "Environment the node points to.", 0, 0, ""});
+    visitor(val.frame_, visit_var{"frame_", visit_var_type::value,
+                            "Transform frame. This is a computed value only "
+                            "stored for convenience.",
+                            0, 0, ""});
     visitor(val.children_, visit_var{"children_", visit_var_type::value,
                                "Child nodes. This is a computed value only "
                                "stored for convenience.",
@@ -6229,8 +6217,6 @@ inline void visit(animation_group& val, Visitor&& visitor) {
             "Path used when writing files on disk with glTF.", 0, 0, ""});
     visitor(val.animations, visit_var{"animations", visit_var_type::value,
                                 "Keyframed values.", 0, 0, ""});
-    visitor(val.targets, visit_var{"targets", visit_var_type::reference,
-                             "Binds keyframe values to nodes.", 0, 0, ""});
 }
 
 /// Visit struct elements.
@@ -6238,8 +6224,6 @@ template <typename Visitor>
 inline void visit(scene& val, Visitor&& visitor) {
     visitor(val.shapes,
         visit_var{"shapes", visit_var_type::value, "Shapes.", 0, 0, ""});
-    visitor(val.instances, visit_var{"instances", visit_var_type::value,
-                               "Shape instances.", 0, 0, ""});
     visitor(val.materials,
         visit_var{"materials", visit_var_type::value, "Materials.", 0, 0, ""});
     visitor(val.textures,
@@ -6420,6 +6404,8 @@ struct proc_shape {
     std::string material = "";
     /// Interior material name.
     std::string interior = "";
+    /// Local frame. @refl_uilimits(-10,10)
+    frame3f frame = identity_frame3f;
     /// Level of shape tesselatation (-1 for default). @refl_uilimits(-1,10)
     int tesselation = -1;
     /// Level of shape tesselation for subdivision surfaces.
@@ -6436,18 +6422,6 @@ struct proc_shape {
     int num = -1;
     /// Hair generation params.
     optional<make_hair_params> hair_params = {};
-};
-
-/// Procedural instance parameters.
-struct proc_instance {
-    /// Name (if not filled, assign a default one).
-    std::string name = "";
-    /// Shape name.
-    std::string shape = "";
-    /// Base frame.
-    frame3f frame = identity_frame3f;
-    /// Rotation in Euler angles.
-    vec3f rotation = zero3f;
 };
 
 /// Procedural environment parameters.
@@ -6474,11 +6448,11 @@ struct proc_node {
     std::string parent = "";
     /// Camera.
     std::string camera = "";
-    /// Instance.
-    std::string instance = "";
+    /// Shape.
+    std::string shape = "";
     /// Environment.
     std::string environment = "";
-    /// Frame.
+    /// Local frame. @refl_uilimits(-10,10)
     frame3f frame = identity_frame3f;
     /// Translation. @refl_uilimits(-10,10)
     vec3f translation = {0, 0, 0};
@@ -6522,8 +6496,6 @@ struct proc_scene {
     std::vector<std::shared_ptr<proc_material>> materials;
     /// Shapes.
     std::vector<std::shared_ptr<proc_shape>> shapes;
-    /// Instances.
-    std::vector<std::shared_ptr<proc_instance>> instances;
     /// Environmennts.
     std::vector<std::shared_ptr<proc_environment>> environments;
     /// Nodes.
@@ -6562,10 +6534,6 @@ void update_proc_elem(const std::shared_ptr<scene>& scn,
     const std::shared_ptr<shape>& shp, const std::shared_ptr<proc_shape>& tshp);
 /// Updates a procedural instance.
 void update_proc_elem(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<instance>& ist,
-    const std::shared_ptr<proc_instance>& tist);
-/// Updates a procedural instance.
-void update_proc_elem(const std::shared_ptr<scene>& scn,
     const std::shared_ptr<environment>& env,
     const std::shared_ptr<proc_environment>& tenv);
 /// Updates a procedural node.
@@ -6596,8 +6564,6 @@ std::vector<std::shared_ptr<proc_texture>>& proc_texture_presets();
 std::vector<std::shared_ptr<proc_material>>& proc_material_presets();
 /// Procedural shape presets.
 std::vector<std::shared_ptr<proc_shape>>& proc_shape_presets();
-/// Procedural instance presets.
-std::vector<std::shared_ptr<proc_instance>>& proc_instance_presets();
 /// Procedural environment presets.
 std::vector<std::shared_ptr<proc_environment>>& proc_environment_presets();
 /// Procedural nodes presets.
@@ -6783,20 +6749,6 @@ inline void visit(proc_shape& val, Visitor&& visitor) {
 
 /// Visit struct elements.
 template <typename Visitor>
-inline void visit(proc_instance& val, Visitor&& visitor) {
-    visitor(
-        val.name, visit_var{"name", visit_var_type::value,
-                      "Name (if not filled, assign a default one).", 0, 0, ""});
-    visitor(val.shape,
-        visit_var{"shape", visit_var_type::value, "Shape name.", 0, 0, ""});
-    visitor(val.frame,
-        visit_var{"frame", visit_var_type::value, "Base frame.", 0, 0, ""});
-    visitor(val.rotation, visit_var{"rotation", visit_var_type::value,
-                              "Rotation in Euler angles.", 0, 0, ""});
-}
-
-/// Visit struct elements.
-template <typename Visitor>
 inline void visit(proc_environment& val, Visitor&& visitor) {
     visitor(
         val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
@@ -6821,12 +6773,12 @@ inline void visit(proc_node& val, Visitor&& visitor) {
         visit_var{"parent", visit_var_type::value, "Parent node.", 0, 0, ""});
     visitor(val.camera,
         visit_var{"camera", visit_var_type::value, "Camera.", 0, 0, ""});
-    visitor(val.instance,
-        visit_var{"instance", visit_var_type::value, "Instance.", 0, 0, ""});
+    visitor(val.shape,
+        visit_var{"shape", visit_var_type::value, "Shape.", 0, 0, ""});
     visitor(val.environment, visit_var{"environment", visit_var_type::value,
                                  "Environment.", 0, 0, ""});
     visitor(val.frame,
-        visit_var{"frame", visit_var_type::value, "Frame.", 0, 0, ""});
+        visit_var{"frame", visit_var_type::value, "Local frame.", 0, 0, ""});
     visitor(val.translation, visit_var{"translation", visit_var_type::value,
                                  "Translation.", -10, 10, ""});
     visitor(val.rotation,
@@ -6871,8 +6823,6 @@ inline void visit(proc_scene& val, Visitor&& visitor) {
         visit_var{"materials", visit_var_type::value, "Materials.", 0, 0, ""});
     visitor(val.shapes,
         visit_var{"shapes", visit_var_type::value, "Shapes.", 0, 0, ""});
-    visitor(val.instances,
-        visit_var{"instances", visit_var_type::value, "Instances.", 0, 0, ""});
     visitor(val.environments, visit_var{"environments", visit_var_type::value,
                                   "Environmennts.", 0, 0, ""});
     visitor(val.nodes,
@@ -7061,14 +7011,14 @@ struct trace_pixel {
     float weight = 0;
 };
 
-/// Trace light as either instances or environments. The members are not part of
+/// Trace light as either shapes or environments. The members are not part of
 /// the the public API.
 struct trace_light {
     /// Shape pointer.
-    std::shared_ptr<instance> ist = nullptr;
-    /// Shape index for instance lights
-    int sid = 0;
-    /// Environment pointer for environment lights.
+    std::shared_ptr<shape> shp = nullptr;
+    /// Shape frame.
+    frame3f frame = identity_frame3f;
+    /// Environment pointer.
     std::shared_ptr<environment> env = nullptr;
 };
 
@@ -7184,7 +7134,7 @@ inline void visit(trace_params& val, Visitor&& visitor) {
         visit_var{"filter", visit_var_type::value, "Filter type.", 0, 0, ""});
     visitor(val.notransmission,
         visit_var{"notransmission", visit_var_type::value,
-            "Wheter to test transmission in shadows.", 0, 0, ""});
+            "Whether to test transmission in shadows.", 0, 0, ""});
     visitor(val.ambient, visit_var{"ambient", visit_var_type::color,
                              "Ambient lighting.", 0, 0, ""});
     visitor(val.envmap_invisible,
@@ -7290,6 +7240,8 @@ struct obj_group {
 struct obj_object {
     /// Name.
     std::string name;
+    /// Frame [extension]. Vertices are not transformed though.
+    frame3f frame = identity_frame3f;
     /// Element groups.
     std::vector<std::shared_ptr<obj_group>> groups;
     /// Properties not explicitly handled [extension].
@@ -7427,7 +7379,7 @@ struct obj_node {
     /// Environment name.
     std::string envname;
     /// Transform frame (affine matrix).
-    frame3f frame = identity_frame3f;
+    frame3f local = identity_frame3f;
     /// Translation.
     vec3f translation = zero3f;
     /// Rotation.

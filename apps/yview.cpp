@@ -87,8 +87,7 @@ inline void draw(const std::shared_ptr<ygl::gl_window>& win,
             last_time = app->time;
         }
         if (sel.is<ygl::shape>() || sel.is<ygl::shape_group>() ||
-            sel.is<ygl::material>() || sel.is<ygl::instance>() ||
-            sel.is<ygl::node>()) {
+            sel.is<ygl::material>() || sel.is<ygl::node>()) {
             app->lights = ygl::make_gl_lights(app->scn);
             if (app->lights.pos.empty()) app->params.eyelight = true;
         }
@@ -268,7 +267,6 @@ int main(int argc, char* argv[]) {
             auto opts = ygl::load_options();
             opts.preserve_quads = preserve_quads;
             opts.preserve_facevarying = preserve_facevarying;
-            opts.preserve_hierarchy = true;
             auto scn = load_scene(filename, opts);
             ygl::merge_into(app->scn, scn);
         } catch (std::exception e) {

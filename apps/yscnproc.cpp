@@ -137,7 +137,7 @@ int main(int argc, char** argv) {
         auto opts = ygl::add_elements_options::none();
         opts.default_names = true;
         opts.smooth_normals = add_normals;
-        opts.shape_instances = add_scene;
+        opts.node_hierarchy = add_scene;
         opts.default_paths = true;
         ygl::add_elements(scn, opts);
     }

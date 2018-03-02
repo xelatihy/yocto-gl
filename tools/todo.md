@@ -3,6 +3,32 @@
 This file contains notes on future improvements of Yocto.
 Please consider this to be just development notes and not any real planning.
 
+## New scene
+
+- add material to env
+- remove node children
+    - use stable sort
+    - add local frame
+- nodes point to shapes
+    - instances are created on the fly
+    - update hierarchy creates instances
+- procedural instances are deleted
+- instances are optional
+    - rename instances for now
+    - make drawing code work with only shapes
+    - instances are added during node updates
+    - remove instances from being central
+    - instances are added during update_hierarchy()
+    - loaders have no option to add or remove hierarchy
+- remove instances
+    - trace should not need instances
+        - bvh should handle instances in a different way,
+            - maybe just returning frames instead of instance ids
+            - or return sid, iid as before
+    - move frame to shape_group
+    - use nodes everywhere instances where needed
+- move to tagged shape
+
 ## Trace
 
 - environment map with material
