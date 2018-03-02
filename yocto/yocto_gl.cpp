@@ -1310,26 +1310,6 @@ void facet_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     facet_quads(quads, pos);
 }
 
-// Unshare vertices for faceting
-template <typename T>
-std::vector<T> facet_vert(
-    const std::vector<T>& vert, const std::vector<int>& vmap) {
-    if (vert.empty()) return vert;
-    auto tvert = std::vector<T>(vmap.size());
-    for (auto vid = 0; vid < vmap.size(); vid++) tvert[vid] = vert[vmap[vid]];
-    return tvert;
-}
-
-// instantations
-template std::vector<float> facet_vert<float>(
-    const std::vector<float>& vert, const std::vector<int>& vmap);
-template std::vector<vec2f> facet_vert<vec2f>(
-    const std::vector<vec2f>& vert, const std::vector<int>& vmap);
-template std::vector<vec3f> facet_vert<vec3f>(
-    const std::vector<vec3f>& vert, const std::vector<int>& vmap);
-template std::vector<vec4f> facet_vert<vec4f>(
-    const std::vector<vec4f>& vert, const std::vector<int>& vmap);
-
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
@@ -3177,18 +3157,18 @@ vec4f eval_tangsp(
 }
 
 // Instance position interpolated using barycentric coordinates
-vec3f eval_pos(
-    const std::shared_ptr<instance>& ist, int sid, int eid, const vec2f& euv) {
-    auto shp = ist->shp->shapes.at(sid);
+vec3f eval_pos(const std::shared_ptr<shape_group>& sgr, int sid, int eid,
+    const vec2f& euv) {
+    auto shp = sgr->shapes.at(sid);
     return transform_point(
-        ist->frame, eval_elem(shp, shp->pos, eid, euv, {0, 0, 0}));
+        sgr->frame, eval_elem(shp, shp->pos, eid, euv, {0, 0, 0}));
 }
 // Instance normal interpolated using barycentric coordinates
-vec3f eval_norm(
-    const std::shared_ptr<instance>& ist, int sid, int eid, const vec2f& euv) {
-    auto shp = ist->shp->shapes.at(sid);
+vec3f eval_norm(const std::shared_ptr<shape_group>& sgr, int sid, int eid,
+    const vec2f& euv) {
+    auto shp = sgr->shapes.at(sid);
     return transform_direction(
-        ist->frame, normalize(eval_elem(shp, shp->norm, eid, euv, {0, 0, 1})));
+        sgr->frame, normalize(eval_elem(shp, shp->norm, eid, euv, {0, 0, 1})));
 }
 
 // Environment position interpolated using uv parametrization.
@@ -3528,12 +3508,13 @@ void update_transforms(
 // Update node transforms
 void update_transforms(const std::shared_ptr<node>& nde,
     const frame3f& parent = identity_frame3f) {
-    auto frame = parent * nde->frame * translation_frame(nde->translation) *
-                 rotation_frame(nde->rotation) * scaling_frame(nde->scaling);
-    if (nde->ist) nde->ist->frame = frame;
-    if (nde->cam) nde->cam->frame = frame;
-    if (nde->env) nde->env->frame = frame;
-    for (auto child : nde->children_) update_transforms(child.lock(), frame);
+    nde->frame_ = parent * nde->local * translation_frame(nde->translation) *
+                  rotation_frame(nde->rotation) * scaling_frame(nde->scaling);
+    if (nde->shp) nde->shp->frame = nde->frame_;
+    if (nde->cam) nde->cam->frame = nde->frame_;
+    if (nde->env) nde->env->frame = nde->frame_;
+    for (auto child : nde->children_)
+        update_transforms(child.lock(), nde->frame_);
 }
 
 // Update node transforms
@@ -3612,14 +3593,15 @@ void add_elements(
         }
     }
 
-    if (opts.shape_instances) {
-        if (!scn->instances.empty()) return;
-        for (auto shp : scn->shapes) {
-            auto ist = std::make_shared<instance>();
-            ist->name = shp->name;
-            ist->shp = shp;
-            scn->instances.push_back(ist);
-        }
+    if (opts.node_hierarchy) {
+        log_error("not implemented");
+        //        if (!scn->instances.empty()) return;
+        //        for (auto shp : scn->shapes) {
+        //            auto ist = std::make_shared<instance>();
+        //            ist->name = shp->name;
+        //            ist->shp = shp;
+        //            scn->instances.push_back(ist);
+        //        }
     }
 
     if (opts.default_names || opts.default_paths) {
@@ -3651,18 +3633,18 @@ void add_elements(
             sid++;
         }
 
-        auto iid = 0;
-        for (auto ist : scn->instances) {
-            if (ist->name.empty())
-                ist->name = "unnamed_instance_" + std::to_string(iid);
-            iid++;
-        }
-
         auto eid = 0;
         for (auto env : scn->environments) {
             if (env->name.empty())
                 env->name = "unnamed_environment_" + std::to_string(eid);
             eid++;
+        }
+
+        auto nid = 0;
+        for (auto nde : scn->nodes) {
+            if (nde->name.empty())
+                nde->name = "unnamed_node_" + std::to_string(nid);
+            nid++;
         }
     }
 
@@ -3724,7 +3706,6 @@ void merge_into(const std::shared_ptr<scene>& merge_into,
     merge(merge_into->textures, merge_from->textures);
     merge(merge_into->materials, merge_from->materials);
     merge(merge_into->shapes, merge_from->shapes);
-    merge(merge_into->instances, merge_from->instances);
     merge(merge_into->environments, merge_from->environments);
     merge(merge_into->nodes, merge_from->nodes);
     merge(merge_into->animations, merge_from->animations);
@@ -3750,38 +3731,31 @@ bbox3f compute_bounds(const std::shared_ptr<scene>& scn, bool skip_emitting) {
         }
     }
     auto bbox = invalid_bbox3f;
-    if (!scn->instances.empty()) {
-        for (auto ist : scn->instances)
-            bbox += transform_bbox(ist->frame, shape_bboxes.at(ist->shp));
+    if (!scn->nodes.empty()) {
+        for (auto nde : scn->nodes)
+            bbox += transform_bbox(nde->frame_, shape_bboxes.at(nde->shp));
 
     } else {
-        for (auto shp : scn->shapes) bbox += shape_bboxes.at(shp);
+        for (auto shp : scn->shapes)
+            bbox += transform_bbox(shp->frame, shape_bboxes.at(shp));
     }
     return bbox;
 }
 
 // Flatten scene instances into separate meshes.
 void flatten_instances(const std::shared_ptr<scene>& scn) {
-    if (scn->instances.empty()) return;
-    auto shapes = scn->shapes;
-    scn->shapes.clear();
-    auto instances = scn->instances;
-    scn->instances.clear();
-    for (auto ist : instances) {
-        if (!ist->shp) continue;
-        auto nsgr = std::make_shared<shape_group>();
-        nsgr->name = ist->shp->name;
-        nsgr->path = "";
-        for (auto shp : ist->shp->shapes) {
-            auto nshp = std::make_shared<shape>(*shp);
-            for (auto& p : nshp->pos) p = transform_point(ist->frame, p);
-            for (auto& n : nshp->norm) n = transform_direction(ist->frame, n);
-            nsgr->shapes.push_back(nshp);
-        }
-        scn->shapes.push_back(nsgr);
+    auto shape_count = std::unordered_map<std::shared_ptr<shape_group>, int>();
+    for (auto shp : scn->shapes) shape_count[shp] = 0;
+    for (auto nde : scn->nodes) {
+        if (!nde->shp) continue;
+        shape_count[nde->shp] += 1;
+        if (shape_count[nde->shp] < 2) continue;
+        auto sgr = std::make_shared<shape_group>(*nde->shp);
+        sgr->name += "_" + std::to_string(shape_count[nde->shp]);
+        for (auto& shp : sgr->shapes) shp = std::make_shared<shape>(*shp);
+        scn->shapes.push_back(sgr);
+        nde->shp = sgr;
     }
-    scn->nodes.clear();
-    scn->animations.clear();
 }
 
 // Build a shape BVH
@@ -3807,16 +3781,32 @@ std::shared_ptr<bvh_tree> make_bvh(
 
     // tree bvh
     auto bists = std::vector<bvh_instance>();
-    for (auto iid = 0; iid < scn->instances.size(); iid++) {
-        auto ist = scn->instances[iid];
-        for (auto sid = 0; sid < ist->shp->shapes.size(); sid++) {
-            auto bist = bvh_instance();
-            bist.frame = ist->frame;
-            bist.frame_inv = inverse(ist->frame);
-            bist.iid = iid;
-            bist.sid = sid;
-            bist.bvh = smap.at(ist->shp->shapes.at(sid));
-            bists.push_back(bist);
+    if (scn->nodes.empty()) {
+        for (auto iid = 0; iid < scn->shapes.size(); iid++) {
+            auto sgr = scn->shapes[iid];
+            for (auto sid = 0; sid < sgr->shapes.size(); sid++) {
+                auto bist = bvh_instance();
+                bist.frame = sgr->frame;
+                bist.frame_inv = inverse(sgr->frame);
+                bist.iid = iid;
+                bist.sid = sid;
+                bist.bvh = smap.at(sgr->shapes.at(sid));
+                bists.push_back(bist);
+            }
+        }
+    } else {
+        for (auto iid = 0; iid < scn->nodes.size(); iid++) {
+            auto nde = scn->nodes[iid];
+            if (!nde->shp) continue;
+            for (auto sid = 0; sid < nde->shp->shapes.size(); sid++) {
+                auto bist = bvh_instance();
+                bist.frame = nde->frame_;
+                bist.frame_inv = inverse(nde->frame_);
+                bist.iid = iid;
+                bist.sid = sid;
+                bist.bvh = smap.at(nde->shp->shapes.at(sid));
+                bists.push_back(bist);
+            }
         }
     }
     return make_bvh(bists, shape_bvhs, equalsize);
@@ -3843,9 +3833,17 @@ void refit_bvh(const std::shared_ptr<bvh_tree>& bvh,
     }
     auto ist_frames = std::vector<frame3f>();
     auto ist_frames_inv = std::vector<frame3f>();
-    for (auto ist : scn->instances) {
-        ist_frames.push_back(ist->frame);
-        ist_frames_inv.push_back(inverse(ist->frame));
+    if (scn->nodes.empty()) {
+        for (auto sgr : scn->shapes) {
+            ist_frames.push_back(sgr->frame);
+            ist_frames_inv.push_back(inverse(sgr->frame));
+        }
+    } else {
+        for (auto nde : scn->nodes) {
+            if (!nde->shp) continue;
+            ist_frames.push_back(nde->frame_);
+            ist_frames_inv.push_back(inverse(nde->frame_));
+        }
     }
     refit_bvh(bvh, ist_frames, ist_frames_inv);
 }
@@ -3855,13 +3853,15 @@ scene_stats compute_stats(const std::shared_ptr<scene>& scn) {
     auto stats = scene_stats();
     stats.num_cameras = scn->cameras.size();
     stats.num_shape_groups = scn->shapes.size();
-    stats.num_instances = scn->instances.size();
     stats.num_materials = scn->materials.size();
     stats.num_textures = scn->textures.size();
     stats.num_environments = scn->environments.size();
     stats.num_nodes = scn->nodes.size();
     stats.num_animation_groups = scn->animations.size();
 
+    for (auto nde : scn->nodes) {
+        if (nde->shp) stats.num_instances += 1;
+    }
     for (auto sgr : scn->shapes) {
         stats.num_shapes += sgr->shapes.size();
         for (auto shp : sgr->shapes) {
@@ -4058,6 +4058,7 @@ std::shared_ptr<scene> obj_to_scene(
     for (auto omsh : obj->objects) {
         auto sgr = std::make_shared<shape_group>();
         sgr->name = omsh->name;
+        sgr->frame = omsh->frame;
         for (auto oshp : omsh->groups) {
             if (oshp->verts.empty()) continue;
             if (oshp->elems.empty()) continue;
@@ -4348,24 +4349,30 @@ std::shared_ptr<scene> obj_to_scene(
         scn->materials.erase(end, scn->materials.end());
     }
 
+    // adjust positions and normals
+    for (auto oid = 0; oid < obj->objects.size(); oid++) {
+        auto oobj = obj->objects[oid];
+        if (oobj->frame == identity_frame3f) continue;
+        scn->shapes[oid]->frame = oobj->frame;
+        auto inv_frame = inverse(oobj->frame);
+        for (auto shp : scn->shapes[oid]->shapes) {
+            for (auto& p : shp->pos) p = transform_point(inv_frame, p);
+            for (auto& n : shp->norm) n = transform_direction(inv_frame, n);
+        }
+    }
+
+    // convert nodes
     if (!obj->nodes.empty()) {
-        // convert nodes
         for (auto onde : obj->nodes) {
             auto nde = std::make_shared<node>();
             nde->name = onde->name;
             nde->cam = cmap.at(onde->camname);
-            if (!onde->objname.empty()) {
-                auto ist = std::make_shared<instance>();
-                ist->name = onde->name;
-                ist->shp = omap.at(onde->objname);
-                nde->ist = ist;
-                scn->instances.push_back(ist);
-            }
+            nde->shp = omap.at(onde->objname);
             nde->env = emap.at(onde->envname);
             nde->translation = onde->translation;
             nde->rotation = onde->rotation;
             nde->scaling = onde->scaling;
-            nde->frame = onde->frame;
+            nde->local = onde->local;
             scn->nodes.push_back(nde);
         }
 
@@ -4385,12 +4392,6 @@ std::shared_ptr<scene> obj_to_scene(
 
     // update transforms
     update_transforms(scn);
-
-    // remove hierarchy if necessary
-    if (!opts.preserve_hierarchy) {
-        scn->nodes.clear();
-        scn->animations.clear();
-    }
 
     // done
     return scn;
@@ -4511,13 +4512,21 @@ std::shared_ptr<obj_scene> scene_to_obj(const std::shared_ptr<scene>& scn) {
     for (auto sgr : scn->shapes) {
         auto oobj = std::make_shared<obj_object>();
         oobj->name = sgr->name;
+        oobj->frame = sgr->frame;
         for (auto shp : sgr->shapes) {
             auto offset = obj_vertex{(int)obj->pos.size(),
                 (int)obj->texcoord.size(), (int)obj->norm.size(),
                 (int)obj->color.size(), (int)obj->radius.size()};
-            for (auto& v : shp->pos) obj->pos.push_back({v.x, v.y, v.z});
-            for (auto& v : shp->norm) obj->norm.push_back({v.x, v.y, v.z});
-            for (auto& v : shp->texcoord) obj->texcoord.push_back({v.x, v.y});
+            if (sgr->frame == identity_frame3f) {
+                for (auto& v : shp->pos) obj->pos.push_back(v);
+                for (auto& v : shp->norm) obj->norm.push_back(v);
+            } else {
+                for (auto& v : shp->pos)
+                    obj->pos.push_back(transform_point(sgr->frame, v));
+                for (auto& v : shp->norm)
+                    obj->norm.push_back(transform_direction(sgr->frame, v));
+            }
+            for (auto& v : shp->texcoord) obj->texcoord.push_back(v);
             for (auto& v : shp->color)
                 obj->color.push_back({v.x, v.y, v.z, v.w});
             for (auto& v : shp->radius) obj->radius.push_back(v);
@@ -4670,13 +4679,14 @@ std::shared_ptr<obj_scene> scene_to_obj(const std::shared_ptr<scene>& scn) {
             auto onde = std::make_shared<obj_node>();
             onde->name = nde->name;
             if (nde->cam) onde->camname = nde->cam->name;
-            if (nde->ist) onde->objname = nde->ist->name;
+            if (nde->shp) onde->objname = nde->shp->name;
             if (nde->env) onde->envname = nde->env->name;
-            onde->frame = nde->frame;
+            onde->local = nde->local;
             onde->translation = nde->translation;
             onde->rotation = nde->rotation;
             onde->scaling = nde->scaling;
             obj->nodes.push_back(onde);
+            log_error("obj position/norma; already transformed");
         }
 
         // parent
@@ -4685,14 +4695,6 @@ std::shared_ptr<obj_scene> scene_to_obj(const std::shared_ptr<scene>& scn) {
             if (!nde->parent) continue;
             auto onde = obj->nodes.at(idx);
             onde->parent = nde->parent->name;
-        }
-    } else {
-        for (auto ist : scn->instances) {
-            auto onde = std::make_shared<obj_node>();
-            onde->name = ist->name;
-            onde->objname = (ist->shp) ? ist->shp->name : "<undefined>";
-            onde->frame = ist->frame;
-            obj->nodes.push_back(onde);
         }
     }
 
@@ -4976,10 +4978,8 @@ std::shared_ptr<scene> gltf_to_scene(
     }
 
     // convert cameras
-    auto cameras = std::vector<camera>();
     for (auto gcam : gltf->cameras) {
-        cameras.push_back({});
-        auto cam = &cameras.back();
+        auto cam = std::make_shared<camera>();
         cam->name = gcam->name;
         cam->ortho = gcam->type == glTFCameraType::Orthographic;
         if (cam->ortho) {
@@ -4996,38 +4996,26 @@ std::shared_ptr<scene> gltf_to_scene(
             cam->near = persp->znear;
             cam->far = persp->zfar;
         }
+        scn->cameras.push_back(cam);
     }
 
     // convert nodes
     for (auto gnde : gltf->nodes) {
         auto nde = std::make_shared<node>();
         nde->name = gnde->name;
-        if (gnde->camera) {
-            auto cam = std::make_shared<camera>(cameras[(int)gnde->camera]);
-            nde->cam = cam;
-            scn->cameras.push_back(cam);
-        }
-        if (gnde->mesh) {
-            auto ist = std::make_shared<instance>();
-            ist->name = gnde->name;
-            ist->shp = scn->shapes[(int)gnde->mesh];
-            nde->ist = ist;
-            scn->instances.push_back(ist);
-#if 0
-            for (auto shp : node->msh->shapes) {
-                if (node->morph_weights.size() < shp->morph_targets.size()) {
-                    node->morph_weights.resize(shp->morph_targets.size());
-                }
-            }
-#endif
-        }
+        if (gnde->camera) nde->cam = scn->cameras[(int)gnde->camera];
+        if (gnde->mesh) nde->shp = scn->shapes[(int)gnde->mesh];
+        //            for (auto shp : node->msh->shapes) {
+        //                if (node->morph_weights.size() <
+        //                shp->morph_targets.size()) {
+        //                    node->morph_weights.resize(shp->morph_targets.size());
+        //                }
+        //            }
         nde->translation = gnde->translation;
         nde->rotation = gnde->rotation;
         nde->scaling = gnde->scale;
-        nde->frame = mat_to_frame(gnde->matrix);
-#if 0
-        nde->weights = gnde->weights;
-#endif
+        nde->local = mat_to_frame(gnde->matrix);
+        //        nde->weights = gnde->weights;
         scn->nodes.push_back(nde);
     }
 
@@ -5127,12 +5115,6 @@ std::shared_ptr<scene> gltf_to_scene(
     // compute transforms
     update_transforms(scn, 0);
 
-    // remove hierarchy if necessary
-    if (!opts.preserve_hierarchy) {
-        scn->nodes.clear();
-        scn->animations.clear();
-    }
-
     return scn;
 }
 
@@ -5153,6 +5135,8 @@ std::shared_ptr<scene> load_gltf_scene(
 std::shared_ptr<glTF> scene_to_gltf(const std::shared_ptr<scene>& scn,
     const std::string& buffer_uri, bool separate_buffers) {
     auto gltf = std::make_shared<glTF>();
+
+    log_error("untransformed shape frames");
 
     // add asset info
     gltf->asset = std::make_shared<glTFAsset>();
@@ -5482,12 +5466,12 @@ std::shared_ptr<glTF> scene_to_gltf(const std::shared_ptr<scene>& scn,
 
     // hierarchy
     if (scn->nodes.empty()) {
-        // instances
-        for (auto ist : scn->instances) {
+        // shapes
+        for (auto shp : scn->shapes) {
             auto gnode = std::make_shared<glTFNode>();
-            gnode->name = ist->name;
-            gnode->mesh = glTFid<glTFMesh>(index(scn->shapes, ist->shp));
-            gnode->matrix = frame_to_mat(ist->frame);
+            gnode->name = shp->name;
+            gnode->mesh = glTFid<glTFMesh>(index(scn->shapes, shp));
+            gnode->matrix = frame_to_mat(shp->frame);
             gltf->nodes.push_back(gnode);
         }
 
@@ -5519,11 +5503,10 @@ std::shared_ptr<glTF> scene_to_gltf(const std::shared_ptr<scene>& scn,
                 gnode->camera =
                     glTFid<glTFCamera>(index(scn->cameras, nde->cam));
             }
-            if (nde->ist) {
-                gnode->mesh =
-                    glTFid<glTFMesh>(index(scn->shapes, nde->ist->shp));
+            if (nde->shp) {
+                gnode->mesh = glTFid<glTFMesh>(index(scn->shapes, nde->shp));
             }
-            gnode->matrix = frame_to_mat(nde->frame);
+            gnode->matrix = frame_to_mat(nde->local);
             gnode->translation = nde->translation;
             gnode->rotation = nde->rotation;
             gnode->scale = nde->scaling;
@@ -6219,7 +6202,7 @@ std::tuple<vec3f, bool> sample_brdfcos(
 }
 
 // Create a point for an environment map. Resolves material with textures.
-trace_point eval_trace_point(
+trace_point eval_environment_point(
     const std::shared_ptr<environment>& env, const vec2f& uv) {
     auto pt = trace_point();
     pt.env = env;
@@ -6238,8 +6221,8 @@ trace_point eval_trace_point(
 }
 
 // Create a point for a shape. Resolves geometry and material with textures.
-trace_point eval_trace_point(
-    const std::shared_ptr<instance>& ist, int sid, int eid, const vec2f& euv) {
+trace_point eval_shape_point(const std::shared_ptr<shape>& shp,
+    const frame3f& frame, int eid, const vec2f& euv) {
     // default material
     static auto def_material = (std::shared_ptr<material>)nullptr;
     if (!def_material) {
@@ -6252,7 +6235,7 @@ trace_point eval_trace_point(
     auto pt = trace_point();
 
     // shape
-    pt.shp = ist->shp->shapes.at(sid);
+    pt.shp = shp;
     switch (get_shape_type(pt.shp)) {
         case shape_elem_type::none: {
             return pt;
@@ -6295,8 +6278,8 @@ trace_point eval_trace_point(
     }
 
     // move to world coordinates
-    pt.pos = transform_point(ist->frame, pt.pos);
-    pt.norm = transform_direction(ist->frame, pt.norm);
+    pt.pos = transform_point(frame, pt.pos);
+    pt.norm = transform_direction(frame, pt.norm);
 
     // double-sided
     pt.double_sided = mat->double_sided;
@@ -6463,14 +6446,14 @@ float weight_lights(
 // Picks a point on a light.
 trace_point sample_light(const trace_lights& lights, const trace_light& lgt,
     const trace_point& pt, float rel, const vec2f& ruv) {
-    if (lgt.ist) {
-        auto shp = lgt.ist->shp->shapes.at(lgt.sid);
-        auto& dst = lights.shape_distribs.at(shp);
-        auto sample = sample_shape(shp, dst, rel, ruv);
-        return eval_trace_point(lgt.ist, lgt.sid, sample.first, sample.second);
+    if (lgt.shp) {
+        auto& dst = lights.shape_distribs.at(lgt.shp);
+        auto sample = sample_shape(lgt.shp, dst, rel, ruv);
+        return eval_shape_point(
+            lgt.shp, lgt.frame, sample.first, sample.second);
     } else if (lgt.env) {
         // BUG: this is not uniform sampling
-        return eval_trace_point(lgt.env, ruv);
+        return eval_environment_point(lgt.env, ruv);
     } else {
         throw std::runtime_error("should not have gotten here");
     }
@@ -6492,9 +6475,15 @@ trace_point intersect_scene(const std::shared_ptr<scene>& scn,
     auto euv = zero2f;
     auto ray_t = 0.0f;
     if (intersect_bvh(bvh, ray, false, ray_t, iid, sid, eid, euv)) {
-        return eval_trace_point(scn->instances[iid], sid, eid, euv);
+        if (scn->nodes.empty()) {
+            return eval_shape_point(scn->shapes[iid]->shapes[sid],
+                scn->shapes[iid]->frame, eid, euv);
+        } else {
+            return eval_shape_point(scn->nodes[iid]->shp->shapes[sid],
+                scn->nodes[iid]->frame_, eid, euv);
+        }
     } else if (!scn->environments.empty()) {
-        return eval_trace_point(
+        return eval_environment_point(
             scn->environments[0], eval_uv(scn->environments[0], ray.d));
     } else {
         return {};
@@ -7082,18 +7071,35 @@ void trace_async_stop(std::vector<std::thread>& threads, bool& stop_flag) {
 // Initialize trace lights
 trace_lights make_trace_lights(const std::shared_ptr<scene>& scn) {
     auto lights = trace_lights();
-    for (auto ist : scn->instances) {
-        if (!ist->shp) continue;
-        for (auto sid = 0; sid < ist->shp->shapes.size(); sid++) {
-            auto shp = ist->shp->shapes.at(sid);
-            if (!shp->mat) continue;
-            if (shp->mat->ke == zero3f) continue;
-            auto lgt = trace_light();
-            lgt.ist = ist;
-            lgt.sid = sid;
-            lights.lights.push_back(lgt);
+
+    for (auto sgr : scn->shapes) {
+        for (auto shp : sgr->shapes) {
+            if (!shp->mat || shp->mat->ke == zero3f) continue;
             if (!contains(lights.shape_distribs, shp))
                 lights.shape_distribs[shp] = make_shape_distribution(shp);
+        }
+    }
+
+    if (scn->nodes.empty()) {
+        for (auto sgr : scn->shapes) {
+            for (auto shp : sgr->shapes) {
+                if (!shp->mat || shp->mat->ke == zero3f) continue;
+                auto lgt = trace_light();
+                lgt.shp = shp;
+                lgt.frame = sgr->frame;
+                lights.lights.push_back(lgt);
+            }
+        }
+    } else {
+        for (auto nde : scn->nodes) {
+            if (!nde->shp) continue;
+            for (auto shp : nde->shp->shapes) {
+                if (!shp->mat || shp->mat->ke == zero3f) continue;
+                auto lgt = trace_light();
+                lgt.shp = shp;
+                lgt.frame = nde->frame_;
+                lights.lights.push_back(lgt);
+            }
         }
     }
 
@@ -7676,6 +7682,8 @@ std::shared_ptr<obj_scene> load_obj(const std::string& filename, bool load_txt,
                 obj_skipws(ss);
                 object->props[name].push_back(tok);
             }
+        } else if (obj_streq(cmd, "of")) {
+            obj_parse(ss, object->frame);
         } else if (obj_streq(cmd, "mtllib")) {
             mtllibs.push_back("");
             obj_parse(ss, mtllibs.back());
@@ -7702,7 +7710,7 @@ std::shared_ptr<obj_scene> load_obj(const std::string& filename, bool load_txt,
             obj_parse(ss, nde->camname);
             obj_parse(ss, nde->objname);
             obj_parse(ss, nde->envname);
-            obj_parse(ss, nde->frame);
+            obj_parse(ss, nde->local);
             obj_parse(ss, nde->translation);
             obj_parse(ss, nde->rotation);
             obj_parse(ss, nde->scaling);
@@ -7718,9 +7726,8 @@ std::shared_ptr<obj_scene> load_obj(const std::string& filename, bool load_txt,
 
     // cleanup unused
     for (auto& o : asset->objects) {
-        for (auto& g : o->groups) {
-            if (g->verts.empty()) { g = nullptr; }
-        }
+        for (auto& g : o->groups)
+            if (g->verts.empty()) g = nullptr;
         auto end = std::remove_if(o->groups.begin(), o->groups.end(),
             [](const std::shared_ptr<obj_group>& x) { return !x; });
         o->groups.erase(end, o->groups.end());
@@ -7999,7 +8006,7 @@ void save_obj(const std::string& filename,
         obj_dump_sp(fs, (nde->camname.empty()) ? "\"\""s : nde->camname);
         obj_dump_sp(fs, (nde->objname.empty()) ? "\"\""s : nde->objname);
         obj_dump_sp(fs, (nde->envname.empty()) ? "\"\""s : nde->envname);
-        obj_dump_sp(fs, nde->frame);
+        obj_dump_sp(fs, nde->local);
         obj_dump_sp(fs, nde->translation);
         obj_dump_sp(fs, nde->rotation);
         obj_dump_sp(fs, nde->scaling);
@@ -8024,6 +8031,8 @@ void save_obj(const std::string& filename,
         {obj_element_type::face, "f"}, {obj_element_type::bezier, "b"}};
     for (auto object : asset->objects) {
         obj_dump_line(fs, "o", object->name);
+        if (object->frame != identity_frame3f)
+            obj_dump_line(fs, "of", object->frame);
         for (auto& kv : object->props) {
             obj_dump_line(fs, "op", join({kv.first}, kv.second));
         }
@@ -10373,23 +10382,15 @@ std::shared_ptr<scene> make_cornell_box_scene() {
         return cam;
     };
 
-    auto make_instance = [](std::string name,
-                             const std::shared_ptr<shape_group>& shp, vec3f pos,
-                             vec3f rot = {0, 0, 0}) {
-        auto ist = std::make_shared<instance>();
-        ist->name = name;
-        ist->shp = shp;
-        ist->frame = translation_frame(pos) *
+    auto make_quad = [](std::string name, const std::shared_ptr<material>& mat,
+                         vec3f pos, vec3f rot = {0, 0, 0},
+                         vec3f scale = {1, 1, 1}) {
+        auto sgr = std::make_shared<shape_group>();
+        sgr->name = name;
+        sgr->frame = translation_frame(pos) *
                      rotation_frame(vec3f{0, 0, 1}, rot[2] * pif / 180) *
                      rotation_frame(vec3f{0, 1, 0}, rot[1] * pif / 180) *
                      rotation_frame(vec3f{1, 0, 0}, rot[0] * pif / 180);
-        return ist;
-    };
-
-    auto make_quad = [](std::string name, const std::shared_ptr<material>& mat,
-                         float scale = 1) {
-        auto sgr = std::make_shared<shape_group>();
-        sgr->name = name;
         auto shp = std::make_shared<shape>();
         shp->mat = mat;
         shp->name = name;
@@ -10400,9 +10401,14 @@ std::shared_ptr<scene> make_cornell_box_scene() {
     };
 
     auto make_box = [](std::string name, const std::shared_ptr<material>& mat,
-                        vec3f scale) {
+                        vec3f pos, vec3f rot = {0, 0, 0},
+                        vec3f scale = {1, 1, 1}) {
         auto sgr = std::make_shared<shape_group>();
         sgr->name = name;
+        sgr->frame = translation_frame(pos) *
+                     rotation_frame(vec3f{0, 0, 1}, rot[2] * pif / 180) *
+                     rotation_frame(vec3f{0, 1, 0}, rot[1] * pif / 180) *
+                     rotation_frame(vec3f{1, 0, 0}, rot[0] * pif / 180);
         auto shp = std::make_shared<shape>();
         shp->mat = mat;
         shp->name = name;
@@ -10430,32 +10436,22 @@ std::shared_ptr<scene> make_cornell_box_scene() {
     scn->materials.push_back(make_material("cb_red", {0.63f, 0.065f, 0.05f}));
     scn->materials.push_back(make_material("cb_green", {0.14f, 0.45f, 0.091f}));
     scn->materials.push_back(make_material("cb_light", zero3f, {17, 12, 4}));
-    scn->shapes.push_back(make_quad("cb_floor", scn->materials[0]));
-    scn->shapes.push_back(make_quad("cb_ceiling", scn->materials[0]));
-    scn->shapes.push_back(make_quad("cb_back", scn->materials[0]));
-    scn->shapes.push_back(make_quad("cb_left", scn->materials[2]));
-    scn->shapes.push_back(make_quad("cb_right", scn->materials[1]));
     scn->shapes.push_back(
-        make_box("cb_tallbox", scn->materials[0], {0.3f, 0.6f, 0.3f}));
+        make_quad("cb_floor", scn->materials[0], {0, 0, 0}, {-90, 0, 0}));
     scn->shapes.push_back(
-        make_box("cb_shortbox", scn->materials[0], {0.3f, 0.3f, 0.3f}));
-    scn->shapes.push_back(make_quad("cb_light", scn->materials[3], 0.25f));
-    scn->instances.push_back(
-        make_instance("cb_floor", scn->shapes[0], {0, 0, 0}, {-90, 0, 0}));
-    scn->instances.push_back(
-        make_instance("cb_ceiling", scn->shapes[1], {0, 2, 0}, {90, 0, 0}));
-    scn->instances.push_back(
-        make_instance("cb_back", scn->shapes[2], {0, 1, -1}));
-    scn->instances.push_back(
-        make_instance("cb_left", scn->shapes[3], {+1, 1, 0}, {0, -90, 0}));
-    scn->instances.push_back(
-        make_instance("cb_right", scn->shapes[4], {-1, 1, 0}, {0, 90, 0}));
-    scn->instances.push_back(make_instance(
-        "cb_tallbox", scn->shapes[5], {-0.33f, 0.6f, -0.29f}, {0, 15, 0}));
-    scn->instances.push_back(make_instance(
-        "cb_shortbox", scn->shapes[6], {0.33f, 0.3f, 0.33f}, {0, -15, 0}));
-    scn->instances.push_back(
-        make_instance("cb_light", scn->shapes[7], {0, 1.999f, 0}, {90, 0, 0}));
+        make_quad("cb_ceiling", scn->materials[0], {0, 2, 0}, {90, 0, 0}));
+    scn->shapes.push_back(
+        make_quad("cb_back", scn->materials[0], {0, 1, -1}, {0, 0, 0}));
+    scn->shapes.push_back(
+        make_quad("cb_left", scn->materials[2], {+1, 1, 0}, {0, -90, 0}));
+    scn->shapes.push_back(
+        make_quad("cb_right", scn->materials[1], {-1, 1, 0}, {0, 90, 0}));
+    scn->shapes.push_back(make_box("cb_tallbox", scn->materials[0],
+        {-0.33f, 0.6f, -0.29f}, {0, 15, 0}, {0.3f, 0.6f, 0.3f}));
+    scn->shapes.push_back(make_box("cb_shortbox", scn->materials[0],
+        {0.33f, 0.3f, 0.33f}, {0, -15, 0}, {0.3f, 0.3f, 0.3f}));
+    scn->shapes.push_back(make_quad("cb_light", scn->materials[3],
+        {0, 1.999f, 0}, {90, 0, 0}, {0.25f, 0.25f, 0.25f}));
     return scn;
 }
 
@@ -10676,6 +10672,7 @@ void update_proc_elem(const std::shared_ptr<scene>& scn,
     }
 
     sgr->name = pshp->name;
+    sgr->frame = pshp->frame;
     auto sid = 0;
     for (auto shp : sgr->shapes) {
         shp->name =
@@ -10814,23 +10811,6 @@ void update_proc_elem(const std::shared_ptr<scene>& scn,
     if (pshp->faceted) facet_shape(shp);
 }
 
-// Makes/updates a test shape.
-void update_proc_elem(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<instance>& ist,
-    const std::shared_ptr<proc_instance>& pist) {
-    if (pist->name == "") throw std::runtime_error("cannot use empty name");
-    ist->name = pist->name;
-    ist->frame = pist->frame;
-    if (pist->rotation != zero3f) {
-        ist->frame =
-            pist->frame *
-            rotation_frame(vec3f{0, 0, 1}, pist->rotation.z * pif / 180) *
-            rotation_frame(vec3f{0, 1, 0}, pist->rotation.y * pif / 180) *
-            rotation_frame(vec3f{1, 0, 0}, pist->rotation.x * pif / 180);
-    }
-    ist->shp = find_named_elem(scn->shapes, pist->shape);
-}
-
 // Makes/updates a test shape
 void update_proc_elem(const std::shared_ptr<scene>& scn,
     const std::shared_ptr<camera>& cam,
@@ -10862,12 +10842,12 @@ void update_proc_elem(const std::shared_ptr<scene>& scn,
     const std::shared_ptr<node>& nde, const std::shared_ptr<proc_node>& pnde) {
     if (pnde->name == "") throw std::runtime_error("cannot use empty name");
     nde->name = pnde->name;
-    nde->frame = pnde->frame;
+    nde->local = pnde->frame;
     nde->translation = pnde->translation;
     nde->rotation = pnde->rotation;
     nde->scaling = pnde->scaling;
     nde->cam = find_named_elem(scn->cameras, pnde->camera);
-    nde->ist = find_named_elem(scn->instances, pnde->instance);
+    nde->shp = find_named_elem(scn->shapes, pnde->shape);
     nde->env = find_named_elem(scn->environments, pnde->environment);
 }
 
@@ -10923,7 +10903,6 @@ void update_proc_elems(const std::shared_ptr<scene>& scn,
     update_proc_scene_elem(scn, scn->textures, pscn->textures, refresh);
     update_proc_scene_elem(scn, scn->materials, pscn->materials, refresh);
     update_proc_scene_elem(scn, scn->shapes, pscn->shapes, refresh);
-    update_proc_scene_elem(scn, scn->instances, pscn->instances, refresh);
     update_proc_scene_elem(scn, scn->environments, pscn->environments, refresh);
     update_proc_scene_elem(scn, scn->nodes, pscn->nodes, refresh);
     update_proc_scene_elem(scn, scn->animations, pscn->animations, refresh);
@@ -10955,56 +10934,55 @@ void remove_duplicates(const std::shared_ptr<proc_scene>& scn) {
     remove_duplicate_elems(scn->textures);
     remove_duplicate_elems(scn->materials);
     remove_duplicate_elems(scn->shapes);
-    remove_duplicate_elems(scn->instances);
     remove_duplicate_elems(scn->environments);
+    remove_duplicate_elems(scn->nodes);
+    remove_duplicate_elems(scn->animations);
 }
 
 std::vector<std::shared_ptr<proc_texture>>& proc_texture_presets() {
     static auto presets = std::vector<std::shared_ptr<proc_texture>>();
     if (!presets.empty()) return presets;
 
-    auto make_test_texture = [](const std::string& name,
-                                 proc_texture_type type) {
+    auto make_texture = [](const std::string& name, proc_texture_type type) {
         auto params = std::make_shared<proc_texture>();
         params->name = name;
         params->type = type;
         return params;
     };
 
-    presets.push_back(make_test_texture("grid", proc_texture_type::grid));
-    presets.push_back(make_test_texture("checker", proc_texture_type::checker));
-    presets.push_back(make_test_texture("colored", proc_texture_type::colored));
+    presets.push_back(make_texture("grid", proc_texture_type::grid));
+    presets.push_back(make_texture("checker", proc_texture_type::checker));
+    presets.push_back(make_texture("colored", proc_texture_type::colored));
+    presets.push_back(make_texture("rcolored", proc_texture_type::rcolored));
+    presets.push_back(make_texture("bump", proc_texture_type::bump));
+    presets.back()->tile_size = 32;
+    presets.push_back(make_texture("tgrid", proc_texture_type::bump));
+    presets.back()->tile_size = 32;
+    presets.push_back(make_texture("uv", proc_texture_type::uv));
+    presets.push_back(make_texture("gamma", proc_texture_type::gamma));
+    presets.push_back(make_texture("gridn", proc_texture_type::grid));
+    presets.back()->bump_to_normal = true;
+    presets.back()->bump_to_normal = true;
+    presets.back()->bump_scale = 4;
+    presets.push_back(make_texture("tgridn", proc_texture_type::grid));
+    presets.back()->tile_size = 32;
+    presets.back()->bump_to_normal = true;
+    presets.back()->bump_to_normal = true;
+    presets.back()->bump_scale = 4;
+    presets.push_back(make_texture("bumpn", proc_texture_type::bump));
+    presets.back()->tile_size = 32;
+    presets.back()->bump_to_normal = true;
+    presets.back()->bump_scale = 4;
+    presets.push_back(make_texture("noise", proc_texture_type::noise));
+    presets.push_back(make_texture("ridge", proc_texture_type::ridge));
+    presets.push_back(make_texture("fbm", proc_texture_type::fbm));
     presets.push_back(
-        make_test_texture("rcolored", proc_texture_type::rcolored));
-    presets.push_back(make_test_texture("bump", proc_texture_type::bump));
-    presets.back()->tile_size = 32;
-    presets.push_back(make_test_texture("tgrid", proc_texture_type::bump));
-    presets.back()->tile_size = 32;
-    presets.push_back(make_test_texture("uv", proc_texture_type::uv));
-    presets.push_back(make_test_texture("gamma", proc_texture_type::gamma));
-    presets.push_back(make_test_texture("gridn", proc_texture_type::grid));
-    presets.back()->bump_to_normal = true;
-    presets.back()->bump_to_normal = true;
-    presets.back()->bump_scale = 4;
-    presets.push_back(make_test_texture("tgridn", proc_texture_type::grid));
-    presets.back()->tile_size = 32;
-    presets.back()->bump_to_normal = true;
-    presets.back()->bump_to_normal = true;
-    presets.back()->bump_scale = 4;
-    presets.push_back(make_test_texture("bumpn", proc_texture_type::bump));
-    presets.back()->tile_size = 32;
-    presets.back()->bump_to_normal = true;
-    presets.back()->bump_scale = 4;
-    presets.push_back(make_test_texture("noise", proc_texture_type::noise));
-    presets.push_back(make_test_texture("ridge", proc_texture_type::ridge));
-    presets.push_back(make_test_texture("fbm", proc_texture_type::fbm));
-    presets.push_back(
-        make_test_texture("turbulence", proc_texture_type::turbulence));
+        make_texture("turbulence", proc_texture_type::turbulence));
 
-    presets.push_back(make_test_texture("gammaf", proc_texture_type::gammaf));
-    presets.push_back(make_test_texture("sky1", proc_texture_type::sky));
+    presets.push_back(make_texture("gammaf", proc_texture_type::gammaf));
+    presets.push_back(make_texture("sky1", proc_texture_type::sky));
     presets.back()->sky_sunangle = pif / 4;
-    presets.push_back(make_test_texture("sky2", proc_texture_type::sky));
+    presets.push_back(make_texture("sky2", proc_texture_type::sky));
     presets.back()->sky_sunangle = pif / 2;
 
     return presets;
@@ -11014,9 +10992,8 @@ std::vector<std::shared_ptr<proc_material>>& proc_material_presets() {
     static auto presets = std::vector<std::shared_ptr<proc_material>>();
     if (!presets.empty()) return presets;
 
-    auto make_test_material = [](const std::string& name,
-                                  proc_material_type type, const vec3f& color,
-                                  float roughness = 1) {
+    auto make_material = [](const std::string& name, proc_material_type type,
+                             const vec3f& color, float roughness = 1) {
         auto params = std::make_shared<proc_material>();
         params->name = name;
         params->type = type;
@@ -11024,17 +11001,16 @@ std::vector<std::shared_ptr<proc_material>>& proc_material_presets() {
         params->roughness = roughness;
         return params;
     };
-    auto make_test_materialt =
-        [](const std::string& name, proc_material_type type,
-            const std::string& txt, float roughness = 1) {
-            auto params = std::make_shared<proc_material>();
-            params->name = name;
-            params->type = type;
-            params->color = {1, 1, 1};
-            params->roughness = roughness;
-            params->texture = txt;
-            return params;
-        };
+    auto make_materialt = [](const std::string& name, proc_material_type type,
+                              const std::string& txt, float roughness = 1) {
+        auto params = std::make_shared<proc_material>();
+        params->name = name;
+        params->type = type;
+        params->color = {1, 1, 1};
+        params->roughness = roughness;
+        params->texture = txt;
+        return params;
+    };
 
     auto emission = proc_material_type::emission;
     auto matte = proc_material_type::matte;
@@ -11056,46 +11032,43 @@ std::vector<std::shared_ptr<proc_material>>& proc_material_presets() {
 
     auto params = std::vector<proc_material>();
 
-    presets.push_back(make_test_materialt("matte_floor", matte, "grid"));
+    presets.push_back(make_materialt("matte_floor", matte, "grid"));
 
-    presets.push_back(make_test_material("matte_gray", matte, gray));
-    presets.push_back(make_test_material("matte_red", matte, red));
-    presets.push_back(make_test_material("matte_green", matte, green));
-    presets.push_back(make_test_material("matte_blue", matte, blue));
-    presets.push_back(make_test_materialt("matte_grid", matte, "grid"));
-    presets.push_back(make_test_materialt("matte_colored", matte, "colored"));
-    presets.push_back(make_test_materialt("matte_uv", matte, "uv"));
+    presets.push_back(make_material("matte_gray", matte, gray));
+    presets.push_back(make_material("matte_red", matte, red));
+    presets.push_back(make_material("matte_green", matte, green));
+    presets.push_back(make_material("matte_blue", matte, blue));
+    presets.push_back(make_materialt("matte_grid", matte, "grid"));
+    presets.push_back(make_materialt("matte_colored", matte, "colored"));
+    presets.push_back(make_materialt("matte_uv", matte, "uv"));
 
-    presets.push_back(make_test_material("plastic_red", plastic, red, rough));
+    presets.push_back(make_material("plastic_red", plastic, red, rough));
+    presets.push_back(make_material("plastic_green", plastic, green, rough));
+    presets.push_back(make_material("plastic_blue", plastic, blue, sharp));
     presets.push_back(
-        make_test_material("plastic_green", plastic, green, rough));
-    presets.push_back(make_test_material("plastic_blue", plastic, blue, sharp));
+        make_materialt("plastic_colored", plastic, "colored", rough));
     presets.push_back(
-        make_test_materialt("plastic_colored", plastic, "colored", rough));
-    presets.push_back(
-        make_test_material("plastic_blue_bumped", plastic, blue, sharp));
+        make_material("plastic_blue_bumped", plastic, blue, sharp));
     presets.back()->normal = "bumpn";
-    presets.push_back(make_test_materialt(
-        "plastic_colored_bumped", plastic, "colored", rough));
+    presets.push_back(
+        make_materialt("plastic_colored_bumped", plastic, "colored", rough));
     presets.back()->normal = "bumpn";
 
-    presets.push_back(make_test_material("silver_sharp", metal, lgray, sharp));
-    presets.push_back(make_test_material("silver_rough", metal, lgray, rough));
-    presets.push_back(make_test_material("gold_sharp", metal, gold, sharp));
-    presets.push_back(make_test_material("gold_rough", metal, gold, rough));
+    presets.push_back(make_material("silver_sharp", metal, lgray, sharp));
+    presets.push_back(make_material("silver_rough", metal, lgray, rough));
+    presets.push_back(make_material("gold_sharp", metal, gold, sharp));
+    presets.push_back(make_material("gold_rough", metal, gold, rough));
 
-    presets.push_back(make_test_material("transparent_red", transparent, red));
+    presets.push_back(make_material("transparent_red", transparent, red));
     presets.back()->opacity = 0.9f;
-    presets.push_back(
-        make_test_material("transparent_green", transparent, green));
+    presets.push_back(make_material("transparent_green", transparent, green));
     presets.back()->opacity = 0.5f;
-    presets.push_back(
-        make_test_material("transparent_blue", transparent, blue));
+    presets.push_back(make_material("transparent_blue", transparent, blue));
     presets.back()->opacity = 0.2f;
 
-    presets.push_back(make_test_material("pointlight", emission, white));
+    presets.push_back(make_material("pointlight", emission, white));
     presets.back()->emission = 80;
-    presets.push_back(make_test_material("arealight", emission, white));
+    presets.push_back(make_material("arealight", emission, white));
     presets.back()->emission = 80;
 
     return presets;
@@ -11105,9 +11078,9 @@ std::vector<std::shared_ptr<proc_shape>>& proc_shape_presets() {
     static auto presets = std::vector<std::shared_ptr<proc_shape>>();
     if (!presets.empty()) return presets;
 
-    auto make_test_shape = [](const std::string& name, proc_shape_type type,
-                               int tesselation = -1, int subdivision = 0,
-                               bool faceted = false) {
+    auto make_shape = [](const std::string& name, proc_shape_type type,
+                          int tesselation = -1, int subdivision = 0,
+                          bool faceted = false) {
         auto params = std::make_shared<proc_shape>();
         params->name = name;
         params->type = type;
@@ -11117,58 +11090,53 @@ std::vector<std::shared_ptr<proc_shape>>& proc_shape_presets() {
         return params;
     };
 
-    presets.push_back(make_test_shape("floor", proc_shape_type::floor));
-    presets.push_back(make_test_shape("quad", proc_shape_type::quad));
-    presets.push_back(make_test_shape("cube", proc_shape_type::cube));
-    presets.push_back(make_test_shape("sphere", proc_shape_type::sphere));
+    presets.push_back(make_shape("floor", proc_shape_type::floor));
+    presets.push_back(make_shape("quad", proc_shape_type::quad));
+    presets.push_back(make_shape("cube", proc_shape_type::cube));
+    presets.push_back(make_shape("sphere", proc_shape_type::sphere));
+    presets.push_back(make_shape("spherecube", proc_shape_type::spherecube));
     presets.push_back(
-        make_test_shape("spherecube", proc_shape_type::spherecube));
+        make_shape("spherizedcube", proc_shape_type::spherizedcube));
     presets.push_back(
-        make_test_shape("spherizedcube", proc_shape_type::spherizedcube));
+        make_shape("flipcapsphere", proc_shape_type::flipcapsphere));
+    presets.push_back(make_shape("geosphere", proc_shape_type::geosphere, 5));
     presets.push_back(
-        make_test_shape("flipcapsphere", proc_shape_type::flipcapsphere));
+        make_shape("geospheref", proc_shape_type::geosphere, 5, 0, true));
     presets.push_back(
-        make_test_shape("geosphere", proc_shape_type::geosphere, 5));
-    presets.push_back(
-        make_test_shape("geospheref", proc_shape_type::geosphere, 5, 0, true));
-    presets.push_back(
-        make_test_shape("geospherel", proc_shape_type::geosphere, 4, 0, true));
-    presets.push_back(make_test_shape("cubep", proc_shape_type::cubep));
-    presets.push_back(make_test_shape("cubes", proc_shape_type::cubep, 0, 4));
-    presets.push_back(make_test_shape("suzanne", proc_shape_type::suzanne));
-    presets.push_back(
-        make_test_shape("suzannes", proc_shape_type::suzanne, 0, 2));
-    presets.push_back(make_test_shape("cubefv", proc_shape_type::fvcube));
-    presets.push_back(
-        make_test_shape("cubefvs", proc_shape_type::fvcube, 0, 4));
-    presets.push_back(make_test_shape("spherefv", proc_shape_type::fvsphere));
-    presets.push_back(make_test_shape("matball", proc_shape_type::matball));
-    presets.push_back(make_test_shape("matballi", proc_shape_type::sphere));
+        make_shape("geospherel", proc_shape_type::geosphere, 4, 0, true));
+    presets.push_back(make_shape("cubep", proc_shape_type::cubep));
+    presets.push_back(make_shape("cubes", proc_shape_type::cubep, 0, 4));
+    presets.push_back(make_shape("suzanne", proc_shape_type::suzanne));
+    presets.push_back(make_shape("suzannes", proc_shape_type::suzanne, 0, 2));
+    presets.push_back(make_shape("cubefv", proc_shape_type::fvcube));
+    presets.push_back(make_shape("cubefvs", proc_shape_type::fvcube, 0, 4));
+    presets.push_back(make_shape("spherefv", proc_shape_type::fvsphere));
+    presets.push_back(make_shape("matball", proc_shape_type::matball));
+    presets.push_back(make_shape("matballi", proc_shape_type::sphere));
     presets.back()->scale = 0.8f;
-    presets.push_back(
-        make_test_shape("pointscube", proc_shape_type::pointscube));
-    presets.push_back(make_test_shape("hairball1", proc_shape_type::hairball));
+    presets.push_back(make_shape("pointscube", proc_shape_type::pointscube));
+    presets.push_back(make_shape("hairball1", proc_shape_type::hairball));
     presets.back()->hair_params =
         optional<make_hair_params>{make_hair_params()};
     presets.back()->hair_params->radius = {0.001f, 0.0001f};
     presets.back()->hair_params->length = {0.1f, 0.1f};
     presets.back()->hair_params->noise = {0.5f, 8};
-    presets.push_back(make_test_shape("hairball2", proc_shape_type::hairball));
+    presets.push_back(make_shape("hairball2", proc_shape_type::hairball));
     presets.back()->hair_params =
         optional<make_hair_params>{make_hair_params()};
     presets.back()->hair_params->radius = {0.001f, 0.0001f};
     presets.back()->hair_params->length = {0.1f, 0.1f};
     presets.back()->hair_params->clump = {0.5f, 128};
-    presets.push_back(make_test_shape("hairball3", proc_shape_type::hairball));
+    presets.push_back(make_shape("hairball3", proc_shape_type::hairball));
     presets.back()->hair_params =
         optional<make_hair_params>{make_hair_params()};
     presets.back()->hair_params->radius = {0.001f, 0.0001f};
     presets.back()->hair_params->length = {0.1f, 0.1f};
-    presets.push_back(make_test_shape("hairballi", proc_shape_type::sphere));
+    presets.push_back(make_shape("hairballi", proc_shape_type::sphere));
     presets.back()->scale = 0.8f;
     presets.push_back(
-        make_test_shape("beziercircle", proc_shape_type::beziercircle));
-    presets.push_back(make_test_shape("point", proc_shape_type::point));
+        make_shape("beziercircle", proc_shape_type::beziercircle));
+    presets.push_back(make_shape("point", proc_shape_type::point));
 
     return presets;
 }
@@ -11177,8 +11145,8 @@ std::vector<std::shared_ptr<proc_environment>>& proc_environment_presets() {
     static auto presets = std::vector<std::shared_ptr<proc_environment>>();
     if (!presets.empty()) return presets;
 
-    auto make_test_environment = [](const std::string& name,
-                                     const std::string& texture) {
+    auto make_environment = [](const std::string& name,
+                                const std::string& texture) {
         auto params = std::make_shared<proc_environment>();
         params->name = name;
         params->color = {1, 1, 1};
@@ -11186,9 +11154,9 @@ std::vector<std::shared_ptr<proc_environment>>& proc_environment_presets() {
         return params;
     };
 
-    presets.push_back(make_test_environment("const", ""));
-    presets.push_back(make_test_environment("sky1", "sky1"));
-    presets.push_back(make_test_environment("sky2", "sky2"));
+    presets.push_back(make_environment("const", ""));
+    presets.push_back(make_environment("sky1", "sky1"));
+    presets.push_back(make_environment("sky2", "sky2"));
 
     return presets;
 }
@@ -11197,11 +11165,11 @@ std::vector<std::shared_ptr<proc_animation>>& proc_animation_presets() {
     static auto presets = std::vector<std::shared_ptr<proc_animation>>();
     if (!presets.empty()) return presets;
 
-    auto make_test_animation = [](const std::string& name, bool bezier,
-                                   const std::vector<float>& times,
-                                   const std::vector<vec3f>& translation,
-                                   const std::vector<quat4f>& rotation,
-                                   const std::vector<vec3f>& scaling) {
+    auto make_animation = [](const std::string& name, bool bezier,
+                              const std::vector<float>& times,
+                              const std::vector<vec3f>& translation,
+                              const std::vector<quat4f>& rotation,
+                              const std::vector<vec3f>& scaling) {
         auto params = std::make_shared<proc_animation>();
         params->name = name;
         params->speed = 1;
@@ -11214,11 +11182,11 @@ std::vector<std::shared_ptr<proc_animation>>& proc_animation_presets() {
         return params;
     };
 
-    presets.push_back(make_test_animation(
+    presets.push_back(make_animation(
         "bounce", false, {0, 1, 2}, {{0, 0, 0}, {0, 1, 0}, {0, 0, 0}}, {}, {}));
-    presets.push_back(make_test_animation("scale", false, {0, 1, 2}, {}, {},
+    presets.push_back(make_animation("scale", false, {0, 1, 2}, {}, {},
         {{1, 1, 1}, {0.1f, 0.1f, 0.1f}, {1, 1, 1}}));
-    presets.push_back(make_test_animation("rotation", false, {0, 1, 2}, {},
+    presets.push_back(make_animation("rotation", false, {0, 1, 2}, {},
         {rotation_quat<float>({0, 1, 0}, 0),
             rotation_quat<float>({0, 1, 0}, pif),
             rotation_quat<float>({0, 1, 0}, 0)},
@@ -11231,8 +11199,8 @@ std::vector<std::shared_ptr<proc_camera>>& proc_camera_presets() {
     static auto presets = std::vector<std::shared_ptr<proc_camera>>();
     if (!presets.empty()) return presets;
 
-    auto make_test_camera = [](const std::string& name, const vec3f& from,
-                                const vec3f& to, float yfov, float aspect) {
+    auto make_camera = [](const std::string& name, const vec3f& from,
+                           const vec3f& to, float yfov, float aspect) {
         auto params = std::make_shared<proc_camera>();
         params->name = name;
         params->from = from;
@@ -11243,361 +11211,11 @@ std::vector<std::shared_ptr<proc_camera>>& proc_camera_presets() {
     };
 
     presets.push_back(
-        make_test_camera("cam1", {0, 4, 10}, {0, 1, 0}, 15 * pif / 180, 1));
-    presets.push_back(make_test_camera(
+        make_camera("cam1", {0, 4, 10}, {0, 1, 0}, 15 * pif / 180, 1));
+    presets.push_back(make_camera(
         "cam2", {0, 4, 10}, {0, 1, 0}, 15 * pif / 180, 16.0f / 9.0f));
-    presets.push_back(make_test_camera(
+    presets.push_back(make_camera(
         "cam3", {0, 6, 24}, {0, 1, 0}, 7.5f * pif / 180, 2.35f / 1.0f));
-
-    return presets;
-}
-
-std::vector<std::shared_ptr<proc_scene>>& proc_scene_presets() {
-    static auto presets = std::vector<std::shared_ptr<proc_scene>>();
-    if (!presets.empty()) return presets;
-
-    auto make_test_scene = [](const std::string& name) {
-        auto params = std::make_shared<proc_scene>();
-        params->name = name;
-        return params;
-    };
-    auto make_test_instance = [](const std::string& name,
-                                  const std::string& shape,
-                                  const vec3f& pos = {0, 0, 0}) {
-        auto params = std::make_shared<proc_instance>();
-        params->name = name;
-        params->shape = shape;
-        params->frame.o = pos;
-        return params;
-    };
-    auto make_texture_preset = [](const std::string& name) {
-        for (auto p : proc_texture_presets())
-            if (p->name == name) return std::make_shared<proc_texture>(*p);
-        throw std::runtime_error("missing texture preset " + name);
-    };
-    auto make_shape_preset = [](const std::string& name) {
-        for (auto p : proc_shape_presets())
-            if (p->name == name) return std::make_shared<proc_shape>(*p);
-        return (std::shared_ptr<proc_shape>)nullptr;
-    };
-    auto make_environment_preset = [](const std::string& name) {
-        for (auto p : proc_environment_presets())
-            if (p->name == name) return std::make_shared<proc_environment>(*p);
-        return (std::shared_ptr<proc_environment>)nullptr;
-    };
-    auto make_camera_preset = [](const std::string& name) {
-        for (auto p : proc_camera_presets())
-            if (p->name == name) return std::make_shared<proc_camera>(*p);
-        return (std::shared_ptr<proc_camera>)nullptr;
-    };
-    auto make_material_preset = [](const std::string& name) {
-        for (auto p : proc_material_presets())
-            if (p->name == name) return std::make_shared<proc_material>(*p);
-        return (std::shared_ptr<proc_material>)nullptr;
-    };
-    auto make_animation_preset = [](const std::string& name) {
-        for (auto p : proc_animation_presets())
-            if (p->name == name) return std::make_shared<proc_animation>(*p);
-        return (std::shared_ptr<proc_animation>)nullptr;
-    };
-
-    // textures
-    presets.push_back(make_test_scene("textures"));
-    for (auto txt : proc_texture_presets())
-        presets.back()->textures.push_back(make_texture_preset(txt->name));
-
-    // shapes
-    presets.push_back(make_test_scene("shapes"));
-    for (auto shp : proc_shape_presets())
-        presets.back()->shapes.push_back(make_shape_preset(shp->name));
-
-    // envmap
-    presets.push_back(make_test_scene("envmaps"));
-    for (auto env : proc_environment_presets())
-        presets.back()->environments.push_back(
-            make_environment_preset(env->name));
-
-    // simple scenes shared functions
-    auto make_simple_scene = [&](const std::string& name,
-                                 const std::vector<std::string>& shapes,
-                                 const std::vector<std::string>& mats,
-                                 const std::string& lights, bool nodes = false,
-                                 const std::vector<std::string>& animations =
-                                     {}) {
-        auto pos =
-            std::vector<vec3f>{{-2.50f, 1, 0}, {0, 1, 0}, {+2.50f, 1, 0}};
-        auto params = make_test_scene(name);
-        params->cameras.push_back(make_camera_preset("cam3"));
-        params->materials.push_back(make_material_preset("matte_floor"));
-        if (params->materials.back()->texture != "")
-            params->textures.push_back(
-                make_texture_preset(params->materials.back()->texture));
-        params->shapes.push_back(make_shape_preset("floor"));
-        params->shapes.back()->material = params->materials.back()->name;
-        params->instances.push_back(
-            make_test_instance("floor", "floor", {0, 0, 0}));
-        for (auto i = 0; i < shapes.size(); i++) {
-            auto name = "obj" + std::to_string(i + 1);
-            params->materials.push_back(make_material_preset(mats[i]));
-            params->shapes.push_back(make_shape_preset(shapes[i]));
-            params->shapes.back()->name = name;
-            params->shapes.back()->material = mats[i];
-            if (params->shapes.back()->type == proc_shape_type::hairball ||
-                params->shapes.back()->type == proc_shape_type::matball) {
-                params->materials.push_back(make_material_preset("matte_gray"));
-                params->shapes.back()->interior = "matte_gray";
-            }
-            params->instances.push_back(make_test_instance(name, name, pos[i]));
-            if (!animations.empty()) {
-                params->animations.push_back(
-                    make_animation_preset(animations[i]));
-                params->animations.back()->nodes.push_back(name);
-            }
-        }
-        if (lights == "pointlights" || lights == "arealights" ||
-            lights == "arealights1") {
-            auto emission = 120;
-            auto shp = "point";
-            auto mat = "pointlight";
-            auto pos = std::vector<vec3f>{{-2, 10, 8}, {+2, 10, 8}};
-            auto scale = 1.0f;
-            if (lights == "arealights") {
-                emission = 8;
-                shp = "quad";
-                mat = "arealight";
-                pos = {{0, 16, 0}, {0, 16, 16}};
-                scale = 8;
-            }
-            if (lights == "arealights1") {
-                emission = 80;
-                shp = "quad";
-                mat = "arealight";
-                pos = {{-4, 5, 8}, {+4, 5, 8}};
-                scale = 2;
-            }
-            for (auto i = 0; i < 2; i++) {
-                auto name = "light" + std::to_string(i + 1);
-                params->materials.push_back(make_material_preset(mat));
-                params->materials.back()->name = name;
-                params->materials.back()->emission = emission;
-                params->shapes.push_back(make_shape_preset(shp));
-                params->shapes.back()->name = name;
-                params->shapes.back()->material = name;
-                params->shapes.back()->scale = scale;
-                params->instances.push_back(
-                    make_test_instance(name, name, pos[i]));
-                if (lights == "arealights" || lights == "arealights1")
-                    params->instances.back()->frame =
-                        lookat_frame(pos[i], {0, 1, 0}, {0, 0, 1}, true);
-            }
-        }
-        if (lights == "envlights") {
-            params->environments.push_back(make_environment_preset("sky1"));
-            params->textures.push_back(make_texture_preset("sky1"));
-        }
-        if (!animations.empty() || nodes) {
-            for (auto cam : params->cameras) {
-                auto nde = std::make_shared<proc_node>();
-                nde->name = cam->name;
-                nde->frame = lookat_frame(cam->from, cam->to, vec3f{0, 1, 0});
-                nde->camera = cam->name;
-                params->nodes.push_back(nde);
-            }
-            for (auto ist : params->instances) {
-                auto nde = std::make_shared<proc_node>();
-                nde->name = ist->name;
-                nde->frame = ist->frame;
-                nde->instance = ist->name;
-                params->nodes.push_back(nde);
-            }
-            for (auto env : params->environments) {
-                auto nde = std::make_shared<proc_node>();
-                nde->name = env->name;
-                nde->frame = env->frame;
-                nde->environment = env->name;
-                params->nodes.push_back(nde);
-            }
-        }
-        return params;
-    };
-
-    // plane only
-    presets.push_back(make_simple_scene("plane_pl", {}, {}, "pointlights"));
-    presets.push_back(make_simple_scene("plane_al", {}, {}, "arealights"));
-
-    // basic shapes
-    presets.push_back(make_simple_scene("basic_pl",
-        {"flipcapsphere", "spherecube", "spherizedcube"},
-        {"plastic_red", "plastic_green", "plastic_blue"}, "pointlights"));
-    presets.push_back(make_simple_scene("basic_al",
-        {"flipcapsphere", "spherecube", "spherizedcube"},
-        {"plastic_red", "plastic_green", "plastic_blue"}, "arealights"));
-
-    // simple shapes
-    presets.push_back(make_simple_scene("simple_pl",
-        {"flipcapsphere", "spherecube", "spherizedcube"},
-        {"plastic_colored", "plastic_colored", "plastic_colored"},
-        "pointlights"));
-    presets.push_back(make_simple_scene("simple_al",
-        {"flipcapsphere", "spherecube", "spherizedcube"},
-        {"plastic_colored", "plastic_colored", "plastic_colored"},
-        "arealights"));
-    presets.push_back(make_simple_scene("simple_el",
-        {"flipcapsphere", "spherecube", "spherizedcube"},
-        {"plastic_colored", "plastic_colored", "plastic_colored"},
-        "envlights"));
-
-    // transparent shapes
-    presets.push_back(
-        make_simple_scene("transparent_al", {"quad", "quad", "quad"},
-            {"transparent_red", "transparent_green", "transparent_blue"},
-            "arealights"));
-
-    // points shapes
-    presets.push_back(make_simple_scene("transparent_al",
-        {"pointscube", "pointscube", "pointscube"},
-        {"matte_gray", "matte_gray", "matte_gray"}, "arealights"));
-
-    // lines shapes
-    presets.push_back(
-        make_simple_scene("lines_al", {"hairball1", "hairball2", "hairball3"},
-            {"matte_gray", "matte_gray", "matte_gray"}, "arealights"));
-
-    // subdiv shapes
-    presets.push_back(
-        make_simple_scene("subdiv_al", {"cubes", "suzannes", "suzannes"},
-            {"plastic_red", "plastic_green", "plastic_blue"}, "arealights"));
-
-    // plastics shapes
-    presets.push_back(
-        make_simple_scene("plastics_al", {"matball", "matball", "matball"},
-            {"matte_green", "plastic_green", "plastic_colored"}, "arealights",
-            true));
-    presets.push_back(
-        make_simple_scene("plastics_el", {"matball", "matball", "matball"},
-            {"matte_green", "plastic_green", "plastic_colored"}, "envlights"));
-
-    // metals shapes
-    presets.push_back(
-        make_simple_scene("metals_al", {"matball", "matball", "matball"},
-            {"gold_rough", "gold_sharp", "silver_sharp"}, "arealights"));
-    presets.push_back(
-        make_simple_scene("metals_el", {"matball", "matball", "matball"},
-            {"gold_rough", "gold_sharp", "silver_sharp"}, "envlights"));
-
-    // tesselation shapes
-    presets.push_back(make_simple_scene("tesselation_pl",
-        {"geospherel", "geospheref", "geosphere"},
-        {"matte_gray", "matte_gray", "matte_gray"}, "pointlights"));
-
-    // textureuv shapes
-    presets.push_back(make_simple_scene("textureuv_pl",
-        {"flipcapsphere", "flipcapsphere", "flipcapsphere"},
-        {"matte_green", "matte_colored", "matte_uv"}, "pointlights"));
-
-    // normalmap shapes
-    presets.push_back(make_simple_scene("normalmap_pl",
-        {"flipcapsphere", "flipcapsphere", "flipcapsphere"},
-        {"plastic_blue", "plastic_blue_bumped", "plastic_colored_bumped"},
-        "pointlights"));
-
-    // animated shapes
-    presets.push_back(make_simple_scene("animated_pl",
-        {"flipcapsphere", "spherecube", "spherizedcube"},
-        {"plastic_colored", "plastic_colored", "plastic_colored"},
-        "pointlights", true, {"bounce", "scale", "rotation"}));
-
-    // instances shared functions
-    auto make_random_scene = [&](const std::string& name, const vec2i& num,
-                                 const bbox2f& bbox, uint32_t seed = 13) {
-        auto rscale = 0.9f * 0.25f *
-                      min((bbox.max.x - bbox.min.x) / num.x,
-                          (bbox.max.x - bbox.min.x) / num.y);
-
-        auto params = make_test_scene(name);
-        params->cameras.push_back(make_camera_preset("cam3"));
-        params->materials.push_back(make_material_preset("matte_floor"));
-        params->shapes.push_back(make_shape_preset("floor"));
-        params->instances.push_back(
-            make_test_instance("floor", "floor", {0, 0, 0}));
-        auto shapes = std::vector<std::string>();
-        for (auto mat : {"plastic_red", "plastic_green", "plastic_blue"})
-            params->materials.push_back(make_material_preset(mat));
-        for (auto shp : {"sphere", "flipcapsphere", "cube"}) {
-            for (auto mat : {"plastic_red", "plastic_green", "plastic_blue"}) {
-                params->shapes.push_back(make_shape_preset(shp));
-                params->shapes.back()->name += "_"s + mat;
-                params->shapes.back()->material = mat;
-                params->shapes.back()->scale *= rscale;
-                shapes.push_back(params->shapes.back()->name);
-            }
-        }
-
-        auto rng = init_rng(seed, 7);
-        auto count = 0;
-        for (auto j = 0; j < num.y; j++) {
-            for (auto i = 0; i < num.x; i++) {
-                auto rpos = next_rand2f(rng);
-                auto pos = vec3f{
-                    bbox.min.x + (bbox.max.x - bbox.min.x) *
-                                     (i + 0.45f + 0.1f * rpos.x) / num.x,
-                    rscale,
-                    bbox.min.y + (bbox.max.y - bbox.min.y) *
-                                     (j + 0.45f + 0.1f * rpos.y) / num.y,
-                };
-                params->instances.push_back(
-                    make_test_instance("instance" + std::to_string(count++),
-                        shapes[next_rand1i(rng, (int)shapes.size())], pos));
-            }
-        }
-
-        auto pos = std::vector<vec3f>{{-2, 10, 8}, {+2, 10, 8}};
-        for (auto i = 0; i < 2; i++) {
-            auto name = "light" + std::to_string(i + 1);
-            params->materials.push_back(make_material_preset("pointlight"));
-            params->materials.back()->name = name;
-            params->materials.back()->emission = 80;
-            params->shapes.push_back(make_shape_preset("point"));
-            params->shapes.back()->name = name;
-            params->shapes.back()->material = name;
-            params->instances.push_back(make_test_instance(name, name, pos[i]));
-        }
-
-        return params;
-    };
-
-    // instances
-    presets.push_back(
-        make_random_scene("instances_pl", {10, 10}, {{-3, -3}, {3, 3}}));
-    presets.push_back(
-        make_random_scene("instancel_pl", {100, 100}, {{-3, -3}, {3, 3}}));
-
-#if 0
-        else if (otype == "normdisp") {
-            auto mat = std::vector<material*>{
-                add_test_material(scn, test_material_type::plastic_bumped),
-                add_test_material(scn, test_material_type::plastic_bumped)};
-            add_test_instance(scn, "obj01",
-                add_uvspherecube(scn, "base_obj01", mat[0], 4), {-1.25f, 1, 0});
-            add_test_instance(scn, "obj03",
-                add_uvspherecube(scn, "subdiv_02_obj02", mat[1], 4), {1.25f, 1, 0});
-            }
-#endif
-
-    // add missing textures
-    for (auto preset : presets) {
-        auto used = std::unordered_set<std::string>();
-        for (auto mat : preset->materials) used.insert(mat->texture);
-        for (auto mat : preset->materials) used.insert(mat->normal);
-        for (auto env : preset->environments) used.insert(env->texture);
-        used.erase("");
-        for (auto txt : preset->textures) used.erase(txt->name);
-        for (auto txt : used)
-            preset->textures.push_back(make_texture_preset(txt));
-    }
-
-    // remove duplicates
-    for (auto preset : presets) remove_duplicates(preset);
 
     return presets;
 }
@@ -11615,183 +11233,182 @@ std::vector<std::shared_ptr<proc_split_scene>>& proc_split_scene_presets() {
             return params;
         };
 
-    auto make_test_scene = [](const std::string& name) {
+    auto make_scene = [](const std::string& name) {
         auto params = std::make_shared<proc_scene>();
         params->name = name;
         return params;
     };
 
-    auto make_test_instance = [](const std::string& name,
-                                  const std::string& shape,
-                                  const vec3f& pos = {0, 0, 0}) {
-        auto params = std::make_shared<proc_instance>();
+    auto make_node = [](const std::string& name, const std::string& cam,
+                         const std::string& shape, const std::string& env,
+                         const vec3f& pos) {
+        auto params = std::make_shared<proc_node>();
         params->name = name;
+        params->camera = cam;
         params->shape = shape;
+        params->environment = env;
         params->frame.o = pos;
         return params;
     };
-    auto make_texture_preset = [](const std::string& name) {
+    auto make_texture = [](const std::string& name) {
         for (auto p : proc_texture_presets())
             if (p->name == name) return std::make_shared<proc_texture>(*p);
         throw std::runtime_error("missing texture preset " + name);
     };
-    auto make_shape_preset = [](const std::string& name) {
-        for (auto p : proc_shape_presets())
-            if (p->name == name) return std::make_shared<proc_shape>(*p);
+    auto make_shape = [](const std::string& name, const vec3f& pos) {
+        for (auto p : proc_shape_presets()) {
+            if (p->name != name) continue;
+            auto shp = std::make_shared<proc_shape>(*p);
+            shp->frame.o = pos;
+            return shp;
+        }
         return (std::shared_ptr<proc_shape>)nullptr;
     };
-    auto make_environment_preset = [](const std::string& name) {
+    auto make_environment = [](const std::string& name) {
         for (auto p : proc_environment_presets())
             if (p->name == name) return std::make_shared<proc_environment>(*p);
         return (std::shared_ptr<proc_environment>)nullptr;
     };
-    auto make_camera_preset = [](const std::string& name) {
+    auto make_camera = [](const std::string& name) {
         for (auto p : proc_camera_presets())
             if (p->name == name) return std::make_shared<proc_camera>(*p);
         return (std::shared_ptr<proc_camera>)nullptr;
     };
-    auto make_material_preset = [](const std::string& name) {
+    auto make_material = [](const std::string& name) {
         for (auto p : proc_material_presets())
             if (p->name == name) return std::make_shared<proc_material>(*p);
         return (std::shared_ptr<proc_material>)nullptr;
     };
-    auto make_animation_preset = [](const std::string& name) {
+    auto make_animation = [](const std::string& name) {
         for (auto p : proc_animation_presets())
             if (p->name == name) return std::make_shared<proc_animation>(*p);
         return (std::shared_ptr<proc_animation>)nullptr;
     };
 
     // textures
-    presets.push_back(make_split_scene(make_test_scene("textures"), {}));
+    presets.push_back(make_split_scene(make_scene("textures"), {}));
     for (auto txt : proc_texture_presets())
-        presets.back()->scn->textures.push_back(make_texture_preset(txt->name));
+        presets.back()->scn->textures.push_back(make_texture(txt->name));
 
     // shapes
-    presets.push_back(make_split_scene(make_test_scene("shapes"), {}));
+    presets.push_back(make_split_scene(make_scene("shapes"), {}));
     for (auto shp : proc_shape_presets())
-        presets.back()->scn->shapes.push_back(make_shape_preset(shp->name));
+        presets.back()->scn->shapes.push_back(make_shape(shp->name, zero3f));
 
     // envmap
-    presets.push_back(make_split_scene(make_test_scene("envmaps"), {}));
+    presets.push_back(make_split_scene(make_scene("envmaps"), {}));
     for (auto env : proc_environment_presets())
         presets.back()->scn->environments.push_back(
-            make_environment_preset(env->name));
+            make_environment(env->name));
 
     // simple scenes shared functions
-    auto make_simple_scene = [&](const std::string& name,
-                                 const std::vector<std::string>& shapes,
-                                 const std::vector<std::string>& mats,
-                                 bool nodes = false,
-                                 const std::vector<std::string>& animations =
-                                     {}) {
-        auto pos =
-            std::vector<vec3f>{{-2.50f, 1, 0}, {0, 1, 0}, {+2.50f, 1, 0}};
-        auto preset = make_split_scene(make_test_scene(name), {});
-        auto scn = preset->scn;
-        scn->cameras.push_back(make_camera_preset("cam3"));
-        scn->materials.push_back(make_material_preset("matte_floor"));
-        if (scn->materials.back()->texture != "")
-            scn->textures.push_back(
-                make_texture_preset(scn->materials.back()->texture));
-        scn->shapes.push_back(make_shape_preset("floor"));
-        scn->shapes.back()->material = scn->materials.back()->name;
-        scn->instances.push_back(
-            make_test_instance("floor", "floor", {0, 0, 0}));
-        for (auto i = 0; i < shapes.size(); i++) {
-            auto name = "obj" + std::to_string(i + 1);
-            scn->materials.push_back(make_material_preset(mats[i]));
-            scn->shapes.push_back(make_shape_preset(shapes[i]));
-            scn->shapes.back()->name = name;
-            scn->shapes.back()->material = mats[i];
-            if (scn->shapes.back()->type == proc_shape_type::hairball ||
-                scn->shapes.back()->type == proc_shape_type::matball) {
-                scn->materials.push_back(make_material_preset("matte_gray"));
-                scn->shapes.back()->interior = "matte_gray";
+    auto make_simple_scene =
+        [&](const std::string& name, const std::vector<std::string>& shapes,
+            const std::vector<std::string>& mats, bool nodes = false,
+            const std::vector<std::string>& animations = {}) {
+            auto pos =
+                std::vector<vec3f>{{-2.50f, 1, 0}, {0, 1, 0}, {+2.50f, 1, 0}};
+            auto preset = make_split_scene(make_scene(name), {});
+            auto scn = preset->scn;
+            scn->cameras.push_back(make_camera("cam3"));
+            scn->materials.push_back(make_material("matte_floor"));
+            if (scn->materials.back()->texture != "")
+                scn->textures.push_back(
+                    make_texture(scn->materials.back()->texture));
+            scn->shapes.push_back(make_shape("floor", zero3f));
+            scn->shapes.back()->material = scn->materials.back()->name;
+            for (auto i = 0; i < shapes.size(); i++) {
+                auto name = "obj" + std::to_string(i + 1);
+                scn->materials.push_back(make_material(mats[i]));
+                scn->shapes.push_back(make_shape(shapes[i], pos[i]));
+                scn->shapes.back()->name = name;
+                scn->shapes.back()->material = mats[i];
+                if (scn->shapes.back()->type == proc_shape_type::hairball ||
+                    scn->shapes.back()->type == proc_shape_type::matball) {
+                    scn->materials.push_back(make_material("matte_gray"));
+                    scn->shapes.back()->interior = "matte_gray";
+                }
+                if (!animations.empty()) {
+                    scn->animations.push_back(make_animation(animations[i]));
+                    scn->animations.back()->nodes.push_back(name);
+                }
             }
-            scn->instances.push_back(make_test_instance(name, name, pos[i]));
-            if (!animations.empty()) {
-                scn->animations.push_back(make_animation_preset(animations[i]));
-                scn->animations.back()->nodes.push_back(name);
-            }
-        }
 
-        auto& views = preset->views;
-        for (auto lights : {"pointlights"s, "arealights"s, "envlights"s}) {
-            auto view = make_test_scene(lights);
-            view->cameras.push_back(make_camera_preset("cam3"));
-            if (lights == "pointlights" || lights == "arealights" ||
-                lights == "arealights1") {
-                auto emission = 120;
-                auto shp = "point";
-                auto mat = "pointlight";
-                auto pos = std::vector<vec3f>{{-2, 10, 8}, {+2, 10, 8}};
-                auto scale = 1.0f;
-                if (lights == "arealights") {
-                    emission = 8;
-                    shp = "quad";
-                    mat = "arealight";
-                    pos = {{0, 16, 0}, {0, 16, 16}};
-                    scale = 8;
+            auto& views = preset->views;
+            for (auto lights : {"pointlights"s, "arealights"s, "envlights"s}) {
+                auto view = make_scene(lights);
+                view->cameras.push_back(make_camera("cam3"));
+                if (lights == "pointlights" || lights == "arealights" ||
+                    lights == "arealights1") {
+                    auto emission = 120;
+                    auto shp = "point";
+                    auto mat = "pointlight";
+                    auto pos = std::vector<vec3f>{{-2, 10, 8}, {+2, 10, 8}};
+                    auto scale = 1.0f;
+                    if (lights == "arealights") {
+                        emission = 8;
+                        shp = "quad";
+                        mat = "arealight";
+                        pos = {{0, 16, 0}, {0, 16, 16}};
+                        scale = 8;
+                    }
+                    if (lights == "arealights1") {
+                        emission = 80;
+                        shp = "quad";
+                        mat = "arealight";
+                        pos = {{-4, 5, 8}, {+4, 5, 8}};
+                        scale = 2;
+                    }
+                    for (auto i = 0; i < 2; i++) {
+                        auto name = "light" + std::to_string(i + 1);
+                        view->materials.push_back(make_material(mat));
+                        view->materials.back()->name = name;
+                        view->materials.back()->emission = emission;
+                        view->shapes.push_back(make_shape(shp, pos[i]));
+                        view->shapes.back()->name = name;
+                        view->shapes.back()->material = name;
+                        view->shapes.back()->scale = scale;
+                        if (lights == "arealights" || lights == "arealights1")
+                            view->shapes.back()->frame = lookat_frame(
+                                pos[i], {0, 1, 0}, {0, 0, 1}, true);
+                    }
                 }
-                if (lights == "arealights1") {
-                    emission = 80;
-                    shp = "quad";
-                    mat = "arealight";
-                    pos = {{-4, 5, 8}, {+4, 5, 8}};
-                    scale = 2;
+                if (lights == "envlights") {
+                    view->environments.push_back(make_environment("sky1"));
+                    view->textures.push_back(make_texture("sky1"));
                 }
-                for (auto i = 0; i < 2; i++) {
-                    auto name = "light" + std::to_string(i + 1);
-                    view->materials.push_back(make_material_preset(mat));
-                    view->materials.back()->name = name;
-                    view->materials.back()->emission = emission;
-                    view->shapes.push_back(make_shape_preset(shp));
-                    view->shapes.back()->name = name;
-                    view->shapes.back()->material = name;
-                    view->shapes.back()->scale = scale;
-                    view->instances.push_back(
-                        make_test_instance(name, name, pos[i]));
-                    if (lights == "arealights" || lights == "arealights1")
-                        view->instances.back()->frame =
-                            lookat_frame(pos[i], {0, 1, 0}, {0, 0, 1}, true);
+                views.push_back(view);
+            }
+            auto scns = std::vector<std::shared_ptr<proc_scene>>{scn};
+            append(scns, views);
+            for (auto scn : scns) {
+                if (!animations.empty() || nodes) {
+                    for (auto cam : scn->cameras) {
+                        auto nde = std::make_shared<proc_node>();
+                        nde->name = cam->name;
+                        nde->frame =
+                            lookat_frame(cam->from, cam->to, vec3f{0, 1, 0});
+                        nde->camera = cam->name;
+                        scn->nodes.push_back(nde);
+                    }
+                    for (auto shp : scn->shapes) {
+                        auto nde = std::make_shared<proc_node>();
+                        nde->name = shp->name;
+                        nde->frame = shp->frame;
+                        nde->shape = shp->name;
+                        scn->nodes.push_back(nde);
+                    }
+                    for (auto env : scn->environments) {
+                        auto nde = std::make_shared<proc_node>();
+                        nde->name = env->name;
+                        nde->frame = env->frame;
+                        nde->environment = env->name;
+                        scn->nodes.push_back(nde);
+                    }
                 }
             }
-            if (lights == "envlights") {
-                view->environments.push_back(make_environment_preset("sky1"));
-                view->textures.push_back(make_texture_preset("sky1"));
-            }
-            views.push_back(view);
-        }
-        auto scns = std::vector<std::shared_ptr<proc_scene>>{scn};
-        append(scns, views);
-        for (auto scn : scns) {
-            if (!animations.empty() || nodes) {
-                for (auto cam : scn->cameras) {
-                    auto nde = std::make_shared<proc_node>();
-                    nde->name = cam->name;
-                    nde->frame =
-                        lookat_frame(cam->from, cam->to, vec3f{0, 1, 0});
-                    nde->camera = cam->name;
-                    scn->nodes.push_back(nde);
-                }
-                for (auto ist : scn->instances) {
-                    auto nde = std::make_shared<proc_node>();
-                    nde->name = ist->name;
-                    nde->frame = ist->frame;
-                    nde->instance = ist->name;
-                    scn->nodes.push_back(nde);
-                }
-                for (auto env : scn->environments) {
-                    auto nde = std::make_shared<proc_node>();
-                    nde->name = env->name;
-                    nde->frame = env->frame;
-                    nde->environment = env->name;
-                    scn->nodes.push_back(nde);
-                }
-            }
-        }
-        return preset;
-    };
+            return preset;
+        };
 
     // plane only
     presets.push_back(make_simple_scene("plane", {}, {}));
@@ -11858,19 +11475,18 @@ std::vector<std::shared_ptr<proc_split_scene>>& proc_split_scene_presets() {
                       min((bbox.max.x - bbox.min.x) / num.x,
                           (bbox.max.x - bbox.min.x) / num.y);
 
-        auto preset = make_split_scene(make_test_scene(name), {});
+        auto preset = make_split_scene(make_scene(name), {});
         auto scn = preset->scn;
-        scn->cameras.push_back(make_camera_preset("cam3"));
-        scn->materials.push_back(make_material_preset("matte_floor"));
-        scn->shapes.push_back(make_shape_preset("floor"));
-        scn->instances.push_back(
-            make_test_instance("floor", "floor", {0, 0, 0}));
+        scn->cameras.push_back(make_camera("cam3"));
+        scn->materials.push_back(make_material("matte_floor"));
+        scn->shapes.push_back(make_shape("floor", zero3f));
+        scn->shapes.back()->material = scn->materials.back()->name;
         auto shapes = std::vector<std::string>();
         for (auto mat : {"plastic_red", "plastic_green", "plastic_blue"})
-            scn->materials.push_back(make_material_preset(mat));
+            scn->materials.push_back(make_material(mat));
         for (auto shp : {"sphere", "flipcapsphere", "cube"}) {
             for (auto mat : {"plastic_red", "plastic_green", "plastic_blue"}) {
-                scn->shapes.push_back(make_shape_preset(shp));
+                scn->shapes.push_back(make_shape(shp, zero3f));
                 scn->shapes.back()->name += "_"s + mat;
                 scn->shapes.back()->material = mat;
                 scn->shapes.back()->scale *= rscale;
@@ -11890,27 +11506,26 @@ std::vector<std::shared_ptr<proc_split_scene>>& proc_split_scene_presets() {
                     bbox.min.y + (bbox.max.y - bbox.min.y) *
                                      (j + 0.45f + 0.1f * rpos.y) / num.y,
                 };
-                scn->instances.push_back(
-                    make_test_instance("instance" + std::to_string(count++),
-                        shapes[next_rand1i(rng, (int)shapes.size())], pos));
+                scn->nodes.push_back(
+                    make_node("instance" + std::to_string(count++), "",
+                        shapes[next_rand1i(rng, (int)shapes.size())], "", pos));
             }
         }
 
         auto& views = preset->views;
         for (auto name : {"pointlights"s}) {
-            auto view = make_test_scene(name);
-            view->cameras.push_back(make_camera_preset("cam3"));
+            auto view = make_scene(name);
+            view->cameras.push_back(make_camera("cam3"));
             auto pos = std::vector<vec3f>{{-2, 10, 8}, {+2, 10, 8}};
             for (auto i = 0; i < 2; i++) {
                 auto name = "light" + std::to_string(i + 1);
-                view->materials.push_back(make_material_preset("pointlight"));
+                view->materials.push_back(make_material("pointlight"));
                 view->materials.back()->name = name;
                 view->materials.back()->emission = 80;
-                view->shapes.push_back(make_shape_preset("point"));
+                view->shapes.push_back(make_shape("point", zero3f));
                 view->shapes.back()->name = name;
                 view->shapes.back()->material = name;
-                view->instances.push_back(
-                    make_test_instance(name, name, pos[i]));
+                view->nodes.push_back(make_node(name, "", name, "", pos[i]));
             }
             views.push_back(view);
         }
@@ -11925,15 +11540,15 @@ std::vector<std::shared_ptr<proc_split_scene>>& proc_split_scene_presets() {
         make_random_scene("instancel", {100, 100}, {{-3, -3}, {3, 3}}));
 
 #if 0
-    else if (otype == "normdisp") {
-        auto mat = std::vector<material*>{
-            add_test_material(scn, test_material_type::plastic_bumped),
-            add_test_material(scn, test_material_type::plastic_bumped)};
-        add_test_instance(scn, "obj01",
-                          add_uvspherecube(scn, "base_obj01", mat[0], 4), {-1.25f, 1, 0});
-        add_test_instance(scn, "obj03",
-                          add_uvspherecube(scn, "subdiv_02_obj02", mat[1], 4), {1.25f, 1, 0});
-    }
+        else if (otype == "normdisp") {
+            auto mat = std::vector<material*>{
+                add_test_material(scn, test_material_type::plastic_bumped),
+                add_test_material(scn, test_material_type::plastic_bumped)};
+            add_test_instance(scn, "obj01",
+                              add_uvspherecube(scn, "base_obj01", mat[0], 4), {-1.25f, 1, 0});
+            add_test_instance(scn, "obj03",
+                              add_uvspherecube(scn, "subdiv_02_obj02", mat[1], 4), {1.25f, 1, 0});
+        }
 #endif
 
     // add missing textures
@@ -11944,8 +11559,7 @@ std::vector<std::shared_ptr<proc_split_scene>>& proc_split_scene_presets() {
         for (auto env : preset->environments) used.insert(env->texture);
         used.erase("");
         for (auto txt : preset->textures) used.erase(txt->name);
-        for (auto txt : used)
-            preset->textures.push_back(make_texture_preset(txt));
+        for (auto txt : used) preset->textures.push_back(make_texture(txt));
     };
 
     // add missing textures
@@ -11958,6 +11572,43 @@ std::vector<std::shared_ptr<proc_split_scene>>& proc_split_scene_presets() {
     for (auto& preset : presets) {
         remove_duplicates(preset->scn);
         for (auto& view : preset->views) remove_duplicates(view);
+    }
+
+    return presets;
+}
+
+std::vector<std::shared_ptr<proc_scene>>& proc_scene_presets() {
+    static auto presets = std::vector<std::shared_ptr<proc_scene>>();
+    if (!presets.empty()) return presets;
+
+    for (auto sscn : proc_split_scene_presets()) {
+        auto scn = sscn->scn;
+        for (auto view : sscn->views) {
+            auto preset = std::make_shared<proc_scene>();
+            preset->name = scn->name + "_" + view->name;
+            for (auto mscn : {scn, view}) {
+                for (auto v : mscn->cameras)
+                    preset->cameras.push_back(
+                        std::make_shared<proc_camera>(*v));
+                for (auto v : mscn->textures)
+                    preset->textures.push_back(
+                        std::make_shared<proc_texture>(*v));
+                for (auto v : mscn->materials)
+                    preset->materials.push_back(
+                        std::make_shared<proc_material>(*v));
+                for (auto v : mscn->shapes)
+                    preset->shapes.push_back(std::make_shared<proc_shape>(*v));
+                for (auto v : mscn->environments)
+                    preset->environments.push_back(
+                        std::make_shared<proc_environment>(*v));
+                for (auto v : mscn->nodes)
+                    preset->nodes.push_back(std::make_shared<proc_node>(*v));
+                for (auto v : mscn->animations)
+                    preset->animations.push_back(
+                        std::make_shared<proc_animation>(*v));
+            }
+            presets.push_back(preset);
+        }
     }
 
     return presets;
@@ -12042,16 +11693,6 @@ void serialize(proc_shape& val, json& js, bool reading) {
 }
 
 // Parses a test_camera object
-void serialize(proc_instance& val, json& js, bool reading) {
-    static auto def = proc_instance();
-    serialize_obj(js, reading);
-    serialize_attr(val.name, js, "name", reading);
-    serialize_attr(val.shape, js, "shape", reading);
-    serialize_attr(val.frame, js, "frame", reading, false, def.frame);
-    serialize_attr(val.rotation, js, "rotation", reading, false, def.rotation);
-}
-
-// Parses a test_camera object
 void serialize(proc_environment& val, json& js, bool reading) {
     static auto def = proc_environment();
     serialize_obj(js, reading);
@@ -12061,6 +11702,39 @@ void serialize(proc_environment& val, json& js, bool reading) {
     serialize_attr(val.texture, js, "texture", reading, false, def.texture);
     serialize_attr(val.frame, js, "frame", reading, false, def.frame);
     serialize_attr(val.rotation, js, "rotation", reading, false, def.rotation);
+}
+
+// Parses a test_node object
+void serialize(proc_node& val, json& js, bool reading) {
+    static auto def = proc_node();
+    serialize_obj(js, reading);
+    serialize_attr(val.name, js, "name", reading);
+    serialize_attr(val.parent, js, "parent", reading, false, def.parent);
+    serialize_attr(val.camera, js, "camera", reading, false, def.camera);
+    serialize_attr(val.shape, js, "shape", reading, false, def.shape);
+    serialize_attr(
+        val.environment, js, "environment", reading, false, def.environment);
+    serialize_attr(val.frame, js, "frame", reading, false, def.frame);
+    serialize_attr(
+        val.translation, js, "translation", reading, false, def.translation);
+    serialize_attr(val.rotation, js, "rotation", reading, false, def.rotation);
+    serialize_attr(val.scaling, js, "scaling", reading, false, def.scaling);
+}
+
+// Parses a test_node object
+void serialize(proc_animation& val, json& js, bool reading) {
+    static auto def = proc_animation();
+    serialize_obj(js, reading);
+    serialize_attr(val.name, js, "name", reading);
+    serialize_attr(val.bezier, js, "bezier", reading, false, def.bezier);
+    serialize_attr(val.speed, js, "speed", reading, false, def.speed);
+    serialize_attr(val.scale, js, "scale", reading, false, def.scale);
+    serialize_attr(val.times, js, "times", reading, false, def.times);
+    serialize_attr(
+        val.translation, js, "translation", reading, false, def.translation);
+    serialize_attr(val.rotation, js, "rotation", reading, false, def.rotation);
+    serialize_attr(val.scaling, js, "scaling", reading, false, def.scaling);
+    serialize_attr(val.nodes, js, "nodes", reading, false, def.nodes);
 }
 
 // Parses a test_camera object
@@ -12075,6 +11749,9 @@ void serialize(proc_scene& val, json& js, bool reading) {
     serialize_attr(val.shapes, js, "shapes", reading, false, def.shapes);
     serialize_attr(
         val.environments, js, "environments", reading, false, def.environments);
+    serialize_attr(val.nodes, js, "nodes", reading, false, def.nodes);
+    serialize_attr(
+        val.animations, js, "animations", reading, false, def.animations);
 }
 
 // Load test scene
@@ -12882,41 +12559,52 @@ std::shared_ptr<gl_shape> make_gl_shape(const std::shared_ptr<shape>& shp) {
     return gshp;
 }
 
+// Add gl lights
+void add_gl_lights(gl_lights& lights, const frame3f& frame,
+    const std::shared_ptr<shape>& shp) {
+    if (!shp->mat || shp->mat->ke == zero3f) return;
+    if (lights.pos.size() >= 16) return;
+    if (!shp->points.empty()) {
+        for (auto p : shp->points) {
+            if (lights.pos.size() >= 16) break;
+            lights.pos.push_back(transform_point(frame, shp->pos[p]));
+            lights.ke.push_back(shp->mat->ke);
+            lights.type.push_back(gl_light_type::point);
+        }
+    } else {
+        auto bbox = make_bbox(shp->pos.size(), shp->pos.data());
+        auto pos = bbox_center(bbox);
+        auto area = 0.0f;
+        for (auto l : shp->lines)
+            area += line_length(shp->pos[l.x], shp->pos[l.y]);
+        for (auto t : shp->triangles)
+            area += triangle_area(shp->pos[t.x], shp->pos[t.y], shp->pos[t.z]);
+        for (auto t : shp->quads)
+            area += quad_area(
+                shp->pos[t.x], shp->pos[t.y], shp->pos[t.z], shp->pos[t.w]);
+        auto ke = shp->mat->ke * area;
+        if (lights.pos.size() < 16) {
+            lights.pos.push_back(transform_point(frame, pos));
+            lights.ke.push_back(ke);
+            lights.type.push_back(gl_light_type::point);
+        }
+    }
+}
+
 // Initialize gl lights
 gl_lights make_gl_lights(const std::shared_ptr<scene>& scn) {
     auto lights = gl_lights();
-    for (auto ist : scn->instances) {
-        if (!ist->shp) continue;
-        for (auto shp : ist->shp->shapes) {
-            if (!shp->mat) continue;
-            if (shp->mat->ke == zero3f) continue;
-            if (lights.pos.size() >= 16) break;
-            if (!shp->points.empty()) {
-                for (auto p : shp->points) {
-                    if (lights.pos.size() >= 16) break;
-                    lights.pos.push_back(
-                        transform_point(ist->frame, shp->pos[p]));
-                    lights.ke.push_back(shp->mat->ke);
-                    lights.type.push_back(gl_light_type::point);
-                }
-            } else {
-                auto bbox = make_bbox(shp->pos.size(), shp->pos.data());
-                auto pos = bbox_center(bbox);
-                auto area = 0.0f;
-                for (auto l : shp->lines)
-                    area += line_length(shp->pos[l.x], shp->pos[l.y]);
-                for (auto t : shp->triangles)
-                    area += triangle_area(
-                        shp->pos[t.x], shp->pos[t.y], shp->pos[t.z]);
-                for (auto t : shp->quads)
-                    area += quad_area(shp->pos[t.x], shp->pos[t.y],
-                        shp->pos[t.z], shp->pos[t.w]);
-                auto ke = shp->mat->ke * area;
-                if (lights.pos.size() < 16) {
-                    lights.pos.push_back(transform_point(ist->frame, pos));
-                    lights.ke.push_back(ke);
-                    lights.type.push_back(gl_light_type::point);
-                }
+    if (scn->nodes.empty()) {
+        for (auto sgr : scn->shapes) {
+            for (auto shp : sgr->shapes) {
+                add_gl_lights(lights, sgr->frame, shp);
+            }
+        }
+    } else {
+        for (auto nde : scn->nodes) {
+            if (!nde->shp) continue;
+            for (auto shp : nde->shp->shapes) {
+                add_gl_lights(lights, nde->frame_, shp);
             }
         }
     }
@@ -13880,21 +13568,22 @@ void draw_stdsurface_scene(const std::shared_ptr<scene>& scn,
         set_stdsurface_lights(prog, params.ambient, lights);
     }
 
-    if (!scn->instances.empty()) {
-        for (auto ist : scn->instances) {
-            for (auto shp : ist->shp->shapes) {
-                draw_stdsurface_shape(shp, frame_to_mat(ist->frame),
-                    ist == highlighted || ist->shp == highlighted ||
-                        shp == highlighted,
-                    prog, shapes, textures, params);
+    if (scn->nodes.empty()) {
+        for (auto sgr : scn->shapes) {
+            for (auto shp : sgr->shapes) {
+                draw_stdsurface_shape(shp, frame_to_mat(sgr->frame),
+                    sgr == highlighted || shp == highlighted, prog, shapes,
+                    textures, params);
             }
         }
     } else {
-        for (auto sgr : scn->shapes) {
-            for (auto shp : sgr->shapes) {
-                draw_stdsurface_shape(shp, identity_mat4f,
-                    sgr == highlighted || shp == highlighted, prog, shapes,
-                    textures, params);
+        for (auto nde : scn->nodes) {
+            if (!nde->shp) continue;
+            for (auto shp : nde->shp->shapes) {
+                draw_stdsurface_shape(shp, frame_to_mat(nde->frame_),
+                    nde == highlighted || nde->shp == highlighted ||
+                        shp == highlighted,
+                    prog, shapes, textures, params);
             }
         }
     }
@@ -14854,9 +14543,6 @@ struct draw_elem_visitor {
     const std::vector<std::shared_ptr<material>> elems(material* aux) {
         return scn->materials;
     }
-    const std::vector<std::shared_ptr<instance>> elems(instance* aux) {
-        return scn->instances;
-    }
     const std::vector<std::shared_ptr<environment>> elems(environment* aux) {
         return scn->environments;
     }
@@ -14929,19 +14615,18 @@ bool draw_scene_widgets(const std::shared_ptr<gl_window>& win,
             test_scn->materials, sel, update_list);
         auto shp_add = draw_add_elem_widgets(
             win, scn, "shp", scn->shapes, test_scn->shapes, sel, update_list);
-        if (shp_add) {
-            scn->instances.push_back(std::make_shared<instance>());
-            scn->instances.back()->name = scn->shapes.back()->name;
-            scn->instances.back()->shp = scn->shapes.back();
-            test_scn->instances.push_back(std::make_shared<proc_instance>());
-            test_scn->instances.back()->name = scn->instances.back()->name;
-            test_scn->instances.back()->shape =
-                scn->instances.back()->shp->name;
+        if (shp_add && !scn->nodes.empty()) {
+            scn->nodes.push_back(std::make_shared<node>());
+            scn->nodes.back()->name = scn->shapes.back()->name;
+            scn->nodes.back()->shp = scn->shapes.back();
+            test_scn->nodes.push_back(std::make_shared<proc_node>());
+            test_scn->nodes.back()->name = scn->nodes.back()->name;
+            test_scn->nodes.back()->shape = scn->nodes.back()->shp->name;
             update_list.push_back({});
-            update_list.back() = scn->instances.back();
+            update_list.back() = scn->nodes.back();
         }
-        draw_add_elem_widgets(win, scn, "ist", scn->instances,
-            test_scn->instances, sel, update_list);
+        draw_add_elem_widgets(
+            win, scn, "nde", scn->nodes, test_scn->nodes, sel, update_list);
         draw_add_elem_widgets(win, scn, "env", scn->environments,
             test_scn->environments, sel, update_list);
         draw_add_elem_widgets(win, scn, "anim", scn->animations,
@@ -14956,8 +14641,6 @@ bool draw_scene_widgets(const std::shared_ptr<gl_window>& win,
     if (sel.is<shape>()) elem_visitor(sel.get<shape>());
     if (sel.is<shape_group>())
         elem_visitor(sel.get<shape_group>(), test_scn_res->shapes);
-    if (sel.is<instance>())
-        elem_visitor(sel.get<instance>(), test_scn_res->instances);
     if (sel.is<texture>())
         elem_visitor(sel.get<texture>(), test_scn_res->textures);
     if (sel.is<material>())
