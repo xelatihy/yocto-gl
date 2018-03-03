@@ -510,7 +510,7 @@ std::shared_ptr<scene> load_tungsten(
                 for (auto& p : shp->pos) p = transform_point(frame, p);
                 for (auto& n : shp->norm) n = transform_direction(frame, n);
             }
-            shp->mat = add_material(jprim, scn);
+            shp->mats.push_back(add_material(jprim, scn));
             auto sgr = std::make_shared<shape_group>();
             sgr->shapes.push_back(shp);
             sgr->name = sgr->shapes.at(0)->name;

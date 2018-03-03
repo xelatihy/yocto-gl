@@ -753,20 +753,20 @@ using byte = unsigned char;
 using uint = unsigned int;
 
 /// Pi (float).
-const auto pif = 3.14159265f;
+const float pif = 3.14159265f;
 /// Pi (double).
-const auto pi = 3.1415926535897932384626433832795;
+const double pi = 3.1415926535897932384626433832795;
 
 /// Shortcat for float max value.
-const auto flt_max = std::numeric_limits<float>::max();
+const float flt_max = std::numeric_limits<float>::max();
 /// Shortcat for float min value.
-const auto flt_min = std::numeric_limits<float>::lowest();
+const float flt_min = std::numeric_limits<float>::lowest();
 /// Shortcat for float epsilon.
-const auto flt_eps = std::numeric_limits<float>::epsilon();
+const float flt_eps = std::numeric_limits<float>::epsilon();
 /// Shortcat for int max value.
-const auto int_max = std::numeric_limits<int>::max();
+const int int_max = std::numeric_limits<int>::max();
 /// Shortcat for int min value.
-const auto int_min = std::numeric_limits<int>::min();
+const int int_min = std::numeric_limits<int>::min();
 
 /// Square root.
 template <typename T>
@@ -5453,13 +5453,29 @@ struct material {
     optional<texture_info> occ_txt_info = {};
 };
 
+/// Shape element tags.
+struct shape_element_tags {
+    /// Material id.
+    uint16_t matid = 0;
+    /// Groups id.
+    uint16_t groupid = 0;
+    /// Smoothing id.
+    uint16_t smoothingid = 0;
+    /// Original element size.
+    uint16_t esize = 0;
+};
+
 /// Shape data represented as an indexed array. May contain only one of the
 /// points/lines/triangles/quads.
 struct shape {
     /// Name.
     std::string name = "";
-    /// Material. @refl_semantic(reference)
-    std::shared_ptr<material> mat = nullptr;
+    /// Materials. @refl_semantic(reference)
+    std::vector<std::shared_ptr<material>> mats = {};
+    /// Group names.
+    std::vector<std::string> groupnames = {};
+    /// Smoothing values.
+    std::vector<bool> smoothing = {};
 
     /// Points.
     std::vector<int> points;
@@ -5477,6 +5493,9 @@ struct shape {
     std::vector<vec4i> quads_texcoord;
     /// Bezier.
     std::vector<vec4i> beziers;
+
+    /// Element material ids.
+    std::vector<shape_element_tags> elem_tags;
 
     /// Vertex position.
     std::vector<vec3f> pos;
@@ -5652,6 +5671,20 @@ enum struct shape_elem_type {
 
 /// Get shape element type.
 shape_elem_type get_shape_type(const std::shared_ptr<shape>& shp);
+/// Check whether a shape has emission.
+bool has_emission(const std::shared_ptr<shape>& shp);
+/// Split a shape based on material. Returns the same shape if not split.
+std::vector<std::shared_ptr<shape>> split_by_material(
+    const std::shared_ptr<shape>& shp);
+/// Split a shape based on group. Returns the same shape if not split.
+std::vector<std::shared_ptr<shape>> split_by_group(
+    const std::shared_ptr<shape>& shp);
+/// Split a shape based on smoothing. Returns the same shape if not split.
+std::vector<std::shared_ptr<shape>> split_by_smoothing(
+    const std::shared_ptr<shape>& shp);
+/// Get the material for a shape element.
+std::shared_ptr<material> get_element_material(
+    const std::shared_ptr<shape>& shp, int eid, bool default_if_missing = true);
 
 /// Shape position interpolated using barycentric coordinates.
 vec3f eval_pos(const std::shared_ptr<shape>& shp, int eid, const vec2f& euv);
@@ -6081,11 +6114,28 @@ inline void visit(material& val, Visitor&& visitor) {
 
 /// Visit struct elements.
 template <typename Visitor>
+inline void visit(shape_element_tags& val, Visitor&& visitor) {
+    visitor(val.matid,
+        visit_var{"matid", visit_var_type::value, "Material id.", 0, 0, ""});
+    visitor(val.groupid,
+        visit_var{"groupid", visit_var_type::value, "Groups id.", 0, 0, ""});
+    visitor(val.smoothingid, visit_var{"smoothingid", visit_var_type::value,
+                                 "Smoothing id.", 0, 0, ""});
+    visitor(val.esize, visit_var{"esize", visit_var_type::value,
+                           "Original element size.", 0, 0, ""});
+}
+
+/// Visit struct elements.
+template <typename Visitor>
 inline void visit(shape& val, Visitor&& visitor) {
     visitor(
         val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
-    visitor(val.mat,
-        visit_var{"mat", visit_var_type::reference, "Material.", 0, 0, ""});
+    visitor(val.mats,
+        visit_var{"mats", visit_var_type::reference, "Materials.", 0, 0, ""});
+    visitor(val.groupnames, visit_var{"groupnames", visit_var_type::value,
+                                "Group names.", 0, 0, ""});
+    visitor(val.smoothing, visit_var{"smoothing", visit_var_type::value,
+                               "Smoothing values.", 0, 0, ""});
     visitor(val.points,
         visit_var{"points", visit_var_type::value, "Points.", 0, 0, ""});
     visitor(val.lines,
@@ -6103,6 +6153,8 @@ inline void visit(shape& val, Visitor&& visitor) {
             "Face-varying indices for texcoord.", 0, 0, ""});
     visitor(val.beziers,
         visit_var{"beziers", visit_var_type::value, "Bezier.", 0, 0, ""});
+    visitor(val.elem_tags, visit_var{"elem_tags", visit_var_type::value,
+                               "Element material ids.", 0, 0, ""});
     visitor(val.pos,
         visit_var{"pos", visit_var_type::value, "Vertex position.", 0, 0, ""});
     visitor(val.norm,
@@ -7214,36 +7266,34 @@ enum struct obj_element_type : uint16_t {
 struct obj_element {
     /// Starting vertex index.
     uint32_t start;
-    /// Element type.
-    obj_element_type type;
     /// Number of vertices.
     uint16_t size;
-};
-
-/// Obj element group.
-struct obj_group {
-    /// Material name.
-    std::string matname;
-    /// Group name.
-    std::string groupname;
-    /// Smoothing.
-    bool smoothing = true;
-    /// Element vertices.
-    std::vector<obj_vertex> verts;
-    /// Element faces.
-    std::vector<obj_element> elems;
-    /// Properties not explicitly handled [extension].
-    std::unordered_map<std::string, std::vector<std::string>> props;
+    /// Element type.
+    obj_element_type type;
+    /// Material id.
+    uint16_t matid = 0;
+    /// Group id.
+    uint16_t groupid = 0;
+    /// Smoothing group id.
+    uint16_t smoothingid = 0;
 };
 
 /// Obj object.
 struct obj_object {
     /// Name.
     std::string name;
+    /// Material name.
+    std::vector<std::string> matnames;
+    /// Group name.
+    std::vector<std::string> groupnames;
+    /// Smoothing groups.
+    std::vector<bool> smoothing;
+    /// Element vertices.
+    std::vector<obj_vertex> verts;
+    /// Element faces.
+    std::vector<obj_element> elems;
     /// Frame [extension]. Vertices are not transformed though.
     frame3f frame = identity_frame3f;
-    /// Element groups.
-    std::vector<std::shared_ptr<obj_group>> groups;
     /// Properties not explicitly handled [extension].
     std::unordered_map<std::string, std::vector<std::string>> props;
 };
@@ -9598,7 +9648,7 @@ namespace ygl {
 /// @{
 
 /// Vertex buffers for scene drawing. Members are not part of the public API.
-struct gl_shape {
+struct gl_shape_primitive {
     std::shared_ptr<gl_vertex_buffer> pos = {};         // position
     std::shared_ptr<gl_vertex_buffer> norm = {};        // normals
     std::shared_ptr<gl_vertex_buffer> texcoord = {};    // texcoord
@@ -9611,6 +9661,11 @@ struct gl_shape {
     std::shared_ptr<gl_element_buffer> quads = {};      // quad elements as tris
     std::shared_ptr<gl_element_buffer> beziers = {};    // bezier elements as l.
     std::shared_ptr<gl_element_buffer> edges = {};      // edge elements
+};
+
+/// Vertex buffers for scene drawing. Members are not part of the public API.
+struct gl_shape {
+    std::vector<std::shared_ptr<gl_shape_primitive>> prims = {};         // primitives
 };
 
 /// Initialize gl lights.
