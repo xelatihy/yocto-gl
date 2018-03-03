@@ -101,7 +101,7 @@ void save_test_scene(const std::string& sname, const std::string& basedir) {
                 ssgr->name = sgr->name;
                 for (auto shp : sgr->shapes) {
                     auto sshp = std::make_shared<ygl::shape>(*shp);
-                    sshp->mat = nullptr;
+                    sshp->mats.clear();
                     ssgr->shapes.push_back(sshp);
                 }
                 sscn->shapes.push_back(ssgr);

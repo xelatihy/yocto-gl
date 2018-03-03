@@ -1,5 +1,20 @@
 {
     "python.pythonPath": "/usr/local/bin/python3",
     "C_Cpp.clang_format_path": "/usr/local/bin/clang-format",
-    "clang.cxxflags": ["-std=c++14", "-I/usr/local/include"]
+    "cmake.configureSettings": {
+        "YOCTO_GL": true,
+        "YOCTO_EXPERIMENTAL": true,
+        "YOCTO_TOOLS": true
+    },
+    "cmake.buildDirectory": "${workspaceRoot}/build/vscode",
+    "files.associations": {
+        "__config": "cpp",
+        "__nullptr": "cpp",
+        "exception": "cpp",
+        "initializer_list": "cpp",
+        "new": "cpp",
+        "stdexcept": "cpp",
+        "typeinfo": "cpp",
+        "algorithm": "cpp"
+    }
 }

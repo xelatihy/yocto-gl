@@ -5,6 +5,21 @@ Please consider this to be just development notes and not any real planning.
 
 ## New scene
 
+- shape with ids
+    - shapes have multiple materials
+    - shape have material and group ids
+    - shape have group names
+    - yView
+        - shapes are recompiled into smaller primitives based on material
+            - use same vertex array for now
+    - obj
+        - load material id
+        - option to split primitives on load
+    - glTF
+        - option to convert to one primitive on load
+- facevarying
+    - move to polys
+    - consider using only one array
 - add material to env
 - remove node children
     - use stable sort
