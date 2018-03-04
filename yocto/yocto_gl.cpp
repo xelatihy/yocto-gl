@@ -3467,6 +3467,139 @@ void tesselate_shapes(const std::shared_ptr<scene>& scn, bool subdivide,
     }
 }
 
+int add_shape_vert(const std::shared_ptr<shape>& shp, const vec<int, 5>& vert,
+    std::unordered_map<vec<int, 5>, int>& vmap, const std::vector<vec3f>& pos,
+    const std::vector<vec3f>& norm, const std::vector<vec2f>& texcoord,
+    const std::vector<vec4f>& color, const std::vector<float>& radius) {
+    if (contains(vmap, vert)) return vmap.at(vert);
+    auto vid = (int)vmap.size();
+    vmap[vert] = vid;
+    if (!pos.empty() && vert[0] >= 0) shp->pos.push_back(pos[vert[0]]);
+    if (!norm.empty() && vert[1] >= 0) shp->norm.push_back(norm[vert[1]]);
+    if (!texcoord.empty() && vert[2] >= 0)
+        shp->texcoord.push_back(texcoord[vert[2]]);
+    if (!color.empty() && vert[3] >= 0) shp->color.push_back(color[vert[3]]);
+    if (!radius.empty() && vert[4] >= 0) shp->radius.push_back(radius[vert[4]]);
+    return vid;
+}
+
+// Convert face-varying shapes to shapes.
+std::vector<std::shared_ptr<shape>> tesselate_shape(
+    const std::shared_ptr<fvshape>& fvshp) {
+    if (fvshp->elem_tags.empty() && fvshp->quads_pos.empty()) {
+        auto shp = std::make_shared<shape>();
+        shp->name = fvshp->name;
+        shp->mat = fvshp->mats.empty() ? nullptr : fvshp->mats.front();
+        shp->faceted =
+            fvshp->smoothing.empty() ? false : !fvshp->smoothing.front();
+        shp->pos = fvshp->pos;
+        shp->norm = fvshp->norm;
+        shp->texcoord = fvshp->texcoord;
+        shp->color = fvshp->color;
+        shp->radius = fvshp->radius;
+        shp->points = fvshp->points;
+        shp->lines = fvshp->lines;
+        shp->triangles = fvshp->triangles;
+        shp->quads = fvshp->quads;
+        shp->beziers = fvshp->beziers;
+        return {shp};
+    } else {
+        auto shps = std::vector<std::shared_ptr<shape>>();
+        auto split_ids = std::set<vec3i>();
+        for (auto& tag : fvshp->elem_tags)
+            split_ids.insert({tag.matid, tag.groupid, tag.smoothingid});
+        for (auto tag : split_ids) {
+            auto matid = tag.x, groupid = tag.y, smoothid = tag.z;
+            auto shp = std::make_shared<shape>();
+            shp->name = (fvshp->groupnames.empty()) ?
+                            fvshp->name :
+                            fvshp->groupnames[groupid];
+            shp->mat = (fvshp->mats.empty()) ? nullptr : fvshp->mats[matid];
+            shp->faceted = (fvshp->smoothing.empty()) ?
+                               false :
+                               !fvshp->smoothing[smoothid];
+            auto vmap = std::unordered_map<vec<int, 5>, int>();
+            auto add_vert = [&fvshp, &shp, &vmap](int idx) {
+                return add_shape_vert(shp, {idx, idx, idx, idx, idx}, vmap,
+                    fvshp->pos, fvshp->norm, fvshp->texcoord, fvshp->color,
+                    fvshp->radius);
+            };
+            for (auto p : fvshp->points) shp->points.push_back(add_vert(p));
+            for (auto l : fvshp->lines)
+                shp->lines.push_back({add_vert(l.x), add_vert(l.y)});
+            for (auto t : fvshp->triangles)
+                shp->triangles.push_back(
+                    {add_vert(t.x), add_vert(t.y), add_vert(t.z)});
+            for (auto q : fvshp->quads)
+                shp->quads.push_back({add_vert(q.x), add_vert(q.y),
+                    add_vert(q.z), add_vert(q.w)});
+            for (auto b : fvshp->beziers)
+                shp->beziers.push_back({add_vert(b.x), add_vert(b.y),
+                    add_vert(b.z), add_vert(b.w)});
+            for (auto eid = 0; eid < fvshp->quads_pos.size(); eid++) {
+                shp->quads.push_back({});
+                for (auto c = 0; c < 4; c++) {
+                    auto vert = vec<int, 5>{fvshp->quads_pos[eid][c],
+                        (fvshp->quads_norm.empty()) ? -1 :
+                                                      fvshp->quads_norm[eid][c],
+                        (fvshp->quads_texcoord.empty()) ?
+                            -1 :
+                            fvshp->quads_texcoord[eid][c],
+                        -1, -1};
+                    shp->quads.back()[c] = add_shape_vert(shp, vert, vmap,
+                        fvshp->pos, fvshp->norm, fvshp->texcoord, {}, {});
+                }
+            }
+            shps.push_back(shp);
+        }
+        return shps;
+    }
+}
+
+// Convert a list of shapes into a face-varying shape.
+std::shared_ptr<fvshape> group_shapes(
+    const std::vector<std::shared_ptr<shape>>& shps) {
+    auto fvshp = std::make_shared<fvshape>();
+    if (shps.empty()) return fvshp;
+    fvshp->name = shps.front()->name;
+    for (auto sid = 0; sid < shps.size(); sid++) {
+        auto shp = shps[sid];
+        fvshp->mats.push_back(shp->mat);
+        fvshp->groupnames.push_back(shp->name);
+        fvshp->smoothing.push_back(!shp->faceted);
+        auto offset = (int)fvshp->pos.size();
+        append(fvshp->pos, shp->pos);
+        append(fvshp->norm, shp->norm);
+        append(fvshp->texcoord, shp->texcoord);
+        append(fvshp->texcoord1, shp->texcoord1);
+        append(fvshp->color, shp->color);
+        append(fvshp->radius, shp->radius);
+        append(fvshp->tangsp, shp->tangsp);
+        auto eid = (uint16_t)sid;
+        for (auto p : shp->points) {
+            fvshp->points.push_back(p + offset);
+            fvshp->elem_tags.push_back({eid, eid, eid, 0});
+        }
+        for (auto l : shp->lines) {
+            fvshp->lines.push_back(l + vec2i{offset});
+            fvshp->elem_tags.push_back({eid, eid, eid, 0});
+        }
+        for (auto t : shp->triangles) {
+            fvshp->triangles.push_back(t + vec3i{offset});
+            fvshp->elem_tags.push_back({eid, eid, eid, 0});
+        }
+        for (auto q : shp->quads) {
+            fvshp->quads.push_back(q + vec4i{offset});
+            fvshp->elem_tags.push_back({eid, eid, eid, 0});
+        }
+        for (auto b : shp->beziers) {
+            fvshp->beziers.push_back(b + vec4i{offset});
+            fvshp->elem_tags.push_back({eid, eid, eid, 0});
+        }
+    }
+    return fvshp;
+}
+
 // Update animation transforms
 void update_transforms(
     const std::shared_ptr<animation_group>& agr, float time) {
@@ -4059,247 +4192,260 @@ std::shared_ptr<scene> obj_to_scene(
         auto sgr = std::make_shared<shape_group>();
         sgr->name = omsh->name;
         sgr->frame = omsh->frame;
-        for (auto oshp : omsh->groups) {
-            if (oshp->verts.empty()) continue;
-            if (oshp->elems.empty()) continue;
+        if (omsh->verts.empty()) continue;
+        if (omsh->elems.empty()) continue;
 
-            auto shp = std::make_shared<shape>();
-            shp->name = oshp->groupname;
-            shp->mat = mmap[oshp->matname];
-            shp->faceted = !oshp->smoothing;
-            if (oshp->props.find("subdivision") != oshp->props.end()) {
-                shp->subdivision =
-                    atoi(oshp->props.at("subdivision").at(0).c_str());
-            }
-            if (oshp->props.find("catmullclark") != oshp->props.end()) {
-                shp->catmullclark =
-                    (bool)atoi(oshp->props.at("catmullclark").at(1).c_str());
-            }
+        auto shp = std::make_shared<fvshape>();
+        shp->name = sgr->name;
+        for (auto& matname : omsh->matnames)
+            shp->mats.push_back((mmap[matname]) ? mmap[matname] : nullptr);
+        shp->groupnames = omsh->groupnames;
+        shp->smoothing = omsh->smoothing;
+        if (omsh->props.find("subdivision") != omsh->props.end()) {
+            shp->subdivision =
+                atoi(omsh->props.at("subdivision").at(0).c_str());
+        }
+        if (omsh->props.find("catmullclark") != omsh->props.end()) {
+            shp->catmullclark =
+                (bool)atoi(omsh->props.at("catmullclark").at(1).c_str());
+        }
 
-            // check to see if this shuold be face-varying or flat
-            // quads
-            auto as_facevarying = false, as_quads = false;
-            if (opts.preserve_quads || opts.preserve_facevarying) {
-                auto face_max = 0;
-                for (auto& elem : oshp->elems) {
-                    if (elem.type != obj_element_type::face) {
-                        face_max = 0;
-                        break;
-                    } else {
-                        face_max = max(face_max, (int)elem.size);
-                    }
+        // check to see if this shuold be face-varying or flat
+        // quads
+        auto as_facevarying = false, as_quads = false;
+        if (opts.preserve_quads || opts.preserve_facevarying) {
+            auto face_max = 0;
+            for (auto& elem : omsh->elems) {
+                if (elem.type != obj_element_type::face) {
+                    face_max = 0;
+                    break;
+                } else {
+                    face_max = max(face_max, (int)elem.size);
                 }
-                as_quads = opts.preserve_quads && face_max > 3;
-                as_facevarying = opts.preserve_facevarying && face_max > 2;
-                // in case of facevarying, check if there is really
-                // need for it
-                if (as_facevarying) {
-                    auto need_facevarying = false;
-                    for (auto& elem : oshp->elems) {
+            }
+            as_quads = opts.preserve_quads && face_max > 3;
+            as_facevarying = opts.preserve_facevarying && face_max > 2;
+            // in case of facevarying, check if there is really
+            // need for it
+            if (as_facevarying) {
+                auto need_facevarying = false;
+                for (auto& elem : omsh->elems) {
+                    for (auto i = elem.start; i < elem.start + elem.size; i++) {
+                        auto& v = omsh->verts[i];
+                        if ((v.norm >= 0 && v.pos != v.norm) ||
+                            (v.texcoord >= 0 && v.pos != v.texcoord) ||
+                            (v.norm >= 0 && v.texcoord >= 0 &&
+                                v.norm != v.texcoord))
+                            need_facevarying = true;
+                        if (v.color >= 0 || v.radius >= 0)
+                            as_facevarying = false;
+                    }
+                    if (!as_facevarying) break;
+                }
+                as_facevarying = need_facevarying;
+            }
+        }
+
+        if (!as_facevarying) {
+            // insert all vertices
+            std::unordered_map<obj_vertex, int, obj_vertex_hash> vert_map;
+            std::vector<int> vert_ids;
+            for (auto& vert : omsh->verts) {
+                if (vert_map.find(vert) == vert_map.end()) {
+                    auto s = (int)vert_map.size();
+                    vert_map[vert] = s;
+                }
+                vert_ids.push_back(vert_map.at(vert));
+            }
+
+            // convert elements
+            for (auto& elem : omsh->elems) {
+                switch (elem.type) {
+                    case obj_element_type::point: {
                         for (auto i = elem.start; i < elem.start + elem.size;
                              i++) {
-                            auto& v = oshp->verts[i];
-                            if ((v.norm >= 0 && v.pos != v.norm) ||
-                                (v.texcoord >= 0 && v.pos != v.texcoord) ||
-                                (v.norm >= 0 && v.texcoord >= 0 &&
-                                    v.norm != v.texcoord))
-                                need_facevarying = true;
-                            if (v.color >= 0 || v.radius >= 0)
-                                as_facevarying = false;
+                            shp->points.push_back(vert_ids[i]);
+                            shp->elem_tags.push_back({elem.matid, elem.groupid,
+                                elem.smoothingid, elem.size});
                         }
-                        if (!as_facevarying) break;
-                    }
-                    as_facevarying = need_facevarying;
+                    } break;
+                    case obj_element_type::line: {
+                        for (auto i = elem.start;
+                             i < elem.start + elem.size - 1; i++) {
+                            shp->lines.push_back(
+                                {vert_ids[i], vert_ids[i + 1]});
+                            shp->elem_tags.push_back({elem.matid, elem.groupid,
+                                elem.smoothingid, elem.size});
+                        }
+                    } break;
+                    case obj_element_type::face: {
+                        if (as_quads && elem.size == 4) {
+                            shp->quads.push_back({vert_ids[elem.start + 0],
+                                vert_ids[elem.start + 1],
+                                vert_ids[elem.start + 2],
+                                vert_ids[elem.start + 3]});
+                            shp->elem_tags.push_back({elem.matid, elem.groupid,
+                                elem.smoothingid, elem.size});
+                        } else if (as_quads && elem.size != 4) {
+                            for (auto i = elem.start + 2;
+                                 i < elem.start + elem.size; i++) {
+                                shp->quads.push_back({vert_ids[elem.start],
+                                    vert_ids[i - 1], vert_ids[i], vert_ids[i]});
+                                shp->elem_tags.push_back({elem.matid,
+                                    elem.groupid, elem.smoothingid, elem.size});
+                            }
+                        } else {
+                            for (auto i = elem.start + 2;
+                                 i < elem.start + elem.size; i++) {
+                                shp->triangles.push_back({vert_ids[elem.start],
+                                    vert_ids[i - 1], vert_ids[i]});
+                                shp->elem_tags.push_back({elem.matid,
+                                    elem.groupid, elem.smoothingid, elem.size});
+                            }
+                        }
+                    } break;
+                    case obj_element_type::bezier: {
+                        if ((elem.size - 1) % 3)
+                            throw std::runtime_error("bad obj bezier");
+                        for (auto i = elem.start + 1;
+                             i < elem.start + elem.size; i += 3) {
+                            shp->beziers.push_back({vert_ids[i - 1],
+                                vert_ids[i], vert_ids[i + 1], vert_ids[i + 2]});
+                            shp->elem_tags.push_back({elem.matid, elem.groupid,
+                                elem.smoothingid, elem.size});
+                        }
+                    } break;
+                    default: { assert(false); }
                 }
             }
 
-            if (!as_facevarying) {
-                // insert all vertices
-                std::unordered_map<obj_vertex, int, obj_vertex_hash> vert_map;
-                std::vector<int> vert_ids;
-                for (auto& vert : oshp->verts) {
-                    if (vert_map.find(vert) == vert_map.end()) {
-                        auto s = (int)vert_map.size();
-                        vert_map[vert] = s;
+            // copy vertex data
+            auto v = omsh->verts[0];
+            if (v.pos >= 0) shp->pos.resize(vert_map.size());
+            if (v.texcoord >= 0) shp->texcoord.resize(vert_map.size());
+            if (v.norm >= 0) shp->norm.resize(vert_map.size());
+            if (v.color >= 0) shp->color.resize(vert_map.size());
+            if (v.radius >= 0) shp->radius.resize(vert_map.size());
+            for (auto& kv : vert_map) {
+                auto idx = kv.second;
+                auto vert = kv.first;
+                if (v.pos >= 0 && vert.pos >= 0)
+                    shp->pos[idx] = obj->pos[vert.pos];
+                if (v.texcoord >= 0 && vert.texcoord >= 0)
+                    shp->texcoord[idx] = obj->texcoord[vert.texcoord];
+                if (v.norm >= 0 && vert.norm >= 0)
+                    shp->norm[idx] = obj->norm[vert.norm];
+                if (v.color >= 0 && vert.color >= 0)
+                    shp->color[idx] = obj->color[vert.color];
+                if (v.radius >= 0 && vert.radius >= 0)
+                    shp->radius[idx] = obj->radius[vert.radius];
+            }
+        } else {
+            // insert all vertices
+            std::unordered_map<int, int> pos_map, norm_map, texcoord_map;
+            std::vector<int> pos_ids, norm_ids, texcoord_ids;
+            for (auto& vert : omsh->verts) {
+                if (vert.pos >= 0) {
+                    if (pos_map.find(vert.pos) == pos_map.end()) {
+                        auto s = (int)pos_map.size();
+                        pos_map[vert.pos] = s;
                     }
-                    vert_ids.push_back(vert_map.at(vert));
+                    pos_ids.push_back(pos_map.at(vert.pos));
+                } else {
+                    if (!pos_ids.empty())
+                        throw std::runtime_error("malformed obj");
                 }
+                if (vert.norm >= 0) {
+                    if (norm_map.find(vert.norm) == norm_map.end()) {
+                        auto s = (int)norm_map.size();
+                        norm_map[vert.norm] = s;
+                    }
+                    norm_ids.push_back(norm_map.at(vert.norm));
+                } else {
+                    if (!norm_ids.empty())
+                        throw std::runtime_error("malformed obj");
+                }
+                if (vert.texcoord >= 0) {
+                    if (texcoord_map.find(vert.texcoord) ==
+                        texcoord_map.end()) {
+                        auto s = (int)texcoord_map.size();
+                        texcoord_map[vert.texcoord] = s;
+                    }
+                    texcoord_ids.push_back(texcoord_map.at(vert.texcoord));
+                } else {
+                    if (!texcoord_ids.empty())
+                        throw std::runtime_error("malformed obj");
+                }
+            }
 
-                // convert elements
-                for (auto& elem : oshp->elems) {
-                    switch (elem.type) {
-                        case obj_element_type::point: {
-                            for (auto i = elem.start;
-                                 i < elem.start + elem.size; i++) {
-                                shp->points.push_back(vert_ids[i]);
-                            }
-                        } break;
-                        case obj_element_type::line: {
-                            for (auto i = elem.start;
-                                 i < elem.start + elem.size - 1; i++) {
-                                shp->lines.push_back(
-                                    {vert_ids[i], vert_ids[i + 1]});
-                            }
-                        } break;
-                        case obj_element_type::face: {
-                            if (as_quads && elem.size == 4) {
-                                shp->quads.push_back({vert_ids[elem.start + 0],
-                                    vert_ids[elem.start + 1],
-                                    vert_ids[elem.start + 2],
-                                    vert_ids[elem.start + 3]});
-                            } else if (as_quads && elem.size != 4) {
-                                for (auto i = elem.start + 2;
-                                     i < elem.start + elem.size; i++) {
-                                    shp->quads.push_back(
-                                        {vert_ids[elem.start], vert_ids[i - 1],
-                                            vert_ids[i], vert_ids[i]});
-                                }
-                            } else {
-                                for (auto i = elem.start + 2;
-                                     i < elem.start + elem.size; i++) {
-                                    shp->triangles.push_back(
-                                        {vert_ids[elem.start], vert_ids[i - 1],
-                                            vert_ids[i]});
-                                }
-                            }
-                        } break;
-                        case obj_element_type::bezier: {
-                            if ((elem.size - 1) % 3)
-                                throw std::runtime_error("bad obj bezier");
-                            for (auto i = elem.start + 1;
-                                 i < elem.start + elem.size; i += 3) {
-                                shp->beziers.push_back(
-                                    {vert_ids[i - 1], vert_ids[i],
-                                        vert_ids[i + 1], vert_ids[i + 2]});
-                            }
-                        } break;
-                        default: { assert(false); }
+            // convert elements
+            for (auto elem : omsh->elems) {
+                if (elem.size == 4) {
+                    if (!pos_ids.empty()) {
+                        shp->quads_pos.push_back({pos_ids[elem.start + 0],
+                            pos_ids[elem.start + 1], pos_ids[elem.start + 2],
+                            pos_ids[elem.start + 3]});
+                        shp->elem_tags.push_back({elem.matid, elem.groupid,
+                            elem.smoothingid, elem.size});
                     }
-                }
-
-                // copy vertex data
-                auto v = oshp->verts[0];
-                if (v.pos >= 0) shp->pos.resize(vert_map.size());
-                if (v.texcoord >= 0) shp->texcoord.resize(vert_map.size());
-                if (v.norm >= 0) shp->norm.resize(vert_map.size());
-                if (v.color >= 0) shp->color.resize(vert_map.size());
-                if (v.radius >= 0) shp->radius.resize(vert_map.size());
-                for (auto& kv : vert_map) {
-                    auto idx = kv.second;
-                    auto vert = kv.first;
-                    if (v.pos >= 0 && vert.pos >= 0)
-                        shp->pos[idx] = obj->pos[vert.pos];
-                    if (v.texcoord >= 0 && vert.texcoord >= 0)
-                        shp->texcoord[idx] = obj->texcoord[vert.texcoord];
-                    if (v.norm >= 0 && vert.norm >= 0)
-                        shp->norm[idx] = obj->norm[vert.norm];
-                    if (v.color >= 0 && vert.color >= 0)
-                        shp->color[idx] = obj->color[vert.color];
-                    if (v.radius >= 0 && vert.radius >= 0)
-                        shp->radius[idx] = obj->radius[vert.radius];
-                }
-            } else {
-                // insert all vertices
-                std::unordered_map<int, int> pos_map, norm_map, texcoord_map;
-                std::vector<int> pos_ids, norm_ids, texcoord_ids;
-                for (auto& vert : oshp->verts) {
-                    if (vert.pos >= 0) {
-                        if (pos_map.find(vert.pos) == pos_map.end()) {
-                            auto s = (int)pos_map.size();
-                            pos_map[vert.pos] = s;
-                        }
-                        pos_ids.push_back(pos_map.at(vert.pos));
-                    } else {
-                        if (!pos_ids.empty())
-                            throw std::runtime_error("malformed obj");
+                    if (!texcoord_ids.empty()) {
+                        shp->quads_texcoord.push_back(
+                            {texcoord_ids[elem.start + 0],
+                                texcoord_ids[elem.start + 1],
+                                texcoord_ids[elem.start + 2],
+                                texcoord_ids[elem.start + 3]});
                     }
-                    if (vert.norm >= 0) {
-                        if (norm_map.find(vert.norm) == norm_map.end()) {
-                            auto s = (int)norm_map.size();
-                            norm_map[vert.norm] = s;
-                        }
-                        norm_ids.push_back(norm_map.at(vert.norm));
-                    } else {
-                        if (!norm_ids.empty())
-                            throw std::runtime_error("malformed obj");
+                    if (!norm_ids.empty()) {
+                        shp->quads_norm.push_back({norm_ids[elem.start + 0],
+                            norm_ids[elem.start + 1], norm_ids[elem.start + 2],
+                            norm_ids[elem.start + 3]});
                     }
-                    if (vert.texcoord >= 0) {
-                        if (texcoord_map.find(vert.texcoord) ==
-                            texcoord_map.end()) {
-                            auto s = (int)texcoord_map.size();
-                            texcoord_map[vert.texcoord] = s;
+                } else {
+                    if (!pos_ids.empty()) {
+                        for (auto i = elem.start + 2;
+                             i < elem.start + elem.size; i++) {
+                            shp->quads_pos.push_back({pos_ids[elem.start],
+                                pos_ids[i - 1], pos_ids[i], pos_ids[i]});
+                            shp->elem_tags.push_back({elem.matid, elem.groupid,
+                                elem.smoothingid, elem.size});
                         }
-                        texcoord_ids.push_back(texcoord_map.at(vert.texcoord));
-                    } else {
-                        if (!texcoord_ids.empty())
-                            throw std::runtime_error("malformed obj");
                     }
-                }
-
-                // convert elements
-                for (auto elem : oshp->elems) {
-                    if (elem.size == 4) {
-                        if (!pos_ids.empty()) {
-                            shp->quads_pos.push_back({pos_ids[elem.start + 0],
-                                pos_ids[elem.start + 1],
-                                pos_ids[elem.start + 2],
-                                pos_ids[elem.start + 3]});
-                        }
-                        if (!texcoord_ids.empty()) {
+                    if (!texcoord_ids.empty()) {
+                        for (auto i = elem.start + 2;
+                             i < elem.start + elem.size; i++) {
                             shp->quads_texcoord.push_back(
-                                {texcoord_ids[elem.start + 0],
-                                    texcoord_ids[elem.start + 1],
-                                    texcoord_ids[elem.start + 2],
-                                    texcoord_ids[elem.start + 3]});
+                                {texcoord_ids[elem.start], texcoord_ids[i - 1],
+                                    texcoord_ids[i], texcoord_ids[i]});
                         }
-                        if (!norm_ids.empty()) {
-                            shp->quads_norm.push_back({norm_ids[elem.start + 0],
-                                norm_ids[elem.start + 1],
-                                norm_ids[elem.start + 2],
-                                norm_ids[elem.start + 3]});
-                        }
-                    } else {
-                        if (!pos_ids.empty()) {
-                            for (auto i = elem.start + 2;
-                                 i < elem.start + elem.size; i++) {
-                                shp->quads_pos.push_back({pos_ids[elem.start],
-                                    pos_ids[i - 1], pos_ids[i], pos_ids[i]});
-                            }
-                        }
-                        if (!texcoord_ids.empty()) {
-                            for (auto i = elem.start + 2;
-                                 i < elem.start + elem.size; i++) {
-                                shp->quads_texcoord.push_back(
-                                    {texcoord_ids[elem.start],
-                                        texcoord_ids[i - 1], texcoord_ids[i],
-                                        texcoord_ids[i]});
-                            }
-                        }
-                        if (!norm_ids.empty()) {
-                            for (auto i = elem.start + 2;
-                                 i < elem.start + elem.size; i++) {
-                                shp->quads_norm.push_back({norm_ids[elem.start],
-                                    norm_ids[i - 1], norm_ids[i], norm_ids[i]});
-                            }
+                    }
+                    if (!norm_ids.empty()) {
+                        for (auto i = elem.start + 2;
+                             i < elem.start + elem.size; i++) {
+                            shp->quads_norm.push_back({norm_ids[elem.start],
+                                norm_ids[i - 1], norm_ids[i], norm_ids[i]});
                         }
                     }
                 }
-
-                // copy vertex data
-                shp->pos.resize(pos_map.size());
-                shp->texcoord.resize(texcoord_map.size());
-                shp->norm.resize(norm_map.size());
-                for (auto& kv : pos_map) {
-                    shp->pos[kv.second] = obj->pos[kv.first];
-                }
-                for (auto& kv : texcoord_map) {
-                    shp->texcoord[kv.second] = obj->texcoord[kv.first];
-                }
-                for (auto& kv : norm_map) {
-                    shp->norm[kv.second] = obj->norm[kv.first];
-                }
             }
-            sgr->shapes.push_back(shp);
+
+            // copy vertex data
+            shp->pos.resize(pos_map.size());
+            shp->texcoord.resize(texcoord_map.size());
+            shp->norm.resize(norm_map.size());
+            for (auto& kv : pos_map) {
+                shp->pos[kv.second] = obj->pos[kv.first];
+            }
+            for (auto& kv : texcoord_map) {
+                shp->texcoord[kv.second] = obj->texcoord[kv.first];
+            }
+            for (auto& kv : norm_map) {
+                shp->norm[kv.second] = obj->norm[kv.first];
+            }
+        }
+        if (opts.simple_shapes) {
+            append(sgr->shapes, tesselate_shape(shp));
+        } else {
+            sgr->fvshapes.push_back(shp);
         }
         scn->shapes.push_back(sgr);
         omap[omsh->name] = sgr;
@@ -4508,12 +4654,46 @@ std::shared_ptr<obj_scene> scene_to_obj(const std::shared_ptr<scene>& scn) {
         obj->materials.push_back(omat);
     }
 
+    // add elem
+    auto add_elem = [](auto& shp, auto& oobj, auto etype, auto esize, auto eid,
+                        auto& eoffset) {
+        auto etags = (shp->elem_tags.empty()) ? shape_element_tags() :
+                                                shp->elem_tags.at(eid);
+        auto elem = obj_element();
+        elem.start = (uint32_t)oobj->verts.size();
+        elem.type = etype;
+        elem.size = (uint16_t)esize;
+        elem.matid = etags.matid + eoffset.matid;
+        elem.groupid = etags.groupid + eoffset.groupid;
+        elem.smoothingid = etags.smoothingid + eoffset.smoothingid;
+        oobj->elems.push_back(elem);
+    };
+    // add vertex
+    auto add_vert = [](auto& shp, auto& oobj, auto& offset, int vid) {
+        auto vert = obj_vertex{-1, -1, -1, -1, -1};
+        if (!shp->pos.empty()) vert.pos = offset.pos + vid;
+        if (!shp->texcoord.empty()) vert.texcoord = offset.texcoord + vid;
+        if (!shp->norm.empty()) vert.norm = offset.norm + vid;
+        if (!shp->color.empty()) vert.color = offset.color + vid;
+        if (!shp->radius.empty()) vert.radius = offset.radius + vid;
+        oobj->verts.push_back(vert);
+    };
+
     // convert shapes
     for (auto sgr : scn->shapes) {
         auto oobj = std::make_shared<obj_object>();
         oobj->name = sgr->name;
         oobj->frame = sgr->frame;
-        for (auto shp : sgr->shapes) {
+        auto fvshapes = sgr->fvshapes;
+        if (fvshapes.empty()) {
+            if (sgr->shapes.empty()) continue;
+            fvshapes.push_back(group_shapes(sgr->shapes));
+        }
+        for (auto shp : fvshapes) {
+            if (shp->subdivision)
+                oobj->props["subdivision"].push_back(
+                    std::to_string(shp->subdivision));
+            if (shp->catmullclark) oobj->props["catmullclark"].push_back("1");
             auto offset = obj_vertex{(int)obj->pos.size(),
                 (int)obj->texcoord.size(), (int)obj->norm.size(),
                 (int)obj->color.size(), (int)obj->radius.size()};
@@ -4530,118 +4710,70 @@ std::shared_ptr<obj_scene> scene_to_obj(const std::shared_ptr<scene>& scn) {
             for (auto& v : shp->color)
                 obj->color.push_back({v.x, v.y, v.z, v.w});
             for (auto& v : shp->radius) obj->radius.push_back(v);
-            auto group = std::make_shared<obj_group>();
-            group->groupname = shp->name;
-            group->matname = (shp->mat) ? shp->mat->name : "";
-            if (shp->subdivision)
-                group->props["subdivision"].push_back(
-                    std::to_string(shp->subdivision));
-            if (shp->catmullclark) group->props["catmullclark"].push_back("1");
-            for (auto point : shp->points) {
-                group->elems.push_back({(uint32_t)group->verts.size(),
-                    obj_element_type::point, 1});
-                auto vert = obj_vertex{-1, -1, -1, -1, -1};
-                if (!shp->pos.empty()) vert.pos = offset.pos + point;
-                if (!shp->texcoord.empty())
-                    vert.texcoord = offset.texcoord + point;
-                if (!shp->norm.empty()) vert.norm = offset.norm + point;
-                if (!shp->color.empty()) vert.color = offset.color + point;
-                if (!shp->radius.empty()) vert.radius = offset.radius + point;
-                group->verts.push_back(vert);
+            auto eoffset = shape_element_tags();
+            eoffset.matid = oobj->matnames.size();
+            eoffset.groupid = oobj->groupnames.size();
+            eoffset.smoothingid = 0;  // TODO: fix smoothing groups
+            if (shp->mats.empty()) {
+                oobj->matnames.push_back("");
+            } else {
+                for (auto mat : shp->mats)
+                    oobj->matnames.push_back((mat) ? mat->name : ""s);
             }
-            for (auto line : shp->lines) {
-                group->elems.push_back(
-                    {(uint32_t)group->verts.size(), obj_element_type::line, 2});
-                for (auto vid : line) {
-                    auto vert = obj_vertex{-1, -1, -1, -1, -1};
-                    if (!shp->pos.empty()) vert.pos = offset.pos + vid;
-                    if (!shp->texcoord.empty())
-                        vert.texcoord = offset.texcoord + vid;
-                    if (!shp->norm.empty()) vert.norm = offset.norm + vid;
-                    if (!shp->color.empty()) vert.color = offset.color + vid;
-                    if (!shp->radius.empty()) vert.radius = offset.radius + vid;
-                    group->verts.push_back(vert);
-                }
+            if (shp->groupnames.empty()) {
+                oobj->groupnames.push_back("");
+            } else {
+                oobj->groupnames.insert(oobj->groupnames.end(),
+                    shp->groupnames.begin(), shp->groupnames.end());
             }
-            for (auto triangle : shp->triangles) {
-                group->elems.push_back(
-                    {(uint32_t)group->verts.size(), obj_element_type::face, 3});
-                for (auto vid : triangle) {
-                    auto vert = obj_vertex{-1, -1, -1, -1, -1};
-                    if (!shp->pos.empty()) vert.pos = offset.pos + vid;
-                    if (!shp->texcoord.empty())
-                        vert.texcoord = offset.texcoord + vid;
-                    if (!shp->norm.empty()) vert.norm = offset.norm + vid;
-                    if (!shp->color.empty()) vert.color = offset.color + vid;
-                    if (!shp->radius.empty()) vert.radius = offset.radius + vid;
-                    group->verts.push_back(vert);
-                }
+            for (auto eid = 0; eid < shp->points.size(); eid++) {
+                auto vid = shp->points[eid];
+                add_elem(shp, oobj, obj_element_type::point, 1, eid, eoffset);
+                add_vert(shp, oobj, offset, vid);
             }
-            for (auto quad : shp->quads) {
-                group->elems.push_back(
-                    {(uint32_t)group->verts.size(), obj_element_type::face,
-                        (uint16_t)((quad.z == quad.w) ? 3 : 4)});
-                if (group->elems.back().size == 3) {
-                    for (auto vid : {quad.x, quad.y, quad.z}) {
-                        auto vert = obj_vertex{-1, -1, -1, -1, -1};
-                        if (!shp->pos.empty()) vert.pos = offset.pos + vid;
-                        if (!shp->texcoord.empty())
-                            vert.texcoord = offset.texcoord + vid;
-                        if (!shp->norm.empty()) vert.norm = offset.norm + vid;
-                        if (!shp->color.empty())
-                            vert.color = offset.color + vid;
-                        if (!shp->radius.empty())
-                            vert.radius = offset.radius + vid;
-                        group->verts.push_back(vert);
-                    }
+            for (auto eid = 0; eid < shp->lines.size(); eid++) {
+                auto line = shp->lines[eid];
+                add_elem(shp, oobj, obj_element_type::line, 2, eid, eoffset);
+                for (auto vid : line) add_vert(shp, oobj, offset, vid);
+            }
+            for (auto eid = 0; eid < shp->triangles.size(); eid++) {
+                auto triangle = shp->triangles[eid];
+                add_elem(shp, oobj, obj_element_type::face, 3, eid, eoffset);
+                for (auto vid : triangle) add_vert(shp, oobj, offset, vid);
+            }
+            for (auto eid = 0; eid < shp->quads.size(); eid++) {
+                auto quad = shp->quads[eid];
+                add_elem(shp, oobj, obj_element_type::face,
+                    (uint16_t)((quad.z == quad.w) ? 3 : 4), eid, eoffset);
+                if (oobj->elems.back().size == 3) {
+                    for (auto vid : {quad.x, quad.y, quad.z})
+                        add_vert(shp, oobj, offset, vid);
                 } else {
-                    for (auto vid : quad) {
-                        auto vert = obj_vertex{-1, -1, -1, -1, -1};
-                        if (!shp->pos.empty()) vert.pos = offset.pos + vid;
-                        if (!shp->texcoord.empty())
-                            vert.texcoord = offset.texcoord + vid;
-                        if (!shp->norm.empty()) vert.norm = offset.norm + vid;
-                        if (!shp->color.empty())
-                            vert.color = offset.color + vid;
-                        if (!shp->radius.empty())
-                            vert.radius = offset.radius + vid;
-                        group->verts.push_back(vert);
-                    }
+                    for (auto vid : quad) add_vert(shp, oobj, offset, vid);
                 }
             }
-            for (auto fid = 0; fid < shp->quads_pos.size(); fid++) {
-                group->elems.push_back(
-                    {(uint32_t)group->verts.size(), obj_element_type::face, 4});
+            for (auto eid = 0; eid < shp->beziers.size(); eid++) {
+                auto bezier = shp->beziers[eid];
+                add_elem(shp, oobj, obj_element_type::bezier, 4, eid, eoffset);
+                for (auto vid : bezier) add_vert(shp, oobj, offset, vid);
+            }
+            for (auto eid = 0; eid < shp->quads_pos.size(); eid++) {
+                add_elem(shp, oobj, obj_element_type::face, 4, eid, eoffset);
                 auto last_vid = -1;
                 for (auto i = 0; i < 4; i++) {
-                    if (last_vid == shp->quads_pos[fid][i]) continue;
+                    if (last_vid == shp->quads_pos[eid][i]) continue;
                     auto vert = obj_vertex{-1, -1, -1, -1, -1};
                     if (!shp->pos.empty() && !shp->quads_pos.empty())
-                        vert.pos = offset.pos + shp->quads_pos[fid][i];
+                        vert.pos = offset.pos + shp->quads_pos[eid][i];
                     if (!shp->texcoord.empty() && !shp->quads_texcoord.empty())
                         vert.texcoord =
-                            offset.texcoord + shp->quads_texcoord[fid][i];
+                            offset.texcoord + shp->quads_texcoord[eid][i];
                     if (!shp->norm.empty() && !shp->quads_norm.empty())
-                        vert.norm = offset.norm + shp->quads_norm[fid][i];
-                    group->verts.push_back(vert);
-                    last_vid = shp->quads_pos[fid][i];
+                        vert.norm = offset.norm + shp->quads_norm[eid][i];
+                    oobj->verts.push_back(vert);
+                    last_vid = shp->quads_pos[eid][i];
                 }
             }
-            for (auto bezier : shp->beziers) {
-                group->elems.push_back({(uint32_t)group->verts.size(),
-                    obj_element_type::bezier, 4});
-                for (auto vid : bezier) {
-                    auto vert = obj_vertex{-1, -1, -1, -1, -1};
-                    if (!shp->pos.empty()) vert.pos = offset.pos + vid;
-                    if (!shp->texcoord.empty())
-                        vert.texcoord = offset.texcoord + vid;
-                    if (!shp->norm.empty()) vert.norm = offset.norm + vid;
-                    if (!shp->color.empty()) vert.color = offset.color + vid;
-                    if (!shp->radius.empty()) vert.radius = offset.radius + vid;
-                    group->verts.push_back(vert);
-                }
-            }
-            oobj->groups.push_back(group);
         }
         obj->objects.push_back(oobj);
     }
@@ -5136,8 +5268,6 @@ std::shared_ptr<glTF> scene_to_gltf(const std::shared_ptr<scene>& scn,
     const std::string& buffer_uri, bool separate_buffers) {
     auto gltf = std::make_shared<glTF>();
 
-    log_error("untransformed shape frames");
-
     // add asset info
     gltf->asset = std::make_shared<glTFAsset>();
     gltf->asset->generator = "Yocto/gltf";
@@ -5388,7 +5518,11 @@ std::shared_ptr<glTF> scene_to_gltf(const std::shared_ptr<scene>& scn,
         auto gmesh = std::make_shared<glTFMesh>();
         gmesh->name = sgr->name;
         auto gbuffer = add_opt_buffer(sgr->path);
-        for (auto shp : sgr->shapes) {
+        auto shapes = sgr->shapes;
+        if(shapes.empty()) {
+            for(auto fvshp : sgr->fvshapes) append(shapes, tesselate_shape(fvshp));
+        }
+        for (auto shp : shapes) {
             auto gprim = std::make_shared<glTFMeshPrimitive>();
             gprim->material =
                 glTFid<glTFMaterial>(index(scn->materials, shp->mat));
@@ -7529,9 +7663,9 @@ std::vector<std::shared_ptr<obj_material>> load_mtl(const std::string& filename,
 }
 
 // Loads textures for an scene.
-void load_textures(const std::shared_ptr<obj_scene>& asset,
+void load_textures(const std::shared_ptr<obj_scene>& obj,
     const std::string& dirname, bool skip_missing) {
-    for (auto txt : asset->textures) {
+    for (auto txt : obj->textures) {
         auto filename = dirname + txt->path;
         for (auto& c : filename)
             if (c == '\\') c = '/';
@@ -7555,22 +7689,31 @@ void load_textures(const std::shared_ptr<obj_scene>& asset,
 std::shared_ptr<obj_scene> load_obj(const std::string& filename, bool load_txt,
     bool skip_missing, bool flip_texcoord, bool flip_tr) {
     // clear obj
-    auto asset = std::make_shared<obj_scene>();
+    auto obj = std::make_shared<obj_scene>();
+
+    // splitting policy
+    auto split_material = false;
+    auto split_group = false;
+    auto split_smoothing = false;
 
     // open file
     auto fs = fopen(filename.c_str(), "rt");
     if (!fs) throw std::runtime_error("cannot open filename " + filename);
 
-    // initializing obj
-    asset->objects.push_back(std::make_shared<obj_object>());
-    asset->objects.back()->groups.push_back(std::make_shared<obj_group>());
-
-    // current parsing value
-    auto matname = std::string();
+    // current parsing values
     auto mtllibs = std::vector<std::string>();
-    auto object = asset->objects.back();
-    auto group = object->groups.back();
+    auto oobj = std::shared_ptr<obj_object>();
+    auto matname = ""s;
+    auto oname = ""s;
+    auto smoothing = true;
     auto elems = std::vector<obj_vertex>();
+
+    // initializing obj
+    obj->objects.push_back(std::make_shared<obj_object>());
+    oobj = obj->objects.back();
+    oobj->matnames.push_back("");
+    oobj->groupnames.push_back("");
+    oobj->smoothing.push_back(true);
 
     // keep track of array lengths
     auto vert_size = obj_vertex{0, 0, 0, 0, 0};
@@ -7601,76 +7744,93 @@ std::shared_ptr<obj_scene> load_obj(const std::string& filename, bool load_txt,
         // possible token values
         if (obj_streq(cmd, "v")) {
             vert_size.pos += 1;
-            asset->pos.push_back(zero3f);
-            obj_parse(ss, asset->pos.back());
+            obj->pos.push_back(zero3f);
+            obj_parse(ss, obj->pos.back());
         } else if (obj_streq(cmd, "vn")) {
             vert_size.norm += 1;
-            asset->norm.push_back(zero3f);
-            obj_parse(ss, asset->norm.back());
+            obj->norm.push_back(zero3f);
+            obj_parse(ss, obj->norm.back());
         } else if (obj_streq(cmd, "vt")) {
             vert_size.texcoord += 1;
-            asset->texcoord.push_back(zero2f);
-            obj_parse(ss, asset->texcoord.back());
+            obj->texcoord.push_back(zero2f);
+            obj_parse(ss, obj->texcoord.back());
             if (flip_texcoord)
-                asset->texcoord.back().y = 1 - asset->texcoord.back().y;
+                obj->texcoord.back().y = 1 - obj->texcoord.back().y;
         } else if (obj_streq(cmd, "vc")) {
             vert_size.color += 1;
-            asset->color.push_back(vec4f{0, 0, 0, 1});
-            obj_parse(ss, asset->color.back());
+            obj->color.push_back(vec4f{0, 0, 0, 1});
+            obj_parse(ss, obj->color.back());
         } else if (obj_streq(cmd, "vr")) {
             vert_size.radius += 1;
-            asset->radius.push_back(0);
-            obj_parse(ss, asset->radius.back());
+            obj->radius.push_back(0);
+            obj_parse(ss, obj->radius.back());
         } else if (obj_streq(cmd, "f") || obj_streq(cmd, "l") ||
                    obj_streq(cmd, "p") || obj_streq(cmd, "b")) {
-            group->elems.push_back(
-                {(uint32_t)group->verts.size(), elem_type_map.at(cmd), 0});
+            auto elem = obj_element();
+            elem.type = elem_type_map.at(cmd);
+            elem.start = (uint32_t)oobj->verts.size();
+            elem.size = 0;
+            elem.matid = (uint16_t)oobj->matnames.size() - 1;
+            elem.groupid = (uint16_t)oobj->groupnames.size() - 1;
+            elem.smoothingid = (uint16_t)oobj->smoothing.size() - 1;
+            oobj->elems.push_back(elem);
             obj_skipws(ss);
             while (*ss) {
                 auto vert = obj_vertex();
                 obj_parse(ss, vert, vert_size);
                 obj_skipws(ss);
-                group->verts.push_back(vert);
-                group->elems.back().size += 1;
+                oobj->verts.push_back(vert);
+                oobj->elems.back().size += 1;
             }
         } else if (obj_streq(cmd, "o")) {
-            asset->objects.push_back(std::make_shared<obj_object>());
-            object = asset->objects.back();
-            obj_parse(ss, object->name);
-            object->groups.push_back(std::make_shared<obj_group>());
-            group = object->groups.back();
-            group->matname = matname;
+            auto name = ""s;
+            obj_parse(ss, name);
+            obj->objects.push_back(std::make_shared<obj_object>());
+            oobj = obj->objects.back();
+            oobj->name = name;
+            oobj->matnames.push_back("");
+            oobj->groupnames.push_back("");
+            oobj->smoothing.push_back(true);
+            matname = "";
+            oname = name;
         } else if (obj_streq(cmd, "usemtl")) {
             obj_parse(ss, matname);
-            object->groups.push_back(std::make_shared<obj_group>());
-            group = object->groups.back();
-            group->matname = matname;
+            if (split_material) {
+                obj->objects.push_back(std::make_shared<obj_object>());
+                oobj = obj->objects.back();
+                oobj->name = oname;
+                oobj->matnames.push_back(matname);
+                oobj->groupnames.push_back("");
+                oobj->smoothing.push_back(true);
+            } else {
+                oobj->matnames.push_back(matname);
+            }
         } else if (obj_streq(cmd, "g")) {
-            object->groups.push_back(std::make_shared<obj_group>());
-            group = object->groups.back();
-            obj_parse(ss, group->groupname);
-            group->matname = matname;
+            auto name = ""s;
+            obj_parse(ss, name);
+            if (split_group) {
+                obj->objects.push_back(std::make_shared<obj_object>());
+                oobj = obj->objects.back();
+                oobj->name = oname + name;
+                oobj->matnames.push_back(matname);
+                oobj->groupnames.push_back(name);
+                oobj->smoothing.push_back(smoothing);
+            } else {
+                oobj->groupnames.push_back(name);
+            }
         } else if (obj_streq(cmd, "s")) {
             auto name = std::string();
             obj_parse(ss, name);
-            auto smoothing = (name == "on");
-            if (group->smoothing != smoothing) {
-                auto gname = group->groupname;
-                object->groups.push_back(std::make_shared<obj_group>());
-                group = object->groups.back();
-                group->matname = matname;
-                group->groupname = gname;
-                group->smoothing = smoothing;
-            }
-        } else if (obj_streq(cmd, "gp")) {
-            auto name = std::string();
-            obj_parse(ss, name);
-            obj_skipws(ss);
-            while (*ss) {
-                auto tok = std::string();
-                obj_parse(ss, tok);
-                obj_skipws(ss);
-                group->props[name].push_back(tok);
+            smoothing = (name == "on");
+            if (split_smoothing) {
+                obj->objects.push_back(std::make_shared<obj_object>());
+                oobj = obj->objects.back();
+                oobj->name = oname;
+                oobj->matnames.push_back(matname);
+                oobj->groupnames.push_back("");
+                oobj->smoothing.push_back(smoothing);
+            } else {
+                oobj->smoothing.push_back(smoothing);
             }
         } else if (obj_streq(cmd, "op")) {
             auto name = std::string();
@@ -7680,10 +7840,10 @@ std::shared_ptr<obj_scene> load_obj(const std::string& filename, bool load_txt,
                 auto tok = std::string();
                 obj_parse(ss, tok);
                 obj_skipws(ss);
-                object->props[name].push_back(tok);
+                oobj->props[name].push_back(tok);
             }
         } else if (obj_streq(cmd, "of")) {
-            obj_parse(ss, object->frame);
+            obj_parse(ss, oobj->frame);
         } else if (obj_streq(cmd, "mtllib")) {
             mtllibs.push_back("");
             obj_parse(ss, mtllibs.back());
@@ -7696,13 +7856,13 @@ std::shared_ptr<obj_scene> load_obj(const std::string& filename, bool load_txt,
             obj_parse(ss, cam->aperture);
             obj_parse(ss, cam->focus);
             obj_parse(ss, cam->frame);
-            asset->cameras.push_back(cam);
+            obj->cameras.push_back(cam);
         } else if (obj_streq(cmd, "e")) {
             auto env = std::make_shared<obj_environment>();
             obj_parse(ss, env->name);
             obj_parse(ss, env->matname);
             obj_parse(ss, env->frame);
-            asset->environments.push_back(env);
+            obj->environments.push_back(env);
         } else if (obj_streq(cmd, "n")) {
             auto nde = std::make_shared<obj_node>();
             obj_parse(ss, nde->name);
@@ -7718,24 +7878,58 @@ std::shared_ptr<obj_scene> load_obj(const std::string& filename, bool load_txt,
             if (nde->camname == "\"\"") nde->camname = "";
             if (nde->objname == "\"\"") nde->objname = "";
             if (nde->envname == "\"\"") nde->envname = "";
-            asset->nodes.push_back(nde);
+            obj->nodes.push_back(nde);
         } else {
             // unused
         }
     }
 
-    // cleanup unused
-    for (auto& o : asset->objects) {
-        for (auto& g : o->groups)
-            if (g->verts.empty()) g = nullptr;
-        auto end = std::remove_if(o->groups.begin(), o->groups.end(),
-            [](const std::shared_ptr<obj_group>& x) { return !x; });
-        o->groups.erase(end, o->groups.end());
-        if (o->groups.empty()) { o = nullptr; }
+    // cleanup empty
+    for (auto idx = 0; idx < obj->objects.size(); idx++) {
+        if (!obj->objects[idx]->elems.empty()) continue;
+        if (!obj->objects[idx]->verts.empty()) continue;
+        obj->objects.erase(obj->objects.begin() + idx);
+        idx--;
     }
-    auto end = std::remove_if(asset->objects.begin(), asset->objects.end(),
+
+    // clean ids
+    auto clean_ids = [](auto& vals, auto& elems, auto&& elem_id) {
+        auto used = std::vector<bool>(vals.size());
+        for (auto& elem : elems) used[elem_id(elem)] = true;
+        auto emap = std::vector<uint16_t>(vals.size());
+        auto valid = 0;
+        for (auto idx = 0; idx < vals.size(); idx++) {
+            emap[idx] = valid;
+            if (used[idx]) valid++;
+        }
+        for (auto& elem : elems) elem_id(elem) = emap[elem_id(elem)];
+        for (auto idx = 0; idx < used.size(); idx++) {
+            if (used[idx]) continue;
+            used.erase(used.begin() + idx);
+            vals.erase(vals.begin() + idx);
+            idx--;
+        }
+    };
+
+    // cleanup unused
+    for (auto& oobj : obj->objects) {
+        clean_ids(oobj->matnames, oobj->elems,
+            [](auto& e) -> uint16_t& { return e.matid; });
+        clean_ids(oobj->groupnames, oobj->elems,
+            [](auto& e) -> uint16_t& { return e.groupid; });
+        clean_ids(oobj->smoothing, oobj->elems,
+            [](auto& e) -> uint16_t& { return e.smoothingid; });
+        if (oobj->matnames.size() == 1 && oobj->matnames.at(0) == "")
+            oobj->matnames.clear();
+        if (oobj->groupnames.size() == 1 && oobj->groupnames.at(0) == "")
+            oobj->groupnames.clear();
+        if (oobj->smoothing.size() == 1 && oobj->smoothing.at(0) == true)
+            oobj->smoothing.clear();
+    }
+
+    auto end = std::remove_if(obj->objects.begin(), obj->objects.end(),
         [](const std::shared_ptr<obj_object>& x) { return !x; });
-    asset->objects.erase(end, asset->objects.end());
+    obj->objects.erase(end, obj->objects.end());
 
     // parse materials
     auto mtllibs_set =
@@ -7747,24 +7941,24 @@ std::shared_ptr<obj_scene> load_obj(const std::string& filename, bool load_txt,
         auto mtlname = dirname + mtllib;
         std::vector<std::string> textures;
         auto materials = load_mtl(mtlname, flip_tr, textures);
-        asset->materials.insert(
-            asset->materials.end(), materials.begin(), materials.end());
+        obj->materials.insert(
+            obj->materials.end(), materials.begin(), materials.end());
         for (auto& txt : textures) {
             if (texture_set.find(txt) != texture_set.end()) continue;
-            asset->textures.push_back(std::make_shared<obj_texture>());
-            asset->textures.back()->path = txt;
+            obj->textures.push_back(std::make_shared<obj_texture>());
+            obj->textures.back()->path = txt;
             texture_set.insert(txt);
         }
     }
 
     // load textures
-    if (load_txt) load_textures(asset, dirname, skip_missing);
+    if (load_txt) load_textures(obj, dirname, skip_missing);
 
     // close file
     fclose(fs);
 
     // done
-    return asset;
+    return obj;
 }
 
 // Dumps a value
@@ -7935,9 +8129,9 @@ void save_mtl(const std::string& filename,
 }
 
 // Loads textures for an scene.
-void save_textures(const std::shared_ptr<obj_scene>& asset,
+void save_textures(const std::shared_ptr<obj_scene>& obj,
     const std::string& dirname, bool skip_missing) {
-    for (auto txt : asset->textures) {
+    for (auto txt : obj->textures) {
         if (txt->datab.empty() && txt->dataf.empty()) continue;
         auto filename = dirname + txt->path;
         for (auto& c : filename)
@@ -7962,7 +8156,7 @@ void save_textures(const std::shared_ptr<obj_scene>& asset,
 
 // Save an OBJ
 void save_obj(const std::string& filename,
-    const std::shared_ptr<obj_scene>& asset, bool save_txt, bool skip_missing,
+    const std::shared_ptr<obj_scene>& obj, bool save_txt, bool skip_missing,
     bool flip_texcoord, bool flip_tr) {
     // open file
     auto fs = fopen(filename.c_str(), "wt");
@@ -7972,12 +8166,12 @@ void save_obj(const std::string& filename,
     auto dirname = path_dirname(filename);
     auto basename = filename.substr(dirname.length());
     basename = basename.substr(0, basename.length() - 4);
-    if (!asset->materials.empty()) {
+    if (!obj->materials.empty()) {
         obj_dump_line(fs, "mtllib", basename + ".mtl");
     }
 
     // save cameras
-    for (auto cam : asset->cameras) {
+    for (auto cam : obj->cameras) {
         obj_dump_sp(fs, "c");
         obj_dump_sp(fs, cam->name);
         obj_dump_sp(fs, cam->ortho);
@@ -7990,7 +8184,7 @@ void save_obj(const std::string& filename,
     }
 
     // save envs
-    for (auto env : asset->environments) {
+    for (auto env : obj->environments) {
         obj_dump_sp(fs, "e");
         obj_dump_sp(fs, env->name);
         obj_dump_sp(fs, env->matname);
@@ -7999,7 +8193,7 @@ void save_obj(const std::string& filename,
     }
 
     // save nodes
-    for (auto nde : asset->nodes) {
+    for (auto nde : obj->nodes) {
         obj_dump_sp(fs, "n");
         obj_dump_sp(fs, nde->name);
         obj_dump_sp(fs, (nde->parent.empty()) ? "\"\""s : nde->parent);
@@ -8014,52 +8208,67 @@ void save_obj(const std::string& filename,
     }
 
     // save all vertex data
-    for (auto& v : asset->pos) obj_dump_line(fs, "v", v);
+    for (auto& v : obj->pos) obj_dump_line(fs, "v", v);
     if (flip_texcoord) {
-        for (auto& v : asset->texcoord)
+        for (auto& v : obj->texcoord)
             obj_dump_line(fs, "vt", vec2f{v.x, 1 - v.y});
     } else {
-        for (auto& v : asset->texcoord) obj_dump_line(fs, "vt", v);
+        for (auto& v : obj->texcoord) obj_dump_line(fs, "vt", v);
     }
-    for (auto& v : asset->norm) obj_dump_line(fs, "vn", v);
-    for (auto& v : asset->color) obj_dump_line(fs, "vc", v);
-    for (auto& v : asset->radius) obj_dump_line(fs, "vr", v);
+    for (auto& v : obj->norm) obj_dump_line(fs, "vn", v);
+    for (auto& v : obj->color) obj_dump_line(fs, "vc", v);
+    for (auto& v : obj->radius) obj_dump_line(fs, "vr", v);
 
     // save element data
     static auto elem_labels = std::unordered_map<obj_element_type, std::string>{
         {obj_element_type::point, "p"}, {obj_element_type::line, "l"},
         {obj_element_type::face, "f"}, {obj_element_type::bezier, "b"}};
-    for (auto object : asset->objects) {
-        obj_dump_line(fs, "o", object->name);
-        if (object->frame != identity_frame3f)
-            obj_dump_line(fs, "of", object->frame);
-        for (auto& kv : object->props) {
+    for (auto oobj : obj->objects) {
+        obj_dump_line(fs, "o", oobj->name);
+        if (oobj->frame != identity_frame3f)
+            obj_dump_line(fs, "of", oobj->frame);
+        for (auto& kv : oobj->props) {
             obj_dump_line(fs, "op", join({kv.first}, kv.second));
         }
-        for (auto group : object->groups) {
-            if (!group->matname.empty())
-                obj_dump_line(fs, "usemtl", group->matname);
-            if (!group->groupname.empty())
-                obj_dump_line(fs, "g", group->groupname);
-            if (!group->smoothing) obj_dump_line(fs, "s", "off");
-            for (auto& kv : group->props) {
-                obj_dump_line(fs, "gp", join({kv.first}, kv.second));
+        if (!oobj->matnames.empty() && oobj->matnames.front() != "")
+            obj_dump_line(fs, "usemtl", oobj->matnames.front());
+        if (!oobj->groupnames.empty() && oobj->groupnames.front() != "")
+            obj_dump_line(fs, "g", oobj->groupnames.front());
+        if (!oobj->smoothing.empty() && oobj->smoothing.front() != true)
+            obj_dump_line(fs, "s", "off");
+        auto last_matid = 0, last_groupid = 0, last_smoothid = 0;
+        for (auto& elem : oobj->elems) {
+            if (last_matid != elem.matid) {
+                obj_dump_line(fs, "usemtl",
+                    oobj->matnames.empty() ? ""s : oobj->matnames[elem.matid]);
+                last_matid = elem.matid;
             }
-            for (auto elem : group->elems) {
-                obj_dump_line(fs, elem_labels.at(elem.type).c_str(),
-                    group->verts.data() + elem.start, elem.size);
+            if (last_groupid != elem.groupid) {
+                obj_dump_line(fs, "g",
+                    oobj->groupnames.empty() ? ""s :
+                                               oobj->groupnames[elem.matid]);
+                last_matid = elem.matid;
             }
+            if (last_smoothid != elem.smoothingid) {
+                obj_dump_line(fs, "s",
+                    oobj->smoothing.empty() ?
+                        "on" :
+                        (oobj->smoothing[elem.matid] ? "on" : "off"));
+                last_matid = elem.matid;
+            }
+            obj_dump_line(fs, elem_labels.at(elem.type).c_str(),
+                oobj->verts.data() + elem.start, elem.size);
         }
     }
 
     fclose(fs);
 
     // save materials
-    if (!asset->materials.empty())
-        save_mtl(dirname + basename + ".mtl", asset->materials, flip_tr);
+    if (!obj->materials.empty())
+        save_mtl(dirname + basename + ".mtl", obj->materials, flip_tr);
 
     // save textures
-    if (save_txt) save_textures(asset, dirname, skip_missing);
+    if (save_txt) save_textures(obj, dirname, skip_missing);
 }
 
 }  // namespace ygl
