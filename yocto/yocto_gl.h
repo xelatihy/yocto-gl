@@ -926,7 +926,30 @@ namespace ygl {
 /// Generic vector of N elements. This is used only to define template
 /// specializations for small fixed sized vectors.
 template <typename T, int N>
-struct vec;
+struct vec {
+    /// Default constructor. Initializes to zeros.
+    vec() {
+        for(auto i = 0; i < N; i ++) d[i] = 0;
+    }
+    /// Element constructor.
+    explicit vec(T vv) {
+        for(auto i = 0; i < N; i ++) d[i] = vv;
+    }
+    /// Element constructor.
+    vec(std::initializer_list<T> vv) {
+        if(vv.size() != N) throw std::length_error("bad vec length");
+        auto i = 0;
+        for(auto v : vv) d[i++] = v;
+    }
+
+    /// Element access.
+    T& operator[](int i) { return d[i]; }
+    /// Element access.
+    const T& operator[](int i) const { return d[i]; }
+
+    /// Element data.
+    T d[N];
+};
 
 /// Vector of 1 element. Defined only for completeness.
 template <typename T>
@@ -1055,32 +1078,32 @@ const auto zero4b = vec4b();
 /// Element iteration.
 template <typename T, int N>
 inline T* begin(vec<T, N>& a) {
-    return &a.x;
+    return &a[0];
 }
 /// Element iteration.
 template <typename T, int N>
 inline const T* begin(const vec<T, N>& a) {
-    return &a.x;
+    return &a[0];
 }
 /// Element iteration.
 template <typename T, int N>
 inline T* end(vec<T, N>& a) {
-    return &a.x + N;
+    return &a[0] + N;
 }
 /// Element iteration.
 template <typename T, int N>
 inline const T* end(const vec<T, N>& a) {
-    return &a.x + N;
+    return &a[0] + N;
 }
 /// Element access.
 template <typename T, int N>
 inline T* data(vec<T, N>& a) {
-    return &a.x;
+    return &a[0];
 }
 /// Element access.
 template <typename T, int N>
 inline const T* data(const vec<T, N>& a) {
-    return &a.x;
+    return &a[0];
 }
 /// Number of elements.
 template <typename T, int N>
@@ -1090,6 +1113,28 @@ inline int size(vec<T, N>& a) {
 /// Empty check (always false for useful for templated code).
 template <typename T, int N>
 inline bool empty(vec<T, N>& a) {
+    return false;
+}
+
+/// Vector equality.
+template <typename T, int N>
+inline bool operator==(const vec<T, N>& a, const vec<T, N>& b) {
+    for(auto i = 0; i < N; i ++) if(a[i] != b[i]) return false;
+    return true;
+}
+/// Vector inequality.
+template <typename T, int N>
+inline bool operator!=(const vec<T, N>& a, const vec<T, N>& b) {
+    for(auto i = 0; i < N; i ++) if(a[i] == b[i]) return false;
+    return true;
+}
+/// Vector comparison using lexicographic order, useful for map.
+template <typename T, int N>
+inline bool operator<(const vec<T, N>& a, const vec<T, N>& b) {
+    for (auto i = 0; i < N; i++) {
+        if (a[i] < b[i]) return true;
+        if (a[i] > b[i]) return false;
+    }
     return false;
 }
 
@@ -1137,32 +1182,73 @@ inline bool operator!=(const vec<T, 4>& a, const vec<T, 4>& b) {
     return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
 }
 
-/// Vector comparison using lexicographic order, useful for map.
-template <typename T>
-inline bool operator<(const vec<T, 2>& a, const vec<T, 2>& b) {
-    for (auto i = 0; i < 2; i++) {
-        if (a[i] < b[i]) return true;
-        if (a[i] > b[i]) return false;
-    }
-    return false;
+/// Vector unary plus (for completeness).
+template <typename T, int N>
+inline vec<T, N> operator+(const vec<T, N>& a) {
+    return a;
 }
-/// Vector comparison using lexicographic order, useful for map.
-template <typename T>
-inline bool operator<(const vec<T, 3>& a, const vec<T, 3>& b) {
-    for (auto i = 0; i < 3; i++) {
-        if (a[i] < b[i]) return true;
-        if (a[i] > b[i]) return false;
-    }
-    return false;
+/// Vector negation.
+template <typename T, int N>
+inline vec<T, N> operator-(const vec<T, N>& a) {
+    auto c = vec<T, N>{};
+    for(auto i = 0; i < N; i ++) c[i] = -a[i];
+    return c;
 }
-/// Vector comparison using lexicographic order, useful for map.
-template <typename T>
-inline bool operator<(const vec<T, 4>& a, const vec<T, 4>& b) {
-    for (auto i = 0; i < 4; i++) {
-        if (a[i] < b[i]) return true;
-        if (a[i] > b[i]) return false;
-    }
-    return false;
+/// Vector sum.
+template <typename T, int N>
+inline vec<T, N> operator+(const vec<T, N>& a, const vec<T, N>& b) {
+    auto c = vec<T, N>{};
+    for(auto i = 0; i < N; i ++) c[i] = a[i] + b[i];
+    return c;
+}
+/// Vector difference.
+template <typename T, int N>
+inline vec<T, N> operator-(const vec<T, N>& a, const vec<T, N>& b) {
+    auto c = vec<T, N>{};
+    for(auto i = 0; i < N; i ++) c[i] = a[i] - b[i];
+    return c;
+}
+/// Vector scalar product.
+template <typename T, int N>
+inline vec<T, N> operator*(const vec<T, N>& a, const vec<T, N>& b) {
+    auto c = vec<T, N>{};
+    for(auto i = 0; i < N; i ++) c[i] = a[i] * b[i];
+    return c;
+}
+/// Vector scalar product.
+template <typename T, int N, typename T1>
+inline vec<T, N> operator*(const vec<T, N>& a, T1 b) {
+    auto c = vec<T, N>{};
+    for(auto i = 0; i < N; i ++) c[i] = a[i] * b;
+    return c;
+}
+/// Vector scalar product.
+template <typename T, int N, typename T1>
+inline vec<T, N> operator*(T1 a, const vec<T, N>& b) {
+    auto c = vec<T, N>{};
+    for(auto i = 0; i < N; i ++) c[i] = a * b[i];
+    return c;
+}
+/// Vector scalar division.
+template <typename T, int N>
+inline vec<T, N> operator/(const vec<T, N>& a, const vec<T, N>& b) {
+    auto c = vec<T, N>{};
+    for(auto i = 0; i < N; i ++) c[i] = a[i] / b[i];
+    return c;
+}
+/// Vector scalar division.
+template <typename T, int N, typename T1>
+inline vec<T, N> operator/(const vec<T, N>& a, T1 b) {
+    auto c = vec<T, N>{};
+    for(auto i = 0; i < N; i ++) c[i] = a[i] / b;
+    return c;
+}
+/// Vector scalar division.
+template <typename T, int N, typename T1>
+inline vec<T, N> operator/(T1 a, const vec<T, N>& b) {
+    auto c = vec<T, N>{};
+    for(auto i = 0; i < N; i ++) c[i] = a / b[i];
+    return c;
 }
 
 /// Vector unary plus (for completeness).
@@ -1196,8 +1282,8 @@ inline vec<T, 2> operator*(const vec<T, 2>& a, T1 b) {
     return {a.x * b, a.y * b};
 }
 /// Vector scalar product.
-template <typename T>
-inline vec<T, 2> operator*(float a, const vec<T, 2>& b) {
+template <typename T, typename T1>
+inline vec<T, 2> operator*(T1 a, const vec<T, 2>& b) {
     return {a * b.x, a * b.y};
 }
 /// Vector scalar division.
@@ -1293,13 +1379,13 @@ inline vec<T, 4> operator*(const vec<T, 4>& a, const vec<T, 4>& b) {
     return {a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
 }
 /// Vector scalar product.
-template <typename T>
-inline vec<T, 4> operator*(const vec<T, 4>& a, float b) {
+template <typename T, typename T1>
+inline vec<T, 4> operator*(const vec<T, 4>& a, T1 b) {
     return {a.x * b, a.y * b, a.z * b, a.w * b};
 }
 /// Vector scalar product.
-template <typename T>
-inline vec<T, 4> operator*(float a, const vec<T, 4>& b) {
+template <typename T, typename T1>
+inline vec<T, 4> operator*(T1 a, const vec<T, 4>& b) {
     return {a * b.x, a * b.y, a * b.z, a * b.w};
 }
 /// Vector scalar division.
@@ -1349,6 +1435,13 @@ inline vec<T, N>& operator/=(vec<T, N>& a, T1 b) {
     return a = a / b;
 }
 
+/// Vector dot product.
+template <typename T, int N>
+inline T dot(const vec<T, N>& a, const vec<T, N>& b) {
+    auto c = T{0};
+    for(auto i = 0; i < N; i ++) c += a[i] * b[i];
+    return c;
+}
 /// Vector dot product.
 template <typename T>
 inline T dot(const vec<T, 2>& a, const vec<T, 2>& b) {
@@ -5501,6 +5594,73 @@ struct shape {
     bool catmullclark = false;
 };
 
+/// Shape element tags.
+struct shape_element_tags {
+    /// Material id.
+    uint16_t matid = 0;
+    /// Groups id.
+    uint16_t groupid = 0;
+    /// Smoothing id.
+    uint16_t smoothingid = 0;
+    /// Original element size.
+    uint16_t esize = 0;
+};
+
+/// Shape data represented as an indexed array. May contain only one of the
+/// points/lines/triangles/quads.
+struct fvshape {
+    /// Name.
+    std::string name = "";
+    /// Materials. @refl_semantic(reference)
+    std::vector<std::shared_ptr<material>> mats = {};
+    /// Group names.
+    std::vector<std::string> groupnames = {};
+    /// Smoothing values.
+    std::vector<bool> smoothing = {};
+
+    /// Points.
+    std::vector<int> points;
+    /// Lines.
+    std::vector<vec2i> lines;
+    /// Triangles.
+    std::vector<vec3i> triangles;
+    /// Quads.
+    std::vector<vec4i> quads;
+    /// Face-varying indices for position.
+    std::vector<vec4i> quads_pos;
+    /// Face-varying indices for normal.
+    std::vector<vec4i> quads_norm;
+    /// Face-varying indices for texcoord.
+    std::vector<vec4i> quads_texcoord;
+    /// Bezier.
+    std::vector<vec4i> beziers;
+
+    /// Element material ids.
+    std::vector<shape_element_tags> elem_tags;
+
+    /// Vertex position.
+    std::vector<vec3f> pos;
+    /// Vertex normals.
+    std::vector<vec3f> norm;
+    /// Vertex texcoord.
+    std::vector<vec2f> texcoord;
+    /// Vertex second texcoord.
+    std::vector<vec2f> texcoord1;
+    /// Vertex color.
+    std::vector<vec4f> color;
+    /// per-vertex radius.
+    std::vector<float> radius;
+    /// Vertex tangent space.
+    std::vector<vec4f> tangsp;
+
+    /// Whether normal smoothing or faceting is used
+    bool faceted = false;
+    /// Number of times to subdivide.
+    int subdivision = 0;
+    /// Whether to use Catmull-Clark subdivision.
+    bool catmullclark = false;
+};
+
 /// Group of shapes.
 struct shape_group {
     /// Name.
@@ -5511,6 +5671,8 @@ struct shape_group {
     frame3f frame = identity_frame3f;
     /// Shapes.
     std::vector<std::shared_ptr<shape>> shapes;
+    /// Face-varying shapes.
+    std::vector<std::shared_ptr<fvshape>> fvshapes;
 };
 
 /// Distance at which we set environment map positions.
@@ -5757,6 +5919,11 @@ void tesselate_shapes(const std::shared_ptr<scene>& scn, bool subdivide,
     bool facevarying_to_sharedvertex, bool quads_to_triangles,
     bool bezier_to_lines);
 
+/// Convert face-varying shapes to shapes.
+std::vector<std::shared_ptr<shape>> tesselate_shape(const std::shared_ptr<fvshape>& shp);
+/// Convert a list of shapes into a face-varying shape.
+std::shared_ptr<fvshape> group_shapes(const std::vector<std::shared_ptr<shape>>& shps);
+
 /// Update node transforms.
 void update_transforms(const std::shared_ptr<scene>& scn, float time = 0);
 /// Compute animation range.
@@ -5836,6 +6003,8 @@ struct load_options {
     bool preserve_quads = false;
     /// Whether to preserve face-varying faces.
     bool preserve_facevarying = false;
+    /// Use simple shapes.
+    bool simple_shapes = true;
 };
 
 /// Loads a scene. For now OBJ or glTF are supported.
@@ -7210,40 +7379,37 @@ enum struct obj_element_type : uint16_t {
     bezier = 4,
 };
 
-/// Obj element vertex indices.
 struct obj_element {
     /// Starting vertex index.
     uint32_t start;
-    /// Element type.
-    obj_element_type type;
     /// Number of vertices.
     uint16_t size;
-};
-
-/// Obj element group.
-struct obj_group {
-    /// Material name.
-    std::string matname;
-    /// Group name.
-    std::string groupname;
-    /// Smoothing.
-    bool smoothing = true;
-    /// Element vertices.
-    std::vector<obj_vertex> verts;
-    /// Element faces.
-    std::vector<obj_element> elems;
-    /// Properties not explicitly handled [extension].
-    std::unordered_map<std::string, std::vector<std::string>> props;
+    /// Element type.
+    obj_element_type type;
+    /// Material id.
+    uint16_t matid = 0;
+    /// Group id.
+    uint16_t groupid = 0;
+    /// Smoothing group id.
+    uint16_t smoothingid = 0;
 };
 
 /// Obj object.
 struct obj_object {
     /// Name.
     std::string name;
+    /// Material name.
+    std::vector<std::string> matnames;
+    /// Group name.
+    std::vector<std::string> groupnames;
+    /// Smoothing groups.
+    std::vector<bool> smoothing;
+    /// Element vertices.
+    std::vector<obj_vertex> verts;
+    /// Element faces.
+    std::vector<obj_element> elems;
     /// Frame [extension]. Vertices are not transformed though.
     frame3f frame = identity_frame3f;
-    /// Element groups.
-    std::vector<std::shared_ptr<obj_group>> groups;
     /// Properties not explicitly handled [extension].
     std::unordered_map<std::string, std::vector<std::string>> props;
 };

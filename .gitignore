@@ -6,3 +6,4 @@ run_tests
 cmake-build-debug
 cmake-build-release
 .idea
+.vscode/.cmaketools.json
