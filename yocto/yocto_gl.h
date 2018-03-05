@@ -10289,18 +10289,9 @@ bool draw_tree_widget_begin(
 /// Start selectable tree node widget.
 template <typename T>
 inline bool draw_tree_widget_begin(
-    gl_window* win, const std::string& lbl, void*& selection, T* content) {
-    auto sel = selection;
-    auto open = draw_tree_widget_begin(win, lbl, sel, content);
-    if (sel == content) selection = content;
-    return open;
-}
-/// Start selectable tree node widget.
-template <typename T>
-inline bool draw_tree_widget_begin(
     gl_window* win, const std::string& lbl, T*& selection, T* content) {
     auto sel = selection;
-    auto open = draw_tree_widget_begin(win, lbl, (void*&)sel, content);
+    auto open = draw_tree_widget_begin(win, lbl, (void*&)sel, (void*)content);
     if (sel == content) selection = content;
     return open;
 }

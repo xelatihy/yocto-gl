@@ -58,7 +58,6 @@ struct app_state {
     ~app_state() {
         if (scn) delete scn;
         if (view) delete view;
-        if (cam) delete cam;
         if (pscn) delete pscn;
     }
 };
