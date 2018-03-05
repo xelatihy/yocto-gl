@@ -31,26 +31,22 @@ using namespace std::literals;
 
 // Application state
 struct app_state {
-    std::shared_ptr<ygl::scene> scn = nullptr;
-    std::shared_ptr<ygl::camera> view = nullptr;
-    std::shared_ptr<ygl::camera> cam = nullptr;
+    ygl::scene* scn = nullptr;
+    ygl::camera* view = nullptr;
+    ygl::camera* cam = nullptr;
     std::string filename;
     std::string imfilename;
     std::string outfilename;
     ygl::gl_stdsurface_params params = {};
     ygl::tonemap_params tmparams = {};
-    std::shared_ptr<ygl::gl_stdsurface_program> prog;
-    std::unordered_map<std::shared_ptr<ygl::texture>,
-        std::shared_ptr<ygl::gl_texture>>
-        textures;
-    std::unordered_map<std::shared_ptr<ygl::shape>,
-        std::shared_ptr<ygl::gl_shape>>
-        shapes;
+    ygl::gl_stdsurface_program prog;
+    std::unordered_map<ygl::texture*, ygl::gl_texture> textures;
+    std::unordered_map<ygl::shape*, ygl::gl_shape> shapes;
     ygl::gl_lights lights;
     bool navigation_fps = false;
     ygl::scene_selection selection = {};
     std::vector<ygl::scene_selection> update_list;
-    std::shared_ptr<ygl::proc_scene> pscn = nullptr;
+    ygl::proc_scene* pscn = nullptr;
     float time = 0;
     ygl::vec2f time_range = ygl::zero2f;
     bool animate = false;
@@ -58,11 +54,17 @@ struct app_state {
     bool screenshot_and_exit = false;
     bool no_widgets = false;
     std::unordered_map<std::string, std::string> inspector_highlights;
+
+    ~app_state() {
+        if (scn) delete scn;
+        if (view) delete view;
+        if (cam) delete cam;
+        if (pscn) delete pscn;
+    }
 };
 
 // draw with shading
-inline void draw(const std::shared_ptr<ygl::gl_window>& win,
-    const std::shared_ptr<app_state>& app) {
+inline void draw(ygl::gl_window* win, app_state* app) {
     auto framebuffer_size = get_framebuffer_size(win);
     app->params.resolution = framebuffer_size.y;
 
@@ -111,19 +113,24 @@ inline void draw(const std::shared_ptr<ygl::gl_window>& win,
             ygl::draw_groupid_widget_push(win, app);
             ygl::draw_value_widget(win, "scene", app->filename);
             if (ygl::draw_button_widget(win, "new")) {
-                app->pscn = std::make_shared<ygl::proc_scene>();
-                app->scn = std::make_shared<ygl::scene>();
-                app->shapes.clear();
-                app->textures.clear();
+                delete app->pscn;
+                delete app->scn;
+                ygl::clear_gl_textures(app->textures);
+                ygl::clear_gl_shapes(app->shapes);
+                app->pscn = new ygl::proc_scene();
+                app->scn = new ygl::scene();
                 ygl::update_proc_elems(app->scn, app->pscn);
                 app->textures = ygl::make_gl_textures(app->scn);
                 app->shapes = ygl::make_gl_shapes(app->scn);
             }
             ygl::draw_continue_widget(win);
             if (ygl::draw_button_widget(win, "load")) {
+                delete app->pscn;
+                delete app->scn;
                 app->scn = ygl::load_scene(app->filename, {});
-                app->textures.clear();
-                app->shapes.clear();
+                app->pscn = new ygl::proc_scene();
+                ygl::clear_gl_textures(app->textures);
+                ygl::clear_gl_shapes(app->shapes);
                 app->textures = ygl::make_gl_textures(app->scn);
                 app->shapes = ygl::make_gl_shapes(app->scn);
             }
@@ -166,7 +173,7 @@ inline void draw(const std::shared_ptr<ygl::gl_window>& win,
 }
 
 // run ui loop
-void run_ui(const std::shared_ptr<app_state>& app) {
+void run_ui(app_state* app) {
     // window
     auto win = ygl::make_window(
         (int)std::round(app->cam->aspect * app->params.resolution),
@@ -212,11 +219,14 @@ void run_ui(const std::shared_ptr<app_state>& app) {
         // event hadling
         ygl::poll_events(win);
     }
+
+    // cleanup
+    delete win;
 }
 
 int main(int argc, char* argv[]) {
     // create empty scene
-    auto app = std::make_shared<app_state>();
+    auto app = new app_state();
 
     // parse command line
     auto parser =
@@ -260,7 +270,7 @@ int main(int argc, char* argv[]) {
     }
 
     // scene loading
-    app->scn = std::make_shared<ygl::scene>();
+    app->scn = new ygl::scene();
     for (auto filename : filenames) {
         try {
             ygl::log_info("loading scene {}", filename);
@@ -269,6 +279,7 @@ int main(int argc, char* argv[]) {
             opts.preserve_facevarying = preserve_facevarying;
             auto scn = load_scene(filename, opts);
             ygl::merge_into(app->scn, scn);
+            delete scn;
         } catch (std::exception e) {
             ygl::log_fatal("cannot load scene {}", filename);
         }
@@ -300,6 +311,9 @@ int main(int argc, char* argv[]) {
 
     // run ui
     run_ui(app);
+
+    // cleanup
+    delete app;
 
     // done
     return 0;

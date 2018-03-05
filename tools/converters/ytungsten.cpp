@@ -224,9 +224,9 @@ frame3f xform_to_frame(const json& js, float* focus = nullptr) {
 
 #endif
 
-std::shared_ptr<shape> make_shape(const std::string& type) {
+shape* make_shape(const std::string& type) {
     static auto tcount = std::unordered_map<std::string, int>();
-    auto shp = std::make_shared<shape>();
+    auto shp = new shape();
     shp->name = type + std::to_string(tcount[type]++);
     if (type == "quad") {
         shp->pos = {
@@ -248,7 +248,7 @@ std::shared_ptr<shape> make_shape(const std::string& type) {
     return shp;
 }
 
-std::shared_ptr<shape> load_wo3(const std::string& filename) {
+shape* load_wo3(const std::string& filename) {
     auto fs = fopen(filename.c_str(), "rb");
     if (!fs) throw std::runtime_error("cannot open file " + filename);
 
@@ -277,7 +277,7 @@ std::shared_ptr<shape> load_wo3(const std::string& filename) {
 
     fclose(fs);
 
-    auto shp = std::make_shared<shape>();
+    auto shp = new shape();
     shp->name = path_basename(filename);
     for (auto& vert : verts) {
         shp->pos.push_back(vert.pos);
@@ -289,11 +289,11 @@ std::shared_ptr<shape> load_wo3(const std::string& filename) {
     return shp;
 }
 
-std::shared_ptr<texture> add_texture(const std::string& path, const std::shared_ptr<scene>& scn) {
+texture* add_texture(const std::string& path, scene* scn) {
     if (path == "") return nullptr;
     for (auto t : scn->textures)
         if (t->path == path) return t;
-    auto txt = std::make_shared<texture>();
+    auto txt = new texture();
     txt->name = path;
     txt->path = path;
     scn->textures.push_back(txt);
@@ -322,9 +322,9 @@ auto metal_ior = std::unordered_map<std::string, std::pair<vec3f, vec3f>>{
     {"W", {vec3f(4.3707029924f, 3.3002972445f, 2.9982666528f),
               vec3f(3.5006778591f, 2.6048652781f, 2.2731930614f)}}};
 
-std::shared_ptr<material> add_bsdf(const json& js, const std::shared_ptr<scene>& scn) {
+material* add_bsdf(const json& js, scene* scn) {
     static auto count = 0;
-    auto mat = std::make_shared<material>();
+    auto mat = new material();
     if (js.count("name"))
         mat->name = js.at("name");
     else
@@ -332,10 +332,10 @@ std::shared_ptr<material> add_bsdf(const json& js, const std::shared_ptr<scene>&
     mat->double_sided = true;
     auto type = js.at("type").get<std::string>();
     auto albedo = vec3f{1, 1, 1};
-    auto albedo_txt = std::shared_ptr<texture>();
-    auto bump_txt = std::shared_ptr<texture>();
+    auto albedo_txt = (texture*)nullptr;
+    auto bump_txt = (texture*)nullptr;
     auto alpha = vec3f{1, 1, 1};
-    auto alpha_txt = std::shared_ptr<texture>();
+    auto alpha_txt = (texture*)nullptr;
     if (js.count("albedo")) {
         auto& jalbedo = js.at("albedo");
         if (jalbedo.is_string()) {
@@ -403,8 +403,8 @@ std::shared_ptr<material> add_bsdf(const json& js, const std::shared_ptr<scene>&
     return mat;
 }
 
-std::shared_ptr<material> add_material(const json& js, const std::shared_ptr<scene>& scn) {
-    auto mat = std::shared_ptr<material>();
+material* add_material(const json& js, scene* scn) {
+    auto mat = new material();
     auto jbsdf = js.at("bsdf");
     if (jbsdf.is_string()) {
         auto name = jbsdf.get<std::string>();
@@ -419,7 +419,7 @@ std::shared_ptr<material> add_material(const json& js, const std::shared_ptr<sce
     return mat;
 }
 
-std::shared_ptr<scene> load_tungsten(
+scene* load_tungsten(
     const std::string& filename, const std::string& meshdirname) {
     auto dirname = path_dirname(filename);
     auto meshdir = (meshdirname == "") ? dirname : meshdirname;
@@ -437,12 +437,12 @@ std::shared_ptr<scene> load_tungsten(
     }
 
     // create scene
-    auto scn = std::make_shared<scene>();
+    auto scn = new scene();
 
     // convert cameras
     if (js.count("camera")) {
         auto& jcam = js.at("camera");
-        auto cam = std::make_shared<camera>();
+        auto cam = new camera();
         cam->name = "cam";
         if (jcam.count("transform")) {
             cam->frame = xform_to_frame(jcam.at("transform"), &cam->focus);
@@ -479,7 +479,7 @@ std::shared_ptr<scene> load_tungsten(
             auto frame = identity_frame3f;
             if (!jprim.at("transform").empty())
                 frame = xform_to_frame(jprim.at("transform"));
-            auto shp = std::shared_ptr<shape>{};
+            auto shp = (shape*)nullptr;
             if (type == "mesh") {
                 auto path = jprim.at("file").get<std::string>();
                 if (path_extension(path) == ".obj") {
@@ -511,7 +511,7 @@ std::shared_ptr<scene> load_tungsten(
                 for (auto& n : shp->norm) n = transform_direction(frame, n);
             }
             shp->materials.push_back(add_material(jprim, scn));
-            auto sgr = std::make_shared<shape_group>();
+            auto sgr = new shape_group();
             sgr->shapes.push_back(shp);
             sgr->name = sgr->shapes.at(0)->name;
             scn->shapes.push_back(sgr);

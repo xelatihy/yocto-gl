@@ -2575,7 +2575,7 @@ std::tuple<std::vector<bvh_node>, std::vector<int>> make_bvh_nodes(
 }
 
 // Build a BVH from the data already set
-void make_bvh_nodes(const std::shared_ptr<bvh_tree>& bvh, bool equal_size) {
+void make_bvh_nodes(bvh_tree* bvh, bool equal_size) {
     // get the number of primitives and the primitive type
     auto bboxes = std::vector<bbox3f>();
     if (!bvh->points.empty()) {
@@ -2633,12 +2633,12 @@ void make_bvh_nodes(const std::shared_ptr<bvh_tree>& bvh, bool equal_size) {
 }
 
 // Build a BVH from a set of primitives.
-std::shared_ptr<bvh_tree> make_bvh(const std::vector<int>& points,
+bvh_tree* make_bvh(const std::vector<int>& points,
     const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
     const std::vector<vec4i>& quads, const std::vector<vec3f>& pos,
     const std::vector<float>& radius, float def_radius, bool equal_size) {
     // allocate the bvh
-    auto bvh = std::make_shared<bvh_tree>();
+    auto bvh = new bvh_tree();
 
     // set values
     bvh->points = points;
@@ -2657,14 +2657,16 @@ std::shared_ptr<bvh_tree> make_bvh(const std::vector<int>& points,
 }
 
 // Build a BVH from a set of shape instances.
-std::shared_ptr<bvh_tree> make_bvh(const std::vector<bvh_instance>& instances,
-    const std::vector<std::shared_ptr<bvh_tree>>& shape_bvhs, bool equal_size) {
+bvh_tree* make_bvh(const std::vector<bvh_instance>& instances,
+    const std::vector<bvh_tree*>& shape_bvhs, bool equal_size,
+    bool own_shape_bvhs) {
     // allocate the bvh
-    auto bvh = std::make_shared<bvh_tree>();
+    auto bvh = new bvh_tree();
 
     // set values
     bvh->instances = instances;
     bvh->shape_bvhs = shape_bvhs;
+    bvh->own_shape_bvhs = own_shape_bvhs;
 
     // make bvh nodes
     make_bvh_nodes(bvh, equal_size);
@@ -2674,7 +2676,7 @@ std::shared_ptr<bvh_tree> make_bvh(const std::vector<bvh_instance>& instances,
 }
 
 // Recursively recomputes the node bounds for a shape bvh
-void refit_bvh(const std::shared_ptr<bvh_tree>& bvh, int nodeid) {
+void refit_bvh(bvh_tree* bvh, int nodeid) {
     // refit
     auto& node = bvh->nodes[nodeid];
     node.bbox = invalid_bbox3f;
@@ -2728,9 +2730,8 @@ void refit_bvh(const std::shared_ptr<bvh_tree>& bvh, int nodeid) {
 }
 
 // Recursively recomputes the node bounds for a shape bvh
-void refit_bvh(const std::shared_ptr<bvh_tree>& bvh,
-    const std::vector<vec3f>& pos, const std::vector<float>& radius,
-    float def_radius) {
+void refit_bvh(bvh_tree* bvh, const std::vector<vec3f>& pos,
+    const std::vector<float>& radius, float def_radius) {
     bvh->pos = pos;
     bvh->radius =
         (radius.empty()) ? std::vector<float>(pos.size(), def_radius) : radius;
@@ -2738,8 +2739,7 @@ void refit_bvh(const std::shared_ptr<bvh_tree>& bvh,
 }
 
 // Recursively recomputes the node bounds for a scene bvh
-void refit_bvh(const std::shared_ptr<bvh_tree>& bvh,
-    const std::vector<frame3f>& frames,
+void refit_bvh(bvh_tree* bvh, const std::vector<frame3f>& frames,
     const std::vector<frame3f>& frames_inv) {
     for (auto i = 0; i < frames.size(); i++) {
         bvh->instances[i].frame = frames[bvh->sorted_prim[i]];
@@ -2749,8 +2749,8 @@ void refit_bvh(const std::shared_ptr<bvh_tree>& bvh,
 }
 
 // Intersect ray with a bvh.
-bool intersect_bvh(const std::shared_ptr<bvh_tree>& bvh, const ray3f& ray_,
-    bool find_any, float& ray_t, int& iid, int& sid, int& eid, vec2f& euv) {
+bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
+    float& ray_t, int& iid, int& sid, int& eid, vec2f& euv) {
     // node stack
     int node_stack[128];
     auto node_cur = 0;
@@ -2872,9 +2872,8 @@ bool intersect_bvh(const std::shared_ptr<bvh_tree>& bvh, const ray3f& ray_,
 }
 
 // Finds the closest element with a bvh.
-bool overlap_bvh(const std::shared_ptr<bvh_tree>& bvh, const vec3f& pos,
-    float max_dist, bool find_any, float& dist, int& iid, int& sid, int& eid,
-    vec2f& euv) {
+bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
+    bool find_any, float& dist, int& iid, int& sid, int& eid, vec2f& euv) {
     // node stack
     int node_stack[64];
     auto node_cur = 0;
@@ -2984,7 +2983,7 @@ bool overlap_bvh(const std::shared_ptr<bvh_tree>& bvh, const vec3f& pos,
 
 // Intersect ray with a bvh (convenience wrapper).
 intersection_point intersect_bvh(
-    const std::shared_ptr<bvh_tree>& bvh, const ray3f& ray, bool find_any) {
+    const bvh_tree* bvh, const ray3f& ray, bool find_any) {
     auto isec = intersection_point();
     if (!intersect_bvh(bvh, ray, find_any, isec.dist, isec.iid, isec.sid,
             isec.eid, isec.euv))
@@ -2993,8 +2992,8 @@ intersection_point intersect_bvh(
 }
 
 // Finds the closest element with a bvh (convenience wrapper).
-intersection_point overlap_bvh(const std::shared_ptr<bvh_tree>& bvh,
-    const vec3f& pos, float max_dist, bool find_any) {
+intersection_point overlap_bvh(
+    const bvh_tree* bvh, const vec3f& pos, float max_dist, bool find_any) {
     auto isec = intersection_point();
     if (!overlap_bvh(bvh, pos, max_dist, find_any, isec.dist, isec.iid,
             isec.sid, isec.eid, isec.euv))
@@ -3074,7 +3073,7 @@ intersection_point overlap_bvh(const std::shared_ptr<bvh_tree>& bvh,
 namespace ygl {
 
 // Synchronizes shape element type.
-shape_elem_type get_shape_type(const std::shared_ptr<shape>& shp) {
+shape_elem_type get_shape_type(const shape* shp) {
     if (!shp->triangles.empty()) {
         return shape_elem_type::triangles;
     } else if (!shp->lines.empty()) {
@@ -3095,21 +3094,19 @@ shape_elem_type get_shape_type(const std::shared_ptr<shape>& shp) {
 }
 
 // Check if a shape has emission.
-bool has_emission(const std::shared_ptr<shape>& shp) {
+bool has_emission(const shape* shp) {
     for (auto mat : shp->materials)
         if (mat && mat->ke != zero3f) return true;
     return false;
 }
 // Gets the material for a shape element.
-std::shared_ptr<material> get_material(
-    const std::shared_ptr<shape>& shp, int eid) {
+material* get_material(const shape* shp, int eid) {
     if (shp->materials.empty()) return nullptr;
     if (shp->elem_tags.empty()) return shp->materials.at(0);
     return shp->materials.at(shp->elem_tags[eid].matid);
 }
 // Returns is the shape is simple.
-bool is_shape_simple(
-    const std::shared_ptr<shape>& shp, bool split_facevarying) {
+bool is_shape_simple(const shape* shp, bool split_facevarying) {
     if (split_facevarying && !shp->quads_pos.empty()) return false;
     if (!shp->elem_tags.empty() &&
         (shp->materials.size() > 1 || shp->groupnames.size() > 1 ||
@@ -3120,8 +3117,8 @@ bool is_shape_simple(
 
 // Shape value interpolated using barycentric coordinates
 template <typename T>
-T eval_elem(const std::shared_ptr<shape>& shp, const std::vector<T>& vals,
-    int eid, const vec2f& euv, const T& def) {
+T eval_elem(const shape* shp, const std::vector<T>& vals, int eid,
+    const vec2f& euv, const T& def) {
     if (vals.empty()) return def;
     switch (get_shape_type(shp)) {
         case shape_elem_type::none: {
@@ -3153,74 +3150,66 @@ T eval_elem(const std::shared_ptr<shape>& shp, const std::vector<T>& vals,
 }
 
 // Shape position interpolated using barycentric coordinates
-vec3f eval_pos(const std::shared_ptr<shape>& shp, int eid, const vec2f& euv) {
+vec3f eval_pos(const shape* shp, int eid, const vec2f& euv) {
     return eval_elem(shp, shp->pos, eid, euv, {0, 0, 0});
 }
 // Shape normal interpolated using barycentric coordinates
-vec3f eval_norm(const std::shared_ptr<shape>& shp, int eid, const vec2f& euv) {
+vec3f eval_norm(const shape* shp, int eid, const vec2f& euv) {
     return normalize(eval_elem(shp, shp->norm, eid, euv, {0, 0, 1}));
 }
 // Shape texcoord interpolated using barycentric coordinates
-vec2f eval_texcoord(
-    const std::shared_ptr<shape>& shp, int eid, const vec2f& euv) {
+vec2f eval_texcoord(const shape* shp, int eid, const vec2f& euv) {
     return eval_elem(shp, shp->texcoord, eid, euv, {0, 0});
 }
 // Shape color interpolated using barycentric coordinates
-vec4f eval_color(const std::shared_ptr<shape>& shp, int eid, const vec2f& euv) {
+vec4f eval_color(const shape* shp, int eid, const vec2f& euv) {
     return eval_elem(shp, shp->color, eid, euv, {1, 1, 1, 1});
 }
 // Shape radius interpolated using barycentric coordinates
-float eval_radius(
-    const std::shared_ptr<shape>& shp, int eid, const vec2f& euv) {
+float eval_radius(const shape* shp, int eid, const vec2f& euv) {
     return eval_elem(shp, shp->radius, eid, euv, 0.0f);
 }
 // Shape tangent space interpolated using barycentric coordinates
-vec4f eval_tangsp(
-    const std::shared_ptr<shape>& shp, int eid, const vec2f& euv) {
+vec4f eval_tangsp(const shape* shp, int eid, const vec2f& euv) {
     return eval_elem(shp, shp->tangsp, eid, euv, {0, 0, 0, 1});
 }
 
 // Instance position interpolated using barycentric coordinates
-vec3f eval_pos(const std::shared_ptr<shape_group>& sgr, int sid, int eid,
-    const vec2f& euv) {
+vec3f eval_pos(const shape_group* sgr, int sid, int eid, const vec2f& euv) {
     auto shp = sgr->shapes.at(sid);
     return transform_point(
         sgr->frame, eval_elem(shp, shp->pos, eid, euv, {0, 0, 0}));
 }
 // Instance normal interpolated using barycentric coordinates
-vec3f eval_norm(const std::shared_ptr<shape_group>& sgr, int sid, int eid,
-    const vec2f& euv) {
+vec3f eval_norm(const shape_group* sgr, int sid, int eid, const vec2f& euv) {
     auto shp = sgr->shapes.at(sid);
     return transform_direction(
         sgr->frame, normalize(eval_elem(shp, shp->norm, eid, euv, {0, 0, 1})));
 }
 
 // Environment position interpolated using uv parametrization.
-vec3f eval_pos(const std::shared_ptr<environment>& env, const vec2f& uv) {
+vec3f eval_pos(const environment* env, const vec2f& uv) {
     return transform_point(env->frame,
         sphericaly_to_cartesian(
             vec3f{uv.x * pif * 2, uv.y * pif, environment_distance}));
 }
 // Environment normal interpolated using uv parametrization.
-vec3f eval_norm(const std::shared_ptr<environment>& env, const vec2f& uv) {
+vec3f eval_norm(const environment* env, const vec2f& uv) {
     return transform_direction(env->frame,
         -sphericaly_to_cartesian(vec3f{uv.x * pif * 2, uv.y * pif, 1.0f}));
 }
 // Environment texture coordinates from uv parametrization.
-vec2f eval_texcoord(const std::shared_ptr<environment>& env, const vec2f& uv) {
-    return uv;
-}
+vec2f eval_texcoord(const environment* env, const vec2f& uv) { return uv; }
 // Evaluate uv parameters for environment.
-vec2f eval_uv(const std::shared_ptr<environment>& env, const vec3f& w) {
+vec2f eval_uv(const environment* env, const vec3f& w) {
     auto wl = transform_direction_inverse(env->frame, w);
     auto sh = cartesian_to_sphericaly(wl);
     return {sh.x / (2 * pif), sh.y / pif};
 }
 
 // Evaluate a texture
-vec4f eval_texture(const std::shared_ptr<texture>& txt,
-    const texture_info& info, const vec2f& texcoord, bool srgb,
-    const vec4f& def) {
+vec4f eval_texture(const texture* txt, const texture_info& info,
+    const vec2f& texcoord, bool srgb, const vec4f& def) {
     if (!txt) return def;
     assert(!txt->hdr.empty() || !txt->ldr.empty());
 
@@ -3268,8 +3257,7 @@ vec4f eval_texture(const std::shared_ptr<texture>& txt,
 
 // Generates a ray from a camera for image plane coordinate uv and the
 // lens coordinates luv.
-ray3f eval_camera_ray(
-    const std::shared_ptr<camera>& cam, const vec2f& uv, const vec2f& luv) {
+ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv) {
     auto h = 2 * tan(cam->yfov / 2);
     auto w = h * cam->aspect;
     auto o = vec3f{luv.x * cam->aperture, luv.y * cam->aperture, 0};
@@ -3282,15 +3270,15 @@ ray3f eval_camera_ray(
 // Generates a ray from a camera for pixel coordinates `ij`, the resolution
 // `res`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and the
 // image resolution `res`.
-ray3f eval_camera_ray(const std::shared_ptr<camera>& cam, const vec2i& ij,
-    int res, const vec2f& puv, const vec2f& luv) {
+ray3f eval_camera_ray(const camera* cam, const vec2i& ij, int res,
+    const vec2f& puv, const vec2f& luv) {
     auto uv =
         vec2f{(ij.x + puv.x) / (cam->aspect * res), (1 - ij.y - puv.y) / res};
     return eval_camera_ray(cam, uv, luv);
 }
 
 // Generate a distribution for sampling a shape uniformly based on area/length.
-distribution1f make_shape_distribution(const std::shared_ptr<shape>& shp) {
+distribution1f make_shape_distribution(const shape* shp) {
     switch (get_shape_type(shp)) {
         case shape_elem_type::none: {
             throw std::runtime_error("type not supported");
@@ -3320,8 +3308,8 @@ distribution1f make_shape_distribution(const std::shared_ptr<shape>& shp) {
 }
 
 // Sample a shape based on a distribution.
-std::pair<int, vec2f> sample_shape(const std::shared_ptr<shape>& shp,
-    const distribution1f& dst, float re, const vec2f& ruv) {
+std::pair<int, vec2f> sample_shape(
+    const shape* shp, const distribution1f& dst, float re, const vec2f& ruv) {
     switch (get_shape_type(shp)) {
         case shape_elem_type::none: {
             throw std::runtime_error("type not supported");
@@ -3351,7 +3339,7 @@ std::pair<int, vec2f> sample_shape(const std::shared_ptr<shape>& shp,
 }
 
 // Subdivides shape elements.
-void subdivide_shape_once(const std::shared_ptr<shape>& shp, bool subdiv) {
+void subdivide_shape_once(shape* shp, bool subdiv) {
     switch (get_shape_type(shp)) {
         case shape_elem_type::none: break;
         case shape_elem_type::points: break;
@@ -3392,7 +3380,7 @@ void subdivide_shape_once(const std::shared_ptr<shape>& shp, bool subdiv) {
 }
 
 // Compute shape normals. Supports only non-facevarying shapes.
-void compute_normals(const std::shared_ptr<shape>& shp) {
+void compute_normals(shape* shp) {
     switch (get_shape_type(shp)) {
         case shape_elem_type::none: break;
         case shape_elem_type::points: {
@@ -3420,7 +3408,7 @@ void compute_normals(const std::shared_ptr<shape>& shp) {
 }
 
 // Facet a shape. Supports only non-facevarying shapes
-void facet_shape(const std::shared_ptr<shape>& shp, bool recompute_normals) {
+void facet_shape(shape* shp, bool recompute_normals) {
     switch (get_shape_type(shp)) {
         case shape_elem_type::none: break;
         case shape_elem_type::points: break;
@@ -3449,7 +3437,7 @@ void facet_shape(const std::shared_ptr<shape>& shp, bool recompute_normals) {
 }
 
 // Tesselate a shape into basic primitives
-void tesselate_shape(const std::shared_ptr<shape>& shp, bool subdivide,
+void tesselate_shape(shape* shp, bool subdivide,
     bool facevarying_to_sharedvertex, bool quads_to_triangles,
     bool bezier_to_lines) {
     if (subdivide && shp->subdivision) {
@@ -3480,7 +3468,7 @@ void tesselate_shape(const std::shared_ptr<shape>& shp, bool subdivide,
 }
 
 // Tesselate scene shapes and update pointers
-void tesselate_shapes(const std::shared_ptr<scene>& scn, bool subdivide,
+void tesselate_shapes(scene* scn, bool subdivide,
     bool facevarying_to_sharedvertex, bool quads_to_triangles,
     bool bezier_to_lines) {
     for (auto sgr : scn->shapes) {
@@ -3491,7 +3479,7 @@ void tesselate_shapes(const std::shared_ptr<scene>& scn, bool subdivide,
     }
 }
 
-int add_shape_vert(const std::shared_ptr<shape>& shp, const vec<int, 5>& vert,
+int add_shape_vert(shape* shp, const vec<int, 5>& vert,
     std::unordered_map<vec<int, 5>, int>& vmap, const std::vector<vec3f>& pos,
     const std::vector<vec3f>& norm, const std::vector<vec2f>& texcoord,
     const std::vector<vec4f>& color, const std::vector<float>& radius) {
@@ -3507,10 +3495,10 @@ int add_shape_vert(const std::shared_ptr<shape>& shp, const vec<int, 5>& vert,
     return vid;
 }
 
-int add_shape_vert(const std::shared_ptr<shape>& shp, int vert,
-    std::unordered_map<int, int>& vmap, const std::vector<vec3f>& pos,
-    const std::vector<vec3f>& norm, const std::vector<vec2f>& texcoord,
-    const std::vector<vec4f>& color, const std::vector<float>& radius) {
+int add_shape_vert(shape* shp, int vert, std::unordered_map<int, int>& vmap,
+    const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
+    const std::vector<vec2f>& texcoord, const std::vector<vec4f>& color,
+    const std::vector<float>& radius) {
     if (contains(vmap, vert)) return vmap.at(vert);
     auto vid = (int)vmap.size();
     vmap[vert] = vid;
@@ -3523,16 +3511,15 @@ int add_shape_vert(const std::shared_ptr<shape>& shp, int vert,
 }
 
 // Convert face-varying shapes to shapes.
-std::vector<std::shared_ptr<shape>> split_shape(
-    const std::shared_ptr<shape>& shp, bool split_facevarying) {
+std::vector<shape*> split_shape(const shape* shp, bool split_facevarying) {
     if (is_shape_simple(shp, split_facevarying)) return {};
-    auto sshps = std::vector<std::shared_ptr<shape>>();
+    auto sshps = std::vector<shape*>();
     auto split_ids = std::set<vec3i>();
     for (auto& tag : shp->elem_tags)
         split_ids.insert({tag.matid, tag.groupid, tag.smoothingid});
     for (auto tag : split_ids) {
         auto matid = tag.x, groupid = tag.y, smoothid = tag.z;
-        auto sshp = std::make_shared<shape>();
+        auto sshp = new shape();
         if (shp->groupnames.empty()) {
             sshp->name = shp->name;
         } else {
@@ -3617,9 +3604,8 @@ std::vector<std::shared_ptr<shape>> split_shape(
 }
 
 // Convert a list of shapes into a face-varying shape.
-std::shared_ptr<shape> group_shapes(
-    const std::vector<std::shared_ptr<shape>>& shps) {
-    auto gshp = std::make_shared<shape>();
+shape* group_shapes(const std::vector<shape*>& shps) {
+    auto gshp = new shape();
     if (shps.empty()) return gshp;
     gshp->name = shps.front()->name;
     for (auto shp : shps) {
@@ -3659,8 +3645,7 @@ std::shared_ptr<shape> group_shapes(
 }
 
 // Update animation transforms
-void update_transforms(
-    const std::shared_ptr<animation_group>& agr, float time) {
+void update_transforms(const animation_group* agr, float time) {
     auto interpolate = [](keyframe_type type, const std::vector<float>& times,
                            const auto& vals, float time) {
         switch (type) {
@@ -3697,19 +3682,17 @@ void update_transforms(
 }
 
 // Update node transforms
-void update_transforms(const std::shared_ptr<node>& nde,
-    const frame3f& parent = identity_frame3f) {
+void update_transforms(node* nde, const frame3f& parent = identity_frame3f) {
     nde->frame_ = parent * nde->local * translation_frame(nde->translation) *
                   rotation_frame(nde->rotation) * scaling_frame(nde->scaling);
     if (nde->shp) nde->shp->frame = nde->frame_;
     if (nde->cam) nde->cam->frame = nde->frame_;
     if (nde->env) nde->env->frame = nde->frame_;
-    for (auto child : nde->children_)
-        update_transforms(child.lock(), nde->frame_);
+    for (auto child : nde->children_) update_transforms(child, nde->frame_);
 }
 
 // Update node transforms
-void update_transforms(const std::shared_ptr<scene>& scn, float time) {
+void update_transforms(scene* scn, float time) {
     for (auto agr : scn->animations) update_transforms(agr, time);
     for (auto nde : scn->nodes) nde->children_.clear();
     for (auto nde : scn->nodes)
@@ -3719,7 +3702,7 @@ void update_transforms(const std::shared_ptr<scene>& scn, float time) {
 }
 
 // Compute animation range
-vec2f compute_animation_range(const std::shared_ptr<scene>& scn) {
+vec2f compute_animation_range(const scene* scn) {
     if (scn->animations.empty()) return zero2f;
     auto range = vec2f{+flt_max, -flt_max};
     for (auto agr : scn->animations) {
@@ -3732,8 +3715,7 @@ vec2f compute_animation_range(const std::shared_ptr<scene>& scn) {
 }
 
 // Add missing values and elements
-void add_elements(
-    const std::shared_ptr<scene>& scn, const add_elements_options& opts) {
+void add_elements(scene* scn, const add_elements_options& opts) {
     if (opts.smooth_normals) {
         for (auto sgr : scn->shapes) {
             for (auto shp : sgr->shapes) {
@@ -3791,7 +3773,7 @@ void add_elements(
         log_error("not implemented");
         //        if (!scn->instances.empty()) return;
         //        for (auto shp : scn->shapes) {
-        //            auto ist = std::make_shared<instance>();
+        //            auto ist = new instance();
         //            ist->name = shp->name;
         //            ist->shp = shp;
         //            scn->instances.push_back(ist);
@@ -3860,15 +3842,14 @@ void add_elements(
 
 // Make a view camera either copying a given one or building a
 // default one.
-std::shared_ptr<camera> make_view_camera(
-    const std::shared_ptr<scene>& scn, int camera_id) {
+camera* make_view_camera(const scene* scn, int camera_id) {
     if (scn->cameras.empty()) {
         auto bbox = compute_bounds(scn);
         auto bbox_center = (bbox.max + bbox.min) / 2.0f;
         auto bbox_size = bbox.max - bbox.min;
         auto bbox_msize = max(bbox_size[0], max(bbox_size[1], bbox_size[2]));
         // set up camera
-        auto cam = std::make_shared<camera>();
+        auto cam = new camera();
         cam->name = "<view>";
         auto camera_dir = vec3f{1, 0.4f, 1};
         auto from = camera_dir * bbox_msize + bbox_center;
@@ -3883,15 +3864,14 @@ std::shared_ptr<camera> make_view_camera(
         return cam;
     } else {
         camera_id = clamp(camera_id, 0, (int)scn->cameras.size());
-        auto cam = std::make_shared<camera>(*scn->cameras[camera_id]);
+        auto cam = new camera(*scn->cameras[camera_id]);
         cam->name = "<view>";
         return cam;
     }
 }
 
 // Merge scene into one another
-void merge_into(const std::shared_ptr<scene>& merge_into,
-    const std::shared_ptr<scene>& merge_from) {
+void merge_into(scene* merge_into, scene* merge_from) {
     auto merge = [](auto& v1, auto& v2) {
         v1.insert(v1.end(), v2.begin(), v2.end());
         v2.clear();
@@ -3907,16 +3887,15 @@ void merge_into(const std::shared_ptr<scene>& merge_into,
 
 // Computes a shape bounding box (quick computation that ignores
 // radius)
-bbox3f compute_bounds(const std::shared_ptr<shape>& shp) {
+bbox3f compute_bounds(const shape* shp) {
     auto bbox = invalid_bbox3f;
     for (auto p : shp->pos) bbox += vec3f(p);
     return bbox;
 }
 
 // Updates the scene and scene's instances bounding boxes
-bbox3f compute_bounds(const std::shared_ptr<scene>& scn, bool skip_emitting) {
-    auto shape_bboxes =
-        std::unordered_map<std::shared_ptr<shape_group>, bbox3f>();
+bbox3f compute_bounds(const scene* scn, bool skip_emitting) {
+    auto shape_bboxes = std::unordered_map<shape_group*, bbox3f>();
     for (auto sgr : scn->shapes) {
         shape_bboxes[sgr] = invalid_bbox3f;
         for (auto shp : sgr->shapes) {
@@ -3937,35 +3916,34 @@ bbox3f compute_bounds(const std::shared_ptr<scene>& scn, bool skip_emitting) {
 }
 
 // Flatten scene instances into separate meshes.
-void flatten_instances(const std::shared_ptr<scene>& scn) {
-    auto shape_count = std::unordered_map<std::shared_ptr<shape_group>, int>();
+void flatten_instances(scene* scn) {
+    auto shape_count = std::unordered_map<shape_group*, int>();
     for (auto shp : scn->shapes) shape_count[shp] = 0;
     for (auto nde : scn->nodes) {
         if (!nde->shp) continue;
         shape_count[nde->shp] += 1;
         if (shape_count[nde->shp] < 2) continue;
-        auto sgr = std::make_shared<shape_group>(*nde->shp);
+        auto sgr = new shape_group(*nde->shp);
         sgr->name += "_" + std::to_string(shape_count[nde->shp]);
-        for (auto& shp : sgr->shapes) shp = std::make_shared<shape>(*shp);
+        // TODO: check pointer
+        log_error("check code");
+        for (auto& shp : sgr->shapes) shp = new shape(*shp);
         scn->shapes.push_back(sgr);
         nde->shp = sgr;
     }
 }
 
 // Build a shape BVH
-std::shared_ptr<bvh_tree> make_bvh(
-    const std::shared_ptr<shape>& shp, float def_radius, bool equalsize) {
+bvh_tree* make_bvh(const shape* shp, float def_radius, bool equalsize) {
     return make_bvh(shp->points, shp->lines, shp->triangles, shp->quads,
         shp->pos, shp->radius, def_radius, equalsize);
 }
 
 // Build a scene BVH
-std::shared_ptr<bvh_tree> make_bvh(
-    const std::shared_ptr<scene>& scn, float def_radius, bool equalsize) {
+bvh_tree* make_bvh(const scene* scn, float def_radius, bool equalsize) {
     // do shapes
-    auto shape_bvhs = std::vector<std::shared_ptr<bvh_tree>>();
-    auto smap =
-        std::unordered_map<std::shared_ptr<shape>, std::shared_ptr<bvh_tree>>();
+    auto shape_bvhs = std::vector<bvh_tree*>();
+    auto smap = std::unordered_map<shape*, bvh_tree*>();
     for (auto sgr : scn->shapes) {
         for (auto shp : sgr->shapes) {
             shape_bvhs.push_back(make_bvh(shp, def_radius, equalsize));
@@ -4003,18 +3981,17 @@ std::shared_ptr<bvh_tree> make_bvh(
             }
         }
     }
-    return make_bvh(bists, shape_bvhs, equalsize);
+    return make_bvh(bists, shape_bvhs, equalsize, true);
 }
 
 // Refits a scene BVH
-void refit_bvh(const std::shared_ptr<bvh_tree>& bvh,
-    const std::shared_ptr<shape>& shp, float def_radius) {
+void refit_bvh(bvh_tree* bvh, const shape* shp, float def_radius) {
     refit_bvh(bvh, shp->pos, shp->radius, def_radius);
 }
 
 // Refits a scene BVH
-void refit_bvh(const std::shared_ptr<bvh_tree>& bvh,
-    const std::shared_ptr<scene>& scn, bool do_shapes, float def_radius) {
+void refit_bvh(
+    bvh_tree* bvh, const scene* scn, bool do_shapes, float def_radius) {
     if (do_shapes) {
         auto sid = 0;
         for (auto sgr : scn->shapes) {
@@ -4043,7 +4020,7 @@ void refit_bvh(const std::shared_ptr<bvh_tree>& bvh,
 }
 
 // Compute stats.
-scene_stats compute_stats(const std::shared_ptr<scene>& scn) {
+scene_stats compute_stats(const scene* scn) {
     auto stats = scene_stats();
     stats.num_cameras = scn->cameras.size();
     stats.num_shape_groups = scn->shapes.size();
@@ -4136,10 +4113,9 @@ std::ostream& operator<<(std::ostream& os, const scene_stats& stats) {
 }
 
 // Flattens an scene
-std::shared_ptr<scene> obj_to_scene(
-    const std::shared_ptr<obj_scene>& obj, const load_options& opts) {
+scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
     // clear scene
-    auto scn = std::make_shared<scene>();
+    auto scn = new scene();
 
     struct obj_vertex_hash {
         std::hash<int> Th;
@@ -4155,10 +4131,9 @@ std::shared_ptr<scene> obj_to_scene(
     };
 
     // convert textures
-    auto tmap = std::unordered_map<std::string, std::shared_ptr<texture>>{
-        {"", nullptr}};
+    auto tmap = std::unordered_map<std::string, texture*>{{"", nullptr}};
     for (auto otxt : obj->textures) {
-        auto txt = std::make_shared<texture>();
+        auto txt = new texture();
         txt->name = otxt->path;
         txt->path = otxt->path;
         if (!otxt->datab.empty()) {
@@ -4183,10 +4158,9 @@ std::shared_ptr<scene> obj_to_scene(
     };
 
     // convert materials and build textures
-    auto mmap = std::unordered_map<std::string, std::shared_ptr<material>>{
-        {"", nullptr}};
+    auto mmap = std::unordered_map<std::string, material*>{{"", nullptr}};
     for (auto omat : obj->materials) {
-        auto mat = std::make_shared<material>();
+        auto mat = new material();
         mat->name = omat->name;
         mat->type = material_type::specular_roughness;
         mat->ke = omat->ke;
@@ -4247,16 +4221,15 @@ std::shared_ptr<scene> obj_to_scene(
     }
 
     // convert meshes
-    auto omap = std::unordered_map<std::string, std::shared_ptr<shape_group>>{
-        {"", nullptr}};
+    auto omap = std::unordered_map<std::string, shape_group*>{{"", nullptr}};
     for (auto omsh : obj->objects) {
-        auto sgr = std::make_shared<shape_group>();
+        auto sgr = new shape_group();
         sgr->name = omsh->name;
         sgr->frame = omsh->frame;
         if (omsh->verts.empty()) continue;
         if (omsh->elems.empty()) continue;
 
-        auto shp = std::make_shared<shape>();
+        auto shp = new shape();
         shp->name = sgr->name;
         for (auto& matname : omsh->matnames)
             shp->materials.push_back((mmap[matname]) ? mmap[matname] : nullptr);
@@ -4514,10 +4487,9 @@ std::shared_ptr<scene> obj_to_scene(
     }
 
     // convert cameras
-    auto cmap =
-        std::unordered_map<std::string, std::shared_ptr<camera>>{{"", nullptr}};
+    auto cmap = std::unordered_map<std::string, camera*>{{"", nullptr}};
     for (auto ocam : obj->cameras) {
-        auto cam = std::make_shared<camera>();
+        auto cam = new camera();
         cam->name = ocam->name;
         cam->ortho = ocam->ortho;
         cam->yfov = ocam->yfov;
@@ -4530,11 +4502,10 @@ std::shared_ptr<scene> obj_to_scene(
     }
 
     // convert envs
-    std::unordered_set<std::shared_ptr<material>> env_mat;
-    auto emap = std::unordered_map<std::string, std::shared_ptr<environment>>{
-        {"", nullptr}};
+    std::unordered_set<material*> env_mat;
+    auto emap = std::unordered_map<std::string, environment*>{{"", nullptr}};
     for (auto oenv : obj->environments) {
-        auto env = std::make_shared<environment>();
+        auto env = new environment();
         env->name = oenv->name;
         for (auto mat : scn->materials) {
             if (mat->name == oenv->matname) {
@@ -4573,7 +4544,7 @@ std::shared_ptr<scene> obj_to_scene(
     // convert nodes
     if (!obj->nodes.empty()) {
         for (auto onde : obj->nodes) {
-            auto nde = std::make_shared<node>();
+            auto nde = new node();
             nde->name = onde->name;
             nde->cam = cmap.at(onde->camname);
             nde->shp = omap.at(onde->objname);
@@ -4607,18 +4578,19 @@ std::shared_ptr<scene> obj_to_scene(
 }
 
 // Load an obj scene
-std::shared_ptr<scene> load_obj_scene(
-    const std::string& filename, const load_options& opts) {
+scene* load_obj_scene(const std::string& filename, const load_options& opts) {
     auto oscn = load_obj(filename, opts.load_textures, opts.skip_missing,
         opts.obj_flip_texcoord, opts.obj_flip_tr);
-    return obj_to_scene(oscn, opts);
+    auto scn = obj_to_scene(oscn, opts);
+    delete oscn;
+    return scn;
 }
 
 // Save an scene
-std::shared_ptr<obj_scene> scene_to_obj(const std::shared_ptr<scene>& scn) {
-    auto obj = std::make_shared<obj_scene>();
+obj_scene* scene_to_obj(const scene* scn) {
+    auto obj = new obj_scene();
 
-    auto make_texture_info = [](const std::shared_ptr<texture>& txt,
+    auto make_texture_info = [](const texture* txt,
                                  const optional<texture_info>& info,
                                  bool bump = false) {
         auto oinfo = obj_texture_info();
@@ -4632,7 +4604,7 @@ std::shared_ptr<obj_scene> scene_to_obj(const std::shared_ptr<scene>& scn) {
 
     // convert textures
     for (auto txt : scn->textures) {
-        auto otxt = std::make_shared<obj_texture>();
+        auto otxt = new obj_texture();
         otxt->path = txt->path;
         if (!txt->hdr.empty()) {
             otxt->width = txt->hdr.width();
@@ -4655,7 +4627,7 @@ std::shared_ptr<obj_scene> scene_to_obj(const std::shared_ptr<scene>& scn) {
 
     // convert materials
     for (auto mat : scn->materials) {
-        auto omat = std::make_shared<obj_material>();
+        auto omat = new obj_material();
         omat->name = mat->name;
         omat->ke = {mat->ke.x, mat->ke.y, mat->ke.z};
         omat->ke_txt = make_texture_info(mat->ke_txt, mat->ke_txt_info);
@@ -4744,7 +4716,7 @@ std::shared_ptr<obj_scene> scene_to_obj(const std::shared_ptr<scene>& scn) {
 
     // convert shapes
     for (auto sgr : scn->shapes) {
-        auto oobj = std::make_shared<obj_object>();
+        auto oobj = new obj_object();
         oobj->name = sgr->name;
         oobj->frame = sgr->frame;
         for (auto shp : sgr->shapes) {
@@ -4838,7 +4810,7 @@ std::shared_ptr<obj_scene> scene_to_obj(const std::shared_ptr<scene>& scn) {
 
     // convert cameras
     for (auto cam : scn->cameras) {
-        auto ocam = std::make_shared<obj_camera>();
+        auto ocam = new obj_camera();
         ocam->name = cam->name;
         ocam->ortho = cam->ortho;
         ocam->yfov = cam->yfov;
@@ -4851,8 +4823,8 @@ std::shared_ptr<obj_scene> scene_to_obj(const std::shared_ptr<scene>& scn) {
 
     // convert envs
     for (auto env : scn->environments) {
-        auto oenv = std::make_shared<obj_environment>();
-        auto omat = std::make_shared<obj_material>();
+        auto oenv = new obj_environment();
+        auto omat = new obj_material();
         omat->name = env->name + "_mat";
         omat->ke = env->ke;
         omat->ke_txt = make_texture_info(env->ke_txt, env->ke_txt_info);
@@ -4866,7 +4838,7 @@ std::shared_ptr<obj_scene> scene_to_obj(const std::shared_ptr<scene>& scn) {
     // convert hierarchy
     if (!obj->nodes.empty()) {
         for (auto nde : scn->nodes) {
-            auto onde = std::make_shared<obj_node>();
+            auto onde = new obj_node();
             onde->name = nde->name;
             if (nde->cam) onde->camname = nde->cam->name;
             if (nde->shp) onde->objname = nde->shp->name;
@@ -4892,8 +4864,8 @@ std::shared_ptr<obj_scene> scene_to_obj(const std::shared_ptr<scene>& scn) {
 }
 
 // Save an obj scene
-void save_obj_scene(const std::string& filename,
-    const std::shared_ptr<scene>& scn, const save_options& opts) {
+void save_obj_scene(
+    const std::string& filename, const scene* scn, const save_options& opts) {
     auto oscn = scene_to_obj(scn);
     save_obj(filename, oscn, opts.save_textures, opts.skip_missing,
         opts.obj_flip_texcoord, opts.obj_flip_tr);
@@ -4902,14 +4874,13 @@ void save_obj_scene(const std::string& filename,
 #if YGL_GLTF
 
 // Flattens a gltf file into a flattened asset.
-std::shared_ptr<scene> gltf_to_scene(
-    const std::shared_ptr<glTF>& gltf, const load_options& opts) {
+scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
     // clear asset
-    auto scn = std::make_shared<scene>();
+    auto scn = new scene();
 
     // convert images
     for (auto gtxt : gltf->images) {
-        auto txt = std::make_shared<texture>();
+        auto txt = new texture();
         txt->name = gtxt->name;
         txt->path = (startswith(gtxt->uri, "data:")) ? std::string("inlines") :
                                                        gtxt->uri;
@@ -4924,9 +4895,7 @@ std::shared_ptr<scene> gltf_to_scene(
     }
 
     // add a texture
-    auto get_texture = [gltf, scn](
-                           const std::shared_ptr<glTFTextureInfo>& ginfo)
-        -> std::shared_ptr<texture> {
+    auto get_texture = [gltf, scn](const glTFTextureInfo* ginfo) -> texture* {
         if (!ginfo) return nullptr;
         auto gtxt = gltf->get(ginfo->index);
         if (!gtxt || !gtxt->source) return nullptr;
@@ -4935,8 +4904,7 @@ std::shared_ptr<scene> gltf_to_scene(
 
     // add a texture
     auto make_texture_info =
-        [gltf, scn](const std::shared_ptr<glTFTextureInfo>& ginfo,
-            bool normal = false,
+        [gltf, scn](const glTFTextureInfo* ginfo, bool normal = false,
             bool occlusion = false) -> optional<texture_info> {
         if (!ginfo) return {};
         auto gtxt = gltf->get(ginfo->index);
@@ -4953,11 +4921,11 @@ std::shared_ptr<scene> gltf_to_scene(
             info->wrap_t = gsmp->wrapT != glTFSamplerWrapT::ClampToEdge;
         }
         if (normal) {
-            auto ninfo = (glTFMaterialNormalTextureInfo*)ginfo.get();
+            auto ninfo = (glTFMaterialNormalTextureInfo*)ginfo;
             info->scale = ninfo->scale;
         }
         if (occlusion) {
-            auto ninfo = (glTFMaterialOcclusionTextureInfo*)ginfo.get();
+            auto ninfo = (glTFMaterialOcclusionTextureInfo*)ginfo;
             info->scale = ninfo->strength;
         }
         return info;
@@ -4965,7 +4933,7 @@ std::shared_ptr<scene> gltf_to_scene(
 
     // convert materials
     for (auto gmat : gltf->materials) {
-        auto mat = std::make_shared<material>();
+        auto mat = new material();
         mat->name = gmat->name;
         mat->ke = gmat->emissiveFactor;
         mat->ke_txt = get_texture(gmat->emissiveTexture);
@@ -5010,12 +4978,12 @@ std::shared_ptr<scene> gltf_to_scene(
 
     // convert meshes
     for (auto gmesh : gltf->meshes) {
-        auto sgr = std::make_shared<shape_group>();
+        auto sgr = new shape_group();
         sgr->name = gmesh->name;
         // primitives
         auto gid = 0;
         for (auto gprim : gmesh->primitives) {
-            auto shp = std::make_shared<shape>();
+            auto shp = new shape();
             shp->name = gmesh->name + "_" + std::to_string(gid++);
             if (gprim->material) {
                 shp->materials.push_back(scn->materials[(int)gprim->material]);
@@ -5169,7 +5137,7 @@ std::shared_ptr<scene> gltf_to_scene(
 
     // convert cameras
     for (auto gcam : gltf->cameras) {
-        auto cam = std::make_shared<camera>();
+        auto cam = new camera();
         cam->name = gcam->name;
         cam->ortho = gcam->type == glTFCameraType::Orthographic;
         if (cam->ortho) {
@@ -5191,7 +5159,7 @@ std::shared_ptr<scene> gltf_to_scene(
 
     // convert nodes
     for (auto gnde : gltf->nodes) {
-        auto nde = std::make_shared<node>();
+        auto nde = new node();
         nde->name = gnde->name;
         if (gnde->camera) nde->cam = scn->cameras[(int)gnde->camera];
         if (gnde->mesh) nde->shp = scn->shapes[(int)gnde->mesh];
@@ -5230,15 +5198,14 @@ std::shared_ptr<scene> gltf_to_scene(
 
     // convert animations
     for (auto ganm : gltf->animations) {
-        auto agr = std::make_shared<animation_group>();
+        auto agr = new animation_group();
         agr->name = ganm->name;
-        auto sampler_map =
-            std::unordered_map<vec2i, std::shared_ptr<animation>>();
+        auto sampler_map = std::unordered_map<vec2i, animation*>();
         for (auto gchannel : ganm->channels) {
             if (sampler_map.find({(int)gchannel->sampler,
                     (int)gchannel->target->path}) == sampler_map.end()) {
                 auto gsampler = ganm->get(gchannel->sampler);
-                auto anm = std::make_shared<animation>();
+                auto anm = new animation();
                 auto input_view =
                     accessor_view(gltf, gltf->get(gsampler->input));
                 anm->times.resize(input_view.size());
@@ -5309,11 +5276,11 @@ std::shared_ptr<scene> gltf_to_scene(
 }
 
 // Load an gltf scene
-std::shared_ptr<scene> load_gltf_scene(
-    const std::string& filename, const load_options& opts) {
+scene* load_gltf_scene(const std::string& filename, const load_options& opts) {
     auto gscn =
         load_gltf(filename, true, opts.load_textures, opts.skip_missing);
     auto scn = gltf_to_scene(gscn, opts);
+    delete gscn;
     if (!scn) {
         throw std::runtime_error("could not convert gltf scene");
         return nullptr;
@@ -5322,30 +5289,30 @@ std::shared_ptr<scene> load_gltf_scene(
 }
 
 // Unflattnes gltf
-std::shared_ptr<glTF> scene_to_gltf(const std::shared_ptr<scene>& scn,
-    const std::string& buffer_uri, bool separate_buffers) {
-    auto gltf = std::make_shared<glTF>();
+glTF* scene_to_gltf(
+    const scene* scn, const std::string& buffer_uri, bool separate_buffers) {
+    auto gltf = new glTF();
 
     // add asset info
-    gltf->asset = std::make_shared<glTFAsset>();
+    gltf->asset = new glTFAsset();
     gltf->asset->generator = "Yocto/gltf";
     gltf->asset->version = "2.0";
 
     // convert cameras
     for (auto cam : scn->cameras) {
-        auto gcam = std::make_shared<glTFCamera>();
+        auto gcam = new glTFCamera();
         gcam->name = cam->name;
         gcam->type = (cam->ortho) ? glTFCameraType::Orthographic :
                                     glTFCameraType::Perspective;
         if (cam->ortho) {
-            auto ortho = std::make_shared<glTFCameraOrthographic>();
+            auto ortho = new glTFCameraOrthographic();
             ortho->ymag = cam->yfov;
             ortho->xmag = cam->aspect * cam->yfov;
             ortho->znear = cam->near;
             ortho->znear = cam->far;
             gcam->orthographic = ortho;
         } else {
-            auto persp = std::make_shared<glTFCameraPerspective>();
+            auto persp = new glTFCameraPerspective();
             persp->yfov = cam->yfov;
             persp->aspectRatio = cam->aspect;
             persp->znear = cam->near;
@@ -5357,7 +5324,7 @@ std::shared_ptr<glTF> scene_to_gltf(const std::shared_ptr<scene>& scn,
 
     // convert images
     for (auto txt : scn->textures) {
-        auto gimg = std::make_shared<glTFImage>();
+        auto gimg = new glTFImage();
         gimg->uri = txt->path;
         if (!txt->hdr.empty()) {
             gimg->data.width = txt->hdr.width();
@@ -5387,12 +5354,11 @@ std::shared_ptr<glTF> scene_to_gltf(const std::shared_ptr<scene>& scn,
     };
 
     // add a texture and sampler
-    auto add_texture_info = [&gltf, &index, scn](
-                                const std::shared_ptr<texture>& txt,
+    auto add_texture_info = [&gltf, &index, scn](const texture* txt,
                                 const optional<texture_info>& info,
                                 bool norm = false, bool occ = false) {
-        if (!txt) return (std::shared_ptr<glTFTextureInfo>)nullptr;
-        auto gtxt = std::make_shared<glTFTexture>();
+        if (!txt) return (glTFTextureInfo*)nullptr;
+        auto gtxt = new glTFTexture();
         gtxt->name = txt->name;
         gtxt->source = glTFid<glTFImage>(index(scn->textures, txt));
 
@@ -5400,7 +5366,7 @@ std::shared_ptr<glTF> scene_to_gltf(const std::shared_ptr<scene>& scn,
         auto is_default = !info || (info->wrap_s && info->wrap_t &&
                                        info->linear && info->mipmap);
         if (!is_default) {
-            auto gsmp = std::make_shared<glTFSampler>();
+            auto gsmp = new glTFSampler();
             gsmp->wrapS = (!info || info->wrap_s) ?
                               glTFSamplerWrapS::Repeat :
                               glTFSamplerWrapS::ClampToEdge;
@@ -5418,17 +5384,17 @@ std::shared_ptr<glTF> scene_to_gltf(const std::shared_ptr<scene>& scn,
         }
         gltf->textures.push_back(gtxt);
         if (norm) {
-            auto ginfo = std::make_shared<glTFMaterialNormalTextureInfo>();
+            auto ginfo = new glTFMaterialNormalTextureInfo();
             ginfo->index = glTFid<glTFTexture>{(int)gltf->textures.size() - 1};
             ginfo->scale = (info) ? info->scale : 1;
-            return (std::shared_ptr<glTFTextureInfo>)ginfo;
+            return (glTFTextureInfo*)ginfo;
         } else if (occ) {
-            auto ginfo = std::make_shared<glTFMaterialOcclusionTextureInfo>();
+            auto ginfo = new glTFMaterialOcclusionTextureInfo();
             ginfo->index = glTFid<glTFTexture>{(int)gltf->textures.size() - 1};
             ginfo->strength = (info) ? info->scale : 1;
-            return (std::shared_ptr<glTFTextureInfo>)ginfo;
+            return (glTFTextureInfo*)ginfo;
         } else {
-            auto ginfo = std::make_shared<glTFTextureInfo>();
+            auto ginfo = new glTFTextureInfo();
             ginfo->index = glTFid<glTFTexture>{(int)gltf->textures.size() - 1};
             return ginfo;
         }
@@ -5436,14 +5402,14 @@ std::shared_ptr<glTF> scene_to_gltf(const std::shared_ptr<scene>& scn,
 
     // convert materials
     for (auto mat : scn->materials) {
-        auto gmat = std::make_shared<glTFMaterial>();
+        auto gmat = new glTFMaterial();
         gmat->name = mat->name;
         gmat->emissiveFactor = mat->ke;
         gmat->emissiveTexture = add_texture_info(mat->ke_txt, mat->ke_txt_info);
         switch (mat->type) {
             case material_type::specular_roughness: {
                 gmat->pbrSpecularGlossiness =
-                    std::make_shared<glTFMaterialPbrSpecularGlossiness>();
+                    new glTFMaterialPbrSpecularGlossiness();
                 auto gsg = gmat->pbrSpecularGlossiness;
                 gsg->diffuseFactor = {
                     mat->kd[0], mat->kd[1], mat->kd[2], mat->op};
@@ -5456,7 +5422,7 @@ std::shared_ptr<glTF> scene_to_gltf(const std::shared_ptr<scene>& scn,
             } break;
             case material_type::metallic_roughness: {
                 gmat->pbrMetallicRoughness =
-                    std::make_shared<glTFMaterialPbrMetallicRoughness>();
+                    new glTFMaterialPbrMetallicRoughness();
                 auto gmr = gmat->pbrMetallicRoughness;
                 gmr->baseColorFactor = {
                     mat->kd.x, mat->kd.y, mat->kd.z, mat->op};
@@ -5469,7 +5435,7 @@ std::shared_ptr<glTF> scene_to_gltf(const std::shared_ptr<scene>& scn,
             } break;
             case material_type::specular_glossiness: {
                 gmat->pbrSpecularGlossiness =
-                    std::make_shared<glTFMaterialPbrSpecularGlossiness>();
+                    new glTFMaterialPbrSpecularGlossiness();
                 auto gsg = gmat->pbrSpecularGlossiness;
                 gsg->diffuseFactor = {
                     mat->kd[0], mat->kd[1], mat->kd[2], mat->op};
@@ -5481,20 +5447,18 @@ std::shared_ptr<glTF> scene_to_gltf(const std::shared_ptr<scene>& scn,
                     add_texture_info(mat->ks_txt, mat->ks_txt_info);
             } break;
         }
-        gmat->normalTexture =
-            std::static_pointer_cast<glTFMaterialNormalTextureInfo>(
-                add_texture_info(
-                    mat->norm_txt, mat->norm_txt_info, true, false));
+        gmat->normalTexture = (glTFMaterialNormalTextureInfo*)(add_texture_info(
+            mat->norm_txt, mat->norm_txt_info, true, false));
         gmat->occlusionTexture =
-            std::static_pointer_cast<glTFMaterialOcclusionTextureInfo>(
-                add_texture_info(mat->occ_txt, mat->occ_txt_info, false, true));
+            (glTFMaterialOcclusionTextureInfo*)(add_texture_info(
+                mat->occ_txt, mat->occ_txt_info, false, true));
         gmat->doubleSided = mat->double_sided;
         gltf->materials.push_back(gmat);
     }
 
     // add buffer
     auto add_buffer = [&gltf](const std::string& buffer_uri) {
-        auto gbuffer = std::make_shared<glTFBuffer>();
+        auto gbuffer = new glTFBuffer();
         gltf->buffers.push_back(gbuffer);
         gbuffer->uri = buffer_uri;
         return gbuffer;
@@ -5515,12 +5479,11 @@ std::shared_ptr<glTF> scene_to_gltf(const std::shared_ptr<scene>& scn,
     };
 
     // attribute handling
-    auto add_accessor = [&gltf, &index](
-                            const std::shared_ptr<glTFBuffer>& gbuffer,
+    auto add_accessor = [&gltf, &index](glTFBuffer* gbuffer,
                             const std::string& name, glTFAccessorType type,
                             glTFAccessorComponentType ctype, int count,
                             int csize, const void* data, bool save_min_max) {
-        gltf->bufferViews.push_back(std::make_shared<glTFBufferView>());
+        gltf->bufferViews.push_back(new glTFBufferView());
         auto bufferView = gltf->bufferViews.back();
         bufferView->buffer = glTFid<glTFBuffer>(index(gltf->buffers, gbuffer));
         bufferView->byteOffset = (int)gbuffer->data.size();
@@ -5532,7 +5495,7 @@ std::shared_ptr<glTF> scene_to_gltf(const std::shared_ptr<scene>& scn,
                    bufferView->byteLength;
         bufferView->target = glTFBufferViewTarget::ArrayBuffer;
         memcpy(ptr, data, bufferView->byteLength);
-        gltf->accessors.push_back(std::make_shared<glTFAccessor>());
+        gltf->accessors.push_back(new glTFAccessor());
         auto accessor = gltf->accessors.back();
         accessor->bufferView =
             glTFid<glTFBufferView>((int)gltf->bufferViews.size() - 1);
@@ -5573,10 +5536,10 @@ std::shared_ptr<glTF> scene_to_gltf(const std::shared_ptr<scene>& scn,
 
     // convert meshes
     for (auto sgr : scn->shapes) {
-        auto gmesh = std::make_shared<glTFMesh>();
+        auto gmesh = new glTFMesh();
         gmesh->name = sgr->name;
         auto gbuffer = add_opt_buffer(sgr->path);
-        auto shapes = std::vector<std::shared_ptr<shape>>();
+        auto shapes = std::vector<shape*>();
         for (auto shp : sgr->shapes) {
             if (!is_shape_simple(shp, true))
                 append(shapes, split_shape(shp, true));
@@ -5584,7 +5547,7 @@ std::shared_ptr<glTF> scene_to_gltf(const std::shared_ptr<scene>& scn,
                 shapes.push_back(shp);
         }
         for (auto shp : shapes) {
-            auto gprim = std::make_shared<glTFMeshPrimitive>();
+            auto gprim = new glTFMeshPrimitive();
             if (!shp->materials.empty())
                 gprim->material = glTFid<glTFMaterial>(
                     index(scn->materials, shp->materials.at(0)));
@@ -5664,7 +5627,7 @@ std::shared_ptr<glTF> scene_to_gltf(const std::shared_ptr<scene>& scn,
     if (scn->nodes.empty()) {
         // shapes
         for (auto shp : scn->shapes) {
-            auto gnode = std::make_shared<glTFNode>();
+            auto gnode = new glTFNode();
             gnode->name = shp->name;
             gnode->mesh = glTFid<glTFMesh>(index(scn->shapes, shp));
             gnode->matrix = frame_to_mat(shp->frame);
@@ -5673,7 +5636,7 @@ std::shared_ptr<glTF> scene_to_gltf(const std::shared_ptr<scene>& scn,
 
         // cameras
         for (auto cam : scn->cameras) {
-            auto gnode = std::make_shared<glTFNode>();
+            auto gnode = new glTFNode();
             gnode->name = cam->name;
             gnode->camera = glTFid<glTFCamera>(index(scn->cameras, cam));
             gnode->matrix = frame_to_mat(cam->frame);
@@ -5682,7 +5645,7 @@ std::shared_ptr<glTF> scene_to_gltf(const std::shared_ptr<scene>& scn,
 
         // scenes
         if (!gltf->nodes.empty()) {
-            auto gscene = std::make_shared<glTFScene>();
+            auto gscene = new glTFScene();
             gscene->name = "scene";
             for (auto i = 0; i < gltf->nodes.size(); i++) {
                 gscene->nodes.push_back(glTFid<glTFNode>(i));
@@ -5693,7 +5656,7 @@ std::shared_ptr<glTF> scene_to_gltf(const std::shared_ptr<scene>& scn,
     } else {
         // nodes
         for (auto nde : scn->nodes) {
-            auto gnode = std::make_shared<glTFNode>();
+            auto gnode = new glTFNode();
             gnode->name = nde->name;
             if (nde->cam) {
                 gnode->camera =
@@ -5727,7 +5690,7 @@ std::shared_ptr<glTF> scene_to_gltf(const std::shared_ptr<scene>& scn,
         }
 
         // scene with root nodes
-        auto gscene = std::make_shared<glTFScene>();
+        auto gscene = new glTFScene();
         gscene->name = "scene";
         for (auto idx = 0; idx < gltf->nodes.size(); idx++) {
             if (is_root[idx]) gscene->nodes.push_back(glTFid<glTFNode>(idx));
@@ -5749,15 +5712,15 @@ std::shared_ptr<glTF> scene_to_gltf(const std::shared_ptr<scene>& scn,
 
     // animation
     for (auto agr : scn->animations) {
-        auto ganm = std::make_shared<glTFAnimation>();
+        auto ganm = new glTFAnimation();
         ganm->name = agr->name;
         auto gbuffer = add_opt_buffer(agr->path);
         auto count = 0;
-        auto paths = std::unordered_map<std::shared_ptr<animation>,
-            glTFAnimationChannelTargetPath>();
+        auto paths =
+            std::unordered_map<animation*, glTFAnimationChannelTargetPath>();
         for (auto anm : agr->animations) {
             auto aid = ganm->name + "_" + std::to_string(count++);
-            auto gsmp = std::make_shared<glTFAnimationSampler>();
+            auto gsmp = new glTFAnimationSampler();
             gsmp->input =
                 add_accessor(gbuffer, aid + "_time", glTFAccessorType::Scalar,
                     glTFAccessorComponentType::Float, (int)anm->times.size(),
@@ -5802,10 +5765,10 @@ std::shared_ptr<glTF> scene_to_gltf(const std::shared_ptr<scene>& scn,
         for (auto target : agr->targets) {
             auto kfr = target.first;
             auto node = target.second;
-            auto gchan = std::make_shared<glTFAnimationChannel>();
+            auto gchan = new glTFAnimationChannel();
             gchan->sampler =
                 glTFid<glTFAnimationSampler>{index(agr->animations, kfr)};
-            gchan->target = std::make_shared<glTFAnimationChannelTarget>();
+            gchan->target = new glTFAnimationChannelTarget();
             gchan->target->node = glTFid<glTFNode>{index(scn->nodes, node)};
             gchan->target->path = paths.at(kfr);
             ganm->channels.push_back(gchan);
@@ -5819,8 +5782,8 @@ std::shared_ptr<glTF> scene_to_gltf(const std::shared_ptr<scene>& scn,
 }
 
 // Save a gltf scene
-void save_gltf_scene(const std::string& filename,
-    const std::shared_ptr<scene>& scn, const save_options& opts) {
+void save_gltf_scene(
+    const std::string& filename, const scene* scn, const save_options& opts) {
     auto buffer_uri = path_basename(filename) + ".bin";
     auto gscn = scene_to_gltf(scn, buffer_uri, opts.gltf_separate_buffers);
     save_gltf(filename, gscn, true, opts.save_textures);
@@ -5831,15 +5794,14 @@ void save_gltf_scene(const std::string& filename,
 #if YGL_SVG
 
 // Converts an svg scene
-std::shared_ptr<scene> svg_to_scene(
-    const std::shared_ptr<svg_scene>& sscn, const load_options& opts) {
-    auto scn = std::make_shared<scene>();
+scene* svg_to_scene(const svg_scene* sscn, const load_options& opts) {
+    auto scn = new scene();
     auto sid = 0;
     for (auto sshp : sscn->shapes) {
         // TODO: recursive shape
-        auto sgr = std::make_shared<shape_group>();
+        auto sgr = new shape_group();
         sgr->name = "shape" + std::to_string(sid++);
-        auto shp = std::make_shared<shape>();
+        auto shp = new shape();
         shp->name = sgr->name;
         for (auto spth : sshp->paths) {
             auto o = (int)shp->pos.size();
@@ -5870,8 +5832,7 @@ std::shared_ptr<scene> svg_to_scene(
 }
 
 // Load an svg scene
-std::shared_ptr<scene> load_svg_scene(
-    const std::string& filename, const load_options& opts) {
+scene* load_svg_scene(const std::string& filename, const load_options& opts) {
     auto sscn = load_svg(filename);
     return svg_to_scene(sscn, opts);
 }
@@ -5879,8 +5840,7 @@ std::shared_ptr<scene> load_svg_scene(
 #endif
 
 // Load a scene
-std::shared_ptr<scene> load_scene(
-    const std::string& filename, const load_options& opts) {
+scene* load_scene(const std::string& filename, const load_options& opts) {
     auto ext = path_extension(filename);
     if (ext == ".obj" || ext == ".OBJ") return load_obj_scene(filename, opts);
 #if YGL_GLTF
@@ -5895,8 +5855,8 @@ std::shared_ptr<scene> load_scene(
 }
 
 // Save a scene
-void save_scene(const std::string& filename, const std::shared_ptr<scene>& scn,
-    const save_options& opts) {
+void save_scene(
+    const std::string& filename, const scene* scn, const save_options& opts) {
     auto ext = path_extension(filename);
     if (ext == ".obj" || ext == ".OBJ")
         return save_obj_scene(filename, scn, opts);
@@ -6094,8 +6054,8 @@ enum struct trace_point_type {
 // Surface point with geometry and material data. Supports point on
 // envmap too. This is the key data manipulated in the path tracer.
 struct trace_point {
-    std::shared_ptr<shape> shp = nullptr;            // shape
-    std::shared_ptr<environment> env = nullptr;      // environment
+    const shape* shp = nullptr;                      // shape
+    const environment* env = nullptr;                // environment
     trace_point_type type = trace_point_type::none;  // type
     vec3f pos = zero3f;                              // pos
     vec3f norm = {0, 0, 1};                          // norm
@@ -6398,8 +6358,7 @@ std::tuple<vec3f, bool> sample_brdfcos(
 }
 
 // Create a point for an environment map. Resolves material with textures.
-trace_point eval_environment_point(
-    const std::shared_ptr<environment>& env, const vec2f& uv) {
+trace_point eval_environment_point(const environment* env, const vec2f& uv) {
     auto pt = trace_point();
     pt.env = env;
     pt.type = trace_point_type::environment;
@@ -6417,12 +6376,12 @@ trace_point eval_environment_point(
 }
 
 // Create a point for a shape. Resolves geometry and material with textures.
-trace_point eval_shape_point(const std::shared_ptr<shape>& shp,
-    const frame3f& frame, int eid, const vec2f& euv) {
+trace_point eval_shape_point(
+    const shape* shp, const frame3f& frame, int eid, const vec2f& euv) {
     // default material
-    static auto def_material = (std::shared_ptr<material>)nullptr;
+    static auto def_material = (material*)nullptr;
     if (!def_material) {
-        def_material = std::make_shared<material>();
+        def_material = new material();
         def_material->kd = {0.2f, 0.2f, 0.2f};
         def_material->rs = 1;
     }
@@ -6666,8 +6625,8 @@ trace_point sample_lights(const trace_lights& lights, const trace_point& pt,
 }
 
 // Intersects a ray with the scn and return the point (or env point).
-trace_point intersect_scene(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<bvh_tree>& bvh, const ray3f& ray) {
+trace_point intersect_scene(
+    const scene* scn, const bvh_tree* bvh, const ray3f& ray) {
     auto iid = 0, sid = 0, eid = 0;
     auto euv = zero2f;
     auto ray_t = 0.0f;
@@ -6688,9 +6647,8 @@ trace_point intersect_scene(const std::shared_ptr<scene>& scn,
 }
 
 // Test occlusion.
-vec3f eval_transmission(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<bvh_tree>& bvh, const trace_point& pt,
-    const trace_point& lpt, const trace_params& params) {
+vec3f eval_transmission(const scene* scn, const bvh_tree* bvh,
+    const trace_point& pt, const trace_point& lpt, const trace_params& params) {
     if (params.notransmission) {
         auto ray = make_segment(pt.pos, lpt.pos);
         return (intersect_bvh(bvh, ray, true)) ? zero3f : vec3f{1, 1, 1};
@@ -6715,10 +6673,9 @@ float weight_mis(float w0, float w1) {
 }
 
 // Recursive path tracing.
-vec3f trace_path(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<bvh_tree>& bvh, const trace_lights& lights,
-    const trace_point& pt_, const vec3f& wo_, trace_pixel& pxl,
-    const trace_params& params) {
+vec3f trace_path(const scene* scn, const bvh_tree* bvh,
+    const trace_lights& lights, const trace_point& pt_, const vec3f& wo_,
+    trace_pixel& pxl, const trace_params& params) {
     auto pt = pt_;
     auto wo = wo_;
 
@@ -6795,10 +6752,9 @@ vec3f trace_path(const std::shared_ptr<scene>& scn,
 }
 
 // Recursive path tracing.
-vec3f trace_path_nomis(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<bvh_tree>& bvh, const trace_lights& lights,
-    const trace_point& pt_, const vec3f& wo_, trace_pixel& pxl,
-    const trace_params& params) {
+vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
+    const trace_lights& lights, const trace_point& pt_, const vec3f& wo_,
+    trace_pixel& pxl, const trace_params& params) {
     // emission
     auto pt = pt_;
     auto wo = wo_;
@@ -6863,10 +6819,9 @@ vec3f trace_path_nomis(const std::shared_ptr<scene>& scn,
 }
 
 // Recursive path tracing.
-vec3f trace_path_hack(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<bvh_tree>& bvh, const trace_lights& lights,
-    const trace_point& pt_, const vec3f& wo_, trace_pixel& pxl,
-    const trace_params& params) {
+vec3f trace_path_hack(const scene* scn, const bvh_tree* bvh,
+    const trace_lights& lights, const trace_point& pt_, const vec3f& wo_,
+    trace_pixel& pxl, const trace_params& params) {
     auto pt = pt_;
     auto wo = wo_;
 
@@ -6927,10 +6882,9 @@ vec3f trace_path_hack(const std::shared_ptr<scene>& scn,
 }
 
 // Direct illumination.
-vec3f trace_direct(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<bvh_tree>& bvh, const trace_lights& lights,
-    const trace_point& pt, const vec3f& wo, int bounce, trace_pixel& pxl,
-    const trace_params& params) {
+vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
+    const trace_lights& lights, const trace_point& pt, const vec3f& wo,
+    int bounce, trace_pixel& pxl, const trace_params& params) {
     // emission
     auto l = eval_emission(pt, wo);
     if (eval_brdf_albedo(pt) == zero3f || lights.empty()) return l;
@@ -6973,18 +6927,16 @@ vec3f trace_direct(const std::shared_ptr<scene>& scn,
 }
 
 // Direct illumination.
-vec3f trace_direct(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<bvh_tree>& bvh, const trace_lights& lights,
-    const trace_point& pt, const vec3f& wo, trace_pixel& pxl,
-    const trace_params& params) {
+vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
+    const trace_lights& lights, const trace_point& pt, const vec3f& wo,
+    trace_pixel& pxl, const trace_params& params) {
     return trace_direct(scn, bvh, lights, pt, wo, 0, pxl, params);
 }
 
 // Eyelight for quick previewing.
-vec3f trace_eyelight(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<bvh_tree>& bvh, const trace_lights& lights,
-    const trace_point& pt, const vec3f& wo, int bounce, trace_pixel& pxl,
-    const trace_params& params) {
+vec3f trace_eyelight(const scene* scn, const bvh_tree* bvh,
+    const trace_lights& lights, const trace_point& pt, const vec3f& wo,
+    int bounce, trace_pixel& pxl, const trace_params& params) {
     // emission
     auto l = eval_emission(pt, wo);
     if (eval_brdf_albedo(pt) == zero3f) return l;
@@ -7005,42 +6957,37 @@ vec3f trace_eyelight(const std::shared_ptr<scene>& scn,
 }
 
 // Eyelight for quick previewing.
-vec3f trace_eyelight(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<bvh_tree>& bvh, const trace_lights& lights,
-    const trace_point& pt, const vec3f& wo, trace_pixel& pxl,
-    const trace_params& params) {
+vec3f trace_eyelight(const scene* scn, const bvh_tree* bvh,
+    const trace_lights& lights, const trace_point& pt, const vec3f& wo,
+    trace_pixel& pxl, const trace_params& params) {
     return trace_eyelight(scn, bvh, lights, pt, wo, 0, pxl, params);
 }
 
 // Debug previewing.
-vec3f trace_debug_normal(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<bvh_tree>& bvh, const trace_lights& lights,
-    const trace_point& pt, const vec3f& wo, trace_pixel& pxl,
-    const trace_params& params) {
+vec3f trace_debug_normal(const scene* scn, const bvh_tree* bvh,
+    const trace_lights& lights, const trace_point& pt, const vec3f& wo,
+    trace_pixel& pxl, const trace_params& params) {
     return pt.norm * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
 }
 
 // Debug previewing.
-vec3f trace_debug_albedo(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<bvh_tree>& bvh, const trace_lights& lights,
-    const trace_point& pt, const vec3f& wo, trace_pixel& pxl,
-    const trace_params& params) {
+vec3f trace_debug_albedo(const scene* scn, const bvh_tree* bvh,
+    const trace_lights& lights, const trace_point& pt, const vec3f& wo,
+    trace_pixel& pxl, const trace_params& params) {
     return eval_brdf_albedo(pt);
 }
 
 // Debug previewing.
-vec3f trace_debug_texcoord(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<bvh_tree>& bvh, const trace_lights& lights,
-    const trace_point& pt, const vec3f& wo, trace_pixel& pxl,
-    const trace_params& params) {
+vec3f trace_debug_texcoord(const scene* scn, const bvh_tree* bvh,
+    const trace_lights& lights, const trace_point& pt, const vec3f& wo,
+    trace_pixel& pxl, const trace_params& params) {
     return {pt.texcoord.x, pt.texcoord.y, 0};
 }
 
 // Trace shader function
-using trace_shader = vec3f (*)(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<bvh_tree>& bvh, const trace_lights& lights,
-    const trace_point& pt, const vec3f& wo, trace_pixel& pxl,
-    const trace_params& params);
+using trace_shader = vec3f (*)(const scene* scn, const bvh_tree* bvh,
+    const trace_lights& lights, const trace_point& pt, const vec3f& wo,
+    trace_pixel& pxl, const trace_params& params);
 
 // Trace filter function
 using trace_filter = float (*)(float);
@@ -7075,8 +7022,7 @@ static auto trace_filter_sizes = std::unordered_map<trace_filter_type, int>{
 };
 
 // Trace a single sample
-void trace_sample(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<camera>& cam, const std::shared_ptr<bvh_tree>& bvh,
+void trace_sample(const scene* scn, const camera* cam, const bvh_tree* bvh,
     const trace_lights& lights, trace_pixel& pxl, trace_shader shader,
     const trace_params& params) {
     pxl.sample += 1;
@@ -7099,8 +7045,7 @@ void trace_sample(const std::shared_ptr<scene>& scn,
 }
 
 // Trace the next nsamples.
-void trace_samples(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<camera>& cam, const std::shared_ptr<bvh_tree>& bvh,
+void trace_samples(const scene* scn, const camera* cam, const bvh_tree* bvh,
     const trace_lights& lights, image4f& img, image<trace_pixel>& pixels,
     int nsamples, const trace_params& params) {
     auto shader = trace_shaders.at(params.shader);
@@ -7140,10 +7085,9 @@ void trace_samples(const std::shared_ptr<scene>& scn,
 }
 
 // Trace a filtered sample of samples
-void trace_sample_filtered(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<camera>& cam, const std::shared_ptr<bvh_tree>& bvh,
-    const trace_lights& lights, image4f& img, trace_pixel& pxl,
-    trace_shader shader, trace_filter filter, int filter_size,
+void trace_sample_filtered(const scene* scn, const camera* cam,
+    const bvh_tree* bvh, const trace_lights& lights, image4f& img,
+    trace_pixel& pxl, trace_shader shader, trace_filter filter, int filter_size,
     std::mutex& image_mutex, const trace_params& params) {
     pxl.sample += 1;
     pxl.dimension = 0;
@@ -7181,10 +7125,9 @@ void trace_sample_filtered(const std::shared_ptr<scene>& scn,
 }
 
 // Trace the next nsamples.
-void trace_samples_filtered(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<camera>& cam, const std::shared_ptr<bvh_tree>& bvh,
-    const trace_lights& lights, image4f& img, image<trace_pixel>& pixels,
-    int nsamples, const trace_params& params) {
+void trace_samples_filtered(const scene* scn, const camera* cam,
+    const bvh_tree* bvh, const trace_lights& lights, image4f& img,
+    image<trace_pixel>& pixels, int nsamples, const trace_params& params) {
     auto shader = trace_shaders.at(params.shader);
     auto filter = trace_filters.at(params.filter);
     auto filter_size = trace_filter_sizes.at(params.filter);
@@ -7230,8 +7173,7 @@ void trace_samples_filtered(const std::shared_ptr<scene>& scn,
 }
 
 // Starts an anyncrhounous renderer.
-void trace_async_start(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<camera>& cam, const std::shared_ptr<bvh_tree>& bvh,
+void trace_async_start(const scene* scn, const camera* cam, const bvh_tree* bvh,
     const trace_lights& lights, image4f& img, image<trace_pixel>& pixels,
     std::vector<std::thread>& threads, bool& stop_flag,
     const trace_params& params) {
@@ -7266,7 +7208,7 @@ void trace_async_stop(std::vector<std::thread>& threads, bool& stop_flag) {
 }
 
 // Initialize trace lights
-trace_lights make_trace_lights(const std::shared_ptr<scene>& scn) {
+trace_lights make_trace_lights(const scene* scn) {
     auto lights = trace_lights();
 
     for (auto sgr : scn->shapes) {
@@ -7583,17 +7525,17 @@ inline void obj_parse(char*& s, obj_texture_info& info) {
 }
 
 // Load MTL
-std::vector<std::shared_ptr<obj_material>> load_mtl(const std::string& filename,
-    bool flip_tr, std::vector<std::string>& textures) {
+std::vector<obj_material*> load_mtl(const std::string& filename, bool flip_tr,
+    std::vector<std::string>& textures) {
     // clear materials
-    auto materials = std::vector<std::shared_ptr<obj_material>>();
+    auto materials = std::vector<obj_material*>();
 
     // open file
     auto fs = fopen(filename.c_str(), "rt");
     if (!fs) throw std::runtime_error("cannot open filename " + filename);
 
     // add a material preemptively to avoid crashes
-    materials.push_back(std::make_shared<obj_material>());
+    materials.push_back(new obj_material());
     auto mat = materials.back();
 
     // read the file line by line
@@ -7615,7 +7557,7 @@ std::vector<std::shared_ptr<obj_material>> load_mtl(const std::string& filename,
 
         // possible token values
         if (obj_streq(cmd, "newmtl")) {
-            materials.push_back(std::make_shared<obj_material>());
+            materials.push_back(new obj_material());
             mat = materials.back();
             obj_parse(ss, mat->name);
         } else if (obj_streq(cmd, "illum")) {
@@ -7726,8 +7668,8 @@ std::vector<std::shared_ptr<obj_material>> load_mtl(const std::string& filename,
 }
 
 // Loads textures for an scene.
-void load_textures(const std::shared_ptr<obj_scene>& obj,
-    const std::string& dirname, bool skip_missing) {
+void load_textures(
+    const obj_scene* obj, const std::string& dirname, bool skip_missing) {
     for (auto txt : obj->textures) {
         auto filename = dirname + txt->path;
         for (auto& c : filename)
@@ -7749,10 +7691,10 @@ void load_textures(const std::shared_ptr<obj_scene>& obj,
 }
 
 // Loads an OBJ
-std::shared_ptr<obj_scene> load_obj(const std::string& filename, bool load_txt,
+obj_scene* load_obj(const std::string& filename, bool load_txt,
     bool skip_missing, bool flip_texcoord, bool flip_tr) {
     // clear obj
-    auto obj = std::make_shared<obj_scene>();
+    auto obj = new obj_scene();
 
     // splitting policy
     auto split_material = false;
@@ -7765,14 +7707,14 @@ std::shared_ptr<obj_scene> load_obj(const std::string& filename, bool load_txt,
 
     // current parsing values
     auto mtllibs = std::vector<std::string>();
-    auto oobj = std::shared_ptr<obj_object>();
+    auto oobj = (obj_object*)nullptr;
     auto matname = ""s;
     auto oname = ""s;
     auto smoothing = true;
     auto elems = std::vector<obj_vertex>();
 
     // initializing obj
-    obj->objects.push_back(std::make_shared<obj_object>());
+    obj->objects.push_back(new obj_object());
     oobj = obj->objects.back();
     oobj->matnames.push_back("");
     oobj->groupnames.push_back("");
@@ -7848,7 +7790,7 @@ std::shared_ptr<obj_scene> load_obj(const std::string& filename, bool load_txt,
         } else if (obj_streq(cmd, "o")) {
             auto name = ""s;
             obj_parse(ss, name);
-            obj->objects.push_back(std::make_shared<obj_object>());
+            obj->objects.push_back(new obj_object());
             oobj = obj->objects.back();
             oobj->name = name;
             oobj->matnames.push_back("");
@@ -7859,7 +7801,7 @@ std::shared_ptr<obj_scene> load_obj(const std::string& filename, bool load_txt,
         } else if (obj_streq(cmd, "usemtl")) {
             obj_parse(ss, matname);
             if (split_material) {
-                obj->objects.push_back(std::make_shared<obj_object>());
+                obj->objects.push_back(new obj_object());
                 oobj = obj->objects.back();
                 oobj->name = oname;
                 oobj->matnames.push_back(matname);
@@ -7872,7 +7814,7 @@ std::shared_ptr<obj_scene> load_obj(const std::string& filename, bool load_txt,
             auto name = ""s;
             obj_parse(ss, name);
             if (split_group) {
-                obj->objects.push_back(std::make_shared<obj_object>());
+                obj->objects.push_back(new obj_object());
                 oobj = obj->objects.back();
                 oobj->name = oname + name;
                 oobj->matnames.push_back(matname);
@@ -7886,7 +7828,7 @@ std::shared_ptr<obj_scene> load_obj(const std::string& filename, bool load_txt,
             obj_parse(ss, name);
             smoothing = (name == "on");
             if (split_smoothing) {
-                obj->objects.push_back(std::make_shared<obj_object>());
+                obj->objects.push_back(new obj_object());
                 oobj = obj->objects.back();
                 oobj->name = oname;
                 oobj->matnames.push_back(matname);
@@ -7911,7 +7853,7 @@ std::shared_ptr<obj_scene> load_obj(const std::string& filename, bool load_txt,
             mtllibs.push_back("");
             obj_parse(ss, mtllibs.back());
         } else if (obj_streq(cmd, "c")) {
-            auto cam = std::make_shared<obj_camera>();
+            auto cam = new obj_camera();
             obj_parse(ss, cam->name);
             obj_parse(ss, cam->ortho);
             obj_parse(ss, cam->yfov);
@@ -7921,13 +7863,13 @@ std::shared_ptr<obj_scene> load_obj(const std::string& filename, bool load_txt,
             obj_parse(ss, cam->frame);
             obj->cameras.push_back(cam);
         } else if (obj_streq(cmd, "e")) {
-            auto env = std::make_shared<obj_environment>();
+            auto env = new obj_environment();
             obj_parse(ss, env->name);
             obj_parse(ss, env->matname);
             obj_parse(ss, env->frame);
             obj->environments.push_back(env);
         } else if (obj_streq(cmd, "n")) {
-            auto nde = std::make_shared<obj_node>();
+            auto nde = new obj_node();
             obj_parse(ss, nde->name);
             obj_parse(ss, nde->parent);
             obj_parse(ss, nde->camname);
@@ -7951,6 +7893,7 @@ std::shared_ptr<obj_scene> load_obj(const std::string& filename, bool load_txt,
     for (auto idx = 0; idx < obj->objects.size(); idx++) {
         if (!obj->objects[idx]->elems.empty()) continue;
         if (!obj->objects[idx]->verts.empty()) continue;
+        delete obj->objects[idx];
         obj->objects.erase(obj->objects.begin() + idx);
         idx--;
     }
@@ -7991,7 +7934,7 @@ std::shared_ptr<obj_scene> load_obj(const std::string& filename, bool load_txt,
     }
 
     auto end = std::remove_if(obj->objects.begin(), obj->objects.end(),
-        [](const std::shared_ptr<obj_object>& x) { return !x; });
+        [](const obj_object* x) { return !x; });
     obj->objects.erase(end, obj->objects.end());
 
     // parse materials
@@ -8008,7 +7951,7 @@ std::shared_ptr<obj_scene> load_obj(const std::string& filename, bool load_txt,
             obj->materials.end(), materials.begin(), materials.end());
         for (auto& txt : textures) {
             if (texture_set.find(txt) != texture_set.end()) continue;
-            obj->textures.push_back(std::make_shared<obj_texture>());
+            obj->textures.push_back(new obj_texture());
             obj->textures.back()->path = txt;
             texture_set.insert(txt);
         }
@@ -8146,7 +8089,7 @@ inline void obj_dump_sp(FILE* fs, const T& val) {
 
 // Save an MTL file
 void save_mtl(const std::string& filename,
-    const std::vector<std::shared_ptr<obj_material>>& materials, bool flip_tr) {
+    const std::vector<obj_material*>& materials, bool flip_tr) {
     // open file
     auto fs = fopen(filename.c_str(), "wt");
     if (!fs) throw std::runtime_error("cannot open filename " + filename);
@@ -8192,8 +8135,8 @@ void save_mtl(const std::string& filename,
 }
 
 // Loads textures for an scene.
-void save_textures(const std::shared_ptr<obj_scene>& obj,
-    const std::string& dirname, bool skip_missing) {
+void save_textures(
+    const obj_scene* obj, const std::string& dirname, bool skip_missing) {
     for (auto txt : obj->textures) {
         if (txt->datab.empty() && txt->dataf.empty()) continue;
         auto filename = dirname + txt->path;
@@ -8218,9 +8161,8 @@ void save_textures(const std::shared_ptr<obj_scene>& obj,
 }
 
 // Save an OBJ
-void save_obj(const std::string& filename,
-    const std::shared_ptr<obj_scene>& obj, bool save_txt, bool skip_missing,
-    bool flip_texcoord, bool flip_tr) {
+void save_obj(const std::string& filename, const obj_scene* obj, bool save_txt,
+    bool skip_missing, bool flip_texcoord, bool flip_tr) {
     // open file
     auto fs = fopen(filename.c_str(), "wt");
     if (!fs) throw std::runtime_error("cannot open filename " + filename);
@@ -8406,27 +8348,6 @@ void serialize(T*& val, json& js, bool reading) {
         }
         if (!js.is_object()) throw std::runtime_error("object expected");
         if (!val) val = new T();
-        serialize(*val, js, reading);
-    } else {
-        if (!val) {
-            js = nullptr;
-            return;
-        }
-        if (!js.is_object()) js = json::object();
-        serialize(*val, js, reading);
-    }
-}
-
-// Parse support function.
-template <typename T>
-void serialize(std::shared_ptr<T>& val, json& js, bool reading) {
-    if (reading) {
-        if (js.is_null()) {
-            val = nullptr;
-            return;
-        }
-        if (!js.is_object()) throw std::runtime_error("object expected");
-        if (!val) val = std::make_shared<T>();
         serialize(*val, js, reading);
     } else {
         if (!val) {
@@ -9277,8 +9198,8 @@ std::string base64_decode(std::string const& encoded_string) {
 }
 
 // Load buffer data.
-void load_buffers(const std::shared_ptr<glTF>& gltf, const std::string& dirname,
-    bool skip_missing) {
+void load_buffers(
+    const glTF* gltf, const std::string& dirname, bool skip_missing) {
     for (auto buffer : gltf->buffers) {
         if (buffer->uri == "") continue;
         try {
@@ -9315,8 +9236,8 @@ void load_buffers(const std::shared_ptr<glTF>& gltf, const std::string& dirname,
 }
 
 // Loads images.
-void load_images(const std::shared_ptr<glTF>& gltf, const std::string& dirname,
-    bool skip_missing) {
+void load_images(
+    const glTF* gltf, const std::string& dirname, bool skip_missing) {
     for (auto image : gltf->images) {
         image->data = image_data();
         auto filename = std::string();
@@ -9392,10 +9313,10 @@ void load_images(const std::shared_ptr<glTF>& gltf, const std::string& dirname,
 }
 
 // Loads a gltf.
-std::shared_ptr<glTF> load_gltf(const std::string& filename, bool load_bin,
-    bool load_image, bool skip_missing) {
+glTF* load_gltf(const std::string& filename, bool load_bin, bool load_image,
+    bool skip_missing) {
     // clear data
-    auto gltf = std::make_shared<glTF>();
+    auto gltf = new glTF();
 
     // load json
     std::ifstream stream(filename.c_str());
@@ -9425,8 +9346,8 @@ std::shared_ptr<glTF> load_gltf(const std::string& filename, bool load_bin,
 }
 
 // Save buffer data.
-void save_buffers(const std::shared_ptr<glTF>& gltf, const std::string& dirname,
-    bool skip_missing) {
+void save_buffers(
+    const glTF* gltf, const std::string& dirname, bool skip_missing) {
     for (auto buffer : gltf->buffers) {
         try {
             if (startswith(buffer->uri, "data:")) {
@@ -9442,8 +9363,8 @@ void save_buffers(const std::shared_ptr<glTF>& gltf, const std::string& dirname,
 }
 
 // Save images.
-void save_images(const std::shared_ptr<glTF>& gltf, const std::string& dirname,
-    bool skip_missing) {
+void save_images(
+    const glTF* gltf, const std::string& dirname, bool skip_missing) {
     for (auto image : gltf->images) {
         try {
             if (startswith(image->uri, "data:")) {
@@ -9474,11 +9395,11 @@ void save_images(const std::shared_ptr<glTF>& gltf, const std::string& dirname,
 }
 
 // Saves a gltf.
-void save_gltf(const std::string& filename, const std::shared_ptr<glTF>& gltf,
-    bool save_bin, bool save_image) {
+void save_gltf(const std::string& filename, const glTF* gltf, bool save_bin,
+    bool save_image) {
     // dumps json
     auto js = json();
-    serialize((std::shared_ptr<glTF>&)gltf, js, false);
+    serialize((glTF*&)gltf, js, false);
 
     // save json
     save_text(filename, js.dump(2));
@@ -9504,10 +9425,10 @@ void gltf_fwrite(FILE* f, const T* v, int count) {
 }
 
 // Loads a binary gltf.
-std::shared_ptr<glTF> load_binary_gltf(const std::string& filename,
-    bool load_bin, bool load_image, bool skip_missing) {
+glTF* load_binary_gltf(const std::string& filename, bool load_bin,
+    bool load_image, bool skip_missing) {
     // clear data
-    auto gltf = std::make_shared<glTF>();
+    auto gltf = new glTF();
 
     // opens binary file
     auto f = fopen(filename.c_str(), "rb");
@@ -9590,9 +9511,8 @@ std::shared_ptr<glTF> load_binary_gltf(const std::string& filename,
     }
 
     // parse json
-    auto gltf_ = gltf.get();
     try {
-        serialize(gltf_, js, true);
+        serialize(gltf, js, true);
     } catch (const std::exception& e) {
         throw std::runtime_error(
             "cannot parse gltf json " + std::string(e.what()));
@@ -9618,8 +9538,8 @@ std::shared_ptr<glTF> load_binary_gltf(const std::string& filename,
 }
 
 // Saves a binary gltf.
-void save_binary_gltf(const std::string& filename,
-    const std::shared_ptr<glTF>& gltf, bool save_bin, bool save_image) {
+void save_binary_gltf(const std::string& filename, const glTF* gltf,
+    bool save_bin, bool save_image) {
     // opens binary file
     auto f = fopen(filename.c_str(), "wb");
     if (!f) throw std::runtime_error("could not write binary file");
@@ -9671,8 +9591,7 @@ void save_binary_gltf(const std::string& filename,
     if (save_image) save_images(gltf, dirname, false);
 }
 
-accessor_view::accessor_view(const std::shared_ptr<glTF>& gltf,
-    const std::shared_ptr<glTFAccessor>& accessor) {
+accessor_view::accessor_view(const glTF* gltf, const glTFAccessor* accessor) {
     _size = accessor->count;
     _ncomp = _num_components(accessor->type);
     _ctype = accessor->componentType;
@@ -9794,15 +9713,15 @@ int accessor_view::_ctype_size(glTFAccessorComponentType componentType) {
 namespace ygl {
 
 // Load SVG
-std::shared_ptr<svg_scene> load_svg(const std::string& filename) {
+svg_scene* load_svg(const std::string& filename) {
     auto svg = nsvgParseFromFile(filename.c_str(), "mm", 96);
     if (!svg) throw std::runtime_error("cannot load SVG");
-    auto scn = std::make_shared<svg_scene>();
+    auto scn = new svg_scene();
     for (auto shape = svg->shapes; shape != nullptr; shape = shape->next) {
-        auto shp = std::make_shared<svg_shape>();
+        auto shp = new svg_shape();
         scn->shapes.push_back(shp);
         for (auto path = shape->paths; path != nullptr; path = path->next) {
-            auto pth = std::make_shared<svg_path>();
+            auto pth = new svg_path();
             shp->paths.push_back(pth);
             pth->pos.resize(path->npts);
             for (int i = 0; i < path->npts; i += 1) {
@@ -10641,10 +10560,10 @@ namespace ygl {
 // makes the cornell box scene
 // http://graphics.cs.williams.edu/data
 // http://www.graphics.cornell.edu/online/box/data.html
-std::shared_ptr<scene> make_cornell_box_scene() {
+scene* make_cornell_box_scene() {
     auto make_camera = [](std::string name, vec3f from, vec3f to, float yfov,
                            float aperture, float aspect = 16.0f / 9.0f) {
-        auto cam = std::make_shared<camera>();
+        auto cam = new camera();
         cam->name = name;
         cam->frame = lookat_frame(from, to, {0, 1, 0});
         cam->aperture = aperture;
@@ -10654,16 +10573,15 @@ std::shared_ptr<scene> make_cornell_box_scene() {
         return cam;
     };
 
-    auto make_quad = [](std::string name, const std::shared_ptr<material>& mat,
-                         vec3f pos, vec3f rot = {0, 0, 0},
-                         vec3f scale = {1, 1, 1}) {
-        auto sgr = std::make_shared<shape_group>();
+    auto make_quad = [](std::string name, material* mat, vec3f pos,
+                         vec3f rot = {0, 0, 0}, vec3f scale = {1, 1, 1}) {
+        auto sgr = new shape_group();
         sgr->name = name;
         sgr->frame = translation_frame(pos) *
                      rotation_frame(vec3f{0, 0, 1}, rot[2] * pif / 180) *
                      rotation_frame(vec3f{0, 1, 0}, rot[1] * pif / 180) *
                      rotation_frame(vec3f{1, 0, 0}, rot[0] * pif / 180);
-        auto shp = std::make_shared<shape>();
+        auto shp = new shape();
         shp->materials.push_back(mat);
         shp->name = name;
         make_uvquad(shp->quads, shp->pos, shp->norm, shp->texcoord, 0);
@@ -10672,16 +10590,15 @@ std::shared_ptr<scene> make_cornell_box_scene() {
         return sgr;
     };
 
-    auto make_box = [](std::string name, const std::shared_ptr<material>& mat,
-                        vec3f pos, vec3f rot = {0, 0, 0},
-                        vec3f scale = {1, 1, 1}) {
-        auto sgr = std::make_shared<shape_group>();
+    auto make_box = [](std::string name, material* mat, vec3f pos,
+                        vec3f rot = {0, 0, 0}, vec3f scale = {1, 1, 1}) {
+        auto sgr = new shape_group();
         sgr->name = name;
         sgr->frame = translation_frame(pos) *
                      rotation_frame(vec3f{0, 0, 1}, rot[2] * pif / 180) *
                      rotation_frame(vec3f{0, 1, 0}, rot[1] * pif / 180) *
                      rotation_frame(vec3f{1, 0, 0}, rot[0] * pif / 180);
-        auto shp = std::make_shared<shape>();
+        auto shp = new shape();
         shp->materials.push_back(mat);
         shp->name = name;
         make_uvcube(shp->quads, shp->pos, shp->norm, shp->texcoord, 0);
@@ -10691,7 +10608,7 @@ std::shared_ptr<scene> make_cornell_box_scene() {
     };
 
     auto make_material = [](std::string name, vec3f kd, vec3f ke = {0, 0, 0}) {
-        auto mat = std::make_shared<material>();
+        auto mat = new material();
         mat->type = material_type::specular_roughness;
         mat->name = name;
         mat->ke = ke;
@@ -10701,7 +10618,7 @@ std::shared_ptr<scene> make_cornell_box_scene() {
         return mat;
     };
 
-    auto scn = std::make_shared<scene>();
+    auto scn = new scene();
     scn->cameras.push_back(
         make_camera("cb_cam", {0, 1, 5.15f}, {0, 1, 0}, 27, 0, 1));
     scn->materials.push_back(make_material("cb_white", {0.725f, 0.71f, 0.68f}));
@@ -10806,9 +10723,7 @@ void make_uvhollowcutsphere1(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
 namespace ygl {
 
 // Makes/updates a test texture
-void update_proc_elem(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<texture>& txt,
-    const std::shared_ptr<proc_texture>& ptxt) {
+void update_proc_elem(scene* scn, texture* txt, const proc_texture* ptxt) {
     if (ptxt->name == "") throw std::runtime_error("cannot use empty name");
 
     txt->name = ptxt->name;
@@ -10875,9 +10790,7 @@ void update_proc_elem(const std::shared_ptr<scene>& scn,
 }
 
 // Makes/updates a test material
-void update_proc_elem(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<material>& mat,
-    const std::shared_ptr<proc_material>& pmat) {
+void update_proc_elem(scene* scn, material* mat, const proc_material* pmat) {
     if (pmat->name == "") throw std::runtime_error("cannot use empty name");
 
     auto txt = find_named_elem(scn->textures, pmat->texture);
@@ -10929,9 +10842,7 @@ void update_proc_elem(const std::shared_ptr<scene>& scn,
 }
 
 // Makes/updates a test shape
-void update_proc_elem(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<shape_group>& sgr,
-    const std::shared_ptr<proc_shape>& pshp) {
+void update_proc_elem(scene* scn, shape_group* sgr, const proc_shape* pshp) {
     if (pshp->name == "") throw std::runtime_error("cannot use empty name");
     auto nshapes = 1;
     if (pshp->type == proc_shape_type::matball ||
@@ -10940,7 +10851,7 @@ void update_proc_elem(const std::shared_ptr<scene>& scn,
     if (sgr->shapes.size() != nshapes) {
         sgr->shapes.clear();
         for (auto sid = 0; sid < nshapes; sid++)
-            sgr->shapes.push_back(std::make_shared<shape>());
+            sgr->shapes.push_back(new shape());
     }
 
     sgr->name = pshp->name;
@@ -11087,9 +10998,7 @@ void update_proc_elem(const std::shared_ptr<scene>& scn,
 }
 
 // Makes/updates a test shape
-void update_proc_elem(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<camera>& cam,
-    const std::shared_ptr<proc_camera>& pcam) {
+void update_proc_elem(scene* scn, camera* cam, const proc_camera* pcam) {
     if (pcam->name == "") throw std::runtime_error("cannot use empty name");
     cam->name = pcam->name;
     cam->frame = lookat_frame(pcam->from, pcam->to, vec3f{0, 1, 0});
@@ -11102,9 +11011,8 @@ void update_proc_elem(const std::shared_ptr<scene>& scn,
 }
 
 // Makes/updates a test shape
-void update_proc_elem(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<environment>& env,
-    const std::shared_ptr<proc_environment>& penv) {
+void update_proc_elem(
+    scene* scn, environment* env, const proc_environment* penv) {
     if (penv->name == "") throw std::runtime_error("cannot use empty name");
     env->name = penv->name;
     env->frame = penv->frame * rotation_frame(vec3f{0, 1, 0}, penv->rotation);
@@ -11113,8 +11021,7 @@ void update_proc_elem(const std::shared_ptr<scene>& scn,
 }
 
 // Makes/updates a test shape
-void update_proc_elem(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<node>& nde, const std::shared_ptr<proc_node>& pnde) {
+void update_proc_elem(scene* scn, node* nde, const proc_node* pnde) {
     if (pnde->name == "") throw std::runtime_error("cannot use empty name");
     nde->name = pnde->name;
     nde->local = pnde->frame;
@@ -11127,13 +11034,12 @@ void update_proc_elem(const std::shared_ptr<scene>& scn,
 }
 
 // Makes/updates a test animation
-void update_proc_elem(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<animation_group>& agr,
-    const std::shared_ptr<proc_animation>& panm) {
+void update_proc_elem(
+    scene* scn, animation_group* agr, const proc_animation* panm) {
     if (panm->name == "") throw std::runtime_error("cannot use empty name");
     if (agr->animations.size() != 1) {
         agr->animations.clear();
-        agr->animations.push_back(std::make_shared<animation>());
+        agr->animations.push_back(new animation());
     }
     agr->name = panm->name;
     auto anm = agr->animations.front();
@@ -11153,15 +11059,13 @@ void update_proc_elem(const std::shared_ptr<scene>& scn,
 
 // Update test elements
 template <typename T, typename T1>
-void update_proc_scene_elem(const std::shared_ptr<scene>& scn,
-    std::vector<std::shared_ptr<T>>& elems,
-    const std::vector<std::shared_ptr<T1>>& telems,
-    const std::unordered_set<std::shared_ptr<void>>& refresh) {
-    auto emap = std::unordered_map<std::string, std::shared_ptr<T>>();
+void update_proc_scene_elem(scene* scn, std::vector<T*>& elems,
+    const std::vector<T1*>& telems, const std::unordered_set<void*>& refresh) {
+    auto emap = std::unordered_map<std::string, T*>();
     for (auto elem : elems) emap[elem->name] = elem;
     for (auto telem : telems) {
         if (!contains(emap, telem->name)) {
-            elems.push_back(std::make_shared<T>());
+            elems.push_back(new T());
             update_proc_elem(scn, elems.back(), telem);
         } else {
             auto elem = emap.at(telem->name);
@@ -11171,9 +11075,8 @@ void update_proc_scene_elem(const std::shared_ptr<scene>& scn,
 }
 
 // Makes/updates a test scene
-void update_proc_elems(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<proc_scene>& pscn,
-    const std::unordered_set<std::shared_ptr<void>>& refresh) {
+void update_proc_elems(scene* scn, const proc_scene* pscn,
+    const std::unordered_set<void*>& refresh) {
     update_proc_scene_elem(scn, scn->cameras, pscn->cameras, refresh);
     update_proc_scene_elem(scn, scn->textures, pscn->textures, refresh);
     update_proc_scene_elem(scn, scn->materials, pscn->materials, refresh);
@@ -11185,13 +11088,13 @@ void update_proc_elems(const std::shared_ptr<scene>& scn,
 
 // remove duplicate elems
 template <typename T>
-void remove_duplicate_elems(std::vector<std::shared_ptr<T>>& telems) {
+void remove_duplicate_elems(std::vector<T*>& telems) {
     auto names = std::unordered_set<std::string>();
     for (auto elem : telems) names.insert(elem->name);
     if (names.size() == telems.size()) return;
     names.clear();
-    auto ntelems = std::vector<std::shared_ptr<T>>();
-    auto tdel = std::vector<std::shared_ptr<T>>();
+    auto ntelems = std::vector<T*>();
+    auto tdel = std::vector<T*>();
     for (auto elem : telems) {
         if (contains(names, elem->name)) {
             tdel.push_back(elem);
@@ -11204,7 +11107,7 @@ void remove_duplicate_elems(std::vector<std::shared_ptr<T>>& telems) {
 }
 
 // remove duplicates
-void remove_duplicates(const std::shared_ptr<proc_scene>& scn) {
+void remove_duplicates(proc_scene* scn) {
     remove_duplicate_elems(scn->cameras);
     remove_duplicate_elems(scn->textures);
     remove_duplicate_elems(scn->materials);
@@ -11214,12 +11117,12 @@ void remove_duplicates(const std::shared_ptr<proc_scene>& scn) {
     remove_duplicate_elems(scn->animations);
 }
 
-std::vector<std::shared_ptr<proc_texture>>& proc_texture_presets() {
-    static auto presets = std::vector<std::shared_ptr<proc_texture>>();
+std::vector<proc_texture*>& proc_texture_presets() {
+    static auto presets = std::vector<proc_texture*>();
     if (!presets.empty()) return presets;
 
     auto make_texture = [](const std::string& name, proc_texture_type type) {
-        auto params = std::make_shared<proc_texture>();
+        auto params = new proc_texture();
         params->name = name;
         params->type = type;
         return params;
@@ -11263,13 +11166,13 @@ std::vector<std::shared_ptr<proc_texture>>& proc_texture_presets() {
     return presets;
 }
 
-std::vector<std::shared_ptr<proc_material>>& proc_material_presets() {
-    static auto presets = std::vector<std::shared_ptr<proc_material>>();
+std::vector<proc_material*>& proc_material_presets() {
+    static auto presets = std::vector<proc_material*>();
     if (!presets.empty()) return presets;
 
     auto make_material = [](const std::string& name, proc_material_type type,
                              const vec3f& color, float roughness = 1) {
-        auto params = std::make_shared<proc_material>();
+        auto params = new proc_material();
         params->name = name;
         params->type = type;
         params->color = color;
@@ -11278,7 +11181,7 @@ std::vector<std::shared_ptr<proc_material>>& proc_material_presets() {
     };
     auto make_materialt = [](const std::string& name, proc_material_type type,
                               const std::string& txt, float roughness = 1) {
-        auto params = std::make_shared<proc_material>();
+        auto params = new proc_material();
         params->name = name;
         params->type = type;
         params->color = {1, 1, 1};
@@ -11349,14 +11252,14 @@ std::vector<std::shared_ptr<proc_material>>& proc_material_presets() {
     return presets;
 }
 
-std::vector<std::shared_ptr<proc_shape>>& proc_shape_presets() {
-    static auto presets = std::vector<std::shared_ptr<proc_shape>>();
+std::vector<proc_shape*>& proc_shape_presets() {
+    static auto presets = std::vector<proc_shape*>();
     if (!presets.empty()) return presets;
 
     auto make_shape = [](const std::string& name, proc_shape_type type,
                           int tesselation = -1, int subdivision = 0,
                           bool faceted = false) {
-        auto params = std::make_shared<proc_shape>();
+        auto params = new proc_shape();
         params->name = name;
         params->type = type;
         params->tesselation = tesselation;
@@ -11416,13 +11319,13 @@ std::vector<std::shared_ptr<proc_shape>>& proc_shape_presets() {
     return presets;
 }
 
-std::vector<std::shared_ptr<proc_environment>>& proc_environment_presets() {
-    static auto presets = std::vector<std::shared_ptr<proc_environment>>();
+std::vector<proc_environment*>& proc_environment_presets() {
+    static auto presets = std::vector<proc_environment*>();
     if (!presets.empty()) return presets;
 
     auto make_environment = [](const std::string& name,
                                 const std::string& texture) {
-        auto params = std::make_shared<proc_environment>();
+        auto params = new proc_environment();
         params->name = name;
         params->color = {1, 1, 1};
         params->texture = texture;
@@ -11436,8 +11339,8 @@ std::vector<std::shared_ptr<proc_environment>>& proc_environment_presets() {
     return presets;
 }
 
-std::vector<std::shared_ptr<proc_animation>>& proc_animation_presets() {
-    static auto presets = std::vector<std::shared_ptr<proc_animation>>();
+std::vector<proc_animation*>& proc_animation_presets() {
+    static auto presets = std::vector<proc_animation*>();
     if (!presets.empty()) return presets;
 
     auto make_animation = [](const std::string& name, bool bezier,
@@ -11445,7 +11348,7 @@ std::vector<std::shared_ptr<proc_animation>>& proc_animation_presets() {
                               const std::vector<vec3f>& translation,
                               const std::vector<quat4f>& rotation,
                               const std::vector<vec3f>& scaling) {
-        auto params = std::make_shared<proc_animation>();
+        auto params = new proc_animation();
         params->name = name;
         params->speed = 1;
         params->scale = 1;
@@ -11470,13 +11373,13 @@ std::vector<std::shared_ptr<proc_animation>>& proc_animation_presets() {
     return presets;
 }
 
-std::vector<std::shared_ptr<proc_camera>>& proc_camera_presets() {
-    static auto presets = std::vector<std::shared_ptr<proc_camera>>();
+std::vector<proc_camera*>& proc_camera_presets() {
+    static auto presets = std::vector<proc_camera*>();
     if (!presets.empty()) return presets;
 
     auto make_camera = [](const std::string& name, const vec3f& from,
                            const vec3f& to, float yfov, float aspect) {
-        auto params = std::make_shared<proc_camera>();
+        auto params = new proc_camera();
         params->name = name;
         params->from = from;
         params->to = to;
@@ -11495,21 +11398,20 @@ std::vector<std::shared_ptr<proc_camera>>& proc_camera_presets() {
     return presets;
 }
 
-std::vector<std::shared_ptr<proc_split_scene>>& proc_split_scene_presets() {
-    static auto presets = std::vector<std::shared_ptr<proc_split_scene>>();
+std::vector<proc_split_scene*>& proc_split_scene_presets() {
+    static auto presets = std::vector<proc_split_scene*>();
     if (!presets.empty()) return presets;
 
-    auto make_split_scene =
-        [](const std::shared_ptr<proc_scene>& scn,
-            const std::vector<std::shared_ptr<proc_scene>>& views) {
-            auto params = std::make_shared<proc_split_scene>();
-            params->scn = scn;
-            params->views = views;
-            return params;
-        };
+    auto make_split_scene = [](proc_scene* scn,
+                                const std::vector<proc_scene*>& views) {
+        auto params = new proc_split_scene();
+        params->scn = scn;
+        params->views = views;
+        return params;
+    };
 
     auto make_scene = [](const std::string& name) {
-        auto params = std::make_shared<proc_scene>();
+        auto params = new proc_scene();
         params->name = name;
         return params;
     };
@@ -11517,7 +11419,7 @@ std::vector<std::shared_ptr<proc_split_scene>>& proc_split_scene_presets() {
     auto make_node = [](const std::string& name, const std::string& cam,
                          const std::string& shape, const std::string& env,
                          const vec3f& pos) {
-        auto params = std::make_shared<proc_node>();
+        auto params = new proc_node();
         params->name = name;
         params->camera = cam;
         params->shape = shape;
@@ -11527,37 +11429,37 @@ std::vector<std::shared_ptr<proc_split_scene>>& proc_split_scene_presets() {
     };
     auto make_texture = [](const std::string& name) {
         for (auto p : proc_texture_presets())
-            if (p->name == name) return std::make_shared<proc_texture>(*p);
+            if (p->name == name) return new proc_texture(*p);
         throw std::runtime_error("missing texture preset " + name);
     };
     auto make_shape = [](const std::string& name, const vec3f& pos) {
         for (auto p : proc_shape_presets()) {
             if (p->name != name) continue;
-            auto shp = std::make_shared<proc_shape>(*p);
+            auto shp = new proc_shape(*p);
             shp->frame.o = pos;
             return shp;
         }
-        return (std::shared_ptr<proc_shape>)nullptr;
+        return (proc_shape*)nullptr;
     };
     auto make_environment = [](const std::string& name) {
         for (auto p : proc_environment_presets())
-            if (p->name == name) return std::make_shared<proc_environment>(*p);
-        return (std::shared_ptr<proc_environment>)nullptr;
+            if (p->name == name) return new proc_environment(*p);
+        return (proc_environment*)nullptr;
     };
     auto make_camera = [](const std::string& name) {
         for (auto p : proc_camera_presets())
-            if (p->name == name) return std::make_shared<proc_camera>(*p);
-        return (std::shared_ptr<proc_camera>)nullptr;
+            if (p->name == name) return new proc_camera(*p);
+        return (proc_camera*)nullptr;
     };
     auto make_material = [](const std::string& name) {
         for (auto p : proc_material_presets())
-            if (p->name == name) return std::make_shared<proc_material>(*p);
-        return (std::shared_ptr<proc_material>)nullptr;
+            if (p->name == name) return new proc_material(*p);
+        return (proc_material*)nullptr;
     };
     auto make_animation = [](const std::string& name) {
         for (auto p : proc_animation_presets())
-            if (p->name == name) return std::make_shared<proc_animation>(*p);
-        return (std::shared_ptr<proc_animation>)nullptr;
+            if (p->name == name) return new proc_animation(*p);
+        return (proc_animation*)nullptr;
     };
 
     // textures
@@ -11654,12 +11556,12 @@ std::vector<std::shared_ptr<proc_split_scene>>& proc_split_scene_presets() {
                 }
                 views.push_back(view);
             }
-            auto scns = std::vector<std::shared_ptr<proc_scene>>{scn};
+            auto scns = std::vector<proc_scene*>{scn};
             append(scns, views);
             for (auto scn : scns) {
                 if (!animations.empty() || nodes) {
                     for (auto cam : scn->cameras) {
-                        auto nde = std::make_shared<proc_node>();
+                        auto nde = new proc_node();
                         nde->name = cam->name;
                         nde->frame =
                             lookat_frame(cam->from, cam->to, vec3f{0, 1, 0});
@@ -11667,14 +11569,14 @@ std::vector<std::shared_ptr<proc_split_scene>>& proc_split_scene_presets() {
                         scn->nodes.push_back(nde);
                     }
                     for (auto shp : scn->shapes) {
-                        auto nde = std::make_shared<proc_node>();
+                        auto nde = new proc_node();
                         nde->name = shp->name;
                         nde->frame = shp->frame;
                         nde->shape = shp->name;
                         scn->nodes.push_back(nde);
                     }
                     for (auto env : scn->environments) {
-                        auto nde = std::make_shared<proc_node>();
+                        auto nde = new proc_node();
                         nde->name = env->name;
                         nde->frame = env->frame;
                         nde->environment = env->name;
@@ -11827,7 +11729,7 @@ std::vector<std::shared_ptr<proc_split_scene>>& proc_split_scene_presets() {
 #endif
 
     // add missing textures
-    auto add_textures = [&](const std::shared_ptr<proc_scene>& preset) {
+    auto add_textures = [&](proc_scene* preset) {
         auto used = std::unordered_set<std::string>();
         for (auto mat : preset->materials) used.insert(mat->texture);
         for (auto mat : preset->materials) used.insert(mat->normal);
@@ -11852,35 +11754,30 @@ std::vector<std::shared_ptr<proc_split_scene>>& proc_split_scene_presets() {
     return presets;
 }
 
-std::vector<std::shared_ptr<proc_scene>>& proc_scene_presets() {
-    static auto presets = std::vector<std::shared_ptr<proc_scene>>();
+std::vector<proc_scene*>& proc_scene_presets() {
+    static auto presets = std::vector<proc_scene*>();
     if (!presets.empty()) return presets;
 
     for (auto sscn : proc_split_scene_presets()) {
         auto scn = sscn->scn;
         for (auto view : sscn->views) {
-            auto preset = std::make_shared<proc_scene>();
+            auto preset = new proc_scene();
             preset->name = scn->name + "_" + view->name;
             for (auto mscn : {scn, view}) {
                 for (auto v : mscn->cameras)
-                    preset->cameras.push_back(
-                        std::make_shared<proc_camera>(*v));
+                    preset->cameras.push_back(new proc_camera(*v));
                 for (auto v : mscn->textures)
-                    preset->textures.push_back(
-                        std::make_shared<proc_texture>(*v));
+                    preset->textures.push_back(new proc_texture(*v));
                 for (auto v : mscn->materials)
-                    preset->materials.push_back(
-                        std::make_shared<proc_material>(*v));
+                    preset->materials.push_back(new proc_material(*v));
                 for (auto v : mscn->shapes)
-                    preset->shapes.push_back(std::make_shared<proc_shape>(*v));
+                    preset->shapes.push_back(new proc_shape(*v));
                 for (auto v : mscn->environments)
-                    preset->environments.push_back(
-                        std::make_shared<proc_environment>(*v));
+                    preset->environments.push_back(new proc_environment(*v));
                 for (auto v : mscn->nodes)
-                    preset->nodes.push_back(std::make_shared<proc_node>(*v));
+                    preset->nodes.push_back(new proc_node(*v));
                 for (auto v : mscn->animations)
-                    preset->animations.push_back(
-                        std::make_shared<proc_animation>(*v));
+                    preset->animations.push_back(new proc_animation(*v));
             }
             presets.push_back(preset);
         }
@@ -12030,7 +11927,7 @@ void serialize(proc_scene& val, json& js, bool reading) {
 }
 
 // Load test scene
-std::shared_ptr<proc_scene> load_proc_scene(const std::string& filename) {
+proc_scene* load_proc_scene(const std::string& filename) {
     // load json
     std::ifstream stream(filename.c_str());
     if (!stream) throw std::runtime_error("could not load json " + filename);
@@ -12043,7 +11940,7 @@ std::shared_ptr<proc_scene> load_proc_scene(const std::string& filename) {
     }
 
     // clear data
-    auto scn = std::make_shared<proc_scene>();
+    auto scn = new proc_scene();
     try {
         serialize(scn, js, true);
     } catch (const std::exception& e) {
@@ -12056,8 +11953,7 @@ std::shared_ptr<proc_scene> load_proc_scene(const std::string& filename) {
 }
 
 // Save test scene
-void save_proc_scene(
-    const std::string& filename, const std::shared_ptr<proc_scene>& scn) {
+void save_proc_scene(const std::string& filename, const proc_scene* scn) {
     auto js = json();
     serialize((proc_scene&)*scn, js, false);
     save_text(filename, js.dump(2));
@@ -12194,20 +12090,19 @@ void gl_read_imagef(float* pixels, int w, int h, int nc) {
 namespace ygl {
 
 // Implementation of update_texture.
-void _update_texture(const std::shared_ptr<gl_texture>& txt, int w, int h,
-    int nc, const void* pixels, bool floats, bool linear, bool mipmap,
-    bool as_float, bool as_srgb) {
-    auto refresh = !txt->tid || txt->width != w || txt->height != h ||
-                   txt->ncomp != nc || txt->as_float != as_float ||
-                   txt->as_srgb != as_srgb || txt->mipmap != mipmap ||
-                   txt->linear != linear;
-    txt->width = w;
-    txt->height = h;
-    txt->ncomp = nc;
-    txt->as_float = as_float;
-    txt->as_srgb = as_srgb;
-    txt->mipmap = mipmap;
-    txt->linear = linear;
+void _update_texture(gl_texture& txt, int w, int h, int nc, const void* pixels,
+    bool floats, bool linear, bool mipmap, bool as_float, bool as_srgb) {
+    auto refresh = !txt.tid || txt.width != w || txt.height != h ||
+                   txt.ncomp != nc || txt.as_float != as_float ||
+                   txt.as_srgb != as_srgb || txt.mipmap != mipmap ||
+                   txt.linear != linear;
+    txt.width = w;
+    txt.height = h;
+    txt.ncomp = nc;
+    txt.as_float = as_float;
+    txt.as_srgb = as_srgb;
+    txt.mipmap = mipmap;
+    txt.linear = linear;
     assert(!as_srgb || !as_float);
     assert(gl_check_error());
     if (w * h) {
@@ -12217,8 +12112,8 @@ void _update_texture(const std::shared_ptr<gl_texture>& txt, int w, int h,
         int* formats =
             (as_float) ? formats_f : ((as_srgb) ? formats_sub : formats_ub);
         assert(gl_check_error());
-        if (!txt->tid) glGenTextures(1, &txt->tid);
-        glBindTexture(GL_TEXTURE_2D, txt->tid);
+        if (!txt.tid) glGenTextures(1, &txt.tid);
+        glBindTexture(GL_TEXTURE_2D, txt.tid);
         if (refresh) {
             glTexImage2D(GL_TEXTURE_2D, 0, formats[nc - 1], w, h, 0,
                 formats_ub[nc - 1], (floats) ? GL_FLOAT : GL_UNSIGNED_BYTE,
@@ -12239,10 +12134,10 @@ void _update_texture(const std::shared_ptr<gl_texture>& txt, int w, int h,
         }
         glBindTexture(GL_TEXTURE_2D, 0);
     } else {
-        if (txt->tid) {
-            glBindTexture(GL_TEXTURE_2D, txt->tid);
-            glDeleteTextures(1, &txt->tid);
-            txt->tid = 0;
+        if (txt.tid) {
+            glBindTexture(GL_TEXTURE_2D, txt.tid);
+            glDeleteTextures(1, &txt.tid);
+            txt.tid = 0;
             glBindTexture(GL_TEXTURE_2D, 0);
         }
     }
@@ -12250,27 +12145,24 @@ void _update_texture(const std::shared_ptr<gl_texture>& txt, int w, int h,
 }
 
 // Binds a texture to a texture unit
-void bind_texture(const std::shared_ptr<gl_texture>& txt, uint unit) {
+void bind_texture(const gl_texture& txt, uint unit) {
     glActiveTexture(GL_TEXTURE0 + unit);
-    glBindTexture(GL_TEXTURE_2D, txt->tid);
+    glBindTexture(GL_TEXTURE_2D, txt.tid);
 }
 
 // Unbinds
-void unbind_texture(const std::shared_ptr<gl_texture>& txt, uint unit) {
+void unbind_texture(const gl_texture& txt, uint unit) {
     glActiveTexture(GL_TEXTURE0 + unit);
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 // Destroys the texture tid.
-void clear_texture(gl_texture* txt) {
+void clear_texture(gl_texture& txt) {
     assert(gl_check_error());
-    glDeleteTextures(1, &txt->tid);
-    txt->tid = 0;
+    glDeleteTextures(1, &txt.tid);
+    txt.tid = 0;
     assert(gl_check_error());
 }
-
-// Clear texture.
-gl_texture::~gl_texture() { clear_texture(this); }
 
 }  // namespace ygl
 
@@ -12280,34 +12172,34 @@ gl_texture::~gl_texture() { clear_texture(this); }
 namespace ygl {
 
 // Updates the buffer with new data.
-void _update_vertex_buffer(const std::shared_ptr<gl_vertex_buffer>& buf, int n,
-    int nc, const void* values, bool as_float, bool dynamic) {
-    auto resize = !buf->bid || n * nc != buf->num * buf->ncomp ||
-                  as_float != buf->as_float;
-    buf->num = n;
-    buf->ncomp = nc;
-    buf->as_float = as_float;
+void _update_vertex_buffer(gl_vertex_buffer& buf, int n, int nc,
+    const void* values, bool as_float, bool dynamic) {
+    auto resize =
+        !buf.bid || n * nc != buf.num * buf.ncomp || as_float != buf.as_float;
+    buf.num = n;
+    buf.ncomp = nc;
+    buf.as_float = as_float;
     assert(gl_check_error());
     if (n) {
-        if (!buf->bid) glGenBuffers(1, &buf->bid);
-        glBindBuffer(GL_ARRAY_BUFFER, buf->bid);
+        if (!buf.bid) glGenBuffers(1, &buf.bid);
+        glBindBuffer(GL_ARRAY_BUFFER, buf.bid);
         if (resize) {
             glBufferData(GL_ARRAY_BUFFER,
-                buf->num * buf->ncomp *
+                buf.num * buf.ncomp *
                     ((as_float) ? sizeof(float) : sizeof(int)),
                 values, (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
         } else {
             glBufferSubData(GL_ARRAY_BUFFER, 0,
-                buf->num * buf->ncomp *
+                buf.num * buf.ncomp *
                     ((as_float) ? sizeof(float) : sizeof(int)),
                 values);
         }
         glBindBuffer(GL_ARRAY_BUFFER, 0);
     } else {
-        if (buf->bid) {
-            glBindBuffer(GL_ARRAY_BUFFER, buf->bid);
-            glDeleteBuffers(1, &buf->bid);
-            buf->bid = 0;
+        if (buf.bid) {
+            glBindBuffer(GL_ARRAY_BUFFER, buf.bid);
+            glDeleteBuffers(1, &buf.bid);
+            buf.bid = 0;
             glBindBuffer(GL_ARRAY_BUFFER, 0);
         }
     }
@@ -12315,17 +12207,15 @@ void _update_vertex_buffer(const std::shared_ptr<gl_vertex_buffer>& buf, int n,
 }
 
 // Bind the buffer at a particular attribute location
-void bind_vertex_buffer(
-    const std::shared_ptr<gl_vertex_buffer>& buf, uint vattr) {
+void bind_vertex_buffer(const gl_vertex_buffer& buf, uint vattr) {
     glEnableVertexAttribArray(vattr);
-    glBindBuffer(GL_ARRAY_BUFFER, buf->bid);
-    glVertexAttribPointer(vattr, buf->ncomp, GL_FLOAT, false, 0, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, buf.bid);
+    glVertexAttribPointer(vattr, buf.ncomp, GL_FLOAT, false, 0, 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 // Unbind the buffer
-void unbind_vertex_buffer(
-    const std::shared_ptr<gl_vertex_buffer>& buf, uint vattr) {
+void unbind_vertex_buffer(const gl_vertex_buffer& buf, uint vattr) {
     glDisableVertexAttribArray(vattr);
 }
 
@@ -12333,15 +12223,12 @@ void unbind_vertex_buffer(
 void unbind_vertex_buffer(uint vattr) { glDisableVertexAttribArray(vattr); }
 
 // Destroys the buffer
-void clear_vertex_buffer(gl_vertex_buffer* buf) {
+void clear_vertex_buffer(gl_vertex_buffer& buf) {
     assert(gl_check_error());
-    glDeleteBuffers(1, &buf->bid);
-    buf->bid = 0;
+    glDeleteBuffers(1, &buf.bid);
+    buf.bid = 0;
     assert(gl_check_error());
 }
-
-// Clears the buffers.
-gl_vertex_buffer::~gl_vertex_buffer() { clear_vertex_buffer(this); }
 
 }  // namespace ygl
 
@@ -12351,29 +12238,29 @@ gl_vertex_buffer::~gl_vertex_buffer() { clear_vertex_buffer(this); }
 namespace ygl {
 
 // Updates the buffer bid with new data.
-void _update_element_buffer(const std::shared_ptr<gl_element_buffer>& buf,
-    int n, int nc, const int* values, bool dynamic) {
-    auto resize = !buf->bid || n * nc != buf->num * buf->ncomp;
-    buf->num = n;
-    buf->ncomp = nc;
+void _update_element_buffer(
+    gl_element_buffer& buf, int n, int nc, const int* values, bool dynamic) {
+    auto resize = !buf.bid || n * nc != buf.num * buf.ncomp;
+    buf.num = n;
+    buf.ncomp = nc;
     assert(gl_check_error());
     if (n) {
-        if (!buf->bid) glGenBuffers(1, &buf->bid);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf->bid);
+        if (!buf.bid) glGenBuffers(1, &buf.bid);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf.bid);
         if (resize) {
             glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                buf->num * buf->ncomp * sizeof(int), values,
+                buf.num * buf.ncomp * sizeof(int), values,
                 (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
         } else {
             glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0,
-                buf->num * buf->ncomp * sizeof(int), values);
+                buf.num * buf.ncomp * sizeof(int), values);
         }
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     } else {
-        if (buf->bid) {
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf->bid);
-            glDeleteBuffers(1, &buf->bid);
-            buf->bid = 0;
+        if (buf.bid) {
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf.bid);
+            glDeleteBuffers(1, &buf.bid);
+            buf.bid = 0;
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
         }
     }
@@ -12381,28 +12268,28 @@ void _update_element_buffer(const std::shared_ptr<gl_element_buffer>& buf,
 }
 
 // Draws elements.
-void draw_elems(const std::shared_ptr<gl_element_buffer>& buf) {
-    if (!buf || !buf->bid) return;
+void draw_elems(const gl_element_buffer& buf) {
+    if (!buf.bid) return;
     assert(gl_check_error());
     int mode = 0;
-    switch (buf->ncomp) {
+    switch (buf.ncomp) {
         case 1: mode = GL_POINTS; break;
         case 2: mode = GL_LINES; break;
         case 3: mode = GL_TRIANGLES; break;
         case 4: mode = GL_QUADS; break;
         default: assert(false);
     };
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf->bid);
-    glDrawElements(mode, buf->ncomp * buf->num, GL_UNSIGNED_INT, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf.bid);
+    glDrawElements(mode, buf.ncomp * buf.num, GL_UNSIGNED_INT, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     assert(gl_check_error());
 }
 
 // Destroys the buffer
-void clear_element_buffer(const std::shared_ptr<gl_element_buffer>& buf) {
+void clear_element_buffer(gl_element_buffer& buf) {
     assert(gl_check_error());
-    glDeleteBuffers(1, &buf->bid);
-    buf->bid = 0;
+    glDeleteBuffers(1, &buf.bid);
+    buf.bid = 0;
     assert(gl_check_error());
 }
 
@@ -12416,59 +12303,59 @@ namespace ygl {
 // Creates and OpenGL program from vertex and fragment code. Returns the
 // program id. Optionally return vertex and fragment shader ids. A VAO
 // is created.
-std::shared_ptr<gl_program> make_program(
+gl_program make_program(
     const std::string& vertex, const std::string& fragment) {
-    auto prog = std::make_shared<gl_program>();
+    auto prog = gl_program();
 
     assert(gl_check_error());
-    glGenVertexArrays(1, &prog->vao);
-    glBindVertexArray(prog->vao);
+    glGenVertexArrays(1, &prog.vao);
+    glBindVertexArray(prog.vao);
     assert(gl_check_error());
 
     int errflags;
     char errbuf[10000];
 
     // create vertex
-    prog->vid = glCreateShader(GL_VERTEX_SHADER);
+    prog.vid = glCreateShader(GL_VERTEX_SHADER);
     const char* vertex_str = vertex.c_str();
-    glShaderSource(prog->vid, 1, &vertex_str, NULL);
-    glCompileShader(prog->vid);
-    glGetShaderiv(prog->vid, GL_COMPILE_STATUS, &errflags);
+    glShaderSource(prog.vid, 1, &vertex_str, NULL);
+    glCompileShader(prog.vid);
+    glGetShaderiv(prog.vid, GL_COMPILE_STATUS, &errflags);
     if (!errflags) {
-        glGetShaderInfoLog(prog->vid, 10000, 0, errbuf);
+        glGetShaderInfoLog(prog.vid, 10000, 0, errbuf);
         throw std::runtime_error(
             std::string("shader not compiled\n\n") + errbuf);
     }
     assert(glGetError() == GL_NO_ERROR);
 
     // create fragment
-    prog->fid = glCreateShader(GL_FRAGMENT_SHADER);
+    prog.fid = glCreateShader(GL_FRAGMENT_SHADER);
     const char* fragment_str = fragment.c_str();
-    glShaderSource(prog->fid, 1, &fragment_str, NULL);
-    glCompileShader(prog->fid);
-    glGetShaderiv(prog->fid, GL_COMPILE_STATUS, &errflags);
+    glShaderSource(prog.fid, 1, &fragment_str, NULL);
+    glCompileShader(prog.fid);
+    glGetShaderiv(prog.fid, GL_COMPILE_STATUS, &errflags);
     if (!errflags) {
-        glGetShaderInfoLog(prog->fid, 10000, 0, errbuf);
+        glGetShaderInfoLog(prog.fid, 10000, 0, errbuf);
         throw std::runtime_error(
             std::string("shader not compiled\n\n") + errbuf);
     }
     assert(glGetError() == GL_NO_ERROR);
 
     // create program
-    prog->pid = glCreateProgram();
-    glAttachShader(prog->pid, prog->vid);
-    glAttachShader(prog->pid, prog->fid);
-    glLinkProgram(prog->pid);
-    glValidateProgram(prog->pid);
-    glGetProgramiv(prog->pid, GL_LINK_STATUS, &errflags);
+    prog.pid = glCreateProgram();
+    glAttachShader(prog.pid, prog.vid);
+    glAttachShader(prog.pid, prog.fid);
+    glLinkProgram(prog.pid);
+    glValidateProgram(prog.pid);
+    glGetProgramiv(prog.pid, GL_LINK_STATUS, &errflags);
     if (!errflags) {
-        glGetProgramInfoLog(prog->pid, 10000, 0, errbuf);
+        glGetProgramInfoLog(prog.pid, 10000, 0, errbuf);
         throw std::runtime_error(
             std::string("program not linked\n\n") + errbuf);
     }
-    glGetProgramiv(prog->pid, GL_VALIDATE_STATUS, &errflags);
+    glGetProgramiv(prog.pid, GL_VALIDATE_STATUS, &errflags);
     if (!errflags) {
-        glGetProgramInfoLog(prog->pid, 10000, 0, errbuf);
+        glGetProgramInfoLog(prog.pid, 10000, 0, errbuf);
         throw std::runtime_error(
             std::string("program not linked\n\n") + errbuf);
     }
@@ -12481,57 +12368,54 @@ std::shared_ptr<gl_program> make_program(
 }
 
 // Destroys the program pid and optionally the sahders vid and fid.
-void clear_program(gl_program* prog) {
+void clear_program(gl_program& prog) {
     assert(gl_check_error());
-    glDetachShader(prog->pid, prog->vid);
-    glDeleteShader(prog->vid);
-    prog->vid = 0;
-    glDetachShader(prog->pid, prog->fid);
-    glDeleteShader(prog->fid);
-    prog->fid = 0;
-    glDeleteProgram(prog->pid);
-    prog->pid = 0;
-    glDeleteVertexArrays(1, &prog->vao);
-    prog->vao = 0;
+    glDetachShader(prog.pid, prog.vid);
+    glDeleteShader(prog.vid);
+    prog.vid = 0;
+    glDetachShader(prog.pid, prog.fid);
+    glDeleteShader(prog.fid);
+    prog.fid = 0;
+    glDeleteProgram(prog.pid);
+    prog.pid = 0;
+    glDeleteVertexArrays(1, &prog.vao);
+    prog.vao = 0;
     assert(gl_check_error());
 }
 
-// Clear program
-gl_program::~gl_program() { clear_program(this); }
-
 // Get uniform location (simple GL wrapper that avoids GL includes)
 int get_program_uniform_location(
-    const std::shared_ptr<gl_program>& prog, const std::string& name) {
+    const gl_program& prog, const std::string& name) {
     assert(gl_check_error());
-    return glGetUniformLocation(prog->pid, name.c_str());
+    return glGetUniformLocation(prog.pid, name.c_str());
     assert(gl_check_error());
 }
 
 // Get uniform location (simple GL wrapper that avoids GL includes)
 int get_program_attrib_location(
-    const std::shared_ptr<gl_program>& prog, const std::string& name) {
+    const gl_program& prog, const std::string& name) {
     assert(gl_check_error());
-    return glGetAttribLocation(prog->pid, name.c_str());
+    return glGetAttribLocation(prog.pid, name.c_str());
     assert(gl_check_error());
 }
 
 // Get the names of all uniforms
 std::vector<std::pair<std::string, int>> get_program_uniforms_names(
-    const std::shared_ptr<gl_program>& prog) {
+    const gl_program& prog) {
     auto num = 0;
     assert(gl_check_error());
-    glGetProgramiv(prog->pid, GL_ACTIVE_UNIFORMS, &num);
+    glGetProgramiv(prog.pid, GL_ACTIVE_UNIFORMS, &num);
     assert(gl_check_error());
     auto names = std::vector<std::pair<std::string, int>>();
     for (auto i = 0; i < num; i++) {
         char name[4096];
         auto size = 0, length = 0;
         GLenum type;
-        glGetActiveUniform(prog->pid, i, 4096, &length, &size, &type, name);
+        glGetActiveUniform(prog.pid, i, 4096, &length, &size, &type, name);
         if (length > 3 && name[length - 1] == ']' && name[length - 2] == '0' &&
             name[length - 3] == '[')
             name[length - 3] = 0;
-        auto loc = glGetUniformLocation(prog->pid, name);
+        auto loc = glGetUniformLocation(prog.pid, name);
         if (loc < 0) continue;
         names.push_back({name, loc});
         assert(gl_check_error());
@@ -12541,18 +12425,18 @@ std::vector<std::pair<std::string, int>> get_program_uniforms_names(
 
 // Get the names of all attributes
 std::vector<std::pair<std::string, int>> get_program_attributes_names(
-    const std::shared_ptr<gl_program>& prog) {
+    const gl_program& prog) {
     auto num = 0;
     assert(gl_check_error());
-    glGetProgramiv(prog->pid, GL_ACTIVE_ATTRIBUTES, &num);
+    glGetProgramiv(prog.pid, GL_ACTIVE_ATTRIBUTES, &num);
     assert(gl_check_error());
     auto names = std::vector<std::pair<std::string, int>>();
     for (auto i = 0; i < num; i++) {
         char name[4096];
         auto size = 0;
         GLenum type;
-        glGetActiveAttrib(prog->pid, i, 4096, nullptr, &size, &type, name);
-        auto loc = glGetAttribLocation(prog->pid, name);
+        glGetActiveAttrib(prog.pid, i, 4096, nullptr, &size, &type, name);
+        auto loc = glGetAttribLocation(prog.pid, name);
         if (loc < 0) continue;
         names.push_back({name, loc});
         assert(gl_check_error());
@@ -12563,8 +12447,8 @@ std::vector<std::pair<std::string, int>> get_program_attributes_names(
 // Set uniform integer values val for program pid and variable loc.
 // The values have nc number of components (1-4) and count elements
 // (for arrays).
-bool set_program_uniform(const std::shared_ptr<gl_program>& prog, int pos,
-    const int* val, int ncomp, int count) {
+bool set_program_uniform(
+    const gl_program& prog, int pos, const int* val, int ncomp, int count) {
     assert(ncomp >= 1 && ncomp <= 4);
     assert(gl_check_error());
     if (pos < 0) return false;
@@ -12582,8 +12466,8 @@ bool set_program_uniform(const std::shared_ptr<gl_program>& prog, int pos,
 // Set uniform float values val for program pid and variable var.
 // The values have nc number of components (1-4) and count elements
 // (for arrays).
-bool set_program_uniform(const std::shared_ptr<gl_program>& prog, int pos,
-    const float* val, int ncomp, int count) {
+bool set_program_uniform(
+    const gl_program& prog, int pos, const float* val, int ncomp, int count) {
     assert((ncomp >= 1 && ncomp <= 4) || (ncomp == 16) || (ncomp == 12));
     assert(gl_check_error());
     if (pos < 0) return false;
@@ -12602,9 +12486,8 @@ bool set_program_uniform(const std::shared_ptr<gl_program>& prog, int pos,
 
 // Set uniform texture id tid and unit tunit for program pid and
 // variable var.
-bool set_program_uniform_texture(const std::shared_ptr<gl_program>& prog,
-    int pos, const std::shared_ptr<gl_texture>& txt,
-    const gl_texture_info& tinfo, uint tunit) {
+bool set_program_uniform_texture(const gl_program& prog, int pos,
+    const gl_texture& txt, const gl_texture_info& tinfo, uint tunit) {
     static const auto wrap_mode_map =
         std::map<gl_texture_wrap, uint>{{gl_texture_wrap::repeat, GL_REPEAT},
             {gl_texture_wrap::clamp, GL_CLAMP_TO_EDGE},
@@ -12619,7 +12502,7 @@ bool set_program_uniform_texture(const std::shared_ptr<gl_program>& prog,
 
     assert(gl_check_error());
     if (pos < 0) return false;
-    if (txt && is_texture_valid(txt)) {
+    if (is_texture_valid(txt)) {
         bind_texture(txt, tunit);
         if (tinfo.wrap_s != gl_texture_wrap::not_set)
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
@@ -12644,8 +12527,8 @@ bool set_program_uniform_texture(const std::shared_ptr<gl_program>& prog,
 
 // Sets a constant value for a vertex attribute for program pid and
 // variable var. The attribute has nc components.
-bool set_program_vertattr(const std::shared_ptr<gl_program>& prog, int pos,
-    const float* value, int nc) {
+bool set_program_vertattr(
+    const gl_program& prog, int pos, const float* value, int nc) {
     assert(nc >= 1 && nc <= 4);
     assert(gl_check_error());
     if (pos < 0) return false;
@@ -12663,8 +12546,8 @@ bool set_program_vertattr(const std::shared_ptr<gl_program>& prog, int pos,
 
 // Sets a constant value for a vertex attribute for program pid and
 // variable var. The attribute has nc components.
-bool set_program_vertattr(const std::shared_ptr<gl_program>& prog, int pos,
-    const int* value, int nc) {
+bool set_program_vertattr(
+    const gl_program& prog, int pos, const int* value, int nc) {
     assert(nc >= 1 && nc <= 4);
     assert(gl_check_error());
     if (pos < 0) return false;
@@ -12683,10 +12566,10 @@ bool set_program_vertattr(const std::shared_ptr<gl_program>& prog, int pos,
 // Sets a vartex attribute for program pid and variable var to the
 // buffer bid. The attribute has nc components and per-vertex values
 // values.
-bool set_program_vertattr(const std::shared_ptr<gl_program>& prog,
-    const std::string& var, const std::shared_ptr<gl_vertex_buffer>& buf) {
+bool set_program_vertattr(const gl_program& prog, const std::string& var,
+    const gl_vertex_buffer& buf) {
     assert(gl_check_error());
-    int pos = glGetAttribLocation(prog->pid, var.c_str());
+    int pos = glGetAttribLocation(prog.pid, var.c_str());
     if (pos < 0) return false;
     if (is_vertex_buffer_valid(buf)) {
         glEnableVertexAttribArray(pos);
@@ -12702,12 +12585,12 @@ bool set_program_vertattr(const std::shared_ptr<gl_program>& prog,
 // Sets a vartex attribute for program pid and variable var. The
 // attribute has nc components and either buffer bid or a single value
 // def (if bid is zero). Convenience wrapper to above functions.
-bool set_program_vertattr(const std::shared_ptr<gl_program>& prog, int pos,
-    const std::shared_ptr<gl_vertex_buffer>& buf, int nc, const float* def) {
+bool set_program_vertattr(const gl_program& prog, int pos,
+    const gl_vertex_buffer& buf, int nc, const float* def) {
     assert(nc >= 1 && nc <= 4);
     assert(gl_check_error());
     if (pos < 0) return false;
-    if (buf && is_vertex_buffer_valid(buf)) {
+    if (is_vertex_buffer_valid(buf)) {
         assert(gl_check_error());
         glEnableVertexAttribArray(pos);
         assert(gl_check_error());
@@ -12731,16 +12614,16 @@ bool set_program_vertattr(const std::shared_ptr<gl_program>& prog, int pos,
 }
 
 // Binds a program
-void bind_program(const std::shared_ptr<gl_program>& prog) {
+void bind_program(const gl_program& prog) {
     assert(gl_check_error());
-    if (!prog->pid) return;
-    glBindVertexArray(prog->vao);
-    glUseProgram(prog->pid);
+    if (!prog.pid) return;
+    glBindVertexArray(prog.vao);
+    glUseProgram(prog.pid);
     assert(gl_check_error());
 }
 
 // Unbind a program
-void unbind_program(const std::shared_ptr<gl_program>& prog) {
+void unbind_program(const gl_program& prog) {
     assert(gl_check_error());
     glUseProgram(0);
     glBindVertexArray(0);
@@ -12755,12 +12638,10 @@ void unbind_program(const std::shared_ptr<gl_program>& prog) {
 namespace ygl {
 
 // Init shading
-void update_gl_texture(
-    const std::shared_ptr<texture>& txt, std::shared_ptr<gl_texture>& gtxt) {
+void update_gl_texture(const texture* txt, gl_texture& gtxt) {
     if (!txt) {
-        gtxt = nullptr;
+        clear_texture(gtxt);
     } else {
-        if (!gtxt) gtxt = std::make_shared<gl_texture>();
         if (!txt->hdr.empty()) {
             update_texture(gtxt, txt->hdr, true, true, true);
         } else if (!txt->ldr.empty()) {
@@ -12771,28 +12652,24 @@ void update_gl_texture(
 }
 
 // Update shading
-void update_gl_shape(
-    const std::shared_ptr<shape>& shp, std::shared_ptr<gl_shape>& gshp) {
+void update_gl_shape(const shape* shp, gl_shape& gshp) {
     auto update_vert_buffer = [](auto& buf, const auto& vert) {
         if (vert.empty()) {
-            if (buf) buf = nullptr;
+            clear_vertex_buffer(buf);
         } else {
-            buf = std::make_shared<gl_vertex_buffer>();
             update_vertex_buffer(buf, vert);
         }
     };
     auto update_elem_buffer = [](auto& buf, const auto& elem) {
         if (elem.empty()) {
-            if (buf) buf = nullptr;
+            clear_element_buffer(buf);
         } else {
-            buf = std::make_shared<gl_element_buffer>();
             update_element_buffer(buf, elem);
         }
     };
     if (!shp) {
-        gshp = nullptr;
+        clear_gl_shape(gshp);
     } else {
-        if (!gshp) gshp = std::make_shared<gl_shape>();
         if (!shp->quads_pos.empty()) {
             auto pos = std::vector<vec3f>();
             auto norm = std::vector<vec3f>();
@@ -12801,42 +12678,49 @@ void update_gl_shape(
             std::tie(quads, pos, norm, texcoord) =
                 convert_face_varying(shp->quads_pos, shp->quads_norm,
                     shp->quads_texcoord, shp->pos, shp->norm, shp->texcoord);
-            update_vert_buffer(gshp->pos, pos);
-            update_vert_buffer(gshp->norm, norm);
-            update_vert_buffer(gshp->texcoord, texcoord);
-            update_elem_buffer(gshp->quads, convert_quads_to_triangles(quads));
-            update_elem_buffer(gshp->edges, get_edges({}, {}, shp->quads));
-            update_vert_buffer(gshp->color, std::vector<vec4f>{});
-            update_vert_buffer(gshp->tangsp, std::vector<vec4f>{});
+            update_vert_buffer(gshp.pos, pos);
+            update_vert_buffer(gshp.norm, norm);
+            update_vert_buffer(gshp.texcoord, texcoord);
+            update_elem_buffer(gshp.quads, convert_quads_to_triangles(quads));
+            update_elem_buffer(gshp.edges, get_edges({}, {}, shp->quads));
+            update_vert_buffer(gshp.color, std::vector<vec4f>{});
+            update_vert_buffer(gshp.tangsp, std::vector<vec4f>{});
         } else {
-            update_vert_buffer(gshp->pos, shp->pos);
-            update_vert_buffer(gshp->norm, shp->norm);
-            update_vert_buffer(gshp->texcoord, shp->texcoord);
-            update_vert_buffer(gshp->color, shp->color);
-            update_vert_buffer(gshp->tangsp, shp->tangsp);
-            update_elem_buffer(gshp->points, shp->points);
-            update_elem_buffer(gshp->lines, shp->lines);
-            update_elem_buffer(gshp->triangles, shp->triangles);
+            update_vert_buffer(gshp.pos, shp->pos);
+            update_vert_buffer(gshp.norm, shp->norm);
+            update_vert_buffer(gshp.texcoord, shp->texcoord);
+            update_vert_buffer(gshp.color, shp->color);
+            update_vert_buffer(gshp.tangsp, shp->tangsp);
+            update_elem_buffer(gshp.points, shp->points);
+            update_elem_buffer(gshp.lines, shp->lines);
+            update_elem_buffer(gshp.triangles, shp->triangles);
             update_elem_buffer(
-                gshp->quads, convert_quads_to_triangles(shp->quads));
+                gshp.quads, convert_quads_to_triangles(shp->quads));
             update_elem_buffer(
-                gshp->beziers, convert_bezier_to_lines(shp->beziers));
+                gshp.beziers, convert_bezier_to_lines(shp->beziers));
             update_elem_buffer(
-                gshp->edges, get_edges({}, shp->triangles, shp->quads));
+                gshp.edges, get_edges({}, shp->triangles, shp->quads));
         }
     }
 }
 
-// Init shading
-std::shared_ptr<gl_shape> make_gl_shape(const std::shared_ptr<shape>& shp) {
-    auto gshp = std::make_shared<gl_shape>();
-    update_gl_shape(shp, gshp);
-    return gshp;
+// clear gl_shape
+void clear_gl_shape(gl_shape& gshp) {
+    clear_vertex_buffer(gshp.pos);
+    clear_vertex_buffer(gshp.norm);
+    clear_vertex_buffer(gshp.texcoord);
+    clear_vertex_buffer(gshp.color);
+    clear_vertex_buffer(gshp.tangsp);
+    clear_element_buffer(gshp.points);
+    clear_element_buffer(gshp.lines);
+    clear_element_buffer(gshp.triangles);
+    clear_element_buffer(gshp.quads);
+    clear_element_buffer(gshp.beziers);
+    clear_element_buffer(gshp.edges);
 }
 
 // Add gl lights
-void add_gl_lights(gl_lights& lights, const frame3f& frame,
-    const std::shared_ptr<shape>& shp) {
+void add_gl_lights(gl_lights& lights, const frame3f& frame, const shape* shp) {
     if (!has_emission(shp)) return;
     if (lights.pos.size() >= 16) return;
     if (!shp->points.empty()) {
@@ -12867,7 +12751,7 @@ void add_gl_lights(gl_lights& lights, const frame3f& frame,
 }
 
 // Initialize gl lights
-gl_lights make_gl_lights(const std::shared_ptr<scene>& scn) {
+gl_lights make_gl_lights(const scene* scn) {
     auto lights = gl_lights();
     if (scn->nodes.empty()) {
         for (auto sgr : scn->shapes) {
@@ -12894,7 +12778,7 @@ gl_lights make_gl_lights(const std::shared_ptr<scene>& scn) {
 namespace ygl {
 
 // Initialize the program. Call with true only after the GL is initialized.
-std::shared_ptr<gl_stdimage_program> make_stdimage_program() {
+gl_stdimage_program make_stdimage_program() {
     std::string _header =
         R"(
         #version 330
@@ -12969,42 +12853,42 @@ std::shared_ptr<gl_stdimage_program> make_stdimage_program() {
         }
         )";
 
-    auto prog = std::make_shared<gl_stdimage_program>();
-    prog->prog =
+    auto prog = gl_stdimage_program();
+    prog.prog =
         make_program(_header + _vert, _header + _frag_tonemap + _frag_main);
 
-    prog->vbo = make_vertex_buffer(
+    prog.vbo = make_vertex_buffer(
         std::vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}}, false);
-    prog->ebo =
+    prog.ebo =
         make_element_buffer(std::vector<vec3i>{{0, 1, 2}, {0, 2, 3}}, false);
     return prog;
 }
 
 // Draws the stdimage program.
-void draw_image(const std::shared_ptr<gl_stdimage_program>& prog,
-    const std::shared_ptr<gl_texture>& txt, const vec2i& win_size,
-    const vec2f& offset, float zoom, float exposure, float gamma, bool filmic) {
+void draw_image(const gl_stdimage_program& prog, const gl_texture& txt,
+    const vec2i& win_size, const vec2f& offset, float zoom, float exposure,
+    float gamma, bool filmic) {
     assert(is_texture_valid(txt));
 
-    bind_program(prog->prog);
+    bind_program(prog.prog);
 
     gl_enable_blending(true);
     gl_set_blend_over();
 
     bind_texture(txt, 0);
-    set_program_uniform(prog->prog, "zoom", zoom);
+    set_program_uniform(prog.prog, "zoom", zoom);
     set_program_uniform(
-        prog->prog, "win_size", vec2f{(float)win_size.x, (float)win_size.y});
-    set_program_uniform(prog->prog, "offset", offset);
-    set_program_uniform(prog->prog, "tonemap.filmic", filmic);
-    set_program_uniform(prog->prog, "tonemap.exposure", exposure);
-    set_program_uniform(prog->prog, "tonemap.gamma", gamma);
-    set_program_uniform_texture(prog->prog, "img", txt, {}, 0);
+        prog.prog, "win_size", vec2f{(float)win_size.x, (float)win_size.y});
+    set_program_uniform(prog.prog, "offset", offset);
+    set_program_uniform(prog.prog, "tonemap.filmic", filmic);
+    set_program_uniform(prog.prog, "tonemap.exposure", exposure);
+    set_program_uniform(prog.prog, "tonemap.gamma", gamma);
+    set_program_uniform_texture(prog.prog, "img", txt, {}, 0);
 
-    set_program_vertattr(prog->prog, "vert_texcoord", prog->vbo, vec2f{0, 0});
-    draw_elems(prog->ebo);
+    set_program_vertattr(prog.prog, "vert_texcoord", prog.vbo, vec2f{0, 0});
+    draw_elems(prog.ebo);
 
-    unbind_program(prog->prog);
+    unbind_program(prog.prog);
 
     gl_enable_blending(false);
 
@@ -13020,7 +12904,7 @@ namespace ygl {
 
 // Initialize a standard shader. Call with true only after the gl has
 // been initialized
-std::shared_ptr<gl_stdsurface_program> make_stdsurface_program() {
+gl_stdsurface_program make_stdsurface_program() {
 #ifndef _WIN32
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Woverlength-strings"
@@ -13438,8 +13322,8 @@ std::shared_ptr<gl_stdsurface_program> make_stdsurface_program() {
 #endif
 
     assert(gl_check_error());
-    auto prog = std::make_shared<gl_stdsurface_program>();
-    prog->prog = make_program(_vert_header + _vert_skinning + _vert_main,
+    auto prog = gl_stdsurface_program();
+    prog.prog = make_program(_vert_header + _vert_skinning + _vert_main,
         _frag_header + _frag_tonemap + _frag_lighting + _frag_brdf +
             _frag_material + _frag_main);
     assert(gl_check_error());
@@ -13449,40 +13333,40 @@ std::shared_ptr<gl_stdsurface_program> make_stdsurface_program() {
 // Starts a frame by setting exposure/gamma values, camera transforms
 // and projection. Sets also whether to use full shading or a quick
 // eyelight preview.
-void begin_stdsurface_frame(const std::shared_ptr<gl_stdsurface_program>& prog,
+void begin_stdsurface_frame(const gl_stdsurface_program& prog,
     bool shade_eyelight, float tonemap_exposure, float tonemap_gamma,
     bool tonemap_filmic, const mat4f& camera_xform,
     const mat4f& camera_xform_inv, const mat4f& camera_proj) {
     static auto eyelight_id =
-        get_program_uniform_location(prog->prog, "lighting.eyelight");
+        get_program_uniform_location(prog.prog, "lighting.eyelight");
     static auto exposure_id =
-        get_program_uniform_location(prog->prog, "tonemap.exposure");
+        get_program_uniform_location(prog.prog, "tonemap.exposure");
     static auto gamma_id =
-        get_program_uniform_location(prog->prog, "tonemap.gamma");
+        get_program_uniform_location(prog.prog, "tonemap.gamma");
     static auto filmic_id =
-        get_program_uniform_location(prog->prog, "tonemap.filmic");
+        get_program_uniform_location(prog.prog, "tonemap.filmic");
     static auto xform_id =
-        get_program_uniform_location(prog->prog, "camera.xform");
+        get_program_uniform_location(prog.prog, "camera.xform");
     static auto xform_inv_id =
-        get_program_uniform_location(prog->prog, "camera.xform_inv");
+        get_program_uniform_location(prog.prog, "camera.xform_inv");
     static auto proj_id =
-        get_program_uniform_location(prog->prog, "camera.proj");
+        get_program_uniform_location(prog.prog, "camera.proj");
     assert(gl_check_error());
-    bind_program(prog->prog);
-    set_program_uniform(prog->prog, eyelight_id, shade_eyelight);
-    set_program_uniform(prog->prog, exposure_id, tonemap_exposure);
-    set_program_uniform(prog->prog, gamma_id, tonemap_gamma);
-    set_program_uniform(prog->prog, filmic_id, tonemap_filmic);
-    set_program_uniform(prog->prog, xform_id, camera_xform);
-    set_program_uniform(prog->prog, xform_inv_id, camera_xform_inv);
-    set_program_uniform(prog->prog, proj_id, camera_proj);
+    bind_program(prog.prog);
+    set_program_uniform(prog.prog, eyelight_id, shade_eyelight);
+    set_program_uniform(prog.prog, exposure_id, tonemap_exposure);
+    set_program_uniform(prog.prog, gamma_id, tonemap_gamma);
+    set_program_uniform(prog.prog, filmic_id, tonemap_filmic);
+    set_program_uniform(prog.prog, xform_id, camera_xform);
+    set_program_uniform(prog.prog, xform_inv_id, camera_xform_inv);
+    set_program_uniform(prog.prog, proj_id, camera_proj);
     assert(gl_check_error());
 }
 
 // Ends a frame.
-void end_stdsurface_frame(const std::shared_ptr<gl_stdsurface_program>& prog) {
+void end_stdsurface_frame(const gl_stdsurface_program& prog) {
     assert(gl_check_error());
-    unbind_program(prog->prog);
+    unbind_program(prog.prog);
     //    glBindVertexArray(0);
     //    glUseProgram(0);
     assert(gl_check_error());
@@ -13490,45 +13374,45 @@ void end_stdsurface_frame(const std::shared_ptr<gl_stdsurface_program>& prog) {
 
 // Set num lights with position pos, color ke, type ltype. Also set the
 // ambient illumination amb.
-void set_stdsurface_lights(const std::shared_ptr<gl_stdsurface_program>& prog,
-    const vec3f& amb, const gl_lights& lights) {
+void set_stdsurface_lights(const gl_stdsurface_program& prog, const vec3f& amb,
+    const gl_lights& lights) {
     static auto amb_id =
-        get_program_uniform_location(prog->prog, "lighting.amb");
+        get_program_uniform_location(prog.prog, "lighting.amb");
     static auto lnum_id =
-        get_program_uniform_location(prog->prog, "lighting.lnum");
+        get_program_uniform_location(prog.prog, "lighting.lnum");
     static auto lpos_id =
-        get_program_uniform_location(prog->prog, "lighting.lpos");
+        get_program_uniform_location(prog.prog, "lighting.lpos");
     static auto lke_id =
-        get_program_uniform_location(prog->prog, "lighting.lke");
+        get_program_uniform_location(prog.prog, "lighting.lke");
     static auto ltype_id =
-        get_program_uniform_location(prog->prog, "lighting.ltype");
+        get_program_uniform_location(prog.prog, "lighting.ltype");
     assert(gl_check_error());
-    set_program_uniform(prog->prog, amb_id, amb);
-    set_program_uniform(prog->prog, lnum_id, (int)lights.pos.size());
+    set_program_uniform(prog.prog, amb_id, amb);
+    set_program_uniform(prog.prog, lnum_id, (int)lights.pos.size());
     set_program_uniform(
-        prog->prog, lpos_id, lights.pos.data(), (int)lights.pos.size());
+        prog.prog, lpos_id, lights.pos.data(), (int)lights.pos.size());
     set_program_uniform(
-        prog->prog, lke_id, lights.ke.data(), (int)lights.pos.size());
+        prog.prog, lke_id, lights.ke.data(), (int)lights.pos.size());
     set_program_uniform(
-        prog->prog, ltype_id, (int*)lights.type.data(), (int)lights.pos.size());
+        prog.prog, ltype_id, (int*)lights.type.data(), (int)lights.pos.size());
     assert(gl_check_error());
 }
 
 // Begins drawing a shape with transform xform.
-void begin_stdsurface_shape(const std::shared_ptr<gl_stdsurface_program>& prog,
+void begin_stdsurface_shape(const gl_stdsurface_program& prog,
     const mat4f& xform, float normal_offset) {
     static auto xform_id =
-        get_program_uniform_location(prog->prog, "shape_xform");
+        get_program_uniform_location(prog.prog, "shape_xform");
     static auto normal_offset_id =
-        get_program_uniform_location(prog->prog, "shape_normal_offset");
+        get_program_uniform_location(prog.prog, "shape_normal_offset");
     assert(gl_check_error());
-    set_program_uniform(prog->prog, xform_id, xform);
-    set_program_uniform(prog->prog, normal_offset_id, normal_offset);
+    set_program_uniform(prog.prog, xform_id, xform);
+    set_program_uniform(prog.prog, normal_offset_id, normal_offset);
     assert(gl_check_error());
 }
 
 // End shade drawing.
-void end_stdsurface_shape(const std::shared_ptr<gl_stdsurface_program>& prog) {
+void end_stdsurface_shape(const gl_stdsurface_program& prog) {
     assert(gl_check_error());
     for (int i = 0; i < 16; i++) unbind_vertex_buffer(i);
     assert(gl_check_error());
@@ -13536,21 +13420,20 @@ void end_stdsurface_shape(const std::shared_ptr<gl_stdsurface_program>& prog) {
 
 // Sets normal offset.
 void set_stdsurface_normaloffset(
-    const std::shared_ptr<gl_stdsurface_program>& prog, float normal_offset) {
+    const gl_stdsurface_program& prog, float normal_offset) {
     static auto normal_offset_id =
-        get_program_uniform_location(prog->prog, "shape_normal_offset");
+        get_program_uniform_location(prog.prog, "shape_normal_offset");
     assert(gl_check_error());
-    set_program_uniform(prog->prog, normal_offset_id, normal_offset);
+    set_program_uniform(prog.prog, normal_offset_id, normal_offset);
     assert(gl_check_error());
 }
 
 // Set the object as highlighted.
 void set_stdsurface_highlight(
-    const std::shared_ptr<gl_stdsurface_program>& prog,
-    const vec4f& highlight) {
+    const gl_stdsurface_program& prog, const vec4f& highlight) {
     static auto highlight_id =
-        get_program_uniform_location(prog->prog, "highlight");
-    set_program_uniform(prog->prog, highlight_id, highlight);
+        get_program_uniform_location(prog.prog, "highlight");
+    set_program_uniform(prog.prog, highlight_id, highlight);
 }
 
 // Set material values with emission ke, diffuse kd, specular ks and
@@ -13559,62 +13442,59 @@ void set_stdsurface_highlight(
 // maps. Works for points/lines/triangles (diffuse for points,
 // Kajiya-Kay for lines, GGX/Phong for triangles).
 // Material type matches the scene material type.
-void set_stdsurface_material(const std::shared_ptr<gl_stdsurface_program>& prog,
+void set_stdsurface_material(const gl_stdsurface_program& prog,
     material_type type, gl_elem_type etype, const vec3f& ke, const vec3f& kd,
-    const vec3f& ks, float rs, float op,
-    const std::shared_ptr<gl_texture>& ke_txt,
-    const std::shared_ptr<gl_texture>& kd_txt,
-    const std::shared_ptr<gl_texture>& ks_txt,
-    const std::shared_ptr<gl_texture>& rs_txt,
-    const std::shared_ptr<gl_texture>& norm_txt,
-    const std::shared_ptr<gl_texture>& occ_txt,
-    const gl_texture_info& ke_txt_info, const gl_texture_info& kd_txt_info,
-    const gl_texture_info& ks_txt_info, const gl_texture_info& rs_txt_info,
-    const gl_texture_info& norm_txt_info, const gl_texture_info& occ_txt_info,
-    bool use_phong, bool double_sided, bool alpha_cutout) {
+    const vec3f& ks, float rs, float op, const gl_texture& ke_txt,
+    const gl_texture& kd_txt, const gl_texture& ks_txt,
+    const gl_texture& rs_txt, const gl_texture& norm_txt,
+    const gl_texture& occ_txt, const gl_texture_info& ke_txt_info,
+    const gl_texture_info& kd_txt_info, const gl_texture_info& ks_txt_info,
+    const gl_texture_info& rs_txt_info, const gl_texture_info& norm_txt_info,
+    const gl_texture_info& occ_txt_info, bool use_phong, bool double_sided,
+    bool alpha_cutout) {
     static auto mtype_id =
-        get_program_uniform_location(prog->prog, "material.type");
+        get_program_uniform_location(prog.prog, "material.type");
     static auto etype_id =
-        get_program_uniform_location(prog->prog, "material.etype");
-    static auto ke_id = get_program_uniform_location(prog->prog, "material.ke");
-    static auto kd_id = get_program_uniform_location(prog->prog, "material.kd");
-    static auto ks_id = get_program_uniform_location(prog->prog, "material.ks");
-    static auto rs_id = get_program_uniform_location(prog->prog, "material.rs");
-    static auto op_id = get_program_uniform_location(prog->prog, "material.op");
+        get_program_uniform_location(prog.prog, "material.etype");
+    static auto ke_id = get_program_uniform_location(prog.prog, "material.ke");
+    static auto kd_id = get_program_uniform_location(prog.prog, "material.kd");
+    static auto ks_id = get_program_uniform_location(prog.prog, "material.ks");
+    static auto rs_id = get_program_uniform_location(prog.prog, "material.rs");
+    static auto op_id = get_program_uniform_location(prog.prog, "material.op");
     static auto ke_txt_id =
-        get_program_uniform_location(prog->prog, "material.txt_ke");
+        get_program_uniform_location(prog.prog, "material.txt_ke");
     static auto ke_txt_on_id =
-        get_program_uniform_location(prog->prog, "material.txt_ke_on");
+        get_program_uniform_location(prog.prog, "material.txt_ke_on");
     static auto kd_txt_id =
-        get_program_uniform_location(prog->prog, "material.txt_kd");
+        get_program_uniform_location(prog.prog, "material.txt_kd");
     static auto kd_txt_on_id =
-        get_program_uniform_location(prog->prog, "material.txt_kd_on");
+        get_program_uniform_location(prog.prog, "material.txt_kd_on");
     static auto ks_txt_id =
-        get_program_uniform_location(prog->prog, "material.txt_ks");
+        get_program_uniform_location(prog.prog, "material.txt_ks");
     static auto ks_txt_on_id =
-        get_program_uniform_location(prog->prog, "material.txt_ks_on");
+        get_program_uniform_location(prog.prog, "material.txt_ks_on");
     static auto rs_txt_id =
-        get_program_uniform_location(prog->prog, "material.txt_rs");
+        get_program_uniform_location(prog.prog, "material.txt_rs");
     static auto rs_txt_on_id =
-        get_program_uniform_location(prog->prog, "material.txt_rs_on");
+        get_program_uniform_location(prog.prog, "material.txt_rs_on");
     static auto norm_txt_id =
-        get_program_uniform_location(prog->prog, "material.txt_norm");
+        get_program_uniform_location(prog.prog, "material.txt_norm");
     static auto norm_txt_on_id =
-        get_program_uniform_location(prog->prog, "material.txt_norm_on");
+        get_program_uniform_location(prog.prog, "material.txt_norm_on");
     static auto occ_txt_id =
-        get_program_uniform_location(prog->prog, "material.txt_occ");
+        get_program_uniform_location(prog.prog, "material.txt_occ");
     static auto occ_txt_on_id =
-        get_program_uniform_location(prog->prog, "material.txt_occ_on");
+        get_program_uniform_location(prog.prog, "material.txt_occ_on");
     static auto norm_scale_id =
-        get_program_uniform_location(prog->prog, "material.norm_scale");
+        get_program_uniform_location(prog.prog, "material.norm_scale");
     static auto occ_scale_id =
-        get_program_uniform_location(prog->prog, "material.occ_scale");
+        get_program_uniform_location(prog.prog, "material.occ_scale");
     static auto use_phong_id =
-        get_program_uniform_location(prog->prog, "material.use_phong");
+        get_program_uniform_location(prog.prog, "material.use_phong");
     static auto double_sided_id =
-        get_program_uniform_location(prog->prog, "material.double_sided");
+        get_program_uniform_location(prog.prog, "material.double_sided");
     static auto alpha_cutout_id =
-        get_program_uniform_location(prog->prog, "material.alpha_cutout");
+        get_program_uniform_location(prog.prog, "material.alpha_cutout");
 
     static auto mtypes = std::unordered_map<material_type, int>{
         {material_type::specular_roughness, 1},
@@ -13622,144 +13502,132 @@ void set_stdsurface_material(const std::shared_ptr<gl_stdsurface_program>& prog,
         {material_type::specular_glossiness, 3}};
 
     assert(gl_check_error());
-    set_program_uniform(prog->prog, mtype_id, mtypes.at(type));
-    set_program_uniform(prog->prog, etype_id, (int)etype);
-    set_program_uniform(prog->prog, ke_id, ke);
-    set_program_uniform(prog->prog, kd_id, kd);
-    set_program_uniform(prog->prog, ks_id, ks);
-    set_program_uniform(prog->prog, rs_id, rs);
-    set_program_uniform(prog->prog, op_id, op);
+    set_program_uniform(prog.prog, mtype_id, mtypes.at(type));
+    set_program_uniform(prog.prog, etype_id, (int)etype);
+    set_program_uniform(prog.prog, ke_id, ke);
+    set_program_uniform(prog.prog, kd_id, kd);
+    set_program_uniform(prog.prog, ks_id, ks);
+    set_program_uniform(prog.prog, rs_id, rs);
+    set_program_uniform(prog.prog, op_id, op);
     set_program_uniform_texture(
-        prog->prog, ke_txt_id, ke_txt_on_id, ke_txt, ke_txt_info, 0);
+        prog.prog, ke_txt_id, ke_txt_on_id, ke_txt, ke_txt_info, 0);
     set_program_uniform_texture(
-        prog->prog, kd_txt_id, kd_txt_on_id, kd_txt, kd_txt_info, 1);
+        prog.prog, kd_txt_id, kd_txt_on_id, kd_txt, kd_txt_info, 1);
     set_program_uniform_texture(
-        prog->prog, ks_txt_id, ks_txt_on_id, ks_txt, ks_txt_info, 2);
+        prog.prog, ks_txt_id, ks_txt_on_id, ks_txt, ks_txt_info, 2);
     set_program_uniform_texture(
-        prog->prog, rs_txt_id, rs_txt_on_id, rs_txt, rs_txt_info, 3);
+        prog.prog, rs_txt_id, rs_txt_on_id, rs_txt, rs_txt_info, 3);
     set_program_uniform_texture(
-        prog->prog, norm_txt_id, norm_txt_on_id, norm_txt, norm_txt_info, 4);
+        prog.prog, norm_txt_id, norm_txt_on_id, norm_txt, norm_txt_info, 4);
     set_program_uniform_texture(
-        prog->prog, occ_txt_id, occ_txt_on_id, occ_txt, occ_txt_info, 5);
-    set_program_uniform(prog->prog, norm_scale_id, norm_txt_info.scale);
-    set_program_uniform(prog->prog, occ_scale_id, occ_txt_info.scale);
-    set_program_uniform(prog->prog, use_phong_id, use_phong);
-    set_program_uniform(prog->prog, double_sided_id, double_sided);
-    set_program_uniform(prog->prog, alpha_cutout_id, alpha_cutout);
+        prog.prog, occ_txt_id, occ_txt_on_id, occ_txt, occ_txt_info, 5);
+    set_program_uniform(prog.prog, norm_scale_id, norm_txt_info.scale);
+    set_program_uniform(prog.prog, occ_scale_id, occ_txt_info.scale);
+    set_program_uniform(prog.prog, use_phong_id, use_phong);
+    set_program_uniform(prog.prog, double_sided_id, double_sided);
+    set_program_uniform(prog.prog, alpha_cutout_id, alpha_cutout);
     assert(gl_check_error());
 }
 
 // Set constant material values with emission ke.
 void set_stdsurface_constmaterial(
-    const std::shared_ptr<gl_stdsurface_program>& prog, const vec3f& ke,
-    float op) {
+    gl_stdsurface_program& prog, const vec3f& ke, float op) {
     static auto mtype_id =
-        get_program_uniform_location(prog->prog, "material.type");
+        get_program_uniform_location(prog.prog, "material.type");
     static auto etype_id =
-        get_program_uniform_location(prog->prog, "material.etype");
-    static auto ke_id = get_program_uniform_location(prog->prog, "material.ke");
-    static auto op_id = get_program_uniform_location(prog->prog, "material.op");
+        get_program_uniform_location(prog.prog, "material.etype");
+    static auto ke_id = get_program_uniform_location(prog.prog, "material.ke");
+    static auto op_id = get_program_uniform_location(prog.prog, "material.op");
 
     assert(gl_check_error());
-    set_program_uniform(prog->prog, mtype_id, 0);
-    set_program_uniform(prog->prog, etype_id, 0);
-    set_program_uniform(prog->prog, ke_id, ke);
-    set_program_uniform(prog->prog, op_id, op);
+    set_program_uniform(prog.prog, mtype_id, 0);
+    set_program_uniform(prog.prog, etype_id, 0);
+    set_program_uniform(prog.prog, ke_id, ke);
+    set_program_uniform(prog.prog, op_id, op);
     assert(gl_check_error());
 }
 
 // Set vertex data with buffers for position pos, normals norm, texture
 // coordinates texcoord, per-vertex color color and tangent space
 // tangsp.
-void set_stdsurface_vert(const std::shared_ptr<gl_stdsurface_program>& prog,
-    const std::shared_ptr<gl_vertex_buffer>& pos,
-    const std::shared_ptr<gl_vertex_buffer>& norm,
-    const std::shared_ptr<gl_vertex_buffer>& texcoord,
-    const std::shared_ptr<gl_vertex_buffer>& color,
-    const std::shared_ptr<gl_vertex_buffer>& tangsp) {
-    static auto pos_id = get_program_attrib_location(prog->prog, "vert_pos");
-    static auto norm_id = get_program_attrib_location(prog->prog, "vert_norm");
+void set_stdsurface_vert(const gl_stdsurface_program& prog,
+    const gl_vertex_buffer& pos, const gl_vertex_buffer& norm,
+    const gl_vertex_buffer& texcoord, const gl_vertex_buffer& color,
+    const gl_vertex_buffer& tangsp) {
+    static auto pos_id = get_program_attrib_location(prog.prog, "vert_pos");
+    static auto norm_id = get_program_attrib_location(prog.prog, "vert_norm");
     static auto texcoord_id =
-        get_program_attrib_location(prog->prog, "vert_texcoord");
-    static auto color_id =
-        get_program_attrib_location(prog->prog, "vert_color");
+        get_program_attrib_location(prog.prog, "vert_texcoord");
+    static auto color_id = get_program_attrib_location(prog.prog, "vert_color");
     static auto tangsp_id =
-        get_program_attrib_location(prog->prog, "vert_tangsp");
+        get_program_attrib_location(prog.prog, "vert_tangsp");
     assert(gl_check_error());
-    set_program_vertattr(prog->prog, pos_id, pos, zero3f);
-    set_program_vertattr(prog->prog, norm_id, norm, zero3f);
-    set_program_vertattr(prog->prog, texcoord_id, texcoord, zero2f);
-    set_program_vertattr(prog->prog, color_id, color, vec4f{1, 1, 1, 1});
-    set_program_vertattr(prog->prog, tangsp_id, tangsp, zero4f);
+    set_program_vertattr(prog.prog, pos_id, pos, zero3f);
+    set_program_vertattr(prog.prog, norm_id, norm, zero3f);
+    set_program_vertattr(prog.prog, texcoord_id, texcoord, zero2f);
+    set_program_vertattr(prog.prog, color_id, color, vec4f{1, 1, 1, 1});
+    set_program_vertattr(prog.prog, tangsp_id, tangsp, zero4f);
     assert(gl_check_error());
 }
 
 // Set vertex data with buffers for skinning.
-void set_stdsurface_vert_skinning(
-    const std::shared_ptr<gl_stdsurface_program>& prog,
-    const std::shared_ptr<gl_vertex_buffer>& weights,
-    const std::shared_ptr<gl_vertex_buffer>& joints, int nxforms,
+void set_stdsurface_vert_skinning(const gl_stdsurface_program& prog,
+    gl_vertex_buffer& weights, gl_vertex_buffer& joints, int nxforms,
     const mat4f* xforms) {
-    static auto type_id = get_program_uniform_location(prog->prog, "skin_type");
+    static auto type_id = get_program_uniform_location(prog.prog, "skin_type");
     static auto xforms_id =
-        get_program_uniform_location(prog->prog, "skin_xforms");
+        get_program_uniform_location(prog.prog, "skin_xforms");
     static auto weights_id =
-        get_program_attrib_location(prog->prog, "vert_skin_weights");
+        get_program_attrib_location(prog.prog, "vert_skin_weights");
     static auto joints_id =
-        get_program_attrib_location(prog->prog, "vert_skin_joints");
+        get_program_attrib_location(prog.prog, "vert_skin_joints");
     int type = 1;
-    set_program_uniform(prog->prog, type_id, type);
-    set_program_uniform(prog->prog, xforms_id, xforms, min(nxforms, 32));
-    set_program_vertattr(prog->prog, weights_id, weights, zero4f);
-    set_program_vertattr(prog->prog, joints_id, joints, zero4f);
+    set_program_uniform(prog.prog, type_id, type);
+    set_program_uniform(prog.prog, xforms_id, xforms, min(nxforms, 32));
+    set_program_vertattr(prog.prog, weights_id, weights, zero4f);
+    set_program_vertattr(prog.prog, joints_id, joints, zero4f);
 }
 
 // Set vertex data with buffers for skinning.
-void set_stdsurface_vert_gltf_skinning(
-    const std::shared_ptr<gl_stdsurface_program>& prog,
-    const std::shared_ptr<gl_vertex_buffer>& weights,
-    const std::shared_ptr<gl_vertex_buffer>& joints, int nxforms,
+void set_stdsurface_vert_gltf_skinning(const gl_stdsurface_program& prog,
+    gl_vertex_buffer& weights, gl_vertex_buffer& joints, int nxforms,
     const mat4f* xforms) {
-    static auto type_id = get_program_uniform_location(prog->prog, "skin_type");
+    static auto type_id = get_program_uniform_location(prog.prog, "skin_type");
     static auto xforms_id =
-        get_program_uniform_location(prog->prog, "skin_xforms");
+        get_program_uniform_location(prog.prog, "skin_xforms");
     static auto weights_id =
-        get_program_attrib_location(prog->prog, "vert_skin_weights");
+        get_program_attrib_location(prog.prog, "vert_skin_weights");
     static auto joints_id =
-        get_program_attrib_location(prog->prog, "vert_skin_joints");
+        get_program_attrib_location(prog.prog, "vert_skin_joints");
     int type = 2;
-    set_program_uniform(prog->prog, type_id, type);
-    set_program_uniform(prog->prog, xforms_id, xforms, min(nxforms, 32));
-    set_program_vertattr(prog->prog, weights_id, weights, zero4f);
-    set_program_vertattr(prog->prog, joints_id, joints, zero4f);
+    set_program_uniform(prog.prog, type_id, type);
+    set_program_uniform(prog.prog, xforms_id, xforms, min(nxforms, 32));
+    set_program_vertattr(prog.prog, weights_id, weights, zero4f);
+    set_program_vertattr(prog.prog, joints_id, joints, zero4f);
 }
 
 // Disables vertex skinning.
-void set_stdsurface_vert_skinning_off(
-    const std::shared_ptr<gl_stdsurface_program>& prog) {
-    static auto type_id = get_program_uniform_location(prog->prog, "skin_type");
-    // static auto xforms_id = get_program_uniform_location(prog->prog,
+void set_stdsurface_vert_skinning_off(const gl_stdsurface_program& prog) {
+    static auto type_id = get_program_uniform_location(prog.prog, "skin_type");
+    // static auto xforms_id = get_program_uniform_location(prog.prog,
     // "skin_xforms");
     static auto weights_id =
-        get_program_attrib_location(prog->prog, "vert_skin_weights");
+        get_program_attrib_location(prog.prog, "vert_skin_weights");
     static auto joints_id =
-        get_program_attrib_location(prog->prog, "vert_skin_joints");
+        get_program_attrib_location(prog.prog, "vert_skin_joints");
     int type = 0;
-    set_program_uniform(prog->prog, type_id, type);
-    set_program_vertattr(prog->prog, weights_id, {}, zero4f);
-    set_program_vertattr(prog->prog, joints_id, {}, zero4f);
+    set_program_uniform(prog.prog, type_id, type);
+    set_program_vertattr(prog.prog, weights_id, {}, zero4f);
+    set_program_vertattr(prog.prog, joints_id, {}, zero4f);
 }
 
 // Draw a shape
-void draw_stdsurface_shape(const std::shared_ptr<shape>& shp,
-    const mat4f& xform, bool highlighted,
-    const std::shared_ptr<gl_stdsurface_program>& prog,
-    std::unordered_map<std::shared_ptr<shape>, std::shared_ptr<gl_shape>>&
-        shapes,
-    std::unordered_map<std::shared_ptr<texture>, std::shared_ptr<gl_texture>>&
-        textures,
+void draw_stdsurface_shape(const shape* shp, const mat4f& xform,
+    bool highlighted, gl_stdsurface_program& prog,
+    std::unordered_map<shape*, gl_shape>& shapes,
+    std::unordered_map<texture*, gl_texture>& textures,
     const gl_stdsurface_params& params) {
-    static auto default_material = std::make_shared<material>();
+    static auto default_material = new material();
     default_material->kd = {0.2f, 0.2f, 0.2f};
 
     begin_stdsurface_shape(prog, xform);
@@ -13768,10 +13636,10 @@ void draw_stdsurface_shape(const std::shared_ptr<shape>& shp,
     if (!shp->lines.empty()) etype = gl_elem_type::line;
     if (!shp->points.empty()) etype = gl_elem_type::point;
 
-    auto txt = [&textures](const std::shared_ptr<texture>& txt)
-        -> std::shared_ptr<gl_texture> {
-        if (!txt) return {};
-        return textures.at(txt);
+    auto txt = [&textures](const texture* txt) -> gl_texture& {
+        static auto def = gl_texture();
+        if (!txt) return def;
+        return textures.at((texture*)txt);
     };
 
     auto mat = get_material(shp, 0) ? get_material(shp, 0) : default_material;
@@ -13780,15 +13648,15 @@ void draw_stdsurface_shape(const std::shared_ptr<shape>& shp,
         txt(mat->rs_txt), txt(mat->norm_txt), txt(mat->occ_txt), false,
         mat->double_sided, params.cutout);
 
-    auto& gshp = shapes.at(shp);
+    auto& gshp = shapes.at((shape*)shp);
     set_stdsurface_vert(
-        prog, gshp->pos, gshp->norm, gshp->texcoord, gshp->color, gshp->tangsp);
+        prog, gshp.pos, gshp.norm, gshp.texcoord, gshp.color, gshp.tangsp);
 
-    draw_elems(gshp->points);
-    draw_elems(gshp->lines);
-    draw_elems(gshp->triangles);
-    draw_elems(gshp->quads);
-    draw_elems(gshp->beziers);
+    draw_elems(gshp.points);
+    draw_elems(gshp.lines);
+    draw_elems(gshp.triangles);
+    draw_elems(gshp.quads);
+    draw_elems(gshp.beziers);
 
     if ((params.edges && !params.wireframe) || highlighted) {
         gl_enable_culling(false);
@@ -13796,33 +13664,28 @@ void draw_stdsurface_shape(const std::shared_ptr<shape>& shp,
             (highlighted) ? params.highlight_color : params.edge_color,
             (highlighted) ? 1 : mat->op);
         set_stdsurface_normaloffset(prog, params.edge_offset);
-        draw_elems(gshp->edges);
+        draw_elems(gshp.edges);
         gl_enable_culling(params.cull_backface);
     }
 
     if (highlighted && false) {
         set_stdsurface_constmaterial(prog, params.highlight_color, 1);
         set_stdsurface_normaloffset(prog, params.edge_offset);
-        draw_elems(gshp->points);
-        draw_elems(gshp->lines);
-        draw_elems(gshp->triangles);
-        draw_elems(gshp->quads);
-        draw_elems(gshp->beziers);
+        draw_elems(gshp.points);
+        draw_elems(gshp.lines);
+        draw_elems(gshp.triangles);
+        draw_elems(gshp.quads);
+        draw_elems(gshp.beziers);
     }
 
     end_stdsurface_shape(prog);
 }
 
 // Display a scene
-void draw_stdsurface_scene(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<camera>& cam,
-    const std::shared_ptr<gl_stdsurface_program>& prog,
-    std::unordered_map<std::shared_ptr<shape>, std::shared_ptr<gl_shape>>&
-        shapes,
-    std::unordered_map<std::shared_ptr<texture>, std::shared_ptr<gl_texture>>&
-        textures,
-    const gl_lights& lights, const vec2i& viewport_size,
-    const std::shared_ptr<void>& highlighted,
+void draw_stdsurface_scene(const scene* scn, const camera* cam,
+    gl_stdsurface_program& prog, std::unordered_map<shape*, gl_shape>& shapes,
+    std::unordered_map<texture*, gl_texture>& textures, const gl_lights& lights,
+    const vec2i& viewport_size, const void* highlighted,
     const gl_stdsurface_params& params, const tonemap_params& tmparams) {
     // begin frame
     gl_enable_depth_test(true);
@@ -13924,9 +13787,8 @@ void _glfw_refresh_cb(GLFWwindow* gwin) {
 }
 
 // Initialize gl_window
-std::shared_ptr<gl_window> make_window(
-    int width, int height, const std::string& title) {
-    auto win = std::make_shared<gl_window>();
+gl_window* make_window(int width, int height, const std::string& title) {
+    auto win = new gl_window();
 
     // gl_window
     if (!glfwInit()) throw std::runtime_error("cannot open gl_window");
@@ -13941,7 +13803,7 @@ std::shared_ptr<gl_window> make_window(
 
     win->gwin = glfwCreateWindow(width, height, title.c_str(), 0, 0);
     glfwMakeContextCurrent(win->gwin);
-    glfwSetWindowUserPointer(win->gwin, win.get());
+    glfwSetWindowUserPointer(win->gwin, win);
 
     glfwSetErrorCallback(_glfw_error_cb);
 
@@ -13960,9 +13822,8 @@ std::shared_ptr<gl_window> make_window(
 }
 
 // Set gl_window callbacks
-void set_window_callbacks(const std::shared_ptr<gl_window>& win,
-    gl_text_callback text_cb, gl_mouse_callback mouse_cb,
-    gl_refresh_callback refresh_cb) {
+void set_window_callbacks(gl_window* win, gl_text_callback text_cb,
+    gl_mouse_callback mouse_cb, gl_refresh_callback refresh_cb) {
     win->text_cb = text_cb;
     win->mouse_cb = mouse_cb;
     win->refresh_cb = refresh_cb;
@@ -13970,29 +13831,24 @@ void set_window_callbacks(const std::shared_ptr<gl_window>& win,
 }
 
 // Set gl_window title
-void set_window_title(
-    const std::shared_ptr<gl_window>& win, const std::string& title) {
+void set_window_title(gl_window* win, const std::string& title) {
     glfwSetWindowTitle(win->gwin, title.c_str());
 }
 
 // Wait events
-void wait_events(const std::shared_ptr<gl_window>& win) { glfwWaitEvents(); }
+void wait_events(gl_window* win) { glfwWaitEvents(); }
 
 // Poll events
-void poll_events(const std::shared_ptr<gl_window>& win) { glfwPollEvents(); }
+void poll_events(gl_window* win) { glfwPollEvents(); }
 
 // Swap buffers
-void swap_buffers(const std::shared_ptr<gl_window>& win) {
-    glfwSwapBuffers(win->gwin);
-}
+void swap_buffers(gl_window* win) { glfwSwapBuffers(win->gwin); }
 
 // Should close
-bool should_close(const std::shared_ptr<gl_window>& win) {
-    return glfwWindowShouldClose(win->gwin);
-}
+bool should_close(gl_window* win) { return glfwWindowShouldClose(win->gwin); }
 
 // Mouse button
-int get_mouse_button(const std::shared_ptr<gl_window>& win) {
+int get_mouse_button(gl_window* win) {
     auto mouse1 =
         glfwGetMouseButton(win->gwin, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS;
     auto mouse2 =
@@ -14021,42 +13877,41 @@ int get_mouse_button(const std::shared_ptr<gl_window>& win) {
 }
 
 // Mouse position
-vec2i get_mouse_pos(const std::shared_ptr<gl_window>& win) {
+vec2i get_mouse_pos(gl_window* win) {
     double x, y;
     glfwGetCursorPos(win->gwin, &x, &y);
     return {(int)x, (int)y};
 }
 
 // Mouse position
-vec2f get_mouse_posf(const std::shared_ptr<gl_window>& win) {
+vec2f get_mouse_posf(gl_window* win) {
     double x, y;
     glfwGetCursorPos(win->gwin, &x, &y);
     return {(float)x, (float)y};
 }
 
 // Window size
-vec2i get_window_size(const std::shared_ptr<gl_window>& win) {
+vec2i get_window_size(gl_window* win) {
     auto ret = vec2i{0, 0};
     glfwGetWindowSize(win->gwin, &ret.x, &ret.y);
     return ret;
 }
 
 // Check if a key is pressed (not all keys are supported)
-bool get_key(const std::shared_ptr<gl_window>& win, int key) {
+bool get_key(gl_window* win, int key) {
     key = std::toupper(key);
     return glfwGetKey(win->gwin, key) == GLFW_PRESS;
 }
 
 // Framebuffer size
-vec2i get_framebuffer_size(const std::shared_ptr<gl_window>& win) {
+vec2i get_framebuffer_size(gl_window* win) {
     auto ret = vec2i{0, 0};
     glfwGetFramebufferSize(win->gwin, &ret.x, &ret.y);
     return ret;
 }
 
 // Read pixels
-image4b take_screenshot4b(
-    const std::shared_ptr<gl_window>& win, bool flipy, bool back) {
+image4b take_screenshot4b(gl_window* win, bool flipy, bool back) {
     auto wh = get_framebuffer_size(win);
     auto img = image4b(wh.x, wh.y);
     glReadBuffer((back) ? GL_BACK : GL_FRONT);
@@ -14073,8 +13928,8 @@ image4b take_screenshot4b(
 }
 
 // Handles camera navigation
-bool handle_camera_navigation(const std::shared_ptr<gl_window>& win,
-    const std::shared_ptr<camera>& cam, bool navigation_fps) {
+bool handle_camera_navigation(
+    gl_window* win, camera* cam, bool navigation_fps) {
     static auto mouse_last = zero2f;
     auto mouse_pos = get_mouse_posf(win);
     auto mouse_button = get_mouse_button(win);
@@ -14134,8 +13989,7 @@ bool handle_camera_navigation(const std::shared_ptr<gl_window>& win,
 }
 
 // Initialize widgets
-void init_widgets(
-    const std::shared_ptr<gl_window>& win, bool light_style, bool alt_font) {
+void init_widgets(gl_window* win, bool light_style, bool alt_font) {
     ImGui_ImplGlfwGL3_Init(win->gwin, false);
     ImGui::GetStyle().WindowRounding = 0;
     ImGui::GetIO().IniFilename = nullptr;
@@ -14156,8 +14010,7 @@ void init_widgets(
 }
 
 // Begin draw widget
-bool begin_widgets(
-    const std::shared_ptr<gl_window>& win, const std::string& title) {
+bool begin_widgets(gl_window* win, const std::string& title) {
     static bool first_time = true;
     ImGui_ImplGlfwGL3_NewFrame();
     if (first_time) {
@@ -14174,47 +14027,39 @@ bool begin_widgets(
 }
 
 // End draw widget
-void end_widgets(const std::shared_ptr<gl_window>& win) {
+void end_widgets(gl_window* win) {
     ImGui::End();
     ImGui::Render();
 }
 
 // Whether widget are active
-bool get_widget_active(const std::shared_ptr<gl_window>& win) {
+bool get_widget_active(gl_window* win) {
     if (!win->widget_enabled) return false;
     auto io = &ImGui::GetIO();
     return io->WantTextInput || io->WantCaptureMouse || io->WantCaptureKeyboard;
 }
 
 // Horizontal separator
-void draw_separator_widget(const std::shared_ptr<gl_window>& win) {
-    ImGui::Separator();
-}
+void draw_separator_widget(gl_window* win) { ImGui::Separator(); }
 
 // Indent widget
-void draw_indent_widget_begin(const std::shared_ptr<gl_window>& win) {
-    ImGui::Indent();
-}
+void draw_indent_widget_begin(gl_window* win) { ImGui::Indent(); }
 
 // Indent widget
-void draw_indent_widget_end(const std::shared_ptr<gl_window>& win) {
-    ImGui::Unindent();
-}
+void draw_indent_widget_end(gl_window* win) { ImGui::Unindent(); }
 
 // Continue line with next widget
-void draw_continue_widget(const std::shared_ptr<gl_window>& win) {
-    ImGui::SameLine();
-}
+void draw_continue_widget(gl_window* win) { ImGui::SameLine(); }
 
 // Label widget
-void draw_label_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, const std::string& msg) {
+void draw_label_widget(
+    gl_window* win, const std::string& lbl, const std::string& msg) {
     ImGui::LabelText(lbl.c_str(), "%s", msg.c_str());
 }
 
 // Value widget
-bool draw_text_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, std::string& str) {
+bool draw_text_widget(
+    gl_window* win, const std::string& lbl, std::string& str) {
     char buf[4096];
     if (str.length() >= 4096) throw std::runtime_error("bad memory");
     memcpy(buf, str.c_str(), str.size());
@@ -14225,8 +14070,8 @@ bool draw_text_widget(const std::shared_ptr<gl_window>& win,
 }
 
 // Value widget
-bool draw_multilinetext_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, std::string& str) {
+bool draw_multilinetext_widget(
+    gl_window* win, const std::string& lbl, std::string& str) {
     char sbuf[8192];
     std::vector<char> dbuf;
     char* buf = nullptr;
@@ -14248,50 +14093,50 @@ bool draw_multilinetext_widget(const std::shared_ptr<gl_window>& win,
 }
 
 // Value widget
-bool draw_slider_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, int& val, int min, int max) {
+bool draw_slider_widget(
+    gl_window* win, const std::string& lbl, int& val, int min, int max) {
     return ImGui::SliderInt(lbl.c_str(), &val, min, max);
 }
 // Value widget
-bool draw_slider_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, vec2i& val, int min, int max) {
+bool draw_slider_widget(
+    gl_window* win, const std::string& lbl, vec2i& val, int min, int max) {
     return ImGui::SliderInt2(lbl.c_str(), &val.x, min, max);
 }
 // Value widget
-bool draw_slider_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, vec3i& val, int min, int max) {
+bool draw_slider_widget(
+    gl_window* win, const std::string& lbl, vec3i& val, int min, int max) {
     return ImGui::SliderInt3(lbl.c_str(), &val.x, min, max);
 }
 // Value widget
-bool draw_slider_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, vec4i& val, int min, int max) {
+bool draw_slider_widget(
+    gl_window* win, const std::string& lbl, vec4i& val, int min, int max) {
     return ImGui::SliderInt4(lbl.c_str(), &val.x, min, max);
 }
 
 // Value widget
-bool draw_slider_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, float& val, float min, float max) {
+bool draw_slider_widget(
+    gl_window* win, const std::string& lbl, float& val, float min, float max) {
     return ImGui::SliderFloat(lbl.c_str(), &val, min, max);
 }
 // Value widget
-bool draw_slider_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, vec2f& val, float min, float max) {
+bool draw_slider_widget(
+    gl_window* win, const std::string& lbl, vec2f& val, float min, float max) {
     return ImGui::SliderFloat2(lbl.c_str(), &val.x, min, max);
 }
 // Value widget
-bool draw_slider_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, vec3f& val, float min, float max) {
+bool draw_slider_widget(
+    gl_window* win, const std::string& lbl, vec3f& val, float min, float max) {
     return ImGui::SliderFloat3(lbl.c_str(), &val.x, min, max);
 }
 // Value widget
-bool draw_slider_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, vec4f& val, float min, float max) {
+bool draw_slider_widget(
+    gl_window* win, const std::string& lbl, vec4f& val, float min, float max) {
     return ImGui::SliderFloat4(lbl.c_str(), &val.x, min, max);
 }
 
 // Slider widget.
-bool draw_slider_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, mat<float, 4>& val, float min, float max) {
+bool draw_slider_widget(gl_window* win, const std::string& lbl,
+    mat<float, 4>& val, float min, float max) {
     auto modx = draw_slider_widget(win, lbl + ".x", val.x, min, max);
     auto mody = draw_slider_widget(win, lbl + ".y", val.y, min, max);
     auto modz = draw_slider_widget(win, lbl + ".z", val.z, min, max);
@@ -14299,8 +14144,8 @@ bool draw_slider_widget(const std::shared_ptr<gl_window>& win,
     return modx || mody || modz || modw;
 }
 // Slider widget.
-bool draw_slider_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, frame<float, 3>& val, float min, float max) {
+bool draw_slider_widget(gl_window* win, const std::string& lbl,
+    frame<float, 3>& val, float min, float max) {
     auto modx = draw_slider_widget(win, lbl + ".x", val.x, -1, 1);
     auto mody = draw_slider_widget(win, lbl + ".y", val.y, -1, 1);
     auto modz = draw_slider_widget(win, lbl + ".z", val.z, -1, 1);
@@ -14309,26 +14154,23 @@ bool draw_slider_widget(const std::shared_ptr<gl_window>& win,
     return modx || mody || modz || modo;
 }
 // Slider widget
-bool draw_slider_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, quat4f& val, float min, float max) {
+bool draw_slider_widget(
+    gl_window* win, const std::string& lbl, quat4f& val, float min, float max) {
     auto mod = ImGui::SliderFloat4(lbl.c_str(), &val.x, min, max);
     if (mod) val = normalize(val);
     return mod;
 }
 
 // Color widget
-bool draw_color_widget(
-    const std::shared_ptr<gl_window>& win, const std::string& lbl, vec4f& val) {
+bool draw_color_widget(gl_window* win, const std::string& lbl, vec4f& val) {
     return ImGui::ColorEdit4(lbl.c_str(), (float*)&val.x);
 }
 // Color widget
-bool draw_color_widget(
-    const std::shared_ptr<gl_window>& win, const std::string& lbl, vec3f& val) {
+bool draw_color_widget(gl_window* win, const std::string& lbl, vec3f& val) {
     return ImGui::ColorEdit3(lbl.c_str(), (float*)&val.x);
 }
 // Color widget
-bool draw_color_widget(
-    const std::shared_ptr<gl_window>& win, const std::string& lbl, vec4b& val) {
+bool draw_color_widget(gl_window* win, const std::string& lbl, vec4b& val) {
     auto valf = ImGui::ColorConvertU32ToFloat4(*(uint32_t*)&val);
     if (ImGui::ColorEdit4(lbl.c_str(), &valf.x)) {
         auto valb = ImGui::ColorConvertFloat4ToU32(valf);
@@ -14339,20 +14181,19 @@ bool draw_color_widget(
 }
 
 // Bool widget
-bool draw_checkbox_widget(
-    const std::shared_ptr<gl_window>& win, const std::string& lbl, bool& val) {
+bool draw_checkbox_widget(gl_window* win, const std::string& lbl, bool& val) {
     return ImGui::Checkbox(lbl.c_str(), &val);
 }
 
 // Combo widget
-bool draw_combo_widget_begin(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, const std::string& label) {
+bool draw_combo_widget_begin(
+    gl_window* win, const std::string& lbl, const std::string& label) {
     return ImGui::BeginCombo(lbl.c_str(), label.c_str());
 }
 
 // Combo widget
-bool draw_combo_widget_item(const std::shared_ptr<gl_window>& win,
-    const std::string& label, int idx, bool selected) {
+bool draw_combo_widget_item(
+    gl_window* win, const std::string& label, int idx, bool selected) {
     ImGui::PushID((void*)(intptr_t)idx);
     auto clicked = ImGui::Selectable(label.c_str(), selected);
     if (selected) ImGui::SetItemDefaultFocus();
@@ -14361,36 +14202,29 @@ bool draw_combo_widget_item(const std::shared_ptr<gl_window>& win,
 }
 
 // Combo widget
-void draw_combo_widget_end(const std::shared_ptr<gl_window>& win) {
-    ImGui::EndCombo();
-}
+void draw_combo_widget_end(gl_window* win) { ImGui::EndCombo(); }
 
 // Button widget
-bool draw_button_widget(
-    const std::shared_ptr<gl_window>& win, const std::string& lbl) {
+bool draw_button_widget(gl_window* win, const std::string& lbl) {
     return ImGui::Button(lbl.c_str());
 }
 
 // Collapsible header
-bool draw_header_widget(
-    const std::shared_ptr<gl_window>& win, const std::string& lbl) {
+bool draw_header_widget(gl_window* win, const std::string& lbl) {
     return ImGui::CollapsingHeader(lbl.c_str());
 }
 
 // Start tree node
-bool draw_tree_widget_begin(
-    const std::shared_ptr<gl_window>& win, const std::string& lbl) {
+bool draw_tree_widget_begin(gl_window* win, const std::string& lbl) {
     return ImGui::TreeNode(lbl.c_str());
 }
 
 // Collapsible header
-void draw_tree_widget_end(const std::shared_ptr<gl_window>& win) {
-    ImGui::TreePop();
-}
+void draw_tree_widget_end(gl_window* win) { ImGui::TreePop(); }
 
 // Start selectable tree node
-bool draw_tree_widget_begin(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, void*& selection, void* content) {
+bool draw_tree_widget_begin(
+    gl_window* win, const std::string& lbl, void*& selection, void* content) {
     ImGuiTreeNodeFlags node_flags =
         ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
     if (selection == content) node_flags |= ImGuiTreeNodeFlags_Selected;
@@ -14400,14 +14234,11 @@ bool draw_tree_widget_begin(const std::shared_ptr<gl_window>& win,
 }
 
 // End selectable tree node
-void draw_tree_widget_end(
-    const std::shared_ptr<gl_window>& win, void* content) {
-    ImGui::TreePop();
-}
+void draw_tree_widget_end(gl_window* win, void* content) { ImGui::TreePop(); }
 
 // Selectable tree leaf node
-void draw_tree_widget_leaf(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, void*& selection, void* content) {
+void draw_tree_widget_leaf(
+    gl_window* win, const std::string& lbl, void*& selection, void* content) {
     ImGuiTreeNodeFlags node_flags =
         ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
     if (selection == content) node_flags |= ImGuiTreeNodeFlags_Selected;
@@ -14416,16 +14247,16 @@ void draw_tree_widget_leaf(const std::shared_ptr<gl_window>& win,
 }
 
 // Selectable tree leaf node
-void draw_tree_widget_leaf(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, void*& selection, void* content, const vec4f& col) {
+void draw_tree_widget_leaf(gl_window* win, const std::string& lbl,
+    void*& selection, void* content, const vec4f& col) {
     ImGui::PushStyleColor(ImGuiCol_Text, {col.x, col.y, col.z, col.w});
     draw_tree_widget_leaf(win, lbl, selection, content);
     ImGui::PopStyleColor();
 }
 
 // Image widget
-void draw_image_widget(const std::shared_ptr<gl_window>& win, int tid,
-    const vec2i& size, const vec2i& imsize) {
+void draw_image_widget(
+    gl_window* win, int tid, const vec2i& size, const vec2i& imsize) {
     auto w = ImGui::GetContentRegionAvailWidth();
     auto s = vec2f{(float)size.x, (float)size.y};
     auto a = (float)imsize.x / (float)imsize.y;
@@ -14452,65 +14283,48 @@ void draw_image_widget(const std::shared_ptr<gl_window>& win, int tid,
 }
 
 // Image widget
-void draw_image_widget(const std::shared_ptr<gl_window>& win,
-    const std::shared_ptr<gl_texture>& txt, const vec2i& size) {
-    draw_image_widget(
-        win, get_texture_id(txt), size, {txt->width, txt->height});
+void draw_image_widget(
+    gl_window* win, const gl_texture& txt, const vec2i& size) {
+    draw_image_widget(win, get_texture_id(txt), size, {txt.width, txt.height});
 }
 
 // Scroll region
-void draw_scroll_widget_begin(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, int height, bool border) {
+void draw_scroll_widget_begin(
+    gl_window* win, const std::string& lbl, int height, bool border) {
     ImGui::BeginChild(lbl.c_str(), ImVec2(0, height), border);
 }
 // Scroll region
-void draw_scroll_widget_end(const std::shared_ptr<gl_window>& win) {
-    ImGui::EndChild();
-}
+void draw_scroll_widget_end(gl_window* win) { ImGui::EndChild(); }
 // Scroll region
-void draw_scroll_widget_here(const std::shared_ptr<gl_window>& win) {
-    ImGui::SetScrollHere();
-}
+void draw_scroll_widget_here(gl_window* win) { ImGui::SetScrollHere(); }
 
 // Group ids
-void draw_groupid_widget_push(const std::shared_ptr<gl_window>& win, int gid) {
+void draw_groupid_widget_push(gl_window* win, int gid) { ImGui::PushID(gid); }
+// Group ids
+void draw_groupid_widget_push(gl_window* win, void* gid) { ImGui::PushID(gid); }
+// Group ids
+void draw_groupid_widget_push(gl_window* win, const void* gid) {
     ImGui::PushID(gid);
 }
 // Group ids
-void draw_groupid_widget_push(
-    const std::shared_ptr<gl_window>& win, void* gid) {
+void draw_groupid_widget_push(gl_window* win, const char* gid) {
     ImGui::PushID(gid);
 }
 // Group ids
-void draw_groupid_widget_push(
-    const std::shared_ptr<gl_window>& win, const std::shared_ptr<void>& gid) {
-    ImGui::PushID(gid.get());
-}
-// Group ids
-void draw_groupid_widget_push(
-    const std::shared_ptr<gl_window>& win, const char* gid) {
-    ImGui::PushID(gid);
-}
-// Group ids
-void draw_groupid_widget_pop(const std::shared_ptr<gl_window>& win) {
-    ImGui::PopID();
-}
+void draw_groupid_widget_pop(gl_window* win) { ImGui::PopID(); }
 
 // Widget style
-void draw_style_widget_push(
-    const std::shared_ptr<gl_window>& win, const vec4f& col) {
+void draw_style_widget_push(gl_window* win, const vec4f& col) {
     ImGui::PushStyleColor(ImGuiCol_Text, {col.x, col.y, col.z, col.w});
 }
 
 // Widget style
-void draw_style_widget_pop(const std::shared_ptr<gl_window>& win) {
-    ImGui::PopStyleColor();
-}
+void draw_style_widget_pop(gl_window* win) { ImGui::PopStyleColor(); }
 
 // Image inspection widgets.
-void draw_imageinspect_widgets(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, const image4f& hdr, const image4b& ldr,
-    const vec2f& mouse_pos, const gl_stdimage_params& params) {
+void draw_imageinspect_widgets(gl_window* win, const std::string& lbl,
+    const image4f& hdr, const image4b& ldr, const vec2f& mouse_pos,
+    const gl_stdimage_params& params) {
     auto xy = (mouse_pos - params.offset) / params.zoom;
     auto i = (int)round(xy.x), j = (int)round(xy.y);
     auto v4f = zero4f;
@@ -14547,11 +14361,11 @@ namespace ygl {
 
 // Implementation of draw camera
 struct draw_camera_visitor {
-    std::shared_ptr<gl_window> win = nullptr;
+    gl_window* win = nullptr;
     int edited = 0;
 
     // constructor
-    draw_camera_visitor(const std::shared_ptr<gl_window>& win_) : win(win_) {}
+    draw_camera_visitor(gl_window* win_) : win(win_) {}
 
     template <typename T>
     void operator()(T& val, const visit_var& var) {
@@ -14560,7 +14374,7 @@ struct draw_camera_visitor {
     }
 
     template <typename T>
-    void operator()(const std::shared_ptr<T>& val,
+    void operator()(const T* val,
         const visit_var& var = visit_var{"", visit_var_type::object}) {
         if (!val) return;
         // TODO: fix this separator
@@ -14573,8 +14387,7 @@ struct draw_camera_visitor {
 };
 
 // Implementation of camera selection
-bool draw_camera_widgets(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, const std::shared_ptr<camera>& cam) {
+bool draw_camera_widgets(gl_window* win, const std::string& lbl, camera* cam) {
     if (!cam) return false;
     auto edited = false;
     auto from = cam->frame.o;
@@ -14598,13 +14411,12 @@ static const std::unordered_map<std::string, vec4f>
 
 // Implementation of draw tree
 struct draw_tree_visitor {
-    std::shared_ptr<gl_window> win = nullptr;
+    gl_window* win = nullptr;
     scene_selection& sel;
     const std::unordered_map<std::string, std::string>& highlights;
 
     // constructor
-    draw_tree_visitor(const std::shared_ptr<gl_window>& win_,
-        scene_selection& sel_,
+    draw_tree_visitor(gl_window* win_, scene_selection& sel_,
         const std::unordered_map<std::string, std::string>& hi_)
         : win(win_), sel(sel_), highlights(hi_) {}
 
@@ -14619,12 +14431,10 @@ struct draw_tree_visitor {
     template <typename T>
     void operator()(T& val, const visit_var&) {}
     // callback for texture_info
-    void operator()(
-        const std::shared_ptr<texture_info>& val, const visit_var&) {}
+    void operator()(const texture_info* val, const visit_var&) {}
     // callback for array
     template <typename T>
-    void operator()(
-        std::vector<std::shared_ptr<T>>& val, const visit_var& var) {
+    void operator()(std::vector<T*>& val, const visit_var& var) {
         if (draw_tree_widget_begin(win, var.name)) {
             for (auto& v : val) (*this)(v, var);
             draw_tree_widget_end(win);
@@ -14632,43 +14442,38 @@ struct draw_tree_visitor {
     }
     // callback for pointer
     template <typename T>
-    void operator()(std::shared_ptr<T>& val, const visit_var& var) {
+    void operator()(T*& val, const visit_var& var) {
         if (!val) return;
         auto lbl = val->name;
         if (!var.name.empty()) lbl = var.name + ": " + val->name;
         auto selection = sel.get_raw();
         auto color = get_highlight_color(val->name);
         if (color != zero4f) draw_style_widget_push(win, color);
-        auto open = draw_tree_widget_begin(win, lbl, selection, val.get());
+        auto open = draw_tree_widget_begin(win, lbl, selection, val);
         if (color != zero4f) draw_style_widget_pop(win);
-        if (selection == val.get()) sel = val;
+        if (selection == val) sel = val;
         if (open) {
             visit(val, *this);
             draw_tree_widget_end(win);
         }
     }
     // callback for pointer
-    void operator()(const std::shared_ptr<scene>& val, const visit_var& var) {
-        visit(val, *this);
-    }
+    void operator()(scene* val, const visit_var& var) { visit(val, *this); }
 };
 
 // Implementation of draw elements
 struct draw_elem_visitor {
-    std::shared_ptr<gl_window> win = nullptr;
-    std::shared_ptr<scene> scn = nullptr;
+    gl_window* win = nullptr;
+    scene* scn = nullptr;
     scene_selection& sel;
-    const std::unordered_map<std::shared_ptr<texture>,
-        std::shared_ptr<gl_texture>>& gl_txt;
+    const std::unordered_map<texture*, gl_texture>& gl_txt;
     const std::unordered_map<std::string, std::string>& highlights;
     int edited = 0;
     std::string elem_name = "";
 
     // constructor
-    draw_elem_visitor(const std::shared_ptr<gl_window>& win_,
-        const std::shared_ptr<scene>& scn_, scene_selection& sel_,
-        const std::unordered_map<std::shared_ptr<texture>,
-            std::shared_ptr<gl_texture>>& gl_txt_,
+    draw_elem_visitor(gl_window* win_, scene* scn_, scene_selection& sel_,
+        const std::unordered_map<texture*, gl_texture>& gl_txt_,
         const std::unordered_map<std::string, std::string>& hi_)
         : win(win_), scn(scn_), sel(sel_), gl_txt(gl_txt_), highlights(hi_) {}
 
@@ -14715,10 +14520,10 @@ struct draw_elem_visitor {
     }
 
     template <typename T>
-    void operator()(
-        std::vector<std::shared_ptr<T>>& val, const visit_var& var) {
+    void operator()(std::vector<T*>& val, const visit_var& var) {
         if (var.type != visit_var_type::reference) {
-            for (auto idx = 0; idx < val.size(); idx++) visit(val[idx], *this);
+            for (auto idx = 0; idx < val.size(); idx++)
+                operator()(val[idx], var);
         }
     }
     template <typename T>
@@ -14730,29 +14535,27 @@ struct draw_elem_visitor {
         if (color != zero4f) draw_style_widget_pop(win);
     }
     template <typename T1, typename T2>
-    void operator()(
-        std::vector<std::pair<std::shared_ptr<T1>, std::shared_ptr<T2>>>& val,
-        const visit_var&) {
+    void operator()(std::vector<std::pair<T1*, T2*>>& val, const visit_var&) {
         // TODO
     }
 
     template <typename T>
-    void operator()(const std::shared_ptr<T>& val,
-        const visit_var& var = visit_var{"", visit_var_type::object}) {
+    void start(
+        T* val, const visit_var& var = visit_var{"", visit_var_type::object}) {
         if (!val) return;
         // TODO: fix this separator
         draw_separator_widget(win);
         draw_groupid_widget_push(win, val);
         draw_separator_widget(win);
         if (var.type != visit_var_type::reference) elem_name = val->name;
-        visit(*val, *this);
+        // visit(*val, *this);
         preview(val);
         draw_groupid_widget_pop(win);
     }
 
     template <typename T>
-    void operator()(std::shared_ptr<T>& val,
-        const visit_var& var = visit_var{"", visit_var_type::object}) {
+    void operator()(
+        T*& val, const visit_var& var = visit_var{"", visit_var_type::object}) {
         if (var.type == visit_var_type::reference) {
             auto color = get_highlight_color(var.name);
             if (color != zero4f) draw_style_widget_push(win, color);
@@ -14760,99 +14563,64 @@ struct draw_elem_visitor {
             if (color != zero4f) draw_style_widget_pop(win);
         } else {
             elem_name = val->name;
-            operator()((const std::shared_ptr<T>&)val, var);
+            visit(val, var);
         }
     }
 
     template <typename T, typename TT>
-    void operator()(const std::shared_ptr<T>& elem,
-        std::vector<std::shared_ptr<TT>>& telems) {
+    void start(T* elem, std::vector<TT*>& telems) {
         if (!elem) return;
-        auto telem = (std::shared_ptr<TT>)nullptr;
+        auto telem = (TT*)nullptr;
         for (auto te : telems)
             if (te->name == elem->name) telem = te;
         if (telem) {
             auto last = edited;
-            operator()(telem);
+            start(telem);
             if (last != edited) update_proc_elem(scn, elem, telem);
         }
-        operator()(elem);
-    }
-
-    template <typename T, typename TT>
-    void operator()(
-        std::shared_ptr<T>& elem, std::vector<std::shared_ptr<TT>>& telems) {
-        if (!elem) return;
-        auto telem = (std::shared_ptr<TT>)nullptr;
-        for (auto te : telems)
-            if (te->name == elem->name) telem = te;
-        if (telem) {
-            auto last = edited;
-            operator()(telem);
-            if (last != edited) update_proc_elem(scn, elem, telem);
-        }
-        operator()(elem);
+        start(elem);
     }
 
     template <typename T>
-    const std::vector<std::shared_ptr<T>>& elems(std::shared_ptr<T>& aux) {
-        static auto v = std::vector<std::shared_ptr<T>>();
+    const std::vector<T*>& elems(const T* aux) {
+        static auto v = std::vector<T*>();
         return v;
     }
-    template <typename T>
-    const std::vector<std::shared_ptr<T>>& elems(
-        const std::shared_ptr<T>& aux) {
-        static auto v = std::vector<std::shared_ptr<T>>();
-        return v;
-    }
-    const std::vector<std::shared_ptr<texture>>& elems(
-        const std::shared_ptr<texture>& aux) {
+    const std::vector<texture*>& elems(const texture* aux) {
         return scn->textures;
     }
-    const std::vector<std::shared_ptr<shape_group>>& elems(shape_group* aux) {
+    const std::vector<shape_group*>& elems(shape_group* aux) {
         return scn->shapes;
     }
-    const std::vector<std::shared_ptr<camera>> elems(camera* aux) {
-        return scn->cameras;
-    }
-    const std::vector<std::shared_ptr<material>> elems(material* aux) {
-        return scn->materials;
-    }
-    const std::vector<std::shared_ptr<environment>> elems(environment* aux) {
+    const std::vector<camera*> elems(camera* aux) { return scn->cameras; }
+    const std::vector<material*> elems(material* aux) { return scn->materials; }
+    const std::vector<environment*> elems(environment* aux) {
         return scn->environments;
     }
-    const std::vector<std::shared_ptr<node>> elems(node* aux) {
-        return scn->nodes;
-    }
-    const std::vector<std::shared_ptr<animation_group>> elems(
-        animation_group* aux) {
+    const std::vector<node*> elems(node* aux) { return scn->nodes; }
+    const std::vector<animation_group*> elems(animation_group* aux) {
         return scn->animations;
     }
 
     template <typename T>
-    void preview(std::shared_ptr<T>& val) {}
-
-    template <typename T>
-    void preview(const std::shared_ptr<T>& val) {}
-    void preview(const std::shared_ptr<texture>& txt) {
+    void preview(T* val) {}
+    void preview(texture* txt) {
         if (!contains(gl_txt, txt)) return;
-        draw_image_widget(win,
-            (const std::shared_ptr<gl_texture>&)gl_txt.at(txt), {128, 128});
+        draw_image_widget(win, gl_txt.at((texture*)txt), {128, 128});
     }
 };
 
 template <typename T, typename T1>
-inline bool draw_add_elem_widgets(const std::shared_ptr<gl_window>& win,
-    const std::shared_ptr<scene>& scn, const std::string& lbl,
-    std::vector<std::shared_ptr<T>>& elems,
-    std::vector<std::shared_ptr<T1>>& proc_elems, scene_selection& sel,
+inline bool draw_add_elem_widgets(gl_window* win, scene* scn,
+    const std::string& lbl, std::vector<T*>& elems,
+    std::vector<T1*>& proc_elems, scene_selection& sel,
     std::vector<ygl::scene_selection>& update_list) {
     static auto count = 0;
     if (draw_button_widget(win, "add " + lbl)) {
         auto name = lbl + "_" + std::to_string(count++);
-        elems.push_back(std::make_shared<T>());
+        elems.push_back(new T());
         elems.back()->name = name;
-        proc_elems.push_back(std::make_shared<T1>());
+        proc_elems.push_back(new T1());
         proc_elems.back()->name = name;
         sel = elems.back();
         update_list.push_back(sel);
@@ -14863,14 +14631,12 @@ inline bool draw_add_elem_widgets(const std::shared_ptr<gl_window>& win,
     return false;
 }
 
-bool draw_scene_widgets(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, const std::shared_ptr<scene>& scn,
+bool draw_scene_widgets(gl_window* win, const std::string& lbl, scene* scn,
     scene_selection& sel, std::vector<ygl::scene_selection>& update_list,
-    const std::unordered_map<std::shared_ptr<texture>,
-        std::shared_ptr<gl_texture>>& gl_txt,
-    const std::shared_ptr<proc_scene>& test_scn,
+    const std::unordered_map<texture*, gl_texture>& gl_txt,
+    proc_scene* test_scn,
     const std::unordered_map<std::string, std::string>& inspector_highlights) {
-    static auto test_scn_def = std::make_shared<proc_scene>();
+    static auto test_scn_def = proc_scene();
 
     if (!scn) return false;
     if (!lbl.empty() && !draw_header_widget(win, lbl)) return false;
@@ -14891,10 +14657,10 @@ bool draw_scene_widgets(const std::shared_ptr<gl_window>& win,
         auto shp_add = draw_add_elem_widgets(
             win, scn, "shp", scn->shapes, test_scn->shapes, sel, update_list);
         if (shp_add && !scn->nodes.empty()) {
-            scn->nodes.push_back(std::make_shared<node>());
+            scn->nodes.push_back(new node());
             scn->nodes.back()->name = scn->shapes.back()->name;
             scn->nodes.back()->shp = scn->shapes.back();
-            test_scn->nodes.push_back(std::make_shared<proc_node>());
+            test_scn->nodes.push_back(new proc_node());
             test_scn->nodes.back()->name = scn->nodes.back()->name;
             test_scn->nodes.back()->shape = scn->nodes.back()->shp->name;
             update_list.push_back({});
@@ -14908,24 +14674,26 @@ bool draw_scene_widgets(const std::shared_ptr<gl_window>& win,
             test_scn->animations, sel, update_list);
     }
 
-    auto test_scn_res = (test_scn) ? test_scn : test_scn_def;
+    auto test_scn_res = (test_scn) ? test_scn : &test_scn_def;
     auto elem_visitor =
         draw_elem_visitor{win, scn, sel, gl_txt, inspector_highlights};
     if (sel.is<camera>())
-        elem_visitor(sel.get<camera>(), test_scn_res->cameras);
-    if (sel.is<shape>()) elem_visitor(sel.get<shape>());
+        elem_visitor.start(sel.get<camera>(), test_scn_res->cameras);
+    if (sel.is<shape>()) elem_visitor.start(sel.get<shape>());
     if (sel.is<shape_group>())
-        elem_visitor(sel.get<shape_group>(), test_scn_res->shapes);
+        elem_visitor.start(sel.get<shape_group>(), test_scn_res->shapes);
     if (sel.is<texture>())
-        elem_visitor(sel.get<texture>(), test_scn_res->textures);
+        elem_visitor.start(sel.get<texture>(), test_scn_res->textures);
     if (sel.is<material>())
-        elem_visitor(sel.get<material>(), test_scn_res->materials);
+        elem_visitor.start(sel.get<material>(), test_scn_res->materials);
     if (sel.is<environment>())
-        elem_visitor(sel.get<environment>(), test_scn_res->environments);
-    if (sel.is<node>()) elem_visitor(sel.get<node>(), test_scn_res->nodes);
-    if (sel.is<animation>()) elem_visitor(sel.get<animation>());
+        elem_visitor.start(sel.get<environment>(), test_scn_res->environments);
+    if (sel.is<node>())
+        elem_visitor.start(sel.get<node>(), test_scn_res->nodes);
+    if (sel.is<animation>()) elem_visitor.start(sel.get<animation>());
     if (sel.is<animation_group>())
-        elem_visitor(sel.get<animation_group>(), test_scn_res->animations);
+        elem_visitor.start(
+            sel.get<animation_group>(), test_scn_res->animations);
     if (elem_visitor.edited) update_list.push_back(sel);
 
     draw_groupid_widget_pop(win);

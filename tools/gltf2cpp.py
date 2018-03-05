@@ -37,10 +37,16 @@ struct {{name}} {{#base}}: {{base}}{{/base}} {
 {{/extra_properties}}
 {{#has_getters}}{{#properties}}{{#is_ptrarray}}
 /// typed access for nodes
-std::shared_ptr<{{item}}> get(const glTFid<{{item}}>& id) const {
+{{item}}* get(const glTFid<{{item}}>& id) const {
     if (!id) return nullptr;
     return {{name}}.at((int)id);
 }{{/is_ptrarray}}{{/properties}}{{/has_getters}}
+{{#destructor}}
+
+~{{name}}() {
+    {{#properties}}{{#is_ptr}}if({{name}}) delete {{name}};{{/is_ptr}}{{#is_ptrarray}}for(auto v : {{name}}) delete v;{{/is_ptrarray}}{{/properties}}
+}
+{{/destructor}}
 };
 {{/types}}
 '''
@@ -193,7 +199,7 @@ def fix_schema(js):
             if 'description' not in vv: vv['description'] = vv['label']
     for vjs in js['properties']:
         vjs['required'] = 'required' in js and vjs['name'] in js['required']
-        if 'std::shared_ptr<' in vjs['type']:
+        if '*' in vjs['type']:
             js['destructor'] = True
             if 'std::vector<' in vjs['type']: vjs['is_ptrarray'] = True
             else: vjs['is_ptr'] = True
