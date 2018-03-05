@@ -236,8 +236,6 @@ int main(int argc, char* argv[]) {
         parser, "--preserve-quads", "", "Preserve quads on load");
     auto preserve_facevarying = ygl::parse_flag(
         parser, "--preserve-facevarying", "", "Preserve facevarying on load");
-    auto double_sided =
-        ygl::parse_flag(parser, "--double-sided", "", "Double sided rendering");
     app->quiet =
         ygl::parse_flag(parser, "--quiet", "-q", "Print only errors messages");
     app->screenshot_and_exit = ygl::parse_flag(
@@ -293,7 +291,7 @@ int main(int argc, char* argv[]) {
     ygl::add_elements(app->scn);
 
     // fix double sided materials
-    if (double_sided) {
+    if (app->params.double_sided) {
         for (auto m : app->scn->materials) m->double_sided = true;
     }
 

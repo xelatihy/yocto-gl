@@ -6211,11 +6211,28 @@ inline void visit(material& val, Visitor&& visitor) {
 
 /// Visit struct elements.
 template <typename Visitor>
+inline void visit(shape_element_tags& val, Visitor&& visitor) {
+    visitor(val.matid,
+        visit_var{"matid", visit_var_type::value, "Material id.", 0, 0, ""});
+    visitor(val.groupid,
+        visit_var{"groupid", visit_var_type::value, "Groups id.", 0, 0, ""});
+    visitor(val.smoothingid, visit_var{"smoothingid", visit_var_type::value,
+                                 "Smoothing id.", 0, 0, ""});
+    visitor(val.esize, visit_var{"esize", visit_var_type::value,
+                           "Original element size.", 0, 0, ""});
+}
+
+/// Visit struct elements.
+template <typename Visitor>
 inline void visit(shape& val, Visitor&& visitor) {
     visitor(
         val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
     visitor(val.materials, visit_var{"materials", visit_var_type::reference,
                                "Materials.", 0, 0, ""});
+    visitor(val.groupnames, visit_var{"groupnames", visit_var_type::value,
+                                "Group names.", 0, 0, ""});
+    visitor(val.smoothing, visit_var{"smoothing", visit_var_type::value,
+                               "Smoothing values.", 0, 0, ""});
     visitor(val.points,
         visit_var{"points", visit_var_type::value, "Points.", 0, 0, ""});
     visitor(val.lines,
@@ -6233,6 +6250,8 @@ inline void visit(shape& val, Visitor&& visitor) {
             "Face-varying indices for texcoord.", 0, 0, ""});
     visitor(val.beziers,
         visit_var{"beziers", visit_var_type::value, "Bezier.", 0, 0, ""});
+    visitor(val.elem_tags, visit_var{"elem_tags", visit_var_type::value,
+                               "Element material ids.", 0, 0, ""});
     visitor(val.pos,
         visit_var{"pos", visit_var_type::value, "Vertex position.", 0, 0, ""});
     visitor(val.norm,
@@ -6309,7 +6328,7 @@ inline void visit(node& val, Visitor&& visitor) {
                             "Transform frame. This is a computed value only "
                             "stored for convenience.",
                             0, 0, ""});
-    visitor(val.children_, visit_var{"children_", visit_var_type::value,
+    visitor(val.children_, visit_var{"children_", visit_var_type::reference,
                                "Child nodes. This is a computed value only "
                                "stored for convenience.",
                                0, 0, ""});
@@ -6344,6 +6363,8 @@ inline void visit(animation_group& val, Visitor&& visitor) {
             "Path used when writing files on disk with glTF.", 0, 0, ""});
     visitor(val.animations, visit_var{"animations", visit_var_type::value,
                                 "Keyframed values.", 0, 0, ""});
+    visitor(val.targets, visit_var{"targets", visit_var_type::reference,
+                             "Binds keyframe values to nodes.", 0, 0, ""});
 }
 
 /// Visit struct elements.
@@ -7102,6 +7123,8 @@ struct trace_params {
     trace_filter_type filter = trace_filter_type::box;
     /// Whether to test transmission in shadows.
     bool notransmission = false;
+    /// Force double sided rendering. @refl_shortname(D)
+    bool double_sided = false;
     /// Ambient lighting. @refl_semantic(color)
     vec3f ambient = {0, 0, 0};
     /// View environment map.
@@ -7262,6 +7285,8 @@ inline void visit(trace_params& val, Visitor&& visitor) {
     visitor(val.notransmission,
         visit_var{"notransmission", visit_var_type::value,
             "Whether to test transmission in shadows.", 0, 0, ""});
+    visitor(val.double_sided, visit_var{"double_sided", visit_var_type::value,
+                                  "Force double sided rendering.", 0, 0, "D"});
     visitor(val.ambient, visit_var{"ambient", visit_var_type::color,
                              "Ambient lighting.", 0, 0, ""});
     visitor(val.envmap_invisible,
@@ -10007,6 +10032,8 @@ struct gl_stdsurface_params {
     vec3f highlight_color = {1, 1, 0};
     /// Edge color. @refl_semantic(color)
     vec3f edge_color = {0, 0, 0};
+    /// Force double sided rendering. @refl_shortname(D)
+    bool double_sided = false;
     /// Cull back face.
     bool cull_backface = false;
 };
@@ -10061,6 +10088,8 @@ inline void visit(gl_stdsurface_params& val, Visitor&& visitor) {
                                  "Highlight color.", 0, 0, ""});
     visitor(val.edge_color, visit_var{"edge_color", visit_var_type::color,
                                 "Edge color.", 0, 0, ""});
+    visitor(val.double_sided, visit_var{"double_sided", visit_var_type::value,
+                                  "Force double sided rendering.", 0, 0, "D"});
     visitor(val.cull_backface, visit_var{"cull_backface", visit_var_type::value,
                                    "Cull back face.", 0, 0, ""});
 }

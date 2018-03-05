@@ -13653,7 +13653,7 @@ void draw_stdsurface_shape(const shape* shp, const mat4f& xform,
     set_stdsurface_material(prog, mat->type, etype, mat->ke, mat->kd, mat->ks,
         mat->rs, mat->op, txt(mat->ke_txt), txt(mat->kd_txt), txt(mat->ks_txt),
         txt(mat->rs_txt), txt(mat->norm_txt), txt(mat->occ_txt), false,
-        mat->double_sided, params.cutout);
+        mat->double_sided || params.double_sided, params.cutout);
 
     auto& gshp = shapes.at((shape*)shp);
     set_stdsurface_vert(
@@ -13696,7 +13696,7 @@ void draw_stdsurface_scene(const scene* scn, const camera* cam,
     const gl_stdsurface_params& params, const tonemap_params& tmparams) {
     // begin frame
     gl_enable_depth_test(true);
-    gl_enable_culling(params.cull_backface);
+    gl_enable_culling(params.cull_backface && !params.double_sided);
     gl_enable_wireframe(params.wireframe);
     gl_set_viewport(viewport_size);
 
