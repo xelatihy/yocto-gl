@@ -124,7 +124,7 @@ ygl::image4f filter_bilateral(const ygl::image4f& img, float spatial_sigma,
                     if (ii >= img.width() || jj >= img.height()) continue;
                     auto uv = ygl::vec2f{float(i - ii), float(j - jj)};
                     auto rgb = img.at(i, j) - img.at(ii, jj);
-                    auto w = exp(-dot(uv, uv) * sw) * exp(-dot(rgb, rgb) * rw);
+                    auto w = (float)exp(-dot(uv, uv) * sw) * exp(-dot(rgb, rgb) * rw);
                     for (auto fi = 0; fi < features.size(); fi++) {
                         auto feat =
                             features[fi].at(i, j) - features[fi].at(ii, jj);

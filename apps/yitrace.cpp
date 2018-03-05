@@ -204,8 +204,6 @@ int main(int argc, char* argv[]) {
     app->imparams = ygl::parse_params(parser, "", app->imparams);
     app->preview_res =
         ygl::parse_opt(parser, "--preview-res", "", "preview resolution", 64);
-    auto double_sided =
-        ygl::parse_flag(parser, "--double-sided", "", "Double sided rendering");
     app->quiet =
         ygl::parse_flag(parser, "--quiet", "-q", "Print only errors messages");
     app->imfilename = ygl::parse_opt(
@@ -243,7 +241,7 @@ int main(int argc, char* argv[]) {
     app->cam = app->view;
 
     // fix double sided materials
-    if (double_sided) {
+    if (app->params.double_sided) {
         for (auto m : app->scn->materials) m->double_sided = true;
     }
 

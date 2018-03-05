@@ -40,6 +40,7 @@ def parse(cpp):
         if line.isspace() or line.startswith('    // ') or line.startswith('        ') or line.startswith('    }'):
             continue
         elif line.startswith('    ~'):
+            if not curm: continue
             if not curm['mem_name']:
                 cur['members'].pop()
                 curm = None
