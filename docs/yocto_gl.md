@@ -34,7 +34,7 @@ and released under the MIT license. Features include:
 - OpenGL utilities to manage textures, buffers and prograrms
 - OpenGL shader for image viewing and GGX microfacet and hair rendering
 
-The current version is 0.3.10.
+The current version is 0.4.0.
 
 ## Credits
 
@@ -581,6 +581,7 @@ and user end.
 Here we mark only major features added to the library. Small refactorings
 and bug fixes are not reported here.
 
+- v 0.4.0: face-varying shapes, removal if scene instancing
 - v 0.3.0: templated types, animation and objects in scene, api cleanups
 - v 0.2.0: various bug fixes and improvement to OpenGL drawing and widgets
 - v 0.1.0: initial release after refactoring
@@ -907,11 +908,27 @@ Makes literals available
 
 ~~~ .cpp
 template <typename T, int N>
-struct vec;
+struct vec {
+    vec(); 
+    explicit vec(T vv); 
+    vec(std::initializer_list<T> vv); 
+    T& operator[](int i); 
+    const T& operator[](int i) const; 
+    T d[N];
+}
 ~~~
 
 Generic vector of N elements. This is used only to define template
 specializations for small fixed sized vectors.
+
+- Members:
+    - vec():      Default constructor. Initializes to zeros.
+    - vec():      Element constructor.
+    - vec():      Element constructor.
+    - operator[]():      Element access.
+    - operator[]():      Element access.
+    - d[N]:      Element data.
+
 
 #### Struct vec<T, 1\>
 
@@ -1242,6 +1259,33 @@ Empty check (always false for useful for templated code).
 #### Function operator==()
 
 ~~~ .cpp
+template <typename T, int N>
+inline bool operator==(const vec<T, N>& a, const vec<T, N>& b);
+~~~
+
+Vector equality.
+
+#### Function operator!=()
+
+~~~ .cpp
+template <typename T, int N>
+inline bool operator!=(const vec<T, N>& a, const vec<T, N>& b);
+~~~
+
+Vector inequality.
+
+#### Function operator<()
+
+~~~ .cpp
+template <typename T, int N>
+inline bool operator<(const vec<T, N>& a, const vec<T, N>& b);
+~~~
+
+Vector comparison using lexicographic order, useful for map.
+
+#### Function operator==()
+
+~~~ .cpp
 template <typename T>
 inline bool operator==(const vec<T, 1>& a, const vec<T, 1>& b);
 ~~~
@@ -1311,32 +1355,95 @@ inline bool operator!=(const vec<T, 4>& a, const vec<T, 4>& b);
 
 Vector inequality.
 
-#### Function operator<()
+#### Function operator+()
 
 ~~~ .cpp
-template <typename T>
-inline bool operator<(const vec<T, 2>& a, const vec<T, 2>& b);
+template <typename T, int N>
+inline vec<T, N> operator+(const vec<T, N>& a);
 ~~~
 
-Vector comparison using lexicographic order, useful for map.
+Vector unary plus (for completeness).
 
-#### Function operator<()
+#### Function operator-()
 
 ~~~ .cpp
-template <typename T>
-inline bool operator<(const vec<T, 3>& a, const vec<T, 3>& b);
+template <typename T, int N>
+inline vec<T, N> operator-(const vec<T, N>& a);
 ~~~
 
-Vector comparison using lexicographic order, useful for map.
+Vector negation.
 
-#### Function operator<()
+#### Function operator+()
 
 ~~~ .cpp
-template <typename T>
-inline bool operator<(const vec<T, 4>& a, const vec<T, 4>& b);
+template <typename T, int N>
+inline vec<T, N> operator+(const vec<T, N>& a, const vec<T, N>& b);
 ~~~
 
-Vector comparison using lexicographic order, useful for map.
+Vector sum.
+
+#### Function operator-()
+
+~~~ .cpp
+template <typename T, int N>
+inline vec<T, N> operator-(const vec<T, N>& a, const vec<T, N>& b);
+~~~
+
+Vector difference.
+
+#### Function operator*()
+
+~~~ .cpp
+template <typename T, int N>
+inline vec<T, N> operator*(const vec<T, N>& a, const vec<T, N>& b);
+~~~
+
+Vector scalar product.
+
+#### Function operator*()
+
+~~~ .cpp
+template <typename T, int N, typename T1>
+inline vec<T, N> operator*(const vec<T, N>& a, T1 b);
+~~~
+
+Vector scalar product.
+
+#### Function operator*()
+
+~~~ .cpp
+template <typename T, int N, typename T1>
+inline vec<T, N> operator*(T1 a, const vec<T, N>& b);
+~~~
+
+Vector scalar product.
+
+#### Function operator/()
+
+~~~ .cpp
+template <typename T, int N>
+inline vec<T, N> operator/(const vec<T, N>& a, const vec<T, N>& b);
+~~~
+
+Vector scalar division.
+
+#### Function operator/()
+
+~~~ .cpp
+template <typename T, int N, typename T1>
+inline vec<T, N> operator/(const vec<T, N>& a, T1 b);
+~~~
+
+Vector scalar division.
+
+#### Function operator/()
+
+~~~ .cpp
+template <typename T, int N, typename T1>
+inline vec<T, N> operator/(T1 a, const vec<T, N>& b);
+~~~
+
+Vector scalar division.
 
 #### Function operator+()
 
@@ -1395,8 +1502,8 @@ Vector scalar product.
 #### Function operator*()
 
 ~~~ .cpp
-template <typename T>
-inline vec<T, 2> operator*(float a, const vec<T, 2>& b);
+template <typename T, typename T1>
+inline vec<T, 2> operator*(T1 a, const vec<T, 2>& b);
 ~~~
 
 Vector scalar product.
@@ -1566,8 +1673,8 @@ Vector scalar product.
 #### Function operator*()
 
 ~~~ .cpp
-template <typename T>
-inline vec<T, 4> operator*(const vec<T, 4>& a, float b);
+template <typename T, typename T1>
+inline vec<T, 4> operator*(const vec<T, 4>& a, T1 b);
 ~~~
 
 Vector scalar product.
@@ -1575,8 +1682,8 @@ Vector scalar product.
 #### Function operator*()
 
 ~~~ .cpp
-template <typename T>
-inline vec<T, 4> operator*(float a, const vec<T, 4>& b);
+template <typename T, typename T1>
+inline vec<T, 4> operator*(T1 a, const vec<T, 4>& b);
 ~~~
 
 Vector scalar product.
@@ -1661,6 +1768,15 @@ inline vec<T, N>& operator/=(vec<T, N>& a, T1 b);
 ~~~
 
 Vector assignment.
+
+#### Function dot()
+
+~~~ .cpp
+template <typename T, int N>
+inline T dot(const vec<T, N>& a, const vec<T, N>& b);
+~~~
+
+Vector dot product.
 
 #### Function dot()
 
@@ -1866,6 +1982,46 @@ inline vec4f byte_to_float(const vec4b& a);
 ~~~
 
 Element-wise byte to float conversion.
+
+#### Function cartesian_to_spherical()
+
+~~~ .cpp
+template <typename T>
+inline vec<T, 3> cartesian_to_spherical(const vec<T, 3>& p);
+~~~
+
+Cartesian to spherical coordinates with theta aligned along z.
+Spherical coordinates are phi, theta, r.
+
+#### Function spherical_to_cartesian()
+
+~~~ .cpp
+template <typename T>
+inline vec<T, 3> spherical_to_cartesian(const vec<T, 3>& s);
+~~~
+
+Spherical to cartesian coordinates with theta aligned along z.
+Spherical coordinates are phi, theta, r.
+
+#### Function cartesian_to_sphericaly()
+
+~~~ .cpp
+template <typename T>
+inline vec<T, 3> cartesian_to_sphericaly(const vec<T, 3>& p);
+~~~
+
+Cartesian to spherical coordinates with theta aligned along y.
+Spherical coordinates are phi, theta, r.
+
+#### Function sphericaly_to_cartesian()
+
+~~~ .cpp
+template <typename T>
+inline vec<T, 3> sphericaly_to_cartesian(const vec<T, 3>& s);
+~~~
+
+Spherical to cartesian coordinates with theta aligned along y.
+Spherical coordinates are phi, theta, r.
 
 #### Function operator<<()
 
@@ -2511,8 +2667,42 @@ template <typename T, int N>
 struct frame;
 ~~~
 
-Generic frame of N elements. This is used only to define template
-specializations for small fixed sized frames.
+Rigid transforms stored as a column-major affine matrix.
+In memory, this representation is equivalent to storing an NxN rotation
+followed by a Nx1 translation. Viewed this way, the representation allows
+also to retrive the axis of the coordinate frame as the first N columns and
+the translation as the (N+1)-th column. Colums access via operator[].
+Access rotation and position with pos() and rot().
+
+#### Struct frame<T, 2\>
+
+~~~ .cpp
+template <typename T>
+struct frame<T, 2> {
+    frame(); 
+    frame(const vec<T, 2>& x, const vec<T, 2>& y, const vec<T, 2>& o); 
+    frame(const mat<T, 2>& m, const vec<T, 2>& t); 
+    vec<T, 2>& operator[](int i); 
+    const vec<T, 2>& operator[](int i) const; 
+    vec<T, 2> x;
+    vec<T, 2> y;
+    vec<T, 2> o;
+}
+~~~
+
+Rigid transforms stored as a column-major affine matrix.
+Specialization for 2 dimensional frames.
+
+- Members:
+    - frame():      Default constructor. Initializes to the identity frame.
+    - frame():      Basic and origin constructor. Equavalent to columns of affine matrix.
+    - frame():      Rotation and traslation constructor.
+    - operator[]():      Element/column access
+    - operator[]():      Element/column access
+    - x:      Axes and origin data
+    - y:      Axes and origin data
+    - o:      Axes and origin data
+
 
 #### Struct frame<T, 3\>
 
@@ -2532,11 +2722,7 @@ struct frame<T, 3> {
 ~~~
 
 Rigid transforms stored as a column-major affine matrix.
-In memory, this representation is equivalent to storing an NxN rotation
-followed by a Nx1 translation. Viewed this way, the representation allows
-also to retrive the axis of the coordinate frame as the first N columns and
-the translation as the (N+1)-th column. Colums access via operator[].
-Access rotation and position with pos() and rot().
+Specialization for 3 dimensional frames.
 
 - Members:
     - frame():      Default constructor. Initializes to the identity frame.
@@ -2550,6 +2736,14 @@ Access rotation and position with pos() and rot().
     - o:      Axes and origin data
 
 
+#### Typedef frame2f
+
+~~~ .cpp
+using frame2f = frame<float, 2>;
+~~~
+
+2-dimensional float frame.
+
 #### Typedef frame3f
 
 ~~~ .cpp
@@ -2557,6 +2751,14 @@ using frame3f = frame<float, 3>;
 ~~~
 
 3-dimensional float frame.
+
+#### Constant identity_frame2f
+
+~~~ .cpp
+const auto identity_frame2f = frame2f{ {1, 0}, {0, 1}, {0, 0} };
+~~~
+
+Indentity frame.
 
 #### Constant identity_frame3f
 
@@ -2638,6 +2840,61 @@ inline bool empty(frame<T, N>& a);
 ~~~
 
 Empty check (always false for useful for templated code).
+
+#### Function make_basis_fromz()
+
+~~~ .cpp
+template <typename T>
+inline mat<T, 3> make_basis_fromz(const vec<T, 3>& z_);
+~~~
+
+Initializes a basis from z.
+
+#### Function make_basis_fromzx()
+
+~~~ .cpp
+template <typename T>
+inline mat<T, 3> make_basis_fromzx(const vec<T, 3>& z_, const vec<T, 3>& x_);
+~~~
+
+Initializes a basis from z and x.
+
+#### Function make_frame_fromz()
+
+~~~ .cpp
+template <typename T>
+inline frame<T, 3> make_frame_fromz(const vec<T, 3>& o, const vec<T, 3>& z);
+~~~
+
+Initializes a frame from origin and z.
+
+#### Function make_frame_fromzx()
+
+~~~ .cpp
+template <typename T>
+inline frame<T, 3> make_frame_fromzx(
+    const vec<T, 3>& o, const vec<T, 3>& z, const vec<T, 3>& x);
+~~~
+
+Initializes a frame3 from origin, z and x.
+
+#### Function frame_to_mat()
+
+~~~ .cpp
+template <typename T>
+inline mat<T, 3> frame_to_mat(const frame<T, 2>& a);
+~~~
+
+Frame to matrix conversion.
+
+#### Function mat_to_frame()
+
+~~~ .cpp
+template <typename T>
+inline frame<T, 2> mat_to_frame(const mat<T, 3>& a);
+~~~
+
+Matrix to frame conversion.
 
 #### Function frame_to_mat()
 
@@ -3447,52 +3704,6 @@ inline vec<T, 3> transform_point(const mat<T, 4>& a, const vec<T, 3>& b);
 
 Transforms a point by a matrix.
 
-#### Function transform_vector()
-
-~~~ .cpp
-template <typename T>
-inline vec<T, 2> transform_vector(const mat<T, 3>& a, const vec<T, 2>& b);
-~~~
-
-Transforms a vector by a matrix.
-
-#### Function transform_vector()
-
-~~~ .cpp
-template <typename T>
-inline vec<T, 3> transform_vector(const mat<T, 4>& a, const vec<T, 3>& b);
-~~~
-
-Transforms a vector by a matrix.
-
-#### Function transform_direction()
-
-~~~ .cpp
-template <typename T, int N>
-inline vec<T, N> transform_direction(
-    const mat<T, N + 1>& a, const vec<T, N>& b);
-~~~
-
-Transforms a direction by a matrix.
-
-#### Function transform_ray()
-
-~~~ .cpp
-template <typename T, int N>
-inline ray<T, N> transform_ray(const mat<T, N + 1>& a, const ray<T, N>& b);
-~~~
-
-Transforms a ray by a matrix, leaving the direction not normalized.
-
-#### Function transform_bbox()
-
-~~~ .cpp
-template <typename T, int N>
-inline bbox<T, N> transform_bbox(const mat<T, N + 1>& a, const bbox<T, N>& b);
-~~~
-
-transforms a bbox by a matrix
-
 #### Function transform_point()
 
 ~~~ .cpp
@@ -3515,6 +3726,33 @@ Transforms a point by a frame, i.e. an affine transform.
 
 ~~~ .cpp
 template <typename T>
+inline vec<T, 2> transform_vector(const mat<T, 3>& a, const vec<T, 2>& b);
+~~~
+
+Transforms a vector by a matrix.
+
+#### Function transform_vector()
+
+~~~ .cpp
+template <typename T>
+inline vec<T, 3> transform_vector(const mat<T, 3>& a, const vec<T, 3>& b);
+~~~
+
+Transforms a vector by a matrix.
+
+#### Function transform_vector()
+
+~~~ .cpp
+template <typename T>
+inline vec<T, 3> transform_vector(const mat<T, 4>& a, const vec<T, 3>& b);
+~~~
+
+Transforms a vector by a matrix.
+
+#### Function transform_vector()
+
+~~~ .cpp
+template <typename T>
 inline vec<T, 2> transform_vector(const frame<T, 2>& a, const vec<T, 2>& b);
 ~~~
 
@@ -3532,38 +3770,29 @@ Transforms a vector by a frame, i.e. an affine transform.
 #### Function transform_direction()
 
 ~~~ .cpp
-template <typename T, int N>
-inline vec<T, N> transform_direction(const frame<T, N>& a, const vec<T, N>& b);
+template <typename TT, typename T, int N>
+inline vec<T, N> transform_direction(const TT& a, const vec<T, N>& b);
 ~~~
 
-Transforms a direction by a frame, i.e. an affine transform.
-
-#### Function transform_frame()
-
-~~~ .cpp
-template <typename T, int N>
-inline frame<T, N> transform_frame(const frame<T, N>& a, const frame<T, N>& b);
-~~~
-
-Transforms a frame by a frame, i.e. an affine transform.
+Transforms a direction by transforming a vector and then normalizing it.
 
 #### Function transform_ray()
 
 ~~~ .cpp
-template <typename T, int N>
-inline ray<T, N> transform_ray(const frame<T, 3>& a, const ray<T, N>& b);
+template <typename TT, typename T, int N>
+inline ray<T, N> transform_ray(const TT& a, const ray<T, N>& b);
 ~~~
 
-Transforms a ray by a frame, i.e. an affine transform.
+Transforms a ray, leaving the direction not normalized.
 
 #### Function transform_bbox()
 
 ~~~ .cpp
-template <typename T, int N>
-inline bbox<T, N> transform_bbox(const frame<T, N>& a, const bbox<T, N>& b);
+template <typename TT, typename T, int N>
+inline bbox<T, N> transform_bbox(const TT& a, const bbox<T, N>& b);
 ~~~
 
-Transforms a bbox by a frame, i.e. an affine transform.
+Transforms a bbox.
 
 #### Function transform_bbox()
 
@@ -3680,6 +3909,15 @@ inline frame<T, 3> rotation_frame(const quat<T, 4>& v);
 
 Rotation affine transform.
 
+#### Function rotation_frame()
+
+~~~ .cpp
+template <typename T, typename T1>
+inline frame<T, 3> rotation_frame(const mat<T, 3>& rot);
+~~~
+
+Rotation affine transform.
+
 #### Function lookat_frame()
 
 ~~~ .cpp
@@ -3775,8 +4013,8 @@ Rotation matrix to quaternion conversion.
 
 ~~~ .cpp
 template <typename T>
-inline std::tuple<vec<T, 3>, mat<T, 3>, vec<T, 3>> decompose_frame(
-    const frame<T, 3>& m);
+inline void decompose_frame(
+    const frame<T, 3>& m, vec<T, 3>& pos, mat<T, 3>& rot, vec<T, 3>& scale);
 ~~~
 
 Decompose an affine matrix into translation, rotation, scale.
@@ -3787,7 +4025,7 @@ Assumes there is no shear.
 ~~~ .cpp
 template <typename T>
 inline std::tuple<vec<T, 3>, quat<T, 4>, vec<T, 3>> decompose_frame(
-    const frame<T, 3>& m);
+    const frame<T, 3>& m, vec<T, 3>& pos, quat<T, 4>& rot, vec<T, 3>& scale);
 ~~~
 
 Decompose an affine matrix into translation, rotation, scale.
@@ -3797,7 +4035,7 @@ Assumes there is no shear and the matrix is affine.
 
 ~~~ .cpp
 template <typename T>
-inline frame<T, 4> compose_frame(const vec<T, 3>& translation,
+inline frame<T, 3> compose_frame(const vec<T, 3>& translation,
     const mat<T, 3>& rotation, const vec<T, 3>& scale);
 ~~~
 
@@ -3808,7 +4046,7 @@ Assumes there is no shear and the matrix is affine.
 
 ~~~ .cpp
 template <typename T>
-inline frame<T, 4> compose_frame(const vec<T, 3>& translation,
+inline frame<T, 3> compose_frame(const vec<T, 3>& translation,
     const quat<T, 4>& rotation, const vec<T, 3>& scale);
 ~~~
 
@@ -4052,6 +4290,22 @@ inline float sample_sphere_pdf(const vec3f& w);
 
 Pdf for uniform spherical direction.
 
+#### Function sample_spherical()
+
+~~~ .cpp
+inline vec2f sample_spherical(const vec2f& ruv);
+~~~
+
+Sample spherical coordinates uniformly.
+
+#### Function sample_spherical_pdf()
+
+~~~ .cpp
+inline float sample_spherical_pdf(const vec2f& w);
+~~~
+
+Pdf for uniform spherical direction.
+
 #### Function sample_hemisphere_cosine()
 
 ~~~ .cpp
@@ -4158,18 +4412,103 @@ inline float sample_index_pdf(int size);
 
 Pdf for uniform index sampling.
 
-#### Function sample_discrete()
+#### Function sample_index()
 
 ~~~ .cpp
-inline int sample_discrete(const std::vector<float>& cdf, float r);
+template <size_t N>
+inline int sample_index(const std::array<float, N>& weights, float r);
+~~~
+
+Pick an index with probability proportional to the given weights.
+The sum of the weights is expected to be normalized to 1.
+This is inefficient for large numbers. Use distributions for that.
+
+#### Struct distribution1f
+
+~~~ .cpp
+struct distribution1f {
+    std::vector<float> weights;
+    std::vector<float> cdf;
+}
+~~~
+
+Distribution for sampling of elements with probability proportional
+to the input weights. Uses inverse CDF sampling in its implementation.
+Initialize the distribution with `make_distribution()` and use
+`sample_distribution_discrete()` and `sample_distribution_discrete_pdf()`
+to obtain sampled values and their weights. Use
+`sample_distribution_total_weight()` for total weight.
+This type is not strictly needed, but helpful to enforce type safety when
+passing distributions around.
+
+- Members:
+    - weights:      Element weights. This is redundant since `weights[i] = cdf[i]-cdf[i-1]`.
+    - cdf:      Element cdf. This is not-normalized, so total weight is `cdf.back()`.
+
+
+#### Function make_distribution()
+
+~~~ .cpp
+distribution1f make_distribution(const std::vector<float>& weights);
+~~~
+
+Make a one-dimensional distribution for sampling.
+
+#### Function make_distribution()
+
+~~~ .cpp
+template <typename F>
+inline distribution1f make_distribution(int num, F&& func);
+~~~
+
+Make a one-dimensional distribution for sampling.
+
+#### Function sample_distribution_discrete()
+
+~~~ .cpp
+int sample_distribution_discrete(const distribution1f& dist, float r);
+~~~
+
+Sample a discrete distribution.
+
+#### Function sample_distribution_discrete_pdf()
+
+~~~ .cpp
+float sample_distribution_discrete_pdf(const distribution1f& dist, int idx);
+~~~
+
+Pdf for smapling a discrete distribution.
+
+#### Function sample_distribution_weightsum()
+
+~~~ .cpp
+float sample_distribution_weightsum(const distribution1f& dist);
+~~~
+
+Get the total weight of a distribution.
+
+#### Function sample_distribution_discrete_pdf()
+
+~~~ .cpp
+template <int N>
+inline int sample_distribution_discrete_pdf(
+    const std::array<float, N>& weights, int idx);
+~~~
+
+PDF for sampling a discrete distribution.
+
+#### Function sample_discrete_()
+
+~~~ .cpp
+inline int sample_discrete_(const std::vector<float>& cdf, float r);
 ~~~
 
 Sample a discrete distribution represented by its cdf.
 
-#### Function sample_discrete_pdf()
+#### Function sample_discrete_pdf_()
 
 ~~~ .cpp
-inline float sample_discrete_pdf(const std::vector<float>& cdf, int idx);
+inline float sample_discrete_pdf_(const std::vector<float>& cdf, int idx);
 ~~~
 
 Pdf for uniform discrete distribution sampling.
@@ -5306,10 +5645,10 @@ inline int sample_points(int npoints, float re);
 
 Pick a point.
 
-#### Function sample_points_cdf()
+#### Function make_point_distribution()
 
 ~~~ .cpp
-std::vector<float> sample_points_cdf(int npoints);
+inline distribution1f make_point_distribution(int npoints);
 ~~~
 
 Compute a distribution for sampling points uniformly.
@@ -5317,15 +5656,15 @@ Compute a distribution for sampling points uniformly.
 #### Function sample_points()
 
 ~~~ .cpp
-inline int sample_points(const std::vector<float>& cdf, float re);
+inline int sample_points(const distribution1f& dst, float re);
 ~~~
 
 Pick a point uniformly.
 
-#### Function sample_lines_cdf()
+#### Function make_line_distribution()
 
 ~~~ .cpp
-std::vector<float> sample_lines_cdf(
+inline distribution1f make_line_distribution(
     const std::vector<vec2i>& lines, const std::vector<vec3f>& pos);
 ~~~
 
@@ -5335,15 +5674,15 @@ Compute a distribution for sampling lines uniformly.
 
 ~~~ .cpp
 inline std::pair<int, float> sample_lines(
-    const std::vector<float>& cdf, float re, float ru);
+    const distribution1f& dst, float re, float ru);
 ~~~
 
 Pick a point on lines uniformly.
 
-#### Function sample_triangles_cdf()
+#### Function make_triangle_distribution()
 
 ~~~ .cpp
-std::vector<float> sample_triangles_cdf(
+inline distribution1f make_triangle_distribution(
     const std::vector<vec3i>& triangles, const std::vector<vec3f>& pos);
 ~~~
 
@@ -5353,15 +5692,15 @@ Compute a distribution for sampling triangle meshes uniformly.
 
 ~~~ .cpp
 inline std::pair<int, vec2f> sample_triangles(
-    const std::vector<float>& cdf, float re, const vec2f& ruv);
+    const distribution1f& dst, float re, const vec2f& ruv);
 ~~~
 
 Pick a point on a triangle mesh uniformly.
 
-#### Function sample_quads_cdf()
+#### Function make_quad_distribution()
 
 ~~~ .cpp
-std::vector<float> sample_quads_cdf(
+inline distribution1f make_quad_distribution(
     const std::vector<vec4i>& quads, const std::vector<vec3f>& pos);
 ~~~
 
@@ -5371,7 +5710,7 @@ Compute a distribution for sampling quad meshes uniformly.
 
 ~~~ .cpp
 inline std::pair<int, vec2f> sample_quads(
-    const std::vector<float>& cdf, float re, const vec2f& ruv);
+    const distribution1f& dst, float re, const vec2f& ruv);
 ~~~
 
 Pick a point on a quad mesh uniformly.
@@ -6717,12 +7056,34 @@ Material for surfaces, lines and triangles.
     - occ_txt_info:      Occlusion texture info.
 
 
+#### Struct shape_element_tags
+
+~~~ .cpp
+struct shape_element_tags {
+    uint16_t matid = 0;
+    uint16_t groupid = 0;
+    uint16_t smoothingid = 0;
+    uint16_t esize = 0;
+}
+~~~
+
+Shape element tags.
+
+- Members:
+    - matid:      Material id.
+    - groupid:      Groups id.
+    - smoothingid:      Smoothing id.
+    - esize:      Original element size.
+
+
 #### Struct shape
 
 ~~~ .cpp
 struct shape {
     std::string name = "";
-    std::shared_ptr<material> mat = nullptr;
+    std::vector<std::shared_ptr<material>> materials = {};
+    std::vector<std::string> groupnames = {};
+    std::vector<bool> smoothing = {};
     std::vector<int> points;
     std::vector<vec2i> lines;
     std::vector<vec3i> triangles;
@@ -6731,6 +7092,7 @@ struct shape {
     std::vector<vec4i> quads_norm;
     std::vector<vec4i> quads_texcoord;
     std::vector<vec4i> beziers;
+    std::vector<shape_element_tags> elem_tags;
     std::vector<vec3f> pos;
     std::vector<vec3f> norm;
     std::vector<vec2f> texcoord;
@@ -6738,7 +7100,6 @@ struct shape {
     std::vector<vec4f> color;
     std::vector<float> radius;
     std::vector<vec4f> tangsp;
-    bool faceted = false;
     int subdivision = 0;
     bool catmullclark = false;
 }
@@ -6749,7 +7110,9 @@ points/lines/triangles/quads.
 
 - Members:
     - name:      Name.
-    - mat:      Material. 
+    - materials:      Materials. 
+    - groupnames:      Group names.
+    - smoothing:      Smoothing values.
     - points:      Points.
     - lines:      Lines.
     - triangles:      Triangles.
@@ -6758,6 +7121,7 @@ points/lines/triangles/quads.
     - quads_norm:      Face-varying indices for normal.
     - quads_texcoord:      Face-varying indices for texcoord.
     - beziers:      Bezier.
+    - elem_tags:      Element material ids.
     - pos:      Vertex position.
     - norm:      Vertex normals.
     - texcoord:      Vertex texcoord.
@@ -6765,7 +7129,6 @@ points/lines/triangles/quads.
     - color:      Vertex color.
     - radius:      per-vertex radius.
     - tangsp:      Vertex tangent space.
-    - faceted:      Whether normal smoothing or faceting is used
     - subdivision:      Number of times to subdivide.
     - catmullclark:      Whether to use Catmull-Clark subdivision.
 
@@ -6776,6 +7139,7 @@ points/lines/triangles/quads.
 struct shape_group {
     std::string name = "";
     std::string path = "";
+    frame3f frame = identity_frame3f;
     std::vector<std::shared_ptr<shape>> shapes;
 }
 ~~~
@@ -6785,26 +7149,17 @@ Group of shapes.
 - Members:
     - name:      Name.
     - path:      Path used for saving in glTF.
+    - frame:      Frame.
     - shapes:      Shapes.
 
 
-#### Struct instance
+#### Constant environment_distance
 
 ~~~ .cpp
-struct instance {
-    std::string name = "";
-    frame3f frame = identity_frame3f;
-    std::shared_ptr<shape_group> shp = nullptr;
-}
+const auto environment_distance = 1000000.0f;
 ~~~
 
-Shape instance.
-
-- Members:
-    - name:      Name.
-    - frame:      Transform frame.
-    - shp:      Shape instance. 
-
+Distance at which we set environment map positions.
 
 #### Struct environment
 
@@ -6834,14 +7189,15 @@ Envinonment map.
 struct node {
     std::string name = "";
     std::shared_ptr<node> parent = nullptr;
-    frame3f frame = identity_frame3f;
+    frame3f local = identity_frame3f;
     vec3f translation = zero3f;
     quat4f rotation = {0, 0, 0, 1};
     vec3f scaling = {1, 1, 1};
     std::vector<float> weights = {};
     std::shared_ptr<camera> cam = nullptr;
-    std::shared_ptr<instance> ist = nullptr;
+    std::shared_ptr<shape_group> shp = nullptr;
     std::shared_ptr<environment> env = nullptr;
+    frame3f frame_ = identity_frame3f;
     std::vector<std::weak_ptr<node>> children_ = {};
 }
 ~~~
@@ -6851,14 +7207,15 @@ Node in a transform hierarchy.
 - Members:
     - name:      Name.
     - parent:      Parent node. 
-    - frame:      Transform frame.
+    - local:      Local frame.
     - translation:      Translation.
     - rotation:      Rotation.
     - scaling:      Scaling. 
     - weights:      Weights for morphing.
     - cam:      Camera the node points to. 
-    - ist:      Instance the node points to. 
+    - shp:      Shape the node points to. 
     - env:      Environment the node points to. 
+    - frame_:      Transform frame. This is a computed value only stored for convenience.
     - children_:      Child nodes. This is a computed value only stored for convenience.
 
 
@@ -6934,7 +7291,6 @@ Animation made of multiple keyframed values.
 ~~~ .cpp
 struct scene {
     std::vector<std::shared_ptr<shape_group>> shapes = {};
-    std::vector<std::shared_ptr<instance>> instances = {};
     std::vector<std::shared_ptr<material>> materials = {};
     std::vector<std::shared_ptr<texture>> textures = {};
     std::vector<std::shared_ptr<camera>> cameras = {};
@@ -6955,7 +7311,6 @@ updates node transformations only if defined.
 
 - Members:
     - shapes:      Shapes.
-    - instances:      Shape instances.
     - materials:      Materials.
     - textures:      Textures.
     - cameras:      Cameras.
@@ -6963,6 +7318,67 @@ updates node transformations only if defined.
     - nodes:      Node hierarchy.
     - animations:      Node animations.
 
+
+#### Enum shape_elem_type
+
+~~~ .cpp
+enum struct shape_elem_type {
+    none = 0,
+    points = 1,
+    lines = 2,
+    triangles = 3,
+    quads = 4,
+    beziers = 5,
+    vertices = 8,
+    facevarying = 9,
+}
+~~~
+
+Shape elements type.
+
+- Values:
+    - none:      Empty.
+    - points:      Points.
+    - lines:      Lines.
+    - triangles:      Triangles.
+    - quads:      Quads.
+    - beziers:      Beziers.
+    - vertices:      Vertices.
+    - facevarying:      Facevarying.
+
+
+#### Function get_shape_type()
+
+~~~ .cpp
+shape_elem_type get_shape_type(const std::shared_ptr<shape>& shp);
+~~~
+
+Get shape element type.
+
+#### Function has_emission()
+
+~~~ .cpp
+bool has_emission(const std::shared_ptr<shape>& shp);
+~~~
+
+Check if a shape has emission.
+
+#### Function get_material()
+
+~~~ .cpp
+std::shared_ptr<material> get_material(
+    const std::shared_ptr<shape>& shp, int eid);
+~~~
+
+Gets the material for a shape element.
+
+#### Function is_shape_simple()
+
+~~~ .cpp
+bool is_shape_simple(const std::shared_ptr<shape>& shp, bool split_facevarying);
+~~~
+
+Returns is the shape is simple, i.e. it has only one material and one group.
 
 #### Function eval_pos()
 
@@ -7016,8 +7432,8 @@ Shape tangent space interpolated using barycentric coordinates.
 #### Function eval_pos()
 
 ~~~ .cpp
-vec3f eval_pos(
-    const std::shared_ptr<instance>& ist, int sid, int eid, const vec2f& euv);
+vec3f eval_pos(const std::shared_ptr<shape_group>& shp, int sid, int eid,
+    const vec2f& euv);
 ~~~
 
 Instance position interpolated using barycentric coordinates.
@@ -7025,11 +7441,43 @@ Instance position interpolated using barycentric coordinates.
 #### Function eval_norm()
 
 ~~~ .cpp
-vec3f eval_norm(
-    const std::shared_ptr<instance>& ist, int sid, int eid, const vec2f& euv);
+vec3f eval_norm(const std::shared_ptr<shape_group>& shp, int sid, int eid,
+    const vec2f& euv);
 ~~~
 
 Instance normal interpolated using barycentric coordinates.
+
+#### Function eval_pos()
+
+~~~ .cpp
+vec3f eval_pos(const std::shared_ptr<environment>& env, const vec2f& uv);
+~~~
+
+Environment position interpolated using uv parametrization.
+
+#### Function eval_norm()
+
+~~~ .cpp
+vec3f eval_norm(const std::shared_ptr<environment>& env, const vec2f& uv);
+~~~
+
+Environment normal interpolated using uv parametrization.
+
+#### Function eval_texcoord()
+
+~~~ .cpp
+vec2f eval_texcoord(const std::shared_ptr<environment>& env, const vec2f& uv);
+~~~
+
+Environment texture coordinates from uv parametrization.
+
+#### Function eval_uv()
+
+~~~ .cpp
+vec2f eval_uv(const std::shared_ptr<environment>& env, const vec3f& w);
+~~~
+
+Evaluate uv parameters for environment.
 
 #### Function eval_texture()
 
@@ -7081,6 +7529,32 @@ void sync_camera_aspect(
 
 Synchronizes a camera aspect with image width and height. Set image
 values any one is 0 or less. Set camera aspect otherwise.
+
+#### Function make_shape_distribution()
+
+~~~ .cpp
+distribution1f make_shape_distribution(const std::shared_ptr<shape>& shp);
+~~~
+
+Generate a distribution for sampling a shape uniformly based on area/length.
+
+#### Function sample_shape()
+
+~~~ .cpp
+std::pair<int, vec2f> sample_shape(const std::shared_ptr<shape>& shp,
+    const distribution1f& dst, float re, const vec2f& ruv);
+~~~
+
+Sample a shape based on a distribution.
+
+#### Function sample_environment()
+
+~~~ .cpp
+vec2f sample_environment(
+    const std::shared_ptr<environment>& env, const vec2f& ruv);
+~~~
+
+Sample an environment uniformly.
 
 #### Function find_named_elem()
 
@@ -7139,6 +7613,25 @@ void tesselate_shapes(const std::shared_ptr<scene>& scn, bool subdivide,
 ~~~
 
 Tesselate scene shapes.
+
+#### Function split_shape()
+
+~~~ .cpp
+std::vector<std::shared_ptr<shape>> split_shape(
+    const std::shared_ptr<shape>& shp, bool split_facevarying);
+~~~
+
+Convert a shape into simple shapes. Facevarying primitives are split if
+`allow_facevarying` is false.
+
+#### Function group_shapes()
+
+~~~ .cpp
+std::shared_ptr<shape> group_shapes(
+    const std::vector<std::shared_ptr<shape>>& shps);
+~~~
+
+Convert a list of shapes into a face-varying shape.
 
 #### Function update_transforms()
 
@@ -7234,9 +7727,9 @@ struct add_elements_options {
     bool smooth_normals = true;
     bool tangent_space = true;
     bool texture_data = true;
-    bool shape_instances = true;
+    bool node_hierarchy = false;
     bool default_names = true;
-    bool default_paths = true;
+    bool default_paths = false;
     static add_elements_options none(); 
 }
 ~~~
@@ -7247,7 +7740,7 @@ Add elements options.
     - smooth_normals:      Add missing normal.
     - tangent_space:      Add missing trangent space.
     - texture_data:      Add empty texture data.
-    - shape_instances:      Add instances.
+    - node_hierarchy:      Add hierarchy.
     - default_names:      Add default names.
     - default_paths:      Add default paths.
     - none():      Initialize to no elements.
@@ -7282,7 +7775,7 @@ struct load_options {
     bool obj_flip_tr = true;
     bool preserve_quads = false;
     bool preserve_facevarying = false;
-    bool preserve_hierarchy = false;
+    bool simple_shapes = true;
 }
 ~~~
 
@@ -7295,7 +7788,7 @@ Loading options.
     - obj_flip_tr:      Whether to flip tr in OBJ.
     - preserve_quads:      Whether to preserve quads.
     - preserve_facevarying:      Whether to preserve face-varying faces.
-    - preserve_hierarchy:      Whether to preserve node hierarchy.
+    - simple_shapes:      Use simple shapes.
 
 
 #### Function load_scene()
@@ -7493,15 +7986,6 @@ Visit struct elements.
 ~~~ .cpp
 template <typename Visitor>
 inline void visit(shape_group& val, Visitor&& visitor);
-~~~
-
-Visit struct elements.
-
-#### Function visit()
-
-~~~ .cpp
-template <typename Visitor>
-inline void visit(instance& val, Visitor&& visitor);
 ~~~
 
 Visit struct elements.
@@ -7749,6 +8233,7 @@ struct proc_shape {
     proc_shape_type type = proc_shape_type::sphere;
     std::string material = "";
     std::string interior = "";
+    frame3f frame = identity_frame3f;
     int tesselation = -1;
     int subdivision = 0;
     float scale = 1;
@@ -7766,6 +8251,7 @@ Procedural shape parameters.
     - type:      Shape type.
     - material:      Material name.
     - interior:      Interior material name.
+    - frame:      Local frame. 
     - tesselation:      Level of shape tesselatation (-1 for default). 
     - subdivision:      Level of shape tesselation for subdivision surfaces.
      
@@ -7775,26 +8261,6 @@ Procedural shape parameters.
     - num:      Number of elements for points and lines (-1 for default).
      
     - hair_params:      Hair generation params.
-
-
-#### Struct proc_instance
-
-~~~ .cpp
-struct proc_instance {
-    std::string name = "";
-    std::string shape = "";
-    frame3f frame = identity_frame3f;
-    vec3f rotation = zero3f;
-}
-~~~
-
-Procedural instance parameters.
-
-- Members:
-    - name:      Name (if not filled, assign a default one).
-    - shape:      Shape name.
-    - frame:      Base frame.
-    - rotation:      Rotation in Euler angles.
 
 
 #### Struct proc_environment
@@ -7828,7 +8294,7 @@ struct proc_node {
     std::string name = "";
     std::string parent = "";
     std::string camera = "";
-    std::string instance = "";
+    std::string shape = "";
     std::string environment = "";
     frame3f frame = identity_frame3f;
     vec3f translation = {0, 0, 0};
@@ -7843,9 +8309,9 @@ Procedural node parameters.
     - name:      Name.
     - parent:      Parent node.
     - camera:      Camera.
-    - instance:      Instance.
+    - shape:      Shape.
     - environment:      Environment.
-    - frame:      Frame.
+    - frame:      Local frame. 
     - translation:      Translation. 
     - rotation:      Roation.
     - scaling:      Scaling. 
@@ -7890,7 +8356,6 @@ struct proc_scene {
     std::vector<std::shared_ptr<proc_texture>> textures;
     std::vector<std::shared_ptr<proc_material>> materials;
     std::vector<std::shared_ptr<proc_shape>> shapes;
-    std::vector<std::shared_ptr<proc_instance>> instances;
     std::vector<std::shared_ptr<proc_environment>> environments;
     std::vector<std::shared_ptr<proc_node>> nodes;
     std::vector<std::shared_ptr<proc_animation>> animations;
@@ -7905,7 +8370,6 @@ Procedural scene.
     - textures:      Textures.
     - materials:      Materials.
     - shapes:      Shapes.
-    - instances:      Instances.
     - environments:      Environmennts.
     - nodes:      Nodes.
     - animations:      Animations.
@@ -7973,16 +8437,6 @@ void update_proc_elem(const std::shared_ptr<scene>& scn,
 ~~~
 
 Updates a procedural shape, adding it to the scene if missing.
-
-#### Function update_proc_elem()
-
-~~~ .cpp
-void update_proc_elem(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<instance>& ist,
-    const std::shared_ptr<proc_instance>& tist);
-~~~
-
-Updates a procedural instance.
 
 #### Function update_proc_elem()
 
@@ -8064,14 +8518,6 @@ std::vector<std::shared_ptr<proc_shape>>& proc_shape_presets();
 ~~~
 
 Procedural shape presets.
-
-#### Function proc_instance_presets()
-
-~~~ .cpp
-std::vector<std::shared_ptr<proc_instance>>& proc_instance_presets();
-~~~
-
-Procedural instance presets.
 
 #### Function proc_environment_presets()
 
@@ -8200,15 +8646,6 @@ Visit struct elements.
 ~~~ .cpp
 template <typename Visitor>
 inline void visit(proc_shape& val, Visitor&& visitor);
-~~~
-
-Visit struct elements.
-
-#### Function visit()
-
-~~~ .cpp
-template <typename Visitor>
-inline void visit(proc_instance& val, Visitor&& visitor);
 ~~~
 
 Visit struct elements.
@@ -8497,19 +8934,19 @@ the public API.
 
 ~~~ .cpp
 struct trace_light {
-    std::shared_ptr<instance> ist = nullptr;
-    int sid = 0;
+    std::shared_ptr<shape> shp = nullptr;
+    frame3f frame = identity_frame3f;
     std::shared_ptr<environment> env = nullptr;
 }
 ~~~
 
-Trace light as either instances or environments. The members are not part of
+Trace light as either shapes or environments. The members are not part of
 the the public API.
 
 - Members:
-    - ist:      Instance pointer for instance lights.
-    - sid:      Shape index for instance lights
-    - env:      Environment pointer for environment lights.
+    - shp:      Shape pointer.
+    - frame:      Shape frame.
+    - env:      Environment pointer.
 
 
 #### Struct trace_lights
@@ -8517,8 +8954,8 @@ the the public API.
 ~~~ .cpp
 struct trace_lights {
     std::vector<trace_light> lights;
-    std::unordered_map<std::shared_ptr<shape>, std::vector<float>> shape_cdfs;
-    std::unordered_map<std::shared_ptr<shape>, float> shape_areas;
+    std::unordered_map<std::shared_ptr<shape>, distribution1f> shape_distribs;
+    distribution1f light_distrib;
     bool empty() const; 
     int size() const; 
 }
@@ -8529,8 +8966,8 @@ the the public API.
 
 - Members:
     - lights:      Shape instances.
-    - shape_cdfs:      Shape cdfs.
-    - shape_areas:      Shape areas.
+    - shape_distribs:      Shape distributions.
+    - light_distrib:      Lights distribution.
     - empty():      Check whether there are any lights.
     - size():      Number of lights.
 
@@ -8677,6 +9114,12 @@ enum struct obj_element_type : uint16_t {
     line = 2,
     face = 3,
     bezier = 4,
+    uint32_t start
+    uint16_t size
+    obj_element_type type
+    uint16_t matid = 0
+    uint16_t groupid = 0
+    uint16_t smoothingid = 0
 }
 ~~~
 
@@ -8687,48 +9130,12 @@ Obj element type.
     - line:      Polyline.
     - face:      Polygon face.
     - bezier:      Bezier segments.
-
-
-#### Struct obj_element
-
-~~~ .cpp
-struct obj_element {
-    uint32_t start;
-    obj_element_type type;
-    uint16_t size;
-}
-~~~
-
-Obj element vertex indices.
-
-- Members:
     - start:      Starting vertex index.
-    - type:      Element type.
     - size:      Number of vertices.
-
-
-#### Struct obj_group
-
-~~~ .cpp
-struct obj_group {
-    std::string matname;
-    std::string groupname;
-    bool smoothing = true;
-    std::vector<obj_vertex> verts;
-    std::vector<obj_element> elems;
-    std::unordered_map<std::string, std::vector<std::string>> props;
-}
-~~~
-
-Obj element group.
-
-- Members:
-    - matname:      Material name.
-    - groupname:      Group name.
-    - smoothing:      Smoothing.
-    - verts:      Element vertices.
-    - elems:      Element faces.
-    - props:      Properties not explicitly handled [extension].
+    - type:      Element type.
+    - matid:      Material id.
+    - groupid:      Group id.
+    - smoothingid:      Smoothing group id.
 
 
 #### Struct obj_object
@@ -8736,7 +9143,12 @@ Obj element group.
 ~~~ .cpp
 struct obj_object {
     std::string name;
-    std::vector<std::shared_ptr<obj_group>> groups;
+    std::vector<std::string> matnames;
+    std::vector<std::string> groupnames;
+    std::vector<bool> smoothing;
+    std::vector<obj_vertex> verts;
+    std::vector<obj_element> elems;
+    frame3f frame = identity_frame3f;
     std::unordered_map<std::string, std::vector<std::string>> props;
 }
 ~~~
@@ -8745,7 +9157,12 @@ Obj object.
 
 - Members:
     - name:      Name.
-    - groups:      Element groups.
+    - matnames:      Material name.
+    - groupnames:      Group name.
+    - smoothing:      Smoothing groups.
+    - verts:      Element vertices.
+    - elems:      Element faces.
+    - frame:      Frame [extension]. Vertices are not transformed though.
     - props:      Properties not explicitly handled [extension].
 
 
@@ -8906,7 +9323,7 @@ struct obj_node {
     std::string camname;
     std::string objname;
     std::string envname;
-    frame3f frame = identity_frame3f;
+    frame3f local = identity_frame3f;
     vec3f translation = zero3f;
     quat4f rotation = {0, 0, 0, 1};
     vec3f scaling = {1, 1, 1};
@@ -8921,7 +9338,7 @@ Obj node [extension].
     - camname:      Camera name.
     - objname:      Instance name.
     - envname:      Environment name.
-    - frame:      Transform frame (affine matrix).
+    - local:      Transform frame (affine matrix).
     - translation:      Translation.
     - rotation:      Rotation.
     - scaling:      Scaling.

@@ -34,7 +34,7 @@ and released under the MIT license. Features include:
 - OpenGL utilities to manage textures, buffers and prograrms
 - OpenGL shader for image viewing and GGX microfacet and hair rendering
 
-The current version is 0.3.10.
+The current version is 0.4.0.
 
 ## Credits
 
@@ -581,6 +581,7 @@ and user end.
 Here we mark only major features added to the library. Small refactorings
 and bug fixes are not reported here.
 
+- v 0.4.0: face-varying shapes, removal if scene instancing
 - v 0.3.0: templated types, animation and objects in scene, api cleanups
 - v 0.2.0: various bug fixes and improvement to OpenGL drawing and widgets
 - v 0.1.0: initial release after refactoring

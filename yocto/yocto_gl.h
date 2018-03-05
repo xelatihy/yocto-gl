@@ -35,7 +35,7 @@
 /// - OpenGL utilities to manage textures, buffers and prograrms
 /// - OpenGL shader for image viewing and GGX microfacet and hair rendering
 ///
-/// The current version is 0.3.10.
+/// The current version is 0.4.0.
 ///
 /// ## Credits
 ///
@@ -582,6 +582,7 @@
 /// Here we mark only major features added to the library. Small refactorings
 /// and bug fixes are not reported here.
 ///
+/// - v 0.4.0: face-varying shapes, removal if scene instancing
 /// - v 0.3.0: templated types, animation and objects in scene, api cleanups
 /// - v 0.2.0: various bug fixes and improvement to OpenGL drawing and widgets
 /// - v 0.1.0: initial release after refactoring
@@ -852,7 +853,7 @@ inline T min(T x, T y) {
 /// Safe minimum value.
 template <typename T>
 inline T min(std::initializer_list<T> vs) {
-    auto m = int_max;
+    auto m = std::numeric_limits<T>::max();
     for (auto v : vs) m = min(m, v);
     return m;
 }
@@ -864,7 +865,7 @@ inline T max(T x, T y) {
 /// Safe maximum value.
 template <typename T>
 inline T max(std::initializer_list<T> vs) {
-    auto m = int_min;
+    auto m = std::numeric_limits<T>::lowest();
     for (auto v : vs) m = max(m, v);
     return m;
 }
@@ -929,17 +930,17 @@ template <typename T, int N>
 struct vec {
     /// Default constructor. Initializes to zeros.
     vec() {
-        for(auto i = 0; i < N; i ++) d[i] = 0;
+        for (auto i = 0; i < N; i++) d[i] = 0;
     }
     /// Element constructor.
     explicit vec(T vv) {
-        for(auto i = 0; i < N; i ++) d[i] = vv;
+        for (auto i = 0; i < N; i++) d[i] = vv;
     }
     /// Element constructor.
     vec(std::initializer_list<T> vv) {
-        if(vv.size() != N) throw std::length_error("bad vec length");
+        if (vv.size() != N) throw std::length_error("bad vec length");
         auto i = 0;
-        for(auto v : vv) d[i++] = v;
+        for (auto v : vv) d[i++] = v;
     }
 
     /// Element access.
@@ -1119,13 +1120,15 @@ inline bool empty(vec<T, N>& a) {
 /// Vector equality.
 template <typename T, int N>
 inline bool operator==(const vec<T, N>& a, const vec<T, N>& b) {
-    for(auto i = 0; i < N; i ++) if(a[i] != b[i]) return false;
+    for (auto i = 0; i < N; i++)
+        if (a[i] != b[i]) return false;
     return true;
 }
 /// Vector inequality.
 template <typename T, int N>
 inline bool operator!=(const vec<T, N>& a, const vec<T, N>& b) {
-    for(auto i = 0; i < N; i ++) if(a[i] == b[i]) return false;
+    for (auto i = 0; i < N; i++)
+        if (a[i] == b[i]) return false;
     return true;
 }
 /// Vector comparison using lexicographic order, useful for map.
@@ -1191,63 +1194,63 @@ inline vec<T, N> operator+(const vec<T, N>& a) {
 template <typename T, int N>
 inline vec<T, N> operator-(const vec<T, N>& a) {
     auto c = vec<T, N>{};
-    for(auto i = 0; i < N; i ++) c[i] = -a[i];
+    for (auto i = 0; i < N; i++) c[i] = -a[i];
     return c;
 }
 /// Vector sum.
 template <typename T, int N>
 inline vec<T, N> operator+(const vec<T, N>& a, const vec<T, N>& b) {
     auto c = vec<T, N>{};
-    for(auto i = 0; i < N; i ++) c[i] = a[i] + b[i];
+    for (auto i = 0; i < N; i++) c[i] = a[i] + b[i];
     return c;
 }
 /// Vector difference.
 template <typename T, int N>
 inline vec<T, N> operator-(const vec<T, N>& a, const vec<T, N>& b) {
     auto c = vec<T, N>{};
-    for(auto i = 0; i < N; i ++) c[i] = a[i] - b[i];
+    for (auto i = 0; i < N; i++) c[i] = a[i] - b[i];
     return c;
 }
 /// Vector scalar product.
 template <typename T, int N>
 inline vec<T, N> operator*(const vec<T, N>& a, const vec<T, N>& b) {
     auto c = vec<T, N>{};
-    for(auto i = 0; i < N; i ++) c[i] = a[i] * b[i];
+    for (auto i = 0; i < N; i++) c[i] = a[i] * b[i];
     return c;
 }
 /// Vector scalar product.
 template <typename T, int N, typename T1>
 inline vec<T, N> operator*(const vec<T, N>& a, T1 b) {
     auto c = vec<T, N>{};
-    for(auto i = 0; i < N; i ++) c[i] = a[i] * b;
+    for (auto i = 0; i < N; i++) c[i] = a[i] * b;
     return c;
 }
 /// Vector scalar product.
 template <typename T, int N, typename T1>
 inline vec<T, N> operator*(T1 a, const vec<T, N>& b) {
     auto c = vec<T, N>{};
-    for(auto i = 0; i < N; i ++) c[i] = a * b[i];
+    for (auto i = 0; i < N; i++) c[i] = a * b[i];
     return c;
 }
 /// Vector scalar division.
 template <typename T, int N>
 inline vec<T, N> operator/(const vec<T, N>& a, const vec<T, N>& b) {
     auto c = vec<T, N>{};
-    for(auto i = 0; i < N; i ++) c[i] = a[i] / b[i];
+    for (auto i = 0; i < N; i++) c[i] = a[i] / b[i];
     return c;
 }
 /// Vector scalar division.
 template <typename T, int N, typename T1>
 inline vec<T, N> operator/(const vec<T, N>& a, T1 b) {
     auto c = vec<T, N>{};
-    for(auto i = 0; i < N; i ++) c[i] = a[i] / b;
+    for (auto i = 0; i < N; i++) c[i] = a[i] / b;
     return c;
 }
 /// Vector scalar division.
 template <typename T, int N, typename T1>
 inline vec<T, N> operator/(T1 a, const vec<T, N>& b) {
     auto c = vec<T, N>{};
-    for(auto i = 0; i < N; i ++) c[i] = a / b[i];
+    for (auto i = 0; i < N; i++) c[i] = a / b[i];
     return c;
 }
 
@@ -1439,7 +1442,7 @@ inline vec<T, N>& operator/=(vec<T, N>& a, T1 b) {
 template <typename T, int N>
 inline T dot(const vec<T, N>& a, const vec<T, N>& b) {
     auto c = T{0};
-    for(auto i = 0; i < N; i ++) c += a[i] * b[i];
+    for (auto i = 0; i < N; i++) c += a[i] * b[i];
     return c;
 }
 /// Vector dot product.
@@ -5546,54 +5549,6 @@ struct material {
     optional<texture_info> occ_txt_info = {};
 };
 
-/// Shape data represented as an indexed array. May contain only one of the
-/// points/lines/triangles/quads.
-struct shape {
-    /// Name.
-    std::string name = "";
-    /// Material. @refl_semantic(reference)
-    std::shared_ptr<material> mat = nullptr;
-
-    /// Points.
-    std::vector<int> points;
-    /// Lines.
-    std::vector<vec2i> lines;
-    /// Triangles.
-    std::vector<vec3i> triangles;
-    /// Quads.
-    std::vector<vec4i> quads;
-    /// Face-varying indices for position.
-    std::vector<vec4i> quads_pos;
-    /// Face-varying indices for normal.
-    std::vector<vec4i> quads_norm;
-    /// Face-varying indices for texcoord.
-    std::vector<vec4i> quads_texcoord;
-    /// Bezier.
-    std::vector<vec4i> beziers;
-
-    /// Vertex position.
-    std::vector<vec3f> pos;
-    /// Vertex normals.
-    std::vector<vec3f> norm;
-    /// Vertex texcoord.
-    std::vector<vec2f> texcoord;
-    /// Vertex second texcoord.
-    std::vector<vec2f> texcoord1;
-    /// Vertex color.
-    std::vector<vec4f> color;
-    /// per-vertex radius.
-    std::vector<float> radius;
-    /// Vertex tangent space.
-    std::vector<vec4f> tangsp;
-
-    /// Whether normal smoothing or faceting is used
-    bool faceted = false;
-    /// Number of times to subdivide.
-    int subdivision = 0;
-    /// Whether to use Catmull-Clark subdivision.
-    bool catmullclark = false;
-};
-
 /// Shape element tags.
 struct shape_element_tags {
     /// Material id.
@@ -5608,11 +5563,11 @@ struct shape_element_tags {
 
 /// Shape data represented as an indexed array. May contain only one of the
 /// points/lines/triangles/quads.
-struct fvshape {
+struct shape {
     /// Name.
     std::string name = "";
     /// Materials. @refl_semantic(reference)
-    std::vector<std::shared_ptr<material>> mats = {};
+    std::vector<std::shared_ptr<material>> materials = {};
     /// Group names.
     std::vector<std::string> groupnames = {};
     /// Smoothing values.
@@ -5653,8 +5608,6 @@ struct fvshape {
     /// Vertex tangent space.
     std::vector<vec4f> tangsp;
 
-    /// Whether normal smoothing or faceting is used
-    bool faceted = false;
     /// Number of times to subdivide.
     int subdivision = 0;
     /// Whether to use Catmull-Clark subdivision.
@@ -5671,8 +5624,6 @@ struct shape_group {
     frame3f frame = identity_frame3f;
     /// Shapes.
     std::vector<std::shared_ptr<shape>> shapes;
-    /// Face-varying shapes.
-    std::vector<std::shared_ptr<fvshape>> fvshapes;
 };
 
 /// Distance at which we set environment map positions.
@@ -5814,6 +5765,13 @@ enum struct shape_elem_type {
 
 /// Get shape element type.
 shape_elem_type get_shape_type(const std::shared_ptr<shape>& shp);
+/// Check if a shape has emission.
+bool has_emission(const std::shared_ptr<shape>& shp);
+/// Gets the material for a shape element.
+std::shared_ptr<material> get_material(
+    const std::shared_ptr<shape>& shp, int eid);
+/// Returns is the shape is simple, i.e. it has only one material and one group.
+bool is_shape_simple(const std::shared_ptr<shape>& shp, bool split_facevarying);
 
 /// Shape position interpolated using barycentric coordinates.
 vec3f eval_pos(const std::shared_ptr<shape>& shp, int eid, const vec2f& euv);
@@ -5919,10 +5877,13 @@ void tesselate_shapes(const std::shared_ptr<scene>& scn, bool subdivide,
     bool facevarying_to_sharedvertex, bool quads_to_triangles,
     bool bezier_to_lines);
 
-/// Convert face-varying shapes to shapes.
-std::vector<std::shared_ptr<shape>> tesselate_shape(const std::shared_ptr<fvshape>& shp);
+/// Convert a shape into simple shapes. Facevarying primitives are split if
+/// `allow_facevarying` is false.
+std::vector<std::shared_ptr<shape>> split_shape(
+    const std::shared_ptr<shape>& shp, bool split_facevarying);
 /// Convert a list of shapes into a face-varying shape.
-std::shared_ptr<fvshape> group_shapes(const std::vector<std::shared_ptr<shape>>& shps);
+std::shared_ptr<shape> group_shapes(
+    const std::vector<std::shared_ptr<shape>>& shps);
 
 /// Update node transforms.
 void update_transforms(const std::shared_ptr<scene>& scn, float time = 0);
@@ -6253,8 +6214,8 @@ template <typename Visitor>
 inline void visit(shape& val, Visitor&& visitor) {
     visitor(
         val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
-    visitor(val.mat,
-        visit_var{"mat", visit_var_type::reference, "Material.", 0, 0, ""});
+    visitor(val.materials, visit_var{"materials", visit_var_type::reference,
+                               "Materials.", 0, 0, ""});
     visitor(val.points,
         visit_var{"points", visit_var_type::value, "Points.", 0, 0, ""});
     visitor(val.lines,
@@ -6286,9 +6247,6 @@ inline void visit(shape& val, Visitor&& visitor) {
                             "per-vertex radius.", 0, 0, ""});
     visitor(val.tangsp, visit_var{"tangsp", visit_var_type::value,
                             "Vertex tangent space.", 0, 0, ""});
-    visitor(val.faceted,
-        visit_var{"faceted", visit_var_type::value,
-            "Whether normal smoothing or faceting is used", 0, 0, ""});
     visitor(val.subdivision, visit_var{"subdivision", visit_var_type::value,
                                  "Number of times to subdivide.", 0, 0, ""});
     visitor(val.catmullclark,

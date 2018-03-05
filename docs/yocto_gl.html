@@ -123,7 +123,7 @@ and released under the MIT license. Features include:</p>
 <li>OpenGL utilities to manage textures, buffers and prograrms</li>
 <li>OpenGL shader for image viewing and GGX microfacet and hair rendering</li>
 </ul>
-<p>The current version is 0.3.10.</p>
+<p>The current version is 0.4.0.</p>
 <p><a id="toc1"></a></p>
 <h2>Credits</h2>
 <p>This library includes code from the PCG random number generator,
@@ -645,6 +645,7 @@ and user end.</p>
 <p>Here we mark only major features added to the library. Small refactorings
 and bug fixes are not reported here.</p>
 <ul>
+<li>v 0.4.0: face-varying shapes, removal if scene instancing</li>
 <li>v 0.3.0: templated types, animation and objects in scene, api cleanups</li>
 <li>v 0.2.0: various bug fixes and improvement to OpenGL drawing and widgets</li>
 <li>v 0.1.0: initial release after refactoring</li>
@@ -896,12 +897,30 @@ so a,b,c,d correspond to parameters (0,0), (0,1), (1,1), (0,1).</p>
 <h3>Fixed-size vectors</h3>
 <h4>Struct vec</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
-<span class="k">struct</span> <span class="n">vec</span><span class="p">;</span>
+<span class="k">struct</span> <span class="n">vec</span> <span class="p">{</span>
+    <span class="n">vec</span><span class="p">();</span> 
+    <span class="k">explicit</span> <span class="nf">vec</span><span class="p">(</span><span class="n">T</span> <span class="n">vv</span><span class="p">);</span> 
+    <span class="n">vec</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">initializer_list</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">vv</span><span class="p">);</span> 
+    <span class="n">T</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">);</span> 
+    <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="n">T</span> <span class="n">d</span><span class="p">[</span><span class="n">N</span><span class="p">];</span>
+<span class="p">}</span>
 </code></pre></div>
 
 
 <p>Generic vector of N elements. This is used only to define template
 specializations for small fixed sized vectors.</p>
+<ul>
+<li>Members:<ul>
+<li>vec():      Default constructor. Initializes to zeros.</li>
+<li>vec():      Element constructor.</li>
+<li>vec():      Element constructor.</li>
+<li>operator<a href=""></a>:      Element access.</li>
+<li>operator<a href=""></a>:      Element access.</li>
+<li>d[N]:      Element data.</li>
+</ul>
+</li>
+</ul>
 <h4>Struct vec&lt;T, 1></h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="k">struct</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">1</span><span class="o">&gt;</span> <span class="p">{</span>
@@ -1177,6 +1196,27 @@ specializations for small fixed sized vectors.</p>
 
 <p>Empty check (always false for useful for templated code).</p>
 <h4>Function operator==()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="k">operator</span><span class="o">==</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Vector equality.</p>
+<h4>Function operator!=()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="k">operator</span><span class="o">!=</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Vector inequality.</p>
+<h4>Function operator&lt;()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="k">operator</span><span class="o">&lt;</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Vector comparison using lexicographic order, useful for map.</p>
+<h4>Function operator==()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="kt">bool</span> <span class="k">operator</span><span class="o">==</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">1</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">1</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
 </code></pre></div>
@@ -1232,27 +1272,76 @@ specializations for small fixed sized vectors.</p>
 
 
 <p>Vector inequality.</p>
-<h4>Function operator&lt;()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">bool</span> <span class="k">operator</span><span class="o">&lt;</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
+<h4>Function operator+()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span> <span class="k">operator</span><span class="o">+</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Vector comparison using lexicographic order, useful for map.</p>
-<h4>Function operator&lt;()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">bool</span> <span class="k">operator</span><span class="o">&lt;</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
+<p>Vector unary plus (for completeness).</p>
+<h4>Function operator-()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span> <span class="k">operator</span><span class="o">-</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Vector comparison using lexicographic order, useful for map.</p>
-<h4>Function operator&lt;()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">bool</span> <span class="k">operator</span><span class="o">&lt;</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
+<p>Vector negation.</p>
+<h4>Function operator+()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span> <span class="k">operator</span><span class="o">+</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Vector comparison using lexicographic order, useful for map.</p>
+<p>Vector sum.</p>
+<h4>Function operator-()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span> <span class="k">operator</span><span class="o">-</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Vector difference.</p>
+<h4>Function operator*()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span> <span class="k">operator</span><span class="o">*</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Vector scalar product.</p>
+<h4>Function operator*()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span> <span class="k">operator</span><span class="o">*</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="n">T1</span> <span class="n">b</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Vector scalar product.</p>
+<h4>Function operator*()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span> <span class="k">operator</span><span class="o">*</span><span class="p">(</span><span class="n">T1</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Vector scalar product.</p>
+<h4>Function operator/()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span> <span class="k">operator</span><span class="o">/</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Vector scalar division.</p>
+<h4>Function operator/()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span> <span class="k">operator</span><span class="o">/</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="n">T1</span> <span class="n">b</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Vector scalar division.</p>
+<h4>Function operator/()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span> <span class="k">operator</span><span class="o">/</span><span class="p">(</span><span class="n">T1</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Vector scalar division.</p>
 <h4>Function operator+()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;</span> <span class="k">operator</span><span class="o">+</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
@@ -1296,8 +1385,8 @@ specializations for small fixed sized vectors.</p>
 
 <p>Vector scalar product.</p>
 <h4>Function operator*()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;</span> <span class="k">operator</span><span class="o">*</span><span class="p">(</span><span class="kt">float</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;</span> <span class="k">operator</span><span class="o">*</span><span class="p">(</span><span class="n">T1</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -1429,15 +1518,15 @@ specializations for small fixed sized vectors.</p>
 
 <p>Vector scalar product.</p>
 <h4>Function operator*()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="k">operator</span><span class="o">*</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="kt">float</span> <span class="n">b</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="k">operator</span><span class="o">*</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="n">T1</span> <span class="n">b</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Vector scalar product.</p>
 <h4>Function operator*()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="k">operator</span><span class="o">*</span><span class="p">(</span><span class="kt">float</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="k">operator</span><span class="o">*</span><span class="p">(</span><span class="n">T1</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -1505,6 +1594,13 @@ specializations for small fixed sized vectors.</p>
 
 
 <p>Vector assignment.</p>
+<h4>Function dot()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">T</span> <span class="n">dot</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Vector dot product.</p>
 <h4>Function dot()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">T</span> <span class="n">dot</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
@@ -1664,6 +1760,38 @@ specializations for small fixed sized vectors.</p>
 
 
 <p>Element-wise byte to float conversion.</p>
+<h4>Function cartesian_to_spherical()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">cartesian_to_spherical</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">p</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Cartesian to spherical coordinates with theta aligned along z.
+Spherical coordinates are phi, theta, r.</p>
+<h4>Function spherical_to_cartesian()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">spherical_to_cartesian</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">s</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Spherical to cartesian coordinates with theta aligned along z.
+Spherical coordinates are phi, theta, r.</p>
+<h4>Function cartesian_to_sphericaly()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">cartesian_to_sphericaly</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">p</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Cartesian to spherical coordinates with theta aligned along y.
+Spherical coordinates are phi, theta, r.</p>
+<h4>Function sphericaly_to_cartesian()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">sphericaly_to_cartesian</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">s</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Spherical to cartesian coordinates with theta aligned along y.
+Spherical coordinates are phi, theta, r.</p>
 <h4>Function operator&lt;&lt;()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">ostream</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">&lt;&lt;</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">ostream</span><span class="o">&amp;</span> <span class="n">os</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
@@ -2185,8 +2313,42 @@ Colums access via operator[].</p>
 </code></pre></div>
 
 
-<p>Generic frame of N elements. This is used only to define template
-specializations for small fixed sized frames.</p>
+<p>Rigid transforms stored as a column-major affine matrix.
+In memory, this representation is equivalent to storing an NxN rotation
+followed by a Nx1 translation. Viewed this way, the representation allows
+also to retrive the axis of the coordinate frame as the first N columns and
+the translation as the (N+1)-th column. Colums access via operator[].
+Access rotation and position with pos() and rot().</p>
+<h4>Struct frame&lt;T, 2></h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="k">struct</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;</span> <span class="p">{</span>
+    <span class="n">frame</span><span class="p">();</span> 
+    <span class="n">frame</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="n">x</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="n">y</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="n">o</span><span class="p">);</span> 
+    <span class="n">frame</span><span class="p">(</span><span class="k">const</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="n">m</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="n">t</span><span class="p">);</span> 
+    <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">);</span> 
+    <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;</span> <span class="n">x</span><span class="p">;</span>
+    <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;</span> <span class="n">y</span><span class="p">;</span>
+    <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;</span> <span class="n">o</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Rigid transforms stored as a column-major affine matrix.
+Specialization for 2 dimensional frames.</p>
+<ul>
+<li>Members:<ul>
+<li>frame():      Default constructor. Initializes to the identity frame.</li>
+<li>frame():      Basic and origin constructor. Equavalent to columns of affine matrix.</li>
+<li>frame():      Rotation and traslation constructor.</li>
+<li>operator<a href=""></a>:      Element/column access</li>
+<li>operator<a href=""></a>:      Element/column access</li>
+<li>x:      Axes and origin data</li>
+<li>y:      Axes and origin data</li>
+<li>o:      Axes and origin data</li>
+</ul>
+</li>
+</ul>
 <h4>Struct frame&lt;T, 3></h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="k">struct</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="p">{</span>
@@ -2204,11 +2366,7 @@ specializations for small fixed sized frames.</p>
 
 
 <p>Rigid transforms stored as a column-major affine matrix.
-In memory, this representation is equivalent to storing an NxN rotation
-followed by a Nx1 translation. Viewed this way, the representation allows
-also to retrive the axis of the coordinate frame as the first N columns and
-the translation as the (N+1)-th column. Colums access via operator[].
-Access rotation and position with pos() and rot().</p>
+Specialization for 3 dimensional frames.</p>
 <ul>
 <li>Members:<ul>
 <li>frame():      Default constructor. Initializes to the identity frame.</li>
@@ -2223,12 +2381,24 @@ Access rotation and position with pos() and rot().</p>
 </ul>
 </li>
 </ul>
+<h4>Typedef frame2f</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">frame2f</span> <span class="o">=</span> <span class="n">frame</span><span class="o">&lt;</span><span class="kt">float</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>2-dimensional float frame.</p>
 <h4>Typedef frame3f</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">frame3f</span> <span class="o">=</span> <span class="n">frame</span><span class="o">&lt;</span><span class="kt">float</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span><span class="p">;</span>
 </code></pre></div>
 
 
 <p>3-dimensional float frame.</p>
+<h4>Constant identity_frame2f</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">const</span> <span class="k">auto</span> <span class="n">identity_frame2f</span> <span class="o">=</span> <span class="n">frame2f</span><span class="p">{</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">},</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">},</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">}</span> <span class="p">};</span>
+</code></pre></div>
+
+
+<p>Indentity frame.</p>
 <h4>Constant identity_frame3f</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">const</span> <span class="k">auto</span> <span class="n">identity_frame3f</span> <span class="o">=</span>
     <span class="n">frame3f</span><span class="p">{</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">},</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">},</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">},</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">}</span> <span class="p">};</span>
@@ -2292,6 +2462,49 @@ Access rotation and position with pos() and rot().</p>
 
 
 <p>Empty check (always false for useful for templated code).</p>
+<h4>Function make_basis_fromz()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">make_basis_fromz</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">z_</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Initializes a basis from z.</p>
+<h4>Function make_basis_fromzx()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">make_basis_fromzx</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">z_</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">x_</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Initializes a basis from z and x.</p>
+<h4>Function make_frame_fromz()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">make_frame_fromz</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">o</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">z</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Initializes a frame from origin and z.</p>
+<h4>Function make_frame_fromzx()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">make_frame_fromzx</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">o</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">z</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">x</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Initializes a frame3 from origin, z and x.</p>
+<h4>Function frame_to_mat()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">frame_to_mat</span><span class="p">(</span><span class="k">const</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Frame to matrix conversion.</p>
+<h4>Function mat_to_frame()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;</span> <span class="n">mat_to_frame</span><span class="p">(</span><span class="k">const</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Matrix to frame conversion.</p>
 <h4>Function frame_to_mat()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">frame_to_mat</span><span class="p">(</span><span class="k">const</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
@@ -2940,42 +3153,6 @@ of N-elements.</p>
 
 
 <p>Transforms a point by a matrix.</p>
-<h4>Function transform_vector()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;</span> <span class="n">transform_vector</span><span class="p">(</span><span class="k">const</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Transforms a vector by a matrix.</p>
-<h4>Function transform_vector()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">transform_vector</span><span class="p">(</span><span class="k">const</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Transforms a vector by a matrix.</p>
-<h4>Function transform_direction()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span> <span class="n">transform_direction</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span> <span class="o">+</span> <span class="mi">1</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Transforms a direction by a matrix.</p>
-<h4>Function transform_ray()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">ray</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span> <span class="n">transform_ray</span><span class="p">(</span><span class="k">const</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span> <span class="o">+</span> <span class="mi">1</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">ray</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Transforms a ray by a matrix, leaving the direction not normalized.</p>
-<h4>Function transform_bbox()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">bbox</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span> <span class="n">transform_bbox</span><span class="p">(</span><span class="k">const</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span> <span class="o">+</span> <span class="mi">1</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">bbox</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>transforms a bbox by a matrix</p>
 <h4>Function transform_point()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;</span> <span class="n">transform_point</span><span class="p">(</span><span class="k">const</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
@@ -2992,6 +3169,27 @@ of N-elements.</p>
 <p>Transforms a point by a frame, i.e. an affine transform.</p>
 <h4>Function transform_vector()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;</span> <span class="n">transform_vector</span><span class="p">(</span><span class="k">const</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Transforms a vector by a matrix.</p>
+<h4>Function transform_vector()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">transform_vector</span><span class="p">(</span><span class="k">const</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Transforms a vector by a matrix.</p>
+<h4>Function transform_vector()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">transform_vector</span><span class="p">(</span><span class="k">const</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Transforms a vector by a matrix.</p>
+<h4>Function transform_vector()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;</span> <span class="n">transform_vector</span><span class="p">(</span><span class="k">const</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
 </code></pre></div>
 
@@ -3005,33 +3203,26 @@ of N-elements.</p>
 
 <p>Transforms a vector by a frame, i.e. an affine transform.</p>
 <h4>Function transform_direction()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span> <span class="n">transform_direction</span><span class="p">(</span><span class="k">const</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">TT</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span> <span class="n">transform_direction</span><span class="p">(</span><span class="k">const</span> <span class="n">TT</span><span class="o">&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Transforms a direction by a frame, i.e. an affine transform.</p>
-<h4>Function transform_frame()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span> <span class="n">transform_frame</span><span class="p">(</span><span class="k">const</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Transforms a frame by a frame, i.e. an affine transform.</p>
+<p>Transforms a direction by transforming a vector and then normalizing it.</p>
 <h4>Function transform_ray()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">ray</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span> <span class="n">transform_ray</span><span class="p">(</span><span class="k">const</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">ray</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">TT</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">ray</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span> <span class="n">transform_ray</span><span class="p">(</span><span class="k">const</span> <span class="n">TT</span><span class="o">&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">ray</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Transforms a ray by a frame, i.e. an affine transform.</p>
+<p>Transforms a ray, leaving the direction not normalized.</p>
 <h4>Function transform_bbox()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">bbox</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span> <span class="n">transform_bbox</span><span class="p">(</span><span class="k">const</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">bbox</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">TT</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">bbox</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span> <span class="n">transform_bbox</span><span class="p">(</span><span class="k">const</span> <span class="n">TT</span><span class="o">&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">bbox</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Transforms a bbox by a frame, i.e. an affine transform.</p>
+<p>Transforms a bbox.</p>
 <h4>Function transform_bbox()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">bbox</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">transform_bbox</span><span class="p">(</span><span class="k">const</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">bbox</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
@@ -3123,6 +3314,13 @@ of N-elements.</p>
 
 
 <p>Rotation affine transform.</p>
+<h4>Function rotation_frame()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">rotation_frame</span><span class="p">(</span><span class="k">const</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">rot</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Rotation affine transform.</p>
 <h4>Function lookat_frame()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">lookat_frame</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">eye</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">center</span><span class="p">,</span>
@@ -3196,8 +3394,8 @@ of N-elements.</p>
 <p>Rotation matrix to quaternion conversion.</p>
 <h4>Function decompose_frame()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&gt;</span> <span class="n">decompose_frame</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">m</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">decompose_frame</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">m</span><span class="p">,</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">rot</span><span class="p">,</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">scale</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -3206,7 +3404,7 @@ Assumes there is no shear.</p>
 <h4>Function decompose_frame()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&gt;</span> <span class="n">decompose_frame</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">m</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">m</span><span class="p">,</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">rot</span><span class="p">,</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">scale</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -3214,7 +3412,7 @@ Assumes there is no shear.</p>
 Assumes there is no shear and the matrix is affine.</p>
 <h4>Function compose_frame()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">compose_frame</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">translation</span><span class="p">,</span>
+<span class="kr">inline</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">compose_frame</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">translation</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">rotation</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">scale</span><span class="p">);</span>
 </code></pre></div>
 
@@ -3223,7 +3421,7 @@ Assumes there is no shear and the matrix is affine.</p>
 Assumes there is no shear and the matrix is affine.</p>
 <h4>Function compose_frame()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">compose_frame</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">translation</span><span class="p">,</span>
+<span class="kr">inline</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">compose_frame</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">translation</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">rotation</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">scale</span><span class="p">);</span>
 </code></pre></div>
 
@@ -3415,6 +3613,18 @@ better than float that uses 23.</p>
 
 
 <p>Pdf for uniform spherical direction.</p>
+<h4>Function sample_spherical()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vec2f</span> <span class="nf">sample_spherical</span><span class="p">(</span><span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">ruv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sample spherical coordinates uniformly.</p>
+<h4>Function sample_spherical_pdf()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">float</span> <span class="nf">sample_spherical_pdf</span><span class="p">(</span><span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">w</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Pdf for uniform spherical direction.</p>
 <h4>Function sample_hemisphere_cosine()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vec3f</span> <span class="nf">sample_hemisphere_cosine</span><span class="p">(</span><span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">ruv</span><span class="p">);</span>
 </code></pre></div>
@@ -3495,14 +3705,85 @@ better than float that uses 23.</p>
 
 
 <p>Pdf for uniform index sampling.</p>
-<h4>Function sample_discrete()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="nf">sample_discrete</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">cdf</span><span class="p">,</span> <span class="kt">float</span> <span class="n">r</span><span class="p">);</span>
+<h4>Function sample_index()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="kt">size_t</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">int</span> <span class="n">sample_index</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="kt">float</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">weights</span><span class="p">,</span> <span class="kt">float</span> <span class="n">r</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Pick an index with probability proportional to the given weights.
+The sum of the weights is expected to be normalized to 1.
+This is inefficient for large numbers. Use distributions for that.</p>
+<h4>Struct distribution1f</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">distribution1f</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">weights</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">cdf</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Distribution for sampling of elements with probability proportional
+to the input weights. Uses inverse CDF sampling in its implementation.
+Initialize the distribution with <code>make_distribution()</code> and use
+<code>sample_distribution_discrete()</code> and <code>sample_distribution_discrete_pdf()</code>
+to obtain sampled values and their weights. Use
+<code>sample_distribution_total_weight()</code> for total weight.
+This type is not strictly needed, but helpful to enforce type safety when
+passing distributions around.</p>
+<ul>
+<li>Members:<ul>
+<li>weights:      Element weights. This is redundant since <code>weights[i] = cdf[i]-cdf[i-1]</code>.</li>
+<li>cdf:      Element cdf. This is not-normalized, so total weight is <code>cdf.back()</code>.</li>
+</ul>
+</li>
+</ul>
+<h4>Function make_distribution()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">distribution1f</span> <span class="nf">make_distribution</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">weights</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Make a one-dimensional distribution for sampling.</p>
+<h4>Function make_distribution()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">F</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">distribution1f</span> <span class="n">make_distribution</span><span class="p">(</span><span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="n">F</span><span class="o">&amp;&amp;</span> <span class="n">func</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Make a one-dimensional distribution for sampling.</p>
+<h4>Function sample_distribution_discrete()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">sample_distribution_discrete</span><span class="p">(</span><span class="k">const</span> <span class="n">distribution1f</span><span class="o">&amp;</span> <span class="n">dist</span><span class="p">,</span> <span class="kt">float</span> <span class="n">r</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sample a discrete distribution.</p>
+<h4>Function sample_distribution_discrete_pdf()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">float</span> <span class="nf">sample_distribution_discrete_pdf</span><span class="p">(</span><span class="k">const</span> <span class="n">distribution1f</span><span class="o">&amp;</span> <span class="n">dist</span><span class="p">,</span> <span class="kt">int</span> <span class="n">idx</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Pdf for smapling a discrete distribution.</p>
+<h4>Function sample_distribution_weightsum()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">float</span> <span class="nf">sample_distribution_weightsum</span><span class="p">(</span><span class="k">const</span> <span class="n">distribution1f</span><span class="o">&amp;</span> <span class="n">dist</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Get the total weight of a distribution.</p>
+<h4>Function sample_distribution_discrete_pdf()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">int</span> <span class="n">sample_distribution_discrete_pdf</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">array</span><span class="o">&lt;</span><span class="kt">float</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">weights</span><span class="p">,</span> <span class="kt">int</span> <span class="n">idx</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>PDF for sampling a discrete distribution.</p>
+<h4>Function sample_discrete_()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="nf">sample_discrete_</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">cdf</span><span class="p">,</span> <span class="kt">float</span> <span class="n">r</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Sample a discrete distribution represented by its cdf.</p>
-<h4>Function sample_discrete_pdf()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">float</span> <span class="nf">sample_discrete_pdf</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">cdf</span><span class="p">,</span> <span class="kt">int</span> <span class="n">idx</span><span class="p">);</span>
+<h4>Function sample_discrete_pdf_()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">float</span> <span class="nf">sample_discrete_pdf_</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">cdf</span><span class="p">,</span> <span class="kt">int</span> <span class="n">idx</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -4427,20 +4708,20 @@ Vertex data can then be concatenated successfully.</p>
 
 
 <p>Pick a point.</p>
-<h4>Function sample_points_cdf()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">sample_points_cdf</span><span class="p">(</span><span class="kt">int</span> <span class="n">npoints</span><span class="p">);</span>
+<h4>Function make_point_distribution()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">distribution1f</span> <span class="nf">make_point_distribution</span><span class="p">(</span><span class="kt">int</span> <span class="n">npoints</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Compute a distribution for sampling points uniformly.</p>
 <h4>Function sample_points()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="nf">sample_points</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">cdf</span><span class="p">,</span> <span class="kt">float</span> <span class="n">re</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="nf">sample_points</span><span class="p">(</span><span class="k">const</span> <span class="n">distribution1f</span><span class="o">&amp;</span> <span class="n">dst</span><span class="p">,</span> <span class="kt">float</span> <span class="n">re</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Pick a point uniformly.</p>
-<h4>Function sample_lines_cdf()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">sample_lines_cdf</span><span class="p">(</span>
+<h4>Function make_line_distribution()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">distribution1f</span> <span class="nf">make_line_distribution</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">);</span>
 </code></pre></div>
 
@@ -4448,13 +4729,13 @@ Vertex data can then be concatenated successfully.</p>
 <p>Compute a distribution for sampling lines uniformly.</p>
 <h4>Function sample_lines()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="kt">float</span><span class="o">&gt;</span> <span class="n">sample_lines</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">cdf</span><span class="p">,</span> <span class="kt">float</span> <span class="n">re</span><span class="p">,</span> <span class="kt">float</span> <span class="n">ru</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">distribution1f</span><span class="o">&amp;</span> <span class="n">dst</span><span class="p">,</span> <span class="kt">float</span> <span class="n">re</span><span class="p">,</span> <span class="kt">float</span> <span class="n">ru</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Pick a point on lines uniformly.</p>
-<h4>Function sample_triangles_cdf()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">sample_triangles_cdf</span><span class="p">(</span>
+<h4>Function make_triangle_distribution()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">distribution1f</span> <span class="nf">make_triangle_distribution</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">triangles</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">);</span>
 </code></pre></div>
 
@@ -4462,13 +4743,13 @@ Vertex data can then be concatenated successfully.</p>
 <p>Compute a distribution for sampling triangle meshes uniformly.</p>
 <h4>Function sample_triangles()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">vec2f</span><span class="o">&gt;</span> <span class="n">sample_triangles</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">cdf</span><span class="p">,</span> <span class="kt">float</span> <span class="n">re</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">ruv</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">distribution1f</span><span class="o">&amp;</span> <span class="n">dst</span><span class="p">,</span> <span class="kt">float</span> <span class="n">re</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">ruv</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Pick a point on a triangle mesh uniformly.</p>
-<h4>Function sample_quads_cdf()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">sample_quads_cdf</span><span class="p">(</span>
+<h4>Function make_quad_distribution()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">distribution1f</span> <span class="nf">make_quad_distribution</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">);</span>
 </code></pre></div>
 
@@ -4476,7 +4757,7 @@ Vertex data can then be concatenated successfully.</p>
 <p>Compute a distribution for sampling quad meshes uniformly.</p>
 <h4>Function sample_quads()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">vec2f</span><span class="o">&gt;</span> <span class="n">sample_quads</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">cdf</span><span class="p">,</span> <span class="kt">float</span> <span class="n">re</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">ruv</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">distribution1f</span><span class="o">&amp;</span> <span class="n">dst</span><span class="p">,</span> <span class="kt">float</span> <span class="n">re</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">ruv</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -5634,10 +5915,32 @@ coordinates <code>euv</code>.</p>
 </ul>
 </li>
 </ul>
+<h4>Struct shape_element_tags</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">shape_element_tags</span> <span class="p">{</span>
+    <span class="kt">uint16_t</span> <span class="n">matid</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">uint16_t</span> <span class="n">groupid</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">uint16_t</span> <span class="n">smoothingid</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">uint16_t</span> <span class="n">esize</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Shape element tags.</p>
+<ul>
+<li>Members:<ul>
+<li>matid:      Material id.</li>
+<li>groupid:      Groups id.</li>
+<li>smoothingid:      Smoothing id.</li>
+<li>esize:      Original element size.</li>
+</ul>
+</li>
+</ul>
 <h4>Struct shape</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">shape</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">material</span><span class="o">&gt;</span> <span class="n">mat</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">material</span><span class="o">&gt;&gt;</span> <span class="n">materials</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">groupnames</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">bool</span><span class="o">&gt;</span> <span class="n">smoothing</span> <span class="o">=</span> <span class="p">{};</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">points</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;</span> <span class="n">lines</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span> <span class="n">triangles</span><span class="p">;</span>
@@ -5646,6 +5949,7 @@ coordinates <code>euv</code>.</p>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span> <span class="n">quads_norm</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span> <span class="n">quads_texcoord</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span> <span class="n">beziers</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">shape_element_tags</span><span class="o">&gt;</span> <span class="n">elem_tags</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span> <span class="n">pos</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span> <span class="n">norm</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span> <span class="n">texcoord</span><span class="p">;</span>
@@ -5653,7 +5957,6 @@ coordinates <code>euv</code>.</p>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;</span> <span class="n">color</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">radius</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;</span> <span class="n">tangsp</span><span class="p">;</span>
-    <span class="kt">bool</span> <span class="n">faceted</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="kt">int</span> <span class="n">subdivision</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">catmullclark</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
 <span class="p">}</span>
@@ -5665,7 +5968,9 @@ points/lines/triangles/quads.</p>
 <ul>
 <li>Members:<ul>
 <li>name:      Name.</li>
-<li>mat:      Material. </li>
+<li>materials:      Materials. </li>
+<li>groupnames:      Group names.</li>
+<li>smoothing:      Smoothing values.</li>
 <li>points:      Points.</li>
 <li>lines:      Lines.</li>
 <li>triangles:      Triangles.</li>
@@ -5674,6 +5979,7 @@ points/lines/triangles/quads.</p>
 <li>quads_norm:      Face-varying indices for normal.</li>
 <li>quads_texcoord:      Face-varying indices for texcoord.</li>
 <li>beziers:      Bezier.</li>
+<li>elem_tags:      Element material ids.</li>
 <li>pos:      Vertex position.</li>
 <li>norm:      Vertex normals.</li>
 <li>texcoord:      Vertex texcoord.</li>
@@ -5681,7 +5987,6 @@ points/lines/triangles/quads.</p>
 <li>color:      Vertex color.</li>
 <li>radius:      per-vertex radius.</li>
 <li>tangsp:      Vertex tangent space.</li>
-<li>faceted:      Whether normal smoothing or faceting is used</li>
 <li>subdivision:      Number of times to subdivide.</li>
 <li>catmullclark:      Whether to use Catmull-Clark subdivision.</li>
 </ul>
@@ -5691,6 +5996,7 @@ points/lines/triangles/quads.</p>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">shape_group</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">path</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
+    <span class="n">frame3f</span> <span class="n">frame</span> <span class="o">=</span> <span class="n">identity_frame3f</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">&gt;&gt;</span> <span class="n">shapes</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
@@ -5701,28 +6007,17 @@ points/lines/triangles/quads.</p>
 <li>Members:<ul>
 <li>name:      Name.</li>
 <li>path:      Path used for saving in glTF.</li>
+<li>frame:      Frame.</li>
 <li>shapes:      Shapes.</li>
 </ul>
 </li>
 </ul>
-<h4>Struct instance</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">instance</span> <span class="p">{</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
-    <span class="n">frame3f</span> <span class="n">frame</span> <span class="o">=</span> <span class="n">identity_frame3f</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">shape_group</span><span class="o">&gt;</span> <span class="n">shp</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-<span class="p">}</span>
+<h4>Constant environment_distance</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">const</span> <span class="k">auto</span> <span class="n">environment_distance</span> <span class="o">=</span> <span class="mf">1000000.0f</span><span class="p">;</span>
 </code></pre></div>
 
 
-<p>Shape instance.</p>
-<ul>
-<li>Members:<ul>
-<li>name:      Name.</li>
-<li>frame:      Transform frame.</li>
-<li>shp:      Shape instance. </li>
-</ul>
-</li>
-</ul>
+<p>Distance at which we set environment map positions.</p>
 <h4>Struct environment</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">environment</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
@@ -5749,14 +6044,15 @@ points/lines/triangles/quads.</p>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">node</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">node</span><span class="o">&gt;</span> <span class="n">parent</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">frame3f</span> <span class="n">frame</span> <span class="o">=</span> <span class="n">identity_frame3f</span><span class="p">;</span>
+    <span class="n">frame3f</span> <span class="n">local</span> <span class="o">=</span> <span class="n">identity_frame3f</span><span class="p">;</span>
     <span class="n">vec3f</span> <span class="n">translation</span> <span class="o">=</span> <span class="n">zero3f</span><span class="p">;</span>
     <span class="n">quat4f</span> <span class="n">rotation</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">};</span>
     <span class="n">vec3f</span> <span class="n">scaling</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">};</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">weights</span> <span class="o">=</span> <span class="p">{};</span>
     <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">camera</span><span class="o">&gt;</span> <span class="n">cam</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">instance</span><span class="o">&gt;</span> <span class="n">ist</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">shape_group</span><span class="o">&gt;</span> <span class="n">shp</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">environment</span><span class="o">&gt;</span> <span class="n">env</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">frame3f</span> <span class="n">frame_</span> <span class="o">=</span> <span class="n">identity_frame3f</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">weak_ptr</span><span class="o">&lt;</span><span class="n">node</span><span class="o">&gt;&gt;</span> <span class="n">children_</span> <span class="o">=</span> <span class="p">{};</span>
 <span class="p">}</span>
 </code></pre></div>
@@ -5767,14 +6063,15 @@ points/lines/triangles/quads.</p>
 <li>Members:<ul>
 <li>name:      Name.</li>
 <li>parent:      Parent node. </li>
-<li>frame:      Transform frame.</li>
+<li>local:      Local frame.</li>
 <li>translation:      Translation.</li>
 <li>rotation:      Rotation.</li>
 <li>scaling:      Scaling. </li>
 <li>weights:      Weights for morphing.</li>
 <li>cam:      Camera the node points to. </li>
-<li>ist:      Instance the node points to. </li>
+<li>shp:      Shape the node points to. </li>
 <li>env:      Environment the node points to. </li>
+<li>frame_:      Transform frame. This is a computed value only stored for convenience.</li>
 <li>children_:      Child nodes. This is a computed value only stored for convenience.</li>
 </ul>
 </li>
@@ -5849,7 +6146,6 @@ points/lines/triangles/quads.</p>
 <h4>Struct scene</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">scene</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">shape_group</span><span class="o">&gt;&gt;</span> <span class="n">shapes</span> <span class="o">=</span> <span class="p">{};</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">instance</span><span class="o">&gt;&gt;</span> <span class="n">instances</span> <span class="o">=</span> <span class="p">{};</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">material</span><span class="o">&gt;&gt;</span> <span class="n">materials</span> <span class="o">=</span> <span class="p">{};</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">&gt;&gt;</span> <span class="n">textures</span> <span class="o">=</span> <span class="p">{};</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">camera</span><span class="o">&gt;&gt;</span> <span class="n">cameras</span> <span class="o">=</span> <span class="p">{};</span>
@@ -5871,7 +6167,6 @@ updates node transformations only if defined.</p>
 <ul>
 <li>Members:<ul>
 <li>shapes:      Shapes.</li>
-<li>instances:      Shape instances.</li>
 <li>materials:      Materials.</li>
 <li>textures:      Textures.</li>
 <li>cameras:      Cameras.</li>
@@ -5881,6 +6176,59 @@ updates node transformations only if defined.</p>
 </ul>
 </li>
 </ul>
+<h4>Enum shape_elem_type</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">shape_elem_type</span> <span class="p">{</span>
+    <span class="n">none</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">points</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="n">triangles</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="n">quads</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+    <span class="n">beziers</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+    <span class="n">vertices</span> <span class="o">=</span> <span class="mi">8</span><span class="p">,</span>
+    <span class="n">facevarying</span> <span class="o">=</span> <span class="mi">9</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Shape elements type.</p>
+<ul>
+<li>Values:<ul>
+<li>none:      Empty.</li>
+<li>points:      Points.</li>
+<li>lines:      Lines.</li>
+<li>triangles:      Triangles.</li>
+<li>quads:      Quads.</li>
+<li>beziers:      Beziers.</li>
+<li>vertices:      Vertices.</li>
+<li>facevarying:      Facevarying.</li>
+</ul>
+</li>
+</ul>
+<h4>Function get_shape_type()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">shape_elem_type</span> <span class="nf">get_shape_type</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">&gt;&amp;</span> <span class="n">shp</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Get shape element type.</p>
+<h4>Function has_emission()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">has_emission</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">&gt;&amp;</span> <span class="n">shp</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Check if a shape has emission.</p>
+<h4>Function get_material()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">material</span><span class="o">&gt;</span> <span class="n">get_material</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">&gt;&amp;</span> <span class="n">shp</span><span class="p">,</span> <span class="kt">int</span> <span class="n">eid</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Gets the material for a shape element.</p>
+<h4>Function is_shape_simple()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">is_shape_simple</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">&gt;&amp;</span> <span class="n">shp</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">split_facevarying</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Returns is the shape is simple, i.e. it has only one material and one group.</p>
 <h4>Function eval_pos()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">vec3f</span> <span class="nf">eval_pos</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">&gt;&amp;</span> <span class="n">shp</span><span class="p">,</span> <span class="kt">int</span> <span class="n">eid</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
 </code></pre></div>
@@ -5919,19 +6267,43 @@ updates node transformations only if defined.</p>
 
 <p>Shape tangent space interpolated using barycentric coordinates.</p>
 <h4>Function eval_pos()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">vec3f</span> <span class="nf">eval_pos</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">instance</span><span class="o">&gt;&amp;</span> <span class="n">ist</span><span class="p">,</span> <span class="kt">int</span> <span class="n">sid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">eid</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">vec3f</span> <span class="nf">eval_pos</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">shape_group</span><span class="o">&gt;&amp;</span> <span class="n">shp</span><span class="p">,</span> <span class="kt">int</span> <span class="n">sid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">eid</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Instance position interpolated using barycentric coordinates.</p>
 <h4>Function eval_norm()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">vec3f</span> <span class="nf">eval_norm</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">instance</span><span class="o">&gt;&amp;</span> <span class="n">ist</span><span class="p">,</span> <span class="kt">int</span> <span class="n">sid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">eid</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">vec3f</span> <span class="nf">eval_norm</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">shape_group</span><span class="o">&gt;&amp;</span> <span class="n">shp</span><span class="p">,</span> <span class="kt">int</span> <span class="n">sid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">eid</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Instance normal interpolated using barycentric coordinates.</p>
+<h4>Function eval_pos()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">vec3f</span> <span class="nf">eval_pos</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">environment</span><span class="o">&gt;&amp;</span> <span class="n">env</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">uv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Environment position interpolated using uv parametrization.</p>
+<h4>Function eval_norm()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">vec3f</span> <span class="nf">eval_norm</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">environment</span><span class="o">&gt;&amp;</span> <span class="n">env</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">uv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Environment normal interpolated using uv parametrization.</p>
+<h4>Function eval_texcoord()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">vec2f</span> <span class="nf">eval_texcoord</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">environment</span><span class="o">&gt;&amp;</span> <span class="n">env</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">uv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Environment texture coordinates from uv parametrization.</p>
+<h4>Function eval_uv()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">vec2f</span> <span class="nf">eval_uv</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">environment</span><span class="o">&gt;&amp;</span> <span class="n">env</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">w</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Evaluate uv parameters for environment.</p>
 <h4>Function eval_texture()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">vec4f</span> <span class="n">eval_texture</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">&gt;&amp;</span> <span class="n">txt</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">info</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">texcoord</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">srgb</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span>
@@ -5973,6 +6345,26 @@ the image resolution <code>res</code>.</p>
 
 <p>Synchronizes a camera aspect with image width and height. Set image
 values any one is 0 or less. Set camera aspect otherwise.</p>
+<h4>Function make_shape_distribution()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">distribution1f</span> <span class="nf">make_shape_distribution</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">&gt;&amp;</span> <span class="n">shp</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Generate a distribution for sampling a shape uniformly based on area/length.</p>
+<h4>Function sample_shape()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">vec2f</span><span class="o">&gt;</span> <span class="n">sample_shape</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">&gt;&amp;</span> <span class="n">shp</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">distribution1f</span><span class="o">&amp;</span> <span class="n">dst</span><span class="p">,</span> <span class="kt">float</span> <span class="n">re</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">ruv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sample a shape based on a distribution.</p>
+<h4>Function sample_environment()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">vec2f</span> <span class="nf">sample_environment</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">environment</span><span class="o">&gt;&amp;</span> <span class="n">env</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">ruv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sample an environment uniformly.</p>
 <h4>Function find_named_elem()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">find_named_elem</span><span class="p">(</span>
@@ -6019,6 +6411,21 @@ non-facevarying shapes.</p>
 
 
 <p>Tesselate scene shapes.</p>
+<h4>Function split_shape()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">&gt;&gt;</span> <span class="n">split_shape</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">&gt;&amp;</span> <span class="n">shp</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">split_facevarying</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Convert a shape into simple shapes. Facevarying primitives are split if
+<code>allow_facevarying</code> is false.</p>
+<h4>Function group_shapes()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">&gt;</span> <span class="n">group_shapes</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">&gt;&gt;&amp;</span> <span class="n">shps</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Convert a list of shapes into a face-varying shape.</p>
 <h4>Function update_transforms()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_transforms</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">scene</span><span class="o">&gt;&amp;</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">float</span> <span class="n">time</span> <span class="o">=</span> <span class="mi">0</span><span class="p">);</span>
 </code></pre></div>
@@ -6091,9 +6498,9 @@ non-facevarying shapes.</p>
     <span class="kt">bool</span> <span class="n">smooth_normals</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">tangent_space</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">texture_data</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
-    <span class="kt">bool</span> <span class="n">shape_instances</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">node_hierarchy</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">default_names</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
-    <span class="kt">bool</span> <span class="n">default_paths</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">default_paths</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="k">static</span> <span class="n">add_elements_options</span> <span class="nf">none</span><span class="p">();</span> 
 <span class="p">}</span>
 </code></pre></div>
@@ -6105,7 +6512,7 @@ non-facevarying shapes.</p>
 <li>smooth_normals:      Add missing normal.</li>
 <li>tangent_space:      Add missing trangent space.</li>
 <li>texture_data:      Add empty texture data.</li>
-<li>shape_instances:      Add instances.</li>
+<li>node_hierarchy:      Add hierarchy.</li>
 <li>default_names:      Add default names.</li>
 <li>default_paths:      Add default paths.</li>
 <li>none():      Initialize to no elements.</li>
@@ -6135,7 +6542,7 @@ merge_from to merged_into, so merge_from will be empty after this function.</p>
     <span class="kt">bool</span> <span class="n">obj_flip_tr</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">preserve_quads</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">preserve_facevarying</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
-    <span class="kt">bool</span> <span class="n">preserve_hierarchy</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">simple_shapes</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -6149,7 +6556,7 @@ merge_from to merged_into, so merge_from will be empty after this function.</p>
 <li>obj_flip_tr:      Whether to flip tr in OBJ.</li>
 <li>preserve_quads:      Whether to preserve quads.</li>
 <li>preserve_facevarying:      Whether to preserve face-varying faces.</li>
-<li>preserve_hierarchy:      Whether to preserve node hierarchy.</li>
+<li>simple_shapes:      Use simple shapes.</li>
 </ul>
 </li>
 </ul>
@@ -6324,13 +6731,6 @@ Throws an exception if an error occurs.</p>
 <h4>Function visit()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">shape_group</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Visit struct elements.</p>
-<h4>Function visit()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">instance</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -6566,6 +6966,7 @@ Throws an exception if an error occurs.</p>
     <span class="n">proc_shape_type</span> <span class="n">type</span> <span class="o">=</span> <span class="n">proc_shape_type</span><span class="o">::</span><span class="n">sphere</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">material</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">interior</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
+    <span class="n">frame3f</span> <span class="n">frame</span> <span class="o">=</span> <span class="n">identity_frame3f</span><span class="p">;</span>
     <span class="kt">int</span> <span class="n">tesselation</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
     <span class="kt">int</span> <span class="n">subdivision</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">scale</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
@@ -6586,6 +6987,7 @@ Throws an exception if an error occurs.</p>
 <li>type:      Shape type.</li>
 <li>material:      Material name.</li>
 <li>interior:      Interior material name.</li>
+<li>frame:      Local frame. </li>
 <li>tesselation:      Level of shape tesselatation (-1 for default). </li>
 <li>
 <p>subdivision:      Level of shape tesselation for subdivision surfaces.</p>
@@ -6601,26 +7003,6 @@ Throws an exception if an error occurs.</p>
 <li>
 <p>hair_params:      Hair generation params.</p>
 </li>
-</ul>
-</li>
-</ul>
-<h4>Struct proc_instance</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">proc_instance</span> <span class="p">{</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">shape</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
-    <span class="n">frame3f</span> <span class="n">frame</span> <span class="o">=</span> <span class="n">identity_frame3f</span><span class="p">;</span>
-    <span class="n">vec3f</span> <span class="n">rotation</span> <span class="o">=</span> <span class="n">zero3f</span><span class="p">;</span>
-<span class="p">}</span>
-</code></pre></div>
-
-
-<p>Procedural instance parameters.</p>
-<ul>
-<li>Members:<ul>
-<li>name:      Name (if not filled, assign a default one).</li>
-<li>shape:      Shape name.</li>
-<li>frame:      Base frame.</li>
-<li>rotation:      Rotation in Euler angles.</li>
 </ul>
 </li>
 </ul>
@@ -6653,7 +7035,7 @@ Throws an exception if an error occurs.</p>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">parent</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">camera</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">instance</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">shape</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">environment</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="n">frame3f</span> <span class="n">frame</span> <span class="o">=</span> <span class="n">identity_frame3f</span><span class="p">;</span>
     <span class="n">vec3f</span> <span class="n">translation</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
@@ -6669,9 +7051,9 @@ Throws an exception if an error occurs.</p>
 <li>name:      Name.</li>
 <li>parent:      Parent node.</li>
 <li>camera:      Camera.</li>
-<li>instance:      Instance.</li>
+<li>shape:      Shape.</li>
 <li>environment:      Environment.</li>
-<li>frame:      Frame.</li>
+<li>frame:      Local frame. </li>
 <li>translation:      Translation. </li>
 <li>rotation:      Roation.</li>
 <li>scaling:      Scaling. </li>
@@ -6715,7 +7097,6 @@ Throws an exception if an error occurs.</p>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">proc_texture</span><span class="o">&gt;&gt;</span> <span class="n">textures</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">proc_material</span><span class="o">&gt;&gt;</span> <span class="n">materials</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">proc_shape</span><span class="o">&gt;&gt;</span> <span class="n">shapes</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">proc_instance</span><span class="o">&gt;&gt;</span> <span class="n">instances</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">proc_environment</span><span class="o">&gt;&gt;</span> <span class="n">environments</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">proc_node</span><span class="o">&gt;&gt;</span> <span class="n">nodes</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">proc_animation</span><span class="o">&gt;&gt;</span> <span class="n">animations</span><span class="p">;</span>
@@ -6731,7 +7112,6 @@ Throws an exception if an error occurs.</p>
 <li>textures:      Textures.</li>
 <li>materials:      Materials.</li>
 <li>shapes:      Shapes.</li>
-<li>instances:      Instances.</li>
 <li>environments:      Environmennts.</li>
 <li>nodes:      Nodes.</li>
 <li>animations:      Animations.</li>
@@ -6791,14 +7171,6 @@ Throws an exception if an error occurs.</p>
 
 
 <p>Updates a procedural shape, adding it to the scene if missing.</p>
-<h4>Function update_proc_elem()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_proc_elem</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">scene</span><span class="o">&gt;&amp;</span> <span class="n">scn</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">instance</span><span class="o">&gt;&amp;</span> <span class="n">ist</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">proc_instance</span><span class="o">&gt;&amp;</span> <span class="n">tist</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Updates a procedural instance.</p>
 <h4>Function update_proc_elem()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_proc_elem</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">scene</span><span class="o">&gt;&amp;</span> <span class="n">scn</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">environment</span><span class="o">&gt;&amp;</span> <span class="n">env</span><span class="p">,</span>
@@ -6862,12 +7234,6 @@ and never removed.</p>
 
 
 <p>Procedural shape presets.</p>
-<h4>Function proc_instance_presets()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">proc_instance</span><span class="o">&gt;&gt;&amp;</span> <span class="n">proc_instance_presets</span><span class="p">();</span>
-</code></pre></div>
-
-
-<p>Procedural instance presets.</p>
 <h4>Function proc_environment_presets()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">proc_environment</span><span class="o">&gt;&gt;&amp;</span> <span class="n">proc_environment_presets</span><span class="p">();</span>
 </code></pre></div>
@@ -6965,13 +7331,6 @@ and never removed.</p>
 <h4>Function visit()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">proc_shape</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Visit struct elements.</p>
-<h4>Function visit()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">Visitor</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">visit</span><span class="p">(</span><span class="n">proc_instance</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="n">Visitor</span><span class="o">&amp;&amp;</span> <span class="n">visitor</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -7224,28 +7583,28 @@ the public API.</p>
 </ul>
 <h4>Struct trace_light</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">trace_light</span> <span class="p">{</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">instance</span><span class="o">&gt;</span> <span class="n">ist</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="kt">int</span> <span class="n">sid</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">&gt;</span> <span class="n">shp</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">frame3f</span> <span class="n">frame</span> <span class="o">=</span> <span class="n">identity_frame3f</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">environment</span><span class="o">&gt;</span> <span class="n">env</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
 
-<p>Trace light as either instances or environments. The members are not part of
+<p>Trace light as either shapes or environments. The members are not part of
 the the public API.</p>
 <ul>
 <li>Members:<ul>
-<li>ist:      Instance pointer for instance lights.</li>
-<li>sid:      Shape index for instance lights</li>
-<li>env:      Environment pointer for environment lights.</li>
+<li>shp:      Shape pointer.</li>
+<li>frame:      Shape frame.</li>
+<li>env:      Environment pointer.</li>
 </ul>
 </li>
 </ul>
 <h4>Struct trace_lights</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">trace_lights</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">trace_light</span><span class="o">&gt;</span> <span class="n">lights</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&gt;</span> <span class="n">shape_cdfs</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">&gt;</span><span class="p">,</span> <span class="kt">float</span><span class="o">&gt;</span> <span class="n">shape_areas</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">distribution1f</span><span class="o">&gt;</span> <span class="n">shape_distribs</span><span class="p">;</span>
+    <span class="n">distribution1f</span> <span class="n">light_distrib</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="nf">empty</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
     <span class="kt">int</span> <span class="nf">size</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
 <span class="p">}</span>
@@ -7257,8 +7616,8 @@ the the public API.</p>
 <ul>
 <li>Members:<ul>
 <li>lights:      Shape instances.</li>
-<li>shape_cdfs:      Shape cdfs.</li>
-<li>shape_areas:      Shape areas.</li>
+<li>shape_distribs:      Shape distributions.</li>
+<li>light_distrib:      Lights distribution.</li>
 <li>empty():      Check whether there are any lights.</li>
 <li>size():      Number of lights.</li>
 </ul>
@@ -7382,6 +7741,12 @@ the the public API.</p>
     <span class="n">line</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
     <span class="n">face</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
     <span class="n">bezier</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+    <span class="kt">uint32_t</span> <span class="n">start</span>
+    <span class="kt">uint16_t</span> <span class="n">size</span>
+    <span class="n">obj_element_type</span> <span class="n">type</span>
+    <span class="kt">uint16_t</span> <span class="n">matid</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="kt">uint16_t</span> <span class="n">groupid</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="kt">uint16_t</span> <span class="n">smoothingid</span> <span class="o">=</span> <span class="mi">0</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -7393,55 +7758,24 @@ the the public API.</p>
 <li>line:      Polyline.</li>
 <li>face:      Polygon face.</li>
 <li>bezier:      Bezier segments.</li>
-</ul>
-</li>
-</ul>
-<h4>Struct obj_element</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">obj_element</span> <span class="p">{</span>
-    <span class="kt">uint32_t</span> <span class="n">start</span><span class="p">;</span>
-    <span class="n">obj_element_type</span> <span class="n">type</span><span class="p">;</span>
-    <span class="kt">uint16_t</span> <span class="n">size</span><span class="p">;</span>
-<span class="p">}</span>
-</code></pre></div>
-
-
-<p>Obj element vertex indices.</p>
-<ul>
-<li>Members:<ul>
 <li>start:      Starting vertex index.</li>
-<li>type:      Element type.</li>
 <li>size:      Number of vertices.</li>
-</ul>
-</li>
-</ul>
-<h4>Struct obj_group</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">obj_group</span> <span class="p">{</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">matname</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">groupname</span><span class="p">;</span>
-    <span class="kt">bool</span> <span class="n">smoothing</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">obj_vertex</span><span class="o">&gt;</span> <span class="n">verts</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">obj_element</span><span class="o">&gt;</span> <span class="n">elems</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;&gt;</span> <span class="n">props</span><span class="p">;</span>
-<span class="p">}</span>
-</code></pre></div>
-
-
-<p>Obj element group.</p>
-<ul>
-<li>Members:<ul>
-<li>matname:      Material name.</li>
-<li>groupname:      Group name.</li>
-<li>smoothing:      Smoothing.</li>
-<li>verts:      Element vertices.</li>
-<li>elems:      Element faces.</li>
-<li>props:      Properties not explicitly handled [extension].</li>
+<li>type:      Element type.</li>
+<li>matid:      Material id.</li>
+<li>groupid:      Group id.</li>
+<li>smoothingid:      Smoothing group id.</li>
 </ul>
 </li>
 </ul>
 <h4>Struct obj_object</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">obj_object</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">obj_group</span><span class="o">&gt;&gt;</span> <span class="n">groups</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">matnames</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">groupnames</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">bool</span><span class="o">&gt;</span> <span class="n">smoothing</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">obj_vertex</span><span class="o">&gt;</span> <span class="n">verts</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">obj_element</span><span class="o">&gt;</span> <span class="n">elems</span><span class="p">;</span>
+    <span class="n">frame3f</span> <span class="n">frame</span> <span class="o">=</span> <span class="n">identity_frame3f</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;&gt;</span> <span class="n">props</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
@@ -7451,7 +7785,12 @@ the the public API.</p>
 <ul>
 <li>Members:<ul>
 <li>name:      Name.</li>
-<li>groups:      Element groups.</li>
+<li>matnames:      Material name.</li>
+<li>groupnames:      Group name.</li>
+<li>smoothing:      Smoothing groups.</li>
+<li>verts:      Element vertices.</li>
+<li>elems:      Element faces.</li>
+<li>frame:      Frame [extension]. Vertices are not transformed though.</li>
 <li>props:      Properties not explicitly handled [extension].</li>
 </ul>
 </li>
@@ -7611,7 +7950,7 @@ the the public API.</p>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">camname</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">objname</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">envname</span><span class="p">;</span>
-    <span class="n">frame3f</span> <span class="n">frame</span> <span class="o">=</span> <span class="n">identity_frame3f</span><span class="p">;</span>
+    <span class="n">frame3f</span> <span class="n">local</span> <span class="o">=</span> <span class="n">identity_frame3f</span><span class="p">;</span>
     <span class="n">vec3f</span> <span class="n">translation</span> <span class="o">=</span> <span class="n">zero3f</span><span class="p">;</span>
     <span class="n">quat4f</span> <span class="n">rotation</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">};</span>
     <span class="n">vec3f</span> <span class="n">scaling</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">};</span>
@@ -7627,7 +7966,7 @@ the the public API.</p>
 <li>camname:      Camera name.</li>
 <li>objname:      Instance name.</li>
 <li>envname:      Environment name.</li>
-<li>frame:      Transform frame (affine matrix).</li>
+<li>local:      Transform frame (affine matrix).</li>
 <li>translation:      Translation.</li>
 <li>rotation:      Rotation.</li>
 <li>scaling:      Scaling.</li>
