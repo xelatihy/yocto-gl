@@ -3094,6 +3094,30 @@ shape_elem_type get_shape_type(const std::shared_ptr<shape>& shp) {
     }
 }
 
+// Check if a shape has emission.
+bool has_emission(const std::shared_ptr<shape>& shp) {
+    for (auto mat : shp->materials)
+        if (mat && mat->ke != zero3f) return true;
+    return false;
+}
+// Gets the material for a shape element.
+std::shared_ptr<material> get_material(
+    const std::shared_ptr<shape>& shp, int eid) {
+    if (shp->materials.empty()) return nullptr;
+    if (shp->elem_tags.empty()) return shp->materials.at(0);
+    return shp->materials.at(shp->elem_tags[eid].matid);
+}
+// Returns is the shape is simple.
+bool is_shape_simple(
+    const std::shared_ptr<shape>& shp, bool split_facevarying) {
+    if (split_facevarying && !shp->quads_pos.empty()) return false;
+    if (!shp->elem_tags.empty() &&
+        (shp->materials.size() > 1 || shp->groupnames.size() > 1 ||
+            shp->smoothing.size() > 1))
+        return false;
+    return true;
+}
+
 // Shape value interpolated using barycentric coordinates
 template <typename T>
 T eval_elem(const std::shared_ptr<shape>& shp, const std::vector<T>& vals,
@@ -3483,121 +3507,155 @@ int add_shape_vert(const std::shared_ptr<shape>& shp, const vec<int, 5>& vert,
     return vid;
 }
 
+int add_shape_vert(const std::shared_ptr<shape>& shp, int vert,
+    std::unordered_map<int, int>& vmap, const std::vector<vec3f>& pos,
+    const std::vector<vec3f>& norm, const std::vector<vec2f>& texcoord,
+    const std::vector<vec4f>& color, const std::vector<float>& radius) {
+    if (contains(vmap, vert)) return vmap.at(vert);
+    auto vid = (int)vmap.size();
+    vmap[vert] = vid;
+    if (!pos.empty()) shp->pos.push_back(pos[vert]);
+    if (!norm.empty()) shp->norm.push_back(norm[vert]);
+    if (!texcoord.empty()) shp->texcoord.push_back(texcoord[vert]);
+    if (!color.empty()) shp->color.push_back(color[vert]);
+    if (!radius.empty()) shp->radius.push_back(radius[vert]);
+    return vid;
+}
+
 // Convert face-varying shapes to shapes.
-std::vector<std::shared_ptr<shape>> tesselate_shape(
-    const std::shared_ptr<fvshape>& fvshp) {
-    if (fvshp->elem_tags.empty() && fvshp->quads_pos.empty()) {
-        auto shp = std::make_shared<shape>();
-        shp->name = fvshp->name;
-        shp->mat = fvshp->mats.empty() ? nullptr : fvshp->mats.front();
-        shp->faceted =
-            fvshp->smoothing.empty() ? false : !fvshp->smoothing.front();
-        shp->pos = fvshp->pos;
-        shp->norm = fvshp->norm;
-        shp->texcoord = fvshp->texcoord;
-        shp->color = fvshp->color;
-        shp->radius = fvshp->radius;
-        shp->points = fvshp->points;
-        shp->lines = fvshp->lines;
-        shp->triangles = fvshp->triangles;
-        shp->quads = fvshp->quads;
-        shp->beziers = fvshp->beziers;
-        return {shp};
-    } else {
-        auto shps = std::vector<std::shared_ptr<shape>>();
-        auto split_ids = std::set<vec3i>();
-        for (auto& tag : fvshp->elem_tags)
-            split_ids.insert({tag.matid, tag.groupid, tag.smoothingid});
-        for (auto tag : split_ids) {
-            auto matid = tag.x, groupid = tag.y, smoothid = tag.z;
-            auto shp = std::make_shared<shape>();
-            shp->name = (fvshp->groupnames.empty()) ?
-                            fvshp->name :
-                            fvshp->groupnames[groupid];
-            shp->mat = (fvshp->mats.empty()) ? nullptr : fvshp->mats[matid];
-            shp->faceted = (fvshp->smoothing.empty()) ?
-                               false :
-                               !fvshp->smoothing[smoothid];
-            auto vmap = std::unordered_map<vec<int, 5>, int>();
-            auto add_vert = [&fvshp, &shp, &vmap](int idx) {
-                return add_shape_vert(shp, {idx, idx, idx, idx, idx}, vmap,
-                    fvshp->pos, fvshp->norm, fvshp->texcoord, fvshp->color,
-                    fvshp->radius);
-            };
-            for (auto p : fvshp->points) shp->points.push_back(add_vert(p));
-            for (auto l : fvshp->lines)
-                shp->lines.push_back({add_vert(l.x), add_vert(l.y)});
-            for (auto t : fvshp->triangles)
-                shp->triangles.push_back(
-                    {add_vert(t.x), add_vert(t.y), add_vert(t.z)});
-            for (auto q : fvshp->quads)
-                shp->quads.push_back({add_vert(q.x), add_vert(q.y),
-                    add_vert(q.z), add_vert(q.w)});
-            for (auto b : fvshp->beziers)
-                shp->beziers.push_back({add_vert(b.x), add_vert(b.y),
-                    add_vert(b.z), add_vert(b.w)});
-            for (auto eid = 0; eid < fvshp->quads_pos.size(); eid++) {
-                shp->quads.push_back({});
+std::vector<std::shared_ptr<shape>> split_shape(
+    const std::shared_ptr<shape>& shp, bool split_facevarying) {
+    if (is_shape_simple(shp, split_facevarying)) return {};
+    auto sshps = std::vector<std::shared_ptr<shape>>();
+    auto split_ids = std::set<vec3i>();
+    for (auto& tag : shp->elem_tags)
+        split_ids.insert({tag.matid, tag.groupid, tag.smoothingid});
+    for (auto tag : split_ids) {
+        auto matid = tag.x, groupid = tag.y, smoothid = tag.z;
+        auto sshp = std::make_shared<shape>();
+        if (shp->groupnames.empty()) {
+            sshp->name = shp->name;
+        } else {
+            sshp->name = shp->name;
+            sshp->groupnames.push_back(shp->groupnames[groupid]);
+        }
+        if (!shp->materials.empty()) {
+            sshp->materials.push_back(shp->materials[matid]);
+        }
+        if (!shp->smoothing.empty()) {
+            sshp->smoothing.push_back(shp->smoothing[smoothid]);
+        }
+        auto vmap = std::unordered_map<int, int>();
+        auto add_vert = [&shp, &sshp, &vmap](int vert) {
+            return add_shape_vert(sshp, vert, vmap, shp->pos, shp->norm,
+                shp->texcoord, shp->color, shp->radius);
+        };
+        auto add_fvvert = [&vmap](auto& svals, auto& vals, int vert) {
+            if (vals.empty()) return -1;
+            if (contains(vmap, vert)) return vmap.at(vert);
+            auto vid = (int)vmap.size();
+            vmap[vert] = vid;
+            svals.push_back(vals[vert]);
+            return vid;
+        };
+        for (auto p : shp->points) sshp->points.push_back(add_vert(p));
+        for (auto l : shp->lines)
+            sshp->lines.push_back({add_vert(l.x), add_vert(l.y)});
+        for (auto t : shp->triangles)
+            sshp->triangles.push_back(
+                {add_vert(t.x), add_vert(t.y), add_vert(t.z)});
+        for (auto q : shp->quads)
+            sshp->quads.push_back(
+                {add_vert(q.x), add_vert(q.y), add_vert(q.z), add_vert(q.w)});
+        for (auto b : shp->beziers)
+            sshp->beziers.push_back(
+                {add_vert(b.x), add_vert(b.y), add_vert(b.z), add_vert(b.w)});
+        if (split_facevarying) {
+            auto fvmap = std::unordered_map<vec<int, 5>, int>();
+            for (auto eid = 0; eid < shp->quads_pos.size(); eid++) {
+                sshp->quads.push_back({});
                 for (auto c = 0; c < 4; c++) {
-                    auto vert = vec<int, 5>{fvshp->quads_pos[eid][c],
-                        (fvshp->quads_norm.empty()) ? -1 :
-                                                      fvshp->quads_norm[eid][c],
-                        (fvshp->quads_texcoord.empty()) ?
+                    auto vert = vec<int, 5>{shp->quads_pos[eid][c],
+                        (shp->quads_norm.empty()) ? -1 :
+                                                    shp->quads_norm[eid][c],
+                        (shp->quads_texcoord.empty()) ?
                             -1 :
-                            fvshp->quads_texcoord[eid][c],
+                            shp->quads_texcoord[eid][c],
                         -1, -1};
-                    shp->quads.back()[c] = add_shape_vert(shp, vert, vmap,
-                        fvshp->pos, fvshp->norm, fvshp->texcoord, {}, {});
+                    sshp->quads.back()[c] = add_shape_vert(sshp, vert, fvmap,
+                        shp->pos, shp->norm, shp->texcoord, {}, {});
                 }
             }
-            shps.push_back(shp);
+        } else {
+            vmap.clear();
+            for (auto q : shp->quads_pos) {
+                sshp->quads_pos.push_back({add_fvvert(sshp->pos, shp->pos, q.x),
+                    add_fvvert(sshp->pos, shp->pos, q.y),
+                    add_fvvert(sshp->pos, shp->pos, q.z),
+                    add_fvvert(sshp->pos, shp->pos, q.w)});
+            }
+            vmap.clear();
+            for (auto q : shp->quads_norm) {
+                sshp->quads_norm.push_back(
+                    {add_fvvert(sshp->norm, shp->norm, q.x),
+                        add_fvvert(sshp->norm, shp->norm, q.y),
+                        add_fvvert(sshp->norm, shp->norm, q.z),
+                        add_fvvert(sshp->norm, shp->norm, q.w)});
+            }
+            vmap.clear();
+            for (auto q : shp->quads_texcoord) {
+                sshp->quads_texcoord.push_back(
+                    {add_fvvert(sshp->texcoord, shp->texcoord, q.x),
+                        add_fvvert(sshp->texcoord, shp->texcoord, q.y),
+                        add_fvvert(sshp->texcoord, shp->texcoord, q.z),
+                        add_fvvert(sshp->texcoord, shp->texcoord, q.w)});
+            }
         }
-        return shps;
+        sshps.push_back(sshp);
     }
+    return sshps;
 }
 
 // Convert a list of shapes into a face-varying shape.
-std::shared_ptr<fvshape> group_shapes(
+std::shared_ptr<shape> group_shapes(
     const std::vector<std::shared_ptr<shape>>& shps) {
-    auto fvshp = std::make_shared<fvshape>();
-    if (shps.empty()) return fvshp;
-    fvshp->name = shps.front()->name;
-    for (auto sid = 0; sid < shps.size(); sid++) {
-        auto shp = shps[sid];
-        fvshp->mats.push_back(shp->mat);
-        fvshp->groupnames.push_back(shp->name);
-        fvshp->smoothing.push_back(!shp->faceted);
-        auto offset = (int)fvshp->pos.size();
-        append(fvshp->pos, shp->pos);
-        append(fvshp->norm, shp->norm);
-        append(fvshp->texcoord, shp->texcoord);
-        append(fvshp->texcoord1, shp->texcoord1);
-        append(fvshp->color, shp->color);
-        append(fvshp->radius, shp->radius);
-        append(fvshp->tangsp, shp->tangsp);
-        auto eid = (uint16_t)sid;
-        for (auto p : shp->points) {
-            fvshp->points.push_back(p + offset);
-            fvshp->elem_tags.push_back({eid, eid, eid, 0});
-        }
-        for (auto l : shp->lines) {
-            fvshp->lines.push_back(l + vec2i{offset});
-            fvshp->elem_tags.push_back({eid, eid, eid, 0});
-        }
-        for (auto t : shp->triangles) {
-            fvshp->triangles.push_back(t + vec3i{offset});
-            fvshp->elem_tags.push_back({eid, eid, eid, 0});
-        }
-        for (auto q : shp->quads) {
-            fvshp->quads.push_back(q + vec4i{offset});
-            fvshp->elem_tags.push_back({eid, eid, eid, 0});
-        }
-        for (auto b : shp->beziers) {
-            fvshp->beziers.push_back(b + vec4i{offset});
-            fvshp->elem_tags.push_back({eid, eid, eid, 0});
+    auto gshp = std::make_shared<shape>();
+    if (shps.empty()) return gshp;
+    gshp->name = shps.front()->name;
+    for (auto shp : shps) {
+        auto moffset = (uint16_t)gshp->materials.size(),
+             goffset = (uint16_t)gshp->groupnames.size(),
+             soffset = (uint16_t)gshp->smoothing.size();
+        auto voffset = (int)gshp->pos.size();
+        append(gshp->materials, shp->materials);
+        append(gshp->groupnames, shp->groupnames);
+        append(gshp->smoothing, shp->smoothing);
+        append(gshp->pos, shp->pos);
+        append(gshp->norm, shp->norm);
+        append(gshp->texcoord, shp->texcoord);
+        append(gshp->texcoord1, shp->texcoord1);
+        append(gshp->color, shp->color);
+        append(gshp->radius, shp->radius);
+        append(gshp->tangsp, shp->tangsp);
+        for (auto p : shp->points) gshp->points.push_back(p + voffset);
+        for (auto l : shp->lines) gshp->lines.push_back(l + vec2i{voffset});
+        for (auto t : shp->triangles)
+            gshp->triangles.push_back(t + vec3i{voffset});
+        for (auto q : shp->quads) gshp->quads.push_back(q + vec4i{voffset});
+        for (auto b : shp->beziers) gshp->beziers.push_back(b + vec4i{voffset});
+        if (shp->elem_tags.empty()) {
+            auto nelems = (int)max({shp->points.size(), shp->lines.size(),
+                shp->triangles.size(), shp->quads.size(), shp->beziers.size()});
+            for (auto i = 0; i < nelems; i++)
+                gshp->elem_tags.push_back({moffset, goffset, soffset, 0});
+        } else {
+            for (auto tag : shp->elem_tags)
+                gshp->elem_tags.push_back({(uint16_t)(moffset + tag.matid),
+                    (uint16_t)(goffset + tag.groupid),
+                    (uint16_t)(soffset + tag.smoothingid), 0});
         }
     }
-    return fvshp;
+    return gshp;
 }
 
 // Update animation transforms
@@ -3698,10 +3756,13 @@ void add_elements(
     if (opts.tangent_space) {
         for (auto sgr : scn->shapes) {
             for (auto shp : sgr->shapes) {
-                if (!shp->tangsp.empty()) continue;
-                if (shp->texcoord.empty()) continue;
-                if (!shp->mat) continue;
-                if (!(shp->mat->norm_txt || shp->mat->bump_txt)) continue;
+                if (!shp->tangsp.empty() || shp->texcoord.empty()) continue;
+                auto mat_needs_tangents = false;
+                for (auto mat : shp->materials) {
+                    if (mat && (mat->norm_txt || mat->bump_txt))
+                        mat_needs_tangents = true;
+                }
+                if (mat_needs_tangents) continue;
                 auto type = get_shape_type(shp);
                 if (type == shape_elem_type::triangles) {
                     compute_tangent_frames(shp->triangles, shp->pos, shp->norm,
@@ -3859,7 +3920,7 @@ bbox3f compute_bounds(const std::shared_ptr<scene>& scn, bool skip_emitting) {
     for (auto sgr : scn->shapes) {
         shape_bboxes[sgr] = invalid_bbox3f;
         for (auto shp : sgr->shapes) {
-            if (skip_emitting && shp->mat && shp->mat->ke != zero3f) continue;
+            if (skip_emitting && has_emission(shp)) continue;
             shape_bboxes[sgr] += compute_bounds(shp);
         }
     }
@@ -4195,10 +4256,10 @@ std::shared_ptr<scene> obj_to_scene(
         if (omsh->verts.empty()) continue;
         if (omsh->elems.empty()) continue;
 
-        auto shp = std::make_shared<fvshape>();
+        auto shp = std::make_shared<shape>();
         shp->name = sgr->name;
         for (auto& matname : omsh->matnames)
-            shp->mats.push_back((mmap[matname]) ? mmap[matname] : nullptr);
+            shp->materials.push_back((mmap[matname]) ? mmap[matname] : nullptr);
         shp->groupnames = omsh->groupnames;
         shp->smoothing = omsh->smoothing;
         if (omsh->props.find("subdivision") != omsh->props.end()) {
@@ -4442,10 +4503,11 @@ std::shared_ptr<scene> obj_to_scene(
                 shp->norm[kv.second] = obj->norm[kv.first];
             }
         }
-        if (opts.simple_shapes) {
-            append(sgr->shapes, tesselate_shape(shp));
+        if (opts.simple_shapes &&
+            !is_shape_simple(shp, !opts.preserve_facevarying)) {
+            append(sgr->shapes, split_shape(shp, !opts.preserve_facevarying));
         } else {
-            sgr->fvshapes.push_back(shp);
+            sgr->shapes.push_back(shp);
         }
         scn->shapes.push_back(sgr);
         omap[omsh->name] = sgr;
@@ -4488,7 +4550,8 @@ std::shared_ptr<scene> obj_to_scene(
 
     // remove env materials
     for (auto sgr : scn->shapes)
-        for (auto shp : sgr->shapes) env_mat.erase(shp->mat);
+        for (auto shp : sgr->shapes)
+            for (auto mat : shp->materials) env_mat.erase(mat);
     for (auto mat : env_mat) {
         auto end =
             std::remove(scn->materials.begin(), scn->materials.end(), mat);
@@ -4684,12 +4747,7 @@ std::shared_ptr<obj_scene> scene_to_obj(const std::shared_ptr<scene>& scn) {
         auto oobj = std::make_shared<obj_object>();
         oobj->name = sgr->name;
         oobj->frame = sgr->frame;
-        auto fvshapes = sgr->fvshapes;
-        if (fvshapes.empty()) {
-            if (sgr->shapes.empty()) continue;
-            fvshapes.push_back(group_shapes(sgr->shapes));
-        }
-        for (auto shp : fvshapes) {
+        for (auto shp : sgr->shapes) {
             if (shp->subdivision)
                 oobj->props["subdivision"].push_back(
                     std::to_string(shp->subdivision));
@@ -4714,10 +4772,10 @@ std::shared_ptr<obj_scene> scene_to_obj(const std::shared_ptr<scene>& scn) {
             eoffset.matid = oobj->matnames.size();
             eoffset.groupid = oobj->groupnames.size();
             eoffset.smoothingid = 0;  // TODO: fix smoothing groups
-            if (shp->mats.empty()) {
+            if (shp->materials.empty()) {
                 oobj->matnames.push_back("");
             } else {
-                for (auto mat : shp->mats)
+                for (auto mat : shp->materials)
                     oobj->matnames.push_back((mat) ? mat->name : ""s);
             }
             if (shp->groupnames.empty()) {
@@ -4960,7 +5018,7 @@ std::shared_ptr<scene> gltf_to_scene(
             auto shp = std::make_shared<shape>();
             shp->name = gmesh->name + "_" + std::to_string(gid++);
             if (gprim->material) {
-                shp->mat = scn->materials[(int)gprim->material];
+                shp->materials.push_back(scn->materials[(int)gprim->material]);
             }
             // vertex data
             for (auto gattr : gprim->attributes) {
@@ -5518,14 +5576,18 @@ std::shared_ptr<glTF> scene_to_gltf(const std::shared_ptr<scene>& scn,
         auto gmesh = std::make_shared<glTFMesh>();
         gmesh->name = sgr->name;
         auto gbuffer = add_opt_buffer(sgr->path);
-        auto shapes = sgr->shapes;
-        if(shapes.empty()) {
-            for(auto fvshp : sgr->fvshapes) append(shapes, tesselate_shape(fvshp));
+        auto shapes = std::vector<std::shared_ptr<shape>>();
+        for (auto shp : sgr->shapes) {
+            if (!is_shape_simple(shp, true))
+                append(shapes, split_shape(shp, true));
+            else
+                shapes.push_back(shp);
         }
         for (auto shp : shapes) {
             auto gprim = std::make_shared<glTFMeshPrimitive>();
-            gprim->material =
-                glTFid<glTFMaterial>(index(scn->materials, shp->mat));
+            if (!shp->materials.empty())
+                gprim->material = glTFid<glTFMaterial>(
+                    index(scn->materials, shp->materials.at(0)));
             if (!shp->pos.empty())
                 gprim->attributes["POSITION"] = add_accessor(gbuffer,
                     shp->name + "_pos", glTFAccessorType::Vec3,
@@ -6395,7 +6457,8 @@ trace_point eval_shape_point(const std::shared_ptr<shape>& shp,
     pt.texcoord = eval_texcoord(pt.shp, eid, euv);
 
     // shortcuts
-    auto mat = (pt.shp->mat) ? pt.shp->mat : def_material;
+    auto mat =
+        get_material(pt.shp, eid) ? get_material(pt.shp, eid) : def_material;
 
     // handle normal map
     if (mat->norm_txt) {
@@ -7208,7 +7271,7 @@ trace_lights make_trace_lights(const std::shared_ptr<scene>& scn) {
 
     for (auto sgr : scn->shapes) {
         for (auto shp : sgr->shapes) {
-            if (!shp->mat || shp->mat->ke == zero3f) continue;
+            if (!has_emission(shp)) continue;
             if (!contains(lights.shape_distribs, shp))
                 lights.shape_distribs[shp] = make_shape_distribution(shp);
         }
@@ -7217,7 +7280,7 @@ trace_lights make_trace_lights(const std::shared_ptr<scene>& scn) {
     if (scn->nodes.empty()) {
         for (auto sgr : scn->shapes) {
             for (auto shp : sgr->shapes) {
-                if (!shp->mat || shp->mat->ke == zero3f) continue;
+                if (!has_emission(shp)) continue;
                 auto lgt = trace_light();
                 lgt.shp = shp;
                 lgt.frame = sgr->frame;
@@ -7228,7 +7291,7 @@ trace_lights make_trace_lights(const std::shared_ptr<scene>& scn) {
         for (auto nde : scn->nodes) {
             if (!nde->shp) continue;
             for (auto shp : nde->shp->shapes) {
-                if (!shp->mat || shp->mat->ke == zero3f) continue;
+                if (!has_emission(shp)) continue;
                 auto lgt = trace_light();
                 lgt.shp = shp;
                 lgt.frame = nde->frame_;
@@ -10601,7 +10664,7 @@ std::shared_ptr<scene> make_cornell_box_scene() {
                      rotation_frame(vec3f{0, 1, 0}, rot[1] * pif / 180) *
                      rotation_frame(vec3f{1, 0, 0}, rot[0] * pif / 180);
         auto shp = std::make_shared<shape>();
-        shp->mat = mat;
+        shp->materials.push_back(mat);
         shp->name = name;
         make_uvquad(shp->quads, shp->pos, shp->norm, shp->texcoord, 0);
         for (auto& p : shp->pos) p *= scale;
@@ -10619,7 +10682,7 @@ std::shared_ptr<scene> make_cornell_box_scene() {
                      rotation_frame(vec3f{0, 1, 0}, rot[1] * pif / 180) *
                      rotation_frame(vec3f{1, 0, 0}, rot[0] * pif / 180);
         auto shp = std::make_shared<shape>();
-        shp->mat = mat;
+        shp->materials.push_back(mat);
         shp->name = name;
         make_uvcube(shp->quads, shp->pos, shp->norm, shp->texcoord, 0);
         for (auto& p : shp->pos) p *= scale;
@@ -10886,7 +10949,8 @@ void update_proc_elem(const std::shared_ptr<scene>& scn,
     for (auto shp : sgr->shapes) {
         shp->name =
             pshp->name + ((sid > 0) ? std::to_string(sid++) : std::string(""));
-        shp->mat = find_named_elem(scn->materials, pshp->material);
+        auto mat = find_named_elem(scn->materials, pshp->material);
+        if (mat) shp->materials.push_back(mat);
         shp->pos = {};
         shp->norm = {};
         shp->texcoord = {};
@@ -10966,7 +11030,8 @@ void update_proc_elem(const std::shared_ptr<scene>& scn,
             make_uvsphere(shp1->quads, shp1->pos, shp1->norm, shp1->texcoord,
                 (pshp->tesselation < 0) ? 5 : pshp->tesselation);
             for (auto& p : shp1->pos) p *= 0.8f;
-            shp1->mat = find_named_elem(scn->materials, pshp->interior);
+            auto mat = find_named_elem(scn->materials, pshp->interior);
+            shp1->materials.push_back(mat);
         } break;
         case proc_shape_type::point: {
             shp->points.push_back(0);
@@ -10991,7 +11056,8 @@ void update_proc_elem(const std::shared_ptr<scene>& scn,
             auto shp1 = sgr->shapes.at(1);
             make_uvspherecube(
                 shp1->quads, shp1->pos, shp1->norm, shp1->texcoord, 5);
-            shp1->mat = find_named_elem(scn->materials, pshp->interior);
+            auto mat = find_named_elem(scn->materials, pshp->interior);
+            if (mat) shp1->materials.push_back(mat);
             auto nhairs = (pshp->num < 0) ? 65536 : pshp->num;
             // auto radius = (pshp->radius < 0) ? vec2f{0.001f, 0.0001f}
             // :
@@ -12771,13 +12837,13 @@ std::shared_ptr<gl_shape> make_gl_shape(const std::shared_ptr<shape>& shp) {
 // Add gl lights
 void add_gl_lights(gl_lights& lights, const frame3f& frame,
     const std::shared_ptr<shape>& shp) {
-    if (!shp->mat || shp->mat->ke == zero3f) return;
+    if (!has_emission(shp)) return;
     if (lights.pos.size() >= 16) return;
     if (!shp->points.empty()) {
         for (auto p : shp->points) {
             if (lights.pos.size() >= 16) break;
             lights.pos.push_back(transform_point(frame, shp->pos[p]));
-            lights.ke.push_back(shp->mat->ke);
+            lights.ke.push_back(shp->materials.at(0)->ke);
             lights.type.push_back(gl_light_type::point);
         }
     } else {
@@ -12791,7 +12857,7 @@ void add_gl_lights(gl_lights& lights, const frame3f& frame,
         for (auto t : shp->quads)
             area += quad_area(
                 shp->pos[t.x], shp->pos[t.y], shp->pos[t.z], shp->pos[t.w]);
-        auto ke = shp->mat->ke * area;
+        auto ke = shp->materials.at(0)->ke * area;
         if (lights.pos.size() < 16) {
             lights.pos.push_back(transform_point(frame, pos));
             lights.ke.push_back(ke);
@@ -13708,7 +13774,7 @@ void draw_stdsurface_shape(const std::shared_ptr<shape>& shp,
         return textures.at(txt);
     };
 
-    auto mat = (shp->mat) ? shp->mat : default_material;
+    auto mat = get_material(shp, 0) ? get_material(shp, 0) : default_material;
     set_stdsurface_material(prog, mat->type, etype, mat->ke, mat->kd, mat->ks,
         mat->rs, mat->op, txt(mat->ke_txt), txt(mat->kd_txt), txt(mat->ks_txt),
         txt(mat->rs_txt), txt(mat->norm_txt), txt(mat->occ_txt), false,
