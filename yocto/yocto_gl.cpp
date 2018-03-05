@@ -10842,6 +10842,9 @@ void update_proc_elem(scene* scn, material* mat, const proc_material* pmat) {
     mat->norm_txt = norm;
 }
 
+    // Fake function for template programming.
+    void update_proc_elem(scene* scn, shape* shp, const proc_shape* pshp) { }
+    
 // Makes/updates a test shape
 void update_proc_elem(scene* scn, shape_group* sgr, const proc_shape* pshp) {
     if (pshp->name == "") throw std::runtime_error("cannot use empty name");
@@ -11033,6 +11036,9 @@ void update_proc_elem(scene* scn, node* nde, const proc_node* pnde) {
     nde->shp = find_named_elem(scn->shapes, pnde->shape);
     nde->env = find_named_elem(scn->environments, pnde->environment);
 }
+
+    // Fake function for template programming.
+    void update_proc_elem(scene* scn, animation* shp, const proc_animation* pshp) { }
 
 // Makes/updates a test animation
 void update_proc_elem(
@@ -14522,11 +14528,16 @@ struct draw_elem_visitor {
 
     template <typename T>
     void operator()(std::vector<T*>& val, const visit_var& var) {
-        if (var.type != visit_var_type::reference) {
-            for (auto idx = 0; idx < val.size(); idx++)
-                operator()(val[idx], var);
+        if (var.type == visit_var_type::reference) {
+            for (auto idx = 0; idx < val.size(); idx++) {
+                auto color = get_highlight_color(var.name);
+                if (color != zero4f) draw_style_widget_push(win, color);
+                edited += draw_combo_widget(win, var.name + "[" + std::to_string(idx) + "]", val[idx], elems(val[idx]));
+                if (color != zero4f) draw_style_widget_pop(win);
+            }
         }
     }
+    
     template <typename T>
     void operator()(std::vector<T>& val, const visit_var& var) {
         if (val.empty()) return;
@@ -14541,20 +14552,6 @@ struct draw_elem_visitor {
     }
 
     template <typename T>
-    void start(
-        T* val, const visit_var& var = visit_var{"", visit_var_type::object}) {
-        if (!val) return;
-        // TODO: fix this separator
-        draw_separator_widget(win);
-        draw_groupid_widget_push(win, val);
-        draw_separator_widget(win);
-        if (var.type != visit_var_type::reference) elem_name = val->name;
-        // visit(*val, *this);
-        preview(val);
-        draw_groupid_widget_pop(win);
-    }
-
-    template <typename T>
     void operator()(
         T*& val, const visit_var& var = visit_var{"", visit_var_type::object}) {
         if (var.type == visit_var_type::reference) {
@@ -14564,7 +14561,15 @@ struct draw_elem_visitor {
             if (color != zero4f) draw_style_widget_pop(win);
         } else {
             elem_name = val->name;
-            visit(val, var);
+            if (!val) return;
+            // TODO: fix this separator
+            draw_separator_widget(win);
+            draw_groupid_widget_push(win, val);
+            draw_separator_widget(win);
+            if (var.type != visit_var_type::reference) elem_name = val->name;
+            visit(*val, *this);
+            preview(val);
+            draw_groupid_widget_pop(win);
         }
     }
 
@@ -14576,10 +14581,10 @@ struct draw_elem_visitor {
             if (te->name == elem->name) telem = te;
         if (telem) {
             auto last = edited;
-            start(telem);
+            operator()(telem);
             if (last != edited) update_proc_elem(scn, elem, telem);
         }
-        start(elem);
+        operator()(elem);
     }
 
     template <typename T>
@@ -14680,7 +14685,7 @@ bool draw_scene_widgets(gl_window* win, const std::string& lbl, scene* scn,
         draw_elem_visitor{win, scn, sel, gl_txt, inspector_highlights};
     if (sel.is<camera>())
         elem_visitor.start(sel.get<camera>(), test_scn_res->cameras);
-    if (sel.is<shape>()) elem_visitor.start(sel.get<shape>());
+    if (sel.is<shape>()) elem_visitor.start(sel.get<shape>(), test_scn_res->shapes);
     if (sel.is<shape_group>())
         elem_visitor.start(sel.get<shape_group>(), test_scn_res->shapes);
     if (sel.is<texture>())
@@ -14691,7 +14696,7 @@ bool draw_scene_widgets(gl_window* win, const std::string& lbl, scene* scn,
         elem_visitor.start(sel.get<environment>(), test_scn_res->environments);
     if (sel.is<node>())
         elem_visitor.start(sel.get<node>(), test_scn_res->nodes);
-    if (sel.is<animation>()) elem_visitor.start(sel.get<animation>());
+    if (sel.is<animation>()) elem_visitor.start(sel.get<animation>(),test_scn_res->animations);
     if (sel.is<animation_group>())
         elem_visitor.start(
             sel.get<animation_group>(), test_scn_res->animations);
