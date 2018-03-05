@@ -4579,7 +4579,7 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
 
 // Load an obj scene
 scene* load_obj_scene(const std::string& filename, const load_options& opts) {
-    auto oscn = load_obj(filename, opts.load_textures, opts.skip_missing,
+    auto oscn = load_obj(filename, opts.simple_shapes, opts.load_textures, opts.skip_missing,
         opts.obj_flip_texcoord, opts.obj_flip_tr);
     auto scn = obj_to_scene(oscn, opts);
     delete oscn;
@@ -7691,15 +7691,15 @@ void load_textures(
 }
 
 // Loads an OBJ
-obj_scene* load_obj(const std::string& filename, bool load_txt,
+obj_scene* load_obj(const std::string& filename, bool split_shapes, bool load_txt,
     bool skip_missing, bool flip_texcoord, bool flip_tr) {
     // clear obj
     auto obj = new obj_scene();
 
     // splitting policy
-    auto split_material = false;
-    auto split_group = false;
-    auto split_smoothing = false;
+    auto split_material = split_shapes;
+    auto split_group = split_shapes;
+    auto split_smoothing = split_shapes;
 
     // open file
     auto fs = fopen(filename.c_str(), "rt");

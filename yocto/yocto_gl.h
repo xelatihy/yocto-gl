@@ -7549,12 +7549,14 @@ struct obj_scene {
     }
 };
 
-/// Load an OBJ from file `filename`. Load textures if `load_textures` is true,
-/// and report errors only if `skip_missing` is false.
-/// Texture coordinates and material Tr are flipped if `flip_texcoord` and
-/// `flip_tp` are respectively true.
-obj_scene* load_obj(const std::string& filename, bool load_textures = false,
-    bool skip_missing = false, bool flip_texcoord = true, bool flip_tr = true);
+/// Load an OBJ from file `filename`. Split shapes at material and group
+/// boundaries, if `split_shapes` is true.
+/// Load textures if `load_textures` is true, and report errors only if
+/// `skip_missing` is false. Texture coordinates and material Tr are flipped
+/// if `flip_texcoord` and `flip_tp` are respectively true.
+obj_scene* load_obj(const std::string& filename, bool split_shapes,
+    bool load_textures = false, bool skip_missing = false,
+    bool flip_texcoord = true, bool flip_tr = true);
 
 /// Save an OBJ to file `filename`. Save textures if `save_textures` is true,
 /// and report errors only if `skip_missing` is false.
