@@ -4946,16 +4946,7 @@ Visit pointer elements.
 
 ~~~ .cpp
 template <typename T, typename Visitor>
-inline void visit(const std::shared_ptr<T>& val, Visitor&& visitor);
-~~~
-
-Visit pointer elements.
-
-#### Function visit()
-
-~~~ .cpp
-template <typename T, typename Visitor>
-inline void visit(std::shared_ptr<T>& val, Visitor&& visitor);
+inline void visit(const T* val, Visitor&& visitor);
 ~~~
 
 Visit pointer elements.
@@ -6719,7 +6710,7 @@ struct bvh_instance {
     frame3f frame_inv = identity_frame3f;
     int iid = 0;
     int sid = 0;
-    std::shared_ptr<bvh_tree> bvh = nullptr;
+    bvh_tree* bvh = nullptr;
 }
 ~~~
 
@@ -6748,7 +6739,8 @@ struct bvh_tree {
     std::vector<vec3i> triangles;
     std::vector<vec4i> quads;
     std::vector<bvh_instance> instances;
-    std::vector<std::shared_ptr<bvh_tree>> shape_bvhs;
+    std::vector<bvh_tree*> shape_bvhs;
+    bool own_shape_bvhs = false;
 }
 ~~~
 
@@ -6774,12 +6766,13 @@ This is an internal data structure.
     - quads:      Quads for shape BVHs.
     - instances:      Instance ids (iid, sid, shape bvh index).
     - shape_bvhs:      Shape BVHs.
+    - own_shape_bvhs:      Owns shape BVHs.
 
 
 #### Function make_bvh()
 
 ~~~ .cpp
-std::shared_ptr<bvh_tree> make_bvh(const std::vector<int>& points,
+bvh_tree* make_bvh(const std::vector<int>& points,
     const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
     const std::vector<vec4i>& quads, const std::vector<vec3f>& pos,
     const std::vector<float>& radius, float def_radius, bool equalsize);
@@ -6790,8 +6783,9 @@ Build a shape BVH from a set of primitives.
 #### Function make_bvh()
 
 ~~~ .cpp
-std::shared_ptr<bvh_tree> make_bvh(const std::vector<bvh_instance>& instances,
-    const std::vector<std::shared_ptr<bvh_tree>>& shape_bvhs, bool equal_size);
+bvh_tree* make_bvh(const std::vector<bvh_instance>& instances,
+    const std::vector<bvh_tree*>& shape_bvhs, bool equal_size,
+    bool owns_shape_bvhs);
 ~~~
 
 Build a scene BVH from a set of shape instances.
@@ -6799,8 +6793,7 @@ Build a scene BVH from a set of shape instances.
 #### Function get_shape_bvhs()
 
 ~~~ .cpp
-inline const std::vector<std::shared_ptr<bvh_tree>>& get_shape_bvhs(
-    const std::shared_ptr<bvh_tree>& bvh);
+inline const std::vector<bvh_tree*>& get_shape_bvhs(const bvh_tree* bvh);
 ~~~
 
 Grab the shape BVHs
@@ -6808,9 +6801,8 @@ Grab the shape BVHs
 #### Function refit_bvh()
 
 ~~~ .cpp
-void refit_bvh(const std::shared_ptr<bvh_tree>& bvh,
-    const std::vector<vec3f>& pos, const std::vector<float>& radius,
-    float def_radius);
+void refit_bvh(bvh_tree* bvh, const std::vector<vec3f>& pos,
+    const std::vector<float>& radius, float def_radius);
 ~~~
 
 Update the node bounds for a shape bvh.
@@ -6818,8 +6810,8 @@ Update the node bounds for a shape bvh.
 #### Function refit_bvh()
 
 ~~~ .cpp
-void refit_bvh(const std::shared_ptr<bvh_tree>& bvh,
-    const std::vector<frame3f>& frames, const std::vector<frame3f>& frames_inv);
+void refit_bvh(bvh_tree* bvh, const std::vector<frame3f>& frames,
+    const std::vector<frame3f>& frames_inv);
 ~~~
 
 Update the node bounds for a scene bvh
@@ -6827,8 +6819,8 @@ Update the node bounds for a scene bvh
 #### Function intersect_bvh()
 
 ~~~ .cpp
-bool intersect_bvh(const std::shared_ptr<bvh_tree>& bvh, const ray3f& ray,
-    bool find_any, float& ray_t, int& iid, int& sid, int& eid, vec2f& euv);
+bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray, bool find_any,
+    float& ray_t, int& iid, int& sid, int& eid, vec2f& euv);
 ~~~
 
 Intersect ray with a bvh returning either the first or any intersection
@@ -6839,9 +6831,8 @@ shape barycentric coordinates `euv`.
 #### Function overlap_bvh()
 
 ~~~ .cpp
-bool overlap_bvh(const std::shared_ptr<bvh_tree>& bvh, const vec3f& pos,
-    float max_dist, bool find_any, float& dist, int& iid, int& sid, int& eid,
-    vec2f& euv);
+bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
+    bool find_any, float& dist, int& iid, int& sid, int& eid, vec2f& euv);
 ~~~
 
 Find a shape element that overlaps a point within a given distance
@@ -6878,7 +6869,7 @@ Intersection point.
 
 ~~~ .cpp
 intersection_point intersect_bvh(
-    const std::shared_ptr<bvh_tree>& bvh, const ray3f& ray, bool early_exit);
+    const bvh_tree* bvh, const ray3f& ray, bool early_exit);
 ~~~
 
 Intersect a ray with a bvh (convenience wrapper).
@@ -6886,8 +6877,8 @@ Intersect a ray with a bvh (convenience wrapper).
 #### Function overlap_bvh()
 
 ~~~ .cpp
-intersection_point overlap_bvh(const std::shared_ptr<bvh_tree>& bvh,
-    const vec3f& pos, float max_dist, bool early_exit);
+intersection_point overlap_bvh(
+    const bvh_tree* bvh, const vec3f& pos, float max_dist, bool early_exit);
 ~~~
 
 Finds the closest element with a bvh (convenience wrapper).
@@ -6998,16 +6989,16 @@ struct material {
     vec3f kt = {0, 0, 0};
     float rs = 0.0001;
     float op = 1;
-    std::shared_ptr<texture> ke_txt = nullptr;
-    std::shared_ptr<texture> kd_txt = nullptr;
-    std::shared_ptr<texture> ks_txt = nullptr;
-    std::shared_ptr<texture> kr_txt = nullptr;
-    std::shared_ptr<texture> kt_txt = nullptr;
-    std::shared_ptr<texture> rs_txt = nullptr;
-    std::shared_ptr<texture> bump_txt = nullptr;
-    std::shared_ptr<texture> disp_txt = nullptr;
-    std::shared_ptr<texture> norm_txt = nullptr;
-    std::shared_ptr<texture> occ_txt = nullptr;
+    texture* ke_txt = nullptr;
+    texture* kd_txt = nullptr;
+    texture* ks_txt = nullptr;
+    texture* kr_txt = nullptr;
+    texture* kt_txt = nullptr;
+    texture* rs_txt = nullptr;
+    texture* bump_txt = nullptr;
+    texture* disp_txt = nullptr;
+    texture* norm_txt = nullptr;
+    texture* occ_txt = nullptr;
     optional<texture_info> ke_txt_info = {};
     optional<texture_info> kd_txt_info = {};
     optional<texture_info> ks_txt_info = {};
@@ -7081,7 +7072,7 @@ Shape element tags.
 ~~~ .cpp
 struct shape {
     std::string name = "";
-    std::vector<std::shared_ptr<material>> materials = {};
+    std::vector<material*> materials = {};
     std::vector<std::string> groupnames = {};
     std::vector<bool> smoothing = {};
     std::vector<int> points;
@@ -7140,7 +7131,7 @@ struct shape_group {
     std::string name = "";
     std::string path = "";
     frame3f frame = identity_frame3f;
-    std::vector<std::shared_ptr<shape>> shapes;
+    std::vector<shape*> shapes;
 }
 ~~~
 
@@ -7168,7 +7159,7 @@ struct environment {
     std::string name = "";
     frame3f frame = identity_frame3f;
     vec3f ke = {0, 0, 0};
-    std::shared_ptr<texture> ke_txt = nullptr;
+    texture* ke_txt = nullptr;
     optional<texture_info> ke_txt_info = {};
 }
 ~~~
@@ -7188,17 +7179,17 @@ Envinonment map.
 ~~~ .cpp
 struct node {
     std::string name = "";
-    std::shared_ptr<node> parent = nullptr;
+    node* parent = nullptr;
     frame3f local = identity_frame3f;
     vec3f translation = zero3f;
     quat4f rotation = {0, 0, 0, 1};
     vec3f scaling = {1, 1, 1};
     std::vector<float> weights = {};
-    std::shared_ptr<camera> cam = nullptr;
-    std::shared_ptr<shape_group> shp = nullptr;
-    std::shared_ptr<environment> env = nullptr;
+    camera* cam = nullptr;
+    shape_group* shp = nullptr;
+    environment* env = nullptr;
     frame3f frame_ = identity_frame3f;
-    std::vector<std::weak_ptr<node>> children_ = {};
+    std::vector<node*> children_ = {};
 }
 ~~~
 
@@ -7217,6 +7208,7 @@ Node in a transform hierarchy.
     - env:      Environment the node points to. 
     - frame_:      Transform frame. This is a computed value only stored for convenience.
     - children_:      Child nodes. This is a computed value only stored for convenience.
+     
 
 
 #### Enum keyframe_type
@@ -7271,9 +7263,8 @@ Keyframe data.
 struct animation_group {
     std::string name;
     std::string path = "";
-    std::vector<std::shared_ptr<animation>> animations;
-    std::vector<std::pair<std::shared_ptr<animation>, std::shared_ptr<node>>>
-        targets;
+    std::vector<animation*> animations;
+    std::vector<std::pair<animation*, node*>> targets;
 }
 ~~~
 
@@ -7290,13 +7281,13 @@ Animation made of multiple keyframed values.
 
 ~~~ .cpp
 struct scene {
-    std::vector<std::shared_ptr<shape_group>> shapes = {};
-    std::vector<std::shared_ptr<material>> materials = {};
-    std::vector<std::shared_ptr<texture>> textures = {};
-    std::vector<std::shared_ptr<camera>> cameras = {};
-    std::vector<std::shared_ptr<environment>> environments = {};
-    std::vector<std::shared_ptr<node>> nodes = {};
-    std::vector<std::shared_ptr<animation_group>> animations = {};
+    std::vector<shape_group*> shapes = {};
+    std::vector<material*> materials = {};
+    std::vector<texture*> textures = {};
+    std::vector<camera*> cameras = {};
+    std::vector<environment*> environments = {};
+    std::vector<node*> nodes = {};
+    std::vector<animation_group*> animations = {};
 }
 ~~~
 
@@ -7350,7 +7341,7 @@ Shape elements type.
 #### Function get_shape_type()
 
 ~~~ .cpp
-shape_elem_type get_shape_type(const std::shared_ptr<shape>& shp);
+shape_elem_type get_shape_type(const shape* shp);
 ~~~
 
 Get shape element type.
@@ -7358,7 +7349,7 @@ Get shape element type.
 #### Function has_emission()
 
 ~~~ .cpp
-bool has_emission(const std::shared_ptr<shape>& shp);
+bool has_emission(const shape* shp);
 ~~~
 
 Check if a shape has emission.
@@ -7366,8 +7357,7 @@ Check if a shape has emission.
 #### Function get_material()
 
 ~~~ .cpp
-std::shared_ptr<material> get_material(
-    const std::shared_ptr<shape>& shp, int eid);
+material* get_material(const shape* shp, int eid);
 ~~~
 
 Gets the material for a shape element.
@@ -7375,7 +7365,7 @@ Gets the material for a shape element.
 #### Function is_shape_simple()
 
 ~~~ .cpp
-bool is_shape_simple(const std::shared_ptr<shape>& shp, bool split_facevarying);
+bool is_shape_simple(const shape* shp, bool split_facevarying);
 ~~~
 
 Returns is the shape is simple, i.e. it has only one material and one group.
@@ -7383,7 +7373,7 @@ Returns is the shape is simple, i.e. it has only one material and one group.
 #### Function eval_pos()
 
 ~~~ .cpp
-vec3f eval_pos(const std::shared_ptr<shape>& shp, int eid, const vec2f& euv);
+vec3f eval_pos(const shape* shp, int eid, const vec2f& euv);
 ~~~
 
 Shape position interpolated using barycentric coordinates.
@@ -7391,7 +7381,7 @@ Shape position interpolated using barycentric coordinates.
 #### Function eval_norm()
 
 ~~~ .cpp
-vec3f eval_norm(const std::shared_ptr<shape>& shp, int eid, const vec2f& euv);
+vec3f eval_norm(const shape* shp, int eid, const vec2f& euv);
 ~~~
 
 Shape normal interpolated using barycentric coordinates.
@@ -7399,8 +7389,7 @@ Shape normal interpolated using barycentric coordinates.
 #### Function eval_texcoord()
 
 ~~~ .cpp
-vec2f eval_texcoord(
-    const std::shared_ptr<shape>& shp, int eid, const vec2f& euv);
+vec2f eval_texcoord(const shape* shp, int eid, const vec2f& euv);
 ~~~
 
 Shape texcoord interpolated using barycentric coordinates.
@@ -7408,7 +7397,7 @@ Shape texcoord interpolated using barycentric coordinates.
 #### Function eval_color()
 
 ~~~ .cpp
-vec4f eval_color(const std::shared_ptr<shape>& shp, int eid, const vec2f& euv);
+vec4f eval_color(const shape* shp, int eid, const vec2f& euv);
 ~~~
 
 Shape color interpolated using barycentric coordinates.
@@ -7416,7 +7405,7 @@ Shape color interpolated using barycentric coordinates.
 #### Function eval_radius()
 
 ~~~ .cpp
-float eval_radius(const std::shared_ptr<shape>& shp, int eid, const vec2f& euv);
+float eval_radius(const shape* shp, int eid, const vec2f& euv);
 ~~~
 
 Shape radius interpolated using barycentric coordinates.
@@ -7424,7 +7413,7 @@ Shape radius interpolated using barycentric coordinates.
 #### Function eval_tangsp()
 
 ~~~ .cpp
-vec4f eval_tangsp(const std::shared_ptr<shape>& shp, int eid, const vec2f& euv);
+vec4f eval_tangsp(const shape* shp, int eid, const vec2f& euv);
 ~~~
 
 Shape tangent space interpolated using barycentric coordinates.
@@ -7432,8 +7421,7 @@ Shape tangent space interpolated using barycentric coordinates.
 #### Function eval_pos()
 
 ~~~ .cpp
-vec3f eval_pos(const std::shared_ptr<shape_group>& shp, int sid, int eid,
-    const vec2f& euv);
+vec3f eval_pos(const shape_group* shp, int sid, int eid, const vec2f& euv);
 ~~~
 
 Instance position interpolated using barycentric coordinates.
@@ -7441,8 +7429,7 @@ Instance position interpolated using barycentric coordinates.
 #### Function eval_norm()
 
 ~~~ .cpp
-vec3f eval_norm(const std::shared_ptr<shape_group>& shp, int sid, int eid,
-    const vec2f& euv);
+vec3f eval_norm(const shape_group* shp, int sid, int eid, const vec2f& euv);
 ~~~
 
 Instance normal interpolated using barycentric coordinates.
@@ -7450,7 +7437,7 @@ Instance normal interpolated using barycentric coordinates.
 #### Function eval_pos()
 
 ~~~ .cpp
-vec3f eval_pos(const std::shared_ptr<environment>& env, const vec2f& uv);
+vec3f eval_pos(const environment* env, const vec2f& uv);
 ~~~
 
 Environment position interpolated using uv parametrization.
@@ -7458,7 +7445,7 @@ Environment position interpolated using uv parametrization.
 #### Function eval_norm()
 
 ~~~ .cpp
-vec3f eval_norm(const std::shared_ptr<environment>& env, const vec2f& uv);
+vec3f eval_norm(const environment* env, const vec2f& uv);
 ~~~
 
 Environment normal interpolated using uv parametrization.
@@ -7466,7 +7453,7 @@ Environment normal interpolated using uv parametrization.
 #### Function eval_texcoord()
 
 ~~~ .cpp
-vec2f eval_texcoord(const std::shared_ptr<environment>& env, const vec2f& uv);
+vec2f eval_texcoord(const environment* env, const vec2f& uv);
 ~~~
 
 Environment texture coordinates from uv parametrization.
@@ -7474,7 +7461,7 @@ Environment texture coordinates from uv parametrization.
 #### Function eval_uv()
 
 ~~~ .cpp
-vec2f eval_uv(const std::shared_ptr<environment>& env, const vec3f& w);
+vec2f eval_uv(const environment* env, const vec3f& w);
 ~~~
 
 Evaluate uv parameters for environment.
@@ -7482,9 +7469,8 @@ Evaluate uv parameters for environment.
 #### Function eval_texture()
 
 ~~~ .cpp
-vec4f eval_texture(const std::shared_ptr<texture>& txt,
-    const texture_info& info, const vec2f& texcoord, bool srgb = true,
-    const vec4f& def =;
+vec4f eval_texture(const texture* txt, const texture_info& info,
+    const vec2f& texcoord, bool srgb = true, const vec4f& def =;
 ~~~
 
 Evaluate a texture.
@@ -7492,9 +7478,8 @@ Evaluate a texture.
 #### Function eval_texture()
 
 ~~~ .cpp
-inline vec4f eval_texture(const std::shared_ptr<texture>& txt,
-    const optional<texture_info> info, const vec2f& texcoord, bool srgb = true,
-    const vec4f& def =;
+inline vec4f eval_texture(const texture* txt, const optional<texture_info> info,
+    const vec2f& texcoord, bool srgb = true, const vec4f& def =;
 ~~~
 
 Evaluate a texture.
@@ -7502,8 +7487,7 @@ Evaluate a texture.
 #### Function eval_camera_ray()
 
 ~~~ .cpp
-ray3f eval_camera_ray(
-    const std::shared_ptr<camera>& cam, const vec2f& uv, const vec2f& luv);
+ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv);
 ~~~
 
 Generates a ray from a camera for image plane coordinate `uv` and the
@@ -7512,8 +7496,8 @@ lens coordinates `luv`.
 #### Function eval_camera_ray()
 
 ~~~ .cpp
-ray3f eval_camera_ray(const std::shared_ptr<camera>& cam, const vec2i& ij,
-    int res, const vec2f& puv, const vec2f& luv);
+ray3f eval_camera_ray(const camera* cam, const vec2i& ij, int res,
+    const vec2f& puv, const vec2f& luv);
 ~~~
 
 Generates a ray from a camera for pixel coordinates `ij`, the resolution
@@ -7523,8 +7507,7 @@ the image resolution `res`.
 #### Function sync_camera_aspect()
 
 ~~~ .cpp
-void sync_camera_aspect(
-    const std::shared_ptr<camera>& cam, int& width, int& height);
+void sync_camera_aspect(const camera* cam, int& width, int& height);
 ~~~
 
 Synchronizes a camera aspect with image width and height. Set image
@@ -7533,7 +7516,7 @@ values any one is 0 or less. Set camera aspect otherwise.
 #### Function make_shape_distribution()
 
 ~~~ .cpp
-distribution1f make_shape_distribution(const std::shared_ptr<shape>& shp);
+distribution1f make_shape_distribution(const shape* shp);
 ~~~
 
 Generate a distribution for sampling a shape uniformly based on area/length.
@@ -7541,8 +7524,8 @@ Generate a distribution for sampling a shape uniformly based on area/length.
 #### Function sample_shape()
 
 ~~~ .cpp
-std::pair<int, vec2f> sample_shape(const std::shared_ptr<shape>& shp,
-    const distribution1f& dst, float re, const vec2f& ruv);
+std::pair<int, vec2f> sample_shape(
+    const shape* shp, const distribution1f& dst, float re, const vec2f& ruv);
 ~~~
 
 Sample a shape based on a distribution.
@@ -7550,8 +7533,7 @@ Sample a shape based on a distribution.
 #### Function sample_environment()
 
 ~~~ .cpp
-vec2f sample_environment(
-    const std::shared_ptr<environment>& env, const vec2f& ruv);
+vec2f sample_environment(const environment* env, const vec2f& ruv);
 ~~~
 
 Sample an environment uniformly.
@@ -7560,8 +7542,8 @@ Sample an environment uniformly.
 
 ~~~ .cpp
 template <typename T>
-inline std::shared_ptr<T> find_named_elem(
-    const std::vector<std::shared_ptr<T>>& elems, const std::string& name);
+inline T* find_named_elem(
+    const std::vector<T*>& elems, const std::string& name);
 ~~~
 
 Finds an element by name.
@@ -7569,7 +7551,7 @@ Finds an element by name.
 #### Function compute_normals()
 
 ~~~ .cpp
-void compute_normals(const std::shared_ptr<shape>& shp);
+void compute_normals(shape* shp);
 ~~~
 
 Update the normals of a shape.  Supports only non-facevarying shapes.
@@ -7577,8 +7559,7 @@ Update the normals of a shape.  Supports only non-facevarying shapes.
 #### Function subdivide_shape_once()
 
 ~~~ .cpp
-void subdivide_shape_once(
-    const std::shared_ptr<shape>& shp, bool subdiv = false);
+void subdivide_shape_once(shape* shp, bool subdiv = false);
 ~~~
 
 Subdivides shape elements. Apply subdivision surface rules if subdivide
@@ -7587,8 +7568,7 @@ is true.
 #### Function facet_shape()
 
 ~~~ .cpp
-void facet_shape(
-    const std::shared_ptr<shape>& shp, bool recompute_normals = true);
+void facet_shape(shape* shp, bool recompute_normals = true);
 ~~~
 
 Facet a shape elements by duplicating vertices. Supports only
@@ -7597,7 +7577,7 @@ non-facevarying shapes.
 #### Function tesselate_shape()
 
 ~~~ .cpp
-void tesselate_shape(const std::shared_ptr<shape>& shp, bool subdivide,
+void tesselate_shape(shape* shp, bool subdivide,
     bool facevarying_to_sharedvertex, bool quads_to_triangles,
     bool bezier_to_lines);
 ~~~
@@ -7607,7 +7587,7 @@ Tesselate a shape into basic primitives.
 #### Function tesselate_shapes()
 
 ~~~ .cpp
-void tesselate_shapes(const std::shared_ptr<scene>& scn, bool subdivide,
+void tesselate_shapes(scene* scn, bool subdivide,
     bool facevarying_to_sharedvertex, bool quads_to_triangles,
     bool bezier_to_lines);
 ~~~
@@ -7617,18 +7597,16 @@ Tesselate scene shapes.
 #### Function split_shape()
 
 ~~~ .cpp
-std::vector<std::shared_ptr<shape>> split_shape(
-    const std::shared_ptr<shape>& shp, bool split_facevarying);
+std::vector<shape*> split_shape(const shape* shp, bool split_facevarying);
 ~~~
 
 Convert a shape into simple shapes. Facevarying primitives are split if
-`allow_facevarying` is false.
+`allow_facevarying` is false. No shape is retuned if the shape is simple.
 
 #### Function group_shapes()
 
 ~~~ .cpp
-std::shared_ptr<shape> group_shapes(
-    const std::vector<std::shared_ptr<shape>>& shps);
+shape* group_shapes(const std::vector<shape*>& shps);
 ~~~
 
 Convert a list of shapes into a face-varying shape.
@@ -7636,7 +7614,7 @@ Convert a list of shapes into a face-varying shape.
 #### Function update_transforms()
 
 ~~~ .cpp
-void update_transforms(const std::shared_ptr<scene>& scn, float time = 0);
+void update_transforms(scene* scn, float time = 0);
 ~~~
 
 Update node transforms.
@@ -7644,7 +7622,7 @@ Update node transforms.
 #### Function compute_animation_range()
 
 ~~~ .cpp
-vec2f compute_animation_range(const std::shared_ptr<scene>& scn);
+vec2f compute_animation_range(const scene* scn);
 ~~~
 
 Compute animation range.
@@ -7652,8 +7630,7 @@ Compute animation range.
 #### Function make_view_camera()
 
 ~~~ .cpp
-std::shared_ptr<camera> make_view_camera(
-    const std::shared_ptr<scene>& scn, int camera_id);
+camera* make_view_camera(const scene* scn, int camera_id);
 ~~~
 
 Make a view camera either copying a given one or building a default one.
@@ -7661,7 +7638,7 @@ Make a view camera either copying a given one or building a default one.
 #### Function compute_bounds()
 
 ~~~ .cpp
-bbox3f compute_bounds(const std::shared_ptr<shape>& shp);
+bbox3f compute_bounds(const shape* shp);
 ~~~
 
 Computes a shape bounding box using a quick computation that ignores radius.
@@ -7669,8 +7646,7 @@ Computes a shape bounding box using a quick computation that ignores radius.
 #### Function compute_bounds()
 
 ~~~ .cpp
-bbox3f compute_bounds(
-    const std::shared_ptr<scene>& scn, bool skip_emitting = false);
+bbox3f compute_bounds(const scene* scn, bool skip_emitting = false);
 ~~~
 
 Compute a scene bounding box.
@@ -7678,7 +7654,7 @@ Compute a scene bounding box.
 #### Function flatten_instances()
 
 ~~~ .cpp
-void flatten_instances(const std::shared_ptr<scene>& scn);
+void flatten_instances(scene* scn);
 ~~~
 
 Flatten scene instances into separate shapes.
@@ -7686,8 +7662,8 @@ Flatten scene instances into separate shapes.
 #### Function make_bvh()
 
 ~~~ .cpp
-std::shared_ptr<bvh_tree> make_bvh(const std::shared_ptr<shape>& shp,
-    float def_radius = 0.001f, bool equalsize = true);
+bvh_tree* make_bvh(
+    const shape* shp, float def_radius = 0.001f, bool equalsize = true);
 ~~~
 
 Build a shape BVH.
@@ -7695,8 +7671,8 @@ Build a shape BVH.
 #### Function make_bvh()
 
 ~~~ .cpp
-std::shared_ptr<bvh_tree> make_bvh(const std::shared_ptr<scene>& scn,
-    float def_radius = 0.001f, bool equalsize = true);
+bvh_tree* make_bvh(
+    const scene* scn, float def_radius = 0.001f, bool equalsize = true);
 ~~~
 
 Build a scene BVH.
@@ -7704,8 +7680,7 @@ Build a scene BVH.
 #### Function refit_bvh()
 
 ~~~ .cpp
-void refit_bvh(const std::shared_ptr<bvh_tree>& bvh,
-    const std::shared_ptr<shape>& shp, float def_radius = 0.001f);
+void refit_bvh(bvh_tree* bvh, const shape* shp, float def_radius = 0.001f);
 ~~~
 
 Refits a scene BVH.
@@ -7713,9 +7688,8 @@ Refits a scene BVH.
 #### Function refit_bvh()
 
 ~~~ .cpp
-void refit_bvh(const std::shared_ptr<bvh_tree>& bvh,
-    const std::shared_ptr<scene>& scn, bool do_shapes,
-    float def_radius = 0.001f);
+void refit_bvh(
+    bvh_tree* bvh, const scene* scn, bool do_shapes, float def_radius = 0.001f);
 ~~~
 
 Refits a scene BVH.
@@ -7749,8 +7723,7 @@ Add elements options.
 #### Function add_elements()
 
 ~~~ .cpp
-void add_elements(
-    const std::shared_ptr<scene>& scn, const add_elements_options& opts =;
+void add_elements(scene* scn, const add_elements_options& opts =;
 ~~~
 
 Add elements
@@ -7758,8 +7731,7 @@ Add elements
 #### Function merge_into()
 
 ~~~ .cpp
-void merge_into(const std::shared_ptr<scene>& merge_into,
-    const std::shared_ptr<scene>& merge_from);
+void merge_into(scene* merge_into, scene* merge_from);
 ~~~
 
 Merge scene into one another. Note that the objects are _moved_ from
@@ -7794,8 +7766,7 @@ Loading options.
 #### Function load_scene()
 
 ~~~ .cpp
-std::shared_ptr<scene> load_scene(
-    const std::string& filename, const load_options& opts =;
+scene* load_scene(const std::string& filename, const load_options& opts =;
 ~~~
 
 Loads a scene. For now OBJ or glTF are supported.
@@ -7826,8 +7797,8 @@ Save options.
 #### Function save_scene()
 
 ~~~ .cpp
-void save_scene(const std::string& filename, const std::shared_ptr<scene>& scn,
-    const save_options& opts);
+void save_scene(
+    const std::string& filename, const scene* scn, const save_options& opts);
 ~~~
 
 Saves a scene. For now OBJ and glTF are supported.
@@ -7903,7 +7874,7 @@ Scene statistics
 #### Function compute_stats()
 
 ~~~ .cpp
-scene_stats compute_stats(const std::shared_ptr<scene>& scn);
+scene_stats compute_stats(const scene* scn);
 ~~~
 
 Get scene statistics.
@@ -8352,13 +8323,13 @@ Procedural animation parameters.
 ~~~ .cpp
 struct proc_scene {
     std::string name;
-    std::vector<std::shared_ptr<proc_camera>> cameras;
-    std::vector<std::shared_ptr<proc_texture>> textures;
-    std::vector<std::shared_ptr<proc_material>> materials;
-    std::vector<std::shared_ptr<proc_shape>> shapes;
-    std::vector<std::shared_ptr<proc_environment>> environments;
-    std::vector<std::shared_ptr<proc_node>> nodes;
-    std::vector<std::shared_ptr<proc_animation>> animations;
+    std::vector<proc_camera*> cameras;
+    std::vector<proc_texture*> textures;
+    std::vector<proc_material*> materials;
+    std::vector<proc_shape*> shapes;
+    std::vector<proc_environment*> environments;
+    std::vector<proc_node*> nodes;
+    std::vector<proc_animation*> animations;
 }
 ~~~
 
@@ -8379,8 +8350,8 @@ Procedural scene.
 
 ~~~ .cpp
 struct proc_split_scene {
-    std::shared_ptr<proc_scene> scn;
-    std::vector<std::shared_ptr<proc_scene>> views;
+    proc_scene* scn;
+    std::vector<proc_scene*> views;
 }
 ~~~
 
@@ -8394,7 +8365,7 @@ Procedural scene with objects and lights split into separate groups.
 #### Function make_cornell_box_scene()
 
 ~~~ .cpp
-std::shared_ptr<scene> make_cornell_box_scene();
+scene* make_cornell_box_scene();
 ~~~
 
 Makes the Cornell Box scene.
@@ -8402,9 +8373,7 @@ Makes the Cornell Box scene.
 #### Function update_proc_elem()
 
 ~~~ .cpp
-void update_proc_elem(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<camera>& cam,
-    const std::shared_ptr<proc_camera>& tcam);
+void update_proc_elem(scene* scn, camera* cam, const proc_camera* tcam);
 ~~~
 
 Updates a procesural camera.
@@ -8412,9 +8381,7 @@ Updates a procesural camera.
 #### Function update_proc_elem()
 
 ~~~ .cpp
-void update_proc_elem(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<texture>& txt,
-    const std::shared_ptr<proc_texture>& ttxt);
+void update_proc_elem(scene* scn, texture* txt, const proc_texture* ttxt);
 ~~~
 
 Updates a procedural texture.
@@ -8422,9 +8389,7 @@ Updates a procedural texture.
 #### Function update_proc_elem()
 
 ~~~ .cpp
-void update_proc_elem(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<material>& mat,
-    const std::shared_ptr<proc_material>& tmat);
+void update_proc_elem(scene* scn, material* mat, const proc_material* tmat);
 ~~~
 
 Updates a procedural material.
@@ -8432,8 +8397,7 @@ Updates a procedural material.
 #### Function update_proc_elem()
 
 ~~~ .cpp
-void update_proc_elem(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<shape>& shp, const std::shared_ptr<proc_shape>& tshp);
+void update_proc_elem(scene* scn, shape* shp, const proc_shape* tshp);
 ~~~
 
 Updates a procedural shape, adding it to the scene if missing.
@@ -8441,9 +8405,8 @@ Updates a procedural shape, adding it to the scene if missing.
 #### Function update_proc_elem()
 
 ~~~ .cpp
-void update_proc_elem(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<environment>& env,
-    const std::shared_ptr<proc_environment>& tenv);
+void update_proc_elem(
+    scene* scn, environment* env, const proc_environment* tenv);
 ~~~
 
 Updates a procedural instance.
@@ -8451,8 +8414,7 @@ Updates a procedural instance.
 #### Function update_proc_elem()
 
 ~~~ .cpp
-void update_proc_elem(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<node>& nde, const std::shared_ptr<proc_node>& tndr);
+void update_proc_elem(scene* scn, node* nde, const proc_node* tndr);
 ~~~
 
 Updates a procedural node.
@@ -8460,9 +8422,8 @@ Updates a procedural node.
 #### Function update_proc_elem()
 
 ~~~ .cpp
-void update_proc_elem(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<animation_group>& anm,
-    const std::shared_ptr<proc_animation>& tndr);
+void update_proc_elem(
+    scene* scn, animation_group* anm, const proc_animation* tndr);
 ~~~
 
 Updates a procedural animation.
@@ -8470,9 +8431,8 @@ Updates a procedural animation.
 #### Function update_proc_elems()
 
 ~~~ .cpp
-void update_proc_elems(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<proc_scene>& tscn,
-    const std::unordered_set<std::shared_ptr<void>>& refresh =;
+void update_proc_elems(scene* scn, const proc_scene* tscn,
+    const std::unordered_set<void*>& refresh =;
 ~~~
 
 Updates a procedural scene, adding missing objects. Objects are only added
@@ -8481,8 +8441,7 @@ and never removed.
 #### Function make_proc_elems()
 
 ~~~ .cpp
-inline std::shared_ptr<scene> make_proc_elems(
-    const std::shared_ptr<proc_scene>& tscn);
+inline scene* make_proc_elems(const proc_scene* tscn);
 ~~~
 
 Makes a test scene. Convenience wrapper around `update_test_scene()`.
@@ -8490,7 +8449,7 @@ Makes a test scene. Convenience wrapper around `update_test_scene()`.
 #### Function proc_camera_presets()
 
 ~~~ .cpp
-std::vector<std::shared_ptr<proc_camera>>& proc_camera_presets();
+std::vector<proc_camera*>& proc_camera_presets();
 ~~~
 
 Procedural camera presets.
@@ -8498,7 +8457,7 @@ Procedural camera presets.
 #### Function proc_texture_presets()
 
 ~~~ .cpp
-std::vector<std::shared_ptr<proc_texture>>& proc_texture_presets();
+std::vector<proc_texture*>& proc_texture_presets();
 ~~~
 
 Procedural texture presets.
@@ -8506,7 +8465,7 @@ Procedural texture presets.
 #### Function proc_material_presets()
 
 ~~~ .cpp
-std::vector<std::shared_ptr<proc_material>>& proc_material_presets();
+std::vector<proc_material*>& proc_material_presets();
 ~~~
 
 Procedural material presets.
@@ -8514,7 +8473,7 @@ Procedural material presets.
 #### Function proc_shape_presets()
 
 ~~~ .cpp
-std::vector<std::shared_ptr<proc_shape>>& proc_shape_presets();
+std::vector<proc_shape*>& proc_shape_presets();
 ~~~
 
 Procedural shape presets.
@@ -8522,7 +8481,7 @@ Procedural shape presets.
 #### Function proc_environment_presets()
 
 ~~~ .cpp
-std::vector<std::shared_ptr<proc_environment>>& proc_environment_presets();
+std::vector<proc_environment*>& proc_environment_presets();
 ~~~
 
 Procedural environment presets.
@@ -8530,7 +8489,7 @@ Procedural environment presets.
 #### Function proc_node_presets()
 
 ~~~ .cpp
-std::vector<std::shared_ptr<proc_node>>& proc_node_presets();
+std::vector<proc_node*>& proc_node_presets();
 ~~~
 
 Procedural nodes presets.
@@ -8538,7 +8497,7 @@ Procedural nodes presets.
 #### Function proc_animation_presets()
 
 ~~~ .cpp
-std::vector<std::shared_ptr<proc_animation>>& proc_animation_presets();
+std::vector<proc_animation*>& proc_animation_presets();
 ~~~
 
 Procedural animation presets.
@@ -8546,7 +8505,7 @@ Procedural animation presets.
 #### Function proc_scene_presets()
 
 ~~~ .cpp
-std::vector<std::shared_ptr<proc_scene>>& proc_scene_presets();
+std::vector<proc_scene*>& proc_scene_presets();
 ~~~
 
 Test scene presets.
@@ -8554,7 +8513,7 @@ Test scene presets.
 #### Function proc_split_scene_presets()
 
 ~~~ .cpp
-std::vector<std::shared_ptr<proc_split_scene>>& proc_split_scene_presets();
+std::vector<proc_split_scene*>& proc_split_scene_presets();
 ~~~
 
 Test scene presets split into objects and lighting and cameras.
@@ -8562,7 +8521,7 @@ Test scene presets split into objects and lighting and cameras.
 #### Function remove_duplicates()
 
 ~~~ .cpp
-void remove_duplicates(const std::shared_ptr<proc_scene>& tscn);
+void remove_duplicates(const proc_scene* tscn);
 ~~~
 
 Remove duplicates based on name.
@@ -8570,7 +8529,7 @@ Remove duplicates based on name.
 #### Function load_proc_scene()
 
 ~~~ .cpp
-std::shared_ptr<proc_scene> load_proc_scene(const std::string& filename);
+proc_scene* load_proc_scene(const std::string& filename);
 ~~~
 
 Load test scene.
@@ -8578,8 +8537,7 @@ Load test scene.
 #### Function save_proc_scene()
 
 ~~~ .cpp
-void save_proc_scene(
-    const std::string& filename, const std::shared_ptr<proc_scene>& scn);
+void save_proc_scene(const std::string& filename, const proc_scene* scn);
 ~~~
 
 Save test scene.
@@ -8934,9 +8892,9 @@ the public API.
 
 ~~~ .cpp
 struct trace_light {
-    std::shared_ptr<shape> shp = nullptr;
+    const shape* shp = nullptr;
     frame3f frame = identity_frame3f;
-    std::shared_ptr<environment> env = nullptr;
+    const environment* env = nullptr;
 }
 ~~~
 
@@ -8954,7 +8912,7 @@ the the public API.
 ~~~ .cpp
 struct trace_lights {
     std::vector<trace_light> lights;
-    std::unordered_map<std::shared_ptr<shape>, distribution1f> shape_distribs;
+    std::unordered_map<const shape*, distribution1f> shape_distribs;
     distribution1f light_distrib;
     bool empty() const; 
     int size() const; 
@@ -8984,7 +8942,7 @@ Initialize trace pixels.
 #### Function make_trace_lights()
 
 ~~~ .cpp
-trace_lights make_trace_lights(const std::shared_ptr<scene>& scn);
+trace_lights make_trace_lights(const scene* scn);
 ~~~
 
 Initialize trace lights.
@@ -8992,8 +8950,7 @@ Initialize trace lights.
 #### Function trace_samples()
 
 ~~~ .cpp
-void trace_samples(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<camera>& cam, const std::shared_ptr<bvh_tree>& bvh,
+void trace_samples(const scene* scn, const camera* cam, const bvh_tree* bvh,
     const trace_lights& lights, image4f& img, image<trace_pixel>& pixels,
     int nsamples, const trace_params& params);
 ~~~
@@ -9003,10 +8960,9 @@ Trace the next `nsamples` samples.
 #### Function trace_samples_filtered()
 
 ~~~ .cpp
-void trace_samples_filtered(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<camera>& cam, const std::shared_ptr<bvh_tree>& bvh,
-    const trace_lights& lights, image4f& img, image<trace_pixel>& pixels,
-    int nsamples, const trace_params& params);
+void trace_samples_filtered(const scene* scn, const camera* cam,
+    const bvh_tree* bvh, const trace_lights& lights, image4f& img,
+    image<trace_pixel>& pixels, int nsamples, const trace_params& params);
 ~~~
 
 Trace the next `nsamples` samples with image filtering.
@@ -9014,9 +8970,8 @@ Trace the next `nsamples` samples with image filtering.
 #### Function trace_image()
 
 ~~~ .cpp
-inline image4f trace_image(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<camera>& cam, const std::shared_ptr<bvh_tree>& bvh,
-    const trace_params& params);
+inline image4f trace_image(const scene* scn, const camera* cam,
+    const bvh_tree* bvh, const trace_params& params);
 ~~~
 
 Trace the whole image.
@@ -9024,8 +8979,7 @@ Trace the whole image.
 #### Function trace_async_start()
 
 ~~~ .cpp
-void trace_async_start(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<camera>& cam, const std::shared_ptr<bvh_tree>& bvh,
+void trace_async_start(const scene* scn, const camera* cam, const bvh_tree* bvh,
     const trace_lights& lights, image4f& img, image<trace_pixel>& pixels,
     std::vector<std::thread>& threads, bool& stop_flag,
     const trace_params& params);
@@ -9353,12 +9307,12 @@ struct obj_scene {
     std::vector<vec2f> texcoord;
     std::vector<vec4f> color;
     std::vector<float> radius;
-    std::vector<std::shared_ptr<obj_object>> objects;
-    std::vector<std::shared_ptr<obj_material>> materials;
-    std::vector<std::shared_ptr<obj_texture>> textures;
-    std::vector<std::shared_ptr<obj_camera>> cameras;
-    std::vector<std::shared_ptr<obj_environment>> environments;
-    std::vector<std::shared_ptr<obj_node>> nodes;
+    std::vector<obj_object*> objects;
+    std::vector<obj_material*> materials;
+    std::vector<obj_texture*> textures;
+    std::vector<obj_camera*> cameras;
+    std::vector<obj_environment*> environments;
+    std::vector<obj_node*> nodes;
 }
 ~~~
 
@@ -9381,9 +9335,8 @@ Obj scene.
 #### Function load_obj()
 
 ~~~ .cpp
-std::shared_ptr<obj_scene> load_obj(const std::string& filename,
-    bool load_textures = false, bool skip_missing = false,
-    bool flip_texcoord = true, bool flip_tr = true);
+obj_scene* load_obj(const std::string& filename, bool load_textures = false,
+    bool skip_missing = false, bool flip_texcoord = true, bool flip_tr = true);
 ~~~
 
 Load an OBJ from file `filename`. Load textures if `load_textures` is true,
@@ -9394,9 +9347,9 @@ Texture coordinates and material Tr are flipped if `flip_texcoord` and
 #### Function save_obj()
 
 ~~~ .cpp
-void save_obj(const std::string& filename,
-    const std::shared_ptr<obj_scene>& model, bool save_textures = false,
-    bool skip_missing = false, bool flip_texcoord = true, bool flip_tr = true);
+void save_obj(const std::string& filename, const obj_scene* model,
+    bool save_textures = false, bool skip_missing = false,
+    bool flip_texcoord = true, bool flip_tr = true);
 ~~~
 
 Save an OBJ to file `filename`. Save textures if `save_textures` is true,
@@ -9548,8 +9501,8 @@ displaced accessor attributes pointed by `accessor.sparse.indices`.
 ~~~ .cpp
 struct glTFAccessorSparse : glTFProperty {
     int count = 0;
-    std::shared_ptr<glTFAccessorSparseIndices> indices = {};
-    std::shared_ptr<glTFAccessorSparseValues> values = {};
+    glTFAccessorSparseIndices* indices = {};
+    glTFAccessorSparseValues* values = {};
 }
 ~~~
 
@@ -9606,7 +9559,7 @@ struct glTFAccessor : glTFChildOfRootProperty {
     glTFAccessorType type = glTFAccessorType::NotSet;
     std::vector<float> max = {};
     std::vector<float> min = {};
-    std::shared_ptr<glTFAccessorSparse> sparse = {};
+    glTFAccessorSparse* sparse = {};
 }
 ~~~
 
@@ -9665,7 +9618,7 @@ The index of the node and TRS property that an animation channel targets.
 ~~~ .cpp
 struct glTFAnimationChannel : glTFProperty {
     glTFid<glTFAnimationSampler> sampler = {};
-    std::shared_ptr<glTFAnimationChannelTarget> target = {};
+    glTFAnimationChannelTarget* target = {};
 }
 ~~~
 
@@ -9716,10 +9669,10 @@ define a keyframe graph (but not its target).
 
 ~~~ .cpp
 struct glTFAnimation : glTFChildOfRootProperty {
-    std::vector<std::shared_ptr<glTFAnimationChannel>> channels = {};
-    std::vector<std::shared_ptr<glTFAnimationSampler>> samplers = {};
-    std::shared_ptr<glTFAnimationChannel> get( const glTFid<glTFAnimationChannel>& id) const; 
-    std::shared_ptr<glTFAnimationSampler> get( const glTFid<glTFAnimationSampler>& id) const; 
+    std::vector<glTFAnimationChannel*> channels = {};
+    std::vector<glTFAnimationSampler*> samplers = {};
+    glTFAnimationChannel* get(const glTFid<glTFAnimationChannel>& id) const; 
+    glTFAnimationSampler* get(const glTFid<glTFAnimationSampler>& id) const; 
 }
 ~~~
 
@@ -9871,8 +9824,8 @@ Values for glTFCamera::type
 
 ~~~ .cpp
 struct glTFCamera : glTFChildOfRootProperty {
-    std::shared_ptr<glTFCameraOrthographic> orthographic = {};
-    std::shared_ptr<glTFCameraPerspective> perspective = {};
+    glTFCameraOrthographic* orthographic = {};
+    glTFCameraPerspective* perspective = {};
     glTFCameraType type = glTFCameraType::NotSet;
 }
 ~~~
@@ -9993,10 +9946,10 @@ Occlusion texture information.
 ~~~ .cpp
 struct glTFMaterialPbrMetallicRoughness : glTFProperty {
     vec4f baseColorFactor = {1, 1, 1, 1};
-    std::shared_ptr<glTFTextureInfo> baseColorTexture = {};
+    glTFTextureInfo* baseColorTexture = {};
     float metallicFactor = 1;
     float roughnessFactor = 1;
-    std::shared_ptr<glTFTextureInfo> metallicRoughnessTexture = {};
+    glTFTextureInfo* metallicRoughnessTexture = {};
 }
 ~~~
 
@@ -10016,10 +9969,10 @@ material model from Physically-Based Rendering (PBR) methodology.
 ~~~ .cpp
 struct glTFMaterialPbrSpecularGlossiness : glTFProperty {
     vec4f diffuseFactor = {1, 1, 1, 1};
-    std::shared_ptr<glTFTextureInfo> diffuseTexture = {};
+    glTFTextureInfo* diffuseTexture = {};
     vec3f specularFactor = {1, 1, 1};
     float glossinessFactor = 1;
-    std::shared_ptr<glTFTextureInfo> specularGlossinessTexture = {};
+    glTFTextureInfo* specularGlossinessTexture = {};
 }
 ~~~
 
@@ -10052,12 +10005,11 @@ Values for glTFMaterial::alphaMode
 
 ~~~ .cpp
 struct glTFMaterial : glTFChildOfRootProperty {
-    std::shared_ptr<glTFMaterialPbrMetallicRoughness> pbrMetallicRoughness = {};
-    std::shared_ptr<glTFMaterialPbrSpecularGlossiness> pbrSpecularGlossiness =
-        {};
-    std::shared_ptr<glTFMaterialNormalTextureInfo> normalTexture = {};
-    std::shared_ptr<glTFMaterialOcclusionTextureInfo> occlusionTexture = {};
-    std::shared_ptr<glTFTextureInfo> emissiveTexture = {};
+    glTFMaterialPbrMetallicRoughness* pbrMetallicRoughness = {};
+    glTFMaterialPbrSpecularGlossiness* pbrSpecularGlossiness = {};
+    glTFMaterialNormalTextureInfo* normalTexture = {};
+    glTFMaterialOcclusionTextureInfo* occlusionTexture = {};
+    glTFTextureInfo* emissiveTexture = {};
     vec3f emissiveFactor = {0, 0, 0};
     glTFMaterialAlphaMode alphaMode = glTFMaterialAlphaMode::Opaque;
     float alphaCutoff = 0.5;
@@ -10128,7 +10080,7 @@ Geometry to be rendered with the given material.
 
 ~~~ .cpp
 struct glTFMesh : glTFChildOfRootProperty {
-    std::vector<std::shared_ptr<glTFMeshPrimitive>> primitives = {};
+    std::vector<glTFMeshPrimitive*> primitives = {};
     std::vector<float> weights = {};
 }
 ~~~
@@ -10300,34 +10252,34 @@ Joints and matrices defining a skin.
 struct glTF : glTFProperty {
     std::vector<std::string> extensionsUsed = {};
     std::vector<std::string> extensionsRequired = {};
-    std::vector<std::shared_ptr<glTFAccessor>> accessors = {};
-    std::vector<std::shared_ptr<glTFAnimation>> animations = {};
-    std::shared_ptr<glTFAsset> asset = {};
-    std::vector<std::shared_ptr<glTFBuffer>> buffers = {};
-    std::vector<std::shared_ptr<glTFBufferView>> bufferViews = {};
-    std::vector<std::shared_ptr<glTFCamera>> cameras = {};
-    std::vector<std::shared_ptr<glTFImage>> images = {};
-    std::vector<std::shared_ptr<glTFMaterial>> materials = {};
-    std::vector<std::shared_ptr<glTFMesh>> meshes = {};
-    std::vector<std::shared_ptr<glTFNode>> nodes = {};
-    std::vector<std::shared_ptr<glTFSampler>> samplers = {};
+    std::vector<glTFAccessor*> accessors = {};
+    std::vector<glTFAnimation*> animations = {};
+    glTFAsset* asset = {};
+    std::vector<glTFBuffer*> buffers = {};
+    std::vector<glTFBufferView*> bufferViews = {};
+    std::vector<glTFCamera*> cameras = {};
+    std::vector<glTFImage*> images = {};
+    std::vector<glTFMaterial*> materials = {};
+    std::vector<glTFMesh*> meshes = {};
+    std::vector<glTFNode*> nodes = {};
+    std::vector<glTFSampler*> samplers = {};
     glTFid<glTFScene> scene = {};
-    std::vector<std::shared_ptr<glTFScene>> scenes = {};
-    std::vector<std::shared_ptr<glTFSkin>> skins = {};
-    std::vector<std::shared_ptr<glTFTexture>> textures = {};
-    std::shared_ptr<glTFAccessor> get(const glTFid<glTFAccessor>& id) const; 
-    std::shared_ptr<glTFAnimation> get(const glTFid<glTFAnimation>& id) const; 
-    std::shared_ptr<glTFBuffer> get(const glTFid<glTFBuffer>& id) const; 
-    std::shared_ptr<glTFBufferView> get( const glTFid<glTFBufferView>& id) const; 
-    std::shared_ptr<glTFCamera> get(const glTFid<glTFCamera>& id) const; 
-    std::shared_ptr<glTFImage> get(const glTFid<glTFImage>& id) const; 
-    std::shared_ptr<glTFMaterial> get(const glTFid<glTFMaterial>& id) const; 
-    std::shared_ptr<glTFMesh> get(const glTFid<glTFMesh>& id) const; 
-    std::shared_ptr<glTFNode> get(const glTFid<glTFNode>& id) const; 
-    std::shared_ptr<glTFSampler> get(const glTFid<glTFSampler>& id) const; 
-    std::shared_ptr<glTFScene> get(const glTFid<glTFScene>& id) const; 
-    std::shared_ptr<glTFSkin> get(const glTFid<glTFSkin>& id) const; 
-    std::shared_ptr<glTFTexture> get(const glTFid<glTFTexture>& id) const; 
+    std::vector<glTFScene*> scenes = {};
+    std::vector<glTFSkin*> skins = {};
+    std::vector<glTFTexture*> textures = {};
+    glTFAccessor* get(const glTFid<glTFAccessor>& id) const; 
+    glTFAnimation* get(const glTFid<glTFAnimation>& id) const; 
+    glTFBuffer* get(const glTFid<glTFBuffer>& id) const; 
+    glTFBufferView* get(const glTFid<glTFBufferView>& id) const; 
+    glTFCamera* get(const glTFid<glTFCamera>& id) const; 
+    glTFImage* get(const glTFid<glTFImage>& id) const; 
+    glTFMaterial* get(const glTFid<glTFMaterial>& id) const; 
+    glTFMesh* get(const glTFid<glTFMesh>& id) const; 
+    glTFNode* get(const glTFid<glTFNode>& id) const; 
+    glTFSampler* get(const glTFid<glTFSampler>& id) const; 
+    glTFScene* get(const glTFid<glTFScene>& id) const; 
+    glTFSkin* get(const glTFid<glTFSkin>& id) const; 
+    glTFTexture* get(const glTFid<glTFTexture>& id) const; 
 }
 ~~~
 
@@ -10369,8 +10321,8 @@ The root object for a glTF asset.
 #### Function load_gltf()
 
 ~~~ .cpp
-std::shared_ptr<glTF> load_gltf(const std::string& filename,
-    bool load_bin = true, bool load_img = false, bool skip_missing = false);
+glTF* load_gltf(const std::string& filename, bool load_bin = true,
+    bool load_img = false, bool skip_missing = false);
 ~~~
 
 Load a gltf file `filename` from disk. Load binaries and images only if
@@ -10380,8 +10332,8 @@ is false.
 #### Function load_binary_gltf()
 
 ~~~ .cpp
-std::shared_ptr<glTF> load_binary_gltf(const std::string& filename,
-    bool load_bin = true, bool load_img = false, bool skip_missing = false);
+glTF* load_binary_gltf(const std::string& filename, bool load_bin = true,
+    bool load_img = false, bool skip_missing = false);
 ~~~
 
 Load a binary gltf file `filename` from disk. Load binaries and images only
@@ -10391,7 +10343,7 @@ if `load_bin` and `load_img` are true, reporting errors only if
 #### Function save_gltf()
 
 ~~~ .cpp
-void save_gltf(const std::string& filename, const std::shared_ptr<glTF>& gltf,
+void save_gltf(const std::string& filename, const glTF* gltf,
     bool save_bin = true, bool save_img = false);
 ~~~
 
@@ -10401,9 +10353,8 @@ Save a gltf file `filename` to disk. Save binaries and images only if
 #### Function save_binary_gltf()
 
 ~~~ .cpp
-void save_binary_gltf(const std::string& filename,
-    const std::shared_ptr<glTF>& gltf, bool save_bin = true,
-    bool save_img = false);
+void save_binary_gltf(const std::string& filename, const glTF* gltf,
+    bool save_bin = true, bool save_img = false);
 ~~~
 
 Save a gltf file `filename` to disk. Save binaries and images only if
@@ -10412,7 +10363,7 @@ Save a gltf file `filename` to disk. Save binaries and images only if
 #### Function node_transform()
 
 ~~~ .cpp
-inline mat4f node_transform(const std::shared_ptr<glTFNode>& node);
+inline mat4f node_transform(const glTFNode* node);
 ~~~
 
 Computes the local node transform and its inverse.
@@ -10421,7 +10372,7 @@ Computes the local node transform and its inverse.
 
 ~~~ .cpp
 struct accessor_view {
-    accessor_view(const std::shared_ptr<glTF>& gltf, const std::shared_ptr<glTFAccessor>& accessor); 
+    accessor_view(const glTF* gltf, const glTFAccessor* accessor); 
     int size() const; 
     int count() const; 
     int ncomp() const; 
@@ -10477,7 +10428,7 @@ Svg path.
 
 ~~~ .cpp
 struct svg_shape {
-    std::vector<std::shared_ptr<svg_path>> paths;
+    std::vector<svg_path*> paths;
 }
 ~~~
 
@@ -10491,7 +10442,7 @@ Svg shape.
 
 ~~~ .cpp
 struct svg_scene {
-    std::vector<std::shared_ptr<svg_shape>> shapes;
+    std::vector<svg_shape*> shapes;
 }
 ~~~
 
@@ -10504,7 +10455,7 @@ Svg scene.
 #### Function load_svg()
 
 ~~~ .cpp
-std::shared_ptr<svg_scene> load_svg(const std::string& filename);
+svg_scene* load_svg(const std::string& filename);
 ~~~
 
 Load an SVG.
@@ -10512,8 +10463,7 @@ Load an SVG.
 #### Function save_svg()
 
 ~~~ .cpp
-void save_svg(
-    const std::string& filename, const std::shared_ptr<svg_scene>& svg);
+void save_svg(const std::string& filename, const svg_scene* svg);
 ~~~
 
 Save an SVG.
@@ -10938,7 +10888,7 @@ Logger object. A logger can output messages to console an a file.
 #### Function make_logger()
 
 ~~~ .cpp
-inline std::shared_ptr<logger> make_logger(const std::string& filename = "",
+inline logger* make_logger(const std::string& filename = "",
     bool console = true, bool verbose = true, bool file_append = true);
 ~~~
 
@@ -10948,7 +10898,7 @@ and the specified verbosity level.
 #### Function get_default_logger()
 
 ~~~ .cpp
-inline std::shared_ptr<logger> get_default_logger();
+inline logger* get_default_logger();
 ~~~
 
 Get the default logger.
@@ -10957,8 +10907,8 @@ Get the default logger.
 
 ~~~ .cpp
 template <typename... Args>
-inline void log_info(const std::shared_ptr<logger>& lgr, const std::string& msg,
-    const Args&... args);
+inline void log_info(
+    const logger* lgr, const std::string& msg, const Args&... args);
 ~~~
 
 Log an info message.
@@ -10967,8 +10917,8 @@ Log an info message.
 
 ~~~ .cpp
 template <typename... Args>
-inline void log_warning(const std::shared_ptr<logger>& lgr,
-    const std::string& msg, const Args&... args);
+inline void log_warning(
+    const logger* lgr, const std::string& msg, const Args&... args);
 ~~~
 
 Log an info message.
@@ -10977,8 +10927,8 @@ Log an info message.
 
 ~~~ .cpp
 template <typename... Args>
-inline void log_error(const std::shared_ptr<logger>& lgr,
-    const std::string& msg, const Args&... args);
+inline void log_error(
+    const logger* lgr, const std::string& msg, const Args&... args);
 ~~~
 
 Log an error message.
@@ -10987,8 +10937,8 @@ Log an error message.
 
 ~~~ .cpp
 template <typename... Args>
-inline void log_fatal(const std::shared_ptr<logger>& lgr,
-    const std::string& msg, const Args&... args);
+inline void log_fatal(
+    const logger* lgr, const std::string& msg, const Args&... args);
 ~~~
 
 Log a fatal message and exit.
@@ -11205,8 +11155,8 @@ OpenGL texture object. Members are not part of the public API.
 #### Function update_texture()
 
 ~~~ .cpp
-inline void update_texture(const std::shared_ptr<gl_texture>& txt, int w, int h,
-    int nc, const float* pixels, bool linear, bool mipmap, bool as_float);
+inline void update_texture(gl_texture& txt, int w, int h, int nc,
+    const float* pixels, bool linear, bool mipmap, bool as_float);
 ~~~
 
 Updates a texture with pixels values of size w, h with nc number of
@@ -11215,9 +11165,8 @@ components (1-4). Internally use float if as_float and filtering if filter.
 #### Function update_texture()
 
 ~~~ .cpp
-inline void update_texture(const std::shared_ptr<gl_texture>& txt, int w, int h,
-    int nc, const unsigned char* pixels, bool linear, bool mipmap,
-    bool as_srgb);
+inline void update_texture(gl_texture& txt, int w, int h, int nc,
+    const unsigned char* pixels, bool linear, bool mipmap, bool as_srgb);
 ~~~
 
 Updates a texture with pixels values of size w, h with nc number of
@@ -11226,8 +11175,8 @@ components (1-4). Internally use float if as_float and filtering if filter.
 #### Function update_texture()
 
 ~~~ .cpp
-inline void update_texture(const std::shared_ptr<gl_texture>& txt,
-    const image4f& img, bool linear, bool mipmap, bool as_float);
+inline void update_texture(gl_texture& txt, const image4f& img, bool linear,
+    bool mipmap, bool as_float);
 ~~~
 
 Updates a texture with pixels values from an image.
@@ -11236,8 +11185,8 @@ Internally use float if as_float and filtering if filter.
 #### Function update_texture()
 
 ~~~ .cpp
-inline void update_texture(const std::shared_ptr<gl_texture>& txt,
-    const image4b& img, bool linear, bool mipmap, bool as_srgb);
+inline void update_texture(gl_texture& txt, const image4b& img, bool linear,
+    bool mipmap, bool as_srgb);
 ~~~
 
 Updates a texture with pixels values from an image.
@@ -11246,8 +11195,7 @@ Internally use float if as_float and filtering if filter.
 #### Function update_texture()
 
 ~~~ .cpp
-inline void update_texture(
-    const std::shared_ptr<gl_texture>& txt, const image4f& img);
+inline void update_texture(gl_texture& txt, const image4f& img);
 ~~~
 
 Updates a texture with pixels values from an image.
@@ -11255,8 +11203,7 @@ Updates a texture with pixels values from an image.
 #### Function update_texture()
 
 ~~~ .cpp
-inline void update_texture(
-    const std::shared_ptr<gl_texture>& txt, const image4b& img);
+inline void update_texture(gl_texture& txt, const image4b& img);
 ~~~
 
 Updates a texture with pixels values from an image.
@@ -11264,7 +11211,7 @@ Updates a texture with pixels values from an image.
 #### Function make_texture()
 
 ~~~ .cpp
-inline std::shared_ptr<gl_texture> make_texture(
+inline gl_texture make_texture(
     const image4f& img, bool linear, bool mipmap, bool as_float);
 ~~~
 
@@ -11273,7 +11220,7 @@ Creates a texture from an image. Convenience wrapper to update_texture().
 #### Function make_texture()
 
 ~~~ .cpp
-inline std::shared_ptr<gl_texture> make_texture(
+inline gl_texture make_texture(
     const image4b& img, bool linear, bool mipmap, bool as_srgb);
 ~~~
 
@@ -11282,7 +11229,7 @@ Creates a texture from an image. Convenience wrapper to update_texture().
 #### Function bind_texture()
 
 ~~~ .cpp
-void bind_texture(const std::shared_ptr<gl_texture>& txt, uint unit);
+void bind_texture(const gl_texture& txt, uint unit);
 ~~~
 
 Binds a texture to a texture unit.
@@ -11290,15 +11237,23 @@ Binds a texture to a texture unit.
 #### Function unbind_texture()
 
 ~~~ .cpp
-void unbind_texture(const std::shared_ptr<gl_texture>& txt, uint unit);
+void unbind_texture(const gl_texture& txt, uint unit);
 ~~~
 
 Unbinds a texture.
 
+#### Function clear_texture()
+
+~~~ .cpp
+void clear_texture(gl_texture& txt);
+~~~
+
+Clears the OpenGL buffer.
+
 #### Function get_texture_id()
 
 ~~~ .cpp
-inline uint get_texture_id(const std::shared_ptr<gl_texture>& txt);
+inline uint get_texture_id(const gl_texture& txt);
 ~~~
 
 Get texture id.
@@ -11306,7 +11261,7 @@ Get texture id.
 #### Function is_texture_valid()
 
 ~~~ .cpp
-inline bool is_texture_valid(const std::shared_ptr<gl_texture>& txt);
+inline bool is_texture_valid(const gl_texture& txt);
 ~~~
 
 Check if defined.
@@ -11392,8 +11347,8 @@ OpenGL vertex/element buffer. Members are not part of the public API.
 #### Function update_vertex_buffer()
 
 ~~~ .cpp
-inline void update_vertex_buffer(const std::shared_ptr<gl_vertex_buffer>& buf,
-    int num, int ncomp, const float* values, bool dynamic = false);
+inline void update_vertex_buffer(gl_vertex_buffer& buf, int num, int ncomp,
+    const float* values, bool dynamic = false);
 ~~~
 
 Updates the buffer with new data.
@@ -11401,8 +11356,8 @@ Updates the buffer with new data.
 #### Function update_vertex_buffer()
 
 ~~~ .cpp
-inline void update_vertex_buffer(const std::shared_ptr<gl_vertex_buffer>& buf,
-    int num, int ncomp, const int* values, bool dynamic = false);
+inline void update_vertex_buffer(gl_vertex_buffer& buf, int num, int ncomp,
+    const int* values, bool dynamic = false);
 ~~~
 
 Updates the buffer with new data.
@@ -11410,7 +11365,7 @@ Updates the buffer with new data.
 #### Function update_vertex_buffer()
 
 ~~~ .cpp
-inline void update_vertex_buffer(const std::shared_ptr<gl_vertex_buffer>& buf,
+inline void update_vertex_buffer(gl_vertex_buffer& buf,
     const std::vector<float>& values, bool dynamic = false);
 ~~~
 
@@ -11419,7 +11374,7 @@ Updates the buffer with new data.
 #### Function update_vertex_buffer()
 
 ~~~ .cpp
-inline void update_vertex_buffer(const std::shared_ptr<gl_vertex_buffer>& buf,
+inline void update_vertex_buffer(gl_vertex_buffer& buf,
     const std::vector<vec2f>& values, bool dynamic = false);
 ~~~
 
@@ -11428,7 +11383,7 @@ Updates the buffer with new data.
 #### Function update_vertex_buffer()
 
 ~~~ .cpp
-inline void update_vertex_buffer(const std::shared_ptr<gl_vertex_buffer>& buf,
+inline void update_vertex_buffer(gl_vertex_buffer& buf,
     const std::vector<vec3f>& values, bool dynamic = false);
 ~~~
 
@@ -11437,7 +11392,7 @@ Updates the buffer with new data.
 #### Function update_vertex_buffer()
 
 ~~~ .cpp
-inline void update_vertex_buffer(const std::shared_ptr<gl_vertex_buffer>& buf,
+inline void update_vertex_buffer(gl_vertex_buffer& buf,
     const std::vector<vec4f>& values, bool dynamic = false);
 ~~~
 
@@ -11446,7 +11401,7 @@ Updates the buffer with new data.
 #### Function update_vertex_buffer()
 
 ~~~ .cpp
-inline void update_vertex_buffer(const std::shared_ptr<gl_vertex_buffer>& buf,
+inline void update_vertex_buffer(gl_vertex_buffer& buf,
     const std::vector<int>& values, bool dynamic = false);
 ~~~
 
@@ -11455,7 +11410,7 @@ Updates the buffer with new data.
 #### Function update_vertex_buffer()
 
 ~~~ .cpp
-inline void update_vertex_buffer(const std::shared_ptr<gl_vertex_buffer>& buf,
+inline void update_vertex_buffer(gl_vertex_buffer& buf,
     const std::vector<vec2i>& values, bool dynamic = false);
 ~~~
 
@@ -11464,7 +11419,7 @@ Updates the buffer with new data.
 #### Function update_vertex_buffer()
 
 ~~~ .cpp
-inline void update_vertex_buffer(const std::shared_ptr<gl_vertex_buffer>& buf,
+inline void update_vertex_buffer(gl_vertex_buffer& buf,
     const std::vector<vec3i>& values, bool dynamic = false);
 ~~~
 
@@ -11473,7 +11428,7 @@ Updates the buffer with new data.
 #### Function update_vertex_buffer()
 
 ~~~ .cpp
-inline void update_vertex_buffer(const std::shared_ptr<gl_vertex_buffer>& buf,
+inline void update_vertex_buffer(gl_vertex_buffer& buf,
     const std::vector<vec4i>& values, bool dynamic = false);
 ~~~
 
@@ -11483,7 +11438,7 @@ Updates the buffer with new data.
 
 ~~~ .cpp
 template <typename T>
-inline std::shared_ptr<gl_vertex_buffer> make_vertex_buffer(
+inline gl_vertex_buffer make_vertex_buffer(
     const std::vector<T>& values, bool dynamic = false);
 ~~~
 
@@ -11492,8 +11447,7 @@ Make a buffer with new data.
 #### Function bind_vertex_buffer()
 
 ~~~ .cpp
-void bind_vertex_buffer(
-    const std::shared_ptr<gl_vertex_buffer>& buf, uint vattr);
+void bind_vertex_buffer(const gl_vertex_buffer& buf, uint vattr);
 ~~~
 
 Bind the buffer at a particular attribute location.
@@ -11501,8 +11455,7 @@ Bind the buffer at a particular attribute location.
 #### Function unbind_vertex_buffer()
 
 ~~~ .cpp
-void unbind_vertex_buffer(
-    const std::shared_ptr<gl_vertex_buffer>& buf, uint vattr);
+void unbind_vertex_buffer(const gl_vertex_buffer& buf, uint vattr);
 ~~~
 
 Unbind the buffer.
@@ -11518,7 +11471,7 @@ Unbind the buffer.
 #### Function get_vertex_buffer_id()
 
 ~~~ .cpp
-inline uint get_vertex_buffer_id(const std::shared_ptr<gl_vertex_buffer>& buf);
+inline uint get_vertex_buffer_id(const gl_vertex_buffer& buf);
 ~~~
 
 Get buffer id.
@@ -11526,11 +11479,18 @@ Get buffer id.
 #### Function is_vertex_buffer_valid()
 
 ~~~ .cpp
-inline bool is_vertex_buffer_valid(
-    const std::shared_ptr<gl_vertex_buffer>& buf);
+inline bool is_vertex_buffer_valid(const gl_vertex_buffer& buf);
 ~~~
 
 Check if defined.
+
+#### Function clear_vertex_buffer()
+
+~~~ .cpp
+void clear_vertex_buffer(gl_vertex_buffer& buf);
+~~~
+
+Clears OpenGL state.
 
 #### Struct gl_element_buffer
 
@@ -11553,8 +11513,8 @@ OpenGL element array buffer. Members are not part of the public API.
 #### Function update_element_buffer()
 
 ~~~ .cpp
-inline void update_element_buffer(const std::shared_ptr<gl_element_buffer>& buf,
-    int num, int ncomp, const int* values, bool dynamic = false);
+inline void update_element_buffer(gl_element_buffer& buf, int num, int ncomp,
+    const int* values, bool dynamic = false);
 ~~~
 
 Updates the buffer with new data.
@@ -11562,7 +11522,7 @@ Updates the buffer with new data.
 #### Function update_element_buffer()
 
 ~~~ .cpp
-inline void update_element_buffer(const std::shared_ptr<gl_element_buffer>& buf,
+inline void update_element_buffer(gl_element_buffer& buf,
     const std::vector<int>& values, bool dynamic = false);
 ~~~
 
@@ -11571,7 +11531,7 @@ Updates the bufferwith new data.
 #### Function update_element_buffer()
 
 ~~~ .cpp
-inline void update_element_buffer(const std::shared_ptr<gl_element_buffer>& buf,
+inline void update_element_buffer(gl_element_buffer& buf,
     const std::vector<vec2i>& values, bool dynamic = false);
 ~~~
 
@@ -11580,7 +11540,7 @@ Updates the buffer with new data.
 #### Function update_element_buffer()
 
 ~~~ .cpp
-inline void update_element_buffer(const std::shared_ptr<gl_element_buffer>& buf,
+inline void update_element_buffer(gl_element_buffer& buf,
     const std::vector<vec3i>& values, bool dynamic = false);
 ~~~
 
@@ -11589,7 +11549,7 @@ Updates the buffer with new data.
 #### Function update_element_buffer()
 
 ~~~ .cpp
-inline void update_element_buffer(const std::shared_ptr<gl_element_buffer>& buf,
+inline void update_element_buffer(gl_element_buffer& buf,
     const std::vector<vec4i>& values, bool dynamic = false);
 ~~~
 
@@ -11599,7 +11559,7 @@ Updates the buffer with new data.
 
 ~~~ .cpp
 template <typename T>
-inline std::shared_ptr<gl_element_buffer> make_element_buffer(
+inline gl_element_buffer make_element_buffer(
     const std::vector<T>& values, bool dynamic = false);
 ~~~
 
@@ -11608,7 +11568,7 @@ Make a buffer with new data.
 #### Function draw_elems()
 
 ~~~ .cpp
-void draw_elems(const std::shared_ptr<gl_element_buffer>& buf);
+void draw_elems(const gl_element_buffer& buf);
 ~~~
 
 Draws elements.
@@ -11616,8 +11576,7 @@ Draws elements.
 #### Function get_element_buffer_id()
 
 ~~~ .cpp
-inline uint get_element_buffer_id(
-    const std::shared_ptr<gl_element_buffer>& buf);
+inline uint get_element_buffer_id(const gl_element_buffer& buf);
 ~~~
 
 Get id
@@ -11625,11 +11584,18 @@ Get id
 #### Function is_element_buffer_valid()
 
 ~~~ .cpp
-inline bool is_element_buffer_valid(
-    const std::shared_ptr<gl_element_buffer>& buf);
+inline bool is_element_buffer_valid(const gl_element_buffer& buf);
 ~~~
 
 Check if defined
+
+#### Function clear_element_buffer()
+
+~~~ .cpp
+void clear_element_buffer(gl_element_buffer& buf);
+~~~
+
+Clears OpenGL state.
 
 #### Struct gl_program
 
@@ -11639,7 +11605,6 @@ struct gl_program {
     uint vid = 0;
     uint fid = 0;
     uint vao = 0;
-    ~gl_program(); 
 }
 ~~~
 
@@ -11650,14 +11615,12 @@ OpenGL program. Members are not part of the public API.
     - vid:      Vertex shader id.
     - fid:      Fragment shader id.
     - vao:      Vertex array object.
-    - ~gl_program():      Cleanup.
 
 
 #### Function make_program()
 
 ~~~ .cpp
-std::shared_ptr<gl_program> make_program(
-    const std::string& vertex, const std::string& fragment);
+gl_program make_program(const std::string& vertex, const std::string& fragment);
 ~~~
 
 Creates an OpenGL program from vertex and fragment code.
@@ -11666,7 +11629,7 @@ Creates an OpenGL program from vertex and fragment code.
 
 ~~~ .cpp
 int get_program_uniform_location(
-    const std::shared_ptr<gl_program>& prog, const std::string& name);
+    const gl_program& prog, const std::string& name);
 ~~~
 
 Get uniform location.
@@ -11675,7 +11638,7 @@ Get uniform location.
 
 ~~~ .cpp
 int get_program_attrib_location(
-    const std::shared_ptr<gl_program>& prog, const std::string& name);
+    const gl_program& prog, const std::string& name);
 ~~~
 
 Get attribute location.
@@ -11684,7 +11647,7 @@ Get attribute location.
 
 ~~~ .cpp
 std::vector<std::pair<std::string, int>> get_program_uniforms_names(
-    const std::shared_ptr<gl_program>& prog);
+    const gl_program& prog);
 ~~~
 
 Get the names of all uniforms.
@@ -11693,7 +11656,7 @@ Get the names of all uniforms.
 
 ~~~ .cpp
 std::vector<std::pair<std::string, int>> get_program_attributes_names(
-    const std::shared_ptr<gl_program>& prog);
+    const gl_program& prog);
 ~~~
 
 Get the names of all attributes.
@@ -11701,8 +11664,8 @@ Get the names of all attributes.
 #### Function set_program_uniform()
 
 ~~~ .cpp
-bool set_program_uniform(const std::shared_ptr<gl_program>& prog, int pos,
-    const int* val, int ncomp, int count);
+bool set_program_uniform(
+    const gl_program& prog, int pos, const int* val, int ncomp, int count);
 ~~~
 
 Set uniform integer values `val` for program `prog` and variable `pos`.
@@ -11711,8 +11674,8 @@ The values have `nc` number of components (1-4) and `count` elements.
 #### Function set_program_uniform()
 
 ~~~ .cpp
-bool set_program_uniform(const std::shared_ptr<gl_program>& prog, int pos,
-    const float* val, int ncomp, int count);
+bool set_program_uniform(
+    const gl_program& prog, int pos, const float* val, int ncomp, int count);
 ~~~
 
 Set uniform float values `val` for program `prog` and variable `pos`.
@@ -11721,8 +11684,7 @@ The values have `nc` number of components (1-4) and `count` elements.
 #### Function set_program_uniform()
 
 ~~~ .cpp
-inline bool set_program_uniform(
-    const std::shared_ptr<gl_program>& prog, int var, bool val);
+inline bool set_program_uniform(const gl_program& prog, int var, bool val);
 ~~~
 
 Set uniform value.
@@ -11730,8 +11692,7 @@ Set uniform value.
 #### Function set_program_uniform()
 
 ~~~ .cpp
-inline bool set_program_uniform(
-    const std::shared_ptr<gl_program>& prog, int var, int val);
+inline bool set_program_uniform(const gl_program& prog, int var, int val);
 ~~~
 
 Set uniform value.
@@ -11739,8 +11700,7 @@ Set uniform value.
 #### Function set_program_uniform()
 
 ~~~ .cpp
-inline bool set_program_uniform(
-    const std::shared_ptr<gl_program>& prog, int var, float val);
+inline bool set_program_uniform(const gl_program& prog, int var, float val);
 ~~~
 
 Set uniform value.
@@ -11750,7 +11710,7 @@ Set uniform value.
 ~~~ .cpp
 template <typename T, int N>
 inline bool set_program_uniform(
-    const std::shared_ptr<gl_program>& prog, int var, const vec<T, N>& val);
+    const gl_program& prog, int var, const vec<T, N>& val);
 ~~~
 
 Set uniform value.
@@ -11760,7 +11720,7 @@ Set uniform value.
 ~~~ .cpp
 template <typename T>
 inline bool set_program_uniform(
-    const std::shared_ptr<gl_program>& prog, int var, const mat<T, 4>& val);
+    const gl_program& prog, int var, const mat<T, 4>& val);
 ~~~
 
 Set uniform value.
@@ -11770,7 +11730,7 @@ Set uniform value.
 ~~~ .cpp
 template <typename T>
 inline bool set_program_uniform(
-    const std::shared_ptr<gl_program>& prog, int var, const frame<T, 3>& val);
+    const gl_program& prog, int var, const frame<T, 3>& val);
 ~~~
 
 Set uniform value.
@@ -11779,7 +11739,7 @@ Set uniform value.
 
 ~~~ .cpp
 inline bool set_program_uniform(
-    const std::shared_ptr<gl_program>& prog, int var, const int* val, int num);
+    const gl_program& prog, int var, const int* val, int num);
 ~~~
 
 Set uniform array.
@@ -11787,8 +11747,8 @@ Set uniform array.
 #### Function set_program_uniform()
 
 ~~~ .cpp
-inline bool set_program_uniform(const std::shared_ptr<gl_program>& prog,
-    int var, const float* val, int num);
+inline bool set_program_uniform(
+    const gl_program& prog, int var, const float* val, int num);
 ~~~
 
 Set uniform array.
@@ -11797,8 +11757,8 @@ Set uniform array.
 
 ~~~ .cpp
 template <typename T, int N>
-inline bool set_program_uniform(const std::shared_ptr<gl_program>& prog,
-    int var, const vec<T, N>* val, int num);
+inline bool set_program_uniform(
+    const gl_program& prog, int var, const vec<T, N>* val, int num);
 ~~~
 
 Set uniform array.
@@ -11807,8 +11767,8 @@ Set uniform array.
 
 ~~~ .cpp
 template <typename T>
-inline bool set_program_uniform(const std::shared_ptr<gl_program>& prog,
-    int var, const mat<T, 4>* val, int num);
+inline bool set_program_uniform(
+    const gl_program& prog, int var, const mat<T, 4>* val, int num);
 ~~~
 
 Set uniform array.
@@ -11817,8 +11777,8 @@ Set uniform array.
 
 ~~~ .cpp
 template <typename T>
-inline bool set_program_uniform(const std::shared_ptr<gl_program>& prog,
-    int var, const frame<T, 3>* val, int num);
+inline bool set_program_uniform(
+    const gl_program& prog, int var, const frame<T, 3>* val, int num);
 ~~~
 
 Set uniform array.
@@ -11827,8 +11787,8 @@ Set uniform array.
 
 ~~~ .cpp
 template <typename T>
-inline bool set_program_uniform(const std::shared_ptr<gl_program>& prog,
-    const std::string& var, const T& val);
+inline bool set_program_uniform(
+    const gl_program& prog, const std::string& var, const T& val);
 ~~~
 
 Set uniform value for names variable.
@@ -11837,8 +11797,8 @@ Set uniform value for names variable.
 
 ~~~ .cpp
 template <typename T>
-inline bool set_program_uniform(const std::shared_ptr<gl_program>& prog,
-    const std::string& var, const T* val, int num);
+inline bool set_program_uniform(
+    const gl_program& prog, const std::string& var, const T* val, int num);
 ~~~
 
 Set uniform array for names variable.
@@ -11846,9 +11806,8 @@ Set uniform array for names variable.
 #### Function set_program_uniform_texture()
 
 ~~~ .cpp
-bool set_program_uniform_texture(const std::shared_ptr<gl_program>& prog,
-    int pos, const std::shared_ptr<gl_texture>& txt,
-    const gl_texture_info& tinfo, uint tunit);
+bool set_program_uniform_texture(const gl_program& prog, int pos,
+    const gl_texture& txt, const gl_texture_info& tinfo, uint tunit);
 ~~~
 
 Set uniform texture.
@@ -11856,9 +11815,9 @@ Set uniform texture.
 #### Function set_program_uniform_texture()
 
 ~~~ .cpp
-inline bool set_program_uniform_texture(const std::shared_ptr<gl_program>& prog,
-    int var, int varon, const std::shared_ptr<gl_texture>& txt,
-    const gl_texture_info& tinfo, uint tunit);
+inline bool set_program_uniform_texture(const gl_program& prog, int var,
+    int varon, const gl_texture& txt, const gl_texture_info& tinfo,
+    uint tunit);
 ~~~
 
 Set uniform texture with an additionasl texture enable flags.
@@ -11866,9 +11825,9 @@ Set uniform texture with an additionasl texture enable flags.
 #### Function set_program_uniform_texture()
 
 ~~~ .cpp
-inline bool set_program_uniform_texture(const std::shared_ptr<gl_program>& prog,
-    const std::string& var, const std::shared_ptr<gl_texture>& txt,
-    const gl_texture_info& tinfo, uint tunit);
+inline bool set_program_uniform_texture(const gl_program& prog,
+    const std::string& var, const gl_texture& txt, const gl_texture_info& tinfo,
+    uint tunit);
 ~~~
 
 Set uniform texture.
@@ -11876,10 +11835,9 @@ Set uniform texture.
 #### Function set_program_uniform_texture()
 
 ~~~ .cpp
-inline bool set_program_uniform_texture(const std::shared_ptr<gl_program>& prog,
-    const std::string& var, const std::string& varon,
-    const std::shared_ptr<gl_texture>& txt, const gl_texture_info& tinfo,
-    uint tunit);
+inline bool set_program_uniform_texture(const gl_program& prog,
+    const std::string& var, const std::string& varon, const gl_texture& txt,
+    const gl_texture_info& tinfo, uint tunit);
 ~~~
 
 Set uniform texture with an additionasl texture enable flags.
@@ -11887,8 +11845,8 @@ Set uniform texture with an additionasl texture enable flags.
 #### Function set_program_vertattr()
 
 ~~~ .cpp
-bool set_program_vertattr(const std::shared_ptr<gl_program>& prog, int pos,
-    const float* value, int nc);
+bool set_program_vertattr(
+    const gl_program& prog, int pos, const float* value, int nc);
 ~~~
 
 Sets a constant `value` of `nc` components for the vertex attribute at
@@ -11898,7 +11856,7 @@ Sets a constant `value` of `nc` components for the vertex attribute at
 
 ~~~ .cpp
 bool set_program_vertattr(
-    const std::shared_ptr<gl_program>& prog, int pos, const int* value, int nc);
+    const gl_program& prog, int pos, const int* value, int nc);
 ~~~
 
 Sets a constant `value` of `nc` components for the vertex attribute at
@@ -11907,8 +11865,8 @@ Sets a constant `value` of `nc` components for the vertex attribute at
 #### Function set_program_vertattr()
 
 ~~~ .cpp
-bool set_program_vertattr(const std::shared_ptr<gl_program>& prog,
-    const std::string& var, const std::shared_ptr<gl_vertex_buffer>& buf);
+bool set_program_vertattr(const gl_program& prog, const std::string& var,
+    const gl_vertex_buffer& buf);
 ~~~
 
 Binds a buffer to a vertex attribute.
@@ -11916,8 +11874,8 @@ Binds a buffer to a vertex attribute.
 #### Function set_program_vertattr()
 
 ~~~ .cpp
-bool set_program_vertattr(const std::shared_ptr<gl_program>& prog, int pos,
-    const std::shared_ptr<gl_vertex_buffer>& buf, int nc, const float* def);
+bool set_program_vertattr(const gl_program& prog, int pos,
+    const gl_vertex_buffer& buf, int nc, const float* def);
 ~~~
 
 Binds a buffer to a vertex attribute, or a constant value if the buffer is
@@ -11927,9 +11885,8 @@ empty.
 
 ~~~ .cpp
 template <typename T, int N>
-inline bool set_program_vertattr(const std::shared_ptr<gl_program>& prog,
-    int var, const std::shared_ptr<gl_vertex_buffer>& buf,
-    const vec<T, N>& def);
+inline bool set_program_vertattr(const gl_program& prog, int var,
+    const gl_vertex_buffer& buf, const vec<T, N>& def);
 ~~~
 
 Binds a buffer or constant to a vertex attribute.
@@ -11938,9 +11895,8 @@ Binds a buffer or constant to a vertex attribute.
 
 ~~~ .cpp
 template <typename T, int N>
-inline bool set_program_vertattr(const std::shared_ptr<gl_program>& prog,
-    const std::string& var, const std::shared_ptr<gl_vertex_buffer>& buf,
-    const vec<T, N>& def);
+inline bool set_program_vertattr(const gl_program& prog, const std::string& var,
+    const gl_vertex_buffer& buf, const vec<T, N>& def);
 ~~~
 
 Binds a buffer or constant to a vertex attribute.
@@ -11948,7 +11904,7 @@ Binds a buffer or constant to a vertex attribute.
 #### Function is_program_valid()
 
 ~~~ .cpp
-inline bool is_program_valid(const std::shared_ptr<gl_program>& prog);
+inline bool is_program_valid(const gl_program& prog);
 ~~~
 
 Check whether the program is valid.
@@ -11956,7 +11912,7 @@ Check whether the program is valid.
 #### Function bind_program()
 
 ~~~ .cpp
-void bind_program(const std::shared_ptr<gl_program>& prog);
+void bind_program(const gl_program& prog);
 ~~~
 
 Binds a program.
@@ -11964,10 +11920,18 @@ Binds a program.
 #### Function unbind_program()
 
 ~~~ .cpp
-void unbind_program(const std::shared_ptr<gl_program>& prog);
+void unbind_program(const gl_program& prog);
 ~~~
 
 Unbind a program.
+
+#### Function clear_program()
+
+~~~ .cpp
+void clear_program(gl_program& prog);
+~~~
+
+Clears OpenGL state.
 
 ### OpenGL default shaders
 
@@ -11982,7 +11946,7 @@ Vertex buffers for scene drawing. Members are not part of the public API.
 #### Function make_gl_lights()
 
 ~~~ .cpp
-gl_lights make_gl_lights(const std::shared_ptr<scene>& scn);
+gl_lights make_gl_lights(const scene* scn);
 ~~~
 
 Initialize gl lights.
@@ -11990,8 +11954,7 @@ Initialize gl lights.
 #### Function update_gl_texture()
 
 ~~~ .cpp
-void update_gl_texture(
-    const std::shared_ptr<texture>& txt, std::shared_ptr<gl_texture>& gtxt);
+void update_gl_texture(const texture* txt, gl_texture& gtxt);
 ~~~
 
 Update scene textures on the GPU.
@@ -11999,36 +11962,58 @@ Update scene textures on the GPU.
 #### Function make_gl_textures()
 
 ~~~ .cpp
-inline std::unordered_map<std::shared_ptr<texture>, std::shared_ptr<gl_texture>>
-make_gl_textures(const std::shared_ptr<scene>& scn);
+inline std::unordered_map<texture*, gl_texture> make_gl_textures(
+    const scene* scn);
 ~~~
 
 Update scene textures on the GPU.
 
+#### Function clear_gl_textures()
+
+~~~ .cpp
+inline void clear_gl_textures(std::unordered_map<texture*, gl_texture>& txts);
+~~~
+
+Clear OpenGL state.
+
 #### Function update_gl_shape()
 
 ~~~ .cpp
-void update_gl_shape(
-    const std::shared_ptr<shape>& shp, std::shared_ptr<gl_shape>& gshp);
+void update_gl_shape(const shape* shp, gl_shape& gshp);
 ~~~
 
 Update scene shapes on the GPU.
+
+#### Function clear_gl_shape()
+
+~~~ .cpp
+void clear_gl_shape(gl_shape& gshp);
+~~~
+
+Clear OpenGL state.
 
 #### Function make_gl_shapes()
 
 ~~~ .cpp
-inline std::unordered_map<std::shared_ptr<shape>, std::shared_ptr<gl_shape>>
-make_gl_shapes(const std::shared_ptr<scene>& scn);
+inline std::unordered_map<shape*, gl_shape> make_gl_shapes(const scene* scn);
 ~~~
 
 Update scene shapes on the GPU.
+
+#### Function clear_gl_shapes()
+
+~~~ .cpp
+inline void clear_gl_shapes(std::unordered_map<shape*, gl_shape>& shps);
+~~~
+
+Clear OpenGL state.
 
 #### Struct gl_stdimage_program
 
 ~~~ .cpp
 struct gl_stdimage_program {
-    std::shared_ptr<gl_program> prog = {};
-    std::shared_ptr<gl_vertex_buffer> vbo = {};
+    gl_program prog;
+    gl_vertex_buffer vbo;
 }
 ~~~
 
@@ -12042,7 +12027,7 @@ A shader for displaying images.  Members are not part of the public API.
 #### Function make_stdimage_program()
 
 ~~~ .cpp
-std::shared_ptr<gl_stdimage_program> make_stdimage_program();
+gl_stdimage_program make_stdimage_program();
 ~~~
 
 Initialize a stdimage program.
@@ -12050,9 +12035,9 @@ Initialize a stdimage program.
 #### Function draw_image()
 
 ~~~ .cpp
-void draw_image(const std::shared_ptr<gl_stdimage_program>& prog,
-    const std::shared_ptr<gl_texture>& txt, const vec2i& win_size,
-    const vec2f& offset, float zoom, float exposure, float gamma, bool filmic);
+void draw_image(const gl_stdimage_program& prog, const gl_texture& txt,
+    const vec2i& win_size, const vec2f& offset, float zoom, float exposure,
+    float gamma, bool filmic);
 ~~~
 
 Draws an image texture the stdimage program.
@@ -12060,9 +12045,8 @@ Draws an image texture the stdimage program.
 #### Function draw_image()
 
 ~~~ .cpp
-inline void draw_image(const std::shared_ptr<gl_stdimage_program>& prog,
-    const std::shared_ptr<gl_texture>& txt, const vec2i& win_size,
-    const vec2f& offset, float zoom);
+inline void draw_image(const gl_stdimage_program& prog, const gl_texture& txt,
+    const vec2i& win_size, const vec2f& offset, float zoom);
 ~~~
 
 Draws an image texture the stdimage program.
@@ -12088,10 +12072,9 @@ Params for stdimage drawing.
 #### Function draw_image()
 
 ~~~ .cpp
-inline void draw_image(const std::shared_ptr<gl_stdimage_program>& prog,
-    const std::shared_ptr<gl_texture>& txt, const vec2i& win_size,
-    const gl_stdimage_params& params, const tonemap_params& tmparams,
-    bool clear_background = true);
+inline void draw_image(const gl_stdimage_program& prog, const gl_texture& txt,
+    const vec2i& win_size, const gl_stdimage_params& params,
+    const tonemap_params& tmparams, bool clear_background = true);
 ~~~
 
 Draws an image texture the stdimage program.
@@ -12100,7 +12083,7 @@ Draws an image texture the stdimage program.
 
 ~~~ .cpp
 struct gl_stdsurface_program {
-    std::shared_ptr<gl_program> prog = {};
+    gl_program prog;
 }
 ~~~
 
@@ -12114,7 +12097,7 @@ Phong/GGX. Members are not part of public API.
 #### Function make_stdsurface_program()
 
 ~~~ .cpp
-std::shared_ptr<gl_stdsurface_program> make_stdsurface_program();
+gl_stdsurface_program make_stdsurface_program();
 ~~~
 
 Initialize a stdsurface shader.
@@ -12122,8 +12105,7 @@ Initialize a stdsurface shader.
 #### Function is_program_valid()
 
 ~~~ .cpp
-inline bool is_program_valid(
-    const std::shared_ptr<gl_stdsurface_program>& prog);
+inline bool is_program_valid(const gl_stdsurface_program& prog);
 ~~~
 
 Check if the program is valid.
@@ -12131,7 +12113,7 @@ Check if the program is valid.
 #### Function begin_stdsurface_frame()
 
 ~~~ .cpp
-void begin_stdsurface_frame(const std::shared_ptr<gl_stdsurface_program>& prog,
+void begin_stdsurface_frame(const gl_stdsurface_program& prog,
     bool shade_eyelight, float tonemap_exposure, float tonemap_gamma,
     bool tonemap_filmic, const mat4f& camera_xform,
     const mat4f& camera_xform_inv, const mat4f& camera_proj);
@@ -12144,7 +12126,7 @@ preview.
 #### Function end_stdsurface_frame()
 
 ~~~ .cpp
-void end_stdsurface_frame(const std::shared_ptr<gl_stdsurface_program>& prog);
+void end_stdsurface_frame(const gl_stdsurface_program& prog);
 ~~~
 
 Ends a frame.
@@ -12152,8 +12134,8 @@ Ends a frame.
 #### Function set_stdsurface_lights()
 
 ~~~ .cpp
-void set_stdsurface_lights(const std::shared_ptr<gl_stdsurface_program>& prog,
-    const vec3f& amb, const gl_lights& lights);
+void set_stdsurface_lights(const gl_stdsurface_program& prog, const vec3f& amb,
+    const gl_lights& lights);
 ~~~
 
 Set shading lights and ambient.
@@ -12161,7 +12143,7 @@ Set shading lights and ambient.
 #### Function begin_stdsurface_shape()
 
 ~~~ .cpp
-void begin_stdsurface_shape(const std::shared_ptr<gl_stdsurface_program>& prog,
+void begin_stdsurface_shape(const gl_stdsurface_program& prog,
     const mat4f& xform, float normal_offset = 0);
 ~~~
 
@@ -12170,7 +12152,7 @@ Begins drawing a shape with transform `xform`.
 #### Function end_stdsurface_shape()
 
 ~~~ .cpp
-void end_stdsurface_shape(const std::shared_ptr<gl_stdsurface_program>& prog);
+void end_stdsurface_shape(const gl_stdsurface_program& prog);
 ~~~
 
 End shade drawing.
@@ -12179,7 +12161,7 @@ End shade drawing.
 
 ~~~ .cpp
 void set_stdsurface_normaloffset(
-    const std::shared_ptr<gl_stdsurface_program>& prog, float normal_offset);
+    const gl_stdsurface_program& prog, float normal_offset);
 ~~~
 
 Sets normal offset.
@@ -12188,7 +12170,7 @@ Sets normal offset.
 
 ~~~ .cpp
 void set_stdsurface_highlight(
-    const std::shared_ptr<gl_stdsurface_program>& prog, const vec4f& highlight);
+    const gl_stdsurface_program& prog, const vec4f& highlight);
 ~~~
 
 Set the object as highlighted.
@@ -12196,19 +12178,16 @@ Set the object as highlighted.
 #### Function set_stdsurface_material()
 
 ~~~ .cpp
-void set_stdsurface_material(const std::shared_ptr<gl_stdsurface_program>& prog,
+void set_stdsurface_material(const gl_stdsurface_program& prog,
     material_type type, gl_elem_type etype, const vec3f& ke, const vec3f& kd,
-    const vec3f& ks, float rs, float op,
-    const std::shared_ptr<gl_texture>& ke_txt,
-    const std::shared_ptr<gl_texture>& kd_txt,
-    const std::shared_ptr<gl_texture>& ks_txt,
-    const std::shared_ptr<gl_texture>& rs_txt,
-    const std::shared_ptr<gl_texture>& norm_txt,
-    const std::shared_ptr<gl_texture>& occ_txt,
-    const gl_texture_info& ke_txt_info, const gl_texture_info& kd_txt_info,
-    const gl_texture_info& ks_txt_info, const gl_texture_info& rs_txt_info,
-    const gl_texture_info& norm_txt_info, const gl_texture_info& occ_txt_info,
-    bool use_phong, bool double_sided, bool alpha_cutout);
+    const vec3f& ks, float rs, float op, const gl_texture& ke_txt,
+    const gl_texture& kd_txt, const gl_texture& ks_txt,
+    const gl_texture& rs_txt, const gl_texture& norm_txt,
+    const gl_texture& occ_txt, const gl_texture_info& ke_txt_info,
+    const gl_texture_info& kd_txt_info, const gl_texture_info& ks_txt_info,
+    const gl_texture_info& rs_txt_info, const gl_texture_info& norm_txt_info,
+    const gl_texture_info& occ_txt_info, bool use_phong, bool double_sided,
+    bool alpha_cutout);
 ~~~
 
 Set material values with emission `ke`, diffuse `kd`, specular `ks` and
@@ -12221,16 +12200,13 @@ matches the scene material type.
 #### Function set_stdsurface_material()
 
 ~~~ .cpp
-inline void set_stdsurface_material(
-    const std::shared_ptr<gl_stdsurface_program>& prog, material_type type,
-    gl_elem_type etype, const vec3f& ke, const vec3f& kd, const vec3f& ks,
-    float rs, float op, const std::shared_ptr<gl_texture>& ke_txt,
-    const std::shared_ptr<gl_texture>& kd_txt,
-    const std::shared_ptr<gl_texture>& ks_txt,
-    const std::shared_ptr<gl_texture>& rs_txt,
-    const std::shared_ptr<gl_texture>& norm_txt,
-    const std::shared_ptr<gl_texture>& occ_txt, bool use_phong,
-    bool double_sided, bool alpha_cutout);
+inline void set_stdsurface_material(const gl_stdsurface_program& prog,
+    material_type type, gl_elem_type etype, const vec3f& ke, const vec3f& kd,
+    const vec3f& ks, float rs, float op, const gl_texture& ke_txt,
+    const gl_texture& kd_txt, const gl_texture& ks_txt,
+    const gl_texture& rs_txt, const gl_texture& norm_txt,
+    const gl_texture& occ_txt, bool use_phong, bool double_sided,
+    bool alpha_cutout);
 ~~~
 
 Set material values with emission `ke`, diffuse `kd`, specular `ks` and
@@ -12244,8 +12220,7 @@ matches the scene material type.
 
 ~~~ .cpp
 void set_stdsurface_constmaterial(
-    const std::shared_ptr<gl_stdsurface_program>& prog, const vec3f& ke,
-    float op);
+    const gl_stdsurface_program& prog, const vec3f& ke, float op);
 ~~~
 
 Set constant material with emission `ke` and opacity `op`.
@@ -12253,12 +12228,10 @@ Set constant material with emission `ke` and opacity `op`.
 #### Function set_stdsurface_vert()
 
 ~~~ .cpp
-void set_stdsurface_vert(const std::shared_ptr<gl_stdsurface_program>& prog,
-    const std::shared_ptr<gl_vertex_buffer>& pos,
-    const std::shared_ptr<gl_vertex_buffer>& norm,
-    const std::shared_ptr<gl_vertex_buffer>& texcoord,
-    const std::shared_ptr<gl_vertex_buffer>& color,
-    const std::shared_ptr<gl_vertex_buffer>& tangsp);
+void set_stdsurface_vert(const gl_stdsurface_program& prog,
+    const gl_vertex_buffer& pos, const gl_vertex_buffer& norm,
+    const gl_vertex_buffer& texcoord, const gl_vertex_buffer& color,
+    const gl_vertex_buffer& tangsp);
 ~~~
 
 Set vertex data with buffers for position pos, normals norm, texture
@@ -12267,11 +12240,9 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.
 #### Function set_stdsurface_vert_skinning()
 
 ~~~ .cpp
-void set_stdsurface_vert_skinning(
-    const std::shared_ptr<gl_stdsurface_program>& prog,
-    const std::shared_ptr<gl_vertex_buffer>& weights,
-    const std::shared_ptr<gl_vertex_buffer>& joints, int nxforms,
-    const mat4f* xforms);
+void set_stdsurface_vert_skinning(const gl_stdsurface_program& prog,
+    const gl_vertex_buffer& weights, const gl_vertex_buffer& joints,
+    int nxforms, const mat4f* xforms);
 ~~~
 
 Set vertex data with buffers for skinning.
@@ -12279,11 +12250,9 @@ Set vertex data with buffers for skinning.
 #### Function set_stdsurface_vert_gltf_skinning()
 
 ~~~ .cpp
-void set_stdsurface_vert_gltf_skinning(
-    const std::shared_ptr<gl_stdsurface_program>& prog,
-    const std::shared_ptr<gl_vertex_buffer>& weights,
-    const std::shared_ptr<gl_vertex_buffer>& joints, int nxforms,
-    const mat4f* xforms);
+void set_stdsurface_vert_gltf_skinning(const gl_stdsurface_program& prog,
+    const gl_vertex_buffer& weights, const gl_vertex_buffer& joints,
+    int nxforms, const mat4f* xforms);
 ~~~
 
 Set vertex data with buffers for skinning.
@@ -12291,8 +12260,7 @@ Set vertex data with buffers for skinning.
 #### Function set_stdsurface_vert_skinning_off()
 
 ~~~ .cpp
-void set_stdsurface_vert_skinning_off(
-    const std::shared_ptr<gl_stdsurface_program>& prog);
+void set_stdsurface_vert_skinning_off(const gl_stdsurface_program& prog);
 ~~~
 
 Disables vertex skinning.
@@ -12334,15 +12302,10 @@ Params for stdsurface drawing.
 #### Function draw_stdsurface_scene()
 
 ~~~ .cpp
-void draw_stdsurface_scene(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<camera>& cam,
-    const std::shared_ptr<gl_stdsurface_program>& prog,
-    std::unordered_map<std::shared_ptr<shape>, std::shared_ptr<gl_shape>>&
-        shapes,
-    std::unordered_map<std::shared_ptr<texture>, std::shared_ptr<gl_texture>>&
-        textures,
-    const gl_lights& lights, const vec2i& viewport_size,
-    const std::shared_ptr<void>& highlighted,
+void draw_stdsurface_scene(const scene* scn, const camera* cam,
+    gl_stdsurface_program& prog, std::unordered_map<shape*, gl_shape>& shapes,
+    std::unordered_map<texture*, gl_texture>& textures, const gl_lights& lights,
+    const vec2i& viewport_size, const void* highlighted,
     const gl_stdsurface_params& params, const tonemap_params& tmparams);
 ~~~
 
@@ -12403,8 +12366,7 @@ OpenGL window. Members are not part of the public API.
 #### Function make_window()
 
 ~~~ .cpp
-std::shared_ptr<gl_window> make_window(
-    int width, int height, const std::string& title);
+gl_window* make_window(int width, int height, const std::string& title);
 ~~~
 
 Initialize a window.
@@ -12412,9 +12374,8 @@ Initialize a window.
 #### Function set_window_callbacks()
 
 ~~~ .cpp
-void set_window_callbacks(const std::shared_ptr<gl_window>& win,
-    gl_text_callback text_cb, gl_mouse_callback mouse_cb,
-    gl_refresh_callback refresh_cb);
+void set_window_callbacks(gl_window* win, gl_text_callback text_cb,
+    gl_mouse_callback mouse_cb, gl_refresh_callback refresh_cb);
 ~~~
 
 Set window callbacks.
@@ -12422,8 +12383,7 @@ Set window callbacks.
 #### Function set_window_title()
 
 ~~~ .cpp
-void set_window_title(
-    const std::shared_ptr<gl_window>& win, const std::string& title);
+void set_window_title(gl_window* win, const std::string& title);
 ~~~
 
 Set window title.
@@ -12431,7 +12391,7 @@ Set window title.
 #### Function wait_events()
 
 ~~~ .cpp
-void wait_events(const std::shared_ptr<gl_window>& win);
+void wait_events(gl_window* win);
 ~~~
 
 Wait events
@@ -12439,7 +12399,7 @@ Wait events
 #### Function poll_events()
 
 ~~~ .cpp
-void poll_events(const std::shared_ptr<gl_window>& win);
+void poll_events(gl_window* win);
 ~~~
 
 Poll events
@@ -12447,7 +12407,7 @@ Poll events
 #### Function swap_buffers()
 
 ~~~ .cpp
-void swap_buffers(const std::shared_ptr<gl_window>& win);
+void swap_buffers(gl_window* win);
 ~~~
 
 Swap buffers
@@ -12455,7 +12415,7 @@ Swap buffers
 #### Function should_close()
 
 ~~~ .cpp
-bool should_close(const std::shared_ptr<gl_window>& win);
+bool should_close(gl_window* win);
 ~~~
 
 Should close
@@ -12463,7 +12423,7 @@ Should close
 #### Function get_window_size()
 
 ~~~ .cpp
-vec2i get_window_size(const std::shared_ptr<gl_window>& win);
+vec2i get_window_size(gl_window* win);
 ~~~
 
 Window size
@@ -12471,7 +12431,7 @@ Window size
 #### Function get_framebuffer_size()
 
 ~~~ .cpp
-vec2i get_framebuffer_size(const std::shared_ptr<gl_window>& win);
+vec2i get_framebuffer_size(gl_window* win);
 ~~~
 
 Framebuffer size
@@ -12479,7 +12439,7 @@ Framebuffer size
 #### Function get_mouse_button()
 
 ~~~ .cpp
-int get_mouse_button(const std::shared_ptr<gl_window>& win);
+int get_mouse_button(gl_window* win);
 ~~~
 
 Mouse button
@@ -12487,7 +12447,7 @@ Mouse button
 #### Function get_mouse_pos()
 
 ~~~ .cpp
-vec2i get_mouse_pos(const std::shared_ptr<gl_window>& win);
+vec2i get_mouse_pos(gl_window* win);
 ~~~
 
 Mouse position
@@ -12495,7 +12455,7 @@ Mouse position
 #### Function get_mouse_posf()
 
 ~~~ .cpp
-vec2f get_mouse_posf(const std::shared_ptr<gl_window>& win);
+vec2f get_mouse_posf(gl_window* win);
 ~~~
 
 Mouse position
@@ -12503,7 +12463,7 @@ Mouse position
 #### Function get_key()
 
 ~~~ .cpp
-bool get_key(const std::shared_ptr<gl_window>& win, int key);
+bool get_key(gl_window* win, int key);
 ~~~
 
 Check if a key is pressed (not all keys are supported)
@@ -12511,8 +12471,7 @@ Check if a key is pressed (not all keys are supported)
 #### Function take_screenshot4b()
 
 ~~~ .cpp
-image4b take_screenshot4b(const std::shared_ptr<gl_window>& win,
-    bool flipy = true, bool back = false);
+image4b take_screenshot4b(gl_window* win, bool flipy = true, bool back = false);
 ~~~
 
 Read pixels
@@ -12520,8 +12479,7 @@ Read pixels
 #### Function save_screenshot()
 
 ~~~ .cpp
-inline void save_screenshot(
-    const std::shared_ptr<gl_window>& win, const std::string& imfilename);
+inline void save_screenshot(gl_window* win, const std::string& imfilename);
 ~~~
 
 Save a screenshot to disk
@@ -12529,8 +12487,7 @@ Save a screenshot to disk
 #### Function handle_camera_navigation()
 
 ~~~ .cpp
-bool handle_camera_navigation(const std::shared_ptr<gl_window>& win,
-    const std::shared_ptr<camera>& cam, bool navigation_fps);
+bool handle_camera_navigation(gl_window* win, camera* cam, bool navigation_fps);
 ~~~
 
 Handle camera navigation.
@@ -12540,8 +12497,8 @@ Handle camera navigation.
 #### Function init_widgets()
 
 ~~~ .cpp
-void init_widgets(const std::shared_ptr<gl_window>& win,
-    bool light_style = false, bool extra_font = true);
+void init_widgets(
+    gl_window* win, bool light_style = false, bool extra_font = true);
 ~~~
 
 Initialize widgets.
@@ -12549,8 +12506,7 @@ Initialize widgets.
 #### Function begin_widgets()
 
 ~~~ .cpp
-bool begin_widgets(
-    const std::shared_ptr<gl_window>& win, const std::string& title);
+bool begin_widgets(gl_window* win, const std::string& title);
 ~~~
 
 Begin draw widgets.
@@ -12558,7 +12514,7 @@ Begin draw widgets.
 #### Function end_widgets()
 
 ~~~ .cpp
-void end_widgets(const std::shared_ptr<gl_window>& win);
+void end_widgets(gl_window* win);
 ~~~
 
 End draw widgets.
@@ -12566,7 +12522,7 @@ End draw widgets.
 #### Function get_widget_active()
 
 ~~~ .cpp
-bool get_widget_active(const std::shared_ptr<gl_window>& win);
+bool get_widget_active(gl_window* win);
 ~~~
 
 Whether widgets are active.
@@ -12574,7 +12530,7 @@ Whether widgets are active.
 #### Function draw_separator_widget()
 
 ~~~ .cpp
-void draw_separator_widget(const std::shared_ptr<gl_window>& win);
+void draw_separator_widget(gl_window* win);
 ~~~
 
 Horizontal separator.
@@ -12582,7 +12538,7 @@ Horizontal separator.
 #### Function draw_indent_widget_begin()
 
 ~~~ .cpp
-void draw_indent_widget_begin(const std::shared_ptr<gl_window>& win);
+void draw_indent_widget_begin(gl_window* win);
 ~~~
 
 Indent widget.
@@ -12590,7 +12546,7 @@ Indent widget.
 #### Function draw_indent_widget_end()
 
 ~~~ .cpp
-void draw_indent_widget_end(const std::shared_ptr<gl_window>& win);
+void draw_indent_widget_end(gl_window* win);
 ~~~
 
 Indent widget.
@@ -12598,7 +12554,7 @@ Indent widget.
 #### Function draw_continue_widget()
 
 ~~~ .cpp
-void draw_continue_widget(const std::shared_ptr<gl_window>& win);
+void draw_continue_widget(gl_window* win);
 ~~~
 
 Continue line with next widget.
@@ -12606,8 +12562,8 @@ Continue line with next widget.
 #### Function draw_label_widget()
 
 ~~~ .cpp
-void draw_label_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, const std::string& msg);
+void draw_label_widget(
+    gl_window* win, const std::string& lbl, const std::string& msg);
 ~~~
 
 Label widget.
@@ -12616,8 +12572,8 @@ Label widget.
 
 ~~~ .cpp
 template <typename... Args>
-inline void draw_label_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, const std::string& fmt, const Args&... args);
+inline void draw_label_widget(gl_window* win, const std::string& lbl,
+    const std::string& fmt, const Args&... args);
 ~~~
 
 Label widget.
@@ -12626,8 +12582,8 @@ Label widget.
 
 ~~~ .cpp
 template <typename T>
-inline void draw_label_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, const T& val);
+inline void draw_label_widget(
+    gl_window* win, const std::string& lbl, const T& val);
 ~~~
 
 Label widget.
@@ -12635,8 +12591,7 @@ Label widget.
 #### Function draw_checkbox_widget()
 
 ~~~ .cpp
-bool draw_checkbox_widget(
-    const std::shared_ptr<gl_window>& win, const std::string& lbl, bool& val);
+bool draw_checkbox_widget(gl_window* win, const std::string& lbl, bool& val);
 ~~~
 
 Checkbox widget
@@ -12644,8 +12599,7 @@ Checkbox widget
 #### Function draw_text_widget()
 
 ~~~ .cpp
-bool draw_text_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, std::string& str);
+bool draw_text_widget(gl_window* win, const std::string& lbl, std::string& str);
 ~~~
 
 Text widget.
@@ -12653,8 +12607,8 @@ Text widget.
 #### Function draw_multilinetext_widget()
 
 ~~~ .cpp
-bool draw_multilinetext_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, std::string& str);
+bool draw_multilinetext_widget(
+    gl_window* win, const std::string& lbl, std::string& str);
 ~~~
 
 Multiline text widget.
@@ -12662,8 +12616,8 @@ Multiline text widget.
 #### Function draw_slider_widget()
 
 ~~~ .cpp
-bool draw_slider_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, int& val, int min = 0, int max = 1);
+bool draw_slider_widget(
+    gl_window* win, const std::string& lbl, int& val, int min = 0, int max = 1);
 ~~~
 
 Slider widget.
@@ -12671,8 +12625,8 @@ Slider widget.
 #### Function draw_slider_widget()
 
 ~~~ .cpp
-bool draw_slider_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, vec2i& val, int min = 0, int max = 1);
+bool draw_slider_widget(gl_window* win, const std::string& lbl, vec2i& val,
+    int min = 0, int max = 1);
 ~~~
 
 Slider widget.
@@ -12680,8 +12634,8 @@ Slider widget.
 #### Function draw_slider_widget()
 
 ~~~ .cpp
-bool draw_slider_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, vec3i& val, int min = 0, int max = 1);
+bool draw_slider_widget(gl_window* win, const std::string& lbl, vec3i& val,
+    int min = 0, int max = 1);
 ~~~
 
 Slider widget.
@@ -12689,8 +12643,8 @@ Slider widget.
 #### Function draw_slider_widget()
 
 ~~~ .cpp
-bool draw_slider_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, vec4i& val, int min = 0, int max = 1);
+bool draw_slider_widget(gl_window* win, const std::string& lbl, vec4i& val,
+    int min = 0, int max = 1);
 ~~~
 
 Slider widget.
@@ -12698,8 +12652,8 @@ Slider widget.
 #### Function draw_slider_widget()
 
 ~~~ .cpp
-bool draw_slider_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, float& val, float min = 0, float max = 1);
+bool draw_slider_widget(gl_window* win, const std::string& lbl, float& val,
+    float min = 0, float max = 1);
 ~~~
 
 Slider widget.
@@ -12707,8 +12661,8 @@ Slider widget.
 #### Function draw_slider_widget()
 
 ~~~ .cpp
-bool draw_slider_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, vec2f& val, float min = 0, float max = 1);
+bool draw_slider_widget(gl_window* win, const std::string& lbl, vec2f& val,
+    float min = 0, float max = 1);
 ~~~
 
 Slider widget.
@@ -12716,8 +12670,8 @@ Slider widget.
 #### Function draw_slider_widget()
 
 ~~~ .cpp
-bool draw_slider_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, vec3f& val, float min = 0, float max = 1);
+bool draw_slider_widget(gl_window* win, const std::string& lbl, vec3f& val,
+    float min = 0, float max = 1);
 ~~~
 
 Slider widget.
@@ -12725,8 +12679,8 @@ Slider widget.
 #### Function draw_slider_widget()
 
 ~~~ .cpp
-bool draw_slider_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, vec4f& val, float min = 0, float max = 1);
+bool draw_slider_widget(gl_window* win, const std::string& lbl, vec4f& val,
+    float min = 0, float max = 1);
 ~~~
 
 Slider widget.
@@ -12734,8 +12688,8 @@ Slider widget.
 #### Function draw_slider_widget()
 
 ~~~ .cpp
-bool draw_slider_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, mat<float, 4>& val, float min = 0, float max = 1);
+bool draw_slider_widget(gl_window* win, const std::string& lbl,
+    mat<float, 4>& val, float min = 0, float max = 1);
 ~~~
 
 Slider widget.
@@ -12743,9 +12697,8 @@ Slider widget.
 #### Function draw_slider_widget()
 
 ~~~ .cpp
-bool draw_slider_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, frame<float, 3>& val, float min = -10,
-    float max = 10);
+bool draw_slider_widget(gl_window* win, const std::string& lbl,
+    frame<float, 3>& val, float min = -10, float max = 10);
 ~~~
 
 Slider widget.
@@ -12753,8 +12706,8 @@ Slider widget.
 #### Function draw_slider_widget()
 
 ~~~ .cpp
-bool draw_slider_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, quat4f& val, float min = -1, float max = 1);
+bool draw_slider_widget(gl_window* win, const std::string& lbl, quat4f& val,
+    float min = -1, float max = 1);
 ~~~
 
 Slider widget.
@@ -12762,8 +12715,7 @@ Slider widget.
 #### Function draw_color_widget()
 
 ~~~ .cpp
-bool draw_color_widget(
-    const std::shared_ptr<gl_window>& win, const std::string& lbl, vec4f& val);
+bool draw_color_widget(gl_window* win, const std::string& lbl, vec4f& val);
 ~~~
 
 Color widget.
@@ -12771,8 +12723,7 @@ Color widget.
 #### Function draw_color_widget()
 
 ~~~ .cpp
-bool draw_color_widget(
-    const std::shared_ptr<gl_window>& win, const std::string& lbl, vec4b& val);
+bool draw_color_widget(gl_window* win, const std::string& lbl, vec4b& val);
 ~~~
 
 Color widget.
@@ -12780,8 +12731,7 @@ Color widget.
 #### Function draw_color_widget()
 
 ~~~ .cpp
-bool draw_color_widget(
-    const std::shared_ptr<gl_window>& win, const std::string& lbl, vec3f& val);
+bool draw_color_widget(gl_window* win, const std::string& lbl, vec3f& val);
 ~~~
 
 Color widget.
@@ -12789,8 +12739,8 @@ Color widget.
 #### Function draw_combo_widget_begin()
 
 ~~~ .cpp
-bool draw_combo_widget_begin(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, const std::string& label);
+bool draw_combo_widget_begin(
+    gl_window* win, const std::string& lbl, const std::string& label);
 ~~~
 
 Combo widget.
@@ -12798,8 +12748,8 @@ Combo widget.
 #### Function draw_combo_widget_item()
 
 ~~~ .cpp
-bool draw_combo_widget_item(const std::shared_ptr<gl_window>& win,
-    const std::string& label, int idx, bool selected);
+bool draw_combo_widget_item(
+    gl_window* win, const std::string& label, int idx, bool selected);
 ~~~
 
 Combo widget.
@@ -12807,7 +12757,7 @@ Combo widget.
 #### Function draw_combo_widget_end()
 
 ~~~ .cpp
-void draw_combo_widget_end(const std::shared_ptr<gl_window>& win);
+void draw_combo_widget_end(gl_window* win);
 ~~~
 
 Combo widget.
@@ -12816,8 +12766,8 @@ Combo widget.
 
 ~~~ .cpp
 template <typename T>
-bool draw_combo_widget_item(const std::shared_ptr<gl_window>& win,
-    const std::string& label, int idx, T& val, const T& item);
+bool draw_combo_widget_item(
+    gl_window* win, const std::string& label, int idx, T& val, const T& item);
 ~~~
 
 Combo widget.
@@ -12826,9 +12776,8 @@ Combo widget.
 
 ~~~ .cpp
 template <typename T, typename T1>
-inline bool draw_combo_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, T& val, const std::vector<T1>& vals,
-    const std::function<T(const T1&)>& value_func,
+inline bool draw_combo_widget(gl_window* win, const std::string& lbl, T& val,
+    const std::vector<T1>& vals, const std::function<T(const T1&)>& value_func,
     const std::function<std::string(const T1&)>& label_func);
 ~~~
 
@@ -12837,9 +12786,8 @@ Combo widget.
 #### Function draw_combo_widget()
 
 ~~~ .cpp
-inline bool draw_combo_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, std::string& val,
-    const std::vector<std::string>& labels);
+inline bool draw_combo_widget(gl_window* win, const std::string& lbl,
+    std::string& val, const std::vector<std::string>& labels);
 ~~~
 
 Combo widget.
@@ -12848,8 +12796,7 @@ Combo widget.
 
 ~~~ .cpp
 template <typename T>
-inline bool draw_combo_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, T& val,
+inline bool draw_combo_widget(gl_window* win, const std::string& lbl, T& val,
     const std::vector<std::pair<std::string, T>>& labels);
 ~~~
 
@@ -12859,21 +12806,8 @@ Combo widget.
 
 ~~~ .cpp
 template <typename T>
-inline bool draw_combo_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, T*& val, const std::vector<T*>& vals,
-    bool extra = true, T* extra_val = nullptr);
-~~~
-
-Combo widget
-
-#### Function draw_combo_widget()
-
-~~~ .cpp
-template <typename T>
-inline bool draw_combo_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, std::shared_ptr<T>& val,
-    const std::vector<std::shared_ptr<T>>& vals, bool extra = true,
-    const std::shared_ptr<T>& extra_val = nullptr);
+inline bool draw_combo_widget(gl_window* win, const std::string& lbl, T*& val,
+    const std::vector<T*>& vals, bool extra = true, T* extra_val = nullptr);
 ~~~
 
 Combo widget
@@ -12881,8 +12815,7 @@ Combo widget
 #### Function draw_button_widget()
 
 ~~~ .cpp
-bool draw_button_widget(
-    const std::shared_ptr<gl_window>& win, const std::string& lbl);
+bool draw_button_widget(gl_window* win, const std::string& lbl);
 ~~~
 
 Button widget.
@@ -12890,8 +12823,7 @@ Button widget.
 #### Function draw_header_widget()
 
 ~~~ .cpp
-bool draw_header_widget(
-    const std::shared_ptr<gl_window>& win, const std::string& lbl);
+bool draw_header_widget(gl_window* win, const std::string& lbl);
 ~~~
 
 Collapsible header widget.
@@ -12899,8 +12831,7 @@ Collapsible header widget.
 #### Function draw_tree_widget_begin()
 
 ~~~ .cpp
-bool draw_tree_widget_begin(
-    const std::shared_ptr<gl_window>& win, const std::string& lbl);
+bool draw_tree_widget_begin(gl_window* win, const std::string& lbl);
 ~~~
 
 Start tree widget.
@@ -12908,7 +12839,7 @@ Start tree widget.
 #### Function draw_tree_widget_end()
 
 ~~~ .cpp
-void draw_tree_widget_end(const std::shared_ptr<gl_window>& win);
+void draw_tree_widget_end(gl_window* win);
 ~~~
 
 End tree widget.
@@ -12916,8 +12847,8 @@ End tree widget.
 #### Function draw_tree_widget_begin()
 
 ~~~ .cpp
-bool draw_tree_widget_begin(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, void*& selection, void* content);
+bool draw_tree_widget_begin(
+    gl_window* win, const std::string& lbl, void*& selection, void* content);
 ~~~
 
 Start selectable tree node widget.
@@ -12926,9 +12857,8 @@ Start selectable tree node widget.
 
 ~~~ .cpp
 template <typename T>
-inline bool draw_tree_widget_begin(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, std::shared_ptr<void>& selection,
-    const std::shared_ptr<T>& content);
+inline bool draw_tree_widget_begin(
+    gl_window* win, const std::string& lbl, void*& selection, T* content);
 ~~~
 
 Start selectable tree node widget.
@@ -12937,9 +12867,8 @@ Start selectable tree node widget.
 
 ~~~ .cpp
 template <typename T>
-inline bool draw_tree_widget_begin(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, std::shared_ptr<T>& selection,
-    const std::shared_ptr<T>& content);
+inline bool draw_tree_widget_begin(
+    gl_window* win, const std::string& lbl, T*& selection, T* content);
 ~~~
 
 Start selectable tree node widget.
@@ -12947,7 +12876,7 @@ Start selectable tree node widget.
 #### Function draw_tree_widget_end()
 
 ~~~ .cpp
-void draw_tree_widget_end(const std::shared_ptr<gl_window>& win, void* content);
+void draw_tree_widget_end(gl_window* win, void* content);
 ~~~
 
 End selectable tree node widget.
@@ -12955,8 +12884,8 @@ End selectable tree node widget.
 #### Function draw_tree_widget_leaf()
 
 ~~~ .cpp
-void draw_tree_widget_leaf(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, void*& selection, void* content);
+void draw_tree_widget_leaf(
+    gl_window* win, const std::string& lbl, void*& selection, void* content);
 ~~~
 
 Selectable tree leaf nodewidget.
@@ -12965,9 +12894,8 @@ Selectable tree leaf nodewidget.
 
 ~~~ .cpp
 template <typename T>
-inline void draw_tree_widget_leaf(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, std::shared_ptr<void>& selection,
-    const std::shared_ptr<T>& content);
+inline void draw_tree_widget_leaf(
+    gl_window* win, const std::string& lbl, void*& selection, T* content);
 ~~~
 
 Selectable tree leaf nodewidget.
@@ -12975,8 +12903,8 @@ Selectable tree leaf nodewidget.
 #### Function draw_tree_widget_leaf()
 
 ~~~ .cpp
-void draw_tree_widget_leaf(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, void*& selection, void* content, const vec4f& col);
+void draw_tree_widget_leaf(gl_window* win, const std::string& lbl,
+    void*& selection, void* content, const vec4f& col);
 ~~~
 
 Selectable tree leaf node widget.
@@ -12984,8 +12912,8 @@ Selectable tree leaf node widget.
 #### Function draw_image_widget()
 
 ~~~ .cpp
-void draw_image_widget(const std::shared_ptr<gl_window>& win, int tid,
-    const vec2i& size, const vec2i& imsize);
+void draw_image_widget(
+    gl_window* win, int tid, const vec2i& size, const vec2i& imsize);
 ~~~
 
 Image widget.
@@ -12993,8 +12921,7 @@ Image widget.
 #### Function draw_image_widget()
 
 ~~~ .cpp
-void draw_image_widget(
-    const std::shared_ptr<gl_window>& win, gl_texture& txt, const vec2i& size);
+void draw_image_widget(gl_window* win, gl_texture& txt, const vec2i& size);
 ~~~
 
 Image widget.
@@ -13002,8 +12929,8 @@ Image widget.
 #### Function draw_scroll_widget_begin()
 
 ~~~ .cpp
-void draw_scroll_widget_begin(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, int height, bool border);
+void draw_scroll_widget_begin(
+    gl_window* win, const std::string& lbl, int height, bool border);
 ~~~
 
 Scroll region widget.
@@ -13011,7 +12938,7 @@ Scroll region widget.
 #### Function draw_scroll_widget_end()
 
 ~~~ .cpp
-void draw_scroll_widget_end(const std::shared_ptr<gl_window>& win);
+void draw_scroll_widget_end(gl_window* win);
 ~~~
 
 Scroll region widget.
@@ -13019,7 +12946,7 @@ Scroll region widget.
 #### Function draw_scroll_widget_here()
 
 ~~~ .cpp
-void draw_scroll_widget_here(const std::shared_ptr<gl_window>& win);
+void draw_scroll_widget_here(gl_window* win);
 ~~~
 
 Scroll region widget.
@@ -13027,7 +12954,7 @@ Scroll region widget.
 #### Function draw_groupid_widget_push()
 
 ~~~ .cpp
-void draw_groupid_widget_push(const std::shared_ptr<gl_window>& win, int gid);
+void draw_groupid_widget_push(gl_window* win, int gid);
 ~~~
 
 Group ids widget.
@@ -13035,7 +12962,7 @@ Group ids widget.
 #### Function draw_groupid_widget_push()
 
 ~~~ .cpp
-void draw_groupid_widget_push(const std::shared_ptr<gl_window>& win, void* gid);
+void draw_groupid_widget_push(gl_window* win, void* gid);
 ~~~
 
 Group ids widget.
@@ -13043,8 +12970,7 @@ Group ids widget.
 #### Function draw_groupid_widget_push()
 
 ~~~ .cpp
-void draw_groupid_widget_push(
-    const std::shared_ptr<gl_window>& win, const std::shared_ptr<void>& gid);
+void draw_groupid_widget_push(gl_window* win, const void* gid);
 ~~~
 
 Group ids widget.
@@ -13052,8 +12978,7 @@ Group ids widget.
 #### Function draw_groupid_widget_push()
 
 ~~~ .cpp
-void draw_groupid_widget_push(
-    const std::shared_ptr<gl_window>& win, const char* gid);
+void draw_groupid_widget_push(gl_window* win, const char* gid);
 ~~~
 
 Group ids widget.
@@ -13061,7 +12986,7 @@ Group ids widget.
 #### Function draw_groupid_widget_pop()
 
 ~~~ .cpp
-void draw_groupid_widget_pop(const std::shared_ptr<gl_window>& win);
+void draw_groupid_widget_pop(gl_window* win);
 ~~~
 
 Group ids widget.
@@ -13069,8 +12994,7 @@ Group ids widget.
 #### Function draw_style_widget_push()
 
 ~~~ .cpp
-void draw_style_widget_push(
-    const std::shared_ptr<gl_window>& win, const vec4f& color);
+void draw_style_widget_push(gl_window* win, const vec4f& color);
 ~~~
 
 Widget style.
@@ -13078,7 +13002,7 @@ Widget style.
 #### Function draw_style_widget_pop()
 
 ~~~ .cpp
-void draw_style_widget_pop(const std::shared_ptr<gl_window>& win);
+void draw_style_widget_pop(gl_window* win);
 ~~~
 
 Widget style.
@@ -13086,9 +13010,8 @@ Widget style.
 #### Function draw_value_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, bool& val, float min = 0, float max = 0,
-    bool color = false);
+inline bool draw_value_widget(gl_window* win, const std::string& lbl, bool& val,
+    float min = 0, float max = 0, bool color = false);
 ~~~
 
 Generic widget used for templated code. Min, max and color are ignored.
@@ -13096,9 +13019,8 @@ Generic widget used for templated code. Min, max and color are ignored.
 #### Function draw_value_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, std::string& val, float min = 0, float max = 0,
-    bool color = false);
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    std::string& val, float min = 0, float max = 0, bool color = false);
 ~~~
 
 Generic widget used for templated code. Min, max and color are ignored.
@@ -13106,9 +13028,8 @@ Generic widget used for templated code. Min, max and color are ignored.
 #### Function draw_value_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, int& val, float min = 0, float max = 0,
-    bool color = false);
+inline bool draw_value_widget(gl_window* win, const std::string& lbl, int& val,
+    float min = 0, float max = 0, bool color = false);
 ~~~
 
 Generic widget used for templated code. Uses min and max,
@@ -13118,9 +13039,8 @@ or a deafult range when their are the same. Color is ignored.
 
 ~~~ .cpp
 template <typename T, int N>
-inline bool draw_value_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, vec<int, N>& val, float min = 0, float max = 0,
-    bool color = false);
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    vec<int, N>& val, float min = 0, float max = 0, bool color = false);
 ~~~
 
 Generic widget used for templated code. Uses min and max,
@@ -13129,9 +13049,8 @@ or a deafult range when their are the same. Color is ignored.
 #### Function draw_value_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, float& val, float min = 0, float max = 0,
-    bool color = false);
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    float& val, float min = 0, float max = 0, bool color = false);
 ~~~
 
 Generic widget used for templated code. Uses min and max,
@@ -13140,9 +13059,8 @@ or a deafult range when their are the same. Color is ignored.
 #### Function draw_value_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, vec2f& val, float min = 0, float max = 0,
-    bool color = false);
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    vec2f& val, float min = 0, float max = 0, bool color = false);
 ~~~
 
 Generic widget used for templated code. Uses min and max,
@@ -13151,9 +13069,8 @@ or a deafult range when their are the same. Color is ignored.
 #### Function draw_value_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, vec3f& val, float min = 0, float max = 0,
-    bool color = false);
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    vec3f& val, float min = 0, float max = 0, bool color = false);
 ~~~
 
 Generic widget used for templated code. Uses min and max,
@@ -13162,9 +13079,8 @@ or a deafult range when their are the same.
 #### Function draw_value_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, vec4f& val, float min = 0, float max = 0,
-    bool color = false);
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    vec4f& val, float min = 0, float max = 0, bool color = false);
 ~~~
 
 Generic widget used for templated code. Uses min and max,
@@ -13173,9 +13089,8 @@ or a deafult range when their are the same.
 #### Function draw_value_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, frame3f& val, float min = 0, float max = 0,
-    bool color = false);
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    frame3f& val, float min = 0, float max = 0, bool color = false);
 ~~~
 
 Generic widget used for templated code. Uses min and max for frame origin,
@@ -13184,9 +13099,8 @@ or a deafult range when their are the same. Color is ignored.
 #### Function draw_value_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, mat4f& val, float min = 0, float max = 0,
-    bool color = false);
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    mat4f& val, float min = 0, float max = 0, bool color = false);
 ~~~
 
 Generic widget used for templated code. Uses min and max,
@@ -13195,9 +13109,8 @@ or a deafult range when their are the same. Color is ignored.
 #### Function draw_value_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, quat4f& val, float min = 0, float max = 0,
-    bool color = false);
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    quat4f& val, float min = 0, float max = 0, bool color = false);
 ~~~
 
 Generic widget used for templated code. Uses min and max,
@@ -13208,9 +13121,8 @@ or a deafult range when their are the same. Color is ignored.
 ~~~ .cpp
 template <typename T,
     typename std::enable_if_t<std::is_enum<T>::value, int> = 0>
-inline bool draw_value_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, T& val, float min = 0, float max = 0,
-    bool color = false) {
+inline bool draw_value_widget(gl_window* win, const std::string& lbl, T& val,
+    float min = 0, float max = 0, bool color = false) {
 ~~~
 
 Generic widget used for templated code. Min, max and color are ignored.
@@ -13218,9 +13130,8 @@ Generic widget used for templated code. Min, max and color are ignored.
 #### Function draw_value_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, uint32_t& val, float min = 0, float max = 0,
-    bool color = false);
+inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+    uint32_t& val, float min = 0, float max = 0, bool color = false);
 ~~~
 
 Generic widget used for templated code. Internally convert to int loosing
@@ -13229,9 +13140,9 @@ precision. See the int version.
 #### Function draw_imageinspect_widgets()
 
 ~~~ .cpp
-void draw_imageinspect_widgets(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, const image4f& hdr, const image4b& ldr,
-    const vec2f& mouse_pos, const gl_stdimage_params& params);
+void draw_imageinspect_widgets(gl_window* win, const std::string& lbl,
+    const image4f& hdr, const image4b& ldr, const vec2f& mouse_pos,
+    const gl_stdimage_params& params);
 ~~~
 
 Image inspection widgets.
@@ -13241,7 +13152,7 @@ Image inspection widgets.
 ~~~ .cpp
 template <typename T>
 inline bool draw_params_widgets(
-    const std::shared_ptr<gl_window>& win, const std::string& lbl, T& params);
+    gl_window* win, const std::string& lbl, T& params);
 ~~~
 
 Draws a widget that sets params in non-recursive trivial structures.
@@ -13250,9 +13161,8 @@ Internally uses visit to implement the view.
 #### Function draw_camera_selection_widget()
 
 ~~~ .cpp
-inline bool draw_camera_selection_widget(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, std::shared_ptr<camera>& cam,
-    const std::shared_ptr<scene>& scn, const std::shared_ptr<camera>& view);
+inline bool draw_camera_selection_widget(gl_window* win, const std::string& lbl,
+    camera*& cam, const scene* scn, camera* view);
 ~~~
 
 Draws a widget that can selected the camera.
@@ -13260,8 +13170,7 @@ Draws a widget that can selected the camera.
 #### Function draw_camera_widgets()
 
 ~~~ .cpp
-bool draw_camera_widgets(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, const std::shared_ptr<camera>& cam);
+bool draw_camera_widgets(gl_window* win, const std::string& lbl, camera* cam);
 ~~~
 
 Draws widgets for a camera. Used for quickly making demos.
@@ -13270,12 +13179,12 @@ Draws widgets for a camera. Used for quickly making demos.
 
 ~~~ .cpp
 struct scene_selection {
-    template <typename T> scene_selection& operator=(const std::shared_ptr<T>& val); 
+    template <typename T> scene_selection& operator=(T* val); 
     template <typename T> bool is() const; 
-    template <typename T> std::shared_ptr<T> get(); 
+    template <typename T> T* get(); 
     void* get_raw(); 
-    std::shared_ptr<void> get_untyped(); 
-    std::shared_ptr<void> ptr = nullptr;
+    void* get_untyped(); 
+    void* ptr = nullptr;
     const std::type_info* tinfo = nullptr;
 }
 ~~~
@@ -13295,12 +13204,10 @@ Scene selection
 #### Function draw_scene_widgets()
 
 ~~~ .cpp
-bool draw_scene_widgets(const std::shared_ptr<gl_window>& win,
-    const std::string& lbl, const std::shared_ptr<scene>& scn,
+bool draw_scene_widgets(gl_window* win, const std::string& lbl, scene* scn,
     scene_selection& sel, std::vector<ygl::scene_selection>& update_list,
-    const std::unordered_map<std::shared_ptr<texture>,
-        std::shared_ptr<gl_texture>>& gl_txt,
-    const std::shared_ptr<proc_scene>& test_scn = nullptr,
+    const std::unordered_map<texture*, gl_texture>& gl_txt,
+    proc_scene* test_scn = nullptr,
     const std::unordered_map<std::string, std::string>& inspector_highlights =
        ;
 ~~~
