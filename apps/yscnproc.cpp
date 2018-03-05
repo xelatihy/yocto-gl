@@ -91,9 +91,9 @@ int main(int argc, char** argv) {
     }
 
     // load obj
-    auto scn = std::make_shared<ygl::scene>();
+    auto scn = new ygl::scene();
     for (auto filename : filenames) {
-        auto to_merge = std::shared_ptr<ygl::scene>(nullptr);
+        auto to_merge = (ygl::scene*)nullptr;
         try {
             auto opts = ygl::load_options();
             opts.load_textures = textures;
@@ -108,7 +108,7 @@ int main(int argc, char** argv) {
         }
 
         // check missing texture
-        if (validate_textures) validate_texture_paths(to_merge.get(), filename);
+        if (validate_textures) validate_texture_paths(to_merge, filename);
 
         // print information
         if (info) {
@@ -118,11 +118,8 @@ int main(int argc, char** argv) {
         }
 
         // merge the scene into the other
-        if (filenames.size() > 1) {
-            ygl::merge_into(scn, to_merge);
-        } else {
-            swap(scn, to_merge);
-        }
+        ygl::merge_into(scn, to_merge);
+        delete to_merge;
     }
 
     // print information

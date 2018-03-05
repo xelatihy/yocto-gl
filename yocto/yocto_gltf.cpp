@@ -34,7 +34,7 @@
 namespace ygl {
 
 // Math support
-inline mat4f node_transform(const std::shared_ptr<gltf_node>& node) {
+inline mat4f node_transform(const gltf_node* node) {
     return frame_to_mat(translation_frame(node->translation) *
                         rotation_frame(node->rotation) *
                         scaling_frame(node->scale)) *
@@ -42,14 +42,13 @@ inline mat4f node_transform(const std::shared_ptr<gltf_node>& node) {
 }
 
 // Flattens a gltf file into a flattened asset.
-std::shared_ptr<gltf_scene_group> gltf_to_scenes(
-    const std::shared_ptr<glTF>& gltf, int scene_idx) {
+gltf_scene_group* gltf_to_scenes(const glTF* gltf, int scene_idx) {
     // clear asset
-    auto scns = std::make_shared<gltf_scene_group>();
+    auto scns = new gltf_scene_group();
 
     // convert images
     for (auto gtxt : gltf->images) {
-        auto txt = std::make_shared<gltf_texture>();
+        auto txt = new gltf_texture();
         txt->name = gtxt->name;
         txt->path = (startswith(gtxt->uri, "data:")) ? std::string("inlines") :
                                                        gtxt->uri;
@@ -137,16 +136,14 @@ std::shared_ptr<gltf_scene_group> gltf_to_scenes(
         };
 
     // add a texture
-    auto add_texture = [gltf, scns](
-                           const std::shared_ptr<glTFTextureInfo>& ginfo,
-                           std::shared_ptr<gltf_texture>& txt,
-                           std::shared_ptr<gltf_texture_info>& info,
-                           bool normal = false, bool occlusion = false) {
+    auto add_texture = [gltf, scns](glTFTextureInfo* ginfo, gltf_texture*& txt,
+                           gltf_texture_info*& info, bool normal = false,
+                           bool occlusion = false) {
         auto gtxt = gltf->get(ginfo->index);
         if (!gtxt) return;
         txt = (!gtxt->source) ? nullptr : scns->textures[(int)gtxt->source];
         if (!txt) return;
-        info = std::make_shared<gltf_texture_info>();
+        info = new gltf_texture_info();
         auto gsmp = gltf->get(gtxt->sampler);
         if (gsmp) {
             info->filter_mag = filter_mag_map.at(gsmp->magFilter);
@@ -155,21 +152,18 @@ std::shared_ptr<gltf_scene_group> gltf_to_scenes(
             info->wrap_t = wrap_t_map.at(gsmp->wrapT);
         }
         if (normal) {
-            auto ninfo =
-                std::static_pointer_cast<glTFMaterialNormalTextureInfo>(ginfo);
+            auto ninfo = (glTFMaterialNormalTextureInfo*)ginfo;
             info->scale = ninfo->scale;
         }
         if (occlusion) {
-            auto ninfo =
-                std::static_pointer_cast<glTFMaterialOcclusionTextureInfo>(
-                    ginfo);
+            auto ninfo = (glTFMaterialOcclusionTextureInfo*)ginfo;
             info->scale = ninfo->strength;
         }
     };
 
     // convert materials
     for (auto gmat : gltf->materials) {
-        auto mat = std::make_shared<gltf_material>();
+        auto mat = new gltf_material();
         mat->name = gmat->name;
         mat->emission = gmat->emissiveFactor;
         if (gmat->emissiveTexture) {
@@ -178,8 +172,7 @@ std::shared_ptr<gltf_scene_group> gltf_to_scenes(
         }
         if (gmat->pbrMetallicRoughness) {
             auto gmr = gmat->pbrMetallicRoughness;
-            mat->metallic_roughness =
-                std::make_shared<gltf_material_metallic_roughness>();
+            mat->metallic_roughness = new gltf_material_metallic_roughness();
             auto mr = mat->metallic_roughness;
             mr->base = {gmr->baseColorFactor[0], gmr->baseColorFactor[1],
                 gmr->baseColorFactor[2]};
@@ -197,8 +190,7 @@ std::shared_ptr<gltf_scene_group> gltf_to_scenes(
         }
         if (gmat->pbrSpecularGlossiness) {
             auto gsg = gmat->pbrSpecularGlossiness;
-            mat->specular_glossiness =
-                std::make_shared<gltf_material_specular_glossiness>();
+            mat->specular_glossiness = new gltf_material_specular_glossiness();
             auto sg = mat->specular_glossiness;
             sg->diffuse = {gsg->diffuseFactor[0], gsg->diffuseFactor[1],
                 gsg->diffuseFactor[2]};
@@ -227,12 +219,12 @@ std::shared_ptr<gltf_scene_group> gltf_to_scenes(
     }
 
     // convert meshes
-    auto meshes = std::vector<std::vector<std::shared_ptr<gltf_shape>>>();
+    auto meshes = std::vector<std::vector<gltf_shape*>>();
     for (auto gmesh : gltf->meshes) {
-        auto msh = std::make_shared<gltf_mesh>();
+        auto msh = new gltf_mesh();
         // primitives
         for (auto gprim : gmesh->primitives) {
-            auto prim = std::make_shared<gltf_shape>();
+            auto prim = new gltf_shape();
             if (gprim->material) {
                 prim->mat = scns->materials[(int)gprim->material];
             }
@@ -390,7 +382,7 @@ std::shared_ptr<gltf_scene_group> gltf_to_scenes(
             // morph targets
             int target_index = 0;
             for (auto& gtarget : gprim->targets) {
-                auto target = std::make_shared<gltf_shape_morph>();
+                auto target = new gltf_shape_morph();
                 for (auto gattr : gtarget) {
                     auto semantic = gattr.first;
                     auto vals = accessor_view(gltf, gltf->get(gattr.second));
@@ -422,7 +414,7 @@ std::shared_ptr<gltf_scene_group> gltf_to_scenes(
 
     // convert cameras
     for (auto gcam : gltf->cameras) {
-        auto cam = std::make_shared<gltf_camera>();
+        auto cam = new gltf_camera();
         cam->name = gcam->name;
         cam->ortho = gcam->type == glTFCameraType::Orthographic;
         if (cam->ortho) {
@@ -444,7 +436,7 @@ std::shared_ptr<gltf_scene_group> gltf_to_scenes(
 
     // convert nodes
     for (auto gnode : gltf->nodes) {
-        auto node = std::make_shared<gltf_node>();
+        auto node = new gltf_node();
         node->name = gnode->name;
         node->cam =
             (!gnode->camera) ? nullptr : scns->cameras[(int)gnode->camera];
@@ -479,14 +471,14 @@ std::shared_ptr<gltf_scene_group> gltf_to_scenes(
 
     // convert animations
     for (auto ganim : gltf->animations) {
-        auto anim_group = std::make_shared<gltf_animation_group>();
+        auto anim_group = new gltf_animation_group();
         anim_group->name = ganim->name;
-        std::map<vec2i, std::shared_ptr<gltf_animation>> sampler_map;
+        std::map<vec2i, gltf_animation*> sampler_map;
         for (auto gchannel : ganim->channels) {
             if (sampler_map.find({(int)gchannel->sampler,
                     (int)gchannel->target->path}) == sampler_map.end()) {
                 auto gsampler = ganim->get(gchannel->sampler);
-                auto keyframes = std::make_shared<gltf_animation>();
+                auto keyframes = new gltf_animation();
                 auto input_view =
                     accessor_view(gltf, gltf->get(gsampler->input));
                 keyframes->time.resize(input_view.size());
@@ -557,7 +549,7 @@ std::shared_ptr<gltf_scene_group> gltf_to_scenes(
 
     // convert skins
     for (auto gskin : gltf->skins) {
-        auto skin = std::make_shared<gltf_skin>();
+        auto skin = new gltf_skin();
         skin->name = gskin->name;
         for (auto gnode : gskin->joints)
             skin->joints.push_back(scns->nodes[(int)gnode]);
@@ -585,7 +577,7 @@ std::shared_ptr<gltf_scene_group> gltf_to_scenes(
 
     // convert scenes
     for (auto gscn : gltf->scenes) {
-        auto scn = std::make_shared<gltf_scene>();
+        auto scn = new gltf_scene();
         scn->name = gscn->name;
         for (auto n : gscn->nodes) scn->nodes.push_back(scns->nodes[(int)n]);
         scns->scenes.push_back(scn);
@@ -600,39 +592,37 @@ std::shared_ptr<gltf_scene_group> gltf_to_scenes(
 
 // helper
 template <typename T>
-static inline int index(
-    const std::vector<std::shared_ptr<T>>& vec, const std::shared_ptr<T>& val) {
+static inline int index(const std::vector<T*>& vec, T* val) {
     auto pos = std::find(vec.begin(), vec.end(), val);
     if (pos == vec.end()) return -1;
     return (int)(pos - vec.begin());
 }
 
 // Unflattnes gltf
-std::shared_ptr<glTF> scenes_to_gltf(
-    const std::shared_ptr<gltf_scene_group>& scns,
-    const std::string& buffer_uri, bool separate_buffers) {
-    auto gltf = std::make_shared<glTF>();
+glTF* scenes_to_gltf(gltf_scene_group* scns, const std::string& buffer_uri,
+    bool separate_buffers) {
+    auto gltf = new glTF();
 
     // add asset info
-    gltf->asset = std::make_shared<glTFAsset>();
+    gltf->asset = new glTFAsset();
     gltf->asset->generator = "Yocto/gltf";
     gltf->asset->version = "2.0";
 
     // convert cameras
     for (auto cam : scns->cameras) {
-        auto gcam = std::make_shared<glTFCamera>();
+        auto gcam = new glTFCamera();
         gcam->name = cam->name;
         gcam->type = (cam->ortho) ? glTFCameraType::Orthographic :
                                     glTFCameraType::Perspective;
         if (cam->ortho) {
-            auto ortho = std::make_shared<glTFCameraOrthographic>();
+            auto ortho = new glTFCameraOrthographic();
             ortho->ymag = cam->yfov;
             ortho->xmag = cam->aspect * cam->yfov;
             ortho->znear = cam->near;
             ortho->znear = cam->far;
             gcam->orthographic = ortho;
         } else {
-            auto persp = std::make_shared<glTFCameraPerspective>();
+            auto persp = new glTFCameraPerspective();
             persp->yfov = cam->yfov;
             persp->aspectRatio = cam->aspect;
             persp->znear = cam->near;
@@ -644,7 +634,7 @@ std::shared_ptr<glTF> scenes_to_gltf(
 
     // convert images
     for (auto txt : scns->textures) {
-        auto gimg = std::make_shared<glTFImage>();
+        auto gimg = new glTFImage();
         gimg->uri = txt->path;
         if (!txt->hdr.empty()) {
             gimg->data.width = txt->hdr.width();
@@ -698,14 +688,14 @@ std::shared_ptr<glTF> scenes_to_gltf(
         };
 
     // add a texture and sampler
-    auto add_texture = [&gltf, scns](const std::shared_ptr<gltf_texture>& txt,
-                           const std::shared_ptr<gltf_texture_info>& info) {
+    auto add_texture = [&gltf, scns](
+                           gltf_texture* txt, gltf_texture_info* info) {
         if (!txt) return glTFid<glTFTexture>{-1};
-        auto gtxt = std::make_shared<glTFTexture>();
+        auto gtxt = new glTFTexture();
         gtxt->name = txt->name;
         gtxt->source = glTFid<glTFImage>(index(scns->textures, txt));
         if (info && !info->is_default()) {
-            auto gsmp = std::make_shared<glTFSampler>();
+            auto gsmp = new glTFSampler();
             gsmp->wrapS = wrap_s_map.at(info->wrap_s);
             gsmp->wrapT = wrap_t_map.at(info->wrap_t);
             gsmp->minFilter = texture_min_map.at(info->filter_min);
@@ -719,17 +709,16 @@ std::shared_ptr<glTF> scenes_to_gltf(
 
     // convert materials
     for (auto mat : scns->materials) {
-        auto gmat = std::make_shared<glTFMaterial>();
+        auto gmat = new glTFMaterial();
         gmat->name = mat->name;
         gmat->emissiveFactor = mat->emission;
         if (mat->emission_txt) {
-            gmat->emissiveTexture = std::make_shared<glTFTextureInfo>();
+            gmat->emissiveTexture = new glTFTextureInfo();
             gmat->emissiveTexture->index =
                 add_texture(mat->emission_txt, mat->emission_txt_info);
         }
         if (mat->metallic_roughness) {
-            gmat->pbrMetallicRoughness =
-                std::make_shared<glTFMaterialPbrMetallicRoughness>();
+            gmat->pbrMetallicRoughness = new glTFMaterialPbrMetallicRoughness();
             auto gmr = gmat->pbrMetallicRoughness;
             auto mr = mat->metallic_roughness;
             gmr->baseColorFactor = {
@@ -737,20 +726,19 @@ std::shared_ptr<glTF> scenes_to_gltf(
             gmr->metallicFactor = mr->metallic;
             gmr->roughnessFactor = mr->roughness;
             if (mr->base_txt) {
-                gmr->baseColorTexture = std::make_shared<glTFTextureInfo>();
+                gmr->baseColorTexture = new glTFTextureInfo();
                 gmr->baseColorTexture->index =
                     add_texture(mr->base_txt, mr->base_txt_info);
             }
             if (mr->metallic_txt) {
-                gmr->metallicRoughnessTexture =
-                    std::make_shared<glTFTextureInfo>();
+                gmr->metallicRoughnessTexture = new glTFTextureInfo();
                 gmr->metallicRoughnessTexture->index =
                     add_texture(mr->metallic_txt, mr->metallic_txt_info);
             }
         }
         if (mat->specular_glossiness) {
             gmat->pbrSpecularGlossiness =
-                std::make_shared<glTFMaterialPbrSpecularGlossiness>();
+                new glTFMaterialPbrSpecularGlossiness();
             auto gsg = gmat->pbrSpecularGlossiness;
             auto sg = mat->specular_glossiness;
             gsg->diffuseFactor = {
@@ -758,28 +746,25 @@ std::shared_ptr<glTF> scenes_to_gltf(
             gsg->specularFactor = sg->specular;
             gsg->glossinessFactor = sg->glossiness;
             if (sg->diffuse_txt) {
-                gsg->diffuseTexture = std::make_shared<glTFTextureInfo>();
+                gsg->diffuseTexture = new glTFTextureInfo();
                 gsg->diffuseTexture->index =
                     add_texture(sg->diffuse_txt, sg->diffuse_txt_info);
             }
             if (sg->specular_txt) {
-                gsg->specularGlossinessTexture =
-                    std::make_shared<glTFTextureInfo>();
+                gsg->specularGlossinessTexture = new glTFTextureInfo();
                 gsg->specularGlossinessTexture->index =
                     add_texture(sg->specular_txt, sg->specular_txt_info);
             }
         }
         if (mat->normal_txt) {
-            gmat->normalTexture =
-                std::make_shared<glTFMaterialNormalTextureInfo>();
+            gmat->normalTexture = new glTFMaterialNormalTextureInfo();
             gmat->normalTexture->index =
                 add_texture(mat->normal_txt, mat->normal_txt_info);
             if (gmat->normalTexture && mat->normal_txt_info)
                 gmat->normalTexture->scale = mat->normal_txt_info->scale;
         }
         if (mat->occlusion_txt) {
-            gmat->occlusionTexture =
-                std::make_shared<glTFMaterialOcclusionTextureInfo>();
+            gmat->occlusionTexture = new glTFMaterialOcclusionTextureInfo();
             gmat->occlusionTexture->index =
                 add_texture(mat->occlusion_txt, mat->occlusion_txt_info);
             if (gmat->occlusionTexture && mat->occlusion_txt_info)
@@ -792,7 +777,7 @@ std::shared_ptr<glTF> scenes_to_gltf(
 
     // add buffer
     auto add_buffer = [&gltf](const std::string& buffer_uri) {
-        auto gbuffer = std::make_shared<glTFBuffer>();
+        auto gbuffer = new glTFBuffer();
         gltf->buffers.push_back(gbuffer);
         gbuffer->uri = buffer_uri;
         return gbuffer;
@@ -813,11 +798,11 @@ std::shared_ptr<glTF> scenes_to_gltf(
     };
 
     // attribute handling
-    auto add_accessor = [&gltf](const std::shared_ptr<glTFBuffer>& gbuffer,
-                            const std::string& name, glTFAccessorType type,
+    auto add_accessor = [&gltf](glTFBuffer* gbuffer, const std::string& name,
+                            glTFAccessorType type,
                             glTFAccessorComponentType ctype, int count,
                             int csize, const void* data, bool save_min_max) {
-        gltf->bufferViews.push_back(std::make_shared<glTFBufferView>());
+        gltf->bufferViews.push_back(new glTFBufferView());
         auto bufferView = gltf->bufferViews.back();
         bufferView->buffer = glTFid<glTFBuffer>(index(gltf->buffers, gbuffer));
         bufferView->byteOffset = (int)gbuffer->data.size();
@@ -829,7 +814,7 @@ std::shared_ptr<glTF> scenes_to_gltf(
                    bufferView->byteLength;
         bufferView->target = glTFBufferViewTarget::ArrayBuffer;
         memcpy(ptr, data, bufferView->byteLength);
-        gltf->accessors.push_back(std::make_shared<glTFAccessor>());
+        gltf->accessors.push_back(new glTFAccessor());
         auto accessor = gltf->accessors.back();
         accessor->bufferView =
             glTFid<glTFBufferView>((int)gltf->bufferViews.size() - 1);
@@ -871,12 +856,12 @@ std::shared_ptr<glTF> scenes_to_gltf(
     // convert meshes
     for (auto msh : scns->meshes) {
         auto gbuffer = add_opt_buffer(msh->path);
-        auto gmesh = std::make_shared<glTFMesh>();
+        auto gmesh = new glTFMesh();
         gmesh->name = msh->name;
         for (auto j = 0; j < msh->shapes.size(); j++) {
             auto gprim = msh->shapes[j];
             auto pid = msh->name + "_" + std::to_string(j);
-            auto prim = std::make_shared<glTFMeshPrimitive>();
+            auto prim = new glTFMeshPrimitive();
             prim->material =
                 glTFid<glTFMaterial>(index(scns->materials, gprim->mat));
             if (!gprim->pos.empty())
@@ -989,7 +974,7 @@ std::shared_ptr<glTF> scenes_to_gltf(
 
     // nodes
     for (auto node : scns->nodes) {
-        auto gnode = std::make_shared<glTFNode>();
+        auto gnode = new glTFNode();
         gnode->name = node->name;
         gnode->camera = glTFid<glTFCamera>(index(scns->cameras, node->cam));
         gnode->mesh = glTFid<glTFMesh>(index(scns->meshes, node->msh));
@@ -1012,7 +997,7 @@ std::shared_ptr<glTF> scenes_to_gltf(
 
     // skins
     for (auto sk : scns->skins) {
-        auto gsk = std::make_shared<glTFSkin>();
+        auto gsk = new glTFSkin();
         auto gbuffer = add_opt_buffer(sk->path);
         gsk->name = sk->name;
         gsk->skeleton = glTFid<glTFNode>(index(scns->nodes, sk->root));
@@ -1052,13 +1037,13 @@ std::shared_ptr<glTF> scenes_to_gltf(
 
     // animation
     for (auto anims : scns->animations) {
-        auto ganim = std::make_shared<glTFAnimation>();
+        auto ganim = new glTFAnimation();
         ganim->name = anims->name;
         auto gbuffer = add_opt_buffer(anims->path);
         auto count = 0;
         for (auto anim : anims->animations) {
             auto aid = ganim->name + "_" + std::to_string(count++);
-            auto gsmp = std::make_shared<glTFAnimationSampler>();
+            auto gsmp = new glTFAnimationSampler();
             gsmp->input =
                 add_accessor(gbuffer, aid + "_time", glTFAccessorType::Scalar,
                     glTFAccessorComponentType::Float, (int)anim->time.size(),
@@ -1098,10 +1083,10 @@ std::shared_ptr<glTF> scenes_to_gltf(
             }
             gsmp->interpolation = interpolation_map.at(anim->interp);
             for (auto node : anim->nodes) {
-                auto gchan = std::make_shared<glTFAnimationChannel>();
+                auto gchan = new glTFAnimationChannel();
                 gchan->sampler =
                     glTFid<glTFAnimationSampler>{(int)ganim->samplers.size()};
-                gchan->target = std::make_shared<glTFAnimationChannelTarget>();
+                gchan->target = new glTFAnimationChannelTarget();
                 gchan->target->node =
                     glTFid<glTFNode>{index(scns->nodes, node)};
                 gchan->target->path = path;
@@ -1114,7 +1099,7 @@ std::shared_ptr<glTF> scenes_to_gltf(
 
     // scenes
     for (auto scn : scns->scenes) {
-        auto gscn = std::make_shared<glTFScene>();
+        auto gscn = new glTFScene();
         gscn->name = scn->name;
         for (auto child : scn->nodes)
             gscn->nodes.push_back(glTFid<glTFNode>(index(scns->nodes, child)));
@@ -1127,10 +1112,10 @@ std::shared_ptr<glTF> scenes_to_gltf(
 }
 
 // Load scene
-std::shared_ptr<gltf_scene_group> load_scenes(
+gltf_scene_group* load_scenes(
     const std::string& filename, bool load_textures, bool skip_missing) {
     auto ext = path_extension(filename);
-    auto gltf = std::shared_ptr<glTF>();
+    auto gltf = (glTF*)nullptr;
     if (ext != ".glb") {
         gltf = load_gltf(filename, true, load_textures, skip_missing);
     } else {
@@ -1142,16 +1127,14 @@ std::shared_ptr<gltf_scene_group> load_scenes(
 
 /// Save scene
 void save_scenes(const std::string& filename, const std::string& buffer_uri,
-    const std::shared_ptr<gltf_scene_group>& scn, bool save_textures,
-    bool separate_buffers) {
+    gltf_scene_group* scn, bool save_textures, bool separate_buffers) {
     auto gltf = scenes_to_gltf(scn, buffer_uri, separate_buffers);
     save_gltf(filename, gltf, true, save_textures);
 }
 
 // Computes a scene bounding box
-bbox3f compute_scene_bounds(const std::shared_ptr<gltf_scene_group>& scn) {
-    auto bbox_meshes =
-        std::map<std::shared_ptr<gltf_mesh>, bbox3f>{{nullptr, invalid_bbox3f}};
+bbox3f compute_scene_bounds(const gltf_scene_group* scn) {
+    auto bbox_meshes = std::map<gltf_mesh*, bbox3f>{{nullptr, invalid_bbox3f}};
     for (auto mesh : scn->meshes) {
         bbox_meshes[mesh] = invalid_bbox3f;
         auto& bbox = bbox_meshes[mesh];
@@ -1171,7 +1154,7 @@ bbox3f compute_scene_bounds(const std::shared_ptr<gltf_scene_group>& scn) {
 }
 
 // Add missing data to the scene.
-void add_normals(const std::shared_ptr<gltf_scene_group>& scn) {
+void add_normals(gltf_scene_group* scn) {
     for (auto msh : scn->meshes) {
         for (auto shp : msh->shapes) {
             if (!shp->norm.empty()) continue;
@@ -1187,7 +1170,7 @@ void add_normals(const std::shared_ptr<gltf_scene_group>& scn) {
 }
 
 // Add missing data to the scene.
-void add_tangent_space(const std::shared_ptr<gltf_scene_group>& scn) {
+void add_tangent_space(gltf_scene_group* scn) {
     for (auto msh : scn->meshes) {
         for (auto shp : msh->shapes) {
             if (!shp->mat) continue;
@@ -1202,7 +1185,7 @@ void add_tangent_space(const std::shared_ptr<gltf_scene_group>& scn) {
 }
 
 // Add missing data to the scene.
-void add_radius(const std::shared_ptr<gltf_scene_group>& scn, float radius) {
+void add_radius(gltf_scene_group* scn, float radius) {
     for (auto msh : scn->meshes) {
         for (auto shp : msh->shapes) {
             if (shp->points.empty() && shp->lines.empty()) continue;
@@ -1213,7 +1196,7 @@ void add_radius(const std::shared_ptr<gltf_scene_group>& scn, float radius) {
 }
 
 // Add missing data to the scene.
-void add_texture_data(const std::shared_ptr<gltf_scene_group>& scn) {
+void add_texture_data(gltf_scene_group* scn) {
     for (auto txt : scn->textures) {
         if (txt->hdr.empty() && txt->ldr.empty()) {
             printf("unable to load texture %s\n", txt->path.c_str());
@@ -1223,10 +1206,10 @@ void add_texture_data(const std::shared_ptr<gltf_scene_group>& scn) {
 }
 
 // Add missing data to the scene.
-void add_nodes(const std::shared_ptr<gltf_scene_group>& scn) {
+void add_nodes(gltf_scene_group* scn) {
     if (!scn->nodes.empty()) return;
     for (auto mesh : scn->meshes) {
-        auto ist = std::make_shared<gltf_node>();
+        auto ist = new gltf_node();
         ist->name = mesh->name;
         ist->msh = mesh;
         scn->nodes.push_back(ist);
@@ -1234,18 +1217,18 @@ void add_nodes(const std::shared_ptr<gltf_scene_group>& scn) {
 }
 
 // Add missing data to the scene.
-void add_scene(const std::shared_ptr<gltf_scene_group>& scn) {
+void add_scene(gltf_scene_group* scn) {
     if (!scn->scenes.empty()) return;
-    auto s = std::make_shared<gltf_scene>();
+    auto s = new gltf_scene();
     s->name = "scene";
     update_transforms(scn);
     for (auto n : scn->nodes) {
-        if (!n->parent.lock()) s->nodes.push_back(n);
+        if (!n->parent) s->nodes.push_back(n);
     }
 }
 
 // Add missing data to the scene.
-void add_names(const std::shared_ptr<gltf_scene_group>& scn) {
+void add_names(gltf_scene_group* scn) {
     auto cid = 0;
     for (auto cam : scn->cameras) {
         if (cam->name.empty())
@@ -1296,7 +1279,7 @@ void add_names(const std::shared_ptr<gltf_scene_group>& scn) {
 }
 
 // Add a default camera that views the entire scene.
-void add_default_cameras(const std::shared_ptr<gltf_scene_group>& scns) {
+void add_default_cameras(gltf_scene_group* scns) {
     for (auto scn : scns->scenes) {
         auto cams = get_camera_nodes(scn);
         if (cams.empty()) {
@@ -1307,7 +1290,7 @@ void add_default_cameras(const std::shared_ptr<gltf_scene_group>& scns) {
             auto bbox_msize =
                 max(bbox_size[0], max(bbox_size[1], bbox_size[2]));
             // set up camera
-            auto cam = std::make_shared<gltf_camera>();
+            auto cam = new gltf_camera();
             cam->name = scn->name + " camera";
             auto camera_dir = vec3f{1, 0.4f, 1};
             auto from = camera_dir * bbox_msize + bbox_center;
@@ -1318,7 +1301,7 @@ void add_default_cameras(const std::shared_ptr<gltf_scene_group>& scns) {
             cam->yfov = 2 * atanf(0.5f);
             cam->aperture = 0;
             cam->focus = length(to - from);
-            auto node = std::make_shared<gltf_node>();
+            auto node = new gltf_node();
             node->matrix = frame_to_mat(lookat_frame(from, to, up));
             node->cam = cam;
             node->name = cam->name;
@@ -1330,7 +1313,7 @@ void add_default_cameras(const std::shared_ptr<gltf_scene_group>& scns) {
 }
 
 // Update node hierarchy
-void update_node_hierarchy(const std::shared_ptr<gltf_scene_group>& scns) {
+void update_node_hierarchy(gltf_scene_group* scns) {
     for (auto node : scns->nodes) node->parent = {};
     for (auto node : scns->nodes) {
         for (auto child : node->children) child->parent = node;
@@ -1338,10 +1321,10 @@ void update_node_hierarchy(const std::shared_ptr<gltf_scene_group>& scns) {
 }
 
 // Update node trasforms
-void update_transforms(const std::shared_ptr<gltf_node>& ist) {
+void update_transforms(gltf_node* ist) {
     ist->_local_xform = node_transform(ist);
-    if (ist->parent.lock()) {
-        ist->_xform = ist->parent.lock()->_xform * ist->_local_xform;
+    if (ist->parent) {
+        ist->_xform = ist->parent->_xform * ist->_local_xform;
     } else {
         ist->_xform = ist->_local_xform;
     }
@@ -1349,14 +1332,13 @@ void update_transforms(const std::shared_ptr<gltf_node>& ist) {
 }
 
 // Update node trasforms
-void update_transforms(const std::shared_ptr<gltf_scene_group>& scns) {
+void update_transforms(gltf_scene_group* scns) {
     update_node_hierarchy(scns);
     for (auto node : scns->nodes) { update_transforms(node); }
 }
 
 // Evalute interpolated values
-void update_animated_node_transforms(
-    const std::shared_ptr<gltf_animation>& anim, float time) {
+void update_animated_node_transforms(gltf_animation* anim, float time) {
     time = clamp(time, anim->time.front(), anim->time.back() - 0.001f);
     // get time slice
     auto i1 = 0, i2 = 0;
@@ -1445,8 +1427,7 @@ void update_animated_node_transforms(
 }
 
 // Compute animation
-void update_animated_transforms(
-    const std::shared_ptr<gltf_scene_group>& scns, float time) {
+void update_animated_transforms(gltf_scene_group* scns, float time) {
     for (auto anim_group : scns->animations) {
         for (auto anim : anim_group->animations) {
             update_animated_node_transforms(anim, time);
@@ -1455,8 +1436,7 @@ void update_animated_transforms(
 }
 
 // Update skin trasforms
-void update_skin_transforms(const std::shared_ptr<gltf_node>& ist,
-    const std::shared_ptr<gltf_node>& parent) {
+void update_skin_transforms(gltf_node* ist, gltf_node* parent) {
     ist->_skin_xform = node_transform(ist);
     if (parent) ist->_skin_xform = parent->_skin_xform * ist->_skin_xform;
     for (auto child : ist->children) update_skin_transforms(child, ist);
@@ -1464,7 +1444,7 @@ void update_skin_transforms(const std::shared_ptr<gltf_node>& ist,
 
 // Skin transforms (local-to-object)
 std::vector<mat4f> get_skin_transforms(
-    const std::shared_ptr<gltf_skin>& sk, const mat4f& xform) {
+    const gltf_skin* sk, const mat4f& xform) {
     auto ret = std::vector<mat4f>(sk->joints.size());
     update_skin_transforms(sk->root, nullptr);
     auto inv_root = inverse(xform);
@@ -1479,7 +1459,7 @@ std::vector<mat4f> get_skin_transforms(
 }
 
 // Compute shape morphing
-void compute_morphing_deformation(const std::shared_ptr<gltf_shape>& shp,
+void compute_morphing_deformation(const gltf_shape* shp,
     const std::vector<float>& weights, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec4f>& tangsp) {
     pos = shp->pos;
@@ -1508,7 +1488,7 @@ void compute_morphing_deformation(const std::shared_ptr<gltf_shape>& shp,
 }
 
 // Animation times
-vec2f get_animation_bounds(const std::shared_ptr<gltf_scene_group>& scns) {
+vec2f get_animation_bounds(const gltf_scene_group* scns) {
     auto range = vec2f{0, 0};
     for (auto anim_group : scns->animations) {
         for (auto anim : anim_group->animations) {
@@ -1520,9 +1500,8 @@ vec2f get_animation_bounds(const std::shared_ptr<gltf_scene_group>& scns) {
 }
 
 // Helpder to filter nodes
-void get_nodes(const std::vector<std::shared_ptr<gltf_node>>& nodes,
-    bool has_camera, bool has_mesh,
-    std::vector<std::shared_ptr<gltf_node>>& filtered) {
+void get_nodes(const std::vector<gltf_node*>& nodes, bool has_camera,
+    bool has_mesh, std::vector<gltf_node*>& filtered) {
     for (auto node : nodes) {
         if (has_camera && node->cam) filtered.push_back(node);
         if (has_mesh && node->msh) filtered.push_back(node);
@@ -1531,31 +1510,28 @@ void get_nodes(const std::vector<std::shared_ptr<gltf_node>>& nodes,
 }
 
 // Helpder to filter nodes
-std::vector<std::shared_ptr<gltf_node>> get_nodes(
-    const std::vector<std::shared_ptr<gltf_node>>& nodes, bool has_camera,
-    bool has_mesh) {
-    std::vector<std::shared_ptr<gltf_node>> filtered;
+std::vector<gltf_node*> get_nodes(
+    const std::vector<gltf_node*>& nodes, bool has_camera, bool has_mesh) {
+    std::vector<gltf_node*> filtered;
     get_nodes(nodes, has_camera, has_mesh, filtered);
     return filtered;
 }
 
 // Get a list of nodes with meshes
-std::vector<std::shared_ptr<gltf_node>> get_mesh_nodes(
-    const std::shared_ptr<gltf_scene>& scn) {
+std::vector<gltf_node*> get_mesh_nodes(const gltf_scene* scn) {
     if (!scn) return {};
     return get_nodes(scn->nodes, false, true);
 }
 
 // Get a list of nodes with cameras
-std::vector<std::shared_ptr<gltf_node>> get_camera_nodes(
-    const std::shared_ptr<gltf_scene>& scn) {
+std::vector<gltf_node*> get_camera_nodes(const gltf_scene* scn) {
     if (!scn) return {};
     return get_nodes(scn->nodes, true, false);
 }
 
 // Set unique path names for outputting separate buffers
-void add_unique_path_names(const std::shared_ptr<gltf_scene_group>& scns,
-    const std::string& buffer_uri) {
+void add_unique_path_names(
+    gltf_scene_group* scns, const std::string& buffer_uri) {
     auto mid = 0;
     for (auto msh : scns->meshes) {
         msh->path = buffer_uri + "mesh_" + std::to_string(mid++) + "_" +
@@ -1574,16 +1550,13 @@ void add_unique_path_names(const std::shared_ptr<gltf_scene_group>& scns,
 }
 
 // Convert materials to spec gloss
-void add_spec_gloss(const std::shared_ptr<gltf_scene_group>& scns) {
-    auto txts = std::map<
-        std::pair<std::shared_ptr<gltf_texture>, std::shared_ptr<gltf_texture>>,
-        std::pair<std::shared_ptr<gltf_texture>,
-            std::shared_ptr<gltf_texture>>>();
+void add_spec_gloss(gltf_scene_group* scns) {
+    auto txts = std::map<std::pair<gltf_texture*, gltf_texture*>,
+        std::pair<gltf_texture*, gltf_texture*>>();
     for (auto mat : scns->materials) {
         if (mat->specular_glossiness) continue;
         if (!mat->metallic_roughness) continue;
-        mat->specular_glossiness =
-            std::make_shared<gltf_material_specular_glossiness>();
+        mat->specular_glossiness = new gltf_material_specular_glossiness();
         auto mr = mat->metallic_roughness;
         auto sg = mat->specular_glossiness;
         if (mr->base_txt || mr->metallic_txt) {
@@ -1591,8 +1564,8 @@ void add_spec_gloss(const std::shared_ptr<gltf_scene_group>& scns) {
             sg->opacity = 1;
             sg->specular = {1, 1, 1};
             sg->glossiness = 1;
-            auto mr_txt = std::pair<std::shared_ptr<gltf_texture>,
-                std::shared_ptr<gltf_texture>>{mr->base_txt, mr->metallic_txt};
+            auto mr_txt = std::pair<gltf_texture*, gltf_texture*>{
+                mr->base_txt, mr->metallic_txt};
             if (txts.find(mr_txt) == txts.end()) {
                 auto w = 0, h = 0;
                 if (mr->base_txt) {
@@ -1603,9 +1576,9 @@ void add_spec_gloss(const std::shared_ptr<gltf_scene_group>& scns) {
                     w = max(w, mr->metallic_txt->width());
                     h = max(h, mr->metallic_txt->height());
                 }
-                auto diff = std::make_shared<gltf_texture>();
+                auto diff = new gltf_texture();
                 diff->ldr = image4b(w, h);
-                auto spec = std::make_shared<gltf_texture>();
+                auto spec = new gltf_texture();
                 spec->ldr = image4b(w, h);
                 for (auto j = 0; j < h; j++) {
                     for (auto i = 0; i < w; i++) {
