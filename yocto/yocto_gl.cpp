@@ -8343,6 +8343,7 @@ template <typename T>
 void serialize(T*& val, json& js, bool reading) {
     if (reading) {
         if (js.is_null()) {
+            if(val) delete val;
             val = nullptr;
             return;
         }
