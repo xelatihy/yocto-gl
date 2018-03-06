@@ -4524,15 +4524,10 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
     }
 
     // adjust positions and normals
-    for (auto oid = 0; oid < obj->objects.size(); oid++) {
-        auto oobj = obj->objects[oid];
-        if (oobj->frame == identity_frame3f) continue;
-        scn->shapes[oid]->frame = oobj->frame;
-        auto inv_frame = inverse(oobj->frame);
-        for (auto shp : scn->shapes) {
-            for (auto& p : shp->pos) p = transform_point(inv_frame, p);
-            for (auto& n : shp->norm) n = transform_direction(inv_frame, n);
-        }
+    for (auto shp : scn->shapes) {
+        auto inv_frame = inverse(shp->frame);
+        for (auto& p : shp->pos) p = transform_point(inv_frame, p);
+        for (auto& n : shp->norm) n = transform_direction(inv_frame, n);
     }
 
     // convert nodes
