@@ -3,6 +3,28 @@
 This file contains notes on future improvements of Yocto.
 Please consider this to be just development notes and not any real planning.
 
+## Test scenes
+
+- fix obj export
+    - check shape names
+    - save_obj()
+        - skip group names if only one group
+        - skip smoothing if all on
+- fix point light energy
+- 0 roughness
+- transparent
+- bent floor
+
+## Trace
+
+- path trace with explicit light sampling
+- better envmap sampling
+- eval_direct function
+- mis in params and not renderer?
+- samplers
+    - sobol sampler
+    - pixe sampler
+
 ## New scene
 
 - add material to env

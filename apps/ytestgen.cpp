@@ -111,14 +111,10 @@ void save_test_scene(const std::string& sname, const std::string& basedir) {
                 delete sscn;
             }
         } else {
-            auto count = 0;
             for (auto& test_scn : test_scns) {
-                auto name = "scene"s;
-                if (count) name = "view"s + std::to_string(count);
-                count += 1;
-                save_scene(test_scn.second, name, dirname,
+                save_scene(test_scn.second, test_scn.first->name, dirname,
                     !ygl::startswith(sname, "instance"));
-                ygl::save_proc_scene(dirname + name + ".json", test_scn.first);
+                ygl::save_proc_scene(dirname + test_scn.first->name + ".json", test_scn.first);
             }
         }
     } catch (std::exception& e) { ygl::log_fatal("error {}", e.what()); }
