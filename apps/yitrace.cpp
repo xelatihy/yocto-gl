@@ -120,7 +120,7 @@ bool update(app_state* app) {
 
         // update BVH
         for (auto sel : app->update_list) {
-            if (sel.is<ygl::node>() || sel.is<ygl::shape_group>()) {
+            if (sel.is<ygl::shape>()) {
                 ygl::refit_bvh(app->bvh, app->scn, false);
             }
             if (sel.is<ygl::node>()) {

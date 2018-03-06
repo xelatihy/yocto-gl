@@ -73,11 +73,6 @@ inline void draw(ygl::gl_window* win, app_state* app) {
             ygl::update_gl_texture(sel.get<ygl::texture>(),
                 app->textures[sel.get<ygl::texture>()]);
         }
-        if (sel.is<ygl::shape_group>()) {
-            for (auto shp : sel.get<ygl::shape_group>()->shapes) {
-                ygl::update_gl_shape(shp, app->shapes[shp]);
-            }
-        }
         if (sel.is<ygl::shape>()) {
             ygl::update_gl_shape(
                 sel.get<ygl::shape>(), app->shapes[sel.get<ygl::shape>()]);
@@ -87,8 +82,8 @@ inline void draw(ygl::gl_window* win, app_state* app) {
             ygl::update_transforms(app->scn, app->time);
             last_time = app->time;
         }
-        if (sel.is<ygl::shape>() || sel.is<ygl::shape_group>() ||
-            sel.is<ygl::material>() || sel.is<ygl::node>()) {
+        if (sel.is<ygl::shape>() || sel.is<ygl::material>() ||
+            sel.is<ygl::node>()) {
             app->lights = ygl::make_gl_lights(app->scn);
             if (app->lights.pos.empty()) app->params.eyelight = true;
         }

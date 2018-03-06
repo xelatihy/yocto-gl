@@ -53,9 +53,8 @@ void rmdir(const std::string& dir) {
 void save_scene(ygl::scene* scn, const std::string& sname,
     const std::string& dirname, bool flatten_obj) {
     auto facevarying = false;
-    for (auto sgr : scn->shapes)
-        for (auto shp : sgr->shapes)
-            facevarying = facevarying || !shp->quads_pos.empty();
+    for (auto shp : scn->shapes)
+        facevarying = facevarying || !shp->quads_pos.empty();
 
     auto opts = ygl::save_options();
     opts.save_textures = true;
@@ -95,17 +94,13 @@ void save_test_scene(const std::string& sname, const std::string& basedir) {
             }
         } else if (sname == "shapes") {
             auto scn = test_scns.front().second;
-            for (auto sgr : scn->shapes) {
+            for (auto shp : scn->shapes) {
                 auto sscn = new ygl::scene();
-                auto ssgr = new ygl::shape_group();
-                ssgr->name = sgr->name;
-                for (auto shp : sgr->shapes) {
-                    auto sshp = new ygl::shape(*shp);
-                    sshp->materials.clear();
-                    ssgr->shapes.push_back(sshp);
-                }
-                sscn->shapes.push_back(ssgr);
-                auto shp_name = ygl::partition(sgr->name, "_")[0];
+                auto sshp = new ygl::shape();
+                sshp->name = shp->name;
+                sshp->groups.clear();
+                sscn->shapes.push_back(sshp);
+                auto shp_name = ygl::partition(sshp->name, "_")[0];
                 auto opts = ygl::save_options();
                 ygl::save_scene(dirname + shp_name + ".obj", sscn, opts);
                 delete sscn;
@@ -114,7 +109,8 @@ void save_test_scene(const std::string& sname, const std::string& basedir) {
             for (auto& test_scn : test_scns) {
                 save_scene(test_scn.second, test_scn.first->name, dirname,
                     !ygl::startswith(sname, "instance"));
-                ygl::save_proc_scene(dirname + test_scn.first->name + ".json", test_scn.first);
+                ygl::save_proc_scene(
+                    dirname + test_scn.first->name + ".json", test_scn.first);
             }
         }
     } catch (std::exception& e) { ygl::log_fatal("error {}", e.what()); }

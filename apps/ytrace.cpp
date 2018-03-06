@@ -69,8 +69,6 @@ int main(int argc, char* argv[]) {
         "Compute images in <val> samples batches", 16);
     app->save_batch = ygl::parse_flag(
         parser, "--save-batch", "", "Save images progressively");
-    auto double_sided =
-        ygl::parse_flag(parser, "--double-sided", "", "Double sided rendering");
     app->quiet =
         ygl::parse_flag(parser, "--quiet", "-q", "Print only errors messages");
     app->imfilename = ygl::parse_opt(
@@ -104,7 +102,7 @@ int main(int argc, char* argv[]) {
     add_elements(app->scn, opts);
 
     // fix double sided materials
-    if (double_sided) {
+    if (app->params.double_sided) {
         for (auto m : app->scn->materials) m->double_sided = true;
     }
 

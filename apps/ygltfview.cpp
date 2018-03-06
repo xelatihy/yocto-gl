@@ -291,14 +291,11 @@ inline void shade_mesh(const ygl::gltf_mesh* msh, const ygl::gltf_skin* sk,
         default_material->metallic_roughness->base = {0.2f, 0.2f, 0.2f};
     }
 
-    auto txt = [st](const ygl::gltf_texture* gtxt) -> ygl::gl_texture {
-        if (!gtxt) return {};
-        return st->txt.at((ygl::gltf_texture*)gtxt);
-    };
-
-    auto txt_info = [st](
-                        ygl::gltf_texture_info* ginfo) -> ygl::gl_texture_info {
+    auto txt = [st](const ygl::gltf_texture* gtxt,
+                   ygl::gltf_texture_info* ginfo) -> ygl::gl_texture_info {
         auto info = ygl::gl_texture_info();
+        if (!gtxt) return info;
+        info.txt = st->txt.at((ygl::gltf_texture*)gtxt);
         info.wrap_s = (ygl::gl_texture_wrap)ginfo->wrap_s;
         info.wrap_t = (ygl::gl_texture_wrap)ginfo->wrap_t;
         info.filter_min = (ygl::gl_texture_filter)ginfo->filter_min;
@@ -324,33 +321,31 @@ inline void shade_mesh(const ygl::gltf_mesh* msh, const ygl::gltf_skin* sk,
             set_stdsurface_material(st->prog,
                 ygl::material_type::specular_glossiness, etype, mat->emission,
                 sg->diffuse, sg->specular, sg->glossiness, sg->opacity,
-                txt(mat->emission_txt), txt(sg->diffuse_txt),
-                txt(sg->specular_txt), {}, txt(mat->normal_txt),
-                txt(mat->occlusion_txt), txt_info(mat->emission_txt_info),
-                txt_info(sg->diffuse_txt_info), txt_info(sg->specular_txt_info),
-                {}, txt_info(mat->normal_txt_info),
-                txt_info(mat->occlusion_txt_info), false, mat->double_sided,
-                cutout);
+                txt(mat->emission_txt, mat->emission_txt_info),
+                txt(sg->diffuse_txt, sg->diffuse_txt_info),
+                txt(sg->specular_txt, sg->specular_txt_info), {},
+                txt(mat->normal_txt, mat->normal_txt_info),
+                txt(mat->occlusion_txt, mat->occlusion_txt_info), false,
+                mat->double_sided, cutout);
         } else if (mat->metallic_roughness) {
             auto mr = mat->metallic_roughness;
             op = mr->opacity;
             set_stdsurface_material(st->prog,
                 ygl::material_type::metallic_roughness, etype, mat->emission,
                 mr->base, {mr->metallic, mr->metallic, mr->metallic},
-                mr->roughness, mr->opacity, txt(mat->emission_txt),
-                txt(mr->base_txt), txt(mr->metallic_txt), {},
-                txt(mat->normal_txt), txt(mat->occlusion_txt),
-                txt_info(mat->emission_txt_info), txt_info(mr->base_txt_info),
-                txt_info(mr->metallic_txt_info), {},
-                txt_info(mat->normal_txt_info),
-                txt_info(mat->occlusion_txt_info), false, mat->double_sided,
-                cutout);
+                mr->roughness, mr->opacity,
+                txt(mat->emission_txt, mat->emission_txt_info),
+                txt(mr->base_txt, mr->base_txt_info),
+                txt(mr->metallic_txt, mr->metallic_txt_info), {},
+                txt(mat->normal_txt, mat->normal_txt_info),
+                txt(mat->occlusion_txt, mat->occlusion_txt_info), false,
+                mat->double_sided, cutout);
         } else {
             set_stdsurface_material(st->prog,
                 ygl::material_type::specular_roughness, etype, mat->emission,
-                ygl::zero3f, ygl::zero3f, 0.5f, 1, txt(mat->emission_txt), {},
-                {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, false,
-                mat->double_sided, cutout);
+                ygl::zero3f, ygl::zero3f, 0.5f, 1,
+                txt(mat->emission_txt, mat->emission_txt_info), {}, {}, {}, {},
+                {}, false, mat->double_sided, cutout);
         }
 
         auto vbo = st->vbo.at(shp);
