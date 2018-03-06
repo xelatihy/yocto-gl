@@ -104,8 +104,13 @@ void draw(ygl::gl_window* win, app_state* app) {
                 win, "", app->img, {}, get_mouse_posf(win), app->imparams);
         }
         if (ygl::draw_header_widget(win, "scene")) {
-            if (ygl::draw_scene_widgets(
-                    win, "", app->scn, app->selection, app->update_list, {}))
+            if (ygl::draw_scene_tree_widgets(
+                    win, "", app->scn, app->selection, app->update_list))
+                app->scene_updated = true;
+        }
+        if (ygl::draw_header_widget(win, "inspect")) {
+            if (ygl::draw_scene_elem_widgets(
+                    win, "", app->scn, app->selection, app->update_list))
                 app->scene_updated = true;
         }
     }

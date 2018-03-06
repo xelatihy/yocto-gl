@@ -3,29 +3,16 @@
 This file contains notes on future improvements of Yocto.
 Please consider this to be just development notes and not any real planning.
 
-## Bugs
+## User Interface
 
-- do not split OBJ shapes by default
 - bad shape ui
-- hairball scene needs splitting for now
 
 ## One shape
 
-- gltf load
-    - merge shapes
+- hairball scene needs splitting for now
 - update list marks shape buffers
 - scene with name
 - tesselation takes tags
-
-## Group properties
-
-- tags into groupid
-    - material/group/smoothing into one
-    - use only one id
-- texture_info with texture*
-
-## Tagged shape
-
 - OpenGL with multiple index buffers
     - OpenGL updates: rebuild all buffers or detect if same size
     - selection carries shape ids

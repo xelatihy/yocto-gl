@@ -10877,8 +10877,7 @@ void update_proc_elem(scene* scn, shape* shp, const proc_shape* pshp) {
             //                                   0.0001f};
             make_hair(shp->lines, shp->pos, shp->norm, shp->texcoord,
                 shp->radius, nhairs, 2, {}, shp1->quads, shp1->pos, shp1->norm,
-                shp1->texcoord,
-                (pshp->hair_params) ? *pshp->hair_params : make_hair_params());
+                shp1->texcoord, pshp->hair_params);
             merge_into(shp, shp1, false);
             delete shp1;
         } break;
@@ -11203,22 +11202,16 @@ std::vector<proc_shape*>& proc_shape_presets() {
     presets.back()->scale = 0.8f;
     presets.push_back(make_shape("pointscube", proc_shape_type::pointscube));
     presets.push_back(make_shape("hairball1", proc_shape_type::hairball));
-    presets.back()->hair_params =
-        optional<make_hair_params>{make_hair_params()};
-    presets.back()->hair_params->radius = {0.001f, 0.0001f};
-    presets.back()->hair_params->length = {0.1f, 0.1f};
-    presets.back()->hair_params->noise = {0.5f, 8};
+    presets.back()->hair_params.radius = {0.001f, 0.0001f};
+    presets.back()->hair_params.length = {0.1f, 0.1f};
+    presets.back()->hair_params.noise = {0.5f, 8};
     presets.push_back(make_shape("hairball2", proc_shape_type::hairball));
-    presets.back()->hair_params =
-        optional<make_hair_params>{make_hair_params()};
-    presets.back()->hair_params->radius = {0.001f, 0.0001f};
-    presets.back()->hair_params->length = {0.1f, 0.1f};
-    presets.back()->hair_params->clump = {0.5f, 128};
+    presets.back()->hair_params.radius = {0.001f, 0.0001f};
+    presets.back()->hair_params.length = {0.1f, 0.1f};
+    presets.back()->hair_params.clump = {0.5f, 128};
     presets.push_back(make_shape("hairball3", proc_shape_type::hairball));
-    presets.back()->hair_params =
-        optional<make_hair_params>{make_hair_params()};
-    presets.back()->hair_params->radius = {0.001f, 0.0001f};
-    presets.back()->hair_params->length = {0.1f, 0.1f};
+    presets.back()->hair_params.radius = {0.001f, 0.0001f};
+    presets.back()->hair_params.length = {0.1f, 0.1f};
     presets.push_back(make_shape("hairballi", proc_shape_type::sphere));
     presets.back()->scale = 0.8f;
     presets.push_back(
@@ -14276,32 +14269,36 @@ void draw_imageinspect_widgets(gl_window* win, const std::string& lbl,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Implementation of draw camera
-struct draw_camera_visitor {
-    gl_window* win = nullptr;
-    int edited = 0;
+// template <typename T>
+// const std::vector<T*>& elems(const T* aux) {
+//     static auto v = std::vector<T*>();
+//     return v;
+// }
 
-    // constructor
-    draw_camera_visitor(gl_window* win_) : win(win_) {}
-
-    template <typename T>
-    void operator()(T& val, const visit_var& var) {
-        edited += draw_value_widget(win, var.name, val, var.min, var.max,
-            var.type == visit_var_type::color);
-    }
-
-    template <typename T>
-    void operator()(const T* val,
-        const visit_var& var = visit_var{"", visit_var_type::object}) {
-        if (!val) return;
-        // TODO: fix this separator
-        draw_separator_widget(win);
-        draw_groupid_widget_push(win, val);
-        draw_separator_widget(win);
-        visit(*val, *this);
-        draw_groupid_widget_pop(win);
-    }
-};
+const std::vector<texture*>& get_scene_elems(
+    const scene* scn, const texture* aux) {
+    return scn->textures;
+}
+const std::vector<shape*>& get_scene_elems(const scene* scn, shape* aux) {
+    return scn->shapes;
+}
+const std::vector<camera*> get_scene_elems(const scene* scn, camera* aux) {
+    return scn->cameras;
+}
+const std::vector<material*> get_scene_elems(const scene* scn, material* aux) {
+    return scn->materials;
+}
+const std::vector<environment*> get_scene_elems(
+    const scene* scn, environment* aux) {
+    return scn->environments;
+}
+const std::vector<node*> get_scene_elems(const scene* scn, node* aux) {
+    return scn->nodes;
+}
+const std::vector<animation_group*> get_scene_elems(
+    const scene* scn, animation_group* aux) {
+    return scn->animations;
+}
 
 // Implementation of camera selection
 bool draw_camera_widgets(gl_window* win, const std::string& lbl, camera* cam) {
@@ -14361,6 +14358,21 @@ void draw_scene_tree_widgets(gl_window* win, const std::string& lbl_, T* val,
     }
 }
 
+void draw_scene_tree_widgets(gl_window* win, const std::string& lbl,
+    texture_info& val, scene_selection& sel,
+    const std::unordered_map<std::string, std::string>& highlights) {
+    draw_scene_tree_widgets(win, lbl, val.txt, sel, highlights);
+}
+
+void draw_scene_tree_widgets(gl_window* win, const std::string& lbl,
+    std::vector<shape_group_props>& val, scene_selection& sel,
+    const std::unordered_map<std::string, std::string>& highlights) {
+    for (auto gid = 0; gid < val.size(); gid++) {
+        draw_scene_tree_widgets(win, "mat" + std::to_string(gid + 1),
+            val[gid].mat, sel, highlights);
+    }
+}
+
 template <typename T>
 void draw_scene_tree_widgets(gl_window* win, const std::string& lbl,
     std::vector<T*>& val, scene_selection& sel,
@@ -14371,172 +14383,178 @@ void draw_scene_tree_widgets(gl_window* win, const std::string& lbl,
     }
 }
 
-// Implementation of draw elements
-struct draw_elem_visitor {
-    gl_window* win = nullptr;
-    scene* scn = nullptr;
-    scene_selection& sel;
-    const std::unordered_map<texture*, gl_texture>& gl_txt;
-    const std::unordered_map<std::string, std::string>& highlights;
-    int edited = 0;
-    std::string elem_name = "";
+template <typename T>
+bool draw_scene_elem_widgets(gl_window* win, scene* scn, T& val,
+    const visit_var& var,
+    const std::unordered_map<std::string, std::string>& highlights,
+    const std::string& elem_name) {
+    auto color = get_highlight_color(highlights, elem_name + "___" + var.name);
+    if (color != zero4f) draw_style_widget_push(win, color);
+    auto edited = 0;
+    edited += draw_value_widget(win, var.name, val, var.min, var.max,
+        var.type == visit_var_type::color);
+    if (color != zero4f) draw_style_widget_pop(win);
+    return edited;
+}
 
-    // constructor
-    draw_elem_visitor(gl_window* win_, scene* scn_, scene_selection& sel_,
-        const std::unordered_map<texture*, gl_texture>& gl_txt_,
-        const std::unordered_map<std::string, std::string>& hi_)
-        : win(win_), scn(scn_), sel(sel_), gl_txt(gl_txt_), highlights(hi_) {}
+bool draw_scene_elem_widgets(gl_window* win, scene* scn, make_hair_params& val,
+    const visit_var& var,
+    const std::unordered_map<std::string, std::string>& highlights,
+    const std::string& elem_name) {
+    // TODO: hair params
+    return false;
+}
 
-    vec4f get_highlight_color(const std::string& name) {
-        if (!highlights.empty() &&
-            contains(highlights, elem_name + "___" + name)) {
-            return draw_visitor_highlight_colors.at(
-                highlights.at(elem_name + "___" + name));
-        }
-        return zero4f;
+bool draw_scene_elem_widgets(gl_window* win, scene* scn, texture_info& val,
+    const visit_var& var,
+    const std::unordered_map<std::string, std::string>& highlights,
+    const std::string& elem_name) {
+    auto color = get_highlight_color(highlights, elem_name + "___" + var.name);
+    if (color != zero4f) draw_style_widget_push(win, color);
+    auto edited = 0;
+    edited += draw_combo_widget(
+        win, var.name, val.txt, get_scene_elems(scn, val.txt));
+    if (val.txt) {
+        edited += draw_value_widget(win, var.name + " wrap s", val.wrap_s,
+            var.min, var.max, var.type == visit_var_type::color);
+        draw_continue_widget(win);
+        edited += draw_value_widget(win, var.name + " wrap t", val.wrap_t,
+            var.min, var.max, var.type == visit_var_type::color);
+        edited += draw_value_widget(win, var.name + " linear", val.linear,
+            var.min, var.max, var.type == visit_var_type::color);
+        draw_continue_widget(win);
+        edited += draw_value_widget(win, var.name + " mipmap", val.mipmap,
+            var.min, var.max, var.type == visit_var_type::color);
     }
+    if (color != zero4f) draw_style_widget_pop(win);
+    return edited;
+}
 
-    template <typename T>
-    void operator()(T& val, const visit_var& var) {
-        auto color = get_highlight_color(var.name);
-        if (color != zero4f) draw_style_widget_push(win, color);
-        edited += draw_value_widget(win, var.name, val, var.min, var.max,
-            var.type == visit_var_type::color);
-        if (color != zero4f) draw_style_widget_pop(win);
-    }
-
-    void operator()(texture_info& val, const visit_var& var) {
-        auto color = get_highlight_color(var.name);
-        if (color != zero4f) draw_style_widget_push(win, color);
-        edited += draw_combo_widget(win, var.name, val.txt, elems(val.txt));
-        if (val.txt) {
-            edited += draw_value_widget(win, var.name + " wrap s", val.wrap_s,
-                var.min, var.max, var.type == visit_var_type::color);
-            draw_continue_widget(win);
-            edited += draw_value_widget(win, var.name + " wrap t", val.wrap_t,
-                var.min, var.max, var.type == visit_var_type::color);
-            edited += draw_value_widget(win, var.name + " linear", val.linear,
-                var.min, var.max, var.type == visit_var_type::color);
-            draw_continue_widget(win);
-            edited += draw_value_widget(win, var.name + " mipmap", val.mipmap,
-                var.min, var.max, var.type == visit_var_type::color);
-        }
-        if (color != zero4f) draw_style_widget_pop(win);
-    }
-
-    template <typename T>
-    void operator()(optional<T>& val, const visit_var& var) {
-        if (!val) {
-            if (draw_button_widget(win, "add " + var.name)) {
-                val = optional<T>{T{}};
-            }
+bool draw_scene_elem_widgets(gl_window* win, scene* scn,
+    std::vector<shape_group_props>& val, const visit_var& var,
+    const std::unordered_map<std::string, std::string>& highlights,
+    const std::string& elem_name) {
+    if (val.empty()) {
+        if (draw_button_widget(win, "add shape group")) {
+            val.push_back({});
+            return true;
         } else {
-            draw_groupid_widget_push(win, &val);
-            visit(*val, *this);
-            if (draw_button_widget(win, "del " + var.name)) { val = {}; }
-            draw_groupid_widget_pop(win);
+            return false;
         }
+    } else {
+        auto edited = 0;
+        for (auto gid = 0; gid < val.size(); gid++) {
+            visit(val[gid], [gid, scn, win, &highlights, &elem_name, &edited](
+                                auto& val, const auto& var) {
+                edited += draw_scene_elem_widgets(
+                    win, scn, val, var, highlights, elem_name);
+            });
+        }
+        return edited;
     }
+}
 
-    template <typename T>
-    void operator()(image<T>& val, const visit_var& var) {
-        if (empty(val)) return;
-        auto color = get_highlight_color(var.name);
+template <typename T>
+bool draw_scene_elem_widgets(gl_window* win, scene* scn, image<T>& val,
+    const visit_var& var,
+    const std::unordered_map<std::string, std::string>& highlights,
+    const std::string& elem_name) {
+    if (empty(val)) return false;
+    auto color = get_highlight_color(highlights, elem_name + "___" + var.name);
+    if (color != zero4f) draw_style_widget_push(win, color);
+    auto size = format("{} x {}", val.width(), val.height());
+    draw_label_widget(win, var.name, size);
+    if (color != zero4f) draw_style_widget_pop(win);
+    return false;
+}
+
+bool draw_scene_elem_widgets(gl_window* win, scene* scn,
+    std::vector<animation*>& val, const visit_var& var,
+    const std::unordered_map<std::string, std::string>& highlights,
+    const std::string& elem_name) {
+    // TODO.
+    return false;
+}
+
+template <typename T>
+bool draw_scene_elem_widgets(gl_window* win, scene* scn, std::vector<T*>& val,
+    const visit_var& var,
+    const std::unordered_map<std::string, std::string>& highlights,
+    const std::string& elem_name) {
+    auto edited = 0;
+    for (auto idx = 0; idx < val.size(); idx++) {
+        auto color =
+            get_highlight_color(highlights, elem_name + "___" + var.name);
         if (color != zero4f) draw_style_widget_push(win, color);
-        auto size = format("{} x {}", val.width(), val.height());
-        draw_label_widget(win, var.name, size);
+        edited +=
+            draw_combo_widget(win, var.name + "[" + std::to_string(idx) + "]",
+                val[idx], get_scene_elems(scn, val[idx]));
         if (color != zero4f) draw_style_widget_pop(win);
     }
+    return edited;
+}
 
-    template <typename T>
-    void operator()(std::vector<T*>& val, const visit_var& var) {
-        if (var.type == visit_var_type::reference) {
-            for (auto idx = 0; idx < val.size(); idx++) {
-                auto color = get_highlight_color(var.name);
-                if (color != zero4f) draw_style_widget_push(win, color);
-                edited += draw_combo_widget(win,
-                    var.name + "[" + std::to_string(idx) + "]", val[idx],
-                    elems(val[idx]));
-                if (color != zero4f) draw_style_widget_pop(win);
-            }
-        }
-    }
+template <typename T>
+bool draw_scene_elem_widgets(gl_window* win, scene* scn, std::vector<T>& val,
+    const visit_var& var,
+    const std::unordered_map<std::string, std::string>& highlights,
+    const std::string& elem_name) {
+    if (val.empty()) return false;
+    ;
+    auto color = get_highlight_color(highlights, elem_name + "___" + var.name);
+    if (color != zero4f) draw_style_widget_push(win, color);
+    draw_label_widget(win, var.name, (int)val.size());
+    if (color != zero4f) draw_style_widget_pop(win);
+    return false;
+}
 
-    template <typename T>
-    void operator()(std::vector<T>& val, const visit_var& var) {
-        if (val.empty()) return;
-        auto color = get_highlight_color(var.name);
-        if (color != zero4f) draw_style_widget_push(win, color);
-        draw_label_widget(win, var.name, (int)val.size());
-        if (color != zero4f) draw_style_widget_pop(win);
-    }
-    template <typename T1, typename T2>
-    void operator()(std::vector<std::pair<T1*, T2*>>& val, const visit_var&) {
-        // TODO
-    }
+template <typename T1, typename T2>
+bool draw_scene_elem_widgets(gl_window* win, scene* scn,
+    std::vector<std::pair<T1*, T2*>>& val, const visit_var&,
+    const std::unordered_map<std::string, std::string>& highlights,
+    const std::string& elem_name) {
+    auto edited = 0;
+    // TODO
+    return edited;
+}
 
-    template <typename T>
-    void operator()(
-        T*& val, const visit_var& var = visit_var{"", visit_var_type::object}) {
-        if (var.type == visit_var_type::reference) {
-            auto color = get_highlight_color(var.name);
-            if (color != zero4f) draw_style_widget_push(win, color);
-            edited += draw_combo_widget(win, var.name, val, elems(val));
-            if (color != zero4f) draw_style_widget_pop(win);
-        } else {
-            elem_name = val->name;
-            if (!val) return;
-            // TODO: fix this separator
-            draw_separator_widget(win);
-            draw_groupid_widget_push(win, val);
-            draw_separator_widget(win);
-            if (var.type != visit_var_type::reference) elem_name = val->name;
-            visit(*val, *this);
-            preview(val);
-            draw_groupid_widget_pop(win);
-        }
-    }
+template <typename T>
+bool draw_scene_elem_widgets(gl_window* win, scene* scn, T*& val,
+    const visit_var& var,
+    const std::unordered_map<std::string, std::string>& highlights,
+    const std::string& elem_name) {
+    auto edited = false;
+    auto color = get_highlight_color(highlights, elem_name + "___" + var.name);
+    if (color != zero4f) draw_style_widget_push(win, color);
+    edited = draw_combo_widget(win, var.name, val, get_scene_elems(scn, val));
+    if (color != zero4f) draw_style_widget_pop(win);
+    return edited;
+}
 
-    template <typename T, typename TT>
-    void start(T* elem, std::vector<TT*>& telems) {
-        if (!elem) return;
-        auto telem = (TT*)nullptr;
-        for (auto te : telems)
-            if (te->name == elem->name) telem = te;
-        if (telem) {
-            auto last = edited;
-            operator()(telem);
-            if (last != edited) update_proc_elem(scn, elem, telem);
-        }
-        operator()(elem);
+template <typename T, typename TT>
+bool draw_scene_elem_widgets(gl_window* win, scene* scn, T* elem,
+    std::vector<TT*>& telems,
+    const std::unordered_map<std::string, std::string>& highlights) {
+    if (!elem) return false;
+    auto telem = (TT*)nullptr;
+    for (auto te : telems)
+        if (te->name == elem->name) telem = te;
+    auto edited = false;
+    if (telem) {
+        visit(*telem, [win, scn, &edited](auto& val, const auto& var) {
+            auto edited_ = draw_scene_elem_widgets(win, scn, val, var, {}, "");
+            edited = edited || edited_;
+        });
+        if (edited) update_proc_elem(scn, elem, telem);
     }
-
-    template <typename T>
-    const std::vector<T*>& elems(const T* aux) {
-        static auto v = std::vector<T*>();
-        return v;
-    }
-    const std::vector<texture*>& elems(const texture* aux) {
-        return scn->textures;
-    }
-    const std::vector<shape*>& elems(shape* aux) { return scn->shapes; }
-    const std::vector<camera*> elems(camera* aux) { return scn->cameras; }
-    const std::vector<material*> elems(material* aux) { return scn->materials; }
-    const std::vector<environment*> elems(environment* aux) {
-        return scn->environments;
-    }
-    const std::vector<node*> elems(node* aux) { return scn->nodes; }
-    const std::vector<animation_group*> elems(animation_group* aux) {
-        return scn->animations;
-    }
-
-    template <typename T>
-    void preview(T* val) {}
-    void preview(texture* txt) {
-        if (!contains(gl_txt, txt)) return;
-        draw_image_widget(win, gl_txt.at((texture*)txt), {128, 128});
-    }
-};
+    visit(*elem,
+        [win, scn, elem, &edited, &highlights](auto& val, const auto& var) {
+            auto edited_ = draw_scene_elem_widgets(
+                win, scn, val, var, highlights, elem->name);
+            edited = edited || edited_;
+        });
+    return edited;
+}
 
 template <typename T, typename T1>
 inline bool draw_add_elem_widgets(gl_window* win, scene* scn,
@@ -14559,9 +14577,8 @@ inline bool draw_add_elem_widgets(gl_window* win, scene* scn,
     return false;
 }
 
-bool draw_scene_widgets(gl_window* win, const std::string& lbl, scene* scn,
+bool draw_scene_tree_widgets(gl_window* win, const std::string& lbl, scene* scn,
     scene_selection& sel, std::vector<ygl::scene_selection>& update_list,
-    const std::unordered_map<texture*, gl_texture>& gl_txt,
     proc_scene* test_scn,
     const std::unordered_map<std::string, std::string>& inspector_highlights) {
     static auto test_scn_def = proc_scene();
@@ -14569,7 +14586,7 @@ bool draw_scene_widgets(gl_window* win, const std::string& lbl, scene* scn,
     if (!scn) return false;
     if (!lbl.empty() && !draw_header_widget(win, lbl)) return false;
     draw_groupid_widget_push(win, scn);
-    // draw_scroll_widget_begin(win, "model", 240, false);
+    // draw_scroll_widget_begin(win, "scene #$%^!@", 240, false);
     visit(scn, [win, &sel, &inspector_highlights](auto& val, const auto& var) {
         draw_scene_tree_widgets(win, var.name, val, sel, inspector_highlights);
     });
@@ -14603,29 +14620,49 @@ bool draw_scene_widgets(gl_window* win, const std::string& lbl, scene* scn,
             test_scn->animations, sel, update_list);
     }
 
+    draw_groupid_widget_pop(win);
+    return update_list.size() != update_len;
+}
+
+bool draw_scene_elem_widgets(gl_window* win, const std::string& lbl, scene* scn,
+    scene_selection& sel, std::vector<ygl::scene_selection>& update_list,
+    proc_scene* test_scn,
+    const std::unordered_map<std::string, std::string>& inspector_highlights) {
+    static auto test_scn_def = proc_scene();
+
+    if (!scn || !sel.get_raw()) return false;
+    if (!lbl.empty() && !draw_header_widget(win, lbl)) return false;
+    draw_groupid_widget_push(win, sel.get_raw());
+
+    auto update_len = update_list.size();
+
     auto test_scn_res = (test_scn) ? test_scn : &test_scn_def;
-    auto elem_visitor =
-        draw_elem_visitor{win, scn, sel, gl_txt, inspector_highlights};
+    auto edited = false;
     if (sel.is<camera>())
-        elem_visitor.start(sel.get<camera>(), test_scn_res->cameras);
+        edited = draw_scene_elem_widgets(win, scn, sel.get<camera>(),
+            test_scn_res->cameras, inspector_highlights);
     if (sel.is<shape>())
-        elem_visitor.start(sel.get<shape>(), test_scn_res->shapes);
-    if (sel.is<shape>())
-        elem_visitor.start(sel.get<shape>(), test_scn_res->shapes);
+        edited = draw_scene_elem_widgets(win, scn, sel.get<shape>(),
+            test_scn_res->shapes, inspector_highlights);
     if (sel.is<texture>())
-        elem_visitor.start(sel.get<texture>(), test_scn_res->textures);
+        edited = draw_scene_elem_widgets(win, scn, sel.get<texture>(),
+            test_scn_res->textures, inspector_highlights);
     if (sel.is<material>())
-        elem_visitor.start(sel.get<material>(), test_scn_res->materials);
+        edited = draw_scene_elem_widgets(win, scn, sel.get<material>(),
+            test_scn_res->materials, inspector_highlights);
     if (sel.is<environment>())
-        elem_visitor.start(sel.get<environment>(), test_scn_res->environments);
+        edited = draw_scene_elem_widgets(win, scn, sel.get<environment>(),
+            test_scn_res->environments, inspector_highlights);
     if (sel.is<node>())
-        elem_visitor.start(sel.get<node>(), test_scn_res->nodes);
+        edited = draw_scene_elem_widgets(win, scn, sel.get<node>(),
+            test_scn_res->nodes, inspector_highlights);
     if (sel.is<animation>())
-        elem_visitor.start(sel.get<animation>(), test_scn_res->animations);
+        edited = draw_scene_elem_widgets(win, scn, sel.get<animation>(),
+            test_scn_res->animations, inspector_highlights);
     if (sel.is<animation_group>())
-        elem_visitor.start(
-            sel.get<animation_group>(), test_scn_res->animations);
-    if (elem_visitor.edited) update_list.push_back(sel);
+        edited = draw_scene_elem_widgets(win, scn, sel.get<animation_group>(),
+            test_scn_res->animations, inspector_highlights);
+    if (edited) update_list.push_back(sel);
 
     draw_groupid_widget_pop(win);
     return update_list.size() != update_len;
