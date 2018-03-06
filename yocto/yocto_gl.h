@@ -2025,6 +2025,12 @@ struct frame<T, 3> {
     vec<T, 3>& operator[](int i) { return (&x)[i]; }
     /// Element/column access
     const vec<T, 3>& operator[](int i) const { return (&x)[i]; }
+    
+	vec<T, 3>& pos() { return o; }
+	const vec<T, 3>& pos() const{ return o; }
+
+	mat<T, 3>& rot() { return *(mat<T, 3>*)(&x); }
+	const mat<T, 3>& rot() const{ return *(mat<T, 3>*)(&x); }
 
     /// Axes and origin data
     vec<T, 3> x;
