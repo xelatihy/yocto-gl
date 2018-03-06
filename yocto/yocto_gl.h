@@ -3547,7 +3547,7 @@ inline int sample_index(const std::array<float, N>& weights, float r) {
     auto sum = 0.0f;
     for (auto i = 0; i < weights.size(); i++) {
         sum += weights[i];
-        if (r > sum) return i;
+        if (sum > r) return i;
     }
     return (int)weights.size() - 1;
 }

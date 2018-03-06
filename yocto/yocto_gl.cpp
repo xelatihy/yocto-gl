@@ -4719,6 +4719,12 @@ obj_scene* scene_to_obj(const scene* scn) {
         auto oobj = new obj_object();
         oobj->name = sgr->name;
         oobj->frame = sgr->frame;
+        if(sgr->shapes.empty()) {
+            obj->objects.push_back(oobj);
+            continue;
+        }
+        auto skip_groups = sgr->shapes.size() == 1 && sgr->shapes.at(0)->groupnames.size() < 2;
+        auto skip_smoothing = sgr->shapes.size() == 1 && sgr->shapes.at(0)->smoothing.size() < 2;
         for (auto shp : sgr->shapes) {
             if (shp->subdivision)
                 oobj->props["subdivision"].push_back(
@@ -4743,18 +4749,30 @@ obj_scene* scene_to_obj(const scene* scn) {
             auto eoffset = shape_element_tags();
             eoffset.matid = oobj->matnames.size();
             eoffset.groupid = oobj->groupnames.size();
-            eoffset.smoothingid = 0;  // TODO: fix smoothing groups
+            eoffset.smoothingid = oobj->smoothing.size();
             if (shp->materials.empty()) {
                 oobj->matnames.push_back("");
             } else {
                 for (auto mat : shp->materials)
                     oobj->matnames.push_back((mat) ? mat->name : ""s);
             }
-            if (shp->groupnames.empty()) {
-                oobj->groupnames.push_back("");
+            if(skip_groups) {
+            } else if (shp->groupnames.empty()) {
+                oobj->groupnames.push_back(shp->name);
             } else {
+                auto count = 0;
+                for(auto& name : shp->groupnames) {
+                    oobj->groupnames.push_back(shp->name + "_" + ((name == "") ? std::to_string(count++) : name));
+                }
                 oobj->groupnames.insert(oobj->groupnames.end(),
                     shp->groupnames.begin(), shp->groupnames.end());
+            }
+            if(skip_smoothing) {
+            } else if(shp->smoothing.empty()) {
+                oobj->smoothing.push_back(true);
+            } else {
+                oobj->smoothing.insert(oobj->smoothing.end(),
+                    shp->smoothing.begin(), shp->smoothing.end());
             }
             for (auto eid = 0; eid < shp->points.size(); eid++) {
                 auto vid = shp->points[eid];
@@ -8241,7 +8259,7 @@ void save_obj(const std::string& filename, const obj_scene* obj, bool save_txt,
             obj_dump_line(fs, "g", oobj->groupnames.front());
         if (!oobj->smoothing.empty() && oobj->smoothing.front() != true)
             obj_dump_line(fs, "s", "off");
-        auto last_matid = 0, last_groupid = 0, last_smoothid = 0;
+        auto last_matid = 0, last_groupid = 0, last_smoothingid = 0;
         for (auto& elem : oobj->elems) {
             if (last_matid != elem.matid) {
                 obj_dump_line(fs, "usemtl",
@@ -8251,15 +8269,14 @@ void save_obj(const std::string& filename, const obj_scene* obj, bool save_txt,
             if (last_groupid != elem.groupid) {
                 obj_dump_line(fs, "g",
                     oobj->groupnames.empty() ? ""s :
-                                               oobj->groupnames[elem.matid]);
-                last_matid = elem.matid;
+                        oobj->groupnames[elem.groupid]);
+                last_groupid = elem.groupid;
             }
-            if (last_smoothid != elem.smoothingid) {
-                obj_dump_line(fs, "s",
-                    oobj->smoothing.empty() ?
-                        "on" :
-                        (oobj->smoothing[elem.matid] ? "on" : "off"));
-                last_matid = elem.matid;
+            if (last_smoothingid != elem.smoothingid) {
+                if(!oobj->smoothing.empty()) {
+                    obj_dump_line(fs, "s", oobj->smoothing[elem.smoothingid] ? "on" : "off");
+                }
+                last_smoothingid = elem.smoothingid;
             }
             obj_dump_line(fs, elem_labels.at(elem.type).c_str(),
                 oobj->verts.data() + elem.start, elem.size);
@@ -10860,12 +10877,9 @@ void update_proc_elem(scene* scn, shape_group* sgr, const proc_shape* pshp) {
 
     sgr->name = pshp->name;
     sgr->frame = pshp->frame;
-    auto sid = 0;
     for (auto shp : sgr->shapes) {
-        shp->name =
-            pshp->name + ((sid > 0) ? std::to_string(sid++) : std::string(""));
-        auto mat = find_named_elem(scn->materials, pshp->material);
-        if (mat) shp->materials.push_back(mat);
+        shp->name = "";
+        shp->materials.clear();
         shp->pos = {};
         shp->norm = {};
         shp->texcoord = {};
@@ -10883,6 +10897,10 @@ void update_proc_elem(scene* scn, shape_group* sgr, const proc_shape* pshp) {
     }
 
     auto shp = sgr->shapes.front();
+    shp->name = sgr->name;
+    auto mat = find_named_elem(scn->materials, pshp->material);
+    if (mat) shp->materials.push_back(mat);
+
     switch (pshp->type) {
         case proc_shape_type::floor: {
             make_uvquad(shp->quads, shp->pos, shp->norm, shp->texcoord,
@@ -10942,11 +10960,12 @@ void update_proc_elem(scene* scn, shape_group* sgr, const proc_shape* pshp) {
             make_uvflipcapsphere(shp->quads, shp->pos, shp->norm, shp->texcoord,
                 (pshp->tesselation < 0) ? 5 : pshp->tesselation, 0.75f);
             auto shp1 = sgr->shapes.at(1);
+            shp1->name = "interior";
             make_uvsphere(shp1->quads, shp1->pos, shp1->norm, shp1->texcoord,
                 (pshp->tesselation < 0) ? 5 : pshp->tesselation);
             for (auto& p : shp1->pos) p *= 0.8f;
             auto mat = find_named_elem(scn->materials, pshp->interior);
-            shp1->materials.push_back(mat);
+            if(mat) shp1->materials.push_back(mat);
         } break;
         case proc_shape_type::point: {
             shp->points.push_back(0);
@@ -10969,6 +10988,7 @@ void update_proc_elem(scene* scn, shape_group* sgr, const proc_shape* pshp) {
         } break;
         case proc_shape_type::hairball: {
             auto shp1 = sgr->shapes.at(1);
+            shp1->name = "interior";
             make_uvspherecube(
                 shp1->quads, shp1->pos, shp1->norm, shp1->texcoord, 5);
             auto mat = find_named_elem(scn->materials, pshp->interior);
@@ -11214,6 +11234,7 @@ std::vector<proc_material*>& proc_material_presets() {
 
     auto rough = 0.25f;
     auto sharp = 0.05f;
+    auto mirror = 0.0f;
 
     auto params = std::vector<proc_material>();
 
@@ -11239,8 +11260,10 @@ std::vector<proc_material*>& proc_material_presets() {
         make_materialt("plastic_colored_bumped", plastic, "colored", rough));
     presets.back()->normal = "bumpn";
 
+    presets.push_back(make_material("silver_mirror", metal, lgray, mirror));
     presets.push_back(make_material("silver_sharp", metal, lgray, sharp));
     presets.push_back(make_material("silver_rough", metal, lgray, rough));
+    presets.push_back(make_material("gold_mirror", metal, gold, mirror));
     presets.push_back(make_material("gold_sharp", metal, gold, sharp));
     presets.push_back(make_material("gold_rough", metal, gold, rough));
 
@@ -11252,7 +11275,7 @@ std::vector<proc_material*>& proc_material_presets() {
     presets.back()->opacity = 0.2f;
 
     presets.push_back(make_material("pointlight", emission, white));
-    presets.back()->emission = 80;
+    presets.back()->emission = 160;
     presets.push_back(make_material("arealight", emission, white));
     presets.back()->emission = 80;
 
@@ -11519,7 +11542,7 @@ std::vector<proc_split_scene*>& proc_split_scene_presets() {
             }
 
             auto& views = preset->views;
-            for (auto lights : {"pointlights"s, "arealights"s, "envlights"s}) {
+            for (auto lights : {"pointlights"s, "arealights"s, "arealights1"s, "envlights"s}) {
                 auto view = make_scene(lights);
                 view->cameras.push_back(make_camera("cam3"));
                 if (lights == "pointlights" || lights == "arealights" ||
@@ -11629,7 +11652,7 @@ std::vector<proc_split_scene*>& proc_split_scene_presets() {
     // metals shapes
     presets.push_back(
         make_simple_scene("metals", {"matball", "matball", "matball"},
-            {"gold_rough", "gold_sharp", "silver_sharp"}));
+            {"gold_rough", "gold_sharp", "silver_mirror"}));
 
     // tesselation shapes
     presets.push_back(make_simple_scene("tesselation",
@@ -14416,57 +14439,49 @@ static const std::unordered_map<std::string, vec4f>
     draw_visitor_highlight_colors = {{"red", {1, 0.5f, 0.5f, 1}},
         {"green", {0.5f, 1, 0.5f, 1}}, {"blue", {0.5f, 0.5f, 1, 1}}};
 
-// Implementation of draw tree
-struct draw_tree_visitor {
-    gl_window* win = nullptr;
-    scene_selection& sel;
-    const std::unordered_map<std::string, std::string>& highlights;
-
-    // constructor
-    draw_tree_visitor(gl_window* win_, scene_selection& sel_,
-        const std::unordered_map<std::string, std::string>& hi_)
-        : win(win_), sel(sel_), highlights(hi_) {}
-
-    vec4f get_highlight_color(const std::string& name) {
-        if (!highlights.empty() && contains(highlights, name)) {
-            return draw_visitor_highlight_colors.at(highlights.at(name));
-        }
-        return zero4f;
+vec4f get_highlight_color(const std::unordered_map<std::string, std::string>& highlights, 
+                          const std::string& name) {
+    if (!highlights.empty() && contains(highlights, name)) {
+        return draw_visitor_highlight_colors.at(highlights.at(name));
     }
+    return zero4f;
+}
+    
+template<typename T>
+void draw_scene_tree_widgets(gl_window* win, const std::string& lbl_,
+                             T& val, scene_selection& sel,
+                             const std::unordered_map<std::string, std::string>& highlights) {
+    
+}
 
-    // generic callback
-    template <typename T>
-    void operator()(T& val, const visit_var&) {}
-    // callback for texture_info
-    void operator()(const texture_info* val, const visit_var&) {}
-    // callback for array
-    template <typename T>
-    void operator()(std::vector<T*>& val, const visit_var& var) {
-        if (draw_tree_widget_begin(win, var.name)) {
-            for (auto& v : val) (*this)(v, var);
-            draw_tree_widget_end(win);
-        }
-    }
-    // callback for pointer
-    template <typename T>
-    void operator()(T*& val, const visit_var& var) {
+template<typename T>
+void draw_scene_tree_widgets(gl_window* win, const std::string& lbl_, 
+    T* val, scene_selection& sel,
+    const std::unordered_map<std::string, std::string>& highlights) {
         if (!val) return;
         auto lbl = val->name;
-        if (!var.name.empty()) lbl = var.name + ": " + val->name;
+        if (!lbl_.empty()) lbl = lbl_ + ": " + val->name;
         auto selection = sel.get_raw();
-        auto color = get_highlight_color(val->name);
+        auto color = get_highlight_color(highlights, val->name);
         if (color != zero4f) draw_style_widget_push(win, color);
         auto open = draw_tree_widget_begin(win, lbl, selection, val);
         if (color != zero4f) draw_style_widget_pop(win);
         if (selection == val) sel = val;
         if (open) {
-            visit(val, *this);
+            visit(val, [win,&sel,&highlights](auto& val, const auto& var){ draw_scene_tree_widgets(win, var.name, val, sel, highlights); });
             draw_tree_widget_end(win);
         }
-    }
-    // callback for pointer
-    void operator()(scene* val, const visit_var& var) { visit(val, *this); }
-};
+}
+
+template<typename T>
+void draw_scene_tree_widgets(gl_window* win, const std::string& lbl, 
+    std::vector<T*>& val, scene_selection& sel,
+    const std::unordered_map<std::string, std::string>& highlights) {
+    if (draw_tree_widget_begin(win, lbl)) {
+        for(auto v : val) draw_scene_tree_widgets(win, "", v, sel, highlights);
+        draw_tree_widget_end(win);
+    }    
+}
 
 // Implementation of draw elements
 struct draw_elem_visitor {
@@ -14648,8 +14663,9 @@ bool draw_scene_widgets(gl_window* win, const std::string& lbl, scene* scn,
     if (!lbl.empty() && !draw_header_widget(win, lbl)) return false;
     draw_groupid_widget_push(win, scn);
     // draw_scroll_widget_begin(win, "model", 240, false);
-    auto tree_visitor = draw_tree_visitor{win, sel, inspector_highlights};
-    tree_visitor(scn, visit_var{"", visit_var_type::object});
+    visit(scn, [win,&sel,&inspector_highlights](auto& val,const auto& var){
+        draw_scene_tree_widgets(win, var.name, val, sel, inspector_highlights);
+    });
     // draw_scroll_widget_end(win);
 
     auto update_len = update_list.size();
