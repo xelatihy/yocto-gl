@@ -4256,7 +4256,7 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
         // check to see if this shuold be face-varying or flat
         // quads
         auto as_facevarying = false, as_quads = false;
-        if (opts.preserve_quads || opts.preserve_facevarying) {
+        if (opts.obj_preserve_quads || opts.obj_preserve_facevarying) {
             auto face_max = 0;
             for (auto& elem : omsh->elems) {
                 if (elem.type != obj_element_type::face) {
@@ -4266,8 +4266,8 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
                     face_max = max(face_max, (int)elem.size);
                 }
             }
-            as_quads = opts.preserve_quads && face_max > 3;
-            as_facevarying = opts.preserve_facevarying && face_max > 2;
+            as_quads = opts.obj_preserve_quads && face_max > 3;
+            as_facevarying = opts.obj_preserve_facevarying && face_max > 2;
             // in case of facevarying, check if there is really
             // need for it
             if (as_facevarying) {
@@ -4573,7 +4573,7 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
 
 // Load an obj scene
 scene* load_obj_scene(const std::string& filename, const load_options& opts) {
-    auto oscn = load_obj(filename, opts.simple_shapes, opts.load_textures,
+    auto oscn = load_obj(filename, opts.obj_split_shapes, opts.load_textures,
         opts.skip_missing, opts.obj_flip_texcoord, opts.obj_flip_tr);
     auto scn = obj_to_scene(oscn, opts);
     delete oscn;

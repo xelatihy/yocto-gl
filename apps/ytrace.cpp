@@ -37,6 +37,7 @@ struct app_state {
     ygl::bvh_tree* bvh = nullptr;
     std::string filename;
     std::string imfilename;
+    ygl::load_options loadopts;
     ygl::image4f img;
     ygl::image<ygl::trace_pixel> pixels;
     ygl::trace_params params;
@@ -65,6 +66,7 @@ int main(int argc, char* argv[]) {
         ygl::make_parser(argc, argv, "ytrace", "Offline oath tracing");
     app->params = ygl::parse_params(parser, "", app->params);
     app->tmparams = ygl::parse_params(parser, "", app->tmparams);
+    app->loadopts = ygl::parse_params(parser, "", app->loadopts);
     app->batch_size = ygl::parse_opt(parser, "--batch-size", "",
         "Compute images in <val> samples batches", 16);
     app->save_batch = ygl::parse_flag(
@@ -88,7 +90,7 @@ int main(int argc, char* argv[]) {
     for (auto filename : filenames) {
         try {
             ygl::log_info("loading scene {}", filename);
-            auto scn = load_scene(filename, ygl::load_options());
+            auto scn = load_scene(filename, app->loadopts);
             ygl::merge_into(app->scn, scn);
             delete scn;
         } catch (std::exception e) {

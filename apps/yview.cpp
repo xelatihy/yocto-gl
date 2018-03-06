@@ -37,6 +37,7 @@ struct app_state {
     std::string filename;
     std::string imfilename;
     std::string outfilename;
+    ygl::load_options loadopts;
     ygl::gl_stdsurface_params params = {};
     ygl::tonemap_params tmparams = {};
     ygl::gl_stdsurface_program prog;
@@ -227,10 +228,7 @@ int main(int argc, char* argv[]) {
         ygl::make_parser(argc, argv, "yview", "views scenes inteactively");
     app->params = ygl::parse_params(parser, "", app->params);
     app->tmparams = ygl::parse_params(parser, "", app->tmparams);
-    auto preserve_quads = ygl::parse_flag(
-        parser, "--preserve-quads", "", "Preserve quads on load");
-    auto preserve_facevarying = ygl::parse_flag(
-        parser, "--preserve-facevarying", "", "Preserve facevarying on load");
+    app->loadopts = ygl::parse_params(parser, "", app->loadopts);
     app->quiet =
         ygl::parse_flag(parser, "--quiet", "-q", "Print only errors messages");
     app->screenshot_and_exit = ygl::parse_flag(
@@ -266,10 +264,7 @@ int main(int argc, char* argv[]) {
     for (auto filename : filenames) {
         try {
             ygl::log_info("loading scene {}", filename);
-            auto opts = ygl::load_options();
-            opts.preserve_quads = preserve_quads;
-            opts.preserve_facevarying = preserve_facevarying;
-            auto scn = load_scene(filename, opts);
+            auto scn = load_scene(filename, app->loadopts);
             ygl::merge_into(app->scn, scn);
             delete scn;
         } catch (std::exception e) {
@@ -279,8 +274,8 @@ int main(int argc, char* argv[]) {
     app->filename = filenames.front();
 
     // tesselate input shapes
-    ygl::tesselate_shapes(app->scn, true, !preserve_facevarying,
-        !preserve_quads && !preserve_facevarying, false);
+    ygl::tesselate_shapes(app->scn, true, !app->loadopts.obj_preserve_facevarying,
+        !app->loadopts.obj_preserve_quads && !app->loadopts.obj_preserve_facevarying, false);
 
     // add missing data
     ygl::add_elements(app->scn);
