@@ -141,38 +141,30 @@ int main(int argc, char** argv) {
 
     // process geometry
     if (scale != 1.0f) {
-        for (auto sgr : scn->shapes) {
-            for (auto shp : sgr->shapes) {
-                for (auto& p : shp->pos) p *= scale;
-            }
+        for (auto shp : scn->shapes) {
+            for (auto& p : shp->pos) p *= scale;
         }
     }
 
     if (flipyz) {
-        for (auto sgr : scn->shapes) {
-            for (auto shp : sgr->shapes) {
-                for (auto& p : shp->pos) std::swap(p.y, p.z);
-                for (auto& n : shp->norm) std::swap(n.y, n.z);
-            }
+        for (auto shp : scn->shapes) {
+            for (auto& p : shp->pos) std::swap(p.y, p.z);
+            for (auto& n : shp->norm) std::swap(n.y, n.z);
         }
     }
 
     if (tesselation) {
-        for (auto sgr : scn->shapes) {
-            for (auto shp : sgr->shapes) {
-                for (auto l = 0; l < tesselation; l++) {
-                    ygl::subdivide_shape_once(shp);
-                }
+        for (auto shp : scn->shapes) {
+            for (auto l = 0; l < tesselation; l++) {
+                ygl::subdivide_shape_once(shp);
             }
         }
     }
 
     if (subdiv) {
-        for (auto sgr : scn->shapes) {
-            for (auto shp : sgr->shapes) {
-                for (auto l = 0; l < subdiv; l++) {
-                    ygl::subdivide_shape_once(shp, true);
-                }
+        for (auto shp : scn->shapes) {
+            for (auto l = 0; l < subdiv; l++) {
+                ygl::subdivide_shape_once(shp, true);
             }
         }
     }

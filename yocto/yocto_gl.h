@@ -3833,6 +3833,13 @@ template <typename T>
 inline void append(std::vector<T>& v, const std::vector<T>& vv) {
     v.insert(v.end(), vv.begin(), vv.end());
 }
+
+/// Append a vector to a vector.
+template <typename T>
+inline void append(std::vector<T>& v, int num, const T& vv) {
+    v.insert(v.end(), num, vv);
+}
+
 /// Append two vectors.
 template <typename T>
 inline std::vector<T> join(const std::vector<T>& a, const std::vector<T>& b) {
@@ -5299,8 +5306,6 @@ struct bvh_instance {
     int iid = 0;
     /// Shape id to be returned.
     int sid = 0;
-    /// Shape bvh.
-    bvh_tree* bvh = nullptr;
 };
 
 /// BVH tree, stored as a node array. The tree structure is encoded using array
@@ -5460,6 +5465,8 @@ struct texture {
 
 /// Texture information to use for lookup.
 struct texture_info {
+    /// Texture. @refl_semantic(reference)
+    texture* txt = nullptr;
     /// Wrap s coordinate.
     bool wrap_s = true;
     /// Wrap t coordinate.
@@ -5506,47 +5513,26 @@ struct material {
     /// Opacity.
     float op = 1;
 
-    /// Emission texture. @refl_semantic(reference)
-    texture* ke_txt = nullptr;
-    /// Diffuse texture. @refl_semantic(reference)
-    texture* kd_txt = nullptr;
-    /// Specular texture. @refl_semantic(reference)
-    texture* ks_txt = nullptr;
-    /// Clear coat reflection texture. @refl_semantic(reference)
-    texture* kr_txt = nullptr;
-    /// Transmission texture. @refl_semantic(reference)
-    texture* kt_txt = nullptr;
-    /// Roughness texture. @refl_semantic(reference)
-    texture* rs_txt = nullptr;
-    /// Bump map texture (heighfield). @refl_semantic(reference)
-    texture* bump_txt = nullptr;
-    /// Displacement map texture (heighfield). @refl_semantic(reference)
-    texture* disp_txt = nullptr;
-    /// Normal texture. @refl_semantic(reference)
-    texture* norm_txt = nullptr;
-    /// Occlusion texture. @refl_semantic(reference)
-    texture* occ_txt = nullptr;
-
-    /// Emission texture info.
-    optional<texture_info> ke_txt_info = {};
-    /// Diffuse texture info.
-    optional<texture_info> kd_txt_info = {};
-    /// Specular texture info.
-    optional<texture_info> ks_txt_info = {};
-    /// Clear coat reflection texture info.
-    optional<texture_info> kr_txt_info = {};
-    /// Transmission texture info.
-    optional<texture_info> kt_txt_info = {};
-    /// Roughness texture info.
-    optional<texture_info> rs_txt_info = {};
-    /// Bump map texture (heighfield) info.
-    optional<texture_info> bump_txt_info = {};
-    /// Displacement map texture (heighfield) info.
-    optional<texture_info> disp_txt_info = {};
-    /// Normal texture info.
-    optional<texture_info> norm_txt_info = {};
-    /// Occlusion texture info.
-    optional<texture_info> occ_txt_info = {};
+    /// Emission texture.
+    texture_info ke_txt;
+    /// Diffuse texture.
+    texture_info kd_txt;
+    /// Specular texture.
+    texture_info ks_txt;
+    /// Clear coat reflection texture.
+    texture_info kr_txt;
+    /// Transmission texture.
+    texture_info kt_txt;
+    /// Roughness texture.
+    texture_info rs_txt;
+    /// Bump map texture (heighfield).
+    texture_info bump_txt;
+    /// Displacement map texture (heighfield).
+    texture_info disp_txt;
+    /// Normal texture.
+    texture_info norm_txt;
+    /// Occlusion texture.
+    texture_info occ_txt;
 };
 
 /// Shape element tags.
@@ -5561,17 +5547,27 @@ struct shape_element_tags {
     uint16_t esize = 0;
 };
 
+/// Shape group properties.
+struct shape_group_props {
+    /// Group name.
+    std::string name = "";
+    /// Material. @refl_semantic(reference)
+    material* mat = nullptr;
+    /// Faceted.
+    bool faceted = false;
+};
+
 /// Shape data represented as an indexed array. May contain only one of the
 /// points/lines/triangles/quads.
 struct shape {
     /// Name.
     std::string name = "";
-    /// Materials. @refl_semantic(reference)
-    std::vector<material*> materials = {};
-    /// Group names.
-    std::vector<std::string> groupnames = {};
-    /// Smoothing values.
-    std::vector<bool> smoothing = {};
+    /// Path used for saving in glTF.
+    std::string path = "";
+    /// Groups.
+    std::vector<shape_group_props> groups;
+    /// Frame.
+    frame3f frame = identity_frame3f;
 
     /// Points.
     std::vector<int> points;
@@ -5590,8 +5586,8 @@ struct shape {
     /// Bezier.
     std::vector<vec4i> beziers;
 
-    /// Element material ids.
-    std::vector<shape_element_tags> elem_tags;
+    /// Element group ids.
+    std::vector<int> group_ids;
 
     /// Vertex position.
     std::vector<vec3f> pos;
@@ -5614,23 +5610,6 @@ struct shape {
     bool catmullclark = false;
 };
 
-/// Group of shapes.
-struct shape_group {
-    /// Name.
-    std::string name = "";
-    /// Path used for saving in glTF.
-    std::string path = "";
-    /// Frame.
-    frame3f frame = identity_frame3f;
-    /// Shapes.
-    std::vector<shape*> shapes;
-
-    // Cleanup.
-    ~shape_group() {
-        for (auto v : shapes) delete v;
-    }
-};
-
 /// Distance at which we set environment map positions.
 const auto environment_distance = 1000000.0f;
 
@@ -5642,10 +5621,8 @@ struct environment {
     frame3f frame = identity_frame3f;
     /// Emission coefficient. @refl_uilimits(0,10000)
     vec3f ke = {0, 0, 0};
-    /// Emission texture. @refl_semantic(reference)
-    texture* ke_txt = nullptr;
-    /// Emission texture info.
-    optional<texture_info> ke_txt_info = {};
+    /// Emission texture.
+    texture_info ke_txt = {};
 };
 
 /// Node in a transform hierarchy.
@@ -5667,7 +5644,7 @@ struct node {
     /// Camera the node points to. @refl_semantic(reference)
     camera* cam = nullptr;
     /// Shape the node points to. @refl_semantic(reference)
-    shape_group* shp = nullptr;
+    shape* shp = nullptr;
     /// Environment the node points to. @refl_semantic(reference)
     environment* env = nullptr;
 
@@ -5735,7 +5712,7 @@ struct animation_group {
 /// updates node transformations only if defined.
 struct scene {
     /// Shapes.
-    std::vector<shape_group*> shapes = {};
+    std::vector<shape*> shapes = {};
     /// Materials.
     std::vector<material*> materials = {};
     /// Textures.
@@ -5794,9 +5771,11 @@ material* get_material(const shape* shp, int eid);
 bool is_shape_simple(const shape* shp, bool split_facevarying);
 
 /// Shape position interpolated using barycentric coordinates.
-vec3f eval_pos(const shape* shp, int eid, const vec2f& euv);
+vec3f eval_pos(
+    const shape* shp, int eid, const vec2f& euv, bool transformed = false);
 /// Shape normal interpolated using barycentric coordinates.
-vec3f eval_norm(const shape* shp, int eid, const vec2f& euv);
+vec3f eval_norm(
+    const shape* shp, int eid, const vec2f& euv, bool transformed = false);
 /// Shape texcoord interpolated using barycentric coordinates.
 vec2f eval_texcoord(const shape* shp, int eid, const vec2f& euv);
 /// Shape color interpolated using barycentric coordinates.
@@ -5805,28 +5784,27 @@ vec4f eval_color(const shape* shp, int eid, const vec2f& euv);
 float eval_radius(const shape* shp, int eid, const vec2f& euv);
 /// Shape tangent space interpolated using barycentric coordinates.
 vec4f eval_tangsp(const shape* shp, int eid, const vec2f& euv);
-/// Instance position interpolated using barycentric coordinates.
-vec3f eval_pos(const shape_group* shp, int sid, int eid, const vec2f& euv);
-/// Instance normal interpolated using barycentric coordinates.
-vec3f eval_norm(const shape_group* shp, int sid, int eid, const vec2f& euv);
 
 /// Environment position interpolated using uv parametrization.
-vec3f eval_pos(const environment* env, const vec2f& uv);
+vec3f eval_pos(
+    const environment* env, const vec2f& uv, bool transformed = false);
 /// Environment normal interpolated using uv parametrization.
-vec3f eval_norm(const environment* env, const vec2f& uv);
+vec3f eval_norm(
+    const environment* env, const vec2f& uv, bool transformed = false);
 /// Environment texture coordinates from uv parametrization.
 vec2f eval_texcoord(const environment* env, const vec2f& uv);
 /// Evaluate uv parameters for environment.
-vec2f eval_uv(const environment* env, const vec3f& w);
+vec2f eval_uv(const environment* env, const vec3f& w, bool transformed = false);
 
 /// Evaluate a texture.
-vec4f eval_texture(const texture* txt, const texture_info& info,
-    const vec2f& texcoord, bool srgb = true, const vec4f& def = {1, 1, 1, 1});
+vec4f eval_texture(const texture_info& info, const vec2f& texcoord,
+    bool srgb = true, const vec4f& def = {1, 1, 1, 1});
 /// Evaluate a texture.
-inline vec4f eval_texture(const texture* txt, const optional<texture_info> info,
-    const vec2f& texcoord, bool srgb = true, const vec4f& def = {1, 1, 1, 1}) {
-    return eval_texture(
-        txt, (info) ? *info : texture_info(), texcoord, srgb, def);
+inline vec4f eval_texture(const texture* txt, const vec2f& texcoord,
+    bool srgb = true, const vec4f& def = {1, 1, 1, 1}) {
+    auto info = texture_info();
+    info.txt = (texture*)txt;
+    return eval_texture(info, texcoord, srgb, def);
 }
 /// Generates a ray from a camera for image plane coordinate `uv` and the
 /// lens coordinates `luv`.
@@ -5889,8 +5867,11 @@ void tesselate_shapes(scene* scn, bool subdivide,
 /// Convert a shape into simple shapes. Facevarying primitives are split if
 /// `allow_facevarying` is false. No shape is retuned if the shape is simple.
 std::vector<shape*> split_shape(const shape* shp, bool split_facevarying);
-/// Convert a list of shapes into a face-varying shape.
-shape* group_shapes(const std::vector<shape*>& shps);
+/// Convert a list of shapes into one shape. Pad shape values if needed.
+/// Returns null if the shape cannot be constructed.
+shape* merge_shapes(const std::vector<shape*>& shps, bool pad_vertex);
+/// Convert a list of shapes into one shape. Pad shape values if needed.
+void merge_into(shape* shp, const shape* shp1, bool pad_vertex);
 
 /// Update node transforms.
 void update_transforms(scene* scn, float time = 0);
@@ -6163,50 +6144,27 @@ inline void visit(material& val, Visitor&& visitor) {
         val.rs, visit_var{"rs", visit_var_type::value, "Roughness.", 0, 0, ""});
     visitor(
         val.op, visit_var{"op", visit_var_type::value, "Opacity.", 0, 0, ""});
-    visitor(val.ke_txt, visit_var{"ke_txt", visit_var_type::reference,
+    visitor(val.ke_txt, visit_var{"ke_txt", visit_var_type::value,
                             "Emission texture.", 0, 0, ""});
-    visitor(val.kd_txt, visit_var{"kd_txt", visit_var_type::reference,
+    visitor(val.kd_txt, visit_var{"kd_txt", visit_var_type::value,
                             "Diffuse texture.", 0, 0, ""});
-    visitor(val.ks_txt, visit_var{"ks_txt", visit_var_type::reference,
+    visitor(val.ks_txt, visit_var{"ks_txt", visit_var_type::value,
                             "Specular texture.", 0, 0, ""});
-    visitor(val.kr_txt, visit_var{"kr_txt", visit_var_type::reference,
+    visitor(val.kr_txt, visit_var{"kr_txt", visit_var_type::value,
                             "Clear coat reflection texture.", 0, 0, ""});
-    visitor(val.kt_txt, visit_var{"kt_txt", visit_var_type::reference,
+    visitor(val.kt_txt, visit_var{"kt_txt", visit_var_type::value,
                             "Transmission texture.", 0, 0, ""});
-    visitor(val.rs_txt, visit_var{"rs_txt", visit_var_type::reference,
+    visitor(val.rs_txt, visit_var{"rs_txt", visit_var_type::value,
                             "Roughness texture.", 0, 0, ""});
-    visitor(val.bump_txt, visit_var{"bump_txt", visit_var_type::reference,
+    visitor(val.bump_txt, visit_var{"bump_txt", visit_var_type::value,
                               "Bump map texture (heighfield).", 0, 0, ""});
     visitor(
-        val.disp_txt, visit_var{"disp_txt", visit_var_type::reference,
+        val.disp_txt, visit_var{"disp_txt", visit_var_type::value,
                           "Displacement map texture (heighfield).", 0, 0, ""});
-    visitor(val.norm_txt, visit_var{"norm_txt", visit_var_type::reference,
+    visitor(val.norm_txt, visit_var{"norm_txt", visit_var_type::value,
                               "Normal texture.", 0, 0, ""});
-    visitor(val.occ_txt, visit_var{"occ_txt", visit_var_type::reference,
+    visitor(val.occ_txt, visit_var{"occ_txt", visit_var_type::value,
                              "Occlusion texture.", 0, 0, ""});
-    visitor(val.ke_txt_info, visit_var{"ke_txt_info", visit_var_type::value,
-                                 "Emission texture info.", 0, 0, ""});
-    visitor(val.kd_txt_info, visit_var{"kd_txt_info", visit_var_type::value,
-                                 "Diffuse texture info.", 0, 0, ""});
-    visitor(val.ks_txt_info, visit_var{"ks_txt_info", visit_var_type::value,
-                                 "Specular texture info.", 0, 0, ""});
-    visitor(
-        val.kr_txt_info, visit_var{"kr_txt_info", visit_var_type::value,
-                             "Clear coat reflection texture info.", 0, 0, ""});
-    visitor(val.kt_txt_info, visit_var{"kt_txt_info", visit_var_type::value,
-                                 "Transmission texture info.", 0, 0, ""});
-    visitor(val.rs_txt_info, visit_var{"rs_txt_info", visit_var_type::value,
-                                 "Roughness texture info.", 0, 0, ""});
-    visitor(val.bump_txt_info,
-        visit_var{"bump_txt_info", visit_var_type::value,
-            "Bump map texture (heighfield) info.", 0, 0, ""});
-    visitor(val.disp_txt_info,
-        visit_var{"disp_txt_info", visit_var_type::value,
-            "Displacement map texture (heighfield) info.", 0, 0, ""});
-    visitor(val.norm_txt_info, visit_var{"norm_txt_info", visit_var_type::value,
-                                   "Normal texture info.", 0, 0, ""});
-    visitor(val.occ_txt_info, visit_var{"occ_txt_info", visit_var_type::value,
-                                  "Occlusion texture info.", 0, 0, ""});
 }
 
 /// Visit struct elements.
@@ -6224,15 +6182,26 @@ inline void visit(shape_element_tags& val, Visitor&& visitor) {
 
 /// Visit struct elements.
 template <typename Visitor>
+inline void visit(shape_group_props& val, Visitor&& visitor) {
+    visitor(val.name,
+        visit_var{"name", visit_var_type::value, "Group name.", 0, 0, ""});
+    visitor(val.mat,
+        visit_var{"mat", visit_var_type::reference, "Material.", 0, 0, ""});
+    visitor(val.faceted,
+        visit_var{"faceted", visit_var_type::value, "Faceted.", 0, 0, ""});
+}
+
+/// Visit struct elements.
+template <typename Visitor>
 inline void visit(shape& val, Visitor&& visitor) {
     visitor(
         val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
-    visitor(val.materials, visit_var{"materials", visit_var_type::reference,
-                               "Materials.", 0, 0, ""});
-    visitor(val.groupnames, visit_var{"groupnames", visit_var_type::value,
-                                "Group names.", 0, 0, ""});
-    visitor(val.smoothing, visit_var{"smoothing", visit_var_type::value,
-                               "Smoothing values.", 0, 0, ""});
+    visitor(val.path, visit_var{"path", visit_var_type::value,
+                          "Path used for saving in glTF.", 0, 0, ""});
+    visitor(val.groups,
+        visit_var{"groups", visit_var_type::value, "Groups.", 0, 0, ""});
+    visitor(val.frame,
+        visit_var{"frame", visit_var_type::value, "Frame.", 0, 0, ""});
     visitor(val.points,
         visit_var{"points", visit_var_type::value, "Points.", 0, 0, ""});
     visitor(val.lines,
@@ -6250,8 +6219,8 @@ inline void visit(shape& val, Visitor&& visitor) {
             "Face-varying indices for texcoord.", 0, 0, ""});
     visitor(val.beziers,
         visit_var{"beziers", visit_var_type::value, "Bezier.", 0, 0, ""});
-    visitor(val.elem_tags, visit_var{"elem_tags", visit_var_type::value,
-                               "Element material ids.", 0, 0, ""});
+    visitor(val.group_ids, visit_var{"group_ids", visit_var_type::value,
+                               "Element group ids.", 0, 0, ""});
     visitor(val.pos,
         visit_var{"pos", visit_var_type::value, "Vertex position.", 0, 0, ""});
     visitor(val.norm,
@@ -6275,19 +6244,6 @@ inline void visit(shape& val, Visitor&& visitor) {
 
 /// Visit struct elements.
 template <typename Visitor>
-inline void visit(shape_group& val, Visitor&& visitor) {
-    visitor(
-        val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
-    visitor(val.path, visit_var{"path", visit_var_type::value,
-                          "Path used for saving in glTF.", 0, 0, ""});
-    visitor(val.frame,
-        visit_var{"frame", visit_var_type::value, "Frame.", 0, 0, ""});
-    visitor(val.shapes,
-        visit_var{"shapes", visit_var_type::value, "Shapes.", 0, 0, ""});
-}
-
-/// Visit struct elements.
-template <typename Visitor>
 inline void visit(environment& val, Visitor&& visitor) {
     visitor(
         val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
@@ -6297,8 +6253,6 @@ inline void visit(environment& val, Visitor&& visitor) {
                         "Emission coefficient.", 0, 10000, ""});
     visitor(val.ke_txt, visit_var{"ke_txt", visit_var_type::reference,
                             "Emission texture.", 0, 0, ""});
-    visitor(val.ke_txt_info, visit_var{"ke_txt_info", visit_var_type::value,
-                                 "Emission texture info.", 0, 0, ""});
 }
 
 /// Visit struct elements.
@@ -7351,7 +7305,7 @@ inline bool operator==(const obj_vertex& a, const obj_vertex& b) {
 }
 
 /// Obj element type.
-enum struct obj_element_type : uint16_t {
+enum struct obj_element_type : uint8_t {
     /// List of points.
     point = 1,
     /// Polyline.
@@ -7366,27 +7320,29 @@ struct obj_element {
     /// Starting vertex index.
     uint32_t start;
     /// Number of vertices.
-    uint16_t size;
+    uint8_t size;
     /// Element type.
     obj_element_type type;
-    /// Material id.
-    uint16_t matid = 0;
     /// Group id.
     uint16_t groupid = 0;
-    /// Smoothing group id.
-    uint16_t smoothingid = 0;
+};
+
+/// Obj group properties.
+struct obj_group_props {
+    /// Name.
+    std::string name = "";
+    /// Material name.
+    std::string matname = "";
+    /// Faceted.
+    bool faceted = false;
 };
 
 /// Obj object.
 struct obj_object {
     /// Name.
     std::string name;
-    /// Material name.
-    std::vector<std::string> matnames;
-    /// Group name.
-    std::vector<std::string> groupnames;
-    /// Smoothing groups.
-    std::vector<bool> smoothing;
+    /// Groups.
+    std::vector<obj_group_props> groups;
     /// Element vertices.
     std::vector<obj_vertex> verts;
     /// Element faces.
@@ -9398,6 +9354,8 @@ enum struct gl_texture_filter {
 
 /// OpenGL texture parameters.
 struct gl_texture_info {
+    /// Texture.
+    gl_texture txt = {};
     /// Texture coordinate set.
     int texcoord = 0;
     /// Texture strength/scale (used by some models).
@@ -9714,35 +9672,33 @@ inline bool set_program_uniform(
 }
 
 /// Set uniform texture.
-bool set_program_uniform_texture(const gl_program& prog, int pos,
-    const gl_texture& txt, const gl_texture_info& tinfo, uint tunit);
+bool set_program_uniform_texture(
+    const gl_program& prog, int pos, const gl_texture_info& tinfo, uint tunit);
 /// Set uniform texture with an additionasl texture enable flags.
 inline bool set_program_uniform_texture(const gl_program& prog, int var,
-    int varon, const gl_texture& txt, const gl_texture_info& tinfo,
-    uint tunit) {
-    if (!set_program_uniform_texture(prog, var, txt, tinfo, tunit))
+    int varon, const gl_texture_info& tinfo, uint tunit) {
+    if (!set_program_uniform_texture(prog, var, tinfo, tunit)) return false;
+    if (!set_program_uniform(prog, varon, is_texture_valid(tinfo.txt)))
         return false;
-    if (!set_program_uniform(prog, varon, is_texture_valid(txt))) return false;
     return true;
 }
 
 /// Set uniform texture.
 inline bool set_program_uniform_texture(const gl_program& prog,
-    const std::string& var, const gl_texture& txt, const gl_texture_info& tinfo,
-    uint tunit) {
+    const std::string& var, const gl_texture_info& tinfo, uint tunit) {
     auto loc = get_program_uniform_location(prog, var);
     if (loc < 0) return false;
-    return set_program_uniform_texture(prog, loc, txt, tinfo, tunit);
+    return set_program_uniform_texture(prog, loc, tinfo, tunit);
 }
 /// Set uniform texture with an additionasl texture enable flags.
 inline bool set_program_uniform_texture(const gl_program& prog,
-    const std::string& var, const std::string& varon, const gl_texture& txt,
+    const std::string& var, const std::string& varon,
     const gl_texture_info& tinfo, uint tunit) {
     auto loc = get_program_uniform_location(prog, var);
     if (loc < 0) return false;
     auto locon = get_program_uniform_location(prog, varon);
     if (locon < 0) return false;
-    return set_program_uniform_texture(prog, loc, locon, txt, tinfo, tunit);
+    return set_program_uniform_texture(prog, loc, locon, tinfo, tunit);
 }
 
 /// Sets a constant `value` of `nc` components for the vertex attribute at
@@ -9846,8 +9802,7 @@ void clear_gl_shape(gl_shape& gshp);
 /// Update scene shapes on the GPU.
 inline std::unordered_map<shape*, gl_shape> make_gl_shapes(const scene* scn) {
     auto gshapes = std::unordered_map<shape*, gl_shape>();
-    for (auto sgr : scn->shapes)
-        for (auto shp : sgr->shapes) update_gl_shape(shp, gshapes[shp]);
+    for (auto shp : scn->shapes) update_gl_shape(shp, gshapes[shp]);
     return gshapes;
 }
 
@@ -9957,32 +9912,11 @@ void set_stdsurface_highlight(
 /// matches the scene material type.
 void set_stdsurface_material(const gl_stdsurface_program& prog,
     material_type type, gl_elem_type etype, const vec3f& ke, const vec3f& kd,
-    const vec3f& ks, float rs, float op, const gl_texture& ke_txt,
-    const gl_texture& kd_txt, const gl_texture& ks_txt,
-    const gl_texture& rs_txt, const gl_texture& norm_txt,
-    const gl_texture& occ_txt, const gl_texture_info& ke_txt_info,
-    const gl_texture_info& kd_txt_info, const gl_texture_info& ks_txt_info,
-    const gl_texture_info& rs_txt_info, const gl_texture_info& norm_txt_info,
-    const gl_texture_info& occ_txt_info, bool use_phong, bool double_sided,
+    const vec3f& ks, float rs, float op, const gl_texture_info& ke_txt,
+    const gl_texture_info& kd_txt, const gl_texture_info& ks_txt,
+    const gl_texture_info& rs_txt, const gl_texture_info& norm_txt,
+    const gl_texture_info& occ_txt, bool use_phong, bool double_sided,
     bool alpha_cutout);
-
-/// Set material values with emission `ke`, diffuse `kd`, specular `ks` and
-/// specular roughness `rs`, opacity `op`. Indicates textures ids with the
-/// correspoinding `XXX_txt` variables. Sets also normal and occlusion
-/// maps. Works for points/lines/triangles indicated by `etype`, (diffuse for
-/// points, Kajiya-Kay for lines, GGX/Phong for triangles). Material `type`
-/// matches the scene material type.
-inline void set_stdsurface_material(const gl_stdsurface_program& prog,
-    material_type type, gl_elem_type etype, const vec3f& ke, const vec3f& kd,
-    const vec3f& ks, float rs, float op, const gl_texture& ke_txt,
-    const gl_texture& kd_txt, const gl_texture& ks_txt,
-    const gl_texture& rs_txt, const gl_texture& norm_txt,
-    const gl_texture& occ_txt, bool use_phong, bool double_sided,
-    bool alpha_cutout) {
-    set_stdsurface_material(prog, type, etype, ke, kd, ks, rs, op, ke_txt,
-        kd_txt, ks_txt, rs_txt, norm_txt, occ_txt, {}, {}, {}, {}, {}, {},
-        use_phong, double_sided, alpha_cutout);
-}
 
 /// Set constant material with emission `ke` and opacity `op`.
 void set_stdsurface_constmaterial(

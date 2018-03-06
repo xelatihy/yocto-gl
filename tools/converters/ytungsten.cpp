@@ -359,15 +359,15 @@ material* add_bsdf(const json& js, scene* scn) {
         mat->kd = zero3f;
     } else if (type == "lambert") {
         mat->kd = albedo;
-        mat->kd_txt = albedo_txt;
-        mat->bump_txt = bump_txt;
+        mat->kd_txt.txt = albedo_txt;
+        mat->bump_txt.txt = bump_txt;
     } else if (type == "plastic" || type == "rough_plastic") {
         mat->kd = albedo;
-        mat->kd_txt = albedo_txt;
+        mat->kd_txt.txt = albedo_txt;
         mat->ks = vec3f{0.04f, 0.04f, 0.04f};
         mat->rs =
             (js.count("roughness")) ? sqrt(js.at("roughness").get<float>()) : 0;
-        mat->bump_txt = bump_txt;
+        mat->bump_txt.txt = bump_txt;
     } else if (type == "conductor" || type == "rough_conductor") {
         if (js.count("material")) {
             auto ctype = js.at("material").get<std::string>();
@@ -378,11 +378,11 @@ material* add_bsdf(const json& js, scene* scn) {
             mat->ks = albedo;
         }
         mat->rs = (js.count("roughness")) ? js.at("roughness").get<float>() : 0;
-        mat->bump_txt = bump_txt;
+        mat->bump_txt.txt = bump_txt;
     } else if (type == "mirror") {
         mat->ks = albedo;
         mat->rs = 0;
-        mat->bump_txt = bump_txt;
+        mat->bump_txt.txt = bump_txt;
     } else if (type == "transparency") {
         auto base_bsdf = add_bsdf(js.at("base"), scn);
         base_bsdf->op = alpha.x;
@@ -394,8 +394,8 @@ material* add_bsdf(const json& js, scene* scn) {
         mat->ks = vec3f{0.04f, 0.04f, 0.04f};
         mat->rs = (js.count("roughness")) ? js.at("roughness").get<float>() : 0;
         mat->kt = albedo;
-        mat->kt_txt = albedo_txt;
-        mat->bump_txt = bump_txt;
+        mat->kt_txt.txt = albedo_txt;
+        mat->bump_txt.txt = bump_txt;
     } else {
         println("Cannot handle {} material", type);
     }
@@ -470,7 +470,7 @@ scene* load_tungsten(
     }
 
     // primitives
-    auto shp_map = std::unordered_map<std::string, shape_group*>();
+    auto shp_map = std::unordered_map<std::string, shape*>();
     auto used_meshes = std::unordered_set<std::string>();
     if (js.count("primitives")) {
         auto& jprims = js.at("primitives");
@@ -486,9 +486,9 @@ scene* load_tungsten(
                     path = replace_path_extension(path, ".obj");
                     auto oscn = load_scene(dirname + path);
                     if (!oscn || oscn->shapes.size() != 1 ||
-                        oscn->shapes.at(0)->shapes.size() != 1)
+                        oscn->shapes.size() != 1)
                         throw std::runtime_error("bad obj " + path);
-                    shp = oscn->shapes.at(0)->shapes.at(0);
+                    shp = oscn->shapes.at(0);
                 } else if (path_extension(path) == ".wo3") {
                     shp = load_wo3(dirname + path);
                 } else
@@ -510,11 +510,8 @@ scene* load_tungsten(
                 for (auto& p : shp->pos) p = transform_point(frame, p);
                 for (auto& n : shp->norm) n = transform_direction(frame, n);
             }
-            shp->materials.push_back(add_material(jprim, scn));
-            auto sgr = new shape_group();
-            sgr->shapes.push_back(shp);
-            sgr->name = sgr->shapes.at(0)->name;
-            scn->shapes.push_back(sgr);
+            shp->groups.push_back({"", add_material(jprim, scn), false});
+            scn->shapes.push_back(shp);
         }
     }
 
