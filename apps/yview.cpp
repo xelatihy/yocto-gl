@@ -157,9 +157,12 @@ inline void draw(ygl::gl_window* win, app_state* app) {
             ygl::draw_params_widgets(win, "", app->tmparams);
         }
         if (ygl::draw_header_widget(win, "scene")) {
-            ygl::draw_scene_widgets(win, "", app->scn, app->selection,
-                app->update_list, app->textures, app->pscn,
-                app->inspector_highlights);
+            ygl::draw_scene_tree_widgets(win, "", app->scn, app->selection,
+                app->update_list, app->pscn, app->inspector_highlights);
+        }
+        if (ygl::draw_header_widget(win, "inspect")) {
+            ygl::draw_scene_elem_widgets(win, "", app->scn, app->selection,
+                app->update_list, app->pscn, app->inspector_highlights);
         }
     }
     ygl::end_widgets(win);
@@ -274,8 +277,11 @@ int main(int argc, char* argv[]) {
     app->filename = filenames.front();
 
     // tesselate input shapes
-    ygl::tesselate_shapes(app->scn, true, !app->loadopts.obj_preserve_facevarying,
-        !app->loadopts.obj_preserve_quads && !app->loadopts.obj_preserve_facevarying, false);
+    ygl::tesselate_shapes(app->scn, true,
+        !app->loadopts.obj_preserve_facevarying,
+        !app->loadopts.obj_preserve_quads &&
+            !app->loadopts.obj_preserve_facevarying,
+        false);
 
     // add missing data
     ygl::add_elements(app->scn);

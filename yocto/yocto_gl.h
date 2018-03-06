@@ -3800,34 +3800,6 @@ namespace ygl {
 /// @defgroup container_ops Container operations
 /// @{
 
-/// Optional value with an API similar to C++17 std::optional. This is a
-/// placeholder used until we switch to the new API.
-template <typename T>
-struct optional {
-    /// Construct to an empty optional.
-    optional() : val{}, valid{false} {}
-    /// Construct to a valid optional.
-    optional(const T& v) : val{v}, valid{true} {}
-
-    /// Check if the optional is valid.
-    explicit operator bool() const { return valid; }
-    /// Check if the optional is valid.
-    bool has_value() const { return valid; }
-
-    /// Data access.
-    T* operator->() { return &val; }
-    /// Data access.
-    const T* operator->() const { return &val; }
-    /// Data access.
-    T& operator*() { return val; }
-    /// Data access.
-    const T& operator*() const { return val; }
-
-   private:
-    T val;
-    bool valid = false;
-};
-
 /// Append a vector to a vector.
 template <typename T>
 inline void append(std::vector<T>& v, const std::vector<T>& vv) {
@@ -6571,7 +6543,7 @@ struct proc_shape {
     /// @refl_uilimits(-1,10000)
     int num = -1;
     /// Hair generation params.
-    optional<make_hair_params> hair_params = {};
+    make_hair_params hair_params = {};
 };
 
 /// Procedural environment parameters.
@@ -10520,9 +10492,15 @@ struct scene_selection {
 };
 
 /// Draws widgets for a whole scene. Used for quickly making demos.
-bool draw_scene_widgets(gl_window* win, const std::string& lbl, scene* scn,
+bool draw_scene_tree_widgets(gl_window* win, const std::string& lbl, scene* scn,
     scene_selection& sel, std::vector<ygl::scene_selection>& update_list,
-    const std::unordered_map<texture*, gl_texture>& gl_txt,
+    proc_scene* test_scn = nullptr,
+    const std::unordered_map<std::string, std::string>& inspector_highlights =
+        {});
+
+/// Draws widgets for a whole scene. Used for quickly making demos.
+bool draw_scene_elem_widgets(gl_window* win, const std::string& lbl, scene* scn,
+    scene_selection& sel, std::vector<ygl::scene_selection>& update_list,
     proc_scene* test_scn = nullptr,
     const std::unordered_map<std::string, std::string>& inspector_highlights =
         {});
