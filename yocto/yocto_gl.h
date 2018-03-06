@@ -5932,6 +5932,8 @@ void add_elements(scene* scn, const add_elements_options& opts = {});
 /// merge_from to merged_into, so merge_from will be empty after this function.
 void merge_into(scene* merge_into, scene* merge_from);
 
+// #codegen begin refl-scene
+
 /// Loading options.
 struct load_options {
     /// Whether to load textures.
@@ -5943,16 +5945,12 @@ struct load_options {
     /// Whether to flip tr in OBJ.
     bool obj_flip_tr = true;
     /// Whether to preserve quads.
-    bool preserve_quads = false;
+    bool obj_preserve_quads = false;
     /// Whether to preserve face-varying faces.
-    bool preserve_facevarying = false;
-    /// Use simple shapes.
-    bool simple_shapes = true;
+    bool obj_preserve_facevarying = false;
+    /// Split complex shapes into simple components in OBJ.
+    bool obj_split_shapes = false;
 };
-
-/// Loads a scene. For now OBJ or glTF are supported.
-/// Throws an exception if an error occurs.
-scene* load_scene(const std::string& filename, const load_options& opts = {});
 
 /// Save options.
 struct save_options {
@@ -5967,6 +5965,12 @@ struct save_options {
     /// Whether to use separate buffers in gltf.
     bool gltf_separate_buffers = false;
 };
+
+// #codegen end refl-scene
+
+/// Loads a scene. For now OBJ or glTF are supported.
+/// Throws an exception if an error occurs.
+scene* load_scene(const std::string& filename, const load_options& opts = {});
 
 /// Saves a scene. For now OBJ and glTF are supported.
 void save_scene(
@@ -6108,6 +6112,8 @@ inline void visit(texture& val, Visitor&& visitor) {
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(texture_info& val, Visitor&& visitor) {
+    visitor(val.txt,
+        visit_var{"txt", visit_var_type::reference, "Texture.", 0, 0, ""});
     visitor(val.wrap_s, visit_var{"wrap_s", visit_var_type::value,
                             "Wrap s coordinate.", 0, 0, ""});
     visitor(val.wrap_t, visit_var{"wrap_t", visit_var_type::value,
@@ -6251,7 +6257,7 @@ inline void visit(environment& val, Visitor&& visitor) {
                            "Transform frame.", 0, 0, ""});
     visitor(val.ke, visit_var{"ke", visit_var_type::value,
                         "Emission coefficient.", 0, 10000, ""});
-    visitor(val.ke_txt, visit_var{"ke_txt", visit_var_type::reference,
+    visitor(val.ke_txt, visit_var{"ke_txt", visit_var_type::value,
                             "Emission texture.", 0, 0, ""});
 }
 
@@ -6338,6 +6344,48 @@ inline void visit(scene& val, Visitor&& visitor) {
         visit_var{"nodes", visit_var_type::value, "Node hierarchy.", 0, 0, ""});
     visitor(val.animations, visit_var{"animations", visit_var_type::value,
                                 "Node animations.", 0, 0, ""});
+}
+
+/// Visit struct elements.
+template <typename Visitor>
+inline void visit(load_options& val, Visitor&& visitor) {
+    visitor(val.load_textures, visit_var{"load_textures", visit_var_type::value,
+                                   "Whether to load textures.", 0, 0, ""});
+    visitor(val.skip_missing,
+        visit_var{"skip_missing", visit_var_type::value,
+            "Skip missing files without giving and error.", 0, 0, ""});
+    visitor(val.obj_flip_texcoord,
+        visit_var{"obj_flip_texcoord", visit_var_type::value,
+            "Whether to flip the v coordinate in OBJ.", 0, 0, ""});
+    visitor(val.obj_flip_tr, visit_var{"obj_flip_tr", visit_var_type::value,
+                                 "Whether to flip tr in OBJ.", 0, 0, ""});
+    visitor(val.obj_preserve_quads,
+        visit_var{"obj_preserve_quads", visit_var_type::value,
+            "Whether to preserve quads.", 0, 0, ""});
+    visitor(val.obj_preserve_facevarying,
+        visit_var{"obj_preserve_facevarying", visit_var_type::value,
+            "Whether to preserve face-varying faces.", 0, 0, ""});
+    visitor(val.obj_split_shapes,
+        visit_var{"obj_split_shapes", visit_var_type::value,
+            "Split complex shapes into simple components in OBJ.", 0, 0, ""});
+}
+
+/// Visit struct elements.
+template <typename Visitor>
+inline void visit(save_options& val, Visitor&& visitor) {
+    visitor(val.save_textures, visit_var{"save_textures", visit_var_type::value,
+                                   "Whether to save textures.", 0, 0, ""});
+    visitor(val.skip_missing,
+        visit_var{"skip_missing", visit_var_type::value,
+            "Skip missing files without giving and error.", 0, 0, ""});
+    visitor(val.obj_flip_texcoord,
+        visit_var{"obj_flip_texcoord", visit_var_type::value,
+            "Whether to flip the v coordinate in OBJ.", 0, 0, ""});
+    visitor(val.obj_flip_tr, visit_var{"obj_flip_tr", visit_var_type::value,
+                                 "Whether to flip tr in OBJ.", 0, 0, ""});
+    visitor(val.gltf_separate_buffers,
+        visit_var{"gltf_separate_buffers", visit_var_type::value,
+            "Whether to use separate buffers in gltf.", 0, 0, ""});
 }
 
 // #codegen end reflgen-scene

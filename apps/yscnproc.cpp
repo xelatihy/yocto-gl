@@ -99,7 +99,7 @@ int main(int argc, char** argv) {
             opts.load_textures = textures;
             opts.obj_flip_texcoord = !no_flipy_texcoord;
             opts.obj_flip_tr = !no_flip_opacity;
-            opts.preserve_quads = true;
+            opts.obj_preserve_quads = true;
             to_merge = load_scene(filename, opts);
 
         } catch (const std::exception& e) {

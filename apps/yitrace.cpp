@@ -37,6 +37,7 @@ struct app_state {
     ygl::bvh_tree* bvh = nullptr;
     std::string filename;
     std::string imfilename;
+    ygl::load_options loadopts;
     int resolution = 512;
     ygl::image4f img;
     ygl::image<ygl::trace_pixel> pixels;
@@ -202,6 +203,7 @@ int main(int argc, char* argv[]) {
     app->params = ygl::parse_params(parser, "", app->params);
     app->tmparams = ygl::parse_params(parser, "", app->tmparams);
     app->imparams = ygl::parse_params(parser, "", app->imparams);
+    app->loadopts = ygl::parse_params(parser, "", app->loadopts);
     app->preview_res =
         ygl::parse_opt(parser, "--preview-res", "", "preview resolution", 64);
     app->quiet =
@@ -223,7 +225,7 @@ int main(int argc, char* argv[]) {
     for (auto filename : filenames) {
         try {
             ygl::log_info("loading scene {}", filename);
-            auto scn = load_scene(filename, ygl::load_options());
+            auto scn = load_scene(filename, app->loadopts);
             ygl::merge_into(app->scn, scn);
             delete scn;
         } catch (std::exception e) {
