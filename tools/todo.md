@@ -3,9 +3,17 @@
 This file contains notes on future improvements of Yocto.
 Please consider this to be just development notes and not any real planning.
 
+## Animation
+
+- fix broken anim
+
+## Better shape
+
+- change shape to use constant radius, fixed color
+
 ## User Interface
 
-- bad shape ui
+- buf in group numbering
 
 ## One shape
 

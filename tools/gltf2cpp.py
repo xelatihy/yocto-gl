@@ -210,6 +210,10 @@ def fix_schema(js):
                 vjs['default'] = vjs['type']+'::NotSet'
             elif vjs['type'] in defaults:
                 vjs['default'] = defaults[vjs['type']]
+            elif 'std::vector<' in vjs['type']:
+                vjs['default'] = '{}'
+            elif '*' in vjs['type']:
+                vjs['default'] = 'nullptr'
             else:
                 vjs['default'] = '{}'
         elif 'is_enum' in vjs:
@@ -218,6 +222,8 @@ def fix_schema(js):
             vjs['default'] = str(vjs['default']).replace('.0','').replace('[','{').replace(']','}').replace('False','false')
         if 'std::vector<' in vjs['type'] or 'std::map<' in vjs['type']:
             vjs['def_check'] = '!' + 'val.' + vjs['name'] + '.empty()'
+        elif '*' in vjs['type']:
+            vjs['def_check'] = 'val.' + vjs['name'] + ' != nullptr'
         elif 'glTFid<' in vjs['type']:
             vjs['def_check'] = 'val.' + vjs['name'] + '.is_valid()'
         elif vjs['type'] in ['json']:

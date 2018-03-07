@@ -3953,11 +3953,11 @@ enum struct visit_var_type {
 /// Variable description for reflected values in `visit()`.
 struct visit_var {
     /// Name.
-    const std::string name = "";
+    std::string name = "";
     /// Type.
     visit_var_type type = visit_var_type::value;
     /// Help.
-    const std::string help = "";
+    std::string help = "";
     /// Minimum value for numeric types.
     float min = 0;
     /// Maximum value for numeric types.
@@ -5633,10 +5633,8 @@ enum struct keyframe_type {
     linear = 0,
     /// Step function.
     step = 1,
-    /// Catmull-Rom interpolation.
-    catmull_rom = 2,
     /// Cubic Bezier interpolation.
-    bezier = 3,
+    bezier = 2,
 };
 
 /// Keyframe data.
@@ -5655,6 +5653,8 @@ struct animation {
     std::vector<vec3f> scaling;
     /// Weights for morphing.
     std::vector<std::vector<float>> weights;
+    /// Target nodes. @refl_semantic(reference)
+    std::vector<node*> targets;
 };
 
 /// Animation made of multiple keyframed values.
@@ -5664,14 +5664,7 @@ struct animation_group {
     /// Path  used when writing files on disk with glTF.
     std::string path = "";
     /// Keyframed values.
-    std::vector<animation*> animations;
-    /// Binds keyframe values to nodes. @refl_semantic(reference)
-    std::vector<std::pair<animation*, node*>> targets;
-
-    // Cleanup.
-    ~animation_group() {
-        for (auto v : animations) delete v;
-    }
+    std::vector<animation> animations;
 };
 
 /// Scene comprised an array of objects whose memory is owened by the scene.
@@ -6039,7 +6032,6 @@ enum_names<keyframe_type>() {
     static auto names = std::vector<std::pair<std::string, keyframe_type>>{
         {"linear", keyframe_type::linear},
         {"step", keyframe_type::step},
-        {"catmull_rom", keyframe_type::catmull_rom},
         {"bezier", keyframe_type::bezier},
     };
     return names;
@@ -6283,6 +6275,8 @@ inline void visit(animation& val, Visitor&& visitor) {
                              0.0001, 1000, ""});
     visitor(val.weights, visit_var{"weights", visit_var_type::value,
                              "Weights for morphing.", 0, 0, ""});
+    visitor(val.targets, visit_var{"targets", visit_var_type::reference,
+                             "Target nodes.", 0, 0, ""});
 }
 
 /// Visit struct elements.
@@ -6295,8 +6289,6 @@ inline void visit(animation_group& val, Visitor&& visitor) {
             "Path used when writing files on disk with glTF.", 0, 0, ""});
     visitor(val.animations, visit_var{"animations", visit_var_type::value,
                                 "Keyframed values.", 0, 0, ""});
-    visitor(val.targets, visit_var{"targets", visit_var_type::reference,
-                             "Binds keyframe values to nodes.", 0, 0, ""});
 }
 
 /// Visit struct elements.
@@ -7715,12 +7707,12 @@ struct glTFAccessorSparse : glTFProperty {
     /// Index array of size `count` that points to those accessor attributes
     /// that deviate from their initialization value. Indices must strictly
     /// increase. [required]
-    glTFAccessorSparseIndices* indices = {};
+    glTFAccessorSparseIndices* indices = nullptr;
     /// Array of size `count` times number of components, storing the displaced
     /// accessor attributes pointed by `indices`. Substituted values must have
     /// the same `componentType` and number of components as the base accessor.
     /// [required]
-    glTFAccessorSparseValues* values = {};
+    glTFAccessorSparseValues* values = nullptr;
 
     ~glTFAccessorSparse() {
         if (indices) delete indices;
@@ -7789,7 +7781,7 @@ struct glTFAccessor : glTFChildOfRootProperty {
     std::vector<float> min = {};
     /// Sparse storage of attributes that deviate from their initialization
     /// value.
-    glTFAccessorSparse* sparse = {};
+    glTFAccessorSparse* sparse = nullptr;
 
     ~glTFAccessor() {
         if (sparse) delete sparse;
@@ -7826,7 +7818,7 @@ struct glTFAnimationChannel : glTFProperty {
     /// the target. [required]
     glTFid<glTFAnimationSampler> sampler = {};
     /// The index of the node and TRS property to target. [required]
-    glTFAnimationChannelTarget* target = {};
+    glTFAnimationChannelTarget* target = nullptr;
 
     ~glTFAnimationChannel() {
         if (target) delete target;
@@ -7846,12 +7838,6 @@ enum class glTFAnimationSamplerInterpolation {
     // until the next keyframe. The number of output elements must equal the
     // number of input elements.
     Step = 1,
-    // The animation's interpolation is computed using a uniform Catmull-Rom
-    // spline. The number of output elements must equal two more than the number
-    // of input elements. The first and last output elements represent the start
-    // and end tangents of the spline. There must be at least four keyframes
-    // when using this interpolation.
-    CatmullRomSpline = 2,
     // The animation's interpolation is computed using a cubic spline with
     // specified tangents. The number of output elements must equal three times
     // the number of input elements. For each input element, the output stores
@@ -7989,10 +7975,10 @@ enum class glTFCameraType {
 struct glTFCamera : glTFChildOfRootProperty {
     /// An orthographic camera containing properties to create an orthographic
     /// projection matrix.
-    glTFCameraOrthographic* orthographic = {};
+    glTFCameraOrthographic* orthographic = nullptr;
     /// A perspective camera containing properties to create a perspective
     /// projection matrix.
-    glTFCameraPerspective* perspective = {};
+    glTFCameraPerspective* perspective = nullptr;
     /// Specifies if the camera uses a perspective or orthographic projection.
     /// [required]
     glTFCameraType type = glTFCameraType::NotSet;
@@ -8064,13 +8050,13 @@ struct glTFMaterialPbrMetallicRoughness : glTFProperty {
     /// The material's base color factor.
     vec4f baseColorFactor = {1, 1, 1, 1};
     /// The base color texture.
-    glTFTextureInfo* baseColorTexture = {};
+    glTFTextureInfo* baseColorTexture = nullptr;
     /// The metalness of the material.
     float metallicFactor = 1;
     /// The roughness of the material.
     float roughnessFactor = 1;
     /// The metallic-roughness texture.
-    glTFTextureInfo* metallicRoughnessTexture = {};
+    glTFTextureInfo* metallicRoughnessTexture = nullptr;
 
     ~glTFMaterialPbrMetallicRoughness() {
         if (baseColorTexture) delete baseColorTexture;
@@ -8084,13 +8070,13 @@ struct glTFMaterialPbrSpecularGlossiness : glTFProperty {
     /// The reflected diffuse factor of the material.
     vec4f diffuseFactor = {1, 1, 1, 1};
     /// The diffuse texture.
-    glTFTextureInfo* diffuseTexture = {};
+    glTFTextureInfo* diffuseTexture = nullptr;
     /// The specular RGB color of the material.
     vec3f specularFactor = {1, 1, 1};
     /// The glossiness or smoothness of the material.
     float glossinessFactor = 1;
     /// The specular-glossiness texture.
-    glTFTextureInfo* specularGlossinessTexture = {};
+    glTFTextureInfo* specularGlossinessTexture = nullptr;
 
     ~glTFMaterialPbrSpecularGlossiness() {
         if (diffuseTexture) delete diffuseTexture;
@@ -8118,18 +8104,18 @@ struct glTFMaterial : glTFChildOfRootProperty {
     /// A set of parameter values that are used to define the metallic-roughness
     /// material model from Physically-Based Rendering (PBR) methodology. When
     /// not specified, all the default values of `pbrMetallicRoughness` apply.
-    glTFMaterialPbrMetallicRoughness* pbrMetallicRoughness = {};
+    glTFMaterialPbrMetallicRoughness* pbrMetallicRoughness = nullptr;
     /// A set of parameter values that are used to define the
     /// specular-glossiness material model from Physically-Based Rendering (PBR)
     /// methodology. When not specified, all the default values of
     /// `pbrMetallicRoughness` apply.
-    glTFMaterialPbrSpecularGlossiness* pbrSpecularGlossiness = {};
+    glTFMaterialPbrSpecularGlossiness* pbrSpecularGlossiness = nullptr;
     /// The normal map texture.
-    glTFMaterialNormalTextureInfo* normalTexture = {};
+    glTFMaterialNormalTextureInfo* normalTexture = nullptr;
     /// The occlusion map texture.
-    glTFMaterialOcclusionTextureInfo* occlusionTexture = {};
+    glTFMaterialOcclusionTextureInfo* occlusionTexture = nullptr;
     /// The emissive map texture.
-    glTFTextureInfo* emissiveTexture = {};
+    glTFTextureInfo* emissiveTexture = nullptr;
     /// The emissive color of the material.
     vec3f emissiveFactor = {0, 0, 0};
     /// The alpha rendering mode of the material.
@@ -8327,7 +8313,7 @@ struct glTF : glTFProperty {
     /// An array of keyframe animations.
     std::vector<glTFAnimation*> animations = {};
     /// Metadata about the glTF asset. [required]
-    glTFAsset* asset = {};
+    glTFAsset* asset = nullptr;
     /// An array of buffers.
     std::vector<glTFBuffer*> buffers = {};
     /// An array of bufferViews.

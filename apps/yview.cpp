@@ -202,6 +202,7 @@ void run_ui(app_state* app) {
             app->time += 1 / 60.0f;
             if (app->time < app->time_range.x || app->time > app->time_range.y)
                 app->time = app->time_range.x;
+            ygl::update_transforms(app->scn, app->time);
         }
 
         // draw

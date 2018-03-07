@@ -32,6 +32,11 @@
         "vector": "cpp",
         "__locale": "cpp",
         "__string": "cpp",
-        "ios": "cpp"
+        "ios": "cpp",
+        "__bit_reference": "cpp",
+        "__hash_table": "cpp",
+        "__tree": "cpp",
+        "bitset": "cpp",
+        "memory": "cpp"
     }
 } 

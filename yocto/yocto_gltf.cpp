@@ -1031,8 +1031,6 @@ glTF* scenes_to_gltf(gltf_scene_group* scns, const std::string& buffer_uri,
             glTFAnimationSamplerInterpolation::Linear},
         {gltf_animation_interpolation::cubic,
             glTFAnimationSamplerInterpolation::CubicSpline},
-        {gltf_animation_interpolation::catmull_rom,
-            glTFAnimationSamplerInterpolation::CatmullRomSpline},
     };
 
     // animation
