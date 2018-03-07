@@ -3677,7 +3677,6 @@ void update_transforms(const animation_group* agr, float time) {
                 return eval_keyframed_step(times, vals, time);
             case keyframe_type::linear:
                 return eval_keyframed_linear(times, vals, time);
-            case keyframe_type::catmull_rom: return vals.at(0);
             case keyframe_type::bezier:
                 return eval_keyframed_bezier(times, vals, time);
             default: throw std::runtime_error("should not have been here");
@@ -3685,22 +3684,20 @@ void update_transforms(const animation_group* agr, float time) {
         return vals.at(0);
     };
 
-    for (auto anm : agr->animations) {
+    for (auto& anm_ : agr->animations) {
+        auto anm = &anm_;
         if (!anm->translation.empty()) {
             auto val =
                 interpolate(anm->type, anm->times, anm->translation, time);
-            for (auto target : agr->targets)
-                if (target.first == anm) target.second->translation = val;
+            for (auto target : anm->targets) target->translation = val;
         }
         if (!anm->rotation.empty()) {
             auto val = interpolate(anm->type, anm->times, anm->rotation, time);
-            for (auto target : agr->targets)
-                if (target.first == anm) target.second->rotation = val;
+            for (auto target : anm->targets) target->rotation = val;
         }
         if (!anm->scaling.empty()) {
             auto val = interpolate(anm->type, anm->times, anm->scaling, time);
-            for (auto target : agr->targets)
-                if (target.first == anm) target.second->scaling = val;
+            for (auto target : anm->targets) target->scaling = val;
         }
     }
 }
@@ -3730,7 +3727,8 @@ vec2f compute_animation_range(const scene* scn) {
     if (scn->animations.empty()) return zero2f;
     auto range = vec2f{+flt_max, -flt_max};
     for (auto agr : scn->animations) {
-        for (auto anm : agr->animations) {
+        for (auto& anm_ : agr->animations) {
+            auto anm = &anm_;
             range.x = min(range.x, anm->times.front());
             range.y = max(range.y, anm->times.back());
         }
@@ -5145,20 +5143,19 @@ scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
             {glTFAnimationSamplerInterpolation::Step, keyframe_type::step},
             {glTFAnimationSamplerInterpolation::CubicSpline,
                 keyframe_type::bezier},
-            {glTFAnimationSamplerInterpolation::CatmullRomSpline,
-                keyframe_type::catmull_rom},
         };
 
     // convert animations
     for (auto ganm : gltf->animations) {
         auto agr = new animation_group();
         agr->name = ganm->name;
-        auto sampler_map = std::unordered_map<vec2i, animation*>();
+        auto sampler_map = std::unordered_map<vec2i, int>();
         for (auto gchannel : ganm->channels) {
             if (sampler_map.find({(int)gchannel->sampler,
                     (int)gchannel->target->path}) == sampler_map.end()) {
                 auto gsampler = ganm->get(gchannel->sampler);
-                auto anm = new animation();
+                auto anm_ = animation();
+                auto anm = &anm_;
                 auto input_view =
                     accessor_view(gltf, gltf->get(gsampler->input));
                 anm->times.resize(input_view.size());
@@ -5211,13 +5208,13 @@ scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
                         throw std::runtime_error("should not have gotten here");
                     }
                 }
-                sampler_map[{
-                    (int)gchannel->sampler, (int)gchannel->target->path}] = anm;
-                agr->animations.push_back(anm);
+                sampler_map[{(int)gchannel->sampler,
+                    (int)gchannel->target->path}] = (int)agr->animations.size();
+                agr->animations.push_back(anm_);
             }
-            agr->targets.push_back({sampler_map.at({(int)gchannel->sampler,
-                                        (int)gchannel->target->path}),
-                scn->nodes[(int)gchannel->target->node]});
+            agr->animations[sampler_map.at({(int)gchannel->sampler,
+                                (int)gchannel->target->path})]
+                .targets.push_back(scn->nodes[(int)gchannel->target->node]);
         }
         scn->animations.push_back(agr);
     }
@@ -5645,8 +5642,6 @@ glTF* scene_to_gltf(
             {keyframe_type::linear, glTFAnimationSamplerInterpolation::Linear},
             {keyframe_type::bezier,
                 glTFAnimationSamplerInterpolation::CubicSpline},
-            {keyframe_type::catmull_rom,
-                glTFAnimationSamplerInterpolation::CatmullRomSpline},
         };
 
     // animation
@@ -5655,9 +5650,8 @@ glTF* scene_to_gltf(
         ganm->name = agr->name;
         auto gbuffer = add_opt_buffer(agr->path);
         auto count = 0;
-        auto paths =
-            std::unordered_map<animation*, glTFAnimationChannelTargetPath>();
-        for (auto anm : agr->animations) {
+        for (auto& anm_ : agr->animations) {
+            auto anm = &anm_;
             auto aid = ganm->name + "_" + std::to_string(count++);
             auto gsmp = new glTFAnimationSampler();
             gsmp->input =
@@ -5698,19 +5692,17 @@ glTF* scene_to_gltf(
                 throw std::runtime_error("should not have gotten here");
             }
             gsmp->interpolation = interpolation_map.at(anm->type);
+            for (auto target : anm->targets) {
+                auto gchan = new glTFAnimationChannel();
+                gchan->sampler =
+                    glTFid<glTFAnimationSampler>{(int)ganm->samplers.size()};
+                gchan->target = new glTFAnimationChannelTarget();
+                gchan->target->node =
+                    glTFid<glTFNode>{index(scn->nodes, target)};
+                gchan->target->path = path;
+                ganm->channels.push_back(gchan);
+            }
             ganm->samplers.push_back(gsmp);
-            paths[anm] = path;
-        }
-        for (auto target : agr->targets) {
-            auto kfr = target.first;
-            auto node = target.second;
-            auto gchan = new glTFAnimationChannel();
-            gchan->sampler =
-                glTFid<glTFAnimationSampler>{index(agr->animations, kfr)};
-            gchan->target = new glTFAnimationChannelTarget();
-            gchan->target->node = glTFid<glTFNode>{index(scn->nodes, node)};
-            gchan->target->path = paths.at(kfr);
-            ganm->channels.push_back(gchan);
         }
 
         gltf->animations.push_back(ganm);
@@ -8592,8 +8584,6 @@ void serialize(glTFAnimationSamplerInterpolation& val, json& js, bool reading) {
         table = {
             {"LINEAR", glTFAnimationSamplerInterpolation::Linear},
             {"STEP", glTFAnimationSamplerInterpolation::Step},
-            {"CATMULLROMSPLINE",
-                glTFAnimationSamplerInterpolation::CatmullRomSpline},
             {"CUBICSPLINE", glTFAnimationSamplerInterpolation::CubicSpline},
         };
     serialize(val, js, reading, table);
@@ -8835,7 +8825,7 @@ void serialize(glTFMaterial& val, json& js, bool reading) {
                 def.pbrSpecularGlossiness);
         }
     } else {
-        if (val.pbrSpecularGlossiness) {
+        if (val.pbrSpecularGlossiness != nullptr) {
             auto& js_ext = js["extensions"];
             serialize_attr(val.pbrSpecularGlossiness, js_ext,
                 "KHR_materials_pbrSpecularGlossiness", reading, false,
@@ -10944,10 +10934,10 @@ void update_proc_elem(
     if (panm->name == "") throw std::runtime_error("cannot use empty name");
     if (agr->animations.size() != 1) {
         agr->animations.clear();
-        agr->animations.push_back(new animation());
+        agr->animations.push_back(animation());
     }
     agr->name = panm->name;
-    auto anm = agr->animations.front();
+    auto anm = &agr->animations.front();
     anm->name = panm->name;
     anm->type = (!panm->bezier) ? keyframe_type::linear : keyframe_type::bezier;
     anm->times = panm->times;
@@ -10957,9 +10947,9 @@ void update_proc_elem(
     anm->scaling = panm->scaling;
     for (auto& v : anm->translation) v *= panm->scale;
     for (auto& v : anm->scaling) v *= panm->scale;
-    agr->targets.clear();
+    anm->targets.clear();
     for (auto& nde : panm->nodes)
-        agr->targets.push_back({anm, find_named_elem(scn->nodes, nde)});
+        anm->targets.push_back(find_named_elem(scn->nodes, nde));
 }
 
 // Update test elements
@@ -14384,8 +14374,8 @@ void draw_scene_tree_widgets(gl_window* win, const std::string& lbl,
 }
 
 template <typename T>
-bool draw_scene_elem_widgets(gl_window* win, scene* scn, T& val,
-    const visit_var& var,
+bool draw_scene_elem_widgets(gl_window* win, T& val,
+    const visit_var& var, scene* scn, 
     const std::unordered_map<std::string, std::string>& highlights,
     const std::string& elem_name) {
     auto color = get_highlight_color(highlights, elem_name + "___" + var.name);
@@ -14397,16 +14387,16 @@ bool draw_scene_elem_widgets(gl_window* win, scene* scn, T& val,
     return edited;
 }
 
-bool draw_scene_elem_widgets(gl_window* win, scene* scn, make_hair_params& val,
-    const visit_var& var,
+bool draw_scene_elem_widgets(gl_window* win, make_hair_params& val,
+    const visit_var& var, scene* scn, 
     const std::unordered_map<std::string, std::string>& highlights,
     const std::string& elem_name) {
     // TODO: hair params
     return false;
 }
 
-bool draw_scene_elem_widgets(gl_window* win, scene* scn, texture_info& val,
-    const visit_var& var,
+bool draw_scene_elem_widgets(gl_window* win, texture_info& val,
+    const visit_var& var, scene* scn, 
     const std::unordered_map<std::string, std::string>& highlights,
     const std::string& elem_name) {
     auto color = get_highlight_color(highlights, elem_name + "___" + var.name);
@@ -14430,33 +14420,58 @@ bool draw_scene_elem_widgets(gl_window* win, scene* scn, texture_info& val,
     return edited;
 }
 
-bool draw_scene_elem_widgets(gl_window* win, scene* scn,
-    std::vector<shape_group_props>& val, const visit_var& var,
+bool draw_scene_elem_widgets(gl_window* win,
+    std::vector<shape_group_props>& val, const visit_var& var, scene* scn, 
     const std::unordered_map<std::string, std::string>& highlights,
     const std::string& elem_name) {
-    if (val.empty()) {
-        if (draw_button_widget(win, "add shape group")) {
-            val.push_back({});
-            return true;
-        } else {
-            return false;
-        }
-    } else {
-        auto edited = 0;
-        for (auto gid = 0; gid < val.size(); gid++) {
-            visit(val[gid], [gid, scn, win, &highlights, &elem_name, &edited](
-                                auto& val, const auto& var) {
-                edited += draw_scene_elem_widgets(
-                    win, scn, val, var, highlights, elem_name);
-            });
-        }
-        return edited;
+    auto color = get_highlight_color(highlights, elem_name + "___" + var.name);
+    if (color != zero4f) draw_style_widget_push(win, color);
+    auto edited = 0;
+    for (auto gid = 0; gid < val.size(); gid++) {
+        auto& grp = val[gid];
+        auto name = var.name + "[" + std::to_string(gid) + "].";
+        visit(grp, [win,name,scn,&highlights,&elem_name,&edited](auto& val, const auto& var) {
+            auto var_ = var;
+            var_.name = name + var.name;
+            edited += draw_scene_elem_widgets(win, val, var_, scn, highlights, elem_name);
+        });
     }
+    if (draw_button_widget(win, "add " + var.name)) {
+        val.push_back({});
+        edited += 1;
+    }
+    draw_continue_widget(win);
+    if (draw_button_widget(win, "del " + var.name)) {
+        if(!val.empty()) val.pop_back();
+        edited += 1;
+    }
+    if (color != zero4f) draw_style_widget_pop(win);
+    return edited;
+}
+
+bool draw_scene_elem_widgets(gl_window* win,
+    std::vector<animation>& val, const visit_var& var, scene* scn, 
+    const std::unordered_map<std::string, std::string>& highlights,
+    const std::string& elem_name) {
+    auto color = get_highlight_color(highlights, elem_name + "___" + var.name);
+    if (color != zero4f) draw_style_widget_push(win, color);
+    auto edited = 0;
+    for (auto gid = 0; gid < val.size(); gid++) {
+        auto& grp = val[gid];
+        auto name = var.name + "[" + std::to_string(gid) + "].";
+        visit(grp, [win,name,scn,&highlights,&elem_name,&edited](auto& val, const auto& var) {
+            auto var_ = var;
+            var_.name = name + var.name;
+            edited += draw_scene_elem_widgets(win, val, var_, scn, highlights, elem_name);
+        });
+    }
+    if (color != zero4f) draw_style_widget_pop(win);
+    return edited;
 }
 
 template <typename T>
-bool draw_scene_elem_widgets(gl_window* win, scene* scn, image<T>& val,
-    const visit_var& var,
+bool draw_scene_elem_widgets(gl_window* win, image<T>& val,
+    const visit_var& var, scene* scn, 
     const std::unordered_map<std::string, std::string>& highlights,
     const std::string& elem_name) {
     if (empty(val)) return false;
@@ -14468,39 +14483,29 @@ bool draw_scene_elem_widgets(gl_window* win, scene* scn, image<T>& val,
     return false;
 }
 
-bool draw_scene_elem_widgets(gl_window* win, scene* scn,
-    std::vector<animation*>& val, const visit_var& var,
-    const std::unordered_map<std::string, std::string>& highlights,
-    const std::string& elem_name) {
-    // TODO.
-    return false;
-}
-
 template <typename T>
-bool draw_scene_elem_widgets(gl_window* win, scene* scn, std::vector<T*>& val,
-    const visit_var& var,
+bool draw_scene_elem_widgets(gl_window* win, std::vector<T*>& val,
+    const visit_var& var, scene* scn, 
     const std::unordered_map<std::string, std::string>& highlights,
     const std::string& elem_name) {
+    auto color = get_highlight_color(highlights, elem_name + "___" + var.name);
+    if (color != zero4f) draw_style_widget_push(win, color);
     auto edited = 0;
     for (auto idx = 0; idx < val.size(); idx++) {
-        auto color =
-            get_highlight_color(highlights, elem_name + "___" + var.name);
-        if (color != zero4f) draw_style_widget_push(win, color);
-        edited +=
-            draw_combo_widget(win, var.name + "[" + std::to_string(idx) + "]",
-                val[idx], get_scene_elems(scn, val[idx]));
-        if (color != zero4f) draw_style_widget_pop(win);
+        auto var_ = var;
+        var_.name = var.name + "[" + std::to_string(idx) + "]";
+        edited += draw_scene_elem_widgets(win, val[idx], var_, scn, highlights, elem_name);
     }
+    if (color != zero4f) draw_style_widget_pop(win);
     return edited;
 }
 
 template <typename T>
-bool draw_scene_elem_widgets(gl_window* win, scene* scn, std::vector<T>& val,
-    const visit_var& var,
+bool draw_scene_elem_widgets(gl_window* win, std::vector<T>& val,
+    const visit_var& var, scene* scn, 
     const std::unordered_map<std::string, std::string>& highlights,
     const std::string& elem_name) {
     if (val.empty()) return false;
-    ;
     auto color = get_highlight_color(highlights, elem_name + "___" + var.name);
     if (color != zero4f) draw_style_widget_push(win, color);
     draw_label_widget(win, var.name, (int)val.size());
@@ -14508,19 +14513,9 @@ bool draw_scene_elem_widgets(gl_window* win, scene* scn, std::vector<T>& val,
     return false;
 }
 
-template <typename T1, typename T2>
-bool draw_scene_elem_widgets(gl_window* win, scene* scn,
-    std::vector<std::pair<T1*, T2*>>& val, const visit_var&,
-    const std::unordered_map<std::string, std::string>& highlights,
-    const std::string& elem_name) {
-    auto edited = 0;
-    // TODO
-    return edited;
-}
-
 template <typename T>
-bool draw_scene_elem_widgets(gl_window* win, scene* scn, T*& val,
-    const visit_var& var,
+bool draw_scene_elem_widgets(gl_window* win, T*& val,
+    const visit_var& var, scene* scn, 
     const std::unordered_map<std::string, std::string>& highlights,
     const std::string& elem_name) {
     auto edited = false;
@@ -14532,8 +14527,8 @@ bool draw_scene_elem_widgets(gl_window* win, scene* scn, T*& val,
 }
 
 template <typename T, typename TT>
-bool draw_scene_elem_widgets(gl_window* win, scene* scn, T* elem,
-    std::vector<TT*>& telems,
+bool draw_scene_elem_widgets(gl_window* win, T* elem,
+    std::vector<TT*>& telems, scene* scn, 
     const std::unordered_map<std::string, std::string>& highlights) {
     if (!elem) return false;
     auto telem = (TT*)nullptr;
@@ -14542,7 +14537,7 @@ bool draw_scene_elem_widgets(gl_window* win, scene* scn, T* elem,
     auto edited = false;
     if (telem) {
         visit(*telem, [win, scn, &edited](auto& val, const auto& var) {
-            auto edited_ = draw_scene_elem_widgets(win, scn, val, var, {}, "");
+            auto edited_ = draw_scene_elem_widgets(win, val, var, scn, {}, "");
             edited = edited || edited_;
         });
         if (edited) update_proc_elem(scn, elem, telem);
@@ -14550,7 +14545,7 @@ bool draw_scene_elem_widgets(gl_window* win, scene* scn, T* elem,
     visit(*elem,
         [win, scn, elem, &edited, &highlights](auto& val, const auto& var) {
             auto edited_ = draw_scene_elem_widgets(
-                win, scn, val, var, highlights, elem->name);
+                win, val, var, scn, highlights, elem->name);
             edited = edited || edited_;
         });
     return edited;
@@ -14639,29 +14634,29 @@ bool draw_scene_elem_widgets(gl_window* win, const std::string& lbl, scene* scn,
     auto test_scn_res = (test_scn) ? test_scn : &test_scn_def;
     auto edited = false;
     if (sel.is<camera>())
-        edited = draw_scene_elem_widgets(win, scn, sel.get<camera>(),
-            test_scn_res->cameras, inspector_highlights);
+        edited = draw_scene_elem_widgets(win, sel.get<camera>(),
+            test_scn_res->cameras, scn, inspector_highlights);
     if (sel.is<shape>())
-        edited = draw_scene_elem_widgets(win, scn, sel.get<shape>(),
-            test_scn_res->shapes, inspector_highlights);
+        edited = draw_scene_elem_widgets(win, sel.get<shape>(),
+            test_scn_res->shapes, scn, inspector_highlights);
     if (sel.is<texture>())
-        edited = draw_scene_elem_widgets(win, scn, sel.get<texture>(),
-            test_scn_res->textures, inspector_highlights);
+        edited = draw_scene_elem_widgets(win, sel.get<texture>(),
+            test_scn_res->textures, scn, inspector_highlights);
     if (sel.is<material>())
-        edited = draw_scene_elem_widgets(win, scn, sel.get<material>(),
-            test_scn_res->materials, inspector_highlights);
+        edited = draw_scene_elem_widgets(win, sel.get<material>(),
+            test_scn_res->materials, scn, inspector_highlights);
     if (sel.is<environment>())
-        edited = draw_scene_elem_widgets(win, scn, sel.get<environment>(),
-            test_scn_res->environments, inspector_highlights);
+        edited = draw_scene_elem_widgets(win, sel.get<environment>(),
+            test_scn_res->environments, scn, inspector_highlights);
     if (sel.is<node>())
-        edited = draw_scene_elem_widgets(win, scn, sel.get<node>(),
-            test_scn_res->nodes, inspector_highlights);
+        edited = draw_scene_elem_widgets(win, sel.get<node>(),
+            test_scn_res->nodes, scn, inspector_highlights);
     if (sel.is<animation>())
-        edited = draw_scene_elem_widgets(win, scn, sel.get<animation>(),
-            test_scn_res->animations, inspector_highlights);
+        edited = draw_scene_elem_widgets(win, sel.get<animation>(),
+            test_scn_res->animations, scn, inspector_highlights);
     if (sel.is<animation_group>())
-        edited = draw_scene_elem_widgets(win, scn, sel.get<animation_group>(),
-            test_scn_res->animations, inspector_highlights);
+        edited = draw_scene_elem_widgets(win, sel.get<animation_group>(),
+            test_scn_res->animations, scn, inspector_highlights);
     if (edited) update_list.push_back(sel);
 
     draw_groupid_widget_pop(win);
