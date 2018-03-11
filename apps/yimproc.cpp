@@ -158,7 +158,7 @@ ygl::image4f filter_bilateral(
                     if (ii >= img.width() || jj >= img.height()) continue;
                     auto uv = ygl::vec2f{float(i - ii), float(j - jj)};
                     auto rgb = img.at(i, j) - img.at(ii, jj);
-                    auto w = exp(-dot(uv, uv) * sw) * exp(-dot(rgb, rgb) * rw);
+                    auto w = std::exp(-dot(uv, uv) * sw) * std::exp(-dot(rgb, rgb) * rw);
                     av += w * img.at(ii, jj);
                     aw += w;
                 }
