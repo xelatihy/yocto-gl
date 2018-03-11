@@ -45,7 +45,6 @@ struct app_state {
     ygl::trace_params params;
     std::vector<std::thread> async_threads;
     bool async_stop = false;
-    bool scene_updated = false;
     bool navigation_fps = false;
     int preview_res = 64;
     bool rendering = false;
@@ -83,10 +82,12 @@ void draw(ygl::gl_window* win, app_state* app) {
                 win, "size", "{} x {}", app->img.width(), app->img.height());
             ygl::draw_label_widget(win, "sample", app->pixels.at(0, 0).sample);
             if (ygl::draw_camera_selection_widget(
-                    win, "camera", app->cam, app->scn, app->view))
-                app->scene_updated = true;
-            if (ygl::draw_camera_widgets(win, "camera", app->cam))
-                app->scene_updated = true;
+                    win, "camera", app->cam, app->scn, app->view)) {
+                app->update_list.push_back(app->cam);
+            }
+            if (ygl::draw_camera_widgets(win, "camera", app->cam)) {
+                app->update_list.push_back(app->cam);
+            }
             ygl::draw_value_widget(win, "fps", app->navigation_fps);
             if (ygl::draw_button_widget(win, "print stats"))
                 std::cout << ygl::compute_stats(app->scn);
@@ -94,7 +95,7 @@ void draw(ygl::gl_window* win, app_state* app) {
         }
         if (ygl::draw_header_widget(win, "params")) {
             if (ygl::draw_params_widgets(win, "", app->params)) {
-                app->scene_updated = true;
+                app->update_list.push_back(&app->params);
             }
         }
         if (ygl::draw_header_widget(win, "image")) {
@@ -104,14 +105,12 @@ void draw(ygl::gl_window* win, app_state* app) {
                 win, "", app->img, {}, get_mouse_posf(win), app->imparams);
         }
         if (ygl::draw_header_widget(win, "scene")) {
-            if (ygl::draw_scene_tree_widgets(
-                    win, "", app->scn, app->selection, app->update_list))
-                app->scene_updated = true;
+            ygl::draw_scene_tree_widgets(
+                win, "", app->scn, app->selection, app->update_list);
         }
         if (ygl::draw_header_widget(win, "inspect")) {
-            if (ygl::draw_scene_elem_widgets(
-                    win, "", app->scn, app->selection, app->update_list))
-                app->scene_updated = true;
+            ygl::draw_scene_elem_widgets(
+                win, "", app->scn, app->selection, app->update_list);
         }
     }
     ygl::end_widgets(win);
@@ -120,7 +119,7 @@ void draw(ygl::gl_window* win, app_state* app) {
 }
 
 bool update(app_state* app) {
-    if (app->scene_updated || !app->update_list.empty()) {
+    if (!app->update_list.empty()) {
         ygl::trace_async_stop(app->async_threads, app->async_stop);
         app->rendering = false;
 
@@ -149,8 +148,6 @@ bool update(app_state* app) {
             ppixels, 1, pparams);
         ygl::resize_image(pimg, app->img, ygl::resize_filter::box);
         ygl::update_texture(app->trace_texture, app->img);
-
-        app->scene_updated = false;
     } else if (!app->rendering) {
         ygl::trace_async_start(app->scn, app->cam, app->bvh, app->lights,
             app->img, app->pixels, app->async_threads, app->async_stop,
@@ -180,10 +177,12 @@ void run_ui(app_state* app) {
         // handle mouse and keyboard for navigation
         if (app->cam == app->view) {
             if (ygl::handle_camera_navigation(
-                    win, app->view, app->navigation_fps))
-                app->scene_updated = true;
+                    win, app->view, app->navigation_fps)) {
+                        app->update_list.push_back(app->view);
+                    }
         }
-        ygl::handle_scene_selection(win, app->scn, app->cam, app->bvh, app->params.resolution, app->imparams, app->selection);
+        ygl::handle_scene_selection(win, app->scn, app->cam, app->bvh,
+            app->params.resolution, app->imparams, app->selection);
 
         // draw
         draw(win, app);
@@ -273,7 +272,7 @@ int main(int argc, char* argv[]) {
         ygl::image4f((int)round(app->cam->aspect * app->params.resolution),
             app->params.resolution);
     app->pixels = ygl::make_trace_pixels(app->img, app->params);
-    app->scene_updated = true;
+    app->update_list.push_back(app->scn);
 
     // run interactive
     run_ui(app);
