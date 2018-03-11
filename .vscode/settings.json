@@ -37,6 +37,7 @@
         "__hash_table": "cpp",
         "__tree": "cpp",
         "bitset": "cpp",
-        "memory": "cpp"
+        "memory": "cpp",
+        "valarray": "cpp"
     }
 } 
