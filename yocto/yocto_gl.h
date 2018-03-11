@@ -5949,13 +5949,16 @@ void save_scene(
 
 /// Scene selection.
 struct scene_selection {
-    /// Assignment operator.
+    /// Initializing selection.
+    scene_selection() : ptr(nullptr), tinfo(nullptr) { }
+    /// Initializing selection.
     template <typename T>
-    scene_selection& operator=(T* val) {
-        ptr = val;
-        tinfo = &typeid(T);
-        return *this;
-    }
+    scene_selection(T* val) : ptr(val), tinfo(&typeid(T)) { }
+
+    /// Checking whether it is empty.
+    operator bool() const { return (bool)ptr; }
+    /// Checking whether it is empty.
+    bool empty() const { return (bool)ptr; }
 
     /// Check if points to type T.
     template <typename T>
