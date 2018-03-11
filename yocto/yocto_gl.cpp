@@ -3270,7 +3270,7 @@ ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv) {
 ray3f eval_camera_ray(const camera* cam, const vec2i& ij, int res,
     const vec2f& puv, const vec2f& luv) {
     auto uv =
-        vec2f{(ij.x + puv.x) / (cam->aspect * res), (1 - ij.y - puv.y) / res};
+        vec2f{(ij.x + puv.x) / (cam->aspect * res), 1 - (ij.y - puv.y) / res};
     return eval_camera_ray(cam, uv, luv);
 }
 
@@ -12807,6 +12807,13 @@ void draw_image(const gl_stdimage_program& prog, const gl_texture& txt,
     assert(gl_check_error());
 }
 
+// Computes the image uv coordinates corresponding to the view parameters.
+vec2i get_draw_image_coords(
+    const vec2f& mouse_pos, const gl_stdimage_params& params) {
+    auto xy = (mouse_pos - params.offset) / params.zoom;
+    return {(int)round(xy.x), (int)round(xy.y)};
+}
+
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
@@ -13803,6 +13810,24 @@ bool get_key(gl_window* win, int key) {
     return glfwGetKey(win->gwin, key) == GLFW_PRESS;
 }
 
+// Check if the alt key is down
+bool get_alt_key(gl_window* win) {
+    return glfwGetKey(win->gwin, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
+           glfwGetKey(win->gwin, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
+}
+
+// Check if the alt key is down
+bool get_ctrl_key(gl_window* win) {
+    return glfwGetKey(win->gwin, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
+           glfwGetKey(win->gwin, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
+}
+
+// Check if the alt key is down
+bool get_shift_key(gl_window* win) {
+    return glfwGetKey(win->gwin, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
+           glfwGetKey(win->gwin, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+}
+
 // Framebuffer size
 vec2i get_framebuffer_size(gl_window* win) {
     auto ret = vec2i{0, 0};
@@ -13833,12 +13858,14 @@ bool handle_camera_navigation(
     static auto mouse_last = zero2f;
     auto mouse_pos = get_mouse_posf(win);
     auto mouse_button = get_mouse_button(win);
+    auto alt_down = get_alt_key(win);
 
     // updated
     auto updated = false;
 
     // handle mouse and keyboard for navigation
-    if (mouse_button && !get_widget_active(win)) {
+    if (mouse_button && alt_down && !get_widget_active(win)) {
+        if (mouse_button == 1 && get_shift_key(win)) mouse_button = 3;
         if (navigation_fps) {
             auto dolly = 0.0f;
             auto pan = zero2f;
@@ -13886,6 +13913,29 @@ bool handle_camera_navigation(
 
     // done
     return updated;
+}
+
+// Handle scene selection
+bool handle_scene_selection(gl_window* win, const scene* scn, const camera* cam,
+    const bvh_tree* bvh, int res, const gl_stdimage_params& params,
+    scene_selection& sel) {
+    auto mouse_pos = get_mouse_posf(win);
+    auto mouse_button = get_mouse_button(win);
+
+    if (!(mouse_button == 1 && !get_widget_active(win))) return false;
+    auto ij = get_draw_image_coords(mouse_pos, params);
+    if (ij.x < 0 || ij.x >= (int)round(res * cam->aspect) || ij.y < 0 ||
+        ij.y >= res)
+        return false;
+    auto ray = eval_camera_ray(cam, ij, res, {0.5f, 0.5f}, zero2f);
+    auto isec = intersect_bvh(bvh, ray, false);
+    if (!isec) return false;
+    if (scn->nodes.empty()) {
+        sel = scn->shapes[isec.iid];
+    } else {
+        sel = scn->nodes[isec.iid];
+    }
+    return true;
 }
 
 // Initialize widgets
@@ -14225,25 +14275,18 @@ void draw_style_widget_pop(gl_window* win) { ImGui::PopStyleColor(); }
 void draw_imageinspect_widgets(gl_window* win, const std::string& lbl,
     const image4f& hdr, const image4b& ldr, const vec2f& mouse_pos,
     const gl_stdimage_params& params) {
-    auto xy = (mouse_pos - params.offset) / params.zoom;
-    auto i = (int)round(xy.x), j = (int)round(xy.y);
+    auto ij = get_draw_image_coords(mouse_pos, params);
     auto v4f = zero4f;
     auto v4b = zero4b;
-    if (!hdr.empty()) {
-        auto w = hdr.width(), h = hdr.height();
-        if (i >= 0 && i < w && j >= 0 && j < h) {
-            v4f = hdr.at(i, j);
-            v4b = linear_to_srgb(hdr.at(i, j));
-        }
-    } else if (!ldr.empty()) {
-        auto w = ldr.width(), h = ldr.height();
-        if (i >= 0 && i < w && j >= 0 && j < h) {
-            v4f = srgb_to_linear(ldr.at(i, j));
-            v4b = ldr.at(i, j);
-        }
+    if (!hdr.empty() && contains(hdr, ij.x, ij.y)) {
+        v4f = hdr.at(ij.x, ij.y);
+        v4b = linear_to_srgb(hdr.at(ij.x, ij.y));
+    } else if (!ldr.empty() && contains(ldr, ij.x, ij.y)) {
+        v4f = srgb_to_linear(ldr.at(ij.x, ij.y));
+        v4b = ldr.at(ij.x, ij.y);
     }
     char buf[1024];
-    sprintf(buf, "%5d %5d", i, j);
+    sprintf(buf, "%5d %5d", ij.x, ij.y);
     draw_label_widget(win, lbl + "mouse pos", buf);
     sprintf(buf, "%4.4g %4.4g %4.4g %4.4g", v4f.x, v4f.y, v4f.z, v4f.w);
     draw_label_widget(win, lbl + "hdr val", buf);
@@ -14374,9 +14417,8 @@ void draw_scene_tree_widgets(gl_window* win, const std::string& lbl,
 }
 
 template <typename T>
-bool draw_scene_elem_widgets(gl_window* win, T& val,
-    const visit_var& var, scene* scn, 
-    const std::unordered_map<std::string, std::string>& highlights,
+bool draw_scene_elem_widgets(gl_window* win, T& val, const visit_var& var,
+    scene* scn, const std::unordered_map<std::string, std::string>& highlights,
     const std::string& elem_name) {
     auto color = get_highlight_color(highlights, elem_name + "___" + var.name);
     if (color != zero4f) draw_style_widget_push(win, color);
@@ -14388,7 +14430,7 @@ bool draw_scene_elem_widgets(gl_window* win, T& val,
 }
 
 bool draw_scene_elem_widgets(gl_window* win, make_hair_params& val,
-    const visit_var& var, scene* scn, 
+    const visit_var& var, scene* scn,
     const std::unordered_map<std::string, std::string>& highlights,
     const std::string& elem_name) {
     // TODO: hair params
@@ -14396,7 +14438,7 @@ bool draw_scene_elem_widgets(gl_window* win, make_hair_params& val,
 }
 
 bool draw_scene_elem_widgets(gl_window* win, texture_info& val,
-    const visit_var& var, scene* scn, 
+    const visit_var& var, scene* scn,
     const std::unordered_map<std::string, std::string>& highlights,
     const std::string& elem_name) {
     auto color = get_highlight_color(highlights, elem_name + "___" + var.name);
@@ -14421,7 +14463,7 @@ bool draw_scene_elem_widgets(gl_window* win, texture_info& val,
 }
 
 bool draw_scene_elem_widgets(gl_window* win,
-    std::vector<shape_group_props>& val, const visit_var& var, scene* scn, 
+    std::vector<shape_group_props>& val, const visit_var& var, scene* scn,
     const std::unordered_map<std::string, std::string>& highlights,
     const std::string& elem_name) {
     auto color = get_highlight_color(highlights, elem_name + "___" + var.name);
@@ -14430,10 +14472,12 @@ bool draw_scene_elem_widgets(gl_window* win,
     for (auto gid = 0; gid < val.size(); gid++) {
         auto& grp = val[gid];
         auto name = var.name + "[" + std::to_string(gid) + "].";
-        visit(grp, [win,name,scn,&highlights,&elem_name,&edited](auto& val, const auto& var) {
+        visit(grp, [win, name, scn, &highlights, &elem_name, &edited](
+                       auto& val, const auto& var) {
             auto var_ = var;
             var_.name = name + var.name;
-            edited += draw_scene_elem_widgets(win, val, var_, scn, highlights, elem_name);
+            edited += draw_scene_elem_widgets(
+                win, val, var_, scn, highlights, elem_name);
         });
     }
     if (draw_button_widget(win, "add " + var.name)) {
@@ -14442,15 +14486,15 @@ bool draw_scene_elem_widgets(gl_window* win,
     }
     draw_continue_widget(win);
     if (draw_button_widget(win, "del " + var.name)) {
-        if(!val.empty()) val.pop_back();
+        if (!val.empty()) val.pop_back();
         edited += 1;
     }
     if (color != zero4f) draw_style_widget_pop(win);
     return edited;
 }
 
-bool draw_scene_elem_widgets(gl_window* win,
-    std::vector<animation>& val, const visit_var& var, scene* scn, 
+bool draw_scene_elem_widgets(gl_window* win, std::vector<animation>& val,
+    const visit_var& var, scene* scn,
     const std::unordered_map<std::string, std::string>& highlights,
     const std::string& elem_name) {
     auto color = get_highlight_color(highlights, elem_name + "___" + var.name);
@@ -14459,10 +14503,12 @@ bool draw_scene_elem_widgets(gl_window* win,
     for (auto gid = 0; gid < val.size(); gid++) {
         auto& grp = val[gid];
         auto name = var.name + "[" + std::to_string(gid) + "].";
-        visit(grp, [win,name,scn,&highlights,&elem_name,&edited](auto& val, const auto& var) {
+        visit(grp, [win, name, scn, &highlights, &elem_name, &edited](
+                       auto& val, const auto& var) {
             auto var_ = var;
             var_.name = name + var.name;
-            edited += draw_scene_elem_widgets(win, val, var_, scn, highlights, elem_name);
+            edited += draw_scene_elem_widgets(
+                win, val, var_, scn, highlights, elem_name);
         });
     }
     if (color != zero4f) draw_style_widget_pop(win);
@@ -14471,7 +14517,7 @@ bool draw_scene_elem_widgets(gl_window* win,
 
 template <typename T>
 bool draw_scene_elem_widgets(gl_window* win, image<T>& val,
-    const visit_var& var, scene* scn, 
+    const visit_var& var, scene* scn,
     const std::unordered_map<std::string, std::string>& highlights,
     const std::string& elem_name) {
     if (empty(val)) return false;
@@ -14485,7 +14531,7 @@ bool draw_scene_elem_widgets(gl_window* win, image<T>& val,
 
 template <typename T>
 bool draw_scene_elem_widgets(gl_window* win, std::vector<T*>& val,
-    const visit_var& var, scene* scn, 
+    const visit_var& var, scene* scn,
     const std::unordered_map<std::string, std::string>& highlights,
     const std::string& elem_name) {
     auto color = get_highlight_color(highlights, elem_name + "___" + var.name);
@@ -14494,7 +14540,8 @@ bool draw_scene_elem_widgets(gl_window* win, std::vector<T*>& val,
     for (auto idx = 0; idx < val.size(); idx++) {
         auto var_ = var;
         var_.name = var.name + "[" + std::to_string(idx) + "]";
-        edited += draw_scene_elem_widgets(win, val[idx], var_, scn, highlights, elem_name);
+        edited += draw_scene_elem_widgets(
+            win, val[idx], var_, scn, highlights, elem_name);
     }
     if (color != zero4f) draw_style_widget_pop(win);
     return edited;
@@ -14502,7 +14549,7 @@ bool draw_scene_elem_widgets(gl_window* win, std::vector<T*>& val,
 
 template <typename T>
 bool draw_scene_elem_widgets(gl_window* win, std::vector<T>& val,
-    const visit_var& var, scene* scn, 
+    const visit_var& var, scene* scn,
     const std::unordered_map<std::string, std::string>& highlights,
     const std::string& elem_name) {
     if (val.empty()) return false;
@@ -14514,9 +14561,8 @@ bool draw_scene_elem_widgets(gl_window* win, std::vector<T>& val,
 }
 
 template <typename T>
-bool draw_scene_elem_widgets(gl_window* win, T*& val,
-    const visit_var& var, scene* scn, 
-    const std::unordered_map<std::string, std::string>& highlights,
+bool draw_scene_elem_widgets(gl_window* win, T*& val, const visit_var& var,
+    scene* scn, const std::unordered_map<std::string, std::string>& highlights,
     const std::string& elem_name) {
     auto edited = false;
     auto color = get_highlight_color(highlights, elem_name + "___" + var.name);
@@ -14527,8 +14573,8 @@ bool draw_scene_elem_widgets(gl_window* win, T*& val,
 }
 
 template <typename T, typename TT>
-bool draw_scene_elem_widgets(gl_window* win, T* elem,
-    std::vector<TT*>& telems, scene* scn, 
+bool draw_scene_elem_widgets(gl_window* win, T* elem, std::vector<TT*>& telems,
+    scene* scn,
     const std::unordered_map<std::string, std::string>& highlights) {
     if (!elem) return false;
     auto telem = (TT*)nullptr;

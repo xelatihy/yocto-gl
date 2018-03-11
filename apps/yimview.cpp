@@ -140,7 +140,8 @@ void run_ui(app_state* app) {
                      img->width(), img->height()));
 
         // handle mouse
-        if (mouse_button && mouse_pos != mouse_last &&
+        auto alt_down = get_alt_key(win);
+        if (mouse_button && alt_down && mouse_pos != mouse_last &&
             !ygl::get_widget_active(win)) {
             switch (mouse_button) {
                 case 1: app->params.offset += mouse_pos - mouse_last; break;
