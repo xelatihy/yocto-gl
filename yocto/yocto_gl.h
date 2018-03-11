@@ -4875,6 +4875,12 @@ inline image<vec<T, 4>> make_image(
     return img;
 }
 
+/// Check if a pixel is inside an image.
+template<typename T>
+inline bool contains(const image<T>& img, int i, int j) {
+    return i >= 0 && i < img.width() && j >= 0 && j < img.height();
+}
+
 /// @}
 
 }  // namespace ygl
@@ -5940,6 +5946,41 @@ scene* load_scene(const std::string& filename, const load_options& opts = {});
 /// Saves a scene. For now OBJ and glTF are supported.
 void save_scene(
     const std::string& filename, const scene* scn, const save_options& opts);
+
+/// Scene selection.
+struct scene_selection {
+    /// Assignment operator.
+    template <typename T>
+    scene_selection& operator=(T* val) {
+        ptr = val;
+        tinfo = &typeid(T);
+        return *this;
+    }
+
+    /// Check if points to type T.
+    template <typename T>
+    bool is() const {
+        return &typeid(T) == tinfo;
+    }
+
+    /// Gets a pointer cast to the specific type.
+    template <typename T>
+    T* get() {
+        return (is<T>()) ? (T*)ptr : nullptr;
+    }
+
+    /// Get the raw untyped pointer.
+    void* get_raw() { return ptr; }
+
+    /// Get untyped.
+    void* get_untyped() { return ptr; }
+
+   private:
+    /// Selected pointer.
+    void* ptr = nullptr;
+    /// Type information of the pointerd to object.
+    const std::type_info* tinfo = nullptr;
+};
 
 /// Scene statistics
 struct scene_stats {
@@ -9865,6 +9906,9 @@ inline void draw_image(const gl_stdimage_program& prog, const gl_texture& txt,
         tmparams.exposure, tmparams.gamma, tmparams.filmic);
 }
 
+/// Computes the image uv coordinates corresponding to the view parameters.
+vec2i get_draw_image_coords(const vec2f& mouse_pos, const gl_stdimage_params& params);
+
 /// Program to shade surfaces with a physically-based standard shader based on
 /// Phong/GGX. Members are not part of public API.
 struct gl_stdsurface_program {
@@ -10082,31 +10126,37 @@ void set_window_callbacks(gl_window* win, gl_text_callback text_cb,
 /// Set window title.
 void set_window_title(gl_window* win, const std::string& title);
 
-/// Wait events
+/// Wait events.
 void wait_events(gl_window* win);
-/// Poll events
+/// Poll events.
 void poll_events(gl_window* win);
-/// Swap buffers
+/// Swap buffers.
 void swap_buffers(gl_window* win);
 
-/// Should close
+/// Should close.
 bool should_close(gl_window* win);
 
-/// Window size
+/// Window size.
 vec2i get_window_size(gl_window* win);
-/// Framebuffer size
+/// Framebuffer size.
 vec2i get_framebuffer_size(gl_window* win);
 
-/// Mouse button
+/// Mouse button.
 int get_mouse_button(gl_window* win);
-/// Mouse position
+/// Mouse position.
 vec2i get_mouse_pos(gl_window* win);
-/// Mouse position
+/// Mouse position.
 vec2f get_mouse_posf(gl_window* win);
-/// Check if a key is pressed (not all keys are supported)
+/// Check if a key is pressed (not all keys are supported).
 bool get_key(gl_window* win, int key);
+// Check if the alt key is down.
+bool get_alt_key(gl_window* win);
+// Check if the alt key is down.
+bool get_ctrl_key(gl_window* win);
+// Check if the alt key is down.
+bool get_shift_key(gl_window* win);
 
-/// Read pixels
+/// Read pixels.
 image4b take_screenshot4b(gl_window* win, bool flipy = true, bool back = false);
 /// Save a screenshot to disk
 inline void save_screenshot(gl_window* win, const std::string& imfilename) {
@@ -10115,6 +10165,10 @@ inline void save_screenshot(gl_window* win, const std::string& imfilename) {
 
 /// Handle camera navigation.
 bool handle_camera_navigation(gl_window* win, camera* cam, bool navigation_fps);
+/// Handle scene selection.
+bool handle_scene_selection(gl_window* win, const scene* scn, const camera* cam, 
+                            const bvh_tree* bvh, int res, const gl_stdimage_params& params,
+                            scene_selection& sel);
 
 /// @}
 
@@ -10441,41 +10495,6 @@ inline bool draw_camera_selection_widget(gl_window* win, const std::string& lbl,
 
 /// Draws widgets for a camera. Used for quickly making demos.
 bool draw_camera_widgets(gl_window* win, const std::string& lbl, camera* cam);
-
-/// Scene selection
-struct scene_selection {
-    /// Assignment operator.
-    template <typename T>
-    scene_selection& operator=(T* val) {
-        ptr = val;
-        tinfo = &typeid(T);
-        return *this;
-    }
-
-    /// Check if points to type T.
-    template <typename T>
-    bool is() const {
-        return &typeid(T) == tinfo;
-    }
-
-    /// Gets a pointer cast to the specific type.
-    template <typename T>
-    T* get() {
-        return (is<T>()) ? (T*)ptr : nullptr;
-    }
-
-    /// Get the raw untyped pointer.
-    void* get_raw() { return ptr; }
-
-    /// Get untyped.
-    void* get_untyped() { return ptr; }
-
-   private:
-    /// Selected pointer.
-    void* ptr = nullptr;
-    /// Type information of the pointerd to object.
-    const std::type_info* tinfo = nullptr;
-};
 
 /// Draws widgets for a whole scene. Used for quickly making demos.
 bool draw_scene_tree_widgets(gl_window* win, const std::string& lbl, scene* scn,

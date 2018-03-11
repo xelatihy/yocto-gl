@@ -183,6 +183,7 @@ void run_ui(app_state* app) {
                     win, app->view, app->navigation_fps))
                 app->scene_updated = true;
         }
+        ygl::handle_scene_selection(win, app->scn, app->cam, app->bvh, app->params.resolution, app->imparams, app->selection);
 
         // draw
         draw(win, app);
