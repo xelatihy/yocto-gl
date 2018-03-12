@@ -10135,12 +10135,8 @@ void set_window_callbacks(gl_window* win, gl_text_callback text_cb,
 /// Set window title.
 void set_window_title(gl_window* win, const std::string& title);
 
-/// Wait events timeout.
-void wait_events_timeout(gl_window* win, float timeout);
 /// Wait events.
 void wait_events(gl_window* win);
-/// Post event for wait event to continue.
-void post_event(gl_window* win);
 /// Poll events.
 void poll_events(gl_window* win);
 /// Swap buffers.

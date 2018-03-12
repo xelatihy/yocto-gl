@@ -135,14 +135,14 @@ bool update(ygl::gl_window* win, app_state* app) {
             app->img, app->pixels, app->async_threads, app->async_stop,
                                app->params, [win,app](int s,int j){
                                    if(!j || !(j % app->params.preview_resolution)) app->update_texture = true;
-                                   ygl::post_event(win);
                                });
     }
     if(app->update_texture) {
         ygl::update_texture(app->trace_texture, app->img);
         app->update_texture = false;
+        return true;
     }
-    return true;
+    return false;
 }
 
 // run ui loop
@@ -179,10 +179,7 @@ void run_ui(app_state* app) {
         update(win, app);
 
         // event hadling
-        if(ygl::get_mouse_button(win) || ygl::get_widget_active(win))
-            ygl::poll_events(win);
-        else
-            ygl::wait_events(win);
+        ygl::poll_events(win);
     }
 
     // cleanup
