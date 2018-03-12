@@ -45,8 +45,8 @@ struct app_state {
     ygl::trace_params params;
     std::vector<std::thread> async_threads;
     bool async_stop = false;
+    bool update_texture = true;
     bool navigation_fps = false;
-    int preview_res = 64;
     bool rendering = false;
     ygl::gl_stdimage_params imparams = {};
     ygl::tonemap_params tmparams = {};
@@ -64,9 +64,6 @@ struct app_state {
 };
 
 void draw(ygl::gl_window* win, app_state* app) {
-    // update texture
-    update_texture(app->trace_texture, app->img);
-
     // draw image
     auto window_size = get_window_size(win);
     auto framebuffer_size = get_framebuffer_size(win);
@@ -118,10 +115,9 @@ void draw(ygl::gl_window* win, app_state* app) {
     ygl::swap_buffers(win);
 }
 
-bool update(app_state* app) {
+bool update(ygl::gl_window* win, app_state* app) {
     if (!app->update_list.empty()) {
         ygl::trace_async_stop(app->async_threads, app->async_stop);
-        app->rendering = false;
 
         // update BVH
         for (auto sel : app->update_list) {
@@ -135,24 +131,16 @@ bool update(app_state* app) {
         }
         app->update_list.clear();
 
-        // render preview
-        auto pparams = app->params;
-        pparams.resolution = app->preview_res;
-        pparams.nsamples = 1;
-        pparams.filter = ygl::trace_filter_type::box;
-        auto pimg =
-            ygl::image4f((int)std::round(app->cam->aspect * app->preview_res),
-                app->preview_res);
-        auto ppixels = make_trace_pixels(pimg, pparams);
-        ygl::trace_samples(app->scn, app->cam, app->bvh, app->lights, pimg,
-            ppixels, 1, pparams);
-        ygl::resize_image(pimg, app->img, ygl::resize_filter::box);
-        ygl::update_texture(app->trace_texture, app->img);
-    } else if (!app->rendering) {
         ygl::trace_async_start(app->scn, app->cam, app->bvh, app->lights,
             app->img, app->pixels, app->async_threads, app->async_stop,
-            app->params);
-        app->rendering = true;
+                               app->params, [win,app](int s,int j){
+                                   if(!j || !(j % app->params.preview_resolution)) app->update_texture = true;
+                                   ygl::post_event(win);
+                               });
+    }
+    if(app->update_texture) {
+        ygl::update_texture(app->trace_texture, app->img);
+        app->update_texture = false;
     }
     return true;
 }
@@ -188,10 +176,13 @@ void run_ui(app_state* app) {
         draw(win, app);
 
         // update
-        update(app);
+        update(win, app);
 
         // event hadling
-        ygl::poll_events(win);
+        if(ygl::get_mouse_button(win) || ygl::get_widget_active(win))
+            ygl::poll_events(win);
+        else
+            ygl::wait_events(win);
     }
 
     // cleanup
@@ -209,8 +200,6 @@ int main(int argc, char* argv[]) {
     app->tmparams = ygl::parse_params(parser, "", app->tmparams);
     app->imparams = ygl::parse_params(parser, "", app->imparams);
     app->loadopts = ygl::parse_params(parser, "", app->loadopts);
-    app->preview_res =
-        ygl::parse_opt(parser, "--preview-res", "", "preview resolution", 64);
     app->quiet =
         ygl::parse_flag(parser, "--quiet", "-q", "Print only errors messages");
     app->imfilename = ygl::parse_opt(

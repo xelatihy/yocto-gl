@@ -7107,8 +7107,27 @@ void trace_samples_filtered(const scene* scn, const camera* cam,
 void trace_async_start(const scene* scn, const camera* cam, const bvh_tree* bvh,
     const trace_lights& lights, image4f& img, image<trace_pixel>& pixels,
     std::vector<std::thread>& threads, bool& stop_flag,
-    const trace_params& params) {
+    const trace_params& params, const std::function<void(int,int)>& callback) {
     pixels = make_trace_pixels(img, params);
+    
+    // render preview
+    if(params.preview_resolution) {
+        auto pparams = params;
+        pparams.resolution = params.preview_resolution;
+        pparams.nsamples = 1;
+        pparams.filter = ygl::trace_filter_type::box;
+        auto pimg =
+        image4f((int)std::round(cam->aspect * pparams.resolution),
+                     pparams.resolution);
+        auto ppixels = make_trace_pixels(pimg, pparams);
+        trace_samples(scn, cam, bvh, lights, pimg, ppixels, 1, pparams);
+        resize_image(pimg, img, ygl::resize_filter::box);
+    } else {
+        for(auto& p : img) p = zero4f;
+    }
+    if(callback) callback(0, 0);
+
+    // start rendering
     auto nthreads = std::thread::hardware_concurrency();
     for (auto tid = 0; tid < std::thread::hardware_concurrency(); tid++) {
         threads.push_back(std::thread([=, &img, &pixels, &stop_flag]() {
@@ -7124,8 +7143,10 @@ void trace_async_start(const scene* scn, const camera* cam, const bvh_tree* bvh,
                             pxl.col.x, pxl.col.y, pxl.col.z, pxl.alpha};
                         img.at(i, j) /= pxl.sample;
                     }
+                    if(!tid && callback) callback(s, j);
                 }
             }
+            if(!tid && callback) callback(params.nsamples, 0);
         }));
     }
 }
@@ -13744,6 +13765,12 @@ void set_window_title(gl_window* win, const std::string& title) {
 
 // Wait events
 void wait_events(gl_window* win) { glfwWaitEvents(); }
+
+// Wait events
+void wait_events_timeout(gl_window* win, float t) { glfwWaitEventsTimeout(t); }
+
+// Wait events
+void post_event(gl_window* win) { glfwPostEmptyEvent(); }
 
 // Poll events
 void poll_events(gl_window* win) { glfwPollEvents(); }

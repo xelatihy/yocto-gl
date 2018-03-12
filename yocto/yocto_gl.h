@@ -4876,7 +4876,7 @@ inline image<vec<T, 4>> make_image(
 }
 
 /// Check if a pixel is inside an image.
-template<typename T>
+template <typename T>
 inline bool contains(const image<T>& img, int i, int j) {
     return i >= 0 && i < img.width() && j >= 0 && j < img.height();
 }
@@ -5950,10 +5950,10 @@ void save_scene(
 /// Scene selection.
 struct scene_selection {
     /// Initializing selection.
-    scene_selection() : ptr(nullptr), tinfo(nullptr) { }
+    scene_selection() : ptr(nullptr), tinfo(nullptr) {}
     /// Initializing selection.
     template <typename T>
-    scene_selection(T* val) : ptr(val), tinfo(&typeid(T)) { }
+    scene_selection(T* val) : ptr(val), tinfo(&typeid(T)) {}
 
     /// Checking whether it is empty.
     operator bool() const { return (bool)ptr; }
@@ -7151,6 +7151,8 @@ struct trace_params {
     bool parallel = true;
     /// Seed for the random number generators. @refl_uilimits(0,1000)
     uint32_t seed = 0;
+    /// Preview resolution for async rendering.
+    int preview_resolution = 64;
 };
 
 // #codegen end refl-trace
@@ -7232,7 +7234,7 @@ inline image4f trace_image(const scene* scn, const camera* cam,
 void trace_async_start(const scene* scn, const camera* cam, const bvh_tree* bvh,
     const trace_lights& lights, image4f& img, image<trace_pixel>& pixels,
     std::vector<std::thread>& threads, bool& stop_flag,
-    const trace_params& params);
+    const trace_params& params, const std::function<void(int, int)>& callback);
 /// Stop the asynchronous renderer.
 void trace_async_stop(std::vector<std::thread>& threads, bool& stop_flag);
 
@@ -7315,6 +7317,9 @@ inline void visit(trace_params& val, Visitor&& visitor) {
     visitor(
         val.seed, visit_var{"seed", visit_var_type::value,
                       "Seed for the random number generators.", 0, 1000, ""});
+    visitor(val.preview_resolution,
+        visit_var{"preview_resolution", visit_var_type::value,
+            "Preview resolution for async rendering.", 0, 0, ""});
 }
 
 // #codegen end reflgen-trace
@@ -9910,7 +9915,8 @@ inline void draw_image(const gl_stdimage_program& prog, const gl_texture& txt,
 }
 
 /// Computes the image uv coordinates corresponding to the view parameters.
-vec2i get_draw_image_coords(const vec2f& mouse_pos, const gl_stdimage_params& params);
+vec2i get_draw_image_coords(
+    const vec2f& mouse_pos, const gl_stdimage_params& params);
 
 /// Program to shade surfaces with a physically-based standard shader based on
 /// Phong/GGX. Members are not part of public API.
@@ -10129,8 +10135,12 @@ void set_window_callbacks(gl_window* win, gl_text_callback text_cb,
 /// Set window title.
 void set_window_title(gl_window* win, const std::string& title);
 
+/// Wait events timeout.
+void wait_events_timeout(gl_window* win, float timeout);
 /// Wait events.
 void wait_events(gl_window* win);
+/// Post event for wait event to continue.
+void post_event(gl_window* win);
 /// Poll events.
 void poll_events(gl_window* win);
 /// Swap buffers.
@@ -10169,9 +10179,9 @@ inline void save_screenshot(gl_window* win, const std::string& imfilename) {
 /// Handle camera navigation.
 bool handle_camera_navigation(gl_window* win, camera* cam, bool navigation_fps);
 /// Handle scene selection.
-bool handle_scene_selection(gl_window* win, const scene* scn, const camera* cam, 
-                            const bvh_tree* bvh, int res, const gl_stdimage_params& params,
-                            scene_selection& sel);
+bool handle_scene_selection(gl_window* win, const scene* scn, const camera* cam,
+    const bvh_tree* bvh, int res, const gl_stdimage_params& params,
+    scene_selection& sel);
 
 /// @}
 
