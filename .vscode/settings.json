@@ -38,6 +38,8 @@
         "__tree": "cpp",
         "bitset": "cpp",
         "memory": "cpp",
-        "valarray": "cpp"
+        "valarray": "cpp",
+        "atomic": "cpp",
+        "system_error": "cpp"
     }
 } 

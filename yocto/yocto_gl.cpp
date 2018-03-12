@@ -13766,12 +13766,6 @@ void set_window_title(gl_window* win, const std::string& title) {
 // Wait events
 void wait_events(gl_window* win) { glfwWaitEvents(); }
 
-// Wait events
-void wait_events_timeout(gl_window* win, float t) { glfwWaitEventsTimeout(t); }
-
-// Wait events
-void post_event(gl_window* win) { glfwPostEmptyEvent(); }
-
 // Poll events
 void poll_events(gl_window* win) { glfwPollEvents(); }
 
