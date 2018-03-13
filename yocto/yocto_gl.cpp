@@ -13715,15 +13715,20 @@ void _glfw_refresh_cb(GLFWwindow* gwin) {
 }
 
 // Initialize gl_window
-gl_window* make_window(int width, int height, const std::string& title) {
+gl_window* make_window(int width, int height, const std::string& title, bool opengl4) {
     auto win = new gl_window();
 
     // gl_window
     if (!glfwInit()) throw std::runtime_error("cannot open gl_window");
 
     // profile creation
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    if(opengl4) {
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+    } else {
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);        
+    }
 #if __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
