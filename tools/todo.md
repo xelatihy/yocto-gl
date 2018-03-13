@@ -56,6 +56,7 @@ Please consider this to be just development notes and not any real planning.
 - bent floor
 - substance-like shader ball
 - rounded cube
+- bulged cube
 
 ## Trace
 
