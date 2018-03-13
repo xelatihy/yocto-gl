@@ -30,6 +30,23 @@ Please consider this to be just development notes and not any real planning.
 - Blender color grading node
 - https://www.youtube.com/watch?v=m9AT7H4GGrA
 
+## Test scenes
+
+- 1 m defaults
+- make smaller number of variations
+- start from uv_quad, uv_sphere, uv_cube
+- rounded cube
+- bulged cube
+- bent floor
+- substance-like shader ball
+- 0 roughness
+- transparent
+- fix obj export
+    - check shape names
+    - save_obj()
+        - skip group names if only one group
+        - skip smoothing if all on
+
 ## Animation
 
 - fix broken anim
@@ -48,20 +65,6 @@ Please consider this to be just development notes and not any real planning.
 - All functions take all primitives
 - shape with type
 - facet_shape and friends are not virtual in API
-
-## Test scenes
-
-- rounded cube
-- bulged cube
-- bent floor
-- substance-like shader ball
-- 0 roughness
-- transparent
-- fix obj export
-    - check shape names
-    - save_obj()
-        - skip group names if only one group
-        - skip smoothing if all on
 
 ## Trace
 
