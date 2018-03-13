@@ -3,6 +3,22 @@
 This file contains notes on future improvements of Yocto.
 Please consider this to be just development notes and not any real planning.
 
+## OpenGL/Trace
+
+- optional post event on OSX, disable on Linux
+- OpenGL new version 4.1
+- use derivatives
+    - for triangles, compute flat shading and triangle edges well
+        - no need for explicit edges
+        - http://www.aclockworkberry.com/shader-derivative-functions/
+        - https://github.com/rreusser/glsl-solid-wireframe
+
+## Tone mapping
+
+- Blender filmic
+- Blender color grading node
+- https://www.youtube.com/watch?v=m9AT7H4GGrA
+
 ## Animation
 
 - fix broken anim
@@ -38,6 +54,8 @@ Please consider this to be just development notes and not any real planning.
 - 0 roughness
 - transparent
 - bent floor
+- substance-like shader ball
+- rounded cube
 
 ## Trace
 
