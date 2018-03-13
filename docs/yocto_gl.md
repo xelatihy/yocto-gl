@@ -188,7 +188,7 @@ This library supports many facilities helpful in writing sampling
 functions targeting path tracing and shape generations.
 
 1. Random number generation with PCG32:
-    1. initialize the random number generator with `init_rng()`
+    1. initialize the random number generator with `make_rng()`
     2. advance the random number state with `advance_rng()`
     3. if necessary, you can reseed the rng with `seed_rng()`
     4. generate random integers in an interval with `next_rand1i()`
@@ -227,7 +227,11 @@ manipulation useful to support scene viewing and path tracing.
    `compute_tangent_space()`
 6. compute skinning with `compute_skinning()` and
    `compute_matrix_skinning()`
-6. create shapes with `make_points()`, `make_lines()`, `make_uvgrid()`
+6. create shapes with `make_cube()`, `make_sphere()`, `make_quad()`,
+   `make_fvcube()`, `make_hair()`, `make_suzanne()`, `make_lines()`,
+   `make_points()`, `make_sphere_cube()`, `make_cube_rounded()`,
+   `make_sphere_flipcap()`, `make_cylinder()`, `make_cylinder_rounded()`,
+   `make_disk()`, `make_cylinder_side()`
 7. merge element with `marge_lines()`, `marge_triangles()`, `marge_quads()`
 8. facet elements with `facet_lines()`, `facet_triangles()`, `facet_quads()`
 9. shape sampling with `sample_points()`, `sample_lines()`,
@@ -241,9 +245,6 @@ manipulation useful to support scene viewing and path tracing.
 14. subdivide elements by edge splits with `subdivide_lines()`,
     `subdivide_triangles()`, `subdivide_quads()`, `subdivide_beziers()`
 15. Catmull-Clark subdivision surface with `subdivide_catmullclark()`
-17. example shapes: `make_cube()`, `make_uvsphere()`, `make_uvhemisphere()`,
-    `make_uvquad()`, `make_uvcube()`, `make_fvcube()`, `make_hair()`,
-    `make_suzanne()`
 
 
 ### Animation utilities
@@ -2022,6 +2023,26 @@ inline vec<T, 3> sphericaly_to_cartesian(const vec<T, 3>& s);
 
 Spherical to cartesian coordinates with theta aligned along y.
 Spherical coordinates are phi, theta, r.
+
+#### Function cartesian_to_cylindrical()
+
+~~~ .cpp
+template <typename T>
+inline vec<T, 3> cartesian_to_cylindrical(const vec<T, 3>& p);
+~~~
+
+Cartesian to cylindrical coordinates.
+Cylindrical coordinates are phi, r, z.
+
+#### Function cylindrical_to_cartesian()
+
+~~~ .cpp
+template <typename T>
+inline vec<T, 3> cylindrical_to_cartesian(const vec<T, 3>& c);
+~~~
+
+Spherical to cartesian coordinates with theta aligned along z.
+Cylindrical coordinates are phi, r, z.
 
 #### Function operator<<()
 
@@ -4132,10 +4153,10 @@ inline void seed_rng(rng_pcg32& rng, uint64_t state, uint64_t seq = 1);
 
 Seeds a random number generator with a state state from the sequence seq.
 
-#### Function init_rng()
+#### Function make_rng()
 
 ~~~ .cpp
-inline rng_pcg32 init_rng(uint64_t state, uint64_t seq = 1);
+inline rng_pcg32 make_rng(uint64_t state, uint64_t seq = 1);
 ~~~
 
 Init a random number generator with a state state from the sequence seq.
@@ -4665,41 +4686,20 @@ Python-like enumerate.
 
 ### Container operations
 
-#### Struct optional
-
-~~~ .cpp
-template <typename T>
-struct optional {
-    optional(); 
-    optional(const T& v); 
-    explicit operator bool() const; 
-    bool has_value() const; 
-    T* operator->(); 
-    const T* operator->() const; 
-    T& operator*(); 
-    const T& operator*() const; 
-}
-~~~
-
-Optional value with an API similar to C++17 std::optional. This is a
-placeholder used until we switch to the new API.
-
-- Members:
-    - optional():      Construct to an empty optional.
-    - optional():      Construct to a valid optional.
-    - operator bool():      Check if the optional is valid.
-    - has_value():      Check if the optional is valid.
-    - operator->():      Data access.
-    - operator->():      Data access.
-    - operator*():      Data access.
-    - operator*():      Data access.
-
-
 #### Function append()
 
 ~~~ .cpp
 template <typename T>
 inline void append(std::vector<T>& v, const std::vector<T>& vv);
+~~~
+
+Append a vector to a vector.
+
+#### Function append()
+
+~~~ .cpp
+template <typename T>
+inline void append(std::vector<T>& v, int num, const T& vv);
 ~~~
 
 Append a vector to a vector.
@@ -4892,9 +4892,9 @@ Types of variable semantic for `visit()`.
 
 ~~~ .cpp
 struct visit_var {
-    const std::string name = "";
+    std::string name = "";
     visit_var_type type = visit_var_type::value;
-    const std::string help = "";
+    std::string help = "";
     float min = 0;
     float max = 0;
     std::string short_name = "";
@@ -5428,137 +5428,32 @@ void subdivide_catmullclark(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
 
 Subdivide quads using Carmull-Clark subdivision rules.
 
-#### Function make_quads_uv()
-
-~~~ .cpp
-void make_quads_uv(std::vector<vec4i>& quads, std::vector<vec2f>& uvs,
-    int usteps, int vsteps, bool uwrap = false, bool vwrap = false,
-    bool vpole0 = false, bool vpole1 = false);
-~~~
-
-Generate a rectangular grid of usteps x vsteps uv values for parametric
-surface generation. Values cam wrap and have poles.points
-
-#### Function make_lines_uv()
-
-~~~ .cpp
-void make_lines_uv(
-    std::vector<vec2i>& lines, std::vector<vec2f>& uvs, int num, int usteps);
-~~~
-
-Generate parametric num lines of usteps segments.
-
-#### Function make_points_uv()
-
-~~~ .cpp
-void make_points_uv(std::vector<int>& points, std::vector<vec2f>& uvs, int num);
-~~~
-
-Generate a parametric point set. Mostly here for completeness.
-
-#### Function make_quads()
-
-~~~ .cpp
-template <typename T, typename F>
-inline void make_quads(std::vector<vec4i>& quads, std::vector<T>& vert,
-    int usteps, int vsteps, F&& vert_cb, bool uwrap = false, bool vwrap = false,
-    bool vpole0 = false, bool vpole1 = false);
-~~~
-
-Generate a rectangular grid of usteps x vsteps uv values for parametric
-surface generation. Values cam wrap and have poles.
-
-#### Function make_lines()
-
-~~~ .cpp
-template <typename T, typename F>
-inline void make_lines(std::vector<vec2i>& lines, std::vector<T>& vert, int num,
-    int usteps, F&& vert_cb);
-~~~
-
-Generate parametric num lines of usteps segments.
-
-#### Function make_points()
-
-~~~ .cpp
-template <typename T, typename F>
-inline void make_points(
-    std::vector<int>& points, std::vector<T>& vert, int num, F&& vert_cb);
-~~~
-
-Generate a parametric point set. Mostly here for completeness.
-
-#### Function make_quads()
-
-~~~ .cpp
-template <typename F>
-inline void make_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int usteps,
-    int vsteps, F&& vert_cb);
-~~~
-
-Generate a rectangular grid of usteps x vsteps uv with callbacks for
-position, normal and texcoord.
-
-#### Function make_lines()
-
-~~~ .cpp
-template <typename F>
-inline void make_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<float>& radius, int num, int usteps, F&& vert_cb);
-~~~
-
-Generate parametric num lines of usteps segments with callbacks for
-position, tangent, texcoord, and radius.
-
-#### Function make_points()
-
-~~~ .cpp
-template <typename F>
-inline void make_points(std::vector<int>& points, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<float>& radius, int num, F&& vert_cb);
-~~~
-
-Generate a parametric point set with callbacks for position, tangent,
-texcoord, and radius.
-
 #### Function merge_lines()
 
 ~~~ .cpp
-void merge_lines(std::vector<vec2i>& lines, const std::vector<vec2i>& lines1);
+void merge_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    const std::vector<vec2i>& lines1, const std::vector<vec3f>& pos1,
+    const std::vector<vec3f>& norm1, const std::vector<vec2f>& texcoord1);
 ~~~
 
-Merge lines between shapes. The elements are merged by increasing the
-array size of the second array by the number of vertices of the first.
-Vertex data can then be concatenated successfully.
+Merge lines between shapes.
 
 #### Function merge_triangles()
 
 ~~~ .cpp
-void merge_triangles(
-    std::vector<vec3i>& triangles, const std::vector<vec3i>& triangles1);
+void merge_triangles(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    const std::vector<vec3i>& triangles1, const std::vector<vec3f>& pos1,
+    const std::vector<vec3f>& norm1, const std::vector<vec2f>& texcoord1);
 ~~~
 
-Merge triangles between shapes. The elements are merged by increasing the
-array size of the second array by the number of vertices of the first.
-Vertex data can then be concatenated successfully.
+Merge triangles between shapes.
 
 #### Function merge_quads()
 
 ~~~ .cpp
-void merge_quads(std::vector<vec4i>& quads, const std::vector<vec4i>& quads1);
-~~~
-
-Merge quads between shapes. The elements are merged by increasing the
-array size of the second array by the number of vertices of the first.
-Vertex data can then be concatenated successfully.
-
-#### Function merge_quads()
-
-~~~ .cpp
-inline void merge_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+void merge_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
     const std::vector<vec4i>& quads1, const std::vector<vec3f>& pos1,
     const std::vector<vec3f>& norm1, const std::vector<vec2f>& texcoord1);
@@ -5625,8 +5520,6 @@ void facet_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
 ~~~
 
 Duplicate vertex data for each quad index, giving a faceted look.
-
-### Shape sampling
 
 #### Function sample_points()
 
@@ -5718,7 +5611,105 @@ sample_triangles_points(const std::vector<vec3i>& triangles,
 Samples a set of points over a triangle mesh uniformly. Returns pos, norm
 and tecoord of the sampled points.
 
-### Example shapes
+#### Function make_quad()
+
+~~~ .cpp
+void make_quad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
+    const vec2f& size, const vec2f& uvsize);
+~~~
+
+Make a quad.
+
+#### Function make_cube()
+
+~~~ .cpp
+void make_cube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
+    const vec3f& size, const vec3f& uvsize);
+~~~
+
+Make a cube.
+
+#### Function make_cube_rounded()
+
+~~~ .cpp
+void make_cube_rounded(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
+    const vec3f& size, const vec3f& uvsize, float radius);
+~~~
+
+Make a rounded cube.
+
+#### Function make_sphere()
+
+~~~ .cpp
+void make_sphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
+    float size, const vec2f& uvsize);
+~~~
+
+Make a sphere.
+
+#### Function make_sphere_cube()
+
+~~~ .cpp
+void make_sphere_cube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int steps,
+    float size, float uvsize);
+~~~
+
+Make a spherecube.
+
+#### Function make_sphere_flipcap()
+
+~~~ .cpp
+void make_sphere_flipcap(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
+    float size, const vec2f& uvsize, const vec2f& zflip);
+~~~
+
+Make a sphere with flipped caps.
+
+#### Function make_disk()
+
+~~~ .cpp
+void make_disk(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
+    float size, const vec2f& uvsize);
+~~~
+
+Make a disk.
+
+#### Function make_cylinder_side()
+
+~~~ .cpp
+void make_cylinder_side(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
+    const vec2f& size, const vec2f& uvsize, bool capped);
+~~~
+
+Make a cylinder (side-only).
+
+#### Function make_cylinder()
+
+~~~ .cpp
+void make_cylinder(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
+    const vec2f& size, const vec3f& uvsize);
+~~~
+
+Make a cylinder.
+
+#### Function make_cylinder_rounded()
+
+~~~ .cpp
+void make_cylinder_rounded(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
+    const vec2f& size, const vec3f& uvsize, float radius);
+~~~
+
+Make a rounded cylinder.
 
 #### Function make_sphere()
 
@@ -5729,10 +5720,10 @@ void make_sphere(
 
 Make a sphere.
 
-#### Function make_geodesicsphere()
+#### Function make_geodesic_sphere()
 
 ~~~ .cpp
-void make_geodesicsphere(
+void make_geodesic_sphere(
     std::vector<vec3i>& triangles, std::vector<vec3f>& pos, int tesselation);
 ~~~
 
@@ -5747,35 +5738,6 @@ void make_cube(
 
 Make a cube with unique vertices. This is watertight but has no
 texture coordinates or normals.
-
-#### Function make_uvsphere()
-
-~~~ .cpp
-void make_uvsphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
-    bool flipped = false);
-~~~
-
-Make a sphere. This is not watertight.
-
-#### Function make_uvhemisphere()
-
-~~~ .cpp
-void make_uvhemisphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
-    bool flipped = false);
-~~~
-
-Make a sphere. This is not watertight.
-
-#### Function make_uvquad()
-
-~~~ .cpp
-void make_uvquad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation);
-~~~
-
-Make a quad.
 
 #### Function make_fvsphere()
 
@@ -5811,53 +5773,51 @@ void make_suzanne(
 Make a suzanne monkey model for testing. Note that some quads are
 degenerate. Returns quads, pos.
 
-#### Function make_uvcube()
+#### Function make_lines()
 
 ~~~ .cpp
-void make_uvcube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation);
+void make_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<float>& radius, const vec2i& steps, const vec2f& size,
+    const vec2f& uvsize, const vec2f& line_radius =;
 ~~~
 
-Make a cube. This is not watertight.
+Generate lines set along a quad. Lines have `steps.x` subdivision
+and `steps.y` lines are generated.
 
-#### Function make_uvspherecube()
+#### Function make_points()
 
 ~~~ .cpp
-void make_uvspherecube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation);
+void make_points(std::vector<int>& points, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<float>& radius, int num, float uvsize,
+    float point_radius = 0.001f);
 ~~~
 
-Make a sphere from a cube. This is not watertight.
+Generate a point set with points placed at the origin with texcoords varying
+along u.
 
-#### Function make_uvspherizedcube()
+#### Function make_random_points()
 
 ~~~ .cpp
-void make_uvspherizedcube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
-    float radius);
+void make_random_points(std::vector<int>& points, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<float>& radius, int num, const vec3f& size, float uvsize,
+    float point_radius = 0.001f, uint64_t seed = 0);
 ~~~
 
-Make a cube than stretch it towards a sphere. This is not watertight.
+Generate a point set with points placed in a cube the origin with texcoords
+varying along u.
 
-#### Function make_uvflipcapsphere()
+#### Function make_point()
 
 ~~~ .cpp
-void make_uvflipcapsphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
-    float z, bool flipped = false);
+void make_point(std::vector<int>& points, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<float>& radius, float point_radius = 0.001f);
 ~~~
 
-Make a sphere with caps flipped. This is not watertight.
-
-#### Function make_uvcutsphere()
-
-~~~ .cpp
-void make_uvcutsphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
-    float z, bool flipped = false);
-~~~
-
-Make a cutout sphere. This is not watertight.
+Make a point.
 
 #### Struct make_seashell_params
 
@@ -5873,6 +5833,7 @@ struct make_seashell_params {
     vec2f nodule_length = {0, 0};
     float nodule_height = 0;
     float nodule_pos = 0;
+    vec2f uvsize = {1, 1};
 }
 ~~~
 
@@ -5889,17 +5850,18 @@ Make seashell params
     - nodule_length:      Length of nodules along curve and spiral (W1,W2) in [0,inf].
     - nodule_height:      Height of nodules (L) in [0,inf].
     - nodule_pos:      Position of nodules (P) in [0,inf].
+    - uvsize:      Uvsize
 
 
-#### Function make_uvseashell()
+#### Function make_seashell()
 
 ~~~ .cpp
-void make_uvseashell(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
+void make_seashell(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
     const make_seashell_params& params);
 ~~~
 
-Make a seashell. This is not watertight. Returns quads, pos, norm, texcoord.
+Make a seashell.
 
 #### Function make_bezier_circle()
 
@@ -5938,7 +5900,7 @@ Parameters for the make hair function
 ~~~ .cpp
 void make_hair(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
     std::vector<vec3f>& tang, std::vector<vec2f>& texcoord,
-    std::vector<float>& radius, int num, int tesselation,
+    std::vector<float>& radius, const vec2i& steps,
     const std::vector<vec3i>& striangles, const std::vector<vec4i>& squads,
     const std::vector<vec3f>& spos, const std::vector<vec3f>& snorm,
     const std::vector<vec2f>& stexcoord, const make_hair_params& params);
@@ -5955,7 +5917,7 @@ inline void visit(make_hair_params& val, Visitor&& visitor);
 
 Visit struct elements.
 
-### Image containers
+### Image type and utilities
 
 #### Struct image
 
@@ -6095,7 +6057,14 @@ inline image<vec<T, 4>> make_image(
 
 Create a 4 channel image with the given number of channels
 
-### Image operations
+#### Function contains()
+
+~~~ .cpp
+template <typename T>
+inline bool contains(const image<T>& img, int i, int j);
+~~~
+
+Check if a pixel is inside an image.
 
 #### Function srgb_to_linear()
 
@@ -6203,8 +6172,6 @@ inline void visit(tonemap_params& val, Visitor&& visitor);
 ~~~
 
 Visit struct elements.
-
-### Example images
 
 #### Function make_grid_image()
 
@@ -6337,8 +6304,6 @@ image4b make_turbulence_image(int resx, int resy, float scale = 1,
 ~~~
 
 Make a noise image. Wrap works only if both resx and resy are powers of two.
-
-### Image loading and saving
 
 #### Function is_hdr_filename()
 
@@ -6511,7 +6476,7 @@ void resize_image(const image4b& img, image4b& res_img,
 
 Resize an image.
 
-### Ray-primitive intersection
+### Ray intersection and closest point functions
 
 #### Function intersect_point()
 
@@ -6573,8 +6538,6 @@ bool intersect_bbox(const ray3f& ray, const vec3f& ray_dinv,
 Intersect a ray with a axis-aligned bounding box, implemented as
 "Robust BVH Ray Traversal" by T. Ize published at
 http://jcgt.org/published/0002/02/02/paper.pdf
-
-### Point-primitive overlap
 
 #### Function overlap_point()
 
@@ -6710,7 +6673,6 @@ struct bvh_instance {
     frame3f frame_inv = identity_frame3f;
     int iid = 0;
     int sid = 0;
-    bvh_tree* bvh = nullptr;
 }
 ~~~
 
@@ -6722,7 +6684,6 @@ This is an internal data structure.
     - frame_inv:      Frame inverse.
     - iid:      Instance id to be returned.
     - sid:      Shape id to be returned.
-    - bvh:      Shape bvh.
 
 
 #### Struct bvh_tree
@@ -6939,6 +6900,7 @@ Texture containing either an LDR or HDR image.
 
 ~~~ .cpp
 struct texture_info {
+    texture* txt = nullptr;
     bool wrap_s = true;
     bool wrap_t = true;
     bool linear = true;
@@ -6950,6 +6912,7 @@ struct texture_info {
 Texture information to use for lookup.
 
 - Members:
+    - txt:      Texture. 
     - wrap_s:      Wrap s coordinate.
     - wrap_t:      Wrap t coordinate.
     - linear:      Linear interpolation.
@@ -6989,26 +6952,16 @@ struct material {
     vec3f kt = {0, 0, 0};
     float rs = 0.0001;
     float op = 1;
-    texture* ke_txt = nullptr;
-    texture* kd_txt = nullptr;
-    texture* ks_txt = nullptr;
-    texture* kr_txt = nullptr;
-    texture* kt_txt = nullptr;
-    texture* rs_txt = nullptr;
-    texture* bump_txt = nullptr;
-    texture* disp_txt = nullptr;
-    texture* norm_txt = nullptr;
-    texture* occ_txt = nullptr;
-    optional<texture_info> ke_txt_info = {};
-    optional<texture_info> kd_txt_info = {};
-    optional<texture_info> ks_txt_info = {};
-    optional<texture_info> kr_txt_info = {};
-    optional<texture_info> kt_txt_info = {};
-    optional<texture_info> rs_txt_info = {};
-    optional<texture_info> bump_txt_info = {};
-    optional<texture_info> disp_txt_info = {};
-    optional<texture_info> norm_txt_info = {};
-    optional<texture_info> occ_txt_info = {};
+    texture_info ke_txt;
+    texture_info kd_txt;
+    texture_info ks_txt;
+    texture_info kr_txt;
+    texture_info kt_txt;
+    texture_info rs_txt;
+    texture_info bump_txt;
+    texture_info disp_txt;
+    texture_info norm_txt;
+    texture_info occ_txt;
 }
 ~~~
 
@@ -7025,26 +6978,16 @@ Material for surfaces, lines and triangles.
     - kt:      Transmission color. 
     - rs:      Roughness.
     - op:      Opacity.
-    - ke_txt:      Emission texture. 
-    - kd_txt:      Diffuse texture. 
-    - ks_txt:      Specular texture. 
-    - kr_txt:      Clear coat reflection texture. 
-    - kt_txt:      Transmission texture. 
-    - rs_txt:      Roughness texture. 
-    - bump_txt:      Bump map texture (heighfield). 
-    - disp_txt:      Displacement map texture (heighfield). 
-    - norm_txt:      Normal texture. 
-    - occ_txt:      Occlusion texture. 
-    - ke_txt_info:      Emission texture info.
-    - kd_txt_info:      Diffuse texture info.
-    - ks_txt_info:      Specular texture info.
-    - kr_txt_info:      Clear coat reflection texture info.
-    - kt_txt_info:      Transmission texture info.
-    - rs_txt_info:      Roughness texture info.
-    - bump_txt_info:      Bump map texture (heighfield) info.
-    - disp_txt_info:      Displacement map texture (heighfield) info.
-    - norm_txt_info:      Normal texture info.
-    - occ_txt_info:      Occlusion texture info.
+    - ke_txt:      Emission texture.
+    - kd_txt:      Diffuse texture.
+    - ks_txt:      Specular texture.
+    - kr_txt:      Clear coat reflection texture.
+    - kt_txt:      Transmission texture.
+    - rs_txt:      Roughness texture.
+    - bump_txt:      Bump map texture (heighfield).
+    - disp_txt:      Displacement map texture (heighfield).
+    - norm_txt:      Normal texture.
+    - occ_txt:      Occlusion texture.
 
 
 #### Struct shape_element_tags
@@ -7067,14 +7010,32 @@ Shape element tags.
     - esize:      Original element size.
 
 
+#### Struct shape_group_props
+
+~~~ .cpp
+struct shape_group_props {
+    std::string name = "";
+    material* mat = nullptr;
+    bool faceted = false;
+}
+~~~
+
+Shape group properties.
+
+- Members:
+    - name:      Group name.
+    - mat:      Material. 
+    - faceted:      Faceted.
+
+
 #### Struct shape
 
 ~~~ .cpp
 struct shape {
     std::string name = "";
-    std::vector<material*> materials = {};
-    std::vector<std::string> groupnames = {};
-    std::vector<bool> smoothing = {};
+    std::string path = "";
+    std::vector<shape_group_props> groups;
+    frame3f frame = identity_frame3f;
     std::vector<int> points;
     std::vector<vec2i> lines;
     std::vector<vec3i> triangles;
@@ -7083,7 +7044,7 @@ struct shape {
     std::vector<vec4i> quads_norm;
     std::vector<vec4i> quads_texcoord;
     std::vector<vec4i> beziers;
-    std::vector<shape_element_tags> elem_tags;
+    std::vector<int> group_ids;
     std::vector<vec3f> pos;
     std::vector<vec3f> norm;
     std::vector<vec2f> texcoord;
@@ -7101,9 +7062,9 @@ points/lines/triangles/quads.
 
 - Members:
     - name:      Name.
-    - materials:      Materials. 
-    - groupnames:      Group names.
-    - smoothing:      Smoothing values.
+    - path:      Path used for saving in glTF.
+    - groups:      Groups.
+    - frame:      Frame.
     - points:      Points.
     - lines:      Lines.
     - triangles:      Triangles.
@@ -7112,7 +7073,7 @@ points/lines/triangles/quads.
     - quads_norm:      Face-varying indices for normal.
     - quads_texcoord:      Face-varying indices for texcoord.
     - beziers:      Bezier.
-    - elem_tags:      Element material ids.
+    - group_ids:      Element group ids.
     - pos:      Vertex position.
     - norm:      Vertex normals.
     - texcoord:      Vertex texcoord.
@@ -7122,26 +7083,6 @@ points/lines/triangles/quads.
     - tangsp:      Vertex tangent space.
     - subdivision:      Number of times to subdivide.
     - catmullclark:      Whether to use Catmull-Clark subdivision.
-
-
-#### Struct shape_group
-
-~~~ .cpp
-struct shape_group {
-    std::string name = "";
-    std::string path = "";
-    frame3f frame = identity_frame3f;
-    std::vector<shape*> shapes;
-}
-~~~
-
-Group of shapes.
-
-- Members:
-    - name:      Name.
-    - path:      Path used for saving in glTF.
-    - frame:      Frame.
-    - shapes:      Shapes.
 
 
 #### Constant environment_distance
@@ -7159,8 +7100,7 @@ struct environment {
     std::string name = "";
     frame3f frame = identity_frame3f;
     vec3f ke = {0, 0, 0};
-    texture* ke_txt = nullptr;
-    optional<texture_info> ke_txt_info = {};
+    texture_info ke_txt = {};
 }
 ~~~
 
@@ -7170,8 +7110,7 @@ Envinonment map.
     - name:      Name.
     - frame:      Transform frame.
     - ke:      Emission coefficient. 
-    - ke_txt:      Emission texture. 
-    - ke_txt_info:      Emission texture info.
+    - ke_txt:      Emission texture.
 
 
 #### Struct node
@@ -7186,7 +7125,7 @@ struct node {
     vec3f scaling = {1, 1, 1};
     std::vector<float> weights = {};
     camera* cam = nullptr;
-    shape_group* shp = nullptr;
+    shape* shp = nullptr;
     environment* env = nullptr;
     frame3f frame_ = identity_frame3f;
     std::vector<node*> children_ = {};
@@ -7217,8 +7156,7 @@ Node in a transform hierarchy.
 enum struct keyframe_type {
     linear = 0,
     step = 1,
-    catmull_rom = 2,
-    bezier = 3,
+    bezier = 2,
 }
 ~~~
 
@@ -7227,7 +7165,6 @@ Keyframe type.
 - Values:
     - linear:      Linear interpolation.
     - step:      Step function.
-    - catmull_rom:      Catmull-Rom interpolation.
     - bezier:      Cubic Bezier interpolation.
 
 
@@ -7242,6 +7179,7 @@ struct animation {
     std::vector<quat4f> rotation;
     std::vector<vec3f> scaling;
     std::vector<std::vector<float>> weights;
+    std::vector<node*> targets;
 }
 ~~~
 
@@ -7255,6 +7193,7 @@ Keyframe data.
     - rotation:      Rotation.
     - scaling:      Scaling. 
     - weights:      Weights for morphing.
+    - targets:      Target nodes. 
 
 
 #### Struct animation_group
@@ -7263,8 +7202,7 @@ Keyframe data.
 struct animation_group {
     std::string name;
     std::string path = "";
-    std::vector<animation*> animations;
-    std::vector<std::pair<animation*, node*>> targets;
+    std::vector<animation> animations;
 }
 ~~~
 
@@ -7274,14 +7212,13 @@ Animation made of multiple keyframed values.
     - name:      Name.
     - path:      Path  used when writing files on disk with glTF.
     - animations:      Keyframed values.
-    - targets:      Binds keyframe values to nodes. 
 
 
 #### Struct scene
 
 ~~~ .cpp
 struct scene {
-    std::vector<shape_group*> shapes = {};
+    std::vector<shape*> shapes = {};
     std::vector<material*> materials = {};
     std::vector<texture*> textures = {};
     std::vector<camera*> cameras = {};
@@ -7373,7 +7310,8 @@ Returns is the shape is simple, i.e. it has only one material and one group.
 #### Function eval_pos()
 
 ~~~ .cpp
-vec3f eval_pos(const shape* shp, int eid, const vec2f& euv);
+vec3f eval_pos(
+    const shape* shp, int eid, const vec2f& euv, bool transformed = false);
 ~~~
 
 Shape position interpolated using barycentric coordinates.
@@ -7381,7 +7319,8 @@ Shape position interpolated using barycentric coordinates.
 #### Function eval_norm()
 
 ~~~ .cpp
-vec3f eval_norm(const shape* shp, int eid, const vec2f& euv);
+vec3f eval_norm(
+    const shape* shp, int eid, const vec2f& euv, bool transformed = false);
 ~~~
 
 Shape normal interpolated using barycentric coordinates.
@@ -7421,23 +7360,8 @@ Shape tangent space interpolated using barycentric coordinates.
 #### Function eval_pos()
 
 ~~~ .cpp
-vec3f eval_pos(const shape_group* shp, int sid, int eid, const vec2f& euv);
-~~~
-
-Instance position interpolated using barycentric coordinates.
-
-#### Function eval_norm()
-
-~~~ .cpp
-vec3f eval_norm(const shape_group* shp, int sid, int eid, const vec2f& euv);
-~~~
-
-Instance normal interpolated using barycentric coordinates.
-
-#### Function eval_pos()
-
-~~~ .cpp
-vec3f eval_pos(const environment* env, const vec2f& uv);
+vec3f eval_pos(
+    const environment* env, const vec2f& uv, bool transformed = false);
 ~~~
 
 Environment position interpolated using uv parametrization.
@@ -7445,7 +7369,8 @@ Environment position interpolated using uv parametrization.
 #### Function eval_norm()
 
 ~~~ .cpp
-vec3f eval_norm(const environment* env, const vec2f& uv);
+vec3f eval_norm(
+    const environment* env, const vec2f& uv, bool transformed = false);
 ~~~
 
 Environment normal interpolated using uv parametrization.
@@ -7461,7 +7386,7 @@ Environment texture coordinates from uv parametrization.
 #### Function eval_uv()
 
 ~~~ .cpp
-vec2f eval_uv(const environment* env, const vec3f& w);
+vec2f eval_uv(const environment* env, const vec3f& w, bool transformed = false);
 ~~~
 
 Evaluate uv parameters for environment.
@@ -7469,8 +7394,8 @@ Evaluate uv parameters for environment.
 #### Function eval_texture()
 
 ~~~ .cpp
-vec4f eval_texture(const texture* txt, const texture_info& info,
-    const vec2f& texcoord, bool srgb = true, const vec4f& def =;
+vec4f eval_texture(const texture_info& info, const vec2f& texcoord,
+    bool srgb = true, const vec4f& def =;
 ~~~
 
 Evaluate a texture.
@@ -7478,8 +7403,8 @@ Evaluate a texture.
 #### Function eval_texture()
 
 ~~~ .cpp
-inline vec4f eval_texture(const texture* txt, const optional<texture_info> info,
-    const vec2f& texcoord, bool srgb = true, const vec4f& def =;
+inline vec4f eval_texture(const texture* txt, const vec2f& texcoord,
+    bool srgb = true, const vec4f& def =;
 ~~~
 
 Evaluate a texture.
@@ -7603,13 +7528,22 @@ std::vector<shape*> split_shape(const shape* shp, bool split_facevarying);
 Convert a shape into simple shapes. Facevarying primitives are split if
 `allow_facevarying` is false. No shape is retuned if the shape is simple.
 
-#### Function group_shapes()
+#### Function merge_shapes()
 
 ~~~ .cpp
-shape* group_shapes(const std::vector<shape*>& shps);
+shape* merge_shapes(const std::vector<shape*>& shps, bool pad_vertex);
 ~~~
 
-Convert a list of shapes into a face-varying shape.
+Convert a list of shapes into one shape. Pad shape values if needed.
+Returns null if the shape cannot be constructed.
+
+#### Function merge_into()
+
+~~~ .cpp
+void merge_into(shape* shp, const shape* shp1, bool pad_vertex);
+~~~
+
+Convert a list of shapes into one shape. Pad shape values if needed.
 
 #### Function update_transforms()
 
@@ -7745,9 +7679,9 @@ struct load_options {
     bool skip_missing = true;
     bool obj_flip_texcoord = true;
     bool obj_flip_tr = true;
-    bool preserve_quads = false;
-    bool preserve_facevarying = false;
-    bool simple_shapes = true;
+    bool obj_preserve_quads = false;
+    bool obj_preserve_facevarying = false;
+    bool obj_split_shapes = false;
 }
 ~~~
 
@@ -7758,19 +7692,10 @@ Loading options.
     - skip_missing:      Skip missing files without giving and error.
     - obj_flip_texcoord:      Whether to flip the v coordinate in OBJ.
     - obj_flip_tr:      Whether to flip tr in OBJ.
-    - preserve_quads:      Whether to preserve quads.
-    - preserve_facevarying:      Whether to preserve face-varying faces.
-    - simple_shapes:      Use simple shapes.
+    - obj_preserve_quads:      Whether to preserve quads.
+    - obj_preserve_facevarying:      Whether to preserve face-varying faces.
+    - obj_split_shapes:      Split complex shapes into simple components in OBJ.
 
-
-#### Function load_scene()
-
-~~~ .cpp
-scene* load_scene(const std::string& filename, const load_options& opts =;
-~~~
-
-Loads a scene. For now OBJ or glTF are supported.
-Throws an exception if an error occurs.
 
 #### Struct save_options
 
@@ -7794,6 +7719,15 @@ Save options.
     - gltf_separate_buffers:      Whether to use separate buffers in gltf.
 
 
+#### Function load_scene()
+
+~~~ .cpp
+scene* load_scene(const std::string& filename, const load_options& opts =;
+~~~
+
+Loads a scene. For now OBJ or glTF are supported.
+Throws an exception if an error occurs.
+
 #### Function save_scene()
 
 ~~~ .cpp
@@ -7802,6 +7736,38 @@ void save_scene(
 ~~~
 
 Saves a scene. For now OBJ and glTF are supported.
+
+#### Struct scene_selection
+
+~~~ .cpp
+struct scene_selection {
+    scene_selection(); 
+    template <typename T> scene_selection(T* val); 
+    operator bool() const; 
+    bool empty() const; 
+    template <typename T> bool is() const; 
+    template <typename T> T* get(); 
+    void* get_raw(); 
+    void* get_untyped(); 
+    void* ptr = nullptr;
+    const std::type_info* tinfo = nullptr;
+}
+~~~
+
+Scene selection.
+
+- Members:
+    - scene_selection():      Initializing selection.
+    - scene_selection():      Initializing selection.
+    - operator bool():      Checking whether it is empty.
+    - empty():      Checking whether it is empty.
+    - is():      Check if points to type T.
+    - get():      Gets a pointer cast to the specific type.
+    - get_raw():      Get the raw untyped pointer.
+    - get_untyped():      Get untyped.
+    - ptr:      Selected pointer.
+    - tinfo:      Type information of the pointerd to object.
+
 
 #### Struct scene_stats
 
@@ -7947,7 +7913,7 @@ Visit struct elements.
 
 ~~~ .cpp
 template <typename Visitor>
-inline void visit(shape& val, Visitor&& visitor);
+inline void visit(shape_element_tags& val, Visitor&& visitor);
 ~~~
 
 Visit struct elements.
@@ -7956,7 +7922,16 @@ Visit struct elements.
 
 ~~~ .cpp
 template <typename Visitor>
-inline void visit(shape_group& val, Visitor&& visitor);
+inline void visit(shape_group_props& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function visit()
+
+~~~ .cpp
+template <typename Visitor>
+inline void visit(shape& val, Visitor&& visitor);
 ~~~
 
 Visit struct elements.
@@ -8002,6 +7977,24 @@ Visit struct elements.
 ~~~ .cpp
 template <typename Visitor>
 inline void visit(scene& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function visit()
+
+~~~ .cpp
+template <typename Visitor>
+inline void visit(load_options& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
+#### Function visit()
+
+~~~ .cpp
+template <typename Visitor>
+inline void visit(save_options& val, Visitor&& visitor);
 ~~~
 
 Visit struct elements.
@@ -8157,11 +8150,14 @@ enum struct proc_shape_type {
     floor,
     quad,
     cube,
+    cube_rounded,
     sphere,
-    spherecube,
-    spherizedcube,
-    geosphere,
-    flipcapsphere,
+    sphere_cube,
+    geodesic_sphere,
+    sphere_flipcap,
+    disk,
+    cylinder,
+    cylinder_rounded,
     suzanne,
     cubep,
     fvcube,
@@ -8180,11 +8176,14 @@ Procedural shape type.
     - floor:      Floor (shared vertex, 20x20 size).
     - quad:      Quad (shared vertex).
     - cube:      Cube (shared vertex, not watertight).
+    - cube_rounded:      Rounded cube (shared vertex, not watertight).
     - sphere:      Sphere (shared vertex, not watertight).
-    - spherecube:      Sphere with cube uvs (shared vertex, not watertight).
-    - spherizedcube:      Spherized cube (shared vertex, not watertight).
-    - geosphere:      Geodesic sphere (shared vertex, watertight, no texcoord).
-    - flipcapsphere:      Sphere with flipped cap (shared vertex, not watertight).
+    - sphere_cube:      Sphere with cube uvs (shared vertex, not watertight).
+    - geodesic_sphere:      Geodesic sphere (shared vertex, watertight, no texcoord).
+    - sphere_flipcap:      Sphere with flipped cap (shared vertex, not watertight).
+    - disk:      Disk (shared vertex, not watertight).
+    - cylinder:      Cylinder (shared vertex, not watertight).
+    - cylinder_rounded:      Rounded cylinder (shared vertex, not watertight).
     - suzanne:      Suzanne (shared vertex, no texcoord).
     - cubep:      Position-only cube (shared vertex).
     - fvcube:      Face-varying cube (shared vertex).
@@ -8205,13 +8204,16 @@ struct proc_shape {
     std::string material = "";
     std::string interior = "";
     frame3f frame = identity_frame3f;
-    int tesselation = -1;
+    vec3i tesselation = {1, 1, 1};
     int subdivision = 0;
-    float scale = 1;
-    float radius = -1;
+    bool catmull_clark = false;
+    vec3f size = {1, 1, 1};
+    vec3f uvsize = {1, 1, 1};
+    float rounded = 0;
+    float radius = 0.001f;
     bool faceted = false;
-    int num = -1;
-    optional<make_hair_params> hair_params = {};
+    bool flip_yz = false;
+    make_hair_params hair_params = {};
 }
 ~~~
 
@@ -8223,14 +8225,15 @@ Procedural shape parameters.
     - material:      Material name.
     - interior:      Interior material name.
     - frame:      Local frame. 
-    - tesselation:      Level of shape tesselatation (-1 for default). 
-    - subdivision:      Level of shape tesselation for subdivision surfaces.
-     
-    - scale:      Shape scale. 
+    - tesselation:      Shape tesselation steps. 
+    - subdivision:      Shape subdivision level. 
+    - catmull_clark:      Whether to use Catmull-Clark subdivision.
+    - size:      Shape size. 
+    - uvsize:      Texture size. 
+    - rounded:      Rounded radius. 
     - radius:      Radius for points and lines. 
     - faceted:      Faceted shape.
-    - num:      Number of elements for points and lines (-1 for default).
-     
+    - flip_yz:      Flip yz axis.
     - hair_params:      Hair generation params.
 
 
@@ -8644,6 +8647,15 @@ inline void visit(proc_scene& val, Visitor&& visitor);
 
 Visit struct elements.
 
+#### Function visit()
+
+~~~ .cpp
+template <typename Visitor>
+inline void visit(proc_split_scene& val, Visitor&& visitor);
+~~~
+
+Visit struct elements.
+
 ### Path-tracing support
 
 #### Function specular_exponent_to_roughness()
@@ -8830,6 +8842,7 @@ struct trace_params {
     trace_rng_type rng = trace_rng_type::stratified;
     trace_filter_type filter = trace_filter_type::box;
     bool notransmission = false;
+    bool double_sided = false;
     vec3f ambient = {0, 0, 0};
     bool envmap_invisible = false;
     int min_depth = 3;
@@ -8838,6 +8851,7 @@ struct trace_params {
     float ray_eps = 1e-4f;
     bool parallel = true;
     uint32_t seed = 0;
+    int preview_resolution = 64;
 }
 ~~~
 
@@ -8850,6 +8864,7 @@ Rendering params.
     - rng:      Random number generation type. 
     - filter:      Filter type.
     - notransmission:      Whether to test transmission in shadows.
+    - double_sided:      Force double sided rendering. 
     - ambient:      Ambient lighting. 
     - envmap_invisible:      View environment map.
     - min_depth:      Minimum ray depth. 
@@ -8858,6 +8873,7 @@ Rendering params.
     - ray_eps:      Ray intersection epsilon. 
     - parallel:      Parallel execution.
     - seed:      Seed for the random number generators. 
+    - preview_resolution:      Preview resolution for async rendering.
 
 
 #### Struct trace_pixel
@@ -8982,7 +8998,7 @@ Trace the whole image.
 void trace_async_start(const scene* scn, const camera* cam, const bvh_tree* bvh,
     const trace_lights& lights, image4f& img, image<trace_pixel>& pixels,
     std::vector<std::thread>& threads, bool& stop_flag,
-    const trace_params& params);
+    const trace_params& params, const std::function<void(int, int)>& callback);
 ~~~
 
 Starts an anyncrhounous renderer.
@@ -9060,20 +9076,18 @@ Obj face vertex.
     - obj_vertex():      Element constructor. Initializes all non-specified members as -1.
 
 
-#### Enum obj_element_type : uint16_t
+#### Enum obj_element_type : uint8_t
 
 ~~~ .cpp
-enum struct obj_element_type : uint16_t {
+enum struct obj_element_type : uint8_t {
     point = 1,
     line = 2,
     face = 3,
     bezier = 4,
     uint32_t start
-    uint16_t size
+    uint8_t size
     obj_element_type type
-    uint16_t matid = 0
     uint16_t groupid = 0
-    uint16_t smoothingid = 0
 }
 ~~~
 
@@ -9087,9 +9101,25 @@ Obj element type.
     - start:      Starting vertex index.
     - size:      Number of vertices.
     - type:      Element type.
-    - matid:      Material id.
     - groupid:      Group id.
-    - smoothingid:      Smoothing group id.
+
+
+#### Struct obj_group_props
+
+~~~ .cpp
+struct obj_group_props {
+    std::string name = "";
+    std::string matname = "";
+    bool faceted = false;
+}
+~~~
+
+Obj group properties.
+
+- Members:
+    - name:      Name.
+    - matname:      Material name.
+    - faceted:      Faceted.
 
 
 #### Struct obj_object
@@ -9097,9 +9127,7 @@ Obj element type.
 ~~~ .cpp
 struct obj_object {
     std::string name;
-    std::vector<std::string> matnames;
-    std::vector<std::string> groupnames;
-    std::vector<bool> smoothing;
+    std::vector<obj_group_props> groups;
     std::vector<obj_vertex> verts;
     std::vector<obj_element> elems;
     frame3f frame = identity_frame3f;
@@ -9111,9 +9139,7 @@ Obj object.
 
 - Members:
     - name:      Name.
-    - matnames:      Material name.
-    - groupnames:      Group name.
-    - smoothing:      Smoothing groups.
+    - groups:      Groups.
     - verts:      Element vertices.
     - elems:      Element faces.
     - frame:      Frame [extension]. Vertices are not transformed though.
@@ -9335,14 +9361,16 @@ Obj scene.
 #### Function load_obj()
 
 ~~~ .cpp
-obj_scene* load_obj(const std::string& filename, bool load_textures = false,
-    bool skip_missing = false, bool flip_texcoord = true, bool flip_tr = true);
+obj_scene* load_obj(const std::string& filename, bool split_shapes,
+    bool load_textures = false, bool skip_missing = false,
+    bool flip_texcoord = true, bool flip_tr = true);
 ~~~
 
-Load an OBJ from file `filename`. Load textures if `load_textures` is true,
-and report errors only if `skip_missing` is false.
-Texture coordinates and material Tr are flipped if `flip_texcoord` and
-`flip_tp` are respectively true.
+Load an OBJ from file `filename`. Split shapes at material and group
+boundaries, if `split_shapes` is true.
+Load textures if `load_textures` is true, and report errors only if
+`skip_missing` is false. Texture coordinates and material Tr are flipped
+if `flip_texcoord` and `flip_tp` are respectively true.
 
 #### Function save_obj()
 
@@ -9501,8 +9529,8 @@ displaced accessor attributes pointed by `accessor.sparse.indices`.
 ~~~ .cpp
 struct glTFAccessorSparse : glTFProperty {
     int count = 0;
-    glTFAccessorSparseIndices* indices = {};
-    glTFAccessorSparseValues* values = {};
+    glTFAccessorSparseIndices* indices = nullptr;
+    glTFAccessorSparseValues* values = nullptr;
 }
 ~~~
 
@@ -9559,7 +9587,7 @@ struct glTFAccessor : glTFChildOfRootProperty {
     glTFAccessorType type = glTFAccessorType::NotSet;
     std::vector<float> max = {};
     std::vector<float> min = {};
-    glTFAccessorSparse* sparse = {};
+    glTFAccessorSparse* sparse = nullptr;
 }
 ~~~
 
@@ -9618,7 +9646,7 @@ The index of the node and TRS property that an animation channel targets.
 ~~~ .cpp
 struct glTFAnimationChannel : glTFProperty {
     glTFid<glTFAnimationSampler> sampler = {};
-    glTFAnimationChannelTarget* target = {};
+    glTFAnimationChannelTarget* target = nullptr;
 }
 ~~~
 
@@ -9824,8 +9852,8 @@ Values for glTFCamera::type
 
 ~~~ .cpp
 struct glTFCamera : glTFChildOfRootProperty {
-    glTFCameraOrthographic* orthographic = {};
-    glTFCameraPerspective* perspective = {};
+    glTFCameraOrthographic* orthographic = nullptr;
+    glTFCameraPerspective* perspective = nullptr;
     glTFCameraType type = glTFCameraType::NotSet;
 }
 ~~~
@@ -9946,10 +9974,10 @@ Occlusion texture information.
 ~~~ .cpp
 struct glTFMaterialPbrMetallicRoughness : glTFProperty {
     vec4f baseColorFactor = {1, 1, 1, 1};
-    glTFTextureInfo* baseColorTexture = {};
+    glTFTextureInfo* baseColorTexture = nullptr;
     float metallicFactor = 1;
     float roughnessFactor = 1;
-    glTFTextureInfo* metallicRoughnessTexture = {};
+    glTFTextureInfo* metallicRoughnessTexture = nullptr;
 }
 ~~~
 
@@ -9969,10 +9997,10 @@ material model from Physically-Based Rendering (PBR) methodology.
 ~~~ .cpp
 struct glTFMaterialPbrSpecularGlossiness : glTFProperty {
     vec4f diffuseFactor = {1, 1, 1, 1};
-    glTFTextureInfo* diffuseTexture = {};
+    glTFTextureInfo* diffuseTexture = nullptr;
     vec3f specularFactor = {1, 1, 1};
     float glossinessFactor = 1;
-    glTFTextureInfo* specularGlossinessTexture = {};
+    glTFTextureInfo* specularGlossinessTexture = nullptr;
 }
 ~~~
 
@@ -10005,11 +10033,11 @@ Values for glTFMaterial::alphaMode
 
 ~~~ .cpp
 struct glTFMaterial : glTFChildOfRootProperty {
-    glTFMaterialPbrMetallicRoughness* pbrMetallicRoughness = {};
-    glTFMaterialPbrSpecularGlossiness* pbrSpecularGlossiness = {};
-    glTFMaterialNormalTextureInfo* normalTexture = {};
-    glTFMaterialOcclusionTextureInfo* occlusionTexture = {};
-    glTFTextureInfo* emissiveTexture = {};
+    glTFMaterialPbrMetallicRoughness* pbrMetallicRoughness = nullptr;
+    glTFMaterialPbrSpecularGlossiness* pbrSpecularGlossiness = nullptr;
+    glTFMaterialNormalTextureInfo* normalTexture = nullptr;
+    glTFMaterialOcclusionTextureInfo* occlusionTexture = nullptr;
+    glTFTextureInfo* emissiveTexture = nullptr;
     vec3f emissiveFactor = {0, 0, 0};
     glTFMaterialAlphaMode alphaMode = glTFMaterialAlphaMode::Opaque;
     float alphaCutoff = 0.5;
@@ -10254,7 +10282,7 @@ struct glTF : glTFProperty {
     std::vector<std::string> extensionsRequired = {};
     std::vector<glTFAccessor*> accessors = {};
     std::vector<glTFAnimation*> animations = {};
-    glTFAsset* asset = {};
+    glTFAsset* asset = nullptr;
     std::vector<glTFBuffer*> buffers = {};
     std::vector<glTFBufferView*> bufferViews = {};
     std::vector<glTFCamera*> cameras = {};
@@ -11316,6 +11344,7 @@ Filter values for OpenGL texture.
 
 ~~~ .cpp
 struct gl_texture_info {
+    gl_texture txt = {};
     int texcoord = 0;
     float scale = 1;
     gl_texture_wrap wrap_s = gl_texture_wrap::not_set;
@@ -11328,6 +11357,7 @@ struct gl_texture_info {
 OpenGL texture parameters.
 
 - Members:
+    - txt:      Texture.
     - texcoord:      Texture coordinate set.
     - scale:      Texture strength/scale (used by some models).
     - wrap_s:      Wrap s mode.
@@ -11806,8 +11836,8 @@ Set uniform array for names variable.
 #### Function set_program_uniform_texture()
 
 ~~~ .cpp
-bool set_program_uniform_texture(const gl_program& prog, int pos,
-    const gl_texture& txt, const gl_texture_info& tinfo, uint tunit);
+bool set_program_uniform_texture(
+    const gl_program& prog, int pos, const gl_texture_info& tinfo, uint tunit);
 ~~~
 
 Set uniform texture.
@@ -11816,8 +11846,7 @@ Set uniform texture.
 
 ~~~ .cpp
 inline bool set_program_uniform_texture(const gl_program& prog, int var,
-    int varon, const gl_texture& txt, const gl_texture_info& tinfo,
-    uint tunit);
+    int varon, const gl_texture_info& tinfo, uint tunit);
 ~~~
 
 Set uniform texture with an additionasl texture enable flags.
@@ -11826,8 +11855,7 @@ Set uniform texture with an additionasl texture enable flags.
 
 ~~~ .cpp
 inline bool set_program_uniform_texture(const gl_program& prog,
-    const std::string& var, const gl_texture& txt, const gl_texture_info& tinfo,
-    uint tunit);
+    const std::string& var, const gl_texture_info& tinfo, uint tunit);
 ~~~
 
 Set uniform texture.
@@ -11836,7 +11864,7 @@ Set uniform texture.
 
 ~~~ .cpp
 inline bool set_program_uniform_texture(const gl_program& prog,
-    const std::string& var, const std::string& varon, const gl_texture& txt,
+    const std::string& var, const std::string& varon,
     const gl_texture_info& tinfo, uint tunit);
 ~~~
 
@@ -12079,6 +12107,15 @@ inline void draw_image(const gl_stdimage_program& prog, const gl_texture& txt,
 
 Draws an image texture the stdimage program.
 
+#### Function get_draw_image_coords()
+
+~~~ .cpp
+vec2i get_draw_image_coords(
+    const vec2f& mouse_pos, const gl_stdimage_params& params);
+~~~
+
+Computes the image uv coordinates corresponding to the view parameters.
+
 #### Struct gl_stdsurface_program
 
 ~~~ .cpp
@@ -12180,32 +12217,10 @@ Set the object as highlighted.
 ~~~ .cpp
 void set_stdsurface_material(const gl_stdsurface_program& prog,
     material_type type, gl_elem_type etype, const vec3f& ke, const vec3f& kd,
-    const vec3f& ks, float rs, float op, const gl_texture& ke_txt,
-    const gl_texture& kd_txt, const gl_texture& ks_txt,
-    const gl_texture& rs_txt, const gl_texture& norm_txt,
-    const gl_texture& occ_txt, const gl_texture_info& ke_txt_info,
-    const gl_texture_info& kd_txt_info, const gl_texture_info& ks_txt_info,
-    const gl_texture_info& rs_txt_info, const gl_texture_info& norm_txt_info,
-    const gl_texture_info& occ_txt_info, bool use_phong, bool double_sided,
-    bool alpha_cutout);
-~~~
-
-Set material values with emission `ke`, diffuse `kd`, specular `ks` and
-specular roughness `rs`, opacity `op`. Indicates textures ids with the
-correspoinding `XXX_txt` variables. Sets also normal and occlusion
-maps. Works for points/lines/triangles indicated by `etype`, (diffuse for
-points, Kajiya-Kay for lines, GGX/Phong for triangles). Material `type`
-matches the scene material type.
-
-#### Function set_stdsurface_material()
-
-~~~ .cpp
-inline void set_stdsurface_material(const gl_stdsurface_program& prog,
-    material_type type, gl_elem_type etype, const vec3f& ke, const vec3f& kd,
-    const vec3f& ks, float rs, float op, const gl_texture& ke_txt,
-    const gl_texture& kd_txt, const gl_texture& ks_txt,
-    const gl_texture& rs_txt, const gl_texture& norm_txt,
-    const gl_texture& occ_txt, bool use_phong, bool double_sided,
+    const vec3f& ks, float rs, float op, const gl_texture_info& ke_txt,
+    const gl_texture_info& kd_txt, const gl_texture_info& ks_txt,
+    const gl_texture_info& rs_txt, const gl_texture_info& norm_txt,
+    const gl_texture_info& occ_txt, bool use_phong, bool double_sided,
     bool alpha_cutout);
 ~~~
 
@@ -12279,6 +12294,7 @@ struct gl_stdsurface_params {
     vec3f ambient = {0, 0, 0};
     vec3f highlight_color = {1, 1, 0};
     vec3f edge_color = {0, 0, 0};
+    bool double_sided = false;
     bool cull_backface = false;
 }
 ~~~
@@ -12296,6 +12312,7 @@ Params for stdsurface drawing.
     - ambient:      Ambient illumination. 
     - highlight_color:      Highlight color. 
     - edge_color:      Edge color. 
+    - double_sided:      Force double sided rendering. 
     - cull_backface:      Cull back face.
 
 
@@ -12366,7 +12383,8 @@ OpenGL window. Members are not part of the public API.
 #### Function make_window()
 
 ~~~ .cpp
-gl_window* make_window(int width, int height, const std::string& title);
+gl_window* make_window(
+    int width, int height, const std::string& title, bool opengl4 = true);
 ~~~
 
 Initialize a window.
@@ -12394,7 +12412,7 @@ Set window title.
 void wait_events(gl_window* win);
 ~~~
 
-Wait events
+Wait events.
 
 #### Function poll_events()
 
@@ -12402,7 +12420,7 @@ Wait events
 void poll_events(gl_window* win);
 ~~~
 
-Poll events
+Poll events.
 
 #### Function swap_buffers()
 
@@ -12410,7 +12428,7 @@ Poll events
 void swap_buffers(gl_window* win);
 ~~~
 
-Swap buffers
+Swap buffers.
 
 #### Function should_close()
 
@@ -12418,7 +12436,7 @@ Swap buffers
 bool should_close(gl_window* win);
 ~~~
 
-Should close
+Should close.
 
 #### Function get_window_size()
 
@@ -12426,7 +12444,7 @@ Should close
 vec2i get_window_size(gl_window* win);
 ~~~
 
-Window size
+Window size.
 
 #### Function get_framebuffer_size()
 
@@ -12434,7 +12452,7 @@ Window size
 vec2i get_framebuffer_size(gl_window* win);
 ~~~
 
-Framebuffer size
+Framebuffer size.
 
 #### Function get_mouse_button()
 
@@ -12442,7 +12460,7 @@ Framebuffer size
 int get_mouse_button(gl_window* win);
 ~~~
 
-Mouse button
+Mouse button.
 
 #### Function get_mouse_pos()
 
@@ -12450,7 +12468,7 @@ Mouse button
 vec2i get_mouse_pos(gl_window* win);
 ~~~
 
-Mouse position
+Mouse position.
 
 #### Function get_mouse_posf()
 
@@ -12458,7 +12476,7 @@ Mouse position
 vec2f get_mouse_posf(gl_window* win);
 ~~~
 
-Mouse position
+Mouse position.
 
 #### Function get_key()
 
@@ -12466,7 +12484,7 @@ Mouse position
 bool get_key(gl_window* win, int key);
 ~~~
 
-Check if a key is pressed (not all keys are supported)
+Check if a key is pressed (not all keys are supported).
 
 #### Function take_screenshot4b()
 
@@ -12474,7 +12492,7 @@ Check if a key is pressed (not all keys are supported)
 image4b take_screenshot4b(gl_window* win, bool flipy = true, bool back = false);
 ~~~
 
-Read pixels
+Read pixels.
 
 #### Function save_screenshot()
 
@@ -12491,6 +12509,16 @@ bool handle_camera_navigation(gl_window* win, camera* cam, bool navigation_fps);
 ~~~
 
 Handle camera navigation.
+
+#### Function handle_scene_selection()
+
+~~~ .cpp
+bool handle_scene_selection(gl_window* win, const scene* scn, const camera* cam,
+    const bvh_tree* bvh, int res, const gl_stdimage_params& params,
+    scene_selection& sel);
+~~~
+
+Handle scene selection.
 
 ### OpenGL widgets
 
@@ -12858,16 +12886,6 @@ Start selectable tree node widget.
 ~~~ .cpp
 template <typename T>
 inline bool draw_tree_widget_begin(
-    gl_window* win, const std::string& lbl, void*& selection, T* content);
-~~~
-
-Start selectable tree node widget.
-
-#### Function draw_tree_widget_begin()
-
-~~~ .cpp
-template <typename T>
-inline bool draw_tree_widget_begin(
     gl_window* win, const std::string& lbl, T*& selection, T* content);
 ~~~
 
@@ -13038,7 +13056,7 @@ or a deafult range when their are the same. Color is ignored.
 #### Function draw_value_widget()
 
 ~~~ .cpp
-template <typename T, int N>
+template <int N>
 inline bool draw_value_widget(gl_window* win, const std::string& lbl,
     vec<int, N>& val, float min = 0, float max = 0, bool color = false);
 ~~~
@@ -13175,38 +13193,23 @@ bool draw_camera_widgets(gl_window* win, const std::string& lbl, camera* cam);
 
 Draws widgets for a camera. Used for quickly making demos.
 
-#### Struct scene_selection
+#### Function draw_scene_tree_widgets()
 
 ~~~ .cpp
-struct scene_selection {
-    template <typename T> scene_selection& operator=(T* val); 
-    template <typename T> bool is() const; 
-    template <typename T> T* get(); 
-    void* get_raw(); 
-    void* get_untyped(); 
-    void* ptr = nullptr;
-    const std::type_info* tinfo = nullptr;
-}
+bool draw_scene_tree_widgets(gl_window* win, const std::string& lbl, scene* scn,
+    scene_selection& sel, std::vector<ygl::scene_selection>& update_list,
+    proc_scene* test_scn = nullptr,
+    const std::unordered_map<std::string, std::string>& inspector_highlights =
+       ;
 ~~~
 
-Scene selection
+Draws widgets for a whole scene. Used for quickly making demos.
 
-- Members:
-    - operator=():      Assignment operator.
-    - is():      Check if points to type T.
-    - get():      Gets a pointer cast to the specific type.
-    - get_raw():      Get the raw untyped pointer.
-    - get_untyped():      Get untyped.
-    - ptr:      Selected pointer.
-    - tinfo:      Type information of the pointerd to object.
-
-
-#### Function draw_scene_widgets()
+#### Function draw_scene_elem_widgets()
 
 ~~~ .cpp
-bool draw_scene_widgets(gl_window* win, const std::string& lbl, scene* scn,
+bool draw_scene_elem_widgets(gl_window* win, const std::string& lbl, scene* scn,
     scene_selection& sel, std::vector<ygl::scene_selection>& update_list,
-    const std::unordered_map<texture*, gl_texture>& gl_txt,
     proc_scene* test_scn = nullptr,
     const std::unordered_map<std::string, std::string>& inspector_highlights =
        ;

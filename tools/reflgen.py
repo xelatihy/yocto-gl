@@ -130,7 +130,14 @@ def gen_refl(cpp):
 filename = 'yocto/yocto_gl.h'
 
 with open(filename) as f: cpp = f.read()
-for tag in ['scene','test-scene','trace','glstdimage','glstdsurface','shapeexample','tonemap']:
+
+tags = []
+for line in cpp.splitlines():
+    if line.startswith('// #codegen begin refl-'):
+        tags += [ line.replace('// #codegen begin refl-','').strip() ]
+tags = list(set(tags))
+
+for tag in tags:
     decl = extract(cpp, 'refl-'+tag)
     refl = gen_refl(decl)
     cpp = substitute(cpp, refl, 'reflgen-'+tag)

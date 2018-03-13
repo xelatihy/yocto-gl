@@ -189,7 +189,7 @@
 /// functions targeting path tracing and shape generations.
 ///
 /// 1. Random number generation with PCG32:
-///     1. initialize the random number generator with `init_rng()`
+///     1. initialize the random number generator with `make_rng()`
 ///     2. advance the random number state with `advance_rng()`
 ///     3. if necessary, you can reseed the rng with `seed_rng()`
 ///     4. generate random integers in an interval with `next_rand1i()`
@@ -228,7 +228,11 @@
 ///    `compute_tangent_space()`
 /// 6. compute skinning with `compute_skinning()` and
 ///    `compute_matrix_skinning()`
-/// 6. create shapes with `make_points()`, `make_lines()`, `make_uvgrid()`
+/// 6. create shapes with `make_cube()`, `make_sphere()`, `make_quad()`,
+///    `make_fvcube()`, `make_hair()`, `make_suzanne()`, `make_lines()`,
+///    `make_points()`, `make_sphere_cube()`, `make_cube_rounded()`,
+///    `make_sphere_flipcap()`, `make_cylinder()`, `make_cylinder_rounded()`,
+///    `make_disk()`, `make_cylinder_side()`, `make_disk_quad()`
 /// 7. merge element with `marge_lines()`, `marge_triangles()`, `marge_quads()`
 /// 8. facet elements with `facet_lines()`, `facet_triangles()`, `facet_quads()`
 /// 9. shape sampling with `sample_points()`, `sample_lines()`,
@@ -242,9 +246,6 @@
 /// 14. subdivide elements by edge splits with `subdivide_lines()`,
 ///     `subdivide_triangles()`, `subdivide_quads()`, `subdivide_beziers()`
 /// 15. Catmull-Clark subdivision surface with `subdivide_catmullclark()`
-/// 17. example shapes: `make_cube()`, `make_uvsphere()`, `make_uvhemisphere()`,
-///     `make_uvquad()`, `make_uvcube()`, `make_fvcube()`, `make_hair()`,
-///     `make_suzanne()`
 ///
 ///
 /// ### Animation utilities
@@ -1643,6 +1644,48 @@ template <typename T>
 inline vec<T, 3> sphericaly_to_cartesian(const vec<T, 3>& s) {
     return {
         cos(s.x) * sin(s.y) * s.z, cos(s.y) * s.z, sin(s.x) * sin(s.y) * s.z};
+}
+
+/// Cartesian to cylindrical coordinates.
+/// Cylindrical coordinates are phi, r, z.
+template <typename T>
+inline vec<T, 3> cartesian_to_cylindrical(const vec<T, 3>& p) {
+    auto r = length(vec<T, 2>{p.x, p.y});
+    if (!r) return {0, 0, p.z};
+    return {atan2(p.y / r, p.x / r), r, p.z};
+}
+
+/// Spherical to cartesian coordinates with theta aligned along z.
+/// Cylindrical coordinates are phi, r, z.
+template <typename T>
+inline vec<T, 3> cylindrical_to_cartesian(const vec<T, 3>& c) {
+    return {cos(c.x) * c.y, sin(c.x) * c.y, c.z};
+}
+
+/// Cartesian to elliptical mapping.
+/// Cartesian (x,y) in [-1,1]^2. Elliptical |(u,v)|<=1.
+template <typename T>
+inline vec<T, 2> cartesian_to_elliptical(const vec<T, 2>& xy) {
+    // Analytical Methods for Squaring the Disc, by C. Fong
+    // https://arxiv.org/abs/1509.06344
+    auto x = xy.x, y = xy.y;
+    auto u = x * sqrt(1 - y * y / 2);
+    auto v = y * sqrt(1 - x * x / 2);
+    return {u, v};
+}
+
+/// Elliptical to cartesian mapping.
+/// Cartesian (x,y) in [-1,1]^2. Elliptical |(u,v)|<=1.
+template <typename T>
+inline vec<T, 2> elliptical_to_cartesian(const vec<T, 2>& uv) {
+    // Analytical Methods for Squaring the Disc, by C. Fong
+    // https://arxiv.org/abs/1509.06344
+    auto u = uv.x, v = uv.y;
+    auto x = sqrt(2 + u * u - v * v + 2 * sqrt(2) * u) / 2.0f -
+             sqrt(2 + u * u - v * v - 2 * sqrt(2) * u) / 2.0f;
+    auto y = sqrt(2 + v * v - u * u + 2 * sqrt(2) * v) / 2.0f -
+             sqrt(2 + v * v - u * u - 2 * sqrt(2) * v) / 2.0f;
+    return {u, v};
 }
 
 /// Stream write.
@@ -3306,7 +3349,7 @@ inline void seed_rng(rng_pcg32& rng, uint64_t state, uint64_t seq = 1) {
 }
 
 /// Init a random number generator with a state state from the sequence seq.
-inline rng_pcg32 init_rng(uint64_t state, uint64_t seq = 1) {
+inline rng_pcg32 make_rng(uint64_t state, uint64_t seq = 1) {
     auto rng = rng_pcg32();
     seed_rng(rng, state, seq);
     return rng;
@@ -4387,118 +4430,21 @@ void subdivide_catmullclark(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     std::vector<vec3f>& tang, std::vector<vec2f>& texcoord,
     std::vector<vec4f>& color, std::vector<float>& radius);
 
-/// Generate a rectangular grid of usteps x vsteps uv values for parametric
-/// surface generation. Values cam wrap and have poles.points
-void make_quads_uv(std::vector<vec4i>& quads, std::vector<vec2f>& uvs,
-    int usteps, int vsteps, bool uwrap = false, bool vwrap = false,
-    bool vpole0 = false, bool vpole1 = false);
-/// Generate parametric num lines of usteps segments.
-void make_lines_uv(
-    std::vector<vec2i>& lines, std::vector<vec2f>& uvs, int num, int usteps);
-/// Generate a parametric point set. Mostly here for completeness.
-void make_points_uv(std::vector<int>& points, std::vector<vec2f>& uvs, int num);
-
-/// Generate a rectangular grid of usteps x vsteps uv values for parametric
-/// surface generation. Values cam wrap and have poles.
-template <typename T, typename F>
-inline void make_quads(std::vector<vec4i>& quads, std::vector<T>& vert,
-    int usteps, int vsteps, F&& vert_cb, bool uwrap = false, bool vwrap = false,
-    bool vpole0 = false, bool vpole1 = false) {
-    auto uv = std::vector<vec2f>();
-    make_quads_uv(quads, uv, usteps, vsteps, uwrap, vwrap, vpole0, vpole1);
-    vert.resize(uv.size());
-    for (auto i = 0; i < uv.size(); i++) vert[i] = vert_cb(uv[i]);
-}
-/// Generate parametric num lines of usteps segments.
-template <typename T, typename F>
-inline void make_lines(std::vector<vec2i>& lines, std::vector<T>& vert, int num,
-    int usteps, F&& vert_cb) {
-    auto uv = std::vector<vec2f>();
-    make_lines_uv(lines, uv, num, usteps);
-    vert.resize(uv.size());
-    for (auto i = 0; i < uv.size(); i++) vert[i] = vert_cb(uv[i]);
-}
-/// Generate a parametric point set. Mostly here for completeness.
-template <typename T, typename F>
-inline void make_points(
-    std::vector<int>& points, std::vector<T>& vert, int num, F&& vert_cb) {
-    auto uv = std::vector<vec2f>();
-    make_points_uv(points, uv, num);
-    vert.resize(uv.size());
-    for (auto i = 0; i < uv.size(); i++) vert[i] = vert_cb(uv[i].x);
-}
-
-/// Generate a rectangular grid of usteps x vsteps uv with callbacks for
-/// position, normal and texcoord.
-template <typename F>
-inline void make_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int usteps,
-    int vsteps, F&& vert_cb) {
-    auto uv = std::vector<vec2f>();
-    make_quads_uv(quads, uv, usteps, vsteps);
-    pos.resize(uv.size());
-    norm.resize(uv.size());
-    texcoord.resize(uv.size());
-    for (auto i = 0; i < uv.size(); i++) {
-        vert_cb(uv[i], pos[i], norm[i], texcoord[i]);
-    }
-}
-/// Generate parametric num lines of usteps segments with callbacks for
-/// position, tangent, texcoord, and radius.
-template <typename F>
-inline void make_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
+/// Merge lines between shapes.
+void merge_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<float>& radius, int num, int usteps, F&& vert_cb) {
-    auto uv = std::vector<vec2f>();
-    make_lines_uv(lines, uv, num, usteps);
-    pos.resize(uv.size());
-    norm.resize(uv.size());
-    texcoord.resize(uv.size());
-    radius.resize(uv.size());
-    for (auto i = 0; i < uv.size(); i++) {
-        vert_cb(uv[i], pos[i], norm[i], texcoord[i], radius[i]);
-    }
-}
-/// Generate a parametric point set with callbacks for position, tangent,
-/// texcoord, and radius.
-template <typename F>
-inline void make_points(std::vector<int>& points, std::vector<vec3f>& pos,
+    const std::vector<vec2i>& lines1, const std::vector<vec3f>& pos1,
+    const std::vector<vec3f>& norm1, const std::vector<vec2f>& texcoord1);
+/// Merge triangles between shapes.
+void merge_triangles(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<float>& radius, int num, F&& vert_cb) {
-    auto uv = std::vector<vec2f>();
-    make_points_uv(points, uv, num);
-    pos.resize(uv.size());
-    norm.resize(uv.size());
-    texcoord.resize(uv.size());
-    radius.resize(uv.size());
-    for (auto i = 0; i < uv.size(); i++) {
-        vert_cb(uv[i], pos[i], norm[i], texcoord[i], radius[i]);
-    }
-}
-
-/// Merge lines between shapes. The elements are merged by increasing the
-/// array size of the second array by the number of vertices of the first.
-/// Vertex data can then be concatenated successfully.
-void merge_lines(std::vector<vec2i>& lines, const std::vector<vec2i>& lines1);
-/// Merge triangles between shapes. The elements are merged by increasing the
-/// array size of the second array by the number of vertices of the first.
-/// Vertex data can then be concatenated successfully.
-void merge_triangles(
-    std::vector<vec3i>& triangles, const std::vector<vec3i>& triangles1);
-/// Merge quads between shapes. The elements are merged by increasing the
-/// array size of the second array by the number of vertices of the first.
-/// Vertex data can then be concatenated successfully.
-void merge_quads(std::vector<vec4i>& quads, const std::vector<vec4i>& quads1);
+    const std::vector<vec3i>& triangles1, const std::vector<vec3f>& pos1,
+    const std::vector<vec3f>& norm1, const std::vector<vec2f>& texcoord1);
 /// Merge quads between shapes.
-inline void merge_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+void merge_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
     const std::vector<vec4i>& quads1, const std::vector<vec3f>& pos1,
-    const std::vector<vec3f>& norm1, const std::vector<vec2f>& texcoord1) {
-    merge_quads(quads, quads1);
-    append(pos, pos1);
-    append(norm, norm1);
-    append(texcoord, texcoord1);
-}
+    const std::vector<vec3f>& norm1, const std::vector<vec2f>& texcoord1);
 
 /// Duplicate vertex data for each line index, giving a faceted look.
 template <typename T>
@@ -4524,18 +4470,6 @@ void facet_quads(
 void facet_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
     std::vector<vec4f>& color, std::vector<float>& radius);
-
-/// @}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// SHAPE SAMPLING
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-/// @defgroup shape_sampling Shape sampling
-/// @{
 
 /// Pick a point.
 inline int sample_points(int npoints, float re) {
@@ -4604,44 +4538,73 @@ sample_triangles_points(const std::vector<vec3i>& triangles,
     const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
     const std::vector<vec2f>& texcoord, int npoints, uint64_t seed = 0);
 
-/// @}
+/// Make a quad.
+void make_quad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
+    const vec2f& size, const vec2f& uvsize);
 
-}  // namespace ygl
+/// Make a cube.
+void make_cube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
+    const vec3f& size, const vec3f& uvsize);
 
-// -----------------------------------------------------------------------------
-// EXAMPLE SHAPES
-// -----------------------------------------------------------------------------
-namespace ygl {
+/// Make a rounded cube.
+void make_cube_rounded(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
+    const vec3f& size, const vec3f& uvsize, float radius);
 
-/// @defgroup shape_example Example shapes
-/// @{
+/// Make a sphere.
+void make_sphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
+    float size, const vec2f& uvsize);
+
+/// Make a spherecube.
+void make_sphere_cube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int steps,
+    float size, float uvsize);
+
+/// Make a sphere with flipped caps.
+void make_sphere_flipcap(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
+    float size, const vec2f& uvsize, const vec2f& zflip);
+
+/// Make a disk.
+void make_disk(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
+    float size, const vec2f& uvsize);
+
+/// Make a disk from a quad.
+void make_disk_quad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int steps,
+    float size, float uvsize);
+
+/// Make a cylinder (side-only).
+void make_cylinder_side(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
+    const vec2f& size, const vec2f& uvsize, bool capped);
+
+/// Make a cylinder.
+void make_cylinder(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
+    const vec2f& size, const vec3f& uvsize);
+
+/// Make a rounded cylinder.
+void make_cylinder_rounded(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
+    const vec2f& size, const vec3f& uvsize, float radius);
 
 /// Make a sphere.
 void make_sphere(
     std::vector<vec4i>& quads, std::vector<vec3f>& pos, int tesselation);
 
 /// Make a geodesic sphere.
-void make_geodesicsphere(
+void make_geodesic_sphere(
     std::vector<vec3i>& triangles, std::vector<vec3f>& pos, int tesselation);
 
 /// Make a cube with unique vertices. This is watertight but has no
 /// texture coordinates or normals.
 void make_cube(
     std::vector<vec4i>& quads, std::vector<vec3f>& pos, int tesselation);
-
-/// Make a sphere. This is not watertight.
-void make_uvsphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
-    bool flipped = false);
-
-/// Make a sphere. This is not watertight.
-void make_uvhemisphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
-    bool flipped = false);
-
-/// Make a quad.
-void make_uvquad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation);
 
 /// Make a facevarying sphere with unique vertices but different texture
 /// coordinates.
@@ -4662,28 +4625,31 @@ void make_fvcube(std::vector<vec4i>& quads_pos, std::vector<vec3f>& pos,
 void make_suzanne(
     std::vector<vec4i>& quads, std::vector<vec3f>& pos, int tesselation);
 
-/// Make a cube. This is not watertight.
-void make_uvcube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation);
+/// Generate lines set along a quad. Lines have `steps.x` subdivision
+/// and `steps.y` lines are generated.
+void make_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<float>& radius, const vec2i& steps, const vec2f& size,
+    const vec2f& uvsize, const vec2f& line_radius = {0.001f, 0.001f});
 
-/// Make a sphere from a cube. This is not watertight.
-void make_uvspherecube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation);
+/// Generate a point set with points placed at the origin with texcoords varying
+/// along u.
+void make_points(std::vector<int>& points, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<float>& radius, int num, float uvsize,
+    float point_radius = 0.001f);
 
-/// Make a cube than stretch it towards a sphere. This is not watertight.
-void make_uvspherizedcube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
-    float radius);
+/// Generate a point set with points placed in a cube the origin with texcoords
+/// varying along u.
+void make_random_points(std::vector<int>& points, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<float>& radius, int num, const vec3f& size, float uvsize,
+    float point_radius = 0.001f, uint64_t seed = 0);
 
-/// Make a sphere with caps flipped. This is not watertight.
-void make_uvflipcapsphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
-    float z, bool flipped = false);
-
-/// Make a cutout sphere. This is not watertight.
-void make_uvcutsphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
-    float z, bool flipped = false);
+/// Make a point.
+void make_point(std::vector<int>& points, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<float>& radius, float point_radius = 0.001f);
 
 /// Make seashell params
 struct make_seashell_params {
@@ -4707,11 +4673,13 @@ struct make_seashell_params {
     float nodule_height = 0;
     /// Position of nodules (P) in [0,inf].
     float nodule_pos = 0;
+    /// Uvsize
+    vec2f uvsize = {1, 1};
 };
 
-/// Make a seashell. This is not watertight. Returns quads, pos, norm, texcoord.
-void make_uvseashell(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
+/// Make a seashell.
+void make_seashell(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
     const make_seashell_params& params);
 
 /// Make a bezier circle. Returns bezier, pos.
@@ -4740,7 +4708,7 @@ struct make_hair_params {
 /// Make a hair ball around a shape.
 void make_hair(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
     std::vector<vec3f>& tang, std::vector<vec2f>& texcoord,
-    std::vector<float>& radius, int num, int tesselation,
+    std::vector<float>& radius, const vec2i& steps,
     const std::vector<vec3i>& striangles, const std::vector<vec4i>& squads,
     const std::vector<vec3f>& spos, const std::vector<vec3f>& snorm,
     const std::vector<vec2f>& stexcoord, const make_hair_params& params);
@@ -4772,11 +4740,11 @@ inline void visit(make_hair_params& val, Visitor&& visitor) {
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
-// IMAGE CONTAINERS
+// IMAGE TYPE AND UTILITIES
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @defgroup image Image containers
+/// @defgroup image Image type and utilities
 /// @{
 
 /// Generic image container. Access pixels with at() or operator [].
@@ -4881,18 +4849,6 @@ inline bool contains(const image<T>& img, int i, int j) {
     return i >= 0 && i < img.width() && j >= 0 && j < img.height();
 }
 
-/// @}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// IMAGE OPERATIONS
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-/// @defgroup image_ops Image operations
-/// @{
-
 /// Approximate conversion from srgb.
 inline vec4f srgb_to_linear(const vec4b& srgb) {
     return {pow(byte_to_float(srgb.x), 2.2f), pow(byte_to_float(srgb.y), 2.2f),
@@ -4948,7 +4904,7 @@ vec4b hsv_to_rgb(const vec4b& hsv);
 struct tonemap_params {
     /// Hdr exposure. @refl_uilimits(-10,10) @refl_shortname(e)
     float exposure = 0;
-    /// Hdr gamma. @refl_uilimits(0.1,3) @refl_shortname(g)
+    /// Hdr gamma. @refl_uilimits(0.1f,3) @refl_shortname(g)
     float gamma = 2.2f;
     /// Hdr filmic tonemapping. @refl_shortname(F)
     bool filmic = false;
@@ -4967,24 +4923,12 @@ inline void visit(tonemap_params& val, Visitor&& visitor) {
     visitor(val.exposure, visit_var{"exposure", visit_var_type::value,
                               "Hdr exposure.", -10, 10, "e"});
     visitor(val.gamma,
-        visit_var{"gamma", visit_var_type::value, "Hdr gamma.", 0.1, 3, "g"});
+        visit_var{"gamma", visit_var_type::value, "Hdr gamma.", 0.1f, 3, "g"});
     visitor(val.filmic, visit_var{"filmic", visit_var_type::value,
                             "Hdr filmic tonemapping.", 0, 0, "F"});
 }
 
 // #codegen end reflgen-tonemap
-
-/// @}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// EXAMPLE IMAGES
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-/// @defgroup image_example Example images
-/// @{
 
 /// Make a grid image.
 image4b make_grid_image(int width, int height, int tile = 64,
@@ -5041,18 +4985,6 @@ image4b make_ridge_image(int resx, int resy, float scale = 1,
 /// Make a noise image. Wrap works only if both resx and resy are powers of two.
 image4b make_turbulence_image(int resx, int resy, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
-
-/// @}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// IMAGE LOADING/SAVING
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-/// @defgroup image_io Image loading and saving
-/// @{
 
 #if YGL_IMAGEIO
 
@@ -5140,11 +5072,11 @@ void resize_image(const image4b& img, image4b& res_img,
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
-// RAY-PRIMITIVE INTERSECTION FUNCTIONS
+// RAY INTERSECTION AND CLOSEST POINT FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// @defgroup intersect Ray-primitive intersection
+/// @defgroup intersect Ray intersection and closest point functions
 /// @{
 
 /// Intersect a ray with a point (approximate).
@@ -5177,18 +5109,6 @@ bool intersect_bbox(const ray3f& ray, const bbox3f& bbox);
 /// http://jcgt.org/published/0002/02/02/paper.pdf
 bool intersect_bbox(const ray3f& ray, const vec3f& ray_dinv,
     const vec3i& ray_dsign, const bbox3f& bbox);
-
-/// @}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// POINT-PRIMITIVE DISTANCE FUNCTIONS
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-/// @defgroup overlap Point-primitive overlap
-/// @{
 
 /// Check if a point overlaps a position within a max distance.
 bool overlap_point(
@@ -5414,15 +5334,15 @@ struct camera {
     frame3f frame = identity_frame3f;
     /// Orthographic camera.
     bool ortho = false;
-    /// Vertical field of view. @refl_uilimits(0.1,10)
+    /// Vertical field of view. @refl_uilimits(0.1f,10)
     float yfov = 2;
     /// Aspect ratio. @refl_uilimits(1,3)
     float aspect = 16.0f / 9.0f;
-    /// Focus distance. @refl_uilimits(0.01,1000)
+    /// Focus distance. @refl_uilimits(0.01f,1000)
     float focus = 1;
     /// Lens aperture. @refl_uilimits(0,5)
     float aperture = 0;
-    /// Near plane distance. @refl_uilimits(0.01,10)
+    /// Near plane distance. @refl_uilimits(0.01f,10)
     float near = 0.01f;
     /// Far plane distance. @refl_uilimits(10,10000)
     float far = 10000;
@@ -5615,7 +5535,7 @@ struct node {
     vec3f translation = zero3f;
     /// Rotation.
     quat4f rotation = {0, 0, 0, 1};
-    /// Scaling. @refl_uilimits(0.0001,1000)
+    /// Scaling. @refl_uilimits(0.001f,1000)
     vec3f scaling = {1, 1, 1};
     /// Weights for morphing.
     std::vector<float> weights = {};
@@ -5655,7 +5575,7 @@ struct animation {
     std::vector<vec3f> translation;
     /// Rotation.
     std::vector<quat4f> rotation;
-    /// Scaling. @refl_uilimits(0.0001,1000)
+    /// Scaling. @refl_uilimits(0.001f,1000)
     std::vector<vec3f> scaling;
     /// Weights for morphing.
     std::vector<std::vector<float>> weights;
@@ -6091,15 +6011,15 @@ inline void visit(camera& val, Visitor&& visitor) {
     visitor(val.ortho, visit_var{"ortho", visit_var_type::value,
                            "Orthographic camera.", 0, 0, ""});
     visitor(val.yfov, visit_var{"yfov", visit_var_type::value,
-                          "Vertical field of view.", 0.1, 10, ""});
+                          "Vertical field of view.", 0.1f, 10, ""});
     visitor(val.aspect,
         visit_var{"aspect", visit_var_type::value, "Aspect ratio.", 1, 3, ""});
     visitor(val.focus, visit_var{"focus", visit_var_type::value,
-                           "Focus distance.", 0.01, 1000, ""});
+                           "Focus distance.", 0.01f, 1000, ""});
     visitor(val.aperture, visit_var{"aperture", visit_var_type::value,
                               "Lens aperture.", 0, 5, ""});
     visitor(val.near, visit_var{"near", visit_var_type::value,
-                          "Near plane distance.", 0.01, 10, ""});
+                          "Near plane distance.", 0.01f, 10, ""});
     visitor(val.far, visit_var{"far", visit_var_type::value,
                          "Far plane distance.", 10, 10000, ""});
 }
@@ -6283,7 +6203,7 @@ inline void visit(node& val, Visitor&& visitor) {
     visitor(val.rotation,
         visit_var{"rotation", visit_var_type::value, "Rotation.", 0, 0, ""});
     visitor(val.scaling, visit_var{"scaling", visit_var_type::value, "Scaling.",
-                             0.0001, 1000, ""});
+                             0.001f, 1000, ""});
     visitor(val.weights, visit_var{"weights", visit_var_type::value,
                              "Weights for morphing.", 0, 0, ""});
     visitor(val.cam, visit_var{"cam", visit_var_type::reference,
@@ -6316,7 +6236,7 @@ inline void visit(animation& val, Visitor&& visitor) {
     visitor(val.rotation,
         visit_var{"rotation", visit_var_type::value, "Rotation.", 0, 0, ""});
     visitor(val.scaling, visit_var{"scaling", visit_var_type::value, "Scaling.",
-                             0.0001, 1000, ""});
+                             0.001f, 1000, ""});
     visitor(val.weights, visit_var{"weights", visit_var_type::value,
                              "Weights for morphing.", 0, 0, ""});
     visitor(val.targets, visit_var{"targets", visit_var_type::reference,
@@ -6420,7 +6340,7 @@ struct proc_camera {
     vec3f from = {0, 0, -1};
     /// To point. @refl_uilimits(-10,10)
     vec3f to = zero3f;
-    /// Field of view. @refl_uilimits(0.01,10)
+    /// Field of view. @refl_uilimits(0.01f,10)
     float yfov = 45 * pif / 180;
     /// Aspect ratio. @refl_uilimits(1,3)
     float aspect = 1;
@@ -6468,9 +6388,9 @@ struct proc_texture {
     int resolution = 512;
     /// Tile size for grid-like textures. @refl_uilimits(16,128)
     int tile_size = 64;
-    /// Noise scale for noise-like textures. @refl_uilimits(0.1,16)
+    /// Noise scale for noise-like textures. @refl_uilimits(0.1f,16)
     int noise_scale = 8;
-    /// Sun angle for sunsky-like textures. @refl_uilimits(0,1.57)
+    /// Sun angle for sunsky-like textures. @refl_uilimits(0,1.57f)
     float sky_sunangle = pif / 4;
     /// Convert to normal map.
     bool bump_to_normal = false;
@@ -6522,16 +6442,26 @@ enum struct proc_shape_type {
     quad,
     /// Cube (shared vertex, not watertight).
     cube,
+    /// Rounded cube (shared vertex, not watertight).
+    cube_rounded,
     /// Sphere (shared vertex, not watertight).
     sphere,
     /// Sphere with cube uvs (shared vertex, not watertight).
-    spherecube,
-    /// Spherized cube (shared vertex, not watertight).
-    spherizedcube,
+    sphere_cube,
     /// Geodesic sphere (shared vertex, watertight, no texcoord).
-    geosphere,
+    geodesic_sphere,
     /// Sphere with flipped cap (shared vertex, not watertight).
-    flipcapsphere,
+    sphere_flipcap,
+    /// Disk (shared vertex, not watertight).
+    disk,
+    /// Disk (shared vertex, not watertight).
+    disk_quad,
+    /// Disk (shared vertex, not watertight).
+    disk_bulged,
+    /// Cylinder (shared vertex, not watertight).
+    cylinder,
+    /// Rounded cylinder (shared vertex, not watertight).
+    cylinder_rounded,
     /// Suzanne (shared vertex, no texcoord).
     suzanne,
     /// Position-only cube (shared vertex).
@@ -6564,20 +6494,24 @@ struct proc_shape {
     std::string interior = "";
     /// Local frame. @refl_uilimits(-10,10)
     frame3f frame = identity_frame3f;
-    /// Level of shape tesselatation (-1 for default). @refl_uilimits(-1,10)
-    int tesselation = -1;
-    /// Level of shape tesselation for subdivision surfaces.
-    /// @refl_uilimits(-1,10)
+    /// Shape tesselation steps. @refl_uilimits(1,10000)
+    vec3i tesselation = {1, 1, 1};
+    /// Shape subdivision level. @refl_uilimits(0,10)
     int subdivision = 0;
-    /// Shape scale. @refl_uilimits(0.01,10)
-    float scale = 1;
-    /// Radius for points and lines. @refl_uilimits(0.0001,0.01)
-    float radius = -1;
+    /// Whether to use Catmull-Clark subdivision.
+    bool catmull_clark = false;
+    /// Shape size. @refl_uilimits(0.01f,10)
+    vec3f size = {1, 1, 1};
+    /// Texture size. @refl_uilimits(0.01f,10)
+    vec3f uvsize = {1, 1, 1};
+    /// Rounded radius. @refl_uilimits(0,10)
+    float rounded = 0;
+    /// Radius for points and lines. @refl_uilimits(0.001f,0.01f)
+    float radius = 0.001f;
     /// Faceted shape.
     bool faceted = false;
-    /// Number of elements for points and lines (-1 for default).
-    /// @refl_uilimits(-1,10000)
-    int num = -1;
+    /// Flip yz axis.
+    bool flip_yz = false;
     /// Hair generation params.
     make_hair_params hair_params = {};
 };
@@ -6795,11 +6729,16 @@ enum_names<proc_shape_type>() {
         {"floor", proc_shape_type::floor},
         {"quad", proc_shape_type::quad},
         {"cube", proc_shape_type::cube},
+        {"cube_rounded", proc_shape_type::cube_rounded},
         {"sphere", proc_shape_type::sphere},
-        {"spherecube", proc_shape_type::spherecube},
-        {"spherizedcube", proc_shape_type::spherizedcube},
-        {"geosphere", proc_shape_type::geosphere},
-        {"flipcapsphere", proc_shape_type::flipcapsphere},
+        {"sphere_cube", proc_shape_type::sphere_cube},
+        {"geodesic_sphere", proc_shape_type::geodesic_sphere},
+        {"sphere_flipcap", proc_shape_type::sphere_flipcap},
+        {"disk", proc_shape_type::disk},
+        {"disk_quad", proc_shape_type::disk_quad},
+        {"disk_bulged", proc_shape_type::disk_bulged},
+        {"cylinder", proc_shape_type::cylinder},
+        {"cylinder_rounded", proc_shape_type::cylinder_rounded},
         {"suzanne", proc_shape_type::suzanne},
         {"cubep", proc_shape_type::cubep},
         {"fvcube", proc_shape_type::fvcube},
@@ -6823,7 +6762,7 @@ inline void visit(proc_camera& val, Visitor&& visitor) {
     visitor(val.to,
         visit_var{"to", visit_var_type::value, "To point.", -10, 10, ""});
     visitor(val.yfov, visit_var{"yfov", visit_var_type::value, "Field of view.",
-                          0.01, 10, ""});
+                          0.01f, 10, ""});
     visitor(val.aspect,
         visit_var{"aspect", visit_var_type::value, "Aspect ratio.", 1, 3, ""});
 }
@@ -6842,10 +6781,10 @@ inline void visit(proc_texture& val, Visitor&& visitor) {
                            "Tile size for grid-like textures.", 16, 128, ""});
     visitor(val.noise_scale,
         visit_var{"noise_scale", visit_var_type::value,
-            "Noise scale for noise-like textures.", 0.1, 16, ""});
+            "Noise scale for noise-like textures.", 0.1f, 16, ""});
     visitor(val.sky_sunangle,
         visit_var{"sky_sunangle", visit_var_type::value,
-            "Sun angle for sunsky-like textures.", 0, 1.57, ""});
+            "Sun angle for sunsky-like textures.", 0, 1.57f, ""});
     visitor(
         val.bump_to_normal, visit_var{"bump_to_normal", visit_var_type::value,
                                 "Convert to normal map.", 0, 0, ""});
@@ -6888,23 +6827,27 @@ inline void visit(proc_shape& val, Visitor&& visitor) {
                               "Material name.", 0, 0, ""});
     visitor(val.interior, visit_var{"interior", visit_var_type::value,
                               "Interior material name.", 0, 0, ""});
-    visitor(val.tesselation,
-        visit_var{"tesselation", visit_var_type::value,
-            "Level of shape tesselatation (-1 for default).", -1, 10, ""});
-    visitor(val.subdivision,
-        visit_var{"subdivision", visit_var_type::value,
-            "Level of shape tesselation for subdivision surfaces.", -1, 10,
-            ""});
-    visitor(val.scale, visit_var{"scale", visit_var_type::value, "Shape scale.",
-                           0.01, 10, ""});
+    visitor(val.frame,
+        visit_var{"frame", visit_var_type::value, "Local frame.", -10, 10, ""});
+    visitor(val.tesselation, visit_var{"tesselation", visit_var_type::value,
+                                 "Shape tesselation steps.", 1, 10000, ""});
+    visitor(val.subdivision, visit_var{"subdivision", visit_var_type::value,
+                                 "Shape subdivision level.", 0, 10, ""});
+    visitor(val.catmull_clark,
+        visit_var{"catmull_clark", visit_var_type::value,
+            "Whether to use Catmull-Clark subdivision.", 0, 0, ""});
+    visitor(val.size,
+        visit_var{"size", visit_var_type::value, "Shape size.", 0.01f, 10, ""});
+    visitor(val.uvsize, visit_var{"uvsize", visit_var_type::value,
+                            "Texture size.", 0.01f, 10, ""});
+    visitor(val.rounded, visit_var{"rounded", visit_var_type::value,
+                             "Rounded radius.", 0, 10, ""});
     visitor(val.radius, visit_var{"radius", visit_var_type::value,
-                            "Radius for points and lines.", 0.0001, 0.01, ""});
+                            "Radius for points and lines.", 0.001f, 0.01f, ""});
     visitor(val.faceted, visit_var{"faceted", visit_var_type::value,
                              "Faceted shape.", 0, 0, ""});
-    visitor(val.num,
-        visit_var{"num", visit_var_type::value,
-            "Number of elements for points and lines (-1 for default).", -1,
-            10000, ""});
+    visitor(val.flip_yz,
+        visit_var{"flip_yz", visit_var_type::value, "Flip yz axis.", 0, 0, ""});
     visitor(val.hair_params, visit_var{"hair_params", visit_var_type::value,
                                  "Hair generation params.", 0, 0, ""});
 }
@@ -6940,7 +6883,7 @@ inline void visit(proc_node& val, Visitor&& visitor) {
     visitor(val.environment, visit_var{"environment", visit_var_type::value,
                                  "Environment.", 0, 0, ""});
     visitor(val.frame,
-        visit_var{"frame", visit_var_type::value, "Local frame.", 0, 0, ""});
+        visit_var{"frame", visit_var_type::value, "Local frame.", -10, 10, ""});
     visitor(val.translation, visit_var{"translation", visit_var_type::value,
                                  "Translation.", -10, 10, ""});
     visitor(val.rotation,
@@ -6991,6 +6934,17 @@ inline void visit(proc_scene& val, Visitor&& visitor) {
         visit_var{"nodes", visit_var_type::value, "Nodes.", 0, 0, ""});
     visitor(val.animations, visit_var{"animations", visit_var_type::value,
                                 "Animations.", 0, 0, ""});
+}
+
+/// Visit struct elements.
+template <typename Visitor>
+inline void visit(proc_split_scene& val, Visitor&& visitor) {
+    visitor(val.scn,
+        visit_var{"scn", visit_var_type::value, "Scene shapes.", 0, 0, ""});
+    visitor(val.views,
+        visit_var{"views", visit_var_type::value,
+            "Scene lights and cameras split into different configurations.", 0,
+            0, ""});
 }
 
 // #codegen end reflgen-proc-scene
@@ -10126,7 +10080,8 @@ struct gl_window {
 };
 
 /// Initialize a window.
-gl_window* make_window(int width, int height, const std::string& title, bool opengl4 = true);
+gl_window* make_window(
+    int width, int height, const std::string& title, bool opengl4 = true);
 
 /// Set window callbacks.
 void set_window_callbacks(gl_window* win, gl_text_callback text_cb,
@@ -10396,7 +10351,7 @@ inline bool draw_value_widget(gl_window* win, const std::string& lbl, int& val,
 }
 /// Generic widget used for templated code. Uses min and max,
 /// or a deafult range when their are the same. Color is ignored.
-template <typename T, int N>
+template <int N>
 inline bool draw_value_widget(gl_window* win, const std::string& lbl,
     vec<int, N>& val, float min = 0, float max = 0, bool color = false) {
     return (min != max) ?
