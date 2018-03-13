@@ -10126,7 +10126,7 @@ struct gl_window {
 };
 
 /// Initialize a window.
-gl_window* make_window(int width, int height, const std::string& title);
+gl_window* make_window(int width, int height, const std::string& title, bool opengl4 = true);
 
 /// Set window callbacks.
 void set_window_callbacks(gl_window* win, gl_text_callback text_cb,
