@@ -200,7 +200,7 @@ rotation we support axis-angle and quaternions, with slerp.</p>
 functions targeting path tracing and shape generations.</p>
 <ol>
 <li>Random number generation with PCG32:<ol>
-<li>initialize the random number generator with <code>init_rng()</code></li>
+<li>initialize the random number generator with <code>make_rng()</code></li>
 <li>advance the random number state with <code>advance_rng()</code></li>
 <li>if necessary, you can reseed the rng with <code>seed_rng()</code></li>
 <li>generate random integers in an interval with <code>next_rand1i()</code></li>
@@ -240,7 +240,11 @@ manipulation useful to support scene viewing and path tracing.</p>
    <code>compute_tangent_space()</code></li>
 <li>compute skinning with <code>compute_skinning()</code> and
    <code>compute_matrix_skinning()</code></li>
-<li>create shapes with <code>make_points()</code>, <code>make_lines()</code>, <code>make_uvgrid()</code></li>
+<li>create shapes with <code>make_cube()</code>, <code>make_sphere()</code>, <code>make_quad()</code>,
+   <code>make_fvcube()</code>, <code>make_hair()</code>, <code>make_suzanne()</code>, <code>make_lines()</code>,
+   <code>make_points()</code>, <code>make_sphere_cube()</code>, <code>make_cube_rounded()</code>,
+   <code>make_sphere_flipcap()</code>, <code>make_cylinder()</code>, <code>make_cylinder_rounded()</code>,
+   <code>make_disk()</code>, <code>make_cylinder_side()</code></li>
 <li>merge element with <code>marge_lines()</code>, <code>marge_triangles()</code>, <code>marge_quads()</code></li>
 <li>facet elements with <code>facet_lines()</code>, <code>facet_triangles()</code>, <code>facet_quads()</code></li>
 <li>shape sampling with <code>sample_points()</code>, <code>sample_lines()</code>,
@@ -254,9 +258,6 @@ manipulation useful to support scene viewing and path tracing.</p>
 <li>subdivide elements by edge splits with <code>subdivide_lines()</code>,
     <code>subdivide_triangles()</code>, <code>subdivide_quads()</code>, <code>subdivide_beziers()</code></li>
 <li>Catmull-Clark subdivision surface with <code>subdivide_catmullclark()</code></li>
-<li>example shapes: <code>make_cube()</code>, <code>make_uvsphere()</code>, <code>make_uvhemisphere()</code>,
-    <code>make_uvquad()</code>, <code>make_uvcube()</code>, <code>make_fvcube()</code>, <code>make_hair()</code>,
-    <code>make_suzanne()</code></li>
 </ol>
 <p><a id="toc9"></a></p>
 <h3>Animation utilities</h3>

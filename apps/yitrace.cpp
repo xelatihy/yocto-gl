@@ -133,11 +133,12 @@ bool update(ygl::gl_window* win, app_state* app) {
 
         ygl::trace_async_start(app->scn, app->cam, app->bvh, app->lights,
             app->img, app->pixels, app->async_threads, app->async_stop,
-                               app->params, [win,app](int s,int j){
-                                   if(!j || !(j % app->params.preview_resolution)) app->update_texture = true;
-                               });
+            app->params, [win, app](int s, int j) {
+                if (!j || !(j % app->params.preview_resolution))
+                    app->update_texture = true;
+            });
     }
-    if(app->update_texture) {
+    if (app->update_texture) {
         ygl::update_texture(app->trace_texture, app->img);
         app->update_texture = false;
         return true;
@@ -166,8 +167,8 @@ void run_ui(app_state* app) {
         if (app->cam == app->view) {
             if (ygl::handle_camera_navigation(
                     win, app->view, app->navigation_fps)) {
-                        app->update_list.push_back(app->view);
-                    }
+                app->update_list.push_back(app->view);
+            }
         }
         ygl::handle_scene_selection(win, app->scn, app->cam, app->bvh,
             app->params.resolution, app->imparams, app->selection);

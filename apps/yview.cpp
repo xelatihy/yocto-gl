@@ -216,7 +216,7 @@ void run_ui(app_state* app) {
         }
 
         // event hadling
-        if(ygl::get_mouse_button(win) || ygl::get_widget_active(win))
+        if (ygl::get_mouse_button(win) || ygl::get_widget_active(win))
             ygl::poll_events(win);
         else
             ygl::wait_events(win);

@@ -872,34 +872,6 @@ void make_quads_uv(std::vector<vec4i>& quads, std::vector<vec2f>& uv,
     }
 }
 
-// Generate parametric num lines of usteps segments.
-void make_lines_uv(
-    std::vector<vec2i>& lines, std::vector<vec2f>& uv, int num, int usteps) {
-    auto vid = [usteps](int i, int j) { return j * (usteps + 1) + i; };
-    uv = std::vector<vec2f>((usteps + 1) * num);
-    for (auto j = 0; j < num; j++) {
-        for (auto i = 0; i <= usteps; i++) {
-            uv[vid(i, j)] = {i / (float)usteps, j / (float)num};
-        }
-    }
-
-    lines = std::vector<vec2i>(usteps * num);
-    for (int j = 0; j < num; j++) {
-        for (int i = 0; i < usteps; i++) {
-            lines[j * usteps + i] = {vid(i, j), vid(i + 1, j)};
-        }
-    }
-}
-
-// Generate a parametric point set. Mostly here for completeness.
-void make_points_uv(std::vector<int>& points, std::vector<vec2f>& uv, int num) {
-    uv = std::vector<vec2f>(num);
-    for (auto i = 0; i < num; i++) { uv[i] = {i / (float)num, 0}; }
-
-    points = std::vector<int>(num);
-    for (auto i = 0; i < num; i++) points[i] = i;
-}
-
 // Subdivide lines.
 template <typename T>
 void subdivide_lines(
@@ -1185,31 +1157,45 @@ void subdivide_catmullclark(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
 }
 
 // Merge lines between shapes.
-inline void merge_lines(
-    std::vector<vec2i>& lines, const std::vector<vec2i>& lines1) {
-    auto nverts = 0;
-    for (auto& l : lines) nverts = max(nverts, max_element(l));
+void merge_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    const std::vector<vec2i>& lines1, const std::vector<vec3f>& pos1,
+    const std::vector<vec3f>& norm1, const std::vector<vec2f>& texcoord1) {
+    lines.reserve(lines.size() + lines1.size());
+    auto nverts = (int)pos.size();
     for (auto& l : lines1) lines.push_back({l.x + nverts, l.y + nverts});
+    append(pos, pos1);
+    append(norm, norm1);
+    append(texcoord, texcoord1);
 }
-// Merge triangles between shapes. The elements are merged by increasing the
-// array size of the second array by the number of vertices of the first.
-// Vertex data can then be concatenated successfully.
-void merge_triangles(
-    std::vector<vec3i>& triangles, const std::vector<vec3i>& triangles1) {
-    auto nverts = 0;
-    for (auto& t : triangles) nverts = max(nverts, max_element(t));
+
+// Merge triangles between shapes.
+void merge_triangles(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    const std::vector<vec3i>& triangles1, const std::vector<vec3f>& pos1,
+    const std::vector<vec3f>& norm1, const std::vector<vec2f>& texcoord1) {
+    triangles.reserve(triangles.size() + triangles1.size());
+    auto nverts = (int)pos.size();
     for (auto& t : triangles1)
         triangles.push_back({t.x + nverts, t.y + nverts, t.z + nverts});
+    append(pos, pos1);
+    append(norm, norm1);
+    append(texcoord, texcoord1);
 }
-// Merge quads between shapes. The elements are merged by increasing the
-// array size of the second array by the number of vertices of the first.
-// Vertex data can then be concatenated successfully.
-void merge_quads(std::vector<vec4i>& quads, const std::vector<vec4i>& quads1) {
-    auto nverts = 0;
-    for (auto& q : quads) nverts = max(nverts, max_element(q));
+
+// Merge quads between shapes.
+void merge_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    const std::vector<vec4i>& quads1, const std::vector<vec3f>& pos1,
+    const std::vector<vec3f>& norm1, const std::vector<vec2f>& texcoord1) {
+    quads.reserve(quads.size() + quads1.size());
+    auto nverts = (int)pos.size();
     for (auto& q : quads1)
         quads.push_back(
             {q.x + nverts, q.y + nverts, q.z + nverts, q.w + nverts});
+    append(pos, pos1);
+    append(norm, norm1);
+    append(texcoord, texcoord1);
 }
 
 // Duplicate vertex data for each line index, giving a faceted look.
@@ -1310,13 +1296,6 @@ void facet_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     facet_quads(quads, pos);
 }
 
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF SHAPE SAMPLING
-// -----------------------------------------------------------------------------
-namespace ygl {
-
 // Samples a set of points over a triangle mesh uniformly. The rng function
 // takes the point index and returns vec3f numbers uniform directibuted in
 // [0,1]^3. unorm and texcoord are optional.
@@ -1328,7 +1307,7 @@ sample_triangles_points(const std::vector<vec3i>& triangles,
     auto sampled_norm = std::vector<vec3f>(norm.empty() ? 0 : npoints);
     auto sampled_texcoord = std::vector<vec2f>(texcoord.empty() ? 0 : npoints);
     auto dst = make_triangle_distribution(triangles, pos);
-    auto rng = init_rng(seed);
+    auto rng = make_rng(seed);
     for (auto i = 0; i < npoints; i++) {
         auto eid = 0;
         auto euv = zero2f;
@@ -1346,6 +1325,1006 @@ sample_triangles_points(const std::vector<vec3i>& triangles,
     }
 
     return {sampled_pos, sampled_norm, sampled_texcoord};
+}
+
+// Make a quad.
+void make_quad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
+    const vec2f& size, const vec2f& uvsize) {
+    auto nverts = (steps.x + 1) * (steps.y + 1);
+    auto nfaces = steps.x * steps.y;
+    auto vid = [steps](int i, int j) { return j * (steps.x + 1) + i; };
+    auto fid = [steps](int i, int j) { return j * steps.x + i; };
+
+    pos.resize(nverts);
+    norm.resize(nverts);
+    texcoord.resize(nverts);
+    for (auto j = 0; j <= steps.y; j++) {
+        for (auto i = 0; i <= steps.x; i++) {
+            auto uv = vec2f{i / (float)steps.x, j / (float)steps.y};
+            pos[vid(i, j)] = {
+                (uv.x - 0.5f) * size.x, (uv.y - 0.5f) * size.y, 0};
+            norm[vid(i, j)] = {0, 0, 1};
+            texcoord[vid(i, j)] = uv * uvsize;
+        }
+    }
+
+    quads.resize(nfaces);
+    for (auto j = 0; j < steps.y; j++) {
+        for (auto i = 0; i < steps.x; i++) {
+            quads[fid(i, j)] = {
+                vid(i, j), vid(i + 1, j), vid(i + 1, j + 1), vid(i, j + 1)};
+        }
+    }
+}
+
+// Make a cube.
+void make_cube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
+    const vec3f& size, const vec3f& uvsize) {
+    std::vector<vec4i> qquads;
+    std::vector<vec3f> qpos;
+    std::vector<vec3f> qnorm;
+    std::vector<vec2f> qtexcoord;
+
+    quads.clear();
+    pos.clear();
+    norm.clear();
+    texcoord.clear();
+
+    // +z
+    make_quad(qquads, qpos, qnorm, qtexcoord, {steps.x, steps.y},
+        {size.x, size.y}, {uvsize.x, uvsize.y});
+    for (auto i = 0; i < qpos.size(); i++) {
+        qpos[i] = {qpos[i].x, qpos[i].y, size.z / 2};
+        qnorm[i] = {0, 0, 1};
+    }
+    merge_quads(quads, pos, norm, texcoord, qquads, qpos, qnorm, qtexcoord);
+    // -z
+    make_quad(qquads, qpos, qnorm, qtexcoord, {steps.x, steps.y},
+        {size.x, size.y}, {uvsize.x, uvsize.y});
+    for (auto i = 0; i < qpos.size(); i++) {
+        qpos[i] = {-qpos[i].x, qpos[i].y, -size.z / 2};
+        qnorm[i] = {0, 0, -1};
+    }
+    merge_quads(quads, pos, norm, texcoord, qquads, qpos, qnorm, qtexcoord);
+    // +x
+    make_quad(qquads, qpos, qnorm, qtexcoord, {steps.z, steps.y},
+        {size.z, size.y}, {uvsize.z, uvsize.y});
+    for (auto i = 0; i < qpos.size(); i++) {
+        qpos[i] = {size.x / 2, qpos[i].y, -qpos[i].x};
+        qnorm[i] = {1, 0, 0};
+    }
+    merge_quads(quads, pos, norm, texcoord, qquads, qpos, qnorm, qtexcoord);
+    // -x
+    make_quad(qquads, qpos, qnorm, qtexcoord, {steps.z, steps.y},
+        {size.z, size.y}, {uvsize.z, uvsize.y});
+    for (auto i = 0; i < qpos.size(); i++) {
+        qpos[i] = {-size.x / 2, qpos[i].y, qpos[i].x};
+        qnorm[i] = {-1, 0, 0};
+    }
+    merge_quads(quads, pos, norm, texcoord, qquads, qpos, qnorm, qtexcoord);
+    // +y
+    make_quad(qquads, qpos, qnorm, qtexcoord, {steps.x, steps.y},
+        {size.x, size.y}, {uvsize.x, uvsize.y});
+    for (auto i = 0; i < qpos.size(); i++) {
+        qpos[i] = {qpos[i].x, size.y / 2, -qpos[i].y};
+        qnorm[i] = {0, 1, 0};
+    }
+    merge_quads(quads, pos, norm, texcoord, qquads, qpos, qnorm, qtexcoord);
+    // +y
+    make_quad(qquads, qpos, qnorm, qtexcoord, {steps.x, steps.y},
+        {size.x, size.y}, {uvsize.x, uvsize.y});
+    for (auto i = 0; i < qpos.size(); i++) {
+        qpos[i] = {qpos[i].x, -size.y / 2, qpos[i].y};
+        qnorm[i] = {0, -1, 0};
+    }
+    merge_quads(quads, pos, norm, texcoord, qquads, qpos, qnorm, qtexcoord);
+}
+
+// Make a rounded cube.
+void make_cube_rounded(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
+    const vec3f& size, const vec3f& uvsize, float radius) {
+    make_cube(quads, pos, norm, texcoord, steps, size, uvsize);
+    auto c = size / 2 - vec3f{radius, radius, radius};
+    for (auto i = 0; i < pos.size(); i++) {
+        auto pc = vec3f{abs(pos[i].x), abs(pos[i].y), abs(pos[i].z)};
+        auto ps = vec3f{pos[i].x < 0 ? -1.0f : 1.0f,
+            pos[i].y < 0 ? -1.0f : 1.0f, pos[i].z < 0 ? -1.0f : 1.0f};
+        if (pc.x >= c.x && pc.y >= c.y && pc.z >= c.z) {
+            auto pn = normalize(pc - c);
+            pos[i] = c + radius * pn;
+            norm[i] = pn;
+        } else if (pc.x >= c.x && pc.y >= c.y) {
+            auto pn = normalize((pc - c) * vec3f{1, 1, 0});
+            pos[i] = {c.x + radius * pn.x, c.y + radius * pn.y, pc.z};
+            norm[i] = pn;
+        } else if (pc.x >= c.x && pc.z >= c.z) {
+            auto pn = normalize((pc - c) * vec3f{1, 0, 1});
+            pos[i] = {c.x + radius * pn.x, pc.y, c.z + radius * pn.z};
+            norm[i] = pn;
+        } else if (pc.y >= c.y && pc.z >= c.z) {
+            auto pn = normalize((pc - c) * vec3f{0, 1, 1});
+            pos[i] = {pc.x, c.y + radius * pn.y, c.z + radius * pn.z};
+            norm[i] = pn;
+        } else {
+            continue;
+        }
+        pos[i] *= ps;
+        norm[i] *= ps;
+    }
+}
+
+// Make a sphere.
+void make_sphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
+    float size, const vec2f& uvsize) {
+    make_quad(quads, pos, norm, texcoord, steps, {1, 1}, {1, 1});
+    for (auto i = 0; i < pos.size(); i++) {
+        auto uv = texcoord[i];
+        auto a = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
+        auto p = vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
+        pos[i] = p * (size / 2);
+        norm[i] = normalize(p);
+        texcoord[i] = uv * uvsize;
+    }
+}
+
+// Make a spherecube.
+void make_sphere_cube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int steps,
+    float size, float uvsize) {
+    make_cube(quads, pos, norm, texcoord, {steps, steps, steps}, {1, 1, 1},
+        {uvsize, uvsize, uvsize});
+    for (auto i = 0; i < pos.size(); i++) {
+        auto p = pos[i];
+        pos[i] = normalize(p) * (size / 2);
+        norm[i] = normalize(p);
+    }
+}
+
+// Make a flipped sphere. This is not watertight.
+void make_sphere_flipcap(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
+    float size, const vec2f& uvsize, const vec2f& zflip) {
+    make_sphere(quads, pos, norm, texcoord, steps, size, uvsize);
+    for (auto i = 0; i < pos.size(); i++) {
+        if (pos[i].z > zflip.y) {
+            pos[i].z = 2 * zflip.y - pos[i].z;
+            norm[i].x = -norm[i].x;
+            norm[i].y = -norm[i].y;
+        } else if (pos[i].z < zflip.x) {
+            pos[i].z = 2 * zflip.x - pos[i].z;
+            norm[i].x = -norm[i].x;
+            norm[i].y = -norm[i].y;
+        }
+    }
+}
+
+// Make a disk.
+void make_disk(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
+    float size, const vec2f& uvsize) {
+    make_quad(quads, pos, norm, texcoord, steps, {1, 1}, {1, 1});
+    for (auto i = 0; i < pos.size(); i++) {
+        auto uv = texcoord[i];
+        auto phi = 2 * pif * uv.x;
+        pos[i] = {cos(phi) * uv.y * size / 2, sin(phi) * uv.y * size / 2, 0};
+        norm[i] = {0, 0, 1};
+        texcoord[i] = uv * uvsize;
+    }
+}
+
+// Make a disk from a quad.
+void make_disk_quad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int steps,
+    float size, float uvsize) {
+    make_quad(quads, pos, norm, texcoord, {steps, steps}, {2, 2}, {uvsize,uvsize});
+    for (auto i = 0; i < pos.size(); i++) {
+        auto uv = cartesian_to_elliptical(vec2f{pos[i].x,pos[i].y}) * size/2;
+        pos[i] = {uv.x, uv.y, 0};
+    }
+}
+
+// Make a bulged disk from a quad.
+void make_disk_bulged(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+                      std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int steps,
+                      float size, float uvsize, float height) {
+    make_disk_quad(quads, pos, norm, texcoord, steps, size, uvsize);
+    if(height == 0) return;
+    auto radius = (size*size/4 + height*height) / (2 * height);
+    auto center = vec3f{0,0,-radius+height};
+    for (auto i = 0; i < pos.size(); i++) {
+        auto pn = normalize(pos[i] - center);
+        pos[i] = center + pn * radius;
+        norm[i] = pn;
+    }
+}
+
+// Make a cylinder (side-only).
+void make_cylinder_side(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
+    const vec2f& size, const vec2f& uvsize) {
+    make_quad(quads, pos, norm, texcoord, steps, {1, 1}, {1, 1});
+    for (auto i = 0; i < pos.size(); i++) {
+        auto uv = texcoord[i];
+        auto phi = 2 * pif * uv.x;
+        pos[i] = {cos(phi) * size.x / 2, sin(phi) * size.x / 2,
+            (uv.y - 0.5f) * size.y};
+        norm[i] = {cos(phi), sin(phi), 0};
+        texcoord[i] = uv * uvsize;
+    }
+}
+
+// Make a cylinder.
+void make_cylinder(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
+    const vec2f& size, const vec3f& uvsize) {
+    std::vector<vec4i> qquads;
+    std::vector<vec3f> qpos;
+    std::vector<vec3f> qnorm;
+    std::vector<vec2f> qtexcoord;
+
+    quads.clear();
+    pos.clear();
+    norm.clear();
+    texcoord.clear();
+
+    // side
+    make_cylinder_side(qquads, qpos, qnorm, qtexcoord, {steps.x, steps.y},
+        {size.x, size.y}, {uvsize.x, uvsize.y});
+    merge_quads(quads, pos, norm, texcoord, qquads, qpos, qnorm, qtexcoord);
+    // top
+    make_disk(qquads, qpos, qnorm, qtexcoord, {steps.x, steps.z}, size.x,
+        {uvsize.x, uvsize.z});
+    for (auto i = 0; i < qpos.size(); i++) { qpos[i].z = size.y / 2; }
+    merge_quads(quads, pos, norm, texcoord, qquads, qpos, qnorm, qtexcoord);
+    // bottom
+    make_disk(qquads, qpos, qnorm, qtexcoord, {steps.x, steps.z}, size.x,
+        {uvsize.x, uvsize.z});
+    for (auto i = 0; i < qpos.size(); i++) {
+        qpos[i].z = -size.y / 2;
+        qnorm[i] = -qnorm[i];
+    }
+    for (auto i = 0; i < qquads.size(); i++)
+        std::swap(qquads[i].x, qquads[i].z);
+    merge_quads(quads, pos, norm, texcoord, qquads, qpos, qnorm, qtexcoord);
+}
+
+// Make a rounded cylinder.
+void make_cylinder_rounded(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
+    const vec2f& size, const vec3f& uvsize, float radius) {
+    make_cylinder(quads, pos, norm, texcoord, steps, size, uvsize);
+    auto c = size / 2 - vec2f{radius, radius};
+    for (auto i = 0; i < pos.size(); i++) {
+        auto pcyl = cartesian_to_cylindrical(pos[i]);
+        auto pc = vec2f{pcyl.y, abs(pcyl.z)};
+        auto pp = pcyl.x;
+        auto ps = (pcyl.z < 0) ? -1.0f : 1.0f;
+        if (pc.x >= c.x && pc.y >= c.y) {
+            auto pn = normalize(pc - c);
+            pos[i] = cylindrical_to_cartesian(
+                vec3f{pp, c.x + radius * pn.x, ps * (c.y + radius * pn.y)});
+            norm[i] = cylindrical_to_cartesian(vec3f{pp, pn.x, ps * pn.y});
+        } else {
+            continue;
+        }
+    }
+}
+
+// Make a geodesic sphere.
+void make_geodesic_sphere(
+    std::vector<vec3i>& triangles, std::vector<vec3f>& pos, int tesselation) {
+    // https://stackoverflow.com/questions/17705621/algorithm-for-a-geodesic-sphere
+    const float X = 0.525731112119133606f;
+    const float Z = 0.850650808352039932f;
+    pos = std::vector<vec3f>{{-X, 0.0, Z}, {X, 0.0, Z}, {-X, 0.0, -Z},
+        {X, 0.0, -Z}, {0.0, Z, X}, {0.0, Z, -X}, {0.0, -Z, X}, {0.0, -Z, -X},
+        {Z, X, 0.0}, {-Z, X, 0.0}, {Z, -X, 0.0}, {-Z, -X, 0.0}};
+    triangles = std::vector<vec3i>{{0, 1, 4}, {0, 4, 9}, {9, 4, 5}, {4, 8, 5},
+        {4, 1, 8}, {8, 1, 10}, {8, 10, 3}, {5, 8, 3}, {5, 3, 2}, {2, 3, 7},
+        {7, 3, 10}, {7, 10, 6}, {7, 6, 11}, {11, 6, 0}, {0, 6, 1}, {6, 10, 1},
+        {9, 11, 0}, {9, 2, 11}, {9, 5, 2}, {7, 11, 2}};
+    for (auto l = 0; l < max(0, tesselation - 2); l++)
+        subdivide_triangles(triangles, pos);
+    for (auto& p : pos) p = normalize(p);
+}
+
+// Make a cube with unique vertices. This is watertight but has no
+// texture coordinates or normals.
+void make_cube(
+    std::vector<vec4i>& quads, std::vector<vec3f>& pos, int tesselation) {
+    pos = std::vector<vec3f>{{-1, -1, -1}, {-1, +1, -1}, {+1, +1, -1},
+        {+1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {+1, +1, +1}, {+1, -1, +1}};
+    quads = std::vector<vec4i>{{0, 1, 2, 3}, {7, 6, 5, 4}, {4, 5, 1, 0},
+        {6, 7, 3, 2}, {2, 1, 5, 6}, {0, 3, 7, 4}};
+
+    for (auto l = 0; l < tesselation; l++) subdivide_quads(quads, pos);
+}
+
+// Make a facevarying cube with unique vertices but different texture
+// coordinates.
+void make_fvcube(std::vector<vec4i>& quads_pos, std::vector<vec3f>& pos,
+    std::vector<vec4i>& quads_norm, std::vector<vec3f>& norm,
+    std::vector<vec4i>& quads_texcoord, std::vector<vec2f>& texcoord,
+    int tesselation) {
+    pos = std::vector<vec3f>{{-1, -1, -1}, {-1, +1, -1}, {+1, +1, -1},
+        {+1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {+1, +1, +1}, {+1, -1, +1}};
+    quads_pos = std::vector<vec4i>{{0, 1, 2, 3}, {7, 6, 5, 4}, {4, 5, 1, 0},
+        {6, 7, 3, 2}, {2, 1, 5, 6}, {0, 3, 7, 4}};
+    norm = std::vector<vec3f>{{0, 0, -1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1},
+        {0, 0, +1}, {0, 0, +1}, {0, 0, +1}, {0, 0, +1}, {-1, 0, 0}, {-1, 0, 0},
+        {-1, 0, 0}, {-1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0},
+        {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, -1, 0}, {0, -1, 0},
+        {0, -1, 0}, {0, -1, 0}};
+    quads_norm = std::vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7}, {8, 9, 10, 11},
+        {12, 13, 14, 15}, {16, 17, 18, 19}, {20, 21, 22, 23}};
+    texcoord = std::vector<vec2f>{{0, 0}, {1, 0}, {1, 1}, {0, 1}, {0, 0},
+        {1, 0}, {1, 1}, {0, 1}, {0, 0}, {1, 0}, {1, 1}, {0, 1}, {0, 0}, {1, 0},
+        {1, 1}, {0, 1}, {0, 0}, {1, 0}, {1, 1}, {0, 1}, {0, 0}, {1, 0}, {1, 1},
+        {0, 1}};
+    quads_texcoord = std::vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
+        {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19}, {20, 21, 22, 23}};
+
+    for (auto l = 0; l < tesselation; l++) {
+        subdivide_quads(quads_pos, pos);
+        subdivide_quads(quads_norm, norm);
+        subdivide_quads(quads_texcoord, texcoord);
+    }
+}
+
+// Make a facevarying sphere with unique vertices but different texture
+// coordinates.
+void make_fvsphere(std::vector<vec4i>& quads_pos, std::vector<vec3f>& pos,
+    std::vector<vec4i>& quads_norm, std::vector<vec3f>& norm,
+    std::vector<vec4i>& quads_texcoord, std::vector<vec2f>& texcoord,
+    int tesselation) {
+    log_error("fix implementation");
+#if 0
+    make_quads(quads_pos, pos, pow2(tesselation + 2), pow2(tesselation + 1),
+        [](auto uv) {
+            auto a = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
+            return vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
+        },
+        true, false, true, true);
+    make_quads(quads_norm, norm, pow2(tesselation + 2), pow2(tesselation + 1),
+        [](auto uv) {
+            auto a = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
+            return vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
+        },
+        true, false, true, true);
+    make_quads(quads_texcoord, texcoord, pow2(tesselation + 2),
+        pow2(tesselation + 1), [](auto uv) { return uv; });
+#endif
+}
+
+// Make a suzanne monkey model for testing. Note that some quads are
+// degenerate.
+void make_suzanne(
+    std::vector<vec4i>& quads, std::vector<vec3f>& pos, int tesselation) {
+    static auto suzanne_pos = std::vector<vec3f>{{0.4375, 0.1640625, 0.765625},
+        {-0.4375, 0.1640625, 0.765625}, {0.5, 0.09375, 0.6875},
+        {-0.5, 0.09375, 0.6875}, {0.546875, 0.0546875, 0.578125},
+        {-0.546875, 0.0546875, 0.578125}, {0.3515625, -0.0234375, 0.6171875},
+        {-0.3515625, -0.0234375, 0.6171875}, {0.3515625, 0.03125, 0.71875},
+        {-0.3515625, 0.03125, 0.71875}, {0.3515625, 0.1328125, 0.78125},
+        {-0.3515625, 0.1328125, 0.78125}, {0.2734375, 0.1640625, 0.796875},
+        {-0.2734375, 0.1640625, 0.796875}, {0.203125, 0.09375, 0.7421875},
+        {-0.203125, 0.09375, 0.7421875}, {0.15625, 0.0546875, 0.6484375},
+        {-0.15625, 0.0546875, 0.6484375}, {0.078125, 0.2421875, 0.65625},
+        {-0.078125, 0.2421875, 0.65625}, {0.140625, 0.2421875, 0.7421875},
+        {-0.140625, 0.2421875, 0.7421875}, {0.2421875, 0.2421875, 0.796875},
+        {-0.2421875, 0.2421875, 0.796875}, {0.2734375, 0.328125, 0.796875},
+        {-0.2734375, 0.328125, 0.796875}, {0.203125, 0.390625, 0.7421875},
+        {-0.203125, 0.390625, 0.7421875}, {0.15625, 0.4375, 0.6484375},
+        {-0.15625, 0.4375, 0.6484375}, {0.3515625, 0.515625, 0.6171875},
+        {-0.3515625, 0.515625, 0.6171875}, {0.3515625, 0.453125, 0.71875},
+        {-0.3515625, 0.453125, 0.71875}, {0.3515625, 0.359375, 0.78125},
+        {-0.3515625, 0.359375, 0.78125}, {0.4375, 0.328125, 0.765625},
+        {-0.4375, 0.328125, 0.765625}, {0.5, 0.390625, 0.6875},
+        {-0.5, 0.390625, 0.6875}, {0.546875, 0.4375, 0.578125},
+        {-0.546875, 0.4375, 0.578125}, {0.625, 0.2421875, 0.5625},
+        {-0.625, 0.2421875, 0.5625}, {0.5625, 0.2421875, 0.671875},
+        {-0.5625, 0.2421875, 0.671875}, {0.46875, 0.2421875, 0.7578125},
+        {-0.46875, 0.2421875, 0.7578125}, {0.4765625, 0.2421875, 0.7734375},
+        {-0.4765625, 0.2421875, 0.7734375}, {0.4453125, 0.3359375, 0.78125},
+        {-0.4453125, 0.3359375, 0.78125}, {0.3515625, 0.375, 0.8046875},
+        {-0.3515625, 0.375, 0.8046875}, {0.265625, 0.3359375, 0.8203125},
+        {-0.265625, 0.3359375, 0.8203125}, {0.2265625, 0.2421875, 0.8203125},
+        {-0.2265625, 0.2421875, 0.8203125}, {0.265625, 0.15625, 0.8203125},
+        {-0.265625, 0.15625, 0.8203125}, {0.3515625, 0.2421875, 0.828125},
+        {-0.3515625, 0.2421875, 0.828125}, {0.3515625, 0.1171875, 0.8046875},
+        {-0.3515625, 0.1171875, 0.8046875}, {0.4453125, 0.15625, 0.78125},
+        {-0.4453125, 0.15625, 0.78125}, {0.0, 0.4296875, 0.7421875},
+        {0.0, 0.3515625, 0.8203125}, {0.0, -0.6796875, 0.734375},
+        {0.0, -0.3203125, 0.78125}, {0.0, -0.1875, 0.796875},
+        {0.0, -0.7734375, 0.71875}, {0.0, 0.40625, 0.6015625},
+        {0.0, 0.5703125, 0.5703125}, {0.0, 0.8984375, -0.546875},
+        {0.0, 0.5625, -0.8515625}, {0.0, 0.0703125, -0.828125},
+        {0.0, -0.3828125, -0.3515625}, {0.203125, -0.1875, 0.5625},
+        {-0.203125, -0.1875, 0.5625}, {0.3125, -0.4375, 0.5703125},
+        {-0.3125, -0.4375, 0.5703125}, {0.3515625, -0.6953125, 0.5703125},
+        {-0.3515625, -0.6953125, 0.5703125}, {0.3671875, -0.890625, 0.53125},
+        {-0.3671875, -0.890625, 0.53125}, {0.328125, -0.9453125, 0.5234375},
+        {-0.328125, -0.9453125, 0.5234375}, {0.1796875, -0.96875, 0.5546875},
+        {-0.1796875, -0.96875, 0.5546875}, {0.0, -0.984375, 0.578125},
+        {0.4375, -0.140625, 0.53125}, {-0.4375, -0.140625, 0.53125},
+        {0.6328125, -0.0390625, 0.5390625}, {-0.6328125, -0.0390625, 0.5390625},
+        {0.828125, 0.1484375, 0.4453125}, {-0.828125, 0.1484375, 0.4453125},
+        {0.859375, 0.4296875, 0.59375}, {-0.859375, 0.4296875, 0.59375},
+        {0.7109375, 0.484375, 0.625}, {-0.7109375, 0.484375, 0.625},
+        {0.4921875, 0.6015625, 0.6875}, {-0.4921875, 0.6015625, 0.6875},
+        {0.3203125, 0.7578125, 0.734375}, {-0.3203125, 0.7578125, 0.734375},
+        {0.15625, 0.71875, 0.7578125}, {-0.15625, 0.71875, 0.7578125},
+        {0.0625, 0.4921875, 0.75}, {-0.0625, 0.4921875, 0.75},
+        {0.1640625, 0.4140625, 0.7734375}, {-0.1640625, 0.4140625, 0.7734375},
+        {0.125, 0.3046875, 0.765625}, {-0.125, 0.3046875, 0.765625},
+        {0.203125, 0.09375, 0.7421875}, {-0.203125, 0.09375, 0.7421875},
+        {0.375, 0.015625, 0.703125}, {-0.375, 0.015625, 0.703125},
+        {0.4921875, 0.0625, 0.671875}, {-0.4921875, 0.0625, 0.671875},
+        {0.625, 0.1875, 0.6484375}, {-0.625, 0.1875, 0.6484375},
+        {0.640625, 0.296875, 0.6484375}, {-0.640625, 0.296875, 0.6484375},
+        {0.6015625, 0.375, 0.6640625}, {-0.6015625, 0.375, 0.6640625},
+        {0.4296875, 0.4375, 0.71875}, {-0.4296875, 0.4375, 0.71875},
+        {0.25, 0.46875, 0.7578125}, {-0.25, 0.46875, 0.7578125},
+        {0.0, -0.765625, 0.734375}, {0.109375, -0.71875, 0.734375},
+        {-0.109375, -0.71875, 0.734375}, {0.1171875, -0.8359375, 0.7109375},
+        {-0.1171875, -0.8359375, 0.7109375}, {0.0625, -0.8828125, 0.6953125},
+        {-0.0625, -0.8828125, 0.6953125}, {0.0, -0.890625, 0.6875},
+        {0.0, -0.1953125, 0.75}, {0.0, -0.140625, 0.7421875},
+        {0.1015625, -0.1484375, 0.7421875}, {-0.1015625, -0.1484375, 0.7421875},
+        {0.125, -0.2265625, 0.75}, {-0.125, -0.2265625, 0.75},
+        {0.0859375, -0.2890625, 0.7421875}, {-0.0859375, -0.2890625, 0.7421875},
+        {0.3984375, -0.046875, 0.671875}, {-0.3984375, -0.046875, 0.671875},
+        {0.6171875, 0.0546875, 0.625}, {-0.6171875, 0.0546875, 0.625},
+        {0.7265625, 0.203125, 0.6015625}, {-0.7265625, 0.203125, 0.6015625},
+        {0.7421875, 0.375, 0.65625}, {-0.7421875, 0.375, 0.65625},
+        {0.6875, 0.4140625, 0.7265625}, {-0.6875, 0.4140625, 0.7265625},
+        {0.4375, 0.546875, 0.796875}, {-0.4375, 0.546875, 0.796875},
+        {0.3125, 0.640625, 0.8359375}, {-0.3125, 0.640625, 0.8359375},
+        {0.203125, 0.6171875, 0.8515625}, {-0.203125, 0.6171875, 0.8515625},
+        {0.1015625, 0.4296875, 0.84375}, {-0.1015625, 0.4296875, 0.84375},
+        {0.125, -0.1015625, 0.8125}, {-0.125, -0.1015625, 0.8125},
+        {0.2109375, -0.4453125, 0.7109375}, {-0.2109375, -0.4453125, 0.7109375},
+        {0.25, -0.703125, 0.6875}, {-0.25, -0.703125, 0.6875},
+        {0.265625, -0.8203125, 0.6640625}, {-0.265625, -0.8203125, 0.6640625},
+        {0.234375, -0.9140625, 0.6328125}, {-0.234375, -0.9140625, 0.6328125},
+        {0.1640625, -0.9296875, 0.6328125}, {-0.1640625, -0.9296875, 0.6328125},
+        {0.0, -0.9453125, 0.640625}, {0.0, 0.046875, 0.7265625},
+        {0.0, 0.2109375, 0.765625}, {0.328125, 0.4765625, 0.7421875},
+        {-0.328125, 0.4765625, 0.7421875}, {0.1640625, 0.140625, 0.75},
+        {-0.1640625, 0.140625, 0.75}, {0.1328125, 0.2109375, 0.7578125},
+        {-0.1328125, 0.2109375, 0.7578125}, {0.1171875, -0.6875, 0.734375},
+        {-0.1171875, -0.6875, 0.734375}, {0.078125, -0.4453125, 0.75},
+        {-0.078125, -0.4453125, 0.75}, {0.0, -0.4453125, 0.75},
+        {0.0, -0.328125, 0.7421875}, {0.09375, -0.2734375, 0.78125},
+        {-0.09375, -0.2734375, 0.78125}, {0.1328125, -0.2265625, 0.796875},
+        {-0.1328125, -0.2265625, 0.796875}, {0.109375, -0.1328125, 0.78125},
+        {-0.109375, -0.1328125, 0.78125}, {0.0390625, -0.125, 0.78125},
+        {-0.0390625, -0.125, 0.78125}, {0.0, -0.203125, 0.828125},
+        {0.046875, -0.1484375, 0.8125}, {-0.046875, -0.1484375, 0.8125},
+        {0.09375, -0.15625, 0.8125}, {-0.09375, -0.15625, 0.8125},
+        {0.109375, -0.2265625, 0.828125}, {-0.109375, -0.2265625, 0.828125},
+        {0.078125, -0.25, 0.8046875}, {-0.078125, -0.25, 0.8046875},
+        {0.0, -0.2890625, 0.8046875}, {0.2578125, -0.3125, 0.5546875},
+        {-0.2578125, -0.3125, 0.5546875}, {0.1640625, -0.2421875, 0.7109375},
+        {-0.1640625, -0.2421875, 0.7109375}, {0.1796875, -0.3125, 0.7109375},
+        {-0.1796875, -0.3125, 0.7109375}, {0.234375, -0.25, 0.5546875},
+        {-0.234375, -0.25, 0.5546875}, {0.0, -0.875, 0.6875},
+        {0.046875, -0.8671875, 0.6875}, {-0.046875, -0.8671875, 0.6875},
+        {0.09375, -0.8203125, 0.7109375}, {-0.09375, -0.8203125, 0.7109375},
+        {0.09375, -0.7421875, 0.7265625}, {-0.09375, -0.7421875, 0.7265625},
+        {0.0, -0.78125, 0.65625}, {0.09375, -0.75, 0.6640625},
+        {-0.09375, -0.75, 0.6640625}, {0.09375, -0.8125, 0.640625},
+        {-0.09375, -0.8125, 0.640625}, {0.046875, -0.8515625, 0.6328125},
+        {-0.046875, -0.8515625, 0.6328125}, {0.0, -0.859375, 0.6328125},
+        {0.171875, 0.21875, 0.78125}, {-0.171875, 0.21875, 0.78125},
+        {0.1875, 0.15625, 0.7734375}, {-0.1875, 0.15625, 0.7734375},
+        {0.3359375, 0.4296875, 0.7578125}, {-0.3359375, 0.4296875, 0.7578125},
+        {0.2734375, 0.421875, 0.7734375}, {-0.2734375, 0.421875, 0.7734375},
+        {0.421875, 0.3984375, 0.7734375}, {-0.421875, 0.3984375, 0.7734375},
+        {0.5625, 0.3515625, 0.6953125}, {-0.5625, 0.3515625, 0.6953125},
+        {0.5859375, 0.2890625, 0.6875}, {-0.5859375, 0.2890625, 0.6875},
+        {0.578125, 0.1953125, 0.6796875}, {-0.578125, 0.1953125, 0.6796875},
+        {0.4765625, 0.1015625, 0.71875}, {-0.4765625, 0.1015625, 0.71875},
+        {0.375, 0.0625, 0.7421875}, {-0.375, 0.0625, 0.7421875},
+        {0.2265625, 0.109375, 0.78125}, {-0.2265625, 0.109375, 0.78125},
+        {0.1796875, 0.296875, 0.78125}, {-0.1796875, 0.296875, 0.78125},
+        {0.2109375, 0.375, 0.78125}, {-0.2109375, 0.375, 0.78125},
+        {0.234375, 0.359375, 0.7578125}, {-0.234375, 0.359375, 0.7578125},
+        {0.1953125, 0.296875, 0.7578125}, {-0.1953125, 0.296875, 0.7578125},
+        {0.2421875, 0.125, 0.7578125}, {-0.2421875, 0.125, 0.7578125},
+        {0.375, 0.0859375, 0.7265625}, {-0.375, 0.0859375, 0.7265625},
+        {0.4609375, 0.1171875, 0.703125}, {-0.4609375, 0.1171875, 0.703125},
+        {0.546875, 0.2109375, 0.671875}, {-0.546875, 0.2109375, 0.671875},
+        {0.5546875, 0.28125, 0.671875}, {-0.5546875, 0.28125, 0.671875},
+        {0.53125, 0.3359375, 0.6796875}, {-0.53125, 0.3359375, 0.6796875},
+        {0.4140625, 0.390625, 0.75}, {-0.4140625, 0.390625, 0.75},
+        {0.28125, 0.3984375, 0.765625}, {-0.28125, 0.3984375, 0.765625},
+        {0.3359375, 0.40625, 0.75}, {-0.3359375, 0.40625, 0.75},
+        {0.203125, 0.171875, 0.75}, {-0.203125, 0.171875, 0.75},
+        {0.1953125, 0.2265625, 0.75}, {-0.1953125, 0.2265625, 0.75},
+        {0.109375, 0.4609375, 0.609375}, {-0.109375, 0.4609375, 0.609375},
+        {0.1953125, 0.6640625, 0.6171875}, {-0.1953125, 0.6640625, 0.6171875},
+        {0.3359375, 0.6875, 0.59375}, {-0.3359375, 0.6875, 0.59375},
+        {0.484375, 0.5546875, 0.5546875}, {-0.484375, 0.5546875, 0.5546875},
+        {0.6796875, 0.453125, 0.4921875}, {-0.6796875, 0.453125, 0.4921875},
+        {0.796875, 0.40625, 0.4609375}, {-0.796875, 0.40625, 0.4609375},
+        {0.7734375, 0.1640625, 0.375}, {-0.7734375, 0.1640625, 0.375},
+        {0.6015625, 0.0, 0.4140625}, {-0.6015625, 0.0, 0.4140625},
+        {0.4375, -0.09375, 0.46875}, {-0.4375, -0.09375, 0.46875},
+        {0.0, 0.8984375, 0.2890625}, {0.0, 0.984375, -0.078125},
+        {0.0, -0.1953125, -0.671875}, {0.0, -0.4609375, 0.1875},
+        {0.0, -0.9765625, 0.4609375}, {0.0, -0.8046875, 0.34375},
+        {0.0, -0.5703125, 0.3203125}, {0.0, -0.484375, 0.28125},
+        {0.8515625, 0.234375, 0.0546875}, {-0.8515625, 0.234375, 0.0546875},
+        {0.859375, 0.3203125, -0.046875}, {-0.859375, 0.3203125, -0.046875},
+        {0.7734375, 0.265625, -0.4375}, {-0.7734375, 0.265625, -0.4375},
+        {0.4609375, 0.4375, -0.703125}, {-0.4609375, 0.4375, -0.703125},
+        {0.734375, -0.046875, 0.0703125}, {-0.734375, -0.046875, 0.0703125},
+        {0.59375, -0.125, -0.1640625}, {-0.59375, -0.125, -0.1640625},
+        {0.640625, -0.0078125, -0.4296875}, {-0.640625, -0.0078125, -0.4296875},
+        {0.3359375, 0.0546875, -0.6640625}, {-0.3359375, 0.0546875, -0.6640625},
+        {0.234375, -0.3515625, 0.40625}, {-0.234375, -0.3515625, 0.40625},
+        {0.1796875, -0.4140625, 0.2578125}, {-0.1796875, -0.4140625, 0.2578125},
+        {0.2890625, -0.7109375, 0.3828125}, {-0.2890625, -0.7109375, 0.3828125},
+        {0.25, -0.5, 0.390625}, {-0.25, -0.5, 0.390625},
+        {0.328125, -0.9140625, 0.3984375}, {-0.328125, -0.9140625, 0.3984375},
+        {0.140625, -0.7578125, 0.3671875}, {-0.140625, -0.7578125, 0.3671875},
+        {0.125, -0.5390625, 0.359375}, {-0.125, -0.5390625, 0.359375},
+        {0.1640625, -0.9453125, 0.4375}, {-0.1640625, -0.9453125, 0.4375},
+        {0.21875, -0.28125, 0.4296875}, {-0.21875, -0.28125, 0.4296875},
+        {0.2109375, -0.2265625, 0.46875}, {-0.2109375, -0.2265625, 0.46875},
+        {0.203125, -0.171875, 0.5}, {-0.203125, -0.171875, 0.5},
+        {0.2109375, -0.390625, 0.1640625}, {-0.2109375, -0.390625, 0.1640625},
+        {0.296875, -0.3125, -0.265625}, {-0.296875, -0.3125, -0.265625},
+        {0.34375, -0.1484375, -0.5390625}, {-0.34375, -0.1484375, -0.5390625},
+        {0.453125, 0.8671875, -0.3828125}, {-0.453125, 0.8671875, -0.3828125},
+        {0.453125, 0.9296875, -0.0703125}, {-0.453125, 0.9296875, -0.0703125},
+        {0.453125, 0.8515625, 0.234375}, {-0.453125, 0.8515625, 0.234375},
+        {0.4609375, 0.5234375, 0.4296875}, {-0.4609375, 0.5234375, 0.4296875},
+        {0.7265625, 0.40625, 0.3359375}, {-0.7265625, 0.40625, 0.3359375},
+        {0.6328125, 0.453125, 0.28125}, {-0.6328125, 0.453125, 0.28125},
+        {0.640625, 0.703125, 0.0546875}, {-0.640625, 0.703125, 0.0546875},
+        {0.796875, 0.5625, 0.125}, {-0.796875, 0.5625, 0.125},
+        {0.796875, 0.6171875, -0.1171875}, {-0.796875, 0.6171875, -0.1171875},
+        {0.640625, 0.75, -0.1953125}, {-0.640625, 0.75, -0.1953125},
+        {0.640625, 0.6796875, -0.4453125}, {-0.640625, 0.6796875, -0.4453125},
+        {0.796875, 0.5390625, -0.359375}, {-0.796875, 0.5390625, -0.359375},
+        {0.6171875, 0.328125, -0.5859375}, {-0.6171875, 0.328125, -0.5859375},
+        {0.484375, 0.0234375, -0.546875}, {-0.484375, 0.0234375, -0.546875},
+        {0.8203125, 0.328125, -0.203125}, {-0.8203125, 0.328125, -0.203125},
+        {0.40625, -0.171875, 0.1484375}, {-0.40625, -0.171875, 0.1484375},
+        {0.4296875, -0.1953125, -0.2109375},
+        {-0.4296875, -0.1953125, -0.2109375}, {0.890625, 0.40625, -0.234375},
+        {-0.890625, 0.40625, -0.234375}, {0.7734375, -0.140625, -0.125},
+        {-0.7734375, -0.140625, -0.125}, {1.0390625, -0.1015625, -0.328125},
+        {-1.0390625, -0.1015625, -0.328125}, {1.28125, 0.0546875, -0.4296875},
+        {-1.28125, 0.0546875, -0.4296875}, {1.3515625, 0.3203125, -0.421875},
+        {-1.3515625, 0.3203125, -0.421875}, {1.234375, 0.5078125, -0.421875},
+        {-1.234375, 0.5078125, -0.421875}, {1.0234375, 0.4765625, -0.3125},
+        {-1.0234375, 0.4765625, -0.3125}, {1.015625, 0.4140625, -0.2890625},
+        {-1.015625, 0.4140625, -0.2890625}, {1.1875, 0.4375, -0.390625},
+        {-1.1875, 0.4375, -0.390625}, {1.265625, 0.2890625, -0.40625},
+        {-1.265625, 0.2890625, -0.40625}, {1.2109375, 0.078125, -0.40625},
+        {-1.2109375, 0.078125, -0.40625}, {1.03125, -0.0390625, -0.3046875},
+        {-1.03125, -0.0390625, -0.3046875}, {0.828125, -0.0703125, -0.1328125},
+        {-0.828125, -0.0703125, -0.1328125}, {0.921875, 0.359375, -0.21875},
+        {-0.921875, 0.359375, -0.21875}, {0.9453125, 0.3046875, -0.2890625},
+        {-0.9453125, 0.3046875, -0.2890625},
+        {0.8828125, -0.0234375, -0.2109375},
+        {-0.8828125, -0.0234375, -0.2109375}, {1.0390625, 0.0, -0.3671875},
+        {-1.0390625, 0.0, -0.3671875}, {1.1875, 0.09375, -0.4453125},
+        {-1.1875, 0.09375, -0.4453125}, {1.234375, 0.25, -0.4453125},
+        {-1.234375, 0.25, -0.4453125}, {1.171875, 0.359375, -0.4375},
+        {-1.171875, 0.359375, -0.4375}, {1.0234375, 0.34375, -0.359375},
+        {-1.0234375, 0.34375, -0.359375}, {0.84375, 0.2890625, -0.2109375},
+        {-0.84375, 0.2890625, -0.2109375}, {0.8359375, 0.171875, -0.2734375},
+        {-0.8359375, 0.171875, -0.2734375}, {0.7578125, 0.09375, -0.2734375},
+        {-0.7578125, 0.09375, -0.2734375}, {0.8203125, 0.0859375, -0.2734375},
+        {-0.8203125, 0.0859375, -0.2734375}, {0.84375, 0.015625, -0.2734375},
+        {-0.84375, 0.015625, -0.2734375}, {0.8125, -0.015625, -0.2734375},
+        {-0.8125, -0.015625, -0.2734375}, {0.7265625, 0.0, -0.0703125},
+        {-0.7265625, 0.0, -0.0703125}, {0.71875, -0.0234375, -0.171875},
+        {-0.71875, -0.0234375, -0.171875}, {0.71875, 0.0390625, -0.1875},
+        {-0.71875, 0.0390625, -0.1875}, {0.796875, 0.203125, -0.2109375},
+        {-0.796875, 0.203125, -0.2109375}, {0.890625, 0.2421875, -0.265625},
+        {-0.890625, 0.2421875, -0.265625}, {0.890625, 0.234375, -0.3203125},
+        {-0.890625, 0.234375, -0.3203125}, {0.8125, -0.015625, -0.3203125},
+        {-0.8125, -0.015625, -0.3203125}, {0.8515625, 0.015625, -0.3203125},
+        {-0.8515625, 0.015625, -0.3203125}, {0.828125, 0.078125, -0.3203125},
+        {-0.828125, 0.078125, -0.3203125}, {0.765625, 0.09375, -0.3203125},
+        {-0.765625, 0.09375, -0.3203125}, {0.84375, 0.171875, -0.3203125},
+        {-0.84375, 0.171875, -0.3203125}, {1.0390625, 0.328125, -0.4140625},
+        {-1.0390625, 0.328125, -0.4140625}, {1.1875, 0.34375, -0.484375},
+        {-1.1875, 0.34375, -0.484375}, {1.2578125, 0.2421875, -0.4921875},
+        {-1.2578125, 0.2421875, -0.4921875}, {1.2109375, 0.0859375, -0.484375},
+        {-1.2109375, 0.0859375, -0.484375}, {1.046875, 0.0, -0.421875},
+        {-1.046875, 0.0, -0.421875}, {0.8828125, -0.015625, -0.265625},
+        {-0.8828125, -0.015625, -0.265625}, {0.953125, 0.2890625, -0.34375},
+        {-0.953125, 0.2890625, -0.34375}, {0.890625, 0.109375, -0.328125},
+        {-0.890625, 0.109375, -0.328125}, {0.9375, 0.0625, -0.3359375},
+        {-0.9375, 0.0625, -0.3359375}, {1.0, 0.125, -0.3671875},
+        {-1.0, 0.125, -0.3671875}, {0.9609375, 0.171875, -0.3515625},
+        {-0.9609375, 0.171875, -0.3515625}, {1.015625, 0.234375, -0.375},
+        {-1.015625, 0.234375, -0.375}, {1.0546875, 0.1875, -0.3828125},
+        {-1.0546875, 0.1875, -0.3828125}, {1.109375, 0.2109375, -0.390625},
+        {-1.109375, 0.2109375, -0.390625}, {1.0859375, 0.2734375, -0.390625},
+        {-1.0859375, 0.2734375, -0.390625}, {1.0234375, 0.4375, -0.484375},
+        {-1.0234375, 0.4375, -0.484375}, {1.25, 0.46875, -0.546875},
+        {-1.25, 0.46875, -0.546875}, {1.3671875, 0.296875, -0.5},
+        {-1.3671875, 0.296875, -0.5}, {1.3125, 0.0546875, -0.53125},
+        {-1.3125, 0.0546875, -0.53125}, {1.0390625, -0.0859375, -0.4921875},
+        {-1.0390625, -0.0859375, -0.4921875}, {0.7890625, -0.125, -0.328125},
+        {-0.7890625, -0.125, -0.328125}, {0.859375, 0.3828125, -0.3828125},
+        {-0.859375, 0.3828125, -0.3828125}};
+    static auto suzanne_triangles = std::vector<vec3i>{{60, 64, 48},
+        {49, 65, 61}, {62, 64, 60}, {61, 65, 63}, {60, 58, 62}, {63, 59, 61},
+        {60, 56, 58}, {59, 57, 61}, {60, 54, 56}, {57, 55, 61}, {60, 52, 54},
+        {55, 53, 61}, {60, 50, 52}, {53, 51, 61}, {60, 48, 50}, {51, 49, 61},
+        {224, 228, 226}, {227, 229, 225}, {72, 283, 73}, {73, 284, 72},
+        {341, 347, 383}, {384, 348, 342}, {299, 345, 343}, {344, 346, 300},
+        {323, 379, 351}, {352, 380, 324}, {441, 443, 445}, {446, 444, 442},
+        {463, 491, 465}, {466, 492, 464}, {495, 497, 499}, {500, 498, 496}};
+    static auto suzanne_quads = std::vector<vec4i>{{46, 0, 2, 44},
+        {3, 1, 47, 45}, {44, 2, 4, 42}, {5, 3, 45, 43}, {2, 8, 6, 4},
+        {7, 9, 3, 5}, {0, 10, 8, 2}, {9, 11, 1, 3}, {10, 12, 14, 8},
+        {15, 13, 11, 9}, {8, 14, 16, 6}, {17, 15, 9, 7}, {14, 20, 18, 16},
+        {19, 21, 15, 17}, {12, 22, 20, 14}, {21, 23, 13, 15}, {22, 24, 26, 20},
+        {27, 25, 23, 21}, {20, 26, 28, 18}, {29, 27, 21, 19}, {26, 32, 30, 28},
+        {31, 33, 27, 29}, {24, 34, 32, 26}, {33, 35, 25, 27}, {34, 36, 38, 32},
+        {39, 37, 35, 33}, {32, 38, 40, 30}, {41, 39, 33, 31}, {38, 44, 42, 40},
+        {43, 45, 39, 41}, {36, 46, 44, 38}, {45, 47, 37, 39}, {46, 36, 50, 48},
+        {51, 37, 47, 49}, {36, 34, 52, 50}, {53, 35, 37, 51}, {34, 24, 54, 52},
+        {55, 25, 35, 53}, {24, 22, 56, 54}, {57, 23, 25, 55}, {22, 12, 58, 56},
+        {59, 13, 23, 57}, {12, 10, 62, 58}, {63, 11, 13, 59}, {10, 0, 64, 62},
+        {65, 1, 11, 63}, {0, 46, 48, 64}, {49, 47, 1, 65}, {88, 173, 175, 90},
+        {175, 174, 89, 90}, {86, 171, 173, 88}, {174, 172, 87, 89},
+        {84, 169, 171, 86}, {172, 170, 85, 87}, {82, 167, 169, 84},
+        {170, 168, 83, 85}, {80, 165, 167, 82}, {168, 166, 81, 83},
+        {78, 91, 145, 163}, {146, 92, 79, 164}, {91, 93, 147, 145},
+        {148, 94, 92, 146}, {93, 95, 149, 147}, {150, 96, 94, 148},
+        {95, 97, 151, 149}, {152, 98, 96, 150}, {97, 99, 153, 151},
+        {154, 100, 98, 152}, {99, 101, 155, 153}, {156, 102, 100, 154},
+        {101, 103, 157, 155}, {158, 104, 102, 156}, {103, 105, 159, 157},
+        {160, 106, 104, 158}, {105, 107, 161, 159}, {162, 108, 106, 160},
+        {107, 66, 67, 161}, {67, 66, 108, 162}, {109, 127, 159, 161},
+        {160, 128, 110, 162}, {127, 178, 157, 159}, {158, 179, 128, 160},
+        {125, 155, 157, 178}, {158, 156, 126, 179}, {123, 153, 155, 125},
+        {156, 154, 124, 126}, {121, 151, 153, 123}, {154, 152, 122, 124},
+        {119, 149, 151, 121}, {152, 150, 120, 122}, {117, 147, 149, 119},
+        {150, 148, 118, 120}, {115, 145, 147, 117}, {148, 146, 116, 118},
+        {113, 163, 145, 115}, {146, 164, 114, 116}, {113, 180, 176, 163},
+        {176, 181, 114, 164}, {109, 161, 67, 111}, {67, 162, 110, 112},
+        {111, 67, 177, 182}, {177, 67, 112, 183}, {176, 180, 182, 177},
+        {183, 181, 176, 177}, {134, 136, 175, 173}, {175, 136, 135, 174},
+        {132, 134, 173, 171}, {174, 135, 133, 172}, {130, 132, 171, 169},
+        {172, 133, 131, 170}, {165, 186, 184, 167}, {185, 187, 166, 168},
+        {130, 169, 167, 184}, {168, 170, 131, 185}, {143, 189, 188, 186},
+        {188, 189, 144, 187}, {184, 186, 188, 68}, {188, 187, 185, 68},
+        {129, 130, 184, 68}, {185, 131, 129, 68}, {141, 192, 190, 143},
+        {191, 193, 142, 144}, {139, 194, 192, 141}, {193, 195, 140, 142},
+        {138, 196, 194, 139}, {195, 197, 138, 140}, {137, 70, 196, 138},
+        {197, 70, 137, 138}, {189, 143, 190, 69}, {191, 144, 189, 69},
+        {69, 190, 205, 207}, {206, 191, 69, 207}, {70, 198, 199, 196},
+        {200, 198, 70, 197}, {196, 199, 201, 194}, {202, 200, 197, 195},
+        {194, 201, 203, 192}, {204, 202, 195, 193}, {192, 203, 205, 190},
+        {206, 204, 193, 191}, {198, 203, 201, 199}, {202, 204, 198, 200},
+        {198, 207, 205, 203}, {206, 207, 198, 204}, {138, 139, 163, 176},
+        {164, 140, 138, 176}, {139, 141, 210, 163}, {211, 142, 140, 164},
+        {141, 143, 212, 210}, {213, 144, 142, 211}, {143, 186, 165, 212},
+        {166, 187, 144, 213}, {80, 208, 212, 165}, {213, 209, 81, 166},
+        {208, 214, 210, 212}, {211, 215, 209, 213}, {78, 163, 210, 214},
+        {211, 164, 79, 215}, {130, 129, 71, 221}, {71, 129, 131, 222},
+        {132, 130, 221, 219}, {222, 131, 133, 220}, {134, 132, 219, 217},
+        {220, 133, 135, 218}, {136, 134, 217, 216}, {218, 135, 136, 216},
+        {216, 217, 228, 230}, {229, 218, 216, 230}, {217, 219, 226, 228},
+        {227, 220, 218, 229}, {219, 221, 224, 226}, {225, 222, 220, 227},
+        {221, 71, 223, 224}, {223, 71, 222, 225}, {223, 230, 228, 224},
+        {229, 230, 223, 225}, {182, 180, 233, 231}, {234, 181, 183, 232},
+        {111, 182, 231, 253}, {232, 183, 112, 254}, {109, 111, 253, 255},
+        {254, 112, 110, 256}, {180, 113, 251, 233}, {252, 114, 181, 234},
+        {113, 115, 249, 251}, {250, 116, 114, 252}, {115, 117, 247, 249},
+        {248, 118, 116, 250}, {117, 119, 245, 247}, {246, 120, 118, 248},
+        {119, 121, 243, 245}, {244, 122, 120, 246}, {121, 123, 241, 243},
+        {242, 124, 122, 244}, {123, 125, 239, 241}, {240, 126, 124, 242},
+        {125, 178, 235, 239}, {236, 179, 126, 240}, {178, 127, 237, 235},
+        {238, 128, 179, 236}, {127, 109, 255, 237}, {256, 110, 128, 238},
+        {237, 255, 257, 275}, {258, 256, 238, 276}, {235, 237, 275, 277},
+        {276, 238, 236, 278}, {239, 235, 277, 273}, {278, 236, 240, 274},
+        {241, 239, 273, 271}, {274, 240, 242, 272}, {243, 241, 271, 269},
+        {272, 242, 244, 270}, {245, 243, 269, 267}, {270, 244, 246, 268},
+        {247, 245, 267, 265}, {268, 246, 248, 266}, {249, 247, 265, 263},
+        {266, 248, 250, 264}, {251, 249, 263, 261}, {264, 250, 252, 262},
+        {233, 251, 261, 279}, {262, 252, 234, 280}, {255, 253, 259, 257},
+        {260, 254, 256, 258}, {253, 231, 281, 259}, {282, 232, 254, 260},
+        {231, 233, 279, 281}, {280, 234, 232, 282}, {66, 107, 283, 72},
+        {284, 108, 66, 72}, {107, 105, 285, 283}, {286, 106, 108, 284},
+        {105, 103, 287, 285}, {288, 104, 106, 286}, {103, 101, 289, 287},
+        {290, 102, 104, 288}, {101, 99, 291, 289}, {292, 100, 102, 290},
+        {99, 97, 293, 291}, {294, 98, 100, 292}, {97, 95, 295, 293},
+        {296, 96, 98, 294}, {95, 93, 297, 295}, {298, 94, 96, 296},
+        {93, 91, 299, 297}, {300, 92, 94, 298}, {307, 308, 327, 337},
+        {328, 308, 307, 338}, {306, 307, 337, 335}, {338, 307, 306, 336},
+        {305, 306, 335, 339}, {336, 306, 305, 340}, {88, 90, 305, 339},
+        {305, 90, 89, 340}, {86, 88, 339, 333}, {340, 89, 87, 334},
+        {84, 86, 333, 329}, {334, 87, 85, 330}, {82, 84, 329, 331},
+        {330, 85, 83, 332}, {329, 335, 337, 331}, {338, 336, 330, 332},
+        {329, 333, 339, 335}, {340, 334, 330, 336}, {325, 331, 337, 327},
+        {338, 332, 326, 328}, {80, 82, 331, 325}, {332, 83, 81, 326},
+        {208, 341, 343, 214}, {344, 342, 209, 215}, {80, 325, 341, 208},
+        {342, 326, 81, 209}, {78, 214, 343, 345}, {344, 215, 79, 346},
+        {78, 345, 299, 91}, {300, 346, 79, 92}, {76, 323, 351, 303},
+        {352, 324, 76, 303}, {303, 351, 349, 77}, {350, 352, 303, 77},
+        {77, 349, 347, 304}, {348, 350, 77, 304}, {304, 347, 327, 308},
+        {328, 348, 304, 308}, {325, 327, 347, 341}, {348, 328, 326, 342},
+        {295, 297, 317, 309}, {318, 298, 296, 310}, {75, 315, 323, 76},
+        {324, 316, 75, 76}, {301, 357, 355, 302}, {356, 358, 301, 302},
+        {302, 355, 353, 74}, {354, 356, 302, 74}, {74, 353, 315, 75},
+        {316, 354, 74, 75}, {291, 293, 361, 363}, {362, 294, 292, 364},
+        {363, 361, 367, 365}, {368, 362, 364, 366}, {365, 367, 369, 371},
+        {370, 368, 366, 372}, {371, 369, 375, 373}, {376, 370, 372, 374},
+        {313, 377, 373, 375}, {374, 378, 314, 376}, {315, 353, 373, 377},
+        {374, 354, 316, 378}, {353, 355, 371, 373}, {372, 356, 354, 374},
+        {355, 357, 365, 371}, {366, 358, 356, 372}, {357, 359, 363, 365},
+        {364, 360, 358, 366}, {289, 291, 363, 359}, {364, 292, 290, 360},
+        {73, 359, 357, 301}, {358, 360, 73, 301}, {283, 285, 287, 289},
+        {288, 286, 284, 290}, {283, 289, 359, 73}, {360, 290, 284, 73},
+        {293, 295, 309, 361}, {310, 296, 294, 362}, {309, 311, 367, 361},
+        {368, 312, 310, 362}, {311, 381, 369, 367}, {370, 382, 312, 368},
+        {313, 375, 369, 381}, {370, 376, 314, 382}, {347, 349, 385, 383},
+        {386, 350, 348, 384}, {317, 383, 385, 319}, {386, 384, 318, 320},
+        {297, 299, 383, 317}, {384, 300, 298, 318}, {299, 343, 341, 383},
+        {342, 344, 300, 384}, {313, 321, 379, 377}, {380, 322, 314, 378},
+        {315, 377, 379, 323}, {380, 378, 316, 324}, {319, 385, 379, 321},
+        {380, 386, 320, 322}, {349, 351, 379, 385}, {380, 352, 350, 386},
+        {399, 387, 413, 401}, {414, 388, 400, 402}, {399, 401, 403, 397},
+        {404, 402, 400, 398}, {397, 403, 405, 395}, {406, 404, 398, 396},
+        {395, 405, 407, 393}, {408, 406, 396, 394}, {393, 407, 409, 391},
+        {410, 408, 394, 392}, {391, 409, 411, 389}, {412, 410, 392, 390},
+        {409, 419, 417, 411}, {418, 420, 410, 412}, {407, 421, 419, 409},
+        {420, 422, 408, 410}, {405, 423, 421, 407}, {422, 424, 406, 408},
+        {403, 425, 423, 405}, {424, 426, 404, 406}, {401, 427, 425, 403},
+        {426, 428, 402, 404}, {401, 413, 415, 427}, {416, 414, 402, 428},
+        {317, 319, 443, 441}, {444, 320, 318, 442}, {319, 389, 411, 443},
+        {412, 390, 320, 444}, {309, 317, 441, 311}, {442, 318, 310, 312},
+        {381, 429, 413, 387}, {414, 430, 382, 388}, {411, 417, 439, 443},
+        {440, 418, 412, 444}, {437, 445, 443, 439}, {444, 446, 438, 440},
+        {433, 445, 437, 435}, {438, 446, 434, 436}, {431, 447, 445, 433},
+        {446, 448, 432, 434}, {429, 447, 431, 449}, {432, 448, 430, 450},
+        {413, 429, 449, 415}, {450, 430, 414, 416}, {311, 447, 429, 381},
+        {430, 448, 312, 382}, {311, 441, 445, 447}, {446, 442, 312, 448},
+        {415, 449, 451, 475}, {452, 450, 416, 476}, {449, 431, 461, 451},
+        {462, 432, 450, 452}, {431, 433, 459, 461}, {460, 434, 432, 462},
+        {433, 435, 457, 459}, {458, 436, 434, 460}, {435, 437, 455, 457},
+        {456, 438, 436, 458}, {437, 439, 453, 455}, {454, 440, 438, 456},
+        {439, 417, 473, 453}, {474, 418, 440, 454}, {427, 415, 475, 463},
+        {476, 416, 428, 464}, {425, 427, 463, 465}, {464, 428, 426, 466},
+        {423, 425, 465, 467}, {466, 426, 424, 468}, {421, 423, 467, 469},
+        {468, 424, 422, 470}, {419, 421, 469, 471}, {470, 422, 420, 472},
+        {417, 419, 471, 473}, {472, 420, 418, 474}, {457, 455, 479, 477},
+        {480, 456, 458, 478}, {477, 479, 481, 483}, {482, 480, 478, 484},
+        {483, 481, 487, 485}, {488, 482, 484, 486}, {485, 487, 489, 491},
+        {490, 488, 486, 492}, {463, 475, 485, 491}, {486, 476, 464, 492},
+        {451, 483, 485, 475}, {486, 484, 452, 476}, {451, 461, 477, 483},
+        {478, 462, 452, 484}, {457, 477, 461, 459}, {462, 478, 458, 460},
+        {453, 473, 479, 455}, {480, 474, 454, 456}, {471, 481, 479, 473},
+        {480, 482, 472, 474}, {469, 487, 481, 471}, {482, 488, 470, 472},
+        {467, 489, 487, 469}, {488, 490, 468, 470}, {465, 491, 489, 467},
+        {490, 492, 466, 468}, {391, 389, 503, 501}, {504, 390, 392, 502},
+        {393, 391, 501, 499}, {502, 392, 394, 500}, {395, 393, 499, 497},
+        {500, 394, 396, 498}, {397, 395, 497, 495}, {498, 396, 398, 496},
+        {399, 397, 495, 493}, {496, 398, 400, 494}, {387, 399, 493, 505},
+        {494, 400, 388, 506}, {493, 501, 503, 505}, {504, 502, 494, 506},
+        {493, 495, 499, 501}, {500, 496, 494, 502}, {313, 381, 387, 505},
+        {388, 382, 314, 506}, {313, 505, 503, 321}, {504, 506, 314, 322},
+        {319, 321, 503, 389}, {504, 322, 320, 390}};
+
+    pos = suzanne_pos;
+    quads = suzanne_quads;
+    for (auto& t : suzanne_triangles) { quads.push_back({t.x, t.y, t.z, t.z}); }
+
+    for (auto l = 0; l < tesselation; l++) subdivide_quads(quads, pos);
+}
+
+// Make a seashell. This is not watertight. Returns quads, pos, norm,
+// texcoord.
+void make_uvseashell(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
+    const make_seashell_params& params) {
+    auto R = params.spiral_revolutions;
+    auto D = -1.0f;
+    auto a = params.spiral_angle;
+    auto b = params.enlarging_angle;
+    auto A = params.spiral_aperture;
+    auto e = params.ellipse_axis;
+    auto O = params.curve_rotation;  // (psi, Omega, mu)
+    auto W = params.nodule_length;
+    auto N = params.nodules_num;
+    auto P = params.nodule_pos;
+    auto L = params.nodule_height;
+
+    auto cot_a = 1 / tan(a);
+
+    make_quad(quads, pos, norm, texcoord, steps, {1, 1}, {1, 1});
+    for (auto i = 0; i < pos.size(); i++) {
+        auto uv = texcoord[i];
+        auto s = uv.x * 2 * pif;
+        auto t = uv.y * 2 * pif * R - pif * R;
+        auto re = 1 / sqrt(pow(cos(s) / e.x, 2) + pow(sin(s) / e.y, 2));
+        if (L && W.x && W.y && t > 0) {
+            auto l = (2 * pif / N) *
+                     ((N * t) / (2 * pif) - floor((N * t) / (2 * pif)));
+            auto rn =
+                L * exp(-pow((2 * (s - P)) / W.x, 2) - pow((2 * l) / W.y, 2));
+            re += rn;
+        }
+        pos[i].x = (A * sin(b) * cos(t) + cos(s + O.x) * cos(t + O.y) * re -
+                       sin(O.z) * sin(t + O.y) * re) *
+                   D * exp(t * cot_a);
+        pos[i].y = (A * sin(b) * sin(t) + cos(s + O.x) * sin(t + O.y) * re +
+                       sin(O.z) * sin(s + O.x) * cos(t + O.y) * re) *
+                   exp(t * cot_a);
+        pos[i].z =
+            (-A * cos(b) + cos(O.z) * sin(s + O.x) * re) * exp(t * cot_a);
+        texcoord[i] = vec2f{uv.x * params.uvsize.x, uv.y * params.uvsize.y * R};
+    }
+
+    compute_normals(quads, pos, norm);
+}
+
+// Generate lines set along a quad.
+void make_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<float>& radius, const vec2i& steps, const vec2f& size,
+    const vec2f& uvsize, const vec2f& line_radius) {
+    auto nverts = (steps.x + 1) * steps.y;
+    auto nlines = steps.x * steps.y;
+    auto vid = [steps](int i, int j) { return j * (steps.x + 1) + i; };
+    auto fid = [steps](int i, int j) { return j * steps.x + i; };
+
+    pos.resize(nverts);
+    norm.resize(nverts);
+    texcoord.resize(nverts);
+    radius.resize(nverts);
+    if (steps.y > 1) {
+        for (auto j = 0; j < steps.y; j++) {
+            for (auto i = 0; i <= steps.x; i++) {
+                auto uv = vec2f{i / (float)steps.x,
+                    j / (float)(steps.y > 1 ? steps.y - 1 : 1)};
+                pos[vid(i, j)] = {
+                    (uv.x - 0.5f) * size.x, (uv.y - 0.5f) * size.y, 0};
+                norm[vid(i, j)] = {1, 0, 0};
+                texcoord[vid(i, j)] = uv * uvsize;
+            }
+        }
+    } else {
+        for (auto i = 0; i <= steps.x; i++) {
+            auto uv = vec2f{i / (float)steps.x, 0};
+            pos[vid(i, 0)] = {(uv.x - 0.5f) * size.x, 0, 0};
+            norm[vid(i, 0)] = {1, 0, 0};
+            texcoord[vid(i, 0)] = uv * uvsize;
+        }
+    }
+
+    lines.resize(nlines);
+    for (int j = 0; j < steps.y; j++) {
+        for (int i = 0; i < steps.x; i++) {
+            lines[fid(i, j)] = {vid(i, j), vid(i + 1, j)};
+        }
+    }
+}
+
+// Generate a point set with points placed at the origin with texcoords varying
+// along u.
+void make_points(std::vector<int>& points, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<float>& radius, int num, float uvsize, float point_radius) {
+    points.resize(num);
+    for (auto i = 0; i < num; i++) points[i] = i;
+    pos.assign(num, {0, 0, 0});
+    norm.assign(num, {0, 0, 1});
+    texcoord.assign(num, {0, 0});
+    radius.assign(num, point_radius);
+    for (auto i = 0; i < texcoord.size(); i++)
+        texcoord[i] = {(float)i / (float)num, 0};
+}
+
+// Generate a point set.
+void make_random_points(std::vector<int>& points, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<float>& radius, int num, const vec3f& size, float uvsize,
+    float point_radius, uint64_t seed) {
+    make_points(points, pos, norm, texcoord, radius, num, uvsize, point_radius);
+    auto rng = make_rng(seed);
+    for (auto i = 0; i < pos.size(); i++) {
+        pos[i] = (next_rand3f(rng) - vec3f{0.5f, 0.5f, 0.5f}) * size;
+    }
+}
+
+// Make a point.
+void make_point(std::vector<int>& points, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<float>& radius, float point_radius) {
+    points = {0};
+    pos = {{0, 0, 0}};
+    norm = {{0, 0, 1}};
+    texcoord = {{0, 0}};
+    radius = {point_radius};
+}
+
+// Make a bezier circle. Returns bezier, pos.
+void make_bezier_circle(std::vector<vec4i>& beziers, std::vector<vec3f>& pos) {
+    // constant from http://spencermortensen.com/articles/bezier-circle/
+    auto c = 0.551915024494f;
+    pos = std::vector<vec3f>{{1, 0, 0}, {1, c, 0}, {c, 1, 0}, {0, 1, 0},
+        {-c, 1, 0}, {-1, c, 0}, {-1, 0, 0}, {-1, -c, 0}, {-c, -1, 0},
+        {0, -1, 0}, {c, -1, 0}, {1, -c, 0}};
+    beziers = std::vector<vec4i>{
+        {0, 1, 2, 3}, {3, 4, 5, 6}, {6, 7, 8, 9}, {9, 10, 11, 0}};
+}
+
+// Make a hair ball around a shape
+void make_hair(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<float>& radius, const vec2i& steps,
+    const std::vector<vec3i>& striangles, const std::vector<vec4i>& squads,
+    const std::vector<vec3f>& spos, const std::vector<vec3f>& snorm,
+    const std::vector<vec2f>& stexcoord, const make_hair_params& params) {
+    std::vector<vec3f> bpos;
+    std::vector<vec3f> bnorm;
+    std::vector<vec2f> btexcoord;
+    std::tie(bpos, bnorm, btexcoord) = sample_triangles_points(
+        join(striangles, convert_quads_to_triangles(squads)), spos, snorm,
+        stexcoord, steps.y, params.seed);
+
+    auto rng = make_rng(params.seed, 3);
+    auto blen = std::vector<float>(bpos.size());
+    for (auto& l : blen)
+        l = lerp(params.length.x, params.length.y, next_rand1f(rng));
+
+    auto cidx = std::vector<int>();
+    if (params.clump.x > 0) {
+        for (auto bidx = 0; bidx < bpos.size(); bidx++) {
+            cidx.push_back(0);
+            auto cdist = flt_max;
+            for (auto c = 0; c < params.clump.y; c++) {
+                auto d = length(bpos[bidx] - bpos[c]);
+                if (d < cdist) {
+                    cdist = d;
+                    cidx.back() = c;
+                }
+            }
+        }
+    }
+
+    make_lines(lines, pos, norm, texcoord, radius, steps, {1, 1}, {1, 1});
+    for (auto i = 0; i < pos.size(); i++) {
+        auto u = texcoord[i].x;
+        auto bidx = i / (steps.x + 1);
+        pos[i] = bpos[bidx] + bnorm[bidx] * u * blen[bidx];
+        norm[i] = bnorm[bidx];
+        radius[i] = lerp(params.radius.x, params.radius.y, u);
+        if (params.clump.x > 0) {
+            pos[i] = lerp(pos[i], pos[i + (cidx[bidx] - bidx) * (steps.x + 1)],
+                u * params.clump.x);
+        }
+        if (params.noise.x > 0) {
+            auto nx = perlin_noise(pos[i] * params.noise.y + vec3f{0, 0, 0}) *
+                      params.noise.x;
+            auto ny = perlin_noise(pos[i] * params.noise.y + vec3f{3, 7, 11}) *
+                      params.noise.x;
+            auto nz =
+                perlin_noise(pos[i] * params.noise.y + vec3f{13, 17, 19}) *
+                params.noise.x;
+            pos[i] += {nx, ny, nz};
+        }
+    }
+
+    if (params.clump.x > 0 || params.noise.x > 0 || params.rotation.x > 0)
+        compute_tangents(lines, pos, norm);
 }
 
 }  // namespace ygl
@@ -7107,25 +8086,24 @@ void trace_samples_filtered(const scene* scn, const camera* cam,
 void trace_async_start(const scene* scn, const camera* cam, const bvh_tree* bvh,
     const trace_lights& lights, image4f& img, image<trace_pixel>& pixels,
     std::vector<std::thread>& threads, bool& stop_flag,
-    const trace_params& params, const std::function<void(int,int)>& callback) {
+    const trace_params& params, const std::function<void(int, int)>& callback) {
     pixels = make_trace_pixels(img, params);
-    
+
     // render preview
-    if(params.preview_resolution) {
+    if (params.preview_resolution) {
         auto pparams = params;
         pparams.resolution = params.preview_resolution;
         pparams.nsamples = 1;
         pparams.filter = ygl::trace_filter_type::box;
-        auto pimg =
-        image4f((int)std::round(cam->aspect * pparams.resolution),
-                     pparams.resolution);
+        auto pimg = image4f((int)std::round(cam->aspect * pparams.resolution),
+            pparams.resolution);
         auto ppixels = make_trace_pixels(pimg, pparams);
         trace_samples(scn, cam, bvh, lights, pimg, ppixels, 1, pparams);
         resize_image(pimg, img, ygl::resize_filter::box);
     } else {
-        for(auto& p : img) p = zero4f;
+        for (auto& p : img) p = zero4f;
     }
-    if(callback) callback(0, 0);
+    if (callback) callback(0, 0);
 
     // start rendering
     auto nthreads = std::thread::hardware_concurrency();
@@ -7143,10 +8121,10 @@ void trace_async_start(const scene* scn, const camera* cam, const bvh_tree* bvh,
                             pxl.col.x, pxl.col.y, pxl.col.z, pxl.alpha};
                         img.at(i, j) /= pxl.sample;
                     }
-                    if(!tid && callback) callback(s, j);
+                    if (!tid && callback) callback(s, j);
                 }
             }
-            if(!tid && callback) callback(params.nsamples, 0);
+            if (!tid && callback) callback(params.nsamples, 0);
         }));
     }
 }
@@ -7212,7 +8190,7 @@ image<trace_pixel> make_trace_pixels(
             auto pxl = trace_pixel();
             pxl.i = i;
             pxl.j = j;
-            pxl.rng = init_rng(params.seed, (j * img.width() + i) * 2 + 1);
+            pxl.rng = make_rng(params.seed, (j * img.width() + i) * 2 + 1);
             pixels.at(i, j) = pxl;
         }
     }
@@ -9661,816 +10639,6 @@ void save_svg(const std::string& filename, const std::vector<svg_path>& paths) {
 #endif
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR SHAPE EXAMPLES
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-// Make a sphere. This is not watertight.
-void make_uvsphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
-    bool flipped) {
-    if (!flipped) {
-        make_quads(quads, pos, norm, texcoord, pow2(tesselation + 2),
-            pow2(tesselation + 1),
-            [](auto uv, auto& pos, auto& norm, auto& texcoord) {
-                auto a = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
-                pos = {cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
-                norm = {cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
-                texcoord = uv;
-            });
-    } else {
-        make_quads(quads, pos, norm, texcoord, pow2(tesselation + 2),
-            pow2(tesselation + 1),
-            [](auto uv, auto& pos, auto& norm, auto& texcoord) {
-                auto a = vec2f{2 * pif * uv.x, pif * uv.y};
-                pos = {cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
-                norm = {-cos(a.x) * sin(a.y), -sin(a.x) * sin(a.y), -cos(a.y)};
-                texcoord = {uv.x, 1 - uv.y};
-            });
-    }
-}
-
-// Make a geodesic sphere.
-void make_geodesicsphere(
-    std::vector<vec3i>& triangles, std::vector<vec3f>& pos, int tesselation) {
-    // https://stackoverflow.com/questions/17705621/algorithm-for-a-geodesic-sphere
-    const float X = 0.525731112119133606f;
-    const float Z = 0.850650808352039932f;
-    pos = std::vector<vec3f>{{-X, 0.0, Z}, {X, 0.0, Z}, {-X, 0.0, -Z},
-        {X, 0.0, -Z}, {0.0, Z, X}, {0.0, Z, -X}, {0.0, -Z, X}, {0.0, -Z, -X},
-        {Z, X, 0.0}, {-Z, X, 0.0}, {Z, -X, 0.0}, {-Z, -X, 0.0}};
-    triangles = std::vector<vec3i>{{0, 1, 4}, {0, 4, 9}, {9, 4, 5}, {4, 8, 5},
-        {4, 1, 8}, {8, 1, 10}, {8, 10, 3}, {5, 8, 3}, {5, 3, 2}, {2, 3, 7},
-        {7, 3, 10}, {7, 10, 6}, {7, 6, 11}, {11, 6, 0}, {0, 6, 1}, {6, 10, 1},
-        {9, 11, 0}, {9, 2, 11}, {9, 5, 2}, {7, 11, 2}};
-    for (auto l = 0; l < max(0, tesselation - 2); l++)
-        subdivide_triangles(triangles, pos);
-    for (auto& p : pos) p = normalize(p);
-}
-
-// Make a sphere. This is not watertight.
-void make_uvhemisphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
-    bool flipped) {
-    if (!flipped) {
-        make_quads(quads, pos, norm, texcoord, pow2(tesselation + 2),
-            pow2(tesselation),
-            [](auto uv, auto& pos, auto& norm, auto& texcoord) {
-                auto a = vec2f{2 * pif * uv.x, pif * 0.5f * (1 - uv.y)};
-                pos = {cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
-                norm = {cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
-                texcoord = uv;
-            });
-    } else {
-        make_quads(quads, pos, norm, texcoord, pow2(tesselation + 2),
-            pow2(tesselation),
-            [](auto uv, auto& pos, auto& norm, auto& texcoord) {
-                auto a = vec2f{2 * pif * uv.x, pif * (0.5f + 0.5f * uv.y)};
-                pos = {cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
-                norm = {-cos(a.x) * sin(a.y), -sin(a.x) * sin(a.y), -cos(a.y)};
-                texcoord = {uv.x, 1 - uv.y};
-            });
-    }
-}
-
-// Make a quad.
-void make_uvquad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation) {
-    make_quads(quads, pos, norm, texcoord, pow2(tesselation), pow2(tesselation),
-        [](auto uv, auto& pos, auto& norm, auto& texcoord) {
-            pos = vec3f{(-1 + uv.x * 2), (-1 + uv.y * 2), 0};
-            norm = vec3f{0, 0, 1};
-            texcoord = uv;
-        });
-}
-
-// Make a cube with unique vertices. This is watertight but has no
-// texture coordinates or normals.
-void make_cube(
-    std::vector<vec4i>& quads, std::vector<vec3f>& pos, int tesselation) {
-    pos = std::vector<vec3f>{{-1, -1, -1}, {-1, +1, -1}, {+1, +1, -1},
-        {+1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {+1, +1, +1}, {+1, -1, +1}};
-    quads = std::vector<vec4i>{{0, 1, 2, 3}, {7, 6, 5, 4}, {4, 5, 1, 0},
-        {6, 7, 3, 2}, {2, 1, 5, 6}, {0, 3, 7, 4}};
-
-    for (auto l = 0; l < tesselation; l++) subdivide_quads(quads, pos);
-}
-
-// Make a facevarying cube with unique vertices but different texture
-// coordinates.
-void make_fvcube(std::vector<vec4i>& quads_pos, std::vector<vec3f>& pos,
-    std::vector<vec4i>& quads_norm, std::vector<vec3f>& norm,
-    std::vector<vec4i>& quads_texcoord, std::vector<vec2f>& texcoord,
-    int tesselation) {
-    pos = std::vector<vec3f>{{-1, -1, -1}, {-1, +1, -1}, {+1, +1, -1},
-        {+1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {+1, +1, +1}, {+1, -1, +1}};
-    quads_pos = std::vector<vec4i>{{0, 1, 2, 3}, {7, 6, 5, 4}, {4, 5, 1, 0},
-        {6, 7, 3, 2}, {2, 1, 5, 6}, {0, 3, 7, 4}};
-    norm = std::vector<vec3f>{{0, 0, -1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1},
-        {0, 0, +1}, {0, 0, +1}, {0, 0, +1}, {0, 0, +1}, {-1, 0, 0}, {-1, 0, 0},
-        {-1, 0, 0}, {-1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0},
-        {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, -1, 0}, {0, -1, 0},
-        {0, -1, 0}, {0, -1, 0}};
-    quads_norm = std::vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7}, {8, 9, 10, 11},
-        {12, 13, 14, 15}, {16, 17, 18, 19}, {20, 21, 22, 23}};
-    texcoord = std::vector<vec2f>{{0, 0}, {1, 0}, {1, 1}, {0, 1}, {0, 0},
-        {1, 0}, {1, 1}, {0, 1}, {0, 0}, {1, 0}, {1, 1}, {0, 1}, {0, 0}, {1, 0},
-        {1, 1}, {0, 1}, {0, 0}, {1, 0}, {1, 1}, {0, 1}, {0, 0}, {1, 0}, {1, 1},
-        {0, 1}};
-    quads_texcoord = std::vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
-        {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19}, {20, 21, 22, 23}};
-
-    for (auto l = 0; l < tesselation; l++) {
-        subdivide_quads(quads_pos, pos);
-        subdivide_quads(quads_norm, norm);
-        subdivide_quads(quads_texcoord, texcoord);
-    }
-}
-
-// Make a facevarying sphere with unique vertices but different texture
-// coordinates.
-void make_fvsphere(std::vector<vec4i>& quads_pos, std::vector<vec3f>& pos,
-    std::vector<vec4i>& quads_norm, std::vector<vec3f>& norm,
-    std::vector<vec4i>& quads_texcoord, std::vector<vec2f>& texcoord,
-    int tesselation) {
-    make_quads(quads_pos, pos, pow2(tesselation + 2), pow2(tesselation + 1),
-        [](auto uv) {
-            auto a = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
-            return vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
-        },
-        true, false, true, true);
-    make_quads(quads_norm, norm, pow2(tesselation + 2), pow2(tesselation + 1),
-        [](auto uv) {
-            auto a = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
-            return vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
-        },
-        true, false, true, true);
-    make_quads(quads_texcoord, texcoord, pow2(tesselation + 2),
-        pow2(tesselation + 1), [](auto uv) { return uv; });
-}
-
-// Make a suzanne monkey model for testing. Note that some quads are
-// degenerate.
-void make_suzanne(
-    std::vector<vec4i>& quads, std::vector<vec3f>& pos, int tesselation) {
-    static auto suzanne_pos = std::vector<vec3f>{{0.4375, 0.1640625, 0.765625},
-        {-0.4375, 0.1640625, 0.765625}, {0.5, 0.09375, 0.6875},
-        {-0.5, 0.09375, 0.6875}, {0.546875, 0.0546875, 0.578125},
-        {-0.546875, 0.0546875, 0.578125}, {0.3515625, -0.0234375, 0.6171875},
-        {-0.3515625, -0.0234375, 0.6171875}, {0.3515625, 0.03125, 0.71875},
-        {-0.3515625, 0.03125, 0.71875}, {0.3515625, 0.1328125, 0.78125},
-        {-0.3515625, 0.1328125, 0.78125}, {0.2734375, 0.1640625, 0.796875},
-        {-0.2734375, 0.1640625, 0.796875}, {0.203125, 0.09375, 0.7421875},
-        {-0.203125, 0.09375, 0.7421875}, {0.15625, 0.0546875, 0.6484375},
-        {-0.15625, 0.0546875, 0.6484375}, {0.078125, 0.2421875, 0.65625},
-        {-0.078125, 0.2421875, 0.65625}, {0.140625, 0.2421875, 0.7421875},
-        {-0.140625, 0.2421875, 0.7421875}, {0.2421875, 0.2421875, 0.796875},
-        {-0.2421875, 0.2421875, 0.796875}, {0.2734375, 0.328125, 0.796875},
-        {-0.2734375, 0.328125, 0.796875}, {0.203125, 0.390625, 0.7421875},
-        {-0.203125, 0.390625, 0.7421875}, {0.15625, 0.4375, 0.6484375},
-        {-0.15625, 0.4375, 0.6484375}, {0.3515625, 0.515625, 0.6171875},
-        {-0.3515625, 0.515625, 0.6171875}, {0.3515625, 0.453125, 0.71875},
-        {-0.3515625, 0.453125, 0.71875}, {0.3515625, 0.359375, 0.78125},
-        {-0.3515625, 0.359375, 0.78125}, {0.4375, 0.328125, 0.765625},
-        {-0.4375, 0.328125, 0.765625}, {0.5, 0.390625, 0.6875},
-        {-0.5, 0.390625, 0.6875}, {0.546875, 0.4375, 0.578125},
-        {-0.546875, 0.4375, 0.578125}, {0.625, 0.2421875, 0.5625},
-        {-0.625, 0.2421875, 0.5625}, {0.5625, 0.2421875, 0.671875},
-        {-0.5625, 0.2421875, 0.671875}, {0.46875, 0.2421875, 0.7578125},
-        {-0.46875, 0.2421875, 0.7578125}, {0.4765625, 0.2421875, 0.7734375},
-        {-0.4765625, 0.2421875, 0.7734375}, {0.4453125, 0.3359375, 0.78125},
-        {-0.4453125, 0.3359375, 0.78125}, {0.3515625, 0.375, 0.8046875},
-        {-0.3515625, 0.375, 0.8046875}, {0.265625, 0.3359375, 0.8203125},
-        {-0.265625, 0.3359375, 0.8203125}, {0.2265625, 0.2421875, 0.8203125},
-        {-0.2265625, 0.2421875, 0.8203125}, {0.265625, 0.15625, 0.8203125},
-        {-0.265625, 0.15625, 0.8203125}, {0.3515625, 0.2421875, 0.828125},
-        {-0.3515625, 0.2421875, 0.828125}, {0.3515625, 0.1171875, 0.8046875},
-        {-0.3515625, 0.1171875, 0.8046875}, {0.4453125, 0.15625, 0.78125},
-        {-0.4453125, 0.15625, 0.78125}, {0.0, 0.4296875, 0.7421875},
-        {0.0, 0.3515625, 0.8203125}, {0.0, -0.6796875, 0.734375},
-        {0.0, -0.3203125, 0.78125}, {0.0, -0.1875, 0.796875},
-        {0.0, -0.7734375, 0.71875}, {0.0, 0.40625, 0.6015625},
-        {0.0, 0.5703125, 0.5703125}, {0.0, 0.8984375, -0.546875},
-        {0.0, 0.5625, -0.8515625}, {0.0, 0.0703125, -0.828125},
-        {0.0, -0.3828125, -0.3515625}, {0.203125, -0.1875, 0.5625},
-        {-0.203125, -0.1875, 0.5625}, {0.3125, -0.4375, 0.5703125},
-        {-0.3125, -0.4375, 0.5703125}, {0.3515625, -0.6953125, 0.5703125},
-        {-0.3515625, -0.6953125, 0.5703125}, {0.3671875, -0.890625, 0.53125},
-        {-0.3671875, -0.890625, 0.53125}, {0.328125, -0.9453125, 0.5234375},
-        {-0.328125, -0.9453125, 0.5234375}, {0.1796875, -0.96875, 0.5546875},
-        {-0.1796875, -0.96875, 0.5546875}, {0.0, -0.984375, 0.578125},
-        {0.4375, -0.140625, 0.53125}, {-0.4375, -0.140625, 0.53125},
-        {0.6328125, -0.0390625, 0.5390625}, {-0.6328125, -0.0390625, 0.5390625},
-        {0.828125, 0.1484375, 0.4453125}, {-0.828125, 0.1484375, 0.4453125},
-        {0.859375, 0.4296875, 0.59375}, {-0.859375, 0.4296875, 0.59375},
-        {0.7109375, 0.484375, 0.625}, {-0.7109375, 0.484375, 0.625},
-        {0.4921875, 0.6015625, 0.6875}, {-0.4921875, 0.6015625, 0.6875},
-        {0.3203125, 0.7578125, 0.734375}, {-0.3203125, 0.7578125, 0.734375},
-        {0.15625, 0.71875, 0.7578125}, {-0.15625, 0.71875, 0.7578125},
-        {0.0625, 0.4921875, 0.75}, {-0.0625, 0.4921875, 0.75},
-        {0.1640625, 0.4140625, 0.7734375}, {-0.1640625, 0.4140625, 0.7734375},
-        {0.125, 0.3046875, 0.765625}, {-0.125, 0.3046875, 0.765625},
-        {0.203125, 0.09375, 0.7421875}, {-0.203125, 0.09375, 0.7421875},
-        {0.375, 0.015625, 0.703125}, {-0.375, 0.015625, 0.703125},
-        {0.4921875, 0.0625, 0.671875}, {-0.4921875, 0.0625, 0.671875},
-        {0.625, 0.1875, 0.6484375}, {-0.625, 0.1875, 0.6484375},
-        {0.640625, 0.296875, 0.6484375}, {-0.640625, 0.296875, 0.6484375},
-        {0.6015625, 0.375, 0.6640625}, {-0.6015625, 0.375, 0.6640625},
-        {0.4296875, 0.4375, 0.71875}, {-0.4296875, 0.4375, 0.71875},
-        {0.25, 0.46875, 0.7578125}, {-0.25, 0.46875, 0.7578125},
-        {0.0, -0.765625, 0.734375}, {0.109375, -0.71875, 0.734375},
-        {-0.109375, -0.71875, 0.734375}, {0.1171875, -0.8359375, 0.7109375},
-        {-0.1171875, -0.8359375, 0.7109375}, {0.0625, -0.8828125, 0.6953125},
-        {-0.0625, -0.8828125, 0.6953125}, {0.0, -0.890625, 0.6875},
-        {0.0, -0.1953125, 0.75}, {0.0, -0.140625, 0.7421875},
-        {0.1015625, -0.1484375, 0.7421875}, {-0.1015625, -0.1484375, 0.7421875},
-        {0.125, -0.2265625, 0.75}, {-0.125, -0.2265625, 0.75},
-        {0.0859375, -0.2890625, 0.7421875}, {-0.0859375, -0.2890625, 0.7421875},
-        {0.3984375, -0.046875, 0.671875}, {-0.3984375, -0.046875, 0.671875},
-        {0.6171875, 0.0546875, 0.625}, {-0.6171875, 0.0546875, 0.625},
-        {0.7265625, 0.203125, 0.6015625}, {-0.7265625, 0.203125, 0.6015625},
-        {0.7421875, 0.375, 0.65625}, {-0.7421875, 0.375, 0.65625},
-        {0.6875, 0.4140625, 0.7265625}, {-0.6875, 0.4140625, 0.7265625},
-        {0.4375, 0.546875, 0.796875}, {-0.4375, 0.546875, 0.796875},
-        {0.3125, 0.640625, 0.8359375}, {-0.3125, 0.640625, 0.8359375},
-        {0.203125, 0.6171875, 0.8515625}, {-0.203125, 0.6171875, 0.8515625},
-        {0.1015625, 0.4296875, 0.84375}, {-0.1015625, 0.4296875, 0.84375},
-        {0.125, -0.1015625, 0.8125}, {-0.125, -0.1015625, 0.8125},
-        {0.2109375, -0.4453125, 0.7109375}, {-0.2109375, -0.4453125, 0.7109375},
-        {0.25, -0.703125, 0.6875}, {-0.25, -0.703125, 0.6875},
-        {0.265625, -0.8203125, 0.6640625}, {-0.265625, -0.8203125, 0.6640625},
-        {0.234375, -0.9140625, 0.6328125}, {-0.234375, -0.9140625, 0.6328125},
-        {0.1640625, -0.9296875, 0.6328125}, {-0.1640625, -0.9296875, 0.6328125},
-        {0.0, -0.9453125, 0.640625}, {0.0, 0.046875, 0.7265625},
-        {0.0, 0.2109375, 0.765625}, {0.328125, 0.4765625, 0.7421875},
-        {-0.328125, 0.4765625, 0.7421875}, {0.1640625, 0.140625, 0.75},
-        {-0.1640625, 0.140625, 0.75}, {0.1328125, 0.2109375, 0.7578125},
-        {-0.1328125, 0.2109375, 0.7578125}, {0.1171875, -0.6875, 0.734375},
-        {-0.1171875, -0.6875, 0.734375}, {0.078125, -0.4453125, 0.75},
-        {-0.078125, -0.4453125, 0.75}, {0.0, -0.4453125, 0.75},
-        {0.0, -0.328125, 0.7421875}, {0.09375, -0.2734375, 0.78125},
-        {-0.09375, -0.2734375, 0.78125}, {0.1328125, -0.2265625, 0.796875},
-        {-0.1328125, -0.2265625, 0.796875}, {0.109375, -0.1328125, 0.78125},
-        {-0.109375, -0.1328125, 0.78125}, {0.0390625, -0.125, 0.78125},
-        {-0.0390625, -0.125, 0.78125}, {0.0, -0.203125, 0.828125},
-        {0.046875, -0.1484375, 0.8125}, {-0.046875, -0.1484375, 0.8125},
-        {0.09375, -0.15625, 0.8125}, {-0.09375, -0.15625, 0.8125},
-        {0.109375, -0.2265625, 0.828125}, {-0.109375, -0.2265625, 0.828125},
-        {0.078125, -0.25, 0.8046875}, {-0.078125, -0.25, 0.8046875},
-        {0.0, -0.2890625, 0.8046875}, {0.2578125, -0.3125, 0.5546875},
-        {-0.2578125, -0.3125, 0.5546875}, {0.1640625, -0.2421875, 0.7109375},
-        {-0.1640625, -0.2421875, 0.7109375}, {0.1796875, -0.3125, 0.7109375},
-        {-0.1796875, -0.3125, 0.7109375}, {0.234375, -0.25, 0.5546875},
-        {-0.234375, -0.25, 0.5546875}, {0.0, -0.875, 0.6875},
-        {0.046875, -0.8671875, 0.6875}, {-0.046875, -0.8671875, 0.6875},
-        {0.09375, -0.8203125, 0.7109375}, {-0.09375, -0.8203125, 0.7109375},
-        {0.09375, -0.7421875, 0.7265625}, {-0.09375, -0.7421875, 0.7265625},
-        {0.0, -0.78125, 0.65625}, {0.09375, -0.75, 0.6640625},
-        {-0.09375, -0.75, 0.6640625}, {0.09375, -0.8125, 0.640625},
-        {-0.09375, -0.8125, 0.640625}, {0.046875, -0.8515625, 0.6328125},
-        {-0.046875, -0.8515625, 0.6328125}, {0.0, -0.859375, 0.6328125},
-        {0.171875, 0.21875, 0.78125}, {-0.171875, 0.21875, 0.78125},
-        {0.1875, 0.15625, 0.7734375}, {-0.1875, 0.15625, 0.7734375},
-        {0.3359375, 0.4296875, 0.7578125}, {-0.3359375, 0.4296875, 0.7578125},
-        {0.2734375, 0.421875, 0.7734375}, {-0.2734375, 0.421875, 0.7734375},
-        {0.421875, 0.3984375, 0.7734375}, {-0.421875, 0.3984375, 0.7734375},
-        {0.5625, 0.3515625, 0.6953125}, {-0.5625, 0.3515625, 0.6953125},
-        {0.5859375, 0.2890625, 0.6875}, {-0.5859375, 0.2890625, 0.6875},
-        {0.578125, 0.1953125, 0.6796875}, {-0.578125, 0.1953125, 0.6796875},
-        {0.4765625, 0.1015625, 0.71875}, {-0.4765625, 0.1015625, 0.71875},
-        {0.375, 0.0625, 0.7421875}, {-0.375, 0.0625, 0.7421875},
-        {0.2265625, 0.109375, 0.78125}, {-0.2265625, 0.109375, 0.78125},
-        {0.1796875, 0.296875, 0.78125}, {-0.1796875, 0.296875, 0.78125},
-        {0.2109375, 0.375, 0.78125}, {-0.2109375, 0.375, 0.78125},
-        {0.234375, 0.359375, 0.7578125}, {-0.234375, 0.359375, 0.7578125},
-        {0.1953125, 0.296875, 0.7578125}, {-0.1953125, 0.296875, 0.7578125},
-        {0.2421875, 0.125, 0.7578125}, {-0.2421875, 0.125, 0.7578125},
-        {0.375, 0.0859375, 0.7265625}, {-0.375, 0.0859375, 0.7265625},
-        {0.4609375, 0.1171875, 0.703125}, {-0.4609375, 0.1171875, 0.703125},
-        {0.546875, 0.2109375, 0.671875}, {-0.546875, 0.2109375, 0.671875},
-        {0.5546875, 0.28125, 0.671875}, {-0.5546875, 0.28125, 0.671875},
-        {0.53125, 0.3359375, 0.6796875}, {-0.53125, 0.3359375, 0.6796875},
-        {0.4140625, 0.390625, 0.75}, {-0.4140625, 0.390625, 0.75},
-        {0.28125, 0.3984375, 0.765625}, {-0.28125, 0.3984375, 0.765625},
-        {0.3359375, 0.40625, 0.75}, {-0.3359375, 0.40625, 0.75},
-        {0.203125, 0.171875, 0.75}, {-0.203125, 0.171875, 0.75},
-        {0.1953125, 0.2265625, 0.75}, {-0.1953125, 0.2265625, 0.75},
-        {0.109375, 0.4609375, 0.609375}, {-0.109375, 0.4609375, 0.609375},
-        {0.1953125, 0.6640625, 0.6171875}, {-0.1953125, 0.6640625, 0.6171875},
-        {0.3359375, 0.6875, 0.59375}, {-0.3359375, 0.6875, 0.59375},
-        {0.484375, 0.5546875, 0.5546875}, {-0.484375, 0.5546875, 0.5546875},
-        {0.6796875, 0.453125, 0.4921875}, {-0.6796875, 0.453125, 0.4921875},
-        {0.796875, 0.40625, 0.4609375}, {-0.796875, 0.40625, 0.4609375},
-        {0.7734375, 0.1640625, 0.375}, {-0.7734375, 0.1640625, 0.375},
-        {0.6015625, 0.0, 0.4140625}, {-0.6015625, 0.0, 0.4140625},
-        {0.4375, -0.09375, 0.46875}, {-0.4375, -0.09375, 0.46875},
-        {0.0, 0.8984375, 0.2890625}, {0.0, 0.984375, -0.078125},
-        {0.0, -0.1953125, -0.671875}, {0.0, -0.4609375, 0.1875},
-        {0.0, -0.9765625, 0.4609375}, {0.0, -0.8046875, 0.34375},
-        {0.0, -0.5703125, 0.3203125}, {0.0, -0.484375, 0.28125},
-        {0.8515625, 0.234375, 0.0546875}, {-0.8515625, 0.234375, 0.0546875},
-        {0.859375, 0.3203125, -0.046875}, {-0.859375, 0.3203125, -0.046875},
-        {0.7734375, 0.265625, -0.4375}, {-0.7734375, 0.265625, -0.4375},
-        {0.4609375, 0.4375, -0.703125}, {-0.4609375, 0.4375, -0.703125},
-        {0.734375, -0.046875, 0.0703125}, {-0.734375, -0.046875, 0.0703125},
-        {0.59375, -0.125, -0.1640625}, {-0.59375, -0.125, -0.1640625},
-        {0.640625, -0.0078125, -0.4296875}, {-0.640625, -0.0078125, -0.4296875},
-        {0.3359375, 0.0546875, -0.6640625}, {-0.3359375, 0.0546875, -0.6640625},
-        {0.234375, -0.3515625, 0.40625}, {-0.234375, -0.3515625, 0.40625},
-        {0.1796875, -0.4140625, 0.2578125}, {-0.1796875, -0.4140625, 0.2578125},
-        {0.2890625, -0.7109375, 0.3828125}, {-0.2890625, -0.7109375, 0.3828125},
-        {0.25, -0.5, 0.390625}, {-0.25, -0.5, 0.390625},
-        {0.328125, -0.9140625, 0.3984375}, {-0.328125, -0.9140625, 0.3984375},
-        {0.140625, -0.7578125, 0.3671875}, {-0.140625, -0.7578125, 0.3671875},
-        {0.125, -0.5390625, 0.359375}, {-0.125, -0.5390625, 0.359375},
-        {0.1640625, -0.9453125, 0.4375}, {-0.1640625, -0.9453125, 0.4375},
-        {0.21875, -0.28125, 0.4296875}, {-0.21875, -0.28125, 0.4296875},
-        {0.2109375, -0.2265625, 0.46875}, {-0.2109375, -0.2265625, 0.46875},
-        {0.203125, -0.171875, 0.5}, {-0.203125, -0.171875, 0.5},
-        {0.2109375, -0.390625, 0.1640625}, {-0.2109375, -0.390625, 0.1640625},
-        {0.296875, -0.3125, -0.265625}, {-0.296875, -0.3125, -0.265625},
-        {0.34375, -0.1484375, -0.5390625}, {-0.34375, -0.1484375, -0.5390625},
-        {0.453125, 0.8671875, -0.3828125}, {-0.453125, 0.8671875, -0.3828125},
-        {0.453125, 0.9296875, -0.0703125}, {-0.453125, 0.9296875, -0.0703125},
-        {0.453125, 0.8515625, 0.234375}, {-0.453125, 0.8515625, 0.234375},
-        {0.4609375, 0.5234375, 0.4296875}, {-0.4609375, 0.5234375, 0.4296875},
-        {0.7265625, 0.40625, 0.3359375}, {-0.7265625, 0.40625, 0.3359375},
-        {0.6328125, 0.453125, 0.28125}, {-0.6328125, 0.453125, 0.28125},
-        {0.640625, 0.703125, 0.0546875}, {-0.640625, 0.703125, 0.0546875},
-        {0.796875, 0.5625, 0.125}, {-0.796875, 0.5625, 0.125},
-        {0.796875, 0.6171875, -0.1171875}, {-0.796875, 0.6171875, -0.1171875},
-        {0.640625, 0.75, -0.1953125}, {-0.640625, 0.75, -0.1953125},
-        {0.640625, 0.6796875, -0.4453125}, {-0.640625, 0.6796875, -0.4453125},
-        {0.796875, 0.5390625, -0.359375}, {-0.796875, 0.5390625, -0.359375},
-        {0.6171875, 0.328125, -0.5859375}, {-0.6171875, 0.328125, -0.5859375},
-        {0.484375, 0.0234375, -0.546875}, {-0.484375, 0.0234375, -0.546875},
-        {0.8203125, 0.328125, -0.203125}, {-0.8203125, 0.328125, -0.203125},
-        {0.40625, -0.171875, 0.1484375}, {-0.40625, -0.171875, 0.1484375},
-        {0.4296875, -0.1953125, -0.2109375},
-        {-0.4296875, -0.1953125, -0.2109375}, {0.890625, 0.40625, -0.234375},
-        {-0.890625, 0.40625, -0.234375}, {0.7734375, -0.140625, -0.125},
-        {-0.7734375, -0.140625, -0.125}, {1.0390625, -0.1015625, -0.328125},
-        {-1.0390625, -0.1015625, -0.328125}, {1.28125, 0.0546875, -0.4296875},
-        {-1.28125, 0.0546875, -0.4296875}, {1.3515625, 0.3203125, -0.421875},
-        {-1.3515625, 0.3203125, -0.421875}, {1.234375, 0.5078125, -0.421875},
-        {-1.234375, 0.5078125, -0.421875}, {1.0234375, 0.4765625, -0.3125},
-        {-1.0234375, 0.4765625, -0.3125}, {1.015625, 0.4140625, -0.2890625},
-        {-1.015625, 0.4140625, -0.2890625}, {1.1875, 0.4375, -0.390625},
-        {-1.1875, 0.4375, -0.390625}, {1.265625, 0.2890625, -0.40625},
-        {-1.265625, 0.2890625, -0.40625}, {1.2109375, 0.078125, -0.40625},
-        {-1.2109375, 0.078125, -0.40625}, {1.03125, -0.0390625, -0.3046875},
-        {-1.03125, -0.0390625, -0.3046875}, {0.828125, -0.0703125, -0.1328125},
-        {-0.828125, -0.0703125, -0.1328125}, {0.921875, 0.359375, -0.21875},
-        {-0.921875, 0.359375, -0.21875}, {0.9453125, 0.3046875, -0.2890625},
-        {-0.9453125, 0.3046875, -0.2890625},
-        {0.8828125, -0.0234375, -0.2109375},
-        {-0.8828125, -0.0234375, -0.2109375}, {1.0390625, 0.0, -0.3671875},
-        {-1.0390625, 0.0, -0.3671875}, {1.1875, 0.09375, -0.4453125},
-        {-1.1875, 0.09375, -0.4453125}, {1.234375, 0.25, -0.4453125},
-        {-1.234375, 0.25, -0.4453125}, {1.171875, 0.359375, -0.4375},
-        {-1.171875, 0.359375, -0.4375}, {1.0234375, 0.34375, -0.359375},
-        {-1.0234375, 0.34375, -0.359375}, {0.84375, 0.2890625, -0.2109375},
-        {-0.84375, 0.2890625, -0.2109375}, {0.8359375, 0.171875, -0.2734375},
-        {-0.8359375, 0.171875, -0.2734375}, {0.7578125, 0.09375, -0.2734375},
-        {-0.7578125, 0.09375, -0.2734375}, {0.8203125, 0.0859375, -0.2734375},
-        {-0.8203125, 0.0859375, -0.2734375}, {0.84375, 0.015625, -0.2734375},
-        {-0.84375, 0.015625, -0.2734375}, {0.8125, -0.015625, -0.2734375},
-        {-0.8125, -0.015625, -0.2734375}, {0.7265625, 0.0, -0.0703125},
-        {-0.7265625, 0.0, -0.0703125}, {0.71875, -0.0234375, -0.171875},
-        {-0.71875, -0.0234375, -0.171875}, {0.71875, 0.0390625, -0.1875},
-        {-0.71875, 0.0390625, -0.1875}, {0.796875, 0.203125, -0.2109375},
-        {-0.796875, 0.203125, -0.2109375}, {0.890625, 0.2421875, -0.265625},
-        {-0.890625, 0.2421875, -0.265625}, {0.890625, 0.234375, -0.3203125},
-        {-0.890625, 0.234375, -0.3203125}, {0.8125, -0.015625, -0.3203125},
-        {-0.8125, -0.015625, -0.3203125}, {0.8515625, 0.015625, -0.3203125},
-        {-0.8515625, 0.015625, -0.3203125}, {0.828125, 0.078125, -0.3203125},
-        {-0.828125, 0.078125, -0.3203125}, {0.765625, 0.09375, -0.3203125},
-        {-0.765625, 0.09375, -0.3203125}, {0.84375, 0.171875, -0.3203125},
-        {-0.84375, 0.171875, -0.3203125}, {1.0390625, 0.328125, -0.4140625},
-        {-1.0390625, 0.328125, -0.4140625}, {1.1875, 0.34375, -0.484375},
-        {-1.1875, 0.34375, -0.484375}, {1.2578125, 0.2421875, -0.4921875},
-        {-1.2578125, 0.2421875, -0.4921875}, {1.2109375, 0.0859375, -0.484375},
-        {-1.2109375, 0.0859375, -0.484375}, {1.046875, 0.0, -0.421875},
-        {-1.046875, 0.0, -0.421875}, {0.8828125, -0.015625, -0.265625},
-        {-0.8828125, -0.015625, -0.265625}, {0.953125, 0.2890625, -0.34375},
-        {-0.953125, 0.2890625, -0.34375}, {0.890625, 0.109375, -0.328125},
-        {-0.890625, 0.109375, -0.328125}, {0.9375, 0.0625, -0.3359375},
-        {-0.9375, 0.0625, -0.3359375}, {1.0, 0.125, -0.3671875},
-        {-1.0, 0.125, -0.3671875}, {0.9609375, 0.171875, -0.3515625},
-        {-0.9609375, 0.171875, -0.3515625}, {1.015625, 0.234375, -0.375},
-        {-1.015625, 0.234375, -0.375}, {1.0546875, 0.1875, -0.3828125},
-        {-1.0546875, 0.1875, -0.3828125}, {1.109375, 0.2109375, -0.390625},
-        {-1.109375, 0.2109375, -0.390625}, {1.0859375, 0.2734375, -0.390625},
-        {-1.0859375, 0.2734375, -0.390625}, {1.0234375, 0.4375, -0.484375},
-        {-1.0234375, 0.4375, -0.484375}, {1.25, 0.46875, -0.546875},
-        {-1.25, 0.46875, -0.546875}, {1.3671875, 0.296875, -0.5},
-        {-1.3671875, 0.296875, -0.5}, {1.3125, 0.0546875, -0.53125},
-        {-1.3125, 0.0546875, -0.53125}, {1.0390625, -0.0859375, -0.4921875},
-        {-1.0390625, -0.0859375, -0.4921875}, {0.7890625, -0.125, -0.328125},
-        {-0.7890625, -0.125, -0.328125}, {0.859375, 0.3828125, -0.3828125},
-        {-0.859375, 0.3828125, -0.3828125}};
-    static auto suzanne_triangles = std::vector<vec3i>{{60, 64, 48},
-        {49, 65, 61}, {62, 64, 60}, {61, 65, 63}, {60, 58, 62}, {63, 59, 61},
-        {60, 56, 58}, {59, 57, 61}, {60, 54, 56}, {57, 55, 61}, {60, 52, 54},
-        {55, 53, 61}, {60, 50, 52}, {53, 51, 61}, {60, 48, 50}, {51, 49, 61},
-        {224, 228, 226}, {227, 229, 225}, {72, 283, 73}, {73, 284, 72},
-        {341, 347, 383}, {384, 348, 342}, {299, 345, 343}, {344, 346, 300},
-        {323, 379, 351}, {352, 380, 324}, {441, 443, 445}, {446, 444, 442},
-        {463, 491, 465}, {466, 492, 464}, {495, 497, 499}, {500, 498, 496}};
-    static auto suzanne_quads = std::vector<vec4i>{{46, 0, 2, 44},
-        {3, 1, 47, 45}, {44, 2, 4, 42}, {5, 3, 45, 43}, {2, 8, 6, 4},
-        {7, 9, 3, 5}, {0, 10, 8, 2}, {9, 11, 1, 3}, {10, 12, 14, 8},
-        {15, 13, 11, 9}, {8, 14, 16, 6}, {17, 15, 9, 7}, {14, 20, 18, 16},
-        {19, 21, 15, 17}, {12, 22, 20, 14}, {21, 23, 13, 15}, {22, 24, 26, 20},
-        {27, 25, 23, 21}, {20, 26, 28, 18}, {29, 27, 21, 19}, {26, 32, 30, 28},
-        {31, 33, 27, 29}, {24, 34, 32, 26}, {33, 35, 25, 27}, {34, 36, 38, 32},
-        {39, 37, 35, 33}, {32, 38, 40, 30}, {41, 39, 33, 31}, {38, 44, 42, 40},
-        {43, 45, 39, 41}, {36, 46, 44, 38}, {45, 47, 37, 39}, {46, 36, 50, 48},
-        {51, 37, 47, 49}, {36, 34, 52, 50}, {53, 35, 37, 51}, {34, 24, 54, 52},
-        {55, 25, 35, 53}, {24, 22, 56, 54}, {57, 23, 25, 55}, {22, 12, 58, 56},
-        {59, 13, 23, 57}, {12, 10, 62, 58}, {63, 11, 13, 59}, {10, 0, 64, 62},
-        {65, 1, 11, 63}, {0, 46, 48, 64}, {49, 47, 1, 65}, {88, 173, 175, 90},
-        {175, 174, 89, 90}, {86, 171, 173, 88}, {174, 172, 87, 89},
-        {84, 169, 171, 86}, {172, 170, 85, 87}, {82, 167, 169, 84},
-        {170, 168, 83, 85}, {80, 165, 167, 82}, {168, 166, 81, 83},
-        {78, 91, 145, 163}, {146, 92, 79, 164}, {91, 93, 147, 145},
-        {148, 94, 92, 146}, {93, 95, 149, 147}, {150, 96, 94, 148},
-        {95, 97, 151, 149}, {152, 98, 96, 150}, {97, 99, 153, 151},
-        {154, 100, 98, 152}, {99, 101, 155, 153}, {156, 102, 100, 154},
-        {101, 103, 157, 155}, {158, 104, 102, 156}, {103, 105, 159, 157},
-        {160, 106, 104, 158}, {105, 107, 161, 159}, {162, 108, 106, 160},
-        {107, 66, 67, 161}, {67, 66, 108, 162}, {109, 127, 159, 161},
-        {160, 128, 110, 162}, {127, 178, 157, 159}, {158, 179, 128, 160},
-        {125, 155, 157, 178}, {158, 156, 126, 179}, {123, 153, 155, 125},
-        {156, 154, 124, 126}, {121, 151, 153, 123}, {154, 152, 122, 124},
-        {119, 149, 151, 121}, {152, 150, 120, 122}, {117, 147, 149, 119},
-        {150, 148, 118, 120}, {115, 145, 147, 117}, {148, 146, 116, 118},
-        {113, 163, 145, 115}, {146, 164, 114, 116}, {113, 180, 176, 163},
-        {176, 181, 114, 164}, {109, 161, 67, 111}, {67, 162, 110, 112},
-        {111, 67, 177, 182}, {177, 67, 112, 183}, {176, 180, 182, 177},
-        {183, 181, 176, 177}, {134, 136, 175, 173}, {175, 136, 135, 174},
-        {132, 134, 173, 171}, {174, 135, 133, 172}, {130, 132, 171, 169},
-        {172, 133, 131, 170}, {165, 186, 184, 167}, {185, 187, 166, 168},
-        {130, 169, 167, 184}, {168, 170, 131, 185}, {143, 189, 188, 186},
-        {188, 189, 144, 187}, {184, 186, 188, 68}, {188, 187, 185, 68},
-        {129, 130, 184, 68}, {185, 131, 129, 68}, {141, 192, 190, 143},
-        {191, 193, 142, 144}, {139, 194, 192, 141}, {193, 195, 140, 142},
-        {138, 196, 194, 139}, {195, 197, 138, 140}, {137, 70, 196, 138},
-        {197, 70, 137, 138}, {189, 143, 190, 69}, {191, 144, 189, 69},
-        {69, 190, 205, 207}, {206, 191, 69, 207}, {70, 198, 199, 196},
-        {200, 198, 70, 197}, {196, 199, 201, 194}, {202, 200, 197, 195},
-        {194, 201, 203, 192}, {204, 202, 195, 193}, {192, 203, 205, 190},
-        {206, 204, 193, 191}, {198, 203, 201, 199}, {202, 204, 198, 200},
-        {198, 207, 205, 203}, {206, 207, 198, 204}, {138, 139, 163, 176},
-        {164, 140, 138, 176}, {139, 141, 210, 163}, {211, 142, 140, 164},
-        {141, 143, 212, 210}, {213, 144, 142, 211}, {143, 186, 165, 212},
-        {166, 187, 144, 213}, {80, 208, 212, 165}, {213, 209, 81, 166},
-        {208, 214, 210, 212}, {211, 215, 209, 213}, {78, 163, 210, 214},
-        {211, 164, 79, 215}, {130, 129, 71, 221}, {71, 129, 131, 222},
-        {132, 130, 221, 219}, {222, 131, 133, 220}, {134, 132, 219, 217},
-        {220, 133, 135, 218}, {136, 134, 217, 216}, {218, 135, 136, 216},
-        {216, 217, 228, 230}, {229, 218, 216, 230}, {217, 219, 226, 228},
-        {227, 220, 218, 229}, {219, 221, 224, 226}, {225, 222, 220, 227},
-        {221, 71, 223, 224}, {223, 71, 222, 225}, {223, 230, 228, 224},
-        {229, 230, 223, 225}, {182, 180, 233, 231}, {234, 181, 183, 232},
-        {111, 182, 231, 253}, {232, 183, 112, 254}, {109, 111, 253, 255},
-        {254, 112, 110, 256}, {180, 113, 251, 233}, {252, 114, 181, 234},
-        {113, 115, 249, 251}, {250, 116, 114, 252}, {115, 117, 247, 249},
-        {248, 118, 116, 250}, {117, 119, 245, 247}, {246, 120, 118, 248},
-        {119, 121, 243, 245}, {244, 122, 120, 246}, {121, 123, 241, 243},
-        {242, 124, 122, 244}, {123, 125, 239, 241}, {240, 126, 124, 242},
-        {125, 178, 235, 239}, {236, 179, 126, 240}, {178, 127, 237, 235},
-        {238, 128, 179, 236}, {127, 109, 255, 237}, {256, 110, 128, 238},
-        {237, 255, 257, 275}, {258, 256, 238, 276}, {235, 237, 275, 277},
-        {276, 238, 236, 278}, {239, 235, 277, 273}, {278, 236, 240, 274},
-        {241, 239, 273, 271}, {274, 240, 242, 272}, {243, 241, 271, 269},
-        {272, 242, 244, 270}, {245, 243, 269, 267}, {270, 244, 246, 268},
-        {247, 245, 267, 265}, {268, 246, 248, 266}, {249, 247, 265, 263},
-        {266, 248, 250, 264}, {251, 249, 263, 261}, {264, 250, 252, 262},
-        {233, 251, 261, 279}, {262, 252, 234, 280}, {255, 253, 259, 257},
-        {260, 254, 256, 258}, {253, 231, 281, 259}, {282, 232, 254, 260},
-        {231, 233, 279, 281}, {280, 234, 232, 282}, {66, 107, 283, 72},
-        {284, 108, 66, 72}, {107, 105, 285, 283}, {286, 106, 108, 284},
-        {105, 103, 287, 285}, {288, 104, 106, 286}, {103, 101, 289, 287},
-        {290, 102, 104, 288}, {101, 99, 291, 289}, {292, 100, 102, 290},
-        {99, 97, 293, 291}, {294, 98, 100, 292}, {97, 95, 295, 293},
-        {296, 96, 98, 294}, {95, 93, 297, 295}, {298, 94, 96, 296},
-        {93, 91, 299, 297}, {300, 92, 94, 298}, {307, 308, 327, 337},
-        {328, 308, 307, 338}, {306, 307, 337, 335}, {338, 307, 306, 336},
-        {305, 306, 335, 339}, {336, 306, 305, 340}, {88, 90, 305, 339},
-        {305, 90, 89, 340}, {86, 88, 339, 333}, {340, 89, 87, 334},
-        {84, 86, 333, 329}, {334, 87, 85, 330}, {82, 84, 329, 331},
-        {330, 85, 83, 332}, {329, 335, 337, 331}, {338, 336, 330, 332},
-        {329, 333, 339, 335}, {340, 334, 330, 336}, {325, 331, 337, 327},
-        {338, 332, 326, 328}, {80, 82, 331, 325}, {332, 83, 81, 326},
-        {208, 341, 343, 214}, {344, 342, 209, 215}, {80, 325, 341, 208},
-        {342, 326, 81, 209}, {78, 214, 343, 345}, {344, 215, 79, 346},
-        {78, 345, 299, 91}, {300, 346, 79, 92}, {76, 323, 351, 303},
-        {352, 324, 76, 303}, {303, 351, 349, 77}, {350, 352, 303, 77},
-        {77, 349, 347, 304}, {348, 350, 77, 304}, {304, 347, 327, 308},
-        {328, 348, 304, 308}, {325, 327, 347, 341}, {348, 328, 326, 342},
-        {295, 297, 317, 309}, {318, 298, 296, 310}, {75, 315, 323, 76},
-        {324, 316, 75, 76}, {301, 357, 355, 302}, {356, 358, 301, 302},
-        {302, 355, 353, 74}, {354, 356, 302, 74}, {74, 353, 315, 75},
-        {316, 354, 74, 75}, {291, 293, 361, 363}, {362, 294, 292, 364},
-        {363, 361, 367, 365}, {368, 362, 364, 366}, {365, 367, 369, 371},
-        {370, 368, 366, 372}, {371, 369, 375, 373}, {376, 370, 372, 374},
-        {313, 377, 373, 375}, {374, 378, 314, 376}, {315, 353, 373, 377},
-        {374, 354, 316, 378}, {353, 355, 371, 373}, {372, 356, 354, 374},
-        {355, 357, 365, 371}, {366, 358, 356, 372}, {357, 359, 363, 365},
-        {364, 360, 358, 366}, {289, 291, 363, 359}, {364, 292, 290, 360},
-        {73, 359, 357, 301}, {358, 360, 73, 301}, {283, 285, 287, 289},
-        {288, 286, 284, 290}, {283, 289, 359, 73}, {360, 290, 284, 73},
-        {293, 295, 309, 361}, {310, 296, 294, 362}, {309, 311, 367, 361},
-        {368, 312, 310, 362}, {311, 381, 369, 367}, {370, 382, 312, 368},
-        {313, 375, 369, 381}, {370, 376, 314, 382}, {347, 349, 385, 383},
-        {386, 350, 348, 384}, {317, 383, 385, 319}, {386, 384, 318, 320},
-        {297, 299, 383, 317}, {384, 300, 298, 318}, {299, 343, 341, 383},
-        {342, 344, 300, 384}, {313, 321, 379, 377}, {380, 322, 314, 378},
-        {315, 377, 379, 323}, {380, 378, 316, 324}, {319, 385, 379, 321},
-        {380, 386, 320, 322}, {349, 351, 379, 385}, {380, 352, 350, 386},
-        {399, 387, 413, 401}, {414, 388, 400, 402}, {399, 401, 403, 397},
-        {404, 402, 400, 398}, {397, 403, 405, 395}, {406, 404, 398, 396},
-        {395, 405, 407, 393}, {408, 406, 396, 394}, {393, 407, 409, 391},
-        {410, 408, 394, 392}, {391, 409, 411, 389}, {412, 410, 392, 390},
-        {409, 419, 417, 411}, {418, 420, 410, 412}, {407, 421, 419, 409},
-        {420, 422, 408, 410}, {405, 423, 421, 407}, {422, 424, 406, 408},
-        {403, 425, 423, 405}, {424, 426, 404, 406}, {401, 427, 425, 403},
-        {426, 428, 402, 404}, {401, 413, 415, 427}, {416, 414, 402, 428},
-        {317, 319, 443, 441}, {444, 320, 318, 442}, {319, 389, 411, 443},
-        {412, 390, 320, 444}, {309, 317, 441, 311}, {442, 318, 310, 312},
-        {381, 429, 413, 387}, {414, 430, 382, 388}, {411, 417, 439, 443},
-        {440, 418, 412, 444}, {437, 445, 443, 439}, {444, 446, 438, 440},
-        {433, 445, 437, 435}, {438, 446, 434, 436}, {431, 447, 445, 433},
-        {446, 448, 432, 434}, {429, 447, 431, 449}, {432, 448, 430, 450},
-        {413, 429, 449, 415}, {450, 430, 414, 416}, {311, 447, 429, 381},
-        {430, 448, 312, 382}, {311, 441, 445, 447}, {446, 442, 312, 448},
-        {415, 449, 451, 475}, {452, 450, 416, 476}, {449, 431, 461, 451},
-        {462, 432, 450, 452}, {431, 433, 459, 461}, {460, 434, 432, 462},
-        {433, 435, 457, 459}, {458, 436, 434, 460}, {435, 437, 455, 457},
-        {456, 438, 436, 458}, {437, 439, 453, 455}, {454, 440, 438, 456},
-        {439, 417, 473, 453}, {474, 418, 440, 454}, {427, 415, 475, 463},
-        {476, 416, 428, 464}, {425, 427, 463, 465}, {464, 428, 426, 466},
-        {423, 425, 465, 467}, {466, 426, 424, 468}, {421, 423, 467, 469},
-        {468, 424, 422, 470}, {419, 421, 469, 471}, {470, 422, 420, 472},
-        {417, 419, 471, 473}, {472, 420, 418, 474}, {457, 455, 479, 477},
-        {480, 456, 458, 478}, {477, 479, 481, 483}, {482, 480, 478, 484},
-        {483, 481, 487, 485}, {488, 482, 484, 486}, {485, 487, 489, 491},
-        {490, 488, 486, 492}, {463, 475, 485, 491}, {486, 476, 464, 492},
-        {451, 483, 485, 475}, {486, 484, 452, 476}, {451, 461, 477, 483},
-        {478, 462, 452, 484}, {457, 477, 461, 459}, {462, 478, 458, 460},
-        {453, 473, 479, 455}, {480, 474, 454, 456}, {471, 481, 479, 473},
-        {480, 482, 472, 474}, {469, 487, 481, 471}, {482, 488, 470, 472},
-        {467, 489, 487, 469}, {488, 490, 468, 470}, {465, 491, 489, 467},
-        {490, 492, 466, 468}, {391, 389, 503, 501}, {504, 390, 392, 502},
-        {393, 391, 501, 499}, {502, 392, 394, 500}, {395, 393, 499, 497},
-        {500, 394, 396, 498}, {397, 395, 497, 495}, {498, 396, 398, 496},
-        {399, 397, 495, 493}, {496, 398, 400, 494}, {387, 399, 493, 505},
-        {494, 400, 388, 506}, {493, 501, 503, 505}, {504, 502, 494, 506},
-        {493, 495, 499, 501}, {500, 496, 494, 502}, {313, 381, 387, 505},
-        {388, 382, 314, 506}, {313, 505, 503, 321}, {504, 506, 314, 322},
-        {319, 321, 503, 389}, {504, 322, 320, 390}};
-
-    pos = suzanne_pos;
-    quads = suzanne_quads;
-    for (auto& t : suzanne_triangles) { quads.push_back({t.x, t.y, t.z, t.z}); }
-
-    for (auto l = 0; l < tesselation; l++) subdivide_quads(quads, pos);
-}
-
-// Make a cube with uv. This is not watertight.
-void make_uvcube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation) {
-    frame3f frames[6] = {frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 1}},
-        frame3f{{-1, 0, 0}, {0, 1, 0}, {0, 0, -1}, {0, 0, -1}},
-        frame3f{{-1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 1, 0}},
-        frame3f{{1, 0, 0}, {0, 0, 1}, {0, -1, 0}, {0, -1, 0}},
-        frame3f{{0, 1, 0}, {0, 0, 1}, {1, 0, 0}, {1, 0, 0}},
-        frame3f{{0, -1, 0}, {0, 0, 1}, {-1, 0, 0}, {-1, 0, 0}}};
-    std::vector<vec3f> quad_pos, quad_norm;
-    std::vector<vec2f> quad_texcoord;
-    std::vector<vec4i> quad_quads;
-    make_uvquad(quad_quads, quad_pos, quad_norm, quad_texcoord, tesselation);
-    for (auto i = 0; i < 6; i++) {
-        pos.insert(pos.end(), quad_pos.begin(), quad_pos.end());
-        norm.insert(norm.end(), quad_norm.begin(), quad_norm.end());
-        texcoord.insert(
-            texcoord.end(), quad_texcoord.begin(), quad_texcoord.end());
-        quads.insert(quads.end(), quad_quads.begin(), quad_quads.end());
-    }
-    auto quad_verts = quad_pos.size();
-    for (auto i = 0; i < 6; i++) {
-        for (auto j = quad_verts * i; j < quad_verts * (i + 1); j++)
-            pos[j] = transform_point(frames[i], pos[j]);
-        for (auto j = quad_verts * i; j < quad_verts * (i + 1); j++)
-            norm[j] = transform_direction(frames[i], norm[j]);
-    }
-    auto quad_faces = quad_quads.size();
-    for (auto i = 0; i < 6; i++) {
-        for (auto j = quad_faces * i; j < quad_faces * (i + 1); j++) {
-            quads[j].x += quad_verts * i;
-            quads[j].y += quad_verts * i;
-            quads[j].z += quad_verts * i;
-            quads[j].w += quad_verts * i;
-        }
-    }
-}
-
-// Make a sphere from a cube. This is not watertight.
-void make_uvspherecube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation) {
-    make_uvcube(quads, pos, norm, texcoord, tesselation);
-    for (auto i = 0; i < pos.size(); i++) {
-        pos[i] = normalize(pos[i]);
-        norm[i] = normalize(pos[i]);
-    }
-}
-
-// Make a cube than stretch it towards a sphere. This is not watertight.
-void make_uvspherizedcube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
-    float radius) {
-    make_uvcube(quads, pos, norm, texcoord, tesselation);
-    for (auto i = 0; i < pos.size(); i++) {
-        norm[i] = normalize(pos[i]);
-        pos[i] *= 1 - radius;
-        pos[i] += norm[i] * radius;
-    }
-    compute_normals(quads, pos, norm);
-}
-
-// Make a flipped sphere. This is not watertight.
-void make_uvflipcapsphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
-    float z, bool flipped) {
-    make_uvsphere(quads, pos, norm, texcoord, tesselation, flipped);
-    for (auto i = 0; i < pos.size(); i++) {
-        if (pos[i].z > z) {
-            pos[i].z = 2 * z - pos[i].z;
-            norm[i].x = -norm[i].x;
-            norm[i].y = -norm[i].y;
-        } else if (pos[i].z < -z) {
-            pos[i].z = -2 * z - pos[i].z;
-            norm[i].x = -norm[i].x;
-            norm[i].y = -norm[i].y;
-        }
-    }
-}
-
-// Make a cutout sphere. This is not watertight.
-void make_uvcutsphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
-    float z, bool flipped) {
-    if (!flipped) {
-        make_quads(quads, pos, norm, texcoord, pow2(tesselation + 2),
-            pow2(tesselation + 1),
-            [=](auto uv, auto& pos, auto& norm, auto& texcoord) {
-                auto p = 1 - acos(z) / pif;
-                auto a = vec2f{2 * pif * uv.x, pif * (1 - p * uv.y)};
-                pos = {cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
-                norm = {cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
-                texcoord = uv;
-            });
-    } else {
-        make_quads(quads, pos, norm, texcoord, pow2(tesselation + 2),
-            pow2(tesselation + 1),
-            [=](auto uv, auto& pos, auto& norm, auto& texcoord) {
-                auto p = 1 - acos(z) / pif;
-                auto a = vec2f{2 * pif * uv.x, pif * ((1 - p) + p * uv.y)};
-                pos = {cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
-                norm = {-cos(a.x) * sin(a.y), -sin(a.x) * sin(a.y), -cos(a.y)};
-                texcoord = {uv.x, 1 - uv.y};
-            });
-    }
-}
-
-// Make a seashell. This is not watertight. Returns quads, pos, norm,
-// texcoord.
-void make_uvseashell(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
-    const make_seashell_params& params) {
-    auto R = params.spiral_revolutions;
-    auto D = -1.0f;
-    auto a = params.spiral_angle;
-    auto b = params.enlarging_angle;
-    auto A = params.spiral_aperture;
-    auto e = params.ellipse_axis;
-    auto O = params.curve_rotation;  // (psi, Omega, mu)
-    auto W = params.nodule_length;
-    auto N = params.nodules_num;
-    auto P = params.nodule_pos;
-    auto L = params.nodule_height;
-
-    auto cot_a = 1 / tan(a);
-
-    make_quads(quads, pos, norm, texcoord, pow2(tesselation + 2),
-        pow2(tesselation + 1 + (int)round(R)),
-        [=](auto uv, auto& pos, auto& norm, auto& texcoord) {
-            auto s = uv.x * 2 * pif;
-            auto t = uv.y * 2 * pif * R - pif * R;
-            auto re = 1 / sqrt(pow(cos(s) / e.x, 2) + pow(sin(s) / e.y, 2));
-            if (L && W.x && W.y && t > 0) {
-                auto l = (2 * pif / N) *
-                         ((N * t) / (2 * pif) - floor((N * t) / (2 * pif)));
-                auto rn = L * exp(-pow((2 * (s - P)) / W.x, 2) -
-                                  pow((2 * l) / W.y, 2));
-                re += rn;
-            }
-            pos.x = (A * sin(b) * cos(t) + cos(s + O.x) * cos(t + O.y) * re -
-                        sin(O.z) * sin(t + O.y) * re) *
-                    D * exp(t * cot_a);
-            pos.y = (A * sin(b) * sin(t) + cos(s + O.x) * sin(t + O.y) * re +
-                        sin(O.z) * sin(s + O.x) * cos(t + O.y) * re) *
-                    exp(t * cot_a);
-            pos.z =
-                (-A * cos(b) + cos(O.z) * sin(s + O.x) * re) * exp(t * cot_a);
-            norm = vec3f{0, 0, 1};
-            texcoord = vec2f{uv.x, uv.y * R};
-        });
-
-    norm = std::vector<vec3f>(pos.size());
-    compute_normals(quads, pos, norm);
-}
-
-// Make a bezier circle. Returns bezier, pos.
-void make_bezier_circle(std::vector<vec4i>& beziers, std::vector<vec3f>& pos) {
-    // constant from http://spencermortensen.com/articles/bezier-circle/
-    auto c = 0.551915024494f;
-    pos = std::vector<vec3f>{{1, 0, 0}, {1, c, 0}, {c, 1, 0}, {0, 1, 0},
-        {-c, 1, 0}, {-1, c, 0}, {-1, 0, 0}, {-1, -c, 0}, {-c, -1, 0},
-        {0, -1, 0}, {c, -1, 0}, {1, -c, 0}};
-    beziers = std::vector<vec4i>{
-        {0, 1, 2, 3}, {3, 4, 5, 6}, {6, 7, 8, 9}, {9, 10, 11, 0}};
-}
-
-// Make a hair ball around a shape
-void make_hair(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<float>& radius, int num, int tesselation,
-    const std::vector<vec3i>& striangles, const std::vector<vec4i>& squads,
-    const std::vector<vec3f>& spos, const std::vector<vec3f>& snorm,
-    const std::vector<vec2f>& stexcoord, const make_hair_params& params) {
-    std::vector<vec3f> bpos;
-    std::vector<vec3f> bnorm;
-    std::vector<vec2f> btexcoord;
-    std::tie(bpos, bnorm, btexcoord) = sample_triangles_points(
-        join(striangles, convert_quads_to_triangles(squads)), spos, snorm,
-        stexcoord, num, params.seed);
-
-    auto rng = init_rng(params.seed, 3);
-    auto blen = std::vector<float>(bpos.size());
-    for (auto& l : blen)
-        l = lerp(params.length.x, params.length.y, next_rand1f(rng));
-
-    auto cidx = std::vector<int>();
-    if (params.clump.x > 0) {
-        for (auto bidx = 0; bidx < bpos.size(); bidx++) {
-            cidx.push_back(0);
-            auto cdist = flt_max;
-            for (auto c = 0; c < params.clump.y; c++) {
-                auto d = length(bpos[bidx] - bpos[c]);
-                if (d < cdist) {
-                    cdist = d;
-                    cidx.back() = c;
-                }
-            }
-        }
-    }
-
-    auto usteps = pow2(tesselation);
-    make_lines_uv(lines, texcoord, num, usteps);
-    pos = std::vector<vec3f>(texcoord.size());
-    norm = std::vector<vec3f>(texcoord.size());
-    radius = std::vector<float>(texcoord.size());
-    for (auto i = 0; i < texcoord.size(); i++) {
-        auto u = texcoord[i].x;
-        auto bidx = i / (usteps + 1);
-        pos[i] = bpos[bidx] + bnorm[bidx] * u * blen[bidx];
-        norm[i] = bnorm[bidx];
-        radius[i] = lerp(params.radius.x, params.radius.y, u);
-        if (params.clump.x > 0) {
-            pos[i] = lerp(pos[i], pos[i + (cidx[bidx] - bidx) * (usteps + 1)],
-                u * params.clump.x);
-        }
-        if (params.noise.x > 0) {
-            auto nx = perlin_noise(pos[i] * params.noise.y + vec3f{0, 0, 0}) *
-                      params.noise.x;
-            auto ny = perlin_noise(pos[i] * params.noise.y + vec3f{3, 7, 11}) *
-                      params.noise.x;
-            auto nz =
-                perlin_noise(pos[i] * params.noise.y + vec3f{13, 17, 19}) *
-                params.noise.x;
-            pos[i] += {nx, ny, nz};
-        }
-    }
-
-    if (params.clump.x > 0 || params.noise.x > 0 || params.rotation.x > 0)
-        compute_tangents(lines, pos, norm);
-}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR EXAMPLE SCENES
 // -----------------------------------------------------------------------------
 namespace ygl {
@@ -10492,7 +10660,7 @@ scene* make_cornell_box_scene() {
     };
 
     auto make_quad = [](std::string name, material* mat, vec3f pos,
-                         vec3f rot = {0, 0, 0}, vec3f scale = {1, 1, 1}) {
+                         vec3f rot = {0, 0, 0}, vec2f size = {2, 2}) {
         auto shp = new shape();
         shp->name = name;
         shp->frame = translation_frame(pos);
@@ -10503,13 +10671,13 @@ scene* make_cornell_box_scene() {
                          rotation_frame(vec3f{1, 0, 0}, rot[0] * pif / 180);
         }
         shp->groups.push_back({"", mat, false});
-        make_uvquad(shp->quads, shp->pos, shp->norm, shp->texcoord, 0);
-        for (auto& p : shp->pos) p *= scale;
+        ygl::make_quad(shp->quads, shp->pos, shp->norm, shp->texcoord, {1, 1},
+            size, {1, 1});
         return shp;
     };
 
     auto make_box = [](std::string name, material* mat, vec3f pos,
-                        vec3f rot = {0, 0, 0}, vec3f scale = {1, 1, 1}) {
+                        vec3f rot = {0, 0, 0}, vec3f size = {2, 2, 2}) {
         auto shp = new shape();
         shp->name = name;
         shp->frame = translation_frame(pos);
@@ -10521,8 +10689,8 @@ scene* make_cornell_box_scene() {
         }
         shp->groups.push_back({"", mat, false});
         shp->name = name;
-        make_uvcube(shp->quads, shp->pos, shp->norm, shp->texcoord, 0);
-        for (auto& p : shp->pos) p *= scale;
+        make_cube(shp->quads, shp->pos, shp->norm, shp->texcoord, {1, 1, 1},
+            size, {1, 1, 1});
         return shp;
     };
 
@@ -10555,83 +10723,12 @@ scene* make_cornell_box_scene() {
     scn->shapes.push_back(
         make_quad("cb_right", scn->materials[1], {-1, 1, 0}, {0, 90, 0}));
     scn->shapes.push_back(make_box("cb_tallbox", scn->materials[0],
-        {-0.33f, 0.6f, -0.29f}, {0, 15, 0}, {0.3f, 0.6f, 0.3f}));
+        {-0.33f, 0.6f, -0.29f}, {0, 15, 0}, {0.6f, 1.2f, 0.6f}));
     scn->shapes.push_back(make_box("cb_shortbox", scn->materials[0],
-        {0.33f, 0.3f, 0.33f}, {0, -15, 0}, {0.3f, 0.3f, 0.3f}));
+        {0.33f, 0.3f, 0.33f}, {0, -15, 0}, {0.6f, 0.6f, 0.6f}));
     scn->shapes.push_back(make_quad("cb_light", scn->materials[3],
-        {0, 1.999f, 0}, {90, 0, 0}, {0.25f, 0.25f, 0.25f}));
+        {0, 1.999f, 0}, {90, 0, 0}, {0.5f, 0.5f}));
     return scn;
-}
-
-// Make standard shape.
-void make_uvhollowcutsphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
-    float radius) {
-    std::vector<vec3f> mpos, mnorm;
-    std::vector<vec2f> mtexcoord;
-    std::vector<vec4i> mquads;
-    make_uvcutsphere(mquads, mpos, mnorm, mtexcoord, tesselation, radius);
-    for (auto& uv : mtexcoord) uv.y *= radius;
-    merge_quads(quads, pos, norm, texcoord, mquads, mpos, mnorm, mtexcoord);
-
-    make_uvcutsphere(mquads, mpos, mnorm, mtexcoord, tesselation, radius, true);
-    for (auto& p : mpos) p *= radius;
-    merge_quads(quads, pos, norm, texcoord, mquads, mpos, mnorm, mtexcoord);
-
-    // dpdu = [- s r s0 s1, s r c0 s1, 0] === [- s0, c0, 0]
-    // dpdv = [s c0 s1, s s0 s1, s c1] === [c0 s1, s0 s1, c1]
-    // n = [c0 c1, - s0 c1, s1]
-    make_quads(mquads, mpos, mnorm, mtexcoord, pow2(tesselation + 2),
-        pow2(tesselation + 1),
-        [=](auto uv, auto& pos, auto& norm, auto& texcoord) {
-            auto a = vec2f{2 * pif * uv[0], pif * (1 - radius)};
-            auto r = (1 - uv[1]) + uv[1] * radius;
-            pos = {r * cos(a[0]) * sin(a[1]), r * sin(a[0]) * sin(a[1]),
-                r * cos(a[1])};
-            norm = {-cos(a[0]) * cos(a[1]), -sin(a[0]) * cos(a[1]), sin(a[1])};
-            texcoord = vec2f{uv[0], radius + (1 - radius) * uv[1]};
-        });
-    merge_quads(quads, pos, norm, texcoord, mquads, mpos, mnorm, mtexcoord);
-}
-
-// Make standard shape.
-void make_uvhollowcutsphere1(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int tesselation,
-    float radius) {
-    std::vector<vec3f> mpos, mnorm;
-    std::vector<vec2f> mtexcoord;
-    std::vector<vec4i> mquads;
-    std::vector<vec2i> _aux1;
-    std::vector<vec3i> _aux2;
-
-    make_uvcutsphere(mquads, mpos, mnorm, mtexcoord, tesselation, radius);
-    for (auto& uv : mtexcoord) uv.y *= radius;
-    for (auto i = (pow2(tesselation + 2) + 1) * pow2(tesselation + 1);
-         i < mnorm.size(); i++)
-        mnorm[i] = normalize(mnorm[i] + vec3f{0, 0, 1});
-    merge_quads(quads, pos, norm, texcoord, mquads, mpos, mnorm, mtexcoord);
-
-    make_uvcutsphere(
-        mquads, mpos, mnorm, mtexcoord, tesselation, radius * 1.05f, true);
-    for (auto& p : mpos) p *= 0.8f;
-    merge_quads(quads, pos, norm, texcoord, mquads, mpos, mnorm, mtexcoord);
-
-    make_quads(mquads, mpos, mnorm, mtexcoord, pow2(tesselation + 2),
-        pow2(tesselation + 1) / 4,
-        [=](auto uv, auto& pos, auto& norm, auto& texcoord) {
-            auto p = 1 - acos(radius) / pif;
-            auto v = p + uv[1] * (1 - p);
-            auto a = vec2f{2 * pif * uv[0], pif * (1 - v)};
-            pos = vec3f{cos(a[0]) * sin(a[1]), sin(a[0]) * sin(a[1]),
-                (2 * radius - cos(a[1]))};
-            norm = vec3f{
-                -cos(a[0]) * sin(a[1]), -sin(a[0]) * sin(a[1]), cos(a[1])};
-            texcoord = vec2f{uv[0], radius + (1 - radius) * uv[1]};
-        });
-
-    for (auto i = 0; i < (pow2(tesselation + 2) + 1); i++)
-        mnorm[i] = normalize(mnorm[i] + vec3f{0, 0, 1});
-    merge_quads(quads, pos, norm, texcoord, mquads, mpos, mnorm, mtexcoord);
 }
 
 }  // namespace ygl
@@ -10786,109 +10883,127 @@ void update_proc_elem(scene* scn, shape* shp, const proc_shape* pshp) {
 
     switch (pshp->type) {
         case proc_shape_type::floor: {
-            make_uvquad(shp->quads, shp->pos, shp->norm, shp->texcoord,
-                (pshp->tesselation < 0) ? 5 : pshp->tesselation);
+            make_quad(shp->quads, shp->pos, shp->norm, shp->texcoord,
+                {pshp->tesselation.x, pshp->tesselation.y},
+                {pshp->size.x, pshp->size.y}, {pshp->uvsize.x, pshp->uvsize.y});
             for (auto& p : shp->pos) p = {-p.x, p.z, p.y};
             for (auto& n : shp->norm) n = {n.x, n.z, n.y};
-            for (auto& p : shp->pos) p *= 20;
-            for (auto& uv : shp->texcoord) uv *= 20;
         } break;
         case proc_shape_type::quad: {
-            make_uvquad(shp->quads, shp->pos, shp->norm, shp->texcoord,
-                (pshp->tesselation < 0) ? 0 : pshp->tesselation);
+            make_quad(shp->quads, shp->pos, shp->norm, shp->texcoord,
+                {pshp->tesselation.x, pshp->tesselation.y},
+                {pshp->size.x, pshp->size.y}, {pshp->uvsize.x, pshp->uvsize.y});
         } break;
         case proc_shape_type::cube: {
-            make_uvcube(shp->quads, shp->pos, shp->norm, shp->texcoord,
-                (pshp->tesselation < 0) ? 0 : pshp->tesselation);
+            make_cube(shp->quads, shp->pos, shp->norm, shp->texcoord,
+                pshp->tesselation, pshp->size, pshp->uvsize);
+        } break;
+        case proc_shape_type::cube_rounded: {
+            make_cube_rounded(shp->quads, shp->pos, shp->norm, shp->texcoord,
+                pshp->tesselation, pshp->size, pshp->uvsize, pshp->rounded);
         } break;
         case proc_shape_type::sphere: {
-            make_uvsphere(shp->quads, shp->pos, shp->norm, shp->texcoord,
-                (pshp->tesselation < 0) ? 5 : pshp->tesselation);
+            make_sphere(shp->quads, shp->pos, shp->norm, shp->texcoord,
+                {pshp->tesselation.x, pshp->tesselation.y}, pshp->size.x,
+                {pshp->uvsize.x, pshp->uvsize.y});
         } break;
-        case proc_shape_type::spherecube: {
-            make_uvspherecube(shp->quads, shp->pos, shp->norm, shp->texcoord,
-                (pshp->tesselation < 0) ? 4 : pshp->tesselation);
+        case proc_shape_type::sphere_cube: {
+            make_sphere_cube(shp->quads, shp->pos, shp->norm, shp->texcoord,
+                pshp->tesselation.x, pshp->size.x, pshp->uvsize.x);
         } break;
-        case proc_shape_type::spherizedcube: {
-            make_uvspherizedcube(shp->quads, shp->pos, shp->norm, shp->texcoord,
-                (pshp->tesselation < 0) ? 4 : pshp->tesselation, 0.75f);
+        case proc_shape_type::disk: {
+            make_disk(shp->quads, shp->pos, shp->norm, shp->texcoord,
+                {pshp->tesselation.x, pshp->tesselation.y}, pshp->size.x,
+                {pshp->uvsize.x, pshp->uvsize.y});
         } break;
-        case proc_shape_type::geosphere: {
-            make_geodesicsphere(shp->triangles, shp->pos,
-                (pshp->tesselation < 0) ? 5 : pshp->tesselation);
+        case proc_shape_type::disk_quad: {
+            make_disk_quad(shp->quads, shp->pos, shp->norm, shp->texcoord,
+                pshp->tesselation.x, pshp->size.x, pshp->uvsize.x);
+        } break;
+        case proc_shape_type::disk_bulged: {
+            make_disk_bulged(shp->quads, shp->pos, shp->norm, shp->texcoord,
+                pshp->tesselation.x, pshp->size.x, pshp->uvsize.x, pshp->rounded);
+        } break;
+        case proc_shape_type::cylinder: {
+            make_cylinder(shp->quads, shp->pos, shp->norm, shp->texcoord,
+                pshp->tesselation, {pshp->size.x, pshp->size.y}, pshp->uvsize);
+        } break;
+        case proc_shape_type::cylinder_rounded: {
+            make_cylinder_rounded(shp->quads, shp->pos, shp->norm,
+                shp->texcoord, pshp->tesselation, {pshp->size.x, pshp->size.y},
+                pshp->uvsize, pshp->rounded);
+        } break;
+        case proc_shape_type::geodesic_sphere: {
+            auto level = 0;
+            auto ntris = (pshp->tesselation.x * pshp->tesselation.y) / 4;
+            while (ntris > 4) {
+                ntris /= 4;
+                level += 1;
+            }
+            make_geodesic_sphere(shp->triangles, shp->pos, level);
             shp->norm = shp->pos;
+            shp->texcoord.assign(shp->pos.size(), {0, 0});
         } break;
-        case proc_shape_type::flipcapsphere: {
-            make_uvflipcapsphere(shp->quads, shp->pos, shp->norm, shp->texcoord,
-                (pshp->tesselation < 0) ? 5 : pshp->tesselation, 0.75f);
+        case proc_shape_type::sphere_flipcap: {
+            make_sphere_flipcap(shp->quads, shp->pos, shp->norm, shp->texcoord,
+                {pshp->tesselation.x, pshp->tesselation.y}, pshp->size.x,
+                {pshp->uvsize.x, pshp->uvsize.y},
+                {-pshp->rounded, pshp->rounded});
         } break;
         case proc_shape_type::suzanne: {
-            make_suzanne(shp->quads, shp->pos,
-                (pshp->tesselation < 0) ? 0 : pshp->tesselation);
+            make_suzanne(shp->quads, shp->pos, 0);
         } break;
         case proc_shape_type::cubep: {
-            make_cube(shp->quads, shp->pos,
-                (pshp->tesselation < 0) ? 0 : pshp->tesselation);
+            make_cube(shp->quads, shp->pos, 0);
         } break;
         case proc_shape_type::fvcube: {
             make_fvcube(shp->quads_pos, shp->pos, shp->quads_norm, shp->norm,
-                shp->quads_texcoord, shp->texcoord,
-                (pshp->tesselation < 0) ? 0 : pshp->tesselation);
+                shp->quads_texcoord, shp->texcoord, 0);
         } break;
         case proc_shape_type::fvsphere: {
-            make_uvsphere(shp->quads, shp->pos, shp->norm, shp->texcoord,
-                (pshp->tesselation < 0) ? 5 : pshp->tesselation);
+            make_sphere(shp->quads, shp->pos, shp->norm, shp->texcoord,
+                {pshp->tesselation.x, pshp->tesselation.y}, pshp->size.x,
+                {pshp->uvsize.x, pshp->uvsize.y});
         } break;
         case proc_shape_type::matball: {
-            make_uvflipcapsphere(shp->quads, shp->pos, shp->norm, shp->texcoord,
-                (pshp->tesselation < 0) ? 5 : pshp->tesselation, 0.75f);
+            make_sphere_flipcap(shp->quads, shp->pos, shp->norm, shp->texcoord,
+                {pshp->tesselation.x, pshp->tesselation.y}, pshp->size.x,
+                {pshp->uvsize.x, pshp->uvsize.y},
+                {-pshp->rounded, pshp->rounded});
             auto shp1 = new shape();
             shp1->name = "interior";
             shp1->frame = shp->frame;
-            make_uvsphere(shp1->quads, shp1->pos, shp1->norm, shp1->texcoord,
-                (pshp->tesselation < 0) ? 5 : pshp->tesselation);
-            for (auto& p : shp1->pos) p *= 0.8f;
+            make_sphere(shp1->quads, shp1->pos, shp1->norm, shp1->texcoord,
+                {pshp->tesselation.x, pshp->tesselation.y}, pshp->size.x * 0.8f,
+                {pshp->uvsize.x, pshp->uvsize.y});
             shp1->groups.push_back({"interior",
                 find_named_elem(scn->materials, pshp->interior), false});
             merge_into(shp, shp1, false);
             delete shp1;
         } break;
         case proc_shape_type::point: {
-            shp->points.push_back(0);
-            shp->pos.push_back({0, 0, 0});
-            shp->norm.push_back({0, 0, 1});
-            shp->radius.push_back(0.001f);
+            make_point(
+                shp->points, shp->pos, shp->norm, shp->texcoord, shp->radius);
         } break;
         case proc_shape_type::pointscube: {
-            auto npoints = (pshp->num < 0) ? 64 * 64 * 16 : pshp->num;
-            auto radius = (pshp->radius < 0) ? 0.0025f : pshp->radius;
-            make_points_uv(shp->points, shp->texcoord, npoints);
-            shp->pos.reserve(shp->texcoord.size());
-            shp->norm.resize(shp->texcoord.size(), {0, 0, 1});
-            shp->radius.resize(shp->texcoord.size(), radius);
-            auto rn = init_rng(0);
-            for (auto i = 0; i < shp->texcoord.size(); i++) {
-                shp->pos.push_back(vec3f{-1 + 2 * next_rand1f(rn),
-                    -1 + 2 * next_rand1f(rn), -1 + 2 * next_rand1f(rn)});
-            }
+            make_random_points(shp->points, shp->pos, shp->norm, shp->texcoord,
+                shp->radius, pshp->tesselation.x, pshp->size, pshp->uvsize.x,
+                pshp->radius);
         } break;
         case proc_shape_type::hairball: {
             auto shp1 = new shape();
             shp1->name = "interior";
             shp1->frame = shp->frame;
-            make_uvspherecube(
-                shp1->quads, shp1->pos, shp1->norm, shp1->texcoord, 5);
+            auto steps = pow2(5);
+            make_sphere_cube(shp1->quads, shp1->pos, shp1->norm, shp1->texcoord,
+                steps, pshp->size.x * 0.8f, 1);
             shp1->radius.assign(shp1->pos.size(), 0);
             shp1->groups.push_back({"interior",
                 find_named_elem(scn->materials, pshp->interior), false});
-            auto nhairs = (pshp->num < 0) ? 65536 : pshp->num;
-            // auto radius = (pshp->radius < 0) ? vec2f{0.001f, 0.0001f}
-            // :
-            //                                   vec2f{pshp->radius,
-            //                                   0.0001f};
             make_hair(shp->lines, shp->pos, shp->norm, shp->texcoord,
-                shp->radius, nhairs, 2, {}, shp1->quads, shp1->pos, shp1->norm,
-                shp1->texcoord, pshp->hair_params);
+                shp->radius, {pshp->tesselation.x, pshp->tesselation.y}, {},
+                shp1->quads, shp1->pos, shp1->norm, shp1->texcoord,
+                pshp->hair_params);
             merge_into(shp, shp1, false);
             delete shp1;
         } break;
@@ -10899,12 +11014,13 @@ void update_proc_elem(scene* scn, shape* shp, const proc_shape* pshp) {
         default: throw std::runtime_error("should not have gotten here");
     }
 
-    if (pshp->scale != 1) {
-        for (auto& p : shp->pos) p *= pshp->scale;
+    if (pshp->flip_yz) {
+        for (auto& p : shp->pos) std::swap(p.y, p.z);
+        for (auto& n : shp->norm) std::swap(n.y, n.z);
     }
 
     for (auto i = 0; i < pshp->subdivision; i++) {
-        subdivide_shape_once(shp, true);
+        subdivide_shape_once(shp, pshp->catmull_clark);
     }
 
     if (pshp->faceted) facet_shape(shp);
@@ -11176,58 +11292,101 @@ std::vector<proc_shape*>& proc_shape_presets() {
     if (!presets.empty()) return presets;
 
     auto make_shape = [](const std::string& name, proc_shape_type type,
-                          int tesselation = -1, int subdivision = 0,
-                          bool faceted = false) {
+                          const vec3i& steps, const vec3f& size,
+                          const vec3f& uvsize, int subdivision = 0,
+                          bool catmullclark = false, bool faceted = false) {
         auto params = new proc_shape();
         params->name = name;
         params->type = type;
-        params->tesselation = tesselation;
+        params->tesselation = steps;
         params->subdivision = subdivision;
+        params->size = size;
+        params->uvsize = uvsize;
+        params->catmull_clark = catmullclark;
         params->faceted = faceted;
         return params;
     };
 
-    presets.push_back(make_shape("floor", proc_shape_type::floor));
-    presets.push_back(make_shape("quad", proc_shape_type::quad));
-    presets.push_back(make_shape("cube", proc_shape_type::cube));
-    presets.push_back(make_shape("sphere", proc_shape_type::sphere));
-    presets.push_back(make_shape("spherecube", proc_shape_type::spherecube));
+    presets.push_back(make_shape("floor", proc_shape_type::floor, {64, 64, 0},
+        {40, 40, 40}, {20, 20, 20}));
+    presets.push_back(make_shape(
+        "quad", proc_shape_type::quad, {1, 1, 1}, {2, 2, 2}, {1, 1, 1}));
+    presets.push_back(make_shape(
+        "cube", proc_shape_type::cube, {1, 1, 1}, {2, 2, 2}, {1, 1, 1}));
+    presets.push_back(make_shape("cube_rounded", proc_shape_type::cube_rounded,
+        {32, 32, 32}, {2, 2, 2}, {1, 1, 1}));
+    presets.back()->rounded = 0.15f;
+    presets.push_back(make_shape(
+        "sphere", proc_shape_type::sphere, {128, 64, 0}, {2, 2, 2}, {1, 1, 1}));
+    presets.push_back(make_shape("sphere_cube", proc_shape_type::sphere_cube,
+        {32, 0, 0}, {2, 2, 2}, {1, 1, 1}));
+    presets.push_back(make_shape("sphere_flipcap",
+        proc_shape_type::sphere_flipcap, {128, 64, 0}, {2, 2, 2}, {1, 1, 1}));
+    presets.back()->rounded = 0.75f;
+    presets.push_back(make_shape(
+        "disk", proc_shape_type::disk, {128, 32, 0}, {2, 2, 2}, {1, 1, 1}));
+    presets.push_back(make_shape(
+        "disk_quad", proc_shape_type::disk_quad, {32, 0, 0}, {2, 2, 2}, {1, 1, 1}));
+    presets.push_back(make_shape(
+        "disk_bulged", proc_shape_type::disk_bulged, {32, 0, 0}, {2, 2, 2}, {1, 1, 1}));
+    presets.back()->rounded = 0.25;
+    presets.push_back(make_shape("cylinder", proc_shape_type::cylinder,
+        {128, 32, 32}, {2, 2, 2}, {1, 1, 1}));
+    presets.back()->flip_yz = true;
     presets.push_back(
-        make_shape("spherizedcube", proc_shape_type::spherizedcube));
+        make_shape("cylinder_rounded", proc_shape_type::cylinder_rounded,
+            {128, 32, 32}, {2, 2, 2}, {1, 1, 1}));
+    presets.back()->flip_yz = true;
+    presets.back()->rounded = 0.15f;
+    presets.push_back(make_shape("geodesic_sphere",
+        proc_shape_type::geodesic_sphere, {0, 0, 0}, {2, 2, 2}, {1, 1, 1}, 5));
     presets.push_back(
-        make_shape("flipcapsphere", proc_shape_type::flipcapsphere));
-    presets.push_back(make_shape("geosphere", proc_shape_type::geosphere, 5));
+        make_shape("geodesic_spheref", proc_shape_type::geodesic_sphere,
+            {0, 0, 0}, {2, 2, 2}, {1, 1, 1}, 5, 0, true));
     presets.push_back(
-        make_shape("geospheref", proc_shape_type::geosphere, 5, 0, true));
-    presets.push_back(
-        make_shape("geospherel", proc_shape_type::geosphere, 4, 0, true));
-    presets.push_back(make_shape("cubep", proc_shape_type::cubep));
-    presets.push_back(make_shape("cubes", proc_shape_type::cubep, 0, 4));
-    presets.push_back(make_shape("suzanne", proc_shape_type::suzanne));
-    presets.push_back(make_shape("suzannes", proc_shape_type::suzanne, 0, 2));
-    presets.push_back(make_shape("cubefv", proc_shape_type::fvcube));
-    presets.push_back(make_shape("cubefvs", proc_shape_type::fvcube, 0, 4));
-    presets.push_back(make_shape("spherefv", proc_shape_type::fvsphere));
-    presets.push_back(make_shape("matball", proc_shape_type::matball));
-    presets.push_back(make_shape("matballi", proc_shape_type::sphere));
-    presets.back()->scale = 0.8f;
-    presets.push_back(make_shape("pointscube", proc_shape_type::pointscube));
-    presets.push_back(make_shape("hairball1", proc_shape_type::hairball));
+        make_shape("geodesic_spherel", proc_shape_type::geodesic_sphere,
+            {0, 0, 0}, {2, 2, 2}, {1, 1, 1}, 4, 0, true));
+    presets.push_back(make_shape(
+        "cubep", proc_shape_type::cubep, {1, 1, 1}, {2, 2, 2}, {1, 1, 1}));
+    presets.push_back(make_shape("cubes", proc_shape_type::cubep, {1, 1, 1},
+        {2, 2, 2}, {1, 1, 1}, 4, true));
+    presets.push_back(make_shape(
+        "suzanne", proc_shape_type::suzanne, {0, 0, 0}, {2, 2, 2}, {1, 1, 1}));
+    presets.push_back(make_shape("suzannes", proc_shape_type::suzanne,
+        {0, 0, 0}, {2, 2, 2}, {1, 1, 1}, 2, true));
+    presets.push_back(make_shape(
+        "cubefv", proc_shape_type::fvcube, {1, 1, 1}, {2, 2, 2}, {1, 1, 1}));
+    presets.push_back(make_shape("cubefvs", proc_shape_type::fvcube, {1, 1, 1},
+        {2, 2, 2}, {1, 1, 1}, 0, 4));
+    presets.push_back(make_shape("spherefv", proc_shape_type::fvsphere,
+        {128, 64, 0}, {2, 2, 2}, {1, 1, 1}));
+    presets.push_back(make_shape("matball", proc_shape_type::matball,
+        {128, 64, 0}, {2, 2, 2}, {1, 1, 1}));
+    presets.back()->rounded = 0.75f;
+    presets.push_back(make_shape("matballi", proc_shape_type::sphere,
+        {128, 64, 0}, vec3f{2 * 0.8f}, {1, 1, 1}));
+    presets.push_back(make_shape("pointscube", proc_shape_type::pointscube,
+        {10000, 0, 0}, {2, 2, 2}, {1, 1, 1}));
+    presets.push_back(make_shape("hairball1", proc_shape_type::hairball,
+        {8, 65536, 0}, {2, 2, 2}, {1, 1, 1}));
     presets.back()->hair_params.radius = {0.001f, 0.0001f};
     presets.back()->hair_params.length = {0.1f, 0.1f};
     presets.back()->hair_params.noise = {0.5f, 8};
-    presets.push_back(make_shape("hairball2", proc_shape_type::hairball));
+    presets.push_back(make_shape("hairball2", proc_shape_type::hairball,
+        {8, 65536, 0}, {2, 2, 2}, {1, 1, 1}));
     presets.back()->hair_params.radius = {0.001f, 0.0001f};
     presets.back()->hair_params.length = {0.1f, 0.1f};
     presets.back()->hair_params.clump = {0.5f, 128};
-    presets.push_back(make_shape("hairball3", proc_shape_type::hairball));
+    presets.push_back(make_shape("hairball3", proc_shape_type::hairball,
+        {8, 65536, 0}, {2, 2, 2}, {1, 1, 1}));
     presets.back()->hair_params.radius = {0.001f, 0.0001f};
     presets.back()->hair_params.length = {0.1f, 0.1f};
-    presets.push_back(make_shape("hairballi", proc_shape_type::sphere));
-    presets.back()->scale = 0.8f;
-    presets.push_back(
-        make_shape("beziercircle", proc_shape_type::beziercircle));
-    presets.push_back(make_shape("point", proc_shape_type::point));
+    presets.push_back(make_shape("hairballi", proc_shape_type::sphere,
+        {64, 32, 0}, vec3f{2 * 0.8f}, {1, 1, 1}));
+    presets.push_back(make_shape("beziercircle", proc_shape_type::beziercircle,
+        {0, 0, 0}, {2, 2, 2}, {1, 1, 1}));
+    presets.push_back(make_shape(
+        "point", proc_shape_type::point, {0, 0, 0}, {2, 2, 2}, {1, 1, 1}));
 
     return presets;
 }
@@ -11441,14 +11600,14 @@ std::vector<proc_split_scene*>& proc_split_scene_presets() {
                         shp = "quad";
                         mat = "arealight";
                         pos = {{0, 16, 0}, {0, 16, 16}};
-                        scale = 8;
+                        scale = 16;
                     }
                     if (lights == "arealights1") {
                         emission = 80;
                         shp = "quad";
                         mat = "arealight";
                         pos = {{-4, 5, 8}, {+4, 5, 8}};
-                        scale = 2;
+                        scale = 4;
                     }
                     for (auto i = 0; i < 2; i++) {
                         auto name = "light" + std::to_string(i + 1);
@@ -11458,7 +11617,7 @@ std::vector<proc_split_scene*>& proc_split_scene_presets() {
                         view->shapes.push_back(make_shape(shp, pos[i]));
                         view->shapes.back()->name = name;
                         view->shapes.back()->material = name;
-                        view->shapes.back()->scale = scale;
+                        view->shapes.back()->size = {scale, scale, scale};
                         if (lights == "arealights" || lights == "arealights1")
                             view->shapes.back()->frame = lookat_frame(
                                 pos[i], {0, 1, 0}, {0, 0, 1}, true);
@@ -11506,13 +11665,33 @@ std::vector<proc_split_scene*>& proc_split_scene_presets() {
 
     // basic shapes
     presets.push_back(make_simple_scene("basic",
-        {"flipcapsphere", "spherecube", "spherizedcube"},
+        {"sphere_flipcap", "sphere_cube", "cube_rounded"},
         {"plastic_red", "plastic_green", "plastic_blue"}));
 
     // simple shapes
     presets.push_back(make_simple_scene("simple",
-        {"flipcapsphere", "spherecube", "spherizedcube"},
+        {"sphere_flipcap", "sphere_cube", "cube_rounded"},
         {"plastic_colored", "plastic_colored", "plastic_colored"}));
+
+    // simple shapes 1
+    presets.push_back(make_simple_scene("spheres",
+        {"sphere_flipcap", "sphere_cube", "sphere"},
+        {"plastic_colored", "plastic_colored", "plastic_colored"}));
+
+    // simple shapes 2
+    presets.push_back(
+        make_simple_scene("cubes", {"quad", "cube", "cube_rounded"},
+            {"plastic_colored", "plastic_colored", "plastic_colored"}));
+
+    // simple shapes 3
+    presets.push_back(
+        make_simple_scene("cylinders", {"disk", "cylinder", "cylinder_rounded"},
+            {"plastic_colored", "plastic_colored", "plastic_colored"}));
+
+    // simple shapes 3
+    presets.push_back(
+        make_simple_scene("disks", {"disk", "disk_quad", "disk_bulged"},
+            {"plastic_colored", "plastic_colored", "plastic_colored"}));
 
     // transparent shapes
     presets.push_back(make_simple_scene("transparent", {"quad", "quad", "quad"},
@@ -11540,28 +11719,28 @@ std::vector<proc_split_scene*>& proc_split_scene_presets() {
 
     // tesselation shapes
     presets.push_back(make_simple_scene("tesselation",
-        {"geospherel", "geospheref", "geosphere"},
+        {"geodesic_spherel", "geodesic_spheref", "geodesic_sphere"},
         {"matte_gray", "matte_gray", "matte_gray"}));
 
     // textureuv shapes
     presets.push_back(make_simple_scene("textureuv",
-        {"flipcapsphere", "flipcapsphere", "flipcapsphere"},
+        {"sphere_flipcap", "sphere_flipcap", "sphere_flipcap"},
         {"matte_green", "matte_colored", "matte_uv"}));
 
     // normalmap shapes
     presets.push_back(make_simple_scene("normalmap",
-        {"flipcapsphere", "flipcapsphere", "flipcapsphere"},
+        {"sphere_flipcap", "sphere_flipcap", "sphere_flipcap"},
         {"plastic_blue", "plastic_blue_bumped", "plastic_colored_bumped"}));
 
     // animated shapes
     presets.push_back(make_simple_scene("animated",
-        {"flipcapsphere", "spherecube", "spherizedcube"},
+        {"sphere_flipcap", "sphere_cube", "cube_rounded"},
         {"plastic_colored", "plastic_colored", "plastic_colored"}, true,
         {"bounce", "scale", "rotation"}));
 
     // instances shared functions
     auto make_random_scene = [&](const std::string& name, const vec2i& num,
-                                 const bbox2f& bbox, uint32_t seed = 13) {
+                                 const bbox2f& bbox, uint64_t seed = 13) {
         auto rscale = 0.9f * 0.25f *
                       min((bbox.max.x - bbox.min.x) / num.x,
                           (bbox.max.x - bbox.min.x) / num.y);
@@ -11575,17 +11754,17 @@ std::vector<proc_split_scene*>& proc_split_scene_presets() {
         auto shapes = std::vector<std::string>();
         for (auto mat : {"plastic_red", "plastic_green", "plastic_blue"})
             scn->materials.push_back(make_material(mat));
-        for (auto shp : {"sphere", "flipcapsphere", "cube"}) {
+        for (auto shp : {"sphere", "sphere_flipcap", "cube"}) {
             for (auto mat : {"plastic_red", "plastic_green", "plastic_blue"}) {
                 scn->shapes.push_back(make_shape(shp, zero3f));
                 scn->shapes.back()->name += "_"s + mat;
                 scn->shapes.back()->material = mat;
-                scn->shapes.back()->scale *= rscale;
+                scn->shapes.back()->size *= 2 * rscale;
                 shapes.push_back(scn->shapes.back()->name);
             }
         }
 
-        auto rng = init_rng(seed, 7);
+        auto rng = make_rng(seed, 7);
         auto count = 0;
         for (auto j = 0; j < num.y; j++) {
             for (auto i = 0; i < num.x; i++) {
@@ -11771,10 +11950,14 @@ void serialize(proc_shape& val, json& js, bool reading) {
         val.tesselation, js, "tesselation", reading, false, def.tesselation);
     serialize_attr(
         val.subdivision, js, "subdivision", reading, false, def.subdivision);
-    serialize_attr(val.scale, js, "scale", reading, false, def.scale);
+    serialize_attr(val.catmull_clark, js, "catmull_clark", reading, false,
+        def.catmull_clark);
+    serialize_attr(val.size, js, "size", reading, false, def.size);
+    serialize_attr(val.uvsize, js, "uvsize", reading, false, def.uvsize);
     serialize_attr(val.radius, js, "radius", reading, false, def.radius);
     serialize_attr(val.faceted, js, "faceted", reading, false, def.faceted);
-    serialize_attr(val.num, js, "num", reading, false, def.num);
+    serialize_attr(val.catmull_clark, js, "catmull_clark", reading, false,
+        def.catmull_clark);
     // TODO: hair parameters
 }
 
@@ -13715,19 +13898,20 @@ void _glfw_refresh_cb(GLFWwindow* gwin) {
 }
 
 // Initialize gl_window
-gl_window* make_window(int width, int height, const std::string& title, bool opengl4) {
+gl_window* make_window(
+    int width, int height, const std::string& title, bool opengl4) {
     auto win = new gl_window();
 
     // gl_window
     if (!glfwInit()) throw std::runtime_error("cannot open gl_window");
 
     // profile creation
-    if(opengl4) {
+    if (opengl4) {
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
     } else {
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);        
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     }
 #if __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);

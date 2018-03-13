@@ -239,10 +239,9 @@ shape* make_shape(const std::string& type) {
         shp->texcoord = {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
         shp->triangles = {{0, 1, 2}, {0, 2, 3}};
     } else if (type == "cube") {
-        make_uvcube(shp->quads, shp->pos, shp->norm, shp->texcoord, 0);
-        for (auto& p : shp->pos) p *= 0.5f;
+        make_cube(shp->quads, shp->pos, shp->norm, shp->texcoord, {1,1,1}, {1,1,1}, {1,1,1});
     } else if (type == "sphere") {
-        make_uvsphere(shp->quads, shp->pos, shp->norm, shp->texcoord, 4);
+        make_sphere(shp->quads, shp->pos, shp->norm, shp->texcoord, {64,32}, 2, {1,1});
     } else
         log_error("unknow type " + type);
     return shp;

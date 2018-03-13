@@ -5,10 +5,31 @@ Please consider this to be just development notes and not any real planning.
 
 ## Main features
 
+- better tests
 - better material rendering
 - better rendering
 - interactive procedural shapes
 - prepare for research on procedural components
+
+## Ui: clenanup scene widgets
+
+- remove draw_value_widgets
+
+## Test scenes: simnplify shape generation
+
+- substance-like shader ball
+- shapes
+    - squircle
+    - bent floor
+- add cube based tesselation for cylinder, disk
+- use welding instead of complex grids
+- 0 roughness
+- transparent
+- fix obj export
+    - check shape names
+    - save_obj()
+        - skip group names if only one group
+        - skip smoothing if all on
 
 ## OpenGL/Trace
 
@@ -19,6 +40,9 @@ Please consider this to be just development notes and not any real planning.
         - no need for explicit edges
         - http://www.aclockworkberry.com/shader-derivative-functions/
         - https://github.com/rreusser/glsl-solid-wireframe
+- investigate bump map on GPU
+    - https://www.opengl.org/discussion_boards/showthread.php/162857-Computing-the-tangent-space-in-the-fragment-shader
+    - http://jbit.net/~sparky/sfgrad_bump/mm_sfgrad_bump.pdf
 
 ## Tone mapping
 
@@ -29,23 +53,6 @@ Please consider this to be just development notes and not any real planning.
     - Better implementation on Github
 - Blender color grading node
 - https://www.youtube.com/watch?v=m9AT7H4GGrA
-
-## Test scenes
-
-- 1 m defaults
-- make smaller number of variations
-- start from uv_quad, uv_sphere, uv_cube
-- rounded cube
-- bulged cube
-- bent floor
-- substance-like shader ball
-- 0 roughness
-- transparent
-- fix obj export
-    - check shape names
-    - save_obj()
-        - skip group names if only one group
-        - skip smoothing if all on
 
 ## Animation
 

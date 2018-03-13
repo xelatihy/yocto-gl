@@ -40,6 +40,8 @@
         "memory": "cpp",
         "valarray": "cpp",
         "atomic": "cpp",
-        "system_error": "cpp"
+        "system_error": "cpp",
+        "utility": "cpp",
+        "ratio": "cpp"
     }
 } 

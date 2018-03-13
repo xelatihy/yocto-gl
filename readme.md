@@ -188,7 +188,7 @@ This library supports many facilities helpful in writing sampling
 functions targeting path tracing and shape generations.
 
 1. Random number generation with PCG32:
-    1. initialize the random number generator with `init_rng()`
+    1. initialize the random number generator with `make_rng()`
     2. advance the random number state with `advance_rng()`
     3. if necessary, you can reseed the rng with `seed_rng()`
     4. generate random integers in an interval with `next_rand1i()`
@@ -227,7 +227,11 @@ manipulation useful to support scene viewing and path tracing.
    `compute_tangent_space()`
 6. compute skinning with `compute_skinning()` and
    `compute_matrix_skinning()`
-6. create shapes with `make_points()`, `make_lines()`, `make_uvgrid()`
+6. create shapes with `make_cube()`, `make_sphere()`, `make_quad()`,
+   `make_fvcube()`, `make_hair()`, `make_suzanne()`, `make_lines()`,
+   `make_points()`, `make_sphere_cube()`, `make_cube_rounded()`,
+   `make_sphere_flipcap()`, `make_cylinder()`, `make_cylinder_rounded()`,
+   `make_disk()`, `make_cylinder_side()`
 7. merge element with `marge_lines()`, `marge_triangles()`, `marge_quads()`
 8. facet elements with `facet_lines()`, `facet_triangles()`, `facet_quads()`
 9. shape sampling with `sample_points()`, `sample_lines()`,
@@ -241,9 +245,6 @@ manipulation useful to support scene viewing and path tracing.
 14. subdivide elements by edge splits with `subdivide_lines()`,
     `subdivide_triangles()`, `subdivide_quads()`, `subdivide_beziers()`
 15. Catmull-Clark subdivision surface with `subdivide_catmullclark()`
-17. example shapes: `make_cube()`, `make_uvsphere()`, `make_uvhemisphere()`,
-    `make_uvquad()`, `make_uvcube()`, `make_fvcube()`, `make_hair()`,
-    `make_suzanne()`
 
 
 ### Animation utilities
