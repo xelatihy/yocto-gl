@@ -15,7 +15,11 @@ Please consider this to be just development notes and not any real planning.
 
 ## Tone mapping
 
-- Blender filmic
+- Filmic tonemapping take 2
+    - Blender filmic
+    - Tungsten
+    - Sync my implementations
+    - Better implementation on Github
 - Blender color grading node
 - https://www.youtube.com/watch?v=m9AT7H4GGrA
 
@@ -23,16 +27,9 @@ Please consider this to be just development notes and not any real planning.
 
 - fix broken anim
 
-## Better shape
-
-- change shape to use constant radius, fixed color
-
-## User Interface
-
-- buf in group numbering
-
 ## One shape
 
+- change shape to use constant radius, fixed color
 - hairball scene needs splitting for now
 - update list marks shape buffers
 - scene with name
@@ -42,21 +39,22 @@ Please consider this to be just development notes and not any real planning.
     - selection carries shape ids
 - BVH with multiple primitives
 - All functions take all primitives
+- shape with type
+- facet_shape and friends are not virtual in API
 
 ## Test scenes
 
+- rounded cube
+- bulged cube
+- bent floor
+- substance-like shader ball
+- 0 roughness
+- transparent
 - fix obj export
     - check shape names
     - save_obj()
         - skip group names if only one group
         - skip smoothing if all on
-- fix point light energy
-- 0 roughness
-- transparent
-- bent floor
-- substance-like shader ball
-- rounded cube
-- bulged cube
 
 ## Trace
 
@@ -121,23 +119,6 @@ Please consider this to be just development notes and not any real planning.
 - path tracer with mis
     - possible bug in light weight
 
-## Refactor
-
-- shape with type
-- make make_basis
-- facet_shape and friends are not virtual in API
-- span
-- material in shape_group
-- cleanup
-    - make_vec
-    - generic transform with make_vec and project_homogeneous
-
-## Internal
-
-- move away from special functions in BVH
-    - always use sort
-    - provide a sort buffer
-
 ## Scene Import
 
 - PBR in OBJ
@@ -185,6 +166,9 @@ Please consider this to be just development notes and not any real planning.
 
 - SAH based build
 - simplify build code
+- move away from special functions in BVH?
+    - always use sort
+    - provide a sort buffer
 
 ## Deployment
 
@@ -197,6 +181,10 @@ Please consider this to be just development notes and not any real planning.
 - consider constexpr
 - consider types without constructors
 - consider removing const refs
+- make make_basis
+- span
+- make_vec
+- generic transform with make_vec and project_homogeneous
 
 ## Scenes
 
@@ -264,9 +252,6 @@ Please consider this to be just development notes and not any real planning.
 - add rotation
 - add frame editing with decomposition
 - add labels 2,3,4
-
-## Maybe
-
 
 ## Trace
 
