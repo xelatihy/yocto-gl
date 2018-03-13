@@ -3,6 +3,13 @@
 This file contains notes on future improvements of Yocto.
 Please consider this to be just development notes and not any real planning.
 
+## Main features
+
+- better material rendering
+- better rendering
+- interactive procedural shapes
+- prepare for research on procedural components
+
 ## OpenGL/Trace
 
 - optional post event on OSX, disable on Linux
