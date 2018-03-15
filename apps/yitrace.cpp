@@ -234,11 +234,6 @@ int main(int argc, char* argv[]) {
     app->view = ygl::make_view_camera(app->scn, 0);
     app->cam = app->view;
 
-    // fix double sided materials
-    if (app->params.double_sided) {
-        for (auto m : app->scn->materials) m->double_sided = true;
-    }
-
     // build bvh
     ygl::log_info("building bvh");
     app->bvh = ygl::make_bvh(app->scn);

@@ -40,6 +40,8 @@ using namespace ygl;
 using namespace nlohmann;
 using namespace std::literals;
 
+const float env_distance = 100.0f;
+
 vec3f to_vec3f(const json& js) {
     if (js.is_number())
         return {js.get<float>(), js.get<float>(), js.get<float>()};
@@ -224,7 +226,7 @@ frame3f xform_to_frame(const json& js, float* focus = nullptr) {
 
 #endif
 
-shape* make_shape(const std::string& type) {
+shape* make_shape(const std::string& type, const json& js) {
     static auto tcount = std::unordered_map<std::string, int>();
     auto shp = new shape();
     shp->name = type + std::to_string(tcount[type]++);
@@ -239,9 +241,26 @@ shape* make_shape(const std::string& type) {
         shp->texcoord = {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
         shp->triangles = {{0, 1, 2}, {0, 2, 3}};
     } else if (type == "cube") {
-        make_cube(shp->quads, shp->pos, shp->norm, shp->texcoord, {1,1,1}, {1,1,1}, {1,1,1});
+        make_cube(shp->quads, shp->pos, shp->norm, shp->texcoord, {1, 1, 1},
+            {1, 1, 1}, {1, 1, 1});
     } else if (type == "sphere") {
-        make_sphere(shp->quads, shp->pos, shp->norm, shp->texcoord, {64,32}, 2, {1,1});
+        make_sphere(shp->quads, shp->pos, shp->norm, shp->texcoord, {64, 32}, 2,
+            {1, 1});
+    } else if (type == "infinite_sphere") {
+        make_sphere(shp->quads, shp->pos, shp->norm, shp->texcoord, {128, 64},
+            1000, {1, 1});
+        for (auto& n : shp->norm) n = -n;
+        for (auto& t : shp->triangles) std::swap(t.y, t.z);
+        for (auto& q : shp->quads) std::swap(q.y, q.w);
+    } else if (type == "infinite_sphere_cap") {
+        auto angle = js.at("cap_angle").get<float>() * pif / 180;
+        make_quad(shp->quads, shp->pos, shp->norm, shp->texcoord, {1,1}, {2*std::sin(angle),2*std::sin(angle)}, {1,1});
+        for (auto& p : shp->pos) std::swap(p.y,p.z);
+        for (auto& n : shp->pos) std::swap(n.y,n.z);
+        for (auto& p : shp->pos) p = vec3f{0,env_distance,0} + p * env_distance;
+        for (auto& n : shp->norm) n = -n;
+        for (auto& t : shp->triangles) std::swap(t.y, t.z);
+        for (auto& q : shp->quads) std::swap(q.y, q.w);
     } else
         log_error("unknow type " + type);
     return shp;
@@ -284,11 +303,15 @@ shape* load_wo3(const std::string& filename) {
         shp->texcoord.push_back(vert.texcoord);
     }
     for (auto& t : triangles) { shp->triangles.push_back({t.x, t.y, t.z}); }
+    for (auto& uv : shp->texcoord) uv.y = 1 - uv.y;
 
     return shp;
 }
 
-texture* add_texture(const std::string& path, scene* scn) {
+texture* add_texture(const std::string& path_, scene* scn) {
+    auto path = path_;
+    if (ygl::path_extension(path) == ".pfm")
+        path = ygl::replace_path_extension(path, ".hdr");
     if (path == "") return nullptr;
     for (auto t : scn->textures)
         if (t->path == path) return t;
@@ -297,6 +320,28 @@ texture* add_texture(const std::string& path, scene* scn) {
     txt->path = path;
     scn->textures.push_back(txt);
     return txt;
+}
+
+std::pair<vec3f, texture*> add_scaled_texture(const json& js, scene* scn) {
+    if (js.is_number() || js.is_array()) {
+        return {to_vec3f(js), nullptr};
+    } else if (js.is_string()) {
+        return {vec3f{1, 1, 1}, add_texture(js.get<std::string>(), scn)};
+    } else if (js.is_object()) {
+        if (js.count("type") && js.at("type").get<std::string>() != "bitmap") {
+            log_error("canont handle texture type");
+            return {vec3f{1, 1, 1}, nullptr};
+        }
+        auto kx = vec3f{1, 1, 1};
+        auto txt = (texture*)nullptr;
+        if (js.count("scale")) kx = to_vec3f(js.at("scale"));
+        if (js.count("file"))
+            txt = add_texture(js.at("file").get<std::string>(), scn);
+        return {kx, txt};
+    } else {
+        log_error("cannot handle texture");
+        return {vec3f{1, 1, 1}, nullptr};
+    }
 }
 
 auto metal_ior = std::unordered_map<std::string, std::pair<vec3f, vec3f>>{
@@ -332,27 +377,18 @@ material* add_bsdf(const json& js, scene* scn) {
     auto type = js.at("type").get<std::string>();
     auto albedo = vec3f{1, 1, 1};
     auto albedo_txt = (texture*)nullptr;
+    auto bump_scale = vec3f{1, 1, 1};
     auto bump_txt = (texture*)nullptr;
     auto alpha = vec3f{1, 1, 1};
     auto alpha_txt = (texture*)nullptr;
     if (js.count("albedo")) {
-        auto& jalbedo = js.at("albedo");
-        if (jalbedo.is_string()) {
-            albedo_txt = add_texture(jalbedo.get<std::string>(), scn);
-        } else {
-            albedo = to_vec3f(jalbedo);
-        }
+        std::tie(albedo, albedo_txt) = add_scaled_texture(js.at("albedo"), scn);
     }
     if (js.count("alpha")) {
-        auto& jalpha = js.at("alpha");
-        if (jalpha.is_string()) {
-            alpha_txt = add_texture(jalpha.get<std::string>(), scn);
-        } else {
-            alpha = to_vec3f(jalpha);
-        }
+        std::tie(alpha, alpha_txt) = add_scaled_texture(js.at("alpha"), scn);
     }
     if (js.count("bump")) {
-        bump_txt = add_texture(js.at("bump").get<std::string>(), scn);
+        std::tie(bump_scale, bump_txt) = add_scaled_texture(js.at("bump"), scn);
     }
     if (type == "null") {
         mat->kd = zero3f;
@@ -384,12 +420,36 @@ material* add_bsdf(const json& js, scene* scn) {
         mat->bump_txt.txt = bump_txt;
     } else if (type == "transparency") {
         auto base_bsdf = add_bsdf(js.at("base"), scn);
+        scn->materials.pop_back();
+        base_bsdf->name = mat->name;
         base_bsdf->op = alpha.x;
         if (alpha_txt) log_warning("missing alpha texture");
         mat = base_bsdf;
         // base_bsdf->op_txt = alpha_txt;
-    } else if (type == "thinsheet" || type == "dielectric" ||
-               type == "rough_dielectric") {
+    } else if (type == "smooth_coat") {
+        auto base_bsdf = add_bsdf(js.at("substrate"), scn);
+        scn->materials.pop_back();
+        base_bsdf->name = mat->name;
+        auto sigma = to_vec3f(js.at("sigma_a")) * to_vec3f(js.at("thickness"));
+        auto kx = vec3f{std::exp(-sigma.x * 2), std::exp(-sigma.y * 2),
+            std::exp(-sigma.z * 2)};
+#if 1
+        // mat->kr = {0.04f,0.04f,0.04f};
+        mat->ks = kx * base_bsdf->ks;
+        mat->rs = base_bsdf->rs;
+#else
+        mat->ks = {0.04f, 0.04f, 0.04f};
+        mat->rs = 0;
+        mat->kd = kx;
+#endif
+        log_warning("bad translation of smooth coat");
+    } else if (type == "thinsheet") {
+        mat->ks = vec3f{0.04f, 0.04f, 0.04f};
+        mat->rs = (js.count("roughness")) ? js.at("roughness").get<float>() : 0;
+        mat->kt = albedo;
+        mat->kt_txt.txt = albedo_txt;
+        mat->bump_txt.txt = bump_txt;
+    } else if (type == "dielectric" || type == "rough_dielectric") {
         mat->ks = vec3f{0.04f, 0.04f, 0.04f};
         mat->rs = (js.count("roughness")) ? js.at("roughness").get<float>() : 0;
         mat->kt = albedo;
@@ -402,24 +462,45 @@ material* add_bsdf(const json& js, scene* scn) {
     return mat;
 }
 
-material* add_material(const json& js, scene* scn) {
+material* add_material(const json& js, scene* scn, shape* shp) {
+    static auto mid = 0;
     auto mat = new material();
-    auto jbsdf = js.at("bsdf");
-    if (jbsdf.is_string()) {
-        auto name = jbsdf.get<std::string>();
-        for (auto m : scn->materials)
-            if (m->name == name) mat = m;
-    } else
-        mat = add_bsdf(jbsdf, scn);
-    if (js.count("emission")) {
-        // FIXME
-        mat->ke = to_vec3f(js.at("emission"));
+    mat->name = "mat" + std::to_string(mid++);
+    if (js.count("bsdf")) {
+        auto jbsdf = js.at("bsdf");
+        if (jbsdf.is_string()) {
+            auto name = jbsdf.get<std::string>();
+            for (auto m : scn->materials) {
+                if (m->name == name) {
+                    delete mat;
+                    mat = m;
+                }
+            }
+        } else {
+            delete mat;
+            mat = add_bsdf(jbsdf, scn);
+        }
     }
+    if (js.count("emission")) {
+        std::tie(mat->ke, mat->ke_txt.txt) =
+            add_scaled_texture(js.at("emission"), scn);
+    }
+    if (js.count("power")) {
+        mat->ke = to_vec3f(js.at("power"));
+        auto area = 0.0f;
+        for (auto t : shp->triangles)
+            area += triangle_area(shp->pos[t.x], shp->pos[t.y], shp->pos[t.z]);
+        for (auto q : shp->quads)
+            area += quad_area(
+                shp->pos[q.x], shp->pos[q.y], shp->pos[q.z], shp->pos[q.w]);
+        mat->ke /= area;
+    }
+    if(!contains(scn->materials, mat)) scn->materials.push_back(mat);
     return mat;
 }
 
-scene* load_tungsten(
-    const std::string& filename, const std::string& meshdirname) {
+scene* load_tungsten(const std::string& filename,
+    const std::string& meshdirname, bool facet_non_smooth) {
     auto dirname = path_dirname(filename);
     auto meshdir = (meshdirname == "") ? dirname : meshdirname;
     if (meshdir.back() != '/') meshdir += '/';
@@ -475,9 +556,23 @@ scene* load_tungsten(
         auto& jprims = js.at("primitives");
         for (auto& jprim : jprims) {
             auto type = jprim.at("type").get<std::string>();
+            auto smooth =
+                (jprim.count("smooth")) ? jprim.at("smooth").get<bool>() : true;
+            auto cull = (jprim.count("backface_culling")) ?
+                            jprim.at("backface_culling").get<bool>() :
+                            true;
+            auto compute_normals =
+                (jprim.count("recompute_normals")) ?
+                    jprim.at("recompute_normals").get<bool>() :
+                    true;
             auto frame = identity_frame3f;
-            if (!jprim.at("transform").empty())
+            auto scale = vec3f{1, 1, 1};
+            if (!jprim.at("transform").empty()) {
                 frame = xform_to_frame(jprim.at("transform"));
+                scale = {length(frame.x), length(frame.y), length(frame.z)};
+                frame = {normalize(frame.x), normalize(frame.y),
+                    normalize(frame.z), frame.o};
+            }
             auto shp = (shape*)nullptr;
             if (type == "mesh") {
                 auto path = jprim.at("file").get<std::string>();
@@ -496,21 +591,50 @@ scene* load_tungsten(
                 if (contains(used_meshes, path))
                     log_error("already used mesh " + path);
                 used_meshes.insert(path);
-            } else if (type == "quad" || type == "sphere" || type == "cube") {
-                shp = make_shape(type);
-            } else if (type == "curves" || type == "infinite_sphere" ||
-                       type == "disk") {
+            } else if (type == "quad" || type == "sphere" || type == "cube" ||
+                       type == "infinite_sphere" || type == "infinite_sphere_cap") {
+                cull = false;
+                smooth = true;
+                compute_normals = false;
+                shp = make_shape(type, jprim);
+            } else if (type == "curves" || type == "disk") {
                 // TODO: implement these later
             } else {
                 log_error("unknown shape type " + type);
+                continue;
             }
             if (!shp) continue;
-            if (frame != identity_frame3f) {
-                for (auto& p : shp->pos) p = transform_point(frame, p);
-                for (auto& n : shp->norm) n = transform_direction(frame, n);
+            shp->frame = frame;
+            for (auto& p : shp->pos) p *= scale;
+            shp->groups.push_back({"", add_material(jprim, scn, shp), false});
+            if (cull) log_warning("culling enabled for type {}", type);
+            if (!smooth) {
+                shp->groups.at(0).faceted = true;
+                if (facet_non_smooth && !shp->triangles.empty()) {
+                    facet_triangles(shp->triangles, shp->pos, shp->norm,
+                        shp->texcoord, shp->color, shp->radius);
+                }
+                // log_warning("faceting enabled");
             }
-            shp->groups.push_back({"", add_material(jprim, scn), false});
-            scn->shapes.push_back(shp);
+            if (compute_normals)
+                log_warning("recomputing normals for type {}", type);
+            if (type == "infinite_sphere") {
+                auto env = new environment();
+                env->name = shp->name;
+                env->frame = shp->frame;
+                env->frame = shp->frame * rotation_frame<float>({0, 1, 0}, pif);
+                env->ke = shp->groups.at(0).mat->ke;
+                env->ke_txt = shp->groups.at(0).mat->ke_txt;
+                scn->environments.push_back(env);
+                //     scn->materials.erase(std::find(scn->materials.begin(),
+                //     scn->materials.end(), shp->groups.at(0).mat)); delete
+                //     shp->groups.at(0).mat;
+            } else if (type == "infinite_sphere_cap") {
+                shp->groups.at(0).mat->ke *= env_distance * env_distance;
+                scn->shapes.push_back(shp);
+            } else {
+                scn->shapes.push_back(shp);
+            }
         }
     }
 
@@ -524,6 +648,8 @@ int main(int argc, char** argv) {
         argc, argv, "ytungsten", "convert tungsten files to yocto");
     auto meshdirname =
         ygl::parse_opt(parser, "--meshdir", "-m", "mesh input directory", ""s);
+    auto facet_non_smooth = ygl::parse_flag(
+        parser, "--facet-non-smooth", "-f", "facet non smooth meshes", false);
     auto outfilename = ygl::parse_opt(
         parser, "--output", "-o", "output scene filename", "out.obj"s);
     auto filename =
@@ -534,7 +660,7 @@ int main(int argc, char** argv) {
     }
 
     // load image
-    auto scn = load_tungsten(filename, meshdirname);
+    auto scn = load_tungsten(filename, meshdirname, facet_non_smooth);
 
     // save scene
     system(("mkdir -p " + path_dirname(outfilename)).c_str());

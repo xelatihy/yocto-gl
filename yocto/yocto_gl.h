@@ -7049,6 +7049,8 @@ enum struct trace_shader_type {
     debug_albedo,
     /// Debug texcoord.
     debug_texcoord,
+    /// Debug frontfacing.
+    debug_frontfacing,
 };
 
 /// Random number generator type.
@@ -7206,6 +7208,7 @@ enum_names<trace_shader_type>() {
         {"debug_normal", trace_shader_type::debug_normal},
         {"debug_albedo", trace_shader_type::debug_albedo},
         {"debug_texcoord", trace_shader_type::debug_texcoord},
+        {"debug_frontfacing", trace_shader_type::debug_frontfacing},
     };
     return names;
 }

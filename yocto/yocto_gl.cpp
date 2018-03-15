@@ -1520,21 +1520,22 @@ void make_disk(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
 void make_disk_quad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int steps,
     float size, float uvsize) {
-    make_quad(quads, pos, norm, texcoord, {steps, steps}, {2, 2}, {uvsize,uvsize});
+    make_quad(
+        quads, pos, norm, texcoord, {steps, steps}, {2, 2}, {uvsize, uvsize});
     for (auto i = 0; i < pos.size(); i++) {
-        auto uv = cartesian_to_elliptical(vec2f{pos[i].x,pos[i].y}) * size/2;
+        auto uv = cartesian_to_elliptical(vec2f{pos[i].x, pos[i].y}) * size / 2;
         pos[i] = {uv.x, uv.y, 0};
     }
 }
 
 // Make a bulged disk from a quad.
 void make_disk_bulged(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-                      std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int steps,
-                      float size, float uvsize, float height) {
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int steps,
+    float size, float uvsize, float height) {
     make_disk_quad(quads, pos, norm, texcoord, steps, size, uvsize);
-    if(height == 0) return;
-    auto radius = (size*size/4 + height*height) / (2 * height);
-    auto center = vec3f{0,0,-radius+height};
+    if (height == 0) return;
+    auto radius = (size * size / 4 + height * height) / (2 * height);
+    auto center = vec3f{0, 0, -radius + height};
     for (auto i = 0; i < pos.size(); i++) {
         auto pn = normalize(pos[i] - center);
         pos[i] = center + pn * radius;
@@ -2356,8 +2357,9 @@ image4f load_image4f(const std::string& filename) {
     auto pixels = std::unique_ptr<float>(nullptr);
     if (ext == ".exr") {
         auto pixels_ = (float*)nullptr;
-        if (!LoadEXR(&pixels_, &w, &h, filename.c_str(), nullptr))
-            pixels = std::unique_ptr<float>(pixels_);
+        if (LoadEXR(&pixels_, &w, &h, filename.c_str(), nullptr) < 0) return {};
+        pixels = std::unique_ptr<float>(pixels_);
+        c = 4;
     } else {
         pixels =
             std::unique_ptr<float>(stbi_loadf(filename.c_str(), &w, &h, &c, 4));
@@ -2395,7 +2397,14 @@ bool save_image4f(const std::string& filename, const image4f& img) {
 // Loads an image
 std::vector<float> load_imagef(
     const std::string& filename, int& width, int& height, int& ncomp) {
-    auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 0);
+    auto ext = path_extension(filename);
+    auto pixels = (float*)nullptr;
+    if(ext == ".exr") {
+        if(LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) < 0) return {};
+        ncomp = 4;
+    } else {
+        pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 0);
+    }
     if (!pixels) return {};
     auto ret = std::vector<float>(pixels, pixels + width * height * ncomp);
     free(pixels);
@@ -7010,6 +7019,11 @@ vec3f eval_emission(const trace_point& pt, const vec3f& wo) {
     return zero3f;
 }
 
+// Check if we are near the mirror direction.
+inline bool check_near_mirror(const vec3f& wn, const vec3f& wo, const vec3f& wi) {
+    return abs(dot(wi, normalize(wn * 2.0f * dot(wo, wn) - wo))) < 0.001f;
+}
+
 // Evaluates the BRDF scaled by the cosine of the incoming direction.
 // - ggx from [Heitz 2014] and [Walter 2007] and [Lagarde 2014]
 // "Understanding the Masking-Shadowing Function in Microfacet-Based
@@ -7034,12 +7048,14 @@ vec3f eval_surface_brdfcos(const trace_point& pt, const vec3f& wo,
             auto ks = fresnel_schlick(pt.ks, odh, pt.rs);
             brdfcos += ks * ndi * dg / (4 * ndi * ndo);
         }
-        if (!pt.rs && delta) {
+        if (!pt.rs && delta && check_near_mirror(wn,wo,wi)) {
             auto ks = fresnel_schlick(pt.ks, ndo, pt.rs);
             brdfcos += ks;
         }
+        if (delta && check_near_mirror(wn,wo,wi)) brdfcos += pt.kr;
     }
-    if (wo == -wi && delta) brdfcos += pt.ktr + pt.kto;
+    if (wo == -wi && delta)
+        brdfcos += pt.ktr + pt.kto;
 
     assert(isfinite(brdfcos.x) && isfinite(brdfcos.y) && isfinite(brdfcos.z));
     return brdfcos;
@@ -7121,9 +7137,11 @@ float weight_surface_brdfcos(const trace_point& pt, const vec3f& wo,
             auto hdo = dot(wo, wh);
             pdf += weights[1] * d / (4 * hdo);
         }
-        if (!pt.rs && delta) pdf += weights[1];
+        if (!pt.rs && delta && check_near_mirror(wn,wo,wi)) pdf += weights[1];
+        if (delta && check_near_mirror(wn,wo,wi)) pdf += weights[2];
     }
-    if (wi == -wo && delta) pdf += weights[3] + weights[4];
+    if (wi == -wo && delta)
+        pdf += weights[3] + weights[4];
 
     assert(isfinite(pdf));
     if (!pdf) return 0;
@@ -7182,7 +7200,7 @@ std::tuple<vec3f, bool> sample_surface_brdfcos(
     auto wn = pt.norm;
     if (pt.double_sided && dot(wo, wn) < 0) wn = -wn;
 
-    auto ndo = dot(pt.norm, wo);
+    auto ndo = dot(wn, wo);
     if (ndo <= 0) return {zero3f, false};
 
     // sample according to diffuse
@@ -7194,14 +7212,18 @@ std::tuple<vec3f, bool> sample_surface_brdfcos(
     }
     // sample according to specular GGX
     else if (lid == 1 && pt.rs) {
-        auto fp = make_frame_fromz(pt.pos, pt.norm);
+        auto fp = make_frame_fromz(pt.pos, wn);
         auto wh_local = sample_ggx(pt.rs, rn);
         auto wh = transform_direction(fp, wh_local);
         return {normalize(wh * 2.0f * dot(wo, wh) - wo), false};
     }
     // sample according to specular mirror
     else if (lid == 1 && !pt.rs) {
-        return {normalize(pt.norm * 2.0f * dot(wo, pt.norm) - wo), true};
+        return {normalize(wn * 2.0f * dot(wo, wn) - wo), true};
+    }
+    // sample according to specular mirror
+    else if (lid == 2) {
+        return {normalize(wn * 2.0f * dot(wo, wn) - wo), true};
     }
     // transmission hack
     else if (lid == 3 || lid == 4) {
@@ -7295,8 +7317,8 @@ trace_point eval_environment_point(
 }
 
 // Create a point for a shape. Resolves geometry and material with textures.
-trace_point eval_shape_point(
-    const shape* shp, const frame3f& frame, int eid, const vec2f& euv) {
+trace_point eval_shape_point(const shape* shp, const frame3f& frame, int eid,
+    const vec2f& euv, bool force_double_sided) {
     // default material
     static auto def_material = (material*)nullptr;
     if (!def_material) {
@@ -7355,11 +7377,11 @@ trace_point eval_shape_point(
     pt.norm = transform_direction(frame, pt.norm);
 
     // double-sided
-    pt.double_sided = mat->double_sided;
+    pt.double_sided = mat->double_sided || force_double_sided;
 
     // initialized material values
     auto kx = vec3f{1, 1, 1};
-    auto op = 1;
+    auto op = 1.0f;
     if (!pt.shp->color.empty()) {
         auto col = eval_color(pt.shp, eid, euv);
         kx *= {col.x, col.y, col.z};
@@ -7371,6 +7393,9 @@ trace_point eval_shape_point(
         auto txt = eval_texture(mat->occ_txt, pt.texcoord);
         kx *= {txt.x, txt.y, txt.z};
     }
+    
+    // handle opacity
+    op *= mat->op;
 
     // sample emission
     pt.ke = mat->ke * kx;
@@ -7463,6 +7488,7 @@ trace_point eval_shape_point(
         pt.rs = 0;
     }
     pt.kr *= op;
+    pt.krg *= op;
     pt.ktr *= op;
     pt.kto = {1.0f - op, 1.0f - op, 1.0f - op};
 
@@ -7508,12 +7534,13 @@ float weight_lights(
 
 // Picks a point on a light.
 trace_point sample_light(const trace_lights& lights, const trace_light& lgt,
-    const trace_point& pt, float rel, const vec2f& ruv) {
+    const trace_point& pt, float rel, const vec2f& ruv,
+    const trace_params& params) {
     if (lgt.shp) {
         auto& dst = lights.shape_distribs.at(lgt.shp);
         auto sample = sample_shape(lgt.shp, dst, rel, ruv);
-        return eval_shape_point(
-            lgt.shp, lgt.frame, sample.first, sample.second);
+        return eval_shape_point(lgt.shp, lgt.frame, sample.first, sample.second,
+            params.double_sided);
     } else if (lgt.env) {
         // BUG: this is not uniform sampling
         return eval_environment_point(lgt.env, lgt.frame, ruv);
@@ -7525,25 +7552,25 @@ trace_point sample_light(const trace_lights& lights, const trace_light& lgt,
 
 // Picks a point on a light.
 trace_point sample_lights(const trace_lights& lights, const trace_point& pt,
-    float rnl, float rne, const vec2f& ruv) {
+    float rnl, float rne, const vec2f& ruv, const trace_params& params) {
     auto lidx = sample_distribution_discrete(lights.light_distrib, rnl);
     auto& lgt = lights.lights.at(lidx);
-    return sample_light(lights, lgt, pt, rne, ruv);
+    return sample_light(lights, lgt, pt, rne, ruv, params);
 }
 
 // Intersects a ray with the scn and return the point (or env point).
-trace_point intersect_scene(
-    const scene* scn, const bvh_tree* bvh, const ray3f& ray) {
+trace_point intersect_scene(const scene* scn, const bvh_tree* bvh,
+    const ray3f& ray, const trace_params& params) {
     auto iid = 0, sid = 0, eid = 0;
     auto euv = zero2f;
     auto ray_t = 0.0f;
     if (intersect_bvh(bvh, ray, false, ray_t, iid, sid, eid, euv)) {
         if (scn->nodes.empty()) {
-            return eval_shape_point(
-                scn->shapes[iid], scn->shapes[iid]->frame, eid, euv);
+            return eval_shape_point(scn->shapes[iid], scn->shapes[iid]->frame,
+                eid, euv, params.double_sided);
         } else {
-            return eval_shape_point(
-                scn->nodes[iid]->shp, scn->nodes[iid]->frame_, eid, euv);
+            return eval_shape_point(scn->nodes[iid]->shp,
+                scn->nodes[iid]->frame_, eid, euv, params.double_sided);
         }
     } else if (!scn->environments.empty()) {
         return eval_environment_point(scn->environments[0],
@@ -7567,7 +7594,7 @@ vec3f eval_transmission(const scene* scn, const bvh_tree* bvh,
         auto weight = vec3f{1, 1, 1};
         for (auto bounce = 0; bounce < params.max_depth; bounce++) {
             auto ray = make_segment(cpt.pos, lpt.pos);
-            cpt = intersect_scene(scn, bvh, ray);
+            cpt = intersect_scene(scn, bvh, ray, params);
             if (!cpt.shp) break;
             weight *= cpt.ktr + cpt.kto;
             if (weight == zero3f) break;
@@ -7609,7 +7636,7 @@ vec3f trace_path(const scene* scn, const bvh_tree* bvh,
         auto rluv = sample_next2f(pxl, params.rng, params.nsamples);
         auto& lgt = lights.lights[sample_distribution_discrete(
             lights.light_distrib, rll)];
-        auto lpt = sample_light(lights, lgt, pt, rle, rluv);
+        auto lpt = sample_light(lights, lgt, pt, rle, rluv, params);
         auto lw = weight_light(lights, lpt, pt) *
                   sample_distribution_weightsum(lights.light_distrib);
         auto lwi = normalize(lpt.pos - pt.pos);
@@ -7627,7 +7654,7 @@ vec3f trace_path(const scene* scn, const bvh_tree* bvh,
         auto bwi = zero3f;
         auto bdelta = false;
         std::tie(bwi, bdelta) = sample_brdfcos(pt, wo, rbl, rbuv);
-        auto bpt = intersect_scene(scn, bvh, make_ray(pt.pos, bwi));
+        auto bpt = intersect_scene(scn, bvh, make_ray(pt.pos, bwi), params);
         auto bw = weight_brdfcos(pt, wo, bwi, bdelta);
         auto bke = eval_emission(bpt, -bwi);
         auto bbc = eval_brdfcos(pt, wo, bwi, bdelta);
@@ -7641,7 +7668,7 @@ vec3f trace_path(const scene* scn, const bvh_tree* bvh,
         if (bounce == params.max_depth - 1) break;
 
         // continue path
-        weight *= eval_brdfcos(pt, wo, bwi) * weight_brdfcos(pt, wo, bwi);
+        weight *= eval_brdfcos(pt, wo, bwi, bdelta) * weight_brdfcos(pt, wo, bwi, bdelta);
         if (weight == zero3f) break;
 
         // roussian roulette
@@ -7687,7 +7714,7 @@ vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
         auto rluv = sample_next2f(pxl, params.rng, params.nsamples);
         auto& lgt = lights.lights[sample_distribution_discrete(
             lights.light_distrib, rll)];
-        auto lpt = sample_light(lights, lgt, pt, rle, rluv);
+        auto lpt = sample_light(lights, lgt, pt, rle, rluv, params);
         auto lwi = normalize(lpt.pos - pt.pos);
         auto ld = eval_emission(lpt, -lwi) * eval_brdfcos(pt, wo, lwi) *
                   weight_light(lights, lpt, pt) *
@@ -7717,7 +7744,7 @@ vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
                   weight_brdfcos(pt, wo, bwi, bdelta);
         if (weight == zero3f) break;
 
-        auto bpt = intersect_scene(scn, bvh, make_ray(pt.pos, bwi));
+        auto bpt = intersect_scene(scn, bvh, make_ray(pt.pos, bwi), params);
         emission = false;
 
         // continue path
@@ -7751,7 +7778,7 @@ vec3f trace_path_hack(const scene* scn, const bvh_tree* bvh,
         auto rluv = sample_next2f(pxl, params.rng, params.nsamples);
         auto& lgt = lights.lights[sample_distribution_discrete(
             lights.light_distrib, rll)];
-        auto lpt = sample_light(lights, lgt, pt, rle, rluv);
+        auto lpt = sample_light(lights, lgt, pt, rle, rluv, params);
         auto lwi = normalize(lpt.pos - pt.pos);
         auto ld = eval_emission(lpt, -lwi) * eval_brdfcos(pt, wo, -lwi) *
                   weight_light(lights, lpt, pt) *
@@ -7781,7 +7808,7 @@ vec3f trace_path_hack(const scene* scn, const bvh_tree* bvh,
                   weight_brdfcos(pt, wo, bwi, bdelta);
         if (weight == zero3f) break;
 
-        auto bpt = intersect_scene(scn, bvh, make_ray(pt.pos, bwi));
+        auto bpt = intersect_scene(scn, bvh, make_ray(pt.pos, bwi), params);
 
         // continue path
         pt = bpt;
@@ -7806,7 +7833,7 @@ vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
     for (auto& lgt : lights.lights) {
         auto rle = sample_next1f(pxl, params.rng, params.nsamples);
         auto rluv = sample_next2f(pxl, params.rng, params.nsamples);
-        auto lpt = sample_light(lights, lgt, pt, rle, rluv);
+        auto lpt = sample_light(lights, lgt, pt, rle, rluv, params);
         auto lwi = normalize(lpt.pos - pt.pos);
         auto ld = eval_emission(lpt, -lwi) * eval_brdfcos(pt, wo, lwi) *
                   weight_light(lights, lpt, pt);
@@ -7820,14 +7847,14 @@ vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
     // reflection
     if (pt.ks != zero3f && !pt.rs) {
         auto wi = reflect(wo, pt.norm);
-        auto rpt = intersect_scene(scn, bvh, make_ray(pt.pos, wi));
+        auto rpt = intersect_scene(scn, bvh, make_ray(pt.pos, wi), params);
         l += pt.ks *
              trace_direct(scn, bvh, lights, rpt, -wi, bounce + 1, pxl, params);
     }
 
     // opacity
     if (pt.ktr + pt.kto != zero3f) {
-        auto opt = intersect_scene(scn, bvh, make_ray(pt.pos, -wo));
+        auto opt = intersect_scene(scn, bvh, make_ray(pt.pos, -wo), params);
         l += (pt.ktr + pt.kto) *
              trace_direct(scn, bvh, lights, opt, wo, bounce + 1, pxl, params);
     }
@@ -7857,7 +7884,7 @@ vec3f trace_eyelight(const scene* scn, const bvh_tree* bvh,
     // opacity
     if (bounce >= params.max_depth) return l;
     if (pt.ktr + pt.kto != zero3f) {
-        auto opt = intersect_scene(scn, bvh, make_ray(pt.pos, -wo));
+        auto opt = intersect_scene(scn, bvh, make_ray(pt.pos, -wo), params);
         l += (pt.ktr + pt.kto) *
              trace_eyelight(scn, bvh, lights, opt, wo, bounce + 1, pxl, params);
     }
@@ -7877,7 +7904,18 @@ vec3f trace_eyelight(const scene* scn, const bvh_tree* bvh,
 vec3f trace_debug_normal(const scene* scn, const bvh_tree* bvh,
     const trace_lights& lights, const trace_point& pt, const vec3f& wo,
     trace_pixel& pxl, const trace_params& params) {
-    return pt.norm * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
+    auto wn = pt.norm;
+    if (pt.double_sided && dot(wn, wo) < 0) wn = -wn;
+    return wn * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
+}
+
+// Debug frontfacing.
+vec3f trace_debug_frontfacing(const scene* scn, const bvh_tree* bvh,
+    const trace_lights& lights, const trace_point& pt, const vec3f& wo,
+    trace_pixel& pxl, const trace_params& params) {
+    auto wn = pt.norm;
+    if (pt.double_sided && dot(wn, wo) < 0) wn = -wn;
+    return dot(wn, wo) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0};
 }
 
 // Debug previewing.
@@ -7910,6 +7948,7 @@ static auto trace_shaders = std::unordered_map<trace_shader_type, trace_shader>{
     {trace_shader_type::pathtrace_nomis, trace_path_nomis},
     {trace_shader_type::debug_albedo, trace_debug_albedo},
     {trace_shader_type::debug_normal, trace_debug_normal},
+    {trace_shader_type::debug_frontfacing, trace_debug_frontfacing},
     {trace_shader_type::debug_texcoord, trace_debug_texcoord},
 };
 
@@ -7942,7 +7981,7 @@ void trace_sample(const scene* scn, const camera* cam, const bvh_tree* bvh,
     auto uv = vec2f{(pxl.i + crn.x) / (cam->aspect * params.resolution),
         1 - (pxl.j + crn.y) / params.resolution};
     auto ray = eval_camera_ray(cam, uv, lrn);
-    auto pt = intersect_scene(scn, bvh, ray);
+    auto pt = intersect_scene(scn, bvh, ray, params);
     if (!pt.shp && params.envmap_invisible) return;
     auto l = shader(scn, bvh, lights, pt, -ray.d, pxl, params);
     if (!isfinite(l.x) || !isfinite(l.y) || !isfinite(l.z)) {
@@ -8006,7 +8045,7 @@ void trace_sample_filtered(const scene* scn, const camera* cam,
     auto uv = vec2f{(pxl.i + crn.x) / (cam->aspect * params.resolution),
         1 - (pxl.j + crn.y) / params.resolution};
     auto ray = eval_camera_ray(cam, uv, lrn);
-    auto pt = intersect_scene(scn, bvh, ray);
+    auto pt = intersect_scene(scn, bvh, ray, params);
     if (!pt.shp && params.envmap_invisible) return;
     auto l = shader(scn, bvh, lights, pt, -ray.d, pxl, params);
     if (!isfinite(l.x) || !isfinite(l.y) || !isfinite(l.z)) {
@@ -10922,7 +10961,8 @@ void update_proc_elem(scene* scn, shape* shp, const proc_shape* pshp) {
         } break;
         case proc_shape_type::disk_bulged: {
             make_disk_bulged(shp->quads, shp->pos, shp->norm, shp->texcoord,
-                pshp->tesselation.x, pshp->size.x, pshp->uvsize.x, pshp->rounded);
+                pshp->tesselation.x, pshp->size.x, pshp->uvsize.x,
+                pshp->rounded);
         } break;
         case proc_shape_type::cylinder: {
             make_cylinder(shp->quads, shp->pos, shp->norm, shp->texcoord,
@@ -11325,10 +11365,10 @@ std::vector<proc_shape*>& proc_shape_presets() {
     presets.back()->rounded = 0.75f;
     presets.push_back(make_shape(
         "disk", proc_shape_type::disk, {128, 32, 0}, {2, 2, 2}, {1, 1, 1}));
-    presets.push_back(make_shape(
-        "disk_quad", proc_shape_type::disk_quad, {32, 0, 0}, {2, 2, 2}, {1, 1, 1}));
-    presets.push_back(make_shape(
-        "disk_bulged", proc_shape_type::disk_bulged, {32, 0, 0}, {2, 2, 2}, {1, 1, 1}));
+    presets.push_back(make_shape("disk_quad", proc_shape_type::disk_quad,
+        {32, 0, 0}, {2, 2, 2}, {1, 1, 1}));
+    presets.push_back(make_shape("disk_bulged", proc_shape_type::disk_bulged,
+        {32, 0, 0}, {2, 2, 2}, {1, 1, 1}));
     presets.back()->rounded = 0.25;
     presets.push_back(make_shape("cylinder", proc_shape_type::cylinder,
         {128, 32, 32}, {2, 2, 2}, {1, 1, 1}));
