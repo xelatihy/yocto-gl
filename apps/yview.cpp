@@ -290,11 +290,6 @@ int main(int argc, char* argv[]) {
     // add missing data
     ygl::add_elements(app->scn);
 
-    // fix double sided materials
-    if (app->params.double_sided) {
-        for (auto m : app->scn->materials) m->double_sided = true;
-    }
-
     // view camera
     app->view = ygl::make_view_camera(app->scn, 0);
     app->cam = app->view;

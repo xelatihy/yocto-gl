@@ -11,6 +11,43 @@ Please consider this to be just development notes and not any real planning.
 - interactive procedural shapes
 - prepare for research on procedural components
 
+## Port scenes
+
+- move ytrace batch size
+- bitterli
+    - veach-bidir
+        - bad materials
+        - too high energy
+    - kitchen
+        - bump map
+    - dining room
+        - infinite sphere cap
+    - lamp
+        - bulb size
+    - car
+        - shading bug
+        - enable kr
+        - metallic paint
+        - envmap
+    - car2
+        - shading bug
+        - enable kr
+        - metallic paint
+    - check texture color
+    - check tone mapping
+    - metallic paint
+        - car, car2
+    - huge number of bounces
+    - make list of scenes that should not be ported
+    - flip double sided normals on at least large objects
+- mcguire
+    - retest all datasets
+    - write list of issues
+    - add bounding box print
+- pbrt
+    - pber parser
+- gltf exports
+
 ## Ui: clenanup scene widgets
 
 - remove draw_value_widgets
@@ -54,10 +91,6 @@ Please consider this to be just development notes and not any real planning.
 - Blender color grading node
 - https://www.youtube.com/watch?v=m9AT7H4GGrA
 
-## Animation
-
-- fix broken anim
-
 ## One shape
 
 - change shape to use constant radius, fixed color
@@ -75,6 +108,10 @@ Please consider this to be just development notes and not any real planning.
 
 ## Trace
 
+- sobol
+- adaptive sampling ala tungsgen
+- deltas without delta flag
+- check tungsten light smapling
 - path trace with explicit light sampling
 - better envmap sampling
 - eval_direct function
@@ -82,6 +119,9 @@ Please consider this to be just development notes and not any real planning.
 - samplers
     - sobol sampler
     - pixe sampler
+- vcm
+    - check code
+    - understand light sampling
 
 ## New scene
 
@@ -89,28 +129,10 @@ Please consider this to be just development notes and not any real planning.
 - remove node children
     - use stable sort
     - add local frame
-- nodes point to shapes
-    - instances are created on the fly
-    - update hierarchy creates instances
-- procedural instances are deleted
-- instances are optional
-    - rename instances for now
-    - make drawing code work with only shapes
-    - instances are added during node updates
-    - remove instances from being central
-    - instances are added during update_hierarchy()
-    - loaders have no option to add or remove hierarchy
-- remove instances
-    - trace should not need instances
-        - bvh should handle instances in a different way,
-            - maybe just returning frames instead of instance ids
-            - or return sid, iid as before
-    - move frame to shape_group
-    - use nodes everywhere instances where needed
-- move to tagged shape
 
 ## Trace
 
+- move ytrace batch size
 - environment map with material
 - remove instances from tracer
     - handle environments as missing shape or as a special shape

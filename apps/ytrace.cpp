@@ -52,7 +52,6 @@ struct app_state {
     ~app_state() {
         if (scn) delete scn;
         if (view) delete view;
-        if (cam) delete cam;
         if (bvh) delete bvh;
     }
 };
@@ -103,11 +102,6 @@ int main(int argc, char* argv[]) {
     auto opts = ygl::add_elements_options();
     add_elements(app->scn, opts);
 
-    // fix double sided materials
-    if (app->params.double_sided) {
-        for (auto m : app->scn->materials) m->double_sided = true;
-    }
-
     // view camera
     app->view = make_view_camera(app->scn, 0);
     app->cam = app->view;
@@ -141,7 +135,7 @@ int main(int argc, char* argv[]) {
         ygl::log_info(
             "rendering sample {}/{}", cur_sample, app->params.nsamples);
         trace_samples(app->scn, app->cam, app->bvh, app->lights, app->img,
-            app->pixels, app->batch_size, app->params);
+            app->pixels, std::min(app->batch_size, app->params.nsamples - cur_sample), app->params);
     }
     ygl::log_info("rendering done");
 
