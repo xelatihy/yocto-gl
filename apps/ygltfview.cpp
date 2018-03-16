@@ -80,8 +80,8 @@ struct app_state {
 
     // render
     int resolution = 0;
-    float exposure = 0, gamma = 2.2f;
-    bool filmic = false;
+    float exposure = 0;
+    ygl::tonemap_type tonemap = ygl::tonemap_type::gamma;
     ygl::vec4f background = {0, 0, 0, 0};
 
     // lighting
@@ -379,9 +379,9 @@ inline void shade_mesh(const ygl::gltf_mesh* msh, const ygl::gltf_skin* sk,
 
         ygl::gl_enable_culling(!mat->double_sided);
 
-        draw_elems(vbo.points);
-        draw_elems(vbo.lines);
-        draw_elems(vbo.triangles);
+        ygl::draw_elems(vbo.points);
+        ygl::draw_elems(vbo.lines);
+        ygl::draw_elems(vbo.triangles);
 
         ygl::gl_enable_culling(false);
 
@@ -408,7 +408,7 @@ inline void shade_mesh(const ygl::gltf_mesh* msh, const ygl::gltf_skin* sk,
 // Display a scene
 inline void shade_scene(const ygl::gltf_scene_group* scns, shade_state* st,
     const ygl::camera* ycam, const ygl::gltf_node* gcam, void* selection,
-    const ygl::vec4f& background, float exposure, float gamma, bool filmic,
+    const ygl::vec4f& background, float exposure, ygl::tonemap_type tonemap,
     bool wireframe, bool edges, bool cutout, bool camera_lights,
     const ygl::vec3f& amb) {
     // update state
@@ -451,7 +451,7 @@ inline void shade_scene(const ygl::gltf_scene_group* scns, shade_state* st,
         }
     }
 
-    begin_stdsurface_frame(st->prog, camera_lights, exposure, gamma, filmic,
+    begin_stdsurface_frame(st->prog, camera_lights, exposure, tonemap,
         camera_xform, camera_view, camera_proj);
 
     if (!camera_lights) {
@@ -485,7 +485,7 @@ void draw_scene(ygl::gl_window* win, app_state* scn) {
     scn->view_cam->aspect = aspect;
     if (scn->gcam) scn->gcam->cam->aspect = aspect;
     shade_scene(scn->gscn, scn->shstate, scn->view_cam, scn->gcam,
-        scn->selection, scn->background, scn->exposure, scn->gamma, scn->filmic,
+        scn->selection, scn->background, scn->exposure, scn->tonemap,
         scn->wireframe, scn->edges, scn->alpha_cutout, scn->camera_lights,
         scn->amb);
 }
@@ -963,8 +963,6 @@ void draw_widgets(ygl::gl_window* win, app_state* scn) {
         draw_value_widget(win, "cutout", scn->alpha_cutout);
         draw_value_widget(win, "fps", scn->navigation_fps);
         draw_value_widget(win, "hdr exposure", scn->exposure, -20, 20, 1);
-        draw_value_widget(win, "hdr gamma", scn->gamma, 0.1, 5);
-        draw_value_widget(win, "hdr filmic", scn->filmic);
         if (draw_header_widget(win, "view cam")) {
             auto cam = scn->view_cam;
             draw_value_widget(win, "yfov", cam->yfov, 0.1, 5);
@@ -990,8 +988,6 @@ void parse_cmdline(app_state* scene, int argc, char** argv, const char* name,
     // render
     scene->exposure =
         parse_opt(parser, "--exposure", "-e", "hdr image exposure", 0.0f);
-    scene->gamma = parse_opt(parser, "--gamma", "-g", "hdr image gamma", 2.2f);
-    scene->filmic = parse_flag(parser, "--filmic", "-F", "hdr filmic output");
     scene->resolution =
         parse_opt(parser, "--resolution", "-r", "image resolution", 540);
 

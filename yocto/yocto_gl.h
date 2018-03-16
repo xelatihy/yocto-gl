@@ -4900,14 +4900,28 @@ vec4b hsv_to_rgb(const vec4b& hsv);
 
 // #codegen begin refl-tonemap
 
+/// Tone mapping type.
+enum struct tonemap_type {
+    /// Linear.
+    linear = 0,
+    /// Gamma 2.2.
+    gamma = 1,
+    /// Filmic, default variant.
+    filmic = 2,
+    /// Filmic, variant 1.
+    filmic1 = 3,
+    /// Filmic, variant 2.
+    filmic2 = 4,
+    /// Filmic, variant 3.
+    filmic3 = 5,
+};
+
 /// Tone mapping parameters
 struct tonemap_params {
     /// Hdr exposure. @refl_uilimits(-10,10) @refl_shortname(e)
     float exposure = 0;
-    /// Hdr gamma. @refl_uilimits(0.1f,3) @refl_shortname(g)
-    float gamma = 2.2f;
-    /// Hdr filmic tonemapping. @refl_shortname(F)
-    bool filmic = false;
+    /// Type. @refl_shortname(t)
+    tonemap_type type = tonemap_type::filmic;
 };
 
 // #codegen end refl-tonemap
@@ -4917,15 +4931,28 @@ image4b tonemap_image(const image4f& hdr, const tonemap_params& params);
 
 // #codegen begin reflgen-tonemap
 
+/// Names of enum values.
+template <>
+inline const std::vector<std::pair<std::string, tonemap_type>>&
+enum_names<tonemap_type>() {
+    static auto names = std::vector<std::pair<std::string, tonemap_type>>{
+        {"linear", tonemap_type::linear},
+        {"gamma", tonemap_type::gamma},
+        {"filmic", tonemap_type::filmic},
+        {"filmic1", tonemap_type::filmic1},
+        {"filmic2", tonemap_type::filmic2},
+        {"filmic3", tonemap_type::filmic3},
+    };
+    return names;
+}
+
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(tonemap_params& val, Visitor&& visitor) {
     visitor(val.exposure, visit_var{"exposure", visit_var_type::value,
                               "Hdr exposure.", -10, 10, "e"});
-    visitor(val.gamma,
-        visit_var{"gamma", visit_var_type::value, "Hdr gamma.", 0.1f, 3, "g"});
-    visitor(val.filmic, visit_var{"filmic", visit_var_type::value,
-                            "Hdr filmic tonemapping.", 0, 0, "F"});
+    visitor(
+        val.type, visit_var{"type", visit_var_type::value, "Type.", 0, 0, "t"});
 }
 
 // #codegen end reflgen-tonemap
@@ -9840,12 +9867,12 @@ gl_stdimage_program make_stdimage_program();
 /// Draws an image texture the stdimage program.
 void draw_image(const gl_stdimage_program& prog, const gl_texture& txt,
     const vec2i& win_size, const vec2f& offset, float zoom, float exposure,
-    float gamma, bool filmic);
+    tonemap_type tonemap);
 
 /// Draws an image texture the stdimage program.
 inline void draw_image(const gl_stdimage_program& prog, const gl_texture& txt,
     const vec2i& win_size, const vec2f& offset, float zoom) {
-    draw_image(prog, txt, win_size, offset, zoom, 0, 1, false);
+    draw_image(prog, txt, win_size, offset, zoom, 0, tonemap_type::linear);
 }
 
 // #codegen begin refl-glstdimage
@@ -9868,7 +9895,7 @@ inline void draw_image(const gl_stdimage_program& prog, const gl_texture& txt,
     const tonemap_params& tmparams, bool clear_background = true) {
     if (clear_background) gl_clear_buffers(params.background);
     draw_image(prog, txt, win_size, params.offset, params.zoom,
-        tmparams.exposure, tmparams.gamma, tmparams.filmic);
+        tmparams.exposure, tmparams.type);
 }
 
 /// Computes the image uv coordinates corresponding to the view parameters.
@@ -9894,9 +9921,9 @@ inline bool is_program_valid(const gl_stdsurface_program& prog) {
 /// projection. Sets also whether to use full shading or a quick eye light
 /// preview.
 void begin_stdsurface_frame(const gl_stdsurface_program& prog,
-    bool shade_eyelight, float tonemap_exposure, float tonemap_gamma,
-    bool tonemap_filmic, const mat4f& camera_xform,
-    const mat4f& camera_xform_inv, const mat4f& camera_proj);
+    bool shade_eyelight, float exposure, tonemap_type tonemap,
+    const mat4f& camera_xform, const mat4f& camera_xform_inv,
+    const mat4f& camera_proj);
 
 /// Ends a frame.
 void end_stdsurface_frame(const gl_stdsurface_program& prog);

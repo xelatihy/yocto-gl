@@ -2399,8 +2399,9 @@ std::vector<float> load_imagef(
     const std::string& filename, int& width, int& height, int& ncomp) {
     auto ext = path_extension(filename);
     auto pixels = (float*)nullptr;
-    if(ext == ".exr") {
-        if(LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) < 0) return {};
+    if (ext == ".exr") {
+        if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) < 0)
+            return {};
         ncomp = 4;
     } else {
         pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 0);
@@ -2538,46 +2539,69 @@ void resize_image(const image4b& img, image4b& res_img, resize_filter filter,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-#if 1
-// Tone map with a fitted filmic curve.
-//
-// Implementation from
-// https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
-inline float tonemap_filmic(float hdr) {
-    // rescale
-    auto x = hdr * 2.05f;
-    // fitted values
-    float a = 2.51f, b = 0.03f, c = 2.43f, d = 0.59f, e = 0.14f;
-    auto y = ((x * (a * x + b)) / (x * (c * x + d) + e));
-    return pow(clamp(y, 0.0f, 1.0f), 1 / 2.2f);
+inline vec3f tonemap_gamma(const vec3f& x) {
+    return {pow(x.x, 1 / 2.2f), pow(x.y, 1 / 2.2f), pow(x.z, 1 / 2.2f)};
 }
-#else
-inline float tonemap_filmic(float x) {
-    auto y =
-        (x * (x * (x * (x * 2708.7142 + 6801.1525) + 1079.5474) + 1.1614649) -
-            0.00004139375) /
-        (x * (x * (x * (x * 983.38937 + 4132.0662) + 2881.6522) + 128.35911) +
-            1.0);
-    return (float)std::max(y, 0.0);
+
+inline vec3f tonemap_filmic1(const vec3f& hdr) {
+    // http://filmicworlds.com/blog/filmic-tonemapping-operators/
+    auto x = vec3f{max(0.0f, hdr.x - 0.004f), max(0.0f, hdr.y - 0.004f),
+        max(0.0f, hdr.z - 0.004f)};
+    return (x * (6.2f * x + vec3f{0.5f})) /
+           (x * (6.2f * x + vec3f{1.7f}) + vec3f{0.06f});
 }
-#endif
+
+inline vec3f tonemap_filmic2(const vec3f& hdr) {
+    // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
+    auto x = hdr;
+    // x *= 0.6; // brings it back to ACES range
+    x = (x * (2.51f * x + vec3f{0.03f})) /
+        (x * (2.43f * x + vec3f{0.59f}) + vec3f{0.14f});
+    return tonemap_gamma(x);
+}
+
+inline vec3f tonemap_filmic3(const vec3f& hdr) {
+    // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
+
+    // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
+    static const mat3f ACESInputMat = transpose(mat3f(
+        vec3f(0.59719, 0.35458, 0.04823), vec3f(0.07600, 0.90834, 0.01566),
+        vec3f(0.02840, 0.13383, 0.83777)));
+
+    // ODT_SAT => XYZ => D60_2_D65 => sRGB
+    static const mat3f ACESOutputMat = transpose(mat3f(
+        vec3f(1.60475, -0.53108, -0.07367), vec3f(-0.10208, 1.10813, -0.00605),
+        vec3f(-0.00327, -0.07276, 1.07602)));
+
+    auto x = hdr;
+    x = 2 * x;  // matches standard range
+    x = ACESInputMat * x;
+    // Apply RRT and ODT
+    vec3f a = x * (x + vec3f{0.0245786f}) - vec3f{0.000090537f};
+    vec3f b = x * (0.983729f * x + vec3f{0.4329510f}) + vec3f{0.238081f};
+    x = a / b;
+    x = ACESOutputMat * x;
+    return tonemap_gamma(x);
+}
 
 // Tone mapping HDR to LDR images.
 image4b tonemap_image(const image4f& hdr, const tonemap_params& params) {
     auto ldr = image4b(hdr.width(), hdr.height());
     auto scale = pow(2.0f, params.exposure);
-    auto inv_gamma = 1 / params.gamma;
     for (auto j = 0; j < hdr.height(); j++) {
         for (auto i = 0; i < hdr.width(); i++) {
-            auto h = hdr.at(i, j) * vec4f{scale, scale, scale, 1};
-            if (params.filmic) {
-                h = {tonemap_filmic(h.x), tonemap_filmic(h.y),
-                    tonemap_filmic(h.z), h.w};
-            } else {
-                h = {pow(h.x, inv_gamma), pow(h.y, inv_gamma),
-                    pow(h.z, inv_gamma), h.w};
+            auto h4 = hdr.at(i, j);
+            auto h = vec3f{h4.x, h4.y, h4.z} * scale;
+            auto a = h4.w;
+            switch (params.type) {
+                case tonemap_type::linear: break;
+                case tonemap_type::gamma: h = tonemap_gamma(h); break;
+                case tonemap_type::filmic: h = tonemap_filmic1(h); break;
+                case tonemap_type::filmic1: h = tonemap_filmic1(h); break;
+                case tonemap_type::filmic2: h = tonemap_filmic2(h); break;
+                case tonemap_type::filmic3: h = tonemap_filmic3(h); break;
             }
-            ldr.at(i, j) = float_to_byte(h);
+            ldr.at(i, j) = float_to_byte({h.x, h.y, h.z, a});
         }
     }
     return ldr;
@@ -7020,7 +7044,8 @@ vec3f eval_emission(const trace_point& pt, const vec3f& wo) {
 }
 
 // Check if we are near the mirror direction.
-inline bool check_near_mirror(const vec3f& wn, const vec3f& wo, const vec3f& wi) {
+inline bool check_near_mirror(
+    const vec3f& wn, const vec3f& wo, const vec3f& wi) {
     return abs(dot(wi, normalize(wn * 2.0f * dot(wo, wn) - wo))) < 0.001f;
 }
 
@@ -7048,14 +7073,13 @@ vec3f eval_surface_brdfcos(const trace_point& pt, const vec3f& wo,
             auto ks = fresnel_schlick(pt.ks, odh, pt.rs);
             brdfcos += ks * ndi * dg / (4 * ndi * ndo);
         }
-        if (!pt.rs && delta && check_near_mirror(wn,wo,wi)) {
+        if (!pt.rs && delta && check_near_mirror(wn, wo, wi)) {
             auto ks = fresnel_schlick(pt.ks, ndo, pt.rs);
             brdfcos += ks;
         }
-        if (delta && check_near_mirror(wn,wo,wi)) brdfcos += pt.kr;
+        if (delta && check_near_mirror(wn, wo, wi)) brdfcos += pt.kr;
     }
-    if (wo == -wi && delta)
-        brdfcos += pt.ktr + pt.kto;
+    if (wo == -wi && delta) brdfcos += pt.ktr + pt.kto;
 
     assert(isfinite(brdfcos.x) && isfinite(brdfcos.y) && isfinite(brdfcos.z));
     return brdfcos;
@@ -7137,11 +7161,10 @@ float weight_surface_brdfcos(const trace_point& pt, const vec3f& wo,
             auto hdo = dot(wo, wh);
             pdf += weights[1] * d / (4 * hdo);
         }
-        if (!pt.rs && delta && check_near_mirror(wn,wo,wi)) pdf += weights[1];
-        if (delta && check_near_mirror(wn,wo,wi)) pdf += weights[2];
+        if (!pt.rs && delta && check_near_mirror(wn, wo, wi)) pdf += weights[1];
+        if (delta && check_near_mirror(wn, wo, wi)) pdf += weights[2];
     }
-    if (wi == -wo && delta)
-        pdf += weights[3] + weights[4];
+    if (wi == -wo && delta) pdf += weights[3] + weights[4];
 
     assert(isfinite(pdf));
     if (!pdf) return 0;
@@ -7393,7 +7416,7 @@ trace_point eval_shape_point(const shape* shp, const frame3f& frame, int eid,
         auto txt = eval_texture(mat->occ_txt, pt.texcoord);
         kx *= {txt.x, txt.y, txt.z};
     }
-    
+
     // handle opacity
     op *= mat->op;
 
@@ -7668,7 +7691,8 @@ vec3f trace_path(const scene* scn, const bvh_tree* bvh,
         if (bounce == params.max_depth - 1) break;
 
         // continue path
-        weight *= eval_brdfcos(pt, wo, bwi, bdelta) * weight_brdfcos(pt, wo, bwi, bdelta);
+        weight *= eval_brdfcos(pt, wo, bwi, bdelta) *
+                  weight_brdfcos(pt, wo, bwi, bdelta);
         if (weight == zero3f) break;
 
         // roussian roulette
@@ -12969,28 +12993,60 @@ gl_stdimage_program make_stdimage_program() {
     std::string _frag_tonemap =
         R"(
         struct Tonemap {
-            bool filmic;
             float exposure;
-            float gamma;
+            int type;
         };
         uniform Tonemap tonemap;
 
-        vec3 eval_filmic(vec3 x) {
-            float a = 2.51f;
-            float b = 0.03f;
-            float c = 2.43f;
-            float d = 0.59f;
-            float e = 0.14f;
-            return clamp((x*(a*x+b))/(x*(c*x+d)+e),0,1);
+        vec3 eval_filmic1(vec3 x) {
+            // http://filmicworlds.com/blog/filmic-tonemapping-operators/
+            x = max(vec3(0),x-0.004);
+            return (x*(6.2*x+.5))/(x*(6.2*x+1.7)+0.06);
+        }
+
+        vec3 eval_filmic2(vec3 x) {
+            // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
+            // x *= 0.6; // brings it back to ACES range
+            return pow(clamp((x*(2.51f*x+0.03f))/(x*(2.43f*x+0.59f)+0.14f),0,1),vec3(1/2.2));
+        }
+
+        vec3 eval_filmic3(vec3 x) {
+            // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
+
+            // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
+            mat3 ACESInputMat = transpose(mat3(
+                vec3(0.59719, 0.35458, 0.04823),
+                vec3(0.07600, 0.90834, 0.01566),
+                vec3(0.02840, 0.13383, 0.83777)));
+
+            // ODT_SAT => XYZ => D60_2_D65 => sRGB
+            mat3 ACESOutputMat = transpose(mat3(
+                vec3( 1.60475, -0.53108, -0.07367),
+                vec3(-0.10208,  1.10813, -0.00605),
+                vec3(-0.00327, -0.07276,  1.07602)));
+
+            x = 2 * x; // matches standard range
+            x = ACESInputMat * x;
+            // Apply RRT and ODT
+            vec3 a = x * (x + 0.0245786f) - 0.000090537f;
+            vec3 b = x * (0.983729f * x + 0.4329510f) + 0.238081f;
+            x = a / b;
+            x = ACESOutputMat * x;
+            x = pow(clamp(x,0,1),vec3(1/2.2));
+            return x;
         }
 
         vec3 eval_tonemap(vec3 c) {
             // final color correction
             c = c*pow(2,tonemap.exposure);
-            if(tonemap.filmic) {
-                c = eval_filmic(c);
-            } else {
-                c = pow(c,vec3(1/tonemap.gamma));
+            switch(tonemap.type) {
+                case 0: break;
+                case 1: c = pow(c,vec3(1/2.2)); break;
+                case 2: c = eval_filmic1(c); break;
+                case 3: c = eval_filmic1(c); break;
+                case 4: c = eval_filmic2(c); break;
+                case 5: c = eval_filmic3(c); break;
+                default: c = pow(c,vec3(1/2.2)); break;
             }
             return c;
         }
@@ -13023,7 +13079,7 @@ gl_stdimage_program make_stdimage_program() {
 // Draws the stdimage program.
 void draw_image(const gl_stdimage_program& prog, const gl_texture& txt,
     const vec2i& win_size, const vec2f& offset, float zoom, float exposure,
-    float gamma, bool filmic) {
+    tonemap_type tonemap) {
     assert(is_texture_valid(txt));
 
     bind_program(prog.prog);
@@ -13036,9 +13092,8 @@ void draw_image(const gl_stdimage_program& prog, const gl_texture& txt,
     set_program_uniform(
         prog.prog, "win_size", vec2f{(float)win_size.x, (float)win_size.y});
     set_program_uniform(prog.prog, "offset", offset);
-    set_program_uniform(prog.prog, "tonemap.filmic", filmic);
     set_program_uniform(prog.prog, "tonemap.exposure", exposure);
-    set_program_uniform(prog.prog, "tonemap.gamma", gamma);
+    set_program_uniform(prog.prog, "tonemap.type", (int)tonemap);
     set_program_uniform_texture(prog.prog, "img", txt, 0);
 
     set_program_vertattr(prog.prog, "vert_texcoord", prog.vbo, vec2f{0, 0});
@@ -13189,28 +13244,60 @@ gl_stdsurface_program make_stdsurface_program() {
     std::string _frag_tonemap =
         R"(
         struct Tonemap {
-            bool filmic;       // tonemap type (TM_...)
-            float exposure; // image exposure
-            float gamma;    // image gamma
+            float exposure; 
+            int type;
         };
         uniform Tonemap tonemap;
 
-        vec3 eval_filmic(vec3 x) {
-            float a = 2.51f;
-            float b = 0.03f;
-            float c = 2.43f;
-            float d = 0.59f;
-            float e = 0.14f;
-            return clamp((x*(a*x+b))/(x*(c*x+d)+e),0,1);
+        vec3 eval_filmic1(vec3 x) {
+            // http://filmicworlds.com/blog/filmic-tonemapping-operators/
+            x = max(vec3(0),x-0.004);
+            return (x*(6.2*x+.5))/(x*(6.2*x+1.7)+0.06);
+        }
+
+        vec3 eval_filmic2(vec3 x) {
+            // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
+            // x *= 0.6; // brings it back to ACES range
+            return pow(clamp((x*(2.51f*x+0.03f))/(x*(2.43f*x+0.59f)+0.14f),0,1),vec3(1/2.2));
+        }
+
+        vec3 eval_filmic3(vec3 x) {
+            // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
+
+            // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
+            mat3 ACESInputMat = transpose(mat3(
+                vec3(0.59719, 0.35458, 0.04823),
+                vec3(0.07600, 0.90834, 0.01566),
+                vec3(0.02840, 0.13383, 0.83777)));
+
+            // ODT_SAT => XYZ => D60_2_D65 => sRGB
+            mat3 ACESOutputMat = transpose(mat3(
+                vec3( 1.60475, -0.53108, -0.07367),
+                vec3(-0.10208,  1.10813, -0.00605),
+                vec3(-0.00327, -0.07276,  1.07602)));
+
+            x = 2 * x; // matches standard range
+            x = ACESInputMat * x;
+            // Apply RRT and ODT
+            vec3 a = x * (x + 0.0245786f) - 0.000090537f;
+            vec3 b = x * (0.983729f * x + 0.4329510f) + 0.238081f;
+            x = a / b;
+            x = ACESOutputMat * x;
+            x = pow(clamp(x,0,1),vec3(1/2.2));
+            return x;
         }
 
         vec3 eval_tonemap(vec3 c) {
             // final color correction
             c = c*pow(2,tonemap.exposure);
-            if(tonemap.filmic) {
-                c = eval_filmic(c);
-            } else {
-                c = pow(c,vec3(1/tonemap.gamma));
+            switch(tonemap.type) {
+                case 0: break;
+                case 1: c = pow(c,vec3(1/2.2)); break;
+                case 2: c = eval_filmic1(c); break;
+                case 3: c = eval_filmic1(c); break;
+                case 4: c = eval_filmic2(c); break;
+                case 5: c = eval_filmic3(c); break;
+                default: c = pow(c,vec3(1/2.2)); break;
             }
             return c;
         }
@@ -13497,17 +13584,15 @@ gl_stdsurface_program make_stdsurface_program() {
 // and projection. Sets also whether to use full shading or a quick
 // eyelight preview.
 void begin_stdsurface_frame(const gl_stdsurface_program& prog,
-    bool shade_eyelight, float tonemap_exposure, float tonemap_gamma,
-    bool tonemap_filmic, const mat4f& camera_xform,
-    const mat4f& camera_xform_inv, const mat4f& camera_proj) {
+    bool shade_eyelight, float exposure, tonemap_type tonemap,
+    const mat4f& camera_xform, const mat4f& camera_xform_inv,
+    const mat4f& camera_proj) {
     static auto eyelight_id =
         get_program_uniform_location(prog.prog, "lighting.eyelight");
     static auto exposure_id =
         get_program_uniform_location(prog.prog, "tonemap.exposure");
-    static auto gamma_id =
-        get_program_uniform_location(prog.prog, "tonemap.gamma");
-    static auto filmic_id =
-        get_program_uniform_location(prog.prog, "tonemap.filmic");
+    static auto tonemap_id =
+        get_program_uniform_location(prog.prog, "tonemap.type");
     static auto xform_id =
         get_program_uniform_location(prog.prog, "camera.xform");
     static auto xform_inv_id =
@@ -13517,9 +13602,8 @@ void begin_stdsurface_frame(const gl_stdsurface_program& prog,
     assert(gl_check_error());
     bind_program(prog.prog);
     set_program_uniform(prog.prog, eyelight_id, shade_eyelight);
-    set_program_uniform(prog.prog, exposure_id, tonemap_exposure);
-    set_program_uniform(prog.prog, gamma_id, tonemap_gamma);
-    set_program_uniform(prog.prog, filmic_id, tonemap_filmic);
+    set_program_uniform(prog.prog, exposure_id, exposure);
+    set_program_uniform(prog.prog, tonemap_id, (int)tonemap);
     set_program_uniform(prog.prog, xform_id, camera_xform);
     set_program_uniform(prog.prog, xform_inv_id, camera_xform_inv);
     set_program_uniform(prog.prog, proj_id, camera_proj);
@@ -13856,8 +13940,7 @@ void draw_stdsurface_scene(const scene* scn, const camera* cam,
         (float)viewport_size.x / (float)viewport_size.y, cam->near, cam->far);
 
     begin_stdsurface_frame(prog, params.eyelight, tmparams.exposure,
-        tmparams.gamma, tmparams.filmic, camera_xform, camera_view,
-        camera_proj);
+        tmparams.type, camera_xform, camera_view, camera_proj);
 
     if (!params.eyelight) {
         set_stdsurface_lights(prog, params.ambient, lights);

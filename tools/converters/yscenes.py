@@ -73,5 +73,34 @@ def render_tungsten(scene='*',samples=16,resolution=256):
         print(cmd)
         os.system(cmd)
 
+@view.command('mcguire')
+@click.argument('scene', required=False, default='*')
+def view_mcguire(scene='*'):
+    for filename in sorted(glob.glob(f'mcguire/yocto/{scene}/*.obj')):
+        print(f'-------------------------------- {filename}')
+        cmd = f'../yocto-gl/bin/yview -D -c {filename}'
+        print(cmd)
+        os.system(cmd)
+
+@trace.command('mcguire')
+@click.argument('scene', required=False, default='*')
+def trace_mcguire(scene='*'):
+    for filename in sorted(glob.glob(f'mcguire/yocto/{scene}/*.obj')):
+        print(f'-------------------------------- {filename}')
+        cmd = f'../yocto-gl/bin/yitrace -D {filename}'
+        print(cmd)
+        os.system(cmd)
+
+@render.command('mcguire')
+@click.option('--resolution', '-r', default=256, type=int)
+@click.option('--samples', '-s', default=64, type=int)
+@click.argument('scene', required=False, default='*')
+def render_mcguire(scene='*',samples=16,resolution=256):
+    for filename in sorted(glob.glob(f'mcguire/yocto/{scene}/*.obj')):
+        print(f'-------------------------------- {filename}')
+        cmd = f'../yocto-gl/bin/ytrace -D -r {resolution} -s {samples} {filename}'
+        print(cmd)
+        os.system(cmd)
+
 if __name__ == '__main__':
     run()

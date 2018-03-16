@@ -11,10 +11,28 @@ Please consider this to be just development notes and not any real planning.
 - interactive procedural shapes
 - prepare for research on procedural components
 
+## Tonemapping formulas
+
+- internal
+    - 
+- bitterli
+- fit1
+- fit2
+- better fit
+
 ## Port scenes
 
+- tonemapping
 - move ytrace batch size
+    - use callback workflow
+- mcguire
+    - list of scenes
+    - some scenes have wrong transparency
+    - cameras
+    - lights
 - bitterli
+    - new scenes
+    - hair
     - veach-bidir
         - bad materials
         - too high energy
