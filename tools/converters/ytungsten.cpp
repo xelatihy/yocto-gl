@@ -190,16 +190,22 @@ frame3f rotation_yxz_frame(const vec3f& r) {
     return {m.x, m.y, m.z, zero3f};
 }
 
-frame3f xform_to_frame(const json& js, float* focus = nullptr) {
+std::pair<frame3f, vec3f> xform_to_scaled_frame(
+    const json& js, float* focus = nullptr) {
     if (js.is_array()) {
         auto m = identity_mat4f;
         for (auto i = 0; i < 16; i++) ((float*)&m)[i] = js.at(i).get<float>();
+        auto f = mat_to_frame(m);
+        auto scl = vec3f{length(f.x), length(f.y), length(f.z)};
+        return {{normalize(f.x), normalize(f.y), normalize(f.z), f.o}, scl};
     } else if (js.count("look_at")) {
         auto from = to_vec3f(js.at("position"));
         auto to = to_vec3f(js.at("look_at"));
         auto up = to_vec3f(js.at("up"));
         if (focus) *focus = length(from - to);
-        return lookat_frame(from, to, up);
+        auto scl =
+            (js.count("scale")) ? to_vec3f(js.at("scale")) : vec3f{1, 1, 1};
+        return {lookat_frame(from, to, up), scl};
     } else {
         auto pos =
             (js.count("position")) ? to_vec3f(js.at("position")) : zero3f;
@@ -216,12 +222,10 @@ frame3f xform_to_frame(const json& js, float* focus = nullptr) {
         // *
         //        rotation_frame(vec3f{1, 0, 0}, rot.y) *
         //        rotation_frame(vec3f{0, 1, 0}, rot.z) * scaling_frame(scl);
-        return translation_frame(pos) * rotation_yxz_frame(rot) *
-               scaling_frame(scl);
+        return {translation_frame(pos) * rotation_yxz_frame(rot), scl};
     }
     log_error("bad xform");
-    return identity_frame3f;
-    //    throw std::runtime_error("xform not handled");
+    return {identity_frame3f, vec3f{1, 1, 1}};
 }
 
 #endif
@@ -231,12 +235,8 @@ shape* make_shape(const std::string& type, const json& js) {
     auto shp = new shape();
     shp->name = type + std::to_string(tcount[type]++);
     if (type == "quad") {
-        shp->pos = {
-            {-0.5f, 0.0f, -0.5f},
-            {0.5f, 0.0f, -0.5f},
-            {0.5f, 0.0f, 0.5f},
-            {-0.5f, 0.0f, 0.5f},
-        };
+        shp->pos = {{-0.5f, 0.0f, -0.5f}, {0.5f, 0.0f, -0.5f},
+            {0.5f, 0.0f, 0.5f}, {-0.5f, 0.0f, 0.5f}};
         shp->norm = {{0, 1, 0}, {0, 1, 0}, {0, 1, 0}, {0, 1, 0}};
         shp->texcoord = {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
         shp->triangles = {{0, 1, 2}, {0, 2, 3}};
@@ -253,14 +253,14 @@ shape* make_shape(const std::string& type, const json& js) {
         for (auto& t : shp->triangles) std::swap(t.y, t.z);
         for (auto& q : shp->quads) std::swap(q.y, q.w);
     } else if (type == "infinite_sphere_cap") {
+        // flipped
+        shp->pos = {{-0.5f, 0.0f, -0.5f}, {0.5f, 0.0f, -0.5f},
+            {0.5f, 0.0f, 0.5f}, {-0.5f, 0.0f, 0.5f}};
+        shp->norm = {{0, -1, 0}, {0, -1, 0}, {0, -1, 0}, {0, -1, 0}};
+        shp->texcoord = {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
+        shp->triangles = {{0, 2, 1}, {0, 3, 2}};
         auto angle = js.at("cap_angle").get<float>() * pif / 180;
-        make_quad(shp->quads, shp->pos, shp->norm, shp->texcoord, {1,1}, {2*std::sin(angle),2*std::sin(angle)}, {1,1});
-        for (auto& p : shp->pos) std::swap(p.y,p.z);
-        for (auto& n : shp->pos) std::swap(n.y,n.z);
-        for (auto& p : shp->pos) p = vec3f{0,env_distance,0} + p * env_distance;
-        for (auto& n : shp->norm) n = -n;
-        for (auto& t : shp->triangles) std::swap(t.y, t.z);
-        for (auto& q : shp->quads) std::swap(q.y, q.w);
+        for (auto& p : shp->pos) p = vec3f{0, env_distance, 0} + p * 2 * env_distance * std::sin(angle);
     } else
         log_error("unknow type " + type);
     return shp;
@@ -345,6 +345,8 @@ std::pair<vec3f, texture*> add_scaled_texture(const json& js, scene* scn) {
 }
 
 auto metal_ior = std::unordered_map<std::string, std::pair<vec3f, vec3f>>{
+    {"Ag", {vec3f(0.1552646489f, 0.1167232965f, 0.1383806959f),
+               vec3f(4.8283433224f, 3.1222459278f, 2.1469504455f)}},
     {"Al", {vec3f(1.6574599595f, 0.8803689579f, 0.5212287346f),
                vec3f(9.2238691996f, 6.2695232477f, 4.8370012281f)}},
     {"AlSb", {vec3f(-0.0485225705f, 4.1427547893f, 4.6697691348f),
@@ -366,13 +368,8 @@ auto metal_ior = std::unordered_map<std::string, std::pair<vec3f, vec3f>>{
     {"W", {vec3f(4.3707029924f, 3.3002972445f, 2.9982666528f),
               vec3f(3.5006778591f, 2.6048652781f, 2.2731930614f)}}};
 
-material* add_bsdf(const json& js, scene* scn) {
-    static auto count = 0;
-    auto mat = new material();
-    if (js.count("name"))
-        mat->name = js.at("name");
-    else
-        mat->name = "unnamed_mat" + std::to_string(count++);
+void parse_bsdf(material* mat, const json& js, scene* scn) {
+    if (js.count("name")) mat->name = js.at("name");
     mat->double_sided = true;
     auto type = js.at("type").get<std::string>();
     auto albedo = vec3f{1, 1, 1};
@@ -412,31 +409,24 @@ material* add_bsdf(const json& js, scene* scn) {
         } else {
             mat->ks = albedo;
         }
-        mat->rs = (js.count("roughness")) ? js.at("roughness").get<float>() : 0;
+        mat->rs = (js.count("roughness")) ? sqrt(js.at("roughness").get<float>()) : 0;
         mat->bump_txt.txt = bump_txt;
     } else if (type == "mirror") {
         mat->ks = albedo;
         mat->rs = 0;
         mat->bump_txt.txt = bump_txt;
     } else if (type == "transparency") {
-        auto base_bsdf = add_bsdf(js.at("base"), scn);
-        scn->materials.pop_back();
-        base_bsdf->name = mat->name;
-        base_bsdf->op = alpha.x;
+        parse_bsdf(mat, js.at("base"), scn);
+        mat->op = alpha.x;
         if (alpha_txt) log_warning("missing alpha texture");
-        mat = base_bsdf;
-        // base_bsdf->op_txt = alpha_txt;
     } else if (type == "smooth_coat") {
-        auto base_bsdf = add_bsdf(js.at("substrate"), scn);
-        scn->materials.pop_back();
-        base_bsdf->name = mat->name;
+        parse_bsdf(mat, js.at("substrate"), scn);
         auto sigma = to_vec3f(js.at("sigma_a")) * to_vec3f(js.at("thickness"));
         auto kx = vec3f{std::exp(-sigma.x * 2), std::exp(-sigma.y * 2),
             std::exp(-sigma.z * 2)};
 #if 1
         // mat->kr = {0.04f,0.04f,0.04f};
-        mat->ks = kx * base_bsdf->ks;
-        mat->rs = base_bsdf->rs;
+        mat->ks *= kx;
 #else
         mat->ks = {0.04f, 0.04f, 0.04f};
         mat->rs = 0;
@@ -458,29 +448,31 @@ material* add_bsdf(const json& js, scene* scn) {
     } else {
         println("Cannot handle {} material", type);
     }
-    scn->materials.push_back(mat);
-    return mat;
 }
 
 material* add_material(const json& js, scene* scn, shape* shp) {
-    static auto mid = 0;
+    if (js.count("bsdf") && js.at("bsdf").is_string() &&
+        !js.count("emission") && !js.count("power")) {
+        auto name = js.at("bsdf").get<std::string>();
+        for (auto m : scn->materials)
+            if (m->name == name) return m;
+        throw std::runtime_error("bad bsdf name");
+    }
+    static auto mids = std::map<std::string, int>();
     auto mat = new material();
-    mat->name = "mat" + std::to_string(mid++);
+    scn->materials.push_back(mat);
     if (js.count("bsdf")) {
         auto jbsdf = js.at("bsdf");
         if (jbsdf.is_string()) {
             auto name = jbsdf.get<std::string>();
-            for (auto m : scn->materials) {
-                if (m->name == name) {
-                    delete mat;
-                    mat = m;
-                }
-            }
+            for (auto m : scn->materials)
+                if (m->name == name) *mat = *m;
         } else {
-            delete mat;
-            mat = add_bsdf(jbsdf, scn);
+            parse_bsdf(mat, jbsdf, scn);
+            if (mat->name == "") mat->name = "unnamed_mat";
         }
     }
+    mat->name += "_" + std::to_string(mids[mat->name]++);
     if (js.count("emission")) {
         std::tie(mat->ke, mat->ke_txt.txt) =
             add_scaled_texture(js.at("emission"), scn);
@@ -493,14 +485,13 @@ material* add_material(const json& js, scene* scn, shape* shp) {
         for (auto q : shp->quads)
             area += quad_area(
                 shp->pos[q.x], shp->pos[q.y], shp->pos[q.z], shp->pos[q.w]);
-        mat->ke /= area;
+        mat->ke /= (area * pif);
     }
-    if(!contains(scn->materials, mat)) scn->materials.push_back(mat);
+    if (!contains(scn->materials, mat)) scn->materials.push_back(mat);
     return mat;
 }
 
-scene* load_tungsten(const std::string& filename,
-    bool facet_non_smooth) {
+scene* load_tungsten(const std::string& filename, bool facet_non_smooth) {
     auto dirname = path_dirname(filename);
     auto meshdir = dirname;
     if (meshdir.back() != '/') meshdir += '/';
@@ -525,7 +516,9 @@ scene* load_tungsten(const std::string& filename,
         auto cam = new camera();
         cam->name = "cam";
         if (jcam.count("transform")) {
-            cam->frame = xform_to_frame(jcam.at("transform"), &cam->focus);
+            auto s = zero3f;
+            std::tie(cam->frame, s) =
+                xform_to_scaled_frame(jcam.at("transform"), &cam->focus);
         }
         cam->aspect = 1;
         if (jcam.count("resolution")) {
@@ -546,7 +539,11 @@ scene* load_tungsten(const std::string& filename,
     // convert materials
     if (js.count("bsdfs")) {
         auto& jmats = js.at("bsdfs");
-        for (auto& jmat : jmats) add_bsdf(jmat, scn);
+        for (auto& jmat : jmats) {
+            auto mat = new material();
+            scn->materials.push_back(mat);
+            parse_bsdf(mat, jmat, scn);
+        }
     }
 
     // primitives
@@ -568,10 +565,8 @@ scene* load_tungsten(const std::string& filename,
             auto frame = identity_frame3f;
             auto scale = vec3f{1, 1, 1};
             if (!jprim.at("transform").empty()) {
-                frame = xform_to_frame(jprim.at("transform"));
-                scale = {length(frame.x), length(frame.y), length(frame.z)};
-                frame = {normalize(frame.x), normalize(frame.y),
-                    normalize(frame.z), frame.o};
+                std::tie(frame, scale) =
+                    xform_to_scaled_frame(jprim.at("transform"));
             }
             auto shp = (shape*)nullptr;
             if (type == "mesh") {
@@ -592,7 +587,8 @@ scene* load_tungsten(const std::string& filename,
                     log_error("already used mesh " + path);
                 used_meshes.insert(path);
             } else if (type == "quad" || type == "sphere" || type == "cube" ||
-                       type == "infinite_sphere" || type == "infinite_sphere_cap") {
+                       type == "infinite_sphere" ||
+                       type == "infinite_sphere_cap") {
                 cull = false;
                 smooth = true;
                 compute_normals = false;
@@ -630,6 +626,11 @@ scene* load_tungsten(const std::string& filename,
                 //     scn->materials.end(), shp->groups.at(0).mat)); delete
                 //     shp->groups.at(0).mat;
             } else if (type == "infinite_sphere_cap") {
+                println("f {}", shp->frame);
+                println(
+                    "y {}", transform_direction(shp->frame, vec3f{0, 1, 0}));
+                println(
+                    "z {}", transform_direction(shp->frame, vec3f{0, 0, 1}));
                 shp->groups.at(0).mat->ke *= env_distance * env_distance;
                 scn->shapes.push_back(shp);
             } else {

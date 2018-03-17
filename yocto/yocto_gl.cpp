@@ -2335,10 +2335,148 @@ void make_hair(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+// Pfm load
+float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
+    auto f = fopen(filename, "rb");
+    if (!f) return nullptr;
+
+    // buffer
+    char buf[256];
+    auto toks = std::vector<std::string>();
+
+    // read magic
+    if (!fgets(buf, 256, f)) return nullptr;
+    toks = split(buf);
+    if (toks[0] == "Pf")
+        *nc = 1;
+    else if (toks[0] == "PF")
+        *nc = 3;
+    else
+        return nullptr;
+
+    // read w, h
+    if (!fgets(buf, 256, f)) return nullptr;
+    toks = split(buf);
+    *w = atoi(toks[0].c_str());
+    *h = atoi(toks[1].c_str());
+
+    // read scale
+    if (!fgets(buf, 256, f)) return nullptr;
+    toks = split(buf);
+    auto s = atof(toks[0].c_str());
+
+    // read the data (flip y)
+    auto npixels = (*w) * (*h);
+    auto nvalues = (*w) * (*h) * (*nc);
+    auto nrow = (*w) * (*nc);
+    auto pixels = std::unique_ptr<float[]>(new float[nvalues]);
+    for (auto j = *h - 1; j >= 0; j--) {
+        if (fread(pixels.get() + j * nrow, sizeof(float), nrow, f) != nrow)
+            return nullptr;
+    }
+
+    // done reading
+    fclose(f);
+
+    // endian conversion
+    if (s > 0) {
+        for (auto i = 0; i < nvalues; ++i) {
+            auto dta = (uint8_t*)(pixels.get() + i);
+            std::swap(dta[0], dta[3]);
+            std::swap(dta[1], dta[2]);
+        }
+    }
+
+    // scale
+    auto scl = (s > 0) ? s : -s;
+    if (scl != 1) {
+        for (auto i = 0; i < nvalues; i++) pixels[i] *= scl;
+    }
+
+    // proper number of channels
+    if (!req || *nc == req) return pixels.release();
+
+    // pack into channels
+    if (req < 0 || req > 4) return nullptr;
+    auto cpixels = new float[req * npixels];
+    for (auto i = 0; i < npixels; i++) {
+        auto vp = pixels.get() + i * (*nc);
+        auto cp = cpixels + i * req;
+        if (*nc == 1) {
+            switch (req) {
+                case 1: cp[0] = vp[0]; break;
+                case 2:
+                    cp[0] = vp[0];
+                    cp[1] = vp[0];
+                    break;
+                case 3:
+                    cp[0] = vp[0];
+                    cp[1] = vp[0];
+                    cp[2] = vp[0];
+                    break;
+                case 4:
+                    cp[0] = vp[0];
+                    cp[1] = vp[0];
+                    cp[2] = vp[0];
+                    cp[3] = 1;
+                    break;
+            }
+        } else {
+            switch (req) {
+                case 1: cp[0] = vp[0]; break;
+                case 2:
+                    cp[0] = vp[0];
+                    cp[1] = vp[1];
+                    break;
+                case 3:
+                    cp[0] = vp[0];
+                    cp[1] = vp[1];
+                    cp[2] = vp[2];
+                    break;
+                case 4:
+                    cp[0] = vp[0];
+                    cp[1] = vp[1];
+                    cp[2] = vp[2];
+                    cp[3] = 1;
+                    break;
+            }
+        }
+    }
+    return cpixels;
+}
+
+// save pfm
+bool save_pfm(const char* filename, int w, int h, int nc, const float* pixels) {
+    auto f = fopen(filename, "wb");
+    if (!f) return false;
+
+    fprintf(f, "%s\n", (nc == 1) ? "Pf" : "PF");
+    fprintf(f, "%d %d\n", w, h);
+    fprintf(f, "-1\n");
+    if (nc == 1 || nc == 3) {
+        fwrite(pixels, sizeof(float), w * h * nc, f);
+    } else {
+        for (auto i = 0; i < w * h; i++) {
+            auto vz = 0.0f;
+            auto v = pixels + i * nc;
+            fwrite(v + 0, sizeof(float), 1, f);
+            fwrite(v + 1, sizeof(float), 1, f);
+            if (nc == 2)
+                fwrite(&vz, sizeof(float), 1, f);
+            else
+                fwrite(v + 2, sizeof(float), 1, f);
+        }
+    }
+
+    fclose(f);
+
+    return true;
+}
+
 // check hdr extensions
 bool is_hdr_filename(const std::string& filename) {
     auto ext = path_extension(filename);
-    return ext == ".hdr" || ext == ".exr";
+    return ext == ".hdr" || ext == ".exr" || ext == ".pfm";
 }
 
 // Loads an ldr image.
@@ -2360,6 +2498,9 @@ image4f load_image4f(const std::string& filename) {
         if (LoadEXR(&pixels_, &w, &h, filename.c_str(), nullptr) < 0) return {};
         pixels = std::unique_ptr<float>(pixels_);
         c = 4;
+    } else if (ext == ".pfm") {
+        pixels =
+            std::unique_ptr<float>(load_pfm(filename.c_str(), &w, &h, &c, 4));
     } else {
         pixels =
             std::unique_ptr<float>(stbi_loadf(filename.c_str(), &w, &h, &c, 4));
@@ -2386,6 +2527,9 @@ bool save_image4f(const std::string& filename, const image4f& img) {
     if (path_extension(filename) == ".hdr") {
         return stbi_write_hdr(
             filename.c_str(), img.width(), img.height(), 4, (float*)data(img));
+    } else if (path_extension(filename) == ".pfm") {
+        return save_pfm(
+            filename.c_str(), img.width(), img.height(), 4, (float*)data(img));
     } else if (path_extension(filename) == ".exr") {
         return !SaveEXR(
             (float*)data(img), img.width(), img.height(), 4, filename.c_str());
@@ -2403,6 +2547,8 @@ std::vector<float> load_imagef(
         if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) < 0)
             return {};
         ncomp = 4;
+    } else if(ext == ".pfm") {
+        pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, 0);
     } else {
         pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 0);
     }
@@ -2449,6 +2595,8 @@ bool save_imagef(const std::string& filename, int width, int height, int ncomp,
     const float* hdr) {
     if (path_extension(filename) == ".hdr") {
         return stbi_write_hdr(filename.c_str(), width, height, ncomp, hdr);
+    } else if (path_extension(filename) == ".pfm") {
+        return save_pfm(filename.c_str(), width, height, ncomp, hdr);
     } else {
         return false;
     }
@@ -2543,6 +2691,15 @@ inline vec3f tonemap_gamma(const vec3f& x) {
     return {pow(x.x, 1 / 2.2f), pow(x.y, 1 / 2.2f), pow(x.z, 1 / 2.2f)};
 }
 
+inline float tonemap_srgb(float x) {
+    if (x <= 0.0031308f) return 12.92f * x;
+    return 1.055f * pow(x, 1 / 2.4f) - 0.055f;
+}
+
+inline vec3f tonemap_srgb(const vec3f& x) {
+    return {tonemap_srgb(x.x), tonemap_srgb(x.y), tonemap_srgb(x.z)};
+}
+
 inline vec3f tonemap_filmic1(const vec3f& hdr) {
     // http://filmicworlds.com/blog/filmic-tonemapping-operators/
     auto x = vec3f{max(0.0f, hdr.x - 0.004f), max(0.0f, hdr.y - 0.004f),
@@ -2596,7 +2753,7 @@ image4b tonemap_image(const image4f& hdr, const tonemap_params& params) {
             switch (params.type) {
                 case tonemap_type::linear: break;
                 case tonemap_type::gamma: h = tonemap_gamma(h); break;
-                case tonemap_type::filmic: h = tonemap_filmic1(h); break;
+                case tonemap_type::srgb: h = tonemap_srgb(h); break;
                 case tonemap_type::filmic1: h = tonemap_filmic1(h); break;
                 case tonemap_type::filmic2: h = tonemap_filmic2(h); break;
                 case tonemap_type::filmic3: h = tonemap_filmic3(h); break;
@@ -5207,37 +5364,10 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
         mat->kr_txt = make_texture_info(omat->kr_txt);
         mat->kt_txt = make_texture_info(omat->kt_txt);
         mat->rs_txt = make_texture_info(omat->ns_txt);
+        mat->op_txt = make_texture_info(omat->op_txt);
         mat->norm_txt = make_texture_info(omat->norm_txt);
         mat->bump_txt = make_texture_info(omat->bump_txt);
         mat->disp_txt = make_texture_info(omat->disp_txt);
-        switch (omat->illum) {
-            case 0:  // Color on and Ambient off
-            case 1:  // Color on and Ambient on
-            case 2:  // Highlight on
-            case 3:  // Reflection on and Ray trace on
-                mat->op = 1;
-                mat->kt = {0, 0, 0};
-                break;
-            case 4:  // Transparency: Glass on
-                // Reflection: Ray trace on
-                break;
-            case 5:  // Reflection: Fresnel on and Ray trace on
-                mat->op = 1;
-                mat->kt = {0, 0, 0};
-                break;
-            case 6:  // Transparency: Refraction on
-                     // Reflection: Fresnel off and Ray trace on
-            case 7:  // Transparency: Refraction on
-                // Reflection: Fresnel on and Ray trace on
-                break;
-            case 8:  // Reflection on and Ray trace off
-                mat->op = 1;
-                mat->kt = {0, 0, 0};
-                break;
-            case 9:  // Transparency: Glass on
-                // Reflection: Ray trace off
-                break;
-        }
         scn->materials.push_back(mat);
         mmap[mat->name] = mat;
     }
@@ -5639,6 +5769,7 @@ obj_scene* scene_to_obj(const scene* scn) {
                 omat->ks_txt = make_texture_info(mat->ks_txt);
                 omat->kr_txt = make_texture_info(mat->kr_txt);
                 omat->kt_txt = make_texture_info(mat->kt_txt);
+                omat->op_txt = make_texture_info(mat->op_txt);
             } break;
             case material_type::metallic_roughness: {
                 if (mat->rs == 1 && mat->ks.x == 0) {
@@ -6898,7 +7029,7 @@ vec3f fresnel_schlick(const vec3f& ks, float cosw) {
 // This is a hack, but works better than not doing it.
 vec3f fresnel_schlick(const vec3f& ks, float cosw, float rs) {
     auto fks = fresnel_schlick(ks, cosw);
-    return lerp(ks, fks, rs);
+    return lerp(ks, fks, 1 - rs);
 }
 
 // Evaluates the GGX distribution and geometric term
@@ -7419,6 +7550,10 @@ trace_point eval_shape_point(const shape* shp, const frame3f& frame, int eid,
 
     // handle opacity
     op *= mat->op;
+    if(mat->op_txt.txt) {
+        auto txt = eval_texture(mat->op_txt, pt.texcoord);
+        op *= (txt.x + txt.y + txt.z) / 3;
+    }
 
     // sample emission
     pt.ke = mat->ke * kx;
@@ -12998,6 +13133,17 @@ gl_stdimage_program make_stdimage_program() {
         };
         uniform Tonemap tonemap;
 
+        vec3 eval_gamma(vec3 x) {
+            return pow(x, vec3(1/2.2));
+        }
+
+        vec3 eval_srgb(vec3 x) {
+            float r = (x.x < 0.0031308) ? 12.92 * x.x : (1+0.055) * pow(x.x, 1/2.4) - 0.055;
+            float g = (x.y < 0.0031308) ? 12.92 * x.y : (1+0.055) * pow(x.y, 1/2.4) - 0.055;
+            float b = (x.z < 0.0031308) ? 12.92 * x.z : (1+0.055) * pow(x.z, 1/2.4) - 0.055;
+            return vec3(r,g,b);
+        }
+
         vec3 eval_filmic1(vec3 x) {
             // http://filmicworlds.com/blog/filmic-tonemapping-operators/
             x = max(vec3(0),x-0.004);
@@ -13041,12 +13187,12 @@ gl_stdimage_program make_stdimage_program() {
             c = c*pow(2,tonemap.exposure);
             switch(tonemap.type) {
                 case 0: break;
-                case 1: c = pow(c,vec3(1/2.2)); break;
-                case 2: c = eval_filmic1(c); break;
+                case 1: c = eval_gamma(c); break;
+                case 2: c = eval_srgb(c); break;
                 case 3: c = eval_filmic1(c); break;
                 case 4: c = eval_filmic2(c); break;
                 case 5: c = eval_filmic3(c); break;
-                default: c = pow(c,vec3(1/2.2)); break;
+                default: c = eval_gamma(c); break;
             }
             return c;
         }
@@ -13249,6 +13395,17 @@ gl_stdsurface_program make_stdsurface_program() {
         };
         uniform Tonemap tonemap;
 
+        vec3 eval_gamma(vec3 x) {
+            return pow(x, vec3(1/2.2));
+        }
+
+        vec3 eval_srgb(vec3 x) {
+            float r = (x.x < 0.0031308) ? 12.92 * x.x : (1+0.055) * pow(x.x, 1/2.4) - 0.055;
+            float g = (x.y < 0.0031308) ? 12.92 * x.y : (1+0.055) * pow(x.y, 1/2.4) - 0.055;
+            float b = (x.z < 0.0031308) ? 12.92 * x.z : (1+0.055) * pow(x.z, 1/2.4) - 0.055;
+            return vec3(r,g,b);
+        }
+
         vec3 eval_filmic1(vec3 x) {
             // http://filmicworlds.com/blog/filmic-tonemapping-operators/
             x = max(vec3(0),x-0.004);
@@ -13292,12 +13449,12 @@ gl_stdsurface_program make_stdsurface_program() {
             c = c*pow(2,tonemap.exposure);
             switch(tonemap.type) {
                 case 0: break;
-                case 1: c = pow(c,vec3(1/2.2)); break;
-                case 2: c = eval_filmic1(c); break;
+                case 1: c = eval_gamma(c); break;
+                case 2: c = eval_srgb(c); break;
                 case 3: c = eval_filmic1(c); break;
                 case 4: c = eval_filmic2(c); break;
                 case 5: c = eval_filmic3(c); break;
-                default: c = pow(c,vec3(1/2.2)); break;
+                default: c = eval_gamma(c); break;
             }
             return c;
         }

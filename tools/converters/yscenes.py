@@ -34,7 +34,7 @@ def run():
 @click.argument('scene', required=False, default='*')
 def convert(dirname, scene):
     tungsten = dirname in ['bitterli']
-    pbrt = dirname in ['bitterli_pbrt']
+    pbrt = dirname in ['bitterli_pbrt', 'pbrt']
     ext = 'json' if tungsten else 'pbrt'
     for filename in get_filenames(f'{dirname}/original', scene, f'*.{ext}'):
         srcdir = os.path.dirname(filename)
@@ -54,6 +54,9 @@ def convert(dirname, scene):
             run_cmd(f'cp -r {srcdir}/textures {outdir}/')
         if os.path.exists(f'{srcdir}/LICENSE.txt'):
             run_cmd(f'cp -r {srcdir}/LICENSE.txt {outdir}/')
+        for imfilename in glob.glob(f'{srcdir}/textures/*.pfm'):
+            out_imfilename = imfilename.replace('.pfm','.hdr')
+            run_cmd(f'../yocto-gl/bin/yimproc -o {out_imfilename} {imfilename}')
 
 @run.command()
 @click.argument('dirname', required=True)
@@ -71,12 +74,21 @@ def trace(dirname, scene='*'):
 
 @run.command()
 @click.argument('dirname', required=True)
-@click.option('--resolution', '-r', default=256, type=int)
+@click.option('--resolution', '-r', default=720, type=int)
 @click.option('--samples', '-s', default=64, type=int)
+@click.option('--filter', '-f', default='box', type=str)
+@click.option('--progressive', '-p', is_flag=True, default=False, type=bool)
 @click.argument('scene', required=False, default='*')
-def render(dirname, scene='*',samples=16,resolution=256):
+def render(dirname, scene='*',samples=64,resolution=720,filter='box',progressive=False):
     for filename in get_filenames(f'{dirname}/yocto', scene, f'*.obj'):
-        run_cmd(f'../yocto-gl/bin/ytrace -D -r {resolution} -s {samples} {filename}')
+        outdir = os.path.dirname(filename).replace('/yocto','/render')
+        if os.path.exists(f'{outdir}'):
+            run_cmd(f'rm {outdir}/*.exr')
+        else:
+            run_cmd(f'mkdir -p {outdir}')
+        outname = filename.replace('.obj','.exr').replace('/yocto','/render')
+        save_batch = '--save-batch' if progressive else ''
+        run_cmd(f'../yocto-gl/bin/ytrace -D -r {resolution} -s {samples} --filter {filter} {save_batch} -o {outname} {filename}')
 
 @run.command()
 def sync():

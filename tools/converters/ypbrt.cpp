@@ -41,12 +41,14 @@ using namespace std::literals;
 bool is_cmd(const std::vector<std::string>& tokens, int i) {
     auto& tok = tokens.at(i);
     return !(tok[0] == '[' || tok[0] == ']' || tok[0] == '\"' ||
-             tok[0] == '-' || tok[0] == '+' || std::isdigit(tok[0]));
+             tok[0] == '-' || tok[0] == '+' || tok[0] == '.' ||
+             std::isdigit(tok[0]));
 }
 
 bool is_number(const std::vector<std::string>& tokens, int i) {
     auto& tok = tokens.at(i);
-    return tok[0] == '-' || tok[0] == '+' || std::isdigit(tok[0]);
+    return tok[0] == '-' || tok[0] == '+' || tok[0] == '.' ||
+           std::isdigit(tok[0]);
 }
 
 std::string parse_string(const std::vector<std::string>& tokens, int& i) {
@@ -58,25 +60,27 @@ std::string parse_string(const std::vector<std::string>& tokens, int& i) {
 }
 
 void parse_param(const std::vector<std::string>& tokens, int& i, json& js) {
-    auto open = false, first = true;
+    auto list = false, first = true;
     while (i < tokens.size()) {
         if (is_cmd(tokens, i)) {
             break;
         } else if (tokens[i][0] == '[') {
-            open = true;
+            list = true;
             i++;
         } else if (tokens[i][0] == ']') {
-            open = false;
+            list = false;
             i++;
             break;
         } else if (tokens[i][0] == '"') {
-            if (!first || !open) break;
-            first = false;
+            if (!first && !list) break;
             js.push_back(tokens[i].substr(1, tokens[i].size() - 2));
             i++;
+            if (!list) break;
         } else {
+            if (!first && !list) throw std::runtime_error("bad params");
             js.push_back(atof(tokens[i].c_str()));
             i++;
+            if (!list) break;
         }
     }
 }
@@ -95,11 +99,23 @@ void parse_param_list(
 void parse_param_numbers(
     const std::vector<std::string>& tokens, int& i, json& js) {
     js["values"] = json::array();
-    parse_param(tokens, i, js.at("values"));
+    if(tokens[i][0] == '[') i++;
+    while (is_number(tokens, i)) {
+        js.at("values").push_back((float)atof(tokens[i++].c_str()));
+    }
+    if(tokens[i][0] == ']') i++;
 }
 
 json pbrt_to_json(const std::string& filename) {
     auto pbrt = load_text(filename);
+    auto npbrt = std::string();
+    for (auto& line : splitlines(pbrt)) {
+        if (line.find('#') == line.npos)
+            npbrt += line + "\n";
+        else
+            npbrt += line.substr(0, line.find('#')) + "\n";
+    }
+    pbrt = npbrt;
     auto re = std::regex("\"(\\w+)\\s+(\\w+)\"");
     auto tokens = split(std::regex_replace(pbrt, re, "\"$1|$2\""));
     auto js = json::array();
@@ -109,7 +125,8 @@ json pbrt_to_json(const std::string& filename) {
         auto& tok = tokens[i++];
         auto jcmd = json::object();
         jcmd["cmd"] = tok;
-        if (tok == "Transform") {
+        if (tok == "Transform" || tok == "LookAt" || tok == "Scale" ||
+            tok == "Rotate" || tok == "Translate" || tok == "ConcatTransform") {
             parse_param_numbers(tokens, i, jcmd);
         } else if (tok == "Integrator" || tok == "Sampler" ||
                    tok == "PixelFilter" || tok == "Film" || tok == "Camera" ||
@@ -128,11 +145,13 @@ json pbrt_to_json(const std::string& filename) {
         } else if (tok == "Material") {
             jcmd["type"] = parse_string(tokens, i);
             parse_param_list(tokens, i, jcmd);
-        } else if (tok == "NamedMaterial") {
+        } else if (tok == "NamedMaterial" || tok == "ObjectBegin" ||
+                   tok == "ObjectInstance") {
             jcmd["name"] = parse_string(tokens, i);
         } else if (tok == "WorldBegin" || tok == "AttributeBegin" ||
                    tok == "TransformBegin" || tok == "WorldEnd" ||
-                   tok == "AttributeEnd" || tok == "TransformEnd") {
+                   tok == "AttributeEnd" || tok == "TransformEnd" ||
+                   tok == "ObjectEnd") {
         } else {
             throw std::runtime_error("unsupported command " + tok);
         }
@@ -156,8 +175,6 @@ void load_ply(const std::string& filename, std::vector<vec3i>& triangles,
     char buf[4096];
     while (fgets(buf, 4096, f)) {
         auto line = std::string(buf);
-        if(line.find('#') != line.npos)
-            line = line.substr(0, line.find('#')-1);
         auto toks = split(line);
         if (toks[0] == "ply") {
         } else if (toks[0] == "end_header") {
@@ -256,6 +273,17 @@ scene* load_pbrt(const std::string& filename) {
         return zero3f;
     };
 
+    auto get_vec4f = [](const json& js) -> vec4f {
+        if (js.is_number())
+            return {js.get<float>(), js.get<float>(), js.get<float>(),
+                js.get<float>()};
+        if (js.is_array() && js.size() == 4)
+            return {js.at(0).get<float>(), js.at(1).get<float>(),
+                js.at(2).get<float>(), js.at(3).get<float>()};
+        log_error("cannot handle vec4f");
+        return zero4f;
+    };
+
     auto get_mat4f = [](const json& js) -> mat4f {
         if (!js.is_array() || js.size() != 16) {
             log_error("cannot handle mat4f");
@@ -263,6 +291,16 @@ scene* load_pbrt(const std::string& filename) {
         }
         auto m = identity_mat4f;
         for (auto i = 0; i < 16; i++) (&m.x.x)[i] = js.at(i).get<float>();
+        return m;
+    };
+
+    auto get_mat3f = [](const json& js) -> mat3f {
+        if (!js.is_array() || js.size() != 9) {
+            log_error("cannot handle mat3f");
+            return identity_mat3f;
+        }
+        auto m = identity_mat3f;
+        for (auto i = 0; i < 9; i++) (&m.x.x)[i] = js.at(i).get<float>();
         return m;
     };
 
@@ -297,7 +335,7 @@ scene* load_pbrt(const std::string& filename) {
     auto get_vector_vec2f = [](const json& js) -> std::vector<vec2f> {
         if (!js.is_array() || js.size() % 2) {
             log_error("cannot handle vector<vec3f>");
-            return {};
+            return {}; 
         }
         auto vals = std::vector<vec2f>(js.size() / 2);
         for (auto i = 0; i < vals.size(); i++) {
@@ -314,13 +352,31 @@ scene* load_pbrt(const std::string& filename) {
         return {get_vec3f(js), nullptr};
     };
 
-    auto lid = 0;
+    auto lid = 0, sid = 0;
     for (auto& jcmd : js) {
         auto cmd = jcmd.at("cmd").get<std::string>();
         if (cmd == "Integrator" || cmd == "Sampler" || cmd == "PixelFilter") {
         } else if (cmd == "Transform") {
             auto m = get_mat4f(jcmd.at("values"));
+            stack.back().frame = mat_to_frame(m);
+        } else if (cmd == "ConcatTransform") {
+            auto m = get_mat4f(jcmd.at("values"));
             stack.back().frame = stack.back().frame * mat_to_frame(m);
+        } else if (cmd == "Scale") {
+            auto v = get_vec3f(jcmd.at("values"));
+            stack.back().frame = stack.back().frame * scaling_frame(v);
+        } else if (cmd == "Translate") {
+            auto v = get_vec3f(jcmd.at("values"));
+            stack.back().frame = stack.back().frame * translation_frame(v);
+        } else if (cmd == "Rotate") {
+            auto v = get_vec4f(jcmd.at("values"));
+            stack.back().frame =
+                stack.back().frame *
+                rotation_frame(vec3f{v.y, v.z, v.w}, v.x * pif / 180);
+        } else if (cmd == "LookAt") {
+            auto m = get_mat3f(jcmd.at("values"));
+            stack.back().frame =
+                stack.back().frame * inverse(lookat_frame(m.x, m.y, m.z, true));
         } else if (cmd == "Film") {
             if (scn->cameras.empty()) {
                 auto cam = new camera();
@@ -353,6 +409,8 @@ scene* load_pbrt(const std::string& filename) {
             auto type = jcmd.at("type").get<std::string>();
             if (type == "imagemap") {
                 txt->path = jcmd.at("filename").get<std::string>();
+                if (ygl::path_extension(txt->path) == ".pfm")
+                    txt->path = ygl::replace_path_extension(txt->path, ".hdr");
             } else {
                 log_error("{} texture not supported", type);
             }
@@ -366,7 +424,8 @@ scene* load_pbrt(const std::string& filename) {
                 mat->name = jcmd.at("name").get<std::string>();
                 mat_map[mat->name] = mat;
             }
-            auto type = jcmd.at("type").get<std::string>();
+            auto type = "uber"s;
+            if (jcmd.count("type")) type = jcmd.at("type").get<std::string>();
             if (type == "uber") {
                 if (jcmd.count("Kd"))
                     std::tie(mat->kd, mat->kd_txt.txt) =
@@ -374,53 +433,77 @@ scene* load_pbrt(const std::string& filename) {
                 if (jcmd.count("Ks"))
                     std::tie(mat->ks, mat->ks_txt.txt) =
                         get_scaled_texture(jcmd.at("Ks"));
+                if (jcmd.count("Kt"))
+                    std::tie(mat->kt, mat->kt_txt.txt) =
+                    get_scaled_texture(jcmd.at("Kt"));
+                if (jcmd.count("opacity")) {
+                    auto op = vec3f{0,0,0};
+                    auto op_txt = (texture*)nullptr;
+                    std::tie(op, op_txt) =
+                    get_scaled_texture(jcmd.at("opacity"));
+                    mat->op = (op.x + op.y + op.z) / 3;
+                    mat->op_txt.txt = op_txt;
+                }
                 mat->rs = 0;
             } else if (type == "matte") {
-                mat->kd = {1,1,1};
+                mat->kd = {1, 1, 1};
                 if (jcmd.count("Kd"))
                     std::tie(mat->kd, mat->kd_txt.txt) =
                         get_scaled_texture(jcmd.at("Kd"));
                 mat->rs = 1;
             } else if (type == "mirror") {
-                mat->ks = {1,1,1};
+                mat->kd = {0, 0, 0};
+                mat->ks = {1, 1, 1};
                 mat->rs = 0;
             } else if (type == "metal") {
                 auto eta = get_vec3f(jcmd.at("eta"));
-                auto k = get_vec3f(jcmd.at("eta"));
-                mat->ks = fresnel_metal(1,eta, k);
+                auto k = get_vec3f(jcmd.at("k"));
+                mat->ks = fresnel_metal(1, eta, k);
                 mat->rs = 0;
             } else if (type == "substrate") {
                 if (jcmd.count("Kd"))
                     std::tie(mat->kd, mat->kd_txt.txt) =
                         get_scaled_texture(jcmd.at("Kd"));
-                mat->ks = {0.04,0.04,0.04};
+                mat->ks = {0.04, 0.04, 0.04};
                 if (jcmd.count("Ks"))
                     std::tie(mat->ks, mat->ks_txt.txt) =
                         get_scaled_texture(jcmd.at("Ks"));
                 mat->rs = 0;
             } else if (type == "glass") {
-                mat->ks = {0.04,0.04,0.04};
+                mat->ks = {0.04, 0.04, 0.04};
+                mat->kt = {1, 1, 1};
                 if (jcmd.count("Ks"))
                     std::tie(mat->ks, mat->ks_txt.txt) =
                         get_scaled_texture(jcmd.at("Ks"));
+                if (jcmd.count("Kt"))
+                    std::tie(mat->kt, mat->kt_txt.txt) =
+                        get_scaled_texture(jcmd.at("Kt"));
                 mat->rs = 0;
             } else {
-                mat->kd = {1,0,0};
+                mat->kd = {1, 0, 0};
                 log_error("{} material not supported", type);
             }
-            if(jcmd.count("uroughness")) {
-                auto remap = js.count("remaproughness") && js.at("remaproughness").get<bool>();
+            if (jcmd.count("uroughness")) {
+                auto remap = js.count("remaproughness") &&
+                             js.at("remaproughness").get<bool>();
                 if (jcmd.count("uroughness"))
                     mat->rs = jcmd.at("uroughness").get<float>();
-                if(!remap) mat->rs = sqrt(mat->rs);
+                if (!remap) mat->rs = sqrt(mat->rs);
             }
-            if(stack.back().light_mat) {
+            if (jcmd.count("roughness")) {
+                auto remap = js.count("remaproughness") &&
+                             js.at("remaproughness").get<bool>();
+                if (jcmd.count("roughness"))
+                    mat->rs = jcmd.at("roughness").get<float>();
+                if (!remap) mat->rs = sqrt(mat->rs);
+            }
+            if (stack.back().light_mat) {
                 mat->ke = stack.back().light_mat->ke;
                 mat->ke_txt = stack.back().light_mat->ke_txt;
             }
         } else if (cmd == "NamedMaterial") {
             stack.back().mat = mat_map.at(jcmd.at("name").get<std::string>());
-            if(stack.back().light_mat) {
+            if (stack.back().light_mat) {
                 auto mat = new material(*stack.back().mat);
                 mat->name += "_" + std::to_string(lid++);
                 mat->ke = stack.back().light_mat->ke;
@@ -443,39 +526,82 @@ scene* load_pbrt(const std::string& filename) {
                 load_ply(dirname + filename, shp->triangles, shp->pos,
                     shp->norm, shp->texcoord);
             } else if (type == "trianglemesh") {
+                shp->name = "mesh" + std::to_string(sid++);
                 if (jcmd.count("indices"))
                     shp->triangles = get_vector_vec3i(jcmd.at("indices"));
                 if (jcmd.count("P")) shp->pos = get_vector_vec3f(jcmd.at("P"));
                 if (jcmd.count("N")) shp->norm = get_vector_vec3f(jcmd.at("N"));
                 if (jcmd.count("uv"))
                     shp->texcoord = get_vector_vec2f(jcmd.at("uv"));
+            } else if (type == "sphere") {
+                shp->name = "sphere" + std::to_string(sid++);
+                auto radius = 1.0f;
+                if(jcmd.count("radius"))
+                    radius = jcmd.at("radius").get<float>();
+                make_sphere(shp->quads, shp->pos, shp->norm, shp->texcoord, {64, 32}, 2*radius, {1,1});
+            } else if (type == "disk") {
+                shp->name = "disk" + std::to_string(sid++);
+                auto radius = 1.0f;
+                if(jcmd.count("radius"))
+                    radius = jcmd.at("radius").get<float>();
+                make_disk(shp->quads, shp->pos, shp->norm, shp->texcoord, {32, 16}, 2*radius, {1,1});
             } else {
                 log_error("{} shape not supported", type);
             }
+            auto scl = vec3f{length(shp->frame.x),length(shp->frame.y),length(shp->frame.z)};
+            for(auto& p : shp->pos) p *= scl;
+            shp->frame = {normalize(shp->frame.x),normalize(shp->frame.y),normalize(shp->frame.z),shp->frame.o};
         } else if (cmd == "AreaLightSource") {
             auto type = jcmd.at("type").get<std::string>();
-            if(type == "diffuse") {
-            auto lmat = new material();
-            lmat->ke = get_vec3f(jcmd.at("L"));
-            stack.back().light_mat = lmat;
+            if (type == "diffuse") {
+                auto lmat = new material();
+                lmat->ke = get_vec3f(jcmd.at("L"));
+                stack.back().light_mat = lmat;
             } else {
                 log_error("{} area light not supported", type);
             }
         } else if (cmd == "LightSource") {
             auto type = jcmd.at("type").get<std::string>();
-            if(type == "infinite") {   
+            if (type == "infinite") {
                 auto env = new environment();
                 env->name = "env" + std::to_string(lid++);
-                env->frame = stack.back().frame;
-                env->ke = {1,1,1};
-                if(jcmd.count("mapname")) {
+                env->frame = frame3f{{1,0,0},{0,0,-1},{0,-1,0},{0,0,0}} * stack.back().frame;
+                env->ke = {1, 1, 1};
+                if(jcmd.count("scale"))
+                    env->ke *= get_vec3f(jcmd.at("scale"));
+                if (jcmd.count("mapname")) {
                     auto txt = new texture();
                     txt->path = jcmd.at("mapname").get<std::string>();
                     txt->name = env->name;
                     scn->textures.push_back(txt);
                     env->ke_txt.txt = txt;
                 }
-                scn->environments.push_back(env);         
+                scn->environments.push_back(env);
+            } else if(type == "distant") {
+                auto distant_dist = 100;
+                auto shp = new shape();
+                shp->name = "distant" + std::to_string(lid++);
+                auto from = vec3f{0,0,0}, to = vec3f{0,0,0};
+                if(jcmd.count("from"))
+                    from = get_vec3f(jcmd.at("from"));
+                if(jcmd.count("to"))
+                    to = get_vec3f(jcmd.at("to"));
+                auto dir = normalize(from - to);
+                shp->frame = stack.back().frame * lookat_frame(dir * distant_dist, zero3f, {0,1,0}, true);
+                auto size = distant_dist * sin(5 * pif / 180);
+                make_quad(shp->quads, shp->pos, shp->norm, shp->texcoord, {1,1}, {size,size}, {1,1});
+                scn->shapes.push_back(shp);
+                auto mat = new material();
+                mat->name = shp->name;
+                mat->ke = {1,1,1};
+                if(jcmd.count("L"))
+                    mat->ke *= get_vec3f(jcmd.at("L"));
+                if(jcmd.count("scale"))
+                    mat->ke *= get_vec3f(jcmd.at("scale"));
+                mat->ke *= (distant_dist * distant_dist) / (size*size);
+                shp->groups.push_back({"", mat, false});
+                scn->materials.push_back(mat);
+                log_error("distant light not properly supported", type);
             } else {
                 log_error("{} light not supported", type);
             }

@@ -13,18 +13,45 @@ Please consider this to be just development notes and not any real planning.
 
 ## Port scenes
 
-- exclusion list
-- script is simpler and shared between datasets
-- mcguire
-    - list of scenes
-    - some scenes have wrong transparency
-    - cameras
-    - lights
-    - write list of issues
-    - add bounding box print
+- yocto
+    - load pfm
+    - pixel clamp
+    - pixel filter
+    - fresnel scale with roughness (should be option)
+    - fresnel scale transmission
+    - tone enhancement
+    - fresnel sampling
+    - better bvh?
+    - highlights are too soft in bitterli scenes
 - bitterli
-    - duplicate materials on emission or power
-    - new scenes
+    - render exclude list
+    - bathroom
+    - bathroom2
+    - bedroom
+    - classroom
+        - light
+    - coffee
+    - dining-room
+        - light
+    - dragon
+        - light
+    - house
+        - light
+    - kitchen
+    - lamp
+        - light
+    - living-room
+        - check render
+    - living-room-2
+        - check render
+    - living-room-3
+        - check render
+    - spaceship
+        - check render
+    - staircase
+    - staircase2
+    - teapot
+- bitterli
     - hair
     - veach-bidir
         - bad materials
@@ -51,6 +78,13 @@ Please consider this to be just development notes and not any real planning.
     - huge number of bounces
     - make list of scenes that should not be ported
     - flip double sided normals on at least large objects
+- mcguire
+    - list of scenes
+    - some scenes have wrong transparency
+    - cameras
+    - lights
+    - write list of issues
+    - add bounding box print
 - move ytrace batch size
     - use callback workflow
 - pbrt
