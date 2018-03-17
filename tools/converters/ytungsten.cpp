@@ -500,9 +500,9 @@ material* add_material(const json& js, scene* scn, shape* shp) {
 }
 
 scene* load_tungsten(const std::string& filename,
-    const std::string& meshdirname, bool facet_non_smooth) {
+    bool facet_non_smooth) {
     auto dirname = path_dirname(filename);
-    auto meshdir = (meshdirname == "") ? dirname : meshdirname;
+    auto meshdir = dirname;
     if (meshdir.back() != '/') meshdir += '/';
 
     // load json
@@ -646,8 +646,6 @@ int main(int argc, char** argv) {
     // parse command line
     auto parser = ygl::make_parser(
         argc, argv, "ytungsten", "convert tungsten files to yocto");
-    auto meshdirname =
-        ygl::parse_opt(parser, "--meshdir", "-m", "mesh input directory", ""s);
     auto facet_non_smooth = ygl::parse_flag(
         parser, "--facet-non-smooth", "-f", "facet non smooth meshes", false);
     auto outfilename = ygl::parse_opt(
@@ -660,7 +658,7 @@ int main(int argc, char** argv) {
     }
 
     // load image
-    auto scn = load_tungsten(filename, meshdirname, facet_non_smooth);
+    auto scn = load_tungsten(filename, facet_non_smooth);
 
     // save scene
     system(("mkdir -p " + path_dirname(outfilename)).c_str());
