@@ -58,12 +58,12 @@ void save_ldr(const std::string& filename, const ygl::image4b& img) {
 // Resize image.
 template <typename Image>
 Image resize_image(const Image& img, int res_width, int res_height) {
-    if (res_width < 0 && res_height < 0)
+    if (!res_width && !res_height)
         ygl::log_fatal("at least argument should be >0");
-    if (res_width < 0)
+    if (!res_width)
         res_width =
             (int)round(img.width() * (res_height / (float)img.height()));
-    if (res_height < 0)
+    if (!res_height)
         res_height =
             (int)round(img.height() * (res_width / (float)img.width()));
     auto res = Image(res_width, res_height);
@@ -173,78 +173,53 @@ ygl::image4f filter_bilateral(
 int main(int argc, char* argv[]) {
     // command line params
     auto parser = ygl::make_parser(argc, argv, "yimproc", "process images");
-    auto command = ygl::parse_arg(parser, "command", "command to execute", ""s,
-        true, {"resize", "tonemap", "bilateral"});
+    auto tonemap = ygl::parse_params(parser, "", ygl::tonemap_params());
+    auto width = ygl::parse_opt(
+        parser, "--width", "-w", "width (0 to maintain aspect)", 0);
+    auto height = ygl::parse_opt(
+        parser, "--height", "-h", "height (0 to maintain aspect)", 0);
+    auto spatial_sigma = ygl::parse_opt(
+        parser, "--spatial-sigma", "-s", "blur spatial sigma", 0.0f);
+    auto range_sigma = ygl::parse_opt(
+        parser, "--range-sigma", "-r", "bilateral blur range sigma", 0.0f);
     auto output =
         ygl::parse_opt(parser, "--output", "-o", "output image filename", ""s);
-    if (command == "resize") {
-        auto width = ygl::parse_opt(
-            parser, "--width", "-w", "width (-1 to maintain aspect)", -1);
-        auto height = ygl::parse_opt(
-            parser, "--height", "-h", "height (-1 to maintain aspect)", -1);
-        auto filename =
-            ygl::parse_arg(parser, "filename", "input image filename", ""s);
-        // check parsing
-        if (ygl::should_exit(parser)) {
-            printf("%s\n", get_usage(parser).c_str());
-            exit(1);
-        }
+    auto filename =
+        ygl::parse_arg(parser, "filename", "input image filename", ""s);
+    // check parsing
+    if (ygl::should_exit(parser)) {
+        printf("%s\n", get_usage(parser).c_str());
+        exit(1);
+    }
 
-        if (ygl::is_hdr_filename(filename)) {
-            auto img = load_hdr(filename);
-            auto out = resize_image(img, width, height);
-            save_hdr(output, out);
-        } else {
-            auto img = load_ldr(filename);
-            auto out = resize_image(img, width, height);
-            save_ldr(output, out);
-        }
-    } else if (command == "tonemap") {
-        auto params = ygl::parse_params(parser, "", ygl::tonemap_params());
-        auto filename =
-            ygl::parse_arg(parser, "filename", "input image filename", ""s);
-        // check parsing
-        if (ygl::should_exit(parser)) {
-            printf("%s\n", get_usage(parser).c_str());
-            exit(1);
-        }
-
-        auto img = load_hdr(filename);
-        auto out = tonemap_image(img, params);
-        save_ldr(output, out);
-    } else if (command == "bilateral") {
-        auto spatial_sigma =
-            ygl::parse_opt(parser, "--spatial-sigma", "-s", "spatial sigma", 3);
-        auto range_sigma =
-            ygl::parse_opt(parser, "--range-sigma", "-r", "range sigma", 0.1f);
-        auto feature_sigma = ygl::parse_opt(
-            parser, "--features-sigma", "-f", "features sigmas", 0.1f);
-        auto filename =
-            ygl::parse_arg(parser, "filename", "input image filename", ""s);
-        auto ffilenames = ygl::parse_args(parser, "features",
-            "input features filename", std::vector<std::string>{}, false);
-        // check parsing
-        if (ygl::should_exit(parser)) {
-            printf("%s\n", get_usage(parser).c_str());
-            exit(1);
-        }
-
-        auto img = load_hdr(filename);
-        auto features = std::vector<ygl::image4f>();
-        auto features_sigma = std::vector<float>();
-        for (auto ffilename : ffilenames) {
-            features.push_back(load_hdr(ffilename));
-            features_sigma.push_back(feature_sigma);
-        }
-        auto out = filter_bilateral(
-            img, spatial_sigma, range_sigma, features, features_sigma);
-        save_hdr(output, out);
+    // load
+    auto hdr = ygl::image4f();
+    auto ldr = ygl::image4b();
+    if (ygl::is_hdr_filename(filename)) {
+        hdr = load_hdr(filename);
+        ldr = ygl::tonemap_image(hdr, tonemap);
     } else {
-        // check parsing
-        if (ygl::should_exit(parser)) {
-            printf("%s\n", get_usage(parser).c_str());
-            exit(1);
-        }
+        ldr = load_ldr(filename);
+        hdr = srgb_to_linear(ldr);
+    }
+
+    // resize
+    if (width || height) {
+        hdr = resize_image(hdr, width, height);
+        ldr = resize_image(ldr, width, height);
+    }
+
+    // bilateral
+    if (spatial_sigma && range_sigma) {
+        hdr = filter_bilateral(hdr, spatial_sigma, range_sigma, {}, {});
+        ldr = tonemap_image(hdr, tonemap);
+    }
+
+    // save
+    if (ygl::is_hdr_filename(output)) {
+        ygl::save_image4f(output, hdr);
+    } else {
+        ygl::save_image4b(output, ldr);
     }
 
     // done

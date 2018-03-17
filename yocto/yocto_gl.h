@@ -4076,12 +4076,12 @@ inline float triangle_area(const vec3f& v0, const vec3f& v1, const vec3f& v2) {
 /// Quad normal.
 inline vec3f quad_normal(
     const vec3f& v0, const vec3f& v1, const vec3f& v2, const vec3f& v3) {
-    return normalize(triangle_normal(v0, v1, v3) + triangle_normal(v3, v2, v1));
+    return normalize(triangle_normal(v0, v1, v3) + triangle_normal(v2, v3, v1));
 }
 /// Quad area.
 inline float quad_area(
     const vec3f& v0, const vec3f& v1, const vec3f& v2, const vec3f& v3) {
-    return triangle_area(v0, v1, v3) + triangle_area(v3, v2, v1);
+    return triangle_area(v0, v1, v3) + triangle_area(v2, v3, v1);
 }
 
 /// tetrahedron volume
@@ -4861,6 +4861,23 @@ inline vec4b linear_to_srgb(const vec4f& lin) {
         float_to_byte(pow(lin.z, 1 / 2.2f)), float_to_byte(lin.w)};
 }
 
+/// Approximate conversion from srgb.
+inline image4f srgb_to_linear(const image4b& srgb) {
+    auto lin = image4f(srgb.width(), srgb.height());
+    for(auto j = 0; j < srgb.height(); j ++) 
+        for(auto i = 0; i < srgb.width(); i ++) 
+            lin.at(i,j) = srgb_to_linear(srgb.at(i,j));
+    return  lin;
+}
+/// Approximate conversion to srgb.
+inline image4b linear_to_srgb(const image4f& lin) {
+    auto srgb = image4b(lin.width(), lin.height());
+        for(auto j = 0; j < srgb.height(); j ++) 
+        for(auto i = 0; i < srgb.width(); i ++) 
+            srgb.at(i,j) = linear_to_srgb(lin.at(i,j));
+    return  srgb;
+}
+
 /// Convert between CIE XYZ and xyY
 inline vec3f xyz_to_xyY(const vec3f& xyz) {
     if (xyz == zero3f) return zero3f;
@@ -4906,8 +4923,8 @@ enum struct tonemap_type {
     linear = 0,
     /// Gamma 2.2.
     gamma = 1,
-    /// Filmic, default variant.
-    filmic = 2,
+    /// sRGB.
+    srgb = 2,
     /// Filmic, variant 1.
     filmic1 = 3,
     /// Filmic, variant 2.
@@ -4921,7 +4938,7 @@ struct tonemap_params {
     /// Hdr exposure. @refl_uilimits(-10,10) @refl_shortname(e)
     float exposure = 0;
     /// Type. @refl_shortname(t)
-    tonemap_type type = tonemap_type::filmic;
+    tonemap_type type = tonemap_type::gamma;
 };
 
 // #codegen end refl-tonemap
@@ -4938,7 +4955,7 @@ enum_names<tonemap_type>() {
     static auto names = std::vector<std::pair<std::string, tonemap_type>>{
         {"linear", tonemap_type::linear},
         {"gamma", tonemap_type::gamma},
-        {"filmic", tonemap_type::filmic},
+        {"srgb", tonemap_type::srgb},
         {"filmic1", tonemap_type::filmic1},
         {"filmic2", tonemap_type::filmic2},
         {"filmic3", tonemap_type::filmic3},
@@ -5450,6 +5467,8 @@ struct material {
     texture_info kt_txt;
     /// Roughness texture.
     texture_info rs_txt;
+    /// Opacity texture.
+    texture_info op_txt;
     /// Bump map texture (heighfield).
     texture_info bump_txt;
     /// Displacement map texture (heighfield).
@@ -10878,7 +10897,7 @@ inline cmdline_parser make_parser(
     parser._usage_prog = (prog.empty()) ? std::string(argv[0]) : prog;
     parser._usage_help = help;
     parser._usage =
-        parse_flag(parser, "--help", "-h", "prints and help message");
+        parse_flag(parser, "--help", "", "prints and help message");
     return parser;
 }
 

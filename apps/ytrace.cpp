@@ -134,10 +134,17 @@ int main(int argc, char* argv[]) {
         }
         ygl::log_info(
             "rendering sample {}/{}", cur_sample, app->params.nsamples);
-        trace_samples(app->scn, app->cam, app->bvh, app->lights, app->img,
-            app->pixels,
-            std::min(app->batch_size, app->params.nsamples - cur_sample),
-            app->params);
+        if (app->params.filter == ygl::trace_filter_type::box) {
+            ygl::trace_samples(app->scn, app->cam, app->bvh, app->lights,
+                app->img, app->pixels,
+                std::min(app->batch_size, app->params.nsamples - cur_sample),
+                app->params);
+        } else {
+            ygl::trace_samples_filtered(app->scn, app->cam, app->bvh,
+                app->lights, app->img, app->pixels,
+                std::min(app->batch_size, app->params.nsamples - cur_sample),
+                app->params);
+        }
     }
     ygl::log_info("rendering done");
 
