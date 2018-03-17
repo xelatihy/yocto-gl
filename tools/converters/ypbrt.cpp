@@ -156,6 +156,8 @@ void load_ply(const std::string& filename, std::vector<vec3i>& triangles,
     char buf[4096];
     while (fgets(buf, 4096, f)) {
         auto line = std::string(buf);
+        if(line.find('#') != line.npos)
+            line = line.substr(0, line.find('#')-1);
         auto toks = split(line);
         if (toks[0] == "ply") {
         } else if (toks[0] == "end_header") {
