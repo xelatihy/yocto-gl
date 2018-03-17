@@ -11,26 +11,19 @@ Please consider this to be just development notes and not any real planning.
 - interactive procedural shapes
 - prepare for research on procedural components
 
-## Tonemapping formulas
-
-- internal
-    - 
-- bitterli
-- fit1
-- fit2
-- better fit
-
 ## Port scenes
 
-- tonemapping
-- move ytrace batch size
-    - use callback workflow
+- exclusion list
+- script is simpler and shared between datasets
 - mcguire
     - list of scenes
     - some scenes have wrong transparency
     - cameras
     - lights
+    - write list of issues
+    - add bounding box print
 - bitterli
+    - duplicate materials on emission or power
     - new scenes
     - hair
     - veach-bidir
@@ -58,17 +51,51 @@ Please consider this to be just development notes and not any real planning.
     - huge number of bounces
     - make list of scenes that should not be ported
     - flip double sided normals on at least large objects
-- mcguire
-    - retest all datasets
-    - write list of issues
-    - add bounding box print
+- move ytrace batch size
+    - use callback workflow
 - pbrt
     - pber parser
 - gltf exports
 
-## Ui: clenanup scene widgets
+## Trace
 
-- remove draw_value_widgets
+- move ytrace batch size
+- roussian roulette on weight
+- samplers
+    - sobol
+    - adaptive sampling ala tungsgen
+- shape
+    - faceted shading
+- brdf
+    - deltas without delta flag
+    - check pbrt hair
+- light sampling
+    - possible bug in light weight
+    - envmap sampling
+    - path trace with explicit light sampling
+    - check tungsten light smapling
+    - eval_direct function
+    - mis in params and not renderer?
+- fresnel in brdf
+    - fix kr
+    - rescale fresnel with roughness
+    - fresnel in coefficients
+    - fresnel in weights
+
+## One shape
+
+- change shape to use constant radius, fixed color
+- hairball scene needs splitting for now
+- update list marks shape buffers
+- scene with name
+- tesselation takes tags
+- OpenGL with multiple index buffers
+    - OpenGL updates: rebuild all buffers or detect if same size
+    - selection carries shape ids
+- BVH with multiple primitives
+- All functions take all primitives
+- shape with type
+- facet_shape and friends are not virtual in API
 
 ## Test scenes: simnplify shape generation
 
@@ -86,6 +113,17 @@ Please consider this to be just development notes and not any real planning.
         - skip group names if only one group
         - skip smoothing if all on
 
+## Ui: clenanup scene widgets
+
+- remove draw_value_widgets
+
+## New scene
+
+- add material to env
+- remove node children
+    - use stable sort
+    - add local frame
+
 ## OpenGL/Trace
 
 - optional post event on OSX, disable on Linux
@@ -98,83 +136,6 @@ Please consider this to be just development notes and not any real planning.
 - investigate bump map on GPU
     - https://www.opengl.org/discussion_boards/showthread.php/162857-Computing-the-tangent-space-in-the-fragment-shader
     - http://jbit.net/~sparky/sfgrad_bump/mm_sfgrad_bump.pdf
-
-## Tone mapping
-
-- Filmic tonemapping take 2
-    - Blender filmic
-    - Tungsten
-    - Sync my implementations
-    - Better implementation on Github
-- Blender color grading node
-- https://www.youtube.com/watch?v=m9AT7H4GGrA
-
-## One shape
-
-- change shape to use constant radius, fixed color
-- hairball scene needs splitting for now
-- update list marks shape buffers
-- scene with name
-- tesselation takes tags
-- OpenGL with multiple index buffers
-    - OpenGL updates: rebuild all buffers or detect if same size
-    - selection carries shape ids
-- BVH with multiple primitives
-- All functions take all primitives
-- shape with type
-- facet_shape and friends are not virtual in API
-
-## Trace
-
-- sobol
-- adaptive sampling ala tungsgen
-- deltas without delta flag
-- check tungsten light smapling
-- path trace with explicit light sampling
-- better envmap sampling
-- eval_direct function
-- mis in params and not renderer?
-- samplers
-    - sobol sampler
-    - pixe sampler
-- vcm
-    - check code
-    - understand light sampling
-
-## New scene
-
-- add material to env
-- remove node children
-    - use stable sort
-    - add local frame
-
-## Trace
-
-- move ytrace batch size
-- environment map with material
-- remove instances from tracer
-    - handle environments as missing shape or as a special shape
-    - add special shape types: inf sphere (env) distant points
-    - handle light as frame + shape (none for env) + ke + ke_txt
-- envlight parametrization
-    - bad weight for envmap
-    - bad envmap rendering
-- trace options
-    - no mis
-    - no env lights
-- fast distribution sampling
-- fresnel in brdf
-    - rescale fresnel with roughness
-    - fresnel in coefficients
-    - fresnel in weights
-- add shape methods
-    - surface/curve/point
-    - quads/points/triangles etc
-- try hard to eliminate deltas
-    - I do not think they actually work right
-    - put stringent epsilons
-- path tracer with mis
-    - possible bug in light weight
 
 ## Scene Import
 
