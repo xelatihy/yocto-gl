@@ -306,10 +306,6 @@ inline void shade_mesh(const ygl::gltf_mesh* msh, const ygl::gltf_skin* sk,
     for (auto shp : msh->shapes) {
         begin_stdsurface_shape(st->prog, xform);
 
-        auto etype = ygl::gl_elem_type::triangle;
-        if (!shp->lines.empty()) etype = ygl::gl_elem_type::line;
-        if (!shp->points.empty()) etype = ygl::gl_elem_type::point;
-
         set_stdsurface_highlight(
             st->prog, (highlighted) ? ygl::vec4f{1, 1, 0, 1} : ygl::zero4f);
 
@@ -319,7 +315,7 @@ inline void shade_mesh(const ygl::gltf_mesh* msh, const ygl::gltf_skin* sk,
             auto sg = mat->specular_glossiness;
             op = sg->opacity;
             set_stdsurface_material(st->prog,
-                ygl::material_type::specular_glossiness, etype, mat->emission,
+                ygl::material_type::specular_glossiness, mat->emission,
                 sg->diffuse, sg->specular, sg->glossiness, sg->opacity,
                 txt(mat->emission_txt, mat->emission_txt_info),
                 txt(sg->diffuse_txt, sg->diffuse_txt_info),
@@ -331,10 +327,9 @@ inline void shade_mesh(const ygl::gltf_mesh* msh, const ygl::gltf_skin* sk,
             auto mr = mat->metallic_roughness;
             op = mr->opacity;
             set_stdsurface_material(st->prog,
-                ygl::material_type::metallic_roughness, etype, mat->emission,
-                mr->base, {mr->metallic, mr->metallic, mr->metallic},
-                mr->roughness, mr->opacity,
-                txt(mat->emission_txt, mat->emission_txt_info),
+                ygl::material_type::metallic_roughness, mat->emission, mr->base,
+                {mr->metallic, mr->metallic, mr->metallic}, mr->roughness,
+                mr->opacity, txt(mat->emission_txt, mat->emission_txt_info),
                 txt(mr->base_txt, mr->base_txt_info),
                 txt(mr->metallic_txt, mr->metallic_txt_info), {},
                 txt(mat->normal_txt, mat->normal_txt_info),
@@ -342,7 +337,7 @@ inline void shade_mesh(const ygl::gltf_mesh* msh, const ygl::gltf_skin* sk,
                 mat->double_sided, cutout);
         } else {
             set_stdsurface_material(st->prog,
-                ygl::material_type::specular_roughness, etype, mat->emission,
+                ygl::material_type::specular_roughness, mat->emission,
                 ygl::zero3f, ygl::zero3f, 0.5f, 1,
                 txt(mat->emission_txt, mat->emission_txt_info), {}, {}, {}, {},
                 {}, false, mat->double_sided, cutout);
@@ -388,15 +383,30 @@ inline void shade_mesh(const ygl::gltf_mesh* msh, const ygl::gltf_skin* sk,
         if (edges && !wireframe) {
             assert(ygl::gl_check_error());
             set_stdsurface_material(st->prog,
-                ygl::material_type::specular_roughness, etype, ygl::zero3f,
+                ygl::material_type::specular_roughness, ygl::zero3f,
                 ygl::zero3f, ygl::zero3f, 0.5f, 1, {}, {}, {}, {}, {}, {}, true,
                 mat->double_sided, cutout);
 
             assert(ygl::gl_check_error());
             ygl::gl_line_width(2);
-            draw_elems(vbo.points);
-            draw_elems(vbo.lines);
-            draw_elems(vbo.triangles);
+            if (ygl::is_element_buffer_valid(vbo.points) &&
+                !ygl::is_element_buffer_empty(vbo.points)) {
+                ygl::set_stdsurface_elems(
+                    st->prog, ygl::gl_elem_type::point, false);
+                ygl::draw_elems(vbo.points);
+            }
+            if (ygl::is_element_buffer_valid(vbo.lines) &&
+                !ygl::is_element_buffer_empty(vbo.lines)) {
+                ygl::set_stdsurface_elems(
+                    st->prog, ygl::gl_elem_type::line, false);
+                ygl::draw_elems(vbo.lines);
+            }
+            if (ygl::is_element_buffer_valid(vbo.triangles) &&
+                !ygl::is_element_buffer_empty(vbo.triangles)) {
+                ygl::set_stdsurface_elems(
+                    st->prog, ygl::gl_elem_type::triangle, false);
+                ygl::draw_elems(vbo.triangles);
+            }
             ygl::gl_line_width(1);
             assert(ygl::gl_check_error());
         }
