@@ -227,8 +227,11 @@ int main(int argc, char* argv[]) {
     app->filename = filenames.front();
 
     // add elements
-    auto opts = ygl::add_elements_options();
-    ygl::add_elements(app->scn, opts);
+    ygl::add_names(app->scn);
+    ygl::add_tangent_space(app->scn);
+
+    // validate
+    ygl::validate(app->scn, true);
 
     // view camera
     app->view = ygl::make_view_camera(app->scn, 0);

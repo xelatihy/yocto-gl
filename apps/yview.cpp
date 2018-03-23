@@ -288,7 +288,11 @@ int main(int argc, char* argv[]) {
         false);
 
     // add missing data
-    ygl::add_elements(app->scn);
+    ygl::add_names(app->scn);
+    ygl::add_tangent_space(app->scn);
+
+    // validate
+    ygl::validate(app->scn, true);
 
     // view camera
     app->view = ygl::make_view_camera(app->scn, 0);

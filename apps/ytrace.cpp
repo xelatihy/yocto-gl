@@ -46,7 +46,6 @@ struct app_state {
     ygl::tonemap_params tonemap;
     ygl::vec4f background = {0, 0, 0, 0};
     bool save_batch = false;
-    int batch_size = 16;
     bool quiet = false;
 
     ~app_state() {
@@ -66,8 +65,6 @@ int main(int argc, char* argv[]) {
     app->params = ygl::parse_params(parser, "", app->params);
     app->tmparams = ygl::parse_params(parser, "", app->tmparams);
     app->loadopts = ygl::parse_params(parser, "", app->loadopts);
-    app->batch_size = ygl::parse_opt(parser, "--batch-size", "",
-        "Compute images in <val> samples batches", 16);
     app->save_batch = ygl::parse_flag(
         parser, "--save-batch", "", "Save images progressively");
     app->quiet =
@@ -99,8 +96,11 @@ int main(int argc, char* argv[]) {
     app->filename = filenames.front();
 
     // add elements
-    auto opts = ygl::add_elements_options();
-    add_elements(app->scn, opts);
+    ygl::add_names(app->scn);
+    ygl::add_tangent_space(app->scn);
+
+    // validate
+    ygl::validate(app->scn, true);
 
     // view camera
     app->view = make_view_camera(app->scn, 0);
@@ -122,30 +122,19 @@ int main(int argc, char* argv[]) {
 
     // render
     ygl::log_info("starting renderer");
-    for (auto cur_sample = 0; cur_sample < app->params.nsamples;
-         cur_sample += app->batch_size) {
-        if (app->save_batch && cur_sample) {
-            auto imfilename =
-                ygl::format("{}{}.{}{}", ygl::path_dirname(app->imfilename),
-                    ygl::path_basename(app->imfilename), cur_sample,
-                    ygl::path_extension(app->imfilename));
-            ygl::log_info("saving image {}", imfilename);
-            save_image(imfilename, app->img, app->tonemap);
-        }
-        ygl::log_info(
-            "rendering sample {}/{}", cur_sample, app->params.nsamples);
-        if (app->params.filter == ygl::trace_filter_type::box) {
-            ygl::trace_samples(app->scn, app->cam, app->bvh, app->lights,
-                app->img, app->pixels,
-                std::min(app->batch_size, app->params.nsamples - cur_sample),
-                app->params);
-        } else {
-            ygl::trace_samples_filtered(app->scn, app->cam, app->bvh,
-                app->lights, app->img, app->pixels,
-                std::min(app->batch_size, app->params.nsamples - cur_sample),
-                app->params);
-        }
-    }
+    ygl::trace_image(app->scn, app->cam, app->bvh, app->lights, app->img,
+        app->pixels, app->params, [app](int cur_sample) {
+            if (app->save_batch && cur_sample) {
+                auto imfilename =
+                    ygl::format("{}{}.{}{}", ygl::path_dirname(app->imfilename),
+                        ygl::path_basename(app->imfilename), cur_sample,
+                        ygl::path_extension(app->imfilename));
+                ygl::log_info("saving image {}", imfilename);
+                save_image(imfilename, app->img, app->tonemap);
+            }
+            ygl::log_info(
+                "rendering sample {}/{}", cur_sample, app->params.nsamples);
+        });
     ygl::log_info("rendering done");
 
     // save image

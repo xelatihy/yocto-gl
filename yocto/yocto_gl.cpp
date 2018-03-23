@@ -2547,7 +2547,7 @@ std::vector<float> load_imagef(
         if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) < 0)
             return {};
         ncomp = 4;
-    } else if(ext == ".pfm") {
+    } else if (ext == ".pfm") {
         pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, 0);
     } else {
         pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 0);
@@ -4278,11 +4278,58 @@ material* get_material(const shape* shp, int eid) {
     if (shp->group_ids.empty()) return shp->groups.at(0).mat;
     return shp->groups.at(shp->group_ids[eid]).mat;
 }
+// Gets is the element is faceted.
+bool get_faceted(const shape* shp, int eid) {
+    if (shp->groups.empty()) return false;
+    if (shp->group_ids.empty()) return shp->groups.at(0).faceted;
+    return shp->groups.at(shp->group_ids[eid]).faceted;
+}
 // Returns is the shape is simple.
 bool is_shape_simple(const shape* shp, bool split_facevarying) {
     if (split_facevarying && !shp->quads_pos.empty()) return false;
     if (!shp->group_ids.empty() && shp->groups.size() > 1) return false;
     return true;
+}
+
+// Shape element normal.
+vec3f eval_elem_norm(const shape* shp, int eid, bool transformed) {
+    auto norm = zero3f;
+    switch (get_shape_type(shp)) {
+        case shape_elem_type::none: {
+            throw std::runtime_error("type not supported");
+        } break;
+        case shape_elem_type::triangles: {
+            auto t = shp->triangles[eid];
+            norm = triangle_normal(shp->pos[t.x], shp->pos[t.y], shp->pos[t.z]);
+        } break;
+        case shape_elem_type::lines: {
+            auto l = shp->lines[eid];
+            norm = line_tangent(shp->pos[l.x], shp->pos[l.y]);
+        } break;
+        case shape_elem_type::points: {
+            norm = {0, 0, 1};
+        } break;
+        case shape_elem_type::quads: {
+            auto q = shp->quads[eid];
+            norm = quad_normal(
+                shp->pos[q.x], shp->pos[q.y], shp->pos[q.z], shp->pos[q.w]);
+        } break;
+        case shape_elem_type::beziers: {
+            auto l = shp->beziers[eid];
+            norm = line_tangent(shp->pos[l.x], shp->pos[l.w]);
+        } break;
+        case shape_elem_type::vertices: {
+            norm = {0, 0, 1};
+        } break;
+        case shape_elem_type::facevarying: {
+            auto q = (shp->quads_norm.empty()) ? shp->quads_pos[eid] :
+                                                 shp->quads_norm[eid];
+            norm = quad_normal(
+                shp->pos[q.x], shp->pos[q.y], shp->pos[q.z], shp->pos[q.w]);
+        } break;
+    }
+    if (transformed) norm = transform_direction(shp->frame, norm);
+    return norm;
 }
 
 // Shape value interpolated using barycentric coordinates
@@ -4327,6 +4374,8 @@ vec3f eval_pos(const shape* shp, int eid, const vec2f& euv, bool transformed) {
 }
 // Shape normal interpolated using barycentric coordinates
 vec3f eval_norm(const shape* shp, int eid, const vec2f& euv, bool transformed) {
+    if (shp->norm.empty() || get_faceted(shp, eid))
+        return eval_elem_norm(shp, eid, transformed);
     auto norm = normalize(eval_elem(shp, shp->norm, eid, euv, {0, 0, 1}));
     if (transformed) norm = transform_direction(shp->frame, norm);
     return norm;
@@ -4376,8 +4425,7 @@ vec2f eval_uv(const environment* env, const vec3f& w, bool transformed) {
 vec4f eval_texture(const texture_info& info, const vec2f& texcoord, bool srgb,
     const vec4f& def) {
     auto txt = info.txt;
-    if (!txt) return def;
-    assert(!txt->hdr.empty() || !txt->ldr.empty());
+    if (!txt || (txt->hdr.empty() && txt->ldr.empty())) return def;
 
     auto lookup = [&def, &txt, &srgb](int i, int j) {
         if (!txt->ldr.empty())
@@ -4905,139 +4953,121 @@ vec2f compute_animation_range(const scene* scn) {
     return range;
 }
 
-// Add missing values and elements
-void add_elements(scene* scn, const add_elements_options& opts) {
-    if (opts.smooth_normals) {
-        for (auto shp : scn->shapes) {
-            if (!shp->norm.empty()) continue;
-            auto type = get_shape_type(shp);
-            if (type == shape_elem_type::facevarying) {
-                if (!shp->quads_norm.empty())
-                    throw std::runtime_error("bad normals");
-                shp->quads_norm = shp->quads_pos;
-                compute_normals(shp->quads_pos, shp->pos, shp->norm);
-            } else if (type == shape_elem_type::beziers) {
-                shp->norm.resize(shp->pos.size(), {0, 0, 1});
+// Add missing names and resolve duplicated names.
+void add_names(scene* scn) {
+    auto fix_names = [](auto& vals, const std::string& base) {
+        auto nmap = std::map<std::string, int>();
+        for (auto val : vals) {
+            if (val->name == "") val->name = base;
+            if (nmap.find(val->name) == nmap.end()) {
+                nmap[val->name] = 0;
             } else {
-                compute_normals(shp);
+                nmap[val->name] += 1;
+                val->name = val->name + "_" + std::to_string(nmap[val->name]);
             }
         }
-    }
+    };
+    fix_names(scn->cameras, "cam");
+    fix_names(scn->shapes, "shp");
+    fix_names(scn->textures, "txt");
+    fix_names(scn->materials, "mat");
+    fix_names(scn->environments, "env");
+    fix_names(scn->nodes, "nde");
+    fix_names(scn->animations, "anm");
+}
 
-    if (opts.tangent_space) {
-        for (auto shp : scn->shapes) {
-            if (!shp->tangsp.empty() || shp->texcoord.empty()) continue;
-            auto mat_needs_tangents = false;
-            for (auto grp : shp->groups) {
-                if (grp.mat && (grp.mat->norm_txt.txt || grp.mat->bump_txt.txt))
-                    mat_needs_tangents = true;
-            }
-            if (!mat_needs_tangents) continue;
-            auto type = get_shape_type(shp);
-            if (type == shape_elem_type::triangles) {
-                compute_tangent_frames(shp->triangles, shp->pos, shp->norm,
-                    shp->texcoord, shp->tangsp);
-            } else if (type == shape_elem_type::quads) {
-                auto triangles = convert_quads_to_triangles(shp->quads);
-                compute_tangent_frames(
-                    triangles, shp->pos, shp->norm, shp->texcoord, shp->tangsp);
-            } else {
-                throw std::runtime_error("type not supported");
-            }
-        }
+// Add missing normals.
+void add_normals(scene* scn) {
+    for (auto shp : scn->shapes) {
+        if (!shp->norm.empty()) continue;
+        compute_normals(shp);
     }
+}
 
-    if (opts.texture_data) {
-        for (auto txt : scn->textures) {
-            if (txt->hdr.empty() && txt->ldr.empty()) {
-                printf("unable to load texture %s\n", txt->path.c_str());
-                txt->ldr = image4b(1, 1, {255, 255, 255, 255});
-            }
+// Add missing tangent space if needed.
+void add_tangent_space(scene* scn) {
+    for (auto shp : scn->shapes) {
+        if (!shp->tangsp.empty() || shp->texcoord.empty()) continue;
+        auto mat_needs_tangents = false;
+        for (auto grp : shp->groups) {
+            if (grp.mat && (grp.mat->norm_txt.txt || grp.mat->bump_txt.txt))
+                mat_needs_tangents = true;
         }
-    }
-
-    if (opts.node_hierarchy && scn->nodes.empty()) {
-        for (auto cam : scn->cameras) {
-            auto nde = new node();
-            nde->name = cam->name;
-            nde->local = cam->frame;
-            nde->cam = cam;
-            scn->nodes.push_back(nde);
-        }
-        for (auto shp : scn->shapes) {
-            auto nde = new node();
-            nde->name = shp->name;
-            nde->local = shp->frame;
-            nde->shp = shp;
-            scn->nodes.push_back(nde);
-        }
-        for (auto env : scn->environments) {
-            auto nde = new node();
-            nde->name = env->name;
-            nde->local = env->frame;
-            nde->env = env;
-            scn->nodes.push_back(nde);
+        if (!mat_needs_tangents) continue;
+        auto type = get_shape_type(shp);
+        if (type == shape_elem_type::triangles) {
+            compute_tangent_frames(shp->triangles, shp->pos, shp->norm,
+                shp->texcoord, shp->tangsp);
+        } else if (type == shape_elem_type::quads) {
+            auto triangles = convert_quads_to_triangles(shp->quads);
+            compute_tangent_frames(
+                triangles, shp->pos, shp->norm, shp->texcoord, shp->tangsp);
+        } else {
+            throw std::runtime_error("type not supported");
         }
     }
+}
 
-    if (opts.default_names || opts.default_paths) {
-        auto cid = 0;
-        for (auto cam : scn->cameras) {
-            if (cam->name.empty())
-                cam->name = "unnamed_camera_" + std::to_string(cid);
-            cid++;
-        }
+// Add hierarchy.
+void add_hierarchy(scene* scn) {
+    if (!scn->nodes.empty()) return;
+    for (auto cam : scn->cameras) {
+        auto nde = new node();
+        nde->name = cam->name;
+        nde->local = cam->frame;
+        nde->cam = cam;
+        scn->nodes.push_back(nde);
+    }
+    for (auto shp : scn->shapes) {
+        auto nde = new node();
+        nde->name = shp->name;
+        nde->local = shp->frame;
+        nde->shp = shp;
+        scn->nodes.push_back(nde);
+    }
+    for (auto env : scn->environments) {
+        auto nde = new node();
+        nde->name = env->name;
+        nde->local = env->frame;
+        nde->env = env;
+        scn->nodes.push_back(nde);
+    }
+}
 
-        auto tid = 0;
-        for (auto txt : scn->textures) {
-            if (txt->name.empty())
-                txt->name = "unnamed_texture_" + std::to_string(tid);
-            tid++;
+// Checks for validity of the scene.
+std::vector<std::string> validate(const scene* scn, bool log_as_warning) {
+    auto errs = std::vector<std::string>();
+    auto check_names = [&errs](const auto& vals, const std::string& base) {
+        auto used = std::map<std::string, int>();
+        for (auto val : vals) used[val->name] += 1;
+        for (auto& kv : used) {
+            if (kv.first == "")
+                errs.push_back("empty " + base + " name");
+            else if (kv.second > 1)
+                errs.push_back("duplicated " + base + " name " + kv.first);
         }
+    };
+    auto check_textures = [&errs](const std::vector<texture*>& vals) {
+        for (auto val : vals) {
+            if (val->ldr.empty() && val->hdr.empty())
+                errs.push_back("empty texture " + val->name);
+        }
+    };
 
-        auto mid = 0;
-        for (auto mat : scn->materials) {
-            if (mat->name.empty())
-                mat->name = "unnamed_material_" + std::to_string(mid);
-            mid++;
-        }
+    check_names(scn->cameras, "camera");
+    check_names(scn->shapes, "shape");
+    check_names(scn->textures, "texture");
+    check_names(scn->materials, "material");
+    check_names(scn->environments, "environment");
+    check_names(scn->nodes, "node");
+    check_names(scn->animations, "animation");
+    check_textures(scn->textures);
 
-        auto sid = 0;
-        for (auto shp : scn->shapes) {
-            if (shp->name.empty())
-                shp->name = "unnamed_shape_" + std::to_string(sid);
-            sid++;
-        }
-
-        auto eid = 0;
-        for (auto env : scn->environments) {
-            if (env->name.empty())
-                env->name = "unnamed_environment_" + std::to_string(eid);
-            eid++;
-        }
-
-        auto nid = 0;
-        for (auto nde : scn->nodes) {
-            if (nde->name.empty())
-                nde->name = "unnamed_node_" + std::to_string(nid);
-            nid++;
-        }
+    if (log_as_warning) {
+        for (auto& err : errs) log_warning(err);
     }
 
-    if (opts.default_paths) {
-        for (auto txt : scn->textures) {
-            if (txt->path != "") continue;
-            txt->path = txt->name + ".png";
-        }
-        for (auto shp : scn->shapes) {
-            if (shp->path != "") continue;
-            shp->path = shp->name + ".bin";
-        }
-        for (auto anm : scn->animations) {
-            if (anm->path != "") continue;
-            anm->path = anm->name + ".bin";
-        }
-    }
+    return errs;
 }
 
 // Make a view camera either copying a given one or building a
@@ -7205,12 +7235,16 @@ vec3f eval_surface_brdfcos(const trace_point& pt, const vec3f& wo,
             brdfcos += ks * ndi * dg / (4 * ndi * ndo);
         }
         if (!pt.rs && delta && check_near_mirror(wn, wo, wi)) {
-            auto ks = fresnel_schlick(pt.ks, ndo, pt.rs);
+            auto ks = fresnel_schlick(pt.ks, ndo);
             brdfcos += ks;
         }
         if (delta && check_near_mirror(wn, wo, wi)) brdfcos += pt.kr;
     }
-    if (wo == -wi && delta) brdfcos += pt.ktr + pt.kto;
+    if (wo == -wi && delta) {
+        auto kt = pt.ktr, ko = pt.kto;
+        if (pt.ks != zero3f) kt *= vec3f{1, 1, 1} - fresnel_schlick(pt.ks, ndo);
+        brdfcos += kt + ko;
+    }
 
     assert(isfinite(brdfcos.x) && isfinite(brdfcos.y) && isfinite(brdfcos.z));
     return brdfcos;
@@ -7550,7 +7584,7 @@ trace_point eval_shape_point(const shape* shp, const frame3f& frame, int eid,
 
     // handle opacity
     op *= mat->op;
-    if(mat->op_txt.txt) {
+    if (mat->op_txt.txt) {
         auto txt = eval_texture(mat->op_txt, pt.texcoord);
         op *= (txt.x + txt.y + txt.z) / 3;
     }
@@ -7649,6 +7683,7 @@ trace_point eval_shape_point(const shape* shp, const frame3f& frame, int eid,
     pt.krg *= op;
     pt.ktr *= op;
     pt.kto = {1.0f - op, 1.0f - op, 1.0f - op};
+    if (pt.ktr != zero3f) pt.double_sided = true;
 
     // done
     return pt;
@@ -8696,25 +8731,29 @@ std::vector<obj_material*> load_mtl(const std::string& filename, bool flip_tr,
             obj_parse(ss, mat->ks);
         } else if (obj_streq(cmd, "Kr")) {
             obj_parse(ss, mat->kr);
-        } else if (obj_streq(cmd, "Kt") || obj_streq(cmd, "Tf")) {
-            auto ntok = 0;
+        } else if (obj_streq(cmd, "Kt")) {
+            obj_parse(ss, mat->kt);
+        } else if (obj_streq(cmd, "Tf")) {
+            auto nchan = 0;
             obj_skipws(ss);
-            while (*ss && ntok < 3) {
-                obj_parse(ss, mat->kt[ntok++]);
+            while (*ss && nchan < 3) {
+                obj_parse(ss, mat->kt[nchan++]);
                 obj_skipws(ss);
             }
-            if (ntok < 3) mat->kt = {mat->kt.x, mat->kt.x, mat->kt.x};
+            if (nchan < 3) mat->kt = {mat->kt.x, mat->kt.x, mat->kt.x};
+            if (flip_tr)
+                materials.back()->kt = vec3f{1, 1, 1} - materials.back()->kt;
         } else if (obj_streq(cmd, "Tr")) {
-            auto ntok = 0;
+            auto nchan = 0;
+            auto tr = zero3f;
             obj_skipws(ss);
-            while (*ss && ntok < 3) {
-                obj_parse(ss, mat->kt[ntok++]);
+            while (*ss && nchan < 3) {
+                obj_parse(ss, tr[nchan++]);
                 obj_skipws(ss);
             }
-            if (ntok < 3) {
-                materials.back()->op = (flip_tr) ? 1 - mat->kt.x : mat->kt.x;
-                mat->kt = {0, 0, 0};
-            }
+            if (nchan < 3) tr = {tr.x, tr.x, tr.x};
+            materials.back()->op = (tr.x + tr.y + tr.z) / 3;
+            if (flip_tr) materials.back()->op = 1 - materials.back()->op;
         } else if (obj_streq(cmd, "Ns")) {
             obj_parse(ss, mat->ns);
         } else if (obj_streq(cmd, "d")) {
@@ -9207,7 +9246,7 @@ void save_mtl(const std::string& filename,
         if (mat->ks != zero3f) obj_dump_line(fs, "  Ks", mat->ks);
         if (mat->kr != zero3f) obj_dump_line(fs, "  Kr", mat->kr);
         if (mat->kt != zero3f) obj_dump_line(fs, "  Kt", mat->kt);
-        if (mat->kt != zero3f) obj_dump_line(fs, "  Tf", mat->kt);
+        // if (mat->kt != zero3f) obj_dump_line(fs, "  Tf", mat->kt);
         if (mat->ns != 0.0f)
             obj_dump_line(fs, "  Ns", (int)clamp(mat->ns, 0.0f, 1000000000.0f));
         if (mat->op != 1.0f) obj_dump_line(fs, "  d", mat->op);
@@ -11044,6 +11083,12 @@ void update_proc_elem(scene* scn, material* mat, const proc_material* pmat) {
             mat->rs = pmat->roughness;
             mat->ks_txt.txt = txt;
         } break;
+        case proc_material_type::glass: {
+            mat->ks = {0.04f, 0.04f, 0.04f};
+            mat->kt = pmat->color;
+            mat->rs = pmat->roughness;
+            mat->kt_txt.txt = txt;
+        } break;
         case proc_material_type::transparent: {
             mat->kd = pmat->color;
             mat->op = pmat->opacity;
@@ -11076,8 +11121,8 @@ void update_proc_elem(scene* scn, shape* shp, const proc_shape* pshp) {
     shp->quads_norm = {};
     shp->quads_texcoord = {};
 
-    shp->groups.push_back(
-        {shp->name, find_named_elem(scn->materials, pshp->material), false});
+    shp->groups.push_back({shp->name,
+        find_named_elem(scn->materials, pshp->material), pshp->faceted});
 
     switch (pshp->type) {
         case proc_shape_type::floor: {
@@ -11221,8 +11266,6 @@ void update_proc_elem(scene* scn, shape* shp, const proc_shape* pshp) {
     for (auto i = 0; i < pshp->subdivision; i++) {
         subdivide_shape_once(shp, pshp->catmull_clark);
     }
-
-    if (pshp->faceted) facet_shape(shp);
 }
 
 // Makes/updates a test shape
@@ -11425,6 +11468,7 @@ std::vector<proc_material*>& proc_material_presets() {
     auto matte = proc_material_type::matte;
     auto plastic = proc_material_type::plastic;
     auto metal = proc_material_type::metal;
+    auto glass = proc_material_type::glass;
     auto transparent = proc_material_type::transparent;
 
     auto gray = vec3f{0.2f, 0.2f, 0.2f};
@@ -11477,6 +11521,10 @@ std::vector<proc_material*>& proc_material_presets() {
     presets.back()->opacity = 0.5f;
     presets.push_back(make_material("transparent_blue", transparent, blue));
     presets.back()->opacity = 0.2f;
+
+    presets.push_back(make_material("glass_mirror", glass, {1, 1, 1}, mirror));
+    presets.push_back(make_material("glass_colored", glass, red, mirror));
+    presets.push_back(make_material("glass_rough", glass, {1, 1, 1}, rough));
 
     presets.push_back(make_material("pointlight", emission, white));
     presets.back()->emission = 160;
@@ -11537,14 +11585,17 @@ std::vector<proc_shape*>& proc_shape_presets() {
             {128, 32, 32}, {2, 2, 2}, {1, 1, 1}));
     presets.back()->flip_yz = true;
     presets.back()->rounded = 0.15f;
-    presets.push_back(make_shape("geodesic_sphere",
-        proc_shape_type::geodesic_sphere, {0, 0, 0}, {2, 2, 2}, {1, 1, 1}, 5));
+    presets.push_back(
+        make_shape("geodesic_sphere", proc_shape_type::geodesic_sphere,
+            {64, 64, 0}, {2, 2, 2}, {1, 1, 1}, 5));
     presets.push_back(
         make_shape("geodesic_spheref", proc_shape_type::geodesic_sphere,
-            {0, 0, 0}, {2, 2, 2}, {1, 1, 1}, 5, 0, true));
+            {64, 64, 0}, {2, 2, 2}, {1, 1, 1}, 5, 0, true));
+    presets.back()->faceted = true;
     presets.push_back(
         make_shape("geodesic_spherel", proc_shape_type::geodesic_sphere,
-            {0, 0, 0}, {2, 2, 2}, {1, 1, 1}, 4, 0, true));
+            {32, 32, 0}, {2, 2, 2}, {1, 1, 1}, 4, 0, true));
+    presets.back()->faceted = true;
     presets.push_back(make_shape(
         "cubep", proc_shape_type::cubep, {1, 1, 1}, {2, 2, 2}, {1, 1, 1}));
     presets.push_back(make_shape("cubes", proc_shape_type::cubep, {1, 1, 1},
@@ -11915,6 +11966,11 @@ std::vector<proc_split_scene*>& proc_split_scene_presets() {
     presets.push_back(
         make_simple_scene("metals", {"matball", "matball", "matball"},
             {"gold_rough", "gold_sharp", "silver_mirror"}));
+
+    // glass shapes
+    presets.push_back(
+        make_simple_scene("glass", {"matball", "matball", "matball"},
+            {"glass_mirror", "glass_colored", "glass_rough"}));
 
     // tesselation shapes
     presets.push_back(make_simple_scene("tesselation",
@@ -12972,6 +13028,18 @@ void update_gl_texture(const texture* txt, gl_texture& gtxt) {
     }
 }
 
+template <typename T>
+std::vector<std::vector<T>> _split_elems(
+    int ngroups, const std::vector<T>& elems, const std::vector<int>& ids) {
+    if (ids.empty()) return {elems};
+    auto splits = std::vector<std::vector<T>>(ngroups);
+    if (elems.empty()) return splits;
+    for (auto i = 0; i < elems.size(); i++) {
+        splits[ids[i]].push_back(elems[i]);
+    }
+    return splits;
+}
+
 // Update shading
 void update_gl_shape(const shape* shp, gl_shape& gshp) {
     auto update_vert_buffer = [](auto& buf, const auto& vert) {
@@ -12991,6 +13059,14 @@ void update_gl_shape(const shape* shp, gl_shape& gshp) {
     if (!shp) {
         clear_gl_shape(gshp);
     } else {
+        auto ngroups = max(1, (int)shp->groups.size());
+        if (shp->group_ids.empty()) ngroups = 1;
+        gshp.points.resize(ngroups);
+        gshp.lines.resize(ngroups);
+        gshp.triangles.resize(ngroups);
+        gshp.quads.resize(ngroups);
+        gshp.beziers.resize(ngroups);
+        gshp.edges.resize(ngroups);
         if (!shp->quads_pos.empty()) {
             auto pos = std::vector<vec3f>();
             auto norm = std::vector<vec3f>();
@@ -13002,25 +13078,60 @@ void update_gl_shape(const shape* shp, gl_shape& gshp) {
             update_vert_buffer(gshp.pos, pos);
             update_vert_buffer(gshp.norm, norm);
             update_vert_buffer(gshp.texcoord, texcoord);
-            update_elem_buffer(gshp.quads, convert_quads_to_triangles(quads));
-            update_elem_buffer(gshp.edges, get_edges({}, {}, shp->quads));
             update_vert_buffer(gshp.color, std::vector<vec4f>{});
             update_vert_buffer(gshp.tangsp, std::vector<vec4f>{});
+            auto split_quads = _split_elems(ngroups, quads, shp->group_ids);
+            for (auto gid = 0; gid < ngroups; gid++) {
+                update_elem_buffer(gshp.quads.at(gid),
+                    convert_quads_to_triangles(split_quads.at(gid)));
+                update_elem_buffer(
+                    gshp.edges.at(gid), get_edges({}, {}, split_quads.at(gid)));
+            }
         } else {
             update_vert_buffer(gshp.pos, shp->pos);
             update_vert_buffer(gshp.norm, shp->norm);
             update_vert_buffer(gshp.texcoord, shp->texcoord);
             update_vert_buffer(gshp.color, shp->color);
             update_vert_buffer(gshp.tangsp, shp->tangsp);
-            update_elem_buffer(gshp.points, shp->points);
-            update_elem_buffer(gshp.lines, shp->lines);
-            update_elem_buffer(gshp.triangles, shp->triangles);
-            update_elem_buffer(
-                gshp.quads, convert_quads_to_triangles(shp->quads));
-            update_elem_buffer(
-                gshp.beziers, convert_bezier_to_lines(shp->beziers));
-            update_elem_buffer(
-                gshp.edges, get_edges({}, shp->triangles, shp->quads));
+            if (ngroups == 1) {
+                update_elem_buffer(gshp.points.at(0), shp->points);
+                update_elem_buffer(gshp.lines.at(0), shp->lines);
+                update_elem_buffer(gshp.triangles.at(0), shp->triangles);
+                update_elem_buffer(
+                    gshp.quads.at(0), convert_quads_to_triangles(shp->quads));
+                update_elem_buffer(
+                    gshp.beziers.at(0), convert_bezier_to_lines(shp->beziers));
+                update_elem_buffer(gshp.edges.at(0),
+                    get_edges({}, shp->triangles, shp->quads));
+            } else {
+                auto split_points =
+                    _split_elems(ngroups, shp->points, shp->group_ids);
+                for (auto gid = 0; gid < ngroups; gid++)
+                    update_elem_buffer(
+                        gshp.points.at(gid), split_points.at(gid));
+                auto split_lines =
+                    _split_elems(ngroups, shp->lines, shp->group_ids);
+                for (auto gid = 0; gid < ngroups; gid++)
+                    update_elem_buffer(gshp.lines.at(gid), split_lines.at(gid));
+                auto split_triangles =
+                    _split_elems(ngroups, shp->triangles, shp->group_ids);
+                for (auto gid = 0; gid < ngroups; gid++)
+                    update_elem_buffer(
+                        gshp.triangles.at(gid), split_triangles.at(gid));
+                auto split_quads =
+                    _split_elems(ngroups, shp->quads, shp->group_ids);
+                for (auto gid = 0; gid < ngroups; gid++)
+                    update_elem_buffer(gshp.quads.at(gid), split_quads.at(gid));
+                auto split_beziers =
+                    _split_elems(ngroups, shp->beziers, shp->group_ids);
+                for (auto gid = 0; gid < ngroups; gid++)
+                    update_elem_buffer(
+                        gshp.beziers.at(gid), split_beziers.at(gid));
+                for (auto gid = 0; gid < ngroups; gid++)
+                    update_elem_buffer(gshp.edges.at(gid),
+                        get_edges(
+                            {}, split_triangles.at(gid), split_quads.at(gid)));
+            }
         }
     }
 }
@@ -13032,12 +13143,12 @@ void clear_gl_shape(gl_shape& gshp) {
     clear_vertex_buffer(gshp.texcoord);
     clear_vertex_buffer(gshp.color);
     clear_vertex_buffer(gshp.tangsp);
-    clear_element_buffer(gshp.points);
-    clear_element_buffer(gshp.lines);
-    clear_element_buffer(gshp.triangles);
-    clear_element_buffer(gshp.quads);
-    clear_element_buffer(gshp.beziers);
-    clear_element_buffer(gshp.edges);
+    for (auto& elems : gshp.points) clear_element_buffer(elems);
+    for (auto& elems : gshp.lines) clear_element_buffer(elems);
+    for (auto& elems : gshp.triangles) clear_element_buffer(elems);
+    for (auto& elems : gshp.quads) clear_element_buffer(elems);
+    for (auto& elems : gshp.beziers) clear_element_buffer(elems);
+    for (auto& elems : gshp.edges) clear_element_buffer(elems);
 }
 
 // Add gl lights
@@ -13273,14 +13384,10 @@ gl_stdsurface_program make_stdsurface_program() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Woverlength-strings"
 #endif
-    std::string _vert_header =
+    std::string _vert =
         R"(
         #version 330
 
-        )";
-
-    std::string _vert_skinning =
-        R"(
         #define SKIN_NONE 0
         #define SKIN_STD 1
         #define SKIN_GLTF 2
@@ -13324,10 +13431,7 @@ gl_stdsurface_program make_stdsurface_program() {
                 norm = normalize(transform_normal(xf, norm));
             }
         }
-        )";
 
-    std::string _vert_main =
-        R"(
         layout(location = 0) in vec3 vert_pos;            // vertex position (in mesh coordinate frame)
         layout(location = 1) in vec3 vert_norm;           // vertex normal (in mesh coordinate frame)
         layout(location = 2) in vec2 vert_texcoord;       // vertex texcoords
@@ -13337,12 +13441,9 @@ gl_stdsurface_program make_stdsurface_program() {
         uniform mat4 shape_xform;           // shape transform
         uniform float shape_normal_offset;           // shape normal offset
 
-        struct Camera {
-            mat4 xform;          // camera xform
-            mat4 xform_inv;      // inverse of the camera frame (as a matrix)
-            mat4 proj;           // camera projection
-        };
-        uniform Camera camera;      // camera data
+        uniform mat4 cam_xform;          // camera xform
+        uniform mat4 cam_xform_inv;      // inverse of the camera frame (as a matrix)
+        uniform mat4 cam_proj;           // camera projection
 
         out vec3 pos;                   // [to fragment shader] vertex position (in world coordinate)
         out vec3 norm;                  // [to fragment shader] vertex normal (in world coordinate)
@@ -13375,7 +13476,7 @@ gl_stdsurface_program make_stdsurface_program() {
             color = vert_color;
 
             // clip
-            gl_Position = camera.proj * camera.xform_inv * vec4(pos,1);
+            gl_Position = cam_proj * cam_xform_inv * vec4(pos,1);
         }
         )";
 
@@ -13389,11 +13490,8 @@ gl_stdsurface_program make_stdsurface_program() {
 
     std::string _frag_tonemap =
         R"(
-        struct Tonemap {
-            float exposure; 
-            int type;
-        };
-        uniform Tonemap tonemap;
+        uniform float tm_exposure; 
+        uniform int tm_type;
 
         vec3 eval_gamma(vec3 x) {
             return pow(x, vec3(1/2.2));
@@ -13446,8 +13544,8 @@ gl_stdsurface_program make_stdsurface_program() {
 
         vec3 eval_tonemap(vec3 c) {
             // final color correction
-            c = c*pow(2,tonemap.exposure);
-            switch(tonemap.type) {
+            c = c*pow(2,tm_exposure);
+            switch(tm_type) {
                 case 0: break;
                 case 1: c = eval_gamma(c); break;
                 case 2: c = eval_srgb(c); break;
@@ -13463,30 +13561,27 @@ gl_stdsurface_program make_stdsurface_program() {
 
     std::string _frag_lighting =
         R"(
-        struct Lighting {
-            bool eyelight;        // eyelight shading
-            vec3 amb;             // ambient light
-            int lnum;              // number of lights
-            int ltype[16];         // light type (0 -> point, 1 -> directional)
-            vec3 lpos[16];         // light positions
-            vec3 lke[16];          // light intensities
-        };
-        uniform Lighting lighting;
+        uniform bool eyelight;        // eyelight shading
+        uniform vec3 lamb;             // ambient light
+        uniform int lnum;              // number of lights
+        uniform int ltype[16];         // light type (0 -> point, 1 -> directional)
+        uniform vec3 lpos[16];         // light positions
+        uniform vec3 lke[16];          // light intensities
 
         void eval_light(int lid, vec3 pos, out vec3 cl, out vec3 wi) {
             cl = vec3(0,0,0);
             wi = vec3(0,0,0);
-            if(lighting.ltype[lid] == 0) {
+            if(ltype[lid] == 0) {
                 // compute point light color at pos
-                cl = lighting.lke[lid] / pow(length(lighting.lpos[lid]-pos),2);
+                cl = lke[lid] / pow(length(lpos[lid]-pos),2);
                 // compute light direction at pos
-                wi = normalize(lighting.lpos[lid]-pos);
+                wi = normalize(lpos[lid]-pos);
             }
-            else if(lighting.ltype[lid] == 1) {
+            else if(ltype[lid] == 1) {
                 // compute light color
-                cl = lighting.lke[lid];
+                cl = lke[lid];
                 // compute light direction
-                wi = normalize(lighting.lpos[lid]);
+                wi = normalize(lpos[lid]);
             }
         }
 
@@ -13494,50 +13589,41 @@ gl_stdsurface_program make_stdsurface_program() {
 
     std::string _frag_brdf =
         R"(
-        struct Brdf {
-            int type;
-            vec3 ke;
-            vec3 kd;
-            vec3 ks;
-            float rs;
-            float op;
-            bool cutout;
-        };
-
-        vec3 brdfcos(Brdf brdf, vec3 n, vec3 wi, vec3 wo) {
-            if(brdf.type == 0) return vec3(0);
+        vec3 brdfcos(int etype, vec3 ke, vec3 kd, vec3 ks, float rs, float op,
+            vec3 n, vec3 wi, vec3 wo) {
+            if(etype == 0) return vec3(0);
             vec3 wh = normalize(wi+wo);
-            float ns = 2/(brdf.rs*brdf.rs)-2;
+            float ns = 2/(rs*rs)-2;
             float ndi = dot(wi,n), ndo = dot(wo,n), ndh = dot(wh,n);
-            if(brdf.type == 1) {
-                return ((1+dot(wo,wi))/2) * brdf.kd/pi;
-            } else if(brdf.type == 2) {
+            if(etype == 1) {
+                return ((1+dot(wo,wi))/2) * kd/pi;
+            } else if(etype == 2) {
                 float si = sqrt(1-ndi*ndi);
                 float so = sqrt(1-ndo*ndo);
                 float sh = sqrt(1-ndh*ndh);
                 if(si <= 0) return vec3(0);
-                vec3 diff = si * brdf.kd / pi;
+                vec3 diff = si * kd / pi;
                 if(sh<=0) return diff;
                 float d = ((2+ns)/(2*pi)) * pow(si,ns);
-                vec3 spec = si * brdf.ks * d / (4*si*so);
+                vec3 spec = si * ks * d / (4*si*so);
                 return diff+spec;
-            } else if(brdf.type == 3 || brdf.type == 4) {
+            } else if(etype == 3 || etype == 4) {
                 if(ndi<=0 || ndo <=0) return vec3(0);
-                vec3 diff = ndi * brdf.kd / pi;
+                vec3 diff = ndi * kd / pi;
                 if(ndh<=0) return diff;
-                if(brdf.type == 4) {
+                if(etype == 4) {
                     float d = ((2+ns)/(2*pi)) * pow(ndh,ns);
-                    vec3 spec = ndi * brdf.ks * d / (4*ndi*ndo);
+                    vec3 spec = ndi * ks * d / (4*ndi*ndo);
                     return diff+spec;
                 } else {
                     float cos2 = ndh * ndh;
                     float tan2 = (1 - cos2) / cos2;
-                    float alpha2 = brdf.rs * brdf.rs;
+                    float alpha2 = rs * rs;
                     float d = alpha2 / (pi * cos2 * cos2 * (alpha2 + tan2) * (alpha2 + tan2));
                     float lambda_o = (-1 + sqrt(1 + (1 - ndo * ndo) / (ndo * ndo))) / 2;
                     float lambda_i = (-1 + sqrt(1 + (1 - ndi * ndi) / (ndi * ndi))) / 2;
                     float g = 1 / (1 + lambda_o + lambda_i);
-                    vec3 spec = ndi * brdf.ks * d * g / (4*ndi*ndo);
+                    vec3 spec = ndi * ks * d * g / (4*ndi*ndo);
                     return diff+spec;
                 }
             }
@@ -13547,73 +13633,70 @@ gl_stdsurface_program make_stdsurface_program() {
 
     std::string _frag_material =
         R"(
-        struct Material {
-            int type;         // material type
-            int etype;         // element type
-            vec3 ke;           // material ke
-            vec3 kd;           // material kd
-            vec3 ks;           // material ks
-            float rs;          // material rs
-            float op;          // material op
+        uniform int elem_type;
+        uniform bool elem_faceted;
+        uniform vec4 highlight;   // highlighted color
 
-            bool txt_ke_on;    // material ke texture on
-            sampler2D txt_ke;  // material ke texture
-            bool txt_kd_on;    // material kd texture on
-            sampler2D txt_kd;  // material kd texture
-            bool txt_ks_on;    // material ks texture on
-            sampler2D txt_ks;  // material ks texture
-            bool txt_rs_on;    // material rs texture on
-            sampler2D txt_rs;  // material rs texture
+        uniform int mat_type;          // material type
+        uniform vec3 mat_ke;           // material ke
+        uniform vec3 mat_kd;           // material kd
+        uniform vec3 mat_ks;           // material ks
+        uniform float mat_rs;          // material rs
+        uniform float mat_op;          // material op
 
-            bool txt_norm_on;    // material norm texture on
-            sampler2D txt_norm;  // material norm texture
-            sampler2D txt_norm_scale;  // material norm scale
+        uniform bool mat_txt_ke_on;    // material ke texture on
+        uniform sampler2D mat_txt_ke;  // material ke texture
+        uniform bool mat_txt_kd_on;    // material kd texture on
+        uniform sampler2D mat_txt_kd;  // material kd texture
+        uniform bool mat_txt_ks_on;    // material ks texture on
+        uniform sampler2D mat_txt_ks;  // material ks texture
+        uniform bool mat_txt_rs_on;    // material rs texture on
+        uniform sampler2D mat_txt_rs;  // material rs texture
 
-            bool txt_occ_on;    // material occ texture on
-            sampler2D txt_occ;  // material occ texture
-            sampler2D txt_occ_scale;  // material occ scale
+        uniform bool mat_txt_norm_on;    // material norm texture on
+        uniform sampler2D mat_txt_norm;  // material norm texture
+        uniform sampler2D mat_txt_norm_scale;  // material norm scale
 
-            bool use_phong;       // material use phong
-            bool double_sided;    // material double sided
-            bool alpha_cutout;    // material alpha cutout
-        };
-        uniform Material material;
+        uniform bool mat_txt_occ_on;    // material occ texture on
+        uniform sampler2D mat_txt_occ;  // material occ texture
+        uniform sampler2D mat_txt_occ_scale;  // material occ scale
 
-        void eval_material(vec2 texcoord, vec4 color, out int type, out vec3 ke,
+        uniform bool mat_use_phong;       // material use phong
+        uniform bool mat_double_sided;    // material double sided
+        uniform bool mat_alpha_cutout;    // material alpha cutout
+
+        bool eval_material(vec2 texcoord, vec4 color, out vec3 ke, 
                            out vec3 kd, out vec3 ks, out float rs, out float op, out bool cutout) {
-            if(material.type == 0) {
-                type = 0;
-                ke = material.ke;
+            if(mat_type == 0) {
+                ke = mat_ke;
                 kd = vec3(0,0,0);
                 ks = vec3(0,0,0);
                 op = 1;
+                return false;
             }
 
-            ke = color.xyz * material.ke;
-            kd = color.xyz * material.kd;
-            ks = color.xyz * material.ks;
-            rs = material.rs;
-            op = color.w * material.op;
+            ke = color.xyz * mat_ke;
+            kd = color.xyz * mat_kd;
+            ks = color.xyz * mat_ks;
+            rs = mat_rs;
+            op = color.w * mat_op;
 
-            vec3 ke_txt = (material.txt_ke_on) ? texture(material.txt_ke,texcoord).xyz : vec3(1);
-            vec4 kd_txt = (material.txt_kd_on) ? texture(material.txt_kd,texcoord) : vec4(1);
-            vec4 ks_txt = (material.txt_ks_on) ? texture(material.txt_ks,texcoord) : vec4(1);
-            float rs_txt = (material.txt_rs_on) ? texture(material.txt_rs,texcoord).x : 1;
+            vec3 ke_txt = (mat_txt_ke_on) ? texture(mat_txt_ke,texcoord).xyz : vec3(1);
+            vec4 kd_txt = (mat_txt_kd_on) ? texture(mat_txt_kd,texcoord) : vec4(1);
+            vec4 ks_txt = (mat_txt_ks_on) ? texture(mat_txt_ks,texcoord) : vec4(1);
+            float rs_txt = (mat_txt_rs_on) ? texture(mat_txt_rs,texcoord).x : 1;
 
             // scale common values
             ke *= ke_txt;
 
             // get material color from textures and adjust values
-            if(material.type == 0) {
-                type = 0;
-            } else if(material.type == 1) {
-                type = material.etype;
+            if(mat_type == 0) {
+            } else if(mat_type == 1) {
                 kd *= kd_txt.xyz;
                 ks *= ks_txt.xyz;
                 rs *= rs_txt;
                 rs = rs*rs;
-            } else if(material.type == 2) {
-                type = material.etype;
+            } else if(mat_type == 2) {
                 vec3 kb = kd * kd_txt.xyz;
                 float km = ks.x * ks_txt.z;
                 kd = kb * (1 - km);
@@ -13621,8 +13704,7 @@ gl_stdsurface_program make_stdsurface_program() {
                 rs *= ks_txt.y;
                 rs = rs*rs;
                 op *= kd_txt.w;
-            } else if(material.type == 3) {
-                type = material.etype;
+            } else if(mat_type == 3) {
                 kd *= kd_txt.xyz;
                 ks *= ks_txt.xyz;
                 rs *= ks_txt.w;
@@ -13630,15 +13712,16 @@ gl_stdsurface_program make_stdsurface_program() {
                 op *= kd_txt.w;
             }
 
-            cutout = material.alpha_cutout && op == 0;
+            cutout = mat_alpha_cutout && op == 0;
+            return true;
         }
 
         vec3 apply_normal_map(vec2 texcoord, vec3 norm, vec4 tangsp) {
-            if(!material.txt_norm_on) return norm;
+            if(!mat_txt_norm_on) return norm;
             vec3 tangu = normalize(tangsp.xyz);
             vec3 tangv = normalize(cross(tangu, norm));
             if(tangsp.w < 0) tangv = -tangv;
-            vec3 txt = 2 * pow(texture(material.txt_norm,texcoord).xyz, vec3(1/2.2)) - 1;
+            vec3 txt = 2 * pow(texture(mat_txt_norm,texcoord).xyz, vec3(1/2.2)) - 1;
             return normalize( tangu * txt.x + tangv * txt.y + norm * txt.z );
         }
 
@@ -13652,61 +13735,67 @@ gl_stdsurface_program make_stdsurface_program() {
         in vec4 color;                 // [from vertex shader] color
         in vec4 tangsp;                // [from vertex shader] tangent space
 
-        struct Camera {
-            mat4 xform;          // camera xform
-            mat4 xform_inv;      // inverse of the camera frame (as a matrix)
-            mat4 proj;           // camera projection
-        };
-        uniform Camera camera;      // camera data
-
-        uniform vec4 highlight;   // highlighted color
+        uniform mat4 cam_xform;          // camera xform
+        uniform mat4 cam_xform_inv;      // inverse of the camera frame (as a matrix)
+        uniform mat4 cam_proj;           // camera projection
 
         out vec4 frag_color;        // eyelight shading
+
+        vec3 triangle_normal(vec3 pos) {
+            vec3 fdx = dFdx(pos); 
+            vec3 fdy = dFdy(pos); 
+            return normalize(cross(fdx, fdy));
+        }
 
         // main
         void main() {
             // view vector
-            vec3 wo = normalize( (camera.xform*vec4(0,0,0,1)).xyz - pos );
+            vec3 wo = normalize( (cam_xform*vec4(0,0,0,1)).xyz - pos );
 
-            // re-normalize normals
-            vec3 n = normalize(norm);
+            // prepare normals
+            vec3 n;
+            if(elem_faceted) {
+                n = triangle_normal(pos);
+            } else {
+                n = normalize(norm);
+            }
 
             // apply normal map
             n = apply_normal_map(texcoord, n, tangsp);
 
             // use faceforward to ensure the normals points toward us
-            if(material.double_sided) n = faceforward(n,-wo,n);
+            if(mat_double_sided) n = faceforward(n,-wo,n);
 
             // get material color from textures
-            Brdf brdf;
-            eval_material(texcoord, color, brdf.type, brdf.ke, brdf.kd, brdf.ks, brdf.rs, brdf.op, brdf.cutout);
+            vec3 brdf_ke, brdf_kd, brdf_ks; float brdf_rs, brdf_op; bool brdf_cutout;
+            bool has_brdf = eval_material(texcoord, color, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, brdf_cutout);
 
             // exit if needed
-            if(brdf.cutout) discard;
+            if(brdf_cutout) discard;
 
             // check const color
-            if(brdf.type == 0) {
-                frag_color = vec4(brdf.ke,brdf.op);
+            if(elem_type == 0) {
+                frag_color = vec4(brdf_ke,brdf_op);
                 return;
             }
 
             // emission
-            vec3 c = brdf.ke;
+            vec3 c = brdf_ke;
 
             // check early exit
-            if(brdf.kd != vec3(0,0,0) || brdf.ks != vec3(0,0,0)) {
+            if(brdf_kd != vec3(0,0,0) || brdf_ks != vec3(0,0,0)) {
                 // eyelight shading
-                if(lighting.eyelight) {
+                if(eyelight) {
                     vec3 wi = wo;
-                    c += pi * brdfcos(brdf,n,wi,wo);
+                    c += pi * brdfcos((has_brdf) ? elem_type : 0, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, n,wi,wo);
                 } else {
                     // accumulate ambient
-                    c += lighting.amb * brdf.kd;
+                    c += lamb * brdf_kd;
                     // foreach light
-                    for(int lid = 0; lid < lighting.lnum; lid ++) {
+                    for(int lid = 0; lid < lnum; lid ++) {
                         vec3 cl = vec3(0,0,0); vec3 wi = vec3(0,0,0);
                         eval_light(lid, pos, cl, wi);
-                        c += cl * brdfcos(brdf,n,wi,wo);
+                        c += cl * brdfcos((has_brdf) ? elem_type : 0, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, n,wi,wo);
                     }
                 }
             }
@@ -13721,7 +13810,7 @@ gl_stdsurface_program make_stdsurface_program() {
             }
 
             // output final color by setting gl_FragColor
-            frag_color = vec4(c,brdf.op);
+            frag_color = vec4(c,brdf_op);
         }
         )";
 #ifndef _WIN32
@@ -13730,9 +13819,9 @@ gl_stdsurface_program make_stdsurface_program() {
 
     assert(gl_check_error());
     auto prog = gl_stdsurface_program();
-    prog.prog = make_program(_vert_header + _vert_skinning + _vert_main,
-        _frag_header + _frag_tonemap + _frag_lighting + _frag_brdf +
-            _frag_material + _frag_main);
+    prog.prog =
+        make_program(_vert, _frag_header + _frag_tonemap + _frag_lighting +
+                                _frag_brdf + _frag_material + _frag_main);
     assert(gl_check_error());
     return prog;
 }
@@ -13745,17 +13834,14 @@ void begin_stdsurface_frame(const gl_stdsurface_program& prog,
     const mat4f& camera_xform, const mat4f& camera_xform_inv,
     const mat4f& camera_proj) {
     static auto eyelight_id =
-        get_program_uniform_location(prog.prog, "lighting.eyelight");
+        get_program_uniform_location(prog.prog, "eyelight");
     static auto exposure_id =
-        get_program_uniform_location(prog.prog, "tonemap.exposure");
-    static auto tonemap_id =
-        get_program_uniform_location(prog.prog, "tonemap.type");
-    static auto xform_id =
-        get_program_uniform_location(prog.prog, "camera.xform");
+        get_program_uniform_location(prog.prog, "tm_exposure");
+    static auto tonemap_id = get_program_uniform_location(prog.prog, "tm_type");
+    static auto xform_id = get_program_uniform_location(prog.prog, "cam_xform");
     static auto xform_inv_id =
-        get_program_uniform_location(prog.prog, "camera.xform_inv");
-    static auto proj_id =
-        get_program_uniform_location(prog.prog, "camera.proj");
+        get_program_uniform_location(prog.prog, "cam_xform_inv");
+    static auto proj_id = get_program_uniform_location(prog.prog, "cam_proj");
     assert(gl_check_error());
     bind_program(prog.prog);
     set_program_uniform(prog.prog, eyelight_id, shade_eyelight);
@@ -13765,6 +13851,7 @@ void begin_stdsurface_frame(const gl_stdsurface_program& prog,
     set_program_uniform(prog.prog, xform_inv_id, camera_xform_inv);
     set_program_uniform(prog.prog, proj_id, camera_proj);
     assert(gl_check_error());
+    set_stdsurface_elems(prog, gl_elem_type::triangle, false);
 }
 
 // Ends a frame.
@@ -13780,16 +13867,11 @@ void end_stdsurface_frame(const gl_stdsurface_program& prog) {
 // ambient illumination amb.
 void set_stdsurface_lights(const gl_stdsurface_program& prog, const vec3f& amb,
     const gl_lights& lights) {
-    static auto amb_id =
-        get_program_uniform_location(prog.prog, "lighting.amb");
-    static auto lnum_id =
-        get_program_uniform_location(prog.prog, "lighting.lnum");
-    static auto lpos_id =
-        get_program_uniform_location(prog.prog, "lighting.lpos");
-    static auto lke_id =
-        get_program_uniform_location(prog.prog, "lighting.lke");
-    static auto ltype_id =
-        get_program_uniform_location(prog.prog, "lighting.ltype");
+    static auto amb_id = get_program_uniform_location(prog.prog, "lamb");
+    static auto lnum_id = get_program_uniform_location(prog.prog, "lnum");
+    static auto lpos_id = get_program_uniform_location(prog.prog, "lpos");
+    static auto lke_id = get_program_uniform_location(prog.prog, "lke");
+    static auto ltype_id = get_program_uniform_location(prog.prog, "ltype");
     assert(gl_check_error());
     set_program_uniform(prog.prog, amb_id, amb);
     set_program_uniform(prog.prog, lnum_id, (int)lights.pos.size());
@@ -13847,55 +13929,52 @@ void set_stdsurface_highlight(
 // Kajiya-Kay for lines, GGX/Phong for triangles).
 // Material type matches the scene material type.
 void set_stdsurface_material(const gl_stdsurface_program& prog,
-    material_type type, gl_elem_type etype, const vec3f& ke, const vec3f& kd,
-    const vec3f& ks, float rs, float op, const gl_texture_info& ke_txt,
+    material_type type, const vec3f& ke, const vec3f& kd, const vec3f& ks,
+    float rs, float op, const gl_texture_info& ke_txt,
     const gl_texture_info& kd_txt, const gl_texture_info& ks_txt,
     const gl_texture_info& rs_txt, const gl_texture_info& norm_txt,
     const gl_texture_info& occ_txt, bool use_phong, bool double_sided,
     bool alpha_cutout) {
-    static auto mtype_id =
-        get_program_uniform_location(prog.prog, "material.type");
-    static auto etype_id =
-        get_program_uniform_location(prog.prog, "material.etype");
-    static auto ke_id = get_program_uniform_location(prog.prog, "material.ke");
-    static auto kd_id = get_program_uniform_location(prog.prog, "material.kd");
-    static auto ks_id = get_program_uniform_location(prog.prog, "material.ks");
-    static auto rs_id = get_program_uniform_location(prog.prog, "material.rs");
-    static auto op_id = get_program_uniform_location(prog.prog, "material.op");
+    static auto mtype_id = get_program_uniform_location(prog.prog, "mat_type");
+    static auto ke_id = get_program_uniform_location(prog.prog, "mat_ke");
+    static auto kd_id = get_program_uniform_location(prog.prog, "mat_kd");
+    static auto ks_id = get_program_uniform_location(prog.prog, "mat_ks");
+    static auto rs_id = get_program_uniform_location(prog.prog, "mat_rs");
+    static auto op_id = get_program_uniform_location(prog.prog, "mat_op");
     static auto ke_txt_id =
-        get_program_uniform_location(prog.prog, "material.txt_ke");
+        get_program_uniform_location(prog.prog, "mat_txt_ke");
     static auto ke_txt_on_id =
-        get_program_uniform_location(prog.prog, "material.txt_ke_on");
+        get_program_uniform_location(prog.prog, "mat_txt_ke_on");
     static auto kd_txt_id =
-        get_program_uniform_location(prog.prog, "material.txt_kd");
+        get_program_uniform_location(prog.prog, "mat_txt_kd");
     static auto kd_txt_on_id =
-        get_program_uniform_location(prog.prog, "material.txt_kd_on");
+        get_program_uniform_location(prog.prog, "mat_txt_kd_on");
     static auto ks_txt_id =
-        get_program_uniform_location(prog.prog, "material.txt_ks");
+        get_program_uniform_location(prog.prog, "mat_txt_ks");
     static auto ks_txt_on_id =
-        get_program_uniform_location(prog.prog, "material.txt_ks_on");
+        get_program_uniform_location(prog.prog, "mat_txt_ks_on");
     static auto rs_txt_id =
-        get_program_uniform_location(prog.prog, "material.txt_rs");
+        get_program_uniform_location(prog.prog, "mat_txt_rs");
     static auto rs_txt_on_id =
-        get_program_uniform_location(prog.prog, "material.txt_rs_on");
+        get_program_uniform_location(prog.prog, "mat_txt_rs_on");
     static auto norm_txt_id =
-        get_program_uniform_location(prog.prog, "material.txt_norm");
+        get_program_uniform_location(prog.prog, "mat_txt_norm");
     static auto norm_txt_on_id =
-        get_program_uniform_location(prog.prog, "material.txt_norm_on");
+        get_program_uniform_location(prog.prog, "mat_txt_norm_on");
     static auto occ_txt_id =
-        get_program_uniform_location(prog.prog, "material.txt_occ");
+        get_program_uniform_location(prog.prog, "mat_txt_occ");
     static auto occ_txt_on_id =
-        get_program_uniform_location(prog.prog, "material.txt_occ_on");
+        get_program_uniform_location(prog.prog, "mat_txt_occ_on");
     static auto norm_scale_id =
-        get_program_uniform_location(prog.prog, "material.norm_scale");
+        get_program_uniform_location(prog.prog, "mat_norm_scale");
     static auto occ_scale_id =
-        get_program_uniform_location(prog.prog, "material.occ_scale");
+        get_program_uniform_location(prog.prog, "mat_occ_scale");
     static auto use_phong_id =
-        get_program_uniform_location(prog.prog, "material.use_phong");
+        get_program_uniform_location(prog.prog, "mat_use_phong");
     static auto double_sided_id =
-        get_program_uniform_location(prog.prog, "material.double_sided");
+        get_program_uniform_location(prog.prog, "mat_double_sided");
     static auto alpha_cutout_id =
-        get_program_uniform_location(prog.prog, "material.alpha_cutout");
+        get_program_uniform_location(prog.prog, "mat_alpha_cutout");
 
     static auto mtypes = std::unordered_map<material_type, int>{
         {material_type::specular_roughness, 1},
@@ -13904,7 +13983,6 @@ void set_stdsurface_material(const gl_stdsurface_program& prog,
 
     assert(gl_check_error());
     set_program_uniform(prog.prog, mtype_id, mtypes.at(type));
-    set_program_uniform(prog.prog, etype_id, (int)etype);
     set_program_uniform(prog.prog, ke_id, ke);
     set_program_uniform(prog.prog, kd_id, kd);
     set_program_uniform(prog.prog, ks_id, ks);
@@ -13929,16 +14007,12 @@ void set_stdsurface_material(const gl_stdsurface_program& prog,
 // Set constant material values with emission ke.
 void set_stdsurface_constmaterial(
     gl_stdsurface_program& prog, const vec3f& ke, float op) {
-    static auto mtype_id =
-        get_program_uniform_location(prog.prog, "material.type");
-    static auto etype_id =
-        get_program_uniform_location(prog.prog, "material.etype");
-    static auto ke_id = get_program_uniform_location(prog.prog, "material.ke");
-    static auto op_id = get_program_uniform_location(prog.prog, "material.op");
+    static auto mtype_id = get_program_uniform_location(prog.prog, "mat_type");
+    static auto ke_id = get_program_uniform_location(prog.prog, "mat_ke");
+    static auto op_id = get_program_uniform_location(prog.prog, "mat_op");
 
     assert(gl_check_error());
     set_program_uniform(prog.prog, mtype_id, 0);
-    set_program_uniform(prog.prog, etype_id, 0);
     set_program_uniform(prog.prog, ke_id, ke);
     set_program_uniform(prog.prog, op_id, op);
     assert(gl_check_error());
@@ -14018,6 +14092,18 @@ void set_stdsurface_vert_skinning_off(const gl_stdsurface_program& prog) {
     set_program_vertattr(prog.prog, joints_id, {}, zero4f);
 }
 
+// Set element properties.
+void set_stdsurface_elems(
+    const gl_stdsurface_program& prog, gl_elem_type etype, bool faceted) {
+    static auto etype_id = get_program_uniform_location(prog.prog, "elem_type");
+    static auto efaceted_id =
+        get_program_uniform_location(prog.prog, "elem_faceted");
+    assert(gl_check_error());
+    set_program_uniform(prog.prog, etype_id, (int)etype);
+    set_program_uniform(prog.prog, efaceted_id, (int)faceted);
+    assert(gl_check_error());
+}
+
 // Draw a shape
 void draw_stdsurface_shape(const shape* shp, const mat4f& xform,
     bool highlighted, gl_stdsurface_program& prog,
@@ -14029,10 +14115,6 @@ void draw_stdsurface_shape(const shape* shp, const mat4f& xform,
 
     begin_stdsurface_shape(prog, xform);
 
-    auto etype = gl_elem_type::triangle;
-    if (!shp->lines.empty()) etype = gl_elem_type::line;
-    if (!shp->points.empty()) etype = gl_elem_type::point;
-
     auto txt = [&textures](const texture_info& info) -> gl_texture_info {
         auto ginfo = gl_texture_info();
         if (!info.txt) return ginfo;
@@ -14040,40 +14122,61 @@ void draw_stdsurface_shape(const shape* shp, const mat4f& xform,
         return ginfo;
     };
 
-    auto mat = get_material(shp, 0) ? get_material(shp, 0) : default_material;
-    set_stdsurface_material(prog, mat->type, etype, mat->ke, mat->kd, mat->ks,
-        mat->rs, mat->op, txt(mat->ke_txt), txt(mat->kd_txt), txt(mat->ks_txt),
-        txt(mat->rs_txt), txt(mat->norm_txt), txt(mat->occ_txt), false,
-        mat->double_sided || params.double_sided, params.cutout);
+    auto ngroups = max(1, (int)shp->groups.size());
+    for (auto gid = 0; gid < ngroups; gid++) {
+        auto mat = (!shp->groups.empty() && shp->groups.at(gid).mat) ?
+                       shp->groups.at(gid).mat :
+                       default_material;
+        auto faceted = shp->norm.empty() ||
+                       (!shp->groups.empty() && shp->groups.at(gid).faceted);
 
-    auto& gshp = shapes.at((shape*)shp);
-    set_stdsurface_vert(
-        prog, gshp.pos, gshp.norm, gshp.texcoord, gshp.color, gshp.tangsp);
+        set_stdsurface_material(prog, mat->type, mat->ke, mat->kd, mat->ks,
+            mat->rs, mat->op, txt(mat->ke_txt), txt(mat->kd_txt),
+            txt(mat->ks_txt), txt(mat->rs_txt), txt(mat->norm_txt),
+            txt(mat->occ_txt), false, mat->double_sided || params.double_sided,
+            params.cutout);
 
-    draw_elems(gshp.points);
-    draw_elems(gshp.lines);
-    draw_elems(gshp.triangles);
-    draw_elems(gshp.quads);
-    draw_elems(gshp.beziers);
+        auto& gshp = shapes.at((shape*)shp);
+        set_stdsurface_vert(
+            prog, gshp.pos, gshp.norm, gshp.texcoord, gshp.color, gshp.tangsp);
 
-    if ((params.edges && !params.wireframe) || highlighted) {
-        gl_enable_culling(false);
-        set_stdsurface_constmaterial(prog,
-            (highlighted) ? params.highlight_color : params.edge_color,
-            (highlighted) ? 1 : mat->op);
-        set_stdsurface_normaloffset(prog, params.edge_offset);
-        draw_elems(gshp.edges);
-        gl_enable_culling(params.cull_backface);
-    }
+        if (!gshp.points.empty() &&
+            !is_element_buffer_empty(gshp.points.at(gid))) {
+            set_stdsurface_elems(prog, gl_elem_type::point, faceted);
+            draw_elems(gshp.points.at(gid));
+        }
+        if (!gshp.lines.empty() &&
+            !is_element_buffer_empty(gshp.lines.at(gid))) {
+            set_stdsurface_elems(prog, gl_elem_type::line, faceted);
+            draw_elems(gshp.lines.at(gid));
+        }
+        if (!gshp.triangles.empty() &&
+            !is_element_buffer_empty(gshp.triangles.at(gid))) {
+            set_stdsurface_elems(prog, gl_elem_type::triangle, faceted);
+            draw_elems(gshp.triangles.at(gid));
+        }
+        if (!gshp.quads.empty() &&
+            !is_element_buffer_empty(gshp.quads.at(gid))) {
+            set_stdsurface_elems(prog, gl_elem_type::triangle, faceted);
+            draw_elems(gshp.quads.at(gid));
+        }
+        if (!gshp.beziers.empty() &&
+            !is_element_buffer_empty(gshp.beziers.at(gid))) {
+            set_stdsurface_elems(prog, gl_elem_type::line, faceted);
+            draw_elems(gshp.beziers.at(gid));
+        }
 
-    if (highlighted && false) {
-        set_stdsurface_constmaterial(prog, params.highlight_color, 1);
-        set_stdsurface_normaloffset(prog, params.edge_offset);
-        draw_elems(gshp.points);
-        draw_elems(gshp.lines);
-        draw_elems(gshp.triangles);
-        draw_elems(gshp.quads);
-        draw_elems(gshp.beziers);
+        if ((params.edges && !params.wireframe) || highlighted) {
+            gl_enable_culling(false);
+            set_stdsurface_constmaterial(prog,
+                (highlighted) ? params.highlight_color : params.edge_color,
+                (highlighted) ? 1 : mat->op);
+            set_stdsurface_normaloffset(prog, params.edge_offset);
+            if (!gshp.edges.empty() &&
+                !is_element_buffer_empty(gshp.edges.at(gid)))
+                draw_elems(gshp.edges.at(gid));
+            gl_enable_culling(params.cull_backface);
+        }
     }
 
     end_stdsurface_shape(prog);

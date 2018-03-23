@@ -324,10 +324,12 @@
 /// applications and tuned for quick creating viewers, renderers and simulators.
 ///
 /// 1. load a scene with `load_scene()` and save it with `save_scene()`.
-/// 2. add missing data with `add_elements()`
+/// 2. add missing data with `add_normals()`, `add_names()`, `add_hierarchy()`
+///    `add_tangent_space()`
 /// 3. use `compute_bounds()` to compute element bounds
 /// 4. can merge scene together with `merge_into()`
 /// 5. make example scenes with `make_test_scene()`
+/// 6. validate scene with `validate_scene()`
 ///
 /// Ray-intersection and closet-point routines supporting points,
 /// lines and triangles accelerated by a two-level bounding volume
@@ -4377,7 +4379,7 @@ std::vector<vec3i> convert_quads_to_triangles(
 std::vector<vec2i> convert_bezier_to_lines(const std::vector<vec4i>& beziers);
 
 /// Convert face-varying data to single primitives. Returns the quads indices
-/// and filled vectors for pos, norm and texcoord.
+/// and face ids and filled vectors for pos, norm and texcoord.
 std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
     std::vector<vec2f>>
 convert_face_varying(const std::vector<vec4i>& quads_pos,
@@ -4864,18 +4866,18 @@ inline vec4b linear_to_srgb(const vec4f& lin) {
 /// Approximate conversion from srgb.
 inline image4f srgb_to_linear(const image4b& srgb) {
     auto lin = image4f(srgb.width(), srgb.height());
-    for(auto j = 0; j < srgb.height(); j ++) 
-        for(auto i = 0; i < srgb.width(); i ++) 
-            lin.at(i,j) = srgb_to_linear(srgb.at(i,j));
-    return  lin;
+    for (auto j = 0; j < srgb.height(); j++)
+        for (auto i = 0; i < srgb.width(); i++)
+            lin.at(i, j) = srgb_to_linear(srgb.at(i, j));
+    return lin;
 }
 /// Approximate conversion to srgb.
 inline image4b linear_to_srgb(const image4f& lin) {
     auto srgb = image4b(lin.width(), lin.height());
-        for(auto j = 0; j < srgb.height(); j ++) 
-        for(auto i = 0; i < srgb.width(); i ++) 
-            srgb.at(i,j) = linear_to_srgb(lin.at(i,j));
-    return  srgb;
+    for (auto j = 0; j < srgb.height(); j++)
+        for (auto i = 0; i < srgb.width(); i++)
+            srgb.at(i, j) = linear_to_srgb(lin.at(i, j));
+    return srgb;
 }
 
 /// Convert between CIE XYZ and xyY
@@ -5704,8 +5706,12 @@ shape_elem_type get_shape_type(const shape* shp);
 bool has_emission(const shape* shp);
 /// Gets the material for a shape element.
 material* get_material(const shape* shp, int eid);
+/// Gets is the element is faceted.
+bool get_faceted(const shape* shp, int eid);
 /// Returns is the shape is simple, i.e. it has only one material and one group.
 bool is_shape_simple(const shape* shp, bool split_facevarying);
+/// Shape element normal.
+vec3f eval_elem_norm(const shape* shp, int eid, bool transformed = false);
 
 /// Shape position interpolated using barycentric coordinates.
 vec3f eval_pos(
@@ -5839,31 +5845,21 @@ void refit_bvh(bvh_tree* bvh, const shape* shp, float def_radius = 0.001f);
 void refit_bvh(
     bvh_tree* bvh, const scene* scn, bool do_shapes, float def_radius = 0.001f);
 
-/// Add elements options.
-struct add_elements_options {
-    /// Add missing normal.
-    bool smooth_normals = true;
-    /// Add missing trangent space.
-    bool tangent_space = true;
-    /// Add empty texture data.
-    bool texture_data = true;
-    /// Add hierarchy.
-    bool node_hierarchy = false;
-    /// Add default names.
-    bool default_names = true;
-    /// Add default paths.
-    bool default_paths = false;
+/// Add missing names and resolve duplicated names.
+void add_names(scene* scn);
 
-    /// Initialize to no elements.
-    static add_elements_options none() {
-        auto opts = add_elements_options();
-        memset(&opts, 0, sizeof(opts));
-        return opts;
-    }
-};
+/// Add missing normals.
+void add_normals(scene* scn);
 
-/// Add elements
-void add_elements(scene* scn, const add_elements_options& opts = {});
+/// Add missing tangent space if needed.
+void add_tangent_space(scene* scn);
+
+/// Add hierarchy.
+void add_hierarchy(scene* scn);
+
+/// Checks for validity of the scene.
+std::vector<std::string> validate(
+    const scene* scn, bool log_as_warning = false);
 
 /// Merge scene into one another. Note that the objects are _moved_ from
 /// merge_from to merged_into, so merge_from will be empty after this function.
@@ -5879,7 +5875,7 @@ struct load_options {
     bool skip_missing = true;
     /// Whether to flip the v coordinate in OBJ.
     bool obj_flip_texcoord = true;
-    /// Whether to flip tr in OBJ.
+    /// Whether to flip tr and tf in OBJ.
     bool obj_flip_tr = true;
     /// Whether to preserve quads.
     bool obj_preserve_quads = false;
@@ -6136,6 +6132,8 @@ inline void visit(material& val, Visitor&& visitor) {
                             "Transmission texture.", 0, 0, ""});
     visitor(val.rs_txt, visit_var{"rs_txt", visit_var_type::value,
                             "Roughness texture.", 0, 0, ""});
+    visitor(val.op_txt, visit_var{"op_txt", visit_var_type::value,
+                            "Opacity texture.", 0, 0, ""});
     visitor(val.bump_txt, visit_var{"bump_txt", visit_var_type::value,
                               "Bump map texture (heighfield).", 0, 0, ""});
     visitor(
@@ -6331,8 +6329,9 @@ inline void visit(load_options& val, Visitor&& visitor) {
     visitor(val.obj_flip_texcoord,
         visit_var{"obj_flip_texcoord", visit_var_type::value,
             "Whether to flip the v coordinate in OBJ.", 0, 0, ""});
-    visitor(val.obj_flip_tr, visit_var{"obj_flip_tr", visit_var_type::value,
-                                 "Whether to flip tr in OBJ.", 0, 0, ""});
+    visitor(
+        val.obj_flip_tr, visit_var{"obj_flip_tr", visit_var_type::value,
+                             "Whether to flip tr and tf in OBJ.", 0, 0, ""});
     visitor(val.obj_preserve_quads,
         visit_var{"obj_preserve_quads", visit_var_type::value,
             "Whether to preserve quads.", 0, 0, ""});
@@ -6456,6 +6455,8 @@ enum struct proc_material_type {
     plastic,
     /// Matetal.
     metal,
+    /// Glass.
+    glass,
     /// Transparent (diffuse with opacity).
     transparent,
 };
@@ -6762,6 +6763,7 @@ enum_names<proc_material_type>() {
         {"matte", proc_material_type::matte},
         {"plastic", proc_material_type::plastic},
         {"metal", proc_material_type::metal},
+        {"glass", proc_material_type::glass},
         {"transparent", proc_material_type::transparent},
     };
     return names;
@@ -7145,16 +7147,18 @@ struct trace_params {
     int min_depth = 3;
     /// Maximum ray depth. @refl_uilimits(1,10)
     int max_depth = 8;
-    /// Final pixel clamping. @refl_uilimits(1,10)
-    float pixel_clamp = 10;
+    /// Final pixel clamping. @refl_uilimits(10,1000)
+    float pixel_clamp = 100;
     /// Ray intersection epsilon. @refl_uilimits(0.0001,0.001)
     float ray_eps = 1e-4f;
     /// Parallel execution.
     bool parallel = true;
     /// Seed for the random number generators. @refl_uilimits(0,1000)
     uint32_t seed = 0;
-    /// Preview resolution for async rendering.
+    /// Preview resolution for async rendering. @refl_uilimits(64,1080)
     int preview_resolution = 64;
+    /// Sample batch size. @refl_uilimits(1,256)
+    int batch_size = 16;
 };
 
 // #codegen end refl-trace
@@ -7222,13 +7226,35 @@ void trace_samples_filtered(const scene* scn, const camera* cam,
     image<trace_pixel>& pixels, int nsamples, const trace_params& params);
 
 /// Trace the whole image.
+inline void trace_image(const scene* scn, const camera* cam,
+    const bvh_tree* bvh, const trace_lights& lights, image4f& img,
+    image<trace_pixel>& pixels, const trace_params& params,
+    const std::function<void(int)>& callback) {
+    for (auto& p : img) p = zero4f;
+    for (auto cur_sample = 0; cur_sample < params.nsamples;
+         cur_sample += params.batch_size) {
+        if (callback) callback(cur_sample);
+        if (params.filter == trace_filter_type::box) {
+            trace_samples(scn, cam, bvh, lights, img, pixels,
+                std::min(params.batch_size, params.nsamples - cur_sample),
+                params);
+        } else {
+            trace_samples_filtered(scn, cam, bvh, lights, img, pixels,
+                std::min(params.batch_size, params.nsamples - cur_sample),
+                params);
+        }
+    }
+}
+
+/// Trace the whole image.
 inline image4f trace_image(const scene* scn, const camera* cam,
-    const bvh_tree* bvh, const trace_params& params) {
+    const bvh_tree* bvh, const trace_params& params,
+    const std::function<void(int)>& callback) {
     auto img = image4f(
         (int)std::round(cam->aspect * params.resolution), params.resolution);
     auto pixels = make_trace_pixels(img, params);
     auto lights = make_trace_lights(scn);
-    trace_samples(scn, cam, bvh, lights, img, pixels, params.nsamples, params);
+    trace_image(scn, cam, bvh, lights, img, pixels, params, callback);
     return img;
 }
 
@@ -7312,7 +7338,7 @@ inline void visit(trace_params& val, Visitor&& visitor) {
     visitor(val.max_depth, visit_var{"max_depth", visit_var_type::value,
                                "Maximum ray depth.", 1, 10, ""});
     visitor(val.pixel_clamp, visit_var{"pixel_clamp", visit_var_type::value,
-                                 "Final pixel clamping.", 1, 10, ""});
+                                 "Final pixel clamping.", 10, 1000, ""});
     visitor(val.ray_eps, visit_var{"ray_eps", visit_var_type::value,
                              "Ray intersection epsilon.", 0.0001, 0.001, ""});
     visitor(val.parallel, visit_var{"parallel", visit_var_type::value,
@@ -7322,7 +7348,9 @@ inline void visit(trace_params& val, Visitor&& visitor) {
                       "Seed for the random number generators.", 0, 1000, ""});
     visitor(val.preview_resolution,
         visit_var{"preview_resolution", visit_var_type::value,
-            "Preview resolution for async rendering.", 0, 0, ""});
+            "Preview resolution for async rendering.", 64, 1080, ""});
+    visitor(val.batch_size, visit_var{"batch_size", visit_var_type::value,
+                                "Sample batch size.", 1, 256, ""});
 }
 
 // #codegen end reflgen-trace
@@ -9380,6 +9408,11 @@ inline uint get_texture_id(const gl_texture& txt) { return txt.tid; }
 /// Check if defined.
 inline bool is_texture_valid(const gl_texture& txt) { return (bool)txt.tid; }
 
+/// Check if empty.
+inline bool is_texture_empty(const gl_texture& txt) {
+    return !txt.tid || !txt.width || !txt.height;
+}
+
 /// Wrap values for OpenGL texture.
 enum struct gl_texture_wrap {
     /// Not set.
@@ -9537,6 +9570,11 @@ inline bool is_vertex_buffer_valid(const gl_vertex_buffer& buf) {
     return (bool)buf.bid;
 }
 
+/// Check if empty.
+inline bool is_vertex_buffer_empty(const gl_vertex_buffer& buf) {
+    return !buf.bid || !buf.num;
+}
+
 /// Clears OpenGL state.
 void clear_vertex_buffer(gl_vertex_buffer& buf);
 
@@ -9607,6 +9645,11 @@ inline uint get_element_buffer_id(const gl_element_buffer& buf) {
 /// Check if defined
 inline bool is_element_buffer_valid(const gl_element_buffer& buf) {
     return (bool)buf.bid;
+}
+
+/// Check if defined
+inline bool is_element_buffer_empty(const gl_element_buffer& buf) {
+    return !buf.bid || !buf.num;
 }
 
 /// Clears OpenGL state.
@@ -9736,7 +9779,8 @@ bool set_program_uniform_texture(
 inline bool set_program_uniform_texture(const gl_program& prog, int var,
     int varon, const gl_texture_info& tinfo, uint tunit) {
     if (!set_program_uniform_texture(prog, var, tinfo, tunit)) return false;
-    if (!set_program_uniform(prog, varon, is_texture_valid(tinfo.txt)))
+    if (!set_program_uniform(prog, varon,
+            is_texture_valid(tinfo.txt) && !is_texture_empty(tinfo.txt)))
         return false;
     return true;
 }
@@ -9817,18 +9861,18 @@ namespace ygl {
 
 /// Vertex buffers for scene drawing. Members are not part of the public API.
 struct gl_shape {
-    gl_vertex_buffer pos;         // position
-    gl_vertex_buffer norm;        // normals
-    gl_vertex_buffer texcoord;    // texcoord
-    gl_vertex_buffer texcoord1;   // texcoord
-    gl_vertex_buffer color;       // color
-    gl_vertex_buffer tangsp;      // tangent space
-    gl_element_buffer points;     // point elements
-    gl_element_buffer lines;      // line elements
-    gl_element_buffer triangles;  // triangle elements
-    gl_element_buffer quads;      // quad elements as tris
-    gl_element_buffer beziers;    // bezier elements as l.
-    gl_element_buffer edges;      // edge elements
+    gl_vertex_buffer pos;                      // position
+    gl_vertex_buffer norm;                     // normals
+    gl_vertex_buffer texcoord;                 // texcoord
+    gl_vertex_buffer texcoord1;                // texcoord
+    gl_vertex_buffer color;                    // color
+    gl_vertex_buffer tangsp;                   // tangent space
+    std::vector<gl_element_buffer> points;     // point elements
+    std::vector<gl_element_buffer> lines;      // line elements
+    std::vector<gl_element_buffer> triangles;  // triangle elements
+    std::vector<gl_element_buffer> quads;      // quad elements as tris
+    std::vector<gl_element_buffer> beziers;    // bezier elements as l.
+    std::vector<gl_element_buffer> edges;      // edge elements
 };
 
 /// Initialize gl lights.
@@ -9973,8 +10017,8 @@ void set_stdsurface_highlight(
 /// points, Kajiya-Kay for lines, GGX/Phong for triangles). Material `type`
 /// matches the scene material type.
 void set_stdsurface_material(const gl_stdsurface_program& prog,
-    material_type type, gl_elem_type etype, const vec3f& ke, const vec3f& kd,
-    const vec3f& ks, float rs, float op, const gl_texture_info& ke_txt,
+    material_type type, const vec3f& ke, const vec3f& kd, const vec3f& ks,
+    float rs, float op, const gl_texture_info& ke_txt,
     const gl_texture_info& kd_txt, const gl_texture_info& ks_txt,
     const gl_texture_info& rs_txt, const gl_texture_info& norm_txt,
     const gl_texture_info& occ_txt, bool use_phong, bool double_sided,
@@ -9983,6 +10027,10 @@ void set_stdsurface_material(const gl_stdsurface_program& prog,
 /// Set constant material with emission `ke` and opacity `op`.
 void set_stdsurface_constmaterial(
     const gl_stdsurface_program& prog, const vec3f& ke, float op);
+
+/// Set element properties.
+void set_stdsurface_elems(
+    const gl_stdsurface_program& prog, gl_elem_type etype, bool faceted);
 
 /// Set vertex data with buffers for position pos, normals norm, texture
 /// coordinates texcoord, per-vertex color color and tangent space tangsp.
@@ -10896,8 +10944,7 @@ inline cmdline_parser make_parser(
     parser._to_parse = std::vector<std::string>(argv + 1, argv + argc);
     parser._usage_prog = (prog.empty()) ? std::string(argv[0]) : prog;
     parser._usage_help = help;
-    parser._usage =
-        parse_flag(parser, "--help", "", "prints and help message");
+    parser._usage = parse_flag(parser, "--help", "", "prints and help message");
     return parser;
 }
 
