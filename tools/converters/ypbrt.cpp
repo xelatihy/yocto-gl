@@ -99,11 +99,11 @@ void parse_param_list(
 void parse_param_numbers(
     const std::vector<std::string>& tokens, int& i, json& js) {
     js["values"] = json::array();
-    if(tokens[i][0] == '[') i++;
+    if (tokens[i][0] == '[') i++;
     while (is_number(tokens, i)) {
         js.at("values").push_back((float)atof(tokens[i++].c_str()));
     }
-    if(tokens[i][0] == ']') i++;
+    if (tokens[i][0] == ']') i++;
 }
 
 json pbrt_to_json(const std::string& filename) {
@@ -262,6 +262,7 @@ scene* load_pbrt(const std::string& filename) {
         material* mat = nullptr;
         material* light_mat = nullptr;
         float focus = 1;
+        bool reverse = false;
     };
 
     // parse
@@ -275,6 +276,9 @@ scene* load_pbrt(const std::string& filename) {
     auto get_vec3f = [](const json& js) -> vec3f {
         if (js.is_number())
             return {js.get<float>(), js.get<float>(), js.get<float>()};
+        if (js.is_array() && js.size() == 1)
+            return {js.at(0).get<float>(), js.at(0).get<float>(),
+                js.at(0).get<float>()};
         if (js.is_array() && js.size() == 3)
             return {js.at(0).get<float>(), js.at(1).get<float>(),
                 js.at(2).get<float>()};
@@ -344,7 +348,7 @@ scene* load_pbrt(const std::string& filename) {
     auto get_vector_vec2f = [](const json& js) -> std::vector<vec2f> {
         if (!js.is_array() || js.size() % 2) {
             log_error("cannot handle vector<vec3f>");
-            return {}; 
+            return {};
         }
         auto vals = std::vector<vec2f>(js.size() / 2);
         for (auto i = 0; i < vals.size(); i++) {
@@ -363,12 +367,12 @@ scene* load_pbrt(const std::string& filename) {
 
     auto use_hierarchy = false;
     std::map<std::string, std::vector<shape*>> objects;
-    for(auto& jcmd : js) {
+    for (auto& jcmd : js) {
         auto cmd = jcmd.at("cmd").get<std::string>();
-        if(cmd == "ObjectInstance") {
+        if (cmd == "ObjectInstance") {
             use_hierarchy = true;
             break;
-        }       
+        }
     }
 
     auto lid = 0, sid = 0;
@@ -397,7 +401,9 @@ scene* load_pbrt(const std::string& filename) {
             auto m = get_mat3f(jcmd.at("values"));
             stack.back().frame =
                 stack.back().frame * inverse(lookat_frame(m.x, m.y, m.z, true));
-            stack.back().focus = length(m.x-m.y);
+            stack.back().focus = length(m.x - m.y);
+        } else if (cmd == "ReverseOrientation") {
+            stack.back().reverse = !stack.back().reverse;
         } else if (cmd == "Film") {
             if (scn->cameras.empty()) {
                 auto cam = new camera();
@@ -457,12 +463,12 @@ scene* load_pbrt(const std::string& filename) {
                         get_scaled_texture(jcmd.at("Ks"));
                 if (jcmd.count("Kt"))
                     std::tie(mat->kt, mat->kt_txt.txt) =
-                    get_scaled_texture(jcmd.at("Kt"));
+                        get_scaled_texture(jcmd.at("Kt"));
                 if (jcmd.count("opacity")) {
-                    auto op = vec3f{0,0,0};
+                    auto op = vec3f{0, 0, 0};
                     auto op_txt = (texture*)nullptr;
                     std::tie(op, op_txt) =
-                    get_scaled_texture(jcmd.at("opacity"));
+                        get_scaled_texture(jcmd.at("opacity"));
                     mat->op = (op.x + op.y + op.z) / 3;
                     mat->op_txt.txt = op_txt;
                 }
@@ -557,37 +563,46 @@ scene* load_pbrt(const std::string& filename) {
             } else if (type == "sphere") {
                 shp->name = "sphere" + std::to_string(sid++);
                 auto radius = 1.0f;
-                if(jcmd.count("radius"))
+                if (jcmd.count("radius"))
                     radius = jcmd.at("radius").get<float>();
-                make_sphere(shp->quads, shp->pos, shp->norm, shp->texcoord, {64, 32}, 2*radius, {1,1});
+                make_sphere(shp->quads, shp->pos, shp->norm, shp->texcoord,
+                    {64, 32}, 2 * radius, {1, 1});
             } else if (type == "disk") {
                 shp->name = "disk" + std::to_string(sid++);
                 auto radius = 1.0f;
-                if(jcmd.count("radius"))
+                if (jcmd.count("radius"))
                     radius = jcmd.at("radius").get<float>();
-                make_disk(shp->quads, shp->pos, shp->norm, shp->texcoord, {32, 16}, 2*radius, {1,1});
+                make_disk(shp->quads, shp->pos, shp->norm, shp->texcoord,
+                    {32, 16}, 2 * radius, {1, 1});
             } else {
                 log_error("{} shape not supported", type);
             }
-            auto scl = vec3f{length(shp->frame.x),length(shp->frame.y),length(shp->frame.z)};
-            for(auto& p : shp->pos) p *= scl;
-            shp->frame = {normalize(shp->frame.x),normalize(shp->frame.y),normalize(shp->frame.z),shp->frame.o};
+            auto scl = vec3f{length(shp->frame.x), length(shp->frame.y),
+                length(shp->frame.z)};
+            for (auto& p : shp->pos) p *= scl;
+            shp->frame = {normalize(shp->frame.x), normalize(shp->frame.y),
+                normalize(shp->frame.z), shp->frame.o};
+            if (stack.back().reverse) {
+                for (auto& t : shp->triangles) std::swap(t.y, t.z);
+                for (auto& q : shp->quads) std::swap(q.y, q.w);
+            }
             scn->shapes.push_back(shp);
-            if(cur_object != "") objects[cur_object].push_back(shp);
-            if(use_hierarchy && cur_object == "") {
+            if (cur_object != "") objects[cur_object].push_back(shp);
+            if (use_hierarchy && cur_object == "") {
                 auto nde = new node();
                 nde->name = shp->name;
                 nde->local = shp->frame;
                 nde->shp = shp;
             }
         } else if (cmd == "ObjectInstance") {
-            static auto instances = std::map<std::string, int>(); 
+            static auto instances = std::map<std::string, int>();
             auto name = jcmd.at("name").get<std::string>();
             auto& object = objects.at(name);
-            for(auto shp : object) {
+            for (auto shp : object) {
                 instances[shp->name] += 1;
                 auto nde = new node();
-                nde->name = shp->name + "_ist" + std::to_string(instances[shp->name]);
+                nde->name =
+                    shp->name + "_ist" + std::to_string(instances[shp->name]);
                 nde->local = stack.back().frame;
                 nde->shp = shp;
                 scn->nodes.push_back(nde);
@@ -606,11 +621,12 @@ scene* load_pbrt(const std::string& filename) {
             if (type == "infinite") {
                 auto env = new environment();
                 env->name = "env" + std::to_string(lid++);
-                // env->frame = frame3f{{1,0,0},{0,0,-1},{0,-1,0},{0,0,0}} * stack.back().frame;
-                env->frame = stack.back().frame * frame3f{ {0,0,1}, {0,1,0}, {1,0,0}, {0,0,0} };
+                // env->frame = frame3f{{1,0,0},{0,0,-1},{0,-1,0},{0,0,0}} *
+                // stack.back().frame;
+                env->frame = stack.back().frame * frame3f{{0, 0, 1}, {0, 1, 0},
+                                                      {1, 0, 0}, {0, 0, 0}};
                 env->ke = {1, 1, 1};
-                if(jcmd.count("scale"))
-                    env->ke *= get_vec3f(jcmd.at("scale"));
+                if (jcmd.count("scale")) env->ke *= get_vec3f(jcmd.at("scale"));
                 if (jcmd.count("mapname")) {
                     auto txt = new texture();
                     txt->path = jcmd.at("mapname").get<std::string>();
@@ -619,28 +635,27 @@ scene* load_pbrt(const std::string& filename) {
                     env->ke_txt.txt = txt;
                 }
                 scn->environments.push_back(env);
-            } else if(type == "distant") {
+            } else if (type == "distant") {
                 auto distant_dist = 100;
                 auto shp = new shape();
                 shp->name = "distant" + std::to_string(lid++);
-                auto from = vec3f{0,0,0}, to = vec3f{0,0,0};
-                if(jcmd.count("from"))
-                    from = get_vec3f(jcmd.at("from"));
-                if(jcmd.count("to"))
-                    to = get_vec3f(jcmd.at("to"));
+                auto from = vec3f{0, 0, 0}, to = vec3f{0, 0, 0};
+                if (jcmd.count("from")) from = get_vec3f(jcmd.at("from"));
+                if (jcmd.count("to")) to = get_vec3f(jcmd.at("to"));
                 auto dir = normalize(from - to);
-                shp->frame = stack.back().frame * lookat_frame(dir * distant_dist, zero3f, {0,1,0}, true);
+                shp->frame =
+                    stack.back().frame *
+                    lookat_frame(dir * distant_dist, zero3f, {0, 1, 0}, true);
                 auto size = distant_dist * sin(5 * pif / 180);
-                make_quad(shp->quads, shp->pos, shp->norm, shp->texcoord, {1,1}, {size,size}, {1,1});
+                make_quad(shp->quads, shp->pos, shp->norm, shp->texcoord,
+                    {1, 1}, {size, size}, {1, 1});
                 scn->shapes.push_back(shp);
                 auto mat = new material();
                 mat->name = shp->name;
-                mat->ke = {1,1,1};
-                if(jcmd.count("L"))
-                    mat->ke *= get_vec3f(jcmd.at("L"));
-                if(jcmd.count("scale"))
-                    mat->ke *= get_vec3f(jcmd.at("scale"));
-                mat->ke *= (distant_dist * distant_dist) / (size*size);
+                mat->ke = {1, 1, 1};
+                if (jcmd.count("L")) mat->ke *= get_vec3f(jcmd.at("L"));
+                if (jcmd.count("scale")) mat->ke *= get_vec3f(jcmd.at("scale"));
+                mat->ke *= (distant_dist * distant_dist) / (size * size);
                 shp->groups.push_back({"", mat, false});
                 scn->materials.push_back(mat);
                 log_error("distant light not properly supported", type);
@@ -666,15 +681,15 @@ scene* load_pbrt(const std::string& filename) {
             log_error("{} command not supported", cmd);
         }
     }
-    if(use_hierarchy) {
-        for(auto cam : scn->cameras) {
+    if (use_hierarchy) {
+        for (auto cam : scn->cameras) {
             auto nde = new node();
             nde->name = cam->name;
             nde->local = cam->frame;
             nde->cam = cam;
             scn->nodes.insert(scn->nodes.begin(), nde);
         }
-        for(auto env : scn->environments) {
+        for (auto env : scn->environments) {
             auto nde = new node();
             nde->name = env->name;
             nde->local = env->frame;
