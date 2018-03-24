@@ -261,6 +261,7 @@ scene* load_pbrt(const std::string& filename) {
         frame3f frame = identity_frame3f;
         material* mat = nullptr;
         material* light_mat = nullptr;
+        float focus = 1;
     };
 
     // parse
@@ -396,6 +397,7 @@ scene* load_pbrt(const std::string& filename) {
             auto m = get_mat3f(jcmd.at("values"));
             stack.back().frame =
                 stack.back().frame * inverse(lookat_frame(m.x, m.y, m.z, true));
+            stack.back().focus = length(m.x-m.y);
         } else if (cmd == "Film") {
             if (scn->cameras.empty()) {
                 auto cam = new camera();
@@ -413,6 +415,7 @@ scene* load_pbrt(const std::string& filename) {
             // scn->cameras.back()->frame = stack.back().frame;
             scn->cameras.back()->frame = inverse(stack.back().frame);
             scn->cameras.back()->frame.z = -scn->cameras.back()->frame.z;
+            scn->cameras.back()->focus = stack.back().focus;
             auto type = jcmd.at("type").get<std::string>();
             if (type == "perspective") {
                 scn->cameras.back()->yfov =
