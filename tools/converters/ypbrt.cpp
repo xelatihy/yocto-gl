@@ -117,7 +117,10 @@ json pbrt_to_json(const std::string& filename) {
     }
     pbrt = npbrt;
     auto re = std::regex("\"(\\w+)\\s+(\\w+)\"");
-    auto tokens = split(std::regex_replace(pbrt, re, "\"$1|$2\""));
+    pbrt = std::regex_replace(pbrt, re, "\"$1|$2\"");
+    pbrt = std::regex_replace(pbrt, std::regex("\\["), " [ ");
+    pbrt = std::regex_replace(pbrt, std::regex("\\]"), " ] ");
+    auto tokens = split(pbrt);
     auto js = json::array();
     auto i = 0;
     while (i < tokens.size()) {
@@ -151,7 +154,7 @@ json pbrt_to_json(const std::string& filename) {
         } else if (tok == "WorldBegin" || tok == "AttributeBegin" ||
                    tok == "TransformBegin" || tok == "WorldEnd" ||
                    tok == "AttributeEnd" || tok == "TransformEnd" ||
-                   tok == "ObjectEnd") {
+                   tok == "ObjectEnd" || tok == "ReverseOrientation") {
         } else {
             throw std::runtime_error("unsupported command " + tok);
         }
@@ -176,7 +179,7 @@ void load_ply(const std::string& filename, std::vector<vec3i>& triangles,
     while (fgets(buf, 4096, f)) {
         auto line = std::string(buf);
         auto toks = split(line);
-        if (toks[0] == "ply") {
+        if (toks[0] == "ply" || toks[0] == "comment") {
         } else if (toks[0] == "end_header") {
             break;
         } else if (toks[0] == "format") {
@@ -200,8 +203,13 @@ void load_ply(const std::string& filename, std::vector<vec3i>& triangles,
                     throw std::runtime_error("bad ply vertex property");
                 vertex_pos[toks[2]] = vert_size++;
             } else if (toks[1] == "list") {
-                if (!in_faces || toks[2] != "uint8" || toks[3] != "int" ||
-                    toks[4] != "vertex_indices")
+                if (!in_faces)
+                    throw std::runtime_error("bad ply face property");
+                if (toks[2] != "uint8" && toks[2] != "uchar")
+                    throw std::runtime_error("bad ply face property");
+                if (toks[3] != "int")
+                    throw std::runtime_error("bad ply face property");
+                if (toks[4] != "vertex_indices")
                     throw std::runtime_error("bad ply face property");
             } else {
                 throw std::runtime_error("bad ply property");
@@ -351,6 +359,16 @@ scene* load_pbrt(const std::string& filename) {
             return {{1, 1, 1}, txt_map.at(js.get<std::string>())};
         return {get_vec3f(js), nullptr};
     };
+
+    auto use_hierarchy = false;
+    std::map<std::string, std::vector<shape*>> objects;
+    for(auto& jcmd : js) {
+        auto cmd = jcmd.at("cmd").get<std::string>();
+        if(cmd == "ObjectInstance") {
+            use_hierarchy = true;
+            break;
+        }       
+    }
 
     auto lid = 0, sid = 0;
     for (auto& jcmd : js) {
@@ -513,7 +531,6 @@ scene* load_pbrt(const std::string& filename) {
             }
         } else if (cmd == "Shape") {
             auto shp = new shape();
-            scn->shapes.push_back(shp);
             shp->frame = stack.back().frame;
             if (stack.back().mat) {
                 shp->groups.push_back({});
@@ -551,6 +568,13 @@ scene* load_pbrt(const std::string& filename) {
             auto scl = vec3f{length(shp->frame.x),length(shp->frame.y),length(shp->frame.z)};
             for(auto& p : shp->pos) p *= scl;
             shp->frame = {normalize(shp->frame.x),normalize(shp->frame.y),normalize(shp->frame.z),shp->frame.o};
+            scn->shapes.push_back(shp);
+            if(use_hierarchy) {
+                auto nde = new node();
+                nde->name = shp->name;
+                nde->local = shp->frame;
+                nde->shp = shp;
+            }
         } else if (cmd == "AreaLightSource") {
             auto type = jcmd.at("type").get<std::string>();
             if (type == "diffuse") {
@@ -565,7 +589,8 @@ scene* load_pbrt(const std::string& filename) {
             if (type == "infinite") {
                 auto env = new environment();
                 env->name = "env" + std::to_string(lid++);
-                env->frame = frame3f{{1,0,0},{0,0,-1},{0,-1,0},{0,0,0}} * stack.back().frame;
+                // env->frame = frame3f{{1,0,0},{0,0,-1},{0,-1,0},{0,0,0}} * stack.back().frame;
+                env->frame = stack.back().frame * frame3f{ {0,0,1}, {0,1,0}, {1,0,0}, {0,0,0} };
                 env->ke = {1, 1, 1};
                 if(jcmd.count("scale"))
                     env->ke *= get_vec3f(jcmd.at("scale"));
@@ -616,6 +641,22 @@ scene* load_pbrt(const std::string& filename) {
             stack.pop_back();
         } else {
             log_error("{} command not supported", cmd);
+        }
+    }
+    if(use_hierarchy) {
+        for(auto cam : scn->cameras) {
+            auto nde = new node();
+            nde->name = cam->name;
+            nde->local = cam->frame;
+            nde->cam = cam;
+            scn->nodes.insert(scn->nodes.begin(), nde);
+        }
+        for(auto env : scn->environments) {
+            auto nde = new node();
+            nde->name = env->name;
+            nde->local = env->frame;
+            nde->env = env;
+            scn->nodes.push_back(nde);
         }
     }
     return scn;
