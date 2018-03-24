@@ -371,6 +371,7 @@ scene* load_pbrt(const std::string& filename) {
     }
 
     auto lid = 0, sid = 0;
+    auto cur_object = ""s;
     for (auto& jcmd : js) {
         auto cmd = jcmd.at("cmd").get<std::string>();
         if (cmd == "Integrator" || cmd == "Sampler" || cmd == "PixelFilter") {
@@ -569,11 +570,24 @@ scene* load_pbrt(const std::string& filename) {
             for(auto& p : shp->pos) p *= scl;
             shp->frame = {normalize(shp->frame.x),normalize(shp->frame.y),normalize(shp->frame.z),shp->frame.o};
             scn->shapes.push_back(shp);
-            if(use_hierarchy) {
+            if(cur_object != "") objects[cur_object].push_back(shp);
+            if(use_hierarchy && cur_object == "") {
                 auto nde = new node();
                 nde->name = shp->name;
                 nde->local = shp->frame;
                 nde->shp = shp;
+            }
+        } else if (cmd == "ObjectInstance") {
+            static auto instances = std::map<std::string, int>(); 
+            auto name = jcmd.at("name").get<std::string>();
+            auto& object = objects.at(name);
+            for(auto shp : object) {
+                instances[shp->name] += 1;
+                auto nde = new node();
+                nde->name = shp->name + "_ist" + std::to_string(instances[shp->name]);
+                nde->local = stack.back().frame;
+                nde->shp = shp;
+                scn->nodes.push_back(nde);
             }
         } else if (cmd == "AreaLightSource") {
             auto type = jcmd.at("type").get<std::string>();
@@ -634,6 +648,12 @@ scene* load_pbrt(const std::string& filename) {
             stack.push_back(stack_item());
         } else if (cmd == "AttributeBegin") {
             stack.push_back(stack.back());
+        } else if (cmd == "ObjectBegin") {
+            auto name = jcmd.at("name").get<std::string>();
+            cur_object = name;
+            objects[name] = {};
+        } else if (cmd == "ObjectEnd") {
+            cur_object = "";
         } else if (cmd == "TransformBegin") {
             stack.push_back(stack.back());
         } else if (cmd == "WorldEnd" || cmd == "AttributeEnd" ||

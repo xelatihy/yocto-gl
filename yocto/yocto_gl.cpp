@@ -5968,7 +5968,7 @@ obj_scene* scene_to_obj(const scene* scn) {
     }
 
     // convert hierarchy
-    if (!obj->nodes.empty()) {
+    if (!scn->nodes.empty()) {
         for (auto nde : scn->nodes) {
             auto onde = new obj_node();
             onde->name = nde->name;
