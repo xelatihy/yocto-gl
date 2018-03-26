@@ -727,10 +727,19 @@ int main(int argc, char** argv) {
     auto scn = load_pbrt(filename);
     if(flipyz) flipyz_scene(scn);
 
+    // validate
+    validate(scn, true);
+
+    // add paths for meshes
+    for(auto shp : scn->shapes) {
+        shp->path = "models/" + shp->name + ".bin";
+    }
+
     // save scene
     system(("mkdir -p " + path_dirname(outfilename)).c_str());
     auto opts = save_options();
     opts.save_textures = false;
+    opts.gltf_separate_buffers = true;
     save_scene(outfilename, scn, opts);
 
     return 0;
