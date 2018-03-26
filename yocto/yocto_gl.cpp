@@ -6530,7 +6530,7 @@ glTF* scene_to_gltf(
                     new glTFMaterialPbrSpecularGlossiness();
                 auto gsg = gmat->pbrSpecularGlossiness;
                 gsg->diffuseFactor = {
-                    mat->kd[0], mat->kd[1], mat->kd[2], mat->op};
+                    mat->kd.x, mat->kd.y, mat->kd.z, mat->op};
                 gsg->specularFactor = mat->ks;
                 gsg->glossinessFactor = 1 - mat->rs;
                 gsg->diffuseTexture = add_texture_info(mat->kd_txt);
