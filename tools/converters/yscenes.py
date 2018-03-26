@@ -32,7 +32,7 @@ def run():
 @run.command()
 @click.argument('dirname', required=True)
 @click.argument('scene', required=False, default='*')
-def convert(dirname, scene):
+def convert(dirname, scene='*'):
     tungsten = dirname in ['bitterli']
     pbrt = dirname in ['bitterli_pbrt', 'pbrt']
     ext = 'json' if tungsten else 'pbrt'
@@ -45,11 +45,16 @@ def convert(dirname, scene):
         srcdir = os.path.dirname(filename)
         basename = os.path.basename(filename)
         outdir = srcdir.replace('original','yocto')
-        outname = basename.replace('.'+ext,'.obj')
+        objname = basename.replace('.'+ext,f'.obj')
+        gltfname = basename.replace('.'+ext,f'.gltf')
+        # options = '' if 'ecosys' not in srcdir else '--flipyz'
+        options = ''
         if tungsten:
-            run_cmd(f'../yocto-gl/bin/ytungsten {srcdir}/{basename} -o {outdir}/{outname}')
+            run_cmd(f'../yocto-gl/bin/ytungsten {srcdir}/{basename} -o {outdir}/{objname}')
+            run_cmd(f'../yocto-gl/bin/ytungsten {srcdir}/{basename} -o {outdir}/{gltfname}')
         if pbrt:
-            run_cmd(f'../yocto-gl/bin/ypbrt {srcdir}/{basename} -o {outdir}/{outname}')
+            run_cmd(f'../yocto-gl/bin/ypbrt {options} {srcdir}/{basename} -o {outdir}/{objname}')
+            run_cmd(f'../yocto-gl/bin/ypbrt {options} {srcdir}/{basename} -o {outdir}/{gltfname}')
         if os.path.exists(f'{srcdir}/textures'):
             run_cmd(f'cp -r {srcdir}/textures {outdir}/')
         if os.path.exists(f'{srcdir}/LICENSE.txt'):
@@ -59,34 +64,37 @@ def convert(dirname, scene):
             run_cmd(f'../yocto-gl/bin/yimproc -o {out_imfilename} {imfilename}')
 
 @run.command()
+@click.option('--format', '-F', default='obj', type=click.Choice(['obj','gltf']))
 @click.argument('dirname', required=True)
 @click.argument('scene', required=False, default='*')
-def view(dirname, scene='*'):
-    for filename in get_filenames(f'{dirname}/yocto', scene, f'*.obj'):
+def view(dirname, scene='*', format='obj'):
+    for filename in get_filenames(f'{dirname}/yocto', scene, f'*.{format}'):
         run_cmd(f'../yocto-gl/bin/yview -D --eyelight {filename}')
 
 @run.command()
+@click.option('--format', '-F', default='obj', type=click.Choice(['obj','gltf']))
 @click.argument('dirname', required=True)
 @click.argument('scene', required=False, default='*')
-def trace(dirname, scene='*'):
-    for filename in get_filenames(f'{dirname}/yocto', scene, f'*.obj'):
+def trace(dirname, scene='*', format='obj'):
+    for filename in get_filenames(f'{dirname}/yocto', scene, f'*.{format}'):
         run_cmd(f'../yocto-gl/bin/yitrace -D {filename}')
 
 @run.command()
-@click.argument('dirname', required=True)
 @click.option('--resolution', '-r', default=720, type=int)
 @click.option('--samples', '-s', default=64, type=int)
 @click.option('--filter', '-f', default='box', type=str)
 @click.option('--progressive', '-p', is_flag=True, default=False, type=bool)
+@click.option('--format', '-F', default='obj', type=click.Choice(['obj','gltf']))
+@click.argument('dirname', required=True)
 @click.argument('scene', required=False, default='*')
-def render(dirname, scene='*',samples=64,resolution=720,filter='box',progressive=False):
-    for filename in get_filenames(f'{dirname}/yocto', scene, f'*.obj'):
+def render(dirname, scene='*', format='obj', samples=64, resolution=720, filter='box', progressive=False):
+    for filename in get_filenames(f'{dirname}/yocto', scene, f'*.{format}'):
         outdir = os.path.dirname(filename).replace('/yocto','/render')
         if os.path.exists(f'{outdir}'):
-            run_cmd(f'rm {outdir}/*.exr')
+            run_cmd(f'rm {outdir}/*.{format}.exr')
         else:
             run_cmd(f'mkdir -p {outdir}')
-        outname = filename.replace('.obj','.exr').replace('/yocto','/render')
+        outname = filename.replace('/yocto','/render')+'.exr'
         save_batch = '--save-batch' if progressive else ''
         run_cmd(f'../yocto-gl/bin/ytrace -D -r {resolution} -s {samples} --filter {filter} {save_batch} -o {outname} {filename}')
 

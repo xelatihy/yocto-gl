@@ -700,10 +700,20 @@ scene* load_pbrt(const std::string& filename) {
     return scn;
 }
 
+void flipyz_scene(scene* scn) {
+    // flip meshes
+    for(auto shp : scn->shapes) {
+        for(auto& p : shp->pos) std::swap(p.y,p.z);
+        for(auto& n : shp->norm) std::swap(n.y,n.z);
+        shp->frame = shp->frame * frame3f{{1,0,0},{0,0,1},{0,1,0},{0,0,0}};
+    }
+}
+
 int main(int argc, char** argv) {
     // parse command line
     auto parser =
         ygl::make_parser(argc, argv, "ypbrt", "convert pbrt files to yocto");
+    auto flipyz = ygl::parse_flag(parser, "--flipyz", "", "flip y and z axes");
     auto outfilename = ygl::parse_opt(
         parser, "--output", "-o", "output scene filename", "out.obj"s);
     auto filename =
@@ -715,6 +725,7 @@ int main(int argc, char** argv) {
 
     // load image
     auto scn = load_pbrt(filename);
+    if(flipyz) flipyz_scene(scn);
 
     // save scene
     system(("mkdir -p " + path_dirname(outfilename)).c_str());
