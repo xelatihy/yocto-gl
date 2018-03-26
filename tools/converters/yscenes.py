@@ -49,6 +49,7 @@ def convert(dirname, scene='*'):
         gltfname = basename.replace('.'+ext,f'.gltf')
         # options = '' if 'ecosys' not in srcdir else '--flipyz'
         options = ''
+        run_cmd(f'mkdir -p {outdir}/models')
         if tungsten:
             run_cmd(f'../yocto-gl/bin/ytungsten {srcdir}/{basename} -o {outdir}/{objname}')
             run_cmd(f'../yocto-gl/bin/ytungsten {srcdir}/{basename} -o {outdir}/{gltfname}')

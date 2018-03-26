@@ -5140,6 +5140,7 @@ bbox3f compute_bounds(const scene* scn, bool skip_emitting) {
         }
         auto bbox = invalid_bbox3f;
         for (auto nde : scn->nodes) {
+            if (!nde->shp) continue;
             if (skip_emitting && has_emission(nde->shp)) continue;
             bbox += transform_bbox(nde->frame_ * inverse(nde->shp->frame),
                 shape_bboxes.at(nde->shp));
