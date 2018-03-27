@@ -261,7 +261,7 @@ scene* load_pbrt(const std::string& filename) {
         frame3f frame = identity_frame3f;
         material* mat = nullptr;
         material* light_mat = nullptr;
-        float focus = 1;
+        float focus = 1, aspect = 1;
         bool reverse = false;
     };
 
@@ -375,7 +375,7 @@ scene* load_pbrt(const std::string& filename) {
         }
     }
 
-    auto lid = 0, sid = 0;
+    auto lid = 0, sid = 0, cid = 0;
     auto cur_object = ""s;
     for (auto& jcmd : js) {
         auto cmd = jcmd.at("cmd").get<std::string>();
@@ -405,30 +405,23 @@ scene* load_pbrt(const std::string& filename) {
         } else if (cmd == "ReverseOrientation") {
             stack.back().reverse = !stack.back().reverse;
         } else if (cmd == "Film") {
-            if (scn->cameras.empty()) {
-                auto cam = new camera();
-                cam->name = "cam";
-                scn->cameras.push_back(cam);
-            }
-            scn->cameras.back()->aspect = jcmd.at("xresolution").get<float>() /
-                                          jcmd.at("yresolution").get<float>();
+            stack.back().aspect =   jcmd.at("xresolution").get<float>() /
+                                    jcmd.at("yresolution").get<float>();
         } else if (cmd == "Camera") {
-            if (scn->cameras.empty()) {
-                auto cam = new camera();
-                cam->name = "cam";
-                scn->cameras.push_back(cam);
-            }
-            // scn->cameras.back()->frame = stack.back().frame;
-            scn->cameras.back()->frame = inverse(stack.back().frame);
-            scn->cameras.back()->frame.z = -scn->cameras.back()->frame.z;
-            scn->cameras.back()->focus = stack.back().focus;
+            auto cam = new camera();
+            cam->name = "cam" + std::to_string(cid++);
+            cam->frame = inverse(stack.back().frame);
+            cam->frame.z = -cam->frame.z;
+            cam->focus = stack.back().focus;
+            cam->aspect = stack.back().aspect;
             auto type = jcmd.at("type").get<std::string>();
             if (type == "perspective") {
-                scn->cameras.back()->yfov =
+                cam->yfov =
                     jcmd.at("fov").get<float>() * pif / 180;
             } else {
                 log_error("{} camera not supported", type);
             }
+            scn->cameras.push_back(cam);
         } else if (cmd == "Texture") {
             auto txt = new texture();
             scn->textures.push_back(txt);
