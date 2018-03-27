@@ -29,32 +29,6 @@
 #include "../yocto/yocto_gl.h"
 using namespace std::literals;
 
-// Load hdr
-ygl::image4f load_hdr(const std::string& filename) {
-    auto img = ygl::load_image4f(filename);
-    if (img.empty()) ygl::log_fatal("cannot load image {}", filename);
-    return img;
-}
-
-// Load ldr
-ygl::image4b load_ldr(const std::string& filename) {
-    auto img = ygl::load_image4b(filename);
-    if (img.empty()) ygl::log_fatal("cannot load image {}", filename);
-    return img;
-}
-
-// Save hdr
-void save_hdr(const std::string& filename, const ygl::image4f& img) {
-    if (!save_image4f(filename, img))
-        ygl::log_fatal("cannot save image {}", filename);
-}
-
-// Save ldr
-void save_ldr(const std::string& filename, const ygl::image4b& img) {
-    if (!save_image4b(filename, img))
-        ygl::log_fatal("cannot save image {}", filename);
-}
-
 // Resize image.
 template <typename Image>
 Image resize_image(const Image& img, int res_width, int res_height) {
@@ -170,20 +144,98 @@ ygl::image4f filter_bilateral(
     return filtered;
 }
 
+// Merge alpha from one image onto the other.
+template <typename T>
+void set_alpha(ygl::image<T>& img, const ygl::image<T>& alpha) {
+    for (auto j = 0; j < img.height(); j++) {
+        for (auto i = 0; i < img.width(); i++) {
+            img.at(i, j).w = alpha.at(i, j).w;
+        }
+    }
+}
+
+// Set alpha from color.
+void set_color_as_alpha(ygl::image4b& img, const ygl::image4b& alpha) {
+    for (auto j = 0; j < img.height(); j++) {
+        for (auto i = 0; i < img.width(); i++) {
+            auto& p = alpha.at(i, j);
+            img.at(i, j).w = (uint8_t)ygl::clamp(
+                ((int)p.x + (int)p.y + (int)p.z) / 3, 0, 255);
+        }
+    }
+}
+
+// Set alpha from color.
+void set_color_as_alpha(ygl::image4f& img, const ygl::image4f& alpha) {
+    for (auto j = 0; j < img.height(); j++) {
+        for (auto i = 0; i < img.width(); i++) {
+            auto& p = alpha.at(i, j);
+            img.at(i, j).w = (p.x + p.y + p.z) / 3;
+        }
+    }
+}
+
+void multiply(ygl::image4f& img, const ygl::vec4f& scl) {
+    for (auto j = 0; j < img.height(); j++) {
+        for (auto i = 0; i < img.width(); i++) { img.at(i, j) *= scl; }
+    }
+}
+
+void multiply(ygl::image4b& img, const ygl::vec4f& scl) {
+    for (auto j = 0; j < img.height(); j++) {
+        for (auto i = 0; i < img.width(); i++) {
+            img.at(i, j) = linear_to_srgb(srgb_to_linear(img.at(i, j)) * scl);
+        }
+    }
+}
+
+std::pair<ygl::image4b, ygl::image4f> load_image(
+    const std::string& filename, const ygl::tonemap_params& tonemap) {
+    auto hdr = ygl::image4f();
+    auto ldr = ygl::image4b();
+    if (ygl::is_hdr_filename(filename)) {
+        hdr = ygl::load_image4f(filename);
+        ldr = ygl::tonemap_image(hdr, tonemap);
+    } else {
+        ldr = ygl::load_image4b(filename);
+        hdr = srgb_to_linear(ldr);
+    }
+    if (ldr.empty() || hdr.empty())
+        ygl::log_fatal("cannot load image {}", filename);
+    return {ldr, hdr};
+}
+
+void save_image(const std::string& filename, const ygl::image4b& ldr,
+    const ygl::image4f& hdr) {
+    if (ygl::is_hdr_filename(filename)) {
+        if (!save_image4f(filename, hdr))
+            ygl::log_fatal("cannot save image {}", filename);
+    } else {
+        if (!save_image4b(filename, ldr))
+            ygl::log_fatal("cannot save image {}", filename);
+    }
+}
+
 int main(int argc, char* argv[]) {
     // command line params
     auto parser = ygl::make_parser(argc, argv, "yimproc", "process images");
     auto tonemap = ygl::parse_params(parser, "", ygl::tonemap_params());
-    auto width = ygl::parse_opt(
-        parser, "--width", "-w", "width (0 to maintain aspect)", 0);
-    auto height = ygl::parse_opt(
-        parser, "--height", "-h", "height (0 to maintain aspect)", 0);
+    auto resize_width = ygl::parse_opt(
+        parser, "--resize-width", "-w", "width (0 to maintain aspect)", 0);
+    auto resize_height = ygl::parse_opt(
+        parser, "--resize-height", "-h", "height (0 to maintain aspect)", 0);
+    auto multiply_color = ygl::parse_opt(parser, "--multiply-color", "",
+        "multiply b y this color", ygl::vec4f{1, 1, 1, 1});
     auto spatial_sigma = ygl::parse_opt(
         parser, "--spatial-sigma", "-s", "blur spatial sigma", 0.0f);
     auto range_sigma = ygl::parse_opt(
         parser, "--range-sigma", "-r", "bilateral blur range sigma", 0.0f);
-    auto output =
-        ygl::parse_opt(parser, "--output", "-o", "output image filename", ""s);
+    auto set_alpha_filename = ygl::parse_opt(
+        parser, "--set-alpha", "", "set alpha as this image alpha", ""s);
+    auto set_color_as_alpha_filename = ygl::parse_opt(parser,
+        "--set-color-as-alpha", "", "set alpha as this image color", ""s);
+    auto output = ygl::parse_opt(
+        parser, "--output", "-o", "output image filename", ""s, true);
     auto filename =
         ygl::parse_arg(parser, "filename", "input image filename", ""s);
     // check parsing
@@ -195,18 +247,44 @@ int main(int argc, char* argv[]) {
     // load
     auto hdr = ygl::image4f();
     auto ldr = ygl::image4b();
-    if (ygl::is_hdr_filename(filename)) {
-        hdr = load_hdr(filename);
-        ldr = ygl::tonemap_image(hdr, tonemap);
-    } else {
-        ldr = load_ldr(filename);
-        hdr = srgb_to_linear(ldr);
+    std::tie(ldr, hdr) = load_image(filename, tonemap);
+
+    // set alpha
+    if (set_alpha_filename != "") {
+        auto alpha_hdr = ygl::image4f();
+        auto alpha_ldr = ygl::image4b();
+        std::tie(alpha_ldr, alpha_hdr) =
+            load_image(set_alpha_filename, tonemap);
+        if (ldr.width() != alpha_ldr.width() ||
+            ldr.height() != alpha_ldr.height())
+            ygl::log_fatal("bad image size");
+        set_alpha(hdr, alpha_hdr);
+        set_alpha(ldr, alpha_ldr);
+    }
+
+    // set alpha
+    if (set_color_as_alpha_filename != "") {
+        auto alpha_hdr = ygl::image4f();
+        auto alpha_ldr = ygl::image4b();
+        std::tie(alpha_ldr, alpha_hdr) =
+            load_image(set_color_as_alpha_filename, tonemap);
+        if (ldr.width() != alpha_ldr.width() ||
+            ldr.height() != alpha_ldr.height())
+            ygl::log_fatal("bad image size");
+        set_color_as_alpha(hdr, alpha_hdr);
+        set_color_as_alpha(ldr, alpha_ldr);
+    }
+
+    // multiply
+    if (multiply_color != ygl::vec4f{1, 1, 1, 1}) {
+        multiply(ldr, multiply_color);
+        multiply(hdr, multiply_color);
     }
 
     // resize
-    if (width || height) {
-        hdr = resize_image(hdr, width, height);
-        ldr = resize_image(ldr, width, height);
+    if (resize_width || resize_height) {
+        hdr = resize_image(hdr, resize_width, resize_height);
+        ldr = resize_image(ldr, resize_width, resize_height);
     }
 
     // bilateral
@@ -216,11 +294,7 @@ int main(int argc, char* argv[]) {
     }
 
     // save
-    if (ygl::is_hdr_filename(output)) {
-        ygl::save_image4f(output, hdr);
-    } else {
-        ygl::save_image4b(output, ldr);
-    }
+    save_image(output, ldr, hdr);
 
     // done
     return 0;

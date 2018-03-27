@@ -5035,7 +5035,8 @@ void add_hierarchy(scene* scn) {
 }
 
 // Checks for validity of the scene.
-std::vector<std::string> validate(const scene* scn, bool log_as_warning) {
+std::vector<std::string> validate(
+    const scene* scn, bool skip_missing, bool log_as_warning) {
     auto errs = std::vector<std::string>();
     auto check_names = [&errs](const auto& vals, const std::string& base) {
         auto used = std::map<std::string, int>();
@@ -5047,7 +5048,7 @@ std::vector<std::string> validate(const scene* scn, bool log_as_warning) {
                 errs.push_back("duplicated " + base + " name " + kv.first);
         }
     };
-    auto check_textures = [&errs](const std::vector<texture*>& vals) {
+    auto check_empty_textures = [&errs](const std::vector<texture*>& vals) {
         for (auto val : vals) {
             if (val->ldr.empty() && val->hdr.empty())
                 errs.push_back("empty texture " + val->name);
@@ -5061,7 +5062,7 @@ std::vector<std::string> validate(const scene* scn, bool log_as_warning) {
     check_names(scn->environments, "environment");
     check_names(scn->nodes, "node");
     check_names(scn->animations, "animation");
-    check_textures(scn->textures);
+    if (!skip_missing) check_empty_textures(scn->textures);
 
     if (log_as_warning) {
         for (auto& err : errs) log_warning(err);
@@ -6530,8 +6531,7 @@ glTF* scene_to_gltf(
                 gmat->pbrSpecularGlossiness =
                     new glTFMaterialPbrSpecularGlossiness();
                 auto gsg = gmat->pbrSpecularGlossiness;
-                gsg->diffuseFactor = {
-                    mat->kd.x, mat->kd.y, mat->kd.z, mat->op};
+                gsg->diffuseFactor = {mat->kd.x, mat->kd.y, mat->kd.z, mat->op};
                 gsg->specularFactor = mat->ks;
                 gsg->glossinessFactor = 1 - mat->rs;
                 gsg->diffuseTexture = add_texture_info(mat->kd_txt);
@@ -11721,17 +11721,9 @@ std::vector<proc_camera*>& proc_camera_presets() {
     return presets;
 }
 
-std::vector<proc_split_scene*>& proc_split_scene_presets() {
-    static auto presets = std::vector<proc_split_scene*>();
+std::vector<proc_scene*>& proc_scene_presets() {
+    static auto presets = std::vector<proc_scene*>();
     if (!presets.empty()) return presets;
-
-    auto make_split_scene = [](proc_scene* scn,
-                                const std::vector<proc_scene*>& views) {
-        auto params = new proc_split_scene();
-        params->scn = scn;
-        params->views = views;
-        return params;
-    };
 
     auto make_scene = [](const std::string& name) {
         auto params = new proc_scene();
@@ -11786,223 +11778,237 @@ std::vector<proc_split_scene*>& proc_split_scene_presets() {
     };
 
     // textures
-    presets.push_back(make_split_scene(make_scene("textures"), {}));
+    presets.push_back(make_scene("textures"));
     for (auto txt : proc_texture_presets())
-        presets.back()->scn->textures.push_back(make_texture(txt->name));
+        presets.back()->textures.push_back(make_texture(txt->name));
 
     // shapes
-    presets.push_back(make_split_scene(make_scene("shapes"), {}));
+    presets.push_back(make_scene("shapes"));
     for (auto shp : proc_shape_presets())
-        presets.back()->scn->shapes.push_back(make_shape(shp->name, zero3f));
+        presets.back()->shapes.push_back(make_shape(shp->name, zero3f));
 
     // envmap
-    presets.push_back(make_split_scene(make_scene("envmaps"), {}));
+    presets.push_back(make_scene("envmaps"));
     for (auto env : proc_environment_presets())
-        presets.back()->scn->environments.push_back(
-            make_environment(env->name));
+        presets.back()->environments.push_back(make_environment(env->name));
 
     // simple scenes shared functions
-    auto make_simple_scene =
-        [&](const std::string& name, const std::vector<std::string>& shapes,
-            const std::vector<std::string>& mats, bool nodes = false,
-            const std::vector<std::string>& animations = {}) {
-            auto pos =
-                std::vector<vec3f>{{-2.50f, 1, 0}, {0, 1, 0}, {+2.50f, 1, 0}};
-            auto preset = make_split_scene(make_scene(name), {});
-            auto scn = preset->scn;
-            scn->cameras.push_back(make_camera("cam3"));
-            scn->materials.push_back(make_material("matte_floor"));
-            if (scn->materials.back()->texture != "")
-                scn->textures.push_back(
-                    make_texture(scn->materials.back()->texture));
-            scn->shapes.push_back(make_shape("floor", zero3f));
-            scn->shapes.back()->material = scn->materials.back()->name;
-            for (auto i = 0; i < shapes.size(); i++) {
-                auto name = "obj" + std::to_string(i + 1);
-                scn->materials.push_back(make_material(mats[i]));
-                scn->shapes.push_back(make_shape(shapes[i], pos[i]));
+    auto make_simple_scene = [&](const std::string& name,
+                                 const std::vector<std::string>& shapes,
+                                 const std::vector<std::string>& mats,
+                                 const std::string& lights, bool nodes = false,
+                                 const std::vector<std::string>& animations =
+                                     {}) {
+        auto pos =
+            std::vector<vec3f>{{-2.50f, 1, 0}, {0, 1, 0}, {+2.50f, 1, 0}};
+        auto scn = make_scene(name);
+        scn->cameras.push_back(make_camera("cam3"));
+        scn->materials.push_back(make_material("matte_floor"));
+        if (scn->materials.back()->texture != "")
+            scn->textures.push_back(
+                make_texture(scn->materials.back()->texture));
+        scn->shapes.push_back(make_shape("floor", zero3f));
+        scn->shapes.back()->material = scn->materials.back()->name;
+        for (auto i = 0; i < shapes.size(); i++) {
+            auto name = "obj" + std::to_string(i + 1);
+            scn->materials.push_back(make_material(mats[i]));
+            scn->shapes.push_back(make_shape(shapes[i], pos[i]));
+            scn->shapes.back()->name = name;
+            scn->shapes.back()->material = mats[i];
+            if (scn->shapes.back()->type == proc_shape_type::hairball ||
+                scn->shapes.back()->type == proc_shape_type::matball) {
+                scn->materials.push_back(make_material("matte_gray"));
+                scn->shapes.back()->interior = "matte_gray";
+            }
+            if (!animations.empty()) {
+                scn->animations.push_back(make_animation(animations[i]));
+                scn->animations.back()->nodes.push_back(name);
+            }
+        }
+
+        if (lights == "pointlights" || lights == "arealights" ||
+            lights == "arealights1") {
+            auto emission = 120;
+            auto shp = "point";
+            auto mat = "pointlight";
+            auto pos = std::vector<vec3f>{{-2, 10, 8}, {+2, 10, 8}};
+            auto scale = 1.0f;
+            if (lights == "arealights") {
+                emission = 8;
+                shp = "quad";
+                mat = "arealight";
+                pos = {{0, 16, 0}, {0, 16, 16}};
+                scale = 16;
+            }
+            if (lights == "arealights1") {
+                emission = 80;
+                shp = "quad";
+                mat = "arealight";
+                pos = {{-4, 5, 8}, {+4, 5, 8}};
+                scale = 4;
+            }
+            for (auto i = 0; i < 2; i++) {
+                auto name = "light" + std::to_string(i + 1);
+                scn->materials.push_back(make_material(mat));
+                scn->materials.back()->name = name;
+                scn->materials.back()->emission = emission;
+                scn->shapes.push_back(make_shape(shp, pos[i]));
                 scn->shapes.back()->name = name;
-                scn->shapes.back()->material = mats[i];
-                if (scn->shapes.back()->type == proc_shape_type::hairball ||
-                    scn->shapes.back()->type == proc_shape_type::matball) {
-                    scn->materials.push_back(make_material("matte_gray"));
-                    scn->shapes.back()->interior = "matte_gray";
-                }
-                if (!animations.empty()) {
-                    scn->animations.push_back(make_animation(animations[i]));
-                    scn->animations.back()->nodes.push_back(name);
-                }
+                scn->shapes.back()->material = name;
+                scn->shapes.back()->size = {scale, scale, scale};
+                if (lights == "arealights" || lights == "arealights1")
+                    scn->shapes.back()->frame =
+                        lookat_frame(pos[i], {0, 1, 0}, {0, 0, 1}, true);
             }
-
-            auto& views = preset->views;
-            for (auto lights :
-                {"pointlights"s, "arealights"s, "arealights1"s, "envlights"s}) {
-                auto view = make_scene(lights);
-                view->cameras.push_back(make_camera("cam3"));
-                if (lights == "pointlights" || lights == "arealights" ||
-                    lights == "arealights1") {
-                    auto emission = 120;
-                    auto shp = "point";
-                    auto mat = "pointlight";
-                    auto pos = std::vector<vec3f>{{-2, 10, 8}, {+2, 10, 8}};
-                    auto scale = 1.0f;
-                    if (lights == "arealights") {
-                        emission = 8;
-                        shp = "quad";
-                        mat = "arealight";
-                        pos = {{0, 16, 0}, {0, 16, 16}};
-                        scale = 16;
-                    }
-                    if (lights == "arealights1") {
-                        emission = 80;
-                        shp = "quad";
-                        mat = "arealight";
-                        pos = {{-4, 5, 8}, {+4, 5, 8}};
-                        scale = 4;
-                    }
-                    for (auto i = 0; i < 2; i++) {
-                        auto name = "light" + std::to_string(i + 1);
-                        view->materials.push_back(make_material(mat));
-                        view->materials.back()->name = name;
-                        view->materials.back()->emission = emission;
-                        view->shapes.push_back(make_shape(shp, pos[i]));
-                        view->shapes.back()->name = name;
-                        view->shapes.back()->material = name;
-                        view->shapes.back()->size = {scale, scale, scale};
-                        if (lights == "arealights" || lights == "arealights1")
-                            view->shapes.back()->frame = lookat_frame(
-                                pos[i], {0, 1, 0}, {0, 0, 1}, true);
-                    }
-                }
-                if (lights == "envlights") {
-                    view->environments.push_back(make_environment("sky1"));
-                    view->textures.push_back(make_texture("sky1"));
-                }
-                views.push_back(view);
+        }
+        if (lights == "envlights") {
+            scn->environments.push_back(make_environment("sky1"));
+            scn->textures.push_back(make_texture("sky1"));
+        }
+        if (!animations.empty() || nodes) {
+            for (auto cam : scn->cameras) {
+                auto nde = new proc_node();
+                nde->name = cam->name;
+                nde->frame = lookat_frame(cam->from, cam->to, vec3f{0, 1, 0});
+                nde->camera = cam->name;
+                scn->nodes.push_back(nde);
             }
-            auto scns = std::vector<proc_scene*>{scn};
-            append(scns, views);
-            for (auto scn : scns) {
-                if (!animations.empty() || nodes) {
-                    for (auto cam : scn->cameras) {
-                        auto nde = new proc_node();
-                        nde->name = cam->name;
-                        nde->frame =
-                            lookat_frame(cam->from, cam->to, vec3f{0, 1, 0});
-                        nde->camera = cam->name;
-                        scn->nodes.push_back(nde);
-                    }
-                    for (auto shp : scn->shapes) {
-                        auto nde = new proc_node();
-                        nde->name = shp->name;
-                        nde->frame = shp->frame;
-                        nde->shape = shp->name;
-                        scn->nodes.push_back(nde);
-                    }
-                    for (auto env : scn->environments) {
-                        auto nde = new proc_node();
-                        nde->name = env->name;
-                        nde->frame = env->frame;
-                        nde->environment = env->name;
-                        scn->nodes.push_back(nde);
-                    }
-                }
+            for (auto shp : scn->shapes) {
+                auto nde = new proc_node();
+                nde->name = shp->name;
+                nde->frame = shp->frame;
+                nde->shape = shp->name;
+                scn->nodes.push_back(nde);
             }
-            return preset;
-        };
-
-    // plane only
-    presets.push_back(make_simple_scene("plane", {}, {}));
+            for (auto env : scn->environments) {
+                auto nde = new proc_node();
+                nde->name = env->name;
+                nde->frame = env->frame;
+                nde->environment = env->name;
+                scn->nodes.push_back(nde);
+            }
+        }
+        return scn;
+    };
 
     // basic shapes
-    presets.push_back(make_simple_scene("basic",
+    presets.push_back(make_simple_scene("basic_pl",
         {"sphere_flipcap", "sphere_cube", "cube_rounded"},
-        {"plastic_red", "plastic_green", "plastic_blue"}));
+        {"plastic_red", "plastic_green", "plastic_blue"}, "pointlights"));
 
     // simple shapes
-    presets.push_back(make_simple_scene("simple",
+    presets.push_back(make_simple_scene("simple_al",
         {"sphere_flipcap", "sphere_cube", "cube_rounded"},
-        {"plastic_colored", "plastic_colored", "plastic_colored"}));
+        {"plastic_colored", "plastic_colored", "plastic_colored"},
+        "arealights"));
+
+    // simple shapes
+    presets.push_back(make_simple_scene("simple_pl",
+        {"sphere_flipcap", "sphere_cube", "cube_rounded"},
+        {"plastic_colored", "plastic_colored", "plastic_colored"},
+        "pointlights"));
+
+    // simple shapes
+    presets.push_back(make_simple_scene("simple_el",
+        {"sphere_flipcap", "sphere_cube", "cube_rounded"},
+        {"plastic_colored", "plastic_colored", "plastic_colored"},
+        "envlights"));
 
     // simple shapes 1
-    presets.push_back(make_simple_scene("spheres",
+    presets.push_back(make_simple_scene("spheres_al",
         {"sphere_flipcap", "sphere_cube", "sphere"},
-        {"plastic_colored", "plastic_colored", "plastic_colored"}));
+        {"plastic_colored", "plastic_colored", "plastic_colored"},
+        "arealights"));
 
     // simple shapes 2
     presets.push_back(
-        make_simple_scene("cubes", {"quad", "cube", "cube_rounded"},
-            {"plastic_colored", "plastic_colored", "plastic_colored"}));
+        make_simple_scene("cubes_al", {"quad", "cube", "cube_rounded"},
+            {"plastic_colored", "plastic_colored", "plastic_colored"},
+            "arealights"));
+
+    // simple shapes 3
+    presets.push_back(make_simple_scene("cylinders_al",
+        {"disk", "cylinder", "cylinder_rounded"},
+        {"plastic_colored", "plastic_colored", "plastic_colored"},
+        "arealights"));
 
     // simple shapes 3
     presets.push_back(
-        make_simple_scene("cylinders", {"disk", "cylinder", "cylinder_rounded"},
-            {"plastic_colored", "plastic_colored", "plastic_colored"}));
-
-    // simple shapes 3
-    presets.push_back(
-        make_simple_scene("disks", {"disk", "disk_quad", "disk_bulged"},
-            {"plastic_colored", "plastic_colored", "plastic_colored"}));
+        make_simple_scene("disks_al", {"disk", "disk_quad", "disk_bulged"},
+            {"plastic_colored", "plastic_colored", "plastic_colored"},
+            "arealights"));
 
     // transparent shapes
-    presets.push_back(make_simple_scene("transparent", {"quad", "quad", "quad"},
-        {"transparent_red", "transparent_green", "transparent_blue"}));
+    presets.push_back(
+        make_simple_scene("transparent_al", {"quad", "quad", "quad"},
+            {"transparent_red", "transparent_green", "transparent_blue"},
+            "arealights"));
 
     // lines shapes
     presets.push_back(
-        make_simple_scene("lines", {"hairball1", "hairball2", "hairball3"},
-            {"matte_gray", "matte_gray", "matte_gray"}));
+        make_simple_scene("lines_al", {"hairball1", "hairball2", "hairball3"},
+            {"matte_gray", "matte_gray", "matte_gray"}, "arealights"));
 
     // subdiv shapes
     presets.push_back(
-        make_simple_scene("subdiv", {"cubes", "suzannes", "suzannes"},
-            {"plastic_red", "plastic_green", "plastic_blue"}));
+        make_simple_scene("subdiv_al", {"cubes", "suzannes", "suzannes"},
+            {"plastic_red", "plastic_green", "plastic_blue"}, "arealights"));
 
     // plastics shapes
     presets.push_back(
-        make_simple_scene("plastics", {"matball", "matball", "matball"},
-            {"matte_green", "plastic_green", "plastic_colored"}, true));
+        make_simple_scene("plastics_al", {"matball", "matball", "matball"},
+            {"matte_green", "plastic_green", "plastic_colored"}, "arealights"));
+    presets.push_back(
+        make_simple_scene("plastics_el", {"matball", "matball", "matball"},
+            {"matte_green", "plastic_green", "plastic_colored"}, "envlights"));
 
     // metals shapes
     presets.push_back(
-        make_simple_scene("metals", {"matball", "matball", "matball"},
-            {"gold_rough", "gold_sharp", "silver_mirror"}));
+        make_simple_scene("metals_al", {"matball", "matball", "matball"},
+            {"gold_rough", "gold_sharp", "silver_mirror"}, "arealights"));
+    presets.push_back(
+        make_simple_scene("metals_el", {"matball", "matball", "matball"},
+            {"gold_rough", "gold_sharp", "silver_mirror"}, "envlights"));
 
     // glass shapes
     presets.push_back(
-        make_simple_scene("glass", {"matball", "matball", "matball"},
-            {"glass_mirror", "glass_colored", "glass_rough"}));
+        make_simple_scene("glass_al", {"matball", "matball", "matball"},
+            {"glass_mirror", "glass_colored", "glass_rough"}, "arealights"));
+    presets.push_back(
+        make_simple_scene("glass_el", {"matball", "matball", "matball"},
+            {"glass_mirror", "glass_colored", "glass_rough"}, "envlights"));
 
     // tesselation shapes
-    presets.push_back(make_simple_scene("tesselation",
+    presets.push_back(make_simple_scene("tesselation_pl",
         {"geodesic_spherel", "geodesic_spheref", "geodesic_sphere"},
-        {"matte_gray", "matte_gray", "matte_gray"}));
+        {"matte_gray", "matte_gray", "matte_gray"}, "pointlights"));
 
     // textureuv shapes
-    presets.push_back(make_simple_scene("textureuv",
+    presets.push_back(make_simple_scene("textureuv_pl",
         {"sphere_flipcap", "sphere_flipcap", "sphere_flipcap"},
-        {"matte_green", "matte_colored", "matte_uv"}));
+        {"matte_green", "matte_colored", "matte_uv"}, "pointlights"));
 
     // normalmap shapes
-    presets.push_back(make_simple_scene("normalmap",
+    presets.push_back(make_simple_scene("normalmap_pl",
         {"sphere_flipcap", "sphere_flipcap", "sphere_flipcap"},
-        {"plastic_blue", "plastic_blue_bumped", "plastic_colored_bumped"}));
+        {"plastic_blue", "plastic_blue_bumped", "plastic_colored_bumped"},
+        "pointlights"));
 
     // animated shapes
-    presets.push_back(make_simple_scene("animated",
+    presets.push_back(make_simple_scene("animated_pl",
         {"sphere_flipcap", "sphere_cube", "cube_rounded"},
-        {"plastic_colored", "plastic_colored", "plastic_colored"}, true,
-        {"bounce", "scale", "rotation"}));
+        {"plastic_colored", "plastic_colored", "plastic_colored"},
+        "pointlights", true, {"bounce", "scale", "rotation"}));
 
     // instances shared functions
     auto make_random_scene = [&](const std::string& name, const vec2i& num,
-                                 const bbox2f& bbox, uint64_t seed = 13) {
+                                 const bbox2f& bbox, const std::string& lights,
+                                 uint64_t seed = 13) {
         auto rscale = 0.9f * 0.25f *
                       min((bbox.max.x - bbox.min.x) / num.x,
                           (bbox.max.x - bbox.min.x) / num.y);
 
-        auto preset = make_split_scene(make_scene(name), {});
-        auto scn = preset->scn;
+        auto scn = make_scene(name);
         scn->cameras.push_back(make_camera("cam3"));
         scn->materials.push_back(make_material("matte_floor"));
         scn->shapes.push_back(make_shape("floor", zero3f));
@@ -12038,32 +12044,28 @@ std::vector<proc_split_scene*>& proc_split_scene_presets() {
             }
         }
 
-        auto& views = preset->views;
-        for (auto name : {"pointlights"s}) {
-            auto view = make_scene(name);
-            view->cameras.push_back(make_camera("cam3"));
+        if (lights == "pointlights") {
             auto pos = std::vector<vec3f>{{-2, 10, 8}, {+2, 10, 8}};
             for (auto i = 0; i < 2; i++) {
                 auto name = "light" + std::to_string(i + 1);
-                view->materials.push_back(make_material("pointlight"));
-                view->materials.back()->name = name;
-                view->materials.back()->emission = 80;
-                view->shapes.push_back(make_shape("point", zero3f));
-                view->shapes.back()->name = name;
-                view->shapes.back()->material = name;
-                view->nodes.push_back(make_node(name, "", name, "", pos[i]));
+                scn->materials.push_back(make_material("pointlight"));
+                scn->materials.back()->name = name;
+                scn->materials.back()->emission = 80;
+                scn->shapes.push_back(make_shape("point", zero3f));
+                scn->shapes.back()->name = name;
+                scn->shapes.back()->material = name;
+                scn->nodes.push_back(make_node(name, "", name, "", pos[i]));
             }
-            views.push_back(view);
         }
 
-        return preset;
+        return scn;
     };
 
     // instances
-    presets.push_back(
-        make_random_scene("instances", {10, 10}, {{-3, -3}, {3, 3}}));
-    presets.push_back(
-        make_random_scene("instancel", {100, 100}, {{-3, -3}, {3, 3}}));
+    presets.push_back(make_random_scene(
+        "instances_pl", {10, 10}, {{-3, -3}, {3, 3}}, "pointlights"));
+    presets.push_back(make_random_scene(
+        "instancel_pl", {100, 100}, {{-3, -3}, {3, 3}}, "pointlights"));
 
 #if 0
         else if (otype == "normdisp") {
@@ -12078,7 +12080,7 @@ std::vector<proc_split_scene*>& proc_split_scene_presets() {
 #endif
 
     // add missing textures
-    auto add_textures = [&](proc_scene* preset) {
+    for (auto preset : presets) {
         auto used = std::unordered_set<std::string>();
         for (auto mat : preset->materials) used.insert(mat->texture);
         for (auto mat : preset->materials) used.insert(mat->normal);
@@ -12086,51 +12088,10 @@ std::vector<proc_split_scene*>& proc_split_scene_presets() {
         used.erase("");
         for (auto txt : preset->textures) used.erase(txt->name);
         for (auto txt : used) preset->textures.push_back(make_texture(txt));
-    };
-
-    // add missing textures
-    for (auto& preset : presets) {
-        add_textures(preset->scn);
-        for (auto& view : preset->views) add_textures(view);
     }
 
     // remove duplicates
-    for (auto& preset : presets) {
-        remove_duplicates(preset->scn);
-        for (auto& view : preset->views) remove_duplicates(view);
-    }
-
-    return presets;
-}
-
-std::vector<proc_scene*>& proc_scene_presets() {
-    static auto presets = std::vector<proc_scene*>();
-    if (!presets.empty()) return presets;
-
-    for (auto sscn : proc_split_scene_presets()) {
-        auto scn = sscn->scn;
-        for (auto view : sscn->views) {
-            auto preset = new proc_scene();
-            preset->name = scn->name + "_" + view->name;
-            for (auto mscn : {scn, view}) {
-                for (auto v : mscn->cameras)
-                    preset->cameras.push_back(new proc_camera(*v));
-                for (auto v : mscn->textures)
-                    preset->textures.push_back(new proc_texture(*v));
-                for (auto v : mscn->materials)
-                    preset->materials.push_back(new proc_material(*v));
-                for (auto v : mscn->shapes)
-                    preset->shapes.push_back(new proc_shape(*v));
-                for (auto v : mscn->environments)
-                    preset->environments.push_back(new proc_environment(*v));
-                for (auto v : mscn->nodes)
-                    preset->nodes.push_back(new proc_node(*v));
-                for (auto v : mscn->animations)
-                    preset->animations.push_back(new proc_animation(*v));
-            }
-            presets.push_back(preset);
-        }
-    }
+    for (auto scn : presets) remove_duplicates(scn);
 
     return presets;
 }

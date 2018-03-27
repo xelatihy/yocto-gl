@@ -100,7 +100,7 @@ int main(int argc, char* argv[]) {
     ygl::add_tangent_space(app->scn);
 
     // validate
-    ygl::validate(app->scn, true);
+    ygl::validate(app->scn, false, true);
 
     // view camera
     app->view = make_view_camera(app->scn, 0);
