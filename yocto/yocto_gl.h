@@ -5859,7 +5859,7 @@ void add_hierarchy(scene* scn);
 
 /// Checks for validity of the scene.
 std::vector<std::string> validate(
-    const scene* scn, bool log_as_warning = false);
+    const scene* scn, bool skip_missing = false, bool log_as_warning = false);
 
 /// Merge scene into one another. Note that the objects are _moved_ from
 /// merge_from to merged_into, so merge_from will be empty after this function.
@@ -6654,20 +6654,6 @@ struct proc_scene {
     }
 };
 
-/// Procedural scene with objects and lights split into separate groups.
-struct proc_split_scene {
-    /// Scene shapes.
-    proc_scene* scn;
-    /// Scene lights and cameras split into different configurations.
-    std::vector<proc_scene*> views;
-
-    // Cleanup.
-    ~proc_split_scene() {
-        if (scn) delete scn;
-        for (auto v : views) delete v;
-    }
-};
-
 // #codegen end refl-proc-scene
 
 /// Makes the Cornell Box scene.
@@ -6716,8 +6702,6 @@ std::vector<proc_node*>& proc_node_presets();
 std::vector<proc_animation*>& proc_animation_presets();
 /// Test scene presets.
 std::vector<proc_scene*>& proc_scene_presets();
-/// Test scene presets split into objects and lighting and cameras.
-std::vector<proc_split_scene*>& proc_split_scene_presets();
 
 /// Remove duplicates based on name.
 void remove_duplicates(const proc_scene* tscn);
@@ -6982,17 +6966,6 @@ inline void visit(proc_scene& val, Visitor&& visitor) {
         visit_var{"nodes", visit_var_type::value, "Nodes.", 0, 0, ""});
     visitor(val.animations, visit_var{"animations", visit_var_type::value,
                                 "Animations.", 0, 0, ""});
-}
-
-/// Visit struct elements.
-template <typename Visitor>
-inline void visit(proc_split_scene& val, Visitor&& visitor) {
-    visitor(val.scn,
-        visit_var{"scn", visit_var_type::value, "Scene shapes.", 0, 0, ""});
-    visitor(val.views,
-        visit_var{"views", visit_var_type::value,
-            "Scene lights and cameras split into different configurations.", 0,
-            0, ""});
 }
 
 // #codegen end reflgen-proc-scene

@@ -423,104 +423,135 @@ scene* load_pbrt(const std::string& filename) {
             }
             scn->cameras.push_back(cam);
         } else if (cmd == "Texture") {
-            auto txt = new texture();
-            scn->textures.push_back(txt);
-            txt->name = jcmd.at("name").get<std::string>();
-            txt_map[txt->name] = txt;
-            auto type = jcmd.at("type").get<std::string>();
-            if (type == "imagemap") {
-                txt->path = jcmd.at("filename").get<std::string>();
-                if (ygl::path_extension(txt->path) == ".pfm")
-                    txt->path = ygl::replace_path_extension(txt->path, ".hdr");
-            } else {
-                log_error("{} texture not supported", type);
+            auto found = false;
+            auto name = jcmd.at("name").get<std::string>();
+            for(auto txt : scn->textures) {
+                if(txt->name == name) {
+                    found = true; break;
+                }
+            }
+            if(!found) {
+                auto txt = new texture();
+                scn->textures.push_back(txt);
+                txt->name = jcmd.at("name").get<std::string>();
+                txt_map[txt->name] = txt;
+                auto type = jcmd.at("type").get<std::string>();
+                if (type == "imagemap") {
+                    txt->path = jcmd.at("filename").get<std::string>();
+                    if (ygl::path_extension(txt->path) == ".pfm")
+                        txt->path = ygl::replace_path_extension(txt->path, ".hdr");
+                } else {
+                    log_error("{} texture not supported", type);
+                }
             }
         } else if (cmd == "MakeNamedMaterial" || cmd == "Material") {
-            auto mat = new material();
-            scn->materials.push_back(mat);
-            if (cmd == "Material") {
-                mat->name = "unnamed_mat" + std::to_string(mid++);
-                stack.back().mat = mat;
-            } else {
-                mat->name = jcmd.at("name").get<std::string>();
-                mat_map[mat->name] = mat;
-            }
-            auto type = "uber"s;
-            if (jcmd.count("type")) type = jcmd.at("type").get<std::string>();
-            if (type == "uber") {
-                if (jcmd.count("Kd"))
-                    std::tie(mat->kd, mat->kd_txt.txt) =
-                        get_scaled_texture(jcmd.at("Kd"));
-                if (jcmd.count("Ks"))
-                    std::tie(mat->ks, mat->ks_txt.txt) =
-                        get_scaled_texture(jcmd.at("Ks"));
-                if (jcmd.count("Kt"))
-                    std::tie(mat->kt, mat->kt_txt.txt) =
-                        get_scaled_texture(jcmd.at("Kt"));
-                if (jcmd.count("opacity")) {
-                    auto op = vec3f{0, 0, 0};
-                    auto op_txt = (texture*)nullptr;
-                    std::tie(op, op_txt) =
-                        get_scaled_texture(jcmd.at("opacity"));
-                    mat->op = (op.x + op.y + op.z) / 3;
-                    mat->op_txt.txt = op_txt;
+            auto found = false;
+            if(cmd == "MakeNamedMaterial") {
+                auto name = jcmd.at("name").get<std::string>();
+                for(auto mat : scn->materials) {
+                    if(mat->name == name) {
+                        found = true;
+                        break;
+                    }
                 }
-                mat->rs = 0;
-            } else if (type == "matte") {
-                mat->kd = {1, 1, 1};
-                if (jcmd.count("Kd"))
-                    std::tie(mat->kd, mat->kd_txt.txt) =
-                        get_scaled_texture(jcmd.at("Kd"));
-                mat->rs = 1;
-            } else if (type == "mirror") {
-                mat->kd = {0, 0, 0};
-                mat->ks = {1, 1, 1};
-                mat->rs = 0;
-            } else if (type == "metal") {
-                auto eta = get_vec3f(jcmd.at("eta"));
-                auto k = get_vec3f(jcmd.at("k"));
-                mat->ks = fresnel_metal(1, eta, k);
-                mat->rs = 0;
-            } else if (type == "substrate") {
-                if (jcmd.count("Kd"))
-                    std::tie(mat->kd, mat->kd_txt.txt) =
-                        get_scaled_texture(jcmd.at("Kd"));
-                mat->ks = {0.04, 0.04, 0.04};
-                if (jcmd.count("Ks"))
-                    std::tie(mat->ks, mat->ks_txt.txt) =
-                        get_scaled_texture(jcmd.at("Ks"));
-                mat->rs = 0;
-            } else if (type == "glass") {
-                mat->ks = {0.04, 0.04, 0.04};
-                mat->kt = {1, 1, 1};
-                if (jcmd.count("Ks"))
-                    std::tie(mat->ks, mat->ks_txt.txt) =
-                        get_scaled_texture(jcmd.at("Ks"));
-                if (jcmd.count("Kt"))
-                    std::tie(mat->kt, mat->kt_txt.txt) =
-                        get_scaled_texture(jcmd.at("Kt"));
-                mat->rs = 0;
-            } else {
-                mat->kd = {1, 0, 0};
-                log_error("{} material not supported", type);
             }
-            if (jcmd.count("uroughness")) {
-                auto remap = js.count("remaproughness") &&
-                             js.at("remaproughness").get<bool>();
-                if (jcmd.count("uroughness"))
-                    mat->rs = jcmd.at("uroughness").get<float>();
-                if (!remap) mat->rs = sqrt(mat->rs);
-            }
-            if (jcmd.count("roughness")) {
-                auto remap = js.count("remaproughness") &&
-                             js.at("remaproughness").get<bool>();
-                if (jcmd.count("roughness"))
-                    mat->rs = jcmd.at("roughness").get<float>();
-                if (!remap) mat->rs = sqrt(mat->rs);
-            }
-            if (stack.back().light_mat) {
-                mat->ke = stack.back().light_mat->ke;
-                mat->ke_txt = stack.back().light_mat->ke_txt;
+            if(!found) {
+                auto mat = new material();
+                scn->materials.push_back(mat);
+                if (cmd == "Material") {
+                    mat->name = "unnamed_mat" + std::to_string(mid++);
+                    stack.back().mat = mat;
+                } else {
+                    mat->name = jcmd.at("name").get<std::string>();
+                    mat_map[mat->name] = mat;
+                }
+                auto type = "uber"s;
+                if (jcmd.count("type")) type = jcmd.at("type").get<std::string>();
+                if (type == "uber") {
+                    if (jcmd.count("Kd"))
+                        std::tie(mat->kd, mat->kd_txt.txt) =
+                            get_scaled_texture(jcmd.at("Kd"));
+                    if (jcmd.count("Ks"))
+                        std::tie(mat->ks, mat->ks_txt.txt) =
+                            get_scaled_texture(jcmd.at("Ks"));
+                    if (jcmd.count("Kt"))
+                        std::tie(mat->kt, mat->kt_txt.txt) =
+                            get_scaled_texture(jcmd.at("Kt"));
+                    if (jcmd.count("opacity")) {
+                        auto op = vec3f{0, 0, 0};
+                        auto op_txt = (texture*)nullptr;
+                        std::tie(op, op_txt) =
+                            get_scaled_texture(jcmd.at("opacity"));
+                        mat->op = (op.x + op.y + op.z) / 3;
+                        mat->op_txt.txt = op_txt;
+                    }
+                    mat->rs = 0;
+                } else if (type == "matte") {
+                    mat->kd = {1, 1, 1};
+                    if (jcmd.count("Kd"))
+                        std::tie(mat->kd, mat->kd_txt.txt) =
+                            get_scaled_texture(jcmd.at("Kd"));
+                    mat->rs = 1;
+                } else if (type == "mirror") {
+                    mat->kd = {0, 0, 0};
+                    mat->ks = {1, 1, 1};
+                    mat->rs = 0;
+                } else if (type == "metal") {
+                    auto eta = get_vec3f(jcmd.at("eta"));
+                    auto k = get_vec3f(jcmd.at("k"));
+                    mat->ks = fresnel_metal(1, eta, k);
+                    mat->rs = 0;
+                } else if (type == "substrate") {
+                    if (jcmd.count("Kd"))
+                        std::tie(mat->kd, mat->kd_txt.txt) =
+                            get_scaled_texture(jcmd.at("Kd"));
+                    mat->ks = {0.04, 0.04, 0.04};
+                    if (jcmd.count("Ks"))
+                        std::tie(mat->ks, mat->ks_txt.txt) =
+                            get_scaled_texture(jcmd.at("Ks"));
+                    mat->rs = 0;
+                } else if (type == "glass") {
+                    mat->ks = {0.04, 0.04, 0.04};
+                    mat->kt = {1, 1, 1};
+                    if (jcmd.count("Ks"))
+                        std::tie(mat->ks, mat->ks_txt.txt) =
+                            get_scaled_texture(jcmd.at("Ks"));
+                    if (jcmd.count("Kt"))
+                        std::tie(mat->kt, mat->kt_txt.txt) =
+                            get_scaled_texture(jcmd.at("Kt"));
+                    mat->rs = 0;
+                } else if(type == "mix") {
+                    log_warning("mix material not properly supported");
+                    if(jcmd.count("namedmaterial1")) {
+                        auto mat1 = jcmd.at("namedmaterial1").get<std::string>();
+                        auto saved_name = mat->name;
+                        *mat = *mat_map.at(mat1);
+                        mat->name = saved_name;
+                    } else {
+                        log_error("mix material missing front material");
+                    }
+                } else {
+                    mat->kd = {1, 0, 0};
+                    log_error("{} material not supported", type);
+                }
+                if (jcmd.count("uroughness")) {
+                    auto remap = js.count("remaproughness") &&
+                                js.at("remaproughness").get<bool>();
+                    if (jcmd.count("uroughness"))
+                        mat->rs = jcmd.at("uroughness").get<float>();
+                    if (!remap) mat->rs = sqrt(mat->rs);
+                }
+                if (jcmd.count("roughness")) {
+                    auto remap = js.count("remaproughness") &&
+                                js.at("remaproughness").get<bool>();
+                    if (jcmd.count("roughness"))
+                        mat->rs = jcmd.at("roughness").get<float>();
+                    if (!remap) mat->rs = sqrt(mat->rs);
+                }
+                if (stack.back().light_mat) {
+                    mat->ke = stack.back().light_mat->ke;
+                    mat->ke_txt = stack.back().light_mat->ke_txt;
+                }
             }
         } else if (cmd == "NamedMaterial") {
             stack.back().mat = mat_map.at(jcmd.at("name").get<std::string>());
@@ -721,7 +752,7 @@ int main(int argc, char** argv) {
     if(flipyz) flipyz_scene(scn);
 
     // validate
-    validate(scn, true);
+    ygl::validate(scn, true, true);
 
     // add paths for meshes
     for(auto shp : scn->shapes) {
