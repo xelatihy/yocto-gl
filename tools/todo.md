@@ -11,10 +11,14 @@ Please consider this to be just development notes and not any real planning.
 - interactive procedural shapes
 - prepare for research on procedural components
 
+## Presets
+
+- presets as dictionaries?
+- remove split scenes
+
 ## Port scenes
 
 - yocto
-    - pixel filter
     - fresnel
         - diffuse formula
         - scale with roughness (should be option)
@@ -48,11 +52,19 @@ Please consider this to be just development notes and not any real planning.
     - cameras
     - lights
 - pbrt
+    - crown material or re-export
+    - landscape materials
     - pbrt include parser
 - gltf exports
 
 ## Trace
 
+- fresnel
+    - diffuse formula
+    - scale with roughness (should be option)
+    - transmission formula
+    - sampling
+- highlights are too soft in bitterli scenes
 - roussian roulette on weight
 - samplers
     - sobol
@@ -61,7 +73,7 @@ Please consider this to be just development notes and not any real planning.
     - faceted shading
 - brdf
     - deltas without delta flag
-    - check pbrt hair
+- check pbrt hair
 - light sampling
     - possible bug in light weight
     - envmap sampling
@@ -121,11 +133,6 @@ Please consider this to be just development notes and not any real planning.
 
 - optional post event on OSX, disable on Linux
 - OpenGL new version 4.1
-- use derivatives
-    - for triangles, compute flat shading and triangle edges well
-        - no need for explicit edges
-        - http://www.aclockworkberry.com/shader-derivative-functions/
-        - https://github.com/rreusser/glsl-solid-wireframe
 - investigate bump map on GPU
     - https://www.opengl.org/discussion_boards/showthread.php/162857-Computing-the-tangent-space-in-the-fragment-shader
     - http://jbit.net/~sparky/sfgrad_bump/mm_sfgrad_bump.pdf
@@ -142,9 +149,8 @@ Please consider this to be just development notes and not any real planning.
     - Ke/map_Ke (emissive) // new
     - aniso (anisotropy) // new
     - anisor (anisotropy rotation) // new
-- filmic tonemapping from tungsten
 - obj
-    - decide whether to put it in eval_norm (probably not)
+    - remove 
     - insert facet shape call after loading?
     - tesselate may create smoothed vertices or during vbo creation
     - trace respect smoothing
@@ -208,15 +214,6 @@ Please consider this to be just development notes and not any real planning.
     - converted GLTF
 - consider putting OBJ extensions into its own files?
 
-## Postponed: Shade uses render buffers
-
-- implement a framebuffer
-- hardcode textures inside it
-    - create empty texture functions
-    - add depth texture for depth
-- tutorial at
-    http:www.opengl-tutorial.org/intermediate-tutorials/tutorial-14-render-to-texture/
-
 ## Tesselation
 
 - update convert functions to new api (?)
@@ -244,8 +241,6 @@ Please consider this to be just development notes and not any real planning.
 
 ## Image
 
-- tonemap params to put everywhere
-- consider other tone reproduction code
 - maybe: make image a simple structure
     - get_pixel, make_image
 - remove constructors and accessors from vec/mat/frame
