@@ -11,22 +11,43 @@ Please consider this to be just development notes and not any real planning.
 - interactive procedural shapes
 - prepare for research on procedural components
 
-## Next
+## Simplifications
 
-- material
-    - remove Kr for now
-    - Kto removed from pathtracer
-        - add fresnel option
+- proc scene
+    - remove pointers
+    - use dictionaries
+    - should we remove names (probably not - keep in sync?)
+    - hold pointer to scene objects?
 
 ## Trace
 
-- optional post event on OSX, disable on Linux
+- error in handling deltas, that have to be special cased
+    - write delta math
+    - easiest way if it looks good
+    - option -1 (wrong): make up large values for BRDF and PDF
+        - DID NOT PROPERLY WORK
+    - option 0: split delta and non-delta fully
+        - seems the easiest solution, since it makes the algorithms clear
+        - can transition to all rough if needed
+        - use two separate code paths and choose between them at random
+        - question: can we fold this into two?
+    - option 1: consider rough transmission proper pdf (GGX on the back side)
+        - eval transmission remains the same
+            - if splitting light and brdf we are good here
+        - sampling remains the same as now, just remove deltas
+    - option 2: handle delta if there is a somewhat nice way (is there?)
+        - reqrite math with split integrals for deltas
+        - split direct and indirect
+- opacity still broken: why?
+- rewrite pdf to follow steve's
+    - write different pathtracers too also to follow steve's
+    - remove environment map point (not useful anymore)
+- lower energy on tests
+- test on car paint
 - fresnel
     - diffuse formula
     - scale with roughness (should be option)
     - transmission formula
-    - sampling
-- fresnel in brdf
     - remove kr for now
     - fresnel in coefficients
     - fresnel in weights
@@ -36,6 +57,7 @@ Please consider this to be just development notes and not any real planning.
 - roussian roulette on weight
 - samplers
     - sobol
+    - cmjs
     - adaptive sampling ala tungsgen
 - light sampling
     - possible bug in light weight
@@ -53,7 +75,7 @@ Please consider this to be just development notes and not any real planning.
     - better scheme: filter intersection
 - distributions
     - is using simple distribution, go back to CDF only
-        - caspita!!!
+        - sample_distribution
     - move to binary function
     - consider adding an object
     - add distributions for lights?
@@ -64,18 +86,14 @@ Please consider this to be just development notes and not any real planning.
     - cleanup sampling in ray tracing
     - make lights with single shapes in trace
 - add radius in offsetting rays
-- remove background from point?
-    - make background explicit or use only first environment
 - sample background to sum all environments
 - envmap sampling
     - simplest case, pick pixels as 1D distribution
-- better distributions
-    - sobol and cmjs
-    - are they really helpful?
 - Simple denoiser
     - joint bilateral denoiser
     - non-local means denoiser
-    - donoiser from paris
+    - denoiser from paris
+- add builtin envmap to trace
 
 ## Port scenes
 
@@ -150,24 +168,18 @@ Please consider this to be just development notes and not any real planning.
     - Ke/map_Ke (emissive) // new
     - aniso (anisotropy) // new
     - anisor (anisotropy rotation) // new
-- trace
-    - SAH based build
-- double sided option in render params
-    - this forces double sided over the material settings
-- doule sided in scene <-> glTF
+
+## yView
+
+- double sided in scene
+    - check glTF write
+    - extend OBJ
 - bug in light detection
     - check mcguire car
 - cutout not working on yview
-- consider double sided by default
-    - check pbrt
-- consider cutout by default
+    - consider cutout by default
 - add print scene info button to yview/ytrace
 - add view cam settings
-- add bbox to trace
-- add builtin envmap to trace
-- better default material
-- better eyelight
-- add prefiltered look to trace/view ?
 
 ## BVH
 
@@ -225,18 +237,23 @@ Please consider this to be just development notes and not any real planning.
 
 ## Low-level code
 
-- serialization with visitor
-    - decide if exposing json is reasonable
+- serialization with visitor?
+    - decide if exposing json is reasonable (no, move to C++17 any when possible)
       for now this is just a matter of compilation time
       later it is best to use a variant type
+- serialization to JSON as the main reflection model
 
 ## Ui
 
+- update imgui and imgui opengl3
+    - consider gl3w since ImGui integrates it and it is small
+- consider not using sliders
 - cleanup scene widgets
 - add angle semantic
 - add rotation
 - add frame editing with decomposition
 - add labels 2,3,4
+- consider disabling visitors and using JSON serialization with schema-like things
 
 ## yScnProc
 

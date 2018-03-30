@@ -50,6 +50,7 @@
         "functional": "cpp",
         "limits": "cpp",
         "tuple": "cpp",
-        "type_traits": "cpp"
+        "type_traits": "cpp",
+        "locale": "cpp"
     }
 } 

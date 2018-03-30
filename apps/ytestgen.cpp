@@ -74,9 +74,9 @@ void save_test_scene(const std::string& sname, const std::string& basedir) {
             scn = ygl::make_cornell_box_scene();
         } else {
             for (auto preset : ygl::proc_scene_presets()) {
-                if (preset->name != sname) continue;
-                proc_scn = preset;
-                scn = ygl::make_proc_elems(preset);
+                if (preset.first != sname) continue;
+                proc_scn = preset.second;
+                scn = ygl::make_proc_elems(preset.second);
                 break;
             }
         }
@@ -102,9 +102,9 @@ void save_test_scene(const std::string& sname, const std::string& basedir) {
             }
         } else {
             save_scene(
-                scn, sname, dirname, !ygl::startswith(sname, "instance"));
+                scn, "scene", dirname, !ygl::startswith(sname, "instance"));
             if (proc_scn)
-                ygl::save_proc_scene(dirname + sname + ".json", proc_scn);
+                ygl::save_proc_scene(dirname + "scene.json", proc_scn);
         }
     } catch (std::exception& e) { ygl::log_fatal("error {}", e.what()); }
 }
@@ -113,7 +113,7 @@ int main(int argc, char* argv[]) {
     // put together scene names
     auto scene_names = std::vector<std::string>{"cornell_box"};
     for (auto preset : ygl::proc_scene_presets())
-        scene_names.push_back(preset->name);
+        scene_names.push_back(preset.first);
 
     // command line params
     auto parser = ygl::make_parser(argc, argv, "ytestgen", "make tests");
