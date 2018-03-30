@@ -134,8 +134,11 @@ bool update(ygl::gl_window* win, app_state* app) {
         ygl::trace_async_start(app->scn, app->cam, app->bvh, app->lights,
             app->img, app->pixels, app->async_threads, app->async_stop,
             app->params, [win, app](int s, int j) {
-                if (!j || !(j % app->params.preview_resolution))
-                    app->update_texture = true;
+                if (j % app->params.preview_resolution) return;
+                app->update_texture = true;
+#ifdef __APPLE__
+                ygl::post_empty_event(win);
+#endif
             });
     }
     if (app->update_texture) {
@@ -179,8 +182,17 @@ void run_ui(app_state* app) {
         // update
         update(win, app);
 
+#ifdef __APPLE__
+        // event hadling
+        if (ygl::get_mouse_button(win) || ygl::get_widget_active(win)) {
+            ygl::poll_events(win);
+        } else {
+            ygl::wait_events(win);
+        }
+#else
         // event hadling
         ygl::poll_events(win);
+#endif
     }
 
     // cleanup

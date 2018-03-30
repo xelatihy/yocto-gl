@@ -4726,11 +4726,16 @@ int add_shape_vert(shape* shp, int vert, std::unordered_map<int, int>& vmap,
 std::vector<shape*> split_shape(const shape* shp, bool split_facevarying) {
     if (is_shape_simple(shp, split_facevarying)) return {};
     auto sshps = std::vector<shape*>();
-    for (auto gid = 0; gid < shp->groups.size(); gid++) {
-        auto grp = shp->groups[gid];
+    auto ngroups = max(1, (int)shp->groups.size());
+    for (auto gid = 0; gid < ngroups; gid++) {
         auto sshp = new shape();
-        sshp->name = (grp.name == "") ? shp->name : grp.name;
-        sshp->groups.push_back(grp);
+        if (!shp->groups.empty()) {
+            sshp->name = (shp->groups[gid].name == "") ? shp->name :
+                                                         shp->groups[gid].name;
+            sshp->groups.push_back(shp->groups[gid]);
+        } else {
+            sshp->name = shp->name + "_" + std::to_string(gid + 1);
+        }
         auto vmap = std::unordered_map<int, int>();
         auto add_vert = [&shp, &sshp, &vmap](int vert) {
             return add_shape_vert(sshp, vert, vmap, shp->pos, shp->norm,
@@ -4744,21 +4749,39 @@ std::vector<shape*> split_shape(const shape* shp, bool split_facevarying) {
             svals.push_back(vals[vert]);
             return vid;
         };
-        for (auto p : shp->points) sshp->points.push_back(add_vert(p));
-        for (auto l : shp->lines)
+        for (auto eid = 0; eid < shp->points.size(); eid++) {
+            if (!shp->group_ids.empty() && shp->group_ids[eid] != gid) continue;
+            auto p = shp->points.at(eid);
+            sshp->points.push_back(add_vert(p));
+        }
+        for (auto eid = 0; eid < shp->lines.size(); eid++) {
+            if (!shp->group_ids.empty() && shp->group_ids[eid] != gid) continue;
+            auto l = shp->lines.at(eid);
             sshp->lines.push_back({add_vert(l.x), add_vert(l.y)});
-        for (auto t : shp->triangles)
+        }
+        for (auto eid = 0; eid < shp->triangles.size(); eid++) {
+            if (!shp->group_ids.empty() && shp->group_ids[eid] != gid) continue;
+            auto t = shp->triangles.at(eid);
             sshp->triangles.push_back(
                 {add_vert(t.x), add_vert(t.y), add_vert(t.z)});
-        for (auto q : shp->quads)
+        }
+        for (auto eid = 0; eid < shp->quads.size(); eid++) {
+            if (!shp->group_ids.empty() && shp->group_ids[eid] != gid) continue;
+            auto q = shp->quads.at(eid);
             sshp->quads.push_back(
                 {add_vert(q.x), add_vert(q.y), add_vert(q.z), add_vert(q.w)});
-        for (auto b : shp->beziers)
+        }
+        for (auto eid = 0; eid < shp->beziers.size(); eid++) {
+            if (!shp->group_ids.empty() && shp->group_ids[eid] != gid) continue;
+            auto b = shp->beziers.at(eid);
             sshp->beziers.push_back(
                 {add_vert(b.x), add_vert(b.y), add_vert(b.z), add_vert(b.w)});
+        }
         if (split_facevarying) {
             auto fvmap = std::unordered_map<vec<int, 5>, int>();
             for (auto eid = 0; eid < shp->quads_pos.size(); eid++) {
+                if (!shp->group_ids.empty() && shp->group_ids[eid] != gid)
+                    continue;
                 sshp->quads.push_back({});
                 for (auto c = 0; c < 4; c++) {
                     auto vert = vec<int, 5>{shp->quads_pos[eid][c],
@@ -4774,14 +4797,20 @@ std::vector<shape*> split_shape(const shape* shp, bool split_facevarying) {
             }
         } else {
             vmap.clear();
-            for (auto q : shp->quads_pos) {
+            for (auto eid = 0; eid < shp->quads_pos.size(); eid++) {
+                if (!shp->group_ids.empty() && shp->group_ids[eid] != gid)
+                    continue;
+                auto q = shp->quads_pos.at(eid);
                 sshp->quads_pos.push_back({add_fvvert(sshp->pos, shp->pos, q.x),
                     add_fvvert(sshp->pos, shp->pos, q.y),
                     add_fvvert(sshp->pos, shp->pos, q.z),
                     add_fvvert(sshp->pos, shp->pos, q.w)});
             }
             vmap.clear();
-            for (auto q : shp->quads_norm) {
+            for (auto eid = 0; eid < shp->quads_norm.size(); eid++) {
+                if (!shp->group_ids.empty() && shp->group_ids[eid] != gid)
+                    continue;
+                auto q = shp->quads_norm.at(eid);
                 sshp->quads_norm.push_back(
                     {add_fvvert(sshp->norm, shp->norm, q.x),
                         add_fvvert(sshp->norm, shp->norm, q.y),
@@ -4789,7 +4818,10 @@ std::vector<shape*> split_shape(const shape* shp, bool split_facevarying) {
                         add_fvvert(sshp->norm, shp->norm, q.w)});
             }
             vmap.clear();
-            for (auto q : shp->quads_texcoord) {
+            for (auto eid = 0; eid < shp->quads_texcoord.size(); eid++) {
+                if (!shp->group_ids.empty() && shp->group_ids[eid] != gid)
+                    continue;
+                auto q = shp->quads_texcoord.at(eid);
                 sshp->quads_texcoord.push_back(
                     {add_fvvert(sshp->texcoord, shp->texcoord, q.x),
                         add_fvvert(sshp->texcoord, shp->texcoord, q.y),
@@ -5388,7 +5420,12 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
         mat->ks = omat->ks;
         mat->kr = omat->kr;
         mat->kt = omat->kt;
-        mat->rs = (omat->ns >= 1e6f) ? 0 : pow(2 / (omat->ns + 2), 1 / 4.0f);
+        if (omat->ns >= 1e6f)
+            mat->rs = 0;
+        else if (omat->ns < 1)
+            mat->rs = 1;
+        else
+            mat->rs = pow(2 / (omat->ns + 2), 1 / 4.0f);
         mat->op = omat->op;
         mat->ke_txt = make_texture_info(omat->ke_txt);
         mat->kd_txt = make_texture_info(omat->kd_txt);
@@ -5795,7 +5832,12 @@ obj_scene* scene_to_obj(const scene* scn) {
                 omat->ks = {mat->ks.x, mat->ks.y, mat->ks.z};
                 omat->kr = {mat->kr.x, mat->kr.y, mat->kr.z};
                 omat->kt = {mat->kt.x, mat->kt.y, mat->kt.z};
-                omat->ns = (mat->rs) ? 2 / pow(mat->rs, 4.0f) - 2 : 1e6;
+                if (mat->rs <= 0)
+                    omat->ns = 1e6f;
+                else if (mat->rs >= 1)
+                    omat->ns = 0;
+                else
+                    omat->ns = 2 / pow(mat->rs, 4.0f) - 2;
                 omat->op = mat->op;
                 omat->kd_txt = make_texture_info(mat->kd_txt);
                 omat->ks_txt = make_texture_info(mat->ks_txt);
@@ -5804,7 +5846,7 @@ obj_scene* scene_to_obj(const scene* scn) {
                 omat->op_txt = make_texture_info(mat->op_txt);
             } break;
             case material_type::metallic_roughness: {
-                if (mat->rs == 1 && mat->ks.x == 0) {
+                if (mat->rs >= 1 && mat->ks.x == 0) {
                     omat->kd = mat->kd;
                     omat->ks = {0, 0, 0};
                     omat->ns = 1;
@@ -5814,7 +5856,12 @@ obj_scene* scene_to_obj(const scene* scn) {
                               vec3f{0.04f, 0.04f, 0.04f} * (1 - mat->ks.x);
                     omat->kd = {kd.x, kd.y, kd.z};
                     omat->ks = {ks.x, ks.y, ks.z};
-                    omat->ns = (mat->rs) ? 2 / pow(mat->rs, 4.0f) - 2 : 1e6;
+                    if (mat->rs <= 0)
+                        omat->ns = 1e6f;
+                    else if (mat->rs >= 1)
+                        omat->ns = 0;
+                    else
+                        omat->ns = 2 / pow(mat->rs, 4.0f) - 2;
                 }
                 omat->op = mat->op;
                 if (mat->ks.x < 0.5f) {
@@ -5826,7 +5873,12 @@ obj_scene* scene_to_obj(const scene* scn) {
             case material_type::specular_glossiness: {
                 omat->kd = {mat->kd.x, mat->kd.y, mat->kd.z};
                 omat->ks = {mat->ks.x, mat->ks.y, mat->ks.z};
-                omat->ns = (mat->rs) ? 2 / pow(1 - mat->rs, 4.0f) - 2 : 1e6;
+                if (mat->rs <= 0)
+                    omat->ns = 1e6f;
+                else if (mat->rs >= 1)
+                    omat->ns = 0;
+                else
+                    omat->ns = 2 / pow(mat->rs, 4.0f) - 2;
                 omat->op = mat->op;
                 omat->kd_txt = make_texture_info(mat->kd_txt);
                 omat->ks_txt = make_texture_info(mat->ks_txt);
@@ -6654,74 +6706,75 @@ glTF* scene_to_gltf(
         auto gbuffer = add_opt_buffer(shp->path);
         auto shapes = (is_shape_simple(shp, true)) ? std::vector<shape*>{shp} :
                                                      split_shape(shp, true);
-        for (auto shp : shapes) {
+        for (auto sshp : shapes) {
             auto gprim = new glTFMeshPrimitive();
-            if (!shp->groups.empty())
+            if (!sshp->groups.empty())
                 gprim->material = glTFid<glTFMaterial>(
-                    index(scn->materials, shp->groups.at(0).mat));
-            if (!shp->pos.empty())
+                    index(scn->materials, sshp->groups.at(0).mat));
+            if (!sshp->pos.empty())
                 gprim->attributes["POSITION"] = add_accessor(gbuffer,
-                    shp->name + "_pos", glTFAccessorType::Vec3,
-                    glTFAccessorComponentType::Float, (int)shp->pos.size(),
-                    sizeof(vec3f), shp->pos.data(), true);
-            if (!shp->norm.empty())
+                    sshp->name + "_pos", glTFAccessorType::Vec3,
+                    glTFAccessorComponentType::Float, (int)sshp->pos.size(),
+                    sizeof(vec3f), sshp->pos.data(), true);
+            if (!sshp->norm.empty())
                 gprim->attributes["NORMAL"] = add_accessor(gbuffer,
-                    shp->name + "_norm", glTFAccessorType::Vec3,
-                    glTFAccessorComponentType::Float, (int)shp->norm.size(),
-                    sizeof(vec3f), shp->norm.data(), false);
-            if (!shp->texcoord.empty())
+                    sshp->name + "_norm", glTFAccessorType::Vec3,
+                    glTFAccessorComponentType::Float, (int)sshp->norm.size(),
+                    sizeof(vec3f), sshp->norm.data(), false);
+            if (!sshp->texcoord.empty())
                 gprim->attributes["TEXCOORD_0"] = add_accessor(gbuffer,
-                    shp->name + "_texcoord", glTFAccessorType::Vec2,
-                    glTFAccessorComponentType::Float, (int)shp->texcoord.size(),
-                    sizeof(vec2f), shp->texcoord.data(), false);
-            if (!shp->texcoord1.empty())
-                gprim->attributes["TEXCOORD_1"] = add_accessor(gbuffer,
-                    shp->name + "_texcoord1", glTFAccessorType::Vec2,
+                    sshp->name + "_texcoord", glTFAccessorType::Vec2,
                     glTFAccessorComponentType::Float,
-                    (int)shp->texcoord1.size(), sizeof(vec2f),
-                    shp->texcoord1.data(), false);
-            if (!shp->color.empty())
+                    (int)sshp->texcoord.size(), sizeof(vec2f),
+                    sshp->texcoord.data(), false);
+            if (!sshp->texcoord1.empty())
+                gprim->attributes["TEXCOORD_1"] = add_accessor(gbuffer,
+                    sshp->name + "_texcoord1", glTFAccessorType::Vec2,
+                    glTFAccessorComponentType::Float,
+                    (int)sshp->texcoord1.size(), sizeof(vec2f),
+                    sshp->texcoord1.data(), false);
+            if (!sshp->color.empty())
                 gprim->attributes["COLOR_0"] = add_accessor(gbuffer,
-                    shp->name + "_color", glTFAccessorType::Vec4,
-                    glTFAccessorComponentType::Float, (int)shp->color.size(),
-                    sizeof(vec4f), shp->color.data(), false);
-            if (!shp->radius.empty())
+                    sshp->name + "_color", glTFAccessorType::Vec4,
+                    glTFAccessorComponentType::Float, (int)sshp->color.size(),
+                    sizeof(vec4f), sshp->color.data(), false);
+            if (!sshp->radius.empty())
                 gprim->attributes["RADIUS"] = add_accessor(gbuffer,
-                    shp->name + "_radius", glTFAccessorType::Scalar,
-                    glTFAccessorComponentType::Float, (int)shp->radius.size(),
-                    sizeof(float), shp->radius.data(), false);
+                    sshp->name + "_radius", glTFAccessorType::Scalar,
+                    glTFAccessorComponentType::Float, (int)sshp->radius.size(),
+                    sizeof(float), sshp->radius.data(), false);
             // auto elem_as_uint = shp->pos.size() >
             // numeric_limits<unsigned short>::max();
-            if (!shp->points.empty()) {
-                gprim->indices = add_accessor(gbuffer, shp->name + "_points",
+            if (!sshp->points.empty()) {
+                gprim->indices = add_accessor(gbuffer, sshp->name + "_points",
                     glTFAccessorType::Scalar,
                     glTFAccessorComponentType::UnsignedInt,
-                    (int)shp->points.size(), sizeof(int),
-                    (int*)shp->points.data(), false);
+                    (int)sshp->points.size(), sizeof(int),
+                    (int*)sshp->points.data(), false);
                 gprim->mode = glTFMeshPrimitiveMode::Points;
-            } else if (!shp->lines.empty()) {
-                gprim->indices = add_accessor(gbuffer, shp->name + "_lines",
+            } else if (!sshp->lines.empty()) {
+                gprim->indices = add_accessor(gbuffer, sshp->name + "_lines",
                     glTFAccessorType::Scalar,
                     glTFAccessorComponentType::UnsignedInt,
-                    (int)shp->lines.size() * 2, sizeof(int),
-                    (int*)shp->lines.data(), false);
+                    (int)sshp->lines.size() * 2, sizeof(int),
+                    (int*)sshp->lines.data(), false);
                 gprim->mode = glTFMeshPrimitiveMode::Lines;
-            } else if (!shp->triangles.empty()) {
-                gprim->indices = add_accessor(gbuffer, shp->name + "_triangles",
-                    glTFAccessorType::Scalar,
+            } else if (!sshp->triangles.empty()) {
+                gprim->indices = add_accessor(gbuffer,
+                    sshp->name + "_triangles", glTFAccessorType::Scalar,
                     glTFAccessorComponentType::UnsignedInt,
-                    (int)shp->triangles.size() * 3, sizeof(int),
-                    (int*)shp->triangles.data(), false);
+                    (int)sshp->triangles.size() * 3, sizeof(int),
+                    (int*)sshp->triangles.data(), false);
                 gprim->mode = glTFMeshPrimitiveMode::Triangles;
-            } else if (!shp->quads.empty()) {
-                auto triangles = convert_quads_to_triangles(shp->quads);
-                gprim->indices = add_accessor(gbuffer, shp->name + "_quads",
+            } else if (!sshp->quads.empty()) {
+                auto triangles = convert_quads_to_triangles(sshp->quads);
+                gprim->indices = add_accessor(gbuffer, sshp->name + "_quads",
                     glTFAccessorType::Scalar,
                     glTFAccessorComponentType::UnsignedInt,
                     (int)triangles.size() * 3, sizeof(int),
                     (int*)triangles.data(), false);
                 gprim->mode = glTFMeshPrimitiveMode::Triangles;
-            } else if (!shp->quads_pos.empty()) {
+            } else if (!sshp->quads_pos.empty()) {
                 throw std::runtime_error("face varying not supported in glTF");
             } else {
                 throw std::runtime_error("empty mesh");
@@ -7052,6 +7105,7 @@ vec3f fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak) {
 
 // Schlick approximation of Fresnel term
 vec3f fresnel_schlick(const vec3f& ks, float cosw) {
+    if (ks == zero3f) return zero3f;
     return ks +
            (vec3f{1, 1, 1} - ks) * pow(clamp(1.0f - cosw, 0.0f, 1.0f), 5.0f);
 }
@@ -7059,21 +7113,24 @@ vec3f fresnel_schlick(const vec3f& ks, float cosw) {
 // Schlick approximation of Fresnel term weighted by roughness.
 // This is a hack, but works better than not doing it.
 vec3f fresnel_schlick(const vec3f& ks, float cosw, float rs) {
+    if (ks == zero3f) return zero3f;
     auto fks = fresnel_schlick(ks, cosw);
-    return lerp(ks, fks, 1 - rs);
+    return lerp(ks, fks, 1 - sqrt(clamp(rs, 0.0f, 1.0f)));
 }
 
 // Evaluates the GGX distribution and geometric term
 float eval_ggx(float rs, float ndh, float ndi, float ndo) {
-    // evaluate GGX
+    // evaluate D
     auto alpha2 = rs * rs;
     auto di = (ndh * ndh) * (alpha2 - 1) + 1;
     auto d = alpha2 / (pif * di * di);
-#ifndef YGL_GGX_SMITH
+#if 0
+    // evaluate G from Heitz
     auto lambda_o = (-1 + sqrt(1 + alpha2 * (1 - ndo * ndo) / (ndo * ndo))) / 2;
     auto lambda_i = (-1 + sqrt(1 + alpha2 * (1 - ndi * ndi) / (ndi * ndi))) / 2;
     auto g = 1 / (1 + lambda_o + lambda_i);
 #else
+    // evaluate G from Smith
     auto go = (2 * ndo) / (ndo + sqrt(alpha2 + (1 - alpha2) * ndo * ndo));
     auto gi = (2 * ndi) / (ndi + sqrt(alpha2 + (1 - alpha2) * ndi * ndi));
     auto g = go * gi;
@@ -7083,18 +7140,18 @@ float eval_ggx(float rs, float ndh, float ndi, float ndo) {
 
 // Evaluates the GGX pdf
 float sample_ggx_pdf(float rs, float ndh) {
-    auto cos2 = ndh * ndh;
-    auto tan2 = (1 - cos2) / cos2;
     auto alpha2 = rs * rs;
-    auto d = alpha2 / (pif * cos2 * cos2 * (alpha2 + tan2) * (alpha2 + tan2));
-    return d;
+    auto di = (ndh * ndh) * (alpha2 - 1) + 1;
+    auto d = alpha2 / (pif * di * di);
+    return d * ndh;
 }
 
 // Sample the GGX distribution
 vec3f sample_ggx(float rs, const vec2f& rn) {
     auto tan2 = rs * rs * rn.y / (1 - rn.y);
-    auto rz = sqrt(1 / (tan2 + 1)), rr = sqrt(1 - rz * rz),
-         rphi = 2 * pif * rn.x;
+    auto rz = sqrt(1 / (tan2 + 1));
+    auto rr = sqrt(1 - rz * rz);
+    auto rphi = 2 * pif * rn.x;
     // set to wh
     auto wh_local = vec3f{rr * cos(rphi), rr * sin(rphi), rz};
     return wh_local;
@@ -7173,315 +7230,12 @@ struct trace_point {
     vec3f ke = zero3f;                               // emission
     vec3f kd = {0, 0, 0};                            // diffuse
     vec3f ks = {0, 0, 0};                            // specular
-    vec3f ksg = {1, 1, 1};                           // specular at grazing
     float rs = 0;                                    // specular roughness
     vec3f kr = {0, 0, 0};                            // clear coat
-    vec3f krg = {1, 1, 1};                           // clear coat at grazing
-    vec3f ktr = {0, 0, 0};                           // thin glass transmission
-    vec3f kto = {0, 0, 0};                           // opacity transmission
+    vec3f kt = {0, 0, 0};                            // thin glass transmission
+    float op = 1;                                    // opacity
     bool double_sided = false;                       // double sided
 };
-
-// Evaluates the BRDF albedo at normal incidence
-vec3f eval_brdf_albedo(const trace_point& pt) {
-    return pt.kd + pt.ks + pt.kr + pt.ktr + pt.kto;
-}
-
-// Evaluates the weights of each BRDF lobe
-std::array<float, 5> eval_brdf_weights(const trace_point& pt) {
-    auto w = std::array<float, 5>{{max_element_value(pt.kd),
-        max_element_value(pt.ks), max_element_value(pt.kr),
-        max_element_value(pt.ktr), max_element_value(pt.kto)}};
-    auto s = w[0] + w[1] + w[2] + w[3] + w[4];
-    if (!s) return w;
-    return {{w[0] / s, w[1] / s, w[2] / s, w[3] / s, w[4] / s}};
-}
-
-// Evaluates emission.
-vec3f eval_emission(const trace_point& pt, const vec3f& wo) {
-    if (pt.type != trace_point_type::surface || pt.double_sided ||
-        dot(pt.norm, wo) >= 0)
-        return pt.ke;
-    return zero3f;
-}
-
-// Check if we are near the mirror direction.
-inline bool check_near_mirror(
-    const vec3f& wn, const vec3f& wo, const vec3f& wi) {
-    return abs(dot(wi, normalize(wn * 2.0f * dot(wo, wn) - wo))) < 0.001f;
-}
-
-// Evaluates the BRDF scaled by the cosine of the incoming direction.
-// - ggx from [Heitz 2014] and [Walter 2007] and [Lagarde 2014]
-// "Understanding the Masking-Shadowing Function in Microfacet-Based
-// BRDFs" http://jcgt.org/published/0003/02/03/
-// - "Microfacet Models for Refraction through Rough Surfaces" EGSR 07
-// https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf
-vec3f eval_surface_brdfcos(const trace_point& pt, const vec3f& wo,
-    const vec3f& wi, bool delta = false) {
-    auto brdfcos = zero3f;
-    auto wh = normalize(wo + wi);
-    auto wn = pt.norm;
-    if (pt.double_sided && dot(wo, wn) < 0) wn = -wn;
-
-    auto ndo = dot(wn, wo), ndi = dot(wn, wi),
-         ndh = clamp(dot(wh, wn), -1.0f, 1.0f);
-
-    if (ndi > 0 && ndo > 0) {
-        brdfcos += pt.kd * ndi / pif;
-        if (ndh > 0 && pt.rs) {
-            auto dg = eval_ggx(pt.rs, ndh, ndi, ndo);
-            auto odh = clamp(dot(wo, wh), 0.0f, 1.0f);
-            auto ks = fresnel_schlick(pt.ks, odh, pt.rs);
-            brdfcos += ks * ndi * dg / (4 * ndi * ndo);
-        }
-        if (!pt.rs && delta && check_near_mirror(wn, wo, wi)) {
-            auto ks = fresnel_schlick(pt.ks, ndo);
-            brdfcos += ks;
-        }
-        if (delta && check_near_mirror(wn, wo, wi)) brdfcos += pt.kr;
-    }
-    if (wo == -wi && delta) {
-        auto kt = pt.ktr, ko = pt.kto;
-        if (pt.ks != zero3f) kt *= vec3f{1, 1, 1} - fresnel_schlick(pt.ks, ndo);
-        brdfcos += kt + ko;
-    }
-
-    assert(isfinite(brdfcos.x) && isfinite(brdfcos.y) && isfinite(brdfcos.z));
-    return brdfcos;
-}
-
-// Evaluates the BRDF scaled by the cosine of the incoming direction.
-// - uses Kajiya-Kay for hair
-vec3f eval_curve_brdfcos(const trace_point& pt, const vec3f& wo,
-    const vec3f& wi, bool delta = false) {
-    auto brdfcos = zero3f;
-    auto wh = normalize(wo + wi);
-    auto wn = pt.norm;
-
-    auto ndo = dot(wn, wo), ndi = dot(wn, wi),
-         ndh = clamp(dot(wn, wh), 0.0f, 1.0f);
-    auto so = sqrt(clamp(1 - ndo * ndo, 0.0f, 1.0f)),
-         si = sqrt(clamp(1 - ndi * ndi, 0.0f, 1.0f)),
-         sh = sqrt(clamp(1 - ndh * ndh, 0.0f, 1.0f));
-
-    if (si > 0 && so > 0) {
-        brdfcos += pt.kd * si / pif;
-        if (sh > 0 && pt.rs) {
-            auto ns = 2 / (pt.rs * pt.rs) - 2;
-            auto d = (ns + 2) * pow(sh, ns) / (2 + pif);
-            brdfcos += pt.ks * si * d / (4.0f * si * so);
-        }
-    }
-    if (wo == -wi && delta) brdfcos += pt.kto;
-
-    assert(isfinite(brdfcos.x) && isfinite(brdfcos.y) && isfinite(brdfcos.z));
-    return brdfcos;
-}
-
-// Evaluates the BRDF scaled by the cosine of the incoming direction.
-// - uses a hack for points
-vec3f eval_point_brdfcos(const trace_point& pt, const vec3f& wo,
-    const vec3f& wi, bool delta = false) {
-    auto brdfcos = zero3f;
-
-    auto ido = dot(wo, wi);
-    brdfcos += pt.kd * (2 * ido + 1) / (2 * pif);
-    if (wo == -wi && delta) brdfcos += pt.kto;
-
-    assert(isfinite(brdfcos.x) && isfinite(brdfcos.y) && isfinite(brdfcos.z));
-    return brdfcos;
-}
-
-// Evaluates the BRDF scaled by the cosine of the incoming direction.
-vec3f eval_brdfcos(const trace_point& pt, const vec3f& wo, const vec3f& wi,
-    bool delta = false) {
-    if (eval_brdf_albedo(pt) == zero3f) return zero3f;
-    switch (pt.type) {
-        case trace_point_type::none: return zero3f;
-        case trace_point_type::surface:
-            return eval_surface_brdfcos(pt, wo, wi, delta);
-        case trace_point_type::curve:
-            return eval_curve_brdfcos(pt, wo, wi, delta);
-        case trace_point_type::point:
-            return eval_point_brdfcos(pt, wo, wi, delta);
-        case trace_point_type::environment: return zero3f;
-    }
-}
-
-// Compute the weight for sampling the BRDF
-float weight_surface_brdfcos(const trace_point& pt, const vec3f& wo,
-    const vec3f& wi, bool delta = false) {
-    auto weights = eval_brdf_weights(pt);
-    auto wh = normalize(wi + wo);
-    auto wn = pt.norm;
-    if (pt.double_sided && dot(wo, wn) < 0) wn = -wn;
-
-    auto ndo = dot(wn, wo), ndi = dot(wn, wi), ndh = dot(wn, wh);
-
-    auto pdf = 0.0f;
-    if (ndo > 0 && ndi > 0) {
-        pdf += weights[0] * ndi / pif;
-        if (ndh > 0 && pt.rs) {
-            auto d = sample_ggx_pdf(pt.rs, ndh);
-            auto hdo = dot(wo, wh);
-            pdf += weights[1] * d / (4 * hdo);
-        }
-        if (!pt.rs && delta && check_near_mirror(wn, wo, wi)) pdf += weights[1];
-        if (delta && check_near_mirror(wn, wo, wi)) pdf += weights[2];
-    }
-    if (wi == -wo && delta) pdf += weights[3] + weights[4];
-
-    assert(isfinite(pdf));
-    if (!pdf) return 0;
-    return 1 / pdf;
-}
-
-// Compute the weight for sampling the BRDF
-float weight_curve_brdfcos(const trace_point& pt, const vec3f& wo,
-    const vec3f& wi, bool delta = false) {
-    auto weights = eval_brdf_weights(pt);
-
-    auto pdf = 0.0f;
-    pdf += (weights[0] + weights[1] + weights[2]) / (4 * pif);
-    if (wi == -wo && delta) pdf += weights[3] + weights[4];
-
-    assert(isfinite(pdf));
-    if (!pdf) return 0;
-    return 1 / pdf;
-}
-
-// Compute the weight for sampling the BRDF
-float weight_point_brdfcos(const trace_point& pt, const vec3f& wo,
-    const vec3f& wi, bool delta = false) {
-    auto weights = eval_brdf_weights(pt);
-
-    auto pdf = 0.0f;
-    pdf += (weights[0] + weights[1] + weights[2]) / (4 * pif);
-    if (wi == -wo && delta) pdf += weights[3] + weights[4];
-
-    assert(isfinite(pdf));
-    if (!pdf) return 0;
-    return 1 / pdf;
-}
-
-// Compute the weight for sampling the BRDF
-float weight_brdfcos(const trace_point& pt, const vec3f& wo, const vec3f& wi,
-    bool delta = false) {
-    if (eval_brdf_albedo(pt) == zero3f) return 0;
-    switch (pt.type) {
-        case trace_point_type::none: return 0;
-        case trace_point_type::surface:
-            return weight_surface_brdfcos(pt, wo, wi, delta);
-        case trace_point_type::curve:
-            return weight_curve_brdfcos(pt, wo, wi, delta);
-        case trace_point_type::point:
-            return weight_point_brdfcos(pt, wo, wi, delta);
-        case trace_point_type::environment: return 0;
-    }
-}
-
-// Picks a direction based on the BRDF
-std::tuple<vec3f, bool> sample_surface_brdfcos(
-    const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
-    auto weights = eval_brdf_weights(pt);
-    auto lid = sample_index(weights, rnl);
-    auto wn = pt.norm;
-    if (pt.double_sided && dot(wo, wn) < 0) wn = -wn;
-
-    auto ndo = dot(wn, wo);
-    if (ndo <= 0) return {zero3f, false};
-
-    // sample according to diffuse
-    if (lid == 0) {
-        auto fp = make_frame_fromz(pt.pos, wn);
-        auto rz = sqrtf(rn.y), rr = sqrtf(1 - rz * rz), rphi = 2 * pif * rn.x;
-        auto wi_local = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
-        return {transform_direction(fp, wi_local), false};
-    }
-    // sample according to specular GGX
-    else if (lid == 1 && pt.rs) {
-        auto fp = make_frame_fromz(pt.pos, wn);
-        auto wh_local = sample_ggx(pt.rs, rn);
-        auto wh = transform_direction(fp, wh_local);
-        return {normalize(wh * 2.0f * dot(wo, wh) - wo), false};
-    }
-    // sample according to specular mirror
-    else if (lid == 1 && !pt.rs) {
-        return {normalize(wn * 2.0f * dot(wo, wn) - wo), true};
-    }
-    // sample according to specular mirror
-    else if (lid == 2) {
-        return {normalize(wn * 2.0f * dot(wo, wn) - wo), true};
-    }
-    // transmission hack
-    else if (lid == 3 || lid == 4) {
-        return {-wo, true};
-    } else
-        assert(false);
-
-    return {zero3f, false};
-}
-
-// Picks a direction based on the BRDF
-std::tuple<vec3f, bool> sample_curve_brdfcos(
-    const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
-    auto weights = eval_brdf_weights(pt);
-    auto lid = sample_index(weights, rnl);
-    auto wn = pt.norm;
-
-    // diffuse and specular: samnple a uniform spherical direction
-    if (lid == 0 || lid == 1 || lid == 2) {
-        auto fp = make_frame_fromz(pt.pos, wn);
-        auto rz = 2 * rn.y - 1, rr = sqrtf(1 - rz * rz), rphi = 2 * pif * rn.x;
-        auto wi_local = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
-        return {transform_direction(fp, wi_local), false};
-    }
-    // transmission hack
-    else if (lid == 3 || lid == 4) {
-        return {-wo, true};
-    } else
-        assert(false);
-    return {zero3f, false};
-}
-
-// Picks a direction based on the BRDF
-std::tuple<vec3f, bool> sample_point_brdfcos(
-    const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
-    auto weights = eval_brdf_weights(pt);
-    auto lid = sample_index(weights, rnl);
-    auto wn = pt.norm;
-    // diffuse and specular: samnple a uniform spherical direction
-    if (lid == 0 || lid == 1 || lid == 2) {
-        auto fp = make_frame_fromz(pt.pos, wn);
-        auto rz = 2 * rn.y - 1, rr = sqrtf(1 - rz * rz), rphi = 2 * pif * rn.x;
-        auto wi_local = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
-        return {transform_direction(fp, wi_local), false};
-    }
-    // transmission hack
-    else if (lid == 3 || lid == 4) {
-        // continue ray direction
-        return {-wo, true};
-    } else
-        assert(false);
-    return {zero3f, false};
-}
-
-// Picks a direction based on the BRDF
-std::tuple<vec3f, bool> sample_brdfcos(
-    const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
-    if (eval_brdf_albedo(pt) == zero3f) return {zero3f, false};
-    switch (pt.type) {
-        case trace_point_type::none: return {zero3f, false};
-        case trace_point_type::surface:
-            return sample_surface_brdfcos(pt, wo, rnl, rn);
-        case trace_point_type::curve:
-            return sample_curve_brdfcos(pt, wo, rnl, rn);
-        case trace_point_type::point:
-            return sample_point_brdfcos(pt, wo, rnl, rn);
-        case trace_point_type::environment: return {zero3f, false};
-    }
-}
 
 // Create a point for an environment map. Resolves material with textures.
 trace_point eval_environment_point(
@@ -7584,10 +7338,10 @@ trace_point eval_shape_point(const shape* shp, const frame3f& frame, int eid,
     }
 
     // handle opacity
-    op *= mat->op;
+    pt.op = mat->op * op;
     if (mat->op_txt.txt) {
         auto txt = eval_texture(mat->op_txt, pt.texcoord);
-        op *= (txt.x + txt.y + txt.z) / 3;
+        pt.op *= (txt.x + txt.y + txt.z) / 3;
     }
 
     // sample emission
@@ -7604,7 +7358,7 @@ trace_point eval_shape_point(const shape* shp, const frame3f& frame, int eid,
             if (mat->kd_txt.txt) {
                 auto txt = eval_texture(mat->kd_txt, pt.texcoord);
                 pt.kd *= {txt.x, txt.y, txt.z};
-                op *= txt.w;
+                pt.op *= txt.w;
             }
             pt.ks = mat->ks * kx;
             pt.rs = mat->rs;
@@ -7617,10 +7371,10 @@ trace_point eval_shape_point(const shape* shp, const frame3f& frame, int eid,
                 auto txt = eval_texture(mat->kr_txt, pt.texcoord);
                 pt.kr *= {txt.x, txt.y, txt.z};
             }
-            pt.ktr = mat->kt * kx;
+            pt.kt = mat->kt * kx;
             if (mat->kt_txt.txt) {
                 auto txt = eval_texture(mat->kt_txt, pt.texcoord);
-                pt.ktr *= {txt.x, txt.y, txt.z};
+                pt.kt *= {txt.x, txt.y, txt.z};
             }
         } break;
         case material_type::metallic_roughness: {
@@ -7628,7 +7382,7 @@ trace_point eval_shape_point(const shape* shp, const frame3f& frame, int eid,
             if (mat->kd_txt.txt) {
                 auto txt = eval_texture(mat->kd_txt, pt.texcoord);
                 kb *= {txt.x, txt.y, txt.z};
-                op *= txt.w;
+                pt.op *= txt.w;
             }
             auto km = mat->ks.x;
             pt.rs = mat->rs;
@@ -7645,7 +7399,7 @@ trace_point eval_shape_point(const shape* shp, const frame3f& frame, int eid,
             if (mat->kd_txt.txt) {
                 auto txt = eval_texture(mat->kd_txt, pt.texcoord);
                 pt.kd *= {txt.x, txt.y, txt.z};
-                op *= txt.w;
+                pt.op *= txt.w;
             }
             pt.ks = mat->ks * kx;
             pt.rs = mat->rs;
@@ -7660,34 +7414,330 @@ trace_point eval_shape_point(const shape* shp, const frame3f& frame, int eid,
                 auto txt = eval_texture(mat->kr_txt, pt.texcoord);
                 pt.kr *= {txt.x, txt.y, txt.z};
             }
-            pt.ktr = mat->kt * kx;
+            pt.kt = mat->kt * kx;
             if (mat->kt_txt.txt) {
                 auto txt = eval_texture(mat->kt_txt, pt.texcoord);
-                pt.ktr *= {txt.x, txt.y, txt.z};
+                pt.kt *= {txt.x, txt.y, txt.z};
             }
         } break;
     }
 
     // set up final values
-    pt.ke *= op;
-    pt.kd *= op;
     if (pt.ks != zero3f && pt.rs < 0.9999f) {
-        pt.ks *= op;
-        pt.ksg *= op;
         pt.rs = pt.rs * pt.rs;
-        pt.rs = clamp(pt.rs, 0.02f * 0.02f, 1.0f);
+        if (pt.rs < 0.03f * 0.03f)
+            pt.rs = 0;
+        else
+            pt.rs = clamp(pt.rs, 0.03f * 0.03f, 1.0f);
     } else {
         pt.ks = zero3f;
-        pt.rs = 0;
+        pt.rs = 1;
     }
-    pt.kr *= op;
-    pt.krg *= op;
-    pt.ktr *= op;
-    pt.kto = {1.0f - op, 1.0f - op, 1.0f - op};
-    if (pt.ktr != zero3f) pt.double_sided = true;
+    if (pt.kt != zero3f) pt.double_sided = true;
+    if (pt.op > 0.999f) pt.op = 1;
 
     // done
     return pt;
+}
+
+// Evaluates the BRDF albedo at normal incidence
+vec3f eval_brdf_albedo(const trace_point& pt) {
+    return pt.kd + pt.ks + pt.kr + pt.kt;
+}
+
+// Evaluates the weights of each BRDF lobe
+std::array<float, 4> eval_brdf_weights(const trace_point& pt) {
+    auto w = std::array<float, 4>{
+        {max_element_value(pt.kd), max_element_value(pt.ks),
+            max_element_value(pt.kr), max_element_value(pt.kt)}};
+    auto s = w[0] + w[1] + w[2] + w[3];
+    if (!s) return w;
+    return {{w[0] / s, w[1] / s, w[2] / s, w[3] / s}};
+}
+
+// Evaluates emission.
+vec3f eval_emission(const trace_point& pt, const vec3f& wo) {
+    if (pt.type != trace_point_type::surface || pt.double_sided ||
+        dot(pt.norm, wo) >= 0)
+        return pt.ke;
+    return zero3f;
+}
+
+// Check if we are near the mirror direction.
+inline bool check_near_mirror(
+    const vec3f& wn, const vec3f& wo, const vec3f& wi) {
+    return abs(dot(wi, normalize(wn * 2.0f * dot(wo, wn) - wo)) - 1) < 0.001f;
+}
+
+// Evaluates the BRDF scaled by the cosine of the incoming direction.
+// - ggx from [Heitz 2014] and [Walter 2007] and [Lagarde 2014]
+// "Understanding the Masking-Shadowing Function in Microfacet-Based
+// BRDFs" http://jcgt.org/published/0003/02/03/
+// - "Microfacet Models for Refraction through Rough Surfaces" EGSR 07
+// https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf
+vec3f eval_surface_brdfcos(const trace_point& pt, const vec3f& wo,
+    const vec3f& wi, bool delta = false) {
+    auto brdfcos = zero3f;
+    auto wn = pt.norm;
+    if (pt.double_sided && dot(wo, wn) < 0) wn = -wn;
+
+    auto ndo = dot(wn, wo), ndi = dot(wn, wi);
+
+    if (pt.kd != zero3f && ndi > 0 && ndo > 0) { brdfcos += pt.kd * ndi / pif; }
+
+    if (pt.ks != zero3f && pt.rs && ndi > 0 && ndo > 0) {
+        auto wh = normalize(wo + wi);
+        auto ndh = clamp(dot(wh, wn), -1.0f, 1.0f);
+        auto dg = eval_ggx(pt.rs, ndh, ndi, ndo);
+        auto odh = clamp(dot(wo, wh), 0.0f, 1.0f);
+        auto ks = fresnel_schlick(pt.ks, odh, pt.rs);
+        brdfcos += ks * ndi * dg / (4 * ndi * ndo);
+    }
+
+    if (pt.ks != zero3f && !pt.rs && delta && ndo > 0 &&
+        check_near_mirror(wn, wo, wi)) {
+        auto ks = fresnel_schlick(pt.ks, ndo);
+        brdfcos += ks;
+    }
+
+    if (pt.kr != zero3f && delta && ndo > 0 && check_near_mirror(wn, wo, wi)) {
+        auto kr = fresnel_schlick(pt.kr, ndo);
+        brdfcos += kr;
+    }
+
+    if (pt.kt != zero3f && pt.rs && ndo > 0 && ndi < 0) {
+        auto wir = wi - 2 * dot(wi, wn) * wn;
+        auto wh = normalize(wo + wir);
+        auto ndh = clamp(dot(wh, wn), -1.0f, 1.0f);
+        auto dg = eval_ggx(pt.rs, ndh, -ndi, ndo);
+        auto odh = clamp(dot(wo, wh), 0.0f, 1.0f);
+        auto kt = pt.kt * (vec3f{1, 1, 1} - fresnel_schlick(pt.ks, odh, pt.rs));
+        brdfcos += kt * ndi * dg / (4 * ndi * ndo);
+    }
+
+    if (pt.kt != zero3f && !pt.rs && wo == -wi && delta) {
+        auto kt = pt.kt * (vec3f{1, 1, 1} - fresnel_schlick(pt.ks, ndo));
+        brdfcos += kt;
+    }
+
+    assert(isfinite(brdfcos.x) && isfinite(brdfcos.y) && isfinite(brdfcos.z));
+    return brdfcos;
+}
+
+// Evaluates the BRDF scaled by the cosine of the incoming direction.
+// - uses Kajiya-Kay for hair
+vec3f eval_curve_brdfcos(const trace_point& pt, const vec3f& wo,
+    const vec3f& wi, bool delta = false) {
+    auto brdfcos = zero3f;
+    auto wh = normalize(wo + wi);
+    auto wn = pt.norm;
+
+    auto ndo = dot(wn, wo), ndi = dot(wn, wi),
+         ndh = clamp(dot(wn, wh), 0.0f, 1.0f);
+    auto so = sqrt(clamp(1 - ndo * ndo, 0.0001f, 1.0f)),
+         si = sqrt(clamp(1 - ndi * ndi, 0.0001f, 1.0f)),
+         sh = sqrt(clamp(1 - ndh * ndh, 0.0001f, 1.0f));
+
+    if (pt.kd != zero3f) { brdfcos += pt.kd * si / pif; }
+
+    if (pt.ks != zero3f && pt.rs) {
+        auto ns = 2 / (pt.rs * pt.rs) - 2;
+        auto d = (ns + 2) * pow(sh, ns) / (2 + pif);
+        brdfcos += pt.ks * si * d / (4.0f * si * so);
+    }
+
+    assert(isfinite(brdfcos.x) && isfinite(brdfcos.y) && isfinite(brdfcos.z));
+    return brdfcos;
+}
+
+// Evaluates the BRDF scaled by the cosine of the incoming direction.
+// - uses a hack for points
+vec3f eval_point_brdfcos(const trace_point& pt, const vec3f& wo,
+    const vec3f& wi, bool delta = false) {
+    auto brdfcos = zero3f;
+
+    auto ido = dot(wo, wi);
+    brdfcos += pt.kd * (2 * ido + 1) / (2 * pif);
+
+    assert(isfinite(brdfcos.x) && isfinite(brdfcos.y) && isfinite(brdfcos.z));
+    return brdfcos;
+}
+
+// Evaluates the BRDF scaled by the cosine of the incoming direction.
+vec3f eval_brdfcos(const trace_point& pt, const vec3f& wo, const vec3f& wi,
+    bool delta = false) {
+    if (eval_brdf_albedo(pt) == zero3f) return zero3f;
+    switch (pt.type) {
+        case trace_point_type::none: return zero3f;
+        case trace_point_type::surface:
+            return eval_surface_brdfcos(pt, wo, wi, delta);
+        case trace_point_type::curve:
+            return eval_curve_brdfcos(pt, wo, wi, delta);
+        case trace_point_type::point:
+            return eval_point_brdfcos(pt, wo, wi, delta);
+        case trace_point_type::environment: return zero3f;
+    }
+}
+
+// Compute the weight for sampling the BRDF
+float weight_surface_brdf(const trace_point& pt, const vec3f& wo,
+    const vec3f& wi, bool delta = false) {
+    auto weights = eval_brdf_weights(pt);
+    auto wn = pt.norm;
+    if (pt.double_sided && dot(wo, wn) < 0) wn = -wn;
+
+    auto ndo = dot(wn, wo), ndi = dot(wn, wi);
+
+    auto pdf = 0.0f;
+
+    if (weights[0] && ndo > 0 && ndi > 0) { pdf += weights[0] * ndi / pif; }
+
+    if (weights[1] && pt.rs && ndo > 0 && ndi > 0) {
+        auto wh = normalize(wi + wo);
+        auto ndh = dot(wn, wh);
+        auto d = sample_ggx_pdf(pt.rs, ndh);
+        auto hdo = dot(wo, wh);
+        pdf += weights[1] * d / (4 * hdo);
+    }
+
+    if (weights[1] && !pt.rs && ndo > 0 && check_near_mirror(wn, wo, wi)) {
+        pdf += weights[1];
+    }
+
+    if (weights[2] && ndo > 0 && check_near_mirror(wn, wo, wi)) {
+        pdf += weights[2];
+    }
+
+    if (weights[3] && pt.rs && ndo > 0 && ndi < 0) {
+        auto wir = wi - 2 * dot(wi, wn) * wn;
+        auto wh = normalize(wo + wir);
+        auto ndh = dot(wn, wh);
+        auto d = sample_ggx_pdf(pt.rs, ndh);
+        auto hdo = dot(wo, wh);
+        pdf += weights[3] * d / (4 * hdo);
+    }
+
+    if (weights[3] && !pt.rs && wi == -wo && ndo > 0 && delta) {
+        pdf += weights[3];
+    }
+
+    assert(isfinite(pdf));
+    if (!pdf) return 0;
+    return 1 / pdf;
+}
+
+// Compute the weight for sampling the BRDF
+float weight_curve_brdf(const trace_point& pt, const vec3f& wo, const vec3f& wi,
+    bool delta = false) {
+    auto pdf = 1 / (4 * pif);
+    return 1 / pdf;
+}
+
+// Compute the weight for sampling the BRDF
+float weight_point_brdf(const trace_point& pt, const vec3f& wo, const vec3f& wi,
+    bool delta = false) {
+    auto pdf = 1 / (4 * pif);
+    return 1 / pdf;
+}
+
+// Compute the weight for sampling the BRDF
+float weight_brdf(const trace_point& pt, const vec3f& wo, const vec3f& wi,
+    bool delta = false) {
+    if (eval_brdf_albedo(pt) == zero3f) return 0;
+    switch (pt.type) {
+        case trace_point_type::none: return 0;
+        case trace_point_type::surface:
+            return weight_surface_brdf(pt, wo, wi, delta);
+        case trace_point_type::curve:
+            return weight_curve_brdf(pt, wo, wi, delta);
+        case trace_point_type::point:
+            return weight_point_brdf(pt, wo, wi, delta);
+        case trace_point_type::environment: return 0;
+    }
+}
+
+// Picks a direction based on the BRDF
+std::tuple<vec3f, bool> sample_surface_brdf(
+    const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
+    auto weights = eval_brdf_weights(pt);
+    auto lid = sample_index(weights, rnl);
+    auto wn = pt.norm;
+    if (pt.double_sided && dot(wo, wn) < 0) wn = -wn;
+
+    auto ndo = dot(wn, wo);
+    if (ndo <= 0) return {zero3f, false};
+
+    // sample according to diffuse
+    if (lid == 0) {
+        auto fp = make_frame_fromz(pt.pos, wn);
+        auto rz = sqrtf(rn.y), rr = sqrtf(1 - rz * rz), rphi = 2 * pif * rn.x;
+        auto wi_local = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
+        return {transform_direction(fp, wi_local), false};
+    }
+    // sample according to specular GGX
+    else if (lid == 1 && pt.rs) {
+        auto fp = make_frame_fromz(pt.pos, wn);
+        auto wh_local = sample_ggx(pt.rs, rn);
+        auto wh = transform_direction(fp, wh_local);
+        return {normalize(wh * 2.0f * dot(wo, wh) - wo), false};
+    }
+    // sample according to specular mirror
+    else if (lid == 1 && !pt.rs) {
+        return {normalize(wn * 2.0f * dot(wo, wn) - wo), true};
+    }
+    // sample according to specular mirror
+    else if (lid == 2) {
+        return {normalize(wn * 2.0f * dot(wo, wn) - wo), true};
+    }
+    // transmission hack
+    else if (lid == 3 && pt.rs) {
+        auto fp = make_frame_fromz(pt.pos, wn);
+        auto wh_local = sample_ggx(pt.rs, rn);
+        auto wh = transform_direction(fp, wh_local);
+        auto wi = normalize(wh * 2.0f * dot(wo, wh) - wo);
+        return {normalize(wi - 2 * dot(wi, wn) * wn), false};
+    }
+    // transmission hack
+    else if (lid == 3 && !pt.rs) {
+        return {-wo, true};
+    } else
+        assert(false);
+
+    return {zero3f, false};
+}
+
+// Picks a direction based on the BRDF
+std::tuple<vec3f, bool> sample_curve_brdf(
+    const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
+    auto wn = pt.norm;
+    auto fp = make_frame_fromz(pt.pos, wn);
+    auto rz = 2 * rn.y - 1, rr = sqrtf(1 - rz * rz), rphi = 2 * pif * rn.x;
+    auto wi_local = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
+    return {transform_direction(fp, wi_local), false};
+}
+
+// Picks a direction based on the BRDF
+std::tuple<vec3f, bool> sample_point_brdf(
+    const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
+    auto wn = pt.norm;
+    auto fp = make_frame_fromz(pt.pos, wn);
+    auto rz = 2 * rn.y - 1, rr = sqrtf(1 - rz * rz), rphi = 2 * pif * rn.x;
+    auto wi_local = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
+    return {transform_direction(fp, wi_local), false};
+}
+
+// Picks a direction based on the BRDF
+std::tuple<vec3f, bool> sample_brdf(
+    const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
+    if (eval_brdf_albedo(pt) == zero3f) return {zero3f, false};
+    switch (pt.type) {
+        case trace_point_type::none: return {zero3f, false};
+        case trace_point_type::surface:
+            return sample_surface_brdf(pt, wo, rnl, rn);
+        case trace_point_type::curve: return sample_curve_brdf(pt, wo, rnl, rn);
+        case trace_point_type::point: return sample_point_brdf(pt, wo, rnl, rn);
+        case trace_point_type::environment: return {zero3f, false};
+    }
 }
 
 // Sample weight for a light point.
@@ -7790,7 +7840,7 @@ vec3f eval_transmission(const scene* scn, const bvh_tree* bvh,
             auto ray = make_segment(cpt.pos, lpt.pos);
             cpt = intersect_scene(scn, bvh, ray, params);
             if (!cpt.shp) break;
-            weight *= cpt.ktr + cpt.kto;
+            weight *= cpt.kt + vec3f{1 - cpt.op};
             if (weight == zero3f) break;
         }
         return weight;
@@ -7799,8 +7849,9 @@ vec3f eval_transmission(const scene* scn, const bvh_tree* bvh,
 
 // Mis weight.
 float weight_mis(float w0, float w1) {
-    if (!w0 || !w1) return 1;
-    return (1 / w0) / (1 / w0 + 1 / w1);
+    if (w0 == 0) return w1;
+    if (w1 == 0) return w0;
+    return 1 / (1 / w0 + 1 / w1);
 }
 
 // Recursive path tracing.
@@ -7810,14 +7861,23 @@ vec3f trace_path(const scene* scn, const bvh_tree* bvh,
     auto pt = pt_;
     auto wo = wo_;
 
-    // emission
-    auto l = eval_emission(pt, wo);
-    if (eval_brdf_albedo(pt) == zero3f || lights.empty()) return l;
+    // check
+    if (lights.empty()) return eval_emission(pt, wo);
 
     // trace path
+    auto l = zero3f;
     auto weight = vec3f{1, 1, 1};
-    auto emission = false;
+    auto emission = true;
     for (auto bounce = 0; bounce < params.max_depth; bounce++) {
+        // opacity
+        if (pt.op != 1) {
+            if (sample_next1f(pxl, params.rng, params.nsamples) < 1 - pt.op) {
+                pt = intersect_scene(scn, bvh, make_ray(pt.pos, -wo), params);
+                emission = true;
+                continue;
+            }
+        }
+
         // emission
         if (emission) l += weight * eval_emission(pt, wo);
 
@@ -7835,11 +7895,11 @@ vec3f trace_path(const scene* scn, const bvh_tree* bvh,
                   sample_distribution_weightsum(lights.light_distrib);
         auto lwi = normalize(lpt.pos - pt.pos);
         auto lke = eval_emission(lpt, -lwi);
-        auto lbc = eval_brdfcos(pt, wo, lwi);
-        auto lld = lke * lbc * lw;
+        auto lbc = eval_brdfcos(pt, wo, lwi, true);
+        auto lld = lke * lbc;
         if (lld != zero3f) {
             l += weight * lld * eval_transmission(scn, bvh, pt, lpt, params) *
-                 weight_mis(lw, weight_brdfcos(pt, wo, lwi));
+                 weight_mis(lw, weight_brdf(pt, wo, lwi, true));
         }
 
         // direct – brdf
@@ -7847,23 +7907,25 @@ vec3f trace_path(const scene* scn, const bvh_tree* bvh,
         auto rbuv = sample_next2f(pxl, params.rng, params.nsamples);
         auto bwi = zero3f;
         auto bdelta = false;
-        std::tie(bwi, bdelta) = sample_brdfcos(pt, wo, rbl, rbuv);
+        std::tie(bwi, bdelta) = sample_brdf(pt, wo, rbl, rbuv);
         auto bpt = intersect_scene(scn, bvh, make_ray(pt.pos, bwi), params);
-        auto bw = weight_brdfcos(pt, wo, bwi, bdelta);
+        auto bw = weight_brdf(pt, wo, bwi, true);
         auto bke = eval_emission(bpt, -bwi);
-        auto bbc = eval_brdfcos(pt, wo, bwi, bdelta);
-        auto bld = bke * bbc * bw;
+        auto bbc = eval_brdfcos(pt, wo, bwi, true);
+        auto bld = bke * bbc;
         if (bld != zero3f) {
-            // TODO: possible BUG; check for light distribution weight here
-            l += weight * bld * weight_mis(bw, weight_light(lights, bpt, pt));
+            l += weight * bld *
+                 weight_mis(bw,
+                     weight_light(lights, bpt, pt) *
+                         sample_distribution_weightsum(lights.light_distrib));
         }
 
         // skip recursion if path ends
         if (bounce == params.max_depth - 1) break;
 
         // continue path
-        weight *= eval_brdfcos(pt, wo, bwi, bdelta) *
-                  weight_brdfcos(pt, wo, bwi, bdelta);
+        weight *=
+            eval_brdfcos(pt, wo, bwi, true) * weight_brdf(pt, wo, bwi, true);
         if (weight == zero3f) break;
 
         // roussian roulette
@@ -7890,13 +7952,24 @@ vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
     // emission
     auto pt = pt_;
     auto wo = wo_;
-    auto l = eval_emission(pt, wo);
-    if (eval_brdf_albedo(pt) == zero3f || lights.empty()) return l;
+
+    // check
+    if (lights.empty()) return eval_emission(pt, wo);
 
     // trace path
+    auto l = zero3f;
     auto weight = vec3f{1, 1, 1};
     auto emission = false;
     for (auto bounce = 0; bounce < params.max_depth; bounce++) {
+        // opacity
+        if (pt.op != 1) {
+            if (sample_next1f(pxl, params.rng, params.nsamples) < 1 - pt.op) {
+                pt = intersect_scene(scn, bvh, make_ray(pt.pos, -wo), params);
+                emission = true;
+                continue;
+            }
+        }
+
         // emission
         if (emission) l += weight * eval_emission(pt, wo);
 
@@ -7904,18 +7977,20 @@ vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
         if (eval_brdf_albedo(pt) == zero3f) break;
 
         // direct
-        auto rll = sample_next1f(pxl, params.rng, params.nsamples);
-        auto rle = sample_next1f(pxl, params.rng, params.nsamples);
-        auto rluv = sample_next2f(pxl, params.rng, params.nsamples);
-        auto& lgt = lights.lights[sample_distribution_discrete(
-            lights.light_distrib, rll)];
-        auto lpt = sample_light(lights, lgt, pt, rle, rluv, params);
-        auto lwi = normalize(lpt.pos - pt.pos);
-        auto ld = eval_emission(lpt, -lwi) * eval_brdfcos(pt, wo, lwi) *
-                  weight_light(lights, lpt, pt) *
-                  sample_distribution_weightsum(lights.light_distrib);
-        if (ld != zero3f) {
-            l += weight * ld * eval_transmission(scn, bvh, pt, lpt, params);
+        if (!lights.empty()) {
+            auto rll = sample_next1f(pxl, params.rng, params.nsamples);
+            auto rle = sample_next1f(pxl, params.rng, params.nsamples);
+            auto rluv = sample_next2f(pxl, params.rng, params.nsamples);
+            auto& lgt = lights.lights[sample_distribution_discrete(
+                lights.light_distrib, rll)];
+            auto lpt = sample_light(lights, lgt, pt, rle, rluv, params);
+            auto lwi = normalize(lpt.pos - pt.pos);
+            auto ld = eval_emission(lpt, -lwi) * eval_brdfcos(pt, wo, lwi) *
+                      weight_light(lights, lpt, pt) *
+                      sample_distribution_weightsum(lights.light_distrib);
+            if (ld != zero3f) {
+                l += weight * ld * eval_transmission(scn, bvh, pt, lpt, params);
+            }
         }
 
         // skip recursion if path ends
@@ -7934,9 +8009,9 @@ vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
         auto rbuv = sample_next2f(pxl, params.rng, params.nsamples);
         auto bwi = zero3f;
         auto bdelta = false;
-        std::tie(bwi, bdelta) = sample_brdfcos(pt, wo, rbl, rbuv);
+        std::tie(bwi, bdelta) = sample_brdf(pt, wo, rbl, rbuv);
         weight *= eval_brdfcos(pt, wo, bwi, bdelta) *
-                  weight_brdfcos(pt, wo, bwi, bdelta);
+                  weight_brdf(pt, wo, bwi, bdelta);
         if (weight == zero3f) break;
 
         auto bpt = intersect_scene(scn, bvh, make_ray(pt.pos, bwi), params);
@@ -7996,11 +8071,11 @@ vec3f trace_path_hack(const scene* scn, const bvh_tree* bvh,
         // continue path
         auto bwi = zero3f;
         auto bdelta = false;
-        std::tie(bwi, bdelta) = sample_brdfcos(pt, wo,
-            sample_next1f(pxl, params.rng, params.nsamples),
-            sample_next2f(pxl, params.rng, params.nsamples));
+        std::tie(bwi, bdelta) =
+            sample_brdf(pt, wo, sample_next1f(pxl, params.rng, params.nsamples),
+                sample_next2f(pxl, params.rng, params.nsamples));
         weight *= eval_brdfcos(pt, wo, bwi, bdelta) *
-                  weight_brdfcos(pt, wo, bwi, bdelta);
+                  weight_brdf(pt, wo, bwi, bdelta);
         if (weight == zero3f) break;
 
         auto bpt = intersect_scene(scn, bvh, make_ray(pt.pos, bwi), params);
@@ -8048,10 +8123,17 @@ vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
     }
 
     // opacity
-    if (pt.ktr + pt.kto != zero3f) {
+    if (pt.kt != zero3f) {
         auto opt = intersect_scene(scn, bvh, make_ray(pt.pos, -wo), params);
-        l += (pt.ktr + pt.kto) *
+        l += pt.kt *
              trace_direct(scn, bvh, lights, opt, wo, bounce + 1, pxl, params);
+    }
+
+    // opacity
+    if (pt.op != 1) {
+        auto opt = intersect_scene(scn, bvh, make_ray(pt.pos, -wo), params);
+        l = pt.op * l + (1 - pt.op) * trace_direct(scn, bvh, lights, opt, wo,
+                                          bounce + 1, pxl, params);
     }
 
     // done
@@ -8078,10 +8160,15 @@ vec3f trace_eyelight(const scene* scn, const bvh_tree* bvh,
 
     // opacity
     if (bounce >= params.max_depth) return l;
-    if (pt.ktr + pt.kto != zero3f) {
+    if (pt.kt != zero3f) {
         auto opt = intersect_scene(scn, bvh, make_ray(pt.pos, -wo), params);
-        l += (pt.ktr + pt.kto) *
+        l += pt.kt *
              trace_eyelight(scn, bvh, lights, opt, wo, bounce + 1, pxl, params);
+    }
+    if (pt.op != 1) {
+        auto opt = intersect_scene(scn, bvh, make_ray(pt.pos, -wo), params);
+        l = pt.op * l + (1 - pt.op) * trace_eyelight(scn, bvh, lights, opt, wo,
+                                          bounce + 1, pxl, params);
     }
 
     // done
@@ -11072,6 +11159,7 @@ void update_proc_elem(scene* scn, material* mat, const proc_material* pmat) {
         case proc_material_type::matte: {
             mat->kd = pmat->color;
             mat->kd_txt.txt = txt;
+            mat->rs = 1;
         } break;
         case proc_material_type::plastic: {
             mat->kd = pmat->color;
@@ -11083,6 +11171,12 @@ void update_proc_elem(scene* scn, material* mat, const proc_material* pmat) {
             mat->ks = pmat->color;
             mat->rs = pmat->roughness;
             mat->ks_txt.txt = txt;
+        } break;
+        case proc_material_type::car_paint: {
+            mat->ks = pmat->color;
+            mat->rs = pmat->roughness;
+            mat->ks_txt.txt = txt;
+            mat->kr = {0.04f, 0.04f, 0.04f};
         } break;
         case proc_material_type::glass: {
             mat->ks = {0.04f, 0.04f, 0.04f};
@@ -11249,7 +11343,7 @@ void update_proc_elem(scene* scn, shape* shp, const proc_shape* pshp) {
                 shp->radius, {pshp->tesselation.x, pshp->tesselation.y}, {},
                 shp1->quads, shp1->pos, shp1->norm, shp1->texcoord,
                 pshp->hair_params);
-            merge_into(shp, shp1, false);
+            // merge_into(shp, shp1, false);
             delete shp1;
         } break;
         case proc_shape_type::beziercircle: {
@@ -11392,77 +11486,84 @@ void remove_duplicates(proc_scene* scn) {
     remove_duplicate_elems(scn->animations);
 }
 
-std::vector<proc_texture*>& proc_texture_presets() {
-    static auto presets = std::vector<proc_texture*>();
+std::map<std::string, proc_texture*>& proc_texture_presets() {
+    static auto presets = std::map<std::string, proc_texture*>();
     if (!presets.empty()) return presets;
 
-    auto make_texture = [](const std::string& name, proc_texture_type type) {
-        auto params = new proc_texture();
-        params->name = name;
-        params->type = type;
-        return params;
+    auto add_texture = [](std::map<std::string, proc_texture*>& presets,
+                           const std::string& name, proc_texture_type type) {
+        auto txt = new proc_texture();
+        presets[name] = txt;
+        txt->name = name;
+        txt->type = type;
+        return txt;
     };
 
-    presets.push_back(make_texture("grid", proc_texture_type::grid));
-    presets.push_back(make_texture("checker", proc_texture_type::checker));
-    presets.push_back(make_texture("colored", proc_texture_type::colored));
-    presets.push_back(make_texture("rcolored", proc_texture_type::rcolored));
-    presets.push_back(make_texture("bump", proc_texture_type::bump));
-    presets.back()->tile_size = 32;
-    presets.push_back(make_texture("tgrid", proc_texture_type::bump));
-    presets.back()->tile_size = 32;
-    presets.push_back(make_texture("uv", proc_texture_type::uv));
-    presets.push_back(make_texture("gamma", proc_texture_type::gamma));
-    presets.push_back(make_texture("gridn", proc_texture_type::grid));
-    presets.back()->bump_to_normal = true;
-    presets.back()->bump_to_normal = true;
-    presets.back()->bump_scale = 4;
-    presets.push_back(make_texture("tgridn", proc_texture_type::grid));
-    presets.back()->tile_size = 32;
-    presets.back()->bump_to_normal = true;
-    presets.back()->bump_to_normal = true;
-    presets.back()->bump_scale = 4;
-    presets.push_back(make_texture("bumpn", proc_texture_type::bump));
-    presets.back()->tile_size = 32;
-    presets.back()->bump_to_normal = true;
-    presets.back()->bump_scale = 4;
-    presets.push_back(make_texture("noise", proc_texture_type::noise));
-    presets.push_back(make_texture("ridge", proc_texture_type::ridge));
-    presets.push_back(make_texture("fbm", proc_texture_type::fbm));
-    presets.push_back(
-        make_texture("turbulence", proc_texture_type::turbulence));
+    auto last = (proc_texture*)nullptr;
 
-    presets.push_back(make_texture("gammaf", proc_texture_type::gammaf));
-    presets.push_back(make_texture("sky1", proc_texture_type::sky));
-    presets.back()->sky_sunangle = pif / 4;
-    presets.push_back(make_texture("sky2", proc_texture_type::sky));
-    presets.back()->sky_sunangle = pif / 2;
+    last = add_texture(presets, "grid", proc_texture_type::grid);
+    last = add_texture(presets, "checker", proc_texture_type::checker);
+    last = add_texture(presets, "colored", proc_texture_type::colored);
+    last = add_texture(presets, "rcolored", proc_texture_type::rcolored);
+    last = add_texture(presets, "bump", proc_texture_type::bump);
+    last->tile_size = 32;
+    last = add_texture(presets, "tgrid", proc_texture_type::bump);
+    last->tile_size = 32;
+    last = add_texture(presets, "uv", proc_texture_type::uv);
+    last = add_texture(presets, "gamma", proc_texture_type::gamma);
+    last = add_texture(presets, "gridn", proc_texture_type::grid);
+    last->bump_to_normal = true;
+    last->bump_to_normal = true;
+    last->bump_scale = 4;
+    last = add_texture(presets, "tgridn", proc_texture_type::grid);
+    last->tile_size = 32;
+    last->bump_to_normal = true;
+    last->bump_to_normal = true;
+    last->bump_scale = 4;
+    last = add_texture(presets, "bumpn", proc_texture_type::bump);
+    last->tile_size = 32;
+    last->bump_to_normal = true;
+    last->bump_scale = 4;
+    last = add_texture(presets, "noise", proc_texture_type::noise);
+    last = add_texture(presets, "ridge", proc_texture_type::ridge);
+    last = add_texture(presets, "fbm", proc_texture_type::fbm);
+    last = add_texture(presets, "turbulence", proc_texture_type::turbulence);
+
+    last = add_texture(presets, "gammaf", proc_texture_type::gammaf);
+    last = add_texture(presets, "sky1", proc_texture_type::sky);
+    last->sky_sunangle = pif / 4;
+    last = add_texture(presets, "sky2", proc_texture_type::sky);
+    last->sky_sunangle = pif / 2;
 
     return presets;
 }
 
-std::vector<proc_material*>& proc_material_presets() {
-    static auto presets = std::vector<proc_material*>();
+std::map<std::string, proc_material*>& proc_material_presets() {
+    static auto presets = std::map<std::string, proc_material*>();
     if (!presets.empty()) return presets;
 
-    auto make_material = [](const std::string& name, proc_material_type type,
-                             const vec3f& color, float roughness = 1) {
-        auto params = new proc_material();
-        params->name = name;
-        params->type = type;
-        params->color = color;
-        params->roughness = roughness;
-        return params;
+    auto add_material = [](std::map<std::string, proc_material*>& presets,
+                            const std::string& name, proc_material_type type,
+                            const vec3f& color, float roughness = 1) {
+        auto mat = new proc_material();
+        presets[name] = mat;
+        mat->name = name;
+        mat->type = type;
+        mat->color = color;
+        mat->roughness = roughness;
+        return mat;
     };
-    auto make_materialt = [](const std::string& name, proc_material_type type,
-                              const std::string& txt, float roughness = 1) {
-        auto params = new proc_material();
-        params->name = name;
-        params->type = type;
-        params->color = {1, 1, 1};
-        params->roughness = roughness;
-        params->texture = txt;
-        return params;
+    auto add_materialt = [](std::map<std::string, proc_material*>& presets,
+                             const std::string& name, proc_material_type type,
+                             const std::string& txt, float roughness = 1) {
+        auto mat = new proc_material();
+        presets[name] = mat;
+        mat->name = name;
+        mat->type = type;
+        mat->color = {1, 1, 1};
+        mat->roughness = roughness;
+        mat->texture = txt;
+        return mat;
     };
 
     auto emission = proc_material_type::emission;
@@ -11471,7 +11572,9 @@ std::vector<proc_material*>& proc_material_presets() {
     auto metal = proc_material_type::metal;
     auto glass = proc_material_type::glass;
     auto transparent = proc_material_type::transparent;
+    auto carpaint = proc_material_type::car_paint;
 
+    auto black = vec3f{0.01f, 0.01f, 0.01f};
     auto gray = vec3f{0.2f, 0.2f, 0.2f};
     auto lgray = vec3f{0.5f, 0.5f, 0.5f};
     auto red = vec3f{0.5f, 0.2f, 0.2f};
@@ -11485,330 +11588,346 @@ std::vector<proc_material*>& proc_material_presets() {
     auto sharp = 0.05f;
     auto mirror = 0.0f;
 
-    auto params = std::vector<proc_material>();
+    auto last = (proc_material*)nullptr;
 
-    presets.push_back(make_materialt("matte_floor", matte, "grid"));
+    last = add_material(presets, "none", matte, {0, 0, 0});
+    last = add_material(presets, "transparent_none", transparent, {0, 0, 0});
+    last->opacity = 0.5f;
 
-    presets.push_back(make_material("matte_gray", matte, gray));
-    presets.push_back(make_material("matte_red", matte, red));
-    presets.push_back(make_material("matte_green", matte, green));
-    presets.push_back(make_material("matte_blue", matte, blue));
-    presets.push_back(make_materialt("matte_grid", matte, "grid"));
-    presets.push_back(make_materialt("matte_colored", matte, "colored"));
-    presets.push_back(make_materialt("matte_uv", matte, "uv"));
+    last = add_materialt(presets, "matte_floor", matte, "grid");
 
-    presets.push_back(make_material("plastic_red", plastic, red, rough));
-    presets.push_back(make_material("plastic_green", plastic, green, rough));
-    presets.push_back(make_material("plastic_blue", plastic, blue, sharp));
-    presets.push_back(
-        make_materialt("plastic_colored", plastic, "colored", rough));
-    presets.push_back(
-        make_material("plastic_blue_bumped", plastic, blue, sharp));
-    presets.back()->normal = "bumpn";
-    presets.push_back(
-        make_materialt("plastic_colored_bumped", plastic, "colored", rough));
-    presets.back()->normal = "bumpn";
+    last = add_material(presets, "matte_gray", matte, gray);
+    last = add_material(presets, "matte_red", matte, red);
+    last = add_material(presets, "matte_green", matte, green);
+    last = add_material(presets, "matte_blue", matte, blue);
+    last = add_materialt(presets, "matte_grid", matte, "grid");
+    last = add_materialt(presets, "matte_colored", matte, "colored");
+    last = add_materialt(presets, "matte_uv", matte, "uv");
 
-    presets.push_back(make_material("silver_mirror", metal, lgray, mirror));
-    presets.push_back(make_material("silver_sharp", metal, lgray, sharp));
-    presets.push_back(make_material("silver_rough", metal, lgray, rough));
-    presets.push_back(make_material("gold_mirror", metal, gold, mirror));
-    presets.push_back(make_material("gold_sharp", metal, gold, sharp));
-    presets.push_back(make_material("gold_rough", metal, gold, rough));
+    last = add_material(presets, "plastic_red", plastic, red, rough);
+    last = add_material(presets, "plastic_green", plastic, green, sharp);
+    last = add_material(presets, "plastic_blue", plastic, blue, mirror);
+    last = add_material(presets, "plastic_black", plastic, black, mirror);
+    last = add_materialt(presets, "plastic_colored", plastic, "colored", rough);
+    last = add_material(presets, "plastic_blue_bumped", plastic, blue, sharp);
+    last->normal = "bumpn";
+    last = add_materialt(
+        presets, "plastic_colored_bumped", plastic, "colored", rough);
+    last->normal = "bumpn";
 
-    presets.push_back(make_material("transparent_red", transparent, red));
-    presets.back()->opacity = 0.9f;
-    presets.push_back(make_material("transparent_green", transparent, green));
-    presets.back()->opacity = 0.5f;
-    presets.push_back(make_material("transparent_blue", transparent, blue));
-    presets.back()->opacity = 0.2f;
+    last = add_material(presets, "carpaint_black", carpaint, black, rough);
+    last = add_material(presets, "carpaint_blue", carpaint, blue, rough);
+    last = add_material(presets, "metal_blue", metal, blue, rough);
 
-    presets.push_back(make_material("glass_mirror", glass, {1, 1, 1}, mirror));
-    presets.push_back(make_material("glass_colored", glass, red, mirror));
-    presets.push_back(make_material("glass_rough", glass, {1, 1, 1}, rough));
+    last = add_material(presets, "silver_mirror", metal, lgray, mirror);
+    last = add_material(presets, "silver_sharp", metal, lgray, sharp);
+    last = add_material(presets, "silver_rough", metal, lgray, rough);
+    last = add_material(presets, "gold_mirror", metal, gold, mirror);
+    last = add_material(presets, "gold_sharp", metal, gold, sharp);
+    last = add_material(presets, "gold_rough", metal, gold, rough);
 
-    presets.push_back(make_material("pointlight", emission, white));
-    presets.back()->emission = 160;
-    presets.push_back(make_material("arealight", emission, white));
-    presets.back()->emission = 80;
+    last = add_material(presets, "transparent_red", transparent, red);
+    last->opacity = 0.9f;
+    last = add_material(presets, "transparent_green", transparent, green);
+    last->opacity = 0.5f;
+    last = add_material(presets, "transparent_blue", transparent, blue);
+    last->opacity = 0.2f;
 
-    return presets;
-}
+    last = add_material(presets, "glass_mirror", glass, {1, 1, 1}, mirror);
+    last = add_material(presets, "glass_colored", glass, red, mirror);
+    last = add_material(presets, "glass_rough", glass, {1, 1, 1}, rough);
 
-std::vector<proc_shape*>& proc_shape_presets() {
-    static auto presets = std::vector<proc_shape*>();
-    if (!presets.empty()) return presets;
-
-    auto make_shape = [](const std::string& name, proc_shape_type type,
-                          const vec3i& steps, const vec3f& size,
-                          const vec3f& uvsize, int subdivision = 0,
-                          bool catmullclark = false, bool faceted = false) {
-        auto params = new proc_shape();
-        params->name = name;
-        params->type = type;
-        params->tesselation = steps;
-        params->subdivision = subdivision;
-        params->size = size;
-        params->uvsize = uvsize;
-        params->catmull_clark = catmullclark;
-        params->faceted = faceted;
-        return params;
-    };
-
-    presets.push_back(make_shape("floor", proc_shape_type::floor, {64, 64, 0},
-        {40, 40, 40}, {20, 20, 20}));
-    presets.push_back(make_shape(
-        "quad", proc_shape_type::quad, {1, 1, 1}, {2, 2, 2}, {1, 1, 1}));
-    presets.push_back(make_shape(
-        "cube", proc_shape_type::cube, {1, 1, 1}, {2, 2, 2}, {1, 1, 1}));
-    presets.push_back(make_shape("cube_rounded", proc_shape_type::cube_rounded,
-        {32, 32, 32}, {2, 2, 2}, {1, 1, 1}));
-    presets.back()->rounded = 0.15f;
-    presets.push_back(make_shape(
-        "sphere", proc_shape_type::sphere, {128, 64, 0}, {2, 2, 2}, {1, 1, 1}));
-    presets.push_back(make_shape("sphere_cube", proc_shape_type::sphere_cube,
-        {32, 0, 0}, {2, 2, 2}, {1, 1, 1}));
-    presets.push_back(make_shape("sphere_flipcap",
-        proc_shape_type::sphere_flipcap, {128, 64, 0}, {2, 2, 2}, {1, 1, 1}));
-    presets.back()->rounded = 0.75f;
-    presets.push_back(make_shape(
-        "disk", proc_shape_type::disk, {128, 32, 0}, {2, 2, 2}, {1, 1, 1}));
-    presets.push_back(make_shape("disk_quad", proc_shape_type::disk_quad,
-        {32, 0, 0}, {2, 2, 2}, {1, 1, 1}));
-    presets.push_back(make_shape("disk_bulged", proc_shape_type::disk_bulged,
-        {32, 0, 0}, {2, 2, 2}, {1, 1, 1}));
-    presets.back()->rounded = 0.25;
-    presets.push_back(make_shape("cylinder", proc_shape_type::cylinder,
-        {128, 32, 32}, {2, 2, 2}, {1, 1, 1}));
-    presets.back()->flip_yz = true;
-    presets.push_back(
-        make_shape("cylinder_rounded", proc_shape_type::cylinder_rounded,
-            {128, 32, 32}, {2, 2, 2}, {1, 1, 1}));
-    presets.back()->flip_yz = true;
-    presets.back()->rounded = 0.15f;
-    presets.push_back(
-        make_shape("geodesic_sphere", proc_shape_type::geodesic_sphere,
-            {64, 64, 0}, {2, 2, 2}, {1, 1, 1}, 5));
-    presets.push_back(
-        make_shape("geodesic_spheref", proc_shape_type::geodesic_sphere,
-            {64, 64, 0}, {2, 2, 2}, {1, 1, 1}, 5, 0, true));
-    presets.back()->faceted = true;
-    presets.push_back(
-        make_shape("geodesic_spherel", proc_shape_type::geodesic_sphere,
-            {32, 32, 0}, {2, 2, 2}, {1, 1, 1}, 4, 0, true));
-    presets.back()->faceted = true;
-    presets.push_back(make_shape(
-        "cubep", proc_shape_type::cubep, {1, 1, 1}, {2, 2, 2}, {1, 1, 1}));
-    presets.push_back(make_shape("cubes", proc_shape_type::cubep, {1, 1, 1},
-        {2, 2, 2}, {1, 1, 1}, 4, true));
-    presets.push_back(make_shape(
-        "suzanne", proc_shape_type::suzanne, {0, 0, 0}, {2, 2, 2}, {1, 1, 1}));
-    presets.push_back(make_shape("suzannes", proc_shape_type::suzanne,
-        {0, 0, 0}, {2, 2, 2}, {1, 1, 1}, 2, true));
-    presets.push_back(make_shape(
-        "cubefv", proc_shape_type::fvcube, {1, 1, 1}, {2, 2, 2}, {1, 1, 1}));
-    presets.push_back(make_shape("cubefvs", proc_shape_type::fvcube, {1, 1, 1},
-        {2, 2, 2}, {1, 1, 1}, 0, 4));
-    presets.push_back(make_shape("spherefv", proc_shape_type::fvsphere,
-        {128, 64, 0}, {2, 2, 2}, {1, 1, 1}));
-    presets.push_back(make_shape("matball", proc_shape_type::matball,
-        {128, 64, 0}, {2, 2, 2}, {1, 1, 1}));
-    presets.back()->rounded = 0.75f;
-    presets.push_back(make_shape("matballi", proc_shape_type::sphere,
-        {128, 64, 0}, vec3f{2 * 0.8f}, {1, 1, 1}));
-    presets.push_back(make_shape("pointscube", proc_shape_type::pointscube,
-        {10000, 0, 0}, {2, 2, 2}, {1, 1, 1}));
-    presets.push_back(make_shape("hairball1", proc_shape_type::hairball,
-        {8, 65536, 0}, {2, 2, 2}, {1, 1, 1}));
-    presets.back()->hair_params.radius = {0.001f, 0.0001f};
-    presets.back()->hair_params.length = {0.1f, 0.1f};
-    presets.back()->hair_params.noise = {0.5f, 8};
-    presets.push_back(make_shape("hairball2", proc_shape_type::hairball,
-        {8, 65536, 0}, {2, 2, 2}, {1, 1, 1}));
-    presets.back()->hair_params.radius = {0.001f, 0.0001f};
-    presets.back()->hair_params.length = {0.1f, 0.1f};
-    presets.back()->hair_params.clump = {0.5f, 128};
-    presets.push_back(make_shape("hairball3", proc_shape_type::hairball,
-        {8, 65536, 0}, {2, 2, 2}, {1, 1, 1}));
-    presets.back()->hair_params.radius = {0.001f, 0.0001f};
-    presets.back()->hair_params.length = {0.1f, 0.1f};
-    presets.push_back(make_shape("hairballi", proc_shape_type::sphere,
-        {64, 32, 0}, vec3f{2 * 0.8f}, {1, 1, 1}));
-    presets.push_back(make_shape("beziercircle", proc_shape_type::beziercircle,
-        {0, 0, 0}, {2, 2, 2}, {1, 1, 1}));
-    presets.push_back(make_shape(
-        "point", proc_shape_type::point, {0, 0, 0}, {2, 2, 2}, {1, 1, 1}));
+    last = add_material(presets, "light", emission, white);
+    last->emission = 4;
 
     return presets;
 }
 
-std::vector<proc_environment*>& proc_environment_presets() {
-    static auto presets = std::vector<proc_environment*>();
+std::map<std::string, proc_shape*>& proc_shape_presets() {
+    static auto presets = std::map<std::string, proc_shape*>();
     if (!presets.empty()) return presets;
 
-    auto make_environment = [](const std::string& name,
-                                const std::string& texture) {
-        auto params = new proc_environment();
-        params->name = name;
-        params->color = {1, 1, 1};
-        params->texture = texture;
-        return params;
+    auto add_shape = [](std::map<std::string, proc_shape*>& presets,
+                         const std::string& name, proc_shape_type type,
+                         const vec3i& steps, const vec3f& size,
+                         const vec3f& uvsize, int subdivision = 0,
+                         bool catmullclark = false, bool faceted = false) {
+        auto shp = new proc_shape();
+        presets[name] = shp;
+        shp->name = name;
+        shp->type = type;
+        shp->tesselation = steps;
+        shp->subdivision = subdivision;
+        shp->size = size;
+        shp->uvsize = uvsize;
+        shp->catmull_clark = catmullclark;
+        shp->faceted = faceted;
+        return shp;
     };
 
-    presets.push_back(make_environment("const", ""));
-    presets.push_back(make_environment("sky1", "sky1"));
-    presets.push_back(make_environment("sky2", "sky2"));
+    auto last = (proc_shape*)nullptr;
+
+    last = add_shape(presets, "floor", proc_shape_type::floor, {64, 64, 0},
+        {40, 40, 40}, {20, 20, 20});
+    last = add_shape(presets, "quad", proc_shape_type::quad, {1, 1, 1},
+        {2, 2, 2}, {1, 1, 1});
+    last = add_shape(presets, "cube", proc_shape_type::cube, {1, 1, 1},
+        {2, 2, 2}, {1, 1, 1});
+    last = add_shape(presets, "cube_rounded", proc_shape_type::cube_rounded,
+        {32, 32, 32}, {2, 2, 2}, {1, 1, 1});
+    last->rounded = 0.15f;
+    last = add_shape(presets, "sphere", proc_shape_type::sphere, {128, 64, 0},
+        {2, 2, 2}, {1, 1, 1});
+    last = add_shape(presets, "sphere_cube", proc_shape_type::sphere_cube,
+        {32, 0, 0}, {2, 2, 2}, {1, 1, 1});
+    last = add_shape(presets, "sphere_flipcap", proc_shape_type::sphere_flipcap,
+        {128, 64, 0}, {2, 2, 2}, {1, 1, 1});
+    last->rounded = 0.75f;
+    last = add_shape(presets, "disk", proc_shape_type::disk, {128, 32, 0},
+        {2, 2, 2}, {1, 1, 1});
+    last = add_shape(presets, "disk_quad", proc_shape_type::disk_quad,
+        {32, 0, 0}, {2, 2, 2}, {1, 1, 1});
+    last = add_shape(presets, "disk_bulged", proc_shape_type::disk_bulged,
+        {32, 0, 0}, {2, 2, 2}, {1, 1, 1});
+    last->rounded = 0.25;
+    last = add_shape(presets, "cylinder", proc_shape_type::cylinder,
+        {128, 32, 32}, {2, 2, 2}, {1, 1, 1});
+    last->flip_yz = true;
+    last = add_shape(presets, "cylinder_rounded",
+        proc_shape_type::cylinder_rounded, {128, 32, 32}, {2, 2, 2}, {1, 1, 1});
+    last->flip_yz = true;
+    last->rounded = 0.15f;
+    last = add_shape(presets, "geodesic_sphere",
+        proc_shape_type::geodesic_sphere, {64, 64, 0}, {2, 2, 2}, {1, 1, 1}, 5);
+    last =
+        add_shape(presets, "geodesic_spheref", proc_shape_type::geodesic_sphere,
+            {64, 64, 0}, {2, 2, 2}, {1, 1, 1}, 5, 0, true);
+    last->faceted = true;
+    last =
+        add_shape(presets, "geodesic_spherel", proc_shape_type::geodesic_sphere,
+            {32, 32, 0}, {2, 2, 2}, {1, 1, 1}, 4, 0, true);
+    last->faceted = true;
+    last = add_shape(presets, "cubep", proc_shape_type::cubep, {1, 1, 1},
+        {2, 2, 2}, {1, 1, 1});
+    last = add_shape(presets, "cubes", proc_shape_type::cubep, {1, 1, 1},
+        {2, 2, 2}, {1, 1, 1}, 4, true);
+    last = add_shape(presets, "suzanne", proc_shape_type::suzanne, {0, 0, 0},
+        {2, 2, 2}, {1, 1, 1});
+    last = add_shape(presets, "suzannes", proc_shape_type::suzanne, {0, 0, 0},
+        {2, 2, 2}, {1, 1, 1}, 2, true);
+    last = add_shape(presets, "cubefv", proc_shape_type::fvcube, {1, 1, 1},
+        {2, 2, 2}, {1, 1, 1});
+    last = add_shape(presets, "cubefvs", proc_shape_type::fvcube, {1, 1, 1},
+        {2, 2, 2}, {1, 1, 1}, 0, 4);
+    last = add_shape(presets, "spherefv", proc_shape_type::fvsphere,
+        {128, 64, 0}, {2, 2, 2}, {1, 1, 1});
+    last = add_shape(presets, "matball", proc_shape_type::matball, {128, 64, 0},
+        {2, 2, 2}, {1, 1, 1});
+    last->rounded = 0.75f;
+    last = add_shape(presets, "matballi", proc_shape_type::sphere, {128, 64, 0},
+        vec3f{2 * 0.8f}, {1, 1, 1});
+    last = add_shape(presets, "pointscube", proc_shape_type::pointscube,
+        {10000, 0, 0}, {2, 2, 2}, {1, 1, 1});
+    last = add_shape(presets, "hairball1", proc_shape_type::hairball,
+        {8, 65536, 0}, {2, 2, 2}, {1, 1, 1});
+    last->hair_params.radius = {0.001f, 0.0001f};
+    last->hair_params.length = {0.1f, 0.1f};
+    last->hair_params.noise = {0.5f, 8};
+    last = add_shape(presets, "hairball2", proc_shape_type::hairball,
+        {8, 65536, 0}, {2, 2, 2}, {1, 1, 1});
+    last->hair_params.radius = {0.001f, 0.0001f};
+    last->hair_params.length = {0.1f, 0.1f};
+    last->hair_params.clump = {0.5f, 128};
+    last = add_shape(presets, "hairball3", proc_shape_type::hairball,
+        {8, 65536, 0}, {2, 2, 2}, {1, 1, 1});
+    last->hair_params.radius = {0.001f, 0.0001f};
+    last->hair_params.length = {0.1f, 0.1f};
+    last = add_shape(presets, "hairballi", proc_shape_type::sphere, {64, 32, 0},
+        vec3f{2 * 0.8f}, {1, 1, 1});
+    last = add_shape(presets, "beziercircle", proc_shape_type::beziercircle,
+        {0, 0, 0}, {2, 2, 2}, {1, 1, 1});
+    last = add_shape(presets, "point", proc_shape_type::point, {0, 0, 0},
+        {2, 2, 2}, {1, 1, 1});
 
     return presets;
 }
 
-std::vector<proc_animation*>& proc_animation_presets() {
-    static auto presets = std::vector<proc_animation*>();
+std::map<std::string, proc_environment*>& proc_environment_presets() {
+    static auto presets = std::map<std::string, proc_environment*>();
     if (!presets.empty()) return presets;
 
-    auto make_animation = [](const std::string& name, bool bezier,
-                              const std::vector<float>& times,
-                              const std::vector<vec3f>& translation,
-                              const std::vector<quat4f>& rotation,
-                              const std::vector<vec3f>& scaling) {
-        auto params = new proc_animation();
-        params->name = name;
-        params->speed = 1;
-        params->scale = 1;
-        params->bezier = bezier;
-        params->times = times;
-        params->translation = translation;
-        params->rotation = rotation;
-        params->scaling = scaling;
-        return params;
+    auto add_environment = [](std::map<std::string, proc_environment*>& presets,
+                               const std::string& name,
+                               const std::string& texture) {
+        auto env = new proc_environment();
+        presets[name] = env;
+        env->name = name;
+        env->color = {1, 1, 1};
+        env->texture = texture;
+        return env;
     };
 
-    presets.push_back(make_animation(
-        "bounce", false, {0, 1, 2}, {{0, 0, 0}, {0, 1, 0}, {0, 0, 0}}, {}, {}));
-    presets.push_back(make_animation("scale", false, {0, 1, 2}, {}, {},
-        {{1, 1, 1}, {0.1f, 0.1f, 0.1f}, {1, 1, 1}}));
-    presets.push_back(make_animation("rotation", false, {0, 1, 2}, {},
+    auto last = (proc_environment*)nullptr;
+
+    last = add_environment(presets, "const", "");
+    last = add_environment(presets, "sky1", "sky1");
+    last = add_environment(presets, "sky2", "sky2");
+
+    return presets;
+}
+
+std::map<std::string, proc_animation*>& proc_animation_presets() {
+    static auto presets = std::map<std::string, proc_animation*>();
+    if (!presets.empty()) return presets;
+
+    auto add_animation = [](std::map<std::string, proc_animation*>& presets,
+                             const std::string& name, bool bezier,
+                             const std::vector<float>& times,
+                             const std::vector<vec3f>& translation,
+                             const std::vector<quat4f>& rotation,
+                             const std::vector<vec3f>& scaling) {
+        auto anm = new proc_animation();
+        presets[name] = anm;
+        anm->name = name;
+        anm->speed = 1;
+        anm->scale = 1;
+        anm->bezier = bezier;
+        anm->times = times;
+        anm->translation = translation;
+        anm->rotation = rotation;
+        anm->scaling = scaling;
+        return anm;
+    };
+
+    auto last = (proc_animation*)nullptr;
+
+    last = add_animation(presets, "bounce", false, {0, 1, 2},
+        {{0, 0, 0}, {0, 1, 0}, {0, 0, 0}}, {}, {});
+    last = add_animation(presets, "scale", false, {0, 1, 2}, {}, {},
+        {{1, 1, 1}, {0.1f, 0.1f, 0.1f}, {1, 1, 1}});
+    last = add_animation(presets, "rotation", false, {0, 1, 2}, {},
         {rotation_quat<float>({0, 1, 0}, 0),
             rotation_quat<float>({0, 1, 0}, pif),
             rotation_quat<float>({0, 1, 0}, 0)},
-        {}));
+        {});
 
     return presets;
 }
 
-std::vector<proc_camera*>& proc_camera_presets() {
-    static auto presets = std::vector<proc_camera*>();
+std::map<std::string, proc_camera*>& proc_camera_presets() {
+    static auto presets = std::map<std::string, proc_camera*>();
     if (!presets.empty()) return presets;
 
-    auto make_camera = [](const std::string& name, const vec3f& from,
-                           const vec3f& to, float yfov, float aspect) {
-        auto params = new proc_camera();
-        params->name = name;
-        params->from = from;
-        params->to = to;
-        params->yfov = yfov;
-        params->aspect = aspect;
-        return params;
+    auto add_camera = [](std::map<std::string, proc_camera*>& presets,
+                          const std::string& name, const vec3f& from,
+                          const vec3f& to, float yfov, float aspect) {
+        auto cam = new proc_camera();
+        presets[name] = cam;
+        cam->name = name;
+        cam->from = from;
+        cam->to = to;
+        cam->yfov = yfov;
+        cam->aspect = aspect;
+        return cam;
     };
 
-    presets.push_back(
-        make_camera("cam1", {0, 4, 10}, {0, 1, 0}, 15 * pif / 180, 1));
-    presets.push_back(make_camera(
-        "cam2", {0, 4, 10}, {0, 1, 0}, 15 * pif / 180, 16.0f / 9.0f));
-    presets.push_back(make_camera(
-        "cam3", {0, 6, 24}, {0, 1, 0}, 7.5f * pif / 180, 2.35f / 1.0f));
+    auto last = (proc_camera*)nullptr;
+
+    last =
+        add_camera(presets, "cam1", {0, 4, 10}, {0, 1, 0}, 15 * pif / 180, 1);
+    last = add_camera(
+        presets, "cam2", {0, 4, 10}, {0, 1, 0}, 15 * pif / 180, 16.0f / 9.0f);
+    last = add_camera(
+        presets, "cam3", {0, 6, 24}, {0, 1, 0}, 7.5f * pif / 180, 2.35f / 1.0f);
 
     return presets;
 }
 
-std::vector<proc_scene*>& proc_scene_presets() {
-    static auto presets = std::vector<proc_scene*>();
+std::map<std::string, proc_scene*>& proc_scene_presets() {
+    static auto presets = std::map<std::string, proc_scene*>();
     if (!presets.empty()) return presets;
 
-    auto make_scene = [](const std::string& name) {
-        auto params = new proc_scene();
-        params->name = name;
-        return params;
+    auto add_scene = [](std::map<std::string, proc_scene*>& presets,
+                         const std::string& name) {
+        auto scn = new proc_scene();
+        presets[name] = scn;
+        scn->name = name;
+        return scn;
     };
 
     auto make_node = [](const std::string& name, const std::string& cam,
                          const std::string& shape, const std::string& env,
                          const vec3f& pos) {
-        auto params = new proc_node();
-        params->name = name;
-        params->camera = cam;
-        params->shape = shape;
-        params->environment = env;
-        params->frame.o = pos;
-        return params;
+        auto nde = new proc_node();
+        nde->name = name;
+        nde->camera = cam;
+        nde->shape = shape;
+        nde->environment = env;
+        nde->frame.o = pos;
+        return nde;
     };
     auto make_texture = [](const std::string& name) {
-        for (auto p : proc_texture_presets())
-            if (p->name == name) return new proc_texture(*p);
-        throw std::runtime_error("missing texture preset " + name);
+        return new proc_texture(*proc_texture_presets().at(name));
     };
     auto make_shape = [](const std::string& name, const vec3f& pos) {
-        for (auto p : proc_shape_presets()) {
-            if (p->name != name) continue;
-            auto shp = new proc_shape(*p);
-            shp->frame.o = pos;
-            return shp;
-        }
-        return (proc_shape*)nullptr;
+        auto shp = new proc_shape(*proc_shape_presets().at(name));
+        shp->frame.o = pos;
+        return shp;
     };
     auto make_environment = [](const std::string& name) {
-        for (auto p : proc_environment_presets())
-            if (p->name == name) return new proc_environment(*p);
-        return (proc_environment*)nullptr;
+        return new proc_environment(*proc_environment_presets().at(name));
     };
     auto make_camera = [](const std::string& name) {
-        for (auto p : proc_camera_presets())
-            if (p->name == name) return new proc_camera(*p);
-        return (proc_camera*)nullptr;
+        return new proc_camera(*proc_camera_presets().at(name));
     };
     auto make_material = [](const std::string& name) {
-        for (auto p : proc_material_presets())
-            if (p->name == name) return new proc_material(*p);
-        return (proc_material*)nullptr;
+        return new proc_material(*proc_material_presets().at(name));
     };
     auto make_animation = [](const std::string& name) {
-        for (auto p : proc_animation_presets())
-            if (p->name == name) return new proc_animation(*p);
-        return (proc_animation*)nullptr;
+        return new proc_animation(*proc_animation_presets().at(name));
     };
 
+    auto last = (proc_scene*)nullptr;
+
     // textures
-    presets.push_back(make_scene("textures"));
+    last = add_scene(presets, "textures");
     for (auto txt : proc_texture_presets())
-        presets.back()->textures.push_back(make_texture(txt->name));
+        last->textures.push_back(make_texture(txt.second->name));
 
     // shapes
-    presets.push_back(make_scene("shapes"));
+    last = add_scene(presets, "shapes");
     for (auto shp : proc_shape_presets())
-        presets.back()->shapes.push_back(make_shape(shp->name, zero3f));
+        last->shapes.push_back(make_shape(shp.second->name, zero3f));
 
     // envmap
-    presets.push_back(make_scene("envmaps"));
+    last = add_scene(presets, "envmaps");
     for (auto env : proc_environment_presets())
-        presets.back()->environments.push_back(make_environment(env->name));
+        last->environments.push_back(make_environment(env.second->name));
 
     // simple scenes shared functions
-    auto make_simple_scene = [&](const std::string& name,
-                                 const std::vector<std::string>& shapes,
-                                 const std::vector<std::string>& mats,
-                                 const std::string& lights, bool nodes = false,
-                                 const std::vector<std::string>& animations =
-                                     {}) {
-        auto pos =
-            std::vector<vec3f>{{-2.50f, 1, 0}, {0, 1, 0}, {+2.50f, 1, 0}};
-        auto scn = make_scene(name);
+    auto add_simple_scene = [&](std::map<std::string, proc_scene*>& presets,
+                                const std::string& name,
+                                const std::vector<std::string>& shapes,
+                                const std::vector<std::string>& mats,
+                                const std::string& lights,
+                                const std::string& floor_mat = "matte_floor",
+                                bool nodes = false,
+                                const std::vector<std::string>& animations =
+                                    {}) {
+        auto single = shapes.size() == 1;
+        auto pos = (single) ? std::vector<vec3f>{{0, 1, 0}} :
+                              std::vector<vec3f>{
+                                  {-2.50f, 1, 0}, {0, 1, 0}, {+2.50f, 1, 0}};
+        auto scn = add_scene(presets, name);
         scn->cameras.push_back(make_camera("cam3"));
-        scn->materials.push_back(make_material("matte_floor"));
-        if (scn->materials.back()->texture != "")
-            scn->textures.push_back(
-                make_texture(scn->materials.back()->texture));
-        scn->shapes.push_back(make_shape("floor", zero3f));
-        scn->shapes.back()->material = scn->materials.back()->name;
+        if (floor_mat != "") {
+            scn->materials.push_back(make_material(floor_mat));
+            if (scn->materials.back()->texture != "")
+                scn->textures.push_back(
+                    make_texture(scn->materials.back()->texture));
+            scn->shapes.push_back(make_shape("floor", zero3f));
+            scn->shapes.back()->material = scn->materials.back()->name;
+        }
         for (auto i = 0; i < shapes.size(); i++) {
             auto name = "obj" + std::to_string(i + 1);
             scn->materials.push_back(make_material(mats[i]));
@@ -11830,26 +11949,23 @@ std::vector<proc_scene*>& proc_scene_presets() {
             lights == "arealights1") {
             auto emission = 120;
             auto shp = "point";
-            auto mat = "pointlight";
             auto pos = std::vector<vec3f>{{-2, 10, 8}, {+2, 10, 8}};
             auto scale = 1.0f;
             if (lights == "arealights") {
-                emission = 8;
+                emission = 16;
                 shp = "quad";
-                mat = "arealight";
                 pos = {{0, 16, 0}, {0, 16, 16}};
-                scale = 16;
+                scale = 8;
             }
             if (lights == "arealights1") {
-                emission = 80;
+                emission = 40;
                 shp = "quad";
-                mat = "arealight";
                 pos = {{-4, 5, 8}, {+4, 5, 8}};
                 scale = 4;
             }
             for (auto i = 0; i < 2; i++) {
                 auto name = "light" + std::to_string(i + 1);
-                scn->materials.push_back(make_material(mat));
+                scn->materials.push_back(make_material("light"));
                 scn->materials.back()->name = name;
                 scn->materials.back()->emission = emission;
                 scn->shapes.push_back(make_shape(shp, pos[i]));
@@ -11892,123 +12008,141 @@ std::vector<proc_scene*>& proc_scene_presets() {
     };
 
     // basic shapes
-    presets.push_back(make_simple_scene("basic_pl",
+    last = add_simple_scene(presets, "basic_pl",
         {"sphere_flipcap", "sphere_cube", "cube_rounded"},
-        {"plastic_red", "plastic_green", "plastic_blue"}, "pointlights"));
+        {"plastic_red", "plastic_green", "plastic_blue"}, "pointlights");
+    last = add_simple_scene(presets, "basic_al",
+        {"sphere_flipcap", "sphere_cube", "cube_rounded"},
+        {"plastic_red", "plastic_green", "plastic_blue"}, "arealights");
+    last = add_simple_scene(presets, "basic_el",
+        {"sphere_flipcap", "sphere_cube", "cube_rounded"},
+        {"plastic_red", "plastic_green", "plastic_blue"}, "envlights");
 
     // simple shapes
-    presets.push_back(make_simple_scene("simple_al",
+    last = add_simple_scene(presets, "simple_al",
         {"sphere_flipcap", "sphere_cube", "cube_rounded"},
         {"plastic_colored", "plastic_colored", "plastic_colored"},
-        "arealights"));
-
-    // simple shapes
-    presets.push_back(make_simple_scene("simple_pl",
+        "arealights");
+    last = add_simple_scene(presets, "simple_pl",
         {"sphere_flipcap", "sphere_cube", "cube_rounded"},
         {"plastic_colored", "plastic_colored", "plastic_colored"},
-        "pointlights"));
-
-    // simple shapes
-    presets.push_back(make_simple_scene("simple_el",
+        "pointlights");
+    last = add_simple_scene(presets, "simple_el",
         {"sphere_flipcap", "sphere_cube", "cube_rounded"},
-        {"plastic_colored", "plastic_colored", "plastic_colored"},
-        "envlights"));
+        {"plastic_colored", "plastic_colored", "plastic_colored"}, "envlights");
 
     // simple shapes 1
-    presets.push_back(make_simple_scene("spheres_al",
+    last = add_simple_scene(presets, "spheres_al",
         {"sphere_flipcap", "sphere_cube", "sphere"},
         {"plastic_colored", "plastic_colored", "plastic_colored"},
-        "arealights"));
+        "arealights");
 
     // simple shapes 2
-    presets.push_back(
-        make_simple_scene("cubes_al", {"quad", "cube", "cube_rounded"},
+    last =
+        add_simple_scene(presets, "cubes_al", {"quad", "cube", "cube_rounded"},
             {"plastic_colored", "plastic_colored", "plastic_colored"},
-            "arealights"));
+            "arealights");
 
     // simple shapes 3
-    presets.push_back(make_simple_scene("cylinders_al",
+    last = add_simple_scene(presets, "cylinders_al",
         {"disk", "cylinder", "cylinder_rounded"},
         {"plastic_colored", "plastic_colored", "plastic_colored"},
-        "arealights"));
+        "arealights");
 
     // simple shapes 3
-    presets.push_back(
-        make_simple_scene("disks_al", {"disk", "disk_quad", "disk_bulged"},
-            {"plastic_colored", "plastic_colored", "plastic_colored"},
-            "arealights"));
+    last = add_simple_scene(presets, "disks_al",
+        {"disk", "disk_quad", "disk_bulged"},
+        {"plastic_colored", "plastic_colored", "plastic_colored"},
+        "arealights");
 
     // transparent shapes
-    presets.push_back(
-        make_simple_scene("transparent_al", {"quad", "quad", "quad"},
-            {"transparent_red", "transparent_green", "transparent_blue"},
-            "arealights"));
+    last = add_simple_scene(presets, "transparent_al", {"quad", "quad", "quad"},
+        {"transparent_red", "transparent_green", "transparent_blue"},
+        "arealights");
 
     // lines shapes
-    presets.push_back(
-        make_simple_scene("lines_al", {"hairball1", "hairball2", "hairball3"},
-            {"matte_gray", "matte_gray", "matte_gray"}, "arealights"));
+    last = add_simple_scene(presets, "lines_al",
+        {"hairball1", "hairball2", "hairball3"},
+        {"matte_gray", "matte_gray", "matte_gray"}, "arealights");
 
     // subdiv shapes
-    presets.push_back(
-        make_simple_scene("subdiv_al", {"cubes", "suzannes", "suzannes"},
-            {"plastic_red", "plastic_green", "plastic_blue"}, "arealights"));
+    last = add_simple_scene(presets, "subdiv_al",
+        {"cubes", "suzannes", "suzannes"},
+        {"plastic_red", "plastic_green", "plastic_blue"}, "arealights");
 
     // plastics shapes
-    presets.push_back(
-        make_simple_scene("plastics_al", {"matball", "matball", "matball"},
-            {"matte_green", "plastic_green", "plastic_colored"}, "arealights"));
-    presets.push_back(
-        make_simple_scene("plastics_el", {"matball", "matball", "matball"},
-            {"matte_green", "plastic_green", "plastic_colored"}, "envlights"));
+    last = add_simple_scene(presets, "plastics_al",
+        {"matball", "matball", "matball"},
+        {"plastic_red", "plastic_green", "plastic_blue"}, "arealights");
+    last = add_simple_scene(presets, "plastics_el",
+        {"matball", "matball", "matball"},
+        {"plastic_red", "plastic_green", "plastic_blue"}, "envlights");
 
     // metals shapes
-    presets.push_back(
-        make_simple_scene("metals_al", {"matball", "matball", "matball"},
-            {"gold_rough", "gold_sharp", "silver_mirror"}, "arealights"));
-    presets.push_back(
-        make_simple_scene("metals_el", {"matball", "matball", "matball"},
-            {"gold_rough", "gold_sharp", "silver_mirror"}, "envlights"));
+    last = add_simple_scene(presets, "metals_al",
+        {"matball", "matball", "matball"},
+        {"gold_rough", "gold_sharp", "silver_mirror"}, "arealights");
+    last = add_simple_scene(presets, "metals_el",
+        {"matball", "matball", "matball"},
+        {"gold_rough", "gold_sharp", "silver_mirror"}, "envlights");
 
     // glass shapes
-    presets.push_back(
-        make_simple_scene("glass_al", {"matball", "matball", "matball"},
-            {"glass_mirror", "glass_colored", "glass_rough"}, "arealights"));
-    presets.push_back(
-        make_simple_scene("glass_el", {"matball", "matball", "matball"},
-            {"glass_mirror", "glass_colored", "glass_rough"}, "envlights"));
+    last =
+        add_simple_scene(presets, "glass_al", {"matball", "matball", "matball"},
+            {"glass_mirror", "glass_colored", "glass_rough"}, "arealights");
+    last =
+        add_simple_scene(presets, "glass_el", {"matball", "matball", "matball"},
+            {"glass_mirror", "glass_colored", "glass_rough"}, "envlights");
+
+    // car paints shapes
+    last = add_simple_scene(presets, "paints_al",
+        {"matball", "matball", "matball"},
+        {"carpaint_black", "carpaint_blue", "metal_blue"}, "arealights");
+    last = add_simple_scene(presets, "paints_el",
+        {"matball", "matball", "matball"},
+        {"carpaint_black", "carpaint_blue", "metal_blue"}, "envlights");
+
+    // matball
+    // last = add_simple_scene(presets, "mattball_al", {"matball"},
+    // {"carpaint_black"}, "arealights", ""); last = add_simple_scene(presets,
+    // "mattball_el", {"matball"}, {"carpaint_black"}, "envlights", "");
+    last = add_simple_scene(presets, "matball_el", {"sphere"},
+        {"transparent_none"}, "envlights", "");
+    last = add_simple_scene(presets, "matball_al", {"sphere"},
+        {"transparent_none"}, "arealights", "");
 
     // tesselation shapes
-    presets.push_back(make_simple_scene("tesselation_pl",
+    last = add_simple_scene(presets, "tesselation_pl",
         {"geodesic_spherel", "geodesic_spheref", "geodesic_sphere"},
-        {"matte_gray", "matte_gray", "matte_gray"}, "pointlights"));
+        {"matte_gray", "matte_gray", "matte_gray"}, "pointlights");
 
     // textureuv shapes
-    presets.push_back(make_simple_scene("textureuv_pl",
+    last = add_simple_scene(presets, "textureuv_pl",
         {"sphere_flipcap", "sphere_flipcap", "sphere_flipcap"},
-        {"matte_green", "matte_colored", "matte_uv"}, "pointlights"));
+        {"matte_green", "matte_colored", "matte_uv"}, "pointlights");
 
     // normalmap shapes
-    presets.push_back(make_simple_scene("normalmap_pl",
+    last = add_simple_scene(presets, "normalmap_pl",
         {"sphere_flipcap", "sphere_flipcap", "sphere_flipcap"},
         {"plastic_blue", "plastic_blue_bumped", "plastic_colored_bumped"},
-        "pointlights"));
+        "pointlights");
 
     // animated shapes
-    presets.push_back(make_simple_scene("animated_pl",
+    last = add_simple_scene(presets, "animated_pl",
         {"sphere_flipcap", "sphere_cube", "cube_rounded"},
         {"plastic_colored", "plastic_colored", "plastic_colored"},
-        "pointlights", true, {"bounce", "scale", "rotation"}));
+        "pointlights", "matte_floor", true, {"bounce", "scale", "rotation"});
 
     // instances shared functions
-    auto make_random_scene = [&](const std::string& name, const vec2i& num,
-                                 const bbox2f& bbox, const std::string& lights,
-                                 uint64_t seed = 13) {
+    auto add_random_scene = [&](std::map<std::string, proc_scene*>& presets,
+                                const std::string& name, const vec2i& num,
+                                const bbox2f& bbox, const std::string& lights,
+                                uint64_t seed = 13) {
         auto rscale = 0.9f * 0.25f *
                       min((bbox.max.x - bbox.min.x) / num.x,
                           (bbox.max.x - bbox.min.x) / num.y);
 
-        auto scn = make_scene(name);
+        auto scn = add_scene(presets, name);
         scn->cameras.push_back(make_camera("cam3"));
         scn->materials.push_back(make_material("matte_floor"));
         scn->shapes.push_back(make_shape("floor", zero3f));
@@ -12048,7 +12182,7 @@ std::vector<proc_scene*>& proc_scene_presets() {
             auto pos = std::vector<vec3f>{{-2, 10, 8}, {+2, 10, 8}};
             for (auto i = 0; i < 2; i++) {
                 auto name = "light" + std::to_string(i + 1);
-                scn->materials.push_back(make_material("pointlight"));
+                scn->materials.push_back(make_material("light"));
                 scn->materials.back()->name = name;
                 scn->materials.back()->emission = 80;
                 scn->shapes.push_back(make_shape("point", zero3f));
@@ -12062,10 +12196,10 @@ std::vector<proc_scene*>& proc_scene_presets() {
     };
 
     // instances
-    presets.push_back(make_random_scene(
-        "instances_pl", {10, 10}, {{-3, -3}, {3, 3}}, "pointlights"));
-    presets.push_back(make_random_scene(
-        "instancel_pl", {100, 100}, {{-3, -3}, {3, 3}}, "pointlights"));
+    last = add_random_scene(
+        presets, "instances_pl", {10, 10}, {{-3, -3}, {3, 3}}, "pointlights");
+    last = add_random_scene(
+        presets, "instancel_pl", {100, 100}, {{-3, -3}, {3, 3}}, "pointlights");
 
 #if 0
         else if (otype == "normdisp") {
@@ -12081,17 +12215,18 @@ std::vector<proc_scene*>& proc_scene_presets() {
 
     // add missing textures
     for (auto preset : presets) {
+        auto scn = preset.second;
         auto used = std::unordered_set<std::string>();
-        for (auto mat : preset->materials) used.insert(mat->texture);
-        for (auto mat : preset->materials) used.insert(mat->normal);
-        for (auto env : preset->environments) used.insert(env->texture);
+        for (auto mat : scn->materials) used.insert(mat->texture);
+        for (auto mat : scn->materials) used.insert(mat->normal);
+        for (auto env : scn->environments) used.insert(env->texture);
         used.erase("");
-        for (auto txt : preset->textures) used.erase(txt->name);
-        for (auto txt : used) preset->textures.push_back(make_texture(txt));
+        for (auto txt : scn->textures) used.erase(txt->name);
+        for (auto txt : used) scn->textures.push_back(make_texture(txt));
     }
 
     // remove duplicates
-    for (auto scn : presets) remove_duplicates(scn);
+    for (auto preset : presets) remove_duplicates(preset.second);
 
     return presets;
 }
@@ -14200,13 +14335,13 @@ gl_window::~gl_window() {
 
 // Support
 void _glfw_error_cb(int error, const char* description) {
-    printf("GLFW error: %s\n", description);
+    log_error("GLFW error: {}\n", description);
 }
 
 // Support
 void _glfw_text_cb(GLFWwindow* gwin, unsigned key) {
     auto win = (gl_window*)glfwGetWindowUserPointer(gwin);
-    if (win->widget_enabled) { ImGui_ImplGlfwGL3_CharCallback(win->gwin, key); }
+    if (win->widget_enabled) { ImGui_ImplGlfw_CharCallback(win->gwin, key); }
     if (win->text_cb) win->text_cb(key);
 }
 
@@ -14215,7 +14350,7 @@ void _glfw_key_cb(
     GLFWwindow* gwin, int key, int scancode, int action, int mods) {
     auto win = (gl_window*)glfwGetWindowUserPointer(gwin);
     if (win->widget_enabled) {
-        ImGui_ImplGlfwGL3_KeyCallback(win->gwin, key, scancode, action, mods);
+        ImGui_ImplGlfw_KeyCallback(win->gwin, key, scancode, action, mods);
     }
 }
 
@@ -14223,7 +14358,7 @@ void _glfw_key_cb(
 void _glfw_mouse_cb(GLFWwindow* gwin, int button, int action, int mods) {
     auto win = (gl_window*)glfwGetWindowUserPointer(gwin);
     if (win->widget_enabled) {
-        ImGui_ImplGlfwGL3_MouseButtonCallback(win->gwin, button, action, mods);
+        ImGui_ImplGlfw_MouseButtonCallback(win->gwin, button, action, mods);
     }
     if (win->mouse_cb) win->mouse_cb(button, action == GLFW_PRESS, mods);
 }
@@ -14232,7 +14367,7 @@ void _glfw_mouse_cb(GLFWwindow* gwin, int button, int action, int mods) {
 void _glfw_scroll_cb(GLFWwindow* gwin, double xoffset, double yoffset) {
     auto win = (gl_window*)glfwGetWindowUserPointer(gwin);
     if (win->widget_enabled) {
-        ImGui_ImplGlfwGL3_ScrollCallback(win->gwin, xoffset, yoffset);
+        ImGui_ImplGlfw_ScrollCallback(win->gwin, xoffset, yoffset);
     }
 }
 
@@ -14248,6 +14383,7 @@ gl_window* make_window(
     auto win = new gl_window();
 
     // gl_window
+    glfwSetErrorCallback(_glfw_error_cb);
     if (!glfwInit()) throw std::runtime_error("cannot open gl_window");
 
     // profile creation
@@ -14258,16 +14394,15 @@ gl_window* make_window(
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     }
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 #if __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     win->gwin = glfwCreateWindow(width, height, title.c_str(), 0, 0);
     glfwMakeContextCurrent(win->gwin);
     glfwSetWindowUserPointer(win->gwin, win);
-
-    glfwSetErrorCallback(_glfw_error_cb);
+    glfwSwapInterval(1);  // Enable vsync
 
     glfwSetCharCallback(win->gwin, _glfw_text_cb);
     glfwSetKeyCallback(win->gwin, _glfw_key_cb);
@@ -14302,6 +14437,18 @@ void wait_events(gl_window* win) { glfwWaitEvents(); }
 
 // Poll events
 void poll_events(gl_window* win) { glfwPollEvents(); }
+
+#ifdef __APPLE__
+
+// Wait events
+void wait_events_timeout(gl_window* win, double timeout_sec) {
+    glfwWaitEventsTimeout(timeout_sec);
+}
+
+// Wait events
+void post_empty_event(gl_window* win) { glfwPostEmptyEvent(); }
+
+#endif
 
 // Swap buffers
 void swap_buffers(gl_window* win) { glfwSwapBuffers(win->gwin); }
@@ -14495,20 +14642,23 @@ bool handle_scene_selection(gl_window* win, const scene* scn, const camera* cam,
 
 // Initialize widgets
 void init_widgets(gl_window* win, bool light_style, bool alt_font) {
+    ImGui::CreateContext();
     ImGui_ImplGlfwGL3_Init(win->gwin, false);
+    ImGuiIO& io = ImGui::GetIO();
+    // io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard
+    // Controls io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable
+    // Gamepad Controls
     ImGui::GetStyle().WindowRounding = 0;
-    ImGui::GetIO().IniFilename = nullptr;
+    io.IniFilename = nullptr;
     auto size = get_window_size(win);
     ImGui::SetNextWindowPos({(float)size[0] - 320, 0});
     ImGui::SetNextWindowSize({(float)320, (float)size[1]});
     if (light_style) ImGui::StyleColorsLight();
     if (alt_font) {
-        ImGuiIO& io = ImGui::GetIO();
         io.Fonts->AddFontFromMemoryCompressedTTF(
             imgui_extrafont_compressed_data(),
             imgui_extrafont_compressed_size(), 16);
     } else {
-        ImGuiIO& io = ImGui::GetIO();
         io.Fonts->AddFontDefault();
     }
     win->widget_enabled = true;
@@ -14535,6 +14685,7 @@ bool begin_widgets(gl_window* win, const std::string& title) {
 void end_widgets(gl_window* win) {
     ImGui::End();
     ImGui::Render();
+    ImGui_ImplGlfwGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
 // Whether widget are active
@@ -14666,13 +14817,106 @@ bool draw_slider_widget(
     return mod;
 }
 
+static float draw_drag_scale = 1 / 100.0f;
+
+// Drag widget.
+bool draw_drag_widget(
+    gl_window* win, const std::string& lbl, int& val, int min, int max) {
+    auto speed = (min == max) ? 1 : draw_drag_scale * (max - min);
+    return ImGui::DragInt(lbl.c_str(), &val, speed, min, max);
+}
+// Drag widget.
+bool draw_drag_widget(
+    gl_window* win, const std::string& lbl, vec2i& val, int min, int max) {
+    auto speed = (min == max) ? 1 : draw_drag_scale * (max - min);
+    return ImGui::DragInt2(lbl.c_str(), &val.x, speed, min, max);
+}
+// Drag widget.
+bool draw_drag_widget(
+    gl_window* win, const std::string& lbl, vec3i& val, int min, int max) {
+    auto speed = (min == max) ? 1 : draw_drag_scale * (max - min);
+    return ImGui::DragInt3(lbl.c_str(), &val.x, speed, min, max);
+}
+// Drag widget.
+bool draw_drag_widget(
+    gl_window* win, const std::string& lbl, vec4i& val, int min, int max) {
+    auto speed = (min == max) ? 1 : draw_drag_scale * (max - min);
+    return ImGui::DragInt4(lbl.c_str(), &val.x, speed, min, max);
+}
+// Drag widget.
+bool draw_drag_widget(
+    gl_window* win, const std::string& lbl, float& val, float min, float max) {
+    auto speed = (min == max) ? 1 : draw_drag_scale * (max - min);
+    return ImGui::DragFloat(lbl.c_str(), &val, speed, min, max);
+}
+// Drag widget.
+bool draw_drag_widget(
+    gl_window* win, const std::string& lbl, vec2f& val, float min, float max) {
+    auto speed = (min == max) ? 1 : draw_drag_scale * (max - min);
+    return ImGui::DragFloat2(lbl.c_str(), &val.x, speed, min, max);
+}
+// Drag widget.
+bool draw_drag_widget(
+    gl_window* win, const std::string& lbl, vec3f& val, float min, float max) {
+    auto speed = (min == max) ? 1 : draw_drag_scale * (max - min);
+    return ImGui::DragFloat3(lbl.c_str(), &val.x, speed, min, max);
+}
+// Drag widget.
+bool draw_drag_widget(
+    gl_window* win, const std::string& lbl, vec4f& val, float min, float max) {
+    auto speed = (min == max) ? 1 : draw_drag_scale * (max - min);
+    return ImGui::DragFloat4(lbl.c_str(), &val.x, speed, min, max);
+}
+// Drag widget.
+bool draw_drag_widget(
+    gl_window* win, const std::string& lbl, mat4f& val, float min, float max) {
+    auto modx = draw_drag_widget(win, lbl + ".x", val.x, min, max);
+    auto mody = draw_drag_widget(win, lbl + ".y", val.y, min, max);
+    auto modz = draw_drag_widget(win, lbl + ".z", val.z, min, max);
+    auto modw = draw_drag_widget(win, lbl + ".w", val.w, min, max);
+    return modx || mody || modz || modw;
+}
+// Drag widget.
+bool draw_drag_widget(gl_window* win, const std::string& lbl, frame3f& val,
+    float min, float max) {
+    auto modx = draw_drag_widget(win, lbl + ".x", val.x, -1, 1);
+    auto mody = draw_drag_widget(win, lbl + ".y", val.y, -1, 1);
+    auto modz = draw_drag_widget(win, lbl + ".z", val.z, -1, 1);
+    auto modo = draw_drag_widget(win, lbl + ".o", val.o, min, max);
+    return modx || mody || modz || modo;
+}
+// Drag widget.
+bool draw_drag_widget(
+    gl_window* win, const std::string& lbl, quat4f& val, float min, float max) {
+    auto mod = ImGui::DragFloat4(lbl.c_str(), &val.x, min, max);
+    if (mod) val = normalize(val);
+    return mod;
+}
+
 // Color widget
 bool draw_color_widget(gl_window* win, const std::string& lbl, vec4f& val) {
-    return ImGui::ColorEdit4(lbl.c_str(), (float*)&val.x);
+    auto mod = ImGui::ColorEdit4(
+        lbl.c_str(), (float*)&val.x, ImGuiColorEditFlags_Float);
+    // fix for bug in ImGui
+    if (mod) {
+        if (val.x < 0.0001f) val.x = 0;
+        if (val.y < 0.0001f) val.y = 0;
+        if (val.z < 0.0001f) val.z = 0;
+        if (val.w < 0.0001f) val.w = 0;
+    }
+    return mod;
 }
 // Color widget
 bool draw_color_widget(gl_window* win, const std::string& lbl, vec3f& val) {
-    return ImGui::ColorEdit3(lbl.c_str(), (float*)&val.x);
+    auto mod = ImGui::ColorEdit3(
+        lbl.c_str(), (float*)&val.x, ImGuiColorEditFlags_Float);
+    // fix for bug in ImGui
+    if (mod) {
+        if (val.x < 0.0001f) val.x = 0;
+        if (val.y < 0.0001f) val.y = 0;
+        if (val.z < 0.0001f) val.z = 0;
+    }
+    return mod;
 }
 // Color widget
 bool draw_color_widget(gl_window* win, const std::string& lbl, vec4b& val) {

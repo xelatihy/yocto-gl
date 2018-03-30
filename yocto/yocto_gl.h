@@ -4978,12 +4978,12 @@ inline void visit(tonemap_params& val, Visitor&& visitor) {
 
 /// Make a grid image.
 image4b make_grid_image(int width, int height, int tile = 64,
-    const vec4b& c0 = {90, 90, 90, 255},
+    const vec4b& c0 = {64, 64, 64, 255},
     const vec4b& c1 = {128, 128, 128, 255});
 
 /// Make a checkerboard image.
 image4b make_checker_image(int width, int height, int tile = 64,
-    const vec4b& c0 = {90, 90, 90, 255},
+    const vec4b& c0 = {64, 64, 64, 255},
     const vec4b& c1 = {128, 128, 128, 255});
 
 /// Make an image with bumps and dimples.
@@ -5442,7 +5442,7 @@ struct material {
     /// Material type.
     material_type type = material_type::specular_roughness;
 
-    /// Emission color. @refl_semantic(color) refl_uilimits(0,10000)
+    /// Emission color. @refl_semantic(color) @refl_uilimits(0,10000)
     vec3f ke = {0, 0, 0};
     /// Diffuse color / base color. @refl_semantic(color)
     vec3f kd = {0, 0, 0};
@@ -5808,7 +5808,7 @@ void tesselate_shapes(scene* scn, bool subdivide,
     bool bezier_to_lines);
 
 /// Convert a shape into simple shapes. Facevarying primitives are split if
-/// `allow_facevarying` is false. No shape is retuned if the shape is simple.
+/// `split_facevarying` is true. No shape is retuned if the shape is simple.
 std::vector<shape*> split_shape(const shape* shp, bool split_facevarying);
 /// Convert a list of shapes into one shape. Pad shape values if needed.
 /// Returns null if the shape cannot be constructed.
@@ -6106,8 +6106,8 @@ inline void visit(material& val, Visitor&& visitor) {
                                   "Double-sided rendering.", 0, 0, ""});
     visitor(val.type,
         visit_var{"type", visit_var_type::value, "Material type.", 0, 0, ""});
-    visitor(val.ke, visit_var{"ke", visit_var_type::color,
-                        "Emission color. refl_uilimits(0,10000)", 0, 0, ""});
+    visitor(val.ke, visit_var{"ke", visit_var_type::color, "Emission color.", 0,
+                        10000, ""});
     visitor(val.kd, visit_var{"kd", visit_var_type::color,
                         "Diffuse color / base color.", 0, 0, ""});
     visitor(val.ks, visit_var{"ks", visit_var_type::color,
@@ -6459,6 +6459,8 @@ enum struct proc_material_type {
     glass,
     /// Transparent (diffuse with opacity).
     transparent,
+    /// Car paint (clearcoat with metal reflection)
+    car_paint,
 };
 
 /// Procedural material parameters.
@@ -6687,21 +6689,21 @@ inline scene* make_proc_elems(const proc_scene* tscn) {
 }
 
 /// Procedural camera presets.
-std::vector<proc_camera*>& proc_camera_presets();
+std::map<std::string, proc_camera*>& proc_camera_presets();
 /// Procedural texture presets.
-std::vector<proc_texture*>& proc_texture_presets();
+std::map<std::string, proc_texture*>& proc_texture_presets();
 /// Procedural material presets.
-std::vector<proc_material*>& proc_material_presets();
+std::map<std::string, proc_material*>& proc_material_presets();
 /// Procedural shape presets.
-std::vector<proc_shape*>& proc_shape_presets();
+std::map<std::string, proc_shape*>& proc_shape_presets();
 /// Procedural environment presets.
-std::vector<proc_environment*>& proc_environment_presets();
+std::map<std::string, proc_environment*>& proc_environment_presets();
 /// Procedural nodes presets.
-std::vector<proc_node*>& proc_node_presets();
+std::map<std::string, proc_node*>& proc_node_presets();
 /// Procedural animation presets.
-std::vector<proc_animation*>& proc_animation_presets();
+std::map<std::string, proc_animation*>& proc_animation_presets();
 /// Test scene presets.
-std::vector<proc_scene*>& proc_scene_presets();
+std::map<std::string, proc_scene*>& proc_scene_presets();
 
 /// Remove duplicates based on name.
 void remove_duplicates(const proc_scene* tscn);
@@ -6749,6 +6751,7 @@ enum_names<proc_material_type>() {
         {"metal", proc_material_type::metal},
         {"glass", proc_material_type::glass},
         {"transparent", proc_material_type::transparent},
+        {"car_paint", proc_material_type::car_paint},
     };
     return names;
 }
@@ -7473,7 +7476,7 @@ struct obj_material {
     /// Transmision color.
     vec3f kt = {0, 0, 0};
     /// Phong exponent for ks.
-    float ns = 1;
+    float ns = 0;
     /// Index of refraction.
     float ior = 1;
     /// Opacity.
@@ -10166,6 +10169,12 @@ void wait_events(gl_window* win);
 void poll_events(gl_window* win);
 /// Swap buffers.
 void swap_buffers(gl_window* win);
+#ifdef __APPLE__
+/// Wait events with a timeout.
+void wait_events_timeout(gl_window* win, double timeout_sec);
+/// Post an empty event to wake the window.
+void post_empty_event(gl_window* win);
+#endif
 
 /// Should close.
 bool should_close(gl_window* win);
@@ -10282,13 +10291,49 @@ bool draw_slider_widget(gl_window* win, const std::string& lbl, vec3f& val,
 bool draw_slider_widget(gl_window* win, const std::string& lbl, vec4f& val,
     float min = 0, float max = 1);
 /// Slider widget.
-bool draw_slider_widget(gl_window* win, const std::string& lbl,
-    mat<float, 4>& val, float min = 0, float max = 1);
+bool draw_slider_widget(gl_window* win, const std::string& lbl, mat4f& val,
+    float min = 0, float max = 1);
 /// Slider widget.
-bool draw_slider_widget(gl_window* win, const std::string& lbl,
-    frame<float, 3>& val, float min = -10, float max = 10);
+bool draw_slider_widget(gl_window* win, const std::string& lbl, frame3f& val,
+    float min = -10, float max = 10);
 /// Slider widget.
 bool draw_slider_widget(gl_window* win, const std::string& lbl, quat4f& val,
+    float min = -1, float max = 1);
+
+/// Drag widget scale (defaults to 1/100).
+void draw_drag_speedscale(float scale);
+/// Drag widget.
+bool draw_drag_widget(
+    gl_window* win, const std::string& lbl, int& val, int min = 0, int max = 0);
+/// Drag widget.
+bool draw_drag_widget(gl_window* win, const std::string& lbl, vec2i& val,
+    int min = 0, int max = 0);
+/// Drag widget.
+bool draw_drag_widget(gl_window* win, const std::string& lbl, vec3i& val,
+    int min = 0, int max = 0);
+/// Drag widget.
+bool draw_drag_widget(gl_window* win, const std::string& lbl, vec4i& val,
+    int min = 0, int max = 0);
+/// Drag widget.
+bool draw_drag_widget(gl_window* win, const std::string& lbl, float& val,
+    float min = 0, float max = 0);
+/// Drag widget.
+bool draw_drag_widget(gl_window* win, const std::string& lbl, vec2f& val,
+    float min = 0, float max = 0);
+/// Drag widget.
+bool draw_drag_widget(gl_window* win, const std::string& lbl, vec3f& val,
+    float min = 0, float max = 0);
+/// Drag widget.
+bool draw_drag_widget(gl_window* win, const std::string& lbl, vec4f& val,
+    float min = 0, float max = 0);
+/// Drag widget.
+bool draw_drag_widget(gl_window* win, const std::string& lbl, mat4f& val,
+    float min = 0, float max = 0);
+/// Drag widget.
+bool draw_drag_widget(gl_window* win, const std::string& lbl, frame3f& val,
+    float min = 0, float max = 0);
+/// Drag widget.
+bool draw_drag_widget(gl_window* win, const std::string& lbl, quat4f& val,
     float min = -1, float max = 1);
 
 /// Color widget.
@@ -10415,34 +10460,32 @@ inline bool draw_value_widget(gl_window* win, const std::string& lbl,
 /// or a deafult range when their are the same. Color is ignored.
 inline bool draw_value_widget(gl_window* win, const std::string& lbl, int& val,
     float min = 0, float max = 0, bool color = false) {
-    return (min != max) ?
-               draw_slider_widget(win, lbl, val, (int)min, (int)max) :
-               draw_slider_widget(win, lbl, val, 0, 10);
+    return (min != max) ? draw_drag_widget(win, lbl, val, (int)min, (int)max) :
+                          draw_drag_widget(win, lbl, val, 0, 10);
 }
 /// Generic widget used for templated code. Uses min and max,
 /// or a deafult range when their are the same. Color is ignored.
 template <int N>
 inline bool draw_value_widget(gl_window* win, const std::string& lbl,
     vec<int, N>& val, float min = 0, float max = 0, bool color = false) {
-    return (min != max) ?
-               draw_slider_widget(win, lbl, val, (int)min, (int)max) :
-               draw_slider_widget(win, lbl, val, 0, 10);
+    return (min != max) ? draw_drag_widget(win, lbl, val, (int)min, (int)max) :
+                          draw_drag_widget(win, lbl, val, 0, 10);
 }
 /// Generic widget used for templated code. Uses min and max,
 /// or a deafult range when their are the same. Color is ignored.
 inline bool draw_value_widget(gl_window* win, const std::string& lbl,
     float& val, float min = 0, float max = 0, bool color = false) {
     return (min != max) ?
-               draw_slider_widget(win, lbl, val, (float)min, (float)max) :
-               draw_slider_widget(win, lbl, val, 0, 1);
+               draw_drag_widget(win, lbl, val, (float)min, (float)max) :
+               draw_drag_widget(win, lbl, val, 0, 1);
 }
 /// Generic widget used for templated code. Uses min and max,
 /// or a deafult range when their are the same. Color is ignored.
 inline bool draw_value_widget(gl_window* win, const std::string& lbl,
     vec2f& val, float min = 0, float max = 0, bool color = false) {
     return (min != max) ?
-               draw_slider_widget(win, lbl, val, (float)min, (float)max) :
-               draw_slider_widget(win, lbl, val, 0, 1);
+               draw_drag_widget(win, lbl, val, (float)min, (float)max) :
+               draw_drag_widget(win, lbl, val, 0, 1);
 }
 /// Generic widget used for templated code. Uses min and max,
 /// or a deafult range when their are the same.
@@ -10450,11 +10493,23 @@ inline bool draw_value_widget(gl_window* win, const std::string& lbl,
     vec3f& val, float min = 0, float max = 0, bool color = false) {
     if (!color) {
         return (min != max) ?
-                   draw_slider_widget(win, lbl, val, (float)min, (float)max) :
-                   draw_slider_widget(win, lbl, val, 0, 1);
+                   draw_drag_widget(win, lbl, val, (float)min, (float)max) :
+                   draw_drag_widget(win, lbl, val, 0, 1);
     } else {
-        // TODO: min/max
-        return draw_color_widget(win, lbl, val);
+        if (max > 1) {
+            auto l = ygl::max(1.0f, max_element_value(val));
+            auto c = val / l;
+            auto ed1 = draw_drag_widget(win, lbl + "_l", l, 0, max);
+            auto ed2 = draw_color_widget(win, lbl + "_c", c);
+            if (ed1 || ed2) {
+                val = c * l;
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            return draw_color_widget(win, lbl, val);
+        }
     }
 }
 /// Generic widget used for templated code. Uses min and max,
@@ -10463,11 +10518,23 @@ inline bool draw_value_widget(gl_window* win, const std::string& lbl,
     vec4f& val, float min = 0, float max = 0, bool color = false) {
     if (!color) {
         return (min != max) ?
-                   draw_slider_widget(win, lbl, val, (float)min, (float)max) :
-                   draw_slider_widget(win, lbl, val, 0, 1);
+                   draw_drag_widget(win, lbl, val, (float)min, (float)max) :
+                   draw_drag_widget(win, lbl, val, 0, 1);
     } else {
-        // TODO: min/max
-        return draw_color_widget(win, lbl, val);
+        if (max > 1) {
+            auto l = ygl::max(1.0f, max_element_value(val));
+            auto c = vec4f{val.x / l, val.y / l, val.z / l, val.w};
+            auto ed1 = draw_drag_widget(win, lbl + "_l", l, 0, max);
+            auto ed2 = draw_color_widget(win, lbl + "_c", c);
+            if (ed1 || ed2) {
+                val = {c.x * l, c.y * l, c.z * l, c.w};
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            return draw_color_widget(win, lbl, val);
+        }
     }
 }
 /// Generic widget used for templated code. Uses min and max for frame origin,
@@ -10475,24 +10542,24 @@ inline bool draw_value_widget(gl_window* win, const std::string& lbl,
 inline bool draw_value_widget(gl_window* win, const std::string& lbl,
     frame3f& val, float min = 0, float max = 0, bool color = false) {
     return (min != max) ?
-               draw_slider_widget(win, lbl, val, (float)min, (float)max) :
-               draw_slider_widget(win, lbl, val, -10, 10);
+               draw_drag_widget(win, lbl, val, (float)min, (float)max) :
+               draw_drag_widget(win, lbl, val, -10, 10);
 }
 /// Generic widget used for templated code. Uses min and max,
 /// or a deafult range when their are the same. Color is ignored.
 inline bool draw_value_widget(gl_window* win, const std::string& lbl,
     mat4f& val, float min = 0, float max = 0, bool color = false) {
     return (min != max) ?
-               draw_slider_widget(win, lbl, val, (float)min, (float)max) :
-               draw_slider_widget(win, lbl, val, -10, 10);
+               draw_drag_widget(win, lbl, val, (float)min, (float)max) :
+               draw_drag_widget(win, lbl, val, -10, 10);
 }
 /// Generic widget used for templated code. Uses min and max,
 /// or a deafult range when their are the same. Color is ignored.
 inline bool draw_value_widget(gl_window* win, const std::string& lbl,
     quat4f& val, float min = 0, float max = 0, bool color = false) {
     return (min != max) ?
-               draw_slider_widget(win, lbl, val, (float)min, (float)max) :
-               draw_slider_widget(win, lbl, val, -1, 1);
+               draw_drag_widget(win, lbl, val, (float)min, (float)max) :
+               draw_drag_widget(win, lbl, val, -1, 1);
 }
 /// Generic widget used for templated code. Min, max and color are ignored.
 template <typename T,
@@ -10506,8 +10573,8 @@ inline bool draw_value_widget(gl_window* win, const std::string& lbl, T& val,
 inline bool draw_value_widget(gl_window* win, const std::string& lbl,
     uint32_t& val, float min = 0, float max = 0, bool color = false) {
     return (min != max) ?
-               draw_slider_widget(win, lbl, (int&)val, (int)min, (int)max) :
-               draw_slider_widget(win, lbl, (int&)val, 0, 10);
+               draw_drag_widget(win, lbl, (int&)val, (int)min, (int)max) :
+               draw_drag_widget(win, lbl, (int&)val, 0, 10);
 }
 
 /// Image inspection widgets.
