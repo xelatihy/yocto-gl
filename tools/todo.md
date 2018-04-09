@@ -21,34 +21,35 @@ Please consider this to be just development notes and not any real planning.
 
 ## Trace
 
-- error in handling deltas, that have to be special cased
-    - write delta math
-    - easiest way if it looks good
-    - option -1 (wrong): make up large values for BRDF and PDF
-        - DID NOT PROPERLY WORK
-    - option 0: split delta and non-delta fully
-        - seems the easiest solution, since it makes the algorithms clear
-        - can transition to all rough if needed
-        - use two separate code paths and choose between them at random
-        - question: can we fold this into two?
-    - option 1: consider rough transmission proper pdf (GGX on the back side)
-        - eval transmission remains the same
-            - if splitting light and brdf we are good here
-        - sampling remains the same as now, just remove deltas
-    - option 2: handle delta if there is a somewhat nice way (is there?)
-        - reqrite math with split integrals for deltas
-        - split direct and indirect
-- opacity still broken: why?
-- rewrite pdf to follow steve's
-    - write different pathtracers too also to follow steve's
-    - remove environment map point (not useful anymore)
+- simplification
+    - back to instances
+    - trace functions returns vec4f 
+    - double-sided brdf
+    - remove none point?
+    - is point needed?
+        - introduce brdf, pos, norm
+    - trace_lights
+        - remove
+        - add node point
+        - solve the stupid problem
+        - lights as pointers
+        - maybe integrate lights back into the scene
+        - add pointer to node if helpful
+    - trace_pixel and trace_sample
+        - do we need trace_pixels?
+    - remove environment map point?
+    - sample all lights only
+    - back to using pdfs
+    - remove distributions
+- variants
+    - steve's
+    - one sample mis only
 - lower energy on tests
 - test on car paint
 - fresnel
     - diffuse formula
-    - scale with roughness (should be option)
+    - scale with roughness
     - transmission formula
-    - remove kr for now
     - fresnel in coefficients
     - fresnel in weights
 - brdf

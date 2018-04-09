@@ -3359,7 +3359,7 @@ inline rng_pcg32 make_rng(uint64_t state, uint64_t seq = 1) {
 
 /// Next random uint in [0,n) range with proper weighting
 inline uint32_t next_rand1i(rng_pcg32& rng, uint32_t n) {
-#if YGL_RNG_FASTUINT
+#if 1
     return advance_rng(rng) % n;
 #else
     uint32_t threshold = (~n + 1u) % n;
@@ -4940,7 +4940,7 @@ struct tonemap_params {
     /// Hdr exposure. @refl_uilimits(-10,10) @refl_shortname(e)
     float exposure = 0;
     /// Type. @refl_shortname(t)
-    tonemap_type type = tonemap_type::gamma;
+    tonemap_type tonemapper = tonemap_type::gamma;
 };
 
 // #codegen end refl-tonemap
@@ -4970,8 +4970,8 @@ template <typename Visitor>
 inline void visit(tonemap_params& val, Visitor&& visitor) {
     visitor(val.exposure, visit_var{"exposure", visit_var_type::value,
                               "Hdr exposure.", -10, 10, "e"});
-    visitor(
-        val.type, visit_var{"type", visit_var_type::value, "Type.", 0, 0, "t"});
+    visitor(val.tonemapper,
+        visit_var{"tonemapper", visit_var_type::value, "Type.", 0, 0, "t"});
 }
 
 // #codegen end reflgen-tonemap
@@ -7058,7 +7058,7 @@ namespace ygl {
 // #codegen begin refl-trace
 
 /// Type of rendering algorithm.
-enum struct trace_shader_type {
+enum struct trace_type {
     /// Pathtrace.
     pathtrace = 0,
     /// Eye light for previews.
@@ -7077,40 +7077,14 @@ enum struct trace_shader_type {
     debug_frontfacing,
 };
 
-/// Random number generator type.
-enum struct trace_rng_type {
-    /// Uniform random numbers.
-    uniform = 0,
-    /// Stratified random numbers.
-    stratified,
-};
-
-/// Filter type.
-enum struct trace_filter_type {
-    /// Box filter.
-    box = 1,
-    /// Hat filter.
-    triangle = 2,
-    /// Cubic spline.
-    cubic = 3,
-    /// Catmull-Rom spline.
-    catmull_rom = 4,
-    /// Mitchell-Netrevalli.
-    mitchell = 5
-};
-
 /// Rendering params.
 struct trace_params {
     /// Image vertical resolution. @refl_uilimits(256,4096) @refl_shortname(r)
     int resolution = 512;
     /// Number of samples. @refl_uilimits(16,4096) @refl_shortname(s)
     int nsamples = 256;
-    /// Sampler type. @refl_shortname(S)
-    trace_shader_type shader = trace_shader_type::pathtrace;
-    /// Random number generation type. @refl_shortname(R)
-    trace_rng_type rng = trace_rng_type::stratified;
-    /// Filter type.
-    trace_filter_type filter = trace_filter_type::box;
+    /// Trace type. @refl_shortname(T)
+    trace_type tracer = trace_type::pathtrace;
     /// Whether to test transmission in shadows.
     bool notransmission = false;
     /// Force double sided rendering. @refl_shortname(D)
@@ -7143,20 +7117,14 @@ struct trace_params {
 /// for uniform and stratified sequences. The members are not part of the
 /// the public API.
 struct trace_pixel {
-    /// Accumulated radiance.
-    vec3f col = zero3f;
-    /// Accumulated coverage.
-    float alpha = 1;
+    /// Accumulated radiance and coverage.
+    vec4f acc = zero4f;
     /// Random number state.
     rng_pcg32 rng = rng_pcg32();
     /// Pixel coordinates.
     int i = 0, j = 0;
     /// Number of samples computed.
     int sample = 0;
-    /// Current dimension.
-    int dimension = 0;
-    /// Pixel weight for filtering.
-    float weight = 0;
 };
 
 /// Trace light as either shapes or environments. The members are not part of
@@ -7210,15 +7178,8 @@ inline void trace_image(const scene* scn, const camera* cam,
     for (auto cur_sample = 0; cur_sample < params.nsamples;
          cur_sample += params.batch_size) {
         if (callback) callback(cur_sample);
-        if (params.filter == trace_filter_type::box) {
-            trace_samples(scn, cam, bvh, lights, img, pixels,
-                std::min(params.batch_size, params.nsamples - cur_sample),
-                params);
-        } else {
-            trace_samples_filtered(scn, cam, bvh, lights, img, pixels,
-                std::min(params.batch_size, params.nsamples - cur_sample),
-                params);
-        }
+        trace_samples(scn, cam, bvh, lights, img, pixels,
+            std::min(params.batch_size, params.nsamples - cur_sample), params);
     }
 }
 
@@ -7246,42 +7207,17 @@ void trace_async_stop(std::vector<std::thread>& threads, bool& stop_flag);
 
 /// Names of enum values.
 template <>
-inline const std::vector<std::pair<std::string, trace_shader_type>>&
-enum_names<trace_shader_type>() {
-    static auto names = std::vector<std::pair<std::string, trace_shader_type>>{
-        {"pathtrace", trace_shader_type::pathtrace},
-        {"eyelight", trace_shader_type::eyelight},
-        {"direct", trace_shader_type::direct},
-        {"pathtrace_nomis", trace_shader_type::pathtrace_nomis},
-        {"debug_normal", trace_shader_type::debug_normal},
-        {"debug_albedo", trace_shader_type::debug_albedo},
-        {"debug_texcoord", trace_shader_type::debug_texcoord},
-        {"debug_frontfacing", trace_shader_type::debug_frontfacing},
-    };
-    return names;
-}
-
-/// Names of enum values.
-template <>
-inline const std::vector<std::pair<std::string, trace_rng_type>>&
-enum_names<trace_rng_type>() {
-    static auto names = std::vector<std::pair<std::string, trace_rng_type>>{
-        {"uniform", trace_rng_type::uniform},
-        {"stratified", trace_rng_type::stratified},
-    };
-    return names;
-}
-
-/// Names of enum values.
-template <>
-inline const std::vector<std::pair<std::string, trace_filter_type>>&
-enum_names<trace_filter_type>() {
-    static auto names = std::vector<std::pair<std::string, trace_filter_type>>{
-        {"box", trace_filter_type::box},
-        {"triangle", trace_filter_type::triangle},
-        {"cubic", trace_filter_type::cubic},
-        {"catmull_rom", trace_filter_type::catmull_rom},
-        {"mitchell", trace_filter_type::mitchell},
+inline const std::vector<std::pair<std::string, trace_type>>&
+enum_names<trace_type>() {
+    static auto names = std::vector<std::pair<std::string, trace_type>>{
+        {"pathtrace", trace_type::pathtrace},
+        {"eyelight", trace_type::eyelight},
+        {"direct", trace_type::direct},
+        {"pathtrace_nomis", trace_type::pathtrace_nomis},
+        {"debug_normal", trace_type::debug_normal},
+        {"debug_albedo", trace_type::debug_albedo},
+        {"debug_texcoord", trace_type::debug_texcoord},
+        {"debug_frontfacing", trace_type::debug_frontfacing},
     };
     return names;
 }
@@ -7293,12 +7229,8 @@ inline void visit(trace_params& val, Visitor&& visitor) {
                                 "Image vertical resolution.", 256, 4096, "r"});
     visitor(val.nsamples, visit_var{"nsamples", visit_var_type::value,
                               "Number of samples.", 16, 4096, "s"});
-    visitor(val.shader,
-        visit_var{"shader", visit_var_type::value, "Sampler type.", 0, 0, "S"});
-    visitor(val.rng, visit_var{"rng", visit_var_type::value,
-                         "Random number generation type.", 0, 0, "R"});
-    visitor(val.filter,
-        visit_var{"filter", visit_var_type::value, "Filter type.", 0, 0, ""});
+    visitor(val.tracer,
+        visit_var{"tracer", visit_var_type::value, "Trace type.", 0, 0, "T"});
     visitor(val.notransmission,
         visit_var{"notransmission", visit_var_type::value,
             "Whether to test transmission in shadows.", 0, 0, ""});
@@ -9906,7 +9838,7 @@ gl_stdimage_program make_stdimage_program();
 /// Draws an image texture the stdimage program.
 void draw_image(const gl_stdimage_program& prog, const gl_texture& txt,
     const vec2i& win_size, const vec2f& offset, float zoom, float exposure,
-    tonemap_type tonemap);
+    tonemap_type tonemapper);
 
 /// Draws an image texture the stdimage program.
 inline void draw_image(const gl_stdimage_program& prog, const gl_texture& txt,
@@ -9934,7 +9866,7 @@ inline void draw_image(const gl_stdimage_program& prog, const gl_texture& txt,
     const tonemap_params& tmparams, bool clear_background = true) {
     if (clear_background) gl_clear_buffers(params.background);
     draw_image(prog, txt, win_size, params.offset, params.zoom,
-        tmparams.exposure, tmparams.type);
+        tmparams.exposure, tmparams.tonemapper);
 }
 
 /// Computes the image uv coordinates corresponding to the view parameters.
