@@ -5489,16 +5489,6 @@ struct shape_element_tags {
     uint16_t esize = 0;
 };
 
-/// Shape group properties.
-struct shape_group_props {
-    /// Group name.
-    std::string name = "";
-    /// Material. @refl_semantic(reference)
-    material* mat = nullptr;
-    /// Faceted.
-    bool faceted = false;
-};
-
 /// Shape data represented as an indexed array. May contain only one of the
 /// points/lines/triangles/quads.
 struct shape {
@@ -5506,8 +5496,6 @@ struct shape {
     std::string name = "";
     /// Path used for saving in glTF.
     std::string path = "";
-    /// Groups.
-    std::vector<shape_group_props> groups;
 
     /// Points.
     std::vector<int> points;
@@ -5525,9 +5513,6 @@ struct shape {
     std::vector<vec4i> quads_texcoord;
     /// Bezier.
     std::vector<vec4i> beziers;
-
-    /// Element group ids.
-    std::vector<int> group_ids;
 
     /// Vertex position.
     std::vector<vec3f> pos;
@@ -5558,6 +5543,8 @@ struct instance {
     frame3f frame = identity_frame3f;
     /// Shape.
     shape* shp = nullptr;
+    /// Material.
+    material* mat = nullptr;
 };
 
 /// Distance at which we set environment map positions.
@@ -5582,7 +5569,7 @@ struct node {
     /// Parent node. @refl_semantic(reference)
     node* parent = nullptr;
     /// Local frame.
-    frame3f local = identity_frame3f;
+    frame3f frame = identity_frame3f;
     /// Translation.
     vec3f translation = zero3f;
     /// Rotation.
@@ -5598,8 +5585,6 @@ struct node {
     /// Environment the node points to. @refl_semantic(reference)
     environment* env = nullptr;
 
-    /// Transform frame. This is a computed value only stored for convenience.
-    frame3f frame_ = identity_frame3f;
     /// Child nodes. This is a computed value only stored for convenience.
     /// @refl_semantic(reference)
     std::vector<node*> children_ = {};
@@ -5709,14 +5694,6 @@ enum struct shape_elem_type {
 
 /// Get shape element type.
 shape_elem_type get_shape_type(const shape* shp);
-/// Check if a shape has emission.
-bool has_emission(const shape* shp);
-/// Gets the material for a shape element.
-material* get_material(const shape* shp, int eid);
-/// Gets is the element is faceted.
-bool get_faceted(const shape* shp, int eid);
-/// Returns is the shape is simple, i.e. it has only one material and one group.
-bool is_shape_simple(const shape* shp, bool split_facevarying);
 /// Shape element normal.
 vec3f eval_elem_norm(const shape* shp, int eid);
 
@@ -5811,15 +5788,6 @@ void tesselate_shape(shape* shp, bool subdivide,
 void tesselate_shapes(scene* scn, bool subdivide,
     bool facevarying_to_sharedvertex, bool quads_to_triangles,
     bool bezier_to_lines);
-
-/// Convert a shape into simple shapes. Facevarying primitives are split if
-/// `split_facevarying` is true. No shape is retuned if the shape is simple.
-std::vector<shape*> split_shape(const shape* shp, bool split_facevarying);
-/// Convert a list of shapes into one shape. Pad shape values if needed.
-/// Returns null if the shape cannot be constructed.
-shape* merge_shapes(const std::vector<shape*>& shps, bool pad_vertex);
-/// Convert a list of shapes into one shape. Pad shape values if needed.
-void merge_into(shape* shp, const shape* shp1, bool pad_vertex);
 
 /// Update node transforms.
 void update_transforms(scene* scn, float time = 0);
@@ -6164,24 +6132,11 @@ inline void visit(shape_element_tags& val, Visitor&& visitor) {
 
 /// Visit struct elements.
 template <typename Visitor>
-inline void visit(shape_group_props& val, Visitor&& visitor) {
-    visitor(val.name,
-        visit_var{"name", visit_var_type::value, "Group name.", 0, 0, ""});
-    visitor(val.mat,
-        visit_var{"mat", visit_var_type::reference, "Material.", 0, 0, ""});
-    visitor(val.faceted,
-        visit_var{"faceted", visit_var_type::value, "Faceted.", 0, 0, ""});
-}
-
-/// Visit struct elements.
-template <typename Visitor>
 inline void visit(shape& val, Visitor&& visitor) {
     visitor(
         val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
     visitor(val.path, visit_var{"path", visit_var_type::value,
                           "Path used for saving in glTF.", 0, 0, ""});
-    visitor(val.groups,
-        visit_var{"groups", visit_var_type::value, "Groups.", 0, 0, ""});
     visitor(val.points,
         visit_var{"points", visit_var_type::value, "Points.", 0, 0, ""});
     visitor(val.lines,
@@ -6199,8 +6154,6 @@ inline void visit(shape& val, Visitor&& visitor) {
             "Face-varying indices for texcoord.", 0, 0, ""});
     visitor(val.beziers,
         visit_var{"beziers", visit_var_type::value, "Bezier.", 0, 0, ""});
-    visitor(val.group_ids, visit_var{"group_ids", visit_var_type::value,
-                               "Element group ids.", 0, 0, ""});
     visitor(val.pos,
         visit_var{"pos", visit_var_type::value, "Vertex position.", 0, 0, ""});
     visitor(val.norm,
@@ -6231,6 +6184,8 @@ inline void visit(instance& val, Visitor&& visitor) {
         visit_var{"frame", visit_var_type::value, "Frame.", 0, 0, ""});
     visitor(
         val.shp, visit_var{"shp", visit_var_type::value, "Shape.", 0, 0, ""});
+    visitor(val.mat,
+        visit_var{"mat", visit_var_type::value, "Material.", 0, 0, ""});
 }
 
 /// Visit struct elements.
@@ -6253,8 +6208,8 @@ inline void visit(node& val, Visitor&& visitor) {
         val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
     visitor(val.parent, visit_var{"parent", visit_var_type::reference,
                             "Parent node.", 0, 0, ""});
-    visitor(val.local,
-        visit_var{"local", visit_var_type::value, "Local frame.", 0, 0, ""});
+    visitor(val.frame,
+        visit_var{"frame", visit_var_type::value, "Local frame.", 0, 0, ""});
     visitor(val.translation, visit_var{"translation", visit_var_type::value,
                                  "Translation.", 0, 0, ""});
     visitor(val.rotation,
@@ -6269,10 +6224,6 @@ inline void visit(node& val, Visitor&& visitor) {
                          "Shape instance the node points to.", 0, 0, ""});
     visitor(val.env, visit_var{"env", visit_var_type::reference,
                          "Environment the node points to.", 0, 0, ""});
-    visitor(val.frame_, visit_var{"frame_", visit_var_type::value,
-                            "Transform frame. This is a computed value only "
-                            "stored for convenience.",
-                            0, 0, ""});
     visitor(val.children_, visit_var{"children_", visit_var_type::reference,
                                "Child nodes. This is a computed value only "
                                "stored for convenience.",
@@ -6371,6 +6322,9 @@ inline void visit(save_options& val, Visitor&& visitor) {
             "Whether to flip the v coordinate in OBJ.", 0, 0, ""});
     visitor(val.obj_flip_tr, visit_var{"obj_flip_tr", visit_var_type::value,
                                  "Whether to flip tr in OBJ.", 0, 0, ""});
+    visitor(val.obj_save_instances,
+        visit_var{"obj_save_instances", visit_var_type::value,
+            "Whether to preserve instances in OBJ.", 0, 0, ""});
     visitor(val.gltf_separate_buffers,
         visit_var{"gltf_separate_buffers", visit_var_type::value,
             "Whether to use separate buffers in gltf.", 0, 0, ""});
@@ -6552,10 +6506,6 @@ struct proc_shape {
     std::string name = "";
     /// Shape type.
     proc_shape_type type = proc_shape_type::sphere;
-    /// Material name.
-    std::string material = "";
-    /// Interior material name.
-    std::string interior = "";
     /// Shape tesselation steps. @refl_uilimits(1,10000)
     vec3i tesselation = {1, 1, 1};
     /// Shape subdivision level. @refl_uilimits(0,10)
@@ -6600,6 +6550,8 @@ struct proc_instance {
     std::string name = "";
     /// Shape.
     std::string shape = "";
+    /// Material name.
+    std::string material = "";
     /// Frame. @refl_uilimits(-10,10)
     frame3f frame = identity_frame3f;
 };
@@ -6653,33 +6605,21 @@ struct proc_scene {
     /// Name.
     std::string name;
     /// Cameras.
-    std::vector<proc_camera*> cameras;
+    std::map<std::string, proc_camera> cameras;
     /// Textures.
-    std::vector<proc_texture*> textures;
+    std::map<std::string, proc_texture> textures;
     /// Materials.
-    std::vector<proc_material*> materials;
+    std::map<std::string, proc_material> materials;
     /// Shapes.
-    std::vector<proc_shape*> shapes;
+    std::map<std::string, proc_shape> shapes;
     /// Instances.
-    std::vector<proc_instance*> instances;
+    std::map<std::string, proc_instance> instances;
     /// Environmennts.
-    std::vector<proc_environment*> environments;
+    std::map<std::string, proc_environment> environments;
     /// Nodes.
-    std::vector<proc_node*> nodes;
+    std::map<std::string, proc_node> nodes;
     /// Animations.
-    std::vector<proc_animation*> animations;
-
-    // Cleanup.
-    ~proc_scene() {
-        for (auto v : shapes) delete v;
-        for (auto v : instances) delete v;
-        for (auto v : materials) delete v;
-        for (auto v : textures) delete v;
-        for (auto v : cameras) delete v;
-        for (auto v : environments) delete v;
-        for (auto v : nodes) delete v;
-        for (auto v : animations) delete v;
-    }
+    std::map<std::string, proc_animation> animations;
 };
 
 // #codegen end refl-proc-scene
@@ -6688,59 +6628,56 @@ struct proc_scene {
 scene* make_cornell_box_scene();
 
 /// Updates a procesural camera.
-void update_proc_elem(scene* scn, camera* cam, const proc_camera* tcam);
+void update_proc_elem(scene* scn, camera* cam, const proc_camera& tcam);
 /// Updates a procedural texture.
-void update_proc_elem(scene* scn, texture* txt, const proc_texture* ttxt);
+void update_proc_elem(scene* scn, texture* txt, const proc_texture& ttxt);
 /// Updates a procedural material.
-void update_proc_elem(scene* scn, material* mat, const proc_material* tmat);
+void update_proc_elem(scene* scn, material* mat, const proc_material& tmat);
 /// Updates a procedural shape, adding it to the scene if missing.
-void update_proc_elem(scene* scn, shape* shp, const proc_shape* tshp);
+void update_proc_elem(scene* scn, shape* shp, const proc_shape& tshp);
 /// Updates a procedural shape, adding it to the scene if missing.
-void update_proc_elem(scene* scn, instance* shp, const proc_instance* tist);
+void update_proc_elem(scene* scn, instance* shp, const proc_instance& tist);
 /// Updates a procedural instance.
 void update_proc_elem(
-    scene* scn, environment* env, const proc_environment* tenv);
+    scene* scn, environment* env, const proc_environment& tenv);
 /// Updates a procedural node.
-void update_proc_elem(scene* scn, node* nde, const proc_node* tndr);
+void update_proc_elem(scene* scn, node* nde, const proc_node& tndr);
 /// Updates a procedural animation.
 void update_proc_elem(
-    scene* scn, animation_group* anm, const proc_animation* tndr);
+    scene* scn, animation_group* anm, const proc_animation& tndr);
 /// Updates a procedural scene, adding missing objects. Objects are only added
 /// and never removed.
-void update_proc_elems(scene* scn, const proc_scene* tscn,
+void update_proc_elems(scene* scn, const proc_scene& tscn,
     const std::unordered_set<void*>& refresh = {});
 /// Makes a test scene. Convenience wrapper around `update_test_scene()`.
-inline scene* make_proc_elems(const proc_scene* tscn) {
+inline scene* make_proc_elems(const proc_scene& tscn) {
     auto scn = new scene();
     update_proc_elems(scn, tscn);
     return scn;
 }
 
 /// Procedural camera presets.
-std::map<std::string, proc_camera*>& proc_camera_presets();
+std::map<std::string, proc_camera>& proc_camera_presets();
 /// Procedural texture presets.
-std::map<std::string, proc_texture*>& proc_texture_presets();
+std::map<std::string, proc_texture>& proc_texture_presets();
 /// Procedural material presets.
-std::map<std::string, proc_material*>& proc_material_presets();
+std::map<std::string, proc_material>& proc_material_presets();
 /// Procedural shape presets.
-std::map<std::string, proc_shape*>& proc_shape_presets();
+std::map<std::string, proc_shape>& proc_shape_presets();
 /// Procedural environment presets.
-std::map<std::string, proc_environment*>& proc_environment_presets();
+std::map<std::string, proc_environment>& proc_environment_presets();
 /// Procedural nodes presets.
-std::map<std::string, proc_node*>& proc_node_presets();
+std::map<std::string, proc_node>& proc_node_presets();
 /// Procedural animation presets.
-std::map<std::string, proc_animation*>& proc_animation_presets();
+std::map<std::string, proc_animation>& proc_animation_presets();
 /// Test scene presets.
-std::map<std::string, proc_scene*>& proc_scene_presets();
-
-/// Remove duplicates based on name.
-void remove_duplicates(const proc_scene* tscn);
+std::map<std::string, proc_scene>& proc_scene_presets();
 
 /// Load test scene.
-proc_scene* load_proc_scene(const std::string& filename);
+proc_scene load_proc_scene(const std::string& filename);
 
 /// Save test scene.
-void save_proc_scene(const std::string& filename, const proc_scene* scn);
+void save_proc_scene(const std::string& filename, const proc_scene& scn);
 
 // #codegen begin reflgen-proc-scene
 
@@ -6886,10 +6823,6 @@ inline void visit(proc_shape& val, Visitor&& visitor) {
             ""});
     visitor(val.type,
         visit_var{"type", visit_var_type::value, "Shape type.", 0, 0, ""});
-    visitor(val.material, visit_var{"material", visit_var_type::value,
-                              "Material name.", 0, 0, ""});
-    visitor(val.interior, visit_var{"interior", visit_var_type::value,
-                              "Interior material name.", 0, 0, ""});
     visitor(val.tesselation, visit_var{"tesselation", visit_var_type::value,
                                  "Shape tesselation steps.", 1, 10000, ""});
     visitor(val.subdivision, visit_var{"subdivision", visit_var_type::value,
@@ -6937,6 +6870,8 @@ inline void visit(proc_instance& val, Visitor&& visitor) {
         val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
     visitor(val.shape,
         visit_var{"shape", visit_var_type::value, "Shape.", 0, 0, ""});
+    visitor(val.material, visit_var{"material", visit_var_type::value,
+                              "Material name.", 0, 0, ""});
     visitor(val.frame,
         visit_var{"frame", visit_var_type::value, "Frame.", -10, 10, ""});
 }
@@ -7502,8 +7437,10 @@ struct obj_environment {
     std::string name;
     /// Transform frame (affine matrix).
     frame3f frame = identity_frame3f;
-    /// Material name.
-    std::string matname;
+    /// Emission.
+    vec3f ke = zero3f;
+    /// Emission texture.
+    obj_texture_info ke_txt;
 };
 
 /// Obj node [extension].
@@ -7519,7 +7456,7 @@ struct obj_node {
     /// Environment name.
     std::string envname;
     /// Transform frame (affine matrix).
-    frame3f local = identity_frame3f;
+    frame3f frame = identity_frame3f;
     /// Translation.
     vec3f translation = zero3f;
     /// Rotation.
@@ -9804,18 +9741,18 @@ namespace ygl {
 
 /// Vertex buffers for scene drawing. Members are not part of the public API.
 struct gl_shape {
-    gl_vertex_buffer pos;                      // position
-    gl_vertex_buffer norm;                     // normals
-    gl_vertex_buffer texcoord;                 // texcoord
-    gl_vertex_buffer texcoord1;                // texcoord
-    gl_vertex_buffer color;                    // color
-    gl_vertex_buffer tangsp;                   // tangent space
-    std::vector<gl_element_buffer> points;     // point elements
-    std::vector<gl_element_buffer> lines;      // line elements
-    std::vector<gl_element_buffer> triangles;  // triangle elements
-    std::vector<gl_element_buffer> quads;      // quad elements as tris
-    std::vector<gl_element_buffer> beziers;    // bezier elements as l.
-    std::vector<gl_element_buffer> edges;      // edge elements
+    gl_vertex_buffer pos;         // position
+    gl_vertex_buffer norm;        // normals
+    gl_vertex_buffer texcoord;    // texcoord
+    gl_vertex_buffer texcoord1;   // texcoord
+    gl_vertex_buffer tangsp;      // tangent space
+    gl_vertex_buffer color;       // color
+    gl_element_buffer points;     // point elements
+    gl_element_buffer lines;      // line elements
+    gl_element_buffer triangles;  // triangle elements
+    gl_element_buffer quads;      // quad elements as tris
+    gl_element_buffer beziers;    // bezier elements as l.
+    gl_element_buffer edges;      // edge elements
 };
 
 /// Initialize gl lights.

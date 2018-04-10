@@ -4262,33 +4262,6 @@ shape_elem_type get_shape_type(const shape* shp) {
     }
 }
 
-// Check if a shape has emission.
-bool has_emission(const shape* shp) {
-    for (auto grp : shp->groups) {
-        auto mat = grp.mat;
-        if (mat && mat->ke != zero3f) return true;
-    }
-    return false;
-}
-// Gets the material for a shape element.
-material* get_material(const shape* shp, int eid) {
-    if (shp->groups.empty()) return nullptr;
-    if (shp->group_ids.empty()) return shp->groups.at(0).mat;
-    return shp->groups.at(shp->group_ids[eid]).mat;
-}
-// Gets is the element is faceted.
-bool get_faceted(const shape* shp, int eid) {
-    if (shp->groups.empty()) return false;
-    if (shp->group_ids.empty()) return shp->groups.at(0).faceted;
-    return shp->groups.at(shp->group_ids[eid]).faceted;
-}
-// Returns is the shape is simple.
-bool is_shape_simple(const shape* shp, bool split_facevarying) {
-    if (split_facevarying && !shp->quads_pos.empty()) return false;
-    if (!shp->group_ids.empty() && shp->groups.size() > 1) return false;
-    return true;
-}
-
 // Shape element normal.
 vec3f eval_elem_norm(const shape* shp, int eid) {
     auto norm = zero3f;
@@ -4369,7 +4342,7 @@ vec3f eval_pos(const shape* shp, int eid, const vec2f& euv) {
 }
 // Shape normal interpolated using barycentric coordinates
 vec3f eval_norm(const shape* shp, int eid, const vec2f& euv) {
-    if (shp->norm.empty() || get_faceted(shp, eid)) return eval_elem_norm(shp, eid);
+    if (shp->norm.empty()) return eval_elem_norm(shp, eid);
     return normalize(eval_elem(shp, shp->norm, eid, euv, {0, 0, 1}));
 }
 // Shape texcoord interpolated using barycentric coordinates
@@ -4714,198 +4687,6 @@ int add_shape_vert(shape* shp, int vert, std::unordered_map<int, int>& vmap,
     return vid;
 }
 
-// Convert face-varying shapes to shapes.
-std::vector<shape*> split_shape(const shape* shp, bool split_facevarying) {
-    if (is_shape_simple(shp, split_facevarying)) return {};
-    auto sshps = std::vector<shape*>();
-    auto ngroups = max(1, (int)shp->groups.size());
-    for (auto gid = 0; gid < ngroups; gid++) {
-        auto sshp = new shape();
-        if (!shp->groups.empty()) {
-            sshp->name = (shp->groups[gid].name == "") ? shp->name :
-                                                         shp->groups[gid].name;
-            sshp->groups.push_back(shp->groups[gid]);
-        } else {
-            sshp->name = shp->name + "_" + std::to_string(gid + 1);
-        }
-        auto vmap = std::unordered_map<int, int>();
-        auto add_vert = [&shp, &sshp, &vmap](int vert) {
-            return add_shape_vert(sshp, vert, vmap, shp->pos, shp->norm,
-                shp->texcoord, shp->color, shp->radius);
-        };
-        auto add_fvvert = [&vmap](auto& svals, auto& vals, int vert) {
-            if (vals.empty()) return -1;
-            if (contains(vmap, vert)) return vmap.at(vert);
-            auto vid = (int)vmap.size();
-            vmap[vert] = vid;
-            svals.push_back(vals[vert]);
-            return vid;
-        };
-        for (auto eid = 0; eid < shp->points.size(); eid++) {
-            if (!shp->group_ids.empty() && shp->group_ids[eid] != gid) continue;
-            auto p = shp->points.at(eid);
-            sshp->points.push_back(add_vert(p));
-        }
-        for (auto eid = 0; eid < shp->lines.size(); eid++) {
-            if (!shp->group_ids.empty() && shp->group_ids[eid] != gid) continue;
-            auto l = shp->lines.at(eid);
-            sshp->lines.push_back({add_vert(l.x), add_vert(l.y)});
-        }
-        for (auto eid = 0; eid < shp->triangles.size(); eid++) {
-            if (!shp->group_ids.empty() && shp->group_ids[eid] != gid) continue;
-            auto t = shp->triangles.at(eid);
-            sshp->triangles.push_back(
-                {add_vert(t.x), add_vert(t.y), add_vert(t.z)});
-        }
-        for (auto eid = 0; eid < shp->quads.size(); eid++) {
-            if (!shp->group_ids.empty() && shp->group_ids[eid] != gid) continue;
-            auto q = shp->quads.at(eid);
-            sshp->quads.push_back(
-                {add_vert(q.x), add_vert(q.y), add_vert(q.z), add_vert(q.w)});
-        }
-        for (auto eid = 0; eid < shp->beziers.size(); eid++) {
-            if (!shp->group_ids.empty() && shp->group_ids[eid] != gid) continue;
-            auto b = shp->beziers.at(eid);
-            sshp->beziers.push_back(
-                {add_vert(b.x), add_vert(b.y), add_vert(b.z), add_vert(b.w)});
-        }
-        if (split_facevarying) {
-            auto fvmap = std::unordered_map<vec<int, 5>, int>();
-            for (auto eid = 0; eid < shp->quads_pos.size(); eid++) {
-                if (!shp->group_ids.empty() && shp->group_ids[eid] != gid)
-                    continue;
-                sshp->quads.push_back({});
-                for (auto c = 0; c < 4; c++) {
-                    auto vert = vec<int, 5>{shp->quads_pos[eid][c],
-                        (shp->quads_norm.empty()) ? -1 :
-                                                    shp->quads_norm[eid][c],
-                        (shp->quads_texcoord.empty()) ?
-                            -1 :
-                            shp->quads_texcoord[eid][c],
-                        -1, -1};
-                    sshp->quads.back()[c] = add_shape_vert(sshp, vert, fvmap,
-                        shp->pos, shp->norm, shp->texcoord, {}, {});
-                }
-            }
-        } else {
-            vmap.clear();
-            for (auto eid = 0; eid < shp->quads_pos.size(); eid++) {
-                if (!shp->group_ids.empty() && shp->group_ids[eid] != gid)
-                    continue;
-                auto q = shp->quads_pos.at(eid);
-                sshp->quads_pos.push_back({add_fvvert(sshp->pos, shp->pos, q.x),
-                    add_fvvert(sshp->pos, shp->pos, q.y),
-                    add_fvvert(sshp->pos, shp->pos, q.z),
-                    add_fvvert(sshp->pos, shp->pos, q.w)});
-            }
-            vmap.clear();
-            for (auto eid = 0; eid < shp->quads_norm.size(); eid++) {
-                if (!shp->group_ids.empty() && shp->group_ids[eid] != gid)
-                    continue;
-                auto q = shp->quads_norm.at(eid);
-                sshp->quads_norm.push_back(
-                    {add_fvvert(sshp->norm, shp->norm, q.x),
-                        add_fvvert(sshp->norm, shp->norm, q.y),
-                        add_fvvert(sshp->norm, shp->norm, q.z),
-                        add_fvvert(sshp->norm, shp->norm, q.w)});
-            }
-            vmap.clear();
-            for (auto eid = 0; eid < shp->quads_texcoord.size(); eid++) {
-                if (!shp->group_ids.empty() && shp->group_ids[eid] != gid)
-                    continue;
-                auto q = shp->quads_texcoord.at(eid);
-                sshp->quads_texcoord.push_back(
-                    {add_fvvert(sshp->texcoord, shp->texcoord, q.x),
-                        add_fvvert(sshp->texcoord, shp->texcoord, q.y),
-                        add_fvvert(sshp->texcoord, shp->texcoord, q.z),
-                        add_fvvert(sshp->texcoord, shp->texcoord, q.w)});
-            }
-        }
-        sshps.push_back(sshp);
-    }
-    return sshps;
-}
-
-// Convert a list of shapes into one shape.
-shape* merge_shapes(const std::vector<shape*>& shps, bool pad_vertex) {
-    if (shps.size() < 2) return nullptr;
-    auto gshp = new shape();
-    gshp->name = shps.front()->name;
-    auto pad_norm = false, pad_texcoord = false, pad_texcoord1 = false,
-         pad_color = false, pad_radius = false, pad_tangsp = false;
-    for (auto i = 1; i < shps.size(); i++) {
-        pad_norm = shps[i]->norm.empty() != shps[i - 1]->norm.empty();
-        pad_texcoord =
-            shps[i]->texcoord.empty() != shps[i - 1]->texcoord.empty();
-        pad_texcoord1 =
-            shps[i]->texcoord1.empty() != shps[i - 1]->texcoord1.empty();
-        pad_color = shps[i]->color.empty() != shps[i - 1]->color.empty();
-        pad_radius = shps[i]->radius.empty() != shps[i - 1]->radius.empty();
-        pad_tangsp = shps[i]->tangsp.empty() != shps[i - 1]->tangsp.empty();
-    }
-    if (!pad_vertex && (pad_norm || pad_texcoord || pad_texcoord1 ||
-                           pad_color || pad_radius || pad_tangsp))
-        throw std::runtime_error("need padding");
-    for (auto shp : shps) {
-        if (shp->pos.empty()) continue;
-        auto goffset = (uint16_t)gshp->groups.size();
-        auto voffset = (int)gshp->pos.size();
-        if (shp->groups.empty()) {
-            gshp->groups.push_back({});
-        } else {
-            append(gshp->groups, shp->groups);
-        }
-        append(gshp->pos, shp->pos);
-        if (shp->norm.empty() && pad_norm)
-            append(gshp->norm, shp->pos.size(), zero3f);
-        else
-            append(gshp->norm, shp->norm);
-        if (shp->texcoord.empty() && pad_texcoord)
-            append(gshp->texcoord, shp->pos.size(), zero2f);
-        else
-            append(gshp->texcoord, shp->texcoord);
-        if (shp->texcoord1.empty() && pad_texcoord1)
-            append(gshp->texcoord1, shp->pos.size(), zero2f);
-        else
-            append(gshp->texcoord1, shp->texcoord1);
-        if (shp->color.empty() && pad_color)
-            append(gshp->color, shp->pos.size(), {1, 1, 1, 1});
-        else
-            append(gshp->color, shp->color);
-        if (shp->radius.empty() && pad_radius)
-            append(gshp->radius, shp->pos.size(), 0.0f);
-        else
-            append(gshp->radius, shp->radius);
-        if (shp->tangsp.empty() && pad_tangsp)
-            append(gshp->tangsp, shp->pos.size(), {0, 0, 1, 1});
-        else
-            append(gshp->tangsp, shp->tangsp);
-        for (auto p : shp->points) gshp->points.push_back(p + voffset);
-        for (auto l : shp->lines) gshp->lines.push_back(l + vec2i{voffset});
-        for (auto t : shp->triangles)
-            gshp->triangles.push_back(t + vec3i{voffset});
-        for (auto q : shp->quads) gshp->quads.push_back(q + vec4i{voffset});
-        for (auto b : shp->beziers) gshp->beziers.push_back(b + vec4i{voffset});
-        if (shp->group_ids.empty()) {
-            auto nelems = (int)max({shp->points.size(), shp->lines.size(),
-                shp->triangles.size(), shp->quads.size(), shp->beziers.size()});
-            for (auto i = 0; i < nelems; i++)
-                gshp->group_ids.push_back(goffset);
-        } else {
-            for (auto gid : shp->group_ids)
-                gshp->group_ids.push_back((uint16_t)(goffset + gid));
-        }
-    }
-    return gshp;
-}
-
-// Convert a list of shapes into one shape. Pad shape values if needed.
-void merge_into(shape* shp, const shape* shp1, bool pad_vertex) {
-    auto mshp = merge_shapes({shp, (shape*)shp1}, pad_vertex);
-    *shp = *mshp;
-    delete mshp;
-}
-
 // Update animation transforms
 void update_transforms(const animation_group* agr, float time) {
     auto interpolate = [](keyframe_type type, const std::vector<float>& times,
@@ -4942,12 +4723,12 @@ void update_transforms(const animation_group* agr, float time) {
 
 // Update node transforms
 void update_transforms(node* nde, const frame3f& parent = identity_frame3f) {
-    nde->frame_ = parent * nde->local * translation_frame(nde->translation) *
+    auto frame = parent * nde->frame * translation_frame(nde->translation) *
                   rotation_frame(nde->rotation) * scaling_frame(nde->scaling);
-    if (nde->ist) nde->ist->frame = nde->frame_;
-    if (nde->cam) nde->cam->frame = nde->frame_;
-    if (nde->env) nde->env->frame = nde->frame_;
-    for (auto child : nde->children_) update_transforms(child, nde->frame_);
+    if (nde->ist) nde->ist->frame = frame;
+    if (nde->cam) nde->cam->frame = frame;
+    if (nde->env) nde->env->frame = frame;
+    for (auto child : nde->children_) update_transforms(child, frame);
 }
 
 // Update node transforms
@@ -5007,22 +4788,17 @@ void add_normals(scene* scn) {
 
 // Add missing tangent space if needed.
 void add_tangent_space(scene* scn) {
-    for (auto shp : scn->shapes) {
-        if (!shp->tangsp.empty() || shp->texcoord.empty()) continue;
-        auto mat_needs_tangents = false;
-        for (auto grp : shp->groups) {
-            if (grp.mat && (grp.mat->norm_txt.txt || grp.mat->bump_txt.txt))
-                mat_needs_tangents = true;
-        }
-        if (!mat_needs_tangents) continue;
-        auto type = get_shape_type(shp);
+    for (auto ist : scn->instances) {
+        if (!ist->shp->tangsp.empty() || ist->shp->texcoord.empty()) continue;
+        if (!ist->mat || (!ist->mat->norm_txt.txt && !ist->mat->bump_txt.txt)) continue;
+        auto type = get_shape_type(ist->shp);
         if (type == shape_elem_type::triangles) {
-            compute_tangent_frames(shp->triangles, shp->pos, shp->norm,
-                shp->texcoord, shp->tangsp);
+            compute_tangent_frames(ist->shp->triangles, ist->shp->pos, ist->shp->norm,
+                ist->shp->texcoord, ist->shp->tangsp);
         } else if (type == shape_elem_type::quads) {
-            auto triangles = convert_quads_to_triangles(shp->quads);
+            auto triangles = convert_quads_to_triangles(ist->shp->quads);
             compute_tangent_frames(
-                triangles, shp->pos, shp->norm, shp->texcoord, shp->tangsp);
+                triangles, ist->shp->pos, ist->shp->norm, ist->shp->texcoord, ist->shp->tangsp);
         } else {
             throw std::runtime_error("type not supported");
         }
@@ -5128,7 +4904,7 @@ bbox3f compute_bounds(const scene* scn, bool skip_emitting) {
     auto bbox = invalid_bbox3f;
     for (auto ist : scn->instances) {
         if (!ist->shp) continue;
-        if (skip_emitting && has_emission(ist->shp)) continue;
+        if (skip_emitting && ist->mat && ist->mat->ke != zero3f) continue;
         bbox += transform_bbox(ist->frame, shape_bboxes.at(ist->shp));
     }
     return bbox;
@@ -5351,251 +5127,236 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
     }
 
     // convert meshes
-    auto omap = std::unordered_map<std::string, shape*>{{"", nullptr}};
+    auto omap = std::unordered_map<std::string, std::vector<std::pair<shape*, material*>>>{{"", {}}};
     for (auto omsh : obj->objects) {
-        auto shp = new shape();
-        shp->name = omsh->name;
         if (omsh->verts.empty()) continue;
         if (omsh->elems.empty()) continue;
+        for (auto gid = 0; gid < omsh->groups.size(); gid++) {
+            auto ogrp = omsh->groups.at(gid);
+            auto shp = new shape();
+            shp->name = omsh->name + ((gid) ? std::to_string(gid) : ""s);
 
-        for (auto ogrp : omsh->groups)
-            shp->groups.push_back(
-                {ogrp.name, mmap[ogrp.matname], ogrp.faceted});
-        if (omsh->props.find("subdivision") != omsh->props.end()) {
-            shp->subdivision =
-                atoi(omsh->props.at("subdivision").at(0).c_str());
-        }
-        if (omsh->props.find("catmullclark") != omsh->props.end()) {
-            shp->catmullclark =
-                (bool)atoi(omsh->props.at("catmullclark").at(1).c_str());
-        }
-
-        // check to see if this shuold be face-varying or flat
-        // quads
-        auto as_facevarying = false, as_quads = false;
-        if (opts.obj_preserve_quads || opts.obj_preserve_facevarying) {
-            auto face_max = 0;
-            for (auto& elem : omsh->elems) {
-                if (elem.type != obj_element_type::face) {
-                    face_max = 0;
-                    break;
-                } else {
-                    face_max = max(face_max, (int)elem.size);
-                }
-            }
-            as_quads = opts.obj_preserve_quads && face_max > 3;
-            as_facevarying = opts.obj_preserve_facevarying && face_max > 2;
-            // in case of facevarying, check if there is really
-            // need for it
-            if (as_facevarying) {
-                auto need_facevarying = false;
+            // check to see if this shuold be face-varying or flat
+            // quads
+            auto as_facevarying = false, as_quads = false;
+            if (opts.obj_preserve_quads || opts.obj_preserve_facevarying) {
+                auto face_max = 0;
                 for (auto& elem : omsh->elems) {
-                    for (auto i = elem.start; i < elem.start + elem.size; i++) {
-                        auto& v = omsh->verts[i];
-                        if ((v.norm >= 0 && v.pos != v.norm) ||
-                            (v.texcoord >= 0 && v.pos != v.texcoord) ||
-                            (v.norm >= 0 && v.texcoord >= 0 &&
-                                v.norm != v.texcoord))
-                            need_facevarying = true;
-                        if (v.color >= 0 || v.radius >= 0)
-                            as_facevarying = false;
+                    if (elem.type != obj_element_type::face) {
+                        face_max = 0;
+                        break;
+                    } else {
+                        face_max = max(face_max, (int)elem.size);
                     }
-                    if (!as_facevarying) break;
                 }
-                as_facevarying = need_facevarying;
-            }
-        }
-
-        if (!as_facevarying) {
-            // insert all vertices
-            std::unordered_map<obj_vertex, int, obj_vertex_hash> vert_map;
-            std::vector<int> vert_ids;
-            for (auto& vert : omsh->verts) {
-                if (vert_map.find(vert) == vert_map.end()) {
-                    auto s = (int)vert_map.size();
-                    vert_map[vert] = s;
+                as_quads = opts.obj_preserve_quads && face_max > 3;
+                as_facevarying = opts.obj_preserve_facevarying && face_max > 2;
+                // in case of facevarying, check if there is really
+                // need for it
+                if (as_facevarying) {
+                    auto need_facevarying = false;
+                    for (auto& elem : omsh->elems) {
+                        for (auto i = elem.start; i < elem.start + elem.size; i++) {
+                            auto& v = omsh->verts[i];
+                            if ((v.norm >= 0 && v.pos != v.norm) ||
+                                (v.texcoord >= 0 && v.pos != v.texcoord) ||
+                                (v.norm >= 0 && v.texcoord >= 0 &&
+                                    v.norm != v.texcoord))
+                                need_facevarying = true;
+                            if (v.color >= 0 || v.radius >= 0)
+                                as_facevarying = false;
+                        }
+                        if (!as_facevarying) break;
+                    }
+                    as_facevarying = need_facevarying;
                 }
-                vert_ids.push_back(vert_map.at(vert));
             }
 
-            // convert elements
-            for (auto& elem : omsh->elems) {
-                switch (elem.type) {
-                    case obj_element_type::point: {
-                        for (auto i = elem.start; i < elem.start + elem.size;
-                             i++) {
-                            shp->points.push_back(vert_ids[i]);
-                            shp->group_ids.push_back(elem.groupid);
-                        }
-                    } break;
-                    case obj_element_type::line: {
-                        for (auto i = elem.start;
-                             i < elem.start + elem.size - 1; i++) {
-                            shp->lines.push_back(
-                                {vert_ids[i], vert_ids[i + 1]});
-                            shp->group_ids.push_back(elem.groupid);
-                        }
-                    } break;
-                    case obj_element_type::face: {
-                        if (as_quads && elem.size == 4) {
-                            shp->quads.push_back({vert_ids[elem.start + 0],
-                                vert_ids[elem.start + 1],
-                                vert_ids[elem.start + 2],
-                                vert_ids[elem.start + 3]});
-                            shp->group_ids.push_back(elem.groupid);
-                        } else if (as_quads && elem.size != 4) {
-                            for (auto i = elem.start + 2;
-                                 i < elem.start + elem.size; i++) {
-                                shp->quads.push_back({vert_ids[elem.start],
-                                    vert_ids[i - 1], vert_ids[i], vert_ids[i]});
-                                shp->group_ids.push_back(elem.groupid);
+            if (!as_facevarying) {
+                // insert all vertices
+                std::unordered_map<obj_vertex, int, obj_vertex_hash> vert_map;
+                std::vector<int> vert_ids;
+                for (auto& vert : omsh->verts) {
+                    if (vert_map.find(vert) == vert_map.end()) {
+                        auto s = (int)vert_map.size();
+                        vert_map[vert] = s;
+                    }
+                    vert_ids.push_back(vert_map.at(vert));
+                }
+
+                // convert elements
+                for (auto& elem : omsh->elems) {
+                    if (elem.groupid != gid) continue;
+                    switch (elem.type) {
+                        case obj_element_type::point: {
+                            for (auto i = elem.start; i < elem.start + elem.size;
+                                i++) {
+                                shp->points.push_back(vert_ids[i]);
                             }
-                        } else {
-                            for (auto i = elem.start + 2;
-                                 i < elem.start + elem.size; i++) {
-                                shp->triangles.push_back({vert_ids[elem.start],
-                                    vert_ids[i - 1], vert_ids[i]});
-                                shp->group_ids.push_back(elem.groupid);
+                        } break;
+                        case obj_element_type::line: {
+                            for (auto i = elem.start;
+                                i < elem.start + elem.size - 1; i++) {
+                                shp->lines.push_back(
+                                    {vert_ids[i], vert_ids[i + 1]});
                             }
-                        }
-                    } break;
-                    case obj_element_type::bezier: {
-                        if ((elem.size - 1) % 3)
-                            throw std::runtime_error("bad obj bezier");
-                        for (auto i = elem.start + 1;
-                             i < elem.start + elem.size; i += 3) {
-                            shp->beziers.push_back({vert_ids[i - 1],
-                                vert_ids[i], vert_ids[i + 1], vert_ids[i + 2]});
-                            shp->group_ids.push_back(elem.groupid);
-                        }
-                    } break;
-                    default: { assert(false); }
+                        } break;
+                        case obj_element_type::face: {
+                            if (as_quads && elem.size == 4) {
+                                shp->quads.push_back({vert_ids[elem.start + 0],
+                                    vert_ids[elem.start + 1],
+                                    vert_ids[elem.start + 2],
+                                    vert_ids[elem.start + 3]});
+                            } else if (as_quads && elem.size != 4) {
+                                for (auto i = elem.start + 2;
+                                    i < elem.start + elem.size; i++) {
+                                    shp->quads.push_back({vert_ids[elem.start],
+                                        vert_ids[i - 1], vert_ids[i], vert_ids[i]});
+                                }
+                            } else {
+                                for (auto i = elem.start + 2;
+                                    i < elem.start + elem.size; i++) {
+                                    shp->triangles.push_back({vert_ids[elem.start],
+                                        vert_ids[i - 1], vert_ids[i]});
+                                }
+                            }
+                        } break;
+                        case obj_element_type::bezier: {
+                            if ((elem.size - 1) % 3)
+                                throw std::runtime_error("bad obj bezier");
+                            for (auto i = elem.start + 1;
+                                i < elem.start + elem.size; i += 3) {
+                                shp->beziers.push_back({vert_ids[i - 1],
+                                    vert_ids[i], vert_ids[i + 1], vert_ids[i + 2]});
+                            }
+                        } break;
+                        default: { assert(false); }
+                    }
                 }
-            }
 
-            // copy vertex data
-            auto v = omsh->verts[0];
-            if (v.pos >= 0) shp->pos.resize(vert_map.size());
-            if (v.texcoord >= 0) shp->texcoord.resize(vert_map.size());
-            if (v.norm >= 0) shp->norm.resize(vert_map.size());
-            if (v.color >= 0) shp->color.resize(vert_map.size());
-            if (v.radius >= 0) shp->radius.resize(vert_map.size());
-            for (auto& kv : vert_map) {
-                auto idx = kv.second;
-                auto vert = kv.first;
-                if (v.pos >= 0 && vert.pos >= 0)
-                    shp->pos[idx] = obj->pos[vert.pos];
-                if (v.texcoord >= 0 && vert.texcoord >= 0)
-                    shp->texcoord[idx] = obj->texcoord[vert.texcoord];
-                if (v.norm >= 0 && vert.norm >= 0)
-                    shp->norm[idx] = obj->norm[vert.norm];
-                if (v.color >= 0 && vert.color >= 0)
-                    shp->color[idx] = obj->color[vert.color];
-                if (v.radius >= 0 && vert.radius >= 0)
-                    shp->radius[idx] = obj->radius[vert.radius];
-            }
-        } else {
-            // insert all vertices
-            std::unordered_map<int, int> pos_map, norm_map, texcoord_map;
-            std::vector<int> pos_ids, norm_ids, texcoord_ids;
-            for (auto& vert : omsh->verts) {
-                if (vert.pos >= 0) {
-                    if (pos_map.find(vert.pos) == pos_map.end()) {
-                        auto s = (int)pos_map.size();
-                        pos_map[vert.pos] = s;
-                    }
-                    pos_ids.push_back(pos_map.at(vert.pos));
-                } else {
-                    if (!pos_ids.empty())
-                        throw std::runtime_error("malformed obj");
+                // copy vertex data
+                auto v = omsh->verts[0];
+                if (v.pos >= 0) shp->pos.resize(vert_map.size());
+                if (v.texcoord >= 0) shp->texcoord.resize(vert_map.size());
+                if (v.norm >= 0) shp->norm.resize(vert_map.size());
+                if (v.color >= 0) shp->color.resize(vert_map.size());
+                if (v.radius >= 0) shp->radius.resize(vert_map.size());
+                for (auto& kv : vert_map) {
+                    auto idx = kv.second;
+                    auto vert = kv.first;
+                    if (v.pos >= 0 && vert.pos >= 0)
+                        shp->pos[idx] = obj->pos[vert.pos];
+                    if (v.texcoord >= 0 && vert.texcoord >= 0)
+                        shp->texcoord[idx] = obj->texcoord[vert.texcoord];
+                    if (v.norm >= 0 && vert.norm >= 0)
+                        shp->norm[idx] = obj->norm[vert.norm];
+                    if (v.color >= 0 && vert.color >= 0)
+                        shp->color[idx] = obj->color[vert.color];
+                    if (v.radius >= 0 && vert.radius >= 0)
+                        shp->radius[idx] = obj->radius[vert.radius];
                 }
-                if (vert.norm >= 0) {
-                    if (norm_map.find(vert.norm) == norm_map.end()) {
-                        auto s = (int)norm_map.size();
-                        norm_map[vert.norm] = s;
-                    }
-                    norm_ids.push_back(norm_map.at(vert.norm));
-                } else {
-                    if (!norm_ids.empty())
-                        throw std::runtime_error("malformed obj");
-                }
-                if (vert.texcoord >= 0) {
-                    if (texcoord_map.find(vert.texcoord) ==
-                        texcoord_map.end()) {
-                        auto s = (int)texcoord_map.size();
-                        texcoord_map[vert.texcoord] = s;
-                    }
-                    texcoord_ids.push_back(texcoord_map.at(vert.texcoord));
-                } else {
-                    if (!texcoord_ids.empty())
-                        throw std::runtime_error("malformed obj");
-                }
-            }
-
-            // convert elements
-            for (auto elem : omsh->elems) {
-                if (elem.size == 4) {
-                    if (!pos_ids.empty()) {
-                        shp->quads_pos.push_back({pos_ids[elem.start + 0],
-                            pos_ids[elem.start + 1], pos_ids[elem.start + 2],
-                            pos_ids[elem.start + 3]});
-                        shp->group_ids.push_back(elem.groupid);
-                    }
-                    if (!texcoord_ids.empty()) {
-                        shp->quads_texcoord.push_back(
-                            {texcoord_ids[elem.start + 0],
-                                texcoord_ids[elem.start + 1],
-                                texcoord_ids[elem.start + 2],
-                                texcoord_ids[elem.start + 3]});
-                    }
-                    if (!norm_ids.empty()) {
-                        shp->quads_norm.push_back({norm_ids[elem.start + 0],
-                            norm_ids[elem.start + 1], norm_ids[elem.start + 2],
-                            norm_ids[elem.start + 3]});
-                    }
-                } else {
-                    if (!pos_ids.empty()) {
-                        for (auto i = elem.start + 2;
-                             i < elem.start + elem.size; i++) {
-                            shp->quads_pos.push_back({pos_ids[elem.start],
-                                pos_ids[i - 1], pos_ids[i], pos_ids[i]});
-                            shp->group_ids.push_back(elem.groupid);
+            } else {
+                // insert all vertices
+                std::unordered_map<int, int> pos_map, norm_map, texcoord_map;
+                std::vector<int> pos_ids, norm_ids, texcoord_ids;
+                for (auto& vert : omsh->verts) {
+                    if (vert.pos >= 0) {
+                        if (pos_map.find(vert.pos) == pos_map.end()) {
+                            auto s = (int)pos_map.size();
+                            pos_map[vert.pos] = s;
                         }
+                        pos_ids.push_back(pos_map.at(vert.pos));
+                    } else {
+                        if (!pos_ids.empty())
+                            throw std::runtime_error("malformed obj");
                     }
-                    if (!texcoord_ids.empty()) {
-                        for (auto i = elem.start + 2;
-                             i < elem.start + elem.size; i++) {
+                    if (vert.norm >= 0) {
+                        if (norm_map.find(vert.norm) == norm_map.end()) {
+                            auto s = (int)norm_map.size();
+                            norm_map[vert.norm] = s;
+                        }
+                        norm_ids.push_back(norm_map.at(vert.norm));
+                    } else {
+                        if (!norm_ids.empty())
+                            throw std::runtime_error("malformed obj");
+                    }
+                    if (vert.texcoord >= 0) {
+                        if (texcoord_map.find(vert.texcoord) ==
+                            texcoord_map.end()) {
+                            auto s = (int)texcoord_map.size();
+                            texcoord_map[vert.texcoord] = s;
+                        }
+                        texcoord_ids.push_back(texcoord_map.at(vert.texcoord));
+                    } else {
+                        if (!texcoord_ids.empty())
+                            throw std::runtime_error("malformed obj");
+                    }
+                }
+
+                // convert elements
+                for (auto elem : omsh->elems) {
+                    if (elem.groupid != gid) continue;
+                    if (elem.size == 4) {
+                        if (!pos_ids.empty()) {
+                            shp->quads_pos.push_back({pos_ids[elem.start + 0],
+                                pos_ids[elem.start + 1], pos_ids[elem.start + 2],
+                                pos_ids[elem.start + 3]});
+                        }
+                        if (!texcoord_ids.empty()) {
                             shp->quads_texcoord.push_back(
-                                {texcoord_ids[elem.start], texcoord_ids[i - 1],
-                                    texcoord_ids[i], texcoord_ids[i]});
+                                {texcoord_ids[elem.start + 0],
+                                    texcoord_ids[elem.start + 1],
+                                    texcoord_ids[elem.start + 2],
+                                    texcoord_ids[elem.start + 3]});
                         }
-                    }
-                    if (!norm_ids.empty()) {
-                        for (auto i = elem.start + 2;
-                             i < elem.start + elem.size; i++) {
-                            shp->quads_norm.push_back({norm_ids[elem.start],
-                                norm_ids[i - 1], norm_ids[i], norm_ids[i]});
+                        if (!norm_ids.empty()) {
+                            shp->quads_norm.push_back({norm_ids[elem.start + 0],
+                                norm_ids[elem.start + 1], norm_ids[elem.start + 2],
+                                norm_ids[elem.start + 3]});
+                        }
+                    } else {
+                        if (!pos_ids.empty()) {
+                            for (auto i = elem.start + 2;
+                                i < elem.start + elem.size; i++) {
+                                shp->quads_pos.push_back({pos_ids[elem.start],
+                                    pos_ids[i - 1], pos_ids[i], pos_ids[i]});
+                            }
+                        }
+                        if (!texcoord_ids.empty()) {
+                            for (auto i = elem.start + 2;
+                                i < elem.start + elem.size; i++) {
+                                shp->quads_texcoord.push_back(
+                                    {texcoord_ids[elem.start], texcoord_ids[i - 1],
+                                        texcoord_ids[i], texcoord_ids[i]});
+                            }
+                        }
+                        if (!norm_ids.empty()) {
+                            for (auto i = elem.start + 2;
+                                i < elem.start + elem.size; i++) {
+                                shp->quads_norm.push_back({norm_ids[elem.start],
+                                    norm_ids[i - 1], norm_ids[i], norm_ids[i]});
+                            }
                         }
                     }
                 }
-            }
 
-            // copy vertex data
-            shp->pos.resize(pos_map.size());
-            shp->texcoord.resize(texcoord_map.size());
-            shp->norm.resize(norm_map.size());
-            for (auto& kv : pos_map) {
-                shp->pos[kv.second] = obj->pos[kv.first];
+                // copy vertex data
+                shp->pos.resize(pos_map.size());
+                shp->texcoord.resize(texcoord_map.size());
+                shp->norm.resize(norm_map.size());
+                for (auto& kv : pos_map) {
+                    shp->pos[kv.second] = obj->pos[kv.first];
+                }
+                for (auto& kv : texcoord_map) {
+                    shp->texcoord[kv.second] = obj->texcoord[kv.first];
+                }
+                for (auto& kv : norm_map) {
+                    shp->norm[kv.second] = obj->norm[kv.first];
+                }
             }
-            for (auto& kv : texcoord_map) {
-                shp->texcoord[kv.second] = obj->texcoord[kv.first];
-            }
-            for (auto& kv : norm_map) {
-                shp->norm[kv.second] = obj->norm[kv.first];
-            }
+            scn->shapes.push_back(shp);
+            omap[omsh->name].push_back({shp, mmap[ogrp.matname]});
         }
-        scn->shapes.push_back(shp);
-        omap[omsh->name] = shp;
     }
 
     // convert cameras
@@ -5619,25 +5380,11 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
     for (auto oenv : obj->environments) {
         auto env = new environment();
         env->name = oenv->name;
-        for (auto mat : scn->materials) {
-            if (mat->name == oenv->matname) {
-                env->ke = mat->ke;
-                env->ke_txt = mat->ke_txt;
-                env_mat.insert(mat);
-            }
-        }
+        env->ke = oenv->ke;
+        env->ke_txt = make_texture_info(oenv->ke_txt);
         env->frame = oenv->frame;
         scn->environments.push_back(env);
         emap[env->name] = env;
-    }
-
-    // remove env materials
-    for (auto shp : scn->shapes)
-        for (auto grp : shp->groups) env_mat.erase(grp.mat);
-    for (auto mat : env_mat) {
-        auto end =
-            std::remove(scn->materials.begin(), scn->materials.end(), mat);
-        scn->materials.erase(end, scn->materials.end());
     }
 
     // convert nodes
@@ -5646,17 +5393,11 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
             auto nde = new node();
             nde->name = onde->name;
             nde->cam = cmap.at(onde->camname);
-            if(omap.at(onde->objname)) {
-                nde->ist = new instance();
-                nde->ist->name = nde->name;
-                nde->ist->shp = omap.at(onde->objname);
-                scn->instances.push_back(nde->ist);
-            }
             nde->env = emap.at(onde->envname);
             nde->translation = onde->translation;
             nde->rotation = onde->rotation;
             nde->scaling = onde->scaling;
-            nde->local = onde->local;
+            nde->frame = onde->frame;
             scn->nodes.push_back(nde);
         }
 
@@ -5672,12 +5413,42 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
                 }
             }
         }
+
+        // set up instances
+        for (auto nid = 0; nid < obj->nodes.size(); nid++) {
+            auto onde = obj->nodes[nid];
+            if (onde->objname.empty()) continue;
+            auto nde = scn->nodes[nid];
+            auto& shps = omap.at(onde->objname);
+            if(shps.empty()) continue;
+            if(shps.size() == 1) {
+                nde->ist = new instance();
+                nde->ist->name = nde->name;
+                nde->ist->shp = shps[0].first;
+                nde->ist->mat = shps[0].second;
+                scn->instances.push_back(nde->ist);
+            } else {
+                for(auto shp : shps) {
+                    auto child = new node();
+                    child->name = nde->name + "_" + shp.first->name;
+                    child->parent = nde;
+                    child->ist = new instance();
+                    child->ist->name = child->name;
+                    child->ist->shp = shp.first;
+                    child->ist->mat = shp.second;
+                    scn->instances.push_back(child->ist);                    
+                }
+            }
+        }
     } else {
-        for(auto shp : scn->shapes) {
-            auto ist = new instance();
-            ist->name = shp->name;
-            ist->shp = omap.at(shp->name);
-            scn->instances.push_back(ist);
+        for(auto& shps : omap) {
+            for(auto shp : shps.second) {
+                auto ist = new instance();
+                ist->name = shp.first->name;
+                ist->shp = shp.first;
+                ist->mat = shp.second;
+                scn->instances.push_back(ist);
+            }
         }
     }
 
@@ -5815,7 +5586,7 @@ obj_scene* scene_to_obj(const scene* scn, const save_options& opts) {
         elem.start = (uint32_t)oobj->verts.size();
         elem.type = etype;
         elem.size = (uint16_t)esize;
-        if (!shp->group_ids.empty()) elem.groupid = shp->group_ids.at(eid);
+        elem.groupid = 0;
         oobj->elems.push_back(elem);
     };
     // add vertex
@@ -5837,11 +5608,20 @@ obj_scene* scene_to_obj(const scene* scn, const save_options& opts) {
     } else {
         for(auto shp : scn->shapes) shapes.push_back({shp, identity_frame3f});
     }
+    auto shape_mats = std::map<shape*, material*>();
+    for(auto shp : scn->shapes) shape_mats[shp] = nullptr;
+    for(auto ist : scn->instances) {
+        if(shape_mats.at(ist->shp) && shape_mats.at(ist->shp) != ist->mat) 
+            log_error("shapes can only have one material associated");
+        else
+            shape_mats[ist->shp] = ist->mat;
+    }
 
     // convert shapes
-    for (auto shp_frame : shapes) {
+    for (auto& shp_frame : shapes) {
         auto shp = shp_frame.first;
         auto frame = shp_frame.second;
+        auto mat = shape_mats.at(shp);
         auto oobj = new obj_object();
         oobj->name = shp->name;
         if (shp->subdivision)
@@ -5861,9 +5641,8 @@ obj_scene* scene_to_obj(const scene* scn, const save_options& opts) {
             for (auto& v : shp->texcoord) obj->texcoord.push_back(v);
         for (auto& v : shp->color) obj->color.push_back({v.x, v.y, v.z, v.w});
         for (auto& v : shp->radius) obj->radius.push_back(v);
-        for (auto grp : shp->groups)
-            oobj->groups.push_back(
-                {grp.name, (grp.mat) ? grp.mat->name : ""s, grp.faceted});
+        oobj->groups.push_back(
+            {"", (mat) ? mat->name : ""s, shp->norm.empty()});
         for (auto eid = 0; eid < shp->points.size(); eid++) {
             auto vid = shp->points[eid];
             add_elem(shp, oobj, obj_element_type::point, 1, eid);
@@ -5931,14 +5710,10 @@ obj_scene* scene_to_obj(const scene* scn, const save_options& opts) {
     // convert envs
     for (auto env : scn->environments) {
         auto oenv = new obj_environment();
-        auto omat = new obj_material();
-        omat->name = env->name + "_mat";
-        omat->ke = env->ke;
-        omat->ke_txt = make_texture_info(env->ke_txt);
         oenv->name = env->name;
-        oenv->matname = omat->name;
+        oenv->ke = env->ke;
+        oenv->ke_txt = make_texture_info(env->ke_txt);
         oenv->frame = env->frame;
-        obj->materials.push_back(omat);
         obj->environments.push_back(oenv);
     }
 
@@ -5950,7 +5725,7 @@ obj_scene* scene_to_obj(const scene* scn, const save_options& opts) {
             if (nde->cam) onde->camname = nde->cam->name;
             if (nde->ist) onde->objname = nde->ist->shp->name;
             if (nde->env) onde->envname = nde->env->name;
-            onde->local = nde->local;
+            onde->frame = nde->frame;
             onde->translation = nde->translation;
             onde->rotation = nde->rotation;
             onde->scaling = nde->scaling;
@@ -5969,7 +5744,7 @@ obj_scene* scene_to_obj(const scene* scn, const save_options& opts) {
             auto onde = new obj_node();
             onde->name = ist->name;
             onde->objname = ist->shp->name;
-            onde->local = ist->frame;
+            onde->frame = ist->frame;
             obj->nodes.push_back(onde);
         }
     }
@@ -6073,21 +5848,14 @@ scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
     }
 
     // convert meshes
+    auto meshes = std::vector<std::vector<std::pair<shape*, material*>>>();
     for (auto gmesh : gltf->meshes) {
-        if (gmesh->primitives.empty()) {
-            auto shp = new shape();
-            shp->name = gmesh->name;
-            scn->shapes.push_back(shp);
-            continue;
-        }
-        // primitives
-        auto shps = std::vector<shape*>();
+        meshes.push_back({});
+        auto sid = 0;
         for (auto gprim : gmesh->primitives) {
             auto shp = new shape();
-            if (gprim->material) {
-                shp->groups.push_back(
-                    {"", scn->materials[(int)gprim->material], false});
-            }
+            shp->name = gmesh->name + ((sid) ? std::to_string(sid) : ""s);
+            sid++;
             // vertex data
             for (auto gattr : gprim->attributes) {
                 auto semantic = gattr.first;
@@ -6230,16 +5998,8 @@ scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
                     } break;
                 }
             }
-            shps.push_back(shp);
-        }
-        if (shps.size() == 1) {
-            shps[0]->name = gmesh->name;
-            scn->shapes.push_back(shps[0]);
-        } else {
-            auto shp = merge_shapes(shps, true);
-            shp->name = gmesh->name;
+            meshes.back().push_back({shp, scn->materials[(int)gprim->material]});
             scn->shapes.push_back(shp);
-            for (auto shp : shps) delete shp;
         }
     }
 
@@ -6270,23 +6030,10 @@ scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
         auto nde = new node();
         nde->name = gnde->name;
         if (gnde->camera) nde->cam = scn->cameras[(int)gnde->camera];
-        if (gnde->mesh) {
-            nde->ist = new instance();
-            nde->ist->name = nde->name;
-            nde->ist->shp = scn->shapes[(int)gnde->mesh];
-            scn->instances.push_back(nde->ist);
-        }
-        //            for (auto shp : node->msh->shapes) {
-        //                if (node->morph_weights.size() <
-        //                shp->morph_targets.size()) {
-        //                    node->morph_weights.resize(shp->morph_targets.size());
-        //                }
-        //            }
         nde->translation = gnde->translation;
         nde->rotation = gnde->rotation;
         nde->scaling = gnde->scale;
-        nde->local = mat_to_frame(gnde->matrix);
-        //        nde->weights = gnde->weights;
+        nde->frame = mat_to_frame(gnde->matrix);
         scn->nodes.push_back(nde);
     }
 
@@ -6295,6 +6042,33 @@ scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
         auto gnde = gltf->nodes[nid];
         auto nde = scn->nodes[nid];
         for (auto cid : gnde->children) scn->nodes[(int)cid]->parent = nde;
+    }
+
+    // set up instances
+    for (auto nid = 0; nid < gltf->nodes.size(); nid++) {
+        auto gnde = gltf->nodes[nid];
+        if (!gnde->mesh) continue;
+        auto nde = scn->nodes[nid];
+        auto& shps = meshes.at((int)gnde->mesh);
+        if(shps.empty()) continue;
+        if(shps.size() == 1) {
+            nde->ist = new instance();
+            nde->ist->name = nde->name;
+            nde->ist->shp = shps[0].first;
+            nde->ist->mat = shps[0].second;
+            scn->instances.push_back(nde->ist);
+        } else {
+            for(auto shp : shps) {
+                auto child = new node();
+                child->name = nde->name + "_" + shp.first->name;
+                child->parent = nde;
+                child->ist = new instance();
+                child->ist->name = child->name;
+                child->ist->shp = shp.first;
+                child->ist->mat = shp.second;
+                scn->instances.push_back(child->ist);                    
+            }
+        }
     }
 
     // keyframe type conversion
@@ -6634,90 +6408,92 @@ glTF* scene_to_gltf(
         return glTFid<glTFAccessor>((int)gltf->accessors.size() - 1);
     };
 
+    // instances
+    auto shape_mats = std::map<shape*, material*>();
+    for(auto shp : scn->shapes) shape_mats[shp] = nullptr;
+    for(auto ist : scn->instances) {
+        if(shape_mats.at(ist->shp) && shape_mats.at(ist->shp) != ist->mat) 
+            log_error("shapes can only have one material associated");
+        else
+            shape_mats[ist->shp] = ist->mat;
+    }
+
     // convert meshes
     for (auto shp : scn->shapes) {
         auto gmesh = new glTFMesh();
         gmesh->name = shp->name;
         auto gbuffer = add_opt_buffer(shp->path);
-        auto shapes = (is_shape_simple(shp, true)) ? std::vector<shape*>{shp} :
-                                                     split_shape(shp, true);
-        for (auto sshp : shapes) {
             auto gprim = new glTFMeshPrimitive();
-            if (!sshp->groups.empty())
-                gprim->material = glTFid<glTFMaterial>(
-                    index(scn->materials, sshp->groups.at(0).mat));
-            if (!sshp->pos.empty())
+                gprim->material = glTFid<glTFMaterial>(index(scn->materials, shape_mats.at(shp)));
+            if (!shp->pos.empty())
                 gprim->attributes["POSITION"] = add_accessor(gbuffer,
-                    sshp->name + "_pos", glTFAccessorType::Vec3,
-                    glTFAccessorComponentType::Float, (int)sshp->pos.size(),
-                    sizeof(vec3f), sshp->pos.data(), true);
-            if (!sshp->norm.empty())
+                    shp->name + "_pos", glTFAccessorType::Vec3,
+                    glTFAccessorComponentType::Float, (int)shp->pos.size(),
+                    sizeof(vec3f), shp->pos.data(), true);
+            if (!shp->norm.empty())
                 gprim->attributes["NORMAL"] = add_accessor(gbuffer,
-                    sshp->name + "_norm", glTFAccessorType::Vec3,
-                    glTFAccessorComponentType::Float, (int)sshp->norm.size(),
-                    sizeof(vec3f), sshp->norm.data(), false);
-            if (!sshp->texcoord.empty())
+                    shp->name + "_norm", glTFAccessorType::Vec3,
+                    glTFAccessorComponentType::Float, (int)shp->norm.size(),
+                    sizeof(vec3f), shp->norm.data(), false);
+            if (!shp->texcoord.empty())
                 gprim->attributes["TEXCOORD_0"] = add_accessor(gbuffer,
-                    sshp->name + "_texcoord", glTFAccessorType::Vec2,
+                    shp->name + "_texcoord", glTFAccessorType::Vec2,
                     glTFAccessorComponentType::Float,
-                    (int)sshp->texcoord.size(), sizeof(vec2f),
-                    sshp->texcoord.data(), false);
-            if (!sshp->texcoord1.empty())
+                    (int)shp->texcoord.size(), sizeof(vec2f),
+                    shp->texcoord.data(), false);
+            if (!shp->texcoord1.empty())
                 gprim->attributes["TEXCOORD_1"] = add_accessor(gbuffer,
-                    sshp->name + "_texcoord1", glTFAccessorType::Vec2,
+                    shp->name + "_texcoord1", glTFAccessorType::Vec2,
                     glTFAccessorComponentType::Float,
-                    (int)sshp->texcoord1.size(), sizeof(vec2f),
-                    sshp->texcoord1.data(), false);
-            if (!sshp->color.empty())
+                    (int)shp->texcoord1.size(), sizeof(vec2f),
+                    shp->texcoord1.data(), false);
+            if (!shp->color.empty())
                 gprim->attributes["COLOR_0"] = add_accessor(gbuffer,
-                    sshp->name + "_color", glTFAccessorType::Vec4,
-                    glTFAccessorComponentType::Float, (int)sshp->color.size(),
-                    sizeof(vec4f), sshp->color.data(), false);
-            if (!sshp->radius.empty())
+                    shp->name + "_color", glTFAccessorType::Vec4,
+                    glTFAccessorComponentType::Float, (int)shp->color.size(),
+                    sizeof(vec4f), shp->color.data(), false);
+            if (!shp->radius.empty())
                 gprim->attributes["RADIUS"] = add_accessor(gbuffer,
-                    sshp->name + "_radius", glTFAccessorType::Scalar,
-                    glTFAccessorComponentType::Float, (int)sshp->radius.size(),
-                    sizeof(float), sshp->radius.data(), false);
+                    shp->name + "_radius", glTFAccessorType::Scalar,
+                    glTFAccessorComponentType::Float, (int)shp->radius.size(),
+                    sizeof(float), shp->radius.data(), false);
             // auto elem_as_uint = shp->pos.size() >
             // numeric_limits<unsigned short>::max();
-            if (!sshp->points.empty()) {
-                gprim->indices = add_accessor(gbuffer, sshp->name + "_points",
+            if (!shp->points.empty()) {
+                gprim->indices = add_accessor(gbuffer, shp->name + "_points",
                     glTFAccessorType::Scalar,
                     glTFAccessorComponentType::UnsignedInt,
-                    (int)sshp->points.size(), sizeof(int),
-                    (int*)sshp->points.data(), false);
+                    (int)shp->points.size(), sizeof(int),
+                    (int*)shp->points.data(), false);
                 gprim->mode = glTFMeshPrimitiveMode::Points;
-            } else if (!sshp->lines.empty()) {
-                gprim->indices = add_accessor(gbuffer, sshp->name + "_lines",
+            } else if (!shp->lines.empty()) {
+                gprim->indices = add_accessor(gbuffer, shp->name + "_lines",
                     glTFAccessorType::Scalar,
                     glTFAccessorComponentType::UnsignedInt,
-                    (int)sshp->lines.size() * 2, sizeof(int),
-                    (int*)sshp->lines.data(), false);
+                    (int)shp->lines.size() * 2, sizeof(int),
+                    (int*)shp->lines.data(), false);
                 gprim->mode = glTFMeshPrimitiveMode::Lines;
-            } else if (!sshp->triangles.empty()) {
+            } else if (!shp->triangles.empty()) {
                 gprim->indices = add_accessor(gbuffer,
-                    sshp->name + "_triangles", glTFAccessorType::Scalar,
+                    shp->name + "_triangles", glTFAccessorType::Scalar,
                     glTFAccessorComponentType::UnsignedInt,
-                    (int)sshp->triangles.size() * 3, sizeof(int),
-                    (int*)sshp->triangles.data(), false);
+                    (int)shp->triangles.size() * 3, sizeof(int),
+                    (int*)shp->triangles.data(), false);
                 gprim->mode = glTFMeshPrimitiveMode::Triangles;
-            } else if (!sshp->quads.empty()) {
-                auto triangles = convert_quads_to_triangles(sshp->quads);
-                gprim->indices = add_accessor(gbuffer, sshp->name + "_quads",
+            } else if (!shp->quads.empty()) {
+                auto triangles = convert_quads_to_triangles(shp->quads);
+                gprim->indices = add_accessor(gbuffer, shp->name + "_quads",
                     glTFAccessorType::Scalar,
                     glTFAccessorComponentType::UnsignedInt,
                     (int)triangles.size() * 3, sizeof(int),
                     (int*)triangles.data(), false);
                 gprim->mode = glTFMeshPrimitiveMode::Triangles;
-            } else if (!sshp->quads_pos.empty()) {
+            } else if (!shp->quads_pos.empty()) {
                 throw std::runtime_error("face varying not supported in glTF");
             } else {
                 throw std::runtime_error("empty mesh");
             }
             gmesh->primitives.push_back(gprim);
-        }
-        for (auto s : shapes)
-            if (s != shp) delete s;
         gltf->meshes.push_back(gmesh);
     }
 
@@ -6762,7 +6538,7 @@ glTF* scene_to_gltf(
             if (nde->ist) {
                 gnode->mesh = glTFid<glTFMesh>(index(scn->shapes, nde->ist->shp));
             }
-            gnode->matrix = frame_to_mat(nde->local);
+            gnode->matrix = frame_to_mat(nde->frame);
             gnode->translation = nde->translation;
             gnode->rotation = nde->rotation;
             gnode->scale = nde->scaling;
@@ -7197,8 +6973,7 @@ trace_point eval_point(const instance* ist, int eid,
     pt.texcoord = eval_texcoord(ist->shp, eid, euv);
 
     // shortcuts
-    auto mat =
-        get_material(ist->shp, eid) ? get_material(ist->shp, eid) : def_material;
+    auto mat = (ist->mat) ? ist->mat : def_material;
 
     // handle normal map
     if (mat->norm_txt.txt) {
@@ -8184,17 +7959,13 @@ void trace_async_stop(std::vector<std::thread>& threads, bool& stop_flag) {
 trace_lights make_trace_lights(const scene* scn) {
     auto lights = trace_lights();
 
-    for (auto shp : scn->shapes) {
-        if (!has_emission(shp)) continue;
-        if (!contains(lights.shape_distribs, shp))
-            lights.shape_distribs[shp] = make_shape_distribution(shp);
-    }
-
     for (auto ist : scn->instances) {
-        if (!has_emission(ist->shp)) continue;
+        if (!ist->mat || ist->mat->ke == zero3f) continue;
         auto lgt = trace_light();
         lgt.ist = ist;
         lights.lights.push_back(lgt);
+        if (!contains(lights.shape_distribs, ist->shp))
+            lights.shape_distribs[ist->shp] = make_shape_distribution(ist->shp);
     }
 
     for (auto env : scn->environments) {
@@ -8813,7 +8584,9 @@ obj_scene* load_obj(const std::string& filename, bool split_shapes,
         } else if (obj_streq(cmd, "e")) {
             auto env = new obj_environment();
             obj_parse(ss, env->name);
-            obj_parse(ss, env->matname);
+            obj_parse(ss, env->ke);
+            obj_parse(ss, env->ke_txt.path);
+            if (env->ke_txt.path == "\"\"") env->ke_txt.path = "";
             obj_parse(ss, env->frame);
             obj->environments.push_back(env);
         } else if (obj_streq(cmd, "n")) {
@@ -8823,7 +8596,7 @@ obj_scene* load_obj(const std::string& filename, bool split_shapes,
             obj_parse(ss, nde->camname);
             obj_parse(ss, nde->objname);
             obj_parse(ss, nde->envname);
-            obj_parse(ss, nde->local);
+            obj_parse(ss, nde->frame);
             obj_parse(ss, nde->translation);
             obj_parse(ss, nde->rotation);
             obj_parse(ss, nde->scaling);
@@ -8891,6 +8664,14 @@ obj_scene* load_obj(const std::string& filename, bool split_shapes,
             obj->textures.back()->path = txt;
             texture_set.insert(txt);
         }
+    }
+    for(auto oenv : obj->environments) {
+        auto txt = oenv->ke_txt.path;
+        if(txt == "") continue;
+        if (texture_set.find(txt) != texture_set.end()) continue;
+        obj->textures.push_back(new obj_texture());
+        obj->textures.back()->path = txt;
+        texture_set.insert(txt);
     }
 
     // load textures
@@ -9128,7 +8909,8 @@ void save_obj(const std::string& filename, const obj_scene* obj, bool save_txt,
     for (auto env : obj->environments) {
         obj_dump_sp(fs, "e");
         obj_dump_sp(fs, env->name);
-        obj_dump_sp(fs, env->matname);
+        obj_dump_sp(fs, env->ke);
+        obj_dump_sp(fs, (env->ke_txt.path != "") ? env->ke_txt.path : "\"\""s);
         obj_dump_sp(fs, env->frame);
         obj_dump_sp(fs, "\n");
     }
@@ -9141,7 +8923,7 @@ void save_obj(const std::string& filename, const obj_scene* obj, bool save_txt,
         obj_dump_sp(fs, (nde->camname.empty()) ? "\"\""s : nde->camname);
         obj_dump_sp(fs, (nde->objname.empty()) ? "\"\""s : nde->objname);
         obj_dump_sp(fs, (nde->envname.empty()) ? "\"\""s : nde->envname);
-        obj_dump_sp(fs, nde->local);
+        obj_dump_sp(fs, nde->frame);
         obj_dump_sp(fs, nde->translation);
         obj_dump_sp(fs, nde->rotation);
         obj_dump_sp(fs, nde->scaling);
@@ -9419,6 +9201,25 @@ void serialize_attr(T& val, json& js, const char* name, bool reading,
 template <typename T>
 void serialize_attr(std::vector<T>& val, json& js, const char* name,
     bool reading, bool required = true, const std::vector<T>& def = {}) {
+    if (reading) {
+        if (required) {
+            if (!js.count(name)) throw std::runtime_error("missing value");
+            serialize(val, js.at(name), reading);
+        } else {
+            if (!js.count(name))
+                val = def;
+            else
+                serialize(val, js.at(name), reading);
+        }
+    } else {
+        if (required || !val.empty()) serialize(val, js[name], reading);
+    }
+}
+
+// Dump support function.
+template <typename T>
+void serialize_attr(std::map<std::string, T>& val, json& js, const char* name,
+                    bool reading, bool required = true, const std::map<std::string, T>& def = {}) {
     if (reading) {
         if (required) {
             if (!js.count(name)) throw std::runtime_error("missing value");
@@ -10692,13 +10493,13 @@ scene* make_cornell_box_scene() {
                          vec3f rot = {0, 0, 0}, vec2f size = {2, 2}) {
         auto shp = new shape();
         shp->name = name;
-        shp->groups.push_back({"", mat, false});
         ygl::make_quad(shp->quads, shp->pos, shp->norm, shp->texcoord, {1, 1},
             size, {1, 1});
         scn->shapes.push_back(shp);
         auto ist = new instance();
         ist->name = name;
         ist->shp = shp;
+        ist->mat = mat;
         ist->frame = translation_frame(pos);
         if (rot != zero3f) {
             ist->frame = ist->frame *
@@ -10713,7 +10514,6 @@ scene* make_cornell_box_scene() {
                         vec3f rot = {0, 0, 0}, vec3f size = {2, 2, 2}) {
         auto shp = new shape();
         shp->name = name;
-        shp->groups.push_back({"", mat, false});
         shp->name = name;
         make_cube(shp->quads, shp->pos, shp->norm, shp->texcoord, {1, 1, 1},
             size, {1, 1, 1});
@@ -10721,6 +10521,7 @@ scene* make_cornell_box_scene() {
         auto ist = new instance();
         ist->name = name;
         ist->shp = shp;
+        ist->mat = mat;
         ist->frame = translation_frame(pos);
         if (rot != zero3f) {
             ist->frame = ist->frame *
@@ -10771,80 +10572,80 @@ scene* make_cornell_box_scene() {
 namespace ygl {
 
 // Makes/updates a test texture
-void update_proc_elem(scene* scn, texture* txt, const proc_texture* ptxt) {
-    if (ptxt->name == "") throw std::runtime_error("cannot use empty name");
+void update_proc_elem(scene* scn, texture* txt, const proc_texture& ptxt) {
+    if (ptxt.name == "") throw std::runtime_error("cannot use empty name");
 
-    txt->name = ptxt->name;
+    txt->name = ptxt.name;
     txt->path = "";
     txt->ldr = {};
     txt->hdr = {};
 
-    switch (ptxt->type) {
+    switch (ptxt.type) {
         case proc_texture_type::none: break;
         case proc_texture_type::grid: {
-            txt->ldr = make_grid_image(ptxt->resolution, ptxt->resolution);
+            txt->ldr = make_grid_image(ptxt.resolution, ptxt.resolution);
         } break;
         case proc_texture_type::checker: {
-            txt->ldr = make_checker_image(ptxt->resolution, ptxt->resolution);
+            txt->ldr = make_checker_image(ptxt.resolution, ptxt.resolution);
         } break;
         case proc_texture_type::colored: {
-            txt->ldr = make_uvgrid_image(ptxt->resolution, ptxt->resolution);
+            txt->ldr = make_uvgrid_image(ptxt.resolution, ptxt.resolution);
         } break;
         case proc_texture_type::rcolored: {
-            txt->ldr = make_recuvgrid_image(ptxt->resolution, ptxt->resolution);
+            txt->ldr = make_recuvgrid_image(ptxt.resolution, ptxt.resolution);
         } break;
         case proc_texture_type::bump: {
             txt->ldr = make_bumpdimple_image(
-                ptxt->resolution, ptxt->resolution, ptxt->tile_size);
+                ptxt.resolution, ptxt.resolution, ptxt.tile_size);
         } break;
         case proc_texture_type::uv: {
-            txt->ldr = make_uv_image(ptxt->resolution, ptxt->resolution);
+            txt->ldr = make_uv_image(ptxt.resolution, ptxt.resolution);
         } break;
         case proc_texture_type::gamma: {
-            txt->ldr = make_gammaramp_image(ptxt->resolution, ptxt->resolution);
+            txt->ldr = make_gammaramp_image(ptxt.resolution, ptxt.resolution);
         } break;
         case proc_texture_type::noise: {
             txt->ldr = make_noise_image(
-                ptxt->resolution, ptxt->resolution, ptxt->noise_scale);
+                ptxt.resolution, ptxt.resolution, ptxt.noise_scale);
         } break;
         case proc_texture_type::ridge: {
             txt->ldr = make_ridge_image(
-                ptxt->resolution, ptxt->resolution, ptxt->noise_scale);
+                ptxt.resolution, ptxt.resolution, ptxt.noise_scale);
         } break;
         case proc_texture_type::fbm: {
             txt->ldr = make_fbm_image(
-                ptxt->resolution, ptxt->resolution, ptxt->noise_scale);
+                ptxt.resolution, ptxt.resolution, ptxt.noise_scale);
         } break;
         case proc_texture_type::turbulence: {
             txt->ldr = make_turbulence_image(
-                ptxt->resolution, ptxt->resolution, ptxt->noise_scale);
+                ptxt.resolution, ptxt.resolution, ptxt.noise_scale);
         } break;
         case proc_texture_type::gammaf: {
             txt->hdr =
-                make_gammaramp_imagef(ptxt->resolution, ptxt->resolution);
+                make_gammaramp_imagef(ptxt.resolution, ptxt.resolution);
         } break;
         case proc_texture_type::sky: {
-            txt->hdr = make_sunsky_image(ptxt->resolution, ptxt->sky_sunangle);
+            txt->hdr = make_sunsky_image(ptxt.resolution, ptxt.sky_sunangle);
         } break;
         default: throw std::runtime_error("should not have gotten here");
     }
 
-    if (ptxt->bump_to_normal) {
-        txt->ldr = bump_to_normal_map(txt->ldr, ptxt->bump_scale);
+    if (ptxt.bump_to_normal) {
+        txt->ldr = bump_to_normal_map(txt->ldr, ptxt.bump_scale);
     }
 
-    if (!txt->ldr.empty()) txt->path = ptxt->name + ".png";
-    if (!txt->hdr.empty()) txt->path = ptxt->name + ".hdr";
+    if (!txt->ldr.empty()) txt->path = ptxt.name + ".png";
+    if (!txt->hdr.empty()) txt->path = ptxt.name + ".hdr";
 }
 
 // Makes/updates a test material
-void update_proc_elem(scene* scn, material* mat, const proc_material* pmat) {
-    if (pmat->name == "") throw std::runtime_error("cannot use empty name");
+void update_proc_elem(scene* scn, material* mat, const proc_material& pmat) {
+    if (pmat.name == "") throw std::runtime_error("cannot use empty name");
 
-    auto txt = find_named_elem(scn->textures, pmat->texture);
-    auto norm = find_named_elem(scn->textures, pmat->normal);
+    auto txt = find_named_elem(scn->textures, pmat.texture);
+    auto norm = find_named_elem(scn->textures, pmat.normal);
 
-    mat->name = pmat->name;
+    mat->name = pmat.name;
     mat->type = material_type::specular_roughness;
     mat->ke = zero3f;
     mat->kd = zero3f;
@@ -10857,43 +10658,43 @@ void update_proc_elem(scene* scn, material* mat, const proc_material* pmat) {
     mat->kr_txt = {};
     mat->kt_txt = {};
 
-    switch (pmat->type) {
+    switch (pmat.type) {
         case proc_material_type::none: break;
         case proc_material_type::emission: {
-            mat->ke = pmat->emission * pmat->color;
+            mat->ke = pmat.emission * pmat.color;
             mat->ke_txt.txt = txt;
         } break;
         case proc_material_type::matte: {
-            mat->kd = pmat->color;
+            mat->kd = pmat.color;
             mat->kd_txt.txt = txt;
             mat->rs = 1;
         } break;
         case proc_material_type::plastic: {
-            mat->kd = pmat->color;
+            mat->kd = pmat.color;
             mat->ks = {0.04f, 0.04f, 0.04f};
-            mat->rs = pmat->roughness;
+            mat->rs = pmat.roughness;
             mat->kd_txt.txt = txt;
         } break;
         case proc_material_type::metal: {
-            mat->ks = pmat->color;
-            mat->rs = pmat->roughness;
+            mat->ks = pmat.color;
+            mat->rs = pmat.roughness;
             mat->ks_txt.txt = txt;
         } break;
         case proc_material_type::car_paint: {
-            mat->ks = pmat->color;
-            mat->rs = pmat->roughness;
+            mat->ks = pmat.color;
+            mat->rs = pmat.roughness;
             mat->ks_txt.txt = txt;
             mat->kr = {0.04f, 0.04f, 0.04f};
         } break;
         case proc_material_type::glass: {
             mat->ks = {0.04f, 0.04f, 0.04f};
-            mat->kt = pmat->color;
-            mat->rs = pmat->roughness;
+            mat->kt = pmat.color;
+            mat->rs = pmat.roughness;
             mat->kt_txt.txt = txt;
         } break;
         case proc_material_type::transparent: {
-            mat->kd = pmat->color;
-            mat->op = pmat->opacity;
+            mat->kd = pmat.color;
+            mat->op = pmat.opacity;
             mat->kd_txt.txt = txt;
         } break;
         default: throw std::runtime_error("should not have gotten here");
@@ -10903,10 +10704,9 @@ void update_proc_elem(scene* scn, material* mat, const proc_material* pmat) {
 }
 
 // Makes/updates a test shape
-void update_proc_elem(scene* scn, shape* shp, const proc_shape* pshp) {
-    if (pshp->name == "") throw std::runtime_error("cannot use empty name");
-    shp->name = pshp->name;
-    shp->groups.clear();
+void update_proc_elem(scene* scn, shape* shp, const proc_shape& pshp) {
+    if (pshp.name == "") throw std::runtime_error("cannot use empty name");
+    shp->name = pshp.name;
     shp->pos = {};
     shp->norm = {};
     shp->texcoord = {};
@@ -10922,65 +10722,62 @@ void update_proc_elem(scene* scn, shape* shp, const proc_shape* pshp) {
     shp->quads_norm = {};
     shp->quads_texcoord = {};
 
-    shp->groups.push_back({shp->name,
-        find_named_elem(scn->materials, pshp->material), pshp->faceted});
-
-    switch (pshp->type) {
+    switch (pshp.type) {
         case proc_shape_type::floor: {
             make_quad(shp->quads, shp->pos, shp->norm, shp->texcoord,
-                {pshp->tesselation.x, pshp->tesselation.y},
-                {pshp->size.x, pshp->size.y}, {pshp->uvsize.x, pshp->uvsize.y});
+                {pshp.tesselation.x, pshp.tesselation.y},
+                {pshp.size.x, pshp.size.y}, {pshp.uvsize.x, pshp.uvsize.y});
             for (auto& p : shp->pos) p = {-p.x, p.z, p.y};
             for (auto& n : shp->norm) n = {n.x, n.z, n.y};
         } break;
         case proc_shape_type::quad: {
             make_quad(shp->quads, shp->pos, shp->norm, shp->texcoord,
-                {pshp->tesselation.x, pshp->tesselation.y},
-                {pshp->size.x, pshp->size.y}, {pshp->uvsize.x, pshp->uvsize.y});
+                {pshp.tesselation.x, pshp.tesselation.y},
+                {pshp.size.x, pshp.size.y}, {pshp.uvsize.x, pshp.uvsize.y});
         } break;
         case proc_shape_type::cube: {
             make_cube(shp->quads, shp->pos, shp->norm, shp->texcoord,
-                pshp->tesselation, pshp->size, pshp->uvsize);
+                pshp.tesselation, pshp.size, pshp.uvsize);
         } break;
         case proc_shape_type::cube_rounded: {
             make_cube_rounded(shp->quads, shp->pos, shp->norm, shp->texcoord,
-                pshp->tesselation, pshp->size, pshp->uvsize, pshp->rounded);
+                pshp.tesselation, pshp.size, pshp.uvsize, pshp.rounded);
         } break;
         case proc_shape_type::sphere: {
             make_sphere(shp->quads, shp->pos, shp->norm, shp->texcoord,
-                {pshp->tesselation.x, pshp->tesselation.y}, pshp->size.x,
-                {pshp->uvsize.x, pshp->uvsize.y});
+                {pshp.tesselation.x, pshp.tesselation.y}, pshp.size.x,
+                {pshp.uvsize.x, pshp.uvsize.y});
         } break;
         case proc_shape_type::sphere_cube: {
             make_sphere_cube(shp->quads, shp->pos, shp->norm, shp->texcoord,
-                pshp->tesselation.x, pshp->size.x, pshp->uvsize.x);
+                pshp.tesselation.x, pshp.size.x, pshp.uvsize.x);
         } break;
         case proc_shape_type::disk: {
             make_disk(shp->quads, shp->pos, shp->norm, shp->texcoord,
-                {pshp->tesselation.x, pshp->tesselation.y}, pshp->size.x,
-                {pshp->uvsize.x, pshp->uvsize.y});
+                {pshp.tesselation.x, pshp.tesselation.y}, pshp.size.x,
+                {pshp.uvsize.x, pshp.uvsize.y});
         } break;
         case proc_shape_type::disk_quad: {
             make_disk_quad(shp->quads, shp->pos, shp->norm, shp->texcoord,
-                pshp->tesselation.x, pshp->size.x, pshp->uvsize.x);
+                pshp.tesselation.x, pshp.size.x, pshp.uvsize.x);
         } break;
         case proc_shape_type::disk_bulged: {
             make_disk_bulged(shp->quads, shp->pos, shp->norm, shp->texcoord,
-                pshp->tesselation.x, pshp->size.x, pshp->uvsize.x,
-                pshp->rounded);
+                pshp.tesselation.x, pshp.size.x, pshp.uvsize.x,
+                pshp.rounded);
         } break;
         case proc_shape_type::cylinder: {
             make_cylinder(shp->quads, shp->pos, shp->norm, shp->texcoord,
-                pshp->tesselation, {pshp->size.x, pshp->size.y}, pshp->uvsize);
+                pshp.tesselation, {pshp.size.x, pshp.size.y}, pshp.uvsize);
         } break;
         case proc_shape_type::cylinder_rounded: {
             make_cylinder_rounded(shp->quads, shp->pos, shp->norm,
-                shp->texcoord, pshp->tesselation, {pshp->size.x, pshp->size.y},
-                pshp->uvsize, pshp->rounded);
+                shp->texcoord, pshp.tesselation, {pshp.size.x, pshp.size.y},
+                pshp.uvsize, pshp.rounded);
         } break;
         case proc_shape_type::geodesic_sphere: {
             auto level = 0;
-            auto ntris = (pshp->tesselation.x * pshp->tesselation.y) / 4;
+            auto ntris = (pshp.tesselation.x * pshp.tesselation.y) / 4;
             while (ntris > 4) {
                 ntris /= 4;
                 level += 1;
@@ -10991,9 +10788,9 @@ void update_proc_elem(scene* scn, shape* shp, const proc_shape* pshp) {
         } break;
         case proc_shape_type::sphere_flipcap: {
             make_sphere_flipcap(shp->quads, shp->pos, shp->norm, shp->texcoord,
-                {pshp->tesselation.x, pshp->tesselation.y}, pshp->size.x,
-                {pshp->uvsize.x, pshp->uvsize.y},
-                {-pshp->rounded, pshp->rounded});
+                {pshp.tesselation.x, pshp.tesselation.y}, pshp.size.x,
+                {pshp.uvsize.x, pshp.uvsize.y},
+                {-pshp.rounded, pshp.rounded});
         } break;
         case proc_shape_type::suzanne: {
             make_suzanne(shp->quads, shp->pos, 0);
@@ -11007,23 +10804,23 @@ void update_proc_elem(scene* scn, shape* shp, const proc_shape* pshp) {
         } break;
         case proc_shape_type::fvsphere: {
             make_sphere(shp->quads, shp->pos, shp->norm, shp->texcoord,
-                {pshp->tesselation.x, pshp->tesselation.y}, pshp->size.x,
-                {pshp->uvsize.x, pshp->uvsize.y});
+                {pshp.tesselation.x, pshp.tesselation.y}, pshp.size.x,
+                {pshp.uvsize.x, pshp.uvsize.y});
         } break;
         case proc_shape_type::matball: {
             make_sphere_flipcap(shp->quads, shp->pos, shp->norm, shp->texcoord,
-                {pshp->tesselation.x, pshp->tesselation.y}, pshp->size.x,
-                {pshp->uvsize.x, pshp->uvsize.y},
-                {-pshp->rounded, pshp->rounded});
-            auto shp1 = new shape();
-            shp1->name = "interior";
-            make_sphere(shp1->quads, shp1->pos, shp1->norm, shp1->texcoord,
-                {pshp->tesselation.x, pshp->tesselation.y}, pshp->size.x * 0.8f,
-                {pshp->uvsize.x, pshp->uvsize.y});
-            shp1->groups.push_back({"interior",
-                find_named_elem(scn->materials, pshp->interior), false});
-            merge_into(shp, shp1, false);
-            delete shp1;
+                {pshp.tesselation.x, pshp.tesselation.y}, pshp.size.x,
+                {pshp.uvsize.x, pshp.uvsize.y},
+                {-pshp.rounded, pshp.rounded});
+            // auto shp1 = new shape();
+            // shp1->name = "interior";
+            // make_sphere(shp1->quads, shp1->pos, shp1->norm, shp1->texcoord,
+            //     {pshp.tesselation.x, pshp.tesselation.y}, pshp.size.x * 0.8f,
+            //     {pshp.uvsize.x, pshp.uvsize.y});
+            // shp1->groups.push_back({"interior",
+            //     find_named_elem(scn->materials, pshp.interior), false});
+            // merge_into(shp, shp1, false);
+            // delete shp1;
         } break;
         case proc_shape_type::point: {
             make_point(
@@ -11031,22 +10828,22 @@ void update_proc_elem(scene* scn, shape* shp, const proc_shape* pshp) {
         } break;
         case proc_shape_type::pointscube: {
             make_random_points(shp->points, shp->pos, shp->norm, shp->texcoord,
-                shp->radius, pshp->tesselation.x, pshp->size, pshp->uvsize.x,
-                pshp->radius);
+                shp->radius, pshp.tesselation.x, pshp.size, pshp.uvsize.x,
+                pshp.radius);
         } break;
         case proc_shape_type::hairball: {
             auto shp1 = new shape();
             shp1->name = "interior";
             auto steps = pow2(5);
             make_sphere_cube(shp1->quads, shp1->pos, shp1->norm, shp1->texcoord,
-                steps, pshp->size.x * 0.8f, 1);
+                steps, pshp.size.x * 0.8f, 1);
             shp1->radius.assign(shp1->pos.size(), 0);
-            shp1->groups.push_back({"interior",
-                find_named_elem(scn->materials, pshp->interior), false});
+            // shp1->groups.push_back({"interior",
+            //     find_named_elem(scn->materials, pshp.interior), false});
             make_hair(shp->lines, shp->pos, shp->norm, shp->texcoord,
-                shp->radius, {pshp->tesselation.x, pshp->tesselation.y}, {},
+                shp->radius, {pshp.tesselation.x, pshp.tesselation.y}, {},
                 shp1->quads, shp1->pos, shp1->norm, shp1->texcoord,
-                pshp->hair_params);
+                pshp.hair_params);
             // merge_into(shp, shp1, false);
             delete shp1;
         } break;
@@ -11057,225 +10854,188 @@ void update_proc_elem(scene* scn, shape* shp, const proc_shape* pshp) {
         default: throw std::runtime_error("should not have gotten here");
     }
 
-    if (pshp->flip_yz) {
+    if (pshp.flip_yz) {
         for (auto& p : shp->pos) std::swap(p.y, p.z);
         for (auto& n : shp->norm) std::swap(n.y, n.z);
     }
 
-    for (auto i = 0; i < pshp->subdivision; i++) {
-        subdivide_shape_once(shp, pshp->catmull_clark);
+    for (auto i = 0; i < pshp.subdivision; i++) {
+        subdivide_shape_once(shp, pshp.catmull_clark);
     }
 }
 
 // Makes/updates a test shape
-void update_proc_elem(scene* scn, camera* cam, const proc_camera* pcam) {
-    if (pcam->name == "") throw std::runtime_error("cannot use empty name");
-    cam->name = pcam->name;
-    cam->frame = lookat_frame(pcam->from, pcam->to, vec3f{0, 1, 0});
-    cam->yfov = pcam->yfov;
-    cam->aspect = pcam->aspect;
+void update_proc_elem(scene* scn, camera* cam, const proc_camera& pcam) {
+    if (pcam.name == "") throw std::runtime_error("cannot use empty name");
+    cam->name = pcam.name;
+    cam->frame = lookat_frame(pcam.from, pcam.to, vec3f{0, 1, 0});
+    cam->yfov = pcam.yfov;
+    cam->aspect = pcam.aspect;
     cam->near = 0.01f;
     cam->far = 10000;
     cam->aperture = 0;
-    cam->focus = length(pcam->from - pcam->to);
+    cam->focus = length(pcam.from - pcam.to);
 }
 
 // Makes/updates a test shape
 void update_proc_elem(
-    scene* scn, environment* env, const proc_environment* penv) {
-    if (penv->name == "") throw std::runtime_error("cannot use empty name");
-    env->name = penv->name;
-    env->frame = penv->frame * rotation_frame(vec3f{0, 1, 0}, penv->rotation);
-    env->ke = penv->emission * penv->color;
-    env->ke_txt.txt = find_named_elem(scn->textures, penv->texture);
+    scene* scn, environment* env, const proc_environment& penv) {
+    if (penv.name == "") throw std::runtime_error("cannot use empty name");
+    env->name = penv.name;
+    env->frame = penv.frame * rotation_frame(vec3f{0, 1, 0}, penv.rotation);
+    env->ke = penv.emission * penv.color;
+    env->ke_txt.txt = find_named_elem(scn->textures, penv.texture);
 }
 
 // Makes/updates a test shape
-void update_proc_elem(scene* scn, instance* ist, const proc_instance* pist) {
-    if (pist->name == "") throw std::runtime_error("cannot use empty name");
-    ist->name = pist->name;
-    ist->frame = pist->frame;
-    ist->shp = find_named_elem(scn->shapes, pist->shape);
+void update_proc_elem(scene* scn, instance* ist, const proc_instance& pist) {
+    if (pist.name == "") throw std::runtime_error("cannot use empty name");
+    ist->name = pist.name;
+    ist->frame = pist.frame;
+    ist->shp = find_named_elem(scn->shapes, pist.shape);
+    ist->mat = find_named_elem(scn->materials, pist.material);
 }
 
 // Makes/updates a test shape
-void update_proc_elem(scene* scn, node* nde, const proc_node* pnde) {
-    if (pnde->name == "") throw std::runtime_error("cannot use empty name");
-    nde->name = pnde->name;
-    nde->local = pnde->frame;
-    nde->translation = pnde->translation;
-    nde->rotation = pnde->rotation;
-    nde->scaling = pnde->scaling;
-    nde->cam = find_named_elem(scn->cameras, pnde->camera);
-    nde->ist = find_named_elem(scn->instances, pnde->instance);
-    nde->env = find_named_elem(scn->environments, pnde->environment);
+void update_proc_elem(scene* scn, node* nde, const proc_node& pnde) {
+    if (pnde.name == "") throw std::runtime_error("cannot use empty name");
+    nde->name = pnde.name;
+    nde->frame = pnde.frame;
+    nde->translation = pnde.translation;
+    nde->rotation = pnde.rotation;
+    nde->scaling = pnde.scaling;
+    nde->cam = find_named_elem(scn->cameras, pnde.camera);
+    nde->ist = find_named_elem(scn->instances, pnde.instance);
+    nde->env = find_named_elem(scn->environments, pnde.environment);
 }
 
 // Fake function for template programming.
-void update_proc_elem(scene* scn, animation* shp, const proc_animation* pshp) {}
+void update_proc_elem(scene* scn, animation* shp, const proc_animation& pshp) {}
 
 // Makes/updates a test animation
 void update_proc_elem(
-    scene* scn, animation_group* agr, const proc_animation* panm) {
-    if (panm->name == "") throw std::runtime_error("cannot use empty name");
+    scene* scn, animation_group* agr, const proc_animation& panm) {
+    if (panm.name == "") throw std::runtime_error("cannot use empty name");
     if (agr->animations.size() != 1) {
         agr->animations.clear();
         agr->animations.push_back(animation());
     }
-    agr->name = panm->name;
+    agr->name = panm.name;
     auto anm = &agr->animations.front();
-    anm->name = panm->name;
-    anm->type = (!panm->bezier) ? keyframe_type::linear : keyframe_type::bezier;
-    anm->times = panm->times;
-    for (auto& v : anm->times) v *= panm->speed;
-    anm->translation = panm->translation;
-    anm->rotation = panm->rotation;
-    anm->scaling = panm->scaling;
-    for (auto& v : anm->translation) v *= panm->scale;
-    for (auto& v : anm->scaling) v *= panm->scale;
+    anm->name = panm.name;
+    anm->type = (!panm.bezier) ? keyframe_type::linear : keyframe_type::bezier;
+    anm->times = panm.times;
+    for (auto& v : anm->times) v *= panm.speed;
+    anm->translation = panm.translation;
+    anm->rotation = panm.rotation;
+    anm->scaling = panm.scaling;
+    for (auto& v : anm->translation) v *= panm.scale;
+    for (auto& v : anm->scaling) v *= panm.scale;
     anm->targets.clear();
-    for (auto& nde : panm->nodes)
+    for (auto& nde : panm.nodes)
         anm->targets.push_back(find_named_elem(scn->nodes, nde));
 }
 
 // Update test elements
 template <typename T, typename T1>
 void update_proc_scene_elem(scene* scn, std::vector<T*>& elems,
-    const std::vector<T1*>& telems, const std::unordered_set<void*>& refresh) {
+    const std::map<std::string, T1>& telems, const std::unordered_set<void*>& refresh) {
     auto emap = std::unordered_map<std::string, T*>();
     for (auto elem : elems) emap[elem->name] = elem;
-    for (auto telem : telems) {
-        if (!contains(emap, telem->name)) {
+    for (auto& telem : telems) {
+        if (!contains(emap, telem.second.name)) {
             elems.push_back(new T());
-            update_proc_elem(scn, elems.back(), telem);
+            update_proc_elem(scn, elems.back(), telem.second);
         } else {
-            auto elem = emap.at(telem->name);
-            if (contains(refresh, elem)) update_proc_elem(scn, elem, telem);
+            auto elem = emap.at(telem.second.name);
+            if (contains(refresh, elem)) update_proc_elem(scn, elem, telem.second);
         }
     }
 }
 
 // Makes/updates a test scene
-void update_proc_elems(scene* scn, const proc_scene* pscn,
+void update_proc_elems(scene* scn, const proc_scene& pscn,
     const std::unordered_set<void*>& refresh) {
-    update_proc_scene_elem(scn, scn->cameras, pscn->cameras, refresh);
-    update_proc_scene_elem(scn, scn->textures, pscn->textures, refresh);
-    update_proc_scene_elem(scn, scn->materials, pscn->materials, refresh);
-    update_proc_scene_elem(scn, scn->shapes, pscn->shapes, refresh);
-    update_proc_scene_elem(scn, scn->instances, pscn->instances, refresh);
-    update_proc_scene_elem(scn, scn->environments, pscn->environments, refresh);
-    update_proc_scene_elem(scn, scn->nodes, pscn->nodes, refresh);
-    update_proc_scene_elem(scn, scn->animations, pscn->animations, refresh);
+    update_proc_scene_elem(scn, scn->cameras, pscn.cameras, refresh);
+    update_proc_scene_elem(scn, scn->textures, pscn.textures, refresh);
+    update_proc_scene_elem(scn, scn->materials, pscn.materials, refresh);
+    update_proc_scene_elem(scn, scn->shapes, pscn.shapes, refresh);
+    update_proc_scene_elem(scn, scn->instances, pscn.instances, refresh);
+    update_proc_scene_elem(scn, scn->environments, pscn.environments, refresh);
+    update_proc_scene_elem(scn, scn->nodes, pscn.nodes, refresh);
+    update_proc_scene_elem(scn, scn->animations, pscn.animations, refresh);
 }
 
-// remove duplicate elems
-template <typename T>
-void remove_duplicate_elems(std::vector<T*>& telems) {
-    auto names = std::unordered_set<std::string>();
-    for (auto elem : telems) names.insert(elem->name);
-    if (names.size() == telems.size()) return;
-    names.clear();
-    auto ntelems = std::vector<T*>();
-    auto tdel = std::vector<T*>();
-    for (auto elem : telems) {
-        if (contains(names, elem->name)) {
-            tdel.push_back(elem);
-        } else {
-            ntelems.push_back(elem);
-            names.insert(elem->name);
-        }
-    }
-    telems = ntelems;
-}
-
-// remove duplicates
-void remove_duplicates(proc_scene* scn) {
-    remove_duplicate_elems(scn->cameras);
-    remove_duplicate_elems(scn->textures);
-    remove_duplicate_elems(scn->materials);
-    remove_duplicate_elems(scn->shapes);
-    remove_duplicate_elems(scn->environments);
-    remove_duplicate_elems(scn->nodes);
-    remove_duplicate_elems(scn->animations);
-}
-
-std::map<std::string, proc_texture*>& proc_texture_presets() {
-    static auto presets = std::map<std::string, proc_texture*>();
+std::map<std::string, proc_texture>& proc_texture_presets() {
+    static auto presets = std::map<std::string, proc_texture>();
     if (!presets.empty()) return presets;
 
-    auto add_texture = [](std::map<std::string, proc_texture*>& presets,
-                           const std::string& name, proc_texture_type type) {
-        auto txt = new proc_texture();
-        presets[name] = txt;
-        txt->name = name;
-        txt->type = type;
+    auto make_texture = [](const std::string& name, proc_texture_type type, int tile_size = 0, float bump_scale = 0) {
+        auto txt = proc_texture();
+        txt.name = name;
+        txt.type = type;
+        if(tile_size) txt.tile_size = tile_size;
+        if(bump_scale) {
+            txt.bump_to_normal = true;
+            txt.bump_scale = bump_scale;
+        }
         return txt;
     };
 
-    auto last = (proc_texture*)nullptr;
+    presets["grid"] = make_texture("grid", proc_texture_type::grid);
+    presets["checker"] = make_texture("checker", proc_texture_type::checker);
+    presets["colored"] = make_texture("colored", proc_texture_type::colored);
+    presets["rcolored"] = make_texture("rcolored", proc_texture_type::rcolored);
+    presets["bump"] = make_texture("bump", proc_texture_type::bump, 32);
+    presets["tgrid"] = make_texture("tgrid", proc_texture_type::bump, 32);
+    presets["uv"] = make_texture("uv", proc_texture_type::uv);
+    presets["gamma"] = make_texture("gamma", proc_texture_type::gamma);
+    presets["gridn"] = make_texture("gridn", proc_texture_type::grid, 64, 4);
+    presets["tgridn"] = make_texture("tgridn", proc_texture_type::grid, 32, 4);
+    presets["bumpn"] = make_texture("bumpn", proc_texture_type::bump, 32, 4);
+    presets["noise"] = make_texture("noise", proc_texture_type::noise);
+    presets["ridge"] = make_texture("ridge", proc_texture_type::ridge);
+    presets["fbm"] = make_texture("fbm", proc_texture_type::fbm);
+    presets["turbulence"] = make_texture("turbulence", proc_texture_type::turbulence);
 
-    last = add_texture(presets, "grid", proc_texture_type::grid);
-    last = add_texture(presets, "checker", proc_texture_type::checker);
-    last = add_texture(presets, "colored", proc_texture_type::colored);
-    last = add_texture(presets, "rcolored", proc_texture_type::rcolored);
-    last = add_texture(presets, "bump", proc_texture_type::bump);
-    last->tile_size = 32;
-    last = add_texture(presets, "tgrid", proc_texture_type::bump);
-    last->tile_size = 32;
-    last = add_texture(presets, "uv", proc_texture_type::uv);
-    last = add_texture(presets, "gamma", proc_texture_type::gamma);
-    last = add_texture(presets, "gridn", proc_texture_type::grid);
-    last->bump_to_normal = true;
-    last->bump_to_normal = true;
-    last->bump_scale = 4;
-    last = add_texture(presets, "tgridn", proc_texture_type::grid);
-    last->tile_size = 32;
-    last->bump_to_normal = true;
-    last->bump_to_normal = true;
-    last->bump_scale = 4;
-    last = add_texture(presets, "bumpn", proc_texture_type::bump);
-    last->tile_size = 32;
-    last->bump_to_normal = true;
-    last->bump_scale = 4;
-    last = add_texture(presets, "noise", proc_texture_type::noise);
-    last = add_texture(presets, "ridge", proc_texture_type::ridge);
-    last = add_texture(presets, "fbm", proc_texture_type::fbm);
-    last = add_texture(presets, "turbulence", proc_texture_type::turbulence);
-
-    last = add_texture(presets, "gammaf", proc_texture_type::gammaf);
-    last = add_texture(presets, "sky1", proc_texture_type::sky);
-    last->sky_sunangle = pif / 4;
-    last = add_texture(presets, "sky2", proc_texture_type::sky);
-    last->sky_sunangle = pif / 2;
+    presets["gammaf"] = make_texture("gammaf", proc_texture_type::gammaf);
+    presets["sky1"] = make_texture("sky1", proc_texture_type::sky);
+    presets["sky1"].sky_sunangle = pif / 4;
+    presets["sky2"] = make_texture("sky2", proc_texture_type::sky);
+    presets["sky2"].sky_sunangle = pif / 2;
 
     return presets;
 }
 
-std::map<std::string, proc_material*>& proc_material_presets() {
-    static auto presets = std::map<std::string, proc_material*>();
+std::map<std::string, proc_material>& proc_material_presets() {
+    static auto presets = std::map<std::string, proc_material>();
     if (!presets.empty()) return presets;
 
-    auto add_material = [](std::map<std::string, proc_material*>& presets,
+    auto make_material = [](
                             const std::string& name, proc_material_type type,
-                            const vec3f& color, float roughness = 1) {
-        auto mat = new proc_material();
-        presets[name] = mat;
-        mat->name = name;
-        mat->type = type;
-        mat->color = color;
-        mat->roughness = roughness;
+                            const vec3f& color, float roughness = 1, float opacity = 1, const std::string& normal = "") {
+        auto mat = proc_material();
+        mat.name = name;
+        mat.type = type;
+        mat.color = color;
+        mat.roughness = roughness;
+        mat.opacity = opacity;
+        mat.normal = normal;
         return mat;
     };
-    auto add_materialt = [](std::map<std::string, proc_material*>& presets,
+    auto make_materialt = [](
                              const std::string& name, proc_material_type type,
-                             const std::string& txt, float roughness = 1) {
-        auto mat = new proc_material();
-        presets[name] = mat;
-        mat->name = name;
-        mat->type = type;
-        mat->color = {1, 1, 1};
-        mat->roughness = roughness;
-        mat->texture = txt;
+                             const std::string& txt, float roughness = 1, 
+                             float opacity = 1, 
+                             const std::string& normal = "") {
+        auto mat = proc_material();
+        mat.name = name;
+        mat.type = type;
+        mat.color = {1, 1, 1};
+        mat.roughness = roughness;
+        mat.opacity = opacity;
+        mat.texture = txt;
+        mat.normal = normal;
         return mat;
     };
 
@@ -11301,179 +11061,168 @@ std::map<std::string, proc_material*>& proc_material_presets() {
     auto sharp = 0.05f;
     auto mirror = 0.0f;
 
-    auto last = (proc_material*)nullptr;
+    presets["none"] = make_material("none", matte, {0, 0, 0});
+    presets["transparent_none"] = make_material("transparent_none", transparent, {0, 0, 0}, 1, 0.5f);
 
-    last = add_material(presets, "none", matte, {0, 0, 0});
-    last = add_material(presets, "transparent_none", transparent, {0, 0, 0});
-    last->opacity = 0.5f;
+    presets["matte_floor"] = make_materialt("matte_floor", matte, "grid");
 
-    last = add_materialt(presets, "matte_floor", matte, "grid");
+    presets["matte_gray"] = make_material("matte_gray", matte, gray);
+    presets["matte_red"] = make_material("matte_red", matte, red);
+    presets["matte_green"] = make_material("matte_green", matte, green);
+    presets["matte_blue"] = make_material("matte_blue", matte, blue);
+    presets["matte_grid"] = make_materialt("matte_grid", matte, "grid");
+    presets["matte_colored"] = make_materialt("matte_colored", matte, "colored");
+    presets["matte_uv"] = make_materialt("matte_uv", matte, "uv");
 
-    last = add_material(presets, "matte_gray", matte, gray);
-    last = add_material(presets, "matte_red", matte, red);
-    last = add_material(presets, "matte_green", matte, green);
-    last = add_material(presets, "matte_blue", matte, blue);
-    last = add_materialt(presets, "matte_grid", matte, "grid");
-    last = add_materialt(presets, "matte_colored", matte, "colored");
-    last = add_materialt(presets, "matte_uv", matte, "uv");
+    presets["plastic_red"] = make_material("plastic_red", plastic, red, rough);
+    presets["plastic_green"] = make_material("plastic_green", plastic, green, sharp);
+    presets["plastic_blue"] = make_material("plastic_blue", plastic, blue, mirror);
+    presets["plastic_black"] = make_material("plastic_black", plastic, black, mirror);
+    presets["plastic_colored"] = make_materialt("plastic_colored", plastic, "colored", rough);
+    presets["plastic_blue_bumped"] = make_material("plastic_blue_bumped", plastic, blue, sharp, 1, "bumpn");
+    presets["plastic_colored_bumped"] = make_materialt(
+        "plastic_colored_bumped", plastic, "colored", rough, 1, "bumpn");
 
-    last = add_material(presets, "plastic_red", plastic, red, rough);
-    last = add_material(presets, "plastic_green", plastic, green, sharp);
-    last = add_material(presets, "plastic_blue", plastic, blue, mirror);
-    last = add_material(presets, "plastic_black", plastic, black, mirror);
-    last = add_materialt(presets, "plastic_colored", plastic, "colored", rough);
-    last = add_material(presets, "plastic_blue_bumped", plastic, blue, sharp);
-    last->normal = "bumpn";
-    last = add_materialt(
-        presets, "plastic_colored_bumped", plastic, "colored", rough);
-    last->normal = "bumpn";
+    presets["carpaint_black"] = make_material("carpaint_black", carpaint, black, rough);
+    presets["carpaint_blue"] = make_material("carpaint_blue", carpaint, blue, rough);
+    presets["metal_blue"] = make_material("metal_blue", metal, blue, rough);
 
-    last = add_material(presets, "carpaint_black", carpaint, black, rough);
-    last = add_material(presets, "carpaint_blue", carpaint, blue, rough);
-    last = add_material(presets, "metal_blue", metal, blue, rough);
+    presets["silver_mirror"] = make_material("silver_mirror", metal, lgray, mirror);
+    presets["silver_sharp"] = make_material("silver_sharp", metal, lgray, sharp);
+    presets["silver_rough"] = make_material("silver_rough", metal, lgray, rough);
+    presets["gold_mirror"] = make_material("gold_mirror", metal, gold, mirror);
+    presets["gold_sharp"] = make_material("gold_sharp", metal, gold, sharp);
+    presets["gold_rough"] = make_material("gold_rough", metal, gold, rough);
 
-    last = add_material(presets, "silver_mirror", metal, lgray, mirror);
-    last = add_material(presets, "silver_sharp", metal, lgray, sharp);
-    last = add_material(presets, "silver_rough", metal, lgray, rough);
-    last = add_material(presets, "gold_mirror", metal, gold, mirror);
-    last = add_material(presets, "gold_sharp", metal, gold, sharp);
-    last = add_material(presets, "gold_rough", metal, gold, rough);
+    presets["transparent_red"] = make_material("transparent_red", transparent, red, 1, 0.9f);
+    presets["transparent_green"] = make_material("transparent_green", transparent, green, 1, 0.5f);
+    presets["transparent_blue"] = make_material("transparent_blue", transparent, blue, 1, 0.2f);
 
-    last = add_material(presets, "transparent_red", transparent, red);
-    last->opacity = 0.9f;
-    last = add_material(presets, "transparent_green", transparent, green);
-    last->opacity = 0.5f;
-    last = add_material(presets, "transparent_blue", transparent, blue);
-    last->opacity = 0.2f;
+    presets["glass_mirror"] = make_material("glass_mirror", glass, {1, 1, 1}, mirror);
+    presets["glass_colored"] = make_material("glass_colored", glass, red, mirror);
+    presets["glass_rough"] = make_material("glass_rough", glass, {1, 1, 1}, rough);
 
-    last = add_material(presets, "glass_mirror", glass, {1, 1, 1}, mirror);
-    last = add_material(presets, "glass_colored", glass, red, mirror);
-    last = add_material(presets, "glass_rough", glass, {1, 1, 1}, rough);
-
-    last = add_material(presets, "light", emission, white);
-    last->emission = 4;
+    presets["light"] = make_material("light", emission, white);
+    presets["light"].emission = 4;
 
     return presets;
 }
 
-std::map<std::string, proc_shape*>& proc_shape_presets() {
-    static auto presets = std::map<std::string, proc_shape*>();
+std::map<std::string, proc_shape>& proc_shape_presets() {
+    static auto presets = std::map<std::string, proc_shape>();
     if (!presets.empty()) return presets;
 
-    auto add_shape = [](std::map<std::string, proc_shape*>& presets,
+    auto make_shape = [](
                          const std::string& name, proc_shape_type type,
                          const vec3i& steps, const vec3f& size,
                          const vec3f& uvsize, int subdivision = 0,
                          bool catmullclark = false, bool faceted = false) {
-        auto shp = new proc_shape();
-        presets[name] = shp;
-        shp->name = name;
-        shp->type = type;
-        shp->tesselation = steps;
-        shp->subdivision = subdivision;
-        shp->size = size;
-        shp->uvsize = uvsize;
-        shp->catmull_clark = catmullclark;
-        shp->faceted = faceted;
+        auto shp = proc_shape();
+        shp.name = name;
+        shp.type = type;
+        shp.tesselation = steps;
+        shp.subdivision = subdivision;
+        shp.size = size;
+        shp.uvsize = uvsize;
+        shp.catmull_clark = catmullclark;
+        shp.faceted = faceted;
         return shp;
     };
 
-    auto last = (proc_shape*)nullptr;
-
-    last = add_shape(presets, "floor", proc_shape_type::floor, {64, 64, 0},
+    presets["floor"] = make_shape("floor", proc_shape_type::floor, {64, 64, 0},
         {40, 40, 40}, {20, 20, 20});
-    last = add_shape(presets, "quad", proc_shape_type::quad, {1, 1, 1},
+    presets["quad"] = make_shape("quad", proc_shape_type::quad, {1, 1, 1},
         {2, 2, 2}, {1, 1, 1});
-    last = add_shape(presets, "cube", proc_shape_type::cube, {1, 1, 1},
+    presets["cube"] = make_shape("cube", proc_shape_type::cube, {1, 1, 1},
         {2, 2, 2}, {1, 1, 1});
-    last = add_shape(presets, "cube_rounded", proc_shape_type::cube_rounded,
+    presets["cube_rounded"] = make_shape("cube_rounded", proc_shape_type::cube_rounded,
         {32, 32, 32}, {2, 2, 2}, {1, 1, 1});
-    last->rounded = 0.15f;
-    last = add_shape(presets, "sphere", proc_shape_type::sphere, {128, 64, 0},
+    presets["cube_rounded"].rounded = 0.15f;
+    presets["sphere"] = make_shape("sphere", proc_shape_type::sphere, {128, 64, 0},
         {2, 2, 2}, {1, 1, 1});
-    last = add_shape(presets, "sphere_cube", proc_shape_type::sphere_cube,
+    presets["sphere_cube"] = make_shape("sphere_cube", proc_shape_type::sphere_cube,
         {32, 0, 0}, {2, 2, 2}, {1, 1, 1});
-    last = add_shape(presets, "sphere_flipcap", proc_shape_type::sphere_flipcap,
+    presets["sphere_flipcap"] = make_shape("sphere_flipcap", proc_shape_type::sphere_flipcap,
         {128, 64, 0}, {2, 2, 2}, {1, 1, 1});
-    last->rounded = 0.75f;
-    last = add_shape(presets, "disk", proc_shape_type::disk, {128, 32, 0},
+    presets["sphere_flipcap"].rounded = 0.75f;
+    presets["disk"] = make_shape("disk", proc_shape_type::disk, {128, 32, 0},
         {2, 2, 2}, {1, 1, 1});
-    last = add_shape(presets, "disk_quad", proc_shape_type::disk_quad,
+    presets["disk_quad"] = make_shape("disk_quad", proc_shape_type::disk_quad,
         {32, 0, 0}, {2, 2, 2}, {1, 1, 1});
-    last = add_shape(presets, "disk_bulged", proc_shape_type::disk_bulged,
+    presets["disk_bulged"] = make_shape("disk_bulged", proc_shape_type::disk_bulged,
         {32, 0, 0}, {2, 2, 2}, {1, 1, 1});
-    last->rounded = 0.25;
-    last = add_shape(presets, "cylinder", proc_shape_type::cylinder,
+    presets["disk_bulged"].rounded = 0.25;
+    presets["cylinder"] = make_shape("cylinder", proc_shape_type::cylinder,
         {128, 32, 32}, {2, 2, 2}, {1, 1, 1});
-    last->flip_yz = true;
-    last = add_shape(presets, "cylinder_rounded",
+    presets["cylinder"].flip_yz = true;
+    presets["cylinder_rounded"] = make_shape("cylinder_rounded",
         proc_shape_type::cylinder_rounded, {128, 32, 32}, {2, 2, 2}, {1, 1, 1});
-    last->flip_yz = true;
-    last->rounded = 0.15f;
-    last = add_shape(presets, "geodesic_sphere",
+    presets["cylinder_rounded"].flip_yz = true;
+    presets["cylinder_rounded"].rounded = 0.15f;
+    presets["geodesic_sphere"] = make_shape("geodesic_sphere",
         proc_shape_type::geodesic_sphere, {64, 64, 0}, {2, 2, 2}, {1, 1, 1}, 5);
-    last =
-        add_shape(presets, "geodesic_spheref", proc_shape_type::geodesic_sphere,
+    presets["geodesic_spheref"] = 
+        make_shape("geodesic_spheref", proc_shape_type::geodesic_sphere,
             {64, 64, 0}, {2, 2, 2}, {1, 1, 1}, 5, 0, true);
-    last->faceted = true;
-    last =
-        add_shape(presets, "geodesic_spherel", proc_shape_type::geodesic_sphere,
+    presets["geodesic_spheref"].faceted = true;
+    presets["geodesic_spherel"] = 
+        make_shape("geodesic_spherel", proc_shape_type::geodesic_sphere,
             {32, 32, 0}, {2, 2, 2}, {1, 1, 1}, 4, 0, true);
-    last->faceted = true;
-    last = add_shape(presets, "cubep", proc_shape_type::cubep, {1, 1, 1},
+    presets["geodesic_spherel"].faceted = true;
+    presets["cubep"] = make_shape("cubep", proc_shape_type::cubep, {1, 1, 1},
         {2, 2, 2}, {1, 1, 1});
-    last = add_shape(presets, "cubes", proc_shape_type::cubep, {1, 1, 1},
+    presets["cubes"] = make_shape("cubes", proc_shape_type::cubep, {1, 1, 1},
         {2, 2, 2}, {1, 1, 1}, 4, true);
-    last = add_shape(presets, "suzanne", proc_shape_type::suzanne, {0, 0, 0},
+    presets["suzanne"] = make_shape("suzanne", proc_shape_type::suzanne, {0, 0, 0},
         {2, 2, 2}, {1, 1, 1});
-    last = add_shape(presets, "suzannes", proc_shape_type::suzanne, {0, 0, 0},
+    presets["suzannes"] = make_shape("suzannes", proc_shape_type::suzanne, {0, 0, 0},
         {2, 2, 2}, {1, 1, 1}, 2, true);
-    last = add_shape(presets, "cubefv", proc_shape_type::fvcube, {1, 1, 1},
+    presets["cubefv"] = make_shape("cubefv", proc_shape_type::fvcube, {1, 1, 1},
         {2, 2, 2}, {1, 1, 1});
-    last = add_shape(presets, "cubefvs", proc_shape_type::fvcube, {1, 1, 1},
+    presets["cubefvs"] = make_shape("cubefvs", proc_shape_type::fvcube, {1, 1, 1},
         {2, 2, 2}, {1, 1, 1}, 0, 4);
-    last = add_shape(presets, "spherefv", proc_shape_type::fvsphere,
+    presets["spherefv"] = make_shape("spherefv", proc_shape_type::fvsphere,
         {128, 64, 0}, {2, 2, 2}, {1, 1, 1});
-    last = add_shape(presets, "matball", proc_shape_type::matball, {128, 64, 0},
+    presets["matball"] = make_shape("matball", proc_shape_type::matball, {128, 64, 0},
         {2, 2, 2}, {1, 1, 1});
-    last->rounded = 0.75f;
-    last = add_shape(presets, "matballi", proc_shape_type::sphere, {128, 64, 0},
+    presets["matball"].rounded = 0.75f;
+    presets["matballi"] = make_shape("matballi", proc_shape_type::sphere, {128, 64, 0},
         vec3f{2 * 0.8f}, {1, 1, 1});
-    last = add_shape(presets, "pointscube", proc_shape_type::pointscube,
+    presets["pointscube"] = make_shape("pointscube", proc_shape_type::pointscube,
         {10000, 0, 0}, {2, 2, 2}, {1, 1, 1});
-    last = add_shape(presets, "hairball1", proc_shape_type::hairball,
+    presets["hairball1"] = make_shape("hairball1", proc_shape_type::hairball,
         {8, 65536, 0}, {2, 2, 2}, {1, 1, 1});
-    last->hair_params.radius = {0.001f, 0.0001f};
-    last->hair_params.length = {0.1f, 0.1f};
-    last->hair_params.noise = {0.5f, 8};
-    last = add_shape(presets, "hairball2", proc_shape_type::hairball,
+    presets["hairball1"].hair_params.radius = {0.001f, 0.0001f};
+    presets["hairball1"].hair_params.length = {0.1f, 0.1f};
+    presets["hairball1"].hair_params.noise = {0.5f, 8};
+    presets["hairball2"] = make_shape("hairball2", proc_shape_type::hairball,
         {8, 65536, 0}, {2, 2, 2}, {1, 1, 1});
-    last->hair_params.radius = {0.001f, 0.0001f};
-    last->hair_params.length = {0.1f, 0.1f};
-    last->hair_params.clump = {0.5f, 128};
-    last = add_shape(presets, "hairball3", proc_shape_type::hairball,
+    presets["hairball2"].hair_params.radius = {0.001f, 0.0001f};
+    presets["hairball2"].hair_params.length = {0.1f, 0.1f};
+    presets["hairball2"].hair_params.clump = {0.5f, 128};
+    presets["hairball3"] = make_shape("hairball3", proc_shape_type::hairball,
         {8, 65536, 0}, {2, 2, 2}, {1, 1, 1});
-    last->hair_params.radius = {0.001f, 0.0001f};
-    last->hair_params.length = {0.1f, 0.1f};
-    last = add_shape(presets, "hairballi", proc_shape_type::sphere, {64, 32, 0},
+    presets["hairball3"].hair_params.radius = {0.001f, 0.0001f};
+    presets["hairball3"].hair_params.length = {0.1f, 0.1f};
+    presets["hairballi"] = make_shape("hairballi", proc_shape_type::sphere, {64, 32, 0},
         vec3f{2 * 0.8f}, {1, 1, 1});
-    last = add_shape(presets, "beziercircle", proc_shape_type::beziercircle,
+    presets["beziercircle"] = make_shape("beziercircle", proc_shape_type::beziercircle,
         {0, 0, 0}, {2, 2, 2}, {1, 1, 1});
-    last = add_shape(presets, "point", proc_shape_type::point, {0, 0, 0},
+    presets["point"] = make_shape("point", proc_shape_type::point, {0, 0, 0},
         {2, 2, 2}, {1, 1, 1});
 
     return presets;
 }
 
-std::map<std::string, proc_environment*>& proc_environment_presets() {
-    static auto presets = std::map<std::string, proc_environment*>();
+std::map<std::string, proc_environment>& proc_environment_presets() {
+    static auto presets = std::map<std::string, proc_environment>();
     if (!presets.empty()) return presets;
 
-    auto add_environment = [](std::map<std::string, proc_environment*>& presets,
+    auto add_environment = [](std::map<std::string, proc_environment>& presets,
                                const std::string& name,
                                const std::string& texture) {
-        auto env = new proc_environment();
-        presets[name] = env;
+        presets[name] = proc_environment();
+        auto env = &presets[name];
         env->name = name;
         env->color = {1, 1, 1};
         env->texture = texture;
@@ -11489,36 +11238,32 @@ std::map<std::string, proc_environment*>& proc_environment_presets() {
     return presets;
 }
 
-std::map<std::string, proc_animation*>& proc_animation_presets() {
-    static auto presets = std::map<std::string, proc_animation*>();
+std::map<std::string, proc_animation>& proc_animation_presets() {
+    static auto presets = std::map<std::string, proc_animation>();
     if (!presets.empty()) return presets;
 
-    auto add_animation = [](std::map<std::string, proc_animation*>& presets,
-                             const std::string& name, bool bezier,
+    auto make_animation = [](const std::string& name, bool bezier,
                              const std::vector<float>& times,
                              const std::vector<vec3f>& translation,
                              const std::vector<quat4f>& rotation,
                              const std::vector<vec3f>& scaling) {
-        auto anm = new proc_animation();
-        presets[name] = anm;
-        anm->name = name;
-        anm->speed = 1;
-        anm->scale = 1;
-        anm->bezier = bezier;
-        anm->times = times;
-        anm->translation = translation;
-        anm->rotation = rotation;
-        anm->scaling = scaling;
+        auto anm = proc_animation();
+        anm.name = name;
+        anm.speed = 1;
+        anm.scale = 1;
+        anm.bezier = bezier;
+        anm.times = times;
+        anm.translation = translation;
+        anm.rotation = rotation;
+        anm.scaling = scaling;
         return anm;
     };
 
-    auto last = (proc_animation*)nullptr;
-
-    last = add_animation(presets, "bounce", false, {0, 1, 2},
+    presets["bounce"] = make_animation("bounce", false, {0, 1, 2},
         {{0, 0, 0}, {0, 1, 0}, {0, 0, 0}}, {}, {});
-    last = add_animation(presets, "scale", false, {0, 1, 2}, {}, {},
+    presets["scale"] = make_animation("scale", false, {0, 1, 2}, {}, {},
         {{1, 1, 1}, {0.1f, 0.1f, 0.1f}, {1, 1, 1}});
-    last = add_animation(presets, "rotation", false, {0, 1, 2}, {},
+    presets["rotation"] = make_animation("rotation", false, {0, 1, 2}, {},
         {rotation_quat<float>({0, 1, 0}, 0),
             rotation_quat<float>({0, 1, 0}, pif),
             rotation_quat<float>({0, 1, 0}, 0)},
@@ -11527,113 +11272,103 @@ std::map<std::string, proc_animation*>& proc_animation_presets() {
     return presets;
 }
 
-std::map<std::string, proc_camera*>& proc_camera_presets() {
-    static auto presets = std::map<std::string, proc_camera*>();
+std::map<std::string, proc_camera>& proc_camera_presets() {
+    static auto presets = std::map<std::string, proc_camera>();
     if (!presets.empty()) return presets;
 
-    auto add_camera = [](std::map<std::string, proc_camera*>& presets,
-                          const std::string& name, const vec3f& from,
+    auto make_camera = [](const std::string& name, const vec3f& from,
                           const vec3f& to, float yfov, float aspect) {
-        auto cam = new proc_camera();
-        presets[name] = cam;
-        cam->name = name;
-        cam->from = from;
-        cam->to = to;
-        cam->yfov = yfov;
-        cam->aspect = aspect;
+        auto cam = proc_camera();
+        cam.name = name;
+        cam.from = from;
+        cam.to = to;
+        cam.yfov = yfov;
+        cam.aspect = aspect;
         return cam;
     };
 
-    auto last = (proc_camera*)nullptr;
-
-    last =
-        add_camera(presets, "cam1", {0, 4, 10}, {0, 1, 0}, 15 * pif / 180, 1);
-    last = add_camera(
-        presets, "cam2", {0, 4, 10}, {0, 1, 0}, 15 * pif / 180, 16.0f / 9.0f);
-    last = add_camera(
-        presets, "cam3", {0, 6, 24}, {0, 1, 0}, 7.5f * pif / 180, 2.35f / 1.0f);
+    presets["cam1"] = make_camera("cam1", {0, 4, 10}, {0, 1, 0}, 15 * pif / 180, 1);
+    presets["cam2"] = make_camera(
+        "cam2", {0, 4, 10}, {0, 1, 0}, 15 * pif / 180, 16.0f / 9.0f);
+    presets["cam3"] = make_camera("cam3", {0, 6, 24}, {0, 1, 0}, 7.5f * pif / 180, 2.35f / 1.0f);
 
     return presets;
 }
 
-std::map<std::string, proc_scene*>& proc_scene_presets() {
-    static auto presets = std::map<std::string, proc_scene*>();
+std::map<std::string, proc_scene>& proc_scene_presets() {
+    static auto presets = std::map<std::string, proc_scene>();
     if (!presets.empty()) return presets;
 
-    auto add_scene = [](std::map<std::string, proc_scene*>& presets,
-                         const std::string& name) {
-        auto scn = new proc_scene();
-        presets[name] = scn;
-        scn->name = name;
+    auto make_scene = [](const std::string& name) {
+        auto scn = proc_scene();
+        scn.name = name;
         return scn;
     };
 
-    auto add_node = [](proc_scene* scn, const std::string& name, const std::string& cam,
+    auto add_node = [](proc_scene& scn, const std::string& name, const std::string& cam,
                          const std::string& instance, const std::string& env,
                          const vec3f& pos) {
-        auto nde = new proc_node();
-        nde->name = name;
-        nde->camera = cam;
-        nde->instance = instance;
-        nde->environment = env;
-        nde->translation = pos;
-        scn->nodes.push_back(nde);
+        auto nde = proc_node();
+        nde.name = name;
+        nde.camera = cam;
+        nde.instance = instance;
+        nde.environment = env;
+        nde.translation = pos;
+        scn.nodes[name] = nde;
     };
-    auto add_texture = [](proc_scene* scn, const std::string& name, const std::string& preset) {
-        auto txt = new proc_texture(*proc_texture_presets().at(preset));
-        txt->name = name;
-        scn->textures.push_back(txt);
+    auto add_texture = [](proc_scene& scn, const std::string& name, const std::string& preset) {
+        auto txt = proc_texture_presets().at(preset);
+        txt.name = name;
+        scn.textures[name] = txt;
     };
-    auto add_shape = [](proc_scene* scn, const std::string& name, const std::string& preset) {
-        auto shp = new proc_shape(*proc_shape_presets().at(preset));
-        shp->name = name;
-        scn->shapes.push_back(shp);
+    auto add_shape = [](proc_scene& scn, const std::string& name, const std::string& preset) {
+        auto shp = proc_shape_presets().at(preset);
+        shp.name = name;
+        scn.shapes[name] = shp;
     };
-    auto add_instance = [](proc_scene* scn, const std::string& name, const std::string& shape, const vec3f& pos) {
-        auto ist = new proc_instance();
-        ist->name = name;
-        ist->frame.o = pos;
-        ist->shape = shape;
-        scn->instances.push_back(ist);
+    auto add_instance = [](proc_scene& scn, const std::string& name, const std::string& shape, const std::string& mat, const vec3f& pos) {
+        auto ist = proc_instance();
+        ist.name = name;
+        ist.frame.o = pos;
+        ist.shape = shape;
+        ist.material = mat;
+        scn.instances[name] = ist;
     };
-    auto add_environment = [](proc_scene* scn, const std::string& name, const std::string& preset) {
-        auto env = new proc_environment(*proc_environment_presets().at(preset));
-        env->name = name;
-        scn->environments.push_back(env);
+    auto add_environment = [](proc_scene& scn, const std::string& name, const std::string& preset) {
+        auto env = proc_environment_presets().at(preset);
+        env.name = name;
+        scn.environments[name] = env;
     };
-    auto add_camera = [](proc_scene* scn, const std::string& name, const std::string& preset) {
-        auto cam = new proc_camera(*proc_camera_presets().at(preset));
-        cam->name = name;
-        scn->cameras.push_back(cam);
+    auto add_camera = [](proc_scene& scn, const std::string& name, const std::string& preset) {
+        auto cam = proc_camera_presets().at(preset);
+        cam.name = name;
+        scn.cameras[name] = cam;
     };
-    auto add_material = [](proc_scene* scn, const std::string& name, const std::string& preset) {
-        auto mat = new proc_material(*proc_material_presets().at(preset));
-        mat->name = name;
-        scn->materials.push_back(mat);
+    auto add_material = [](proc_scene& scn, const std::string& name, const std::string& preset) {
+        auto mat = proc_material_presets().at(preset);
+        mat.name = name;
+        scn.materials[name] = mat;
     };
-    auto add_animation = [](proc_scene* scn, const std::string& name, const std::string& preset) {
-        auto anm = new proc_animation(*proc_animation_presets().at(preset));
-        anm->name = name;
-        scn->animations.push_back(anm);
+    auto add_animation = [](proc_scene& scn, const std::string& name, const std::string& preset) {
+        auto anm = proc_animation_presets().at(preset);
+        anm.name = name;
+        scn.animations[name] = anm;
     };
-
-    auto last = (proc_scene*)nullptr;
 
     // textures
-    last = add_scene(presets, "textures");
-    for (auto txt : proc_texture_presets()) add_texture(last, txt.second->name, txt.second->name);
+    presets["textures"] = make_scene("textures");
+    for (auto txt : proc_texture_presets()) add_texture(presets["textures"], txt.second.name, txt.second.name);
 
     // shapes
-    last = add_scene(presets, "shapes");
-    for (auto shp : proc_shape_presets()) add_shape(last, shp.second->name, shp.second->name);
+    presets["shapes"] = make_scene("shapes");
+    for (auto shp : proc_shape_presets()) add_shape(presets["shapes"], shp.second.name, shp.second.name);
 
     // envmap
-    last = add_scene(presets, "envmaps");
-    for (auto env : proc_environment_presets()) add_environment(last, env.second->name, env.second->name);
+    presets["envmaps"] = make_scene("envmaps");
+    for (auto env : proc_environment_presets()) add_environment(presets["envmaps"], env.second.name, env.second.name);
 
     // simple scenes shared functions
-    auto add_simple_scene = [&](std::map<std::string, proc_scene*>& presets,
-                                const std::string& name,
+    auto make_simple_scene = [&](const std::string& name,
                                 const std::vector<std::string>& shapes,
                                 const std::vector<std::string>& mats,
                                 const std::string& lights,
@@ -11645,32 +11380,23 @@ std::map<std::string, proc_scene*>& proc_scene_presets() {
         auto pos = (single) ? std::vector<vec3f>{{0, 1, 0}} :
                               std::vector<vec3f>{
                                   {-2.50f, 1, 0}, {0, 1, 0}, {+2.50f, 1, 0}};
-        auto scn = add_scene(presets, name);
+        auto scn = make_scene(name);
         add_camera(scn, "cam3", "cam3");
         if (floor_mat != "") {
             add_material(scn, floor_mat, floor_mat);
-            if (scn->materials.back()->texture != "")
-                add_texture(scn, scn->materials.back()->texture, scn->materials.back()->texture);
             add_shape(scn, "floor", "floor");
-            add_instance(scn, "floor", "floor", zero3f);
+            add_instance(scn, "floor", "floor", floor_mat, zero3f);
             if(nodes) add_node(scn, name, "", "floor", "", zero3f);
-            scn->shapes.back()->material = scn->materials.back()->name;
         }
         for (auto i = 0; i < shapes.size(); i++) {
             auto name = "obj" + std::to_string(i + 1);
             add_material(scn, mats[i], mats[i]);
             add_shape(scn, name, shapes[i]);
-            scn->shapes.back()->material = mats[i];
-            add_instance(scn, name, name, pos[i]);
+            add_instance(scn, name, name, mats[i], pos[i]);
             if(nodes) add_node(scn, name, "", name, "", pos[i]);
-            if (scn->shapes.back()->type == proc_shape_type::hairball ||
-                scn->shapes.back()->type == proc_shape_type::matball) {
-                add_material(scn, "matte_gray", "matte_gray");
-                scn->shapes.back()->interior = "matte_gray";
-            }
             if (!animations.empty()) {
                 add_animation(scn, animations[i], animations[i]);
-                scn->animations.back()->nodes.push_back(name);
+                scn.animations[animations[i]].nodes.push_back(name);
             }
         }
 
@@ -11695,18 +11421,17 @@ std::map<std::string, proc_scene*>& proc_scene_presets() {
             for (auto i = 0; i < 2; i++) {
                 auto name = "light" + std::to_string(i + 1);
                 add_material(scn, name, "light");
-                scn->materials.back()->emission = emission;
+                scn.materials[name].emission = emission;
                 add_shape(scn, name, shp);
-                scn->shapes.back()->material = name;
-                scn->shapes.back()->size = {scale, scale, scale};
-                add_instance(scn, name, name, pos[i]);
+                scn.shapes[name].size = {scale, scale, scale};
+                add_instance(scn, name, name, name, pos[i]);
                 if(nodes) add_node(scn, name, "", name, "", pos[i]);
                 if (lights == "arealights" || lights == "arealights1")
-                    scn->instances.back()->frame =
+                    scn.instances[name].frame =
                         lookat_frame(pos[i], {0, 1, 0}, {0, 0, 1}, true);
-                    if(nodes) scn->nodes.back()->frame =
+                    if(nodes) scn.nodes[name].frame =
                         lookat_frame(pos[i], {0, 1, 0}, {0, 0, 1}, true);
-                    if(nodes) scn->nodes.back()->translation = zero3f;
+                    if(nodes) scn.nodes[name].translation = zero3f;
             }
         }
         if (lights == "envlights") {
@@ -11718,153 +11443,152 @@ std::map<std::string, proc_scene*>& proc_scene_presets() {
     };
 
     // basic shapes
-    last = add_simple_scene(presets, "basic_pl",
+    presets["basic_pl"] = make_simple_scene("basic_pl",
         {"sphere_flipcap", "sphere_cube", "cube_rounded"},
         {"plastic_red", "plastic_green", "plastic_blue"}, "pointlights");
-    last = add_simple_scene(presets, "basic_al",
+    presets["basic_al"] = make_simple_scene("basic_al",
         {"sphere_flipcap", "sphere_cube", "cube_rounded"},
         {"plastic_red", "plastic_green", "plastic_blue"}, "arealights");
-    last = add_simple_scene(presets, "basic_el",
+    presets["basic_el"] = make_simple_scene("basic_el",
         {"sphere_flipcap", "sphere_cube", "cube_rounded"},
         {"plastic_red", "plastic_green", "plastic_blue"}, "envlights");
 
     // simple shapes
-    last = add_simple_scene(presets, "simple_al",
+    presets["simple_al"] = make_simple_scene("simple_al",
         {"sphere_flipcap", "sphere_cube", "cube_rounded"},
         {"plastic_colored", "plastic_colored", "plastic_colored"},
         "arealights");
-    last = add_simple_scene(presets, "simple_pl",
+    presets["simple_pl"] = make_simple_scene("simple_pl",
         {"sphere_flipcap", "sphere_cube", "cube_rounded"},
         {"plastic_colored", "plastic_colored", "plastic_colored"},
         "pointlights");
-    last = add_simple_scene(presets, "simple_el",
+    presets["simple_el"] = make_simple_scene("simple_el",
         {"sphere_flipcap", "sphere_cube", "cube_rounded"},
         {"plastic_colored", "plastic_colored", "plastic_colored"}, "envlights");
 
     // simple shapes 1
-    last = add_simple_scene(presets, "spheres_al",
+    presets["spheres_al"] = make_simple_scene("spheres_al",
         {"sphere_flipcap", "sphere_cube", "sphere"},
         {"plastic_colored", "plastic_colored", "plastic_colored"},
         "arealights");
 
     // simple shapes 2
-    last =
-        add_simple_scene(presets, "cubes_al", {"quad", "cube", "cube_rounded"},
+    presets["cubes_al"] = make_simple_scene("cubes_al", {"quad", "cube", "cube_rounded"},
             {"plastic_colored", "plastic_colored", "plastic_colored"},
             "arealights");
 
     // simple shapes 3
-    last = add_simple_scene(presets, "cylinders_al",
+    presets["cylinders_al"] = make_simple_scene("cylinders_al",
         {"disk", "cylinder", "cylinder_rounded"},
         {"plastic_colored", "plastic_colored", "plastic_colored"},
         "arealights");
 
     // simple shapes 3
-    last = add_simple_scene(presets, "disks_al",
+    presets["disks_al"] = make_simple_scene("disks_al",
         {"disk", "disk_quad", "disk_bulged"},
         {"plastic_colored", "plastic_colored", "plastic_colored"},
         "arealights");
 
     // transparent shapes
-    last = add_simple_scene(presets, "transparent_al", {"quad", "quad", "quad"},
+    presets["transparent_al"] = make_simple_scene("transparent_al", {"quad", "quad", "quad"},
         {"transparent_red", "transparent_green", "transparent_blue"},
         "arealights");
 
     // lines shapes
-    last = add_simple_scene(presets, "lines_al",
+    presets["lines_al"] = make_simple_scene("lines_al",
         {"hairball1", "hairball2", "hairball3"},
         {"matte_gray", "matte_gray", "matte_gray"}, "arealights");
 
     // subdiv shapes
-    last = add_simple_scene(presets, "subdiv_al",
+    presets["subdiv_al"] = make_simple_scene("subdiv_al",
         {"cubes", "suzannes", "suzannes"},
         {"plastic_red", "plastic_green", "plastic_blue"}, "arealights");
 
     // plastics shapes
-    last = add_simple_scene(presets, "plastics_al",
+    presets["plastics_al"] = make_simple_scene("plastics_al",
         {"matball", "matball", "matball"},
         {"plastic_red", "plastic_green", "plastic_blue"}, "arealights");
-    last = add_simple_scene(presets, "plastics_el",
+    presets["plastics_el"] = make_simple_scene("plastics_el",
         {"matball", "matball", "matball"},
         {"plastic_red", "plastic_green", "plastic_blue"}, "envlights");
 
     // metals shapes
-    last = add_simple_scene(presets, "metals_al",
+    presets["metals_al"] = make_simple_scene("metals_al",
         {"matball", "matball", "matball"},
         {"gold_rough", "gold_sharp", "silver_mirror"}, "arealights");
-    last = add_simple_scene(presets, "metals_el",
+    presets["metals_el"] = make_simple_scene("metals_el",
         {"matball", "matball", "matball"},
         {"gold_rough", "gold_sharp", "silver_mirror"}, "envlights");
 
     // glass shapes
-    last =
-        add_simple_scene(presets, "glass_al", {"matball", "matball", "matball"},
+    presets["glass_al"] = make_simple_scene("glass_al", {"matball", "matball", "matball"},
             {"glass_mirror", "glass_colored", "glass_rough"}, "arealights");
-    last =
-        add_simple_scene(presets, "glass_el", {"matball", "matball", "matball"},
+    presets["glass_el"] = make_simple_scene("glass_el", {"matball", "matball", "matball"},
             {"glass_mirror", "glass_colored", "glass_rough"}, "envlights");
 
     // car paints shapes
-    last = add_simple_scene(presets, "paints_al",
+    presets["paints_al"] = make_simple_scene("paints_al",
         {"matball", "matball", "matball"},
         {"carpaint_black", "carpaint_blue", "metal_blue"}, "arealights");
-    last = add_simple_scene(presets, "paints_el",
+    presets["paints_el"] = make_simple_scene("paints_el",
         {"matball", "matball", "matball"},
         {"carpaint_black", "carpaint_blue", "metal_blue"}, "envlights");
 
     // matball
-    // last = add_simple_scene(presets, "mattball_al", {"matball"},
+    // presets["mattball_al"] = make_simple_scene("mattball_al", {"matball"},
     // {"carpaint_black"}, "arealights", ""); last = add_simple_scene(presets,
     // "mattball_el", {"matball"}, {"carpaint_black"}, "envlights", "");
-    last = add_simple_scene(presets, "matball_el", {"sphere"},
+    presets["matball_el"] = make_simple_scene("matball_el", {"sphere"},
         {"transparent_none"}, "envlights", "");
-    last = add_simple_scene(presets, "matball_al", {"sphere"},
+    presets["matball_al"] = make_simple_scene("matball_al", {"sphere"},
         {"transparent_none"}, "arealights", "");
 
     // tesselation shapes
-    last = add_simple_scene(presets, "tesselation_pl",
+    presets["tesselation_pl"] = make_simple_scene("tesselation_pl",
         {"geodesic_spherel", "geodesic_spheref", "geodesic_sphere"},
         {"matte_gray", "matte_gray", "matte_gray"}, "pointlights");
 
     // textureuv shapes
-    last = add_simple_scene(presets, "textureuv_pl",
+    presets["textureuv_pl"] = make_simple_scene("textureuv_pl",
         {"sphere_flipcap", "sphere_flipcap", "sphere_flipcap"},
         {"matte_green", "matte_colored", "matte_uv"}, "pointlights");
 
     // normalmap shapes
-    last = add_simple_scene(presets, "normalmap_pl",
+    presets["normalmap_pl"] = make_simple_scene("normalmap_pl",
         {"sphere_flipcap", "sphere_flipcap", "sphere_flipcap"},
         {"plastic_blue", "plastic_blue_bumped", "plastic_colored_bumped"},
         "pointlights");
 
     // animated shapes
-    last = add_simple_scene(presets, "animated_pl",
+    presets["animated_pl"] = make_simple_scene("animated_pl",
         {"sphere_flipcap", "sphere_cube", "cube_rounded"},
         {"plastic_colored", "plastic_colored", "plastic_colored"},
         "pointlights", "matte_floor", true, {"bounce", "scale", "rotation"});
 
     // instances shared functions
-    auto add_random_scene = [&](std::map<std::string, proc_scene*>& presets,
-                                const std::string& name, const vec2i& num,
+    auto make_random_scene = [&](const std::string& name, const vec2i& num,
                                 const bbox2f& bbox, const std::string& lights,
                                 uint64_t seed = 13) {
         auto rscale = 0.9f * 0.25f *
                       min((bbox.max.x - bbox.min.x) / num.x,
                           (bbox.max.x - bbox.min.x) / num.y);
 
-        auto scn = add_scene(presets, name);
+        auto scn = make_scene(name);
         add_camera(scn, "cam3", "cam3");
         add_material(scn, "matte_floor", "matte_floor");
         add_shape(scn, "floor", "floor");
-        scn->shapes.back()->material = scn->materials.back()->name;
-        add_instance(scn, "floor", "floor", zero3f);
+        add_instance(scn, "floor", "floor", "matte_floor", zero3f);
+        std::vector<std::string> shapes;
+        std::map<std::string, std::string> shapes_mats;
         for (auto mat : {"plastic_red", "plastic_green", "plastic_blue"})
             add_material(scn, mat, mat);
         for (auto shp : {"sphere"s, "sphere_flipcap"s, "cube"s}) {
             for (auto mat : {"plastic_red"s, "plastic_green"s, "plastic_blue"s}) {
-                add_shape(scn, shp+"_"+mat, shp);
-                scn->shapes.back()->material = mat;
-                scn->shapes.back()->size *= 2 * rscale;
+                auto name = shp+"_"+mat;
+                add_shape(scn, name, shp);
+                scn.shapes[name].size *= 2 * rscale;
+                shapes.push_back(name);
+                shapes_mats[name] = mat;
             }
         }
 
@@ -11880,8 +11604,9 @@ std::map<std::string, proc_scene*>& proc_scene_presets() {
                     bbox.min.y + (bbox.max.y - bbox.min.y) *
                                      (j + 0.45f + 0.1f * rpos.y) / num.y,
                 };
+                auto shp = shapes[next_rand1i(rng, (int)shapes.size())];
                 add_instance(scn, "instance" + std::to_string(count++),
-                        scn->shapes[next_rand1i(rng, (int)scn->shapes.size())]->name, pos);
+                        shp, shapes_mats.at(shp), pos);
             }
         }
 
@@ -11890,10 +11615,9 @@ std::map<std::string, proc_scene*>& proc_scene_presets() {
             for (auto i = 0; i < 2; i++) {
                 auto name = "light" + std::to_string(i + 1);
                 add_material(scn, name, "light");
-                scn->materials.back()->emission = 80;
+                scn.materials[name].emission = 80;
                 add_shape(scn, name, "point");
-                scn->shapes.back()->material = name;
-                add_instance(scn, name, name, pos[i]);
+                add_instance(scn, name, name, name, pos[i]);
             }
         }
 
@@ -11901,10 +11625,10 @@ std::map<std::string, proc_scene*>& proc_scene_presets() {
     };
 
     // instances
-    last = add_random_scene(
-        presets, "instances_pl", {10, 10}, {{-3, -3}, {3, 3}}, "pointlights");
-    last = add_random_scene(
-        presets, "instancel_pl", {100, 100}, {{-3, -3}, {3, 3}}, "pointlights");
+    presets["instances_pl"] = make_random_scene(
+        "instances_pl", {10, 10}, {{-3, -3}, {3, 3}}, "pointlights");
+    presets["instancel_pl"] = make_random_scene(
+        "instancel_pl", {100, 100}, {{-3, -3}, {3, 3}}, "pointlights");
 
 #if 0
         else if (otype == "normdisp") {
@@ -11919,19 +11643,16 @@ std::map<std::string, proc_scene*>& proc_scene_presets() {
 #endif
 
     // add missing textures
-    for (auto preset : presets) {
-        auto scn = preset.second;
+    for (auto& preset : presets) {
+        auto& scn = preset.second;
         auto used = std::unordered_set<std::string>();
-        for (auto mat : scn->materials) used.insert(mat->texture);
-        for (auto mat : scn->materials) used.insert(mat->normal);
-        for (auto env : scn->environments) used.insert(env->texture);
+        for (auto mat : scn.materials) used.insert(mat.second.texture);
+        for (auto mat : scn.materials) used.insert(mat.second.normal);
+        for (auto env : scn.environments) used.insert(env.second.texture);
         used.erase("");
-        for (auto txt : scn->textures) used.erase(txt->name);
+        for (auto txt : scn.textures) used.erase(txt.second.name);
         for (auto txt : used) add_texture(scn, txt, txt);
     }
-
-    // remove duplicates
-    for (auto preset : presets) remove_duplicates(preset.second);
 
     return presets;
 }
@@ -12002,7 +11723,6 @@ void serialize(proc_shape& val, json& js, bool reading) {
     serialize_obj(js, reading);
     serialize_attr(val.name, js, "name", reading);
     serialize_attr(val.type, js, "type", reading);
-    serialize_attr(val.material, js, "material", reading, false, def.material);
     serialize_attr(
         val.tesselation, js, "tesselation", reading, false, def.tesselation);
     serialize_attr(
@@ -12037,6 +11757,7 @@ void serialize(proc_instance& val, json& js, bool reading) {
     serialize_attr(val.name, js, "name", reading);
     serialize_attr(val.frame, js, "frame", reading, false, def.frame);
     serialize_attr(val.shape, js, "shape", reading, false, def.shape);
+    serialize_attr(val.material, js, "material", reading, false, def.material);
 }
 
 // Parses a test_node object
@@ -12091,7 +11812,7 @@ void serialize(proc_scene& val, json& js, bool reading) {
 }
 
 // Load test scene
-proc_scene* load_proc_scene(const std::string& filename) {
+proc_scene load_proc_scene(const std::string& filename) {
     // load json
     std::ifstream stream(filename.c_str());
     if (!stream) throw std::runtime_error("could not load json " + filename);
@@ -12104,7 +11825,7 @@ proc_scene* load_proc_scene(const std::string& filename) {
     }
 
     // clear data
-    auto scn = new proc_scene();
+    auto scn = proc_scene();
     try {
         serialize(scn, js, true);
     } catch (const std::exception& e) {
@@ -12117,9 +11838,9 @@ proc_scene* load_proc_scene(const std::string& filename) {
 }
 
 // Save test scene
-void save_proc_scene(const std::string& filename, const proc_scene* scn) {
+void save_proc_scene(const std::string& filename, const proc_scene& scn) {
     auto js = json();
-    serialize((proc_scene&)*scn, js, false);
+    serialize((proc_scene&)scn, js, false);
     save_text(filename, js.dump(2));
 }
 
@@ -12871,14 +12592,6 @@ void update_gl_shape(const shape* shp, gl_shape& gshp) {
     if (!shp) {
         clear_gl_shape(gshp);
     } else {
-        auto ngroups = max(1, (int)shp->groups.size());
-        if (shp->group_ids.empty()) ngroups = 1;
-        gshp.points.resize(ngroups);
-        gshp.lines.resize(ngroups);
-        gshp.triangles.resize(ngroups);
-        gshp.quads.resize(ngroups);
-        gshp.beziers.resize(ngroups);
-        gshp.edges.resize(ngroups);
         if (!shp->quads_pos.empty()) {
             auto pos = std::vector<vec3f>();
             auto norm = std::vector<vec3f>();
@@ -12892,58 +12605,25 @@ void update_gl_shape(const shape* shp, gl_shape& gshp) {
             update_vert_buffer(gshp.texcoord, texcoord);
             update_vert_buffer(gshp.color, std::vector<vec4f>{});
             update_vert_buffer(gshp.tangsp, std::vector<vec4f>{});
-            auto split_quads = _split_elems(ngroups, quads, shp->group_ids);
-            for (auto gid = 0; gid < ngroups; gid++) {
-                update_elem_buffer(gshp.quads.at(gid),
-                    convert_quads_to_triangles(split_quads.at(gid)));
-                update_elem_buffer(
-                    gshp.edges.at(gid), get_edges({}, {}, split_quads.at(gid)));
-            }
+            update_elem_buffer(gshp.quads,
+                convert_quads_to_triangles(quads));
+            update_elem_buffer(
+                gshp.edges, get_edges({}, {}, quads));
         } else {
             update_vert_buffer(gshp.pos, shp->pos);
             update_vert_buffer(gshp.norm, shp->norm);
             update_vert_buffer(gshp.texcoord, shp->texcoord);
             update_vert_buffer(gshp.color, shp->color);
             update_vert_buffer(gshp.tangsp, shp->tangsp);
-            if (ngroups == 1) {
-                update_elem_buffer(gshp.points.at(0), shp->points);
-                update_elem_buffer(gshp.lines.at(0), shp->lines);
-                update_elem_buffer(gshp.triangles.at(0), shp->triangles);
-                update_elem_buffer(
-                    gshp.quads.at(0), convert_quads_to_triangles(shp->quads));
-                update_elem_buffer(
-                    gshp.beziers.at(0), convert_bezier_to_lines(shp->beziers));
-                update_elem_buffer(gshp.edges.at(0),
-                    get_edges({}, shp->triangles, shp->quads));
-            } else {
-                auto split_points =
-                    _split_elems(ngroups, shp->points, shp->group_ids);
-                for (auto gid = 0; gid < ngroups; gid++)
-                    update_elem_buffer(
-                        gshp.points.at(gid), split_points.at(gid));
-                auto split_lines =
-                    _split_elems(ngroups, shp->lines, shp->group_ids);
-                for (auto gid = 0; gid < ngroups; gid++)
-                    update_elem_buffer(gshp.lines.at(gid), split_lines.at(gid));
-                auto split_triangles =
-                    _split_elems(ngroups, shp->triangles, shp->group_ids);
-                for (auto gid = 0; gid < ngroups; gid++)
-                    update_elem_buffer(
-                        gshp.triangles.at(gid), split_triangles.at(gid));
-                auto split_quads =
-                    _split_elems(ngroups, shp->quads, shp->group_ids);
-                for (auto gid = 0; gid < ngroups; gid++)
-                    update_elem_buffer(gshp.quads.at(gid), split_quads.at(gid));
-                auto split_beziers =
-                    _split_elems(ngroups, shp->beziers, shp->group_ids);
-                for (auto gid = 0; gid < ngroups; gid++)
-                    update_elem_buffer(
-                        gshp.beziers.at(gid), split_beziers.at(gid));
-                for (auto gid = 0; gid < ngroups; gid++)
-                    update_elem_buffer(gshp.edges.at(gid),
-                        get_edges(
-                            {}, split_triangles.at(gid), split_quads.at(gid)));
-            }
+            update_elem_buffer(gshp.points, shp->points);
+            update_elem_buffer(gshp.lines, shp->lines);
+            update_elem_buffer(gshp.triangles, shp->triangles);
+            update_elem_buffer(
+                gshp.quads, convert_quads_to_triangles(shp->quads));
+            update_elem_buffer(
+                gshp.beziers, convert_bezier_to_lines(shp->beziers));
+            update_elem_buffer(gshp.edges,
+                get_edges({}, shp->triangles, shp->quads));
         }
     }
 }
@@ -12955,23 +12635,24 @@ void clear_gl_shape(gl_shape& gshp) {
     clear_vertex_buffer(gshp.texcoord);
     clear_vertex_buffer(gshp.color);
     clear_vertex_buffer(gshp.tangsp);
-    for (auto& elems : gshp.points) clear_element_buffer(elems);
-    for (auto& elems : gshp.lines) clear_element_buffer(elems);
-    for (auto& elems : gshp.triangles) clear_element_buffer(elems);
-    for (auto& elems : gshp.quads) clear_element_buffer(elems);
-    for (auto& elems : gshp.beziers) clear_element_buffer(elems);
-    for (auto& elems : gshp.edges) clear_element_buffer(elems);
+    clear_element_buffer(gshp.points);
+    clear_element_buffer(gshp.lines);
+    clear_element_buffer(gshp.triangles);
+    clear_element_buffer(gshp.quads);
+    clear_element_buffer(gshp.beziers);
+    clear_element_buffer(gshp.edges);
 }
 
 // Add gl lights
-void add_gl_lights(gl_lights& lights, const frame3f& frame, const shape* shp) {
-    if (!has_emission(shp)) return;
+void add_gl_lights(gl_lights& lights, const instance* ist) {
+    if (!ist->mat || ist->mat->ke == zero3f) return;
     if (lights.pos.size() >= 16) return;
+    auto shp = ist->shp;
     if (!shp->points.empty()) {
         for (auto p : shp->points) {
             if (lights.pos.size() >= 16) break;
-            lights.pos.push_back(transform_point(frame, shp->pos[p]));
-            lights.ke.push_back(shp->groups.at(0).mat->ke);
+            lights.pos.push_back(transform_point(ist->frame, shp->pos[p]));
+            lights.ke.push_back(ist->mat->ke);
             lights.type.push_back(gl_light_type::point);
         }
     } else {
@@ -12985,9 +12666,9 @@ void add_gl_lights(gl_lights& lights, const frame3f& frame, const shape* shp) {
         for (auto t : shp->quads)
             area += quad_area(
                 shp->pos[t.x], shp->pos[t.y], shp->pos[t.z], shp->pos[t.w]);
-        auto ke = shp->groups.at(0).mat->ke * area;
+        auto ke = ist->mat->ke * area;
         if (lights.pos.size() < 16) {
-            lights.pos.push_back(transform_point(frame, pos));
+            lights.pos.push_back(transform_point(ist->frame, pos));
             lights.ke.push_back(ke);
             lights.type.push_back(gl_light_type::point);
         }
@@ -12997,7 +12678,7 @@ void add_gl_lights(gl_lights& lights, const frame3f& frame, const shape* shp) {
 // Initialize gl lights
 gl_lights make_gl_lights(const scene* scn) {
     auto lights = gl_lights();
-    for (auto ist : scn->instances) add_gl_lights(lights, ist->frame, ist->shp);
+    for (auto ist : scn->instances) add_gl_lights(lights, ist);
     return lights;
 }
 
@@ -13910,13 +13591,13 @@ void set_stdsurface_elems(
 }
 
 // Draw a shape
-void draw_stdsurface_shape(const shape* shp, const mat4f& xform,
+void draw_stdsurface_shape(const shape* shp, const material* mat, const mat4f& xform,
     bool highlighted, gl_stdsurface_program& prog,
     std::unordered_map<shape*, gl_shape>& shapes,
     std::unordered_map<texture*, gl_texture>& textures,
     const gl_stdsurface_params& params) {
-    static auto default_material = new material();
-    default_material->kd = {0.2f, 0.2f, 0.2f};
+    static auto default_material = material();
+    default_material.kd = {0.2f, 0.2f, 0.2f};
 
     begin_stdsurface_shape(prog, xform);
 
@@ -13927,61 +13608,49 @@ void draw_stdsurface_shape(const shape* shp, const mat4f& xform,
         return ginfo;
     };
 
-    auto ngroups = max(1, (int)shp->groups.size());
-    for (auto gid = 0; gid < ngroups; gid++) {
-        auto mat = (!shp->groups.empty() && shp->groups.at(gid).mat) ?
-                       shp->groups.at(gid).mat :
-                       default_material;
-        auto faceted = shp->norm.empty() ||
-                       (!shp->groups.empty() && shp->groups.at(gid).faceted);
+    auto& gshp = shapes.at((shape*)shp);
+    if(!mat) mat = &default_material;
+    auto faceted = shp->norm.empty();
 
-        set_stdsurface_material(prog, mat->type, mat->ke, mat->kd, mat->ks,
-            mat->rs, mat->op, txt(mat->ke_txt), txt(mat->kd_txt),
-            txt(mat->ks_txt), txt(mat->rs_txt), txt(mat->norm_txt),
-            txt(mat->occ_txt), false, mat->double_sided || params.double_sided,
-            params.cutout);
+    set_stdsurface_material(prog, mat->type, mat->ke, mat->kd, mat->ks,
+        mat->rs, mat->op, txt(mat->ke_txt), txt(mat->kd_txt),
+        txt(mat->ks_txt), txt(mat->rs_txt), txt(mat->norm_txt),
+        txt(mat->occ_txt), false, mat->double_sided || params.double_sided,
+        params.cutout);
 
-        auto& gshp = shapes.at((shape*)shp);
-        set_stdsurface_vert(
-            prog, gshp.pos, gshp.norm, gshp.texcoord, gshp.color, gshp.tangsp);
+    set_stdsurface_vert(
+        prog, gshp.pos, gshp.norm, gshp.texcoord, gshp.color, gshp.tangsp);
 
-        if (!gshp.points.empty() &&
-            !is_element_buffer_empty(gshp.points.at(gid))) {
-            set_stdsurface_elems(prog, gl_elem_type::point, faceted);
-            draw_elems(gshp.points.at(gid));
-        }
-        if (!gshp.lines.empty() &&
-            !is_element_buffer_empty(gshp.lines.at(gid))) {
-            set_stdsurface_elems(prog, gl_elem_type::line, faceted);
-            draw_elems(gshp.lines.at(gid));
-        }
-        if (!gshp.triangles.empty() &&
-            !is_element_buffer_empty(gshp.triangles.at(gid))) {
-            set_stdsurface_elems(prog, gl_elem_type::triangle, faceted);
-            draw_elems(gshp.triangles.at(gid));
-        }
-        if (!gshp.quads.empty() &&
-            !is_element_buffer_empty(gshp.quads.at(gid))) {
-            set_stdsurface_elems(prog, gl_elem_type::triangle, faceted);
-            draw_elems(gshp.quads.at(gid));
-        }
-        if (!gshp.beziers.empty() &&
-            !is_element_buffer_empty(gshp.beziers.at(gid))) {
-            set_stdsurface_elems(prog, gl_elem_type::line, faceted);
-            draw_elems(gshp.beziers.at(gid));
-        }
+    if (!is_element_buffer_empty(gshp.points)) {
+        set_stdsurface_elems(prog, gl_elem_type::point, faceted);
+        draw_elems(gshp.points);
+    }
+    if (!is_element_buffer_empty(gshp.lines)) {
+        set_stdsurface_elems(prog, gl_elem_type::line, faceted);
+        draw_elems(gshp.lines);
+    }
+    if (!is_element_buffer_empty(gshp.triangles)) {
+        set_stdsurface_elems(prog, gl_elem_type::triangle, faceted);
+        draw_elems(gshp.triangles);
+    }
+    if (!is_element_buffer_empty(gshp.quads)) {
+        set_stdsurface_elems(prog, gl_elem_type::triangle, faceted);
+        draw_elems(gshp.quads);
+    }
+    if (!is_element_buffer_empty(gshp.beziers)) {
+        set_stdsurface_elems(prog, gl_elem_type::line, faceted);
+        draw_elems(gshp.beziers);
+    }
 
-        if ((params.edges && !params.wireframe) || highlighted) {
-            gl_enable_culling(false);
-            set_stdsurface_constmaterial(prog,
-                (highlighted) ? params.highlight_color : params.edge_color,
-                (highlighted) ? 1 : mat->op);
-            set_stdsurface_normaloffset(prog, params.edge_offset);
-            if (!gshp.edges.empty() &&
-                !is_element_buffer_empty(gshp.edges.at(gid)))
-                draw_elems(gshp.edges.at(gid));
-            gl_enable_culling(params.cull_backface);
-        }
+    if ((params.edges && !params.wireframe) || highlighted) {
+        gl_enable_culling(false);
+        set_stdsurface_constmaterial(prog,
+            (highlighted) ? params.highlight_color : params.edge_color,
+            (highlighted) ? 1 : mat->op);
+        set_stdsurface_normaloffset(prog, params.edge_offset);
+        if (is_element_buffer_empty(gshp.edges))
+            draw_elems(gshp.edges);
+        gl_enable_culling(params.cull_backface);
     }
 
     end_stdsurface_shape(prog);
@@ -14012,8 +13681,8 @@ void draw_stdsurface_scene(const scene* scn, const camera* cam,
     }
 
     for (auto ist : scn->instances) {
-        draw_stdsurface_shape(ist->shp, frame_to_mat(ist->frame),
-            ist == highlighted || ist->shp == highlighted, 
+        draw_stdsurface_shape(ist->shp, ist->mat, frame_to_mat(ist->frame),
+            ist == highlighted || ist->shp == highlighted|| ist->mat == highlighted, 
             prog, shapes, textures, params);
     }
 
@@ -14899,15 +14568,6 @@ void draw_scene_tree_widgets(gl_window* win, const std::string& lbl,
     draw_scene_tree_widgets(win, lbl, val.txt, sel, highlights);
 }
 
-void draw_scene_tree_widgets(gl_window* win, const std::string& lbl,
-    std::vector<shape_group_props>& val, scene_selection& sel,
-    const std::unordered_map<std::string, std::string>& highlights) {
-    for (auto gid = 0; gid < val.size(); gid++) {
-        draw_scene_tree_widgets(win, "mat" + std::to_string(gid + 1),
-            val[gid].mat, sel, highlights);
-    }
-}
-
 template <typename T>
 void draw_scene_tree_widgets(gl_window* win, const std::string& lbl,
     std::vector<T*>& val, scene_selection& sel,
@@ -14959,37 +14619,6 @@ bool draw_scene_elem_widgets(gl_window* win, texture_info& val,
         draw_continue_widget(win);
         edited += draw_value_widget(win, var.name + " mipmap", val.mipmap,
             var.min, var.max, var.type == visit_var_type::color);
-    }
-    if (color != zero4f) draw_style_widget_pop(win);
-    return edited;
-}
-
-bool draw_scene_elem_widgets(gl_window* win,
-    std::vector<shape_group_props>& val, const visit_var& var, scene* scn,
-    const std::unordered_map<std::string, std::string>& highlights,
-    const std::string& elem_name) {
-    auto color = get_highlight_color(highlights, elem_name + "___" + var.name);
-    if (color != zero4f) draw_style_widget_push(win, color);
-    auto edited = 0;
-    for (auto gid = 0; gid < val.size(); gid++) {
-        auto& grp = val[gid];
-        auto name = var.name + "[" + std::to_string(gid) + "].";
-        visit(grp, [win, name, scn, &highlights, &elem_name, &edited](
-                       auto& val, const auto& var) {
-            auto var_ = var;
-            var_.name = name + var.name;
-            edited += draw_scene_elem_widgets(
-                win, val, var_, scn, highlights, elem_name);
-        });
-    }
-    if (draw_button_widget(win, "add " + var.name)) {
-        val.push_back({});
-        edited += 1;
-    }
-    draw_continue_widget(win);
-    if (draw_button_widget(win, "del " + var.name)) {
-        if (!val.empty()) val.pop_back();
-        edited += 1;
     }
     if (color != zero4f) draw_style_widget_pop(win);
     return edited;
@@ -15075,20 +14704,20 @@ bool draw_scene_elem_widgets(gl_window* win, T*& val, const visit_var& var,
 }
 
 template <typename T, typename TT>
-bool draw_scene_elem_widgets(gl_window* win, T* elem, std::vector<TT*>& telems,
+    bool draw_scene_elem_widgets(gl_window* win, T* elem, std::map<std::string, TT>& telems,
     scene* scn,
     const std::unordered_map<std::string, std::string>& highlights) {
     if (!elem) return false;
     auto telem = (TT*)nullptr;
-    for (auto te : telems)
-        if (te->name == elem->name) telem = te;
+    for (auto& te : telems)
+        if (te.second.name == elem->name) telem = &te.second;
     auto edited = false;
     if (telem) {
         visit(*telem, [win, scn, &edited](auto& val, const auto& var) {
             auto edited_ = draw_scene_elem_widgets(win, val, var, scn, {}, "");
             edited = edited || edited_;
         });
-        if (edited) update_proc_elem(scn, elem, telem);
+        if (edited) update_proc_elem(scn, elem, *telem);
     }
     visit(*elem,
         [win, scn, elem, &edited, &highlights](auto& val, const auto& var) {
@@ -15102,18 +14731,18 @@ bool draw_scene_elem_widgets(gl_window* win, T* elem, std::vector<TT*>& telems,
 template <typename T, typename T1>
 inline bool draw_add_elem_widgets(gl_window* win, scene* scn,
     const std::string& lbl, std::vector<T*>& elems,
-    std::vector<T1*>& proc_elems, scene_selection& sel,
+    std::map<std::string, T1>& proc_elems, scene_selection& sel,
     std::vector<ygl::scene_selection>& update_list) {
     static auto count = 0;
     if (draw_button_widget(win, "add " + lbl)) {
         auto name = lbl + "_" + std::to_string(count++);
         elems.push_back(new T());
         elems.back()->name = name;
-        proc_elems.push_back(new T1());
-        proc_elems.back()->name = name;
+        proc_elems[name] = T1();
+        proc_elems[name].name = name;
         sel = elems.back();
         update_list.push_back(sel);
-        update_proc_elem(scn, elems.back(), proc_elems.back());
+        update_proc_elem(scn, elems.back(), proc_elems[name]);
         return true;
     }
     draw_continue_widget(win);

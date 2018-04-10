@@ -73,9 +73,9 @@ void save_test_scene(const std::string& sname, const std::string& basedir) {
         if (sname == "cornell_box") {
             scn = ygl::make_cornell_box_scene();
         } else {
-            for (auto preset : ygl::proc_scene_presets()) {
+            for (auto& preset : ygl::proc_scene_presets()) {
                 if (preset.first != sname) continue;
-                proc_scn = preset.second;
+                proc_scn = &preset.second;
                 scn = ygl::make_proc_elems(preset.second);
                 break;
             }
@@ -91,9 +91,7 @@ void save_test_scene(const std::string& sname, const std::string& basedir) {
         } else if (sname == "shapes") {
             for (auto shp : scn->shapes) {
                 auto sscn = new ygl::scene();
-                auto sshp = new ygl::shape();
-                sshp->name = shp->name;
-                sshp->groups.clear();
+                auto sshp = new ygl::shape(*shp);
                 sscn->shapes.push_back(sshp);
                 auto shp_name = ygl::partition(sshp->name, "_")[0];
                 auto opts = ygl::save_options();
@@ -104,7 +102,7 @@ void save_test_scene(const std::string& sname, const std::string& basedir) {
             save_scene(
                 scn, "scene", dirname, !ygl::startswith(sname, "instance"));
             if (proc_scn)
-                ygl::save_proc_scene(dirname + "scene.json", proc_scn);
+                ygl::save_proc_scene(dirname + "scene.json", *proc_scn);
         }
     } catch (std::exception& e) { ygl::log_fatal("error {}", e.what()); }
 }

@@ -565,10 +565,6 @@ scene* load_pbrt(const std::string& filename) {
             }
         } else if (cmd == "Shape") {
             auto shp = new shape();
-            if (stack.back().mat) {
-                shp->groups.push_back({});
-                shp->groups.back().mat = stack.back().mat;
-            }
             auto type = jcmd.at("type").get<std::string>();
             if (type == "plymesh") {
                 auto filename = jcmd.at("filename").get<std::string>();
@@ -614,6 +610,7 @@ scene* load_pbrt(const std::string& filename) {
                 auto ist = new instance();
                 ist->name = shp->name;
                 ist->frame = frame;
+                ist->mat = stack.back().mat;
             if (cur_object != "") {
                 objects[cur_object].push_back(ist);
             } else {
@@ -683,7 +680,7 @@ scene* load_pbrt(const std::string& filename) {
                 if (jcmd.count("L")) mat->ke *= get_vec3f(jcmd.at("L"));
                 if (jcmd.count("scale")) mat->ke *= get_vec3f(jcmd.at("scale"));
                 mat->ke *= (distant_dist * distant_dist) / (size * size);
-                shp->groups.push_back({"", mat, false});
+                ist->mat = mat;
                 scn->materials.push_back(mat);
                 log_error("distant light not properly supported", type);
             } else {
@@ -712,14 +709,14 @@ scene* load_pbrt(const std::string& filename) {
         for (auto cam : scn->cameras) {
             auto nde = new node();
             nde->name = cam->name;
-            nde->local = cam->frame;
+            nde->frame = cam->frame;
             nde->cam = cam;
             scn->nodes.insert(scn->nodes.begin(), nde);
         }
         for (auto env : scn->environments) {
             auto nde = new node();
             nde->name = env->name;
-            nde->local = env->frame;
+            nde->frame = env->frame;
             nde->env = env;
             scn->nodes.push_back(nde);
         }
