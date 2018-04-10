@@ -5246,8 +5246,6 @@ struct bvh_instance {
     frame3f frame = identity_frame3f;
     /// Frame inverse.
     frame3f frame_inv = identity_frame3f;
-    /// Instance id to be returned.
-    int iid = 0;
     /// Shape id to be returned.
     int sid = 0;
 };
@@ -5323,7 +5321,7 @@ void refit_bvh(bvh_tree* bvh, const std::vector<frame3f>& frames,
 /// id `iid`, the shape id `sid`, the shape element index `eid` and the
 /// shape barycentric coordinates `euv`.
 bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray, bool find_any,
-    float& ray_t, int& iid, int& sid, int& eid, vec2f& euv);
+    float& ray_t, int& iid, int& eid, vec2f& euv);
 
 /// Find a shape element that overlaps a point within a given distance
 /// `max_dist`, returning either the closest or any overlap depending on
@@ -5331,7 +5329,7 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray, bool find_any,
 /// shape id `sid`, the shape element index `eid` and the shape barycentric
 /// coordinates `euv`.
 bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
-    bool find_any, float& dist, int& iid, int& sid, int& eid, vec2f& euv);
+    bool find_any, float& dist, int& iid, int& eid, vec2f& euv);
 
 /// Intersection point.
 struct intersection_point {
@@ -5339,8 +5337,6 @@ struct intersection_point {
     float dist = 0;
     /// Instance index.
     int iid = -1;
-    /// Shape index.
-    int sid = -1;
     /// Shape element index.
     int eid = -1;
     /// Shape barycentric coordinates.
@@ -5512,8 +5508,6 @@ struct shape {
     std::string path = "";
     /// Groups.
     std::vector<shape_group_props> groups;
-    /// Frame.
-    frame3f frame = identity_frame3f;
 
     /// Points.
     std::vector<int> points;
@@ -5556,6 +5550,16 @@ struct shape {
     bool catmullclark = false;
 };
 
+/// Shape instance.
+struct instance {
+    /// Name.
+    std::string name;
+    /// Frame.
+    frame3f frame = identity_frame3f;
+    /// Shape.
+    shape* shp = nullptr;
+};
+
 /// Distance at which we set environment map positions.
 const auto environment_distance = 1000000.0f;
 
@@ -5589,8 +5593,8 @@ struct node {
     std::vector<float> weights = {};
     /// Camera the node points to. @refl_semantic(reference)
     camera* cam = nullptr;
-    /// Shape the node points to. @refl_semantic(reference)
-    shape* shp = nullptr;
+    /// Shape instance the node points to. @refl_semantic(reference)
+    instance* ist = nullptr;
     /// Environment the node points to. @refl_semantic(reference)
     environment* env = nullptr;
 
@@ -5650,14 +5654,16 @@ struct animation_group {
 /// the hierarchy. Animation is also optional, with keyframe data that
 /// updates node transformations only if defined.
 struct scene {
+    /// Cameras.
+    std::vector<camera*> cameras = {};
     /// Shapes.
     std::vector<shape*> shapes = {};
+    /// Instances.
+    std::vector<instance*> instances = {};
     /// Materials.
     std::vector<material*> materials = {};
     /// Textures.
     std::vector<texture*> textures = {};
-    /// Cameras.
-    std::vector<camera*> cameras = {};
     /// Environments.
     std::vector<environment*> environments = {};
 
@@ -5669,6 +5675,7 @@ struct scene {
     // Cleanup
     ~scene() {
         for (auto v : shapes) delete v;
+        for (auto v : instances) delete v;
         for (auto v : materials) delete v;
         for (auto v : textures) delete v;
         for (auto v : cameras) delete v;
@@ -5711,14 +5718,12 @@ bool get_faceted(const shape* shp, int eid);
 /// Returns is the shape is simple, i.e. it has only one material and one group.
 bool is_shape_simple(const shape* shp, bool split_facevarying);
 /// Shape element normal.
-vec3f eval_elem_norm(const shape* shp, int eid, bool transformed = false);
+vec3f eval_elem_norm(const shape* shp, int eid);
 
 /// Shape position interpolated using barycentric coordinates.
-vec3f eval_pos(
-    const shape* shp, int eid, const vec2f& euv, bool transformed = false);
+vec3f eval_pos(const shape* shp, int eid, const vec2f& euv);
 /// Shape normal interpolated using barycentric coordinates.
-vec3f eval_norm(
-    const shape* shp, int eid, const vec2f& euv, bool transformed = false);
+vec3f eval_norm(const shape* shp, int eid, const vec2f& euv);
 /// Shape texcoord interpolated using barycentric coordinates.
 vec2f eval_texcoord(const shape* shp, int eid, const vec2f& euv);
 /// Shape color interpolated using barycentric coordinates.
@@ -5829,9 +5834,6 @@ bbox3f compute_bounds(const shape* shp);
 /// Compute a scene bounding box.
 bbox3f compute_bounds(const scene* scn, bool skip_emitting = false);
 
-/// Flatten scene instances into separate shapes.
-void flatten_instances(scene* scn);
-
 /// Build a shape BVH.
 bvh_tree* make_bvh(
     const shape* shp, float def_radius = 0.001f, bool equalsize = true);
@@ -5895,6 +5897,8 @@ struct save_options {
     bool obj_flip_texcoord = true;
     /// Whether to flip tr in OBJ.
     bool obj_flip_tr = true;
+    /// Whether to preserve instances in OBJ.
+    bool obj_save_instances = false;
     /// Whether to use separate buffers in gltf.
     bool gltf_separate_buffers = false;
 };
@@ -6178,8 +6182,6 @@ inline void visit(shape& val, Visitor&& visitor) {
                           "Path used for saving in glTF.", 0, 0, ""});
     visitor(val.groups,
         visit_var{"groups", visit_var_type::value, "Groups.", 0, 0, ""});
-    visitor(val.frame,
-        visit_var{"frame", visit_var_type::value, "Frame.", 0, 0, ""});
     visitor(val.points,
         visit_var{"points", visit_var_type::value, "Points.", 0, 0, ""});
     visitor(val.lines,
@@ -6222,6 +6224,17 @@ inline void visit(shape& val, Visitor&& visitor) {
 
 /// Visit struct elements.
 template <typename Visitor>
+inline void visit(instance& val, Visitor&& visitor) {
+    visitor(
+        val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
+    visitor(val.frame,
+        visit_var{"frame", visit_var_type::value, "Frame.", 0, 0, ""});
+    visitor(
+        val.shp, visit_var{"shp", visit_var_type::value, "Shape.", 0, 0, ""});
+}
+
+/// Visit struct elements.
+template <typename Visitor>
 inline void visit(environment& val, Visitor&& visitor) {
     visitor(
         val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
@@ -6252,8 +6265,8 @@ inline void visit(node& val, Visitor&& visitor) {
                              "Weights for morphing.", 0, 0, ""});
     visitor(val.cam, visit_var{"cam", visit_var_type::reference,
                          "Camera the node points to.", 0, 0, ""});
-    visitor(val.shp, visit_var{"shp", visit_var_type::reference,
-                         "Shape the node points to.", 0, 0, ""});
+    visitor(val.ist, visit_var{"ist", visit_var_type::reference,
+                         "Shape instance the node points to.", 0, 0, ""});
     visitor(val.env, visit_var{"env", visit_var_type::reference,
                          "Environment the node points to.", 0, 0, ""});
     visitor(val.frame_, visit_var{"frame_", visit_var_type::value,
@@ -6302,14 +6315,16 @@ inline void visit(animation_group& val, Visitor&& visitor) {
 /// Visit struct elements.
 template <typename Visitor>
 inline void visit(scene& val, Visitor&& visitor) {
+    visitor(val.cameras,
+        visit_var{"cameras", visit_var_type::value, "Cameras.", 0, 0, ""});
     visitor(val.shapes,
         visit_var{"shapes", visit_var_type::value, "Shapes.", 0, 0, ""});
+    visitor(val.instances,
+        visit_var{"instances", visit_var_type::value, "Instances.", 0, 0, ""});
     visitor(val.materials,
         visit_var{"materials", visit_var_type::value, "Materials.", 0, 0, ""});
     visitor(val.textures,
         visit_var{"textures", visit_var_type::value, "Textures.", 0, 0, ""});
-    visitor(val.cameras,
-        visit_var{"cameras", visit_var_type::value, "Cameras.", 0, 0, ""});
     visitor(val.environments, visit_var{"environments", visit_var_type::value,
                                   "Environments.", 0, 0, ""});
     visitor(val.nodes,
@@ -6541,8 +6556,6 @@ struct proc_shape {
     std::string material = "";
     /// Interior material name.
     std::string interior = "";
-    /// Local frame. @refl_uilimits(-10,10)
-    frame3f frame = identity_frame3f;
     /// Shape tesselation steps. @refl_uilimits(1,10000)
     vec3i tesselation = {1, 1, 1};
     /// Shape subdivision level. @refl_uilimits(0,10)
@@ -6581,6 +6594,16 @@ struct proc_environment {
     float rotation = 0;
 };
 
+/// Procedural instance parameters.
+struct proc_instance {
+    /// Name.
+    std::string name = "";
+    /// Shape.
+    std::string shape = "";
+    /// Frame. @refl_uilimits(-10,10)
+    frame3f frame = identity_frame3f;
+};
+
 /// Procedural node parameters.
 struct proc_node {
     /// Name.
@@ -6589,8 +6612,8 @@ struct proc_node {
     std::string parent = "";
     /// Camera.
     std::string camera = "";
-    /// Shape.
-    std::string shape = "";
+    /// Shape instance.
+    std::string instance = "";
     /// Environment.
     std::string environment = "";
     /// Local frame. @refl_uilimits(-10,10)
@@ -6637,6 +6660,8 @@ struct proc_scene {
     std::vector<proc_material*> materials;
     /// Shapes.
     std::vector<proc_shape*> shapes;
+    /// Instances.
+    std::vector<proc_instance*> instances;
     /// Environmennts.
     std::vector<proc_environment*> environments;
     /// Nodes.
@@ -6647,6 +6672,7 @@ struct proc_scene {
     // Cleanup.
     ~proc_scene() {
         for (auto v : shapes) delete v;
+        for (auto v : instances) delete v;
         for (auto v : materials) delete v;
         for (auto v : textures) delete v;
         for (auto v : cameras) delete v;
@@ -6669,6 +6695,8 @@ void update_proc_elem(scene* scn, texture* txt, const proc_texture* ttxt);
 void update_proc_elem(scene* scn, material* mat, const proc_material* tmat);
 /// Updates a procedural shape, adding it to the scene if missing.
 void update_proc_elem(scene* scn, shape* shp, const proc_shape* tshp);
+/// Updates a procedural shape, adding it to the scene if missing.
+void update_proc_elem(scene* scn, instance* shp, const proc_instance* tist);
 /// Updates a procedural instance.
 void update_proc_elem(
     scene* scn, environment* env, const proc_environment* tenv);
@@ -6862,8 +6890,6 @@ inline void visit(proc_shape& val, Visitor&& visitor) {
                               "Material name.", 0, 0, ""});
     visitor(val.interior, visit_var{"interior", visit_var_type::value,
                               "Interior material name.", 0, 0, ""});
-    visitor(val.frame,
-        visit_var{"frame", visit_var_type::value, "Local frame.", -10, 10, ""});
     visitor(val.tesselation, visit_var{"tesselation", visit_var_type::value,
                                  "Shape tesselation steps.", 1, 10000, ""});
     visitor(val.subdivision, visit_var{"subdivision", visit_var_type::value,
@@ -6906,6 +6932,17 @@ inline void visit(proc_environment& val, Visitor&& visitor) {
 
 /// Visit struct elements.
 template <typename Visitor>
+inline void visit(proc_instance& val, Visitor&& visitor) {
+    visitor(
+        val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
+    visitor(val.shape,
+        visit_var{"shape", visit_var_type::value, "Shape.", 0, 0, ""});
+    visitor(val.frame,
+        visit_var{"frame", visit_var_type::value, "Frame.", -10, 10, ""});
+}
+
+/// Visit struct elements.
+template <typename Visitor>
 inline void visit(proc_node& val, Visitor&& visitor) {
     visitor(
         val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
@@ -6913,8 +6950,8 @@ inline void visit(proc_node& val, Visitor&& visitor) {
         visit_var{"parent", visit_var_type::value, "Parent node.", 0, 0, ""});
     visitor(val.camera,
         visit_var{"camera", visit_var_type::value, "Camera.", 0, 0, ""});
-    visitor(val.shape,
-        visit_var{"shape", visit_var_type::value, "Shape.", 0, 0, ""});
+    visitor(val.instance, visit_var{"instance", visit_var_type::value,
+                              "Shape instance.", 0, 0, ""});
     visitor(val.environment, visit_var{"environment", visit_var_type::value,
                                  "Environment.", 0, 0, ""});
     visitor(val.frame,
@@ -6963,6 +7000,8 @@ inline void visit(proc_scene& val, Visitor&& visitor) {
         visit_var{"materials", visit_var_type::value, "Materials.", 0, 0, ""});
     visitor(val.shapes,
         visit_var{"shapes", visit_var_type::value, "Shapes.", 0, 0, ""});
+    visitor(val.instances,
+        visit_var{"instances", visit_var_type::value, "Instances.", 0, 0, ""});
     visitor(val.environments, visit_var{"environments", visit_var_type::value,
                                   "Environmennts.", 0, 0, ""});
     visitor(val.nodes,
@@ -7130,10 +7169,8 @@ struct trace_pixel {
 /// Trace light as either shapes or environments. The members are not part of
 /// the the public API.
 struct trace_light {
-    /// Shape pointer.
-    const shape* shp = nullptr;
-    /// Shape frame.
-    frame3f frame = identity_frame3f;
+    /// Instance pointer.
+    const instance* ist = nullptr;
     /// Environment pointer.
     const environment* env = nullptr;
 };
@@ -7347,8 +7384,6 @@ struct obj_object {
     std::vector<obj_vertex> verts;
     /// Element faces.
     std::vector<obj_element> elems;
-    /// Frame [extension]. Vertices are not transformed though.
-    frame3f frame = identity_frame3f;
     /// Properties not explicitly handled [extension].
     std::unordered_map<std::string, std::vector<std::string>> props;
 };

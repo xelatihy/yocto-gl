@@ -58,8 +58,8 @@ void save_scene(ygl::scene* scn, const std::string& sname,
 
     auto opts = ygl::save_options();
     opts.save_textures = true;
+    opts.obj_save_instances = !flatten_obj;
     if (!facevarying) save_scene(dirname + sname + ".gltf", scn, opts);
-    if (flatten_obj) ygl::flatten_instances(scn);
     ygl::save_scene(dirname + sname + ".obj", scn, opts);
 }
 

@@ -247,8 +247,7 @@ int main(int argc, char* argv[]) {
         ygl::parse_opt(parser, "--highlights", "", "Highlight filename", ""s);
     app->imfilename = ygl::parse_opt(
         parser, "--output-image", "-o", "Image filename", "out.png"s);
-    auto filenames = ygl::parse_args(
-        parser, "scenes", "Scene filenames", std::vector<std::string>());
+    app->filename = ygl::parse_arg(parser, "scene", "Scene filename", ""s);
     if (ygl::should_exit(parser)) {
         printf("%s\n", get_usage(parser).c_str());
         exit(1);
@@ -268,18 +267,12 @@ int main(int argc, char* argv[]) {
     }
 
     // scene loading
-    app->scn = new ygl::scene();
-    for (auto filename : filenames) {
-        try {
-            ygl::log_info("loading scene {}", filename);
-            auto scn = load_scene(filename, app->loadopts);
-            ygl::merge_into(app->scn, scn);
-            delete scn;
-        } catch (std::exception e) {
-            ygl::log_fatal("cannot load scene {}", filename);
-        }
+    try {
+        ygl::log_info("loading scene {}", app->filename);
+        app->scn = load_scene(app->filename, app->loadopts);
+    } catch (std::exception e) {
+        ygl::log_fatal("cannot load scene {}", app->filename);
     }
-    app->filename = filenames.front();
 
     // tesselate input shapes
     ygl::tesselate_shapes(app->scn, true,
