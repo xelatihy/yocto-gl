@@ -85,9 +85,9 @@ if(YOCTO_OPENGL)
 endif(YOCTO_OPENGL)
 
 if(YOCTO_TOOLS)
-    add_executable(ytungsten tools/converters/ytungsten.cpp)
+    # add_executable(ytungsten tools/converters/ytungsten.cpp)
     add_executable(ypbrt tools/converters/ypbrt.cpp)
 
-    target_link_libraries(ytungsten yocto_gl)
+    # target_link_libraries(ytungsten yocto_gl)
     target_link_libraries(ypbrt yocto_gl)
 endif(YOCTO_TOOLS)

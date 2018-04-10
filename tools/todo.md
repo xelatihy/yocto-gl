@@ -13,6 +13,25 @@ Please consider this to be just development notes and not any real planning.
 
 ## Simplifications
 
+- bvh
+    - bvh very slow for instances
+    - do not sort elements
+    - simpler instance api
+- bugs
+    - eval_pos(env) should apply frame
+    - implement eval_pos(ist)
+    - trace should use these
+- remove shape groups
+    - back to single material, maybe in instance
+    - nodes have multiple instances
+    - material in instance
+    - remove shape varying
+- add tesselated shape
+    - multiple materials
+    - face varying here
+    - gets a pointer to shape array
+    - node can point to this 
+- put back instances
 - proc scene
     - remove pointers
     - use dictionaries
@@ -23,6 +42,8 @@ Please consider this to be just development notes and not any real planning.
 
 - simplification
     - back to instances
+        - introduce instances
+        - modify node hierarchy to remove node stuff
     - trace functions returns vec4f 
     - double-sided brdf
     - remove none point?

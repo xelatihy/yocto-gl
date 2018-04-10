@@ -65,8 +65,6 @@ int main(int argc, char** argv) {
     auto scale = ygl::parse_opt(parser, "--scale", "", "scale the model", 1.0f);
     auto flipyz =
         ygl::parse_flag(parser, "--flipyz", "", "flip y and z coords");
-    auto add_hierarchy =
-        ygl::parse_flag(parser, "--hierarchy", "", "add node hierarchy");
     auto add_normals = ygl::parse_flag(parser, "--normals", "", "add normals");
     auto tesselation =
         ygl::parse_opt(parser, "--tesselation", "-T", "tesselation level", 0);
@@ -131,7 +129,6 @@ int main(int argc, char** argv) {
     }
 
     // add missing elements
-    if (add_hierarchy) ygl::add_hierarchy(scn);
     if (add_normals) ygl::add_normals(scn);
 
     // process geometry

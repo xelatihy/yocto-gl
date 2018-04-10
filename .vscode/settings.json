@@ -51,6 +51,7 @@
         "limits": "cpp",
         "tuple": "cpp",
         "type_traits": "cpp",
-        "locale": "cpp"
+        "locale": "cpp",
+        "cstddef": "cpp"
     }
 } 

@@ -366,7 +366,7 @@ scene* load_pbrt(const std::string& filename) {
     };
 
     auto use_hierarchy = false;
-    std::map<std::string, std::vector<shape*>> objects;
+    std::map<std::string, std::vector<instance*>> objects;
     for (auto& jcmd : js) {
         auto cmd = jcmd.at("cmd").get<std::string>();
         if (cmd == "ObjectInstance") {
@@ -565,7 +565,6 @@ scene* load_pbrt(const std::string& filename) {
             }
         } else if (cmd == "Shape") {
             auto shp = new shape();
-            shp->frame = stack.back().frame;
             if (stack.back().mat) {
                 shp->groups.push_back({});
                 shp->groups.back().mat = stack.back().mat;
@@ -601,22 +600,24 @@ scene* load_pbrt(const std::string& filename) {
             } else {
                 log_error("{} shape not supported", type);
             }
-            auto scl = vec3f{length(shp->frame.x), length(shp->frame.y),
-                length(shp->frame.z)};
+            auto frame = stack.back().frame;
+            auto scl = vec3f{length(frame.x), length(frame.y),
+                length(frame.z)};
             for (auto& p : shp->pos) p *= scl;
-            shp->frame = {normalize(shp->frame.x), normalize(shp->frame.y),
-                normalize(shp->frame.z), shp->frame.o};
+            frame = {normalize(frame.x), normalize(frame.y),
+                normalize(frame.z), frame.o};
             if (stack.back().reverse) {
                 for (auto& t : shp->triangles) std::swap(t.y, t.z);
                 for (auto& q : shp->quads) std::swap(q.y, q.w);
             }
             scn->shapes.push_back(shp);
-            if (cur_object != "") objects[cur_object].push_back(shp);
-            if (use_hierarchy && cur_object == "") {
-                auto nde = new node();
-                nde->name = shp->name;
-                nde->local = shp->frame;
-                nde->shp = shp;
+                auto ist = new instance();
+                ist->name = shp->name;
+                ist->frame = frame;
+            if (cur_object != "") {
+                objects[cur_object].push_back(ist);
+            } else {
+                scn->instances.push_back(ist);
             }
         } else if (cmd == "ObjectInstance") {
             static auto instances = std::map<std::string, int>();
@@ -624,12 +625,11 @@ scene* load_pbrt(const std::string& filename) {
             auto& object = objects.at(name);
             for (auto shp : object) {
                 instances[shp->name] += 1;
-                auto nde = new node();
-                nde->name =
-                    shp->name + "_ist" + std::to_string(instances[shp->name]);
-                nde->local = stack.back().frame;
-                nde->shp = shp;
-                scn->nodes.push_back(nde);
+                auto ist = new instance();
+                ist->name = shp->name + "_ist" + std::to_string(instances[shp->name]);
+                ist->frame = stack.back().frame * shp->frame;
+                ist->shp = shp->shp;
+                scn->instances.push_back(ist);
             }
         } else if (cmd == "AreaLightSource") {
             auto type = jcmd.at("type").get<std::string>();
@@ -667,13 +667,16 @@ scene* load_pbrt(const std::string& filename) {
                 if (jcmd.count("from")) from = get_vec3f(jcmd.at("from"));
                 if (jcmd.count("to")) to = get_vec3f(jcmd.at("to"));
                 auto dir = normalize(from - to);
-                shp->frame =
-                    stack.back().frame *
-                    lookat_frame(dir * distant_dist, zero3f, {0, 1, 0}, true);
                 auto size = distant_dist * sin(5 * pif / 180);
                 make_quad(shp->quads, shp->pos, shp->norm, shp->texcoord,
                     {1, 1}, {size, size}, {1, 1});
                 scn->shapes.push_back(shp);
+                auto ist = new instance();
+                ist->name = shp->name;
+                ist->shp = shp;
+                ist->frame =
+                    stack.back().frame *
+                    lookat_frame(dir * distant_dist, zero3f, {0, 1, 0}, true);
                 auto mat = new material();
                 mat->name = shp->name;
                 mat->ke = {1, 1, 1};
@@ -729,7 +732,9 @@ void flipyz_scene(scene* scn) {
     for(auto shp : scn->shapes) {
         for(auto& p : shp->pos) std::swap(p.y,p.z);
         for(auto& n : shp->norm) std::swap(n.y,n.z);
-        shp->frame = shp->frame * frame3f{{1,0,0},{0,0,1},{0,1,0},{0,0,0}};
+    }
+    for(auto ist : scn->instances) {
+        ist->frame = ist->frame * frame3f{{1,0,0},{0,0,1},{0,1,0},{0,0,0}};
     }
 }
 
