@@ -47,7 +47,7 @@ struct app_state {
     bool navigation_fps = false;
     ygl::scene_selection selection = {};
     std::vector<ygl::scene_selection> update_list;
-    ygl::proc_scene* pscn = nullptr;
+    ygl::proc_scene pscn;
     float time = 0;
     ygl::vec2f time_range = ygl::zero2f;
     bool animate = false;
@@ -59,7 +59,6 @@ struct app_state {
     ~app_state() {
         if (scn) delete scn;
         if (view) delete view;
-        if (pscn) delete pscn;
     }
 };
 
@@ -108,11 +107,10 @@ inline void draw(ygl::gl_window* win, app_state* app) {
             ygl::draw_groupid_widget_push(win, app);
             ygl::draw_value_widget(win, "scene", app->filename);
             if (ygl::draw_button_widget(win, "new")) {
-                delete app->pscn;
                 delete app->scn;
                 ygl::clear_gl_textures(app->textures);
                 ygl::clear_gl_shapes(app->shapes);
-                app->pscn = new ygl::proc_scene();
+                app->pscn = ygl::proc_scene();
                 app->scn = new ygl::scene();
                 ygl::update_proc_elems(app->scn, app->pscn);
                 app->textures = ygl::make_gl_textures(app->scn);
@@ -120,10 +118,9 @@ inline void draw(ygl::gl_window* win, app_state* app) {
             }
             ygl::draw_continue_widget(win);
             if (ygl::draw_button_widget(win, "load")) {
-                delete app->pscn;
                 delete app->scn;
                 app->scn = ygl::load_scene(app->filename, {});
-                app->pscn = new ygl::proc_scene();
+                app->pscn = ygl::proc_scene();
                 ygl::clear_gl_textures(app->textures);
                 ygl::clear_gl_shapes(app->shapes);
                 app->textures = ygl::make_gl_textures(app->scn);
@@ -158,11 +155,11 @@ inline void draw(ygl::gl_window* win, app_state* app) {
         }
         if (ygl::draw_header_widget(win, "scene")) {
             ygl::draw_scene_tree_widgets(win, "", app->scn, app->selection,
-                app->update_list, app->pscn, app->inspector_highlights);
+                app->update_list, &app->pscn, app->inspector_highlights);
         }
         if (ygl::draw_header_widget(win, "inspect")) {
             ygl::draw_scene_elem_widgets(win, "", app->scn, app->selection,
-                app->update_list, app->pscn, app->inspector_highlights);
+                app->update_list, &app->pscn, app->inspector_highlights);
         }
     }
     ygl::end_widgets(win);
