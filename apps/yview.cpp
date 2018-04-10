@@ -49,6 +49,7 @@ struct app_state {
     std::vector<ygl::scene_selection> update_list;
     ygl::proc_scene pscn;
     float time = 0;
+    std::string anim_group = ""; 
     ygl::vec2f time_range = ygl::zero2f;
     bool animate = false;
     bool quiet = false;
@@ -78,8 +79,8 @@ inline void draw(ygl::gl_window* win, app_state* app) {
                 sel.get<ygl::shape>(), app->shapes[sel.get<ygl::shape>()]);
         }
         if (sel.is<ygl::node>() || sel.is<ygl::animation>() ||
-            sel.is<ygl::animation_group>() || app->time != last_time) {
-            ygl::update_transforms(app->scn, app->time);
+            app->time != last_time) {
+            ygl::update_transforms(app->scn, app->time, app->anim_group);
             last_time = app->time;
         }
         if (sel.is<ygl::shape>() || sel.is<ygl::material>() ||
@@ -143,6 +144,7 @@ inline void draw(ygl::gl_window* win, app_state* app) {
             if (app->time_range != ygl::zero2f) {
                 ygl::draw_value_widget(win, "time", app->time,
                     app->time_range.x, app->time_range.y);
+                ygl::draw_value_widget(win, "anim group", app->anim_group);
                 ygl::draw_value_widget(win, "animate", app->animate);
             }
             if (ygl::draw_button_widget(win, "print stats"))

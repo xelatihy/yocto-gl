@@ -13,9 +13,13 @@ Please consider this to be just development notes and not any real planning.
 
 ## Simplifications
 
+- remove animation group
+    - put group name for playback
+- remove unused functions
+    - facet
 - bvh
-    - do not sort elements
     - simpler instance api
+    - bvh trimming
 - bugs
     - eval_pos(env) should apply frame
     - implement eval_pos(ist)
@@ -28,6 +32,11 @@ Please consider this to be just development notes and not any real planning.
 
 ## Trace
 
+- shape trimming in intersection
+- review light sampling with simpler interface
+    - sample according to area
+    - sample according to angle one light
+    - sample according to angle all lights
 - simplification
     - trace functions returns vec4f 
     - double-sided brdf

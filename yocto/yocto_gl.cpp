@@ -1198,104 +1198,6 @@ void merge_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     append(texcoord, texcoord1);
 }
 
-// Duplicate vertex data for each line index, giving a faceted look.
-template <typename T>
-void facet_lines(
-    std::vector<vec2i>& lines, std::vector<T>& vert, bool update_lines) {
-    if (vert.empty()) return;
-    auto tvert = vert;
-    tvert.resize(lines.size() * 2);
-    for (auto i = 0; i < lines.size(); i++) {
-        tvert[2 * i + 0] = vert[lines[i].x];
-        tvert[2 * i + 1] = vert[lines[i].y];
-    }
-    std::swap(vert, tvert);
-
-    if (update_lines) {
-        auto tlines = std::vector<vec2i>(lines.size());
-        for (auto i = 0; i < lines.size(); i++)
-            tlines[i] = {i * 2 + 0, i * 2 + 1};
-        std::swap(lines, tlines);
-    }
-}
-
-// Duplicate vertex data for each line index, giving a faceted look.
-template <typename T>
-void facet_triangles(std::vector<vec3i>& triangles, std::vector<T>& vert,
-    bool update_triangles) {
-    if (vert.empty()) return;
-    auto tvert = vert;
-    tvert.resize(triangles.size() * 3);
-    for (auto i = 0; i < triangles.size(); i++) {
-        tvert[3 * i + 0] = vert[triangles[i].x];
-        tvert[3 * i + 1] = vert[triangles[i].y];
-        tvert[3 * i + 2] = vert[triangles[i].z];
-    }
-    std::swap(vert, tvert);
-
-    if (update_triangles) {
-        auto ttriangles = std::vector<vec3i>(triangles.size());
-        for (auto i = 0; i < triangles.size(); i++)
-            ttriangles[i] = {i * 3 + 0, i * 3 + 1, i * 3 + 2};
-        std::swap(triangles, ttriangles);
-    }
-}
-// Duplicate vertex data for each quad index, giving a faceted look.
-template <typename T>
-void facet_quads(
-    std::vector<vec4i>& quads, std::vector<T>& vert, bool update_quads) {
-    if (vert.empty()) return;
-    auto tvert = vert;
-    tvert.resize(quads.size() * 4);
-    for (auto i = 0; i < quads.size(); i++) {
-        tvert[4 * i + 0] = vert[quads[i].x];
-        tvert[4 * i + 1] = vert[quads[i].y];
-        tvert[4 * i + 2] = vert[quads[i].z];
-        tvert[4 * i + 3] = vert[quads[i].z];
-    }
-    std::swap(vert, tvert);
-
-    if (update_quads) {
-        auto tquads = std::vector<vec4i>(quads.size());
-        for (auto i = 0; i < quads.size(); i++)
-            tquads[i] = {i * 4 + 0, i * 4 + 1, i * 4 + 2, i * 4 + 3};
-        std::swap(quads, tquads);
-    }
-}
-
-// Unshare line data.
-void facet_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<vec4f>& color, std::vector<float>& radius) {
-    facet_lines(lines, norm, false);
-    facet_lines(lines, texcoord, false);
-    facet_lines(lines, color, false);
-    facet_lines(lines, radius, false);
-    facet_lines(lines, pos);
-}
-
-// Unshare triangle data.
-void facet_triangles(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<vec4f>& color, std::vector<float>& radius) {
-    facet_triangles(triangles, norm, false);
-    facet_triangles(triangles, texcoord, false);
-    facet_triangles(triangles, color, false);
-    facet_triangles(triangles, radius, false);
-    facet_triangles(triangles, pos);
-}
-
-// Unshare quad data.
-void facet_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<vec4f>& color, std::vector<float>& radius) {
-    facet_quads(quads, norm, false);
-    facet_quads(quads, texcoord, false);
-    facet_quads(quads, color, false);
-    facet_quads(quads, radius, false);
-    facet_quads(quads, pos);
-}
-
 // Samples a set of points over a triangle mesh uniformly. The rng function
 // takes the point index and returns vec3f numbers uniform directibuted in
 // [0,1]^3. unorm and texcoord are optional.
@@ -3636,31 +3538,26 @@ bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// number of primitives to avoid splitting on
-const int bvh_minprims = 4;
-
 // Initializes the BVH node node that contains the primitives sorted_prims
 // from start to end, by either splitting it into two other nodes,
 // or initializing it as a leaf. When splitting, the heuristic heuristic is
 // used and nodes added sequentially in the preallocated nodes array and
 // the number of nodes nnodes is updated.
-void make_bvh_node(std::vector<bvh_node>& nodes, int nodeid,
+int make_bvh_node(std::vector<bvh_node>& nodes,
     std::vector<int>& sorted_prims, int start, int end,
     const std::vector<bbox3f>& bboxes, bvh_node_type type, bool equal_size) {
-    // compute node bounds
-    auto& node = nodes.at(nodeid);
+    // add a new node
+    auto nodeid = (int)nodes.size();
+    nodes.push_back({});
+    auto& node = nodes.back();
+    
+    // compute bounds
     node.bbox = invalid_bbox3f;
     for (auto i = start; i < end; i++) node.bbox += bboxes[sorted_prims[i]];
 
-    // initialize as a leaf
-    node.type = type;
-    node.start = start;
-    node.count = end - start;
-
-    // try to split into two children
-    if (end - start > bvh_minprims) {
-        // choose the split axis and position
-        // init to default values
+    // split into two children
+    if (end - start > bvh_max_prims) {
+        // initialize split axis and position
         auto axis = 0;
         auto mid = (start + end) / 2;
 
@@ -3670,7 +3567,7 @@ void make_bvh_node(std::vector<bvh_node>& nodes, int nodeid,
             centroid_bbox += bbox_center(bboxes[sorted_prims[i]]);
         auto centroid_size = bbox_size(centroid_bbox);
 
-        // check if it is not possible to split
+        // choose the split axis and position
         if (centroid_size != zero3f) {
             // split along largest
             auto largest_axis = max_element(centroid_size);
@@ -3700,28 +3597,35 @@ void make_bvh_node(std::vector<bvh_node>& nodes, int nodeid,
                     });
             }
 
-            // check whether we were able to split
-            if (mid > start && mid < end) {
-                // makes an internal node
-                node.type = bvh_node_type::internal;
-                // perform the splits by preallocating children and recurring
-                node.axis = axis;
-                node.start = (int)nodes.size();
-                node.count = 2;
-                nodes.emplace_back();
-                nodes.emplace_back();
-                // build child nodes
-                make_bvh_node(nodes, node.start, sorted_prims, start, mid,
-                    bboxes, type, equal_size);
-                make_bvh_node(nodes, node.start + 1, sorted_prims, mid, end,
-                    bboxes, type, equal_size);
+            // if we were able to split, just break the primitives in half
+            if (mid == start || mid == end) {
+                axis = 0;
+                mid = (start + end) / 2;
             }
         }
+
+        // make an internal node
+        node.type = bvh_node_type::internal;
+        node.axis = axis;
+        node.count = 2;
+        node.prims[0] = make_bvh_node(nodes, sorted_prims, start, mid,
+            bboxes, type, equal_size);
+        node.prims[1] = make_bvh_node(nodes, sorted_prims, mid, end,
+            bboxes, type, equal_size);
+    } else {
+        // Make a leaf node
+        node.type = type;
+        node.count = end - start;
+        for(auto i = 0; i < node.count; i ++)
+            node.prims[i] = sorted_prims[start + i];
     }
+    
+    // return nodeid
+    return nodeid;
 }
 
 // Build a BVH node list and sorted primitive array
-std::tuple<std::vector<bvh_node>, std::vector<int>> make_bvh_nodes(
+std::vector<bvh_node> make_bvh_nodes(
     const std::vector<bbox3f>& bboxes, bvh_node_type type, bool equal_size) {
     // create an array of primitives to sort
     auto sorted_prim = std::vector<int>(bboxes.size());
@@ -3732,15 +3636,14 @@ std::tuple<std::vector<bvh_node>, std::vector<int>> make_bvh_nodes(
     nodes.reserve(sorted_prim.size() * 2);
 
     // start recursive splitting
-    nodes.emplace_back();
-    make_bvh_node(nodes, 0, sorted_prim, 0, (int)sorted_prim.size(), bboxes,
+    make_bvh_node(nodes, sorted_prim, 0, (int)sorted_prim.size(), bboxes,
         type, equal_size);
 
     // shrink back
     nodes.shrink_to_fit();
 
     // done
-    return {nodes, sorted_prim};
+    return nodes;
 }
 
 // Build a BVH from the data already set
@@ -3784,22 +3687,8 @@ void make_bvh_nodes(bvh_tree* bvh, bool equal_size) {
     }
 
     // make node bvh
-    std::tie(bvh->nodes, bvh->sorted_prim) =
+    bvh->nodes =
         make_bvh_nodes(bboxes, bvh->type, equal_size);
-
-    // sort primitives
-    auto sort_prims = [bvh](auto& prims) {
-        if (prims.empty()) return;
-        auto sprims = prims;
-        for (auto i = 0; i < bvh->sorted_prim.size(); i++) {
-            prims[i] = sprims[bvh->sorted_prim[i]];
-        }
-    };
-    sort_prims(bvh->points);
-    sort_prims(bvh->lines);
-    sort_prims(bvh->triangles);
-    sort_prims(bvh->quads);
-    sort_prims(bvh->instances);
 }
 
 // Build a BVH from a set of primitives.
@@ -3852,47 +3741,47 @@ void refit_bvh(bvh_tree* bvh, int nodeid) {
     node.bbox = invalid_bbox3f;
     switch (node.type) {
         case bvh_node_type::internal: {
-            for (auto i = node.start; i < node.start + node.count; i++) {
-                refit_bvh(bvh, i);
-                node.bbox += bvh->nodes[i].bbox;
+            for (auto i = 0; i < 2; i++) {
+                refit_bvh(bvh, node.prims[i]);
+                node.bbox += bvh->nodes[node.prims[i]].bbox;
             }
         } break;
         case bvh_node_type::point: {
-            for (auto i = node.start; i < node.start + node.count; i++) {
-                auto& p = bvh->points[i];
+            for (auto i = 0; i < node.count; i++) {
+                auto& p = bvh->points[node.prims[i]];
                 node.bbox += point_bbox(bvh->pos[p], bvh->radius[p]);
             }
         } break;
         case bvh_node_type::line: {
-            for (auto i = node.start; i < node.start + node.count; i++) {
-                auto& l = bvh->lines[i];
+            for (auto i = 0; i < node.count; i++) {
+                auto& l = bvh->lines[node.prims[i]];
                 node.bbox += line_bbox(bvh->pos[l.x], bvh->pos[l.y],
                     bvh->radius[l.x], bvh->radius[l.y]);
             }
         } break;
         case bvh_node_type::triangle: {
-            for (auto i = node.start; i < node.start + node.count; i++) {
-                auto& t = bvh->triangles[i];
+            for (auto i = 0; i < node.count; i++) {
+                auto& t = bvh->triangles[node.prims[i]];
                 node.bbox +=
                     triangle_bbox(bvh->pos[t.x], bvh->pos[t.y], bvh->pos[t.z]);
             }
         } break;
         case bvh_node_type::quad: {
-            for (auto i = node.start; i < node.start + node.count; i++) {
-                auto& q = bvh->quads[i];
+            for (auto i = 0; i < node.count; i++) {
+                auto& q = bvh->quads[node.prims[i]];
                 node.bbox += quad_bbox(
                     bvh->pos[q.x], bvh->pos[q.y], bvh->pos[q.z], bvh->pos[q.w]);
             }
         } break;
         case bvh_node_type::vertex: {
-            for (auto i = node.start; i < node.start + node.count; i++) {
-                auto idx = bvh->sorted_prim[i];
+            for (auto i = 0; i < node.count; i++) {
+                auto idx = node.prims[i];
                 node.bbox += point_bbox(bvh->pos[idx], bvh->radius[idx]);
             }
         } break;
         case bvh_node_type::instance: {
-            for (auto i = node.start; i < node.start + node.count; i++) {
-                auto& ist = bvh->instances[i];
+            for (auto i = 0; i < node.count; i++) {
+                auto& ist = bvh->instances[node.prims[node.prims[i]]];
                 auto sbvh = bvh->shape_bvhs[ist.sid];
                 node.bbox += transform_bbox(ist.frame, sbvh->nodes[0].bbox);
             }
@@ -3913,8 +3802,8 @@ void refit_bvh(bvh_tree* bvh, const std::vector<vec3f>& pos,
 void refit_bvh(bvh_tree* bvh, const std::vector<frame3f>& frames,
     const std::vector<frame3f>& frames_inv) {
     for (auto i = 0; i < frames.size(); i++) {
-        bvh->instances[i].frame = frames[bvh->sorted_prim[i]];
-        bvh->instances[i].frame_inv = frames_inv[bvh->sorted_prim[i]];
+        bvh->instances[i].frame = frames[i];
+        bvh->instances[i].frame_inv = frames_inv[i];
     }
     refit_bvh(bvh, 0);
 }
@@ -3956,79 +3845,79 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
                 // for internal nodes, attempts to proceed along the
                 // split axis from smallest to largest nodes
                 if (ray_reverse[node.axis]) {
-                    node_stack[node_cur++] = node.start;
-                    node_stack[node_cur++] = node.start + 1;
+                    node_stack[node_cur++] = node.prims[0];
+                    node_stack[node_cur++] = node.prims[1];
                 } else {
-                    node_stack[node_cur++] = node.start + 1;
-                    node_stack[node_cur++] = node.start;
+                    node_stack[node_cur++] = node.prims[1];
+                    node_stack[node_cur++] = node.prims[0];
                 }
             } break;
             case bvh_node_type::point: {
-                for (auto i = node.start; i < node.start + node.count; i++) {
-                    auto& p = bvh->points[i];
+                for (auto i = 0; i < node.count; i++) {
+                    auto& p = bvh->points[node.prims[i]];
                     if (intersect_point(
                             ray, bvh->pos[p], bvh->radius[p], ray_t)) {
                         hit = true;
                         ray.tmax = ray_t;
-                        eid = bvh->sorted_prim[i];
+                        eid = node.prims[i];
                         euv = {1, 0};
                     }
                 }
             } break;
             case bvh_node_type::line: {
-                for (auto i = node.start; i < node.start + node.count; i++) {
-                    auto& l = bvh->lines[i];
+                for (auto i = 0; i < node.count; i++) {
+                    auto& l = bvh->lines[node.prims[i]];
                     if (intersect_line(ray, bvh->pos[l.x], bvh->pos[l.y],
                             bvh->radius[l.x], bvh->radius[l.y], ray_t, euv)) {
                         hit = true;
                         ray.tmax = ray_t;
-                        eid = bvh->sorted_prim[i];
+                        eid = node.prims[i];
                     }
                 }
             } break;
             case bvh_node_type::triangle: {
-                for (auto i = node.start; i < node.start + node.count; i++) {
-                    auto& t = bvh->triangles[i];
+                for (auto i = 0; i < node.count; i++) {
+                    auto& t = bvh->triangles[node.prims[i]];
                     if (intersect_triangle(ray, bvh->pos[t.x], bvh->pos[t.y],
                             bvh->pos[t.z], ray_t, euv)) {
                         hit = true;
                         ray.tmax = ray_t;
-                        eid = bvh->sorted_prim[i];
+                        eid = node.prims[i];
                     }
                 }
             } break;
             case bvh_node_type::quad: {
-                for (auto i = node.start; i < node.start + node.count; i++) {
-                    auto& q = bvh->quads[i];
+                for (auto i = 0; i < node.count; i++) {
+                    auto& q = bvh->quads[node.prims[i]];
                     if (intersect_quad(ray, bvh->pos[q.x], bvh->pos[q.y],
                             bvh->pos[q.z], bvh->pos[q.w], ray_t, euv)) {
                         hit = true;
                         ray.tmax = ray_t;
-                        eid = bvh->sorted_prim[i];
+                        eid = node.prims[i];
                     }
                 }
             } break;
             case bvh_node_type::vertex: {
-                for (auto i = node.start; i < node.start + node.count; i++) {
-                    auto idx = bvh->sorted_prim[i];
+                for (auto i = 0; i < node.count; i++) {
+                    auto idx = node.prims[i];
                     if (intersect_point(
                             ray, bvh->pos[idx], bvh->radius[idx], ray_t)) {
                         hit = true;
                         ray.tmax = ray_t;
-                        eid = idx;
+                        eid = node.prims[i];
                         euv = {1, 0};
                     }
                 }
             } break;
             case bvh_node_type::instance: {
-                for (auto i = node.start; i < node.start + node.count; i++) {
-                    auto& ist = bvh->instances[i];
+                for (auto i = 0; i < node.count; i++) {
+                    auto& ist = bvh->instances[node.prims[i]];
                     auto sbvh = bvh->shape_bvhs[ist.sid];
                     if (intersect_bvh(sbvh, transform_ray(ist.frame_inv, ray),
                             find_any, ray_t, iid, eid, euv)) {
                         hit = true;
                         ray.tmax = ray_t;
-                        iid = bvh->sorted_prim[i];
+                        iid = node.prims[i];
                     }
                 }
             } break;
@@ -4065,79 +3954,79 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
         switch (node.type) {
             case bvh_node_type::internal: {
                 // internal node
-                node_stack[node_cur++] = node.start;
-                node_stack[node_cur++] = node.start + 1;
+                node_stack[node_cur++] = node.prims[0];
+                node_stack[node_cur++] = node.prims[1];
             } break;
             case bvh_node_type::point: {
-                for (auto i = node.start; i < node.start + node.count; i++) {
-                    auto& p = bvh->points[i];
+                for (auto i = 0; i < node.count; i++) {
+                    auto& p = bvh->points[node.prims[i]];
                     if (overlap_point(
                             pos, max_dist, bvh->pos[p], bvh->radius[p], dist)) {
                         hit = true;
                         max_dist = dist;
-                        eid = bvh->sorted_prim[i];
+                        eid = node.prims[i];
                         euv = {1, 0};
                     }
                 }
             } break;
             case bvh_node_type::line: {
-                for (auto i = node.start; i < node.start + node.count; i++) {
-                    auto& l = bvh->lines[i];
+                for (auto i = 0; i < node.count; i++) {
+                    auto& l = bvh->lines[node.prims[i]];
                     if (overlap_line(pos, max_dist, bvh->pos[l.x],
                             bvh->pos[l.y], bvh->radius[l.x], bvh->radius[l.y],
                             dist, euv)) {
                         hit = true;
                         max_dist = dist;
-                        eid = bvh->sorted_prim[i];
+                        eid = node.prims[i];
                     }
                 }
             } break;
             case bvh_node_type::triangle: {
-                for (auto i = node.start; i < node.start + node.count; i++) {
-                    auto& t = bvh->triangles[i];
+                for (auto i = 0; i < node.count; i++) {
+                    auto& t = bvh->triangles[node.prims[i]];
                     if (overlap_triangle(pos, max_dist, bvh->pos[t.x],
                             bvh->pos[t.y], bvh->pos[t.z], bvh->radius[t.x],
                             bvh->radius[t.y], bvh->radius[t.z], dist, euv)) {
                         hit = true;
                         max_dist = dist;
-                        eid = bvh->sorted_prim[i];
+                        eid = node.prims[i];
                     }
                 }
             } break;
             case bvh_node_type::quad: {
-                for (auto i = node.start; i < node.start + node.count; i++) {
-                    auto& q = bvh->quads[i];
+                for (auto i = 0; i < node.count; i++) {
+                    auto& q = bvh->quads[node.prims[i]];
                     if (overlap_quad(pos, max_dist, bvh->pos[q.x],
                             bvh->pos[q.y], bvh->pos[q.z], bvh->pos[q.w],
                             bvh->radius[q.x], bvh->radius[q.y],
                             bvh->radius[q.z], bvh->radius[q.w], dist, euv)) {
                         hit = true;
                         max_dist = dist;
-                        eid = bvh->sorted_prim[i];
+                        eid = node.prims[i];
                     }
                 }
             } break;
             case bvh_node_type::vertex: {
-                for (auto i = node.start; i < node.start + node.count; i++) {
-                    auto idx = bvh->sorted_prim[i];
+                for (auto i = 0; i < node.count; i++) {
+                    auto idx = node.prims[i];
                     if (overlap_point(pos, max_dist, bvh->pos[idx],
                             bvh->radius[idx], dist)) {
                         hit = true;
                         max_dist = dist;
-                        eid = idx;
+                        eid = node.prims[i];
                         euv = {1, 0};
                     }
                 }
             } break;
             case bvh_node_type::instance: {
-                for (auto i = node.start; i < node.start + node.count; i++) {
-                    auto& ist = bvh->instances[i];
+                for (auto i = 0; i < node.count; i++) {
+                    auto& ist = bvh->instances[node.prims[i]];
                     auto sbvh = bvh->shape_bvhs[ist.sid];
                     if (overlap_bvh(sbvh, transform_point(ist.frame_inv, pos),
                             max_dist, find_any, dist, iid, eid, euv)) {
                         hit = true;
                         max_dist = dist;
-                        iid = bvh->sorted_prim[i];
+                        iid = node.prims[i];
                     }
                 }
             } break;
@@ -4586,35 +4475,6 @@ void compute_normals(shape* shp) {
     }
 }
 
-// Facet a shape. Supports only non-facevarying shapes
-void facet_shape(shape* shp, bool recompute_normals) {
-    switch (get_shape_type(shp)) {
-        case shape_elem_type::none: break;
-        case shape_elem_type::points: break;
-        case shape_elem_type::vertices: break;
-        case shape_elem_type::triangles: {
-            facet_triangles(shp->triangles, shp->pos, shp->norm, shp->texcoord,
-                shp->color, shp->radius);
-        } break;
-        case shape_elem_type::lines: {
-            facet_lines(shp->lines, shp->pos, shp->norm, shp->texcoord,
-                shp->color, shp->radius);
-        } break;
-        case shape_elem_type::quads: {
-            std::vector<int> verts;
-            facet_quads(shp->quads, shp->pos, shp->norm, shp->texcoord,
-                shp->color, shp->radius);
-        } break;
-        case shape_elem_type::beziers: {
-            throw std::runtime_error("type not supported");
-        } break;
-        case shape_elem_type::facevarying: {
-            throw std::runtime_error("type not supported");
-        } break;
-    }
-    if (recompute_normals) compute_normals(shp);
-}
-
 // Tesselate a shape into basic primitives
 void tesselate_shape(shape* shp, bool subdivide,
     bool facevarying_to_sharedvertex, bool quads_to_triangles,
@@ -4688,7 +4548,9 @@ int add_shape_vert(shape* shp, int vert, std::unordered_map<int, int>& vmap,
 }
 
 // Update animation transforms
-void update_transforms(const animation_group* agr, float time) {
+void update_transforms(const animation* anm, float time, const std::string& anim_group) {
+    if(anim_group != "" && anim_group != anm->group) return;
+
     auto interpolate = [](keyframe_type type, const std::vector<float>& times,
                            const auto& vals, float time) {
         switch (type) {
@@ -4703,21 +4565,18 @@ void update_transforms(const animation_group* agr, float time) {
         return vals.at(0);
     };
 
-    for (auto& anm_ : agr->animations) {
-        auto anm = &anm_;
-        if (!anm->translation.empty()) {
-            auto val =
-                interpolate(anm->type, anm->times, anm->translation, time);
-            for (auto target : anm->targets) target->translation = val;
-        }
-        if (!anm->rotation.empty()) {
-            auto val = interpolate(anm->type, anm->times, anm->rotation, time);
-            for (auto target : anm->targets) target->rotation = val;
-        }
-        if (!anm->scaling.empty()) {
-            auto val = interpolate(anm->type, anm->times, anm->scaling, time);
-            for (auto target : anm->targets) target->scaling = val;
-        }
+    if (!anm->translation.empty()) {
+        auto val =
+            interpolate(anm->type, anm->times, anm->translation, time);
+        for (auto target : anm->targets) target->translation = val;
+    }
+    if (!anm->rotation.empty()) {
+        auto val = interpolate(anm->type, anm->times, anm->rotation, time);
+        for (auto target : anm->targets) target->rotation = val;
+    }
+    if (!anm->scaling.empty()) {
+        auto val = interpolate(anm->type, anm->times, anm->scaling, time);
+        for (auto target : anm->targets) target->scaling = val;
     }
 }
 
@@ -4732,8 +4591,8 @@ void update_transforms(node* nde, const frame3f& parent = identity_frame3f) {
 }
 
 // Update node transforms
-void update_transforms(scene* scn, float time) {
-    for (auto agr : scn->animations) update_transforms(agr, time);
+void update_transforms(scene* scn, float time, const std::string& anim_group) {
+    for (auto agr : scn->animations) update_transforms(agr, time, anim_group);
     for (auto nde : scn->nodes) nde->children_.clear();
     for (auto nde : scn->nodes)
         if (nde->parent) nde->parent->children_.push_back(nde);
@@ -4742,16 +4601,15 @@ void update_transforms(scene* scn, float time) {
 }
 
 // Compute animation range
-vec2f compute_animation_range(const scene* scn) {
+vec2f compute_animation_range(const scene* scn, const std::string& anim_group) {
     if (scn->animations.empty()) return zero2f;
     auto range = vec2f{+flt_max, -flt_max};
-    for (auto agr : scn->animations) {
-        for (auto& anm_ : agr->animations) {
-            auto anm = &anm_;
-            range.x = min(range.x, anm->times.front());
-            range.y = max(range.y, anm->times.back());
-        }
+    for (auto anm : scn->animations) {
+        if(anim_group != "" && anm->group != anim_group) continue;
+        range.x = min(range.x, anm->times.front());
+        range.y = max(range.y, anm->times.back());
     }
+    if(range.y < range.x) return zero2f;
     return range;
 }
 
@@ -4971,7 +4829,7 @@ scene_stats compute_stats(const scene* scn) {
     stats.num_environments = scn->environments.size();
     stats.num_instances = scn->instances.size();
     stats.num_nodes = scn->nodes.size();
-    stats.num_animation_groups = scn->animations.size();
+    stats.num_animations = scn->animations.size();
 
     for (auto shp : scn->shapes) {
         stats.elem_points += shp->points.size();
@@ -4992,10 +4850,6 @@ scene_stats compute_stats(const scene* scn) {
         stats.vert_pos * sizeof(vec3f) + stats.vert_norm * sizeof(vec3f) +
         stats.vert_texcoord * sizeof(vec3f) + stats.vert_color * sizeof(vec4f) +
         stats.vert_tangsp * sizeof(vec4f) + stats.vert_radius * sizeof(float);
-
-    for (auto agr : scn->animations) {
-        stats.num_animations += agr->animations.size();
-    }
 
     for (auto txt : scn->textures) {
         stats.texel_ldrs = txt->ldr.width() * txt->ldr.height();
@@ -5020,7 +4874,6 @@ std::ostream& operator<<(std::ostream& os, const scene_stats& stats) {
     os << "num_textures: " << stats.num_textures << "\n";
     os << "num_environments: " << stats.num_environments << "\n";
     os << "num_nodes: " << stats.num_nodes << "\n";
-    os << "num_animation_groups: " << stats.num_animation_groups << "\n";
     os << "num_animations: " << stats.num_animations << "\n";
     os << "elem_points: " << stats.elem_points << "\n";
     os << "elem_lines: " << stats.elem_lines << "\n";
@@ -6083,15 +5936,15 @@ scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
 
     // convert animations
     for (auto ganm : gltf->animations) {
-        auto agr = new animation_group();
-        agr->name = ganm->name;
+        auto aid = 0;
         auto sampler_map = std::unordered_map<vec2i, int>();
         for (auto gchannel : ganm->channels) {
             if (sampler_map.find({(int)gchannel->sampler,
                     (int)gchannel->target->path}) == sampler_map.end()) {
                 auto gsampler = ganm->get(gchannel->sampler);
-                auto anm_ = animation();
-                auto anm = &anm_;
+                auto anm = new animation();
+                anm->name = ((ganm->name != "") ? ganm->name : "anim"s) + std::to_string(aid++);
+                anm->group = ganm->name;
                 auto input_view =
                     accessor_view(gltf, gltf->get(gsampler->input));
                 anm->times.resize(input_view.size());
@@ -6145,14 +5998,13 @@ scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
                     }
                 }
                 sampler_map[{(int)gchannel->sampler,
-                    (int)gchannel->target->path}] = (int)agr->animations.size();
-                agr->animations.push_back(anm_);
+                    (int)gchannel->target->path}] = (int)scn->animations.size();
+                scn->animations.push_back(anm);
             }
-            agr->animations[sampler_map.at({(int)gchannel->sampler,
+            scn->animations[sampler_map.at({(int)gchannel->sampler,
                                 (int)gchannel->target->path})]
-                .targets.push_back(scn->nodes[(int)gchannel->target->node]);
+                ->targets.push_back(scn->nodes[(int)gchannel->target->node]);
         }
-        scn->animations.push_back(agr);
     }
 
     // compute transforms
@@ -6580,15 +6432,29 @@ glTF* scene_to_gltf(
             {keyframe_type::bezier,
                 glTFAnimationSamplerInterpolation::CubicSpline},
         };
+    
+    // gruop animations
+    struct anim_group {
+        std::string path;
+        std::string name;
+        std::vector<animation*> animations;
+    };
+
+    std::map<std::string, anim_group> anim_groups;
+    for(auto anm : scn->animations) {
+        auto agr = &anim_groups[anm->group];
+        if(agr->path == "") agr->path = anm->path;
+        agr->animations.push_back(anm);
+    }
 
     // animation
-    for (auto agr : scn->animations) {
+    for (auto& agr_kv : anim_groups) {
+        auto agr = &agr_kv.second;
         auto ganm = new glTFAnimation();
         ganm->name = agr->name;
         auto gbuffer = add_opt_buffer(agr->path);
         auto count = 0;
-        for (auto& anm_ : agr->animations) {
-            auto anm = &anm_;
+        for (auto anm : scn->animations) {
             auto aid = ganm->name + "_" + std::to_string(count++);
             auto gsmp = new glTFAnimationSampler();
             gsmp->input =
@@ -10909,20 +10775,12 @@ void update_proc_elem(scene* scn, node* nde, const proc_node& pnde) {
     nde->env = find_named_elem(scn->environments, pnde.environment);
 }
 
-// Fake function for template programming.
-void update_proc_elem(scene* scn, animation* shp, const proc_animation& pshp) {}
-
 // Makes/updates a test animation
 void update_proc_elem(
-    scene* scn, animation_group* agr, const proc_animation& panm) {
+    scene* scn, animation* anm, const proc_animation& panm) {
     if (panm.name == "") throw std::runtime_error("cannot use empty name");
-    if (agr->animations.size() != 1) {
-        agr->animations.clear();
-        agr->animations.push_back(animation());
-    }
-    agr->name = panm.name;
-    auto anm = &agr->animations.front();
     anm->name = panm.name;
+    anm->group = panm.group;
     anm->type = (!panm.bezier) ? keyframe_type::linear : keyframe_type::bezier;
     anm->times = panm.times;
     for (auto& v : anm->times) v *= panm.speed;
@@ -11307,13 +11165,13 @@ std::map<std::string, proc_scene>& proc_scene_presets() {
 
     auto add_node = [](proc_scene& scn, const std::string& name, const std::string& cam,
                          const std::string& instance, const std::string& env,
-                         const vec3f& pos) {
+                         const frame3f& frame) {
         auto nde = proc_node();
         nde.name = name;
         nde.camera = cam;
         nde.instance = instance;
         nde.environment = env;
-        nde.translation = pos;
+        nde.frame = frame;
         scn.nodes[name] = nde;
     };
     auto add_texture = [](proc_scene& scn, const std::string& name, const std::string& preset) {
@@ -11349,9 +11207,10 @@ std::map<std::string, proc_scene>& proc_scene_presets() {
         mat.name = name;
         scn.materials[name] = mat;
     };
-    auto add_animation = [](proc_scene& scn, const std::string& name, const std::string& preset) {
+    auto add_animation = [](proc_scene& scn, const std::string& name, const std::string& preset, const std::vector<std::string>& nodes) {
         auto anm = proc_animation_presets().at(preset);
         anm.name = name;
+        anm.nodes = nodes;
         scn.animations[name] = anm;
     };
 
@@ -11386,18 +11245,12 @@ std::map<std::string, proc_scene>& proc_scene_presets() {
             add_material(scn, floor_mat, floor_mat);
             add_shape(scn, "floor", "floor");
             add_instance(scn, "floor", "floor", floor_mat, zero3f);
-            if(nodes) add_node(scn, name, "", "floor", "", zero3f);
         }
         for (auto i = 0; i < shapes.size(); i++) {
             auto name = "obj" + std::to_string(i + 1);
             add_material(scn, mats[i], mats[i]);
             add_shape(scn, name, shapes[i]);
             add_instance(scn, name, name, mats[i], pos[i]);
-            if(nodes) add_node(scn, name, "", name, "", pos[i]);
-            if (!animations.empty()) {
-                add_animation(scn, animations[i], animations[i]);
-                scn.animations[animations[i]].nodes.push_back(name);
-            }
         }
 
         if (lights == "pointlights" || lights == "arealights" ||
@@ -11425,20 +11278,39 @@ std::map<std::string, proc_scene>& proc_scene_presets() {
                 add_shape(scn, name, shp);
                 scn.shapes[name].size = {scale, scale, scale};
                 add_instance(scn, name, name, name, pos[i]);
-                if(nodes) add_node(scn, name, "", name, "", pos[i]);
                 if (lights == "arealights" || lights == "arealights1")
                     scn.instances[name].frame =
                         lookat_frame(pos[i], {0, 1, 0}, {0, 0, 1}, true);
-                    if(nodes) scn.nodes[name].frame =
-                        lookat_frame(pos[i], {0, 1, 0}, {0, 0, 1}, true);
-                    if(nodes) scn.nodes[name].translation = zero3f;
             }
         }
         if (lights == "envlights") {
             add_environment(scn, "sky1", "sky1");
             add_texture(scn, "sky1", "sky1");
-            if(nodes) add_node(scn, "sky1", "", "", "sky1", zero3f);
         }
+        if (nodes || !animations.empty()) {
+            for(auto& cam_kv : scn.cameras) {
+                auto& cam = cam_kv.second;
+                add_node(scn, cam.name, cam.name, "", "",
+                    lookat_frame(cam.from, cam.to, vec3f{0,1,0}));
+            }
+            for(auto& ist_kv : scn.instances) {
+                auto& ist = ist_kv.second;
+                add_node(scn, ist.name, "", ist.name, "", ist.frame);
+            }
+            for(auto& env_kv : scn.environments) {
+                auto& env = env_kv.second;
+                add_node(scn, env.name, "", "", env.name, env.frame);
+            }
+        }
+        if (!animations.empty()) {
+            for (auto i = 0; i < shapes.size(); i++) {
+                auto name = "obj" + std::to_string(i + 1);
+                add_animation(scn, name, animations[i], {name});
+                scn.nodes[name].frame = identity_frame3f;
+                scn.nodes[name].translation = pos[i];
+            }
+        }
+
         return scn;
     };
 
@@ -11563,7 +11435,7 @@ std::map<std::string, proc_scene>& proc_scene_presets() {
     presets["animated_pl"] = make_simple_scene("animated_pl",
         {"sphere_flipcap", "sphere_cube", "cube_rounded"},
         {"plastic_colored", "plastic_colored", "plastic_colored"},
-        "pointlights", "matte_floor", true, {"bounce", "scale", "rotation"});
+        "pointlights", "matte_floor", true, {"scale", "bounce", "rotation"});
 
     // instances shared functions
     auto make_random_scene = [&](const std::string& name, const vec2i& num,
@@ -14499,8 +14371,8 @@ const std::vector<node*> get_scene_elems(const scene* scn, node* aux) {
 const std::vector<instance*> get_scene_elems(const scene* scn, instance* aux) {
     return scn->instances;
 }
-const std::vector<animation_group*> get_scene_elems(
-    const scene* scn, animation_group* aux) {
+const std::vector<animation*> get_scene_elems(
+    const scene* scn, animation* aux) {
     return scn->animations;
 }
 
@@ -14822,9 +14694,6 @@ bool draw_scene_elem_widgets(gl_window* win, const std::string& lbl, scene* scn,
             test_scn_res->nodes, scn, inspector_highlights);
     if (sel.is<animation>())
         edited = draw_scene_elem_widgets(win, sel.get<animation>(),
-            test_scn_res->animations, scn, inspector_highlights);
-    if (sel.is<animation_group>())
-        edited = draw_scene_elem_widgets(win, sel.get<animation_group>(),
             test_scn_res->animations, scn, inspector_highlights);
     if (edited) update_list.push_back(sel);
 

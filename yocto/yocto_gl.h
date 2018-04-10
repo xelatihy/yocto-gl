@@ -234,18 +234,17 @@
 ///    `make_sphere_flipcap()`, `make_cylinder()`, `make_cylinder_rounded()`,
 ///    `make_disk()`, `make_cylinder_side()`, `make_disk_quad()`
 /// 7. merge element with `marge_lines()`, `marge_triangles()`, `marge_quads()`
-/// 8. facet elements with `facet_lines()`, `facet_triangles()`, `facet_quads()`
-/// 9. shape sampling with `sample_points()`, `sample_lines()`,
+/// 8. shape sampling with `sample_points()`, `sample_lines()`,
 ///    `sample_triangles()`; initialize the sampling CDFs with
 ///    `sample_points_cdf()`, `sample_lines_cdf()`, `sample_triangles_cdf()`
-/// 10. samnple a could of point over a surface with `sample_triangles_points()`
-/// 11. get edges and boundaries with `get_edges()`
-/// 12. convert quads to triangles with `convert_quads_to_triangles()`
-/// 13. convert face varying to vertex shared representations with
+/// 9.  samnple a could of point over a surface with `sample_triangles_points()`
+/// 10. get edges and boundaries with `get_edges()`
+/// 11. convert quads to triangles with `convert_quads_to_triangles()`
+/// 12. convert face varying to vertex shared representations with
 ///     `convert_face_varying()`
-/// 14. subdivide elements by edge splits with `subdivide_lines()`,
+/// 13. subdivide elements by edge splits with `subdivide_lines()`,
 ///     `subdivide_triangles()`, `subdivide_quads()`, `subdivide_beziers()`
-/// 15. Catmull-Clark subdivision surface with `subdivide_catmullclark()`
+/// 14. Catmull-Clark subdivision surface with `subdivide_catmullclark()`
 ///
 ///
 /// ### Animation utilities
@@ -4448,31 +4447,6 @@ void merge_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     const std::vector<vec4i>& quads1, const std::vector<vec3f>& pos1,
     const std::vector<vec3f>& norm1, const std::vector<vec2f>& texcoord1);
 
-/// Duplicate vertex data for each line index, giving a faceted look.
-template <typename T>
-void facet_lines(
-    std::vector<vec2i>& lines, std::vector<T>& vert, bool upgrade_lines = true);
-/// Duplicate vertex data for each line index, giving a faceted look.
-void facet_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<vec4f>& color, std::vector<float>& radius);
-/// Duplicate vertex data for each triangle index, giving a faceted look.
-template <typename T>
-void facet_triangles(std::vector<vec3i>& triangles, std::vector<T>& vert,
-    bool upgrade_triangles = true);
-/// Duplicate vertex data for each triangle index, giving a faceted look.
-void facet_triangles(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<vec4f>& color, std::vector<float>& radius);
-/// Duplicate vertex data for each quad index, giving a faceted look.
-template <typename T>
-void facet_quads(
-    std::vector<vec4i>& quads, std::vector<T>& vert, bool upgrade_quads = true);
-/// Duplicate vertex data for each quad index, giving a faceted look.
-void facet_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<vec4f>& color, std::vector<float>& radius);
-
 /// Pick a point.
 inline int sample_points(int npoints, float re) {
     return sample_index(npoints, re);
@@ -5200,7 +5174,7 @@ namespace ygl {
 /// @{
 
 /// Type of BVH node.
-enum struct bvh_node_type : uint32_t {
+enum struct bvh_node_type : uint8_t {
     /// Internal.
     internal = 0,
     /// Points.
@@ -5217,6 +5191,9 @@ enum struct bvh_node_type : uint32_t {
     instance = 16,
 };
 
+/// Maximum number of primitives per BVH node.
+const int bvh_max_prims = 4;
+
 /// BVH tree node containing its bounds, indices to the BVH arrays of either
 /// sorted primitives or internal nodes, the node element type,
 /// and the split axis. Leaf and internal nodes are identical, except that
@@ -5226,8 +5203,8 @@ enum struct bvh_node_type : uint32_t {
 struct bvh_node {
     /// Bounding box.
     bbox3f bbox;
-    /// Index to the first sorted primitive/node.
-    uint32_t start;
+    /// Index to the leaf primitives or child nodes.
+    uint32_t prims[bvh_max_prims];
     /// Number of primitives/nodes.
     uint16_t count;
     /// Type of node.
@@ -5235,9 +5212,6 @@ struct bvh_node {
     /// Slit axis for internal nodes.
     uint8_t axis;
 };
-
-// forward declaration
-struct bvh_tree;
 
 /// Shape instance for two-level BVH.
 /// This is an internal data structure.
@@ -5262,8 +5236,6 @@ struct bvh_instance {
 struct bvh_tree {
     /// Sorted array of internal nodes.
     std::vector<bvh_node> nodes;
-    /// Sorted array of elements.
-    std::vector<int> sorted_prim;
     /// Leaf element type.
     bvh_node_type type = bvh_node_type::internal;
 
@@ -5604,6 +5576,10 @@ enum struct keyframe_type {
 struct animation {
     /// Name.
     std::string name;
+    /// Path used when writing files on disk with glTF.
+    std::string path = "";
+    /// Group name for playback.
+    std::string group;
     /// Interpolation.
     keyframe_type type = keyframe_type::linear;
     /// Times.
@@ -5618,16 +5594,6 @@ struct animation {
     std::vector<std::vector<float>> weights;
     /// Target nodes. @refl_semantic(reference)
     std::vector<node*> targets;
-};
-
-/// Animation made of multiple keyframed values.
-struct animation_group {
-    /// Name.
-    std::string name;
-    /// Path  used when writing files on disk with glTF.
-    std::string path = "";
-    /// Keyframed values.
-    std::vector<animation> animations;
 };
 
 /// Scene comprised an array of objects whose memory is owened by the scene.
@@ -5655,7 +5621,7 @@ struct scene {
     /// Node hierarchy.
     std::vector<node*> nodes = {};
     /// Node animations.
-    std::vector<animation_group*> animations = {};
+    std::vector<animation*> animations = {};
 
     // Cleanup
     ~scene() {
@@ -5777,9 +5743,6 @@ void compute_normals(shape* shp);
 /// Subdivides shape elements. Apply subdivision surface rules if subdivide
 /// is true.
 void subdivide_shape_once(shape* shp, bool subdiv = false);
-/// Facet a shape elements by duplicating vertices. Supports only
-/// non-facevarying shapes.
-void facet_shape(shape* shp, bool recompute_normals = true);
 /// Tesselate a shape into basic primitives.
 void tesselate_shape(shape* shp, bool subdivide,
     bool facevarying_to_sharedvertex, bool quads_to_triangles,
@@ -5790,9 +5753,9 @@ void tesselate_shapes(scene* scn, bool subdivide,
     bool bezier_to_lines);
 
 /// Update node transforms.
-void update_transforms(scene* scn, float time = 0);
+void update_transforms(scene* scn, float time = 0, const std::string& anim_group = "");
 /// Compute animation range.
-vec2f compute_animation_range(const scene* scn);
+vec2f compute_animation_range(const scene* scn, const std::string& anim_group = "");
 
 /// Make a view camera either copying a given one or building a default one.
 camera* make_view_camera(const scene* scn, int camera_id);
@@ -5937,8 +5900,6 @@ struct scene_stats {
     uint64_t num_environments = 0;
     /// Number of nodes.
     uint64_t num_nodes = 0;
-    /// Number of animation groups.
-    uint64_t num_animation_groups = 0;
     /// Number of animations.
     uint64_t num_animations = 0;
 
@@ -6249,18 +6210,6 @@ inline void visit(animation& val, Visitor&& visitor) {
                              "Weights for morphing.", 0, 0, ""});
     visitor(val.targets, visit_var{"targets", visit_var_type::reference,
                              "Target nodes.", 0, 0, ""});
-}
-
-/// Visit struct elements.
-template <typename Visitor>
-inline void visit(animation_group& val, Visitor&& visitor) {
-    visitor(
-        val.name, visit_var{"name", visit_var_type::value, "Name.", 0, 0, ""});
-    visitor(val.path,
-        visit_var{"path", visit_var_type::value,
-            "Path used when writing files on disk with glTF.", 0, 0, ""});
-    visitor(val.animations, visit_var{"animations", visit_var_type::value,
-                                "Keyframed values.", 0, 0, ""});
 }
 
 /// Visit struct elements.
@@ -6582,6 +6531,8 @@ struct proc_node {
 struct proc_animation {
     /// Name.
     std::string name = "";
+    /// Group.
+    std::string group = "";
     /// Linear or bezier.
     bool bezier = false;
     /// Animation speed. @refl_uilimits(0.01,10)
@@ -6644,7 +6595,7 @@ void update_proc_elem(
 void update_proc_elem(scene* scn, node* nde, const proc_node& tndr);
 /// Updates a procedural animation.
 void update_proc_elem(
-    scene* scn, animation_group* anm, const proc_animation& tndr);
+    scene* scn, animation* anm, const proc_animation& tndr);
 /// Updates a procedural scene, adding missing objects. Objects are only added
 /// and never removed.
 void update_proc_elems(scene* scn, const proc_scene& tscn,
