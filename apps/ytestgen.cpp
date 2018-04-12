@@ -50,7 +50,7 @@ void rmdir(const std::string& dir) {
 #endif
 }
 
-void save_scene(ygl::scene* scn, const std::string& sname,
+void save_scene(const ygl::scene* scn, const std::string& sname,
     const std::string& dirname, bool flatten_obj) {
     auto facevarying = false;
     for (auto shp : scn->shapes)
@@ -63,29 +63,24 @@ void save_scene(ygl::scene* scn, const std::string& sname,
     ygl::save_scene(dirname + sname + ".obj", scn, opts);
 }
 
-void save_test_scene(const std::string& sname, const std::string& basedir) {
+void save_test_scene(const ygl::scene* scn, const std::string& sname,
+    const std::string& basedir) {
+    auto startswith = [](const std::string& str, const std::string& substr) {
+        if (str.length() < substr.length()) return false;
+        for (auto i = 0; i < substr.length(); i++)
+            if (str[i] != substr[i]) return false;
+        return true;
+    };
+
     auto dirname = basedir + "/" + sname + "/";
     try {
         mkdir(dirname);
-        ygl::log_info("generating scene {}", sname);
-        auto scn = (ygl::scene*)nullptr;
-        auto proc_scn = (ygl::proc_scene*)nullptr;
-        if (sname == "cornell_box") {
-            scn = ygl::make_cornell_box_scene();
-        } else {
-            for (auto& preset : ygl::proc_scene_presets()) {
-                if (preset.first != sname) continue;
-                proc_scn = &preset.second;
-                scn = ygl::make_proc_elems(preset.second);
-                break;
-            }
-        }
         ygl::log_info("saving scene {}", sname);
         if (sname == "textures") {
             for (auto txt : scn->textures) {
-                if (!txt->hdr.empty())
+                if (!txt->hdr.pixels.empty())
                     ygl::save_image4f(dirname + txt->path, txt->hdr);
-                if (!txt->ldr.empty())
+                if (!txt->ldr.pixels.empty())
                     ygl::save_image4b(dirname + txt->path, txt->ldr);
             }
         } else if (sname == "shapes") {
@@ -93,25 +88,186 @@ void save_test_scene(const std::string& sname, const std::string& basedir) {
                 auto sscn = new ygl::scene();
                 auto sshp = new ygl::shape(*shp);
                 sscn->shapes.push_back(sshp);
-                auto shp_name = ygl::partition(sshp->name, "_")[0];
+                auto shp_name = sshp->name;
                 auto opts = ygl::save_options();
                 ygl::save_scene(dirname + shp_name + ".obj", sscn, opts);
                 delete sscn;
             }
         } else {
-            save_scene(
-                scn, "scene", dirname, !ygl::startswith(sname, "instance"));
-            if (proc_scn)
-                ygl::save_proc_scene(dirname + "scene.json", *proc_scn);
+            save_scene(scn, "scene", dirname, !startswith(sname, "instance"));
         }
     } catch (std::exception& e) { ygl::log_fatal("error {}", e.what()); }
 }
 
+std::map<std::string, ygl::scene*> make_scene_presets() {
+    auto presets = std::map<std::string, ygl::scene*>();
+
+    // cornell box
+    presets["cornell_box"] = ygl::make_cornell_box_scene();
+
+    // textures
+    presets["textures"] = new ygl::scene();
+    for (auto txt : ygl::proc_texture_types()) {
+        presets["textures"]->textures.push_back(
+            ygl::make_proc_texture(txt, txt, 512));
+    }
+
+    // shapes
+    presets["shapes"] = new ygl::scene();
+    for (auto shp : ygl::proc_shape_types()) {
+        presets["shapes"]->shapes.push_back(ygl::make_proc_shape(shp, shp));
+    }
+
+    // basic shapes
+    presets["basic_pl"] = ygl::make_simple_scene(
+        {"sphere_flipcap", "sphere_cube", "cube_rounded"},
+        {"plastic_red", "plastic_green", "plastic_blue"}, "pointlights");
+    presets["basic_al"] = ygl::make_simple_scene(
+        {"sphere_flipcap", "sphere_cube", "cube_rounded"},
+        {"plastic_red", "plastic_green", "plastic_blue"}, "arealights");
+    presets["basic_el"] = ygl::make_simple_scene(
+        {"sphere_flipcap", "sphere_cube", "cube_rounded"},
+        {"plastic_red", "plastic_green", "plastic_blue"}, "envlights");
+
+    // simple shapes
+    presets["simple_al"] = ygl::make_simple_scene(
+        {"sphere_flipcap", "sphere_cube", "cube_rounded"},
+        {"plastic_colored", "plastic_colored", "plastic_colored"},
+        "arealights");
+    presets["simple_pl"] = ygl::make_simple_scene(
+        {"sphere_flipcap", "sphere_cube", "cube_rounded"},
+        {"plastic_colored", "plastic_colored", "plastic_colored"},
+        "pointlights");
+    presets["simple_el"] = ygl::make_simple_scene(
+        {"sphere_flipcap", "sphere_cube", "cube_rounded"},
+        {"plastic_colored", "plastic_colored", "plastic_colored"}, "envlights");
+
+    // simple shapes 1
+    presets["spheres_al"] =
+        ygl::make_simple_scene({"sphere_flipcap", "sphere_cube", "sphere"},
+            {"plastic_colored", "plastic_colored", "plastic_colored"},
+            "arealights");
+
+    // simple shapes 2
+    presets["cubes_al"] =
+        ygl::make_simple_scene({"quad", "cube", "cube_rounded"},
+            {"plastic_colored", "plastic_colored", "plastic_colored"},
+            "arealights");
+
+    // simple shapes 3
+    presets["cylinders_al"] =
+        ygl::make_simple_scene({"disk", "cylinder", "cylinder_rounded"},
+            {"plastic_colored", "plastic_colored", "plastic_colored"},
+            "arealights");
+
+    // simple shapes 3
+    presets["disks_al"] =
+        ygl::make_simple_scene({"disk", "disk_quad", "disk_bulged"},
+            {"plastic_colored", "plastic_colored", "plastic_colored"},
+            "arealights");
+
+    // transparent shapes
+    presets["transparent_al"] = ygl::make_simple_scene({"quad", "quad", "quad"},
+        {"transparent_red", "transparent_green", "transparent_blue"},
+        "arealights");
+
+    // lines shapes
+    presets["lines_al"] =
+        ygl::make_simple_scene({"hairball_noise", "hairball_clump", "hairball"},
+            {"matte_gray", "matte_gray", "matte_gray"}, "arealights");
+
+    // subdiv shapes
+    presets["subdiv_al"] = ygl::make_simple_scene(
+        {"cube_subdiv", "suzanne_subdiv", "fvcube_subdiv"},
+        {"plastic_red", "plastic_green", "plastic_colored"}, "arealights");
+
+    // plastics shapes
+    presets["plastics_al"] =
+        ygl::make_simple_scene({"matball", "matball", "matball"},
+            {"plastic_red", "plastic_green", "plastic_blue"}, "arealights");
+    presets["plastics_el"] =
+        ygl::make_simple_scene({"matball", "matball", "matball"},
+            {"plastic_red", "plastic_green", "plastic_blue"}, "envlights");
+
+    // metals shapes
+    presets["metals_al"] =
+        ygl::make_simple_scene({"matball", "matball", "matball"},
+            {"metal_gold_rough", "metal_gold_sharp", "metal_silver_mirror"},
+            "arealights");
+    presets["metals_el"] =
+        ygl::make_simple_scene({"matball", "matball", "matball"},
+            {"metal_gold_rough", "metal_gold_sharp", "metal_silver_mirror"},
+            "envlights");
+
+    // glass shapes
+    presets["glass_al"] =
+        ygl::make_simple_scene({"matball", "matball", "matball"},
+            {"glass_mirror", "glass_colored", "glass_rough"}, "arealights");
+    presets["glass_el"] =
+        ygl::make_simple_scene({"matball", "matball", "matball"},
+            {"glass_mirror", "glass_colored", "glass_rough"}, "envlights");
+
+    // car paints shapes
+    presets["paints_al"] =
+        ygl::make_simple_scene({"matball", "matball", "matball"},
+            {"carpaint_black", "carpaint_blue", "metal_blue"}, "arealights");
+    presets["paints_el"] =
+        ygl::make_simple_scene({"matball", "matball", "matball"},
+            {"carpaint_black", "carpaint_blue", "metal_blue"}, "envlights");
+
+    // matball
+    // presets["mattball_al"] = ygl::make_simple_scene( {"matball"},
+    // {"carpaint_black"}, "arealights", ""); last = add_simple_scene(presets,
+    // "mattball_el", {"matball"}, {"carpaint_black"}, "envlights", "");
+    //    presets["matball_el"] =
+    //        ygl::make_simple_scene({"sphere"}, {"transparent_none"},
+    //        "envlights",
+    //        "");
+    //    presets["matball_al"] =
+    //        ygl::make_simple_scene({"sphere"}, {"transparent_none"},
+    //        "arealights",
+    //        "");
+
+    // tesselation shapes
+    //    presets["tesselation_pl"] = ygl::make_simple_scene(
+    //        {"geodesic_spherel", "geodesic_spheref", "geodesic_sphere"},
+    //        {"matte_gray", "matte_gray", "matte_gray"}, "pointlights");
+
+    // textureuv shapes
+    presets["textureuv_pl"] = ygl::make_simple_scene(
+        {"sphere_flipcap", "sphere_flipcap", "sphere_flipcap"},
+        {"matte_green", "matte_colored", "matte_uv"}, "pointlights");
+
+    // normalmap shapes
+    presets["normalmap_pl"] = ygl::make_simple_scene(
+        {"sphere_flipcap", "sphere_flipcap", "sphere_flipcap"},
+        {"plastic_blue", "plastic_blue_grid_norm", "plastic_colored_bump_norm"},
+        "pointlights");
+
+    // animated shapes
+    // presets["animated_pl"] = ygl::make_simple_scene(
+    //     {"sphere_flipcap",
+    //         "sphere_cube",
+    //         "cube_rounded"},
+    //     {"plastic_colored",
+    //         "plastic_colored",
+    //         "plastic_colored"},
+    //     "pointlights", true, {"scale", "bounce", "rotation"});
+
+    // instances
+    presets["instances_pl"] =
+        ygl::make_random_scene({10, 10}, {{-3, -3, 0}, {3, 3, 0}});
+    presets["instancel_pl"] =
+        ygl::make_random_scene({100, 100}, {{-3, -3, 0}, {3, 3, 0}});
+
+    return presets;
+}
+
 int main(int argc, char* argv[]) {
     // put together scene names
-    auto scene_names = std::vector<std::string>{"cornell_box"};
-    for (auto preset : ygl::proc_scene_presets())
-        scene_names.push_back(preset.first);
+    auto presets = make_scene_presets();
+    auto scene_names = std::vector<std::string>{};
+    for (auto preset : presets) scene_names.push_back(preset.first);
 
     // command line params
     auto parser = ygl::make_parser(argc, argv, "ytestgen", "make tests");
@@ -141,14 +297,15 @@ int main(int argc, char* argv[]) {
     mkdir(dirname);
 
     if (scene != "") {
-        save_test_scene(scene, dirname);
+        save_test_scene(presets.at(scene), scene, dirname);
     } else if (no_parallel) {
-        for (auto scn : scene_names) save_test_scene(scn, dirname);
+        for (auto& scn_kv : presets)
+            save_test_scene(scn_kv.second, scn_kv.first, dirname);
     } else {
         auto threads = std::vector<std::thread>();
-        for (auto scene_name : scene_names) {
-            threads.push_back(std::thread([scene_name, dirname]() {
-                save_test_scene(scene_name, dirname);
+        for (auto& scn_kv : presets) {
+            threads.push_back(std::thread([scn_kv, dirname]() {
+                save_test_scene(scn_kv.second, scn_kv.first, dirname);
             }));
         }
         for (auto& t : threads) t.join();

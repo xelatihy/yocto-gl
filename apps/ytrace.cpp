@@ -39,12 +39,11 @@ struct app_state {
     std::string imfilename;
     ygl::load_options loadopts;
     ygl::image4f img;
-    ygl::image<ygl::trace_pixel> pixels;
+    std::vector<ygl::trace_pixel> pixels;
     ygl::trace_params params;
-    ygl::tonemap_params tmparams;
     ygl::trace_lights lights;
-    ygl::tonemap_params tonemap;
-    ygl::vec4f background = {0, 0, 0, 0};
+    ygl::tonemap_type tonemapper = ygl::tonemap_type::gamma;
+    float exposure = 0;
     bool save_batch = false;
     bool quiet = false;
 
@@ -62,11 +61,43 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser =
         ygl::make_parser(argc, argv, "ytrace", "Offline oath tracing");
-    app->params = ygl::parse_params(parser, "", app->params);
-    app->tmparams = ygl::parse_params(parser, "", app->tmparams);
-    app->loadopts = ygl::parse_params(parser, "", app->loadopts);
+    app->params.resolution = ygl::parse_opt(parser, "--resolution", "-r",
+        "Image vertical resolution.", app->params.resolution);
+    app->params.nsamples = ygl::parse_opt(
+        parser, "--nsamples", "-s", "Number of samples.", app->params.nsamples);
+    app->params.tracer = ygl::parse_opt(parser, "--tracer", "-T", "Trace type.",
+        ygl::trace_type_names(), app->params.tracer);
+    app->params.notransmission = ygl::parse_opt(parser, "--notransmission", "",
+        "Whether to test transmission in shadows.", app->params.notransmission);
+    app->params.double_sided = ygl::parse_opt(parser, "--double-sided", "-D",
+        "Force double sided rendering.", app->params.double_sided);
+    app->params.ambient = ygl::parse_opt(
+        parser, "--ambient", "", "Ambient lighting.", app->params.ambient);
+    app->params.envmap_invisible = ygl::parse_opt(parser, "--envmap-invisible",
+        "", "View environment map.", app->params.envmap_invisible);
+    app->params.min_depth = ygl::parse_opt(
+        parser, "--min-depth", "", "Minimum ray depth.", app->params.min_depth);
+    app->params.max_depth = ygl::parse_opt(
+        parser, "--max-depth", "", "Maximum ray depth.", app->params.max_depth);
+    app->params.pixel_clamp = ygl::parse_opt(parser, "--pixel-clamp", "",
+        "Final pixel clamping.", app->params.pixel_clamp);
+    app->params.ray_eps = ygl::parse_opt(parser, "--ray-eps", "",
+        "Ray intersection epsilon.", app->params.ray_eps);
+    app->params.parallel = ygl::parse_opt(
+        parser, "--parallel", "", "Parallel execution.", app->params.parallel);
+    app->params.seed = ygl::parse_opt(parser, "--seed", "",
+        "Seed for the random number generators.", app->params.seed);
+    app->params.preview_resolution = ygl::parse_opt(parser,
+        "--preview-resolution", "", "Preview resolution for async rendering.",
+        app->params.preview_resolution);
+    app->params.batch_size = ygl::parse_opt(parser, "--batch-size", "",
+        "Sample batch size.", app->params.batch_size);
     app->save_batch = ygl::parse_flag(
         parser, "--save-batch", "", "Save images progressively");
+    app->tonemapper = ygl::parse_opt(parser, "--tonemapper", "t",
+        "Tonemapper type.", ygl::tonemap_type_names(), app->tonemapper);
+    app->exposure = ygl::parse_opt(
+        parser, "--exposure", "t", "Hdr exposure", app->exposure);
     app->quiet =
         ygl::parse_flag(parser, "--quiet", "-q", "Print only errors messages");
     app->imfilename = ygl::parse_opt(
@@ -116,7 +147,7 @@ int main(int argc, char* argv[]) {
 
     // initialize rendering objects
     app->img =
-        ygl::image4f((int)round(app->cam->aspect * app->params.resolution),
+        ygl::make_image4f((int)round(app->cam->aspect * app->params.resolution),
             app->params.resolution);
     app->pixels = ygl::make_trace_pixels(app->img, app->params);
 
@@ -130,7 +161,8 @@ int main(int argc, char* argv[]) {
                         ygl::path_basename(app->imfilename), cur_sample,
                         ygl::path_extension(app->imfilename));
                 ygl::log_info("saving image {}", imfilename);
-                save_image(imfilename, app->img, app->tonemap);
+                save_image(
+                    imfilename, app->img, app->tonemapper, app->exposure);
             }
             ygl::log_info(
                 "rendering sample {}/{}", cur_sample, app->params.nsamples);
@@ -139,7 +171,7 @@ int main(int argc, char* argv[]) {
 
     // save image
     ygl::log_info("saving image {}", app->imfilename);
-    ygl::save_image(app->imfilename, app->img, app->tonemap);
+    ygl::save_image(app->imfilename, app->img, app->tonemapper, app->exposure);
 
     // cleanup
     delete app;

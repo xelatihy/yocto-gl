@@ -11,15 +11,58 @@ Please consider this to be just development notes and not any real planning.
 - interactive procedural shapes
 - prepare for research on procedural components
 
+## Cleanup
+
+- refactor gl
+    - rename functions with glXXX names
+    - one buffer
+        - remove int vbo
+        - merge buffers
+    - remove array calls into one for vertices and uniforms
+    - reduce uniform tyexture calls
+    - remove skinning
+
+- removing std::
+
+- math header: 3000, mostly boiler plate
+- rng: 300 lines
+- mc: 500
+- hash: 200
+- noise -> c++
+- shape funcs: 200
+- anim funcs: 200
+
+- numeric_limits: can we remove it?
+- include math functions without crap
+
+- consider removing
+    - logger (make it a function)
+    - streams -> to_string
+    - cmdline -> check streams
+
+- pi
+    - define pif, pid, pi (float)
+- using std
+- grouping
+    - geometry functions -> move to math
+    - animation functions -> move to math
+    - color functions -> math
+    - intersect functions -> bvh
+    - string ops, file ops, format, logger, timer -> utils group
+    - byte_to_float
+- delete
+    - compositing if not used
+    - image io functions?
+    - intersection point if not used
+        - remove magic conversion and used .hit() method
+    - can we limit opengl calls
+    - widgets
+        - simpler combo
+
 ## Simplifications
 
-- remove animation group
-    - put group name for playback
-- remove unused functions
-    - facet
 - bvh
     - simpler instance api
-    - bvh trimming
 - bugs
     - eval_pos(env) should apply frame
     - implement eval_pos(ist)

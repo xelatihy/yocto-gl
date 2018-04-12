@@ -45,7 +45,7 @@ def gcc(target=''):
 
 @run.command()
 def xcode():
-    os.system('mkdir -p build/xcode; cd build/xcode; cmake -G Xcode -DYOCTO_EXPERIMENTAL=ON -DYOCTO_TOOLS=ON ../../; open yocto-gl.xcodeproj')
+    os.system('mkdir -p build/xcode; cd build/xcode; cmake -GXcode -DYOCTO_EXPERIMENTAL=ON -DYOCTO_TOOLS=ON ../../; open yocto-gl.xcodeproj')
 
 @run.command()
 def clean():

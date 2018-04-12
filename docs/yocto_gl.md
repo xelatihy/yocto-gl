@@ -473,22 +473,22 @@ this can used to access the scene data with `glTF::get<T>(index)`.
 We include a set of utilities to draw on screen with OpenGL 3.3, manage
 windows with GLFW and draw immediate-mode widgets with ImGui.
 
-1. texture and buffer objects with `gl_texture` and `gl_buffer`
+1. texture and buffer objects with `gltexture` and `gl_buffer`
     - create textures/buffers with appropriate constructors
     - check validity with `is_valid()`
     - update textures/buffers with `update()` functions
     - delete textures/buffers with `clear()`
     - bind/unbind textures/buffers with `bind()`/`unbind()`
     - draw elements with `gl_buffer::draw_elems()`
-2. program objects with `gl_program`
+2. program objects with `glprogram`
     - program creation with constructor
     - check validity with `is_valid()`
     - delete with `clear()`
-    - uniforms with `set_program_uniform()`
-    - vertex attrib with `set_program_vertattr()`
+    - uniforms with `set_gl_uniform()`
+    - vertex attrib with `set_gl_attribute()`
     - draw elements with `gl_buffer::draw_elems()`
-3. image viewing with `gl_stdimage_program`, with support for tone mapping.
-4. draw surfaces and hair with GGX/Kayjia-Kay with `gl_stdsurface_program`
+3. image viewing with `glimage_program`, with support for tone mapping.
+4. draw surfaces and hair with GGX/Kayjia-Kay with `glsurface_program`
     - initialize the program with constructor
     - check validity with `is_valid()`
     - start/end each frame with `begin_frame()`, `end_frame()`
@@ -500,10 +500,10 @@ windows with GLFW and draw immediate-mode widgets with ImGui.
 5. draw yocto scenes using the above shader
     - initialize the rendering state with `init_stdsurface_state()`
     - load/update meshes and textures with `update_stdsurface_state()`
-    - setup draw params using a `gl_stdsurface_params` struct
-    - draw scene with `draw_stdsurface_scene()`
+    - setup draw params using a `glsurface_params` struct
+    - draw scene with `draw_gl_stdsurface_scene()`
 6. also includes other utlities for quick OpenGL hacking
-7. GLFW window with `gl_window`
+7. GLFW window with `glwindow`
     - create with constructor
     - delete with `clear()`
     - set callbacks with `set_callbacks()`
@@ -4104,10 +4104,10 @@ FPS camera for UI navigation.
 
 ### Random number generation
 
-#### Struct rng_pcg32
+#### Struct rng_state
 
 ~~~ .cpp
-struct rng_pcg32 {
+struct rng_state {
     uint64_t state = 0x853c49e6748fea9bULL;
     uint64_t inc = 0xda3e39cb94b95bdbULL;
 }
@@ -4124,7 +4124,7 @@ multiple sequences. From http://www.pcg-random.org/
 #### Function advance_rng()
 
 ~~~ .cpp
-inline uint32_t advance_rng(rng_pcg32& rng);
+inline uint32_t advance_rng(rng_state& rng);
 ~~~
 
 Next random number.
@@ -4132,7 +4132,7 @@ Next random number.
 #### Function advance_rng()
 
 ~~~ .cpp
-inline void advance_rng(rng_pcg32& rng, uint64_t delta);
+inline void advance_rng(rng_state& rng, uint64_t delta);
 ~~~
 
 Multi-step advance function (jump-ahead, jump-back).
@@ -4140,7 +4140,7 @@ Multi-step advance function (jump-ahead, jump-back).
 #### Function advance_rng()
 
 ~~~ .cpp
-inline void advance_rng(rng_pcg32& rng, int64_t delta);
+inline void advance_rng(rng_state& rng, int64_t delta);
 ~~~
 
 Multi-step advance function (jump-ahead, jump-back).
@@ -4148,7 +4148,7 @@ Multi-step advance function (jump-ahead, jump-back).
 #### Function seed_rng()
 
 ~~~ .cpp
-inline void seed_rng(rng_pcg32& rng, uint64_t state, uint64_t seq = 1);
+inline void seed_rng(rng_state& rng, uint64_t state, uint64_t seq = 1);
 ~~~
 
 Seeds a random number generator with a state state from the sequence seq.
@@ -4156,7 +4156,7 @@ Seeds a random number generator with a state state from the sequence seq.
 #### Function make_rng()
 
 ~~~ .cpp
-inline rng_pcg32 make_rng(uint64_t state, uint64_t seq = 1);
+inline rng_state make_rng(uint64_t state, uint64_t seq = 1);
 ~~~
 
 Init a random number generator with a state state from the sequence seq.
@@ -4164,7 +4164,7 @@ Init a random number generator with a state state from the sequence seq.
 #### Function next_rand1i()
 
 ~~~ .cpp
-inline uint32_t next_rand1i(rng_pcg32& rng, uint32_t n);
+inline uint32_t next_rand1i(rng_state& rng, uint32_t n);
 ~~~
 
 Next random uint in [0,n) range with proper weighting
@@ -4172,7 +4172,7 @@ Next random uint in [0,n) range with proper weighting
 #### Function next_rand1f()
 
 ~~~ .cpp
-inline float next_rand1f(rng_pcg32& rng);
+inline float next_rand1f(rng_state& rng);
 ~~~
 
 Next random float in [0,1).
@@ -4180,7 +4180,7 @@ Next random float in [0,1).
 #### Function next_rand1f()
 
 ~~~ .cpp
-inline float next_rand1f(rng_pcg32& rng, float a, float b);
+inline float next_rand1f(rng_state& rng, float a, float b);
 ~~~
 
 Next random float in [a,b).
@@ -4188,7 +4188,7 @@ Next random float in [a,b).
 #### Function next_rand2f()
 
 ~~~ .cpp
-inline vec2f next_rand2f(rng_pcg32& rng);
+inline vec2f next_rand2f(rng_state& rng);
 ~~~
 
 Next random float2 in [0,1)x[0,1).
@@ -4196,7 +4196,7 @@ Next random float2 in [0,1)x[0,1).
 #### Function next_rand2f()
 
 ~~~ .cpp
-inline vec2f next_rand2f(rng_pcg32& rng, const vec2f& a, const vec2f& b);
+inline vec2f next_rand2f(rng_state& rng, const vec2f& a, const vec2f& b);
 ~~~
 
 Next random float in [a.x,b.x)x[a.y,b.y).
@@ -4204,7 +4204,7 @@ Next random float in [a.x,b.x)x[a.y,b.y).
 #### Function next_rand3f()
 
 ~~~ .cpp
-inline vec3f next_rand3f(rng_pcg32& rng);
+inline vec3f next_rand3f(rng_state& rng);
 ~~~
 
 Next random float3 in [0,1)x[0,1)x[0,1).
@@ -4212,7 +4212,7 @@ Next random float3 in [0,1)x[0,1)x[0,1).
 #### Function next_rand2f()
 
 ~~~ .cpp
-inline vec3f next_rand2f(rng_pcg32& rng, const vec3f& a, const vec3f& b);
+inline vec3f next_rand2f(rng_state& rng, const vec3f& a, const vec3f& b);
 ~~~
 
 Next random float in [a.x,b.x)x[a.y,b.y)x[a.z,b.z).
@@ -4220,7 +4220,7 @@ Next random float in [a.x,b.x)x[a.y,b.y)x[a.z,b.z).
 #### Function next_rand1d()
 
 ~~~ .cpp
-inline double next_rand1d(rng_pcg32& rng);
+inline double next_rand1d(rng_state& rng);
 ~~~
 
 Next random double in [0, 1). Only 32 mantissa bits are filled, but still
@@ -4229,7 +4229,7 @@ better than float that uses 23.
 #### Function rng_distance()
 
 ~~~ .cpp
-inline int64_t rng_distance(const rng_pcg32& a, const rng_pcg32& b);
+inline int64_t rng_distance(const rng_state& a, const rng_state& b);
 ~~~
 
 Distance between random number generators.
@@ -4238,7 +4238,7 @@ Distance between random number generators.
 
 ~~~ .cpp
 template <typename Iterator>
-inline void rng_shuffle(rng_pcg32& rng, Iterator begin, Iterator end);
+inline void rng_shuffle(rng_state& rng, Iterator begin, Iterator end);
 ~~~
 
 Random shuffle of a sequence.
@@ -4247,7 +4247,7 @@ Random shuffle of a sequence.
 
 ~~~ .cpp
 template <typename T>
-inline void rng_shuffle(rng_pcg32& rng, T* vals, int num);
+inline void rng_shuffle(rng_state& rng, T* vals, int num);
 ~~~
 
 Random shuffle of a sequence.
@@ -4256,7 +4256,7 @@ Random shuffle of a sequence.
 
 ~~~ .cpp
 template <typename T>
-inline void rng_shuffle(rng_pcg32& rng, std::vector<T>& vals);
+inline void rng_shuffle(rng_state& rng, std::vector<T>& vals);
 ~~~
 
 Random shuffle of a sequence.
@@ -4264,7 +4264,7 @@ Random shuffle of a sequence.
 #### Function operator==()
 
 ~~~ .cpp
-inline bool operator==(const rng_pcg32& a, const rng_pcg32& b);
+inline bool operator==(const rng_state& a, const rng_state& b);
 ~~~
 
 Random number generator equality.
@@ -4272,7 +4272,7 @@ Random number generator equality.
 #### Function operator!=()
 
 ~~~ .cpp
-inline bool operator!=(const rng_pcg32& a, const rng_pcg32& b);
+inline bool operator!=(const rng_state& a, const rng_state& b);
 ~~~
 
 Random number generator inequality.
@@ -4713,11 +4713,11 @@ inline std::vector<T> join(const std::vector<T>& a, const std::vector<T>& b);
 
 Append two vectors.
 
-#### Function get_key()
+#### Function get_gl_key()
 
 ~~~ .cpp
 template <typename K, typename V>
-inline K get_key(const std::vector<std::pair<K, V>>& kvs, const V& v);
+inline K get_gl_key(const std::vector<std::pair<K, V>>& kvs, const V& v);
 ~~~
 
 Get a key from a list of key-value pairs and its value.
@@ -8882,7 +8882,7 @@ Rendering params.
 struct trace_pixel {
     vec3f col = zero3f;
     float alpha = 1;
-    rng_pcg32 rng = rng_pcg32();
+    rng_state rng = rng_state();
     int i = 0, j = 0;
     int sample = 0;
     int dimension = 0;
@@ -11031,10 +11031,10 @@ A simple wrapper for std::chrono.
 
 ### OpenGL objects and utilities
 
-#### Enum gl_elem_type : int
+#### Enum glelem_type : int
 
 ~~~ .cpp
-enum struct gl_elem_type : int {
+enum struct glelem_type : int {
     point = 1,
     line = 2,
     triangle = 3
@@ -11050,10 +11050,10 @@ OpenGL shape element types.
     - triangle:      Triangles.
 
 
-#### Enum gl_light_type : int
+#### Enum gllight_type : int
 
 ~~~ .cpp
-enum struct gl_light_type : int {
+enum struct gllight_type : int {
     point = 0,
     directional = 1,
 }
@@ -11066,13 +11066,13 @@ OpenGL light types.
     - directional:      Directional lights.
 
 
-#### Struct gl_lights
+#### Struct gllights
 
 ~~~ .cpp
-struct gl_lights {
+struct gllights {
     std::vector<vec3f> pos;
     std::vector<vec3f> ke;
-    std::vector<gl_light_type> type;
+    std::vector<gllight_type> type;
 }
 ~~~
 
@@ -11084,58 +11084,58 @@ OpenGL lights
     - type:      Light types.
 
 
-#### Function gl_check_error()
+#### Function check_gl_error()
 
 ~~~ .cpp
-bool gl_check_error(bool print = true);
+bool check_gl_error(bool print = true);
 ~~~
 
 Checks for GL error and then prints.
 
-#### Function gl_clear_buffers()
+#### Function clear_gl_buffers()
 
 ~~~ .cpp
-void gl_clear_buffers(const vec4f& background =;
+void clear_gl_buffers(const vec4f& background =;
 ~~~
 
 Clear window.
 
-#### Function gl_enable_depth_test()
+#### Function enable_gl_depth_test()
 
 ~~~ .cpp
-void gl_enable_depth_test(bool enabled);
+void enable_gl_depth_test(bool enabled);
 ~~~
 
 Enable/disable depth test.
 
-#### Function gl_enable_culling()
+#### Function enable_gl_culling()
 
 ~~~ .cpp
-void gl_enable_culling(bool enabled, bool front = false, bool back = true);
+void enable_gl_culling(bool enabled, bool front = false, bool back = true);
 ~~~
 
 Enable/disable culling.
 
-#### Function gl_enable_wireframe()
+#### Function enable_gl_wireframe()
 
 ~~~ .cpp
-void gl_enable_wireframe(bool enabled);
+void enable_gl_wireframe(bool enabled);
 ~~~
 
 Enable/disable wireframe.
 
-#### Function gl_enable_blending()
+#### Function enable_gl_blending()
 
 ~~~ .cpp
-void gl_enable_blending(bool enabled);
+void enable_gl_blending(bool enabled);
 ~~~
 
 Enable/disable blending.
 
-#### Function gl_set_blend_over()
+#### Function set_gl_blend_over()
 
 ~~~ .cpp
-void gl_set_blend_over();
+void set_gl_blend_over();
 ~~~
 
 Set blending to over operator.
@@ -11148,34 +11148,34 @@ void gl_line_width(float w);
 
 Line width.
 
-#### Function gl_set_viewport()
+#### Function set_gl_viewport()
 
 ~~~ .cpp
-void gl_set_viewport(const vec4i& v);
+void set_gl_viewport(const vec4i& v);
 ~~~
 
 Set viewport.
 
-#### Function gl_set_viewport()
+#### Function set_gl_viewport()
 
 ~~~ .cpp
-void gl_set_viewport(const vec2i& v);
+void set_gl_viewport(const vec2i& v);
 ~~~
 
 Set viewport.
 
-#### Function gl_read_imagef()
+#### Function read_gl_imagef()
 
 ~~~ .cpp
-void gl_read_imagef(float* pixels, int w, int h, int nc);
+void read_gl_imagef(float* pixels, int w, int h, int nc);
 ~~~
 
 Reads an image from the the framebuffer.
 
-#### Struct gl_texture
+#### Struct gltexture
 
 ~~~ .cpp
-struct gl_texture {
+struct gltexture {
 ~~~
 
 OpenGL texture object. Members are not part of the public API.
@@ -11183,7 +11183,7 @@ OpenGL texture object. Members are not part of the public API.
 #### Function update_texture()
 
 ~~~ .cpp
-inline void update_texture(gl_texture& txt, int w, int h, int nc,
+inline void update_texture(gltexture& txt, int w, int h, int nc,
     const float* pixels, bool linear, bool mipmap, bool as_float);
 ~~~
 
@@ -11193,7 +11193,7 @@ components (1-4). Internally use float if as_float and filtering if filter.
 #### Function update_texture()
 
 ~~~ .cpp
-inline void update_texture(gl_texture& txt, int w, int h, int nc,
+inline void update_texture(gltexture& txt, int w, int h, int nc,
     const unsigned char* pixels, bool linear, bool mipmap, bool as_srgb);
 ~~~
 
@@ -11203,7 +11203,7 @@ components (1-4). Internally use float if as_float and filtering if filter.
 #### Function update_texture()
 
 ~~~ .cpp
-inline void update_texture(gl_texture& txt, const image4f& img, bool linear,
+inline void update_texture(gltexture& txt, const image4f& img, bool linear,
     bool mipmap, bool as_float);
 ~~~
 
@@ -11213,7 +11213,7 @@ Internally use float if as_float and filtering if filter.
 #### Function update_texture()
 
 ~~~ .cpp
-inline void update_texture(gl_texture& txt, const image4b& img, bool linear,
+inline void update_texture(gltexture& txt, const image4b& img, bool linear,
     bool mipmap, bool as_srgb);
 ~~~
 
@@ -11223,7 +11223,7 @@ Internally use float if as_float and filtering if filter.
 #### Function update_texture()
 
 ~~~ .cpp
-inline void update_texture(gl_texture& txt, const image4f& img);
+inline void update_texture(gltexture& txt, const image4f& img);
 ~~~
 
 Updates a texture with pixels values from an image.
@@ -11231,7 +11231,7 @@ Updates a texture with pixels values from an image.
 #### Function update_texture()
 
 ~~~ .cpp
-inline void update_texture(gl_texture& txt, const image4b& img);
+inline void update_texture(gltexture& txt, const image4b& img);
 ~~~
 
 Updates a texture with pixels values from an image.
@@ -11239,7 +11239,7 @@ Updates a texture with pixels values from an image.
 #### Function make_texture()
 
 ~~~ .cpp
-inline gl_texture make_texture(
+inline gltexture make_texture(
     const image4f& img, bool linear, bool mipmap, bool as_float);
 ~~~
 
@@ -11248,7 +11248,7 @@ Creates a texture from an image. Convenience wrapper to update_texture().
 #### Function make_texture()
 
 ~~~ .cpp
-inline gl_texture make_texture(
+inline gltexture make_texture(
     const image4b& img, bool linear, bool mipmap, bool as_srgb);
 ~~~
 
@@ -11257,7 +11257,7 @@ Creates a texture from an image. Convenience wrapper to update_texture().
 #### Function bind_texture()
 
 ~~~ .cpp
-void bind_texture(const gl_texture& txt, uint unit);
+void bind_texture(const gltexture& txt, uint unit);
 ~~~
 
 Binds a texture to a texture unit.
@@ -11265,7 +11265,7 @@ Binds a texture to a texture unit.
 #### Function unbind_texture()
 
 ~~~ .cpp
-void unbind_texture(const gl_texture& txt, uint unit);
+void unbind_texture(const gltexture& txt, uint unit);
 ~~~
 
 Unbinds a texture.
@@ -11273,7 +11273,7 @@ Unbinds a texture.
 #### Function clear_texture()
 
 ~~~ .cpp
-void clear_texture(gl_texture& txt);
+void clear_texture(gltexture& txt);
 ~~~
 
 Clears the OpenGL buffer.
@@ -11281,7 +11281,7 @@ Clears the OpenGL buffer.
 #### Function get_texture_id()
 
 ~~~ .cpp
-inline uint get_texture_id(const gl_texture& txt);
+inline uint get_texture_id(const gltexture& txt);
 ~~~
 
 Get texture id.
@@ -11289,15 +11289,15 @@ Get texture id.
 #### Function is_texture_valid()
 
 ~~~ .cpp
-inline bool is_texture_valid(const gl_texture& txt);
+inline bool is_texture_valid(const gltexture& txt);
 ~~~
 
 Check if defined.
 
-#### Enum gl_texture_wrap
+#### Enum gltexture_wrap
 
 ~~~ .cpp
-enum struct gl_texture_wrap {
+enum struct gltexture_wrap {
     not_set = 0,
     repeat = 1,
     clamp = 2,
@@ -11314,10 +11314,10 @@ Wrap values for OpenGL texture.
     - mirror:      Mirror.
 
 
-#### Enum gl_texture_filter
+#### Enum gltexture_filter
 
 ~~~ .cpp
-enum struct gl_texture_filter {
+enum struct gltexture_filter {
     not_set = 0,
     linear = 1,
     nearest = 2,
@@ -11340,17 +11340,17 @@ Filter values for OpenGL texture.
     - nearest_mipmap_linear:      Mip-mapping.
 
 
-#### Struct gl_texture_info
+#### Struct gltexture_info
 
 ~~~ .cpp
-struct gl_texture_info {
-    gl_texture txt = {};
+struct gltexture_info {
+    gltexture txt = {};
     int texcoord = 0;
     float scale = 1;
-    gl_texture_wrap wrap_s = gl_texture_wrap::not_set;
-    gl_texture_wrap wrap_t = gl_texture_wrap::not_set;
-    gl_texture_filter filter_mag = gl_texture_filter::not_set;
-    gl_texture_filter filter_min = gl_texture_filter::not_set;
+    gltexture_wrap wrap_s = gltexture_wrap::not_set;
+    gltexture_wrap wrap_t = gltexture_wrap::not_set;
+    gltexture_filter filter_mag = gltexture_filter::not_set;
+    gltexture_filter filter_min = gltexture_filter::not_set;
 }
 ~~~
 
@@ -11366,99 +11366,99 @@ OpenGL texture parameters.
     - filter_min:      Filter min mode.
 
 
-#### Struct gl_vertex_buffer
+#### Struct glvertex_buffer
 
 ~~~ .cpp
-struct gl_vertex_buffer {
+struct glvertex_buffer {
 ~~~
 
 OpenGL vertex/element buffer. Members are not part of the public API.
 
-#### Function update_vertex_buffer()
+#### Function update_gl_buffer()
 
 ~~~ .cpp
-inline void update_vertex_buffer(gl_vertex_buffer& buf, int num, int ncomp,
+inline void update_gl_buffer(glvertex_buffer& buf, int num, int ncomp,
     const float* values, bool dynamic = false);
 ~~~
 
 Updates the buffer with new data.
 
-#### Function update_vertex_buffer()
+#### Function update_gl_buffer()
 
 ~~~ .cpp
-inline void update_vertex_buffer(gl_vertex_buffer& buf, int num, int ncomp,
+inline void update_gl_buffer(glvertex_buffer& buf, int num, int ncomp,
     const int* values, bool dynamic = false);
 ~~~
 
 Updates the buffer with new data.
 
-#### Function update_vertex_buffer()
+#### Function update_gl_buffer()
 
 ~~~ .cpp
-inline void update_vertex_buffer(gl_vertex_buffer& buf,
+inline void update_gl_buffer(glvertex_buffer& buf,
     const std::vector<float>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer with new data.
 
-#### Function update_vertex_buffer()
+#### Function update_gl_buffer()
 
 ~~~ .cpp
-inline void update_vertex_buffer(gl_vertex_buffer& buf,
+inline void update_gl_buffer(glvertex_buffer& buf,
     const std::vector<vec2f>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer with new data.
 
-#### Function update_vertex_buffer()
+#### Function update_gl_buffer()
 
 ~~~ .cpp
-inline void update_vertex_buffer(gl_vertex_buffer& buf,
+inline void update_gl_buffer(glvertex_buffer& buf,
     const std::vector<vec3f>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer with new data.
 
-#### Function update_vertex_buffer()
+#### Function update_gl_buffer()
 
 ~~~ .cpp
-inline void update_vertex_buffer(gl_vertex_buffer& buf,
+inline void update_gl_buffer(glvertex_buffer& buf,
     const std::vector<vec4f>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer with new data.
 
-#### Function update_vertex_buffer()
+#### Function update_gl_buffer()
 
 ~~~ .cpp
-inline void update_vertex_buffer(gl_vertex_buffer& buf,
+inline void update_gl_buffer(glvertex_buffer& buf,
     const std::vector<int>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer with new data.
 
-#### Function update_vertex_buffer()
+#### Function update_gl_buffer()
 
 ~~~ .cpp
-inline void update_vertex_buffer(gl_vertex_buffer& buf,
+inline void update_gl_buffer(glvertex_buffer& buf,
     const std::vector<vec2i>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer with new data.
 
-#### Function update_vertex_buffer()
+#### Function update_gl_buffer()
 
 ~~~ .cpp
-inline void update_vertex_buffer(gl_vertex_buffer& buf,
+inline void update_gl_buffer(glvertex_buffer& buf,
     const std::vector<vec3i>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer with new data.
 
-#### Function update_vertex_buffer()
+#### Function update_gl_buffer()
 
 ~~~ .cpp
-inline void update_vertex_buffer(gl_vertex_buffer& buf,
+inline void update_gl_buffer(glvertex_buffer& buf,
     const std::vector<vec4i>& values, bool dynamic = false);
 ~~~
 
@@ -11468,7 +11468,7 @@ Updates the buffer with new data.
 
 ~~~ .cpp
 template <typename T>
-inline gl_vertex_buffer make_vertex_buffer(
+inline glvertex_buffer make_vertex_buffer(
     const std::vector<T>& values, bool dynamic = false);
 ~~~
 
@@ -11477,7 +11477,7 @@ Make a buffer with new data.
 #### Function bind_vertex_buffer()
 
 ~~~ .cpp
-void bind_vertex_buffer(const gl_vertex_buffer& buf, uint vattr);
+void bind_vertex_buffer(const glvertex_buffer& buf, uint vattr);
 ~~~
 
 Bind the buffer at a particular attribute location.
@@ -11485,7 +11485,7 @@ Bind the buffer at a particular attribute location.
 #### Function unbind_vertex_buffer()
 
 ~~~ .cpp
-void unbind_vertex_buffer(const gl_vertex_buffer& buf, uint vattr);
+void unbind_vertex_buffer(const glvertex_buffer& buf, uint vattr);
 ~~~
 
 Unbind the buffer.
@@ -11501,7 +11501,7 @@ Unbind the buffer.
 #### Function get_vertex_buffer_id()
 
 ~~~ .cpp
-inline uint get_vertex_buffer_id(const gl_vertex_buffer& buf);
+inline uint get_vertex_buffer_id(const glvertex_buffer& buf);
 ~~~
 
 Get buffer id.
@@ -11509,7 +11509,7 @@ Get buffer id.
 #### Function is_vertex_buffer_valid()
 
 ~~~ .cpp
-inline bool is_vertex_buffer_valid(const gl_vertex_buffer& buf);
+inline bool is_vertex_buffer_valid(const glvertex_buffer& buf);
 ~~~
 
 Check if defined.
@@ -11517,7 +11517,7 @@ Check if defined.
 #### Function clear_vertex_buffer()
 
 ~~~ .cpp
-void clear_vertex_buffer(gl_vertex_buffer& buf);
+void clear_vertex_buffer(glvertex_buffer& buf);
 ~~~
 
 Clears OpenGL state.
@@ -11540,46 +11540,46 @@ OpenGL element array buffer. Members are not part of the public API.
     - ncomp:      Number of components.
 
 
-#### Function update_element_buffer()
+#### Function update_gl_buffer()
 
 ~~~ .cpp
-inline void update_element_buffer(gl_element_buffer& buf, int num, int ncomp,
+inline void update_gl_buffer(gl_element_buffer& buf, int num, int ncomp,
     const int* values, bool dynamic = false);
 ~~~
 
 Updates the buffer with new data.
 
-#### Function update_element_buffer()
+#### Function update_gl_buffer()
 
 ~~~ .cpp
-inline void update_element_buffer(gl_element_buffer& buf,
+inline void update_gl_buffer(gl_element_buffer& buf,
     const std::vector<int>& values, bool dynamic = false);
 ~~~
 
 Updates the bufferwith new data.
 
-#### Function update_element_buffer()
+#### Function update_gl_buffer()
 
 ~~~ .cpp
-inline void update_element_buffer(gl_element_buffer& buf,
+inline void update_gl_buffer(gl_element_buffer& buf,
     const std::vector<vec2i>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer with new data.
 
-#### Function update_element_buffer()
+#### Function update_gl_buffer()
 
 ~~~ .cpp
-inline void update_element_buffer(gl_element_buffer& buf,
+inline void update_gl_buffer(gl_element_buffer& buf,
     const std::vector<vec3i>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer with new data.
 
-#### Function update_element_buffer()
+#### Function update_gl_buffer()
 
 ~~~ .cpp
-inline void update_element_buffer(gl_element_buffer& buf,
+inline void update_gl_buffer(gl_element_buffer& buf,
     const std::vector<vec4i>& values, bool dynamic = false);
 ~~~
 
@@ -11627,10 +11627,10 @@ void clear_element_buffer(gl_element_buffer& buf);
 
 Clears OpenGL state.
 
-#### Struct gl_program
+#### Struct glprogram
 
 ~~~ .cpp
-struct gl_program {
+struct glprogram {
     uint pid = 0;
     uint vid = 0;
     uint fid = 0;
@@ -11650,25 +11650,25 @@ OpenGL program. Members are not part of the public API.
 #### Function make_program()
 
 ~~~ .cpp
-gl_program make_program(const std::string& vertex, const std::string& fragment);
+glprogram make_program(const std::string& vertex, const std::string& fragment);
 ~~~
 
 Creates an OpenGL program from vertex and fragment code.
 
-#### Function get_program_uniform_location()
+#### Function get_gl_uniform_location()
 
 ~~~ .cpp
-int get_program_uniform_location(
-    const gl_program& prog, const std::string& name);
+int get_gl_uniform_location(
+    const glprogram& prog, const std::string& name);
 ~~~
 
 Get uniform location.
 
-#### Function get_program_attrib_location()
+#### Function get_gl_attrib_location()
 
 ~~~ .cpp
-int get_program_attrib_location(
-    const gl_program& prog, const std::string& name);
+int get_gl_attrib_location(
+    const glprogram& prog, const std::string& name);
 ~~~
 
 Get attribute location.
@@ -11677,7 +11677,7 @@ Get attribute location.
 
 ~~~ .cpp
 std::vector<std::pair<std::string, int>> get_program_uniforms_names(
-    const gl_program& prog);
+    const glprogram& prog);
 ~~~
 
 Get the names of all uniforms.
@@ -11686,269 +11686,269 @@ Get the names of all uniforms.
 
 ~~~ .cpp
 std::vector<std::pair<std::string, int>> get_program_attributes_names(
-    const gl_program& prog);
+    const glprogram& prog);
 ~~~
 
 Get the names of all attributes.
 
-#### Function set_program_uniform()
+#### Function set_gl_uniform()
 
 ~~~ .cpp
-bool set_program_uniform(
-    const gl_program& prog, int pos, const int* val, int ncomp, int count);
+bool set_gl_uniform(
+    const glprogram& prog, int pos, const int* val, int ncomp, int count);
 ~~~
 
 Set uniform integer values `val` for program `prog` and variable `pos`.
 The values have `nc` number of components (1-4) and `count` elements.
 
-#### Function set_program_uniform()
+#### Function set_gl_uniform()
 
 ~~~ .cpp
-bool set_program_uniform(
-    const gl_program& prog, int pos, const float* val, int ncomp, int count);
+bool set_gl_uniform(
+    const glprogram& prog, int pos, const float* val, int ncomp, int count);
 ~~~
 
 Set uniform float values `val` for program `prog` and variable `pos`.
 The values have `nc` number of components (1-4) and `count` elements.
 
-#### Function set_program_uniform()
+#### Function set_gl_uniform()
 
 ~~~ .cpp
-inline bool set_program_uniform(const gl_program& prog, int var, bool val);
+inline bool set_gl_uniform(const glprogram& prog, int var, bool val);
 ~~~
 
 Set uniform value.
 
-#### Function set_program_uniform()
+#### Function set_gl_uniform()
 
 ~~~ .cpp
-inline bool set_program_uniform(const gl_program& prog, int var, int val);
+inline bool set_gl_uniform(const glprogram& prog, int var, int val);
 ~~~
 
 Set uniform value.
 
-#### Function set_program_uniform()
+#### Function set_gl_uniform()
 
 ~~~ .cpp
-inline bool set_program_uniform(const gl_program& prog, int var, float val);
+inline bool set_gl_uniform(const glprogram& prog, int var, float val);
 ~~~
 
 Set uniform value.
 
-#### Function set_program_uniform()
+#### Function set_gl_uniform()
 
 ~~~ .cpp
 template <typename T, int N>
-inline bool set_program_uniform(
-    const gl_program& prog, int var, const vec<T, N>& val);
+inline bool set_gl_uniform(
+    const glprogram& prog, int var, const vec<T, N>& val);
 ~~~
 
 Set uniform value.
 
-#### Function set_program_uniform()
+#### Function set_gl_uniform()
 
 ~~~ .cpp
 template <typename T>
-inline bool set_program_uniform(
-    const gl_program& prog, int var, const mat<T, 4>& val);
+inline bool set_gl_uniform(
+    const glprogram& prog, int var, const mat<T, 4>& val);
 ~~~
 
 Set uniform value.
 
-#### Function set_program_uniform()
+#### Function set_gl_uniform()
 
 ~~~ .cpp
 template <typename T>
-inline bool set_program_uniform(
-    const gl_program& prog, int var, const frame<T, 3>& val);
+inline bool set_gl_uniform(
+    const glprogram& prog, int var, const frame<T, 3>& val);
 ~~~
 
 Set uniform value.
 
-#### Function set_program_uniform()
+#### Function set_gl_uniform()
 
 ~~~ .cpp
-inline bool set_program_uniform(
-    const gl_program& prog, int var, const int* val, int num);
+inline bool set_gl_uniform(
+    const glprogram& prog, int var, const int* val, int num);
 ~~~
 
 Set uniform array.
 
-#### Function set_program_uniform()
+#### Function set_gl_uniform()
 
 ~~~ .cpp
-inline bool set_program_uniform(
-    const gl_program& prog, int var, const float* val, int num);
+inline bool set_gl_uniform(
+    const glprogram& prog, int var, const float* val, int num);
 ~~~
 
 Set uniform array.
 
-#### Function set_program_uniform()
+#### Function set_gl_uniform()
 
 ~~~ .cpp
 template <typename T, int N>
-inline bool set_program_uniform(
-    const gl_program& prog, int var, const vec<T, N>* val, int num);
+inline bool set_gl_uniform(
+    const glprogram& prog, int var, const vec<T, N>* val, int num);
 ~~~
 
 Set uniform array.
 
-#### Function set_program_uniform()
+#### Function set_gl_uniform()
 
 ~~~ .cpp
 template <typename T>
-inline bool set_program_uniform(
-    const gl_program& prog, int var, const mat<T, 4>* val, int num);
+inline bool set_gl_uniform(
+    const glprogram& prog, int var, const mat<T, 4>* val, int num);
 ~~~
 
 Set uniform array.
 
-#### Function set_program_uniform()
+#### Function set_gl_uniform()
 
 ~~~ .cpp
 template <typename T>
-inline bool set_program_uniform(
-    const gl_program& prog, int var, const frame<T, 3>* val, int num);
+inline bool set_gl_uniform(
+    const glprogram& prog, int var, const frame<T, 3>* val, int num);
 ~~~
 
 Set uniform array.
 
-#### Function set_program_uniform()
+#### Function set_gl_uniform()
 
 ~~~ .cpp
 template <typename T>
-inline bool set_program_uniform(
-    const gl_program& prog, const std::string& var, const T& val);
+inline bool set_gl_uniform(
+    const glprogram& prog, const std::string& var, const T& val);
 ~~~
 
 Set uniform value for names variable.
 
-#### Function set_program_uniform()
+#### Function set_gl_uniform()
 
 ~~~ .cpp
 template <typename T>
-inline bool set_program_uniform(
-    const gl_program& prog, const std::string& var, const T* val, int num);
+inline bool set_gl_uniform(
+    const glprogram& prog, const std::string& var, const T* val, int num);
 ~~~
 
 Set uniform array for names variable.
 
-#### Function set_program_uniform_texture()
+#### Function set_gl_uniform_texture()
 
 ~~~ .cpp
-bool set_program_uniform_texture(
-    const gl_program& prog, int pos, const gl_texture_info& tinfo, uint tunit);
+bool set_gl_uniform_texture(
+    const glprogram& prog, int pos, const gltexture_info& tinfo, uint tunit);
 ~~~
 
 Set uniform texture.
 
-#### Function set_program_uniform_texture()
+#### Function set_gl_uniform_texture()
 
 ~~~ .cpp
-inline bool set_program_uniform_texture(const gl_program& prog, int var,
-    int varon, const gl_texture_info& tinfo, uint tunit);
+inline bool set_gl_uniform_texture(const glprogram& prog, int var,
+    int varon, const gltexture_info& tinfo, uint tunit);
 ~~~
 
 Set uniform texture with an additionasl texture enable flags.
 
-#### Function set_program_uniform_texture()
+#### Function set_gl_uniform_texture()
 
 ~~~ .cpp
-inline bool set_program_uniform_texture(const gl_program& prog,
-    const std::string& var, const gl_texture_info& tinfo, uint tunit);
+inline bool set_gl_uniform_texture(const glprogram& prog,
+    const std::string& var, const gltexture_info& tinfo, uint tunit);
 ~~~
 
 Set uniform texture.
 
-#### Function set_program_uniform_texture()
+#### Function set_gl_uniform_texture()
 
 ~~~ .cpp
-inline bool set_program_uniform_texture(const gl_program& prog,
+inline bool set_gl_uniform_texture(const glprogram& prog,
     const std::string& var, const std::string& varon,
-    const gl_texture_info& tinfo, uint tunit);
+    const gltexture_info& tinfo, uint tunit);
 ~~~
 
 Set uniform texture with an additionasl texture enable flags.
 
-#### Function set_program_vertattr()
+#### Function set_gl_attribute()
 
 ~~~ .cpp
-bool set_program_vertattr(
-    const gl_program& prog, int pos, const float* value, int nc);
+bool set_gl_attribute(
+    const glprogram& prog, int pos, const float* value, int nc);
 ~~~
 
 Sets a constant `value` of `nc` components for the vertex attribute at
 `pos` location.
 
-#### Function set_program_vertattr()
+#### Function set_gl_attribute()
 
 ~~~ .cpp
-bool set_program_vertattr(
-    const gl_program& prog, int pos, const int* value, int nc);
+bool set_gl_attribute(
+    const glprogram& prog, int pos, const int* value, int nc);
 ~~~
 
 Sets a constant `value` of `nc` components for the vertex attribute at
 `pos` location.
 
-#### Function set_program_vertattr()
+#### Function set_gl_attribute()
 
 ~~~ .cpp
-bool set_program_vertattr(const gl_program& prog, const std::string& var,
-    const gl_vertex_buffer& buf);
+bool set_gl_attribute(const glprogram& prog, const std::string& var,
+    const glvertex_buffer& buf);
 ~~~
 
 Binds a buffer to a vertex attribute.
 
-#### Function set_program_vertattr()
+#### Function set_gl_attribute()
 
 ~~~ .cpp
-bool set_program_vertattr(const gl_program& prog, int pos,
-    const gl_vertex_buffer& buf, int nc, const float* def);
+bool set_gl_attribute(const glprogram& prog, int pos,
+    const glvertex_buffer& buf, int nc, const float* def);
 ~~~
 
 Binds a buffer to a vertex attribute, or a constant value if the buffer is
 empty.
 
-#### Function set_program_vertattr()
+#### Function set_gl_attribute()
 
 ~~~ .cpp
 template <typename T, int N>
-inline bool set_program_vertattr(const gl_program& prog, int var,
-    const gl_vertex_buffer& buf, const vec<T, N>& def);
+inline bool set_gl_attribute(const glprogram& prog, int var,
+    const glvertex_buffer& buf, const vec<T, N>& def);
 ~~~
 
 Binds a buffer or constant to a vertex attribute.
 
-#### Function set_program_vertattr()
+#### Function set_gl_attribute()
 
 ~~~ .cpp
 template <typename T, int N>
-inline bool set_program_vertattr(const gl_program& prog, const std::string& var,
-    const gl_vertex_buffer& buf, const vec<T, N>& def);
+inline bool set_gl_attribute(const glprogram& prog, const std::string& var,
+    const glvertex_buffer& buf, const vec<T, N>& def);
 ~~~
 
 Binds a buffer or constant to a vertex attribute.
 
-#### Function is_program_valid()
+#### Function is_gl_program_valid()
 
 ~~~ .cpp
-inline bool is_program_valid(const gl_program& prog);
+inline bool is_gl_program_valid(const glprogram& prog);
 ~~~
 
 Check whether the program is valid.
 
-#### Function bind_program()
+#### Function bind_gl_program()
 
 ~~~ .cpp
-void bind_program(const gl_program& prog);
+void bind_gl_program(const glprogram& prog);
 ~~~
 
 Binds a program.
 
-#### Function unbind_program()
+#### Function unbind_gl_program()
 
 ~~~ .cpp
-void unbind_program(const gl_program& prog);
+void unbind_gl_program(const glprogram& prog);
 ~~~
 
 Unbind a program.
@@ -11956,17 +11956,17 @@ Unbind a program.
 #### Function clear_program()
 
 ~~~ .cpp
-void clear_program(gl_program& prog);
+void clear_program(glprogram& prog);
 ~~~
 
 Clears OpenGL state.
 
 ### OpenGL default shaders
 
-#### Struct gl_shape
+#### Struct glshape
 
 ~~~ .cpp
-struct gl_shape {
+struct glshape {
 ~~~
 
 Vertex buffers for scene drawing. Members are not part of the public API.
@@ -11974,7 +11974,7 @@ Vertex buffers for scene drawing. Members are not part of the public API.
 #### Function make_gl_lights()
 
 ~~~ .cpp
-gl_lights make_gl_lights(const scene* scn);
+gllights make_gl_lights(const scene* scn);
 ~~~
 
 Initialize gl lights.
@@ -11982,7 +11982,7 @@ Initialize gl lights.
 #### Function update_gl_texture()
 
 ~~~ .cpp
-void update_gl_texture(const texture* txt, gl_texture& gtxt);
+void update_gl_texture(const texture* txt, gltexture& gtxt);
 ~~~
 
 Update scene textures on the GPU.
@@ -11990,7 +11990,7 @@ Update scene textures on the GPU.
 #### Function make_gl_textures()
 
 ~~~ .cpp
-inline std::unordered_map<texture*, gl_texture> make_gl_textures(
+inline std::unordered_map<texture*, gltexture> make_gl_textures(
     const scene* scn);
 ~~~
 
@@ -11999,7 +11999,7 @@ Update scene textures on the GPU.
 #### Function clear_gl_textures()
 
 ~~~ .cpp
-inline void clear_gl_textures(std::unordered_map<texture*, gl_texture>& txts);
+inline void clear_gl_textures(std::unordered_map<texture*, gltexture>& txts);
 ~~~
 
 Clear OpenGL state.
@@ -12007,7 +12007,7 @@ Clear OpenGL state.
 #### Function update_gl_shape()
 
 ~~~ .cpp
-void update_gl_shape(const shape* shp, gl_shape& gshp);
+void update_gl_shape(const shape* shp, glshape& gshp);
 ~~~
 
 Update scene shapes on the GPU.
@@ -12015,7 +12015,7 @@ Update scene shapes on the GPU.
 #### Function clear_gl_shape()
 
 ~~~ .cpp
-void clear_gl_shape(gl_shape& gshp);
+void clear_gl_shape(glshape& gshp);
 ~~~
 
 Clear OpenGL state.
@@ -12023,7 +12023,7 @@ Clear OpenGL state.
 #### Function make_gl_shapes()
 
 ~~~ .cpp
-inline std::unordered_map<shape*, gl_shape> make_gl_shapes(const scene* scn);
+inline std::unordered_map<shape*, glshape> make_gl_shapes(const scene* scn);
 ~~~
 
 Update scene shapes on the GPU.
@@ -12031,17 +12031,17 @@ Update scene shapes on the GPU.
 #### Function clear_gl_shapes()
 
 ~~~ .cpp
-inline void clear_gl_shapes(std::unordered_map<shape*, gl_shape>& shps);
+inline void clear_gl_shapes(std::unordered_map<shape*, glshape>& shps);
 ~~~
 
 Clear OpenGL state.
 
-#### Struct gl_stdimage_program
+#### Struct glimage_program
 
 ~~~ .cpp
-struct gl_stdimage_program {
-    gl_program prog;
-    gl_vertex_buffer vbo;
+struct glimage_program {
+    glprogram prog;
+    glvertex_buffer vbo;
 }
 ~~~
 
@@ -12052,10 +12052,10 @@ A shader for displaying images.  Members are not part of the public API.
     - vbo:      Vertex array.
 
 
-#### Function make_stdimage_program()
+#### Function make_gl_stdimage_program()
 
 ~~~ .cpp
-gl_stdimage_program make_stdimage_program();
+glimage_program make_gl_stdimage_program();
 ~~~
 
 Initialize a stdimage program.
@@ -12063,7 +12063,7 @@ Initialize a stdimage program.
 #### Function draw_image()
 
 ~~~ .cpp
-void draw_image(const gl_stdimage_program& prog, const gl_texture& txt,
+void draw_image(const glimage_program& prog, const gltexture& txt,
     const vec2i& win_size, const vec2f& offset, float zoom, float exposure,
     float gamma, bool filmic);
 ~~~
@@ -12073,16 +12073,16 @@ Draws an image texture the stdimage program.
 #### Function draw_image()
 
 ~~~ .cpp
-inline void draw_image(const gl_stdimage_program& prog, const gl_texture& txt,
+inline void draw_image(const glimage_program& prog, const gltexture& txt,
     const vec2i& win_size, const vec2f& offset, float zoom);
 ~~~
 
 Draws an image texture the stdimage program.
 
-#### Struct gl_stdimage_params
+#### Struct glimage_params
 
 ~~~ .cpp
-struct gl_stdimage_params {
+struct glimage_params {
     vec2f offset = {0, 0};
     float zoom = 1;
     vec4f background = zero4f;
@@ -12100,8 +12100,8 @@ Params for stdimage drawing.
 #### Function draw_image()
 
 ~~~ .cpp
-inline void draw_image(const gl_stdimage_program& prog, const gl_texture& txt,
-    const vec2i& win_size, const gl_stdimage_params& params,
+inline void draw_image(const glimage_program& prog, const gltexture& txt,
+    const vec2i& win_size, const glimage_params& params,
     const tonemap_params& tmparams, bool clear_background = true);
 ~~~
 
@@ -12111,16 +12111,16 @@ Draws an image texture the stdimage program.
 
 ~~~ .cpp
 vec2i get_draw_image_coords(
-    const vec2f& mouse_pos, const gl_stdimage_params& params);
+    const vec2f& mouse_pos, const glimage_params& params);
 ~~~
 
 Computes the image uv coordinates corresponding to the view parameters.
 
-#### Struct gl_stdsurface_program
+#### Struct glsurface_program
 
 ~~~ .cpp
-struct gl_stdsurface_program {
-    gl_program prog;
+struct glsurface_program {
+    glprogram prog;
 }
 ~~~
 
@@ -12131,26 +12131,26 @@ Phong/GGX. Members are not part of public API.
     - prog:      Program.
 
 
-#### Function make_stdsurface_program()
+#### Function make_gl_stdsurface_program()
 
 ~~~ .cpp
-gl_stdsurface_program make_stdsurface_program();
+glsurface_program make_gl_stdsurface_program();
 ~~~
 
 Initialize a stdsurface shader.
 
-#### Function is_program_valid()
+#### Function is_gl_program_valid()
 
 ~~~ .cpp
-inline bool is_program_valid(const gl_stdsurface_program& prog);
+inline bool is_gl_program_valid(const glsurface_program& prog);
 ~~~
 
 Check if the program is valid.
 
-#### Function begin_stdsurface_frame()
+#### Function begin_gl_stdsurface_frame()
 
 ~~~ .cpp
-void begin_stdsurface_frame(const gl_stdsurface_program& prog,
+void begin_gl_stdsurface_frame(const glsurface_program& prog,
     bool shade_eyelight, float tonemap_exposure, float tonemap_gamma,
     bool tonemap_filmic, const mat4f& camera_xform,
     const mat4f& camera_xform_inv, const mat4f& camera_proj);
@@ -12160,67 +12160,67 @@ Starts a frame by setting exposure/gamma values, camera transforms and
 projection. Sets also whether to use full shading or a quick eye light
 preview.
 
-#### Function end_stdsurface_frame()
+#### Function end_gl_stdsurface_frame()
 
 ~~~ .cpp
-void end_stdsurface_frame(const gl_stdsurface_program& prog);
+void end_gl_stdsurface_frame(const glsurface_program& prog);
 ~~~
 
 Ends a frame.
 
-#### Function set_stdsurface_lights()
+#### Function set_gl_stdsurface_lights()
 
 ~~~ .cpp
-void set_stdsurface_lights(const gl_stdsurface_program& prog, const vec3f& amb,
-    const gl_lights& lights);
+void set_gl_stdsurface_lights(const glsurface_program& prog, const vec3f& amb,
+    const gllights& lights);
 ~~~
 
 Set shading lights and ambient.
 
-#### Function begin_stdsurface_shape()
+#### Function begin_gl_stdsurface_shape()
 
 ~~~ .cpp
-void begin_stdsurface_shape(const gl_stdsurface_program& prog,
+void begin_gl_stdsurface_shape(const glsurface_program& prog,
     const mat4f& xform, float normal_offset = 0);
 ~~~
 
 Begins drawing a shape with transform `xform`.
 
-#### Function end_stdsurface_shape()
+#### Function end_gl_stdsurface_shape()
 
 ~~~ .cpp
-void end_stdsurface_shape(const gl_stdsurface_program& prog);
+void end_gl_stdsurface_shape(const glsurface_program& prog);
 ~~~
 
 End shade drawing.
 
-#### Function set_stdsurface_normaloffset()
+#### Function set_gl_stdsurface_normaloffset()
 
 ~~~ .cpp
-void set_stdsurface_normaloffset(
-    const gl_stdsurface_program& prog, float normal_offset);
+void set_gl_stdsurface_normaloffset(
+    const glsurface_program& prog, float normal_offset);
 ~~~
 
 Sets normal offset.
 
-#### Function set_stdsurface_highlight()
+#### Function set_gl_stdsurface_highlight()
 
 ~~~ .cpp
-void set_stdsurface_highlight(
-    const gl_stdsurface_program& prog, const vec4f& highlight);
+void set_gl_stdsurface_highlight(
+    const glsurface_program& prog, const vec4f& highlight);
 ~~~
 
 Set the object as highlighted.
 
-#### Function set_stdsurface_material()
+#### Function set_gl_stdsurface_material()
 
 ~~~ .cpp
-void set_stdsurface_material(const gl_stdsurface_program& prog,
-    material_type type, gl_elem_type etype, const vec3f& ke, const vec3f& kd,
-    const vec3f& ks, float rs, float op, const gl_texture_info& ke_txt,
-    const gl_texture_info& kd_txt, const gl_texture_info& ks_txt,
-    const gl_texture_info& rs_txt, const gl_texture_info& norm_txt,
-    const gl_texture_info& occ_txt, bool use_phong, bool double_sided,
+void set_gl_stdsurface_material(const glsurface_program& prog,
+    material_type type, glelem_type etype, const vec3f& ke, const vec3f& kd,
+    const vec3f& ks, float rs, float op, const gltexture_info& ke_txt,
+    const gltexture_info& kd_txt, const gltexture_info& ks_txt,
+    const gltexture_info& rs_txt, const gltexture_info& norm_txt,
+    const gltexture_info& occ_txt, bool use_phong, bool double_sided,
     bool alpha_cutout);
 ~~~
 
@@ -12231,22 +12231,22 @@ maps. Works for points/lines/triangles indicated by `etype`, (diffuse for
 points, Kajiya-Kay for lines, GGX/Phong for triangles). Material `type`
 matches the scene material type.
 
-#### Function set_stdsurface_constmaterial()
+#### Function set_gl_stdsurface_constmaterial()
 
 ~~~ .cpp
-void set_stdsurface_constmaterial(
-    const gl_stdsurface_program& prog, const vec3f& ke, float op);
+void set_gl_stdsurface_constmaterial(
+    const glsurface_program& prog, const vec3f& ke, float op);
 ~~~
 
 Set constant material with emission `ke` and opacity `op`.
 
-#### Function set_stdsurface_vert()
+#### Function set_gl_stdsurface_vert()
 
 ~~~ .cpp
-void set_stdsurface_vert(const gl_stdsurface_program& prog,
-    const gl_vertex_buffer& pos, const gl_vertex_buffer& norm,
-    const gl_vertex_buffer& texcoord, const gl_vertex_buffer& color,
-    const gl_vertex_buffer& tangsp);
+void set_gl_stdsurface_vert(const glsurface_program& prog,
+    const glvertex_buffer& pos, const glvertex_buffer& norm,
+    const glvertex_buffer& texcoord, const glvertex_buffer& color,
+    const glvertex_buffer& tangsp);
 ~~~
 
 Set vertex data with buffers for position pos, normals norm, texture
@@ -12255,8 +12255,8 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.
 #### Function set_stdsurface_vert_skinning()
 
 ~~~ .cpp
-void set_stdsurface_vert_skinning(const gl_stdsurface_program& prog,
-    const gl_vertex_buffer& weights, const gl_vertex_buffer& joints,
+void set_stdsurface_vert_skinning(const glsurface_program& prog,
+    const glvertex_buffer& weights, const glvertex_buffer& joints,
     int nxforms, const mat4f* xforms);
 ~~~
 
@@ -12265,8 +12265,8 @@ Set vertex data with buffers for skinning.
 #### Function set_stdsurface_vert_gltf_skinning()
 
 ~~~ .cpp
-void set_stdsurface_vert_gltf_skinning(const gl_stdsurface_program& prog,
-    const gl_vertex_buffer& weights, const gl_vertex_buffer& joints,
+void set_stdsurface_vert_gltf_skinning(const glsurface_program& prog,
+    const glvertex_buffer& weights, const glvertex_buffer& joints,
     int nxforms, const mat4f* xforms);
 ~~~
 
@@ -12275,15 +12275,15 @@ Set vertex data with buffers for skinning.
 #### Function set_stdsurface_vert_skinning_off()
 
 ~~~ .cpp
-void set_stdsurface_vert_skinning_off(const gl_stdsurface_program& prog);
+void set_stdsurface_vert_skinning_off(const glsurface_program& prog);
 ~~~
 
 Disables vertex skinning.
 
-#### Struct gl_stdsurface_params
+#### Struct glsurface_params
 
 ~~~ .cpp
-struct gl_stdsurface_params {
+struct glsurface_params {
     int resolution = 512;
     bool wireframe = false;
     bool edges = false;
@@ -12316,14 +12316,14 @@ Params for stdsurface drawing.
     - cull_backface:      Cull back face.
 
 
-#### Function draw_stdsurface_scene()
+#### Function draw_gl_stdsurface_scene()
 
 ~~~ .cpp
-void draw_stdsurface_scene(const scene* scn, const camera* cam,
-    gl_stdsurface_program& prog, std::unordered_map<shape*, gl_shape>& shapes,
-    std::unordered_map<texture*, gl_texture>& textures, const gl_lights& lights,
+void draw_gl_stdsurface_scene(const scene* scn, const camera* cam,
+    glsurface_program& prog, std::unordered_map<shape*, glshape>& shapes,
+    std::unordered_map<texture*, gltexture>& textures, const gllights& lights,
     const vec2i& viewport_size, const void* highlighted,
-    const gl_stdsurface_params& params, const tonemap_params& tmparams);
+    const glsurface_params& params, const tonemap_params& tmparams);
 ~~~
 
 Draw scene with stdsurface program.
@@ -12332,7 +12332,7 @@ Draw scene with stdsurface program.
 
 ~~~ .cpp
 template <typename Visitor>
-inline void visit(gl_stdimage_params& val, Visitor&& visitor);
+inline void visit(glimage_params& val, Visitor&& visitor);
 ~~~
 
 Visit struct elements.
@@ -12341,155 +12341,155 @@ Visit struct elements.
 
 ~~~ .cpp
 template <typename Visitor>
-inline void visit(gl_stdsurface_params& val, Visitor&& visitor);
+inline void visit(glsurface_params& val, Visitor&& visitor);
 ~~~
 
 Visit struct elements.
 
 ### OpenGL window
 
-#### Typedef gl_text_callback
+#### Typedef text_glcallback
 
 ~~~ .cpp
-using gl_text_callback = std::function<void(unsigned int key)>;
+using text_glcallback = std::function<void(unsigned int key)>;
 ~~~
 
 Text callback.
 
-#### Typedef gl_mouse_callback
+#### Typedef mouse_glcallback
 
 ~~~ .cpp
-using gl_mouse_callback = std::function<void(int button, bool press, int mods)>;
+using mouse_glcallback = std::function<void(int button, bool press, int mods)>;
 ~~~
 
 Mouse callback.
 
-#### Typedef gl_refresh_callback
+#### Typedef refresh_glcallback
 
 ~~~ .cpp
-using gl_refresh_callback = std::function<void()>;
+using refresh_glcallback = std::function<void()>;
 ~~~
 
 Window refresh callback.
 
-#### Struct gl_window
+#### Struct glwindow
 
 ~~~ .cpp
-struct gl_window {
+struct glwindow {
 ~~~
 
 OpenGL window. Members are not part of the public API.
 
-#### Function make_window()
+#### Function make_gl_window()
 
 ~~~ .cpp
-gl_window* make_window(
+glwindow* make_gl_window(
     int width, int height, const std::string& title, bool opengl4 = true);
 ~~~
 
 Initialize a window.
 
-#### Function set_window_callbacks()
+#### Function set_gl_window_callbacks()
 
 ~~~ .cpp
-void set_window_callbacks(gl_window* win, gl_text_callback text_cb,
-    gl_mouse_callback mouse_cb, gl_refresh_callback refresh_cb);
+void set_gl_window_callbacks(glwindow* win, text_glcallback text_cb,
+    mouse_glcallback mouse_cb, refresh_glcallback refresh_cb);
 ~~~
 
 Set window callbacks.
 
-#### Function set_window_title()
+#### Function set_gl_window_title()
 
 ~~~ .cpp
-void set_window_title(gl_window* win, const std::string& title);
+void set_gl_window_title(glwindow* win, const std::string& title);
 ~~~
 
 Set window title.
 
-#### Function wait_events()
+#### Function wait_gl_window_events()
 
 ~~~ .cpp
-void wait_events(gl_window* win);
+void wait_gl_window_events(glwindow* win);
 ~~~
 
 Wait events.
 
-#### Function poll_events()
+#### Function poll_gl_window_events()
 
 ~~~ .cpp
-void poll_events(gl_window* win);
+void poll_gl_window_events(glwindow* win);
 ~~~
 
 Poll events.
 
-#### Function swap_buffers()
+#### Function swap_gl_window_buffers()
 
 ~~~ .cpp
-void swap_buffers(gl_window* win);
+void swap_gl_window_buffers(glwindow* win);
 ~~~
 
 Swap buffers.
 
-#### Function should_close()
+#### Function should_gl_window_close()
 
 ~~~ .cpp
-bool should_close(gl_window* win);
+bool should_gl_window_close(glwindow* win);
 ~~~
 
 Should close.
 
-#### Function get_window_size()
+#### Function get_gl_window_size()
 
 ~~~ .cpp
-vec2i get_window_size(gl_window* win);
+vec2i get_gl_window_size(glwindow* win);
 ~~~
 
 Window size.
 
-#### Function get_framebuffer_size()
+#### Function get_gl_framebuffer_size()
 
 ~~~ .cpp
-vec2i get_framebuffer_size(gl_window* win);
+vec2i get_gl_framebuffer_size(glwindow* win);
 ~~~
 
 Framebuffer size.
 
-#### Function get_mouse_button()
+#### Function get_gl_mouse_button()
 
 ~~~ .cpp
-int get_mouse_button(gl_window* win);
+int get_gl_mouse_button(glwindow* win);
 ~~~
 
 Mouse button.
 
-#### Function get_mouse_pos()
+#### Function get_gl_mouse_pos()
 
 ~~~ .cpp
-vec2i get_mouse_pos(gl_window* win);
+vec2i get_gl_mouse_pos(glwindow* win);
 ~~~
 
 Mouse position.
 
-#### Function get_mouse_posf()
+#### Function get_gl_mouse_posf()
 
 ~~~ .cpp
-vec2f get_mouse_posf(gl_window* win);
+vec2f get_gl_mouse_posf(glwindow* win);
 ~~~
 
 Mouse position.
 
-#### Function get_key()
+#### Function get_gl_key()
 
 ~~~ .cpp
-bool get_key(gl_window* win, int key);
+bool get_gl_key(glwindow* win, int key);
 ~~~
 
 Check if a key is pressed (not all keys are supported).
 
-#### Function take_screenshot4b()
+#### Function take_gl_screenshot4b()
 
 ~~~ .cpp
-image4b take_screenshot4b(gl_window* win, bool flipy = true, bool back = false);
+image4b take_gl_screenshot4b(glwindow* win, bool flipy = true, bool back = false);
 ~~~
 
 Read pixels.
@@ -12497,24 +12497,24 @@ Read pixels.
 #### Function save_screenshot()
 
 ~~~ .cpp
-inline void save_screenshot(gl_window* win, const std::string& imfilename);
+inline void save_screenshot(glwindow* win, const std::string& imfilename);
 ~~~
 
 Save a screenshot to disk
 
-#### Function handle_camera_navigation()
+#### Function handle_gl_camera_navigation()
 
 ~~~ .cpp
-bool handle_camera_navigation(gl_window* win, camera* cam, bool navigation_fps);
+bool handle_gl_camera_navigation(glwindow* win, camera* cam, bool navigation_fps);
 ~~~
 
 Handle camera navigation.
 
-#### Function handle_scene_selection()
+#### Function handle_gl_scene_selection()
 
 ~~~ .cpp
-bool handle_scene_selection(gl_window* win, const scene* scn, const camera* cam,
-    const bvh_tree* bvh, int res, const gl_stdimage_params& params,
+bool handle_gl_scene_selection(glwindow* win, const scene* scn, const camera* cam,
+    const bvh_tree* bvh, int res, const glimage_params& params,
     scene_selection& sel);
 ~~~
 
@@ -12522,121 +12522,121 @@ Handle scene selection.
 
 ### OpenGL widgets
 
-#### Function init_widgets()
+#### Function init_imgui()
 
 ~~~ .cpp
-void init_widgets(
-    gl_window* win, bool light_style = false, bool extra_font = true);
+void init_imgui(
+    glwindow* win, bool light_style = false, bool extra_font = true);
 ~~~
 
 Initialize widgets.
 
-#### Function begin_widgets()
+#### Function begin_imgui_frame()
 
 ~~~ .cpp
-bool begin_widgets(gl_window* win, const std::string& title);
+bool begin_imgui_frame(glwindow* win, const std::string& title);
 ~~~
 
 Begin draw widgets.
 
-#### Function end_widgets()
+#### Function end_imgui_frame()
 
 ~~~ .cpp
-void end_widgets(gl_window* win);
+void end_imgui_frame(glwindow* win);
 ~~~
 
 End draw widgets.
 
-#### Function get_widget_active()
+#### Function get_imgui_active()
 
 ~~~ .cpp
-bool get_widget_active(gl_window* win);
+bool get_imgui_active(glwindow* win);
 ~~~
 
 Whether widgets are active.
 
-#### Function draw_separator_widget()
+#### Function draw_imgui_separator()
 
 ~~~ .cpp
-void draw_separator_widget(gl_window* win);
+void draw_imgui_separator(glwindow* win);
 ~~~
 
 Horizontal separator.
 
-#### Function draw_indent_widget_begin()
+#### Function begin_imgui_indent()
 
 ~~~ .cpp
-void draw_indent_widget_begin(gl_window* win);
+void begin_imgui_indent(glwindow* win);
 ~~~
 
 Indent widget.
 
-#### Function draw_indent_widget_end()
+#### Function end_imgui_indent()
 
 ~~~ .cpp
-void draw_indent_widget_end(gl_window* win);
+void end_imgui_indent(glwindow* win);
 ~~~
 
 Indent widget.
 
-#### Function draw_continue_widget()
+#### Function continue_imgui_line()
 
 ~~~ .cpp
-void draw_continue_widget(gl_window* win);
+void continue_imgui_line(glwindow* win);
 ~~~
 
 Continue line with next widget.
 
-#### Function draw_label_widget()
+#### Function draw_imgui_label()
 
 ~~~ .cpp
-void draw_label_widget(
-    gl_window* win, const std::string& lbl, const std::string& msg);
+void draw_imgui_label(
+    glwindow* win, const std::string& lbl, const std::string& msg);
 ~~~
 
 Label widget.
 
-#### Function draw_label_widget()
+#### Function draw_imgui_label()
 
 ~~~ .cpp
 template <typename... Args>
-inline void draw_label_widget(gl_window* win, const std::string& lbl,
+inline void draw_imgui_label(glwindow* win, const std::string& lbl,
     const std::string& fmt, const Args&... args);
 ~~~
 
 Label widget.
 
-#### Function draw_label_widget()
+#### Function draw_imgui_label()
 
 ~~~ .cpp
 template <typename T>
-inline void draw_label_widget(
-    gl_window* win, const std::string& lbl, const T& val);
+inline void draw_imgui_label(
+    glwindow* win, const std::string& lbl, const T& val);
 ~~~
 
 Label widget.
 
-#### Function draw_checkbox_widget()
+#### Function draw_imgui_checkbox()
 
 ~~~ .cpp
-bool draw_checkbox_widget(gl_window* win, const std::string& lbl, bool& val);
+bool draw_imgui_checkbox(glwindow* win, const std::string& lbl, bool& val);
 ~~~
 
 Checkbox widget
 
-#### Function draw_text_widget()
+#### Function draw_imgui_text()
 
 ~~~ .cpp
-bool draw_text_widget(gl_window* win, const std::string& lbl, std::string& str);
+bool draw_imgui_text(glwindow* win, const std::string& lbl, std::string& str);
 ~~~
 
 Text widget.
 
-#### Function draw_multilinetext_widget()
+#### Function draw_imgui_multiline_text()
 
 ~~~ .cpp
-bool draw_multilinetext_widget(
-    gl_window* win, const std::string& lbl, std::string& str);
+bool draw_imgui_multiline_text(
+    glwindow* win, const std::string& lbl, std::string& str);
 ~~~
 
 Multiline text widget.
@@ -12645,7 +12645,7 @@ Multiline text widget.
 
 ~~~ .cpp
 bool draw_slider_widget(
-    gl_window* win, const std::string& lbl, int& val, int min = 0, int max = 1);
+    glwindow* win, const std::string& lbl, int& val, int min = 0, int max = 1);
 ~~~
 
 Slider widget.
@@ -12653,7 +12653,7 @@ Slider widget.
 #### Function draw_slider_widget()
 
 ~~~ .cpp
-bool draw_slider_widget(gl_window* win, const std::string& lbl, vec2i& val,
+bool draw_slider_widget(glwindow* win, const std::string& lbl, vec2i& val,
     int min = 0, int max = 1);
 ~~~
 
@@ -12662,7 +12662,7 @@ Slider widget.
 #### Function draw_slider_widget()
 
 ~~~ .cpp
-bool draw_slider_widget(gl_window* win, const std::string& lbl, vec3i& val,
+bool draw_slider_widget(glwindow* win, const std::string& lbl, vec3i& val,
     int min = 0, int max = 1);
 ~~~
 
@@ -12671,7 +12671,7 @@ Slider widget.
 #### Function draw_slider_widget()
 
 ~~~ .cpp
-bool draw_slider_widget(gl_window* win, const std::string& lbl, vec4i& val,
+bool draw_slider_widget(glwindow* win, const std::string& lbl, vec4i& val,
     int min = 0, int max = 1);
 ~~~
 
@@ -12680,7 +12680,7 @@ Slider widget.
 #### Function draw_slider_widget()
 
 ~~~ .cpp
-bool draw_slider_widget(gl_window* win, const std::string& lbl, float& val,
+bool draw_slider_widget(glwindow* win, const std::string& lbl, float& val,
     float min = 0, float max = 1);
 ~~~
 
@@ -12689,7 +12689,7 @@ Slider widget.
 #### Function draw_slider_widget()
 
 ~~~ .cpp
-bool draw_slider_widget(gl_window* win, const std::string& lbl, vec2f& val,
+bool draw_slider_widget(glwindow* win, const std::string& lbl, vec2f& val,
     float min = 0, float max = 1);
 ~~~
 
@@ -12698,7 +12698,7 @@ Slider widget.
 #### Function draw_slider_widget()
 
 ~~~ .cpp
-bool draw_slider_widget(gl_window* win, const std::string& lbl, vec3f& val,
+bool draw_slider_widget(glwindow* win, const std::string& lbl, vec3f& val,
     float min = 0, float max = 1);
 ~~~
 
@@ -12707,7 +12707,7 @@ Slider widget.
 #### Function draw_slider_widget()
 
 ~~~ .cpp
-bool draw_slider_widget(gl_window* win, const std::string& lbl, vec4f& val,
+bool draw_slider_widget(glwindow* win, const std::string& lbl, vec4f& val,
     float min = 0, float max = 1);
 ~~~
 
@@ -12716,7 +12716,7 @@ Slider widget.
 #### Function draw_slider_widget()
 
 ~~~ .cpp
-bool draw_slider_widget(gl_window* win, const std::string& lbl,
+bool draw_slider_widget(glwindow* win, const std::string& lbl,
     mat<float, 4>& val, float min = 0, float max = 1);
 ~~~
 
@@ -12725,7 +12725,7 @@ Slider widget.
 #### Function draw_slider_widget()
 
 ~~~ .cpp
-bool draw_slider_widget(gl_window* win, const std::string& lbl,
+bool draw_slider_widget(glwindow* win, const std::string& lbl,
     frame<float, 3>& val, float min = -10, float max = 10);
 ~~~
 
@@ -12734,293 +12734,293 @@ Slider widget.
 #### Function draw_slider_widget()
 
 ~~~ .cpp
-bool draw_slider_widget(gl_window* win, const std::string& lbl, quat4f& val,
+bool draw_slider_widget(glwindow* win, const std::string& lbl, quat4f& val,
     float min = -1, float max = 1);
 ~~~
 
 Slider widget.
 
-#### Function draw_color_widget()
+#### Function draw_imgui_colorbox()
 
 ~~~ .cpp
-bool draw_color_widget(gl_window* win, const std::string& lbl, vec4f& val);
+bool draw_imgui_colorbox(glwindow* win, const std::string& lbl, vec4f& val);
 ~~~
 
 Color widget.
 
-#### Function draw_color_widget()
+#### Function draw_imgui_colorbox()
 
 ~~~ .cpp
-bool draw_color_widget(gl_window* win, const std::string& lbl, vec4b& val);
+bool draw_imgui_colorbox(glwindow* win, const std::string& lbl, vec4b& val);
 ~~~
 
 Color widget.
 
-#### Function draw_color_widget()
+#### Function draw_imgui_colorbox()
 
 ~~~ .cpp
-bool draw_color_widget(gl_window* win, const std::string& lbl, vec3f& val);
+bool draw_imgui_colorbox(glwindow* win, const std::string& lbl, vec3f& val);
 ~~~
 
 Color widget.
 
-#### Function draw_combo_widget_begin()
+#### Function begin_imgui_combobox()
 
 ~~~ .cpp
-bool draw_combo_widget_begin(
-    gl_window* win, const std::string& lbl, const std::string& label);
+bool begin_imgui_combobox(
+    glwindow* win, const std::string& lbl, const std::string& label);
 ~~~
 
 Combo widget.
 
-#### Function draw_combo_widget_item()
+#### Function draw_imgui_item()
 
 ~~~ .cpp
-bool draw_combo_widget_item(
-    gl_window* win, const std::string& label, int idx, bool selected);
+bool draw_imgui_item(
+    glwindow* win, const std::string& label, int idx, bool selected);
 ~~~
 
 Combo widget.
 
-#### Function draw_combo_widget_end()
+#### Function end_imgui_combobox()
 
 ~~~ .cpp
-void draw_combo_widget_end(gl_window* win);
+void end_imgui_combobox(glwindow* win);
 ~~~
 
 Combo widget.
 
-#### Function draw_combo_widget_item()
+#### Function draw_imgui_item()
 
 ~~~ .cpp
 template <typename T>
-bool draw_combo_widget_item(
-    gl_window* win, const std::string& label, int idx, T& val, const T& item);
+bool draw_imgui_item(
+    glwindow* win, const std::string& label, int idx, T& val, const T& item);
 ~~~
 
 Combo widget.
 
-#### Function draw_combo_widget()
+#### Function draw_imgui_combobox()
 
 ~~~ .cpp
 template <typename T, typename T1>
-inline bool draw_combo_widget(gl_window* win, const std::string& lbl, T& val,
+inline bool draw_imgui_combobox(glwindow* win, const std::string& lbl, T& val,
     const std::vector<T1>& vals, const std::function<T(const T1&)>& value_func,
     const std::function<std::string(const T1&)>& label_func);
 ~~~
 
 Combo widget.
 
-#### Function draw_combo_widget()
+#### Function draw_imgui_combobox()
 
 ~~~ .cpp
-inline bool draw_combo_widget(gl_window* win, const std::string& lbl,
+inline bool draw_imgui_combobox(glwindow* win, const std::string& lbl,
     std::string& val, const std::vector<std::string>& labels);
 ~~~
 
 Combo widget.
 
-#### Function draw_combo_widget()
+#### Function draw_imgui_combobox()
 
 ~~~ .cpp
 template <typename T>
-inline bool draw_combo_widget(gl_window* win, const std::string& lbl, T& val,
+inline bool draw_imgui_combobox(glwindow* win, const std::string& lbl, T& val,
     const std::vector<std::pair<std::string, T>>& labels);
 ~~~
 
 Combo widget.
 
-#### Function draw_combo_widget()
+#### Function draw_imgui_combobox()
 
 ~~~ .cpp
 template <typename T>
-inline bool draw_combo_widget(gl_window* win, const std::string& lbl, T*& val,
+inline bool draw_imgui_combobox(glwindow* win, const std::string& lbl, T*& val,
     const std::vector<T*>& vals, bool extra = true, T* extra_val = nullptr);
 ~~~
 
 Combo widget
 
-#### Function draw_button_widget()
+#### Function draw_imgui_button()
 
 ~~~ .cpp
-bool draw_button_widget(gl_window* win, const std::string& lbl);
+bool draw_imgui_button(glwindow* win, const std::string& lbl);
 ~~~
 
 Button widget.
 
-#### Function draw_header_widget()
+#### Function draw_imgui_header()
 
 ~~~ .cpp
-bool draw_header_widget(gl_window* win, const std::string& lbl);
+bool draw_imgui_header(glwindow* win, const std::string& lbl);
 ~~~
 
 Collapsible header widget.
 
-#### Function draw_tree_widget_begin()
+#### Function begin_imgui_tree()
 
 ~~~ .cpp
-bool draw_tree_widget_begin(gl_window* win, const std::string& lbl);
+bool begin_imgui_tree(glwindow* win, const std::string& lbl);
 ~~~
 
 Start tree widget.
 
-#### Function draw_tree_widget_end()
+#### Function end_imgui_tree()
 
 ~~~ .cpp
-void draw_tree_widget_end(gl_window* win);
+void end_imgui_tree(glwindow* win);
 ~~~
 
 End tree widget.
 
-#### Function draw_tree_widget_begin()
+#### Function begin_imgui_tree()
 
 ~~~ .cpp
-bool draw_tree_widget_begin(
-    gl_window* win, const std::string& lbl, void*& selection, void* content);
+bool begin_imgui_tree(
+    glwindow* win, const std::string& lbl, void*& selection, void* content);
 ~~~
 
 Start selectable tree node widget.
 
-#### Function draw_tree_widget_begin()
+#### Function begin_imgui_tree()
 
 ~~~ .cpp
 template <typename T>
-inline bool draw_tree_widget_begin(
-    gl_window* win, const std::string& lbl, T*& selection, T* content);
+inline bool begin_imgui_tree(
+    glwindow* win, const std::string& lbl, T*& selection, T* content);
 ~~~
 
 Start selectable tree node widget.
 
-#### Function draw_tree_widget_end()
+#### Function end_imgui_tree()
 
 ~~~ .cpp
-void draw_tree_widget_end(gl_window* win, void* content);
+void end_imgui_tree(glwindow* win, void* content);
 ~~~
 
 End selectable tree node widget.
 
-#### Function draw_tree_widget_leaf()
+#### Function draw_imgui_tree_leaf()
 
 ~~~ .cpp
-void draw_tree_widget_leaf(
-    gl_window* win, const std::string& lbl, void*& selection, void* content);
+void draw_imgui_tree_leaf(
+    glwindow* win, const std::string& lbl, void*& selection, void* content);
 ~~~
 
 Selectable tree leaf nodewidget.
 
-#### Function draw_tree_widget_leaf()
+#### Function draw_imgui_tree_leaf()
 
 ~~~ .cpp
 template <typename T>
-inline void draw_tree_widget_leaf(
-    gl_window* win, const std::string& lbl, void*& selection, T* content);
+inline void draw_imgui_tree_leaf(
+    glwindow* win, const std::string& lbl, void*& selection, T* content);
 ~~~
 
 Selectable tree leaf nodewidget.
 
-#### Function draw_tree_widget_leaf()
+#### Function draw_imgui_tree_leaf()
 
 ~~~ .cpp
-void draw_tree_widget_leaf(gl_window* win, const std::string& lbl,
+void draw_imgui_tree_leaf(glwindow* win, const std::string& lbl,
     void*& selection, void* content, const vec4f& col);
 ~~~
 
 Selectable tree leaf node widget.
 
-#### Function draw_image_widget()
+#### Function draw_imgui_imagebox()
 
 ~~~ .cpp
-void draw_image_widget(
-    gl_window* win, int tid, const vec2i& size, const vec2i& imsize);
+void draw_imgui_imagebox(
+    glwindow* win, int tid, const vec2i& size, const vec2i& imsize);
 ~~~
 
 Image widget.
 
-#### Function draw_image_widget()
+#### Function draw_imgui_imagebox()
 
 ~~~ .cpp
-void draw_image_widget(gl_window* win, gl_texture& txt, const vec2i& size);
+void draw_imgui_imagebox(glwindow* win, gltexture& txt, const vec2i& size);
 ~~~
 
 Image widget.
 
-#### Function draw_scroll_widget_begin()
+#### Function begin_imgui_scrollarea()
 
 ~~~ .cpp
-void draw_scroll_widget_begin(
-    gl_window* win, const std::string& lbl, int height, bool border);
+void begin_imgui_scrollarea(
+    glwindow* win, const std::string& lbl, int height, bool border);
 ~~~
 
 Scroll region widget.
 
-#### Function draw_scroll_widget_end()
+#### Function end_imgui_scrollarea()
 
 ~~~ .cpp
-void draw_scroll_widget_end(gl_window* win);
+void end_imgui_scrollarea(glwindow* win);
 ~~~
 
 Scroll region widget.
 
-#### Function draw_scroll_widget_here()
+#### Function move_imgui_scrollarea()
 
 ~~~ .cpp
-void draw_scroll_widget_here(gl_window* win);
+void move_imgui_scrollarea(glwindow* win);
 ~~~
 
 Scroll region widget.
 
-#### Function draw_groupid_widget_push()
+#### Function push_imgui_groupid()
 
 ~~~ .cpp
-void draw_groupid_widget_push(gl_window* win, int gid);
+void push_imgui_groupid(glwindow* win, int gid);
 ~~~
 
 Group ids widget.
 
-#### Function draw_groupid_widget_push()
+#### Function push_imgui_groupid()
 
 ~~~ .cpp
-void draw_groupid_widget_push(gl_window* win, void* gid);
+void push_imgui_groupid(glwindow* win, void* gid);
 ~~~
 
 Group ids widget.
 
-#### Function draw_groupid_widget_push()
+#### Function push_imgui_groupid()
 
 ~~~ .cpp
-void draw_groupid_widget_push(gl_window* win, const void* gid);
+void push_imgui_groupid(glwindow* win, const void* gid);
 ~~~
 
 Group ids widget.
 
-#### Function draw_groupid_widget_push()
+#### Function push_imgui_groupid()
 
 ~~~ .cpp
-void draw_groupid_widget_push(gl_window* win, const char* gid);
+void push_imgui_groupid(glwindow* win, const char* gid);
 ~~~
 
 Group ids widget.
 
-#### Function draw_groupid_widget_pop()
+#### Function pop_imgui_groupid()
 
 ~~~ .cpp
-void draw_groupid_widget_pop(gl_window* win);
+void pop_imgui_groupid(glwindow* win);
 ~~~
 
 Group ids widget.
 
-#### Function draw_style_widget_push()
+#### Function push_imgui_style()
 
 ~~~ .cpp
-void draw_style_widget_push(gl_window* win, const vec4f& color);
+void push_imgui_style(glwindow* win, const vec4f& color);
 ~~~
 
 Widget style.
 
-#### Function draw_style_widget_pop()
+#### Function pop_imgui_style()
 
 ~~~ .cpp
-void draw_style_widget_pop(gl_window* win);
+void pop_imgui_style(glwindow* win);
 ~~~
 
 Widget style.
@@ -13028,7 +13028,7 @@ Widget style.
 #### Function draw_value_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(gl_window* win, const std::string& lbl, bool& val,
+inline bool draw_value_widget(glwindow* win, const std::string& lbl, bool& val,
     float min = 0, float max = 0, bool color = false);
 ~~~
 
@@ -13037,7 +13037,7 @@ Generic widget used for templated code. Min, max and color are ignored.
 #### Function draw_value_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+inline bool draw_value_widget(glwindow* win, const std::string& lbl,
     std::string& val, float min = 0, float max = 0, bool color = false);
 ~~~
 
@@ -13046,7 +13046,7 @@ Generic widget used for templated code. Min, max and color are ignored.
 #### Function draw_value_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(gl_window* win, const std::string& lbl, int& val,
+inline bool draw_value_widget(glwindow* win, const std::string& lbl, int& val,
     float min = 0, float max = 0, bool color = false);
 ~~~
 
@@ -13057,7 +13057,7 @@ or a deafult range when their are the same. Color is ignored.
 
 ~~~ .cpp
 template <int N>
-inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+inline bool draw_value_widget(glwindow* win, const std::string& lbl,
     vec<int, N>& val, float min = 0, float max = 0, bool color = false);
 ~~~
 
@@ -13067,7 +13067,7 @@ or a deafult range when their are the same. Color is ignored.
 #### Function draw_value_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+inline bool draw_value_widget(glwindow* win, const std::string& lbl,
     float& val, float min = 0, float max = 0, bool color = false);
 ~~~
 
@@ -13077,7 +13077,7 @@ or a deafult range when their are the same. Color is ignored.
 #### Function draw_value_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+inline bool draw_value_widget(glwindow* win, const std::string& lbl,
     vec2f& val, float min = 0, float max = 0, bool color = false);
 ~~~
 
@@ -13087,7 +13087,7 @@ or a deafult range when their are the same. Color is ignored.
 #### Function draw_value_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+inline bool draw_value_widget(glwindow* win, const std::string& lbl,
     vec3f& val, float min = 0, float max = 0, bool color = false);
 ~~~
 
@@ -13097,7 +13097,7 @@ or a deafult range when their are the same.
 #### Function draw_value_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+inline bool draw_value_widget(glwindow* win, const std::string& lbl,
     vec4f& val, float min = 0, float max = 0, bool color = false);
 ~~~
 
@@ -13107,7 +13107,7 @@ or a deafult range when their are the same.
 #### Function draw_value_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+inline bool draw_value_widget(glwindow* win, const std::string& lbl,
     frame3f& val, float min = 0, float max = 0, bool color = false);
 ~~~
 
@@ -13117,7 +13117,7 @@ or a deafult range when their are the same. Color is ignored.
 #### Function draw_value_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+inline bool draw_value_widget(glwindow* win, const std::string& lbl,
     mat4f& val, float min = 0, float max = 0, bool color = false);
 ~~~
 
@@ -13127,7 +13127,7 @@ or a deafult range when their are the same. Color is ignored.
 #### Function draw_value_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+inline bool draw_value_widget(glwindow* win, const std::string& lbl,
     quat4f& val, float min = 0, float max = 0, bool color = false);
 ~~~
 
@@ -13139,7 +13139,7 @@ or a deafult range when their are the same. Color is ignored.
 ~~~ .cpp
 template <typename T,
     typename std::enable_if_t<std::is_enum<T>::value, int> = 0>
-inline bool draw_value_widget(gl_window* win, const std::string& lbl, T& val,
+inline bool draw_value_widget(glwindow* win, const std::string& lbl, T& val,
     float min = 0, float max = 0, bool color = false) {
 ~~~
 
@@ -13148,19 +13148,19 @@ Generic widget used for templated code. Min, max and color are ignored.
 #### Function draw_value_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(gl_window* win, const std::string& lbl,
+inline bool draw_value_widget(glwindow* win, const std::string& lbl,
     uint32_t& val, float min = 0, float max = 0, bool color = false);
 ~~~
 
 Generic widget used for templated code. Internally convert to int loosing
 precision. See the int version.
 
-#### Function draw_imageinspect_widgets()
+#### Function draw_imgui_image_inspector()
 
 ~~~ .cpp
-void draw_imageinspect_widgets(gl_window* win, const std::string& lbl,
+void draw_imgui_image_inspector(glwindow* win, const std::string& lbl,
     const image4f& hdr, const image4b& ldr, const vec2f& mouse_pos,
-    const gl_stdimage_params& params);
+    const glimage_params& params);
 ~~~
 
 Image inspection widgets.
@@ -13170,33 +13170,33 @@ Image inspection widgets.
 ~~~ .cpp
 template <typename T>
 inline bool draw_params_widgets(
-    gl_window* win, const std::string& lbl, T& params);
+    glwindow* win, const std::string& lbl, T& params);
 ~~~
 
 Draws a widget that sets params in non-recursive trivial structures.
 Internally uses visit to implement the view.
 
-#### Function draw_camera_selection_widget()
+#### Function draw_imgui_camera_selector()
 
 ~~~ .cpp
-inline bool draw_camera_selection_widget(gl_window* win, const std::string& lbl,
+inline bool draw_imgui_camera_selector(glwindow* win, const std::string& lbl,
     camera*& cam, const scene* scn, camera* view);
 ~~~
 
 Draws a widget that can selected the camera.
 
-#### Function draw_camera_widgets()
+#### Function draw_imgui_camera_inspector()
 
 ~~~ .cpp
-bool draw_camera_widgets(gl_window* win, const std::string& lbl, camera* cam);
+bool draw_imgui_camera_inspector(glwindow* win, const std::string& lbl, camera* cam);
 ~~~
 
 Draws widgets for a camera. Used for quickly making demos.
 
-#### Function draw_scene_tree_widgets()
+#### Function draw_imgui_scene_tree()
 
 ~~~ .cpp
-bool draw_scene_tree_widgets(gl_window* win, const std::string& lbl, scene* scn,
+bool draw_imgui_scene_tree(glwindow* win, const std::string& lbl, scene* scn,
     scene_selection& sel, std::vector<ygl::scene_selection>& update_list,
     proc_scene* test_scn = nullptr,
     const std::unordered_map<std::string, std::string>& inspector_highlights =
@@ -13205,10 +13205,10 @@ bool draw_scene_tree_widgets(gl_window* win, const std::string& lbl, scene* scn,
 
 Draws widgets for a whole scene. Used for quickly making demos.
 
-#### Function draw_scene_elem_widgets()
+#### Function draw_imgui_scene_inspector()
 
 ~~~ .cpp
-bool draw_scene_elem_widgets(gl_window* win, const std::string& lbl, scene* scn,
+bool draw_imgui_scene_inspector(glwindow* win, const std::string& lbl, scene* scn,
     scene_selection& sel, std::vector<ygl::scene_selection>& update_list,
     proc_scene* test_scn = nullptr,
     const std::unordered_map<std::string, std::string>& inspector_highlights =
