@@ -41,15 +41,15 @@ struct gimage {
 
     /// image width
     int width() const {
-        if (!hdr.empty()) return hdr.width();
-        if (!ldr.empty()) return ldr.width();
+        if (!hdr.pixels.empty()) return hdr.width;
+        if (!ldr.pixels.empty()) return ldr.width;
         return 0;
     }
 
     /// image height
     int height() const {
-        if (!hdr.empty()) return hdr.height();
-        if (!ldr.empty()) return ldr.height();
+        if (!hdr.pixels.empty()) return hdr.height;
+        if (!ldr.pixels.empty()) return ldr.height;
         return 0;
     }
 };
@@ -63,7 +63,7 @@ inline gimage* load_gimage(const std::string& filename) {
     } else {
         img->ldr = ygl::load_image4b(filename);
     }
-    if (img->hdr.empty() && img->ldr.empty()) {
+    if (img->hdr.pixels.empty() && img->ldr.pixels.empty()) {
         throw std::runtime_error("cannot load image " + img->filename);
     }
     return img;
@@ -73,43 +73,42 @@ struct app_state {
     std::vector<gimage*> imgs;
     int cur_img = 0;
 
-    ygl::gl_stdimage_program gl_prog = {};
-    std::unordered_map<gimage*, ygl::gl_texture> gl_txt = {};
-    ygl::gl_stdimage_params params;
-    ygl::tonemap_params tmparams;
+    ygl::glimage_program gl_prog = {};
+    std::unordered_map<gimage*, ygl::gltexture> gl_txt = {};
+    ygl::glimage_params params;
+    float exposure = 1.0f;
 
     ~app_state() {
         for (auto v : imgs) delete v;
     }
 };
 
-void draw(ygl::gl_window* win, app_state* app) {
+void draw(ygl::glwindow* win, app_state* app) {
     auto img = app->imgs[app->cur_img];
-    auto window_size = get_window_size(win);
-    auto framebuffer_size = get_framebuffer_size(win);
-    ygl::gl_set_viewport(framebuffer_size);
-    ygl::draw_image(app->gl_prog, app->gl_txt.at(img), window_size, app->params,
-        app->tmparams);
+    auto window_size = get_glwindow_size(win);
+    auto framebuffer_size = get_glframebuffer_size(win);
+    ygl::set_glviewport(framebuffer_size);
+    ygl::draw_glimage(
+        app->gl_prog, app->gl_txt.at(img), window_size, app->params);
 
-    if (ygl::begin_widgets(win, "yimview")) {
-        ygl::draw_label_widget(win, "filename", img->filename);
-        ygl::draw_label_widget(
+    if (ygl::begin_imgui_frame(win, "yimview")) {
+        ygl::draw_imgui_label(win, "filename", img->filename);
+        ygl::draw_imgui_label(
             win, "size", "{} x {}", img->width(), img->height());
-        ygl::draw_params_widgets(win, "", app->params);
-        ygl::draw_params_widgets(win, "", app->tmparams);
-        ygl::draw_imageinspect_widgets(
-            win, "", img->hdr, img->ldr, get_mouse_posf(win), app->params);
+        ygl::draw_imgui_stdimage_inspector(win, "", app->params);
+        ygl::draw_imgui_image_inspector(
+            win, "", img->hdr, img->ldr, get_glmouse_posf(win), app->params);
     }
-    ygl::end_widgets(win);
+    ygl::end_imgui_frame(win);
 
-    ygl::swap_buffers(win);
+    ygl::swap_glwindow_buffers(win);
 }
 
 void run_ui(app_state* app) {
     // window
-    auto win = ygl::make_window(
+    auto win = ygl::make_glwindow(
         app->imgs[0]->width(), app->imgs[0]->height(), "yimview");
-    ygl::set_window_callbacks(
+    ygl::set_glwindow_callbacks(
         win, nullptr, nullptr, [app, win]() { draw(win, app); });
 
     // window values
@@ -117,37 +116,37 @@ void run_ui(app_state* app) {
     ygl::vec2f mouse_pos, mouse_last;
 
     // init widgets
-    ygl::init_widgets(win);
+    ygl::init_imgui(win);
 
     // load textures
-    app->gl_prog = ygl::make_stdimage_program();
+    app->gl_prog = ygl::make_glimage_program();
     for (auto img : app->imgs) {
-        if (!img->hdr.empty()) {
-            app->gl_txt[img] = make_texture(img->hdr, false, false, true);
-        } else if (!img->ldr.empty()) {
-            app->gl_txt[img] = make_texture(img->ldr, false, false, true);
+        if (!img->hdr.pixels.empty()) {
+            update_gltexture(app->gl_txt[img], img->hdr, false, false, true);
+        } else if (!img->ldr.pixels.empty()) {
+            update_gltexture(app->gl_txt[img], img->ldr, false, false, true);
         }
     }
 
-    while (!should_close(win)) {
+    while (!should_glwindow_close(win)) {
         mouse_last = mouse_pos;
-        mouse_pos = ygl::get_mouse_posf(win);
-        mouse_button = ygl::get_mouse_button(win);
+        mouse_pos = ygl::get_glmouse_posf(win);
+        mouse_button = ygl::get_glmouse_button(win);
 
         auto img = app->imgs[app->cur_img];
-        ygl::set_window_title(
+        ygl::set_glwindow_title(
             win, ygl::format("yimview | {} | {}x{}", img->filename,
                      img->width(), img->height()));
 
         // handle mouse
-        auto alt_down = get_alt_key(win);
+        auto alt_down = get_glalt_key(win);
         if (mouse_button && alt_down && mouse_pos != mouse_last &&
-            !ygl::get_widget_active(win)) {
+            !ygl::get_imgui_active(win)) {
             switch (mouse_button) {
                 case 1: app->params.offset += mouse_pos - mouse_last; break;
                 case 2:
                     app->params.zoom *=
-                        powf(2, (mouse_pos[0] - mouse_last[0]) * 0.001f);
+                        powf(2, (mouse_pos.x - mouse_last.x) * 0.001f);
                     break;
                 default: break;
             }
@@ -157,10 +156,10 @@ void run_ui(app_state* app) {
         draw(win, app);
 
         // event hadling
-        if (ygl::get_mouse_button(win) || ygl::get_widget_active(win)) {
-            ygl::poll_events(win);
+        if (ygl::get_glmouse_button(win) || ygl::get_imgui_active(win)) {
+            ygl::poll_glwindow_events(win);
         } else {
-            ygl::wait_events(win);
+            ygl::wait_glwindow_events(win);
         }
     }
 
@@ -173,8 +172,6 @@ int main(int argc, char* argv[]) {
 
     // command line params
     auto parser = ygl::make_parser(argc, argv, "yimview", "view images");
-    app->params = ygl::parse_params(parser, "", app->params);
-    app->tmparams = ygl::parse_params(parser, "", app->tmparams);
     auto filenames = ygl::parse_args(
         parser, "image", "image filename", std::vector<std::string>{});
     // check parsing

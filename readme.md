@@ -473,22 +473,22 @@ this can used to access the scene data with `glTF::get<T>(index)`.
 We include a set of utilities to draw on screen with OpenGL 3.3, manage
 windows with GLFW and draw immediate-mode widgets with ImGui.
 
-1. texture and buffer objects with `gl_texture` and `gl_buffer`
+1. texture and buffer objects with `gltexture` and `gl_buffer`
     - create textures/buffers with appropriate constructors
     - check validity with `is_valid()`
     - update textures/buffers with `update()` functions
     - delete textures/buffers with `clear()`
     - bind/unbind textures/buffers with `bind()`/`unbind()`
     - draw elements with `gl_buffer::draw_elems()`
-2. program objects with `gl_program`
+2. program objects with `glprogram`
     - program creation with constructor
     - check validity with `is_valid()`
     - delete with `clear()`
-    - uniforms with `set_program_uniform()`
-    - vertex attrib with `set_program_vertattr()`
+    - uniforms with `set_gl_uniform()`
+    - vertex attrib with `set_gl_attribute()`
     - draw elements with `gl_buffer::draw_elems()`
-3. image viewing with `gl_stdimage_program`, with support for tone mapping.
-4. draw surfaces and hair with GGX/Kayjia-Kay with `gl_stdsurface_program`
+3. image viewing with `glimage_program`, with support for tone mapping.
+4. draw surfaces and hair with GGX/Kayjia-Kay with `glsurface_program`
     - initialize the program with constructor
     - check validity with `is_valid()`
     - start/end each frame with `begin_frame()`, `end_frame()`
@@ -500,10 +500,10 @@ windows with GLFW and draw immediate-mode widgets with ImGui.
 5. draw yocto scenes using the above shader
     - initialize the rendering state with `init_stdsurface_state()`
     - load/update meshes and textures with `update_stdsurface_state()`
-    - setup draw params using a `gl_stdsurface_params` struct
-    - draw scene with `draw_stdsurface_scene()`
+    - setup draw params using a `glsurface_params` struct
+    - draw scene with `draw_gl_stdsurface_scene()`
 6. also includes other utlities for quick OpenGL hacking
-7. GLFW window with `gl_window`
+7. GLFW window with `glwindow`
     - create with constructor
     - delete with `clear()`
     - set callbacks with `set_callbacks()`

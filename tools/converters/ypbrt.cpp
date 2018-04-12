@@ -31,6 +31,7 @@
 //
 
 #include <regex>
+#include <fstream>
 #include "../../yocto/yocto_gl.h"
 #include "ext/json.hpp"
 
@@ -107,15 +108,35 @@ void parse_param_numbers(
 }
 
 json pbrt_to_json(const std::string& filename) {
-    auto pbrt = load_text(filename);
-    auto npbrt = std::string();
-    for (auto& line : splitlines(pbrt)) {
+    auto split = [](const std::string& str) {
+        auto ret = std::vector<std::string>();
+        if (str.empty()) return ret;
+        auto lpos = (size_t)0;
+        while (lpos != str.npos) {
+            auto pos = str.find_first_of(" \t\n\r", lpos);
+            if (pos != str.npos) {
+                if (pos > lpos) ret.push_back(str.substr(lpos, pos - lpos));
+                lpos = pos + 1;
+            } else {
+                if (lpos < str.size()) ret.push_back(str.substr(lpos));
+                lpos = pos;
+            }
+        }
+        return ret;
+    };
+
+    auto f = fopen(filename.c_str(), "wt");
+    if (!f) throw std::runtime_error("cannot open filename " + filename);
+    auto pbrt = std::string();
+    char buf[4096];
+    while (fgets(buf, 4096, f)) {
+        auto line = std::string(buf);
         if (line.find('#') == line.npos)
-            npbrt += line + "\n";
+            pbrt += line + "\n";
         else
-            npbrt += line.substr(0, line.find('#')) + "\n";
+            pbrt += line.substr(0, line.find('#')) + "\n";
     }
-    pbrt = npbrt;
+    fclose(f);
     auto re = std::regex("\"(\\w+)\\s+(\\w+)\"");
     pbrt = std::regex_replace(pbrt, re, "\"$1|$2\"");
     pbrt = std::regex_replace(pbrt, std::regex("\\["), " [ ");
@@ -160,13 +181,31 @@ json pbrt_to_json(const std::string& filename) {
         }
         js.push_back(jcmd);
     }
-    save_text(filename + ".json", js.dump(2));
+    auto fstr = std::fstream(filename + ".json");
+    fstr << js;
     return js;
 }
 
 void load_ply(const std::string& filename, std::vector<vec3i>& triangles,
     std::vector<vec3f>& pos, std::vector<vec3f>& norm,
     std::vector<vec2f>& texcoord) {
+    auto split = [](const std::string& str) {
+        auto ret = std::vector<std::string>();
+        if (str.empty()) return ret;
+        auto lpos = (size_t)0;
+        while (lpos != str.npos) {
+            auto pos = str.find_first_of(" \t\n\r", lpos);
+            if (pos != str.npos) {
+                if (pos > lpos) ret.push_back(str.substr(lpos, pos - lpos));
+                lpos = pos + 1;
+            } else {
+                if (lpos < str.size()) ret.push_back(str.substr(lpos));
+                lpos = pos;
+            }
+        }
+        return ret;
+    };
+
     auto f = fopen(filename.c_str(), "rb");
     if (!f) throw std::runtime_error("cannot open file " + filename);
 
@@ -228,17 +267,20 @@ void load_ply(const std::string& filename, std::vector<vec3i>& triangles,
     for (auto i = 0; i < nverts; i++) {
         float buf[32];
         fread(buf, sizeof(float), vert_size, f);
-        if (contains(vertex_pos, "x"s) && contains(vertex_pos, "y"s) &&
-            contains(vertex_pos, "z"s)) {
+        if (vertex_pos.find("x") != vertex_pos.end() &&
+            vertex_pos.find("y") != vertex_pos.end() &&
+            vertex_pos.find("z") != vertex_pos.end()) {
             pos.push_back({buf[vertex_pos["x"]], buf[vertex_pos["y"]],
                 buf[vertex_pos["z"]]});
         }
-        if (contains(vertex_pos, "nx"s) && contains(vertex_pos, "ny"s) &&
-            contains(vertex_pos, "nz"s)) {
+        if (vertex_pos.find("nx") != vertex_pos.end() &&
+            vertex_pos.find("ny") != vertex_pos.end() &&
+            vertex_pos.find("nz") != vertex_pos.end()) {
             norm.push_back({buf[vertex_pos["nx"]], buf[vertex_pos["ny"]],
                 buf[vertex_pos["nz"]]});
         }
-        if (contains(vertex_pos, "u"s) && contains(vertex_pos, "v"s)) {
+        if (vertex_pos.find("u") != vertex_pos.end() &&
+            vertex_pos.find("v") != vertex_pos.end()) {
             texcoord.push_back({buf[vertex_pos["u"]], buf[vertex_pos["v"]]});
         }
     }
@@ -396,7 +438,7 @@ scene* load_pbrt(const std::string& filename) {
             auto v = get_vec4f(jcmd.at("values"));
             stack.back().frame =
                 stack.back().frame *
-                rotation_frame(vec3f{v.y, v.z, v.w}, v.x * pif / 180);
+                rotation_frame(vec3f{v.y, v.z, v.w}, v.x * pi / 180);
         } else if (cmd == "LookAt") {
             auto m = get_mat3f(jcmd.at("values"));
             stack.back().frame =
@@ -405,8 +447,8 @@ scene* load_pbrt(const std::string& filename) {
         } else if (cmd == "ReverseOrientation") {
             stack.back().reverse = !stack.back().reverse;
         } else if (cmd == "Film") {
-            stack.back().aspect =   jcmd.at("xresolution").get<float>() /
-                                    jcmd.at("yresolution").get<float>();
+            stack.back().aspect = jcmd.at("xresolution").get<float>() /
+                                  jcmd.at("yresolution").get<float>();
         } else if (cmd == "Camera") {
             auto cam = new camera();
             cam->name = "cam" + std::to_string(cid++);
@@ -416,8 +458,7 @@ scene* load_pbrt(const std::string& filename) {
             cam->aspect = stack.back().aspect;
             auto type = jcmd.at("type").get<std::string>();
             if (type == "perspective") {
-                cam->yfov =
-                    jcmd.at("fov").get<float>() * pif / 180;
+                cam->yfov = jcmd.at("fov").get<float>() * pi / 180;
             } else {
                 log_error("{} camera not supported", type);
             }
@@ -425,12 +466,13 @@ scene* load_pbrt(const std::string& filename) {
         } else if (cmd == "Texture") {
             auto found = false;
             auto name = jcmd.at("name").get<std::string>();
-            for(auto txt : scn->textures) {
-                if(txt->name == name) {
-                    found = true; break;
+            for (auto txt : scn->textures) {
+                if (txt->name == name) {
+                    found = true;
+                    break;
                 }
             }
-            if(!found) {
+            if (!found) {
                 auto txt = new texture();
                 scn->textures.push_back(txt);
                 txt->name = jcmd.at("name").get<std::string>();
@@ -439,23 +481,24 @@ scene* load_pbrt(const std::string& filename) {
                 if (type == "imagemap") {
                     txt->path = jcmd.at("filename").get<std::string>();
                     if (ygl::path_extension(txt->path) == ".pfm")
-                        txt->path = ygl::replace_path_extension(txt->path, ".hdr");
+                        txt->path =
+                            ygl::replace_path_extension(txt->path, ".hdr");
                 } else {
                     log_error("{} texture not supported", type);
                 }
             }
         } else if (cmd == "MakeNamedMaterial" || cmd == "Material") {
             auto found = false;
-            if(cmd == "MakeNamedMaterial") {
+            if (cmd == "MakeNamedMaterial") {
                 auto name = jcmd.at("name").get<std::string>();
-                for(auto mat : scn->materials) {
-                    if(mat->name == name) {
+                for (auto mat : scn->materials) {
+                    if (mat->name == name) {
                         found = true;
                         break;
                     }
                 }
             }
-            if(!found) {
+            if (!found) {
                 auto mat = new material();
                 scn->materials.push_back(mat);
                 if (cmd == "Material") {
@@ -466,7 +509,8 @@ scene* load_pbrt(const std::string& filename) {
                     mat_map[mat->name] = mat;
                 }
                 auto type = "uber"s;
-                if (jcmd.count("type")) type = jcmd.at("type").get<std::string>();
+                if (jcmd.count("type"))
+                    type = jcmd.at("type").get<std::string>();
                 if (type == "uber") {
                     if (jcmd.count("Kd"))
                         std::tie(mat->kd, mat->kd_txt.txt) =
@@ -520,10 +564,11 @@ scene* load_pbrt(const std::string& filename) {
                         std::tie(mat->kt, mat->kt_txt.txt) =
                             get_scaled_texture(jcmd.at("Kt"));
                     mat->rs = 0;
-                } else if(type == "mix") {
+                } else if (type == "mix") {
                     log_warning("mix material not properly supported");
-                    if(jcmd.count("namedmaterial1")) {
-                        auto mat1 = jcmd.at("namedmaterial1").get<std::string>();
+                    if (jcmd.count("namedmaterial1")) {
+                        auto mat1 =
+                            jcmd.at("namedmaterial1").get<std::string>();
                         auto saved_name = mat->name;
                         *mat = *mat_map.at(mat1);
                         mat->name = saved_name;
@@ -536,14 +581,14 @@ scene* load_pbrt(const std::string& filename) {
                 }
                 if (jcmd.count("uroughness")) {
                     auto remap = js.count("remaproughness") &&
-                                js.at("remaproughness").get<bool>();
+                                 js.at("remaproughness").get<bool>();
                     if (jcmd.count("uroughness"))
                         mat->rs = jcmd.at("uroughness").get<float>();
                     if (!remap) mat->rs = sqrt(mat->rs);
                 }
                 if (jcmd.count("roughness")) {
                     auto remap = js.count("remaproughness") &&
-                                js.at("remaproughness").get<bool>();
+                                 js.at("remaproughness").get<bool>();
                     if (jcmd.count("roughness"))
                         mat->rs = jcmd.at("roughness").get<float>();
                     if (!remap) mat->rs = sqrt(mat->rs);
@@ -597,20 +642,19 @@ scene* load_pbrt(const std::string& filename) {
                 log_error("{} shape not supported", type);
             }
             auto frame = stack.back().frame;
-            auto scl = vec3f{length(frame.x), length(frame.y),
-                length(frame.z)};
+            auto scl = vec3f{length(frame.x), length(frame.y), length(frame.z)};
             for (auto& p : shp->pos) p *= scl;
-            frame = {normalize(frame.x), normalize(frame.y),
-                normalize(frame.z), frame.o};
+            frame = {normalize(frame.x), normalize(frame.y), normalize(frame.z),
+                frame.o};
             if (stack.back().reverse) {
                 for (auto& t : shp->triangles) std::swap(t.y, t.z);
                 for (auto& q : shp->quads) std::swap(q.y, q.w);
             }
             scn->shapes.push_back(shp);
-                auto ist = new instance();
-                ist->name = shp->name;
-                ist->frame = frame;
-                ist->mat = stack.back().mat;
+            auto ist = new instance();
+            ist->name = shp->name;
+            ist->frame = frame;
+            ist->mat = stack.back().mat;
             if (cur_object != "") {
                 objects[cur_object].push_back(ist);
             } else {
@@ -623,7 +667,8 @@ scene* load_pbrt(const std::string& filename) {
             for (auto shp : object) {
                 instances[shp->name] += 1;
                 auto ist = new instance();
-                ist->name = shp->name + "_ist" + std::to_string(instances[shp->name]);
+                ist->name =
+                    shp->name + "_ist" + std::to_string(instances[shp->name]);
                 ist->frame = stack.back().frame * shp->frame;
                 ist->shp = shp->shp;
                 scn->instances.push_back(ist);
@@ -664,7 +709,7 @@ scene* load_pbrt(const std::string& filename) {
                 if (jcmd.count("from")) from = get_vec3f(jcmd.at("from"));
                 if (jcmd.count("to")) to = get_vec3f(jcmd.at("to"));
                 auto dir = normalize(from - to);
-                auto size = distant_dist * sin(5 * pif / 180);
+                auto size = distant_dist * sin(5 * pi / 180);
                 make_quad(shp->quads, shp->pos, shp->norm, shp->texcoord,
                     {1, 1}, {size, size}, {1, 1});
                 scn->shapes.push_back(shp);
@@ -726,12 +771,13 @@ scene* load_pbrt(const std::string& filename) {
 
 void flipyz_scene(scene* scn) {
     // flip meshes
-    for(auto shp : scn->shapes) {
-        for(auto& p : shp->pos) std::swap(p.y,p.z);
-        for(auto& n : shp->norm) std::swap(n.y,n.z);
+    for (auto shp : scn->shapes) {
+        for (auto& p : shp->pos) std::swap(p.y, p.z);
+        for (auto& n : shp->norm) std::swap(n.y, n.z);
     }
-    for(auto ist : scn->instances) {
-        ist->frame = ist->frame * frame3f{{1,0,0},{0,0,1},{0,1,0},{0,0,0}};
+    for (auto ist : scn->instances) {
+        ist->frame =
+            ist->frame * frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
     }
 }
 
@@ -751,15 +797,13 @@ int main(int argc, char** argv) {
 
     // load image
     auto scn = load_pbrt(filename);
-    if(flipyz) flipyz_scene(scn);
+    if (flipyz) flipyz_scene(scn);
 
     // validate
     ygl::validate(scn, true, true);
 
     // add paths for meshes
-    for(auto shp : scn->shapes) {
-        shp->path = "models/" + shp->name + ".bin";
-    }
+    for (auto shp : scn->shapes) { shp->path = "models/" + shp->name + ".bin"; }
 
     // save scene
     system(("mkdir -p " + path_dirname(outfilename)).c_str());

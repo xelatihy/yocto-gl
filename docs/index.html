@@ -471,7 +471,7 @@ this can used to access the scene data with <code>glTF::get&lt;T&gt;(index)</cod
 <p>We include a set of utilities to draw on screen with OpenGL 3.3, manage
 windows with GLFW and draw immediate-mode widgets with ImGui.</p>
 <ol>
-<li>texture and buffer objects with <code>gl_texture</code> and <code>gl_buffer</code><ul>
+<li>texture and buffer objects with <code>gltexture</code> and <code>gl_buffer</code><ul>
 <li>create textures/buffers with appropriate constructors</li>
 <li>check validity with <code>is_valid()</code></li>
 <li>update textures/buffers with <code>update()</code> functions</li>
@@ -480,17 +480,17 @@ windows with GLFW and draw immediate-mode widgets with ImGui.</p>
 <li>draw elements with <code>gl_buffer::draw_elems()</code></li>
 </ul>
 </li>
-<li>program objects with <code>gl_program</code><ul>
+<li>program objects with <code>glprogram</code><ul>
 <li>program creation with constructor</li>
 <li>check validity with <code>is_valid()</code></li>
 <li>delete with <code>clear()</code></li>
-<li>uniforms with <code>set_program_uniform()</code></li>
-<li>vertex attrib with <code>set_program_vertattr()</code></li>
+<li>uniforms with <code>set_gl_uniform()</code></li>
+<li>vertex attrib with <code>set_gl_attribute()</code></li>
 <li>draw elements with <code>gl_buffer::draw_elems()</code></li>
 </ul>
 </li>
-<li>image viewing with <code>gl_stdimage_program</code>, with support for tone mapping.</li>
-<li>draw surfaces and hair with GGX/Kayjia-Kay with <code>gl_stdsurface_program</code><ul>
+<li>image viewing with <code>glimage_program</code>, with support for tone mapping.</li>
+<li>draw surfaces and hair with GGX/Kayjia-Kay with <code>glsurface_program</code><ul>
 <li>initialize the program with constructor</li>
 <li>check validity with <code>is_valid()</code></li>
 <li>start/end each frame with <code>begin_frame()</code>, <code>end_frame()</code></li>
@@ -504,12 +504,12 @@ windows with GLFW and draw immediate-mode widgets with ImGui.</p>
 <li>draw yocto scenes using the above shader<ul>
 <li>initialize the rendering state with <code>init_stdsurface_state()</code></li>
 <li>load/update meshes and textures with <code>update_stdsurface_state()</code></li>
-<li>setup draw params using a <code>gl_stdsurface_params</code> struct</li>
-<li>draw scene with <code>draw_stdsurface_scene()</code></li>
+<li>setup draw params using a <code>glsurface_params</code> struct</li>
+<li>draw scene with <code>draw_gl_stdsurface_scene()</code></li>
 </ul>
 </li>
 <li>also includes other utlities for quick OpenGL hacking</li>
-<li>GLFW window with <code>gl_window</code><ul>
+<li>GLFW window with <code>glwindow</code><ul>
 <li>create with constructor</li>
 <li>delete with <code>clear()</code></li>
 <li>set callbacks with <code>set_callbacks()</code></li>
