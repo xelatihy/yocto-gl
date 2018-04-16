@@ -1,7 +1,7 @@
 //
 // LICENSE:
 //
-// Copyright (c) 2016 -- 2017 Fabio Pellacini
+// Copyright (c) 2016 -- 2018 Fabio Pellacini
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -26,7 +26,9 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_gl.h"
+#include "../yocto/yocto_bvh.h"
+#include "../yocto/yocto_trace.h"
+#include "../yocto/yocto_utils.h"
 using namespace std::literals;
 
 // Application state
@@ -139,7 +141,7 @@ int main(int argc, char* argv[]) {
 
     // build bvh
     ygl::log_info("building bvh");
-    app->bvh = make_bvh(app->scn);
+    app->bvh = ygl::build_scene_bvh(app->scn);
 
     // init renderer
     ygl::log_info("initializing tracer");

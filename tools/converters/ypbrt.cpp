@@ -32,7 +32,9 @@
 
 #include <regex>
 #include <fstream>
-#include "../../yocto/yocto_gl.h"
+#include "../../yocto/yocto_scene.h"
+#include "../../yocto/yocto_trace.h"
+#include "../../yocto/yocto_utils.h"
 #include "ext/json.hpp"
 
 using namespace ygl;
