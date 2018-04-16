@@ -13,24 +13,20 @@ Please consider this to be just development notes and not any real planning.
 
 ## Cleanup
 
-- refactor gl
-    - rename functions with glXXX names
-    - one buffer
-        - remove int vbo
-        - merge buffers
-    - remove array calls into one for vertices and uniforms
-    - reduce uniform tyexture calls
-    - remove skinning
+- remove load/save options
+- simplify scene selection -> where to put it?
+- split/rename glu
+    - bvh in trace or stored in the scene
+    - image code removed from OBJ and glTF
+- cleanup documentation
+    - glu
+    - math
+    - utils
+- removal of dependencies for .h
+- removal of dependencies for .cpp
+- move as much code as possible to .cpp
 
 - removing std::
-
-- math header: 3000, mostly boiler plate
-- rng: 300 lines
-- mc: 500
-- hash: 200
-- noise -> c++
-- shape funcs: 200
-- anim funcs: 200
 
 - numeric_limits: can we remove it?
 - include math functions without crap

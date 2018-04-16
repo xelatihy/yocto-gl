@@ -1,7 +1,7 @@
 //
 // LICENSE:
 //
-// Copyright (c) 2016 -- 2017 Fabio Pellacini
+// Copyright (c) 2016 -- 2018 Fabio Pellacini
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -26,7 +26,9 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_gl.h"
+#include "../yocto/yocto_glutils.h"
+#include "../yocto/yocto_image.h"
+#include "../yocto/yocto_utils.h"
 
 // Generic image that contains either an HDR or an LDR image, giving access
 // to both. This is helpful when writing viewers or generic image
@@ -94,7 +96,7 @@ void draw(ygl::glwindow* win, app_state* app) {
     if (ygl::begin_imgui_frame(win, "yimview")) {
         ygl::draw_imgui_label(win, "filename", img->filename);
         ygl::draw_imgui_label(
-            win, "size", "{} x {}", img->width(), img->height());
+            win, "size", ygl::format("{} x {}", img->width(), img->height()));
         ygl::draw_imgui_stdimage_inspector(win, "", app->params);
         ygl::draw_imgui_image_inspector(
             win, "", img->hdr, img->ldr, get_glmouse_posf(win), app->params);

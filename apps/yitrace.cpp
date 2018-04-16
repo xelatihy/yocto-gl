@@ -1,7 +1,7 @@
 //
 // LICENSE:
 //
-// Copyright (c) 2016 -- 2017 Fabio Pellacini
+// Copyright (c) 2016 -- 2018 Fabio Pellacini
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -26,7 +26,11 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_gl.h"
+#include "../yocto/yocto_bvh.h"
+#include "../yocto/yocto_glutils.h"
+#include "../yocto/yocto_trace.h"
+#include "../yocto/yocto_utils.h"
+#include "yapp_ui.h"
 using namespace std::literals;
 
 // Application state
@@ -63,6 +67,36 @@ struct app_state {
     }
 };
 
+namespace ygl {
+
+bool draw_imgui_trace_inspector(
+    glwindow* win, const std::string& lbl, trace_params& params) {
+    auto edited = 0;
+    edited +=
+        draw_imgui_dragbox(win, "resolution", params.resolution, 256, 4096);
+    edited += draw_imgui_dragbox(win, "nsamples", params.nsamples, 16, 4096);
+    edited +=
+        draw_imgui_combobox(win, "tracer", params.tracer, trace_type_names());
+    edited += draw_imgui_checkbox(win, "notransmission", params.notransmission);
+    edited += draw_imgui_checkbox(win, "double_sided", params.double_sided);
+    edited += draw_imgui_colorbox(win, "ambient", params.ambient);
+    edited +=
+        draw_imgui_checkbox(win, "envmap_invisible", params.envmap_invisible);
+    edited += draw_imgui_dragbox(win, "min_depth", params.min_depth, 1, 10);
+    edited += draw_imgui_dragbox(win, "max_depth", params.max_depth, 1, 10);
+    edited +=
+        draw_imgui_dragbox(win, "pixel_clamp", params.pixel_clamp, 10, 1000);
+    edited +=
+        draw_imgui_dragbox(win, "ray_eps", params.ray_eps, 0.0001f, 0.001f);
+    edited += draw_imgui_checkbox(win, "parallel", params.parallel);
+    edited += draw_imgui_dragbox(win, "seed", (int&)params.seed, 0, 1000);
+    edited +=
+        draw_imgui_dragbox(win, "preview", params.preview_resolution, 64, 1080);
+    return edited;
+}
+
+}
+
 void draw(ygl::glwindow* win, app_state* app) {
     // draw image
     auto window_size = get_glwindow_size(win);
@@ -76,8 +110,8 @@ void draw(ygl::glwindow* win, app_state* app) {
             ygl::push_imgui_groupid(win, app);
             ygl::draw_imgui_label(win, "scene", app->filename);
             ygl::draw_imgui_label(
-                win, "size", "{} x {}", app->img.width, app->img.height);
-            ygl::draw_imgui_label(win, "sample", app->cur_sample);
+                win, "size", ygl::format("{} x {}", app->img.width, app->img.height));
+            ygl::draw_imgui_label(win, "sample", std::to_string(app->cur_sample));
             if (ygl::draw_imgui_camera_selector(
                     win, "camera", app->cam, app->scn, app->view)) {
                 app->update_list.push_back(app->cam);
@@ -121,11 +155,11 @@ bool update(ygl::glwindow* win, app_state* app) {
         // update BVH
         for (auto sel : app->update_list) {
             if (sel.is<ygl::shape>()) {
-                ygl::refit_bvh(app->bvh, app->scn, false);
+                ygl::refit_shape_bvh(app->bvh, sel.get<ygl::shape>(), false);
             }
             if (sel.is<ygl::node>()) {
                 ygl::update_transforms(app->scn, 0);
-                ygl::refit_bvh(app->bvh, app->scn, false);
+                ygl::refit_scene_bvh(app->bvh, app->scn, false);
             }
         }
         app->update_list.clear();
@@ -270,7 +304,7 @@ int main(int argc, char* argv[]) {
 
     // build bvh
     ygl::log_info("building bvh");
-    app->bvh = ygl::make_bvh(app->scn);
+    app->bvh = ygl::build_scene_bvh(app->scn);
 
     // init renderer
     ygl::log_info("initializing tracer");

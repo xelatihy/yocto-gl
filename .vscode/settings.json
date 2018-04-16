@@ -37,6 +37,8 @@
         "bitset": "cpp",
         "random": "cpp",
         "utility": "cpp",
-        "valarray": "cpp"
+        "valarray": "cpp",
+        "__locale": "cpp",
+        "algorithm": "cpp"
     },
 } 

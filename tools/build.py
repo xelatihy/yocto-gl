@@ -56,33 +56,5 @@ def format():
     for glob in ['yocto/yocto_*.h', 'yocto/yocto_*.cpp', 'apps/y*.cpp']:
         os.system('clang-format -i -style=file ' + glob)
 
-@run.command()
-def docs():
-    os.system('./tools/cpp2doc.py')
-
-@run.command()
-def doxygen():
-    os.system('doxygen ./tools/Doxyfile')
-
-@run.command()
-@click.argument('msg',required=True)
-def commit(msg):
-    print('updating version ...')
-    ncpp = ''
-    with open('yocto/yocto_gl.h') as f:
-        for line in f:
-            if line.startswith('/// The current version'):
-                tokens = line.split('.')
-                tokens[-2] = str(int(tokens[-2])+1)
-                line = '.'.join(tokens)
-            ncpp += line
-    with open('yocto/yocto_gl.h', 'wt') as f: f.write(ncpp)
-    print('formatting code ...')
-    os.system('./tools/build.py format')
-    print('building docs ...')
-    os.system('./tools/build.py docs')
-    print('committing code ...')
-    os.system(f'git commit -a -m "{msg}"')
-
 if __name__ == '__main__':
     run()

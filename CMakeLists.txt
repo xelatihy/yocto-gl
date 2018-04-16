@@ -33,6 +33,18 @@ else(YOCTO_OPENGL)
     add_definitions(-DYGL_OPENGL=0)
 endif(YOCTO_OPENGL)
 
+set(YOCTO_FILES
+    yocto/yocto_math.h
+    yocto/yocto_utils.h
+    yocto/yocto_image.h yocto/yocto_image.cpp
+    yocto/yocto_bvh.h yocto/yocto_bvh.cpp
+    yocto/yocto_shape.h yocto/yocto_shape.cpp
+    yocto/yocto_obj.h yocto/yocto_obj.cpp
+    yocto/yocto_gltf.h yocto/yocto_gltf.cpp
+    yocto/yocto_scene.h yocto/yocto_scene.cpp
+    yocto/yocto_trace.h yocto/yocto_trace.cpp
+)
+
 if(YOCTO_OPENGL)
     find_package(OpenGL REQUIRED)
     if(APPLE)
@@ -51,10 +63,16 @@ if(YOCTO_OPENGL)
         find_library(GLFW_LIBRARY NAMES glfw3 glfw PATHS /usr/lib /usr/local/lib64 /usr/lib64 /usr/local/lib /usr/lib/x86_64-linux-gnu)
         find_package(GLEW REQUIRED)
     endif(UNIX AND NOT APPLE)
-    add_library(yocto_gl yocto/yocto_gl.h yocto/yocto_gl.cpp yocto/ext/stb_image.cpp yocto/ext/imgui/imgui.cpp yocto/ext/imgui/imgui_draw.cpp yocto/ext/imgui/imgui_impl_glfw_gl3.cpp yocto/ext/imgui/imgui_extra_fonts.cpp)
-    target_link_libraries(yocto_gl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GLEW_LIBRARIES})
-else(YOCTO_OPENGL)
-    add_library(yocto_gl yocto/yocto_gl.h yocto/yocto_gl.cpp yocto/ext/stb_image.cpp)
+    set(YOCTO_FILES 
+        ${YOCTO_FILES}
+        yocto/yocto_glu.h yocto/yocto_glu.cpp        
+        yocto/ext/imgui/imgui.cpp yocto/ext/imgui/imgui_draw.cpp yocto/ext/imgui/imgui_impl_glfw_gl3.cpp yocto/ext/imgui/imgui_extra_fonts.cpp    )
+endif(YOCTO_OPENGL)
+
+add_library(yocto_gl ${YOCTO_FILES})
+
+if(YOCTO_OPENGL)
+target_link_libraries(yocto_gl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GLEW_LIBRARIES})
 endif(YOCTO_OPENGL)
 
 if(UNIX AND NOT APPLE)
@@ -73,8 +91,8 @@ target_link_libraries(yscnproc yocto_gl)
 target_link_libraries(yimproc yocto_gl)
 
 if(YOCTO_OPENGL)
-    add_executable(yview apps/yview.cpp)
-    add_executable(yitrace apps/yitrace.cpp)
+    add_executable(yview apps/yview.cpp apps/yapp_ui.h  apps/yapp_ui.cpp)
+    add_executable(yitrace apps/yitrace.cpp apps/yapp_ui.h  apps/yapp_ui.cpp)
     add_executable(yimview apps/yimview.cpp)
 
     target_link_libraries(yview yocto_gl)
