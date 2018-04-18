@@ -43,10 +43,10 @@ void update_gltexture(const texture* txt, gltexture& gtxt) {
     } else {
         if (!txt->hdr.pixels.empty()) {
             update_gltexture(gtxt, txt->hdr, true, true, true);
-        } else if (!txt->ldr.pixels.empty()) {
+        }
+        if (!txt->ldr.pixels.empty()) {
             update_gltexture(gtxt, txt->ldr, true, true, true);
-        } else
-            assert(false);
+        }
     }
 }
 
