@@ -78,6 +78,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <algorithm>
 
 // -----------------------------------------------------------------------------
 // STRING, PATH AND FILE UTILITIES

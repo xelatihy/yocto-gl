@@ -134,8 +134,8 @@ using namespace std::literals;
 using byte = unsigned char;
 using uint = unsigned int;
 
-// const auto pi = 3.14159265f;
-const auto pi = (float)M_PI;
+// const auto pi_d = 3.14159265358979323846;
+const auto pi = 3.14159265f;
 const auto flt_max = FLT_MAX;
 const auto flt_min = -FLT_MAX;
 const auto flt_eps = FLT_EPSILON;

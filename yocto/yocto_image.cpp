@@ -29,6 +29,8 @@
 #include "yocto_image.h"
 #include "yocto_utils.h"
 
+#include <cstdlib>
+
 #if YGL_IMAGEIO
 
 #ifndef _WIN32
@@ -118,10 +120,12 @@ float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
     auto npixels = (*w) * (*h);
     auto nvalues = (*w) * (*h) * (*nc);
     auto nrow = (*w) * (*nc);
-    auto pixels = std::unique_ptr<float[]>(new float[nvalues]);
+    auto pixels = new float[nvalues];
     for (auto j = *h - 1; j >= 0; j--) {
-        if (fread(pixels.get() + j * nrow, sizeof(float), nrow, f) != nrow)
+        if (fread(pixels + j * nrow, sizeof(float), nrow, f) != nrow) {
+            delete pixels;
             return nullptr;
+        }
     }
 
     // done reading
@@ -130,7 +134,7 @@ float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
     // endian conversion
     if (s > 0) {
         for (auto i = 0; i < nvalues; ++i) {
-            auto dta = (uint8_t*)(pixels.get() + i);
+            auto dta = (uint8_t*)(pixels + i);
             std::swap(dta[0], dta[3]);
             std::swap(dta[1], dta[2]);
         }
@@ -143,13 +147,16 @@ float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
     }
 
     // proper number of channels
-    if (!req || *nc == req) return pixels.release();
+    if (!req || *nc == req) return pixels;
 
     // pack into channels
-    if (req < 0 || req > 4) return nullptr;
+    if (req < 0 || req > 4) {
+        delete pixels;
+        return nullptr;
+    }
     auto cpixels = new float[req * npixels];
     for (auto i = 0; i < npixels; i++) {
-        auto vp = pixels.get() + i * (*nc);
+        auto vp = pixels + i * (*nc);
         auto cp = cpixels + i * req;
         if (*nc == 1) {
             switch (req) {
@@ -191,6 +198,7 @@ float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
             }
         }
     }
+    delete pixels;
     return cpixels;
 }
 
@@ -231,31 +239,30 @@ bool is_hdr_filename(const std::string& filename) {
 // Loads an ldr image.
 image4b load_image4b(const std::string& filename) {
     auto w = 0, h = 0, c = 0;
-    auto pixels =
-        std::unique_ptr<byte>(stbi_load(filename.c_str(), &w, &h, &c, 4));
+    auto pixels = stbi_load(filename.c_str(), &w, &h, &c, 4);
     if (!pixels) return {};
-    return make_image4b(w, h, (vec4b*)pixels.get());
+    auto img = make_image4b(w, h, (vec4b*)pixels);
+    free(pixels);
+    return img;
 }
 
 // Loads an hdr image.
 image4f load_image4f(const std::string& filename) {
     auto ext = path_extension(filename);
     auto w = 0, h = 0, c = 0;
-    auto pixels = std::unique_ptr<float>(nullptr);
+    auto pixels = (float*)nullptr;
     if (ext == ".exr") {
-        auto pixels_ = (float*)nullptr;
-        if (LoadEXR(&pixels_, &w, &h, filename.c_str(), nullptr) < 0) return {};
-        pixels = std::unique_ptr<float>(pixels_);
+        if (LoadEXR(&pixels, &w, &h, filename.c_str(), nullptr) < 0) return {};
         c = 4;
     } else if (ext == ".pfm") {
-        pixels =
-            std::unique_ptr<float>(load_pfm(filename.c_str(), &w, &h, &c, 4));
+        pixels = load_pfm(filename.c_str(), &w, &h, &c, 4);
     } else {
-        pixels =
-            std::unique_ptr<float>(stbi_loadf(filename.c_str(), &w, &h, &c, 4));
+        pixels = stbi_loadf(filename.c_str(), &w, &h, &c, 4);
     }
     if (!pixels) return {};
-    return make_image4f(w, h, (vec4f*)pixels.get());
+    auto img = make_image4f(w, h, (vec4f*)pixels);
+    delete pixels;
+    return img;
 }
 
 // Saves an ldr image.
