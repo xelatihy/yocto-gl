@@ -275,13 +275,13 @@ int main(int argc, char* argv[]) {
         parser, "--nsamples", "-s", "Number of samples.", app->params.nsamples);
     app->params.tracer = ygl::parse_opt(parser, "--tracer", "-T", "Trace type.",
         trace_names, app->params.tracer);
-    app->params.notransmission = ygl::parse_opt(parser, "--notransmission", "",
+    app->params.notransmission = ygl::parse_flag(parser, "--notransmission", "",
         "Whether to test transmission in shadows.", app->params.notransmission);
-    app->params.double_sided = ygl::parse_opt(parser, "--double-sided", "-D",
+    app->params.double_sided = ygl::parse_flag(parser, "--double-sided", "-D",
         "Force double sided rendering.", app->params.double_sided);
     app->params.ambient = ygl::parse_opt(
         parser, "--ambient", "", "Ambient lighting.", app->params.ambient);
-    app->params.envmap_invisible = ygl::parse_opt(parser, "--envmap-invisible",
+    app->params.envmap_invisible = ygl::parse_flag(parser, "--envmap-invisible",
         "", "View environment map.", app->params.envmap_invisible);
     app->params.min_depth = ygl::parse_opt(
         parser, "--min-depth", "", "Minimum ray depth.", app->params.min_depth);
@@ -312,8 +312,8 @@ int main(int argc, char* argv[]) {
     if (app->quiet) ygl::get_default_logger()->verbose = false;
 
     // scene loading
+    ygl::log_info("loading scene {}", app->filename);
     try {
-        ygl::log_info("loading scene {}", app->filename);
         app->scn = ygl::load_scene(app->filename);
     } catch (std::exception e) {
         ygl::log_fatal("cannot load scene {}", app->filename);
