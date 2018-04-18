@@ -18,8 +18,6 @@ Please consider this to be just development notes and not any real planning.
 
 ## Cleanup
 
-- bvh
-    - simpler instance api
 - include math functions without crap
 - consider removing
     - logger (make it a function)
@@ -28,6 +26,7 @@ Please consider this to be just development notes and not any real planning.
 - grouping
     - color -> math
 - delete
+    - image io
     - compositing if not used
     - widgets
         - simpler combo

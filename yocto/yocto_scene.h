@@ -12,7 +12,8 @@
 // glTF andinclude emission, base-metallic and diffuse-specular parametrization,
 // normal, occlusion and displacement mapping. Finally, the scene containers
 // cameras and environment maps. Quad support in shapes is experimental and
-// mostly supported for loading and saving.
+// mostly supported for loading and saving. Lights in Yocto/Scene are pointers
+// to either instances or environments.
 // The scene supports an optional node hierarchy with animation modeled on
 // the glTF model.
 //
@@ -85,11 +86,12 @@
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
-// SIMPLE SCENE SUPPORT
+// SCENE DATA
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// #codegen begin refl-scene
+// forward declaration
+struct bvh_tree;
 
 // Camera.
 struct camera {
@@ -193,6 +195,14 @@ struct shape {
     // tesselation data
     int subdivision = 0;        // subdivision [deprecated]
     bool catmullclark = false;  // catmull-clark [deprecated]
+
+    // computed properties
+    bbox3f bbox = invalid_bbox3f;      // boudning box
+    std::vector<float> elem_cdf = {};  // element cdf for sampling
+    bvh_tree* bvh = nullptr;
+
+    // cleanup
+    ~shape();
 };
 
 // Shape instance.
@@ -201,6 +211,9 @@ struct instance {
     frame3f frame = identity_frame3f;  // transform frame
     shape* shp = nullptr;              // shape
     material* mat = nullptr;           // material
+
+    // compute properties
+    bbox3f bbox = invalid_bbox3f;  // boudning box
 };
 
 // Distance at which we set environment map positions.
@@ -228,7 +241,7 @@ struct node {
     environment* env = nullptr;        // environment
 
     // compute properties
-    std::vector<node*> children_ = {};  // child nodes
+    std::vector<node*> children = {};  // child nodes
 };
 
 // Keyframe type.
@@ -246,6 +259,12 @@ struct animation {
     std::vector<vec3f> scale;                      // scale keyframes
     std::vector<std::vector<float>> weights;       // mprph weight keyframes
     std::vector<node*> targets;                    // target nodes
+};
+
+// Light as either an instance or an environment.
+struct light {
+    instance* ist = nullptr;     // instance
+    environment* env = nullptr;  // environment
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -266,18 +285,112 @@ struct scene {
     std::vector<node*> nodes = {};            // node hierarchy [optional]
     std::vector<animation*> animations = {};  // animations [optional]
 
-    // Cleanup
-    ~scene() {
-        for (auto v : shapes) delete v;
-        for (auto v : instances) delete v;
-        for (auto v : materials) delete v;
-        for (auto v : textures) delete v;
-        for (auto v : cameras) delete v;
-        for (auto v : environments) delete v;
-        for (auto v : nodes) delete v;
-        for (auto v : animations) delete v;
-    }
+    // compute properties
+    std::vector<light*> lights;
+    bbox3f bbox = invalid_bbox3f;  // boudning box
+    bvh_tree* bvh = nullptr;
+
+    // cleanup
+    ~scene();
 };
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// SCENE INPUT AND OUTPUT AND STATS
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Loads/saves a scene in OBJ and glTF formats.
+scene* load_scene(const std::string& filename, bool load_textures = true,
+    bool preserve_quads = false, bool split_obj_shapes = false,
+    bool skip_missing = true);
+void save_scene(const std::string& filename, const scene* scn,
+    bool save_textures = true, bool preserve_obj_instances = false,
+    bool gltf_separate_buffers = false, bool skip_missing = true);
+
+// Loads/saves scene textures.
+void load_textures(
+    const std::string& filename, scene* scn, bool skip_missing = true);
+void save_textures(
+    const std::string& filename, const scene* scn, bool skip_missing = true);
+
+// Print scene statistics.
+void print_stats(scene* scn);
+
+// Merge scene into one another. Note that the objects are _moved_ from
+// merge_from to merged_into, so merge_from will be empty after this function.
+void merge_into(scene* merge_into, scene* merge_from);
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// UPDATES TO COMPUTED PROPERTIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Update the normals of a shape.
+void update_normals(shape* shp);
+
+// Update node transforms.
+void update_transforms(
+    scene* scn, float time = 0, const std::string& anim_group = "");
+// Compute animation range.
+vec2f compute_animation_range(
+    const scene* scn, const std::string& anim_group = "");
+
+// Computes shape/scene approximate bounds.
+void udpate_bbox(shape* shp);
+void update_bbox(scene* scn, bool do_shapes = true);
+
+// Update lights.
+void update_lights(scene* scn, bool do_shapes = true);
+// Generate a distribution for sampling a shape uniformly based on area/length.
+void update_shape_cdf(shape* shp);
+
+// Updates/refits bvh.
+void update_bvh(shape* shp, bool equalsize = true);
+void update_bvh(scene* scn, bool do_shapes = true, bool equalsize = true);
+void refit_bvh(shape* shp);
+void refit_bvh(scene* scn, bool do_shapes = true);
+
+// Subdivides shape elements.
+void subdivide_shape_once(shape* shp, bool subdiv = false);
+// Tesselate a shape into basic primitives.
+void tesselate_shape(shape* shp, bool subdivide,
+    bool facevarying_to_sharedvertex, bool quads_to_triangles,
+    bool bezier_to_lines);
+// Tesselate scene shapes.
+void tesselate_shapes(scene* scn, bool subdivide,
+    bool facevarying_to_sharedvertex, bool quads_to_triangles,
+    bool bezier_to_lines);
+
+// Add missing names, normals, tangents and hierarchy.
+void add_missing_camera(scene* scn);
+void add_missing_names(scene* scn);
+void add_missing_normals(scene* scn);
+void add_missing_tangent_space(scene* scn);
+// Checks for validity of the scene.
+std::vector<std::string> validate(const scene* scn);
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// INTERSECTION, EVAL AND SAMPLING FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Scene intersection.
+struct scene_intersection {
+    instance* ist = nullptr;  // instance or null for no intersection
+    int eid = 0;              // shape element index
+    vec2f euv = zero2f;       // shape element coordinates
+    float ray_t = 0;          // ray/point distance
+};
+
+// Intersects a ray with the scene.
+scene_intersection intersect_ray(
+    const scene* scn, const ray3f& ray, bool find_any = false);
 
 // Shape elements type.
 enum struct shape_elem_type {
@@ -335,8 +448,6 @@ ray3f eval_camera_ray(const camera* cam, const vec2i& ij, int res,
 // values any one is 0 or less. Set camera aspect otherwise.
 void sync_camera_aspect(const camera* cam, int& width, int& height);
 
-// Generate a distribution for sampling a shape uniformly based on area/length.
-std::vector<float> sample_shape_cdf(const shape* shp);
 // Sample a shape based on a distribution.
 std::pair<int, vec2f> sample_shape(const shape* shp,
     const std::vector<float>& cdf, float re, const vec2f& ruv);
@@ -344,81 +455,10 @@ std::pair<int, vec2f> sample_shape(const shape* shp,
 // Sample an environment uniformly.
 vec2f sample_environment(const environment* env, const vec2f& ruv);
 
-// Update the normals of a shape.  Supports only non-facevarying shapes.
-void compute_normals(shape* shp);
-// Subdivides shape elements. Apply subdivision surface rules if subdivide
-// is true.
-void subdivide_shape_once(shape* shp, bool subdiv = false);
-// Tesselate a shape into basic primitives.
-void tesselate_shape(shape* shp, bool subdivide,
-    bool facevarying_to_sharedvertex, bool quads_to_triangles,
-    bool bezier_to_lines);
-// Tesselate scene shapes.
-void tesselate_shapes(scene* scn, bool subdivide,
-    bool facevarying_to_sharedvertex, bool quads_to_triangles,
-    bool bezier_to_lines);
-
-// Update node transforms.
-void update_transforms(
-    scene* scn, float time = 0, const std::string& anim_group = "");
-// Compute animation range.
-vec2f compute_animation_range(
-    const scene* scn, const std::string& anim_group = "");
-
-// Make a view camera either copying a given one or building a default one.
-camera* make_view_camera(const scene* scn, int camera_id);
-
-// Computes shape/scene approximate bounds.
-bbox3f compute_bbox(const shape* shp);
-bbox3f compute_bbox(const scene* scn, bool skip_emitting = false);
-
-// Build a shape/scene BVH.
-struct bvh_tree;
-bvh_tree* build_shape_bvh(
-    const shape* shp, float def_radius = 0.001f, bool equalsize = true);
-bvh_tree* build_scene_bvh(
-    const scene* scn, float def_radius = 0.001f, bool equalsize = true);
-
-// Refits shape/scene BVH.
-void refit_shape_bvh(
-    bvh_tree* bvh, const shape* shp, float def_radius = 0.001f);
-void refit_scene_bvh(
-    bvh_tree* bvh, const scene* scn, bool do_shapes, float def_radius = 0.001f);
-
-// Add missing names, normals, tangents and hierarchy.
-void add_names(scene* scn);
-void add_normals(scene* scn);
-void add_tangent_space(scene* scn);
-void add_hierarchy(scene* scn);
-// Checks for validity of the scene.
-std::vector<std::string> validate(
-    const scene* scn, bool skip_missing = false, bool log_as_warning = false);
-
-// Merge scene into one another. Note that the objects are _moved_ from
-// merge_from to merged_into, so merge_from will be empty after this function.
-void merge_into(scene* merge_into, scene* merge_from);
-
-// Loads/saves a scene in OBJ and glTF formats.
-scene* load_scene(const std::string& filename, bool load_textures = true,
-    bool preserve_quads = false, bool split_obj_shapes = false,
-    bool skip_missing = true);
-void save_scene(const std::string& filename, const scene* scn,
-    bool save_textures = true, bool preserve_obj_instances = false,
-    bool gltf_separate_buffers = false, bool skip_missing = true);
-
-// Loads/saves scene textures.
-void load_textures(
-    const std::string& filename, scene* scn, bool skip_missing = true);
-void save_textures(
-    const std::string& filename, const scene* scn, bool skip_missing = true);
-
-// Print scene statistics.
-void print_stats(const scene* scn);
-
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
-// EXAMPLE SCENES
+// SCENE ELEMENT CREATION
 // -----------------------------------------------------------------------------
 namespace ygl {
 
@@ -426,8 +466,8 @@ namespace ygl {
 camera* make_camera(const std::string& name, const vec3f& from, const vec3f& to,
     float yfov, float aspect);
 texture* make_texture(const std::string& name, const std::string& path = "",
-int width = 0, int height = 0,
-    const std::vector<vec4b>& ldr = {}, const std::vector<vec4f>& hdr = {});
+    int width = 0, int height = 0, const std::vector<vec4b>& ldr = {},
+    const std::vector<vec4f>& hdr = {});
 material* make_material(const std::string& name,
     const vec3f& kd = {0.2, 0.2, 0.2}, const vec3f& ks = {0, 0, 0},
     float rs = 1);

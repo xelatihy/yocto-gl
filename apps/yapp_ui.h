@@ -136,18 +136,12 @@ void draw_glsurface_scene(const scene* scn, const camera* cam,
 bool handle_glcamera_navigation(
     glwindow* win, camera* cam, bool navigation_fps);
 bool handle_glscene_selection(glwindow* win, const scene* scn,
-    const camera* cam, const bvh_tree* bvh, int res,
+    const camera* cam, int res,
     const vec2f& offset, float zoom, scene_selection& sel);
 
 // Draws widgets for params.
 bool draw_imgui_stdsurface_inspector(
     glwindow* win, const std::string& lbl, glsurface_params& params);
-
-// Draws a widget that can selected the camera.
-inline bool draw_imgui_camera_selector(glwindow* win, const std::string& lbl,
-    camera*& cam, const scene* scn, camera* view) {
-    return draw_imgui_combobox(win, lbl, cam, scn->cameras, true, view);
-}
 
 // Draws widgets for a camera. Used for quickly making demos.
 bool draw_imgui_camera_inspector(

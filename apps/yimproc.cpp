@@ -32,7 +32,7 @@ using namespace std::literals;
 
 // Resize image.
 template <typename T>
-std::vector<T> resize_image(int width, int height, const std::vector<T>& img, 
+std::vector<T> resize_image(int width, int height, const std::vector<T>& img,
     int res_width, int res_height) {
     if (!res_width && !res_height)
         ygl::log_fatal("at least argument should be >0");
@@ -102,8 +102,8 @@ std::vector<ygl::vec4f> filter_bilateral(int width, int height,
                     auto w = (float)std::exp(-dot(uv, uv) * sw) *
                              (float)std::exp(-dot(rgb, rgb) * rw);
                     for (auto fi = 0; fi < features.size(); fi++) {
-                        auto feat =
-                            features[fi][i + width * j] - features[fi][ii + width * jj];
+                        auto feat = features[fi][i + width * j] -
+                                    features[fi][ii + width * jj];
                         w *= exp(-dot(feat, feat) * fw[fi]);
                     }
                     av += w * img[ii + width * jj];
@@ -117,7 +117,8 @@ std::vector<ygl::vec4f> filter_bilateral(int width, int height,
 }
 
 std::vector<ygl::vec4f> filter_bilateral(int width, int height,
-    const std::vector<ygl::vec4f>& img, float spatial_sigma, float range_sigma) {
+    const std::vector<ygl::vec4f>& img, float spatial_sigma,
+    float range_sigma) {
     auto filtered = std::vector<ygl::vec4f>(width * height);
     auto fwidth = (int)ceil(2.57f * spatial_sigma);
     auto sw = 1 / (2.0f * spatial_sigma * spatial_sigma);

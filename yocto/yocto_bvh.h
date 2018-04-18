@@ -18,11 +18,11 @@
 //
 // ## Usage
 //
-// 1. build shape BVHs with `build_shape_bvh()`
-// 2. build scene BVH with `build_scene_bvh()`
+// 1. fill the shape or instance data
+// 2. build the BVH with `build_bvh()`
 // 3. perform ray-element intersection with `intersect_bvh()`
 // 4. perform point overlap queries with `overlap_bvh()`
-// 5. refit the BVH with `refit_shape_bvh()` and `refit_Scene_bvh()`
+// 5. refit the BVH with `refit_bvh()` after updating internal data
 //
 //
 
@@ -133,15 +133,18 @@ bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2);
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+// forward declaration
+struct bvh_tree;
+
 // Type of BVH node.
 enum struct bvh_node_type : uint8_t {
-    internal = 0,
+    internal,
     point,
     line,
     triangle,
     quad,
     vertex,
-    instance,
+    instance
 };
 
 // Maximum number of primitives per BVH node.
@@ -152,21 +155,12 @@ const int bvh_max_prims = 4;
 // and the split axis. Leaf and internal nodes are identical, except that
 // indices refer to primitives for leaf nodes or other nodes for internal
 // nodes. See bvh_tree for more details.
-// This is an internal data structure.
 struct bvh_node {
     bbox3f bbox;                    // bouds
     uint32_t prims[bvh_max_prims];  // primitives
     uint16_t count;                 // number of prims
     bvh_node_type type;             // node type
     uint8_t split_axis;             // split axis
-};
-
-// Shape instance for two-level BVH.
-// This is an internal data structure.
-struct bvh_instance {
-    frame3f frame = identity_frame3f;      // frame
-    frame3f frame_inv = identity_frame3f;  // frame inverse
-    int shape_id = 0;                      // shape id
 };
 
 // BVH tree, stored as a node array. The tree structure is encoded using array
@@ -177,12 +171,10 @@ struct bvh_instance {
 // BVHs. To handle multiple primitive types and transformed primitives, build
 // a two-level hierarchy with the outer BVH, the scene BVH, containing inner
 // BVHs, shape BVHs, each of which of a uniform primitive type.
-// This is an internal data structure.
+// To build a BVH, first fill in either the shape or instance data, then
+// call `build_bvh()`.
 struct bvh_tree {
-    std::vector<bvh_node> nodes;                   // Internal nodes.
-    bvh_node_type type = bvh_node_type::internal;  // Bvh leaF type
-
-    // data for shape BVHs
+    // data for shape BVH
     std::vector<vec3f> pos;        // Positions for shape BVHs.
     std::vector<float> radius;     // Radius for shape BVHs.
     std::vector<int> points;       // Points for shape BVHs.
@@ -190,40 +182,19 @@ struct bvh_tree {
     std::vector<vec3i> triangles;  // Triangles for shape BVHs.
     std::vector<vec4i> quads;      // Quads for shape BVHs.
 
-    // data for instance BVHs
-    std::vector<bvh_instance>
-        instances;  // Instance ids (iid, sid, shape bvh index).
-    std::vector<bvh_tree*> shape_bvhs;  // Shape BVHs.
-    bool own_shape_bvhs = false;        // Owns shape BVHs.
+    // data for instance BVH
+    std::vector<frame3f> ist_frames;      // instance frames
+    std::vector<frame3f> ist_inv_frames;  // instance inverse frames
+    std::vector<bvh_tree*> ist_bvhs;      // instance shape bvhs
 
-    // Cleanup
-    ~bvh_tree() {
-        if (own_shape_bvhs)
-            for (auto v : shape_bvhs) delete v;
-    }
+    // bvh nodes
+    std::vector<bvh_node> nodes;  // Internal nodes.
 };
 
-// Build a shape BVH from a set of primitives.
-bvh_tree* build_shape_bvh(const std::vector<int>& points,
-    const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
-    const std::vector<vec4i>& quads, const std::vector<vec3f>& pos,
-    const std::vector<float>& radius, float def_radius, bool equalsize);
-// Build a scene BVH from a set of shape instances.
-bvh_tree* build_scene_bvh(const std::vector<bvh_instance>& instances,
-    const std::vector<bvh_tree*>& shape_bvhs, bool equal_size,
-    bool owns_shape_bvhs);
-
-// Grab the shape BVHs
-inline const std::vector<bvh_tree*>& get_shape_bvhs(const bvh_tree* bvh) {
-    return bvh->shape_bvhs;
-}
-
+// Build a BVH from the given set of primitives.
+void build_bvh(bvh_tree* bvh, bool equalsize);
 // Update the node bounds for a shape bvh.
-void refit_shape_bvh(bvh_tree* bvh, const std::vector<vec3f>& pos,
-    const std::vector<float>& radius, float def_radius);
-// Update the node bounds for a scene bvh
-void refit_scene_bvh(bvh_tree* bvh, const std::vector<frame3f>& frames,
-    const std::vector<frame3f>& frames_inv);
+void refit_bvh(bvh_tree* bvh);
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance `ray_t`, the instance

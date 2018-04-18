@@ -517,116 +517,58 @@ int make_bvh_node(std::vector<bvh_node>& nodes, std::vector<bvh_prim>& prims,
     return nodeid;
 }
 
-// Build a BVH node list and sorted primitive array
-std::vector<bvh_node> make_bvh_nodes(
-    const std::vector<bbox3f>& bboxes, bvh_node_type type, bool equal_size) {
+// Build a BVH from a set of primitives.
+void build_bvh(bvh_tree* bvh, bool equal_size) {
+    // get the number of primitives and the primitive type
+    auto prims = std::vector<bvh_prim>();
+    auto type = bvh_node_type::internal;
+    if (!bvh->points.empty()) {
+        for (auto& p : bvh->points) {
+            prims.push_back({point_bbox(bvh->pos[p], bvh->radius[p])});
+        }
+        type = bvh_node_type::point;
+    } else if (!bvh->lines.empty()) {
+        for (auto& l : bvh->lines) {
+            prims.push_back({line_bbox(bvh->pos[l.x], bvh->pos[l.y],
+                bvh->radius[l.x], bvh->radius[l.y])});
+        }
+        type = bvh_node_type::line;
+    } else if (!bvh->triangles.empty()) {
+        for (auto& t : bvh->triangles) {
+            prims.push_back(
+                {triangle_bbox(bvh->pos[t.x], bvh->pos[t.y], bvh->pos[t.z])});
+        }
+        type = bvh_node_type::triangle;
+    } else if (!bvh->quads.empty()) {
+        for (auto& q : bvh->quads) {
+            prims.push_back({quad_bbox(
+                bvh->pos[q.x], bvh->pos[q.y], bvh->pos[q.z], bvh->pos[q.w])});
+        }
+        type = bvh_node_type::quad;
+    } else if (!bvh->pos.empty()) {
+        for (auto i = 0; i < bvh->pos.size(); i++) {
+            prims.push_back({point_bbox(bvh->pos[i], bvh->radius[i])});
+        }
+        type = bvh_node_type::vertex;
+    } else if (!bvh->ist_bvhs.empty()) {
+        for (auto i = 0; i < bvh->ist_bvhs.size(); i++) {
+            prims.push_back({transform_bbox(
+                bvh->ist_frames[i], bvh->ist_bvhs[i]->nodes[0].bbox)});
+        }
+        type = bvh_node_type::instance;
+    }
+
     // create an array of primitives to sort
-    auto prims = std::vector<bvh_prim>(bboxes.size());
-    for (auto i = 0; i < bboxes.size(); i++) {
-        prims[i].bbox = bboxes[i];
-        prims[i].center = (bboxes[i].min + bboxes[i].max) / 2;
+    for (auto i = 0; i < prims.size(); i++) {
+        prims[i].center = (prims[i].bbox.min + prims[i].bbox.max) / 2;
         prims[i].primid = i;
     }
 
-    // allocate nodes (over-allocate now then shrink)
-    auto nodes = std::vector<bvh_node>();
-    nodes.reserve(prims.size() * 2);
-
-    // start recursive splitting
-    make_bvh_node(nodes, prims, 0, (int)prims.size(), type, equal_size);
-
-    // shrink back
-    nodes.shrink_to_fit();
-
-    // done
-    return nodes;
-}
-
-// Build a BVH from the data already set
-void make_bvh_nodes(bvh_tree* bvh, bool equal_size) {
-    // get the number of primitives and the primitive type
-    auto bboxes = std::vector<bbox3f>();
-    if (!bvh->points.empty()) {
-        for (auto& p : bvh->points) {
-            bboxes.push_back(point_bbox(bvh->pos[p], bvh->radius[p]));
-        }
-        bvh->type = bvh_node_type::point;
-    } else if (!bvh->lines.empty()) {
-        for (auto& l : bvh->lines) {
-            bboxes.push_back(line_bbox(bvh->pos[l.x], bvh->pos[l.y],
-                bvh->radius[l.x], bvh->radius[l.y]));
-        }
-        bvh->type = bvh_node_type::line;
-    } else if (!bvh->triangles.empty()) {
-        for (auto& t : bvh->triangles) {
-            bboxes.push_back(
-                triangle_bbox(bvh->pos[t.x], bvh->pos[t.y], bvh->pos[t.z]));
-        }
-        bvh->type = bvh_node_type::triangle;
-    } else if (!bvh->quads.empty()) {
-        for (auto& q : bvh->quads) {
-            bboxes.push_back(quad_bbox(
-                bvh->pos[q.x], bvh->pos[q.y], bvh->pos[q.z], bvh->pos[q.w]));
-        }
-        bvh->type = bvh_node_type::quad;
-    } else if (!bvh->pos.empty()) {
-        for (auto i = 0; i < bvh->pos.size(); i++) {
-            bboxes.push_back(point_bbox(bvh->pos[i], bvh->radius[i]));
-        }
-        bvh->type = bvh_node_type::vertex;
-    } else if (!bvh->instances.empty()) {
-        for (auto& ist : bvh->instances) {
-            auto sbvh = bvh->shape_bvhs[ist.shape_id];
-            bboxes.push_back(transform_bbox(ist.frame, sbvh->nodes[0].bbox));
-        }
-        bvh->type = bvh_node_type::instance;
-    }
-
-    // make node bvh
-    bvh->nodes = make_bvh_nodes(bboxes, bvh->type, equal_size);
-}
-
-// Build a BVH from a set of primitives.
-bvh_tree* build_shape_bvh(const std::vector<int>& points,
-    const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
-    const std::vector<vec4i>& quads, const std::vector<vec3f>& pos,
-    const std::vector<float>& radius, float def_radius, bool equal_size) {
-    // allocate the bvh
-    auto bvh = new bvh_tree();
-
-    // set values
-    bvh->points = points;
-    bvh->lines = lines;
-    bvh->triangles = triangles;
-    bvh->quads = quads;
-    bvh->pos = pos;
-    bvh->radius =
-        (radius.empty()) ? std::vector<float>(pos.size(), def_radius) : radius;
-
-    // make bvh nodes
-    make_bvh_nodes(bvh, equal_size);
-
-    // done
-    return bvh;
-}
-
-// Build a BVH from a set of shape instances.
-bvh_tree* build_scene_bvh(const std::vector<bvh_instance>& instances,
-    const std::vector<bvh_tree*>& shape_bvhs, bool equal_size,
-    bool own_shape_bvhs) {
-    // allocate the bvh
-    auto bvh = new bvh_tree();
-
-    // set values
-    bvh->instances = instances;
-    bvh->shape_bvhs = shape_bvhs;
-    bvh->own_shape_bvhs = own_shape_bvhs;
-
-    // make bvh nodes
-    make_bvh_nodes(bvh, equal_size);
-
-    // done
-    return bvh;
+    // build nodes
+    bvh->nodes.clear();
+    bvh->nodes.reserve(prims.size() * 2);
+    make_bvh_node(bvh->nodes, prims, 0, (int)prims.size(), type, equal_size);
+    bvh->nodes.shrink_to_fit();
 }
 
 // Recursively recomputes the node bounds for a shape bvh
@@ -676,32 +618,16 @@ void refit_bvh(bvh_tree* bvh, int nodeid) {
         } break;
         case bvh_node_type::instance: {
             for (auto i = 0; i < node.count; i++) {
-                auto& ist = bvh->instances[node.prims[node.prims[i]]];
-                auto sbvh = bvh->shape_bvhs[ist.shape_id];
-                node.bbox += transform_bbox(ist.frame, sbvh->nodes[0].bbox);
+                auto idx = node.prims[i];
+                node.bbox += transform_bbox(
+                    bvh->ist_frames[idx], bvh->ist_bvhs[idx]->nodes[0].bbox);
             }
         } break;
     }
 }
 
 // Recursively recomputes the node bounds for a shape bvh
-void refit_shape_bvh(bvh_tree* bvh, const std::vector<vec3f>& pos,
-    const std::vector<float>& radius, float def_radius) {
-    bvh->pos = pos;
-    bvh->radius =
-        (radius.empty()) ? std::vector<float>(pos.size(), def_radius) : radius;
-    refit_bvh(bvh, 0);
-}
-
-// Recursively recomputes the node bounds for a scene bvh
-void refit_scene_bvh(bvh_tree* bvh, const std::vector<frame3f>& frames,
-    const std::vector<frame3f>& frames_inv) {
-    for (auto i = 0; i < frames.size(); i++) {
-        bvh->instances[i].frame = frames[i];
-        bvh->instances[i].frame_inv = frames_inv[i];
-    }
-    refit_bvh(bvh, 0);
-}
+void refit_bvh(bvh_tree* bvh) { refit_bvh(bvh, 0); }
 
 // Intersect ray with a bvh.
 bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
@@ -804,9 +730,9 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
             } break;
             case bvh_node_type::instance: {
                 for (auto i = 0; i < node.count; i++) {
-                    auto& ist = bvh->instances[node.prims[i]];
-                    auto sbvh = bvh->shape_bvhs[ist.shape_id];
-                    if (intersect_bvh(sbvh, transform_ray(ist.frame_inv, ray),
+                    auto idx = node.prims[i];
+                    if (intersect_bvh(bvh->ist_bvhs[idx],
+                            transform_ray(bvh->ist_inv_frames[idx], ray),
                             find_any, ray_t, iid, eid, euv)) {
                         hit = true;
                         ray.tmax = ray_t;
@@ -913,9 +839,9 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
             } break;
             case bvh_node_type::instance: {
                 for (auto i = 0; i < node.count; i++) {
-                    auto& ist = bvh->instances[node.prims[i]];
-                    auto sbvh = bvh->shape_bvhs[ist.shape_id];
-                    if (overlap_bvh(sbvh, transform_point(ist.frame_inv, pos),
+                    auto idx = node.prims[i];
+                    if (overlap_bvh(bvh->ist_bvhs[idx],
+                            transform_point(bvh->ist_inv_frames[idx], pos),
                             max_dist, find_any, dist, iid, eid, euv)) {
                         hit = true;
                         max_dist = dist;

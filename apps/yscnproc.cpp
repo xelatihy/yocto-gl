@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
     }
 
     // add missing elements
-    if (add_normals) ygl::add_normals(scn);
+    if (add_normals) ygl::add_missing_normals(scn);
 
     // process geometry
     if (scale != 1.0f) {

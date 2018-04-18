@@ -533,8 +533,8 @@ bool get_glctrl_key(glwindow* win);
 bool get_glshift_key(glwindow* win);
 
 // Read pixels.
-void take_glscreenshot4b(
-    glwindow* win, int& width, int& height, std::vector<vec4b>& img, bool flipy = true, bool back = false);
+void take_glscreenshot4b(glwindow* win, int& width, int& height,
+    std::vector<vec4b>& img, bool flipy = true, bool back = false);
 
 }  // namespace ygl
 

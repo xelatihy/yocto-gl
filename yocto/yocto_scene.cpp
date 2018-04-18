@@ -28,9 +28,9 @@
 
 #include "yocto_scene.h"
 #include "yocto_bvh.h"
+#include "yocto_image.h"
 #include "yocto_shape.h"
 #include "yocto_utils.h"
-#include "yocto_image.h"
 
 #include <unordered_map>
 
@@ -43,9 +43,433 @@
 #endif
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR SIMPLE SCENE
+// SCENE DATA
 // -----------------------------------------------------------------------------
 namespace ygl {
+shape::~shape() {
+    if (bvh) delete bvh;
+}
+scene::~scene() {
+    for (auto v : shapes) delete v;
+    for (auto v : instances) delete v;
+    for (auto v : materials) delete v;
+    for (auto v : textures) delete v;
+    for (auto v : cameras) delete v;
+    for (auto v : environments) delete v;
+    for (auto v : lights) delete v;
+    for (auto v : nodes) delete v;
+    for (auto v : animations) delete v;
+    if (bvh) delete bvh;
+}
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// UPDATES TO COMPUTED PROPERTIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Compute shape normals. Supports only non-facevarying shapes.
+void update_normals(shape* shp) {
+    switch (get_shape_type(shp)) {
+        case shape_elem_type::none: break;
+        case shape_elem_type::points: {
+            shp->norm.assign(shp->pos.size(), {0, 0, 1});
+        } break;
+        case shape_elem_type::vertices: {
+            shp->norm.assign(shp->pos.size(), {0, 0, 1});
+        } break;
+        case shape_elem_type::triangles: {
+            compute_normals(shp->triangles, shp->pos, shp->norm);
+        } break;
+        case shape_elem_type::lines: {
+            compute_tangents(shp->lines, shp->pos, shp->norm);
+        } break;
+        case shape_elem_type::quads: {
+            compute_normals(shp->quads, shp->pos, shp->norm);
+        } break;
+        case shape_elem_type::beziers: {
+            throw std::runtime_error("type not supported");
+        } break;
+        case shape_elem_type::facevarying: {
+            throw std::runtime_error("type not supported");
+        } break;
+    }
+}
+
+// Tesselate a shape into basic primitives
+void tesselate_shape(shape* shp, bool subdivide,
+    bool facevarying_to_sharedvertex, bool quads_to_triangles,
+    bool bezier_to_lines) {
+    if (subdivide && shp->subdivision) {
+        for (auto l = 0; l < shp->subdivision; l++) {
+            subdivide_shape_once(shp, shp->catmullclark);
+        }
+    }
+    auto type = get_shape_type(shp);
+    if (facevarying_to_sharedvertex && type == shape_elem_type::facevarying) {
+        std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+            convert_face_varying(shp->quads_pos, shp->quads_norm,
+                shp->quads_texcoord, shp->pos, shp->norm, shp->texcoord);
+        shp->quads_pos = {};
+        shp->quads_norm = {};
+        shp->quads_texcoord = {};
+        type = get_shape_type(shp);
+    }
+    if (quads_to_triangles && type == shape_elem_type::quads) {
+        shp->triangles = convert_quads_to_triangles(shp->quads);
+        shp->quads = {};
+        type = get_shape_type(shp);
+    }
+    if (bezier_to_lines && type == shape_elem_type::beziers) {
+        shp->lines = convert_bezier_to_lines(shp->beziers);
+        shp->beziers = {};
+        type = get_shape_type(shp);
+    }
+}
+
+// Tesselate scene shapes and update pointers
+void tesselate_shapes(scene* scn, bool subdivide,
+    bool facevarying_to_sharedvertex, bool quads_to_triangles,
+    bool bezier_to_lines) {
+    for (auto shp : scn->shapes) {
+        tesselate_shape(shp, subdivide, facevarying_to_sharedvertex,
+            quads_to_triangles, bezier_to_lines);
+    }
+}
+
+// Computes a shape bounding box.
+void update_bbox(shape* shp) {
+    shp->bbox = invalid_bbox3f;
+    for (auto p : shp->pos) shp->bbox += p;
+}
+
+// Updates the scene and scene's instances bounding boxes
+void update_bbox(scene* scn, bool do_shapes) {
+    if (do_shapes) {
+        for (auto shp : scn->shapes) update_bbox(shp);
+    }
+    scn->bbox = invalid_bbox3f;
+    for (auto ist : scn->instances) {
+        ist->bbox = transform_bbox(ist->frame, ist->shp->bbox);
+        scn->bbox += ist->bbox;
+    }
+}
+
+// Update animation transforms
+void update_transforms(
+    const animation* anm, float time, const std::string& anim_group) {
+    if (anim_group != "" && anim_group != anm->group) return;
+
+    if (!anm->translation.empty()) {
+        auto val = vec3f{0, 0, 0};
+        switch (anm->type) {
+            case animation_type::step:
+                val = eval_keyframed_step(anm->times, anm->translation, time);
+                break;
+            case animation_type::linear:
+                val = eval_keyframed_linear(anm->times, anm->translation, time);
+                break;
+            case animation_type::bezier:
+                val = eval_keyframed_bezier(anm->times, anm->translation, time);
+                break;
+            default: throw std::runtime_error("should not have been here");
+        }
+        for (auto target : anm->targets) target->translation = val;
+    }
+    if (!anm->rotation.empty()) {
+        auto val = vec4f{0, 0, 0, 1};
+        switch (anm->type) {
+            case animation_type::step:
+                val = eval_keyframed_step(anm->times, anm->rotation, time);
+                break;
+            case animation_type::linear:
+                val = eval_keyframed_linear(anm->times, anm->rotation, time);
+                break;
+            case animation_type::bezier:
+                val = eval_keyframed_bezier(anm->times, anm->rotation, time);
+                break;
+        }
+        for (auto target : anm->targets) target->rotation = val;
+    }
+    if (!anm->scale.empty()) {
+        auto val = vec3f{1, 1, 1};
+        switch (anm->type) {
+            case animation_type::step:
+                val = eval_keyframed_step(anm->times, anm->scale, time);
+                break;
+            case animation_type::linear:
+                val = eval_keyframed_linear(anm->times, anm->scale, time);
+                break;
+            case animation_type::bezier:
+                val = eval_keyframed_bezier(anm->times, anm->scale, time);
+                break;
+        }
+        for (auto target : anm->targets) target->scale = val;
+    }
+}
+
+// Update node transforms
+void update_transforms(node* nde, const frame3f& parent = identity_frame3f) {
+    auto frame = parent * nde->frame * translation_frame(nde->translation) *
+                 rotation_frame(nde->rotation) * scaling_frame(nde->scale);
+    if (nde->ist) nde->ist->frame = frame;
+    if (nde->cam) nde->cam->frame = frame;
+    if (nde->env) nde->env->frame = frame;
+    for (auto child : nde->children) update_transforms(child, frame);
+}
+
+// Update node transforms
+void update_transforms(scene* scn, float time, const std::string& anim_group) {
+    for (auto agr : scn->animations) update_transforms(agr, time, anim_group);
+    for (auto nde : scn->nodes) nde->children.clear();
+    for (auto nde : scn->nodes)
+        if (nde->parent) nde->parent->children.push_back(nde);
+    for (auto nde : scn->nodes)
+        if (!nde->parent) update_transforms(nde);
+}
+
+// Compute animation range
+vec2f compute_animation_range(const scene* scn, const std::string& anim_group) {
+    if (scn->animations.empty()) return zero2f;
+    auto range = vec2f{+flt_max, -flt_max};
+    for (auto anm : scn->animations) {
+        if (anim_group != "" && anm->group != anim_group) continue;
+        range.x = min(range.x, anm->times.front());
+        range.y = max(range.y, anm->times.back());
+    }
+    if (range.y < range.x) return zero2f;
+    return range;
+}
+
+// Update lights.
+void update_lights(scene* scn, bool do_shapes) {
+    if (do_shapes) {
+        for (auto shp : scn->shapes) shp->elem_cdf.clear();
+    }
+    for (auto lgt : scn->lights) delete lgt;
+    scn->lights.clear();
+
+    for (auto ist : scn->instances) {
+        if (!ist->mat || ist->mat->ke == zero3f) continue;
+        auto lgt = new light();
+        lgt->ist = ist;
+        scn->lights.push_back(lgt);
+        if (ist->shp->elem_cdf.empty()) update_shape_cdf(ist->shp);
+    }
+
+    for (auto env : scn->environments) {
+        if (env->ke == zero3f) continue;
+        auto lgt = new light();
+        lgt->env = env;
+        scn->lights.push_back(lgt);
+    }
+}
+
+// Generate a distribution for sampling a shape uniformly based on area/length.
+void update_shape_cdf(shape* shp) {
+    shp->elem_cdf.clear();
+    if (!shp->triangles.empty()) {
+        shp->elem_cdf = sample_triangles_cdf(shp->triangles, shp->pos);
+    } else if (!shp->lines.empty()) {
+        shp->elem_cdf = sample_lines_cdf(shp->lines, shp->pos);
+    } else if (!shp->points.empty()) {
+        shp->elem_cdf = sample_points_cdf(shp->points.size());
+    } else if (!shp->quads.empty()) {
+        shp->elem_cdf = sample_quads_cdf(shp->quads, shp->pos);
+    } else if (!shp->quads_pos.empty()) {
+        shp->elem_cdf = sample_quads_cdf(shp->quads, shp->pos);
+    } else if (!shp->beziers.empty()) {
+        throw std::runtime_error("bezier not supported");
+    } else if (!shp->pos.empty()) {
+        shp->elem_cdf = sample_points_cdf(shp->pos.size());
+    } else {
+        throw std::runtime_error("empty shape not supported");
+    }
+}
+
+// Build a shape BVH
+void update_bvh(shape* shp, bool equalsize) {
+    if (!shp->bvh) shp->bvh = new bvh_tree();
+    shp->bvh->pos = shp->pos;
+    shp->bvh->radius = shp->radius;
+    if (shp->bvh->radius.empty())
+        shp->bvh->radius.assign(shp->bvh->radius.size(), 0.001f);
+    shp->bvh->points = shp->points;
+    shp->bvh->lines = shp->lines;
+    shp->bvh->triangles = shp->triangles;
+    shp->bvh->quads = shp->quads;
+    build_bvh(shp->bvh, equalsize);
+}
+
+// Build a scene BVH
+void update_bvh(scene* scn, bool do_shapes, bool equalsize) {
+    if (do_shapes) {
+        for (auto shp : scn->shapes) update_bvh(shp, equalsize);
+    }
+
+    // tree bvh
+    if (!scn->bvh) scn->bvh = new bvh_tree();
+    scn->bvh->ist_frames.resize(scn->instances.size());
+    scn->bvh->ist_inv_frames.resize(scn->instances.size());
+    scn->bvh->ist_bvhs.resize(scn->instances.size());
+    for (auto i = 0; i < scn->instances.size(); i++) {
+        auto ist = scn->instances[i];
+        scn->bvh->ist_frames[i] = ist->frame;
+        scn->bvh->ist_inv_frames[i] = inverse(ist->frame);
+        scn->bvh->ist_bvhs[i] = ist->shp->bvh;
+    }
+    build_bvh(scn->bvh, equalsize);
+}
+
+// Refits a scene BVH
+void refit_bvh(shape* shp) {
+    shp->bvh->pos = shp->pos;
+    shp->bvh->radius = shp->radius;
+    if (shp->bvh->radius.empty())
+        shp->bvh->radius.assign(shp->bvh->radius.size(), 0.001f);
+    refit_bvh(shp->bvh);
+}
+
+// Refits a scene BVH
+void refit_bvh(scene* scn, bool do_shapes) {
+    if (do_shapes) {
+        for (auto shp : scn->shapes) refit_bvh(shp);
+    }
+    scn->bvh->ist_frames.resize(scn->instances.size());
+    scn->bvh->ist_inv_frames.resize(scn->instances.size());
+    scn->bvh->ist_bvhs.resize(scn->instances.size());
+    for (auto i = 0; i < scn->instances.size(); i++) {
+        auto ist = scn->instances[i];
+        scn->bvh->ist_frames[i] = ist->frame;
+        scn->bvh->ist_inv_frames[i] = inverse(ist->frame);
+        scn->bvh->ist_bvhs[i] = ist->shp->bvh;
+    }
+    refit_bvh(scn->bvh);
+}
+
+// Add missing names and resolve duplicated names.
+void add_missing_names(scene* scn) {
+    auto fix_names = [](auto& vals, const std::string& base) {
+        auto nmap = std::map<std::string, int>();
+        for (auto val : vals) {
+            if (val->name == "") val->name = base;
+            if (nmap.find(val->name) == nmap.end()) {
+                nmap[val->name] = 0;
+            } else {
+                nmap[val->name] += 1;
+                val->name = val->name + "_" + std::to_string(nmap[val->name]);
+            }
+        }
+    };
+    fix_names(scn->cameras, "cam");
+    fix_names(scn->shapes, "shp");
+    fix_names(scn->textures, "txt");
+    fix_names(scn->materials, "mat");
+    fix_names(scn->environments, "env");
+    fix_names(scn->nodes, "nde");
+    fix_names(scn->animations, "anm");
+}
+
+// Add missing normals.
+void add_missing_normals(scene* scn) {
+    for (auto shp : scn->shapes) {
+        if (shp->norm.empty()) update_normals(shp);
+    }
+}
+
+// Add missing tangent space if needed.
+void add_missing_tangent_space(scene* scn) {
+    for (auto ist : scn->instances) {
+        if (!ist->shp->tangsp.empty() || ist->shp->texcoord.empty()) continue;
+        if (!ist->mat || (!ist->mat->norm_txt.txt && !ist->mat->bump_txt.txt))
+            continue;
+        auto type = get_shape_type(ist->shp);
+        if (type == shape_elem_type::triangles) {
+            compute_tangent_frames(ist->shp->triangles, ist->shp->pos,
+                ist->shp->norm, ist->shp->texcoord, ist->shp->tangsp);
+        } else if (type == shape_elem_type::quads) {
+            auto triangles = convert_quads_to_triangles(ist->shp->quads);
+            compute_tangent_frames(triangles, ist->shp->pos, ist->shp->norm,
+                ist->shp->texcoord, ist->shp->tangsp);
+        } else {
+            throw std::runtime_error("type not supported");
+        }
+    }
+}
+
+// add missing camera
+void add_missing_camera(scene* scn) {
+    if (!scn->cameras.empty()) return;
+    update_bbox(scn, true);
+    auto bbox = scn->bbox;
+    auto bbox_center = (bbox.max + bbox.min) / 2.0f;
+    auto bbox_size = bbox.max - bbox.min;
+    auto bbox_msize = max(bbox_size.x, max(bbox_size.y, bbox_size.z));
+    auto cam = new camera();
+    cam->name = "<view>";
+    auto camera_dir = vec3f{1, 0.4f, 1};
+    auto from = camera_dir * bbox_msize + bbox_center;
+    auto to = bbox_center;
+    auto up = vec3f{0, 1, 0};
+    cam->frame = lookat_frame(from, to, up);
+    cam->ortho = false;
+    cam->aspect = 16.0f / 9.0f;
+    cam->yfov = 2 * atanf(0.5f);
+    cam->aperture = 0;
+    cam->focus = length(to - from);
+    scn->cameras.push_back(cam);
+}
+
+// Checks for validity of the scene.
+std::vector<std::string> validate(const scene* scn) {
+    auto errs = std::vector<std::string>();
+    auto check_names = [&errs](const auto& vals, const std::string& base) {
+        auto used = std::map<std::string, int>();
+        for (auto val : vals) used[val->name] += 1;
+        for (auto& kv : used) {
+            if (kv.first == "")
+                errs.push_back("empty " + base + " name");
+            else if (kv.second > 1)
+                errs.push_back("duplicated " + base + " name " + kv.first);
+        }
+    };
+    auto check_empty_textures = [&errs](const std::vector<texture*>& vals) {
+        for (auto val : vals) {
+            if (val->ldr.empty() && val->hdr.empty())
+                errs.push_back("empty texture " + val->name);
+        }
+    };
+
+    check_names(scn->cameras, "camera");
+    check_names(scn->shapes, "shape");
+    check_names(scn->textures, "texture");
+    check_names(scn->materials, "material");
+    check_names(scn->environments, "environment");
+    check_names(scn->nodes, "node");
+    check_names(scn->animations, "animation");
+    check_empty_textures(scn->textures);
+
+    return errs;
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR EVAL AND SAMPLING FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Scene intersection.
+scene_intersection intersect_ray(
+    const scene* scn, const ray3f& ray, bool find_any) {
+    auto iid = 0;
+    auto isec = scene_intersection();
+    if (!intersect_bvh(
+            scn->bvh, ray, find_any, isec.ray_t, iid, isec.eid, isec.euv))
+        return {};
+    isec.ist = scn->instances[iid];
+    return isec;
+}
 
 // Synchronizes shape element type.
 shape_elem_type get_shape_type(const shape* shp) {
@@ -262,28 +686,6 @@ ray3f eval_camera_ray(const camera* cam, const vec2i& ij, int res,
     return eval_camera_ray(cam, uv, luv);
 }
 
-// Generate a distribution for sampling a shape uniformly based on area/length.
-std::vector<float> sample_shape_cdf(const shape* shp) {
-    switch (get_shape_type(shp)) {
-        case shape_elem_type::none:
-            throw std::runtime_error("type not supported");
-        case shape_elem_type::triangles:
-            return sample_triangles_cdf(shp->triangles, shp->pos);
-        case shape_elem_type::lines:
-            return sample_lines_cdf(shp->lines, shp->pos);
-        case shape_elem_type::points:
-            return sample_points_cdf(shp->points.size());
-        case shape_elem_type::quads:
-            return sample_quads_cdf(shp->quads, shp->pos);
-        case shape_elem_type::beziers:
-            throw std::runtime_error("type not supported");
-        case shape_elem_type::vertices:
-            return sample_points_cdf(shp->pos.size());
-        case shape_elem_type::facevarying:
-            return sample_quads_cdf(shp->quads_pos, shp->pos);
-    }
-}
-
 // Sample a shape based on a distribution.
 std::pair<int, vec2f> sample_shape(const shape* shp,
     const std::vector<float>& cdf, float re, const vec2f& ruv) {
@@ -343,279 +745,6 @@ void subdivide_shape_once(shape* shp, bool subdiv) {
     }
 }
 
-// Compute shape normals. Supports only non-facevarying shapes.
-void compute_normals(shape* shp) {
-    switch (get_shape_type(shp)) {
-        case shape_elem_type::none: break;
-        case shape_elem_type::points: {
-            shp->norm.assign(shp->pos.size(), {0, 0, 1});
-        } break;
-        case shape_elem_type::vertices: {
-            shp->norm.assign(shp->pos.size(), {0, 0, 1});
-        } break;
-        case shape_elem_type::triangles: {
-            compute_normals(shp->triangles, shp->pos, shp->norm);
-        } break;
-        case shape_elem_type::lines: {
-            compute_tangents(shp->lines, shp->pos, shp->norm);
-        } break;
-        case shape_elem_type::quads: {
-            compute_normals(shp->quads, shp->pos, shp->norm);
-        } break;
-        case shape_elem_type::beziers: {
-            throw std::runtime_error("type not supported");
-        } break;
-        case shape_elem_type::facevarying: {
-            throw std::runtime_error("type not supported");
-        } break;
-    }
-}
-
-// Tesselate a shape into basic primitives
-void tesselate_shape(shape* shp, bool subdivide,
-    bool facevarying_to_sharedvertex, bool quads_to_triangles,
-    bool bezier_to_lines) {
-    if (subdivide && shp->subdivision) {
-        for (auto l = 0; l < shp->subdivision; l++) {
-            subdivide_shape_once(shp, shp->catmullclark);
-        }
-    }
-    auto type = get_shape_type(shp);
-    if (facevarying_to_sharedvertex && type == shape_elem_type::facevarying) {
-        std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-            convert_face_varying(shp->quads_pos, shp->quads_norm,
-                shp->quads_texcoord, shp->pos, shp->norm, shp->texcoord);
-        shp->quads_pos = {};
-        shp->quads_norm = {};
-        shp->quads_texcoord = {};
-        type = get_shape_type(shp);
-    }
-    if (quads_to_triangles && type == shape_elem_type::quads) {
-        shp->triangles = convert_quads_to_triangles(shp->quads);
-        shp->quads = {};
-        type = get_shape_type(shp);
-    }
-    if (bezier_to_lines && type == shape_elem_type::beziers) {
-        shp->lines = convert_bezier_to_lines(shp->beziers);
-        shp->beziers = {};
-        type = get_shape_type(shp);
-    }
-}
-
-// Tesselate scene shapes and update pointers
-void tesselate_shapes(scene* scn, bool subdivide,
-    bool facevarying_to_sharedvertex, bool quads_to_triangles,
-    bool bezier_to_lines) {
-    for (auto shp : scn->shapes) {
-        tesselate_shape(shp, subdivide, facevarying_to_sharedvertex,
-            quads_to_triangles, bezier_to_lines);
-    }
-}
-
-// Update animation transforms
-void update_transforms(
-    const animation* anm, float time, const std::string& anim_group) {
-    if (anim_group != "" && anim_group != anm->group) return;
-
-    if (!anm->translation.empty()) {
-        auto val = vec3f{0, 0, 0};
-        switch (anm->type) {
-            case animation_type::step:
-                val = eval_keyframed_step(anm->times, anm->translation, time);
-                break;
-            case animation_type::linear:
-                val = eval_keyframed_linear(anm->times, anm->translation, time);
-                break;
-            case animation_type::bezier:
-                val = eval_keyframed_bezier(anm->times, anm->translation, time);
-                break;
-            default: throw std::runtime_error("should not have been here");
-        }
-        for (auto target : anm->targets) target->translation = val;
-    }
-    if (!anm->rotation.empty()) {
-        auto val = vec4f{0, 0, 0, 1};
-        switch (anm->type) {
-            case animation_type::step:
-                val = eval_keyframed_step(anm->times, anm->rotation, time);
-                break;
-            case animation_type::linear:
-                val = eval_keyframed_linear(anm->times, anm->rotation, time);
-                break;
-            case animation_type::bezier:
-                val = eval_keyframed_bezier(anm->times, anm->rotation, time);
-                break;
-        }
-        for (auto target : anm->targets) target->rotation = val;
-    }
-    if (!anm->scale.empty()) {
-        auto val = vec3f{1, 1, 1};
-        switch (anm->type) {
-            case animation_type::step:
-                val = eval_keyframed_step(anm->times, anm->scale, time);
-                break;
-            case animation_type::linear:
-                val = eval_keyframed_linear(anm->times, anm->scale, time);
-                break;
-            case animation_type::bezier:
-                val = eval_keyframed_bezier(anm->times, anm->scale, time);
-                break;
-        }
-        for (auto target : anm->targets) target->scale = val;
-    }
-}
-
-// Update node transforms
-void update_transforms(node* nde, const frame3f& parent = identity_frame3f) {
-    auto frame = parent * nde->frame * translation_frame(nde->translation) *
-                 rotation_frame(nde->rotation) * scaling_frame(nde->scale);
-    if (nde->ist) nde->ist->frame = frame;
-    if (nde->cam) nde->cam->frame = frame;
-    if (nde->env) nde->env->frame = frame;
-    for (auto child : nde->children_) update_transforms(child, frame);
-}
-
-// Update node transforms
-void update_transforms(scene* scn, float time, const std::string& anim_group) {
-    for (auto agr : scn->animations) update_transforms(agr, time, anim_group);
-    for (auto nde : scn->nodes) nde->children_.clear();
-    for (auto nde : scn->nodes)
-        if (nde->parent) nde->parent->children_.push_back(nde);
-    for (auto nde : scn->nodes)
-        if (!nde->parent) update_transforms(nde);
-}
-
-// Compute animation range
-vec2f compute_animation_range(const scene* scn, const std::string& anim_group) {
-    if (scn->animations.empty()) return zero2f;
-    auto range = vec2f{+flt_max, -flt_max};
-    for (auto anm : scn->animations) {
-        if (anim_group != "" && anm->group != anim_group) continue;
-        range.x = min(range.x, anm->times.front());
-        range.y = max(range.y, anm->times.back());
-    }
-    if (range.y < range.x) return zero2f;
-    return range;
-}
-
-// Add missing names and resolve duplicated names.
-void add_names(scene* scn) {
-    auto fix_names = [](auto& vals, const std::string& base) {
-        auto nmap = std::map<std::string, int>();
-        for (auto val : vals) {
-            if (val->name == "") val->name = base;
-            if (nmap.find(val->name) == nmap.end()) {
-                nmap[val->name] = 0;
-            } else {
-                nmap[val->name] += 1;
-                val->name = val->name + "_" + std::to_string(nmap[val->name]);
-            }
-        }
-    };
-    fix_names(scn->cameras, "cam");
-    fix_names(scn->shapes, "shp");
-    fix_names(scn->textures, "txt");
-    fix_names(scn->materials, "mat");
-    fix_names(scn->environments, "env");
-    fix_names(scn->nodes, "nde");
-    fix_names(scn->animations, "anm");
-}
-
-// Add missing normals.
-void add_normals(scene* scn) {
-    for (auto shp : scn->shapes) {
-        if (!shp->norm.empty()) continue;
-        compute_normals(shp);
-    }
-}
-
-// Add missing tangent space if needed.
-void add_tangent_space(scene* scn) {
-    for (auto ist : scn->instances) {
-        if (!ist->shp->tangsp.empty() || ist->shp->texcoord.empty()) continue;
-        if (!ist->mat || (!ist->mat->norm_txt.txt && !ist->mat->bump_txt.txt))
-            continue;
-        auto type = get_shape_type(ist->shp);
-        if (type == shape_elem_type::triangles) {
-            compute_tangent_frames(ist->shp->triangles, ist->shp->pos,
-                ist->shp->norm, ist->shp->texcoord, ist->shp->tangsp);
-        } else if (type == shape_elem_type::quads) {
-            auto triangles = convert_quads_to_triangles(ist->shp->quads);
-            compute_tangent_frames(triangles, ist->shp->pos, ist->shp->norm,
-                ist->shp->texcoord, ist->shp->tangsp);
-        } else {
-            throw std::runtime_error("type not supported");
-        }
-    }
-}
-
-// Checks for validity of the scene.
-std::vector<std::string> validate(
-    const scene* scn, bool skip_missing, bool log_as_warning) {
-    auto errs = std::vector<std::string>();
-    auto check_names = [&errs](const auto& vals, const std::string& base) {
-        auto used = std::map<std::string, int>();
-        for (auto val : vals) used[val->name] += 1;
-        for (auto& kv : used) {
-            if (kv.first == "")
-                errs.push_back("empty " + base + " name");
-            else if (kv.second > 1)
-                errs.push_back("duplicated " + base + " name " + kv.first);
-        }
-    };
-    auto check_empty_textures = [&errs](const std::vector<texture*>& vals) {
-        for (auto val : vals) {
-            if (val->ldr.empty() && val->hdr.empty())
-                errs.push_back("empty texture " + val->name);
-        }
-    };
-
-    check_names(scn->cameras, "camera");
-    check_names(scn->shapes, "shape");
-    check_names(scn->textures, "texture");
-    check_names(scn->materials, "material");
-    check_names(scn->environments, "environment");
-    check_names(scn->nodes, "node");
-    check_names(scn->animations, "animation");
-    if (!skip_missing) check_empty_textures(scn->textures);
-
-    if (log_as_warning) {
-        for (auto& err : errs) log_warning(err);
-    }
-
-    return errs;
-}
-
-// Make a view camera either copying a given one or building a
-// default one.
-camera* make_view_camera(const scene* scn, int camera_id) {
-    if (scn->cameras.empty()) {
-        auto bbox = compute_bbox(scn);
-        auto bbox_center = (bbox.max + bbox.min) / 2.0f;
-        auto bbox_size = bbox.max - bbox.min;
-        auto bbox_msize = max(bbox_size.x, max(bbox_size.y, bbox_size.z));
-        // set up camera
-        auto cam = new camera();
-        cam->name = "<view>";
-        auto camera_dir = vec3f{1, 0.4f, 1};
-        auto from = camera_dir * bbox_msize + bbox_center;
-        auto to = bbox_center;
-        auto up = vec3f{0, 1, 0};
-        cam->frame = lookat_frame(from, to, up);
-        cam->ortho = false;
-        cam->aspect = 16.0f / 9.0f;
-        cam->yfov = 2 * atanf(0.5f);
-        cam->aperture = 0;
-        cam->focus = length(to - from);
-        return cam;
-    } else {
-        camera_id = clamp(camera_id, 0, (int)scn->cameras.size());
-        auto cam = new camera(*scn->cameras[camera_id]);
-        cam->name = "<view>";
-        return cam;
-    }
-}
-
 // Merge scene into one another
 void merge_into(scene* merge_into, scene* merge_from) {
     auto merge = [](auto& v1, auto& v2) {
@@ -631,80 +760,7 @@ void merge_into(scene* merge_into, scene* merge_from) {
     merge(merge_into->animations, merge_from->animations);
 }
 
-// Computes a shape bounding box (quick computation that ignores
-// radius)
-bbox3f compute_bbox(const shape* shp) {
-    auto bbox = invalid_bbox3f;
-    for (auto p : shp->pos) bbox += p;
-    return bbox;
-}
-
-// Updates the scene and scene's instances bounding boxes
-bbox3f compute_bbox(const scene* scn, bool skip_emitting) {
-    auto shape_bboxes = std::unordered_map<shape*, bbox3f>();
-    for (auto shp : scn->shapes) { shape_bboxes[shp] += compute_bbox(shp); }
-    auto bbox = invalid_bbox3f;
-    for (auto ist : scn->instances) {
-        if (!ist->shp) continue;
-        if (skip_emitting && ist->mat && ist->mat->ke != zero3f) continue;
-        bbox += transform_bbox(ist->frame, shape_bboxes.at(ist->shp));
-    }
-    return bbox;
-}
-
-// Build a shape BVH
-bvh_tree* build_shape_bvh(const shape* shp, float def_radius, bool equalsize) {
-    return build_shape_bvh(shp->points, shp->lines, shp->triangles, shp->quads,
-        shp->pos, shp->radius, def_radius, equalsize);
-}
-
-// Build a scene BVH
-bvh_tree* build_scene_bvh(const scene* scn, float def_radius, bool equalsize) {
-    // do shapes
-    auto shape_bvhs = std::vector<bvh_tree*>();
-    auto smap = std::unordered_map<shape*, int>();
-    for (auto shp : scn->shapes) {
-        shape_bvhs.push_back(build_shape_bvh(shp, def_radius, equalsize));
-        smap[shp] = (int)shape_bvhs.size() - 1;
-    }
-
-    // tree bvh
-    auto bists = std::vector<bvh_instance>();
-    for (auto ist : scn->instances) {
-        auto bist = bvh_instance();
-        bist.frame = ist->frame;
-        bist.frame_inv = inverse(ist->frame);
-        bist.shape_id = smap.at(ist->shp);
-        bists.push_back(bist);
-    }
-    return build_scene_bvh(bists, shape_bvhs, equalsize, true);
-}
-
-// Refits a scene BVH
-void refit_shape_bvh(bvh_tree* bvh, const shape* shp, float def_radius) {
-    refit_shape_bvh(bvh, shp->pos, shp->radius, def_radius);
-}
-
-// Refits a scene BVH
-void refit_scene_bvh(
-    bvh_tree* bvh, const scene* scn, bool do_shapes, float def_radius) {
-    if (do_shapes) {
-        auto sid = 0;
-        for (auto shp : scn->shapes) {
-            refit_shape_bvh(get_shape_bvhs(bvh).at(sid++), shp->pos,
-                shp->radius, def_radius);
-        }
-    }
-    auto ist_frames = std::vector<frame3f>();
-    auto ist_frames_inv = std::vector<frame3f>();
-    for (auto ist : scn->instances) {
-        ist_frames.push_back(ist->frame);
-        ist_frames_inv.push_back(inverse(ist->frame));
-    }
-    refit_scene_bvh(bvh, ist_frames, ist_frames_inv);
-}
-
-void print_stats(const scene* scn) {
+void print_stats(scene* scn) {
     uint64_t num_cameras = 0;
     uint64_t num_shape_groups = 0;
     uint64_t num_shapes = 0;
@@ -734,8 +790,8 @@ void print_stats(const scene* scn) {
     uint64_t memory_elems = 0;
     uint64_t memory_verts = 0;
 
-    bbox3f bbox_scn = invalid_bbox3f;
-    bbox3f bbox_nolights = invalid_bbox3f;
+    update_bbox(scn, true);
+    auto bbox = scn->bbox;
 
     num_cameras = scn->cameras.size();
     num_shapes = scn->shapes.size();
@@ -771,9 +827,6 @@ void print_stats(const scene* scn) {
     memory_ldrs = texel_ldrs * sizeof(vec4b);
     memory_hdrs = texel_hdrs * sizeof(vec4f);
 
-    bbox_scn = compute_bbox(scn);
-    bbox_nolights = compute_bbox(scn, true);
-
     println("num_cameras: {}", num_cameras);
     println("num_shape_groups: {}", num_shape_groups);
     println("num_shapes: {}", num_shapes);
@@ -799,12 +852,11 @@ void print_stats(const scene* scn) {
     println("memory_hdrs: {}", memory_hdrs);
     println("memory_elems: {}", memory_elems);
     println("memory_verts: {}", memory_verts);
-    println("bbox_scn: {} {}", bbox_scn.min, bbox_scn.max);
-    println("bbox_nolights: {} {}", bbox_nolights.min, bbox_nolights.max);
-    println("bbox_min   : {}", bbox_scn.min);
-    println("bbox_max   : {}", bbox_scn.max);
-    println("bbox_size  : {}", bbox_scn.max - bbox_scn.min);
-    println("bbox_center: {}", (bbox_scn.max + bbox_scn.min) / 2);
+    println("bbox_scn: {} {}", bbox.min, bbox.max);
+    println("bbox_min   : {}", bbox.min);
+    println("bbox_max   : {}", bbox.max);
+    println("bbox_size  : {}", bbox.max - bbox.min);
+    println("bbox_center: {}", (bbox.max + bbox.min) / 2);
 }
 
 #ifdef YGL_OBJ

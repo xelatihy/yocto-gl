@@ -209,8 +209,8 @@ bool save_image4b(const std::string& filename, int width, int height,
 bool save_image4f(const std::string& filename, int width, int height,
     const std::vector<vec4f>& img);
 // Save a 4 channel HDR or LDR image with tonemapping based on filename.
-bool save_image(const std::string& filename, int width, int height, const std::vector<vec4f>& hdr,
-    tonemap_type tonemapper, float exposure);
+bool save_image(const std::string& filename, int width, int height,
+    const std::vector<vec4f>& hdr, tonemap_type tonemapper, float exposure);
 
 // Loads.saves an image with variable number of channels.
 std::vector<float> load_imagef(
@@ -238,12 +238,12 @@ enum struct resize_filter {
 enum struct resize_edge { def, clamp, reflect, wrap, zero };
 
 // Resize an image.
-std::vector<vec4f> resize_image(int width, int height,const std::vector<vec4f>& img, 
-    int res_width, int res_height,
+std::vector<vec4f> resize_image(int width, int height,
+    const std::vector<vec4f>& img, int res_width, int res_height,
     resize_filter filter = resize_filter::def,
     resize_edge edge = resize_edge::def, bool premultiplied_alpha = false);
-std::vector<vec4b> resize_image(int width, int height,const std::vector<vec4b>& img, 
-    int res_width, int res_height, 
+std::vector<vec4b> resize_image(int width, int height,
+    const std::vector<vec4b>& img, int res_width, int res_height,
     resize_filter filter = resize_filter::def,
     resize_edge edge = resize_edge::def, bool premultiplied_alpha = false);
 

@@ -163,7 +163,7 @@ void add_gllights(gllights& lights, const instance* ist) {
             lights.type.push_back(gllight_type::point);
         }
     } else {
-        auto bbox = compute_bbox(shp);
+        auto bbox = shp->bbox;
         auto pos = (bbox.max + bbox.min) / 2;
         auto area = 0.0f;
         for (auto l : shp->lines)
@@ -358,8 +358,8 @@ bool handle_glcamera_navigation(
 
 // Handle scene selection
 bool handle_glscene_selection(glwindow* win, const scene* scn,
-    const camera* cam, const bvh_tree* bvh, int res, const vec2f& offset,
-    float zoom, scene_selection& sel) {
+    const camera* cam, int res, const vec2f& offset, float zoom,
+    scene_selection& sel) {
     auto mouse_pos = get_glmouse_posf(win);
     auto mouse_button = get_glmouse_button(win);
 
@@ -369,8 +369,11 @@ bool handle_glscene_selection(glwindow* win, const scene* scn,
         ij.y >= res)
         return false;
     auto ray = eval_camera_ray(cam, ij, res, {0.5f, 0.5f}, zero2f);
-    auto iid = 0, eid = 0; auto ray_t = 0.0f; auto euv = zero2f;
-    if (!intersect_bvh(bvh, ray, false, ray_t, iid, eid, euv)) return false;
+    auto iid = 0, eid = 0;
+    auto ray_t = 0.0f;
+    auto euv = zero2f;
+    if (!intersect_bvh(scn->bvh, ray, false, ray_t, iid, eid, euv))
+        return false;
     if (scn->nodes.empty()) {
         sel = scn->shapes[iid];
     } else {
@@ -497,7 +500,7 @@ void draw_scene_tree_widgets_rec<node>(glwindow* win, const std::string& lbl_,
     draw_imgui_scene_tree(win, "env", val->env, sel, highlights);
     draw_imgui_scene_tree(win, "par", val->parent, sel, highlights);
     auto cid = 0;
-    for (auto ch : val->children_) {
+    for (auto ch : val->children) {
         draw_imgui_scene_tree(
             win, "ch" + std::to_string(cid++), ch, sel, highlights);
     }

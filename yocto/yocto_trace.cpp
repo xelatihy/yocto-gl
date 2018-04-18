@@ -28,8 +28,8 @@
 
 #include "yocto_trace.h"
 #include "yocto_bvh.h"
-#include "yocto_utils.h"
 #include "yocto_image.h"
+#include "yocto_utils.h"
 
 #include <cassert>
 
@@ -615,14 +615,13 @@ float sample_delta_prob(const trace_point& pt, const vec3f& wo) {
 }
 
 // Sample weight for a light point.
-float weight_light(
-    const trace_lights& lights, const trace_point& lpt, const trace_point& pt) {
+float weight_light(const trace_point& lpt, const trace_point& pt) {
     switch (lpt.type) {
         case trace_point_type::none: {
             throw std::runtime_error("should not have gotten here");
         } break;
         case trace_point_type::point: {
-            auto area = lights.shape_distribs.at(lpt.ist->shp).back();
+            auto area = lpt.ist->shp->elem_cdf.back();
             auto dist = length(lpt.pos - pt.pos);
             return area / (dist * dist);
         } break;
@@ -630,7 +629,7 @@ float weight_light(
             throw std::runtime_error("not implemented yet");
         } break;
         case trace_point_type::surface: {
-            auto area = lights.shape_distribs.at(lpt.ist->shp).back();
+            auto area = lpt.ist->shp->elem_cdf.back();
             auto dist = length(lpt.pos - pt.pos);
             return area * fabs(dot(lpt.norm, normalize(lpt.pos - pt.pos))) /
                    (dist * dist);
@@ -644,22 +643,21 @@ float weight_light(
 
 // Sample weight for a light point.
 float weight_lights(
-    const trace_lights& lights, const trace_point& lpt, const trace_point& pt) {
-    return lights.lights.size() * weight_light(lights, lpt, pt);
+    const scene* scn, const trace_point& lpt, const trace_point& pt) {
+    return scn->lights.size() * weight_light(lpt, pt);
 }
 
 // Picks a point on a light.
-trace_point sample_light(const trace_lights& lights, const trace_light& lgt,
-    const trace_point& pt, float rel, const vec2f& ruv,
-    const trace_params& params) {
-    if (lgt.ist) {
-        auto& dst = lights.shape_distribs.at(lgt.ist->shp);
-        auto sample = sample_shape(lgt.ist->shp, dst, rel, ruv);
+trace_point sample_light(const light* lgt, const trace_point& pt, float rel,
+    const vec2f& ruv, const trace_params& params) {
+    if (lgt->ist) {
+        auto& dst = lgt->ist->shp->elem_cdf;
+        auto sample = sample_shape(lgt->ist->shp, dst, rel, ruv);
         return eval_point(
-            lgt.ist, sample.first, sample.second, params.double_sided);
-    } else if (lgt.env) {
+            lgt->ist, sample.first, sample.second, params.double_sided);
+    } else if (lgt->env) {
         // BUG: this is not uniform sampling
-        return eval_point(lgt.env, ruv);
+        return eval_point(lgt->env, ruv);
     } else {
         throw std::runtime_error("should not have gotten here");
     }
@@ -667,21 +665,19 @@ trace_point sample_light(const trace_lights& lights, const trace_light& lgt,
 }
 
 // Picks a point on a light.
-trace_point sample_lights(const trace_lights& lights, const trace_point& pt,
-    float rnl, float rne, const vec2f& ruv, const trace_params& params) {
-    auto lidx = sample_discrete(lights.light_distrib, rnl);
-    auto& lgt = lights.lights.at(lidx);
-    return sample_light(lights, lgt, pt, rne, ruv, params);
+trace_point sample_lights(const scene* scn, const trace_point& pt, float rnl,
+    float rne, const vec2f& ruv, const trace_params& params) {
+    auto lidx = sample_index(scn->lights.size(), rnl);
+    auto& lgt = scn->lights.at(lidx);
+    return sample_light(lgt, pt, rne, ruv, params);
 }
 
 // Intersects a ray with the scn and return the point (or env point).
-trace_point intersect_scene(const scene* scn, const bvh_tree* bvh,
-    const ray3f& ray, const trace_params& params) {
-    auto iid = 0, eid = 0;
-    auto euv = zero2f;
-    auto ray_t = 0.0f;
-    if (intersect_bvh(bvh, ray, false, ray_t, iid, eid, euv)) {
-        return eval_point(scn->instances[iid], eid, euv, params.double_sided);
+trace_point intersect_scene(
+    const scene* scn, const ray3f& ray, const trace_params& params) {
+    auto isec = intersect_ray(scn, ray, false);
+    if (isec.ist) {
+        return eval_point(isec.ist, isec.eid, isec.euv, params.double_sided);
     } else if (!scn->environments.empty()) {
         return eval_point(
             scn->environments[0], eval_uv(scn->environments[0],
@@ -693,18 +689,18 @@ trace_point intersect_scene(const scene* scn, const bvh_tree* bvh,
 }
 
 // Test occlusion.
-vec3f eval_transmission(const scene* scn, const bvh_tree* bvh,
-    const trace_point& pt, const trace_point& lpt, const trace_params& params) {
+vec3f eval_transmission(const scene* scn, const trace_point& pt,
+    const trace_point& lpt, const trace_params& params) {
     if (params.notransmission) {
         auto ray = make_segment(pt.pos, lpt.pos);
-        auto iid = 0, eid = 0; auto ray_t = 0.0f; auto euv = zero2f;
-        return (intersect_bvh(bvh, ray, true, ray_t, iid, eid, euv)) ? zero3f : vec3f{1, 1, 1};
+        auto isec = intersect_ray(scn, ray, true);
+        return (isec.ist) ? zero3f : vec3f{1, 1, 1};
     } else {
         auto cpt = pt;
         auto weight = vec3f{1, 1, 1};
         for (auto bounce = 0; bounce < params.max_depth; bounce++) {
             auto ray = make_segment(cpt.pos, lpt.pos);
-            cpt = intersect_scene(scn, bvh, ray, params);
+            cpt = intersect_scene(scn, ray, params);
             if (!cpt.ist) break;
             weight *= cpt.kt + vec3f{1 - cpt.op, 1 - cpt.op, 1 - cpt.op};
             if (weight == zero3f) break;
@@ -721,10 +717,9 @@ float weight_mis(float w0, float w1) {
 }
 
 // Recursive path tracing.
-vec3f trace_path(const scene* scn, const bvh_tree* bvh,
-    const trace_lights& lights, const trace_point& pt_, const vec3f& wo_,
+vec3f trace_path(const scene* scn, const trace_point& pt_, const vec3f& wo_,
     rng_state& rng, const trace_params& params) {
-    if (lights.lights.empty()) return zero3f;
+    if (scn->lights.empty()) return zero3f;
     auto pt = pt_;
     auto wo = wo_;
 
@@ -737,7 +732,7 @@ vec3f trace_path(const scene* scn, const bvh_tree* bvh,
         // opacity
         if (pt.op != 1) {
             if (next_rand1f(rng) < 1 - pt.op) {
-                pt = intersect_scene(scn, bvh, make_ray(pt.pos, -wo), params);
+                pt = intersect_scene(scn, make_ray(pt.pos, -wo), params);
                 l += weight * eval_emission(pt, wo);
                 continue;
             }
@@ -747,31 +742,30 @@ vec3f trace_path(const scene* scn, const bvh_tree* bvh,
         if (!has_reflectance(pt)) break;
 
         // direct – light
-        auto& lgt = lights.lights[sample_discrete(
-            lights.light_distrib, next_rand1f(rng))];
-        auto lpt = sample_light(
-            lights, lgt, pt, next_rand1f(rng), next_rand2f(rng), params);
-        auto lw = weight_light(lights, lpt, pt) * lights.light_distrib.back();
+        auto lgt =
+            scn->lights[sample_index(scn->lights.size(), next_rand1f(rng))];
+        auto lpt =
+            sample_light(lgt, pt, next_rand1f(rng), next_rand2f(rng), params);
+        auto lw = weight_light(lpt, pt) * scn->lights.size();
         auto lwi = normalize(lpt.pos - pt.pos);
         auto lke = eval_emission(lpt, -lwi);
         auto lbc = eval_brdfcos(pt, wo, lwi);
         auto lld = lke * lbc;
         if (lld != zero3f) {
-            l += weight * lld * eval_transmission(scn, bvh, pt, lpt, params) *
+            l += weight * lld * eval_transmission(scn, pt, lpt, params) *
                  weight_mis(lw, weight_brdf(pt, wo, lwi));
         }
 
         // direct – brdf
         auto bwi = sample_brdf(pt, wo, next_rand1f(rng), next_rand2f(rng));
-        auto bpt = intersect_scene(scn, bvh, make_ray(pt.pos, bwi), params);
+        auto bpt = intersect_scene(scn, make_ray(pt.pos, bwi), params);
         auto bw = weight_brdf(pt, wo, bwi);
         auto bke = eval_emission(bpt, -bwi);
         auto bbc = eval_brdfcos(pt, wo, bwi);
         auto bld = bke * bbc;
         if (bld != zero3f) {
             l += weight * bld *
-                 weight_mis(bw, weight_light(lights, bpt, pt) *
-                                    lights.light_distrib.back());
+                 weight_mis(bw, weight_light(bpt, pt) * scn->lights.size());
         }
 
         // skip recursion if path ends
@@ -784,7 +778,7 @@ vec3f trace_path(const scene* scn, const bvh_tree* bvh,
         if (delta) {
             bwi =
                 sample_brdf(pt, wo, next_rand1f(rng), next_rand2f(rng), delta);
-            bpt = intersect_scene(scn, bvh, make_ray(pt.pos, bwi), params);
+            bpt = intersect_scene(scn, make_ray(pt.pos, bwi), params);
             l += weight * eval_emission(bpt, -bwi) *
                  eval_brdfcos(pt, wo, bwi, delta) *
                  weight_brdf(pt, wo, bwi, delta);
@@ -811,10 +805,9 @@ vec3f trace_path(const scene* scn, const bvh_tree* bvh,
 }
 
 // Recursive path tracing.
-vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
-    const trace_lights& lights, const trace_point& pt_, const vec3f& wo_,
-    rng_state& rng, const trace_params& params) {
-    if (lights.lights.empty()) return zero3f;
+vec3f trace_path_nomis(const scene* scn, const trace_point& pt_,
+    const vec3f& wo_, rng_state& rng, const trace_params& params) {
+    if (scn->lights.empty()) return zero3f;
     auto pt = pt_;
     auto wo = wo_;
 
@@ -827,7 +820,7 @@ vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
         // opacity
         if (pt.op != 1) {
             if (next_rand1f(rng) < 1 - pt.op) {
-                pt = intersect_scene(scn, bvh, make_ray(pt.pos, -wo), params);
+                pt = intersect_scene(scn, make_ray(pt.pos, -wo), params);
                 l += weight * eval_emission(pt, wo);
                 continue;
             }
@@ -837,17 +830,16 @@ vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
         if (!has_reflectance(pt)) break;
 
         // direct
-        if (!lights.lights.empty()) {
-            auto& lgt = lights.lights[sample_discrete(
-                lights.light_distrib, next_rand1f(rng))];
+        if (!scn->lights.empty()) {
+            auto lgt =
+                scn->lights[sample_index(scn->lights.size(), next_rand1f(rng))];
             auto lpt = sample_light(
-                lights, lgt, pt, next_rand1f(rng), next_rand2f(rng), params);
+                lgt, pt, next_rand1f(rng), next_rand2f(rng), params);
             auto lwi = normalize(lpt.pos - pt.pos);
             auto ld = eval_emission(lpt, -lwi) * eval_brdfcos(pt, wo, lwi) *
-                      weight_light(lights, lpt, pt) *
-                      lights.light_distrib.back();
+                      weight_light(lpt, pt) * scn->lights.size();
             if (ld != zero3f) {
-                l += weight * ld * eval_transmission(scn, bvh, pt, lpt, params);
+                l += weight * ld * eval_transmission(scn, pt, lpt, params);
             }
         }
 
@@ -873,7 +865,7 @@ vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
             weight *= 1 / (1 - rrprob);
         }
 
-        pt = intersect_scene(scn, bvh, make_ray(pt.pos, bwi), params);
+        pt = intersect_scene(scn, make_ray(pt.pos, bwi), params);
         wo = -bwi;
         if (delta) l += weight * eval_emission(pt, wo);
     }
@@ -882,8 +874,7 @@ vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
 }
 
 // Direct illumination.
-vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
-    const trace_lights& lights, const trace_point& pt, const vec3f& wo,
+vec3f trace_direct(const scene* scn, const trace_point& pt, const vec3f& wo,
     int bounce, rng_state& rng, const trace_params& params) {
     // emission
     auto l = eval_emission(pt, wo);
@@ -892,14 +883,14 @@ vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
     l += params.ambient * pt.kd;
 
     // direct
-    for (auto& lgt : lights.lights) {
-        auto lpt = sample_light(
-            lights, lgt, pt, next_rand1f(rng), next_rand2f(rng), params);
+    for (auto lgt : scn->lights) {
+        auto lpt =
+            sample_light(lgt, pt, next_rand1f(rng), next_rand2f(rng), params);
         auto lwi = normalize(lpt.pos - pt.pos);
         auto ld = eval_emission(lpt, -lwi) * eval_brdfcos(pt, wo, lwi) *
-                  weight_light(lights, lpt, pt);
+                  weight_light(lpt, pt);
         if (ld == zero3f) continue;
-        l += ld * eval_transmission(scn, bvh, pt, lpt, params);
+        l += ld * eval_transmission(scn, pt, lpt, params);
     }
 
     // exit if needed
@@ -908,23 +899,21 @@ vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
     // reflection
     if (pt.ks != zero3f && !pt.rs) {
         auto wi = reflect(wo, pt.norm);
-        auto rpt = intersect_scene(scn, bvh, make_ray(pt.pos, wi), params);
-        l += pt.ks *
-             trace_direct(scn, bvh, lights, rpt, -wi, bounce + 1, rng, params);
+        auto rpt = intersect_scene(scn, make_ray(pt.pos, wi), params);
+        l += pt.ks * trace_direct(scn, rpt, -wi, bounce + 1, rng, params);
     }
 
     // opacity
     if (pt.kt != zero3f) {
-        auto opt = intersect_scene(scn, bvh, make_ray(pt.pos, -wo), params);
-        l += pt.kt *
-             trace_direct(scn, bvh, lights, opt, wo, bounce + 1, rng, params);
+        auto opt = intersect_scene(scn, make_ray(pt.pos, -wo), params);
+        l += pt.kt * trace_direct(scn, opt, wo, bounce + 1, rng, params);
     }
 
     // opacity
     if (pt.op != 1) {
-        auto opt = intersect_scene(scn, bvh, make_ray(pt.pos, -wo), params);
-        l = pt.op * l + (1 - pt.op) * trace_direct(scn, bvh, lights, opt, wo,
-                                          bounce + 1, rng, params);
+        auto opt = intersect_scene(scn, make_ray(pt.pos, -wo), params);
+        l = pt.op * l +
+            (1 - pt.op) * trace_direct(scn, opt, wo, bounce + 1, rng, params);
     }
 
     // done
@@ -932,15 +921,13 @@ vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
 }
 
 // Direct illumination.
-vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
-    const trace_lights& lights, const trace_point& pt, const vec3f& wo,
+vec3f trace_direct(const scene* scn, const trace_point& pt, const vec3f& wo,
     rng_state& rng, const trace_params& params) {
-    return trace_direct(scn, bvh, lights, pt, wo, 0, rng, params);
+    return trace_direct(scn, pt, wo, 0, rng, params);
 }
 
 // Eyelight for quick previewing.
-vec3f trace_eyelight(const scene* scn, const bvh_tree* bvh,
-    const trace_lights& lights, const trace_point& pt, const vec3f& wo,
+vec3f trace_eyelight(const scene* scn, const trace_point& pt, const vec3f& wo,
     int bounce, rng_state& rng, const trace_params& params) {
     // emission
     auto l = eval_emission(pt, wo);
@@ -951,14 +938,13 @@ vec3f trace_eyelight(const scene* scn, const bvh_tree* bvh,
     // opacity
     if (bounce >= params.max_depth) return l;
     if (pt.kt != zero3f) {
-        auto opt = intersect_scene(scn, bvh, make_ray(pt.pos, -wo), params);
-        l += pt.kt *
-             trace_eyelight(scn, bvh, lights, opt, wo, bounce + 1, rng, params);
+        auto opt = intersect_scene(scn, make_ray(pt.pos, -wo), params);
+        l += pt.kt * trace_eyelight(scn, opt, wo, bounce + 1, rng, params);
     }
     if (pt.op != 1) {
-        auto opt = intersect_scene(scn, bvh, make_ray(pt.pos, -wo), params);
-        l = pt.op * l + (1 - pt.op) * trace_eyelight(scn, bvh, lights, opt, wo,
-                                          bounce + 1, rng, params);
+        auto opt = intersect_scene(scn, make_ray(pt.pos, -wo), params);
+        l = pt.op * l +
+            (1 - pt.op) * trace_eyelight(scn, opt, wo, bounce + 1, rng, params);
     }
 
     // done
@@ -966,80 +952,71 @@ vec3f trace_eyelight(const scene* scn, const bvh_tree* bvh,
 }
 
 // Eyelight for quick previewing.
-vec3f trace_eyelight(const scene* scn, const bvh_tree* bvh,
-    const trace_lights& lights, const trace_point& pt, const vec3f& wo,
+vec3f trace_eyelight(const scene* scn, const trace_point& pt, const vec3f& wo,
     rng_state& rng, const trace_params& params) {
-    return trace_eyelight(scn, bvh, lights, pt, wo, 0, rng, params);
+    return trace_eyelight(scn, pt, wo, 0, rng, params);
 }
 
 // Debug previewing.
-vec3f trace_debug_normal(const scene* scn, const bvh_tree* bvh,
-    const trace_lights& lights, const trace_point& pt, const vec3f& wo,
-    rng_state& rng, const trace_params& params) {
+vec3f trace_debug_normal(const scene* scn, const trace_point& pt,
+    const vec3f& wo, rng_state& rng, const trace_params& params) {
     auto wn = pt.norm;
     if (pt.double_sided && dot(wn, wo) < 0) wn = -wn;
     return wn * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
 }
 
 // Debug frontfacing.
-vec3f trace_debug_frontfacing(const scene* scn, const bvh_tree* bvh,
-    const trace_lights& lights, const trace_point& pt, const vec3f& wo,
-    rng_state& rng, const trace_params& params) {
+vec3f trace_debug_frontfacing(const scene* scn, const trace_point& pt,
+    const vec3f& wo, rng_state& rng, const trace_params& params) {
     auto wn = pt.norm;
     if (pt.double_sided && dot(wn, wo) < 0) wn = -wn;
     return dot(wn, wo) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0};
 }
 
 // Debug previewing.
-vec3f trace_debug_albedo(const scene* scn, const bvh_tree* bvh,
-    const trace_lights& lights, const trace_point& pt, const vec3f& wo,
-    rng_state& rng, const trace_params& params) {
+vec3f trace_debug_albedo(const scene* scn, const trace_point& pt,
+    const vec3f& wo, rng_state& rng, const trace_params& params) {
     return pt.kd + pt.ks + pt.kt;
 }
 
 // Debug previewing.
-vec3f trace_debug_texcoord(const scene* scn, const bvh_tree* bvh,
-    const trace_lights& lights, const trace_point& pt, const vec3f& wo,
-    rng_state& rng, const trace_params& params) {
+vec3f trace_debug_texcoord(const scene* scn, const trace_point& pt,
+    const vec3f& wo, rng_state& rng, const trace_params& params) {
     return {pt.texcoord.x, pt.texcoord.y, 0};
 }
 
 // Trace function
-vec3f trace_func(const scene* scn, const bvh_tree* bvh,
-    const trace_lights& lights, const trace_point& pt, const vec3f& wo,
+vec3f trace_func(const scene* scn, const trace_point& pt, const vec3f& wo,
     rng_state& rng, const trace_params& params) {
     switch (params.tracer) {
         case trace_type::eyelight:
-            return trace_eyelight(scn, bvh, lights, pt, wo, rng, params);
-        case trace_type::direct:
-            return trace_direct(scn, bvh, lights, pt, wo, rng, params);
-        case trace_type::pathtrace:
-            return trace_path(scn, bvh, lights, pt, wo, rng, params);
+            return trace_eyelight(scn, pt, wo, rng, params);
+        case trace_type::direct: return trace_direct(scn, pt, wo, rng, params);
+        case trace_type::pathtrace: return trace_path(scn, pt, wo, rng, params);
         case trace_type::pathtrace_nomis:
-            return trace_path_nomis(scn, bvh, lights, pt, wo, rng, params);
+            return trace_path_nomis(scn, pt, wo, rng, params);
         case trace_type::debug_albedo:
-            return trace_debug_albedo(scn, bvh, lights, pt, wo, rng, params);
+            return trace_debug_albedo(scn, pt, wo, rng, params);
         case trace_type::debug_normal:
-            return trace_debug_normal(scn, bvh, lights, pt, wo, rng, params);
+            return trace_debug_normal(scn, pt, wo, rng, params);
         case trace_type::debug_frontfacing:
-            return trace_debug_frontfacing(
-                scn, bvh, lights, pt, wo, rng, params);
+            return trace_debug_frontfacing(scn, pt, wo, rng, params);
         case trace_type::debug_texcoord:
-            return trace_debug_texcoord(scn, bvh, lights, pt, wo, rng, params);
+            return trace_debug_texcoord(scn, pt, wo, rng, params);
     }
 }
 
 // Trace a single sample
-void trace_sample(const scene* scn, const camera* cam, const bvh_tree* bvh,
-    const trace_lights& lights, trace_pixel& pxl, const trace_params& params) {
+void trace_sample(const scene* scn, const camera* cam, trace_pixel& pxl,
+    const trace_params& params) {
     auto crn = next_rand2f(pxl.rng);
     auto lrn = next_rand2f(pxl.rng);
     auto uv = vec2f{(pxl.i + crn.x) / (cam->aspect * params.resolution),
         1 - (pxl.j + crn.y) / params.resolution};
     auto ray = eval_camera_ray(cam, uv, lrn);
-    auto pt = intersect_scene(scn, bvh, ray, params);
+    auto pt = intersect_scene(scn, ray, params);
     if (!pt.ist && params.envmap_invisible) return;
-    auto l = trace_func(scn, bvh, lights, pt, -ray.d, pxl.rng, params);
+    auto l = trace_func(scn, pt, -ray.d, pxl.rng, params);
     if (!isfinite(l.x) || !isfinite(l.y) || !isfinite(l.z)) {
         log_error("NaN detected");
         return;
@@ -1050,13 +1027,13 @@ void trace_sample(const scene* scn, const camera* cam, const bvh_tree* bvh,
 }
 
 // Trace the next nsamples.
-void trace_samples(const scene* scn, const camera* cam, const bvh_tree* bvh,
-    const trace_lights& lights, int width, int height, std::vector<vec4f>& img, std::vector<trace_pixel>& pixels,
-    int nsamples, const trace_params& params) {
+void trace_samples(const scene* scn, const camera* cam, int width, int height,
+    std::vector<vec4f>& img, std::vector<trace_pixel>& pixels, int nsamples,
+    const trace_params& params) {
     if (params.noparallel) {
-        for (auto pid = 0; pid < pixels.size(); pid ++) {
+        for (auto pid = 0; pid < pixels.size(); pid++) {
             for (auto s = 0; s < params.nsamples; s++)
-                trace_sample(scn, cam, bvh, lights, pixels[pid], params);
+                trace_sample(scn, cam, pixels[pid], params);
             img[pid] = pixels[pid].acc / pixels[pid].sample;
         }
     } else {
@@ -1066,7 +1043,7 @@ void trace_samples(const scene* scn, const camera* cam, const bvh_tree* bvh,
             threads.push_back(std::thread([=, &img, &pixels, &params]() {
                 for (auto pid = tid; pid < pixels.size(); pid += nthreads) {
                     for (auto s = 0; s < nsamples; s++)
-                        trace_sample(scn, cam, bvh, lights, pixels[pid], params);
+                        trace_sample(scn, cam, pixels[pid], params);
                     img[pid] = pixels[pid].acc / pixels[pid].sample;
                 }
             }));
@@ -1077,8 +1054,8 @@ void trace_samples(const scene* scn, const camera* cam, const bvh_tree* bvh,
 }
 
 // Starts an anyncrhounous renderer.
-void trace_async_start(const scene* scn, const camera* cam, const bvh_tree* bvh,
-    const trace_lights& lights, int width, int height, std::vector<vec4f>& img, std::vector<trace_pixel>& pixels,
+void trace_async_start(const scene* scn, const camera* cam, int width,
+    int height, std::vector<vec4f>& img, std::vector<trace_pixel>& pixels,
     std::vector<std::thread>& threads, bool& stop_flag,
     const trace_params& params, const std::function<void(int, int)>& callback) {
     pixels = make_trace_pixels(width, height, params);
@@ -1090,10 +1067,11 @@ void trace_async_start(const scene* scn, const camera* cam, const bvh_tree* bvh,
         pparams.nsamples = 1;
         auto pwidth = (int)std::round(cam->aspect * pparams.resolution);
         auto pheight = pparams.resolution;
-        auto pimg = std::vector<vec4f>(pwidth*pheight);
+        auto pimg = std::vector<vec4f>(pwidth * pheight);
         auto ppixels = make_trace_pixels(pwidth, pheight, pparams);
-        trace_samples(scn, cam, bvh, lights, pwidth, pheight, pimg, ppixels, 1, pparams);
-        img = resize_image(pwidth, pheight, pimg, width, height, ygl::resize_filter::box);
+        trace_samples(scn, cam, pwidth, pheight, pimg, ppixels, 1, pparams);
+        img = resize_image(
+            pwidth, pheight, pimg, width, height, ygl::resize_filter::box);
     } else {
         for (auto& p : img) p = zero4f;
     }
@@ -1106,7 +1084,7 @@ void trace_async_start(const scene* scn, const camera* cam, const bvh_tree* bvh,
             for (auto s = 0; s < params.nsamples; s++) {
                 for (auto pid = tid; pid < pixels.size(); pid += nthreads) {
                     if (stop_flag) return;
-                    trace_sample(scn, cam, bvh, lights, pixels[pid], params);
+                    trace_sample(scn, cam, pixels[pid], params);
                     img[pid] = pixels[pid].acc / pixels[pid].sample;
                     if (!pixels[pid].i && callback) callback(s, pixels[pid].j);
                 }
@@ -1124,36 +1102,9 @@ void trace_async_stop(std::vector<std::thread>& threads, bool& stop_flag) {
     threads.clear();
 }
 
-// Initialize trace lights
-trace_lights make_trace_lights(const scene* scn) {
-    auto lights = trace_lights();
-
-    for (auto ist : scn->instances) {
-        if (!ist->mat || ist->mat->ke == zero3f) continue;
-        auto lgt = trace_light();
-        lgt.ist = ist;
-        lights.lights.push_back(lgt);
-        if (lights.shape_distribs.find(ist->shp) == lights.shape_distribs.end())
-            lights.shape_distribs[ist->shp] = sample_shape_cdf(ist->shp);
-    }
-
-    for (auto env : scn->environments) {
-        if (env->ke == zero3f) continue;
-        auto lgt = trace_light();
-        lgt.env = env;
-        lights.lights.push_back(lgt);
-    }
-
-    lights.light_distrib = std::vector<float>(lights.lights.size());
-    for (auto i = 0; i < lights.lights.size(); i++)
-        lights.light_distrib[i] = i + 1;
-
-    return lights;
-}
-
 // Initialize a rendering state
-std::vector<trace_pixel> make_trace_pixels(int width, int height,
-    const trace_params& params) {
+std::vector<trace_pixel> make_trace_pixels(
+    int width, int height, const trace_params& params) {
     auto pixels = std::vector<trace_pixel>(width * height);
     for (auto j = 0; j < height; j++) {
         for (auto i = 0; i < width; i++) {
