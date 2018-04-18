@@ -28,8 +28,8 @@
 
 #include "yocto_scene.h"
 #include "yocto_bvh.h"
-#include "yocto_utils.h"
 #include "yocto_shape.h"
+#include "yocto_utils.h"
 
 #include <unordered_map>
 
@@ -829,9 +829,9 @@ scene* obj_to_scene(
     };
 
     // convert textures
-    auto tmap = std::unordered_map<std::string, texture*>{{""s,nullptr}};
-    auto add_texture = [&tmap,scn](const std::string& path) {
-        if(tmap.find(path) != tmap.end()) return tmap.at(path);
+    auto tmap = std::unordered_map<std::string, texture*>{{""s, nullptr}};
+    auto add_texture = [&tmap, scn](const std::string& path) {
+        if (tmap.find(path) != tmap.end()) return tmap.at(path);
         auto txt = new texture();
         txt->name = path;
         txt->path = path;
@@ -1507,8 +1507,9 @@ scene* gltf_to_scene(const glTF* gltf) {
     for (auto gtxt : gltf->images) {
         auto txt = new texture();
         txt->name = gtxt->name;
-        txt->path = (startswith(gtxt->uri, "data:")) ? std::string("[glTF inline]") :
-                                                       gtxt->uri;
+        txt->path = (startswith(gtxt->uri, "data:")) ?
+                        std::string("[glTF inline]") :
+                        gtxt->uri;
         scn->textures.push_back(txt);
     }
 
@@ -2337,9 +2338,9 @@ void load_textures(const std::string& filename, scene* scn, bool skip_missing) {
     auto dirname = path_dirname(filename);
     for (auto txt : scn->textures) {
         // TODO: handle glTF buffer textures
-        if(txt->path == "[glTF inline]") {
+        if (txt->path == "[glTF inline]") {
             log_warning("cannot handle glTF inline images");
-            txt->ldr = make_image4b(1,1,vec4b{255,255,255,255});
+            txt->ldr = make_image4b(1, 1, vec4b{255, 255, 255, 255});
             continue;
         }
         auto filename = dirname + txt->path;
@@ -2358,7 +2359,8 @@ void load_textures(const std::string& filename, scene* scn, bool skip_missing) {
         }
     }
 }
-void save_textures(const std::string& filename, const scene* scn, bool skip_missing) {
+void save_textures(
+    const std::string& filename, const scene* scn, bool skip_missing) {
     auto dirname = path_dirname(filename);
     for (auto txt : scn->textures) {
         if (txt->ldr.pixels.empty() && txt->hdr.pixels.empty()) continue;
@@ -2367,12 +2369,8 @@ void save_textures(const std::string& filename, const scene* scn, bool skip_miss
             if (c == '\\') c = '/';
         auto ok = false;
 #if YGL_IMAGEIO
-        if (!txt->ldr.pixels.empty()) {
-            ok = save_image4b(filename, txt->ldr);
-        }
-        if (!txt->hdr.pixels.empty()) {
-            ok = save_image4f(filename, txt->hdr);
-        }
+        if (!txt->ldr.pixels.empty()) { ok = save_image4b(filename, txt->ldr); }
+        if (!txt->hdr.pixels.empty()) { ok = save_image4f(filename, txt->hdr); }
 #endif
         if (!ok) {
             if (skip_missing) continue;
@@ -2383,18 +2381,16 @@ void save_textures(const std::string& filename, const scene* scn, bool skip_miss
 
 // Load a scene
 scene* load_scene(const std::string& filename, bool load_txts,
-    bool preserve_quads, bool split_obj_shapes,
-    bool skip_missing) {
+    bool preserve_quads, bool split_obj_shapes, bool skip_missing) {
     auto ext = path_extension(filename);
     auto scn = (scene*)nullptr;
     if (ext == ".obj" || ext == ".OBJ") {
 #if YGL_OBJ
-        auto oscn = load_obj(
-            filename, split_obj_shapes, true, false);
+        auto oscn = load_obj(filename, split_obj_shapes, true, false);
         scn = obj_to_scene(oscn, preserve_quads, false);
         delete oscn;
 #else
-        throw std::runtime_error("Obj not supported");    
+        throw std::runtime_error("Obj not supported");
 #endif
     } else if (ext == ".gltf" || ext == ".GLTF") {
 #if YGL_GLTF
@@ -2402,20 +2398,20 @@ scene* load_scene(const std::string& filename, bool load_txts,
         scn = gltf_to_scene(gscn);
         delete gscn;
 #else
-        throw std::runtime_error("glTF not supported");    
+        throw std::runtime_error("glTF not supported");
 #endif
     } else {
         throw std::runtime_error("unsupported extension " + ext);
     }
     if (!scn) throw std::runtime_error("could not convert gltf scene");
-    if(load_txts) load_textures(filename, scn, skip_missing);
+    if (load_txts) load_textures(filename, scn, skip_missing);
     return scn;
 }
 
 // Save a scene
-void save_scene(const std::string& filename, const scene* scn, 
-    bool save_txt, bool preserve_obj_instances,
-    bool gltf_separate_buffers, bool skip_missing) {
+void save_scene(const std::string& filename, const scene* scn, bool save_txt,
+    bool preserve_obj_instances, bool gltf_separate_buffers,
+    bool skip_missing) {
     auto ext = path_extension(filename);
     if (ext == ".obj" || ext == ".OBJ") {
 #if YGL_OBJ
@@ -2437,7 +2433,7 @@ void save_scene(const std::string& filename, const scene* scn,
     } else {
         throw std::runtime_error("unsupported extension " + ext);
     }
-    if(save_txt) save_textures(filename, scn, skip_missing);
+    if (save_txt) save_textures(filename, scn, skip_missing);
 }
 
 }  // namespace ygl

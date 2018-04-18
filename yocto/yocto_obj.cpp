@@ -772,7 +772,8 @@ void save_mtl(const std::string& filename,
 }
 
 // Save an OBJ
-void save_obj(const std::string& filename, const obj_scene* obj, bool flip_texcoord, bool flip_tr) {
+void save_obj(const std::string& filename, const obj_scene* obj,
+    bool flip_texcoord, bool flip_tr) {
     // open file
     auto fs = fopen(filename.c_str(), "wt");
     if (!fs) throw std::runtime_error("cannot open filename " + filename);

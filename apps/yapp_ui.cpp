@@ -31,10 +31,28 @@
 //
 
 #include "yapp_ui.h"
-#include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_bvh.h"
+#include "../yocto/yocto_shape.h"
 
 namespace ygl {
+
+static const std::map<material_type, std::string>& material_type_names() {
+    static auto names = std::map<material_type, std::string>{
+        {material_type::specular_roughness, "specular_roughness"},
+        {material_type::metallic_roughness, "metallic_roughness"},
+        {material_type::specular_glossiness, "specular_glossiness"},
+    };
+    return names;
+}
+
+static const std::map<animation_type, std::string>& animation_type_names() {
+    static auto names = std::map<animation_type, std::string>{
+        {animation_type::linear, "linear"},
+        {animation_type::step, "step"},
+        {animation_type::bezier, "bezier"},
+    };
+    return names;
+}
 
 // Init shading
 void update_gltexture(const texture* txt, gltexture& gtxt) {
@@ -177,7 +195,7 @@ void draw_stdsurface_shape(const shape* shp, const material* mat,
     const glsurface_params& params) {
     static auto default_material = material();
     default_material.kd = {0.2f, 0.2f, 0.2f};
-        static auto mtypes = std::unordered_map<material_type, int>{
+    static auto mtypes = std::unordered_map<material_type, int>{
         {material_type::specular_roughness, 1},
         {material_type::metallic_roughness, 2},
         {material_type::specular_glossiness, 3}};
@@ -195,10 +213,11 @@ void draw_stdsurface_shape(const shape* shp, const material* mat,
     if (!mat) mat = &default_material;
     auto faceted = shp->norm.empty();
 
-    set_glsurface_material(prog, mtypes.at(mat->type), mat->ke, mat->kd, mat->ks, mat->rs,
-        mat->op, txt(mat->ke_txt), txt(mat->kd_txt), txt(mat->ks_txt),
-        txt(mat->rs_txt), txt(mat->norm_txt), txt(mat->occ_txt), false,
-        mat->double_sided || params.double_sided, params.cutout);
+    set_glsurface_material(prog, mtypes.at(mat->type), mat->ke, mat->kd,
+        mat->ks, mat->rs, mat->op, txt(mat->ke_txt), txt(mat->kd_txt),
+        txt(mat->ks_txt), txt(mat->rs_txt), txt(mat->norm_txt),
+        txt(mat->occ_txt), false, mat->double_sided || params.double_sided,
+        params.cutout);
 
     set_glsurface_vert(
         prog, gshp.pos, gshp.norm, gshp.texcoord, gshp.color, gshp.tangsp);
@@ -254,8 +273,8 @@ void draw_glsurface_scene(const scene* scn, const camera* cam,
     auto camera_proj = perspective_mat(cam->yfov,
         (float)viewport_size.x / (float)viewport_size.y, cam->near, cam->far);
 
-    begin_glsurface_frame(prog, params.eyelight, params.tonemapper,
-        params.exposure, camera_xform, camera_view, camera_proj);
+    begin_glsurface_frame(prog, camera_xform, camera_view, camera_proj,
+        params.eyelight, params.exposure, params.gamma);
 
     if (!params.eyelight) {
         set_glsurface_lights(prog, params.ambient, lights);
@@ -337,13 +356,13 @@ bool handle_glcamera_navigation(
 
 // Handle scene selection
 bool handle_glscene_selection(glwindow* win, const scene* scn,
-    const camera* cam, const bvh_tree* bvh, int res,
-    const glimage_params& params, scene_selection& sel) {
+    const camera* cam, const bvh_tree* bvh, int res, const vec2f& offset,
+    float zoom, scene_selection& sel) {
     auto mouse_pos = get_glmouse_posf(win);
     auto mouse_button = get_glmouse_button(win);
 
     if (!(mouse_button == 1 && !get_imgui_active(win))) return false;
-    auto ij = get_glimage_coords(mouse_pos, params);
+    auto ij = get_glimage_coords(mouse_pos, offset, zoom);
     if (ij.x < 0 || ij.x >= (int)round(res * cam->aspect) || ij.y < 0 ||
         ij.y >= res)
         return false;
@@ -369,9 +388,8 @@ bool draw_imgui_stdsurface_inspector(
         draw_imgui_dragbox(win, "edge_offset", params.edge_offset, 0, 0.1);
     edited += draw_imgui_checkbox(win, "cutout", params.cutout);
     edited += draw_imgui_checkbox(win, "eyelight", params.eyelight);
-    edited += draw_imgui_combobox(
-        win, "tonemap", params.tonemapper, tonemap_type_names());
-    edited += draw_imgui_dragbox(win, "exposure", params.exposure);
+    edited += draw_imgui_dragbox(win, "exposure", params.exposure, -10, 10);
+    edited += draw_imgui_dragbox(win, "gamma", params.gamma, 0.1f, 4);
     edited += draw_imgui_colorbox(win, "background", params.background);
     edited += draw_imgui_colorbox(win, "ambient", params.ambient);
     edited +=
@@ -646,7 +664,8 @@ bool draw_imgui_scene_inspector(glwindow* win, shape* val, scene* scn) {
     draw_imgui_label(win, "radius", val->radius);
     draw_imgui_label(win, "tangsp", val->tangsp);
     draw_imgui_label(win, "subdivision", std::to_string(val->subdivision));
-    draw_imgui_label(win, "catmullclark", (val->catmullclark) ? "true" : "false");
+    draw_imgui_label(
+        win, "catmullclark", (val->catmullclark) ? "true" : "false");
     return edited;
 }
 
@@ -765,4 +784,4 @@ bool draw_imgui_scene_inspector(glwindow* win, const std::string& lbl,
     return update_list.size() != update_len;
 }
 
-}
+}  // namespace ygl

@@ -226,11 +226,20 @@ void save_image(const std::string& filename, const ygl::image4b& ldr,
 }
 
 int main(int argc, char* argv[]) {
+    static auto tonemap_names = std::map<ygl::tonemap_type, std::string> {
+        {ygl::tonemap_type::linear, "linear"},
+        {ygl::tonemap_type::gamma, "gamma"},
+        {ygl::tonemap_type::srgb, "srgb"},
+        {ygl::tonemap_type::filmic1, "filmic1"},
+        {ygl::tonemap_type::filmic2, "filmic2"},
+        {ygl::tonemap_type::filmic3, "filmic3"},
+    };
+
     // command line params
     auto parser = ygl::make_parser(argc, argv, "yimproc", "process images");
     auto tonemapper =
         ygl::parse_opt(parser, "--tonemapper", "t", "Tonemapper type.",
-            ygl::tonemap_type_names(), ygl::tonemap_type::gamma);
+            tonemap_names, ygl::tonemap_type::gamma);
     auto exposure =
         ygl::parse_opt(parser, "--exposure", "t", "Hdr exposure", 0.0f);
     auto resize_width = ygl::parse_opt(

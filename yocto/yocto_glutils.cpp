@@ -471,17 +471,19 @@ void set_gluniform(const glprogram& prog, int pos, const frame3f& val) {
 // variable var.
 void set_gluniform_texture(
     const glprogram& prog, int pos, const gltexture_info& tinfo, uint tunit) {
-    static const auto wrap_mode_map =
-        std::unordered_map<gltexture_wrap, uint>{{gltexture_wrap::repeat, GL_REPEAT},
-            {gltexture_wrap::clamp, GL_CLAMP_TO_EDGE},
-            {gltexture_wrap::mirror, GL_MIRRORED_REPEAT}};
-    static const auto filter_mode_map = std::unordered_map<gltexture_filter, uint>{
-        {gltexture_filter::nearest, GL_NEAREST},
-        {gltexture_filter::linear, GL_LINEAR},
-        {gltexture_filter::nearest_mipmap_nearest, GL_NEAREST_MIPMAP_NEAREST},
-        {gltexture_filter::linear_mipmap_nearest, GL_LINEAR_MIPMAP_NEAREST},
-        {gltexture_filter::nearest_mipmap_linear, GL_NEAREST_MIPMAP_LINEAR},
-        {gltexture_filter::linear_mipmap_linear, GL_LINEAR_MIPMAP_LINEAR}};
+    static const auto wrap_mode_map = std::unordered_map<gltexture_wrap, uint>{
+        {gltexture_wrap::repeat, GL_REPEAT},
+        {gltexture_wrap::clamp, GL_CLAMP_TO_EDGE},
+        {gltexture_wrap::mirror, GL_MIRRORED_REPEAT}};
+    static const auto filter_mode_map =
+        std::unordered_map<gltexture_filter, uint>{
+            {gltexture_filter::nearest, GL_NEAREST},
+            {gltexture_filter::linear, GL_LINEAR},
+            {gltexture_filter::nearest_mipmap_nearest,
+                GL_NEAREST_MIPMAP_NEAREST},
+            {gltexture_filter::linear_mipmap_nearest, GL_LINEAR_MIPMAP_NEAREST},
+            {gltexture_filter::nearest_mipmap_linear, GL_NEAREST_MIPMAP_LINEAR},
+            {gltexture_filter::linear_mipmap_linear, GL_LINEAR_MIPMAP_LINEAR}};
 
     assert(check_glerror());
     if (pos < 0) throw std::runtime_error("bad OpenGL id");
@@ -615,128 +617,53 @@ void unbind_glprogram(const glprogram& prog) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+static std::string glimage_vert =
+    R"(
+    #version 330
+
+    layout(location = 0) in vec2 vert_texcoord;
+
+    uniform vec2 offset;
+    uniform vec2 win_size;
+    uniform float zoom;
+    uniform sampler2D img;
+
+    out vec2 texcoord;
+
+    void main() {
+        vec2 size = textureSize(img, 0).xy;
+        texcoord = vert_texcoord.xy;
+        vec2 pos = offset + size * vert_texcoord.xy * zoom;
+        vec2 upos = 2 * pos / win_size - vec2(1,1);
+        upos.y = - upos.y;
+        gl_Position = vec4(upos.x, upos.y, 0, 1);
+    }
+
+    )";
+
+static std::string glimage_frag =
+    R"(
+    #version 330
+
+    in vec2 texcoord;
+
+    uniform sampler2D img;
+    uniform float exposure;
+    uniform float gamma;
+
+    out vec4 color;
+
+    void main() {
+        vec4 c = texture(img,texcoord);
+        c.xyz = pow(c.xyz * pow(2,exposure), vec3(1/gamma));
+        color = c;
+    }
+    )";
+
 // Initialize the program. Call with true only after the GL is initialized.
 glimage_program make_glimage_program() {
-    std::string _header =
-        R"(
-        #version 330
-
-        float pi = 3.14159265;
-
-        uniform vec2 offset;
-        uniform vec2 win_size;
-        uniform float zoom;
-
-        uniform sampler2D img;
-
-        )";
-
-    std::string _vert =
-        R"(
-        layout(location = 0) in vec2 vert_texcoord;
-
-        out vec2 texcoord;
-
-        void main() {
-            vec2 size = textureSize(img, 0).xy;
-            texcoord = vert_texcoord.xy;
-            vec2 pos = offset + size * vert_texcoord.xy * zoom;
-            vec2 upos = 2 * pos / win_size - vec2(1,1);
-            upos.y = - upos.y;
-            gl_Position = vec4(upos.x, upos.y, 0, 1);
-        }
-
-        )";
-
-    std::string _frag_tonemap =
-        R"(
-        struct Tonemap {
-            float exposure;
-            int type;
-        };
-        uniform Tonemap tonemap;
-
-        vec3 eval_gamma(vec3 x) {
-            return pow(x, vec3(1/2.2));
-        }
-
-        vec3 eval_srgb(vec3 x) {
-            float r = (x.x < 0.0031308) ? 12.92 * x.x : (1+0.055) * pow(x.x, 1/2.4) - 0.055;
-            float g = (x.y < 0.0031308) ? 12.92 * x.y : (1+0.055) * pow(x.y, 1/2.4) - 0.055;
-            float b = (x.z < 0.0031308) ? 12.92 * x.z : (1+0.055) * pow(x.z, 1/2.4) - 0.055;
-            return vec3(r,g,b);
-        }
-
-        vec3 eval_filmic1(vec3 x) {
-            // http://filmicworlds.com/blog/filmic-tonemapping-operators/
-            x = max(vec3(0),x-0.004);
-            return (x*(6.2*x+.5))/(x*(6.2*x+1.7)+0.06);
-        }
-
-        vec3 eval_filmic2(vec3 x) {
-            // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
-            // x *= 0.6; // brings it back to ACES range
-            return pow(clamp((x*(2.51f*x+0.03f))/(x*(2.43f*x+0.59f)+0.14f),0,1),vec3(1/2.2));
-        }
-
-        vec3 eval_filmic3(vec3 x) {
-            // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
-
-            // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
-            mat3 ACESInputMat = transpose(mat3(
-                vec3(0.59719, 0.35458, 0.04823),
-                vec3(0.07600, 0.90834, 0.01566),
-                vec3(0.02840, 0.13383, 0.83777)));
-
-            // ODT_SAT => XYZ => D60_2_D65 => sRGB
-            mat3 ACESOutputMat = transpose(mat3(
-                vec3( 1.60475, -0.53108, -0.07367),
-                vec3(-0.10208,  1.10813, -0.00605),
-                vec3(-0.00327, -0.07276,  1.07602)));
-
-            x = 2 * x; // matches standard range
-            x = ACESInputMat * x;
-            // Apply RRT and ODT
-            vec3 a = x * (x + 0.0245786f) - 0.000090537f;
-            vec3 b = x * (0.983729f * x + 0.4329510f) + 0.238081f;
-            x = a / b;
-            x = ACESOutputMat * x;
-            x = pow(clamp(x,0,1),vec3(1/2.2));
-            return x;
-        }
-
-        vec3 eval_tonemap(vec3 c) {
-            // final color correction
-            c = c*pow(2,tonemap.exposure);
-            switch(tonemap.type) {
-                case 0: break;
-                case 1: c = eval_gamma(c); break;
-                case 2: c = eval_srgb(c); break;
-                case 3: c = eval_filmic1(c); break;
-                case 4: c = eval_filmic2(c); break;
-                case 5: c = eval_filmic3(c); break;
-                default: c = eval_gamma(c); break;
-            }
-            return c;
-        }
-
-        )";
-
-    std::string _frag_main =
-        R"(
-        in vec2 texcoord;
-        out vec4 color;
-
-        void main() {
-            vec4 c = texture(img,texcoord);
-            c.xyz = eval_tonemap(c.xyz);
-            color = c;
-        }
-        )";
-
     auto prog = glimage_program();
-    prog.prog =
-        make_glprogram(_header + _vert, _header + _frag_tonemap + _frag_main);
+    prog.prog = make_glprogram(glimage_vert, glimage_frag);
 
     update_glbuffer(
         prog.vbo, false, std::vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}});
@@ -746,8 +673,8 @@ glimage_program make_glimage_program() {
 
 // Draws the stdimage program.
 void draw_glimage(const glimage_program& prog, const gltexture& txt,
-    const vec2i& win_size, const vec2f& offset, float zoom,
-    tonemap_type tonemap, float exposure) {
+    const vec2i& win_size, const vec2f& offset, float zoom, float exposure,
+    float gamma) {
     assert(is_gltexture_valid(txt));
 
     bind_glprogram(prog.prog);
@@ -760,8 +687,8 @@ void draw_glimage(const glimage_program& prog, const gltexture& txt,
     set_gluniform(
         prog.prog, "win_size", vec2f{(float)win_size.x, (float)win_size.y});
     set_gluniform(prog.prog, "offset", offset);
-    set_gluniform(prog.prog, "tonemap.exposure", exposure);
-    set_gluniform(prog.prog, "tonemap.type", (int)tonemap);
+    set_gluniform(prog.prog, "exposure", exposure);
+    set_gluniform(prog.prog, "gamma", gamma);
     set_gluniform_texture(prog.prog, "img", txt, 0);
 
     set_glattribute(prog.prog, "vert_texcoord", prog.vbo, vec2f{0, 0});
@@ -842,77 +769,6 @@ glsurface_program make_glsurface_program() {
         #version 330
 
         float pi = 3.14159265;
-
-        )";
-
-    std::string _frag_tonemap =
-        R"(
-        uniform float tm_exposure; 
-        uniform int tm_type;
-
-        vec3 eval_gamma(vec3 x) {
-            return pow(x, vec3(1/2.2));
-        }
-
-        vec3 eval_srgb(vec3 x) {
-            float r = (x.x < 0.0031308) ? 12.92 * x.x : (1+0.055) * pow(x.x, 1/2.4) - 0.055;
-            float g = (x.y < 0.0031308) ? 12.92 * x.y : (1+0.055) * pow(x.y, 1/2.4) - 0.055;
-            float b = (x.z < 0.0031308) ? 12.92 * x.z : (1+0.055) * pow(x.z, 1/2.4) - 0.055;
-            return vec3(r,g,b);
-        }
-
-        vec3 eval_filmic1(vec3 x) {
-            // http://filmicworlds.com/blog/filmic-tonemapping-operators/
-            x = max(vec3(0),x-0.004);
-            return (x*(6.2*x+.5))/(x*(6.2*x+1.7)+0.06);
-        }
-
-        vec3 eval_filmic2(vec3 x) {
-            // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
-            // x *= 0.6; // brings it back to ACES range
-            return pow(clamp((x*(2.51f*x+0.03f))/(x*(2.43f*x+0.59f)+0.14f),0,1),vec3(1/2.2));
-        }
-
-        vec3 eval_filmic3(vec3 x) {
-            // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
-
-            // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
-            mat3 ACESInputMat = transpose(mat3(
-                vec3(0.59719, 0.35458, 0.04823),
-                vec3(0.07600, 0.90834, 0.01566),
-                vec3(0.02840, 0.13383, 0.83777)));
-
-            // ODT_SAT => XYZ => D60_2_D65 => sRGB
-            mat3 ACESOutputMat = transpose(mat3(
-                vec3( 1.60475, -0.53108, -0.07367),
-                vec3(-0.10208,  1.10813, -0.00605),
-                vec3(-0.00327, -0.07276,  1.07602)));
-
-            x = 2 * x; // matches standard range
-            x = ACESInputMat * x;
-            // Apply RRT and ODT
-            vec3 a = x * (x + 0.0245786f) - 0.000090537f;
-            vec3 b = x * (0.983729f * x + 0.4329510f) + 0.238081f;
-            x = a / b;
-            x = ACESOutputMat * x;
-            x = pow(clamp(x,0,1),vec3(1/2.2));
-            return x;
-        }
-
-        vec3 eval_tonemap(vec3 c) {
-            // final color correction
-            c = c*pow(2,tm_exposure);
-            switch(tm_type) {
-                case 0: break;
-                case 1: c = eval_gamma(c); break;
-                case 2: c = eval_srgb(c); break;
-                case 3: c = eval_filmic1(c); break;
-                case 4: c = eval_filmic2(c); break;
-                case 5: c = eval_filmic3(c); break;
-                default: c = eval_gamma(c); break;
-            }
-            return c;
-        }
 
         )";
 
@@ -1096,7 +952,10 @@ glsurface_program make_glsurface_program() {
         uniform mat4 cam_xform_inv;      // inverse of the camera frame (as a matrix)
         uniform mat4 cam_proj;           // camera projection
 
-        out vec4 frag_color;        // eyelight shading
+        uniform float exposure; 
+        uniform float gamma;
+
+        out vec4 frag_color;      
 
         vec3 triangle_normal(vec3 pos) {
             vec3 fdx = dFdx(pos); 
@@ -1158,7 +1017,7 @@ glsurface_program make_glsurface_program() {
             }
 
             // final color correction
-            c = eval_tonemap(c);
+            c = pow(c * pow(2,exposure), vec3(1/gamma));
 
             // highlighting
             if(highlight.w > 0) {
@@ -1177,12 +1036,12 @@ glsurface_program make_glsurface_program() {
     assert(check_glerror());
     auto prog = glsurface_program();
     prog.prog =
-        make_glprogram(_vert, _frag_header + _frag_tonemap + _frag_lighting +
-                                  _frag_brdf + _frag_material + _frag_main);
+        make_glprogram(_vert, _frag_header + _frag_lighting + _frag_brdf +
+                                  _frag_material + _frag_main);
     assert(check_glerror());
     prog.eyelight_id = get_gluniform_location(prog.prog, "eyelight");
-    prog.exposure_id = get_gluniform_location(prog.prog, "tm_exposure");
-    prog.tonemap_id = get_gluniform_location(prog.prog, "tm_type");
+    prog.exposure_id = get_gluniform_location(prog.prog, "exposure");
+    prog.gamma_id = get_gluniform_location(prog.prog, "gamma");
     prog.cam_xform_id = get_gluniform_location(prog.prog, "cam_xform");
     prog.cam_xform_inv_id = get_gluniform_location(prog.prog, "cam_xform_inv");
     prog.cam_proj_id = get_gluniform_location(prog.prog, "cam_proj");
@@ -1239,17 +1098,18 @@ glsurface_program make_glsurface_program() {
 // Starts a frame by setting exposure/gamma values, camera transforms
 // and projection. Sets also whether to use full shading or a quick
 // eyelight preview.
-void begin_glsurface_frame(const glsurface_program& prog, bool shade_eyelight,
-    tonemap_type tonemap, float exposure, const mat4f& camera_xform,
-    const mat4f& camera_xform_inv, const mat4f& camera_proj) {
+void begin_glsurface_frame(const glsurface_program& prog,
+    const mat4f& camera_xform, const mat4f& camera_xform_inv,
+    const mat4f& camera_proj, bool shade_eyelight, float exposure,
+    float gamma) {
     assert(check_glerror());
     bind_glprogram(prog.prog);
-    set_gluniform(prog.prog, prog.eyelight_id, shade_eyelight);
-    set_gluniform(prog.prog, prog.exposure_id, exposure);
-    set_gluniform(prog.prog, prog.tonemap_id, (int)tonemap);
     set_gluniform(prog.prog, prog.cam_xform_id, camera_xform);
     set_gluniform(prog.prog, prog.cam_xform_inv_id, camera_xform_inv);
     set_gluniform(prog.prog, prog.cam_proj_id, camera_proj);
+    set_gluniform(prog.prog, prog.eyelight_id, shade_eyelight);
+    set_gluniform(prog.prog, prog.exposure_id, exposure);
+    set_gluniform(prog.prog, prog.gamma_id, gamma);
     assert(check_glerror());
     set_glsurface_elems(prog, glelem_type::triangle, false);
 }
@@ -1322,7 +1182,6 @@ void set_glsurface_material(const glsurface_program& prog, int mtype,
     const gltexture_info& ks_txt, const gltexture_info& rs_txt,
     const gltexture_info& norm_txt, const gltexture_info& occ_txt,
     bool use_phong, bool double_sided, bool alpha_cutout) {
-
     assert(check_glerror());
     set_gluniform(prog.prog, prog.mtype_id, mtype);
     set_gluniform(prog.prog, prog.ke_id, ke);
@@ -1984,42 +1843,5 @@ void push_imgui_style(glwindow* win, const vec4f& col) {
 
 // Widget style
 void pop_imgui_style(glwindow* win) { ImGui::PopStyleColor(); }
-
-// Image inspection widgets.
-void draw_imgui_image_inspector(glwindow* win, const std::string& lbl,
-    const image4f& hdr, const image4b& ldr, const vec2f& mouse_pos,
-    const glimage_params& params) {
-    auto ij = get_glimage_coords(mouse_pos, params);
-    auto v4f = zero4f;
-    auto v4b = zero4b;
-    if (!hdr.pixels.empty() && contains(hdr, ij.x, ij.y)) {
-        v4f = hdr.at(ij.x, ij.y);
-        v4b = linear_to_srgb(hdr.at(ij.x, ij.y));
-    } else if (!ldr.pixels.empty() && contains(ldr, ij.x, ij.y)) {
-        v4f = srgb_to_linear(ldr.at(ij.x, ij.y));
-        v4b = ldr.at(ij.x, ij.y);
-    }
-    char buf[1024];
-    sprintf(buf, "%5d %5d", ij.x, ij.y);
-    draw_imgui_label(win, lbl + "mouse pos", buf);
-    sprintf(buf, "%4.4g %4.4g %4.4g %4.4g", v4f.x, v4f.y, v4f.z, v4f.w);
-    draw_imgui_label(win, lbl + "hdr val", buf);
-    sprintf(
-        buf, "%3d %3d %3d %3d", (int)v4b.x, (int)v4b.y, (int)v4b.z, (int)v4b.w);
-    draw_imgui_label(win, lbl + "ldr val", buf);
-}
-
-// Draws widgets for params.
-bool draw_imgui_stdimage_inspector(
-    glwindow* win, const std::string& lbl, glimage_params& params) {
-    auto edited = 0;
-    edited += draw_imgui_dragbox(win, "offset", params.offset, -4096, 4096);
-    edited += draw_imgui_dragbox(win, "zoom", params.zoom, 0.01, 10);
-    edited += draw_imgui_colorbox(win, "background", params.background);
-    edited += draw_imgui_combobox(
-        win, "tonemap", params.tonemapper, tonemap_type_names());
-    edited += draw_imgui_dragbox(win, "exposure", params.exposure, -5, 5);
-    return edited;
-}
 
 }  // namespace ygl

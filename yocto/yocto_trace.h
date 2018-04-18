@@ -191,21 +191,6 @@ void trace_async_start(const scene* scn, const camera* cam, const bvh_tree* bvh,
 // Stop the asynchronous renderer.
 void trace_async_stop(std::vector<std::thread>& threads, bool& stop_flag);
 
-// Names of enum values.
-inline const std::map<trace_type, std::string>& trace_type_names() {
-    static auto names = std::map<trace_type, std::string>{
-        {trace_type::pathtrace, "pathtrace"},
-        {trace_type::eyelight, "eyelight"},
-        {trace_type::direct, "direct"},
-        {trace_type::pathtrace_nomis, "pathtrace_nomis"},
-        {trace_type::debug_normal, "debug_normal"},
-        {trace_type::debug_albedo, "debug_albedo"},
-        {trace_type::debug_texcoord, "debug_texcoord"},
-        {trace_type::debug_frontfacing, "debug_frontfacing"},
-    };
-    return names;
-}
-
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------

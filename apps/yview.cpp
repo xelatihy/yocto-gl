@@ -71,8 +71,8 @@ inline void draw(ygl::glwindow* win, app_state* app) {
     static auto last_time = 0.0f;
     for (auto& sel : app->update_list) {
         if (sel.as<ygl::texture>()) {
-            ygl::update_gltexture(sel.as<ygl::texture>(),
-                app->textures[sel.as<ygl::texture>()]);
+            ygl::update_gltexture(
+                sel.as<ygl::texture>(), app->textures[sel.as<ygl::texture>()]);
         }
         if (sel.as<ygl::shape>()) {
             ygl::update_glshape(
@@ -95,8 +95,8 @@ inline void draw(ygl::glwindow* win, app_state* app) {
     ygl::enable_gldepth_test(true);
     ygl::enable_glculling(app->params.cull_backface);
     ygl::draw_glsurface_scene(app->scn, app->cam, app->prog, app->shapes,
-        app->textures, app->lights, framebuffer_size,
-        app->selection.ptr, app->params);
+        app->textures, app->lights, framebuffer_size, app->selection.ptr,
+        app->params);
 
     if (app->no_widgets) {
         ygl::swap_glwindow_buffers(win);

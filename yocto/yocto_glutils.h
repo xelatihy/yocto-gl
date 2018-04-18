@@ -28,18 +28,13 @@
 //     - define material Parameters with `set_material()`
 //     - define vertices with `set_vert()`
 //     - draw elements with `draw_elems()`
-// 5. draw yocto scenes using the above shader
-//     - initialize the rendering state with `init_stdsurface_state()`
-//     - load/update meshes and textures with `update_stdsurface_state()`
-//     - setup draw params using a `glsurface_params` struct
-//     - draw scene with `draw_glsurface_scene()`
-// 6. also includes other utlities for quick OpenGL hacking
-// 7. GLFW window with `glwindow`
+// 5. also includes other utlities for quick OpenGL hacking
+// 6. GLFW window with `glwindow`
 //     - create with constructor
 //     - delete with `clear()`
 //     - set callbacks with `set_callbacks()`
 //     - includes carious utilities to query window, mouse and keyboard
-// 8. immediate mode widgets using ImGui
+// 7. immediate mode widgets using ImGui
 //     - init with `init_widget()`
 //     - use the various widget calls to draw the widget and handle events
 //
@@ -80,8 +75,8 @@
 #include "yocto_image.h"
 #include "yocto_math.h"
 
-#include <map>
 #include <functional>
+#include <map>
 
 // -----------------------------------------------------------------------------
 // OPENGL OBJECTS AND FUNCTIONS
@@ -381,36 +376,12 @@ glimage_program make_glimage_program();
 // Draws an image texture the stdimage program.
 void draw_glimage(const glimage_program& prog, const gltexture& txt,
     const vec2i& win_size, const vec2f& offset, float zoom,
-    tonemap_type tonemapper, float exposure);
-
-// Draws an image texture the stdimage program.
-inline void draw_glimage(const glimage_program& prog, const gltexture& txt,
-    const vec2i& win_size, const vec2f& offset, float zoom) {
-    draw_glimage(prog, txt, win_size, offset, zoom, tonemap_type::linear, 0);
-}
-
-// Params for stdimage drawing.
-struct glimage_params {
-    vec2f offset = {0, 0};                          // iomage offset
-    float zoom = 1;                                 // image oom
-    vec4f background = zero4f;                      // background
-    tonemap_type tonemapper = tonemap_type::gamma;  // hdr tonemapping type
-    float exposure = 0;                             // hdr exposure
-};
-
-// Draws an image texture the stdimage program.
-inline void draw_glimage(const glimage_program& prog, const gltexture& txt,
-    const vec2i& win_size, const glimage_params& params,
-    bool clear_background = true) {
-    if (clear_background) clear_glbuffers(params.background);
-    draw_glimage(prog, txt, win_size, params.offset, params.zoom,
-        params.tonemapper, params.exposure);
-}
+    float exposure = 0, float gamma = 1);
 
 // Computes the image uv coordinates corresponding to the view parameters.
 inline vec2i get_glimage_coords(
-    const vec2f& mouse_pos, const glimage_params& params) {
-    auto xy = (mouse_pos - params.offset) / params.zoom;
+    const vec2f& mouse_pos, const vec2f& offset, float zoom) {
+    auto xy = (mouse_pos - offset) / zoom;
     return {(int)round(xy.x), (int)round(xy.y)};
 }
 
@@ -419,7 +390,7 @@ inline vec2i get_glimage_coords(
 struct glsurface_program {
     glprogram prog;  // program
     // uniform variable location
-    int eyelight_id, exposure_id, tonemap_id, cam_xform_id, cam_xform_inv_id,
+    int eyelight_id, exposure_id, gamma_id, cam_xform_id, cam_xform_inv_id,
         cam_proj_id, lamb_id, lnum_id, lpos_id[16], lke_id[16], ltype_id[16],
         shp_xform_id, shp_normal_offset_id, highlight_id, mtype_id, ke_id,
         kd_id, ks_id, rs_id, op_id, ke_txt_id, ke_txt_on_id, kd_txt_id,
@@ -442,9 +413,10 @@ inline bool is_glprogram_valid(const glsurface_program& prog) {
 // Starts a frame by setting exposure/gamma values, camera transforms and
 // projection. Sets also whether to use full shading or a quick eye light
 // preview.
-void begin_glsurface_frame(const glsurface_program& prog, bool shade_eyelight,
-    tonemap_type tonemap, float exposure, const mat4f& camera_xform,
-    const mat4f& camera_xform_inv, const mat4f& camera_proj);
+void begin_glsurface_frame(const glsurface_program& prog,
+    const mat4f& camera_xform, const mat4f& camera_xform_inv,
+    const mat4f& camera_proj, bool shade_eyelight, float exposure = 0,
+    float gamma = 2.2f);
 
 // Ends a frame.
 void end_glsurface_frame(const glsurface_program& prog);
@@ -708,14 +680,6 @@ void pop_imgui_groupid(glwindow* win);
 // Widget style.
 void push_imgui_style(glwindow* win, const vec4f& color);
 void pop_imgui_style(glwindow* win);
-
-// Draws widgets for params.
-bool draw_imgui_stdimage_inspector(
-    glwindow* win, const std::string& lbl, glimage_params& params);
-void draw_imgui_image_inspector(glwindow* win, const std::string& lbl,
-    const image4f& hdr, const image4b& ldr, const vec2f& mouse_pos,
-    const glimage_params& params);
-
 
 }  // namespace ygl
 
