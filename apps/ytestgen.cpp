@@ -276,8 +276,8 @@ int main(int argc, char* argv[]) {
     auto clean = ygl::parse_flag(parser, "--clean", "-c", "clean directory");
     auto dirname =
         ygl::parse_opt(parser, "--dirname", "-d", "directory name", "tests"s);
-    auto no_parallel =
-        ygl::parse_flag(parser, "--no-parallel", "", "do not run in parallel");
+    auto noparallel =
+        ygl::parse_flag(parser, "--noparallel", "", "do not run in parallel");
     auto quiet =
         ygl::parse_flag(parser, "--quiet", "-q", "Print only errors messages");
     if (should_exit(parser)) {
@@ -298,7 +298,7 @@ int main(int argc, char* argv[]) {
 
     if (scene != "") {
         save_test_scene(presets.at(scene), scene, dirname);
-    } else if (no_parallel) {
+    } else if (noparallel) {
         for (auto& scn_kv : presets)
             save_test_scene(scn_kv.second, scn_kv.first, dirname);
     } else {
