@@ -18,54 +18,27 @@ Please consider this to be just development notes and not any real planning.
 
 ## Cleanup
 
-- lights in scene
-- remove GPU tone mapping
-    - hardcode gamma 2.2 in viewer
-    - softward tonemap in other
-    - remove filmic3?
-- removal of dependencies for .h
-- removal of dependencies for .cpp
-- move as much code as possible to .cpp
-
-- removing std::
-- numeric_limits: can we remove it?
-    - or put it where it is used
+- bvh
+    - simpler instance api
 - include math functions without crap
-
 - consider removing
     - logger (make it a function)
     - streams -> to_string
     - cmdline -> check streams
-
-- pi
-    - define pif, pid, pi (float)
 - grouping
-    - geometry functions -> move to math
-    - animation functions -> move to math
-    - byte_to_float
+    - color -> math
 - delete
     - compositing if not used
-    - intersection point if not used
-        - remove magic conversion and used .hit() method
     - widgets
         - simpler combo
 
-## Simplifications
+## Trace
 
-- bvh
-    - simpler instance api
+- lights in scene
 - bugs
     - eval_pos(env) should apply frame
     - implement eval_pos(ist)
     - trace should use these
-- add tesselated shape
-    - multiple materials
-    - face varying here
-    - gets a pointer to shape array
-    - node can point to this 
-
-## Trace
-
 - shape trimming in intersection
 - review light sampling with simpler interface
     - sample according to area
@@ -139,11 +112,18 @@ Please consider this to be just development notes and not any real planning.
 - sample background to sum all environments
 - envmap sampling
     - simplest case, pick pixels as 1D distribution
-- Simple denoiser
+- simple denoiser
     - joint bilateral denoiser
     - non-local means denoiser
     - denoiser from paris
-- add builtin envmap to trace
+
+## Tesselated shapes
+
+- add tesselated shape
+    - multiple materials
+    - face varying here
+    - gets a pointer to shape array
+    - node can point to this 
 
 ## Port scenes
 

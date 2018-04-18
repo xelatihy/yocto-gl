@@ -2125,8 +2125,6 @@ glTF* scene_to_gltf(
                 shp->name + "_radius", glTFAccessorType::Scalar,
                 glTFAccessorComponentType::Float, (int)shp->radius.size(),
                 sizeof(float), shp->radius.data(), false);
-        // auto elem_as_uint = shp->pos.size() >
-        // numeric_limits<unsigned short>::max();
         if (!shp->points.empty()) {
             gprim->indices = add_accessor(gbuffer, shp->name + "_points",
                 glTFAccessorType::Scalar,
