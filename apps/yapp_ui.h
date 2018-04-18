@@ -109,20 +109,20 @@ inline void clear_glshapes(std::unordered_map<shape*, glshape>& shps) {
 
 // Params for stdsurface drawing.
 struct glsurface_params {
-    int resolution = 512;       // image resolution
-    bool wireframe = false;     // wireframe drawing
-    bool edges = false;         // draw edges
-    float edge_offset = 0.01f;  // offset for edges
-    bool cutout = false;        // draw with binary transparency
-    bool eyelight = false;      // camera light mode
-    tonemap_type tonemapper = tonemap_type::gamma;  // tonemapper
-    float exposure = 0;                             // exposure
-    vec4f background = {0, 0, 0, 0};                // background color
-    vec3f ambient = {0, 0, 0};                      // ambient lighting
-    vec3f highlight_color = {1, 1, 0};              // highlight color
-    vec3f edge_color = {0, 0, 0};                   // edge color
-    bool double_sided = false;                      // double sided rendering
-    bool cull_backface = false;                     // culling back face
+    int resolution = 512;               // image resolution
+    bool wireframe = false;             // wireframe drawing
+    bool edges = false;                 // draw edges
+    float edge_offset = 0.01f;          // offset for edges
+    bool cutout = false;                // draw with binary transparency
+    bool eyelight = false;              // camera light mode
+    float exposure = 0;                 // exposure
+    float gamma = 2.2f;                 // gamma
+    vec4f background = {0, 0, 0, 0};    // background color
+    vec3f ambient = {0, 0, 0};          // ambient lighting
+    vec3f highlight_color = {1, 1, 0};  // highlight color
+    vec3f edge_color = {0, 0, 0};       // edge color
+    bool double_sided = false;          // double sided rendering
+    bool cull_backface = false;         // culling back face
 };
 
 // Draw scene with stdsurface program.
@@ -137,7 +137,7 @@ bool handle_glcamera_navigation(
     glwindow* win, camera* cam, bool navigation_fps);
 bool handle_glscene_selection(glwindow* win, const scene* scn,
     const camera* cam, const bvh_tree* bvh, int res,
-    const glimage_params& params, scene_selection& sel);
+    const vec2f& offset, float zoom, scene_selection& sel);
 
 // Draws widgets for params.
 bool draw_imgui_stdsurface_inspector(
@@ -166,4 +166,4 @@ bool draw_imgui_scene_inspector(glwindow* win, const std::string& lbl,
     const std::unordered_map<std::string, std::string>& inspector_highlights =
         {});
 
-}
+}  // namespace ygl

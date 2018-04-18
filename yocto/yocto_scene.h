@@ -85,8 +85,6 @@
 #include "yocto_image.h"
 #include "yocto_math.h"
 
-#include <map>
-
 // -----------------------------------------------------------------------------
 // SIMPLE SCENE SUPPORT
 // -----------------------------------------------------------------------------
@@ -408,29 +406,13 @@ void save_scene(const std::string& filename, const scene* scn,
     bool gltf_separate_buffers = false, bool skip_missing = true);
 
 // Loads/saves scene textures.
-void load_textures(const std::string& filename, scene* scn, bool skip_missing = true);
-void save_textures(const std::string& filename, const scene* scn, bool skip_missing = true);
+void load_textures(
+    const std::string& filename, scene* scn, bool skip_missing = true);
+void save_textures(
+    const std::string& filename, const scene* scn, bool skip_missing = true);
 
 // Print scene statistics.
 void print_stats(const scene* scn);
-
-// Names of enum values.
-inline const std::map<material_type, std::string>& material_type_names() {
-    static auto names = std::map<material_type, std::string>{
-        {material_type::specular_roughness, "specular_roughness"},
-        {material_type::metallic_roughness, "metallic_roughness"},
-        {material_type::specular_glossiness, "specular_glossiness"},
-    };
-    return names;
-}
-inline const std::map<animation_type, std::string>& animation_type_names() {
-    static auto names = std::map<animation_type, std::string>{
-        {animation_type::linear, "linear"},
-        {animation_type::step, "step"},
-        {animation_type::bezier, "bezier"},
-    };
-    return names;
-}
 
 }  // namespace ygl
 

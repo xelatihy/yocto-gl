@@ -941,17 +941,17 @@ struct glTF : glTFProperty {
 };
 // #codegen end gltf-type
 
-// Load a gltf file `filename` from disk. 
+// Load a gltf file `filename` from disk.
 glTF* load_gltf(const std::string& filename, bool load_bin = true);
 // Load a binary gltf file `filename` from disk.
 glTF* load_binary_gltf(const std::string& filename, bool load_bin = true);
 
 // Save a gltf file `filename` to disk.
-void save_gltf(const std::string& filename, const glTF* gltf,
-    bool save_bin = true);
+void save_gltf(
+    const std::string& filename, const glTF* gltf, bool save_bin = true);
 // Save a gltf file `filename` to disk.
-void save_binary_gltf(const std::string& filename, const glTF* gltf,
-    bool save_bin = true);
+void save_binary_gltf(
+    const std::string& filename, const glTF* gltf, bool save_bin = true);
 
 // Computes the local node transform and its inverse.
 inline mat4f node_transform(const glTFNode* node) {

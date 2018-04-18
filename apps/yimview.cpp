@@ -36,21 +36,28 @@
 // to both. This is helpful when writing viewers or generic image
 // manipulation code
 struct gimage {
-    /// image path
-    std::string filename;
-    /// HDR image content
-    ygl::image4f hdr;
-    /// LDR image content
-    ygl::image4b ldr;
+    std::string filename;  // path
+    ygl::image4f hdr;      // hdr
+    ygl::image4b ldr;      // ldr
 
-    /// image width
+    // image adjustment
+    bool updated = true;
+    ygl::tonemap_type tonemap = ygl::tonemap_type::gamma;
+    float exposure = 0;
+    ygl::image4b img;
+
+    // opengl texture
+    bool gl_updated = true;
+    ygl::gltexture gl_txt;
+
+    // image width
     int width() const {
         if (!hdr.pixels.empty()) return hdr.width;
         if (!ldr.pixels.empty()) return ldr.width;
         return 0;
     }
 
-    /// image height
+    // image height
     int height() const {
         if (!hdr.pixels.empty()) return hdr.height;
         if (!ldr.pixels.empty()) return ldr.height;
@@ -78,33 +85,72 @@ struct app_state {
     int cur_img = 0;
 
     ygl::glimage_program gl_prog = {};
-    std::unordered_map<gimage*, ygl::gltexture> gl_txt = {};
-    ygl::glimage_params params;
-    float exposure = 1.0f;
+
+    ygl::vec2f offset = {0, 0};
+    float zoom = 1;
+    ygl::vec4f background = {0, 0, 0, 0};
 
     ~app_state() {
         for (auto v : imgs) delete v;
     }
 };
 
+void draw_widgets(ygl::glwindow* win, app_state* app) {
+    static auto tonemap_names = std::map<ygl::tonemap_type, std::string> {
+        {ygl::tonemap_type::linear, "linear"},
+        {ygl::tonemap_type::gamma, "gamma"},
+        {ygl::tonemap_type::srgb, "srgb"},
+        {ygl::tonemap_type::filmic1, "filmic1"},
+        {ygl::tonemap_type::filmic2, "filmic2"},
+        {ygl::tonemap_type::filmic3, "filmic3"},
+    };
+
+    if (ygl::begin_imgui_frame(win, "yimview")) {
+        auto img = app->imgs[app->cur_img];
+        ygl::draw_imgui_label(win, "filename", img->filename);
+        ygl::draw_imgui_label(
+            win, "size", ygl::format("{} x {}", img->width(), img->height()));
+        ygl::draw_imgui_dragbox(win, "offset", app->offset, -4096, 4096);
+        ygl::draw_imgui_dragbox(win, "zoom", app->zoom, 0.01, 10);
+        ygl::draw_imgui_colorbox(win, "background", app->background);
+        auto edited = 0;
+        edited += ygl::draw_imgui_combobox(
+            win, "tonemap", img->tonemap, tonemap_names);
+        edited +=
+            ygl::draw_imgui_dragbox(win, "exposure", img->exposure, -5, 5);
+        img->updated = edited;
+        auto ij = ygl::get_glimage_coords(
+            get_glmouse_posf(win), app->offset, app->zoom);
+        ygl::draw_imgui_dragbox(win, "mouse", ij);
+        if (ij.x >= 0 && ij.x < img->width() && ij.y >= 0 &&
+            ij.y < img->height()) {
+            if (!img->ldr.pixels.empty())
+                ygl::draw_imgui_colorbox(
+                    win, "pixel b", img->ldr.at(ij.x, ij.y));
+            if (!img->hdr.pixels.empty())
+                ygl::draw_imgui_colorbox(
+                    win, "pixel f", img->hdr.at(ij.x, ij.y));
+        } else {
+            auto zero4b_ = ygl::zero4b;
+            auto zero4f_ = ygl::zero4f;
+            if (!img->ldr.pixels.empty())
+                ygl::draw_imgui_colorbox(win, "pixel b", zero4b_);
+            if (!img->hdr.pixels.empty())
+                ygl::draw_imgui_colorbox(win, "pixel f", zero4f_);
+        }
+    }
+    ygl::end_imgui_frame(win);
+}
+
 void draw(ygl::glwindow* win, app_state* app) {
     auto img = app->imgs[app->cur_img];
     auto window_size = get_glwindow_size(win);
     auto framebuffer_size = get_glframebuffer_size(win);
     ygl::set_glviewport(framebuffer_size);
-    ygl::draw_glimage(
-        app->gl_prog, app->gl_txt.at(img), window_size, app->params);
-
-    if (ygl::begin_imgui_frame(win, "yimview")) {
-        ygl::draw_imgui_label(win, "filename", img->filename);
-        ygl::draw_imgui_label(
-            win, "size", ygl::format("{} x {}", img->width(), img->height()));
-        ygl::draw_imgui_stdimage_inspector(win, "", app->params);
-        ygl::draw_imgui_image_inspector(
-            win, "", img->hdr, img->ldr, get_glmouse_posf(win), app->params);
-    }
-    ygl::end_imgui_frame(win);
-
+    ygl::clear_glbuffers(app->background);
+    ygl::draw_glimage(app->gl_prog, img->gl_txt, window_size, app->offset,
+                      app->zoom);
+    draw_widgets(win, app);
     ygl::swap_glwindow_buffers(win);
 }
 
@@ -124,13 +170,6 @@ void run_ui(app_state* app) {
 
     // load textures
     app->gl_prog = ygl::make_glimage_program();
-    for (auto img : app->imgs) {
-        if (!img->hdr.pixels.empty()) {
-            update_gltexture(app->gl_txt[img], img->hdr, false, false, true);
-        } else if (!img->ldr.pixels.empty()) {
-            update_gltexture(app->gl_txt[img], img->ldr, false, false, true);
-        }
-    }
 
     while (!should_glwindow_close(win)) {
         mouse_last = mouse_pos;
@@ -147,13 +186,27 @@ void run_ui(app_state* app) {
         if (mouse_button && alt_down && mouse_pos != mouse_last &&
             !ygl::get_imgui_active(win)) {
             switch (mouse_button) {
-                case 1: app->params.offset += mouse_pos - mouse_last; break;
+                case 1: app->offset += mouse_pos - mouse_last; break;
                 case 2:
-                    app->params.zoom *=
-                        powf(2, (mouse_pos.x - mouse_last.x) * 0.001f);
+                    app->zoom *= powf(2, (mouse_pos.x - mouse_last.x) * 0.001f);
                     break;
                 default: break;
             }
+        }
+
+        // update texture
+        if(img->updated) {
+            if(!img->hdr.pixels.empty()) {
+                img->img = ygl::tonemap_image(img->hdr, img->tonemap, img->exposure);
+            } else {
+                img->img = img->ldr;
+            }
+            img->gl_updated = true;
+            img->updated = false;
+        }
+        if (img->gl_updated) {
+            update_gltexture(img->gl_txt, img->img, false, false, false);
+            img->gl_updated = false;
         }
 
         // draw

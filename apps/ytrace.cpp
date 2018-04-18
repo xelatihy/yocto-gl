@@ -31,6 +31,8 @@
 #include "../yocto/yocto_utils.h"
 using namespace std::literals;
 
+#include <map>
+
 // Application state
 struct app_state {
     ygl::scene* scn = nullptr;
@@ -56,6 +58,25 @@ struct app_state {
 };
 
 int main(int argc, char* argv[]) {
+    static auto tonemap_names = std::map<ygl::tonemap_type, std::string> {
+        {ygl::tonemap_type::linear, "linear"},
+        {ygl::tonemap_type::gamma, "gamma"},
+        {ygl::tonemap_type::srgb, "srgb"},
+        {ygl::tonemap_type::filmic1, "filmic1"},
+        {ygl::tonemap_type::filmic2, "filmic2"},
+        {ygl::tonemap_type::filmic3, "filmic3"},
+    };
+    static auto trace_names = std::map<ygl::trace_type, std::string>{
+        {ygl::trace_type::pathtrace, "pathtrace"},
+        {ygl::trace_type::eyelight, "eyelight"},
+        {ygl::trace_type::direct, "direct"},
+        {ygl::trace_type::pathtrace_nomis, "pathtrace_nomis"},
+        {ygl::trace_type::debug_normal, "debug_normal"},
+        {ygl::trace_type::debug_albedo, "debug_albedo"},
+        {ygl::trace_type::debug_texcoord, "debug_texcoord"},
+        {ygl::trace_type::debug_frontfacing, "debug_frontfacing"},
+    };
+
     // create empty scene
     auto app = new app_state();
 
@@ -67,7 +88,7 @@ int main(int argc, char* argv[]) {
     app->params.nsamples = ygl::parse_opt(
         parser, "--nsamples", "-s", "Number of samples.", app->params.nsamples);
     app->params.tracer = ygl::parse_opt(parser, "--tracer", "-T", "Trace type.",
-        ygl::trace_type_names(), app->params.tracer);
+        trace_names, app->params.tracer);
     app->params.notransmission = ygl::parse_opt(parser, "--notransmission", "",
         "Whether to test transmission in shadows.", app->params.notransmission);
     app->params.double_sided = ygl::parse_opt(parser, "--double-sided", "-D",
@@ -95,10 +116,10 @@ int main(int argc, char* argv[]) {
         "Sample batch size.", app->params.batch_size);
     app->save_batch = ygl::parse_flag(
         parser, "--save-batch", "", "Save images progressively");
-    app->tonemapper = ygl::parse_opt(parser, "--tonemapper", "t",
-        "Tonemapper type.", ygl::tonemap_type_names(), app->tonemapper);
     app->exposure = ygl::parse_opt(
-        parser, "--exposure", "t", "Hdr exposure", app->exposure);
+        parser, "--exposure", "-t", "Hdr exposure", app->exposure);
+    app->tonemapper = ygl::parse_opt(
+        parser, "--tonemap", "-T", "Hdr tonemap", tonemap_names, app->tonemapper);
     app->quiet =
         ygl::parse_flag(parser, "--quiet", "-q", "Print only errors messages");
     app->imfilename = ygl::parse_opt(

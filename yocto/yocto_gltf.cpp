@@ -1075,7 +1075,7 @@ void load_buffers(const glTF* gltf, const std::string& dirname) {
             buffer->data = load_binary(fix_path(dirname + buffer->uri));
             if (buffer->data.empty()) {
                 throw std::runtime_error("could not load binary file " +
-                                            fix_path(dirname + buffer->uri));
+                                         fix_path(dirname + buffer->uri));
             }
         }
         if (buffer->byteLength != buffer->data.size()) {
@@ -1135,8 +1135,7 @@ void save_buffers(const glTF* gltf, const std::string& dirname) {
         fclose(f);
     };
 
-    auto startswith = [](const std::string& str,
-                            const std::string& substr) {
+    auto startswith = [](const std::string& str, const std::string& substr) {
         if (str.length() < substr.length()) return false;
         for (auto i = 0; i < substr.length(); i++)
             if (str[i] != substr[i]) return false;
@@ -1145,8 +1144,7 @@ void save_buffers(const glTF* gltf, const std::string& dirname) {
 
     for (auto buffer : gltf->buffers) {
         if (startswith(buffer->uri, "data:")) {
-            throw std::runtime_error(
-                "saving of embedded data not supported");
+            throw std::runtime_error("saving of embedded data not supported");
         }
         save_binary(dirname + buffer->uri, buffer->data);
     }
@@ -1301,8 +1299,8 @@ glTF* load_binary_gltf(const std::string& filename, bool load_bin) {
 }
 
 // Saves a binary gltf.
-void save_binary_gltf(const std::string& filename, const glTF* gltf,
-    bool save_bin) {
+void save_binary_gltf(
+    const std::string& filename, const glTF* gltf, bool save_bin) {
     // opens binary file
     auto f = fopen(filename.c_str(), "wb");
     if (!f) throw std::runtime_error("could not write binary file");

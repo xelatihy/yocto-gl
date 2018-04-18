@@ -282,7 +282,7 @@ bool save_image4b(const std::string& filename, const image4b& img) {
 bool save_image4f(const std::string& filename, const image4f& img) {
     if (path_extension(filename) == ".hdr") {
         return stbi_write_hdr(filename.c_str(), img.width, img.height, 4,
-                              (float*)img.pixels.data());
+            (float*)img.pixels.data());
     } else if (path_extension(filename) == ".pfm") {
         return save_pfm(filename.c_str(), img.width, img.height, 4,
             (float*)img.pixels.data());

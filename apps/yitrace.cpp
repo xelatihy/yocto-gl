@@ -33,6 +33,8 @@
 #include "yapp_ui.h"
 using namespace std::literals;
 
+#include <map>
+
 // Application state
 struct app_state {
     ygl::scene* scn = nullptr;
@@ -51,8 +53,13 @@ struct app_state {
     bool update_texture = true;
     bool navigation_fps = false;
     bool rendering = false;
-    ygl::glimage_params imparams = {};
-    ygl::gltexture trace_texture = {};
+
+    ygl::vec2f offset = {0, 0};
+    float zoom = 1;
+    float exposure = 0;
+    float gamma = 2.2f;
+    ygl::vec4f background = {0, 0, 0, 0};
+    ygl::gltexture gl_txt = {};
     ygl::glimage_program gl_prog = {};
     ygl::scene_selection selection = {};
     std::vector<ygl::scene_selection> update_list;
@@ -66,16 +73,28 @@ struct app_state {
     }
 };
 
+auto trace_names = std::map<ygl::trace_type, std::string>{
+    {ygl::trace_type::pathtrace, "pathtrace"},
+    {ygl::trace_type::eyelight, "eyelight"},
+    {ygl::trace_type::direct, "direct"},
+    {ygl::trace_type::pathtrace_nomis, "pathtrace_nomis"},
+    {ygl::trace_type::debug_normal, "debug_normal"},
+    {ygl::trace_type::debug_albedo, "debug_albedo"},
+    {ygl::trace_type::debug_texcoord, "debug_texcoord"},
+    {ygl::trace_type::debug_frontfacing, "debug_frontfacing"},
+};
+
 namespace ygl {
 
 bool draw_imgui_trace_inspector(
     glwindow* win, const std::string& lbl, trace_params& params) {
+
     auto edited = 0;
     edited +=
         draw_imgui_dragbox(win, "resolution", params.resolution, 256, 4096);
     edited += draw_imgui_dragbox(win, "nsamples", params.nsamples, 16, 4096);
     edited +=
-        draw_imgui_combobox(win, "tracer", params.tracer, trace_type_names());
+        draw_imgui_combobox(win, "tracer", params.tracer, trace_names);
     edited += draw_imgui_checkbox(win, "notransmission", params.notransmission);
     edited += draw_imgui_checkbox(win, "double_sided", params.double_sided);
     edited += draw_imgui_colorbox(win, "ambient", params.ambient);
@@ -94,23 +113,25 @@ bool draw_imgui_trace_inspector(
     return edited;
 }
 
-}
+}  // namespace ygl
 
 void draw(ygl::glwindow* win, app_state* app) {
     // draw image
     auto window_size = get_glwindow_size(win);
     auto framebuffer_size = get_glframebuffer_size(win);
     ygl::set_glviewport(framebuffer_size);
-    ygl::draw_glimage(
-        app->gl_prog, app->trace_texture, window_size, app->imparams);
+    ygl::clear_glbuffers(app->background);
+    ygl::draw_glimage(app->gl_prog, app->gl_txt, window_size, app->offset,
+        app->zoom, app->exposure, app->gamma);
 
     if (ygl::begin_imgui_frame(win, "yitrace")) {
         if (ygl::draw_imgui_header(win, "trace")) {
             ygl::push_imgui_groupid(win, app);
             ygl::draw_imgui_label(win, "scene", app->filename);
+            ygl::draw_imgui_label(win, "size",
+                ygl::format("{} x {}", app->img.width, app->img.height));
             ygl::draw_imgui_label(
-                win, "size", ygl::format("{} x {}", app->img.width, app->img.height));
-            ygl::draw_imgui_label(win, "sample", std::to_string(app->cur_sample));
+                win, "sample", std::to_string(app->cur_sample));
             if (ygl::draw_imgui_camera_selector(
                     win, "camera", app->cam, app->scn, app->view)) {
                 app->update_list.push_back(app->cam);
@@ -129,9 +150,21 @@ void draw(ygl::glwindow* win, app_state* app) {
             }
         }
         if (ygl::draw_imgui_header(win, "image")) {
-            ygl::draw_imgui_stdimage_inspector(win, "", app->imparams);
-            ygl::draw_imgui_image_inspector(
-                win, "", app->img, {}, get_glmouse_posf(win), app->imparams);
+            ygl::draw_imgui_dragbox(win, "offset", app->offset, -4096, 4096);
+            ygl::draw_imgui_dragbox(win, "zoom", app->zoom, 0.01, 10);
+            ygl::draw_imgui_colorbox(win, "background", app->background);
+            ygl::draw_imgui_dragbox(win, "exposure", app->exposure, -5, 5);
+            ygl::draw_imgui_dragbox(win, "gamma", app->gamma, 0.2f, 4);
+            auto ij = ygl::get_glimage_coords(
+                get_glmouse_posf(win), app->offset, app->zoom);
+            ygl::draw_imgui_dragbox(win, "mouse", ij);
+            if (ij.x >= 0 && ij.x < app->img.width && ij.y >= 0 &&
+                ij.y < app->img.height) {
+                ygl::draw_imgui_colorbox(win, "pixel", app->img.at(ij.x, ij.y));
+            } else {
+                auto zero4f_ = ygl::zero4f;
+                ygl::draw_imgui_colorbox(win, "pixel", zero4f_);
+            }
         }
         if (ygl::draw_imgui_header(win, "scene")) {
             ygl::draw_imgui_scene_tree(
@@ -174,7 +207,7 @@ bool update(ygl::glwindow* win, app_state* app) {
             });
     }
     if (app->update_texture) {
-        ygl::update_gltexture(app->trace_texture, app->img, false, false, true);
+        ygl::update_gltexture(app->gl_txt, app->img, false, false, true);
         app->update_texture = false;
         return true;
     }
@@ -191,7 +224,7 @@ void run_ui(app_state* app) {
 
     // load textures
     app->gl_prog = ygl::make_glimage_program();
-    ygl::update_gltexture(app->trace_texture, app->img, false, false, true);
+    ygl::update_gltexture(app->gl_txt, app->img, false, false, true);
 
     // init widget
     ygl::init_imgui(win);
@@ -206,7 +239,7 @@ void run_ui(app_state* app) {
             }
         }
         ygl::handle_glscene_selection(win, app->scn, app->cam, app->bvh,
-            app->params.resolution, app->imparams, app->selection);
+            app->params.resolution, app->offset, app->zoom, app->selection);
 
         // draw
         draw(win, app);
@@ -243,7 +276,7 @@ int main(int argc, char* argv[]) {
     app->params.nsamples = ygl::parse_opt(
         parser, "--nsamples", "-s", "Number of samples.", app->params.nsamples);
     app->params.tracer = ygl::parse_opt(parser, "--tracer", "-T", "Trace type.",
-        ygl::trace_type_names(), app->params.tracer);
+        trace_names, app->params.tracer);
     app->params.notransmission = ygl::parse_opt(parser, "--notransmission", "",
         "Whether to test transmission in shadows.", app->params.notransmission);
     app->params.double_sided = ygl::parse_opt(parser, "--double-sided", "-D",

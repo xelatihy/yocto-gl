@@ -73,12 +73,12 @@
 
 #include "yocto_math.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <cstdio>
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
-#include <algorithm>
 
 // -----------------------------------------------------------------------------
 // STRING, PATH AND FILE UTILITIES

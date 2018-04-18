@@ -67,7 +67,6 @@
 #include "yocto_math.h"
 
 #include <vector>
-#include <map>
 
 // -----------------------------------------------------------------------------
 // COLOR CONVERSION UTILITIES
@@ -248,30 +247,10 @@ inline image4b linear_to_srgb(const image4f& lin) {
 }
 
 // Tone mapping type.
-enum struct tonemap_type {
-    linear = 0,
-    gamma = 1,
-    srgb = 2,
-    filmic1 = 3,
-    filmic2 = 4,
-    filmic3 = 5
-};
+enum struct tonemap_type { linear, gamma, srgb, filmic1, filmic2, filmic3 };
 
 // Tone mapping HDR to LDR images.
 image4b tonemap_image(const image4f& hdr, tonemap_type type, float exposure);
-
-// Names of enum values.
-inline const std::map<tonemap_type, std::string>& tonemap_type_names() {
-    static auto names = std::map<tonemap_type, std::string>{
-        {tonemap_type::linear, "linear"},
-        {tonemap_type::gamma, "gamma"},
-        {tonemap_type::srgb, "srgb"},
-        {tonemap_type::filmic1, "filmic1"},
-        {tonemap_type::filmic2, "filmic2"},
-        {tonemap_type::filmic3, "filmic3"},
-    };
-    return names;
-}
 
 // Make example images.
 image4b make_grid_image(int width, int height, int tile = 64,
