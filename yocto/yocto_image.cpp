@@ -123,7 +123,7 @@ float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
     auto pixels = new float[nvalues];
     for (auto j = *h - 1; j >= 0; j--) {
         if (fread(pixels + j * nrow, sizeof(float), nrow, f) != nrow) {
-            delete pixels;
+            delete[] pixels;
             return nullptr;
         }
     }
@@ -151,7 +151,7 @@ float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
 
     // pack into channels
     if (req < 0 || req > 4) {
-        delete pixels;
+        delete[] pixels;
         return nullptr;
     }
     auto cpixels = new float[req * npixels];
@@ -198,7 +198,7 @@ float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
             }
         }
     }
-    delete pixels;
+    delete[] pixels;
     return cpixels;
 }
 
