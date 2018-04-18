@@ -41,7 +41,6 @@ struct app_state {
     ygl::bvh_tree* bvh = nullptr;
     std::string filename;
     std::string imfilename;
-    ygl::load_options loadopts;
     int resolution = 512;
     ygl::image4f img;
     std::vector<ygl::trace_pixel> pixels;
@@ -154,10 +153,10 @@ bool update(ygl::glwindow* win, app_state* app) {
 
         // update BVH
         for (auto sel : app->update_list) {
-            if (sel.is<ygl::shape>()) {
-                ygl::refit_shape_bvh(app->bvh, sel.get<ygl::shape>(), false);
+            if (sel.as<ygl::shape>()) {
+                ygl::refit_shape_bvh(app->bvh, sel.as<ygl::shape>(), false);
             }
-            if (sel.is<ygl::node>()) {
+            if (sel.as<ygl::node>()) {
                 ygl::update_transforms(app->scn, 0);
                 ygl::refit_scene_bvh(app->bvh, app->scn, false);
             }
@@ -286,7 +285,7 @@ int main(int argc, char* argv[]) {
     // scene loading
     try {
         ygl::log_info("loading scene {}", app->filename);
-        app->scn = load_scene(app->filename, app->loadopts);
+        app->scn = ygl::load_scene(app->filename);
     } catch (std::exception e) {
         ygl::log_fatal("cannot load scene {}", app->filename);
     }

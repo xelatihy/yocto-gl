@@ -30,6 +30,8 @@
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_utils.h"
 
+#include <unordered_map>
+
 // Generic image that contains either an HDR or an LDR image, giving access
 // to both. This is helpful when writing viewers or generic image
 // manipulation code

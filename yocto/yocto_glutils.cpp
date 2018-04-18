@@ -29,6 +29,9 @@
 #include "yocto_glutils.h"
 #include "yocto_utils.h"
 
+#include <cassert>
+#include <unordered_map>
+
 #ifdef __APPLE__
 #include <OpenGL/gl3.h>
 #define GLFW_INCLUDE_GLCOREARB
@@ -469,10 +472,10 @@ void set_gluniform(const glprogram& prog, int pos, const frame3f& val) {
 void set_gluniform_texture(
     const glprogram& prog, int pos, const gltexture_info& tinfo, uint tunit) {
     static const auto wrap_mode_map =
-        std::map<gltexture_wrap, uint>{{gltexture_wrap::repeat, GL_REPEAT},
+        std::unordered_map<gltexture_wrap, uint>{{gltexture_wrap::repeat, GL_REPEAT},
             {gltexture_wrap::clamp, GL_CLAMP_TO_EDGE},
             {gltexture_wrap::mirror, GL_MIRRORED_REPEAT}};
-    static const auto filter_mode_map = std::map<gltexture_filter, uint>{
+    static const auto filter_mode_map = std::unordered_map<gltexture_filter, uint>{
         {gltexture_filter::nearest, GL_NEAREST},
         {gltexture_filter::linear, GL_LINEAR},
         {gltexture_filter::nearest_mipmap_nearest, GL_NEAREST_MIPMAP_NEAREST},

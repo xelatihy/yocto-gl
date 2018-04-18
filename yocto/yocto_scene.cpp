@@ -29,6 +29,9 @@
 #include "yocto_scene.h"
 #include "yocto_bvh.h"
 #include "yocto_utils.h"
+#include "yocto_shape.h"
+
+#include <unordered_map>
 
 #if YGL_OBJ
 #include "yocto_obj.h"
@@ -826,26 +829,21 @@ scene* obj_to_scene(
     };
 
     // convert textures
-    auto tmap = std::unordered_map<std::string, texture*>{{"", nullptr}};
-    for (auto otxt : obj->textures) {
+    auto tmap = std::unordered_map<std::string, texture*>{{""s,nullptr}};
+    auto add_texture = [&tmap,scn](const std::string& path) {
+        if(tmap.find(path) != tmap.end()) return tmap.at(path);
         auto txt = new texture();
-        txt->name = otxt->path;
-        txt->path = otxt->path;
-        if (!otxt->datab.empty()) {
-            txt->ldr = make_image4b(otxt->width, otxt->height, otxt->ncomp,
-                otxt->datab.data(), vec4b{0, 0, 0, 255});
-        } else if (!otxt->dataf.empty()) {
-            txt->hdr = make_image4f(otxt->width, otxt->height, otxt->ncomp,
-                otxt->dataf.data(), vec4f{0, 0, 0, 1});
-        }
+        txt->name = path;
+        txt->path = path;
         scn->textures.push_back(txt);
-        tmap[txt->path] = txt;
-    }
+        tmap[path] = txt;
+        return txt;
+    };
 
-    auto make_texture_info = [&tmap](const obj_texture_info& oinfo) {
+    auto make_texture_info = [&add_texture](const obj_texture_info& oinfo) {
         auto info = texture_info();
         if (oinfo.path == "") return info;
-        info.txt = tmap.at(oinfo.path);
+        info.txt = add_texture(oinfo.path);
         info.wrap_s = !oinfo.clamp;
         info.wrap_t = !oinfo.clamp;
         info.scale = oinfo.scale;
@@ -993,7 +991,6 @@ scene* obj_to_scene(
                                         vert_ids[i + 1], vert_ids[i + 2]});
                             }
                         } break;
-                        default: { assert(false); }
                     }
                 }
 
@@ -1225,17 +1222,6 @@ scene* obj_to_scene(
     return scn;
 }
 
-// Load an obj scene
-scene* load_obj_scene(const std::string& filename, bool load_textures,
-    bool split_shapes, bool preserve_quads, bool preserve_facevarying,
-    bool skip_missing) {
-    auto oscn = load_obj(
-        filename, split_shapes, load_textures, skip_missing, true, false);
-    auto scn = obj_to_scene(oscn, preserve_quads, preserve_facevarying);
-    delete oscn;
-    return scn;
-}
-
 // Save an scene
 obj_scene* scene_to_obj(const scene* scn, bool preserve_instances) {
     auto obj = new obj_scene();
@@ -1248,29 +1234,6 @@ obj_scene* scene_to_obj(const scene* scn, bool preserve_instances) {
         if (bump) oinfo.scale = info.scale;
         return oinfo;
     };
-
-    // convert textures
-    for (auto txt : scn->textures) {
-        auto otxt = new obj_texture();
-        otxt->path = txt->path;
-        if (!txt->hdr.pixels.empty()) {
-            otxt->width = txt->hdr.width;
-            otxt->height = txt->hdr.height;
-            otxt->ncomp = 4;
-            otxt->dataf.assign((float*)txt->hdr.pixels.data(),
-                (float*)txt->hdr.pixels.data() +
-                    txt->hdr.width * txt->hdr.height * 4);
-        }
-        if (!txt->ldr.pixels.empty()) {
-            otxt->width = txt->ldr.width;
-            otxt->height = txt->ldr.height;
-            otxt->ncomp = 4;
-            otxt->datab.assign((uint8_t*)txt->ldr.pixels.data(),
-                (uint8_t*)txt->ldr.pixels.data() +
-                    txt->ldr.width * txt->ldr.height * 4);
-        }
-        obj->textures.push_back(otxt);
-    }
 
     // convert materials
     for (auto mat : scn->materials) {
@@ -1524,14 +1487,6 @@ obj_scene* scene_to_obj(const scene* scn, bool preserve_instances) {
     return obj;
 }
 
-// Save an obj scene
-void save_obj_scene(const std::string& filename, const scene* scn,
-    bool save_textures, bool preserve_instances, bool skip_missing) {
-    auto oscn = scene_to_obj(scn, preserve_instances);
-    save_obj(filename, oscn, save_textures, skip_missing, true, false);
-    delete oscn;
-}
-
 #endif
 
 #ifdef YGL_GLTF
@@ -1552,15 +1507,8 @@ scene* gltf_to_scene(const glTF* gltf) {
     for (auto gtxt : gltf->images) {
         auto txt = new texture();
         txt->name = gtxt->name;
-        txt->path = (startswith(gtxt->uri, "data:")) ? std::string("inlines") :
+        txt->path = (startswith(gtxt->uri, "data:")) ? std::string("[glTF inline]") :
                                                        gtxt->uri;
-        if (!gtxt->data.datab.empty()) {
-            txt->ldr = make_image4b(gtxt->data.width, gtxt->data.height,
-                gtxt->data.ncomp, gtxt->data.datab.data(), vec4b{0, 0, 0, 255});
-        } else if (!gtxt->data.dataf.empty()) {
-            txt->hdr = make_image4f(gtxt->data.width, gtxt->data.height,
-                gtxt->data.ncomp, gtxt->data.dataf.data(), vec4f{0, 0, 0, 1});
-        }
         scn->textures.push_back(txt);
     }
 
@@ -1915,19 +1863,6 @@ scene* gltf_to_scene(const glTF* gltf) {
     return scn;
 }
 
-// Load an gltf scene
-scene* load_gltf_scene(
-    const std::string& filename, bool load_textures, bool skip_missing) {
-    auto gscn = load_gltf(filename, true, load_textures, skip_missing);
-    auto scn = gltf_to_scene(gscn);
-    delete gscn;
-    if (!scn) {
-        throw std::runtime_error("could not convert gltf scene");
-        return nullptr;
-    }
-    return scn;
-}
-
 // Unflattnes gltf
 glTF* scene_to_gltf(
     const scene* scn, const std::string& buffer_uri, bool separate_buffers) {
@@ -1966,22 +1901,6 @@ glTF* scene_to_gltf(
     for (auto txt : scn->textures) {
         auto gimg = new glTFImage();
         gimg->uri = txt->path;
-        if (!txt->hdr.pixels.empty()) {
-            gimg->data.width = txt->hdr.width;
-            gimg->data.height = txt->hdr.height;
-            gimg->data.ncomp = 4;
-            gimg->data.dataf.assign((float*)txt->hdr.pixels.data(),
-                (float*)txt->hdr.pixels.data() +
-                    txt->hdr.width * txt->hdr.height * 4);
-        }
-        if (!txt->ldr.pixels.empty()) {
-            gimg->data.width = txt->ldr.width;
-            gimg->data.height = txt->ldr.height;
-            gimg->data.ncomp = 4;
-            gimg->data.datab.assign((uint8_t*)txt->ldr.pixels.data(),
-                (uint8_t*)txt->ldr.pixels.data() +
-                    txt->ldr.width * txt->ldr.height * 4);
-        }
         gltf->images.push_back(gimg);
     }
 
@@ -2411,48 +2330,114 @@ glTF* scene_to_gltf(
     return gltf;
 }
 
-// Save a gltf scene
-void save_gltf_scene(const std::string& filename, const scene* scn,
-    bool save_textures, bool separate_buffers, bool skip_missing) {
-    auto buffer_uri = path_basename(filename) + ".bin";
-    auto gscn = scene_to_gltf(scn, buffer_uri, separate_buffers);
-    save_gltf(filename, gscn, true, save_textures);
+#endif
+
+// Loads/saves textures
+void load_textures(const std::string& filename, scene* scn, bool skip_missing) {
+    auto dirname = path_dirname(filename);
+    for (auto txt : scn->textures) {
+        // TODO: handle glTF buffer textures
+        if(txt->path == "[glTF inline]") {
+            log_warning("cannot handle glTF inline images");
+            txt->ldr = make_image4b(1,1,vec4b{255,255,255,255});
+            continue;
+        }
+        auto filename = dirname + txt->path;
+        for (auto& c : filename)
+            if (c == '\\') c = '/';
+#if YGL_IMAGEIO
+        if (is_hdr_filename(filename)) {
+            txt->hdr = load_image4f(filename);
+        } else {
+            txt->ldr = load_image4b(filename);
+        }
+#endif
+        if (txt->hdr.pixels.empty() && txt->ldr.pixels.empty()) {
+            if (skip_missing) continue;
+            throw std::runtime_error("cannot laod image " + filename);
+        }
+    }
+}
+void save_textures(const std::string& filename, const scene* scn, bool skip_missing) {
+    auto dirname = path_dirname(filename);
+    for (auto txt : scn->textures) {
+        if (txt->ldr.pixels.empty() && txt->hdr.pixels.empty()) continue;
+        auto filename = dirname + txt->path;
+        for (auto& c : filename)
+            if (c == '\\') c = '/';
+        auto ok = false;
+#if YGL_IMAGEIO
+        if (!txt->ldr.pixels.empty()) {
+            ok = save_image4b(filename, txt->ldr);
+        }
+        if (!txt->hdr.pixels.empty()) {
+            ok = save_image4f(filename, txt->hdr);
+        }
+#endif
+        if (!ok) {
+            if (skip_missing) continue;
+            throw std::runtime_error("cannot save image " + filename);
+        }
+    }
 }
 
-#endif
-
 // Load a scene
-scene* load_scene(const std::string& filename, const load_options& opts) {
+scene* load_scene(const std::string& filename, bool load_txts,
+    bool preserve_quads, bool split_obj_shapes,
+    bool skip_missing) {
     auto ext = path_extension(filename);
+    auto scn = (scene*)nullptr;
+    if (ext == ".obj" || ext == ".OBJ") {
 #if YGL_OBJ
-    if (ext == ".obj" || ext == ".OBJ")
-        return load_obj_scene(filename, opts.load_textures,
-            opts.obj_split_shapes, opts.obj_preserve_quads,
-            opts.obj_preserve_facevarying, opts.skip_missing);
+        auto oscn = load_obj(
+            filename, split_obj_shapes, true, false);
+        scn = obj_to_scene(oscn, preserve_quads, false);
+        delete oscn;
+#else
+        throw std::runtime_error("Obj not supported");    
 #endif
+    } else if (ext == ".gltf" || ext == ".GLTF") {
 #if YGL_GLTF
-    if (ext == ".gltf" || ext == ".GLTF")
-        return load_gltf_scene(filename, opts.load_textures, opts.skip_missing);
+        auto gscn = load_gltf(filename, true);
+        scn = gltf_to_scene(gscn);
+        delete gscn;
+#else
+        throw std::runtime_error("glTF not supported");    
 #endif
-    throw std::runtime_error("unsupported extension " + ext);
-    return nullptr;
+    } else {
+        throw std::runtime_error("unsupported extension " + ext);
+    }
+    if (!scn) throw std::runtime_error("could not convert gltf scene");
+    if(load_txts) load_textures(filename, scn, skip_missing);
+    return scn;
 }
 
 // Save a scene
-void save_scene(
-    const std::string& filename, const scene* scn, const save_options& opts) {
+void save_scene(const std::string& filename, const scene* scn, 
+    bool save_txt, bool preserve_obj_instances,
+    bool gltf_separate_buffers, bool skip_missing) {
     auto ext = path_extension(filename);
+    if (ext == ".obj" || ext == ".OBJ") {
 #if YGL_OBJ
-    if (ext == ".obj" || ext == ".OBJ")
-        return save_obj_scene(filename, scn, opts.save_textures,
-            opts.obj_save_instances, opts.skip_missing);
+        auto oscn = scene_to_obj(scn, preserve_obj_instances);
+        save_obj(filename, oscn, true, false);
+        delete oscn;
+#else
+        throw std::runtime_error("unsupported Obj");
 #endif
+    } else if (ext == ".gltf" || ext == ".GLTF") {
 #if YGL_GLTF
-    if (ext == ".gltf" || ext == ".GLTF")
-        return save_gltf_scene(filename, scn, opts.save_textures,
-            opts.gltf_separate_buffers, opts.skip_missing);
+        auto buffer_uri = path_basename(filename) + ".bin";
+        auto gscn = scene_to_gltf(scn, buffer_uri, gltf_separate_buffers);
+        save_gltf(filename, gscn);
+        delete gscn;
+#else
+        throw std::runtime_error("unsupported glTF");
 #endif
-    throw std::runtime_error("unsupported extension " + ext);
+    } else {
+        throw std::runtime_error("unsupported extension " + ext);
+    }
+    if(save_txt) save_textures(filename, scn, skip_missing);
 }
 
 }  // namespace ygl
@@ -2685,22 +2670,11 @@ material* make_proc_material(const std::string& name, const std::string& type_,
 // Makes/updates a test shape
 shape* make_proc_shape(const std::string& name, const std::string& type_,
     const vec3i& tesselation_, const vec3f& size_, const vec3f& uvsize_,
-    float rounded, float radius, const make_hair_params& hair_params_) {
+    float rounded, float radius) {
     auto shp = new shape();
 
     auto tesselation = tesselation_;
     auto def_tesselation = (tesselation == zero3i);
-
-    auto type = type_;
-    auto hair_params = hair_params_;
-    if (type == "hairball_noise") {
-        hair_params.noise = {0.5f, 8};
-        type = "hairball";
-    }
-    if (type == "hairball_clump") {
-        hair_params.clump = {0.5f, 128};
-        type = "hairball";
-    }
 
     auto size = size_;
     auto def_size = (size == zero3f);
@@ -2709,6 +2683,17 @@ shape* make_proc_shape(const std::string& name, const std::string& type_,
     auto uvsize = uvsize_;
     auto def_uvsize = (uvsize == zero3f);
     if (def_size) uvsize = {1, 1, 1};
+
+    auto type = type_;
+    auto hair_params = make_hair_params();
+    if (type == "hairball_noise") {
+        hair_params.noise = {0.5f, 8};
+        type = "hairball";
+    }
+    if (type == "hairball_clump") {
+        hair_params.clump = {0.5f, 128};
+        type = "hairball";
+    }
 
     shp->name = name;
     if (type == "") {

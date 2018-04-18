@@ -40,7 +40,6 @@ struct app_state {
     std::string filename;
     std::string imfilename;
     std::string outfilename;
-    ygl::load_options loadopts;
     ygl::glsurface_params params = {};
     ygl::glsurface_program prog;
     std::unordered_map<ygl::texture*, ygl::gltexture> textures;
@@ -71,21 +70,21 @@ inline void draw(ygl::glwindow* win, app_state* app) {
 
     static auto last_time = 0.0f;
     for (auto& sel : app->update_list) {
-        if (sel.is<ygl::texture>()) {
-            ygl::update_gltexture(sel.get<ygl::texture>(),
-                app->textures[sel.get<ygl::texture>()]);
+        if (sel.as<ygl::texture>()) {
+            ygl::update_gltexture(sel.as<ygl::texture>(),
+                app->textures[sel.as<ygl::texture>()]);
         }
-        if (sel.is<ygl::shape>()) {
+        if (sel.as<ygl::shape>()) {
             ygl::update_glshape(
-                sel.get<ygl::shape>(), app->shapes[sel.get<ygl::shape>()]);
+                sel.as<ygl::shape>(), app->shapes[sel.as<ygl::shape>()]);
         }
-        if (sel.is<ygl::node>() || sel.is<ygl::animation>() ||
+        if (sel.as<ygl::node>() || sel.as<ygl::animation>() ||
             app->time != last_time) {
             ygl::update_transforms(app->scn, app->time, app->anim_group);
             last_time = app->time;
         }
-        if (sel.is<ygl::shape>() || sel.is<ygl::material>() ||
-            sel.is<ygl::node>()) {
+        if (sel.as<ygl::shape>() || sel.as<ygl::material>() ||
+            sel.as<ygl::node>()) {
             app->lights = ygl::make_gllights(app->scn);
             if (app->lights.pos.empty()) app->params.eyelight = true;
         }
@@ -97,7 +96,7 @@ inline void draw(ygl::glwindow* win, app_state* app) {
     ygl::enable_glculling(app->params.cull_backface);
     ygl::draw_glsurface_scene(app->scn, app->cam, app->prog, app->shapes,
         app->textures, app->lights, framebuffer_size,
-        app->selection.get_untyped(), app->params);
+        app->selection.ptr, app->params);
 
     if (app->no_widgets) {
         ygl::swap_glwindow_buffers(win);
@@ -289,17 +288,13 @@ int main(int argc, char* argv[]) {
     // scene loading
     try {
         ygl::log_info("loading scene {}", app->filename);
-        app->scn = load_scene(app->filename, app->loadopts);
+        app->scn = ygl::load_scene(app->filename, true, true);
     } catch (std::exception e) {
         ygl::log_fatal("cannot load scene {}", app->filename);
     }
 
     // tesselate input shapes
-    ygl::tesselate_shapes(app->scn, true,
-        !app->loadopts.obj_preserve_facevarying,
-        !app->loadopts.obj_preserve_quads &&
-            !app->loadopts.obj_preserve_facevarying,
-        false);
+    ygl::tesselate_shapes(app->scn, true, false, false, false);
 
     // add missing data
     ygl::add_names(app->scn);

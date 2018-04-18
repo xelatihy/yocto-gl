@@ -39,7 +39,6 @@ struct app_state {
     ygl::bvh_tree* bvh = nullptr;
     std::string filename;
     std::string imfilename;
-    ygl::load_options loadopts;
     ygl::image4f img;
     std::vector<ygl::trace_pixel> pixels;
     ygl::trace_params params;
@@ -119,7 +118,7 @@ int main(int argc, char* argv[]) {
     for (auto filename : filenames) {
         try {
             ygl::log_info("loading scene {}", filename);
-            auto scn = load_scene(filename, app->loadopts);
+            auto scn = ygl::load_scene(filename);
             ygl::merge_into(app->scn, scn);
             delete scn;
         } catch (std::exception e) {

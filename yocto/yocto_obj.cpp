@@ -27,8 +27,6 @@
 //
 
 #include "yocto_obj.h"
-#include "yocto_image.h"
-#include "yocto_utils.h"
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR WAVEFRONT OBJ
@@ -265,9 +263,15 @@ inline void obj_parse(char*& s, obj_texture_info& info) {
     }
 }
 
+static inline std::string path_dirname(const std::string& filename) {
+    auto pos = filename.rfind('/');
+    if (pos == std::string::npos) pos = filename.rfind('\\');
+    if (pos == std::string::npos) return "";
+    return filename.substr(0, pos + 1);
+}
+
 // Load MTL
-std::vector<obj_material*> load_mtl(const std::string& filename, bool flip_tr,
-    std::vector<std::string>& textures) {
+std::vector<obj_material*> load_mtl(const std::string& filename, bool flip_tr) {
     // clear materials
     auto materials = std::vector<obj_material*>();
 
@@ -380,31 +384,6 @@ std::vector<obj_material*> load_mtl(const std::string& filename, bool flip_tr,
     // remove first fake material
     materials.erase(materials.begin());
 
-    // create texture array
-    textures = {};
-    auto texture_set = std::unordered_set<std::string>();
-    auto add_texture = [&texture_set, &textures](const obj_texture_info& info) {
-        if (info.path == "") return;
-        if (texture_set.find(info.path) != texture_set.end()) return;
-        texture_set.insert(info.path);
-        textures.push_back(info.path);
-    };
-    for (auto mat : materials) {
-        add_texture(mat->ke_txt);
-        add_texture(mat->ka_txt);
-        add_texture(mat->kd_txt);
-        add_texture(mat->ks_txt);
-        add_texture(mat->kr_txt);
-        add_texture(mat->kt_txt);
-        add_texture(mat->ns_txt);
-        add_texture(mat->op_txt);
-        add_texture(mat->ior_txt);
-        add_texture(mat->bump_txt);
-        add_texture(mat->bump_txt);
-        add_texture(mat->disp_txt);
-        add_texture(mat->norm_txt);
-    }
-
     // clone
     fclose(fs);
 
@@ -412,32 +391,9 @@ std::vector<obj_material*> load_mtl(const std::string& filename, bool flip_tr,
     return materials;
 }
 
-// Loads textures for an scene.
-void load_textures(
-    const obj_scene* obj, const std::string& dirname, bool skip_missing) {
-    for (auto txt : obj->textures) {
-        auto filename = dirname + txt->path;
-        for (auto& c : filename)
-            if (c == '\\') c = '/';
-#if YGL_IMAGEIO
-        if (is_hdr_filename(filename)) {
-            txt->dataf =
-                load_imagef(filename, txt->width, txt->height, txt->ncomp);
-        } else {
-            txt->datab =
-                load_imageb(filename, txt->width, txt->height, txt->ncomp);
-        }
-#endif
-        if (txt->datab.empty() && txt->dataf.empty()) {
-            if (skip_missing) continue;
-            throw std::runtime_error("cannot laod image " + filename);
-        }
-    }
-}
-
 // Loads an OBJ
 obj_scene* load_obj(const std::string& filename, bool split_shapes,
-    bool load_txt, bool skip_missing, bool flip_texcoord, bool flip_tr) {
+    bool flip_texcoord, bool flip_tr) {
     // clear obj
     auto obj = new obj_scene();
 
@@ -451,7 +407,6 @@ obj_scene* load_obj(const std::string& filename, bool split_shapes,
     if (!fs) throw std::runtime_error("cannot open filename " + filename);
 
     // current parsing values
-    auto mtllibs = std::vector<std::string>();
     auto oobj = (obj_object*)nullptr;
     auto matname = ""s;
     auto oname = ""s;
@@ -584,8 +539,12 @@ obj_scene* load_obj(const std::string& filename, bool split_shapes,
                 oobj->props[name].push_back(tok);
             }
         } else if (obj_streq(cmd, "mtllib")) {
-            mtllibs.push_back("");
-            obj_parse(ss, mtllibs.back());
+            auto mtlname = ""s;
+            obj_parse(ss, mtlname);
+            auto mtlpath = path_dirname(filename) + mtlname;
+            auto mats = load_mtl(mtlpath, flip_tr);
+            obj->materials.insert(
+                obj->materials.end(), mats.begin(), mats.end());
         } else if (obj_streq(cmd, "c")) {
             auto cam = new obj_camera();
             obj_parse(ss, cam->name);
@@ -660,37 +619,6 @@ obj_scene* load_obj(const std::string& filename, bool split_shapes,
     auto end = std::remove_if(obj->objects.begin(), obj->objects.end(),
         [](const obj_object* x) { return !x; });
     obj->objects.erase(end, obj->objects.end());
-
-    // parse materials
-    auto mtllibs_set =
-        std::unordered_set<std::string>(mtllibs.begin(), mtllibs.end());
-    mtllibs = std::vector<std::string>{mtllibs_set.begin(), mtllibs_set.end()};
-    auto dirname = path_dirname(filename);
-    std::unordered_set<std::string> texture_set;
-    for (auto mtllib : mtllibs) {
-        auto mtlname = dirname + mtllib;
-        std::vector<std::string> textures;
-        auto materials = load_mtl(mtlname, flip_tr, textures);
-        obj->materials.insert(
-            obj->materials.end(), materials.begin(), materials.end());
-        for (auto& txt : textures) {
-            if (texture_set.find(txt) != texture_set.end()) continue;
-            obj->textures.push_back(new obj_texture());
-            obj->textures.back()->path = txt;
-            texture_set.insert(txt);
-        }
-    }
-    for (auto oenv : obj->environments) {
-        auto txt = oenv->ke_txt.path;
-        if (txt == "") continue;
-        if (texture_set.find(txt) != texture_set.end()) continue;
-        obj->textures.push_back(new obj_texture());
-        obj->textures.back()->path = txt;
-        texture_set.insert(txt);
-    }
-
-    // load textures
-    if (load_txt) load_textures(obj, dirname, skip_missing);
 
     // close file
     fclose(fs);
@@ -843,35 +771,8 @@ void save_mtl(const std::string& filename,
     fclose(fs);
 }
 
-// Loads textures for an scene.
-void save_textures(
-    const obj_scene* obj, const std::string& dirname, bool skip_missing) {
-    for (auto txt : obj->textures) {
-        if (txt->datab.empty() && txt->dataf.empty()) continue;
-        auto filename = dirname + txt->path;
-        for (auto& c : filename)
-            if (c == '\\') c = '/';
-        auto ok = false;
-#if YGL_IMAGEIO
-        if (!txt->datab.empty()) {
-            ok = save_imageb(filename, txt->width, txt->height, txt->ncomp,
-                txt->datab.data());
-        }
-        if (!txt->dataf.empty()) {
-            ok = save_imagef(filename, txt->width, txt->height, txt->ncomp,
-                txt->dataf.data());
-        }
-#endif
-        if (!ok) {
-            if (skip_missing) continue;
-            throw std::runtime_error("cannot save image " + filename);
-        }
-    }
-}
-
 // Save an OBJ
-void save_obj(const std::string& filename, const obj_scene* obj, bool save_txt,
-    bool skip_missing, bool flip_texcoord, bool flip_tr) {
+void save_obj(const std::string& filename, const obj_scene* obj, bool flip_texcoord, bool flip_tr) {
     // open file
     auto fs = fopen(filename.c_str(), "wt");
     if (!fs) throw std::runtime_error("cannot open filename " + filename);
@@ -973,9 +874,6 @@ void save_obj(const std::string& filename, const obj_scene* obj, bool save_txt,
     // save materials
     if (!obj->materials.empty())
         save_mtl(dirname + basename + ".mtl", obj->materials, flip_tr);
-
-    // save textures
-    if (save_txt) save_textures(obj, dirname, skip_missing);
 }
 
 }  // namespace ygl

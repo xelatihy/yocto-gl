@@ -57,8 +57,6 @@ int main(int argc, char** argv) {
         ygl::make_parser(argc, argv, "yscnproc", "converts obj to gltf");
     auto textures =
         ygl::parse_flag(parser, "--textures", "-t", "process textures");
-    auto no_flipy_texcoord = ygl::parse_flag(
-        parser, "--no-flipy-texcoord", "", "texcoord vertical flipping");
     auto no_flip_opacity =
         ygl::parse_flag(parser, "--no-flip-opacity", "", "flip opacity");
     // auto facet_non_smooth = ygl::parse_flag(
@@ -95,12 +93,7 @@ int main(int argc, char** argv) {
     for (auto filename : filenames) {
         auto to_merge = (ygl::scene*)nullptr;
         try {
-            auto opts = ygl::load_options();
-            opts.load_textures = textures;
-            opts.obj_flip_texcoord = !no_flipy_texcoord;
-            opts.obj_flip_tr = !no_flip_opacity;
-            opts.obj_preserve_quads = true;
-            to_merge = load_scene(filename, opts);
+            to_merge = ygl::load_scene(filename, textures, true);
 
         } catch (const std::exception& e) {
             ygl::log_fatal("unable to load file %s with error {}\n",
@@ -178,10 +171,7 @@ int main(int argc, char** argv) {
     }
     // save scene
     try {
-        auto opts = ygl::save_options();
-        opts.save_textures = textures;
-        opts.gltf_separate_buffers = save_separate_buffers;
-        ygl::save_scene(output, scn, opts);
+        ygl::save_scene(output, scn, textures, false, save_separate_buffers);
     } catch (const std::exception& e) {
         ygl::log_fatal("unable to save scene %s with error {}\n",
             output.c_str(), e.what());

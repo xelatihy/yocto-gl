@@ -31,6 +31,8 @@
 //
 
 #include "yapp_ui.h"
+#include "../yocto/yocto_shape.h"
+#include "../yocto/yocto_bvh.h"
 
 namespace ygl {
 
@@ -425,7 +427,7 @@ void draw_imgui_scene_tree(glwindow* win, const std::string& lbl_, T* val,
     if (!val) return;
     auto lbl = val->name;
     if (!lbl_.empty()) lbl = lbl_ + ": " + val->name;
-    auto selection = sel.get_raw();
+    auto selection = sel.ptr;
     auto color = get_highlight_color(highlights, val->name);
     if (color != zero4f) push_imgui_style(win, color);
     auto open = begin_imgui_tree(win, lbl, selection, val);
@@ -735,28 +737,28 @@ bool draw_imgui_scene_inspector(glwindow* win, const std::string& lbl,
     scene* scn, scene_selection& sel,
     std::vector<ygl::scene_selection>& update_list,
     const std::unordered_map<std::string, std::string>& inspector_highlights) {
-    if (!scn || !sel.get_raw()) return false;
-    push_imgui_groupid(win, sel.get_raw());
+    if (!scn || !sel.ptr) return false;
+    push_imgui_groupid(win, sel.ptr);
 
     auto update_len = update_list.size();
 
     auto edited = false;
-    if (sel.is<camera>())
-        edited = draw_imgui_scene_inspector(win, sel.get<camera>(), scn);
-    if (sel.is<shape>())
-        edited = draw_imgui_scene_inspector(win, sel.get<shape>(), scn);
-    if (sel.is<texture>())
-        edited = draw_imgui_scene_inspector(win, sel.get<texture>(), scn);
-    if (sel.is<material>())
-        edited = draw_imgui_scene_inspector(win, sel.get<material>(), scn);
-    if (sel.is<environment>())
-        edited = draw_imgui_scene_inspector(win, sel.get<environment>(), scn);
-    if (sel.is<instance>())
-        edited = draw_imgui_scene_inspector(win, sel.get<instance>(), scn);
-    if (sel.is<node>())
-        edited = draw_imgui_scene_inspector(win, sel.get<node>(), scn);
-    if (sel.is<animation>())
-        edited = draw_imgui_scene_inspector(win, sel.get<animation>(), scn);
+    if (sel.as<camera>())
+        edited = draw_imgui_scene_inspector(win, sel.as<camera>(), scn);
+    if (sel.as<shape>())
+        edited = draw_imgui_scene_inspector(win, sel.as<shape>(), scn);
+    if (sel.as<texture>())
+        edited = draw_imgui_scene_inspector(win, sel.as<texture>(), scn);
+    if (sel.as<material>())
+        edited = draw_imgui_scene_inspector(win, sel.as<material>(), scn);
+    if (sel.as<environment>())
+        edited = draw_imgui_scene_inspector(win, sel.as<environment>(), scn);
+    if (sel.as<instance>())
+        edited = draw_imgui_scene_inspector(win, sel.as<instance>(), scn);
+    if (sel.as<node>())
+        edited = draw_imgui_scene_inspector(win, sel.as<node>(), scn);
+    if (sel.as<animation>())
+        edited = draw_imgui_scene_inspector(win, sel.as<animation>(), scn);
     if (edited) update_list.push_back(sel);
 
     pop_imgui_groupid(win);

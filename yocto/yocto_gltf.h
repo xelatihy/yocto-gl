@@ -99,6 +99,8 @@
 
 #include "yocto_math.h"
 
+#include <map>
+
 // include json for glTF
 #if YGL_GLTFJSON
 #include "ext/json.hpp"
@@ -111,20 +113,6 @@ namespace ygl {
 
 // Generic buffer data.
 using buffer_data = std::vector<unsigned char>;
-
-// Generic image data.
-struct image_data {
-    // Width.
-    int width = 0;
-    // Height.
-    int height = 0;
-    // Number of Channels.
-    int ncomp = 0;
-    // Buffer data for 8-bit images.
-    std::vector<uint8_t> datab;
-    // Buffer data for float images.
-    std::vector<float> dataf;
-};
 
 // Id for glTF references.
 template <typename T>
@@ -540,8 +528,6 @@ struct glTFImage : glTFChildOfRootProperty {
     // The index of the bufferView that contains the image. Use this instead of
     // the image's uri property.
     glTFid<glTFBufferView> bufferView = {};
-    // Stores image content after loading.
-    image_data data = {};
 };
 
 // Reference to a texture.
@@ -955,27 +941,17 @@ struct glTF : glTFProperty {
 };
 // #codegen end gltf-type
 
-// Load a gltf file `filename` from disk. Load binaries and images only if
-// `load_bin` and `load_img` are true, reporting errors only if `skip_missing`
-// is false.
-glTF* load_gltf(const std::string& filename, bool load_bin = true,
-    bool load_img = false, bool skip_missing = false);
+// Load a gltf file `filename` from disk. 
+glTF* load_gltf(const std::string& filename, bool load_bin = true);
+// Load a binary gltf file `filename` from disk.
+glTF* load_binary_gltf(const std::string& filename, bool load_bin = true);
 
-// Load a binary gltf file `filename` from disk. Load binaries and images only
-// if `load_bin` and `load_img` are true, reporting errors only if
-// `skip_missing` is false.
-glTF* load_binary_gltf(const std::string& filename, bool load_bin = true,
-    bool load_img = false, bool skip_missing = false);
-
-// Save a gltf file `filename` to disk. Save binaries and images only if
-// `save_bin` and `save_img` are true.
+// Save a gltf file `filename` to disk.
 void save_gltf(const std::string& filename, const glTF* gltf,
-    bool save_bin = true, bool save_img = false);
-
-// Save a gltf file `filename` to disk. Save binaries and images only if
-// `save_bin` and `save_img` are true.
+    bool save_bin = true);
+// Save a gltf file `filename` to disk.
 void save_binary_gltf(const std::string& filename, const glTF* gltf,
-    bool save_bin = true, bool save_img = false);
+    bool save_bin = true);
 
 // Computes the local node transform and its inverse.
 inline mat4f node_transform(const glTFNode* node) {
@@ -1021,7 +997,6 @@ struct accessor_view {
     // Get the idx-th element of fixed length as a matrix.
     mat4f getm4f(int idx) const {
         auto v = mat4f();
-        assert(_ncomp == 16);
         auto vm = &v.x.x;
         for (auto i = 0; i < 16; i++) vm[i] = get(idx, i);
         return v;

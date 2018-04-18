@@ -55,8 +55,6 @@
 //
 
 #include "yocto_gltf.h"
-#include "yocto_image.h"
-#include "yocto_utils.h"
 
 #include <fstream>
 #include "ext/json.hpp"
@@ -1033,8 +1031,7 @@ std::string base64_decode(std::string const& encoded_string) {
 }
 
 // Load buffer data.
-void load_buffers(
-    const glTF* gltf, const std::string& dirname, bool skip_missing) {
+void load_buffers(const glTF* gltf, const std::string& dirname) {
     auto fix_path = [](const std::string& path_) {
         auto path = path_;
         for (auto& c : path)
@@ -1063,130 +1060,40 @@ void load_buffers(
 
     for (auto buffer : gltf->buffers) {
         if (buffer->uri == "") continue;
-        try {
-            if (startswith(buffer->uri, "data:")) {
-                // assume it is base64 and find ','
-                auto pos = buffer->uri.find(',');
-                if (pos == buffer->uri.npos) {
-                    if (skip_missing) continue;
-                    throw std::runtime_error("could not decode base64 data");
-                }
-                // decode
-                auto data = base64_decode(buffer->uri.substr(pos + 1));
-                buffer->data =
-                    std::vector<unsigned char>((unsigned char*)data.c_str(),
-                        (unsigned char*)data.c_str() + data.length());
-            } else {
-                buffer->data = load_binary(fix_path(dirname + buffer->uri));
-                if (buffer->data.empty()) {
-                    if (skip_missing) continue;
-                    throw std::runtime_error("could not load binary file " +
-                                             fix_path(dirname + buffer->uri));
-                }
+        if (startswith(buffer->uri, "data:")) {
+            // assume it is base64 and find ','
+            auto pos = buffer->uri.find(',');
+            if (pos == buffer->uri.npos) {
+                throw std::runtime_error("could not decode base64 data");
             }
-            if (buffer->byteLength != buffer->data.size()) {
-                throw std::runtime_error("mismatched buffer size");
+            // decode
+            auto data = base64_decode(buffer->uri.substr(pos + 1));
+            buffer->data =
+                std::vector<unsigned char>((unsigned char*)data.c_str(),
+                    (unsigned char*)data.c_str() + data.length());
+        } else {
+            buffer->data = load_binary(fix_path(dirname + buffer->uri));
+            if (buffer->data.empty()) {
+                throw std::runtime_error("could not load binary file " +
+                                            fix_path(dirname + buffer->uri));
             }
-        } catch (const std::exception&) {
-            if (skip_missing) continue;
-            throw;
+        }
+        if (buffer->byteLength != buffer->data.size()) {
+            throw std::runtime_error("mismatched buffer size");
         }
     }
 }
 
-// Loads images.
-void load_images(
-    const glTF* gltf, const std::string& dirname, bool skip_missing) {
-    auto fix_path = [](const std::string& path_) {
-        auto path = path_;
-        for (auto& c : path)
-            if (c == '\\') c = '/';
-        return path;
-    };
-    auto startswith = [](const std::string& str, const std::string& substr) {
-        if (str.length() < substr.length()) return false;
-        for (auto i = 0; i < substr.length(); i++)
-            if (str[i] != substr[i]) return false;
-        return true;
-    };
-
-    for (auto image : gltf->images) {
-        image->data = image_data();
-        auto filename = std::string();
-#if YGL_IMAGEIO
-        if (image->bufferView || startswith(image->uri, "data:")) {
-            auto buffer = std::string();
-            auto data = (unsigned char*)nullptr;
-            auto data_size = 0;
-            if (image->bufferView) {
-                auto view = gltf->get(image->bufferView);
-                auto buffer = gltf->get(view->buffer);
-                if (!view || !buffer || view->byteStride) {
-                    if (skip_missing) continue;
-                    throw std::runtime_error("invalid image buffer view");
-                }
-                if (image->mimeType == glTFImageMimeType::ImagePng)
-                    filename = "internal_data.png";
-                else if (image->mimeType == glTFImageMimeType::ImageJpeg)
-                    filename = "internal_data.jpg";
-                else {
-                    if (skip_missing) continue;
-                    throw std::runtime_error("unsupported image format");
-                }
-                data = buffer->data.data() + view->byteOffset;
-                data_size = view->byteLength;
-            } else {
-                // assume it is base64 and find ','
-                auto pos = image->uri.find(',');
-                if (pos == image->uri.npos) {
-                    if (skip_missing) continue;
-                    throw std::runtime_error("could not decode base64 data");
-                }
-                auto header = image->uri.substr(0, pos);
-                for (auto format : {"png", "jpg", "jpeg", "tga", "ppm", "hdr"})
-                    if (header.find(format) != header.npos)
-                        filename = std::string("fake.") + format;
-                if (is_hdr_filename(filename)) {
-                    if (skip_missing) continue;
-                    throw std::runtime_error(
-                        "unsupported embedded image format " +
-                        header.substr(0, pos));
-                }
-                // decode
-                buffer = base64_decode(image->uri.substr(pos + 1));
-                data_size = (int)buffer.size();
-                data = (unsigned char*)buffer.data();
-            }
-            if (is_hdr_filename(filename)) {
-                image->data.dataf = load_imagef_from_memory(filename, data,
-                    data_size, image->data.width, image->data.height,
-                    image->data.ncomp);
-            } else {
-                image->data.datab = load_imageb_from_memory(filename, data,
-                    data_size, image->data.width, image->data.height,
-                    image->data.ncomp);
-            }
-        } else {
-            filename = fix_path(dirname + image->uri);
-            if (is_hdr_filename(filename)) {
-                image->data.dataf = load_imagef(filename, image->data.width,
-                    image->data.height, image->data.ncomp);
-            } else {
-                image->data.datab = load_imageb(filename, image->data.width,
-                    image->data.height, image->data.ncomp);
-            }
-        }
-#endif
-        if (image->data.dataf.empty() && image->data.datab.empty()) {
-            if (skip_missing) continue;
-            throw std::runtime_error("cannot load image " + filename);
-        }
-    }
+// Path dirname
+static inline std::string path_dirname(const std::string& filename) {
+    auto pos = filename.rfind('/');
+    if (pos == std::string::npos) pos = filename.rfind('\\');
+    if (pos == std::string::npos) return "";
+    return filename.substr(0, pos + 1);
 }
 
 // Loads a gltf.
-glTF* load_gltf(const std::string& filename, bool load_bin, bool load_image,
-    bool skip_missing) {
+glTF* load_gltf(const std::string& filename, bool load_bin) {
     // clear data
     auto gltf = new glTF();
 
@@ -1210,16 +1117,14 @@ glTF* load_gltf(const std::string& filename, bool load_bin, bool load_image,
 
     // load external resources
     auto dirname = path_dirname(filename);
-    if (load_bin) load_buffers(gltf, dirname, skip_missing);
-    if (load_image) load_images(gltf, dirname, skip_missing);
+    if (load_bin) load_buffers(gltf, dirname);
 
     // done
     return gltf;
 }
 
 // Save buffer data.
-void save_buffers(
-    const glTF* gltf, const std::string& dirname, bool skip_missing) {
+void save_buffers(const glTF* gltf, const std::string& dirname) {
     auto save_binary = [](const std::string& filename,
                            const std::vector<unsigned char>& data) {
         auto f = fopen(filename.c_str(), "wb");
@@ -1230,71 +1135,25 @@ void save_buffers(
         fclose(f);
     };
 
-    for (auto buffer : gltf->buffers) {
-        auto startswith = [](const std::string& str,
-                              const std::string& substr) {
-            if (str.length() < substr.length()) return false;
-            for (auto i = 0; i < substr.length(); i++)
-                if (str[i] != substr[i]) return false;
-            return true;
-        };
-
-        try {
-            if (startswith(buffer->uri, "data:")) {
-                throw std::runtime_error(
-                    "saving of embedded data not supported");
-            }
-            save_binary(dirname + buffer->uri, buffer->data);
-        } catch (const std::exception&) {
-            if (skip_missing) continue;
-            throw;
-        }
-    }
-}
-
-// Save images.
-void save_images(
-    const glTF* gltf, const std::string& dirname, bool skip_missing) {
-    auto startswith = [](const std::string& str, const std::string& substr) {
+    auto startswith = [](const std::string& str,
+                            const std::string& substr) {
         if (str.length() < substr.length()) return false;
         for (auto i = 0; i < substr.length(); i++)
             if (str[i] != substr[i]) return false;
         return true;
     };
 
-    for (auto image : gltf->images) {
-        try {
-            if (startswith(image->uri, "data:")) {
-                throw std::runtime_error(
-                    "saving of embedded data not supported");
-            }
-            auto filename = dirname + image->uri;
-            auto ok = false;
-#if YGL_IMAGEIO
-            if (!image->data.datab.empty()) {
-                ok =
-                    save_imageb(filename, image->data.width, image->data.height,
-                        image->data.ncomp, image->data.datab.data());
-            }
-            if (!image->data.dataf.empty()) {
-                ok =
-                    save_imagef(filename, image->data.width, image->data.height,
-                        image->data.ncomp, image->data.dataf.data());
-            }
-#endif
-            if (!ok) {
-                throw std::runtime_error("cannot save image " + filename);
-            }
-        } catch (const std::exception&) {
-            if (skip_missing) continue;
-            throw;
+    for (auto buffer : gltf->buffers) {
+        if (startswith(buffer->uri, "data:")) {
+            throw std::runtime_error(
+                "saving of embedded data not supported");
         }
+        save_binary(dirname + buffer->uri, buffer->data);
     }
 }
 
 // Saves a gltf.
-void save_gltf(const std::string& filename, const glTF* gltf, bool save_bin,
-    bool save_image) {
+void save_gltf(const std::string& filename, const glTF* gltf, bool save_bin) {
     auto save_text = [](const std::string& filename, const std::string& str) {
         auto f = fopen(filename.c_str(), "wb");
         if (!f) throw std::runtime_error("cannot write file " + filename);
@@ -1313,8 +1172,7 @@ void save_gltf(const std::string& filename, const glTF* gltf, bool save_bin,
 
     // save external resources
     auto dirname = path_dirname(filename);
-    if (save_bin) save_buffers(gltf, dirname, false);
-    if (save_image) save_images(gltf, dirname, false);
+    if (save_bin) save_buffers(gltf, dirname);
 }
 
 // reading shortcut
@@ -1332,8 +1190,7 @@ void gltf_fwrite(FILE* f, const T* v, int count) {
 }
 
 // Loads a binary gltf.
-glTF* load_binary_gltf(const std::string& filename, bool load_bin,
-    bool load_image, bool skip_missing) {
+glTF* load_binary_gltf(const std::string& filename, bool load_bin) {
     // clear data
     auto gltf = new glTF();
 
@@ -1434,8 +1291,7 @@ glTF* load_binary_gltf(const std::string& filename, bool load_bin,
 
     // load external resources
     auto dirname = path_dirname(filename);
-    if (load_bin) load_buffers(gltf, dirname, skip_missing);
-    if (load_image) load_images(gltf, dirname, skip_missing);
+    if (load_bin) load_buffers(gltf, dirname);
 
     // close
     fclose(f);
@@ -1446,7 +1302,7 @@ glTF* load_binary_gltf(const std::string& filename, bool load_bin,
 
 // Saves a binary gltf.
 void save_binary_gltf(const std::string& filename, const glTF* gltf,
-    bool save_bin, bool save_image) {
+    bool save_bin) {
     // opens binary file
     auto f = fopen(filename.c_str(), "wb");
     if (!f) throw std::runtime_error("could not write binary file");
@@ -1494,8 +1350,7 @@ void save_binary_gltf(const std::string& filename, const glTF* gltf,
 
     // save external resources
     auto dirname = path_dirname(filename);
-    if (save_bin) save_buffers(gltf, dirname, false);
-    if (save_image) save_images(gltf, dirname, false);
+    if (save_bin) save_buffers(gltf, dirname);
 }
 
 accessor_view::accessor_view(const glTF* gltf, const glTFAccessor* accessor) {
@@ -1585,6 +1440,7 @@ int accessor_view::geti(int idx, int c) const {
 
 int accessor_view::_num_components(glTFAccessorType type) {
     switch (type) {
+        case glTFAccessorType::NotSet: return 1;
         case glTFAccessorType::Scalar: return 1;
         case glTFAccessorType::Vec2: return 2;
         case glTFAccessorType::Vec3: return 3;
@@ -1592,19 +1448,18 @@ int accessor_view::_num_components(glTFAccessorType type) {
         case glTFAccessorType::Mat2: return 4;
         case glTFAccessorType::Mat3: return 9;
         case glTFAccessorType::Mat4: return 16;
-        default: assert(false); return 0;
     }
 }
 
 int accessor_view::_ctype_size(glTFAccessorComponentType componentType) {
     switch (componentType) {
+        case glTFAccessorComponentType::NotSet: return 1;
         case glTFAccessorComponentType::Byte: return 1;
         case glTFAccessorComponentType::UnsignedByte: return 1;
         case glTFAccessorComponentType::Short: return 2;
         case glTFAccessorComponentType::UnsignedShort: return 2;
         case glTFAccessorComponentType::UnsignedInt: return 4;
         case glTFAccessorComponentType::Float: return 4;
-        default: assert(false); return 0;
     }
 }
 

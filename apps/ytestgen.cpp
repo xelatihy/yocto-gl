@@ -28,6 +28,7 @@
 
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_utils.h"
+#include <thread>
 using namespace std::literals;
 
 void mkdir(const std::string& dir) {
@@ -57,11 +58,8 @@ void save_scene(const ygl::scene* scn, const std::string& sname,
     for (auto shp : scn->shapes)
         facevarying = facevarying || !shp->quads_pos.empty();
 
-    auto opts = ygl::save_options();
-    opts.save_textures = true;
-    opts.obj_save_instances = !flatten_obj;
-    if (!facevarying) save_scene(dirname + sname + ".gltf", scn, opts);
-    ygl::save_scene(dirname + sname + ".obj", scn, opts);
+    if (!facevarying) save_scene(dirname + sname + ".gltf", scn, true);
+    ygl::save_scene(dirname + sname + ".obj", scn, true, !flatten_obj);
 }
 
 void save_test_scene(const ygl::scene* scn, const std::string& sname,
@@ -90,8 +88,7 @@ void save_test_scene(const ygl::scene* scn, const std::string& sname,
                 auto sshp = new ygl::shape(*shp);
                 sscn->shapes.push_back(sshp);
                 auto shp_name = sshp->name;
-                auto opts = ygl::save_options();
-                ygl::save_scene(dirname + shp_name + ".obj", sscn, opts);
+                ygl::save_scene(dirname + shp_name + ".obj", sscn);
                 delete sscn;
             }
         } else {

@@ -11,18 +11,18 @@ Please consider this to be just development notes and not any real planning.
 - interactive procedural shapes
 - prepare for research on procedural components
 
+## Bugs
+
+- lines test
+- command line flags for booleans
+
 ## Cleanup
 
-- remove load/save options
+- lights in scene
 - remove GPU tone mapping
     - hardcode gamma 2.2 in viewer
     - softward tonemap in other
     - remove filmic3?
-- simplify scene selection
-- cleanup documentation
-    - glu
-    - math
-    - utils
 - removal of dependencies for .h
 - removal of dependencies for .cpp
 - move as much code as possible to .cpp

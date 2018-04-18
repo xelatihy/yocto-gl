@@ -85,8 +85,7 @@
 #include "yocto_image.h"
 #include "yocto_math.h"
 
-// TODO: can we remove this dependency?
-#include "yocto_shape.h"
+#include <map>
 
 // -----------------------------------------------------------------------------
 // SIMPLE SCENE SUPPORT
@@ -400,62 +399,17 @@ std::vector<std::string> validate(
 // merge_from to merged_into, so merge_from will be empty after this function.
 void merge_into(scene* merge_into, scene* merge_from);
 
-// Loading options.
-struct load_options {
-    bool load_textures = true;              // load textures
-    bool skip_missing = true;               // whether to skip errors
-    bool obj_flip_texcoord = true;          // flip texcoord in obj
-    bool obj_flip_tr = true;                // flip tr in obj
-    bool obj_preserve_quads = false;        // preserve quads
-    bool obj_preserve_facevarying = false;  // preserve facevarying
-    bool obj_split_shapes = false;          // split shapes in obj
-};
+// Loads/saves a scene in OBJ and glTF formats.
+scene* load_scene(const std::string& filename, bool load_textures = true,
+    bool preserve_quads = false, bool split_obj_shapes = false,
+    bool skip_missing = true);
+void save_scene(const std::string& filename, const scene* scn,
+    bool save_textures = true, bool preserve_obj_instances = false,
+    bool gltf_separate_buffers = false, bool skip_missing = true);
 
-// Save options.
-struct save_options {
-    bool save_textures = true;           // save textures
-    bool skip_missing = true;            // whether to skip errors
-    bool obj_flip_texcoord = true;       // flip obj texcoords
-    bool obj_flip_tr = true;             // flip tr in obj
-    bool obj_save_instances = false;     // preserve instances in obj
-    bool gltf_separate_buffers = false;  // use separate buffers in glTF
-};
-
-// Loads/sa ves a scene in OBJ and glTF formats.
-scene* load_scene(const std::string& filename, const load_options& opts = {});
-void save_scene(
-    const std::string& filename, const scene* scn, const save_options& opts);
-
-// Scene selection.
-struct scene_selection {
-    // initialize selection
-    scene_selection() : ptr(nullptr), tinfo(nullptr) {}
-    template <typename T>
-    scene_selection(T* val) : ptr(val), tinfo(&typeid(T)) {}
-
-    // Checking whether it is empty.
-    operator bool() const { return (bool)ptr; }
-    bool empty() const { return (bool)ptr; }
-
-    // Check if points to type T.
-    template <typename T>
-    bool is() const {
-        return &typeid(T) == tinfo;
-    }
-    // Gets a pointer cast to the specific type.
-    template <typename T>
-    T* get() {
-        return (is<T>()) ? (T*)ptr : nullptr;
-    }
-    // Get the raw untyped pointer.
-    void* get_raw() { return ptr; }
-    // Get untyped.
-    void* get_untyped() { return ptr; }
-
-   private:
-    void* ptr = nullptr;                    // selected pointer
-    const std::type_info* tinfo = nullptr;  // type info
-};
+// Loads/saves scene textures.
+void load_textures(const std::string& filename, scene* scn, bool skip_missing = true);
+void save_textures(const std::string& filename, const scene* scn, bool skip_missing = true);
 
 // Print scene statistics.
 void print_stats(const scene* scn);
@@ -536,8 +490,7 @@ inline std::vector<std::string>& proc_shape_types() {
 }
 shape* make_proc_shape(const std::string& name, const std::string& type,
     const vec3i& tesselation = zero3i, const vec3f& size = zero3f,
-    const vec3f& uvsize = zero3f, float rounded = 0.75f, float radius = 0.001f,
-    const make_hair_params& hair_params = {});
+    const vec3f& uvsize = zero3f, float rounded = 0.75f, float radius = 0.001f);
 instance* make_proc_instance(const std::string& name, const std::string& stype,
     const std::string& mtype, const frame3f& frame = identity_frame3f);
 
