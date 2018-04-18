@@ -39,6 +39,7 @@
         "utility": "cpp",
         "valarray": "cpp",
         "__locale": "cpp",
-        "algorithm": "cpp"
+        "algorithm": "cpp",
+        "functional": "cpp"
     },
 } 

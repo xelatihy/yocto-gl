@@ -41,17 +41,26 @@ struct app_state {
     ygl::camera* cam = nullptr;
     std::string filename;
     std::string imfilename;
-    std::vector<ygl::trace_pixel> pixels;
-    ygl::trace_params params;
-    std::vector<std::thread> async_threads;
-    bool async_stop = false;
-    bool update_texture = true;
-    bool navigation_fps = false;
-    bool rendering = false;
 
+    // rendering params
+    int resolution = 512;  // image vertical resolution
+    int nsamples = 256;    // number of samples
+    ygl::trace_type tracer = ygl::trace_type::pathtrace;  // tracer
+    int nbounces = 8;                                    // max depth
+    int seed = 7;                                         // seed
+    float pixel_clamp = 100.0f; // pixel clamping
+
+    // rendered image
     int width = 0, height = 512;
     std::vector<ygl::vec4f> img;
 
+    // rendering state
+    std::vector<ygl::rng_state> rngs;
+    std::vector<std::thread> async_threads;
+    bool async_stop = false;
+    bool update_texture = true;
+
+    // view image
     ygl::vec2f offset = {0, 0};
     float zoom = 1;
     float exposure = 0;
@@ -63,6 +72,9 @@ struct app_state {
     std::vector<ygl::scene_selection> update_list;
     int cur_sample = 0;
     bool quiet = false;
+    int preview_resolution = 64;
+    bool navigation_fps = false;
+    bool rendering = false;
 
     ~app_state() {
         if (scn) delete scn;
@@ -82,27 +94,15 @@ auto trace_names = std::map<ygl::trace_type, std::string>{
 
 namespace ygl {
 
-bool draw_imgui_trace_inspector(
-    glwindow* win, const std::string& lbl, trace_params& params) {
+bool draw_imgui_trace_inspector(glwindow* win, app_state* app) {
     auto edited = 0;
-    edited +=
-        draw_imgui_dragbox(win, "resolution", params.resolution, 256, 4096);
-    edited += draw_imgui_dragbox(win, "nsamples", params.nsamples, 16, 4096);
-    edited += draw_imgui_combobox(win, "tracer", params.tracer, trace_names);
-    edited += draw_imgui_checkbox(win, "notransmission", params.notransmission);
-    edited += draw_imgui_checkbox(win, "double_sided", params.double_sided);
-    edited += draw_imgui_colorbox(win, "ambient", params.ambient);
-    edited +=
-        draw_imgui_checkbox(win, "envmap_invisible", params.envmap_invisible);
-    edited += draw_imgui_dragbox(win, "min_depth", params.min_depth, 1, 10);
-    edited += draw_imgui_dragbox(win, "max_depth", params.max_depth, 1, 10);
-    edited +=
-        draw_imgui_dragbox(win, "pixel_clamp", params.pixel_clamp, 10, 1000);
-    edited +=
-        draw_imgui_dragbox(win, "ray_eps", params.ray_eps, 0.0001f, 0.001f);
-    edited += draw_imgui_dragbox(win, "seed", (int&)params.seed, 0, 1000);
-    edited +=
-        draw_imgui_dragbox(win, "preview", params.preview_resolution, 64, 1080);
+    edited += draw_imgui_dragbox(win, "resolution", app->resolution, 256, 4096);
+    edited += draw_imgui_dragbox(win, "nsamples", app->nsamples, 16, 4096);
+    edited += draw_imgui_combobox(win, "tracer", app->tracer, trace_names);
+    edited += draw_imgui_dragbox(win, "nbounces", app->nbounces, 1, 10);
+    edited += draw_imgui_dragbox(win, "seed", (int&)app->seed, 0, 1000);
+    edited += draw_imgui_dragbox(
+        win, "preview", app->preview_resolution, 64, 1080);
     return edited;
 }
 
@@ -138,8 +138,8 @@ void draw(ygl::glwindow* win, app_state* app) {
             ygl::pop_imgui_groupid(win);
         }
         if (ygl::draw_imgui_header(win, "params")) {
-            if (ygl::draw_imgui_trace_inspector(win, "", app->params)) {
-                app->update_list.push_back(&app->params);
+            if (ygl::draw_imgui_trace_inspector(win, app)) {
+                app->update_list.push_back(nullptr);
             }
         }
         if (ygl::draw_imgui_header(win, "image")) {
@@ -189,10 +189,35 @@ bool update(ygl::glwindow* win, app_state* app) {
         }
         app->update_list.clear();
 
+        // render preview image
+        if (app->preview_resolution) {
+            auto pwidth = (int)std::round(app->cam->aspect * app->preview_resolution);
+            auto pheight = app->preview_resolution;
+            auto pimg = std::vector<ygl::vec4f>(pwidth * pheight);
+            auto prngs = ygl::make_rng_seq(pwidth * pheight, 7);
+            trace_samples(app->scn, app->cam, pwidth, pheight, pimg, prngs, 0, 1, app->tracer,
+                app->nbounces);
+            auto pratio = app->resolution / app->preview_resolution;
+            for(auto j = 0; j < app->height; j ++) {
+                for(auto i = 0; i < app->width; i ++) {
+                    auto pi = i / pratio, pj = j / pratio;
+                    app->img[i+j*app->width] = pimg[pi + pwidth * pj];
+                }
+            }
+            // app->img = resize_image(
+            //     pwidth, pheight, pimg, app->width, app->height, ygl::resize_filter::box);
+        } else {
+            for (auto& p : app->img) p = ygl::zero4f;
+        }
+        app->update_texture = true;
+
+        // restart renderer
+        app->rngs = ygl::make_rng_seq(app->img.size(), app->seed);
         ygl::trace_async_start(app->scn, app->cam, app->width, app->height,
-            app->img, app->pixels, app->async_threads, app->async_stop,
-            app->params, [win, app](int s, int j) {
-                if (j % app->params.preview_resolution) return;
+            app->img, app->rngs, app->nsamples, app->tracer, app->nbounces,
+            app->async_threads, app->async_stop, app->pixel_clamp, false, 
+            [win, app](int s, int j) {
+                if (j % app->preview_resolution) return;
                 app->update_texture = true;
 #ifdef __APPLE__
                 ygl::post_glwindow_event(win);
@@ -208,13 +233,16 @@ bool update(ygl::glwindow* win, app_state* app) {
     return false;
 }
 
+void refresh(ygl::glwindow* win) {
+    return draw(win, (app_state*)ygl::get_glwindow_user_pointer(win));
+}
+
 // run ui loop
 void run_ui(app_state* app) {
     // window
     auto win = ygl::make_glwindow(
-        app->width, app->height, "yitrace | " + app->filename);
-    ygl::set_glwindow_callbacks(
-        win, nullptr, nullptr, [win, app]() { draw(win, app); });
+        app->width, app->height, "yitrace | " + app->filename, app);
+    ygl::set_glwindow_callbacks(win, nullptr, nullptr, refresh);
 
     // load textures
     app->gl_prog = ygl::make_glimage_program();
@@ -231,8 +259,8 @@ void run_ui(app_state* app) {
                 win, app->cam, app->navigation_fps)) {
             app->update_list.push_back(app->cam);
         }
-        ygl::handle_glscene_selection(win, app->scn, app->cam,
-            app->params.resolution, app->offset, app->zoom, app->selection);
+        ygl::handle_glscene_selection(win, app->scn, app->cam, app->resolution,
+            app->offset, app->zoom, app->selection);
 
         // draw
         draw(win, app);
@@ -264,35 +292,23 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser = ygl::make_parser(
         argc, argv, "yitrace", "Path trace images interactively");
-    app->params.resolution = ygl::parse_opt(parser, "--resolution", "-r",
-        "Image vertical resolution.", app->params.resolution);
-    app->params.nsamples = ygl::parse_opt(
-        parser, "--nsamples", "-s", "Number of samples.", app->params.nsamples);
-    app->params.tracer = ygl::parse_opt(parser, "--tracer", "-T", "Trace type.",
-        trace_names, app->params.tracer);
-    app->params.notransmission = ygl::parse_flag(parser, "--notransmission", "",
-        "Whether to test transmission in shadows.", app->params.notransmission);
-    app->params.double_sided = ygl::parse_flag(parser, "--double-sided", "-D",
-        "Force double sided rendering.", app->params.double_sided);
-    app->params.ambient = ygl::parse_opt(
-        parser, "--ambient", "", "Ambient lighting.", app->params.ambient);
-    app->params.envmap_invisible = ygl::parse_flag(parser, "--envmap-invisible",
-        "", "View environment map.", app->params.envmap_invisible);
-    app->params.min_depth = ygl::parse_opt(
-        parser, "--min-depth", "", "Minimum ray depth.", app->params.min_depth);
-    app->params.max_depth = ygl::parse_opt(
-        parser, "--max-depth", "", "Maximum ray depth.", app->params.max_depth);
-    app->params.pixel_clamp = ygl::parse_opt(parser, "--pixel-clamp", "",
-        "Final pixel clamping.", app->params.pixel_clamp);
-    app->params.ray_eps = ygl::parse_opt(parser, "--ray-eps", "",
-        "Ray intersection epsilon.", app->params.ray_eps);
-    app->params.seed = ygl::parse_opt(parser, "--seed", "",
-        "Seed for the random number generators.", app->params.seed);
-    app->params.preview_resolution = ygl::parse_opt(parser,
+    app->resolution = ygl::parse_opt(parser, "--resolution", "-r",
+        "Image vertical resolution.", app->resolution);
+    app->nsamples = ygl::parse_opt(
+        parser, "--nsamples", "-s", "Number of samples.", app->nsamples);
+    app->tracer = ygl::parse_opt(
+        parser, "--tracer", "-T", "Trace type.", trace_names, app->tracer);
+    auto double_sided = ygl::parse_flag(parser, "--double-sided", "-D",
+        "Force double sided rendering.", false);
+    app->nbounces = ygl::parse_opt(
+        parser, "--nbounces", "", "Maximum number of bounces.", app->nbounces);
+    app->pixel_clamp = ygl::parse_opt(parser, "--pixel-clamp", "",
+        "Final pixel clamping.", 100.0f);
+    app->seed = ygl::parse_opt(
+        parser, "--seed", "", "Seed for the random number generators.", 7);
+    app->preview_resolution = ygl::parse_opt(parser,
         "--preview-resolution", "", "Preview resolution for async rendering.",
-        app->params.preview_resolution);
-    app->params.batch_size = ygl::parse_opt(parser, "--batch-size", "",
-        "Sample batch size.", app->params.batch_size);
+        app->preview_resolution);
     app->quiet =
         ygl::parse_flag(parser, "--quiet", "-q", "Print only errors messages");
     app->imfilename = ygl::parse_opt(
@@ -304,7 +320,7 @@ int main(int argc, char* argv[]) {
     }
 
     // setup logger
-    if (app->quiet) ygl::get_default_logger()->verbose = false;
+    if (app->quiet) ygl::log_verbose() = false;
 
     // scene loading
     ygl::log_info("loading scene {}", app->filename);
@@ -314,11 +330,15 @@ int main(int argc, char* argv[]) {
         ygl::log_fatal("cannot load scene {}", app->filename);
     }
 
-    // add elements
+    // fix scene
+    ygl::update_bbox(app->scn);
     ygl::add_missing_camera(app->scn);
     ygl::add_missing_names(app->scn);
     ygl::add_missing_tangent_space(app->scn);
     app->cam = app->scn->cameras[0];
+    if(double_sided) {
+        for(auto mat : app->scn->materials) mat->double_sided = true;
+    }
 
     // validate
     for (auto err : ygl::validate(app->scn)) ygl::log_warning(err);
@@ -332,17 +352,16 @@ int main(int argc, char* argv[]) {
     ygl::update_lights(app->scn);
 
     // fix renderer type if no lights
-    if (app->scn->lights.empty() &&
-        app->params.tracer != ygl::trace_type::eyelight) {
+    if (app->scn->lights.empty() && app->tracer != ygl::trace_type::eyelight) {
         ygl::log_info("no lights presents, switching to eyelight shader");
-        app->params.tracer = ygl::trace_type::eyelight;
+        app->tracer = ygl::trace_type::eyelight;
     }
 
     // initialize rendering objects
-    app->width = (int)round(app->cam->aspect * app->params.resolution);
-    app->height = app->params.resolution;
+    app->width = (int)round(app->cam->aspect * app->resolution);
+    app->height = app->resolution;
     app->img = std::vector<ygl::vec4f>(app->width * app->height);
-    app->pixels = ygl::make_trace_pixels(app->width, app->height, app->params);
+    app->rngs = ygl::make_rng_seq(app->width * app->height, app->seed);
     app->update_list.push_back(app->scn);
 
     // run interactive

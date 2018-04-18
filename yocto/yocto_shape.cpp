@@ -636,7 +636,7 @@ void merge_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
 std::tuple<std::vector<vec3f>, std::vector<vec3f>, std::vector<vec2f>>
 sample_triangles_points(const std::vector<vec3i>& triangles,
     const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
-    const std::vector<vec2f>& texcoord, int npoints, uint64_t seed) {
+    const std::vector<vec2f>& texcoord, int npoints, int seed) {
     auto sampled_pos = std::vector<vec3f>(npoints);
     auto sampled_norm = std::vector<vec3f>(npoints);
     auto sampled_texcoord = std::vector<vec2f>(npoints);
@@ -1542,7 +1542,8 @@ void make_hair(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
     std::vector<float>& radius, const vec2i& steps,
     const std::vector<vec3i>& striangles, const std::vector<vec4i>& squads,
     const std::vector<vec3f>& spos, const std::vector<vec3f>& snorm,
-    const std::vector<vec2f>& stexcoord, const make_hair_params& params) {
+    const std::vector<vec2f>& stexcoord, const vec2f& len, const vec2f& rad,
+    const vec2f& noise, const vec2f& clump, const vec2f& rotation, int seed) {
     std::vector<vec3f> bpos;
     std::vector<vec3f> bnorm;
     std::vector<vec2f> btexcoord;
@@ -1550,19 +1551,19 @@ void make_hair(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
     all_triangles.insert(
         all_triangles.end(), striangles.begin(), striangles.end());
     std::tie(bpos, bnorm, btexcoord) = sample_triangles_points(
-        all_triangles, spos, snorm, stexcoord, steps.y, params.seed);
+        all_triangles, spos, snorm, stexcoord, steps.y, seed);
 
-    auto rng = make_rng(params.seed, 3);
+    auto rng = make_rng(seed, 3);
     auto blen = std::vector<float>(bpos.size());
     for (auto& l : blen)
-        l = lerp(params.length.x, params.length.y, next_rand1f(rng));
+        l = lerp(len.x, len.y, next_rand1f(rng));
 
     auto cidx = std::vector<int>();
-    if (params.clump.x > 0) {
+    if (clump.x > 0) {
         for (auto bidx = 0; bidx < bpos.size(); bidx++) {
             cidx.push_back(0);
             auto cdist = flt_max;
-            for (auto c = 0; c < params.clump.y; c++) {
+            for (auto c = 0; c < clump.y; c++) {
                 auto d = length(bpos[bidx] - bpos[c]);
                 if (d < cdist) {
                     cdist = d;
@@ -1578,25 +1579,25 @@ void make_hair(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
         auto bidx = i / (steps.x + 1);
         pos[i] = bpos[bidx] + bnorm[bidx] * u * blen[bidx];
         norm[i] = bnorm[bidx];
-        radius[i] = lerp(params.radius.x, params.radius.y, u);
-        if (params.clump.x > 0) {
+        radius[i] = lerp(rad.x, rad.y, u);
+        if (clump.x > 0) {
             pos[i] = pos[i] +
                      (pos[i + (cidx[bidx] - bidx) * (steps.x + 1)] - pos[i]) *
-                         u * params.clump.x;
+                         u * clump.x;
         }
-        if (params.noise.x > 0) {
-            auto nx = perlin_noise(pos[i] * params.noise.y + vec3f{0, 0, 0}) *
-                      params.noise.x;
-            auto ny = perlin_noise(pos[i] * params.noise.y + vec3f{3, 7, 11}) *
-                      params.noise.x;
+        if (noise.x > 0) {
+            auto nx = perlin_noise(pos[i] * noise.y + vec3f{0, 0, 0}) *
+                      noise.x;
+            auto ny = perlin_noise(pos[i] * noise.y + vec3f{3, 7, 11}) *
+                      noise.x;
             auto nz =
-                perlin_noise(pos[i] * params.noise.y + vec3f{13, 17, 19}) *
-                params.noise.x;
+                perlin_noise(pos[i] * noise.y + vec3f{13, 17, 19}) *
+                noise.x;
             pos[i] += {nx, ny, nz};
         }
     }
 
-    if (params.clump.x > 0 || params.noise.x > 0 || params.rotation.x > 0)
+    if (clump.x > 0 || noise.x > 0 || rotation.x > 0)
         compute_tangents(lines, pos, norm);
 }
 

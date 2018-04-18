@@ -212,20 +212,6 @@ bool save_image4f(const std::string& filename, int width, int height,
 bool save_image(const std::string& filename, int width, int height,
     const std::vector<vec4f>& hdr, tonemap_type tonemapper, float exposure);
 
-// Loads.saves an image with variable number of channels.
-std::vector<float> load_imagef(
-    const std::string& filename, int& width, int& height, int& ncomp);
-std::vector<byte> load_imageb(
-    const std::string& filename, int& width, int& height, int& ncomp);
-std::vector<float> load_imagef_from_memory(const std::string& filename,
-    const byte* data, int length, int& width, int& height, int& ncomp);
-std::vector<byte> load_imageb_from_memory(const std::string& filename,
-    const byte* data, int length, int& width, int& height, int& ncomp);
-bool save_imagef(const std::string& filename, int width, int height, int ncomp,
-    const float* hdr);
-bool save_imageb(const std::string& filename, int width, int height, int ncomp,
-    const byte* ldr);
-
 // Filter type and edge mode for resizing.
 enum struct resize_filter {
     def,

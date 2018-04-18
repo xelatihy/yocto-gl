@@ -287,7 +287,7 @@ int main(int argc, char* argv[]) {
     }
 
     // setup logger
-    if (quiet) ygl::get_default_logger()->verbose = false;
+    if (quiet) ygl::log_verbose() = false;
 
     // make directories
     if (clean) {

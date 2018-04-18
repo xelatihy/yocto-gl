@@ -1125,15 +1125,16 @@ void end_glsurface_frame(const glsurface_program& prog) {
 
 // Set num lights with position pos, color ke, type ltype. Also set the
 // ambient illumination amb.
-void set_glsurface_lights(
-    const glsurface_program& prog, const vec3f& amb, const gllights& lights) {
+void set_glsurface_lights(const glsurface_program& prog, const vec3f& amb,
+    const std::vector<vec3f>& lights_pos, const std::vector<vec3f>& lights_ke,
+    const std::vector<int>& lights_type) {
     assert(check_glerror());
     set_gluniform(prog.prog, prog.lamb_id, amb);
-    set_gluniform(prog.prog, prog.lnum_id, (int)lights.pos.size());
-    for (auto i = 0; i < lights.pos.size(); i++) {
-        set_gluniform(prog.prog, prog.lpos_id[i], lights.pos[i]);
-        set_gluniform(prog.prog, prog.lke_id[i], lights.ke[i]);
-        set_gluniform(prog.prog, prog.ltype_id[i], (int)lights.type[i]);
+    set_gluniform(prog.prog, prog.lnum_id, (int)lights_pos.size());
+    for (auto i = 0; i < lights_pos.size(); i++) {
+        set_gluniform(prog.prog, prog.lpos_id[i], lights_pos[i]);
+        set_gluniform(prog.prog, prog.lke_id[i], lights_ke[i]);
+        set_gluniform(prog.prog, prog.ltype_id[i], (int)lights_type[i]);
     }
     assert(check_glerror());
 }
@@ -1263,7 +1264,7 @@ void _glfw_error_cb(int error, const char* description) {
 void _glfw_text_cb(GLFWwindow* gwin, unsigned key) {
     auto win = (glwindow*)glfwGetWindowUserPointer(gwin);
     if (win->widget_enabled) { ImGui_ImplGlfw_CharCallback(win->gwin, key); }
-    if (win->text_cb) win->text_cb(key);
+    if (win->text_cb) win->text_cb(win, key);
 }
 
 // Support
@@ -1281,7 +1282,7 @@ void _glfw_mouse_cb(GLFWwindow* gwin, int button, int action, int mods) {
     if (win->widget_enabled) {
         ImGui_ImplGlfw_MouseButtonCallback(win->gwin, button, action, mods);
     }
-    if (win->mouse_cb) win->mouse_cb(button, action == GLFW_PRESS, mods);
+    if (win->mouse_cb) win->mouse_cb(win, button, action == GLFW_PRESS, mods);
 }
 
 // Support
@@ -1295,13 +1296,14 @@ void _glfw_scroll_cb(GLFWwindow* gwin, double xoffset, double yoffset) {
 // Support
 void _glfw_refresh_cb(GLFWwindow* gwin) {
     auto win = (glwindow*)glfwGetWindowUserPointer(gwin);
-    if (win->refresh_cb) win->refresh_cb();
+    if (win->refresh_cb) win->refresh_cb(win);
 }
 
 // Initialize glwindow
-glwindow* make_glwindow(
-    int width, int height, const std::string& title, bool opengl4) {
+glwindow* make_glwindow(int width, int height, const std::string& title,
+    void* user_ptr, bool opengl4) {
     auto win = new glwindow();
+    win->user_ptr = user_ptr;
 
     // glwindow
     glfwSetErrorCallback(_glfw_error_cb);
@@ -1347,6 +1349,9 @@ void set_glwindow_callbacks(glwindow* win, text_glcallback text_cb,
     win->refresh_cb = refresh_cb;
     if (win->text_cb) glfwSetCharCallback(win->gwin, _glfw_text_cb);
 }
+
+// Get gl window user pointer
+void* get_glwindow_user_pointer(glwindow* win) { return win->user_ptr; }
 
 // Set glwindow title
 void set_glwindow_title(glwindow* win, const std::string& title) {

@@ -39,7 +39,8 @@ namespace ygl {
 
 // Scene selection.
 struct scene_selection {
-    scene_selection() : ptr(nullptr), tinfo(nullptr) {}
+    scene_selection(std::nullptr_t* val = nullptr)
+        : ptr(nullptr), tinfo(nullptr) {}
     template <typename T>
     scene_selection(T* val) : ptr(val), tinfo(&typeid(T)) {}
 
@@ -52,96 +53,27 @@ struct scene_selection {
     const std::type_info* tinfo = nullptr;  // type info
 };
 
-// Vertex buffers for scene drawing. Members are not part of the public API.
-struct glshape {
-    glvertex_buffer pos;        // position
-    glvertex_buffer norm;       // normals
-    glvertex_buffer texcoord;   // texcoord
-    glvertex_buffer texcoord1;  // texcoord
-    glvertex_buffer tangsp;     // tangent space
-    glvertex_buffer color;      // color
-    glvertex_buffer points;     // point elements
-    glvertex_buffer lines;      // line elements
-    glvertex_buffer triangles;  // triangle elements
-    glvertex_buffer quads;      // quad elements as tris
-    glvertex_buffer beziers;    // bezier elements as l.
-    glvertex_buffer edges;      // edge elements
-};
-
-// Initialize gl lights.
-gllights make_gllights(const scene* scn);
-
-// Update scene textures on the GPU.
-void update_gltexture(const texture* txt, gltexture& gtxt);
-
-// Update scene textures on the GPU.
-inline std::unordered_map<texture*, gltexture> make_gltextures(
-    const scene* scn) {
-    auto gtextures = std::unordered_map<texture*, gltexture>();
-    for (auto txt : scn->textures) update_gltexture(txt, gtextures[txt]);
-    return gtextures;
-}
-
-// Clear OpenGL state.
-inline void clear_gltextures(std::unordered_map<texture*, gltexture>& txts) {
-    for (auto& kv : txts) clear_gltexture(kv.second);
-    txts.clear();
-}
-
-// Update scene shapes on the GPU.
-void update_glshape(const shape* shp, glshape& gshp);
-
-// Clear OpenGL state.
-void clear_glshape(glshape& gshp);
-
-// Update scene shapes on the GPU.
-inline std::unordered_map<shape*, glshape> make_glshapes(const scene* scn) {
-    auto gshapes = std::unordered_map<shape*, glshape>();
-    for (auto shp : scn->shapes) update_glshape(shp, gshapes[shp]);
-    return gshapes;
-}
-
-// Clear OpenGL state.
-inline void clear_glshapes(std::unordered_map<shape*, glshape>& shps) {
-    for (auto& kv : shps) clear_glshape(kv.second);
-    shps.clear();
-}
-
-// Params for stdsurface drawing.
-struct glsurface_params {
-    int resolution = 512;               // image resolution
-    bool wireframe = false;             // wireframe drawing
-    bool edges = false;                 // draw edges
-    float edge_offset = 0.01f;          // offset for edges
-    bool cutout = false;                // draw with binary transparency
-    bool eyelight = false;              // camera light mode
-    float exposure = 0;                 // exposure
-    float gamma = 2.2f;                 // gamma
-    vec4f background = {0, 0, 0, 0};    // background color
-    vec3f ambient = {0, 0, 0};          // ambient lighting
-    vec3f highlight_color = {1, 1, 0};  // highlight color
-    vec3f edge_color = {0, 0, 0};       // edge color
-    bool double_sided = false;          // double sided rendering
-    bool cull_backface = false;         // culling back face
-};
+// Update OpenGL scene data.
+void update_gldata(texture* txt);
+void update_gldata(shape* shp);
+void update_gldata(scene* scn);
+void clear_gldata(texture* txt);
+void clear_gldata(shape* shp);
+void clear_gldata(scene* scn);
 
 // Draw scene with stdsurface program.
-void draw_glsurface_scene(const scene* scn, const camera* cam,
-    glsurface_program& prog, std::unordered_map<shape*, glshape>& shapes,
-    std::unordered_map<texture*, gltexture>& textures, const gllights& lights,
-    const vec2i& viewport_size, const void* highlighted,
-    const glsurface_params& params);
+void draw_glscene(const scene* scn, const camera* cam,
+    const glsurface_program& prog, 
+    const vec2i& viewport_size, const void* highlighted, bool eyelight,
+    bool wireframe = false, bool edges = false, bool cutout = false,
+    float exposure = 0, float gamma = 2.2f, bool cull_backface = false);
 
 // Handle camera navigation and scene selection
 bool handle_glcamera_navigation(
     glwindow* win, camera* cam, bool navigation_fps);
 bool handle_glscene_selection(glwindow* win, const scene* scn,
-    const camera* cam, int res,
-    const vec2f& offset, float zoom, scene_selection& sel);
-
-// Draws widgets for params.
-bool draw_imgui_stdsurface_inspector(
-    glwindow* win, const std::string& lbl, glsurface_params& params);
+    const camera* cam, int res, const vec2f& offset, float zoom,
+    scene_selection& sel);
 
 // Draws widgets for a camera. Used for quickly making demos.
 bool draw_imgui_camera_inspector(

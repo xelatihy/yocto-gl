@@ -2718,13 +2718,14 @@ shape* make_proc_shape(const std::string& name, const std::string& type_,
     if (def_size) uvsize = {1, 1, 1};
 
     auto type = type_;
-    auto hair_params = make_hair_params();
+    auto hair_noise = zero2f;
+    auto hair_clump = zero2f;
     if (type == "hairball_noise") {
-        hair_params.noise = {0.5f, 8};
+        hair_noise = {0.5f, 8};
         type = "hairball";
     }
     if (type == "hairball_clump") {
-        hair_params.clump = {0.5f, 128};
+        hair_clump = {0.5f, 128};
         type = "hairball";
     }
 
@@ -2842,15 +2843,16 @@ shape* make_proc_shape(const std::string& name, const std::string& type_,
         make_random_points(shp->points, shp->pos, shp->norm, shp->texcoord,
             shp->radius, 1 << tesselation.x, size, uvsize.x, radius);
     } else if (type == "hairball") {
-        if (def_tesselation) tesselation = {16, 4, 0};
+        if (def_tesselation) tesselation = {16, 4, 4};
+        if (def_size) size = { 0.1f, 0.1f, 2 };
         auto shp1 = new shape();
         shp1->name = "interior";
         make_sphere_cube(shp1->quads, shp1->pos, shp1->norm, shp1->texcoord,
-            1 << 5, size.x * 0.8f, 1);
+            1 << tesselation.z, size.z * 0.8f, 1);
         shp1->radius.assign(shp1->pos.size(), 0);
         make_hair(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius,
             {1 << tesselation.x, 1 << tesselation.y}, {}, shp1->quads,
-            shp1->pos, shp1->norm, shp1->texcoord, hair_params);
+            shp1->pos, shp1->norm, shp1->texcoord, {size.x, size.y}, {0.01f, 0.001f}, hair_noise, hair_clump);
         delete shp1;
     } else if (type == "beziercircle") {
         make_bezier_circle(shp->beziers, shp->pos);

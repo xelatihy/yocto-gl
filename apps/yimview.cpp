@@ -142,12 +142,15 @@ void draw(ygl::glwindow* win, app_state* app) {
     ygl::swap_glwindow_buffers(win);
 }
 
+void refresh(ygl::glwindow* win) {
+    return draw(win, (app_state*)ygl::get_glwindow_user_pointer(win));
+}
+
 void run_ui(app_state* app) {
     // window
     auto win = ygl::make_glwindow(
-        app->imgs[0]->width, app->imgs[0]->height, "yimview");
-    ygl::set_glwindow_callbacks(
-        win, nullptr, nullptr, [app, win]() { draw(win, app); });
+        app->imgs[0]->width, app->imgs[0]->height, "yimview", app);
+    ygl::set_glwindow_callbacks(win, nullptr, nullptr, refresh);
 
     // window values
     int mouse_button = 0;

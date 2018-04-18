@@ -263,7 +263,7 @@ inline std::pair<int, vec2f> sample_quads(
 std::tuple<std::vector<vec3f>, std::vector<vec3f>, std::vector<vec2f>>
 sample_triangles_points(const std::vector<vec3i>& triangles,
     const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
-    const std::vector<vec2f>& texcoord, int npoints, uint64_t seed = 0);
+    const std::vector<vec2f>& texcoord, int npoints, int seed = 7);
 
 // Make examples shapes.
 void make_quad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
@@ -337,30 +337,19 @@ void make_random_points(std::vector<int>& points, std::vector<vec3f>& pos,
 // Make a bezier circle. Returns bezier, pos.
 void make_bezier_circle(std::vector<vec4i>& beziers, std::vector<vec3f>& pos);
 
-// Parameters for the make hair function
-// TODO: remove parameters from the struct -> move to function
-struct make_hair_params {
-    // minimum and maximum length
-    vec2f length = {0.1f, 0.1f};
-    // minimum and maximum radius from base to tip
-    vec2f radius = {0.001f, 0.0001f};
-    // noise added to hair (strength/scale)
-    vec2f noise = zero2f;
-    // clump added to hair (number/strength)
-    vec2f clump = zero2f;
-    // rotation
-    vec2f rotation = zero2f;
-    // random seed
-    int seed = 0;
-};
-
 // Make a hair ball around a shape.
+// length: minimum and maximum length
+// rad: minimum and maximum radius from base to tip
+// noise: noise added to hair (strength/scale)
+// clump: clump added to hair (number/strength)
+// rotation: rotation added to hair (angle/strength)
 void make_hair(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
     std::vector<vec3f>& tang, std::vector<vec2f>& texcoord,
     std::vector<float>& radius, const vec2i& steps,
     const std::vector<vec3i>& striangles, const std::vector<vec4i>& squads,
     const std::vector<vec3f>& spos, const std::vector<vec3f>& snorm,
-    const std::vector<vec2f>& stexcoord, const make_hair_params& params);
+    const std::vector<vec2f>& stexcoord, const vec2f& length = {0.1f, 0.1f}, const vec2f& rad = {0.001f, 0.001f},
+    const vec2f& noise = zero2f, const vec2f& clump = zero2f, const vec2f& rotation = zero2f, int seed = 7);
 
 }  // namespace ygl
 

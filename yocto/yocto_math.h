@@ -1030,14 +1030,21 @@ inline uint32_t advance_rng(rng_state& rng) {
 }
 
 // Init a random number generator with a state state from the sequence seq.
-inline rng_state make_rng(uint64_t state, uint64_t seq = 1) {
+inline rng_state make_rng(uint64_t seed, uint64_t seq = 1) {
     auto rng = rng_state();
     rng.state = 0U;
     rng.inc = (seq << 1u) | 1u;
     advance_rng(rng);
-    rng.state += state;
+    rng.state += seed;
     advance_rng(rng);
     return rng;
+}
+
+// Init a sequence of random number generators.
+inline std::vector<rng_state> make_rng_seq(int num, uint64_t seed) {
+    auto rngs = std::vector<rng_state>(num);
+    for (auto i = 0; i < num; i++) rngs[i] = make_rng(seed, 2 * i + 1);
+    return rngs;
 }
 
 // Next random numbers: floats in [0,1), ints in [0,n).
