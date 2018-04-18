@@ -98,15 +98,8 @@ You can build the example applications using CMake with
 For image loading and saving, Yocto/GL depends on `stb_image.h`,
 `stb_image_write.h`, `stb_image_resize.h` and `tinyexr.h`. These features
 can be disabled by defining YGL_IMAGEIO to 0 before including this file.
-If these features are useful, then the implementation files need to
-included in the manner described by the respective libraries. To simplify
-builds, we provide a file that builds these libraries, `stb_image.cpp`.
-
-To support Khronos glTF, Yocto/GL depends on `json.hpp`. This feature can
-be disabled by defining YGL_GLTF to 0 before including this file.
-
-To support SVG, Yocto/GL depends on `nanosvg.h`. This feature can
-be disabled by defining YGL_SVG to 0 before including this file.
+To support Khronos glTF, Yocto/GL depends on `json.hpp`. All dependencies
+are included in the distribution.
 
 OpenGL utilities include the OpenGL libraries, use GLEW on Windows/Linux,
 GLFW for windows handling and Dear ImGui for UI support.
@@ -119,7 +112,9 @@ your system. For ImGUI, build with the libraries `imgui.cpp`,
 
 ## Design Considerations
 
-Yocto/GL tries to follow a simple programming model inspired by C but with
+Yocto/GL tries to follow a simple programming model inspired by data-driven C.
+All data is stored as simple C++ structs with public data, avoiding classes,
+templates anf the like but with
 heavy use of operator overloading for math readability. We attempt to make
 the code easy to use use rather than as performant as possible.
 We adopt a functional style and only rarely use classes and methods.
