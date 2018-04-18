@@ -202,16 +202,46 @@ inline std::string format(const std::string& fmt, const Args&... args) {
     return format(fmt, vals);
 }
 
-// Wrapper for the above function that prints to stdout.
+// Wrapper for `format()` that prints to stdout with/without ending newline.
 template <typename... Args>
 inline void print(const std::string& fmt, const Args&... args) {
     printf("%s", format(fmt, args...).c_str());
 }
-
-// Wrapper for the above function that prints to stdout with endline.
 template <typename... Args>
 inline void println(const std::string& fmt, const Args&... args) {
     printf("%s\n", format(fmt, args...).c_str());
+}
+
+// Gets/sets log verbosity and output stream
+inline bool& log_verbose() {
+    static bool verbose = true;
+    return verbose;
+}
+
+// Implementation for logging functions.
+inline void _log_msg(const std::string& msg, const char* tag) {
+    printf("%s %s\n", tag, msg.c_str());
+}
+
+// Wrapper for `format()` that logs to a stream (default to stdout).
+template <typename... Args>
+inline void log_info(const std::string& msg, const Args&... args) {
+    if (!log_verbose()) return;
+    _log_msg(format(msg, args...), "INFO ");
+}
+template <typename... Args>
+inline void log_warning(const std::string& msg, const Args&... args) {
+    if (!log_verbose()) return;
+    _log_msg(format(msg, args...), "WARN ");
+}
+template <typename... Args>
+inline void log_error(const std::string& msg, const Args&... args) {
+    _log_msg(format(msg, args...), "ERROR");
+}
+template <typename... Args>
+inline void log_fatal(const std::string& msg, const Args&... args) {
+    _log_msg(format(msg, args...), "FATAL");
+    exit(1);
 }
 
 }  // namespace ygl
@@ -273,127 +303,6 @@ inline std::vector<T> parse_args(cmdline_parser& parser,
     const std::string& name, const std::string& help,
     const std::vector<T>& def = {}, bool req = true,
     const std::vector<T>& choices = {});
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// SIMPLE LOGGER
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-// Logger object. A logger can output messages to console an a file.
-struct logger {
-    // whether to output verbose
-    bool verbose = true;
-    // whether to output to console
-    bool console = true;
-    // file stream for stream output
-    FILE* file = nullptr;
-
-    // cleanup
-    ~logger() {
-        if (file) fclose(file);
-    }
-};
-
-// Make a logger with an optional console stream, an optional file stram
-// and the specified verbosity level.
-inline logger* make_logger(const std::string& filename = "",
-    bool console = true, bool verbose = true, bool file_append = true) {
-    auto lgr = new logger();
-    lgr->verbose = verbose;
-    lgr->console = console;
-    if (filename.empty()) {
-        lgr->file = nullptr;
-    } else {
-        lgr->file = fopen(filename.c_str(), (file_append) ? "at" : "wt");
-        if (!lgr->file)
-            throw std::runtime_error("could not open file " + filename);
-    }
-    return lgr;
-}
-
-// Get the default logger.
-inline logger* get_default_logger() {
-    static auto default_logger = new logger();
-    return default_logger;
-}
-
-// Log a message. Used internally.
-inline void _log_msg(
-    const logger* lgr, const std::string& msg, const char* type) {
-    char time_buf[1024];
-    auto tm = time(nullptr);
-    auto ttm = localtime(&tm);  // TODO: use thread safe version
-
-    // short message for console
-    if (lgr->console) {
-        strftime(time_buf, 1024, "%H:%M:%S", ttm);
-        printf("%s %s %s\n", time_buf, type, msg.c_str());
-        fflush(stdout);
-    }
-
-    // long message for file
-    if (lgr->file) {
-        strftime(time_buf, 1024, "%Y-%m-%d %H:%M:%S", ttm);
-        fprintf(lgr->file, "%s %s %s\n", time_buf, type, msg.c_str());
-    }
-}
-
-// Log an info message.
-template <typename... Args>
-inline void log_info(
-    const logger* lgr, const std::string& msg, const Args&... args) {
-    if (!lgr->verbose) return;
-    _log_msg(lgr, format(msg, args...), "INFO ");
-}
-
-// Log an info message.
-template <typename... Args>
-inline void log_warning(
-    const logger* lgr, const std::string& msg, const Args&... args) {
-    if (!lgr->verbose) return;
-    _log_msg(lgr, format(msg, args...), "WARN ");
-}
-
-// Log an error message.
-template <typename... Args>
-inline void log_error(
-    const logger* lgr, const std::string& msg, const Args&... args) {
-    _log_msg(lgr, format(msg, args...), "ERROR");
-}
-
-// Log a fatal message and exit.
-template <typename... Args>
-inline void log_fatal(
-    const logger* lgr, const std::string& msg, const Args&... args) {
-    _log_msg(lgr, format(msg, args...), "FATAL");
-    exit(1);
-}
-
-// Logs a message to the default loggers.
-template <typename... Args>
-inline void log_info(const std::string& msg, const Args&... args) {
-    log_info(get_default_logger(), msg, args...);
-}
-
-// Logs a message to the default loggers.
-template <typename... Args>
-inline void log_warning(const std::string& msg, const Args&... args) {
-    log_warning(get_default_logger(), msg, args...);
-}
-
-// Logs a message to the default loggers.
-template <typename... Args>
-inline void log_error(const std::string& msg, const Args&... args) {
-    log_error(get_default_logger(), msg, args...);
-}
-
-// Logs a message to the default loggers.
-template <typename... Args>
-inline void log_fatal(const std::string& msg, const Args&... args) {
-    log_fatal(get_default_logger(), msg, args...);
-}
 
 }  // namespace ygl
 

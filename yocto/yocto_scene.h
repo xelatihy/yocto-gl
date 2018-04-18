@@ -114,6 +114,7 @@ struct texture {
     int height = 0;               // height
     std::vector<vec4b> ldr = {};  // ldr image
     std::vector<vec4f> hdr = {};  // hdr image
+    void* gl_data = nullptr; // unmanaged data for OpenGL viewer
 };
 
 // Texture information to use for lookup.
@@ -199,7 +200,8 @@ struct shape {
     // computed properties
     bbox3f bbox = invalid_bbox3f;      // boudning box
     std::vector<float> elem_cdf = {};  // element cdf for sampling
-    bvh_tree* bvh = nullptr;
+    bvh_tree* bvh = nullptr; // bvh for ray intersection
+    void* gl_data = nullptr; // unmanaged data for OpenGL viewer
 
     // cleanup
     ~shape();

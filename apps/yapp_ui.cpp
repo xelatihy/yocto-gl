@@ -54,36 +54,35 @@ static const std::map<animation_type, std::string>& animation_type_names() {
     return names;
 }
 
-// Init shading
-void update_gltexture(const texture* txt, gltexture& gtxt) {
-    if (!txt) {
-        clear_gltexture(gtxt);
-    } else {
-        if (!txt->hdr.empty()) {
-            update_gltexture(
-                gtxt, txt->width, txt->height, txt->hdr, true, true, true);
-        }
-        if (!txt->ldr.empty()) {
-            update_gltexture(
-                gtxt, txt->width, txt->height, txt->ldr, true, true, true);
-        }
+// Vertex buffers for scene drawing. Members are not part of the public API.
+struct glshape {
+    glvertex_buffer pos;        // position
+    glvertex_buffer norm;       // normals
+    glvertex_buffer texcoord;   // texcoord
+    glvertex_buffer texcoord1;  // texcoord
+    glvertex_buffer tangsp;     // tangent space
+    glvertex_buffer color;      // color
+    glvertex_buffer points;     // point elements
+    glvertex_buffer lines;      // line elements
+    glvertex_buffer triangles;  // triangle elements
+    glvertex_buffer quads;      // quad elements as tris
+    glvertex_buffer beziers;    // bezier elements as l.
+    glvertex_buffer edges;      // edge elements
+};
+
+void update_gldata(texture* txt) {
+    if (!txt->gl_data) txt->gl_data = new gltexture();
+    auto& gtxt = *(gltexture*)txt->gl_data;
+    if (!txt->hdr.empty()) {
+        update_gltexture(
+            gtxt, txt->width, txt->height, txt->hdr, true, true, true);
+    }
+    if (!txt->ldr.empty()) {
+        update_gltexture(
+            gtxt, txt->width, txt->height, txt->ldr, true, true, true);
     }
 }
-
-template <typename T>
-std::vector<std::vector<T>> _split_elems(
-    int ngroups, const std::vector<T>& elems, const std::vector<int>& ids) {
-    if (ids.empty()) return {elems};
-    auto splits = std::vector<std::vector<T>>(ngroups);
-    if (elems.empty()) return splits;
-    for (auto i = 0; i < elems.size(); i++) {
-        splits[ids[i]].push_back(elems[i]);
-    }
-    return splits;
-}
-
-// Update shading
-void update_glshape(const shape* shp, glshape& gshp) {
+void update_gldata(shape* shp) {
     auto update_vert_buffer = [](auto& buf, const auto& vert) {
         if (vert.empty()) {
             clear_glbuffer(buf);
@@ -98,45 +97,51 @@ void update_glshape(const shape* shp, glshape& gshp) {
             update_glbuffer(buf, true, elem);
         }
     };
-    if (!shp) {
-        clear_glshape(gshp);
+
+    if (!shp->gl_data) shp->gl_data = new glshape();
+    auto& gshp = *(glshape*)shp->gl_data;
+    if (!shp->quads_pos.empty()) {
+        auto pos = std::vector<vec3f>();
+        auto norm = std::vector<vec3f>();
+        auto texcoord = std::vector<vec2f>();
+        auto quads = std::vector<vec4i>();
+        std::tie(quads, pos, norm, texcoord) =
+            convert_face_varying(shp->quads_pos, shp->quads_norm,
+                shp->quads_texcoord, shp->pos, shp->norm, shp->texcoord);
+        update_vert_buffer(gshp.pos, pos);
+        update_vert_buffer(gshp.norm, norm);
+        update_vert_buffer(gshp.texcoord, texcoord);
+        update_vert_buffer(gshp.color, std::vector<vec4f>{});
+        update_vert_buffer(gshp.tangsp, std::vector<vec4f>{});
+        update_elem_buffer(gshp.quads, convert_quads_to_triangles(quads));
+        update_elem_buffer(gshp.edges, get_edges({}, {}, quads));
     } else {
-        if (!shp->quads_pos.empty()) {
-            auto pos = std::vector<vec3f>();
-            auto norm = std::vector<vec3f>();
-            auto texcoord = std::vector<vec2f>();
-            auto quads = std::vector<vec4i>();
-            std::tie(quads, pos, norm, texcoord) =
-                convert_face_varying(shp->quads_pos, shp->quads_norm,
-                    shp->quads_texcoord, shp->pos, shp->norm, shp->texcoord);
-            update_vert_buffer(gshp.pos, pos);
-            update_vert_buffer(gshp.norm, norm);
-            update_vert_buffer(gshp.texcoord, texcoord);
-            update_vert_buffer(gshp.color, std::vector<vec4f>{});
-            update_vert_buffer(gshp.tangsp, std::vector<vec4f>{});
-            update_elem_buffer(gshp.quads, convert_quads_to_triangles(quads));
-            update_elem_buffer(gshp.edges, get_edges({}, {}, quads));
-        } else {
-            update_vert_buffer(gshp.pos, shp->pos);
-            update_vert_buffer(gshp.norm, shp->norm);
-            update_vert_buffer(gshp.texcoord, shp->texcoord);
-            update_vert_buffer(gshp.color, shp->color);
-            update_vert_buffer(gshp.tangsp, shp->tangsp);
-            update_elem_buffer(gshp.points, shp->points);
-            update_elem_buffer(gshp.lines, shp->lines);
-            update_elem_buffer(gshp.triangles, shp->triangles);
-            update_elem_buffer(
-                gshp.quads, convert_quads_to_triangles(shp->quads));
-            update_elem_buffer(
-                gshp.beziers, convert_bezier_to_lines(shp->beziers));
-            update_elem_buffer(
-                gshp.edges, get_edges({}, shp->triangles, shp->quads));
-        }
+        update_vert_buffer(gshp.pos, shp->pos);
+        update_vert_buffer(gshp.norm, shp->norm);
+        update_vert_buffer(gshp.texcoord, shp->texcoord);
+        update_vert_buffer(gshp.color, shp->color);
+        update_vert_buffer(gshp.tangsp, shp->tangsp);
+        update_elem_buffer(gshp.points, shp->points);
+        update_elem_buffer(gshp.lines, shp->lines);
+        update_elem_buffer(gshp.triangles, shp->triangles);
+        update_elem_buffer(gshp.quads, convert_quads_to_triangles(shp->quads));
+        update_elem_buffer(gshp.beziers, convert_bezier_to_lines(shp->beziers));
+        update_elem_buffer(
+            gshp.edges, get_edges({}, shp->triangles, shp->quads));
     }
 }
-
-// clear glshape
-void clear_glshape(glshape& gshp) {
+void update_gldata(scene* scn) {
+    for (auto txt : scn->textures) update_gldata(txt);
+    for (auto shp : scn->shapes) update_gldata(shp);
+}
+void clear_gldata(texture* txt) {
+    if (!txt->gl_data) return;
+    clear_gltexture(*(gltexture*)txt->gl_data);
+    delete (gltexture*)txt->gl_data;
+}
+void clear_gldata(shape* shp) {
+    if (!shp->gl_data) return;
+    auto& gshp = *(glshape*)shp->gl_data;
     clear_glbuffer(gshp.pos);
     clear_glbuffer(gshp.norm);
     clear_glbuffer(gshp.texcoord);
@@ -148,53 +153,17 @@ void clear_glshape(glshape& gshp) {
     clear_glbuffer(gshp.quads);
     clear_glbuffer(gshp.beziers);
     clear_glbuffer(gshp.edges);
+    delete (glshape*)shp->gl_data;
 }
-
-// Add gl lights
-void add_gllights(gllights& lights, const instance* ist) {
-    if (!ist->mat || ist->mat->ke == zero3f) return;
-    if (lights.pos.size() >= 16) return;
-    auto shp = ist->shp;
-    if (!shp->points.empty()) {
-        for (auto p : shp->points) {
-            if (lights.pos.size() >= 16) break;
-            lights.pos.push_back(transform_point(ist->frame, shp->pos[p]));
-            lights.ke.push_back(ist->mat->ke);
-            lights.type.push_back(gllight_type::point);
-        }
-    } else {
-        auto bbox = shp->bbox;
-        auto pos = (bbox.max + bbox.min) / 2;
-        auto area = 0.0f;
-        for (auto l : shp->lines)
-            area += line_length(shp->pos[l.x], shp->pos[l.y]);
-        for (auto t : shp->triangles)
-            area += triangle_area(shp->pos[t.x], shp->pos[t.y], shp->pos[t.z]);
-        for (auto t : shp->quads)
-            area += quad_area(
-                shp->pos[t.x], shp->pos[t.y], shp->pos[t.z], shp->pos[t.w]);
-        auto ke = ist->mat->ke * area;
-        if (lights.pos.size() < 16) {
-            lights.pos.push_back(transform_point(ist->frame, pos));
-            lights.ke.push_back(ke);
-            lights.type.push_back(gllight_type::point);
-        }
-    }
-}
-
-// Initialize gl lights
-gllights make_gllights(const scene* scn) {
-    auto lights = gllights();
-    for (auto ist : scn->instances) add_gllights(lights, ist);
-    return lights;
+void clear_gldata(scene* scn) {
+    for (auto txt : scn->textures) clear_gldata(txt);
+    for (auto shp : scn->shapes) clear_gldata(shp);
 }
 
 // Draw a shape
-void draw_stdsurface_shape(const shape* shp, const material* mat,
-    const mat4f& xform, bool highlighted, glsurface_program& prog,
-    std::unordered_map<shape*, glshape>& shapes,
-    std::unordered_map<texture*, gltexture>& textures,
-    const glsurface_params& params) {
+void draw_glshape(const shape* shp, const material* mat, const mat4f& xform,
+    bool highlighted, const glsurface_program& prog, bool eyelight,
+    bool wireframe, bool edges, bool cutout, bool cull) {
     static auto default_material = material();
     default_material.kd = {0.2f, 0.2f, 0.2f};
     static auto mtypes = std::unordered_map<material_type, int>{
@@ -202,24 +171,26 @@ void draw_stdsurface_shape(const shape* shp, const material* mat,
         {material_type::metallic_roughness, 2},
         {material_type::specular_glossiness, 3}};
 
+    if (!mat) mat = &default_material;
+
+    enable_glwireframe(wireframe);
+    enable_glculling(cull && !mat->double_sided);
     begin_glsurface_shape(prog, xform);
 
-    auto txt = [&textures](const texture_info& info) -> gltexture_info {
+    auto txt = [](const texture_info& info) -> gltexture_info {
         auto ginfo = gltexture_info();
         if (!info.txt) return ginfo;
-        ginfo.txt = textures.at(info.txt);
+        ginfo.txt = *(gltexture*)info.txt->gl_data;
         return ginfo;
     };
 
-    auto& gshp = shapes.at((shape*)shp);
-    if (!mat) mat = &default_material;
+    auto& gshp = *(glshape*)shp->gl_data;
     auto faceted = shp->norm.empty();
 
     set_glsurface_material(prog, mtypes.at(mat->type), mat->ke, mat->kd,
         mat->ks, mat->rs, mat->op, txt(mat->ke_txt), txt(mat->kd_txt),
         txt(mat->ks_txt), txt(mat->rs_txt), txt(mat->norm_txt),
-        txt(mat->occ_txt), false, mat->double_sided || params.double_sided,
-        params.cutout);
+        txt(mat->occ_txt), false, mat->double_sided, cutout);
 
     set_glsurface_vert(
         prog, gshp.pos, gshp.norm, gshp.texcoord, gshp.color, gshp.tangsp);
@@ -245,29 +216,28 @@ void draw_stdsurface_shape(const shape* shp, const material* mat,
         draw_glelems(gshp.beziers);
     }
 
-    if ((params.edges && !params.wireframe) || highlighted) {
+    if ((edges && !wireframe) || highlighted) {
         enable_glculling(false);
         set_glsurface_constmaterial(prog,
-            (highlighted) ? params.highlight_color : params.edge_color,
+            (highlighted) ? vec3f{1, 1, 0} : vec3f{0, 0, 0},
             (highlighted) ? 1 : mat->op);
-        set_glsurface_normaloffset(prog, params.edge_offset);
+        set_glsurface_normaloffset(prog, 0.01f);
         if (is_glbuffer_empty(gshp.edges)) draw_glelems(gshp.edges);
-        enable_glculling(params.cull_backface);
     }
 
     end_glsurface_shape(prog);
+    enable_glculling(false);
+    enable_glwireframe(false);
 }
 
 // Display a scene
-void draw_glsurface_scene(const scene* scn, const camera* cam,
-    glsurface_program& prog, std::unordered_map<shape*, glshape>& shapes,
-    std::unordered_map<texture*, gltexture>& textures, const gllights& lights,
-    const vec2i& viewport_size, const void* highlighted,
-    const glsurface_params& params) {
+void draw_glscene(const scene* scn, const camera* cam,
+    const glsurface_program& prog, 
+    const vec2i& viewport_size, const void* highlighted, bool eyelight,
+    bool wireframe, bool edges, bool cutout, float exposure, float gamma,
+    bool cull) {
     // begin frame
     enable_gldepth_test(true);
-    enable_glculling(params.cull_backface && !params.double_sided);
-    enable_glwireframe(params.wireframe);
     set_glviewport(viewport_size);
 
     auto camera_xform = frame_to_mat(cam->frame);
@@ -276,17 +246,50 @@ void draw_glsurface_scene(const scene* scn, const camera* cam,
         (float)viewport_size.x / (float)viewport_size.y, cam->near, cam->far);
 
     begin_glsurface_frame(prog, camera_xform, camera_view, camera_proj,
-        params.eyelight, params.exposure, params.gamma);
+        eyelight, exposure, gamma);
 
-    if (!params.eyelight) {
-        set_glsurface_lights(prog, params.ambient, lights);
+    if (!eyelight) {
+        auto lights_pos = std::vector<ygl::vec3f>();
+        auto lights_ke = std::vector<ygl::vec3f>();
+        auto lights_type = std::vector<int>();
+        for (auto lgt : scn->lights) {
+            if (lights_pos.size() >= 16) break;
+            if (!lgt->ist) continue;
+            auto shp = lgt->ist->shp;
+            if (!shp->points.empty()) {
+                for (auto p : shp->points) {
+                    if (lights_pos.size() >= 16) break;
+                    lights_pos.push_back(
+                        transform_point(lgt->ist->frame, shp->pos[p]));
+                    lights_ke.push_back(lgt->ist->mat->ke);
+                    lights_type.push_back(0);
+                }
+            } else {
+                auto bbox = shp->bbox;
+                auto pos = (bbox.max + bbox.min) / 2;
+                auto area = 0.0f;
+                for (auto l : shp->lines)
+                    area += line_length(shp->pos[l.x], shp->pos[l.y]);
+                for (auto t : shp->triangles)
+                    area += triangle_area(
+                        shp->pos[t.x], shp->pos[t.y], shp->pos[t.z]);
+                for (auto t : shp->quads)
+                    area += quad_area(shp->pos[t.x], shp->pos[t.y],
+                        shp->pos[t.z], shp->pos[t.w]);
+                auto ke = lgt->ist->mat->ke * area;
+                lights_pos.push_back(transform_point(lgt->ist->frame, pos));
+                lights_ke.push_back(ke);
+                lights_type.push_back(0);
+            }
+        }
+        set_glsurface_lights(prog, {0, 0, 0}, lights_pos, lights_ke, lights_type);
     }
 
     for (auto ist : scn->instances) {
-        draw_stdsurface_shape(ist->shp, ist->mat, frame_to_mat(ist->frame),
+        draw_glshape(ist->shp, ist->mat, frame_to_mat(ist->frame),
             ist == highlighted || ist->shp == highlighted ||
                 ist->mat == highlighted,
-            prog, shapes, textures, params);
+            prog, eyelight, wireframe, edges, cutout, cull);
     }
 
     end_glsurface_frame(prog);
@@ -380,29 +383,6 @@ bool handle_glscene_selection(glwindow* win, const scene* scn,
         sel = scn->nodes[iid];
     }
     return true;
-}
-
-bool draw_imgui_stdsurface_inspector(
-    glwindow* win, const std::string& lbl, glsurface_params& params) {
-    auto edited = 0;
-    edited +=
-        draw_imgui_dragbox(win, "resolution", params.resolution, 256, 4096);
-    edited += draw_imgui_checkbox(win, "wireframe", params.wireframe);
-    edited += draw_imgui_checkbox(win, "edges", params.edges);
-    edited +=
-        draw_imgui_dragbox(win, "edge_offset", params.edge_offset, 0, 0.1);
-    edited += draw_imgui_checkbox(win, "cutout", params.cutout);
-    edited += draw_imgui_checkbox(win, "eyelight", params.eyelight);
-    edited += draw_imgui_dragbox(win, "exposure", params.exposure, -10, 10);
-    edited += draw_imgui_dragbox(win, "gamma", params.gamma, 0.1f, 4);
-    edited += draw_imgui_colorbox(win, "background", params.background);
-    edited += draw_imgui_colorbox(win, "ambient", params.ambient);
-    edited +=
-        draw_imgui_colorbox(win, "highlight_color", params.highlight_color);
-    edited += draw_imgui_colorbox(win, "edge_color", params.edge_color);
-    edited += draw_imgui_checkbox(win, "double_sided", params.double_sided);
-    edited += draw_imgui_checkbox(win, "cull_backface", params.cull_backface);
-    return edited;
 }
 
 // Implementation of camera selection

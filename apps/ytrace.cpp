@@ -34,29 +34,6 @@ using namespace std::literals;
 
 #include <map>
 
-// Application state
-struct app_state {
-    ygl::scene* scn = nullptr;
-    ygl::camera* cam = nullptr;
-    ygl::bvh_tree* bvh = nullptr;
-    std::string filename;
-    std::string imfilename;
-    std::vector<ygl::trace_pixel> pixels;
-    ygl::trace_params params;
-    ygl::tonemap_type tonemapper = ygl::tonemap_type::gamma;
-    float exposure = 0;
-    bool save_batch = false;
-    bool quiet = false;
-
-    int width = 0, height = 0;
-    std::vector<ygl::vec4f> img = {};
-
-    ~app_state() {
-        if (scn) delete scn;
-        if (bvh) delete bvh;
-    }
-};
-
 int main(int argc, char* argv[]) {
     static auto tonemap_names = std::map<ygl::tonemap_type, std::string>{
         {ygl::tonemap_type::linear, "linear"},
@@ -77,118 +54,113 @@ int main(int argc, char* argv[]) {
         {ygl::trace_type::debug_frontfacing, "debug_frontfacing"},
     };
 
-    // create empty scene
-    auto app = new app_state();
-
     // parse command line
     auto parser =
         ygl::make_parser(argc, argv, "ytrace", "Offline oath tracing");
-    app->params.resolution = ygl::parse_opt(parser, "--resolution", "-r",
-        "Image vertical resolution.", app->params.resolution);
-    app->params.nsamples = ygl::parse_opt(
-        parser, "--nsamples", "-s", "Number of samples.", app->params.nsamples);
-    app->params.tracer = ygl::parse_opt(parser, "--tracer", "-t", "Trace type.",
-        trace_names, app->params.tracer);
-    app->params.notransmission = ygl::parse_flag(parser, "--notransmission", "",
-        "Whether to test transmission in shadows.", app->params.notransmission);
-    app->params.double_sided = ygl::parse_flag(parser, "--double-sided", "-D",
-        "Force double sided rendering.", app->params.double_sided);
-    app->params.ambient = ygl::parse_opt(
-        parser, "--ambient", "", "Ambient lighting.", app->params.ambient);
-    app->params.envmap_invisible = ygl::parse_flag(parser, "--envmap-invisible",
-        "", "View environment map.", app->params.envmap_invisible);
-    app->params.min_depth = ygl::parse_opt(
-        parser, "--min-depth", "", "Minimum ray depth.", app->params.min_depth);
-    app->params.max_depth = ygl::parse_opt(
-        parser, "--max-depth", "", "Maximum ray depth.", app->params.max_depth);
-    app->params.pixel_clamp = ygl::parse_opt(parser, "--pixel-clamp", "",
-        "Final pixel clamping.", app->params.pixel_clamp);
-    app->params.ray_eps = ygl::parse_opt(parser, "--ray-eps", "",
-        "Ray intersection epsilon.", app->params.ray_eps);
-    app->params.noparallel = ygl::parse_flag(parser, "--noparallel", "",
-        "Disable parallel execution.", app->params.noparallel);
-    app->params.seed = ygl::parse_opt(parser, "--seed", "",
-        "Seed for the random number generators.", app->params.seed);
-    app->params.preview_resolution = ygl::parse_opt(parser,
-        "--preview-resolution", "", "Preview resolution for async rendering.",
-        app->params.preview_resolution);
-    app->params.batch_size = ygl::parse_opt(parser, "--batch-size", "",
-        "Sample batch size.", app->params.batch_size);
-    app->save_batch = ygl::parse_flag(
+    auto resolution = ygl::parse_opt(
+        parser, "--resolution", "-r", "Image vertical resolution.", 512);
+    auto nsamples =
+        ygl::parse_opt(parser, "--nsamples", "-s", "Number of samples.", 256);
+    auto tracer = ygl::parse_opt(parser, "--tracer", "-t", "Trace type.",
+        trace_names, ygl::trace_type::pathtrace);
+    auto double_sided = ygl::parse_flag(parser, "--double-sided", "-D",
+        "Force double sided rendering.", false);
+    auto noenvmap = ygl::parse_flag(parser, "--noenvmap", "",
+        "Disable view of the environment map.", false);
+    auto max_depth =
+        ygl::parse_opt(parser, "--nbounces", "", "Maximum number of bounces.", 8);
+    auto pixel_clamp = ygl::parse_opt(parser, "--pixel-clamp", "",
+        "Final pixel clamping.", 100.0f);
+    auto noparallel = ygl::parse_flag(
+        parser, "--noparallel", "", "Disable parallel execution.", false);
+    auto seed = ygl::parse_opt(
+        parser, "--seed", "", "Seed for the random number generators.", 7);
+    auto batch_size =
+        ygl::parse_opt(parser, "--batch-size", "", "Sample batch size.", 16);
+    auto save_batch = ygl::parse_flag(
         parser, "--save-batch", "", "Save images progressively");
-    app->exposure = ygl::parse_opt(
-        parser, "--exposure", "-e", "Hdr exposure", app->exposure);
-    app->tonemapper = ygl::parse_opt(parser, "--tonemap", "-T", "Hdr tonemap",
-        tonemap_names, app->tonemapper);
-    app->quiet =
+    auto exposure =
+        ygl::parse_opt(parser, "--exposure", "-e", "Hdr exposure", 0.0f);
+    auto tonemap = ygl::parse_opt(parser, "--tonemap", "-T", "Hdr tonemap",
+        tonemap_names, ygl::tonemap_type::gamma);
+    auto quiet =
         ygl::parse_flag(parser, "--quiet", "-q", "Print only errors messages");
-    app->imfilename = ygl::parse_opt(
+    auto imfilename = ygl::parse_opt(
         parser, "--output-image", "-o", "Image filename", "out.hdr"s);
-    app->filename = ygl::parse_arg(parser, "scene", "Scene filename", ""s);
+    auto filename = ygl::parse_arg(parser, "scene", "Scene filename", ""s);
     if (ygl::should_exit(parser)) {
         printf("%s\n", get_usage(parser).c_str());
         exit(1);
     }
 
     // setup logger
-    if (app->quiet) ygl::get_default_logger()->verbose = false;
+    if (quiet) ygl::log_verbose() = false;
 
     // scene loading
-    ygl::log_info("loading scene {}", app->filename);
+    ygl::log_info("loading scene {}", filename);
+    auto scn = (ygl::scene*)nullptr;
     try {
-        app->scn = ygl::load_scene(app->filename);
+        scn = ygl::load_scene(filename);
     } catch (std::exception e) {
-        ygl::log_fatal("cannot load scene {}", app->filename);
+        ygl::log_fatal("cannot load scene {}", filename);
     }
 
-    // add elements
-    ygl::add_missing_camera(app->scn);
-    ygl::add_missing_names(app->scn);
-    ygl::add_missing_tangent_space(app->scn);
-    app->cam = app->scn->cameras[0];
+    // fix scene
+    ygl::update_bbox(scn);
+    ygl::add_missing_camera(scn);
+    ygl::add_missing_names(scn);
+    ygl::add_missing_tangent_space(scn);
+    auto cam = scn->cameras[0];
+    if(double_sided) {
+        for(auto mat : scn->materials) mat->double_sided = true;
+    }
 
     // validate
-    for (auto err : ygl::validate(app->scn)) ygl::log_warning(err);
+    for (auto err : ygl::validate(scn)) ygl::log_warning(err);
 
     // build bvh
     ygl::log_info("building bvh");
-    ygl::update_bvh(app->scn);
+    ygl::update_bvh(scn);
 
     // init renderer
     ygl::log_info("initializing tracer");
-    ygl::update_lights(app->scn);
+    ygl::update_lights(scn);
 
     // initialize rendering objects
-    app->width = (int)round(app->cam->aspect * app->params.resolution);
-    app->height = app->params.resolution;
-    app->img = std::vector<ygl::vec4f>(app->width * app->height);
-    app->pixels = ygl::make_trace_pixels(app->width, app->height, app->params);
+    auto width = (int)round(cam->aspect * resolution);
+    auto height = resolution;
+    auto img = std::vector<ygl::vec4f>(width * height);
+    auto rngs = ygl::make_rng_seq(width * height, seed);
 
     // render
     ygl::log_info("starting renderer");
-    ygl::trace_image(app->scn, app->cam, app->width, app->height, app->img,
-        app->pixels, app->params, [app](int cur_sample) {
-            if (app->save_batch && cur_sample) {
-                auto imfilename =
-                    ygl::format("{}{}.{}{}", ygl::path_dirname(app->imfilename),
-                        ygl::path_basename(app->imfilename), cur_sample,
-                        ygl::path_extension(app->imfilename));
-                ygl::log_info("saving image {}", imfilename);
-                save_image(imfilename, app->width, app->height, app->img,
-                    app->tonemapper, app->exposure);
-            }
-            ygl::log_info(
-                "rendering sample {}/{}", cur_sample, app->params.nsamples);
-        });
+    for (auto sample = 0; sample < nsamples; sample += batch_size) {
+        if (save_batch && sample) {
+            auto filename = ygl::format("{}{}.{}{}",
+                ygl::path_dirname(imfilename), ygl::path_basename(imfilename),
+                sample, ygl::path_extension(imfilename));
+            ygl::log_info("saving image {}", filename);
+            save_image(filename, width, height, img, tonemap, exposure);
+        }
+        ygl::log_info("rendering sample {}/{}", sample, nsamples);
+        if (noparallel) {
+            ygl::trace_samples(scn, cam, width, height, img, rngs, sample,
+                std::min(batch_size, nsamples - sample), tracer, max_depth,
+                pixel_clamp, noenvmap);
+        } else {
+            ygl::trace_samples_mt(scn, cam, width, height, img, rngs, sample,
+                std::min(batch_size, nsamples - sample), tracer, max_depth,
+                pixel_clamp, noenvmap);
+        }
+    }
     ygl::log_info("rendering done");
 
     // save image
-    ygl::log_info("saving image {}", app->imfilename);
-    ygl::save_image(app->imfilename, app->width, app->height, app->img,
-        app->tonemapper, app->exposure);
+    ygl::log_info("saving image {}", imfilename);
+    ygl::save_image(imfilename, width, height, img, tonemap, exposure);
 
     // cleanup
-    delete app;
+    delete scn;
 
     // done
     return 0;

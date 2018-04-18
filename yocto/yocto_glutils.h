@@ -74,7 +74,6 @@
 
 #include "yocto_math.h"
 
-#include <functional>
 #include <map>
 
 // -----------------------------------------------------------------------------
@@ -84,19 +83,6 @@ namespace ygl {
 
 // OpenGL shape element types.
 enum struct glelem_type : int { point = 1, line = 2, triangle = 3 };
-
-// OpenGL light types.
-enum struct gllight_type : int {
-    point = 0,
-    directional = 1,
-};
-
-// OpenGL lights
-struct gllights {
-    std::vector<vec3f> pos;          // light positions
-    std::vector<vec3f> ke;           // light intensities
-    std::vector<gllight_type> type;  // light types
-};
 
 // Checks for GL error and then prints.
 bool check_glerror(bool print = true);
@@ -422,7 +408,9 @@ void end_glsurface_frame(const glsurface_program& prog);
 
 // Set shading lights and ambient.
 void set_glsurface_lights(
-    const glsurface_program& prog, const vec3f& amb, const gllights& lights);
+    const glsurface_program& prog, const vec3f& amb,
+    const std::vector<vec3f>& lights_pos, const std::vector<vec3f>& lights_ke,
+    const std::vector<int>& lights_type);
 
 // Begins drawing a shape with transform `xform`.
 void begin_glsurface_shape(
@@ -482,9 +470,10 @@ namespace ygl {
 struct glwindow;
 
 // Callbacks.
-using text_glcallback = std::function<void(unsigned int key)>;
-using mouse_glcallback = std::function<void(int button, bool press, int mods)>;
-using refresh_glcallback = std::function<void()>;
+using text_glcallback = void (*)(glwindow* win, unsigned int key);
+using mouse_glcallback = void (*)(
+    glwindow* win, int button, bool press, int mods);
+using refresh_glcallback = void (*)(glwindow* win);
 
 // OpenGL window. Members are not part of the public API.
 struct glwindow {
@@ -493,17 +482,19 @@ struct glwindow {
     text_glcallback text_cb = nullptr;        // text callback
     mouse_glcallback mouse_cb = nullptr;      // mouse callback
     refresh_glcallback refresh_cb = nullptr;  // refresh callback
+    void* user_ptr = nullptr;                 // user pointer
 
     ~glwindow();  // cleaup
 };
 
 // Initialize a window.
-glwindow* make_glwindow(
-    int width, int height, const std::string& title, bool opengl4 = true);
-
+glwindow* make_glwindow(int width, int height, const std::string& title,
+    void* user_pointer, bool opengl4 = true);
 // Set window callbacks.
 void set_glwindow_callbacks(glwindow* win, text_glcallback text_cb,
     mouse_glcallback mouse_cb, refresh_glcallback refresh_cb);
+// Grab user pointer
+void* get_glwindow_user_pointer(glwindow* win);
 
 // Set window title.
 void set_glwindow_title(glwindow* win, const std::string& title);

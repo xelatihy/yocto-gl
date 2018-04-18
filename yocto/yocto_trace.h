@@ -18,21 +18,12 @@
 //
 // # Usage
 //
-// 1. build the ray-tracing acceleration structure with Yocto/Bvh
-// 2. prepare lights for rendering `update_lights()`
-// 3. define rendering params with the `trace_params` structure
-// 4. initialize buffers of pixel data with `make_trace_pixels()`
-// 5. render blocks of samples with `trace_samples()`
-//
-// The code can also run in fully asynchronous mode to preview images in a
-// window.
-//
-// 1. build the ray-tracing acceleration structure with `make_bvh()`
-// 2. prepare lights for rendering `update_lights()`
-// 3. define rendering params with the `trace_params` structure
-// 4. initialize buffers of pixel data with `make_trace_pixels()`
-// 5. start the progressive renderer with `trace_async_start()`
-// 6. stop the progressive renderer with `trace_async_stop()`
+// 1. prepare the scene for tracing
+//    - build the ray-tracing acceleration structure with `update_bvh()`
+//     - prepare lights for rendering with `update_lights()`
+// 2. create the inmage buffer and random number generators `make_rng_seq()`
+// 3. render blocks of samples with `trace_samples()`
+// 4. you can also start an asynchronous renderer with `trace_asynch_start()`
 //
 //
 
@@ -92,72 +83,24 @@ enum struct trace_type {
     debug_frontfacing
 };
 
-// Rendering params.
-struct trace_params {
-    int resolution = 512;                       // image vertical resolution
-    int nsamples = 256;                         // number of samples
-    trace_type tracer = trace_type::pathtrace;  // trace type
-    bool notransmission = false;    // whether to test transmission in shadows
-    bool double_sided = false;      // force double sided rendering
-    vec3f ambient = {0, 0, 0};      // ambient lighting
-    bool envmap_invisible = false;  // view environment map
-    int min_depth = 3;              // minimum ray depth
-    int max_depth = 8;              // maximum ray depth
-    float pixel_clamp = 100;        // final pixel clamping
-    float ray_eps = 1e-4f;          // ray intersection epsilon
-    bool noparallel = false;        // parallel execution
-    int seed = 0;                   // seed for the random number generators
-    int preview_resolution = 64;    // preview resolution for async rendering
-    int batch_size = 16;            // sample batch size
-};
-
-// #codegen end refl-trace
-
-// Trace pixel state. Handles image accumulation and random number generation
-// for uniform and stratified sequences. The members are not part of the
-// the public API.
-struct trace_pixel {
-    // Accumulated radiance and coverage
-    vec4f acc = zero4f;
-    // Random number state
-    rng_state rng = rng_state();
-    // Pixel coordinates
-    int i = 0, j = 0;
-    // Number of samples computed
-    int sample = 0;
-};
-
-// Initialize trace pixels.
-std::vector<trace_pixel> make_trace_pixels(
-    int width, int height, const trace_params& params);
-// Trace the next `nsamples` samples.
+// Trace the next nsamples samples. Assumes that the
+// image contains cur_samples already. Returns true when done.
 void trace_samples(const scene* scn, const camera* cam, int width, int height,
-    std::vector<vec4f>& img, std::vector<trace_pixel>& pixels, int nsamples,
-    const trace_params& params);
-
-// Trace the next `nsamples` samples with image filtering.
-void trace_samples_filtered(const scene* scn, const camera* cam, int width,
-    int height, std::vector<vec4f>& img, std::vector<trace_pixel>& pixels,
-    int nsamples, const trace_params& params);
-
-// Trace the whole image.
-inline void trace_image(const scene* scn, const camera* cam, int width,
-    int height, std::vector<vec4f>& img, std::vector<trace_pixel>& pixels,
-    const trace_params& params, const std::function<void(int)>& callback) {
-    for (auto& p : img) p = zero4f;
-    for (auto cur_sample = 0; cur_sample < params.nsamples;
-         cur_sample += params.batch_size) {
-        if (callback) callback(cur_sample);
-        trace_samples(scn, cam, width, height, img, pixels,
-            std::min(params.batch_size, params.nsamples - cur_sample), params);
-    }
-}
+    std::vector<vec4f>& img, std::vector<rng_state>& rngs, int cur_samples,
+    int nsamples, trace_type tracer, int nbounces, float pixel_clamp = 100, bool noenvmap = false);
+// Like before but with multiplthreading.
+void trace_samples_mt(const scene* scn, const camera* cam, int width,
+    int height, std::vector<vec4f>& img, std::vector<rng_state>& rngs,
+    int cur_samples, int nsamples, trace_type tracer, int nbounces,
+    float pixel_clamp = 100, bool noenvmap = false);
 
 // Starts an anyncrhounous renderer.
 void trace_async_start(const scene* scn, const camera* cam, int width,
-    int height, std::vector<vec4f>& img, std::vector<trace_pixel>& pixels,
+    int height, std::vector<vec4f>& img, std::vector<rng_state>& rngs,
+    int nsamples, trace_type tracer, int nbounces,
     std::vector<std::thread>& threads, bool& stop_flag,
-    const trace_params& params, const std::function<void(int, int)>& callback);
+    float pixel_clamp = 100, bool noenvmap = false, 
+    const std::function<void(int, int)>& callback = {});
 // Stop the asynchronous renderer.
 void trace_async_stop(std::vector<std::thread>& threads, bool& stop_flag);
 

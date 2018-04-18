@@ -40,11 +40,21 @@ struct app_state {
     std::string filename;
     std::string imfilename;
     std::string outfilename;
-    ygl::glsurface_params params = {};
+
+    int resolution = 512;                  // image resolution
+    bool wireframe = false;                // wireframe drawing
+    bool edges = false;                    // draw edges
+    float edge_offset = 0.01f;             // offset for edges
+    bool cutout = false;                   // draw with binary transparency
+    bool eyelight = false;                 // camera light mode
+    float exposure = 0;                    // exposure
+    float gamma = 2.2f;                    // gamma
+    ygl::vec4f background = {0, 0, 0, 0};  // background color
+    ygl::vec3f ambient = {0, 0, 0};        // ambient lighting
+    bool cull_backface = false;            // culling back face
+
     ygl::glsurface_program prog;
-    std::unordered_map<ygl::texture*, ygl::gltexture> textures;
-    std::unordered_map<ygl::shape*, ygl::glshape> shapes;
-    ygl::gllights lights;
+
     bool navigation_fps = false;
     ygl::scene_selection selection = {};
     std::vector<ygl::scene_selection> update_list;
@@ -62,20 +72,34 @@ struct app_state {
     }
 };
 
+namespace ygl {
+bool draw_imgui_stdsurface_inspector(glwindow* win, app_state* app) {
+    auto edited = 0;
+    edited += draw_imgui_dragbox(win, "resolution", app->resolution, 256, 4096);
+    edited += draw_imgui_checkbox(win, "wireframe", app->wireframe);
+    edited += draw_imgui_checkbox(win, "edges", app->edges);
+    edited += draw_imgui_checkbox(win, "cutout", app->cutout);
+    edited += draw_imgui_checkbox(win, "eyelight", app->eyelight);
+    edited += draw_imgui_dragbox(win, "exposure", app->exposure, -10, 10);
+    edited += draw_imgui_dragbox(win, "gamma", app->gamma, 0.1f, 4);
+    edited += draw_imgui_colorbox(win, "background", app->background);
+    edited += draw_imgui_checkbox(win, "cull_backface", app->cull_backface);
+    return edited;
+}
+}  // namespace ygl
+
 // draw with shading
 inline void draw(ygl::glwindow* win, app_state* app) {
     auto framebuffer_size = get_glframebuffer_size(win);
-    app->params.resolution = framebuffer_size.y;
+    app->resolution = framebuffer_size.y;
 
     static auto last_time = 0.0f;
     for (auto& sel : app->update_list) {
         if (sel.as<ygl::texture>()) {
-            ygl::update_gltexture(
-                sel.as<ygl::texture>(), app->textures[sel.as<ygl::texture>()]);
+            ygl::update_gldata(sel.as<ygl::texture>());
         }
         if (sel.as<ygl::shape>()) {
-            ygl::update_glshape(
-                sel.as<ygl::shape>(), app->shapes[sel.as<ygl::shape>()]);
+            ygl::update_gldata(sel.as<ygl::shape>());
         }
         if (sel.as<ygl::node>() || sel.as<ygl::animation>() ||
             app->time != last_time) {
@@ -84,18 +108,19 @@ inline void draw(ygl::glwindow* win, app_state* app) {
         }
         if (sel.as<ygl::shape>() || sel.as<ygl::material>() ||
             sel.as<ygl::node>()) {
-            app->lights = ygl::make_gllights(app->scn);
-            if (app->lights.pos.empty()) app->params.eyelight = true;
+            ygl::update_lights(app->scn);
+            if (app->scn->lights.empty()) app->eyelight = true;
         }
     }
     app->update_list.clear();
 
-    ygl::clear_glbuffers(app->params.background);
+    ygl::clear_glbuffers(app->background);
     ygl::enable_gldepth_test(true);
-    ygl::enable_glculling(app->params.cull_backface);
-    ygl::draw_glsurface_scene(app->scn, app->cam, app->prog, app->shapes,
-        app->textures, app->lights, framebuffer_size, app->selection.ptr,
-        app->params);
+    ygl::enable_glculling(app->cull_backface);
+    ygl::draw_glscene(app->scn, app->cam, app->prog, 
+        framebuffer_size, app->selection.ptr,
+        app->eyelight, app->wireframe, app->edges, app->cutout, app->exposure,
+        app->gamma, app->cull_backface);
 
     if (app->no_widgets) {
         ygl::swap_glwindow_buffers(win);
@@ -108,20 +133,16 @@ inline void draw(ygl::glwindow* win, app_state* app) {
             ygl::draw_imgui_text(win, "scene", app->filename);
             if (ygl::draw_imgui_button(win, "new")) {
                 delete app->scn;
-                ygl::clear_gltextures(app->textures);
-                ygl::clear_glshapes(app->shapes);
+                ygl::clear_gldata(app->scn);
                 app->scn = new ygl::scene();
-                app->textures = ygl::make_gltextures(app->scn);
-                app->shapes = ygl::make_glshapes(app->scn);
+                ygl::update_gldata(app->scn);
             }
             ygl::continue_imgui_line(win);
             if (ygl::draw_imgui_button(win, "load")) {
+                ygl::clear_gldata(app->scn);
                 delete app->scn;
                 app->scn = ygl::load_scene(app->filename, {});
-                ygl::clear_gltextures(app->textures);
-                ygl::clear_glshapes(app->shapes);
-                app->textures = ygl::make_gltextures(app->scn);
-                app->shapes = ygl::make_glshapes(app->scn);
+                ygl::update_gldata(app->scn);
             }
             ygl::continue_imgui_line(win);
             if (ygl::draw_imgui_button(win, "save")) {
@@ -142,7 +163,7 @@ inline void draw(ygl::glwindow* win, app_state* app) {
             ygl::pop_imgui_groupid(win);
         }
         if (ygl::draw_imgui_header(win, "params")) {
-            ygl::draw_imgui_stdsurface_inspector(win, "", app->params);
+            ygl::draw_imgui_stdsurface_inspector(win, app);
         }
         if (ygl::draw_imgui_header(win, "scene")) {
             ygl::draw_imgui_scene_tree(win, "", app->scn, app->selection,
@@ -156,22 +177,24 @@ inline void draw(ygl::glwindow* win, app_state* app) {
     ygl::swap_glwindow_buffers(win);
 }
 
+inline void refresh(ygl::glwindow* win) {
+    return draw(win, (app_state*)ygl::get_glwindow_user_pointer(win));
+}
+
 // run ui loop
 void run_ui(app_state* app) {
     // window
     auto win = ygl::make_glwindow(
-        (int)std::round(app->cam->aspect * app->params.resolution),
-        app->params.resolution, "yview | " + app->filename);
-    ygl::set_glwindow_callbacks(
-        win, nullptr, nullptr, [win, app]() { draw(win, app); });
+        (int)std::round(app->cam->aspect * app->resolution),
+        app->resolution, "yview | " + app->filename, app);
+    ygl::set_glwindow_callbacks(win, nullptr, nullptr, refresh);
 
     // load textures and vbos
     app->prog = ygl::make_glsurface_program();
-    app->textures = ygl::make_gltextures(app->scn);
-    app->shapes = ygl::make_glshapes(app->scn);
+    ygl::update_gldata(app->scn);
     ygl::update_transforms(app->scn, app->time);
-    app->lights = ygl::make_gllights(app->scn);
-    if (app->lights.pos.empty()) app->params.eyelight = true;
+    ygl::update_lights(app->scn);
+    if (app->scn->lights.empty()) app->eyelight = true;
 
     // init widget
     ygl::init_imgui(win);
@@ -256,6 +279,10 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser =
         ygl::make_parser(argc, argv, "yview", "views scenes inteactively");
+    app->eyelight = ygl::parse_flag(
+        parser, "--eyelight", "-c", "Eyelight rendering.", false);
+    auto double_sided = ygl::parse_flag(
+        parser, "--double-sided", "-D", "Force double sided rendering.", false);
     app->quiet =
         ygl::parse_flag(parser, "--quiet", "-q", "Print only errors messages");
     app->screenshot_and_exit = ygl::parse_flag(
@@ -273,7 +300,7 @@ int main(int argc, char* argv[]) {
     }
 
     // setup logger
-    if (app->quiet) ygl::get_default_logger()->verbose = false;
+    if (app->quiet) ygl::log_verbose() = false;
 
     // fix hilights
     if (!highlight_filename.empty()) {
@@ -295,11 +322,15 @@ int main(int argc, char* argv[]) {
     // tesselate input shapes
     ygl::tesselate_shapes(app->scn, true, false, false, false);
 
-    // add missing data
+    // fix scene
+    ygl::update_bbox(app->scn);
     ygl::add_missing_camera(app->scn);
     ygl::add_missing_names(app->scn);
     ygl::add_missing_tangent_space(app->scn);
     app->cam = app->scn->cameras[0];
+    if (double_sided) {
+        for (auto mat : app->scn->materials) mat->double_sided = true;
+    }
 
     // validate
     for (auto err : ygl::validate(app->scn)) ygl::log_warning(err);
@@ -309,7 +340,8 @@ int main(int argc, char* argv[]) {
     app->time = app->time_range.x;
 
     // lights
-    app->lights = ygl::make_gllights(app->scn);
+    ygl::update_bbox(app->scn);
+    ygl::update_lights(app->scn);
 
     // run ui
     run_ui(app);
