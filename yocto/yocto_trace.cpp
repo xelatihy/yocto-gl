@@ -29,6 +29,7 @@
 #include "yocto_trace.h"
 #include "yocto_bvh.h"
 #include "yocto_utils.h"
+#include "yocto_image.h"
 
 #include <cassert>
 

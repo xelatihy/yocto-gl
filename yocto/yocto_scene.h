@@ -82,7 +82,6 @@
 #define YGL_GLTF 1
 #endif
 
-#include "yocto_image.h"
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------

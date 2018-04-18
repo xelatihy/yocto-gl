@@ -29,6 +29,7 @@
 #include <thread>
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_utils.h"
+#include "../yocto/yocto_image.h"
 using namespace std::literals;
 
 void mkdir(const std::string& dir) {

@@ -29,6 +29,7 @@
 #include "../yocto/yocto_bvh.h"
 #include "../yocto/yocto_trace.h"
 #include "../yocto/yocto_utils.h"
+#include "../yocto/yocto_image.h"
 using namespace std::literals;
 
 #include <map>
