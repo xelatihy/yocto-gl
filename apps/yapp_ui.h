@@ -33,7 +33,24 @@
 #include "../yocto/yocto_glutils.h"
 #include "../yocto/yocto_scene.h"
 
+#include <unordered_map>
+
 namespace ygl {
+
+// Scene selection.
+struct scene_selection {
+    scene_selection() : ptr(nullptr), tinfo(nullptr) {}
+    template <typename T>
+    scene_selection(T* val) : ptr(val), tinfo(&typeid(T)) {}
+
+    template <typename T>
+    T* as() {
+        return (&typeid(T) == tinfo) ? (T*)ptr : nullptr;
+    }
+
+    void* ptr = nullptr;                    // selected pointer
+    const std::type_info* tinfo = nullptr;  // type info
+};
 
 // Vertex buffers for scene drawing. Members are not part of the public API.
 struct glshape {

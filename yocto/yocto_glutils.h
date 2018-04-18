@@ -77,10 +77,10 @@
 // COMPILATION OPTIONS AND INCLUDES
 // -----------------------------------------------------------------------------
 
-#include "yocto_bvh.h"
 #include "yocto_image.h"
 #include "yocto_math.h"
-// #include "yocto_utils.h"
+
+#include <map>
 
 // -----------------------------------------------------------------------------
 // OPENGL OBJECTS AND FUNCTIONS

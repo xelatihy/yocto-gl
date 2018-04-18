@@ -993,13 +993,11 @@ intersection_point overlap_bvh(
                     for (auto idx2 = node2.start; idx2 < node2.start + node2.count;
                          idx2++) {
                         node_stack[node_cur++] = {node_idx.x, (int)idx2};
-                        assert(node_cur < 128);
                     }
                 } else if (node2.isleaf) {
                     for (auto idx1 = node1.start; idx1 < node1.start + node1.count;
                          idx1++) {
                         node_stack[node_cur++] = {(int)idx1, node_idx.y};
-                        assert(node_cur < 128);
                     }
                 } else {
                     for (auto idx2 = node2.start; idx2 < node2.start + node2.count;
@@ -1007,7 +1005,6 @@ intersection_point overlap_bvh(
                         for (auto idx1 = node1.start;
                              idx1 < node1.start + node1.count; idx1++) {
                             node_stack[node_cur++] = {(int)idx1, (int)idx2};
-                            assert(node_cur < 128);
                         }
                     }
                 }

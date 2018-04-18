@@ -78,6 +78,8 @@
 
 #include "yocto_math.h"
 
+#include <unordered_map>
+
 // -----------------------------------------------------------------------------
 // WAVEFRONT OBJ SUPPORT
 // -----------------------------------------------------------------------------
@@ -146,16 +148,6 @@ inline bool operator==(const obj_texture_info& a, const obj_texture_info& b) {
     if (a.path != b.path) return false;
     return a.clamp == b.clamp && a.scale == b.scale && a.props == b.props;
 }
-
-// Obj texture data.
-struct obj_texture {
-    std::string path;            // file path
-    int width = 0;               // width
-    int height = 0;              // height
-    int ncomp = 0;               // number of components [1-4]
-    std::vector<uint8_t> datab;  // data for LDRs
-    std::vector<float> dataf;    // data for HDRs
-};
 
 // Obj material.
 struct obj_material {
@@ -231,7 +223,6 @@ struct obj_scene {
 
     std::vector<obj_object*> objects;            // objects
     std::vector<obj_material*> materials;        // materials
-    std::vector<obj_texture*> textures;          // textures
     std::vector<obj_camera*> cameras;            // cameras [extension]
     std::vector<obj_environment*> environments;  // environments [extension]
     std::vector<obj_node*> nodes;                // nodes [extension]
@@ -240,7 +231,6 @@ struct obj_scene {
     ~obj_scene() {
         for (auto v : objects) delete v;
         for (auto v : materials) delete v;
-        for (auto v : textures) delete v;
         for (auto v : cameras) delete v;
         for (auto v : environments) delete v;
         for (auto v : nodes) delete v;
@@ -253,7 +243,6 @@ struct obj_scene {
 // `skip_missing` is false. Texture coordinates and material Tr are flipped
 // if `flip_texcoord` and `flip_tp` are respectively true.
 obj_scene* load_obj(const std::string& filename, bool split_shapes,
-    bool load_textures = false, bool skip_missing = false,
     bool flip_texcoord = true, bool flip_tr = true);
 
 // Save an OBJ to file `filename`. Save textures if `save_textures` is true,
@@ -261,7 +250,6 @@ obj_scene* load_obj(const std::string& filename, bool split_shapes,
 // Texture coordinates and material Tr are flipped if `flip_texcoord` and
 // `flip_tp` are respectively true.
 void save_obj(const std::string& filename, const obj_scene* model,
-    bool save_textures = false, bool skip_missing = false,
     bool flip_texcoord = true, bool flip_tr = true);
 
 }  // namespace ygl

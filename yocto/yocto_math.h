@@ -100,22 +100,13 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <algorithm>
-#include <cassert>
 #include <cctype>
 #include <cfloat>
 #include <cmath>
 #include <cstdint>
-#include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <map>
 #include <string>
-#include <thread>
-#include <tuple>
-#include <typeinfo>
-#include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 // -----------------------------------------------------------------------------

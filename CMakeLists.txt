@@ -65,7 +65,7 @@ if(YOCTO_OPENGL)
     endif(UNIX AND NOT APPLE)
     set(YOCTO_FILES 
         ${YOCTO_FILES}
-        yocto/yocto_glu.h yocto/yocto_glu.cpp        
+        yocto/yocto_glutils.h yocto/yocto_glutils.cpp        
         yocto/ext/imgui/imgui.cpp yocto/ext/imgui/imgui_draw.cpp yocto/ext/imgui/imgui_impl_glfw_gl3.cpp yocto/ext/imgui/imgui_extra_fonts.cpp    )
 endif(YOCTO_OPENGL)
 

@@ -35,6 +35,7 @@
 #include "../../yocto/yocto_scene.h"
 #include "../../yocto/yocto_trace.h"
 #include "../../yocto/yocto_utils.h"
+#include "../../yocto/yocto_shape.h"
 #include "ext/json.hpp"
 
 using namespace ygl;
@@ -809,10 +810,7 @@ int main(int argc, char** argv) {
 
     // save scene
     system(("mkdir -p " + path_dirname(outfilename)).c_str());
-    auto opts = save_options();
-    opts.save_textures = false;
-    opts.gltf_separate_buffers = true;
-    save_scene(outfilename, scn, opts);
+    save_scene(outfilename, scn, false, true, true);
 
     return 0;
 }

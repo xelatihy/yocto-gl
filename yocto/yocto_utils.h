@@ -71,10 +71,13 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
+#include "yocto_math.h"
+
 #include <cstdint>
 #include <cstdio>
 #include <string>
 #include <vector>
+#include <map>
 
 // -----------------------------------------------------------------------------
 // STRING, PATH AND FILE UTILITIES
