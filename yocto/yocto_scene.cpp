@@ -195,22 +195,21 @@ vec2f eval_uv(const environment* env, const vec3f& w, bool transformed) {
 vec4f eval_texture(const texture_info& info, const vec2f& texcoord, bool srgb,
     const vec4f& def) {
     auto txt = info.txt;
-    if (!txt || (txt->hdr.pixels.empty() && txt->ldr.pixels.empty()))
-        return def;
+    if (!txt || (txt->hdr.empty() && txt->ldr.empty())) return def;
 
     auto lookup = [&def, &txt, &srgb](int i, int j) {
-        if (!txt->ldr.pixels.empty())
-            return (srgb) ? srgb_to_linear(txt->ldr.at(i, j)) :
-                            byte_to_float(txt->ldr.at(i, j));
-        else if (!txt->hdr.pixels.empty())
-            return txt->hdr.at(i, j);
+        auto idx = i + j * txt->width;
+        if (!txt->ldr.empty())
+            return (srgb) ? srgb_to_linear(txt->ldr[idx]) :
+                            byte_to_float(txt->ldr[idx]);
+        else if (!txt->hdr.empty())
+            return txt->hdr[idx];
         else
             return def;
     };
 
     // get image width/height
-    auto w = (!txt->ldr.pixels.empty()) ? txt->ldr.width : txt->hdr.width,
-         h = (!txt->ldr.pixels.empty()) ? txt->ldr.height : txt->hdr.height;
+    auto w = txt->width, h = txt->height;
 
     // get coordinates normalized for tiling
     auto s = 0.0f, t = 0.0f;
@@ -565,7 +564,7 @@ std::vector<std::string> validate(
     };
     auto check_empty_textures = [&errs](const std::vector<texture*>& vals) {
         for (auto val : vals) {
-            if (val->ldr.pixels.empty() && val->hdr.pixels.empty())
+            if (val->ldr.empty() && val->hdr.empty())
                 errs.push_back("empty texture " + val->name);
         }
     };
@@ -765,8 +764,8 @@ void print_stats(const scene* scn) {
                    vert_tangsp * sizeof(vec4f) + vert_radius * sizeof(float);
 
     for (auto txt : scn->textures) {
-        texel_ldrs = txt->ldr.width * txt->ldr.height;
-        texel_hdrs = txt->hdr.width * txt->hdr.height;
+        texel_ldrs = (txt->ldr.empty()) ? 0 : (txt->width * txt->height);
+        texel_hdrs = (txt->hdr.empty()) ? 0 : (txt->width * txt->height);
     }
     memory_ldrs = texel_ldrs * sizeof(vec4b);
     memory_hdrs = texel_hdrs * sizeof(vec4f);
@@ -2340,7 +2339,9 @@ void load_textures(const std::string& filename, scene* scn, bool skip_missing) {
         // TODO: handle glTF buffer textures
         if (txt->path == "[glTF inline]") {
             log_warning("cannot handle glTF inline images");
-            txt->ldr = make_image4b(1, 1, vec4b{255, 255, 255, 255});
+            txt->width = 1;
+            txt->height = 1;
+            txt->ldr = {vec4b{255, 255, 255, 255}};
             continue;
         }
         auto filename = dirname + txt->path;
@@ -2348,12 +2349,12 @@ void load_textures(const std::string& filename, scene* scn, bool skip_missing) {
             if (c == '\\') c = '/';
 #if YGL_IMAGEIO
         if (is_hdr_filename(filename)) {
-            txt->hdr = load_image4f(filename);
+            txt->hdr = load_image4f(filename, txt->width, txt->height);
         } else {
-            txt->ldr = load_image4b(filename);
+            txt->ldr = load_image4b(filename, txt->width, txt->height);
         }
 #endif
-        if (txt->hdr.pixels.empty() && txt->ldr.pixels.empty()) {
+        if (txt->hdr.empty() && txt->ldr.empty()) {
             if (skip_missing) continue;
             throw std::runtime_error("cannot laod image " + filename);
         }
@@ -2363,14 +2364,18 @@ void save_textures(
     const std::string& filename, const scene* scn, bool skip_missing) {
     auto dirname = path_dirname(filename);
     for (auto txt : scn->textures) {
-        if (txt->ldr.pixels.empty() && txt->hdr.pixels.empty()) continue;
+        if (txt->ldr.empty() && txt->hdr.empty()) continue;
         auto filename = dirname + txt->path;
         for (auto& c : filename)
             if (c == '\\') c = '/';
         auto ok = false;
 #if YGL_IMAGEIO
-        if (!txt->ldr.pixels.empty()) { ok = save_image4b(filename, txt->ldr); }
-        if (!txt->hdr.pixels.empty()) { ok = save_image4f(filename, txt->hdr); }
+        if (!txt->ldr.empty()) {
+            ok = save_image4b(filename, txt->width, txt->height, txt->ldr);
+        }
+        if (!txt->hdr.empty()) {
+            ok = save_image4f(filename, txt->width, txt->height, txt->hdr);
+        }
 #endif
         if (!ok) {
             if (skip_missing) continue;
@@ -2468,10 +2473,13 @@ material* make_material(
 }
 
 texture* make_texture(const std::string& name, const std::string& path,
-    const image4b& ldr, const image4f& hdr) {
+    int width, int height, const std::vector<vec4b>& ldr,
+    const std::vector<vec4f>& hdr) {
     auto txt = new texture();
     txt->name = name;
     txt->path = path;
+    txt->width = width;
+    txt->height = height;
     txt->ldr = ldr;
     txt->hdr = hdr;
     return txt;
@@ -2500,82 +2508,60 @@ texture* make_proc_texture(const std::string& name, const std::string& type,
 
     txt->name = name;
     txt->path = "";
+    txt->width = res;
+    txt->height = res;
 
     if (type == "") {
     } else if (type == "grid") {
         auto ts = (int)(res / scale + 0.5f);
-        txt->ldr = make_grid_image(res, res, ts);
+        txt->ldr = make_grid_image(txt->width, txt->height, ts);
     } else if (type == "checker") {
         auto ts = (int)(res / scale + 0.5f);
-        txt->ldr = make_checker_image(res, res, ts);
+        txt->ldr = make_checker_image(txt->width, txt->height, ts);
     } else if (type == "colored") {
         auto ts = (int)(res / scale + 0.5f);
-        txt->ldr = make_uvgrid_image(res, res, ts);
+        txt->ldr = make_uvgrid_image(txt->width, txt->height, ts);
     } else if (type == "rcolored") {
         auto ts = (int)(res / scale + 0.5f);
-        txt->ldr = make_recuvgrid_image(res, res, ts);
+        txt->ldr = make_recuvgrid_image(txt->width, txt->height, ts);
     } else if (type == "bump") {
         auto ts = (int)(res / (2 * scale) + 0.5f);
-        txt->ldr = make_bumpdimple_image(res, res, ts);
+        txt->ldr = make_bumpdimple_image(txt->width, txt->height, ts);
     } else if (type == "uv") {
-        txt->ldr = make_uv_image(res, res);
+        txt->ldr = make_uv_image(txt->width, txt->height);
     } else if (type == "gamma") {
-        txt->ldr = make_gammaramp_image(res, res);
+        txt->ldr = make_gammaramp_image(txt->width, txt->height);
     } else if (type == "noise") {
-        txt->ldr = make_noise_image(res, res, scale);
+        txt->ldr = make_noise_image(txt->width, txt->height, scale);
     } else if (type == "ridge") {
-        txt->ldr = make_ridge_image(res, res, scale);
+        txt->ldr = make_ridge_image(txt->width, txt->height, scale);
     } else if (type == "fbm") {
-        txt->ldr = make_fbm_image(res, res, scale);
+        txt->ldr = make_fbm_image(txt->width, txt->height, scale);
     } else if (type == "turbulence") {
-        txt->ldr = make_turbulence_image(res, res, scale);
+        txt->ldr = make_turbulence_image(txt->width, txt->height, scale);
     } else if (type == "grid_norm") {
         auto ts = (int)(res / scale + 0.5f);
-        txt->ldr = make_grid_image(res, res, ts);
-        txt->ldr = bump_to_normal_map(txt->ldr, bump_scale);
+        txt->ldr = make_grid_image(txt->width, txt->height, ts);
+        txt->ldr =
+            bump_to_normal_map(txt->width, txt->height, txt->ldr, bump_scale);
     } else if (type == "bump_norm") {
         auto ts = (int)(res / (2 * scale) + 0.5f);
-        txt->ldr = make_bumpdimple_image(res, res, ts);
-        txt->ldr = bump_to_normal_map(txt->ldr, bump_scale);
+        txt->ldr = make_bumpdimple_image(txt->width, txt->height, ts);
+        txt->ldr =
+            bump_to_normal_map(txt->width, txt->height, txt->ldr, bump_scale);
     } else if (type == "gammaf") {
-        txt->hdr = make_gammaramp_imagef(res, res);
+        txt->hdr = make_gammaramp_imagef(txt->width, txt->height);
     } else if (type == "sky") {
-        txt->hdr = make_sunsky_image(res, sky_sunangle);
+        txt->width *= 2;
+        txt->hdr = make_sunsky_image(txt->width, txt->height, sky_sunangle);
     } else {
         throw std::runtime_error("unknown texture type " + type);
     }
 
-    if (!txt->ldr.pixels.empty()) txt->path = name + ".png";
-    if (!txt->hdr.pixels.empty()) txt->path = name + ".hdr";
+    if (!txt->ldr.empty()) txt->path = name + ".png";
+    if (!txt->hdr.empty()) txt->path = name + ".hdr";
 
     return txt;
-}
-
-std::map<std::string, texture*>& texture_presets() {
-    static auto presets = std::map<std::string, texture*>();
-    if (!presets.empty()) return presets;
-
-    auto res = 512;
-
-    presets["grid"] = make_proc_texture("grid", "grid", res);
-    presets["checker"] = make_proc_texture("checker", "checker", res);
-    presets["colored"] = make_proc_texture("colored", "colored", res);
-    presets["rcolored"] = make_proc_texture("rcolored", "rcolored", res);
-    presets["bump"] = make_proc_texture("bump", "bump", res);
-    presets["uv"] = make_proc_texture("uv", "uv", res);
-    presets["gamma"] = make_proc_texture("gamma", "gamma", res);
-    presets["grid_norm"] = make_proc_texture("grid_norm", "grid_norm");
-    presets["bump_norm"] = make_proc_texture("bump_norm", "bump_norm");
-    presets["noise"] = make_proc_texture("noise", "noise", res);
-    presets["ridge"] = make_proc_texture("ridge", "ridge", res);
-    presets["fbm"] = make_proc_texture("fbm", "fbm", res);
-    presets["turbulence"] = make_proc_texture("turbulence", "turbulence", res);
-
-    presets["gammaf"] = make_proc_texture("gammaf", "gammaf", res);
-    presets["sky1"] = make_proc_texture("sky1", "sky", res, 0, pi / 4);
-    presets["sky2"] = make_proc_texture("sky2", "sky", res, 0, pi / 2);
-
-    return presets;
 }
 
 // Makes/updates a test material

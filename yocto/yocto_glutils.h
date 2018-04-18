@@ -150,15 +150,15 @@ inline void update_gltexture(gltexture& txt, int w, int h, int nc,
 }
 
 // Updates a texture with pixels values from an image.
-inline void update_gltexture(gltexture& txt, const image4f& img, bool linear,
-    bool mipmap, bool as_float) {
-    update_gltexture(txt, img.width, img.height, 4, (float*)img.pixels.data(),
-        linear, mipmap, as_float);
+inline void update_gltexture(gltexture& txt, int width, int height,
+    const std::vector<vec4b>& pixels, bool linear, bool mipmap, bool as_srgb) {
+    update_gltexture(txt, width, height, 4, (unsigned char*)pixels.data(),
+        linear, mipmap, as_srgb);
 }
-inline void update_gltexture(gltexture& txt, const image4b& img, bool linear,
-    bool mipmap, bool as_srgb) {
-    update_gltexture(txt, img.width, img.height, 4,
-        (unsigned char*)img.pixels.data(), linear, mipmap, as_srgb);
+inline void update_gltexture(gltexture& txt, int width, int height,
+    const std::vector<vec4f>& pixels, bool linear, bool mipmap, bool as_float) {
+    update_gltexture(
+        txt, width, height, 4, (float*)pixels.data(), linear, mipmap, as_float);
 }
 
 // Binds/unbinds a texture to a texture unit.
@@ -375,8 +375,8 @@ glimage_program make_glimage_program();
 
 // Draws an image texture the stdimage program.
 void draw_glimage(const glimage_program& prog, const gltexture& txt,
-    const vec2i& win_size, const vec2f& offset, float zoom,
-    float exposure = 0, float gamma = 1);
+    const vec2i& win_size, const vec2f& offset, float zoom, float exposure = 0,
+    float gamma = 1);
 
 // Computes the image uv coordinates corresponding to the view parameters.
 inline vec2i get_glimage_coords(
@@ -534,8 +534,8 @@ bool get_glctrl_key(glwindow* win);
 bool get_glshift_key(glwindow* win);
 
 // Read pixels.
-image4b take_glscreenshot4b(
-    glwindow* win, bool flipy = true, bool back = false);
+void take_glscreenshot4b(
+    glwindow* win, int& width, int& height, std::vector<vec4b>& img, bool flipy = true, bool back = false);
 
 }  // namespace ygl
 

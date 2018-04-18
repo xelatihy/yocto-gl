@@ -107,10 +107,12 @@ struct camera {
 
 // Texture containing either an LDR or HDR image.
 struct texture {
-    std::string name = "";  // name
-    std::string path = "";  // file path
-    image4b ldr = {};       // ldr image
-    image4f hdr = {};       // hdr image
+    std::string name = "";        // name
+    std::string path = "";        // file path
+    int width = 0;                // width
+    int height = 0;               // height
+    std::vector<vec4b> ldr = {};  // ldr image
+    std::vector<vec4f> hdr = {};  // hdr image
 };
 
 // Texture information to use for lookup.
@@ -425,7 +427,8 @@ namespace ygl {
 camera* make_camera(const std::string& name, const vec3f& from, const vec3f& to,
     float yfov, float aspect);
 texture* make_texture(const std::string& name, const std::string& path = "",
-    const image4b& ldr = {}, const image4f& hdr = {});
+int width = 0, int height = 0,
+    const std::vector<vec4b>& ldr = {}, const std::vector<vec4f>& hdr = {});
 material* make_material(const std::string& name,
     const vec3f& kd = {0.2, 0.2, 0.2}, const vec3f& ks = {0, 0, 0},
     float rs = 1);

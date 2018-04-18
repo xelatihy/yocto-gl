@@ -77,10 +77,12 @@ void save_test_scene(const ygl::scene* scn, const std::string& sname,
         ygl::log_info("saving scene {}", sname);
         if (sname == "textures") {
             for (auto txt : scn->textures) {
-                if (!txt->hdr.pixels.empty())
-                    ygl::save_image4f(dirname + txt->path, txt->hdr);
-                if (!txt->ldr.pixels.empty())
-                    ygl::save_image4b(dirname + txt->path, txt->ldr);
+                if (!txt->hdr.empty())
+                    ygl::save_image4f(
+                        dirname + txt->path, txt->width, txt->height, txt->hdr);
+                if (!txt->ldr.empty())
+                    ygl::save_image4b(
+                        dirname + txt->path, txt->width, txt->height, txt->ldr);
             }
         } else if (sname == "shapes") {
             for (auto shp : scn->shapes) {

@@ -43,8 +43,6 @@ struct app_state {
     ygl::bvh_tree* bvh = nullptr;
     std::string filename;
     std::string imfilename;
-    int resolution = 512;
-    ygl::image4f img;
     std::vector<ygl::trace_pixel> pixels;
     ygl::trace_lights lights;
     ygl::trace_params params;
@@ -53,6 +51,9 @@ struct app_state {
     bool update_texture = true;
     bool navigation_fps = false;
     bool rendering = false;
+
+    int width = 0, height = 512;
+    std::vector<ygl::vec4f> img;
 
     ygl::vec2f offset = {0, 0};
     float zoom = 1;
@@ -88,13 +89,11 @@ namespace ygl {
 
 bool draw_imgui_trace_inspector(
     glwindow* win, const std::string& lbl, trace_params& params) {
-
     auto edited = 0;
     edited +=
         draw_imgui_dragbox(win, "resolution", params.resolution, 256, 4096);
     edited += draw_imgui_dragbox(win, "nsamples", params.nsamples, 16, 4096);
-    edited +=
-        draw_imgui_combobox(win, "tracer", params.tracer, trace_names);
+    edited += draw_imgui_combobox(win, "tracer", params.tracer, trace_names);
     edited += draw_imgui_checkbox(win, "notransmission", params.notransmission);
     edited += draw_imgui_checkbox(win, "double_sided", params.double_sided);
     edited += draw_imgui_colorbox(win, "ambient", params.ambient);
@@ -106,7 +105,6 @@ bool draw_imgui_trace_inspector(
         draw_imgui_dragbox(win, "pixel_clamp", params.pixel_clamp, 10, 1000);
     edited +=
         draw_imgui_dragbox(win, "ray_eps", params.ray_eps, 0.0001f, 0.001f);
-    edited += draw_imgui_checkbox(win, "parallel", params.parallel);
     edited += draw_imgui_dragbox(win, "seed", (int&)params.seed, 0, 1000);
     edited +=
         draw_imgui_dragbox(win, "preview", params.preview_resolution, 64, 1080);
@@ -129,7 +127,7 @@ void draw(ygl::glwindow* win, app_state* app) {
             ygl::push_imgui_groupid(win, app);
             ygl::draw_imgui_label(win, "scene", app->filename);
             ygl::draw_imgui_label(win, "size",
-                ygl::format("{} x {}", app->img.width, app->img.height));
+                ygl::format("{} x {}", app->width, app->height));
             ygl::draw_imgui_label(
                 win, "sample", std::to_string(app->cur_sample));
             if (ygl::draw_imgui_camera_selector(
@@ -158,9 +156,9 @@ void draw(ygl::glwindow* win, app_state* app) {
             auto ij = ygl::get_glimage_coords(
                 get_glmouse_posf(win), app->offset, app->zoom);
             ygl::draw_imgui_dragbox(win, "mouse", ij);
-            if (ij.x >= 0 && ij.x < app->img.width && ij.y >= 0 &&
-                ij.y < app->img.height) {
-                ygl::draw_imgui_colorbox(win, "pixel", app->img.at(ij.x, ij.y));
+            if (ij.x >= 0 && ij.x < app->width && ij.y >= 0 &&
+                ij.y < app->height) {
+                ygl::draw_imgui_colorbox(win, "pixel", app->img[ij.x + ij.y * app->width]);
             } else {
                 auto zero4f_ = ygl::zero4f;
                 ygl::draw_imgui_colorbox(win, "pixel", zero4f_);
@@ -197,7 +195,7 @@ bool update(ygl::glwindow* win, app_state* app) {
         app->update_list.clear();
 
         ygl::trace_async_start(app->scn, app->cam, app->bvh, app->lights,
-            app->img, app->pixels, app->async_threads, app->async_stop,
+            app->width, app->height, app->img, app->pixels, app->async_threads, app->async_stop,
             app->params, [win, app](int s, int j) {
                 if (j % app->params.preview_resolution) return;
                 app->update_texture = true;
@@ -207,7 +205,7 @@ bool update(ygl::glwindow* win, app_state* app) {
             });
     }
     if (app->update_texture) {
-        ygl::update_gltexture(app->gl_txt, app->img, false, false, true);
+        ygl::update_gltexture(app->gl_txt, app->width, app->height, app->img, false, false, true);
         app->update_texture = false;
         return true;
     }
@@ -218,13 +216,13 @@ bool update(ygl::glwindow* win, app_state* app) {
 void run_ui(app_state* app) {
     // window
     auto win = ygl::make_glwindow(
-        app->img.width, app->img.height, "yitrace | " + app->filename);
+        app->width, app->height, "yitrace | " + app->filename);
     ygl::set_glwindow_callbacks(
         win, nullptr, nullptr, [win, app]() { draw(win, app); });
 
     // load textures
     app->gl_prog = ygl::make_glimage_program();
-    ygl::update_gltexture(app->gl_txt, app->img, false, false, true);
+    ygl::update_gltexture(app->gl_txt, app->width, app->height, app->img, false, false, true);
 
     // init widget
     ygl::init_imgui(win);
@@ -293,8 +291,6 @@ int main(int argc, char* argv[]) {
         "Final pixel clamping.", app->params.pixel_clamp);
     app->params.ray_eps = ygl::parse_opt(parser, "--ray-eps", "",
         "Ray intersection epsilon.", app->params.ray_eps);
-    app->params.parallel = ygl::parse_opt(
-        parser, "--parallel", "", "Parallel execution.", app->params.parallel);
     app->params.seed = ygl::parse_opt(parser, "--seed", "",
         "Seed for the random number generators.", app->params.seed);
     app->params.preview_resolution = ygl::parse_opt(parser,
@@ -350,10 +346,10 @@ int main(int argc, char* argv[]) {
     }
 
     // initialize rendering objects
-    app->img =
-        ygl::make_image4f((int)round(app->cam->aspect * app->params.resolution),
-            app->params.resolution);
-    app->pixels = ygl::make_trace_pixels(app->img, app->params);
+    app->width = (int)round(app->cam->aspect * app->params.resolution);
+    app->height = app->params.resolution;
+    app->img = std::vector<ygl::vec4f>(app->width * app->height);
+    app->pixels = ygl::make_trace_pixels(app->width, app->height, app->params);
     app->update_list.push_back(app->scn);
 
     // run interactive
