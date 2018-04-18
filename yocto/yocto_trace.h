@@ -105,7 +105,7 @@ struct trace_params {
     int max_depth = 8;              // maximum ray depth
     float pixel_clamp = 100;        // final pixel clamping
     float ray_eps = 1e-4f;          // ray intersection epsilon
-    bool parallel = true;           // parallel execution
+    bool noparallel = false;        // parallel execution
     int seed = 0;                   // seed for the random number generators
     int preview_resolution = 64;    // preview resolution for async rendering
     int batch_size = 16;            // sample batch size
@@ -142,50 +142,38 @@ struct trace_lights {
 };
 
 // Initialize trace pixels.
-std::vector<trace_pixel> make_trace_pixels(
-    const image4f& img, const trace_params& params);
+std::vector<trace_pixel> make_trace_pixels(int width, int height,
+    const trace_params& params);
 // Initialize trace lights.
 trace_lights make_trace_lights(const scene* scn);
 
 // Trace the next `nsamples` samples.
 void trace_samples(const scene* scn, const camera* cam, const bvh_tree* bvh,
-    const trace_lights& lights, image4f& img, std::vector<trace_pixel>& pixels,
-    int nsamples, const trace_params& params);
+    const trace_lights& lights, int width, int height, std::vector<vec4f>& img, 
+    std::vector<trace_pixel>& pixels, int nsamples, const trace_params& params);
 
 // Trace the next `nsamples` samples with image filtering.
 void trace_samples_filtered(const scene* scn, const camera* cam,
-    const bvh_tree* bvh, const trace_lights& lights, image4f& img,
+    const bvh_tree* bvh, const trace_lights& lights, int width, int height,std::vector<vec4f>& img,
     std::vector<trace_pixel>& pixels, int nsamples, const trace_params& params);
 
 // Trace the whole image.
 inline void trace_image(const scene* scn, const camera* cam,
-    const bvh_tree* bvh, const trace_lights& lights, image4f& img,
-    std::vector<trace_pixel>& pixels, const trace_params& params,
-    const std::function<void(int)>& callback) {
-    for (auto& p : img.pixels) p = zero4f;
+    const bvh_tree* bvh, const trace_lights& lights, int width, int height,
+    std::vector<vec4f>& img, std::vector<trace_pixel>& pixels, 
+    const trace_params& params, const std::function<void(int)>& callback) {
+    for (auto& p : img) p = zero4f;
     for (auto cur_sample = 0; cur_sample < params.nsamples;
          cur_sample += params.batch_size) {
         if (callback) callback(cur_sample);
-        trace_samples(scn, cam, bvh, lights, img, pixels,
+        trace_samples(scn, cam, bvh, lights, width, height, img, pixels,
             std::min(params.batch_size, params.nsamples - cur_sample), params);
     }
 }
 
-// Trace the whole image.
-inline image4f trace_image(const scene* scn, const camera* cam,
-    const bvh_tree* bvh, const trace_params& params,
-    const std::function<void(int)>& callback) {
-    auto img = make_image4f(
-        (int)std::round(cam->aspect * params.resolution), params.resolution);
-    auto pixels = make_trace_pixels(img, params);
-    auto lights = make_trace_lights(scn);
-    trace_image(scn, cam, bvh, lights, img, pixels, params, callback);
-    return img;
-}
-
 // Starts an anyncrhounous renderer.
 void trace_async_start(const scene* scn, const camera* cam, const bvh_tree* bvh,
-    const trace_lights& lights, image4f& img, std::vector<trace_pixel>& pixels,
+    const trace_lights& lights, int width, int height, std::vector<vec4f>& img, std::vector<trace_pixel>& pixels,
     std::vector<std::thread>& threads, bool& stop_flag,
     const trace_params& params, const std::function<void(int, int)>& callback);
 // Stop the asynchronous renderer.

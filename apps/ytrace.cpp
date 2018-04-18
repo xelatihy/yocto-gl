@@ -41,7 +41,6 @@ struct app_state {
     ygl::bvh_tree* bvh = nullptr;
     std::string filename;
     std::string imfilename;
-    ygl::image4f img;
     std::vector<ygl::trace_pixel> pixels;
     ygl::trace_params params;
     ygl::trace_lights lights;
@@ -49,6 +48,9 @@ struct app_state {
     float exposure = 0;
     bool save_batch = false;
     bool quiet = false;
+
+    int width = 0, height = 0;
+    std::vector<ygl::vec4f> img = {};
 
     ~app_state() {
         if (scn) delete scn;
@@ -58,7 +60,7 @@ struct app_state {
 };
 
 int main(int argc, char* argv[]) {
-    static auto tonemap_names = std::map<ygl::tonemap_type, std::string> {
+    static auto tonemap_names = std::map<ygl::tonemap_type, std::string>{
         {ygl::tonemap_type::linear, "linear"},
         {ygl::tonemap_type::gamma, "gamma"},
         {ygl::tonemap_type::srgb, "srgb"},
@@ -87,7 +89,7 @@ int main(int argc, char* argv[]) {
         "Image vertical resolution.", app->params.resolution);
     app->params.nsamples = ygl::parse_opt(
         parser, "--nsamples", "-s", "Number of samples.", app->params.nsamples);
-    app->params.tracer = ygl::parse_opt(parser, "--tracer", "-T", "Trace type.",
+    app->params.tracer = ygl::parse_opt(parser, "--tracer", "-t", "Trace type.",
         trace_names, app->params.tracer);
     app->params.notransmission = ygl::parse_opt(parser, "--notransmission", "",
         "Whether to test transmission in shadows.", app->params.notransmission);
@@ -105,8 +107,8 @@ int main(int argc, char* argv[]) {
         "Final pixel clamping.", app->params.pixel_clamp);
     app->params.ray_eps = ygl::parse_opt(parser, "--ray-eps", "",
         "Ray intersection epsilon.", app->params.ray_eps);
-    app->params.parallel = ygl::parse_opt(
-        parser, "--parallel", "", "Parallel execution.", app->params.parallel);
+    app->params.noparallel = ygl::parse_flag(
+        parser, "--noparallel", "", "Disable parallel execution.", app->params.noparallel);
     app->params.seed = ygl::parse_opt(parser, "--seed", "",
         "Seed for the random number generators.", app->params.seed);
     app->params.preview_resolution = ygl::parse_opt(parser,
@@ -117,9 +119,9 @@ int main(int argc, char* argv[]) {
     app->save_batch = ygl::parse_flag(
         parser, "--save-batch", "", "Save images progressively");
     app->exposure = ygl::parse_opt(
-        parser, "--exposure", "-t", "Hdr exposure", app->exposure);
-    app->tonemapper = ygl::parse_opt(
-        parser, "--tonemap", "-T", "Hdr tonemap", tonemap_names, app->tonemapper);
+        parser, "--exposure", "-e", "Hdr exposure", app->exposure);
+    app->tonemapper = ygl::parse_opt(parser, "--tonemap", "-T", "Hdr tonemap",
+        tonemap_names, app->tonemapper);
     app->quiet =
         ygl::parse_flag(parser, "--quiet", "-q", "Print only errors messages");
     app->imfilename = ygl::parse_opt(
@@ -168,14 +170,14 @@ int main(int argc, char* argv[]) {
     app->lights = make_trace_lights(app->scn);
 
     // initialize rendering objects
-    app->img =
-        ygl::make_image4f((int)round(app->cam->aspect * app->params.resolution),
-            app->params.resolution);
-    app->pixels = ygl::make_trace_pixels(app->img, app->params);
+    app->width = (int)round(app->cam->aspect * app->params.resolution);
+    app->height = app->params.resolution;
+    app->img = std::vector<ygl::vec4f>(app->width * app->height);
+    app->pixels = ygl::make_trace_pixels(app->width, app->height, app->params);
 
     // render
     ygl::log_info("starting renderer");
-    ygl::trace_image(app->scn, app->cam, app->bvh, app->lights, app->img,
+    ygl::trace_image(app->scn, app->cam, app->bvh, app->lights, app->width ,app->height, app->img,
         app->pixels, app->params, [app](int cur_sample) {
             if (app->save_batch && cur_sample) {
                 auto imfilename =
@@ -183,8 +185,7 @@ int main(int argc, char* argv[]) {
                         ygl::path_basename(app->imfilename), cur_sample,
                         ygl::path_extension(app->imfilename));
                 ygl::log_info("saving image {}", imfilename);
-                save_image(
-                    imfilename, app->img, app->tonemapper, app->exposure);
+                save_image(imfilename, app->width, app->height, app->img, app->tonemapper, app->exposure);
             }
             ygl::log_info(
                 "rendering sample {}/{}", cur_sample, app->params.nsamples);
@@ -193,7 +194,7 @@ int main(int argc, char* argv[]) {
 
     // save image
     ygl::log_info("saving image {}", app->imfilename);
-    ygl::save_image(app->imfilename, app->img, app->tonemapper, app->exposure);
+    ygl::save_image(app->imfilename, app->width, app->height, app->img, app->tonemapper, app->exposure);
 
     // cleanup
     delete app;

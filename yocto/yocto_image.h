@@ -133,116 +133,15 @@ vec4b hsv_to_rgb(const vec4b& hsv);
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Ldr image of (r,g,b,a) pixels. Access pixels with at().
-struct image4b {
-    std::vector<vec4b> pixels;  // image pixels
-    int width = 0;              // image width
-    int height = 0;             // image height
-
-    // pixel access
-    vec4b& at(int i, int j) { return pixels.at(j * width + i); }
-    const vec4b& at(int i, int j) const { return pixels.at(j * width + i); }
-};
-
-// Hdr image container. Access pixels with at().
-struct image4f {
-    std::vector<vec4f> pixels;  // image pixels
-    int width = 0;              // image width
-    int height = 0;             // image height
-
-    // pixel access
-    vec4f& at(int i, int j) { return pixels.at(j * width + i); }
-    const vec4f& at(int i, int j) const { return pixels.at(j * width + i); }
-};
-
-// Initializes empty images
-inline image4b make_image4b(
-    int width, int height, const vec4b& val = {0, 0, 0, 0}) {
-    auto img = image4b();
-    img.width = width;
-    img.height = height;
-    img.pixels.assign(width * height, val);
-    return img;
-}
-inline image4f make_image4f(
-    int width, int height, const vec4f& val = {0, 0, 0, 0}) {
-    auto img = image4f();
-    img.width = width;
-    img.height = height;
-    img.pixels.assign(width * height, val);
-    return img;
-}
-
-// Create an image with values stored in an array in scanline order.
-inline image4b make_image4b(int width, int height, const vec4b* vals) {
-    auto img = image4b();
-    img.width = width;
-    img.height = height;
-    img.pixels.assign(vals, vals + width * height);
-    return img;
-}
-inline image4f make_image4f(int width, int height, const vec4f* vals) {
-    auto img = image4f();
-    img.width = width;
-    img.height = height;
-    img.pixels.assign(vals, vals + width * height);
-    return img;
-}
-
-// Create a 4 channel image with the given number of channels
-inline image4f make_image4f(
-    int w, int h, int nc, const float* vals, const vec4f& def) {
-    auto img = make_image4f(w, h);
-    for (auto j = 0; j < h; j++) {
-        for (auto i = 0; i < w; i++) {
-            auto pixel = vals + (j * w + i) * nc;
-            img.at(i, j) = def;
-            auto img_pixel = &img.at(i, j).x;
-            for (auto c = 0; c < nc; c++) img_pixel[c] = pixel[c];
-        }
-    }
-    return img;
-}
-inline image4b make_image4b(
-    int w, int h, int nc, const byte* vals, const vec4b& def) {
-    auto img = make_image4b(w, h);
-    for (auto j = 0; j < h; j++) {
-        for (auto i = 0; i < w; i++) {
-            auto pixel = vals + (j * w + i) * nc;
-            img.at(i, j) = def;
-            auto img_pixel = &img.at(i, j).x;
-            for (auto c = 0; c < nc; c++) img_pixel[c] = pixel[c];
-        }
-    }
-    return img;
-}
-
-// Check if a pixel is inside an image.
-inline bool contains(const image4b& img, int i, int j) {
-    return i >= 0 && i < img.width && j >= 0 && j < img.height;
-}
-inline bool contains(const image4f& img, int i, int j) {
-    return i >= 0 && i < img.width && j >= 0 && j < img.height;
-}
-
-// Image over operator.
-void image_over(vec4f* img, int width, int height, int nlayers, vec4f** layers);
-void image_over(vec4b* img, int width, int height, int nlayers, vec4b** layers);
-
-// Approximate conversion from srgb.
-inline image4f srgb_to_linear(const image4b& srgb) {
-    auto lin = make_image4f(srgb.width, srgb.height);
-    for (auto j = 0; j < srgb.height; j++)
-        for (auto i = 0; i < srgb.width; i++)
-            lin.at(i, j) = srgb_to_linear(srgb.at(i, j));
+// Approximate conversion from/to srgb.
+inline std::vector<vec4f> srgb_to_linear(const std::vector<vec4b>& srgb) {
+    auto lin = std::vector<vec4f>(srgb.size());
+    for (auto i = 0; i < srgb.size(); i++) lin[i] = srgb_to_linear(srgb[i]);
     return lin;
 }
-// Approximate conversion to srgb.
-inline image4b linear_to_srgb(const image4f& lin) {
-    auto srgb = make_image4b(lin.width, lin.height);
-    for (auto j = 0; j < srgb.height; j++)
-        for (auto i = 0; i < srgb.width; i++)
-            srgb.at(i, j) = linear_to_srgb(lin.at(i, j));
+inline std::vector<vec4b> linear_to_srgb(const std::vector<vec4f>& lin) {
+    auto srgb = std::vector<vec4b>(lin.size());
+    for (auto i = 0; i < lin.size(); i++) srgb[i] = linear_to_srgb(lin[i]);
     return srgb;
 }
 
@@ -250,43 +149,50 @@ inline image4b linear_to_srgb(const image4f& lin) {
 enum struct tonemap_type { linear, gamma, srgb, filmic1, filmic2, filmic3 };
 
 // Tone mapping HDR to LDR images.
-image4b tonemap_image(const image4f& hdr, tonemap_type type, float exposure);
+std::vector<vec4b> tonemap_image(
+    const std::vector<vec4f>& hdr, tonemap_type type, float exposure);
 
 // Make example images.
-image4b make_grid_image(int width, int height, int tile = 64,
+std::vector<vec4b> make_grid_image(int width, int height, int tile = 64,
     const vec4b& c0 = {64, 64, 64, 255},
     const vec4b& c1 = {128, 128, 128, 255});
-image4b make_checker_image(int width, int height, int tile = 64,
+std::vector<vec4b> make_checker_image(int width, int height, int tile = 64,
     const vec4b& c0 = {64, 64, 64, 255},
     const vec4b& c1 = {128, 128, 128, 255});
-image4b make_bumpdimple_image(int width, int height, int tile = 64);
-image4b make_ramp_image(
+std::vector<vec4b> make_bumpdimple_image(int width, int height, int tile = 64);
+std::vector<vec4b> make_ramp_image(
     int width, int height, const vec4b& c0, const vec4b& c1, bool srgb = false);
-image4b make_gammaramp_image(int width, int height);
-image4f make_gammaramp_imagef(int width, int height);
-image4b make_uv_image(int width, int height);
-image4b make_uvgrid_image(
+std::vector<vec4b> make_gammaramp_image(int width, int height);
+std::vector<vec4f> make_gammaramp_imagef(int width, int height);
+std::vector<vec4b> make_uv_image(int width, int height);
+std::vector<vec4b> make_uvgrid_image(
     int width, int height, int tile = 64, bool colored = true);
-image4b make_recuvgrid_image(
+std::vector<vec4b> make_recuvgrid_image(
     int width, int height, int tile = 64, bool colored = true);
 
 // Comvert a bump map to a normal map.
-image4b bump_to_normal_map(const image4b& img, float scale = 1);
+std::vector<vec4b> bump_to_normal_map(
+    int width, int height, const std::vector<vec4b>& img, float scale = 1);
 
 // Make a sunsky HDR model with sun at theta elevation in [0,pi/2], turbidity
 // in [1.7,10] with or without sun.
-image4f make_sunsky_image(int res, float thetaSun, float turbidity = 3,
-    bool has_sun = false, bool has_ground = true);
+std::vector<vec4f> make_sunsky_image(int width, int height, float thetaSun,
+    float turbidity = 3, bool has_sun = false, bool has_ground = true);
 
 // Make a noise image. Wrap works only if both resx and resy are powers of two.
-image4b make_noise_image(int resx, int resy, float scale = 1, bool wrap = true);
-image4b make_fbm_image(int resx, int resy, float scale = 1,
+std::vector<vec4b> make_noise_image(
+    int width, int height, float scale = 1, bool wrap = true);
+std::vector<vec4b> make_fbm_image(int width, int height, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
-image4b make_ridge_image(int resx, int resy, float scale = 1,
+std::vector<vec4b> make_ridge_image(int width, int height, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, float offset = 1.0f,
     int octaves = 6, bool wrap = true);
-image4b make_turbulence_image(int resx, int resy, float scale = 1,
+std::vector<vec4b> make_turbulence_image(int width, int height, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
+
+// Image over operator.
+void image_over(vec4f* img, int width, int height, int nlayers, vec4f** layers);
+void image_over(vec4b* img, int width, int height, int nlayers, vec4b** layers);
 
 #if YGL_IMAGEIO
 
@@ -294,12 +200,16 @@ image4b make_turbulence_image(int resx, int resy, float scale = 1,
 bool is_hdr_filename(const std::string& filename);
 
 // Loads/saves a 4 channel ldr/hdr image.
-image4b load_image4b(const std::string& filename);
-image4f load_image4f(const std::string& filename);
-bool save_image4b(const std::string& filename, const image4b& img);
-bool save_image4f(const std::string& filename, const image4f& img);
+std::vector<vec4b> load_image4b(
+    const std::string& filename, int& width, int& height);
+std::vector<vec4f> load_image4f(
+    const std::string& filename, int& width, int& height);
+bool save_image4b(const std::string& filename, int width, int height,
+    const std::vector<vec4b>& img);
+bool save_image4f(const std::string& filename, int width, int height,
+    const std::vector<vec4f>& img);
 // Save a 4 channel HDR or LDR image with tonemapping based on filename.
-bool save_image(const std::string& filename, const image4f& hdr,
+bool save_image(const std::string& filename, int width, int height, const std::vector<vec4f>& hdr,
     tonemap_type tonemapper, float exposure);
 
 // Loads.saves an image with variable number of channels.
@@ -328,10 +238,12 @@ enum struct resize_filter {
 enum struct resize_edge { def, clamp, reflect, wrap, zero };
 
 // Resize an image.
-void resize_image(const image4f& img, image4f& res_img,
+std::vector<vec4f> resize_image(int width, int height,const std::vector<vec4f>& img, 
+    int res_width, int res_height,
     resize_filter filter = resize_filter::def,
     resize_edge edge = resize_edge::def, bool premultiplied_alpha = false);
-void resize_image(const image4b& img, image4b& res_img,
+std::vector<vec4b> resize_image(int width, int height,const std::vector<vec4b>& img, 
+    int res_width, int res_height, 
     resize_filter filter = resize_filter::def,
     resize_edge edge = resize_edge::def, bool premultiplied_alpha = false);
 

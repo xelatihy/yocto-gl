@@ -1049,52 +1049,51 @@ void trace_sample(const scene* scn, const camera* cam, const bvh_tree* bvh,
 
 // Trace the next nsamples.
 void trace_samples(const scene* scn, const camera* cam, const bvh_tree* bvh,
-    const trace_lights& lights, image4f& img, std::vector<trace_pixel>& pixels,
+    const trace_lights& lights, int width, int height, std::vector<vec4f>& img, std::vector<trace_pixel>& pixels,
     int nsamples, const trace_params& params) {
-    if (params.parallel) {
+    if (params.noparallel) {
+        for (auto pid = 0; pid < pixels.size(); pid ++) {
+            for (auto s = 0; s < params.nsamples; s++)
+                trace_sample(scn, cam, bvh, lights, pixels[pid], params);
+            img[pid] = pixels[pid].acc / pixels[pid].sample;
+        }
+    } else {
         auto nthreads = std::thread::hardware_concurrency();
         auto threads = std::vector<std::thread>();
         for (auto tid = 0; tid < std::thread::hardware_concurrency(); tid++) {
             threads.push_back(std::thread([=, &img, &pixels, &params]() {
                 for (auto pid = tid; pid < pixels.size(); pid += nthreads) {
-                    auto& pxl = pixels.at(pid);
                     for (auto s = 0; s < nsamples; s++)
-                        trace_sample(scn, cam, bvh, lights, pxl, params);
-                    img.at(pxl.i, pxl.j) = pxl.acc / pxl.sample;
+                        trace_sample(scn, cam, bvh, lights, pixels[pid], params);
+                    img[pid] = pixels[pid].acc / pixels[pid].sample;
                 }
             }));
         }
         for (auto& t : threads) t.join();
         threads.clear();
-    } else {
-        for (auto& pxl : pixels) {
-            for (auto s = 0; s < params.nsamples; s++)
-                trace_sample(scn, cam, bvh, lights, pxl, params);
-            img.at(pxl.i, pxl.j) = pxl.acc / pxl.sample;
-        }
     }
 }
 
 // Starts an anyncrhounous renderer.
 void trace_async_start(const scene* scn, const camera* cam, const bvh_tree* bvh,
-    const trace_lights& lights, image4f& img, std::vector<trace_pixel>& pixels,
+    const trace_lights& lights, int width, int height, std::vector<vec4f>& img, std::vector<trace_pixel>& pixels,
     std::vector<std::thread>& threads, bool& stop_flag,
     const trace_params& params, const std::function<void(int, int)>& callback) {
-    pixels = make_trace_pixels(img, params);
+    pixels = make_trace_pixels(width, height, params);
 
     // render preview
     if (params.preview_resolution) {
         auto pparams = params;
         pparams.resolution = params.preview_resolution;
         pparams.nsamples = 1;
-        auto pimg =
-            make_image4f((int)std::round(cam->aspect * pparams.resolution),
-                pparams.resolution);
-        auto ppixels = make_trace_pixels(pimg, pparams);
-        trace_samples(scn, cam, bvh, lights, pimg, ppixels, 1, pparams);
-        resize_image(pimg, img, ygl::resize_filter::box);
+        auto pwidth = (int)std::round(cam->aspect * pparams.resolution);
+        auto pheight = pparams.resolution;
+        auto pimg = std::vector<vec4f>(pwidth*pheight);
+        auto ppixels = make_trace_pixels(pwidth, pheight, pparams);
+        trace_samples(scn, cam, bvh, lights, pwidth, pheight, pimg, ppixels, 1, pparams);
+        img = resize_image(pwidth, pheight, pimg, width, height, ygl::resize_filter::box);
     } else {
-        for (auto& p : img.pixels) p = zero4f;
+        for (auto& p : img) p = zero4f;
     }
     if (callback) callback(0, 0);
 
@@ -1105,10 +1104,9 @@ void trace_async_start(const scene* scn, const camera* cam, const bvh_tree* bvh,
             for (auto s = 0; s < params.nsamples; s++) {
                 for (auto pid = tid; pid < pixels.size(); pid += nthreads) {
                     if (stop_flag) return;
-                    auto& pxl = pixels.at(pid);
-                    trace_sample(scn, cam, bvh, lights, pxl, params);
-                    img.at(pxl.i, pxl.j) = pxl.acc / pxl.sample;
-                    if (!pxl.i && callback) callback(s, pxl.j);
+                    trace_sample(scn, cam, bvh, lights, pixels[pid], params);
+                    img[pid] = pixels[pid].acc / pixels[pid].sample;
+                    if (!pixels[pid].i && callback) callback(s, pixels[pid].j);
                 }
             }
             if (!tid && callback) callback(params.nsamples, 0);
@@ -1152,16 +1150,16 @@ trace_lights make_trace_lights(const scene* scn) {
 }
 
 // Initialize a rendering state
-std::vector<trace_pixel> make_trace_pixels(
-    const image4f& img, const trace_params& params) {
-    auto pixels = std::vector<trace_pixel>(img.width * img.height);
-    for (auto j = 0; j < img.height; j++) {
-        for (auto i = 0; i < img.width; i++) {
+std::vector<trace_pixel> make_trace_pixels(int width, int height,
+    const trace_params& params) {
+    auto pixels = std::vector<trace_pixel>(width * height);
+    for (auto j = 0; j < height; j++) {
+        for (auto i = 0; i < width; i++) {
             auto pxl = trace_pixel();
             pxl.i = i;
             pxl.j = j;
-            pxl.rng = make_rng(params.seed, (j * img.width + i) * 2 + 1);
-            pixels[j * img.width + i] = pxl;
+            pxl.rng = make_rng(params.seed, (j * width + i) * 2 + 1);
+            pixels[j * width + i] = pxl;
         }
     }
     return pixels;

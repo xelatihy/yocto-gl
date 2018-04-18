@@ -37,32 +37,21 @@
 // manipulation code
 struct gimage {
     std::string filename;  // path
-    ygl::image4f hdr;      // hdr
-    ygl::image4b ldr;      // ldr
+
+    int width = 0;                // width
+    int height = 0;               // height
+    std::vector<ygl::vec4f> hdr;  // hdr
+    std::vector<ygl::vec4b> ldr;  // ldr
 
     // image adjustment
     bool updated = true;
     ygl::tonemap_type tonemap = ygl::tonemap_type::gamma;
     float exposure = 0;
-    ygl::image4b img;
+    std::vector<ygl::vec4b> img;
 
     // opengl texture
     bool gl_updated = true;
     ygl::gltexture gl_txt;
-
-    // image width
-    int width() const {
-        if (!hdr.pixels.empty()) return hdr.width;
-        if (!ldr.pixels.empty()) return ldr.width;
-        return 0;
-    }
-
-    // image height
-    int height() const {
-        if (!hdr.pixels.empty()) return hdr.height;
-        if (!ldr.pixels.empty()) return ldr.height;
-        return 0;
-    }
 };
 
 // Loads a generic image
@@ -70,11 +59,11 @@ inline gimage* load_gimage(const std::string& filename) {
     auto img = new gimage();
     img->filename = filename;
     if (ygl::is_hdr_filename(filename)) {
-        img->hdr = ygl::load_image4f(filename);
+        img->hdr = ygl::load_image4f(filename, img->width, img->height);
     } else {
-        img->ldr = ygl::load_image4b(filename);
+        img->ldr = ygl::load_image4b(filename, img->width, img->height);
     }
-    if (img->hdr.pixels.empty() && img->ldr.pixels.empty()) {
+    if (img->hdr.empty() && img->ldr.empty()) {
         throw std::runtime_error("cannot load image " + img->filename);
     }
     return img;
@@ -96,7 +85,7 @@ struct app_state {
 };
 
 void draw_widgets(ygl::glwindow* win, app_state* app) {
-    static auto tonemap_names = std::map<ygl::tonemap_type, std::string> {
+    static auto tonemap_names = std::map<ygl::tonemap_type, std::string>{
         {ygl::tonemap_type::linear, "linear"},
         {ygl::tonemap_type::gamma, "gamma"},
         {ygl::tonemap_type::srgb, "srgb"},
@@ -109,7 +98,7 @@ void draw_widgets(ygl::glwindow* win, app_state* app) {
         auto img = app->imgs[app->cur_img];
         ygl::draw_imgui_label(win, "filename", img->filename);
         ygl::draw_imgui_label(
-            win, "size", ygl::format("{} x {}", img->width(), img->height()));
+            win, "size", ygl::format("{} x {}", img->width, img->height));
         ygl::draw_imgui_dragbox(win, "offset", app->offset, -4096, 4096);
         ygl::draw_imgui_dragbox(win, "zoom", app->zoom, 0.01, 10);
         ygl::draw_imgui_colorbox(win, "background", app->background);
@@ -122,20 +111,19 @@ void draw_widgets(ygl::glwindow* win, app_state* app) {
         auto ij = ygl::get_glimage_coords(
             get_glmouse_posf(win), app->offset, app->zoom);
         ygl::draw_imgui_dragbox(win, "mouse", ij);
-        if (ij.x >= 0 && ij.x < img->width() && ij.y >= 0 &&
-            ij.y < img->height()) {
-            if (!img->ldr.pixels.empty())
+        if (ij.x >= 0 && ij.x < img->width && ij.y >= 0 && ij.y < img->height) {
+            if (!img->ldr.empty())
                 ygl::draw_imgui_colorbox(
-                    win, "pixel b", img->ldr.at(ij.x, ij.y));
-            if (!img->hdr.pixels.empty())
+                    win, "pixel b", img->ldr.at(ij.x + ij.y * img->width));
+            if (!img->hdr.empty())
                 ygl::draw_imgui_colorbox(
-                    win, "pixel f", img->hdr.at(ij.x, ij.y));
+                    win, "pixel f", img->hdr.at(ij.x + ij.y * img->width));
         } else {
             auto zero4b_ = ygl::zero4b;
             auto zero4f_ = ygl::zero4f;
-            if (!img->ldr.pixels.empty())
+            if (!img->ldr.empty())
                 ygl::draw_imgui_colorbox(win, "pixel b", zero4b_);
-            if (!img->hdr.pixels.empty())
+            if (!img->hdr.empty())
                 ygl::draw_imgui_colorbox(win, "pixel f", zero4f_);
         }
     }
@@ -148,8 +136,8 @@ void draw(ygl::glwindow* win, app_state* app) {
     auto framebuffer_size = get_glframebuffer_size(win);
     ygl::set_glviewport(framebuffer_size);
     ygl::clear_glbuffers(app->background);
-    ygl::draw_glimage(app->gl_prog, img->gl_txt, window_size, app->offset,
-                      app->zoom);
+    ygl::draw_glimage(
+        app->gl_prog, img->gl_txt, window_size, app->offset, app->zoom);
     draw_widgets(win, app);
     ygl::swap_glwindow_buffers(win);
 }
@@ -157,7 +145,7 @@ void draw(ygl::glwindow* win, app_state* app) {
 void run_ui(app_state* app) {
     // window
     auto win = ygl::make_glwindow(
-        app->imgs[0]->width(), app->imgs[0]->height(), "yimview");
+        app->imgs[0]->width, app->imgs[0]->height, "yimview");
     ygl::set_glwindow_callbacks(
         win, nullptr, nullptr, [app, win]() { draw(win, app); });
 
@@ -178,8 +166,8 @@ void run_ui(app_state* app) {
 
         auto img = app->imgs[app->cur_img];
         ygl::set_glwindow_title(
-            win, ygl::format("yimview | {} | {}x{}", img->filename,
-                     img->width(), img->height()));
+            win, ygl::format("yimview | {} | {}x{}", img->filename, img->width,
+                     img->height));
 
         // handle mouse
         auto alt_down = get_glalt_key(win);
@@ -195,9 +183,10 @@ void run_ui(app_state* app) {
         }
 
         // update texture
-        if(img->updated) {
-            if(!img->hdr.pixels.empty()) {
-                img->img = ygl::tonemap_image(img->hdr, img->tonemap, img->exposure);
+        if (img->updated) {
+            if (!img->hdr.empty()) {
+                img->img =
+                    ygl::tonemap_image(img->hdr, img->tonemap, img->exposure);
             } else {
                 img->img = img->ldr;
             }
@@ -205,7 +194,8 @@ void run_ui(app_state* app) {
             img->updated = false;
         }
         if (img->gl_updated) {
-            update_gltexture(img->gl_txt, img->img, false, false, false);
+            update_gltexture(img->gl_txt, img->width, img->height, img->img,
+                false, false, false);
             img->gl_updated = false;
         }
 

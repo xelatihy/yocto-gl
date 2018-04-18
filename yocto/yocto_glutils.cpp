@@ -1461,20 +1461,21 @@ vec2i get_glframebuffer_size(glwindow* win) {
 }
 
 // Read pixels
-image4b take_glscreenshot4b(glwindow* win, bool flipy, bool back) {
+void take_glscreenshot4b(glwindow* win, int& width, int& height, std::vector<ygl::vec4b>& img, bool flipy, bool back) {
     auto wh = get_glframebuffer_size(win);
-    auto img = make_image4b(wh.x, wh.y);
+    width = wh.x;
+    height = wh.y;
+    img = std::vector<ygl::vec4b>(wh.x * wh.y);
     glReadBuffer((back) ? GL_BACK : GL_FRONT);
-    glReadPixels(0, 0, img.width, img.height, GL_RGBA, GL_UNSIGNED_BYTE,
-        img.pixels.data());
+    glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE,
+        img.data());
     if (flipy) {
-        for (int j = 0; j < img.height / 2; j++) {
-            for (auto i = 0; i < img.width; i++) {
-                std::swap(img.at(i, j), img.at(i, img.height - 1 - j));
+        for (int j = 0; j < height / 2; j++) {
+            for (auto i = 0; i < width; i++) {
+                std::swap(img[i + width * j], img[i + width * (height - 1 - j)]);
             }
         }
     }
-    return img;
 }
 
 // Initialize widgets

@@ -199,7 +199,10 @@ void run_ui(app_state* app) {
         // check if exiting is needed
         if (app->screenshot_and_exit) {
             ygl::log_info("taking screenshot and exiting...");
-            ygl::save_image4b(app->imfilename, ygl::take_glscreenshot4b(win));
+            auto width = 0, height = 0;
+            auto img = std::vector<ygl::vec4b>();
+            ygl::take_glscreenshot4b(win, width, height, img);
+            ygl::save_image4b(app->imfilename, width, height, img);
             break;
         }
 

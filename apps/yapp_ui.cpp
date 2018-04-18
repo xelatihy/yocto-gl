@@ -59,11 +59,13 @@ void update_gltexture(const texture* txt, gltexture& gtxt) {
     if (!txt) {
         clear_gltexture(gtxt);
     } else {
-        if (!txt->hdr.pixels.empty()) {
-            update_gltexture(gtxt, txt->hdr, true, true, true);
+        if (!txt->hdr.empty()) {
+            update_gltexture(
+                gtxt, txt->width, txt->height, txt->hdr, true, true, true);
         }
-        if (!txt->ldr.pixels.empty()) {
-            update_gltexture(gtxt, txt->ldr, true, true, true);
+        if (!txt->ldr.empty()) {
+            update_gltexture(
+                gtxt, txt->width, txt->height, txt->ldr, true, true, true);
         }
     }
 }
@@ -566,18 +568,6 @@ void draw_imgui_label(glwindow* win, const std::string& lbl,
     const std::vector<T>& val, bool skip_if_empty = true) {
     if (skip_if_empty && val.empty()) return;
     draw_imgui_label(win, lbl, std::to_string(val.size()));
-}
-void draw_imgui_label(glwindow* win, const std::string& lbl, const image4b& val,
-    bool skip_if_empty = true) {
-    if (skip_if_empty && val.pixels.empty()) return;
-    draw_imgui_label(win, lbl,
-        std::to_string(val.width) + " x " + std::to_string(val.height));
-}
-void draw_imgui_label(glwindow* win, const std::string& lbl, const image4f& val,
-    bool skip_if_empty = true) {
-    if (skip_if_empty && val.pixels.empty()) return;
-    draw_imgui_label(win, lbl,
-        std::to_string(val.width) + " x " + std::to_string(val.height));
 }
 
 /// Visit struct elements.
