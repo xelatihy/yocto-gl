@@ -112,29 +112,26 @@ your system. For ImGUI, build with the libraries `imgui.cpp`,
 
 ## Design Considerations
 
-Yocto/GL tries to follow a simple programming model inspired by data-driven C.
-All data is stored as simple C++ structs with public data, avoiding classes,
-templates anf the like but with
-heavy use of operator overloading for math readability. We attempt to make
-the code easy to use use rather than as performant as possible.
-We adopt a functional style and only rarely use classes and methods.
-Using a function style makes the code easier to extend, more explicit in
-the function requirements, and easier to write parallel-friendly APIs.
-I guess you could call this "data-driven programming".
+Yocto/GL tries to follow a "data-driven programming model" that makes data
+explicit. Data is stored in simple structs and access with free functions
+or directly. All data is public, so we make no attempt at encapsulation.
+We do this since this makes Yocto/GL easier to extend and quicker to learn,
+which a more explicit data flow that is easier to use in parallel.
+Since Yocto/GL is mainly used for research and teaching,
+explicit data is both more hackable and easier to understand.
 
 The use of templates in Yocto was the reason for many refactorings, going
-from no template to heavy templates use. At this time, templates are used
-in the basic types to make the codebase shorter and reduce bugs,
-at the price of accessibility for beginners. The truth is that modern C++,
-a tenant of Yocto, is heavily templated anyway, so being able to read
-template code is necessary no matter how Yocto does things.
+from no template to heavy template use. After many changes, we settled
+onn using as little templates as possible. This makes code more readable,
+and compilation errors easier to handle. I guess with C++ concepts this
+could change, but for now the complexity of using teplates was not 
+outweighted by their generic use since in graphics, especially when using
+a data-driven programming mode, the number of types we handle is very low.
 
 We make use of exception for error reporting. This makes the code
 much cleaner and more in line with the expectation of most other programming
 languages.
 
-Finally, we often import symbols from the standard library rather than
-using the `std::name` pattern. We found that this improves consistency
-when using math functions, and is more readable with templates. We realize
-this is not standard, but the imports are hidden within the ygl namespace,
-so library users do not have to be concern about it.
+Finally, we import math symbols from the standard library rather than
+using the `std::name` pattern. This makes math code cleaner for graphics
+applications that generally use float rather than doubles.
