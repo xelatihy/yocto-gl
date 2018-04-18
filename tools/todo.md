@@ -14,10 +14,11 @@ Please consider this to be just development notes and not any real planning.
 ## Cleanup
 
 - remove load/save options
-- simplify scene selection -> where to put it?
-- split/rename glu
-    - bvh in trace or stored in the scene
-    - image code removed from OBJ and glTF
+- remove GPU tone mapping
+    - hardcode gamma 2.2 in viewer
+    - softward tonemap in other
+    - remove filmic3?
+- simplify scene selection
 - cleanup documentation
     - glu
     - math
@@ -27,8 +28,8 @@ Please consider this to be just development notes and not any real planning.
 - move as much code as possible to .cpp
 
 - removing std::
-
 - numeric_limits: can we remove it?
+    - or put it where it is used
 - include math functions without crap
 
 - consider removing
@@ -38,13 +39,9 @@ Please consider this to be just development notes and not any real planning.
 
 - pi
     - define pif, pid, pi (float)
-- using std
 - grouping
     - geometry functions -> move to math
     - animation functions -> move to math
-    - color functions -> math
-    - intersect functions -> bvh
-    - string ops, file ops, format, logger, timer -> utils group
     - byte_to_float
 - delete
     - compositing if not used
