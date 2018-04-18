@@ -29,6 +29,7 @@
 #include "../yocto/yocto_glutils.h"
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_utils.h"
+#include "../yocto/yocto_image.h"
 #include "yapp_ui.h"
 using namespace std::literals;
 

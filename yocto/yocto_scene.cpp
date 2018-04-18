@@ -30,6 +30,7 @@
 #include "yocto_bvh.h"
 #include "yocto_shape.h"
 #include "yocto_utils.h"
+#include "yocto_image.h"
 
 #include <unordered_map>
 

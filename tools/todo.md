@@ -45,10 +45,8 @@ Please consider this to be just development notes and not any real planning.
     - byte_to_float
 - delete
     - compositing if not used
-    - image io functions?
     - intersection point if not used
         - remove magic conversion and used .hit() method
-    - can we limit opengl calls
     - widgets
         - simpler combo
 
@@ -280,12 +278,6 @@ Please consider this to be just development notes and not any real planning.
 - cleanup tesselation in shape
     - remove tesselate once
     - tesselation uses only internal levels
-
-## Image
-
-- maybe: make image a simple structure
-    - get_pixel, make_image
-- remove constructors and accessors from vec/mat/frame
 
 ## Low-level code
 
