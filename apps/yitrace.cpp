@@ -38,13 +38,10 @@ using namespace std::literals;
 // Application state
 struct app_state {
     ygl::scene* scn = nullptr;
-    ygl::camera* view = nullptr;
     ygl::camera* cam = nullptr;
-    ygl::bvh_tree* bvh = nullptr;
     std::string filename;
     std::string imfilename;
     std::vector<ygl::trace_pixel> pixels;
-    ygl::trace_lights lights;
     ygl::trace_params params;
     std::vector<std::thread> async_threads;
     bool async_stop = false;
@@ -69,8 +66,6 @@ struct app_state {
 
     ~app_state() {
         if (scn) delete scn;
-        if (view) delete view;
-        if (bvh) delete bvh;
     }
 };
 
@@ -126,12 +121,12 @@ void draw(ygl::glwindow* win, app_state* app) {
         if (ygl::draw_imgui_header(win, "trace")) {
             ygl::push_imgui_groupid(win, app);
             ygl::draw_imgui_label(win, "scene", app->filename);
-            ygl::draw_imgui_label(win, "size",
-                ygl::format("{} x {}", app->width, app->height));
+            ygl::draw_imgui_label(
+                win, "size", ygl::format("{} x {}", app->width, app->height));
             ygl::draw_imgui_label(
                 win, "sample", std::to_string(app->cur_sample));
-            if (ygl::draw_imgui_camera_selector(
-                    win, "camera", app->cam, app->scn, app->view)) {
+            if (ygl::draw_imgui_combobox(
+                    win, "camera", app->cam, app->scn->cameras)) {
                 app->update_list.push_back(app->cam);
             }
             if (ygl::draw_imgui_camera_inspector(win, "camera", app->cam)) {
@@ -158,7 +153,8 @@ void draw(ygl::glwindow* win, app_state* app) {
             ygl::draw_imgui_dragbox(win, "mouse", ij);
             if (ij.x >= 0 && ij.x < app->width && ij.y >= 0 &&
                 ij.y < app->height) {
-                ygl::draw_imgui_colorbox(win, "pixel", app->img[ij.x + ij.y * app->width]);
+                ygl::draw_imgui_colorbox(
+                    win, "pixel", app->img[ij.x + ij.y * app->width]);
             } else {
                 auto zero4f_ = ygl::zero4f;
                 ygl::draw_imgui_colorbox(win, "pixel", zero4f_);
@@ -184,18 +180,17 @@ bool update(ygl::glwindow* win, app_state* app) {
 
         // update BVH
         for (auto sel : app->update_list) {
-            if (sel.as<ygl::shape>()) {
-                ygl::refit_shape_bvh(app->bvh, sel.as<ygl::shape>(), false);
-            }
+            if (sel.as<ygl::shape>()) { ygl::refit_bvh(sel.as<ygl::shape>()); }
+            if (sel.as<ygl::instance>()) { ygl::refit_bvh(app->scn, false); }
             if (sel.as<ygl::node>()) {
                 ygl::update_transforms(app->scn, 0);
-                ygl::refit_scene_bvh(app->bvh, app->scn, false);
+                ygl::refit_bvh(app->scn, false);
             }
         }
         app->update_list.clear();
 
-        ygl::trace_async_start(app->scn, app->cam, app->bvh, app->lights,
-            app->width, app->height, app->img, app->pixels, app->async_threads, app->async_stop,
+        ygl::trace_async_start(app->scn, app->cam, app->width, app->height,
+            app->img, app->pixels, app->async_threads, app->async_stop,
             app->params, [win, app](int s, int j) {
                 if (j % app->params.preview_resolution) return;
                 app->update_texture = true;
@@ -205,7 +200,8 @@ bool update(ygl::glwindow* win, app_state* app) {
             });
     }
     if (app->update_texture) {
-        ygl::update_gltexture(app->gl_txt, app->width, app->height, app->img, false, false, true);
+        ygl::update_gltexture(
+            app->gl_txt, app->width, app->height, app->img, false, false, true);
         app->update_texture = false;
         return true;
     }
@@ -222,7 +218,8 @@ void run_ui(app_state* app) {
 
     // load textures
     app->gl_prog = ygl::make_glimage_program();
-    ygl::update_gltexture(app->gl_txt, app->width, app->height, app->img, false, false, true);
+    ygl::update_gltexture(
+        app->gl_txt, app->width, app->height, app->img, false, false, true);
 
     // init widget
     ygl::init_imgui(win);
@@ -230,13 +227,11 @@ void run_ui(app_state* app) {
     // loop
     while (!ygl::should_glwindow_close(win)) {
         // handle mouse and keyboard for navigation
-        if (app->cam == app->view) {
-            if (ygl::handle_glcamera_navigation(
-                    win, app->view, app->navigation_fps)) {
-                app->update_list.push_back(app->view);
-            }
+        if (ygl::handle_glcamera_navigation(
+                win, app->cam, app->navigation_fps)) {
+            app->update_list.push_back(app->cam);
         }
-        ygl::handle_glscene_selection(win, app->scn, app->cam, app->bvh,
+        ygl::handle_glscene_selection(win, app->scn, app->cam,
             app->params.resolution, app->offset, app->zoom, app->selection);
 
         // draw
@@ -320,26 +315,24 @@ int main(int argc, char* argv[]) {
     }
 
     // add elements
-    ygl::add_names(app->scn);
-    ygl::add_tangent_space(app->scn);
+    ygl::add_missing_camera(app->scn);
+    ygl::add_missing_names(app->scn);
+    ygl::add_missing_tangent_space(app->scn);
+    app->cam = app->scn->cameras[0];
 
     // validate
-    ygl::validate(app->scn, false, true);
-
-    // view camera
-    app->view = ygl::make_view_camera(app->scn, 0);
-    app->cam = app->view;
+    for (auto err : ygl::validate(app->scn)) ygl::log_warning(err);
 
     // build bvh
     ygl::log_info("building bvh");
-    app->bvh = ygl::build_scene_bvh(app->scn);
+    ygl::update_bvh(app->scn);
 
     // init renderer
     ygl::log_info("initializing tracer");
-    app->lights = ygl::make_trace_lights(app->scn);
+    ygl::update_lights(app->scn);
 
     // fix renderer type if no lights
-    if (app->lights.lights.empty() &&
+    if (app->scn->lights.empty() &&
         app->params.tracer != ygl::trace_type::eyelight) {
         ygl::log_info("no lights presents, switching to eyelight shader");
         app->params.tracer = ygl::trace_type::eyelight;

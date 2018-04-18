@@ -27,9 +27,9 @@
 //
 
 #include "../yocto/yocto_bvh.h"
+#include "../yocto/yocto_image.h"
 #include "../yocto/yocto_trace.h"
 #include "../yocto/yocto_utils.h"
-#include "../yocto/yocto_image.h"
 using namespace std::literals;
 
 #include <map>
@@ -37,14 +37,12 @@ using namespace std::literals;
 // Application state
 struct app_state {
     ygl::scene* scn = nullptr;
-    ygl::camera* view = nullptr;
     ygl::camera* cam = nullptr;
     ygl::bvh_tree* bvh = nullptr;
     std::string filename;
     std::string imfilename;
     std::vector<ygl::trace_pixel> pixels;
     ygl::trace_params params;
-    ygl::trace_lights lights;
     ygl::tonemap_type tonemapper = ygl::tonemap_type::gamma;
     float exposure = 0;
     bool save_batch = false;
@@ -55,7 +53,6 @@ struct app_state {
 
     ~app_state() {
         if (scn) delete scn;
-        if (view) delete view;
         if (bvh) delete bvh;
     }
 };
@@ -108,8 +105,8 @@ int main(int argc, char* argv[]) {
         "Final pixel clamping.", app->params.pixel_clamp);
     app->params.ray_eps = ygl::parse_opt(parser, "--ray-eps", "",
         "Ray intersection epsilon.", app->params.ray_eps);
-    app->params.noparallel = ygl::parse_flag(
-        parser, "--noparallel", "", "Disable parallel execution.", app->params.noparallel);
+    app->params.noparallel = ygl::parse_flag(parser, "--noparallel", "",
+        "Disable parallel execution.", app->params.noparallel);
     app->params.seed = ygl::parse_opt(parser, "--seed", "",
         "Seed for the random number generators.", app->params.seed);
     app->params.preview_resolution = ygl::parse_opt(parser,
@@ -145,23 +142,21 @@ int main(int argc, char* argv[]) {
     }
 
     // add elements
-    ygl::add_names(app->scn);
-    ygl::add_tangent_space(app->scn);
+    ygl::add_missing_camera(app->scn);
+    ygl::add_missing_names(app->scn);
+    ygl::add_missing_tangent_space(app->scn);
+    app->cam = app->scn->cameras[0];
 
     // validate
-    ygl::validate(app->scn, false, true);
-
-    // view camera
-    app->view = make_view_camera(app->scn, 0);
-    app->cam = app->view;
+    for (auto err : ygl::validate(app->scn)) ygl::log_warning(err);
 
     // build bvh
     ygl::log_info("building bvh");
-    app->bvh = ygl::build_scene_bvh(app->scn);
+    ygl::update_bvh(app->scn);
 
     // init renderer
     ygl::log_info("initializing tracer");
-    app->lights = make_trace_lights(app->scn);
+    ygl::update_lights(app->scn);
 
     // initialize rendering objects
     app->width = (int)round(app->cam->aspect * app->params.resolution);
@@ -171,7 +166,7 @@ int main(int argc, char* argv[]) {
 
     // render
     ygl::log_info("starting renderer");
-    ygl::trace_image(app->scn, app->cam, app->bvh, app->lights, app->width ,app->height, app->img,
+    ygl::trace_image(app->scn, app->cam, app->width, app->height, app->img,
         app->pixels, app->params, [app](int cur_sample) {
             if (app->save_batch && cur_sample) {
                 auto imfilename =
@@ -179,7 +174,8 @@ int main(int argc, char* argv[]) {
                         ygl::path_basename(app->imfilename), cur_sample,
                         ygl::path_extension(app->imfilename));
                 ygl::log_info("saving image {}", imfilename);
-                save_image(imfilename, app->width, app->height, app->img, app->tonemapper, app->exposure);
+                save_image(imfilename, app->width, app->height, app->img,
+                    app->tonemapper, app->exposure);
             }
             ygl::log_info(
                 "rendering sample {}/{}", cur_sample, app->params.nsamples);
@@ -188,7 +184,8 @@ int main(int argc, char* argv[]) {
 
     // save image
     ygl::log_info("saving image {}", app->imfilename);
-    ygl::save_image(app->imfilename, app->width, app->height, app->img, app->tonemapper, app->exposure);
+    ygl::save_image(app->imfilename, app->width, app->height, app->img,
+        app->tonemapper, app->exposure);
 
     // cleanup
     delete app;

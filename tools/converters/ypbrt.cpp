@@ -803,7 +803,7 @@ int main(int argc, char** argv) {
     if (flipyz) flipyz_scene(scn);
 
     // validate
-    ygl::validate(scn, true, true);
+    for(auto err : ygl::validate(scn)) ygl::log_warning(err);
 
     // add paths for meshes
     for (auto shp : scn->shapes) { shp->path = "models/" + shp->name + ".bin"; }

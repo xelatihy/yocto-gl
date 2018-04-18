@@ -27,16 +27,15 @@
 //
 
 #include "../yocto/yocto_glutils.h"
+#include "../yocto/yocto_image.h"
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_utils.h"
-#include "../yocto/yocto_image.h"
 #include "yapp_ui.h"
 using namespace std::literals;
 
 // Application state
 struct app_state {
     ygl::scene* scn = nullptr;
-    ygl::camera* view = nullptr;
     ygl::camera* cam = nullptr;
     std::string filename;
     std::string imfilename;
@@ -60,7 +59,6 @@ struct app_state {
 
     ~app_state() {
         if (scn) delete scn;
-        if (view) delete view;
     }
 };
 
@@ -129,8 +127,8 @@ inline void draw(ygl::glwindow* win, app_state* app) {
             if (ygl::draw_imgui_button(win, "save")) {
                 ygl::save_scene(app->filename, app->scn, {});
             }
-            ygl::draw_imgui_camera_selector(
-                win, "camera", app->cam, app->scn, app->view);
+            ygl::draw_imgui_combobox(
+                win, "camera", app->cam, app->scn->cameras);
             ygl::draw_imgui_camera_inspector(win, "camera", app->cam);
             ygl::draw_imgui_checkbox(win, "fps", app->navigation_fps);
             if (app->time_range != ygl::zero2f) {
@@ -181,10 +179,7 @@ void run_ui(app_state* app) {
     // loop
     while (!should_glwindow_close(win)) {
         // handle mouse and keyboard for navigation
-        if (app->cam == app->view) {
-            ygl::handle_glcamera_navigation(
-                win, app->view, app->navigation_fps);
-        }
+        ygl::handle_glcamera_navigation(win, app->cam, app->navigation_fps);
 
         // animation
         if (app->animate) {
@@ -301,15 +296,13 @@ int main(int argc, char* argv[]) {
     ygl::tesselate_shapes(app->scn, true, false, false, false);
 
     // add missing data
-    ygl::add_names(app->scn);
-    ygl::add_tangent_space(app->scn);
+    ygl::add_missing_camera(app->scn);
+    ygl::add_missing_names(app->scn);
+    ygl::add_missing_tangent_space(app->scn);
+    app->cam = app->scn->cameras[0];
 
     // validate
-    ygl::validate(app->scn, false, true);
-
-    // view camera
-    app->view = ygl::make_view_camera(app->scn, 0);
-    app->cam = app->view;
+    for (auto err : ygl::validate(app->scn)) ygl::log_warning(err);
 
     // animation
     app->time_range = ygl::compute_animation_range(app->scn);
