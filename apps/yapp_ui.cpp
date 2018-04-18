@@ -369,12 +369,12 @@ bool handle_glscene_selection(glwindow* win, const scene* scn,
         ij.y >= res)
         return false;
     auto ray = eval_camera_ray(cam, ij, res, {0.5f, 0.5f}, zero2f);
-    auto isec = intersect_bvh(bvh, ray, false);
-    if (!isec) return false;
+    auto iid = 0, eid = 0; auto ray_t = 0.0f; auto euv = zero2f;
+    if (!intersect_bvh(bvh, ray, false, ray_t, iid, eid, euv)) return false;
     if (scn->nodes.empty()) {
-        sel = scn->shapes[isec.iid];
+        sel = scn->shapes[iid];
     } else {
-        sel = scn->nodes[isec.iid];
+        sel = scn->nodes[iid];
     }
     return true;
 }

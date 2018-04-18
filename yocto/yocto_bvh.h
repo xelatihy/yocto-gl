@@ -240,22 +240,6 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray, bool find_any,
 bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
     bool find_any, float& dist, int& iid, int& eid, vec2f& euv);
 
-// Intersection point.
-struct intersection_point {
-    float dist = 0;      // Distance of the hit.
-    int iid = -1;        // Instance index.
-    int eid = -1;        // Shape element index.
-    vec2f euv = zero2f;  // Shape barycentric coordinates.
-    operator bool() const { return eid >= 0; }  // Check if valid
-};
-
-// Intersect a ray with a bvh (convenience wrapper).
-intersection_point intersect_bvh(
-    const bvh_tree* bvh, const ray3f& ray, bool early_exit);
-// Finds the closest element with a bvh (convenience wrapper).
-intersection_point overlap_bvh(
-    const bvh_tree* bvh, const vec3f& pos, float max_dist, bool early_exit);
-
 }  // namespace ygl
 
 #endif

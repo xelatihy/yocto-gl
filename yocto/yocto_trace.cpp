@@ -697,7 +697,8 @@ vec3f eval_transmission(const scene* scn, const bvh_tree* bvh,
     const trace_point& pt, const trace_point& lpt, const trace_params& params) {
     if (params.notransmission) {
         auto ray = make_segment(pt.pos, lpt.pos);
-        return (intersect_bvh(bvh, ray, true)) ? zero3f : vec3f{1, 1, 1};
+        auto iid = 0, eid = 0; auto ray_t = 0.0f; auto euv = zero2f;
+        return (intersect_bvh(bvh, ray, true, ray_t, iid, eid, euv)) ? zero3f : vec3f{1, 1, 1};
     } else {
         auto cpt = pt;
         auto weight = vec3f{1, 1, 1};

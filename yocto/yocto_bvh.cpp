@@ -932,26 +932,6 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
     return hit;
 }
 
-// Intersect ray with a bvh (convenience wrapper).
-intersection_point intersect_bvh(
-    const bvh_tree* bvh, const ray3f& ray, bool find_any) {
-    auto isec = intersection_point();
-    if (!intersect_bvh(
-            bvh, ray, find_any, isec.dist, isec.iid, isec.eid, isec.euv))
-        return {};
-    return isec;
-}
-
-// Finds the closest element with a bvh (convenience wrapper).
-intersection_point overlap_bvh(
-    const bvh_tree* bvh, const vec3f& pos, float max_dist, bool find_any) {
-    auto isec = intersection_point();
-    if (!overlap_bvh(bvh, pos, max_dist, find_any, isec.dist, isec.iid,
-            isec.eid, isec.euv))
-        return {};
-    return isec;
-}
-
 #if 0
     // Finds the overlap between BVH leaf nodes.
     template <typename OverlapElem>
