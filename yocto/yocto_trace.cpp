@@ -993,17 +993,17 @@ vec4f trace_sample(const scene* scn, const camera* cam, int i, int j, int width,
 
 // Trace the next nsamples.
 void trace_samples(const scene* scn, const camera* cam, int width, int height,
-    std::vector<vec4f>& img, std::vector<rng_state>& rngs, int cur_samples,
+    std::vector<vec4f>& img, std::vector<rng_state>& rngs, int sample,
     int nsamples, trace_type tracer, int nbounces, float pixel_clamp,
     bool noenvmap) {
     for (auto j = 0; j < height; j++) {
         for (auto i = 0; i < width; i++) {
             auto pid = i + j * width;
-            img[pid] = (cur_samples) ? img[pid] * cur_samples : zero4f;
+            img[pid] *= sample;
             for (auto s = 0; s < nsamples; s++)
                 img[pid] += trace_sample(scn, cam, i, j, width, height,
                     rngs[pid], tracer, nbounces, pixel_clamp, noenvmap);
-            img[pid] /= cur_samples + nsamples;
+            img[pid] /= sample + nsamples;
         }
     }
 }
@@ -1011,7 +1011,7 @@ void trace_samples(const scene* scn, const camera* cam, int width, int height,
 // Trace the next nsamples.
 void trace_samples_mt(const scene* scn, const camera* cam, int width,
     int height, std::vector<vec4f>& img, std::vector<rng_state>& rngs,
-    int cur_samples, int nsamples, trace_type tracer, int nbounces,
+    int sample, int nsamples, trace_type tracer, int nbounces,
     float pixel_clamp, bool noenvmap) {
     auto nthreads = std::thread::hardware_concurrency();
     auto threads = std::vector<std::thread>();
@@ -1020,11 +1020,11 @@ void trace_samples_mt(const scene* scn, const camera* cam, int width,
             for (auto j = tid; j < height; j += nthreads) {
                 for (auto i = 0; i < width; i++) {
                     auto pid = i + j * width;
-                    img[pid] = (cur_samples) ? img[pid] * cur_samples : zero4f;
+                    img[pid] *= sample;
                     for (auto s = 0; s < nsamples; s++)
                         img[pid] += trace_sample(scn, cam, i, j, width, height,
                             rngs[pid], tracer, nbounces, pixel_clamp, noenvmap);
-                    img[pid] /= cur_samples + nsamples;
+                    img[pid] /= sample + nsamples;
                 }
             }
         }));
@@ -1047,10 +1047,9 @@ void trace_async_start(const scene* scn, const camera* cam, int width,
                     for (auto i = 0; i < width; i++) {
                         auto pid = i + j * width;
                         if (stop_flag) return;
-                        img[pid] = (sample) ? img[pid] * sample : zero4f;
-                        img[pid] += trace_sample(scn, cam, i, j, width, height,
+                        auto l = trace_sample(scn, cam, i, j, width, height,
                             rngs[pid], tracer, nbounces);
-                        img[pid] /= sample + 1;
+                        img[pid] = (img[pid] * sample + l) / (sample+1);
                     }
                     if (!tid && callback) callback(sample, j);
                 }
