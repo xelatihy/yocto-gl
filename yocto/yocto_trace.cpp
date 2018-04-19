@@ -813,8 +813,8 @@ vec3f trace_path_nomis(const scene* scn, const trace_point& pt_,
         if (!scn->lights.empty()) {
             auto lgt =
                 scn->lights[sample_index(scn->lights.size(), next_rand1f(rng))];
-            auto lpt = sample_light(
-                lgt, pt, next_rand1f(rng), next_rand2f(rng));
+            auto lpt =
+                sample_light(lgt, pt, next_rand1f(rng), next_rand2f(rng));
             auto lwi = normalize(lpt.pos - pt.pos);
             auto ld = eval_emission(lpt, -lwi) * eval_brdfcos(pt, wo, lwi) *
                       weight_light(lpt, pt) * scn->lights.size();
@@ -861,8 +861,7 @@ vec3f trace_direct(const scene* scn, const trace_point& pt, const vec3f& wo,
 
     // direct
     for (auto lgt : scn->lights) {
-        auto lpt =
-            sample_light(lgt, pt, next_rand1f(rng), next_rand2f(rng));
+        auto lpt = sample_light(lgt, pt, next_rand1f(rng), next_rand2f(rng));
         auto lwi = normalize(lpt.pos - pt.pos);
         auto ld = eval_emission(lpt, -lwi) * eval_brdfcos(pt, wo, lwi) *
                   weight_light(lpt, pt);
@@ -923,30 +922,30 @@ vec3f trace_eyelight(const scene* scn, const trace_point& pt, const vec3f& wo,
 }
 
 // Debug previewing.
-vec3f trace_debug_normal(const scene* scn, const trace_point& pt,
-    const vec3f& wo, rng_state& rng) {
+vec3f trace_debug_normal(
+    const scene* scn, const trace_point& pt, const vec3f& wo, rng_state& rng) {
     auto wn = pt.norm;
     if (pt.double_sided && dot(wn, wo) < 0) wn = -wn;
     return wn * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
 }
 
 // Debug frontfacing.
-vec3f trace_debug_frontfacing(const scene* scn, const trace_point& pt,
-    const vec3f& wo, rng_state& rng) {
+vec3f trace_debug_frontfacing(
+    const scene* scn, const trace_point& pt, const vec3f& wo, rng_state& rng) {
     auto wn = pt.norm;
     if (pt.double_sided && dot(wn, wo) < 0) wn = -wn;
     return dot(wn, wo) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0};
 }
 
 // Debug previewing.
-vec3f trace_debug_albedo(const scene* scn, const trace_point& pt,
-    const vec3f& wo, rng_state& rng) {
+vec3f trace_debug_albedo(
+    const scene* scn, const trace_point& pt, const vec3f& wo, rng_state& rng) {
     return pt.kd + pt.ks + pt.kt;
 }
 
 // Debug previewing.
-vec3f trace_debug_texcoord(const scene* scn, const trace_point& pt,
-    const vec3f& wo, rng_state& rng) {
+vec3f trace_debug_texcoord(
+    const scene* scn, const trace_point& pt, const vec3f& wo, rng_state& rng) {
     return {pt.texcoord.x, pt.texcoord.y, 0};
 }
 
@@ -974,13 +973,12 @@ vec3f trace_func(const scene* scn, const trace_point& pt, const vec3f& wo,
 }
 
 // Trace a single sample
-vec4f trace_sample(const scene* scn, const camera* cam, int pid, int width,
+vec4f trace_sample(const scene* scn, const camera* cam, int i, int j, int width,
     int height, rng_state& rng, trace_type tracer, int nbounces,
     float pixel_clamp = 100, bool noenvmap = false) {
     auto crn = next_rand2f(rng);
     auto lrn = next_rand2f(rng);
-    auto uv = vec2f{(pid % width + crn.x) / (cam->aspect * height),
-        1 - (pid / width + crn.y) / height};
+    auto uv = vec2f{(i + crn.x) / width, 1 - (j + crn.y) / height};
     auto ray = eval_camera_ray(cam, uv, lrn);
     auto pt = intersect_scene(scn, ray);
     if (!pt.ist && noenvmap) return {0, 0, 0, 0};
@@ -996,13 +994,17 @@ vec4f trace_sample(const scene* scn, const camera* cam, int pid, int width,
 // Trace the next nsamples.
 void trace_samples(const scene* scn, const camera* cam, int width, int height,
     std::vector<vec4f>& img, std::vector<rng_state>& rngs, int cur_samples,
-    int nsamples, trace_type tracer, int nbounces, float pixel_clamp, bool noenvmap) {
-    for (auto pid = 0; pid < img.size(); pid++) {
-        img[pid] = (cur_samples) ? img[pid] * cur_samples : zero4f;
-        for (auto s = 0; s < nsamples; s++)
-            img[pid] += trace_sample(scn, cam, pid, width, height, rngs[pid],
-                tracer, nbounces, pixel_clamp, noenvmap);
-        img[pid] /= cur_samples + nsamples;
+    int nsamples, trace_type tracer, int nbounces, float pixel_clamp,
+    bool noenvmap) {
+    for (auto j = 0; j < height; j++) {
+        for (auto i = 0; i < width; i++) {
+            auto pid = i + j * width;
+            img[pid] = (cur_samples) ? img[pid] * cur_samples : zero4f;
+            for (auto s = 0; s < nsamples; s++)
+                img[pid] += trace_sample(scn, cam, i, j, width, height,
+                    rngs[pid], tracer, nbounces, pixel_clamp, noenvmap);
+            img[pid] /= cur_samples + nsamples;
+        }
     }
 }
 
@@ -1015,12 +1017,15 @@ void trace_samples_mt(const scene* scn, const camera* cam, int width,
     auto threads = std::vector<std::thread>();
     for (auto tid = 0; tid < std::thread::hardware_concurrency(); tid++) {
         threads.push_back(std::thread([=, &img, &rngs]() {
-            for (auto pid = tid; pid < img.size(); pid += nthreads) {
-                img[pid] = (cur_samples) ? img[pid] * cur_samples : zero4f;
-                for (auto s = 0; s < nsamples; s++)
-                    img[pid] += trace_sample(scn, cam, pid, width, height,
-                        rngs[pid], tracer, nbounces, pixel_clamp, noenvmap);
-                img[pid] /= cur_samples + nsamples;
+            for (auto j = tid; j < height; j += nthreads) {
+                for (auto i = 0; i < width; i++) {
+                    auto pid = i + j * width;
+                    img[pid] = (cur_samples) ? img[pid] * cur_samples : zero4f;
+                    for (auto s = 0; s < nsamples; s++)
+                        img[pid] += trace_sample(scn, cam, i, j, width, height,
+                            rngs[pid], tracer, nbounces, pixel_clamp, noenvmap);
+                    img[pid] /= cur_samples + nsamples;
+                }
             }
         }));
     }
@@ -1032,24 +1037,25 @@ void trace_samples_mt(const scene* scn, const camera* cam, int width,
 void trace_async_start(const scene* scn, const camera* cam, int width,
     int height, std::vector<vec4f>& img, std::vector<rng_state>& rngs,
     int nsamples, trace_type tracer, int nbounces,
-    std::vector<std::thread>& threads, bool& stop_flag,
-    float pixel_clamp, bool noenvmap, 
-    const std::function<void(int, int)>& callback) {
+    std::vector<std::thread>& threads, bool& stop_flag, float pixel_clamp,
+    bool noenvmap, const std::function<void(int, int)>& callback) {
     auto nthreads = std::thread::hardware_concurrency();
     for (auto tid = 0; tid < nthreads; tid++) {
         threads.push_back(std::thread([=, &img, &rngs, &stop_flag]() {
             for (auto sample = 0; sample < nsamples; sample++) {
-                for (auto pid = tid; pid < img.size(); pid += nthreads) {
-                    if (stop_flag) return;
-                    img[pid] = (sample) ? img[pid] * sample : zero4f;
-                    img[pid] += trace_sample(scn, cam, pid, width, height,
-                        rngs[pid], tracer, nbounces);
-                    img[pid] /= sample + 1;
-                    if (!(pid % width) && callback)
-                        callback(sample, pid % height);
+                for (auto j = tid; j < height; j += nthreads) {
+                    for (auto i = 0; i < width; i++) {
+                        auto pid = i + j * width;
+                        if (stop_flag) return;
+                        img[pid] = (sample) ? img[pid] * sample : zero4f;
+                        img[pid] += trace_sample(scn, cam, i, j, width, height,
+                            rngs[pid], tracer, nbounces);
+                        img[pid] /= sample + 1;
+                    }
+                    if (!tid && callback) callback(sample, j);
                 }
+                if (!tid && callback) callback(nsamples, 0);
             }
-            if (!tid && callback) callback(nsamples, 0);
         }));
     }
 }
