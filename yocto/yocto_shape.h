@@ -348,8 +348,9 @@ void make_hair(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
     std::vector<float>& radius, const vec2i& steps,
     const std::vector<vec3i>& striangles, const std::vector<vec4i>& squads,
     const std::vector<vec3f>& spos, const std::vector<vec3f>& snorm,
-    const std::vector<vec2f>& stexcoord, const vec2f& length = {0.1f, 0.1f}, const vec2f& rad = {0.001f, 0.001f},
-    const vec2f& noise = zero2f, const vec2f& clump = zero2f, const vec2f& rotation = zero2f, int seed = 7);
+    const std::vector<vec2f>& stexcoord, const vec2f& length = {0.1f, 0.1f},
+    const vec2f& rad = {0.001f, 0.001f}, const vec2f& noise = zero2f,
+    const vec2f& clump = zero2f, const vec2f& rotation = zero2f, int seed = 7);
 
 }  // namespace ygl
 

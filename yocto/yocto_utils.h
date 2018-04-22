@@ -74,8 +74,10 @@
 #include "yocto_math.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cstdint>
 #include <cstdio>
+#include <ctime>
 #include <map>
 #include <string>
 #include <vector>
@@ -150,6 +152,8 @@ inline std::string format(
 
 // format value
 inline std::string format_value(const std::string& val) { return val; }
+inline std::string format_value(const char* val) { return val; }
+inline std::string format_value(char* val) { return val; }
 inline std::string format_value(const int& val) { return std::to_string(val); }
 inline std::string format_value(const uint64_t& val) {
     return std::to_string(val);
@@ -220,7 +224,12 @@ inline bool& log_verbose() {
 
 // Implementation for logging functions.
 inline void _log_msg(const std::string& msg, const char* tag) {
-    printf("%s %s\n", tag, msg.c_str());
+    using namespace std::chrono;
+    auto time = system_clock::to_time_t(system_clock::now());
+    auto tm = std::localtime(&time);
+    char tmstr[64];
+    strftime(tmstr, 64, "%T", tm);
+    printf("%s %s %s\n", tmstr, tag, msg.c_str());
 }
 
 // Wrapper for `format()` that logs to a stream (default to stdout).
@@ -242,6 +251,38 @@ template <typename... Args>
 inline void log_fatal(const std::string& msg, const Args&... args) {
     _log_msg(format(msg, args...), "FATAL");
     exit(1);
+}
+
+// Time-based logging
+inline std::vector<std::pair<std::string, int64_t>>& _log_timed_stack() {
+    static auto stack = std::vector<std::pair<std::string, int64_t>>();
+    return stack;
+}
+template <typename... Args>
+inline void log_info_begin(const std::string& msg, const Args&... args) {
+    if (!log_verbose()) return;
+    _log_msg(format("begin " + msg, args...), "INFO ");
+    auto start =
+        std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    _log_timed_stack().push_back({format(msg, args...), start});
+}
+inline void log_info_end() {
+    if (!log_verbose()) return;
+    auto start = _log_timed_stack().back().second;
+    auto stop =
+        std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    auto msg = _log_timed_stack().back().first;
+    _log_timed_stack().pop_back();
+    auto elapsed = (stop - start) / 1000000;
+    auto hours = (int)(elapsed / 3600000);
+    elapsed %= 3600000;
+    auto mins = (int)(elapsed / 60000);
+    elapsed %= 60000;
+    auto secs = (int)(elapsed / 1000);
+    auto msecs = (int)(elapsed % 1000);
+    char buf[256];
+    sprintf(buf, "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
+    _log_msg("done " + msg + " [" + std::string(buf) + "]", "INFO ");
 }
 
 }  // namespace ygl

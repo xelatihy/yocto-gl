@@ -901,6 +901,7 @@ vec3f trace_eyelight(const scene* scn, const trace_point& pt, const vec3f& wo,
     rng_state& rng, int nbounces) {
     // emission
     auto l = eval_emission(pt, wo);
+    if(!pt.ist) return l;
 
     // brdf*light
     l += eval_brdfcos(pt, wo, wo) * pi;
@@ -1049,7 +1050,7 @@ void trace_async_start(const scene* scn, const camera* cam, int width,
                         if (stop_flag) return;
                         auto l = trace_sample(scn, cam, i, j, width, height,
                             rngs[pid], tracer, nbounces);
-                        img[pid] = (img[pid] * sample + l) / (sample+1);
+                        img[pid] = (img[pid] * sample + l) / (sample + 1);
                     }
                     if (!tid && callback) callback(sample, j);
                 }

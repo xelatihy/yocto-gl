@@ -128,7 +128,7 @@ json pbrt_to_json(const std::string& filename) {
         return ret;
     };
 
-    auto f = fopen(filename.c_str(), "wt");
+    auto f = fopen(filename.c_str(), "rt");
     if (!f) throw std::runtime_error("cannot open filename " + filename);
     auto pbrt = std::string();
     char buf[4096];
@@ -657,6 +657,7 @@ scene* load_pbrt(const std::string& filename) {
             auto ist = new instance();
             ist->name = shp->name;
             ist->frame = frame;
+            ist->shp = shp;
             ist->mat = stack.back().mat;
             if (cur_object != "") {
                 objects[cur_object].push_back(ist);
@@ -716,20 +717,21 @@ scene* load_pbrt(const std::string& filename) {
                 make_quad(shp->quads, shp->pos, shp->norm, shp->texcoord,
                     {1, 1}, {size, size}, {1, 1});
                 scn->shapes.push_back(shp);
-                auto ist = new instance();
-                ist->name = shp->name;
-                ist->shp = shp;
-                ist->frame =
-                    stack.back().frame *
-                    lookat_frame(dir * distant_dist, zero3f, {0, 1, 0}, true);
                 auto mat = new material();
                 mat->name = shp->name;
                 mat->ke = {1, 1, 1};
                 if (jcmd.count("L")) mat->ke *= get_vec3f(jcmd.at("L"));
                 if (jcmd.count("scale")) mat->ke *= get_vec3f(jcmd.at("scale"));
                 mat->ke *= (distant_dist * distant_dist) / (size * size);
-                ist->mat = mat;
                 scn->materials.push_back(mat);
+                auto ist = new instance();
+                ist->name = shp->name;
+                ist->shp = shp;
+                ist->mat = mat;
+                ist->frame =
+                stack.back().frame *
+                lookat_frame(dir * distant_dist, zero3f, {0, 1, 0}, true);
+                scn->instances.push_back(ist);
                 log_error("distant light not properly supported", type);
             } else {
                 log_error("{} light not supported", type);
@@ -803,7 +805,7 @@ int main(int argc, char** argv) {
     if (flipyz) flipyz_scene(scn);
 
     // validate
-    for(auto err : ygl::validate(scn)) ygl::log_warning(err);
+    for(auto err : ygl::validate(scn, true)) ygl::log_warning(err);
 
     // add paths for meshes
     for (auto shp : scn->shapes) { shp->path = "models/" + shp->name + ".bin"; }

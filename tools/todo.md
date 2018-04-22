@@ -18,14 +18,11 @@ Please consider this to be just development notes and not any real planning.
 
 ## Cleanup
 
-- trace async without callback
 - push/pop timed logger
+    - add back times
 - ytrace app does not use app state
-- trace with i,j
-- no std::function
-- logger
-    - add timed print
-    - remove times
+- trace async without callback
+    - no std::function
 - include math functions without crap
 - grouping
     - color -> math
@@ -36,21 +33,21 @@ Please consider this to be just development notes and not any real planning.
 
 ## Trace
 
+- trace functions returns vec4f 
+- simplify point
+    - remove none
+    - remove type
+- is point needed?
+    - introduce brdf, pos, norm
 - eval_pos(env) should apply frame
-- implement eval_pos(ist)
-- trace should use these
+    - implement eval_pos(ist)
 - bump/normal mapping
 - shape trimming in intersection
 - review light sampling with simpler interface
     - sample according to area
     - sample according to angle one light
     - sample according to angle all lights
-- simplification
-- trace functions returns vec4f 
 - double-sided brdf
-- remove none point?
-- is point needed?
-    - introduce brdf, pos, norm
 - trace_pixel and trace_sample
     - do we need trace_pixels?
 - remove environment map point?
@@ -69,10 +66,6 @@ Please consider this to be just development notes and not any real planning.
     - deltas without delta flag
 - highlights are too soft in bitterli scenes
 - roussian roulette on weight
-- samplers
-    - sobol
-    - cmjs
-    - adaptive sampling ala tungsgen
 - light sampling
     - possible bug in light weight
     - envmap sampling
@@ -84,7 +77,7 @@ Please consider this to be just development notes and not any real planning.
     - bump mapping frame
 - add transmission to trace
     - better scheme: filter intersection
-- fast distribution smapling
+- fast distribution sampling
 - cleanup sampling functions everywhere
     - probably removing sample_points/lines/triangles
     - cleanup sampling in ray tracing

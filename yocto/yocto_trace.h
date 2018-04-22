@@ -87,7 +87,8 @@ enum struct trace_type {
 // image contains cur_samples already. Returns true when done.
 void trace_samples(const scene* scn, const camera* cam, int width, int height,
     std::vector<vec4f>& img, std::vector<rng_state>& rngs, int cur_samples,
-    int nsamples, trace_type tracer, int nbounces, float pixel_clamp = 100, bool noenvmap = false);
+    int nsamples, trace_type tracer, int nbounces, float pixel_clamp = 100,
+    bool noenvmap = false);
 // Like before but with multiplthreading.
 void trace_samples_mt(const scene* scn, const camera* cam, int width,
     int height, std::vector<vec4f>& img, std::vector<rng_state>& rngs,
@@ -98,9 +99,8 @@ void trace_samples_mt(const scene* scn, const camera* cam, int width,
 void trace_async_start(const scene* scn, const camera* cam, int width,
     int height, std::vector<vec4f>& img, std::vector<rng_state>& rngs,
     int nsamples, trace_type tracer, int nbounces,
-    std::vector<std::thread>& threads, bool& stop_flag,
-    float pixel_clamp = 100, bool noenvmap = false, 
-    const std::function<void(int, int)>& callback = {});
+    std::vector<std::thread>& threads, bool& stop_flag, float pixel_clamp = 100,
+    bool noenvmap = false, const std::function<void(int, int)>& callback = {});
 // Stop the asynchronous renderer.
 void trace_async_stop(std::vector<std::thread>& threads, bool& stop_flag);
 

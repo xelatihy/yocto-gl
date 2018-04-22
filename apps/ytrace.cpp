@@ -63,14 +63,14 @@ int main(int argc, char* argv[]) {
         ygl::parse_opt(parser, "--nsamples", "-s", "Number of samples.", 256);
     auto tracer = ygl::parse_opt(parser, "--tracer", "-t", "Trace type.",
         trace_names, ygl::trace_type::pathtrace);
-    auto double_sided = ygl::parse_flag(parser, "--double-sided", "-D",
-        "Force double sided rendering.", false);
+    auto double_sided = ygl::parse_flag(
+        parser, "--double-sided", "-D", "Force double sided rendering.", false);
     auto noenvmap = ygl::parse_flag(parser, "--noenvmap", "",
         "Disable view of the environment map.", false);
-    auto max_depth =
-        ygl::parse_opt(parser, "--nbounces", "", "Maximum number of bounces.", 8);
-    auto pixel_clamp = ygl::parse_opt(parser, "--pixel-clamp", "",
-        "Final pixel clamping.", 100.0f);
+    auto max_depth = ygl::parse_opt(
+        parser, "--nbounces", "", "Maximum number of bounces.", 8);
+    auto pixel_clamp = ygl::parse_opt(
+        parser, "--pixel-clamp", "", "Final pixel clamping.", 100.0f);
     auto noparallel = ygl::parse_flag(
         parser, "--noparallel", "", "Disable parallel execution.", false);
     auto seed = ygl::parse_opt(
@@ -97,43 +97,45 @@ int main(int argc, char* argv[]) {
     if (quiet) ygl::log_verbose() = false;
 
     // scene loading
-    ygl::log_info("loading scene {}", filename);
+    ygl::log_info_begin("loading scene {}", filename);
     auto scn = (ygl::scene*)nullptr;
     try {
         scn = ygl::load_scene(filename);
     } catch (std::exception e) {
         ygl::log_fatal("cannot load scene {}", filename);
     }
+    ygl::log_info_end();
 
     // fix scene
+    ygl::log_info("adding missing scene elements");
     ygl::update_bbox(scn);
     ygl::add_missing_camera(scn);
     ygl::add_missing_names(scn);
     ygl::add_missing_tangent_space(scn);
     auto cam = scn->cameras[0];
-    if(double_sided) {
-        for(auto mat : scn->materials) mat->double_sided = true;
+    if (double_sided) {
+        for (auto mat : scn->materials) mat->double_sided = true;
     }
-
-    // validate
     for (auto err : ygl::validate(scn)) ygl::log_warning(err);
 
     // build bvh
-    ygl::log_info("building bvh");
+    ygl::log_info_begin("building bvh");
     ygl::update_bvh(scn);
+    ygl::log_info_end();
 
     // init renderer
-    ygl::log_info("initializing tracer");
+    ygl::log_info("initializing lights");
     ygl::update_lights(scn);
 
     // initialize rendering objects
+    ygl::log_info("initializing tracer data");
     auto width = (int)round(cam->aspect * resolution);
     auto height = resolution;
     auto img = std::vector<ygl::vec4f>(width * height);
     auto rngs = ygl::make_rng_seq(width * height, seed);
 
     // render
-    ygl::log_info("starting renderer");
+    ygl::log_info_begin("rendering image");
     for (auto sample = 0; sample < nsamples; sample += batch_size) {
         if (save_batch && sample) {
             auto filename = ygl::format("{}{}.{}{}",
@@ -142,7 +144,7 @@ int main(int argc, char* argv[]) {
             ygl::log_info("saving image {}", filename);
             save_image(filename, width, height, img, tonemap, exposure);
         }
-        ygl::log_info("rendering sample {}/{}", sample, nsamples);
+        ygl::log_info_begin("rendering sample {}/{}", sample, nsamples);
         if (noparallel) {
             ygl::trace_samples(scn, cam, width, height, img, rngs, sample,
                 std::min(batch_size, nsamples - sample), tracer, max_depth,
@@ -152,8 +154,9 @@ int main(int argc, char* argv[]) {
                 std::min(batch_size, nsamples - sample), tracer, max_depth,
                 pixel_clamp, noenvmap);
         }
+        ygl::log_info_end();
     }
-    ygl::log_info("rendering done");
+    ygl::log_info_end();
 
     // save image
     ygl::log_info("saving image {}", imfilename);

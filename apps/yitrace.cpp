@@ -46,9 +46,9 @@ struct app_state {
     int resolution = 512;  // image vertical resolution
     int nsamples = 256;    // number of samples
     ygl::trace_type tracer = ygl::trace_type::pathtrace;  // tracer
-    int nbounces = 8;                                    // max depth
+    int nbounces = 8;                                     // max depth
     int seed = 7;                                         // seed
-    float pixel_clamp = 100.0f; // pixel clamping
+    float pixel_clamp = 100.0f;                           // pixel clamping
 
     // rendered image
     int width = 0, height = 512;
@@ -101,8 +101,8 @@ bool draw_imgui_trace_inspector(glwindow* win, app_state* app) {
     edited += draw_imgui_combobox(win, "tracer", app->tracer, trace_names);
     edited += draw_imgui_dragbox(win, "nbounces", app->nbounces, 1, 10);
     edited += draw_imgui_dragbox(win, "seed", (int&)app->seed, 0, 1000);
-    edited += draw_imgui_dragbox(
-        win, "preview", app->preview_resolution, 64, 1080);
+    edited +=
+        draw_imgui_dragbox(win, "preview", app->preview_resolution, 64, 1080);
     return edited;
 }
 
@@ -191,21 +191,23 @@ bool update(ygl::glwindow* win, app_state* app) {
 
         // render preview image
         if (app->preview_resolution) {
-            auto pwidth = (int)std::round(app->cam->aspect * app->preview_resolution);
+            auto pwidth =
+                (int)std::round(app->cam->aspect * app->preview_resolution);
             auto pheight = app->preview_resolution;
             auto pimg = std::vector<ygl::vec4f>(pwidth * pheight);
             auto prngs = ygl::make_rng_seq(pwidth * pheight, 7);
-            trace_samples(app->scn, app->cam, pwidth, pheight, pimg, prngs, 0, 1, app->tracer,
-                app->nbounces);
+            trace_samples(app->scn, app->cam, pwidth, pheight, pimg, prngs, 0,
+                1, app->tracer, app->nbounces);
             auto pratio = app->resolution / app->preview_resolution;
-            for(auto j = 0; j < app->height; j ++) {
-                for(auto i = 0; i < app->width; i ++) {
+            for (auto j = 0; j < app->height; j++) {
+                for (auto i = 0; i < app->width; i++) {
                     auto pi = i / pratio, pj = j / pratio;
-                    app->img[i+j*app->width] = pimg[pi + pwidth * pj];
+                    app->img[i + j * app->width] = pimg[pi + pwidth * pj];
                 }
             }
             // app->img = resize_image(
-            //     pwidth, pheight, pimg, app->width, app->height, ygl::resize_filter::box);
+            //     pwidth, pheight, pimg, app->width, app->height,
+            //     ygl::resize_filter::box);
         } else {
             for (auto& p : app->img) p = ygl::zero4f;
         }
@@ -215,7 +217,7 @@ bool update(ygl::glwindow* win, app_state* app) {
         app->rngs = ygl::make_rng_seq(app->img.size(), app->seed);
         ygl::trace_async_start(app->scn, app->cam, app->width, app->height,
             app->img, app->rngs, app->nsamples, app->tracer, app->nbounces,
-            app->async_threads, app->async_stop, app->pixel_clamp, false, 
+            app->async_threads, app->async_stop, app->pixel_clamp, false,
             [win, app](int s, int j) {
                 if (j % app->preview_resolution) return;
                 app->update_texture = true;
@@ -298,17 +300,16 @@ int main(int argc, char* argv[]) {
         parser, "--nsamples", "-s", "Number of samples.", app->nsamples);
     app->tracer = ygl::parse_opt(
         parser, "--tracer", "-T", "Trace type.", trace_names, app->tracer);
-    auto double_sided = ygl::parse_flag(parser, "--double-sided", "-D",
-        "Force double sided rendering.", false);
+    auto double_sided = ygl::parse_flag(
+        parser, "--double-sided", "-D", "Force double sided rendering.", false);
     app->nbounces = ygl::parse_opt(
         parser, "--nbounces", "", "Maximum number of bounces.", app->nbounces);
-    app->pixel_clamp = ygl::parse_opt(parser, "--pixel-clamp", "",
-        "Final pixel clamping.", 100.0f);
+    app->pixel_clamp = ygl::parse_opt(
+        parser, "--pixel-clamp", "", "Final pixel clamping.", 100.0f);
     app->seed = ygl::parse_opt(
         parser, "--seed", "", "Seed for the random number generators.", 7);
-    app->preview_resolution = ygl::parse_opt(parser,
-        "--preview-resolution", "", "Preview resolution for async rendering.",
-        app->preview_resolution);
+    app->preview_resolution = ygl::parse_opt(parser, "--preview-resolution", "",
+        "Preview resolution for async rendering.", app->preview_resolution);
     app->quiet =
         ygl::parse_flag(parser, "--quiet", "-q", "Print only errors messages");
     app->imfilename = ygl::parse_opt(
@@ -323,32 +324,33 @@ int main(int argc, char* argv[]) {
     if (app->quiet) ygl::log_verbose() = false;
 
     // scene loading
-    ygl::log_info("loading scene {}", app->filename);
+    ygl::log_info_begin("loading scene {}", app->filename);
     try {
         app->scn = ygl::load_scene(app->filename);
     } catch (std::exception e) {
         ygl::log_fatal("cannot load scene {}", app->filename);
     }
+    ygl::log_info_end();
 
     // fix scene
+    ygl::log_info("adding missing scene elements");
     ygl::update_bbox(app->scn);
     ygl::add_missing_camera(app->scn);
     ygl::add_missing_names(app->scn);
     ygl::add_missing_tangent_space(app->scn);
     app->cam = app->scn->cameras[0];
-    if(double_sided) {
-        for(auto mat : app->scn->materials) mat->double_sided = true;
+    if (double_sided) {
+        for (auto mat : app->scn->materials) mat->double_sided = true;
     }
-
-    // validate
     for (auto err : ygl::validate(app->scn)) ygl::log_warning(err);
 
     // build bvh
-    ygl::log_info("building bvh");
+    ygl::log_info_begin("building bvh");
     ygl::update_bvh(app->scn);
+    ygl::log_info_end();
 
     // init renderer
-    ygl::log_info("initializing tracer");
+    ygl::log_info("initializing lights");
     ygl::update_lights(app->scn);
 
     // fix renderer type if no lights
@@ -358,6 +360,7 @@ int main(int argc, char* argv[]) {
     }
 
     // initialize rendering objects
+    ygl::log_info("initializing tracer data");
     app->width = (int)round(app->cam->aspect * app->resolution);
     app->height = app->resolution;
     app->img = std::vector<ygl::vec4f>(app->width * app->height);

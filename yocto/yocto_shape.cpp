@@ -1555,8 +1555,7 @@ void make_hair(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
 
     auto rng = make_rng(seed, 3);
     auto blen = std::vector<float>(bpos.size());
-    for (auto& l : blen)
-        l = lerp(len.x, len.y, next_rand1f(rng));
+    for (auto& l : blen) l = lerp(len.x, len.y, next_rand1f(rng));
 
     auto cidx = std::vector<int>();
     if (clump.x > 0) {
@@ -1586,13 +1585,11 @@ void make_hair(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
                          u * clump.x;
         }
         if (noise.x > 0) {
-            auto nx = perlin_noise(pos[i] * noise.y + vec3f{0, 0, 0}) *
-                      noise.x;
-            auto ny = perlin_noise(pos[i] * noise.y + vec3f{3, 7, 11}) *
-                      noise.x;
+            auto nx = perlin_noise(pos[i] * noise.y + vec3f{0, 0, 0}) * noise.x;
+            auto ny =
+                perlin_noise(pos[i] * noise.y + vec3f{3, 7, 11}) * noise.x;
             auto nz =
-                perlin_noise(pos[i] * noise.y + vec3f{13, 17, 19}) *
-                noise.x;
+                perlin_noise(pos[i] * noise.y + vec3f{13, 17, 19}) * noise.x;
             pos[i] += {nx, ny, nz};
         }
     }

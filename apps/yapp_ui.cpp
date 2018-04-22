@@ -232,10 +232,9 @@ void draw_glshape(const shape* shp, const material* mat, const mat4f& xform,
 
 // Display a scene
 void draw_glscene(const scene* scn, const camera* cam,
-    const glsurface_program& prog, 
-    const vec2i& viewport_size, const void* highlighted, bool eyelight,
-    bool wireframe, bool edges, bool cutout, float exposure, float gamma,
-    bool cull) {
+    const glsurface_program& prog, const vec2i& viewport_size,
+    const void* highlighted, bool eyelight, bool wireframe, bool edges,
+    bool cutout, float exposure, float gamma, bool cull) {
     // begin frame
     enable_gldepth_test(true);
     set_glviewport(viewport_size);
@@ -282,7 +281,8 @@ void draw_glscene(const scene* scn, const camera* cam,
                 lights_type.push_back(0);
             }
         }
-        set_glsurface_lights(prog, {0, 0, 0}, lights_pos, lights_ke, lights_type);
+        set_glsurface_lights(
+            prog, {0, 0, 0}, lights_pos, lights_ke, lights_type);
     }
 
     for (auto ist : scn->instances) {
