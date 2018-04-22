@@ -114,7 +114,7 @@ struct texture {
     int height = 0;               // height
     std::vector<vec4b> ldr = {};  // ldr image
     std::vector<vec4f> hdr = {};  // hdr image
-    void* gl_data = nullptr; // unmanaged data for OpenGL viewer
+    void* gl_data = nullptr;      // unmanaged data for OpenGL viewer
 };
 
 // Texture information to use for lookup.
@@ -200,8 +200,8 @@ struct shape {
     // computed properties
     bbox3f bbox = invalid_bbox3f;      // boudning box
     std::vector<float> elem_cdf = {};  // element cdf for sampling
-    bvh_tree* bvh = nullptr; // bvh for ray intersection
-    void* gl_data = nullptr; // unmanaged data for OpenGL viewer
+    bvh_tree* bvh = nullptr;           // bvh for ray intersection
+    void* gl_data = nullptr;           // unmanaged data for OpenGL viewer
 
     // cleanup
     ~shape();
@@ -305,7 +305,7 @@ namespace ygl {
 
 // Loads/saves a scene in OBJ and glTF formats.
 scene* load_scene(const std::string& filename, bool load_textures = true,
-    bool preserve_quads = false, bool split_obj_shapes = false,
+    bool preserve_quads = false, bool split_obj_shapes = true,
     bool skip_missing = true);
 void save_scene(const std::string& filename, const scene* scn,
     bool save_textures = true, bool preserve_obj_instances = false,
@@ -373,7 +373,7 @@ void add_missing_names(scene* scn);
 void add_missing_normals(scene* scn);
 void add_missing_tangent_space(scene* scn);
 // Checks for validity of the scene.
-std::vector<std::string> validate(const scene* scn);
+std::vector<std::string> validate(const scene* scn, bool skip_textures = false);
 
 }  // namespace ygl
 

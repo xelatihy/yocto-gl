@@ -611,11 +611,8 @@ obj_scene* load_obj(const std::string& filename, bool split_shapes,
             oobj->groups.erase(oobj->groups.begin() + idx);
             idx--;
         }
-        if (oobj->groups.size() == 1 && oobj->groups[0].name == "" &&
-            oobj->groups[0].matname == "" && oobj->groups[0].faceted == false)
-            oobj->groups.clear();
     }
-
+    
     auto end = std::remove_if(obj->objects.begin(), obj->objects.end(),
         [](const obj_object* x) { return !x; });
     obj->objects.erase(end, obj->objects.end());

@@ -385,9 +385,11 @@ void add_missing_tangent_space(scene* scn) {
             continue;
         auto type = get_shape_type(ist->shp);
         if (type == shape_elem_type::triangles) {
+            if(ist->shp->norm.empty()) update_normals(ist->shp);
             compute_tangent_frames(ist->shp->triangles, ist->shp->pos,
                 ist->shp->norm, ist->shp->texcoord, ist->shp->tangsp);
         } else if (type == shape_elem_type::quads) {
+            if(ist->shp->norm.empty()) update_normals(ist->shp);
             auto triangles = convert_quads_to_triangles(ist->shp->quads);
             compute_tangent_frames(triangles, ist->shp->pos, ist->shp->norm,
                 ist->shp->texcoord, ist->shp->tangsp);
@@ -421,7 +423,7 @@ void add_missing_camera(scene* scn) {
 }
 
 // Checks for validity of the scene.
-std::vector<std::string> validate(const scene* scn) {
+std::vector<std::string> validate(const scene* scn, bool skip_textures) {
     auto errs = std::vector<std::string>();
     auto check_names = [&errs](const auto& vals, const std::string& base) {
         auto used = std::map<std::string, int>();
@@ -447,7 +449,7 @@ std::vector<std::string> validate(const scene* scn) {
     check_names(scn->environments, "environment");
     check_names(scn->nodes, "node");
     check_names(scn->animations, "animation");
-    check_empty_textures(scn->textures);
+    if(!skip_textures) check_empty_textures(scn->textures);
 
     return errs;
 }
@@ -2442,7 +2444,7 @@ scene* load_scene(const std::string& filename, bool load_txts,
     auto scn = (scene*)nullptr;
     if (ext == ".obj" || ext == ".OBJ") {
 #if YGL_OBJ
-        auto oscn = load_obj(filename, split_obj_shapes, true, false);
+        auto oscn = load_obj(filename, split_obj_shapes, true, true);
         scn = obj_to_scene(oscn, preserve_quads, false);
         delete oscn;
 #else
@@ -2844,7 +2846,7 @@ shape* make_proc_shape(const std::string& name, const std::string& type_,
             shp->radius, 1 << tesselation.x, size, uvsize.x, radius);
     } else if (type == "hairball") {
         if (def_tesselation) tesselation = {16, 4, 4};
-        if (def_size) size = { 0.1f, 0.1f, 2 };
+        if (def_size) size = {0.1f, 0.1f, 2};
         auto shp1 = new shape();
         shp1->name = "interior";
         make_sphere_cube(shp1->quads, shp1->pos, shp1->norm, shp1->texcoord,
@@ -2852,7 +2854,8 @@ shape* make_proc_shape(const std::string& name, const std::string& type_,
         shp1->radius.assign(shp1->pos.size(), 0);
         make_hair(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius,
             {1 << tesselation.x, 1 << tesselation.y}, {}, shp1->quads,
-            shp1->pos, shp1->norm, shp1->texcoord, {size.x, size.y}, {0.01f, 0.001f}, hair_noise, hair_clump);
+            shp1->pos, shp1->norm, shp1->texcoord, {size.x, size.y},
+            {0.01f, 0.001f}, hair_noise, hair_clump);
         delete shp1;
     } else if (type == "beziercircle") {
         make_bezier_circle(shp->beziers, shp->pos);

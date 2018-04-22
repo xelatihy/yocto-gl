@@ -33,29 +33,22 @@ def run():
 @click.argument('dirname', required=True)
 @click.argument('scene', required=False, default='*')
 def convert(dirname, scene='*'):
-    tungsten = dirname in ['bitterli']
-    pbrt = dirname in ['bitterli_pbrt', 'pbrt']
-    ext = 'json' if tungsten else 'pbrt'
-    for filename in get_filenames(f'{dirname}/original', scene, f'*.{ext}'):
+    for filename in get_filenames(f'{dirname}/original', scene, '*.pbrt'):
         srcdir = os.path.dirname(filename)
         outdir = srcdir.replace('original','yocto')
         if os.path.exists(outdir):
             run_cmd(f'rm -rf {outdir} && mkdir -p {outdir}')
-    for filename in get_filenames(f'{dirname}/original', scene, f'*.{ext}'):
+    for filename in get_filenames(f'{dirname}/original', scene, '*.pbrt'):
         srcdir = os.path.dirname(filename)
         basename = os.path.basename(filename)
         outdir = srcdir.replace('original','yocto')
-        objname = basename.replace('.'+ext,f'.obj')
-        gltfname = basename.replace('.'+ext,f'.gltf')
+        objname = basename.replace('.pbrt','.obj')
+        gltfname = basename.replace('.pbrt','.gltf')
         # options = '' if 'ecosys' not in srcdir else '--flipyz'
         options = ''
         run_cmd(f'mkdir -p {outdir}/models')
-        if tungsten:
-            run_cmd(f'../yocto-gl/bin/ytungsten {srcdir}/{basename} -o {outdir}/{objname}')
-            run_cmd(f'../yocto-gl/bin/ytungsten {srcdir}/{basename} -o {outdir}/{gltfname}')
-        if pbrt:
-            run_cmd(f'../yocto-gl/bin/ypbrt {options} {srcdir}/{basename} -o {outdir}/{objname}')
-            run_cmd(f'../yocto-gl/bin/ypbrt {options} {srcdir}/{basename} -o {outdir}/{gltfname}')
+        run_cmd(f'../yocto-gl/bin/ypbrt {options} {srcdir}/{basename} -o {outdir}/{objname}')
+        run_cmd(f'../yocto-gl/bin/ypbrt {options} {srcdir}/{basename} -o {outdir}/{gltfname}')
         if os.path.exists(f'{srcdir}/textures'):
             run_cmd(f'cp -r {srcdir}/textures {outdir}/')
         if os.path.exists(f'{srcdir}/LICENSE.txt'):

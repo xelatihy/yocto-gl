@@ -98,9 +98,7 @@ inline void draw(ygl::glwindow* win, app_state* app) {
         if (sel.as<ygl::texture>()) {
             ygl::update_gldata(sel.as<ygl::texture>());
         }
-        if (sel.as<ygl::shape>()) {
-            ygl::update_gldata(sel.as<ygl::shape>());
-        }
+        if (sel.as<ygl::shape>()) { ygl::update_gldata(sel.as<ygl::shape>()); }
         if (sel.as<ygl::node>() || sel.as<ygl::animation>() ||
             app->time != last_time) {
             ygl::update_transforms(app->scn, app->time, app->anim_group);
@@ -117,10 +115,9 @@ inline void draw(ygl::glwindow* win, app_state* app) {
     ygl::clear_glbuffers(app->background);
     ygl::enable_gldepth_test(true);
     ygl::enable_glculling(app->cull_backface);
-    ygl::draw_glscene(app->scn, app->cam, app->prog, 
-        framebuffer_size, app->selection.ptr,
-        app->eyelight, app->wireframe, app->edges, app->cutout, app->exposure,
-        app->gamma, app->cull_backface);
+    ygl::draw_glscene(app->scn, app->cam, app->prog, framebuffer_size,
+        app->selection.ptr, app->eyelight, app->wireframe, app->edges,
+        app->cutout, app->exposure, app->gamma, app->cull_backface);
 
     if (app->no_widgets) {
         ygl::swap_glwindow_buffers(win);
@@ -184,9 +181,9 @@ inline void refresh(ygl::glwindow* win) {
 // run ui loop
 void run_ui(app_state* app) {
     // window
-    auto win = ygl::make_glwindow(
-        (int)std::round(app->cam->aspect * app->resolution),
-        app->resolution, "yview | " + app->filename, app);
+    auto win =
+        ygl::make_glwindow((int)std::round(app->cam->aspect * app->resolution),
+            app->resolution, "yview | " + app->filename, app);
     ygl::set_glwindow_callbacks(win, nullptr, nullptr, refresh);
 
     // load textures and vbos

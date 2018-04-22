@@ -407,8 +407,7 @@ void begin_glsurface_frame(const glsurface_program& prog,
 void end_glsurface_frame(const glsurface_program& prog);
 
 // Set shading lights and ambient.
-void set_glsurface_lights(
-    const glsurface_program& prog, const vec3f& amb,
+void set_glsurface_lights(const glsurface_program& prog, const vec3f& amb,
     const std::vector<vec3f>& lights_pos, const std::vector<vec3f>& lights_ke,
     const std::vector<int>& lights_type);
 
