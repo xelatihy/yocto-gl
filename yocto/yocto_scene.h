@@ -351,8 +351,8 @@ void update_lights(scene* scn, bool do_shapes = true);
 void update_shape_cdf(shape* shp);
 
 // Updates/refits bvh.
-void update_bvh(shape* shp, bool equalsize = true);
-void update_bvh(scene* scn, bool do_shapes = true, bool equalsize = true);
+void update_bvh(shape* shp, bool equalsize = false);
+void update_bvh(scene* scn, bool do_shapes = true, bool equalsize = false);
 void refit_bvh(shape* shp);
 void refit_bvh(scene* scn, bool do_shapes = true);
 
@@ -394,23 +394,8 @@ struct scene_intersection {
 scene_intersection intersect_ray(
     const scene* scn, const ray3f& ray, bool find_any = false);
 
-// Shape elements type.
-enum struct shape_elem_type {
-    none,
-    points,
-    lines,
-    triangles,
-    quads,
-    beziers,
-    vertices,
-    facevarying
-};
-
-// Get shape element type.
-shape_elem_type get_shape_type(const shape* shp);
 // Shape element normal.
 vec3f eval_elem_norm(const shape* shp, int eid);
-
 // Shape values interpolated using barycentric coordinates.
 vec3f eval_pos(const shape* shp, int eid, const vec2f& euv);
 vec3f eval_norm(const shape* shp, int eid, const vec2f& euv);
@@ -522,11 +507,13 @@ instance* make_proc_instance(const std::string& name, const std::string& stype,
 
 // Makes the Cornell Box scene.
 scene* make_cornell_box_scene();
+// Makes a simple scene with up to three objects lined up
 scene* make_simple_scene(const std::vector<std::string>& shapes,
     const std::vector<std::string>& mats, const std::string& lights,
     bool nodes = false, const std::vector<std::string>& animations = {},
     const std::string& floor_mat = "matte_grid");
-scene* make_random_scene(
+// Make a scene with random instances
+scene* make_random_instances_scene(
     const vec2i& num, const bbox3f& bbox, uint64_t seed = 13);
 
 }  // namespace ygl

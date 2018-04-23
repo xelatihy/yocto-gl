@@ -61,11 +61,11 @@ struct app_state {
     bool update_texture = true;
 
     // view image
-    ygl::vec2f offset = {0, 0};
-    float zoom = 1;
+    ygl::frame2f imframe = ygl::identity_frame2f;
+    bool zoom_to_fit = true;
     float exposure = 0;
     float gamma = 2.2f;
-    ygl::vec4f background = {0, 0, 0, 0};
+    ygl::vec4b background = {222, 222, 222, 0};
     ygl::gltexture gl_txt = {};
     ygl::glimage_program gl_prog = {};
     ygl::scene_selection selection = {};
@@ -86,90 +86,85 @@ auto trace_names = std::map<ygl::trace_type, std::string>{
     {ygl::trace_type::eyelight, "eyelight"},
     {ygl::trace_type::direct, "direct"},
     {ygl::trace_type::pathtrace_nomis, "pathtrace_nomis"},
+    {ygl::trace_type::pathtrace_onesample, "pathtrace_onesample"},
+    {ygl::trace_type::pathtrace_naive, "pathtrace_naive"},
     {ygl::trace_type::debug_normal, "debug_normal"},
     {ygl::trace_type::debug_albedo, "debug_albedo"},
     {ygl::trace_type::debug_texcoord, "debug_texcoord"},
     {ygl::trace_type::debug_frontfacing, "debug_frontfacing"},
 };
 
-namespace ygl {
-
-bool draw_imgui_trace_inspector(glwindow* win, app_state* app) {
-    auto edited = 0;
-    edited += draw_imgui_dragbox(win, "resolution", app->resolution, 256, 4096);
-    edited += draw_imgui_dragbox(win, "nsamples", app->nsamples, 16, 4096);
-    edited += draw_imgui_combobox(win, "tracer", app->tracer, trace_names);
-    edited += draw_imgui_dragbox(win, "nbounces", app->nbounces, 1, 10);
-    edited += draw_imgui_dragbox(win, "seed", (int&)app->seed, 0, 1000);
-    edited +=
-        draw_imgui_dragbox(win, "preview", app->preview_resolution, 64, 1080);
-    return edited;
-}
-
-}  // namespace ygl
-
 void draw(ygl::glwindow* win, app_state* app) {
     // draw image
     auto window_size = get_glwindow_size(win);
-    auto framebuffer_size = get_glframebuffer_size(win);
+    auto framebuffer_size = get_glwindow_framebuffer_size(win);
     ygl::set_glviewport(framebuffer_size);
     ygl::clear_glbuffers(app->background);
-    ygl::draw_glimage(app->gl_prog, app->gl_txt, window_size, app->offset,
-        app->zoom, app->exposure, app->gamma);
+    ygl::draw_glimage(app->gl_prog, app->gl_txt, window_size, app->imframe,
+        app->exposure, app->gamma);
 
-    if (ygl::begin_imgui_frame(win, "yitrace")) {
-        if (ygl::draw_imgui_header(win, "trace")) {
-            ygl::push_imgui_groupid(win, app);
-            ygl::draw_imgui_label(win, "scene", app->filename);
-            ygl::draw_imgui_label(
-                win, "size", ygl::format("{} x {}", app->width, app->height));
-            ygl::draw_imgui_label(
-                win, "sample", std::to_string(app->cur_sample));
-            if (ygl::draw_imgui_combobox(
-                    win, "camera", app->cam, app->scn->cameras)) {
-                app->update_list.push_back(app->cam);
-            }
-            if (ygl::draw_imgui_camera_inspector(win, "camera", app->cam)) {
-                app->update_list.push_back(app->cam);
-            }
-            ygl::draw_imgui_checkbox(win, "fps", app->navigation_fps);
-            if (ygl::draw_imgui_button(win, "print stats"))
-                ygl::print_stats(app->scn);
-            ygl::pop_imgui_groupid(win);
+    if (ygl::begin_glwidgets_frame(win, "yitrace")) {
+        ygl::push_glwidgets_groupid(win, app);
+        ygl::draw_glwidgets_label(win, "scene", app->filename);
+        ygl::draw_glwidgets_label(win, "image",
+            ygl::format("{} x {} @ {} samples", app->width, app->height,
+                app->cur_sample));
+        if (ygl::begin_glwidgets_tree(win, "render settings")) {
+            auto edited = 0;
+            edited += ygl::draw_glwidgets_combobox(
+                win, "camera", app->cam, app->scn->cameras);
+            edited += draw_glwidgets_dragbox(
+                win, "resolution", app->resolution, 256, 4096);
+            edited += draw_glwidgets_dragbox(
+                win, "nsamples", app->nsamples, 16, 4096);
+            edited += draw_glwidgets_combobox(
+                win, "tracer", app->tracer, trace_names);
+            edited +=
+                draw_glwidgets_dragbox(win, "nbounces", app->nbounces, 1, 10);
+            edited +=
+                draw_glwidgets_dragbox(win, "seed", (int&)app->seed, 0, 1000);
+            edited += draw_glwidgets_dragbox(
+                win, "preview", app->preview_resolution, 64, 1080);
+            if (edited) app->update_list.push_back(nullptr);
+            ygl::end_glwidgets_tree(win);
         }
-        if (ygl::draw_imgui_header(win, "params")) {
-            if (ygl::draw_imgui_trace_inspector(win, app)) {
-                app->update_list.push_back(nullptr);
-            }
-        }
-        if (ygl::draw_imgui_header(win, "image")) {
-            ygl::draw_imgui_dragbox(win, "offset", app->offset, -4096, 4096);
-            ygl::draw_imgui_dragbox(win, "zoom", app->zoom, 0.01, 10);
-            ygl::draw_imgui_colorbox(win, "background", app->background);
-            ygl::draw_imgui_dragbox(win, "exposure", app->exposure, -5, 5);
-            ygl::draw_imgui_dragbox(win, "gamma", app->gamma, 0.2f, 4);
-            auto ij = ygl::get_glimage_coords(
-                get_glmouse_posf(win), app->offset, app->zoom);
-            ygl::draw_imgui_dragbox(win, "mouse", ij);
+        if (ygl::begin_glwidgets_tree(win, "view settings")) {
+            ygl::draw_glwidgets_dragbox(win, "exposure", app->exposure, -5, 5);
+            ygl::draw_glwidgets_dragbox(win, "gamma", app->gamma, 0.2f, 4);
+            ygl::draw_glwidgets_colorbox(win, "background", app->background);
+            auto zoom = app->imframe.x.x;
+            if (ygl::draw_glwidgets_dragbox(win, "zoom", zoom, 0.1, 10))
+                app->imframe.x.x = app->imframe.y.y = zoom;
+            ygl::draw_glwidgets_checkbox(win, "zoom to fit", app->zoom_to_fit);
+            ygl::continue_glwidgets_line(win);
+            ygl::draw_glwidgets_checkbox(win, "fps", app->navigation_fps);
+            auto ij = ygl::get_glimage_coords(get_glwidnow_mouse_posf(win),
+                app->imframe, {app->width, app->height});
+            ygl::draw_glwidgets_dragbox(win, "mouse", ij);
             if (ij.x >= 0 && ij.x < app->width && ij.y >= 0 &&
                 ij.y < app->height) {
-                ygl::draw_imgui_colorbox(
+                ygl::draw_glwidgets_colorbox(
                     win, "pixel", app->img[ij.x + ij.y * app->width]);
             } else {
                 auto zero4f_ = ygl::zero4f;
-                ygl::draw_imgui_colorbox(win, "pixel", zero4f_);
+                ygl::draw_glwidgets_colorbox(win, "pixel", zero4f_);
             }
+            ygl::end_glwidgets_tree(win);
         }
-        if (ygl::draw_imgui_header(win, "scene")) {
-            ygl::draw_imgui_scene_tree(
+        if (ygl::begin_glwidgets_tree(win, "scene")) {
+            if (ygl::draw_glwidgets_button(win, "print stats"))
+                ygl::print_stats(app->scn);
+            ygl::draw_glwidgets_scene_tree(
                 win, "", app->scn, app->selection, app->update_list);
+            ygl::end_glwidgets_tree(win);
         }
-        if (ygl::draw_imgui_header(win, "inspect")) {
-            ygl::draw_imgui_scene_inspector(
+        if (ygl::begin_glwidgets_tree(win, "object")) {
+            ygl::draw_glwidgets_scene_inspector(
                 win, "", app->scn, app->selection, app->update_list);
+            ygl::end_glwidgets_tree(win);
         }
     }
-    ygl::end_imgui_frame(win);
+    ygl::end_glwidgets_frame(win);
 
     ygl::swap_glwindow_buffers(win);
 }
@@ -217,7 +212,7 @@ bool update(ygl::glwindow* win, app_state* app) {
         app->rngs = ygl::make_rng_seq(app->img.size(), app->seed);
         ygl::trace_async_start(app->scn, app->cam, app->width, app->height,
             app->img, app->rngs, app->nsamples, app->tracer, app->nbounces,
-            app->async_threads, app->async_stop, app->pixel_clamp, false,
+            app->async_threads, app->async_stop, app->pixel_clamp,
             [win, app](int s, int j) {
                 if (j % app->preview_resolution) return;
                 app->update_texture = true;
@@ -236,15 +231,21 @@ bool update(ygl::glwindow* win, app_state* app) {
 }
 
 void refresh(ygl::glwindow* win) {
-    return draw(win, (app_state*)ygl::get_glwindow_user_pointer(win));
+    auto app = (app_state*)ygl::get_glwindow_user_pointer(win);
+    ygl::center_glimage(app->imframe, {app->width, app->height},
+        ygl::get_glwindow_size(win), app->zoom_to_fit);
+    draw(win, (app_state*)ygl::get_glwindow_user_pointer(win));
 }
 
 // run ui loop
 void run_ui(app_state* app) {
     // window
-    auto win = ygl::make_glwindow(
-        app->width, app->height, "yitrace | " + app->filename, app);
+    auto win_width = app->width + ygl::default_glwidgets_width;
+    auto win_height = ygl::clamp(app->height, 512, 1024);
+    auto win = ygl::make_glwindow(win_width, win_height, "yitrace", app);
     ygl::set_glwindow_callbacks(win, nullptr, nullptr, refresh);
+    ygl::center_glimage(app->imframe, {app->width, app->height},
+        ygl::get_glwindow_size(win), app->zoom_to_fit);
 
     // load textures
     app->gl_prog = ygl::make_glimage_program();
@@ -252,7 +253,7 @@ void run_ui(app_state* app) {
         app->gl_txt, app->width, app->height, app->img, false, false, true);
 
     // init widget
-    ygl::init_imgui(win);
+    ygl::init_glwidgets(win);
 
     // loop
     while (!ygl::should_glwindow_close(win)) {
@@ -262,9 +263,11 @@ void run_ui(app_state* app) {
             app->update_list.push_back(app->cam);
         }
         ygl::handle_glscene_selection(win, app->scn, app->cam, app->resolution,
-            app->offset, app->zoom, app->selection);
+            app->imframe, app->selection);
 
         // draw
+        ygl::center_glimage(app->imframe, {app->width, app->height},
+            ygl::get_glwindow_size(win), app->zoom_to_fit);
         draw(win, app);
 
         // update
@@ -272,7 +275,8 @@ void run_ui(app_state* app) {
 
 #ifdef __APPLE__
         // event hadling
-        if (ygl::get_glmouse_button(win) || ygl::get_imgui_active(win)) {
+        if (ygl::get_glwindow_mouse_button(win) ||
+            ygl::get_glwidgets_active(win)) {
             ygl::poll_glwindow_events(win);
         } else {
             ygl::wait_glwindow_events(win);

@@ -33,7 +33,7 @@
 //#define IMGUI_DISABLE_FORMAT_STRING_FUNCTIONS
 
 //---- Include imgui_user.h at the end of imgui.h as a convenience
-//#define IMGUI_INCLUDE_IMGUI_USER_H
+//#define IMGUI_INCLUDE_glwidgets_USER_H
 
 //---- Pack colors to BGRA8 instead of RGBA8 (if you needed to convert from one to another anyway)
 //#define IMGUI_USE_BGRA_PACKED_COLOR

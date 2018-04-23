@@ -48,6 +48,7 @@ int main(int argc, char* argv[]) {
         {ygl::trace_type::eyelight, "eyelight"},
         {ygl::trace_type::direct, "direct"},
         {ygl::trace_type::pathtrace_nomis, "pathtrace_nomis"},
+        {ygl::trace_type::pathtrace_onesample, "pathtrace_onesample"},
         {ygl::trace_type::debug_normal, "debug_normal"},
         {ygl::trace_type::debug_albedo, "debug_albedo"},
         {ygl::trace_type::debug_texcoord, "debug_texcoord"},
@@ -65,8 +66,6 @@ int main(int argc, char* argv[]) {
         trace_names, ygl::trace_type::pathtrace);
     auto double_sided = ygl::parse_flag(
         parser, "--double-sided", "-D", "Force double sided rendering.", false);
-    auto noenvmap = ygl::parse_flag(parser, "--noenvmap", "",
-        "Disable view of the environment map.", false);
     auto max_depth = ygl::parse_opt(
         parser, "--nbounces", "", "Maximum number of bounces.", 8);
     auto pixel_clamp = ygl::parse_opt(
@@ -148,11 +147,11 @@ int main(int argc, char* argv[]) {
         if (noparallel) {
             ygl::trace_samples(scn, cam, width, height, img, rngs, sample,
                 std::min(batch_size, nsamples - sample), tracer, max_depth,
-                pixel_clamp, noenvmap);
+                pixel_clamp);
         } else {
             ygl::trace_samples_mt(scn, cam, width, height, img, rngs, sample,
                 std::min(batch_size, nsamples - sample), tracer, max_depth,
-                pixel_clamp, noenvmap);
+                pixel_clamp);
         }
         ygl::log_info_end();
     }

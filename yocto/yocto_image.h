@@ -126,6 +126,9 @@ inline vec3f rgb_to_xyz(const vec3f& rgb) {
 // Converts HSV to RGB.
 vec4b hsv_to_rgb(const vec4b& hsv);
 
+// Approximate luminance estimate
+inline float luminance(const vec4f& a) { return (a.x + a.y + a.z) / 3; }
+
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------

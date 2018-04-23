@@ -18,14 +18,9 @@ Please consider this to be just development notes and not any real planning.
 
 ## Cleanup
 
-- push/pop timed logger
-    - add back times
-- ytrace app does not use app state
 - trace async without callback
     - no std::function
 - include math functions without crap
-- grouping
-    - color -> math
 - delete
     - compositing if not used
     - widgets
@@ -33,25 +28,23 @@ Please consider this to be just development notes and not any real planning.
 
 ## Trace
 
-- trace functions returns vec4f 
-- simplify point
-    - remove none
-    - remove type
-- is point needed?
-    - introduce brdf, pos, norm
+- yview/yitrace tabs?
+- area light test scene
+- move delta picking up in the loops like opacity
 - eval_pos(env) should apply frame
     - implement eval_pos(ist)
 - bump/normal mapping
 - shape trimming in intersection
-- review light sampling with simpler interface
-    - sample according to area
-    - sample according to angle one light
-    - sample according to angle all lights
+- direct illumination
+    - one light
+    - multiple lights
+    - angle/area
+    - mis
+- simplify point
+    - maybe not return intersect point
+    - handle multiple env
+    - remove environment map point?
 - double-sided brdf
-- trace_pixel and trace_sample
-    - do we need trace_pixels?
-- remove environment map point?
-- sample all lights only
 - back to using pdfs
 - variants
     - steve's
@@ -65,18 +58,11 @@ Please consider this to be just development notes and not any real planning.
 - brdf
     - deltas without delta flag
 - highlights are too soft in bitterli scenes
-- roussian roulette on weight
 - light sampling
-    - possible bug in light weight
-    - envmap sampling
-    - path trace with explicit light sampling
-    - check tungsten light smapling
     - eval_direct function
     - mis in params and not renderer?
 - bump mapping and normal mapping
     - bump mapping frame
-- add transmission to trace
-    - better scheme: filter intersection
 - fast distribution sampling
 - cleanup sampling functions everywhere
     - probably removing sample_points/lines/triangles
