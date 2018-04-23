@@ -196,7 +196,7 @@ static inline const float& _safemax(const float& a, const float& b) {
 }
 
 // Intersect a ray with a axis-aligned bounding box
-bool intersect_check_bbox(const ray3f& ray, const bbox3f& bbox) {
+bool intersect_bbox(const ray3f& ray, const bbox3f& bbox) {
     // determine intersection ranges
     auto invd = 1.0f / ray.d;
     auto t0 = (bbox.min - ray.o) * invd;
@@ -212,7 +212,7 @@ bool intersect_check_bbox(const ray3f& ray, const bbox3f& bbox) {
 }
 
 // Intersect a ray with a axis-aligned bounding box
-bool intersect_check_bbox(const ray3f& ray, const vec3f& ray_dinv,
+bool intersect_bbox(const ray3f& ray, const vec3f& ray_dinv,
     const vec3i& ray_dsign, const bbox3f& bbox_) {
     auto bbox = &bbox_.min;
     auto txmin = (bbox[ray_dsign.x].x - ray.o.x) * ray_dinv.x;
@@ -656,8 +656,7 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
         auto& node = bvh->nodes[node_stack[--node_cur]];
 
         // intersect bbox
-        if (!intersect_check_bbox(ray, ray_dinv, ray_dsign, node.bbox))
-            continue;
+        if (!intersect_bbox(ray, ray_dinv, ray_dsign, node.bbox)) continue;
 
         // intersect node, switching based on node type
         // for each type, iterate over the the primitive list

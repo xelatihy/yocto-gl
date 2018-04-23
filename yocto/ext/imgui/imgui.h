@@ -1842,6 +1842,6 @@ struct ImFont
 #endif
 
 // Include imgui_user.h at the end of imgui.h (convenient for user to only explicitly include vanilla imgui.h)
-#ifdef IMGUI_INCLUDE_IMGUI_USER_H
+#ifdef IMGUI_INCLUDE_glwidgets_USER_H
 #include "imgui_user.h"
 #endif

@@ -106,9 +106,9 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <functional>  // for std::hash
 #include <string>
 #include <vector>
-#include <functional> // for std::hash
 
 // -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
@@ -121,6 +121,7 @@ using std::atan;
 using std::atan2;
 using std::cos;
 using std::exp;
+using std::fabs;
 using std::floor;
 using std::isfinite;
 using std::log;
@@ -129,7 +130,6 @@ using std::round;
 using std::sin;
 using std::sqrt;
 using std::tan;
-using std::fabs;
 using namespace std::string_literals;
 using namespace std::literals;
 
@@ -705,12 +705,21 @@ inline bool operator==(const frame3f& a, const frame3f& b) {
 inline bool operator!=(const frame3f& a, const frame3f& b) { return !(a == b); }
 
 // Frame composition, equivalent to affine matrix product.
+inline frame2f operator*(const frame2f& a, const frame2f& b) {
+    auto rot = mat2f{a.x, a.y} * mat2f{b.x, b.y};
+    auto pos = mat2f{a.x, a.y} * b.o + a.o;
+    return {rot.x, rot.y, pos};
+}
 inline frame3f operator*(const frame3f& a, const frame3f& b) {
     auto rot = mat3f{a.x, a.y, a.z} * mat3f{b.x, b.y, b.z};
     auto pos = mat3f{a.x, a.y, a.z} * b.o + a.o;
     return {rot.x, rot.y, rot.z, pos};
 }
 // Frame inverse, equivalent to rigid affine inverse.
+inline frame2f inverse(const frame2f& a) {
+    auto minv = transpose(mat2f{a.x, a.y});
+    return {minv.x, minv.y, -(minv * a.o)};
+}
 inline frame3f inverse(const frame3f& a) {
     auto minv = transpose(mat3f{a.x, a.y, a.z});
     return {minv.x, minv.y, minv.z, -(minv * a.o)};

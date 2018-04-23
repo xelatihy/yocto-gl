@@ -698,6 +698,28 @@ void make_quad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     }
 }
 
+// Make a stack of quads
+void make_quad_stack(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
+    const vec3f& size, const vec2f& uvsize) {
+    std::vector<vec4i> qquads;
+    std::vector<vec3f> qpos;
+    std::vector<vec3f> qnorm;
+    std::vector<vec2f> qtexcoord;
+
+    quads.clear();
+    pos.clear();
+    norm.clear();
+    texcoord.clear();
+
+    for (auto i = 0; i <= steps.z; i++) {
+        make_quad(qquads, qpos, qnorm, qtexcoord, {steps.x, steps.y},
+            {size.x, size.y}, uvsize);
+        for (auto& p : qpos) p.z = (-0.5f + (float)i / steps.z) * size.z;
+        merge_quads(quads, pos, norm, texcoord, qquads, qpos, qnorm, qtexcoord);
+    }
+}
+
 // Make a cube.
 void make_cube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,

@@ -300,16 +300,16 @@ void draw_glscene(const scene* scn, const camera* cam,
 bool handle_glcamera_navigation(
     glwindow* win, camera* cam, bool navigation_fps) {
     static auto mouse_last = zero2f;
-    auto mouse_pos = get_glmouse_posf(win);
-    auto mouse_button = get_glmouse_button(win);
-    auto alt_down = get_glalt_key(win);
+    auto mouse_pos = get_glwidnow_mouse_posf(win);
+    auto mouse_button = get_glwindow_mouse_button(win);
+    auto alt_down = get_glwindow_alt_key(win);
 
     // updated
     auto updated = false;
 
     // handle mouse and keyboard for navigation
-    if (mouse_button && alt_down && !get_imgui_active(win)) {
-        if (mouse_button == 1 && get_glshift_key(win)) mouse_button = 3;
+    if (mouse_button && alt_down && !get_glwidgets_active(win)) {
+        if (mouse_button == 1 && get_glwindow_shift_key(win)) mouse_button = 3;
         if (navigation_fps) {
             auto dolly = 0.0f;
             auto pan = zero2f;
@@ -338,14 +338,14 @@ bool handle_glcamera_navigation(
     }
 
     // handle keytboard for navigation
-    if (!get_imgui_active(win) && navigation_fps) {
+    if (!get_glwidgets_active(win) && navigation_fps) {
         auto transl = zero3f;
-        if (get_glkey(win, 'a')) transl.x -= 1;
-        if (get_glkey(win, 'd')) transl.x += 1;
-        if (get_glkey(win, 's')) transl.z += 1;
-        if (get_glkey(win, 'w')) transl.z -= 1;
-        if (get_glkey(win, 'e')) transl.y += 1;
-        if (get_glkey(win, 'q')) transl.y -= 1;
+        if (get_glwindow_glkey(win, 'a')) transl.x -= 1;
+        if (get_glwindow_glkey(win, 'd')) transl.x += 1;
+        if (get_glwindow_glkey(win, 's')) transl.z += 1;
+        if (get_glwindow_glkey(win, 'w')) transl.z -= 1;
+        if (get_glwindow_glkey(win, 'e')) transl.y += 1;
+        if (get_glwindow_glkey(win, 'q')) transl.y -= 1;
         if (transl != zero3f) {
             camera_fps(cam->frame, transl, {0, 0});
             updated = true;
@@ -361,13 +361,13 @@ bool handle_glcamera_navigation(
 
 // Handle scene selection
 bool handle_glscene_selection(glwindow* win, const scene* scn,
-    const camera* cam, int res, const vec2f& offset, float zoom,
-    scene_selection& sel) {
-    auto mouse_pos = get_glmouse_posf(win);
-    auto mouse_button = get_glmouse_button(win);
+    const camera* cam, int res, const frame2f& imframe, scene_selection& sel) {
+    auto mouse_pos = get_glwidnow_mouse_posf(win);
+    auto mouse_button = get_glwindow_mouse_button(win);
 
-    if (!(mouse_button == 1 && !get_imgui_active(win))) return false;
-    auto ij = get_glimage_coords(mouse_pos, offset, zoom);
+    if (!(mouse_button == 1 && !get_glwidgets_active(win))) return false;
+    auto ij = get_glimage_coords(
+        mouse_pos, imframe, {(int)round(cam->aspect * res), res});
     if (ij.x < 0 || ij.x >= (int)round(res * cam->aspect) || ij.y < 0 ||
         ij.y >= res)
         return false;
@@ -386,21 +386,22 @@ bool handle_glscene_selection(glwindow* win, const scene* scn,
 }
 
 // Implementation of camera selection
-bool draw_imgui_camera_inspector(
+bool draw_glwidgets_camera_inspector(
     glwindow* win, const std::string& lbl, camera* cam) {
     if (!cam) return false;
     auto edited = 0;
     auto from = cam->frame.o;
     auto to = cam->frame.o - cam->frame.z * cam->focus;
-    edited += draw_imgui_text(win, lbl + " name", cam->name);
-    edited += draw_imgui_dragbox(win, lbl + " from", from, -10, 10);
-    edited += draw_imgui_dragbox(win, lbl + " to", to, -10, 10);
-    edited += draw_imgui_dragbox(win, lbl + " yfov", cam->yfov, 0.1, 10);
-    edited += draw_imgui_dragbox(win, lbl + " aspect", cam->aspect, 1, 3);
-    edited += draw_imgui_dragbox(win, lbl + " aperture", cam->aperture, 0, 1);
-    edited += draw_imgui_dragbox(win, lbl + " focus", cam->focus, 0.1, 100);
-    edited += draw_imgui_dragbox(win, lbl + " near", cam->near, 0.01f, 1);
-    edited += draw_imgui_dragbox(win, lbl + " far", cam->far, 1, 1000);
+    edited += draw_glwidgets_text(win, lbl + " name", cam->name);
+    edited += draw_glwidgets_dragbox(win, lbl + " from", from, -10, 10);
+    edited += draw_glwidgets_dragbox(win, lbl + " to", to, -10, 10);
+    edited += draw_glwidgets_dragbox(win, lbl + " yfov", cam->yfov, 0.1, 10);
+    edited += draw_glwidgets_dragbox(win, lbl + " aspect", cam->aspect, 1, 3);
+    edited +=
+        draw_glwidgets_dragbox(win, lbl + " aperture", cam->aperture, 0, 1);
+    edited += draw_glwidgets_dragbox(win, lbl + " focus", cam->focus, 0.1, 100);
+    edited += draw_glwidgets_dragbox(win, lbl + " near", cam->near, 0.01f, 1);
+    edited += draw_glwidgets_dragbox(win, lbl + " far", cam->far, 1, 1000);
     if (edited) cam->frame = lookat_frame(from, to, {0, 1, 0});
     return edited;
 }
@@ -419,12 +420,12 @@ vec4f get_highlight_color(
 }
 
 template <typename T>
-void draw_scene_tree_widgets_rec(glwindow* win, const std::string& lbl_, T* val,
-    scene_selection& sel,
+void draw_scene_tree_glwidgets_rec(glwindow* win, const std::string& lbl_,
+    T* val, scene_selection& sel,
     const std::unordered_map<std::string, std::string>& highlights) {}
 
 template <typename T>
-void draw_imgui_scene_tree(glwindow* win, const std::string& lbl_, T* val,
+void draw_glwidgets_scene_tree(glwindow* win, const std::string& lbl_, T* val,
     scene_selection& sel,
     const std::unordered_map<std::string, std::string>& highlights) {
     if (!val) return;
@@ -432,328 +433,333 @@ void draw_imgui_scene_tree(glwindow* win, const std::string& lbl_, T* val,
     if (!lbl_.empty()) lbl = lbl_ + ": " + val->name;
     auto selection = sel.ptr;
     auto color = get_highlight_color(highlights, val->name);
-    if (color != zero4f) push_imgui_style(win, color);
-    auto open = begin_imgui_tree(win, lbl, selection, val);
-    if (color != zero4f) pop_imgui_style(win);
+    if (color != zero4f) push_glwidgets_style(win, color);
+    auto open = begin_glwidgets_tree(win, lbl, selection, val);
+    if (color != zero4f) pop_glwidgets_style(win);
     if (selection == val) sel = val;
     if (open) {
-        draw_scene_tree_widgets_rec(win, lbl_, val, sel, highlights);
-        end_imgui_tree(win);
+        draw_scene_tree_glwidgets_rec(win, lbl_, val, sel, highlights);
+        end_glwidgets_tree(win);
     }
 }
 
 template <>
-void draw_scene_tree_widgets_rec<instance>(glwindow* win,
+void draw_scene_tree_glwidgets_rec<instance>(glwindow* win,
     const std::string& lbl_, instance* val, scene_selection& sel,
     const std::unordered_map<std::string, std::string>& highlights) {
-    draw_imgui_scene_tree(win, "shp", val->shp, sel, highlights);
-    draw_imgui_scene_tree(win, "mat", val->mat, sel, highlights);
+    draw_glwidgets_scene_tree(win, "shp", val->shp, sel, highlights);
+    draw_glwidgets_scene_tree(win, "mat", val->mat, sel, highlights);
 }
 
 template <>
-void draw_scene_tree_widgets_rec<material>(glwindow* win,
+void draw_scene_tree_glwidgets_rec<material>(glwindow* win,
     const std::string& lbl_, material* val, scene_selection& sel,
     const std::unordered_map<std::string, std::string>& highlights) {
-    draw_imgui_scene_tree(win, "ke", val->ke_txt.txt, sel, highlights);
-    draw_imgui_scene_tree(win, "kd", val->kd_txt.txt, sel, highlights);
-    draw_imgui_scene_tree(win, "ks", val->ks_txt.txt, sel, highlights);
-    draw_imgui_scene_tree(win, "kr", val->kr_txt.txt, sel, highlights);
-    draw_imgui_scene_tree(win, "rs", val->rs_txt.txt, sel, highlights);
-    draw_imgui_scene_tree(win, "op", val->op_txt.txt, sel, highlights);
-    draw_imgui_scene_tree(win, "bump", val->bump_txt.txt, sel, highlights);
-    draw_imgui_scene_tree(win, "disp", val->disp_txt.txt, sel, highlights);
-    draw_imgui_scene_tree(win, "norm", val->norm_txt.txt, sel, highlights);
-    draw_imgui_scene_tree(win, "occ", val->occ_txt.txt, sel, highlights);
+    draw_glwidgets_scene_tree(win, "ke", val->ke_txt.txt, sel, highlights);
+    draw_glwidgets_scene_tree(win, "kd", val->kd_txt.txt, sel, highlights);
+    draw_glwidgets_scene_tree(win, "ks", val->ks_txt.txt, sel, highlights);
+    draw_glwidgets_scene_tree(win, "kr", val->kr_txt.txt, sel, highlights);
+    draw_glwidgets_scene_tree(win, "rs", val->rs_txt.txt, sel, highlights);
+    draw_glwidgets_scene_tree(win, "op", val->op_txt.txt, sel, highlights);
+    draw_glwidgets_scene_tree(win, "bump", val->bump_txt.txt, sel, highlights);
+    draw_glwidgets_scene_tree(win, "disp", val->disp_txt.txt, sel, highlights);
+    draw_glwidgets_scene_tree(win, "norm", val->norm_txt.txt, sel, highlights);
+    draw_glwidgets_scene_tree(win, "occ", val->occ_txt.txt, sel, highlights);
 }
 template <>
-void draw_scene_tree_widgets_rec<environment>(glwindow* win,
+void draw_scene_tree_glwidgets_rec<environment>(glwindow* win,
     const std::string& lbl_, environment* val, scene_selection& sel,
     const std::unordered_map<std::string, std::string>& highlights) {
-    draw_imgui_scene_tree(win, "ke", val->ke_txt.txt, sel, highlights);
+    draw_glwidgets_scene_tree(win, "ke", val->ke_txt.txt, sel, highlights);
 }
 template <>
-void draw_scene_tree_widgets_rec<node>(glwindow* win, const std::string& lbl_,
+void draw_scene_tree_glwidgets_rec<node>(glwindow* win, const std::string& lbl_,
     node* val, scene_selection& sel,
     const std::unordered_map<std::string, std::string>& highlights) {
-    draw_imgui_scene_tree(win, "ist", val->ist, sel, highlights);
-    draw_imgui_scene_tree(win, "cam", val->cam, sel, highlights);
-    draw_imgui_scene_tree(win, "env", val->env, sel, highlights);
-    draw_imgui_scene_tree(win, "par", val->parent, sel, highlights);
+    draw_glwidgets_scene_tree(win, "ist", val->ist, sel, highlights);
+    draw_glwidgets_scene_tree(win, "cam", val->cam, sel, highlights);
+    draw_glwidgets_scene_tree(win, "env", val->env, sel, highlights);
+    draw_glwidgets_scene_tree(win, "par", val->parent, sel, highlights);
     auto cid = 0;
     for (auto ch : val->children) {
-        draw_imgui_scene_tree(
+        draw_glwidgets_scene_tree(
             win, "ch" + std::to_string(cid++), ch, sel, highlights);
     }
 }
 template <>
-void draw_scene_tree_widgets_rec<animation>(glwindow* win,
+void draw_scene_tree_glwidgets_rec<animation>(glwindow* win,
     const std::string& lbl_, animation* val, scene_selection& sel,
     const std::unordered_map<std::string, std::string>& highlights) {
     auto tid = 0;
     for (auto tg : val->targets) {
-        draw_imgui_scene_tree(
+        draw_glwidgets_scene_tree(
             win, "tg" + std::to_string(tid++), tg, sel, highlights);
     }
 }
 
-void draw_imgui_scene_tree(glwindow* win, const std::string& lbl,
+void draw_glwidgets_scene_tree(glwindow* win, const std::string& lbl,
     texture_info& val, scene_selection& sel,
     const std::unordered_map<std::string, std::string>& highlights) {
-    draw_imgui_scene_tree(win, lbl, val.txt, sel, highlights);
+    draw_glwidgets_scene_tree(win, lbl, val.txt, sel, highlights);
 }
 
-void draw_imgui_scene_tree(glwindow* win, scene* scn, scene_selection& sel,
+void draw_glwidgets_scene_tree(glwindow* win, scene* scn, scene_selection& sel,
     const std::unordered_map<std::string, std::string>& highlights) {
-    if (!scn->cameras.empty() && begin_imgui_tree(win, "cameras")) {
+    if (!scn->cameras.empty() && begin_glwidgets_tree(win, "cameras")) {
         for (auto v : scn->cameras)
-            draw_imgui_scene_tree(win, "", v, sel, highlights);
-        end_imgui_tree(win);
+            draw_glwidgets_scene_tree(win, "", v, sel, highlights);
+        end_glwidgets_tree(win);
     }
-    if (!scn->shapes.empty() && begin_imgui_tree(win, "shapes")) {
+    if (!scn->shapes.empty() && begin_glwidgets_tree(win, "shapes")) {
         for (auto v : scn->shapes)
-            draw_imgui_scene_tree(win, "", v, sel, highlights);
-        end_imgui_tree(win);
+            draw_glwidgets_scene_tree(win, "", v, sel, highlights);
+        end_glwidgets_tree(win);
     }
-    if (!scn->instances.empty() && begin_imgui_tree(win, "instances")) {
+    if (!scn->instances.empty() && begin_glwidgets_tree(win, "instances")) {
         for (auto v : scn->instances)
-            draw_imgui_scene_tree(win, "", v, sel, highlights);
-        end_imgui_tree(win);
+            draw_glwidgets_scene_tree(win, "", v, sel, highlights);
+        end_glwidgets_tree(win);
     }
-    if (!scn->materials.empty() && begin_imgui_tree(win, "materials")) {
+    if (!scn->materials.empty() && begin_glwidgets_tree(win, "materials")) {
         for (auto v : scn->materials)
-            draw_imgui_scene_tree(win, "", v, sel, highlights);
-        end_imgui_tree(win);
+            draw_glwidgets_scene_tree(win, "", v, sel, highlights);
+        end_glwidgets_tree(win);
     }
-    if (!scn->textures.empty() && begin_imgui_tree(win, "textures")) {
+    if (!scn->textures.empty() && begin_glwidgets_tree(win, "textures")) {
         for (auto v : scn->textures)
-            draw_imgui_scene_tree(win, "", v, sel, highlights);
-        end_imgui_tree(win);
+            draw_glwidgets_scene_tree(win, "", v, sel, highlights);
+        end_glwidgets_tree(win);
     }
-    if (!scn->environments.empty() && begin_imgui_tree(win, "environments")) {
+    if (!scn->environments.empty() &&
+        begin_glwidgets_tree(win, "environments")) {
         for (auto v : scn->environments)
-            draw_imgui_scene_tree(win, "", v, sel, highlights);
-        end_imgui_tree(win);
+            draw_glwidgets_scene_tree(win, "", v, sel, highlights);
+        end_glwidgets_tree(win);
     }
-    if (!scn->nodes.empty() && begin_imgui_tree(win, "nodes")) {
+    if (!scn->nodes.empty() && begin_glwidgets_tree(win, "nodes")) {
         for (auto v : scn->nodes)
-            draw_imgui_scene_tree(win, "", v, sel, highlights);
-        end_imgui_tree(win);
+            draw_glwidgets_scene_tree(win, "", v, sel, highlights);
+        end_glwidgets_tree(win);
     }
-    if (!scn->animations.empty() && begin_imgui_tree(win, "animations")) {
+    if (!scn->animations.empty() && begin_glwidgets_tree(win, "animations")) {
         for (auto v : scn->animations)
-            draw_imgui_scene_tree(win, "", v, sel, highlights);
-        end_imgui_tree(win);
+            draw_glwidgets_scene_tree(win, "", v, sel, highlights);
+        end_glwidgets_tree(win);
     }
 }
 
 template <typename T>
-void draw_imgui_label(glwindow* win, const std::string& lbl,
+void draw_glwidgets_label(glwindow* win, const std::string& lbl,
     const std::vector<T>& val, bool skip_if_empty = true) {
     if (skip_if_empty && val.empty()) return;
-    draw_imgui_label(win, lbl, std::to_string(val.size()));
+    draw_glwidgets_label(win, lbl, std::to_string(val.size()));
 }
 
 /// Visit struct elements.
-bool draw_imgui_scene_inspector(glwindow* win, camera* val, scene* scn) {
+bool draw_glwidgets_scene_inspector(glwindow* win, camera* val, scene* scn) {
     auto edited = 0;
-    edited += draw_imgui_text(win, "name", val->name);
-    edited += draw_imgui_dragbox(win, "frame", val->frame);
-    edited += draw_imgui_checkbox(win, "ortho", val->ortho);
-    edited += draw_imgui_dragbox(win, "yfov", val->yfov, 0.1f, 10);
-    edited += draw_imgui_dragbox(win, "aspect", val->aspect, 1, 3);
-    edited += draw_imgui_dragbox(win, "focus", val->focus, 0.01f, 1000);
-    edited += draw_imgui_dragbox(win, "aperture", val->aperture, 0, 5);
-    edited += draw_imgui_dragbox(win, "near", val->near, 0.01f, 10);
-    edited += draw_imgui_dragbox(win, "far", val->far, 10, 10000);
+    edited += draw_glwidgets_text(win, "name", val->name);
+    edited += draw_glwidgets_dragbox(win, "frame", val->frame);
+    edited += draw_glwidgets_checkbox(win, "ortho", val->ortho);
+    edited += draw_glwidgets_dragbox(win, "yfov", val->yfov, 0.1f, 10);
+    edited += draw_glwidgets_dragbox(win, "aspect", val->aspect, 1, 3);
+    edited += draw_glwidgets_dragbox(win, "focus", val->focus, 0.01f, 1000);
+    edited += draw_glwidgets_dragbox(win, "aperture", val->aperture, 0, 5);
+    edited += draw_glwidgets_dragbox(win, "near", val->near, 0.01f, 10);
+    edited += draw_glwidgets_dragbox(win, "far", val->far, 10, 10000);
     return edited;
 }
 
 /// Visit struct elements.
-bool draw_imgui_scene_inspector(glwindow* win, texture* val, scene* scn) {
+bool draw_glwidgets_scene_inspector(glwindow* win, texture* val, scene* scn) {
     auto edited = 0;
-    edited += draw_imgui_text(win, "name", val->name);
-    edited += draw_imgui_text(win, "path", val->path);
-    draw_imgui_label(win, "ldr", val->ldr);
-    draw_imgui_label(win, "hdr", val->hdr);
+    edited += draw_glwidgets_text(win, "name", val->name);
+    edited += draw_glwidgets_text(win, "path", val->path);
+    draw_glwidgets_label(win, "ldr", val->ldr);
+    draw_glwidgets_label(win, "hdr", val->hdr);
     return edited;
 }
 
-bool draw_imgui_scene_inspector(
+bool draw_glwidgets_scene_inspector(
     glwindow* win, const std::string& lbl, texture_info& val, scene* scn) {
     auto edited = 0;
-    edited += draw_imgui_combobox(win, lbl + " txt", val.txt, scn->textures);
-    edited += draw_imgui_checkbox(win, lbl + " wrap_s", val.wrap_s);
-    edited += draw_imgui_checkbox(win, lbl + " wrap_t", val.wrap_t);
-    edited += draw_imgui_checkbox(win, lbl + " linear", val.linear);
-    edited += draw_imgui_checkbox(win, lbl + " mipmap", val.mipmap);
-    edited += draw_imgui_dragbox(win, lbl + " scale", val.scale);
-    return edited;
-}
-
-bool draw_imgui_scene_inspector(glwindow* win, material* val, scene* scn) {
-    auto edited = 0;
-    edited += draw_imgui_text(win, "name", val->name);
-    edited += draw_imgui_checkbox(win, "double_sided", val->double_sided);
     edited +=
-        draw_imgui_combobox(win, "type", val->type, material_type_names());
-    edited += draw_hdr_color_widget(win, "ke", val->ke);
-    edited += draw_imgui_colorbox(win, "kd", val->kd);
-    edited += draw_imgui_colorbox(win, "ks", val->ks);
-    edited += draw_imgui_colorbox(win, "kr", val->kr);
-    edited += draw_imgui_colorbox(win, "kt", val->kt);
-    edited += draw_imgui_dragbox(win, "rs", val->rs);
-    edited += draw_imgui_dragbox(win, "op", val->op);
-    edited += draw_imgui_scene_inspector(win, "ke", val->ke_txt, scn);
-    edited += draw_imgui_scene_inspector(win, "kd", val->kd_txt, scn);
-    edited += draw_imgui_scene_inspector(win, "ks", val->ks_txt, scn);
-    edited += draw_imgui_scene_inspector(win, "kr", val->kr_txt, scn);
-    edited += draw_imgui_scene_inspector(win, "kt", val->kt_txt, scn);
-    edited += draw_imgui_scene_inspector(win, "rs", val->rs_txt, scn);
-    edited += draw_imgui_scene_inspector(win, "op", val->op_txt, scn);
-    edited += draw_imgui_scene_inspector(win, "bump", val->bump_txt, scn);
-    edited += draw_imgui_scene_inspector(win, "disp", val->disp_txt, scn);
-    edited += draw_imgui_scene_inspector(win, "norm", val->norm_txt, scn);
-    edited += draw_imgui_scene_inspector(win, "occ", val->occ_txt, scn);
+        draw_glwidgets_combobox(win, lbl + " txt", val.txt, scn->textures);
+    edited += draw_glwidgets_checkbox(win, lbl + " wrap_s", val.wrap_s);
+    edited += draw_glwidgets_checkbox(win, lbl + " wrap_t", val.wrap_t);
+    edited += draw_glwidgets_checkbox(win, lbl + " linear", val.linear);
+    edited += draw_glwidgets_checkbox(win, lbl + " mipmap", val.mipmap);
+    edited += draw_glwidgets_dragbox(win, lbl + " scale", val.scale);
     return edited;
 }
 
-bool draw_imgui_scene_inspector(glwindow* win, shape* val, scene* scn) {
+bool draw_glwidgets_scene_inspector(glwindow* win, material* val, scene* scn) {
     auto edited = 0;
-    edited += draw_imgui_text(win, "name", val->name);
-    edited += draw_imgui_text(win, "path", val->path);
-    draw_imgui_label(win, "points", val->points);
-    draw_imgui_label(win, "lines", val->lines);
-    draw_imgui_label(win, "triangles", val->triangles);
-    draw_imgui_label(win, "quads", val->quads);
-    draw_imgui_label(win, "quads_pos", val->quads_pos);
-    draw_imgui_label(win, "quads_norm", val->quads_norm);
-    draw_imgui_label(win, "quads_texcoord", val->quads_texcoord);
-    draw_imgui_label(win, "beziers", val->beziers);
-    draw_imgui_label(win, "pos", val->pos);
-    draw_imgui_label(win, "norm", val->norm);
-    draw_imgui_label(win, "texcoord", val->texcoord);
-    draw_imgui_label(win, "texcoord1", val->texcoord1);
-    draw_imgui_label(win, "color", val->color);
-    draw_imgui_label(win, "radius", val->radius);
-    draw_imgui_label(win, "tangsp", val->tangsp);
-    draw_imgui_label(win, "subdivision", std::to_string(val->subdivision));
-    draw_imgui_label(
+    edited += draw_glwidgets_text(win, "name", val->name);
+    edited += draw_glwidgets_checkbox(win, "double_sided", val->double_sided);
+    edited +=
+        draw_glwidgets_combobox(win, "type", val->type, material_type_names());
+    edited += draw_hdr_color_widget(win, "ke", val->ke);
+    edited += draw_glwidgets_colorbox(win, "kd", val->kd);
+    edited += draw_glwidgets_colorbox(win, "ks", val->ks);
+    edited += draw_glwidgets_colorbox(win, "kr", val->kr);
+    edited += draw_glwidgets_colorbox(win, "kt", val->kt);
+    edited += draw_glwidgets_dragbox(win, "rs", val->rs);
+    edited += draw_glwidgets_dragbox(win, "op", val->op);
+    edited += draw_glwidgets_scene_inspector(win, "ke", val->ke_txt, scn);
+    edited += draw_glwidgets_scene_inspector(win, "kd", val->kd_txt, scn);
+    edited += draw_glwidgets_scene_inspector(win, "ks", val->ks_txt, scn);
+    edited += draw_glwidgets_scene_inspector(win, "kr", val->kr_txt, scn);
+    edited += draw_glwidgets_scene_inspector(win, "kt", val->kt_txt, scn);
+    edited += draw_glwidgets_scene_inspector(win, "rs", val->rs_txt, scn);
+    edited += draw_glwidgets_scene_inspector(win, "op", val->op_txt, scn);
+    edited += draw_glwidgets_scene_inspector(win, "bump", val->bump_txt, scn);
+    edited += draw_glwidgets_scene_inspector(win, "disp", val->disp_txt, scn);
+    edited += draw_glwidgets_scene_inspector(win, "norm", val->norm_txt, scn);
+    edited += draw_glwidgets_scene_inspector(win, "occ", val->occ_txt, scn);
+    return edited;
+}
+
+bool draw_glwidgets_scene_inspector(glwindow* win, shape* val, scene* scn) {
+    auto edited = 0;
+    edited += draw_glwidgets_text(win, "name", val->name);
+    edited += draw_glwidgets_text(win, "path", val->path);
+    draw_glwidgets_label(win, "points", val->points);
+    draw_glwidgets_label(win, "lines", val->lines);
+    draw_glwidgets_label(win, "triangles", val->triangles);
+    draw_glwidgets_label(win, "quads", val->quads);
+    draw_glwidgets_label(win, "quads_pos", val->quads_pos);
+    draw_glwidgets_label(win, "quads_norm", val->quads_norm);
+    draw_glwidgets_label(win, "quads_texcoord", val->quads_texcoord);
+    draw_glwidgets_label(win, "beziers", val->beziers);
+    draw_glwidgets_label(win, "pos", val->pos);
+    draw_glwidgets_label(win, "norm", val->norm);
+    draw_glwidgets_label(win, "texcoord", val->texcoord);
+    draw_glwidgets_label(win, "texcoord1", val->texcoord1);
+    draw_glwidgets_label(win, "color", val->color);
+    draw_glwidgets_label(win, "radius", val->radius);
+    draw_glwidgets_label(win, "tangsp", val->tangsp);
+    draw_glwidgets_label(win, "subdivision", std::to_string(val->subdivision));
+    draw_glwidgets_label(
         win, "catmullclark", (val->catmullclark) ? "true" : "false");
     return edited;
 }
 
-bool draw_imgui_scene_inspector(glwindow* win, instance* val, scene* scn) {
+bool draw_glwidgets_scene_inspector(glwindow* win, instance* val, scene* scn) {
     auto edited = 0;
-    edited += draw_imgui_text(win, "name", val->name);
-    edited += draw_imgui_dragbox(win, "frame", val->frame);
-    edited += draw_imgui_combobox(win, "shp", val->shp, scn->shapes);
-    edited += draw_imgui_combobox(win, "mat", val->mat, scn->materials);
+    edited += draw_glwidgets_text(win, "name", val->name);
+    edited += draw_glwidgets_dragbox(win, "frame", val->frame);
+    edited += draw_glwidgets_combobox(win, "shp", val->shp, scn->shapes);
+    edited += draw_glwidgets_combobox(win, "mat", val->mat, scn->materials);
     return edited;
 }
 
-bool draw_imgui_scene_inspector(glwindow* win, environment* val, scene* scn) {
+bool draw_glwidgets_scene_inspector(
+    glwindow* win, environment* val, scene* scn) {
     auto edited = 0;
-    edited += draw_imgui_text(win, "name", val->name);
-    edited += draw_imgui_dragbox(win, "frame", val->frame);
+    edited += draw_glwidgets_text(win, "name", val->name);
+    edited += draw_glwidgets_dragbox(win, "frame", val->frame);
     edited += draw_hdr_color_widget(win, "ke", val->ke);
-    edited += draw_imgui_scene_inspector(win, "ke", val->ke_txt, scn);
+    edited += draw_glwidgets_scene_inspector(win, "ke", val->ke_txt, scn);
     return edited;
 }
 
-bool draw_imgui_scene_inspector(glwindow* win, node* val, scene* scn) {
+bool draw_glwidgets_scene_inspector(glwindow* win, node* val, scene* scn) {
     auto edited = 0;
-    edited += draw_imgui_text(win, "name", val->name);
-    edited += draw_imgui_combobox(win, "parent", val->parent, scn->nodes);
-    edited += draw_imgui_dragbox(win, "frame", val->frame);
-    edited += draw_imgui_dragbox(win, "translation", val->translation);
-    edited += draw_imgui_dragbox(win, "rotation", val->rotation, -1, 1);
-    edited += draw_imgui_dragbox(win, "scale", val->scale, 0, 10);
-    edited += draw_imgui_combobox(win, "cam", val->cam, scn->cameras);
-    edited += draw_imgui_combobox(win, "ist", val->ist, scn->instances);
-    edited += draw_imgui_combobox(win, "env", val->env, scn->environments);
+    edited += draw_glwidgets_text(win, "name", val->name);
+    edited += draw_glwidgets_combobox(win, "parent", val->parent, scn->nodes);
+    edited += draw_glwidgets_dragbox(win, "frame", val->frame);
+    edited += draw_glwidgets_dragbox(win, "translation", val->translation);
+    edited += draw_glwidgets_dragbox(win, "rotation", val->rotation, -1, 1);
+    edited += draw_glwidgets_dragbox(win, "scale", val->scale, 0, 10);
+    edited += draw_glwidgets_combobox(win, "cam", val->cam, scn->cameras);
+    edited += draw_glwidgets_combobox(win, "ist", val->ist, scn->instances);
+    edited += draw_glwidgets_combobox(win, "env", val->env, scn->environments);
     return edited;
 }
 
-bool draw_imgui_scene_inspector(glwindow* win, animation* val, scene* scn) {
+bool draw_glwidgets_scene_inspector(glwindow* win, animation* val, scene* scn) {
     auto edited = 0;
-    edited += draw_imgui_text(win, "name", val->name);
-    edited += draw_imgui_text(win, "path", val->path);
-    edited += draw_imgui_text(win, "group", val->group);
+    edited += draw_glwidgets_text(win, "name", val->name);
+    edited += draw_glwidgets_text(win, "path", val->path);
+    edited += draw_glwidgets_text(win, "group", val->group);
     edited +=
-        draw_imgui_combobox(win, "type", val->type, animation_type_names());
-    draw_imgui_label(win, "times", val->times);
-    draw_imgui_label(win, "translation", val->translation);
-    draw_imgui_label(win, "rotation", val->rotation);
-    draw_imgui_label(win, "scale", val->scale);
-    draw_imgui_label(win, "weights", val->weights);
-    draw_imgui_label(win, "targets", val->targets);
+        draw_glwidgets_combobox(win, "type", val->type, animation_type_names());
+    draw_glwidgets_label(win, "times", val->times);
+    draw_glwidgets_label(win, "translation", val->translation);
+    draw_glwidgets_label(win, "rotation", val->rotation);
+    draw_glwidgets_label(win, "scale", val->scale);
+    draw_glwidgets_label(win, "weights", val->weights);
+    draw_glwidgets_label(win, "targets", val->targets);
     return edited;
 }
 
-bool draw_imgui_scene_tree(glwindow* win, const std::string& lbl, scene* scn,
-    scene_selection& sel, std::vector<ygl::scene_selection>& update_list,
+bool draw_glwidgets_scene_tree(glwindow* win, const std::string& lbl,
+    scene* scn, scene_selection& sel,
+    std::vector<ygl::scene_selection>& update_list,
     const std::unordered_map<std::string, std::string>& inspector_highlights) {
     if (!scn) return false;
-    push_imgui_groupid(win, scn);
-    // begin_imgui_scrollarea(win, "scene #$%^!@", 240, false);
-    draw_imgui_scene_tree(win, scn, sel, inspector_highlights);
-    // end_imgui_scrollarea(win);
+    push_glwidgets_groupid(win, scn);
+    // begin_glwidgets_scrollarea(win, "scene #$%^!@", 240, false);
+    draw_glwidgets_scene_tree(win, scn, sel, inspector_highlights);
+    // end_glwidgets_scrollarea(win);
 
     auto update_len = update_list.size();
 #if 0
     if (test_scn) {
-        draw_add_elem_widgets(
+        draw_add_elem_glwidgets(
             win, scn, "cam", scn->cameras, test_scn->cameras, sel, update_list);
-        draw_add_elem_widgets(win, scn, "txt", scn->textures,
+        draw_add_elem_glwidgets(win, scn, "txt", scn->textures,
             test_scn->textures, sel, update_list);
-        draw_add_elem_widgets(win, scn, "mat", scn->materials,
+        draw_add_elem_glwidgets(win, scn, "mat", scn->materials,
             test_scn->materials, sel, update_list);
-        draw_add_elem_widgets(
+        draw_add_elem_glwidgets(
             win, scn, "shp", scn->shapes, test_scn->shapes, sel, update_list);
-        draw_add_elem_widgets(win, scn, "ist", scn->instances,
+        draw_add_elem_glwidgets(win, scn, "ist", scn->instances,
             test_scn->instances, sel, update_list);
-        draw_add_elem_widgets(
+        draw_add_elem_glwidgets(
             win, scn, "nde", scn->nodes, test_scn->nodes, sel, update_list);
-        draw_add_elem_widgets(win, scn, "env", scn->environments,
+        draw_add_elem_glwidgets(win, scn, "env", scn->environments,
             test_scn->environments, sel, update_list);
-        draw_add_elem_widgets(win, scn, "anim", scn->animations,
+        draw_add_elem_glwidgets(win, scn, "anim", scn->animations,
             test_scn->animations, sel, update_list);
     }
 #endif
 
-    pop_imgui_groupid(win);
+    pop_glwidgets_groupid(win);
     return update_list.size() != update_len;
 }
 
-bool draw_imgui_scene_inspector(glwindow* win, const std::string& lbl,
+bool draw_glwidgets_scene_inspector(glwindow* win, const std::string& lbl,
     scene* scn, scene_selection& sel,
     std::vector<ygl::scene_selection>& update_list,
     const std::unordered_map<std::string, std::string>& inspector_highlights) {
     if (!scn || !sel.ptr) return false;
-    push_imgui_groupid(win, sel.ptr);
+    push_glwidgets_groupid(win, sel.ptr);
 
     auto update_len = update_list.size();
 
     auto edited = false;
     if (sel.as<camera>())
-        edited = draw_imgui_scene_inspector(win, sel.as<camera>(), scn);
+        edited = draw_glwidgets_scene_inspector(win, sel.as<camera>(), scn);
     if (sel.as<shape>())
-        edited = draw_imgui_scene_inspector(win, sel.as<shape>(), scn);
+        edited = draw_glwidgets_scene_inspector(win, sel.as<shape>(), scn);
     if (sel.as<texture>())
-        edited = draw_imgui_scene_inspector(win, sel.as<texture>(), scn);
+        edited = draw_glwidgets_scene_inspector(win, sel.as<texture>(), scn);
     if (sel.as<material>())
-        edited = draw_imgui_scene_inspector(win, sel.as<material>(), scn);
+        edited = draw_glwidgets_scene_inspector(win, sel.as<material>(), scn);
     if (sel.as<environment>())
-        edited = draw_imgui_scene_inspector(win, sel.as<environment>(), scn);
+        edited =
+            draw_glwidgets_scene_inspector(win, sel.as<environment>(), scn);
     if (sel.as<instance>())
-        edited = draw_imgui_scene_inspector(win, sel.as<instance>(), scn);
+        edited = draw_glwidgets_scene_inspector(win, sel.as<instance>(), scn);
     if (sel.as<node>())
-        edited = draw_imgui_scene_inspector(win, sel.as<node>(), scn);
+        edited = draw_glwidgets_scene_inspector(win, sel.as<node>(), scn);
     if (sel.as<animation>())
-        edited = draw_imgui_scene_inspector(win, sel.as<animation>(), scn);
+        edited = draw_glwidgets_scene_inspector(win, sel.as<animation>(), scn);
     if (edited) update_list.push_back(sel);
 
-    pop_imgui_groupid(win);
+    pop_glwidgets_groupid(win);
     return update_list.size() != update_len;
 }
 

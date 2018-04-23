@@ -73,21 +73,21 @@ void draw_glscene(const scene* scn, const camera* cam,
 bool handle_glcamera_navigation(
     glwindow* win, camera* cam, bool navigation_fps);
 bool handle_glscene_selection(glwindow* win, const scene* scn,
-    const camera* cam, int res, const vec2f& offset, float zoom,
+    const camera* cam, int res, const frame2f& imframe,
     scene_selection& sel);
 
 // Draws widgets for a camera. Used for quickly making demos.
-bool draw_imgui_camera_inspector(
+bool draw_glwidgets_camera_inspector(
     glwindow* win, const std::string& lbl, camera* cam);
 
 // Draws widgets for a whole scene. Used for quickly making demos.
-bool draw_imgui_scene_tree(glwindow* win, const std::string& lbl, scene* scn,
+bool draw_glwidgets_scene_tree(glwindow* win, const std::string& lbl, scene* scn,
     scene_selection& sel, std::vector<ygl::scene_selection>& update_list,
     const std::unordered_map<std::string, std::string>& inspector_highlights =
         {});
 
 // Draws widgets for a whole scene. Used for quickly making demos.
-bool draw_imgui_scene_inspector(glwindow* win, const std::string& lbl,
+bool draw_glwidgets_scene_inspector(glwindow* win, const std::string& lbl,
     scene* scn, scene_selection& sel,
     std::vector<ygl::scene_selection>& update_list,
     const std::unordered_map<std::string, std::string>& inspector_highlights =

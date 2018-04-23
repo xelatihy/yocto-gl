@@ -70,29 +70,20 @@ namespace ygl {
 
 // Compute shape normals. Supports only non-facevarying shapes.
 void update_normals(shape* shp) {
-    switch (get_shape_type(shp)) {
-        case shape_elem_type::none: break;
-        case shape_elem_type::points: {
-            shp->norm.assign(shp->pos.size(), {0, 0, 1});
-        } break;
-        case shape_elem_type::vertices: {
-            shp->norm.assign(shp->pos.size(), {0, 0, 1});
-        } break;
-        case shape_elem_type::triangles: {
-            compute_normals(shp->triangles, shp->pos, shp->norm);
-        } break;
-        case shape_elem_type::lines: {
-            compute_tangents(shp->lines, shp->pos, shp->norm);
-        } break;
-        case shape_elem_type::quads: {
-            compute_normals(shp->quads, shp->pos, shp->norm);
-        } break;
-        case shape_elem_type::beziers: {
-            throw std::runtime_error("type not supported");
-        } break;
-        case shape_elem_type::facevarying: {
-            throw std::runtime_error("type not supported");
-        } break;
+    if (!shp->triangles.empty()) {
+        compute_normals(shp->triangles, shp->pos, shp->norm);
+    } else if (!shp->lines.empty()) {
+        compute_tangents(shp->lines, shp->pos, shp->norm);
+    } else if (!shp->points.empty()) {
+        shp->norm.assign(shp->pos.size(), {0, 0, 1});
+    } else if (!shp->quads.empty()) {
+        compute_normals(shp->quads, shp->pos, shp->norm);
+    } else if (!shp->beziers.empty()) {
+        throw std::runtime_error("type not supported");
+    } else if (!shp->quads_pos.empty()) {
+        throw std::runtime_error("type not supported");
+    } else {
+        shp->norm.assign(shp->pos.size(), {0, 0, 1});
     }
 }
 
@@ -105,25 +96,21 @@ void tesselate_shape(shape* shp, bool subdivide,
             subdivide_shape_once(shp, shp->catmullclark);
         }
     }
-    auto type = get_shape_type(shp);
-    if (facevarying_to_sharedvertex && type == shape_elem_type::facevarying) {
+    if (facevarying_to_sharedvertex && !shp->quads_pos.empty()) {
         std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
             convert_face_varying(shp->quads_pos, shp->quads_norm,
                 shp->quads_texcoord, shp->pos, shp->norm, shp->texcoord);
         shp->quads_pos = {};
         shp->quads_norm = {};
         shp->quads_texcoord = {};
-        type = get_shape_type(shp);
     }
-    if (quads_to_triangles && type == shape_elem_type::quads) {
+    if (quads_to_triangles && !shp->quads.empty()) {
         shp->triangles = convert_quads_to_triangles(shp->quads);
         shp->quads = {};
-        type = get_shape_type(shp);
     }
-    if (bezier_to_lines && type == shape_elem_type::beziers) {
+    if (bezier_to_lines && !shp->beziers.empty()) {
         shp->lines = convert_bezier_to_lines(shp->beziers);
         shp->beziers = {};
-        type = get_shape_type(shp);
     }
 }
 
@@ -265,7 +252,8 @@ void update_lights(scene* scn, bool do_shapes) {
     }
 }
 
-// Generate a distribution for sampling a shape uniformly based on area/length.
+// Generate a distribution for sampling a shape uniformly based
+// on area/length.
 void update_shape_cdf(shape* shp) {
     shp->elem_cdf.clear();
     if (!shp->triangles.empty()) {
@@ -383,13 +371,12 @@ void add_missing_tangent_space(scene* scn) {
         if (!ist->shp->tangsp.empty() || ist->shp->texcoord.empty()) continue;
         if (!ist->mat || (!ist->mat->norm_txt.txt && !ist->mat->bump_txt.txt))
             continue;
-        auto type = get_shape_type(ist->shp);
-        if (type == shape_elem_type::triangles) {
-            if(ist->shp->norm.empty()) update_normals(ist->shp);
+        if (!ist->shp->triangles.empty()) {
+            if (ist->shp->norm.empty()) update_normals(ist->shp);
             compute_tangent_frames(ist->shp->triangles, ist->shp->pos,
                 ist->shp->norm, ist->shp->texcoord, ist->shp->tangsp);
-        } else if (type == shape_elem_type::quads) {
-            if(ist->shp->norm.empty()) update_normals(ist->shp);
+        } else if (!ist->shp->quads.empty()) {
+            if (ist->shp->norm.empty()) update_normals(ist->shp);
             auto triangles = convert_quads_to_triangles(ist->shp->quads);
             compute_tangent_frames(triangles, ist->shp->pos, ist->shp->norm,
                 ist->shp->texcoord, ist->shp->tangsp);
@@ -449,7 +436,7 @@ std::vector<std::string> validate(const scene* scn, bool skip_textures) {
     check_names(scn->environments, "environment");
     check_names(scn->nodes, "node");
     check_names(scn->animations, "animation");
-    if(!skip_textures) check_empty_textures(scn->textures);
+    if (!skip_textures) check_empty_textures(scn->textures);
 
     return errs;
 }
@@ -473,63 +460,31 @@ scene_intersection intersect_ray(
     return isec;
 }
 
-// Synchronizes shape element type.
-shape_elem_type get_shape_type(const shape* shp) {
-    if (!shp->triangles.empty()) {
-        return shape_elem_type::triangles;
-    } else if (!shp->lines.empty()) {
-        return shape_elem_type::lines;
-    } else if (!shp->points.empty()) {
-        return shape_elem_type::points;
-    } else if (!shp->quads.empty()) {
-        return shape_elem_type::quads;
-    } else if (!shp->beziers.empty()) {
-        return shape_elem_type::beziers;
-    } else if (!shp->quads_pos.empty()) {
-        return shape_elem_type::facevarying;
-    } else if (!shp->pos.empty()) {
-        return shape_elem_type::vertices;
-    } else {
-        return shape_elem_type::none;
-    }
-}
-
 // Shape element normal.
 vec3f eval_elem_norm(const shape* shp, int eid) {
     auto norm = zero3f;
-    switch (get_shape_type(shp)) {
-        case shape_elem_type::none: {
-            throw std::runtime_error("type not supported");
-        } break;
-        case shape_elem_type::triangles: {
-            auto t = shp->triangles[eid];
-            norm = triangle_normal(shp->pos[t.x], shp->pos[t.y], shp->pos[t.z]);
-        } break;
-        case shape_elem_type::lines: {
-            auto l = shp->lines[eid];
-            norm = line_tangent(shp->pos[l.x], shp->pos[l.y]);
-        } break;
-        case shape_elem_type::points: {
-            norm = {0, 0, 1};
-        } break;
-        case shape_elem_type::quads: {
-            auto q = shp->quads[eid];
-            norm = quad_normal(
-                shp->pos[q.x], shp->pos[q.y], shp->pos[q.z], shp->pos[q.w]);
-        } break;
-        case shape_elem_type::beziers: {
-            auto l = shp->beziers[eid];
-            norm = line_tangent(shp->pos[l.x], shp->pos[l.w]);
-        } break;
-        case shape_elem_type::vertices: {
-            norm = {0, 0, 1};
-        } break;
-        case shape_elem_type::facevarying: {
-            auto q = (shp->quads_norm.empty()) ? shp->quads_pos[eid] :
-                                                 shp->quads_norm[eid];
-            norm = quad_normal(
-                shp->pos[q.x], shp->pos[q.y], shp->pos[q.z], shp->pos[q.w]);
-        } break;
+    if (!shp->triangles.empty()) {
+        auto t = shp->triangles[eid];
+        norm = triangle_normal(shp->pos[t.x], shp->pos[t.y], shp->pos[t.z]);
+    } else if (!shp->lines.empty()) {
+        auto l = shp->lines[eid];
+        norm = line_tangent(shp->pos[l.x], shp->pos[l.y]);
+    } else if (!shp->points.empty()) {
+        norm = {0, 0, 1};
+    } else if (!shp->quads.empty()) {
+        auto q = shp->quads[eid];
+        norm = quad_normal(
+            shp->pos[q.x], shp->pos[q.y], shp->pos[q.z], shp->pos[q.w]);
+    } else if (!shp->beziers.empty()) {
+        auto l = shp->beziers[eid];
+        norm = line_tangent(shp->pos[l.x], shp->pos[l.w]);
+    } else if (!shp->quads_pos.empty()) {
+        auto q = (shp->quads_norm.empty()) ? shp->quads_pos[eid] :
+                                             shp->quads_norm[eid];
+        norm = quad_normal(
+            shp->pos[q.x], shp->pos[q.y], shp->pos[q.z], shp->pos[q.w]);
+    } else {
+        norm = {0, 0, 1};
     }
     return norm;
 }
@@ -539,32 +494,23 @@ template <typename T>
 T eval_elem(const shape* shp, const std::vector<T>& vals, int eid,
     const vec2f& euv, const T& def) {
     if (vals.empty()) return def;
-    switch (get_shape_type(shp)) {
-        case shape_elem_type::none: {
-            throw std::runtime_error("type not supported");
-        } break;
-        case shape_elem_type::triangles: {
-            return interpolate_triangle(vals, shp->triangles[eid], euv);
-        } break;
-        case shape_elem_type::lines: {
-            return interpolate_line(vals, shp->lines[eid], euv.x);
-        } break;
-        case shape_elem_type::points: {
-            return interpolate_point(vals, shp->points[eid]);
-        } break;
-        case shape_elem_type::quads: {
-            return interpolate_quad(vals, shp->quads[eid], euv);
-        } break;
-        case shape_elem_type::beziers: {
-            return interpolate_bezier(vals, shp->beziers[eid], euv.x);
-        } break;
-        case shape_elem_type::vertices: {
-            return vals[eid];
-        } break;
-        case shape_elem_type::facevarying: {
-            throw std::runtime_error("should not have gotten here");
-            return def;
-        } break;
+    if (!shp->triangles.empty()) {
+        return interpolate_triangle(vals, shp->triangles[eid], euv);
+    } else if (!shp->lines.empty()) {
+        return interpolate_line(vals, shp->lines[eid], euv.x);
+    } else if (!shp->points.empty()) {
+        return interpolate_point(vals, shp->points[eid]);
+    } else if (!shp->quads.empty()) {
+        return interpolate_quad(vals, shp->quads[eid], euv);
+    } else if (!shp->beziers.empty()) {
+        return interpolate_bezier(vals, shp->beziers[eid], euv.x);
+    } else if (!shp->quads_pos.empty()) {
+        throw std::runtime_error("should not have gotten here");
+        return def;
+    } else if (!shp->pos.empty()) {
+        return vals[eid];
+    } else {
+        return def;
     }
 }
 
@@ -666,8 +612,8 @@ vec4f eval_texture(const texture_info& info, const vec2f& texcoord, bool srgb,
            lookup(ii, j) * u * (1 - v) + lookup(ii, jj) * u * v;
 }
 
-// Generates a ray from a camera for image plane coordinate uv and the
-// lens coordinates luv.
+// Generates a ray from a camera for image plane coordinate uv and
+// the lens coordinates luv.
 ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv) {
     auto h = 2 * tan(cam->yfov / 2);
     auto w = h * cam->aspect;
@@ -678,9 +624,9 @@ ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv) {
         transform_direction(cam->frame, normalize(q - o)));
 }
 
-// Generates a ray from a camera for pixel coordinates `ij`, the resolution
-// `res`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and the
-// image resolution `res`.
+// Generates a ray from a camera for pixel coordinates `ij`, the
+// resolution `res`, the sub-pixel coordinates `puv` and the lens
+// coordinates `luv` and the image resolution `res`.
 ray3f eval_camera_ray(const camera* cam, const vec2i& ij, int res,
     const vec2f& puv, const vec2f& luv) {
     auto uv =
@@ -691,59 +637,54 @@ ray3f eval_camera_ray(const camera* cam, const vec2i& ij, int res,
 // Sample a shape based on a distribution.
 std::pair<int, vec2f> sample_shape(const shape* shp,
     const std::vector<float>& cdf, float re, const vec2f& ruv) {
-    switch (get_shape_type(shp)) {
-        case shape_elem_type::none:
-            throw std::runtime_error("type not supported");
-        case shape_elem_type::triangles: return sample_triangles(cdf, re, ruv);
-        case shape_elem_type::lines:
-            return {sample_lines(cdf, re, ruv.x).first, ruv};
-        case shape_elem_type::points: return {sample_points(cdf, re), ruv};
-        case shape_elem_type::quads: return sample_quads(cdf, re, ruv);
-        case shape_elem_type::beziers:
-            throw std::runtime_error("type not supported");
-        case shape_elem_type::vertices: return {sample_points(cdf, re), ruv};
-        case shape_elem_type::facevarying: return sample_quads(cdf, re, ruv);
+    if (!shp->triangles.empty()) {
+        return sample_triangles(cdf, re, ruv);
+    } else if (!shp->lines.empty()) {
+        return {sample_lines(cdf, re, ruv.x).first, ruv};
+    } else if (!shp->points.empty()) {
+        return {sample_points(cdf, re), ruv};
+    } else if (!shp->quads.empty()) {
+        return sample_quads(cdf, re, ruv);
+    } else if (!shp->beziers.empty()) {
+        throw std::runtime_error("type not supported");
+    } else if (!shp->quads_pos.empty()) {
+        return sample_quads(cdf, re, ruv);
+    } else if (!shp->pos.empty()) {
+        return {sample_points(cdf, re), ruv};
+    } else {
+        return {0, zero2f};
     }
 }
 
 // Subdivides shape elements.
 void subdivide_shape_once(shape* shp, bool subdiv) {
-    switch (get_shape_type(shp)) {
-        case shape_elem_type::none: break;
-        case shape_elem_type::points: break;
-        case shape_elem_type::vertices: break;
-        case shape_elem_type::triangles: {
-            subdivide_triangles(shp->triangles, shp->pos, shp->norm,
+    if (!shp->triangles.empty()) {
+        subdivide_triangles(shp->triangles, shp->pos, shp->norm, shp->texcoord,
+            shp->color, shp->radius);
+    } else if (!shp->lines.empty()) {
+        subdivide_lines(shp->lines, shp->pos, shp->norm, shp->texcoord,
+            shp->color, shp->radius);
+    } else if (!shp->quads.empty()) {
+        if (!subdiv) {
+            subdivide_quads(shp->quads, shp->pos, shp->norm, shp->texcoord,
+                shp->color, shp->radius);
+        } else {
+            subdivide_catmullclark(shp->quads, shp->pos, shp->norm,
                 shp->texcoord, shp->color, shp->radius);
-        } break;
-        case shape_elem_type::lines: {
-            subdivide_lines(shp->lines, shp->pos, shp->norm, shp->texcoord,
-                shp->color, shp->radius);
-        } break;
-        case shape_elem_type::quads: {
-            if (!subdiv) {
-                subdivide_quads(shp->quads, shp->pos, shp->norm, shp->texcoord,
-                    shp->color, shp->radius);
-            } else {
-                subdivide_catmullclark(shp->quads, shp->pos, shp->norm,
-                    shp->texcoord, shp->color, shp->radius);
-            }
-        } break;
-        case shape_elem_type::beziers: {
-            subdivide_beziers(shp->beziers, shp->pos, shp->norm, shp->texcoord,
-                shp->color, shp->radius);
-        } break;
-        case shape_elem_type::facevarying: {
-            if (!subdiv) {
-                subdivide_quads(shp->quads_pos, shp->pos);
-                subdivide_quads(shp->quads_norm, shp->norm);
-                subdivide_quads(shp->quads_texcoord, shp->texcoord);
-            } else {
-                subdivide_catmullclark(shp->quads_pos, shp->pos);
-                subdivide_catmullclark(shp->quads_norm, shp->norm);
-                subdivide_catmullclark(shp->quads_texcoord, shp->texcoord);
-            }
-        } break;
+        }
+    } else if (!shp->beziers.empty()) {
+        subdivide_beziers(shp->beziers, shp->pos, shp->norm, shp->texcoord,
+            shp->color, shp->radius);
+    } else if (!shp->quads_pos.empty()) {
+        if (!subdiv) {
+            subdivide_quads(shp->quads_pos, shp->pos);
+            subdivide_quads(shp->quads_norm, shp->norm);
+            subdivide_quads(shp->quads_texcoord, shp->texcoord);
+        } else {
+            subdivide_catmullclark(shp->quads_pos, shp->pos);
+            subdivide_catmullclark(shp->quads_norm, shp->norm);
+            subdivide_catmullclark(shp->quads_texcoord, shp->texcoord);
+        }
     }
 }
 
@@ -2749,6 +2690,10 @@ shape* make_proc_shape(const std::string& name, const std::string& type_,
         make_cube(shp->quads, shp->pos, shp->norm, shp->texcoord,
             {1 << tesselation.x, 1 << tesselation.y, 1 << tesselation.z}, size,
             uvsize);
+    } else if (type == "quad_stack") {
+        make_quad_stack(shp->quads, shp->pos, shp->norm, shp->texcoord,
+            {1 << tesselation.x, 1 << tesselation.y, 1 << tesselation.z}, size,
+            {uvsize.x, uvsize.y});
     } else if (type == "cube_rounded") {
         if (def_tesselation) tesselation = {5, 5, 5};
         make_cube_rounded(shp->quads, shp->pos, shp->norm, shp->texcoord,
@@ -3001,13 +2946,33 @@ environment* make_environment(const std::string& name, const vec3f& ke,
 scene* make_simple_scene(const std::vector<std::string>& shapes,
     const std::vector<std::string>& mats, const std::string& lights, bool nodes,
     const std::vector<std::string>& animations, const std::string& floor_mat) {
-    auto frames =
-        std::vector<frame3f>{{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {-2.50f, 1, 0}},
+    auto frames = std::vector<frame3f>();
+    if (shapes.size() == 3) {
+        frames = std::vector<frame3f>{
+            {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {-2.50f, 1, 0}},
             {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 1, 0}},
             {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {+2.50f, 1, 0}}};
+    } else if (shapes.size() == 2) {
+        frames = std::vector<frame3f>{
+            {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {-1.25f, 1, 0}},
+            {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {+1.25f, 1, 0}}};
+    } else if (shapes.size() == 1) {
+        frames =
+            std::vector<frame3f>{{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 1, 0}}};
+    } else {
+        throw std::runtime_error("number of shapes not supported");
+    }
     auto scn = new scene();
-    scn->cameras.push_back(make_camera(
-        "cam", {0, 6, 24}, {0, 1, 0}, 7.5f * pi / 180, 2.35f / 1.0f));
+    if (shapes.size() == 3) {
+        scn->cameras.push_back(make_camera(
+            "cam", {0, 6, 24}, {0, 1, 0}, 7.5f * pi / 180, 2.35f / 1.0f));
+    } else if (shapes.size() == 2) {
+        scn->cameras.push_back(make_camera(
+            "cam", {0, 6, 24}, {0, 1, 0}, 7.5f * pi / 180, 16.0f / 9.0f));
+    } else if (shapes.size() == 1) {
+        scn->cameras.push_back(
+            make_camera("cam", {0, 6, 24}, {0, 1, 0}, 7.5f * pi / 180, 1.0f));
+    }
     if (floor_mat != "") {
         scn->instances.push_back(
             make_proc_instance("floor", "floor", floor_mat));
@@ -3025,8 +2990,7 @@ scene* make_simple_scene(const std::vector<std::string>& shapes,
                     "emission", translation_frame(pos[i])));
             scn->instances.back()->mat->ke *= 120;
         }
-    }
-    if (lights == "arealights") {
+    } else if (lights == "arealights") {
         auto pos = std::vector<vec3f>{{0, 16, 0}, {0, 16, 16}};
         for (auto i = 0; i < 2; i++) {
             scn->instances.push_back(make_proc_instance(
@@ -3035,8 +2999,7 @@ scene* make_simple_scene(const std::vector<std::string>& shapes,
             scn->instances.back()->mat->ke *= 8;
             for (auto& p : scn->instances.back()->shp->pos) p *= 8;
         }
-    }
-    if (lights == "arealights1") {
+    } else if (lights == "arealights1") {
         auto pos = std::vector<vec3f>{{-4, 5, 8}, {+4, 5, 8}};
         for (auto i = 0; i < 2; i++) {
             scn->instances.push_back(make_proc_instance(
@@ -3045,11 +3008,13 @@ scene* make_simple_scene(const std::vector<std::string>& shapes,
             scn->instances.back()->mat->ke *= 20;
             for (auto& p : scn->instances.back()->shp->pos) p *= 4;
         }
-    }
-    if (lights == "envlights") {
+    } else if (lights == "envlights") {
         scn->textures.push_back(make_proc_texture("sky", "sky", 512));
         scn->environments.push_back(
             make_environment("sky", {1, 1, 1}, scn->textures.back()));
+    } else if (lights == "" || lights == "nolights") {
+    } else {
+        throw std::runtime_error("unknown light type " + lights);
     }
     for (auto ist : scn->instances) {
         scn->shapes.push_back(ist->shp);
@@ -3078,8 +3043,8 @@ scene* make_simple_scene(const std::vector<std::string>& shapes,
                 if (n->name == name) nde = n;
             nde->translation = nde->frame.o;
             nde->frame = identity_frame3f;
-            scn->animations.push_back(new animation(*animations[i]));
-            scn->animations.back()->name = name;
+            scn->animations.push_back(new
+    animation(*animations[i])); scn->animations.back()->name = name;
             scn->animations.back()->targets = {nde};
         }
     }
@@ -3107,7 +3072,8 @@ scene* make_simple_scene(const std::vector<std::string>& shapes,
 }
 
 // instances shared functions
-scene* make_random_scene(const vec2i& num, const bbox3f& bbox, uint64_t seed) {
+scene* make_random_instances_scene(
+    const vec2i& num, const bbox3f& bbox, uint64_t seed) {
     auto rscale = 0.9f * 0.25f *
                   min((bbox.max.x - bbox.min.x) / num.x,
                       (bbox.max.x - bbox.min.x) / num.y);

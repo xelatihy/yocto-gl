@@ -216,6 +216,13 @@ std::map<std::string, ygl::scene*> make_scene_presets() {
         ygl::make_simple_scene({"matball", "matball", "matball"},
             {"carpaint_black", "carpaint_blue", "metal_blue"}, "envlights");
 
+    // lihght testing
+    presets["arealights_nl"] =
+        ygl::make_simple_scene({"quad", "sphere", "quad_stack"},
+            {"emission", "emission", "emission"}, "nolights");
+    presets["arealight_nl"] =
+        ygl::make_simple_scene({"quad"}, {"emission"}, "nolights");
+
     // matball
     // presets["mattball_al"] = ygl::make_simple_scene( {"matball"},
     // {"carpaint_black"}, "arealights", ""); last = add_simple_scene(presets,
@@ -257,9 +264,9 @@ std::map<std::string, ygl::scene*> make_scene_presets() {
 
     // instances
     presets["instances_pl"] =
-        ygl::make_random_scene({10, 10}, {{-3, -3, 0}, {3, 3, 0}});
+        ygl::make_random_instances_scene({10, 10}, {{-3, -3, 0}, {3, 3, 0}});
     presets["instancel_pl"] =
-        ygl::make_random_scene({100, 100}, {{-3, -3, 0}, {3, 3, 0}});
+        ygl::make_random_instances_scene({100, 100}, {{-3, -3, 0}, {3, 3, 0}});
 
     return presets;
 }

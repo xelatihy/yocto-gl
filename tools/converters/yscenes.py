@@ -76,12 +76,11 @@ def trace(dirname, scene='*', format='obj'):
 @run.command()
 @click.option('--resolution', '-r', default=720, type=int)
 @click.option('--samples', '-s', default=64, type=int)
-@click.option('--filter', '-f', default='box', type=str)
 @click.option('--progressive', '-p', is_flag=True, default=False, type=bool)
 @click.option('--format', '-F', default='obj', type=click.Choice(['obj','gltf']))
 @click.argument('dirname', required=True)
 @click.argument('scene', required=False, default='*')
-def render(dirname, scene='*', format='obj', samples=64, resolution=720, filter='box', progressive=False):
+def render(dirname, scene='*', format='obj', samples=64, resolution=720, progressive=False):
     for filename in get_filenames(f'{dirname}/yocto', scene, f'*.{format}'):
         outdir = os.path.dirname(filename).replace('/yocto','/render')
         if os.path.exists(f'{outdir}'):
@@ -90,7 +89,7 @@ def render(dirname, scene='*', format='obj', samples=64, resolution=720, filter=
             run_cmd(f'mkdir -p {outdir}')
         outname = filename.replace('/yocto','/render')+'.exr'
         save_batch = '--save-batch' if progressive else ''
-        run_cmd(f'../yocto-gl/bin/ytrace -D -r {resolution} -s {samples} --filter {filter} {save_batch} -o {outname} {filename}')
+        run_cmd(f'../yocto-gl/bin/ytrace -D -r {resolution} -s {samples} {save_batch} -o {outname} {filename}')
 
 @run.command()
 def sync():

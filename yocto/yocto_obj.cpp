@@ -612,7 +612,7 @@ obj_scene* load_obj(const std::string& filename, bool split_shapes,
             idx--;
         }
     }
-    
+
     auto end = std::remove_if(obj->objects.begin(), obj->objects.end(),
         [](const obj_object* x) { return !x; });
     obj->objects.erase(end, obj->objects.end());

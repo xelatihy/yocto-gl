@@ -88,7 +88,8 @@ enum struct glelem_type : int { point = 1, line = 2, triangle = 3 };
 bool check_glerror(bool print = true);
 
 // Clear window.
-void clear_glbuffers(const vec4f& background = {0, 0, 0, 0});
+void clear_glbuffers(const vec4f& background);
+void clear_glbuffers(const vec4b& background);
 
 // Enable/disable depth test, culling, wireframe and blending.
 void enable_gldepth_test(bool enabled);
@@ -98,8 +99,8 @@ void enable_glblending(bool enabled);
 void set_glblend_over();
 
 // Set viewport.
-void set_glviewport(const vec4i& v);
 void set_glviewport(const vec2i& v);
+void set_glviewport(int x, int y, int w, int h);
 
 // Reads an image from the the framebuffer.
 void read_glimagef(float* pixels, int w, int h, int nc);
@@ -277,7 +278,9 @@ void set_gluniform(const glprogram& prog, int var, float val);
 void set_gluniform(const glprogram& prog, int var, const vec2f& val);
 void set_gluniform(const glprogram& prog, int var, const vec3f& val);
 void set_gluniform(const glprogram& prog, int var, const vec4f& val);
+void set_gluniform(const glprogram& prog, int var, const mat3f& val);
 void set_gluniform(const glprogram& prog, int var, const mat4f& val);
+void set_gluniform(const glprogram& prog, int var, const frame2f& val);
 void set_gluniform(const glprogram& prog, int var, const frame3f& val);
 template <typename T>
 inline void set_gluniform(
@@ -360,14 +363,30 @@ glimage_program make_glimage_program();
 
 // Draws an image texture the stdimage program.
 void draw_glimage(const glimage_program& prog, const gltexture& txt,
-    const vec2i& win_size, const vec2f& offset, float zoom, float exposure = 0,
+    const vec2i& win_size, const frame2f& frame, float exposure = 0,
     float gamma = 1);
 
 // Computes the image uv coordinates corresponding to the view parameters.
+// Returns negative coordinates if out of the image.
 inline vec2i get_glimage_coords(
-    const vec2f& mouse_pos, const vec2f& offset, float zoom) {
-    auto xy = (mouse_pos - offset) / zoom;
-    return {(int)round(xy.x), (int)round(xy.y)};
+    const vec2f& mouse_pos, const frame2f& frame, const vec2i& txt_size) {
+    // assume an affine without rotation
+    auto xyf = (mouse_pos - frame.o) / vec2f{frame.x.x, frame.y.y};
+    return vec2i{(int)round(xyf.x + txt_size.x / 2.0f),
+        (int)round(xyf.y + txt_size.y / 2.0f)};
+}
+
+// Center image and autofit.
+inline void center_glimage(frame2f& frame, const vec2i& imsize,
+    const vec2i& winsize, bool zoom_to_fit) {
+    if (zoom_to_fit) {
+        frame.x.x = frame.y.y =
+            ygl::min(winsize.x / (float)imsize.x, winsize.y / (float)imsize.y);
+        frame.o = {(float)winsize.x / 2, (float)winsize.y / 2};
+    } else {
+        if (winsize.x >= imsize.x * frame.x.x) frame.o.x = winsize.x / 2;
+        if (winsize.y >= imsize.y * frame.y.y) frame.o.y = winsize.y / 2;
+    }
 }
 
 // Program to shade surfaces with a physically-based standard shader based on
@@ -474,14 +493,18 @@ using mouse_glcallback = void (*)(
     glwindow* win, int button, bool press, int mods);
 using refresh_glcallback = void (*)(glwindow* win);
 
+// default widgets width
+const int default_glwidgets_width = 320;
+
 // OpenGL window. Members are not part of the public API.
 struct glwindow {
-    GLFWwindow* gwin = nullptr;               // GLFW window
-    bool widget_enabled = false;              // whether we have widgets
-    text_glcallback text_cb = nullptr;        // text callback
-    mouse_glcallback mouse_cb = nullptr;      // mouse callback
-    refresh_glcallback refresh_cb = nullptr;  // refresh callback
-    void* user_ptr = nullptr;                 // user pointer
+    GLFWwindow* gwin = nullptr;                   // GLFW window
+    bool widgets_enabled = false;                 // whether we have widgets
+    int widgets_width = default_glwidgets_width;  // widget width
+    text_glcallback text_cb = nullptr;            // text callback
+    mouse_glcallback mouse_cb = nullptr;          // mouse callback
+    refresh_glcallback refresh_cb = nullptr;      // refresh callback
+    void* user_ptr = nullptr;                     // user pointer
 
     ~glwindow();  // cleaup
 };
@@ -510,20 +533,21 @@ void post_glwindow_event(glwindow* win);
 bool should_glwindow_close(glwindow* win);
 
 // Window/framebuffer size.
-vec2i get_glwindow_size(glwindow* win);
-vec2i get_glframebuffer_size(glwindow* win);
+vec2i get_glwindow_size(glwindow* win, bool adjust_glwidgets = true);
+vec2i get_glwindow_framebuffer_size(
+    glwindow* win, bool adjust_glwidgets = true);
 
 // Mouse/keyboard state queries.
-int get_glmouse_button(glwindow* win);
-vec2i get_glmouse_pos(glwindow* win);
-vec2f get_glmouse_posf(glwindow* win);
-bool get_glkey(glwindow* win, int key);
-bool get_glalt_key(glwindow* win);
-bool get_glctrl_key(glwindow* win);
-bool get_glshift_key(glwindow* win);
+int get_glwindow_mouse_button(glwindow* win);
+vec2i get_glwidnow_mouse_pos(glwindow* win);
+vec2f get_glwidnow_mouse_posf(glwindow* win);
+bool get_glwindow_glkey(glwindow* win, int key);
+bool get_glwindow_alt_key(glwindow* win);
+bool get_glwindow_ctrl_key(glwindow* win);
+bool get_glwindow_shift_key(glwindow* win);
 
 // Read pixels.
-void take_glscreenshot4b(glwindow* win, int& width, int& height,
+void take_glwindow_screenshot4b(glwindow* win, int& width, int& height,
     std::vector<vec4b>& img, bool flipy = true, bool back = false);
 
 }  // namespace ygl
@@ -534,141 +558,143 @@ void take_glscreenshot4b(glwindow* win, int& width, int& height,
 namespace ygl {
 
 // Initialize widgets.
-void init_imgui(
-    glwindow* win, bool light_style = false, bool extra_font = true);
+void init_glwidgets(glwindow* win, int widgets_width = default_glwidgets_width,
+    bool light_style = true, bool extra_font = true);
 
 // Begin/end draw widgets.
-bool begin_imgui_frame(glwindow* win, const std::string& title);
-void end_imgui_frame(glwindow* win);
+bool begin_glwidgets_frame(glwindow* win, const std::string& title);
+void end_glwidgets_frame(glwindow* win);
 
 // Whether widgets are active.
-bool get_imgui_active(glwindow* win);
+bool get_glwidgets_active(glwindow* win);
 
 // Horizontal separator.
-void draw_imgui_separator(glwindow* win);
+void draw_glwidgets_separator(glwindow* win);
 
 // Indent and line continuation widget.
-void begin_imgui_indent(glwindow* win);
-void end_imgui_indent(glwindow* win);
-void continue_imgui_line(glwindow* win);
+void begin_glwidgets_indent(glwindow* win);
+void end_glwidgets_indent(glwindow* win);
+void continue_glwidgets_line(glwindow* win);
 
 // Label widget.
-void draw_imgui_label(
+void draw_glwidgets_label(
     glwindow* win, const std::string& lbl, const std::string& msg);
 
 // Checkbox widget
-bool draw_imgui_checkbox(glwindow* win, const std::string& lbl, bool& val);
+bool draw_glwidgets_checkbox(glwindow* win, const std::string& lbl, bool& val);
 // Text widget.
-bool draw_imgui_text(glwindow* win, const std::string& lbl, std::string& str);
-bool draw_imgui_multiline_text(
+bool draw_glwidgets_text(
+    glwindow* win, const std::string& lbl, std::string& str);
+bool draw_glwidgets_multiline_text(
     glwindow* win, const std::string& lbl, std::string& str);
 
 // Drag widget scale (defaults to 1/100).
 void draw_drag_speedscale(float scale);
 // Drag widget.
-bool draw_imgui_dragbox(
+bool draw_glwidgets_dragbox(
     glwindow* win, const std::string& lbl, int& val, int min = 0, int max = 1);
-bool draw_imgui_dragbox(glwindow* win, const std::string& lbl, vec2i& val,
+bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, vec2i& val,
     int min = 0, int max = 1);
-bool draw_imgui_dragbox(glwindow* win, const std::string& lbl, vec3i& val,
+bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, vec3i& val,
     int min = 0, int max = 1);
-bool draw_imgui_dragbox(glwindow* win, const std::string& lbl, vec4i& val,
+bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, vec4i& val,
     int min = 0, int max = 1);
-bool draw_imgui_dragbox(glwindow* win, const std::string& lbl, float& val,
+bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, float& val,
     float min = 0, float max = 1);
-bool draw_imgui_dragbox(glwindow* win, const std::string& lbl, vec2f& val,
+bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, vec2f& val,
     float min = 0, float max = 1);
-bool draw_imgui_dragbox(glwindow* win, const std::string& lbl, vec3f& val,
+bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, vec3f& val,
     float min = 0, float max = 1);
-bool draw_imgui_dragbox(glwindow* win, const std::string& lbl, vec4f& val,
+bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, vec4f& val,
     float min = 0, float max = 1);
-bool draw_imgui_dragbox(glwindow* win, const std::string& lbl, mat4f& val,
+bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, mat4f& val,
     float min = -1, float max = 1);
-bool draw_imgui_dragbox(glwindow* win, const std::string& lbl, frame3f& val,
+bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, frame3f& val,
     float min = -10, float max = 10);
 
 // Color widget.
-bool draw_imgui_colorbox(glwindow* win, const std::string& lbl, vec4b& val);
-bool draw_imgui_colorbox(glwindow* win, const std::string& lbl, vec4f& val);
-bool draw_imgui_colorbox(glwindow* win, const std::string& lbl, vec3f& val);
+bool draw_glwidgets_colorbox(glwindow* win, const std::string& lbl, vec4b& val);
+bool draw_glwidgets_colorbox(glwindow* win, const std::string& lbl, vec4f& val);
+bool draw_glwidgets_colorbox(glwindow* win, const std::string& lbl, vec3f& val);
 bool draw_hdr_color_widget(
     glwindow* win, const std::string& lbl, vec3f& val, float max = 10);
 
 // Combo widget.
-bool begin_imgui_combobox(
+bool begin_glwidgets_combobox(
     glwindow* win, const std::string& lbl, const std::string& label);
-bool draw_imgui_item(
+bool draw_glwidgets_item(
     glwindow* win, const std::string& label, int idx, bool selected);
-void end_imgui_combobox(glwindow* win);
+void end_glwidgets_combobox(glwindow* win);
 template <typename T>
-bool draw_imgui_item(
+bool draw_glwidgets_item(
     glwindow* win, const std::string& label, int idx, T& val, const T& item) {
-    auto selected = draw_imgui_item(win, label, idx, val == item);
+    auto selected = draw_glwidgets_item(win, label, idx, val == item);
     if (selected) val = item;
     return selected;
 }
-inline bool draw_imgui_combobox(glwindow* win, const std::string& lbl,
+inline bool draw_glwidgets_combobox(glwindow* win, const std::string& lbl,
     std::string& val, const std::vector<std::string>& labels);
 template <typename T>
-inline bool draw_imgui_combobox(glwindow* win, const std::string& lbl, T& val,
-    const std::map<T, std::string>& labels);
+inline bool draw_glwidgets_combobox(glwindow* win, const std::string& lbl,
+    T& val, const std::map<T, std::string>& labels);
 template <typename T>
-inline bool draw_imgui_combobox(glwindow* win, const std::string& lbl, T*& val,
-    const std::vector<T*>& vals, bool extra = true, T* extra_val = nullptr);
+inline bool draw_glwidgets_combobox(glwindow* win, const std::string& lbl,
+    T*& val, const std::vector<T*>& vals, bool extra = true,
+    T* extra_val = nullptr);
 
 // Button widget.
-bool draw_imgui_button(glwindow* win, const std::string& lbl);
+bool draw_glwidgets_button(glwindow* win, const std::string& lbl);
 
 // Collapsible header widget.
-bool draw_imgui_header(glwindow* win, const std::string& lbl);
+bool draw_glwidgets_header(glwindow* win, const std::string& lbl);
 
 // Tree widget.
-bool begin_imgui_tree(glwindow* win, const std::string& lbl);
-void end_imgui_tree(glwindow* win);
-bool begin_imgui_tree(
+bool begin_glwidgets_tree(glwindow* win, const std::string& lbl);
+void end_glwidgets_tree(glwindow* win);
+bool begin_glwidgets_tree(
     glwindow* win, const std::string& lbl, void*& selection, void* content);
 template <typename T>
-inline bool begin_imgui_tree(
+inline bool begin_glwidgets_tree(
     glwindow* win, const std::string& lbl, T*& selection, T* content) {
     auto sel = selection;
-    auto open = begin_imgui_tree(win, lbl, (void*&)sel, (void*)content);
+    auto open = begin_glwidgets_tree(win, lbl, (void*&)sel, (void*)content);
     if (sel == content) selection = content;
     return open;
 }
-void end_imgui_tree(glwindow* win, void* content);
-void draw_imgui_tree_leaf(
+void end_glwidgets_tree(glwindow* win, void* content);
+void draw_glwidgets_tree_leaf(
     glwindow* win, const std::string& lbl, void*& selection, void* content);
 template <typename T>
-inline void draw_imgui_tree_leaf(
+inline void draw_glwidgets_tree_leaf(
     glwindow* win, const std::string& lbl, void*& selection, T* content) {
     auto sel = selection;
-    draw_imgui_tree_leaf(win, lbl, sel, content);
+    draw_glwidgets_tree_leaf(win, lbl, sel, content);
     if (sel == content) selection = content;
 }
-void draw_imgui_tree_leaf(glwindow* win, const std::string& lbl,
+void draw_glwidgets_tree_leaf(glwindow* win, const std::string& lbl,
     void*& selection, void* content, const vec4f& col);
 
 // Image widget.
-void draw_imgui_imagebox(
+void draw_glwidgets_imagebox(
     glwindow* win, int tid, const vec2i& size, const vec2i& imsize);
-void draw_imgui_imagebox(glwindow* win, gltexture& txt, const vec2i& size);
+void draw_glwidgets_imagebox(glwindow* win, gltexture& txt, const vec2i& size);
 
 // Scroll region widget.
-void begin_imgui_scrollarea(
+void begin_glwidgets_scrollarea(
     glwindow* win, const std::string& lbl, int height, bool border);
-void end_imgui_scrollarea(glwindow* win);
-void move_imgui_scrollarea(glwindow* win);
+void end_glwidgets_scrollarea(glwindow* win);
+void move_glwidgets_scrollarea(glwindow* win);
 
 // Group ids widget.
-void push_imgui_groupid(glwindow* win, int gid);
-void push_imgui_groupid(glwindow* win, void* gid);
-void push_imgui_groupid(glwindow* win, const void* gid);
-void push_imgui_groupid(glwindow* win, const char* gid);
-void pop_imgui_groupid(glwindow* win);
+void push_glwidgets_groupid(glwindow* win, int gid);
+void push_glwidgets_groupid(glwindow* win, void* gid);
+void push_glwidgets_groupid(glwindow* win, const void* gid);
+void push_glwidgets_groupid(glwindow* win, const char* gid);
+void pop_glwidgets_groupid(glwindow* win);
 
 // Widget style.
-void push_imgui_style(glwindow* win, const vec4f& color);
-void pop_imgui_style(glwindow* win);
+void push_glwidgets_style(glwindow* win, const vec4f& color);
+void pop_glwidgets_style(glwindow* win);
 
 }  // namespace ygl
 
@@ -678,44 +704,44 @@ void pop_imgui_style(glwindow* win);
 namespace ygl {
 
 // Combo widget.
-inline bool draw_imgui_combobox(glwindow* win, const std::string& lbl,
+inline bool draw_glwidgets_combobox(glwindow* win, const std::string& lbl,
     std::string& val, const std::vector<std::string>& labels) {
-    if (!begin_imgui_combobox(win, lbl, val)) return false;
+    if (!begin_glwidgets_combobox(win, lbl, val)) return false;
     auto old_val = val;
     for (auto i = 0; i < labels.size(); i++) {
-        draw_imgui_item(win, labels[i], i, val, labels[i]);
+        draw_glwidgets_item(win, labels[i], i, val, labels[i]);
     }
-    end_imgui_combobox(win);
+    end_glwidgets_combobox(win);
     return val != old_val;
 }
 
 // Combo widget.
 template <typename T>
-inline bool draw_imgui_combobox(glwindow* win, const std::string& lbl, T& val,
-    const std::map<T, std::string>& labels) {
-    if (!begin_imgui_combobox(win, lbl, labels.at(val))) return false;
+inline bool draw_glwidgets_combobox(glwindow* win, const std::string& lbl,
+    T& val, const std::map<T, std::string>& labels) {
+    if (!begin_glwidgets_combobox(win, lbl, labels.at(val))) return false;
     auto old_val = val;
     auto lid = 0;
     for (auto& kv : labels)
-        draw_imgui_item(win, kv.second, lid++, val, kv.first);
-    end_imgui_combobox(win);
+        draw_glwidgets_item(win, kv.second, lid++, val, kv.first);
+    end_glwidgets_combobox(win);
     return val != old_val;
 }
 
 // Combo widget
 template <typename T>
-inline bool draw_imgui_combobox(glwindow* win, const std::string& lbl, T*& val,
-    const std::vector<T*>& vals, bool extra, T* extra_val) {
-    if (!begin_imgui_combobox(win, lbl, (val) ? val->name : "<none>"))
+inline bool draw_glwidgets_combobox(glwindow* win, const std::string& lbl,
+    T*& val, const std::vector<T*>& vals, bool extra, T* extra_val) {
+    if (!begin_glwidgets_combobox(win, lbl, (val) ? val->name : "<none>"))
         return false;
     auto old_val = val;
     if (extra)
-        draw_imgui_item(
+        draw_glwidgets_item(
             win, (extra_val) ? extra_val->name : "<none>", -1, val, extra_val);
     for (auto i = 0; i < vals.size(); i++) {
-        draw_imgui_item(win, vals[i]->name, i, val, vals[i]);
+        draw_glwidgets_item(win, vals[i]->name, i, val, vals[i]);
     }
-    end_imgui_combobox(win);
+    end_glwidgets_combobox(win);
     return val != old_val;
 }
 

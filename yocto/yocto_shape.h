@@ -269,6 +269,9 @@ sample_triangles_points(const std::vector<vec3i>& triangles,
 void make_quad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
     const vec2f& size, const vec2f& uvsize);
+void make_quad_stack(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
+    const vec3f& size, const vec2f& uvsize);
 void make_cube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
     const vec3f& size, const vec3f& uvsize);

@@ -66,7 +66,7 @@ if(YOCTO_OPENGL)
     set(YOCTO_FILES 
         ${YOCTO_FILES}
         yocto/yocto_glutils.h yocto/yocto_glutils.cpp        
-        yocto/ext/imgui/imgui.cpp yocto/ext/imgui/imgui_draw.cpp yocto/ext/imgui/imgui_impl_glfw_gl3.cpp yocto/ext/imgui/imgui_extra_fonts.cpp    )
+        yocto/ext/imgui/imgui.cpp yocto/ext/imgui/imgui_draw.cpp yocto/ext/imgui/imgui_demo.cpp yocto/ext/imgui/imgui_impl_glfw_gl3.cpp yocto/ext/imgui/imgui_extra_fonts.cpp    )
 endif(YOCTO_OPENGL)
 
 add_library(yocto_gl ${YOCTO_FILES})

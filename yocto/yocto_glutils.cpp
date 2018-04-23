@@ -75,6 +75,10 @@ void clear_glbuffers(const vec4f& background) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     assert(check_glerror());
 }
+void clear_glbuffers(const vec4b& background) {
+    clear_glbuffers(vec4f{background.x / 255.f, background.y / 255.f,
+        background.z / 255.f, background.w / 255.f});
+}
 
 // Enable/disable depth test
 void enable_gldepth_test(bool enabled) {
@@ -134,17 +138,10 @@ void set_glblend_over() {
     assert(check_glerror());
 }
 
-// Line width
-void gl_line_width(float w) {
-    assert(check_glerror());
-    glLineWidth(min(max(w, 0.0f), 1.0f));
-    assert(check_glerror());
-}
-
 // Set viewport
-void set_glviewport(const vec4i& v) {
+void set_glviewport(int x, int y, int w, int h) {
     assert(check_glerror());
-    glViewport(v.x, v.y, v.z, v.w);
+    glViewport(x, y, w, h);
     assert(check_glerror());
 }
 
@@ -458,9 +455,17 @@ void set_gluniform(const glprogram& prog, int pos, const vec4f& val) {
     if (pos < 0) throw std::runtime_error("bad OpenGL id");
     glUniform4f(pos, val.x, val.y, val.z, val.w);
 }
+void set_gluniform(const glprogram& prog, int pos, const mat3f& val) {
+    if (pos < 0) throw std::runtime_error("bad OpenGL id");
+    glUniformMatrix3fv(pos, 1, false, &val.x.x);
+}
 void set_gluniform(const glprogram& prog, int pos, const mat4f& val) {
     if (pos < 0) throw std::runtime_error("bad OpenGL id");
     glUniformMatrix4fv(pos, 1, false, &val.x.x);
+}
+void set_gluniform(const glprogram& prog, int pos, const frame2f& val) {
+    if (pos < 0) throw std::runtime_error("bad OpenGL id");
+    glUniformMatrix3x2fv(pos, 1, false, &val.x.x);
 }
 void set_gluniform(const glprogram& prog, int pos, const frame3f& val) {
     if (pos < 0) throw std::runtime_error("bad OpenGL id");
@@ -623,17 +628,17 @@ static std::string glimage_vert =
 
     layout(location = 0) in vec2 vert_texcoord;
 
-    uniform vec2 offset;
+    uniform mat3x2 frame;
+    uniform vec2 txt_size;
     uniform vec2 win_size;
-    uniform float zoom;
     uniform sampler2D img;
 
     out vec2 texcoord;
 
     void main() {
-        vec2 size = textureSize(img, 0).xy;
         texcoord = vert_texcoord.xy;
-        vec2 pos = offset + size * vert_texcoord.xy * zoom;
+        vec2 pos = frame * vec3(txt_size.x * (vert_texcoord.x - 0.5), 
+                                txt_size.y * (vert_texcoord.y - 0.5), 1);
         vec2 upos = 2 * pos / win_size - vec2(1,1);
         upos.y = - upos.y;
         gl_Position = vec4(upos.x, upos.y, 0, 1);
@@ -673,8 +678,7 @@ glimage_program make_glimage_program() {
 
 // Draws the stdimage program.
 void draw_glimage(const glimage_program& prog, const gltexture& txt,
-    const vec2i& win_size, const vec2f& offset, float zoom, float exposure,
-    float gamma) {
+    const vec2i& win_size, const frame2f& frame, float exposure, float gamma) {
     assert(is_gltexture_valid(txt));
 
     bind_glprogram(prog.prog);
@@ -683,10 +687,11 @@ void draw_glimage(const glimage_program& prog, const gltexture& txt,
     set_glblend_over();
 
     bind_gltexture(txt, 0);
-    set_gluniform(prog.prog, "zoom", zoom);
     set_gluniform(
         prog.prog, "win_size", vec2f{(float)win_size.x, (float)win_size.y});
-    set_gluniform(prog.prog, "offset", offset);
+    set_gluniform(
+        prog.prog, "txt_size", vec2f{(float)txt.width, (float)txt.height});
+    set_gluniform(prog.prog, "frame", frame);
     set_gluniform(prog.prog, "exposure", exposure);
     set_gluniform(prog.prog, "gamma", gamma);
     set_gluniform_texture(prog.prog, "img", txt, 0);
@@ -1244,9 +1249,9 @@ void set_glsurface_elems(
 }
 
 glwindow::~glwindow() {
-    if (widget_enabled) {
+    if (widgets_enabled) {
         ImGui_ImplGlfwGL3_Shutdown();
-        widget_enabled = false;
+        widgets_enabled = false;
     }
     if (gwin) {
         glfwDestroyWindow(gwin);
@@ -1263,7 +1268,7 @@ void _glfw_error_cb(int error, const char* description) {
 // Support
 void _glfw_text_cb(GLFWwindow* gwin, unsigned key) {
     auto win = (glwindow*)glfwGetWindowUserPointer(gwin);
-    if (win->widget_enabled) { ImGui_ImplGlfw_CharCallback(win->gwin, key); }
+    if (win->widgets_enabled) { ImGui_ImplGlfw_CharCallback(win->gwin, key); }
     if (win->text_cb) win->text_cb(win, key);
 }
 
@@ -1271,7 +1276,7 @@ void _glfw_text_cb(GLFWwindow* gwin, unsigned key) {
 void _glfw_key_cb(
     GLFWwindow* gwin, int key, int scancode, int action, int mods) {
     auto win = (glwindow*)glfwGetWindowUserPointer(gwin);
-    if (win->widget_enabled) {
+    if (win->widgets_enabled) {
         ImGui_ImplGlfw_KeyCallback(win->gwin, key, scancode, action, mods);
     }
 }
@@ -1279,7 +1284,7 @@ void _glfw_key_cb(
 // Support
 void _glfw_mouse_cb(GLFWwindow* gwin, int button, int action, int mods) {
     auto win = (glwindow*)glfwGetWindowUserPointer(gwin);
-    if (win->widget_enabled) {
+    if (win->widgets_enabled) {
         ImGui_ImplGlfw_MouseButtonCallback(win->gwin, button, action, mods);
     }
     if (win->mouse_cb) win->mouse_cb(win, button, action == GLFW_PRESS, mods);
@@ -1288,7 +1293,7 @@ void _glfw_mouse_cb(GLFWwindow* gwin, int button, int action, int mods) {
 // Support
 void _glfw_scroll_cb(GLFWwindow* gwin, double xoffset, double yoffset) {
     auto win = (glwindow*)glfwGetWindowUserPointer(gwin);
-    if (win->widget_enabled) {
+    if (win->widgets_enabled) {
         ImGui_ImplGlfw_ScrollCallback(win->gwin, xoffset, yoffset);
     }
 }
@@ -1385,7 +1390,7 @@ bool should_glwindow_close(glwindow* win) {
 }
 
 // Mouse button
-int get_glmouse_button(glwindow* win) {
+int get_glwindow_mouse_button(glwindow* win) {
     auto mouse1 =
         glfwGetMouseButton(win->gwin, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS;
     auto mouse2 =
@@ -1414,61 +1419,66 @@ int get_glmouse_button(glwindow* win) {
 }
 
 // Mouse position
-vec2i get_glmouse_pos(glwindow* win) {
+vec2i get_glwidnow_mouse_pos(glwindow* win) {
     double x, y;
     glfwGetCursorPos(win->gwin, &x, &y);
     return {(int)x, (int)y};
 }
 
 // Mouse position
-vec2f get_glmouse_posf(glwindow* win) {
+vec2f get_glwidnow_mouse_posf(glwindow* win) {
     double x, y;
     glfwGetCursorPos(win->gwin, &x, &y);
     return {(float)x, (float)y};
 }
 
 // Window size
-vec2i get_glwindow_size(glwindow* win) {
+vec2i get_glwindow_size(glwindow* win, bool adjust_glwidgets) {
     auto ret = vec2i{0, 0};
     glfwGetWindowSize(win->gwin, &ret.x, &ret.y);
+    if (win->widgets_enabled && adjust_glwidgets) ret.x -= win->widgets_width;
+    return ret;
+}
+
+// Framebuffer size
+vec2i get_glwindow_framebuffer_size(glwindow* win, bool adjust_glwidgets) {
+    auto ret = vec2i{0, 0};
+    glfwGetFramebufferSize(win->gwin, &ret.x, &ret.y);
+    if (win->widgets_enabled && adjust_glwidgets) {
+        auto wsize = get_glwindow_size(win, false);
+        ret.x -= (int)round(win->widgets_width * (float)ret.x / (float)wsize.x);
+    }
     return ret;
 }
 
 // Check if a key is pressed (not all keys are supported)
-bool get_glkey(glwindow* win, int key) {
+bool get_glwindow_glkey(glwindow* win, int key) {
     key = std::toupper(key);
     return glfwGetKey(win->gwin, key) == GLFW_PRESS;
 }
 
 // Check if the alt key is down
-bool get_glalt_key(glwindow* win) {
+bool get_glwindow_alt_key(glwindow* win) {
     return glfwGetKey(win->gwin, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
            glfwGetKey(win->gwin, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
 }
 
 // Check if the alt key is down
-bool get_glctrl_key(glwindow* win) {
+bool get_glwindow_ctrl_key(glwindow* win) {
     return glfwGetKey(win->gwin, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
            glfwGetKey(win->gwin, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
 }
 
 // Check if the alt key is down
-bool get_glshift_key(glwindow* win) {
+bool get_glwindow_shift_key(glwindow* win) {
     return glfwGetKey(win->gwin, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
            glfwGetKey(win->gwin, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
 }
 
-// Framebuffer size
-vec2i get_glframebuffer_size(glwindow* win) {
-    auto ret = vec2i{0, 0};
-    glfwGetFramebufferSize(win->gwin, &ret.x, &ret.y);
-    return ret;
-}
-
 // Read pixels
-void take_glscreenshot4b(glwindow* win, int& width, int& height,
+void take_glwindow_screenshot4b(glwindow* win, int& width, int& height,
     std::vector<ygl::vec4b>& img, bool flipy, bool back) {
-    auto wh = get_glframebuffer_size(win);
+    auto wh = get_glwindow_framebuffer_size(win);
     width = wh.x;
     height = wh.y;
     img = std::vector<ygl::vec4b>(wh.x * wh.y);
@@ -1485,7 +1495,10 @@ void take_glscreenshot4b(glwindow* win, int& width, int& height,
 }
 
 // Initialize widgets
-void init_imgui(glwindow* win, bool light_style, bool alt_font) {
+void init_glwidgets(
+    glwindow* win, int widgets_width, bool light_style, bool alt_font) {
+    win->widgets_enabled = true;
+    win->widgets_width = widgets_width;
     ImGui::CreateContext();
     ImGui_ImplGlfwGL3_Init(win->gwin, false);
     ImGuiIO& io = ImGui::GetIO();
@@ -1495,9 +1508,13 @@ void init_imgui(glwindow* win, bool light_style, bool alt_font) {
     ImGui::GetStyle().WindowRounding = 0;
     io.IniFilename = nullptr;
     auto size = get_glwindow_size(win);
-    ImGui::SetNextWindowPos({(float)size.x - 320, 0});
-    ImGui::SetNextWindowSize({(float)320, (float)size.y});
-    if (light_style) ImGui::StyleColorsLight();
+    ImGui::SetNextWindowPos({(float)size.x, 0});
+    ImGui::SetNextWindowSize({(float)widgets_width, (float)size.y});
+    ImGui::SetNextWindowCollapsed(false);
+    if (light_style)
+        ImGui::StyleColorsLight();
+    else
+        ImGui::StyleColorsDark();
     if (alt_font) {
         io.Fonts->AddFontFromMemoryCompressedTTF(
             imgui_extrafont_compressed_data(),
@@ -1505,60 +1522,56 @@ void init_imgui(glwindow* win, bool light_style, bool alt_font) {
     } else {
         io.Fonts->AddFontDefault();
     }
-    win->widget_enabled = true;
 }
 
 // Begin draw widget
-bool begin_imgui_frame(glwindow* win, const std::string& title) {
-    static bool first_time = true;
+bool begin_glwidgets_frame(glwindow* win, const std::string& title) {
     ImGui_ImplGlfwGL3_NewFrame();
-    if (first_time) {
-        auto size = get_glwindow_size(win);
-        ImGui::SetNextWindowPos({(float)size.x - 320, 0});
-        ImGui::SetNextWindowSize({(float)320, (float)size.y});
-        ImGui::SetNextWindowCollapsed(true);
-        first_time = false;
-    }
-    ImGui::Begin(title.c_str(), nullptr);
-    // ImGui::ShowTestWindow();
-    // ImGui::ShowStyleEditor();
+    auto size = get_glwindow_size(win);
+    ImGui::SetNextWindowPos({(float)size.x, 0});
+    ImGui::SetNextWindowSize({(float)win->widgets_width, (float)size.y});
+    ImGui::SetNextWindowCollapsed(false);
+    ImGui::Begin(title.c_str(), nullptr,
+        ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove |
+            ImGuiWindowFlags_NoResize);
     return true;
 }
 
 // End draw widget
-void end_imgui_frame(glwindow* win) {
+void end_glwidgets_frame(glwindow* win) {
     ImGui::End();
     ImGui::Render();
     ImGui_ImplGlfwGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
 // Whether widget are active
-bool get_imgui_active(glwindow* win) {
-    if (!win->widget_enabled) return false;
+bool get_glwidgets_active(glwindow* win) {
+    if (!win->widgets_enabled) return false;
     auto io = &ImGui::GetIO();
     return io->WantTextInput || io->WantCaptureMouse || io->WantCaptureKeyboard;
 }
 
 // Horizontal separator
-void draw_imgui_separator(glwindow* win) { ImGui::Separator(); }
+void draw_glwidgets_separator(glwindow* win) { ImGui::Separator(); }
 
 // Indent widget
-void begin_imgui_indent(glwindow* win) { ImGui::Indent(); }
+void begin_glwidgets_indent(glwindow* win) { ImGui::Indent(); }
 
 // Indent widget
-void end_imgui_indent(glwindow* win) { ImGui::Unindent(); }
+void end_glwidgets_indent(glwindow* win) { ImGui::Unindent(); }
 
 // Continue line with next widget
-void continue_imgui_line(glwindow* win) { ImGui::SameLine(); }
+void continue_glwidgets_line(glwindow* win) { ImGui::SameLine(); }
 
 // Label widget
-void draw_imgui_label(
+void draw_glwidgets_label(
     glwindow* win, const std::string& lbl, const std::string& msg) {
     ImGui::LabelText(lbl.c_str(), "%s", msg.c_str());
 }
 
 // Value widget
-bool draw_imgui_text(glwindow* win, const std::string& lbl, std::string& str) {
+bool draw_glwidgets_text(
+    glwindow* win, const std::string& lbl, std::string& str) {
     char buf[4096];
     if (str.length() >= 4096) throw std::runtime_error("bad memory");
     memcpy(buf, str.c_str(), str.size());
@@ -1569,7 +1582,7 @@ bool draw_imgui_text(glwindow* win, const std::string& lbl, std::string& str) {
 }
 
 // Value widget
-bool draw_imgui_multiline_text(
+bool draw_glwidgets_multiline_text(
     glwindow* win, const std::string& lbl, std::string& str) {
     char sbuf[8192];
     std::vector<char> dbuf;
@@ -1593,74 +1606,75 @@ bool draw_imgui_multiline_text(
 static float draw_drag_scale = 1 / 100.0f;
 
 // Drag widget.
-bool draw_imgui_dragbox(
+bool draw_glwidgets_dragbox(
     glwindow* win, const std::string& lbl, int& val, int min, int max) {
     auto speed = (min == max) ? 1 : draw_drag_scale * (max - min);
     return ImGui::DragInt(lbl.c_str(), &val, speed, min, max);
 }
 // Drag widget.
-bool draw_imgui_dragbox(
+bool draw_glwidgets_dragbox(
     glwindow* win, const std::string& lbl, vec2i& val, int min, int max) {
     auto speed = (min == max) ? 1 : draw_drag_scale * (max - min);
     return ImGui::DragInt2(lbl.c_str(), &val.x, speed, min, max);
 }
 // Drag widget.
-bool draw_imgui_dragbox(
+bool draw_glwidgets_dragbox(
     glwindow* win, const std::string& lbl, vec3i& val, int min, int max) {
     auto speed = (min == max) ? 1 : draw_drag_scale * (max - min);
     return ImGui::DragInt3(lbl.c_str(), &val.x, speed, min, max);
 }
 // Drag widget.
-bool draw_imgui_dragbox(
+bool draw_glwidgets_dragbox(
     glwindow* win, const std::string& lbl, vec4i& val, int min, int max) {
     auto speed = (min == max) ? 1 : draw_drag_scale * (max - min);
     return ImGui::DragInt4(lbl.c_str(), &val.x, speed, min, max);
 }
 // Drag widget.
-bool draw_imgui_dragbox(
+bool draw_glwidgets_dragbox(
     glwindow* win, const std::string& lbl, float& val, float min, float max) {
     auto speed = (min == max) ? 1 : draw_drag_scale * (max - min);
     return ImGui::DragFloat(lbl.c_str(), &val, speed, min, max);
 }
 // Drag widget.
-bool draw_imgui_dragbox(
+bool draw_glwidgets_dragbox(
     glwindow* win, const std::string& lbl, vec2f& val, float min, float max) {
     auto speed = (min == max) ? 1 : draw_drag_scale * (max - min);
     return ImGui::DragFloat2(lbl.c_str(), &val.x, speed, min, max);
 }
 // Drag widget.
-bool draw_imgui_dragbox(
+bool draw_glwidgets_dragbox(
     glwindow* win, const std::string& lbl, vec3f& val, float min, float max) {
     auto speed = (min == max) ? 1 : draw_drag_scale * (max - min);
     return ImGui::DragFloat3(lbl.c_str(), &val.x, speed, min, max);
 }
 // Drag widget.
-bool draw_imgui_dragbox(
+bool draw_glwidgets_dragbox(
     glwindow* win, const std::string& lbl, vec4f& val, float min, float max) {
     auto speed = (min == max) ? 1 : draw_drag_scale * (max - min);
     return ImGui::DragFloat4(lbl.c_str(), &val.x, speed, min, max);
 }
 // Drag widget.
-bool draw_imgui_dragbox(
+bool draw_glwidgets_dragbox(
     glwindow* win, const std::string& lbl, mat4f& val, float min, float max) {
-    auto modx = draw_imgui_dragbox(win, lbl + ".x", val.x, min, max);
-    auto mody = draw_imgui_dragbox(win, lbl + ".y", val.y, min, max);
-    auto modz = draw_imgui_dragbox(win, lbl + ".z", val.z, min, max);
-    auto modw = draw_imgui_dragbox(win, lbl + ".w", val.w, min, max);
+    auto modx = draw_glwidgets_dragbox(win, lbl + ".x", val.x, min, max);
+    auto mody = draw_glwidgets_dragbox(win, lbl + ".y", val.y, min, max);
+    auto modz = draw_glwidgets_dragbox(win, lbl + ".z", val.z, min, max);
+    auto modw = draw_glwidgets_dragbox(win, lbl + ".w", val.w, min, max);
     return modx || mody || modz || modw;
 }
 // Drag widget.
-bool draw_imgui_dragbox(
+bool draw_glwidgets_dragbox(
     glwindow* win, const std::string& lbl, frame3f& val, float min, float max) {
-    auto modx = draw_imgui_dragbox(win, lbl + ".x", val.x, -1, 1);
-    auto mody = draw_imgui_dragbox(win, lbl + ".y", val.y, -1, 1);
-    auto modz = draw_imgui_dragbox(win, lbl + ".z", val.z, -1, 1);
-    auto modo = draw_imgui_dragbox(win, lbl + ".o", val.o, min, max);
+    auto modx = draw_glwidgets_dragbox(win, lbl + ".x", val.x, -1, 1);
+    auto mody = draw_glwidgets_dragbox(win, lbl + ".y", val.y, -1, 1);
+    auto modz = draw_glwidgets_dragbox(win, lbl + ".z", val.z, -1, 1);
+    auto modo = draw_glwidgets_dragbox(win, lbl + ".o", val.o, min, max);
     return modx || mody || modz || modo;
 }
 
 // Color widget
-bool draw_imgui_colorbox(glwindow* win, const std::string& lbl, vec3f& val) {
+bool draw_glwidgets_colorbox(
+    glwindow* win, const std::string& lbl, vec3f& val) {
     auto mod = ImGui::ColorEdit3(
         lbl.c_str(), (float*)&val.x, ImGuiColorEditFlags_Float);
     // fix for bug in ImGui
@@ -1672,7 +1686,8 @@ bool draw_imgui_colorbox(glwindow* win, const std::string& lbl, vec3f& val) {
     return mod;
 }
 // Color widget
-bool draw_imgui_colorbox(glwindow* win, const std::string& lbl, vec4f& val) {
+bool draw_glwidgets_colorbox(
+    glwindow* win, const std::string& lbl, vec4f& val) {
     auto mod = ImGui::ColorEdit4(
         lbl.c_str(), (float*)&val.x, ImGuiColorEditFlags_Float);
     // fix for bug in ImGui
@@ -1685,7 +1700,8 @@ bool draw_imgui_colorbox(glwindow* win, const std::string& lbl, vec4f& val) {
     return mod;
 }
 // Color widget
-bool draw_imgui_colorbox(glwindow* win, const std::string& lbl, vec4b& val) {
+bool draw_glwidgets_colorbox(
+    glwindow* win, const std::string& lbl, vec4b& val) {
     auto valf = ImGui::ColorConvertU32ToFloat4(*(uint32_t*)&val);
     if (ImGui::ColorEdit4(lbl.c_str(), &valf.x)) {
         auto valb = ImGui::ColorConvertFloat4ToU32(valf);
@@ -1703,8 +1719,8 @@ bool draw_hdr_color_widget(
     } else {
         vall = 1;
     }
-    auto mod1 = draw_imgui_dragbox(win, lbl + "(m)", vall, 0, max);
-    auto mod2 = draw_imgui_colorbox(win, lbl, valc);
+    auto mod1 = draw_glwidgets_dragbox(win, lbl + "(m)", vall, 0, max);
+    auto mod2 = draw_glwidgets_colorbox(win, lbl, valc);
     if (mod1 || mod2) {
         val = valc * vall;
         return true;
@@ -1714,18 +1730,18 @@ bool draw_hdr_color_widget(
 }
 
 // Bool widget
-bool draw_imgui_checkbox(glwindow* win, const std::string& lbl, bool& val) {
+bool draw_glwidgets_checkbox(glwindow* win, const std::string& lbl, bool& val) {
     return ImGui::Checkbox(lbl.c_str(), &val);
 }
 
 // Combo widget
-bool begin_imgui_combobox(
+bool begin_glwidgets_combobox(
     glwindow* win, const std::string& lbl, const std::string& label) {
     return ImGui::BeginCombo(lbl.c_str(), label.c_str());
 }
 
 // Combo widget
-bool draw_imgui_item(
+bool draw_glwidgets_item(
     glwindow* win, const std::string& label, int idx, bool selected) {
     ImGui::PushID((void*)(intptr_t)idx);
     auto clicked = ImGui::Selectable(label.c_str(), selected);
@@ -1735,28 +1751,28 @@ bool draw_imgui_item(
 }
 
 // Combo widget
-void end_imgui_combobox(glwindow* win) { ImGui::EndCombo(); }
+void end_glwidgets_combobox(glwindow* win) { ImGui::EndCombo(); }
 
 // Button widget
-bool draw_imgui_button(glwindow* win, const std::string& lbl) {
+bool draw_glwidgets_button(glwindow* win, const std::string& lbl) {
     return ImGui::Button(lbl.c_str());
 }
 
 // Collapsible header
-bool draw_imgui_header(glwindow* win, const std::string& lbl) {
+bool draw_glwidgets_header(glwindow* win, const std::string& lbl) {
     return ImGui::CollapsingHeader(lbl.c_str());
 }
 
 // Start tree node
-bool begin_imgui_tree(glwindow* win, const std::string& lbl) {
+bool begin_glwidgets_tree(glwindow* win, const std::string& lbl) {
     return ImGui::TreeNode(lbl.c_str());
 }
 
 // Collapsible header
-void end_imgui_tree(glwindow* win) { ImGui::TreePop(); }
+void end_glwidgets_tree(glwindow* win) { ImGui::TreePop(); }
 
 // Start selectable tree node
-bool begin_imgui_tree(
+bool begin_glwidgets_tree(
     glwindow* win, const std::string& lbl, void*& selection, void* content) {
     ImGuiTreeNodeFlags node_flags =
         ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
@@ -1767,10 +1783,10 @@ bool begin_imgui_tree(
 }
 
 // End selectable tree node
-void end_imgui_tree(glwindow* win, void* content) { ImGui::TreePop(); }
+void end_glwidgets_tree(glwindow* win, void* content) { ImGui::TreePop(); }
 
 // Selectable tree leaf node
-void draw_imgui_tree_leaf(
+void draw_glwidgets_tree_leaf(
     glwindow* win, const std::string& lbl, void*& selection, void* content) {
     ImGuiTreeNodeFlags node_flags =
         ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
@@ -1780,15 +1796,15 @@ void draw_imgui_tree_leaf(
 }
 
 // Selectable tree leaf node
-void draw_imgui_tree_leaf(glwindow* win, const std::string& lbl,
+void draw_glwidgets_tree_leaf(glwindow* win, const std::string& lbl,
     void*& selection, void* content, const vec4f& col) {
     ImGui::PushStyleColor(ImGuiCol_Text, {col.x, col.y, col.z, col.w});
-    draw_imgui_tree_leaf(win, lbl, selection, content);
+    draw_glwidgets_tree_leaf(win, lbl, selection, content);
     ImGui::PopStyleColor();
 }
 
 // Image widget
-void draw_imgui_imagebox(
+void draw_glwidgets_imagebox(
     glwindow* win, int tid, const vec2i& size, const vec2i& imsize) {
     auto w = ImGui::GetContentRegionAvailWidth();
     auto s = vec2f{(float)size.x, (float)size.y};
@@ -1816,39 +1832,43 @@ void draw_imgui_imagebox(
 }
 
 // Image widget
-void draw_imgui_imagebox(
+void draw_glwidgets_imagebox(
     glwindow* win, const gltexture& txt, const vec2i& size) {
-    draw_imgui_imagebox(
+    draw_glwidgets_imagebox(
         win, get_gltexture_id(txt), size, {txt.width, txt.height});
 }
 
 // Scroll region
-void begin_imgui_scrollarea(
+void begin_glwidgets_scrollarea(
     glwindow* win, const std::string& lbl, int height, bool border) {
     ImGui::BeginChild(lbl.c_str(), ImVec2(0, height), border);
 }
 // Scroll region
-void end_imgui_scrollarea(glwindow* win) { ImGui::EndChild(); }
+void end_glwidgets_scrollarea(glwindow* win) { ImGui::EndChild(); }
 // Scroll region
-void move_imgui_scrollarea(glwindow* win) { ImGui::SetScrollHere(); }
+void move_glwidgets_scrollarea(glwindow* win) { ImGui::SetScrollHere(); }
 
 // Group ids
-void push_imgui_groupid(glwindow* win, int gid) { ImGui::PushID(gid); }
+void push_glwidgets_groupid(glwindow* win, int gid) { ImGui::PushID(gid); }
 // Group ids
-void push_imgui_groupid(glwindow* win, void* gid) { ImGui::PushID(gid); }
+void push_glwidgets_groupid(glwindow* win, void* gid) { ImGui::PushID(gid); }
 // Group ids
-void push_imgui_groupid(glwindow* win, const void* gid) { ImGui::PushID(gid); }
+void push_glwidgets_groupid(glwindow* win, const void* gid) {
+    ImGui::PushID(gid);
+}
 // Group ids
-void push_imgui_groupid(glwindow* win, const char* gid) { ImGui::PushID(gid); }
+void push_glwidgets_groupid(glwindow* win, const char* gid) {
+    ImGui::PushID(gid);
+}
 // Group ids
-void pop_imgui_groupid(glwindow* win) { ImGui::PopID(); }
+void pop_glwidgets_groupid(glwindow* win) { ImGui::PopID(); }
 
 // Widget style
-void push_imgui_style(glwindow* win, const vec4f& col) {
+void push_glwidgets_style(glwindow* win, const vec4f& col) {
     ImGui::PushStyleColor(ImGuiCol_Text, {col.x, col.y, col.z, col.w});
 }
 
 // Widget style
-void pop_imgui_style(glwindow* win) { ImGui::PopStyleColor(); }
+void pop_glwidgets_style(glwindow* win) { ImGui::PopStyleColor(); }
 
 }  // namespace ygl
