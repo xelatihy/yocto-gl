@@ -34,6 +34,7 @@
 #include "../yocto/yocto_scene.h"
 
 #include <unordered_map>
+#include <typeinfo>
 
 namespace ygl {
 
