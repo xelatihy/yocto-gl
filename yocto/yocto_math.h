@@ -108,6 +108,7 @@
 #include <cstring>
 #include <string>
 #include <vector>
+#include <functional> // for std::hash
 
 // -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
@@ -128,6 +129,7 @@ using std::round;
 using std::sin;
 using std::sqrt;
 using std::tan;
+using std::fabs;
 using namespace std::string_literals;
 using namespace std::literals;
 

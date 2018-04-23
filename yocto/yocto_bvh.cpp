@@ -28,6 +28,8 @@
 
 #include "yocto_bvh.h"
 
+#include <algorithm>
+
 // -----------------------------------------------------------------------------
 // IMPLEMENRTATION OF RAY-PRIMITIVE INTERSECTION FUNCTIONS
 // -----------------------------------------------------------------------------
