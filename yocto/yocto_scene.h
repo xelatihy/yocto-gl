@@ -466,7 +466,7 @@ texture* make_texture(const std::string& name, const std::string& path = "",
     int width = 0, int height = 0, const std::vector<vec4b>& ldr = {},
     const std::vector<vec4f>& hdr = {});
 material* make_material(const std::string& name,
-    const vec3f& kd = {0.2, 0.2, 0.2}, const vec3f& ks = {0, 0, 0},
+    const vec3f& kd = {0.2f, 0.2f, 0.2f}, const vec3f& ks = {0, 0, 0},
     float rs = 1);
 instance* make_instance(const std::string& name, shape* shp = nullptr,
     material* mat = nullptr, const frame3f& frame = identity_frame3f);

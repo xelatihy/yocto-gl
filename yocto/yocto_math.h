@@ -102,35 +102,34 @@
 
 #include <cctype>
 #include <cfloat>
-// #include <cmath>
+#include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <functional>  // for std::hash
 #include <string>
 #include <vector>
-#include <ctgmath>
 
 // -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// using std::acos;
-// using std::asin;
-// using std::atan;
-// using std::atan2;
-// using std::cos;
-// using std::exp;
-// using std::fabs;
-// using std::floor;
-// using std::isfinite;
-// using std::log;
-// using std::pow;
-// using std::round;
-// using std::sin;
-// using std::sqrt;
-// using std::tan;
+using std::acos;
+using std::asin;
+using std::atan;
+using std::atan2;
+using std::cos;
+using std::exp;
+using std::fabs;
+using std::floor;
+using std::isfinite;
+using std::log;
+using std::pow;
+using std::round;
+using std::sin;
+using std::sqrt;
+using std::tan;
 using namespace std::string_literals;
 using namespace std::literals;
 

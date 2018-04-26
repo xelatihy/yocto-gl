@@ -3114,7 +3114,7 @@ scene* make_random_instances_scene(
     }
 
     auto cols =
-        std::vector<vec3f>{{0.5, 0.2, 0.2}, {0.2, 0.5, 0.2}, {0.2, 0.2, 0.5}};
+        std::vector<vec3f>{{0.5f, 0.2f, 0.2f}, {0.2f, 0.5f, 0.2f}, {0.2f, 0.2f, 0.5f}};
     auto shps =
         std::vector<std::string>{"sphere", "sphere_flipcap", "sphere_flipcap"};
     auto shapes = std::vector<shape*>();
