@@ -514,54 +514,78 @@ T eval_elem(const shape* shp, const std::vector<T>& vals, int eid,
     }
 }
 
-// Shape position interpolated using barycentric coordinates
+// Shape values interpolated using barycentric coordinates
 vec3f eval_pos(const shape* shp, int eid, const vec2f& euv) {
     return eval_elem(shp, shp->pos, eid, euv, {0, 0, 0});
 }
-// Shape normal interpolated using barycentric coordinates
 vec3f eval_norm(const shape* shp, int eid, const vec2f& euv) {
     if (shp->norm.empty()) return eval_elem_norm(shp, eid);
     return normalize(eval_elem(shp, shp->norm, eid, euv, {0, 0, 1}));
 }
-// Shape texcoord interpolated using barycentric coordinates
 vec2f eval_texcoord(const shape* shp, int eid, const vec2f& euv) {
     return eval_elem(shp, shp->texcoord, eid, euv, {0, 0});
 }
-// Shape color interpolated using barycentric coordinates
 vec4f eval_color(const shape* shp, int eid, const vec2f& euv) {
     return eval_elem(shp, shp->color, eid, euv, {1, 1, 1, 1});
 }
-// Shape radius interpolated using barycentric coordinates
 float eval_radius(const shape* shp, int eid, const vec2f& euv) {
     return eval_elem(shp, shp->radius, eid, euv, 0.0f);
 }
-// Shape tangent space interpolated using barycentric coordinates
 vec4f eval_tangsp(const shape* shp, int eid, const vec2f& euv) {
     return eval_elem(shp, shp->tangsp, eid, euv, {0, 0, 0, 1});
 }
-
-// Environment position interpolated using uv parametrization.
-vec3f eval_pos(const environment* env, const vec2f& uv, bool transformed) {
-    auto pos = sphericaly_to_cartesian(
-        vec3f{uv.x * pi * 2, uv.y * pi, environment_distance});
-    if (transformed) pos = transform_point(env->frame, pos);
-    return pos;
+vec3f eval_tangsp(
+    const shape* shp, int eid, const vec2f& euv, bool& left_handed) {
+    auto tangsp = eval_elem(shp, shp->tangsp, eid, euv, {0, 0, 0, 1});
+    left_handed = tangsp.w < 0;
+    return {tangsp.x, tangsp.y, tangsp.w};
 }
-// Environment normal interpolated using uv parametrization.
-vec3f eval_norm(const environment* env, const vec2f& uv, bool transformed) {
-    auto norm = normalize(
-        -sphericaly_to_cartesian(vec3f{uv.x * pi * 2, uv.y * pi, 1.0f}));
-    if (transformed) norm = transform_direction(env->frame, norm);
-    return norm;
+
+// Instance values interpolated using barycentric coordinates.
+vec3f eval_pos(const instance* ist, int eid, const vec2f& euv) {
+    return transform_point(ist->frame, eval_pos(ist->shp, eid, euv));
+}
+vec3f eval_norm(const instance* ist, int eid, const vec2f& euv) {
+    return transform_direction(ist->frame, eval_norm(ist->shp, eid, euv));
+}
+vec2f eval_texcoord(const instance* ist, int eid, const vec2f& euv) {
+    return eval_texcoord(ist->shp, eid, euv);
+}
+vec4f eval_color(const instance* ist, int eid, const vec2f& euv) {
+    return eval_color(ist->shp, eid, euv);
+}
+float eval_radius(const instance* ist, int eid, const vec2f& euv) {
+    return eval_radius(ist->shp, eid, euv);
+}
+vec3f eval_tangsp(
+    const instance* ist, int eid, const vec2f& euv, bool& left_handed) {
+    return transform_direction(
+        ist->frame, eval_tangsp(ist->shp, eid, euv, left_handed));
+}
+// Instance element values.
+vec3f eval_elem_norm(const instance* ist, int eid) {
+    return transform_direction(ist->frame, eval_elem_norm(ist->shp, eid));
+}
+
+// Environment values interpolated using uv parametrization.
+vec3f eval_pos(const environment* env, const vec2f& uv) {
+    auto wl = vec3f{cos(uv.x * 2 * pi) * sin(uv.y * pi), cos(uv.y * pi),
+                   sin(uv.x * 2 * pi) * sin(uv.y * pi)};
+    return transform_direction(env->frame, wl) *
+           environment_distance;
+}
+vec3f eval_norm(const environment* env, const vec2f& uv) {
+    auto wl = vec3f{cos(uv.x * 2 * pi) * sin(uv.y * pi), cos(uv.y * pi),
+                   sin(uv.x * 2 * pi) * sin(uv.y * pi)};
+    return -transform_direction(
+        env->frame, wl);
 }
 // Environment texture coordinates from uv parametrization.
 vec2f eval_texcoord(const environment* env, const vec2f& uv) { return uv; }
 // Evaluate uv parameters for environment.
-vec2f eval_uv(const environment* env, const vec3f& w, bool transformed) {
-    auto wl = w;
-    if (transformed) wl = transform_direction_inverse(env->frame, wl);
-    auto sh = cartesian_to_sphericaly(wl);
-    return {sh.x / (2 * pi), sh.y / pi};
+vec2f eval_uv(const environment* env, const vec3f& w) {
+    auto wl = transform_direction_inverse(env->frame, w);
+    return {atan2(wl.z, wl.x) / (2 * pi), acos(clamp(wl.y, -1.0f, 1.0f)) / pi};
 }
 
 // Evaluate a texture
@@ -3111,7 +3135,7 @@ scene* make_random_instances_scene(
     auto iid = 0;
     for (auto j = 0; j < num.y; j++) {
         for (auto i = 0; i < num.x; i++) {
-            auto rpos = next_rand2f(rng);
+            auto rpos = rand2f(rng);
             auto pos = vec3f{
                 bbox.min.x + (bbox.max.x - bbox.min.x) *
                                  (i + 0.45f + 0.1f * rpos.x) / num.x,
@@ -3119,7 +3143,7 @@ scene* make_random_instances_scene(
                 bbox.min.y + (bbox.max.y - bbox.min.y) *
                                  (j + 0.45f + 0.1f * rpos.y) / num.y,
             };
-            auto idx = next_rand1i(rng, (int)shapes.size());
+            auto idx = rand1i(rng, (int)shapes.size());
             scn->instances.push_back(
                 make_instance("ist" + std::to_string(iid++), shapes[idx],
                     materials[idx], translation_frame(pos)));

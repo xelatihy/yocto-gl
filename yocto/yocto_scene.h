@@ -394,8 +394,6 @@ struct scene_intersection {
 scene_intersection intersect_ray(
     const scene* scn, const ray3f& ray, bool find_any = false);
 
-// Shape element normal.
-vec3f eval_elem_norm(const shape* shp, int eid);
 // Shape values interpolated using barycentric coordinates.
 vec3f eval_pos(const shape* shp, int eid, const vec2f& euv);
 vec3f eval_norm(const shape* shp, int eid, const vec2f& euv);
@@ -403,16 +401,28 @@ vec2f eval_texcoord(const shape* shp, int eid, const vec2f& euv);
 vec4f eval_color(const shape* shp, int eid, const vec2f& euv);
 float eval_radius(const shape* shp, int eid, const vec2f& euv);
 vec4f eval_tangsp(const shape* shp, int eid, const vec2f& euv);
+vec3f eval_tangsp(const shape* shp, int eid, const vec2f& euv, bool& left_handed);
+// Shape element values.
+vec3f eval_elem_norm(const shape* shp, int eid);
+
+// Instance values interpolated using barycentric coordinates.
+// Handles defaults if data is missing.
+vec3f eval_pos(const instance* ist, int eid, const vec2f& euv);
+vec3f eval_norm(const instance* ist, int eid, const vec2f& euv);
+vec2f eval_texcoord(const instance* ist, int eid, const vec2f& euv);
+vec4f eval_color(const instance* ist, int eid, const vec2f& euv);
+float eval_radius(const instance* ist, int eid, const vec2f& euv);
+vec3f eval_tangsp(const instance* ist, int eid, const vec2f& euv, bool& left_handed);
+// Instance element values.
+vec3f eval_elem_norm(const instance* ist, int eid);
 
 // Environment values interpolated using uv parametrization.
-vec3f eval_pos(
-    const environment* env, const vec2f& uv, bool transformed = false);
-vec3f eval_norm(
-    const environment* env, const vec2f& uv, bool transformed = false);
+vec3f eval_pos(const environment* env, const vec2f& uv);
+vec3f eval_norm(const environment* env, const vec2f& uv);
 // Environment texture coordinates from uv parametrization.
 vec2f eval_texcoord(const environment* env, const vec2f& uv);
-// Evaluate uv parameters for environment.
-vec2f eval_uv(const environment* env, const vec3f& w, bool transformed = false);
+// Evaluate uv parameters for an incoming direction.
+vec2f eval_uv(const environment* env, const vec3f& w);
 
 // Evaluate a texture.
 vec4f eval_texture(const texture_info& info, const vec2f& texcoord,

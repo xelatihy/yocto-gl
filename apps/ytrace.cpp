@@ -45,10 +45,11 @@ int main(int argc, char* argv[]) {
     };
     static auto trace_names = std::map<ygl::trace_type, std::string>{
         {ygl::trace_type::pathtrace, "pathtrace"},
-        {ygl::trace_type::eyelight, "eyelight"},
         {ygl::trace_type::direct, "direct"},
+        {ygl::trace_type::eyelight, "eyelight"},
         {ygl::trace_type::pathtrace_nomis, "pathtrace_nomis"},
-        {ygl::trace_type::pathtrace_onesample, "pathtrace_onesample"},
+        {ygl::trace_type::pathtrace_naive, "pathtrace_naive"},
+        {ygl::trace_type::pathtrace_nomis, "direct_nomis"},
         {ygl::trace_type::debug_normal, "debug_normal"},
         {ygl::trace_type::debug_albedo, "debug_albedo"},
         {ygl::trace_type::debug_texcoord, "debug_texcoord"},

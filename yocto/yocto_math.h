@@ -45,9 +45,9 @@
 //     1. initialize the random number generator with `make_rng()`
 //     2. advance the random number state with `advance_rng()`
 //     3. if necessary, you can reseed the rng with `seed_rng()`
-//     4. generate random integers in an interval with `next_rand1i()`
+//     4. generate random integers in an interval with `rand1i()`
 //     5. generate random floats and double in the [0,1) range with
-//        `next_rand1f()`, `next_rand2f()`, `next_rand3f()`, `next_rand1d()`
+//        `rand1f()`, `rand2f()`, `rand3f()`, `next_rand1d()`
 // 2. Perlin noise: `perlin_noise()` to generate Perlin noise with optional
 //    wrapping, with fractal variations `perlin_ridge_noise()`,
 //    `perlin_fbm_noise()`, `perlin_turbulence_noise()`
@@ -102,34 +102,35 @@
 
 #include <cctype>
 #include <cfloat>
-#include <cmath>
+// #include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <functional>  // for std::hash
 #include <string>
 #include <vector>
+#include <ctgmath>
 
 // -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-using std::acos;
-using std::asin;
-using std::atan;
-using std::atan2;
-using std::cos;
-using std::exp;
-using std::fabs;
-using std::floor;
-using std::isfinite;
-using std::log;
-using std::pow;
-using std::round;
-using std::sin;
-using std::sqrt;
-using std::tan;
+// using std::acos;
+// using std::asin;
+// using std::atan;
+// using std::atan2;
+// using std::cos;
+// using std::exp;
+// using std::fabs;
+// using std::floor;
+// using std::isfinite;
+// using std::log;
+// using std::pow;
+// using std::round;
+// using std::sin;
+// using std::sqrt;
+// using std::tan;
 using namespace std::string_literals;
 using namespace std::literals;
 
@@ -430,57 +431,6 @@ inline vec4f quat_mul(const vec4f& a, const vec4f& b) {
 inline vec4f quat_conjugate(const vec4f& a) { return {-a.x, -a.y, -a.z, a.w}; }
 inline vec4f quat_inverse(const vec4f& a) {
     return quat_conjugate(a) / length_sqr(a);
-}
-
-// Coordinate conversions. Spherical (phi,theta,r). Cylindrical (phi,r,z).
-inline vec3f cartesian_to_spherical(const vec3f& p) {
-    auto r = length(p);
-    if (!r) return {0, 0, 0};
-    auto r2 = length(vec2f{p.x, p.y});
-    return {atan2(p.y / r2, p.x / r2), acos(clamp(p.z / r, -1.0f, 1.0f)), r};
-}
-inline vec3f spherical_to_cartesian(const vec3f& s) {
-    return {
-        cos(s.x) * sin(s.y) * s.z, sin(s.x) * sin(s.y) * s.z, cos(s.y) * s.z};
-}
-inline vec3f cartesian_to_sphericaly(const vec3f& p) {
-    auto r = length(p);
-    if (!r) return {0, 0, 0};
-    auto r2 = length(vec2f{p.x, p.z});
-    return {atan2(p.z / r2, p.x / r2), acos(clamp(p.y / r, -1.0f, 1.0f)), r};
-}
-inline vec3f sphericaly_to_cartesian(const vec3f& s) {
-    return {
-        cos(s.x) * sin(s.y) * s.z, cos(s.y) * s.z, sin(s.x) * sin(s.y) * s.z};
-}
-inline vec3f cartesian_to_cylindrical(const vec3f& p) {
-    auto r = length(vec2f{p.x, p.y});
-    if (!r) return {0, 0, p.z};
-    return {atan2(p.y / r, p.x / r), r, p.z};
-}
-inline vec3f cylindrical_to_cartesian(const vec3f& c) {
-    return {cos(c.x) * c.y, sin(c.x) * c.y, c.z};
-}
-
-// Cartesian to elliptical mapping
-// Cartesian (x,y) in [-1,1]^2. Elliptical |(u,v)|<=1.
-inline vec2f cartesian_to_elliptical(const vec2f& xy) {
-    // Analytical Methods for Squaring the Disc, by C. Fong
-    // https://arxiv.org/abs/1509.06344
-    auto x = xy.x, y = xy.y;
-    auto u = x * sqrt(1 - y * y / 2);
-    auto v = y * sqrt(1 - x * x / 2);
-    return {u, v};
-}
-inline vec2f elliptical_to_cartesian(const vec2f& uv) {
-    // Analytical Methods for Squaring the Disc, by C. Fong
-    // https://arxiv.org/abs/1509.06344
-    auto u = uv.x, v = uv.y;
-    auto x = sqrt(2 + u * u - v * v + 2 * sqrt(2.0f) * u) / 2.0f -
-             sqrt(2 + u * u - v * v - 2 * sqrt(2.0f) * u) / 2.0f;
-    auto y = sqrt(2 + v * v - u * u + 2 * sqrt(2.0f) * v) / 2.0f -
-             sqrt(2 + v * v - u * u - 2 * sqrt(2.0f) * v) / 2.0f;
-    return {x, y};
 }
 
 }  // namespace ygl
@@ -1059,10 +1009,10 @@ inline std::vector<rng_state> make_rng_seq(int num, uint64_t seed) {
 }
 
 // Next random numbers: floats in [0,1), ints in [0,n).
-inline uint32_t next_rand1i(rng_state& rng, int n) {
+inline int rand1i(rng_state& rng, int n) {
     return advance_rng(rng) % n;
 }
-inline float next_rand1f(rng_state& rng) {
+inline float rand1f(rng_state& rng) {
     union {
         uint32_t u;
         float f;
@@ -1073,11 +1023,11 @@ inline float next_rand1f(rng_state& rng) {
     // const static auto scale = (float)(1.0 / numeric_limits<uint32_t>::max());
     // return advance_rng(rng) * scale;
 }
-inline vec2f next_rand2f(rng_state& rng) {
-    return {next_rand1f(rng), next_rand1f(rng)};
+inline vec2f rand2f(rng_state& rng) {
+    return {rand1f(rng), rand1f(rng)};
 }
-inline vec3f next_rand3f(rng_state& rng) {
-    return {next_rand1f(rng), next_rand1f(rng), next_rand1f(rng)};
+inline vec3f rand3f(rng_state& rng) {
+    return {rand1f(rng), rand1f(rng), rand1f(rng)};
 }
 
 }  // namespace ygl

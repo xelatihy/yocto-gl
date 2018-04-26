@@ -58,7 +58,7 @@ struct app_state {
     std::vector<ygl::rng_state> rngs;
     std::vector<std::thread> async_threads;
     bool async_stop = false;
-    bool update_texture = true;
+    int cur_sample = 0;
 
     // view image
     ygl::frame2f imframe = ygl::identity_frame2f;
@@ -70,7 +70,6 @@ struct app_state {
     ygl::glimage_program gl_prog = {};
     ygl::scene_selection selection = {};
     std::vector<ygl::scene_selection> update_list;
-    int cur_sample = 0;
     bool quiet = false;
     int preview_resolution = 64;
     bool navigation_fps = false;
@@ -83,11 +82,11 @@ struct app_state {
 
 auto trace_names = std::map<ygl::trace_type, std::string>{
     {ygl::trace_type::pathtrace, "pathtrace"},
-    {ygl::trace_type::eyelight, "eyelight"},
     {ygl::trace_type::direct, "direct"},
+    {ygl::trace_type::eyelight, "eyelight"},
     {ygl::trace_type::pathtrace_nomis, "pathtrace_nomis"},
-    {ygl::trace_type::pathtrace_onesample, "pathtrace_onesample"},
     {ygl::trace_type::pathtrace_naive, "pathtrace_naive"},
+    {ygl::trace_type::direct_nomis, "direct_nomis"},
     {ygl::trace_type::debug_normal, "debug_normal"},
     {ygl::trace_type::debug_albedo, "debug_albedo"},
     {ygl::trace_type::debug_texcoord, "debug_texcoord"},
@@ -95,6 +94,9 @@ auto trace_names = std::map<ygl::trace_type, std::string>{
 };
 
 void draw(ygl::glwindow* win, app_state* app) {
+    // update image
+    ygl::update_gltexture(
+        app->gl_txt, app->width, app->height, app->img, false, false, true);
     // draw image
     auto window_size = get_glwindow_size(win);
     auto framebuffer_size = get_glwindow_framebuffer_size(win);
@@ -104,7 +106,6 @@ void draw(ygl::glwindow* win, app_state* app) {
         app->exposure, app->gamma);
 
     if (ygl::begin_glwidgets_frame(win, "yitrace")) {
-        ygl::push_glwidgets_groupid(win, app);
         ygl::draw_glwidgets_label(win, "scene", app->filename);
         ygl::draw_glwidgets_label(win, "image",
             ygl::format("{} x {} @ {} samples", app->width, app->height,
@@ -170,64 +171,51 @@ void draw(ygl::glwindow* win, app_state* app) {
 }
 
 bool update(ygl::glwindow* win, app_state* app) {
-    if (!app->update_list.empty()) {
-        ygl::trace_async_stop(app->async_threads, app->async_stop);
+    // exit if no updated
+    if (app->update_list.empty()) return false;
 
-        // update BVH
-        for (auto sel : app->update_list) {
-            if (sel.as<ygl::shape>()) { ygl::refit_bvh(sel.as<ygl::shape>()); }
-            if (sel.as<ygl::instance>()) { ygl::refit_bvh(app->scn, false); }
-            if (sel.as<ygl::node>()) {
-                ygl::update_transforms(app->scn, 0);
-                ygl::refit_bvh(app->scn, false);
+    // stop renderer
+    ygl::trace_async_stop(app->async_threads, app->async_stop);
+
+    // update BVH
+    for (auto sel : app->update_list) {
+        if (sel.as<ygl::shape>()) { ygl::refit_bvh(sel.as<ygl::shape>()); }
+        if (sel.as<ygl::instance>()) { ygl::refit_bvh(app->scn, false); }
+        if (sel.as<ygl::node>()) {
+            ygl::update_transforms(app->scn, 0);
+            ygl::refit_bvh(app->scn, false);
+        }
+    }
+    app->update_list.clear();
+
+    // render preview image
+    if (app->preview_resolution) {
+        auto pwidth =
+            (int)std::round(app->cam->aspect * app->preview_resolution);
+        auto pheight = app->preview_resolution;
+        auto pimg = std::vector<ygl::vec4f>(pwidth * pheight);
+        auto prngs = ygl::make_rng_seq(pwidth * pheight, 7);
+        trace_samples(app->scn, app->cam, pwidth, pheight, pimg, prngs, 0,
+            1, app->tracer, app->nbounces);
+        auto pratio = app->resolution / app->preview_resolution;
+        for (auto j = 0; j < app->height; j++) {
+            for (auto i = 0; i < app->width; i++) {
+                auto pi = i / pratio, pj = j / pratio;
+                app->img[i + j * app->width] = pimg[pi + pwidth * pj];
             }
         }
-        app->update_list.clear();
-
-        // render preview image
-        if (app->preview_resolution) {
-            auto pwidth =
-                (int)std::round(app->cam->aspect * app->preview_resolution);
-            auto pheight = app->preview_resolution;
-            auto pimg = std::vector<ygl::vec4f>(pwidth * pheight);
-            auto prngs = ygl::make_rng_seq(pwidth * pheight, 7);
-            trace_samples(app->scn, app->cam, pwidth, pheight, pimg, prngs, 0,
-                1, app->tracer, app->nbounces);
-            auto pratio = app->resolution / app->preview_resolution;
-            for (auto j = 0; j < app->height; j++) {
-                for (auto i = 0; i < app->width; i++) {
-                    auto pi = i / pratio, pj = j / pratio;
-                    app->img[i + j * app->width] = pimg[pi + pwidth * pj];
-                }
-            }
-            // app->img = resize_image(
-            //     pwidth, pheight, pimg, app->width, app->height,
-            //     ygl::resize_filter::box);
-        } else {
-            for (auto& p : app->img) p = ygl::zero4f;
-        }
-        app->update_texture = true;
-
-        // restart renderer
-        app->rngs = ygl::make_rng_seq(app->img.size(), app->seed);
-        ygl::trace_async_start(app->scn, app->cam, app->width, app->height,
-            app->img, app->rngs, app->nsamples, app->tracer, app->nbounces,
-            app->async_threads, app->async_stop, app->pixel_clamp,
-            [win, app](int s, int j) {
-                if (j % app->preview_resolution) return;
-                app->update_texture = true;
-#ifdef __APPLE__
-                ygl::post_glwindow_event(win);
-#endif
-            });
+    } else {
+        for (auto& p : app->img) p = ygl::zero4f;
     }
-    if (app->update_texture) {
-        ygl::update_gltexture(
-            app->gl_txt, app->width, app->height, app->img, false, false, true);
-        app->update_texture = false;
-        return true;
-    }
-    return false;
+
+    // restart renderer
+    app->rngs = ygl::make_rng_seq(app->img.size(), app->seed);
+    ygl::trace_async_start(app->scn, app->cam, app->width, app->height,
+        app->img, app->rngs, app->nsamples, app->tracer, app->nbounces,
+        app->async_threads, app->async_stop, app->cur_sample, app->pixel_clamp);
+        
+    // updated
+    return true;
 }
 
 void refresh(ygl::glwindow* win) {
@@ -273,18 +261,13 @@ void run_ui(app_state* app) {
         // update
         update(win, app);
 
-#ifdef __APPLE__
         // event hadling
-        if (ygl::get_glwindow_mouse_button(win) ||
-            ygl::get_glwidgets_active(win)) {
-            ygl::poll_glwindow_events(win);
-        } else {
-            ygl::wait_glwindow_events(win);
+        if (!ygl::get_glwindow_mouse_button(win) &&
+            !ygl::get_glwidgets_active(win)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
-#else
         // event hadling
         ygl::poll_glwindow_events(win);
-#endif
     }
 
     // cleanup

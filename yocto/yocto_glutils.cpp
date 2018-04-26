@@ -1369,18 +1369,6 @@ void wait_glwindow_events(glwindow* win) { glfwWaitEvents(); }
 // Poll events
 void poll_glwindow_events(glwindow* win) { glfwPollEvents(); }
 
-#ifdef __APPLE__
-
-// Wait events
-void wait_glwindow_events_timeout(glwindow* win, double timeout_sec) {
-    glfwWaitEventsTimeout(timeout_sec);
-}
-
-// Wait events
-void post_glwindow_event(glwindow* win) { glfwPostEmptyEvent(); }
-
-#endif
-
 // Swap buffers
 void swap_glwindow_buffers(glwindow* win) { glfwSwapBuffers(win->gwin); }
 

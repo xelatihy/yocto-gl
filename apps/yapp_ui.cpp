@@ -584,7 +584,7 @@ bool draw_glwidgets_scene_inspector(
     glwindow* win, const std::string& lbl, texture_info& val, scene* scn) {
     auto edited = 0;
     edited +=
-        draw_glwidgets_combobox(win, lbl + " txt", val.txt, scn->textures);
+        draw_glwidgets_combobox(win, lbl + " txt", val.txt, scn->textures, true);
     edited += draw_glwidgets_checkbox(win, lbl + " wrap_s", val.wrap_s);
     edited += draw_glwidgets_checkbox(win, lbl + " wrap_t", val.wrap_t);
     edited += draw_glwidgets_checkbox(win, lbl + " linear", val.linear);
@@ -649,8 +649,8 @@ bool draw_glwidgets_scene_inspector(glwindow* win, instance* val, scene* scn) {
     auto edited = 0;
     edited += draw_glwidgets_text(win, "name", val->name);
     edited += draw_glwidgets_dragbox(win, "frame", val->frame);
-    edited += draw_glwidgets_combobox(win, "shp", val->shp, scn->shapes);
-    edited += draw_glwidgets_combobox(win, "mat", val->mat, scn->materials);
+    edited += draw_glwidgets_combobox(win, "shp", val->shp, scn->shapes, true);
+    edited += draw_glwidgets_combobox(win, "mat", val->mat, scn->materials, true);
     return edited;
 }
 
@@ -667,14 +667,14 @@ bool draw_glwidgets_scene_inspector(
 bool draw_glwidgets_scene_inspector(glwindow* win, node* val, scene* scn) {
     auto edited = 0;
     edited += draw_glwidgets_text(win, "name", val->name);
-    edited += draw_glwidgets_combobox(win, "parent", val->parent, scn->nodes);
+    edited += draw_glwidgets_combobox(win, "parent", val->parent, scn->nodes, true);
     edited += draw_glwidgets_dragbox(win, "frame", val->frame);
     edited += draw_glwidgets_dragbox(win, "translation", val->translation);
     edited += draw_glwidgets_dragbox(win, "rotation", val->rotation, -1, 1);
     edited += draw_glwidgets_dragbox(win, "scale", val->scale, 0, 10);
-    edited += draw_glwidgets_combobox(win, "cam", val->cam, scn->cameras);
-    edited += draw_glwidgets_combobox(win, "ist", val->ist, scn->instances);
-    edited += draw_glwidgets_combobox(win, "env", val->env, scn->environments);
+    edited += draw_glwidgets_combobox(win, "cam", val->cam, scn->cameras, true);
+    edited += draw_glwidgets_combobox(win, "ist", val->ist, scn->instances, true);
+    edited += draw_glwidgets_combobox(win, "env", val->env, scn->environments, true);
     return edited;
 }
 
