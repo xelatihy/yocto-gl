@@ -394,14 +394,16 @@ inline vec3f tonemap_filmic3(const vec3f& hdr) {
     // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
 
     // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
-    static const mat3f ACESInputMat = transpose(mat3f{
-        vec3f{0.59719, 0.35458, 0.04823}, vec3f{0.07600, 0.90834, 0.01566},
-        vec3f{0.02840, 0.13383, 0.83777}});
+    static const mat3f ACESInputMat =
+        transpose(mat3f{vec3f{0.59719f, 0.35458f, 0.04823f},
+            vec3f{0.07600f, 0.90834f, 0.01566f},
+            vec3f{0.02840f, 0.13383f, 0.83777f}});
 
     // ODT_SAT => XYZ => D60_2_D65 => sRGB
-    static const mat3f ACESOutputMat = transpose(mat3f{
-        vec3f{1.60475, -0.53108, -0.07367}, vec3f{-0.10208, 1.10813, -0.00605},
-        vec3f{-0.00327, -0.07276, 1.07602}});
+    static const mat3f ACESOutputMat =
+        transpose(mat3f{vec3f{1.60475f, -0.53108f, -0.07367f},
+            vec3f{-0.10208f, 1.10813f, -0.00605f},
+            vec3f{-0.00327f, -0.07276f, 1.07602f}});
 
     auto x = hdr;
     x = 2 * x;  // matches standard range
