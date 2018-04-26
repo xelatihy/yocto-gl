@@ -18,64 +18,53 @@ Please consider this to be just development notes and not any real planning.
 
 ## Cleanup
 
-- trace async without callback
-    - no std::function
 - include math functions without crap
 - delete
     - compositing if not used
-    - widgets
-        - simpler combo
+
+## Tests
+
+- cornell box with light types
+- group test scenes
+    - simple
+    - basic
+    - materials
+    - textures
+    - shapes
+    - cornellbox
 
 ## Trace
 
-- yview/yitrace tabs?
+- review loops for intersect missed test
+    - consider removing environment point
+- opacity as lobe
+- deltas mixed back in
+- matcap rendering
 - area light test scene
-- move delta picking up in the loops like opacity
-- eval_pos(env) should apply frame
-    - implement eval_pos(ist)
 - bump/normal mapping
 - shape trimming in intersection
-- direct illumination
-    - one light
-    - multiple lights
-    - angle/area
-    - mis
-- simplify point
-    - maybe not return intersect point
-    - handle multiple env
-    - remove environment map point?
 - double-sided brdf
-- back to using pdfs
-- variants
-    - steve's
-    - one sample mis only
 - fresnel
     - diffuse formula
     - scale with roughness
     - transmission formula
     - fresnel in coefficients
     - fresnel in weights
-- brdf
-    - deltas without delta flag
 - highlights are too soft in bitterli scenes
-- light sampling
-    - eval_direct function
-    - mis in params and not renderer?
-- bump mapping and normal mapping
-    - bump mapping frame
 - fast distribution sampling
-- cleanup sampling functions everywhere
-    - probably removing sample_points/lines/triangles
-    - cleanup sampling in ray tracing
-    - make lights with single shapes in trace
 - add radius in offsetting rays
 - sample background to sum all environments
 - envmap sampling
     - simplest case, pick pixels as 1D distribution
+- cleanup sampling functions everywhere
+    - probably removing sample_points/lines/triangles
+    - cleanup sampling in ray tracing
+    - make lights with single shapes in trace
 - simple denoiser
     - joint bilateral denoiser
     - non-local means denoiser
     - denoiser from paris
+- evaluate a big simplifying pass
 
 ## Tesselated shapes
 

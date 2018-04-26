@@ -646,7 +646,7 @@ sample_triangles_points(const std::vector<vec3i>& triangles,
         auto eid = 0;
         auto euv = zero2f;
         std::tie(eid, euv) = sample_triangles(
-            cdf, next_rand1f(rng), {next_rand1f(rng), next_rand1f(rng)});
+            cdf, rand1f(rng), {rand1f(rng), rand1f(rng)});
         auto t = triangles[eid];
         sampled_pos[i] =
             interpolate_triangle(pos[t.x], pos[t.y], pos[t.z], euv);
@@ -885,8 +885,11 @@ void make_disk_quad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     make_quad(
         quads, pos, norm, texcoord, {steps, steps}, {2, 2}, {uvsize, uvsize});
     for (auto i = 0; i < pos.size(); i++) {
-        auto uv = cartesian_to_elliptical(vec2f{pos[i].x, pos[i].y}) * size / 2;
-        pos[i] = {uv.x, uv.y, 0};
+        // Analytical Methods for Squaring the Disc, by C. Fong
+        // https://arxiv.org/abs/1509.06344
+        auto xy = vec2f{pos[i].x, pos[i].y};
+        auto uv = vec2f{xy.x * sqrt(1 - xy.y * xy.y / 2), xy.y * sqrt(1 - xy.x * xy.x / 2)};
+        pos[i] = {uv.x * size / 2, uv.y * size / 2, 0};
     }
 }
 
@@ -962,15 +965,15 @@ void make_cylinder_rounded(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     make_cylinder(quads, pos, norm, texcoord, steps, size, uvsize);
     auto c = size / 2 - vec2f{radius, radius};
     for (auto i = 0; i < pos.size(); i++) {
-        auto pcyl = cartesian_to_cylindrical(pos[i]);
-        auto pc = vec2f{pcyl.y, fabs(pcyl.z)};
-        auto pp = pcyl.x;
-        auto ps = (pcyl.z < 0) ? -1.0f : 1.0f;
+        auto phi = atan2(pos[i].y,pos[i].x);
+        auto r = length(vec2f{pos[i].x,pos[i].y});
+        auto z = pos[i].z;
+        auto pc = vec2f{r, fabs(z)};
+        auto ps = (z < 0) ? -1.0f : 1.0f;
         if (pc.x >= c.x && pc.y >= c.y) {
             auto pn = normalize(pc - c);
-            pos[i] = cylindrical_to_cartesian(
-                vec3f{pp, c.x + radius * pn.x, ps * (c.y + radius * pn.y)});
-            norm[i] = cylindrical_to_cartesian(vec3f{pp, pn.x, ps * pn.y});
+            pos[i] = {cos(phi) * c.x + radius * pn.x, sin(phi) * c.x + radius * pn.x, ps * (c.y + radius * pn.y)};
+            norm[i] = {cos(phi) * pn.x, sin(phi) * pn.x, ps * pn.y};
         } else {
             continue;
         }
@@ -1532,7 +1535,7 @@ void make_random_points(std::vector<int>& points, std::vector<vec3f>& pos,
     make_points(points, pos, norm, texcoord, radius, num, uvsize, point_radius);
     auto rng = make_rng(seed);
     for (auto i = 0; i < pos.size(); i++) {
-        pos[i] = (next_rand3f(rng) - vec3f{0.5f, 0.5f, 0.5f}) * size;
+        pos[i] = (rand3f(rng) - vec3f{0.5f, 0.5f, 0.5f}) * size;
     }
 }
 
@@ -1577,7 +1580,7 @@ void make_hair(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
 
     auto rng = make_rng(seed, 3);
     auto blen = std::vector<float>(bpos.size());
-    for (auto& l : blen) l = lerp(len.x, len.y, next_rand1f(rng));
+    for (auto& l : blen) l = lerp(len.x, len.y, rand1f(rng));
 
     auto cidx = std::vector<int>();
     if (clump.x > 0) {

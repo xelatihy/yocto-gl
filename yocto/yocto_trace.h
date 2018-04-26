@@ -74,11 +74,11 @@ namespace ygl {
 // Type of rendering algorithm.
 enum struct trace_type {
     pathtrace = 0,
-    eyelight,
     direct,
+    eyelight,
     pathtrace_nomis,
-    pathtrace_onesample,
     pathtrace_naive,
+    direct_nomis,
     debug_normal,
     debug_albedo,
     debug_texcoord,
@@ -100,8 +100,8 @@ void trace_samples_mt(const scene* scn, const camera* cam, int width,
 void trace_async_start(const scene* scn, const camera* cam, int width,
     int height, std::vector<vec4f>& img, std::vector<rng_state>& rngs,
     int nsamples, trace_type tracer, int nbounces,
-    std::vector<std::thread>& threads, bool& stop_flag, float pixel_clamp = 100,
-    const std::function<void(int, int)>& callback = {});
+    std::vector<std::thread>& threads, bool& stop_flag, int& cur_sample, 
+    float pixel_clamp = 100);
 // Stop the asynchronous renderer.
 void trace_async_stop(std::vector<std::thread>& threads, bool& stop_flag);
 

@@ -525,10 +525,6 @@ void set_glwindow_title(glwindow* win, const std::string& title);
 void wait_glwindow_events(glwindow* win);
 void poll_glwindow_events(glwindow* win);
 void swap_glwindow_buffers(glwindow* win);
-#ifdef __APPLE__
-void wait_glwindow_events_timeout(glwindow* win, double timeout_sec);
-void post_glwindow_event(glwindow* win);
-#endif
 // Whether the window should exit the event processing loop.
 bool should_glwindow_close(glwindow* win);
 
@@ -625,13 +621,8 @@ bool begin_glwidgets_combobox(
 bool draw_glwidgets_item(
     glwindow* win, const std::string& label, int idx, bool selected);
 void end_glwidgets_combobox(glwindow* win);
-template <typename T>
-bool draw_glwidgets_item(
-    glwindow* win, const std::string& label, int idx, T& val, const T& item) {
-    auto selected = draw_glwidgets_item(win, label, idx, val == item);
-    if (selected) val = item;
-    return selected;
-}
+
+// Combo widgets for lists and enums
 inline bool draw_glwidgets_combobox(glwindow* win, const std::string& lbl,
     std::string& val, const std::vector<std::string>& labels);
 template <typename T>
@@ -639,8 +630,7 @@ inline bool draw_glwidgets_combobox(glwindow* win, const std::string& lbl,
     T& val, const std::map<T, std::string>& labels);
 template <typename T>
 inline bool draw_glwidgets_combobox(glwindow* win, const std::string& lbl,
-    T*& val, const std::vector<T*>& vals, bool extra = true,
-    T* extra_val = nullptr);
+    T*& val, const std::vector<T*>& vals, bool include_null = false);
 
 // Button widget.
 bool draw_glwidgets_button(glwindow* win, const std::string& lbl);
@@ -709,7 +699,7 @@ inline bool draw_glwidgets_combobox(glwindow* win, const std::string& lbl,
     if (!begin_glwidgets_combobox(win, lbl, val)) return false;
     auto old_val = val;
     for (auto i = 0; i < labels.size(); i++) {
-        draw_glwidgets_item(win, labels[i], i, val, labels[i]);
+        if(draw_glwidgets_item(win, labels[i], i, val == labels[i])) val = labels[i];
     }
     end_glwidgets_combobox(win);
     return val != old_val;
@@ -722,8 +712,9 @@ inline bool draw_glwidgets_combobox(glwindow* win, const std::string& lbl,
     if (!begin_glwidgets_combobox(win, lbl, labels.at(val))) return false;
     auto old_val = val;
     auto lid = 0;
-    for (auto& kv : labels)
-        draw_glwidgets_item(win, kv.second, lid++, val, kv.first);
+    for (auto& kv : labels) {
+        if(draw_glwidgets_item(win, kv.second, lid++, val == kv.first)) val = kv.first;
+    }
     end_glwidgets_combobox(win);
     return val != old_val;
 }
@@ -731,15 +722,15 @@ inline bool draw_glwidgets_combobox(glwindow* win, const std::string& lbl,
 // Combo widget
 template <typename T>
 inline bool draw_glwidgets_combobox(glwindow* win, const std::string& lbl,
-    T*& val, const std::vector<T*>& vals, bool extra, T* extra_val) {
+    T*& val, const std::vector<T*>& vals, bool include_null) {
     if (!begin_glwidgets_combobox(win, lbl, (val) ? val->name : "<none>"))
         return false;
     auto old_val = val;
-    if (extra)
-        draw_glwidgets_item(
-            win, (extra_val) ? extra_val->name : "<none>", -1, val, extra_val);
+    if (include_null) {
+        if(draw_glwidgets_item(win, "<none>", -1, val == nullptr)) val = nullptr;
+    }
     for (auto i = 0; i < vals.size(); i++) {
-        draw_glwidgets_item(win, vals[i]->name, i, val, vals[i]);
+        if(draw_glwidgets_item(win, vals[i]->name, i, val == vals[i])) val = vals[i];
     }
     end_glwidgets_combobox(win);
     return val != old_val;
