@@ -21,7 +21,7 @@ matrix:
     env: COMPILER=g++-6
     addons:
       apt:
-        sources: ['ubuntu-toolchain-r-test', 'sourceline': 'deb https://launchpad.net/~cginternals/+archive/ubuntu/ppa trusty main']
+        sources: ['ubuntu-toolchain-r-test', 'sourceline': 'deb http://ppa.launchpad.net/keithw/glfw3/ubuntu trusty main']
         packages: ['g++-6', 'ninja-build', 'libgl1-mesa-dev', 'libglew-dev', 'libglfw3-dev']
 
   - os: linux
@@ -29,7 +29,7 @@ matrix:
     env: COMPILER=g++-7
     addons:
       apt:
-        sources: ['ubuntu-toolchain-r-test', 'sourceline': 'deb https://launchpad.net/~cginternals/+archive/ubuntu/ppa trusty main']
+        sources: ['ubuntu-toolchain-r-test', 'sourceline': 'deb http://ppa.launchpad.net/keithw/glfw3/ubuntu trusty main']
         packages: ['g++-7', 'ninja-build', 'libgl1-mesa-dev', 'libglew-dev', 'libglfw3-dev']
 
   - os: linux
@@ -37,7 +37,7 @@ matrix:
     env: COMPILER=clang++-4.0
     addons:
       apt:
-        sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-4.0', 'sourceline': 'deb https://launchpad.net/~cginternals/+archive/ubuntu/ppa trusty main']
+        sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-4.0', 'sourceline': 'deb http://ppa.launchpad.net/keithw/glfw3/ubuntu trusty main']
         packages: ['g++-6', 'clang-4.0', 'ninja-build', 'libgl1-mesa-dev', 'libglew-dev', 'libglfw3-dev']
 
   - os: linux
@@ -45,7 +45,7 @@ matrix:
     env: COMPILER=clang++-5.0
     addons:
       apt:
-        sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-5.0', 'sourceline': 'deb https://launchpad.net/~cginternals/+archive/ubuntu/ppa trusty main']
+        sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-5.0', 'sourceline': 'deb http://ppa.launchpad.net/keithw/glfw3/ubuntu trusty main']
         packages: ['g++-6', 'clang-5.0', 'ninja-build', 'libgl1-mesa-dev', 'libglew-dev', 'libglfw3-dev']
 
 branches:
