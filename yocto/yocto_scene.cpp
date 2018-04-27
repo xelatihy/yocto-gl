@@ -2534,344 +2534,277 @@ environment* make_environment(const std::string& name, const vec3f& ke,
     return env;
 }
 
-camera* make_proc_camera(const std::string& name, const std::string& type) {
-    if (type == "") {
-        return make_camera(name, {0, 0, 1}, {0, 0, 0}, 75 * pi / 180, 1);
-    } else if (type == "cam1") {
-        return make_camera(name, {0, 4, 10}, {0, 1, 0}, 15 * pi / 180, 1);
-    } else if (type == "cam1") {
-        return make_camera(
-            name, {0, 4, 10}, {0, 1, 0}, 15 * pi / 180, 16.0f / 9.0f);
-    } else if (type == "cam1") {
-        return make_camera(
-            name, {0, 6, 24}, {0, 1, 0}, 7.5f * pi / 180, 2.35f / 1.0f);
-    } else {
-        throw std::runtime_error("unknown camera type");
-    }
+animation* make_animation(const std::string& name,
+    const std::vector<float>& times, const std::vector<vec3f>& translation,
+    const std::vector<vec4f>& rotation, const std::vector<vec3f>& scale,
+    const std::vector<node*>& targets, bool bezier) {
+    auto anm = new animation();
+    anm->name = name;
+    anm->times = times;
+    anm->translation = translation;
+    anm->rotation = rotation;
+    anm->scale = scale;
+    anm->type = (bezier) ? animation_type::bezier : animation_type::linear;
+    anm->targets = targets;
+    return anm;
 }
 
-// Makes/updates a test texture
-texture* make_proc_texture(const std::string& name, const std::string& type,
-    int res, float scale, float sky_sunangle, float bump_scale) {
-    auto txt = new texture();
-
-    txt->name = name;
-    txt->path = "";
-    txt->width = res;
-    txt->height = res;
-
-    if (type == "") {
-    } else if (type == "grid") {
-        auto ts = (int)(res / scale + 0.5f);
-        txt->ldr = make_grid_image(txt->width, txt->height, ts);
-    } else if (type == "checker") {
-        auto ts = (int)(res / scale + 0.5f);
-        txt->ldr = make_checker_image(txt->width, txt->height, ts);
-    } else if (type == "colored") {
-        auto ts = (int)(res / scale + 0.5f);
-        txt->ldr = make_uvgrid_image(txt->width, txt->height, ts);
-    } else if (type == "rcolored") {
-        auto ts = (int)(res / scale + 0.5f);
-        txt->ldr = make_recuvgrid_image(txt->width, txt->height, ts);
-    } else if (type == "bump") {
-        auto ts = (int)(res / (2 * scale) + 0.5f);
-        txt->ldr = make_bumpdimple_image(txt->width, txt->height, ts);
-    } else if (type == "uv") {
-        txt->ldr = make_uv_image(txt->width, txt->height);
-    } else if (type == "gamma") {
-        txt->ldr = make_gammaramp_image(txt->width, txt->height);
-    } else if (type == "noise") {
-        txt->ldr = make_noise_image(txt->width, txt->height, scale);
-    } else if (type == "ridge") {
-        txt->ldr = make_ridge_image(txt->width, txt->height, scale);
-    } else if (type == "fbm") {
-        txt->ldr = make_fbm_image(txt->width, txt->height, scale);
-    } else if (type == "turbulence") {
-        txt->ldr = make_turbulence_image(txt->width, txt->height, scale);
-    } else if (type == "grid_norm") {
-        auto ts = (int)(res / scale + 0.5f);
-        txt->ldr = make_grid_image(txt->width, txt->height, ts);
-        txt->ldr =
-            bump_to_normal_map(txt->width, txt->height, txt->ldr, bump_scale);
-    } else if (type == "bump_norm") {
-        auto ts = (int)(res / (2 * scale) + 0.5f);
-        txt->ldr = make_bumpdimple_image(txt->width, txt->height, ts);
-        txt->ldr =
-            bump_to_normal_map(txt->width, txt->height, txt->ldr, bump_scale);
-    } else if (type == "gammaf") {
-        txt->hdr = make_gammaramp_imagef(txt->width, txt->height);
-    } else if (type == "sky") {
-        txt->width *= 2;
-        txt->hdr = make_sunsky_image(txt->width, txt->height, sky_sunangle);
-    } else {
-        throw std::runtime_error("unknown texture type " + type);
-    }
-
-    if (!txt->ldr.empty()) txt->path = name + ".png";
-    if (!txt->hdr.empty()) txt->path = name + ".hdr";
-
-    return txt;
-}
-
-// Makes/updates a test material
-material* make_proc_material(const std::string& name, const std::string& type_,
-    const vec3f& col_, float rs, const std::string& txt_type_,
-    const std::string& norm_type_) {
-    auto erase = [](std::string& str, const std::string& substr) {
-        auto pos = str.find(substr);
-        if (pos == str.npos) return false;
-        str = str.erase(pos, substr.size());
-        return true;
+scene* make_scene(const std::string& name, const std::vector<camera*>& cams,
+    const std::vector<instance*>& ists, const std::vector<environment*>& envs) {
+    auto scn = new scene();
+    scn->name = name;
+    scn->cameras = cams;
+    scn->instances = ists;
+    scn->environments = envs;
+    auto add_elem = [](auto& elems, auto elem) {
+        if (!elem) return;
+        for (auto e : elems)
+            if (e == elem) return;
+        elems.push_back(elem);
     };
-
-    auto mat = new material();
-
-    mat->name = name;
-
-    auto col = col_;
-    auto type = type_, txt_type = txt_type_, norm_type = norm_type_;
-    for (auto txt_name : {"grid_norm", "bump_norm"})
-        if (erase(type, "_"s + txt_name)) norm_type = txt_name;
-    for (auto txt_name : {"grid", "checker", "colored", "rcolored", "bump",
-             "uv", "gamma", "noise", "ridge", "fbm", "turbulence"})
-        if (erase(type, "_"s + txt_name)) txt_type = txt_name;
-
-    if (erase(type, "_sharp")) rs = 0.05f;
-    if (erase(type, "_rough")) rs = 0.25f;
-    if (erase(type, "_mirror")) rs = 0;
-
-    if (erase(type, "_zero")) col = {0, 0, 0};
-    if (erase(type, "_one")) col = {1, 1, 1};
-    if (erase(type, "_black")) col = {0.01f, 0.01f, 0.01f};
-    if (erase(type, "_gray")) col = {0.2f, 0.2f, 0.2f};
-    if (erase(type, "_lgray")) col = {0.5f, 0.5f, 0.5f};
-    if (erase(type, "_red")) col = {0.5f, 0.2f, 0.2f};
-    if (erase(type, "_green")) col = {0.2f, 0.5f, 0.2f};
-    if (erase(type, "_blue")) col = {0.2f, 0.2f, 0.5f};
-    if (erase(type, "_white")) col = {0.9f, 0.9f, 0.9f};
-    if (erase(type, "_gold")) col = {0.66f, 0.45f, 0.34f};
-    if (erase(type, "_silver")) col = {0.7f, 0.7f, 0.7f};
-
-    auto txt = (texture*)nullptr, norm = (texture*)nullptr;
-    if (txt_type != "") txt = make_proc_texture(txt_type, txt_type, 512);
-    if (norm_type != "") norm = make_proc_texture(norm_type, norm_type, 512);
-
-    auto def_rs = rs == 1;
-
-    if (type == "") {
-    } else if (type == "emission") {
-        mat->ke = col;
-        mat->ke_txt.txt = txt;
-    } else if (type == "matte") {
-        mat->kd = col;
-        mat->kd_txt.txt = txt;
-        mat->rs = 1;
-    } else if (type == "plastic") {
-        mat->kd = col;
-        mat->ks = {0.04f, 0.04f, 0.04f};
-        mat->rs = (def_rs) ? 0.1f : rs;
-        mat->kd_txt.txt = txt;
-    } else if (type == "metal") {
-        mat->ks = col;
-        mat->rs = (def_rs) ? 0.1f : rs;
-        mat->ks_txt.txt = txt;
-    } else if (type == "carpaint") {
-        mat->ks = col;
-        mat->rs = (def_rs) ? 0.1f : rs;
-        mat->ks_txt.txt = txt;
-        mat->kr = {0.04f, 0.04f, 0.04f};
-    } else if (type == "glass") {
-        mat->ks = {0.04f, 0.04f, 0.04f};
-        mat->kt = col;
-        mat->rs = (def_rs) ? 0.1f : rs;
-        mat->kt_txt.txt = txt;
-    } else if (type == "transparent") {
-        mat->kd = col;
-        mat->op = (def_rs) ? 0.5f : rs;
-        mat->kd_txt.txt = txt;
-    } else {
-        throw std::runtime_error("unknown material type " + type);
+    for (auto ist : ists) {
+        add_elem(scn->shapes, ist->shp);
+        add_elem(scn->materials, ist->mat);
     }
+    for (auto mat : scn->materials) {
+        add_elem(scn->textures, mat->ke_txt.txt);
+        add_elem(scn->textures, mat->kd_txt.txt);
+        add_elem(scn->textures, mat->ks_txt.txt);
+        add_elem(scn->textures, mat->norm_txt.txt);
+    }
+    for (auto env : scn->environments) {
+        add_elem(scn->textures, env->ke_txt.txt);
+    }
+    return scn;
+}
 
+scene* make_scene(const std::string& name, const std::vector<camera*>& cams,
+    const std::vector<instance*>& ists, const std::vector<environment*>& envs,
+    const std::vector<node*>& ndes, const std::vector<animation*>& anms) {
+    auto scn = make_scene(name, cams, ists, envs);
+    scn->nodes = ndes;
+    scn->animations = anms;
+    return scn;
+}
+
+
+// example shapes
+shape* make_floor_shape(const std::string& name, int tesselation, float size) {
+    auto shp = new shape();
+    shp->name = name;
+    make_quad(shp->quads, shp->pos, shp->norm, shp->texcoord,
+        {1 << tesselation, 1 << tesselation}, {size, size},
+        {size / 2, size / 2});
+    for (auto& p : shp->pos) p = {p.x, p.z, p.y};
+    for (auto& n : shp->norm) n = {n.x, n.z, n.y};
+    return shp;
+}
+shape* make_quad_shape(const std::string& name, int tesselation, float size) {
+    auto shp = new shape();
+    shp->name = name;
+    make_quad(shp->quads, shp->pos, shp->norm, shp->texcoord,
+        {1 << tesselation, 1 << tesselation}, {size, size},
+        {size / 2, size / 2});
+    return shp;
+}
+shape* make_sphere_shape(const std::string& name, int tesselation, float size) {
+    auto shp = new shape();
+    shp->name = name;
+    make_sphere(shp->quads, shp->pos, shp->norm, shp->texcoord,
+        {1 << (tesselation + 1), 1 << tesselation}, size, {size, size / 2});
+    for (auto& p : shp->pos) p = {p.x, p.z, p.y};
+    for (auto& n : shp->norm) n = {n.x, n.z, n.y};
+    return shp;
+}
+shape* make_spherecube_shape(
+    const std::string& name, int tesselation, float size) {
+    auto shp = new shape();
+    shp->name = name;
+    make_sphere_cube(shp->quads, shp->pos, shp->norm, shp->texcoord,
+        1 << tesselation, size, size / 2);
+    return shp;
+}
+shape* make_sphereflipcap_shape(
+    const std::string& name, int tesselation, float size) {
+    auto shp = new shape();
+    shp->name = name;
+    make_sphere_flipcap(shp->quads, shp->pos, shp->norm, shp->texcoord,
+        {1 << (tesselation + 1), 1 << tesselation}, size, {size, size / 2},
+        {-0.75f, 0.75f});
+    return shp;
+}
+shape* make_cube_shape(const std::string& name, int tesselation, float size) {
+    auto shp = new shape();
+    shp->name = name;
+    make_cube(shp->quads, shp->pos, shp->norm, shp->texcoord,
+        {1 << tesselation, 1 << tesselation, 1 << tesselation},
+        {size, size, size}, {size / 2, size / 2, size / 2});
+    return shp;
+}
+shape* make_cuberounded_shape(
+    const std::string& name, int tesselation, float size) {
+    auto shp = new shape();
+    shp->name = name;
+    make_cube_rounded(shp->quads, shp->pos, shp->norm, shp->texcoord,
+        {1 << tesselation, 1 << tesselation, 1 << tesselation},
+        {size, size, size}, {size / 2, size / 2, size / 2}, 0.15f * size);
+    return shp;
+}
+shape* make_matball_shape(
+    const std::string& name, int tesselation, float size) {
+    auto shp = new shape();
+    shp->name = name;
+    make_sphere(shp->quads, shp->pos, shp->norm, shp->texcoord,
+        {1 << (tesselation + 1), 1 << tesselation}, size, {size, size / 2});
+    for (auto& p : shp->pos) p = {p.x, p.z, p.y};
+    for (auto& n : shp->norm) n = {n.x, n.z, n.y};
+    return shp;
+}
+shape* make_quadstack_shape(const std::string& name, int stack_tesselation,
+    int tesselation, float size) {
+    auto shp = new shape();
+    shp->name = name;
+    make_quad_stack(shp->quads, shp->pos, shp->norm, shp->texcoord,
+        {1 << tesselation, 1 << tesselation, 1 << stack_tesselation},
+        {size, size, size}, {size / 2, size / 2});
+    return shp;
+}
+shape* make_point_shape(const std::string& name) {
+    auto shp = new shape();
+    shp->name = name;
+    make_point(shp->points, shp->pos, shp->norm, shp->texcoord, shp->radius);
+    return shp;
+}
+shape* make_cube_subdiv_shape(
+    const std::string& name, int tesselation, float size) {
+    auto shp = new shape();
+    shp->name = name;
+    make_cube(shp->quads, shp->pos, 0, size);
+    for (auto i = 0; i < tesselation; i++) {
+        subdivide_catmullclark(shp->quads, shp->pos);
+    }
+    if (tesselation) compute_normals(shp->quads, shp->pos, shp->norm);
+    return shp;
+}
+shape* make_suzanne_subdiv_shape(const std::string& name, int tesselation) {
+    auto shp = new shape();
+    shp->name = name;
+    make_suzanne(shp->quads, shp->pos, 0);
+    for (auto i = 0; i < tesselation; i++) {
+        subdivide_catmullclark(shp->quads, shp->pos);
+    }
+    if (tesselation) compute_normals(shp->quads, shp->pos, shp->norm);
+    return shp;
+}
+shape* make_fvcube_subdiv_shape(
+    const std::string& name, int tesselation, float size) {
+    auto shp = new shape();
+    shp->name = name;
+    make_fvcube(shp->quads_pos, shp->pos, shp->quads_norm, shp->norm,
+        shp->quads_texcoord, shp->texcoord, 0, size, size / 2);
+    for (auto i = 0; i < tesselation; i++) {
+        subdivide_catmullclark(shp->quads_pos, shp->pos);
+        subdivide_catmullclark(shp->quads_texcoord, shp->texcoord);
+    }
+    shp->quads_norm = shp->quads_pos;
+    if (tesselation) compute_normals(shp->quads_pos, shp->pos, shp->norm);
+    return shp;
+}
+shape* make_hairball_shape(const std::string& name, int hair_tesselation,
+    int tesselation, float size, const vec2f& len, const vec2f& noise,
+    const vec2f& clump, const vec2f& radius) {
+    auto shp1 = new shape();
+    make_sphere_cube(shp1->quads, shp1->pos, shp1->norm, shp1->texcoord, 1 << 4,
+        size * 0.8f, 1);
+    auto shp = new shape();
+    shp->name = name;
+    make_hair(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius,
+        {1 << tesselation, 1 << hair_tesselation}, {}, shp1->quads, shp1->pos,
+        shp1->norm, shp1->texcoord, len, radius, noise, clump);
+    delete shp1;
+    return shp;
+}
+
+// example materials
+material* make_emission_material(
+    const std::string& name, const vec3f& col, texture* txt, texture* norm) {
+    auto mat = make_material(name, zero3f, zero3f, 1);
+    mat->ke = col;
+    mat->ke_txt.txt = txt;
     mat->norm_txt.txt = norm;
-
+    return mat;
+}
+material* make_matte_material(
+    const std::string& name, const vec3f& col, texture* txt, texture* norm) {
+    auto mat = make_material(name, col, zero3f, 1);
+    mat->kd_txt.txt = txt;
+    mat->norm_txt.txt = norm;
+    return mat;
+}
+material* make_plastic_material(const std::string& name, const vec3f& col,
+    float rs, texture* txt, texture* norm) {
+    auto mat = make_material(name, col, {0.04f, 0.04f, 0.04f}, rs);
+    mat->kd_txt.txt = txt;
+    mat->norm_txt.txt = norm;
+    return mat;
+}
+material* make_metal_material(const std::string& name, const vec3f& col,
+    float rs, texture* txt, texture* norm) {
+    auto mat = make_material(name, {0, 0, 0}, col, rs);
+    mat->ks_txt.txt = txt;
+    mat->norm_txt.txt = norm;
+    return mat;
+}
+material* make_glass_material(const std::string& name, const vec3f& col,
+    float rs, texture* txt, texture* norm) {
+    auto mat = make_material(name, zero3f, {0.04f, 0.04f, 0.04f}, rs);
+    mat->kt = col;
+    mat->kt_txt.txt = txt;
+    mat->norm_txt.txt = norm;
+    return mat;
+}
+material* make_transparent_material(const std::string& name, const vec3f& col,
+    float op, texture* txt, texture* norm) {
+    auto mat = make_material(name, col, zero3f, 1);
+    mat->op = op;
+    mat->kd_txt.txt = txt;
+    mat->norm_txt.txt = norm;
     return mat;
 }
 
-// Makes/updates a test shape
-shape* make_proc_shape(const std::string& name, const std::string& type_,
-    const vec3i& tesselation_, const vec3f& size_, const vec3f& uvsize_,
-    float rounded, float radius) {
-    auto shp = new shape();
-
-    auto tesselation = tesselation_;
-    auto def_tesselation = (tesselation == zero3i);
-
-    auto size = size_;
-    auto def_size = (size == zero3f);
-    if (def_size) size = {2, 2, 2};
-
-    auto uvsize = uvsize_;
-    auto def_uvsize = (uvsize == zero3f);
-    if (def_size) uvsize = {1, 1, 1};
-
-    auto type = type_;
-    auto hair_noise = zero2f;
-    auto hair_clump = zero2f;
-    if (type == "hairball_noise") {
-        hair_noise = {0.5f, 8};
-        type = "hairball";
-    }
-    if (type == "hairball_clump") {
-        hair_clump = {0.5f, 128};
-        type = "hairball";
-    }
-
-    shp->name = name;
-    if (type == "") {
-    } else if (type == "floor") {
-        if (def_size) size = {40, 40, 40};
-        if (def_uvsize) uvsize = {20, 20, 20};
-        make_quad(shp->quads, shp->pos, shp->norm, shp->texcoord,
-            {1 << tesselation.x, 1 << tesselation.y}, {size.x, size.y},
-            {uvsize.x, uvsize.y});
-        for (auto& p : shp->pos) p = {-p.x, p.z, p.y};
-        for (auto& n : shp->norm) n = {n.x, n.z, n.y};
-    } else if (type == "quad") {
-        make_quad(shp->quads, shp->pos, shp->norm, shp->texcoord,
-            {1 << tesselation.x, 1 << tesselation.y}, {size.x, size.y},
-            {uvsize.x, uvsize.y});
-    } else if (type == "cube") {
-        make_cube(shp->quads, shp->pos, shp->norm, shp->texcoord,
-            {1 << tesselation.x, 1 << tesselation.y, 1 << tesselation.z}, size,
-            uvsize);
-    } else if (type == "quad_stack") {
-        make_quad_stack(shp->quads, shp->pos, shp->norm, shp->texcoord,
-            {1 << tesselation.x, 1 << tesselation.y, 1 << tesselation.z}, size,
-            {uvsize.x, uvsize.y});
-    } else if (type == "cube_rounded") {
-        if (def_tesselation) tesselation = {5, 5, 5};
-        make_cube_rounded(shp->quads, shp->pos, shp->norm, shp->texcoord,
-            {1 << tesselation.x, 1 << tesselation.y, 1 << tesselation.z}, size,
-            uvsize, min(size) * (1 - rounded) / 2);
-    } else if (type == "sphere") {
-        if (def_tesselation) tesselation = {6, 5, 5};
-        make_sphere(shp->quads, shp->pos, shp->norm, shp->texcoord,
-            {1 << tesselation.x, 1 << tesselation.y}, size.x,
-            {uvsize.x, uvsize.y});
-    } else if (type == "sphere_flipcap") {
-        if (def_tesselation) tesselation = {6, 5, 5};
-        make_sphere_flipcap(shp->quads, shp->pos, shp->norm, shp->texcoord,
-            {1 << tesselation.x, 1 << tesselation.y}, size.x,
-            {uvsize.x, uvsize.y}, {-rounded, rounded});
-    } else if (type == "sphere_cube") {
-        if (def_tesselation) tesselation = {5, 5, 5};
-        make_sphere_cube(shp->quads, shp->pos, shp->norm, shp->texcoord,
-            1 << tesselation.x, size.x, uvsize.x);
-    } else if (type == "disk") {
-        if (def_tesselation) tesselation = {5, 5, 5};
-        make_disk(shp->quads, shp->pos, shp->norm, shp->texcoord,
-            {1 << tesselation.x, 1 << tesselation.y}, size.x,
-            {uvsize.x, uvsize.y});
-    } else if (type == "disk_quad") {
-        if (def_tesselation) tesselation = {5, 5, 5};
-        make_disk_quad(shp->quads, shp->pos, shp->norm, shp->texcoord,
-            1 << tesselation.x, size.x, uvsize.x);
-    } else if (type == "disk_bulged") {
-        if (def_tesselation) tesselation = {5, 5, 5};
-        make_disk_bulged(shp->quads, shp->pos, shp->norm, shp->texcoord,
-            1 << tesselation.x, size.x, uvsize.x, rounded);
-    } else if (type == "cylinder") {
-        if (def_tesselation) tesselation = {5, 5, 5};
-        make_cylinder(shp->quads, shp->pos, shp->norm, shp->texcoord,
-            {1 << tesselation.x, 1 << tesselation.y, 1 << tesselation.z},
-            {size.x, size.y}, uvsize);
-    } else if (type == "cylinder_rounded") {
-        if (def_tesselation) tesselation = {5, 5, 5};
-        make_cylinder_rounded(shp->quads, shp->pos, shp->norm, shp->texcoord,
-            {1 << tesselation.x, 1 << tesselation.y, 1 << tesselation.z},
-            {size.x, size.y}, uvsize, rounded);
-    } else if (type == "cylindery") {
-        if (def_tesselation) tesselation = {5, 5, 5};
-        make_cylinder(shp->quads, shp->pos, shp->norm, shp->texcoord,
-            {1 << tesselation.x, 1 << tesselation.y, 1 << tesselation.z},
-            {size.x, size.y}, uvsize);
-        for (auto& p : shp->pos) std::swap(p.y, p.z);
-        for (auto& n : shp->norm) std::swap(n.y, n.z);
-    } else if (type == "cylindery_rounded") {
-        if (def_tesselation) tesselation = {5, 5, 5};
-        make_cylinder_rounded(shp->quads, shp->pos, shp->norm, shp->texcoord,
-            {1 << tesselation.x, 1 << tesselation.y, 1 << tesselation.z},
-            {size.x, size.y}, uvsize, rounded);
-        for (auto& p : shp->pos) std::swap(p.y, p.z);
-        for (auto& n : shp->norm) std::swap(n.y, n.z);
-    } else if (type == "geodesic_sphere") {
-        if (def_tesselation) tesselation = {4, 0, 0};
-        make_geodesic_sphere(shp->triangles, shp->pos, tesselation.x);
-        shp->norm = shp->pos;
-        shp->texcoord.assign(shp->pos.size(), {0, 0});
-    } else if (type == "suzanne") {
-        make_suzanne(shp->quads, shp->pos, tesselation.x);
-    } else if (type == "cube_subdiv") {
-        make_cube(shp->quads, shp->pos, 0);
-        for (auto i = 0; i < tesselation.x; i++) {
-            subdivide_catmullclark(shp->quads, shp->pos);
-        }
-        if (tesselation.x) compute_normals(shp->quads, shp->pos, shp->norm);
-    } else if (type == "suzanne_subdiv") {
-        make_suzanne(shp->quads, shp->pos, 0);
-        for (auto i = 0; i < tesselation.x; i++) {
-            subdivide_catmullclark(shp->quads, shp->pos);
-        }
-        if (tesselation.x) compute_normals(shp->quads, shp->pos, shp->norm);
-    } else if (type == "fvcube_subdiv") {
-        make_fvcube(shp->quads_pos, shp->pos, shp->quads_norm, shp->norm,
-            shp->quads_texcoord, shp->texcoord, 0);
-        for (auto i = 0; i < tesselation.x; i++) {
-            subdivide_catmullclark(shp->quads_pos, shp->pos);
-            subdivide_catmullclark(shp->quads_norm, shp->pos);
-            subdivide_catmullclark(shp->quads_texcoord, shp->pos);
-        }
-    } else if (type == "matball") {
-        if (def_tesselation) tesselation = {5, 4, 0};
-        make_sphere_flipcap(shp->quads, shp->pos, shp->norm, shp->texcoord,
-            {1 << tesselation.x, 1 << tesselation.y}, size.x,
-            {uvsize.x, uvsize.y}, {-rounded, rounded});
-    } else if (type == "point") {
-        make_point(
-            shp->points, shp->pos, shp->norm, shp->texcoord, shp->radius);
-    } else if (type == "pointscube") {
-        if (def_tesselation) tesselation = {16, 4, 0};
-        make_random_points(shp->points, shp->pos, shp->norm, shp->texcoord,
-            shp->radius, 1 << tesselation.x, size, uvsize.x, radius);
-    } else if (type == "hairball") {
-        if (def_tesselation) tesselation = {16, 4, 4};
-        if (def_size) size = {0.1f, 0.1f, 2};
-        auto shp1 = new shape();
-        shp1->name = "interior";
-        make_sphere_cube(shp1->quads, shp1->pos, shp1->norm, shp1->texcoord,
-            1 << tesselation.z, size.z * 0.8f, 1);
-        shp1->radius.assign(shp1->pos.size(), 0);
-        make_hair(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius,
-            {1 << tesselation.x, 1 << tesselation.y}, {}, shp1->quads,
-            shp1->pos, shp1->norm, shp1->texcoord, {size.x, size.y},
-            {0.01f, 0.001f}, hair_noise, hair_clump);
-        delete shp1;
-    } else if (type == "beziercircle") {
-        make_bezier_circle(shp->beziers, shp->pos);
-        shp->subdivision = 2;
-    } else {
-        throw std::runtime_error("unknown shape type " + type);
-    }
-
-    return shp;
+// example textures
+texture* make_uvgrid_texture(const std::string& name, int res, int tile) {
+    return make_texture(
+        name, name + ".png", res, res, make_uvgrid_image(res, res, tile));
+}
+texture* make_grid_texture(const std::string& name, int res, int tile) {
+    return make_texture(
+        name, name + ".png", res, res, make_grid_image(res, res, tile));
+}
+texture* make_bump_texture(const std::string& name, int res, int tile) {
+    return make_texture(
+        name, name + ".png", res, res, make_bumpdimple_image(res, res, tile));
+}
+texture* make_bumpnorm_texture(
+    const std::string& name, int res, int tile, float scale) {
+    return make_texture(name, name + ".png", res, res,
+        bump_to_normal_map(
+            res, res, make_bumpdimple_image(res, res, tile), scale));
+}
+texture* make_sky_texture(const std::string& name, int res, float skyangle) {
+    return make_texture(name, name + ".hdr", res * 2, res, {},
+        make_sunsky_image(res * 2, res, skyangle));
+}
+environment* make_sky_environment(
+    const std::string& name, int res, float skyangle) {
+    return make_environment(
+        name, {1, 1, 1}, make_sky_texture(name, res, skyangle));
 }
 
 // makes the cornell box scene
 // http://graphics.cs.williams.edu/data
 // http://www.graphics.cornell.edu/online/box/data.html
-scene* make_cornellbox_scene(
-    const std::string& name, const std::string& lights) {
+scene* make_cornellbox_scene(const std::string& name, bool envlight) {
     auto add_quad = [](scene* scn, std::string name, material* mat, vec3f pos,
                         vec3f rot = {0, 0, 0}, vec2f size = {2, 2}) {
         auto shp = new shape();
@@ -2931,195 +2864,218 @@ scene* make_cornellbox_scene(
         {0, 15, 0}, {0.6f, 1.2f, 0.6f});
     add_box(scn, "shortbox", scn->materials[0], {0.33f, 0.3f, 0.33f},
         {0, -15, 0}, {0.6f, 0.6f, 0.6f});
-    if (lights == "arealight") {
+    if (!envlight) {
         scn->materials.push_back(make_material("light", zero3f));
         scn->materials.back()->ke = {17, 12, 4};
         add_quad(scn, "light", scn->materials[3], {0, 1.999f, 0}, {90, 0, 0},
             {0.5f, 0.5f});
-    } else if (lights == "pointlight") {
-    } else if (lights == "envlight") {
+    } else {
         scn->environments.push_back(make_environment("env"));
     }
     return scn;
 }
 
-instance* make_proc_instance(const std::string& name, const std::string& stype,
-    const std::string& mtype, const frame3f& frame) {
-    return make_instance(name, make_proc_shape(name, stype),
-        make_proc_material(name, mtype), frame);
+// make simple floor instances
+instance* make_simple_floor(bool notexture = false) {
+    return make_instance("floor", make_floor_shape("floor"),
+        make_matte_material("floor",
+            (notexture) ? vec3f{0.2f, 0.2f, 0.2f} : vec3f{1, 1, 1},
+            (notexture) ? nullptr : make_grid_texture("grid")));
 }
 
-// make simple scene
+// Make lights and floor for a simple scene.
+std::vector<instance*> make_simple_arealights() {
+    return std::vector<instance*>{
+        make_instance("light1", make_quad_shape("light1", 0, 16),
+            make_emission_material("light1", {8, 8, 8}),
+            lookat_frame({0, 16, 0}, {0, 1, 0}, {0, 0, 1}, true)),
+        make_instance("light2", make_quad_shape("light2", 0, 16),
+            make_emission_material("light2", {8, 8, 8}),
+            lookat_frame({0, 16, 16}, {0, 1, 0}, {0, 0, 1}, true)),
+    };
+}
+
+std::vector<instance*> make_simple_arealights1() {
+    return std::vector<instance*>{
+        make_instance("light1", make_quad_shape("light1", 0, 8),
+            make_emission_material("light1", {20, 20, 20}),
+            lookat_frame({-4, 5, 8}, {0, 1, 0}, {0, 0, 1}, true)),
+        make_instance("light2", make_quad_shape("light2", 0, 8),
+            make_emission_material("light2", {20, 20, 20}),
+            lookat_frame({+4, 5, 8}, {0, 1, 0}, {0, 0, 1}, true)),
+    };
+}
+
+std::vector<instance*> make_simple_pointlights() {
+    return std::vector<instance*>{
+        make_instance("light1", make_point_shape("light1"),
+            make_emission_material("light1", {120, 120, 120}),
+            translation_frame({-2, 10, 8})),
+        make_instance("light2", make_point_shape("light2"),
+            make_emission_material("light2", {120, 120, 120}),
+            translation_frame({+2, 10, 8})),
+    };
+}
+
 scene* make_simple_scene(const std::string& name,
-    const std::vector<std::string>& shapes,
-    const std::vector<std::string>& mats, const std::string& lights,
-    const std::string& floor_mat, bool nodes,
-    const std::vector<std::string>& animations) {
+    const std::vector<shape*>& shps, const std::vector<material*>& mats,
+    bool envlight, bool pointlights, const std::vector<animation*>& anms) {
     auto frames = std::vector<frame3f>();
-    if (shapes.size() == 3) {
+    if (shps.size() >= 3) {
         frames = std::vector<frame3f>{
             {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {-2.50f, 1, 0}},
             {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 1, 0}},
             {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {+2.50f, 1, 0}}};
-    } else if (shapes.size() == 2) {
+    } else if (shps.size() == 2) {
         frames = std::vector<frame3f>{
             {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {-1.25f, 1, 0}},
             {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {+1.25f, 1, 0}}};
-    } else if (shapes.size() == 1) {
+    } else if (shps.size() == 1) {
         frames =
             std::vector<frame3f>{{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 1, 0}}};
     } else {
         throw std::runtime_error("number of shapes not supported");
     }
-    auto scn = new scene();
-    scn->name = name;
-    if (shapes.size() == 3) {
-        scn->cameras.push_back(make_camera(
+
+    auto cams = std::vector<camera*>();
+    auto ists = std::vector<instance*>();
+    auto envs = std::vector<environment*>();
+    auto objs = std::vector<instance*>();
+
+    if (shps.size() >= 3) {
+        cams.push_back(make_camera(
             "cam", {0, 6, 24}, {0, 1, 0}, 7.5f * pi / 180, 2.35f / 1.0f));
-    } else if (shapes.size() == 2) {
-        scn->cameras.push_back(make_camera(
+    } else if (shps.size() == 2) {
+        cams.push_back(make_camera(
             "cam", {0, 6, 24}, {0, 1, 0}, 7.5f * pi / 180, 16.0f / 9.0f));
-    } else if (shapes.size() == 1) {
-        scn->cameras.push_back(
+    } else if (shps.size() == 1) {
+        cams.push_back(
             make_camera("cam", {0, 6, 24}, {0, 1, 0}, 7.5f * pi / 180, 1.0f));
     }
-    if (floor_mat != "") {
-        scn->instances.push_back(
-            make_proc_instance("floor", "floor", floor_mat));
-    }
-    for (auto i = 0; i < shapes.size(); i++) {
-        scn->instances.push_back(make_proc_instance(
-            "obj" + std::to_string(i + 1), shapes[i], mats[i], frames[i]));
+
+    ists.push_back(make_simple_floor());
+    for (auto i = 0; i < shps.size(); i++) {
+        ists.push_back(
+            make_instance(shps[i]->name, shps[i], mats[i], frames[i % 3]));
+        objs.push_back(ists.back());
     }
 
-    if (lights == "pointlight") {
-        auto pos = std::vector<vec3f>{{-2, 10, 8}, {+2, 10, 8}};
-        for (auto i = 0; i < 2; i++) {
-            scn->instances.push_back(
-                make_proc_instance("light" + std::to_string(i + 1), "point",
-                    "emission", translation_frame(pos[i])));
-            scn->instances.back()->mat->ke *= 120;
-        }
-    } else if (lights == "arealight") {
-        auto pos = std::vector<vec3f>{{0, 16, 0}, {0, 16, 16}};
-        for (auto i = 0; i < 2; i++) {
-            scn->instances.push_back(make_proc_instance(
-                "light" + std::to_string(i + 1), "quad", "emission",
-                lookat_frame(pos[i], {0, 1, 0}, {0, 0, 1}, true)));
-            scn->instances.back()->mat->ke *= 8;
-            for (auto& p : scn->instances.back()->shp->pos) p *= 8;
-        }
-    } else if (lights == "arealights1") {
-        auto pos = std::vector<vec3f>{{-4, 5, 8}, {+4, 5, 8}};
-        for (auto i = 0; i < 2; i++) {
-            scn->instances.push_back(make_proc_instance(
-                "light" + std::to_string(i + 1), "quad", "emission",
-                lookat_frame(pos[i], {0, 1, 0}, {0, 0, 1}, true)));
-            scn->instances.back()->mat->ke *= 20;
-            for (auto& p : scn->instances.back()->shp->pos) p *= 4;
-        }
-    } else if (lights == "envlight") {
-        scn->environments.push_back(
-            make_environment("sky", {1, 1, 1}, make_proc_texture("sky", "sky", 512)));
-    } else if (lights == "" || lights == "nolights") {
+    if (envlight) {
+        envs.push_back(make_sky_environment("env"));
+    } else if (!pointlights) {
+        for (auto lgt : make_simple_arealights()) ists.push_back(lgt);
     } else {
-        throw std::runtime_error("unknown light type " + lights);
+        for (auto lgt : make_simple_pointlights()) ists.push_back(lgt);
     }
-    for (auto ist : scn->instances) {
-        scn->shapes.push_back(ist->shp);
-        scn->materials.push_back(ist->mat);
-    }
-    if (nodes || !animations.empty()) {
-        for (auto cam : scn->cameras) {
-            scn->nodes.push_back(
+
+    if(anms.empty()) return make_scene(name, cams, ists, envs);
+
+    auto ndes = std::vector<node*>();
+    if (!anms.empty()) {
+        for (auto cam : cams) {
+            ndes.push_back(
                 make_node(cam->name, cam, nullptr, nullptr, cam->frame));
         }
-        for (auto ist : scn->instances) {
-            scn->nodes.push_back(
+        for (auto ist : ists) {
+            ndes.push_back(
                 make_node(ist->name, nullptr, ist, nullptr, ist->frame));
+            for (auto i = 0; i < anms.size(); i++) {
+                if (objs[i] == ist) {
+                    anms[i]->targets.push_back(ndes.back());
+                    ndes.back()->frame = identity_frame3f;
+                    ndes.back()->translation = frames[i%3].o;
+                }
+            }
         }
-        for (auto env : scn->environments) {
-            scn->nodes.push_back(
+        for (auto env : envs) {
+            ndes.push_back(
                 make_node(env->name, nullptr, nullptr, env, env->frame));
         }
     }
-    /*
-    if (!animations.empty()) {
-        for (auto i = 0; i < shapes.size(); i++) {
-            auto name = "obj" + std::to_string(i + 1);
-            auto nde = (node*)nullptr;
-            for (auto n : scn->nodes)
-                if (n->name == name) nde = n;
-            nde->translation = nde->frame.o;
-            nde->frame = identity_frame3f;
-            scn->animations.push_back(new
-    animation(*animations[i])); scn->animations.back()->name = name;
-            scn->animations.back()->targets = {nde};
-        }
-    }
-    */
 
-    auto textures = std::map<std::string, texture*>();
-    auto fix_texture = [&textures, scn](texture_info& tinfo) {
-        if (!tinfo.txt) return;
-        if (textures.find(tinfo.txt->name) != textures.end()) {
-            delete tinfo.txt;
-            tinfo.txt = textures.at(tinfo.txt->name);
-        } else {
-            scn->textures.push_back(tinfo.txt);
-            textures[tinfo.txt->name] = tinfo.txt;
-        }
-    };
-    for (auto mat : scn->materials) {
-        fix_texture(mat->ke_txt);
-        fix_texture(mat->kd_txt);
-        fix_texture(mat->ks_txt);
-        fix_texture(mat->norm_txt);
+    return make_scene(name, cams, ists, envs, ndes, anms);
+}
+
+// Make a simple scene with single object.
+scene* make_simple_scene(
+    const std::string& name, shape* shp, material* mat, bool envlight) {
+    auto cams = std::vector<camera*>();
+    auto ists = std::vector<instance*>();
+    auto envs = std::vector<environment*>();
+    cams.push_back(
+        make_camera("cam", {0, 6, 24}, {0, 1, 0}, 7.5f * pi / 180, 1.0f));
+    ists.push_back(make_simple_floor());
+    ists.push_back(
+        make_instance(shp->name, shp, mat, translation_frame({0, 1, 0})));
+    if (envlight) {
+        envs.push_back(make_sky_environment("env"));
+    } else {
+        for (auto lgt : make_simple_arealights()) ists.push_back(lgt);
     }
-    for (auto env : scn->environments) { fix_texture(env->ke_txt); }
-    return scn;
+    return make_scene(name, cams, ists, envs);
+}
+
+// Make a simple scene with single object.
+scene* make_shape_scene(
+    const std::string& name, shape* shp, material* mat, bool envlight) {
+    auto cams = std::vector<camera*>();
+    cams.push_back(
+        make_camera("cam", {0, 6, 24}, {0, 1, 0}, 7.5f * pi / 180, 1.0f));
+    auto ists = std::vector<instance*>();
+    auto envs = std::vector<environment*>();
+    ists.push_back(
+        make_instance("obj", shp, mat, translation_frame({0, 1, 0})));
+    if (envlight) {
+        envs.push_back(make_sky_environment("env"));
+    } else {
+        for (auto lgt : make_simple_arealights()) ists.push_back(lgt);
+    }
+    return make_scene(name, cams, ists, envs);
 }
 
 // instances shared functions
-scene* make_random_instances_scene(
-    const vec2i& num, const bbox3f& bbox, uint64_t seed) {
+scene* make_random_instances_scene(const std::string& name, const vec2i& num,
+    const bbox3f& bbox, uint64_t seed) {
     auto rscale = 0.9f * 0.25f *
                   min((bbox.max.x - bbox.min.x) / num.x,
                       (bbox.max.x - bbox.min.x) / num.y);
 
-    auto scn = new scene();
-    scn->cameras.push_back(make_camera(
-        "cam", {0, 6, 24}, {0, 1, 0}, 7.5f * pi / 180, 2.35f / 1.0f));
-    {
-        auto name = "floor"s;
-        scn->shapes.push_back(make_proc_shape(name, "floor"));
-        scn->materials.push_back(make_material(name, {0.2f, 0.2f, 0.2f}));
-        scn->instances.push_back(make_instance(
-            name, scn->shapes.back(), scn->materials.back(), identity_frame3f));
-    }
+    auto cam = make_camera(
+        "cam", {0, 6, 24}, {0, 1, 0}, 7.5f * pi / 180, 2.35f / 1.0f);
+
+    auto ists = std::vector<instance*>();
+    ists.push_back(make_instance("floor", make_floor_shape("floor"),
+        make_matte_material("floor", {0.2f, 0.2f, 0.2f})));
+
+    auto shps = std::vector<shape*>();
+    auto mats = std::vector<material*>();
 
     auto cols = std::vector<vec3f>{
         {0.5f, 0.2f, 0.2f}, {0.2f, 0.5f, 0.2f}, {0.2f, 0.2f, 0.5f}};
-    auto shps =
-        std::vector<std::string>{"sphere", "sphere_flipcap", "sphere_flipcap"};
-    auto shapes = std::vector<shape*>();
-    auto materials = std::vector<material*>();
     auto sid = 0;
-    for (auto shp : shps) {
+    for (auto shp : {0, 1, 2}) {
         for (auto col : cols) {
             auto name = "shp" + std::to_string(sid++);
-            scn->materials.push_back(make_material(name, col));
-            materials.push_back(scn->materials.back());
-            scn->shapes.push_back(make_proc_shape(
-                name, shp, {32, 32, 32}, {2 * rscale, 2 * rscale, 2 * rscale}));
-            shapes.push_back(scn->shapes.back());
+            mats.push_back(make_material(name, col));
+            switch (shp) {
+                case 0:
+                    shps.push_back(make_sphere_shape(name, 4, 2 * rscale));
+                    break;
+                case 1:
+                    shps.push_back(
+                        make_sphereflipcap_shape(name, 4, 2 * rscale));
+                    break;
+                case 2:
+                    shps.push_back(make_cuberounded_shape(name, 4, 2 * rscale));
+                    break;
+            }
         }
     }
 
     auto rng = make_rng(seed, 7);
-    auto iid = 0;
     for (auto j = 0; j < num.y; j++) {
         for (auto i = 0; i < num.x; i++) {
+            auto name = "ist" + std::to_string(j * num.x + i + 1);
             auto rpos = rand2f(rng);
             auto pos = vec3f{
                 bbox.min.x + (bbox.max.x - bbox.min.x) *
@@ -3128,26 +3084,21 @@ scene* make_random_instances_scene(
                 bbox.min.y + (bbox.max.y - bbox.min.y) *
                                  (j + 0.45f + 0.1f * rpos.y) / num.y,
             };
-            auto idx = rand1i(rng, (int)shapes.size());
-            scn->instances.push_back(
-                make_instance("ist" + std::to_string(iid++), shapes[idx],
-                    materials[idx], translation_frame(pos)));
+            auto idx = rand1i(rng, (int)mats.size());
+            ists.push_back(make_instance(
+                name, shps[idx], mats[idx], translation_frame(pos)));
         }
     }
 
-    {
-        auto pos = std::vector<vec3f>{{-2, 10, 8}, {+2, 10, 8}};
-        for (auto i = 0; i < 2; i++) {
-            auto name = "light" + std::to_string(i + 1);
-            scn->shapes.push_back(make_proc_shape(name, "point"));
-            scn->materials.push_back(
-                make_proc_material(name, "emission", {80, 80, 80}));
-            scn->instances.push_back(make_instance(name, scn->shapes.back(),
-                scn->materials.back(), translation_frame(pos[i])));
-        }
+    auto lpos = std::vector<vec3f>{{-2, 10, 8}, {+2, 10, 8}};
+    for (auto i = 0; i < 2; i++) {
+        auto name = "light" + std::to_string(i + 1);
+        ists.push_back(make_instance(name, make_point_shape(name),
+            make_emission_material(name, {80, 80, 80}),
+            translation_frame(lpos[i])));
     }
 
-    return scn;
+    return make_scene(name, {cam}, ists, {});
 }
 
 }  // namespace ygl

@@ -158,12 +158,12 @@ inline void draw(ygl::glwindow* win, app_state* app) {
             ygl::draw_glwidgets_checkbox(win, "fps", app->navigation_fps);
             ygl::end_glwidgets_tree(win);
         }
-        if (ygl::begin_glwidgets_tree(win, "scene")) {
+        if (ygl::begin_glwidgets_tree(win, "scene tree")) {
             ygl::draw_glwidgets_scene_tree(win, "", app->scn, app->selection,
                 app->update_list, app->inspector_highlights);
             ygl::end_glwidgets_tree(win);
         }
-        if (ygl::begin_glwidgets_tree(win, "object")) {
+        if (ygl::begin_glwidgets_tree(win, "scene object")) {
             ygl::draw_glwidgets_scene_inspector(win, "", app->scn,
                 app->selection, app->update_list, app->inspector_highlights);
             ygl::end_glwidgets_tree(win);

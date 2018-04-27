@@ -479,61 +479,89 @@ node* make_node(const std::string& name, camera* cam = nullptr,
 environment* make_environment(const std::string& name,
     const vec3f& ke = {1, 1, 1}, texture* ke_txt = nullptr,
     const frame3f& frame = identity_frame3f);
+animation* make_animation(const std::string& name, const std::vector<float>& times = {},
+    const std::vector<vec3f>& translation = {}, const std::vector<vec4f>& rotation = {}, 
+    const std::vector<vec3f>& scale = {}, const std::vector<node*>& targets = {}, bool bezier = false);
 
-// make procedural scene elements
-inline std::vector<std::string>& make_camera_types() {
-    static auto names = std::vector<std::string>{"cam1", "cam2", "cam3"};
-    return names;
-}
-camera* make_proc_camera(const std::string& name, const std::string& type);
-inline std::vector<std::string>& proc_texture_types() {
-    static auto names = std::vector<std::string>{"grid", "checker", "colored",
-        "rcolored", "bump", "uv", "gamma", "noise", "ridge", "fbm",
-        "turbulence", "grid_norm", "bump_norm", "gammaf", "sky"};
-    return names;
-}
-texture* make_proc_texture(const std::string& name, const std::string& type,
-    int resolution = 512, float scale = 8.0f, float sky_sunangle = pi / 4,
-    float bump_scale = 4);
-inline std::vector<std::string>& proc_material_types() {
-    static auto names = std::vector<std::string>{"emission", "matte", "plastic",
-        "metal", "glass", "transparent", "carpaint"};
-    return names;
-}
-material* make_proc_material(const std::string& name, const std::string& type,
-    const vec3f& color = {1, 1, 1}, float roughness = 1,
-    const std::string& txt = "", const std::string& norm = "");
-inline std::vector<std::string>& proc_shape_types() {
-    static auto names = std::vector<std::string>{"floor", "quad", "cube",
-        "cube_rounded", "sphere", "sphere_cube", "geodesic_sphere",
-        "sphere_flipcap", "disk", "disk_quad", "disk_bulged", "cylinder",
-        "cylinder_rounded", "cylindery", "cylindery_rounded", "suzanne",
-        "cube_subdiv", "suzanne_subdiv", "fvcube_subdiv", "matball", "point",
-        "pointscube", "hairball", "beziercircle"};
-    return names;
-}
-shape* make_proc_shape(const std::string& name, const std::string& type,
-    const vec3i& tesselation = zero3i, const vec3f& size = zero3f,
-    const vec3f& uvsize = zero3f, float rounded = 0.75f, float radius = 0.001f);
-instance* make_proc_instance(const std::string& name, const std::string& stype,
-    const std::string& mtype, const frame3f& frame = identity_frame3f);
+// make a scene
+scene* make_scene(const std::string& name, const std::vector<camera*>& cams,
+    const std::vector<instance*>& ists, const std::vector<environment*>& envs);
+scene* make_scene(const std::string& name, const std::vector<camera*>& cams,
+    const std::vector<instance*>& ists, const std::vector<environment*>& envs,
+    const std::vector<node*>& ndes, const std::vector<animation*>& anms);
+
+// example shapes
+shape* make_floor_shape(
+    const std::string& name, int tesselation = 0, float size = 40);
+shape* make_quad_shape(
+    const std::string& name, int tesselation = 0, float size = 2);
+shape* make_sphere_shape(
+    const std::string& name, int tesselation = 5, float size = 2);
+shape* make_spherecube_shape(
+    const std::string& name, int tesselation = 4, float size = 2);
+shape* make_sphereflipcap_shape(
+    const std::string& name, int tesselation = 5, float size = 2);
+shape* make_cube_shape(
+    const std::string& name, int tesselation = 0, float size = 2);
+shape* make_cuberounded_shape(
+    const std::string& name, int tesselation = 4, float size = 2);
+shape* make_matball_shape(
+    const std::string& name, int tesselation = 5, float size = 2);
+shape* make_quadstack_shape(const std::string& name, int stack_tesselation = 4,
+    int tesselation = 0, float size = 2);
+shape* make_point_shape(const std::string& name);
+shape* make_cube_subdiv_shape(
+    const std::string& name, int tesselation = 4, float size = 2);
+shape* make_suzanne_subdiv_shape(const std::string& name, int tesselation = 2);
+shape* make_fvcube_subdiv_shape(
+    const std::string& name, int tesselation = 4, float size = 2);
+shape* make_hairball_shape(const std::string& name, int hair_tesselation = 16,
+    int tesselation = 2, float size = 2, const vec2f& len = {0.2f, 0.2f},
+    const vec2f& noise = {0, 0}, const vec2f& clump = {0, 0},
+    const vec2f& radius = {0.001f, 0.001f});
+
+// example materials
+material* make_emission_material(const std::string& name, const vec3f& col,
+    texture* txt = nullptr, texture* norm = nullptr);
+material* make_matte_material(const std::string& name, const vec3f& col,
+    texture* txt = nullptr, texture* norm = nullptr);
+material* make_plastic_material(const std::string& name, const vec3f& col,
+    float rs = 0.1f, texture* txt = nullptr, texture* norm = nullptr);
+material* make_metal_material(const std::string& name, const vec3f& col,
+    float rs = 0.1f, texture* txt = nullptr, texture* norm = nullptr);
+material* make_glass_material(const std::string& name,
+    const vec3f& col = {1, 1, 1}, float rs = 0, texture* txt = nullptr,
+    texture* norm = nullptr);
+material* make_transparent_material(const std::string& name, const vec3f& col,
+    float op, texture* txt = nullptr, texture* norm = nullptr);
+
+// example textures
+texture* make_grid_texture(
+    const std::string& name, int resolution = 512, int tile = 8);
+texture* make_uvgrid_texture(
+    const std::string& name, int resolution = 512, int tile = 8);
+texture* make_bump_texture(
+    const std::string& name, int resolution = 512, int tile = 16);
+texture* make_bumpnorm_texture(const std::string& name, int resolution = 512,
+    int tile = 16, float scale = 4.0f);
+texture* make_sky_texture(
+    const std::string& name, int resolution = 512, float skyangle = pi / 4);
+environment* make_sky_environment(
+    const std::string& name, int resolution = 512, float skyangle = pi / 4);
 
 // Makes the Cornell Box scene.
-scene* make_cornellbox_scene(
-    const std::string& name, const std::string& lights);
-// Makes a simple scene with up to three objects lined up
+scene* make_cornellbox_scene(const std::string& name, bool envlight = false);
+// Make a simple scene with three objects lined up.
 scene* make_simple_scene(const std::string& name,
-    const std::vector<std::string>& shapes,
-    const std::vector<std::string>& mats, const std::string& lights,
-    const std::string& floor_mat = "matte_grid", bool nodes = false,
-    const std::vector<std::string>& animations = {});
-// Makes a simple scene with a single object
-inline scene* make_simple_scene(const std::string& name,
-    const std::string& shape, const std::string& mat, const std::string& lights,
-    const std::string& floor_mat = "matte_grid") {
-    return make_simple_scene(name, std::vector<std::string>{shape},
-        std::vector<std::string>{mat}, lights, floor_mat);
-}
+    const std::vector<shape*>& shps, const std::vector<material*>& mats,
+    bool envlight = false, bool pointlights = false,
+    const std::vector<animation*>& anms = {});
+// Make a simple scene with single object on a floor.
+scene* make_simple_scene(
+    const std::string& name, shape* shp, material* mats, bool envlight = false);
+// Make a simple scene with a single object.
+scene* make_shape_scene(
+    const std::string& name, shape* shp, material* mat, bool envlight = false);
 // Make a scene with random instances
 scene* make_random_instances_scene(const std::string& name, const vec2i& num,
     const bbox3f& bbox, uint64_t seed = 13);

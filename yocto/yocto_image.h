@@ -156,22 +156,22 @@ std::vector<vec4b> tonemap_image(
     const std::vector<vec4f>& hdr, tonemap_type type, float exposure);
 
 // Make example images.
-std::vector<vec4b> make_grid_image(int width, int height, int tile = 64,
+std::vector<vec4b> make_grid_image(int width, int height, int tile = 8,
     const vec4b& c0 = {64, 64, 64, 255},
     const vec4b& c1 = {128, 128, 128, 255});
-std::vector<vec4b> make_checker_image(int width, int height, int tile = 64,
+std::vector<vec4b> make_checker_image(int width, int height, int tile = 8,
     const vec4b& c0 = {64, 64, 64, 255},
     const vec4b& c1 = {128, 128, 128, 255});
-std::vector<vec4b> make_bumpdimple_image(int width, int height, int tile = 64);
+std::vector<vec4b> make_bumpdimple_image(int width, int height, int tile = 8);
 std::vector<vec4b> make_ramp_image(
     int width, int height, const vec4b& c0, const vec4b& c1, bool srgb = false);
 std::vector<vec4b> make_gammaramp_image(int width, int height);
 std::vector<vec4f> make_gammaramp_imagef(int width, int height);
 std::vector<vec4b> make_uv_image(int width, int height);
 std::vector<vec4b> make_uvgrid_image(
-    int width, int height, int tile = 64, bool colored = true);
+    int width, int height, int tile = 8, bool colored = true);
 std::vector<vec4b> make_recuvgrid_image(
-    int width, int height, int tile = 64, bool colored = true);
+    int width, int height, int tile = 8, bool colored = true);
 
 // Comvert a bump map to a normal map.
 std::vector<vec4b> bump_to_normal_map(

@@ -307,14 +307,14 @@ void make_cylinder_rounded(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     const vec2f& size, const vec3f& uvsize, float radius);
 void make_sphere(
     std::vector<vec4i>& quads, std::vector<vec3f>& pos, int tesselation);
-void make_geodesic_sphere(
-    std::vector<vec3i>& triangles, std::vector<vec3f>& pos, int tesselation);
-void make_cube(
-    std::vector<vec4i>& quads, std::vector<vec3f>& pos, int tesselation);
+void make_geodesic_sphere(std::vector<vec3i>& triangles,
+    std::vector<vec3f>& pos, int tesselation, float size);
+void make_cube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    int tesselation, float size);
 void make_fvcube(std::vector<vec4i>& quads_pos, std::vector<vec3f>& pos,
     std::vector<vec4i>& quads_norm, std::vector<vec3f>& norm,
     std::vector<vec4i>& quads_texcoord, std::vector<vec2f>& texcoord,
-    int tesselation);
+    int tesselation, float size, float uvsize);
 void make_suzanne(
     std::vector<vec4i>& quads, std::vector<vec3f>& pos, int tesselation);
 

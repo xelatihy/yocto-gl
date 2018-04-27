@@ -152,14 +152,14 @@ void draw(ygl::glwindow* win, app_state* app) {
             }
             ygl::end_glwidgets_tree(win);
         }
-        if (ygl::begin_glwidgets_tree(win, "scene")) {
+        if (ygl::begin_glwidgets_tree(win, "scene tree")) {
             if (ygl::draw_glwidgets_button(win, "print stats"))
                 ygl::print_stats(app->scn);
             ygl::draw_glwidgets_scene_tree(
                 win, "", app->scn, app->selection, app->update_list);
             ygl::end_glwidgets_tree(win);
         }
-        if (ygl::begin_glwidgets_tree(win, "object")) {
+        if (ygl::begin_glwidgets_tree(win, "scene object")) {
             ygl::draw_glwidgets_scene_inspector(
                 win, "", app->scn, app->selection, app->update_list);
             ygl::end_glwidgets_tree(win);
