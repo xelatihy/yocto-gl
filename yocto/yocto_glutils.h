@@ -699,7 +699,8 @@ inline bool draw_glwidgets_combobox(glwindow* win, const std::string& lbl,
     if (!begin_glwidgets_combobox(win, lbl, val)) return false;
     auto old_val = val;
     for (auto i = 0; i < labels.size(); i++) {
-        if(draw_glwidgets_item(win, labels[i], i, val == labels[i])) val = labels[i];
+        if (draw_glwidgets_item(win, labels[i], i, val == labels[i]))
+            val = labels[i];
     }
     end_glwidgets_combobox(win);
     return val != old_val;
@@ -713,7 +714,8 @@ inline bool draw_glwidgets_combobox(glwindow* win, const std::string& lbl,
     auto old_val = val;
     auto lid = 0;
     for (auto& kv : labels) {
-        if(draw_glwidgets_item(win, kv.second, lid++, val == kv.first)) val = kv.first;
+        if (draw_glwidgets_item(win, kv.second, lid++, val == kv.first))
+            val = kv.first;
     }
     end_glwidgets_combobox(win);
     return val != old_val;
@@ -727,10 +729,12 @@ inline bool draw_glwidgets_combobox(glwindow* win, const std::string& lbl,
         return false;
     auto old_val = val;
     if (include_null) {
-        if(draw_glwidgets_item(win, "<none>", -1, val == nullptr)) val = nullptr;
+        if (draw_glwidgets_item(win, "<none>", -1, val == nullptr))
+            val = nullptr;
     }
     for (auto i = 0; i < vals.size(); i++) {
-        if(draw_glwidgets_item(win, vals[i]->name, i, val == vals[i])) val = vals[i];
+        if (draw_glwidgets_item(win, vals[i]->name, i, val == vals[i]))
+            val = vals[i];
     }
     end_glwidgets_combobox(win);
     return val != old_val;

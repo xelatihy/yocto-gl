@@ -645,8 +645,8 @@ sample_triangles_points(const std::vector<vec3i>& triangles,
     for (auto i = 0; i < npoints; i++) {
         auto eid = 0;
         auto euv = zero2f;
-        std::tie(eid, euv) = sample_triangles(
-            cdf, rand1f(rng), {rand1f(rng), rand1f(rng)});
+        std::tie(eid, euv) =
+            sample_triangles(cdf, rand1f(rng), {rand1f(rng), rand1f(rng)});
         auto t = triangles[eid];
         sampled_pos[i] =
             interpolate_triangle(pos[t.x], pos[t.y], pos[t.z], euv);
@@ -888,7 +888,8 @@ void make_disk_quad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
         // Analytical Methods for Squaring the Disc, by C. Fong
         // https://arxiv.org/abs/1509.06344
         auto xy = vec2f{pos[i].x, pos[i].y};
-        auto uv = vec2f{xy.x * sqrt(1 - xy.y * xy.y / 2), xy.y * sqrt(1 - xy.x * xy.x / 2)};
+        auto uv = vec2f{
+            xy.x * sqrt(1 - xy.y * xy.y / 2), xy.y * sqrt(1 - xy.x * xy.x / 2)};
         pos[i] = {uv.x * size / 2, uv.y * size / 2, 0};
     }
 }
@@ -965,14 +966,15 @@ void make_cylinder_rounded(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     make_cylinder(quads, pos, norm, texcoord, steps, size, uvsize);
     auto c = size / 2 - vec2f{radius, radius};
     for (auto i = 0; i < pos.size(); i++) {
-        auto phi = atan2(pos[i].y,pos[i].x);
-        auto r = length(vec2f{pos[i].x,pos[i].y});
+        auto phi = atan2(pos[i].y, pos[i].x);
+        auto r = length(vec2f{pos[i].x, pos[i].y});
         auto z = pos[i].z;
         auto pc = vec2f{r, fabs(z)};
         auto ps = (z < 0) ? -1.0f : 1.0f;
         if (pc.x >= c.x && pc.y >= c.y) {
             auto pn = normalize(pc - c);
-            pos[i] = {cos(phi) * c.x + radius * pn.x, sin(phi) * c.x + radius * pn.x, ps * (c.y + radius * pn.y)};
+            pos[i] = {cos(phi) * c.x + radius * pn.x,
+                sin(phi) * c.x + radius * pn.x, ps * (c.y + radius * pn.y)};
             norm[i] = {cos(phi) * pn.x, sin(phi) * pn.x, ps * pn.y};
         } else {
             continue;

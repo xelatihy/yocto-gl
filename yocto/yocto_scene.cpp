@@ -570,15 +570,13 @@ vec3f eval_elem_norm(const instance* ist, int eid) {
 // Environment values interpolated using uv parametrization.
 vec3f eval_pos(const environment* env, const vec2f& uv) {
     auto wl = vec3f{cos(uv.x * 2 * pi) * sin(uv.y * pi), cos(uv.y * pi),
-                   sin(uv.x * 2 * pi) * sin(uv.y * pi)};
-    return transform_direction(env->frame, wl) *
-           environment_distance;
+        sin(uv.x * 2 * pi) * sin(uv.y * pi)};
+    return transform_direction(env->frame, wl) * environment_distance;
 }
 vec3f eval_norm(const environment* env, const vec2f& uv) {
     auto wl = vec3f{cos(uv.x * 2 * pi) * sin(uv.y * pi), cos(uv.y * pi),
-                   sin(uv.x * 2 * pi) * sin(uv.y * pi)};
-    return -transform_direction(
-        env->frame, wl);
+        sin(uv.x * 2 * pi) * sin(uv.y * pi)};
+    return -transform_direction(env->frame, wl);
 }
 // Environment texture coordinates from uv parametrization.
 vec2f eval_texcoord(const environment* env, const vec2f& uv) { return uv; }
@@ -2411,6 +2409,7 @@ scene* load_scene(const std::string& filename, bool load_txts,
 #if YGL_OBJ
         auto oscn = load_obj(filename, split_obj_shapes, true, true);
         scn = obj_to_scene(oscn, preserve_quads, false);
+        scn->name = path_filename(filename);
         delete oscn;
 #else
         throw std::runtime_error("Obj not supported");
@@ -2426,6 +2425,7 @@ scene* load_scene(const std::string& filename, bool load_txts,
     } else {
         throw std::runtime_error("unsupported extension " + ext);
     }
+    if (scn->name == "") scn->name = path_filename(filename);
     if (!scn) throw std::runtime_error("could not convert gltf scene");
     if (load_txts) load_textures(filename, scn, skip_missing);
     return scn;
@@ -2501,6 +2501,37 @@ texture* make_texture(const std::string& name, const std::string& path,
     txt->ldr = ldr;
     txt->hdr = hdr;
     return txt;
+}
+
+instance* make_instance(
+    const std::string& name, shape* shp, material* mat, const frame3f& frame) {
+    auto ist = new instance();
+    ist->name = name;
+    ist->shp = shp;
+    ist->mat = mat;
+    ist->frame = frame;
+    return ist;
+}
+
+node* make_node(const std::string& name, camera* cam, instance* ist,
+    environment* env, const frame3f& frame) {
+    auto nde = new node();
+    nde->name = name;
+    nde->cam = cam;
+    nde->ist = ist;
+    nde->env = env;
+    nde->frame = frame;
+    return nde;
+}
+
+environment* make_environment(const std::string& name, const vec3f& ke,
+    texture* ke_txt, const frame3f& frame) {
+    auto env = new environment();
+    env->name = name;
+    env->ke = ke;
+    env->ke_txt.txt = ke_txt;
+    env->frame = frame;
+    return env;
 }
 
 camera* make_proc_camera(const std::string& name, const std::string& type) {
@@ -2839,20 +2870,8 @@ shape* make_proc_shape(const std::string& name, const std::string& type_,
 // makes the cornell box scene
 // http://graphics.cs.williams.edu/data
 // http://www.graphics.cornell.edu/online/box/data.html
-scene* make_cornell_box_scene() {
-    auto add_camera = [](scene* scn, std::string name, vec3f from, vec3f to,
-                          float yfov, float aperture,
-                          float aspect = 16.0f / 9.0f) {
-        auto cam = new camera();
-        cam->name = name;
-        cam->frame = lookat_frame(from, to, {0, 1, 0});
-        cam->aperture = aperture;
-        cam->focus = length(from - to);
-        cam->yfov = yfov * pi / 180;
-        cam->aspect = aspect;
-        scn->cameras.push_back(cam);
-    };
-
+scene* make_cornellbox_scene(
+    const std::string& name, const std::string& lights) {
     auto add_quad = [](scene* scn, std::string name, material* mat, vec3f pos,
                         vec3f rot = {0, 0, 0}, vec2f size = {2, 2}) {
         auto shp = new shape();
@@ -2896,47 +2915,32 @@ scene* make_cornell_box_scene() {
         scn->instances.push_back(ist);
     };
 
-    auto add_material = [](scene* scn, std::string name, vec3f kd,
-                            vec3f ke = {0, 0, 0}) {
-        auto mat = new material();
-        mat->type = material_type::specular_roughness;
-        mat->name = name;
-        mat->ke = ke;
-        mat->kd = kd;
-        mat->ks = zero3f;
-        mat->rs = 1;
-        scn->materials.push_back(mat);
-        return mat;
-    };
-
     auto scn = new scene();
-    add_camera(scn, "cb_cam", {0, 1, 5.15f}, {0, 1, 0}, 27, 0, 1);
-    add_material(scn, "cb_white", {0.725f, 0.71f, 0.68f});
-    add_material(scn, "cb_red", {0.63f, 0.065f, 0.05f});
-    add_material(scn, "cb_green", {0.14f, 0.45f, 0.091f});
-    add_material(scn, "cb_light", zero3f, {17, 12, 4});
-    add_quad(scn, "cb_floor", scn->materials[0], {0, 0, 0}, {-90, 0, 0});
-    add_quad(scn, "cb_ceiling", scn->materials[0], {0, 2, 0}, {90, 0, 0});
-    add_quad(scn, "cb_back", scn->materials[0], {0, 1, -1}, {0, 0, 0});
-    add_quad(scn, "cb_left", scn->materials[2], {+1, 1, 0}, {0, -90, 0});
-    add_quad(scn, "cb_right", scn->materials[1], {-1, 1, 0}, {0, 90, 0});
-    add_box(scn, "cb_tallbox", scn->materials[0], {-0.33f, 0.6f, -0.29f},
+    scn->name = name;
+    scn->cameras.push_back(
+        make_camera("cam", {0, 1, 5.15f}, {0, 1, 0}, 27 * pi / 180, 1));
+    scn->materials.push_back(make_material("white", {0.725f, 0.71f, 0.68f}));
+    scn->materials.push_back(make_material("red", {0.63f, 0.065f, 0.05f}));
+    scn->materials.push_back(make_material("green", {0.14f, 0.45f, 0.091f}));
+    add_quad(scn, "floor", scn->materials[0], {0, 0, 0}, {-90, 0, 0});
+    add_quad(scn, "ceiling", scn->materials[0], {0, 2, 0}, {90, 0, 0});
+    add_quad(scn, "back", scn->materials[0], {0, 1, -1}, {0, 0, 0});
+    add_quad(scn, "left", scn->materials[2], {+1, 1, 0}, {0, -90, 0});
+    add_quad(scn, "right", scn->materials[1], {-1, 1, 0}, {0, 90, 0});
+    add_box(scn, "tallbox", scn->materials[0], {-0.33f, 0.6f, -0.29f},
         {0, 15, 0}, {0.6f, 1.2f, 0.6f});
-    add_box(scn, "cb_shortbox", scn->materials[0], {0.33f, 0.3f, 0.33f},
+    add_box(scn, "shortbox", scn->materials[0], {0.33f, 0.3f, 0.33f},
         {0, -15, 0}, {0.6f, 0.6f, 0.6f});
-    add_quad(scn, "cb_light", scn->materials[3], {0, 1.999f, 0}, {90, 0, 0},
-        {0.5f, 0.5f});
+    if (lights == "arealight") {
+        scn->materials.push_back(make_material("light", zero3f));
+        scn->materials.back()->ke = {17, 12, 4};
+        add_quad(scn, "light", scn->materials[3], {0, 1.999f, 0}, {90, 0, 0},
+            {0.5f, 0.5f});
+    } else if (lights == "pointlight") {
+    } else if (lights == "envlight") {
+        scn->environments.push_back(make_environment("env"));
+    }
     return scn;
-}
-
-instance* make_instance(
-    const std::string& name, shape* shp, material* mat, const frame3f& frame) {
-    auto ist = new instance();
-    ist->name = name;
-    ist->shp = shp;
-    ist->mat = mat;
-    ist->frame = frame;
-    return ist;
 }
 
 instance* make_proc_instance(const std::string& name, const std::string& stype,
@@ -2945,31 +2949,12 @@ instance* make_proc_instance(const std::string& name, const std::string& stype,
         make_proc_material(name, mtype), frame);
 }
 
-node* make_node(const std::string& name, camera* cam, instance* ist,
-    environment* env, const frame3f& frame) {
-    auto nde = new node();
-    nde->name = name;
-    nde->cam = cam;
-    nde->ist = ist;
-    nde->env = env;
-    nde->frame = frame;
-    return nde;
-}
-
-environment* make_environment(const std::string& name, const vec3f& ke,
-    texture* ke_txt, const frame3f& frame) {
-    auto env = new environment();
-    env->name = name;
-    env->ke = ke;
-    env->ke_txt.txt = ke_txt;
-    env->frame = frame;
-    return env;
-}
-
 // make simple scene
-scene* make_simple_scene(const std::vector<std::string>& shapes,
-    const std::vector<std::string>& mats, const std::string& lights, bool nodes,
-    const std::vector<std::string>& animations, const std::string& floor_mat) {
+scene* make_simple_scene(const std::string& name,
+    const std::vector<std::string>& shapes,
+    const std::vector<std::string>& mats, const std::string& lights,
+    const std::string& floor_mat, bool nodes,
+    const std::vector<std::string>& animations) {
     auto frames = std::vector<frame3f>();
     if (shapes.size() == 3) {
         frames = std::vector<frame3f>{
@@ -2987,6 +2972,7 @@ scene* make_simple_scene(const std::vector<std::string>& shapes,
         throw std::runtime_error("number of shapes not supported");
     }
     auto scn = new scene();
+    scn->name = name;
     if (shapes.size() == 3) {
         scn->cameras.push_back(make_camera(
             "cam", {0, 6, 24}, {0, 1, 0}, 7.5f * pi / 180, 2.35f / 1.0f));
@@ -3006,7 +2992,7 @@ scene* make_simple_scene(const std::vector<std::string>& shapes,
             "obj" + std::to_string(i + 1), shapes[i], mats[i], frames[i]));
     }
 
-    if (lights == "pointlights") {
+    if (lights == "pointlight") {
         auto pos = std::vector<vec3f>{{-2, 10, 8}, {+2, 10, 8}};
         for (auto i = 0; i < 2; i++) {
             scn->instances.push_back(
@@ -3014,7 +3000,7 @@ scene* make_simple_scene(const std::vector<std::string>& shapes,
                     "emission", translation_frame(pos[i])));
             scn->instances.back()->mat->ke *= 120;
         }
-    } else if (lights == "arealights") {
+    } else if (lights == "arealight") {
         auto pos = std::vector<vec3f>{{0, 16, 0}, {0, 16, 16}};
         for (auto i = 0; i < 2; i++) {
             scn->instances.push_back(make_proc_instance(
@@ -3032,10 +3018,9 @@ scene* make_simple_scene(const std::vector<std::string>& shapes,
             scn->instances.back()->mat->ke *= 20;
             for (auto& p : scn->instances.back()->shp->pos) p *= 4;
         }
-    } else if (lights == "envlights") {
-        scn->textures.push_back(make_proc_texture("sky", "sky", 512));
+    } else if (lights == "envlight") {
         scn->environments.push_back(
-            make_environment("sky", {1, 1, 1}, scn->textures.back()));
+            make_environment("sky", {1, 1, 1}, make_proc_texture("sky", "sky", 512)));
     } else if (lights == "" || lights == "nolights") {
     } else {
         throw std::runtime_error("unknown light type " + lights);
@@ -3113,8 +3098,8 @@ scene* make_random_instances_scene(
             name, scn->shapes.back(), scn->materials.back(), identity_frame3f));
     }
 
-    auto cols =
-        std::vector<vec3f>{{0.5f, 0.2f, 0.2f}, {0.2f, 0.5f, 0.2f}, {0.2f, 0.2f, 0.5f}};
+    auto cols = std::vector<vec3f>{
+        {0.5f, 0.2f, 0.2f}, {0.2f, 0.5f, 0.2f}, {0.2f, 0.2f, 0.5f}};
     auto shps =
         std::vector<std::string>{"sphere", "sphere_flipcap", "sphere_flipcap"};
     auto shapes = std::vector<shape*>();

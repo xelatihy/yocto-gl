@@ -632,7 +632,8 @@ trace_point intersect_scene(const scene* scn, const ray3f& ray) {
     if (isec.ist) {
         return eval_point(isec.ist, isec.eid, isec.euv);
     } else if (!scn->environments.empty()) {
-        return eval_point(scn->environments[0], eval_uv(scn->environments[0], ray.d));
+        return eval_point(
+            scn->environments[0], eval_uv(scn->environments[0], ray.d));
     } else {
         return {};
     }
@@ -668,7 +669,7 @@ vec3f trace_path(const scene* scn, const trace_point& pt_, const vec3f& wo_,
     for (auto bounce = 0; bounce < nbounces; bounce++) {
         // opacity
         if (pt.op != 1 && rand1f(rng) < 1 - pt.op) {
-            if(bounce < 2) {
+            if (bounce < 2) {
                 if (rand1f(rng) < 1 - pt.op) break;
                 weight *= 1 / pt.op;
             }
@@ -687,13 +688,13 @@ vec3f trace_path(const scene* scn, const trace_point& pt_, const vec3f& wo_,
 
         // direct
         if (!delta) {
-            auto wi =
-                (rand1f(rng) < 0.5f) ?
-                    sample_lights(scn, pt, rand1f(rng), rand1f(rng),
-                        rand2f(rng)) :
-                    sample_brdf(pt, wo, rand1f(rng), rand2f(rng));
+            auto wi = (rand1f(rng) < 0.5f) ?
+                          sample_lights(
+                              scn, pt, rand1f(rng), rand1f(rng), rand2f(rng)) :
+                          sample_brdf(pt, wo, rand1f(rng), rand2f(rng));
             auto lpt = intersect_scene(scn, make_ray(pt.pos, wi));
-            auto pdf = 0.5f * sample_brdf_pdf(pt, wo, wi) + 0.5f * sample_lights_pdf(scn, lpt, pt);
+            auto pdf = 0.5f * sample_brdf_pdf(pt, wo, wi) +
+                       0.5f * sample_lights_pdf(scn, lpt, pt);
             auto le = eval_emission(lpt, -wi);
             auto brdfcos = eval_brdfcos(pt, wo, wi);
             if (pdf != 0) l += weight * le * brdfcos / pdf;
@@ -703,12 +704,11 @@ vec3f trace_path(const scene* scn, const trace_point& pt_, const vec3f& wo_,
         if (bounce == nbounces - 1) break;
 
         // continue path
-        auto wi =
-            sample_brdf(pt, wo, rand1f(rng), rand2f(rng), delta);
+        auto wi = sample_brdf(pt, wo, rand1f(rng), rand2f(rng), delta);
         auto brdfcos = eval_brdfcos(pt, wo, wi, delta);
         auto pdf = sample_brdf_pdf(pt, wo, wi, delta);
-        if(pdf) weight *= brdfcos / pdf;
-                  
+        if (pdf) weight *= brdfcos / pdf;
+
         if (weight == zero3f) break;
 
         // roussian roulette
@@ -742,7 +742,7 @@ vec3f trace_path_naive(const scene* scn, const trace_point& pt_,
     for (auto bounce = 0; bounce < nbounces; bounce++) {
         // opacity
         if (pt.op != 1 && rand1f(rng) < 1 - pt.op) {
-            if(bounce < 2) {
+            if (bounce < 2) {
                 if (rand1f(rng) < 1 - pt.op) break;
                 weight *= 1 / pt.op;
             }
@@ -760,11 +760,10 @@ vec3f trace_path_naive(const scene* scn, const trace_point& pt_,
         weight *= (delta) ? 1 / delta_prob : 1 / (1 - delta_prob);
 
         // continue path
-        auto wi =
-            sample_brdf(pt, wo, rand1f(rng), rand2f(rng), delta);
+        auto wi = sample_brdf(pt, wo, rand1f(rng), rand2f(rng), delta);
         auto brdfcos = eval_brdfcos(pt, wo, wi, delta);
         auto pdf = sample_brdf_pdf(pt, wo, wi, delta);
-        if(pdf) weight *= brdfcos / pdf;
+        if (pdf) weight *= brdfcos / pdf;
 
         // roussian roulette
         if (bounce > 2) {
@@ -797,7 +796,7 @@ vec3f trace_path_nomis(const scene* scn, const trace_point& pt_,
     for (auto bounce = 0; bounce < nbounces; bounce++) {
         // opacity
         if (pt.op != 1 && rand1f(rng) < 1 - pt.op) {
-            if(bounce < 2) {
+            if (bounce < 2) {
                 if (rand1f(rng) < 1 - pt.op) break;
                 weight *= 1 / pt.op;
             }
@@ -816,8 +815,8 @@ vec3f trace_path_nomis(const scene* scn, const trace_point& pt_,
 
         // direct
         if (!delta) {
-            auto wi = sample_lights(
-                scn, pt, rand1f(rng), rand1f(rng), rand2f(rng));
+            auto wi =
+                sample_lights(scn, pt, rand1f(rng), rand1f(rng), rand2f(rng));
             auto lpt = intersect_scene(scn, make_ray(pt.pos, wi));
             auto pdf = sample_lights_pdf(scn, lpt, pt);
             auto le = eval_emission(lpt, -wi);
@@ -829,11 +828,10 @@ vec3f trace_path_nomis(const scene* scn, const trace_point& pt_,
         if (bounce == nbounces - 1) break;
 
         // continue path
-        auto wi =
-            sample_brdf(pt, wo, rand1f(rng), rand2f(rng), delta);
+        auto wi = sample_brdf(pt, wo, rand1f(rng), rand2f(rng), delta);
         auto brdfcos = eval_brdfcos(pt, wo, wi, delta);
         auto pdf = sample_brdf_pdf(pt, wo, wi, delta);
-        if(pdf) weight *= brdfcos / pdf;
+        if (pdf) weight *= brdfcos / pdf;
 
         // roussian roulette
         if (bounce > 2) {
@@ -859,12 +857,13 @@ vec3f trace_direct(const scene* scn, const trace_point& pt, const vec3f& wo,
 
     // direct
     for (auto lgt : scn->lights) {
-        auto wi = (rand1f(rng) < 0.5f) ? 
-            sample_light(lgt, pt, rand1f(rng), rand2f(rng)) : 
-            sample_brdf(pt, wo, rand1f(rng), rand2f(rng));
+        auto wi = (rand1f(rng) < 0.5f) ?
+                      sample_light(lgt, pt, rand1f(rng), rand2f(rng)) :
+                      sample_brdf(pt, wo, rand1f(rng), rand2f(rng));
         auto lpt = intersect_scene(scn, make_ray(pt.pos, wi));
         if (lpt.ist != lgt->ist || lpt.env != lgt->env) continue;
-        auto pdf = 0.5f * sample_light_pdf(lpt, pt) + 0.5f * sample_brdf_pdf(pt, wo, wi);
+        auto pdf = 0.5f * sample_light_pdf(lpt, pt) +
+                   0.5f * sample_brdf_pdf(pt, wo, wi);
         auto le = eval_emission(lpt, -wi);
         auto brdfcos = eval_brdfcos(pt, wo, wi);
         if (pdf != 0) l += le * brdfcos / pdf;
@@ -898,8 +897,8 @@ vec3f trace_direct(const scene* scn, const trace_point& pt, const vec3f& wo,
 }
 
 // Direct illumination.
-vec3f trace_direct_nomis(const scene* scn, const trace_point& pt, const vec3f& wo,
-    rng_state& rng, int nbounces) {
+vec3f trace_direct_nomis(const scene* scn, const trace_point& pt,
+    const vec3f& wo, rng_state& rng, int nbounces) {
     // emission
     auto l = eval_emission(pt, wo);
 

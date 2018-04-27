@@ -18,13 +18,13 @@ Please consider this to be just development notes and not any real planning.
 
 ## Cleanup
 
-- include math functions without crap
 - delete
     - compositing if not used
 
 ## Tests
 
 - cornell box with light types
+- simple scene with pointers
 - group test scenes
     - simple
     - basic
