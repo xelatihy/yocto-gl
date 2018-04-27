@@ -1,7 +1,7 @@
 # Yocto/GL: Tiny C++ Libraries for Physically-based Graphics
 
-Yocto/GL is a collection of utility libraries for building physically-based 
-graphics algorithms implemented released under the MIT license.
+Yocto/GL is a collection of utility C++14 libraries for building 
+physically-based graphics algorithms released under the MIT license.
 Features include:
 
 - convenience math functions for graphics
@@ -94,6 +94,9 @@ You can build the example applications using CMake with
 
 
 ## Compilation
+
+This library requires a C++14 compiler and is know to compiled on 
+OsX (Xcode >= 8), Windows (MSVC 2017) and Linux (gcc >= 6, clang >= 4).
 
 For image loading and saving, Yocto/GL depends on `stb_image.h`,
 `stb_image_write.h`, `stb_image_resize.h` and `tinyexr.h`. These features
