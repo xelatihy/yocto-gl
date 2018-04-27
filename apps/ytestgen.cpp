@@ -54,192 +54,266 @@ void rmdir(const std::string& dir) {
 }
 
 void save_scene(const ygl::scene* scn, const std::string& sname,
-    const std::string& dirname, bool flatten_obj) {
+    const std::string& dirname, bool preserve_instances) {
     try {
         auto gltf = true;
         for (auto shp : scn->shapes) {
-            if(!shp->quads_pos.empty()) gltf = false;
-            if(!shp->beziers.empty()) gltf = false;
+            if (!shp->quads_pos.empty()) gltf = false;
+            if (!shp->beziers.empty()) gltf = false;
         }
 
         if (gltf) save_scene(dirname + sname + ".gltf", scn, true);
-        ygl::save_scene(dirname + sname + ".obj", scn, true, !flatten_obj);
+        ygl::save_scene(
+            dirname + sname + ".obj", scn, true, preserve_instances);
     } catch (std::exception& e) { ygl::log_fatal("error {}", e.what()); }
 }
 
 inline std::vector<std::string>& proc_scenes_types() {
-    static auto names =
-        std::vector<std::string>{"cornellbox", "textures", "shapes", "basic", "simple", "lines", "subdivs"};
+    static auto names = std::vector<std::string>{"cornellbox", "textures",
+        "shapes", "basic", "simple", "lines", "subdivs", "materials",
+        "lighttests", "transparent", "instances", "animated", "examples"};
     return names;
 }
 
 std::vector<ygl::scene*> make_proc_scenes(const std::string& name) {
     auto scenes = std::vector<ygl::scene*>();
 
+    auto nists = std::vector<ygl::instance*>{};
+
     // cornell box
     if (name == "cornellbox") {
-        scenes.push_back(
-            ygl::make_cornellbox_scene("cornellbox_al", "arealight"));
-        scenes.push_back(
-            ygl::make_cornellbox_scene("cornellbox_pl", "pointlight"));
-        scenes.push_back(
-            ygl::make_cornellbox_scene("cornellbox_el", "envlight"));
+        scenes.push_back(ygl::make_cornellbox_scene("cornellbox_al", false));
+        scenes.push_back(ygl::make_cornellbox_scene("cornellbox_el", true));
     }
 
     // textures
     if (name == "textures") {
-        for (auto txt : ygl::proc_texture_types()) {
-            auto scn = ygl::make_simple_scene(
-                "texture_" + txt, "quad", "matte", "arealight", "");
-            ygl::log_error("fix texture scene");
-            scenes.push_back(scn);
+        auto txts = std::vector<ygl::texture*>{
+            ygl::make_grid_texture("grid"),
+            ygl::make_grid_texture("uvgrid"),
+        };
+        for (auto txt : txts) {
+            scenes.push_back(ygl::make_simple_scene(txt->name,
+                ygl::make_quad_shape("obj"),
+                ygl::make_matte_material(txt->name, {1, 1, 1}, txt), false));
         }
     }
 
     // shapes
     if (name == "shapes") {
-        for (auto shp : ygl::proc_shape_types()) {
-            scenes.push_back(ygl::make_simple_scene(
-                "shape_" + shp, shp, "plastic_colored", "arealight", ""));
+        auto shps = std::vector<ygl::shape*>{
+            ygl::make_cube_shape("cube"),
+            ygl::make_sphere_shape("sphere"),
+            ygl::make_sphereflipcap_shape("sphereflipcap"),
+            ygl::make_spherecube_shape("spherecube"),
+            ygl::make_quad_shape("quad"),
+        };
+        for (auto shp : shps) {
+            scenes.push_back(ygl::make_simple_scene(shp->name, shp,
+                ygl::make_plastic_material(
+                    "mat", {1, 1, 1}, 0.1f, ygl::make_uvgrid_texture("uvgrid")),
+                false));
         }
     }
 
-    // light types
-    auto all_lights = {"pointlight"s, "arealight"s, "envlight"s};
-    auto area_lights = {"arealight"s, "envlight"s};
-    auto lights_names = std::map<std::string, std::string>{
-        {"pointlight", "pl"}, {"arealight", "al"}, {"envlight", "el"}
-    };
-
     // basic shapes
     if (name == "basic") {
-        for (auto lgt : all_lights) {
-            scenes.push_back(ygl::make_simple_scene("basic_" + lights_names.at(lgt),
-                {"sphere_flipcap", "sphere_cube", "cube_rounded"},
-                {"plastic_red", "plastic_green", "plastic_blue"}, lgt, "matte"));
+        auto lnames = std::vector<std::string>{"-el", "-al", "-pl"};
+        for (auto lgt : {0, 1, 2}) {
+            scenes.push_back(ygl::make_simple_scene("basic" + lnames[lgt],
+                {
+                    ygl::make_sphereflipcap_shape("obj1"),
+                    ygl::make_spherecube_shape("obj2"),
+                    ygl::make_cuberounded_shape("obj3"),
+                },
+                {
+                    ygl::make_plastic_material("obj1", {0.5f, 0.2f, 0.2f}),
+                    ygl::make_plastic_material("obj2", {0.2f, 0.5f, 0.2f}),
+                    ygl::make_plastic_material("obj3", {0.2f, 0.2f, 0.5f}),
+                },
+                lgt == 0, lgt == 2));
         }
     }
 
     // simple shapes
     if (name == "simple") {
-        for (auto lgt : all_lights) {
-            scenes.push_back(ygl::make_simple_scene("simple_" + lights_names.at(lgt),
-                {"sphere_flipcap", "sphere_cube", "cube_rounded"},
-                {"plastic_colored", "plastic_colored", "plastic_colored"},
-                lgt));
+        for (auto env : {0, 1}) {
+            scenes.push_back(
+                ygl::make_simple_scene("simple"s + ((env) ? "-el" : "-al"),
+                    {
+                        ygl::make_sphereflipcap_shape("obj1"),
+                        ygl::make_spherecube_shape("obj2"),
+                        ygl::make_cuberounded_shape("obj3"),
+                    },
+                    {
+                        ygl::make_plastic_material("obj1", {1, 1, 1}, 0.1f,
+                            ygl::make_uvgrid_texture("uvgrid")),
+                        ygl::make_plastic_material("obj2", {1, 1, 1}, 0.1f,
+                            ygl::make_uvgrid_texture("uvgrid")),
+                        ygl::make_plastic_material("obj3", {1, 1, 1}, 0.1f,
+                            ygl::make_uvgrid_texture("uvgrid")),
+                    },
+                    env));
         }
     }
 
     // lines
     if (name == "lines") {
-        for (auto lgt : area_lights) {
-            scenes.push_back(ygl::make_simple_scene("lines_" + lights_names.at(lgt),
-                {"hairball_noise", "hairball_clump", "hairball"},
-                {"matte_gray", "matte_gray", "matte_gray"}, lgt));
+        for (auto env : {0, 1}) {
+            scenes.push_back(
+                ygl::make_simple_scene("lines"s + ((env) ? "-el" : "-al"),
+                    {
+                        ygl::make_hairball_shape("obj1", 16, 2, 2, {0.15f,0.2f}, {0.05f,100}, {0,0}),
+                        ygl::make_hairball_shape("obj2", 16, 2, 2, {0.15f,0.2f}, {0.5f,8}, {0,0}),
+                        ygl::make_hairball_shape("obj3", 16, 2, 2, {0.15f,0.2f}, {0,0}, {0.5f,128}),
+                        ygl::make_sphere_shape("int1", 4, 1.6f),
+                        ygl::make_sphere_shape("int2", 4, 1.6f),
+                        ygl::make_sphere_shape("int3", 4, 1.6f),
+                    },
+                    {
+                        ygl::make_matte_material("obj1", {0.2f, 0.2f, 0.2f}),
+                        ygl::make_matte_material("obj2", {0.2f, 0.2f, 0.2f}),
+                        ygl::make_matte_material("obj3", {0.2f, 0.2f, 0.2f}),
+                        ygl::make_matte_material("int1", {0.2f, 0.2f, 0.2f}),
+                        ygl::make_matte_material("int2", {0.2f, 0.2f, 0.2f}),
+                        ygl::make_matte_material("int3", {0.2f, 0.2f, 0.2f}),
+                    },
+                    env));
         }
     }
 
     // subdivs
     if (name == "subdivs") {
-        for (auto lgt : area_lights) {
-            scenes.push_back(ygl::make_simple_scene("subdivs_" + lights_names.at(lgt),
-                {"cube_subdiv", "suzanne_subdiv", "fvcube_subdiv"},
-                {"plastic_red", "plastic_green", "plastic_colored"}, lgt));
+        for (auto env : {0, 1}) {
+            scenes.push_back(
+                ygl::make_simple_scene("subdivs"s + ((env) ? "-el" : "-al"),
+                    {
+                        ygl::make_cube_subdiv_shape("obj1"),
+                        ygl::make_suzanne_subdiv_shape("obj2"),
+                        ygl::make_fvcube_subdiv_shape("obj3"),
+                    },
+                    {
+                        ygl::make_plastic_material("obj1", {1, 1, 1}, 0.1f,
+                            ygl::make_uvgrid_texture("uvgrid")),
+                        ygl::make_plastic_material("obj2", {1, 1, 1}, 0.1f,
+                            ygl::make_uvgrid_texture("uvgrid")),
+                        ygl::make_plastic_material("obj3", {1, 1, 1}, 0.1f,
+                            ygl::make_uvgrid_texture("uvgrid")),
+                    },
+                    env));
         }
     }
 
-#if 0
-    // transparent shapes
-    presets["transparent_al"] = ygl::make_simple_scene({"quad", "quad", "quad"},
-        {"transparent_red", "transparent_green", "transparent_blue"},
-        "arealight");
+    // materials
+    if (name == "materials") {
+        auto make_matgroups = []() {
+            return std::vector<std::vector<ygl::material*>>{
+                {
+                    ygl::make_plastic_material(
+                        "plastic1", {0.5f, 0.2f, 0.2f}, 0.1f),
+                    ygl::make_plastic_material(
+                        "plastic2", {0.2f, 0.5f, 0.2f}, 0.05f),
+                    ygl::make_plastic_material(
+                        "plastic3", {0.2f, 0.2f, 0.5f}, 0),
+                },
+                {
+                    ygl::make_metal_material(
+                        "metal1", {0.66f, 0.45f, 0.34f}, 0.1f),
+                    ygl::make_metal_material(
+                        "metal2", {0.66f, 0.45f, 0.34f}, 0.05f),
+                    ygl::make_metal_material("metal3", {0.7f, 0.7f, 0.7f}, 0),
+                },
+                {
+                    ygl::make_glass_material("glass1", {1, 1, 1}, 0),
+                    ygl::make_glass_material("glass2", {1, 0.5f, 0.5f}, 0),
+                    ygl::make_glass_material("glass3", {1, 1, 1}, 0.1f),
+                },
+                {
+                    ygl::make_glass_material(
+                        "transparent1", {0.5f, 0.2f, 0.2f}, 0.9f),
+                    ygl::make_glass_material(
+                        "transparent2", {0.2f, 0.5f, 0.2f}, 0.5f),
+                    ygl::make_glass_material(
+                        "transparent3", {0.2f, 0.2f, 0.5f}, 0.2f),
+                },
+                {
+                    ygl::make_plastic_material("bump1", {0.2f, 0.5f, 0.2f},
+                        0.05f, nullptr, ygl::make_bumpnorm_texture("norm1")),
+                    ygl::make_plastic_material("bump2", {0.2f, 0.5f, 0.2f},
+                        0.05f, nullptr, ygl::make_bumpnorm_texture("norm2")),
+                    ygl::make_plastic_material("bump3", {0.2f, 0.5f, 0.2f},
+                        0.05f, nullptr, ygl::make_bumpnorm_texture("norm3")),
+                },
+            };
+        };
+        for (auto env : {0, 1}) {
+            for (auto& mats : make_matgroups()) {
+                for (auto mat : mats) {
+                    scenes.push_back(ygl::make_simple_scene(
+                        mat->name + ((env) ? "-el" : "-al"),
+                        ygl::make_matball_shape("obj"), mat, env));
+                }
+            }
+        }
+        for (auto env : {0, 1}) {
+            for (auto& mats : make_matgroups()) {
+                auto name = mats[0]->name;
+                name.back() = 's';
+                scenes.push_back(
+                    ygl::make_simple_scene(name + ((env) ? "-el" : "-al"),
+                        {
+                            ygl::make_sphere_shape("obj1"),
+                            ygl::make_sphere_shape("obj2"),
+                            ygl::make_sphere_shape("obj3"),
+                        },
+                        {mats[0], mats[1], mats[2]}, env));
+            }
+        }
+    }
 
-    // plastics shapes
-    presets["plastics_al"] =
-        ygl::make_simple_scene({"matball", "matball", "matball"},
-            {"plastic_red", "plastic_green", "plastic_blue"}, "arealight");
-    presets["plastics_el"] =
-        ygl::make_simple_scene({"matball", "matball", "matball"},
-            {"plastic_red", "plastic_green", "plastic_blue"}, "envlight");
-
-    // metals shapes
-    presets["metals_al"] =
-        ygl::make_simple_scene({"matball", "matball", "matball"},
-            {"metal_gold_rough", "metal_gold_sharp", "metal_silver_mirror"},
-            "arealight");
-    presets["metals_el"] =
-        ygl::make_simple_scene({"matball", "matball", "matball"},
-            {"metal_gold_rough", "metal_gold_sharp", "metal_silver_mirror"},
-            "envlight");
-
-    // glass shapes
-    presets["glass_al"] =
-        ygl::make_simple_scene({"matball", "matball", "matball"},
-            {"glass_mirror", "glass_colored", "glass_rough"}, "arealight");
-    presets["glass_el"] =
-        ygl::make_simple_scene({"matball", "matball", "matball"},
-            {"glass_mirror", "glass_colored", "glass_rough"}, "envlight");
-
-    // car paints shapes
-    presets["paints_al"] =
-        ygl::make_simple_scene({"matball", "matball", "matball"},
-            {"carpaint_black", "carpaint_blue", "metal_blue"}, "arealight");
-    presets["paints_el"] =
-        ygl::make_simple_scene({"matball", "matball", "matball"},
-            {"carpaint_black", "carpaint_blue", "metal_blue"}, "envlight");
-
-    // lihght testing
-    presets["arealights_nl"] =
-        ygl::make_simple_scene({"quad", "sphere", "quad_stack"},
-            {"emission", "emission", "emission"}, "nolights");
-    presets["arealight_nl"] =
-        ygl::make_simple_scene({"quad"}, {"emission"}, "nolights");
-
-    // matball
-    // presets["mattball_al"] = ygl::make_simple_scene( {"matball"},
-    // {"carpaint_black"}, "arealight", ""); last = add_simple_scene(presets,
-    // "mattball_el", {"matball"}, {"carpaint_black"}, "envlight", "");
-    //    presets["matball_el"] =
-    //        ygl::make_simple_scene({"sphere"}, {"transparent_none"},
-    //        "envlight",
-    //        "");
-    //    presets["matball_al"] =
-    //        ygl::make_simple_scene({"sphere"}, {"transparent_none"},
-    //        "arealight",
-    //        "");
-
-    // tesselation shapes
-    //    presets["tesselation_pl"] = ygl::make_simple_scene(
-    //        {"geodesic_spherel", "geodesic_spheref", "geodesic_sphere"},
-    //        {"matte_gray", "matte_gray", "matte_gray"}, "pointlight");
-
-    // textureuv shapes
-    presets["textureuv_pl"] = ygl::make_simple_scene(
-        {"sphere_flipcap", "sphere_flipcap", "sphere_flipcap"},
-        {"matte_green", "matte_colored", "matte_uv"}, "pointlight");
-
-    // normalmap shapes
-    presets["normalmap_pl"] = ygl::make_simple_scene(
-        {"sphere_flipcap", "sphere_flipcap", "sphere_flipcap"},
-        {"plastic_blue", "plastic_blue_grid_norm", "plastic_colored_bump_norm"},
-        "pointlight");
-
-    // animated shapes
-    // presets["animated_pl"] = ygl::make_simple_scene(
-    //     {"sphere_flipcap",
-    //         "sphere_cube",
-    //         "cube_rounded"},
-    //     {"plastic_colored",
-    //         "plastic_colored",
-    //         "plastic_colored"},
-    //     "pointlight", true, {"scale", "bounce", "rotation"});
+    // light tests
+    if (name == "lighttests") {
+        auto shps = std::vector<ygl::shape*>{
+            ygl::make_quad_shape("quad"),
+            ygl::make_sphere_shape("sphere"),
+            ygl::make_quadstack_shape("quadstack"),
+        };
+        for (auto shp : shps) {
+            scenes.push_back(ygl::make_simple_scene(shp->name + "light", shp,
+                ygl::make_emission_material("light", {1, 1, 1}), true));
+        }
+    }
 
     // instances
-    presets["instances_pl"] =
-        ygl::make_random_instances_scene({10, 10}, {{-3, -3, 0}, {3, 3, 0}});
-    presets["instancel_pl"] =
-        ygl::make_random_instances_scene({100, 100}, {{-3, -3, 0}, {3, 3, 0}});
-#endif
+    if (name == "instances") {
+        scenes.push_back(ygl::make_random_instances_scene(
+            "instances-small", {10, 10}, {{-3, -3, 0}, {3, 3, 0}}));
+        scenes.push_back(ygl::make_random_instances_scene(
+            "instances-large", {100, 100}, {{-3, -3, 0}, {3, 3, 0}}));
+    }
+
+    // instances
+    if (name == "animated") {
+            scenes.push_back(
+                ygl::make_simple_scene("animated-al",
+                    {
+                        ygl::make_sphereflipcap_shape("obj1"),
+                        ygl::make_spherecube_shape("obj2"),
+                        ygl::make_cuberounded_shape("obj3"),
+                    },
+                    {
+                        ygl::make_plastic_material("obj1", {0.5f, 0.2f, 0.2f}),
+                        ygl::make_plastic_material("obj2", {0.2f, 0.5f, 0.2f}),
+                        ygl::make_plastic_material("obj3", {0.2f, 0.2f, 0.5f}),
+                    }, false, false, 
+                    {
+                        ygl::make_animation("obj1", {0,1,2}, {}, {}, {{1,1,1},{0.75f,0.75f,0.75f},{1,1,1}}),
+                        ygl::make_animation("obj2", {0,1,2}, {{0,1,0},{0,2,0},{0,1,0}}),
+                        ygl::make_animation("obj3", {0,1,2}, {}, {ygl::rotation_quat({0,1,0}, 0), 
+                        ygl::rotation_quat({0,1,0}, ygl::pi),ygl::rotation_quat({0,1,0}, 0)}),
+                    }
+                    ));
+    }
 
     return scenes;
 }
@@ -249,7 +323,8 @@ int main(int argc, char* argv[]) {
     auto parser = ygl::make_parser(argc, argv, "ytestgen", "make tests");
     auto sname = ygl::parse_opt(parser, "--scene", "-s", "scenes name", ""s,
         false, proc_scenes_types());
-    auto noclean = ygl::parse_flag(parser, "--noclean", "", "do not clean directory");
+    auto noclean =
+        ygl::parse_flag(parser, "--noclean", "", "do not clean directory");
     auto dirname =
         ygl::parse_opt(parser, "--dirname", "-d", "directory name", "tests"s);
     auto noparallel =
@@ -276,13 +351,24 @@ int main(int argc, char* argv[]) {
     ygl::log_info("creating directory {}", dirname);
     mkdir(dirname);
 
+    auto threads = std::vector<std::thread>();
     auto sgroups = std::map<std::string, std::vector<ygl::scene*>>();
     for (auto sname : snames) {
-        ygl::log_info("generating scenes {}", sname);
-        sgroups[sname] = make_proc_scenes(sname);
+        sgroups[sname] = {};
+        if (noparallel) {
+            ygl::log_info("generating scenes {}", sname);
+            sgroups[sname] = make_proc_scenes(sname);
+        } else {
+            threads.push_back(std::thread([=, &sgroups]() {
+                ygl::log_info("start generating scenes {}", sname);
+                sgroups[sname] = make_proc_scenes(sname);
+                ygl::log_info("end generating scenes {}", sname);
+            }));
+        }
     }
-    auto threads = std::vector<std::thread>();
-    for(auto sname : snames) {
+    for (auto& t : threads) t.join();
+    threads.clear();
+    for (auto sname : snames) {
         auto scns = sgroups[sname];
         ygl::log_info("creating directory {}", dirname + "/" + sname);
         mkdir(dirname + "/" + sname);
@@ -293,16 +379,17 @@ int main(int argc, char* argv[]) {
                     sname == "instances");
             } else {
                 threads.push_back(std::thread([=]() {
-                    ygl::log_info("saving scene {}/{}", sname, scn->name);
+                    ygl::log_info("start saving scene {}/{}", sname, scn->name);
                     save_scene(scn, scn->name, dirname + "/" + sname + "/",
                         sname == "instances");
+                    ygl::log_info("end saving scene {}/{}", sname, scn->name);
                 }));
             }
         }
     }
     for (auto& t : threads) t.join();
-    for(auto sname : snames) {
+    for (auto sname : snames) {
         auto scns = sgroups[sname];
-        for(auto scn : scns) delete scn;
+        for (auto scn : scns) delete scn;
     }
 }

@@ -552,8 +552,9 @@ namespace ygl {
 
 // Make a grid image
 std::vector<vec4b> make_grid_image(
-    int width, int height, int tile, const vec4b& c0, const vec4b& c1) {
+    int width, int height, int tiles, const vec4b& c0, const vec4b& c1) {
     auto img = std::vector<vec4b>(width * height);
+    auto tile = width / tiles;
     for (int j = 0; j < width; j++) {
         for (int i = 0; i < height; i++) {
             auto c = i % tile == 0 || i % tile == tile - 1 || j % tile == 0 ||
@@ -566,8 +567,9 @@ std::vector<vec4b> make_grid_image(
 
 // Make a checkerboard image
 std::vector<vec4b> make_checker_image(
-    int width, int height, int tile, const vec4b& c0, const vec4b& c1) {
+    int width, int height, int tiles, const vec4b& c0, const vec4b& c1) {
     auto img = std::vector<vec4b>(width * height);
+    auto tile = width / tiles;
     for (int j = 0; j < height; j++) {
         for (int i = 0; i < width; i++) {
             auto c = (i / tile + j / tile) % 2 == 0;
@@ -578,8 +580,9 @@ std::vector<vec4b> make_checker_image(
 }
 
 // Make an image with bumps and dimples.
-std::vector<vec4b> make_bumpdimple_image(int width, int height, int tile) {
+std::vector<vec4b> make_bumpdimple_image(int width, int height, int tiles) {
     auto img = std::vector<vec4b>(width * height);
+    auto tile = width / tiles;
     for (int j = 0; j < height; j++) {
         for (int i = 0; i < width; i++) {
             auto c = (i / tile + j / tile) % 2 == 0;
@@ -657,8 +660,9 @@ std::vector<vec4b> make_uv_image(int width, int height) {
 
 // Make a uv colored grid
 std::vector<vec4b> make_uvgrid_image(
-    int width, int height, int tile, bool colored) {
+    int width, int height, int tiles, bool colored) {
     auto img = std::vector<vec4b>(width * height);
+    auto tile = width / tiles;
     for (int j = 0; j < height; j++) {
         for (int i = 0; i < width; i++) {
             byte ph = 32 * (i / (height / 8));
@@ -682,8 +686,9 @@ std::vector<vec4b> make_uvgrid_image(
 
 // Make a uv recusive colored grid
 std::vector<vec4b> make_recuvgrid_image(
-    int width, int height, int tile, bool colored) {
+    int width, int height, int tiles, bool colored) {
     auto img = std::vector<vec4b>(width * height);
+    auto tile = width / tiles;
     for (int j = 0; j < height; j++) {
         for (int i = 0; i < width; i++) {
             byte ph = 32 * (i / (height / 8));

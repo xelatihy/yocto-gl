@@ -983,8 +983,8 @@ void make_cylinder_rounded(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
 }
 
 // Make a geodesic sphere.
-void make_geodesic_sphere(
-    std::vector<vec3i>& triangles, std::vector<vec3f>& pos, int tesselation) {
+void make_geodesic_sphere(std::vector<vec3i>& triangles,
+    std::vector<vec3f>& pos, int tesselation, float size) {
     // https://stackoverflow.com/questions/17705621/algorithm-for-a-geodesic-sphere
     const float X = 0.525731112119133606f;
     const float Z = 0.850650808352039932f;
@@ -997,18 +997,19 @@ void make_geodesic_sphere(
         {9, 11, 0}, {9, 2, 11}, {9, 5, 2}, {7, 11, 2}};
     for (auto l = 0; l < max(0, tesselation - 2); l++)
         subdivide_triangles(triangles, pos);
-    for (auto& p : pos) p = normalize(p);
+    for (auto& p : pos) p = normalize(p) * size / 2;
 }
 
 // Make a cube with unique vertices. This is watertight but has no
 // texture coordinates or normals.
-void make_cube(
-    std::vector<vec4i>& quads, std::vector<vec3f>& pos, int tesselation) {
+void make_cube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    int tesselation, float size) {
     pos = std::vector<vec3f>{{-1, -1, -1}, {-1, +1, -1}, {+1, +1, -1},
         {+1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {+1, +1, +1}, {+1, -1, +1}};
     quads = std::vector<vec4i>{{0, 1, 2, 3}, {7, 6, 5, 4}, {4, 5, 1, 0},
         {6, 7, 3, 2}, {2, 1, 5, 6}, {0, 3, 7, 4}};
 
+    for (auto& p : pos) p *= size / 2;
     for (auto l = 0; l < tesselation; l++) subdivide_quads(quads, pos);
 }
 
@@ -1017,7 +1018,7 @@ void make_cube(
 void make_fvcube(std::vector<vec4i>& quads_pos, std::vector<vec3f>& pos,
     std::vector<vec4i>& quads_norm, std::vector<vec3f>& norm,
     std::vector<vec4i>& quads_texcoord, std::vector<vec2f>& texcoord,
-    int tesselation) {
+    int tesselation, float size, float uvsize) {
     pos = std::vector<vec3f>{{-1, -1, -1}, {-1, +1, -1}, {+1, +1, -1},
         {+1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {+1, +1, +1}, {+1, -1, +1}};
     quads_pos = std::vector<vec4i>{{0, 1, 2, 3}, {7, 6, 5, 4}, {4, 5, 1, 0},
@@ -1035,6 +1036,9 @@ void make_fvcube(std::vector<vec4i>& quads_pos, std::vector<vec3f>& pos,
         {0, 1}};
     quads_texcoord = std::vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
         {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19}, {20, 21, 22, 23}};
+
+    for (auto& p : pos) p *= size / 2;
+    for (auto& t : texcoord) t *= uvsize;
 
     for (auto l = 0; l < tesselation; l++) {
         subdivide_quads(quads_pos, pos);

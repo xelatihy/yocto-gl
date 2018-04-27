@@ -25,13 +25,7 @@ Please consider this to be just development notes and not any real planning.
 
 - cornell box with light types
 - simple scene with pointers
-- group test scenes
-    - simple
-    - basic
-    - materials
-    - textures
-    - shapes
-    - cornellbox
+- simple scene with area/env lights
 
 ## Trace
 

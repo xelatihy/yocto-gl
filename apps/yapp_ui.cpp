@@ -222,7 +222,7 @@ void draw_glshape(const shape* shp, const material* mat, const mat4f& xform,
             (highlighted) ? vec3f{1, 1, 0} : vec3f{0, 0, 0},
             (highlighted) ? 1 : mat->op);
         set_glsurface_normaloffset(prog, 0.01f);
-        if (is_glbuffer_empty(gshp.edges)) draw_glelems(gshp.edges);
+        if (!is_glbuffer_empty(gshp.edges)) draw_glelems(gshp.edges);
     }
 
     end_glsurface_shape(prog);
