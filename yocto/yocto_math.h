@@ -1008,9 +1008,7 @@ inline std::vector<rng_state> make_rng_seq(int num, uint64_t seed) {
 }
 
 // Next random numbers: floats in [0,1), ints in [0,n).
-inline int rand1i(rng_state& rng, int n) {
-    return advance_rng(rng) % n;
-}
+inline int rand1i(rng_state& rng, int n) { return advance_rng(rng) % n; }
 inline float rand1f(rng_state& rng) {
     union {
         uint32_t u;
@@ -1022,9 +1020,7 @@ inline float rand1f(rng_state& rng) {
     // const static auto scale = (float)(1.0 / numeric_limits<uint32_t>::max());
     // return advance_rng(rng) * scale;
 }
-inline vec2f rand2f(rng_state& rng) {
-    return {rand1f(rng), rand1f(rng)};
-}
+inline vec2f rand2f(rng_state& rng) { return {rand1f(rng), rand1f(rng)}; }
 inline vec3f rand3f(rng_state& rng) {
     return {rand1f(rng), rand1f(rng), rand1f(rng)};
 }

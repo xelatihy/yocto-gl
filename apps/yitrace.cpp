@@ -195,8 +195,8 @@ bool update(ygl::glwindow* win, app_state* app) {
         auto pheight = app->preview_resolution;
         auto pimg = std::vector<ygl::vec4f>(pwidth * pheight);
         auto prngs = ygl::make_rng_seq(pwidth * pheight, 7);
-        trace_samples(app->scn, app->cam, pwidth, pheight, pimg, prngs, 0,
-            1, app->tracer, app->nbounces);
+        trace_samples(app->scn, app->cam, pwidth, pheight, pimg, prngs, 0, 1,
+            app->tracer, app->nbounces);
         auto pratio = app->resolution / app->preview_resolution;
         for (auto j = 0; j < app->height; j++) {
             for (auto i = 0; i < app->width; i++) {
@@ -213,7 +213,7 @@ bool update(ygl::glwindow* win, app_state* app) {
     ygl::trace_async_start(app->scn, app->cam, app->width, app->height,
         app->img, app->rngs, app->nsamples, app->tracer, app->nbounces,
         app->async_threads, app->async_stop, app->cur_sample, app->pixel_clamp);
-        
+
     // updated
     return true;
 }

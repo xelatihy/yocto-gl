@@ -277,6 +277,7 @@ struct light {
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
 struct scene {
+    std::string name;                             // name
     std::vector<camera*> cameras = {};            // cameras
     std::vector<shape*> shapes = {};              // shapes
     std::vector<instance*> instances = {};        // instances
@@ -401,7 +402,8 @@ vec2f eval_texcoord(const shape* shp, int eid, const vec2f& euv);
 vec4f eval_color(const shape* shp, int eid, const vec2f& euv);
 float eval_radius(const shape* shp, int eid, const vec2f& euv);
 vec4f eval_tangsp(const shape* shp, int eid, const vec2f& euv);
-vec3f eval_tangsp(const shape* shp, int eid, const vec2f& euv, bool& left_handed);
+vec3f eval_tangsp(
+    const shape* shp, int eid, const vec2f& euv, bool& left_handed);
 // Shape element values.
 vec3f eval_elem_norm(const shape* shp, int eid);
 
@@ -412,7 +414,8 @@ vec3f eval_norm(const instance* ist, int eid, const vec2f& euv);
 vec2f eval_texcoord(const instance* ist, int eid, const vec2f& euv);
 vec4f eval_color(const instance* ist, int eid, const vec2f& euv);
 float eval_radius(const instance* ist, int eid, const vec2f& euv);
-vec3f eval_tangsp(const instance* ist, int eid, const vec2f& euv, bool& left_handed);
+vec3f eval_tangsp(
+    const instance* ist, int eid, const vec2f& euv, bool& left_handed);
 // Instance element values.
 vec3f eval_elem_norm(const instance* ist, int eid);
 
@@ -516,15 +519,24 @@ instance* make_proc_instance(const std::string& name, const std::string& stype,
     const std::string& mtype, const frame3f& frame = identity_frame3f);
 
 // Makes the Cornell Box scene.
-scene* make_cornell_box_scene();
+scene* make_cornellbox_scene(
+    const std::string& name, const std::string& lights);
 // Makes a simple scene with up to three objects lined up
-scene* make_simple_scene(const std::vector<std::string>& shapes,
+scene* make_simple_scene(const std::string& name,
+    const std::vector<std::string>& shapes,
     const std::vector<std::string>& mats, const std::string& lights,
-    bool nodes = false, const std::vector<std::string>& animations = {},
-    const std::string& floor_mat = "matte_grid");
+    const std::string& floor_mat = "matte_grid", bool nodes = false,
+    const std::vector<std::string>& animations = {});
+// Makes a simple scene with a single object
+inline scene* make_simple_scene(const std::string& name,
+    const std::string& shape, const std::string& mat, const std::string& lights,
+    const std::string& floor_mat = "matte_grid") {
+    return make_simple_scene(name, std::vector<std::string>{shape},
+        std::vector<std::string>{mat}, lights, floor_mat);
+}
 // Make a scene with random instances
-scene* make_random_instances_scene(
-    const vec2i& num, const bbox3f& bbox, uint64_t seed = 13);
+scene* make_random_instances_scene(const std::string& name, const vec2i& num,
+    const bbox3f& bbox, uint64_t seed = 13);
 
 }  // namespace ygl
 

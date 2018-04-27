@@ -100,7 +100,7 @@ void trace_samples_mt(const scene* scn, const camera* cam, int width,
 void trace_async_start(const scene* scn, const camera* cam, int width,
     int height, std::vector<vec4f>& img, std::vector<rng_state>& rngs,
     int nsamples, trace_type tracer, int nbounces,
-    std::vector<std::thread>& threads, bool& stop_flag, int& cur_sample, 
+    std::vector<std::thread>& threads, bool& stop_flag, int& cur_sample,
     float pixel_clamp = 100);
 // Stop the asynchronous renderer.
 void trace_async_stop(std::vector<std::thread>& threads, bool& stop_flag);
