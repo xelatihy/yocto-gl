@@ -227,6 +227,9 @@ struct environment {
     frame3f frame = identity_frame3f;  // transform frame
     vec3f ke = {0, 0, 0};              // emission color
     texture_info ke_txt = {};          // emission texture
+
+    // computed properties
+    std::vector<float> elem_cdf;    // element cdf for sampling
 };
 
 // Node in a transform hierarchy.
@@ -350,6 +353,9 @@ void update_bbox(scene* scn, bool do_shapes = true);
 void update_lights(scene* scn, bool do_shapes = true);
 // Generate a distribution for sampling a shape uniformly based on area/length.
 void update_shape_cdf(shape* shp);
+// Generate a distribution for sampling an environment texture uniformly 
+// based on angle and texture intensity.
+void update_environment_cdf(environment* env);
 
 // Updates/refits bvh.
 void update_bvh(shape* shp, bool equalsize = false);

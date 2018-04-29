@@ -249,6 +249,7 @@ void update_lights(scene* scn, bool do_shapes) {
         auto lgt = new light();
         lgt->env = env;
         scn->lights.push_back(lgt);
+        update_environment_cdf(env);
     }
 }
 
@@ -272,6 +273,31 @@ void update_shape_cdf(shape* shp) {
         shp->elem_cdf = sample_points_cdf(shp->pos.size());
     } else {
         throw std::runtime_error("empty shape not supported");
+    }
+}
+
+// Update environment CDF for sampling.
+void update_environment_cdf(environment* env) {
+    env->elem_cdf.clear();
+    auto txt = env->ke_txt.txt;
+    if(!txt) return;
+    env->elem_cdf.resize(txt->width * txt->height);
+    if(txt->ldr.empty()) {
+        for(auto i = 0; i < env->elem_cdf.size(); i ++) {
+            auto th = (i / txt->width + 0.5f) * pi / txt->height;
+            auto rgba = srgb_to_linear(txt->ldr[i]);
+            env->elem_cdf[i] = max(rgba.x,max(rgba.y,rgba.z)) * sin(th);
+            if(i) env->elem_cdf[i] += env->elem_cdf[i-1];
+        }
+    } else if(txt->hdr.empty()) {
+        for(auto i = 0; i < env->elem_cdf.size(); i ++) {
+            auto th = (i / txt->width + 0.5f) * pi / txt->height;
+            auto rgba = txt->hdr[i];
+            env->elem_cdf[i] = max(rgba.x,max(rgba.y,rgba.z)) * sin(th);
+            if(i) env->elem_cdf[i] += env->elem_cdf[i-1];
+        }
+    } else {
+        throw std::runtime_error("empty texture");
     }
 }
 
