@@ -229,7 +229,7 @@ struct environment {
     texture_info ke_txt = {};          // emission texture
 
     // computed properties
-    std::vector<float> elem_cdf;    // element cdf for sampling
+    std::vector<float> elem_cdf;  // element cdf for sampling
 };
 
 // Node in a transform hierarchy.
@@ -350,10 +350,11 @@ void udpate_bbox(shape* shp);
 void update_bbox(scene* scn, bool do_shapes = true);
 
 // Update lights.
-void update_lights(scene* scn, bool do_shapes = true);
+void update_lights(
+    scene* scn, bool do_shapes = true, bool do_environments = false);
 // Generate a distribution for sampling a shape uniformly based on area/length.
 void update_shape_cdf(shape* shp);
-// Generate a distribution for sampling an environment texture uniformly 
+// Generate a distribution for sampling an environment texture uniformly
 // based on angle and texture intensity.
 void update_environment_cdf(environment* env);
 
@@ -432,6 +433,8 @@ vec3f eval_norm(const environment* env, const vec2f& uv);
 vec2f eval_texcoord(const environment* env, const vec2f& uv);
 // Evaluate uv parameters for an incoming direction.
 vec2f eval_uv(const environment* env, const vec3f& w);
+// Evaluate the incoming direction from the uv.
+vec3f eval_direction(const environment* env, const vec2f& uv);
 
 // Evaluate a texture.
 vec4f eval_texture(const texture_info& info, const vec2f& texcoord,
@@ -485,9 +488,12 @@ node* make_node(const std::string& name, camera* cam = nullptr,
 environment* make_environment(const std::string& name,
     const vec3f& ke = {1, 1, 1}, texture* ke_txt = nullptr,
     const frame3f& frame = identity_frame3f);
-animation* make_animation(const std::string& name, const std::vector<float>& times = {},
-    const std::vector<vec3f>& translation = {}, const std::vector<vec4f>& rotation = {}, 
-    const std::vector<vec3f>& scale = {}, const std::vector<node*>& targets = {}, bool bezier = false);
+animation* make_animation(const std::string& name,
+    const std::vector<float>& times = {},
+    const std::vector<vec3f>& translation = {},
+    const std::vector<vec4f>& rotation = {},
+    const std::vector<vec3f>& scale = {},
+    const std::vector<node*>& targets = {}, bool bezier = false);
 
 // make a scene
 scene* make_scene(const std::string& name, const std::vector<camera*>& cams,
@@ -552,8 +558,9 @@ texture* make_bumpnorm_texture(const std::string& name, int resolution = 512,
     int tile = 16, float scale = 4.0f);
 texture* make_sky_texture(
     const std::string& name, int resolution = 512, float skyangle = pi / 4);
-environment* make_sky_environment(
-    const std::string& name, int resolution = 512, float skyangle = pi / 4);
+texture* make_lights_texture(const std::string& name, int resolution = 512,
+    const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pi / 4,
+    float lwidth = pi / 16, float lheight = pi / 16);
 
 // Makes the Cornell Box scene.
 scene* make_cornellbox_scene(const std::string& name, bool envlight = false);
@@ -568,6 +575,8 @@ scene* make_simple_scene(
 // Make a simple scene with a single object.
 scene* make_shape_scene(
     const std::string& name, shape* shp, material* mat, bool envlight = false);
+// Make a simple scene with a single environment and a mirror ball.
+scene* make_environment_scene(const std::string& name, environment* env);
 // Make a scene with random instances
 scene* make_random_instances_scene(const std::string& name, const vec2i& num,
     const bbox3f& bbox, uint64_t seed = 13);

@@ -440,50 +440,6 @@ std::vector<vec4b> tonemap_image(
     return ldr;
 }
 
-// Image over operator
-void image_over(
-    vec4f* img, int width, int height, int nlayers, vec4f** layers) {
-    for (auto i = 0; i < width * height; i++) {
-        img[i] = {0, 0, 0, 0};
-        auto weight = 1.0f;
-        for (auto l = 0; l < nlayers; l++) {
-            img[i].x += layers[l][i].x * layers[l][i].w * weight;
-            img[i].y += layers[l][i].y * layers[l][i].w * weight;
-            img[i].z += layers[l][i].z * layers[l][i].w * weight;
-            img[i].w += layers[l][i].w * weight;
-            weight *= (1 - layers[l][i].w);
-        }
-        if (img[i].w) {
-            img[i].x /= img[i].w;
-            img[i].y /= img[i].w;
-            img[i].z /= img[i].w;
-        }
-    }
-}
-
-// Image over operator
-void image_over(
-    vec4b* img, int width, int height, int nlayers, vec4b** layers) {
-    for (auto i = 0; i < width * height; i++) {
-        auto comp = zero4f;
-        auto weight = 1.0f;
-        for (auto l = 0; l < nlayers && weight > 0; l++) {
-            auto w = layers[l][i].w / 255.0f;
-            comp.x += layers[l][i].x / 255.0f * w * weight;
-            comp.y += layers[l][i].y / 255.0f * w * weight;
-            comp.z += layers[l][i].z / 255.0f * w * weight;
-            comp.w += w * weight;
-            weight *= (1 - w);
-        }
-        if (comp.w) {
-            img[i] = float_to_byte(
-                {comp.x / comp.w, comp.y / comp.w, comp.z / comp.w, comp.w});
-        } else {
-            img[i] = {0, 0, 0, 0};
-        }
-    }
-}
-
 // Convert HSV to RGB
 // Implementatkion from
 // http://stackoverflow.com/questions/3018313/algorithm-to-convert-rgb-to-hsv-and-hsv-to-rgb-in-range-0-255-for-both
@@ -652,7 +608,7 @@ std::vector<vec4b> make_uv_image(int width, int height) {
     for (int j = 0; j < height; j++) {
         for (int i = 0; i < width; i++) {
             img[i + j * width] = float_to_byte(
-                {i / (float)(width - 1), j / (float)(height - 1), 0, 255});
+                {i / (float)(width - 1), j / (float)(height - 1), 0, 1});
         }
     }
     return img;
@@ -665,54 +621,23 @@ std::vector<vec4b> make_uvgrid_image(
     auto tile = width / tiles;
     for (int j = 0; j < height; j++) {
         for (int i = 0; i < width; i++) {
-            byte ph = 32 * (i / (height / 8));
-            byte pv = 128;
-            byte ps = 64 + 16 * (7 - j / (height / 8));
+            auto ii = i / tile, jj = j / tile;
+            auto ww = width / tile, hh = height / tile;
+            byte ph = ((256 / (ww * hh)) * (ii + jj * ww) - 64 + 256) % 256;
+            byte pv = 192;
+            byte ps = 128;
             if (i % (tile / 2) && j % (tile / 2)) {
                 if ((i / tile + j / tile) % 2)
                     pv += 16;
                 else
                     pv -= 16;
             } else {
-                pv = 196;
+                pv = 224;
                 ps = 32;
             }
-            img[i + j * width] = (colored) ? hsv_to_rgb({ph, ps, pv, 255}) :
-                                             vec4b{pv, pv, pv, 255};
-        }
-    }
-    return img;
-}
-
-// Make a uv recusive colored grid
-std::vector<vec4b> make_recuvgrid_image(
-    int width, int height, int tiles, bool colored) {
-    auto img = std::vector<vec4b>(width * height);
-    auto tile = width / tiles;
-    for (int j = 0; j < height; j++) {
-        for (int i = 0; i < width; i++) {
-            byte ph = 32 * (i / (height / 8));
-            byte pv = 128;
-            byte ps = 64 + 16 * (7 - j / (height / 8));
-            if (i % (tile / 2) && j % (tile / 2)) {
-                if ((i / tile + j / tile) % 2)
-                    pv += 16;
-                else
-                    pv -= 16;
-                if ((i / (tile / 4) + j / (tile / 4)) % 2)
-                    pv += 4;
-                else
-                    pv -= 4;
-                if ((i / (tile / 8) + j / (tile / 8)) % 2)
-                    pv += 1;
-                else
-                    pv -= 1;
-            } else {
-                pv = 196;
-                ps = 32;
-            }
-            img[i + j * width] = (colored) ? hsv_to_rgb({ph, ps, pv, 255}) :
-                                             vec4b{pv, pv, pv, 255};
+            img[i + (height - j - 1) * width] =
+                (colored) ? hsv_to_rgb({ph, ps, pv, 255}) :
+                            vec4b{pv, pv, pv, 255};
         }
     }
     return img;
@@ -742,7 +667,7 @@ std::vector<vec4b> bump_to_normal_map(
 
 // Implementation of sunsky modified heavily from pbrt
 std::vector<vec4f> make_sunsky_image(int width, int height, float thetaSun,
-    float turbidity, bool has_sun, bool has_ground) {
+    float turbidity, bool has_sun, const vec3f& ground_albedo) {
     auto wSun = vec3f{0, cos(thetaSun), sin(thetaSun)};
 
     // sunSpectralRad =  ComputeAttenuatedSunlight(thetaS, turbidity);
@@ -827,9 +752,8 @@ std::vector<vec4f> make_sunsky_image(int width, int height, float thetaSun,
                                                        zero3f;
     };
 
-    auto img = std::vector<vec4f>(width * height);
-    for (auto j = 0; j < height; j++) {
-        if (!has_ground && j >= height / 2) continue;
+    auto img = std::vector<vec4f>(width * height, {0, 0, 0, 1});
+    for (auto j = 0; j < height / 2; j++) {
         auto theta = pi * ((j + 0.5f) / height);
         theta = clamp(theta, 0.0f, pi / 2 - flt_eps);
         for (int i = 0; i < width; i++) {
@@ -842,6 +766,45 @@ std::vector<vec4f> make_sunsky_image(int width, int height, float thetaSun,
         }
     }
 
+    if (ground_albedo != zero3f) {
+        auto ground = zero3f;
+        for (auto j = 0; j < height / 2; j++) {
+            auto theta = pi * ((j + 0.5f) / height);
+            for (int i = 0; i < width; i++) {
+                auto pxl = img[i + j * width];
+                auto le = vec3f{pxl.x, pxl.y, pxl.z};
+                auto angle = sin(theta) * 4 * pi / (width * height);
+                ground += le * (ground_albedo / pi) * cos(theta) * angle;
+            }
+        }
+        for (auto j = height / 2; j < height; j++) {
+            for (int i = 0; i < width; i++) {
+                img[i + j * width] = {ground.x, ground.y, ground.z, 1};
+            }
+        }
+    }
+
+    return img;
+}
+
+// Make an image of multiple lights.
+std::vector<vec4f> make_lights_image(int width, int height, const vec3f& le,
+    int nlights, float langle, float lwidth, float lheight) {
+    auto img = std::vector<vec4f>(width * height, {0, 0, 0, 1});
+    for (auto j = 0; j < height / 2; j++) {
+        auto theta = pi * ((j + 0.5f) / height);
+        theta = clamp(theta, 0.0f, pi / 2 - flt_eps);
+        if (fabs(theta - langle) > lheight / 2) continue;
+        for (int i = 0; i < width; i++) {
+            auto phi = 2 * pi * (float(i + 0.5f) / width);
+            auto inlight = false;
+            for (auto l = 0; l < nlights; l++) {
+                auto lphi = 2 * pi * (l + 0.5f) / nlights;
+                inlight = inlight || fabs(phi - lphi) < lwidth / 2;
+            }
+            img[i + j * width] = {le.x, le.y, le.z, 1};
+        }
+    }
     return img;
 }
 
