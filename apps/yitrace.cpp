@@ -200,7 +200,8 @@ bool update(ygl::glwindow* win, app_state* app) {
         auto pratio = app->resolution / app->preview_resolution;
         for (auto j = 0; j < app->height; j++) {
             for (auto i = 0; i < app->width; i++) {
-                auto pi = i / pratio, pj = j / pratio;
+                auto pi = ygl::clamp(i / pratio, 0, pwidth - 1),
+                     pj = ygl::clamp(j / pratio, 0, pheight - 1);
                 app->img[i + j * app->width] = pimg[pi + pwidth * pj];
             }
         }

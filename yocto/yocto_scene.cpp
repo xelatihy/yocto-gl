@@ -229,9 +229,12 @@ vec2f compute_animation_range(const scene* scn, const std::string& anim_group) {
 }
 
 // Update lights.
-void update_lights(scene* scn, bool do_shapes) {
+void update_lights(scene* scn, bool do_shapes, bool do_environments) {
     if (do_shapes) {
         for (auto shp : scn->shapes) shp->elem_cdf.clear();
+    }
+    if (do_environments) {
+        for (auto env : scn->environments) env->elem_cdf.clear();
     }
     for (auto lgt : scn->lights) delete lgt;
     scn->lights.clear();
@@ -249,7 +252,7 @@ void update_lights(scene* scn, bool do_shapes) {
         auto lgt = new light();
         lgt->env = env;
         scn->lights.push_back(lgt);
-        update_environment_cdf(env);
+        if (env->elem_cdf.empty()) update_environment_cdf(env);
     }
 }
 
@@ -280,21 +283,21 @@ void update_shape_cdf(shape* shp) {
 void update_environment_cdf(environment* env) {
     env->elem_cdf.clear();
     auto txt = env->ke_txt.txt;
-    if(!txt) return;
+    if (!txt) return;
     env->elem_cdf.resize(txt->width * txt->height);
-    if(txt->ldr.empty()) {
-        for(auto i = 0; i < env->elem_cdf.size(); i ++) {
+    if (!txt->ldr.empty()) {
+        for (auto i = 0; i < env->elem_cdf.size(); i++) {
             auto th = (i / txt->width + 0.5f) * pi / txt->height;
             auto rgba = srgb_to_linear(txt->ldr[i]);
-            env->elem_cdf[i] = max(rgba.x,max(rgba.y,rgba.z)) * sin(th);
-            if(i) env->elem_cdf[i] += env->elem_cdf[i-1];
+            env->elem_cdf[i] = max(rgba.x, max(rgba.y, rgba.z)) * sin(th);
+            if (i) env->elem_cdf[i] += env->elem_cdf[i - 1];
         }
-    } else if(txt->hdr.empty()) {
-        for(auto i = 0; i < env->elem_cdf.size(); i ++) {
+    } else if (!txt->hdr.empty()) {
+        for (auto i = 0; i < env->elem_cdf.size(); i++) {
             auto th = (i / txt->width + 0.5f) * pi / txt->height;
             auto rgba = txt->hdr[i];
-            env->elem_cdf[i] = max(rgba.x,max(rgba.y,rgba.z)) * sin(th);
-            if(i) env->elem_cdf[i] += env->elem_cdf[i-1];
+            env->elem_cdf[i] = max(rgba.x, max(rgba.y, rgba.z)) * sin(th);
+            if (i) env->elem_cdf[i] += env->elem_cdf[i - 1];
         }
     } else {
         throw std::runtime_error("empty texture");
@@ -609,7 +612,16 @@ vec2f eval_texcoord(const environment* env, const vec2f& uv) { return uv; }
 // Evaluate uv parameters for environment.
 vec2f eval_uv(const environment* env, const vec3f& w) {
     auto wl = transform_direction_inverse(env->frame, w);
-    return {atan2(wl.z, wl.x) / (2 * pi), acos(clamp(wl.y, -1.0f, 1.0f)) / pi};
+    auto uv = vec2f{
+        atan2(wl.z, wl.x) / (2 * pi), acos(clamp(wl.y, -1.0f, 1.0f)) / pi};
+    if (uv.x < 0) uv.x += 1;
+    return uv;
+}
+// Evaluate the environment direction.
+vec3f eval_direction(const environment* env, const vec2f& uv) {
+    return transform_direction(
+        env->frame, {cos(uv.x * 2 * pi) * sin(uv.y * pi), cos(uv.y * pi),
+                        sin(uv.x * 2 * pi) * sin(uv.y * pi)});
 }
 
 // Evaluate a texture
@@ -2613,7 +2625,6 @@ scene* make_scene(const std::string& name, const std::vector<camera*>& cams,
     return scn;
 }
 
-
 // example shapes
 shape* make_floor_shape(const std::string& name, int tesselation, float size) {
     auto shp = new shape();
@@ -2821,10 +2832,10 @@ texture* make_sky_texture(const std::string& name, int res, float skyangle) {
     return make_texture(name, name + ".hdr", res * 2, res, {},
         make_sunsky_image(res * 2, res, skyangle));
 }
-environment* make_sky_environment(
-    const std::string& name, int res, float skyangle) {
-    return make_environment(
-        name, {1, 1, 1}, make_sky_texture(name, res, skyangle));
+texture* make_lights_texture(const std::string& name, int res, const vec3f& le,
+    int nlights, float langle, float lwidth, float lheight) {
+    return make_texture(name, name + ".hdr", res * 2, res, {},
+        make_lights_image(res * 2, res, le, nlights, langle, lwidth, lheight));
 }
 
 // makes the cornell box scene
@@ -2909,26 +2920,14 @@ instance* make_simple_floor(bool notexture = false) {
             (notexture) ? nullptr : make_grid_texture("grid")));
 }
 
-// Make lights and floor for a simple scene.
 std::vector<instance*> make_simple_arealights() {
     return std::vector<instance*>{
-        make_instance("light1", make_quad_shape("light1", 0, 16),
-            make_emission_material("light1", {8, 8, 8}),
-            lookat_frame({0, 16, 0}, {0, 1, 0}, {0, 0, 1}, true)),
-        make_instance("light2", make_quad_shape("light2", 0, 16),
-            make_emission_material("light2", {8, 8, 8}),
-            lookat_frame({0, 16, 16}, {0, 1, 0}, {0, 0, 1}, true)),
-    };
-}
-
-std::vector<instance*> make_simple_arealights1() {
-    return std::vector<instance*>{
-        make_instance("light1", make_quad_shape("light1", 0, 8),
+        make_instance("light1", make_quad_shape("light1", 0, 4),
             make_emission_material("light1", {20, 20, 20}),
-            lookat_frame({-4, 5, 8}, {0, 1, 0}, {0, 0, 1}, true)),
-        make_instance("light2", make_quad_shape("light2", 0, 8),
+            lookat_frame({-4, 8, 8}, {0, 1, 0}, {0, 1, 0}, true)),
+        make_instance("light2", make_quad_shape("light2", 0, 4),
             make_emission_material("light2", {20, 20, 20}),
-            lookat_frame({+4, 5, 8}, {0, 1, 0}, {0, 0, 1}, true)),
+            lookat_frame({+4, 8, 8}, {0, 1, 0}, {0, 1, 0}, true)),
     };
 }
 
@@ -2970,13 +2969,13 @@ scene* make_simple_scene(const std::string& name,
 
     if (shps.size() >= 3) {
         cams.push_back(make_camera(
-            "cam", {0, 6, 24}, {0, 1, 0}, 7.5f * pi / 180, 2.35f / 1.0f));
+            "cam", {0, 5, 14}, {0, 1, 0}, 14.0f * pi / 180, 2.35f / 1.0f));
     } else if (shps.size() == 2) {
         cams.push_back(make_camera(
-            "cam", {0, 6, 24}, {0, 1, 0}, 7.5f * pi / 180, 16.0f / 9.0f));
+            "cam", {0, 5, 14}, {0, 1, 0}, 14.0f * pi / 180, 16.0f / 9.0f));
     } else if (shps.size() == 1) {
         cams.push_back(
-            make_camera("cam", {0, 6, 24}, {0, 1, 0}, 7.5f * pi / 180, 1.0f));
+            make_camera("cam", {0, 5, 14}, {0, 1, 0}, 14.0f * pi / 180, 1.0f));
     }
 
     ists.push_back(make_simple_floor());
@@ -2987,14 +2986,15 @@ scene* make_simple_scene(const std::string& name,
     }
 
     if (envlight) {
-        envs.push_back(make_sky_environment("env"));
+        envs.push_back(
+            make_environment("env", {1, 1, 1}, make_sky_texture("sky")));
     } else if (!pointlights) {
         for (auto lgt : make_simple_arealights()) ists.push_back(lgt);
     } else {
         for (auto lgt : make_simple_pointlights()) ists.push_back(lgt);
     }
 
-    if(anms.empty()) return make_scene(name, cams, ists, envs);
+    if (anms.empty()) return make_scene(name, cams, ists, envs);
 
     auto ndes = std::vector<node*>();
     if (!anms.empty()) {
@@ -3009,7 +3009,7 @@ scene* make_simple_scene(const std::string& name,
                 if (objs[i] == ist) {
                     anms[i]->targets.push_back(ndes.back());
                     ndes.back()->frame = identity_frame3f;
-                    ndes.back()->translation = frames[i%3].o;
+                    ndes.back()->translation = frames[i % 3].o;
                 }
             }
         }
@@ -3029,12 +3029,13 @@ scene* make_simple_scene(
     auto ists = std::vector<instance*>();
     auto envs = std::vector<environment*>();
     cams.push_back(
-        make_camera("cam", {0, 6, 24}, {0, 1, 0}, 7.5f * pi / 180, 1.0f));
+        make_camera("cam", {0, 5, 14}, {0, 1, 0}, 14.0f * pi / 180, 1.0f));
     ists.push_back(make_simple_floor());
     ists.push_back(
         make_instance(shp->name, shp, mat, translation_frame({0, 1, 0})));
     if (envlight) {
-        envs.push_back(make_sky_environment("env"));
+        envs.push_back(
+            make_environment("env", {1, 1, 1}, make_sky_texture("env")));
     } else {
         for (auto lgt : make_simple_arealights()) ists.push_back(lgt);
     }
@@ -3046,16 +3047,30 @@ scene* make_shape_scene(
     const std::string& name, shape* shp, material* mat, bool envlight) {
     auto cams = std::vector<camera*>();
     cams.push_back(
-        make_camera("cam", {0, 6, 24}, {0, 1, 0}, 7.5f * pi / 180, 1.0f));
+        make_camera("cam", {0, 5, 14}, {0, 1, 0}, 14.0f * pi / 180, 1.0f));
     auto ists = std::vector<instance*>();
     auto envs = std::vector<environment*>();
     ists.push_back(
         make_instance("obj", shp, mat, translation_frame({0, 1, 0})));
     if (envlight) {
-        envs.push_back(make_sky_environment("env"));
+        envs.push_back(
+            make_environment("env", {1, 1, 1}, make_sky_texture("sky")));
     } else {
         for (auto lgt : make_simple_arealights()) ists.push_back(lgt);
     }
+    return make_scene(name, cams, ists, envs);
+}
+
+// Make a simple scene with single environment and a mirror ball.
+scene* make_environment_scene(const std::string& name, environment* env) {
+    auto cams = std::vector<camera*>();
+    cams.push_back(
+        make_camera("cam", {0, 5, 14}, {0, 1, 0}, 14.0f * pi / 180, 1.0f));
+    auto ists = std::vector<instance*>();
+    auto envs = std::vector<environment*>();
+    ists.push_back(make_instance("obj", make_sphere_shape("obj"),
+        make_metal_material("obj", {1, 1, 1}, 0), identity_frame3f));
+    envs.push_back(env);
     return make_scene(name, cams, ists, envs);
 }
 
@@ -3067,7 +3082,7 @@ scene* make_random_instances_scene(const std::string& name, const vec2i& num,
                       (bbox.max.x - bbox.min.x) / num.y);
 
     auto cam = make_camera(
-        "cam", {0, 6, 24}, {0, 1, 0}, 7.5f * pi / 180, 2.35f / 1.0f);
+        "cam", {0, 5, 14}, {0, 1, 0}, 14.0f * pi / 180, 2.35f / 1.0f);
 
     auto ists = std::vector<instance*>();
     ists.push_back(make_instance("floor", make_floor_shape("floor"),

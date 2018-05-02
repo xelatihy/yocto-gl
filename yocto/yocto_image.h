@@ -157,11 +157,11 @@ std::vector<vec4b> tonemap_image(
 
 // Make example images.
 std::vector<vec4b> make_grid_image(int width, int height, int tile = 8,
-    const vec4b& c0 = {64, 64, 64, 255},
-    const vec4b& c1 = {128, 128, 128, 255});
+    const vec4b& c0 = {128, 128, 128, 255},
+    const vec4b& c1 = {192, 192, 192, 255});
 std::vector<vec4b> make_checker_image(int width, int height, int tile = 8,
-    const vec4b& c0 = {64, 64, 64, 255},
-    const vec4b& c1 = {128, 128, 128, 255});
+    const vec4b& c0 = {128, 128, 128, 255},
+    const vec4b& c1 = {192, 192, 192, 255});
 std::vector<vec4b> make_bumpdimple_image(int width, int height, int tile = 8);
 std::vector<vec4b> make_ramp_image(
     int width, int height, const vec4b& c0, const vec4b& c1, bool srgb = false);
@@ -169,8 +169,6 @@ std::vector<vec4b> make_gammaramp_image(int width, int height);
 std::vector<vec4f> make_gammaramp_imagef(int width, int height);
 std::vector<vec4b> make_uv_image(int width, int height);
 std::vector<vec4b> make_uvgrid_image(
-    int width, int height, int tile = 8, bool colored = true);
-std::vector<vec4b> make_recuvgrid_image(
     int width, int height, int tile = 8, bool colored = true);
 
 // Comvert a bump map to a normal map.
@@ -180,7 +178,12 @@ std::vector<vec4b> bump_to_normal_map(
 // Make a sunsky HDR model with sun at theta elevation in [0,pi/2], turbidity
 // in [1.7,10] with or without sun.
 std::vector<vec4f> make_sunsky_image(int width, int height, float thetaSun,
-    float turbidity = 3, bool has_sun = false, bool has_ground = true);
+    float turbidity = 3, bool has_sun = false,
+    const vec3f& ground_albedo = {0.7f, 0.7f, 0.7f});
+// Make an image of multiple lights.
+std::vector<vec4f> make_lights_image(int width, int height,
+    const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pi / 4,
+    float lwidth = pi / 16, float lheight = pi / 16);
 
 // Make a noise image. Wrap works only if both resx and resy are powers of two.
 std::vector<vec4b> make_noise_image(
@@ -192,10 +195,6 @@ std::vector<vec4b> make_ridge_image(int width, int height, float scale = 1,
     int octaves = 6, bool wrap = true);
 std::vector<vec4b> make_turbulence_image(int width, int height, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
-
-// Image over operator.
-void image_over(vec4f* img, int width, int height, int nlayers, vec4f** layers);
-void image_over(vec4b* img, int width, int height, int nlayers, vec4b** layers);
 
 #if YGL_IMAGEIO
 

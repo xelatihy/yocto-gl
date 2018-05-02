@@ -29,6 +29,19 @@ Please consider this to be just development notes and not any real planning.
 
 ## Trace
 
+- sample pdfs based on intersection record
+    - probability based on intersection point (pos, norm, ei)
+        - fold ei into point
+- environment based on only w?
+    - do not need point for the environment any more?
+    - Le -> emission
+    - ei -> pdf
+- trace point
+    - should we have eval_pos, eval_norm, eval_emission, eval_brdf?
+        - only problem is where to put normal map
+    - use intersection when needed
+        - seems to possible have better semantic for envmap?
+    - remvoe point out of the equation
 - review loops for intersect missed test
     - consider removing environment point
 - opacity as lobe
@@ -45,11 +58,8 @@ Please consider this to be just development notes and not any real planning.
     - fresnel in coefficients
     - fresnel in weights
 - highlights are too soft in bitterli scenes
-- fast distribution sampling
 - add radius in offsetting rays
 - sample background to sum all environments
-- envmap sampling
-    - simplest case, pick pixels as 1D distribution
 - cleanup sampling functions everywhere
     - probably removing sample_points/lines/triangles
     - cleanup sampling in ray tracing

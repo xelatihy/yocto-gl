@@ -1119,12 +1119,9 @@ inline float sample_index_pdf(int size) { return 1.0f / size; }
 
 // Sample a discrete distribution represented by its cdf.
 inline int sample_discrete(const std::vector<float>& cdf, float r) {
-    // todo: implement binary search better
     r = clamp(r * cdf.back(), 0.0f, cdf.back() - 0.00001f);
-    for (auto i = 0; i < cdf.size(); i++) {
-        if (cdf[i] > r) return i;
-    }
-    return (int)cdf.size() - 1;
+    auto idx = (int)(std::upper_bound(cdf.begin(), cdf.end(), r) - cdf.begin());
+    return clamp(idx, 0, (int)cdf.size() - 1);
 }
 // Pdf for uniform discrete distribution sampling.
 inline float sample_discrete_pdf(const std::vector<float>& cdf, int idx) {

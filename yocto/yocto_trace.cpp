@@ -53,6 +53,8 @@ struct trace_point {
     vec3f kt = {0, 0, 0};              // thin glass transmission
     float op = 1;                      // opacity
     bool double_sided = false;         // double sided
+    int eid = 0;                       // element id
+    vec2f euv = zero2f;                // element uv
 };
 
 // Create a point for an environment map. Resolves material with textures.
@@ -85,6 +87,8 @@ trace_point eval_point(const instance* ist, int eid, const vec2f& euv) {
     // point
     auto pt = trace_point();
     pt.ist = ist;
+    pt.eid = eid;
+    pt.euv = euv;
 
     // shape values
     pt.pos = eval_pos(ist, eid, euv);
@@ -571,26 +575,39 @@ float sample_delta_prob(const trace_point& pt, const vec3f& wo) {
 // Sample weight for a light point.
 float sample_light_pdf(const trace_point& lpt, const trace_point& pt) {
     if (lpt.ist) {
-        if (lpt.ist->shp->elem_cdf.empty()) return 0;
-        if (!lpt.ist->shp->triangles.empty() || !lpt.ist->shp->quads.empty()) {
-            auto area = lpt.ist->shp->elem_cdf.back();
+        auto shp = lpt.ist->shp;
+        if (shp->elem_cdf.empty()) return 0;
+        if (!shp->triangles.empty() || !lpt.ist->shp->quads.empty()) {
+            // prob triangle * area triangle = area triangle mesh
+            auto area = shp->elem_cdf.back();
             auto dist = length(lpt.pos - pt.pos);
             return (dist * dist) /
                    (fabs(dot(lpt.norm, normalize(lpt.pos - pt.pos))) * area);
-        } else if (!pt.ist->shp->lines.empty() ||
-                   !pt.ist->shp->beziers.empty()) {
+        } else if (!shp->lines.empty() || !shp->beziers.empty()) {
             throw std::runtime_error("not implemented yet");
             return 0;
-        } else if (!lpt.ist->shp->points.empty() ||
-                   !lpt.ist->shp->pos.empty()) {
-            auto num = lpt.ist->shp->elem_cdf.back();
+        } else if (!shp->points.empty() || !shp->pos.empty()) {
+            auto num = shp->elem_cdf.back();
             auto dist = length(lpt.pos - pt.pos);
             return (dist * dist) / num;
         } else {
             return 0;
         }
     } else if (lpt.env) {
-        return 1 / (4 * pi);
+        auto env = lpt.env;
+        auto txt = env->ke_txt.txt;
+        if (!env->elem_cdf.empty() && txt) {
+            auto i = (int)(lpt.texcoord.x * txt->width);
+            auto j = (int)(lpt.texcoord.y * txt->height);
+            auto idx = j * txt->width + i;
+            auto prob =
+                sample_discrete_pdf(env->elem_cdf, idx) / env->elem_cdf.back();
+            auto angle = (2 * pi / txt->width) * (pi / txt->height) *
+                         sin(pi * (j + 0.5f) / txt->height);
+            return prob / angle;
+        } else {
+            return 1 / (4 * pi);
+        }
     } else {
         return 0;
     }
@@ -611,7 +628,15 @@ vec3f sample_light(
         return normalize(
             eval_pos(lgt->ist, sample.first, sample.second) - pt.pos);
     } else if (lgt->env) {
-        return sample_sphere(ruv);
+        auto txt = lgt->env->ke_txt.txt;
+        if (!lgt->env->elem_cdf.empty() && txt) {
+            auto idx = sample_discrete(lgt->env->elem_cdf, rel);
+            auto u = (idx % txt->width + 0.5f) / txt->width;
+            auto v = (idx / txt->width + 0.5f) / txt->height;
+            return eval_direction(lgt->env, {u, v});
+        } else {
+            return sample_sphere(ruv);
+        }
     } else {
         throw std::runtime_error("should not have gotten here");
     }
@@ -1036,7 +1061,7 @@ vec4f trace_sample(const scene* scn, const camera* cam, int i, int j, int width,
         l = zero3f;
     }
     if (max(l) > pixel_clamp) l = l * (pixel_clamp / max(l));
-    return {l.x, l.y, l.z, (pt.ist) ? 1.0f : 0.0f};
+    return {l.x, l.y, l.z, (pt.ist || pt.env) ? 1.0f : 0.0f};
 }
 
 // Trace the next nsamples.

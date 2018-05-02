@@ -70,8 +70,9 @@ void save_scene(const ygl::scene* scn, const std::string& sname,
 
 inline std::vector<std::string>& proc_scenes_types() {
     static auto names = std::vector<std::string>{"cornellbox", "textures",
-        "shapes", "basic", "simple", "lines", "subdivs", "materials",
-        "lighttests", "transparent", "instances", "animated", "examples"};
+        "shapes", "environments", "basic", "simple", "simplemat", "lines",
+        "subdivs", "materials", "lighttests", "transparent", "instances",
+        "animated", "examples"};
     return names;
 }
 
@@ -116,6 +117,17 @@ std::vector<ygl::scene*> make_proc_scenes(const std::string& name) {
         }
     }
 
+    // environments
+    if (name == "environments") {
+        auto envs = std::vector<ygl::environment*>{
+            ygl::make_environment("const-env", {1, 1, 1}),
+            ygl::make_environment(
+                "sky-env", {1, 1, 1}, ygl::make_sky_texture("sky"))};
+        for (auto env : envs) {
+            scenes.push_back(ygl::make_environment_scene(env->name, env));
+        }
+    }
+
     // basic shapes
     if (name == "basic") {
         auto lnames = std::vector<std::string>{"-el", "-al", "-pl"};
@@ -127,9 +139,9 @@ std::vector<ygl::scene*> make_proc_scenes(const std::string& name) {
                     ygl::make_cuberounded_shape("obj3"),
                 },
                 {
-                    ygl::make_plastic_material("obj1", {0.5f, 0.2f, 0.2f}),
-                    ygl::make_plastic_material("obj2", {0.2f, 0.5f, 0.2f}),
-                    ygl::make_plastic_material("obj3", {0.2f, 0.2f, 0.5f}),
+                    ygl::make_plastic_material("obj1", {0.7f, 0.5f, 0.5f}),
+                    ygl::make_plastic_material("obj2", {0.5f, 0.7f, 0.5f}),
+                    ygl::make_plastic_material("obj3", {0.5f, 0.5f, 0.7f}),
                 },
                 lgt == 0, lgt == 2));
         }
@@ -157,26 +169,49 @@ std::vector<ygl::scene*> make_proc_scenes(const std::string& name) {
         }
     }
 
+    // simple materials
+    if (name == "simplemat") {
+        for (auto env : {0, 1}) {
+            scenes.push_back(
+                ygl::make_simple_scene("simplemat"s + ((env) ? "-el" : "-al"),
+                    {
+                        ygl::make_spherecube_shape("obj1"),
+                        ygl::make_spherecube_shape("obj2"),
+                        ygl::make_spherecube_shape("obj3"),
+                    },
+                    {
+                        ygl::make_matte_material("obj1", {1, 1, 1}),
+                        ygl::make_metal_material("obj2", {1, 1, 1}, 0),
+                        ygl::make_plastic_material(
+                            "obj3", {0.7f, 0.7f, 0.96f}, 0.05f),
+                    },
+                    env));
+        }
+    }
+
     // lines
     if (name == "lines") {
         for (auto env : {0, 1}) {
             scenes.push_back(
                 ygl::make_simple_scene("lines"s + ((env) ? "-el" : "-al"),
                     {
-                        ygl::make_hairball_shape("obj1", 16, 2, 2, {0.15f,0.2f}, {0.05f,100}, {0,0}),
-                        ygl::make_hairball_shape("obj2", 16, 2, 2, {0.15f,0.2f}, {0.5f,8}, {0,0}),
-                        ygl::make_hairball_shape("obj3", 16, 2, 2, {0.15f,0.2f}, {0,0}, {0.5f,128}),
+                        ygl::make_hairball_shape("obj1", 16, 2, 2,
+                            {0.15f, 0.2f}, {0.05f, 100}, {0, 0}),
+                        ygl::make_hairball_shape(
+                            "obj2", 16, 2, 2, {0.15f, 0.2f}, {0.5f, 8}, {0, 0}),
+                        ygl::make_hairball_shape("obj3", 16, 2, 2,
+                            {0.15f, 0.2f}, {0, 0}, {0.5f, 128}),
                         ygl::make_sphere_shape("int1", 4, 1.6f),
                         ygl::make_sphere_shape("int2", 4, 1.6f),
                         ygl::make_sphere_shape("int3", 4, 1.6f),
                     },
                     {
-                        ygl::make_matte_material("obj1", {0.2f, 0.2f, 0.2f}),
-                        ygl::make_matte_material("obj2", {0.2f, 0.2f, 0.2f}),
-                        ygl::make_matte_material("obj3", {0.2f, 0.2f, 0.2f}),
-                        ygl::make_matte_material("int1", {0.2f, 0.2f, 0.2f}),
-                        ygl::make_matte_material("int2", {0.2f, 0.2f, 0.2f}),
-                        ygl::make_matte_material("int3", {0.2f, 0.2f, 0.2f}),
+                        ygl::make_matte_material("obj1", {0.7f, 0.7f, 0.7f}),
+                        ygl::make_matte_material("obj2", {0.7f, 0.7f, 0.7f}),
+                        ygl::make_matte_material("obj3", {0.7f, 0.7f, 0.7f}),
+                        ygl::make_matte_material("int1", {0.7f, 0.7f, 0.7f}),
+                        ygl::make_matte_material("int2", {0.7f, 0.7f, 0.7f}),
+                        ygl::make_matte_material("int3", {0.7f, 0.7f, 0.7f}),
                     },
                     env));
         }
@@ -210,11 +245,11 @@ std::vector<ygl::scene*> make_proc_scenes(const std::string& name) {
             return std::vector<std::vector<ygl::material*>>{
                 {
                     ygl::make_plastic_material(
-                        "plastic1", {0.5f, 0.2f, 0.2f}, 0.1f),
+                        "plastic1", {0.7f, 0.5f, 0.5f}, 0.1f),
                     ygl::make_plastic_material(
-                        "plastic2", {0.2f, 0.5f, 0.2f}, 0.05f),
+                        "plastic2", {0.5f, 0.7f, 0.5f}, 0.05f),
                     ygl::make_plastic_material(
-                        "plastic3", {0.2f, 0.2f, 0.5f}, 0),
+                        "plastic3", {0.5f, 0.5f, 0.7f}, 0),
                 },
                 {
                     ygl::make_metal_material(
@@ -225,7 +260,7 @@ std::vector<ygl::scene*> make_proc_scenes(const std::string& name) {
                 },
                 {
                     ygl::make_glass_material("glass1", {1, 1, 1}, 0),
-                    ygl::make_glass_material("glass2", {1, 0.5f, 0.5f}, 0),
+                    ygl::make_glass_material("glass2", {1, 0.7f, 0.7f}, 0),
                     ygl::make_glass_material("glass3", {1, 1, 1}, 0.1f),
                 },
                 {
@@ -294,25 +329,28 @@ std::vector<ygl::scene*> make_proc_scenes(const std::string& name) {
 
     // instances
     if (name == "animated") {
-            scenes.push_back(
-                ygl::make_simple_scene("animated-al",
-                    {
-                        ygl::make_sphereflipcap_shape("obj1"),
-                        ygl::make_spherecube_shape("obj2"),
-                        ygl::make_cuberounded_shape("obj3"),
-                    },
-                    {
-                        ygl::make_plastic_material("obj1", {0.5f, 0.2f, 0.2f}),
-                        ygl::make_plastic_material("obj2", {0.2f, 0.5f, 0.2f}),
-                        ygl::make_plastic_material("obj3", {0.2f, 0.2f, 0.5f}),
-                    }, false, false, 
-                    {
-                        ygl::make_animation("obj1", {0,1,2}, {}, {}, {{1,1,1},{0.75f,0.75f,0.75f},{1,1,1}}),
-                        ygl::make_animation("obj2", {0,1,2}, {{0,1,0},{0,2,0},{0,1,0}}),
-                        ygl::make_animation("obj3", {0,1,2}, {}, {ygl::rotation_quat({0,1,0}, 0), 
-                        ygl::rotation_quat({0,1,0}, ygl::pi),ygl::rotation_quat({0,1,0}, 0)}),
-                    }
-                    ));
+        scenes.push_back(ygl::make_simple_scene("animated-al",
+            {
+                ygl::make_sphereflipcap_shape("obj1"),
+                ygl::make_spherecube_shape("obj2"),
+                ygl::make_cuberounded_shape("obj3"),
+            },
+            {
+                ygl::make_plastic_material("obj1", {0.5f, 0.2f, 0.2f}),
+                ygl::make_plastic_material("obj2", {0.2f, 0.5f, 0.2f}),
+                ygl::make_plastic_material("obj3", {0.2f, 0.2f, 0.5f}),
+            },
+            false, false,
+            {
+                ygl::make_animation("obj1", {0, 1, 2}, {}, {},
+                    {{1, 1, 1}, {0.7f, 0.7f, 0.7f}, {1, 1, 1}}),
+                ygl::make_animation(
+                    "obj2", {0, 1, 2}, {{0, 1, 0}, {0, 2, 0}, {0, 1, 0}}),
+                ygl::make_animation("obj3", {0, 1, 2}, {},
+                    {ygl::rotation_quat({0, 1, 0}, 0),
+                        ygl::rotation_quat({0, 1, 0}, ygl::pi),
+                        ygl::rotation_quat({0, 1, 0}, 0)}),
+            }));
     }
 
     return scenes;
