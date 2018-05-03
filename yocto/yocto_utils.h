@@ -382,7 +382,7 @@ inline void _add_usage_str(cmdline_parser& parser, const std::string& name,
     const std::string& flag, bool opt, const std::string& metavar,
     const std::string& help, const std::string& def, bool req,
     const std::vector<T>& choices) {
-    auto str = ""s;
+    auto str = std::string();
     str += "  " + name;
     if (!flag.empty()) str += "/" + flag;
     if (!metavar.empty()) str += " " + metavar;

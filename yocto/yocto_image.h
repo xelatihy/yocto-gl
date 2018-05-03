@@ -67,6 +67,7 @@
 #include "yocto_math.h"
 
 #include <vector>
+#include <string>
 
 // -----------------------------------------------------------------------------
 // COLOR CONVERSION UTILITIES

@@ -100,6 +100,8 @@
 #include "yocto_math.h"
 
 #include <map>
+#include <string>
+#include <vector>
 
 // include json for glTF
 #if YGL_GLTFJSON

@@ -410,8 +410,8 @@ obj_scene* load_obj(const std::string& filename, bool split_shapes,
 
     // current parsing values
     auto oobj = (obj_object*)nullptr;
-    auto matname = ""s;
-    auto oname = ""s;
+    auto matname = std::string();
+    auto oname = std::string();
     auto faceted = false;
     auto elems = std::vector<obj_vertex>();
 
@@ -486,7 +486,7 @@ obj_scene* load_obj(const std::string& filename, bool split_shapes,
                 oobj->elems.back().size += 1;
             }
         } else if (obj_streq(cmd, "o")) {
-            auto name = ""s;
+            auto name = std::string();
             obj_parse(ss, name);
             obj->objects.push_back(new obj_object());
             oobj = obj->objects.back();
@@ -506,7 +506,7 @@ obj_scene* load_obj(const std::string& filename, bool split_shapes,
                     oobj->groups.back().faceted});
             }
         } else if (obj_streq(cmd, "g")) {
-            auto name = ""s;
+            auto name = std::string();
             obj_parse(ss, name);
             if (split_group) {
                 obj->objects.push_back(new obj_object());
@@ -541,7 +541,7 @@ obj_scene* load_obj(const std::string& filename, bool split_shapes,
                 oobj->props[name].push_back(tok);
             }
         } else if (obj_streq(cmd, "mtllib")) {
-            auto mtlname = ""s;
+            auto mtlname = std::string();
             obj_parse(ss, mtlname);
             auto mtlpath = path_dirname(filename) + mtlname;
             auto mats = load_mtl(mtlpath, flip_tr);
@@ -803,7 +803,7 @@ void save_obj(const std::string& filename, const obj_scene* obj,
         obj_dump_sp(fs, "e");
         obj_dump_sp(fs, env->name);
         obj_dump_sp(fs, env->ke);
-        obj_dump_sp(fs, (env->ke_txt.path != "") ? env->ke_txt.path : "\"\""s);
+        obj_dump_sp(fs, (env->ke_txt.path != "") ? env->ke_txt.path : "\"\"");
         obj_dump_sp(fs, env->frame);
         obj_dump_sp(fs, "\n");
     }
@@ -812,10 +812,10 @@ void save_obj(const std::string& filename, const obj_scene* obj,
     for (auto nde : obj->nodes) {
         obj_dump_sp(fs, "n");
         obj_dump_sp(fs, nde->name);
-        obj_dump_sp(fs, (nde->parent.empty()) ? "\"\""s : nde->parent);
-        obj_dump_sp(fs, (nde->camname.empty()) ? "\"\""s : nde->camname);
-        obj_dump_sp(fs, (nde->objname.empty()) ? "\"\""s : nde->objname);
-        obj_dump_sp(fs, (nde->envname.empty()) ? "\"\""s : nde->envname);
+        obj_dump_sp(fs, (nde->parent.empty()) ? "\"\"" : nde->parent);
+        obj_dump_sp(fs, (nde->camname.empty()) ? "\"\"" : nde->camname);
+        obj_dump_sp(fs, (nde->objname.empty()) ? "\"\"" : nde->objname);
+        obj_dump_sp(fs, (nde->envname.empty()) ? "\"\"" : nde->envname);
         obj_dump_sp(fs, nde->frame);
         obj_dump_sp(fs, nde->translation);
         obj_dump_sp(fs, nde->rotation);
