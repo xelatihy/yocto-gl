@@ -11,42 +11,29 @@ matrix:
   include:
 
   - os: osx
-    osx_image: xcode8.3
-
-  - os: osx
     osx_image: xcode9.2
 
   - os: linux
     compiler: gcc
-    env: COMPILER=g++-6
+    env:
+      - COMPILER=g++-7
+      - CMAKE_OPTIONS=-DYOCTO_OPENGL=OFF
     addons:
       apt:
-        sources: ['ubuntu-toolchain-r-test', 'sourceline': 'deb http://ppa.launchpad.net/keithw/glfw3/ubuntu trusty main']
-        packages: ['g++-6', 'ninja-build', 'libgl1-mesa-dev', 'libglew-dev', 'libglfw3-dev']
-
-  - os: linux
-    compiler: gcc
-    env: COMPILER=g++-7
-    addons:
-      apt:
-        sources: ['ubuntu-toolchain-r-test', 'sourceline': 'deb http://ppa.launchpad.net/keithw/glfw3/ubuntu trusty main']
-        packages: ['g++-7', 'ninja-build', 'libgl1-mesa-dev', 'libglew-dev', 'libglfw3-dev']
+        # sources: ['ubuntu-toolchain-r-test', 'sourceline': 'deb http://ppa.launchpad.net/keithw/glfw3/ubuntu trusty main']
+        # packages: ['g++-7', 'ninja-build', 'libgl1-mesa-dev', 'libglew-dev', 'libglfw3-dev']
+        packages: ['g++-7', 'ninja-build']
 
   - os: linux
     compiler: clang
-    env: COMPILER=clang++-4.0
+    env:
+      - COMPILER=clang++-5.0
+      - CMAKE_OPTIONS=-DYOCTO_OPENGL=OFF
     addons:
       apt:
-        sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-4.0', 'sourceline': 'deb http://ppa.launchpad.net/keithw/glfw3/ubuntu trusty main']
-        packages: ['g++-6', 'clang-4.0', 'ninja-build', 'libgl1-mesa-dev', 'libglew-dev', 'libglfw3-dev']
-
-  - os: linux
-    compiler: clang
-    env: COMPILER=clang++-5.0
-    addons:
-      apt:
-        sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-5.0', 'sourceline': 'deb http://ppa.launchpad.net/keithw/glfw3/ubuntu trusty main']
-        packages: ['g++-6', 'clang-5.0', 'ninja-build', 'libgl1-mesa-dev', 'libglew-dev', 'libglfw3-dev']
+        # sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-5.0', 'sourceline': 'deb http://ppa.launchpad.net/keithw/glfw3/ubuntu trusty main']
+        # packages: ['g++-6', 'clang-5.0', 'ninja-build', 'libgl1-mesa-dev', 'libglew-dev', 'libglfw3-dev']
+        packages: ['clang-5.0', 'ninja-build']
 
 branches:
   only:
