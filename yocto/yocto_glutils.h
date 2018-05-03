@@ -75,6 +75,8 @@
 #include "yocto_math.h"
 
 #include <map>
+#include <string>
+#include <vector>
 
 // -----------------------------------------------------------------------------
 // OPENGL OBJECTS AND FUNCTIONS

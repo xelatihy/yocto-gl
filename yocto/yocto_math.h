@@ -108,7 +108,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <functional>  // for std::hash
-#include <string>
 #include <vector>
 
 // -----------------------------------------------------------------------------
@@ -131,8 +130,6 @@ using std::round;
 using std::sin;
 using std::sqrt;
 using std::tan;
-using namespace std::string_literals;
-using namespace std::literals;
 
 using byte = unsigned char;
 using uint = unsigned int;

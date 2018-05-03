@@ -884,7 +884,7 @@ scene* obj_to_scene(
     };
 
     // convert textures
-    auto tmap = std::unordered_map<std::string, texture*>{{""s, nullptr}};
+    auto tmap = std::unordered_map<std::string, texture*>{{"", nullptr}};
     auto add_texture = [&tmap, scn](const std::string& path) {
         if (tmap.find(path) != tmap.end()) return tmap.at(path);
         auto txt = new texture();
@@ -946,7 +946,7 @@ scene* obj_to_scene(
         for (auto gid = 0; gid < omsh->groups.size(); gid++) {
             auto ogrp = omsh->groups.at(gid);
             auto shp = new shape();
-            shp->name = omsh->name + ((gid) ? std::to_string(gid) : ""s);
+            shp->name = omsh->name + ((gid) ? std::to_string(gid) : std::string());
 
             // check to see if this shuold be face-varying or flat
             // quads
@@ -1430,7 +1430,7 @@ obj_scene* scene_to_obj(const scene* scn, bool preserve_instances) {
         for (auto& v : shp->color) obj->color.push_back({v.x, v.y, v.z, v.w});
         for (auto& v : shp->radius) obj->radius.push_back(v);
         oobj->groups.push_back(
-            {"", (mat) ? mat->name : ""s, shp->norm.empty()});
+            {"", (mat) ? mat->name : std::string(), shp->norm.empty()});
         for (auto eid = 0; eid < shp->points.size(); eid++) {
             auto vid = shp->points[eid];
             add_elem(shp, oobj, obj_element_type::point, 1, eid);
@@ -1638,7 +1638,7 @@ scene* gltf_to_scene(const glTF* gltf) {
         auto sid = 0;
         for (auto gprim : gmesh->primitives) {
             auto shp = new shape();
-            shp->name = gmesh->name + ((sid) ? std::to_string(sid) : ""s);
+            shp->name = gmesh->name + ((sid) ? std::to_string(sid) : std::string());
             sid++;
             for (auto gattr : gprim->attributes) {
                 auto semantic = gattr.first;
@@ -1849,7 +1849,7 @@ scene* gltf_to_scene(const glTF* gltf) {
                     (int)gchannel->target->path}) == sampler_map.end()) {
                 auto gsampler = ganm->get(gchannel->sampler);
                 auto anm = new animation();
-                anm->name = ((ganm->name != "") ? ganm->name : "anim"s) +
+                anm->name = ((ganm->name != "") ? ganm->name : "anim") +
                             std::to_string(aid++);
                 anm->group = ganm->name;
                 auto input_view =
