@@ -327,10 +327,9 @@ inline T parse_opt(cmdline_parser& parser, const std::string& name,
 
 // Parse an enum option from the command line.
 template <typename T>
-inline T parse_opt(cmdline_parser& parser, const std::string& name,
+inline T parse_opte(cmdline_parser& parser, const std::string& name,
     const std::string& flag, const std::string& help,
-    const std::map<T, std::string>& key_values, const T& def, bool req = false,
-    const std::vector<T>& choices = {});
+    const std::map<T, std::string>& key_values, const T& def, bool req = false);
 
 // Parse positional argument from the command line.
 template <typename T>
@@ -558,10 +557,9 @@ inline T parse_opt(cmdline_parser& parser, const std::string& name,
 
 // Parse an enum option from the command line.
 template <typename T>
-inline T parse_opt(cmdline_parser& parser, const std::string& name,
+inline T parse_opte(cmdline_parser& parser, const std::string& name,
     const std::string& flag, const std::string& help,
-    const std::map<T, std::string>& key_values, const T& def, bool req,
-    const std::vector<T>& choices) {
+    const std::map<T, std::string>& key_values, const T& def, bool req) {
     auto keys = std::vector<std::string>{};
     auto key_def = key_values.at(def);
     for (auto&& kv : key_values) keys.push_back(kv.second);

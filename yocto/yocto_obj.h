@@ -78,9 +78,9 @@
 
 #include "yocto_math.h"
 
+#include <string>
 #include <unordered_map>
 #include <vector>
-#include <string>
 
 // -----------------------------------------------------------------------------
 // WAVEFRONT OBJ SUPPORT

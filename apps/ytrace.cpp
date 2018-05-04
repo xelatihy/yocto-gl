@@ -43,17 +43,17 @@ int main(int argc, char* argv[]) {
         {ygl::tonemap_type::filmic2, "filmic2"},
         {ygl::tonemap_type::filmic3, "filmic3"},
     };
-    static auto trace_names = std::map<ygl::trace_type, std::string>{
-        {ygl::trace_type::pathtrace, "pathtrace"},
-        {ygl::trace_type::direct, "direct"},
-        {ygl::trace_type::eyelight, "eyelight"},
-        {ygl::trace_type::pathtrace_nomis, "pathtrace_nomis"},
-        {ygl::trace_type::pathtrace_naive, "pathtrace_naive"},
-        {ygl::trace_type::pathtrace_nomis, "direct_nomis"},
-        {ygl::trace_type::debug_normal, "debug_normal"},
-        {ygl::trace_type::debug_albedo, "debug_albedo"},
-        {ygl::trace_type::debug_texcoord, "debug_texcoord"},
-        {ygl::trace_type::debug_frontfacing, "debug_frontfacing"},
+    static auto trace_names = std::map<ygl::trace_func, std::string>{
+        {ygl::trace_path, "pathtrace"},
+        {ygl::trace_direct, "direct"},
+        {ygl::trace_eyelight, "eyelight"},
+        {ygl::trace_path_nomis, "pathtrace-nomis"},
+        {ygl::trace_path_naive, "pathtrace-naive"},
+        {ygl::trace_direct_nomis, "direct-nomis"},
+        {ygl::trace_debug_normal, "debug-normal"},
+        {ygl::trace_debug_albedo, "debug-albedo"},
+        {ygl::trace_debug_texcoord, "debug-texcoord"},
+        {ygl::trace_debug_frontfacing, "debug-frontfacing"},
     };
 
     // parse command line
@@ -63,8 +63,8 @@ int main(int argc, char* argv[]) {
         parser, "--resolution", "-r", "Image vertical resolution.", 512);
     auto nsamples =
         ygl::parse_opt(parser, "--nsamples", "-s", "Number of samples.", 256);
-    auto tracer = ygl::parse_opt(parser, "--tracer", "-t", "Trace type.",
-        trace_names, ygl::trace_type::pathtrace);
+    auto tracer = ygl::parse_opte(
+        parser, "--tracer", "-t", "Trace type.", trace_names, &ygl::trace_path);
     auto double_sided = ygl::parse_flag(
         parser, "--double-sided", "-D", "Force double sided rendering.", false);
     auto max_depth = ygl::parse_opt(
@@ -81,7 +81,7 @@ int main(int argc, char* argv[]) {
         parser, "--save-batch", "", "Save images progressively");
     auto exposure =
         ygl::parse_opt(parser, "--exposure", "-e", "Hdr exposure", 0.0f);
-    auto tonemap = ygl::parse_opt(parser, "--tonemap", "-T", "Hdr tonemap",
+    auto tonemap = ygl::parse_opte(parser, "--tonemap", "-T", "Hdr tonemap",
         tonemap_names, ygl::tonemap_type::gamma);
     auto quiet =
         ygl::parse_flag(parser, "--quiet", "-q", "Print only errors messages");

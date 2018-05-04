@@ -180,10 +180,10 @@ std::vector<ygl::scene*> make_proc_scenes(const std::string& name) {
                         ygl::make_spherecube_shape("obj3"),
                     },
                     {
-                        ygl::make_matte_material("obj1", {1, 1, 1}),
-                        ygl::make_metal_material("obj2", {1, 1, 1}, 0),
+                        ygl::make_matte_material("obj1", {0.7f, 0.7f, 0.7f}),
+                        ygl::make_metal_material("obj2", {0.7f, 0.7f, 0.7f}, 0),
                         ygl::make_plastic_material(
-                            "obj3", {0.7f, 0.7f, 0.96f}, 0.05f),
+                            "obj3", {0.5f, 0.5f, 0.7f}, 0.01f),
                     },
                     env));
         }

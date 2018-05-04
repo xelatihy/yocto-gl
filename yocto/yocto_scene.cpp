@@ -56,7 +56,6 @@ scene::~scene() {
     for (auto v : textures) delete v;
     for (auto v : cameras) delete v;
     for (auto v : environments) delete v;
-    for (auto v : lights) delete v;
     for (auto v : nodes) delete v;
     for (auto v : animations) delete v;
     if (bvh) delete bvh;
@@ -236,22 +235,16 @@ void update_lights(scene* scn, bool do_shapes, bool do_environments) {
     if (do_environments) {
         for (auto env : scn->environments) env->elem_cdf.clear();
     }
-    for (auto lgt : scn->lights) delete lgt;
     scn->lights.clear();
 
     for (auto ist : scn->instances) {
         if (!ist->mat || ist->mat->ke == zero3f) continue;
-        auto lgt = new light();
-        lgt->ist = ist;
-        scn->lights.push_back(lgt);
+        scn->lights.push_back(ist);
         if (ist->shp->elem_cdf.empty()) update_shape_cdf(ist->shp);
     }
 
     for (auto env : scn->environments) {
         if (env->ke == zero3f) continue;
-        auto lgt = new light();
-        lgt->env = env;
-        scn->lights.push_back(lgt);
         if (env->elem_cdf.empty()) update_environment_cdf(env);
     }
 }
@@ -483,33 +476,33 @@ scene_intersection intersect_ray(
     auto iid = 0;
     auto isec = scene_intersection();
     if (!intersect_bvh(
-            scn->bvh, ray, find_any, isec.ray_t, iid, isec.eid, isec.euv))
+            scn->bvh, ray, find_any, isec.dist, iid, isec.ei, isec.uv))
         return {};
     isec.ist = scn->instances[iid];
     return isec;
 }
 
 // Shape element normal.
-vec3f eval_elem_norm(const shape* shp, int eid) {
+vec3f eval_elem_norm(const shape* shp, int ei) {
     auto norm = zero3f;
     if (!shp->triangles.empty()) {
-        auto t = shp->triangles[eid];
+        auto t = shp->triangles[ei];
         norm = triangle_normal(shp->pos[t.x], shp->pos[t.y], shp->pos[t.z]);
     } else if (!shp->lines.empty()) {
-        auto l = shp->lines[eid];
+        auto l = shp->lines[ei];
         norm = line_tangent(shp->pos[l.x], shp->pos[l.y]);
     } else if (!shp->points.empty()) {
         norm = {0, 0, 1};
     } else if (!shp->quads.empty()) {
-        auto q = shp->quads[eid];
+        auto q = shp->quads[ei];
         norm = quad_normal(
             shp->pos[q.x], shp->pos[q.y], shp->pos[q.z], shp->pos[q.w]);
     } else if (!shp->beziers.empty()) {
-        auto l = shp->beziers[eid];
+        auto l = shp->beziers[ei];
         norm = line_tangent(shp->pos[l.x], shp->pos[l.w]);
     } else if (!shp->quads_pos.empty()) {
-        auto q = (shp->quads_norm.empty()) ? shp->quads_pos[eid] :
-                                             shp->quads_norm[eid];
+        auto q = (shp->quads_norm.empty()) ? shp->quads_pos[ei] :
+                                             shp->quads_norm[ei];
         norm = quad_normal(
             shp->pos[q.x], shp->pos[q.y], shp->pos[q.z], shp->pos[q.w]);
     } else {
@@ -520,97 +513,106 @@ vec3f eval_elem_norm(const shape* shp, int eid) {
 
 // Shape value interpolated using barycentric coordinates
 template <typename T>
-T eval_elem(const shape* shp, const std::vector<T>& vals, int eid,
-    const vec2f& euv, const T& def) {
+T eval_elem(const shape* shp, const std::vector<T>& vals, int ei,
+    const vec2f& uv, const T& def) {
     if (vals.empty()) return def;
     if (!shp->triangles.empty()) {
-        return interpolate_triangle(vals, shp->triangles[eid], euv);
+        return interpolate_triangle(vals, shp->triangles[ei], uv);
     } else if (!shp->lines.empty()) {
-        return interpolate_line(vals, shp->lines[eid], euv.x);
+        return interpolate_line(vals, shp->lines[ei], uv.x);
     } else if (!shp->points.empty()) {
-        return interpolate_point(vals, shp->points[eid]);
+        return interpolate_point(vals, shp->points[ei]);
     } else if (!shp->quads.empty()) {
-        return interpolate_quad(vals, shp->quads[eid], euv);
+        return interpolate_quad(vals, shp->quads[ei], uv);
     } else if (!shp->beziers.empty()) {
-        return interpolate_bezier(vals, shp->beziers[eid], euv.x);
+        return interpolate_bezier(vals, shp->beziers[ei], uv.x);
     } else if (!shp->quads_pos.empty()) {
         throw std::runtime_error("should not have gotten here");
         return def;
     } else if (!shp->pos.empty()) {
-        return vals[eid];
+        return vals[ei];
     } else {
         return def;
     }
 }
 
 // Shape values interpolated using barycentric coordinates
-vec3f eval_pos(const shape* shp, int eid, const vec2f& euv) {
-    return eval_elem(shp, shp->pos, eid, euv, {0, 0, 0});
+vec3f eval_pos(const shape* shp, int ei, const vec2f& uv) {
+    return eval_elem(shp, shp->pos, ei, uv, {0, 0, 0});
 }
-vec3f eval_norm(const shape* shp, int eid, const vec2f& euv) {
-    if (shp->norm.empty()) return eval_elem_norm(shp, eid);
-    return normalize(eval_elem(shp, shp->norm, eid, euv, {0, 0, 1}));
+vec3f eval_norm(const shape* shp, int ei, const vec2f& uv) {
+    if (shp->norm.empty()) return eval_elem_norm(shp, ei);
+    return normalize(eval_elem(shp, shp->norm, ei, uv, {0, 0, 1}));
 }
-vec2f eval_texcoord(const shape* shp, int eid, const vec2f& euv) {
-    return eval_elem(shp, shp->texcoord, eid, euv, {0, 0});
+vec2f eval_texcoord(const shape* shp, int ei, const vec2f& uv) {
+    return eval_elem(shp, shp->texcoord, ei, uv, {0, 0});
 }
-vec4f eval_color(const shape* shp, int eid, const vec2f& euv) {
-    return eval_elem(shp, shp->color, eid, euv, {1, 1, 1, 1});
+vec4f eval_color(const shape* shp, int ei, const vec2f& uv) {
+    return eval_elem(shp, shp->color, ei, uv, {1, 1, 1, 1});
 }
-float eval_radius(const shape* shp, int eid, const vec2f& euv) {
-    return eval_elem(shp, shp->radius, eid, euv, 0.0f);
+float eval_radius(const shape* shp, int ei, const vec2f& uv) {
+    return eval_elem(shp, shp->radius, ei, uv, 0.0f);
 }
-vec4f eval_tangsp(const shape* shp, int eid, const vec2f& euv) {
-    return eval_elem(shp, shp->tangsp, eid, euv, {0, 0, 0, 1});
+vec4f eval_tangsp(const shape* shp, int ei, const vec2f& uv) {
+    return eval_elem(shp, shp->tangsp, ei, uv, {0, 0, 0, 1});
 }
 vec3f eval_tangsp(
-    const shape* shp, int eid, const vec2f& euv, bool& left_handed) {
-    auto tangsp = eval_elem(shp, shp->tangsp, eid, euv, {0, 0, 0, 1});
+    const shape* shp, int ei, const vec2f& uv, bool& left_handed) {
+    auto tangsp = eval_elem(shp, shp->tangsp, ei, uv, {0, 0, 0, 1});
     left_handed = tangsp.w < 0;
     return {tangsp.x, tangsp.y, tangsp.w};
 }
 
 // Instance values interpolated using barycentric coordinates.
-vec3f eval_pos(const instance* ist, int eid, const vec2f& euv) {
-    return transform_point(ist->frame, eval_pos(ist->shp, eid, euv));
+vec3f eval_pos(const instance* ist, int ei, const vec2f& uv) {
+    return transform_point(ist->frame, eval_pos(ist->shp, ei, uv));
 }
-vec3f eval_norm(const instance* ist, int eid, const vec2f& euv) {
-    return transform_direction(ist->frame, eval_norm(ist->shp, eid, euv));
+vec3f eval_norm(const instance* ist, int ei, const vec2f& uv) {
+    return transform_direction(ist->frame, eval_norm(ist->shp, ei, uv));
 }
-vec2f eval_texcoord(const instance* ist, int eid, const vec2f& euv) {
-    return eval_texcoord(ist->shp, eid, euv);
+vec2f eval_texcoord(const instance* ist, int ei, const vec2f& uv) {
+    return eval_texcoord(ist->shp, ei, uv);
 }
-vec4f eval_color(const instance* ist, int eid, const vec2f& euv) {
-    return eval_color(ist->shp, eid, euv);
+vec4f eval_color(const instance* ist, int ei, const vec2f& uv) {
+    return eval_color(ist->shp, ei, uv);
 }
-float eval_radius(const instance* ist, int eid, const vec2f& euv) {
-    return eval_radius(ist->shp, eid, euv);
+float eval_radius(const instance* ist, int ei, const vec2f& uv) {
+    return eval_radius(ist->shp, ei, uv);
 }
 vec3f eval_tangsp(
-    const instance* ist, int eid, const vec2f& euv, bool& left_handed) {
+    const instance* ist, int ei, const vec2f& uv, bool& left_handed) {
     return transform_direction(
-        ist->frame, eval_tangsp(ist->shp, eid, euv, left_handed));
+        ist->frame, eval_tangsp(ist->shp, ei, uv, left_handed));
 }
 // Instance element values.
-vec3f eval_elem_norm(const instance* ist, int eid) {
-    return transform_direction(ist->frame, eval_elem_norm(ist->shp, eid));
+vec3f eval_elem_norm(const instance* ist, int ei) {
+    return transform_direction(ist->frame, eval_elem_norm(ist->shp, ei));
+}
+// Shading normals including material perturbations.
+vec3f eval_shading_norm(
+    const instance* ist, int ei, const vec2f& uv, const vec3f& o) {
+    auto norm = eval_norm(ist, ei, uv);
+    if (!ist->mat->norm_txt.txt) return norm;
+    if (ist->mat->norm_txt.txt) {
+        auto texcoord = eval_texcoord(ist, ei, uv);
+        auto left_handed = false;
+        auto tang = eval_tangsp(ist, ei, uv, left_handed);
+        auto txt = eval_texture_rgb(ist->mat->norm_txt, texcoord, false);
+        txt = txt * 2 - vec3f{1, 1, 1};
+        txt.y = -txt.y;
+        auto frame = make_frame_fromzx({0, 0, 0}, norm, tang);
+        if (left_handed) frame.y = -frame.y;
+        norm = transform_direction(frame, txt);
+    }
+    if (ist->mat->double_sided &&
+        (!ist->shp->triangles.empty() || !ist->shp->quads.empty()) &&
+        dot(norm, o) < 0)
+        norm = -norm;
+    return norm;
 }
 
-// Environment values interpolated using uv parametrization.
-vec3f eval_pos(const environment* env, const vec2f& uv) {
-    auto wl = vec3f{cos(uv.x * 2 * pi) * sin(uv.y * pi), cos(uv.y * pi),
-        sin(uv.x * 2 * pi) * sin(uv.y * pi)};
-    return transform_direction(env->frame, wl) * environment_distance;
-}
-vec3f eval_norm(const environment* env, const vec2f& uv) {
-    auto wl = vec3f{cos(uv.x * 2 * pi) * sin(uv.y * pi), cos(uv.y * pi),
-        sin(uv.x * 2 * pi) * sin(uv.y * pi)};
-    return -transform_direction(env->frame, wl);
-}
-// Environment texture coordinates from uv parametrization.
-vec2f eval_texcoord(const environment* env, const vec2f& uv) { return uv; }
-// Evaluate uv parameters for environment.
-vec2f eval_uv(const environment* env, const vec3f& w) {
+// Environment texture coordinates from the direction.
+vec2f eval_texcoord(const environment* env, const vec3f& w) {
     auto wl = transform_direction_inverse(env->frame, w);
     auto uv = vec2f{
         atan2(wl.z, wl.x) / (2 * pi), acos(clamp(wl.y, -1.0f, 1.0f)) / pi};
@@ -622,6 +624,15 @@ vec3f eval_direction(const environment* env, const vec2f& uv) {
     return transform_direction(
         env->frame, {cos(uv.x * 2 * pi) * sin(uv.y * pi), cos(uv.y * pi),
                         sin(uv.x * 2 * pi) * sin(uv.y * pi)});
+}
+// Evaluate the environment color.
+vec3f eval_environment(const environment* env, const vec3f& w) {
+    auto ke = env->ke;
+    if (env->ke_txt.txt) {
+        auto texcoord = eval_texcoord(env, w);
+        ke *= eval_texture_rgb(env->ke_txt, texcoord);
+    }
+    return ke;
 }
 
 // Evaluate a texture
@@ -694,23 +705,167 @@ ray3f eval_camera_ray(const camera* cam, const vec2i& ij, int res,
     return eval_camera_ray(cam, uv, luv);
 }
 
+// Evaluates the opacity.
+float eval_opacity(const instance* ist, int ei, const vec2f& uv) {
+    // initialize opacity
+    if (!ist) return 1;
+
+    auto mat = ist->mat;
+    auto texcoord = eval_texcoord(ist, ei, uv);
+
+    // initialized material values
+    auto op = 1.0f;
+    if (!ist->shp->color.empty()) {
+        auto col = eval_color(ist->shp, ei, uv);
+        op *= col.w;
+    }
+
+    // handle opacity
+    op *= mat->op;
+    if (mat->op_txt.txt) {
+        auto txt = eval_texture(mat->op_txt, texcoord);
+        op *= (txt.x + txt.y + txt.z) / 3;
+    }
+    if (mat->kd_txt.txt) { op *= eval_texture(mat->kd_txt, texcoord).w; }
+
+    if (op > 0.999f) op = 1;
+
+    return op;
+}
+
+// Evaluates the brdf at a location.
+vec3f eval_emission(const instance* ist, int ei, const vec2f& uv) {
+    if (!ist) return zero3f;
+
+    auto ke = ist->mat->ke;
+    if (ist->mat->ke_txt.txt) {
+        auto texcoord = eval_texcoord(ist, ei, uv);
+        ke *= eval_texture_rgb(ist->mat->ke_txt, texcoord);
+    }
+
+    auto col = eval_color(ist->shp, ei, uv);
+    ke *= vec3f{col.x, col.y, col.z};
+
+    return ke;
+}
+
+// Evaluates the brdf at a location.
+brdf eval_brdf(const instance* ist, int ei, const vec2f& uv) {
+    // initialize brdf
+    if (!ist) return {};
+
+    auto mat = ist->mat;
+    auto texcoord = eval_texcoord(ist, ei, uv);
+
+    // initialized material values
+    auto f = brdf();
+    auto kx = vec3f{1, 1, 1};
+    if (!ist->shp->color.empty()) {
+        auto col = eval_color(ist->shp, ei, uv);
+        kx *= {col.x, col.y, col.z};
+    }
+
+    // sample reflectance
+    switch (mat->type) {
+        case material_type::specular_roughness: {
+            f.kd = mat->kd * kx;
+            if (mat->kd_txt.txt) {
+                f.kd *= eval_texture_rgb(mat->kd_txt, texcoord);
+            }
+            f.ks = mat->ks * kx;
+            f.rs = mat->rs;
+            if (mat->ks_txt.txt) {
+                auto txt = eval_texture(mat->ks_txt, texcoord);
+                f.ks *= {txt.x, txt.y, txt.z};
+            }
+            f.kt = mat->kt * kx;
+            if (mat->kt_txt.txt) {
+                auto txt = eval_texture(mat->kt_txt, texcoord);
+                f.kt *= {txt.x, txt.y, txt.z};
+            }
+        } break;
+        case material_type::metallic_roughness: {
+            auto kb = mat->kd * kx;
+            if (mat->kd_txt.txt) {
+                kb *= eval_texture_rgb(mat->kd_txt, texcoord);
+            }
+            auto km = mat->ks.x;
+            f.rs = mat->rs;
+            if (mat->ks_txt.txt) {
+                auto txt = eval_texture(mat->ks_txt, texcoord);
+                km *= txt.y;
+                f.rs *= txt.z;
+            }
+            f.kd = kb * (1 - km);
+            f.ks = kb * km + vec3f{0.04f, 0.04f, 0.04f} * (1 - km);
+        } break;
+        case material_type::specular_glossiness: {
+            f.kd = mat->kd * kx;
+            if (mat->kd_txt.txt) {
+                f.kd *= eval_texture_rgb(mat->kd_txt, texcoord);
+            }
+            f.ks = mat->ks * kx;
+            f.rs = mat->rs;
+            if (mat->ks_txt.txt) {
+                auto txt = eval_texture(mat->ks_txt, texcoord);
+                f.ks *= {txt.x, txt.y, txt.z};
+                f.rs *= txt.w;
+            }
+            f.rs = 1 - f.rs;  // glossiness -> roughnes
+            f.kt = mat->kt * kx;
+            if (mat->kt_txt.txt) {
+                auto txt = eval_texture(mat->kt_txt, texcoord);
+                f.kt *= {txt.x, txt.y, txt.z};
+            }
+        } break;
+    }
+
+    // set up final values
+    if (f.ks != zero3f && f.rs < 0.9999f) {
+        f.rs = f.rs * f.rs;
+        if (f.rs < 0.03f * 0.03f)
+            f.rs = 0;
+        else
+            f.rs = clamp(f.rs, 0.03f * 0.03f, 1.0f);
+    } else {
+        f.ks = zero3f;
+        f.rs = 1;
+    }
+
+    // brdf type
+    if (f.kd == zero3f && f.ks == zero3f && f.kt == zero3f) {
+        f.type = brdf_type::none;
+    } else if (!ist->shp->triangles.empty() || !ist->shp->quads.empty()) {
+        f.type = brdf_type::surface;
+    } else if (!ist->shp->lines.empty() || !ist->shp->beziers.empty()) {
+        f.type = brdf_type::line;
+    } else if (!ist->shp->points.empty() || !ist->shp->pos.empty()) {
+        f.type = brdf_type::point;
+    } else {
+        f.type = brdf_type::none;
+    }
+    return f;
+}
+
 // Sample a shape based on a distribution.
-std::pair<int, vec2f> sample_shape(const shape* shp,
-    const std::vector<float>& cdf, float re, const vec2f& ruv) {
+std::pair<int, vec2f> sample_shape(
+    const shape* shp, float re, const vec2f& ruv) {
+    // TODO: implement sampling without cdf
+    if (shp->elem_cdf.empty()) return {};
     if (!shp->triangles.empty()) {
-        return sample_triangles(cdf, re, ruv);
+        return sample_triangles(shp->elem_cdf, re, ruv);
     } else if (!shp->lines.empty()) {
-        return {sample_lines(cdf, re, ruv.x).first, ruv};
+        return {sample_lines(shp->elem_cdf, re, ruv.x).first, ruv};
     } else if (!shp->points.empty()) {
-        return {sample_points(cdf, re), ruv};
+        return {sample_points(shp->elem_cdf, re), ruv};
     } else if (!shp->quads.empty()) {
-        return sample_quads(cdf, re, ruv);
+        return sample_quads(shp->elem_cdf, re, ruv);
     } else if (!shp->beziers.empty()) {
         throw std::runtime_error("type not supported");
     } else if (!shp->quads_pos.empty()) {
-        return sample_quads(cdf, re, ruv);
+        return sample_quads(shp->elem_cdf, re, ruv);
     } else if (!shp->pos.empty()) {
-        return {sample_points(cdf, re), ruv};
+        return {sample_points(shp->elem_cdf, re), ruv};
     } else {
         return {0, zero2f};
     }
@@ -946,7 +1101,8 @@ scene* obj_to_scene(
         for (auto gid = 0; gid < omsh->groups.size(); gid++) {
             auto ogrp = omsh->groups.at(gid);
             auto shp = new shape();
-            shp->name = omsh->name + ((gid) ? std::to_string(gid) : std::string());
+            shp->name =
+                omsh->name + ((gid) ? std::to_string(gid) : std::string());
 
             // check to see if this shuold be face-varying or flat
             // quads
@@ -1364,8 +1520,7 @@ obj_scene* scene_to_obj(const scene* scn, bool preserve_instances) {
     }
 
     // add elem
-    auto add_elem = [](auto& shp, auto& oobj, auto etype, auto esize,
-                        auto eid) {
+    auto add_elem = [](auto& shp, auto& oobj, auto etype, auto esize, auto ei) {
         auto elem = obj_element();
         elem.start = (uint32_t)oobj->verts.size();
         elem.type = etype;
@@ -1431,25 +1586,25 @@ obj_scene* scene_to_obj(const scene* scn, bool preserve_instances) {
         for (auto& v : shp->radius) obj->radius.push_back(v);
         oobj->groups.push_back(
             {"", (mat) ? mat->name : std::string(), shp->norm.empty()});
-        for (auto eid = 0; eid < shp->points.size(); eid++) {
-            auto vid = shp->points[eid];
-            add_elem(shp, oobj, obj_element_type::point, 1, eid);
+        for (auto ei = 0; ei < shp->points.size(); ei++) {
+            auto vid = shp->points[ei];
+            add_elem(shp, oobj, obj_element_type::point, 1, ei);
             add_vert(shp, oobj, offset, vid);
         }
-        for (auto eid = 0; eid < shp->lines.size(); eid++) {
-            auto l = shp->lines[eid];
-            add_elem(shp, oobj, obj_element_type::line, 2, eid);
+        for (auto ei = 0; ei < shp->lines.size(); ei++) {
+            auto l = shp->lines[ei];
+            add_elem(shp, oobj, obj_element_type::line, 2, ei);
             for (auto vid : {l.x, l.y}) add_vert(shp, oobj, offset, vid);
         }
-        for (auto eid = 0; eid < shp->triangles.size(); eid++) {
-            auto t = shp->triangles[eid];
-            add_elem(shp, oobj, obj_element_type::face, 3, eid);
+        for (auto ei = 0; ei < shp->triangles.size(); ei++) {
+            auto t = shp->triangles[ei];
+            add_elem(shp, oobj, obj_element_type::face, 3, ei);
             for (auto vid : {t.x, t.y, t.z}) add_vert(shp, oobj, offset, vid);
         }
-        for (auto eid = 0; eid < shp->quads.size(); eid++) {
-            auto q = shp->quads[eid];
+        for (auto ei = 0; ei < shp->quads.size(); ei++) {
+            auto q = shp->quads[ei];
             add_elem(shp, oobj, obj_element_type::face,
-                (uint16_t)((q.z == q.w) ? 3 : 4), eid);
+                (uint16_t)((q.z == q.w) ? 3 : 4), ei);
             if (oobj->elems.back().size == 3) {
                 for (auto vid : {q.x, q.y, q.z})
                     add_vert(shp, oobj, offset, vid);
@@ -1458,27 +1613,27 @@ obj_scene* scene_to_obj(const scene* scn, bool preserve_instances) {
                     add_vert(shp, oobj, offset, vid);
             }
         }
-        for (auto eid = 0; eid < shp->beziers.size(); eid++) {
-            auto b = shp->beziers[eid];
-            add_elem(shp, oobj, obj_element_type::bezier, 4, eid);
+        for (auto ei = 0; ei < shp->beziers.size(); ei++) {
+            auto b = shp->beziers[ei];
+            add_elem(shp, oobj, obj_element_type::bezier, 4, ei);
             for (auto vid : {b.x, b.y, b.z, b.w})
                 add_vert(shp, oobj, offset, vid);
         }
-        for (auto eid = 0; eid < shp->quads_pos.size(); eid++) {
-            add_elem(shp, oobj, obj_element_type::face, 4, eid);
+        for (auto ei = 0; ei < shp->quads_pos.size(); ei++) {
+            add_elem(shp, oobj, obj_element_type::face, 4, ei);
             auto last_vid = -1;
             for (auto i = 0; i < 4; i++) {
-                if (last_vid == (&shp->quads_pos[eid].x)[i]) continue;
+                if (last_vid == (&shp->quads_pos[ei].x)[i]) continue;
                 auto vert = obj_vertex{-1, -1, -1, -1, -1};
                 if (!shp->pos.empty() && !shp->quads_pos.empty())
-                    vert.pos = offset.pos + (&shp->quads_pos[eid].x)[i];
+                    vert.pos = offset.pos + (&shp->quads_pos[ei].x)[i];
                 if (!shp->texcoord.empty() && !shp->quads_texcoord.empty())
                     vert.texcoord =
-                        offset.texcoord + (&shp->quads_texcoord[eid].x)[i];
+                        offset.texcoord + (&shp->quads_texcoord[ei].x)[i];
                 if (!shp->norm.empty() && !shp->quads_norm.empty())
-                    vert.norm = offset.norm + (&shp->quads_norm[eid].x)[i];
+                    vert.norm = offset.norm + (&shp->quads_norm[ei].x)[i];
                 oobj->verts.push_back(vert);
-                last_vid = (&shp->quads_pos[eid].x)[i];
+                last_vid = (&shp->quads_pos[ei].x)[i];
             }
         }
         obj->objects.push_back(oobj);
@@ -1638,7 +1793,8 @@ scene* gltf_to_scene(const glTF* gltf) {
         auto sid = 0;
         for (auto gprim : gmesh->primitives) {
             auto shp = new shape();
-            shp->name = gmesh->name + ((sid) ? std::to_string(sid) : std::string());
+            shp->name =
+                gmesh->name + ((sid) ? std::to_string(sid) : std::string());
             sid++;
             for (auto gattr : gprim->attributes) {
                 auto semantic = gattr.first;

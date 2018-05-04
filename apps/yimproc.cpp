@@ -183,7 +183,7 @@ int main(int argc, char* argv[]) {
 
     // command line params
     auto parser = ygl::make_parser(argc, argv, "yimproc", "process images");
-    auto tonemapper = ygl::parse_opt(parser, "--tonemapper", "t",
+    auto tonemapper = ygl::parse_opte(parser, "--tonemapper", "t",
         "Tonemapper type.", tonemap_names, ygl::tonemap_type::gamma);
     auto exposure =
         ygl::parse_opt(parser, "--exposure", "t", "Hdr exposure", 0.0f);

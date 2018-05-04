@@ -100,7 +100,7 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <algorithm>   // for std::upper_bound 
+#include <algorithm>  // for std::upper_bound
 #include <cctype>
 #include <cfloat>
 #include <cmath>

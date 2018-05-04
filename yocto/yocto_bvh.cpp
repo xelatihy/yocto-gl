@@ -36,7 +36,7 @@
 namespace ygl {
 
 // Intersect a ray with a point (approximate)
-bool intersect_point(const ray3f& ray, const vec3f& p, float r, float& ray_t) {
+bool intersect_point(const ray3f& ray, const vec3f& p, float r, float& dist) {
     // find parameter for line-point minimum distance
     auto w = p - ray.o;
     auto t = dot(w, ray.d) / dot(ray.d, ray.d);
@@ -50,14 +50,14 @@ bool intersect_point(const ray3f& ray, const vec3f& p, float r, float& ray_t) {
     if (dot(prp, prp) > r * r) return false;
 
     // intersection occurred: set params and exit
-    ray_t = t;
+    dist = t;
 
     return true;
 }
 
 // Intersect a ray with a line
 bool intersect_line(const ray3f& ray, const vec3f& v0, const vec3f& v1,
-    float r0, float r1, float& ray_t, vec2f& euv) {
+    float r0, float r1, float& dist, vec2f& uv) {
     // setup intersection params
     auto u = ray.d;
     auto v = v1 - v0;
@@ -96,15 +96,15 @@ bool intersect_line(const ray3f& ray, const vec3f& v0, const vec3f& v1,
     if (d2 > r * r) return false;
 
     // intersection occurred: set params and exit
-    ray_t = t;
-    euv = {s, sqrt(d2) / r};
+    dist = t;
+    uv = {s, sqrt(d2) / r};
 
     return true;
 }
 
 // Intersect a ray with a triangle
 bool intersect_triangle(const ray3f& ray, const vec3f& v0, const vec3f& v1,
-    const vec3f& v2, float& ray_t, vec2f& euv) {
+    const vec3f& v2, float& dist, vec2f& uv) {
     // compute triangle edges
     auto edge1 = v1 - v0;
     auto edge2 = v2 - v0;
@@ -133,54 +133,26 @@ bool intersect_triangle(const ray3f& ray, const vec3f& v0, const vec3f& v1,
     if (t < ray.tmin || t > ray.tmax) return false;
 
     // intersection occurred: set params and exit
-    ray_t = t;
-    euv = {u, v};
+    dist = t;
+    uv = {u, v};
 
     return true;
 }
 
 // Intersect a ray with a quad.
 bool intersect_quad(const ray3f& ray, const vec3f& v0, const vec3f& v1,
-    const vec3f& v2, const vec3f& v3, float& ray_t, vec2f& euv) {
+    const vec3f& v2, const vec3f& v3, float& dist, vec2f& uv) {
     auto hit = false;
     auto tray = ray;
-    if (intersect_triangle(tray, v0, v1, v3, ray_t, euv)) {
-        tray.tmax = ray_t;
+    if (intersect_triangle(tray, v0, v1, v3, dist, uv)) {
+        tray.tmax = dist;
         hit = true;
     }
-    if (intersect_triangle(tray, v2, v3, v1, ray_t, euv)) {
-        euv = {1 - euv.x, 1 - euv.y};
-        tray.tmax = ray_t;
+    if (intersect_triangle(tray, v2, v3, v1, dist, uv)) {
+        uv = {1 - uv.x, 1 - uv.y};
+        tray.tmax = dist;
         hit = true;
     }
-    return hit;
-}
-
-// Intersect a ray with a tetrahedron.
-bool intersect_tetrahedron(const ray3f& ray_, const vec3f& v0, const vec3f& v1,
-    const vec3f& v2, const vec3f& v3, float& ray_t, vec4f& euv) {
-    // check intersction for each face
-    auto hit = false;
-    auto ray = ray_;
-    auto tuv = zero2f;
-    // TODO: fix uvs
-    if (intersect_triangle(ray, v0, v1, v2, ray_t, tuv)) {
-        hit = true;
-        ray.tmax = ray_t;
-    }
-    if (intersect_triangle(ray, v0, v1, v3, ray_t, tuv)) {
-        hit = true;
-        ray.tmax = ray_t;
-    }
-    if (intersect_triangle(ray, v0, v2, v3, ray_t, tuv)) {
-        hit = true;
-        ray.tmax = ray_t;
-    }
-    if (intersect_triangle(ray, v1, v2, v3, ray_t, tuv)) {
-        hit = true;
-        ray.tmax = ray_t;
-    }
-
     return hit;
 }
 
@@ -256,7 +228,7 @@ float closestuv_line(const vec3f& pos, const vec3f& v0, const vec3f& v1) {
 
 // TODO: documentation
 bool overlap_line(const vec3f& pos, float dist_max, const vec3f& v0,
-    const vec3f& v1, float r0, float r1, float& dist, vec2f& euv) {
+    const vec3f& v1, float r0, float r1, float& dist, vec2f& uv) {
     auto u = closestuv_line(pos, v0, v1);
     // Compute projected position from the clamped t d = a + t * ab;
     auto p = v0 + (v1 - v0) * u;
@@ -266,7 +238,7 @@ bool overlap_line(const vec3f& pos, float dist_max, const vec3f& v0,
     if (d2 > (dist_max + r) * (dist_max + r)) return false;
     // done
     dist = sqrt(d2);
-    euv = {u, 0};
+    uv = {u, 0};
     return true;
 }
 
@@ -317,29 +289,28 @@ vec2f closestuv_triangle(
 // TODO: documentation
 bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& v0,
     const vec3f& v1, const vec3f& v2, float r0, float r1, float r2, float& dist,
-    vec2f& euv) {
-    auto uv = closestuv_triangle(pos, v0, v1, v2);
+    vec2f& uv) {
+    uv = closestuv_triangle(pos, v0, v1, v2);
     auto p = interpolate_triangle(v0, v1, v2, uv);
     auto r = interpolate_triangle(r0, r1, r2, uv);
     auto dd = dot(p - pos, p - pos);
     if (dd > (dist_max + r) * (dist_max + r)) return false;
     dist = sqrt(dd);
-    euv = uv;
     return true;
 }
 
 // TODO: documentation
 bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& v0,
     const vec3f& v1, const vec3f& v2, const vec3f& v3, float r0, float r1,
-    float r2, float r3, float& dist, vec2f& euv) {
+    float r2, float r3, float& dist, vec2f& uv) {
     auto hit = false;
-    if (overlap_triangle(pos, dist_max, v0, v1, v3, r0, r1, r3, dist, euv)) {
+    if (overlap_triangle(pos, dist_max, v0, v1, v3, r0, r1, r3, dist, uv)) {
         dist_max = dist;
         hit = true;
     }
-    if (overlap_triangle(pos, dist_max, v2, v3, v1, r2, r3, r1, dist, euv)) {
+    if (overlap_triangle(pos, dist_max, v2, v3, v1, r2, r3, r1, dist, uv)) {
         // dist_max = dist;
-        euv = {1 - euv.x, 1 - euv.y};
+        uv = {1 - uv.x, 1 - uv.y};
         hit = true;
     }
     return hit;
@@ -347,7 +318,7 @@ bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& v0,
 
 // TODO: documentation
 bool overlap_tetrahedron(const vec3f& pos, const vec3f& v0, const vec3f& v1,
-    const vec3f& v2, const vec3f& v3, vec4f& euv) {
+    const vec3f& v2, const vec3f& v3, vec4f& uv) {
     // TODO: fix uv
     auto vol = dot(v3 - v0, cross(v3 - v1, v3 - v0));
     if (vol == 0) return false;
@@ -357,17 +328,17 @@ bool overlap_tetrahedron(const vec3f& pos, const vec3f& v0, const vec3f& v1,
     if (v < 0 || v > 1 || u + v > 1) return false;
     auto w = dot(v3 - v0, cross(v3 - v1, v3 - v0)) / vol;
     if (w < 0 || w > 1 || u + v + w > 1) return false;
-    euv = {u, v, w, 1 - u - v - w};
+    uv = {u, v, w, 1 - u - v - w};
     return true;
 }
 
 // TODO: documentation
 bool overlap_tetrahedron(const vec3f& pos, float dist_max, const vec3f& v0,
     const vec3f& v1, const vec3f& v2, const vec3f& v3, float r0, float r1,
-    float r2, float r3, float& dist, vec4f& euv) {
+    float r2, float r3, float& dist, vec4f& uv) {
     // TODO: FIX UVs
     // check interior
-    if (overlap_tetrahedron(pos, v0, v1, v2, v3, euv)) {
+    if (overlap_tetrahedron(pos, v0, v1, v2, v3, uv)) {
         dist = 0;
         return true;
     }
@@ -633,7 +604,7 @@ void refit_bvh(bvh_tree* bvh) { refit_bvh(bvh, 0); }
 
 // Intersect ray with a bvh.
 bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
-    float& ray_t, int& iid, int& eid, vec2f& euv) {
+    float& dist, int& iid, int& eid, vec2f& uv) {
     // node stack
     int node_stack[128];
     auto node_cur = 0;
@@ -676,11 +647,11 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
                 for (auto i = 0; i < node.count; i++) {
                     auto& p = bvh->points[node.prims[i]];
                     if (intersect_point(
-                            ray, bvh->pos[p], bvh->radius[p], ray_t)) {
+                            ray, bvh->pos[p], bvh->radius[p], dist)) {
                         hit = true;
-                        ray.tmax = ray_t;
+                        ray.tmax = dist;
                         eid = node.prims[i];
-                        euv = {1, 0};
+                        uv = {1, 0};
                     }
                 }
             } break;
@@ -688,9 +659,9 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
                 for (auto i = 0; i < node.count; i++) {
                     auto& l = bvh->lines[node.prims[i]];
                     if (intersect_line(ray, bvh->pos[l.x], bvh->pos[l.y],
-                            bvh->radius[l.x], bvh->radius[l.y], ray_t, euv)) {
+                            bvh->radius[l.x], bvh->radius[l.y], dist, uv)) {
                         hit = true;
-                        ray.tmax = ray_t;
+                        ray.tmax = dist;
                         eid = node.prims[i];
                     }
                 }
@@ -699,9 +670,9 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
                 for (auto i = 0; i < node.count; i++) {
                     auto& t = bvh->triangles[node.prims[i]];
                     if (intersect_triangle(ray, bvh->pos[t.x], bvh->pos[t.y],
-                            bvh->pos[t.z], ray_t, euv)) {
+                            bvh->pos[t.z], dist, uv)) {
                         hit = true;
-                        ray.tmax = ray_t;
+                        ray.tmax = dist;
                         eid = node.prims[i];
                     }
                 }
@@ -710,9 +681,9 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
                 for (auto i = 0; i < node.count; i++) {
                     auto& q = bvh->quads[node.prims[i]];
                     if (intersect_quad(ray, bvh->pos[q.x], bvh->pos[q.y],
-                            bvh->pos[q.z], bvh->pos[q.w], ray_t, euv)) {
+                            bvh->pos[q.z], bvh->pos[q.w], dist, uv)) {
                         hit = true;
-                        ray.tmax = ray_t;
+                        ray.tmax = dist;
                         eid = node.prims[i];
                     }
                 }
@@ -721,11 +692,11 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
                 for (auto i = 0; i < node.count; i++) {
                     auto idx = node.prims[i];
                     if (intersect_point(
-                            ray, bvh->pos[idx], bvh->radius[idx], ray_t)) {
+                            ray, bvh->pos[idx], bvh->radius[idx], dist)) {
                         hit = true;
-                        ray.tmax = ray_t;
+                        ray.tmax = dist;
                         eid = node.prims[i];
-                        euv = {1, 0};
+                        uv = {1, 0};
                     }
                 }
             } break;
@@ -734,9 +705,9 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
                     auto idx = node.prims[i];
                     if (intersect_bvh(bvh->ist_bvhs[idx],
                             transform_ray(bvh->ist_inv_frames[idx], ray),
-                            find_any, ray_t, iid, eid, euv)) {
+                            find_any, dist, iid, eid, uv)) {
                         hit = true;
-                        ray.tmax = ray_t;
+                        ray.tmax = dist;
                         iid = node.prims[i];
                     }
                 }
@@ -752,7 +723,7 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
 
 // Finds the closest element with a bvh.
 bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
-    bool find_any, float& dist, int& iid, int& eid, vec2f& euv) {
+    bool find_any, float& dist, int& iid, int& eid, vec2f& uv) {
     // node stack
     int node_stack[64];
     auto node_cur = 0;
@@ -785,7 +756,7 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
                         hit = true;
                         max_dist = dist;
                         eid = node.prims[i];
-                        euv = {1, 0};
+                        uv = {1, 0};
                     }
                 }
             } break;
@@ -794,7 +765,7 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
                     auto& l = bvh->lines[node.prims[i]];
                     if (overlap_line(pos, max_dist, bvh->pos[l.x],
                             bvh->pos[l.y], bvh->radius[l.x], bvh->radius[l.y],
-                            dist, euv)) {
+                            dist, uv)) {
                         hit = true;
                         max_dist = dist;
                         eid = node.prims[i];
@@ -806,7 +777,7 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
                     auto& t = bvh->triangles[node.prims[i]];
                     if (overlap_triangle(pos, max_dist, bvh->pos[t.x],
                             bvh->pos[t.y], bvh->pos[t.z], bvh->radius[t.x],
-                            bvh->radius[t.y], bvh->radius[t.z], dist, euv)) {
+                            bvh->radius[t.y], bvh->radius[t.z], dist, uv)) {
                         hit = true;
                         max_dist = dist;
                         eid = node.prims[i];
@@ -819,7 +790,7 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
                     if (overlap_quad(pos, max_dist, bvh->pos[q.x],
                             bvh->pos[q.y], bvh->pos[q.z], bvh->pos[q.w],
                             bvh->radius[q.x], bvh->radius[q.y],
-                            bvh->radius[q.z], bvh->radius[q.w], dist, euv)) {
+                            bvh->radius[q.z], bvh->radius[q.w], dist, uv)) {
                         hit = true;
                         max_dist = dist;
                         eid = node.prims[i];
@@ -834,7 +805,7 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
                         hit = true;
                         max_dist = dist;
                         eid = node.prims[i];
-                        euv = {1, 0};
+                        uv = {1, 0};
                     }
                 }
             } break;
@@ -843,7 +814,7 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
                     auto idx = node.prims[i];
                     if (overlap_bvh(bvh->ist_bvhs[idx],
                             transform_point(bvh->ist_inv_frames[idx], pos),
-                            max_dist, find_any, dist, iid, eid, euv)) {
+                            max_dist, find_any, dist, iid, eid, uv)) {
                         hit = true;
                         max_dist = dist;
                         iid = node.prims[i];
