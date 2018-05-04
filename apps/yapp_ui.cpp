@@ -253,14 +253,13 @@ void draw_glscene(const scene* scn, const camera* cam,
         auto lights_type = std::vector<int>();
         for (auto lgt : scn->lights) {
             if (lights_pos.size() >= 16) break;
-            if (!lgt->ist) continue;
-            auto shp = lgt->ist->shp;
+            auto shp = lgt->shp;
             if (!shp->points.empty()) {
                 for (auto p : shp->points) {
                     if (lights_pos.size() >= 16) break;
                     lights_pos.push_back(
-                        transform_point(lgt->ist->frame, shp->pos[p]));
-                    lights_ke.push_back(lgt->ist->mat->ke);
+                        transform_point(lgt->frame, lgt->shp->pos[p]));
+                    lights_ke.push_back(lgt->mat->ke);
                     lights_type.push_back(0);
                 }
             } else {
@@ -275,8 +274,8 @@ void draw_glscene(const scene* scn, const camera* cam,
                 for (auto t : shp->quads)
                     area += quad_area(shp->pos[t.x], shp->pos[t.y],
                         shp->pos[t.z], shp->pos[t.w]);
-                auto ke = lgt->ist->mat->ke * area;
-                lights_pos.push_back(transform_point(lgt->ist->frame, pos));
+                auto ke = lgt->mat->ke * area;
+                lights_pos.push_back(transform_point(lgt->frame, pos));
                 lights_ke.push_back(ke);
                 lights_type.push_back(0);
             }

@@ -38,207 +38,15 @@
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Surface point with geometry and material data. Supports point on
-// envmap too. This is the key data manipulated in the path tracer.
-struct trace_point {
-    const instance* ist = nullptr;     // shape instance
-    const environment* env = nullptr;  // environment
-    vec3f pos = zero3f;                // pos
-    vec3f norm = {0, 0, 1};            // norm
-    vec2f texcoord = zero2f;           // texcoord
-    vec3f ke = zero3f;                 // emission
-    vec3f kd = {0, 0, 0};              // diffuse
-    vec3f ks = {0, 0, 0};              // specular
-    float rs = 0;                      // specular roughness
-    vec3f kt = {0, 0, 0};              // thin glass transmission
-    float op = 1;                      // opacity
-    bool double_sided = false;         // double sided
-    int eid = 0;                       // element id
-    vec2f euv = zero2f;                // element uv
-};
-
-// Create a point for an environment map. Resolves material with textures.
-trace_point eval_point(const environment* env, const vec2f& uv) {
-    auto pt = trace_point();
-    pt.env = env;
-
-    pt.pos = eval_pos(env, uv);
-    pt.norm = eval_norm(env, uv);
-    pt.texcoord = eval_texcoord(env, uv);
-
-    pt.ke = env->ke;
-    if (env->ke_txt.txt) {
-        auto txt = eval_texture(env->ke_txt, pt.texcoord);
-        pt.ke *= {txt.x, txt.y, txt.z};
-    }
-    return pt;
-}
-
-// Create a point for a shape. Resolves geometry and material with textures.
-trace_point eval_point(const instance* ist, int eid, const vec2f& euv) {
-    // default material
-    static auto def_material = (material*)nullptr;
-    if (!def_material) {
-        def_material = new material();
-        def_material->kd = {0.2f, 0.2f, 0.2f};
-        def_material->rs = 1;
-    }
-
-    // point
-    auto pt = trace_point();
-    pt.ist = ist;
-    pt.eid = eid;
-    pt.euv = euv;
-
-    // shape values
-    pt.pos = eval_pos(ist, eid, euv);
-    pt.norm = eval_norm(ist, eid, euv);
-    pt.texcoord = eval_texcoord(ist, eid, euv);
-
-    // shortcuts
-    auto mat = (ist->mat) ? ist->mat : def_material;
-
-    // handle normal map
-    if (mat->norm_txt.txt) {
-        auto left_handed = false;
-        auto tang = eval_tangsp(ist, eid, euv, left_handed);
-        auto txt = eval_texture(mat->norm_txt, pt.texcoord, false) * 2.0f -
-                   vec4f{1, 1, 1, 1};
-        auto ntxt = normalize(vec3f{txt.x, -txt.y, txt.z});
-        auto frame = make_frame_fromzx({0, 0, 0}, pt.norm, tang);
-        if (left_handed) frame.y = -frame.y;
-        pt.norm = transform_direction(frame, ntxt);
-    }
-
-    // double-sided
-    pt.double_sided = mat->double_sided;
-
-    // initialized material values
-    auto kx = vec3f{1, 1, 1};
-    auto op = 1.0f;
-    if (!ist->shp->color.empty()) {
-        auto col = eval_color(ist->shp, eid, euv);
-        kx *= {col.x, col.y, col.z};
-        op *= col.w;
-    }
-
-    // handle occlusion
-    if (mat->occ_txt.txt) {
-        auto txt = eval_texture(mat->occ_txt, pt.texcoord);
-        kx *= {txt.x, txt.y, txt.z};
-    }
-
-    // handle opacity
-    pt.op = mat->op * op;
-    if (mat->op_txt.txt) {
-        auto txt = eval_texture(mat->op_txt, pt.texcoord);
-        pt.op *= (txt.x + txt.y + txt.z) / 3;
-    }
-
-    // sample emission
-    pt.ke = mat->ke * kx;
-    if (mat->ke_txt.txt) {
-        auto txt = eval_texture(mat->ke_txt, pt.texcoord);
-        pt.ke *= {txt.x, txt.y, txt.z};
-    }
-
-    // sample reflectance
-    switch (mat->type) {
-        case material_type::specular_roughness: {
-            pt.kd = mat->kd * kx;
-            if (mat->kd_txt.txt) {
-                auto txt = eval_texture(mat->kd_txt, pt.texcoord);
-                pt.kd *= {txt.x, txt.y, txt.z};
-                pt.op *= txt.w;
-            }
-            pt.ks = mat->ks * kx;
-            pt.rs = mat->rs;
-            if (mat->ks_txt.txt) {
-                auto txt = eval_texture(mat->ks_txt, pt.texcoord);
-                pt.ks *= {txt.x, txt.y, txt.z};
-            }
-            pt.kt = mat->kt * kx;
-            if (mat->kt_txt.txt) {
-                auto txt = eval_texture(mat->kt_txt, pt.texcoord);
-                pt.kt *= {txt.x, txt.y, txt.z};
-            }
-        } break;
-        case material_type::metallic_roughness: {
-            auto kb = mat->kd * kx;
-            if (mat->kd_txt.txt) {
-                auto txt = eval_texture(mat->kd_txt, pt.texcoord);
-                kb *= {txt.x, txt.y, txt.z};
-                pt.op *= txt.w;
-            }
-            auto km = mat->ks.x;
-            pt.rs = mat->rs;
-            if (mat->ks_txt.txt) {
-                auto txt = eval_texture(mat->ks_txt, pt.texcoord);
-                km *= txt.y;
-                pt.rs *= txt.z;
-            }
-            pt.kd = kb * (1 - km);
-            pt.ks = kb * km + vec3f{0.04f, 0.04f, 0.04f} * (1 - km);
-        } break;
-        case material_type::specular_glossiness: {
-            pt.kd = mat->kd * kx;
-            if (mat->kd_txt.txt) {
-                auto txt = eval_texture(mat->kd_txt, pt.texcoord);
-                pt.kd *= {txt.x, txt.y, txt.z};
-                pt.op *= txt.w;
-            }
-            pt.ks = mat->ks * kx;
-            pt.rs = mat->rs;
-            if (mat->ks_txt.txt) {
-                auto txt = eval_texture(mat->ks_txt, pt.texcoord);
-                pt.ks *= {txt.x, txt.y, txt.z};
-                pt.rs *= txt.w;
-            }
-            pt.rs = 1 - pt.rs;  // glossiness -> roughnes
-            pt.kt = mat->kt * kx;
-            if (mat->kt_txt.txt) {
-                auto txt = eval_texture(mat->kt_txt, pt.texcoord);
-                pt.kt *= {txt.x, txt.y, txt.z};
-            }
-        } break;
-    }
-
-    // set up final values
-    if (pt.ks != zero3f && pt.rs < 0.9999f) {
-        pt.rs = pt.rs * pt.rs;
-        if (pt.rs < 0.03f * 0.03f)
-            pt.rs = 0;
-        else
-            pt.rs = clamp(pt.rs, 0.03f * 0.03f, 1.0f);
-    } else {
-        pt.ks = zero3f;
-        pt.rs = 1;
-    }
-    if (pt.kt != zero3f) pt.double_sided = true;
-    if (pt.op > 0.999f) pt.op = 1;
-
-    // done
-    return pt;
-}
-
-// Check if it has reflectance.
-bool has_reflectance(const trace_point& pt) {
-    return pt.kd + pt.ks + pt.kt != zero3f;
-}
-
 // Evaluates emission.
-vec3f eval_emission(const trace_point& pt, const vec3f& wo) {
-    if (!pt.ist) return pt.ke;
-    if (pt.ist->shp->triangles.empty() || pt.double_sided ||
-        dot(pt.norm, wo) >= 0)
-        return pt.ke;
+vec3f eval_emission(const vec3f& ke, const vec3f& n, const vec3f& o) {
+    if (dot(n, o) >= 0) return ke;
     return zero3f;
 }
 
 // Check if we are near the mirror direction.
-inline bool check_near_mirror(
-    const vec3f& wn, const vec3f& wo, const vec3f& wi) {
-    return fabs(dot(wi, normalize(wn * 2.0f * dot(wo, wn) - wo)) - 1) < 0.001f;
+inline bool check_near_mirror(const vec3f& n, const vec3f& o, const vec3f& i) {
+    return fabs(dot(i, normalize(n * 2.0f * dot(o, n) - o)) - 1) < 0.001f;
 }
 
 // Evaluates the BRDF scaled by the cosine of the incoming direction.
@@ -248,31 +56,29 @@ inline bool check_near_mirror(
 // - "Microfacet Models for Refraction through Rough Surfaces" EGSR 07
 // https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf
 vec3f eval_surface_brdfcos(
-    const trace_point& pt, const vec3f& wo, const vec3f& wi) {
+    const brdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
     auto brdfcos = zero3f;
-    auto wn = pt.norm;
-    if (pt.double_sided && dot(wo, wn) < 0) wn = -wn;
 
-    auto ndo = dot(wn, wo), ndi = dot(wn, wi);
+    auto ndo = dot(n, o), ndi = dot(n, i);
 
-    if (pt.kd != zero3f && ndi > 0 && ndo > 0) { brdfcos += pt.kd * ndi / pi; }
+    if (f.kd != zero3f && ndi > 0 && ndo > 0) { brdfcos += f.kd * ndi / pi; }
 
-    if (pt.ks != zero3f && pt.rs && ndi > 0 && ndo > 0) {
-        auto wh = normalize(wo + wi);
-        auto ndh = clamp(dot(wh, wn), -1.0f, 1.0f);
-        auto dg = eval_ggx(pt.rs, ndh, ndi, ndo);
-        auto odh = clamp(dot(wo, wh), 0.0f, 1.0f);
-        auto ks = fresnel_schlick(pt.ks, odh, pt.rs);
+    if (f.ks != zero3f && f.rs && ndi > 0 && ndo > 0) {
+        auto h = normalize(o + i);
+        auto ndh = clamp(dot(h, n), -1.0f, 1.0f);
+        auto dg = eval_ggx(f.rs, ndh, ndi, ndo);
+        auto odh = clamp(dot(o, h), 0.0f, 1.0f);
+        auto ks = fresnel_schlick(f.ks, odh, f.rs);
         brdfcos += ks * ndi * dg / (4 * ndi * ndo);
     }
 
-    if (pt.kt != zero3f && pt.rs && ndo > 0 && ndi < 0) {
-        auto wir = wi - 2 * dot(wi, wn) * wn;
-        auto wh = normalize(wo + wir);
-        auto ndh = clamp(dot(wh, wn), -1.0f, 1.0f);
-        auto dg = eval_ggx(pt.rs, ndh, -ndi, ndo);
-        auto odh = clamp(dot(wo, wh), 0.0f, 1.0f);
-        auto kt = pt.kt * (vec3f{1, 1, 1} - fresnel_schlick(pt.ks, odh, pt.rs));
+    if (f.kt != zero3f && f.rs && ndo > 0 && ndi < 0) {
+        auto ir = i - 2 * dot(i, n) * n;
+        auto h = normalize(o + ir);
+        auto ndh = clamp(dot(h, n), -1.0f, 1.0f);
+        auto dg = eval_ggx(f.rs, ndh, -ndi, ndo);
+        auto odh = clamp(dot(o, h), 0.0f, 1.0f);
+        auto kt = f.kt * (vec3f{1, 1, 1} - fresnel_schlick(f.ks, odh, f.rs));
         brdfcos += kt * ndi * dg / (4 * ndi * ndo);
     }
 
@@ -282,20 +88,18 @@ vec3f eval_surface_brdfcos(
 
 // Evaluates the BRDF scaled by the cosine of the incoming direction.
 vec3f eval_surface_delta_brdfcos(
-    const trace_point& pt, const vec3f& wo, const vec3f& wi) {
+    const brdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
     auto brdfcos = zero3f;
-    auto wn = pt.norm;
-    if (pt.double_sided && dot(wo, wn) < 0) wn = -wn;
 
-    auto ndo = dot(wn, wo), ndi = dot(wn, wi);
+    auto ndo = dot(n, o), ndi = dot(n, i);
 
-    if (pt.ks != zero3f && !pt.rs && ndo > 0 && check_near_mirror(wn, wo, wi)) {
-        auto ks = fresnel_schlick(pt.ks, ndo);
+    if (f.ks != zero3f && !f.rs && ndo > 0 && check_near_mirror(n, o, i)) {
+        auto ks = fresnel_schlick(f.ks, ndo);
         brdfcos += ks;
     }
 
-    if (pt.kt != zero3f && !pt.rs && wo == -wi) {
-        auto kt = pt.kt * (vec3f{1, 1, 1} - fresnel_schlick(pt.ks, ndo));
+    if (f.kt != zero3f && !f.rs && o == -i) {
+        auto kt = f.kt * (vec3f{1, 1, 1} - fresnel_schlick(f.ks, ndo));
         brdfcos += kt;
     }
 
@@ -306,23 +110,21 @@ vec3f eval_surface_delta_brdfcos(
 // Evaluates the BRDF scaled by the cosine of the incoming direction.
 // - uses Kajiya-Kay for hair
 vec3f eval_curve_brdfcos(
-    const trace_point& pt, const vec3f& wo, const vec3f& wi) {
+    const brdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
     auto brdfcos = zero3f;
-    auto wh = normalize(wo + wi);
-    auto wn = pt.norm;
+    auto h = normalize(o + i);
 
-    auto ndo = dot(wn, wo), ndi = dot(wn, wi),
-         ndh = clamp(dot(wn, wh), 0.0f, 1.0f);
+    auto ndo = dot(n, o), ndi = dot(n, i), ndh = clamp(dot(n, h), 0.0f, 1.0f);
     auto so = sqrt(clamp(1 - ndo * ndo, 0.0001f, 1.0f)),
          si = sqrt(clamp(1 - ndi * ndi, 0.0001f, 1.0f)),
          sh = sqrt(clamp(1 - ndh * ndh, 0.0001f, 1.0f));
 
-    if (pt.kd != zero3f) { brdfcos += pt.kd * si / pi; }
+    if (f.kd != zero3f) { brdfcos += f.kd * si / pi; }
 
-    if (pt.ks != zero3f && pt.rs) {
-        auto ns = 2 / (pt.rs * pt.rs) - 2;
+    if (f.ks != zero3f && f.rs) {
+        auto ns = 2 / (f.rs * f.rs) - 2;
         auto d = (ns + 2) * pow(sh, ns) / (2 + pi);
-        brdfcos += pt.ks * si * d / (4.0f * si * so);
+        brdfcos += f.ks * si * d / (4.0f * si * so);
     }
 
     assert(isfinite(brdfcos.x) && isfinite(brdfcos.y) && isfinite(brdfcos.z));
@@ -332,67 +134,59 @@ vec3f eval_curve_brdfcos(
 // Evaluates the BRDF scaled by the cosine of the incoming direction.
 // - uses a hack for points
 vec3f eval_point_brdfcos(
-    const trace_point& pt, const vec3f& wo, const vec3f& wi) {
+    const brdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
     auto brdfcos = zero3f;
 
-    auto ido = dot(wo, wi);
-    brdfcos += pt.kd * (2 * ido + 1) / (2 * pi);
+    auto ido = dot(o, i);
+    brdfcos += f.kd * (2 * ido + 1) / (2 * pi);
 
     assert(isfinite(brdfcos.x) && isfinite(brdfcos.y) && isfinite(brdfcos.z));
     return brdfcos;
 }
 
 // Evaluates the BRDF scaled by the cosine of the incoming direction.
-vec3f eval_brdfcos(const trace_point& pt, const vec3f& wo, const vec3f& wi,
-    bool delta = false) {
-    if (!pt.ist) return zero3f;
-    if (!has_reflectance(pt)) return zero3f;
-    if (!pt.ist->shp->triangles.empty() || !pt.ist->shp->quads.empty()) {
-        return (!delta) ? eval_surface_brdfcos(pt, wo, wi) :
-                          eval_surface_delta_brdfcos(pt, wo, wi);
-    } else if (!pt.ist->shp->lines.empty() || !pt.ist->shp->beziers.empty()) {
-        return eval_curve_brdfcos(pt, wo, wi);
-    } else if (!pt.ist->shp->points.empty() || !pt.ist->shp->pos.empty()) {
-        return eval_point_brdfcos(pt, wo, wi);
-    } else {
-        return zero3f;
+vec3f eval_brdfcos(const brdf& f, const vec3f& n, const vec3f& o,
+    const vec3f& i, bool delta = false) {
+    switch (f.type) {
+        case brdf_type::none: return zero3f;
+        case brdf_type::surface:
+            return (!delta) ? eval_surface_brdfcos(f, n, o, i) :
+                              eval_surface_delta_brdfcos(f, n, o, i);
+        case brdf_type::line: return eval_curve_brdfcos(f, n, o, i);
+        case brdf_type::point: return eval_point_brdfcos(f, n, o, i);
     }
 }
 
 // Compute the weight for sampling the BRDF
 float sample_surface_brdf_pdf(
-    const trace_point& pt, const vec3f& wo, const vec3f& wi) {
-    auto prob_kd = max(pt.kd), prob_ks = max(pt.ks), prob_kt = max(pt.kt);
+    const brdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
+    auto prob_kd = max(f.kd), prob_ks = max(f.ks), prob_kt = max(f.kt);
     auto prob_sum = prob_kd + prob_ks + prob_kt;
     if (prob_sum == 0) return 0;
     prob_kd /= prob_sum;
     prob_ks /= prob_sum;
     prob_kt /= prob_sum;
 
-    // normal
-    auto wn = pt.norm;
-    if (pt.double_sided && dot(wo, wn) < 0) wn = -wn;
-
-    auto ndo = dot(wn, wo), ndi = dot(wn, wi);
+    auto ndo = dot(n, o), ndi = dot(n, i);
 
     auto pdf = 0.0f;
 
     if (prob_kd && ndo >= 0 && ndi >= 0) { pdf += prob_kd * ndi / pi; }
 
-    if (prob_ks && pt.rs && ndo >= 0 && ndi >= 0) {
-        auto wh = normalize(wi + wo);
-        auto ndh = dot(wn, wh);
-        auto d = sample_ggx_pdf(pt.rs, ndh);
-        auto hdo = dot(wo, wh);
+    if (prob_ks && f.rs && ndo >= 0 && ndi >= 0) {
+        auto h = normalize(i + o);
+        auto ndh = dot(n, h);
+        auto d = sample_ggx_pdf(f.rs, ndh);
+        auto hdo = dot(o, h);
         pdf += prob_ks * d / (4 * hdo);
     }
 
-    if (prob_kt && pt.rs && ndo >= 0 && ndi <= 0) {
-        auto wir = wi - 2 * dot(wi, wn) * wn;
-        auto wh = normalize(wo + wir);
-        auto ndh = dot(wn, wh);
-        auto d = sample_ggx_pdf(pt.rs, ndh);
-        auto hdo = dot(wo, wh);
+    if (prob_kt && f.rs && ndo >= 0 && ndi <= 0) {
+        auto wir = i - 2 * dot(i, n) * n;
+        auto h = normalize(o + wir);
+        auto ndh = dot(n, h);
+        auto d = sample_ggx_pdf(f.rs, ndh);
+        auto hdo = dot(o, h);
         pdf += prob_kt * d / (4 * hdo);
     }
 
@@ -401,98 +195,87 @@ float sample_surface_brdf_pdf(
 
 // Compute the weight for sampling the BRDF
 float sample_surface_delta_brdf_pdf(
-    const trace_point& pt, const vec3f& wo, const vec3f& wi) {
-    if (pt.rs) return 0;
-    auto prob_ks = max(pt.ks), prob_kt = max(pt.kt);
+    const brdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
+    if (f.rs) return 0;
+    auto prob_ks = max(f.ks), prob_kt = max(f.kt);
     auto prob_sum = prob_ks + prob_kt;
     if (prob_sum == 0) return 0;
     prob_ks /= prob_sum;
     prob_kt /= prob_sum;
 
-    // normal
-    auto wn = pt.norm;
-    if (pt.double_sided && dot(wo, wn) < 0) wn = -wn;
-
-    auto ndo = dot(wn, wo), ndi = dot(wn, wi);
+    auto ndo = dot(n, o), ndi = dot(n, i);
 
     auto pdf = 0.0f;
 
-    if (prob_ks && !pt.rs && ndo > 0 && check_near_mirror(wn, wo, wi)) {
+    if (prob_ks && !f.rs && ndo > 0 && check_near_mirror(n, o, i)) {
         pdf += prob_ks;
     }
 
-    if (prob_kt && !pt.rs && wo == -wi) { pdf += prob_kt; }
+    if (prob_kt && !f.rs && o == -i) { pdf += prob_kt; }
 
     return pdf;
 }
 
 // Compute the weight for sampling the BRDF
 float sample_curve_brdf_pdf(
-    const trace_point& pt, const vec3f& wo, const vec3f& wi) {
+    const brdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
     return 1 / (4 * pi);
 }
 
 // Compute the weight for sampling the BRDF
 float sample_point_brdf_pdf(
-    const trace_point& pt, const vec3f& wo, const vec3f& wi) {
+    const brdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
     return 1 / (4 * pi);
 }
 
 // Compute the weight for sampling the BRDF
-float sample_brdf_pdf(const trace_point& pt, const vec3f& wo, const vec3f& wi,
-    bool delta = false) {
-    if (!pt.ist) return 0;
-    if (!has_reflectance(pt)) return 0;
-    if (!pt.ist->shp->triangles.empty() || !pt.ist->shp->quads.empty()) {
-        return (!delta) ? sample_surface_brdf_pdf(pt, wo, wi) :
-                          sample_surface_delta_brdf_pdf(pt, wo, wi);
-    } else if (!pt.ist->shp->lines.empty() || !pt.ist->shp->beziers.empty()) {
-        return sample_curve_brdf_pdf(pt, wo, wi);
-    } else if (!pt.ist->shp->points.empty() || !pt.ist->shp->pos.empty()) {
-        return sample_point_brdf_pdf(pt, wo, wi);
-    } else {
-        return 0;
+float sample_brdf_pdf(const brdf& f, const vec3f& n, const vec3f& o,
+    const vec3f& i, bool delta = false) {
+    switch (f.type) {
+        case brdf_type::none: return 0;
+        case brdf_type::surface:
+            return (!delta) ? sample_surface_brdf_pdf(f, n, o, i) :
+                              sample_surface_delta_brdf_pdf(f, n, o, i);
+        case brdf_type::line: return sample_curve_brdf_pdf(f, n, o, i);
+        case brdf_type::point: return sample_point_brdf_pdf(f, n, o, i);
     }
 }
 
 // Picks a direction based on the BRDF
 vec3f sample_surface_brdf(
-    const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
-    auto prob_kd = max(pt.kd), prob_ks = (pt.rs) ? max(pt.ks) : 0,
-         prob_kt = (pt.rs) ? max(pt.kt) : 0;
+    const brdf& f, const vec3f& n, const vec3f& o, float rnl, const vec2f& rn) {
+    auto prob_kd = max(f.kd), prob_ks = (f.rs) ? max(f.ks) : 0,
+         prob_kt = (f.rs) ? max(f.kt) : 0;
     auto prob_sum = prob_kd + prob_ks + prob_kt;
     if (prob_sum == 0) return zero3f;
     prob_kd /= prob_sum;
     prob_ks /= prob_sum;
     prob_kt /= prob_sum;
 
-    auto wn = pt.norm;
-    if (pt.double_sided && dot(wo, wn) < 0) wn = -wn;
-
-    auto ndo = dot(wn, wo);
+    auto ndo = dot(n, o);
     if (ndo <= 0) return zero3f;
 
     // sample according to diffuse
     if (rnl < prob_kd) {
-        auto fp = make_frame_fromz(pt.pos, wn);
+        auto fp = make_frame_fromz(zero3f, n);
         auto rz = sqrtf(rn.y), rr = sqrtf(1 - rz * rz), rphi = 2 * pi * rn.x;
-        auto wi_local = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
-        return transform_direction(fp, wi_local);
+        auto il = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
+        return transform_direction(fp, il);
     }
     // sample according to specular GGX
-    else if (rnl < prob_kd + prob_ks && pt.rs) {
-        auto fp = make_frame_fromz(pt.pos, wn);
-        auto wh_local = sample_ggx(pt.rs, rn);
-        auto wh = transform_direction(fp, wh_local);
-        return normalize(wh * 2.0f * dot(wo, wh) - wo);
+    else if (rnl < prob_kd + prob_ks && f.rs) {
+        auto fp = make_frame_fromz(zero3f, n);
+        auto hl = sample_ggx(f.rs, rn);
+        auto h = transform_direction(fp, hl);
+        return normalize(h * 2.0f * dot(o, h) - o);
     }
     // transmission hack
-    else if (rnl < prob_kd + prob_ks + prob_kt && pt.rs) {
-        auto fp = make_frame_fromz(pt.pos, wn);
-        auto wh_local = sample_ggx(pt.rs, rn);
-        auto wh = transform_direction(fp, wh_local);
-        auto wi = normalize(wh * 2.0f * dot(wo, wh) - wo);
-        return normalize(wi - 2 * dot(wi, wn) * wn);
+    else if (rnl < prob_kd + prob_ks + prob_kt && f.rs) {
+        auto fp = make_frame_fromz(zero3f, n);
+        auto hl = sample_ggx(f.rs, rn);
+        auto h = transform_direction(fp, hl);
+        auto i = normalize(h * 2.0f * dot(o, h) - o);
+        return normalize(i - 2 * dot(i, n) * n);
     } else {
         return zero3f;
     }
@@ -500,27 +283,24 @@ vec3f sample_surface_brdf(
 
 // Picks a direction based on the BRDF
 vec3f sample_surface_delta_brdf(
-    const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
-    if (pt.rs) return zero3f;
-    auto prob_ks = max(pt.ks), prob_kt = max(pt.kt);
+    const brdf& f, const vec3f& n, const vec3f& o, float rnl, const vec2f& rn) {
+    if (f.rs) return zero3f;
+    auto prob_ks = max(f.ks), prob_kt = max(f.kt);
     auto prob_sum = prob_ks + prob_kt;
     if (prob_sum == 0) return zero3f;
     prob_ks /= prob_sum;
     prob_kt /= prob_sum;
 
-    auto wn = pt.norm;
-    if (pt.double_sided && dot(wo, wn) < 0) wn = -wn;
-
-    auto ndo = dot(wn, wo);
+    auto ndo = dot(n, o);
     if (ndo <= 0) return zero3f;
 
     // sample according to specular mirror
-    if (rnl < prob_ks && !pt.rs) {
-        return normalize(wn * 2.0f * dot(wo, wn) - wo);
+    if (rnl < prob_ks && !f.rs) {
+        return normalize(n * 2.0f * dot(o, n) - o);
     }
     // transmission hack
-    else if (rnl < prob_ks + prob_kt && !pt.rs) {
-        return -wo;
+    else if (rnl < prob_ks + prob_kt && !f.rs) {
+        return -o;
     } else {
         return zero3f;
     }
@@ -528,200 +308,210 @@ vec3f sample_surface_delta_brdf(
 
 // Picks a direction based on the BRDF
 vec3f sample_curve_brdf(
-    const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
-    auto wn = pt.norm;
-    auto fp = make_frame_fromz(pt.pos, wn);
+    const brdf& f, const vec3f& n, const vec3f& o, float rnl, const vec2f& rn) {
+    auto fp = make_frame_fromz(zero3f, n);
     auto rz = 2 * rn.y - 1, rr = sqrtf(1 - rz * rz), rphi = 2 * pi * rn.x;
-    auto wi_local = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
-    return transform_direction(fp, wi_local);
+    auto il = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
+    return transform_direction(fp, il);
 }
 
 // Picks a direction based on the BRDF
 vec3f sample_point_brdf(
-    const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
-    auto wn = pt.norm;
-    auto fp = make_frame_fromz(pt.pos, wn);
+    const brdf& f, const vec3f& n, const vec3f& o, float rnl, const vec2f& rn) {
+    auto fp = make_frame_fromz(zero3f, n);
     auto rz = 2 * rn.y - 1, rr = sqrtf(1 - rz * rz), rphi = 2 * pi * rn.x;
-    auto wi_local = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
-    return transform_direction(fp, wi_local);
+    auto il = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
+    return transform_direction(fp, il);
 }
 
 // Picks a direction based on the BRDF
-vec3f sample_brdf(const trace_point& pt, const vec3f& wo, float rnl,
+vec3f sample_brdf(const brdf& f, const vec3f& n, const vec3f& o, float rnl,
     const vec2f& rn, bool delta = false) {
-    if (!pt.ist) return zero3f;
-    if (!has_reflectance(pt)) return zero3f;
-    if (!pt.ist->shp->triangles.empty() || !pt.ist->shp->quads.empty()) {
-        return (!delta) ? sample_surface_brdf(pt, wo, rnl, rn) :
-                          sample_surface_delta_brdf(pt, wo, rnl, rn);
-    } else if (!pt.ist->shp->lines.empty() || !pt.ist->shp->beziers.empty()) {
-        return sample_curve_brdf(pt, wo, rnl, rn);
-    } else if (!pt.ist->shp->points.empty() || !pt.ist->shp->pos.empty()) {
-        return sample_point_brdf(pt, wo, rnl, rn);
-    } else {
-        return zero3f;
+    switch (f.type) {
+        case brdf_type::none: return zero3f;
+        case brdf_type::surface:
+            return (!delta) ? sample_surface_brdf(f, n, o, rnl, rn) :
+                              sample_surface_delta_brdf(f, n, o, rnl, rn);
+        case brdf_type::line: return sample_curve_brdf(f, n, o, rnl, rn);
+        case brdf_type::point: return sample_point_brdf(f, n, o, rnl, rn);
     }
 }
 
-float sample_delta_prob(const trace_point& pt, const vec3f& wo) {
-    if (!pt.ist ||
-        (pt.ist->shp->triangles.empty() && pt.ist->shp->quads.empty()))
-        return 0;
-    if (pt.rs) return 0;
-    auto dw = max(pt.ks) + max(pt.kt);
-    return dw / (dw + max(pt.kd));
+float sample_delta_prob(const brdf& f, const vec3f& n, const vec3f& o) {
+    if (f.type != brdf_type::surface) return 0;
+    if (f.rs) return 0;
+    auto dw = max(f.ks) + max(f.kt);
+    return dw / (dw + max(f.kd));
 }
 
-// Sample weight for a light point.
-float sample_light_pdf(const trace_point& lpt, const trace_point& pt) {
-    if (lpt.ist) {
-        auto shp = lpt.ist->shp;
-        if (shp->elem_cdf.empty()) return 0;
-        if (!shp->triangles.empty() || !lpt.ist->shp->quads.empty()) {
-            // prob triangle * area triangle = area triangle mesh
-            auto area = shp->elem_cdf.back();
-            auto dist = length(lpt.pos - pt.pos);
-            return (dist * dist) /
-                   (fabs(dot(lpt.norm, normalize(lpt.pos - pt.pos))) * area);
-        } else if (!shp->lines.empty() || !shp->beziers.empty()) {
-            throw std::runtime_error("not implemented yet");
-            return 0;
-        } else if (!shp->points.empty() || !shp->pos.empty()) {
-            auto num = shp->elem_cdf.back();
-            auto dist = length(lpt.pos - pt.pos);
-            return (dist * dist) / num;
-        } else {
-            return 0;
-        }
-    } else if (lpt.env) {
-        auto env = lpt.env;
-        auto txt = env->ke_txt.txt;
-        if (!env->elem_cdf.empty() && txt) {
-            auto i = (int)(lpt.texcoord.x * txt->width);
-            auto j = (int)(lpt.texcoord.y * txt->height);
-            auto idx = j * txt->width + i;
-            auto prob =
-                sample_discrete_pdf(env->elem_cdf, idx) / env->elem_cdf.back();
-            auto angle = (2 * pi / txt->width) * (pi / txt->height) *
-                         sin(pi * (j + 0.5f) / txt->height);
-            return prob / angle;
-        } else {
-            return 1 / (4 * pi);
-        }
+// Sample pdf for an environment.
+float sample_environment_pdf(const environment* env, const vec3f& i) {
+    auto txt = env->ke_txt.txt;
+    if (!env->elem_cdf.empty() && txt) {
+        auto texcoord = eval_texcoord(env, i);
+        auto i = (int)(texcoord.x * txt->width);
+        auto j = (int)(texcoord.y * txt->height);
+        auto idx = j * txt->width + i;
+        auto prob =
+            sample_discrete_pdf(env->elem_cdf, idx) / env->elem_cdf.back();
+        auto angle = (2 * pi / txt->width) * (pi / txt->height) *
+                     sin(pi * (j + 0.5f) / txt->height);
+        return prob / angle;
     } else {
-        return 0;
+        return 1 / (4 * pi);
     }
 }
 
-// Sample weight for a light point.
-float sample_lights_pdf(
-    const scene* scn, const trace_point& lpt, const trace_point& pt) {
-    return sample_light_pdf(lpt, pt) * (1.0f / (float)scn->lights.size());
+// Picks a point on an environment.
+vec3f sample_environment(const environment* env, float rel, const vec2f& ruv) {
+    auto txt = env->ke_txt.txt;
+    if (!env->elem_cdf.empty() && txt) {
+        auto idx = sample_discrete(env->elem_cdf, rel);
+        auto u = (idx % txt->width + 0.5f) / txt->width;
+        auto v = (idx / txt->width + 0.5f) / txt->height;
+        return eval_direction(env, {u, v});
+    } else {
+        return sample_sphere(ruv);
+    }
+}
+
+// Sample pdf for a light point.
+float sample_light_pdf(const instance* ist, int ei, const vec3f& i,
+    const vec3f& lnorm, float dist) {
+    if (!ist) return 0;
+    auto shp = ist->shp;
+    if (shp->elem_cdf.empty()) return 0;
+    if (!shp->triangles.empty() || !shp->quads.empty()) {
+        // prob triangle * area triangle = area triangle mesh
+        auto area = shp->elem_cdf.back();
+        return (dist * dist) / (fabs(dot(lnorm, i)) * area);
+    } else if (!shp->lines.empty() || !shp->beziers.empty()) {
+        throw std::runtime_error("not implemented yet");
+        return 0;
+    } else if (!shp->points.empty() || !shp->pos.empty()) {
+        auto num = shp->elem_cdf.back();
+        return (dist * dist) / num;
+    } else {
+        return 0;
+    }
 }
 
 // Picks a point on a light.
 vec3f sample_light(
-    const light* lgt, const trace_point& pt, float rel, const vec2f& ruv) {
-    if (lgt->ist) {
-        auto& dst = lgt->ist->shp->elem_cdf;
-        auto sample = sample_shape(lgt->ist->shp, dst, rel, ruv);
-        return normalize(
-            eval_pos(lgt->ist, sample.first, sample.second) - pt.pos);
-    } else if (lgt->env) {
-        auto txt = lgt->env->ke_txt.txt;
-        if (!lgt->env->elem_cdf.empty() && txt) {
-            auto idx = sample_discrete(lgt->env->elem_cdf, rel);
-            auto u = (idx % txt->width + 0.5f) / txt->width;
-            auto v = (idx / txt->width + 0.5f) / txt->height;
-            return eval_direction(lgt->env, {u, v});
-        } else {
-            return sample_sphere(ruv);
-        }
-    } else {
-        throw std::runtime_error("should not have gotten here");
-    }
-    return {};
-}
-
-// Picks a point on a light.
-vec3f sample_lights(const scene* scn, const trace_point& pt, float rnl,
-    float rne, const vec2f& ruv) {
-    auto lidx = sample_index(scn->lights.size(), rnl);
-    auto& lgt = scn->lights.at(lidx);
-    return sample_light(lgt, pt, rne, ruv);
-}
-
-// Intersects a ray with the scene and return the point (or env point).
-trace_point intersect_scene(const scene* scn, const ray3f& ray) {
-    auto isec = intersect_ray(scn, ray, false);
-    if (isec.ist) {
-        return eval_point(isec.ist, isec.eid, isec.euv);
-    } else if (!scn->environments.empty()) {
-        return eval_point(
-            scn->environments[0], eval_uv(scn->environments[0], ray.d));
-    } else {
-        return {};
-    }
+    const instance* ist, const vec3f& pos, float rel, const vec2f& ruv) {
+    auto sample = sample_shape(ist->shp, rel, ruv);
+    return normalize(eval_pos(ist, sample.first, sample.second) - pos);
 }
 
 // Test occlusion.
-vec3f eval_transmission(const scene* scn, const trace_point& pt,
-    const trace_point& lpt, int nbounces) {
-    auto cpt = pt;
+vec3f eval_transmission(
+    const scene* scn, const vec3f& from, const vec3f& to, int nbounces) {
     auto weight = vec3f{1, 1, 1};
+    auto pos = from;
     for (auto bounce = 0; bounce < nbounces; bounce++) {
-        auto ray = make_segment(cpt.pos, lpt.pos);
-        cpt = intersect_scene(scn, ray);
-        if (!cpt.ist) break;
-        weight *= cpt.kt + vec3f{1 - cpt.op, 1 - cpt.op, 1 - cpt.op};
+        auto ray = make_segment(pos, to);
+        auto isec = intersect_ray(scn, ray);
+        if (!isec.ist) break;
+        auto f = eval_brdf(isec.ist, isec.ei, isec.uv);
+        auto op = eval_opacity(isec.ist, isec.ei, isec.uv);
+        weight *= f.kt + vec3f{1 - op, 1 - op, 1 - op};
         if (weight == zero3f) break;
+        pos = eval_pos(isec.ist, isec.ei, isec.uv);
     }
     return weight;
 }
 
 // Recursive path tracing.
-vec3f trace_path(const scene* scn, const trace_point& pt_, const vec3f& wo_,
-    rng_state& rng, int nbounces) {
-    if (scn->lights.empty()) return zero3f;
-    auto pt = pt_;
-    auto wo = wo_;
+vec3f trace_path(
+    const scene* scn, const ray3f& ray_, rng_state& rng, int nbounces) {
+    if (scn->lights.empty() && scn->environments.empty()) return zero3f;
 
     // initialize
-    auto l = eval_emission(pt, wo);
+    auto l = zero3f;
     auto weight = vec3f{1, 1, 1};
+    auto emission = true;
+    auto ray = ray_;
 
     // trace  path
     for (auto bounce = 0; bounce < nbounces; bounce++) {
-        // opacity
-        if (pt.op != 1 && rand1f(rng) < 1 - pt.op) {
-            if (bounce < 2) {
-                if (rand1f(rng) < 1 - pt.op) break;
-                weight *= 1 / pt.op;
+        // intersect ray
+        auto isec = intersect_ray(scn, ray);
+        if (!isec.ist) {
+            if (emission) {
+                for (auto env : scn->environments)
+                    l += weight * eval_environment(env, ray.d);
             }
-            pt = intersect_scene(scn, make_ray(pt.pos, -wo));
-            l += weight * eval_emission(pt, wo);
+            break;
+        }
+
+        // point
+        auto pos = eval_pos(isec.ist, isec.ei, isec.uv);
+        auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv);
+        auto o = -ray.d;
+        auto f = eval_brdf(isec.ist, isec.ei, isec.uv);
+        auto op = eval_opacity(isec.ist, isec.ei, isec.uv);
+
+        // opacity
+        if (op != 1 && rand1f(rng) < 1 - op) {
+            if (bounce < 2) {
+                if (rand1f(rng) < 1 - op) break;
+                weight *= 1 / op;
+            }
+            ray = make_ray(pos, -o);
+            emission = true;
             continue;
         }
 
+        // emission
+        if (emission) {
+            auto em = eval_emission(isec.ist, isec.ei, isec.uv);
+            l += weight * eval_emission(em, n, o);
+        }
+
         // early exit
-        if (!has_reflectance(pt)) break;
+        if (f.type == brdf_type::none) break;
 
         // choose delta
-        auto delta_prob = sample_delta_prob(pt, wo);
+        auto delta_prob = sample_delta_prob(f, n, o);
         auto delta = (delta_prob && rand1f(rng) < delta_prob);
         weight *= (delta) ? 1 / delta_prob : 1 / (1 - delta_prob);
 
         // direct
-        if (!delta) {
-            auto wi = (rand1f(rng) < 0.5f) ?
-                          sample_lights(
-                              scn, pt, rand1f(rng), rand1f(rng), rand2f(rng)) :
-                          sample_brdf(pt, wo, rand1f(rng), rand2f(rng));
-            auto lpt = intersect_scene(scn, make_ray(pt.pos, wi));
-            auto pdf = 0.5f * sample_brdf_pdf(pt, wo, wi) +
-                       0.5f * sample_lights_pdf(scn, lpt, pt);
-            auto le = eval_emission(lpt, -wi);
-            auto brdfcos = eval_brdfcos(pt, wo, wi);
+        if (!delta && (!scn->lights.empty() || !scn->environments.empty())) {
+            auto i = zero3f;
+            auto nlights = (int)(scn->lights.size() + scn->environments.size());
+            if (rand1f(rng) < 0.5f) {
+                auto idx = sample_index(nlights, rand1f(rng));
+                if (idx < scn->lights.size()) {
+                    auto lgt = scn->lights[idx];
+                    i = sample_light(lgt, pos, rand1f(rng), rand2f(rng));
+                } else {
+                    auto env = scn->environments[idx - scn->lights.size()];
+                    i = sample_environment(env, rand1f(rng), rand2f(rng));
+                }
+            } else {
+                i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
+            }
+            auto isec = intersect_ray(scn, make_ray(pos, i));
+            auto pdf = 0.5f * sample_brdf_pdf(f, n, o, i);
+            auto le = zero3f;
+            if (isec.ist) {
+                auto lp = eval_pos(isec.ist, isec.ei, isec.uv);
+                auto ln = eval_shading_norm(isec.ist, isec.ei, isec.uv);
+                pdf += 0.5f *
+                       sample_light_pdf(
+                           isec.ist, isec.ei, i, ln, length(lp - pos)) *
+                       sample_index_pdf(nlights);
+                auto em = eval_emission(isec.ist, isec.ei, isec.uv);
+                le += eval_emission(em, ln, -i);
+            } else {
+                for (auto env : scn->environments) {
+                    pdf += 0.5f * sample_environment_pdf(env, i) *
+                           sample_index_pdf(nlights);
+                    le += eval_environment(env, i);
+                }
+            }
+            auto brdfcos = eval_brdfcos(f, n, o, i);
             if (pdf != 0) l += weight * le * brdfcos / pdf;
         }
 
@@ -729,9 +519,9 @@ vec3f trace_path(const scene* scn, const trace_point& pt_, const vec3f& wo_,
         if (bounce == nbounces - 1) break;
 
         // continue path
-        auto wi = sample_brdf(pt, wo, rand1f(rng), rand2f(rng), delta);
-        auto brdfcos = eval_brdfcos(pt, wo, wi, delta);
-        auto pdf = sample_brdf_pdf(pt, wo, wi, delta);
+        auto i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng), delta);
+        auto brdfcos = eval_brdfcos(f, n, o, i, delta);
+        auto pdf = sample_brdf_pdf(f, n, o, i, delta);
         if (pdf) weight *= brdfcos / pdf;
 
         if (weight == zero3f) break;
@@ -743,51 +533,67 @@ vec3f trace_path(const scene* scn, const trace_point& pt_, const vec3f& wo_,
             weight *= 1 / (1 - rrprob);
         }
 
-        // intersect next point
-        pt = intersect_scene(scn, make_ray(pt.pos, wi));
-        wo = -wi;
-        if (delta) l += weight * eval_emission(pt, wo);
+        // setup next ray
+        ray = make_ray(pos, i);
+        emission = delta;
     }
 
     return l;
 }
 
 // Recursive path tracing.
-vec3f trace_path_naive(const scene* scn, const trace_point& pt_,
-    const vec3f& wo_, rng_state& rng, int nbounces) {
-    if (scn->lights.empty()) return zero3f;
-    auto pt = pt_;
-    auto wo = wo_;
+vec3f trace_path_naive(
+    const scene* scn, const ray3f& ray_, rng_state& rng, int nbounces) {
+    if (scn->lights.empty() && scn->environments.empty()) return zero3f;
 
     // initialize
-    auto l = eval_emission(pt, wo);
+    auto l = zero3f;
     auto weight = vec3f{1, 1, 1};
+    auto ray = ray_;
 
     // trace  path
     for (auto bounce = 0; bounce < nbounces; bounce++) {
+        // intersect ray
+        auto isec = intersect_ray(scn, ray);
+        if (!isec.ist) {
+            for (auto env : scn->environments)
+                l += weight * eval_environment(env, ray.d);
+            break;
+        }
+
+        // point
+        auto pos = eval_pos(isec.ist, isec.ei, isec.uv);
+        auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv);
+        auto o = -ray.d;
+        auto f = eval_brdf(isec.ist, isec.ei, isec.uv);
+        auto op = eval_opacity(isec.ist, isec.ei, isec.uv);
+
         // opacity
-        if (pt.op != 1 && rand1f(rng) < 1 - pt.op) {
+        if (op != 1 && rand1f(rng) < 1 - op) {
             if (bounce < 2) {
-                if (rand1f(rng) < 1 - pt.op) break;
-                weight *= 1 / pt.op;
+                if (rand1f(rng) < 1 - op) break;
+                weight *= 1 / op;
             }
-            pt = intersect_scene(scn, make_ray(pt.pos, -wo));
-            l += weight * eval_emission(pt, wo);
+            ray = make_ray(pos, -o);
             continue;
         }
 
+        // emission
+        auto em = eval_emission(isec.ist, isec.ei, isec.uv);
+        l += weight * eval_emission(em, n, o);
+
         // early exit
-        if (!has_reflectance(pt)) break;
+        if (f.type == brdf_type::none) break;
 
         // choose delta
-        auto delta_prob = sample_delta_prob(pt, wo);
+        auto delta_prob = sample_delta_prob(f, n, o);
         auto delta = (delta_prob && rand1f(rng) < delta_prob);
         weight *= (delta) ? 1 / delta_prob : 1 / (1 - delta_prob);
 
         // continue path
-        auto wi = sample_brdf(pt, wo, rand1f(rng), rand2f(rng), delta);
-        auto brdfcos = eval_brdfcos(pt, wo, wi, delta);
-        auto pdf = sample_brdf_pdf(pt, wo, wi, delta);
+        auto i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng), delta);
+        auto brdfcos = eval_brdfcos(f, n, o, i, delta);
+        auto pdf = sample_brdf_pdf(f, n, o, i, delta);
         if (pdf) weight *= brdfcos / pdf;
 
         // roussian roulette
@@ -797,65 +603,91 @@ vec3f trace_path_naive(const scene* scn, const trace_point& pt_,
             weight *= 1 / (1 - rrprob);
         }
 
-        // intersect next point
-        pt = intersect_scene(scn, make_ray(pt.pos, wi));
-        wo = -wi;
-        l += weight * eval_emission(pt, wo);
+        // setup next ray
+        ray = make_ray(pos, i);
     }
 
     return l;
 }
 
 // Recursive path tracing.
-vec3f trace_path_nomis(const scene* scn, const trace_point& pt_,
-    const vec3f& wo_, rng_state& rng, int nbounces) {
-    if (scn->lights.empty()) return zero3f;
-    auto pt = pt_;
-    auto wo = wo_;
+vec3f trace_path_nomis(
+    const scene* scn, const ray3f& ray_, rng_state& rng, int nbounces) {
+    if (scn->lights.empty() && scn->environments.empty()) return zero3f;
 
     // initialize
-    auto l = eval_emission(pt, wo);
+    auto l = zero3f;
     auto weight = vec3f{1, 1, 1};
+    auto emission = true;
+    auto ray = ray_;
 
     // trace  path
     for (auto bounce = 0; bounce < nbounces; bounce++) {
+        // intersect ray
+        auto isec = intersect_ray(scn, ray);
+        if (!isec.ist) {
+            for (auto env : scn->environments)
+                l += weight * eval_environment(env, ray.d);
+            break;
+        }
+
+        // point
+        auto pos = eval_pos(isec.ist, isec.ei, isec.uv);
+        auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv);
+        auto o = -ray.d;
+        auto f = eval_brdf(isec.ist, isec.ei, isec.uv);
+        auto op = eval_opacity(isec.ist, isec.ei, isec.uv);
+
         // opacity
-        if (pt.op != 1 && rand1f(rng) < 1 - pt.op) {
+        if (op != 1 && rand1f(rng) < 1 - op) {
             if (bounce < 2) {
-                if (rand1f(rng) < 1 - pt.op) break;
-                weight *= 1 / pt.op;
+                if (rand1f(rng) < 1 - op) break;
+                weight *= 1 / op;
             }
-            pt = intersect_scene(scn, make_ray(pt.pos, -wo));
-            l += weight * eval_emission(pt, wo);
+            ray = make_ray(pos, -o);
+            emission = true;
             continue;
         }
 
+        // emission
+        if (emission) {
+            auto em = eval_emission(isec.ist, isec.ei, isec.uv);
+            l += weight * eval_emission(em, n, o);
+        }
+
         // early exit
-        if (!has_reflectance(pt)) break;
+        if (f.type == brdf_type::none) break;
 
         // choose delta
-        auto delta_prob = sample_delta_prob(pt, wo);
+        auto delta_prob = sample_delta_prob(f, n, o);
         auto delta = (delta_prob && rand1f(rng) < delta_prob);
         weight *= (delta) ? 1 / delta_prob : 1 / (1 - delta_prob);
 
         // direct
-        if (!delta) {
-            auto wi =
-                sample_lights(scn, pt, rand1f(rng), rand1f(rng), rand2f(rng));
-            auto lpt = intersect_scene(scn, make_ray(pt.pos, wi));
-            auto pdf = sample_lights_pdf(scn, lpt, pt);
-            auto le = eval_emission(lpt, -wi);
-            auto brdfcos = eval_brdfcos(pt, wo, wi);
-            if (pdf != 0) l += weight * le * brdfcos / pdf;
+        if (!delta && !scn->lights.empty()) {
+            auto lgt =
+                scn->lights[sample_index(scn->lights.size(), rand1f(rng))];
+            auto i = sample_light(lgt, pos, rand1f(rng), rand2f(rng));
+            auto isec = intersect_ray(scn, make_ray(pos, i));
+            if (isec.ist && isec.ist->mat->ke != zero3f) {
+                auto ln = eval_shading_norm(isec.ist, isec.ei, isec.uv);
+                auto pdf =
+                    sample_light_pdf(isec.ist, isec.ei, i, ln, isec.dist) *
+                    sample_index_pdf(scn->lights.size());
+                auto em = eval_emission(isec.ist, isec.ei, isec.uv);
+                auto le = eval_emission(em, ln, -i);
+                auto brdfcos = eval_brdfcos(f, n, o, i);
+                if (pdf != 0) l += weight * le * brdfcos / pdf;
+            }
         }
 
         // skip recursion if path ends
         if (bounce == nbounces - 1) break;
 
         // continue path
-        auto wi = sample_brdf(pt, wo, rand1f(rng), rand2f(rng), delta);
-        auto brdfcos = eval_brdfcos(pt, wo, wi, delta);
-        auto pdf = sample_brdf_pdf(pt, wo, wi, delta);
+        auto i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng), delta);
+        auto brdfcos = eval_brdfcos(f, n, o, i, delta);
+        auto pdf = sample_brdf_pdf(f, n, o, i, delta);
         if (pdf) weight *= brdfcos / pdf;
 
         // roussian roulette
@@ -865,32 +697,74 @@ vec3f trace_path_nomis(const scene* scn, const trace_point& pt_,
             weight *= 1 / (1 - rrprob);
         }
 
-        // intersect next point
-        pt = intersect_scene(scn, make_ray(pt.pos, wi));
-        wo = -wi;
-        if (delta) l += weight * eval_emission(pt, wo);
+        // setup next ray
+        ray = make_ray(pos, i);
+        emission = delta;
     }
 
     return l;
 }
 
 // Direct illumination.
-vec3f trace_direct(const scene* scn, const trace_point& pt, const vec3f& wo,
-    rng_state& rng, int nbounces) {
-    // emission
-    auto l = eval_emission(pt, wo);
+vec3f trace_direct(
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces) {
+    if (scn->lights.empty() && scn->environments.empty()) return zero3f;
 
-    // direct
+    // intersect scene
+    auto isec = intersect_ray(scn, ray);
+    auto l = zero3f;
+
+    // handle environment
+    if (!isec.ist) {
+        for (auto env : scn->environments) l += eval_environment(env, ray.d);
+        return l;
+    }
+
+    // point
+    auto pos = eval_pos(isec.ist, isec.ei, isec.uv);
+    auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv);
+    auto o = -ray.d;
+    auto f = eval_brdf(isec.ist, isec.ei, isec.uv);
+
+    // emission
+    auto em = eval_emission(isec.ist, isec.ei, isec.uv);
+    l += eval_emission(em, n, o);
+
+    // direct lights
     for (auto lgt : scn->lights) {
-        auto wi = (rand1f(rng) < 0.5f) ?
-                      sample_light(lgt, pt, rand1f(rng), rand2f(rng)) :
-                      sample_brdf(pt, wo, rand1f(rng), rand2f(rng));
-        auto lpt = intersect_scene(scn, make_ray(pt.pos, wi));
-        if (lpt.ist != lgt->ist || lpt.env != lgt->env) continue;
-        auto pdf = 0.5f * sample_light_pdf(lpt, pt) +
-                   0.5f * sample_brdf_pdf(pt, wo, wi);
-        auto le = eval_emission(lpt, -wi);
-        auto brdfcos = eval_brdfcos(pt, wo, wi);
+        auto i = zero3f;
+        if (rand1f(rng) < 0.5f) {
+            i = sample_light(lgt, pos, rand1f(rng), rand2f(rng));
+        } else {
+            i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
+        }
+        auto isec = intersect_ray(scn, make_ray(pos, i));
+        if (lgt != isec.ist) continue;
+        auto lp = eval_pos(isec.ist, isec.ei, isec.uv);
+        auto ln = eval_shading_norm(isec.ist, isec.ei, isec.uv);
+        auto pdf = 0.5f * sample_light_pdf(
+                              isec.ist, isec.ei, i, ln, length(lp - pos)) +
+                   0.5f * sample_brdf_pdf(f, n, o, i);
+        auto em = eval_emission(isec.ist, isec.ei, isec.uv);
+        auto le = eval_emission(em, ln, -i);
+        auto brdfcos = eval_brdfcos(f, n, o, i);
+        if (pdf != 0) l += le * brdfcos / pdf;
+    }
+
+    // direct environments
+    for (auto env : scn->environments) {
+        auto i = zero3f;
+        if (rand1f(rng) < 0.5f) {
+            i = sample_environment(env, rand1f(rng), rand2f(rng));
+        } else {
+            i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
+        }
+        auto isec = intersect_ray(scn, make_ray(pos, i));
+        if (isec.ist) continue;
+        auto pdf = 0.5f * sample_environment_pdf(env, i) +
+                   0.5f * sample_brdf_pdf(f, n, o, i);
+        auto le = eval_environment(env, i);
+        auto brdfcos = eval_brdfcos(f, n, o, i);
         if (pdf != 0) l += le * brdfcos / pdf;
     }
 
@@ -898,23 +772,21 @@ vec3f trace_direct(const scene* scn, const trace_point& pt, const vec3f& wo,
     if (nbounces <= 0) return l;
 
     // reflection
-    if (pt.ks != zero3f && !pt.rs) {
-        auto wi = reflect(wo, pt.norm);
-        auto rpt = intersect_scene(scn, make_ray(pt.pos, wi));
-        l += pt.ks * trace_direct(scn, rpt, -wi, rng, nbounces - 1);
+    if (f.ks != zero3f && !f.rs) {
+        auto i = reflect(o, n);
+        l += f.ks * trace_direct(scn, make_ray(pos, i), rng, nbounces - 1);
     }
 
     // refraction
-    if (pt.kt != zero3f) {
-        auto opt = intersect_scene(scn, make_ray(pt.pos, -wo));
-        l += pt.kt * trace_direct(scn, opt, wo, rng, nbounces - 1);
+    if (f.kt != zero3f) {
+        l += f.kt * trace_direct(scn, make_ray(pos, -o), rng, nbounces - 1);
     }
 
     // opacity
-    if (pt.op != 1) {
-        auto opt = intersect_scene(scn, make_ray(pt.pos, -wo));
-        l = pt.op * l +
-            (1 - pt.op) * trace_direct(scn, opt, wo, rng, nbounces - 1);
+    auto op = eval_opacity(isec.ist, isec.ei, isec.uv);
+    if (op != 1) {
+        l = op * l +
+            (1 - op) * trace_direct(scn, make_ray(pos, -o), rng, nbounces - 1);
     }
 
     // done
@@ -922,19 +794,52 @@ vec3f trace_direct(const scene* scn, const trace_point& pt, const vec3f& wo,
 }
 
 // Direct illumination.
-vec3f trace_direct_nomis(const scene* scn, const trace_point& pt,
-    const vec3f& wo, rng_state& rng, int nbounces) {
-    // emission
-    auto l = eval_emission(pt, wo);
+vec3f trace_direct_nomis(
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces) {
+    if (scn->lights.empty() && scn->environments.empty()) return zero3f;
 
-    // direct
+    // intersect scene
+    auto isec = intersect_ray(scn, ray);
+    auto l = zero3f;
+
+    // handle environment
+    if (!isec.ist) {
+        for (auto env : scn->environments) l += eval_environment(env, ray.d);
+        return l;
+    }
+
+    // point
+    auto pos = eval_pos(isec.ist, isec.ei, isec.uv);
+    auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv);
+    auto o = -ray.d;
+    auto f = eval_brdf(isec.ist, isec.ei, isec.uv);
+
+    // emission
+    auto em = eval_emission(isec.ist, isec.ei, isec.uv);
+    l += eval_emission(em, n, o);
+
+    // direct lights
     for (auto lgt : scn->lights) {
-        auto wi = sample_light(lgt, pt, rand1f(rng), rand2f(rng));
-        auto lpt = intersect_scene(scn, make_ray(pt.pos, wi));
-        if (lpt.ist != lgt->ist || lpt.env != lgt->env) continue;
-        auto pdf = sample_light_pdf(lpt, pt);
-        auto le = eval_emission(lpt, -wi);
-        auto brdfcos = eval_brdfcos(pt, wo, wi);
+        auto i = sample_light(lgt, pos, rand1f(rng), rand2f(rng));
+        auto isec = intersect_ray(scn, make_ray(pos, i));
+        if (lgt != isec.ist) continue;
+        auto lp = eval_pos(isec.ist, isec.ei, isec.uv);
+        auto ln = eval_shading_norm(isec.ist, isec.ei, isec.uv);
+        auto pdf = sample_light_pdf(isec.ist, isec.ei, i, ln, length(lp - pos));
+        auto em = eval_emission(isec.ist, isec.ei, isec.uv);
+        auto le = eval_emission(em, ln, -i);
+        auto brdfcos = eval_brdfcos(f, n, o, i);
+        if (pdf != 0) l += le * brdfcos / pdf;
+    }
+
+    // direct environments
+    for (auto env : scn->environments) {
+        auto i = sample_environment(env, rand1f(rng), rand2f(rng));
+        auto isec = intersect_ray(scn, make_ray(pos, i));
+        if (isec.ist) continue;
+        auto pdf = sample_environment_pdf(env, i);
+        auto le = eval_environment(env, i);
+        auto brdfcos = eval_brdfcos(f, n, o, i);
         if (pdf != 0) l += le * brdfcos / pdf;
     }
 
@@ -942,23 +847,21 @@ vec3f trace_direct_nomis(const scene* scn, const trace_point& pt,
     if (nbounces <= 0) return l;
 
     // reflection
-    if (pt.ks != zero3f && !pt.rs) {
-        auto wi = reflect(wo, pt.norm);
-        auto rpt = intersect_scene(scn, make_ray(pt.pos, wi));
-        l += pt.ks * trace_direct(scn, rpt, -wi, rng, nbounces - 1);
+    if (f.ks != zero3f && !f.rs) {
+        auto i = reflect(o, n);
+        l += f.ks * trace_direct(scn, make_ray(pos, i), rng, nbounces - 1);
     }
 
     // opacity
-    if (pt.kt != zero3f) {
-        auto opt = intersect_scene(scn, make_ray(pt.pos, -wo));
-        l += pt.kt * trace_direct(scn, opt, wo, rng, nbounces - 1);
+    if (f.kt != zero3f) {
+        l += f.kt * trace_direct(scn, make_ray(pos, -o), rng, nbounces - 1);
     }
 
     // opacity
-    if (pt.op != 1) {
-        auto opt = intersect_scene(scn, make_ray(pt.pos, -wo));
-        l = pt.op * l +
-            (1 - pt.op) * trace_direct(scn, opt, wo, rng, nbounces - 1);
+    auto op = eval_opacity(isec.ist, isec.ei, isec.uv);
+    if (op != 1) {
+        l = op * l +
+            (1 - op) * trace_direct(scn, make_ray(pos, -o), rng, nbounces - 1);
     }
 
     // done
@@ -966,25 +869,40 @@ vec3f trace_direct_nomis(const scene* scn, const trace_point& pt,
 }
 
 // Eyelight for quick previewing.
-vec3f trace_eyelight(const scene* scn, const trace_point& pt, const vec3f& wo,
-    rng_state& rng, int nbounces) {
+vec3f trace_eyelight(
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces) {
+    // intersect scene
+    auto isec = intersect_ray(scn, ray);
+    auto l = zero3f;
+
+    // handle environment
+    if (!isec.ist) {
+        for (auto env : scn->environments) l += eval_environment(env, ray.d);
+        return l;
+    }
+
+    // point
+    auto pos = eval_pos(isec.ist, isec.ei, isec.uv);
+    auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv);
+    auto o = -ray.d;
+    auto f = eval_brdf(isec.ist, isec.ei, isec.uv);
+
     // emission
-    auto l = eval_emission(pt, wo);
-    if (!pt.ist) return l;
+    auto em = eval_emission(isec.ist, isec.ei, isec.uv);
+    l += eval_emission(em, n, o);
 
     // brdf*light
-    l += eval_brdfcos(pt, wo, wo) * pi;
+    l += eval_brdfcos(f, n, o, o) * pi;
 
     // opacity
     if (nbounces <= 0) return l;
-    if (pt.kt != zero3f) {
-        auto opt = intersect_scene(scn, make_ray(pt.pos, -wo));
-        l += pt.kt * trace_eyelight(scn, opt, wo, rng, nbounces - 1);
+    if (f.kt != zero3f) {
+        l += f.kt * trace_eyelight(scn, make_ray(pos, -o), rng, nbounces - 1);
     }
-    if (pt.op != 1) {
-        auto opt = intersect_scene(scn, make_ray(pt.pos, -wo));
-        l = pt.op * l +
-            (1 - pt.op) * trace_eyelight(scn, opt, wo, rng, nbounces - 1);
+    auto op = eval_opacity(isec.ist, isec.ei, isec.uv);
+    if (op != 1) {
+        l = op * l + (1 - op) * trace_eyelight(
+                                    scn, make_ray(pos, -o), rng, nbounces - 1);
     }
 
     // done
@@ -993,81 +911,86 @@ vec3f trace_eyelight(const scene* scn, const trace_point& pt, const vec3f& wo,
 
 // Debug previewing.
 vec3f trace_debug_normal(
-    const scene* scn, const trace_point& pt, const vec3f& wo, rng_state& rng) {
-    auto wn = pt.norm;
-    if (pt.double_sided && dot(wn, wo) < 0) wn = -wn;
-    return wn * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces) {
+    // intersect scene
+    auto isec = intersect_ray(scn, ray);
+    if (!isec.ist) return zero3f;
+
+    // point
+    auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv);
+    auto o = -ray.d;
+
+    // shade
+    if (isec.ist->mat->double_sided && dot(n, o) < 0) n = -n;
+    return n * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
 }
 
 // Debug frontfacing.
 vec3f trace_debug_frontfacing(
-    const scene* scn, const trace_point& pt, const vec3f& wo, rng_state& rng) {
-    auto wn = pt.norm;
-    if (pt.double_sided && dot(wn, wo) < 0) wn = -wn;
-    return dot(wn, wo) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0};
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces) {
+    // intersect scene
+    auto isec = intersect_ray(scn, ray);
+    if (!isec.ist) return zero3f;
+
+    // point
+    auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv);
+    auto o = -ray.d;
+
+    // shade
+    if (isec.ist->mat->double_sided && dot(n, o) < 0) n = -n;
+    return dot(n, o) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0};
 }
 
 // Debug previewing.
 vec3f trace_debug_albedo(
-    const scene* scn, const trace_point& pt, const vec3f& wo, rng_state& rng) {
-    return pt.kd + pt.ks + pt.kt;
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces) {
+    // intersect scene
+    auto isec = intersect_ray(scn, ray);
+    if (!isec.ist) return zero3f;
+
+    // point
+    auto f = eval_brdf(isec.ist, isec.ei, isec.uv);
+
+    // shade
+    return f.kd + f.ks + f.kt;
 }
 
 // Debug previewing.
 vec3f trace_debug_texcoord(
-    const scene* scn, const trace_point& pt, const vec3f& wo, rng_state& rng) {
-    return {pt.texcoord.x, pt.texcoord.y, 0};
-}
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces) {
+    // intersect scene
+    auto isec = intersect_ray(scn, ray);
+    if (!isec.ist) return zero3f;
 
-// Trace function
-vec3f trace_func(const scene* scn, const trace_point& pt, const vec3f& wo,
-    rng_state& rng, trace_type tracer, int nbounces) {
-    switch (tracer) {
-        case trace_type::eyelight:
-            return trace_eyelight(scn, pt, wo, rng, nbounces);
-        case trace_type::direct:
-            return trace_direct(scn, pt, wo, rng, nbounces);
-        case trace_type::pathtrace:
-            return trace_path(scn, pt, wo, rng, nbounces);
-        case trace_type::pathtrace_nomis:
-            return trace_path_nomis(scn, pt, wo, rng, nbounces);
-        case trace_type::pathtrace_naive:
-            return trace_path_naive(scn, pt, wo, rng, nbounces);
-        case trace_type::direct_nomis:
-            return trace_direct_nomis(scn, pt, wo, rng, nbounces);
-        case trace_type::debug_albedo:
-            return trace_debug_albedo(scn, pt, wo, rng);
-        case trace_type::debug_normal:
-            return trace_debug_normal(scn, pt, wo, rng);
-        case trace_type::debug_frontfacing:
-            return trace_debug_frontfacing(scn, pt, wo, rng);
-        case trace_type::debug_texcoord:
-            return trace_debug_texcoord(scn, pt, wo, rng);
-    }
+    // point
+    auto texcoord = eval_texcoord(isec.ist, isec.ei, isec.uv);
+
+    // shade
+    return {texcoord.x, texcoord.y, 0};
 }
 
 // Trace a single sample
 vec4f trace_sample(const scene* scn, const camera* cam, int i, int j, int width,
-    int height, rng_state& rng, trace_type tracer, int nbounces,
+    int height, rng_state& rng, trace_func tracer, int nbounces,
     float pixel_clamp = 100) {
     auto crn = rand2f(rng);
     auto lrn = rand2f(rng);
     auto uv = vec2f{(i + crn.x) / width, 1 - (j + crn.y) / height};
     auto ray = eval_camera_ray(cam, uv, lrn);
-    auto pt = intersect_scene(scn, ray);
-    auto l = trace_func(scn, pt, -ray.d, rng, tracer, nbounces);
+    auto l = tracer(scn, ray, rng, nbounces);
     if (!isfinite(l.x) || !isfinite(l.y) || !isfinite(l.z)) {
         log_error("NaN detected");
         l = zero3f;
     }
     if (max(l) > pixel_clamp) l = l * (pixel_clamp / max(l));
-    return {l.x, l.y, l.z, (pt.ist || pt.env) ? 1.0f : 0.0f};
+    // return {l.x, l.y, l.z, (pt.ist || pt.env) ? 1.0f : 0.0f};
+    return {l.x, l.y, l.z, 1};
 }
 
 // Trace the next nsamples.
 void trace_samples(const scene* scn, const camera* cam, int width, int height,
     std::vector<vec4f>& img, std::vector<rng_state>& rngs, int sample,
-    int nsamples, trace_type tracer, int nbounces, float pixel_clamp) {
+    int nsamples, trace_func tracer, int nbounces, float pixel_clamp) {
     for (auto j = 0; j < height; j++) {
         for (auto i = 0; i < width; i++) {
             auto pid = i + j * width;
@@ -1083,7 +1006,7 @@ void trace_samples(const scene* scn, const camera* cam, int width, int height,
 // Trace the next nsamples.
 void trace_samples_mt(const scene* scn, const camera* cam, int width,
     int height, std::vector<vec4f>& img, std::vector<rng_state>& rngs,
-    int sample, int nsamples, trace_type tracer, int nbounces,
+    int sample, int nsamples, trace_func tracer, int nbounces,
     float pixel_clamp) {
     auto nthreads = std::thread::hardware_concurrency();
     auto threads = std::vector<std::thread>();
@@ -1108,7 +1031,7 @@ void trace_samples_mt(const scene* scn, const camera* cam, int width,
 // Starts an anyncrhounous renderer.
 void trace_async_start(const scene* scn, const camera* cam, int width,
     int height, std::vector<vec4f>& img, std::vector<rng_state>& rngs,
-    int nsamples, trace_type tracer, int nbounces,
+    int nsamples, trace_func tracer, int nbounces,
     std::vector<std::thread>& threads, bool& stop_flag, int& cur_sample,
     float pixel_clamp) {
     auto nthreads = std::thread::hardware_concurrency();

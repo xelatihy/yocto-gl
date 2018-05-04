@@ -43,12 +43,12 @@ struct app_state {
     std::string imfilename;
 
     // rendering params
-    int resolution = 512;  // image vertical resolution
-    int nsamples = 256;    // number of samples
-    ygl::trace_type tracer = ygl::trace_type::pathtrace;  // tracer
-    int nbounces = 8;                                     // max depth
-    int seed = 7;                                         // seed
-    float pixel_clamp = 100.0f;                           // pixel clamping
+    int resolution = 512;                      // image vertical resolution
+    int nsamples = 256;                        // number of samples
+    ygl::trace_func tracer = ygl::trace_path;  // tracer
+    int nbounces = 8;                          // max depth
+    int seed = 7;                              // seed
+    float pixel_clamp = 100.0f;                // pixel clamping
 
     // rendered image
     int width = 0, height = 512;
@@ -80,17 +80,17 @@ struct app_state {
     }
 };
 
-auto trace_names = std::map<ygl::trace_type, std::string>{
-    {ygl::trace_type::pathtrace, "pathtrace"},
-    {ygl::trace_type::direct, "direct"},
-    {ygl::trace_type::eyelight, "eyelight"},
-    {ygl::trace_type::pathtrace_nomis, "pathtrace_nomis"},
-    {ygl::trace_type::pathtrace_naive, "pathtrace_naive"},
-    {ygl::trace_type::direct_nomis, "direct_nomis"},
-    {ygl::trace_type::debug_normal, "debug_normal"},
-    {ygl::trace_type::debug_albedo, "debug_albedo"},
-    {ygl::trace_type::debug_texcoord, "debug_texcoord"},
-    {ygl::trace_type::debug_frontfacing, "debug_frontfacing"},
+auto trace_names = std::map<ygl::trace_func, std::string>{
+    {ygl::trace_path, "pathtrace"},
+    {ygl::trace_direct, "direct"},
+    {ygl::trace_eyelight, "eyelight"},
+    {ygl::trace_path_nomis, "pathtrace_nomis"},
+    {ygl::trace_path_naive, "pathtrace_naive"},
+    {ygl::trace_direct_nomis, "direct_nomis"},
+    {ygl::trace_debug_normal, "debug_normal"},
+    {ygl::trace_debug_albedo, "debug_albedo"},
+    {ygl::trace_debug_texcoord, "debug_texcoord"},
+    {ygl::trace_debug_frontfacing, "debug_frontfacing"},
 };
 
 void draw(ygl::glwindow* win, app_state* app) {
@@ -286,8 +286,8 @@ int main(int argc, char* argv[]) {
         "Image vertical resolution.", app->resolution);
     app->nsamples = ygl::parse_opt(
         parser, "--nsamples", "-s", "Number of samples.", app->nsamples);
-    app->tracer = ygl::parse_opt(
-        parser, "--tracer", "-T", "Trace type.", trace_names, app->tracer);
+    app->tracer = ygl::parse_opte(
+        parser, "--tracer", "-t", "Trace type.", trace_names, app->tracer);
     auto double_sided = ygl::parse_flag(
         parser, "--double-sided", "-D", "Force double sided rendering.", false);
     app->nbounces = ygl::parse_opt(
@@ -342,9 +342,10 @@ int main(int argc, char* argv[]) {
     ygl::update_lights(app->scn);
 
     // fix renderer type if no lights
-    if (app->scn->lights.empty() && app->tracer != ygl::trace_type::eyelight) {
+    if (app->scn->lights.empty() && app->scn->environments.empty() &&
+        app->tracer != ygl::trace_eyelight) {
         ygl::log_info("no lights presents, switching to eyelight shader");
-        app->tracer = ygl::trace_type::eyelight;
+        app->tracer = ygl::trace_eyelight;
     }
 
     // initialize rendering objects

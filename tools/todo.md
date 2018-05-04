@@ -29,6 +29,25 @@ Please consider this to be just development notes and not any real planning.
 
 ## Trace
 
+- api for trace with callbacks
+- review sample_light_pdf -> explicit normal to be carried around
+    - or remove sample_light and use sample_direction
+- intersection in scene with other name
+    - maybe carry environment here?
+- sampling shapes
+    - remove sample_points, sample_lines, etc...
+    - support uniform sampling in sample_shape
+- deltas with only one function call instead of split
+- split eval functions from point
+    - eval emission
+        - simplify?
+    - eval environment
+        - flip direction?
+- redirect log to imgui
+- BUG: double sided for kt
+- BUG: opacity
+- BUG: add default material on load
+- opacity in intersection
 - sample pdfs based on intersection record
     - probability based on intersection point (pos, norm, ei)
         - fold ei into point
@@ -42,6 +61,7 @@ Please consider this to be just development notes and not any real planning.
     - use intersection when needed
         - seems to possible have better semantic for envmap?
     - remvoe point out of the equation
+- intersection return projections for lines and points
 - review loops for intersect missed test
     - consider removing environment point
 - opacity as lobe

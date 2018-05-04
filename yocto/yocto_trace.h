@@ -69,41 +69,63 @@
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// #codegen begin refl-trace
-
-// Type of rendering algorithm.
-enum struct trace_type {
-    pathtrace = 0,
-    direct,
-    eyelight,
-    pathtrace_nomis,
-    pathtrace_naive,
-    direct_nomis,
-    debug_normal,
-    debug_albedo,
-    debug_texcoord,
-    debug_frontfacing
-};
+// Trace evaluation function.
+using trace_func = vec3f (*)(
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces);
 
 // Trace the next nsamples samples. Assumes that the
 // image contains cur_samples already. Returns true when done.
 void trace_samples(const scene* scn, const camera* cam, int width, int height,
     std::vector<vec4f>& img, std::vector<rng_state>& rngs, int cur_samples,
-    int nsamples, trace_type tracer, int nbounces, float pixel_clamp = 100);
+    int nsamples, trace_func tracer, int nbounces, float pixel_clamp = 100);
 // Like before but with multiplthreading.
 void trace_samples_mt(const scene* scn, const camera* cam, int width,
     int height, std::vector<vec4f>& img, std::vector<rng_state>& rngs,
-    int cur_samples, int nsamples, trace_type tracer, int nbounces,
+    int cur_samples, int nsamples, trace_func tracer, int nbounces,
     float pixel_clamp = 100);
 
 // Starts an anyncrhounous renderer.
 void trace_async_start(const scene* scn, const camera* cam, int width,
     int height, std::vector<vec4f>& img, std::vector<rng_state>& rngs,
-    int nsamples, trace_type tracer, int nbounces,
+    int nsamples, trace_func tracer, int nbounces,
     std::vector<std::thread>& threads, bool& stop_flag, int& cur_sample,
     float pixel_clamp = 100);
 // Stop the asynchronous renderer.
 void trace_async_stop(std::vector<std::thread>& threads, bool& stop_flag);
+
+// Trace function - path tracer.
+vec3f trace_path(
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces);
+// Trace function - path tracer without mis.
+vec3f trace_path_nomis(
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces);
+// Trace function - naive path tracer.
+vec3f trace_path_naive(
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces);
+// Trace function - direct illumination.
+vec3f trace_direct(
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces);
+// Trace function - direct illumination without mis.
+vec3f trace_direct_nomis(
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces);
+// Trace function - direct illumination without mis.
+vec3f trace_direct_nomis(
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces);
+// Trace function - eyelight rendering.
+vec3f trace_eyelight(
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces);
+// Trace function - normal debug visualization.
+vec3f trace_debug_normal(
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces);
+// Trace function - faceforward debug visualization.
+vec3f trace_debug_frontfacing(
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces);
+// Trace function - albedo debug visualization.
+vec3f trace_debug_albedo(
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces);
+// Trace function - texcoord debug visualization.
+vec3f trace_debug_texcoord(
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces);
 
 }  // namespace ygl
 

@@ -85,8 +85,8 @@
 
 #include "yocto_math.h"
 
-#include <vector>
 #include <string>
+#include <vector>
 
 // -----------------------------------------------------------------------------
 // SCENE DATA
@@ -269,12 +269,6 @@ struct animation {
     std::vector<node*> targets;                    // target nodes
 };
 
-// Light as either an instance or an environment.
-struct light {
-    instance* ist = nullptr;     // instance
-    environment* env = nullptr;  // environment
-};
-
 // Scene comprised an array of objects whose memory is owened by the scene.
 // All members are optional,Scene objects (camera, instances, environments)
 // have transforms defined internally. A scene can optionally contain a
@@ -295,7 +289,7 @@ struct scene {
     std::vector<animation*> animations = {};  // animations [optional]
 
     // compute properties
-    std::vector<light*> lights;
+    std::vector<instance*> lights;
     bbox3f bbox = invalid_bbox3f;  // boudning box
     bvh_tree* bvh = nullptr;
 
@@ -396,9 +390,9 @@ namespace ygl {
 // Scene intersection.
 struct scene_intersection {
     instance* ist = nullptr;  // instance or null for no intersection
-    int eid = 0;              // shape element index
-    vec2f euv = zero2f;       // shape element coordinates
-    float ray_t = 0;          // ray/point distance
+    int ei = 0;               // shape element index
+    vec2f uv = zero2f;        // shape element coordinates
+    float dist = 0;           // ray/point distance
 };
 
 // Intersects a ray with the scene.
@@ -406,47 +400,50 @@ scene_intersection intersect_ray(
     const scene* scn, const ray3f& ray, bool find_any = false);
 
 // Shape values interpolated using barycentric coordinates.
-vec3f eval_pos(const shape* shp, int eid, const vec2f& euv);
-vec3f eval_norm(const shape* shp, int eid, const vec2f& euv);
-vec2f eval_texcoord(const shape* shp, int eid, const vec2f& euv);
-vec4f eval_color(const shape* shp, int eid, const vec2f& euv);
-float eval_radius(const shape* shp, int eid, const vec2f& euv);
-vec4f eval_tangsp(const shape* shp, int eid, const vec2f& euv);
-vec3f eval_tangsp(
-    const shape* shp, int eid, const vec2f& euv, bool& left_handed);
+vec3f eval_pos(const shape* shp, int ei, const vec2f& uv);
+vec3f eval_norm(const shape* shp, int ei, const vec2f& uv);
+vec2f eval_texcoord(const shape* shp, int ei, const vec2f& uv);
+vec4f eval_color(const shape* shp, int ei, const vec2f& uv);
+float eval_radius(const shape* shp, int ei, const vec2f& uv);
+vec4f eval_tangsp(const shape* shp, int ei, const vec2f& uv);
+vec3f eval_tangsp(const shape* shp, int ei, const vec2f& uv, bool& left_handed);
 // Shape element values.
-vec3f eval_elem_norm(const shape* shp, int eid);
+vec3f eval_elem_norm(const shape* shp, int ei);
 
 // Instance values interpolated using barycentric coordinates.
 // Handles defaults if data is missing.
-vec3f eval_pos(const instance* ist, int eid, const vec2f& euv);
-vec3f eval_norm(const instance* ist, int eid, const vec2f& euv);
-vec2f eval_texcoord(const instance* ist, int eid, const vec2f& euv);
-vec4f eval_color(const instance* ist, int eid, const vec2f& euv);
-float eval_radius(const instance* ist, int eid, const vec2f& euv);
+vec3f eval_pos(const instance* ist, int ei, const vec2f& uv);
+vec3f eval_norm(const instance* ist, int ei, const vec2f& uv);
+vec2f eval_texcoord(const instance* ist, int ei, const vec2f& uv);
+vec4f eval_color(const instance* ist, int ei, const vec2f& uv);
+float eval_radius(const instance* ist, int ei, const vec2f& uv);
 vec3f eval_tangsp(
-    const instance* ist, int eid, const vec2f& euv, bool& left_handed);
+    const instance* ist, int ei, const vec2f& uv, bool& left_handed);
 // Instance element values.
-vec3f eval_elem_norm(const instance* ist, int eid);
+vec3f eval_elem_norm(const instance* ist, int ei);
+// Shading normals including material perturbations.
+vec3f eval_shading_norm(
+    const instance* ist, int ei, const vec2f& uv, const vec3f& o = zero3f);
 
-// Environment values interpolated using uv parametrization.
-vec3f eval_pos(const environment* env, const vec2f& uv);
-vec3f eval_norm(const environment* env, const vec2f& uv);
-// Environment texture coordinates from uv parametrization.
-vec2f eval_texcoord(const environment* env, const vec2f& uv);
-// Evaluate uv parameters for an incoming direction.
-vec2f eval_uv(const environment* env, const vec3f& w);
+// Environment texture coordinates from the incoming direction.
+vec2f eval_texcoord(const environment* env, const vec3f& i);
 // Evaluate the incoming direction from the uv.
 vec3f eval_direction(const environment* env, const vec2f& uv);
+// Evaluate the environment emission.
+vec3f eval_environment(const environment* env, const vec3f& i);
 
 // Evaluate a texture.
 vec4f eval_texture(const texture_info& info, const vec2f& texcoord,
     bool srgb = true, const vec4f& def = {1, 1, 1, 1});
-inline vec4f eval_texture(const texture* txt, const vec2f& texcoord,
-    bool srgb = true, const vec4f& def = {1, 1, 1, 1}) {
-    auto info = texture_info();
-    info.txt = (texture*)txt;
-    return eval_texture(info, texcoord, srgb, def);
+inline vec3f eval_texture_rgb(const texture_info& info, const vec2f& texcoord,
+    bool srgb = true, const vec3f& def = {1, 1, 1}) {
+    auto val = eval_texture(info, texcoord, srgb, {def.x, def.y, def.z, 1});
+    return {val.x, val.y, val.z};
+}
+inline float eval_texture_alpha(
+    const texture_info& info, const vec2f& texcoord, const float def = 1) {
+    auto val = eval_texture(info, texcoord, false, {1, 1, 1, def});
+    return val.w;
 }
 // Generates a ray from a camera image coordinate `uv` and lens coordinates
 // `luv`.
@@ -460,9 +457,28 @@ ray3f eval_camera_ray(const camera* cam, const vec2i& ij, int res,
 // values any one is 0 or less. Set camera aspect otherwise.
 void sync_camera_aspect(const camera* cam, int& width, int& height);
 
+// Brdf type.
+enum struct brdf_type { none, point, line, surface };
+
+// Brdf.
+struct brdf {
+    brdf_type type = brdf_type::none;  // type
+    vec3f kd = {0, 0, 0};              // diffuse
+    vec3f ks = {0, 0, 0};              // specular
+    float rs = 0;                      // specular roughness
+    vec3f kt = {0, 0, 0};              // thin glass transmission
+};
+
+// Evaluates the material emission.
+vec3f eval_emission(const instance* ist, int ei, const vec2f& uv);
+// Evaluates the material brdf.
+brdf eval_brdf(const instance* ist, int ei, const vec2f& uv);
+// Evaluates the opacity.
+float eval_opacity(const instance* ist, int ei, const vec2f& uv);
+
 // Sample a shape based on a distribution.
-std::pair<int, vec2f> sample_shape(const shape* shp,
-    const std::vector<float>& cdf, float re, const vec2f& ruv);
+std::pair<int, vec2f> sample_shape(
+    const shape* shp, float re, const vec2f& ruv);
 
 // Sample an environment uniformly.
 vec2f sample_environment(const environment* env, const vec2f& ruv);

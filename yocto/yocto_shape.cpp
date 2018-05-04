@@ -643,22 +643,21 @@ sample_triangles_points(const std::vector<vec3i>& triangles,
     auto cdf = sample_triangles_cdf(triangles, pos);
     auto rng = make_rng(seed);
     for (auto i = 0; i < npoints; i++) {
-        auto eid = 0;
-        auto euv = zero2f;
-        std::tie(eid, euv) =
+        auto ei = 0;
+        auto uv = zero2f;
+        std::tie(ei, uv) =
             sample_triangles(cdf, rand1f(rng), {rand1f(rng), rand1f(rng)});
-        auto t = triangles[eid];
-        sampled_pos[i] =
-            interpolate_triangle(pos[t.x], pos[t.y], pos[t.z], euv);
+        auto t = triangles[ei];
+        sampled_pos[i] = interpolate_triangle(pos[t.x], pos[t.y], pos[t.z], uv);
         if (!sampled_norm.empty()) {
             sampled_norm[i] = normalize(
-                interpolate_triangle(norm[t.x], norm[t.y], norm[t.z], euv));
+                interpolate_triangle(norm[t.x], norm[t.y], norm[t.z], uv));
         } else {
             sampled_norm[i] = triangle_normal(pos[t.x], pos[t.y], pos[t.z]);
         }
         if (!sampled_texcoord.empty()) {
             sampled_texcoord[i] = interpolate_triangle(
-                texcoord[t.x], texcoord[t.y], texcoord[t.z], euv);
+                texcoord[t.x], texcoord[t.y], texcoord[t.z], uv);
         } else {
             sampled_texcoord[i] = zero2f;
         }
