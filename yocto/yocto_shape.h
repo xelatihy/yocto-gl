@@ -121,8 +121,8 @@ void compute_matrix_skinning(const std::vector<vec3f>& pos,
     std::vector<vec3f>& skinned_pos, std::vector<vec3f>& skinned_norm);
 
 // Create an array of edges.
-std::vector<vec2i> get_edges(const std::vector<vec2i>& lines,
-    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads);
+std::vector<vec2i> get_edges(const std::vector<vec3i>& triangles);
+std::vector<vec2i> get_edges(const std::vector<vec4i>& quads);
 
 // Convert quads to triangles
 std::vector<vec3i> convert_quads_to_triangles(const std::vector<vec4i>& quads);
@@ -136,10 +136,9 @@ std::vector<vec2i> convert_bezier_to_lines(const std::vector<vec4i>& beziers);
 
 // Convert face-varying data to single primitives. Returns the quads indices
 // and face ids and filled vectors for pos, norm and texcoord.
-std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
-    std::vector<vec2f>>
-convert_face_varying(const std::vector<vec4i>& quads_pos,
-    const std::vector<vec4i>& quads_norm,
+void convert_face_varying(std::vector<vec4i>& qquads, std::vector<vec3f>& qpos,
+    std::vector<vec3f>& qnorm, std::vector<vec2f>& qtexcoord,
+    const std::vector<vec4i>& quads_pos, const std::vector<vec4i>& quads_norm,
     const std::vector<vec4i>& quads_texcoord, const std::vector<vec3f>& pos,
     const std::vector<vec3f>& norm, const std::vector<vec2f>& texcoord);
 
@@ -265,50 +264,53 @@ sample_triangles_points(const std::vector<vec3i>& triangles,
     const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
     const std::vector<vec2f>& texcoord, int npoints, int seed = 7);
 
-// Make examples shapes.
-void make_quad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+// Make examples triangle shapes with shared vertices (not watertight).
+void make_quad(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
     const vec2f& size, const vec2f& uvsize);
-void make_quad_stack(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+void make_quad_stack(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
     const vec3f& size, const vec2f& uvsize);
-void make_cube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+void make_cube(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
     const vec3f& size, const vec3f& uvsize);
-void make_cube_rounded(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+void make_cube_rounded(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
     const vec3f& size, const vec3f& uvsize, float radius);
-void make_sphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+void make_sphere(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
     float size, const vec2f& uvsize);
-void make_sphere_cube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+void make_sphere_cube(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int steps,
     float size, float uvsize);
-void make_sphere_flipcap(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+void make_sphere_flipcap(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
     float size, const vec2f& uvsize, const vec2f& zflip);
-void make_disk(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+void make_disk(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
     float size, const vec2f& uvsize);
-void make_disk_quad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+void make_disk_quad(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int steps,
     float size, float uvsize);
-void make_disk_bulged(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+void make_disk_bulged(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int steps,
     float size, float uvsize, float height);
-void make_cylinder_side(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+void make_cylinder_side(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
     const vec2f& size, const vec2f& uvsize, bool capped);
-void make_cylinder(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+void make_cylinder(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
     const vec2f& size, const vec3f& uvsize);
-void make_cylinder_rounded(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
-    const vec2f& size, const vec3f& uvsize, float radius);
+void make_cylinder_rounded(std::vector<vec3i>& triangles,
+    std::vector<vec3f>& pos, std::vector<vec3f>& norm,
+    std::vector<vec2f>& texcoord, const vec3i& steps, const vec2f& size,
+    const vec3f& uvsize, float radius);
 void make_sphere(
-    std::vector<vec4i>& quads, std::vector<vec3f>& pos, int tesselation);
+    std::vector<vec3i>& triangles, std::vector<vec3f>& pos, int tesselation);
 void make_geodesic_sphere(std::vector<vec3i>& triangles,
     std::vector<vec3f>& pos, int tesselation, float size);
+
+// Make example watertight quad meshes for subdivision surfaces.
 void make_cube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     int tesselation, float size);
 void make_fvcube(std::vector<vec4i>& quads_pos, std::vector<vec3f>& pos,
@@ -349,11 +351,11 @@ void make_bezier_circle(std::vector<vec4i>& beziers, std::vector<vec3f>& pos);
 void make_hair(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
     std::vector<vec3f>& tang, std::vector<vec2f>& texcoord,
     std::vector<float>& radius, const vec2i& steps,
-    const std::vector<vec3i>& striangles, const std::vector<vec4i>& squads,
-    const std::vector<vec3f>& spos, const std::vector<vec3f>& snorm,
-    const std::vector<vec2f>& stexcoord, const vec2f& length = {0.1f, 0.1f},
-    const vec2f& rad = {0.001f, 0.001f}, const vec2f& noise = zero2f,
-    const vec2f& clump = zero2f, const vec2f& rotation = zero2f, int seed = 7);
+    const std::vector<vec3i>& striangles, const std::vector<vec3f>& spos,
+    const std::vector<vec3f>& snorm, const std::vector<vec2f>& stexcoord,
+    const vec2f& length = {0.1f, 0.1f}, const vec2f& rad = {0.001f, 0.001f},
+    const vec2f& noise = zero2f, const vec2f& clump = zero2f,
+    const vec2f& rotation = zero2f, int seed = 7);
 
 }  // namespace ygl
 

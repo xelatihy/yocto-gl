@@ -29,47 +29,29 @@ Please consider this to be just development notes and not any real planning.
 
 ## Trace
 
-- api for trace with callbacks
-- review sample_light_pdf -> explicit normal to be carried around
-    - or remove sample_light and use sample_direction
-- intersection in scene with other name
-    - maybe carry environment here?
+- lights are only triangle meshes
+- simpler shapes
+    - remove quads, facevarying
+    - split lines and triangle meshes
+    - remove quads and the rest
+    - remove points
+    - lines materials are just plastic BRDFs for now
+- remove brdf?
+    - eval_diffuse, eval_specular, eval_roughness, eval_emission
 - sampling shapes
     - remove sample_points, sample_lines, etc...
     - support uniform sampling in sample_shape
 - deltas with only one function call instead of split
-- split eval functions from point
-    - eval emission
-        - simplify?
-    - eval environment
-        - flip direction?
+- simplify eval functions
+    - eval emission: simplify?
+    - eval environment: flip direction?
 - redirect log to imgui
 - BUG: double sided for kt
-- BUG: opacity
-- BUG: add default material on load
 - opacity in intersection
-- sample pdfs based on intersection record
-    - probability based on intersection point (pos, norm, ei)
-        - fold ei into point
-- environment based on only w?
-    - do not need point for the environment any more?
-    - Le -> emission
-    - ei -> pdf
-- trace point
-    - should we have eval_pos, eval_norm, eval_emission, eval_brdf?
-        - only problem is where to put normal map
-    - use intersection when needed
-        - seems to possible have better semantic for envmap?
-    - remvoe point out of the equation
 - intersection return projections for lines and points
-- review loops for intersect missed test
-    - consider removing environment point
-- opacity as lobe
-- deltas mixed back in
 - matcap rendering
 - area light test scene
 - bump/normal mapping
-- shape trimming in intersection
 - double-sided brdf
 - fresnel
     - diffuse formula
@@ -77,18 +59,11 @@ Please consider this to be just development notes and not any real planning.
     - transmission formula
     - fresnel in coefficients
     - fresnel in weights
-- highlights are too soft in bitterli scenes
 - add radius in offsetting rays
-- sample background to sum all environments
-- cleanup sampling functions everywhere
-    - probably removing sample_points/lines/triangles
-    - cleanup sampling in ray tracing
-    - make lights with single shapes in trace
 - simple denoiser
     - joint bilateral denoiser
     - non-local means denoiser
     - denoiser from paris
-- evaluate a big simplifying pass
 
 ## Tesselated shapes
 

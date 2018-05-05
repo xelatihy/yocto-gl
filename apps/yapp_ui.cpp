@@ -100,35 +100,14 @@ void update_gldata(shape* shp) {
 
     if (!shp->gl_data) shp->gl_data = new glshape();
     auto& gshp = *(glshape*)shp->gl_data;
-    if (!shp->quads_pos.empty()) {
-        auto pos = std::vector<vec3f>();
-        auto norm = std::vector<vec3f>();
-        auto texcoord = std::vector<vec2f>();
-        auto quads = std::vector<vec4i>();
-        std::tie(quads, pos, norm, texcoord) =
-            convert_face_varying(shp->quads_pos, shp->quads_norm,
-                shp->quads_texcoord, shp->pos, shp->norm, shp->texcoord);
-        update_vert_buffer(gshp.pos, pos);
-        update_vert_buffer(gshp.norm, norm);
-        update_vert_buffer(gshp.texcoord, texcoord);
-        update_vert_buffer(gshp.color, std::vector<vec4f>{});
-        update_vert_buffer(gshp.tangsp, std::vector<vec4f>{});
-        update_elem_buffer(gshp.quads, convert_quads_to_triangles(quads));
-        update_elem_buffer(gshp.edges, get_edges({}, {}, quads));
-    } else {
-        update_vert_buffer(gshp.pos, shp->pos);
-        update_vert_buffer(gshp.norm, shp->norm);
-        update_vert_buffer(gshp.texcoord, shp->texcoord);
-        update_vert_buffer(gshp.color, shp->color);
-        update_vert_buffer(gshp.tangsp, shp->tangsp);
-        update_elem_buffer(gshp.points, shp->points);
-        update_elem_buffer(gshp.lines, shp->lines);
-        update_elem_buffer(gshp.triangles, shp->triangles);
-        update_elem_buffer(gshp.quads, convert_quads_to_triangles(shp->quads));
-        update_elem_buffer(gshp.beziers, convert_bezier_to_lines(shp->beziers));
-        update_elem_buffer(
-            gshp.edges, get_edges({}, shp->triangles, shp->quads));
-    }
+    update_vert_buffer(gshp.pos, shp->pos);
+    update_vert_buffer(gshp.norm, shp->norm);
+    update_vert_buffer(gshp.texcoord, shp->texcoord);
+    update_vert_buffer(gshp.color, shp->color);
+    update_vert_buffer(gshp.tangsp, shp->tangsp);
+    update_elem_buffer(gshp.lines, shp->lines);
+    update_elem_buffer(gshp.triangles, shp->triangles);
+    update_elem_buffer(gshp.edges, get_edges(shp->triangles));
 }
 void update_gldata(scene* scn) {
     for (auto txt : scn->textures) update_gldata(txt);
@@ -189,8 +168,7 @@ void draw_glshape(const shape* shp, const material* mat, const mat4f& xform,
 
     set_glsurface_material(prog, mtypes.at(mat->type), mat->ke, mat->kd,
         mat->ks, mat->rs, mat->op, txt(mat->ke_txt), txt(mat->kd_txt),
-        txt(mat->ks_txt), txt(mat->rs_txt), txt(mat->norm_txt),
-        txt(mat->occ_txt), false, mat->double_sided, cutout);
+        txt(mat->ks_txt), txt(mat->norm_txt), mat->double_sided, cutout);
 
     set_glsurface_vert(
         prog, gshp.pos, gshp.norm, gshp.texcoord, gshp.color, gshp.tangsp);
@@ -254,31 +232,23 @@ void draw_glscene(const scene* scn, const camera* cam,
         for (auto lgt : scn->lights) {
             if (lights_pos.size() >= 16) break;
             auto shp = lgt->shp;
-            if (!shp->points.empty()) {
-                for (auto p : shp->points) {
-                    if (lights_pos.size() >= 16) break;
-                    lights_pos.push_back(
-                        transform_point(lgt->frame, lgt->shp->pos[p]));
-                    lights_ke.push_back(lgt->mat->ke);
-                    lights_type.push_back(0);
-                }
-            } else {
-                auto bbox = shp->bbox;
-                auto pos = (bbox.max + bbox.min) / 2;
-                auto area = 0.0f;
-                for (auto l : shp->lines)
-                    area += line_length(shp->pos[l.x], shp->pos[l.y]);
+            auto bbox = shp->bbox;
+            auto pos = (bbox.max + bbox.min) / 2;
+            auto area = 0.0f;
+            if (!shp->triangles.empty()) {
                 for (auto t : shp->triangles)
                     area += triangle_area(
                         shp->pos[t.x], shp->pos[t.y], shp->pos[t.z]);
-                for (auto t : shp->quads)
-                    area += quad_area(shp->pos[t.x], shp->pos[t.y],
-                        shp->pos[t.z], shp->pos[t.w]);
-                auto ke = lgt->mat->ke * area;
-                lights_pos.push_back(transform_point(lgt->frame, pos));
-                lights_ke.push_back(ke);
-                lights_type.push_back(0);
+            } else if (!shp->lines.empty()) {
+                for (auto l : shp->lines)
+                    area += line_length(shp->pos[l.x], shp->pos[l.y]);
+            } else {
+                area += shp->pos.size();
             }
+            auto ke = lgt->mat->ke * area;
+            lights_pos.push_back(transform_point(lgt->frame, pos));
+            lights_ke.push_back(ke);
+            lights_type.push_back(0);
         }
         set_glsurface_lights(
             prog, {0, 0, 0}, lights_pos, lights_ke, lights_type);
@@ -457,13 +427,9 @@ void draw_scene_tree_glwidgets_rec<material>(glwindow* win,
     draw_glwidgets_scene_tree(win, "ke", val->ke_txt.txt, sel, highlights);
     draw_glwidgets_scene_tree(win, "kd", val->kd_txt.txt, sel, highlights);
     draw_glwidgets_scene_tree(win, "ks", val->ks_txt.txt, sel, highlights);
-    draw_glwidgets_scene_tree(win, "kr", val->kr_txt.txt, sel, highlights);
-    draw_glwidgets_scene_tree(win, "rs", val->rs_txt.txt, sel, highlights);
-    draw_glwidgets_scene_tree(win, "op", val->op_txt.txt, sel, highlights);
     draw_glwidgets_scene_tree(win, "bump", val->bump_txt.txt, sel, highlights);
     draw_glwidgets_scene_tree(win, "disp", val->disp_txt.txt, sel, highlights);
     draw_glwidgets_scene_tree(win, "norm", val->norm_txt.txt, sel, highlights);
-    draw_glwidgets_scene_tree(win, "occ", val->occ_txt.txt, sel, highlights);
 }
 template <>
 void draw_scene_tree_glwidgets_rec<environment>(glwindow* win,
@@ -601,21 +567,16 @@ bool draw_glwidgets_scene_inspector(glwindow* win, material* val, scene* scn) {
     edited += draw_hdr_color_widget(win, "ke", val->ke);
     edited += draw_glwidgets_colorbox(win, "kd", val->kd);
     edited += draw_glwidgets_colorbox(win, "ks", val->ks);
-    edited += draw_glwidgets_colorbox(win, "kr", val->kr);
     edited += draw_glwidgets_colorbox(win, "kt", val->kt);
     edited += draw_glwidgets_dragbox(win, "rs", val->rs);
     edited += draw_glwidgets_dragbox(win, "op", val->op);
     edited += draw_glwidgets_scene_inspector(win, "ke", val->ke_txt, scn);
     edited += draw_glwidgets_scene_inspector(win, "kd", val->kd_txt, scn);
     edited += draw_glwidgets_scene_inspector(win, "ks", val->ks_txt, scn);
-    edited += draw_glwidgets_scene_inspector(win, "kr", val->kr_txt, scn);
     edited += draw_glwidgets_scene_inspector(win, "kt", val->kt_txt, scn);
-    edited += draw_glwidgets_scene_inspector(win, "rs", val->rs_txt, scn);
-    edited += draw_glwidgets_scene_inspector(win, "op", val->op_txt, scn);
     edited += draw_glwidgets_scene_inspector(win, "bump", val->bump_txt, scn);
     edited += draw_glwidgets_scene_inspector(win, "disp", val->disp_txt, scn);
     edited += draw_glwidgets_scene_inspector(win, "norm", val->norm_txt, scn);
-    edited += draw_glwidgets_scene_inspector(win, "occ", val->occ_txt, scn);
     return edited;
 }
 
@@ -623,24 +584,14 @@ bool draw_glwidgets_scene_inspector(glwindow* win, shape* val, scene* scn) {
     auto edited = 0;
     edited += draw_glwidgets_text(win, "name", val->name);
     edited += draw_glwidgets_text(win, "path", val->path);
-    draw_glwidgets_label(win, "points", val->points);
     draw_glwidgets_label(win, "lines", val->lines);
     draw_glwidgets_label(win, "triangles", val->triangles);
-    draw_glwidgets_label(win, "quads", val->quads);
-    draw_glwidgets_label(win, "quads_pos", val->quads_pos);
-    draw_glwidgets_label(win, "quads_norm", val->quads_norm);
-    draw_glwidgets_label(win, "quads_texcoord", val->quads_texcoord);
-    draw_glwidgets_label(win, "beziers", val->beziers);
     draw_glwidgets_label(win, "pos", val->pos);
     draw_glwidgets_label(win, "norm", val->norm);
     draw_glwidgets_label(win, "texcoord", val->texcoord);
-    draw_glwidgets_label(win, "texcoord1", val->texcoord1);
     draw_glwidgets_label(win, "color", val->color);
     draw_glwidgets_label(win, "radius", val->radius);
     draw_glwidgets_label(win, "tangsp", val->tangsp);
-    draw_glwidgets_label(win, "subdivision", std::to_string(val->subdivision));
-    draw_glwidgets_label(
-        win, "catmullclark", (val->catmullclark) ? "true" : "false");
     return edited;
 }
 

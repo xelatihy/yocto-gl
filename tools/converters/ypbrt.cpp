@@ -530,7 +530,7 @@ scene* load_pbrt(const std::string& filename) {
                         std::tie(op, op_txt) =
                             get_scaled_texture(jcmd.at("opacity"));
                         mat->op = (op.x + op.y + op.z) / 3;
-                        mat->op_txt.txt = op_txt;
+                        if(op_txt) log_error("opacity texture not supported");
                     }
                     mat->rs = 0;
                 } else if (type == "matte") {
@@ -632,14 +632,14 @@ scene* load_pbrt(const std::string& filename) {
                 auto radius = 1.0f;
                 if (jcmd.count("radius"))
                     radius = jcmd.at("radius").get<float>();
-                make_sphere(shp->quads, shp->pos, shp->norm, shp->texcoord,
+                make_sphere(shp->triangles, shp->pos, shp->norm, shp->texcoord,
                     {64, 32}, 2 * radius, {1, 1});
             } else if (type == "disk") {
                 shp->name = "disk" + std::to_string(sid++);
                 auto radius = 1.0f;
                 if (jcmd.count("radius"))
                     radius = jcmd.at("radius").get<float>();
-                make_disk(shp->quads, shp->pos, shp->norm, shp->texcoord,
+                make_disk(shp->triangles, shp->pos, shp->norm, shp->texcoord,
                     {32, 16}, 2 * radius, {1, 1});
             } else {
                 log_error("{} shape not supported", type);
@@ -651,7 +651,6 @@ scene* load_pbrt(const std::string& filename) {
                 frame.o};
             if (stack.back().reverse) {
                 for (auto& t : shp->triangles) std::swap(t.y, t.z);
-                for (auto& q : shp->quads) std::swap(q.y, q.w);
             }
             scn->shapes.push_back(shp);
             auto ist = new instance();
@@ -714,7 +713,7 @@ scene* load_pbrt(const std::string& filename) {
                 if (jcmd.count("to")) to = get_vec3f(jcmd.at("to"));
                 auto dir = normalize(from - to);
                 auto size = distant_dist * sin(5 * pi / 180);
-                make_quad(shp->quads, shp->pos, shp->norm, shp->texcoord,
+                make_quad(shp->triangles, shp->pos, shp->norm, shp->texcoord,
                     {1, 1}, {size, size}, {1, 1});
                 scn->shapes.push_back(shp);
                 auto mat = new material();

@@ -150,7 +150,6 @@ struct material {
     vec3f ke = {0, 0, 0};  // emission color
     vec3f kd = {0, 0, 0};  // diffuse/base color
     vec3f ks = {0, 0, 0};  // specular color / metallic factor
-    vec3f kr = {0, 0, 0};  // clear coat reflection
     vec3f kt = {0, 0, 0};  // transmission color
     float rs = 0.0001;     // roughness mapped as glTF
     float op = 1;          // opacity
@@ -159,46 +158,29 @@ struct material {
     texture_info ke_txt;    // emission texture
     texture_info kd_txt;    // diffuse texture
     texture_info ks_txt;    // specular texture
-    texture_info kr_txt;    // clear coat reflection texture
     texture_info kt_txt;    // transmission texture
-    texture_info rs_txt;    // roughness texture
-    texture_info op_txt;    // opacity texture
     texture_info bump_txt;  // bump map texture (heighfield)
     texture_info disp_txt;  // displacement map texture (heighfield)
     texture_info norm_txt;  // normal texture
-    texture_info occ_txt;   // occlusion texture
 };
 
 // Shape data represented as an indexed meshes of elements.
-// May contain only element type (points/lines/triangles/quads/beziers).
+// May contain either tringles, lines or a set of vertices.
 struct shape {
     std::string name = "";  // name
     std::string path = "";  // path for glTF buffers
 
     // primitives
-    std::vector<int> points;       // points
     std::vector<vec2i> lines;      // lines
     std::vector<vec3i> triangles;  // triangles
-    std::vector<vec4i> quads;      // quads
-    std::vector<vec4i> beziers;    // beziers
-
-    // face-varying quad primitives
-    std::vector<vec4i> quads_pos;       // pos indices
-    std::vector<vec4i> quads_norm;      // norm indices
-    std::vector<vec4i> quads_texcoord;  // texcoord indices
 
     // vertex data
     std::vector<vec3f> pos;        // positions
     std::vector<vec3f> norm;       // normals/tangents
     std::vector<vec2f> texcoord;   // texcoord coordinates
-    std::vector<vec2f> texcoord1;  // second set of texture coordinates
     std::vector<vec4f> color;      // colors
     std::vector<float> radius;     // radia for lines/points
     std::vector<vec4f> tangsp;     // tangent space for triangles
-
-    // tesselation data
-    int subdivision = 0;        // subdivision [deprecated]
-    bool catmullclark = false;  // catmull-clark [deprecated]
 
     // computed properties
     bbox3f bbox = invalid_bbox3f;      // boudning box
@@ -306,8 +288,7 @@ namespace ygl {
 
 // Loads/saves a scene in OBJ and glTF formats.
 scene* load_scene(const std::string& filename, bool load_textures = true,
-    bool preserve_quads = false, bool split_obj_shapes = true,
-    bool skip_missing = true);
+    bool split_obj_shapes = true, bool skip_missing = true);
 void save_scene(const std::string& filename, const scene* scn,
     bool save_textures = true, bool preserve_obj_instances = false,
     bool gltf_separate_buffers = false, bool skip_missing = true);
@@ -360,17 +341,6 @@ void update_bvh(shape* shp, bool equalsize = false);
 void update_bvh(scene* scn, bool do_shapes = true, bool equalsize = false);
 void refit_bvh(shape* shp);
 void refit_bvh(scene* scn, bool do_shapes = true);
-
-// Subdivides shape elements.
-void subdivide_shape_once(shape* shp, bool subdiv = false);
-// Tesselate a shape into basic primitives.
-void tesselate_shape(shape* shp, bool subdivide,
-    bool facevarying_to_sharedvertex, bool quads_to_triangles,
-    bool bezier_to_lines);
-// Tesselate scene shapes.
-void tesselate_shapes(scene* scn, bool subdivide,
-    bool facevarying_to_sharedvertex, bool quads_to_triangles,
-    bool bezier_to_lines);
 
 // Add missing names, normals, tangents and hierarchy.
 void add_missing_camera(scene* scn);
@@ -540,7 +510,6 @@ shape* make_matball_shape(
     const std::string& name, int tesselation = 5, float size = 2);
 shape* make_quadstack_shape(const std::string& name, int stack_tesselation = 4,
     int tesselation = 0, float size = 2);
-shape* make_point_shape(const std::string& name);
 shape* make_cube_subdiv_shape(
     const std::string& name, int tesselation = 4, float size = 2);
 shape* make_suzanne_subdiv_shape(const std::string& name, int tesselation = 2);
@@ -586,7 +555,7 @@ scene* make_cornellbox_scene(const std::string& name, bool envlight = false);
 // Make a simple scene with three objects lined up.
 scene* make_simple_scene(const std::string& name,
     const std::vector<shape*>& shps, const std::vector<material*>& mats,
-    bool envlight = false, bool pointlights = false,
+    bool envlight = false,
     const std::vector<animation*>& anms = {});
 // Make a simple scene with single object on a floor.
 scene* make_simple_scene(

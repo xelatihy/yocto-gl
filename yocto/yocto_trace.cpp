@@ -381,14 +381,14 @@ float sample_light_pdf(const instance* ist, int ei, const vec3f& i,
     if (!ist) return 0;
     auto shp = ist->shp;
     if (shp->elem_cdf.empty()) return 0;
-    if (!shp->triangles.empty() || !shp->quads.empty()) {
+    if (!shp->triangles.empty()) {
         // prob triangle * area triangle = area triangle mesh
         auto area = shp->elem_cdf.back();
         return (dist * dist) / (fabs(dot(lnorm, i)) * area);
-    } else if (!shp->lines.empty() || !shp->beziers.empty()) {
+    } else if (!shp->lines.empty()) {
         throw std::runtime_error("not implemented yet");
         return 0;
-    } else if (!shp->points.empty() || !shp->pos.empty()) {
+    } else if (!shp->pos.empty()) {
         auto num = shp->elem_cdf.back();
         return (dist * dist) / num;
     } else {
