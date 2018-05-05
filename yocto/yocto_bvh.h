@@ -141,10 +141,8 @@ struct bvh_tree;
 // Type of BVH node.
 enum struct bvh_node_type : uint8_t {
     internal,
-    point,
     line,
     triangle,
-    quad,
     vertex,
     instance
 };
@@ -179,10 +177,8 @@ struct bvh_tree {
     // data for shape BVH
     std::vector<vec3f> pos;        // Positions for shape BVHs.
     std::vector<float> radius;     // Radius for shape BVHs.
-    std::vector<int> points;       // Points for shape BVHs.
     std::vector<vec2i> lines;      // Lines for shape BVHs.
     std::vector<vec3i> triangles;  // Triangles for shape BVHs.
-    std::vector<vec4i> quads;      // Quads for shape BVHs.
 
     // data for instance BVH
     std::vector<frame3f> ist_frames;      // instance frames

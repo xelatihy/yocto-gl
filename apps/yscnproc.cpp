@@ -65,10 +65,6 @@ int main(int argc, char** argv) {
     auto flipyz =
         ygl::parse_flag(parser, "--flipyz", "", "flip y and z coords");
     auto add_normals = ygl::parse_flag(parser, "--normals", "", "add normals");
-    auto tesselation =
-        ygl::parse_opt(parser, "--tesselation", "-T", "tesselation level", 0);
-    auto subdiv =
-        ygl::parse_opt(parser, "--subdiv", "", "Catmull-Clark subdivision", 0);
     //    auto add_specgloss =
     //        ygl::parse_flag( "--specgloss", "", "add spec gloss");
     auto save_separate_buffers = ygl::parse_flag(
@@ -136,22 +132,6 @@ int main(int argc, char** argv) {
         for (auto shp : scn->shapes) {
             for (auto& p : shp->pos) std::swap(p.y, p.z);
             for (auto& n : shp->norm) std::swap(n.y, n.z);
-        }
-    }
-
-    if (tesselation) {
-        for (auto shp : scn->shapes) {
-            for (auto l = 0; l < tesselation; l++) {
-                ygl::subdivide_shape_once(shp);
-            }
-        }
-    }
-
-    if (subdiv) {
-        for (auto shp : scn->shapes) {
-            for (auto l = 0; l < subdiv; l++) {
-                ygl::subdivide_shape_once(shp, true);
-            }
         }
     }
 

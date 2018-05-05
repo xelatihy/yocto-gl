@@ -56,13 +56,7 @@ void rmdir(const std::string& dir) {
 void save_scene(const ygl::scene* scn, const std::string& sname,
     const std::string& dirname, bool preserve_instances) {
     try {
-        auto gltf = true;
-        for (auto shp : scn->shapes) {
-            if (!shp->quads_pos.empty()) gltf = false;
-            if (!shp->beziers.empty()) gltf = false;
-        }
-
-        if (gltf) save_scene(dirname + sname + ".gltf", scn, true);
+        save_scene(dirname + sname + ".gltf", scn, true);
         ygl::save_scene(
             dirname + sname + ".obj", scn, true, preserve_instances);
     } catch (std::exception& e) { ygl::log_fatal("error {}", e.what()); }
@@ -130,9 +124,8 @@ std::vector<ygl::scene*> make_proc_scenes(const std::string& name) {
 
     // basic shapes
     if (name == "basic") {
-        auto lnames = std::vector<std::string>{"-el", "-al", "-pl"};
-        for (auto lgt : {0, 1, 2}) {
-            scenes.push_back(ygl::make_simple_scene("basic" + lnames[lgt],
+        for (auto env : {0, 1}) {
+            scenes.push_back(ygl::make_simple_scene("basic"s + ((env) ? "-el" : "-al"),
                 {
                     ygl::make_sphereflipcap_shape("obj1"),
                     ygl::make_spherecube_shape("obj2"),
@@ -143,7 +136,7 @@ std::vector<ygl::scene*> make_proc_scenes(const std::string& name) {
                     ygl::make_plastic_material("obj2", {0.5f, 0.7f, 0.5f}),
                     ygl::make_plastic_material("obj3", {0.5f, 0.5f, 0.7f}),
                 },
-                lgt == 0, lgt == 2));
+                env));
         }
     }
 
@@ -340,7 +333,7 @@ std::vector<ygl::scene*> make_proc_scenes(const std::string& name) {
                 ygl::make_plastic_material("obj2", {0.2f, 0.5f, 0.2f}),
                 ygl::make_plastic_material("obj3", {0.2f, 0.2f, 0.5f}),
             },
-            false, false,
+            false,
             {
                 ygl::make_animation("obj1", {0, 1, 2}, {}, {},
                     {{1, 1, 1}, {0.7f, 0.7f, 0.7f}, {1, 1, 1}}),

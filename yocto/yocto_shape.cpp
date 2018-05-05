@@ -167,16 +167,9 @@ void compute_matrix_skinning(const std::vector<vec3f>& pos,
 }
 
 // Create an array of edges.
-std::vector<vec2i> get_edges(const std::vector<vec2i>& lines,
-    const std::vector<vec3i>& triangles, const std::vector<vec4i>& quads) {
+std::vector<vec2i> get_edges(const std::vector<vec3i>& triangles) {
     auto edges = std::vector<vec2i>();
     auto eset = std::unordered_set<vec2i>();
-    for (auto e : lines) {
-        e = {min(e.x, e.y), max(e.x, e.y)};
-        if (!eset.insert(e).second) continue;
-        eset.insert({e.y, e.x});
-        edges.push_back(e);
-    }
     for (auto& t : triangles) {
         for (auto e : {vec2i{t.x, t.y}, vec2i{t.y, t.z}, vec2i{t.z, t.x}}) {
             e = {min(e.x, e.y), max(e.x, e.y)};
@@ -185,6 +178,13 @@ std::vector<vec2i> get_edges(const std::vector<vec2i>& lines,
             edges.push_back(e);
         }
     }
+    return edges;
+}
+
+// Create an array of edges.
+std::vector<vec2i> get_edges(const std::vector<vec4i>& quads) {
+    auto edges = std::vector<vec2i>();
+    auto eset = std::unordered_set<vec2i>();
     for (auto& q : quads) {
         for (auto e : {vec2i{q.x, q.y}, vec2i{q.y, q.z}, vec2i{q.z, q.w},
                  vec2i{q.w, q.x}}) {
@@ -195,7 +195,6 @@ std::vector<vec2i> get_edges(const std::vector<vec2i>& lines,
             edges.push_back(e);
         }
     }
-
     return edges;
 }
 
@@ -254,15 +253,15 @@ std::vector<vec2i> convert_bezier_to_lines(const std::vector<vec4i>& beziers) {
 
 // Convert face varying data to single primitives. Returns the quads indices
 // and filled vectors for pos, norm and texcoord.
-std::tuple<std::vector<vec4i>, std::vector<vec3f>, std::vector<vec3f>,
-    std::vector<vec2f>>
-convert_face_varying(const std::vector<vec4i>& quads_pos,
+void
+convert_face_varying(std::vector<vec4i>& qquads, std::vector<vec3f>& qpos,
+    std::vector<vec3f>& qnorm, std::vector<vec2f>& qtexcoord,const std::vector<vec4i>& quads_pos,
     const std::vector<vec4i>& quads_norm,
     const std::vector<vec4i>& quads_texcoord, const std::vector<vec3f>& pos,
     const std::vector<vec3f>& norm, const std::vector<vec2f>& texcoord) {
     // make faces unique
     std::unordered_map<vec3i, int> vert_map;
-    auto quads = std::vector<vec4i>(quads_pos.size());
+    qquads = std::vector<vec4i>(quads_pos.size());
     for (auto fid = 0; fid < quads_pos.size(); fid++) {
         for (auto c = 0; c < 4; c++) {
             auto v = vec3i{
@@ -274,31 +273,28 @@ convert_face_varying(const std::vector<vec4i>& quads_pos,
                 auto s = (int)vert_map.size();
                 vert_map[v] = s;
             }
-            (&quads[fid].x)[c] = vert_map.at(v);
+            (&qquads[fid].x)[c] = vert_map.at(v);
         }
     }
 
     // fill vert data
-    auto qpos = std::vector<vec3f>();
+    qpos.clear();
     if (!pos.empty()) {
         qpos.resize(vert_map.size());
         for (auto& kv : vert_map) { qpos[kv.second] = pos[kv.first.x]; }
     }
-    auto qnorm = std::vector<vec3f>();
+    qnorm.clear();
     if (!norm.empty()) {
         qnorm.resize(vert_map.size());
         for (auto& kv : vert_map) { qnorm[kv.second] = norm[kv.first.y]; }
     }
-    auto qtexcoord = std::vector<vec2f>();
+    qtexcoord.clear();
     if (!texcoord.empty()) {
         qtexcoord.resize(vert_map.size());
         for (auto& kv : vert_map) {
             qtexcoord[kv.second] = texcoord[kv.first.z];
         }
     }
-
-    // done
-    return {quads, qpos, qnorm, qtexcoord};
 }
 
 // Subdivide lines.
@@ -667,17 +663,14 @@ sample_triangles_points(const std::vector<vec3i>& triangles,
 }
 
 // Make a quad.
-void make_quad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+void make_quad(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
     const vec2f& size, const vec2f& uvsize) {
-    auto nverts = (steps.x + 1) * (steps.y + 1);
-    auto nfaces = steps.x * steps.y;
     auto vid = [steps](int i, int j) { return j * (steps.x + 1) + i; };
-    auto fid = [steps](int i, int j) { return j * steps.x + i; };
 
-    pos.resize(nverts);
-    norm.resize(nverts);
-    texcoord.resize(nverts);
+    pos.resize((steps.x + 1) * (steps.y + 1));
+    norm.resize((steps.x + 1) * (steps.y + 1));
+    texcoord.resize((steps.x + 1) * (steps.y + 1));
     for (auto j = 0; j <= steps.y; j++) {
         for (auto i = 0; i <= steps.x; i++) {
             auto uv = vec2f{i / (float)steps.x, j / (float)steps.y};
@@ -688,106 +681,108 @@ void make_quad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
         }
     }
 
-    quads.resize(nfaces);
+    triangles.resize(steps.x * steps.y * 2);
     for (auto j = 0; j < steps.y; j++) {
         for (auto i = 0; i < steps.x; i++) {
-            quads[fid(i, j)] = {
-                vid(i, j), vid(i + 1, j), vid(i + 1, j + 1), vid(i, j + 1)};
+            triangles[(j * steps.x + i) * 2 + 0] = {
+                vid(i, j), vid(i + 1, j), vid(i + 1, j + 1)};
+            triangles[(j * steps.x + i) * 2 + 1] = {
+                vid(i + 1, j + 1), vid(i, j + 1), vid(i, j)};
         }
     }
 }
 
 // Make a stack of quads
-void make_quad_stack(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+void make_quad_stack(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
     const vec3f& size, const vec2f& uvsize) {
-    std::vector<vec4i> qquads;
+    std::vector<vec3i> qtriangles;
     std::vector<vec3f> qpos;
     std::vector<vec3f> qnorm;
     std::vector<vec2f> qtexcoord;
 
-    quads.clear();
+    triangles.clear();
     pos.clear();
     norm.clear();
     texcoord.clear();
 
     for (auto i = 0; i <= steps.z; i++) {
-        make_quad(qquads, qpos, qnorm, qtexcoord, {steps.x, steps.y},
+        make_quad(qtriangles, qpos, qnorm, qtexcoord, {steps.x, steps.y},
             {size.x, size.y}, uvsize);
         for (auto& p : qpos) p.z = (-0.5f + (float)i / steps.z) * size.z;
-        merge_quads(quads, pos, norm, texcoord, qquads, qpos, qnorm, qtexcoord);
+        merge_triangles(triangles, pos, norm, texcoord, qtriangles, qpos, qnorm, qtexcoord);
     }
 }
 
 // Make a cube.
-void make_cube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+void make_cube(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
     const vec3f& size, const vec3f& uvsize) {
-    std::vector<vec4i> qquads;
+    std::vector<vec3i> qtriangles;
     std::vector<vec3f> qpos;
     std::vector<vec3f> qnorm;
     std::vector<vec2f> qtexcoord;
 
-    quads.clear();
+    triangles.clear();
     pos.clear();
     norm.clear();
     texcoord.clear();
 
     // +z
-    make_quad(qquads, qpos, qnorm, qtexcoord, {steps.x, steps.y},
+    make_quad(qtriangles, qpos, qnorm, qtexcoord, {steps.x, steps.y},
         {size.x, size.y}, {uvsize.x, uvsize.y});
     for (auto i = 0; i < qpos.size(); i++) {
         qpos[i] = {qpos[i].x, qpos[i].y, size.z / 2};
         qnorm[i] = {0, 0, 1};
     }
-    merge_quads(quads, pos, norm, texcoord, qquads, qpos, qnorm, qtexcoord);
+    merge_triangles(triangles, pos, norm, texcoord, qtriangles, qpos, qnorm, qtexcoord);
     // -z
-    make_quad(qquads, qpos, qnorm, qtexcoord, {steps.x, steps.y},
+    make_quad(qtriangles, qpos, qnorm, qtexcoord, {steps.x, steps.y},
         {size.x, size.y}, {uvsize.x, uvsize.y});
     for (auto i = 0; i < qpos.size(); i++) {
         qpos[i] = {-qpos[i].x, qpos[i].y, -size.z / 2};
         qnorm[i] = {0, 0, -1};
     }
-    merge_quads(quads, pos, norm, texcoord, qquads, qpos, qnorm, qtexcoord);
+    merge_triangles(triangles, pos, norm, texcoord, qtriangles, qpos, qnorm, qtexcoord);
     // +x
-    make_quad(qquads, qpos, qnorm, qtexcoord, {steps.z, steps.y},
+    make_quad(qtriangles, qpos, qnorm, qtexcoord, {steps.z, steps.y},
         {size.z, size.y}, {uvsize.z, uvsize.y});
     for (auto i = 0; i < qpos.size(); i++) {
         qpos[i] = {size.x / 2, qpos[i].y, -qpos[i].x};
         qnorm[i] = {1, 0, 0};
     }
-    merge_quads(quads, pos, norm, texcoord, qquads, qpos, qnorm, qtexcoord);
+    merge_triangles(triangles, pos, norm, texcoord, qtriangles, qpos, qnorm, qtexcoord);
     // -x
-    make_quad(qquads, qpos, qnorm, qtexcoord, {steps.z, steps.y},
+    make_quad(qtriangles, qpos, qnorm, qtexcoord, {steps.z, steps.y},
         {size.z, size.y}, {uvsize.z, uvsize.y});
     for (auto i = 0; i < qpos.size(); i++) {
         qpos[i] = {-size.x / 2, qpos[i].y, qpos[i].x};
         qnorm[i] = {-1, 0, 0};
     }
-    merge_quads(quads, pos, norm, texcoord, qquads, qpos, qnorm, qtexcoord);
+    merge_triangles(triangles, pos, norm, texcoord, qtriangles, qpos, qnorm, qtexcoord);
     // +y
-    make_quad(qquads, qpos, qnorm, qtexcoord, {steps.x, steps.y},
+    make_quad(qtriangles, qpos, qnorm, qtexcoord, {steps.x, steps.y},
         {size.x, size.y}, {uvsize.x, uvsize.y});
     for (auto i = 0; i < qpos.size(); i++) {
         qpos[i] = {qpos[i].x, size.y / 2, -qpos[i].y};
         qnorm[i] = {0, 1, 0};
     }
-    merge_quads(quads, pos, norm, texcoord, qquads, qpos, qnorm, qtexcoord);
+    merge_triangles(triangles, pos, norm, texcoord, qtriangles, qpos, qnorm, qtexcoord);
     // +y
-    make_quad(qquads, qpos, qnorm, qtexcoord, {steps.x, steps.y},
+    make_quad(qtriangles, qpos, qnorm, qtexcoord, {steps.x, steps.y},
         {size.x, size.y}, {uvsize.x, uvsize.y});
     for (auto i = 0; i < qpos.size(); i++) {
         qpos[i] = {qpos[i].x, -size.y / 2, qpos[i].y};
         qnorm[i] = {0, -1, 0};
     }
-    merge_quads(quads, pos, norm, texcoord, qquads, qpos, qnorm, qtexcoord);
+    merge_triangles(triangles, pos, norm, texcoord, qtriangles, qpos, qnorm, qtexcoord);
 }
 
 // Make a rounded cube.
-void make_cube_rounded(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+void make_cube_rounded(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
     const vec3f& size, const vec3f& uvsize, float radius) {
-    make_cube(quads, pos, norm, texcoord, steps, size, uvsize);
+    make_cube(triangles, pos, norm, texcoord, steps, size, uvsize);
     auto c = size / 2 - vec3f{radius, radius, radius};
     for (auto i = 0; i < pos.size(); i++) {
         auto pc = vec3f{fabs(pos[i].x), fabs(pos[i].y), fabs(pos[i].z)};
@@ -818,10 +813,10 @@ void make_cube_rounded(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
 }
 
 // Make a sphere.
-void make_sphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+void make_sphere(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
     float size, const vec2f& uvsize) {
-    make_quad(quads, pos, norm, texcoord, steps, {1, 1}, {1, 1});
+    make_quad(triangles, pos, norm, texcoord, steps, {1, 1}, {1, 1});
     for (auto i = 0; i < pos.size(); i++) {
         auto uv = texcoord[i];
         auto a = vec2f{2 * pi * uv.x, pi * (1 - uv.y)};
@@ -833,10 +828,10 @@ void make_sphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
 }
 
 // Make a spherecube.
-void make_sphere_cube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+void make_sphere_cube(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int steps,
     float size, float uvsize) {
-    make_cube(quads, pos, norm, texcoord, {steps, steps, steps}, {1, 1, 1},
+    make_cube(triangles, pos, norm, texcoord, {steps, steps, steps}, {1, 1, 1},
         {uvsize, uvsize, uvsize});
     for (auto i = 0; i < pos.size(); i++) {
         auto p = pos[i];
@@ -846,10 +841,10 @@ void make_sphere_cube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
 }
 
 // Make a flipped sphere. This is not watertight.
-void make_sphere_flipcap(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+void make_sphere_flipcap(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
     float size, const vec2f& uvsize, const vec2f& zflip) {
-    make_sphere(quads, pos, norm, texcoord, steps, size, uvsize);
+    make_sphere(triangles, pos, norm, texcoord, steps, size, uvsize);
     for (auto i = 0; i < pos.size(); i++) {
         if (pos[i].z > zflip.y) {
             pos[i].z = 2 * zflip.y - pos[i].z;
@@ -864,10 +859,10 @@ void make_sphere_flipcap(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
 }
 
 // Make a disk.
-void make_disk(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+void make_disk(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
     float size, const vec2f& uvsize) {
-    make_quad(quads, pos, norm, texcoord, steps, {1, 1}, {1, 1});
+    make_quad(triangles, pos, norm, texcoord, steps, {1, 1}, {1, 1});
     for (auto i = 0; i < pos.size(); i++) {
         auto uv = texcoord[i];
         auto phi = 2 * pi * uv.x;
@@ -878,11 +873,11 @@ void make_disk(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
 }
 
 // Make a disk from a quad.
-void make_disk_quad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+void make_disk_quad(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int steps,
     float size, float uvsize) {
     make_quad(
-        quads, pos, norm, texcoord, {steps, steps}, {2, 2}, {uvsize, uvsize});
+        triangles, pos, norm, texcoord, {steps, steps}, {2, 2}, {uvsize, uvsize});
     for (auto i = 0; i < pos.size(); i++) {
         // Analytical Methods for Squaring the Disc, by C. Fong
         // https://arxiv.org/abs/1509.06344
@@ -894,10 +889,10 @@ void make_disk_quad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
 }
 
 // Make a bulged disk from a quad.
-void make_disk_bulged(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+void make_disk_bulged(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int steps,
     float size, float uvsize, float height) {
-    make_disk_quad(quads, pos, norm, texcoord, steps, size, uvsize);
+    make_disk_quad(triangles, pos, norm, texcoord, steps, size, uvsize);
     if (height == 0) return;
     auto radius = (size * size / 4 + height * height) / (2 * height);
     auto center = vec3f{0, 0, -radius + height};
@@ -909,10 +904,10 @@ void make_disk_bulged(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
 }
 
 // Make a cylinder (side-only).
-void make_cylinder_side(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+void make_cylinder_side(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
     const vec2f& size, const vec2f& uvsize) {
-    make_quad(quads, pos, norm, texcoord, steps, {1, 1}, {1, 1});
+    make_quad(triangles, pos, norm, texcoord, steps, {1, 1}, {1, 1});
     for (auto i = 0; i < pos.size(); i++) {
         auto uv = texcoord[i];
         auto phi = 2 * pi * uv.x;
@@ -924,45 +919,45 @@ void make_cylinder_side(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
 }
 
 // Make a cylinder.
-void make_cylinder(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+void make_cylinder(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
     const vec2f& size, const vec3f& uvsize) {
-    std::vector<vec4i> qquads;
+    std::vector<vec3i> qtriangles;
     std::vector<vec3f> qpos;
     std::vector<vec3f> qnorm;
     std::vector<vec2f> qtexcoord;
 
-    quads.clear();
+    triangles.clear();
     pos.clear();
     norm.clear();
     texcoord.clear();
 
     // side
-    make_cylinder_side(qquads, qpos, qnorm, qtexcoord, {steps.x, steps.y},
+    make_cylinder_side(qtriangles, qpos, qnorm, qtexcoord, {steps.x, steps.y},
         {size.x, size.y}, {uvsize.x, uvsize.y});
-    merge_quads(quads, pos, norm, texcoord, qquads, qpos, qnorm, qtexcoord);
+    merge_triangles(triangles, pos, norm, texcoord, qtriangles, qpos, qnorm, qtexcoord);
     // top
-    make_disk(qquads, qpos, qnorm, qtexcoord, {steps.x, steps.z}, size.x,
+    make_disk(qtriangles, qpos, qnorm, qtexcoord, {steps.x, steps.z}, size.x,
         {uvsize.x, uvsize.z});
     for (auto i = 0; i < qpos.size(); i++) { qpos[i].z = size.y / 2; }
-    merge_quads(quads, pos, norm, texcoord, qquads, qpos, qnorm, qtexcoord);
+    merge_triangles(triangles, pos, norm, texcoord, qtriangles, qpos, qnorm, qtexcoord);
     // bottom
-    make_disk(qquads, qpos, qnorm, qtexcoord, {steps.x, steps.z}, size.x,
+    make_disk(qtriangles, qpos, qnorm, qtexcoord, {steps.x, steps.z}, size.x,
         {uvsize.x, uvsize.z});
     for (auto i = 0; i < qpos.size(); i++) {
         qpos[i].z = -size.y / 2;
         qnorm[i] = -qnorm[i];
     }
-    for (auto i = 0; i < qquads.size(); i++)
-        std::swap(qquads[i].x, qquads[i].z);
-    merge_quads(quads, pos, norm, texcoord, qquads, qpos, qnorm, qtexcoord);
+    for (auto i = 0; i < qtriangles.size(); i++)
+        std::swap(qtriangles[i].x, qtriangles[i].z);
+    merge_triangles(triangles, pos, norm, texcoord, qtriangles, qpos, qnorm, qtexcoord);
 }
 
 // Make a rounded cylinder.
-void make_cylinder_rounded(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+void make_cylinder_rounded(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
     const vec2f& size, const vec3f& uvsize, float radius) {
-    make_cylinder(quads, pos, norm, texcoord, steps, size, uvsize);
+    make_cylinder(triangles, pos, norm, texcoord, steps, size, uvsize);
     auto c = size / 2 - vec2f{radius, radius};
     for (auto i = 0; i < pos.size(); i++) {
         auto phi = atan2(pos[i].y, pos[i].x);
@@ -997,6 +992,37 @@ void make_geodesic_sphere(std::vector<vec3i>& triangles,
     for (auto l = 0; l < max(0, tesselation - 2); l++)
         subdivide_triangles(triangles, pos);
     for (auto& p : pos) p = normalize(p) * size / 2;
+}
+
+// Make a quad.
+void make_quad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
+    const vec2f& size, const vec2f& uvsize) {
+    auto nverts = (steps.x + 1) * (steps.y + 1);
+    auto nfaces = steps.x * steps.y;
+    auto vid = [steps](int i, int j) { return j * (steps.x + 1) + i; };
+    auto fid = [steps](int i, int j) { return j * steps.x + i; };
+
+    pos.resize(nverts);
+    norm.resize(nverts);
+    texcoord.resize(nverts);
+    for (auto j = 0; j <= steps.y; j++) {
+        for (auto i = 0; i <= steps.x; i++) {
+            auto uv = vec2f{i / (float)steps.x, j / (float)steps.y};
+            pos[vid(i, j)] = {
+                (uv.x - 0.5f) * size.x, (uv.y - 0.5f) * size.y, 0};
+            norm[vid(i, j)] = {0, 0, 1};
+            texcoord[vid(i, j)] = uv * uvsize;
+        }
+    }
+
+    quads.resize(nfaces);
+    for (auto j = 0; j < steps.y; j++) {
+        for (auto i = 0; i < steps.x; i++) {
+            quads[fid(i, j)] = {
+                vid(i, j), vid(i + 1, j), vid(i + 1, j + 1), vid(i, j + 1)};
+        }
+    }
 }
 
 // Make a cube with unique vertices. This is watertight but has no
@@ -1570,18 +1596,15 @@ void make_bezier_circle(std::vector<vec4i>& beziers, std::vector<vec3f>& pos) {
 void make_hair(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
     std::vector<float>& radius, const vec2i& steps,
-    const std::vector<vec3i>& striangles, const std::vector<vec4i>& squads,
+    const std::vector<vec3i>& striangles,
     const std::vector<vec3f>& spos, const std::vector<vec3f>& snorm,
     const std::vector<vec2f>& stexcoord, const vec2f& len, const vec2f& rad,
     const vec2f& noise, const vec2f& clump, const vec2f& rotation, int seed) {
     std::vector<vec3f> bpos;
     std::vector<vec3f> bnorm;
     std::vector<vec2f> btexcoord;
-    auto all_triangles = convert_quads_to_triangles(squads);
-    all_triangles.insert(
-        all_triangles.end(), striangles.begin(), striangles.end());
     std::tie(bpos, bnorm, btexcoord) = sample_triangles_points(
-        all_triangles, spos, snorm, stexcoord, steps.y, seed);
+        striangles, spos, snorm, stexcoord, steps.y, seed);
 
     auto rng = make_rng(seed, 3);
     auto blen = std::vector<float>(bpos.size());

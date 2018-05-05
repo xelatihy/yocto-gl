@@ -317,9 +317,6 @@ int main(int argc, char* argv[]) {
         ygl::log_fatal("cannot load scene {}", app->filename);
     }
 
-    // tesselate input shapes
-    ygl::tesselate_shapes(app->scn, true, false, false, false);
-
     // fix scene
     ygl::update_bbox(app->scn);
     ygl::add_missing_camera(app->scn);

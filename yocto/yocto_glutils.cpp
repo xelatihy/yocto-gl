@@ -868,18 +868,10 @@ glsurface_program make_glsurface_program() {
         uniform sampler2D mat_txt_kd;  // material kd texture
         uniform bool mat_txt_ks_on;    // material ks texture on
         uniform sampler2D mat_txt_ks;  // material ks texture
-        uniform bool mat_txt_rs_on;    // material rs texture on
-        uniform sampler2D mat_txt_rs;  // material rs texture
 
         uniform bool mat_txt_norm_on;    // material norm texture on
         uniform sampler2D mat_txt_norm;  // material norm texture
-        uniform float mat_txt_norm_scale;  // material norm scale
 
-        uniform bool mat_txt_occ_on;    // material occ texture on
-        uniform sampler2D mat_txt_occ;  // material occ texture
-        uniform float mat_txt_occ_scale;  // material occ scale
-
-        uniform bool mat_use_phong;       // material use phong
         uniform bool mat_double_sided;    // material double sided
         uniform bool mat_alpha_cutout;    // material alpha cutout
 
@@ -902,7 +894,6 @@ glsurface_program make_glsurface_program() {
             vec3 ke_txt = (mat_txt_ke_on) ? texture(mat_txt_ke,texcoord).xyz : vec3(1);
             vec4 kd_txt = (mat_txt_kd_on) ? texture(mat_txt_kd,texcoord) : vec4(1);
             vec4 ks_txt = (mat_txt_ks_on) ? texture(mat_txt_ks,texcoord) : vec4(1);
-            float rs_txt = (mat_txt_rs_on) ? texture(mat_txt_rs,texcoord).x : 1;
 
             // scale common values
             ke *= ke_txt;
@@ -912,7 +903,7 @@ glsurface_program make_glsurface_program() {
             } else if(mat_type == 1) {
                 kd *= kd_txt.xyz;
                 ks *= ks_txt.xyz;
-                rs *= rs_txt;
+                // TODO: put new texture
                 rs = rs*rs;
             } else if(mat_type == 2) {
                 vec3 kb = kd * kd_txt.xyz;
@@ -1075,15 +1066,8 @@ glsurface_program make_glsurface_program() {
     prog.kd_txt_on_id = get_gluniform_location(prog.prog, "mat_txt_kd_on");
     prog.ks_txt_id = get_gluniform_location(prog.prog, "mat_txt_ks");
     prog.ks_txt_on_id = get_gluniform_location(prog.prog, "mat_txt_ks_on");
-    prog.rs_txt_id = get_gluniform_location(prog.prog, "mat_txt_rs");
-    prog.rs_txt_on_id = get_gluniform_location(prog.prog, "mat_txt_rs_on");
     prog.norm_txt_id = get_gluniform_location(prog.prog, "mat_txt_norm");
     prog.norm_txt_on_id = get_gluniform_location(prog.prog, "mat_txt_norm_on");
-    prog.occ_txt_id = get_gluniform_location(prog.prog, "mat_txt_occ");
-    prog.occ_txt_on_id = get_gluniform_location(prog.prog, "mat_txt_occ_on");
-    prog.norm_scale_id = get_gluniform_location(prog.prog, "mat_norm_scale");
-    prog.occ_scale_id = get_gluniform_location(prog.prog, "mat_occ_scale");
-    prog.use_phong_id = get_gluniform_location(prog.prog, "mat_use_phong");
     prog.double_sided_id =
         get_gluniform_location(prog.prog, "mat_double_sided");
     prog.alpha_cutout_id =
@@ -1185,9 +1169,8 @@ void set_glsurface_highlight(
 void set_glsurface_material(const glsurface_program& prog, int mtype,
     const vec3f& ke, const vec3f& kd, const vec3f& ks, float rs, float op,
     const gltexture_info& ke_txt, const gltexture_info& kd_txt,
-    const gltexture_info& ks_txt, const gltexture_info& rs_txt,
-    const gltexture_info& norm_txt, const gltexture_info& occ_txt,
-    bool use_phong, bool double_sided, bool alpha_cutout) {
+    const gltexture_info& ks_txt, const gltexture_info& norm_txt,
+    bool double_sided, bool alpha_cutout) {
     assert(check_glerror());
     set_gluniform(prog.prog, prog.mtype_id, mtype);
     set_gluniform(prog.prog, prog.ke_id, ke);
@@ -1202,12 +1185,7 @@ void set_glsurface_material(const glsurface_program& prog, int mtype,
     set_gluniform_texture(
         prog.prog, prog.ks_txt_id, prog.ks_txt_on_id, ks_txt, 2);
     set_gluniform_texture(
-        prog.prog, prog.rs_txt_id, prog.rs_txt_on_id, rs_txt, 3);
-    set_gluniform_texture(
         prog.prog, prog.norm_txt_id, prog.norm_txt_on_id, norm_txt, 4);
-    //    set_gluniform(prog.prog, prog.norm_scale_id, norm_txt.scale);
-    //    set_gluniform(prog.prog, prog.occ_scale_id, occ_txt.scale);
-    //    set_gluniform(prog.prog, prog.use_phong_id, use_phong);
     set_gluniform(prog.prog, prog.double_sided_id, double_sided);
     set_gluniform(prog.prog, prog.alpha_cutout_id, alpha_cutout);
     assert(check_glerror());

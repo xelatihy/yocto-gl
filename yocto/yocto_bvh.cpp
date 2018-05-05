@@ -495,12 +495,7 @@ void build_bvh(bvh_tree* bvh, bool equal_size) {
     // get the number of primitives and the primitive type
     auto prims = std::vector<bvh_prim>();
     auto type = bvh_node_type::internal;
-    if (!bvh->points.empty()) {
-        for (auto& p : bvh->points) {
-            prims.push_back({point_bbox(bvh->pos[p], bvh->radius[p])});
-        }
-        type = bvh_node_type::point;
-    } else if (!bvh->lines.empty()) {
+    if (!bvh->lines.empty()) {
         for (auto& l : bvh->lines) {
             prims.push_back({line_bbox(bvh->pos[l.x], bvh->pos[l.y],
                 bvh->radius[l.x], bvh->radius[l.y])});
@@ -512,12 +507,6 @@ void build_bvh(bvh_tree* bvh, bool equal_size) {
                 {triangle_bbox(bvh->pos[t.x], bvh->pos[t.y], bvh->pos[t.z])});
         }
         type = bvh_node_type::triangle;
-    } else if (!bvh->quads.empty()) {
-        for (auto& q : bvh->quads) {
-            prims.push_back({quad_bbox(
-                bvh->pos[q.x], bvh->pos[q.y], bvh->pos[q.z], bvh->pos[q.w])});
-        }
-        type = bvh_node_type::quad;
     } else if (!bvh->pos.empty()) {
         for (auto i = 0; i < bvh->pos.size(); i++) {
             prims.push_back({point_bbox(bvh->pos[i], bvh->radius[i])});
@@ -556,19 +545,6 @@ void refit_bvh(bvh_tree* bvh, int nodeid) {
                 node.bbox += bvh->nodes[node.prims[i]].bbox;
             }
         } break;
-        case bvh_node_type::point: {
-            for (auto i = 0; i < node.count; i++) {
-                auto& p = bvh->points[node.prims[i]];
-                node.bbox += point_bbox(bvh->pos[p], bvh->radius[p]);
-            }
-        } break;
-        case bvh_node_type::line: {
-            for (auto i = 0; i < node.count; i++) {
-                auto& l = bvh->lines[node.prims[i]];
-                node.bbox += line_bbox(bvh->pos[l.x], bvh->pos[l.y],
-                    bvh->radius[l.x], bvh->radius[l.y]);
-            }
-        } break;
         case bvh_node_type::triangle: {
             for (auto i = 0; i < node.count; i++) {
                 auto& t = bvh->triangles[node.prims[i]];
@@ -576,11 +552,11 @@ void refit_bvh(bvh_tree* bvh, int nodeid) {
                     triangle_bbox(bvh->pos[t.x], bvh->pos[t.y], bvh->pos[t.z]);
             }
         } break;
-        case bvh_node_type::quad: {
+        case bvh_node_type::line: {
             for (auto i = 0; i < node.count; i++) {
-                auto& q = bvh->quads[node.prims[i]];
-                node.bbox += quad_bbox(
-                    bvh->pos[q.x], bvh->pos[q.y], bvh->pos[q.z], bvh->pos[q.w]);
+                auto& l = bvh->lines[node.prims[i]];
+                node.bbox += line_bbox(bvh->pos[l.x], bvh->pos[l.y],
+                    bvh->radius[l.x], bvh->radius[l.y]);
             }
         } break;
         case bvh_node_type::vertex: {
@@ -643,29 +619,6 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
                     node_stack[node_cur++] = node.prims[0];
                 }
             } break;
-            case bvh_node_type::point: {
-                for (auto i = 0; i < node.count; i++) {
-                    auto& p = bvh->points[node.prims[i]];
-                    if (intersect_point(
-                            ray, bvh->pos[p], bvh->radius[p], dist)) {
-                        hit = true;
-                        ray.tmax = dist;
-                        eid = node.prims[i];
-                        uv = {1, 0};
-                    }
-                }
-            } break;
-            case bvh_node_type::line: {
-                for (auto i = 0; i < node.count; i++) {
-                    auto& l = bvh->lines[node.prims[i]];
-                    if (intersect_line(ray, bvh->pos[l.x], bvh->pos[l.y],
-                            bvh->radius[l.x], bvh->radius[l.y], dist, uv)) {
-                        hit = true;
-                        ray.tmax = dist;
-                        eid = node.prims[i];
-                    }
-                }
-            } break;
             case bvh_node_type::triangle: {
                 for (auto i = 0; i < node.count; i++) {
                     auto& t = bvh->triangles[node.prims[i]];
@@ -677,11 +630,11 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
                     }
                 }
             } break;
-            case bvh_node_type::quad: {
+            case bvh_node_type::line: {
                 for (auto i = 0; i < node.count; i++) {
-                    auto& q = bvh->quads[node.prims[i]];
-                    if (intersect_quad(ray, bvh->pos[q.x], bvh->pos[q.y],
-                            bvh->pos[q.z], bvh->pos[q.w], dist, uv)) {
+                    auto& l = bvh->lines[node.prims[i]];
+                    if (intersect_line(ray, bvh->pos[l.x], bvh->pos[l.y],
+                            bvh->radius[l.x], bvh->radius[l.y], dist, uv)) {
                         hit = true;
                         ray.tmax = dist;
                         eid = node.prims[i];
@@ -748,30 +701,6 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
                 node_stack[node_cur++] = node.prims[0];
                 node_stack[node_cur++] = node.prims[1];
             } break;
-            case bvh_node_type::point: {
-                for (auto i = 0; i < node.count; i++) {
-                    auto& p = bvh->points[node.prims[i]];
-                    if (overlap_point(
-                            pos, max_dist, bvh->pos[p], bvh->radius[p], dist)) {
-                        hit = true;
-                        max_dist = dist;
-                        eid = node.prims[i];
-                        uv = {1, 0};
-                    }
-                }
-            } break;
-            case bvh_node_type::line: {
-                for (auto i = 0; i < node.count; i++) {
-                    auto& l = bvh->lines[node.prims[i]];
-                    if (overlap_line(pos, max_dist, bvh->pos[l.x],
-                            bvh->pos[l.y], bvh->radius[l.x], bvh->radius[l.y],
-                            dist, uv)) {
-                        hit = true;
-                        max_dist = dist;
-                        eid = node.prims[i];
-                    }
-                }
-            } break;
             case bvh_node_type::triangle: {
                 for (auto i = 0; i < node.count; i++) {
                     auto& t = bvh->triangles[node.prims[i]];
@@ -784,13 +713,12 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
                     }
                 }
             } break;
-            case bvh_node_type::quad: {
+            case bvh_node_type::line: {
                 for (auto i = 0; i < node.count; i++) {
-                    auto& q = bvh->quads[node.prims[i]];
-                    if (overlap_quad(pos, max_dist, bvh->pos[q.x],
-                            bvh->pos[q.y], bvh->pos[q.z], bvh->pos[q.w],
-                            bvh->radius[q.x], bvh->radius[q.y],
-                            bvh->radius[q.z], bvh->radius[q.w], dist, uv)) {
+                    auto& l = bvh->lines[node.prims[i]];
+                    if (overlap_line(pos, max_dist, bvh->pos[l.x],
+                            bvh->pos[l.y], bvh->radius[l.x], bvh->radius[l.y],
+                            dist, uv)) {
                         hit = true;
                         max_dist = dist;
                         eid = node.prims[i];
