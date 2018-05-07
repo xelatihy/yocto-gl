@@ -680,58 +680,35 @@ brdf eval_brdf(const instance* ist, int ei, const vec2f& uv) {
     }
 
     // sample reflectance
-    switch (mat->type) {
-        case material_type::specular_roughness: {
-            f.kd = mat->kd * kx;
-            if (mat->kd_txt.txt) {
-                f.kd *= eval_texture_rgb(mat->kd_txt, texcoord);
-            }
-            f.ks = mat->ks * kx;
-            f.rs = mat->rs;
-            if (mat->ks_txt.txt) {
-                auto txt = eval_texture(mat->ks_txt, texcoord);
-                f.ks *= {txt.x, txt.y, txt.z};
-            }
-            f.kt = mat->kt * kx;
-            if (mat->kt_txt.txt) {
-                auto txt = eval_texture(mat->kt_txt, texcoord);
-                f.kt *= {txt.x, txt.y, txt.z};
-            }
-        } break;
-        case material_type::metallic_roughness: {
-            auto kb = mat->kd * kx;
-            if (mat->kd_txt.txt) {
-                kb *= eval_texture_rgb(mat->kd_txt, texcoord);
-            }
-            auto km = mat->ks.x;
-            f.rs = mat->rs;
-            if (mat->ks_txt.txt) {
-                auto txt = eval_texture(mat->ks_txt, texcoord);
-                km *= txt.y;
-                f.rs *= txt.z;
-            }
-            f.kd = kb * (1 - km);
-            f.ks = kb * km + vec3f{0.04f, 0.04f, 0.04f} * (1 - km);
-        } break;
-        case material_type::specular_glossiness: {
-            f.kd = mat->kd * kx;
-            if (mat->kd_txt.txt) {
-                f.kd *= eval_texture_rgb(mat->kd_txt, texcoord);
-            }
-            f.ks = mat->ks * kx;
-            f.rs = mat->rs;
-            if (mat->ks_txt.txt) {
-                auto txt = eval_texture(mat->ks_txt, texcoord);
-                f.ks *= {txt.x, txt.y, txt.z};
-                f.rs *= txt.w;
-            }
-            f.rs = 1 - f.rs;  // glossiness -> roughnes
-            f.kt = mat->kt * kx;
-            if (mat->kt_txt.txt) {
-                auto txt = eval_texture(mat->kt_txt, texcoord);
-                f.kt *= {txt.x, txt.y, txt.z};
-            }
-        } break;
+    if (!mat->base_metallic) {
+        f.kd = mat->kd * kx;
+        if (mat->kd_txt.txt) {
+            f.kd *= eval_texture_rgb(mat->kd_txt, texcoord);
+        }
+        f.ks = mat->ks * kx;
+        f.rs = mat->rs;
+        if (mat->ks_txt.txt) {
+            auto txt = eval_texture(mat->ks_txt, texcoord);
+            f.ks *= {txt.x, txt.y, txt.z};
+            f.rs = 1 - ((1 - f.rs) * txt.w);
+        }
+    } else {
+        auto kb = mat->kd * kx;
+        if (mat->kd_txt.txt) { kb *= eval_texture_rgb(mat->kd_txt, texcoord); }
+        auto km = mat->ks.x;
+        f.rs = mat->rs;
+        if (mat->ks_txt.txt) {
+            auto txt = eval_texture(mat->ks_txt, texcoord);
+            km *= txt.y;
+            f.rs *= txt.z;
+        }
+        f.kd = kb * (1 - km);
+        f.ks = kb * km + vec3f{0.04f, 0.04f, 0.04f} * (1 - km);
+    }
+    f.kt = mat->kt * kx;
+    if (mat->kt_txt.txt) {
+        auto txt = eval_texture(mat->kt_txt, texcoord);
+        f.kt *= {txt.x, txt.y, txt.z};
     }
 
     // set up final values
@@ -842,8 +819,7 @@ void print_stats(scene* scn) {
         vert_radius += shp->radius.size();
         vert_tangsp += shp->tangsp.size();
     }
-    memory_elems = elem_lines * sizeof(vec2i) +
-                   elem_triangles * sizeof(vec3i);
+    memory_elems = elem_lines * sizeof(vec2i) + elem_triangles * sizeof(vec3i);
     memory_verts = vert_pos * sizeof(vec3f) + vert_norm * sizeof(vec3f) +
                    vert_texcoord * sizeof(vec3f) + vert_color * sizeof(vec4f) +
                    vert_tangsp * sizeof(vec4f) + vert_radius * sizeof(float);
@@ -932,7 +908,6 @@ scene* obj_to_scene(const obj_scene* obj) {
     for (auto omat : obj->materials) {
         auto mat = new material();
         mat->name = omat->name;
-        mat->type = material_type::specular_roughness;
         mat->ke = omat->ke;
         mat->kd = omat->kd;
         mat->ks = omat->ks;
@@ -1150,7 +1125,7 @@ obj_scene* scene_to_obj(const scene* scn, bool preserve_instances) {
         omat->name = mat->name;
         omat->ke = {mat->ke.x, mat->ke.y, mat->ke.z};
         omat->ke_txt = make_texture_info(mat->ke_txt);
-        if (mat->type == material_type::specular_roughness) {
+        if (!mat->base_metallic) {
             omat->kd = {mat->kd.x, mat->kd.y, mat->kd.z};
             omat->ks = {mat->ks.x, mat->ks.y, mat->ks.z};
             omat->kt = {mat->kt.x, mat->kt.y, mat->kt.z};
@@ -1164,7 +1139,7 @@ obj_scene* scene_to_obj(const scene* scn, bool preserve_instances) {
             omat->kd_txt = make_texture_info(mat->kd_txt);
             omat->ks_txt = make_texture_info(mat->ks_txt);
             omat->kt_txt = make_texture_info(mat->kt_txt);
-        } else if (mat->type == material_type::metallic_roughness) {
+        } else {
             if (mat->rs >= 1 && mat->ks.x == 0) {
                 omat->kd = mat->kd;
                 omat->ks = {0, 0, 0};
@@ -1188,20 +1163,6 @@ obj_scene* scene_to_obj(const scene* scn, bool preserve_instances) {
             } else {
                 omat->ks_txt = make_texture_info(mat->ks_txt);
             }
-        } else if (mat->type == material_type::specular_glossiness) {
-            omat->kd = {mat->kd.x, mat->kd.y, mat->kd.z};
-            omat->ks = {mat->ks.x, mat->ks.y, mat->ks.z};
-            if (mat->rs <= 0)
-                omat->ns = 1e6f;
-            else if (mat->rs >= 1)
-                omat->ns = 0;
-            else
-                omat->ns = 2 / pow(mat->rs, 4.0f) - 2;
-            omat->op = mat->op;
-            omat->kd_txt = make_texture_info(mat->kd_txt);
-            omat->ks_txt = make_texture_info(mat->ks_txt);
-        } else {
-            throw std::runtime_error("unknown material type");
         }
         omat->bump_txt = make_texture_info(mat->bump_txt, true);
         omat->disp_txt = make_texture_info(mat->disp_txt, true);
@@ -1408,8 +1369,18 @@ scene* gltf_to_scene(const glTF* gltf) {
         mat->name = gmat->name;
         mat->ke = gmat->emissiveFactor;
         mat->ke_txt = make_texture_info(gmat->emissiveTexture);
-        if (gmat->pbrMetallicRoughness) {
-            mat->type = material_type::metallic_roughness;
+        if (gmat->pbrSpecularGlossiness) {
+            mat->base_metallic = false;
+            auto gsg = gmat->pbrSpecularGlossiness;
+            mat->kd = {gsg->diffuseFactor.x, gsg->diffuseFactor.y,
+                gsg->diffuseFactor.z};
+            mat->op = gsg->diffuseFactor.w;
+            mat->ks = gsg->specularFactor;
+            mat->rs = 1 - gsg->glossinessFactor;
+            mat->kd_txt = make_texture_info(gsg->diffuseTexture);
+            mat->ks_txt = make_texture_info(gsg->specularGlossinessTexture);
+        } else if (gmat->pbrMetallicRoughness) {
+            mat->base_metallic = true;
             auto gmr = gmat->pbrMetallicRoughness;
             mat->kd = {gmr->baseColorFactor.x, gmr->baseColorFactor.y,
                 gmr->baseColorFactor.z};
@@ -1419,17 +1390,6 @@ scene* gltf_to_scene(const glTF* gltf) {
             mat->rs = gmr->roughnessFactor;
             mat->kd_txt = make_texture_info(gmr->baseColorTexture);
             mat->ks_txt = make_texture_info(gmr->metallicRoughnessTexture);
-        }
-        if (gmat->pbrSpecularGlossiness) {
-            mat->type = material_type::specular_glossiness;
-            auto gsg = gmat->pbrSpecularGlossiness;
-            mat->kd = {gsg->diffuseFactor.x, gsg->diffuseFactor.y,
-                gsg->diffuseFactor.z};
-            mat->op = gsg->diffuseFactor.w;
-            mat->ks = gsg->specularFactor;
-            mat->rs = gsg->glossinessFactor;
-            mat->kd_txt = make_texture_info(gsg->diffuseTexture);
-            mat->ks_txt = make_texture_info(gsg->specularGlossinessTexture);
         }
         mat->norm_txt = make_texture_info(gmat->normalTexture, true, false);
         mat->double_sided = gmat->doubleSided;
@@ -1814,38 +1774,23 @@ glTF* scene_to_gltf(
         gmat->name = mat->name;
         gmat->emissiveFactor = mat->ke;
         gmat->emissiveTexture = add_texture_info(mat->ke_txt);
-        switch (mat->type) {
-            case material_type::specular_roughness: {
-                gmat->pbrSpecularGlossiness =
-                    new glTFMaterialPbrSpecularGlossiness();
-                auto gsg = gmat->pbrSpecularGlossiness;
-                gsg->diffuseFactor = {mat->kd.x, mat->kd.y, mat->kd.z, mat->op};
-                gsg->specularFactor = mat->ks;
-                gsg->glossinessFactor = 1 - mat->rs;
-                gsg->diffuseTexture = add_texture_info(mat->kd_txt);
-                gsg->specularGlossinessTexture = add_texture_info(mat->ks_txt);
-            } break;
-            case material_type::metallic_roughness: {
-                gmat->pbrMetallicRoughness =
-                    new glTFMaterialPbrMetallicRoughness();
-                auto gmr = gmat->pbrMetallicRoughness;
-                gmr->baseColorFactor = {
-                    mat->kd.x, mat->kd.y, mat->kd.z, mat->op};
-                gmr->metallicFactor = mat->ks.x;
-                gmr->roughnessFactor = mat->rs;
-                gmr->baseColorTexture = add_texture_info(mat->kd_txt);
-                gmr->metallicRoughnessTexture = add_texture_info(mat->ks_txt);
-            } break;
-            case material_type::specular_glossiness: {
-                gmat->pbrSpecularGlossiness =
-                    new glTFMaterialPbrSpecularGlossiness();
-                auto gsg = gmat->pbrSpecularGlossiness;
-                gsg->diffuseFactor = {mat->kd.x, mat->kd.y, mat->kd.z, mat->op};
-                gsg->specularFactor = mat->ks;
-                gsg->glossinessFactor = mat->rs;
-                gsg->diffuseTexture = add_texture_info(mat->kd_txt);
-                gsg->specularGlossinessTexture = add_texture_info(mat->ks_txt);
-            } break;
+        if (!mat->base_metallic) {
+            gmat->pbrSpecularGlossiness =
+                new glTFMaterialPbrSpecularGlossiness();
+            auto gsg = gmat->pbrSpecularGlossiness;
+            gsg->diffuseFactor = {mat->kd.x, mat->kd.y, mat->kd.z, mat->op};
+            gsg->specularFactor = mat->ks;
+            gsg->glossinessFactor = 1 - mat->rs;
+            gsg->diffuseTexture = add_texture_info(mat->kd_txt);
+            gsg->specularGlossinessTexture = add_texture_info(mat->ks_txt);
+        } else {
+            gmat->pbrMetallicRoughness = new glTFMaterialPbrMetallicRoughness();
+            auto gmr = gmat->pbrMetallicRoughness;
+            gmr->baseColorFactor = {mat->kd.x, mat->kd.y, mat->kd.z, mat->op};
+            gmr->metallicFactor = mat->ks.x;
+            gmr->roughnessFactor = mat->rs;
+            gmr->baseColorTexture = add_texture_info(mat->kd_txt);
+            gmr->metallicRoughnessTexture = add_texture_info(mat->ks_txt);
         }
         gmat->normalTexture = (glTFMaterialNormalTextureInfo*)(add_texture_info(
             mat->norm_txt, true, false));
@@ -2527,8 +2472,8 @@ shape* make_fvcube_subdiv_shape(
     auto shp = new shape();
     shp->name = name;
     auto quads = std::vector<vec4i>();
-    convert_face_varying(quads, shp->pos, shp->norm, shp->texcoord,
-        quads_pos, quads_norm, quads_texcoord, pos, norm, texcoord);
+    convert_face_varying(quads, shp->pos, shp->norm, shp->texcoord, quads_pos,
+        quads_norm, quads_texcoord, pos, norm, texcoord);
     shp->triangles = convert_quads_to_triangles(quads);
     return shp;
 }

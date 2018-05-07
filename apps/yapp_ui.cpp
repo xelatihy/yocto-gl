@@ -36,15 +36,6 @@
 
 namespace ygl {
 
-static const std::map<material_type, std::string>& material_type_names() {
-    static auto names = std::map<material_type, std::string>{
-        {material_type::specular_roughness, "specular_roughness"},
-        {material_type::metallic_roughness, "metallic_roughness"},
-        {material_type::specular_glossiness, "specular_glossiness"},
-    };
-    return names;
-}
-
 static const std::map<animation_type, std::string>& animation_type_names() {
     static auto names = std::map<animation_type, std::string>{
         {animation_type::linear, "linear"},
@@ -145,10 +136,6 @@ void draw_glshape(const shape* shp, const material* mat, const mat4f& xform,
     bool wireframe, bool edges, bool cutout, bool cull) {
     static auto default_material = material();
     default_material.kd = {0.2f, 0.2f, 0.2f};
-    static auto mtypes = std::unordered_map<material_type, int>{
-        {material_type::specular_roughness, 1},
-        {material_type::metallic_roughness, 2},
-        {material_type::specular_glossiness, 3}};
 
     if (!mat) mat = &default_material;
 
@@ -166,9 +153,10 @@ void draw_glshape(const shape* shp, const material* mat, const mat4f& xform,
     auto& gshp = *(glshape*)shp->gl_data;
     auto faceted = shp->norm.empty();
 
-    set_glsurface_material(prog, mtypes.at(mat->type), mat->ke, mat->kd,
+    set_glsurface_material(prog, mat->ke, mat->kd,
         mat->ks, mat->rs, mat->op, txt(mat->ke_txt), txt(mat->kd_txt),
-        txt(mat->ks_txt), txt(mat->norm_txt), mat->double_sided, cutout);
+        txt(mat->ks_txt), txt(mat->norm_txt), mat->base_metallic, 
+        mat->double_sided, cutout);
 
     set_glsurface_vert(
         prog, gshp.pos, gshp.norm, gshp.texcoord, gshp.color, gshp.tangsp);
@@ -561,9 +549,6 @@ bool draw_glwidgets_scene_inspector(
 bool draw_glwidgets_scene_inspector(glwindow* win, material* val, scene* scn) {
     auto edited = 0;
     edited += draw_glwidgets_text(win, "name", val->name);
-    edited += draw_glwidgets_checkbox(win, "double_sided", val->double_sided);
-    edited +=
-        draw_glwidgets_combobox(win, "type", val->type, material_type_names());
     edited += draw_hdr_color_widget(win, "ke", val->ke);
     edited += draw_glwidgets_colorbox(win, "kd", val->kd);
     edited += draw_glwidgets_colorbox(win, "ks", val->ks);
@@ -577,6 +562,9 @@ bool draw_glwidgets_scene_inspector(glwindow* win, material* val, scene* scn) {
     edited += draw_glwidgets_scene_inspector(win, "bump", val->bump_txt, scn);
     edited += draw_glwidgets_scene_inspector(win, "disp", val->disp_txt, scn);
     edited += draw_glwidgets_scene_inspector(win, "norm", val->norm_txt, scn);
+    edited += draw_glwidgets_checkbox(win, "double sided", val->double_sided);
+    edited +=
+        draw_glwidgets_checkbox(win, "base metallic", val->base_metallic);
     return edited;
 }
 

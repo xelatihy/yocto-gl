@@ -130,13 +130,6 @@ struct texture_info {
     float scale = 1;         // scale for occ, normal, bumps
 };
 
-// Material type.
-enum struct material_type {
-    specular_roughness = 0,   // microfacet model (OBJ)
-    metallic_roughness = 1,   // base/metallic model (glTF)
-    specular_glossiness = 2,  // sepcular/glossiness (glTF)
-};
-
 // Material for surfaces, lines and triangles.
 // For surfaces, uses a microfacet model with thin sheet transmission.
 // The model is based on glTF for compatibility and adapted to OBJ.
@@ -144,7 +137,7 @@ enum struct material_type {
 struct material {
     std::string name = "";      // name
     bool double_sided = false;  // double-sided rendering
-    material_type type = material_type::specular_roughness;  // type
+    bool base_metallic = false; // base-metallic parametrization (glTF)
 
     // base values
     vec3f ke = {0, 0, 0};  // emission color
