@@ -7999,6 +7999,9 @@ struct glTF : glTFProperty {
 glTF* load_gltf(const std::string& filename, bool load_bin = true,
     bool load_img = false, bool skip_missing = false);
 
+glTF* load_gltf_from_stream(std::istream& stream, const char* dirname, bool load_bin = true,
+	bool load_image = false, bool skip_missing = false);
+
 /// Load a binary gltf file `filename` from disk. Load binaries and images only
 /// if `load_bin` and `load_img` are true, reporting errors only if
 /// `skip_missing` is false.
