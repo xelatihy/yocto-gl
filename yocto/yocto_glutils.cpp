@@ -1165,14 +1165,13 @@ void set_glsurface_highlight(
 // correspoinding XXX_txt variables. Sets also normal and occlusion
 // maps. Works for points/lines/triangles (diffuse for points,
 // Kajiya-Kay for lines, GGX/Phong for triangles).
-// Material type matches the scene material type.
-void set_glsurface_material(const glsurface_program& prog, int mtype,
+void set_glsurface_material(const glsurface_program& prog, 
     const vec3f& ke, const vec3f& kd, const vec3f& ks, float rs, float op,
     const gltexture_info& ke_txt, const gltexture_info& kd_txt,
     const gltexture_info& ks_txt, const gltexture_info& norm_txt,
-    bool double_sided, bool alpha_cutout) {
+    bool base_metallic, bool double_sided, bool alpha_cutout) {
     assert(check_glerror());
-    set_gluniform(prog.prog, prog.mtype_id, mtype);
+    set_gluniform(prog.prog, prog.mtype_id, base_metallic ? 2 : 1);
     set_gluniform(prog.prog, prog.ke_id, ke);
     set_gluniform(prog.prog, prog.kd_id, kd);
     set_gluniform(prog.prog, prog.ks_id, ks);

@@ -451,12 +451,11 @@ void set_glsurface_highlight(
 // maps. Works for points/lines/triangles indicated by `etype`, (diffuse for
 // points, Kajiya-Kay for lines, GGX/Phong for triangles). Material `type`
 // matches the scene material type.
-// Mtype: (1) specular-roughness (2) metallic-roughness (3) specular-glossiness
-void set_glsurface_material(const glsurface_program& prog, int mtype,
+void set_glsurface_material(const glsurface_program& prog, 
     const vec3f& ke, const vec3f& kd, const vec3f& ks, float rs, float op,
     const gltexture_info& ke_txt, const gltexture_info& kd_txt,
-    const gltexture_info& ks_txt, const gltexture_info& norm_txt, 
-    bool double_sided, bool alpha_cutout);
+    const gltexture_info& ks_txt, const gltexture_info& norm_txt,
+    bool base_metallic, bool double_sided, bool alpha_cutout);
 
 // Set constant material with emission `ke` and opacity `op`.
 void set_glsurface_constmaterial(
