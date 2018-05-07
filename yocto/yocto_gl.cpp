@@ -1276,6 +1276,7 @@ sample_triangles_points(const std::vector<vec3i>& triangles,
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGEIO
 // -----------------------------------------------------------------------------
+#if YGL_IMAGEIO
 namespace ygl {
 
 // check hdr extensions
@@ -1467,7 +1468,7 @@ void resize_image(const image4b& img, image4b& res_img, resize_filter filter,
 }
 
 }  // namespace ygl
-
+#endif
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF IMAGE OPERATIONS
 // -----------------------------------------------------------------------------
@@ -8430,6 +8431,33 @@ void load_images(glTF* gltf, const std::string& dirname, bool skip_missing) {
     }
 }
 
+glTF* load_gltf_from_stream(std::istream& stream,
+    const char* dirname, bool load_bin,
+    bool load_image, bool skip_missing)
+{
+	auto js = json();
+	try {
+		stream >> js;
+	} catch (const std::exception&) {
+		return nullptr;
+	}
+
+	// parse json
+	auto gltf = std::unique_ptr<glTF>(new glTF());
+	auto gltf_ = gltf.get();
+	try {
+		serialize(gltf_, js, true);
+	} catch (const std::exception& e) {
+		throw std::runtime_error("error parsing gltf " + std::string(e.what()));
+	}
+
+	// load external resources
+	if (load_bin) load_buffers(gltf.get(), dirname, skip_missing);
+	if (load_image) load_images(gltf.get(), dirname, skip_missing);
+	// done
+	return gltf.release();
+}
+
 // Loads a gltf.
 glTF* load_gltf(const std::string& filename, bool load_bin, bool load_image,
     bool skip_missing) {
@@ -8447,21 +8475,8 @@ glTF* load_gltf(const std::string& filename, bool load_bin, bool load_image,
             std::string("could not load json with error ") + e.what());
     }
 
-    // parse json
-    auto gltf_ = gltf.get();
-    try {
-        serialize(gltf_, js, true);
-    } catch (const std::exception& e) {
-        throw std::runtime_error("error parsing gltf " + std::string(e.what()));
-    }
-
-    // load external resources
-    auto dirname = path_dirname(filename);
-    if (load_bin) load_buffers(gltf.get(), dirname, skip_missing);
-    if (load_image) load_images(gltf.get(), dirname, skip_missing);
-
-    // done
-    return gltf.release();
+	auto dirname = path_dirname(filename);
+	return load_gltf_from_stream(stream, dirname.c_str(),load_bin, load_image, skip_missing);
 }
 
 // Save buffer data.
