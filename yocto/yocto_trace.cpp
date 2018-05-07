@@ -55,7 +55,7 @@ inline bool check_near_mirror(const vec3f& n, const vec3f& o, const vec3f& i) {
 // BRDFs" http://jcgt.org/published/0003/02/03/
 // - "Microfacet Models for Refraction through Rough Surfaces" EGSR 07
 // https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf
-vec3f eval_surface_brdfcos(
+vec3f eval_brdfcos(
     const brdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
     auto brdfcos = zero3f;
 
@@ -87,7 +87,7 @@ vec3f eval_surface_brdfcos(
 }
 
 // Evaluates the BRDF scaled by the cosine of the incoming direction.
-vec3f eval_surface_delta_brdfcos(
+vec3f eval_delta_brdfcos(
     const brdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
     auto brdfcos = zero3f;
 
@@ -107,58 +107,8 @@ vec3f eval_surface_delta_brdfcos(
     return brdfcos;
 }
 
-// Evaluates the BRDF scaled by the cosine of the incoming direction.
-// - uses Kajiya-Kay for hair
-vec3f eval_curve_brdfcos(
-    const brdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
-    auto brdfcos = zero3f;
-    auto h = normalize(o + i);
-
-    auto ndo = dot(n, o), ndi = dot(n, i), ndh = clamp(dot(n, h), 0.0f, 1.0f);
-    auto so = sqrt(clamp(1 - ndo * ndo, 0.0001f, 1.0f)),
-         si = sqrt(clamp(1 - ndi * ndi, 0.0001f, 1.0f)),
-         sh = sqrt(clamp(1 - ndh * ndh, 0.0001f, 1.0f));
-
-    if (f.kd != zero3f) { brdfcos += f.kd * si / pi; }
-
-    if (f.ks != zero3f && f.rs) {
-        auto ns = 2 / (f.rs * f.rs) - 2;
-        auto d = (ns + 2) * pow(sh, ns) / (2 + pi);
-        brdfcos += f.ks * si * d / (4.0f * si * so);
-    }
-
-    assert(isfinite(brdfcos.x) && isfinite(brdfcos.y) && isfinite(brdfcos.z));
-    return brdfcos;
-}
-
-// Evaluates the BRDF scaled by the cosine of the incoming direction.
-// - uses a hack for points
-vec3f eval_point_brdfcos(
-    const brdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
-    auto brdfcos = zero3f;
-
-    auto ido = dot(o, i);
-    brdfcos += f.kd * (2 * ido + 1) / (2 * pi);
-
-    assert(isfinite(brdfcos.x) && isfinite(brdfcos.y) && isfinite(brdfcos.z));
-    return brdfcos;
-}
-
-// Evaluates the BRDF scaled by the cosine of the incoming direction.
-vec3f eval_brdfcos(const brdf& f, const vec3f& n, const vec3f& o,
-    const vec3f& i, bool delta = false) {
-    switch (f.type) {
-        case brdf_type::none: return zero3f;
-        case brdf_type::surface:
-            return (!delta) ? eval_surface_brdfcos(f, n, o, i) :
-                              eval_surface_delta_brdfcos(f, n, o, i);
-        case brdf_type::line: return eval_curve_brdfcos(f, n, o, i);
-        case brdf_type::point: return eval_point_brdfcos(f, n, o, i);
-    }
-}
-
 // Compute the weight for sampling the BRDF
-float sample_surface_brdf_pdf(
+float sample_brdf_pdf(
     const brdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
     auto prob_kd = max(f.kd), prob_ks = max(f.ks), prob_kt = max(f.kt);
     auto prob_sum = prob_kd + prob_ks + prob_kt;
@@ -194,7 +144,7 @@ float sample_surface_brdf_pdf(
 }
 
 // Compute the weight for sampling the BRDF
-float sample_surface_delta_brdf_pdf(
+float sample_delta_brdf_pdf(
     const brdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
     if (f.rs) return 0;
     auto prob_ks = max(f.ks), prob_kt = max(f.kt);
@@ -216,33 +166,8 @@ float sample_surface_delta_brdf_pdf(
     return pdf;
 }
 
-// Compute the weight for sampling the BRDF
-float sample_curve_brdf_pdf(
-    const brdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
-    return 1 / (4 * pi);
-}
-
-// Compute the weight for sampling the BRDF
-float sample_point_brdf_pdf(
-    const brdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
-    return 1 / (4 * pi);
-}
-
-// Compute the weight for sampling the BRDF
-float sample_brdf_pdf(const brdf& f, const vec3f& n, const vec3f& o,
-    const vec3f& i, bool delta = false) {
-    switch (f.type) {
-        case brdf_type::none: return 0;
-        case brdf_type::surface:
-            return (!delta) ? sample_surface_brdf_pdf(f, n, o, i) :
-                              sample_surface_delta_brdf_pdf(f, n, o, i);
-        case brdf_type::line: return sample_curve_brdf_pdf(f, n, o, i);
-        case brdf_type::point: return sample_point_brdf_pdf(f, n, o, i);
-    }
-}
-
 // Picks a direction based on the BRDF
-vec3f sample_surface_brdf(
+vec3f sample_brdf(
     const brdf& f, const vec3f& n, const vec3f& o, float rnl, const vec2f& rn) {
     auto prob_kd = max(f.kd), prob_ks = (f.rs) ? max(f.ks) : 0,
          prob_kt = (f.rs) ? max(f.kt) : 0;
@@ -282,7 +207,7 @@ vec3f sample_surface_brdf(
 }
 
 // Picks a direction based on the BRDF
-vec3f sample_surface_delta_brdf(
+vec3f sample_delta_brdf(
     const brdf& f, const vec3f& n, const vec3f& o, float rnl, const vec2f& rn) {
     if (f.rs) return zero3f;
     auto prob_ks = max(f.ks), prob_kt = max(f.kt);
@@ -303,37 +228,6 @@ vec3f sample_surface_delta_brdf(
         return -o;
     } else {
         return zero3f;
-    }
-}
-
-// Picks a direction based on the BRDF
-vec3f sample_curve_brdf(
-    const brdf& f, const vec3f& n, const vec3f& o, float rnl, const vec2f& rn) {
-    auto fp = make_frame_fromz(zero3f, n);
-    auto rz = 2 * rn.y - 1, rr = sqrtf(1 - rz * rz), rphi = 2 * pi * rn.x;
-    auto il = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
-    return transform_direction(fp, il);
-}
-
-// Picks a direction based on the BRDF
-vec3f sample_point_brdf(
-    const brdf& f, const vec3f& n, const vec3f& o, float rnl, const vec2f& rn) {
-    auto fp = make_frame_fromz(zero3f, n);
-    auto rz = 2 * rn.y - 1, rr = sqrtf(1 - rz * rz), rphi = 2 * pi * rn.x;
-    auto il = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
-    return transform_direction(fp, il);
-}
-
-// Picks a direction based on the BRDF
-vec3f sample_brdf(const brdf& f, const vec3f& n, const vec3f& o, float rnl,
-    const vec2f& rn, bool delta = false) {
-    switch (f.type) {
-        case brdf_type::none: return zero3f;
-        case brdf_type::surface:
-            return (!delta) ? sample_surface_brdf(f, n, o, rnl, rn) :
-                              sample_surface_delta_brdf(f, n, o, rnl, rn);
-        case brdf_type::line: return sample_curve_brdf(f, n, o, rnl, rn);
-        case brdf_type::point: return sample_point_brdf(f, n, o, rnl, rn);
     }
 }
 
@@ -445,9 +339,9 @@ vec3f trace_path(
         }
 
         // point
-        auto pos = eval_pos(isec.ist, isec.ei, isec.uv);
-        auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv);
         auto o = -ray.d;
+        auto pos = eval_pos(isec.ist, isec.ei, isec.uv);
+        auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv, o);
         auto f = eval_brdf(isec.ist, isec.ei, isec.uv);
         auto op = eval_opacity(isec.ist, isec.ei, isec.uv);
 
@@ -469,7 +363,7 @@ vec3f trace_path(
         }
 
         // early exit
-        if (f.type == brdf_type::none) break;
+        if (f.type == brdf_type::none || bounce >= nbounces - 1) break;
 
         // choose delta
         auto delta_prob = sample_delta_prob(f, n, o);
@@ -497,7 +391,7 @@ vec3f trace_path(
             auto le = zero3f;
             if (isec.ist) {
                 auto lp = eval_pos(isec.ist, isec.ei, isec.uv);
-                auto ln = eval_shading_norm(isec.ist, isec.ei, isec.uv);
+                auto ln = eval_shading_norm(isec.ist, isec.ei, isec.uv, -i);
                 pdf += 0.5f *
                        sample_light_pdf(
                            isec.ist, isec.ei, i, ln, length(lp - pos)) *
@@ -515,18 +409,18 @@ vec3f trace_path(
             if (pdf != 0) l += weight * le * brdfcos / pdf;
         }
 
-        // skip recursion if path ends
-        if (bounce == nbounces - 1) break;
-
         // continue path
-        auto i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng), delta);
-        auto brdfcos = eval_brdfcos(f, n, o, i, delta);
-        auto pdf = sample_brdf_pdf(f, n, o, i, delta);
-        if (pdf) weight *= brdfcos / pdf;
-
-        if (weight == zero3f) break;
+        auto i = zero3f;
+        if(!delta) {
+            i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
+            weight *= eval_brdfcos(f, n, o, i) / sample_brdf_pdf(f, n, o, i);
+        } else {
+            i = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
+            weight *= eval_delta_brdfcos(f, n, o, i) / sample_delta_brdf_pdf(f, n, o, i);
+        }
 
         // roussian roulette
+        if (weight == zero3f) break;
         if (bounce > 2) {
             auto rrprob = 1.0f - min(max(weight), 0.95f);
             if (rand1f(rng) < rrprob) break;
@@ -562,9 +456,9 @@ vec3f trace_path_naive(
         }
 
         // point
-        auto pos = eval_pos(isec.ist, isec.ei, isec.uv);
-        auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv);
         auto o = -ray.d;
+        auto pos = eval_pos(isec.ist, isec.ei, isec.uv);
+        auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv, o);
         auto f = eval_brdf(isec.ist, isec.ei, isec.uv);
         auto op = eval_opacity(isec.ist, isec.ei, isec.uv);
 
@@ -583,7 +477,7 @@ vec3f trace_path_naive(
         l += weight * eval_emission(em, n, o);
 
         // early exit
-        if (f.type == brdf_type::none) break;
+        if (f.type == brdf_type::none || bounce >= nbounces - 1) break;
 
         // choose delta
         auto delta_prob = sample_delta_prob(f, n, o);
@@ -591,12 +485,17 @@ vec3f trace_path_naive(
         weight *= (delta) ? 1 / delta_prob : 1 / (1 - delta_prob);
 
         // continue path
-        auto i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng), delta);
-        auto brdfcos = eval_brdfcos(f, n, o, i, delta);
-        auto pdf = sample_brdf_pdf(f, n, o, i, delta);
-        if (pdf) weight *= brdfcos / pdf;
+        auto i = zero3f;
+        if(!delta) {
+            i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
+            weight *= eval_brdfcos(f, n, o, i) / sample_brdf_pdf(f, n, o, i);
+        } else {
+            i = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
+            weight *= eval_delta_brdfcos(f, n, o, i) / sample_delta_brdf_pdf(f, n, o, i);
+        }
 
         // roussian roulette
+        if(weight == zero3f) break;
         if (bounce > 2) {
             auto rrprob = 1.0f - min(max(weight), 0.95f);
             if (rand1f(rng) < rrprob) break;
@@ -632,9 +531,9 @@ vec3f trace_path_nomis(
         }
 
         // point
-        auto pos = eval_pos(isec.ist, isec.ei, isec.uv);
-        auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv);
         auto o = -ray.d;
+        auto pos = eval_pos(isec.ist, isec.ei, isec.uv);
+        auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv, o);
         auto f = eval_brdf(isec.ist, isec.ei, isec.uv);
         auto op = eval_opacity(isec.ist, isec.ei, isec.uv);
 
@@ -656,7 +555,7 @@ vec3f trace_path_nomis(
         }
 
         // early exit
-        if (f.type == brdf_type::none) break;
+        if (f.type == brdf_type::none || bounce >= nbounces - 1) break;
 
         // choose delta
         auto delta_prob = sample_delta_prob(f, n, o);
@@ -670,7 +569,7 @@ vec3f trace_path_nomis(
             auto i = sample_light(lgt, pos, rand1f(rng), rand2f(rng));
             auto isec = intersect_ray(scn, make_ray(pos, i));
             if (isec.ist && isec.ist->mat->ke != zero3f) {
-                auto ln = eval_shading_norm(isec.ist, isec.ei, isec.uv);
+                auto ln = eval_shading_norm(isec.ist, isec.ei, isec.uv, -i);
                 auto pdf =
                     sample_light_pdf(isec.ist, isec.ei, i, ln, isec.dist) *
                     sample_index_pdf(scn->lights.size());
@@ -681,16 +580,18 @@ vec3f trace_path_nomis(
             }
         }
 
-        // skip recursion if path ends
-        if (bounce == nbounces - 1) break;
-
         // continue path
-        auto i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng), delta);
-        auto brdfcos = eval_brdfcos(f, n, o, i, delta);
-        auto pdf = sample_brdf_pdf(f, n, o, i, delta);
-        if (pdf) weight *= brdfcos / pdf;
+        auto i = zero3f;
+        if(!delta) {
+            i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
+            weight *= eval_brdfcos(f, n, o, i) / sample_brdf_pdf(f, n, o, i);
+        } else {
+            i = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
+            weight *= eval_delta_brdfcos(f, n, o, i) / sample_delta_brdf_pdf(f, n, o, i);
+        }
 
         // roussian roulette
+        if(weight == zero3f) break;
         if (bounce > 2) {
             auto rrprob = 1.0f - min(max(weight), 0.95f);
             if (rand1f(rng) < rrprob) break;
@@ -721,9 +622,9 @@ vec3f trace_direct(
     }
 
     // point
-    auto pos = eval_pos(isec.ist, isec.ei, isec.uv);
-    auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv);
     auto o = -ray.d;
+    auto pos = eval_pos(isec.ist, isec.ei, isec.uv);
+    auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv, o);
     auto f = eval_brdf(isec.ist, isec.ei, isec.uv);
 
     // emission
@@ -741,7 +642,7 @@ vec3f trace_direct(
         auto isec = intersect_ray(scn, make_ray(pos, i));
         if (lgt != isec.ist) continue;
         auto lp = eval_pos(isec.ist, isec.ei, isec.uv);
-        auto ln = eval_shading_norm(isec.ist, isec.ei, isec.uv);
+        auto ln = eval_shading_norm(isec.ist, isec.ei, isec.uv, -i);
         auto pdf = 0.5f * sample_light_pdf(
                               isec.ist, isec.ei, i, ln, length(lp - pos)) +
                    0.5f * sample_brdf_pdf(f, n, o, i);
@@ -809,9 +710,9 @@ vec3f trace_direct_nomis(
     }
 
     // point
-    auto pos = eval_pos(isec.ist, isec.ei, isec.uv);
-    auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv);
     auto o = -ray.d;
+    auto pos = eval_pos(isec.ist, isec.ei, isec.uv);
+    auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv, o);
     auto f = eval_brdf(isec.ist, isec.ei, isec.uv);
 
     // emission
@@ -824,7 +725,7 @@ vec3f trace_direct_nomis(
         auto isec = intersect_ray(scn, make_ray(pos, i));
         if (lgt != isec.ist) continue;
         auto lp = eval_pos(isec.ist, isec.ei, isec.uv);
-        auto ln = eval_shading_norm(isec.ist, isec.ei, isec.uv);
+        auto ln = eval_shading_norm(isec.ist, isec.ei, isec.uv, -i);
         auto pdf = sample_light_pdf(isec.ist, isec.ei, i, ln, length(lp - pos));
         auto em = eval_emission(isec.ist, isec.ei, isec.uv);
         auto le = eval_emission(em, ln, -i);
@@ -882,9 +783,9 @@ vec3f trace_eyelight(
     }
 
     // point
-    auto pos = eval_pos(isec.ist, isec.ei, isec.uv);
-    auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv);
     auto o = -ray.d;
+    auto pos = eval_pos(isec.ist, isec.ei, isec.uv);
+    auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv, o);
     auto f = eval_brdf(isec.ist, isec.ei, isec.uv);
 
     // emission
@@ -917,8 +818,8 @@ vec3f trace_debug_normal(
     if (!isec.ist) return zero3f;
 
     // point
-    auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv);
     auto o = -ray.d;
+    auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv, o);
 
     // shade
     if (isec.ist->mat->double_sided && dot(n, o) < 0) n = -n;
@@ -933,8 +834,8 @@ vec3f trace_debug_frontfacing(
     if (!isec.ist) return zero3f;
 
     // point
-    auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv);
     auto o = -ray.d;
+    auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv, o);
 
     // shade
     if (isec.ist->mat->double_sided && dot(n, o) < 0) n = -n;

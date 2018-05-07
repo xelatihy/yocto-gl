@@ -385,8 +385,7 @@ vec3f eval_tangsp(
 // Instance element values.
 vec3f eval_elem_norm(const instance* ist, int ei);
 // Shading normals including material perturbations.
-vec3f eval_shading_norm(
-    const instance* ist, int ei, const vec2f& uv, const vec3f& o = zero3f);
+vec3f eval_shading_norm(const instance* ist, int ei, const vec2f& uv, const vec3f& o);
 
 // Environment texture coordinates from the incoming direction.
 vec2f eval_texcoord(const environment* env, const vec3f& i);

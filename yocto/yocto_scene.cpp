@@ -508,23 +508,26 @@ vec3f eval_elem_norm(const instance* ist, int ei) {
 // Shading normals including material perturbations.
 vec3f eval_shading_norm(
     const instance* ist, int ei, const vec2f& uv, const vec3f& o) {
-    auto norm = eval_norm(ist, ei, uv);
-    if (!ist->mat->norm_txt.txt) return norm;
-    if (ist->mat->norm_txt.txt) {
-        auto texcoord = eval_texcoord(ist, ei, uv);
-        auto left_handed = false;
-        auto tang = eval_tangsp(ist, ei, uv, left_handed);
-        auto txt = eval_texture_rgb(ist->mat->norm_txt, texcoord, false);
-        txt = txt * 2 - vec3f{1, 1, 1};
-        txt.y = -txt.y;
-        auto frame = make_frame_fromzx({0, 0, 0}, norm, tang);
-        if (left_handed) frame.y = -frame.y;
-        norm = transform_direction(frame, txt);
+    if(!ist->shp->triangles.empty()) {
+        auto norm = eval_norm(ist, ei, uv);
+        if (ist->mat->norm_txt.txt) {
+            auto texcoord = eval_texcoord(ist, ei, uv);
+            auto left_handed = false;
+            auto tang = eval_tangsp(ist, ei, uv, left_handed);
+            auto txt = eval_texture_rgb(ist->mat->norm_txt, texcoord, false);
+            txt = txt * 2 - vec3f{1, 1, 1};
+            txt.y = -txt.y;
+            auto frame = make_frame_fromzx({0, 0, 0}, norm, tang);
+            if (left_handed) frame.y = -frame.y;
+            norm = transform_direction(frame, txt);
+        }
+        if (ist->mat->double_sided && dot(norm, o) < 0) norm = -norm;
+        return norm;
+    } else if(!ist->shp->lines.empty()) {
+        return orthonormalize(o, eval_norm(ist, ei, uv));
+    } else {
+        return o;
     }
-    if (ist->mat->double_sided && !ist->shp->triangles.empty() &&
-        dot(norm, o) < 0)
-        norm = -norm;
-    return norm;
 }
 
 // Environment texture coordinates from the direction.
@@ -726,14 +729,8 @@ brdf eval_brdf(const instance* ist, int ei, const vec2f& uv) {
     // brdf type
     if (f.kd == zero3f && f.ks == zero3f && f.kt == zero3f) {
         f.type = brdf_type::none;
-    } else if (!ist->shp->triangles.empty()) {
-        f.type = brdf_type::surface;
-    } else if (!ist->shp->lines.empty()) {
-        f.type = brdf_type::line;
-    } else if (!ist->shp->pos.empty()) {
-        f.type = brdf_type::point;
     } else {
-        f.type = brdf_type::none;
+        f.type = brdf_type::surface;
     }
     return f;
 }
