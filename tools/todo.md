@@ -29,15 +29,15 @@ Please consider this to be just development notes and not any real planning.
 
 ## Trace
 
+- refactor integrator
+    - recursive call
+    - split delta explicitly
+    - brdf for single thing
 - lights are only triangle meshes
-- simpler shapes
-    - remove quads, facevarying
-    - split lines and triangle meshes
-    - remove quads and the rest
-    - remove points
-    - lines materials are just plastic BRDFs for now
 - remove brdf?
     - eval_diffuse, eval_specular, eval_roughness, eval_emission
+- simpler shapes
+    - split lines and triangle meshes
 - sampling shapes
     - remove sample_points, sample_lines, etc...
     - support uniform sampling in sample_shape
