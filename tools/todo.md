@@ -29,30 +29,17 @@ Please consider this to be just development notes and not any real planning.
 
 ## Trace
 
-- refactor integrator
-    - recursive call
-    - split delta explicitly
-    - brdf for single thing
+- double-sided brdf
 - lights are only triangle meshes
-- remove brdf?
-    - eval_diffuse, eval_specular, eval_roughness, eval_emission
-- simpler shapes
-    - split lines and triangle meshes
-- sampling shapes
-    - remove sample_points, sample_lines, etc...
-    - support uniform sampling in sample_shape
 - deltas with only one function call instead of split
 - simplify eval functions
     - eval emission: simplify?
     - eval environment: flip direction?
 - redirect log to imgui
 - BUG: double sided for kt
-- opacity in intersection
 - intersection return projections for lines and points
-- matcap rendering
 - area light test scene
 - bump/normal mapping
-- double-sided brdf
 - fresnel
     - diffuse formula
     - scale with roughness
@@ -60,10 +47,18 @@ Please consider this to be just development notes and not any real planning.
     - fresnel in coefficients
     - fresnel in weights
 - add radius in offsetting rays
+- bvh with opacity
 - simple denoiser
     - joint bilateral denoiser
     - non-local means denoiser
     - denoiser from paris
+
+## Simpler shapes
+
+- split lines and triangle meshes
+- sampling shapes
+    - remove sample_points, sample_lines, etc...
+    - support uniform sampling in sample_shape
 
 ## Tesselated shapes
 

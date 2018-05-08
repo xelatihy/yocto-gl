@@ -195,6 +195,10 @@ const auto zero3i = vec3i();
 const auto zero4i = vec4i();
 const auto zero4b = vec4b();
 
+// Access xyz component of a vec4 typically used for color operation.
+inline vec3f xyz(const vec4f& a) { return {a.x,a.y,a.z}; }
+inline vec3i xyz(const vec4i& a) { return {a.x,a.y,a.z}; }
+
 // Vector comparison operations.
 inline bool operator==(const vec2f& a, const vec2f& b) {
     return a.x == b.x && a.y == b.y;
