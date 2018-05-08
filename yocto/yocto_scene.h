@@ -360,7 +360,8 @@ struct scene_intersection {
 
 // Intersects a ray with the scene.
 scene_intersection intersect_ray(
-    const scene* scn, const ray3f& ray, bool find_any = false);
+    const scene* scn, const ray3f& ray, 
+    bool find_any = false);
 
 // Shape values interpolated using barycentric coordinates.
 vec3f eval_pos(const shape* shp, int ei, const vec2f& uv);
@@ -397,16 +398,6 @@ vec3f eval_environment(const environment* env, const vec3f& i);
 // Evaluate a texture.
 vec4f eval_texture(const texture_info& info, const vec2f& texcoord,
     bool srgb = true, const vec4f& def = {1, 1, 1, 1});
-inline vec3f eval_texture_rgb(const texture_info& info, const vec2f& texcoord,
-    bool srgb = true, const vec3f& def = {1, 1, 1}) {
-    auto val = eval_texture(info, texcoord, srgb, {def.x, def.y, def.z, 1});
-    return {val.x, val.y, val.z};
-}
-inline float eval_texture_alpha(
-    const texture_info& info, const vec2f& texcoord, const float def = 1) {
-    auto val = eval_texture(info, texcoord, false, {1, 1, 1, def});
-    return val.w;
-}
 // Generates a ray from a camera image coordinate `uv` and lens coordinates
 // `luv`.
 ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv);
@@ -419,24 +410,21 @@ ray3f eval_camera_ray(const camera* cam, const vec2i& ij, int res,
 // values any one is 0 or less. Set camera aspect otherwise.
 void sync_camera_aspect(const camera* cam, int& width, int& height);
 
-// Brdf type.
-enum struct brdf_type { none, point, line, surface };
-
-// Brdf.
-struct brdf {
-    brdf_type type = brdf_type::none;  // type
-    vec3f kd = {0, 0, 0};              // diffuse
-    vec3f ks = {0, 0, 0};              // specular
-    float rs = 0;                      // specular roughness
-    vec3f kt = {0, 0, 0};              // thin glass transmission
-};
-
-// Evaluates the material emission.
+// Evaluates material parameters: emission, diffuse, specular, transmission, 
+// roughness and opacity.
 vec3f eval_emission(const instance* ist, int ei, const vec2f& uv);
-// Evaluates the material brdf.
-brdf eval_brdf(const instance* ist, int ei, const vec2f& uv);
-// Evaluates the opacity.
+vec3f eval_diffuse(const instance* ist, int ei, const vec2f& uv);
+vec3f eval_specular(const instance* ist, int ei, const vec2f& uv);
+vec3f eval_transmission(const instance* ist, int ei, const vec2f& uv);
+float eval_roughness(const instance* ist, int ei, const vec2f& uv);
 float eval_opacity(const instance* ist, int ei, const vec2f& uv);
+
+// Material values packed into a convenience structure.
+struct brdf {
+    vec3f kd = zero3f, ks = zero3f, kt = zero3f; // diffuse, specular, transm
+    float rs = 1; // roughness
+};
+brdf eval_brdf(const instance* ist, int ei, const vec2f& uv);
 
 // Sample a shape based on a distribution.
 std::pair<int, vec2f> sample_shape(

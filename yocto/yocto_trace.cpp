@@ -38,6 +38,20 @@
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+// Intersect a scene handling opacity.
+scene_intersection intersect_ray_cutout(const scene* scn, const ray3f& ray_, rng_state& rng, int nbounces) {
+    auto ray = ray_;
+    for(auto b = 0; b < nbounces; b ++) {
+        auto isec = intersect_ray(scn, ray);
+        if(!isec.ist) return isec;
+        auto op = eval_opacity(isec.ist, isec.ei, isec.uv);
+        if (op > 0.999f) return isec;
+        if(rand1f(rng) < op) return isec;
+        ray = make_ray(eval_pos(isec.ist, isec.ei, isec.uv), ray.d);
+    }
+    return {};
+}
+
 // Evaluates emission.
 vec3f eval_emission(const vec3f& ke, const vec3f& n, const vec3f& o) {
     if (dot(n, o) >= 0) return ke;
@@ -232,7 +246,6 @@ vec3f sample_delta_brdf(
 }
 
 float sample_delta_prob(const brdf& f, const vec3f& n, const vec3f& o) {
-    if (f.type != brdf_type::surface) return 0;
     if (f.rs) return 0;
     auto dw = max(f.ks) + max(f.kt);
     return dw / (dw + max(f.kd));
@@ -329,7 +342,7 @@ vec3f trace_path(
     // trace  path
     for (auto bounce = 0; bounce < nbounces; bounce++) {
         // intersect ray
-        auto isec = intersect_ray(scn, ray);
+        auto isec = intersect_ray_cutout(scn, ray, rng, nbounces);
         if (!isec.ist) {
             if (emission) {
                 for (auto env : scn->environments)
@@ -343,18 +356,6 @@ vec3f trace_path(
         auto pos = eval_pos(isec.ist, isec.ei, isec.uv);
         auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv, o);
         auto f = eval_brdf(isec.ist, isec.ei, isec.uv);
-        auto op = eval_opacity(isec.ist, isec.ei, isec.uv);
-
-        // opacity
-        if (op != 1 && rand1f(rng) < 1 - op) {
-            if (bounce < 2) {
-                if (rand1f(rng) < 1 - op) break;
-                weight *= 1 / op;
-            }
-            ray = make_ray(pos, -o);
-            emission = true;
-            continue;
-        }
 
         // emission
         if (emission) {
@@ -362,8 +363,13 @@ vec3f trace_path(
             l += weight * eval_emission(em, n, o);
         }
 
-        // early exit
-        if (f.type == brdf_type::none || bounce >= nbounces - 1) break;
+        // early exit and russian roulette
+        if (f.kd + f.ks + f.kt == zero3f || bounce >= nbounces - 1) break;
+        if (bounce > 2) {
+            auto rrprob = 1.0f - min(max(weight), 0.95f);
+            if (rand1f(rng) < rrprob) break;
+            weight *= 1 / (1 - rrprob);
+        }
 
         // choose delta
         auto delta_prob = sample_delta_prob(f, n, o);
@@ -386,7 +392,7 @@ vec3f trace_path(
             } else {
                 i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
             }
-            auto isec = intersect_ray(scn, make_ray(pos, i));
+            auto isec = intersect_ray_cutout(scn, make_ray(pos, i), rng, nbounces);
             auto pdf = 0.5f * sample_brdf_pdf(f, n, o, i);
             auto le = zero3f;
             if (isec.ist) {
@@ -410,22 +416,22 @@ vec3f trace_path(
         }
 
         // continue path
-        auto i = zero3f;
+        auto i = zero3f, brdfcos = zero3f;
+        auto pdf = 0.0f;
         if(!delta) {
             i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
-            weight *= eval_brdfcos(f, n, o, i) / sample_brdf_pdf(f, n, o, i);
+            brdfcos = eval_brdfcos(f, n, o, i);
+            pdf = sample_brdf_pdf(f, n, o, i);
         } else {
             i = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
-            weight *= eval_delta_brdfcos(f, n, o, i) / sample_delta_brdf_pdf(f, n, o, i);
+            brdfcos = eval_delta_brdfcos(f, n, o, i);
+            pdf = sample_delta_brdf_pdf(f, n, o, i);
         }
 
-        // roussian roulette
+        // accumulate weight
+        if(pdf== 0) break;
+        weight *= brdfcos / pdf;
         if (weight == zero3f) break;
-        if (bounce > 2) {
-            auto rrprob = 1.0f - min(max(weight), 0.95f);
-            if (rand1f(rng) < rrprob) break;
-            weight *= 1 / (1 - rrprob);
-        }
 
         // setup next ray
         ray = make_ray(pos, i);
@@ -448,7 +454,7 @@ vec3f trace_path_naive(
     // trace  path
     for (auto bounce = 0; bounce < nbounces; bounce++) {
         // intersect ray
-        auto isec = intersect_ray(scn, ray);
+        auto isec = intersect_ray_cutout(scn, ray, rng, nbounces);
         if (!isec.ist) {
             for (auto env : scn->environments)
                 l += weight * eval_environment(env, ray.d);
@@ -460,24 +466,18 @@ vec3f trace_path_naive(
         auto pos = eval_pos(isec.ist, isec.ei, isec.uv);
         auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv, o);
         auto f = eval_brdf(isec.ist, isec.ei, isec.uv);
-        auto op = eval_opacity(isec.ist, isec.ei, isec.uv);
-
-        // opacity
-        if (op != 1 && rand1f(rng) < 1 - op) {
-            if (bounce < 2) {
-                if (rand1f(rng) < 1 - op) break;
-                weight *= 1 / op;
-            }
-            ray = make_ray(pos, -o);
-            continue;
-        }
 
         // emission
         auto em = eval_emission(isec.ist, isec.ei, isec.uv);
         l += weight * eval_emission(em, n, o);
 
-        // early exit
-        if (f.type == brdf_type::none || bounce >= nbounces - 1) break;
+        // early exit and russian roulette
+        if (f.kd + f.ks + f.kt == zero3f || bounce >= nbounces - 1) break;
+        if (bounce > 2) {
+            auto rrprob = 1.0f - min(max(weight), 0.95f);
+            if (rand1f(rng) < rrprob) break;
+            weight *= 1 / (1 - rrprob);
+        }
 
         // choose delta
         auto delta_prob = sample_delta_prob(f, n, o);
@@ -485,22 +485,22 @@ vec3f trace_path_naive(
         weight *= (delta) ? 1 / delta_prob : 1 / (1 - delta_prob);
 
         // continue path
-        auto i = zero3f;
+        auto i = zero3f, brdfcos = zero3f;
+        auto pdf = 0.0f;
         if(!delta) {
             i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
-            weight *= eval_brdfcos(f, n, o, i) / sample_brdf_pdf(f, n, o, i);
+            brdfcos = eval_brdfcos(f, n, o, i);
+            pdf = sample_brdf_pdf(f, n, o, i);
         } else {
             i = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
-            weight *= eval_delta_brdfcos(f, n, o, i) / sample_delta_brdf_pdf(f, n, o, i);
+            brdfcos = eval_delta_brdfcos(f, n, o, i);
+            pdf = sample_delta_brdf_pdf(f, n, o, i);
         }
 
-        // roussian roulette
-        if(weight == zero3f) break;
-        if (bounce > 2) {
-            auto rrprob = 1.0f - min(max(weight), 0.95f);
-            if (rand1f(rng) < rrprob) break;
-            weight *= 1 / (1 - rrprob);
-        }
+        // accumulate weight
+        if(pdf== 0) break;
+        weight *= brdfcos / pdf;
+        if (weight == zero3f) break;
 
         // setup next ray
         ray = make_ray(pos, i);
@@ -523,7 +523,7 @@ vec3f trace_path_nomis(
     // trace  path
     for (auto bounce = 0; bounce < nbounces; bounce++) {
         // intersect ray
-        auto isec = intersect_ray(scn, ray);
+        auto isec = intersect_ray_cutout(scn, ray, rng, nbounces);
         if (!isec.ist) {
             for (auto env : scn->environments)
                 l += weight * eval_environment(env, ray.d);
@@ -535,18 +535,6 @@ vec3f trace_path_nomis(
         auto pos = eval_pos(isec.ist, isec.ei, isec.uv);
         auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv, o);
         auto f = eval_brdf(isec.ist, isec.ei, isec.uv);
-        auto op = eval_opacity(isec.ist, isec.ei, isec.uv);
-
-        // opacity
-        if (op != 1 && rand1f(rng) < 1 - op) {
-            if (bounce < 2) {
-                if (rand1f(rng) < 1 - op) break;
-                weight *= 1 / op;
-            }
-            ray = make_ray(pos, -o);
-            emission = true;
-            continue;
-        }
 
         // emission
         if (emission) {
@@ -554,8 +542,13 @@ vec3f trace_path_nomis(
             l += weight * eval_emission(em, n, o);
         }
 
-        // early exit
-        if (f.type == brdf_type::none || bounce >= nbounces - 1) break;
+        // early exit and russian roulette
+        if (f.kd + f.ks + f.kt == zero3f || bounce >= nbounces - 1) break;
+        if (bounce > 2) {
+            auto rrprob = 1.0f - min(max(weight), 0.95f);
+            if (rand1f(rng) < rrprob) break;
+            weight *= 1 / (1 - rrprob);
+        }
 
         // choose delta
         auto delta_prob = sample_delta_prob(f, n, o);
@@ -567,7 +560,7 @@ vec3f trace_path_nomis(
             auto lgt =
                 scn->lights[sample_index(scn->lights.size(), rand1f(rng))];
             auto i = sample_light(lgt, pos, rand1f(rng), rand2f(rng));
-            auto isec = intersect_ray(scn, make_ray(pos, i));
+            auto isec = intersect_ray_cutout(scn, make_ray(pos, i), rng, nbounces);
             if (isec.ist && isec.ist->mat->ke != zero3f) {
                 auto ln = eval_shading_norm(isec.ist, isec.ei, isec.uv, -i);
                 auto pdf =
@@ -581,22 +574,22 @@ vec3f trace_path_nomis(
         }
 
         // continue path
-        auto i = zero3f;
+        auto i = zero3f, brdfcos = zero3f;
+        auto pdf = 0.0f;
         if(!delta) {
             i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
-            weight *= eval_brdfcos(f, n, o, i) / sample_brdf_pdf(f, n, o, i);
+            brdfcos = eval_brdfcos(f, n, o, i);
+            pdf = sample_brdf_pdf(f, n, o, i);
         } else {
             i = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
-            weight *= eval_delta_brdfcos(f, n, o, i) / sample_delta_brdf_pdf(f, n, o, i);
+            brdfcos = eval_delta_brdfcos(f, n, o, i);
+            pdf = sample_delta_brdf_pdf(f, n, o, i);
         }
 
-        // roussian roulette
-        if(weight == zero3f) break;
-        if (bounce > 2) {
-            auto rrprob = 1.0f - min(max(weight), 0.95f);
-            if (rand1f(rng) < rrprob) break;
-            weight *= 1 / (1 - rrprob);
-        }
+        // accumulate weight
+        if(pdf== 0) break;
+        weight *= brdfcos / pdf;
+        if (weight == zero3f) break;
 
         // setup next ray
         ray = make_ray(pos, i);

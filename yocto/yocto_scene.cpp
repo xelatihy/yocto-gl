@@ -508,13 +508,13 @@ vec3f eval_elem_norm(const instance* ist, int ei) {
 // Shading normals including material perturbations.
 vec3f eval_shading_norm(
     const instance* ist, int ei, const vec2f& uv, const vec3f& o) {
-    if(!ist->shp->triangles.empty()) {
+    if (!ist->shp->triangles.empty()) {
         auto norm = eval_norm(ist, ei, uv);
         if (ist->mat->norm_txt.txt) {
             auto texcoord = eval_texcoord(ist, ei, uv);
             auto left_handed = false;
             auto tang = eval_tangsp(ist, ei, uv, left_handed);
-            auto txt = eval_texture_rgb(ist->mat->norm_txt, texcoord, false);
+            auto txt = xyz(eval_texture(ist->mat->norm_txt, texcoord, false));
             txt = txt * 2 - vec3f{1, 1, 1};
             txt.y = -txt.y;
             auto frame = make_frame_fromzx({0, 0, 0}, norm, tang);
@@ -523,7 +523,7 @@ vec3f eval_shading_norm(
         }
         if (ist->mat->double_sided && dot(norm, o) < 0) norm = -norm;
         return norm;
-    } else if(!ist->shp->lines.empty()) {
+    } else if (!ist->shp->lines.empty()) {
         return orthonormalize(o, eval_norm(ist, ei, uv));
     } else {
         return o;
@@ -549,7 +549,7 @@ vec3f eval_environment(const environment* env, const vec3f& w) {
     auto ke = env->ke;
     if (env->ke_txt.txt) {
         auto texcoord = eval_texcoord(env, w);
-        ke *= eval_texture_rgb(env->ke_txt, texcoord);
+        ke *= xyz(eval_texture(env->ke_txt, texcoord));
     }
     return ke;
 }
@@ -624,114 +624,67 @@ ray3f eval_camera_ray(const camera* cam, const vec2i& ij, int res,
     return eval_camera_ray(cam, uv, luv);
 }
 
-// Evaluates the opacity.
-float eval_opacity(const instance* ist, int ei, const vec2f& uv) {
-    // initialize opacity
-    if (!ist) return 1;
-
-    auto mat = ist->mat;
-
-    // initialized material values
-    auto op = 1.0f;
-    if (!ist->shp->color.empty()) {
-        auto col = eval_color(ist->shp, ei, uv);
-        op *= col.w;
-    }
-
-    // handle opacity
-    op *= mat->op;
-    if (mat->kd_txt.txt) {
-        auto texcoord = eval_texcoord(ist, ei, uv);
-        op *= eval_texture(mat->kd_txt, texcoord).w;
-    }
-
-    if (op > 0.999f) op = 1;
-
-    return op;
-}
-
-// Evaluates the brdf at a location.
+// Evaluates material parameters.
 vec3f eval_emission(const instance* ist, int ei, const vec2f& uv) {
-    if (!ist) return zero3f;
-
-    auto ke = ist->mat->ke;
-    if (ist->mat->ke_txt.txt) {
-        auto texcoord = eval_texcoord(ist, ei, uv);
-        ke *= eval_texture_rgb(ist->mat->ke_txt, texcoord);
+    if (!ist || !ist->mat) return zero3f;
+    return ist->mat->ke * xyz(eval_color(ist, ei, uv)) *
+           xyz(eval_texture(ist->mat->ke_txt, eval_texcoord(ist, ei, uv)));
+}
+vec3f eval_diffuse(const instance* ist, int ei, const vec2f& uv) {
+    if (!ist || !ist->mat) return zero3f;
+    if(!ist->mat->base_metallic) {
+        return ist->mat->kd * xyz(eval_color(ist, ei, uv)) *
+                xyz(eval_texture(ist->mat->kd_txt, eval_texcoord(ist, ei, uv)));
+    } else {
+        auto kb = ist->mat->kd * xyz(eval_color(ist, ei, uv)) *
+                xyz(eval_texture(ist->mat->kd_txt, eval_texcoord(ist, ei, uv)));
+        auto km = ist->mat->ks.x * 
+                eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).x;
+        return kb * (1 - km);
     }
-
-    auto col = eval_color(ist->shp, ei, uv);
-    ke *= vec3f{col.x, col.y, col.z};
-
-    return ke;
+}
+vec3f eval_specular(const instance* ist, int ei, const vec2f& uv) {
+    if (!ist || !ist->mat) return zero3f;
+    if(!ist->mat->base_metallic) {
+        return ist->mat->ks * xyz(eval_color(ist, ei, uv)) *
+                xyz(eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)));
+    } else {
+        auto kb = ist->mat->kd * xyz(eval_color(ist, ei, uv)) *
+                xyz(eval_texture(ist->mat->kd_txt, eval_texcoord(ist, ei, uv)));
+        auto km = ist->mat->ks.x * 
+                eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).x;
+        return kb * km + vec3f{0.04f, 0.04f, 0.04f} * (1 - km);
+    }
+}
+float eval_roughness(const instance* ist, int ei, const vec2f& uv) {
+    if (!ist || !ist->mat) return 1;
+    if(!ist->mat->base_metallic) {
+        auto rs = ist->mat->rs;
+        auto txt_w = eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).w;
+        return 1 - ((1 - rs) * txt_w);
+    } else {
+        return ist->mat->rs * eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).w;
+    }
+    // rs = clamp(rs, 0.03f * 0.03f, 1.0f);
+}
+vec3f eval_transmission(const instance* ist, int ei, const vec2f& uv) {
+    if (!ist || !ist->mat) return zero3f;
+    return ist->mat->kt * xyz(eval_color(ist, ei, uv)) *
+            xyz(eval_texture(ist->mat->kt_txt, eval_texcoord(ist, ei, uv)));
+}
+float eval_opacity(const instance* ist, int ei, const vec2f& uv) {
+    if (!ist || !ist->mat) return 1;
+    return ist->mat->op * eval_color(ist->shp, ei, uv).w *
+           eval_texture(ist->mat->kd_txt, eval_texcoord(ist, ei, uv)).w;
 }
 
 // Evaluates the brdf at a location.
 brdf eval_brdf(const instance* ist, int ei, const vec2f& uv) {
-    // initialize brdf
-    if (!ist) return {};
-
-    auto mat = ist->mat;
-    auto texcoord = eval_texcoord(ist, ei, uv);
-
-    // initialized material values
     auto f = brdf();
-    auto kx = vec3f{1, 1, 1};
-    if (!ist->shp->color.empty()) {
-        auto col = eval_color(ist->shp, ei, uv);
-        kx *= {col.x, col.y, col.z};
-    }
-
-    // sample reflectance
-    if (!mat->base_metallic) {
-        f.kd = mat->kd * kx;
-        if (mat->kd_txt.txt) {
-            f.kd *= eval_texture_rgb(mat->kd_txt, texcoord);
-        }
-        f.ks = mat->ks * kx;
-        f.rs = mat->rs;
-        if (mat->ks_txt.txt) {
-            auto txt = eval_texture(mat->ks_txt, texcoord);
-            f.ks *= {txt.x, txt.y, txt.z};
-            f.rs = 1 - ((1 - f.rs) * txt.w);
-        }
-    } else {
-        auto kb = mat->kd * kx;
-        if (mat->kd_txt.txt) { kb *= eval_texture_rgb(mat->kd_txt, texcoord); }
-        auto km = mat->ks.x;
-        f.rs = mat->rs;
-        if (mat->ks_txt.txt) {
-            auto txt = eval_texture(mat->ks_txt, texcoord);
-            km *= txt.y;
-            f.rs *= txt.z;
-        }
-        f.kd = kb * (1 - km);
-        f.ks = kb * km + vec3f{0.04f, 0.04f, 0.04f} * (1 - km);
-    }
-    f.kt = mat->kt * kx;
-    if (mat->kt_txt.txt) {
-        auto txt = eval_texture(mat->kt_txt, texcoord);
-        f.kt *= {txt.x, txt.y, txt.z};
-    }
-
-    // set up final values
-    if (f.ks != zero3f && f.rs < 0.9999f) {
-        f.rs = f.rs * f.rs;
-        if (f.rs < 0.03f * 0.03f)
-            f.rs = 0;
-        else
-            f.rs = clamp(f.rs, 0.03f * 0.03f, 1.0f);
-    } else {
-        f.ks = zero3f;
-        f.rs = 1;
-    }
-
-    // brdf type
-    if (f.kd == zero3f && f.ks == zero3f && f.kt == zero3f) {
-        f.type = brdf_type::none;
-    } else {
-        f.type = brdf_type::surface;
-    }
+    f.kd = eval_diffuse(ist, ei, uv);
+    f.ks = eval_specular(ist, ei, uv);
+    f.kt = eval_transmission(ist, ei, uv);
+    f.rs = eval_roughness(ist, ei, uv);
     return f;
 }
 
