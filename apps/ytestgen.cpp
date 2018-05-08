@@ -125,18 +125,19 @@ std::vector<ygl::scene*> make_proc_scenes(const std::string& name) {
     // basic shapes
     if (name == "basic") {
         for (auto env : {0, 1}) {
-            scenes.push_back(ygl::make_simple_scene("basic"s + ((env) ? "-el" : "-al"),
-                {
-                    ygl::make_sphereflipcap_shape("obj1"),
-                    ygl::make_spherecube_shape("obj2"),
-                    ygl::make_cuberounded_shape("obj3"),
-                },
-                {
-                    ygl::make_plastic_material("obj1", {0.7f, 0.5f, 0.5f}),
-                    ygl::make_plastic_material("obj2", {0.5f, 0.7f, 0.5f}),
-                    ygl::make_plastic_material("obj3", {0.5f, 0.5f, 0.7f}),
-                },
-                env));
+            scenes.push_back(
+                ygl::make_simple_scene("basic"s + ((env) ? "-el" : "-al"),
+                    {
+                        ygl::make_sphereflipcap_shape("obj1"),
+                        ygl::make_spherecube_shape("obj2"),
+                        ygl::make_cuberounded_shape("obj3"),
+                    },
+                    {
+                        ygl::make_plastic_material("obj1", {0.7f, 0.5f, 0.5f}),
+                        ygl::make_plastic_material("obj2", {0.5f, 0.7f, 0.5f}),
+                        ygl::make_plastic_material("obj3", {0.5f, 0.5f, 0.7f}),
+                    },
+                    env));
         }
     }
 

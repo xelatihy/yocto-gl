@@ -66,8 +66,8 @@ void clear_gldata(scene* scn);
 void draw_glscene(const scene* scn, const camera* cam,
     const glsurface_program& prog, 
     const vec2i& viewport_size, const void* highlighted, bool eyelight,
-    bool wireframe = false, bool edges = false, bool cutout = false,
-    float exposure = 0, float gamma = 2.2f, bool cull_backface = false);
+    bool wireframe = false, bool edges = false, 
+    float exposure = 0, float gamma = 2.2f);
 
 // Handle camera navigation and scene selection
 bool handle_glcamera_navigation(

@@ -41,17 +41,15 @@ struct app_state {
     std::string imfilename;
     std::string outfilename;
 
-    int resolution = 512;       // image resolution
-    bool wireframe = false;     // wireframe drawing
-    bool edges = false;         // draw edges
-    float edge_offset = 0.01f;  // offset for edges
-    bool cutout = false;        // draw with binary transparency
-    bool eyelight = false;      // camera light mode
-    float exposure = 0;         // exposure
-    float gamma = 2.2f;         // gamma
+    int resolution = 512;                        // image resolution
+    bool wireframe = false;                      // wireframe drawing
+    bool edges = false;                          // draw edges
+    float edge_offset = 0.01f;                   // offset for edges
+    bool eyelight = false;                       // camera light mode
+    float exposure = 0;                          // exposure
+    float gamma = 2.2f;                          // gamma
     ygl::vec4b background = {222, 222, 222, 0};  // background
     ygl::vec3f ambient = {0, 0, 0};              // ambient lighting
-    bool cull_backface = false;                  // culling back face
 
     ygl::glsurface_program prog;
 
@@ -98,10 +96,9 @@ inline void draw(ygl::glwindow* win, app_state* app) {
 
     ygl::clear_glbuffers(app->background);
     ygl::enable_gldepth_test(true);
-    ygl::enable_glculling(app->cull_backface);
     ygl::draw_glscene(app->scn, app->cam, app->prog, framebuffer_size,
         app->selection.ptr, app->eyelight, app->wireframe, app->edges,
-        app->cutout, app->exposure, app->gamma, app->cull_backface);
+        app->exposure, app->gamma);
 
     if (app->no_glwidgets) {
         ygl::swap_glwindow_buffers(win);
@@ -145,10 +142,6 @@ inline void draw(ygl::glwindow* win, app_state* app) {
             draw_glwidgets_checkbox(win, "wireframe", app->wireframe);
             ygl::continue_glwidgets_line(win);
             draw_glwidgets_checkbox(win, "edges", app->edges);
-            ygl::continue_glwidgets_line(win);
-            draw_glwidgets_checkbox(win, "cutout", app->cutout);
-            ygl::continue_glwidgets_line(win);
-            draw_glwidgets_checkbox(win, "cull", app->cull_backface);
             ygl::end_glwidgets_tree(win);
         }
         if (ygl::begin_glwidgets_tree(win, "view settings")) {
@@ -279,8 +272,6 @@ int main(int argc, char* argv[]) {
         ygl::make_parser(argc, argv, "yview", "views scenes inteactively");
     app->eyelight = ygl::parse_flag(
         parser, "--eyelight", "-c", "Eyelight rendering.", false);
-    auto double_sided = ygl::parse_flag(
-        parser, "--double-sided", "-D", "Force double sided rendering.", false);
     app->quiet =
         ygl::parse_flag(parser, "--quiet", "-q", "Print only errors messages");
     app->screenshot_and_exit = ygl::parse_flag(
@@ -323,9 +314,6 @@ int main(int argc, char* argv[]) {
     ygl::add_missing_names(app->scn);
     ygl::add_missing_tangent_space(app->scn);
     app->cam = app->scn->cameras[0];
-    if (double_sided) {
-        for (auto mat : app->scn->materials) mat->double_sided = true;
-    }
 
     // validate
     for (auto err : ygl::validate(app->scn)) ygl::log_warning(err);

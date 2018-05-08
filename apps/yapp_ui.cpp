@@ -133,14 +133,13 @@ void clear_gldata(scene* scn) {
 // Draw a shape
 void draw_glshape(const shape* shp, const material* mat, const mat4f& xform,
     bool highlighted, const glsurface_program& prog, bool eyelight,
-    bool wireframe, bool edges, bool cutout, bool cull) {
+    bool wireframe, bool edges) {
     static auto default_material = material();
     default_material.kd = {0.2f, 0.2f, 0.2f};
 
     if (!mat) mat = &default_material;
 
     enable_glwireframe(wireframe);
-    enable_glculling(cull && !mat->double_sided);
     begin_glsurface_shape(prog, xform);
 
     auto txt = [](const texture_info& info) -> gltexture_info {
@@ -153,10 +152,9 @@ void draw_glshape(const shape* shp, const material* mat, const mat4f& xform,
     auto& gshp = *(glshape*)shp->gl_data;
     auto faceted = shp->norm.empty();
 
-    set_glsurface_material(prog, mat->ke, mat->kd,
-        mat->ks, mat->rs, mat->op, txt(mat->ke_txt), txt(mat->kd_txt),
-        txt(mat->ks_txt), txt(mat->norm_txt), mat->base_metallic, 
-        mat->double_sided, cutout);
+    set_glsurface_material(prog, mat->ke, mat->kd, mat->ks, mat->rs, mat->op,
+        txt(mat->ke_txt), txt(mat->kd_txt), txt(mat->ks_txt),
+        txt(mat->norm_txt), mat->base_metallic);
 
     set_glsurface_vert(
         prog, gshp.pos, gshp.norm, gshp.texcoord, gshp.color, gshp.tangsp);
@@ -192,7 +190,6 @@ void draw_glshape(const shape* shp, const material* mat, const mat4f& xform,
     }
 
     end_glsurface_shape(prog);
-    enable_glculling(false);
     enable_glwireframe(false);
 }
 
@@ -200,7 +197,7 @@ void draw_glshape(const shape* shp, const material* mat, const mat4f& xform,
 void draw_glscene(const scene* scn, const camera* cam,
     const glsurface_program& prog, const vec2i& viewport_size,
     const void* highlighted, bool eyelight, bool wireframe, bool edges,
-    bool cutout, float exposure, float gamma, bool cull) {
+    float exposure, float gamma) {
     // begin frame
     enable_gldepth_test(true);
     set_glviewport(viewport_size);
@@ -246,7 +243,7 @@ void draw_glscene(const scene* scn, const camera* cam,
         draw_glshape(ist->shp, ist->mat, frame_to_mat(ist->frame),
             ist == highlighted || ist->shp == highlighted ||
                 ist->mat == highlighted,
-            prog, eyelight, wireframe, edges, cutout, cull);
+            prog, eyelight, wireframe, edges);
     }
 
     end_glsurface_frame(prog);
@@ -562,9 +559,7 @@ bool draw_glwidgets_scene_inspector(glwindow* win, material* val, scene* scn) {
     edited += draw_glwidgets_scene_inspector(win, "bump", val->bump_txt, scn);
     edited += draw_glwidgets_scene_inspector(win, "disp", val->disp_txt, scn);
     edited += draw_glwidgets_scene_inspector(win, "norm", val->norm_txt, scn);
-    edited += draw_glwidgets_checkbox(win, "double sided", val->double_sided);
-    edited +=
-        draw_glwidgets_checkbox(win, "base metallic", val->base_metallic);
+    edited += draw_glwidgets_checkbox(win, "base metallic", val->base_metallic);
     return edited;
 }
 

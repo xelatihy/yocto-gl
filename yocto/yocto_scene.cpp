@@ -509,7 +509,7 @@ vec3f eval_elem_norm(const instance* ist, int ei) {
 vec3f eval_shading_norm(
     const instance* ist, int ei, const vec2f& uv, const vec3f& o) {
     if (!ist->shp->triangles.empty()) {
-        auto norm = eval_norm(ist, ei, uv);
+        auto n = eval_norm(ist, ei, uv);
         if (ist->mat->norm_txt.txt) {
             auto texcoord = eval_texcoord(ist, ei, uv);
             auto left_handed = false;
@@ -517,12 +517,12 @@ vec3f eval_shading_norm(
             auto txt = xyz(eval_texture(ist->mat->norm_txt, texcoord, false));
             txt = txt * 2 - vec3f{1, 1, 1};
             txt.y = -txt.y;
-            auto frame = make_frame_fromzx({0, 0, 0}, norm, tang);
-            if (left_handed) frame.y = -frame.y;
-            norm = transform_direction(frame, txt);
+            auto fp = make_frame_fromzx({0, 0, 0}, n, tang);
+            if (left_handed) fp.y = -fp.y;
+            n = transform_direction(fp, txt);
         }
-        if (ist->mat->double_sided && dot(norm, o) < 0) norm = -norm;
-        return norm;
+        if (dot(n, o) < 0) n = -n;
+        return n;
     } else if (!ist->shp->lines.empty()) {
         return orthonormalize(o, eval_norm(ist, ei, uv));
     } else {
@@ -632,45 +632,49 @@ vec3f eval_emission(const instance* ist, int ei, const vec2f& uv) {
 }
 vec3f eval_diffuse(const instance* ist, int ei, const vec2f& uv) {
     if (!ist || !ist->mat) return zero3f;
-    if(!ist->mat->base_metallic) {
+    if (!ist->mat->base_metallic) {
         return ist->mat->kd * xyz(eval_color(ist, ei, uv)) *
-                xyz(eval_texture(ist->mat->kd_txt, eval_texcoord(ist, ei, uv)));
+               xyz(eval_texture(ist->mat->kd_txt, eval_texcoord(ist, ei, uv)));
     } else {
-        auto kb = ist->mat->kd * xyz(eval_color(ist, ei, uv)) *
-                xyz(eval_texture(ist->mat->kd_txt, eval_texcoord(ist, ei, uv)));
-        auto km = ist->mat->ks.x * 
-                eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).x;
+        auto kb =
+            ist->mat->kd * xyz(eval_color(ist, ei, uv)) *
+            xyz(eval_texture(ist->mat->kd_txt, eval_texcoord(ist, ei, uv)));
+        auto km = ist->mat->ks.x *
+                  eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).x;
         return kb * (1 - km);
     }
 }
 vec3f eval_specular(const instance* ist, int ei, const vec2f& uv) {
     if (!ist || !ist->mat) return zero3f;
-    if(!ist->mat->base_metallic) {
+    if (!ist->mat->base_metallic) {
         return ist->mat->ks * xyz(eval_color(ist, ei, uv)) *
-                xyz(eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)));
+               xyz(eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)));
     } else {
-        auto kb = ist->mat->kd * xyz(eval_color(ist, ei, uv)) *
-                xyz(eval_texture(ist->mat->kd_txt, eval_texcoord(ist, ei, uv)));
-        auto km = ist->mat->ks.x * 
-                eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).x;
+        auto kb =
+            ist->mat->kd * xyz(eval_color(ist, ei, uv)) *
+            xyz(eval_texture(ist->mat->kd_txt, eval_texcoord(ist, ei, uv)));
+        auto km = ist->mat->ks.x *
+                  eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).x;
         return kb * km + vec3f{0.04f, 0.04f, 0.04f} * (1 - km);
     }
 }
 float eval_roughness(const instance* ist, int ei, const vec2f& uv) {
     if (!ist || !ist->mat) return 1;
-    if(!ist->mat->base_metallic) {
+    if (!ist->mat->base_metallic) {
         auto rs = ist->mat->rs;
-        auto txt_w = eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).w;
+        auto txt_w =
+            eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).w;
         return 1 - ((1 - rs) * txt_w);
     } else {
-        return ist->mat->rs * eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).w;
+        return ist->mat->rs *
+               eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).w;
     }
     // rs = clamp(rs, 0.03f * 0.03f, 1.0f);
 }
 vec3f eval_transmission(const instance* ist, int ei, const vec2f& uv) {
     if (!ist || !ist->mat) return zero3f;
     return ist->mat->kt * xyz(eval_color(ist, ei, uv)) *
-            xyz(eval_texture(ist->mat->kt_txt, eval_texcoord(ist, ei, uv)));
+           xyz(eval_texture(ist->mat->kt_txt, eval_texcoord(ist, ei, uv)));
 }
 float eval_opacity(const instance* ist, int ei, const vec2f& uv) {
     if (!ist || !ist->mat) return 1;
@@ -1342,7 +1346,6 @@ scene* gltf_to_scene(const glTF* gltf) {
             mat->ks_txt = make_texture_info(gmr->metallicRoughnessTexture);
         }
         mat->norm_txt = make_texture_info(gmat->normalTexture, true, false);
-        mat->double_sided = gmat->doubleSided;
         scn->materials.push_back(mat);
     }
 
@@ -1744,7 +1747,7 @@ glTF* scene_to_gltf(
         }
         gmat->normalTexture = (glTFMaterialNormalTextureInfo*)(add_texture_info(
             mat->norm_txt, true, false));
-        gmat->doubleSided = mat->double_sided;
+        gmat->doubleSided = true;
         gltf->materials.push_back(gmat);
     }
 
@@ -2807,133 +2810,6 @@ scene* make_random_instances_scene(const std::string& name, const vec2i& num,
     }
 
     return make_scene(name, {cam}, ists, {});
-}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR PATH TRACING SUPPORT FUNCTION
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-// Phong exponent to roughness. Public API, see above.
-float specular_exponent_to_roughness(float n) { return sqrtf(2 / (n + 2)); }
-
-// Specular to fresnel eta. Public API, see above.
-void specular_fresnel_from_ks(const vec3f& ks, vec3f& es, vec3f& esk) {
-    es = {(1 + sqrt(ks.x)) / (1 - sqrt(ks.x)),
-        (1 + sqrt(ks.y)) / (1 - sqrt(ks.y)),
-        (1 + sqrt(ks.z)) / (1 - sqrt(ks.z))};
-    esk = {0, 0, 0};
-}
-
-// Compute the fresnel term for dielectrics. Implementation from
-// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
-vec3f fresnel_dielectric(float cosw, const vec3f& eta_) {
-    auto eta = eta_;
-    if (cosw < 0) {
-        eta = 1.0f / eta;
-        cosw = -cosw;
-    }
-
-    auto sin2 = 1 - cosw * cosw;
-    auto eta2 = eta * eta;
-
-    auto cos2t = vec3f{1, 1, 1} - sin2 / eta2;
-    if (cos2t.x < 0 || cos2t.y < 0 || cos2t.z < 0)
-        return vec3f{1, 1, 1};  // tir
-
-    auto t0 = vec3f{sqrt(cos2t.x), sqrt(cos2t.y), sqrt(cos2t.z)};
-    auto t1 = eta * t0;
-    auto t2 = eta * cosw;
-
-    auto rs = (vec3f{cosw, cosw, cosw} - t1) / (vec3f{cosw, cosw, cosw} + t1);
-    auto rp = (t0 - t2) / (t0 + t2);
-
-    return (rs * rs + rp * rp) / 2.0f;
-}
-
-// Compute the fresnel term for metals. Implementation from
-// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
-vec3f fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak) {
-    if (etak == zero3f) return fresnel_dielectric(cosw, eta);
-
-    cosw = clamp(cosw, (float)-1, (float)1);
-    auto cos2 = cosw * cosw;
-    auto sin2 = clamp(1 - cos2, (float)0, (float)1);
-    auto eta2 = eta * eta;
-    auto etak2 = etak * etak;
-
-    auto t0 = eta2 - etak2 - vec3f{sin2, sin2, sin2};
-    auto a2plusb2_2 = t0 * t0 + 4.0f * eta2 * etak2;
-    auto a2plusb2 =
-        vec3f{sqrt(a2plusb2_2.x), sqrt(a2plusb2_2.y), sqrt(a2plusb2_2.z)};
-    auto t1 = a2plusb2 + vec3f{cos2, cos2, cos2};
-    auto a_2 = (a2plusb2 + t0) / 2.0f;
-    auto a = vec3f{sqrt(a_2.x), sqrt(a_2.y), sqrt(a_2.z)};
-    auto t2 = 2.0f * a * cosw;
-    auto rs = (t1 - t2) / (t1 + t2);
-
-    auto t3 = vec3f{cos2, cos2, cos2} * a2plusb2 +
-              vec3f{sin2, sin2, sin2} * vec3f{sin2, sin2, sin2};
-    auto t4 = t2 * sin2;
-    auto rp = rs * (t3 - t4) / (t3 + t4);
-
-    return (rp + rs) / 2.0f;
-}
-
-// Schlick approximation of Fresnel term
-vec3f fresnel_schlick(const vec3f& ks, float cosw) {
-    if (ks == zero3f) return zero3f;
-    return ks +
-           (vec3f{1, 1, 1} - ks) * pow(clamp(1.0f - cosw, 0.0f, 1.0f), 5.0f);
-}
-
-// Schlick approximation of Fresnel term weighted by roughness.
-// This is a hack, but works better than not doing it.
-vec3f fresnel_schlick(const vec3f& ks, float cosw, float rs) {
-    if (ks == zero3f) return zero3f;
-    auto fks = fresnel_schlick(ks, cosw);
-    return ks + (fks - ks) * (1 - sqrt(clamp(rs, 0.0f, 1.0f)));
-}
-
-// Evaluates the GGX distribution and geometric term
-float eval_ggx(float rs, float ndh, float ndi, float ndo) {
-    // evaluate D
-    auto alpha2 = rs * rs;
-    auto di = (ndh * ndh) * (alpha2 - 1) + 1;
-    auto d = alpha2 / (pi * di * di);
-#if 0
-    // evaluate G from Heitz
-    auto lambda_o = (-1 + sqrt(1 + alpha2 * (1 - ndo * ndo) / (ndo * ndo))) / 2;
-    auto lambda_i = (-1 + sqrt(1 + alpha2 * (1 - ndi * ndi) / (ndi * ndi))) / 2;
-    auto g = 1 / (1 + lambda_o + lambda_i);
-#else
-    // evaluate G from Smith
-    auto go = (2 * ndo) / (ndo + sqrt(alpha2 + (1 - alpha2) * ndo * ndo));
-    auto gi = (2 * ndi) / (ndi + sqrt(alpha2 + (1 - alpha2) * ndi * ndi));
-    auto g = go * gi;
-#endif
-    return d * g;
-}
-
-// Evaluates the GGX pdf
-float sample_ggx_pdf(float rs, float ndh) {
-    auto alpha2 = rs * rs;
-    auto di = (ndh * ndh) * (alpha2 - 1) + 1;
-    auto d = alpha2 / (pi * di * di);
-    return d * ndh;
-}
-
-// Sample the GGX distribution
-vec3f sample_ggx(float rs, const vec2f& rn) {
-    auto tan2 = rs * rs * rn.y / (1 - rn.y);
-    auto rz = sqrt(1 / (tan2 + 1));
-    auto rr = sqrt(1 - rz * rz);
-    auto rphi = 2 * pi * rn.x;
-    // set to wh
-    auto wh_local = vec3f{rr * cos(rphi), rr * sin(rphi), rz};
-    return wh_local;
 }
 
 }  // namespace ygl
