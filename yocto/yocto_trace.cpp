@@ -53,15 +53,44 @@ scene_intersection intersect_ray_cutout(
     return {};
 }
 
-// Evaluates emission.
-vec3f eval_emission(const vec3f& ke, const vec3f& n, const vec3f& o) {
-    if (dot(n, o) >= 0) return ke;
-    return zero3f;
-}
-
 // Check if we are near the mirror direction.
 inline bool check_near_mirror(const vec3f& n, const vec3f& o, const vec3f& i) {
     return fabs(dot(i, normalize(n * 2.0f * dot(o, n) - o)) - 1) < 0.001f;
+}
+
+// Schlick approximation of the Fresnel term
+vec3f fresnel_schlick(const vec3f& ks, const vec3f& h, const vec3f& i) {
+    if (ks == zero3f) return zero3f;
+    return ks + (vec3f{1, 1, 1} - ks) *
+                    pow(clamp(1.0f - fabs(dot(h, i)), 0.0f, 1.0f), 5.0f);
+}
+vec3f fresnel_schlick(
+    const vec3f& ks, const vec3f& h, const vec3f& i, float rs) {
+    if (ks == zero3f) return zero3f;
+    auto fks = fresnel_schlick(ks, fabs(dot(h, i)));
+    return ks + (fks - ks) * (1 - sqrt(clamp(rs, 0.0f, 1.0f)));
+}
+
+// Evaluates the GGX distribution and geometric term
+float eval_ggx_dist(float rs, const vec3f& n, const vec3f& h) {
+    auto di = (dot(n, h) * dot(n, h)) * (rs * rs - 1) + 1;
+    return rs * rs / (pi * di * di);
+}
+float eval_ggx_sm(float rs, const vec3f& n, const vec3f& o, const vec3f& i) {
+#if 0
+    // evaluate G from Heitz
+    auto lambda_o = (-1 + sqrt(1 + alpha2 * (1 - ndo * ndo) / (ndo * ndo))) / 2;
+    auto lambda_i = (-1 + sqrt(1 + alpha2 * (1 - ndi * ndi) / (ndi * ndi))) / 2;
+    auto g = 1 / (1 + lambda_o + lambda_i);
+#else
+    auto Go = (2 * fabs(dot(n, o))) /
+              (fabs(dot(n, o)) +
+                  sqrt(rs * rs + (1 - rs * rs) * dot(n, o) * dot(n, o)));
+    auto Gi = (2 * fabs(dot(n, i))) /
+              (fabs(dot(n, i)) +
+                  sqrt(rs * rs + (1 - rs * rs) * dot(n, i) * dot(n, i)));
+    return Go * Gi;
+#endif
 }
 
 // Evaluates the BRDF scaled by the cosine of the incoming direction.
@@ -70,152 +99,96 @@ inline bool check_near_mirror(const vec3f& n, const vec3f& o, const vec3f& i) {
 // BRDFs" http://jcgt.org/published/0003/02/03/
 // - "Microfacet Models for Refraction through Rough Surfaces" EGSR 07
 // https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf
-vec3f eval_brdfcos(
-    const brdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
-    auto brdfcos = zero3f;
+vec3f eval_brdf(const brdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
+    if(is_delta_brdf(f)) return zero3f;
+    auto brdf = zero3f;
 
-    auto ndo = dot(n, o), ndi = dot(n, i);
-
-    if (f.kd != zero3f && ndi > 0 && ndo > 0) { brdfcos += f.kd * ndi / pi; }
-
-    if (f.ks != zero3f && f.rs && ndi > 0 && ndo > 0) {
-        auto h = normalize(o + i);
-        auto ndh = clamp(dot(h, n), -1.0f, 1.0f);
-        auto dg = eval_ggx(f.rs, ndh, ndi, ndo);
-        auto odh = clamp(dot(o, h), 0.0f, 1.0f);
-        auto ks = fresnel_schlick(f.ks, odh, f.rs);
-        brdfcos += ks * ndi * dg / (4 * ndi * ndo);
-    }
-
-    if (f.kt != zero3f && f.rs && ndo > 0 && ndi < 0) {
-        auto ir = i - 2 * dot(i, n) * n;
-        auto h = normalize(o + ir);
-        auto ndh = clamp(dot(h, n), -1.0f, 1.0f);
-        auto dg = eval_ggx(f.rs, ndh, -ndi, ndo);
-        auto odh = clamp(dot(o, h), 0.0f, 1.0f);
-        auto kt = f.kt * (vec3f{1, 1, 1} - fresnel_schlick(f.ks, odh, f.rs));
-        brdfcos += kt * ndi * dg / (4 * ndi * ndo);
-    }
-
-    assert(isfinite(brdfcos.x) && isfinite(brdfcos.y) && isfinite(brdfcos.z));
-    return brdfcos;
-}
-
-// Evaluates the BRDF scaled by the cosine of the incoming direction.
-vec3f eval_delta_brdfcos(
-    const brdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
-    auto brdfcos = zero3f;
-
-    auto ndo = dot(n, o), ndi = dot(n, i);
-
-    if (f.ks != zero3f && !f.rs && ndo > 0 && check_near_mirror(n, o, i)) {
-        auto ks = fresnel_schlick(f.ks, ndo);
-        brdfcos += ks;
-    }
-
-    if (f.kt != zero3f && !f.rs && o == -i) {
-        auto kt = f.kt * (vec3f{1, 1, 1} - fresnel_schlick(f.ks, ndo));
-        brdfcos += kt;
-    }
-
-    assert(isfinite(brdfcos.x) && isfinite(brdfcos.y) && isfinite(brdfcos.z));
-    return brdfcos;
-}
-
-// Compute the weight for sampling the BRDF
-float sample_brdf_pdf(
-    const brdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
-    auto prob_kd = max(f.kd), prob_ks = max(f.ks), prob_kt = max(f.kt);
-    auto prob_sum = prob_kd + prob_ks + prob_kt;
-    if (prob_sum == 0) return 0;
-    prob_kd /= prob_sum;
-    prob_ks /= prob_sum;
-    prob_kt /= prob_sum;
-
-    auto ndo = dot(n, o), ndi = dot(n, i);
-
-    auto pdf = 0.0f;
-
-    if (prob_kd && ndo >= 0 && ndi >= 0) { pdf += prob_kd * ndi / pi; }
-
-    if (prob_ks && f.rs && ndo >= 0 && ndi >= 0) {
+    // diffuse
+    if (f.kd != zero3f && dot(n, o) * dot(n, i) > 0) {
         auto h = normalize(i + o);
-        auto ndh = dot(n, h);
-        auto d = sample_ggx_pdf(f.rs, ndh);
-        auto hdo = dot(o, h);
-        pdf += prob_ks * d / (4 * hdo);
+        auto F = fresnel_schlick(f.ks, h, o);
+        brdf += f.kd * (vec3f{1, 1, 1} - F) / pi;
     }
 
-    if (prob_kt && f.rs && ndo >= 0 && ndi <= 0) {
-        auto wir = i - 2 * dot(i, n) * n;
-        auto h = normalize(o + wir);
-        auto ndh = dot(n, h);
-        auto d = sample_ggx_pdf(f.rs, ndh);
-        auto hdo = dot(o, h);
-        pdf += prob_kt * d / (4 * hdo);
+    // specular
+    if (f.ks != zero3f && dot(n, o) * dot(n, i) > 0) {
+        auto h = normalize(i + o);
+        auto F = fresnel_schlick(f.ks, h, o);
+        auto D = eval_ggx_dist(f.rs, n, h);
+        auto G = eval_ggx_sm(f.rs, n, o, i);
+        brdf += F * D * G / (4 * fabs(dot(n, o)) * fabs(dot(n, i)));
     }
 
-    return pdf;
+    // transmission (thin sheet)
+    if (f.ks != zero3f && dot(n, o) * dot(n, i) < 0) {
+        auto ir = (dot(n, o) >= 0) ? reflect(-i, n) : reflect(-i, -n);
+        auto h = normalize(ir + o);
+        auto F = fresnel_schlick(f.ks, h, o);
+        auto D = eval_ggx_dist(f.rs, n, h);
+        auto G = eval_ggx_sm(f.rs, n, o, ir);
+        brdf += f.kt * (vec3f{1, 1, 1} - F) * D * G /
+                (4 * fabs(dot(n, o)) * fabs(dot(n, ir)));
+    }
+
+    return brdf;
 }
 
-// Compute the weight for sampling the BRDF
-float sample_delta_brdf_pdf(
+// Evaluates the BRDF assuming that it is called only from the directions 
+// generated by sample_brdf.
+vec3f eval_delta_brdf(
     const brdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
-    if (f.rs) return 0;
-    auto prob_ks = max(f.ks), prob_kt = max(f.kt);
-    auto prob_sum = prob_ks + prob_kt;
-    if (prob_sum == 0) return 0;
-    prob_ks /= prob_sum;
-    prob_kt /= prob_sum;
+    if (!is_delta_brdf(f)) return zero3f;
+    auto brdf = zero3f;
 
-    auto ndo = dot(n, o), ndi = dot(n, i);
-
-    auto pdf = 0.0f;
-
-    if (prob_ks && !f.rs && ndo > 0 && check_near_mirror(n, o, i)) {
-        pdf += prob_ks;
+    // specular
+    if (f.ks != zero3f && dot(n, o) * dot(n, i) > 0) {
+        auto F = fresnel_schlick(f.ks, n, o);
+        brdf += F / fabs(dot(n, i));
     }
 
-    if (prob_kt && !f.rs && o == -i) { pdf += prob_kt; }
+    // transmission (thin sheet)
+    if (f.ks != zero3f && dot(n, o) * dot(n, i) < 0) {
+        auto F = fresnel_schlick(f.ks, n, o);
+        brdf += f.kt * (vec3f{1, 1, 1} - F) / fabs(dot(n, i));
+    }
 
-    return pdf;
+    return brdf;
 }
 
 // Picks a direction based on the BRDF
 vec3f sample_brdf(
     const brdf& f, const vec3f& n, const vec3f& o, float rnl, const vec2f& rn) {
-    auto prob_kd = max(f.kd), prob_ks = (f.rs) ? max(f.ks) : 0,
-         prob_kt = (f.rs) ? max(f.kt) : 0;
-    auto prob_sum = prob_kd + prob_ks + prob_kt;
-    if (prob_sum == 0) return zero3f;
-    prob_kd /= prob_sum;
-    prob_ks /= prob_sum;
-    prob_kt /= prob_sum;
-
-    auto ndo = dot(n, o);
-    if (ndo <= 0) return zero3f;
+    if(is_delta_brdf(f)) return zero3f;
+    auto F = fresnel_schlick(f.ks, n, o);
+    auto prob = vec3f{max(f.kd * (vec3f{1, 1, 1} - F)), max(F),
+        max(f.kt * (vec3f{1, 1, 1} - F))};
+    if (prob == zero3f) return zero3f;
+    prob /= prob.x + prob.y + prob.z;
 
     // sample according to diffuse
-    if (rnl < prob_kd) {
-        auto fp = make_frame_fromz(zero3f, n);
+    if (f.kd != zero3f && rnl < prob.x) {
         auto rz = sqrtf(rn.y), rr = sqrtf(1 - rz * rz), rphi = 2 * pi * rn.x;
         auto il = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
+        auto fp = dot(n, o) >= 0 ? make_frame_fromz(zero3f, n) :
+                                   make_frame_fromz(zero3f, -n);
         return transform_direction(fp, il);
     }
     // sample according to specular GGX
-    else if (rnl < prob_kd + prob_ks && f.rs) {
-        auto fp = make_frame_fromz(zero3f, n);
+    else if (f.ks != zero3f && rnl < prob.x + prob.y) {
         auto hl = sample_ggx(f.rs, rn);
+        auto fp = dot(n, o) >= 0 ? make_frame_fromz(zero3f, n) :
+                                   make_frame_fromz(zero3f, -n);
         auto h = transform_direction(fp, hl);
-        return normalize(h * 2.0f * dot(o, h) - o);
+        return reflect(o, h);
     }
     // transmission hack
-    else if (rnl < prob_kd + prob_ks + prob_kt && f.rs) {
-        auto fp = make_frame_fromz(zero3f, n);
+    else if (f.kt != zero3f && rnl < prob.x + prob.y + prob.z) {
         auto hl = sample_ggx(f.rs, rn);
+        auto fp = dot(n, o) >= 0 ? make_frame_fromz(zero3f, n) :
+                                   make_frame_fromz(zero3f, -n);
         auto h = transform_direction(fp, hl);
-        auto i = normalize(h * 2.0f * dot(o, h) - o);
-        return normalize(i - 2 * dot(i, n) * n);
+        auto ir = reflect(o, h);
+        return dot(n, o) >= 0 ? reflect(-ir, -n) : reflect(-ir, n);
     } else {
         return zero3f;
     }
@@ -224,32 +197,74 @@ vec3f sample_brdf(
 // Picks a direction based on the BRDF
 vec3f sample_delta_brdf(
     const brdf& f, const vec3f& n, const vec3f& o, float rnl, const vec2f& rn) {
-    if (f.rs) return zero3f;
-    auto prob_ks = max(f.ks), prob_kt = max(f.kt);
-    auto prob_sum = prob_ks + prob_kt;
-    if (prob_sum == 0) return zero3f;
-    prob_ks /= prob_sum;
-    prob_kt /= prob_sum;
-
-    auto ndo = dot(n, o);
-    if (ndo <= 0) return zero3f;
+    if (!is_delta_brdf(f)) return zero3f;
+    auto F = fresnel_schlick(f.ks, n, o);
+    auto prob = vec3f{0, max(F), max(f.kt * (vec3f{1, 1, 1} - F))};
+    if (prob == zero3f) return zero3f;
+    prob /= prob.x + prob.y + prob.z;
 
     // sample according to specular mirror
-    if (rnl < prob_ks && !f.rs) {
-        return normalize(n * 2.0f * dot(o, n) - o);
+    if (f.ks != zero3f && rnl < prob.x + prob.y) {
+        return reflect(o, dot(n, o) >= 0 ? n : -n);
     }
-    // transmission hack
-    else if (rnl < prob_ks + prob_kt && !f.rs) {
+    // sample according to transmission
+    else if (f.kt != zero3f && rnl < prob.x + prob.y + prob.z) {
         return -o;
     } else {
         return zero3f;
     }
 }
 
-float sample_delta_prob(const brdf& f, const vec3f& n, const vec3f& o) {
-    if (f.rs) return 0;
-    auto dw = max(f.ks) + max(f.kt);
-    return dw / (dw + max(f.kd));
+// Compute the weight for sampling the BRDF
+float sample_brdf_pdf(
+    const brdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
+    if(is_delta_brdf(f)) return 0;
+    auto F = fresnel_schlick(f.ks, n, o);
+    auto prob = vec3f{max(f.kd * (vec3f{1, 1, 1} - F)), max(F),
+        max(f.kt * (vec3f{1, 1, 1} - F))};
+    if (prob == zero3f) return 0;
+    prob /= prob.x + prob.y + prob.z;
+
+    auto pdf = 0.0f;
+
+    if (f.kd != zero3f && dot(n, o) * dot(n, i) > 0) {
+        pdf += prob.x * fabs(dot(n, i)) / pi;
+    }
+    if (f.ks != zero3f && dot(n, o) * dot(n, i) > 0) {
+        auto h = normalize(i + o);
+        auto d = sample_ggx_pdf(f.rs, fabs(dot(n, h)));
+        pdf += prob.y * d / (4 * fabs(dot(o, h)));
+    }
+    if (f.kt != zero3f && dot(n, o) * dot(n, i) < 0) {
+        auto ir = (dot(n, o) >= 0) ? reflect(-i, n) : reflect(-i, -n);
+        auto h = normalize(ir + o);
+        auto d = sample_ggx_pdf(f.rs, fabs(dot(n, h)));
+        pdf += prob.z * d / (4 * fabs(dot(o, h)));
+    }
+
+    return pdf;
+}
+
+// Compute the weight for sampling the BRDF
+float sample_delta_brdf_pdf(
+    const brdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
+    if (!is_delta_brdf(f)) return 0;
+    auto F = fresnel_schlick(f.ks, n, o);
+    auto prob = vec3f{0, max(F),
+        max(f.kt * (vec3f{1, 1, 1} - F))};
+    if (prob == zero3f) return 0;
+    prob /= prob.x + prob.y + prob.z;
+
+    auto pdf = 0.0f;
+
+    if (f.ks != zero3f && dot(n, o) * dot(n, i) > 0) {
+        return prob.y;
+    }
+    if (f.kt != zero3f && dot(n, o) * dot(n, i) < 0) {
+        return prob.z;
+    }
+
+    return pdf;
 }
 
 // Sample pdf for an environment.
@@ -359,10 +374,7 @@ vec3f trace_path(
         auto f = eval_brdf(isec.ist, isec.ei, isec.uv);
 
         // emission
-        if (emission) {
-            auto em = eval_emission(isec.ist, isec.ei, isec.uv);
-            l += weight * eval_emission(em, n, o);
-        }
+        if (emission) l += weight * eval_emission(isec.ist, isec.ei, isec.uv);
 
         // early exit and russian roulette
         if (f.kd + f.ks + f.kt == zero3f || bounce >= nbounces - 1) break;
@@ -372,13 +384,8 @@ vec3f trace_path(
             weight *= 1 / (1 - rrprob);
         }
 
-        // choose delta
-        auto delta_prob = sample_delta_prob(f, n, o);
-        auto delta = (delta_prob && rand1f(rng) < delta_prob);
-        weight *= (delta) ? 1 / delta_prob : 1 / (1 - delta_prob);
-
         // direct
-        if (!delta && (!scn->lights.empty() || !scn->environments.empty())) {
+        if (!is_delta_brdf(f) && (!scn->lights.empty() || !scn->environments.empty())) {
             auto i = zero3f;
             auto nlights = (int)(scn->lights.size() + scn->environments.size());
             if (rand1f(rng) < 0.5f) {
@@ -404,8 +411,7 @@ vec3f trace_path(
                        sample_light_pdf(
                            isec.ist, isec.ei, i, ln, length(lp - pos)) *
                        sample_index_pdf(nlights);
-                auto em = eval_emission(isec.ist, isec.ei, isec.uv);
-                le += eval_emission(em, ln, -i);
+                le += eval_emission(isec.ist, isec.ei, isec.uv);
             } else {
                 for (auto env : scn->environments) {
                     pdf += 0.5f * sample_environment_pdf(env, i) *
@@ -413,20 +419,20 @@ vec3f trace_path(
                     le += eval_environment(env, i);
                 }
             }
-            auto brdfcos = eval_brdfcos(f, n, o, i);
+            auto brdfcos = eval_brdf(f, n, o, i) * fabs(dot(n, i));
             if (pdf != 0) l += weight * le * brdfcos / pdf;
         }
 
         // continue path
         auto i = zero3f, brdfcos = zero3f;
         auto pdf = 0.0f;
-        if (!delta) {
+        if (!is_delta_brdf(f)) {
             i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
-            brdfcos = eval_brdfcos(f, n, o, i);
+            brdfcos = eval_brdf(f, n, o, i) * fabs(dot(n, i));
             pdf = sample_brdf_pdf(f, n, o, i);
         } else {
             i = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
-            brdfcos = eval_delta_brdfcos(f, n, o, i);
+            brdfcos = eval_delta_brdf(f, n, o, i) * fabs(dot(n, i));
             pdf = sample_delta_brdf_pdf(f, n, o, i);
         }
 
@@ -437,7 +443,7 @@ vec3f trace_path(
 
         // setup next ray
         ray = make_ray(pos, i);
-        emission = delta;
+        emission = is_delta_brdf(f);
     }
 
     return l;
@@ -470,8 +476,7 @@ vec3f trace_path_naive(
         auto f = eval_brdf(isec.ist, isec.ei, isec.uv);
 
         // emission
-        auto em = eval_emission(isec.ist, isec.ei, isec.uv);
-        l += weight * eval_emission(em, n, o);
+        l += weight * eval_emission(isec.ist, isec.ei, isec.uv);
 
         // early exit and russian roulette
         if (f.kd + f.ks + f.kt == zero3f || bounce >= nbounces - 1) break;
@@ -481,21 +486,16 @@ vec3f trace_path_naive(
             weight *= 1 / (1 - rrprob);
         }
 
-        // choose delta
-        auto delta_prob = sample_delta_prob(f, n, o);
-        auto delta = (delta_prob && rand1f(rng) < delta_prob);
-        weight *= (delta) ? 1 / delta_prob : 1 / (1 - delta_prob);
-
         // continue path
         auto i = zero3f, brdfcos = zero3f;
         auto pdf = 0.0f;
-        if (!delta) {
+        if (!is_delta_brdf(f)) {
             i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
-            brdfcos = eval_brdfcos(f, n, o, i);
+            brdfcos = eval_brdf(f, n, o, i) * fabs(dot(n, i));
             pdf = sample_brdf_pdf(f, n, o, i);
         } else {
             i = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
-            brdfcos = eval_delta_brdfcos(f, n, o, i);
+            brdfcos = eval_delta_brdf(f, n, o, i) * fabs(dot(n, i));
             pdf = sample_delta_brdf_pdf(f, n, o, i);
         }
 
@@ -539,10 +539,7 @@ vec3f trace_path_nomis(
         auto f = eval_brdf(isec.ist, isec.ei, isec.uv);
 
         // emission
-        if (emission) {
-            auto em = eval_emission(isec.ist, isec.ei, isec.uv);
-            l += weight * eval_emission(em, n, o);
-        }
+        if (emission) l += weight * eval_emission(isec.ist, isec.ei, isec.uv);
 
         // early exit and russian roulette
         if (f.kd + f.ks + f.kt == zero3f || bounce >= nbounces - 1) break;
@@ -552,13 +549,8 @@ vec3f trace_path_nomis(
             weight *= 1 / (1 - rrprob);
         }
 
-        // choose delta
-        auto delta_prob = sample_delta_prob(f, n, o);
-        auto delta = (delta_prob && rand1f(rng) < delta_prob);
-        weight *= (delta) ? 1 / delta_prob : 1 / (1 - delta_prob);
-
         // direct
-        if (!delta && !scn->lights.empty()) {
+        if (!is_delta_brdf(f) && !scn->lights.empty()) {
             auto lgt =
                 scn->lights[sample_index(scn->lights.size(), rand1f(rng))];
             auto i = sample_light(lgt, pos, rand1f(rng), rand2f(rng));
@@ -569,9 +561,8 @@ vec3f trace_path_nomis(
                 auto pdf =
                     sample_light_pdf(isec.ist, isec.ei, i, ln, isec.dist) *
                     sample_index_pdf(scn->lights.size());
-                auto em = eval_emission(isec.ist, isec.ei, isec.uv);
-                auto le = eval_emission(em, ln, -i);
-                auto brdfcos = eval_brdfcos(f, n, o, i);
+                auto le = eval_emission(isec.ist, isec.ei, isec.uv);
+                auto brdfcos = eval_brdf(f, n, o, i) * fabs(dot(n, i));
                 if (pdf != 0) l += weight * le * brdfcos / pdf;
             }
         }
@@ -579,13 +570,13 @@ vec3f trace_path_nomis(
         // continue path
         auto i = zero3f, brdfcos = zero3f;
         auto pdf = 0.0f;
-        if (!delta) {
+        if (!is_delta_brdf(f)) {
             i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
-            brdfcos = eval_brdfcos(f, n, o, i);
+            brdfcos = eval_brdf(f, n, o, i) * fabs(dot(n, i));
             pdf = sample_brdf_pdf(f, n, o, i);
         } else {
             i = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
-            brdfcos = eval_delta_brdfcos(f, n, o, i);
+            brdfcos = eval_delta_brdf(f, n, o, i) * fabs(dot(n, i));
             pdf = sample_delta_brdf_pdf(f, n, o, i);
         }
 
@@ -596,7 +587,7 @@ vec3f trace_path_nomis(
 
         // setup next ray
         ray = make_ray(pos, i);
-        emission = delta;
+        emission = is_delta_brdf(f);
     }
 
     return l;
@@ -624,8 +615,7 @@ vec3f trace_direct(
     auto f = eval_brdf(isec.ist, isec.ei, isec.uv);
 
     // emission
-    auto em = eval_emission(isec.ist, isec.ei, isec.uv);
-    l += eval_emission(em, n, o);
+    l += eval_emission(isec.ist, isec.ei, isec.uv);
 
     // direct lights
     for (auto lgt : scn->lights) {
@@ -642,9 +632,8 @@ vec3f trace_direct(
         auto pdf = 0.5f * sample_light_pdf(
                               isec.ist, isec.ei, i, ln, length(lp - pos)) +
                    0.5f * sample_brdf_pdf(f, n, o, i);
-        auto em = eval_emission(isec.ist, isec.ei, isec.uv);
-        auto le = eval_emission(em, ln, -i);
-        auto brdfcos = eval_brdfcos(f, n, o, i);
+        auto le = eval_emission(isec.ist, isec.ei, isec.uv);
+        auto brdfcos = eval_brdf(f, n, o, i) * fabs(dot(n, i));
         if (pdf != 0) l += le * brdfcos / pdf;
     }
 
@@ -661,7 +650,7 @@ vec3f trace_direct(
         auto pdf = 0.5f * sample_environment_pdf(env, i) +
                    0.5f * sample_brdf_pdf(f, n, o, i);
         auto le = eval_environment(env, i);
-        auto brdfcos = eval_brdfcos(f, n, o, i);
+        auto brdfcos = eval_brdf(f, n, o, i) * fabs(dot(n, i));
         if (pdf != 0) l += le * brdfcos / pdf;
     }
 
@@ -712,8 +701,7 @@ vec3f trace_direct_nomis(
     auto f = eval_brdf(isec.ist, isec.ei, isec.uv);
 
     // emission
-    auto em = eval_emission(isec.ist, isec.ei, isec.uv);
-    l += eval_emission(em, n, o);
+    l += eval_emission(isec.ist, isec.ei, isec.uv);
 
     // direct lights
     for (auto lgt : scn->lights) {
@@ -723,9 +711,8 @@ vec3f trace_direct_nomis(
         auto lp = eval_pos(isec.ist, isec.ei, isec.uv);
         auto ln = eval_shading_norm(isec.ist, isec.ei, isec.uv, -i);
         auto pdf = sample_light_pdf(isec.ist, isec.ei, i, ln, length(lp - pos));
-        auto em = eval_emission(isec.ist, isec.ei, isec.uv);
-        auto le = eval_emission(em, ln, -i);
-        auto brdfcos = eval_brdfcos(f, n, o, i);
+        auto le = eval_emission(isec.ist, isec.ei, isec.uv);
+        auto brdfcos = eval_brdf(f, n, o, i) * fabs(dot(n, i));
         if (pdf != 0) l += le * brdfcos / pdf;
     }
 
@@ -736,7 +723,7 @@ vec3f trace_direct_nomis(
         if (isec.ist) continue;
         auto pdf = sample_environment_pdf(env, i);
         auto le = eval_environment(env, i);
-        auto brdfcos = eval_brdfcos(f, n, o, i);
+        auto brdfcos = eval_brdf(f, n, o, i) * fabs(dot(n, i));
         if (pdf != 0) l += le * brdfcos / pdf;
     }
 
@@ -785,11 +772,10 @@ vec3f trace_eyelight(
     auto f = eval_brdf(isec.ist, isec.ei, isec.uv);
 
     // emission
-    auto em = eval_emission(isec.ist, isec.ei, isec.uv);
-    l += eval_emission(em, n, o);
+    l += eval_emission(isec.ist, isec.ei, isec.uv);
 
     // brdf*light
-    l += eval_brdfcos(f, n, o, o) * pi;
+    l += eval_brdf(f, n, o, o) * fabs(dot(n, o)) * pi;
 
     // opacity
     if (nbounces <= 0) return l;
@@ -1030,39 +1016,16 @@ vec3f fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak) {
     return (rp + rs) / 2.0f;
 }
 
-// Schlick approximation of Fresnel term
+// Schlick approximation of the Fresnel term
 vec3f fresnel_schlick(const vec3f& ks, float cosw) {
     if (ks == zero3f) return zero3f;
     return ks +
            (vec3f{1, 1, 1} - ks) * pow(clamp(1.0f - cosw, 0.0f, 1.0f), 5.0f);
 }
-
-// Schlick approximation of Fresnel term weighted by roughness.
-// This is a hack, but works better than not doing it.
 vec3f fresnel_schlick(const vec3f& ks, float cosw, float rs) {
     if (ks == zero3f) return zero3f;
     auto fks = fresnel_schlick(ks, cosw);
     return ks + (fks - ks) * (1 - sqrt(clamp(rs, 0.0f, 1.0f)));
-}
-
-// Evaluates the GGX distribution and geometric term
-float eval_ggx(float rs, float ndh, float ndi, float ndo) {
-    // evaluate D
-    auto alpha2 = rs * rs;
-    auto di = (ndh * ndh) * (alpha2 - 1) + 1;
-    auto d = alpha2 / (pi * di * di);
-#if 0
-    // evaluate G from Heitz
-    auto lambda_o = (-1 + sqrt(1 + alpha2 * (1 - ndo * ndo) / (ndo * ndo))) / 2;
-    auto lambda_i = (-1 + sqrt(1 + alpha2 * (1 - ndi * ndi) / (ndi * ndi))) / 2;
-    auto g = 1 / (1 + lambda_o + lambda_i);
-#else
-    // evaluate G from Smith
-    auto go = (2 * ndo) / (ndo + sqrt(alpha2 + (1 - alpha2) * ndo * ndo));
-    auto gi = (2 * ndi) / (ndi + sqrt(alpha2 + (1 - alpha2) * ndi * ndi));
-    auto g = go * gi;
-#endif
-    return d * g;
 }
 
 // Evaluates the GGX pdf

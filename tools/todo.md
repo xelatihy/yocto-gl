@@ -8,44 +8,30 @@ Please consider this to be just development notes and not any real planning.
 - better tests
 - better material rendering
 - better rendering
-- interactive procedural shapes
-- prepare for research on procedural components
-
-## Bugs
-
-- lines test
-- command line flags for booleans
-
-## Cleanup
-
-- delete
-    - compositing if not used
-
-## Tests
-
-- cornell box with light types
-- simple scene with pointers
-- simple scene with area/env lights
 
 ## Trace
 
-- double-sided brdf
-- lights are only triangle meshes
+- use refracts
+- fresnel takes h and o
+- brdf
+    - brdf: split lobes independently
+    - delta brdf
+    - fresnel in brdf
+        - diffuse formula
+        - scale with roughness
+        - transmission formula
+        - fresnel in coefficients
+        - fresnel in weights
+- lights
+    - lights are only triangle meshes
+    - area light test scene
 - deltas with only one function call instead of split
 - simplify eval functions
     - eval emission: simplify?
     - eval environment: flip direction?
 - redirect log to imgui
-- BUG: double sided for kt
 - intersection return projections for lines and points
-- area light test scene
 - bump/normal mapping
-- fresnel
-    - diffuse formula
-    - scale with roughness
-    - transmission formula
-    - fresnel in coefficients
-    - fresnel in weights
 - add radius in offsetting rays
 - bvh with opacity
 - simple denoiser

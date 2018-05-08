@@ -424,6 +424,7 @@ struct brdf {
     float rs = 1;                                 // roughness
 };
 brdf eval_brdf(const instance* ist, int ei, const vec2f& uv);
+bool is_delta_brdf(const brdf& f);
 
 // Sample a shape based on a distribution.
 std::pair<int, vec2f> sample_shape(

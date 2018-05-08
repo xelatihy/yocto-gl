@@ -689,7 +689,13 @@ brdf eval_brdf(const instance* ist, int ei, const vec2f& uv) {
     f.ks = eval_specular(ist, ei, uv);
     f.kt = eval_transmission(ist, ei, uv);
     f.rs = eval_roughness(ist, ei, uv);
+    if(f.kd != zero3f) {
+        f.rs = clamp(f.rs, 0.03f * 0.03f, 1.0f);
+    } else if(f.rs <= 0.03f * 0.03f) f.rs = 0;
     return f;
+}
+bool is_delta_brdf(const brdf& f) {
+    return f.rs == 0 && f.kd == zero3f;
 }
 
 // Sample a shape based on a distribution.
