@@ -65,8 +65,6 @@ int main(int argc, char* argv[]) {
         ygl::parse_opt(parser, "--nsamples", "-s", "Number of samples.", 256);
     auto tracer = ygl::parse_opte(
         parser, "--tracer", "-t", "Trace type.", trace_names, &ygl::trace_path);
-    auto double_sided = ygl::parse_flag(
-        parser, "--double-sided", "-D", "Force double sided rendering.", false);
     auto max_depth = ygl::parse_opt(
         parser, "--nbounces", "", "Maximum number of bounces.", 8);
     auto pixel_clamp = ygl::parse_opt(
@@ -113,9 +111,6 @@ int main(int argc, char* argv[]) {
     ygl::add_missing_names(scn);
     ygl::add_missing_tangent_space(scn);
     auto cam = scn->cameras[0];
-    if (double_sided) {
-        for (auto mat : scn->materials) mat->double_sided = true;
-    }
     for (auto err : ygl::validate(scn)) ygl::log_warning(err);
 
     // build bvh

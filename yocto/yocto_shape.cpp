@@ -253,10 +253,9 @@ std::vector<vec2i> convert_bezier_to_lines(const std::vector<vec4i>& beziers) {
 
 // Convert face varying data to single primitives. Returns the quads indices
 // and filled vectors for pos, norm and texcoord.
-void
-convert_face_varying(std::vector<vec4i>& qquads, std::vector<vec3f>& qpos,
-    std::vector<vec3f>& qnorm, std::vector<vec2f>& qtexcoord,const std::vector<vec4i>& quads_pos,
-    const std::vector<vec4i>& quads_norm,
+void convert_face_varying(std::vector<vec4i>& qquads, std::vector<vec3f>& qpos,
+    std::vector<vec3f>& qnorm, std::vector<vec2f>& qtexcoord,
+    const std::vector<vec4i>& quads_pos, const std::vector<vec4i>& quads_norm,
     const std::vector<vec4i>& quads_texcoord, const std::vector<vec3f>& pos,
     const std::vector<vec3f>& norm, const std::vector<vec2f>& texcoord) {
     // make faces unique
@@ -710,7 +709,8 @@ void make_quad_stack(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
         make_quad(qtriangles, qpos, qnorm, qtexcoord, {steps.x, steps.y},
             {size.x, size.y}, uvsize);
         for (auto& p : qpos) p.z = (-0.5f + (float)i / steps.z) * size.z;
-        merge_triangles(triangles, pos, norm, texcoord, qtriangles, qpos, qnorm, qtexcoord);
+        merge_triangles(
+            triangles, pos, norm, texcoord, qtriangles, qpos, qnorm, qtexcoord);
     }
 }
 
@@ -735,7 +735,8 @@ void make_cube(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
         qpos[i] = {qpos[i].x, qpos[i].y, size.z / 2};
         qnorm[i] = {0, 0, 1};
     }
-    merge_triangles(triangles, pos, norm, texcoord, qtriangles, qpos, qnorm, qtexcoord);
+    merge_triangles(
+        triangles, pos, norm, texcoord, qtriangles, qpos, qnorm, qtexcoord);
     // -z
     make_quad(qtriangles, qpos, qnorm, qtexcoord, {steps.x, steps.y},
         {size.x, size.y}, {uvsize.x, uvsize.y});
@@ -743,7 +744,8 @@ void make_cube(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
         qpos[i] = {-qpos[i].x, qpos[i].y, -size.z / 2};
         qnorm[i] = {0, 0, -1};
     }
-    merge_triangles(triangles, pos, norm, texcoord, qtriangles, qpos, qnorm, qtexcoord);
+    merge_triangles(
+        triangles, pos, norm, texcoord, qtriangles, qpos, qnorm, qtexcoord);
     // +x
     make_quad(qtriangles, qpos, qnorm, qtexcoord, {steps.z, steps.y},
         {size.z, size.y}, {uvsize.z, uvsize.y});
@@ -751,7 +753,8 @@ void make_cube(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
         qpos[i] = {size.x / 2, qpos[i].y, -qpos[i].x};
         qnorm[i] = {1, 0, 0};
     }
-    merge_triangles(triangles, pos, norm, texcoord, qtriangles, qpos, qnorm, qtexcoord);
+    merge_triangles(
+        triangles, pos, norm, texcoord, qtriangles, qpos, qnorm, qtexcoord);
     // -x
     make_quad(qtriangles, qpos, qnorm, qtexcoord, {steps.z, steps.y},
         {size.z, size.y}, {uvsize.z, uvsize.y});
@@ -759,7 +762,8 @@ void make_cube(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
         qpos[i] = {-size.x / 2, qpos[i].y, qpos[i].x};
         qnorm[i] = {-1, 0, 0};
     }
-    merge_triangles(triangles, pos, norm, texcoord, qtriangles, qpos, qnorm, qtexcoord);
+    merge_triangles(
+        triangles, pos, norm, texcoord, qtriangles, qpos, qnorm, qtexcoord);
     // +y
     make_quad(qtriangles, qpos, qnorm, qtexcoord, {steps.x, steps.y},
         {size.x, size.y}, {uvsize.x, uvsize.y});
@@ -767,7 +771,8 @@ void make_cube(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
         qpos[i] = {qpos[i].x, size.y / 2, -qpos[i].y};
         qnorm[i] = {0, 1, 0};
     }
-    merge_triangles(triangles, pos, norm, texcoord, qtriangles, qpos, qnorm, qtexcoord);
+    merge_triangles(
+        triangles, pos, norm, texcoord, qtriangles, qpos, qnorm, qtexcoord);
     // +y
     make_quad(qtriangles, qpos, qnorm, qtexcoord, {steps.x, steps.y},
         {size.x, size.y}, {uvsize.x, uvsize.y});
@@ -775,7 +780,8 @@ void make_cube(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
         qpos[i] = {qpos[i].x, -size.y / 2, qpos[i].y};
         qnorm[i] = {0, -1, 0};
     }
-    merge_triangles(triangles, pos, norm, texcoord, qtriangles, qpos, qnorm, qtexcoord);
+    merge_triangles(
+        triangles, pos, norm, texcoord, qtriangles, qpos, qnorm, qtexcoord);
 }
 
 // Make a rounded cube.
@@ -876,8 +882,8 @@ void make_disk(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
 void make_disk_quad(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int steps,
     float size, float uvsize) {
-    make_quad(
-        triangles, pos, norm, texcoord, {steps, steps}, {2, 2}, {uvsize, uvsize});
+    make_quad(triangles, pos, norm, texcoord, {steps, steps}, {2, 2},
+        {uvsize, uvsize});
     for (auto i = 0; i < pos.size(); i++) {
         // Analytical Methods for Squaring the Disc, by C. Fong
         // https://arxiv.org/abs/1509.06344
@@ -935,12 +941,14 @@ void make_cylinder(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     // side
     make_cylinder_side(qtriangles, qpos, qnorm, qtexcoord, {steps.x, steps.y},
         {size.x, size.y}, {uvsize.x, uvsize.y});
-    merge_triangles(triangles, pos, norm, texcoord, qtriangles, qpos, qnorm, qtexcoord);
+    merge_triangles(
+        triangles, pos, norm, texcoord, qtriangles, qpos, qnorm, qtexcoord);
     // top
     make_disk(qtriangles, qpos, qnorm, qtexcoord, {steps.x, steps.z}, size.x,
         {uvsize.x, uvsize.z});
     for (auto i = 0; i < qpos.size(); i++) { qpos[i].z = size.y / 2; }
-    merge_triangles(triangles, pos, norm, texcoord, qtriangles, qpos, qnorm, qtexcoord);
+    merge_triangles(
+        triangles, pos, norm, texcoord, qtriangles, qpos, qnorm, qtexcoord);
     // bottom
     make_disk(qtriangles, qpos, qnorm, qtexcoord, {steps.x, steps.z}, size.x,
         {uvsize.x, uvsize.z});
@@ -950,13 +958,15 @@ void make_cylinder(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     }
     for (auto i = 0; i < qtriangles.size(); i++)
         std::swap(qtriangles[i].x, qtriangles[i].z);
-    merge_triangles(triangles, pos, norm, texcoord, qtriangles, qpos, qnorm, qtexcoord);
+    merge_triangles(
+        triangles, pos, norm, texcoord, qtriangles, qpos, qnorm, qtexcoord);
 }
 
 // Make a rounded cylinder.
-void make_cylinder_rounded(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
-    const vec2f& size, const vec3f& uvsize, float radius) {
+void make_cylinder_rounded(std::vector<vec3i>& triangles,
+    std::vector<vec3f>& pos, std::vector<vec3f>& norm,
+    std::vector<vec2f>& texcoord, const vec3i& steps, const vec2f& size,
+    const vec3f& uvsize, float radius) {
     make_cylinder(triangles, pos, norm, texcoord, steps, size, uvsize);
     auto c = size / 2 - vec2f{radius, radius};
     for (auto i = 0; i < pos.size(); i++) {
@@ -1596,10 +1606,10 @@ void make_bezier_circle(std::vector<vec4i>& beziers, std::vector<vec3f>& pos) {
 void make_hair(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
     std::vector<float>& radius, const vec2i& steps,
-    const std::vector<vec3i>& striangles,
-    const std::vector<vec3f>& spos, const std::vector<vec3f>& snorm,
-    const std::vector<vec2f>& stexcoord, const vec2f& len, const vec2f& rad,
-    const vec2f& noise, const vec2f& clump, const vec2f& rotation, int seed) {
+    const std::vector<vec3i>& striangles, const std::vector<vec3f>& spos,
+    const std::vector<vec3f>& snorm, const std::vector<vec2f>& stexcoord,
+    const vec2f& len, const vec2f& rad, const vec2f& noise, const vec2f& clump,
+    const vec2f& rotation, int seed) {
     std::vector<vec3f> bpos;
     std::vector<vec3f> bnorm;
     std::vector<vec2f> btexcoord;

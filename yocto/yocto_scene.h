@@ -135,9 +135,8 @@ struct texture_info {
 // The model is based on glTF for compatibility and adapted to OBJ.
 // For lines, uses Kajija-Kay model. For points, a hacked up shading.
 struct material {
-    std::string name = "";      // name
-    bool double_sided = false;  // double-sided rendering
-    bool base_metallic = false; // base-metallic parametrization (glTF)
+    std::string name = "";       // name
+    bool base_metallic = false;  // base-metallic parametrization (glTF)
 
     // base values
     vec3f ke = {0, 0, 0};  // emission color
@@ -168,12 +167,12 @@ struct shape {
     std::vector<vec3i> triangles;  // triangles
 
     // vertex data
-    std::vector<vec3f> pos;        // positions
-    std::vector<vec3f> norm;       // normals/tangents
-    std::vector<vec2f> texcoord;   // texcoord coordinates
-    std::vector<vec4f> color;      // colors
-    std::vector<float> radius;     // radia for lines/points
-    std::vector<vec4f> tangsp;     // tangent space for triangles
+    std::vector<vec3f> pos;       // positions
+    std::vector<vec3f> norm;      // normals/tangents
+    std::vector<vec2f> texcoord;  // texcoord coordinates
+    std::vector<vec4f> color;     // colors
+    std::vector<float> radius;    // radia for lines/points
+    std::vector<vec4f> tangsp;    // tangent space for triangles
 
     // computed properties
     bbox3f bbox = invalid_bbox3f;      // boudning box
@@ -360,8 +359,7 @@ struct scene_intersection {
 
 // Intersects a ray with the scene.
 scene_intersection intersect_ray(
-    const scene* scn, const ray3f& ray, 
-    bool find_any = false);
+    const scene* scn, const ray3f& ray, bool find_any = false);
 
 // Shape values interpolated using barycentric coordinates.
 vec3f eval_pos(const shape* shp, int ei, const vec2f& uv);
@@ -386,7 +384,8 @@ vec3f eval_tangsp(
 // Instance element values.
 vec3f eval_elem_norm(const instance* ist, int ei);
 // Shading normals including material perturbations.
-vec3f eval_shading_norm(const instance* ist, int ei, const vec2f& uv, const vec3f& o);
+vec3f eval_shading_norm(
+    const instance* ist, int ei, const vec2f& uv, const vec3f& o);
 
 // Environment texture coordinates from the incoming direction.
 vec2f eval_texcoord(const environment* env, const vec3f& i);
@@ -410,7 +409,7 @@ ray3f eval_camera_ray(const camera* cam, const vec2i& ij, int res,
 // values any one is 0 or less. Set camera aspect otherwise.
 void sync_camera_aspect(const camera* cam, int& width, int& height);
 
-// Evaluates material parameters: emission, diffuse, specular, transmission, 
+// Evaluates material parameters: emission, diffuse, specular, transmission,
 // roughness and opacity.
 vec3f eval_emission(const instance* ist, int ei, const vec2f& uv);
 vec3f eval_diffuse(const instance* ist, int ei, const vec2f& uv);
@@ -421,8 +420,8 @@ float eval_opacity(const instance* ist, int ei, const vec2f& uv);
 
 // Material values packed into a convenience structure.
 struct brdf {
-    vec3f kd = zero3f, ks = zero3f, kt = zero3f; // diffuse, specular, transm
-    float rs = 1; // roughness
+    vec3f kd = zero3f, ks = zero3f, kt = zero3f;  // diffuse, specular, transm
+    float rs = 1;                                 // roughness
 };
 brdf eval_brdf(const instance* ist, int ei, const vec2f& uv);
 
@@ -535,8 +534,7 @@ scene* make_cornellbox_scene(const std::string& name, bool envlight = false);
 // Make a simple scene with three objects lined up.
 scene* make_simple_scene(const std::string& name,
     const std::vector<shape*>& shps, const std::vector<material*>& mats,
-    bool envlight = false,
-    const std::vector<animation*>& anms = {});
+    bool envlight = false, const std::vector<animation*>& anms = {});
 // Make a simple scene with single object on a floor.
 scene* make_simple_scene(
     const std::string& name, shape* shp, material* mats, bool envlight = false);

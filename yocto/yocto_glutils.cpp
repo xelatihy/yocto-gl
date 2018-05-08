@@ -779,7 +779,7 @@ glsurface_program make_glsurface_program() {
 
     std::string _frag_lighting =
         R"(
-        uniform bool eyelight;        // eyelight shading
+        uniform bool eyelight;         // eyelight shading
         uniform vec3 lamb;             // ambient light
         uniform int lnum;              // number of lights
         uniform int ltype[16];         // light type (0 -> point, 1 -> directional)
@@ -872,11 +872,8 @@ glsurface_program make_glsurface_program() {
         uniform bool mat_txt_norm_on;    // material norm texture on
         uniform sampler2D mat_txt_norm;  // material norm texture
 
-        uniform bool mat_double_sided;    // material double sided
-        uniform bool mat_alpha_cutout;    // material alpha cutout
-
         bool eval_material(vec2 texcoord, vec4 color, out vec3 ke, 
-                           out vec3 kd, out vec3 ks, out float rs, out float op, out bool cutout) {
+                           out vec3 kd, out vec3 ks, out float rs, out float op) {
             if(mat_type == 0) {
                 ke = mat_ke;
                 kd = vec3(0,0,0);
@@ -921,7 +918,6 @@ glsurface_program make_glsurface_program() {
                 op *= kd_txt.w;
             }
 
-            cutout = mat_alpha_cutout && op == 0;
             return true;
         }
 
@@ -976,14 +972,14 @@ glsurface_program make_glsurface_program() {
             n = apply_normal_map(texcoord, n, tangsp);
 
             // use faceforward to ensure the normals points toward us
-            if(mat_double_sided) n = faceforward(n,-wo,n);
+            n = faceforward(n,-wo,n);
 
             // get material color from textures
-            vec3 brdf_ke, brdf_kd, brdf_ks; float brdf_rs, brdf_op; bool brdf_cutout;
-            bool has_brdf = eval_material(texcoord, color, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, brdf_cutout);
+            vec3 brdf_ke, brdf_kd, brdf_ks; float brdf_rs, brdf_op;
+            bool has_brdf = eval_material(texcoord, color, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op);
 
             // exit if needed
-            if(brdf_cutout) discard;
+            if(brdf_op < 0.005) discard;
 
             // check const color
             if(elem_type == 0) {
@@ -1068,10 +1064,6 @@ glsurface_program make_glsurface_program() {
     prog.ks_txt_on_id = get_gluniform_location(prog.prog, "mat_txt_ks_on");
     prog.norm_txt_id = get_gluniform_location(prog.prog, "mat_txt_norm");
     prog.norm_txt_on_id = get_gluniform_location(prog.prog, "mat_txt_norm_on");
-    prog.double_sided_id =
-        get_gluniform_location(prog.prog, "mat_double_sided");
-    prog.alpha_cutout_id =
-        get_gluniform_location(prog.prog, "mat_alpha_cutout");
     prog.etype_id = get_gluniform_location(prog.prog, "elem_type");
     prog.efaceted_id = get_gluniform_location(prog.prog, "elem_faceted");
     assert(check_glerror());
@@ -1165,11 +1157,11 @@ void set_glsurface_highlight(
 // correspoinding XXX_txt variables. Sets also normal and occlusion
 // maps. Works for points/lines/triangles (diffuse for points,
 // Kajiya-Kay for lines, GGX/Phong for triangles).
-void set_glsurface_material(const glsurface_program& prog, 
-    const vec3f& ke, const vec3f& kd, const vec3f& ks, float rs, float op,
+void set_glsurface_material(const glsurface_program& prog, const vec3f& ke,
+    const vec3f& kd, const vec3f& ks, float rs, float op,
     const gltexture_info& ke_txt, const gltexture_info& kd_txt,
     const gltexture_info& ks_txt, const gltexture_info& norm_txt,
-    bool base_metallic, bool double_sided, bool alpha_cutout) {
+    bool base_metallic) {
     assert(check_glerror());
     set_gluniform(prog.prog, prog.mtype_id, base_metallic ? 2 : 1);
     set_gluniform(prog.prog, prog.ke_id, ke);
@@ -1185,8 +1177,6 @@ void set_glsurface_material(const glsurface_program& prog,
         prog.prog, prog.ks_txt_id, prog.ks_txt_on_id, ks_txt, 2);
     set_gluniform_texture(
         prog.prog, prog.norm_txt_id, prog.norm_txt_on_id, norm_txt, 4);
-    set_gluniform(prog.prog, prog.double_sided_id, double_sided);
-    set_gluniform(prog.prog, prog.alpha_cutout_id, alpha_cutout);
     assert(check_glerror());
 }
 

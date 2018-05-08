@@ -196,8 +196,8 @@ const auto zero4i = vec4i();
 const auto zero4b = vec4b();
 
 // Access xyz component of a vec4 typically used for color operation.
-inline vec3f xyz(const vec4f& a) { return {a.x,a.y,a.z}; }
-inline vec3i xyz(const vec4i& a) { return {a.x,a.y,a.z}; }
+inline vec3f xyz(const vec4f& a) { return {a.x, a.y, a.z}; }
+inline vec3i xyz(const vec4i& a) { return {a.x, a.y, a.z}; }
 
 // Vector comparison operations.
 inline bool operator==(const vec2f& a, const vec2f& b) {
@@ -361,6 +361,9 @@ inline float length_sqr(const vec4f& a) { return dot(a, a); }
 inline vec2f normalize(const vec2f& a) { return length(a) ? a / length(a) : a; }
 inline vec3f normalize(const vec3f& a) { return length(a) ? a / length(a) : a; }
 inline vec4f normalize(const vec4f& a) { return length(a) ? a / length(a) : a; }
+inline float adot(const vec2f& a, const vec2f& b) { return fabs(dot(a, b)); }
+inline float adot(const vec3f& a, const vec3f& b) { return fabs(dot(a, b)); }
+inline float adot(const vec4f& a, const vec4f& b) { return fabs(dot(a, b)); }
 
 // Vecror angles and slerps.
 inline float angle(const vec3f& a, const vec3f& b) {

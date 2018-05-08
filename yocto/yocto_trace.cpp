@@ -39,14 +39,15 @@
 namespace ygl {
 
 // Intersect a scene handling opacity.
-scene_intersection intersect_ray_cutout(const scene* scn, const ray3f& ray_, rng_state& rng, int nbounces) {
+scene_intersection intersect_ray_cutout(
+    const scene* scn, const ray3f& ray_, rng_state& rng, int nbounces) {
     auto ray = ray_;
-    for(auto b = 0; b < nbounces; b ++) {
+    for (auto b = 0; b < nbounces; b++) {
         auto isec = intersect_ray(scn, ray);
-        if(!isec.ist) return isec;
+        if (!isec.ist) return isec;
         auto op = eval_opacity(isec.ist, isec.ei, isec.uv);
         if (op > 0.999f) return isec;
-        if(rand1f(rng) < op) return isec;
+        if (rand1f(rng) < op) return isec;
         ray = make_ray(eval_pos(isec.ist, isec.ei, isec.uv), ray.d);
     }
     return {};
@@ -392,7 +393,8 @@ vec3f trace_path(
             } else {
                 i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
             }
-            auto isec = intersect_ray_cutout(scn, make_ray(pos, i), rng, nbounces);
+            auto isec =
+                intersect_ray_cutout(scn, make_ray(pos, i), rng, nbounces);
             auto pdf = 0.5f * sample_brdf_pdf(f, n, o, i);
             auto le = zero3f;
             if (isec.ist) {
@@ -418,7 +420,7 @@ vec3f trace_path(
         // continue path
         auto i = zero3f, brdfcos = zero3f;
         auto pdf = 0.0f;
-        if(!delta) {
+        if (!delta) {
             i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
             brdfcos = eval_brdfcos(f, n, o, i);
             pdf = sample_brdf_pdf(f, n, o, i);
@@ -429,7 +431,7 @@ vec3f trace_path(
         }
 
         // accumulate weight
-        if(pdf== 0) break;
+        if (pdf == 0) break;
         weight *= brdfcos / pdf;
         if (weight == zero3f) break;
 
@@ -487,7 +489,7 @@ vec3f trace_path_naive(
         // continue path
         auto i = zero3f, brdfcos = zero3f;
         auto pdf = 0.0f;
-        if(!delta) {
+        if (!delta) {
             i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
             brdfcos = eval_brdfcos(f, n, o, i);
             pdf = sample_brdf_pdf(f, n, o, i);
@@ -498,7 +500,7 @@ vec3f trace_path_naive(
         }
 
         // accumulate weight
-        if(pdf== 0) break;
+        if (pdf == 0) break;
         weight *= brdfcos / pdf;
         if (weight == zero3f) break;
 
@@ -560,7 +562,8 @@ vec3f trace_path_nomis(
             auto lgt =
                 scn->lights[sample_index(scn->lights.size(), rand1f(rng))];
             auto i = sample_light(lgt, pos, rand1f(rng), rand2f(rng));
-            auto isec = intersect_ray_cutout(scn, make_ray(pos, i), rng, nbounces);
+            auto isec =
+                intersect_ray_cutout(scn, make_ray(pos, i), rng, nbounces);
             if (isec.ist && isec.ist->mat->ke != zero3f) {
                 auto ln = eval_shading_norm(isec.ist, isec.ei, isec.uv, -i);
                 auto pdf =
@@ -576,7 +579,7 @@ vec3f trace_path_nomis(
         // continue path
         auto i = zero3f, brdfcos = zero3f;
         auto pdf = 0.0f;
-        if(!delta) {
+        if (!delta) {
             i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
             brdfcos = eval_brdfcos(f, n, o, i);
             pdf = sample_brdf_pdf(f, n, o, i);
@@ -587,7 +590,7 @@ vec3f trace_path_nomis(
         }
 
         // accumulate weight
-        if(pdf== 0) break;
+        if (pdf == 0) break;
         weight *= brdfcos / pdf;
         if (weight == zero3f) break;
 
@@ -815,7 +818,6 @@ vec3f trace_debug_normal(
     auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv, o);
 
     // shade
-    if (isec.ist->mat->double_sided && dot(n, o) < 0) n = -n;
     return n * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
 }
 
@@ -831,7 +833,6 @@ vec3f trace_debug_frontfacing(
     auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv, o);
 
     // shade
-    if (isec.ist->mat->double_sided && dot(n, o) < 0) n = -n;
     return dot(n, o) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0};
 }
 
@@ -955,6 +956,132 @@ void trace_async_stop(std::vector<std::thread>& threads, bool& stop_flag) {
     for (auto& t : threads) t.join();
     stop_flag = false;
     threads.clear();
+}
+
+}  // namespace ygl
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR PATH TRACING SUPPORT FUNCTION
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Phong exponent to roughness. Public API, see above.
+float specular_exponent_to_roughness(float n) { return sqrtf(2 / (n + 2)); }
+
+// Specular to fresnel eta. Public API, see above.
+void specular_fresnel_from_ks(const vec3f& ks, vec3f& es, vec3f& esk) {
+    es = {(1 + sqrt(ks.x)) / (1 - sqrt(ks.x)),
+        (1 + sqrt(ks.y)) / (1 - sqrt(ks.y)),
+        (1 + sqrt(ks.z)) / (1 - sqrt(ks.z))};
+    esk = {0, 0, 0};
+}
+
+// Compute the fresnel term for dielectrics. Implementation from
+// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
+vec3f fresnel_dielectric(float cosw, const vec3f& eta_) {
+    auto eta = eta_;
+    if (cosw < 0) {
+        eta = 1.0f / eta;
+        cosw = -cosw;
+    }
+
+    auto sin2 = 1 - cosw * cosw;
+    auto eta2 = eta * eta;
+
+    auto cos2t = vec3f{1, 1, 1} - sin2 / eta2;
+    if (cos2t.x < 0 || cos2t.y < 0 || cos2t.z < 0)
+        return vec3f{1, 1, 1};  // tir
+
+    auto t0 = vec3f{sqrt(cos2t.x), sqrt(cos2t.y), sqrt(cos2t.z)};
+    auto t1 = eta * t0;
+    auto t2 = eta * cosw;
+
+    auto rs = (vec3f{cosw, cosw, cosw} - t1) / (vec3f{cosw, cosw, cosw} + t1);
+    auto rp = (t0 - t2) / (t0 + t2);
+
+    return (rs * rs + rp * rp) / 2.0f;
+}
+
+// Compute the fresnel term for metals. Implementation from
+// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
+vec3f fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak) {
+    if (etak == zero3f) return fresnel_dielectric(cosw, eta);
+
+    cosw = clamp(cosw, (float)-1, (float)1);
+    auto cos2 = cosw * cosw;
+    auto sin2 = clamp(1 - cos2, (float)0, (float)1);
+    auto eta2 = eta * eta;
+    auto etak2 = etak * etak;
+
+    auto t0 = eta2 - etak2 - vec3f{sin2, sin2, sin2};
+    auto a2plusb2_2 = t0 * t0 + 4.0f * eta2 * etak2;
+    auto a2plusb2 =
+        vec3f{sqrt(a2plusb2_2.x), sqrt(a2plusb2_2.y), sqrt(a2plusb2_2.z)};
+    auto t1 = a2plusb2 + vec3f{cos2, cos2, cos2};
+    auto a_2 = (a2plusb2 + t0) / 2.0f;
+    auto a = vec3f{sqrt(a_2.x), sqrt(a_2.y), sqrt(a_2.z)};
+    auto t2 = 2.0f * a * cosw;
+    auto rs = (t1 - t2) / (t1 + t2);
+
+    auto t3 = vec3f{cos2, cos2, cos2} * a2plusb2 +
+              vec3f{sin2, sin2, sin2} * vec3f{sin2, sin2, sin2};
+    auto t4 = t2 * sin2;
+    auto rp = rs * (t3 - t4) / (t3 + t4);
+
+    return (rp + rs) / 2.0f;
+}
+
+// Schlick approximation of Fresnel term
+vec3f fresnel_schlick(const vec3f& ks, float cosw) {
+    if (ks == zero3f) return zero3f;
+    return ks +
+           (vec3f{1, 1, 1} - ks) * pow(clamp(1.0f - cosw, 0.0f, 1.0f), 5.0f);
+}
+
+// Schlick approximation of Fresnel term weighted by roughness.
+// This is a hack, but works better than not doing it.
+vec3f fresnel_schlick(const vec3f& ks, float cosw, float rs) {
+    if (ks == zero3f) return zero3f;
+    auto fks = fresnel_schlick(ks, cosw);
+    return ks + (fks - ks) * (1 - sqrt(clamp(rs, 0.0f, 1.0f)));
+}
+
+// Evaluates the GGX distribution and geometric term
+float eval_ggx(float rs, float ndh, float ndi, float ndo) {
+    // evaluate D
+    auto alpha2 = rs * rs;
+    auto di = (ndh * ndh) * (alpha2 - 1) + 1;
+    auto d = alpha2 / (pi * di * di);
+#if 0
+    // evaluate G from Heitz
+    auto lambda_o = (-1 + sqrt(1 + alpha2 * (1 - ndo * ndo) / (ndo * ndo))) / 2;
+    auto lambda_i = (-1 + sqrt(1 + alpha2 * (1 - ndi * ndi) / (ndi * ndi))) / 2;
+    auto g = 1 / (1 + lambda_o + lambda_i);
+#else
+    // evaluate G from Smith
+    auto go = (2 * ndo) / (ndo + sqrt(alpha2 + (1 - alpha2) * ndo * ndo));
+    auto gi = (2 * ndi) / (ndi + sqrt(alpha2 + (1 - alpha2) * ndi * ndi));
+    auto g = go * gi;
+#endif
+    return d * g;
+}
+
+// Evaluates the GGX pdf
+float sample_ggx_pdf(float rs, float ndh) {
+    auto alpha2 = rs * rs;
+    auto di = (ndh * ndh) * (alpha2 - 1) + 1;
+    auto d = alpha2 / (pi * di * di);
+    return d * ndh;
+}
+
+// Sample the GGX distribution
+vec3f sample_ggx(float rs, const vec2f& rn) {
+    auto tan2 = rs * rs * rn.y / (1 - rn.y);
+    auto rz = sqrt(1 / (tan2 + 1));
+    auto rr = sqrt(1 - rz * rz);
+    auto rphi = 2 * pi * rn.x;
+    // set to wh
+    auto wh_local = vec3f{rr * cos(rphi), rr * sin(rphi), rz};
+    return wh_local;
 }
 
 }  // namespace ygl

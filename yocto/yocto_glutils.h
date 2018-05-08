@@ -401,7 +401,7 @@ struct glsurface_program {
         shp_xform_id, shp_normal_offset_id, highlight_id, mtype_id, ke_id,
         kd_id, ks_id, rs_id, op_id, ke_txt_id, ke_txt_on_id, kd_txt_id,
         kd_txt_on_id, ks_txt_id, ks_txt_on_id, norm_txt_id, norm_txt_on_id,
-        double_sided_id, alpha_cutout_id, etype_id, efaceted_id;
+        etype_id, efaceted_id;
     // vertex attribute locations
     int pos_id, norm_id, texcoord_id, color_id, tangsp_id;
 };
@@ -451,11 +451,11 @@ void set_glsurface_highlight(
 // maps. Works for points/lines/triangles indicated by `etype`, (diffuse for
 // points, Kajiya-Kay for lines, GGX/Phong for triangles). Material `type`
 // matches the scene material type.
-void set_glsurface_material(const glsurface_program& prog, 
-    const vec3f& ke, const vec3f& kd, const vec3f& ks, float rs, float op,
+void set_glsurface_material(const glsurface_program& prog, const vec3f& ke,
+    const vec3f& kd, const vec3f& ks, float rs, float op,
     const gltexture_info& ke_txt, const gltexture_info& kd_txt,
     const gltexture_info& ks_txt, const gltexture_info& norm_txt,
-    bool base_metallic, bool double_sided, bool alpha_cutout);
+    bool base_metallic);
 
 // Set constant material with emission `ke` and opacity `op`.
 void set_glsurface_constmaterial(

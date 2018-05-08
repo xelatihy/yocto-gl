@@ -41,6 +41,7 @@
         "__locale": "cpp",
         "algorithm": "cpp",
         "functional": "cpp",
-        "complex": "cpp"
+        "complex": "cpp",
+        "queue": "cpp"
     },
 } 
