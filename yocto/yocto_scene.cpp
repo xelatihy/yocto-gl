@@ -521,7 +521,7 @@ vec3f eval_shading_norm(
             if (left_handed) fp.y = -fp.y;
             n = transform_direction(fp, txt);
         }
-        if (dot(n, o) < 0) n = -n;
+        // if (dot(n, o) < 0) n = -n;
         return n;
     } else if (!ist->shp->lines.empty()) {
         return orthonormalize(o, eval_norm(ist, ei, uv));
@@ -682,21 +682,21 @@ float eval_opacity(const instance* ist, int ei, const vec2f& uv) {
            eval_texture(ist->mat->kd_txt, eval_texcoord(ist, ei, uv)).w;
 }
 
-// Evaluates the brdf at a location.
-brdf eval_brdf(const instance* ist, int ei, const vec2f& uv) {
-    auto f = brdf();
+// Evaluates the bsdf at a location.
+bsdf eval_bsdf(const instance* ist, int ei, const vec2f& uv) {
+    auto f = bsdf();
     f.kd = eval_diffuse(ist, ei, uv);
     f.ks = eval_specular(ist, ei, uv);
     f.kt = eval_transmission(ist, ei, uv);
     f.rs = eval_roughness(ist, ei, uv);
-    if(f.kd != zero3f) {
+    f.refract = (ist && ist->mat) ? ist->mat->refract : false;
+    if (f.kd != zero3f) {
         f.rs = clamp(f.rs, 0.03f * 0.03f, 1.0f);
-    } else if(f.rs <= 0.03f * 0.03f) f.rs = 0;
+    } else if (f.rs <= 0.03f * 0.03f)
+        f.rs = 0;
     return f;
 }
-bool is_delta_brdf(const brdf& f) {
-    return f.rs == 0 && f.kd == zero3f;
-}
+bool is_delta_bsdf(const bsdf& f) { return f.rs == 0 && f.kd == zero3f; }
 
 // Sample a shape based on a distribution.
 std::pair<int, vec2f> sample_shape(
@@ -879,6 +879,8 @@ scene* obj_to_scene(const obj_scene* obj) {
         else
             mat->rs = pow(2 / (omat->ns + 2), 1 / 4.0f);
         mat->op = omat->op;
+        mat->fresnel = omat->illum == 2 || omat->illum == 5 || omat->illum == 7;
+        mat->refract = omat->illum == 6 || omat->illum == 7;
         mat->ke_txt = make_texture_info(omat->ke_txt);
         mat->kd_txt = make_texture_info(omat->kd_txt);
         mat->ks_txt = make_texture_info(omat->ks_txt);
@@ -1083,6 +1085,9 @@ obj_scene* scene_to_obj(const scene* scn, bool preserve_instances) {
     for (auto mat : scn->materials) {
         auto omat = new obj_material();
         omat->name = mat->name;
+        omat->illum = 2;
+        if (mat->kt != zero3f && mat->refract && !mat->fresnel) omat->illum = 6;
+        if (mat->kt != zero3f && mat->refract && mat->fresnel) omat->illum = 7;
         omat->ke = {mat->ke.x, mat->ke.y, mat->ke.z};
         omat->ke_txt = make_texture_info(mat->ke_txt);
         if (!mat->base_metallic) {
@@ -1127,11 +1132,6 @@ obj_scene* scene_to_obj(const scene* scn, bool preserve_instances) {
         omat->bump_txt = make_texture_info(mat->bump_txt, true);
         omat->disp_txt = make_texture_info(mat->disp_txt, true);
         omat->norm_txt = make_texture_info(mat->norm_txt, true);
-        if (mat->op < 1 || mat->kt != zero3f) {
-            omat->illum = 4;
-        } else {
-            omat->illum = 2;
-        }
         obj->materials.push_back(omat);
     }
 
@@ -2487,6 +2487,15 @@ material* make_glass_material(const std::string& name, const vec3f& col,
     mat->kt = col;
     mat->kt_txt.txt = txt;
     mat->norm_txt.txt = norm;
+    return mat;
+}
+material* make_solidglass_material(const std::string& name, const vec3f& col,
+    float rs, texture* txt, texture* norm) {
+    auto mat = make_material(name, zero3f, {0.04f, 0.04f, 0.04f}, rs);
+    mat->kt = col;
+    mat->kt_txt.txt = txt;
+    mat->norm_txt.txt = norm;
+    mat->refract = true;
     return mat;
 }
 material* make_transparent_material(const std::string& name, const vec3f& col,

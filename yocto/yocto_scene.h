@@ -145,6 +145,8 @@ struct material {
     vec3f kt = {0, 0, 0};  // transmission color
     float rs = 0.0001;     // roughness mapped as glTF
     float op = 1;          // opacity
+    bool fresnel = true;   // whether to use fresnel in reflections/transmission
+    bool refract = false;  // whether to use use refraction in tranmission
 
     // textures
     texture_info ke_txt;    // emission texture
@@ -419,12 +421,15 @@ float eval_roughness(const instance* ist, int ei, const vec2f& uv);
 float eval_opacity(const instance* ist, int ei, const vec2f& uv);
 
 // Material values packed into a convenience structure.
-struct brdf {
-    vec3f kd = zero3f, ks = zero3f, kt = zero3f;  // diffuse, specular, transm
-    float rs = 1;                                 // roughness
+struct bsdf {
+    vec3f kd = zero3f;     // diffuse
+    vec3f ks = zero3f;     // specular
+    vec3f kt = zero3f;     // transmission
+    float rs = 1;          // roughness
+    bool refract = false;  // whether to use refraction in transmission
 };
-brdf eval_brdf(const instance* ist, int ei, const vec2f& uv);
-bool is_delta_brdf(const brdf& f);
+bsdf eval_bsdf(const instance* ist, int ei, const vec2f& uv);
+bool is_delta_bsdf(const bsdf& f);
 
 // Sample a shape based on a distribution.
 std::pair<int, vec2f> sample_shape(
@@ -510,6 +515,9 @@ material* make_plastic_material(const std::string& name, const vec3f& col,
 material* make_metal_material(const std::string& name, const vec3f& col,
     float rs = 0.1f, texture* txt = nullptr, texture* norm = nullptr);
 material* make_glass_material(const std::string& name,
+    const vec3f& col = {1, 1, 1}, float rs = 0, texture* txt = nullptr,
+    texture* norm = nullptr);
+material* make_solidglass_material(const std::string& name,
     const vec3f& col = {1, 1, 1}, float rs = 0, texture* txt = nullptr,
     texture* norm = nullptr);
 material* make_transparent_material(const std::string& name, const vec3f& col,

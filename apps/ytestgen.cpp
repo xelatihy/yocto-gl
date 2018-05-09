@@ -258,11 +258,18 @@ std::vector<ygl::scene*> make_proc_scenes(const std::string& name) {
                     ygl::make_glass_material("glass3", {1, 1, 1}, 0.1f),
                 },
                 {
-                    ygl::make_glass_material(
+                    ygl::make_solidglass_material("refractive1", {1, 1, 1}, 0),
+                    ygl::make_solidglass_material(
+                        "refractive2", {1, 0.7f, 0.7f}, 0),
+                    ygl::make_solidglass_material(
+                        "refractive3", {1, 1, 1}, 0.1f),
+                },
+                {
+                    ygl::make_transparent_material(
                         "transparent1", {0.5f, 0.2f, 0.2f}, 0.9f),
-                    ygl::make_glass_material(
+                    ygl::make_transparent_material(
                         "transparent2", {0.2f, 0.5f, 0.2f}, 0.5f),
-                    ygl::make_glass_material(
+                    ygl::make_transparent_material(
                         "transparent3", {0.2f, 0.2f, 0.5f}, 0.2f),
                 },
                 {
