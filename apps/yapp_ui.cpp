@@ -552,6 +552,9 @@ bool draw_glwidgets_scene_inspector(glwindow* win, material* val, scene* scn) {
     edited += draw_glwidgets_colorbox(win, "kt", val->kt);
     edited += draw_glwidgets_dragbox(win, "rs", val->rs);
     edited += draw_glwidgets_dragbox(win, "op", val->op);
+    edited += draw_glwidgets_checkbox(win, "fresnel", val->fresnel);
+    continue_glwidgets_line(win);
+    edited += draw_glwidgets_checkbox(win, "refract", val->refract);
     edited += draw_glwidgets_scene_inspector(win, "ke", val->ke_txt, scn);
     edited += draw_glwidgets_scene_inspector(win, "kd", val->kd_txt, scn);
     edited += draw_glwidgets_scene_inspector(win, "ks", val->ks_txt, scn);

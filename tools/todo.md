@@ -11,17 +11,8 @@ Please consider this to be just development notes and not any real planning.
 
 ## Trace
 
-- use refracts
-- fresnel takes h and o
-- brdf
-    - brdf: split lobes independently
-    - delta brdf
-    - fresnel in brdf
-        - diffuse formula
-        - scale with roughness
-        - transmission formula
-        - fresnel in coefficients
-        - fresnel in weights
+- refraction
+    - use refract
 - lights
     - lights are only triangle meshes
     - area light test scene
