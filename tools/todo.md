@@ -12,30 +12,18 @@ Please consider this to be just development notes and not any real planning.
 ## Trace
 
 - refraction
-    - use refract
-- lights
-    - lights are only triangle meshes
-    - area light test scene
-- deltas with only one function call instead of split
-- simplify eval functions
-    - eval emission: simplify?
-    - eval environment: flip direction?
+    - rough surface refraction
 - redirect log to imgui
-- intersection return projections for lines and points
+- points/lines projections
 - bump/normal mapping
+    - eval tangent space per triangle
+    - compute derivaties for textures
 - add radius in offsetting rays
 - bvh with opacity
 - simple denoiser
     - joint bilateral denoiser
     - non-local means denoiser
     - denoiser from paris
-
-## Simpler shapes
-
-- split lines and triangle meshes
-- sampling shapes
-    - remove sample_points, sample_lines, etc...
-    - support uniform sampling in sample_shape
 
 ## Tesselated shapes
 
@@ -44,6 +32,13 @@ Please consider this to be just development notes and not any real planning.
     - face varying here
     - gets a pointer to shape array
     - node can point to this 
+
+## Simpler shapes
+
+- split lines and triangle meshes
+- sampling shapes
+    - remove sample_points, sample_lines, etc...
+    - support uniform sampling in sample_shape
 
 ## Port scenes
 

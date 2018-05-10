@@ -194,6 +194,7 @@ void update_lights(scene* scn, bool do_shapes, bool do_environments) {
 
     for (auto ist : scn->instances) {
         if (!ist->mat || ist->mat->ke == zero3f) continue;
+        if (ist->shp->triangles.empty()) continue;
         scn->lights.push_back(ist);
         if (ist->shp->elem_cdf.empty()) update_shape_cdf(ist->shp);
     }

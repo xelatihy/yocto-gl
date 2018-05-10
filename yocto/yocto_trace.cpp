@@ -303,48 +303,36 @@ vec3f sample_environment(const environment* env, float rel, const vec2f& ruv) {
     }
 }
 
-// Sample pdf for a light point.
-float sample_light_pdf(const instance* ist, int ei, const vec3f& i,
-    const vec3f& lnorm, float dist) {
-    if (!ist) return 0;
-    auto shp = ist->shp;
-    if (shp->elem_cdf.empty()) return 0;
-    if (!shp->triangles.empty()) {
-        // prob triangle * area triangle = area triangle mesh
-        auto area = shp->elem_cdf.back();
-        return (dist * dist) / (fabs(dot(lnorm, i)) * area);
-    } else if (!shp->lines.empty()) {
-        throw std::runtime_error("not implemented yet");
-        return 0;
-    } else if (!shp->pos.empty()) {
-        auto num = shp->elem_cdf.back();
-        return (dist * dist) / num;
-    } else {
-        return 0;
-    }
-}
-
 // Picks a point on a light.
 vec3f sample_light(
-    const instance* ist, const vec3f& pos, float rel, const vec2f& ruv) {
+    const instance* ist, const vec3f& p, float rel, const vec2f& ruv) {
     auto sample = sample_shape(ist->shp, rel, ruv);
-    return normalize(eval_pos(ist, sample.first, sample.second) - pos);
+    return normalize(eval_pos(ist, sample.first, sample.second) - p);
+}
+
+// Sample pdf for a light point.
+float sample_light_pdf(const instance* ist, const vec3f& p, 
+    const vec3f& i, const vec3f& lp, const vec3f& ln) {
+    if(ist->mat->ke == zero3f) return 0;
+    // prob triangle * area triangle = area triangle mesh
+    auto area = ist->shp->elem_cdf.back();
+    return dot(lp - p, lp - p) / (fabs(dot(ln, i)) * area);
 }
 
 // Test occlusion.
 vec3f eval_transmission(
     const scene* scn, const vec3f& from, const vec3f& to, int nbounces) {
     auto weight = vec3f{1, 1, 1};
-    auto pos = from;
+    auto p = from;
     for (auto bounce = 0; bounce < nbounces; bounce++) {
-        auto ray = make_segment(pos, to);
+        auto ray = make_segment(p, to);
         auto isec = intersect_ray(scn, ray);
         if (!isec.ist) break;
         auto f = eval_bsdf(isec.ist, isec.ei, isec.uv);
         auto op = eval_opacity(isec.ist, isec.ei, isec.uv);
         weight *= f.kt + vec3f{1 - op, 1 - op, 1 - op};
         if (weight == zero3f) break;
-        pos = eval_pos(isec.ist, isec.ei, isec.uv);
+        p = eval_pos(isec.ist, isec.ei, isec.uv);
     }
     return weight;
 }
@@ -374,7 +362,7 @@ vec3f trace_path(
 
         // point
         auto o = -ray.d;
-        auto pos = eval_pos(isec.ist, isec.ei, isec.uv);
+        auto p = eval_pos(isec.ist, isec.ei, isec.uv);
         auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv, o);
         auto f = eval_bsdf(isec.ist, isec.ei, isec.uv);
 
@@ -398,7 +386,7 @@ vec3f trace_path(
                 auto idx = sample_index(nlights, rand1f(rng));
                 if (idx < scn->lights.size()) {
                     auto lgt = scn->lights[idx];
-                    i = sample_light(lgt, pos, rand1f(rng), rand2f(rng));
+                    i = sample_light(lgt, p, rand1f(rng), rand2f(rng));
                 } else {
                     auto env = scn->environments[idx - scn->lights.size()];
                     i = sample_environment(env, rand1f(rng), rand2f(rng));
@@ -407,15 +395,14 @@ vec3f trace_path(
                 i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
             }
             auto isec =
-                intersect_ray_cutout(scn, make_ray(pos, i), rng, nbounces);
+                intersect_ray_cutout(scn, make_ray(p, i), rng, nbounces);
             auto pdf = 0.5f * sample_brdf_pdf(f, n, o, i);
             auto le = zero3f;
             if (isec.ist) {
                 auto lp = eval_pos(isec.ist, isec.ei, isec.uv);
                 auto ln = eval_shading_norm(isec.ist, isec.ei, isec.uv, -i);
                 pdf += 0.5f *
-                       sample_light_pdf(
-                           isec.ist, isec.ei, i, ln, length(lp - pos)) *
+                       sample_light_pdf(isec.ist, p, i, lp, ln) *
                        sample_index_pdf(nlights);
                 le += eval_emission(isec.ist, isec.ei, isec.uv);
             } else {
@@ -448,7 +435,7 @@ vec3f trace_path(
         if (weight == zero3f) break;
 
         // setup next ray
-        ray = make_ray(pos, i);
+        ray = make_ray(p, i);
         emission = is_delta_bsdf(f);
     }
 
@@ -477,7 +464,7 @@ vec3f trace_path_naive(
 
         // point
         auto o = -ray.d;
-        auto pos = eval_pos(isec.ist, isec.ei, isec.uv);
+        auto p = eval_pos(isec.ist, isec.ei, isec.uv);
         auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv, o);
         auto f = eval_bsdf(isec.ist, isec.ei, isec.uv);
 
@@ -511,7 +498,7 @@ vec3f trace_path_naive(
         if (weight == zero3f) break;
 
         // setup next ray
-        ray = make_ray(pos, i);
+        ray = make_ray(p, i);
     }
 
     return l;
@@ -540,7 +527,7 @@ vec3f trace_path_nomis(
 
         // point
         auto o = -ray.d;
-        auto pos = eval_pos(isec.ist, isec.ei, isec.uv);
+        auto p = eval_pos(isec.ist, isec.ei, isec.uv);
         auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv, o);
         auto f = eval_bsdf(isec.ist, isec.ei, isec.uv);
 
@@ -559,13 +546,14 @@ vec3f trace_path_nomis(
         if (!is_delta_bsdf(f) && !scn->lights.empty()) {
             auto lgt =
                 scn->lights[sample_index(scn->lights.size(), rand1f(rng))];
-            auto i = sample_light(lgt, pos, rand1f(rng), rand2f(rng));
+            auto i = sample_light(lgt, p, rand1f(rng), rand2f(rng));
             auto isec =
-                intersect_ray_cutout(scn, make_ray(pos, i), rng, nbounces);
+                intersect_ray_cutout(scn, make_ray(p, i), rng, nbounces);
             if (isec.ist && isec.ist->mat->ke != zero3f) {
+                auto lp = eval_pos(isec.ist, isec.ei, isec.uv);
                 auto ln = eval_shading_norm(isec.ist, isec.ei, isec.uv, -i);
                 auto pdf =
-                    sample_light_pdf(isec.ist, isec.ei, i, ln, isec.dist) *
+                    sample_light_pdf(isec.ist, p, i, lp, ln) *
                     sample_index_pdf(scn->lights.size());
                 auto le = eval_emission(isec.ist, isec.ei, isec.uv);
                 auto brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
@@ -592,7 +580,7 @@ vec3f trace_path_nomis(
         if (weight == zero3f) break;
 
         // setup next ray
-        ray = make_ray(pos, i);
+        ray = make_ray(p, i);
         emission = is_delta_bsdf(f);
     }
 
@@ -616,7 +604,7 @@ vec3f trace_direct(
 
     // point
     auto o = -ray.d;
-    auto pos = eval_pos(isec.ist, isec.ei, isec.uv);
+    auto p = eval_pos(isec.ist, isec.ei, isec.uv);
     auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv, o);
     auto f = eval_bsdf(isec.ist, isec.ei, isec.uv);
 
@@ -627,16 +615,15 @@ vec3f trace_direct(
     for (auto lgt : scn->lights) {
         auto i = zero3f;
         if (rand1f(rng) < 0.5f) {
-            i = sample_light(lgt, pos, rand1f(rng), rand2f(rng));
+            i = sample_light(lgt, p, rand1f(rng), rand2f(rng));
         } else {
             i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
         }
-        auto isec = intersect_ray(scn, make_ray(pos, i));
+        auto isec = intersect_ray(scn, make_ray(p, i));
         if (lgt != isec.ist) continue;
         auto lp = eval_pos(isec.ist, isec.ei, isec.uv);
         auto ln = eval_shading_norm(isec.ist, isec.ei, isec.uv, -i);
-        auto pdf = 0.5f * sample_light_pdf(
-                              isec.ist, isec.ei, i, ln, length(lp - pos)) +
+        auto pdf = 0.5f * sample_light_pdf(isec.ist, p, i, lp, ln) +
                    0.5f * sample_brdf_pdf(f, n, o, i);
         auto le = eval_emission(isec.ist, isec.ei, isec.uv);
         auto brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
@@ -651,7 +638,7 @@ vec3f trace_direct(
         } else {
             i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
         }
-        auto isec = intersect_ray(scn, make_ray(pos, i));
+        auto isec = intersect_ray(scn, make_ray(p, i));
         if (isec.ist) continue;
         auto pdf = 0.5f * sample_environment_pdf(env, i) +
                    0.5f * sample_brdf_pdf(f, n, o, i);
@@ -666,19 +653,19 @@ vec3f trace_direct(
     // reflection
     if (f.ks != zero3f && !f.rs) {
         auto i = reflect(o, n);
-        l += f.ks * trace_direct(scn, make_ray(pos, i), rng, nbounces - 1);
+        l += f.ks * trace_direct(scn, make_ray(p, i), rng, nbounces - 1);
     }
 
     // refraction
     if (f.kt != zero3f) {
-        l += f.kt * trace_direct(scn, make_ray(pos, -o), rng, nbounces - 1);
+        l += f.kt * trace_direct(scn, make_ray(p, -o), rng, nbounces - 1);
     }
 
     // opacity
     auto op = eval_opacity(isec.ist, isec.ei, isec.uv);
     if (op != 1) {
         l = op * l +
-            (1 - op) * trace_direct(scn, make_ray(pos, -o), rng, nbounces - 1);
+            (1 - op) * trace_direct(scn, make_ray(p, -o), rng, nbounces - 1);
     }
 
     // done
@@ -702,7 +689,7 @@ vec3f trace_direct_nomis(
 
     // point
     auto o = -ray.d;
-    auto pos = eval_pos(isec.ist, isec.ei, isec.uv);
+    auto p = eval_pos(isec.ist, isec.ei, isec.uv);
     auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv, o);
     auto f = eval_bsdf(isec.ist, isec.ei, isec.uv);
 
@@ -711,12 +698,12 @@ vec3f trace_direct_nomis(
 
     // direct lights
     for (auto lgt : scn->lights) {
-        auto i = sample_light(lgt, pos, rand1f(rng), rand2f(rng));
-        auto isec = intersect_ray(scn, make_ray(pos, i));
+        auto i = sample_light(lgt, p, rand1f(rng), rand2f(rng));
+        auto isec = intersect_ray(scn, make_ray(p, i));
         if (lgt != isec.ist) continue;
         auto lp = eval_pos(isec.ist, isec.ei, isec.uv);
         auto ln = eval_shading_norm(isec.ist, isec.ei, isec.uv, -i);
-        auto pdf = sample_light_pdf(isec.ist, isec.ei, i, ln, length(lp - pos));
+        auto pdf = sample_light_pdf(isec.ist, p, i, lp, ln);
         auto le = eval_emission(isec.ist, isec.ei, isec.uv);
         auto brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
         if (pdf != 0) l += le * brdfcos / pdf;
@@ -725,7 +712,7 @@ vec3f trace_direct_nomis(
     // direct environments
     for (auto env : scn->environments) {
         auto i = sample_environment(env, rand1f(rng), rand2f(rng));
-        auto isec = intersect_ray(scn, make_ray(pos, i));
+        auto isec = intersect_ray(scn, make_ray(p, i));
         if (isec.ist) continue;
         auto pdf = sample_environment_pdf(env, i);
         auto le = eval_environment(env, i);
@@ -739,19 +726,19 @@ vec3f trace_direct_nomis(
     // reflection
     if (f.ks != zero3f && !f.rs) {
         auto i = reflect(o, n);
-        l += f.ks * trace_direct(scn, make_ray(pos, i), rng, nbounces - 1);
+        l += f.ks * trace_direct(scn, make_ray(p, i), rng, nbounces - 1);
     }
 
     // opacity
     if (f.kt != zero3f) {
-        l += f.kt * trace_direct(scn, make_ray(pos, -o), rng, nbounces - 1);
+        l += f.kt * trace_direct(scn, make_ray(p, -o), rng, nbounces - 1);
     }
 
     // opacity
     auto op = eval_opacity(isec.ist, isec.ei, isec.uv);
     if (op != 1) {
         l = op * l +
-            (1 - op) * trace_direct(scn, make_ray(pos, -o), rng, nbounces - 1);
+            (1 - op) * trace_direct(scn, make_ray(p, -o), rng, nbounces - 1);
     }
 
     // done
@@ -773,7 +760,7 @@ vec3f trace_eyelight(
 
     // point
     auto o = -ray.d;
-    auto pos = eval_pos(isec.ist, isec.ei, isec.uv);
+    auto p = eval_pos(isec.ist, isec.ei, isec.uv);
     auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv, o);
     auto f = eval_bsdf(isec.ist, isec.ei, isec.uv);
 
@@ -786,12 +773,12 @@ vec3f trace_eyelight(
     // opacity
     if (nbounces <= 0) return l;
     if (f.kt != zero3f) {
-        l += f.kt * trace_eyelight(scn, make_ray(pos, -o), rng, nbounces - 1);
+        l += f.kt * trace_eyelight(scn, make_ray(p, -o), rng, nbounces - 1);
     }
     auto op = eval_opacity(isec.ist, isec.ei, isec.uv);
     if (op != 1) {
         l = op * l + (1 - op) * trace_eyelight(
-                                    scn, make_ray(pos, -o), rng, nbounces - 1);
+                                    scn, make_ray(p, -o), rng, nbounces - 1);
     }
 
     // done
