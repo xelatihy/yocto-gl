@@ -872,12 +872,9 @@ scene* obj_to_scene(const obj_scene* obj) {
         mat->kd = omat->kd;
         mat->ks = omat->ks;
         mat->kt = omat->kt;
-        if (omat->ns >= 1e6f)
-            mat->rs = 0;
-        else if (omat->ns < 1)
-            mat->rs = 1;
-        else
-            mat->rs = pow(2 / (omat->ns + 2), 1 / 4.0f);
+        mat->rs = pow(2 / (omat->ns + 2), 1 / 4.0f);
+        if(mat->rs < 0.001f) mat->rs = 0;
+        if(mat->rs > 0.999f) mat->rs = 1;
         mat->op = omat->op;
         mat->fresnel = omat->illum == 2 || omat->illum == 5 || omat->illum == 7;
         mat->refract = omat->illum == 6 || omat->illum == 7;
@@ -1094,12 +1091,7 @@ obj_scene* scene_to_obj(const scene* scn, bool preserve_instances) {
             omat->kd = {mat->kd.x, mat->kd.y, mat->kd.z};
             omat->ks = {mat->ks.x, mat->ks.y, mat->ks.z};
             omat->kt = {mat->kt.x, mat->kt.y, mat->kt.z};
-            if (mat->rs <= 0)
-                omat->ns = 1e6f;
-            else if (mat->rs >= 1)
-                omat->ns = 0;
-            else
-                omat->ns = 2 / pow(mat->rs, 4.0f) - 2;
+            omat->ns = clamp(2 / pow(mat->rs+0.0001f, 4.0f) - 2, 0.0f, 1.0e10f);
             omat->op = mat->op;
             omat->kd_txt = make_texture_info(mat->kd_txt);
             omat->ks_txt = make_texture_info(mat->ks_txt);
@@ -1115,12 +1107,7 @@ obj_scene* scene_to_obj(const scene* scn, bool preserve_instances) {
                           vec3f{0.04f, 0.04f, 0.04f} * (1 - mat->ks.x);
                 omat->kd = {kd.x, kd.y, kd.z};
                 omat->ks = {ks.x, ks.y, ks.z};
-                if (mat->rs <= 0)
-                    omat->ns = 1e6f;
-                else if (mat->rs >= 1)
-                    omat->ns = 0;
-                else
-                    omat->ns = 2 / pow(mat->rs, 4.0f) - 2;
+                omat->ns = clamp(2 / pow(mat->rs+0.0001f, 4.0f) - 2, 0.0f, 1.0e10f);
             }
             omat->op = mat->op;
             if (mat->ks.x < 0.5f) {

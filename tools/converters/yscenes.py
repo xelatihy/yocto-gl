@@ -63,7 +63,7 @@ def convert(dirname, scene='*'):
 @click.argument('scene', required=False, default='*')
 def view(dirname, scene='*', format='obj'):
     for filename in get_filenames(f'{dirname}/yocto', scene, f'*.{format}'):
-        run_cmd(f'../yocto-gl/bin/yview -D --eyelight {filename}')
+        run_cmd(f'../yocto-gl/bin/yview --eyelight {filename}')
 
 @run.command()
 @click.option('--format', '-F', default='obj', type=click.Choice(['obj','gltf']))
@@ -71,7 +71,7 @@ def view(dirname, scene='*', format='obj'):
 @click.argument('scene', required=False, default='*')
 def trace(dirname, scene='*', format='obj'):
     for filename in get_filenames(f'{dirname}/yocto', scene, f'*.{format}'):
-        run_cmd(f'../yocto-gl/bin/yitrace -D {filename}')
+        run_cmd(f'../yocto-gl/bin/yitrace {filename}')
 
 @run.command()
 @click.option('--resolution', '-r', default=720, type=int)
@@ -90,7 +90,7 @@ def render(dirname, scene='*', format='obj', samples=64, resolution=720, tracer=
             run_cmd(f'mkdir -p {outdir}')
         outname = filename.replace('/yocto','/render')+'.exr'
         save_batch = '--save-batch' if progressive else ''
-        run_cmd(f'../yocto-gl/bin/ytrace -D -r {resolution} -s {samples} -t {tracer} {save_batch} -o {outname} {filename}')
+        run_cmd(f'../yocto-gl/bin/ytrace -r {resolution} -s {samples} -t {tracer} {save_batch} -o {outname} {filename}')
 
 @run.command()
 def sync():
