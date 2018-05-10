@@ -29,6 +29,7 @@
 #include "yocto_obj.h"
 
 #include <algorithm>
+#include <array>
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR WAVEFRONT OBJ
@@ -185,18 +186,17 @@ inline void obj_parse(char*& s, vec4f& val) {
 inline void obj_parse(char*& s, frame3f& val) {
     for (auto i = 0; i < 12; i++) obj_parse(s, (&val.x.x)[i]);
 }
-inline void obj_parse(char*& s, obj_vertex& val, const obj_vertex& vert_size) {
+inline void obj_parse(
+    char*& s, std::array<int, 5>& val, const std::array<int, 5>& vert_size) {
     char buf[1024];
     obj_skipws(s);
     obj_parse_base(s, buf);
-    val = obj_vertex{-1, -1, -1, -1, -1};
-    auto v = &val.pos;
-    auto vs = &vert_size.pos;
+    val = std::array<int, 5>{{-1, -1, -1, -1, -1}};
     auto i = 0;
     auto sb = buf;
     while (i < 5 && *sb) {
-        obj_parse_base(sb, v[i]);
-        v[i] = (v[i] < 0) ? vs[i] + v[i] : v[i] - 1;
+        obj_parse_base(sb, val[i]);
+        val[i] = (val[i] < 0) ? vert_size[i] + val[i] : val[i] - 1;
         if (*sb != '/') break;
         while (*sb == '/') {
             sb++;
@@ -243,25 +243,19 @@ inline void obj_parse(char*& s, obj_texture_info& info) {
             last = tok;
             info.props[last] = {};
         } else {
-            info.props[last].push_back(tok);
+            info.props[last].push_back(atof(tok.c_str()));
         }
     }
 
     // clamp
-    if (info.props.find("-clamp") != info.props.end() &&
-        info.props.at("-clamp").size() > 0) {
-        auto& clamp_vec = info.props.at("-clamp");
-        auto clamp_str = (clamp_vec.empty()) ? "" : clamp_vec.front();
-        info.clamp = clamp_str == "on" || clamp_str == "1";
-        info.props.erase("-clamp");
+    if (info.props.find("clamp") != info.props.end()) {
+        info.clamp = info.props.at("clamp").front();
+        info.props.erase("clamp");
     }
 
-    if (info.props.find("-bm") != info.props.end() &&
-        info.props.at("-bm").size() > 0) {
-        auto& bm_vec = info.props.at("-bm");
-        auto bm_str = (bm_vec.empty()) ? "" : bm_vec.front();
-        info.scale = std::atof(bm_str.c_str());
-        info.props.erase("-bm");
+    if (info.props.find("bm") != info.props.end()) {
+        info.scale = info.props.at("bm").front();
+        info.props.erase("bm");
     }
 }
 
@@ -408,20 +402,35 @@ obj_scene* load_obj(const std::string& filename, bool split_shapes,
     auto fs = fopen(filename.c_str(), "rt");
     if (!fs) throw std::runtime_error("cannot open filename " + filename);
 
+    // add object if needed
+    auto add_object = [&](obj_scene* obj, std::string name, std::string matname,
+                          std::string groupname, bool smoothing) {
+        if (obj->objects.empty() || !obj->objects.back()->elems.empty())
+            obj->objects.push_back(new obj_object());
+        auto oobj = obj->objects.back();
+        oobj->name = name;
+        if (oobj->materials.empty()) oobj->materials.push_back("");
+        if (oobj->groups.empty()) oobj->groups.push_back("");
+        if (oobj->smoothing.empty()) oobj->smoothing.push_back(true);
+        oobj->materials.back() = matname;
+        oobj->groups.back() = groupname;
+        oobj->smoothing.back() = smoothing;
+        return oobj;
+    };
+
     // current parsing values
-    auto oobj = (obj_object*)nullptr;
     auto matname = std::string();
     auto oname = std::string();
-    auto faceted = false;
-    auto elems = std::vector<obj_vertex>();
+    auto gname = std::string();
+    auto smoothing = true;
+    auto oobj = add_object(obj, oname, matname, gname, smoothing);
 
-    // initializing obj
-    obj->objects.push_back(new obj_object());
-    oobj = obj->objects.back();
-    oobj->groups.push_back({"", "", false});
+    // properties
+    auto oprops = std::unordered_map<std::string,
+        std::unordered_map<std::string, std::vector<float>>>();
 
     // keep track of array lengths
-    auto vert_size = obj_vertex{0, 0, 0, 0, 0};
+    auto vert_size = std::array<int, 5>{{0, 0, 0, 0, 0}};
 
     // elem type map
     static auto elem_type_map =
@@ -448,97 +457,106 @@ obj_scene* load_obj(const std::string& filename, bool split_shapes,
 
         // possible token values
         if (obj_streq(cmd, "v")) {
-            vert_size.pos += 1;
+            vert_size[0] += 1;
             obj->pos.push_back(zero3f);
             obj_parse(ss, obj->pos.back());
         } else if (obj_streq(cmd, "vn")) {
-            vert_size.norm += 1;
+            vert_size[2] += 1;
             obj->norm.push_back(zero3f);
             obj_parse(ss, obj->norm.back());
         } else if (obj_streq(cmd, "vt")) {
-            vert_size.texcoord += 1;
+            vert_size[1] += 1;
             obj->texcoord.push_back(zero2f);
             obj_parse(ss, obj->texcoord.back());
             if (flip_texcoord)
                 obj->texcoord.back().y = 1 - obj->texcoord.back().y;
         } else if (obj_streq(cmd, "vc")) {
-            vert_size.color += 1;
+            vert_size[3] += 1;
             obj->color.push_back(vec4f{0, 0, 0, 1});
             obj_parse(ss, obj->color.back());
         } else if (obj_streq(cmd, "vr")) {
-            vert_size.radius += 1;
+            vert_size[4] += 1;
             obj->radius.push_back(0);
             obj_parse(ss, obj->radius.back());
         } else if (obj_streq(cmd, "f") || obj_streq(cmd, "l") ||
                    obj_streq(cmd, "p") || obj_streq(cmd, "b")) {
             auto elem = obj_element();
             elem.type = elem_type_map.at(cmd);
-            elem.start = (uint32_t)oobj->verts.size();
+            elem.start = (uint32_t)oobj->verts_pos.size();
             elem.size = 0;
-            elem.groupid = (int)oobj->groups.size() - 1;
+            elem.material = (int)oobj->materials.size() - 1;
+            elem.group = (int)oobj->groups.size() - 1;
+            elem.smoothing = (int)oobj->smoothing.size() - 1;
             oobj->elems.push_back(elem);
             obj_skipws(ss);
             while (*ss) {
-                auto vert = obj_vertex();
+                auto vert = std::array<int, 5>{{-1, -1, -1, -1, -1}};
                 obj_parse(ss, vert, vert_size);
                 obj_skipws(ss);
-                oobj->verts.push_back(vert);
+                oobj->verts_pos.push_back(vert[0]);
+                oobj->verts_norm.push_back(vert[2]);
+                oobj->verts_texcoord.push_back(vert[1]);
+                oobj->verts_color.push_back(vert[3]);
+                oobj->verts_radius.push_back(vert[4]);
                 oobj->elems.back().size += 1;
             }
         } else if (obj_streq(cmd, "o")) {
-            auto name = std::string();
-            obj_parse(ss, name);
-            obj->objects.push_back(new obj_object());
-            oobj = obj->objects.back();
-            oobj->name = name;
-            oobj->groups.push_back({"", "", false});
+            obj_parse(ss, oname);
+            gname = "";
             matname = "";
-            oname = name;
+            smoothing = true;
+            oobj = add_object(obj, oname, matname, gname, smoothing);
         } else if (obj_streq(cmd, "usemtl")) {
             obj_parse(ss, matname);
             if (split_material) {
-                obj->objects.push_back(new obj_object());
-                oobj = obj->objects.back();
-                oobj->name = oname;
-                oobj->groups.push_back({"", matname, faceted});
+                oobj = add_object(obj, oname, matname, gname, smoothing);
             } else {
-                oobj->groups.push_back({oobj->groups.back().name, matname,
-                    oobj->groups.back().faceted});
+                if (oobj->elems.empty()) {
+                    oobj->materials.back() = matname;
+                } else {
+                    oobj->materials.push_back(matname);
+                }
             }
         } else if (obj_streq(cmd, "g")) {
-            auto name = std::string();
-            obj_parse(ss, name);
+            obj_parse(ss, gname);
             if (split_group) {
-                obj->objects.push_back(new obj_object());
-                oobj = obj->objects.back();
-                oobj->name = oname + name;
-                oobj->groups.push_back({name, matname, faceted});
+                oobj = add_object(obj, oname, matname, gname, smoothing);
             } else {
-                oobj->groups.push_back({name, oobj->groups.back().matname,
-                    oobj->groups.back().faceted});
+                if (oobj->elems.empty()) {
+                    oobj->groups.back() = gname;
+                } else {
+                    oobj->groups.push_back(gname);
+                }
             }
         } else if (obj_streq(cmd, "s")) {
             auto name = std::string();
             obj_parse(ss, name);
-            faceted = (name != "on");
+            smoothing = (name == "on");
             if (split_smoothing) {
-                obj->objects.push_back(new obj_object());
-                oobj = obj->objects.back();
-                oobj->name = oname;
-                oobj->groups.push_back({"", matname, faceted});
+                oobj = add_object(obj, oname, matname, gname, smoothing);
             } else {
-                oobj->groups.push_back({oobj->groups.back().name,
-                    oobj->groups.back().matname, faceted});
+                if (oobj->elems.empty()) {
+                    oobj->smoothing.back() = smoothing;
+                } else {
+                    oobj->smoothing.push_back(smoothing);
+                }
             }
+        } else if (obj_streq(cmd, "of")) {
+            obj_parse(ss, oobj->frame);
+        } else if (obj_streq(cmd, "os")) {
+            obj_parse(ss, oobj->subdiv);
         } else if (obj_streq(cmd, "op")) {
-            auto name = std::string();
-            obj_parse(ss, name);
+            auto rname = std::string(), pname = std::string();
+            obj_parse(ss, rname);
             obj_skipws(ss);
+            obj_parse(ss, pname);
+            obj_skipws(ss);
+            auto& pvalues = oprops[rname][pname];
             while (*ss) {
                 auto tok = std::string();
                 obj_parse(ss, tok);
                 obj_skipws(ss);
-                oobj->props[name].push_back(tok);
+                pvalues.push_back((float)std::atof(tok.c_str()));
             }
         } else if (obj_streq(cmd, "mtllib")) {
             auto mtlname = std::string();
@@ -587,37 +605,31 @@ obj_scene* load_obj(const std::string& filename, bool split_shapes,
     }
 
     // cleanup empty
+    auto clear_vert_if_unused = [](std::vector<int>& vert) {
+        if (vert.empty()) return;
+        auto used = false;
+        for (auto v : vert)
+            if (v >= 0) used = true;
+        if (!used) vert.clear();
+    };
     for (auto idx = 0; idx < obj->objects.size(); idx++) {
-        if (!obj->objects[idx]->elems.empty()) continue;
-        if (!obj->objects[idx]->verts.empty()) continue;
-        delete obj->objects[idx];
+        auto oobj = obj->objects[idx];
+        clear_vert_if_unused(oobj->verts_pos);
+        clear_vert_if_unused(oobj->verts_norm);
+        clear_vert_if_unused(oobj->verts_texcoord);
+        clear_vert_if_unused(oobj->verts_color);
+        clear_vert_if_unused(oobj->verts_radius);
+        if (!oobj->elems.empty() || !oobj->verts_pos.empty()) continue;
+        delete oobj;
         obj->objects.erase(obj->objects.begin() + idx);
         idx--;
     }
-
-    // cleanup unused
-    for (auto oobj : obj->objects) {
-        if (oobj->groups.empty()) continue;
-        auto used = std::vector<bool>(oobj->groups.size());
-        for (auto& elem : oobj->elems) used[elem.groupid] = true;
-        auto emap = std::vector<uint16_t>(oobj->groups.size());
-        auto valid = 0;
-        for (auto idx = 0; idx < oobj->groups.size(); idx++) {
-            emap[idx] = valid;
-            if (used[idx]) valid++;
-        }
-        for (auto& elem : oobj->elems) elem.groupid = emap[elem.groupid];
-        for (auto idx = 0; idx < used.size(); idx++) {
-            if (used[idx]) continue;
-            used.erase(used.begin() + idx);
-            oobj->groups.erase(oobj->groups.begin() + idx);
-            idx--;
-        }
-    }
-
     auto end = std::remove_if(obj->objects.begin(), obj->objects.end(),
         [](const obj_object* x) { return !x; });
     obj->objects.erase(end, obj->objects.end());
+
+    // apply properties
+    for (auto oobj : obj->objects) oobj->props = oprops[oobj->name];
 
     // close file
     fclose(fs);
@@ -651,15 +663,14 @@ inline void obj_dump(char*& s, const vec4f& val) { obj_dump(s, &val.x, 4); }
 inline void obj_dump(char*& s, const frame3f& val) {
     obj_dump(s, &val.x.x, 12);
 }
-inline void obj_dump(char*& s, const obj_vertex& val) {
-    auto vert_ptr = &val.pos;
+inline void obj_dump(char*& s, const std::array<int, 5>& val) {
     auto nto_write = 0;
     for (auto i = 0; i < 5; i++) {
-        if (vert_ptr[i] >= 0) nto_write = i + 1;
+        if (val[i] >= 0) nto_write = i + 1;
     }
     for (auto i = 0; i < nto_write; i++) {
         if (i) *s++ = '/';
-        if (vert_ptr[i] >= 0) s += sprintf(s, "%d", vert_ptr[i] + 1);
+        if (val[i] >= 0) s += sprintf(s, "%d", val[i] + 1);
     }
 }
 inline void obj_dump(char*& s, const std::vector<std::string>& vals) {
@@ -696,22 +707,6 @@ inline void obj_dump_line(FILE* fs, const char* lbl, const T& val) {
 }
 
 // Dumps a line
-inline void obj_dump_line(
-    FILE* fs, const char* lbl, const obj_vertex* vals, int count) {
-    char buf[4096];
-    buf[0] = 0;
-    auto s = buf;
-    obj_dump(s, lbl);
-    for (auto i = 0; i < count; i++) {
-        *s++ = ' ';
-        obj_dump(s, vals[i]);
-    }
-    *s++ = '\n';
-    *s = 0;
-    fputs(buf, fs);
-}
-
-// Dumps a line
 template <typename T>
 inline void obj_dump_sp(FILE* fs, const T& val) {
     char buf[4096];
@@ -722,6 +717,9 @@ inline void obj_dump_sp(FILE* fs, const T& val) {
     *s = 0;
     fputs(buf, fs);
 }
+
+// Dumps a newline
+inline void obj_dump_nl(FILE* fs) { fputs("\n", fs); }
 
 // Save an MTL file
 void save_mtl(const std::string& filename,
@@ -764,7 +762,7 @@ void save_mtl(const std::string& filename,
         for (auto&& kv : mat->props) {
             obj_dump_line(fs, ("  " + kv.first + ' ').c_str(), kv.second);
         }
-        fputs("\n", fs);
+        obj_dump_nl(fs);
     }
 
     fclose(fs);
@@ -795,7 +793,7 @@ void save_obj(const std::string& filename, const obj_scene* obj,
         obj_dump_sp(fs, cam->aperture);
         obj_dump_sp(fs, cam->focus);
         obj_dump_sp(fs, cam->frame);
-        obj_dump_sp(fs, "\n");
+        obj_dump_nl(fs);
     }
 
     // save envs
@@ -805,7 +803,7 @@ void save_obj(const std::string& filename, const obj_scene* obj,
         obj_dump_sp(fs, env->ke);
         obj_dump_sp(fs, (env->ke_txt.path != "") ? env->ke_txt.path : "\"\"");
         obj_dump_sp(fs, env->frame);
-        obj_dump_sp(fs, "\n");
+        obj_dump_nl(fs);
     }
 
     // save nodes
@@ -820,7 +818,17 @@ void save_obj(const std::string& filename, const obj_scene* obj,
         obj_dump_sp(fs, nde->translation);
         obj_dump_sp(fs, nde->rotation);
         obj_dump_sp(fs, nde->scale);
-        obj_dump_sp(fs, "\n");
+        obj_dump_nl(fs);
+    }
+
+    // save object properties
+    for (auto oobj : obj->objects) {
+        for (auto& kv : oobj->props) {
+            obj_dump_sp(fs, "op");
+            obj_dump_sp(fs, kv.first);
+            for (auto v : kv.second) obj_dump_sp(fs, v);
+            obj_dump_nl(fs);
+        }
     }
 
     // save all vertex data
@@ -841,31 +849,45 @@ void save_obj(const std::string& filename, const obj_scene* obj,
         {obj_element_type::face, "f"}, {obj_element_type::bezier, "b"}};
     for (auto oobj : obj->objects) {
         obj_dump_line(fs, "o", oobj->name);
-        for (auto& kv : oobj->props) {
-            auto nv = kv.second;
-            nv.insert(nv.begin(), kv.first);
-            obj_dump_line(fs, "op", nv);
-        }
-        if (!oobj->groups.empty()) {
-            auto& ogrp = oobj->groups[0];
-            if (ogrp.name != "") obj_dump_line(fs, "g", ogrp.name);
-            if (ogrp.matname != "") obj_dump_line(fs, "usemtl", ogrp.matname);
-            if (ogrp.faceted) obj_dump_line(fs, "s", "off");
-        }
-        auto last_groupid = 0;
+        if (oobj->frame != identity_frame3f)
+            obj_dump_line(fs, "of", oobj->frame);
+        if (oobj->subdiv) obj_dump_line(fs, "os", oobj->subdiv);
+        auto last_groupid = -1, last_materialid = -1, last_smoothingid = -1;
         for (auto& elem : oobj->elems) {
-            if (last_groupid != elem.groupid) {
-                auto& lgrp = oobj->groups[last_groupid];
-                auto& ogrp = oobj->groups[elem.groupid];
-                if (ogrp.name != lgrp.name) obj_dump_line(fs, "g", ogrp.name);
-                if (ogrp.matname != "" && ogrp.matname != lgrp.matname)
-                    obj_dump_line(fs, "usemtl", ogrp.matname);
-                if (ogrp.faceted != lgrp.faceted)
-                    obj_dump_line(fs, "s", ogrp.faceted ? "off" : "on");
-                last_groupid = elem.groupid;
+            if (last_materialid != elem.material && !oobj->materials.empty()) {
+                auto matname = oobj->materials[elem.material];
+                if (matname != "") obj_dump_line(fs, "usemtl", matname);
+                last_materialid = elem.material;
             }
-            obj_dump_line(fs, elem_labels.at(elem.type).c_str(),
-                oobj->verts.data() + elem.start, elem.size);
+            if (last_groupid != elem.group && !oobj->groups.empty()) {
+                auto groupname = oobj->groups[elem.group];
+                if (groupname != "" || elem.group > 0)
+                    obj_dump_line(fs, "g", groupname);
+                last_groupid = elem.group;
+            }
+            if (last_smoothingid != elem.smoothing &&
+                !oobj->smoothing.empty()) {
+                auto smoothing = oobj->smoothing[elem.smoothing];
+                if (!smoothing || elem.smoothing > 0)
+                    obj_dump_line(fs, "s", smoothing ? "on" : "off");
+                last_smoothingid = elem.smoothing;
+            }
+            obj_dump_sp(fs, elem_labels.at(elem.type).c_str());
+            for (auto vid = elem.start; vid < elem.start + elem.size; vid++) {
+                auto vert = std::array<int, 5>{{-1, -1, -1, -1, -1}};
+                vert[0] = (oobj->verts_pos.empty()) ? -1 : oobj->verts_pos[vid];
+                vert[1] = (oobj->verts_texcoord.empty()) ?
+                              -1 :
+                              oobj->verts_texcoord[vid];
+                vert[2] =
+                    (oobj->verts_norm.empty()) ? -1 : oobj->verts_norm[vid];
+                vert[3] =
+                    (oobj->verts_color.empty()) ? -1 : oobj->verts_color[vid];
+                vert[4] =
+                    (oobj->verts_radius.empty()) ? -1 : oobj->verts_radius[vid];
+                obj_dump_sp(fs, vert);
+            }
+            obj_dump_nl(fs);
         }
     }
 

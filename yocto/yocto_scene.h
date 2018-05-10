@@ -186,22 +186,12 @@ struct shape {
     ~shape();
 };
 
-// Shape instance.
-struct instance {
-    std::string name;                  // name
-    frame3f frame = identity_frame3f;  // transform frame
-    shape* shp = nullptr;              // shape
-    material* mat = nullptr;           // material
-
-    // compute properties
-    bbox3f bbox = invalid_bbox3f;  // boudning box
-};
-
 // Subdivision surface.
 struct subdiv {
     std::string name = "";       // name
     int level = 0;               // subdivision level
-    bool catmull_clark = false;  // catmull clark subdiv
+    bool catmull_clark = true;   // catmull clark subdiv
+    bool faceted = false;        // faceted subdivision
 
     // primitives
     std::vector<vec4i> quads_pos;       // quads for position
@@ -214,6 +204,18 @@ struct subdiv {
     std::vector<vec3f> norm;      // normals
     std::vector<vec2f> texcoord;  // texcoord coordinates
     std::vector<vec4f> color;     // colors
+};
+
+// Shape instance.
+struct instance {
+    std::string name;                  // name
+    frame3f frame = identity_frame3f;  // transform frame
+    shape* shp = nullptr;              // shape
+    material* mat = nullptr;           // material
+    subdiv* sbd = nullptr;             // subdivision shape
+
+    // compute properties
+    bbox3f bbox = invalid_bbox3f;  // boudning box
 };
 
 // Envinonment map.
@@ -302,7 +304,8 @@ scene* load_scene(const std::string& filename, bool load_textures = true,
     bool split_obj_shapes = true, bool skip_missing = true);
 void save_scene(const std::string& filename, const scene* scn,
     bool save_textures = true, bool preserve_obj_instances = false,
-    bool gltf_separate_buffers = false, bool skip_missing = true);
+    bool preserve_obj_subdivs = true, bool gltf_separate_buffers = false,
+    bool skip_missing = true);
 
 // Loads/saves scene textures.
 void load_textures(
@@ -352,6 +355,10 @@ void update_bvh(shape* shp, bool equalsize = false);
 void update_bvh(scene* scn, bool do_shapes = true, bool equalsize = false);
 void refit_bvh(shape* shp);
 void refit_bvh(scene* scn, bool do_shapes = true);
+
+// Updates tesselation.
+void update_tesselation(const subdiv* sbd, shape* shp);
+void update_tesselation(scene* scn);
 
 // Add missing names, normals, tangents and hierarchy.
 void add_missing_camera(scene* scn);
@@ -472,7 +479,8 @@ material* make_material(const std::string& name,
     const vec3f& kd = {0.2f, 0.2f, 0.2f}, const vec3f& ks = {0, 0, 0},
     float rs = 1);
 instance* make_instance(const std::string& name, shape* shp = nullptr,
-    material* mat = nullptr, const frame3f& frame = identity_frame3f);
+    material* mat = nullptr, subdiv* sbd = nullptr,
+    const frame3f& frame = identity_frame3f);
 node* make_node(const std::string& name, camera* cam = nullptr,
     instance* ist = nullptr, environment* env = nullptr,
     const frame3f& frame = identity_frame3f);
@@ -522,6 +530,13 @@ shape* make_hairball_shape(const std::string& name, int hair_tesselation = 16,
     const vec2f& noise = {0, 0}, const vec2f& clump = {0, 0},
     const vec2f& radius = {0.001f, 0.001f});
 
+// example subdivs
+subdiv* make_cube_subdiv(
+    const std::string& name, int tesselation = 4, float size = 2);
+subdiv* make_suzanne_subdiv(const std::string& name, int tesselation = 2);
+subdiv* make_fvcube_subdiv(
+    const std::string& name, int tesselation = 4, float size = 2);
+
 // example materials
 material* make_emission_material(const std::string& name, const vec3f& col,
     texture* txt = nullptr, texture* norm = nullptr);
@@ -559,8 +574,8 @@ texture* make_lights_texture(const std::string& name, int resolution = 512,
 scene* make_cornellbox_scene(const std::string& name, bool envlight = false);
 // Make a simple scene with three objects lined up.
 scene* make_simple_scene(const std::string& name,
-    const std::vector<shape*>& shps, const std::vector<material*>& mats,
-    bool envlight = false, const std::vector<animation*>& anms = {});
+    const std::vector<instance*>& objs, bool envlight = false,
+    const std::vector<animation*>& anms = {});
 // Make a simple scene with single object on a floor.
 scene* make_simple_scene(
     const std::string& name, shape* shp, material* mats, bool envlight = false);

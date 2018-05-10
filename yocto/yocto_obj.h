@@ -87,21 +87,6 @@
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Obj face vertex.
-struct obj_vertex {
-    int pos = -1;       // position index
-    int texcoord = -1;  // texcoord index
-    int norm = -1;      // normal index
-    int color = -1;     // color index [extension]
-    int radius = -1;    // radius index [extension]
-};
-
-// Comparison for unordred_map.
-inline bool operator==(const obj_vertex& a, const obj_vertex& b) {
-    return a.pos == b.pos && a.texcoord == b.texcoord && a.norm == b.norm &&
-           a.color == b.color && a.radius == b.radius;
-}
-
 // Obj element type.
 enum struct obj_element_type : uint8_t {
     point = 1,
@@ -112,10 +97,12 @@ enum struct obj_element_type : uint8_t {
 
 // Obj element (point/polyline/polygon)
 struct obj_element {
-    uint32_t start;         // starting vertex index
-    uint8_t size;           // number of vertices
-    obj_element_type type;  // element type
-    uint16_t groupid = 0;   // group id
+    uint32_t start;          // starting vertex index
+    uint8_t size;            // number of vertices
+    obj_element_type type;   // element type
+    uint16_t material = 0;   // material id
+    uint16_t group = 0;      // group id
+    uint16_t smoothing = 0;  // smoothing group id
 };
 
 // Obj group properties.
@@ -127,12 +114,20 @@ struct obj_group_props {
 
 // Obj object.
 struct obj_object {
-    std::string name;                     // name
-    std::vector<obj_group_props> groups;  // groups
-    std::vector<obj_vertex> verts;        // vertices
-    std::vector<obj_element> elems;       // faces
+    std::string name;                    // name
+    std::vector<std::string> materials;  // materials
+    std::vector<std::string> groups;     // groups
+    std::vector<bool> smoothing;         // smoothing groups
+    std::vector<int> verts_pos;          // vertices pos
+    std::vector<int> verts_norm;         // vertices norm
+    std::vector<int> verts_texcoord;     // vertices texcoord
+    std::vector<int> verts_color;        // vertices color [extension]
+    std::vector<int> verts_radius;       // vertices radius [extension]
+    std::vector<obj_element> elems;      // faces
+    frame3f frame = identity_frame3f;    // frame [extension]
+    int subdiv = -1;                     // level of subdivision [extension]
     // Properties not explicitly handled [extension].
-    std::unordered_map<std::string, std::vector<std::string>> props;
+    std::unordered_map<std::string, std::vector<float>> props;
 };
 
 // Obj texture information.
@@ -141,7 +136,7 @@ struct obj_texture_info {
     bool clamp = false;     // clamp to edge
     float scale = 1;        // scale for bump/displacement
     // Properties not explicitly handled.
-    std::unordered_map<std::string, std::vector<std::string>> props;
+    std::unordered_map<std::string, std::vector<float>> props;
 };
 
 // Comparison for texture info.

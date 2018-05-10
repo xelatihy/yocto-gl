@@ -318,6 +318,10 @@ int main(int argc, char* argv[]) {
     }
     ygl::log_info_end();
 
+    // tesselate
+    ygl::log_info("tesselating scene elements");
+    ygl::update_tesselation(app->scn);
+
     // fix scene
     ygl::log_info("adding missing scene elements");
     ygl::update_bbox(app->scn);
