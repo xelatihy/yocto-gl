@@ -587,14 +587,16 @@ scene* load_pbrt(const std::string& filename) {
                                  js.at("remaproughness").get<bool>();
                     if (jcmd.count("uroughness"))
                         mat->rs = jcmd.at("uroughness").get<float>();
-                    if (!remap) mat->rs = sqrt(mat->rs);
+                    // if (!remap) mat->rs = mat->rs * mat->rs;
+                    if (remap) log_error("remap roughness not supported");
                 }
                 if (jcmd.count("roughness")) {
                     auto remap = js.count("remaproughness") &&
                                  js.at("remaproughness").get<bool>();
                     if (jcmd.count("roughness"))
                         mat->rs = jcmd.at("roughness").get<float>();
-                    if (!remap) mat->rs = sqrt(mat->rs);
+                    // if (!remap) mat->rs = mat->rs * mat->rs;
+                    if (remap) log_error("remap roughness not supported");
                 }
                 if (stack.back().light_mat) {
                     mat->ke = stack.back().light_mat->ke;
