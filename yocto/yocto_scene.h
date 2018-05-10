@@ -197,8 +197,24 @@ struct instance {
     bbox3f bbox = invalid_bbox3f;  // boudning box
 };
 
-// Distance at which we set environment map positions.
-const auto environment_distance = 1000000.0f;
+// Subdivision surface.
+struct subdiv {
+    std::string name = "";       // name
+    int level = 0;               // subdivision level
+    bool catmull_clark = false;  // catmull clark subdiv
+
+    // primitives
+    std::vector<vec4i> quads_pos;       // quads for position
+    std::vector<vec4i> quads_norm;      // quads for normal
+    std::vector<vec4i> quads_texcoord;  // quads for texture coordinates
+    std::vector<vec4i> quads_color;     // quads for color
+
+    // vertex data
+    std::vector<vec3f> pos;       // positions
+    std::vector<vec3f> norm;      // normals
+    std::vector<vec2f> texcoord;  // texcoord coordinates
+    std::vector<vec4f> color;     // colors
+};
 
 // Envinonment map.
 struct environment {
@@ -256,6 +272,7 @@ struct scene {
     std::string name;                             // name
     std::vector<camera*> cameras = {};            // cameras
     std::vector<shape*> shapes = {};              // shapes
+    std::vector<subdiv*> subdivs = {};            // subdivs
     std::vector<instance*> instances = {};        // instances
     std::vector<material*> materials = {};        // materials
     std::vector<texture*> textures = {};          // textures
