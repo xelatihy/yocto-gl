@@ -11,6 +11,7 @@ Please consider this to be just development notes and not any real planning.
 
 ## Trace
 
+- put back double sided
 - refraction
     - rough surface refraction
 - redirect log to imgui

@@ -308,6 +308,10 @@ int main(int argc, char* argv[]) {
         ygl::log_fatal("cannot load scene {}", app->filename);
     }
 
+    // tesselate
+    ygl::log_info("tesselating scene elements");
+    ygl::update_tesselation(app->scn);
+
     // fix scene
     ygl::update_bbox(app->scn);
     ygl::add_missing_camera(app->scn);

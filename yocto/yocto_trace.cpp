@@ -311,9 +311,9 @@ vec3f sample_light(
 }
 
 // Sample pdf for a light point.
-float sample_light_pdf(const instance* ist, const vec3f& p, 
-    const vec3f& i, const vec3f& lp, const vec3f& ln) {
-    if(ist->mat->ke == zero3f) return 0;
+float sample_light_pdf(const instance* ist, const vec3f& p, const vec3f& i,
+    const vec3f& lp, const vec3f& ln) {
+    if (ist->mat->ke == zero3f) return 0;
     // prob triangle * area triangle = area triangle mesh
     auto area = ist->shp->elem_cdf.back();
     return dot(lp - p, lp - p) / (fabs(dot(ln, i)) * area);
@@ -401,8 +401,7 @@ vec3f trace_path(
             if (isec.ist) {
                 auto lp = eval_pos(isec.ist, isec.ei, isec.uv);
                 auto ln = eval_shading_norm(isec.ist, isec.ei, isec.uv, -i);
-                pdf += 0.5f *
-                       sample_light_pdf(isec.ist, p, i, lp, ln) *
+                pdf += 0.5f * sample_light_pdf(isec.ist, p, i, lp, ln) *
                        sample_index_pdf(nlights);
                 le += eval_emission(isec.ist, isec.ei, isec.uv);
             } else {
@@ -552,9 +551,8 @@ vec3f trace_path_nomis(
             if (isec.ist && isec.ist->mat->ke != zero3f) {
                 auto lp = eval_pos(isec.ist, isec.ei, isec.uv);
                 auto ln = eval_shading_norm(isec.ist, isec.ei, isec.uv, -i);
-                auto pdf =
-                    sample_light_pdf(isec.ist, p, i, lp, ln) *
-                    sample_index_pdf(scn->lights.size());
+                auto pdf = sample_light_pdf(isec.ist, p, i, lp, ln) *
+                           sample_index_pdf(scn->lights.size());
                 auto le = eval_emission(isec.ist, isec.ei, isec.uv);
                 auto brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
                 if (pdf != 0) l += weight * le * brdfcos / pdf;
@@ -777,8 +775,8 @@ vec3f trace_eyelight(
     }
     auto op = eval_opacity(isec.ist, isec.ei, isec.uv);
     if (op != 1) {
-        l = op * l + (1 - op) * trace_eyelight(
-                                    scn, make_ray(p, -o), rng, nbounces - 1);
+        l = op * l +
+            (1 - op) * trace_eyelight(scn, make_ray(p, -o), rng, nbounces - 1);
     }
 
     // done

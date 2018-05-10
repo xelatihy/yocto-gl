@@ -254,25 +254,29 @@ std::vector<vec2i> convert_bezier_to_lines(const std::vector<vec4i>& beziers) {
 // Convert face varying data to single primitives. Returns the quads indices
 // and filled vectors for pos, norm and texcoord.
 void convert_face_varying(std::vector<vec4i>& qquads, std::vector<vec3f>& qpos,
-    std::vector<vec3f>& qnorm, std::vector<vec2f>& qtexcoord,
+    std::vector<vec3f>& qnorm, std::vector<vec2f>& qtexcoord, std::vector<vec4f>& qcolor,
     const std::vector<vec4i>& quads_pos, const std::vector<vec4i>& quads_norm,
-    const std::vector<vec4i>& quads_texcoord, const std::vector<vec3f>& pos,
-    const std::vector<vec3f>& norm, const std::vector<vec2f>& texcoord) {
+    const std::vector<vec4i>& quads_texcoord, const std::vector<vec4i>& quads_color, const std::vector<vec3f>& pos,
+    const std::vector<vec3f>& norm, const std::vector<vec2f>& texcoord, const std::vector<vec4f>& color) {
     // make faces unique
-    std::unordered_map<vec3i, int> vert_map;
+    std::unordered_map<vec4i, int> vert_map;
     qquads = std::vector<vec4i>(quads_pos.size());
     for (auto fid = 0; fid < quads_pos.size(); fid++) {
         for (auto c = 0; c < 4; c++) {
-            auto v = vec3i{
+            auto v = vec4i{
                 (&quads_pos[fid].x)[c],
                 (!quads_norm.empty()) ? (&quads_norm[fid].x)[c] : -1,
                 (!quads_texcoord.empty()) ? (&quads_texcoord[fid].x)[c] : -1,
+                (!quads_color.empty()) ? (&quads_color[fid].x)[c] : -1,
             };
-            if (vert_map.find(v) == vert_map.end()) {
+            auto it = vert_map.find(v);
+            if (it == vert_map.end()) {
                 auto s = (int)vert_map.size();
-                vert_map[v] = s;
+                vert_map.insert(it, {v, s});
+                (&qquads[fid].x)[c] = s;
+            } else {
+               (&qquads[fid].x)[c] = it->second;
             }
-            (&qquads[fid].x)[c] = vert_map.at(v);
         }
     }
 

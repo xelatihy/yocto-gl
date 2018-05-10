@@ -137,10 +137,10 @@ std::vector<vec2i> convert_bezier_to_lines(const std::vector<vec4i>& beziers);
 // Convert face-varying data to single primitives. Returns the quads indices
 // and face ids and filled vectors for pos, norm and texcoord.
 void convert_face_varying(std::vector<vec4i>& qquads, std::vector<vec3f>& qpos,
-    std::vector<vec3f>& qnorm, std::vector<vec2f>& qtexcoord,
+    std::vector<vec3f>& qnorm, std::vector<vec2f>& qtexcoord, std::vector<vec4f>& qcolor,
     const std::vector<vec4i>& quads_pos, const std::vector<vec4i>& quads_norm,
-    const std::vector<vec4i>& quads_texcoord, const std::vector<vec3f>& pos,
-    const std::vector<vec3f>& norm, const std::vector<vec2f>& texcoord);
+    const std::vector<vec4i>& quads_texcoord, const std::vector<vec4i>& quads_color, const std::vector<vec3f>& pos,
+    const std::vector<vec3f>& norm, const std::vector<vec2f>& texcoord, const std::vector<vec4f>& color);
 
 // Subdivide lines by splitting each line in half.
 template <typename T>

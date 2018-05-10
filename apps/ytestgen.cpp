@@ -125,19 +125,20 @@ std::vector<ygl::scene*> make_proc_scenes(const std::string& name) {
     // basic shapes
     if (name == "basic") {
         for (auto env : {0, 1}) {
-            scenes.push_back(
-                ygl::make_simple_scene("basic"s + ((env) ? "-el" : "-al"),
-                    {
+            scenes.push_back(ygl::make_simple_scene(
+                "basic"s + ((env) ? "-el" : "-al"),
+                {
+                    ygl::make_instance("obj1",
                         ygl::make_sphereflipcap_shape("obj1"),
+                        ygl::make_plastic_material("obj1", {0.7f, 0.5f, 0.5f})),
+                    ygl::make_instance("obj2",
                         ygl::make_spherecube_shape("obj2"),
+                        ygl::make_plastic_material("obj2", {0.5f, 0.7f, 0.5f})),
+                    ygl::make_instance("obj3",
                         ygl::make_cuberounded_shape("obj3"),
-                    },
-                    {
-                        ygl::make_plastic_material("obj1", {0.7f, 0.5f, 0.5f}),
-                        ygl::make_plastic_material("obj2", {0.5f, 0.7f, 0.5f}),
-                        ygl::make_plastic_material("obj3", {0.5f, 0.5f, 0.7f}),
-                    },
-                    env));
+                        ygl::make_plastic_material("obj3", {0.5f, 0.5f, 0.7f})),
+                },
+                env));
         }
     }
 
@@ -147,17 +148,18 @@ std::vector<ygl::scene*> make_proc_scenes(const std::string& name) {
             scenes.push_back(
                 ygl::make_simple_scene("simple"s + ((env) ? "-el" : "-al"),
                     {
-                        ygl::make_sphereflipcap_shape("obj1"),
-                        ygl::make_spherecube_shape("obj2"),
-                        ygl::make_cuberounded_shape("obj3"),
-                    },
-                    {
-                        ygl::make_plastic_material("obj1", {1, 1, 1}, 0.1f,
-                            ygl::make_uvgrid_texture("uvgrid")),
-                        ygl::make_plastic_material("obj2", {1, 1, 1}, 0.1f,
-                            ygl::make_uvgrid_texture("uvgrid")),
-                        ygl::make_plastic_material("obj3", {1, 1, 1}, 0.1f,
-                            ygl::make_uvgrid_texture("uvgrid")),
+                        ygl::make_instance("obj1",
+                            ygl::make_sphereflipcap_shape("obj1"),
+                            ygl::make_plastic_material("obj1", {1, 1, 1}, 0.1f,
+                                ygl::make_uvgrid_texture("uvgrid"))),
+                        ygl::make_instance("obj2",
+                            ygl::make_spherecube_shape("obj2"),
+                            ygl::make_plastic_material("obj2", {1, 1, 1}, 0.1f,
+                                ygl::make_uvgrid_texture("uvgrid"))),
+                        ygl::make_instance("obj3",
+                            ygl::make_cuberounded_shape("obj3"),
+                            ygl::make_plastic_material("obj3", {1, 1, 1}, 0.1f,
+                                ygl::make_uvgrid_texture("uvgrid"))),
                     },
                     env));
         }
@@ -166,48 +168,54 @@ std::vector<ygl::scene*> make_proc_scenes(const std::string& name) {
     // simple materials
     if (name == "simplemat") {
         for (auto env : {0, 1}) {
-            scenes.push_back(
-                ygl::make_simple_scene("simplemat"s + ((env) ? "-el" : "-al"),
-                    {
+            scenes.push_back(ygl::make_simple_scene(
+                "simplemat"s + ((env) ? "-el" : "-al"),
+                {
+                    ygl::make_instance("obj1",
                         ygl::make_spherecube_shape("obj1"),
+                        ygl::make_matte_material("obj1", {0.7f, 0.7f, 0.7f})),
+                    ygl::make_instance("obj2",
                         ygl::make_spherecube_shape("obj2"),
+                        ygl::make_metal_material(
+                            "obj2", {0.7f, 0.7f, 0.7f}, 0)),
+                    ygl::make_instance("obj3",
                         ygl::make_spherecube_shape("obj3"),
-                    },
-                    {
-                        ygl::make_matte_material("obj1", {0.7f, 0.7f, 0.7f}),
-                        ygl::make_metal_material("obj2", {0.7f, 0.7f, 0.7f}, 0),
                         ygl::make_plastic_material(
-                            "obj3", {0.5f, 0.5f, 0.7f}, 0.01f),
-                    },
-                    env));
+                            "obj3", {0.5f, 0.5f, 0.7f}, 0.01f)),
+                },
+                env));
         }
     }
 
     // lines
     if (name == "lines") {
         for (auto env : {0, 1}) {
-            scenes.push_back(
-                ygl::make_simple_scene("lines"s + ((env) ? "-el" : "-al"),
-                    {
+            scenes.push_back(ygl::make_simple_scene(
+                "lines"s + ((env) ? "-el" : "-al"),
+                {
+                    ygl::make_instance("obj1",
                         ygl::make_hairball_shape("obj1", 16, 2, 2,
                             {0.15f, 0.2f}, {0.05f, 100}, {0, 0}),
+                        ygl::make_matte_material("obj2", {0.7f, 0.7f, 0.7f})),
+                    ygl::make_instance("obj1",
                         ygl::make_hairball_shape(
                             "obj2", 16, 2, 2, {0.15f, 0.2f}, {0.5f, 8}, {0, 0}),
+                        ygl::make_matte_material("obj3", {0.7f, 0.7f, 0.7f})),
+                    ygl::make_instance("obj1",
                         ygl::make_hairball_shape("obj3", 16, 2, 2,
                             {0.15f, 0.2f}, {0, 0}, {0.5f, 128}),
+                        ygl::make_matte_material("obj3", {0.7f, 0.7f, 0.7f})),
+                    ygl::make_instance("int1",
                         ygl::make_sphere_shape("int1", 4, 1.6f),
+                        ygl::make_matte_material("int1", {0.7f, 0.7f, 0.7f})),
+                    ygl::make_instance("int2",
                         ygl::make_sphere_shape("int2", 4, 1.6f),
+                        ygl::make_matte_material("int2", {0.7f, 0.7f, 0.7f})),
+                    ygl::make_instance("int3",
                         ygl::make_sphere_shape("int3", 4, 1.6f),
-                    },
-                    {
-                        ygl::make_matte_material("obj1", {0.7f, 0.7f, 0.7f}),
-                        ygl::make_matte_material("obj2", {0.7f, 0.7f, 0.7f}),
-                        ygl::make_matte_material("obj3", {0.7f, 0.7f, 0.7f}),
-                        ygl::make_matte_material("int1", {0.7f, 0.7f, 0.7f}),
-                        ygl::make_matte_material("int2", {0.7f, 0.7f, 0.7f}),
-                        ygl::make_matte_material("int3", {0.7f, 0.7f, 0.7f}),
-                    },
-                    env));
+                        ygl::make_matte_material("int3", {0.7f, 0.7f, 0.7f})),
+                },
+                env));
         }
     }
 
@@ -217,17 +225,40 @@ std::vector<ygl::scene*> make_proc_scenes(const std::string& name) {
             scenes.push_back(
                 ygl::make_simple_scene("subdivs"s + ((env) ? "-el" : "-al"),
                     {
-                        ygl::make_cube_subdiv_shape("obj1"),
-                        ygl::make_suzanne_subdiv_shape("obj2"),
-                        ygl::make_fvcube_subdiv_shape("obj3"),
+                        ygl::make_instance("obj1",
+                            ygl::make_cube_subdiv_shape("obj1"),
+                            ygl::make_plastic_material("obj1", {1, 1, 1}, 0.1f,
+                                ygl::make_uvgrid_texture("uvgrid")),
+                            ygl::make_cube_subdiv("obj1")),
+                        ygl::make_instance("obj1",
+                            ygl::make_suzanne_subdiv_shape("obj2"),
+                            ygl::make_plastic_material("obj2", {1, 1, 1}, 0.1f,
+                                ygl::make_uvgrid_texture("uvgrid")),
+                            ygl::make_suzanne_subdiv("obj2")),
+                        ygl::make_instance("obj1",
+                            ygl::make_fvcube_subdiv_shape("obj3"),
+                            ygl::make_plastic_material("obj3", {1, 1, 1}, 0.1f,
+                                ygl::make_uvgrid_texture("uvgrid")),
+                            ygl::make_fvcube_subdiv("obj3")),
                     },
+                    env));
+        }
+        for (auto env : {0, 1}) {
+            scenes.push_back(
+                ygl::make_simple_scene("tsubdivs"s + ((env) ? "-el" : "-al"),
                     {
-                        ygl::make_plastic_material("obj1", {1, 1, 1}, 0.1f,
-                            ygl::make_uvgrid_texture("uvgrid")),
-                        ygl::make_plastic_material("obj2", {1, 1, 1}, 0.1f,
-                            ygl::make_uvgrid_texture("uvgrid")),
-                        ygl::make_plastic_material("obj3", {1, 1, 1}, 0.1f,
-                            ygl::make_uvgrid_texture("uvgrid")),
+                        ygl::make_instance("obj1",
+                            ygl::make_cube_subdiv_shape("obj1"),
+                            ygl::make_plastic_material("obj1", {1, 1, 1}, 0.1f,
+                                ygl::make_uvgrid_texture("uvgrid"))),
+                        ygl::make_instance("obj2",
+                            ygl::make_suzanne_subdiv_shape("obj2"),
+                            ygl::make_plastic_material("obj2", {1, 1, 1}, 0.1f,
+                                ygl::make_uvgrid_texture("uvgrid"))),
+                        ygl::make_instance("obj3",
+                            ygl::make_fvcube_subdiv_shape("obj3"),
+                            ygl::make_plastic_material("obj3", {1, 1, 1}, 0.1f,
+                                ygl::make_uvgrid_texture("uvgrid"))),
                     },
                     env));
         }
@@ -298,11 +329,14 @@ std::vector<ygl::scene*> make_proc_scenes(const std::string& name) {
                 scenes.push_back(
                     ygl::make_simple_scene(name + ((env) ? "-el" : "-al"),
                         {
-                            ygl::make_sphere_shape("obj1"),
-                            ygl::make_sphere_shape("obj2"),
-                            ygl::make_sphere_shape("obj3"),
+                            ygl::make_instance("obj1",
+                                ygl::make_sphere_shape("obj1"), mats[0]),
+                            ygl::make_instance("obj2",
+                                ygl::make_sphere_shape("obj2"), mats[1]),
+                            ygl::make_instance("obj3",
+                                ygl::make_sphere_shape("obj3"), mats[2]),
                         },
-                        {mats[0], mats[1], mats[2]}, env));
+                        env));
             }
         }
     }
@@ -332,14 +366,13 @@ std::vector<ygl::scene*> make_proc_scenes(const std::string& name) {
     if (name == "animated") {
         scenes.push_back(ygl::make_simple_scene("animated-al",
             {
-                ygl::make_sphereflipcap_shape("obj1"),
-                ygl::make_spherecube_shape("obj2"),
-                ygl::make_cuberounded_shape("obj3"),
-            },
-            {
-                ygl::make_plastic_material("obj1", {0.5f, 0.2f, 0.2f}),
-                ygl::make_plastic_material("obj2", {0.2f, 0.5f, 0.2f}),
-                ygl::make_plastic_material("obj3", {0.2f, 0.2f, 0.5f}),
+                ygl::make_instance("obj1",
+                    ygl::make_sphereflipcap_shape("obj1"),
+                    ygl::make_plastic_material("obj1", {0.5f, 0.2f, 0.2f})),
+                ygl::make_instance("obj2", ygl::make_spherecube_shape("obj2"),
+                    ygl::make_plastic_material("obj2", {0.2f, 0.5f, 0.2f})),
+                ygl::make_instance("obj3", ygl::make_cuberounded_shape("obj3"),
+                    ygl::make_plastic_material("obj3", {0.2f, 0.2f, 0.5f})),
             },
             false,
             {
