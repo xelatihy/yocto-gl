@@ -137,48 +137,32 @@ std::vector<vec2i> convert_bezier_to_lines(const std::vector<vec4i>& beziers);
 // Convert face-varying data to single primitives. Returns the quads indices
 // and face ids and filled vectors for pos, norm and texcoord.
 void convert_face_varying(std::vector<vec4i>& qquads, std::vector<vec3f>& qpos,
-    std::vector<vec3f>& qnorm, std::vector<vec2f>& qtexcoord, std::vector<vec4f>& qcolor,
-    const std::vector<vec4i>& quads_pos, const std::vector<vec4i>& quads_norm,
-    const std::vector<vec4i>& quads_texcoord, const std::vector<vec4i>& quads_color, const std::vector<vec3f>& pos,
-    const std::vector<vec3f>& norm, const std::vector<vec2f>& texcoord, const std::vector<vec4f>& color);
+    std::vector<vec3f>& qnorm, std::vector<vec2f>& qtexcoord,
+    std::vector<vec4f>& qcolor, const std::vector<vec4i>& quads_pos,
+    const std::vector<vec4i>& quads_norm,
+    const std::vector<vec4i>& quads_texcoord,
+    const std::vector<vec4i>& quads_color, const std::vector<vec3f>& pos,
+    const std::vector<vec3f>& norm, const std::vector<vec2f>& texcoord,
+    const std::vector<vec4f>& color);
 
 // Subdivide lines by splitting each line in half.
 template <typename T>
-void subdivide_lines(
-    std::vector<vec2i>& lines, std::vector<T>& vert, bool update_lines = true);
-void subdivide_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
-    std::vector<vec3f>& tang, std::vector<vec2f>& texcoord,
-    std::vector<vec4f>& color, std::vector<float>& radius);
+void subdivide_lines(std::vector<vec2i>& lines, std::vector<T>& vert);
 // Subdivide triangle by splitting each triangle in four, creating new
 // vertices for each edge.
 template <typename T>
-void subdivide_triangles(std::vector<vec3i>& triangles, std::vector<T>& vert,
-    bool update_triangles = true);
-void subdivide_triangles(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<vec4f>& color, std::vector<float>& radius);
+void subdivide_triangles(std::vector<vec3i>& triangles, std::vector<T>& vert);
 // Subdivide quads by splitting each quads in four, creating new
 // vertices for each edge and for each face.
 template <typename T>
-void subdivide_quads(
-    std::vector<vec4i>& quads, std::vector<T>& vert, bool update_quads = true);
-void subdivide_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<vec4f>& color, std::vector<float>& radius);
+void subdivide_quads(std::vector<vec4i>& quads, std::vector<T>& vert);
 // Subdivide beziers by splitting each segment in two.
 template <typename T>
-void subdivide_beziers(std::vector<vec4i>& beziers, std::vector<T>& vert,
-    bool update_beziers = true);
-void subdivide_beziers(std::vector<vec4i>& beziers, std::vector<vec3f>& pos,
-    std::vector<vec3f>& tang, std::vector<vec2f>& texcoord,
-    std::vector<vec4f>& color, std::vector<float>& radius);
+void subdivide_beziers(std::vector<vec4i>& beziers, std::vector<T>& vert);
 // Subdivide quads using Carmull-Clark subdivision rules.
 template <typename T>
-void subdivide_catmullclark(std::vector<vec4i>& beziers, std::vector<T>& vert,
-    bool update_quads = true);
-void subdivide_catmullclark(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<vec4f>& color, std::vector<float>& radius);
+void subdivide_catmullclark(std::vector<vec4i>& quads, std::vector<T>& vert,
+    bool lock_boundary = false);
 
 // Merge lines between shapes.
 void merge_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
@@ -311,6 +295,8 @@ void make_geodesic_sphere(std::vector<vec3i>& triangles,
     std::vector<vec3f>& pos, int tesselation, float size);
 
 // Make example watertight quad meshes for subdivision surfaces.
+void make_quad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    int tesselation, float size);
 void make_cube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     int tesselation, float size);
 void make_fvcube(std::vector<vec4i>& quads_pos, std::vector<vec3f>& pos,

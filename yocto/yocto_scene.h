@@ -188,20 +188,18 @@ struct shape {
 
 // Subdivision surface.
 struct subdiv {
-    std::string name = "";       // name
-    int level = 0;               // subdivision level
-    bool catmull_clark = true;   // catmull clark subdiv
-    bool faceted = false;        // faceted subdivision
+    std::string name = "";        // name
+    int level = 0;                // subdivision level
+    bool catmull_clark = true;    // catmull clark subdiv
+    bool compute_normals = true;  // faceted subdivision
 
     // primitives
     std::vector<vec4i> quads_pos;       // quads for position
-    std::vector<vec4i> quads_norm;      // quads for normal
     std::vector<vec4i> quads_texcoord;  // quads for texture coordinates
     std::vector<vec4i> quads_color;     // quads for color
 
     // vertex data
     std::vector<vec3f> pos;       // positions
-    std::vector<vec3f> norm;      // normals
     std::vector<vec2f> texcoord;  // texcoord coordinates
     std::vector<vec4f> color;     // colors
 };
@@ -535,6 +533,10 @@ subdiv* make_cube_subdiv(
     const std::string& name, int tesselation = 4, float size = 2);
 subdiv* make_suzanne_subdiv(const std::string& name, int tesselation = 2);
 subdiv* make_fvcube_subdiv(
+    const std::string& name, int tesselation = 4, float size = 2);
+subdiv* make_quad_subdiv(
+    const std::string& name, int tesselation = 4, float size = 2);
+subdiv* make_opencube_subdiv(
     const std::string& name, int tesselation = 4, float size = 2);
 
 // example materials

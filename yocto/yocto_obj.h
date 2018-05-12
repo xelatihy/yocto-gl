@@ -125,7 +125,7 @@ struct obj_object {
     std::vector<int> verts_radius;       // vertices radius [extension]
     std::vector<obj_element> elems;      // faces
     frame3f frame = identity_frame3f;    // frame [extension]
-    int subdiv = -1;                     // level of subdivision [extension]
+    vec2i subdiv = zero2i;  // type/level of subdivision [extension]
     // Properties not explicitly handled [extension].
     std::unordered_map<std::string, std::vector<float>> props;
 };
