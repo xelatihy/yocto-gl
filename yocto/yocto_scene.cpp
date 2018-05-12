@@ -102,29 +102,28 @@ void update_bbox(scene* scn, bool do_shapes) {
 void update_tesselation(const subdiv* sbd, shape* shp) {
     shp->name = sbd->name;
     auto quads_pos = sbd->quads_pos;
-    auto quads_norm = sbd->quads_norm;
     auto quads_texcoord = sbd->quads_texcoord;
     auto quads_color = sbd->quads_color;
     auto pos = sbd->pos;
-    auto norm = sbd->norm;
     auto texcoord = sbd->texcoord;
     auto color = sbd->color;
-    for(auto l = 0; l < sbd->level; l ++) {
+    for (auto l = 0; l < sbd->level; l++) {
         subdivide_catmullclark(quads_pos, pos);
-        subdivide_catmullclark(quads_norm, norm);
-        subdivide_catmullclark(quads_texcoord, texcoord);
+        subdivide_catmullclark(quads_texcoord, texcoord, true);
         subdivide_catmullclark(quads_color, color);
     }
+    auto norm = std::vector<vec3f>();
+    if (sbd->compute_normals) compute_normals(quads_pos, pos, norm);
     auto quads = quads_pos;
-    convert_face_varying(quads, shp->pos, shp->norm, shp->texcoord, 
-        shp->color, quads_pos, quads_norm, quads_texcoord, quads_color, 
-        pos, norm, texcoord, color);
+    convert_face_varying(quads, shp->pos, shp->norm, shp->texcoord, shp->color,
+        quads_pos, quads_pos, quads_texcoord, quads_color, pos, norm, texcoord,
+        color);
     shp->triangles = convert_quads_to_triangles(quads);
     update_bbox(shp);
 }
 void update_tesselation(scene* scn) {
-    for(auto ist : scn->instances) {
-        if(!ist->sbd) continue;
+    for (auto ist : scn->instances) {
+        if (!ist->sbd) continue;
         update_tesselation(ist->sbd, ist->shp);
     }
 }
@@ -1057,7 +1056,7 @@ scene* obj_to_scene(const obj_scene* obj) {
             }
         };
 
-        if (oobj->subdiv < 0) {
+        if (oobj->subdiv == zero2i) {
             ist->shp = new shape();
             ist->shp->name = oobj->name;
             scn->shapes.push_back(ist->shp);
@@ -1100,7 +1099,9 @@ scene* obj_to_scene(const obj_scene* obj) {
         } else {
             ist->sbd = new subdiv();
             ist->sbd->name = oobj->name;
-            ist->sbd->level = oobj->subdiv;
+            ist->sbd->level = oobj->subdiv.x;
+            ist->sbd->catmull_clark = oobj->subdiv.y / 2 == 1;
+            ist->sbd->compute_normals = oobj->subdiv.y % 2 == 1;
             scn->subdivs.push_back(ist->sbd);
 
             // insert all vertices
@@ -1110,13 +1111,6 @@ scene* obj_to_scene(const obj_scene* obj) {
                 convert_vert(nverts, ist->sbd->pos, obj->pos, elem_verts,
                     oobj->verts_pos);
                 convert_quads(oobj->elems, elem_verts, ist->sbd->quads_pos);
-            }
-            if (!oobj->verts_norm.empty()) {
-                auto nverts = 0;
-                auto elem_verts = make_unique_verts1(nverts, oobj->verts_norm);
-                convert_vert(nverts, ist->sbd->norm, obj->norm, elem_verts,
-                    oobj->verts_norm);
-                convert_quads(oobj->elems, elem_verts, ist->sbd->quads_norm);
             }
             if (!oobj->verts_texcoord.empty()) {
                 auto nverts = 0;
@@ -1138,8 +1132,6 @@ scene* obj_to_scene(const obj_scene* obj) {
             if (oobj->frame != identity_frame3f) {
                 auto iframe = inverse(oobj->frame);
                 for (auto& p : ist->sbd->pos) p = transform_point(iframe, p);
-                for (auto& n : ist->sbd->norm)
-                    n = transform_direction(iframe, n);
             }
 
             ist->shp = new shape();
@@ -1357,15 +1349,14 @@ obj_scene* scene_to_obj(
                 }
             }
         } else {
-            oobj->subdiv = ist->sbd->level;
+            oobj->subdiv.x = ist->sbd->level;
+            oobj->subdiv.y = ((ist->sbd->catmull_clark) ? 2 : 0) +
+                             ((ist->sbd->compute_normals) ? 1 : 0);
             if (!preserve_instances && ist->frame != identity_frame3f) {
                 for (auto& v : ist->sbd->pos)
                     obj->pos.push_back(transform_point(ist->frame, v));
-                for (auto& v : ist->sbd->norm)
-                    obj->norm.push_back(transform_direction(ist->frame, v));
             } else {
                 for (auto& v : ist->sbd->pos) obj->pos.push_back(v);
-                for (auto& v : ist->sbd->norm) obj->norm.push_back(v);
             }
             for (auto& v : ist->sbd->texcoord) obj->texcoord.push_back(v);
             for (auto& v : ist->sbd->color) obj->color.push_back(v);
@@ -1375,10 +1366,6 @@ obj_scene* scene_to_obj(
                 add_elem(oobj, obj_element_type::face, ((q.z == q.w) ? 3 : 4));
                 for (auto i = 0; i < ((q.z == q.w) ? 3 : 4); i++)
                     oobj->verts_pos.push_back(offset[0] + (&q.x)[i]);
-            }
-            for (auto q : ist->sbd->quads_norm) {
-                for (auto i = 0; i < ((q.z == q.w) ? 3 : 4); i++)
-                    oobj->verts_norm.push_back(offset[1] + (&q.x)[i]);
             }
             for (auto q : ist->sbd->quads_texcoord) {
                 for (auto i = 0; i < ((q.z == q.w) ? 3 : 4); i++)
@@ -2616,8 +2603,8 @@ shape* make_fvcube_subdiv_shape(
     auto shp = new shape();
     shp->name = name;
     auto quads = std::vector<vec4i>();
-    convert_face_varying(quads, shp->pos, shp->norm, shp->texcoord, shp->color, 
-        quads_pos, quads_norm, quads_texcoord, quads_color, pos, norm, texcoord, 
+    convert_face_varying(quads, shp->pos, shp->norm, shp->texcoord, shp->color,
+        quads_pos, quads_norm, quads_texcoord, quads_color, pos, norm, texcoord,
         color);
     shp->triangles = convert_quads_to_triangles(quads);
     return shp;
@@ -2670,10 +2657,32 @@ subdiv* make_fvcube_subdiv(
     sbd->name = name;
     sbd->pos = pos;
     sbd->quads_pos = quads_pos;
-    sbd->norm = norm;
-    sbd->quads_norm = quads_norm;
     sbd->texcoord = texcoord;
     sbd->quads_texcoord = quads_texcoord;
+    sbd->level = tesselation;
+    return sbd;
+}
+subdiv* make_quad_subdiv(const std::string& name, int tesselation, float size) {
+    auto pos = std::vector<vec3f>();
+    auto quads = std::vector<vec4i>();
+    make_quad(quads, pos, 0, size);
+    auto sbd = new subdiv();
+    sbd->name = name;
+    sbd->pos = pos;
+    sbd->quads_pos = quads;
+    sbd->level = tesselation;
+    return sbd;
+}
+subdiv* make_opencube_subdiv(
+    const std::string& name, int tesselation, float size) {
+    auto pos = std::vector<vec3f>();
+    auto quads = std::vector<vec4i>();
+    make_cube(quads, pos, 0, size);
+    auto sbd = new subdiv();
+    sbd->name = name;
+    sbd->pos = pos;
+    sbd->quads_pos = quads;
+    sbd->quads_pos.pop_back();
     sbd->level = tesselation;
     return sbd;
 }

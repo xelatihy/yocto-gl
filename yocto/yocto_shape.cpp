@@ -254,10 +254,13 @@ std::vector<vec2i> convert_bezier_to_lines(const std::vector<vec4i>& beziers) {
 // Convert face varying data to single primitives. Returns the quads indices
 // and filled vectors for pos, norm and texcoord.
 void convert_face_varying(std::vector<vec4i>& qquads, std::vector<vec3f>& qpos,
-    std::vector<vec3f>& qnorm, std::vector<vec2f>& qtexcoord, std::vector<vec4f>& qcolor,
-    const std::vector<vec4i>& quads_pos, const std::vector<vec4i>& quads_norm,
-    const std::vector<vec4i>& quads_texcoord, const std::vector<vec4i>& quads_color, const std::vector<vec3f>& pos,
-    const std::vector<vec3f>& norm, const std::vector<vec2f>& texcoord, const std::vector<vec4f>& color) {
+    std::vector<vec3f>& qnorm, std::vector<vec2f>& qtexcoord,
+    std::vector<vec4f>& qcolor, const std::vector<vec4i>& quads_pos,
+    const std::vector<vec4i>& quads_norm,
+    const std::vector<vec4i>& quads_texcoord,
+    const std::vector<vec4i>& quads_color, const std::vector<vec3f>& pos,
+    const std::vector<vec3f>& norm, const std::vector<vec2f>& texcoord,
+    const std::vector<vec4f>& color) {
     // make faces unique
     std::unordered_map<vec4i, int> vert_map;
     qquads = std::vector<vec4i>(quads_pos.size());
@@ -275,7 +278,7 @@ void convert_face_varying(std::vector<vec4i>& qquads, std::vector<vec3f>& qpos,
                 vert_map.insert(it, {v, s});
                 (&qquads[fid].x)[c] = s;
             } else {
-               (&qquads[fid].x)[c] = it->second;
+                (&qquads[fid].x)[c] = it->second;
             }
         }
     }
@@ -302,8 +305,7 @@ void convert_face_varying(std::vector<vec4i>& qquads, std::vector<vec3f>& qpos,
 
 // Subdivide lines.
 template <typename T>
-void subdivide_lines(
-    std::vector<vec2i>& lines, std::vector<T>& vert, bool update_lines) {
+void subdivide_lines(std::vector<vec2i>& lines, std::vector<T>& vert) {
     if (lines.empty() || vert.empty()) return;
 
     auto tvert = vert;
@@ -315,13 +317,17 @@ void subdivide_lines(
     }
 
     std::swap(vert, tvert);
-    if (update_lines) std::swap(lines, tlines);
+    std::swap(lines, tlines);
 }
+
+template void subdivide_lines(std::vector<vec2i>&, std::vector<float>&);
+template void subdivide_lines(std::vector<vec2i>&, std::vector<vec2f>&);
+template void subdivide_lines(std::vector<vec2i>&, std::vector<vec3f>&);
+template void subdivide_lines(std::vector<vec2i>&, std::vector<vec4f>&);
 
 // Subdivide triangle.
 template <typename T>
-void subdivide_triangles(std::vector<vec3i>& triangles, std::vector<T>& vert,
-    bool update_triangles) {
+void subdivide_triangles(std::vector<vec3i>& triangles, std::vector<T>& vert) {
     if (triangles.empty() || vert.empty()) return;
 
     auto tvert = vert;
@@ -342,13 +348,17 @@ void subdivide_triangles(std::vector<vec3i>& triangles, std::vector<T>& vert,
     }
 
     std::swap(vert, tvert);
-    if (update_triangles) std::swap(triangles, ttriangles);
+    std::swap(triangles, ttriangles);
 }
+
+template void subdivide_triangles(std::vector<vec3i>&, std::vector<float>&);
+template void subdivide_triangles(std::vector<vec3i>&, std::vector<vec2f>&);
+template void subdivide_triangles(std::vector<vec3i>&, std::vector<vec3f>&);
+template void subdivide_triangles(std::vector<vec3i>&, std::vector<vec4f>&);
 
 // Subdivide quads.
 template <typename T>
-void subdivide_quads(
-    std::vector<vec4i>& quads, std::vector<T>& vert, bool update_quads) {
+void subdivide_quads(std::vector<vec4i>& quads, std::vector<T>& vert) {
     if (quads.empty() || vert.empty()) return;
 
     auto tvert = vert;
@@ -386,13 +396,17 @@ void subdivide_quads(
     }
 
     std::swap(vert, tvert);
-    if (update_quads) std::swap(quads, tquads);
+    std::swap(quads, tquads);
 }
+
+template void subdivide_quads(std::vector<vec4i>&, std::vector<float>&);
+template void subdivide_quads(std::vector<vec4i>&, std::vector<vec2f>&);
+template void subdivide_quads(std::vector<vec4i>&, std::vector<vec3f>&);
+template void subdivide_quads(std::vector<vec4i>&, std::vector<vec4f>&);
 
 // Subdivide beziers.
 template <typename T>
-void subdivide_beziers(
-    std::vector<vec4i>& beziers, std::vector<T>& vert, bool update_beziers) {
+void subdivide_beziers(std::vector<vec4i>& beziers, std::vector<T>& vert) {
     if (beziers.empty() || vert.empty()) return;
 
     auto vmap = std::unordered_map<int, int>();
@@ -419,22 +433,29 @@ void subdivide_beziers(
     }
 
     std::swap(vert, tvert);
-    if (update_beziers) std::swap(beziers, tbeziers);
+    std::swap(beziers, tbeziers);
 }
+
+template void subdivide_beziers(std::vector<vec4i>&, std::vector<float>&);
+template void subdivide_beziers(std::vector<vec4i>&, std::vector<vec2f>&);
+template void subdivide_beziers(std::vector<vec4i>&, std::vector<vec3f>&);
+template void subdivide_beziers(std::vector<vec4i>&, std::vector<vec4f>&);
 
 // Subdivide catmullclark.
 template <typename T>
 void subdivide_catmullclark(
-    std::vector<vec4i>& quads, std::vector<T>& vert, bool update_quads) {
+    std::vector<vec4i>& quads, std::vector<T>& vert, bool lock_boundary) {
     if (quads.empty() || vert.empty()) return;
 
     auto tvert = vert;
     auto tquads = std::vector<vec4i>();
     auto emap = std::unordered_map<vec2i, int>();
+    auto eset = std::unordered_set<vec2i>();
     for (auto& q : quads) {
         for (auto e : {vec2i{q.x, q.y}, vec2i{q.y, q.z}, vec2i{q.z, q.w},
                  vec2i{q.w, q.x}}) {
             if (e.x == e.y) continue;
+            eset.insert({e.x, e.y});
             if (emap.find(e) != emap.end()) continue;
             emap[{e.x, e.y}] = (int)tvert.size();
             emap[{e.y, e.x}] = (int)tvert.size();
@@ -463,17 +484,24 @@ void subdivide_catmullclark(
     }
 
     auto tboundary = std::vector<vec2i>();
-    for (auto e_kv : emap) {
-        auto e = e_kv.first;
-        auto v = e_kv.second;
-        if (emap.find({e.y, e.x}) != emap.end()) continue;
-        tboundary.push_back({e.x, v});
-        tboundary.push_back({v, e.y});
+    for (auto e : eset) {
+        if (eset.find({e.y, e.x}) != eset.end()) continue;
+        auto et = emap.at(e);
+        tboundary.push_back({e.x, et});
+        tboundary.push_back({et, e.y});
     }
 
-    // setup
-    auto tcrease_edges = tboundary;
+    // setup creases
+    auto tcrease_edges = std::vector<vec2i>();
     auto tcrease_verts = std::vector<int>();
+    if (lock_boundary) {
+        for (auto& b : tboundary) {
+            tcrease_verts.push_back(b.x);
+            tcrease_verts.push_back(b.y);
+        }
+    } else {
+        for (auto& b : tboundary) tcrease_edges.push_back(b);
+    }
 
     // define vertex valence ---------------------------
     auto tvert_val = std::vector<int>(tvert.size(), 2);
@@ -518,73 +546,17 @@ void subdivide_catmullclark(
     tvert = avert;
 
     std::swap(vert, tvert);
-    if (update_quads) std::swap(quads, tquads);
+    std::swap(quads, tquads);
 }
 
-// Subdivide lines by splitting each line in half.
-void subdivide_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<vec4f>& color, std::vector<float>& radius) {
-    if (lines.empty()) return;
-    subdivide_lines(lines, norm, false);
-    for (auto& n : norm) n = normalize(n);
-    subdivide_lines(lines, texcoord, false);
-    subdivide_lines(lines, color, false);
-    subdivide_lines(lines, radius, false);
-    subdivide_lines(lines, pos);
-}
-
-// Subdivide triangles.
-void subdivide_triangles(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<vec4f>& color, std::vector<float>& radius) {
-    if (triangles.empty()) return;
-    subdivide_triangles(triangles, norm, false);
-    for (auto& n : norm) n = normalize(n);
-    subdivide_triangles(triangles, texcoord, false);
-    subdivide_triangles(triangles, color, false);
-    subdivide_triangles(triangles, radius, false);
-    subdivide_triangles(triangles, pos);
-}
-
-// Subdivide quads.
-void subdivide_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<vec4f>& color, std::vector<float>& radius) {
-    if (quads.empty()) return;
-    subdivide_quads(quads, norm, false);
-    for (auto& n : norm) n = normalize(n);
-    subdivide_quads(quads, texcoord, false);
-    subdivide_quads(quads, color, false);
-    subdivide_quads(quads, radius, false);
-    subdivide_quads(quads, pos);
-}
-
-// Subdivide beziers.
-void subdivide_beziers(std::vector<vec4i>& beziers, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<vec4f>& color, std::vector<float>& radius) {
-    if (beziers.empty()) return;
-    subdivide_beziers(beziers, norm, false);
-    for (auto& n : norm) n = normalize(n);
-    subdivide_beziers(beziers, texcoord, false);
-    subdivide_beziers(beziers, color, false);
-    subdivide_beziers(beziers, radius, false);
-    subdivide_beziers(beziers, pos);
-}
-
-// Subdivide quads.
-void subdivide_catmullclark(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<vec4f>& color, std::vector<float>& radius) {
-    if (quads.empty()) return;
-    subdivide_catmullclark(quads, norm, false);
-    for (auto& n : norm) n = normalize(n);
-    subdivide_catmullclark(quads, texcoord, false);
-    subdivide_catmullclark(quads, color, false);
-    subdivide_catmullclark(quads, radius, false);
-    subdivide_catmullclark(quads, pos);
-}
+template void subdivide_catmullclark(
+    std::vector<vec4i>&, std::vector<float>&, bool);
+template void subdivide_catmullclark(
+    std::vector<vec4i>&, std::vector<vec2f>&, bool);
+template void subdivide_catmullclark(
+    std::vector<vec4i>&, std::vector<vec3f>&, bool);
+template void subdivide_catmullclark(
+    std::vector<vec4i>&, std::vector<vec4f>&, bool);
 
 // Merge lines between shapes.
 void merge_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
@@ -596,7 +568,6 @@ void merge_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
     for (auto& l : lines1) lines.push_back({l.x + nverts, l.y + nverts});
     for (auto& v : pos1) pos.push_back(v);
     for (auto& v : norm1) norm.push_back(v);
-    ;
     for (auto& v : texcoord1) texcoord.push_back(v);
 }
 
@@ -1037,6 +1008,18 @@ void make_quad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
                 vid(i, j), vid(i + 1, j), vid(i + 1, j + 1), vid(i, j + 1)};
         }
     }
+}
+
+// Make a cube with unique vertices. This is watertight but has no
+// texture coordinates or normals.
+void make_quad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    int tesselation, float size) {
+    pos =
+        std::vector<vec3f>{{-1, -1, 0}, {-1, +1, 0}, {+1, +1, 0}, {+1, -1, 0}};
+    quads = std::vector<vec4i>{{0, 1, 2, 3}};
+
+    for (auto& p : pos) p *= size / 2;
+    for (auto l = 0; l < tesselation; l++) subdivide_quads(quads, pos);
 }
 
 // Make a cube with unique vertices. This is watertight but has no

@@ -80,6 +80,15 @@ inline void draw(ygl::glwindow* win, app_state* app) {
         if (sel.as<ygl::texture>()) {
             ygl::update_gldata(sel.as<ygl::texture>());
         }
+        if (sel.as<ygl::subdiv>()) {
+            auto sbd = sel.as<ygl::subdiv>();
+            for (auto ist : app->scn->instances) {
+                if (ist->sbd != sbd) continue;
+                ygl::update_tesselation(ist->sbd, ist->shp);
+                ygl::update_gldata(ist->shp);
+                break;
+            }
+        }
         if (sel.as<ygl::shape>()) { ygl::update_gldata(sel.as<ygl::shape>()); }
         if (sel.as<ygl::node>() || sel.as<ygl::animation>() ||
             app->time != last_time) {

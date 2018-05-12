@@ -591,12 +591,14 @@ bool draw_glwidgets_scene_inspector(glwindow* win, subdiv* val, scene* scn) {
     auto edited = 0;
     edited += draw_glwidgets_text(win, "name", val->name);
     edited += draw_glwidgets_dragbox(win, "level", val->level, 0, 10);
+    edited += draw_glwidgets_checkbox(win, "catmull-clark", val->catmull_clark);
+    continue_glwidgets_line(win);
+    edited +=
+        draw_glwidgets_checkbox(win, "compute normals", val->compute_normals);
     draw_glwidgets_label(win, "quads pos", val->quads_pos);
-    draw_glwidgets_label(win, "quads norm", val->quads_norm);
     draw_glwidgets_label(win, "quads texcoord", val->quads_texcoord);
     draw_glwidgets_label(win, "quads color", val->quads_color);
     draw_glwidgets_label(win, "pos", val->pos);
-    draw_glwidgets_label(win, "norm", val->norm);
     draw_glwidgets_label(win, "texcoord", val->texcoord);
     draw_glwidgets_label(win, "color", val->color);
     return edited;

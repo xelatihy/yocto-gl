@@ -174,6 +174,9 @@ inline void obj_parse(char*& s, char* val) {
     obj_skipws(s);
     obj_parse_base(s, val);
 }
+inline void obj_parse(char*& s, vec2i& val) {
+    for (auto i = 0; i < 2; i++) obj_parse(s, (&val.x)[i]);
+}
 inline void obj_parse(char*& s, vec2f& val) {
     for (auto i = 0; i < 2; i++) obj_parse(s, (&val.x)[i]);
 }
@@ -651,12 +654,19 @@ inline void obj_dump(char*& s, const std::string& val) {
 }
 inline void obj_dump(char*& s, int val) { s += sprintf(s, "%d", val); }
 inline void obj_dump(char*& s, float val) { s += sprintf(s, "%g", val); }
+inline void obj_dump(char*& s, const int* val, int num) {
+    for (auto i = 0; i < num; i++) {
+        if (i) *s++ = ' ';
+        obj_dump(s, val[i]);
+    }
+}
 inline void obj_dump(char*& s, const float* val, int num) {
     for (auto i = 0; i < num; i++) {
         if (i) *s++ = ' ';
         obj_dump(s, val[i]);
     }
 }
+inline void obj_dump(char*& s, const vec2i& val) { obj_dump(s, &val.x, 2); }
 inline void obj_dump(char*& s, const vec2f& val) { obj_dump(s, &val.x, 2); }
 inline void obj_dump(char*& s, const vec3f& val) { obj_dump(s, &val.x, 3); }
 inline void obj_dump(char*& s, const vec4f& val) { obj_dump(s, &val.x, 4); }
@@ -851,7 +861,7 @@ void save_obj(const std::string& filename, const obj_scene* obj,
         obj_dump_line(fs, "o", oobj->name);
         if (oobj->frame != identity_frame3f)
             obj_dump_line(fs, "of", oobj->frame);
-        if (oobj->subdiv) obj_dump_line(fs, "os", oobj->subdiv);
+        if (oobj->subdiv != zero2i) obj_dump_line(fs, "os", oobj->subdiv);
         auto last_groupid = -1, last_materialid = -1, last_smoothingid = -1;
         for (auto& elem : oobj->elems) {
             if (last_materialid != elem.material && !oobj->materials.empty()) {
