@@ -225,43 +225,18 @@ std::vector<ygl::scene*> make_proc_scenes(const std::string& name) {
             scenes.push_back(
                 ygl::make_simple_scene("subdivs"s + ((env) ? "-el" : "-al"),
                     {
-                        ygl::make_instance("obj1",
-                            ygl::make_cube_subdiv_shape("obj1"),
-                            ygl::make_plastic_material("obj1", {1, 1, 1}, 0.1f,
-                                ygl::make_uvgrid_texture("uvgrid")),
-                            ygl::make_cube_subdiv("obj1")),
-                        ygl::make_instance("obj2",
-                            ygl::make_suzanne_subdiv_shape("obj2"),
-                            ygl::make_plastic_material("obj2", {1, 1, 1}, 0.1f,
-                                ygl::make_uvgrid_texture("uvgrid")),
-                            ygl::make_suzanne_subdiv("obj2")),
-                        ygl::make_instance("obj3",
-                            ygl::make_fvcube_subdiv_shape("obj3"),
-                            ygl::make_plastic_material("obj3", {1, 1, 1}, 0.1f,
-                                ygl::make_uvgrid_texture("uvgrid")),
-                            ygl::make_fvcube_subdiv("obj3")),
-                    },
-                    env));
-        }
-        for (auto env : {0, 1}) {
-            scenes.push_back(
-                ygl::make_simple_scene("osubdivs"s + ((env) ? "-el" : "-al"),
-                    {
-                        ygl::make_instance("obj1",
-                            ygl::make_cube_subdiv_shape("obj1"),
+                        ygl::make_instance("obj1", nullptr,
                             ygl::make_plastic_material("obj1", {1, 1, 1}, 0.1f,
                                 ygl::make_uvgrid_texture("uvgrid")),
                             ygl::make_quad_subdiv("obj1")),
-                        ygl::make_instance("obj2",
-                            ygl::make_suzanne_subdiv_shape("obj2"),
+                        ygl::make_instance("obj2", nullptr,
                             ygl::make_plastic_material("obj2", {1, 1, 1}, 0.1f,
                                 ygl::make_uvgrid_texture("uvgrid")),
-                            ygl::make_opencube_subdiv("obj2")),
-                        ygl::make_instance("obj3",
-                            ygl::make_fvcube_subdiv_shape("obj3"),
+                            ygl::make_suzanne_subdiv("obj2")),
+                        ygl::make_instance("obj3", nullptr,
                             ygl::make_plastic_material("obj3", {1, 1, 1}, 0.1f,
                                 ygl::make_uvgrid_texture("uvgrid")),
-                            ygl::make_fvcube_subdiv("obj3")),
+                            ygl::make_cube_subdiv("obj3")),
                     },
                     env));
         }
@@ -269,18 +244,18 @@ std::vector<ygl::scene*> make_proc_scenes(const std::string& name) {
             scenes.push_back(
                 ygl::make_simple_scene("tsubdivs"s + ((env) ? "-el" : "-al"),
                     {
-                        ygl::make_instance("obj1",
-                            ygl::make_cube_subdiv_shape("obj1"),
+                        ygl::make_instance("obj1", nullptr,
                             ygl::make_plastic_material("obj1", {1, 1, 1}, 0.1f,
-                                ygl::make_uvgrid_texture("uvgrid"))),
-                        ygl::make_instance("obj2",
-                            ygl::make_suzanne_subdiv_shape("obj2"),
+                                ygl::make_uvgrid_texture("uvgrid")),
+                            ygl::make_cube_subdiv("obj1", 1, 4)),
+                        ygl::make_instance("obj2", nullptr,
                             ygl::make_plastic_material("obj2", {1, 1, 1}, 0.1f,
-                                ygl::make_uvgrid_texture("uvgrid"))),
-                        ygl::make_instance("obj3",
-                            ygl::make_fvcube_subdiv_shape("obj3"),
+                                ygl::make_uvgrid_texture("uvgrid")),
+                            ygl::make_cube_subdiv("obj2", 2, 3)),
+                        ygl::make_instance("obj3", nullptr,
                             ygl::make_plastic_material("obj3", {1, 1, 1}, 0.1f,
-                                ygl::make_uvgrid_texture("uvgrid"))),
+                                ygl::make_uvgrid_texture("uvgrid")),
+                            ygl::make_cube_subdiv("obj3", 3, 2)),
                     },
                     env));
         }
