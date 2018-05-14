@@ -145,18 +145,20 @@ inline void draw(ygl::glwindow* win, app_state* app) {
         if (ygl::begin_glwidgets_tree(win, "render settings")) {
             ygl::draw_glwidgets_combobox(
                 win, "camera", app->cam, app->scn->cameras);
-            draw_glwidgets_dragbox(
+            ygl::draw_glwidgets_dragbox(
                 win, "resolution", app->resolution, 256, 4096);
-            draw_glwidgets_checkbox(win, "eyelight", app->eyelight);
-            draw_glwidgets_checkbox(win, "wireframe", app->wireframe);
+            ygl::draw_glwidgets_checkbox(win, "eyelight", app->eyelight);
             ygl::continue_glwidgets_line(win);
-            draw_glwidgets_checkbox(win, "edges", app->edges);
+            ygl::draw_glwidgets_checkbox(win, "wireframe", app->wireframe);
+            ygl::continue_glwidgets_line(win);
+            ygl::draw_glwidgets_checkbox(win, "edges", app->edges);
             ygl::end_glwidgets_tree(win);
         }
         if (ygl::begin_glwidgets_tree(win, "view settings")) {
-            draw_glwidgets_dragbox(win, "exposure", app->exposure, -10, 10);
-            draw_glwidgets_dragbox(win, "gamma", app->gamma, 0.1f, 4);
-            draw_glwidgets_colorbox(win, "background", app->background);
+            ygl::draw_glwidgets_dragbox(
+                win, "exposure", app->exposure, -10, 10);
+            ygl::draw_glwidgets_dragbox(win, "gamma", app->gamma, 0.1f, 4);
+            ygl::draw_glwidgets_colorbox(win, "background", app->background);
             ygl::draw_glwidgets_checkbox(win, "fps", app->navigation_fps);
             ygl::end_glwidgets_tree(win);
         }

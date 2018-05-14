@@ -198,6 +198,10 @@ struct subdiv {
     std::vector<vec4i> quads_texcoord;  // quads for texture coordinates
     std::vector<vec4i> quads_color;     // quads for color
 
+    // creases
+    std::vector<vec3i> crease_pos;      // crease for position
+    std::vector<vec3i> crease_texcoord; // crease for texture coordinates
+
     // vertex data
     std::vector<vec3f> pos;       // positions
     std::vector<vec2f> texcoord;  // texcoord coordinates
@@ -518,26 +522,19 @@ shape* make_matball_shape(
     const std::string& name, int tesselation = 5, float size = 2);
 shape* make_quadstack_shape(const std::string& name, int stack_tesselation = 4,
     int tesselation = 0, float size = 2);
-shape* make_cube_subdiv_shape(
-    const std::string& name, int tesselation = 4, float size = 2);
-shape* make_suzanne_subdiv_shape(const std::string& name, int tesselation = 2);
-shape* make_fvcube_subdiv_shape(
-    const std::string& name, int tesselation = 4, float size = 2);
 shape* make_hairball_shape(const std::string& name, int hair_tesselation = 16,
     int tesselation = 2, float size = 2, const vec2f& len = {0.2f, 0.2f},
     const vec2f& noise = {0, 0}, const vec2f& clump = {0, 0},
     const vec2f& radius = {0.001f, 0.001f});
 
 // example subdivs
-subdiv* make_cube_subdiv(
-    const std::string& name, int tesselation = 4, float size = 2);
-subdiv* make_suzanne_subdiv(const std::string& name, int tesselation = 2);
-subdiv* make_fvcube_subdiv(
-    const std::string& name, int tesselation = 4, float size = 2);
-subdiv* make_quad_subdiv(
-    const std::string& name, int tesselation = 4, float size = 2);
-subdiv* make_opencube_subdiv(
-    const std::string& name, int tesselation = 4, float size = 2);
+subdiv* make_suzanne_subdiv(const std::string& name, int subdivision = 2);
+subdiv* make_cube_subdiv(const std::string& name, int tesselation = 0,
+    int subdivision = 4, float size = 2);
+subdiv* make_quad_subdiv(const std::string& name, int tesselation = 0,
+    int subdivision = 4, float size = 2);
+subdiv* make_opencube_subdiv(const std::string& name, int tesselation = 0,
+    int subdivision = 4, float size = 2);
 
 // example materials
 material* make_emission_material(const std::string& name, const vec3f& col,

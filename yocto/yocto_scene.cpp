@@ -107,11 +107,9 @@ void update_tesselation(const subdiv* sbd, shape* shp) {
     auto pos = sbd->pos;
     auto texcoord = sbd->texcoord;
     auto color = sbd->color;
-    for (auto l = 0; l < sbd->level; l++) {
-        subdivide_catmullclark(quads_pos, pos);
-        subdivide_catmullclark(quads_texcoord, texcoord, true);
-        subdivide_catmullclark(quads_color, color);
-    }
+    subdivide_catmullclark(quads_pos, pos, sbd->level);
+    subdivide_catmullclark(quads_texcoord, texcoord, sbd->level, true);
+    subdivide_catmullclark(quads_color, color, sbd->level);
     auto norm = std::vector<vec3f>();
     if (sbd->compute_normals) compute_normals(quads_pos, pos, norm);
     auto quads = quads_pos;
@@ -2476,136 +2474,98 @@ scene* make_scene(const std::string& name, const std::vector<camera*>& cams,
 shape* make_floor_shape(const std::string& name, int tesselation, float size) {
     auto shp = new shape();
     shp->name = name;
-    make_quad(shp->triangles, shp->pos, shp->norm, shp->texcoord,
+    auto quads = std::vector<vec4i>();
+    make_quad(quads, shp->pos, shp->norm, shp->texcoord,
         {1 << tesselation, 1 << tesselation}, {size, size},
         {size / 2, size / 2});
     for (auto& p : shp->pos) p = {p.x, p.z, p.y};
     for (auto& n : shp->norm) n = {n.x, n.z, n.y};
+    shp->triangles = convert_quads_to_triangles(quads);
     return shp;
 }
 shape* make_quad_shape(const std::string& name, int tesselation, float size) {
     auto shp = new shape();
     shp->name = name;
-    make_quad(shp->triangles, shp->pos, shp->norm, shp->texcoord,
+    auto quads = std::vector<vec4i>();
+    make_quad(quads, shp->pos, shp->norm, shp->texcoord,
         {1 << tesselation, 1 << tesselation}, {size, size},
         {size / 2, size / 2});
+    shp->triangles = convert_quads_to_triangles(quads);
     return shp;
 }
 shape* make_sphere_shape(const std::string& name, int tesselation, float size) {
     auto shp = new shape();
     shp->name = name;
-    make_sphere(shp->triangles, shp->pos, shp->norm, shp->texcoord,
+    auto quads = std::vector<vec4i>();
+    make_sphere(quads, shp->pos, shp->norm, shp->texcoord,
         {1 << (tesselation + 1), 1 << tesselation}, size, {size, size / 2});
     for (auto& p : shp->pos) p = {p.x, p.z, p.y};
     for (auto& n : shp->norm) n = {n.x, n.z, n.y};
+    shp->triangles = convert_quads_to_triangles(quads);
     return shp;
 }
 shape* make_spherecube_shape(
     const std::string& name, int tesselation, float size) {
     auto shp = new shape();
     shp->name = name;
-    make_sphere_cube(shp->triangles, shp->pos, shp->norm, shp->texcoord,
+    auto quads = std::vector<vec4i>();
+    make_sphere_cube(quads, shp->pos, shp->norm, shp->texcoord,
         1 << tesselation, size, size / 2);
+    shp->triangles = convert_quads_to_triangles(quads);
     return shp;
 }
 shape* make_sphereflipcap_shape(
     const std::string& name, int tesselation, float size) {
     auto shp = new shape();
     shp->name = name;
-    make_sphere_flipcap(shp->triangles, shp->pos, shp->norm, shp->texcoord,
+    auto quads = std::vector<vec4i>();
+    make_sphere_flipcap(quads, shp->pos, shp->norm, shp->texcoord,
         {1 << (tesselation + 1), 1 << tesselation}, size, {size, size / 2},
         {-0.75f, 0.75f});
+    shp->triangles = convert_quads_to_triangles(quads);
     return shp;
 }
 shape* make_cube_shape(const std::string& name, int tesselation, float size) {
     auto shp = new shape();
     shp->name = name;
-    make_cube(shp->triangles, shp->pos, shp->norm, shp->texcoord,
+    auto quads = std::vector<vec4i>();
+    make_cube(quads, shp->pos, shp->norm, shp->texcoord,
         {1 << tesselation, 1 << tesselation, 1 << tesselation},
         {size, size, size}, {size / 2, size / 2, size / 2});
+    shp->triangles = convert_quads_to_triangles(quads);
     return shp;
 }
 shape* make_cuberounded_shape(
     const std::string& name, int tesselation, float size) {
     auto shp = new shape();
     shp->name = name;
-    make_cube_rounded(shp->triangles, shp->pos, shp->norm, shp->texcoord,
+    auto quads = std::vector<vec4i>();
+    make_cube_rounded(quads, shp->pos, shp->norm, shp->texcoord,
         {1 << tesselation, 1 << tesselation, 1 << tesselation},
         {size, size, size}, {size / 2, size / 2, size / 2}, 0.15f * size);
+    shp->triangles = convert_quads_to_triangles(quads);
     return shp;
 }
 shape* make_matball_shape(
     const std::string& name, int tesselation, float size) {
     auto shp = new shape();
     shp->name = name;
-    make_sphere(shp->triangles, shp->pos, shp->norm, shp->texcoord,
+    auto quads = std::vector<vec4i>();
+    make_sphere(quads, shp->pos, shp->norm, shp->texcoord,
         {1 << (tesselation + 1), 1 << tesselation}, size, {size, size / 2});
     for (auto& p : shp->pos) p = {p.x, p.z, p.y};
     for (auto& n : shp->norm) n = {n.x, n.z, n.y};
+    shp->triangles = convert_quads_to_triangles(quads);
     return shp;
 }
 shape* make_quadstack_shape(const std::string& name, int stack_tesselation,
     int tesselation, float size) {
     auto shp = new shape();
     shp->name = name;
-    make_quad_stack(shp->triangles, shp->pos, shp->norm, shp->texcoord,
+    auto quads = std::vector<vec4i>();
+    make_quad_stack(quads, shp->pos, shp->norm, shp->texcoord,
         {1 << tesselation, 1 << tesselation, 1 << stack_tesselation},
         {size, size, size}, {size / 2, size / 2});
-    return shp;
-}
-shape* make_cube_subdiv_shape(
-    const std::string& name, int tesselation, float size) {
-    auto pos = std::vector<vec3f>();
-    auto norm = std::vector<vec3f>();
-    auto quads = std::vector<vec4i>();
-    make_cube(quads, pos, 0, size);
-    for (auto i = 0; i < tesselation; i++) {
-        subdivide_catmullclark(quads, pos);
-    }
-    if (tesselation) compute_normals(quads, pos, norm);
-    auto shp = new shape();
-    shp->name = name;
-    shp->pos = pos;
-    shp->norm = norm;
-    shp->triangles = convert_quads_to_triangles(quads);
-    return shp;
-}
-shape* make_suzanne_subdiv_shape(const std::string& name, int tesselation) {
-    auto pos = std::vector<vec3f>();
-    auto norm = std::vector<vec3f>();
-    auto quads = std::vector<vec4i>();
-    make_suzanne(quads, pos, 0);
-    for (auto i = 0; i < tesselation; i++) {
-        subdivide_catmullclark(quads, pos);
-    }
-    if (tesselation) compute_normals(quads, pos, norm);
-    auto shp = new shape();
-    shp->name = name;
-    shp->pos = pos;
-    shp->norm = norm;
-    shp->triangles = convert_quads_to_triangles(quads);
-    return shp;
-}
-shape* make_fvcube_subdiv_shape(
-    const std::string& name, int tesselation, float size) {
-    std::vector<vec4i> quads_pos, quads_norm, quads_texcoord, quads_color;
-    std::vector<vec3f> pos, norm;
-    std::vector<vec2f> texcoord;
-    std::vector<vec4f> color;
-    make_fvcube(quads_pos, pos, quads_norm, norm, quads_texcoord, texcoord, 0,
-        size, size / 2);
-    for (auto i = 0; i < tesselation; i++) {
-        subdivide_catmullclark(quads_pos, pos);
-        subdivide_catmullclark(quads_texcoord, texcoord);
-    }
-    quads_norm = quads_pos;
-    if (tesselation) compute_normals(quads_pos, pos, norm);
-    auto shp = new shape();
-    shp->name = name;
-    auto quads = std::vector<vec4i>();
-    convert_face_varying(quads, shp->pos, shp->norm, shp->texcoord, shp->color,
-        quads_pos, quads_norm, quads_texcoord, quads_color, pos, norm, texcoord,
-        color);
     shp->triangles = convert_quads_to_triangles(quads);
     return shp;
 }
@@ -2613,77 +2573,83 @@ shape* make_hairball_shape(const std::string& name, int hair_tesselation,
     int tesselation, float size, const vec2f& len, const vec2f& noise,
     const vec2f& clump, const vec2f& radius) {
     auto shp1 = new shape();
-    make_sphere_cube(shp1->triangles, shp1->pos, shp1->norm, shp1->texcoord,
-        1 << 4, size * 0.8f, 1);
+    auto quads = std::vector<vec4i>();
+    auto pos = std::vector<vec3f>();
+    auto norm = std::vector<vec3f>();
+    auto texcoord = std::vector<vec2f>();
+    make_sphere_cube(quads, pos, norm, texcoord, 1 << 4, size * 0.8f, 1);
     auto shp = new shape();
     shp->name = name;
     make_hair(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius,
-        {1 << tesselation, 1 << hair_tesselation}, shp1->triangles, shp1->pos,
-        shp1->norm, shp1->texcoord, len, radius, noise, clump);
+        {1 << tesselation, 1 << hair_tesselation},
+        convert_quads_to_triangles(quads), pos, norm, texcoord, len, radius,
+        noise, clump);
     delete shp1;
     return shp;
 }
 
-subdiv* make_cube_subdiv(const std::string& name, int tesselation, float size) {
+subdiv* make_suzanne_subdiv(const std::string& name, int subdivision) {
     auto pos = std::vector<vec3f>();
     auto quads = std::vector<vec4i>();
-    make_cube(quads, pos, 0, size);
+    make_suzanne(quads, pos);
     auto sbd = new subdiv();
     sbd->name = name;
     sbd->pos = pos;
     sbd->quads_pos = quads;
-    sbd->level = tesselation;
+    sbd->level = subdivision;
     return sbd;
 }
-subdiv* make_suzanne_subdiv(const std::string& name, int tesselation) {
-    auto pos = std::vector<vec3f>();
-    auto quads = std::vector<vec4i>();
-    make_suzanne(quads, pos, 0);
-    auto sbd = new subdiv();
-    sbd->name = name;
-    sbd->pos = pos;
-    sbd->quads_pos = quads;
-    sbd->level = tesselation;
-    return sbd;
-}
-subdiv* make_fvcube_subdiv(
-    const std::string& name, int tesselation, float size) {
+subdiv* make_cube_subdiv(
+    const std::string& name, int tesselation, int subdivision, float size) {
     std::vector<vec4i> quads_pos, quads_norm, quads_texcoord;
     std::vector<vec3f> pos, norm;
     std::vector<vec2f> texcoord;
-    make_fvcube(quads_pos, pos, quads_norm, norm, quads_texcoord, texcoord, 0,
-        size, size / 2);
+    make_fvcube(quads_pos, pos, quads_norm, norm, quads_texcoord, texcoord,
+        vec3i{1 << tesselation, 1 << tesselation, 1 << tesselation},
+        vec3f{1, 1, 1} * size, vec3f{1, 1, 1} * size / 2);
     auto sbd = new subdiv();
     sbd->name = name;
     sbd->pos = pos;
     sbd->quads_pos = quads_pos;
     sbd->texcoord = texcoord;
     sbd->quads_texcoord = quads_texcoord;
-    sbd->level = tesselation;
+    sbd->level = subdivision;
     return sbd;
 }
-subdiv* make_quad_subdiv(const std::string& name, int tesselation, float size) {
-    auto pos = std::vector<vec3f>();
+subdiv* make_quad_subdiv(
+    const std::string& name, int tesselation, int subdivision, float size) {
     auto quads = std::vector<vec4i>();
-    make_quad(quads, pos, 0, size);
+    std::vector<vec3f> pos, norm;
+    std::vector<vec2f> texcoord;
+    make_quad(quads, pos, norm, texcoord, {1 << tesselation, 1 << tesselation},
+        vec2f{1, 1} * size, vec2f{1, 1} * size / 2);
     auto sbd = new subdiv();
     sbd->name = name;
     sbd->pos = pos;
     sbd->quads_pos = quads;
-    sbd->level = tesselation;
+    sbd->texcoord = texcoord;
+    sbd->quads_texcoord = quads;
+    sbd->level = subdivision;
     return sbd;
 }
 subdiv* make_opencube_subdiv(
-    const std::string& name, int tesselation, float size) {
-    auto pos = std::vector<vec3f>();
-    auto quads = std::vector<vec4i>();
-    make_cube(quads, pos, 0, size);
+    const std::string& name, int tesselation, int subdivision, float size) {
+    std::vector<vec4i> quads_pos, quads_norm, quads_texcoord;
+    std::vector<vec3f> pos, norm;
+    std::vector<vec2f> texcoord;
+    make_fvcube(quads_pos, pos, quads_norm, norm, quads_texcoord, texcoord,
+        vec3i{1 << tesselation, 1 << tesselation, 1 << tesselation},
+        vec3f{1, 1, 1} * size, vec3f{1, 1, 1} * size / 2);
+    quads_pos.pop_back();
+    quads_norm.pop_back();
+    quads_texcoord.pop_back();
     auto sbd = new subdiv();
     sbd->name = name;
     sbd->pos = pos;
-    sbd->quads_pos = quads;
-    sbd->quads_pos.pop_back();
-    sbd->level = tesselation;
+    sbd->quads_pos = quads_pos;
+    sbd->texcoord = texcoord;
+    sbd->quads_texcoord = quads_texcoord;
+    sbd->level = subdivision;
     return sbd;
 }
 
@@ -2780,8 +2746,10 @@ scene* make_cornellbox_scene(const std::string& name, bool envlight) {
                         vec3f rot = {0, 0, 0}, vec2f size = {2, 2}) {
         auto shp = new shape();
         shp->name = name;
-        ygl::make_quad(shp->triangles, shp->pos, shp->norm, shp->texcoord,
-            {1, 1}, size, {1, 1});
+        auto quads = std::vector<vec4i>();
+        ygl::make_quad(
+            quads, shp->pos, shp->norm, shp->texcoord, {1, 1}, size, {1, 1});
+        shp->triangles = convert_quads_to_triangles(quads);
         scn->shapes.push_back(shp);
         auto ist = new instance();
         ist->name = name;
@@ -2801,9 +2769,10 @@ scene* make_cornellbox_scene(const std::string& name, bool envlight) {
                        vec3f rot = {0, 0, 0}, vec3f size = {2, 2, 2}) {
         auto shp = new shape();
         shp->name = name;
-        shp->name = name;
-        make_cube(shp->triangles, shp->pos, shp->norm, shp->texcoord, {1, 1, 1},
-            size, {1, 1, 1});
+        auto quads = std::vector<vec4i>();
+        make_cube(quads, shp->pos, shp->norm, shp->texcoord, {1, 1, 1}, size,
+            {1, 1, 1});
+        shp->triangles = convert_quads_to_triangles(quads);
         scn->shapes.push_back(shp);
         auto ist = new instance();
         ist->name = name;
@@ -2904,8 +2873,12 @@ scene* make_simple_scene(const std::string& name,
 
     for (auto i = 0; i < objs.size(); i++) {
         auto obj = objs[i];
+        obj->frame.o += pos[i % 3];
+        if (obj->sbd && !obj->shp) {
+            obj->shp = new shape();
+            update_tesselation(obj->sbd, obj->shp);
+        }
         ists.push_back(obj);
-        ists.back()->frame.o += pos[i % 3];
     }
 
     if (anms.empty()) return make_scene(name, cams, ists, envs);

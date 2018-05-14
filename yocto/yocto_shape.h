@@ -147,22 +147,26 @@ void convert_face_varying(std::vector<vec4i>& qquads, std::vector<vec3f>& qpos,
 
 // Subdivide lines by splitting each line in half.
 template <typename T>
-void subdivide_lines(std::vector<vec2i>& lines, std::vector<T>& vert);
+void subdivide_lines(
+    std::vector<vec2i>& lines, std::vector<T>& vert, int level);
 // Subdivide triangle by splitting each triangle in four, creating new
 // vertices for each edge.
 template <typename T>
-void subdivide_triangles(std::vector<vec3i>& triangles, std::vector<T>& vert);
+void subdivide_triangles(
+    std::vector<vec3i>& triangles, std::vector<T>& vert, int level);
 // Subdivide quads by splitting each quads in four, creating new
 // vertices for each edge and for each face.
 template <typename T>
-void subdivide_quads(std::vector<vec4i>& quads, std::vector<T>& vert);
+void subdivide_quads(
+    std::vector<vec4i>& quads, std::vector<T>& vert, int level);
 // Subdivide beziers by splitting each segment in two.
 template <typename T>
-void subdivide_beziers(std::vector<vec4i>& beziers, std::vector<T>& vert);
+void subdivide_beziers(
+    std::vector<vec4i>& beziers, std::vector<T>& vert, int level);
 // Subdivide quads using Carmull-Clark subdivision rules.
 template <typename T>
 void subdivide_catmullclark(std::vector<vec4i>& quads, std::vector<T>& vert,
-    bool lock_boundary = false);
+    int level, bool lock_boundary = false);
 
 // Merge lines between shapes.
 void merge_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
@@ -179,6 +183,13 @@ void merge_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
     const std::vector<vec4i>& quads1, const std::vector<vec3f>& pos1,
     const std::vector<vec3f>& norm1, const std::vector<vec2f>& texcoord1);
+
+// Weld vertices within a threshold. For noe the implementation is O(n^2).
+std::vector<int> weld_vertices(std::vector<vec3f>& pos, float threshold);
+void weld_triangles(
+    std::vector<vec3i>& triangles, std::vector<vec3f>& pos, float threshold);
+void weld_quads(
+    std::vector<vec4i>& quads, std::vector<vec3f>& pos, float threshold);
 
 // Pick a point in a point set uniformly.
 inline int sample_points(int npoints, float re) {
@@ -249,62 +260,56 @@ sample_triangles_points(const std::vector<vec3i>& triangles,
     const std::vector<vec2f>& texcoord, int npoints, int seed = 7);
 
 // Make examples triangle shapes with shared vertices (not watertight).
-void make_quad(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
+void make_quad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
     const vec2f& size, const vec2f& uvsize);
-void make_quad_stack(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
+void make_quad_stack(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
     const vec3f& size, const vec2f& uvsize);
-void make_cube(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
+void make_cube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
     const vec3f& size, const vec3f& uvsize);
-void make_cube_rounded(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
+void make_cube_rounded(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
     const vec3f& size, const vec3f& uvsize, float radius);
-void make_sphere(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
+void make_sphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
     float size, const vec2f& uvsize);
-void make_sphere_cube(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
+void make_sphere_cube(std::vector<vec4i>& quadss, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int steps,
     float size, float uvsize);
-void make_sphere_flipcap(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
+void make_sphere_flipcap(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
     float size, const vec2f& uvsize, const vec2f& zflip);
-void make_disk(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
+void make_disk(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
     float size, const vec2f& uvsize);
-void make_disk_quad(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
+void make_disk_quad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int steps,
     float size, float uvsize);
-void make_disk_bulged(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
+void make_disk_bulged(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int steps,
     float size, float uvsize, float height);
-void make_cylinder_side(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
+void make_cylinder_side(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
     const vec2f& size, const vec2f& uvsize, bool capped);
-void make_cylinder(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
+void make_cylinder(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
     const vec2f& size, const vec3f& uvsize);
-void make_cylinder_rounded(std::vector<vec3i>& triangles,
-    std::vector<vec3f>& pos, std::vector<vec3f>& norm,
-    std::vector<vec2f>& texcoord, const vec3i& steps, const vec2f& size,
-    const vec3f& uvsize, float radius);
+void make_cylinder_rounded(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
+    const vec2f& size, const vec3f& uvsize, float radius);
 void make_sphere(
-    std::vector<vec3i>& triangles, std::vector<vec3f>& pos, int tesselation);
+    std::vector<vec4i>& quads, std::vector<vec3f>& pos, int tesselation);
 void make_geodesic_sphere(std::vector<vec3i>& triangles,
     std::vector<vec3f>& pos, int tesselation, float size);
 
 // Make example watertight quad meshes for subdivision surfaces.
-void make_quad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    int tesselation, float size);
-void make_cube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    int tesselation, float size);
 void make_fvcube(std::vector<vec4i>& quads_pos, std::vector<vec3f>& pos,
     std::vector<vec4i>& quads_norm, std::vector<vec3f>& norm,
     std::vector<vec4i>& quads_texcoord, std::vector<vec2f>& texcoord,
-    int tesselation, float size, float uvsize);
-void make_suzanne(
-    std::vector<vec4i>& quads, std::vector<vec3f>& pos, int tesselation);
+    const vec3i& steps, const vec3f& size, const vec3f& uvsize);
+void make_suzanne(std::vector<vec4i>& quads, std::vector<vec3f>& pos);
 
 // Generate lines set along a quad.
 void make_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,

@@ -634,15 +634,19 @@ scene* load_pbrt(const std::string& filename) {
                 auto radius = 1.0f;
                 if (jcmd.count("radius"))
                     radius = jcmd.at("radius").get<float>();
-                make_sphere(shp->triangles, shp->pos, shp->norm, shp->texcoord,
+                auto quads = std::vector<vec4i>();
+                make_sphere(quads, shp->pos, shp->norm, shp->texcoord,
                     {64, 32}, 2 * radius, {1, 1});
+                shp->triangles = convert_quads_to_triangles(quads);
             } else if (type == "disk") {
                 shp->name = "disk" + std::to_string(sid++);
                 auto radius = 1.0f;
                 if (jcmd.count("radius"))
                     radius = jcmd.at("radius").get<float>();
-                make_disk(shp->triangles, shp->pos, shp->norm, shp->texcoord,
+                auto quads = std::vector<vec4i>();
+                make_disk(quads, shp->pos, shp->norm, shp->texcoord,
                     {32, 16}, 2 * radius, {1, 1});
+                shp->triangles = convert_quads_to_triangles(quads);
             } else {
                 log_error("{} shape not supported", type);
             }
@@ -715,8 +719,10 @@ scene* load_pbrt(const std::string& filename) {
                 if (jcmd.count("to")) to = get_vec3f(jcmd.at("to"));
                 auto dir = normalize(from - to);
                 auto size = distant_dist * sin(5 * pi / 180);
-                make_quad(shp->triangles, shp->pos, shp->norm, shp->texcoord,
+                auto quads = std::vector<vec4i>();
+                make_quad(quads, shp->pos, shp->norm, shp->texcoord,
                     {1, 1}, {size, size}, {1, 1});
+                shp->triangles = convert_quads_to_triangles(quads);
                 scn->shapes.push_back(shp);
                 auto mat = new material();
                 mat->name = shp->name;

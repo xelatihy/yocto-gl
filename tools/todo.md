@@ -28,11 +28,9 @@ Please consider this to be just development notes and not any real planning.
 
 ## Tesselated shapes
 
-- add tesselated shape
-    - multiple materials
-    - face varying here
-    - gets a pointer to shape array
-    - node can point to this 
+- subdivision surface
+- subdivision curve
+- parametric curve
 
 ## Simpler shapes
 
