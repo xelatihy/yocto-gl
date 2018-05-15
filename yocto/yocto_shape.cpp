@@ -79,7 +79,7 @@ void compute_normals(const std::vector<vec4i>& quads,
 // The first three components are the tangent with respect to the U texcoord.
 // The fourth component is the sign of the tangent wrt the V texcoord.
 // Tangent frame is useful in normal mapping.
-void compute_tangent_frames(const std::vector<vec3i>& triangles,
+void compute_tangent_space(const std::vector<vec3i>& triangles,
     const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
     const std::vector<vec2f>& texcoord, std::vector<vec4f>& tangsp,
     bool weighted) {

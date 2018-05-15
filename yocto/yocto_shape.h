@@ -95,12 +95,12 @@ void compute_normals(const std::vector<vec4i>& quads,
     const std::vector<vec3f>& pos, std::vector<vec3f>& norm,
     bool weighted = true);
 
-// Compute per-vertex tangent frames for triangle meshes.
+// Compute per-vertex tangent space for triangle meshes.
 // Tangent space is defined by a four component vector.
 // The first three components are the tangent with respect to the u texcoord.
 // The fourth component is the sign of the tangent wrt the v texcoord.
 // Tangent frame is useful in normal mapping.
-void compute_tangent_frames(const std::vector<vec3i>& triangles,
+void compute_tangent_space(const std::vector<vec3i>& triangles,
     const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
     const std::vector<vec2f>& texcoord, std::vector<vec4f>& tangsp,
     bool weighted = true);

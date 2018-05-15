@@ -113,40 +113,38 @@ struct gltexture {
     int width = 0;          // width
     int height = 0;         // height
     int ncomp = 0;          // number of components
-    bool as_float = false;  // stored as float
-    bool as_srgb = true;    // stored as sRGB
     bool mipmap = true;     // store with mipmaps
     bool linear = true;     // use linear interpolation
 };
 
 // Implementation of update_texture.
 void update_gltexture(gltexture& txt, int w, int h, int nc, const void* pixels,
-    bool floats, bool linear, bool mipmap, bool as_float, bool as_srgb);
+    bool floats, bool linear, bool mipmap);
 
 // Updates a texture with pixels values of size w, h with nc number of
 // components (1-4). Internally use bytes/floats (as_float), linear/sRGB
 // (as_srgb) nearest/linear filtering (linear) and mipmmapping (mipmap).
 inline void update_gltexture(gltexture& txt, int w, int h, int nc,
-    const float* pixels, bool linear, bool mipmap, bool as_float) {
+    const float* pixels, bool linear, bool mipmap) {
     update_gltexture(
-        txt, w, h, nc, pixels, true, linear, mipmap, as_float, false);
+        txt, w, h, nc, pixels, true, linear, mipmap);
 }
 inline void update_gltexture(gltexture& txt, int w, int h, int nc,
-    const unsigned char* pixels, bool linear, bool mipmap, bool as_srgb) {
+    const unsigned char* pixels, bool linear, bool mipmap) {
     update_gltexture(
-        txt, w, h, nc, pixels, false, linear, mipmap, false, as_srgb);
+        txt, w, h, nc, pixels, false, linear, mipmap);
 }
 
 // Updates a texture with pixels values from an image.
 inline void update_gltexture(gltexture& txt, int width, int height,
-    const std::vector<vec4b>& pixels, bool linear, bool mipmap, bool as_srgb) {
+    const std::vector<vec4b>& pixels, bool linear, bool mipmap) {
     update_gltexture(txt, width, height, 4, (unsigned char*)pixels.data(),
-        linear, mipmap, as_srgb);
+        linear, mipmap);
 }
 inline void update_gltexture(gltexture& txt, int width, int height,
-    const std::vector<vec4f>& pixels, bool linear, bool mipmap, bool as_float) {
+    const std::vector<vec4f>& pixels, bool linear, bool mipmap) {
     update_gltexture(
-        txt, width, height, 4, (float*)pixels.data(), linear, mipmap, as_float);
+        txt, width, height, 4, (float*)pixels.data(), linear, mipmap);
 }
 
 // Binds/unbinds a texture to a texture unit.
@@ -396,12 +394,12 @@ inline void center_glimage(frame2f& frame, const vec2i& imsize,
 struct glsurface_program {
     glprogram prog;  // program
     // uniform variable location
-    int eyelight_id, exposure_id, gamma_id, cam_xform_id, cam_xform_inv_id,
+    int eyelight_id, exposure_id, gamma_id, cam_pos_id, cam_xform_inv_id,
         cam_proj_id, lamb_id, lnum_id, lpos_id[16], lke_id[16], ltype_id[16],
         shp_xform_id, shp_normal_offset_id, highlight_id, mtype_id, ke_id,
         kd_id, ks_id, rs_id, op_id, ke_txt_id, ke_txt_on_id, kd_txt_id,
         kd_txt_on_id, ks_txt_id, ks_txt_on_id, norm_txt_id, norm_txt_on_id,
-        etype_id, efaceted_id;
+        etype_id, efaceted_id, double_sided_id;
     // vertex attribute locations
     int pos_id, norm_id, texcoord_id, color_id, tangsp_id;
 };
@@ -418,7 +416,7 @@ inline bool is_glprogram_valid(const glsurface_program& prog) {
 // projection. Sets also whether to use full shading or a quick eye light
 // preview.
 void begin_glsurface_frame(const glsurface_program& prog,
-    const mat4f& camera_xform, const mat4f& camera_xform_inv,
+    const vec3f& camera_pos, const mat4f& camera_xform_inv,
     const mat4f& camera_proj, bool shade_eyelight, float exposure = 0,
     float gamma = 2.2f);
 
@@ -455,7 +453,7 @@ void set_glsurface_material(const glsurface_program& prog, const vec3f& ke,
     const vec3f& kd, const vec3f& ks, float rs, float op,
     const gltexture_info& ke_txt, const gltexture_info& kd_txt,
     const gltexture_info& ks_txt, const gltexture_info& norm_txt,
-    bool base_metallic);
+    bool double_sided, bool base_metallic);
 
 // Set constant material with emission `ke` and opacity `op`.
 void set_glsurface_constmaterial(

@@ -371,7 +371,7 @@ void add_missing_tangent_space(scene* scn) {
             continue;
         if (!ist->shp->triangles.empty()) {
             if (ist->shp->norm.empty()) update_normals(ist->shp);
-            compute_tangent_frames(ist->shp->triangles, ist->shp->pos,
+            compute_tangent_space(ist->shp->triangles, ist->shp->pos,
                 ist->shp->norm, ist->shp->texcoord, ist->shp->tangsp);
         } else {
             throw std::runtime_error("type not supported");
@@ -468,11 +468,35 @@ vec3f eval_elem_norm(const shape* shp, int ei) {
     return norm;
 }
 
+// Shape element normal.
+vec4f eval_elem_tangsp(const shape* shp, int ei) {
+    auto tangsp = zero4f;
+    if (!shp->triangles.empty()) {
+        auto t = shp->triangles[ei];
+        auto norm =
+            triangle_normal(shp->pos[t.x], shp->pos[t.y], shp->pos[t.z]);
+        auto txty = std::pair<vec3f, vec3f>();
+        if (shp->texcoord.empty()) {
+            txty = triangle_tangents_fromuv(shp->pos[t.x], shp->pos[t.y],
+                shp->pos[t.z], {0, 0}, {1, 0}, {0, 1});
+        } else {
+            txty = triangle_tangents_fromuv(shp->pos[t.x], shp->pos[t.y],
+                shp->pos[t.z], shp->texcoord[t.x], shp->texcoord[t.y],
+                shp->texcoord[t.z]);
+        }
+        auto tx = txty.first, ty = txty.second;
+        tx = orthonormalize(tx, norm);
+        auto s = (dot(cross(norm, tx), ty) < 0) ? -1.0f : 1.0f;
+        tangsp = {tx.x, tx.y, tx.z, s};
+    }
+    return tangsp;
+}
+
 // Shape value interpolated using barycentric coordinates
 template <typename T>
-T eval_elem(const shape* shp, const std::vector<T>& vals, int ei,
-    const vec2f& uv, const T& def) {
-    if (vals.empty()) return def;
+T eval_elem(
+    const shape* shp, const std::vector<T>& vals, int ei, const vec2f& uv) {
+    if (vals.empty()) return {};
     if (!shp->triangles.empty()) {
         return interpolate_triangle(vals, shp->triangles[ei], uv);
     } else if (!shp->lines.empty()) {
@@ -480,35 +504,39 @@ T eval_elem(const shape* shp, const std::vector<T>& vals, int ei,
     } else if (!shp->pos.empty()) {
         return vals[ei];
     } else {
-        return def;
+        return {};
     }
 }
 
 // Shape values interpolated using barycentric coordinates
 vec3f eval_pos(const shape* shp, int ei, const vec2f& uv) {
-    return eval_elem(shp, shp->pos, ei, uv, {0, 0, 0});
+    return eval_elem(shp, shp->pos, ei, uv);
 }
 vec3f eval_norm(const shape* shp, int ei, const vec2f& uv) {
     if (shp->norm.empty()) return eval_elem_norm(shp, ei);
-    return normalize(eval_elem(shp, shp->norm, ei, uv, {0, 0, 1}));
+    return normalize(eval_elem(shp, shp->norm, ei, uv));
 }
 vec2f eval_texcoord(const shape* shp, int ei, const vec2f& uv) {
-    return eval_elem(shp, shp->texcoord, ei, uv, {0, 0});
+    if (shp->texcoord.empty()) return uv;
+    return eval_elem(shp, shp->texcoord, ei, uv);
 }
 vec4f eval_color(const shape* shp, int ei, const vec2f& uv) {
-    return eval_elem(shp, shp->color, ei, uv, {1, 1, 1, 1});
+    if (shp->color.empty()) return {1, 1, 1, 1};
+    return eval_elem(shp, shp->color, ei, uv);
 }
 float eval_radius(const shape* shp, int ei, const vec2f& uv) {
-    return eval_elem(shp, shp->radius, ei, uv, 0.0f);
+    if (shp->radius.empty()) return 0.001f;
+    return eval_elem(shp, shp->radius, ei, uv);
 }
 vec4f eval_tangsp(const shape* shp, int ei, const vec2f& uv) {
-    return eval_elem(shp, shp->tangsp, ei, uv, {0, 0, 0, 1});
+    if (shp->tangsp.empty()) return eval_elem_tangsp(shp, ei);
+    return eval_elem(shp, shp->tangsp, ei, uv);
 }
 vec3f eval_tangsp(
     const shape* shp, int ei, const vec2f& uv, bool& left_handed) {
-    auto tangsp = eval_elem(shp, shp->tangsp, ei, uv, {0, 0, 0, 1});
+    auto tangsp = (shp->tangsp.empty()) ? eval_elem_tangsp(shp, ei) : eval_elem(shp, shp->tangsp, ei, uv);
     left_handed = tangsp.w < 0;
-    return {tangsp.x, tangsp.y, tangsp.w};
+    return {tangsp.x, tangsp.y, tangsp.z};
 }
 
 // Instance values interpolated using barycentric coordinates.
@@ -544,15 +572,14 @@ vec3f eval_shading_norm(
         if (ist->mat->norm_txt.txt) {
             auto texcoord = eval_texcoord(ist, ei, uv);
             auto left_handed = false;
-            auto tang = eval_tangsp(ist, ei, uv, left_handed);
             auto txt = xyz(eval_texture(ist->mat->norm_txt, texcoord, false));
             txt = txt * 2 - vec3f{1, 1, 1};
-            txt.y = -txt.y;
-            auto fp = make_frame_fromzx({0, 0, 0}, n, tang);
-            if (left_handed) fp.y = -fp.y;
-            n = transform_direction(fp, txt);
+            txt.y = -txt.y; // flip vertical axis to align green with image up
+            auto tu = orthonormalize(eval_tangsp(ist, ei, uv, left_handed), n);
+            auto tv = normalize(cross(n, tu) * (left_handed ? -1.0f : 1.0f));
+            n = normalize(txt.x * tu + txt.y * tv + txt.z * n);
         }
-        // if (dot(n, o) < 0) n = -n;
+        if (ist->mat->double_sided && dot(n, o) < 0) n = -n;
         return n;
     } else if (!ist->shp->lines.empty()) {
         return orthonormalize(o, eval_norm(ist, ei, uv));
@@ -671,7 +698,7 @@ vec3f eval_diffuse(const instance* ist, int ei, const vec2f& uv) {
             ist->mat->kd * xyz(eval_color(ist, ei, uv)) *
             xyz(eval_texture(ist->mat->kd_txt, eval_texcoord(ist, ei, uv)));
         auto km = ist->mat->ks.x *
-                  eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).x;
+                  eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv), false).z;
         return kb * (1 - km);
     }
 }
@@ -685,7 +712,7 @@ vec3f eval_specular(const instance* ist, int ei, const vec2f& uv) {
             ist->mat->kd * xyz(eval_color(ist, ei, uv)) *
             xyz(eval_texture(ist->mat->kd_txt, eval_texcoord(ist, ei, uv)));
         auto km = ist->mat->ks.x *
-                  eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).x;
+                  eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv), false).z;
         return kb * km + vec3f{0.04f, 0.04f, 0.04f} * (1 - km);
     }
 }
@@ -695,10 +722,12 @@ float eval_roughness(const instance* ist, int ei, const vec2f& uv) {
         auto rs = ist->mat->rs;
         auto txt_w =
             eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).w;
-        return 1 - ((1 - rs) * txt_w);
+        rs = 1 - ((1 - rs) * txt_w);
+        return rs * rs;
     } else {
-        return ist->mat->rs *
-               eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).w;
+        auto rs = ist->mat->rs *
+            eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv), false).y;
+        return rs * rs;
     }
     // rs = clamp(rs, 0.03f * 0.03f, 1.0f);
 }
@@ -1209,8 +1238,9 @@ scene* obj_to_scene(const obj_scene* obj) {
         for (auto ist : ists) delete ist;
     }
 
-    // update transforms
+    // update transforms and bboxes
     update_transforms(scn);
+    update_bbox(scn);
 
     // done
     return scn;
@@ -1518,6 +1548,7 @@ scene* gltf_to_scene(const glTF* gltf) {
             mat->ks_txt = make_texture_info(gmr->metallicRoughnessTexture);
         }
         mat->norm_txt = make_texture_info(gmat->normalTexture, true, false);
+        mat->double_sided = gmat->doubleSided;
         scn->materials.push_back(mat);
     }
 
@@ -1554,6 +1585,7 @@ scene* gltf_to_scene(const glTF* gltf) {
                     shp->tangsp.reserve(vals.size());
                     for (auto i = 0; i < vals.size(); i++)
                         shp->tangsp.push_back(vals.getv4f(i));
+                    for(auto& t : shp->tangsp) t.w = -t.w;
                 } else if (semantic == "RADIUS") {
                     shp->radius.reserve(vals.size());
                     for (auto i = 0; i < vals.size(); i++)
@@ -1796,8 +1828,16 @@ scene* gltf_to_scene(const glTF* gltf) {
         }
     }
 
-    // compute transforms
+    // compute transforms and bbox
     update_transforms(scn, 0);
+    update_bbox(scn);
+
+    // fix camera focus
+    for(auto cam : scn->cameras) {
+        auto center = (scn->bbox.min + scn->bbox.max) / 2;
+        auto dist = dot(-cam->frame.z, center - cam->frame.o);
+        if(dist > 0) cam->focus = dist;
+    }
 
     return scn;
 }
@@ -1919,7 +1959,7 @@ glTF* scene_to_gltf(
         }
         gmat->normalTexture = (glTFMaterialNormalTextureInfo*)(add_texture_info(
             mat->norm_txt, true, false));
-        gmat->doubleSided = true;
+        gmat->doubleSided = mat->double_sided;
         gltf->materials.push_back(gmat);
     }
 

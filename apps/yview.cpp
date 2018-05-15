@@ -283,6 +283,8 @@ int main(int argc, char* argv[]) {
         ygl::make_parser(argc, argv, "yview", "views scenes inteactively");
     app->eyelight = ygl::parse_flag(
         parser, "--eyelight", "-c", "Eyelight rendering.", false);
+    auto double_sided = ygl::parse_flag(
+        parser, "--double-sided", "-D", "Double-sided rendering.", false);
     app->quiet =
         ygl::parse_flag(parser, "--quiet", "-q", "Print only errors messages");
     app->screenshot_and_exit = ygl::parse_flag(
@@ -329,9 +331,12 @@ int main(int argc, char* argv[]) {
     ygl::add_missing_names(app->scn);
     ygl::add_missing_tangent_space(app->scn);
     app->cam = app->scn->cameras[0];
-
-    // validate
     for (auto err : ygl::validate(app->scn)) ygl::log_warning(err);
+
+    // double sided
+    if(double_sided) {
+        for(auto mat : app->scn->materials) mat->double_sided = true;
+    }
 
     // animation
     app->time_range = ygl::compute_animation_range(app->scn);
