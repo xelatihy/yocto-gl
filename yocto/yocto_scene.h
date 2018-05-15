@@ -137,6 +137,7 @@ struct texture_info {
 struct material {
     std::string name = "";       // name
     bool base_metallic = false;  // base-metallic parametrization (glTF)
+    bool double_sided = false;   // double sided rendering
 
     // base values
     vec3f ke = {0, 0, 0};  // emission color
@@ -199,8 +200,8 @@ struct subdiv {
     std::vector<vec4i> quads_color;     // quads for color
 
     // creases
-    std::vector<vec3i> crease_pos;      // crease for position
-    std::vector<vec3i> crease_texcoord; // crease for texture coordinates
+    std::vector<vec3i> crease_pos;       // crease for position
+    std::vector<vec3i> crease_texcoord;  // crease for texture coordinates
 
     // vertex data
     std::vector<vec3f> pos;       // positions
@@ -399,6 +400,7 @@ vec4f eval_tangsp(const shape* shp, int ei, const vec2f& uv);
 vec3f eval_tangsp(const shape* shp, int ei, const vec2f& uv, bool& left_handed);
 // Shape element values.
 vec3f eval_elem_norm(const shape* shp, int ei);
+vec4f eval_elem_tangsp(const shape* shp, int ei);
 
 // Instance values interpolated using barycentric coordinates.
 // Handles defaults if data is missing.

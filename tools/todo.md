@@ -9,16 +9,60 @@ Please consider this to be just development notes and not any real planning.
 - better material rendering
 - better rendering
 
+## planned cleanup
+
+- more image operations to floats
+    - make explicit the use of 1/3/4 channel images
+    - bumps and dimples should be sphere
+- single material representation converted on load
+- convert textures on load
+    - srgb -> float on load with correct convention
+
+## glTF tests
+
+- yview
+    - set focus to bbox center
+- yitrace
+    - envmap rendering
+- update normals/tangents
+- yview
+    - 2CylinderEngine: near plane
+    - AlphaBlendModeTest: not supported
+    - AnimatedMorphCube/AnimatedMorphSphere: not supported
+    - AnimatedTriangle: crash
+    - Avocado: bad specular?
+    - BarracubeFish: flip normal map? specular?
+        - occlusion not supported
+    - BoomBox: specular?
+    - BoxVertexColor: check alpha?
+    - Buggy: transforms
+    - DamagedHelmet: no colors
+    - Duck: not visible 
+    - MetalRoughSphere: check with envmap
+    - NormalTangentMirrorTest: bad normal and bad sideness
+    - NormalTangentTestL check colors
+    - SimpleMeshes: crash
+    - SimpleMorph: crash
+    - SimpleSparseAccessor: crash
+    - Suzanne: bad materials
+    - Triangle: crash
+    - TextureSettingTest: bad texture and double-sided
+    - VC: bad transforms
+
 ## Trace
 
+- pass gltf model
+- bump/normal/displacement mapping
+    - convert bump maps to normal maps internally
+    - eval tangent space per triangle
+    - compute derivaties for textures
+- hair example
+- subdiv example
 - put back double sided
 - refraction
     - rough surface refraction
 - redirect log to imgui
 - points/lines projections
-- bump/normal mapping
-    - eval tangent space per triangle
-    - compute derivaties for textures
 - add radius in offsetting rays
 - bvh with opacity
 - simple denoiser
@@ -26,15 +70,8 @@ Please consider this to be just development notes and not any real planning.
     - non-local means denoiser
     - denoiser from paris
 
-## Tesselated shapes
-
-- subdivision surface
-- subdivision curve
-- parametric curve
-
 ## Simpler shapes
 
-- split lines and triangle meshes
 - sampling shapes
     - remove sample_points, sample_lines, etc...
     - support uniform sampling in sample_shape

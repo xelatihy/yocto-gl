@@ -46,6 +46,7 @@ int main(int argc, char* argv[]) {
     static auto trace_names = std::map<ygl::trace_func, std::string>{
         {ygl::trace_path, "pathtrace"},
         {ygl::trace_direct, "direct"},
+        {ygl::trace_environment, "environment"},
         {ygl::trace_eyelight, "eyelight"},
         {ygl::trace_path_nomis, "pathtrace-nomis"},
         {ygl::trace_path_naive, "pathtrace-naive"},
@@ -81,6 +82,8 @@ int main(int argc, char* argv[]) {
         ygl::parse_opt(parser, "--exposure", "-e", "Hdr exposure", 0.0f);
     auto tonemap = ygl::parse_opte(parser, "--tonemap", "-T", "Hdr tonemap",
         tonemap_names, ygl::tonemap_type::gamma);
+    auto double_sided = ygl::parse_flag(
+        parser, "--double-sided", "-D", "Double-sided rendering.", false);
     auto quiet =
         ygl::parse_flag(parser, "--quiet", "-q", "Print only errors messages");
     auto imfilename = ygl::parse_opt(
@@ -116,6 +119,11 @@ int main(int argc, char* argv[]) {
     ygl::add_missing_tangent_space(scn);
     auto cam = scn->cameras[0];
     for (auto err : ygl::validate(scn)) ygl::log_warning(err);
+
+    // double sided
+    if(double_sided) {
+        for(auto mat : scn->materials) mat->double_sided = true;
+    }
 
     // build bvh
     ygl::log_info_begin("building bvh");

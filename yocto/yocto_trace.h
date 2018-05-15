@@ -71,7 +71,7 @@ namespace ygl {
 
 // Trace evaluation function.
 using trace_func = vec3f (*)(
-    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces);
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces, bool* hit);
 
 // Trace the next nsamples samples. Assumes that the
 // image contains cur_samples already. Returns true when done.
@@ -95,37 +95,46 @@ void trace_async_stop(std::vector<std::thread>& threads, bool& stop_flag);
 
 // Trace function - path tracer.
 vec3f trace_path(
-    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces);
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces, bool* hit = nullptr);
 // Trace function - path tracer without mis.
 vec3f trace_path_nomis(
-    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces);
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces, bool* hit = nullptr);
 // Trace function - naive path tracer.
 vec3f trace_path_naive(
-    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces);
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces, bool* hit = nullptr);
 // Trace function - direct illumination.
 vec3f trace_direct(
-    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces);
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces, bool* hit = nullptr);
 // Trace function - direct illumination without mis.
 vec3f trace_direct_nomis(
-    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces);
-// Trace function - direct illumination without mis.
-vec3f trace_direct_nomis(
-    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces);
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces, bool* hit = nullptr);
+// Trace function - pure environment illumination with no shadows.
+vec3f trace_environment(
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces, bool* hit = nullptr);
 // Trace function - eyelight rendering.
 vec3f trace_eyelight(
-    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces);
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces, bool* hit = nullptr);
 // Trace function - normal debug visualization.
 vec3f trace_debug_normal(
-    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces);
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces, bool* hit = nullptr);
 // Trace function - faceforward debug visualization.
 vec3f trace_debug_frontfacing(
-    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces);
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces, bool* hit = nullptr);
 // Trace function - albedo debug visualization.
 vec3f trace_debug_albedo(
-    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces);
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces, bool* hit = nullptr);
+// Trace function - diffuse debug visualization.
+vec3f trace_debug_diffuse(
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces, bool* hit = nullptr);
+// Trace function - specular debug visualization.
+vec3f trace_debug_specular(
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces, bool* hit = nullptr);
+// Trace function - roughness debug visualization.
+vec3f trace_debug_roughness(
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces, bool* hit = nullptr);
 // Trace function - texcoord debug visualization.
 vec3f trace_debug_texcoord(
-    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces);
+    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces, bool* hit = nullptr);
 
 }  // namespace ygl
 

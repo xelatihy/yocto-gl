@@ -169,26 +169,20 @@ namespace ygl {
 
 // Implementation of update_texture.
 void update_gltexture(gltexture& txt, int w, int h, int nc, const void* pixels,
-    bool floats, bool linear, bool mipmap, bool as_float, bool as_srgb) {
+    bool floats, bool linear, bool mipmap) {
     auto refresh = !txt.tid || txt.width != w || txt.height != h ||
-                   txt.ncomp != nc || txt.as_float != as_float ||
-                   txt.as_srgb != as_srgb || txt.mipmap != mipmap ||
+                   txt.ncomp != nc || txt.mipmap != mipmap ||
                    txt.linear != linear;
     txt.width = w;
     txt.height = h;
     txt.ncomp = nc;
-    txt.as_float = as_float;
-    txt.as_srgb = as_srgb;
     txt.mipmap = mipmap;
     txt.linear = linear;
-    assert(!as_srgb || !as_float);
     assert(check_glerror());
     if (w * h) {
         int formats_ub[4] = {GL_RED, GL_RG, GL_RGB, GL_RGBA};
-        int formats_sub[4] = {GL_RED, GL_RG, GL_SRGB, GL_SRGB_ALPHA};
         int formats_f[4] = {GL_R32F, GL_RG32F, GL_RGB32F, GL_RGBA32F};
-        int* formats =
-            (as_float) ? formats_f : ((as_srgb) ? formats_sub : formats_ub);
+        int* formats = (floats) ? formats_f : formats_ub;
         assert(check_glerror());
         if (!txt.tid) glGenTextures(1, &txt.tid);
         glBindTexture(GL_TEXTURE_2D, txt.tid);
@@ -872,6 +866,10 @@ glsurface_program make_glsurface_program() {
         uniform bool mat_txt_norm_on;    // material norm texture on
         uniform sampler2D mat_txt_norm;  // material norm texture
 
+        uniform bool mat_double_sided;   // double sided rendering
+
+        uniform mat4 shape_xform;           // shape transform
+
         bool eval_material(vec2 texcoord, vec4 color, out vec3 ke, 
                            out vec3 kd, out vec3 ks, out float rs, out float op) {
             if(mat_type == 0) {
@@ -888,22 +886,21 @@ glsurface_program make_glsurface_program() {
             rs = mat_rs;
             op = color.w * mat_op;
 
-            vec3 ke_txt = (mat_txt_ke_on) ? texture(mat_txt_ke,texcoord).xyz : vec3(1);
+            vec4 ke_txt = (mat_txt_ke_on) ? texture(mat_txt_ke,texcoord) : vec4(1);
             vec4 kd_txt = (mat_txt_kd_on) ? texture(mat_txt_kd,texcoord) : vec4(1);
             vec4 ks_txt = (mat_txt_ks_on) ? texture(mat_txt_ks,texcoord) : vec4(1);
 
             // scale common values
-            ke *= ke_txt;
+            ke *= ke_txt.xyz;
 
             // get material color from textures and adjust values
             if(mat_type == 0) {
             } else if(mat_type == 1) {
-                kd *= kd_txt.xyz;
-                ks *= ks_txt.xyz;
-                // TODO: put new texture
+                kd *= pow(kd_txt.xyz, vec3(2.2));
+                ks *= pow(ks_txt.xyz, vec3(2.2));
                 rs = rs*rs;
             } else if(mat_type == 2) {
-                vec3 kb = kd * kd_txt.xyz;
+                vec3 kb = kd * pow(kd_txt.xyz, vec3(2.2));
                 float km = ks.x * ks_txt.z;
                 kd = kb * (1 - km);
                 ks = kb * km + vec3(0.04) * (1 - km);
@@ -911,8 +908,8 @@ glsurface_program make_glsurface_program() {
                 rs = rs*rs;
                 op *= kd_txt.w;
             } else if(mat_type == 3) {
-                kd *= kd_txt.xyz;
-                ks *= ks_txt.xyz;
+                kd *= pow(kd_txt.xyz, vec3(2.2));
+                ks *= pow(ks_txt.xyz, vec3(2.2));
                 rs *= ks_txt.w;
                 rs = (1 - rs) * (1 - rs);
                 op *= kd_txt.w;
@@ -923,10 +920,11 @@ glsurface_program make_glsurface_program() {
 
         vec3 apply_normal_map(vec2 texcoord, vec3 norm, vec4 tangsp) {
             if(!mat_txt_norm_on) return norm;
-            vec3 tangu = normalize(tangsp.xyz);
-            vec3 tangv = normalize(cross(tangu, norm));
+            vec3 tangu = normalize((shape_xform * vec4(normalize(tangsp.xyz),0)).xyz);
+            vec3 tangv = normalize(cross(norm, tangu));
             if(tangsp.w < 0) tangv = -tangv;
-            vec3 txt = 2 * pow(texture(mat_txt_norm,texcoord).xyz, vec3(1/2.2)) - 1;
+            vec3 txt = 2 * texture(mat_txt_norm,texcoord).xyz - 1;
+            txt.y = -txt.y;
             return normalize( tangu * txt.x + tangv * txt.y + norm * txt.z );
         }
 
@@ -940,7 +938,7 @@ glsurface_program make_glsurface_program() {
         in vec4 color;                 // [from vertex shader] color
         in vec4 tangsp;                // [from vertex shader] tangent space
 
-        uniform mat4 cam_xform;          // camera xform
+        uniform vec3 cam_pos;          // camera position
         uniform mat4 cam_xform_inv;      // inverse of the camera frame (as a matrix)
         uniform mat4 cam_proj;           // camera projection
 
@@ -952,13 +950,13 @@ glsurface_program make_glsurface_program() {
         vec3 triangle_normal(vec3 pos) {
             vec3 fdx = dFdx(pos); 
             vec3 fdy = dFdy(pos); 
-            return normalize(cross(fdx, fdy));
+            return normalize((shape_xform * vec4(normalize(cross(fdx, fdy)), 0)).xyz);
         }
 
         // main
         void main() {
             // view vector
-            vec3 wo = normalize( (cam_xform*vec4(0,0,0,1)).xyz - pos );
+            vec3 wo = normalize(cam_pos - pos);
 
             // prepare normals
             vec3 n;
@@ -972,7 +970,7 @@ glsurface_program make_glsurface_program() {
             n = apply_normal_map(texcoord, n, tangsp);
 
             // use faceforward to ensure the normals points toward us
-            n = faceforward(n,-wo,n);
+            if(mat_double_sided) n = faceforward(n,-wo,n);
 
             // get material color from textures
             vec3 brdf_ke, brdf_kd, brdf_ks; float brdf_rs, brdf_op;
@@ -1034,7 +1032,7 @@ glsurface_program make_glsurface_program() {
     prog.eyelight_id = get_gluniform_location(prog.prog, "eyelight");
     prog.exposure_id = get_gluniform_location(prog.prog, "exposure");
     prog.gamma_id = get_gluniform_location(prog.prog, "gamma");
-    prog.cam_xform_id = get_gluniform_location(prog.prog, "cam_xform");
+    prog.cam_pos_id = get_gluniform_location(prog.prog, "cam_pos");
     prog.cam_xform_inv_id = get_gluniform_location(prog.prog, "cam_xform_inv");
     prog.cam_proj_id = get_gluniform_location(prog.prog, "cam_proj");
     prog.lamb_id = get_gluniform_location(prog.prog, "lamb");
@@ -1064,6 +1062,8 @@ glsurface_program make_glsurface_program() {
     prog.ks_txt_on_id = get_gluniform_location(prog.prog, "mat_txt_ks_on");
     prog.norm_txt_id = get_gluniform_location(prog.prog, "mat_txt_norm");
     prog.norm_txt_on_id = get_gluniform_location(prog.prog, "mat_txt_norm_on");
+    prog.double_sided_id =
+        get_gluniform_location(prog.prog, "mat_double_sided");
     prog.etype_id = get_gluniform_location(prog.prog, "elem_type");
     prog.efaceted_id = get_gluniform_location(prog.prog, "elem_faceted");
     assert(check_glerror());
@@ -1080,12 +1080,12 @@ glsurface_program make_glsurface_program() {
 // and projection. Sets also whether to use full shading or a quick
 // eyelight preview.
 void begin_glsurface_frame(const glsurface_program& prog,
-    const mat4f& camera_xform, const mat4f& camera_xform_inv,
+    const vec3f& camera_pos, const mat4f& camera_xform_inv,
     const mat4f& camera_proj, bool shade_eyelight, float exposure,
     float gamma) {
     assert(check_glerror());
     bind_glprogram(prog.prog);
-    set_gluniform(prog.prog, prog.cam_xform_id, camera_xform);
+    set_gluniform(prog.prog, prog.cam_pos_id, camera_pos);
     set_gluniform(prog.prog, prog.cam_xform_inv_id, camera_xform_inv);
     set_gluniform(prog.prog, prog.cam_proj_id, camera_proj);
     set_gluniform(prog.prog, prog.eyelight_id, shade_eyelight);
@@ -1161,7 +1161,7 @@ void set_glsurface_material(const glsurface_program& prog, const vec3f& ke,
     const vec3f& kd, const vec3f& ks, float rs, float op,
     const gltexture_info& ke_txt, const gltexture_info& kd_txt,
     const gltexture_info& ks_txt, const gltexture_info& norm_txt,
-    bool base_metallic) {
+    bool double_sided, bool base_metallic) {
     assert(check_glerror());
     set_gluniform(prog.prog, prog.mtype_id, base_metallic ? 2 : 1);
     set_gluniform(prog.prog, prog.ke_id, ke);
@@ -1169,6 +1169,7 @@ void set_glsurface_material(const glsurface_program& prog, const vec3f& ke,
     set_gluniform(prog.prog, prog.ks_id, ks);
     set_gluniform(prog.prog, prog.rs_id, rs);
     set_gluniform(prog.prog, prog.op_id, op);
+    set_gluniform(prog.prog, prog.double_sided_id, double_sided);
     set_gluniform_texture(
         prog.prog, prog.ke_txt_id, prog.ke_txt_on_id, ke_txt, 0);
     set_gluniform_texture(

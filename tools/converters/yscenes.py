@@ -63,7 +63,7 @@ def convert(dirname, scene='*'):
 @click.argument('scene', required=False, default='*')
 def view(dirname, scene='*', format='obj'):
     for filename in get_filenames(f'{dirname}/yocto', scene, f'*.{format}'):
-        run_cmd(f'../yocto-gl/bin/yview --eyelight {filename}')
+        run_cmd(f'../yocto-gl/bin/yview --eyelight -D {filename}')
 
 @run.command()
 @click.option('--format', '-F', default='obj', type=click.Choice(['obj','gltf']))
@@ -71,7 +71,27 @@ def view(dirname, scene='*', format='obj'):
 @click.argument('scene', required=False, default='*')
 def trace(dirname, scene='*', format='obj'):
     for filename in get_filenames(f'{dirname}/yocto', scene, f'*.{format}'):
-        run_cmd(f'../yocto-gl/bin/yitrace {filename}')
+        run_cmd(f'../yocto-gl/bin/yitrace -D {filename}')
+
+@run.command()
+@click.option('--mode', '-M', required=False, default='glTF')
+@click.argument('dirname', required=True)
+@click.argument('scene', required=False, default='*')
+def view_gltf(dirname, scene='*', mode='glTF'):
+    format = 'gltf'
+    for filename in get_filenames(f'{dirname}/yocto', scene, f'{mode}/*.{format}'):
+        run_cmd(f'../yocto-gl/bin/yview --eyelight {filename}')
+
+@run.command()
+@click.option('--mode', '-M', required=False, default='glTF')
+@click.option('--env', '-E', is_flag=True, required=False, default=False)
+@click.argument('dirname', required=True)
+@click.argument('scene', required=False, default='*')
+def trace_gltf(dirname, scene='*', mode='glTF', env=False):
+    format = 'gltf'
+    opts = '--add-skyenv -t environment' if env else '-t eyelight'
+    for filename in get_filenames(f'{dirname}/yocto', scene, f'{mode}/*.{format}'):
+        run_cmd(f'../yocto-gl/bin/yitrace {opts} {filename}')
 
 @run.command()
 @click.option('--resolution', '-r', default=720, type=int)
@@ -93,9 +113,19 @@ def render(dirname, scene='*', format='obj', samples=64, resolution=720, tracer=
         run_cmd(f'../yocto-gl/bin/ytrace -r {resolution} -s {samples} -t {tracer} {save_batch} -o {outname} {filename}')
 
 @run.command()
-def sync():
-    os.system('rsync -avc --delete ./ ../yocto-scenes')
+@click.argument('dirname', required=True)
+@click.argument('scene', required=False, default='*')
+def zip(dirname, scene='*'):
+    for filename in glob.glob(f'{dirname}/unedited/{scene}'):
+        if not os.path.isdir(filename): continue
+        basedir = os.path.dirname(filename)
+        basename = os.path.basename(filename)
+        print(basedir, dirname)
+        run_cmd(f'cd {basedir}; zip -r -X -9 -q {basename}.zip {basename}')
 
+@run.command()
+def sync():
+    os.system('rsync -avc --delete ./ ../yocto-scenes')    
 
 if __name__ == '__main__':
     run()

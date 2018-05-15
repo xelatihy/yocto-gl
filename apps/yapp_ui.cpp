@@ -66,11 +66,11 @@ void update_gldata(texture* txt) {
     auto& gtxt = *(gltexture*)txt->gl_data;
     if (!txt->hdr.empty()) {
         update_gltexture(
-            gtxt, txt->width, txt->height, txt->hdr, true, true, true);
+            gtxt, txt->width, txt->height, txt->hdr, true, true);
     }
     if (!txt->ldr.empty()) {
         update_gltexture(
-            gtxt, txt->width, txt->height, txt->ldr, true, true, true);
+            gtxt, txt->width, txt->height, txt->ldr, true, true);
     }
 }
 void update_gldata(shape* shp) {
@@ -154,7 +154,7 @@ void draw_glshape(const shape* shp, const material* mat, const mat4f& xform,
 
     set_glsurface_material(prog, mat->ke, mat->kd, mat->ks, mat->rs, mat->op,
         txt(mat->ke_txt), txt(mat->kd_txt), txt(mat->ks_txt),
-        txt(mat->norm_txt), mat->base_metallic);
+        txt(mat->norm_txt), mat->double_sided, mat->base_metallic);
 
     set_glsurface_vert(
         prog, gshp.pos, gshp.norm, gshp.texcoord, gshp.color, gshp.tangsp);
@@ -202,12 +202,11 @@ void draw_glscene(const scene* scn, const camera* cam,
     enable_gldepth_test(true);
     set_glviewport(viewport_size);
 
-    auto camera_xform = frame_to_mat(cam->frame);
     auto camera_view = frame_to_mat(inverse(cam->frame));
     auto camera_proj = perspective_mat(cam->yfov,
         (float)viewport_size.x / (float)viewport_size.y, cam->near, cam->far);
 
-    begin_glsurface_frame(prog, camera_xform, camera_view, camera_proj,
+    begin_glsurface_frame(prog, cam->frame.o, camera_view, camera_proj,
         eyelight, exposure, gamma);
 
     if (!eyelight) {

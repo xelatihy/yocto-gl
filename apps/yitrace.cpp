@@ -30,6 +30,7 @@
 #include "../yocto/yocto_glutils.h"
 #include "../yocto/yocto_trace.h"
 #include "../yocto/yocto_utils.h"
+#include "../yocto/yocto_shape.h"
 #include "yapp_ui.h"
 using namespace std::literals;
 
@@ -83,12 +84,16 @@ struct app_state {
 auto trace_names = std::map<ygl::trace_func, std::string>{
     {ygl::trace_path, "pathtrace"},
     {ygl::trace_direct, "direct"},
+    {ygl::trace_environment, "environment"},
     {ygl::trace_eyelight, "eyelight"},
     {ygl::trace_path_nomis, "pathtrace_nomis"},
     {ygl::trace_path_naive, "pathtrace_naive"},
     {ygl::trace_direct_nomis, "direct_nomis"},
     {ygl::trace_debug_normal, "debug_normal"},
     {ygl::trace_debug_albedo, "debug_albedo"},
+    {ygl::trace_debug_diffuse, "debug_diffuse"},
+    {ygl::trace_debug_specular, "debug_specular"},
+    {ygl::trace_debug_roughness, "debug_roughness"},
     {ygl::trace_debug_texcoord, "debug_texcoord"},
     {ygl::trace_debug_frontfacing, "debug_frontfacing"},
 };
@@ -96,7 +101,7 @@ auto trace_names = std::map<ygl::trace_func, std::string>{
 void draw(ygl::glwindow* win, app_state* app) {
     // update image
     ygl::update_gltexture(
-        app->gl_txt, app->width, app->height, app->img, false, false, true);
+        app->gl_txt, app->width, app->height, app->img, false, false);
     // draw image
     auto window_size = get_glwindow_size(win);
     auto framebuffer_size = get_glwindow_framebuffer_size(win);
@@ -239,7 +244,7 @@ void run_ui(app_state* app) {
     // load textures
     app->gl_prog = ygl::make_glimage_program();
     ygl::update_gltexture(
-        app->gl_txt, app->width, app->height, app->img, false, false, true);
+        app->gl_txt, app->width, app->height, app->img, false, false);
 
     // init widget
     ygl::init_glwidgets(win);
@@ -296,6 +301,9 @@ int main(int argc, char* argv[]) {
         parser, "--seed", "", "Seed for the random number generators.", 7);
     app->preview_resolution = ygl::parse_opt(parser, "--preview-resolution", "",
         "Preview resolution for async rendering.", app->preview_resolution);
+    auto double_sided = ygl::parse_flag(
+        parser, "--double-sided", "-D", "Double-sided rendering.", false);
+    auto add_skyenv = ygl::parse_flag(parser, "--add-skyenv", "-E", "add missing env map", false);
     app->quiet =
         ygl::parse_flag(parser, "--quiet", "-q", "Print only errors messages");
     app->imfilename = ygl::parse_opt(
@@ -322,12 +330,22 @@ int main(int argc, char* argv[]) {
     ygl::log_info("tesselating scene elements");
     ygl::update_tesselation(app->scn);
 
+    // add components
+    if(add_skyenv && app->scn->environments.empty()) {
+        app->scn->environments.push_back(ygl::make_environment("sky", {1,1,1}, 
+            ygl::make_sky_texture("sky")));
+        app->scn->textures.push_back(app->scn->environments.back()->ke_txt.txt);
+    }
+    if(double_sided) {
+        for(auto mat : app->scn->materials) mat->double_sided = true;
+    }
+
     // fix scene
     ygl::log_info("adding missing scene elements");
     ygl::update_bbox(app->scn);
     ygl::add_missing_camera(app->scn);
     ygl::add_missing_names(app->scn);
-    ygl::add_missing_tangent_space(app->scn);
+    // ygl::add_missing_tangent_space(app->scn);
     app->cam = app->scn->cameras[0];
     for (auto err : ygl::validate(app->scn)) ygl::log_warning(err);
 

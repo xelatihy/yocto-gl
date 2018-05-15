@@ -305,7 +305,7 @@ void run_ui(app_state* app) {
         }
         if (app->img->gl_updated) {
             update_gltexture(app->img->gl_txt, app->img->width,
-                app->img->height, app->img->img, false, false, false);
+                app->img->height, app->img->img, false, false);
             app->img->gl_updated = false;
         }
 
