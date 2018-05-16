@@ -670,12 +670,14 @@ inline frame3f operator*(const frame3f& a, const frame3f& b) {
     return {rot.x, rot.y, rot.z, pos};
 }
 // Frame inverse, equivalent to rigid affine inverse.
-inline frame2f inverse(const frame2f& a) {
-    auto minv = transpose(mat2f{a.x, a.y});
+inline frame2f inverse(const frame2f& a, bool is_rigid = true) {
+    auto minv =
+        (is_rigid) ? transpose(mat2f{a.x, a.y}) : inverse(mat2f{a.x, a.y});
     return {minv.x, minv.y, -(minv * a.o)};
 }
-inline frame3f inverse(const frame3f& a) {
-    auto minv = transpose(mat3f{a.x, a.y, a.z});
+inline frame3f inverse(const frame3f& a, bool is_rigid = true) {
+    auto minv = (is_rigid) ? transpose(mat3f{a.x, a.y, a.z}) :
+                             inverse(mat3f{a.x, a.y, a.z});
     return {minv.x, minv.y, minv.z, -(minv * a.o)};
 }
 

@@ -18,12 +18,56 @@ Please consider this to be just development notes and not any real planning.
 - convert textures on load
     - srgb -> float on load with correct convention
 
+## image to float
+
+- tag textures with srgb
+- move textures to float
+- move example images to float
+- move image ops to float
+
+## Trace
+
+- realiztic camera
+    - camera_pos, lens_pos
+- pass gltf model
+- bump/normal/displacement mapping
+    - convert bump maps to normal maps internally
+    - eval tangent space per triangle
+    - compute derivaties for textures
+- hair example
+- subdiv example
+- displacement example
+- put back double sided
+- refraction
+    - rough surface refraction
+- redirect log to imgui
+- points/lines projections
+- add radius in offsetting rays
+- embree/pbrt inetrsection and bvh
+- one sided shading
+- bvh with opacity
+- bvh for sah
+- see mini path tracer features and include them all
+- simple denoiser
+    - joint bilateral denoiser
+    - non-local means denoiser
+    - denoiser from paris
+
+## Simpler shapes
+
+- sampling shapes
+    - remove sample_points, sample_lines, etc...
+    - support uniform sampling in sample_shape
+
 ## glTF tests
 
-- yview
-    - set focus to bbox center
-- yitrace
-    - envmap rendering
+- BUG: transforms
+- not supported
+    - alpha cutoff
+    - texture modes
+- yitrace crash
+    - morph
+    - sparse accessor
 - update normals/tangents
 - yview
     - 2CylinderEngine: near plane
@@ -48,33 +92,6 @@ Please consider this to be just development notes and not any real planning.
     - Triangle: crash
     - TextureSettingTest: bad texture and double-sided
     - VC: bad transforms
-
-## Trace
-
-- pass gltf model
-- bump/normal/displacement mapping
-    - convert bump maps to normal maps internally
-    - eval tangent space per triangle
-    - compute derivaties for textures
-- hair example
-- subdiv example
-- put back double sided
-- refraction
-    - rough surface refraction
-- redirect log to imgui
-- points/lines projections
-- add radius in offsetting rays
-- bvh with opacity
-- simple denoiser
-    - joint bilateral denoiser
-    - non-local means denoiser
-    - denoiser from paris
-
-## Simpler shapes
-
-- sampling shapes
-    - remove sample_points, sample_lines, etc...
-    - support uniform sampling in sample_shape
 
 ## Port scenes
 

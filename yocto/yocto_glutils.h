@@ -109,12 +109,12 @@ void read_glimagef(float* pixels, int w, int h, int nc);
 
 // OpenGL texture object. Members are not part of the public API.
 struct gltexture {
-    uint tid = 0;           // texture id
-    int width = 0;          // width
-    int height = 0;         // height
-    int ncomp = 0;          // number of components
-    bool mipmap = true;     // store with mipmaps
-    bool linear = true;     // use linear interpolation
+    uint tid = 0;        // texture id
+    int width = 0;       // width
+    int height = 0;      // height
+    int ncomp = 0;       // number of components
+    bool mipmap = true;  // store with mipmaps
+    bool linear = true;  // use linear interpolation
 };
 
 // Implementation of update_texture.
@@ -126,20 +126,18 @@ void update_gltexture(gltexture& txt, int w, int h, int nc, const void* pixels,
 // (as_srgb) nearest/linear filtering (linear) and mipmmapping (mipmap).
 inline void update_gltexture(gltexture& txt, int w, int h, int nc,
     const float* pixels, bool linear, bool mipmap) {
-    update_gltexture(
-        txt, w, h, nc, pixels, true, linear, mipmap);
+    update_gltexture(txt, w, h, nc, pixels, true, linear, mipmap);
 }
 inline void update_gltexture(gltexture& txt, int w, int h, int nc,
     const unsigned char* pixels, bool linear, bool mipmap) {
-    update_gltexture(
-        txt, w, h, nc, pixels, false, linear, mipmap);
+    update_gltexture(txt, w, h, nc, pixels, false, linear, mipmap);
 }
 
 // Updates a texture with pixels values from an image.
 inline void update_gltexture(gltexture& txt, int width, int height,
     const std::vector<vec4b>& pixels, bool linear, bool mipmap) {
-    update_gltexture(txt, width, height, 4, (unsigned char*)pixels.data(),
-        linear, mipmap);
+    update_gltexture(
+        txt, width, height, 4, (unsigned char*)pixels.data(), linear, mipmap);
 }
 inline void update_gltexture(gltexture& txt, int width, int height,
     const std::vector<vec4f>& pixels, bool linear, bool mipmap) {

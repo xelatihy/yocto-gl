@@ -65,12 +65,10 @@ void update_gldata(texture* txt) {
     if (!txt->gl_data) txt->gl_data = new gltexture();
     auto& gtxt = *(gltexture*)txt->gl_data;
     if (!txt->hdr.empty()) {
-        update_gltexture(
-            gtxt, txt->width, txt->height, txt->hdr, true, true);
+        update_gltexture(gtxt, txt->width, txt->height, txt->hdr, true, true);
     }
     if (!txt->ldr.empty()) {
-        update_gltexture(
-            gtxt, txt->width, txt->height, txt->ldr, true, true);
+        update_gltexture(gtxt, txt->width, txt->height, txt->ldr, true, true);
     }
 }
 void update_gldata(shape* shp) {

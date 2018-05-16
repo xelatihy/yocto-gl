@@ -364,7 +364,6 @@ void update_tesselation(const subdiv* sbd, shape* shp);
 void update_tesselation(scene* scn);
 
 // Add missing names, normals, tangents and hierarchy.
-void add_missing_camera(scene* scn);
 void add_missing_names(scene* scn);
 void add_missing_normals(scene* scn);
 void add_missing_tangent_space(scene* scn);
@@ -476,6 +475,8 @@ namespace ygl {
 // make scene elements
 camera* make_camera(const std::string& name, const vec3f& from, const vec3f& to,
     float yfov, float aspect);
+camera* make_bbox_camera(
+    const std::string& name, const bbox3f& bbox, float aspect = 16.0f / 9.0f);
 texture* make_texture(const std::string& name, const std::string& path = "",
     int width = 0, int height = 0, const std::vector<vec4b>& ldr = {},
     const std::vector<vec4f>& hdr = {});

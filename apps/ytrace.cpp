@@ -84,6 +84,8 @@ int main(int argc, char* argv[]) {
         tonemap_names, ygl::tonemap_type::gamma);
     auto double_sided = ygl::parse_flag(
         parser, "--double-sided", "-D", "Double-sided rendering.", false);
+    auto add_skyenv = ygl::parse_flag(
+        parser, "--add-skyenv", "-E", "add missing env map", false);
     auto quiet =
         ygl::parse_flag(parser, "--quiet", "-q", "Print only errors messages");
     auto imfilename = ygl::parse_opt(
@@ -111,19 +113,26 @@ int main(int argc, char* argv[]) {
     ygl::log_info("tesselating scene elements");
     ygl::update_tesselation(scn);
 
-    // fix scene
-    ygl::log_info("adding missing scene elements");
+    // update bbox and transforms
+    ygl::update_transforms(scn);
     ygl::update_bbox(scn);
-    ygl::add_missing_camera(scn);
-    ygl::add_missing_names(scn);
-    ygl::add_missing_tangent_space(scn);
-    auto cam = scn->cameras[0];
-    for (auto err : ygl::validate(scn)) ygl::log_warning(err);
 
-    // double sided
-    if(double_sided) {
-        for(auto mat : scn->materials) mat->double_sided = true;
+    // add components
+    ygl::log_info("adding scene elements");
+    if (add_skyenv && scn->environments.empty()) {
+        scn->environments.push_back(ygl::make_environment(
+            "sky", {1, 1, 1}, ygl::make_sky_texture("sky")));
+        scn->textures.push_back(scn->environments.back()->ke_txt.txt);
     }
+    if (double_sided) {
+        for (auto mat : scn->materials) mat->double_sided = true;
+    }
+    if (scn->cameras.empty()) {
+        scn->cameras.push_back(ygl::make_bbox_camera("<view>", scn->bbox));
+    }
+    auto cam = scn->cameras[0];
+    ygl::add_missing_names(scn);
+    for (auto err : ygl::validate(scn)) ygl::log_warning(err);
 
     // build bvh
     ygl::log_info_begin("building bvh");

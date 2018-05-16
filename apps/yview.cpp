@@ -325,17 +325,26 @@ int main(int argc, char* argv[]) {
     ygl::log_info("tesselating scene elements");
     ygl::update_tesselation(app->scn);
 
-    // fix scene
+    // update bbox and transforms
+    ygl::update_transforms(app->scn);
     ygl::update_bbox(app->scn);
-    ygl::add_missing_camera(app->scn);
-    ygl::add_missing_names(app->scn);
-    ygl::add_missing_tangent_space(app->scn);
+
+    // add components
+    ygl::log_info("adding scene elements");
+    if (double_sided) {
+        for (auto mat : app->scn->materials) mat->double_sided = true;
+    }
+    if (app->scn->cameras.empty()) {
+        app->scn->cameras.push_back(
+            ygl::make_bbox_camera("<view>", app->scn->bbox));
+    }
     app->cam = app->scn->cameras[0];
+    ygl::add_missing_names(app->scn);
     for (auto err : ygl::validate(app->scn)) ygl::log_warning(err);
 
     // double sided
-    if(double_sided) {
-        for(auto mat : app->scn->materials) mat->double_sided = true;
+    if (double_sided) {
+        for (auto mat : app->scn->materials) mat->double_sided = true;
     }
 
     // animation

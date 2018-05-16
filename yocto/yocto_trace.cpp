@@ -338,8 +338,8 @@ vec3f eval_transmission(
 }
 
 // Recursive path tracing.
-vec3f trace_path(
-    const scene* scn, const ray3f& ray_, rng_state& rng, int nbounces, bool* hit) {
+vec3f trace_path(const scene* scn, const ray3f& ray_, rng_state& rng,
+    int nbounces, bool* hit) {
     if (scn->lights.empty() && scn->environments.empty()) return zero3f;
 
     // initialize
@@ -359,7 +359,7 @@ vec3f trace_path(
             }
             break;
         }
-        if(hit) *hit = true;
+        if (hit) *hit = true;
 
         // point
         auto o = -ray.d;
@@ -443,8 +443,8 @@ vec3f trace_path(
 }
 
 // Recursive path tracing.
-vec3f trace_path_naive(
-    const scene* scn, const ray3f& ray_, rng_state& rng, int nbounces, bool* hit) {
+vec3f trace_path_naive(const scene* scn, const ray3f& ray_, rng_state& rng,
+    int nbounces, bool* hit) {
     if (scn->lights.empty() && scn->environments.empty()) return zero3f;
 
     // initialize
@@ -461,7 +461,7 @@ vec3f trace_path_naive(
                 l += weight * eval_environment(env, ray.d);
             break;
         }
-        if(hit) *hit = true;
+        if (hit) *hit = true;
 
         // point
         auto o = -ray.d;
@@ -506,8 +506,8 @@ vec3f trace_path_naive(
 }
 
 // Recursive path tracing.
-vec3f trace_path_nomis(
-    const scene* scn, const ray3f& ray_, rng_state& rng, int nbounces, bool* hit) {
+vec3f trace_path_nomis(const scene* scn, const ray3f& ray_, rng_state& rng,
+    int nbounces, bool* hit) {
     if (scn->lights.empty() && scn->environments.empty()) return zero3f;
 
     // initialize
@@ -525,7 +525,7 @@ vec3f trace_path_nomis(
                 l += weight * eval_environment(env, ray.d);
             break;
         }
-        if(hit) *hit = true;
+        if (hit) *hit = true;
 
         // point
         auto o = -ray.d;
@@ -589,8 +589,8 @@ vec3f trace_path_nomis(
 }
 
 // Direct illumination.
-vec3f trace_direct(
-    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces, bool* hit) {
+vec3f trace_direct(const scene* scn, const ray3f& ray, rng_state& rng,
+    int nbounces, bool* hit) {
     if (scn->lights.empty() && scn->environments.empty()) return zero3f;
 
     // intersect scene
@@ -602,7 +602,7 @@ vec3f trace_direct(
         for (auto env : scn->environments) l += eval_environment(env, ray.d);
         return l;
     }
-    if(hit) *hit = true;
+    if (hit) *hit = true;
 
     // point
     auto o = -ray.d;
@@ -666,8 +666,8 @@ vec3f trace_direct(
     // opacity
     auto op = eval_opacity(isec.ist, isec.ei, isec.uv);
     if (op != 1) {
-        l = op * l +
-            (1 - op) * trace_direct(scn, make_ray(p, -o), rng, nbounces - 1, hit);
+        l = op * l + (1 - op) * trace_direct(scn, make_ray(p, -o), rng,
+                                    nbounces - 1, hit);
     }
 
     // done
@@ -675,8 +675,8 @@ vec3f trace_direct(
 }
 
 // Direct illumination.
-vec3f trace_direct_nomis(
-    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces, bool* hit) {
+vec3f trace_direct_nomis(const scene* scn, const ray3f& ray, rng_state& rng,
+    int nbounces, bool* hit) {
     if (scn->lights.empty() && scn->environments.empty()) return zero3f;
 
     // intersect scene
@@ -688,7 +688,7 @@ vec3f trace_direct_nomis(
         for (auto env : scn->environments) l += eval_environment(env, ray.d);
         return l;
     }
-    if(hit) *hit = true;
+    if (hit) *hit = true;
 
     // point
     auto o = -ray.d;
@@ -749,8 +749,8 @@ vec3f trace_direct_nomis(
 }
 
 // Environment illumination only with no shadows.
-vec3f trace_environment(
-    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces, bool* hit) {
+vec3f trace_environment(const scene* scn, const ray3f& ray, rng_state& rng,
+    int nbounces, bool* hit) {
     if (scn->environments.empty()) return zero3f;
 
     // intersect scene
@@ -762,7 +762,7 @@ vec3f trace_environment(
         for (auto env : scn->environments) l += eval_environment(env, ray.d);
         return l;
     }
-    if(hit) *hit = true;
+    if (hit) *hit = true;
 
     // point
     auto o = -ray.d;
@@ -787,8 +787,8 @@ vec3f trace_environment(
     }
 
     // accumulate environment illumination
-    if(pdf != 0 && brdfcos != zero3f) {
-        for(auto env : scn->environments) 
+    if (pdf != 0 && brdfcos != zero3f) {
+        for (auto env : scn->environments)
             l += brdfcos * eval_environment(env, i) / pdf;
     }
 
@@ -798,8 +798,8 @@ vec3f trace_environment(
     // opacity
     auto op = eval_opacity(isec.ist, isec.ei, isec.uv);
     if (op != 1) {
-        l = op * l +
-            (1 - op) * trace_direct(scn, make_ray(p, -o), rng, nbounces - 1, hit);
+        l = op * l + (1 - op) * trace_direct(scn, make_ray(p, -o), rng,
+                                    nbounces - 1, hit);
     }
 
     // done
@@ -807,8 +807,8 @@ vec3f trace_environment(
 }
 
 // Eyelight for quick previewing.
-vec3f trace_eyelight(
-    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces, bool* hit) {
+vec3f trace_eyelight(const scene* scn, const ray3f& ray, rng_state& rng,
+    int nbounces, bool* hit) {
     // intersect scene
     auto isec = intersect_ray(scn, ray);
     auto l = zero3f;
@@ -818,7 +818,7 @@ vec3f trace_eyelight(
         for (auto env : scn->environments) l += eval_environment(env, ray.d);
         return l;
     }
-    if(hit) *hit = true;
+    if (hit) *hit = true;
 
     // point
     auto o = -ray.d;
@@ -848,12 +848,12 @@ vec3f trace_eyelight(
 }
 
 // Debug previewing.
-vec3f trace_debug_normal(
-    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces, bool* hit) {
+vec3f trace_debug_normal(const scene* scn, const ray3f& ray, rng_state& rng,
+    int nbounces, bool* hit) {
     // intersect scene
     auto isec = intersect_ray(scn, ray);
     if (!isec.ist) return zero3f;
-    if(hit) *hit = true;
+    if (hit) *hit = true;
 
     // point
     auto o = -ray.d;
@@ -864,12 +864,12 @@ vec3f trace_debug_normal(
 }
 
 // Debug frontfacing.
-vec3f trace_debug_frontfacing(
-    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces, bool* hit) {
+vec3f trace_debug_frontfacing(const scene* scn, const ray3f& ray,
+    rng_state& rng, int nbounces, bool* hit) {
     // intersect scene
     auto isec = intersect_ray(scn, ray);
     if (!isec.ist) return zero3f;
-    if(hit) *hit = true;
+    if (hit) *hit = true;
 
     // point
     auto o = -ray.d;
@@ -880,12 +880,12 @@ vec3f trace_debug_frontfacing(
 }
 
 // Debug previewing.
-vec3f trace_debug_albedo(
-    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces, bool* hit) {
+vec3f trace_debug_albedo(const scene* scn, const ray3f& ray, rng_state& rng,
+    int nbounces, bool* hit) {
     // intersect scene
     auto isec = intersect_ray(scn, ray);
     if (!isec.ist) return zero3f;
-    if(hit) *hit = true;
+    if (hit) *hit = true;
 
     // point
     auto f = eval_bsdf(isec.ist, isec.ei, isec.uv);
@@ -895,12 +895,12 @@ vec3f trace_debug_albedo(
 }
 
 // Debug previewing.
-vec3f trace_debug_diffuse(
-    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces, bool* hit) {
+vec3f trace_debug_diffuse(const scene* scn, const ray3f& ray, rng_state& rng,
+    int nbounces, bool* hit) {
     // intersect scene
     auto isec = intersect_ray(scn, ray);
     if (!isec.ist) return zero3f;
-    if(hit) *hit = true;
+    if (hit) *hit = true;
 
     // point
     auto f = eval_bsdf(isec.ist, isec.ei, isec.uv);
@@ -910,12 +910,12 @@ vec3f trace_debug_diffuse(
 }
 
 // Debug previewing.
-vec3f trace_debug_specular(
-    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces, bool* hit) {
+vec3f trace_debug_specular(const scene* scn, const ray3f& ray, rng_state& rng,
+    int nbounces, bool* hit) {
     // intersect scene
     auto isec = intersect_ray(scn, ray);
     if (!isec.ist) return zero3f;
-    if(hit) *hit = true;
+    if (hit) *hit = true;
 
     // point
     auto f = eval_bsdf(isec.ist, isec.ei, isec.uv);
@@ -925,12 +925,12 @@ vec3f trace_debug_specular(
 }
 
 // Debug previewing.
-vec3f trace_debug_roughness(
-    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces, bool* hit) {
+vec3f trace_debug_roughness(const scene* scn, const ray3f& ray, rng_state& rng,
+    int nbounces, bool* hit) {
     // intersect scene
     auto isec = intersect_ray(scn, ray);
     if (!isec.ist) return zero3f;
-    if(hit) *hit = true;
+    if (hit) *hit = true;
 
     // point
     auto f = eval_bsdf(isec.ist, isec.ei, isec.uv);
@@ -940,12 +940,12 @@ vec3f trace_debug_roughness(
 }
 
 // Debug previewing.
-vec3f trace_debug_texcoord(
-    const scene* scn, const ray3f& ray, rng_state& rng, int nbounces, bool* hit) {
+vec3f trace_debug_texcoord(const scene* scn, const ray3f& ray, rng_state& rng,
+    int nbounces, bool* hit) {
     // intersect scene
     auto isec = intersect_ray(scn, ray);
     if (!isec.ist) return zero3f;
-    if(hit) *hit = true;
+    if (hit) *hit = true;
 
     // point
     auto texcoord = eval_texcoord(isec.ist, isec.ei, isec.uv);
