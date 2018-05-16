@@ -546,9 +546,7 @@ std::vector<vec4b> make_bumpdimple_image(int width, int height, int tiles) {
             auto r =
                 sqrt(float(ii * ii + jj * jj)) / sqrt(float(tile * tile) / 4);
             auto h = 0.5f;
-            if (r < 0.5f) { 
-                h += (c) ? (0.5f - r) : -(0.5f - r); 
-            }
+            if (r < 0.5f) { h += (c) ? (0.5f - r) : -(0.5f - r); }
             img[i + j * width] = float_to_byte({h, h, h, 1});
         }
     }
@@ -658,7 +656,7 @@ std::vector<vec4b> bump_to_normal_map(
             auto g01 = (float(p01.x) + float(p01.y) + float(p01.z)) / (3 * 255);
             auto g10 = (float(p10.x) + float(p10.y) + float(p10.z)) / (3 * 255);
             auto n = vec3f{scale * (g00 - g10), scale * (g00 - g01), 1.0f};
-            n.y = -n.y; // make green pointing up, even if y axis points down 
+            n.y = -n.y;  // make green pointing up, even if y axis points down
             n = normalize(n) * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
             auto c =
                 vec4b{byte(n.x * 255), byte(n.y * 255), byte(n.z * 255), 255};

@@ -28,9 +28,9 @@
 
 #include "../yocto/yocto_bvh.h"
 #include "../yocto/yocto_glutils.h"
+#include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
 #include "../yocto/yocto_utils.h"
-#include "../yocto/yocto_shape.h"
 #include "yapp_ui.h"
 using namespace std::literals;
 
@@ -303,7 +303,8 @@ int main(int argc, char* argv[]) {
         "Preview resolution for async rendering.", app->preview_resolution);
     auto double_sided = ygl::parse_flag(
         parser, "--double-sided", "-D", "Double-sided rendering.", false);
-    auto add_skyenv = ygl::parse_flag(parser, "--add-skyenv", "-E", "add missing env map", false);
+    auto add_skyenv = ygl::parse_flag(
+        parser, "--add-skyenv", "-E", "add missing env map", false);
     app->quiet =
         ygl::parse_flag(parser, "--quiet", "-q", "Print only errors messages");
     app->imfilename = ygl::parse_opt(
@@ -330,23 +331,26 @@ int main(int argc, char* argv[]) {
     ygl::log_info("tesselating scene elements");
     ygl::update_tesselation(app->scn);
 
+    // update bbox and transforms
+    ygl::update_transforms(app->scn);
+    ygl::update_bbox(app->scn);
+
     // add components
-    if(add_skyenv && app->scn->environments.empty()) {
-        app->scn->environments.push_back(ygl::make_environment("sky", {1,1,1}, 
-            ygl::make_sky_texture("sky")));
+    ygl::log_info("adding scene elements");
+    if (add_skyenv && app->scn->environments.empty()) {
+        app->scn->environments.push_back(ygl::make_environment(
+            "sky", {1, 1, 1}, ygl::make_sky_texture("sky")));
         app->scn->textures.push_back(app->scn->environments.back()->ke_txt.txt);
     }
-    if(double_sided) {
-        for(auto mat : app->scn->materials) mat->double_sided = true;
+    if (double_sided) {
+        for (auto mat : app->scn->materials) mat->double_sided = true;
     }
-
-    // fix scene
-    ygl::log_info("adding missing scene elements");
-    ygl::update_bbox(app->scn);
-    ygl::add_missing_camera(app->scn);
-    ygl::add_missing_names(app->scn);
-    // ygl::add_missing_tangent_space(app->scn);
+    if (app->scn->cameras.empty()) {
+        app->scn->cameras.push_back(
+            ygl::make_bbox_camera("<view>", app->scn->bbox));
+    }
     app->cam = app->scn->cameras[0];
+    ygl::add_missing_names(app->scn);
     for (auto err : ygl::validate(app->scn)) ygl::log_warning(err);
 
     // build bvh

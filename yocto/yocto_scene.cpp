@@ -301,7 +301,7 @@ void update_bvh(scene* scn, bool do_shapes, bool equalsize) {
     for (auto i = 0; i < scn->instances.size(); i++) {
         auto ist = scn->instances[i];
         scn->bvh->ist_frames[i] = ist->frame;
-        scn->bvh->ist_inv_frames[i] = inverse(ist->frame);
+        scn->bvh->ist_inv_frames[i] = inverse(ist->frame, false);
         scn->bvh->ist_bvhs[i] = ist->shp->bvh;
     }
     build_bvh(scn->bvh, equalsize);
@@ -377,29 +377,6 @@ void add_missing_tangent_space(scene* scn) {
             throw std::runtime_error("type not supported");
         }
     }
-}
-
-// add missing camera
-void add_missing_camera(scene* scn) {
-    if (!scn->cameras.empty()) return;
-    update_bbox(scn, true);
-    auto bbox = scn->bbox;
-    auto bbox_center = (bbox.max + bbox.min) / 2.0f;
-    auto bbox_size = bbox.max - bbox.min;
-    auto bbox_msize = max(bbox_size.x, max(bbox_size.y, bbox_size.z));
-    auto cam = new camera();
-    cam->name = "<view>";
-    auto camera_dir = vec3f{1, 0.4f, 1};
-    auto from = camera_dir * bbox_msize + bbox_center;
-    auto to = bbox_center;
-    auto up = vec3f{0, 1, 0};
-    cam->frame = lookat_frame(from, to, up);
-    cam->ortho = false;
-    cam->aspect = 16.0f / 9.0f;
-    cam->yfov = 2 * atanf(0.5f);
-    cam->aperture = 0;
-    cam->focus = length(to - from);
-    scn->cameras.push_back(cam);
 }
 
 // Checks for validity of the scene.
@@ -534,7 +511,8 @@ vec4f eval_tangsp(const shape* shp, int ei, const vec2f& uv) {
 }
 vec3f eval_tangsp(
     const shape* shp, int ei, const vec2f& uv, bool& left_handed) {
-    auto tangsp = (shp->tangsp.empty()) ? eval_elem_tangsp(shp, ei) : eval_elem(shp, shp->tangsp, ei, uv);
+    auto tangsp = (shp->tangsp.empty()) ? eval_elem_tangsp(shp, ei) :
+                                          eval_elem(shp, shp->tangsp, ei, uv);
     left_handed = tangsp.w < 0;
     return {tangsp.x, tangsp.y, tangsp.z};
 }
@@ -574,7 +552,7 @@ vec3f eval_shading_norm(
             auto left_handed = false;
             auto txt = xyz(eval_texture(ist->mat->norm_txt, texcoord, false));
             txt = txt * 2 - vec3f{1, 1, 1};
-            txt.y = -txt.y; // flip vertical axis to align green with image up
+            txt.y = -txt.y;  // flip vertical axis to align green with image up
             auto tu = orthonormalize(eval_tangsp(ist, ei, uv, left_handed), n);
             auto tv = normalize(cross(n, tu) * (left_handed ? -1.0f : 1.0f));
             n = normalize(txt.x * tu + txt.y * tv + txt.z * n);
@@ -697,8 +675,9 @@ vec3f eval_diffuse(const instance* ist, int ei, const vec2f& uv) {
         auto kb =
             ist->mat->kd * xyz(eval_color(ist, ei, uv)) *
             xyz(eval_texture(ist->mat->kd_txt, eval_texcoord(ist, ei, uv)));
-        auto km = ist->mat->ks.x *
-                  eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv), false).z;
+        auto km =
+            ist->mat->ks.x *
+            eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv), false).z;
         return kb * (1 - km);
     }
 }
@@ -711,8 +690,9 @@ vec3f eval_specular(const instance* ist, int ei, const vec2f& uv) {
         auto kb =
             ist->mat->kd * xyz(eval_color(ist, ei, uv)) *
             xyz(eval_texture(ist->mat->kd_txt, eval_texcoord(ist, ei, uv)));
-        auto km = ist->mat->ks.x *
-                  eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv), false).z;
+        auto km =
+            ist->mat->ks.x *
+            eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv), false).z;
         return kb * km + vec3f{0.04f, 0.04f, 0.04f} * (1 - km);
     }
 }
@@ -725,7 +705,8 @@ float eval_roughness(const instance* ist, int ei, const vec2f& uv) {
         rs = 1 - ((1 - rs) * txt_w);
         return rs * rs;
     } else {
-        auto rs = ist->mat->rs *
+        auto rs =
+            ist->mat->rs *
             eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv), false).y;
         return rs * rs;
     }
@@ -1585,7 +1566,7 @@ scene* gltf_to_scene(const glTF* gltf) {
                     shp->tangsp.reserve(vals.size());
                     for (auto i = 0; i < vals.size(); i++)
                         shp->tangsp.push_back(vals.getv4f(i));
-                    for(auto& t : shp->tangsp) t.w = -t.w;
+                    for (auto& t : shp->tangsp) t.w = -t.w;
                 } else if (semantic == "RADIUS") {
                     shp->radius.reserve(vals.size());
                     for (auto i = 0; i < vals.size(); i++)
@@ -1833,10 +1814,10 @@ scene* gltf_to_scene(const glTF* gltf) {
     update_bbox(scn);
 
     // fix camera focus
-    for(auto cam : scn->cameras) {
+    for (auto cam : scn->cameras) {
         auto center = (scn->bbox.min + scn->bbox.max) / 2;
         auto dist = dot(-cam->frame.z, center - cam->frame.o);
-        if(dist > 0) cam->focus = dist;
+        if (dist > 0) cam->focus = dist;
     }
 
     return scn;
@@ -2401,6 +2382,27 @@ camera* make_camera(const std::string& name, const vec3f& from, const vec3f& to,
     cam->focus = length(from - to);
     return cam;
 };
+
+// add missing camera
+camera* make_bbox_camera(
+    const std::string& name, const bbox3f& bbox, float aspect) {
+    auto bbox_center = (bbox.max + bbox.min) / 2.0f;
+    auto bbox_size = bbox.max - bbox.min;
+    auto bbox_msize = max(bbox_size.x, max(bbox_size.y, bbox_size.z));
+    auto cam = new camera();
+    cam->name = name;
+    auto camera_dir = vec3f{1, 0.4f, 1};
+    auto from = camera_dir * bbox_msize + bbox_center;
+    auto to = bbox_center;
+    auto up = vec3f{0, 1, 0};
+    cam->frame = lookat_frame(from, to, up);
+    cam->ortho = false;
+    cam->aspect = aspect;
+    cam->yfov = 2 * atanf(0.5f);
+    cam->aperture = 0;
+    cam->focus = length(to - from);
+    return cam;
+}
 
 material* make_material(
     const std::string& name, const vec3f& kd, const vec3f& ks, float rs) {
