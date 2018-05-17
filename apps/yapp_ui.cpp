@@ -137,10 +137,10 @@ void draw_glshape(const shape* shp, const material* mat, const mat4f& xform,
     enable_glwireframe(wireframe);
     begin_glsurface_shape(prog, xform);
 
-    auto txt = [](const texture_info& info) -> gltexture_info {
+    auto txt = [](const texture* txt) -> gltexture_info {
         auto ginfo = gltexture_info();
-        if (!info.txt) return ginfo;
-        ginfo.txt = *(gltexture*)info.txt->gl_data;
+        if (!txt) return ginfo;
+        ginfo.txt = *(gltexture*)txt->gl_data;
         return ginfo;
     };
 
@@ -404,18 +404,18 @@ template <>
 void draw_scene_tree_glwidgets_rec<material>(glwindow* win,
     const std::string& lbl_, material* val, scene_selection& sel,
     const std::unordered_map<std::string, std::string>& highlights) {
-    draw_glwidgets_scene_tree(win, "ke", val->ke_txt.txt, sel, highlights);
-    draw_glwidgets_scene_tree(win, "kd", val->kd_txt.txt, sel, highlights);
-    draw_glwidgets_scene_tree(win, "ks", val->ks_txt.txt, sel, highlights);
-    draw_glwidgets_scene_tree(win, "bump", val->bump_txt.txt, sel, highlights);
-    draw_glwidgets_scene_tree(win, "disp", val->disp_txt.txt, sel, highlights);
-    draw_glwidgets_scene_tree(win, "norm", val->norm_txt.txt, sel, highlights);
+    draw_glwidgets_scene_tree(win, "ke", val->ke_txt, sel, highlights);
+    draw_glwidgets_scene_tree(win, "kd", val->kd_txt, sel, highlights);
+    draw_glwidgets_scene_tree(win, "ks", val->ks_txt, sel, highlights);
+    draw_glwidgets_scene_tree(win, "bump", val->bump_txt, sel, highlights);
+    draw_glwidgets_scene_tree(win, "disp", val->disp_txt, sel, highlights);
+    draw_glwidgets_scene_tree(win, "norm", val->norm_txt, sel, highlights);
 }
 template <>
 void draw_scene_tree_glwidgets_rec<environment>(glwindow* win,
     const std::string& lbl_, environment* val, scene_selection& sel,
     const std::unordered_map<std::string, std::string>& highlights) {
-    draw_glwidgets_scene_tree(win, "ke", val->ke_txt.txt, sel, highlights);
+    draw_glwidgets_scene_tree(win, "ke", val->ke_txt, sel, highlights);
 }
 template <>
 void draw_scene_tree_glwidgets_rec<node>(glwindow* win, const std::string& lbl_,
@@ -440,12 +440,6 @@ void draw_scene_tree_glwidgets_rec<animation>(glwindow* win,
         draw_glwidgets_scene_tree(
             win, "tg" + std::to_string(tid++), tg, sel, highlights);
     }
-}
-
-void draw_glwidgets_scene_tree(glwindow* win, const std::string& lbl,
-    texture_info& val, scene_selection& sel,
-    const std::unordered_map<std::string, std::string>& highlights) {
-    draw_glwidgets_scene_tree(win, lbl, val.txt, sel, highlights);
 }
 
 void draw_glwidgets_scene_tree(glwindow* win, scene* scn, scene_selection& sel,
@@ -526,19 +520,15 @@ bool draw_glwidgets_scene_inspector(glwindow* win, texture* val, scene* scn) {
     edited += draw_glwidgets_text(win, "name", val->name);
     edited += draw_glwidgets_text(win, "path", val->path);
     draw_glwidgets_label(win, "pxl", val->pxl);
-    return edited;
-}
-
-bool draw_glwidgets_scene_inspector(
-    glwindow* win, const std::string& lbl, texture_info& val, scene* scn) {
-    auto edited = 0;
-    edited += draw_glwidgets_combobox(
-        win, lbl + " txt", val.txt, scn->textures, true);
-    edited += draw_glwidgets_checkbox(win, lbl + " wrap_s", val.wrap_s);
-    edited += draw_glwidgets_checkbox(win, lbl + " wrap_t", val.wrap_t);
-    edited += draw_glwidgets_checkbox(win, lbl + " linear", val.linear);
-    edited += draw_glwidgets_checkbox(win, lbl + " mipmap", val.mipmap);
-    edited += draw_glwidgets_dragbox(win, lbl + " scale", val.scale);
+    edited += draw_glwidgets_checkbox(win, "wrap_s", val->wrap_s);
+    continue_glwidgets_line(win);
+    edited += draw_glwidgets_checkbox(win, "wrap_t", val->wrap_t);
+    continue_glwidgets_line(win);
+    edited += draw_glwidgets_checkbox(win, "linear", val->linear);
+    continue_glwidgets_line(win);
+    edited += draw_glwidgets_checkbox(win, "mipmap", val->mipmap);
+    edited += draw_glwidgets_dragbox(win, "scale", val->scale);
+    edited += draw_glwidgets_checkbox(win, "srgb", val->srgb);
     return edited;
 }
 
@@ -554,13 +544,15 @@ bool draw_glwidgets_scene_inspector(glwindow* win, material* val, scene* scn) {
     edited += draw_glwidgets_checkbox(win, "fresnel", val->fresnel);
     continue_glwidgets_line(win);
     edited += draw_glwidgets_checkbox(win, "refract", val->refract);
-    edited += draw_glwidgets_scene_inspector(win, "ke", val->ke_txt, scn);
-    edited += draw_glwidgets_scene_inspector(win, "kd", val->kd_txt, scn);
-    edited += draw_glwidgets_scene_inspector(win, "ks", val->ks_txt, scn);
-    edited += draw_glwidgets_scene_inspector(win, "kt", val->kt_txt, scn);
-    edited += draw_glwidgets_scene_inspector(win, "bump", val->bump_txt, scn);
-    edited += draw_glwidgets_scene_inspector(win, "disp", val->disp_txt, scn);
-    edited += draw_glwidgets_scene_inspector(win, "norm", val->norm_txt, scn);
+    edited += draw_glwidgets_combobox(win, "ke txt", val->ke_txt, scn->textures, true);
+    edited += draw_glwidgets_combobox(win, "kd txt", val->kd_txt, scn->textures, true);
+    edited += draw_glwidgets_combobox(win, "ks txt", val->ks_txt, scn->textures, true);
+    edited += draw_glwidgets_combobox(win, "kt txt", val->kt_txt, scn->textures, true);
+    edited += draw_glwidgets_combobox(win, "op txt", val->op_txt, scn->textures, true);
+    edited += draw_glwidgets_combobox(win, "rs txt", val->rs_txt, scn->textures, true);
+    edited += draw_glwidgets_combobox(win, "bump txt", val->bump_txt, scn->textures, true);
+    edited += draw_glwidgets_combobox(win, "disp txt", val->disp_txt, scn->textures, true);
+    edited += draw_glwidgets_combobox(win, "norm txt", val->norm_txt, scn->textures, true);
     edited += draw_glwidgets_checkbox(win, "base metallic", val->base_metallic);
     return edited;
 }
@@ -614,7 +606,7 @@ bool draw_glwidgets_scene_inspector(
     edited += draw_glwidgets_text(win, "name", val->name);
     edited += draw_glwidgets_dragbox(win, "frame", val->frame);
     edited += draw_hdr_color_widget(win, "ke", val->ke);
-    edited += draw_glwidgets_scene_inspector(win, "ke", val->ke_txt, scn);
+    edited += draw_glwidgets_combobox(win, "ke txt", val->ke_txt, scn->textures, true);
     return edited;
 }
 

@@ -112,7 +112,7 @@ int main(int argc, char* argv[]) {
     if (add_skyenv && scn->environments.empty()) {
         scn->environments.push_back(ygl::make_environment(
             "sky", {1, 1, 1}, ygl::make_sky_texture("sky")));
-        scn->textures.push_back(scn->environments.back()->ke_txt.txt);
+        scn->textures.push_back(scn->environments.back()->ke_txt);
     }
     if (double_sided) {
         for (auto mat : scn->materials) mat->double_sided = true;

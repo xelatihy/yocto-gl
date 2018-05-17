@@ -22,6 +22,7 @@ Please consider this to be just development notes and not any real planning.
 
 ## image to float
 
+- should remove entirely metallic-roughness on input or provide two materials
 - add textures
     - opacity -> needs splitting
     - occlusion -> needs splitting
@@ -63,27 +64,49 @@ Please consider this to be just development notes and not any real planning.
 
 ## Trace
 
-- realiztic camera
-    - camera_pos, lens_pos
+- camera
+    - thin lens camera - read pbrt
+    - realistic camera - read pbrt
+    - leave ray or camera_pos, lens_pos?
+- clarify light pdfs
+- one path
+    - compute light pdfs with intersection
+- orthonormal basis
+    - file:///Users/fabio/Downloads/Duff2017Basis.pdf
+- volumes
+    - make material models clear
+    - start with a simple design
+- redirect log to imgui
 - pass gltf model
-- bump/normal/displacement mapping
-    - convert bump maps to normal maps internally
-    - eval tangent space per triangle
-    - compute derivaties for textures
-- hair example
-- subdiv example
-- displacement example
+- bump mapping
+    - convert bump maps to normal maps internally on load
+- displacement
+    - apply displacement on tesselation or on triangle vertices directly
+- examples
+    - hair
+    - subdiv
+    - displacement
 - put back double sided
+    - one sided shading
 - refraction
     - rough surface refraction
-- redirect log to imgui
-- points/lines projections
-- add radius in offsetting rays
-- embree/pbrt inetrsection and bvh
-- one sided shading
-- bvh with opacity
-- bvh for sah
+- intersection
+    - methods with projections?
+        - why shear?
+        - triangle
+        - line
+        - point
+    - line/point parametrization that mnatches pbrt and embree
+    - radius in offsetting rays
+        - check embree to avoid 
+- bvh
+    - sah
+    - opacity
+    - embree integration
 - see mini path tracer features and include them all
+- camera
+    - realistic camera
+    - thin lens camera
 - simple denoiser
     - joint bilateral denoiser
     - non-local means denoiser

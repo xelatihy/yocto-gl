@@ -516,13 +516,13 @@ scene* load_pbrt(const std::string& filename) {
                     type = jcmd.at("type").get<std::string>();
                 if (type == "uber") {
                     if (jcmd.count("Kd"))
-                        std::tie(mat->kd, mat->kd_txt.txt) =
+                        std::tie(mat->kd, mat->kd_txt) =
                             get_scaled_texture(jcmd.at("Kd"));
                     if (jcmd.count("Ks"))
-                        std::tie(mat->ks, mat->ks_txt.txt) =
+                        std::tie(mat->ks, mat->ks_txt) =
                             get_scaled_texture(jcmd.at("Ks"));
                     if (jcmd.count("Kt"))
-                        std::tie(mat->kt, mat->kt_txt.txt) =
+                        std::tie(mat->kt, mat->kt_txt) =
                             get_scaled_texture(jcmd.at("Kt"));
                     if (jcmd.count("opacity")) {
                         auto op = vec3f{0, 0, 0};
@@ -536,7 +536,7 @@ scene* load_pbrt(const std::string& filename) {
                 } else if (type == "matte") {
                     mat->kd = {1, 1, 1};
                     if (jcmd.count("Kd"))
-                        std::tie(mat->kd, mat->kd_txt.txt) =
+                        std::tie(mat->kd, mat->kd_txt) =
                             get_scaled_texture(jcmd.at("Kd"));
                     mat->rs = 1;
                 } else if (type == "mirror") {
@@ -550,21 +550,21 @@ scene* load_pbrt(const std::string& filename) {
                     mat->rs = 0;
                 } else if (type == "substrate") {
                     if (jcmd.count("Kd"))
-                        std::tie(mat->kd, mat->kd_txt.txt) =
+                        std::tie(mat->kd, mat->kd_txt) =
                             get_scaled_texture(jcmd.at("Kd"));
                     mat->ks = {0.04, 0.04, 0.04};
                     if (jcmd.count("Ks"))
-                        std::tie(mat->ks, mat->ks_txt.txt) =
+                        std::tie(mat->ks, mat->ks_txt) =
                             get_scaled_texture(jcmd.at("Ks"));
                     mat->rs = 0;
                 } else if (type == "glass") {
                     mat->ks = {0.04, 0.04, 0.04};
                     mat->kt = {1, 1, 1};
                     if (jcmd.count("Ks"))
-                        std::tie(mat->ks, mat->ks_txt.txt) =
+                        std::tie(mat->ks, mat->ks_txt) =
                             get_scaled_texture(jcmd.at("Ks"));
                     if (jcmd.count("Kt"))
-                        std::tie(mat->kt, mat->kt_txt.txt) =
+                        std::tie(mat->kt, mat->kt_txt) =
                             get_scaled_texture(jcmd.at("Kt"));
                     mat->rs = 0;
                 } else if (type == "mix") {
@@ -707,7 +707,7 @@ scene* load_pbrt(const std::string& filename) {
                     txt->path = jcmd.at("mapname").get<std::string>();
                     txt->name = env->name;
                     scn->textures.push_back(txt);
-                    env->ke_txt.txt = txt;
+                    env->ke_txt = txt;
                 }
                 scn->environments.push_back(env);
             } else if (type == "distant") {
