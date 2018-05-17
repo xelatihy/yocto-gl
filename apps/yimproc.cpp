@@ -146,47 +146,15 @@ std::vector<ygl::vec4f> filter_bilateral(int width, int height,
     return filtered;
 }
 
-void load_image(const std::string& filename, int& width, int& height,
-    std::vector<ygl::vec4b>& ldr, std::vector<ygl::vec4f>& hdr,
-    ygl::tonemap_type tonemapper, float exposure) {
-    if (ygl::is_hdr_filename(filename)) {
-        hdr = ygl::load_image4f(filename, width, height);
-        ldr = ygl::tonemap_image(hdr, tonemapper, exposure);
-    } else {
-        ldr = ygl::load_image4b(filename, width, height);
-        hdr = srgb_to_linear(ldr);
-    }
-    if (ldr.empty() || hdr.empty())
-        ygl::log_fatal("cannot load image {}", filename);
-}
-
-void save_image(const std::string& filename, int width, int height,
-    const std::vector<ygl::vec4b>& ldr, const std::vector<ygl::vec4f>& hdr) {
-    if (ygl::is_hdr_filename(filename)) {
-        if (!save_image4f(filename, width, height, hdr))
-            ygl::log_fatal("cannot save image {}", filename);
-    } else {
-        if (!save_image4b(filename, width, height, ldr))
-            ygl::log_fatal("cannot save image {}", filename);
-    }
-}
-
 int main(int argc, char* argv[]) {
-    static auto tonemap_names = std::map<ygl::tonemap_type, std::string>{
-        {ygl::tonemap_type::linear, "linear"},
-        {ygl::tonemap_type::gamma, "gamma"},
-        {ygl::tonemap_type::srgb, "srgb"},
-        {ygl::tonemap_type::filmic1, "filmic1"},
-        {ygl::tonemap_type::filmic2, "filmic2"},
-        {ygl::tonemap_type::filmic3, "filmic3"},
-    };
-
     // command line params
     auto parser = ygl::make_parser(argc, argv, "yimproc", "process images");
-    auto tonemapper = ygl::parse_opte(parser, "--tonemapper", "t",
-        "Tonemapper type.", tonemap_names, ygl::tonemap_type::gamma);
+    auto nosrgb = ygl::parse_flag(parser, "--no-srgb", "",
+        "Disable sRGB default encoding.", false);
     auto exposure =
         ygl::parse_opt(parser, "--exposure", "t", "Hdr exposure", 0.0f);
+    auto filmic = ygl::parse_flag(parser, "--filmic", "-f", "apply approximate filmic tone mapping", false);
+    auto aces = ygl::parse_flag(parser, "--aces", "-F", "apply ACES filmic tone mapping", false);
     auto resize_width = ygl::parse_opt(
         parser, "--resize-width", "-w", "width (0 to maintain aspect)", 0);
     auto resize_height = ygl::parse_opt(
@@ -213,65 +181,55 @@ int main(int argc, char* argv[]) {
 
     // load
     auto width = 0, height = 0;
-    auto hdr = std::vector<ygl::vec4f>();
-    auto ldr = std::vector<ygl::vec4b>();
-    load_image(filename, width, height, ldr, hdr, tonemapper, exposure);
+    auto img = ygl::load_image4f(filename, width, height, !nosrgb);
 
     // set alpha
     if (set_alpha_filename != "") {
-        auto alpha_hdr = std::vector<ygl::vec4f>();
-        auto alpha_ldr = std::vector<ygl::vec4b>();
         auto alpha_width = 0, alpha_height = 0;
-        load_image(set_alpha_filename, alpha_width, alpha_height, alpha_ldr,
-            alpha_hdr, tonemapper, exposure);
+        auto alpha_img = ygl::load_image4f(set_alpha_filename, alpha_width, alpha_height, !nosrgb);
         if (width != alpha_width || height != alpha_height)
             ygl::log_fatal("bad image size");
-        for (auto i = 0; i < ldr.size(); i++) ldr[i].w = alpha_ldr[i].w;
-        for (auto i = 0; i < hdr.size(); i++) ldr[i].w = alpha_ldr[i].w;
+        for (auto i = 0; i < img.size(); i++) img[i].w = alpha_img[i].w;
     }
 
     // set alpha
     if (set_color_as_alpha_filename != "") {
-        auto alpha_hdr = std::vector<ygl::vec4f>();
-        auto alpha_ldr = std::vector<ygl::vec4b>();
         auto alpha_width = 0, alpha_height = 0;
-        load_image(set_color_as_alpha_filename, alpha_width, alpha_height,
-            alpha_ldr, alpha_hdr, tonemapper, exposure);
+        auto alpha_img = ygl::load_image4f(set_color_as_alpha_filename, alpha_width, alpha_height,
+            !nosrgb);
         if (width != alpha_width || height != alpha_height)
             ygl::log_fatal("bad image size");
-        for (auto i = 0; i < ldr.size(); i++) {
-            auto& p = alpha_ldr[i];
-            ldr[i].w = (uint8_t)ygl::clamp(
-                ((int)p.x + (int)p.y + (int)p.z) / 3, 0, 255);
-        }
-        for (auto i = 0; i < hdr.size(); i++) {
-            auto& p = alpha_hdr[i];
-            hdr[i].w = (p.x + p.y + p.z) / 3;
+        for (auto i = 0; i < img.size(); i++) {
+            auto& p = alpha_img[i];
+            img[i].w = (p.x + p.y + p.z) / 3;
         }
     }
 
     // multiply
     if (multiply_color != ygl::vec4f{1, 1, 1, 1}) {
-        for (auto& c : hdr) c *= multiply_color;
-        for (auto& c : ldr)
-            c = linear_to_srgb(srgb_to_linear(c) * multiply_color);
+        for (auto& c : img) c *= multiply_color;
     }
 
     // resize
     if (resize_width || resize_height) {
-        hdr = resize_image(width, height, hdr, resize_width, resize_height);
-        ldr = resize_image(width, height, ldr, resize_width, resize_height);
+        img = resize_image(width, height, img, resize_width, resize_height);
     }
 
     // bilateral
     if (spatial_sigma && range_sigma) {
-        hdr = filter_bilateral(
-            width, height, hdr, spatial_sigma, range_sigma, {}, {});
-        ldr = tonemap_image(hdr, tonemapper, exposure);
+        img = filter_bilateral(
+            width, height, img, spatial_sigma, range_sigma, {}, {});
     }
 
+    // exposure
+    if(exposure) img = expose_image(img, exposure);
+
+    // filmic tone transformations
+    if(filmic) img = filmic_tonemap_image(img);
+    if(aces) img = aces_tonemap_image(img);
+
     // save
-    save_image(output, width, height, ldr, hdr);
+    ygl::save_image4f(output, width, height, img, !nosrgb);
 
     // done
     return 0;

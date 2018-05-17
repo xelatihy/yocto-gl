@@ -66,7 +66,7 @@ struct app_state {
     bool zoom_to_fit = true;
     float exposure = 0;
     float gamma = 2.2f;
-    ygl::vec4b background = {222, 222, 222, 0};
+    ygl::vec4f background = {0.8f, 0.8f, 0.8f, 0};
     ygl::gltexture gl_txt = {};
     ygl::glimage_program gl_prog = {};
     ygl::scene_selection selection = {};
@@ -101,7 +101,7 @@ auto trace_names = std::map<ygl::trace_func, std::string>{
 void draw(ygl::glwindow* win, app_state* app) {
     // update image
     ygl::update_gltexture(
-        app->gl_txt, app->width, app->height, app->img, false, false);
+        app->gl_txt, app->width, app->height, app->img, false, false, true);
     // draw image
     auto window_size = get_glwindow_size(win);
     auto framebuffer_size = get_glwindow_framebuffer_size(win);
@@ -244,7 +244,7 @@ void run_ui(app_state* app) {
     // load textures
     app->gl_prog = ygl::make_glimage_program();
     ygl::update_gltexture(
-        app->gl_txt, app->width, app->height, app->img, false, false);
+        app->gl_txt, app->width, app->height, app->img, false, false, true);
 
     // init widget
     ygl::init_glwidgets(win);

@@ -91,7 +91,6 @@ bool check_glerror(bool print = true);
 
 // Clear window.
 void clear_glbuffers(const vec4f& background);
-void clear_glbuffers(const vec4b& background);
 
 // Enable/disable depth test, culling, wireframe and blending.
 void enable_gldepth_test(bool enabled);
@@ -113,36 +112,37 @@ struct gltexture {
     int width = 0;       // width
     int height = 0;      // height
     int ncomp = 0;       // number of components
+    bool as_float = false; // store as float
     bool mipmap = true;  // store with mipmaps
     bool linear = true;  // use linear interpolation
 };
 
 // Implementation of update_texture.
 void update_gltexture(gltexture& txt, int w, int h, int nc, const void* pixels,
-    bool floats, bool linear, bool mipmap);
+    bool floats, bool linear, bool mipmap, bool as_float);
 
 // Updates a texture with pixels values of size w, h with nc number of
 // components (1-4). Internally use bytes/floats (as_float), linear/sRGB
 // (as_srgb) nearest/linear filtering (linear) and mipmmapping (mipmap).
 inline void update_gltexture(gltexture& txt, int w, int h, int nc,
-    const float* pixels, bool linear, bool mipmap) {
-    update_gltexture(txt, w, h, nc, pixels, true, linear, mipmap);
+    const float* pixels, bool linear, bool mipmap, bool as_float) {
+    update_gltexture(txt, w, h, nc, pixels, true, linear, mipmap, as_float);
 }
 inline void update_gltexture(gltexture& txt, int w, int h, int nc,
-    const unsigned char* pixels, bool linear, bool mipmap) {
-    update_gltexture(txt, w, h, nc, pixels, false, linear, mipmap);
+    const unsigned char* pixels, bool linear, bool mipmap, bool as_float) {
+    update_gltexture(txt, w, h, nc, pixels, false, linear, mipmap, as_float);
 }
 
 // Updates a texture with pixels values from an image.
 inline void update_gltexture(gltexture& txt, int width, int height,
-    const std::vector<vec4b>& pixels, bool linear, bool mipmap) {
+    const std::vector<vec3f>& pixels, bool linear, bool mipmap, bool as_float) {
     update_gltexture(
-        txt, width, height, 4, (unsigned char*)pixels.data(), linear, mipmap);
+        txt, width, height, 3, (float*)pixels.data(), linear, mipmap, as_float);
 }
 inline void update_gltexture(gltexture& txt, int width, int height,
-    const std::vector<vec4f>& pixels, bool linear, bool mipmap) {
+    const std::vector<vec4f>& pixels, bool linear, bool mipmap, bool as_float) {
     update_gltexture(
-        txt, width, height, 4, (float*)pixels.data(), linear, mipmap);
+        txt, width, height, 4, (float*)pixels.data(), linear, mipmap, as_float);
 }
 
 // Binds/unbinds a texture to a texture unit.
@@ -537,8 +537,8 @@ bool get_glwindow_ctrl_key(glwindow* win);
 bool get_glwindow_shift_key(glwindow* win);
 
 // Read pixels.
-void take_glwindow_screenshot4b(glwindow* win, int& width, int& height,
-    std::vector<vec4b>& img, bool flipy = true, bool back = false);
+std::vector<vec4f> take_glwindow_screenshot(glwindow* win, int& width, int& height,
+    bool flipy = true, bool back = false);
 
 }  // namespace ygl
 
@@ -603,7 +603,6 @@ bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, frame3f& val,
     float min = -10, float max = 10);
 
 // Color widget.
-bool draw_glwidgets_colorbox(glwindow* win, const std::string& lbl, vec4b& val);
 bool draw_glwidgets_colorbox(glwindow* win, const std::string& lbl, vec4f& val);
 bool draw_glwidgets_colorbox(glwindow* win, const std::string& lbl, vec3f& val);
 bool draw_hdr_color_widget(

@@ -256,17 +256,10 @@ void update_environment_cdf(environment* env) {
     auto txt = env->ke_txt.txt;
     if (!txt) return;
     env->elem_cdf.resize(txt->width * txt->height);
-    if (!txt->ldr.empty()) {
+    if (!txt->pxl.empty()) {
         for (auto i = 0; i < env->elem_cdf.size(); i++) {
             auto th = (i / txt->width + 0.5f) * pi / txt->height;
-            auto rgba = srgb_to_linear(txt->ldr[i]);
-            env->elem_cdf[i] = max(rgba.x, max(rgba.y, rgba.z)) * sin(th);
-            if (i) env->elem_cdf[i] += env->elem_cdf[i - 1];
-        }
-    } else if (!txt->hdr.empty()) {
-        for (auto i = 0; i < env->elem_cdf.size(); i++) {
-            auto th = (i / txt->width + 0.5f) * pi / txt->height;
-            auto rgba = txt->hdr[i];
+            auto rgba = txt->pxl[i];
             env->elem_cdf[i] = max(rgba.x, max(rgba.y, rgba.z)) * sin(th);
             if (i) env->elem_cdf[i] += env->elem_cdf[i - 1];
         }
@@ -394,7 +387,7 @@ std::vector<std::string> validate(const scene* scn, bool skip_textures) {
     };
     auto check_empty_textures = [&errs](const std::vector<texture*>& vals) {
         for (auto val : vals) {
-            if (val->ldr.empty() && val->hdr.empty())
+            if (val->pxl.empty())
                 errs.push_back("empty texture " + val->name);
         }
     };
@@ -550,7 +543,7 @@ vec3f eval_shading_norm(
         if (ist->mat->norm_txt.txt) {
             auto texcoord = eval_texcoord(ist, ei, uv);
             auto left_handed = false;
-            auto txt = xyz(eval_texture(ist->mat->norm_txt, texcoord, false));
+            auto txt = xyz(eval_texture(ist->mat->norm_txt, texcoord));
             txt = txt * 2 - vec3f{1, 1, 1};
             txt.y = -txt.y;  // flip vertical axis to align green with image up
             auto tu = orthonormalize(eval_tangsp(ist, ei, uv, left_handed), n);
@@ -591,21 +584,9 @@ vec3f eval_environment(const environment* env, const vec3f& w) {
 }
 
 // Evaluate a texture
-vec4f eval_texture(const texture_info& info, const vec2f& texcoord, bool srgb,
-    const vec4f& def) {
+vec4f eval_texture(const texture_info& info, const vec2f& texcoord) {
     auto txt = info.txt;
-    if (!txt || (txt->hdr.empty() && txt->ldr.empty())) return def;
-
-    auto lookup = [&def, &txt, &srgb](int i, int j) {
-        auto idx = i + j * txt->width;
-        if (!txt->ldr.empty())
-            return (srgb) ? srgb_to_linear(txt->ldr[idx]) :
-                            byte_to_float(txt->ldr[idx]);
-        else if (!txt->hdr.empty())
-            return txt->hdr[idx];
-        else
-            return def;
-    };
+    if (!txt || txt->pxl.empty()) return {1,1,1,1};
 
     // get image width/height
     auto w = txt->width, h = txt->height;
@@ -631,11 +612,11 @@ vec4f eval_texture(const texture_info& info, const vec2f& texcoord, bool srgb,
     auto u = s - i, v = t - j;
 
     // nearest lookup
-    if (!info.linear) return lookup(i, j);
+    if (!info.linear) return txt->pxl[j * txt->width + i];
 
     // handle interpolation
-    return lookup(i, j) * (1 - u) * (1 - v) + lookup(i, jj) * (1 - u) * v +
-           lookup(ii, j) * u * (1 - v) + lookup(ii, jj) * u * v;
+    return txt->pxl[j * txt->width + i] * (1 - u) * (1 - v) + txt->pxl[jj * txt->width + i] * (1 - u) * v +
+           txt->pxl[j * txt->width + ii] * u * (1 - v) + txt->pxl[jj * txt->width + ii] * u * v;
 }
 
 // Generates a ray from a camera for image plane coordinate uv and
@@ -677,7 +658,7 @@ vec3f eval_diffuse(const instance* ist, int ei, const vec2f& uv) {
             xyz(eval_texture(ist->mat->kd_txt, eval_texcoord(ist, ei, uv)));
         auto km =
             ist->mat->ks.x *
-            eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv), false).z;
+            eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).z;
         return kb * (1 - km);
     }
 }
@@ -692,7 +673,7 @@ vec3f eval_specular(const instance* ist, int ei, const vec2f& uv) {
             xyz(eval_texture(ist->mat->kd_txt, eval_texcoord(ist, ei, uv)));
         auto km =
             ist->mat->ks.x *
-            eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv), false).z;
+            eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).z;
         return kb * km + vec3f{0.04f, 0.04f, 0.04f} * (1 - km);
     }
 }
@@ -707,7 +688,7 @@ float eval_roughness(const instance* ist, int ei, const vec2f& uv) {
     } else {
         auto rs =
             ist->mat->rs *
-            eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv), false).y;
+            eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).y;
         return rs * rs;
     }
     // rs = clamp(rs, 0.03f * 0.03f, 1.0f);
@@ -790,11 +771,9 @@ void print_stats(scene* scn) {
     uint64_t vert_radius = 0;
     uint64_t vert_tangsp = 0;
 
-    uint64_t texel_ldrs = 0;
-    uint64_t texel_hdrs = 0;
+    uint64_t texel_imgs = 0;
 
-    uint64_t memory_ldrs = 0;
-    uint64_t memory_hdrs = 0;
+    uint64_t memory_imgs = 0;
     uint64_t memory_elems = 0;
     uint64_t memory_verts = 0;
 
@@ -826,11 +805,9 @@ void print_stats(scene* scn) {
                    vert_tangsp * sizeof(vec4f) + vert_radius * sizeof(float);
 
     for (auto txt : scn->textures) {
-        texel_ldrs = (txt->ldr.empty()) ? 0 : (txt->width * txt->height);
-        texel_hdrs = (txt->hdr.empty()) ? 0 : (txt->width * txt->height);
+        texel_imgs = (txt->pxl.empty()) ? 0 : (txt->width * txt->height);
     }
-    memory_ldrs = texel_ldrs * sizeof(vec4b);
-    memory_hdrs = texel_hdrs * sizeof(vec4f);
+    memory_imgs = texel_imgs * sizeof(vec4f);
 
     println("num_cameras: {}", num_cameras);
     println("num_shape_groups: {}", num_shape_groups);
@@ -849,10 +826,8 @@ void print_stats(scene* scn) {
     println("vert_color: {}", vert_color);
     println("vert_radius: {}", vert_radius);
     println("vert_tangsp: {}", vert_tangsp);
-    println("texel_ldrs: {}", texel_ldrs);
-    println("texel_hdrs: {}", texel_hdrs);
-    println("memory_ldrs: {}", memory_ldrs);
-    println("memory_hdrs: {}", memory_hdrs);
+    println("texel_imgs: {}", texel_imgs);
+    println("memory_imgs: {}", memory_imgs);
     println("memory_elems: {}", memory_elems);
     println("memory_verts: {}", memory_verts);
     println("bbox_scn: {} {}", bbox.min, bbox.max);
@@ -895,10 +870,11 @@ scene* obj_to_scene(const obj_scene* obj) {
         return txt;
     };
 
-    auto make_texture_info = [&add_texture](const obj_texture_info& oinfo) {
+    auto make_texture_info = [&add_texture](const obj_texture_info& oinfo, bool srgb) {
         auto info = texture_info();
         if (oinfo.path == "") return info;
         info.txt = add_texture(oinfo.path);
+        info.txt->srgb = srgb;
         info.wrap_s = !oinfo.clamp;
         info.wrap_t = !oinfo.clamp;
         info.scale = oinfo.scale;
@@ -920,13 +896,13 @@ scene* obj_to_scene(const obj_scene* obj) {
         mat->op = omat->op;
         mat->fresnel = omat->illum == 2 || omat->illum == 5 || omat->illum == 7;
         mat->refract = omat->illum == 6 || omat->illum == 7;
-        mat->ke_txt = make_texture_info(omat->ke_txt);
-        mat->kd_txt = make_texture_info(omat->kd_txt);
-        mat->ks_txt = make_texture_info(omat->ks_txt);
-        mat->kt_txt = make_texture_info(omat->kt_txt);
-        mat->norm_txt = make_texture_info(omat->norm_txt);
-        mat->bump_txt = make_texture_info(omat->bump_txt);
-        mat->disp_txt = make_texture_info(omat->disp_txt);
+        mat->ke_txt = make_texture_info(omat->ke_txt, true);
+        mat->kd_txt = make_texture_info(omat->kd_txt, true);
+        mat->ks_txt = make_texture_info(omat->ks_txt, true);
+        mat->kt_txt = make_texture_info(omat->kt_txt, true);
+        mat->norm_txt = make_texture_info(omat->norm_txt, false);
+        mat->bump_txt = make_texture_info(omat->bump_txt, false);
+        mat->disp_txt = make_texture_info(omat->disp_txt, false);
         scn->materials.push_back(mat);
         mmap[mat->name] = mat;
     }
@@ -1174,7 +1150,7 @@ scene* obj_to_scene(const obj_scene* obj) {
         auto env = new environment();
         env->name = oenv->name;
         env->ke = oenv->ke;
-        env->ke_txt = make_texture_info(oenv->ke_txt);
+        env->ke_txt = make_texture_info(oenv->ke_txt, true);
         env->frame = oenv->frame;
         scn->environments.push_back(env);
         emap[env->name] = env;
@@ -1473,13 +1449,14 @@ scene* gltf_to_scene(const glTF* gltf) {
     }
 
     // add a texture
-    auto make_texture_info = [gltf, scn](const glTFTextureInfo* ginfo,
+    auto make_texture_info = [gltf, scn](const glTFTextureInfo* ginfo, bool srgb,
                                  bool normal = false, bool occlusion = false) {
         auto info = texture_info();
         if (!ginfo) return info;
         auto gtxt = gltf->get(ginfo->index);
         if (!gtxt || !gtxt->source) return info;
         info.txt = scn->textures.at((int)gtxt->source);
+        info.txt->srgb = srgb;
         if (!info.txt) return info;
         auto gsmp = gltf->get(gtxt->sampler);
         if (gsmp) {
@@ -1505,7 +1482,7 @@ scene* gltf_to_scene(const glTF* gltf) {
         auto mat = new material();
         mat->name = gmat->name;
         mat->ke = gmat->emissiveFactor;
-        mat->ke_txt = make_texture_info(gmat->emissiveTexture);
+        mat->ke_txt = make_texture_info(gmat->emissiveTexture, true);
         if (gmat->pbrSpecularGlossiness) {
             mat->base_metallic = false;
             auto gsg = gmat->pbrSpecularGlossiness;
@@ -1514,8 +1491,8 @@ scene* gltf_to_scene(const glTF* gltf) {
             mat->op = gsg->diffuseFactor.w;
             mat->ks = gsg->specularFactor;
             mat->rs = 1 - gsg->glossinessFactor;
-            mat->kd_txt = make_texture_info(gsg->diffuseTexture);
-            mat->ks_txt = make_texture_info(gsg->specularGlossinessTexture);
+            mat->kd_txt = make_texture_info(gsg->diffuseTexture, true);
+            mat->ks_txt = make_texture_info(gsg->specularGlossinessTexture, true);
         } else if (gmat->pbrMetallicRoughness) {
             mat->base_metallic = true;
             auto gmr = gmat->pbrMetallicRoughness;
@@ -1525,10 +1502,10 @@ scene* gltf_to_scene(const glTF* gltf) {
             mat->ks = {
                 gmr->metallicFactor, gmr->metallicFactor, gmr->metallicFactor};
             mat->rs = gmr->roughnessFactor;
-            mat->kd_txt = make_texture_info(gmr->baseColorTexture);
-            mat->ks_txt = make_texture_info(gmr->metallicRoughnessTexture);
+            mat->kd_txt = make_texture_info(gmr->baseColorTexture, true);
+            mat->ks_txt = make_texture_info(gmr->metallicRoughnessTexture, false);
         }
-        mat->norm_txt = make_texture_info(gmat->normalTexture, true, false);
+        mat->norm_txt = make_texture_info(gmat->normalTexture, false, true, false);
         mat->double_sided = gmat->doubleSided;
         scn->materials.push_back(mat);
     }
@@ -2251,6 +2228,7 @@ glTF* scene_to_gltf(
 
 // Loads/saves textures
 void load_textures(const std::string& filename, scene* scn, bool skip_missing) {
+#if YGL_IMAGEIO
     auto dirname = path_dirname(filename);
     for (auto txt : scn->textures) {
         // TODO: handle glTF buffer textures
@@ -2258,47 +2236,40 @@ void load_textures(const std::string& filename, scene* scn, bool skip_missing) {
             log_warning("cannot handle glTF inline images");
             txt->width = 1;
             txt->height = 1;
-            txt->ldr = {vec4b{255, 255, 255, 255}};
+            txt->pxl = {vec4f{1, 1, 1, 1}};
             continue;
         }
         auto filename = dirname + txt->path;
         for (auto& c : filename)
             if (c == '\\') c = '/';
-#if YGL_IMAGEIO
-        if (is_hdr_filename(filename)) {
-            txt->hdr = load_image4f(filename, txt->width, txt->height);
-        } else {
-            txt->ldr = load_image4b(filename, txt->width, txt->height);
-        }
-#endif
-        if (txt->hdr.empty() && txt->ldr.empty()) {
+        txt->pxl = load_image4f(filename, txt->width, txt->height, txt->srgb);
+        if (txt->pxl.empty()) {
             if (skip_missing) continue;
             throw std::runtime_error("cannot laod image " + filename);
         }
     }
+#else
+    throw std::runtime_error("cannot laod images");
+#endif
 }
 void save_textures(
     const std::string& filename, const scene* scn, bool skip_missing) {
+#if YGL_IMAGEIO
     auto dirname = path_dirname(filename);
     for (auto txt : scn->textures) {
-        if (txt->ldr.empty() && txt->hdr.empty()) continue;
+        if (txt->pxl.empty()) continue;
         auto filename = dirname + txt->path;
         for (auto& c : filename)
             if (c == '\\') c = '/';
-        auto ok = false;
-#if YGL_IMAGEIO
-        if (!txt->ldr.empty()) {
-            ok = save_image4b(filename, txt->width, txt->height, txt->ldr);
-        }
-        if (!txt->hdr.empty()) {
-            ok = save_image4f(filename, txt->width, txt->height, txt->hdr);
-        }
-#endif
+        auto ok = save_image4f(filename, txt->width, txt->height, txt->pxl, txt->srgb);
         if (!ok) {
             if (skip_missing) continue;
             throw std::runtime_error("cannot save image " + filename);
         }
     }
+#else
+    throw std::runtime_error("cannot save images");
+#endif
 }
 
 // Load a scene
@@ -2415,15 +2386,15 @@ material* make_material(
 }
 
 texture* make_texture(const std::string& name, const std::string& path,
-    int width, int height, const std::vector<vec4b>& ldr,
-    const std::vector<vec4f>& hdr) {
+    int width, int height, const std::vector<vec4f>& pixels,
+    bool srgb) {
     auto txt = new texture();
     txt->name = name;
     txt->path = path;
     txt->width = width;
     txt->height = height;
-    txt->ldr = ldr;
-    txt->hdr = hdr;
+    txt->pxl = pixels;
+    txt->srgb = true;
     return txt;
 }
 
@@ -2768,15 +2739,15 @@ texture* make_bumpnorm_texture(
     const std::string& name, int res, int tile, float scale) {
     return make_texture(name, name + ".png", res, res,
         bump_to_normal_map(
-            res, res, make_bumpdimple_image(res, res, tile), scale));
+            res, res, make_bumpdimple_image(res, res, tile), scale), false);
 }
 texture* make_sky_texture(const std::string& name, int res, float skyangle) {
-    return make_texture(name, name + ".hdr", res * 2, res, {},
+    return make_texture(name, name + ".hdr", res * 2, res, 
         make_sunsky_image(res * 2, res, skyangle));
 }
 texture* make_lights_texture(const std::string& name, int res, const vec3f& le,
     int nlights, float langle, float lwidth, float lheight) {
-    return make_texture(name, name + ".hdr", res * 2, res, {},
+    return make_texture(name, name + ".hdr", res * 2, res, 
         make_lights_image(res * 2, res, le, nlights, langle, lwidth, lheight));
 }
 

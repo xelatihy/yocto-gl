@@ -35,14 +35,6 @@ using namespace std::literals;
 #include <map>
 
 int main(int argc, char* argv[]) {
-    static auto tonemap_names = std::map<ygl::tonemap_type, std::string>{
-        {ygl::tonemap_type::linear, "linear"},
-        {ygl::tonemap_type::gamma, "gamma"},
-        {ygl::tonemap_type::srgb, "srgb"},
-        {ygl::tonemap_type::filmic1, "filmic1"},
-        {ygl::tonemap_type::filmic2, "filmic2"},
-        {ygl::tonemap_type::filmic3, "filmic3"},
-    };
     static auto trace_names = std::map<ygl::trace_func, std::string>{
         {ygl::trace_path, "pathtrace"},
         {ygl::trace_direct, "direct"},
@@ -80,8 +72,6 @@ int main(int argc, char* argv[]) {
         parser, "--save-batch", "", "Save images progressively");
     auto exposure =
         ygl::parse_opt(parser, "--exposure", "-e", "Hdr exposure", 0.0f);
-    auto tonemap = ygl::parse_opte(parser, "--tonemap", "-T", "Hdr tonemap",
-        tonemap_names, ygl::tonemap_type::gamma);
     auto double_sided = ygl::parse_flag(
         parser, "--double-sided", "-D", "Double-sided rendering.", false);
     auto add_skyenv = ygl::parse_flag(
@@ -158,7 +148,7 @@ int main(int argc, char* argv[]) {
                 ygl::path_dirname(imfilename), ygl::path_basename(imfilename),
                 sample, ygl::path_extension(imfilename));
             ygl::log_info("saving image {}", filename);
-            save_image(filename, width, height, img, tonemap, exposure);
+            ygl::save_image4f(filename, width, height, ygl::expose_image(img, exposure));
         }
         ygl::log_info_begin("rendering sample {}/{}", sample, nsamples);
         if (noparallel) {
@@ -176,7 +166,7 @@ int main(int argc, char* argv[]) {
 
     // save image
     ygl::log_info("saving image {}", imfilename);
-    ygl::save_image(imfilename, width, height, img, tonemap, exposure);
+    ygl::save_image4f(imfilename, width, height, ygl::expose_image(img, exposure));
 
     // cleanup
     delete scn;

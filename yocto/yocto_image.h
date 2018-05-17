@@ -96,39 +96,18 @@ inline vec4b linear_to_srgb(const vec4f& lin) {
         pow(lin.z, 1 / 2.2f), lin.w});
 }
 
-// Convert between CIE XYZ and xyY
-inline vec3f xyz_to_xyY(const vec3f& xyz) {
-    if (xyz == zero3f) return zero3f;
-    return {xyz.x / (xyz.x + xyz.y + xyz.z), xyz.y / (xyz.x + xyz.y + xyz.z),
-        xyz.y};
-}
-// Convert between CIE XYZ and xyY
-inline vec3f xyY_to_xyz(const vec3f& xyY) {
-    if (xyY.y == 0) return zero3f;
-    return {xyY.x * xyY.z / xyY.y, xyY.z, (1 - xyY.x - xyY.y) * xyY.z / xyY.y};
-}
-// Convert between CIE XYZ and RGB
-inline vec3f xyz_to_rgb(const vec3f& xyz) {
-    // from http://www.brucelindbloom.com/index.html?Eqn_RGB_to_XYZ.html
-    if (xyz == zero3f) return zero3f;
-    return {+3.2404542f * xyz.x - 1.5371385f * xyz.y - 0.4985314f * xyz.z,
-        -0.9692660f * xyz.x + 1.8760108f * xyz.y + 0.0415560f * xyz.z,
-        +0.0556434f * xyz.x - 0.2040259f * xyz.y + 1.0572252f * xyz.z};
-}
-// Convert between CIE XYZ and RGB
-inline vec3f rgb_to_xyz(const vec3f& rgb) {
-    // from http://www.brucelindbloom.com/index.html?Eqn_RGB_to_XYZ.html
-    if (rgb == zero3f) return zero3f;
-    return {0.4124564f * rgb.x + 0.3575761f * rgb.y + 0.1804375f * rgb.z,
-        0.2126729f * rgb.x + 0.7151522f * rgb.y + 0.0721750f * rgb.z,
-        0.0193339f * rgb.x + 0.1191920f * rgb.y + 0.9503041f * rgb.z};
-}
+// Approximate luminance estimate
+inline float luminance(const vec3f& a) { return (a.x + a.y + a.z) / 3; }
 
 // Converts HSV to RGB.
-vec4b hsv_to_rgb(const vec4b& hsv);
-
-// Approximate luminance estimate
-inline float luminance(const vec4f& a) { return (a.x + a.y + a.z) / 3; }
+vec3f hsv_to_rgb(const vec3f& hsv);
+vec3f rgb_to_hsv(const vec3f& rgb);
+// Convert between CIE XYZ and xyY
+vec3f xyz_to_xyY(const vec3f& xyz);
+vec3f xyY_to_xyz(const vec3f& xyY);
+// Convert between CIE XYZ and RGB
+vec3f xyz_to_rgb(const vec3f& xyz);
+vec3f rgb_to_xyz(const vec3f& rgb);
 
 }  // namespace ygl
 
@@ -149,32 +128,43 @@ inline std::vector<vec4b> linear_to_srgb(const std::vector<vec4f>& lin) {
     return srgb;
 }
 
-// Tone mapping type.
-enum struct tonemap_type { linear, gamma, srgb, filmic1, filmic2, filmic3 };
+// Conversion from/to floats.
+inline std::vector<vec4f> byte_to_float(const std::vector<vec4b>& bt) {
+    auto fl = std::vector<vec4f>(bt.size());
+    for (auto i = 0; i < bt.size(); i++) fl[i] = byte_to_float(bt[i]);
+    return fl;
+}
+inline std::vector<vec4b> float_to_byte(const std::vector<vec4f>& fl) {
+    auto bt = std::vector<vec4b>(fl.size());
+    for (auto i = 0; i < fl.size(); i++) bt[i] = float_to_byte(fl[i]);
+    return bt;
+}
 
-// Tone mapping HDR to LDR images.
-std::vector<vec4b> tonemap_image(
-    const std::vector<vec4f>& hdr, tonemap_type type, float exposure);
+// Apply exposure to an image
+std::vector<vec4f> expose_image(const std::vector<vec4f>& hdr, float exposure);
+
+// Tone mapping linear HDR to linear LDR images in reference space.
+std::vector<vec4f> filmic_tonemap_image(const std::vector<vec4f>& hdr);
+std::vector<vec4f> aces_tonemap_image(const std::vector<vec4f>& hdr);
 
 // Make example images.
-std::vector<vec4b> make_grid_image(int width, int height, int tile = 8,
-    const vec4b& c0 = {128, 128, 128, 255},
-    const vec4b& c1 = {192, 192, 192, 255});
-std::vector<vec4b> make_checker_image(int width, int height, int tile = 8,
-    const vec4b& c0 = {128, 128, 128, 255},
-    const vec4b& c1 = {192, 192, 192, 255});
-std::vector<vec4b> make_bumpdimple_image(int width, int height, int tile = 8);
-std::vector<vec4b> make_ramp_image(
+std::vector<vec4f> make_grid_image(int width, int height, int tile = 8,
+    const vec4f& c0 = {0.5f, 0.5f, 0.5f, 1.0f},
+    const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1.0f});
+std::vector<vec4f> make_checker_image(int width, int height, int tile = 8,
+    const vec4f& c0 = {0.5f, 0.5f, 0.5f, 1.0f},
+    const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1.0f});
+std::vector<vec4f> make_bumpdimple_image(int width, int height, int tile = 8);
+std::vector<vec4f> make_ramp_image(
     int width, int height, const vec4b& c0, const vec4b& c1, bool srgb = false);
-std::vector<vec4b> make_gammaramp_image(int width, int height);
-std::vector<vec4f> make_gammaramp_imagef(int width, int height);
-std::vector<vec4b> make_uv_image(int width, int height);
-std::vector<vec4b> make_uvgrid_image(
+std::vector<vec4f> make_gammaramp_image(int width, int height);
+std::vector<vec4f> make_uv_image(int width, int height);
+std::vector<vec4f> make_uvgrid_image(
     int width, int height, int tile = 8, bool colored = true);
 
 // Comvert a bump map to a normal map.
-std::vector<vec4b> bump_to_normal_map(
-    int width, int height, const std::vector<vec4b>& img, float scale = 1);
+std::vector<vec4f> bump_to_normal_map(
+    int width, int height, const std::vector<vec4f>& img, float scale = 1);
 
 // Make a sunsky HDR model with sun at theta elevation in [0,pi/2], turbidity
 // in [1.7,10] with or without sun.
@@ -187,14 +177,14 @@ std::vector<vec4f> make_lights_image(int width, int height,
     float lwidth = pi / 16, float lheight = pi / 16);
 
 // Make a noise image. Wrap works only if both resx and resy are powers of two.
-std::vector<vec4b> make_noise_image(
+std::vector<vec4f> make_noise_image(
     int width, int height, float scale = 1, bool wrap = true);
-std::vector<vec4b> make_fbm_image(int width, int height, float scale = 1,
+std::vector<vec4f> make_fbm_image(int width, int height, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
-std::vector<vec4b> make_ridge_image(int width, int height, float scale = 1,
+std::vector<vec4f> make_ridge_image(int width, int height, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, float offset = 1.0f,
     int octaves = 6, bool wrap = true);
-std::vector<vec4b> make_turbulence_image(int width, int height, float scale = 1,
+std::vector<vec4f> make_turbulence_image(int width, int height, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
 
 #if YGL_IMAGEIO
@@ -206,14 +196,11 @@ bool is_hdr_filename(const std::string& filename);
 std::vector<vec4b> load_image4b(
     const std::string& filename, int& width, int& height);
 std::vector<vec4f> load_image4f(
-    const std::string& filename, int& width, int& height);
+    const std::string& filename, int& width, int& height, bool srgb_8bit = true);
 bool save_image4b(const std::string& filename, int width, int height,
     const std::vector<vec4b>& img);
 bool save_image4f(const std::string& filename, int width, int height,
-    const std::vector<vec4f>& img);
-// Save a 4 channel HDR or LDR image with tonemapping based on filename.
-bool save_image(const std::string& filename, int width, int height,
-    const std::vector<vec4f>& hdr, tonemap_type tonemapper, float exposure);
+    const std::vector<vec4f>& img, bool srgb_8bit = true);
 
 // Filter type and edge mode for resizing.
 enum struct resize_filter {

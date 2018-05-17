@@ -75,10 +75,6 @@ void clear_glbuffers(const vec4f& background) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     assert(check_glerror());
 }
-void clear_glbuffers(const vec4b& background) {
-    clear_glbuffers(vec4f{background.x / 255.f, background.y / 255.f,
-        background.z / 255.f, background.w / 255.f});
-}
 
 // Enable/disable depth test
 void enable_gldepth_test(bool enabled) {
@@ -169,20 +165,21 @@ namespace ygl {
 
 // Implementation of update_texture.
 void update_gltexture(gltexture& txt, int w, int h, int nc, const void* pixels,
-    bool floats, bool linear, bool mipmap) {
+    bool floats, bool linear, bool mipmap, bool as_float) {
     auto refresh = !txt.tid || txt.width != w || txt.height != h ||
                    txt.ncomp != nc || txt.mipmap != mipmap ||
-                   txt.linear != linear;
+                   txt.linear != linear || txt.as_float != as_float;
     txt.width = w;
     txt.height = h;
     txt.ncomp = nc;
     txt.mipmap = mipmap;
     txt.linear = linear;
+    txt.as_float = as_float;
     assert(check_glerror());
     if (w * h) {
         int formats_ub[4] = {GL_RED, GL_RG, GL_RGB, GL_RGBA};
         int formats_f[4] = {GL_R32F, GL_RG32F, GL_RGB32F, GL_RGBA32F};
-        int* formats = (floats) ? formats_f : formats_ub;
+        int* formats = (as_float) ? formats_f : formats_ub;
         assert(check_glerror());
         if (!txt.tid) glGenTextures(1, &txt.tid);
         glBindTexture(GL_TEXTURE_2D, txt.tid);
@@ -896,11 +893,11 @@ glsurface_program make_glsurface_program() {
             // get material color from textures and adjust values
             if(mat_type == 0) {
             } else if(mat_type == 1) {
-                kd *= pow(kd_txt.xyz, vec3(2.2));
-                ks *= pow(ks_txt.xyz, vec3(2.2));
+                kd *= kd_txt.xyz;
+                ks *= ks_txt.xyz;
                 rs = rs*rs;
             } else if(mat_type == 2) {
-                vec3 kb = kd * pow(kd_txt.xyz, vec3(2.2));
+                vec3 kb = kd * kd_txt.xyz;
                 float km = ks.x * ks_txt.z;
                 kd = kb * (1 - km);
                 ks = kb * km + vec3(0.04) * (1 - km);
@@ -908,8 +905,8 @@ glsurface_program make_glsurface_program() {
                 rs = rs*rs;
                 op *= kd_txt.w;
             } else if(mat_type == 3) {
-                kd *= pow(kd_txt.xyz, vec3(2.2));
-                ks *= pow(ks_txt.xyz, vec3(2.2));
+                kd *= kd_txt.xyz;
+                ks *= ks_txt.xyz;
                 rs *= ks_txt.w;
                 rs = (1 - rs) * (1 - rs);
                 op *= kd_txt.w;
@@ -1432,12 +1429,12 @@ bool get_glwindow_shift_key(glwindow* win) {
 }
 
 // Read pixels
-void take_glwindow_screenshot4b(glwindow* win, int& width, int& height,
-    std::vector<ygl::vec4b>& img, bool flipy, bool back) {
+std::vector<ygl::vec4f> take_glwindow_screenshot(glwindow* win, int& width, int& height,
+    bool flipy, bool back) {
     auto wh = get_glwindow_framebuffer_size(win);
     width = wh.x;
     height = wh.y;
-    img = std::vector<ygl::vec4b>(wh.x * wh.y);
+    auto img = std::vector<ygl::vec4f>(wh.x * wh.y);
     glReadBuffer((back) ? GL_BACK : GL_FRONT);
     glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, img.data());
     if (flipy) {
@@ -1448,6 +1445,7 @@ void take_glwindow_screenshot4b(glwindow* win, int& width, int& height,
             }
         }
     }
+    return img;
 }
 
 // Initialize widgets
@@ -1654,17 +1652,6 @@ bool draw_glwidgets_colorbox(
         if (val.w < 0.0001f) val.w = 0;
     }
     return mod;
-}
-// Color widget
-bool draw_glwidgets_colorbox(
-    glwindow* win, const std::string& lbl, vec4b& val) {
-    auto valf = ImGui::ColorConvertU32ToFloat4(*(uint32_t*)&val);
-    if (ImGui::ColorEdit4(lbl.c_str(), &valf.x)) {
-        auto valb = ImGui::ColorConvertFloat4ToU32(valf);
-        *(uint32_t*)&val = valb;
-        return true;
-    }
-    return false;
 }
 bool draw_hdr_color_widget(
     glwindow* win, const std::string& lbl, vec3f& val, float max) {
