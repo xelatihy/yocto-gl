@@ -41,19 +41,22 @@ struct gimage {
 
     int width = 0;                // width
     int height = 0;               // height
-    std::vector<ygl::vec4f> hdr;  // hdr
-    std::vector<ygl::vec4b> ldr;  // ldr
+    std::vector<ygl::vec4f> pxl;  // pixels
+    bool srgb = true;             // srgb for 8bit i/o
+    bool ldr = false;
 
     // min/max values
-    ygl::vec4f hdr_min = ygl::zero4f, hdr_max = ygl::zero4f;
-    ygl::vec4b ldr_min = ygl::zero4b, ldr_max = ygl::zero4b;
-    float hdr_max_lum = 0;
+    ygl::vec4f min = ygl::zero4f, max = ygl::zero4f;
+    float max_lum = 0;
 
     // image adjustment
     bool updated = true;
-    ygl::tonemap_type tonemap = ygl::tonemap_type::gamma;
     float exposure = 0;
-    std::vector<ygl::vec4b> img;
+    bool filmic = false;
+    bool aces = false;
+
+    // display image
+    std::vector<ygl::vec4f> display;
 
     // opengl texture
     bool gl_updated = true;
@@ -67,7 +70,7 @@ struct app_state {
     ygl::glimage_program gl_prog = {};
     ygl::frame2f imframe = ygl::identity_frame2f;
     bool zoom_to_fit = false;
-    ygl::vec4b background = {222, 222, 222, 0};
+    ygl::vec4f background = {0.8f, 0.8f, 0.8f, 0};
 
     ~app_state() {
         for (auto v : imgs) delete v;
@@ -76,47 +79,27 @@ struct app_state {
 
 // compute min/max
 void update_minmax(gimage* img) {
-    if (!img->hdr.empty()) {
-        img->hdr_min = {ygl::flt_max, ygl::flt_max, ygl::flt_max, ygl::flt_max};
-        img->hdr_max = {ygl::flt_min, ygl::flt_min, ygl::flt_min, ygl::flt_min};
-        img->hdr_max_lum = ygl::flt_min;
-        for (auto& p : img->hdr) {
-            img->hdr_min = {ygl::min(img->hdr_min.x, p.x),
-                ygl::min(img->hdr_min.y, p.y), ygl::min(img->hdr_min.z, p.z),
-                ygl::min(img->hdr_min.w, p.w)};
-            img->hdr_max = {ygl::max(img->hdr_max.x, p.x),
-                ygl::max(img->hdr_max.y, p.y), ygl::max(img->hdr_max.z, p.z),
-                ygl::max(img->hdr_max.w, p.w)};
-            img->hdr_max_lum = ygl::max(img->hdr_max_lum, luminance(p));
-        }
-    }
-    if (!img->ldr.empty()) {
-        img->ldr_min = {255, 255, 255, 255};
-        img->ldr_max = {0, 0, 0, 0};
-        for (auto& p : img->ldr) {
-            img->ldr_min = {(ygl::byte)ygl::min(img->ldr_min.x, p.x),
-                (ygl::byte)ygl::min(img->ldr_min.y, p.y),
-                (ygl::byte)ygl::min(img->ldr_min.z, p.z),
-                (ygl::byte)ygl::min(img->ldr_min.w, p.w)};
-            img->ldr_max = {(ygl::byte)ygl::max(img->ldr_max.x, p.x),
-                (ygl::byte)ygl::max(img->ldr_max.y, p.y),
-                (ygl::byte)ygl::max(img->ldr_max.z, p.z),
-                (ygl::byte)ygl::max(img->ldr_max.w, p.w)};
-        }
+    img->min = {ygl::flt_max, ygl::flt_max, ygl::flt_max, ygl::flt_max};
+    img->max = {ygl::flt_min, ygl::flt_min, ygl::flt_min, ygl::flt_min};
+    img->max_lum = ygl::flt_min;
+    for (auto& p : img->pxl) {
+        img->min = {ygl::min(img->min.x, p.x), ygl::min(img->min.y, p.y),
+            ygl::min(img->min.z, p.z), ygl::min(img->min.w, p.w)};
+        img->max = {ygl::max(img->max.x, p.x), ygl::max(img->max.y, p.y),
+            ygl::max(img->max.z, p.z), ygl::max(img->max.w, p.w)};
+        img->max_lum = ygl::max(img->max_lum, (p.x + p.y + p.z) / 3);
     }
 }
 
 // Loads a generic image
-gimage* load_gimage(const std::string& filename) {
+gimage* load_gimage(const std::string& filename, bool srgb) {
     auto img = new gimage();
     img->filename = filename;
     img->name = ygl::path_filename(filename);
-    if (ygl::is_hdr_filename(filename)) {
-        img->hdr = ygl::load_image4f(filename, img->width, img->height);
-    } else {
-        img->ldr = ygl::load_image4b(filename, img->width, img->height);
-    }
-    if (img->hdr.empty() && img->ldr.empty()) {
+    img->srgb = srgb;
+    img->pxl = ygl::load_image4f(filename, img->width, img->height, img->srgb);
+    img->ldr = !ygl::is_hdr_filename(filename);
+    if (img->pxl.empty()) {
         throw std::runtime_error("cannot load image " + img->filename);
     }
     update_minmax(img);
@@ -125,71 +108,55 @@ gimage* load_gimage(const std::string& filename) {
 
 gimage* diff_gimage(gimage* a, gimage* b, bool color) {
     if (a->width != b->width || a->height != b->height) return nullptr;
-    if (a->ldr.empty() && !b->ldr.empty()) return nullptr;
-    if (a->hdr.empty() && !b->hdr.empty()) return nullptr;
+    if (a->pxl.empty() && !b->pxl.empty()) return nullptr;
     auto d = new gimage();
     d->name = "diff " + a->name + " " + b->name;
     d->filename = "";
     d->width = a->width;
     d->height = a->height;
-    if (!a->hdr.empty()) {
-        d->hdr.resize(a->hdr.size());
+    if (!a->pxl.empty()) {
+        d->pxl.resize(a->pxl.size());
         if (color) {
-            for (auto i = 0; i < a->hdr.size(); i++) {
-                d->hdr[i] = {std::abs(a->hdr[i].x - b->hdr[i].x),
-                    std::abs(a->hdr[i].y - b->hdr[i].y),
-                    std::abs(a->hdr[i].z - b->hdr[i].z),
-                    std::max(a->hdr[i].w, b->hdr[i].w)};
+            for (auto i = 0; i < a->pxl.size(); i++) {
+                d->pxl[i] = {std::abs(a->pxl[i].x - b->pxl[i].x),
+                    std::abs(a->pxl[i].y - b->pxl[i].y),
+                    std::abs(a->pxl[i].z - b->pxl[i].z),
+                    std::max(a->pxl[i].w, b->pxl[i].w)};
             }
         } else {
-            for (auto i = 0; i < a->hdr.size(); i++) {
-                auto ld = std::abs(
-                    ygl::luminance(a->hdr[i]) - ygl::luminance(b->hdr[i]));
-                d->hdr[i] = {ld, ld, ld, std::max(a->hdr[i].w, b->hdr[i].w)};
+            for (auto i = 0; i < a->pxl.size(); i++) {
+                auto la = (a->pxl[i].x + a->pxl[i].y + a->pxl[i].z) / 3;
+                auto lb = (b->pxl[i].x + b->pxl[i].y + b->pxl[i].z) / 3;
+                auto ld = fabsf(la - lb);
+                d->pxl[i] = {ld, ld, ld, std::max(a->pxl[i].w, b->pxl[i].w)};
             }
         }
-    }
-    if (!a->ldr.empty()) {
-        d->ldr.resize(a->ldr.size());
-        for (auto i = 0; i < a->ldr.size(); i++)
-            d->ldr[i] = {(ygl::byte)std::abs(a->ldr[i].x - b->ldr[i].x),
-                (ygl::byte)std::abs(a->ldr[i].y - b->ldr[i].y),
-                (ygl::byte)std::abs(a->ldr[i].z - b->ldr[i].z),
-                std::max(a->ldr[i].w, b->ldr[i].w)};
     }
     update_minmax(d);
     return d;
 }
 
 void update_display_image(gimage* img) {
-    if (!img->hdr.empty()) {
-        img->img = ygl::tonemap_image(img->hdr, img->tonemap, img->exposure);
-    } else {
-        img->img = img->ldr;
-    }
+    img->display = img->pxl;
+    if (img->exposure)
+        img->display = ygl::expose_image(img->display, img->exposure);
+    if (img->filmic) img->display = ygl::filmic_tonemap_image(img->display);
+    if (img->aces) img->display = ygl::aces_tonemap_image(img->display);
     img->updated = false;
 }
 
 void draw_glwidgets(ygl::glwindow* win, app_state* app) {
-    static auto tonemap_names = std::map<ygl::tonemap_type, std::string>{
-        {ygl::tonemap_type::linear, "linear"},
-        {ygl::tonemap_type::gamma, "gamma"},
-        {ygl::tonemap_type::srgb, "srgb"},
-        {ygl::tonemap_type::filmic1, "filmic1"},
-        {ygl::tonemap_type::filmic2, "filmic2"},
-        {ygl::tonemap_type::filmic3, "filmic3"},
-    };
-
     if (ygl::begin_glwidgets_frame(win, "yimview")) {
         ygl::draw_glwidgets_combobox(win, "image", app->img, app->imgs);
         ygl::draw_glwidgets_label(win, "filename", app->img->filename);
         ygl::draw_glwidgets_label(win, "size",
             ygl::format("{} x {}", app->img->width, app->img->height));
         auto edited = 0;
-        edited += ygl::draw_glwidgets_combobox(
-            win, "tonemap", app->img->tonemap, tonemap_names);
         edited += ygl::draw_glwidgets_dragbox(
             win, "exposure", app->img->exposure, -5, 5);
+        edited += ygl::draw_glwidgets_checkbox(win, "filmic", app->img->filmic);
+        ygl::continue_glwidgets_line(win);
+        edited += ygl::draw_glwidgets_checkbox(win, "aces", app->img->aces);
         if (edited) app->img->updated = true;
         auto zoom = app->imframe.x.x;
         if (ygl::draw_glwidgets_dragbox(win, "zoom", zoom, 0.1, 10))
@@ -202,31 +169,18 @@ void draw_glwidgets(ygl::glwindow* win, app_state* app) {
         ygl::draw_glwidgets_dragbox(win, "mouse", ij);
         if (ij.x >= 0 && ij.x < app->img->width && ij.y >= 0 &&
             ij.y < app->img->height) {
-            if (!app->img->ldr.empty()) {
-                ygl::draw_glwidgets_colorbox(win, "pixel",
-                    app->img->ldr.at(ij.x + ij.y * app->img->width));
-            }
-            if (!app->img->hdr.empty()) {
-                ygl::draw_glwidgets_colorbox(win, "pixel",
-                    app->img->hdr.at(ij.x + ij.y * app->img->width));
-            }
+            ygl::draw_glwidgets_colorbox(
+                win, "pixel", app->img->pxl.at(ij.x + ij.y * app->img->width));
+
         } else {
-            auto zero4b_ = ygl::zero4b;
             auto zero4f_ = ygl::zero4f;
-            if (!app->img->ldr.empty())
-                ygl::draw_glwidgets_colorbox(win, "pixel", zero4b_);
-            if (!app->img->hdr.empty())
-                ygl::draw_glwidgets_colorbox(win, "pixel", zero4f_);
+            ygl::draw_glwidgets_colorbox(win, "pixel", zero4f_);
         }
-        if (!app->img->ldr.empty()) {
-            ygl::draw_glwidgets_colorbox(win, "min", app->img->ldr_min);
-            ygl::draw_glwidgets_colorbox(win, "max", app->img->ldr_max);
-        }
-        if (!app->img->hdr.empty()) {
-            ygl::draw_glwidgets_colorbox(win, "min", app->img->hdr_min);
-            ygl::draw_glwidgets_colorbox(win, "max", app->img->hdr_max);
-            float max_exposure = log(app->img->hdr_max_lum + 0.00001f) / log(2);
-            ygl::draw_glwidgets_dragbox(win, "max l", app->img->hdr_max_lum);
+        if (!app->img->pxl.empty()) {
+            ygl::draw_glwidgets_colorbox(win, "min", app->img->min);
+            ygl::draw_glwidgets_colorbox(win, "max", app->img->max);
+            float max_exposure = log(app->img->max_lum + 0.00001f) / log(2);
+            ygl::draw_glwidgets_dragbox(win, "max l", app->img->max_lum);
             ygl::draw_glwidgets_dragbox(win, "max e", max_exposure);
         }
     }
@@ -238,8 +192,8 @@ void draw(ygl::glwindow* win, app_state* app) {
     auto framebuffer_size = get_glwindow_framebuffer_size(win);
     ygl::set_glviewport(framebuffer_size);
     ygl::clear_glbuffers(app->background);
-    ygl::draw_glimage(
-        app->gl_prog, app->img->gl_txt, window_size, app->imframe);
+    ygl::draw_glimage(app->gl_prog, app->img->gl_txt, window_size, app->imframe,
+        0, app->img->srgb ? 2.2f : 1.0f);
     draw_glwidgets(win, app);
     ygl::swap_glwindow_buffers(win);
 }
@@ -305,7 +259,7 @@ void run_ui(app_state* app) {
         }
         if (app->img->gl_updated) {
             update_gltexture(app->img->gl_txt, app->img->width,
-                app->img->height, app->img->img, false, false);
+                app->img->height, app->img->display, false, false, true);
             app->img->gl_updated = false;
         }
 
@@ -330,6 +284,8 @@ int main(int argc, char* argv[]) {
 
     // command line params
     auto parser = ygl::make_parser(argc, argv, "yimview", "view images");
+    auto nosrgb =
+        ygl::parse_flag(parser, "--no-srgb", "", "no srgb for 8 bits");
     auto diff = ygl::parse_flag(parser, "--diff", "-d", "compute diff images");
     auto lum_diff = ygl::parse_flag(
         parser, "--luminance-diff", "-D", "compute luminance diffs");
@@ -344,7 +300,7 @@ int main(int argc, char* argv[]) {
     // loading images
     for (auto filename : filenames) {
         ygl::log_info("loading {}", filename);
-        app->imgs.push_back(load_gimage(filename));
+        app->imgs.push_back(load_gimage(filename, !nosrgb));
     }
     app->img = app->imgs.at(0);
     if (diff) {

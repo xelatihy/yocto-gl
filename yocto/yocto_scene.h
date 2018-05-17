@@ -115,8 +115,8 @@ struct texture {
     std::string path = "";        // file path
     int width = 0;                // width
     int height = 0;               // height
-    std::vector<vec4b> ldr = {};  // ldr image
-    std::vector<vec4f> hdr = {};  // hdr image
+    std::vector<vec4f> pxl = {};  // image pixels
+    bool srgb = true; // whether to use srgb when loading/saving to 8bit
     void* gl_data = nullptr;      // unmanaged data for OpenGL viewer
 };
 
@@ -424,8 +424,7 @@ vec3f eval_direction(const environment* env, const vec2f& uv);
 vec3f eval_environment(const environment* env, const vec3f& i);
 
 // Evaluate a texture.
-vec4f eval_texture(const texture_info& info, const vec2f& texcoord,
-    bool srgb = true, const vec4f& def = {1, 1, 1, 1});
+vec4f eval_texture(const texture_info& info, const vec2f& texcoord);
 // Generates a ray from a camera image coordinate `uv` and lens coordinates
 // `luv`.
 ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv);
@@ -478,8 +477,8 @@ camera* make_camera(const std::string& name, const vec3f& from, const vec3f& to,
 camera* make_bbox_camera(
     const std::string& name, const bbox3f& bbox, float aspect = 16.0f / 9.0f);
 texture* make_texture(const std::string& name, const std::string& path = "",
-    int width = 0, int height = 0, const std::vector<vec4b>& ldr = {},
-    const std::vector<vec4f>& hdr = {});
+    int width = 0, int height = 0, const std::vector<vec4f>& pixels = {},
+    bool srgb = true);
 material* make_material(const std::string& name,
     const vec3f& kd = {0.2f, 0.2f, 0.2f}, const vec3f& ks = {0, 0, 0},
     float rs = 1);

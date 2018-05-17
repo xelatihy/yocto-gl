@@ -48,7 +48,7 @@ struct app_state {
     bool eyelight = false;                       // camera light mode
     float exposure = 0;                          // exposure
     float gamma = 2.2f;                          // gamma
-    ygl::vec4b background = {222, 222, 222, 0};  // background
+    ygl::vec4f background = {0.8f, 0.8f, 0.8f, 0};  // background
     ygl::vec3f ambient = {0, 0, 0};              // ambient lighting
 
     ygl::glsurface_program prog;
@@ -221,9 +221,8 @@ void run_ui(app_state* app) {
         if (app->screenshot_and_exit) {
             ygl::log_info("taking screenshot and exiting...");
             auto width = 0, height = 0;
-            auto img = std::vector<ygl::vec4b>();
-            ygl::take_glwindow_screenshot4b(win, width, height, img);
-            ygl::save_image4b(app->imfilename, width, height, img);
+            auto img = ygl::take_glwindow_screenshot(win, width, height);
+            ygl::save_image4f(app->imfilename, width, height, img);
             break;
         }
 

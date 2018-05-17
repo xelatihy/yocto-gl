@@ -251,7 +251,7 @@ std::vector<vec4b> load_image4b(
 
 // Loads an hdr image.
 std::vector<vec4f> load_image4f(
-    const std::string& filename, int& width, int& height) {
+    const std::string& filename, int& width, int& height, bool srgb_8bit) {
     auto ext = path_extension(filename);
     auto c = 0;
     auto pixels = (vec4f*)nullptr;
@@ -263,7 +263,9 @@ std::vector<vec4f> load_image4f(
     } else if (ext == ".pfm") {
         pixels = (vec4f*)load_pfm(filename.c_str(), &width, &height, &c, 4);
     } else {
+        if (!srgb_8bit) stbi_ldr_to_hdr_gamma(1);
         pixels = (vec4f*)stbi_loadf(filename.c_str(), &width, &height, &c, 4);
+        if (!srgb_8bit) stbi_ldr_to_hdr_gamma(2.2f);
     }
     if (!pixels) return {};
     auto img = std::vector<vec4f>(pixels, pixels + width * height);
@@ -287,8 +289,16 @@ bool save_image4b(const std::string& filename, int width, int height,
 
 // Saves an hdr image.
 bool save_image4f(const std::string& filename, int width, int height,
-    const std::vector<vec4f>& img) {
-    if (path_extension(filename) == ".hdr") {
+    const std::vector<vec4f>& img, bool srgb_8bit) {
+    if (path_extension(filename) == ".png") {
+        auto ldr = (srgb_8bit) ? linear_to_srgb(img) : float_to_byte(img);
+        return stbi_write_png(
+            filename.c_str(), width, height, 4, (byte*)ldr.data(), width * 4);
+    } else if (path_extension(filename) == ".jpg") {
+        auto ldr = (srgb_8bit) ? linear_to_srgb(img) : float_to_byte(img);
+        return stbi_write_jpg(
+            filename.c_str(), width, height, 4, (byte*)ldr.data(), 75);
+    } else if (path_extension(filename) == ".hdr") {
         return stbi_write_hdr(
             filename.c_str(), width, height, 4, (float*)img.data());
     } else if (path_extension(filename) == ".pfm") {
@@ -297,17 +307,6 @@ bool save_image4f(const std::string& filename, int width, int height,
         return !SaveEXR((float*)img.data(), width, height, 4, filename.c_str());
     } else {
         return false;
-    }
-}
-
-// Save an HDR or LDR image with tonemapping based on filename
-bool save_image(const std::string& filename, int width, int height,
-    const std::vector<vec4f>& hdr, tonemap_type tonemapper, float exposure) {
-    if (is_hdr_filename(filename)) {
-        return save_image4f(filename, width, height, hdr);
-    } else {
-        auto ldr = tonemap_image(hdr, tonemapper, exposure);
-        return save_image4b(filename, width, height, ldr);
     }
 }
 
@@ -358,39 +357,17 @@ std::vector<vec4b> resize_image(int width, int height,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-inline vec3f tonemap_gamma(const vec3f& x) {
-    return {pow(x.x, 1 / 2.2f), pow(x.y, 1 / 2.2f), pow(x.z, 1 / 2.2f)};
-}
-
-inline float tonemap_srgb(float x) {
-    if (x <= 0.0031308f) return 12.92f * x;
-    return 1.055f * pow(x, 1 / 2.4f) - 0.055f;
-}
-
-inline vec3f tonemap_srgb(const vec3f& x) {
-    return {tonemap_srgb(x.x), tonemap_srgb(x.y), tonemap_srgb(x.z)};
-}
-
-inline vec3f tonemap_filmic1(const vec3f& hdr) {
-    // http://filmicworlds.com/blog/filmic-tonemapping-operators/
-    auto x = vec3f{max(0.0f, hdr.x - 0.004f), max(0.0f, hdr.y - 0.004f),
-        max(0.0f, hdr.z - 0.004f)};
-    return (x * (6.2f * x + vec3f{0.5f, 0.5f, 0.5f})) /
-           (x * (6.2f * x + vec3f{1.7f, 1.7f, 1.7f}) +
-               vec3f{0.06f, 0.06f, 0.06f});
-}
-
-inline vec3f tonemap_filmic2(const vec3f& hdr) {
+vec3f filmic_tonemap(const vec3f& hdr) {
     // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
     auto x = hdr;
     // x *= 0.6; // brings it back to ACES range
     x = (x * (2.51f * x + vec3f{0.03f, 0.03f, 0.03f})) /
         (x * (2.43f * x + vec3f{0.59f, 0.59f, 0.59f}) +
             vec3f{0.14f, 0.14f, 0.14f});
-    return tonemap_gamma(x);
+    return x;
 }
 
-inline vec3f tonemap_filmic3(const vec3f& hdr) {
+vec3f aces_tonemap(const vec3f& hdr) {
     // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
 
     // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
@@ -415,88 +392,107 @@ inline vec3f tonemap_filmic3(const vec3f& hdr) {
               vec3f{0.238081f, 0.238081f, 0.238081f};
     x = a / b;
     x = ACESOutputMat * x;
-    return tonemap_gamma(x);
+    return x;
 }
 
 // Tone mapping HDR to LDR images.
-std::vector<vec4b> tonemap_image(
-    const std::vector<vec4f>& hdr, tonemap_type tonemapper, float exposure) {
-    auto ldr = std::vector<vec4b>(hdr.size());
+std::vector<vec4f> expose_image(const std::vector<vec4f>& hdr, float exposure) {
+    if (!exposure) return hdr;
+    auto ldr = std::vector<vec4f>(hdr.size());
     auto scale = pow(2.0f, exposure);
+    for (auto i = 0; i < hdr.size(); i++)
+        ldr[i] = {hdr[i].x * scale, hdr[i].y * scale, hdr[i].z * scale, hdr[i].w};
+    return ldr;
+}
+
+// Tone mapping HDR to LDR images.
+std::vector<vec4f> filmic_tonemap_image(const std::vector<vec4f>& hdr) {
+    auto ldr = std::vector<vec4f>(hdr.size());
     for (auto i = 0; i < hdr.size(); i++) {
-        auto h4 = hdr[i];
-        auto h = vec3f{h4.x, h4.y, h4.z} * scale;
-        auto a = h4.w;
-        switch (tonemapper) {
-            case tonemap_type::linear: break;
-            case tonemap_type::gamma: h = tonemap_gamma(h); break;
-            case tonemap_type::srgb: h = tonemap_srgb(h); break;
-            case tonemap_type::filmic1: h = tonemap_filmic1(h); break;
-            case tonemap_type::filmic2: h = tonemap_filmic2(h); break;
-            case tonemap_type::filmic3: h = tonemap_filmic3(h); break;
-        }
-        ldr[i] = float_to_byte({h.x, h.y, h.z, a});
+        auto h = filmic_tonemap({hdr[i].x, hdr[i].y, hdr[i].z});
+        ldr[i] = {h.x, h.y, h.z, hdr[i].w};
     }
     return ldr;
 }
 
+// Tone mapping HDR to LDR images.
+std::vector<vec4f> aces_tonemap_image(const std::vector<vec4f>& hdr) {
+    auto ldr = std::vector<vec4f>(hdr.size());
+    for (auto i = 0; i < hdr.size(); i++) {
+        auto h = aces_tonemap({hdr[i].x, hdr[i].y, hdr[i].z});
+        ldr[i] = {h.x, h.y, h.z, hdr[i].w};
+    }
+    return ldr;
+}
+
+// Convert between CIE XYZ and xyY
+vec3f xyz_to_xyY(const vec3f& xyz) {
+    if (xyz == zero3f) return zero3f;
+    return {xyz.x / (xyz.x + xyz.y + xyz.z), xyz.y / (xyz.x + xyz.y + xyz.z),
+        xyz.y};
+}
+// Convert between CIE XYZ and xyY
+vec3f xyY_to_xyz(const vec3f& xyY) {
+    if (xyY.y == 0) return zero3f;
+    return {xyY.x * xyY.z / xyY.y, xyY.z, (1 - xyY.x - xyY.y) * xyY.z / xyY.y};
+}
+// Convert between CIE XYZ and RGB
+vec3f xyz_to_rgb(const vec3f& xyz) {
+    // from http://www.brucelindbloom.com/index.html?Eqn_RGB_to_XYZ.html
+    if (xyz == zero3f) return zero3f;
+    return {+3.2404542f * xyz.x - 1.5371385f * xyz.y - 0.4985314f * xyz.z,
+        -0.9692660f * xyz.x + 1.8760108f * xyz.y + 0.0415560f * xyz.z,
+        +0.0556434f * xyz.x - 0.2040259f * xyz.y + 1.0572252f * xyz.z};
+}
+// Convert between CIE XYZ and RGB
+vec3f rgb_to_xyz(const vec3f& rgb) {
+    // from http://www.brucelindbloom.com/index.html?Eqn_RGB_to_XYZ.html
+    if (rgb == zero3f) return zero3f;
+    return {0.4124564f * rgb.x + 0.3575761f * rgb.y + 0.1804375f * rgb.z,
+        0.2126729f * rgb.x + 0.7151522f * rgb.y + 0.0721750f * rgb.z,
+        0.0193339f * rgb.x + 0.1191920f * rgb.y + 0.9503041f * rgb.z};
+}
+
 // Convert HSV to RGB
-// Implementatkion from
-// http://stackoverflow.com/questions/3018313/algorithm-to-convert-rgb-to-hsv-and-hsv-to-rgb-in-range-0-255-for-both
-vec4b hsv_to_rgb(const vec4b& hsv) {
-    vec4b rgb = {0, 0, 0, hsv.w};
-    byte region, remainder, p, q, t;
+vec3f hsv_to_rgb(const vec3f& hsv) {
+    // from Imgui.cpp
+    auto h = hsv.x, s = hsv.y, v = hsv.z;
+    if (hsv.y == 0.0f) return {v, v, v};
 
-    byte h = hsv.x, s = hsv.y, v = hsv.z;
+    h = fmodf(h, 1.0f) / (60.0f/360.0f);
+    int   i = (int)h;
+    float f = h - (float)i;
+    float p = v * (1.0f - s);
+    float q = v * (1.0f - s * f);
+    float t = v * (1.0f - s * (1.0f - f));
 
-    if (s == 0) {
-        rgb.x = v;
-        rgb.y = v;
-        rgb.z = v;
-        return rgb;
+    switch (i) {
+    case 0: return {v, t, p};
+    case 1: return {q, v, p};
+    case 2: return {p, v, t};
+    case 3: return {p, q, v};
+    case 4: return {t, p, v};
+    case 5: return {v, p, q};
+    default: return {v, p, q};
+    }
+}
+vec3f rgb_to_hsv(const vec3f& rgb) {
+    // from Imgui.cpp
+    auto r = rgb.x, g = rgb.y, b = rgb.z;
+    float K = 0.f;
+    if (g < b) {
+        std::swap(g, b);
+        K = -1.f;
+    }
+    if (r < g) {
+        std::swap(r, g);
+        K = -2.f / 6.f - K;
     }
 
-    region = h / 43;
-    remainder = (h - (region * 43)) * 6;
-
-    p = (v * (255 - s)) >> 8;
-    q = (v * (255 - ((s * remainder) >> 8))) >> 8;
-    t = (v * (255 - ((s * (255 - remainder)) >> 8))) >> 8;
-
-    switch (region) {
-        case 0:
-            rgb.x = v;
-            rgb.y = t;
-            rgb.z = p;
-            break;
-        case 1:
-            rgb.x = q;
-            rgb.y = v;
-            rgb.z = p;
-            break;
-        case 2:
-            rgb.x = p;
-            rgb.y = v;
-            rgb.z = t;
-            break;
-        case 3:
-            rgb.x = p;
-            rgb.y = q;
-            rgb.z = v;
-            break;
-        case 4:
-            rgb.x = t;
-            rgb.y = p;
-            rgb.z = v;
-            break;
-        default:
-            rgb.x = v;
-            rgb.y = p;
-            rgb.z = q;
-            break;
-    }
-
-    return rgb;
+    float chroma = r - (g < b ? g : b);
+    return { fabsf(K + (g - b) / (6.f * chroma + 1e-20f)),
+    chroma / (r + 1e-20f),
+    r};
 }
 
 }  // namespace ygl
@@ -507,9 +503,9 @@ vec4b hsv_to_rgb(const vec4b& hsv) {
 namespace ygl {
 
 // Make a grid image
-std::vector<vec4b> make_grid_image(
-    int width, int height, int tiles, const vec4b& c0, const vec4b& c1) {
-    auto img = std::vector<vec4b>(width * height);
+std::vector<vec4f> make_grid_image(
+    int width, int height, int tiles, const vec4f& c0, const vec4f& c1) {
+    auto img = std::vector<vec4f>(width * height);
     auto tile = width / tiles;
     for (int j = 0; j < width; j++) {
         for (int i = 0; i < height; i++) {
@@ -522,9 +518,9 @@ std::vector<vec4b> make_grid_image(
 }
 
 // Make a checkerboard image
-std::vector<vec4b> make_checker_image(
-    int width, int height, int tiles, const vec4b& c0, const vec4b& c1) {
-    auto img = std::vector<vec4b>(width * height);
+std::vector<vec4f> make_checker_image(
+    int width, int height, int tiles, const vec4f& c0, const vec4f& c1) {
+    auto img = std::vector<vec4f>(width * height);
     auto tile = width / tiles;
     for (int j = 0; j < height; j++) {
         for (int i = 0; i < width; i++) {
@@ -536,8 +532,8 @@ std::vector<vec4b> make_checker_image(
 }
 
 // Make an image with bumps and dimples.
-std::vector<vec4b> make_bumpdimple_image(int width, int height, int tiles) {
-    auto img = std::vector<vec4b>(width * height);
+std::vector<vec4f> make_bumpdimple_image(int width, int height, int tiles) {
+    auto img = std::vector<vec4f>(width * height);
     auto tile = width / tiles;
     for (int j = 0; j < height; j++) {
         for (int i = 0; i < width; i++) {
@@ -547,41 +543,20 @@ std::vector<vec4b> make_bumpdimple_image(int width, int height, int tiles) {
                 sqrt(float(ii * ii + jj * jj)) / sqrt(float(tile * tile) / 4);
             auto h = 0.5f;
             if (r < 0.5f) { h += (c) ? (0.5f - r) : -(0.5f - r); }
-            img[i + j * width] = float_to_byte({h, h, h, 1});
+            img[i + j * width] = {h, h, h, 1};
         }
     }
     return img;
 }
 
 // Make a uv colored grid
-std::vector<vec4b> make_ramp_image(
-    int width, int height, const vec4b& c0, const vec4b& c1, bool srgb) {
-    auto img = std::vector<vec4b>(width * height);
+std::vector<vec4f> make_ramp_image(
+    int width, int height, const vec4f& c0, const vec4f& c1) {
+    auto img = std::vector<vec4f>(width * height);
     for (int j = 0; j < height; j++) {
         for (int i = 0; i < width; i++) {
             auto u = (float)i / (float)width;
-            if (srgb) {
-                img[i + j * width] = linear_to_srgb(
-                    srgb_to_linear(c0) * (1 - u) + srgb_to_linear(c1) * u);
-            } else {
-                img[i + j * width] = float_to_byte(
-                    byte_to_float(c0) * (1 - u) + byte_to_float(c1) * u);
-            }
-        }
-    }
-    return img;
-}
-
-// Make a gamma ramp image
-std::vector<vec4b> make_gammaramp_image(int width, int height) {
-    auto img = std::vector<vec4b>(width * height);
-    for (int j = 0; j < height; j++) {
-        for (int i = 0; i < width; i++) {
-            auto u = j / float(height - 1);
-            if (i < width / 3) u = pow(u, 2.2f);
-            if (i > (width * 2) / 3) u = pow(u, 1 / 2.2f);
-            auto c = (unsigned char)(u * 255);
-            img[i + j * width] = {c, c, c, 255};
+            img[i + j * width] = c0 * (1 - u) + c1 * u;
         }
     }
     return img;
@@ -603,50 +578,49 @@ std::vector<vec4f> make_gammaramp_imagef(int width, int height) {
 
 // Make an image color with red/green in the [0,1] range. Helpful to visualize
 // uv texture coordinate application.
-std::vector<vec4b> make_uv_image(int width, int height) {
-    auto img = std::vector<vec4b>(width * height);
+std::vector<vec4f> make_uv_image(int width, int height) {
+    auto img = std::vector<vec4f>(width * height);
     for (int j = 0; j < height; j++) {
         for (int i = 0; i < width; i++) {
-            img[i + j * width] = float_to_byte(
-                {i / (float)(width - 1), j / (float)(height - 1), 0, 1});
+            img[i + j * width] = {
+                i / (float)(width - 1), j / (float)(height - 1), 0, 1};
         }
     }
     return img;
 }
 
 // Make a uv colored grid
-std::vector<vec4b> make_uvgrid_image(
+std::vector<vec4f> make_uvgrid_image(
     int width, int height, int tiles, bool colored) {
-    auto img = std::vector<vec4b>(width * height);
+    auto img = std::vector<vec4f>(width * height);
     auto tile = width / tiles;
     for (int j = 0; j < height; j++) {
         for (int i = 0; i < width; i++) {
             auto ii = i / tile, jj = j / tile;
             auto ww = width / tile, hh = height / tile;
-            byte ph = ((256 / (ww * hh)) * (ii + jj * ww) - 64 + 256) % 256;
-            byte pv = 192;
-            byte ps = 128;
+            auto ph = (((256 / (ww * hh)) * (ii + jj * ww) - 64 + 256) % 256) / 360.f;
+            auto pv = 0.5f;
+            auto ps = 0.8f;
             if (i % (tile / 2) && j % (tile / 2)) {
                 if ((i / tile + j / tile) % 2)
-                    pv += 16;
+                    pv += 0.05f;
                 else
-                    pv -= 16;
+                    pv -= 0.05f;
             } else {
-                pv = 224;
-                ps = 32;
+                pv = 0.8f;
+                ps = 0.2f;
             }
-            img[i + (height - j - 1) * width] =
-                (colored) ? hsv_to_rgb({ph, ps, pv, 255}) :
-                            vec4b{pv, pv, pv, 255};
+            auto rgb = (colored) ? hsv_to_rgb({ph, ps, pv}) : vec3f{pv, pv, pv};
+            img[i + (height - j - 1) * width] = {rgb.x, rgb.y, rgb.z, 1};
         }
     }
     return img;
 }
 
 // Comvert a bump map to a normal map.
-std::vector<vec4b> bump_to_normal_map(
-    int width, int height, const std::vector<vec4b>& img, float scale) {
-    auto norm = std::vector<vec4b>(img.size());
+std::vector<vec4f> bump_to_normal_map(
+    int width, int height, const std::vector<vec4f>& img, float scale) {
+    auto norm = std::vector<vec4f>(img.size());
     for (int j = 0; j < height; j++) {
         for (int i = 0; i < width; i++) {
             auto i1 = (i + 1) % width, j1 = (j + 1) % height;
@@ -658,9 +632,7 @@ std::vector<vec4b> bump_to_normal_map(
             auto n = vec3f{scale * (g00 - g10), scale * (g00 - g01), 1.0f};
             n.y = -n.y;  // make green pointing up, even if y axis points down
             n = normalize(n) * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
-            auto c =
-                vec4b{byte(n.x * 255), byte(n.y * 255), byte(n.z * 255), 255};
-            norm[i + j * width] = c;
+            norm[i + j * width] = {n.x, n.y, n.z, 1};
         }
     }
     return norm;
@@ -811,16 +783,16 @@ std::vector<vec4f> make_lights_image(int width, int height, const vec3f& le,
 
 // Make a noise image. Wrap works only if both width and height are powers of
 // two.
-std::vector<vec4b> make_noise_image(
+std::vector<vec4f> make_noise_image(
     int width, int height, float scale, bool wrap) {
     auto wrap3i = (wrap) ? vec3i{width, height, 2} : zero3i;
-    auto img = std::vector<vec4b>(width * height);
+    auto img = std::vector<vec4f>(width * height);
     for (auto j = 0; j < height; j++) {
         for (auto i = 0; i < width; i++) {
             auto p = vec3f{i / (float)width, j / (float)height, 0.5f} * scale;
             auto g = perlin_noise(p, wrap3i);
             g = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
-            img[i + j * width] = float_to_byte({g, g, g, 1});
+            img[i + j * width] = {g, g, g, 1};
         }
     }
     return img;
@@ -828,16 +800,16 @@ std::vector<vec4b> make_noise_image(
 
 // Make a noise image. Wrap works only if both width and height are powers of
 // two.
-std::vector<vec4b> make_fbm_image(int width, int height, float scale,
+std::vector<vec4f> make_fbm_image(int width, int height, float scale,
     float lacunarity, float gain, int octaves, bool wrap) {
     auto wrap3i = (wrap) ? vec3i{width, height, 2} : zero3i;
-    auto img = std::vector<vec4b>(width * height);
+    auto img = std::vector<vec4f>(width * height);
     for (auto j = 0; j < height; j++) {
         for (auto i = 0; i < width; i++) {
             auto p = vec3f{i / (float)width, j / (float)height, 0.5f} * scale;
             auto g = perlin_fbm_noise(p, lacunarity, gain, octaves, wrap3i);
             g = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
-            img[i + j * width] = float_to_byte({g, g, g, 1});
+            img[i + j * width] = {g, g, g, 1};
         }
     }
     return img;
@@ -845,17 +817,17 @@ std::vector<vec4b> make_fbm_image(int width, int height, float scale,
 
 // Make a noise image. Wrap works only if both width and height are powers of
 // two.
-std::vector<vec4b> make_ridge_image(int width, int height, float scale,
+std::vector<vec4f> make_ridge_image(int width, int height, float scale,
     float lacunarity, float gain, float offset, int octaves, bool wrap) {
     auto wrap3i = (wrap) ? vec3i{width, height, 2} : zero3i;
-    auto img = std::vector<vec4b>(width * height);
+    auto img = std::vector<vec4f>(width * height);
     for (auto j = 0; j < height; j++) {
         for (auto i = 0; i < width; i++) {
             auto p = vec3f{i / (float)width, j / (float)height, 0.5f} * scale;
             auto g = perlin_ridge_noise(
                 p, lacunarity, gain, offset, octaves, wrap3i);
             g = clamp(g, 0.0f, 1.0f);
-            img[i + j * width] = float_to_byte({g, g, g, 1});
+            img[i + j * width] = {g, g, g, 1};
         }
     }
     return img;
@@ -863,17 +835,17 @@ std::vector<vec4b> make_ridge_image(int width, int height, float scale,
 
 // Make a noise image. Wrap works only if both width and height are powers of
 // two.
-std::vector<vec4b> make_turbulence_image(int width, int height, float scale,
+std::vector<vec4f> make_turbulence_image(int width, int height, float scale,
     float lacunarity, float gain, int octaves, bool wrap) {
     auto wrap3i = (wrap) ? vec3i{width, height, 2} : zero3i;
-    auto img = std::vector<vec4b>(width * height);
+    auto img = std::vector<vec4f>(width * height);
     for (auto j = 0; j < height; j++) {
         for (auto i = 0; i < width; i++) {
             auto p = vec3f{i / (float)width, j / (float)height, 0.5f} * scale;
             auto g =
                 perlin_turbulence_noise(p, lacunarity, gain, octaves, wrap3i);
             g = clamp(g, 0.0f, 1.0f);
-            img[i + j * width] = float_to_byte({g, g, g, 1});
+            img[i + j * width] = {g, g, g, 1};
         }
     }
     return img;

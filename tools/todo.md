@@ -11,6 +11,8 @@ Please consider this to be just development notes and not any real planning.
 
 ## planned cleanup
 
+- remove texture info back into texture
+    - consider only wrap
 - more image operations to floats
     - make explicit the use of 1/3/4 channel images
     - bumps and dimples should be sphere
@@ -20,10 +22,44 @@ Please consider this to be just development notes and not any real planning.
 
 ## image to float
 
-- tag textures with srgb
-- move textures to float
-- move example images to float
+- add textures
+    - opacity -> needs splitting
+    - occlusion -> needs splitting
+    - metallic -> ks
+    - roughness -> needs splitting
+- obj -> scene
+    - load textures as you go
+    - split textures on the fly
+- gltf -> scene
+    - load textures as you go
+    - split textures on the fly
+    - convert specular-glossness to metallic roughness
+        - probably recombine textures
+- scene -> obj
+    - no texture splitting is necessary
+        - opacity remains opacity
+        - use extension for roughness
+- scene -> glTF
+    - repack textures together
+        - opacity -> diffuse
+        - roughness -> specular
+- on load, split appropriate textures with given ones
+- handle images with vec3f/vec4f and combined vec3f+float
+- example images have very few defaults
+- move example images to vec3f/vec4f
+- update yimproc
+- move examples to vec3f/vec4f
+- move saving to explicit srgb
+- move loading to explicit srgb
 - move image ops to float
+- move image viewer to float
+- move image operations to float
+- move textures to float
+
+## split material
+
+- remap material values
+- split textures on load
 
 ## Trace
 
