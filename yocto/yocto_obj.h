@@ -151,6 +151,7 @@ struct obj_material {
     std::string name;  // name
     int illum = 0;     // MTL illum mode
 
+    // base values
     vec3f ke = {0, 0, 0};  // emission color
     vec3f ka = {0, 0, 0};  // ambient color
     vec3f kd = {0, 0, 0};  // diffuse color
@@ -160,6 +161,8 @@ struct obj_material {
     float ns = 0;          // Phong exponent color
     float ior = 1;         // index of refraction
     float op = 1;          // opacity
+    float rs = -1;          // roughness (-1 not defined)
+    float km = -1; // metallic  (-1 not defined)
 
     obj_texture_info ke_txt;    // emission texture
     obj_texture_info ka_txt;    // ambient texture
@@ -169,7 +172,10 @@ struct obj_material {
     obj_texture_info kt_txt;    // transmission texture
     obj_texture_info ns_txt;    // Phong exponent texture
     obj_texture_info op_txt;    // opacity texture
+    obj_texture_info rs_txt;    // roughness texture
+    obj_texture_info km_txt;    // metallic texture
     obj_texture_info ior_txt;   // ior texture
+    obj_texture_info occ_txt;   // occlusion map
     obj_texture_info bump_txt;  // bump map
     obj_texture_info disp_txt;  // displacement map
     obj_texture_info norm_txt;  // normal map

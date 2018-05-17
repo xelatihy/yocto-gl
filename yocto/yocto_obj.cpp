@@ -345,6 +345,10 @@ std::vector<obj_material*> load_mtl(const std::string& filename, bool flip_tr) {
             obj_parse(ss, mat->op);
         } else if (obj_streq(cmd, "Ni")) {
             obj_parse(ss, mat->ior);
+        } else if (obj_streq(cmd, "Pr") || obj_streq(cmd, "rs")) {
+            obj_parse(ss, mat->rs);
+        } else if (obj_streq(cmd, "Pm") || obj_streq(cmd, "Km")) {
+            obj_parse(ss, mat->km);
         } else if (obj_streq(cmd, "map_Ke")) {
             obj_parse(ss, mat->ke_txt);
         } else if (obj_streq(cmd, "map_Ka")) {
@@ -359,10 +363,16 @@ std::vector<obj_material*> load_mtl(const std::string& filename, bool flip_tr) {
             obj_parse(ss, mat->kt_txt);
         } else if (obj_streq(cmd, "map_Ns")) {
             obj_parse(ss, mat->ns_txt);
-        } else if (obj_streq(cmd, "map_d")) {
+        } else if (obj_streq(cmd, "map_d") || obj_streq(cmd, "map_Tr")) {
             obj_parse(ss, mat->op_txt);
         } else if (obj_streq(cmd, "map_Ni")) {
             obj_parse(ss, mat->ior_txt);
+        } else if (obj_streq(cmd, "map_Pr") || obj_streq(cmd, "map_rs")) {
+            obj_parse(ss, mat->rs_txt);
+        } else if (obj_streq(cmd, "map_Pm") || obj_streq(cmd, "map_Km")) {
+            obj_parse(ss, mat->km_txt);
+        } else if (obj_streq(cmd, "map_occ") || obj_streq(cmd, "occ")) {
+            obj_parse(ss, mat->occ_txt);
         } else if (obj_streq(cmd, "map_bump") || obj_streq(cmd, "bump")) {
             obj_parse(ss, mat->bump_txt);
         } else if (obj_streq(cmd, "map_disp") || obj_streq(cmd, "disp")) {
@@ -748,11 +758,12 @@ void save_mtl(const std::string& filename,
         if (mat->ks != zero3f) obj_dump_line(fs, "  Ks", mat->ks);
         if (mat->kr != zero3f) obj_dump_line(fs, "  Kr", mat->kr);
         if (mat->kt != zero3f) obj_dump_line(fs, "  Kt", mat->kt);
-        // if (mat->kt != zero3f) obj_dump_line(fs, "  Tf", mat->kt);
         if (mat->ns != 0.0f)
             obj_dump_line(fs, "  Ns", (int)clamp(mat->ns, 0.0f, 1000000000.0f));
         if (mat->op != 1.0f) obj_dump_line(fs, "  d", mat->op);
         if (mat->ior != 1.0f) obj_dump_line(fs, "  Ni", mat->ior);
+        if (mat->km != -1.0f) obj_dump_line(fs, "  Pm", mat->km);
+        if (mat->rs != -1.0f) obj_dump_line(fs, "  Pr", mat->rs);
         if (mat->ke_txt.path != "") obj_dump_line(fs, "  map_Ke", mat->ke_txt);
         if (mat->ka_txt.path != "") obj_dump_line(fs, "  map_Ka", mat->ka_txt);
         if (mat->kd_txt.path != "") obj_dump_line(fs, "  map_Kd", mat->kd_txt);
@@ -763,6 +774,9 @@ void save_mtl(const std::string& filename,
         if (mat->op_txt.path != "") obj_dump_line(fs, "  map_d ", mat->op_txt);
         if (mat->ior_txt.path != "")
             obj_dump_line(fs, "  map_Ni", mat->ior_txt);
+        if (mat->km_txt.path != "") obj_dump_line(fs, "  map_Pm ", mat->km_txt);
+        if (mat->rs_txt.path != "") obj_dump_line(fs, "  map_Pr ", mat->rs_txt);
+        if (mat->occ_txt.path != "") obj_dump_line(fs, "  map_occ ", mat->occ_txt);
         if (mat->bump_txt.path != "")
             obj_dump_line(fs, "  map_bump", mat->bump_txt);
         if (mat->disp_txt.path != "")

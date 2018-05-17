@@ -274,7 +274,7 @@ float sample_delta_brdf_pdf(
 
 // Sample pdf for an environment.
 float sample_environment_pdf(const environment* env, const vec3f& i) {
-    auto txt = env->ke_txt.txt;
+    auto txt = env->ke_txt;
     if (!env->elem_cdf.empty() && txt) {
         auto texcoord = eval_texcoord(env, i);
         auto i = (int)(texcoord.x * txt->width);
@@ -292,7 +292,7 @@ float sample_environment_pdf(const environment* env, const vec3f& i) {
 
 // Picks a point on an environment.
 vec3f sample_environment(const environment* env, float rel, const vec2f& ruv) {
-    auto txt = env->ke_txt.txt;
+    auto txt = env->ke_txt;
     if (!env->elem_cdf.empty() && txt) {
         auto idx = sample_discrete(env->elem_cdf, rel);
         auto u = (idx % txt->width + 0.5f) / txt->width;

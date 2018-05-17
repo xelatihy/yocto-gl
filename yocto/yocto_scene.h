@@ -116,18 +116,13 @@ struct texture {
     int width = 0;                // width
     int height = 0;               // height
     std::vector<vec4f> pxl = {};  // image pixels
-    bool srgb = true; // whether to use srgb when loading/saving to 8bit
-    void* gl_data = nullptr;      // unmanaged data for OpenGL viewer
-};
-
-// Texture information to use for lookup.
-struct texture_info {
-    texture* txt = nullptr;  // texture
     bool wrap_s = true;      // wrap in s coordinate
     bool wrap_t = true;      // wrop in t coordinate
     bool linear = true;      // linear interpolation
     bool mipmap = true;      // mipmapping
     float scale = 1;         // scale for occ, normal, bumps
+    bool srgb = true; // whether to use srgb when loading/saving to 8bit
+    void* gl_data = nullptr;      // unmanaged data for OpenGL viewer
 };
 
 // Material for surfaces, lines and triangles.
@@ -150,13 +145,16 @@ struct material {
     bool refract = false;  // whether to use use refraction in tranmission
 
     // textures
-    texture_info ke_txt;    // emission texture
-    texture_info kd_txt;    // diffuse texture
-    texture_info ks_txt;    // specular texture
-    texture_info kt_txt;    // transmission texture
-    texture_info bump_txt;  // bump map texture (heighfield)
-    texture_info disp_txt;  // displacement map texture (heighfield)
-    texture_info norm_txt;  // normal texture
+    texture* ke_txt;    // emission texture
+    texture* kd_txt;    // diffuse texture
+    texture* ks_txt;    // specular texture
+    texture* kt_txt;    // transmission texture
+    texture* rs_txt;    // roughness texture
+    texture* op_txt;    // opacity texture
+    texture* occ_txt;   // occlusion texture
+    texture* bump_txt;  // bump map texture (heighfield)
+    texture* disp_txt;  // displacement map texture (heighfield)
+    texture* norm_txt;  // normal texture
 };
 
 // Shape data represented as an indexed meshes of elements.
@@ -226,7 +224,7 @@ struct environment {
     std::string name = "";             // name
     frame3f frame = identity_frame3f;  // transform frame
     vec3f ke = {0, 0, 0};              // emission color
-    texture_info ke_txt = {};          // emission texture
+    texture* ke_txt = {};          // emission texture
 
     // computed properties
     std::vector<float> elem_cdf;  // element cdf for sampling
@@ -424,7 +422,7 @@ vec3f eval_direction(const environment* env, const vec2f& uv);
 vec3f eval_environment(const environment* env, const vec3f& i);
 
 // Evaluate a texture.
-vec4f eval_texture(const texture_info& info, const vec2f& texcoord);
+vec4f eval_texture(const texture* info, const vec2f& texcoord);
 // Generates a ray from a camera image coordinate `uv` and lens coordinates
 // `luv`.
 ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv);
