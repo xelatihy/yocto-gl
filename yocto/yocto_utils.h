@@ -216,10 +216,20 @@ inline void println(const std::string& fmt, const Args&... args) {
     printf("%s\n", format(fmt, args...).c_str());
 }
 
-// Gets/sets log verbosity and output stream
+// Log verbosity and output stream
 inline bool& log_verbose() {
     static bool verbose = true;
     return verbose;
+}
+
+// Log callback function
+using log_func = void (*)(const char* time, const char* tag, const char* msg);
+inline log_func& log_callback() {
+    static log_func func = [](const char* time, const char* tag,
+                               const char* msg) {
+        printf("%s %s %s\n", time, tag, msg);
+    };
+    return func;
 }
 
 // Implementation for logging functions.
@@ -229,7 +239,7 @@ inline void _log_msg(const std::string& msg, const char* tag) {
     auto tm = std::localtime(&time);
     char tmstr[64];
     strftime(tmstr, 64, "%T", tm);
-    printf("%s %s %s\n", tmstr, tag, msg.c_str());
+    log_callback()(tmstr, tag, msg.c_str());
 }
 
 // Wrapper for `format()` that logs to a stream (default to stdout).
