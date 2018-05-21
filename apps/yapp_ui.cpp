@@ -643,15 +643,14 @@ bool draw_glwidgets_scene_inspector(glwindow* win, animation* val, scene* scn) {
     return edited;
 }
 
-bool draw_glwidgets_scene_tree(glwindow* win, const std::string& lbl,
+bool draw_glwidgets_scene_tree(glwindow* win, const std::string& lbl, 
     scene* scn, scene_selection& sel,
-    std::vector<ygl::scene_selection>& update_list,
+    std::vector<ygl::scene_selection>& update_list, int height,
     const std::unordered_map<std::string, std::string>& inspector_highlights) {
     if (!scn) return false;
     push_glwidgets_groupid(win, scn);
-    // begin_glwidgets_scrollarea(win, "scene #$%^!@", 240, false);
+    begin_glwidgets_scrollarea(win, "scrolling scene tree", height, false);
     draw_glwidgets_scene_tree(win, scn, sel, inspector_highlights);
-    // end_glwidgets_scrollarea(win);
 
     auto update_len = update_list.size();
 #if 0
@@ -675,16 +674,18 @@ bool draw_glwidgets_scene_tree(glwindow* win, const std::string& lbl,
     }
 #endif
 
+    end_glwidgets_scrollarea(win);
     pop_glwidgets_groupid(win);
     return update_list.size() != update_len;
 }
 
-bool draw_glwidgets_scene_inspector(glwindow* win, const std::string& lbl,
+bool draw_glwidgets_scene_inspector(glwindow* win, const std::string& lbl, 
     scene* scn, scene_selection& sel,
-    std::vector<ygl::scene_selection>& update_list,
+    std::vector<ygl::scene_selection>& update_list, int height,
     const std::unordered_map<std::string, std::string>& inspector_highlights) {
     if (!scn || !sel.ptr) return false;
     push_glwidgets_groupid(win, sel.ptr);
+    begin_glwidgets_scrollarea(win, "scrolling scene inspector", height, false);
 
     auto update_len = update_list.size();
 
@@ -710,6 +711,7 @@ bool draw_glwidgets_scene_inspector(glwindow* win, const std::string& lbl,
         edited = draw_glwidgets_scene_inspector(win, sel.as<animation>(), scn);
     if (edited) update_list.push_back(sel);
 
+    end_glwidgets_scrollarea(win);
     pop_glwidgets_groupid(win);
     return update_list.size() != update_len;
 }

@@ -1746,6 +1746,63 @@ void draw_glwidgets_tree_leaf(glwindow* win, const std::string& lbl,
     ImGui::PopStyleColor();
 }
 
+static ImGuiTextBuffer _log_buffer;
+static ImGuiTextFilter _log_filter;
+static ImVector<int> _log_line_offsets;
+static bool _log_scroll_to_bottom = false;
+static bool _log_filtered = true;
+
+void draw_glwidgets_log(glwindow* win, int height) {
+    if (ImGui::Button("clear")) clear_glwidgets_log(win);
+    continue_glwidgets_line(win);
+    bool copy = draw_glwidgets_button(win, "copy");
+    if(_log_filtered) {
+        continue_glwidgets_line(win);
+        _log_filter.Draw("Filter", -100.0f);
+    }
+    ImGui::BeginChild("scrolling", ImVec2(0, height));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,1));
+    if (copy) ImGui::LogToClipboard();
+    if (_log_filtered && _log_filter.IsActive()) {
+        const char* buf_begin = _log_buffer.begin();
+        const char* line = buf_begin;
+        for (int line_no = 0; line != NULL; line_no++) {
+            const char* line_end = (line_no < _log_line_offsets.Size) ? buf_begin + _log_line_offsets[line_no] : NULL;
+            if (_log_filter.PassFilter(line, line_end))
+                ImGui::TextUnformatted(line, line_end);
+            line = line_end && line_end[1] ? line_end + 1 : NULL;
+        }
+    } else {
+        ImGui::TextUnformatted(_log_buffer.begin());
+    }
+
+    if (_log_scroll_to_bottom) ImGui::SetScrollHere(1.0f);
+    _log_scroll_to_bottom = false;
+    ImGui::PopStyleVar();
+    ImGui::EndChild();
+}
+void log_glwidgets_msg(const char* time, const char* tag, const char* msg) {
+    if(_log_filtered) {
+        int old_size = _log_buffer.size();
+        _log_buffer.appendf("%s %s %s\n", time, tag, msg);
+        for (int new_size = _log_buffer.size(); old_size < new_size; old_size++)
+            if (_log_buffer[old_size] == '\n')
+                _log_line_offsets.push_back(old_size);
+        _log_scroll_to_bottom = true;
+    } else {
+        _log_buffer.appendf("%s %s %s\n", time, tag, msg);
+        _log_scroll_to_bottom = true;
+    }
+}
+void log_glwidgets_msg(const std::string& time, const std::string& tag, 
+    const std::string& msg) {
+    log_glwidgets_msg(time.c_str(), tag.c_str(), msg.c_str());
+}
+void clear_glwidgets_log(glwindow* win) {
+    _log_buffer.clear();
+    _log_line_offsets.clear();
+}
+
 // Image widget
 void draw_glwidgets_imagebox(
     glwindow* win, int tid, const vec2i& size, const vec2i& imsize) {

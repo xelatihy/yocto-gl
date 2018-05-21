@@ -169,6 +169,10 @@ void draw(ygl::glwindow* win, app_state* app) {
                 win, "", app->scn, app->selection, app->update_list);
             ygl::end_glwidgets_tree(win);
         }
+        if (ygl::begin_glwidgets_tree(win, "log")) {
+            ygl::draw_glwidgets_log(win, 200);
+            ygl::end_glwidgets_tree(win);
+        }
     }
     ygl::end_glwidgets_frame(win);
 
@@ -184,9 +188,16 @@ bool update(ygl::glwindow* win, app_state* app) {
 
     // update BVH
     for (auto sel : app->update_list) {
-        if (sel.as<ygl::shape>()) { ygl::refit_bvh(sel.as<ygl::shape>()); }
-        if (sel.as<ygl::instance>()) { ygl::refit_bvh(app->scn, false); }
+        if (sel.as<ygl::shape>()) { 
+            ygl::log_info("refit shape bvh");
+            ygl::refit_bvh(sel.as<ygl::shape>()); 
+        }
+        if (sel.as<ygl::instance>()) { 
+            ygl::log_info("refit scene bvh");
+            ygl::refit_bvh(app->scn, false); 
+        }
         if (sel.as<ygl::node>()) {
+            ygl::log_info("refit scene bvh");
             ygl::update_transforms(app->scn, 0);
             ygl::refit_bvh(app->scn, false);
         }
@@ -215,6 +226,7 @@ bool update(ygl::glwindow* win, app_state* app) {
     }
 
     // restart renderer
+    ygl::log_info("restart renderer");
     app->rngs = ygl::make_rng_seq(app->img.size(), app->seed);
     ygl::trace_async_start(app->scn, app->cam, app->width, app->height,
         app->img, app->rngs, app->nsamples, app->tracer, app->nbounces,
@@ -240,6 +252,7 @@ void run_ui(app_state* app) {
     ygl::set_glwindow_callbacks(win, nullptr, nullptr, refresh);
     ygl::center_glimage(app->imframe, {app->width, app->height},
         ygl::get_glwindow_size(win), app->zoom_to_fit);
+    ygl::log_callback() = ygl::log_glwidgets_msg;
 
     // load textures
     app->gl_prog = ygl::make_glimage_program();

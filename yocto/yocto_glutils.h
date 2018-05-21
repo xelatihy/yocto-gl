@@ -657,6 +657,14 @@ inline void draw_glwidgets_tree_leaf(
 void draw_glwidgets_tree_leaf(glwindow* win, const std::string& lbl,
     void*& selection, void* content, const vec4f& col);
 
+// Log widget (internally uses global state, so you can only have one).
+void draw_glwidgets_log(glwindow* win, int height);
+void log_glwidgets_msg(const std::string& time, const std::string& tag, 
+    const std::string& msg);
+void log_glwidgets_msg(const char* time, const char* tag, 
+    const char* msg);
+void clear_glwidgets_log(glwindow* win);
+
 // Image widget.
 void draw_glwidgets_imagebox(
     glwindow* win, int tid, const vec2i& size, const vec2i& imsize);

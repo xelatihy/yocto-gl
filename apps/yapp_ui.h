@@ -82,14 +82,14 @@ bool draw_glwidgets_camera_inspector(
 
 // Draws widgets for a whole scene. Used for quickly making demos.
 bool draw_glwidgets_scene_tree(glwindow* win, const std::string& lbl, scene* scn,
-    scene_selection& sel, std::vector<ygl::scene_selection>& update_list,
+    scene_selection& sel, std::vector<ygl::scene_selection>& update_list, int height = 240,
     const std::unordered_map<std::string, std::string>& inspector_highlights =
         {});
 
 // Draws widgets for a whole scene. Used for quickly making demos.
-bool draw_glwidgets_scene_inspector(glwindow* win, const std::string& lbl,
+bool draw_glwidgets_scene_inspector(glwindow* win, const std::string& lbl, 
     scene* scn, scene_selection& sel,
-    std::vector<ygl::scene_selection>& update_list,
+    std::vector<ygl::scene_selection>& update_list, int height = 240,
     const std::unordered_map<std::string, std::string>& inspector_highlights =
         {});
 
