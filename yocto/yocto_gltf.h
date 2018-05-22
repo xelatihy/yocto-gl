@@ -114,7 +114,15 @@
 namespace ygl {
 
 // Generic buffer data.
-using buffer_data = std::vector<unsigned char>;
+using gltf_buffer_data = std::vector<unsigned char>;
+
+// Generic image data.
+struct gltf_image_data {
+    int width = 0;           // width
+    int height = 0;          // height
+    std::vector<vec4f> hdr;  // hdr pixels
+    std::vector<vec4b> ldr;  // ldr pixels
+};
 
 // Id for glTF references.
 template <typename T>
@@ -427,7 +435,7 @@ struct glTFBuffer : glTFChildOfRootProperty {
     // The length of the buffer in bytes. [required]
     int byteLength = 0;
     // Stores buffer content after loading. [required]
-    buffer_data data = {};
+    gltf_buffer_data data = {};
 };
 
 // Values for glTFBufferView::target
@@ -530,6 +538,9 @@ struct glTFImage : glTFChildOfRootProperty {
     // The index of the bufferView that contains the image. Use this instead of
     // the image's uri property.
     glTFid<glTFBufferView> bufferView = {};
+
+    // Image data (if loaded).
+    gltf_image_data data = {};
 };
 
 // Reference to a texture.
@@ -954,6 +965,13 @@ void save_gltf(
 // Save a gltf file `filename` to disk.
 void save_binary_gltf(
     const std::string& filename, const glTF* gltf, bool save_bin = true);
+
+// Load glTF texture images.
+void load_gltf_textures(
+    glTF* gltf, const std::string& dirname, bool skip_missing = true);
+// Save glTF texture images.
+void save_gltf_textures(
+    const glTF* gltf, const std::string& dirname, bool skip_missing = true);
 
 // Computes the local node transform and its inverse.
 inline mat4f node_transform(const glTFNode* node) {

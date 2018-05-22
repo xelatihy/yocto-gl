@@ -201,6 +201,10 @@ bool save_image4b(const std::string& filename, int width, int height,
     const std::vector<vec4b>& img);
 bool save_image4f(const std::string& filename, int width, int height,
     const std::vector<vec4f>& img, bool srgb_8bit = true);
+std::vector<vec4b> load_image4b_from_memory(
+    const byte* data, int data_size, int& width, int& height);
+std::vector<vec4f> load_image4f_from_memory(const byte* data, int data_size,
+    int& width, int& height, bool srgb_8bit = true);
 
 // Filter type and edge mode for resizing.
 enum struct resize_filter {

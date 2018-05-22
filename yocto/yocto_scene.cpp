@@ -633,8 +633,7 @@ void set_camera_fovy(camera* cam, float fovy, float aspect, float width) {
 ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv) {
     auto dist = cam->focal;
     if (cam->focus < flt_max) {
-        dist = cam->focal * cam->focus /
-               (cam->focus - cam->focal);
+        dist = cam->focal * cam->focus / (cam->focus - cam->focal);
     }
     auto e = vec3f{luv.x * cam->aperture, luv.y * cam->aperture, 0};
     // auto q = vec3f{cam->width * (uv.x - 0.5f),
@@ -871,17 +870,34 @@ scene* obj_to_scene(const obj_scene* obj) {
     auto scn = new scene();
 
     // convert textures
+    auto otmap = std::unordered_map<std::string, obj_texture*>{{"", nullptr}};
+    for (auto otxt : obj->textures) otmap[otxt->path] = otxt;
     auto tmap = std::unordered_map<std::string, texture*>{{"", nullptr}};
-    auto add_texture = [&tmap, scn](const obj_texture_info& oinfo, bool srgb) {
+    auto add_texture = [&tmap, &otmap, scn](
+                           const obj_texture_info& oinfo, bool srgb) {
         if (oinfo.path == "") return (texture*)nullptr;
+        if (otmap.find(oinfo.path) == otmap.end()) return (texture*)nullptr;
         if (tmap.find(oinfo.path) != tmap.end()) return tmap.at(oinfo.path);
+        auto otxt = otmap.at(oinfo.path);
         auto txt = new texture();
-        txt->name = oinfo.path;
-        txt->path = oinfo.path;
+        txt->name = otxt->path;
+        txt->path = otxt->path;
         txt->srgb = srgb;
         txt->wrap_s = !oinfo.clamp;
         txt->wrap_t = !oinfo.clamp;
         txt->scale = oinfo.scale;
+        if (otxt->width && otxt->height &&
+            (!otxt->hdr.empty() || !otxt->ldr.empty())) {
+            txt->width = otxt->width;
+            txt->height = otxt->height;
+            if (!otxt->hdr.empty()) {
+                txt->pxl = otxt->hdr;
+            } else if (srgb) {
+                txt->pxl = srgb_to_linear(otxt->ldr);
+            } else {
+                txt->pxl = byte_to_float(otxt->ldr);
+            }
+        }
         scn->textures.push_back(txt);
         tmap[oinfo.path] = txt;
         return txt;
@@ -1226,6 +1242,22 @@ obj_scene* scene_to_obj(
         return oinfo;
     };
 
+    // convert textures
+    for (auto txt : scn->textures) {
+        auto otxt = new obj_texture();
+        otxt->path = txt->path;
+        otxt->width = txt->width;
+        otxt->height = txt->height;
+        if (is_hdr_filename(txt->path)) {
+            otxt->hdr = txt->pxl;
+        } else if (txt->srgb) {
+            otxt->ldr = linear_to_srgb(txt->pxl);
+        } else {
+            otxt->ldr = float_to_byte(txt->pxl);
+        }
+        obj->textures.push_back(otxt);
+    }
+
     // convert materials
     for (auto mat : scn->materials) {
         auto omat = new obj_material();
@@ -1436,37 +1468,33 @@ obj_scene* scene_to_obj(
 
 #ifdef YGL_GLTF
 
+static bool startswith(const std::string& str, const std::string& substr) {
+    if (str.length() < substr.length()) return false;
+    for (auto i = 0; i < substr.length(); i++)
+        if (str[i] != substr[i]) return false;
+    return true;
+}
+
 // Flattens a gltf file into a flattened asset.
 scene* gltf_to_scene(const glTF* gltf) {
-    auto startswith = [](const std::string& str, const std::string& substr) {
-        if (str.length() < substr.length()) return false;
-        for (auto i = 0; i < substr.length(); i++)
-            if (str[i] != substr[i]) return false;
-        return true;
-    };
-
     // clear asset
     auto scn = new scene();
 
-    // convert images
-    for (auto gtxt : gltf->images) {
-        auto txt = new texture();
-        txt->name = gtxt->name;
-        txt->path = (startswith(gtxt->uri, "data:")) ?
-                        std::string("[glTF inline]") :
-                        gtxt->uri;
-        scn->textures.push_back(txt);
-    }
-
     // add a texture
-    auto make_texture = [gltf, scn](const glTFTextureInfo* ginfo, bool srgb,
-                            bool normal = false, bool occlusion = false) {
-        auto txt = (texture*)nullptr;
-        if (!ginfo) return txt;
+    auto tmap = std::unordered_map<glTFImage*, texture*>{{nullptr, nullptr}};
+    auto add_texture = [&tmap, gltf, scn](const glTFTextureInfo* ginfo,
+                           bool srgb, bool normal = false,
+                           bool occlusion = false) {
+        if (!ginfo) return (texture*)nullptr;
         auto gtxt = gltf->get(ginfo->index);
-        if (!gtxt || !gtxt->source) return txt;
-        txt = scn->textures.at((int)gtxt->source);
-        if (!txt) return txt;
+        if (!gtxt || !gtxt->source) return (texture*)nullptr;
+        auto gimg = gltf->get(gtxt->source);
+        if (tmap.find(gimg) != tmap.end()) return tmap.at(gimg);
+        auto txt = new texture();
+        txt->path = (startswith(gimg->uri, "data:")) ?
+                        std::string("[glTF inline]") :
+                        gimg->uri;
+        txt->name = txt->path;
         txt->srgb = srgb;
         auto gsmp = gltf->get(gtxt->sampler);
         if (gsmp) {
@@ -1484,6 +1512,20 @@ scene* gltf_to_scene(const glTF* gltf) {
             auto ninfo = (glTFMaterialOcclusionTextureInfo*)ginfo;
             txt->scale = ninfo->strength;
         }
+        if (gimg->data.width && gimg->data.height &&
+            (!gimg->data.hdr.empty() || !gimg->data.ldr.empty())) {
+            txt->width = gimg->data.width;
+            txt->height = gimg->data.height;
+            if (!gimg->data.hdr.empty()) {
+                txt->pxl = gimg->data.hdr;
+            } else if (srgb) {
+                txt->pxl = srgb_to_linear(gimg->data.ldr);
+            } else {
+                txt->pxl = byte_to_float(gimg->data.ldr);
+            }
+        }
+        scn->textures.push_back(txt);
+        tmap[gimg] = txt;
         return txt;
     };
 
@@ -1492,7 +1534,7 @@ scene* gltf_to_scene(const glTF* gltf) {
         auto mat = new material();
         mat->name = gmat->name;
         mat->ke = gmat->emissiveFactor;
-        mat->ke_txt = make_texture(gmat->emissiveTexture, true);
+        mat->ke_txt = add_texture(gmat->emissiveTexture, true);
         if (gmat->pbrSpecularGlossiness) {
             mat->base_metallic = false;
             auto gsg = gmat->pbrSpecularGlossiness;
@@ -1501,8 +1543,8 @@ scene* gltf_to_scene(const glTF* gltf) {
             mat->op = gsg->diffuseFactor.w;
             mat->ks = gsg->specularFactor;
             mat->rs = 1 - gsg->glossinessFactor;
-            mat->kd_txt = make_texture(gsg->diffuseTexture, true);
-            mat->ks_txt = make_texture(gsg->specularGlossinessTexture, true);
+            mat->kd_txt = add_texture(gsg->diffuseTexture, true);
+            mat->ks_txt = add_texture(gsg->specularGlossinessTexture, true);
         } else if (gmat->pbrMetallicRoughness) {
             mat->base_metallic = true;
             auto gmr = gmat->pbrMetallicRoughness;
@@ -1512,10 +1554,10 @@ scene* gltf_to_scene(const glTF* gltf) {
             mat->ks = {
                 gmr->metallicFactor, gmr->metallicFactor, gmr->metallicFactor};
             mat->rs = gmr->roughnessFactor;
-            mat->kd_txt = make_texture(gmr->baseColorTexture, true);
-            mat->ks_txt = make_texture(gmr->metallicRoughnessTexture, false);
+            mat->kd_txt = add_texture(gmr->baseColorTexture, true);
+            mat->ks_txt = add_texture(gmr->metallicRoughnessTexture, false);
         }
-        mat->norm_txt = make_texture(gmat->normalTexture, false, true, false);
+        mat->norm_txt = add_texture(gmat->normalTexture, false, true, false);
         mat->double_sided = gmat->doubleSided;
         scn->materials.push_back(mat);
     }
@@ -1656,11 +1698,15 @@ scene* gltf_to_scene(const glTF* gltf) {
             set_camera_fovy(cam, ortho->ymag, ortho->xmag / ortho->ymag);
             cam->near = ortho->znear;
             cam->far = ortho->zfar;
+            cam->focus = flt_max;
+            cam->aperture = 0;
         } else {
             auto persp = gcam->perspective;
             set_camera_fovy(cam, persp->yfov, persp->aspectRatio);
             cam->near = persp->znear;
-            cam->far = persp->zfar;
+            cam->far = (persp->zfar) ? persp->zfar : flt_max;
+            cam->focus = flt_max;
+            cam->aperture = 0;
         }
         scn->cameras.push_back(cam);
     }
@@ -1829,14 +1875,14 @@ glTF* scene_to_gltf(
             ortho->ymag = cam->width;
             ortho->xmag = cam->height;
             ortho->znear = cam->near;
-            ortho->znear = cam->far;
+            ortho->zfar = cam->far;
             gcam->orthographic = ortho;
         } else {
             auto persp = new glTFCameraPerspective();
             persp->yfov = eval_camera_fovy(cam);
             persp->aspectRatio = cam->width / cam->height;
             persp->znear = cam->near;
-            persp->zfar = cam->far;
+            persp->zfar = (cam->far >= flt_max) ? 0 : cam->far;
             gcam->perspective = persp;
         }
         gltf->cameras.push_back(gcam);
@@ -1846,6 +1892,15 @@ glTF* scene_to_gltf(
     for (auto txt : scn->textures) {
         auto gimg = new glTFImage();
         gimg->uri = txt->path;
+        gimg->data.width = txt->width;
+        gimg->data.height = txt->height;
+        if (is_hdr_filename(txt->path)) {
+            gimg->data.hdr = txt->pxl;
+        } else if (txt->srgb) {
+            gimg->data.ldr = linear_to_srgb(txt->pxl);
+        } else {
+            gimg->data.ldr = float_to_byte(txt->pxl);
+        }
         gltf->images.push_back(gimg);
     }
 
@@ -2234,53 +2289,6 @@ glTF* scene_to_gltf(
 
 #endif
 
-// Loads/saves textures
-void load_textures(const std::string& filename, scene* scn, bool skip_missing) {
-#if YGL_IMAGEIO
-    auto dirname = path_dirname(filename);
-    for (auto txt : scn->textures) {
-        // TODO: handle glTF buffer textures
-        if (txt->path == "[glTF inline]") {
-            log_warning("cannot handle glTF inline images");
-            txt->width = 1;
-            txt->height = 1;
-            txt->pxl = {vec4f{1, 1, 1, 1}};
-            continue;
-        }
-        auto filename = dirname + txt->path;
-        for (auto& c : filename)
-            if (c == '\\') c = '/';
-        txt->pxl = load_image4f(filename, txt->width, txt->height, txt->srgb);
-        if (txt->pxl.empty()) {
-            if (skip_missing) continue;
-            throw std::runtime_error("cannot laod image " + filename);
-        }
-    }
-#else
-    throw std::runtime_error("cannot laod images");
-#endif
-}
-void save_textures(
-    const std::string& filename, const scene* scn, bool skip_missing) {
-#if YGL_IMAGEIO
-    auto dirname = path_dirname(filename);
-    for (auto txt : scn->textures) {
-        if (txt->pxl.empty()) continue;
-        auto filename = dirname + txt->path;
-        for (auto& c : filename)
-            if (c == '\\') c = '/';
-        auto ok = save_image4f(
-            filename, txt->width, txt->height, txt->pxl, txt->srgb);
-        if (!ok) {
-            if (skip_missing) continue;
-            throw std::runtime_error("cannot save image " + filename);
-        }
-    }
-#else
-    throw std::runtime_error("cannot save images");
-#endif
-}
-
 // Load a scene
 scene* load_scene(const std::string& filename, bool load_txts,
     bool split_obj_shapes, bool skip_missing) {
@@ -2289,6 +2297,8 @@ scene* load_scene(const std::string& filename, bool load_txts,
     if (ext == ".obj" || ext == ".OBJ") {
 #if YGL_OBJ
         auto oscn = load_obj(filename, split_obj_shapes, true, true);
+        if (load_txts)
+            load_obj_textures(oscn, path_dirname(filename), skip_missing);
         scn = obj_to_scene(oscn);
         scn->name = path_filename(filename);
         delete oscn;
@@ -2298,6 +2308,8 @@ scene* load_scene(const std::string& filename, bool load_txts,
     } else if (ext == ".gltf" || ext == ".GLTF") {
 #if YGL_GLTF
         auto gscn = load_gltf(filename, true);
+        if (load_txts)
+            load_gltf_textures(gscn, path_dirname(filename), skip_missing);
         scn = gltf_to_scene(gscn);
         delete gscn;
 #else
@@ -2309,15 +2321,14 @@ scene* load_scene(const std::string& filename, bool load_txts,
     if (scn->name == "") scn->name = path_filename(filename);
     if (!scn) throw std::runtime_error("could not convert gltf scene");
     auto mat = (material*)nullptr;
-    for(auto ist : scn->instances) {
-        if(ist->mat) continue;
-        if(!mat) {
-            mat = make_matte_material("<default>", {0.2f,0.2f,0.2f});
+    for (auto ist : scn->instances) {
+        if (ist->mat) continue;
+        if (!mat) {
+            mat = make_matte_material("<default>", {0.2f, 0.2f, 0.2f});
             scn->materials.push_back(mat);
         }
         ist->mat = mat;
     }
-    if (load_txts) load_textures(filename, scn, skip_missing);
     return scn;
 }
 
@@ -2332,6 +2343,8 @@ void save_scene(const std::string& filename, const scene* scn, bool save_txt,
         auto oscn =
             scene_to_obj(scn, preserve_obj_instances, preserve_obj_subdivs);
         save_obj(filename, oscn, true, false);
+        if (save_txt)
+            save_obj_textures(oscn, path_dirname(filename), skip_missing);
         delete oscn;
 #else
         throw std::runtime_error("unsupported Obj");
@@ -2341,6 +2354,8 @@ void save_scene(const std::string& filename, const scene* scn, bool save_txt,
         auto buffer_uri = path_basename(filename) + ".bin";
         auto gscn = scene_to_gltf(scn, buffer_uri, gltf_separate_buffers);
         save_gltf(filename, gscn);
+        if (save_txt)
+            save_gltf_textures(gscn, path_dirname(filename), skip_missing);
         delete gscn;
 #else
         throw std::runtime_error("unsupported glTF");
@@ -2348,7 +2363,6 @@ void save_scene(const std::string& filename, const scene* scn, bool save_txt,
     } else {
         throw std::runtime_error("unsupported extension " + ext);
     }
-    if (save_txt) save_textures(filename, scn, skip_missing);
 }
 
 }  // namespace ygl
@@ -2358,7 +2372,8 @@ void save_scene(const std::string& filename, const scene* scn, bool save_txt,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-camera* make_camera(const std::string& name, const frame3f& frame, float width, float height, float focal, float focus, float aperture) {
+camera* make_camera(const std::string& name, const frame3f& frame, float width,
+    float height, float focal, float focus, float aperture) {
     auto cam = new camera();
     cam->name = name;
     cam->frame = frame;
@@ -2373,8 +2388,8 @@ camera* make_camera(const std::string& name, const frame3f& frame, float width, 
 };
 
 // add missing camera
-camera* make_bbox_camera(
-    const std::string& name, const bbox3f& bbox, float width, float height, float focal) {
+camera* make_bbox_camera(const std::string& name, const bbox3f& bbox,
+    float width, float height, float focal) {
     auto bbox_center = (bbox.max + bbox.min) / 2.0f;
     auto bbox_size = bbox.max - bbox.min;
     auto bbox_msize = max(bbox_size.x, max(bbox_size.y, bbox_size.z));
@@ -2821,7 +2836,8 @@ scene* make_cornellbox_scene(const std::string& name, bool envlight) {
     auto scn = new scene();
     scn->name = name;
     scn->cameras.push_back(
-        make_camera("cam", lookat_frame({0, 1, 5.15f}, {0, 1, 0}, {0,1,0}), 0.036f, 0.024f, 0.035f));
+        make_camera("cam", lookat_frame({0, 1, 5.15f}, {0, 1, 0}, {0, 1, 0}),
+            0.036f, 0.024f, 0.035f));
     scn->materials.push_back(make_material("white", {0.725f, 0.71f, 0.68f}));
     scn->materials.push_back(make_material("red", {0.63f, 0.065f, 0.05f}));
     scn->materials.push_back(make_material("green", {0.14f, 0.45f, 0.091f}));
@@ -2882,17 +2898,17 @@ scene* make_simple_scene(const std::string& name,
     auto envs = std::vector<environment*>();
 
     if (objs.size() >= 3) {
-        cams.push_back(make_camera(
-            "cam", lookat_frame({0, 5, 14}, {0, 1, 0}, {0,1,0}), 0.036f, 
-            0.036f / 2.35f, 0.1f));
+        cams.push_back(
+            make_camera("cam", lookat_frame({0, 5, 14}, {0, 1, 0}, {0, 1, 0}),
+                0.036f, 0.036f / 2.35f, 0.1f));
     } else if (objs.size() == 2) {
-        cams.push_back(make_camera(
-            "cam", lookat_frame({0, 5, 14}, {0, 1, 0}, {0,1,0}), 0.036f, 
-            0.036f / 1.5f, 0.1f));
+        cams.push_back(
+            make_camera("cam", lookat_frame({0, 5, 14}, {0, 1, 0}, {0, 1, 0}),
+                0.036f, 0.036f / 1.5f, 0.1f));
     } else if (objs.size() == 1) {
         cams.push_back(
-            make_camera("cam", lookat_frame({0, 5, 14}, {0, 1, 0}, {0,1,0}), 0.036f, 
-            0.036f, 0.1f));
+            make_camera("cam", lookat_frame({0, 5, 14}, {0, 1, 0}, {0, 1, 0}),
+                0.036f, 0.036f, 0.1f));
     }
 
     auto ists = std::vector<instance*>();
@@ -2948,9 +2964,8 @@ scene* make_simple_scene(
     auto cams = std::vector<camera*>();
     auto ists = std::vector<instance*>();
     auto envs = std::vector<environment*>();
-    cams.push_back(
-        make_camera("cam", lookat_frame({0, 5, 14}, {0, 1, 0}, {0, 1, 0}), 
-        0.036f, 0.036f, 0.1f));
+    cams.push_back(make_camera("cam",
+        lookat_frame({0, 5, 14}, {0, 1, 0}, {0, 1, 0}), 0.036f, 0.036f, 0.1f));
     ists.push_back(make_simple_floor());
     ists.push_back(make_instance(
         shp->name, shp, mat, nullptr, translation_frame({0, 1, 0})));
@@ -2967,8 +2982,8 @@ scene* make_simple_scene(
 scene* make_shape_scene(
     const std::string& name, shape* shp, material* mat, bool envlight) {
     auto cams = std::vector<camera*>();
-    cams.push_back(
-        make_camera("cam", lookat_frame({0, 5, 14}, {0, 1, 0}, {0, 1, 0}), 0.036f, 0.036f, 0.1f));
+    cams.push_back(make_camera("cam",
+        lookat_frame({0, 5, 14}, {0, 1, 0}, {0, 1, 0}), 0.036f, 0.036f, 0.1f));
     auto ists = std::vector<instance*>();
     auto envs = std::vector<environment*>();
     ists.push_back(
@@ -2986,7 +3001,8 @@ scene* make_shape_scene(
 scene* make_environment_scene(const std::string& name, environment* env) {
     auto cams = std::vector<camera*>();
     cams.push_back(
-        make_camera("cam", lookat_frame({0, 5, 14}, {0, 1, 0}, {0, 1, 0}), 0.036f, 0.036f / 1.5f, 0.05f));
+        make_camera("cam", lookat_frame({0, 5, 14}, {0, 1, 0}, {0, 1, 0}),
+            0.036f, 0.036f / 1.5f, 0.05f));
     auto ists = std::vector<instance*>();
     auto envs = std::vector<environment*>();
     ists.push_back(make_instance("obj", make_sphere_shape("obj"),
@@ -3002,8 +3018,9 @@ scene* make_random_instances_scene(const std::string& name, const vec2i& num,
                   min((bbox.max.x - bbox.min.x) / num.x,
                       (bbox.max.x - bbox.min.x) / num.y);
 
-    auto cam = make_camera(
-        "cam", lookat_frame({0, 5, 14}, {0, 1, 0}, {0, 1, 0}), 0.036f, 0.036f / 1.5f, 0.035f);
+    auto cam =
+        make_camera("cam", lookat_frame({0, 5, 14}, {0, 1, 0}, {0, 1, 0}),
+            0.036f, 0.036f / 1.5f, 0.035f);
 
     auto ists = std::vector<instance*>();
     ists.push_back(make_instance("floor", make_floor_shape("floor"),

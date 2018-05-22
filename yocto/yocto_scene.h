@@ -103,8 +103,8 @@ struct camera {
     bool ortho = false;                // orthographic
     float width = 0.036f;              // film width (default to 35mm)
     float height = 0.024f;             // film height (default to 35mm)
-    float focal = 0.050f;       // focal length (defaul to 50 mm)
-    float focus = flt_max;        // focal distance (default to inf focus)
+    float focal = 0.050f;              // focal length (defaul to 50 mm)
+    float focus = flt_max;             // focal distance (default to inf focus)
     float aperture = 0;                // lens aperture
     float near = 0.01f;                // near plane distance
     float far = 10000;                 // far plane distance
@@ -309,12 +309,6 @@ void save_scene(const std::string& filename, const scene* scn,
     bool preserve_obj_subdivs = true, bool gltf_separate_buffers = false,
     bool skip_missing = true);
 
-// Loads/saves scene textures.
-void load_textures(
-    const std::string& filename, scene* scn, bool skip_missing = true);
-void save_textures(
-    const std::string& filename, const scene* scn, bool skip_missing = true);
-
 // Print scene statistics.
 void print_stats(scene* scn);
 
@@ -475,12 +469,11 @@ vec2f sample_environment(const environment* env, const vec2f& ruv);
 namespace ygl {
 
 // make scene elements
-camera* make_camera(const std::string& name, const frame3f& frame, 
-    float width = 0.036f, float height = 0.024f, float focal = 0.050f, 
+camera* make_camera(const std::string& name, const frame3f& frame,
+    float width = 0.036f, float height = 0.024f, float focal = 0.050f,
     float focus = flt_max, float aperture = 0);
-camera* make_bbox_camera(
-    const std::string& name, const bbox3f& bbox, float width = 0.036f, 
-    float height = 0.024f, float focal = 0.050f);
+camera* make_bbox_camera(const std::string& name, const bbox3f& bbox,
+    float width = 0.036f, float height = 0.024f, float focal = 0.050f);
 texture* make_texture(const std::string& name, const std::string& path = "",
     int width = 0, int height = 0, const std::vector<vec4f>& pixels = {},
     bool srgb = true);
