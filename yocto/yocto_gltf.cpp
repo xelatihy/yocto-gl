@@ -56,6 +56,8 @@
 
 #include "yocto_gltf.h"
 
+#include "yocto_image.h"
+
 #include <fstream>
 #include "ext/json.hpp"
 
@@ -1030,6 +1032,13 @@ std::string base64_decode(std::string const& encoded_string) {
     return ret;
 }
 
+static bool startswith(const std::string& str, const std::string& substr) {
+    if (str.length() < substr.length()) return false;
+    for (auto i = 0; i < substr.length(); i++)
+        if (str[i] != substr[i]) return false;
+    return true;
+}
+
 // Load buffer data.
 void load_buffers(const glTF* gltf, const std::string& dirname) {
     auto fix_path = [](const std::string& path_) {
@@ -1037,12 +1046,6 @@ void load_buffers(const glTF* gltf, const std::string& dirname) {
         for (auto& c : path)
             if (c == '\\') c = '/';
         return path;
-    };
-    auto startswith = [](const std::string& str, const std::string& substr) {
-        if (str.length() < substr.length()) return false;
-        for (auto i = 0; i < substr.length(); i++)
-            if (str[i] != substr[i]) return false;
-        return true;
     };
     auto load_binary = [](const std::string& filename) {
         // https://stackoverflow.com/questions/174531/easiest-way-to-get-files-contents-in-c
@@ -1133,13 +1136,6 @@ void save_buffers(const glTF* gltf, const std::string& dirname) {
         if (num != data.size())
             throw std::runtime_error("cannot write file " + filename);
         fclose(f);
-    };
-
-    auto startswith = [](const std::string& str, const std::string& substr) {
-        if (str.length() < substr.length()) return false;
-        for (auto i = 0; i < substr.length(); i++)
-            if (str[i] != substr[i]) return false;
-        return true;
     };
 
     for (auto buffer : gltf->buffers) {
@@ -1349,6 +1345,117 @@ void save_binary_gltf(
     // save external resources
     auto dirname = path_dirname(filename);
     if (save_bin) save_buffers(gltf, dirname);
+}
+
+// Load glTF texture images.
+void load_gltf_textures(
+    glTF* gltf, const std::string& dirname, bool skip_missing) {
+#if YGL_IMAGEIO
+    for (auto image : gltf->images) {
+        auto filename = std::string();
+        image->data = gltf_image_data();
+        if (image->bufferView || startswith(image->uri, "data:")) {
+            auto buffer = std::string();
+            auto data = (unsigned char*)nullptr;
+            auto data_size = 0;
+            if (image->bufferView) {
+                auto view = gltf->get(image->bufferView);
+                auto buffer = gltf->get(view->buffer);
+                if (!view || !buffer || view->byteStride) {
+                    if (skip_missing) continue;
+                    throw std::runtime_error("invalid image buffer view");
+                }
+                if (image->mimeType == glTFImageMimeType::ImagePng)
+                    filename = "internal_data.png";
+                else if (image->mimeType == glTFImageMimeType::ImageJpeg)
+                    filename = "internal_data.jpg";
+                else {
+                    if (skip_missing) continue;
+                    throw std::runtime_error("unsupported image format");
+                }
+                data = buffer->data.data() + view->byteOffset;
+                data_size = view->byteLength;
+            } else {
+                // assume it is base64 and find ','
+                auto pos = image->uri.find(',');
+                if (pos == image->uri.npos) {
+                    if (skip_missing) continue;
+                    throw std::runtime_error("could not decode base64 data");
+                }
+                auto header = image->uri.substr(0, pos);
+                for (auto format : {"png", "jpg", "jpeg", "tga", "ppm", "hdr"})
+                    if (header.find(format) != header.npos)
+                        filename = std::string("fake.") + format;
+                if (is_hdr_filename(filename)) {
+                    if (skip_missing) continue;
+                    throw std::runtime_error(
+                        "unsupported embedded image format " +
+                        header.substr(0, pos));
+                }
+                // decode
+                buffer = base64_decode(image->uri.substr(pos + 1));
+                data_size = (int)buffer.size();
+                data = (unsigned char*)buffer.data();
+            }
+            if (is_hdr_filename(filename)) {
+                image->data.hdr = load_image4f_from_memory(
+                    data, data_size, image->data.width, image->data.height);
+            } else {
+                image->data.ldr = load_image4b_from_memory(
+                    data, data_size, image->data.width, image->data.height);
+            }
+        } else {
+            filename = dirname + image->uri;
+            for (auto& c : filename)
+                if (c == '\\') c = '/';
+            if (is_hdr_filename(filename)) {
+                image->data.hdr = load_image4f(
+                    filename, image->data.width, image->data.height);
+            } else {
+                image->data.ldr = load_image4b(
+                    filename, image->data.width, image->data.height);
+            }
+        }
+        if (image->data.hdr.empty() && image->data.ldr.empty()) {
+            if (skip_missing) continue;
+            throw std::runtime_error("cannot load image " + filename);
+        }
+    }
+#else
+    throw std::runtime_error("cannot load images");
+#endif
+}
+
+// Save glTF texture images.
+void save_gltf_textures(
+    const glTF* gltf, const std::string& dirname, bool skip_missing) {
+#if YGL_IMAGEIO
+    for (auto image : gltf->images) {
+        if (image->data.ldr.empty() && image->data.hdr.empty()) continue;
+        if (startswith(image->uri, "data:")) {
+            if (skip_missing) continue;
+            throw std::runtime_error("saving of embedded data not supported");
+        }
+        auto filename = dirname + image->uri;
+        for (auto& c : filename)
+            if (c == '\\') c = '/';
+        auto ok = false;
+        if (!image->data.ldr.empty()) {
+            ok = save_image4b(filename, image->data.width, image->data.height,
+                image->data.ldr);
+        }
+        if (!image->data.hdr.empty()) {
+            ok = save_image4f(filename, image->data.width, image->data.height,
+                image->data.hdr);
+        }
+        if (!ok) {
+            if (skip_missing) continue;
+            throw std::runtime_error("cannot save image " + filename);
+        }
+    }
+#else
+    throw std::runtime_error("cannot save images");
+#endif
 }
 
 accessor_view::accessor_view(const glTF* gltf, const glTFAccessor* accessor) {

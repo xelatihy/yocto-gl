@@ -130,6 +130,15 @@ struct obj_object {
     std::unordered_map<std::string, std::vector<float>> props;
 };
 
+// Obj texture. Texture data is loaded only if desired.
+struct obj_texture {
+    std::string path;        // path
+    int width = 0;           // width
+    int height = 0;          // height
+    std::vector<vec4b> ldr;  // ldr image data
+    std::vector<vec4f> hdr;  // hdr image data
+};
+
 // Obj texture information.
 struct obj_texture_info {
     std::string path = "";  // file path
@@ -228,6 +237,7 @@ struct obj_scene {
 
     std::vector<obj_object*> objects;            // objects
     std::vector<obj_material*> materials;        // materials
+    std::vector<obj_texture*> textures;          // textures
     std::vector<obj_camera*> cameras;            // cameras [extension]
     std::vector<obj_environment*> environments;  // environments [extension]
     std::vector<obj_node*> nodes;                // nodes [extension]
@@ -236,6 +246,7 @@ struct obj_scene {
     ~obj_scene() {
         for (auto v : objects) delete v;
         for (auto v : materials) delete v;
+        for (auto v : textures) delete v;
         for (auto v : cameras) delete v;
         for (auto v : environments) delete v;
         for (auto v : nodes) delete v;
@@ -254,8 +265,15 @@ obj_scene* load_obj(const std::string& filename, bool split_shapes,
 // and report errors only if `skip_missing` is false.
 // Texture coordinates and material Tr are flipped if `flip_texcoord` and
 // `flip_tp` are respectively true.
-void save_obj(const std::string& filename, const obj_scene* model,
+void save_obj(const std::string& filename, const obj_scene* obj,
     bool flip_texcoord = true, bool flip_tr = true);
+
+// Load OBJ texture images.
+void load_obj_textures(
+    obj_scene* obj, const std::string& dirname, bool skip_missing = true);
+// Save OBJ texture images.
+void save_obj_textures(
+    const obj_scene* obj, const std::string& dirname, bool skip_missing = true);
 
 }  // namespace ygl
 

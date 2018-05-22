@@ -310,6 +310,34 @@ bool save_image4f(const std::string& filename, int width, int height,
     }
 }
 
+// Loads an ldr image.
+std::vector<vec4b> load_image4b_from_memory(
+    const byte* data, int data_size, int& width, int& height) {
+    auto c = 0;
+    width = 0;
+    height = 0;
+    auto pixels =
+        (vec4b*)stbi_load_from_memory(data, data_size, &width, &height, &c, 4);
+    if (!pixels) return {};
+    auto img = std::vector<vec4b>(pixels, pixels + width * height);
+    free(pixels);
+    return img;
+}
+
+// Loads an hdr image.
+std::vector<vec4f> load_image4f_from_memory(
+    const byte* data, int data_size, int& width, int& height, bool srgb_8bit) {
+    auto c = 0;
+    if (!srgb_8bit) stbi_ldr_to_hdr_gamma(1);
+    auto pixels =
+        (vec4f*)stbi_loadf_from_memory(data, data_size, &width, &height, &c, 4);
+    if (!srgb_8bit) stbi_ldr_to_hdr_gamma(2.2f);
+    if (!pixels) return {};
+    auto img = std::vector<vec4f>(pixels, pixels + width * height);
+    delete pixels;
+    return img;
+}
+
 static const auto resize_filter_map = std::map<resize_filter, stbir_filter>{
     {resize_filter::def, STBIR_FILTER_DEFAULT},
     {resize_filter::box, STBIR_FILTER_BOX},

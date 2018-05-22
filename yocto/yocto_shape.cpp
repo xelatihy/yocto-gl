@@ -662,7 +662,7 @@ void weld_triangles(
 void weld_quads(
     std::vector<vec4i>& quads, std::vector<vec3f>& pos, float threshold) {
     auto vid = weld_vertices(pos, threshold);
-    for (auto q : quads) {
+    for (auto& q : quads) {
         q.x = vid[q.x];
         q.y = vid[q.y];
         q.z = vid[q.z];

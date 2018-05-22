@@ -28,6 +28,8 @@
 
 #include "yocto_obj.h"
 
+#include "yocto_image.h"
+
 #include <algorithm>
 #include <array>
 
@@ -645,6 +647,30 @@ obj_scene* load_obj(const std::string& filename, bool split_shapes,
     // apply properties
     for (auto oobj : obj->objects) oobj->props = oprops[oobj->name];
 
+    // create textures
+    auto txt_set = std::unordered_map<std::string, obj_texture*>();
+    auto add_texture = [](obj_scene* obj, auto& txt_set,
+                           const obj_texture_info& info) {
+        if (info.path == "") return;
+        if (txt_set.find(info.path) != txt_set.end()) return;
+        auto txt = new obj_texture();
+        txt->path = info.path;
+        txt_set[txt->path] = txt;
+        obj->textures.push_back(txt);
+    };
+    for (auto mat : obj->materials) {
+        add_texture(obj, txt_set, mat->ke_txt);
+        add_texture(obj, txt_set, mat->kd_txt);
+        add_texture(obj, txt_set, mat->ks_txt);
+        add_texture(obj, txt_set, mat->kr_txt);
+        add_texture(obj, txt_set, mat->kt_txt);
+        add_texture(obj, txt_set, mat->rs_txt);
+        add_texture(obj, txt_set, mat->bump_txt);
+        add_texture(obj, txt_set, mat->norm_txt);
+        add_texture(obj, txt_set, mat->disp_txt);
+        add_texture(obj, txt_set, mat->occ_txt);
+    }
+
     // close file
     fclose(fs);
 
@@ -923,6 +949,55 @@ void save_obj(const std::string& filename, const obj_scene* obj,
     // save materials
     if (!obj->materials.empty())
         save_mtl(dirname + basename + ".mtl", obj->materials, flip_tr);
+}
+
+// Load OBJ texture images.
+void load_obj_textures(
+    obj_scene* obj, const std::string& dirname, bool skip_missing) {
+#if YGL_IMAGEIO
+    for (auto txt : obj->textures) {
+        auto filename = dirname + txt->path;
+        for (auto& c : filename)
+            if (c == '\\') c = '/';
+        if (is_hdr_filename(filename)) {
+            txt->hdr = load_image4f(filename, txt->width, txt->height);
+        } else {
+            txt->ldr = load_image4b(filename, txt->width, txt->height);
+        }
+        if (txt->ldr.empty() && txt->hdr.empty()) {
+            if (skip_missing) continue;
+            throw std::runtime_error("cannot laod image " + filename);
+        }
+    }
+#else
+    throw std::runtime_error("cannot load images");
+#endif
+}
+
+// Save OBJ texture images.
+void save_obj_textures(
+    const obj_scene* obj, const std::string& dirname, bool skip_missing) {
+#if YGL_IMAGEIO
+    for (auto txt : obj->textures) {
+        if (txt->ldr.empty() && txt->hdr.empty()) continue;
+        auto filename = dirname + txt->path;
+        for (auto& c : filename)
+            if (c == '\\') c = '/';
+        auto ok = false;
+        if (!txt->ldr.empty()) {
+            ok = save_image4b(filename, txt->width, txt->height, txt->ldr);
+        }
+        if (!txt->hdr.empty()) {
+            ok = save_image4f(filename, txt->width, txt->height, txt->hdr);
+        }
+        if (!ok) {
+            if (skip_missing) continue;
+            throw std::runtime_error("cannot save image " + filename);
+        }
+    }
+#else
+    throw std::runtime_error("cannot save images");
+#endif
 }
 
 }  // namespace ygl

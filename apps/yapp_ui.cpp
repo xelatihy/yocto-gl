@@ -199,8 +199,13 @@ void draw_glscene(const scene* scn, const camera* cam,
     set_glviewport(viewport_size);
 
     auto camera_view = frame_to_mat(inverse(cam->frame));
-    auto camera_proj = perspective_mat(eval_camera_fovy(cam),
-        (float)viewport_size.x / (float)viewport_size.y, cam->near, cam->far);
+    auto camera_proj =
+        (cam->far >= flt_max) ?
+            perspective_mat(eval_camera_fovy(cam),
+                (float)viewport_size.x / (float)viewport_size.y, cam->near) :
+            perspective_mat(eval_camera_fovy(cam),
+                (float)viewport_size.x / (float)viewport_size.y, cam->near,
+                cam->far);
 
     begin_glsurface_frame(prog, cam->frame.o, camera_view, camera_proj,
         eyelight, exposure, gamma);
@@ -395,14 +400,14 @@ bool draw_glwidgets_camera_inspector(
     edited += draw_glwidgets_dragbox(win, lbl + " width", cam->width, 0.01, 1);
     edited +=
         draw_glwidgets_dragbox(win, lbl + " height", cam->height, 0.01, 1);
-    edited += draw_glwidgets_dragbox(
-        win, lbl + " focal length", cam->focal, 0.01, 1);
+    edited +=
+        draw_glwidgets_dragbox(win, lbl + " focal length", cam->focal, 0.01, 1);
     edited +=
         draw_glwidgets_dragbox(win, lbl + " aperture", cam->aperture, 0, 1);
     edited +=
         draw_glwidgets_dragbox(win, lbl + " focal dist", cam->focus, 0.1, 100);
     edited += draw_glwidgets_dragbox(win, lbl + " near", cam->near, 0.01f, 1);
-    edited += draw_glwidgets_dragbox(win, lbl + " far", cam->far, 1, 1000);
+    edited += draw_glwidgets_dragbox(win, lbl + " far", cam->far, 1, 100000);
     return edited;
 }
 
@@ -559,10 +564,8 @@ bool draw_glwidgets_scene_inspector(glwindow* win, camera* val, scene* scn) {
     edited += draw_glwidgets_checkbox(win, "ortho", val->ortho);
     edited += draw_glwidgets_dragbox(win, "width", val->width, 0.01f, 1);
     edited += draw_glwidgets_dragbox(win, "height", val->height, 0.01f, 1);
-    edited +=
-        draw_glwidgets_dragbox(win, "focal length", val->focal, 0.01f, 1);
-    edited +=
-        draw_glwidgets_dragbox(win, "focal dist", val->focus, 0.01f, 1000);
+    edited += draw_glwidgets_dragbox(win, "focal", val->focal, 0.01f, 1);
+    edited += draw_glwidgets_dragbox(win, "focus", val->focus, 0.01f, 1000);
     edited += draw_glwidgets_dragbox(win, "aperture", val->aperture, 0, 5);
     edited += draw_glwidgets_dragbox(win, "near", val->near, 0.01f, 10);
     edited += draw_glwidgets_dragbox(win, "far", val->far, 10, 10000);
