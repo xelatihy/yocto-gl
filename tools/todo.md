@@ -9,6 +9,21 @@ Please consider this to be just development notes and not any real planning.
 - better material rendering
 - better rendering
 
+## giacomo
+
+- pbrt export
+- volumetric values
+
+## mega refactor
+
+- texture load in models
+- builtin materials
+- volumetric values
+
+## testing
+
+- test all yocto tests
+
 ## planned cleanup
 
 - remove texture info back into texture
@@ -27,9 +42,6 @@ Please consider this to be just development notes and not any real planning.
 
 ## Trace
 
-- camera
-    - thin lens camera - read pbrt
-    - leave ray or camera_pos, lens_pos?
 - clarify light pdfs
 - one path
     - compute light pdfs with intersection

@@ -538,7 +538,7 @@ vec3f eval_shading_norm(
     const instance* ist, int ei, const vec2f& uv, const vec3f& o) {
     if (!ist->shp->triangles.empty()) {
         auto n = eval_norm(ist, ei, uv);
-        if (ist->mat->norm_txt) {
+        if (ist->mat && ist->mat->norm_txt) {
             auto texcoord = eval_texcoord(ist, ei, uv);
             auto left_handed = false;
             auto txt = xyz(eval_texture(ist->mat->norm_txt, texcoord));
@@ -548,7 +548,7 @@ vec3f eval_shading_norm(
             auto tv = normalize(cross(n, tu) * (left_handed ? -1.0f : 1.0f));
             n = normalize(txt.x * tu + txt.y * tv + txt.z * n);
         }
-        if (ist->mat->double_sided && dot(n, o) < 0) n = -n;
+        if (ist->mat && ist->mat->double_sided && dot(n, o) < 0) n = -n;
         return n;
     } else if (!ist->shp->lines.empty()) {
         return orthonormalize(o, eval_norm(ist, ei, uv));
@@ -2308,6 +2308,15 @@ scene* load_scene(const std::string& filename, bool load_txts,
     }
     if (scn->name == "") scn->name = path_filename(filename);
     if (!scn) throw std::runtime_error("could not convert gltf scene");
+    auto mat = (material*)nullptr;
+    for(auto ist : scn->instances) {
+        if(ist->mat) continue;
+        if(!mat) {
+            mat = make_matte_material("<default>", {0.2f,0.2f,0.2f});
+            scn->materials.push_back(mat);
+        }
+        ist->mat = mat;
+    }
     if (load_txts) load_textures(filename, scn, skip_missing);
     return scn;
 }
