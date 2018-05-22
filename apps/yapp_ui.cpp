@@ -65,7 +65,8 @@ void update_gldata(texture* txt) {
     if (!txt->gl_data) txt->gl_data = new gltexture();
     auto& gtxt = *(gltexture*)txt->gl_data;
     if (!txt->pxl.empty()) {
-        update_gltexture(gtxt, txt->width, txt->height, txt->pxl, true, true, false);
+        update_gltexture(
+            gtxt, txt->width, txt->height, txt->pxl, true, true, false);
     }
 }
 void update_gldata(shape* shp) {
@@ -198,7 +199,7 @@ void draw_glscene(const scene* scn, const camera* cam,
     set_glviewport(viewport_size);
 
     auto camera_view = frame_to_mat(inverse(cam->frame));
-    auto camera_proj = perspective_mat(cam->yfov,
+    auto camera_proj = perspective_mat(eval_camera_fovy(cam),
         (float)viewport_size.x / (float)viewport_size.y, cam->near, cam->far);
 
     begin_glsurface_frame(prog, cam->frame.o, camera_view, camera_proj,
@@ -244,60 +245,116 @@ void draw_glscene(const scene* scn, const camera* cam,
     enable_glwireframe(false);
 }
 
+float handle_glcamera_turntable_dist(
+    glwindow* win, camera* cam, const scene* scn, const scene_selection& sel) {
+    static auto mouse_button_last = false;
+    static auto mouse_dist_last = 0.0f;
+    auto mouse_button = get_glwindow_mouse_button(win);
+    auto alt_down = get_glwindow_alt_key(win);
+    // auto shift_down = get_glwindow_shift_key(win);
+    // auto ctrl_down = get_glwindow_ctrl_key(win);
+    auto widgets_active = get_glwidgets_active(win);
+
+    if (widgets_active || !mouse_button || !alt_down) {
+        mouse_button_last = false;
+        return 0;
+    }
+
+    if (!mouse_button_last) {
+        auto center = zero3f;
+        if (sel.as<instance>()) {
+            auto ist = sel.as<instance>();
+            center = transform_point(
+                ist->frame, (ist->shp->bbox.min + ist->shp->bbox.max) / 2);
+        } else {
+            center = (scn->bbox.min + scn->bbox.max) / 2;
+        }
+        mouse_dist_last = max(0.01f, -dot(center - cam->frame.o, cam->frame.z));
+    }
+    mouse_button_last = mouse_button;
+    return mouse_dist_last;
+}
+
 // Handles camera navigation
-bool handle_glcamera_navigation(
-    glwindow* win, camera* cam, bool navigation_fps) {
+bool handle_glcamera_turntable(glwindow* win, camera* cam, float dist) {
     static auto mouse_last = zero2f;
     auto mouse_pos = get_glwidnow_mouse_posf(win);
     auto mouse_button = get_glwindow_mouse_button(win);
     auto alt_down = get_glwindow_alt_key(win);
+    auto shift_down = get_glwindow_shift_key(win);
+    // auto ctrl_down = get_glwindow_ctrl_key(win);
+    auto widgets_active = get_glwidgets_active(win);
+
+    if (widgets_active || !alt_down) return false;
 
     // updated
     auto updated = false;
 
     // handle mouse and keyboard for navigation
-    if (mouse_button && alt_down && !get_glwidgets_active(win)) {
-        if (mouse_button == 1 && get_glwindow_shift_key(win)) mouse_button = 3;
-        if (navigation_fps) {
-            auto dolly = 0.0f;
-            auto pan = zero2f;
-            auto rotate = zero2f;
-            switch (mouse_button) {
-                case 1: rotate = (mouse_pos - mouse_last) / 100.0f; break;
-                case 2: dolly = (mouse_pos.x - mouse_last.x) / 100.0f; break;
-                case 3: pan = (mouse_pos - mouse_last) / 100.0f; break;
-                default: break;
-            }
-            camera_fps(cam->frame, {0, 0, 0}, rotate);
-            updated = true;
-        } else {
-            auto dolly = 0.0f;
-            auto pan = zero2f;
-            auto rotate = zero2f;
-            switch (mouse_button) {
-                case 1: rotate = (mouse_pos - mouse_last) / 100.0f; break;
-                case 2: dolly = (mouse_pos.x - mouse_last.x) / 100.0f; break;
-                case 3: pan = (mouse_pos - mouse_last) / 100.0f; break;
-                default: break;
-            }
-            camera_turntable(cam->frame, cam->focus, rotate, dolly, pan);
-            updated = true;
+    if (mouse_button) {
+        if (mouse_button == 1 && shift_down) mouse_button = 3;
+        auto dolly = 0.0f;
+        auto pan = zero2f;
+        auto rotate = zero2f;
+        switch (mouse_button) {
+            case 1: rotate = (mouse_pos - mouse_last) / 100.0f; break;
+            case 2: dolly = (mouse_pos.x - mouse_last.x) / 100.0f; break;
+            case 3: pan = (mouse_pos - mouse_last) / 100.0f; break;
+            default: break;
         }
+        camera_turntable(cam->frame, dist, rotate, dolly, pan);
+        updated = true;
+    }
+
+    // record mouse position
+    mouse_last = mouse_pos;
+
+    // done
+    return updated;
+}
+
+// Handles camera navigation
+bool handle_glcamera_fps(glwindow* win, camera* cam) {
+    static auto mouse_last = zero2f;
+    auto mouse_pos = get_glwidnow_mouse_posf(win);
+    auto mouse_button = get_glwindow_mouse_button(win);
+    auto alt_down = get_glwindow_alt_key(win);
+    auto shift_down = get_glwindow_shift_key(win);
+    // auto ctrl_down = get_glwindow_ctrl_key(win);
+    auto widgets_active = get_glwidgets_active(win);
+
+    if (widgets_active || !alt_down) return false;
+
+    // updated
+    auto updated = false;
+
+    // handle mouse and keyboard for navigation
+    if (mouse_button) {
+        if (mouse_button == 1 && shift_down) mouse_button = 3;
+        auto dolly = 0.0f;
+        auto pan = zero2f;
+        auto rotate = zero2f;
+        switch (mouse_button) {
+            case 1: rotate = (mouse_pos - mouse_last) / 100.0f; break;
+            case 2: dolly = (mouse_pos.x - mouse_last.x) / 100.0f; break;
+            case 3: pan = (mouse_pos - mouse_last) / 100.0f; break;
+            default: break;
+        }
+        camera_fps(cam->frame, {0, 0, 0}, rotate);
+        updated = true;
     }
 
     // handle keytboard for navigation
-    if (!get_glwidgets_active(win) && navigation_fps) {
-        auto transl = zero3f;
-        if (get_glwindow_glkey(win, 'a')) transl.x -= 1;
-        if (get_glwindow_glkey(win, 'd')) transl.x += 1;
-        if (get_glwindow_glkey(win, 's')) transl.z += 1;
-        if (get_glwindow_glkey(win, 'w')) transl.z -= 1;
-        if (get_glwindow_glkey(win, 'e')) transl.y += 1;
-        if (get_glwindow_glkey(win, 'q')) transl.y -= 1;
-        if (transl != zero3f) {
-            camera_fps(cam->frame, transl, {0, 0});
-            updated = true;
-        }
+    auto transl = zero3f;
+    if (get_glwindow_glkey(win, 'a')) transl.x -= 1;
+    if (get_glwindow_glkey(win, 'd')) transl.x += 1;
+    if (get_glwindow_glkey(win, 's')) transl.z += 1;
+    if (get_glwindow_glkey(win, 'w')) transl.z -= 1;
+    if (get_glwindow_glkey(win, 'e')) transl.y += 1;
+    if (get_glwindow_glkey(win, 'q')) transl.y -= 1;
+    if (transl != zero3f) {
+        camera_fps(cam->frame, transl, {0, 0});
+        updated = true;
     }
 
     // record mouse position
@@ -309,27 +366,22 @@ bool handle_glcamera_navigation(
 
 // Handle scene selection
 bool handle_glscene_selection(glwindow* win, const scene* scn,
-    const camera* cam, int res, const frame2f& imframe, scene_selection& sel) {
+    const camera* cam, const vec2i& imsize, const frame2f& imframe,
+    scene_selection& sel) {
     auto mouse_pos = get_glwidnow_mouse_posf(win);
     auto mouse_button = get_glwindow_mouse_button(win);
+    auto mouse_mods = get_glwindow_alt_key(win) || get_glwindow_ctrl_key(win) ||
+                      get_glwindow_shift_key(win);
+    auto widgets_active = get_glwidgets_active(win);
 
-    if (!(mouse_button == 1 && !get_glwidgets_active(win))) return false;
-    auto ij = get_glimage_coords(
-        mouse_pos, imframe, {(int)round(cam->aspect * res), res});
-    if (ij.x < 0 || ij.x >= (int)round(res * cam->aspect) || ij.y < 0 ||
-        ij.y >= res)
+    if (mouse_button != 1 || widgets_active || mouse_mods) return false;
+    auto ij = get_glimage_coords(mouse_pos, imframe, imsize);
+    if (ij.x < 0 || ij.x >= imsize.x || ij.y < 0 || ij.y >= imsize.y)
         return false;
-    auto ray = eval_camera_ray(cam, ij, res, {0.5f, 0.5f}, zero2f);
-    auto iid = 0, eid = 0;
-    auto ray_t = 0.0f;
-    auto euv = zero2f;
-    if (!intersect_bvh(scn->bvh, ray, false, ray_t, iid, eid, euv))
-        return false;
-    if (scn->nodes.empty()) {
-        sel = scn->shapes[iid];
-    } else {
-        sel = scn->nodes[iid];
-    }
+    auto ray = eval_camera_ray(cam, ij, imsize, {0.5f, 0.5f}, zero2f);
+    auto isec = intersect_ray(scn, ray);
+    if (!isec.ist) return false;
+    sel = isec.ist;
     return true;
 }
 
@@ -338,19 +390,19 @@ bool draw_glwidgets_camera_inspector(
     glwindow* win, const std::string& lbl, camera* cam) {
     if (!cam) return false;
     auto edited = 0;
-    auto from = cam->frame.o;
-    auto to = cam->frame.o - cam->frame.z * cam->focus;
     edited += draw_glwidgets_text(win, lbl + " name", cam->name);
-    edited += draw_glwidgets_dragbox(win, lbl + " from", from, -10, 10);
-    edited += draw_glwidgets_dragbox(win, lbl + " to", to, -10, 10);
-    edited += draw_glwidgets_dragbox(win, lbl + " yfov", cam->yfov, 0.1, 10);
-    edited += draw_glwidgets_dragbox(win, lbl + " aspect", cam->aspect, 1, 3);
+    edited += draw_glwidgets_dragbox(win, lbl + " frame", cam->frame, -10, 10);
+    edited += draw_glwidgets_dragbox(win, lbl + " width", cam->width, 0.01, 1);
+    edited +=
+        draw_glwidgets_dragbox(win, lbl + " height", cam->height, 0.01, 1);
+    edited += draw_glwidgets_dragbox(
+        win, lbl + " focal length", cam->focal, 0.01, 1);
     edited +=
         draw_glwidgets_dragbox(win, lbl + " aperture", cam->aperture, 0, 1);
-    edited += draw_glwidgets_dragbox(win, lbl + " focus", cam->focus, 0.1, 100);
+    edited +=
+        draw_glwidgets_dragbox(win, lbl + " focal dist", cam->focus, 0.1, 100);
     edited += draw_glwidgets_dragbox(win, lbl + " near", cam->near, 0.01f, 1);
     edited += draw_glwidgets_dragbox(win, lbl + " far", cam->far, 1, 1000);
-    if (edited) cam->frame = lookat_frame(from, to, {0, 1, 0});
     return edited;
 }
 
@@ -505,9 +557,12 @@ bool draw_glwidgets_scene_inspector(glwindow* win, camera* val, scene* scn) {
     edited += draw_glwidgets_text(win, "name", val->name);
     edited += draw_glwidgets_dragbox(win, "frame", val->frame);
     edited += draw_glwidgets_checkbox(win, "ortho", val->ortho);
-    edited += draw_glwidgets_dragbox(win, "yfov", val->yfov, 0.1f, 10);
-    edited += draw_glwidgets_dragbox(win, "aspect", val->aspect, 1, 3);
-    edited += draw_glwidgets_dragbox(win, "focus", val->focus, 0.01f, 1000);
+    edited += draw_glwidgets_dragbox(win, "width", val->width, 0.01f, 1);
+    edited += draw_glwidgets_dragbox(win, "height", val->height, 0.01f, 1);
+    edited +=
+        draw_glwidgets_dragbox(win, "focal length", val->focal, 0.01f, 1);
+    edited +=
+        draw_glwidgets_dragbox(win, "focal dist", val->focus, 0.01f, 1000);
     edited += draw_glwidgets_dragbox(win, "aperture", val->aperture, 0, 5);
     edited += draw_glwidgets_dragbox(win, "near", val->near, 0.01f, 10);
     edited += draw_glwidgets_dragbox(win, "far", val->far, 10, 10000);
@@ -544,15 +599,24 @@ bool draw_glwidgets_scene_inspector(glwindow* win, material* val, scene* scn) {
     edited += draw_glwidgets_checkbox(win, "fresnel", val->fresnel);
     continue_glwidgets_line(win);
     edited += draw_glwidgets_checkbox(win, "refract", val->refract);
-    edited += draw_glwidgets_combobox(win, "ke txt", val->ke_txt, scn->textures, true);
-    edited += draw_glwidgets_combobox(win, "kd txt", val->kd_txt, scn->textures, true);
-    edited += draw_glwidgets_combobox(win, "ks txt", val->ks_txt, scn->textures, true);
-    edited += draw_glwidgets_combobox(win, "kt txt", val->kt_txt, scn->textures, true);
-    edited += draw_glwidgets_combobox(win, "op txt", val->op_txt, scn->textures, true);
-    edited += draw_glwidgets_combobox(win, "rs txt", val->rs_txt, scn->textures, true);
-    edited += draw_glwidgets_combobox(win, "bump txt", val->bump_txt, scn->textures, true);
-    edited += draw_glwidgets_combobox(win, "disp txt", val->disp_txt, scn->textures, true);
-    edited += draw_glwidgets_combobox(win, "norm txt", val->norm_txt, scn->textures, true);
+    edited += draw_glwidgets_combobox(
+        win, "ke txt", val->ke_txt, scn->textures, true);
+    edited += draw_glwidgets_combobox(
+        win, "kd txt", val->kd_txt, scn->textures, true);
+    edited += draw_glwidgets_combobox(
+        win, "ks txt", val->ks_txt, scn->textures, true);
+    edited += draw_glwidgets_combobox(
+        win, "kt txt", val->kt_txt, scn->textures, true);
+    edited += draw_glwidgets_combobox(
+        win, "op txt", val->op_txt, scn->textures, true);
+    edited += draw_glwidgets_combobox(
+        win, "rs txt", val->rs_txt, scn->textures, true);
+    edited += draw_glwidgets_combobox(
+        win, "bump txt", val->bump_txt, scn->textures, true);
+    edited += draw_glwidgets_combobox(
+        win, "disp txt", val->disp_txt, scn->textures, true);
+    edited += draw_glwidgets_combobox(
+        win, "norm txt", val->norm_txt, scn->textures, true);
     edited += draw_glwidgets_checkbox(win, "base metallic", val->base_metallic);
     return edited;
 }
@@ -606,7 +670,8 @@ bool draw_glwidgets_scene_inspector(
     edited += draw_glwidgets_text(win, "name", val->name);
     edited += draw_glwidgets_dragbox(win, "frame", val->frame);
     edited += draw_hdr_color_widget(win, "ke", val->ke);
-    edited += draw_glwidgets_combobox(win, "ke txt", val->ke_txt, scn->textures, true);
+    edited += draw_glwidgets_combobox(
+        win, "ke txt", val->ke_txt, scn->textures, true);
     return edited;
 }
 
@@ -643,7 +708,7 @@ bool draw_glwidgets_scene_inspector(glwindow* win, animation* val, scene* scn) {
     return edited;
 }
 
-bool draw_glwidgets_scene_tree(glwindow* win, const std::string& lbl, 
+bool draw_glwidgets_scene_tree(glwindow* win, const std::string& lbl,
     scene* scn, scene_selection& sel,
     std::vector<ygl::scene_selection>& update_list, int height,
     const std::unordered_map<std::string, std::string>& inspector_highlights) {
@@ -679,7 +744,7 @@ bool draw_glwidgets_scene_tree(glwindow* win, const std::string& lbl,
     return update_list.size() != update_len;
 }
 
-bool draw_glwidgets_scene_inspector(glwindow* win, const std::string& lbl, 
+bool draw_glwidgets_scene_inspector(glwindow* win, const std::string& lbl,
     scene* scn, scene_selection& sel,
     std::vector<ygl::scene_selection>& update_list, int height,
     const std::unordered_map<std::string, std::string>& inspector_highlights) {

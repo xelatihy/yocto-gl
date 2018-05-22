@@ -108,13 +108,13 @@ void read_glimagef(float* pixels, int w, int h, int nc);
 
 // OpenGL texture object. Members are not part of the public API.
 struct gltexture {
-    uint tid = 0;        // texture id
-    int width = 0;       // width
-    int height = 0;      // height
-    int ncomp = 0;       // number of components
-    bool as_float = false; // store as float
-    bool mipmap = true;  // store with mipmaps
-    bool linear = true;  // use linear interpolation
+    uint tid = 0;           // texture id
+    int width = 0;          // width
+    int height = 0;         // height
+    int ncomp = 0;          // number of components
+    bool as_float = false;  // store as float
+    bool mipmap = true;     // store with mipmaps
+    bool linear = true;     // use linear interpolation
 };
 
 // Implementation of update_texture.
@@ -537,8 +537,8 @@ bool get_glwindow_ctrl_key(glwindow* win);
 bool get_glwindow_shift_key(glwindow* win);
 
 // Read pixels.
-std::vector<vec4f> take_glwindow_screenshot(glwindow* win, int& width, int& height,
-    bool flipy = true, bool back = false);
+std::vector<vec4f> take_glwindow_screenshot(glwindow* win, int& width,
+    int& height, bool flipy = true, bool back = false);
 
 }  // namespace ygl
 
@@ -659,10 +659,9 @@ void draw_glwidgets_tree_leaf(glwindow* win, const std::string& lbl,
 
 // Log widget (internally uses global state, so you can only have one).
 void draw_glwidgets_log(glwindow* win, int height);
-void log_glwidgets_msg(const std::string& time, const std::string& tag, 
-    const std::string& msg);
-void log_glwidgets_msg(const char* time, const char* tag, 
-    const char* msg);
+void log_glwidgets_msg(
+    const std::string& time, const std::string& tag, const std::string& msg);
+void log_glwidgets_msg(const char* time, const char* tag, const char* msg);
 void clear_glwidgets_log(glwindow* win);
 
 // Image widget.

@@ -1429,8 +1429,8 @@ bool get_glwindow_shift_key(glwindow* win) {
 }
 
 // Read pixels
-std::vector<ygl::vec4f> take_glwindow_screenshot(glwindow* win, int& width, int& height,
-    bool flipy, bool back) {
+std::vector<ygl::vec4f> take_glwindow_screenshot(
+    glwindow* win, int& width, int& height, bool flipy, bool back) {
     auto wh = get_glwindow_framebuffer_size(win);
     width = wh.x;
     height = wh.y;
@@ -1756,18 +1756,20 @@ void draw_glwidgets_log(glwindow* win, int height) {
     if (ImGui::Button("clear")) clear_glwidgets_log(win);
     continue_glwidgets_line(win);
     bool copy = draw_glwidgets_button(win, "copy");
-    if(_log_filtered) {
+    if (_log_filtered) {
         continue_glwidgets_line(win);
         _log_filter.Draw("Filter", -100.0f);
     }
     ImGui::BeginChild("scrolling", ImVec2(0, height));
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0,1));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 1));
     if (copy) ImGui::LogToClipboard();
     if (_log_filtered && _log_filter.IsActive()) {
         const char* buf_begin = _log_buffer.begin();
         const char* line = buf_begin;
         for (int line_no = 0; line != NULL; line_no++) {
-            const char* line_end = (line_no < _log_line_offsets.Size) ? buf_begin + _log_line_offsets[line_no] : NULL;
+            const char* line_end = (line_no < _log_line_offsets.Size) ?
+                                       buf_begin + _log_line_offsets[line_no] :
+                                       NULL;
             if (_log_filter.PassFilter(line, line_end))
                 ImGui::TextUnformatted(line, line_end);
             line = line_end && line_end[1] ? line_end + 1 : NULL;
@@ -1782,7 +1784,7 @@ void draw_glwidgets_log(glwindow* win, int height) {
     ImGui::EndChild();
 }
 void log_glwidgets_msg(const char* time, const char* tag, const char* msg) {
-    if(_log_filtered) {
+    if (_log_filtered) {
         int old_size = _log_buffer.size();
         _log_buffer.appendf("%s %s %s\n", time, tag, msg);
         for (int new_size = _log_buffer.size(); old_size < new_size; old_size++)
@@ -1794,8 +1796,8 @@ void log_glwidgets_msg(const char* time, const char* tag, const char* msg) {
         _log_scroll_to_bottom = true;
     }
 }
-void log_glwidgets_msg(const std::string& time, const std::string& tag, 
-    const std::string& msg) {
+void log_glwidgets_msg(
+    const std::string& time, const std::string& tag, const std::string& msg) {
     log_glwidgets_msg(time.c_str(), tag.c_str(), msg.c_str());
 }
 void clear_glwidgets_log(glwindow* win) {

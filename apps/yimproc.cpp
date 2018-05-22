@@ -149,12 +149,14 @@ std::vector<ygl::vec4f> filter_bilateral(int width, int height,
 int main(int argc, char* argv[]) {
     // command line params
     auto parser = ygl::make_parser(argc, argv, "yimproc", "process images");
-    auto nosrgb = ygl::parse_flag(parser, "--no-srgb", "",
-        "Disable sRGB default encoding.", false);
+    auto nosrgb = ygl::parse_flag(
+        parser, "--no-srgb", "", "Disable sRGB default encoding.", false);
     auto exposure =
         ygl::parse_opt(parser, "--exposure", "t", "Hdr exposure", 0.0f);
-    auto filmic = ygl::parse_flag(parser, "--filmic", "-f", "apply approximate filmic tone mapping", false);
-    auto aces = ygl::parse_flag(parser, "--aces", "-F", "apply ACES filmic tone mapping", false);
+    auto filmic = ygl::parse_flag(parser, "--filmic", "-f",
+        "apply approximate filmic tone mapping", false);
+    auto aces = ygl::parse_flag(
+        parser, "--aces", "-F", "apply ACES filmic tone mapping", false);
     auto resize_width = ygl::parse_opt(
         parser, "--resize-width", "-w", "width (0 to maintain aspect)", 0);
     auto resize_height = ygl::parse_opt(
@@ -186,7 +188,8 @@ int main(int argc, char* argv[]) {
     // set alpha
     if (set_alpha_filename != "") {
         auto alpha_width = 0, alpha_height = 0;
-        auto alpha_img = ygl::load_image4f(set_alpha_filename, alpha_width, alpha_height, !nosrgb);
+        auto alpha_img = ygl::load_image4f(
+            set_alpha_filename, alpha_width, alpha_height, !nosrgb);
         if (width != alpha_width || height != alpha_height)
             ygl::log_fatal("bad image size");
         for (auto i = 0; i < img.size(); i++) img[i].w = alpha_img[i].w;
@@ -195,8 +198,8 @@ int main(int argc, char* argv[]) {
     // set alpha
     if (set_color_as_alpha_filename != "") {
         auto alpha_width = 0, alpha_height = 0;
-        auto alpha_img = ygl::load_image4f(set_color_as_alpha_filename, alpha_width, alpha_height,
-            !nosrgb);
+        auto alpha_img = ygl::load_image4f(
+            set_color_as_alpha_filename, alpha_width, alpha_height, !nosrgb);
         if (width != alpha_width || height != alpha_height)
             ygl::log_fatal("bad image size");
         for (auto i = 0; i < img.size(); i++) {
@@ -222,11 +225,11 @@ int main(int argc, char* argv[]) {
     }
 
     // exposure
-    if(exposure) img = expose_image(img, exposure);
+    if (exposure) img = expose_image(img, exposure);
 
     // filmic tone transformations
-    if(filmic) img = filmic_tonemap_image(img);
-    if(aces) img = aces_tonemap_image(img);
+    if (filmic) img = filmic_tonemap_image(img);
+    if (aces) img = aces_tonemap_image(img);
 
     // save
     ygl::save_image4f(output, width, height, img, !nosrgb);

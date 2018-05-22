@@ -582,10 +582,11 @@ obj_scene* load_obj(const std::string& filename, bool split_shapes,
             auto cam = new obj_camera();
             obj_parse(ss, cam->name);
             obj_parse(ss, cam->ortho);
-            obj_parse(ss, cam->yfov);
-            obj_parse(ss, cam->aspect);
-            obj_parse(ss, cam->aperture);
+            obj_parse(ss, cam->width);
+            obj_parse(ss, cam->height);
+            obj_parse(ss, cam->focal);
             obj_parse(ss, cam->focus);
+            obj_parse(ss, cam->aperture);
             obj_parse(ss, cam->frame);
             obj->cameras.push_back(cam);
         } else if (obj_streq(cmd, "e")) {
@@ -776,7 +777,8 @@ void save_mtl(const std::string& filename,
             obj_dump_line(fs, "  map_Ni", mat->ior_txt);
         if (mat->km_txt.path != "") obj_dump_line(fs, "  map_Pm ", mat->km_txt);
         if (mat->rs_txt.path != "") obj_dump_line(fs, "  map_Pr ", mat->rs_txt);
-        if (mat->occ_txt.path != "") obj_dump_line(fs, "  map_occ ", mat->occ_txt);
+        if (mat->occ_txt.path != "")
+            obj_dump_line(fs, "  map_occ ", mat->occ_txt);
         if (mat->bump_txt.path != "")
             obj_dump_line(fs, "  map_bump", mat->bump_txt);
         if (mat->disp_txt.path != "")
@@ -812,10 +814,11 @@ void save_obj(const std::string& filename, const obj_scene* obj,
         obj_dump_sp(fs, "c");
         obj_dump_sp(fs, cam->name);
         obj_dump_sp(fs, cam->ortho);
-        obj_dump_sp(fs, cam->yfov);
-        obj_dump_sp(fs, cam->aspect);
-        obj_dump_sp(fs, cam->aperture);
+        obj_dump_sp(fs, cam->width);
+        obj_dump_sp(fs, cam->height);
+        obj_dump_sp(fs, cam->focal);
         obj_dump_sp(fs, cam->focus);
+        obj_dump_sp(fs, cam->aperture);
         obj_dump_sp(fs, cam->frame);
         obj_dump_nl(fs);
     }

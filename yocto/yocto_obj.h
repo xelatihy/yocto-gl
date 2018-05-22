@@ -161,8 +161,8 @@ struct obj_material {
     float ns = 0;          // Phong exponent color
     float ior = 1;         // index of refraction
     float op = 1;          // opacity
-    float rs = -1;          // roughness (-1 not defined)
-    float km = -1; // metallic  (-1 not defined)
+    float rs = -1;         // roughness (-1 not defined)
+    float km = -1;         // metallic  (-1 not defined)
 
     obj_texture_info ke_txt;    // emission texture
     obj_texture_info ka_txt;    // ambient texture
@@ -189,10 +189,12 @@ struct obj_camera {
     std::string name;                  // name
     frame3f frame = identity_frame3f;  // transform
     bool ortho = false;                // orthographic
-    float yfov = 2 * atan(0.5f);       // vertical field of view
+    float width = 0.036f;              // film width (default to 35mm)
+    float height = 0.024f;             // film height (default to 35mm)
+    float focal = 0.050f;              // focal length
     float aspect = 16.0f / 9.0f;       // aspect ratio
     float aperture = 0;                // lens aperture
-    float focus = 1;                   // lens focus
+    float focus = flt_max;             // focus distance
 };
 
 // Obj environment [extension].
