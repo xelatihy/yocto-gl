@@ -958,10 +958,8 @@ vec3f trace_debug_texcoord(const scene* scn, const ray3f& ray, rng_state& rng,
 vec4f trace_sample(const scene* scn, const camera* cam, int i, int j, int width,
     int height, rng_state& rng, trace_func tracer, int nbounces,
     float pixel_clamp = 100) {
-    auto crn = rand2f(rng);
-    auto lrn = rand2f(rng);
-    auto uv = vec2f{(i + crn.x) / width, 1 - (j + crn.y) / height};
-    auto ray = eval_camera_ray(cam, uv, lrn);
+    auto ray =
+        eval_camera_ray(cam, {i, j}, {width, height}, rand2f(rng), rand2f(rng));
     auto hit = false;
     auto l = tracer(scn, ray, rng, nbounces, &hit);
     if (!isfinite(l.x) || !isfinite(l.y) || !isfinite(l.z)) {

@@ -360,8 +360,7 @@ void add_missing_normals(scene* scn) {
 void add_missing_tangent_space(scene* scn) {
     for (auto ist : scn->instances) {
         if (!ist->shp->tangsp.empty() || ist->shp->texcoord.empty()) continue;
-        if (!ist->mat || (!ist->mat->norm_txt && !ist->mat->bump_txt))
-            continue;
+        if (!ist->mat || (!ist->mat->norm_txt && !ist->mat->bump_txt)) continue;
         if (!ist->shp->triangles.empty()) {
             if (ist->shp->norm.empty()) update_normals(ist->shp);
             compute_tangent_space(ist->shp->triangles, ist->shp->pos,
@@ -387,8 +386,7 @@ std::vector<std::string> validate(const scene* scn, bool skip_textures) {
     };
     auto check_empty_textures = [&errs](const std::vector<texture*>& vals) {
         for (auto val : vals) {
-            if (val->pxl.empty())
-                errs.push_back("empty texture " + val->name);
+            if (val->pxl.empty()) errs.push_back("empty texture " + val->name);
         }
     };
 
@@ -585,7 +583,7 @@ vec3f eval_environment(const environment* env, const vec3f& w) {
 
 // Evaluate a texture
 vec4f eval_texture(const texture* txt, const vec2f& texcoord) {
-    if (!txt || txt->pxl.empty()) return {1,1,1,1};
+    if (!txt || txt->pxl.empty()) return {1, 1, 1, 1};
 
     // get image width/height
     auto w = txt->width, h = txt->height;
@@ -614,29 +612,47 @@ vec4f eval_texture(const texture* txt, const vec2f& texcoord) {
     if (!txt->linear) return txt->pxl[j * txt->width + i];
 
     // handle interpolation
-    return txt->pxl[j * txt->width + i] * (1 - u) * (1 - v) + txt->pxl[jj * txt->width + i] * (1 - u) * v +
-           txt->pxl[j * txt->width + ii] * u * (1 - v) + txt->pxl[jj * txt->width + ii] * u * v;
+    return txt->pxl[j * txt->width + i] * (1 - u) * (1 - v) +
+           txt->pxl[jj * txt->width + i] * (1 - u) * v +
+           txt->pxl[j * txt->width + ii] * u * (1 - v) +
+           txt->pxl[jj * txt->width + ii] * u * v;
+}
+
+// Set and evaluate camera parameters. Setters take zeros as default values.
+float eval_camera_fovy(const camera* cam) {
+    return 2 * std::atan(cam->height / (2 * cam->focal));
+}
+void set_camera_fovy(camera* cam, float fovy, float aspect, float width) {
+    cam->width = width;
+    cam->height = width / aspect;
+    cam->focal = cam->height / (2 * std::tan(fovy / 2));
 }
 
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
 ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv) {
-    auto h = 2 * tan(cam->yfov / 2);
-    auto w = h * cam->aspect;
-    auto o = vec3f{luv.x * cam->aperture, luv.y * cam->aperture, 0};
-    auto q = vec3f{w * cam->focus * (uv.x - 0.5f),
-        h * cam->focus * (uv.y - 0.5f), -cam->focus};
-    return make_ray(transform_point(cam->frame, o),
-        transform_direction(cam->frame, normalize(q - o)));
+    auto dist = cam->focal;
+    if (cam->focus < flt_max) {
+        dist = cam->focal * cam->focus /
+               (cam->focus - cam->focal);
+    }
+    auto e = vec3f{luv.x * cam->aperture, luv.y * cam->aperture, 0};
+    // auto q = vec3f{cam->width * (uv.x - 0.5f),
+    //     cam->height * (uv.y - 0.5f), dist};
+    // X flipped for mirror
+    auto q =
+        vec3f{cam->width * (0.5f - uv.x), cam->height * (uv.y - 0.5f), dist};
+    auto ray = make_ray(transform_point(cam->frame, e),
+        transform_direction(cam->frame, normalize(e - q)));
+    return ray;
 }
 
 // Generates a ray from a camera for pixel coordinates `ij`, the
 // resolution `res`, the sub-pixel coordinates `puv` and the lens
 // coordinates `luv` and the image resolution `res`.
-ray3f eval_camera_ray(const camera* cam, const vec2i& ij, int res,
+ray3f eval_camera_ray(const camera* cam, const vec2i& ij, const vec2i& imsize,
     const vec2f& puv, const vec2f& luv) {
-    auto uv =
-        vec2f{(ij.x + puv.x) / (cam->aspect * res), 1 - (ij.y - puv.y) / res};
+    auto uv = vec2f{(ij.x + puv.x) / imsize.x, (ij.y + puv.y) / imsize.y};
     return eval_camera_ray(cam, uv, luv);
 }
 
@@ -655,9 +671,8 @@ vec3f eval_diffuse(const instance* ist, int ei, const vec2f& uv) {
         auto kb =
             ist->mat->kd * xyz(eval_color(ist, ei, uv)) *
             xyz(eval_texture(ist->mat->kd_txt, eval_texcoord(ist, ei, uv)));
-        auto km =
-            ist->mat->ks.x *
-            eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).z;
+        auto km = ist->mat->ks.x *
+                  eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).z;
         return kb * (1 - km);
     }
 }
@@ -670,9 +685,8 @@ vec3f eval_specular(const instance* ist, int ei, const vec2f& uv) {
         auto kb =
             ist->mat->kd * xyz(eval_color(ist, ei, uv)) *
             xyz(eval_texture(ist->mat->kd_txt, eval_texcoord(ist, ei, uv)));
-        auto km =
-            ist->mat->ks.x *
-            eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).z;
+        auto km = ist->mat->ks.x *
+                  eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).z;
         return kb * km + vec3f{0.04f, 0.04f, 0.04f} * (1 - km);
     }
 }
@@ -685,9 +699,8 @@ float eval_roughness(const instance* ist, int ei, const vec2f& uv) {
         rs = 1 - ((1 - rs) * txt_w);
         return rs * rs;
     } else {
-        auto rs =
-            ist->mat->rs *
-            eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).y;
+        auto rs = ist->mat->rs *
+                  eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).y;
         return rs * rs;
     }
     // rs = clamp(rs, 0.03f * 0.03f, 1.0f);
@@ -860,7 +873,7 @@ scene* obj_to_scene(const obj_scene* obj) {
     // convert textures
     auto tmap = std::unordered_map<std::string, texture*>{{"", nullptr}};
     auto add_texture = [&tmap, scn](const obj_texture_info& oinfo, bool srgb) {
-        if(oinfo.path == "") return (texture*)nullptr;
+        if (oinfo.path == "") return (texture*)nullptr;
         if (tmap.find(oinfo.path) != tmap.end()) return tmap.at(oinfo.path);
         auto txt = new texture();
         txt->name = oinfo.path;
@@ -1129,10 +1142,11 @@ scene* obj_to_scene(const obj_scene* obj) {
         auto cam = new camera();
         cam->name = ocam->name;
         cam->ortho = ocam->ortho;
-        cam->yfov = ocam->yfov;
-        cam->aspect = ocam->aspect;
-        cam->aperture = ocam->aperture;
+        cam->width = ocam->width;
+        cam->height = ocam->height;
+        cam->focal = ocam->focal;
         cam->focus = ocam->focus;
+        cam->aperture = ocam->aperture;
         cam->frame = ocam->frame;
         scn->cameras.push_back(cam);
         cmap[cam->name] = cam;
@@ -1364,8 +1378,9 @@ obj_scene* scene_to_obj(
         auto ocam = new obj_camera();
         ocam->name = cam->name;
         ocam->ortho = cam->ortho;
-        ocam->yfov = cam->yfov;
-        ocam->aspect = cam->aspect;
+        ocam->width = cam->width;
+        ocam->height = cam->height;
+        ocam->focal = cam->focal;
         ocam->focus = cam->focus;
         ocam->aperture = cam->aperture;
         ocam->frame = cam->frame;
@@ -1445,7 +1460,7 @@ scene* gltf_to_scene(const glTF* gltf) {
 
     // add a texture
     auto make_texture = [gltf, scn](const glTFTextureInfo* ginfo, bool srgb,
-                                 bool normal = false, bool occlusion = false) {
+                            bool normal = false, bool occlusion = false) {
         auto txt = (texture*)nullptr;
         if (!ginfo) return txt;
         auto gtxt = gltf->get(ginfo->index);
@@ -1636,16 +1651,14 @@ scene* gltf_to_scene(const glTF* gltf) {
         cam->name = gcam->name;
         cam->ortho = gcam->type == glTFCameraType::Orthographic;
         if (cam->ortho) {
+            log_warning("orthographic not supported well");
             auto ortho = gcam->orthographic;
-            cam->yfov = ortho->ymag;
-            cam->aspect = ortho->xmag / ortho->ymag;
+            set_camera_fovy(cam, ortho->ymag, ortho->xmag / ortho->ymag);
             cam->near = ortho->znear;
             cam->far = ortho->zfar;
         } else {
             auto persp = gcam->perspective;
-            cam->yfov = persp->yfov;
-            cam->aspect = persp->aspectRatio;
-            if (!cam->aspect) cam->aspect = 16.0f / 9.0f;
+            set_camera_fovy(cam, persp->yfov, persp->aspectRatio);
             cam->near = persp->znear;
             cam->far = persp->zfar;
         }
@@ -1813,15 +1826,15 @@ glTF* scene_to_gltf(
                                     glTFCameraType::Perspective;
         if (cam->ortho) {
             auto ortho = new glTFCameraOrthographic();
-            ortho->ymag = cam->yfov;
-            ortho->xmag = cam->aspect * cam->yfov;
+            ortho->ymag = cam->width;
+            ortho->xmag = cam->height;
             ortho->znear = cam->near;
             ortho->znear = cam->far;
             gcam->orthographic = ortho;
         } else {
             auto persp = new glTFCameraPerspective();
-            persp->yfov = cam->yfov;
-            persp->aspectRatio = cam->aspect;
+            persp->yfov = eval_camera_fovy(cam);
+            persp->aspectRatio = cam->width / cam->height;
             persp->znear = cam->near;
             persp->zfar = cam->far;
             gcam->perspective = persp;
@@ -2256,7 +2269,8 @@ void save_textures(
         auto filename = dirname + txt->path;
         for (auto& c : filename)
             if (c == '\\') c = '/';
-        auto ok = save_image4f(filename, txt->width, txt->height, txt->pxl, txt->srgb);
+        auto ok = save_image4f(
+            filename, txt->width, txt->height, txt->pxl, txt->srgb);
         if (!ok) {
             if (skip_missing) continue;
             throw std::runtime_error("cannot save image " + filename);
@@ -2335,23 +2349,23 @@ void save_scene(const std::string& filename, const scene* scn, bool save_txt,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-camera* make_camera(const std::string& name, const vec3f& from, const vec3f& to,
-    float yfov, float aspect) {
+camera* make_camera(const std::string& name, const frame3f& frame, float width, float height, float focal, float focus, float aperture) {
     auto cam = new camera();
     cam->name = name;
-    cam->frame = lookat_frame(from, to, vec3f{0, 1, 0});
-    cam->yfov = yfov;
-    cam->aspect = aspect;
+    cam->frame = frame;
+    cam->width = width;
+    cam->height = height;
+    cam->focal = focal;
+    cam->focus = focus;
+    cam->aperture = aperture;
     cam->near = 0.01f;
-    cam->far = 10000;
-    cam->aperture = 0;
-    cam->focus = length(from - to);
+    cam->far = flt_max;
     return cam;
 };
 
 // add missing camera
 camera* make_bbox_camera(
-    const std::string& name, const bbox3f& bbox, float aspect) {
+    const std::string& name, const bbox3f& bbox, float width, float height, float focal) {
     auto bbox_center = (bbox.max + bbox.min) / 2.0f;
     auto bbox_size = bbox.max - bbox.min;
     auto bbox_msize = max(bbox_size.x, max(bbox_size.y, bbox_size.z));
@@ -2363,10 +2377,11 @@ camera* make_bbox_camera(
     auto up = vec3f{0, 1, 0};
     cam->frame = lookat_frame(from, to, up);
     cam->ortho = false;
-    cam->aspect = aspect;
-    cam->yfov = 2 * atanf(0.5f);
+    cam->width = width;
+    cam->height = height;
+    cam->focal = focal;
+    cam->focus = flt_max;
     cam->aperture = 0;
-    cam->focus = length(to - from);
     return cam;
 }
 
@@ -2381,8 +2396,7 @@ material* make_material(
 }
 
 texture* make_texture(const std::string& name, const std::string& path,
-    int width, int height, const std::vector<vec4f>& pixels,
-    bool srgb) {
+    int width, int height, const std::vector<vec4f>& pixels, bool srgb) {
     auto txt = new texture();
     txt->name = name;
     txt->path = path;
@@ -2463,9 +2477,7 @@ scene* make_scene(const std::string& name, const std::vector<camera*>& cams,
         add_elem(scn->textures, mat->ks_txt);
         add_elem(scn->textures, mat->norm_txt);
     }
-    for (auto env : scn->environments) {
-        add_elem(scn->textures, env->ke_txt);
-    }
+    for (auto env : scn->environments) { add_elem(scn->textures, env->ke_txt); }
     return scn;
 }
 
@@ -2734,15 +2746,16 @@ texture* make_bumpnorm_texture(
     const std::string& name, int res, int tile, float scale) {
     return make_texture(name, name + ".png", res, res,
         bump_to_normal_map(
-            res, res, make_bumpdimple_image(res, res, tile), scale), false);
+            res, res, make_bumpdimple_image(res, res, tile), scale),
+        false);
 }
 texture* make_sky_texture(const std::string& name, int res, float skyangle) {
-    return make_texture(name, name + ".hdr", res * 2, res, 
+    return make_texture(name, name + ".hdr", res * 2, res,
         make_sunsky_image(res * 2, res, skyangle));
 }
 texture* make_lights_texture(const std::string& name, int res, const vec3f& le,
     int nlights, float langle, float lwidth, float lheight) {
-    return make_texture(name, name + ".hdr", res * 2, res, 
+    return make_texture(name, name + ".hdr", res * 2, res,
         make_lights_image(res * 2, res, le, nlights, langle, lwidth, lheight));
 }
 
@@ -2799,7 +2812,7 @@ scene* make_cornellbox_scene(const std::string& name, bool envlight) {
     auto scn = new scene();
     scn->name = name;
     scn->cameras.push_back(
-        make_camera("cam", {0, 1, 5.15f}, {0, 1, 0}, 27 * pi / 180, 1));
+        make_camera("cam", lookat_frame({0, 1, 5.15f}, {0, 1, 0}, {0,1,0}), 0.036f, 0.024f, 0.035f));
     scn->materials.push_back(make_material("white", {0.725f, 0.71f, 0.68f}));
     scn->materials.push_back(make_material("red", {0.63f, 0.065f, 0.05f}));
     scn->materials.push_back(make_material("green", {0.14f, 0.45f, 0.091f}));
@@ -2861,13 +2874,16 @@ scene* make_simple_scene(const std::string& name,
 
     if (objs.size() >= 3) {
         cams.push_back(make_camera(
-            "cam", {0, 5, 14}, {0, 1, 0}, 14.0f * pi / 180, 2.35f / 1.0f));
+            "cam", lookat_frame({0, 5, 14}, {0, 1, 0}, {0,1,0}), 0.036f, 
+            0.036f / 2.35f, 0.1f));
     } else if (objs.size() == 2) {
         cams.push_back(make_camera(
-            "cam", {0, 5, 14}, {0, 1, 0}, 14.0f * pi / 180, 16.0f / 9.0f));
+            "cam", lookat_frame({0, 5, 14}, {0, 1, 0}, {0,1,0}), 0.036f, 
+            0.036f / 1.5f, 0.1f));
     } else if (objs.size() == 1) {
         cams.push_back(
-            make_camera("cam", {0, 5, 14}, {0, 1, 0}, 14.0f * pi / 180, 1.0f));
+            make_camera("cam", lookat_frame({0, 5, 14}, {0, 1, 0}, {0,1,0}), 0.036f, 
+            0.036f, 0.1f));
     }
 
     auto ists = std::vector<instance*>();
@@ -2924,7 +2940,8 @@ scene* make_simple_scene(
     auto ists = std::vector<instance*>();
     auto envs = std::vector<environment*>();
     cams.push_back(
-        make_camera("cam", {0, 5, 14}, {0, 1, 0}, 14.0f * pi / 180, 1.0f));
+        make_camera("cam", lookat_frame({0, 5, 14}, {0, 1, 0}, {0, 1, 0}), 
+        0.036f, 0.036f, 0.1f));
     ists.push_back(make_simple_floor());
     ists.push_back(make_instance(
         shp->name, shp, mat, nullptr, translation_frame({0, 1, 0})));
@@ -2942,7 +2959,7 @@ scene* make_shape_scene(
     const std::string& name, shape* shp, material* mat, bool envlight) {
     auto cams = std::vector<camera*>();
     cams.push_back(
-        make_camera("cam", {0, 5, 14}, {0, 1, 0}, 14.0f * pi / 180, 1.0f));
+        make_camera("cam", lookat_frame({0, 5, 14}, {0, 1, 0}, {0, 1, 0}), 0.036f, 0.036f, 0.1f));
     auto ists = std::vector<instance*>();
     auto envs = std::vector<environment*>();
     ists.push_back(
@@ -2960,7 +2977,7 @@ scene* make_shape_scene(
 scene* make_environment_scene(const std::string& name, environment* env) {
     auto cams = std::vector<camera*>();
     cams.push_back(
-        make_camera("cam", {0, 5, 14}, {0, 1, 0}, 14.0f * pi / 180, 1.0f));
+        make_camera("cam", lookat_frame({0, 5, 14}, {0, 1, 0}, {0, 1, 0}), 0.036f, 0.036f / 1.5f, 0.05f));
     auto ists = std::vector<instance*>();
     auto envs = std::vector<environment*>();
     ists.push_back(make_instance("obj", make_sphere_shape("obj"),
@@ -2977,7 +2994,7 @@ scene* make_random_instances_scene(const std::string& name, const vec2i& num,
                       (bbox.max.x - bbox.min.x) / num.y);
 
     auto cam = make_camera(
-        "cam", {0, 5, 14}, {0, 1, 0}, 14.0f * pi / 180, 2.35f / 1.0f);
+        "cam", lookat_frame({0, 5, 14}, {0, 1, 0}, {0, 1, 0}), 0.036f, 0.036f / 1.5f, 0.035f);
 
     auto ists = std::vector<instance*>();
     ists.push_back(make_instance("floor", make_floor_shape("floor"),

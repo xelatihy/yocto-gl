@@ -195,8 +195,8 @@ bool is_hdr_filename(const std::string& filename);
 // Loads/saves a 4 channel ldr/hdr image.
 std::vector<vec4b> load_image4b(
     const std::string& filename, int& width, int& height);
-std::vector<vec4f> load_image4f(
-    const std::string& filename, int& width, int& height, bool srgb_8bit = true);
+std::vector<vec4f> load_image4f(const std::string& filename, int& width,
+    int& height, bool srgb_8bit = true);
 bool save_image4b(const std::string& filename, int width, int height,
     const std::vector<vec4b>& img);
 bool save_image4f(const std::string& filename, int width, int height,

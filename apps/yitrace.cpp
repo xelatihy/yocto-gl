@@ -188,13 +188,13 @@ bool update(ygl::glwindow* win, app_state* app) {
 
     // update BVH
     for (auto sel : app->update_list) {
-        if (sel.as<ygl::shape>()) { 
+        if (sel.as<ygl::shape>()) {
             ygl::log_info("refit shape bvh");
-            ygl::refit_bvh(sel.as<ygl::shape>()); 
+            ygl::refit_bvh(sel.as<ygl::shape>());
         }
-        if (sel.as<ygl::instance>()) { 
+        if (sel.as<ygl::instance>()) {
             ygl::log_info("refit scene bvh");
-            ygl::refit_bvh(app->scn, false); 
+            ygl::refit_bvh(app->scn, false);
         }
         if (sel.as<ygl::node>()) {
             ygl::log_info("refit scene bvh");
@@ -206,8 +206,8 @@ bool update(ygl::glwindow* win, app_state* app) {
 
     // render preview image
     if (app->preview_resolution) {
-        auto pwidth =
-            (int)std::round(app->cam->aspect * app->preview_resolution);
+        auto pwidth = (int)std::round(
+            app->preview_resolution * app->width / (float)app->height);
         auto pheight = app->preview_resolution;
         auto pimg = std::vector<ygl::vec4f>(pwidth * pheight);
         auto prngs = ygl::make_rng_seq(pwidth * pheight, 7);
@@ -265,12 +265,19 @@ void run_ui(app_state* app) {
     // loop
     while (!ygl::should_glwindow_close(win)) {
         // handle mouse and keyboard for navigation
-        if (ygl::handle_glcamera_navigation(
-                win, app->cam, app->navigation_fps)) {
-            app->update_list.push_back(app->cam);
+        if (app->navigation_fps) {
+            if (ygl::handle_glcamera_fps(win, app->cam)) {
+                app->update_list.push_back(app->cam);
+            }
+        } else {
+            if (ygl::handle_glcamera_turntable(win, app->cam,
+                    ygl::handle_glcamera_turntable_dist(
+                        win, app->cam, app->scn, app->selection))) {
+                app->update_list.push_back(app->cam);
+            }
         }
-        ygl::handle_glscene_selection(win, app->scn, app->cam, app->resolution,
-            app->imframe, app->selection);
+        ygl::handle_glscene_selection(win, app->scn, app->cam,
+            {app->width, app->height}, app->imframe, app->selection);
 
         // draw
         ygl::center_glimage(app->imframe, {app->width, app->height},
@@ -384,7 +391,8 @@ int main(int argc, char* argv[]) {
 
     // initialize rendering objects
     ygl::log_info("initializing tracer data");
-    app->width = (int)round(app->cam->aspect * app->resolution);
+    app->width =
+        (int)round(app->resolution * app->cam->width / app->cam->height);
     app->height = app->resolution;
     app->img = std::vector<ygl::vec4f>(app->width * app->height);
     app->rngs = ygl::make_rng_seq(app->width * app->height, app->seed);

@@ -458,13 +458,15 @@ scene* load_pbrt(const std::string& filename) {
             cam->frame = inverse(stack.back().frame);
             cam->frame.z = -cam->frame.z;
             cam->focus = stack.back().focus;
-            cam->aspect = stack.back().aspect;
+            auto aspect = stack.back().aspect;
+            auto fovy = 1.0f;
             auto type = jcmd.at("type").get<std::string>();
             if (type == "perspective") {
-                cam->yfov = jcmd.at("fov").get<float>() * pi / 180;
+                fovy = jcmd.at("fov").get<float>() * pi / 180;
             } else {
                 log_error("{} camera not supported", type);
             }
+            ygl::set_camera_fovy(cam, fovy, aspect);
             scn->cameras.push_back(cam);
         } else if (cmd == "Texture") {
             auto found = false;

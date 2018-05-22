@@ -101,9 +101,10 @@ struct camera {
     std::string name = "";             // name
     frame3f frame = identity_frame3f;  // transform frame
     bool ortho = false;                // orthographic
-    float yfov = 2;                    // vertical field of view.
-    float aspect = 16.0f / 9.0f;       // aspect ratio
-    float focus = 1;                   // focu distance
+    float width = 0.036f;              // film width (default to 35mm)
+    float height = 0.024f;             // film height (default to 35mm)
+    float focal = 0.050f;       // focal length (defaul to 50 mm)
+    float focus = flt_max;        // focal distance (default to inf focus)
     float aperture = 0;                // lens aperture
     float near = 0.01f;                // near plane distance
     float far = 10000;                 // far plane distance
@@ -116,13 +117,13 @@ struct texture {
     int width = 0;                // width
     int height = 0;               // height
     std::vector<vec4f> pxl = {};  // image pixels
-    bool wrap_s = true;      // wrap in s coordinate
-    bool wrap_t = true;      // wrop in t coordinate
-    bool linear = true;      // linear interpolation
-    bool mipmap = true;      // mipmapping
-    float scale = 1;         // scale for occ, normal, bumps
-    bool srgb = true; // whether to use srgb when loading/saving to 8bit
-    void* gl_data = nullptr;      // unmanaged data for OpenGL viewer
+    bool wrap_s = true;           // wrap in s coordinate
+    bool wrap_t = true;           // wrop in t coordinate
+    bool linear = true;           // linear interpolation
+    bool mipmap = true;           // mipmapping
+    float scale = 1;              // scale for occ, normal, bumps
+    bool srgb = true;         // whether to use srgb when loading/saving to 8bit
+    void* gl_data = nullptr;  // unmanaged data for OpenGL viewer
 };
 
 // Material for surfaces, lines and triangles.
@@ -224,7 +225,7 @@ struct environment {
     std::string name = "";             // name
     frame3f frame = identity_frame3f;  // transform frame
     vec3f ke = {0, 0, 0};              // emission color
-    texture* ke_txt = {};          // emission texture
+    texture* ke_txt = {};              // emission texture
 
     // computed properties
     std::vector<float> elem_cdf;  // element cdf for sampling
@@ -423,17 +424,21 @@ vec3f eval_environment(const environment* env, const vec3f& i);
 
 // Evaluate a texture.
 vec4f eval_texture(const texture* info, const vec2f& texcoord);
+
+// Set and evaluate camera parameters. Setters take zeros as default values.
+float eval_camera_fovy(const camera* cam);
+float eval_camera_aspect(const camera* cam);
+void set_camera_fovy(
+    camera* cam, float fovy, float aspect, float width = 0.036f);
+
 // Generates a ray from a camera image coordinate `uv` and lens coordinates
 // `luv`.
 ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv);
 // Generates a ray from a camera for pixel coordinates `ij`, the resolution
 // `res`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and
 // the image resolution `res`.
-ray3f eval_camera_ray(const camera* cam, const vec2i& ij, int res,
+ray3f eval_camera_ray(const camera* cam, const vec2i& ij, const vec2i& imsize,
     const vec2f& puv, const vec2f& luv);
-// Synchronizes a camera aspect with image width and height. Set image
-// values any one is 0 or less. Set camera aspect otherwise.
-void sync_camera_aspect(const camera* cam, int& width, int& height);
 
 // Evaluates material parameters: emission, diffuse, specular, transmission,
 // roughness and opacity.
@@ -470,10 +475,12 @@ vec2f sample_environment(const environment* env, const vec2f& ruv);
 namespace ygl {
 
 // make scene elements
-camera* make_camera(const std::string& name, const vec3f& from, const vec3f& to,
-    float yfov, float aspect);
+camera* make_camera(const std::string& name, const frame3f& frame, 
+    float width = 0.036f, float height = 0.024f, float focal = 0.050f, 
+    float focus = flt_max, float aperture = 0);
 camera* make_bbox_camera(
-    const std::string& name, const bbox3f& bbox, float aspect = 16.0f / 9.0f);
+    const std::string& name, const bbox3f& bbox, float width = 0.036f, 
+    float height = 0.024f, float focal = 0.050f);
 texture* make_texture(const std::string& name, const std::string& path = "",
     int width = 0, int height = 0, const std::vector<vec4f>& pixels = {},
     bool srgb = true);

@@ -401,7 +401,8 @@ std::vector<vec4f> expose_image(const std::vector<vec4f>& hdr, float exposure) {
     auto ldr = std::vector<vec4f>(hdr.size());
     auto scale = pow(2.0f, exposure);
     for (auto i = 0; i < hdr.size(); i++)
-        ldr[i] = {hdr[i].x * scale, hdr[i].y * scale, hdr[i].z * scale, hdr[i].w};
+        ldr[i] = {
+            hdr[i].x * scale, hdr[i].y * scale, hdr[i].z * scale, hdr[i].w};
     return ldr;
 }
 
@@ -459,21 +460,21 @@ vec3f hsv_to_rgb(const vec3f& hsv) {
     auto h = hsv.x, s = hsv.y, v = hsv.z;
     if (hsv.y == 0.0f) return {v, v, v};
 
-    h = fmodf(h, 1.0f) / (60.0f/360.0f);
-    int   i = (int)h;
+    h = fmodf(h, 1.0f) / (60.0f / 360.0f);
+    int i = (int)h;
     float f = h - (float)i;
     float p = v * (1.0f - s);
     float q = v * (1.0f - s * f);
     float t = v * (1.0f - s * (1.0f - f));
 
     switch (i) {
-    case 0: return {v, t, p};
-    case 1: return {q, v, p};
-    case 2: return {p, v, t};
-    case 3: return {p, q, v};
-    case 4: return {t, p, v};
-    case 5: return {v, p, q};
-    default: return {v, p, q};
+        case 0: return {v, t, p};
+        case 1: return {q, v, p};
+        case 2: return {p, v, t};
+        case 3: return {p, q, v};
+        case 4: return {t, p, v};
+        case 5: return {v, p, q};
+        default: return {v, p, q};
     }
 }
 vec3f rgb_to_hsv(const vec3f& rgb) {
@@ -490,9 +491,8 @@ vec3f rgb_to_hsv(const vec3f& rgb) {
     }
 
     float chroma = r - (g < b ? g : b);
-    return { fabsf(K + (g - b) / (6.f * chroma + 1e-20f)),
-    chroma / (r + 1e-20f),
-    r};
+    return {
+        fabsf(K + (g - b) / (6.f * chroma + 1e-20f)), chroma / (r + 1e-20f), r};
 }
 
 }  // namespace ygl
@@ -598,7 +598,8 @@ std::vector<vec4f> make_uvgrid_image(
         for (int i = 0; i < width; i++) {
             auto ii = i / tile, jj = j / tile;
             auto ww = width / tile, hh = height / tile;
-            auto ph = (((256 / (ww * hh)) * (ii + jj * ww) - 64 + 256) % 256) / 360.f;
+            auto ph =
+                (((256 / (ww * hh)) * (ii + jj * ww) - 64 + 256) % 256) / 360.f;
             auto pv = 0.5f;
             auto ps = 0.8f;
             if (i % (tile / 2) && j % (tile / 2)) {

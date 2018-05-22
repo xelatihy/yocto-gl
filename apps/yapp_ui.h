@@ -49,6 +49,10 @@ struct scene_selection {
     T* as() {
         return (&typeid(T) == tinfo) ? (T*)ptr : nullptr;
     }
+    template <typename T>
+    const T* as() const {
+        return (&typeid(T) == tinfo) ? (T*)ptr : nullptr;
+    }
 
     void* ptr = nullptr;                    // selected pointer
     const std::type_info* tinfo = nullptr;  // type info
@@ -70,10 +74,11 @@ void draw_glscene(const scene* scn, const camera* cam,
     float exposure = 0, float gamma = 2.2f);
 
 // Handle camera navigation and scene selection
-bool handle_glcamera_navigation(
-    glwindow* win, camera* cam, bool navigation_fps);
+bool handle_glcamera_turntable(glwindow* win, camera* cam, float selected_dist);
+float handle_glcamera_turntable_dist(glwindow* win, camera* cam, const scene* scn, const scene_selection& sel);
+bool handle_glcamera_fps(glwindow* win, camera* cam);
 bool handle_glscene_selection(glwindow* win, const scene* scn,
-    const camera* cam, int res, const frame2f& imframe,
+    const camera* cam, const vec2i& imsize, const frame2f& imframe,
     scene_selection& sel);
 
 // Draws widgets for a camera. Used for quickly making demos.

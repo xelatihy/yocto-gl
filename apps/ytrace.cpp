@@ -135,7 +135,7 @@ int main(int argc, char* argv[]) {
 
     // initialize rendering objects
     ygl::log_info("initializing tracer data");
-    auto width = (int)round(cam->aspect * resolution);
+    auto width = (int)round(resolution * cam->width / cam->height);
     auto height = resolution;
     auto img = std::vector<ygl::vec4f>(width * height);
     auto rngs = ygl::make_rng_seq(width * height, seed);
@@ -148,7 +148,8 @@ int main(int argc, char* argv[]) {
                 ygl::path_dirname(imfilename), ygl::path_basename(imfilename),
                 sample, ygl::path_extension(imfilename));
             ygl::log_info("saving image {}", filename);
-            ygl::save_image4f(filename, width, height, ygl::expose_image(img, exposure));
+            ygl::save_image4f(
+                filename, width, height, ygl::expose_image(img, exposure));
         }
         ygl::log_info_begin("rendering sample {}/{}", sample, nsamples);
         if (noparallel) {
@@ -166,7 +167,8 @@ int main(int argc, char* argv[]) {
 
     // save image
     ygl::log_info("saving image {}", imfilename);
-    ygl::save_image4f(imfilename, width, height, ygl::expose_image(img, exposure));
+    ygl::save_image4f(
+        imfilename, width, height, ygl::expose_image(img, exposure));
 
     // cleanup
     delete scn;

@@ -41,15 +41,15 @@ struct app_state {
     std::string imfilename;
     std::string outfilename;
 
-    int resolution = 512;                        // image resolution
-    bool wireframe = false;                      // wireframe drawing
-    bool edges = false;                          // draw edges
-    float edge_offset = 0.01f;                   // offset for edges
-    bool eyelight = false;                       // camera light mode
-    float exposure = 0;                          // exposure
-    float gamma = 2.2f;                          // gamma
+    int resolution = 512;                           // image resolution
+    bool wireframe = false;                         // wireframe drawing
+    bool edges = false;                             // draw edges
+    float edge_offset = 0.01f;                      // offset for edges
+    bool eyelight = false;                          // camera light mode
+    float exposure = 0;                             // exposure
+    float gamma = 2.2f;                             // gamma
     ygl::vec4f background = {0.8f, 0.8f, 0.8f, 0};  // background
-    ygl::vec3f ambient = {0, 0, 0};              // ambient lighting
+    ygl::vec3f ambient = {0, 0, 0};                 // ambient lighting
 
     ygl::glsurface_program prog;
 
@@ -169,7 +169,8 @@ inline void draw(ygl::glwindow* win, app_state* app) {
         }
         if (ygl::begin_glwidgets_tree(win, "scene object")) {
             ygl::draw_glwidgets_scene_inspector(win, "", app->scn,
-                app->selection, app->update_list, 200, app->inspector_highlights);
+                app->selection, app->update_list, 200,
+                app->inspector_highlights);
             ygl::end_glwidgets_tree(win);
         }
         if (ygl::begin_glwidgets_tree(win, "log")) {
@@ -189,10 +190,10 @@ inline void refresh(ygl::glwindow* win) {
 // run ui loop
 void run_ui(app_state* app) {
     // window
-    auto win =
-        ygl::make_glwindow((int)std::round(app->cam->aspect * app->resolution) +
-                               ygl::default_glwidgets_width,
-            app->resolution, "yview | " + app->filename, app);
+    auto win = ygl::make_glwindow(
+        (int)std::round(app->resolution * app->cam->width / app->cam->height) +
+            ygl::default_glwidgets_width,
+        app->resolution, "yview | " + app->filename, app);
     ygl::set_glwindow_callbacks(win, nullptr, nullptr, refresh);
 
     // load textures and vbos
@@ -208,7 +209,13 @@ void run_ui(app_state* app) {
     // loop
     while (!should_glwindow_close(win)) {
         // handle mouse and keyboard for navigation
-        ygl::handle_glcamera_navigation(win, app->cam, app->navigation_fps);
+        if (app->navigation_fps) {
+            ygl::handle_glcamera_fps(win, app->cam);
+        } else {
+            ygl::handle_glcamera_turntable(win, app->cam,
+                ygl::handle_glcamera_turntable_dist(
+                    win, app->cam, app->scn, app->selection));
+        }
 
         // animation
         if (app->animate) {
