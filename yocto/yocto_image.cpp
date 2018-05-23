@@ -291,11 +291,11 @@ bool save_image4b(const std::string& filename, int width, int height,
 bool save_image4f(const std::string& filename, int width, int height,
     const std::vector<vec4f>& img, bool srgb_8bit) {
     if (path_extension(filename) == ".png") {
-        auto ldr = (srgb_8bit) ? linear_to_srgb(img) : float_to_byte(img);
+        auto ldr = float_to_byte((srgb_8bit) ? linear_to_srgb(img) : img);
         return stbi_write_png(
             filename.c_str(), width, height, 4, (byte*)ldr.data(), width * 4);
     } else if (path_extension(filename) == ".jpg") {
-        auto ldr = (srgb_8bit) ? linear_to_srgb(img) : float_to_byte(img);
+        auto ldr = float_to_byte((srgb_8bit) ? linear_to_srgb(img) : img);
         return stbi_write_jpg(
             filename.c_str(), width, height, 4, (byte*)ldr.data(), 75);
     } else if (path_extension(filename) == ".hdr") {

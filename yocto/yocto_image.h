@@ -86,14 +86,14 @@ inline vec4f byte_to_float(const vec4b& a) {
 }
 
 // Approximate conversion from srgb.
-inline vec4f srgb_to_linear(const vec4b& srgb) {
-    return {pow(srgb.x / 255.0f, 2.2f), pow(srgb.y / 255.0f, 2.2f),
-        pow(srgb.z / 255.0f, 2.2f), srgb.w / 255.0f};
+inline vec4f srgb_to_linear(const vec4f& srgb) {
+    return {pow(srgb.x, 2.2f), pow(srgb.y, 2.2f),
+        pow(srgb.z, 2.2f), srgb.w};
 }
 // Approximate conversion to srgb.
-inline vec4b linear_to_srgb(const vec4f& lin) {
-    return float_to_byte({pow(lin.x, 1 / 2.2f), pow(lin.y, 1 / 2.2f),
-        pow(lin.z, 1 / 2.2f), lin.w});
+inline vec4f linear_to_srgb(const vec4f& lin) {
+    return {pow(lin.x, 1 / 2.2f), pow(lin.y, 1 / 2.2f),
+        pow(lin.z, 1 / 2.2f), lin.w};
 }
 
 // Approximate luminance estimate
@@ -117,13 +117,13 @@ vec3f rgb_to_xyz(const vec3f& rgb);
 namespace ygl {
 
 // Approximate conversion from/to srgb.
-inline std::vector<vec4f> srgb_to_linear(const std::vector<vec4b>& srgb) {
+inline std::vector<vec4f> srgb_to_linear(const std::vector<vec4f>& srgb) {
     auto lin = std::vector<vec4f>(srgb.size());
     for (auto i = 0; i < srgb.size(); i++) lin[i] = srgb_to_linear(srgb[i]);
     return lin;
 }
-inline std::vector<vec4b> linear_to_srgb(const std::vector<vec4f>& lin) {
-    auto srgb = std::vector<vec4b>(lin.size());
+inline std::vector<vec4f> linear_to_srgb(const std::vector<vec4f>& lin) {
+    auto srgb = std::vector<vec4f>(lin.size());
     for (auto i = 0; i < lin.size(); i++) srgb[i] = linear_to_srgb(lin[i]);
     return srgb;
 }

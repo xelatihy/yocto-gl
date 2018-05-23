@@ -9,6 +9,20 @@ Please consider this to be just development notes and not any real planning.
 - better material rendering
 - better rendering
 
+## no gl image shading
+
+- yitrace generates a preview image in bytes directly or linear floats
+    - match yview
+- image io is either nchan/float/byte or 3f/4f
+    - this avoids entirely bytes in the high-level API
+- draw image blits the entire screen all in the fragment shader
+- all images are not in premultiplied color
+- linear_to_srgb in the shader
+- remove shader for images (just blit)
+- enable background with checkers if desired
+- proper alpha compositing in renderer
+    - can we use a background color and avoid the issues?
+
 ## giacomo
 
 - pbrt export
