@@ -240,8 +240,6 @@ bool is_hdr_filename(const std::string& filename) {
 std::vector<vec4b> load_image4b(
     const std::string& filename, int& width, int& height) {
     auto c = 0;
-    width = 0;
-    height = 0;
     auto pixels = (vec4b*)stbi_load(filename.c_str(), &width, &height, &c, 4);
     if (!pixels) return {};
     auto img = std::vector<vec4b>(pixels, pixels + width * height);
@@ -251,26 +249,40 @@ std::vector<vec4b> load_image4b(
 
 // Loads an hdr image.
 std::vector<vec4f> load_image4f(
-    const std::string& filename, int& width, int& height, bool srgb_8bit) {
+    const std::string& filename, int& width, int& height, float ldr_gamma) {
     auto ext = path_extension(filename);
-    auto c = 0;
-    auto pixels = (vec4f*)nullptr;
     if (ext == ".exr") {
+        auto pixels = (vec4f*)nullptr;
         if (LoadEXR((float**)&pixels, &width, &height, filename.c_str(),
                 nullptr) < 0)
             return {};
-        c = 4;
+        if (!pixels) return {};
+        auto img = std::vector<vec4f>(pixels, pixels + width * height);
+        free(pixels);
+        return img;
     } else if (ext == ".pfm") {
-        pixels = (vec4f*)load_pfm(filename.c_str(), &width, &height, &c, 4);
+        auto c = 0;
+        auto pixels = (vec4f*)load_pfm(filename.c_str(), &width, &height, &c, 4);
+        if (!pixels) return {};
+        auto img = std::vector<vec4f>(pixels, pixels + width * height);
+        free(pixels);
+        return img;
+    } else if (ext == ".hdr") {
+        auto c = 0;
+        auto pixels = (vec4f*)stbi_loadf(filename.c_str(), &width, &height, &c, 4);
+        if (!pixels) return {};
+        auto img = std::vector<vec4f>(pixels, pixels + width * height);
+        free(pixels);
+        return img;
     } else {
-        if (!srgb_8bit) stbi_ldr_to_hdr_gamma(1);
-        pixels = (vec4f*)stbi_loadf(filename.c_str(), &width, &height, &c, 4);
-        if (!srgb_8bit) stbi_ldr_to_hdr_gamma(2.2f);
+        auto c = 0;
+        auto pixels = (vec4b*)stbi_load(filename.c_str(), &width, &height, &c, 4);
+        if (!pixels) return {};
+        auto img8 = std::vector<vec4b>(pixels, pixels + width * height);
+        free(pixels);
+        auto img = gamma_to_linear(byte_to_float(img8), ldr_gamma);
+        return img;
     }
-    if (!pixels) return {};
-    auto img = std::vector<vec4f>(pixels, pixels + width * height);
-    delete pixels;
-    return img;
 }
 
 // Saves an ldr image.
@@ -282,6 +294,12 @@ bool save_image4b(const std::string& filename, int width, int height,
     } else if (path_extension(filename) == ".jpg") {
         return stbi_write_jpg(
             filename.c_str(), width, height, 4, (byte*)img.data(), 75);
+    } else if (path_extension(filename) == ".tga") {
+        return stbi_write_tga(
+            filename.c_str(), width, height, 4, (byte*)img.data());
+    } else if (path_extension(filename) == ".bmp") {
+        return stbi_write_bmp(
+            filename.c_str(), width, height, 4, (byte*)img.data());
     } else {
         return false;
     }
@@ -289,15 +307,23 @@ bool save_image4b(const std::string& filename, int width, int height,
 
 // Saves an hdr image.
 bool save_image4f(const std::string& filename, int width, int height,
-    const std::vector<vec4f>& img, bool srgb_8bit) {
+    const std::vector<vec4f>& img, float ldr_gamma) {
     if (path_extension(filename) == ".png") {
-        auto ldr = float_to_byte((srgb_8bit) ? linear_to_srgb(img) : img);
+        auto ldr = float_to_byte(linear_to_gamma(img));
         return stbi_write_png(
             filename.c_str(), width, height, 4, (byte*)ldr.data(), width * 4);
     } else if (path_extension(filename) == ".jpg") {
-        auto ldr = float_to_byte((srgb_8bit) ? linear_to_srgb(img) : img);
+        auto ldr = float_to_byte(linear_to_gamma(img));
         return stbi_write_jpg(
             filename.c_str(), width, height, 4, (byte*)ldr.data(), 75);
+    } else if (path_extension(filename) == ".tga") {
+        auto ldr = float_to_byte(linear_to_gamma(img));
+        return stbi_write_tga(
+            filename.c_str(), width, height, 4, (byte*)ldr.data());
+    } else if (path_extension(filename) == ".bmp") {
+        auto ldr = float_to_byte(linear_to_gamma(img));
+        return stbi_write_bmp(
+            filename.c_str(), width, height, 4, (byte*)ldr.data());
     } else if (path_extension(filename) == ".hdr") {
         return stbi_write_hdr(
             filename.c_str(), width, height, 4, (float*)img.data());
@@ -326,12 +352,12 @@ std::vector<vec4b> load_image4b_from_memory(
 
 // Loads an hdr image.
 std::vector<vec4f> load_image4f_from_memory(
-    const byte* data, int data_size, int& width, int& height, bool srgb_8bit) {
+    const byte* data, int data_size, int& width, int& height, float ldr_gamma) {
     auto c = 0;
-    if (!srgb_8bit) stbi_ldr_to_hdr_gamma(1);
+    stbi_ldr_to_hdr_gamma(ldr_gamma);
     auto pixels =
         (vec4f*)stbi_loadf_from_memory(data, data_size, &width, &height, &c, 4);
-    if (!srgb_8bit) stbi_ldr_to_hdr_gamma(2.2f);
+    stbi_ldr_to_hdr_gamma(2.2f);
     if (!pixels) return {};
     auto img = std::vector<vec4f>(pixels, pixels + width * height);
     delete pixels;
@@ -395,34 +421,6 @@ vec3f filmic_tonemap(const vec3f& hdr) {
     return x;
 }
 
-vec3f aces_tonemap(const vec3f& hdr) {
-    // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
-
-    // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
-    static const mat3f ACESInputMat =
-        transpose(mat3f{vec3f{0.59719f, 0.35458f, 0.04823f},
-            vec3f{0.07600f, 0.90834f, 0.01566f},
-            vec3f{0.02840f, 0.13383f, 0.83777f}});
-
-    // ODT_SAT => XYZ => D60_2_D65 => sRGB
-    static const mat3f ACESOutputMat =
-        transpose(mat3f{vec3f{1.60475f, -0.53108f, -0.07367f},
-            vec3f{-0.10208f, 1.10813f, -0.00605f},
-            vec3f{-0.00327f, -0.07276f, 1.07602f}});
-
-    auto x = hdr;
-    x = 2 * x;  // matches standard range
-    x = ACESInputMat * x;
-    // Apply RRT and ODT
-    vec3f a = x * (x + vec3f{0.0245786f, 0.0245786f, 0.0245786f}) -
-              vec3f{0.000090537f, 0.000090537f, 0.000090537f};
-    vec3f b = x * (0.983729f * x + vec3f{0.4329510f, 0.4329510f, 0.4329510f}) +
-              vec3f{0.238081f, 0.238081f, 0.238081f};
-    x = a / b;
-    x = ACESOutputMat * x;
-    return x;
-}
-
 // Tone mapping HDR to LDR images.
 std::vector<vec4f> expose_image(const std::vector<vec4f>& hdr, float exposure) {
     if (!exposure) return hdr;
@@ -439,16 +437,6 @@ std::vector<vec4f> filmic_tonemap_image(const std::vector<vec4f>& hdr) {
     auto ldr = std::vector<vec4f>(hdr.size());
     for (auto i = 0; i < hdr.size(); i++) {
         auto h = filmic_tonemap({hdr[i].x, hdr[i].y, hdr[i].z});
-        ldr[i] = {h.x, h.y, h.z, hdr[i].w};
-    }
-    return ldr;
-}
-
-// Tone mapping HDR to LDR images.
-std::vector<vec4f> aces_tonemap_image(const std::vector<vec4f>& hdr) {
-    auto ldr = std::vector<vec4f>(hdr.size());
-    for (auto i = 0; i < hdr.size(); i++) {
-        auto h = aces_tonemap({hdr[i].x, hdr[i].y, hdr[i].z});
         ldr[i] = {h.x, h.y, h.z, hdr[i].w};
     }
     return ldr;

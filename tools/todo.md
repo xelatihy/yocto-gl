@@ -11,13 +11,7 @@ Please consider this to be just development notes and not any real planning.
 
 ## no gl image shading
 
-- yitrace generates a preview image in bytes directly or linear floats
-    - match yview
-- image io is either nchan/float/byte or 3f/4f
-    - this avoids entirely bytes in the high-level API
-- draw image blits the entire screen all in the fragment shader
-- all images are not in premultiplied color
-- linear_to_srgb in the shader
+- gl_drawimage draws on the entire screen
 - remove shader for images (just blit)
 - enable background with checkers if desired
 - proper alpha compositing in renderer
@@ -37,6 +31,12 @@ Please consider this to be just development notes and not any real planning.
 ## testing
 
 - test all yocto tests
+
+## image
+
+- tone curve
+- 3D lut
+- implement correction workflow
 
 ## planned cleanup
 

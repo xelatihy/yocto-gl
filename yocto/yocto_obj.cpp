@@ -670,6 +670,9 @@ obj_scene* load_obj(const std::string& filename, bool split_shapes,
         add_texture(obj, txt_set, mat->disp_txt);
         add_texture(obj, txt_set, mat->occ_txt);
     }
+    for (auto env : obj->environments) {
+        add_texture(obj, txt_set, env->ke_txt);
+    }
 
     // close file
     fclose(fs);
