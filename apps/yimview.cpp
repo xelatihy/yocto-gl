@@ -42,8 +42,6 @@ struct gimage {
     int width = 0;                // width
     int height = 0;               // height
     std::vector<ygl::vec4f> pxl;  // pixels
-    bool srgb = true;             // srgb for 8bit i/o
-    bool ldr = false;
 
     // min/max values
     ygl::vec4f min = ygl::zero4f, max = ygl::zero4f;
@@ -52,8 +50,8 @@ struct gimage {
     // image adjustment
     bool updated = true;
     float exposure = 0;
+    float gamma = 2.2f;
     bool filmic = false;
-    bool aces = false;
 
     // display image
     std::vector<ygl::vec4f> display;
@@ -92,13 +90,13 @@ void update_minmax(gimage* img) {
 }
 
 // Loads a generic image
-gimage* load_gimage(const std::string& filename, bool srgb) {
+gimage* load_gimage(const std::string& filename, float exposure, float gamma) {
     auto img = new gimage();
     img->filename = filename;
     img->name = ygl::path_filename(filename);
-    img->srgb = srgb;
-    img->pxl = ygl::load_image4f(filename, img->width, img->height, img->srgb);
-    img->ldr = !ygl::is_hdr_filename(filename);
+    img->exposure = exposure;
+    img->gamma = gamma;
+    img->pxl = ygl::load_image4f(filename, img->width, img->height, img->gamma);
     if (img->pxl.empty()) {
         throw std::runtime_error("cannot load image " + img->filename);
     }
@@ -141,7 +139,7 @@ void update_display_image(gimage* img) {
     if (img->exposure)
         img->display = ygl::expose_image(img->display, img->exposure);
     if (img->filmic) img->display = ygl::filmic_tonemap_image(img->display);
-    if (img->aces) img->display = ygl::aces_tonemap_image(img->display);
+    if (img->gamma != 1) img->display = ygl::linear_to_gamma(img->display, img->gamma);
     img->updated = false;
 }
 
@@ -154,9 +152,8 @@ void draw_glwidgets(ygl::glwindow* win, app_state* app) {
         auto edited = 0;
         edited += ygl::draw_glwidgets_dragbox(
             win, "exposure", app->img->exposure, -5, 5);
+        edited += ygl::draw_glwidgets_dragbox(win, "gamma", app->img->gamma, 1, 3);
         edited += ygl::draw_glwidgets_checkbox(win, "filmic", app->img->filmic);
-        ygl::continue_glwidgets_line(win);
-        edited += ygl::draw_glwidgets_checkbox(win, "aces", app->img->aces);
         if (edited) app->img->updated = true;
         auto zoom = app->imframe.x.x;
         if (ygl::draw_glwidgets_dragbox(win, "zoom", zoom, 0.1, 10))
@@ -192,8 +189,7 @@ void draw(ygl::glwindow* win, app_state* app) {
     auto framebuffer_size = get_glwindow_framebuffer_size(win);
     ygl::set_glviewport(framebuffer_size);
     ygl::clear_glbuffers(app->background);
-    ygl::draw_glimage(app->gl_prog, app->img->gl_txt, window_size, app->imframe,
-        0, app->img->srgb ? 2.2f : 1.0f);
+    ygl::draw_glimage(app->gl_prog, app->img->gl_txt, window_size, app->imframe);
     draw_glwidgets(win, app);
     ygl::swap_glwindow_buffers(win);
 }
@@ -284,8 +280,10 @@ int main(int argc, char* argv[]) {
 
     // command line params
     auto parser = ygl::make_parser(argc, argv, "yimview", "view images");
-    auto nosrgb =
-        ygl::parse_flag(parser, "--no-srgb", "", "no srgb for 8 bits");
+    auto gamma =
+        ygl::parse_opt(parser, "--gamma", "-g", "display gamma", 2.2f);
+    auto exposure =
+        ygl::parse_opt(parser, "--exposure", "-e", "display exposure", 0.0f);
     auto diff = ygl::parse_flag(parser, "--diff", "-d", "compute diff images");
     auto lum_diff = ygl::parse_flag(
         parser, "--luminance-diff", "-D", "compute luminance diffs");
@@ -300,7 +298,7 @@ int main(int argc, char* argv[]) {
     // loading images
     for (auto filename : filenames) {
         ygl::log_info("loading {}", filename);
-        app->imgs.push_back(load_gimage(filename, !nosrgb));
+        app->imgs.push_back(load_gimage(filename, exposure, gamma));
     }
     app->img = app->imgs.at(0);
     if (diff) {

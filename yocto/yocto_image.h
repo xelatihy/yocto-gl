@@ -85,15 +85,15 @@ inline vec4f byte_to_float(const vec4b& a) {
     return {a.x / 255.0f, a.y / 255.0f, a.z / 255.0f, a.w / 255.0f};
 }
 
-// Approximate conversion from srgb.
-inline vec4f srgb_to_linear(const vec4f& srgb) {
-    return {pow(srgb.x, 2.2f), pow(srgb.y, 2.2f),
-        pow(srgb.z, 2.2f), srgb.w};
+// Conversion between linear and gamma-encoded images.
+inline vec4f gamma_to_linear(const vec4f& srgb, float gamma = 2.2f) {
+    return {pow(srgb.x, gamma), pow(srgb.y, gamma),
+        pow(srgb.z, gamma), srgb.w};
 }
 // Approximate conversion to srgb.
-inline vec4f linear_to_srgb(const vec4f& lin) {
-    return {pow(lin.x, 1 / 2.2f), pow(lin.y, 1 / 2.2f),
-        pow(lin.z, 1 / 2.2f), lin.w};
+inline vec4f linear_to_gamma(const vec4f& lin, float gamma = 2.2f) {
+    return {pow(lin.x, 1 / gamma), pow(lin.y, 1 / gamma),
+        pow(lin.z, 1 / gamma), lin.w};
 }
 
 // Approximate luminance estimate
@@ -116,15 +116,15 @@ vec3f rgb_to_xyz(const vec3f& rgb);
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Approximate conversion from/to srgb.
-inline std::vector<vec4f> srgb_to_linear(const std::vector<vec4f>& srgb) {
+// Conversion between linear and gamma-encoded images.
+inline std::vector<vec4f> gamma_to_linear(const std::vector<vec4f>& srgb, float gamma = 2.2f) {
     auto lin = std::vector<vec4f>(srgb.size());
-    for (auto i = 0; i < srgb.size(); i++) lin[i] = srgb_to_linear(srgb[i]);
+    for (auto i = 0; i < srgb.size(); i++) lin[i] = gamma_to_linear(srgb[i], gamma);
     return lin;
 }
-inline std::vector<vec4f> linear_to_srgb(const std::vector<vec4f>& lin) {
+inline std::vector<vec4f> linear_to_gamma(const std::vector<vec4f>& lin, float gamma = 2.2f) {
     auto srgb = std::vector<vec4f>(lin.size());
-    for (auto i = 0; i < lin.size(); i++) srgb[i] = linear_to_srgb(lin[i]);
+    for (auto i = 0; i < lin.size(); i++) srgb[i] = linear_to_gamma(lin[i], gamma);
     return srgb;
 }
 
@@ -140,12 +140,9 @@ inline std::vector<vec4b> float_to_byte(const std::vector<vec4f>& fl) {
     return bt;
 }
 
-// Apply exposure to an image
+// Apply exposure and filmic tone mapping
 std::vector<vec4f> expose_image(const std::vector<vec4f>& hdr, float exposure);
-
-// Tone mapping linear HDR to linear LDR images in reference space.
 std::vector<vec4f> filmic_tonemap_image(const std::vector<vec4f>& hdr);
-std::vector<vec4f> aces_tonemap_image(const std::vector<vec4f>& hdr);
 
 // Make example images.
 std::vector<vec4f> make_grid_image(int width, int height, int tile = 8,
@@ -156,7 +153,7 @@ std::vector<vec4f> make_checker_image(int width, int height, int tile = 8,
     const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1.0f});
 std::vector<vec4f> make_bumpdimple_image(int width, int height, int tile = 8);
 std::vector<vec4f> make_ramp_image(
-    int width, int height, const vec4b& c0, const vec4b& c1, bool srgb = false);
+    int width, int height, const vec4b& c0, const vec4b& c1, float srgb = false);
 std::vector<vec4f> make_gammaramp_image(int width, int height);
 std::vector<vec4f> make_uv_image(int width, int height);
 std::vector<vec4f> make_uvgrid_image(
@@ -196,15 +193,15 @@ bool is_hdr_filename(const std::string& filename);
 std::vector<vec4b> load_image4b(
     const std::string& filename, int& width, int& height);
 std::vector<vec4f> load_image4f(const std::string& filename, int& width,
-    int& height, bool srgb_8bit = true);
+    int& height, float ldr_gamma = 2.2f);
 bool save_image4b(const std::string& filename, int width, int height,
     const std::vector<vec4b>& img);
 bool save_image4f(const std::string& filename, int width, int height,
-    const std::vector<vec4f>& img, bool srgb_8bit = true);
+    const std::vector<vec4f>& img, float ldr_gamma = 2.2f);
 std::vector<vec4b> load_image4b_from_memory(
     const byte* data, int data_size, int& width, int& height);
 std::vector<vec4f> load_image4f_from_memory(const byte* data, int data_size,
-    int& width, int& height, bool srgb_8bit = true);
+    int& width, int& height, float ldr_gamma = 2.2f);
 
 // Filter type and edge mode for resizing.
 enum struct resize_filter {

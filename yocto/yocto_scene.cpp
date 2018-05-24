@@ -894,7 +894,7 @@ scene* obj_to_scene(const obj_scene* obj) {
                 txt->pxl = otxt->hdr;
             } else {
                 txt->pxl = byte_to_float(otxt->ldr);
-                if(srgb) txt->pxl = srgb_to_linear(txt->pxl);
+                if(srgb) txt->pxl = gamma_to_linear(txt->pxl);
             }
         }
         scn->textures.push_back(txt);
@@ -1250,7 +1250,7 @@ obj_scene* scene_to_obj(
         if (is_hdr_filename(txt->path)) {
             otxt->hdr = txt->pxl;
         } else if (txt->srgb) {
-            otxt->ldr = float_to_byte(linear_to_srgb(txt->pxl));
+            otxt->ldr = float_to_byte(linear_to_gamma(txt->pxl));
         } else {
             otxt->ldr = float_to_byte(txt->pxl);
         }
@@ -1519,7 +1519,7 @@ scene* gltf_to_scene(const glTF* gltf) {
                 txt->pxl = gimg->data.hdr;
             } else {
                 txt->pxl = byte_to_float(gimg->data.ldr);
-                if(txt->srgb) txt->pxl = srgb_to_linear(txt->pxl);
+                if(txt->srgb) txt->pxl = gamma_to_linear(txt->pxl);
             }
         }
         scn->textures.push_back(txt);
@@ -1895,7 +1895,7 @@ glTF* scene_to_gltf(
         if (is_hdr_filename(txt->path)) {
             gimg->data.hdr = txt->pxl;
         } else if (txt->srgb) {
-            gimg->data.ldr = float_to_byte(linear_to_srgb(txt->pxl));
+            gimg->data.ldr = float_to_byte(linear_to_gamma(txt->pxl));
         } else {
             gimg->data.ldr = float_to_byte(txt->pxl);
         }

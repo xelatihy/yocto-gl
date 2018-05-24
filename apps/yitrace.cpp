@@ -136,7 +136,7 @@ void draw(ygl::glwindow* win, app_state* app) {
         }
         if (ygl::begin_glwidgets_tree(win, "view settings")) {
             ygl::draw_glwidgets_dragbox(win, "exposure", app->exposure, -5, 5);
-            ygl::draw_glwidgets_dragbox(win, "gamma", app->gamma, 0.2f, 4);
+            ygl::draw_glwidgets_dragbox(win, "gamma", app->gamma, 1, 3);
             ygl::draw_glwidgets_colorbox(win, "background", app->background);
             auto zoom = app->imframe.x.x;
             if (ygl::draw_glwidgets_dragbox(win, "zoom", zoom, 0.1, 10))
