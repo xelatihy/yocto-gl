@@ -31,8 +31,6 @@
 
 #include <cstdlib>
 
-#if YGL_IMAGEIO
-
 #ifndef _WIN32
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
@@ -62,7 +60,429 @@
 #pragma GCC diagnostic pop
 #endif
 
-#endif
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR COLOR UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Element-wise float to byte conversion.
+vec4b float_to_byte(const vec4f& a) {
+    return {float_to_byte(a.x), float_to_byte(a.y), float_to_byte(a.z),
+        float_to_byte(a.w)};
+}
+vec4f byte_to_float(const vec4b& a) {
+    return {byte_to_float(a.x), byte_to_float(a.y), byte_to_float(a.z),
+        byte_to_float(a.w)};
+}
+
+// Conversion between linear and gamma-encoded images.
+vec4f gamma_to_linear(const vec4f& srgb, float gamma) {
+    return {gamma_to_linear(srgb.x, gamma), gamma_to_linear(srgb.y, gamma),
+        gamma_to_linear(srgb.z, gamma), srgb.w};
+}
+vec4f linear_to_gamma(const vec4f& lin, float gamma) {
+    return {linear_to_gamma(lin.x, gamma), linear_to_gamma(lin.y, gamma),
+        linear_to_gamma(lin.z, gamma), lin.w};
+}
+vec3f gamma_to_linear(const vec3f& srgb, float gamma) {
+    return {gamma_to_linear(srgb.x, gamma), gamma_to_linear(srgb.y, gamma),
+        gamma_to_linear(srgb.z, gamma)};
+}
+vec3f linear_to_gamma(const vec3f& lin, float gamma) {
+    return {linear_to_gamma(lin.x, gamma), linear_to_gamma(lin.y, gamma),
+        linear_to_gamma(lin.z, gamma)};
+}
+
+// Approximate luminance estimation
+float luminance(const vec3f& a) { return (a.x + a.y + a.z) / 3; }
+
+// Convert between CIE XYZ and xyY
+vec3f xyz_to_xyY(const vec3f& xyz) {
+    if (xyz == zero3f) return zero3f;
+    return {xyz.x / (xyz.x + xyz.y + xyz.z), xyz.y / (xyz.x + xyz.y + xyz.z),
+        xyz.y};
+}
+// Convert between CIE XYZ and xyY
+vec3f xyY_to_xyz(const vec3f& xyY) {
+    if (xyY.y == 0) return zero3f;
+    return {xyY.x * xyY.z / xyY.y, xyY.z, (1 - xyY.x - xyY.y) * xyY.z / xyY.y};
+}
+// Convert between CIE XYZ and RGB
+vec3f xyz_to_rgb(const vec3f& xyz) {
+    // from http://www.brucelindbloom.com/index.html?Eqn_RGB_to_XYZ.html
+    if (xyz == zero3f) return zero3f;
+    return {+3.2404542f * xyz.x - 1.5371385f * xyz.y - 0.4985314f * xyz.z,
+        -0.9692660f * xyz.x + 1.8760108f * xyz.y + 0.0415560f * xyz.z,
+        +0.0556434f * xyz.x - 0.2040259f * xyz.y + 1.0572252f * xyz.z};
+}
+// Convert between CIE XYZ and RGB
+vec3f rgb_to_xyz(const vec3f& rgb) {
+    // from http://www.brucelindbloom.com/index.html?Eqn_RGB_to_XYZ.html
+    if (rgb == zero3f) return zero3f;
+    return {0.4124564f * rgb.x + 0.3575761f * rgb.y + 0.1804375f * rgb.z,
+        0.2126729f * rgb.x + 0.7151522f * rgb.y + 0.0721750f * rgb.z,
+        0.0193339f * rgb.x + 0.1191920f * rgb.y + 0.9503041f * rgb.z};
+}
+
+// Convert HSV to RGB
+vec3f hsv_to_rgb(const vec3f& hsv) {
+    // from Imgui.cpp
+    auto h = hsv.x, s = hsv.y, v = hsv.z;
+    if (hsv.y == 0.0f) return {v, v, v};
+
+    h = fmodf(h, 1.0f) / (60.0f / 360.0f);
+    int i = (int)h;
+    float f = h - (float)i;
+    float p = v * (1.0f - s);
+    float q = v * (1.0f - s * f);
+    float t = v * (1.0f - s * (1.0f - f));
+
+    switch (i) {
+        case 0: return {v, t, p};
+        case 1: return {q, v, p};
+        case 2: return {p, v, t};
+        case 3: return {p, q, v};
+        case 4: return {t, p, v};
+        case 5: return {v, p, q};
+        default: return {v, p, q};
+    }
+}
+vec3f rgb_to_hsv(const vec3f& rgb) {
+    // from Imgui.cpp
+    auto r = rgb.x, g = rgb.y, b = rgb.z;
+    float K = 0.f;
+    if (g < b) {
+        std::swap(g, b);
+        K = -1.f;
+    }
+    if (r < g) {
+        std::swap(r, g);
+        K = -2.f / 6.f - K;
+    }
+
+    float chroma = r - (g < b ? g : b);
+    return {
+        fabsf(K + (g - b) / (6.f * chroma + 1e-20f)), chroma / (r + 1e-20f), r};
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR IMAGE UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Conversion between linear and gamma-encoded images.
+std::vector<vec4f> gamma_to_linear(
+    const std::vector<vec4f>& srgb, float gamma) {
+    auto lin = std::vector<vec4f>(srgb.size());
+    for (auto i = 0; i < srgb.size(); i++)
+        lin[i] = gamma_to_linear(srgb[i], gamma);
+    return lin;
+}
+std::vector<vec4f> linear_to_gamma(const std::vector<vec4f>& lin, float gamma) {
+    auto srgb = std::vector<vec4f>(lin.size());
+    for (auto i = 0; i < lin.size(); i++)
+        srgb[i] = linear_to_gamma(lin[i], gamma);
+    return srgb;
+}
+std::vector<vec3f> gamma_to_linear(
+    const std::vector<vec3f>& srgb, float gamma) {
+    auto lin = std::vector<vec3f>(srgb.size());
+    for (auto i = 0; i < srgb.size(); i++)
+        lin[i] = gamma_to_linear(srgb[i], gamma);
+    return lin;
+}
+std::vector<vec3f> linear_to_gamma(const std::vector<vec3f>& lin, float gamma) {
+    auto srgb = std::vector<vec3f>(lin.size());
+    for (auto i = 0; i < lin.size(); i++)
+        srgb[i] = linear_to_gamma(lin[i], gamma);
+    return srgb;
+}
+// Conversion between linear and gamma-encoded images.
+std::vector<float> gamma_to_linear(
+    const std::vector<float>& srgb, int ncomp, float gamma) {
+    auto lin = std::vector<float>(srgb.size());
+    if (ncomp == 1) {
+        for (auto i = 0; i < srgb.size(); i++) {
+            lin[i] = gamma_to_linear(srgb[i], gamma);
+        }
+    } else if (ncomp == 2) {
+        for (auto i = 0; i < srgb.size() / 2; i++) {
+            lin[i * 2 + 0] = gamma_to_linear(srgb[i * 2 + 0], gamma);
+            lin[i * 2 + 1] = srgb[i * 2 + 1];
+        }
+    } else if (ncomp == 3) {
+        for (auto i = 0; i < srgb.size() / 3; i++) {
+            lin[i * 3 + 0] = gamma_to_linear(srgb[i * 3 + 0], gamma);
+            lin[i * 3 + 1] = gamma_to_linear(srgb[i * 3 + 1], gamma);
+            lin[i * 3 + 2] = gamma_to_linear(srgb[i * 3 + 2], gamma);
+        }
+    } else if (ncomp == 4) {
+        for (auto i = 0; i < srgb.size() / 4; i++) {
+            lin[i * 4 + 0] = gamma_to_linear(srgb[i * 4 + 0], gamma);
+            lin[i * 4 + 1] = gamma_to_linear(srgb[i * 4 + 1], gamma);
+            lin[i * 4 + 2] = gamma_to_linear(srgb[i * 4 + 2], gamma);
+            lin[i * 4 + 3] = srgb[i * 4 + 3];
+        }
+    } else {
+        throw std::runtime_error("number of components not supported");
+    }
+    return lin;
+}
+std::vector<float> linear_to_gamma(
+    const std::vector<float>& lin, int ncomp, float gamma) {
+    auto srgb = std::vector<float>(lin.size());
+    if (ncomp == 1) {
+        for (auto i = 0; i < lin.size(); i++) {
+            srgb[i] = linear_to_gamma(srgb[i], gamma);
+        }
+    } else if (ncomp == 2) {
+        for (auto i = 0; i < lin.size() / 2; i++) {
+            srgb[i * 2 + 0] = linear_to_gamma(lin[i * 2 + 0], gamma);
+            srgb[i * 2 + 1] = lin[i * 2 + 1];
+        }
+    } else if (ncomp == 3) {
+        for (auto i = 0; i < lin.size() / 3; i++) {
+            srgb[i * 3 + 0] = linear_to_gamma(lin[i * 3 + 0], gamma);
+            srgb[i * 3 + 1] = linear_to_gamma(lin[i * 3 + 1], gamma);
+            srgb[i * 3 + 2] = linear_to_gamma(lin[i * 3 + 2], gamma);
+        }
+    } else if (ncomp == 4) {
+        for (auto i = 0; i < lin.size() / 4; i++) {
+            srgb[i * 4 + 0] = linear_to_gamma(lin[i * 4 + 0], gamma);
+            srgb[i * 4 + 1] = linear_to_gamma(lin[i * 4 + 1], gamma);
+            srgb[i * 4 + 2] = linear_to_gamma(lin[i * 4 + 2], gamma);
+            srgb[i * 4 + 3] = lin[i * 4 + 3];
+        }
+    } else {
+        throw std::runtime_error("number of components not supported");
+    }
+    return srgb;
+}
+
+// Conversion from/to floats.
+std::vector<vec4f> byte_to_float(const std::vector<vec4b>& bt) {
+    auto fl = std::vector<vec4f>(bt.size());
+    for (auto i = 0; i < bt.size(); i++) fl[i] = byte_to_float(bt[i]);
+    return fl;
+}
+std::vector<vec4b> float_to_byte(const std::vector<vec4f>& fl) {
+    auto bt = std::vector<vec4b>(fl.size());
+    for (auto i = 0; i < fl.size(); i++) bt[i] = float_to_byte(fl[i]);
+    return bt;
+}
+// Conversion from/to floats.
+std::vector<float> byte_to_float(const std::vector<byte>& bt) {
+    auto fl = std::vector<float>(bt.size());
+    for (auto i = 0; i < bt.size(); i++) fl[i] = byte_to_float(bt[i]);
+    return fl;
+}
+std::vector<byte> float_to_byte(const std::vector<float>& fl) {
+    auto bt = std::vector<byte>(fl.size());
+    for (auto i = 0; i < fl.size(); i++) bt[i] = float_to_byte(fl[i]);
+    return bt;
+}
+
+// Conversion between different number of channels
+std::vector<vec4f> imagef_to_image4f(const std::vector<float>& ax, int ncomp) {
+    auto npixels = (int)ax.size() / ncomp;
+    auto a4 = std::vector<vec4f>(npixels);
+    if (ncomp == 1) {
+        for (auto i = 0; i < npixels; i++) { a4[i] = {ax[i], ax[i], ax[i], 1}; }
+    } else if (ncomp == 2) {
+        for (auto i = 0; i < npixels; i++) {
+            a4[i] = {
+                ax[i * 2 + 0], ax[i * 2 + 0], ax[i * 2 + 0], ax[i * 2 + 1]};
+        }
+    } else if (ncomp == 3) {
+        for (auto i = 0; i < npixels; i++) {
+            a4[i] = {ax[i * 3 + 0], ax[i * 3 + 1], ax[i * 3 + 2], 1};
+        }
+    } else if (ncomp == 4) {
+        for (auto i = 0; i < npixels; i++) {
+            a4[i] = {
+                ax[i * 4 + 0], ax[i * 4 + 1], ax[i * 4 + 2], ax[i * 4 + 3]};
+        }
+    } else {
+        throw std::runtime_error("number of components not supported");
+    }
+    return a4;
+}
+std::vector<float> image4f_to_imagef(const std::vector<vec4f>& a4, int ncomp) {
+    auto npixels = (int)a4.size();
+    auto ax = std::vector<float>(npixels * ncomp);
+    if (ncomp == 1) {
+        for (auto i = 0; i < npixels; i++) {
+            ax[i] = (a4[i].x + a4[i].y + a4[i].z) / 3.0f;
+        }
+    } else if (ncomp == 2) {
+        for (auto i = 0; i < npixels; i++) {
+            ax[i * 2 + 0] = (a4[i].x + a4[i].y + a4[i].z) / 3.0f;
+            ax[i * 2 + 1] = a4[i].w;
+        }
+    } else if (ncomp == 3) {
+        for (auto i = 0; i < npixels; i++) {
+            ax[i * 3 + 0] = a4[i].x;
+            ax[i * 3 + 1] = a4[i].y;
+            ax[i * 3 + 2] = a4[i].z;
+        }
+    } else if (ncomp == 4) {
+        for (auto i = 0; i < npixels; i++) {
+            ax[i * 4 + 0] = a4[i].x;
+            ax[i * 4 + 1] = a4[i].y;
+            ax[i * 4 + 2] = a4[i].z;
+            ax[i * 4 + 3] = a4[i].w;
+        }
+    } else {
+        throw std::runtime_error("number of components not supported");
+    }
+    return ax;
+}
+std::vector<vec4b> imageb_to_image4b(const std::vector<byte>& ax, int ncomp) {
+    auto npixels = (int)ax.size() / ncomp;
+    auto a4 = std::vector<vec4b>(npixels);
+    if (ncomp == 1) {
+        for (auto i = 0; i < npixels; i++) {
+            a4[i] = {ax[i], ax[i], ax[i], (byte)255};
+        }
+    } else if (ncomp == 2) {
+        for (auto i = 0; i < npixels; i++) {
+            a4[i] = {
+                ax[i * 2 + 0], ax[i * 2 + 0], ax[i * 2 + 0], ax[i * 2 + 1]};
+        }
+    } else if (ncomp == 3) {
+        for (auto i = 0; i < npixels; i++) {
+            a4[i] = {ax[i * 3 + 0], ax[i * 3 + 1], ax[i * 3 + 2], (byte)255};
+        }
+    } else if (ncomp == 4) {
+        for (auto i = 0; i < npixels; i++) {
+            a4[i] = {
+                ax[i * 4 + 0], ax[i * 4 + 1], ax[i * 4 + 2], ax[i * 4 + 3]};
+        }
+    } else {
+        throw std::runtime_error("number of components not supported");
+    }
+    return a4;
+}
+std::vector<byte> image4b_to_imageb(const std::vector<vec4b>& a4, int ncomp) {
+    auto npixels = (int)a4.size();
+    auto ax = std::vector<byte>(npixels * ncomp);
+    if (ncomp == 1) {
+        for (auto i = 0; i < npixels; i++) {
+            ax[i] = (byte)((a4[i].x + a4[i].y + a4[i].z) / 3.0f);
+        }
+    } else if (ncomp == 2) {
+        for (auto i = 0; i < npixels; i++) {
+            ax[i * 2 + 0] = (byte)((a4[i].x + a4[i].y + a4[i].z) / 3.0f);
+            ax[i * 2 + 1] = a4[i].w;
+        }
+    } else if (ncomp == 3) {
+        for (auto i = 0; i < npixels; i++) {
+            ax[i * 3 + 0] = a4[i].x;
+            ax[i * 3 + 1] = a4[i].y;
+            ax[i * 3 + 2] = a4[i].z;
+        }
+    } else if (ncomp == 4) {
+        for (auto i = 0; i < npixels; i++) {
+            ax[i * 4 + 0] = a4[i].x;
+            ax[i * 4 + 1] = a4[i].y;
+            ax[i * 4 + 2] = a4[i].z;
+            ax[i * 4 + 3] = a4[i].w;
+        }
+    } else {
+        throw std::runtime_error("number of components not supported");
+    }
+    return ax;
+}
+// Conversion between different number of channels
+std::vector<vec3f> imagef_to_image3f(const std::vector<float>& ax, int ncomp) {
+    auto npixels = (int)ax.size() / ncomp;
+    auto a3 = std::vector<vec3f>(npixels);
+    if (ncomp == 1) {
+        for (auto i = 0; i < npixels; i++) { a3[i] = {ax[i], ax[i], ax[i]}; }
+    } else if (ncomp == 2) {
+        for (auto i = 0; i < npixels; i++) {
+            a3[i] = {
+                ax[i * 2 + 0], ax[i * 2 + 0], ax[i * 2 + 0]};
+        }
+    } else if (ncomp == 3) {
+        for (auto i = 0; i < npixels; i++) {
+            a3[i] = {ax[i * 3 + 0], ax[i * 3 + 1], ax[i * 3 + 2]};
+        }
+    } else if (ncomp == 4) {
+        for (auto i = 0; i < npixels; i++) {
+            a3[i] = {
+                ax[i * 4 + 0], ax[i * 4 + 1], ax[i * 4 + 2]};
+        }
+    } else {
+        throw std::runtime_error("number of components not supported");
+    }
+    return a3;
+}
+std::vector<float> image3f_to_imagef(const std::vector<vec3f>& a3, int ncomp) {
+    auto npixels = (int)a3.size();
+    auto ax = std::vector<float>(npixels * ncomp);
+    if (ncomp == 1) {
+        for (auto i = 0; i < npixels; i++) {
+            ax[i] = (a3[i].x + a3[i].y + a3[i].z) / 3.0f;
+        }
+    } else if (ncomp == 2) {
+        for (auto i = 0; i < npixels; i++) {
+            ax[i * 2 + 0] = (a3[i].x + a3[i].y + a3[i].z) / 3.0f;
+            ax[i * 2 + 1] = 1;
+        }
+    } else if (ncomp == 3) {
+        for (auto i = 0; i < npixels; i++) {
+            ax[i * 3 + 0] = a3[i].x;
+            ax[i * 3 + 1] = a3[i].y;
+            ax[i * 3 + 2] = a3[i].z;
+        }
+    } else if (ncomp == 4) {
+        for (auto i = 0; i < npixels; i++) {
+            ax[i * 4 + 0] = a3[i].x;
+            ax[i * 4 + 1] = a3[i].y;
+            ax[i * 4 + 2] = a3[i].z;
+            ax[i * 4 + 3] = 1;
+        }
+    } else {
+        throw std::runtime_error("number of components not supported");
+    }
+    return ax;
+}
+
+vec3f filmic_tonemap(const vec3f& hdr) {
+    // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
+    auto x = hdr;
+    // x *= 0.6; // brings it back to ACES range
+    x = (x * (2.51f * x + vec3f{0.03f, 0.03f, 0.03f})) /
+        (x * (2.43f * x + vec3f{0.59f, 0.59f, 0.59f}) +
+            vec3f{0.14f, 0.14f, 0.14f});
+    return x;
+}
+
+// Tone mapping HDR to LDR images.
+std::vector<vec4f> expose_image(const std::vector<vec4f>& hdr, float exposure) {
+    if (!exposure) return hdr;
+    auto ldr = std::vector<vec4f>(hdr.size());
+    auto scale = pow(2.0f, exposure);
+    for (auto i = 0; i < hdr.size(); i++)
+        ldr[i] = {
+            hdr[i].x * scale, hdr[i].y * scale, hdr[i].z * scale, hdr[i].w};
+    return ldr;
+}
+
+// Tone mapping HDR to LDR images.
+std::vector<vec4f> filmic_tonemap_image(const std::vector<vec4f>& hdr) {
+    auto ldr = std::vector<vec4f>(hdr.size());
+    for (auto i = 0; i < hdr.size(); i++) {
+        auto h = filmic_tonemap({hdr[i].x, hdr[i].y, hdr[i].z});
+        ldr[i] = {h.x, h.y, h.z, hdr[i].w};
+    }
+    return ldr;
+}
+
+}  // namespace ygl
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGEIO
@@ -239,127 +659,167 @@ bool is_hdr_filename(const std::string& filename) {
 // Loads an ldr image.
 std::vector<vec4b> load_image4b(
     const std::string& filename, int& width, int& height) {
-    auto c = 0;
-    auto pixels = (vec4b*)stbi_load(filename.c_str(), &width, &height, &c, 4);
-    if (!pixels) return {};
-    auto img = std::vector<vec4b>(pixels, pixels + width * height);
-    free(pixels);
-    return img;
+    auto ncomp = 0;
+    auto pixels = load_imageb(filename, width, height, ncomp);
+    return imageb_to_image4b(pixels, ncomp);
 }
 
 // Loads an hdr image.
 std::vector<vec4f> load_image4f(
     const std::string& filename, int& width, int& height, float ldr_gamma) {
-    auto ext = path_extension(filename);
-    if (ext == ".exr") {
-        auto pixels = (vec4f*)nullptr;
-        if (LoadEXR((float**)&pixels, &width, &height, filename.c_str(),
-                nullptr) < 0)
-            return {};
-        if (!pixels) return {};
-        auto img = std::vector<vec4f>(pixels, pixels + width * height);
-        free(pixels);
-        return img;
-    } else if (ext == ".pfm") {
-        auto c = 0;
-        auto pixels = (vec4f*)load_pfm(filename.c_str(), &width, &height, &c, 4);
-        if (!pixels) return {};
-        auto img = std::vector<vec4f>(pixels, pixels + width * height);
-        free(pixels);
-        return img;
-    } else if (ext == ".hdr") {
-        auto c = 0;
-        auto pixels = (vec4f*)stbi_loadf(filename.c_str(), &width, &height, &c, 4);
-        if (!pixels) return {};
-        auto img = std::vector<vec4f>(pixels, pixels + width * height);
-        free(pixels);
-        return img;
-    } else {
-        auto c = 0;
-        auto pixels = (vec4b*)stbi_load(filename.c_str(), &width, &height, &c, 4);
-        if (!pixels) return {};
-        auto img8 = std::vector<vec4b>(pixels, pixels + width * height);
-        free(pixels);
-        auto img = gamma_to_linear(byte_to_float(img8), ldr_gamma);
-        return img;
-    }
+    auto ncomp = 0;
+    auto pixels = load_imagef(filename, width, height, ncomp);
+    return imagef_to_image4f(pixels, ncomp);
 }
 
 // Saves an ldr image.
 bool save_image4b(const std::string& filename, int width, int height,
     const std::vector<vec4b>& img) {
+    auto pxl = image4b_to_imageb(img, 4);
+    return save_imageb(filename, width, height, 4, pxl);
+}
+
+// Saves an hdr image.
+bool save_image4f(const std::string& filename, int width, int height,
+    const std::vector<vec4f>& img, float ldr_gamma) {
+    auto pxl = image4f_to_imagef(img, 4);
+    return save_imagef(filename, width, height, 4, pxl, ldr_gamma);
+}
+
+// Loads an ldr image.
+std::vector<vec4b> load_image4b_from_memory(
+    const byte* data, int data_size, int& width, int& height) {
+    auto ncomp = 0;
+    auto pixels = load_imageb_from_memory(data, data_size, width, height, ncomp);
+    return imageb_to_image4b(pixels, ncomp);
+}
+
+// Loads an hdr image.
+std::vector<vec4f> load_image4f_from_memory(
+    const byte* data, int data_size, int& width, int& height, float ldr_gamma) {
+    auto ncomp = 0;
+    auto pixels = load_imagef_from_memory(data, data_size, width, height, ncomp);
+    return imagef_to_image4f(pixels, ncomp);
+}
+
+// Loads an ldr image.
+std::vector<byte> load_imageb(
+    const std::string& filename, int& width, int& height, int& ncomp) {
+    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 0);
+    if (!pixels) return {};
+    auto img = std::vector<byte>(pixels, pixels + width * height * ncomp);
+    free(pixels);
+    return img;
+}
+
+// Loads an hdr image.
+std::vector<float> load_imagef(const std::string& filename, int& width,
+    int& height, int& ncomp, float ldr_gamma) {
+    auto ext = path_extension(filename);
+    if (ext == ".exr") {
+        auto pixels = (float*)nullptr;
+        if (LoadEXR((float**)&pixels, &width, &height, filename.c_str(),
+                nullptr) < 0)
+            return {};
+        if (!pixels) return {};
+        ncomp = 4;
+        auto img = std::vector<float>(pixels, pixels + width * height * ncomp);
+        free(pixels);
+        return img;
+    } else if (ext == ".pfm") {
+        auto pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, 0);
+        if (!pixels) return {};
+        auto img = std::vector<float>(pixels, pixels + width * height * ncomp);
+        free(pixels);
+        return img;
+    } else if (ext == ".hdr") {
+        auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 0);
+        if (!pixels) return {};
+        auto img = std::vector<float>(pixels, pixels + width * height * ncomp);
+        free(pixels);
+        return img;
+    } else {
+        auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 0);
+        if (!pixels) return {};
+        auto img8 = std::vector<byte>(pixels, pixels + width * height * ncomp);
+        free(pixels);
+        auto img = gamma_to_linear(byte_to_float(img8), ncomp, ldr_gamma);
+        return img;
+    }
+}
+
+// Saves an ldr image.
+bool save_imageb(const std::string& filename, int width, int height, int ncomp,
+    const std::vector<byte>& img) {
     if (path_extension(filename) == ".png") {
         return stbi_write_png(
-            filename.c_str(), width, height, 4, (byte*)img.data(), width * 4);
+            filename.c_str(), width, height, ncomp, img.data(), width * ncomp);
     } else if (path_extension(filename) == ".jpg") {
         return stbi_write_jpg(
-            filename.c_str(), width, height, 4, (byte*)img.data(), 75);
+            filename.c_str(), width, height, ncomp, img.data(), 75);
     } else if (path_extension(filename) == ".tga") {
         return stbi_write_tga(
-            filename.c_str(), width, height, 4, (byte*)img.data());
+            filename.c_str(), width, height, ncomp, img.data());
     } else if (path_extension(filename) == ".bmp") {
         return stbi_write_bmp(
-            filename.c_str(), width, height, 4, (byte*)img.data());
+            filename.c_str(), width, height, ncomp, img.data());
     } else {
         return false;
     }
 }
 
 // Saves an hdr image.
-bool save_image4f(const std::string& filename, int width, int height,
-    const std::vector<vec4f>& img, float ldr_gamma) {
+bool save_imagef(const std::string& filename, int width, int height, int ncomp,
+    const std::vector<float>& img, float ldr_gamma) {
     if (path_extension(filename) == ".png") {
-        auto ldr = float_to_byte(linear_to_gamma(img));
-        return stbi_write_png(
-            filename.c_str(), width, height, 4, (byte*)ldr.data(), width * 4);
+        auto ldr = float_to_byte(linear_to_gamma(img, ncomp));
+        return stbi_write_png(filename.c_str(), width, height, ncomp,
+            (byte*)ldr.data(), width * ncomp);
     } else if (path_extension(filename) == ".jpg") {
-        auto ldr = float_to_byte(linear_to_gamma(img));
+        auto ldr = float_to_byte(linear_to_gamma(img, ncomp));
         return stbi_write_jpg(
-            filename.c_str(), width, height, 4, (byte*)ldr.data(), 75);
+            filename.c_str(), width, height, ncomp, (byte*)ldr.data(), 75);
     } else if (path_extension(filename) == ".tga") {
-        auto ldr = float_to_byte(linear_to_gamma(img));
+        auto ldr = float_to_byte(linear_to_gamma(img, ncomp));
         return stbi_write_tga(
-            filename.c_str(), width, height, 4, (byte*)ldr.data());
+            filename.c_str(), width, height, ncomp, (byte*)ldr.data());
     } else if (path_extension(filename) == ".bmp") {
-        auto ldr = float_to_byte(linear_to_gamma(img));
+        auto ldr = float_to_byte(linear_to_gamma(img, ncomp));
         return stbi_write_bmp(
-            filename.c_str(), width, height, 4, (byte*)ldr.data());
+            filename.c_str(), width, height, ncomp, (byte*)ldr.data());
     } else if (path_extension(filename) == ".hdr") {
         return stbi_write_hdr(
-            filename.c_str(), width, height, 4, (float*)img.data());
+            filename.c_str(), width, height, ncomp, (float*)img.data());
     } else if (path_extension(filename) == ".pfm") {
-        return save_pfm(filename.c_str(), width, height, 4, (float*)img.data());
+        return save_pfm(filename.c_str(), width, height, ncomp, img.data());
     } else if (path_extension(filename) == ".exr") {
-        return !SaveEXR((float*)img.data(), width, height, 4, filename.c_str());
+        return !SaveEXR(
+            (float*)img.data(), width, height, ncomp, filename.c_str());
     } else {
         return false;
     }
 }
 
 // Loads an ldr image.
-std::vector<vec4b> load_image4b_from_memory(
-    const byte* data, int data_size, int& width, int& height) {
-    auto c = 0;
-    width = 0;
-    height = 0;
+std::vector<byte> load_imageb_from_memory(
+    const byte* data, int data_size, int& width, int& height, int& ncomp) {
     auto pixels =
-        (vec4b*)stbi_load_from_memory(data, data_size, &width, &height, &c, 4);
+        stbi_load_from_memory(data, data_size, &width, &height, &ncomp, 0);
     if (!pixels) return {};
-    auto img = std::vector<vec4b>(pixels, pixels + width * height);
+    auto img = std::vector<byte>(pixels, pixels + width * height * ncomp);
     free(pixels);
     return img;
 }
 
 // Loads an hdr image.
-std::vector<vec4f> load_image4f_from_memory(
-    const byte* data, int data_size, int& width, int& height, float ldr_gamma) {
-    auto c = 0;
+std::vector<float> load_imagef_from_memory(const byte* data, int data_size,
+    int& width, int& height, int& ncomp, float ldr_gamma) {
     stbi_ldr_to_hdr_gamma(ldr_gamma);
     auto pixels =
-        (vec4f*)stbi_loadf_from_memory(data, data_size, &width, &height, &c, 4);
+        stbi_loadf_from_memory(data, data_size, &width, &height, &ncomp, 0);
     stbi_ldr_to_hdr_gamma(2.2f);
     if (!pixels) return {};
-    auto img = std::vector<vec4f>(pixels, pixels + width * height);
+    auto img = std::vector<float>(pixels, pixels + width * height * ncomp);
     delete pixels;
     return img;
 }
@@ -407,121 +867,14 @@ std::vector<vec4b> resize_image(int width, int height,
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF IMAGE OPERATIONS
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-vec3f filmic_tonemap(const vec3f& hdr) {
-    // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
-    auto x = hdr;
-    // x *= 0.6; // brings it back to ACES range
-    x = (x * (2.51f * x + vec3f{0.03f, 0.03f, 0.03f})) /
-        (x * (2.43f * x + vec3f{0.59f, 0.59f, 0.59f}) +
-            vec3f{0.14f, 0.14f, 0.14f});
-    return x;
-}
-
-// Tone mapping HDR to LDR images.
-std::vector<vec4f> expose_image(const std::vector<vec4f>& hdr, float exposure) {
-    if (!exposure) return hdr;
-    auto ldr = std::vector<vec4f>(hdr.size());
-    auto scale = pow(2.0f, exposure);
-    for (auto i = 0; i < hdr.size(); i++)
-        ldr[i] = {
-            hdr[i].x * scale, hdr[i].y * scale, hdr[i].z * scale, hdr[i].w};
-    return ldr;
-}
-
-// Tone mapping HDR to LDR images.
-std::vector<vec4f> filmic_tonemap_image(const std::vector<vec4f>& hdr) {
-    auto ldr = std::vector<vec4f>(hdr.size());
-    for (auto i = 0; i < hdr.size(); i++) {
-        auto h = filmic_tonemap({hdr[i].x, hdr[i].y, hdr[i].z});
-        ldr[i] = {h.x, h.y, h.z, hdr[i].w};
-    }
-    return ldr;
-}
-
-// Convert between CIE XYZ and xyY
-vec3f xyz_to_xyY(const vec3f& xyz) {
-    if (xyz == zero3f) return zero3f;
-    return {xyz.x / (xyz.x + xyz.y + xyz.z), xyz.y / (xyz.x + xyz.y + xyz.z),
-        xyz.y};
-}
-// Convert between CIE XYZ and xyY
-vec3f xyY_to_xyz(const vec3f& xyY) {
-    if (xyY.y == 0) return zero3f;
-    return {xyY.x * xyY.z / xyY.y, xyY.z, (1 - xyY.x - xyY.y) * xyY.z / xyY.y};
-}
-// Convert between CIE XYZ and RGB
-vec3f xyz_to_rgb(const vec3f& xyz) {
-    // from http://www.brucelindbloom.com/index.html?Eqn_RGB_to_XYZ.html
-    if (xyz == zero3f) return zero3f;
-    return {+3.2404542f * xyz.x - 1.5371385f * xyz.y - 0.4985314f * xyz.z,
-        -0.9692660f * xyz.x + 1.8760108f * xyz.y + 0.0415560f * xyz.z,
-        +0.0556434f * xyz.x - 0.2040259f * xyz.y + 1.0572252f * xyz.z};
-}
-// Convert between CIE XYZ and RGB
-vec3f rgb_to_xyz(const vec3f& rgb) {
-    // from http://www.brucelindbloom.com/index.html?Eqn_RGB_to_XYZ.html
-    if (rgb == zero3f) return zero3f;
-    return {0.4124564f * rgb.x + 0.3575761f * rgb.y + 0.1804375f * rgb.z,
-        0.2126729f * rgb.x + 0.7151522f * rgb.y + 0.0721750f * rgb.z,
-        0.0193339f * rgb.x + 0.1191920f * rgb.y + 0.9503041f * rgb.z};
-}
-
-// Convert HSV to RGB
-vec3f hsv_to_rgb(const vec3f& hsv) {
-    // from Imgui.cpp
-    auto h = hsv.x, s = hsv.y, v = hsv.z;
-    if (hsv.y == 0.0f) return {v, v, v};
-
-    h = fmodf(h, 1.0f) / (60.0f / 360.0f);
-    int i = (int)h;
-    float f = h - (float)i;
-    float p = v * (1.0f - s);
-    float q = v * (1.0f - s * f);
-    float t = v * (1.0f - s * (1.0f - f));
-
-    switch (i) {
-        case 0: return {v, t, p};
-        case 1: return {q, v, p};
-        case 2: return {p, v, t};
-        case 3: return {p, q, v};
-        case 4: return {t, p, v};
-        case 5: return {v, p, q};
-        default: return {v, p, q};
-    }
-}
-vec3f rgb_to_hsv(const vec3f& rgb) {
-    // from Imgui.cpp
-    auto r = rgb.x, g = rgb.y, b = rgb.z;
-    float K = 0.f;
-    if (g < b) {
-        std::swap(g, b);
-        K = -1.f;
-    }
-    if (r < g) {
-        std::swap(r, g);
-        K = -2.f / 6.f - K;
-    }
-
-    float chroma = r - (g < b ? g : b);
-    return {
-        fabsf(K + (g - b) / (6.f * chroma + 1e-20f)), chroma / (r + 1e-20f), r};
-}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGE EXAMPLES
 // -----------------------------------------------------------------------------
 namespace ygl {
 
 // Make a grid image
-std::vector<vec4f> make_grid_image(
-    int width, int height, int tiles, const vec4f& c0, const vec4f& c1) {
-    auto img = std::vector<vec4f>(width * height);
+std::vector<vec3f> make_grid_image(
+    int width, int height, int tiles, const vec3f& c0, const vec3f& c1) {
+    auto img = std::vector<vec3f>(width * height);
     auto tile = width / tiles;
     for (int j = 0; j < width; j++) {
         for (int i = 0; i < height; i++) {
@@ -534,9 +887,9 @@ std::vector<vec4f> make_grid_image(
 }
 
 // Make a checkerboard image
-std::vector<vec4f> make_checker_image(
-    int width, int height, int tiles, const vec4f& c0, const vec4f& c1) {
-    auto img = std::vector<vec4f>(width * height);
+std::vector<vec3f> make_checker_image(
+    int width, int height, int tiles, const vec3f& c0, const vec3f& c1) {
+    auto img = std::vector<vec3f>(width * height);
     auto tile = width / tiles;
     for (int j = 0; j < height; j++) {
         for (int i = 0; i < width; i++) {
@@ -548,8 +901,8 @@ std::vector<vec4f> make_checker_image(
 }
 
 // Make an image with bumps and dimples.
-std::vector<vec4f> make_bumpdimple_image(int width, int height, int tiles) {
-    auto img = std::vector<vec4f>(width * height);
+std::vector<vec3f> make_bumpdimple_image(int width, int height, int tiles) {
+    auto img = std::vector<vec3f>(width * height);
     auto tile = width / tiles;
     for (int j = 0; j < height; j++) {
         for (int i = 0; i < width; i++) {
@@ -559,16 +912,16 @@ std::vector<vec4f> make_bumpdimple_image(int width, int height, int tiles) {
                 sqrt(float(ii * ii + jj * jj)) / sqrt(float(tile * tile) / 4);
             auto h = 0.5f;
             if (r < 0.5f) { h += (c) ? (0.5f - r) : -(0.5f - r); }
-            img[i + j * width] = {h, h, h, 1};
+            img[i + j * width] = {h, h, h};
         }
     }
     return img;
 }
 
 // Make a uv colored grid
-std::vector<vec4f> make_ramp_image(
-    int width, int height, const vec4f& c0, const vec4f& c1) {
-    auto img = std::vector<vec4f>(width * height);
+std::vector<vec3f> make_ramp_image(
+    int width, int height, const vec3f& c0, const vec3f& c1) {
+    auto img = std::vector<vec3f>(width * height);
     for (int j = 0; j < height; j++) {
         for (int i = 0; i < width; i++) {
             auto u = (float)i / (float)width;
@@ -579,14 +932,14 @@ std::vector<vec4f> make_ramp_image(
 }
 
 // Make a gamma ramp image
-std::vector<vec4f> make_gammaramp_imagef(int width, int height) {
-    auto img = std::vector<vec4f>(width * height);
+std::vector<vec3f> make_gammaramp_imagef(int width, int height) {
+    auto img = std::vector<vec3f>(width * height);
     for (int j = 0; j < height; j++) {
         for (int i = 0; i < width; i++) {
             auto u = j / float(height - 1);
             if (i < width / 3) u = pow(u, 2.2f);
             if (i > (width * 2) / 3) u = pow(u, 1 / 2.2f);
-            img[i + j * width] = {u, u, u, 1};
+            img[i + j * width] = {u, u, u};
         }
     }
     return img;
@@ -594,21 +947,21 @@ std::vector<vec4f> make_gammaramp_imagef(int width, int height) {
 
 // Make an image color with red/green in the [0,1] range. Helpful to visualize
 // uv texture coordinate application.
-std::vector<vec4f> make_uv_image(int width, int height) {
-    auto img = std::vector<vec4f>(width * height);
+std::vector<vec3f> make_uv_image(int width, int height) {
+    auto img = std::vector<vec3f>(width * height);
     for (int j = 0; j < height; j++) {
         for (int i = 0; i < width; i++) {
             img[i + j * width] = {
-                i / (float)(width - 1), j / (float)(height - 1), 0, 1};
+                i / (float)(width - 1), j / (float)(height - 1), 0};
         }
     }
     return img;
 }
 
 // Make a uv colored grid
-std::vector<vec4f> make_uvgrid_image(
+std::vector<vec3f> make_uvgrid_image(
     int width, int height, int tiles, bool colored) {
-    auto img = std::vector<vec4f>(width * height);
+    auto img = std::vector<vec3f>(width * height);
     auto tile = width / tiles;
     for (int j = 0; j < height; j++) {
         for (int i = 0; i < width; i++) {
@@ -628,16 +981,16 @@ std::vector<vec4f> make_uvgrid_image(
                 ps = 0.2f;
             }
             auto rgb = (colored) ? hsv_to_rgb({ph, ps, pv}) : vec3f{pv, pv, pv};
-            img[i + (height - j - 1) * width] = {rgb.x, rgb.y, rgb.z, 1};
+            img[i + (height - j - 1) * width] = rgb;
         }
     }
     return img;
 }
 
 // Comvert a bump map to a normal map.
-std::vector<vec4f> bump_to_normal_map(
-    int width, int height, const std::vector<vec4f>& img, float scale) {
-    auto norm = std::vector<vec4f>(img.size());
+std::vector<vec3f> bump_to_normal_map(
+    int width, int height, const std::vector<vec3f>& img, float scale) {
+    auto norm = std::vector<vec3f>(img.size());
     for (int j = 0; j < height; j++) {
         for (int i = 0; i < width; i++) {
             auto i1 = (i + 1) % width, j1 = (j + 1) % height;
@@ -649,14 +1002,14 @@ std::vector<vec4f> bump_to_normal_map(
             auto n = vec3f{scale * (g00 - g10), scale * (g00 - g01), 1.0f};
             n.y = -n.y;  // make green pointing up, even if y axis points down
             n = normalize(n) * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
-            norm[i + j * width] = {n.x, n.y, n.z, 1};
+            norm[i + j * width] = n;
         }
     }
     return norm;
 }
 
 // Implementation of sunsky modified heavily from pbrt
-std::vector<vec4f> make_sunsky_image(int width, int height, float thetaSun,
+std::vector<vec3f> make_sunsky_image(int width, int height, float thetaSun,
     float turbidity, bool has_sun, const vec3f& ground_albedo) {
     auto wSun = vec3f{0, cos(thetaSun), sin(thetaSun)};
 
@@ -742,7 +1095,7 @@ std::vector<vec4f> make_sunsky_image(int width, int height, float thetaSun,
                                                        zero3f;
     };
 
-    auto img = std::vector<vec4f>(width * height, {0, 0, 0, 1});
+    auto img = std::vector<vec3f>(width * height, {0, 0, 0});
     for (auto j = 0; j < height / 2; j++) {
         auto theta = pi * ((j + 0.5f) / height);
         theta = clamp(theta, 0.0f, pi / 2 - flt_eps);
@@ -752,7 +1105,7 @@ std::vector<vec4f> make_sunsky_image(int width, int height, float thetaSun,
                 vec3f{cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
             auto gamma = acos(clamp(dot(w, wSun), -1.0f, 1.0f));
             auto col = sky(theta, gamma) + sun(theta, gamma);
-            img[i + j * width] = {col.x, col.y, col.z, 1};
+            img[i + j * width] = {col.x, col.y, col.z};
         }
     }
 
@@ -769,7 +1122,7 @@ std::vector<vec4f> make_sunsky_image(int width, int height, float thetaSun,
         }
         for (auto j = height / 2; j < height; j++) {
             for (int i = 0; i < width; i++) {
-                img[i + j * width] = {ground.x, ground.y, ground.z, 1};
+                img[i + j * width] = ground;
             }
         }
     }
@@ -778,9 +1131,9 @@ std::vector<vec4f> make_sunsky_image(int width, int height, float thetaSun,
 }
 
 // Make an image of multiple lights.
-std::vector<vec4f> make_lights_image(int width, int height, const vec3f& le,
+std::vector<vec3f> make_lights_image(int width, int height, const vec3f& le,
     int nlights, float langle, float lwidth, float lheight) {
-    auto img = std::vector<vec4f>(width * height, {0, 0, 0, 1});
+    auto img = std::vector<vec3f>(width * height, {0, 0, 0});
     for (auto j = 0; j < height / 2; j++) {
         auto theta = pi * ((j + 0.5f) / height);
         theta = clamp(theta, 0.0f, pi / 2 - flt_eps);
@@ -792,7 +1145,7 @@ std::vector<vec4f> make_lights_image(int width, int height, const vec3f& le,
                 auto lphi = 2 * pi * (l + 0.5f) / nlights;
                 inlight = inlight || fabs(phi - lphi) < lwidth / 2;
             }
-            img[i + j * width] = {le.x, le.y, le.z, 1};
+            img[i + j * width] = le;
         }
     }
     return img;
@@ -800,16 +1153,16 @@ std::vector<vec4f> make_lights_image(int width, int height, const vec3f& le,
 
 // Make a noise image. Wrap works only if both width and height are powers of
 // two.
-std::vector<vec4f> make_noise_image(
+std::vector<vec3f> make_noise_image(
     int width, int height, float scale, bool wrap) {
     auto wrap3i = (wrap) ? vec3i{width, height, 2} : zero3i;
-    auto img = std::vector<vec4f>(width * height);
+    auto img = std::vector<vec3f>(width * height);
     for (auto j = 0; j < height; j++) {
         for (auto i = 0; i < width; i++) {
             auto p = vec3f{i / (float)width, j / (float)height, 0.5f} * scale;
             auto g = perlin_noise(p, wrap3i);
             g = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
-            img[i + j * width] = {g, g, g, 1};
+            img[i + j * width] = {g, g, g};
         }
     }
     return img;
@@ -817,16 +1170,16 @@ std::vector<vec4f> make_noise_image(
 
 // Make a noise image. Wrap works only if both width and height are powers of
 // two.
-std::vector<vec4f> make_fbm_image(int width, int height, float scale,
+std::vector<vec3f> make_fbm_image(int width, int height, float scale,
     float lacunarity, float gain, int octaves, bool wrap) {
     auto wrap3i = (wrap) ? vec3i{width, height, 2} : zero3i;
-    auto img = std::vector<vec4f>(width * height);
+    auto img = std::vector<vec3f>(width * height);
     for (auto j = 0; j < height; j++) {
         for (auto i = 0; i < width; i++) {
             auto p = vec3f{i / (float)width, j / (float)height, 0.5f} * scale;
             auto g = perlin_fbm_noise(p, lacunarity, gain, octaves, wrap3i);
             g = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
-            img[i + j * width] = {g, g, g, 1};
+            img[i + j * width] = {g, g, g};
         }
     }
     return img;
@@ -834,17 +1187,17 @@ std::vector<vec4f> make_fbm_image(int width, int height, float scale,
 
 // Make a noise image. Wrap works only if both width and height are powers of
 // two.
-std::vector<vec4f> make_ridge_image(int width, int height, float scale,
+std::vector<vec3f> make_ridge_image(int width, int height, float scale,
     float lacunarity, float gain, float offset, int octaves, bool wrap) {
     auto wrap3i = (wrap) ? vec3i{width, height, 2} : zero3i;
-    auto img = std::vector<vec4f>(width * height);
+    auto img = std::vector<vec3f>(width * height);
     for (auto j = 0; j < height; j++) {
         for (auto i = 0; i < width; i++) {
             auto p = vec3f{i / (float)width, j / (float)height, 0.5f} * scale;
             auto g = perlin_ridge_noise(
                 p, lacunarity, gain, offset, octaves, wrap3i);
             g = clamp(g, 0.0f, 1.0f);
-            img[i + j * width] = {g, g, g, 1};
+            img[i + j * width] = {g, g, g};
         }
     }
     return img;
@@ -852,17 +1205,17 @@ std::vector<vec4f> make_ridge_image(int width, int height, float scale,
 
 // Make a noise image. Wrap works only if both width and height are powers of
 // two.
-std::vector<vec4f> make_turbulence_image(int width, int height, float scale,
+std::vector<vec3f> make_turbulence_image(int width, int height, float scale,
     float lacunarity, float gain, int octaves, bool wrap) {
     auto wrap3i = (wrap) ? vec3i{width, height, 2} : zero3i;
-    auto img = std::vector<vec4f>(width * height);
+    auto img = std::vector<vec3f>(width * height);
     for (auto j = 0; j < height; j++) {
         for (auto i = 0; i < width; i++) {
             auto p = vec3f{i / (float)width, j / (float)height, 0.5f} * scale;
             auto g =
                 perlin_turbulence_noise(p, lacunarity, gain, octaves, wrap3i);
             g = clamp(g, 0.0f, 1.0f);
-            img[i + j * width] = {g, g, g, 1};
+            img[i + j * width] = {g, g, g};
         }
     }
     return img;

@@ -135,6 +135,11 @@ inline void update_gltexture(gltexture& txt, int w, int h, int nc,
 
 // Updates a texture with pixels values from an image.
 inline void update_gltexture(gltexture& txt, int width, int height,
+    const std::vector<float>& pixels, bool linear, bool mipmap, bool as_float) {
+    update_gltexture(
+        txt, width, height, 1, pixels.data(), linear, mipmap, as_float);
+}
+inline void update_gltexture(gltexture& txt, int width, int height,
     const std::vector<vec3f>& pixels, bool linear, bool mipmap, bool as_float) {
     update_gltexture(
         txt, width, height, 3, (float*)pixels.data(), linear, mipmap, as_float);
@@ -600,6 +605,12 @@ bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, vec4f& val,
 bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, mat4f& val,
     float min = -1, float max = 1);
 bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, frame3f& val,
+    float min = -10, float max = 10);
+bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, bbox1f& val,
+    float min = -10, float max = 10);
+bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, bbox2f& val,
+    float min = -10, float max = 10);
+bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, bbox3f& val,
     float min = -10, float max = 10);
 
 // Color widget.

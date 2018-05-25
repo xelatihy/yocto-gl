@@ -256,11 +256,10 @@ void update_environment_cdf(environment* env) {
     auto txt = env->ke_txt;
     if (!txt) return;
     env->elem_cdf.resize(txt->width * txt->height);
-    if (!txt->pxl.empty()) {
+    if (!txt->col.empty()) {
         for (auto i = 0; i < env->elem_cdf.size(); i++) {
             auto th = (i / txt->width + 0.5f) * pi / txt->height;
-            auto rgba = txt->pxl[i];
-            env->elem_cdf[i] = max(rgba.x, max(rgba.y, rgba.z)) * sin(th);
+            env->elem_cdf[i] = max(txt->col[i]) * sin(th);
             if (i) env->elem_cdf[i] += env->elem_cdf[i - 1];
         }
     } else {
@@ -386,7 +385,7 @@ std::vector<std::string> validate(const scene* scn, bool skip_textures) {
     };
     auto check_empty_textures = [&errs](const std::vector<texture*>& vals) {
         for (auto val : vals) {
-            if (val->pxl.empty()) errs.push_back("empty texture " + val->name);
+            if (val->col.empty() && val->scl.empty()) errs.push_back("empty texture " + val->name);
         }
     };
 
@@ -541,7 +540,7 @@ vec3f eval_shading_norm(
         if (ist->mat && ist->mat->norm_txt) {
             auto texcoord = eval_texcoord(ist, ei, uv);
             auto left_handed = false;
-            auto txt = xyz(eval_texture(ist->mat->norm_txt, texcoord));
+            auto txt = eval_texture_col(ist->mat->norm_txt, texcoord);
             txt = txt * 2 - vec3f{1, 1, 1};
             txt.y = -txt.y;  // flip vertical axis to align green with image up
             auto tu = orthonormalize(eval_tangsp(ist, ei, uv, left_handed), n);
@@ -575,30 +574,26 @@ vec3f eval_direction(const environment* env, const vec2f& uv) {
 vec3f eval_environment(const environment* env, const vec3f& w) {
     auto ke = env->ke;
     if (env->ke_txt) {
-        auto texcoord = eval_texcoord(env, w);
-        ke *= xyz(eval_texture(env->ke_txt, texcoord));
+        ke *= eval_texture_col(env->ke_txt, eval_texcoord(env, w));
     }
     return ke;
 }
 
 // Evaluate a texture
-vec4f eval_texture(const texture* txt, const vec2f& texcoord) {
-    if (!txt || txt->pxl.empty()) return {1, 1, 1, 1};
+vec3f eval_texture_col(const texture* txt, const vec2f& texcoord) {
+    if (!txt || txt->col.empty()) return {1, 1, 1};
 
     // get image width/height
     auto w = txt->width, h = txt->height;
 
     // get coordinates normalized for tiling
     auto s = 0.0f, t = 0.0f;
-    if (!txt->wrap_s) {
+    if (txt->clamp) {
         s = clamp(texcoord.x, 0.0f, 1.0f) * w;
+        t = clamp(texcoord.y, 0.0f, 1.0f) * h;
     } else {
         s = std::fmod(texcoord.x, 1.0f) * w;
         if (s < 0) s += w;
-    }
-    if (!txt->wrap_t) {
-        t = clamp(texcoord.y, 0.0f, 1.0f) * h;
-    } else {
         t = std::fmod(texcoord.y, 1.0f) * h;
         if (t < 0) t += h;
     }
@@ -608,14 +603,40 @@ vec4f eval_texture(const texture* txt, const vec2f& texcoord) {
     auto ii = (i + 1) % w, jj = (j + 1) % h;
     auto u = s - i, v = t - j;
 
-    // nearest lookup
-    if (!txt->linear) return txt->pxl[j * txt->width + i];
+    // handle interpolation
+    return txt->col[j * txt->width + i] * (1 - u) * (1 - v) +
+           txt->col[jj * txt->width + i] * (1 - u) * v +
+           txt->col[j * txt->width + ii] * u * (1 - v) +
+           txt->col[jj * txt->width + ii] * u * v;
+}
+float eval_texture_scl(const texture* txt, const vec2f& texcoord) {
+    if (!txt || txt->scl.empty()) return 1;
+
+    // get image width/height
+    auto w = txt->width, h = txt->height;
+
+    // get coordinates normalized for tiling
+    auto s = 0.0f, t = 0.0f;
+    if (txt->clamp) {
+        s = clamp(texcoord.x, 0.0f, 1.0f) * w;
+        t = clamp(texcoord.y, 0.0f, 1.0f) * h;
+    } else {
+        s = std::fmod(texcoord.x, 1.0f) * w;
+        if (s < 0) s += w;
+        t = std::fmod(texcoord.y, 1.0f) * h;
+        if (t < 0) t += h;
+    }
+
+    // get image coordinates and residuals
+    auto i = clamp((int)s, 0, w - 1), j = clamp((int)t, 0, h - 1);
+    auto ii = (i + 1) % w, jj = (j + 1) % h;
+    auto u = s - i, v = t - j;
 
     // handle interpolation
-    return txt->pxl[j * txt->width + i] * (1 - u) * (1 - v) +
-           txt->pxl[jj * txt->width + i] * (1 - u) * v +
-           txt->pxl[j * txt->width + ii] * u * (1 - v) +
-           txt->pxl[jj * txt->width + ii] * u * v;
+    return txt->scl[j * txt->width + i] * (1 - u) * (1 - v) +
+           txt->scl[jj * txt->width + i] * (1 - u) * v +
+           txt->scl[j * txt->width + ii] * u * (1 - v) +
+           txt->scl[jj * txt->width + ii] * u * v;
 }
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
@@ -659,19 +680,19 @@ ray3f eval_camera_ray(const camera* cam, const vec2i& ij, const vec2i& imsize,
 vec3f eval_emission(const instance* ist, int ei, const vec2f& uv) {
     if (!ist || !ist->mat) return zero3f;
     return ist->mat->ke * xyz(eval_color(ist, ei, uv)) *
-           xyz(eval_texture(ist->mat->ke_txt, eval_texcoord(ist, ei, uv)));
+           eval_texture_col(ist->mat->ke_txt, eval_texcoord(ist, ei, uv));
 }
 vec3f eval_diffuse(const instance* ist, int ei, const vec2f& uv) {
     if (!ist || !ist->mat) return zero3f;
     if (!ist->mat->base_metallic) {
         return ist->mat->kd * xyz(eval_color(ist, ei, uv)) *
-               xyz(eval_texture(ist->mat->kd_txt, eval_texcoord(ist, ei, uv)));
+               eval_texture_col(ist->mat->kd_txt, eval_texcoord(ist, ei, uv));
     } else {
         auto kb =
             ist->mat->kd * xyz(eval_color(ist, ei, uv)) *
-            xyz(eval_texture(ist->mat->kd_txt, eval_texcoord(ist, ei, uv)));
+            eval_texture_col(ist->mat->kd_txt, eval_texcoord(ist, ei, uv));
         auto km = ist->mat->ks.x *
-                  eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).z;
+                  eval_texture_col(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).z;
         return kb * (1 - km);
     }
 }
@@ -679,40 +700,32 @@ vec3f eval_specular(const instance* ist, int ei, const vec2f& uv) {
     if (!ist || !ist->mat) return zero3f;
     if (!ist->mat->base_metallic) {
         return ist->mat->ks * xyz(eval_color(ist, ei, uv)) *
-               xyz(eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)));
+               eval_texture_col(ist->mat->ks_txt, eval_texcoord(ist, ei, uv));
     } else {
         auto kb =
             ist->mat->kd * xyz(eval_color(ist, ei, uv)) *
-            xyz(eval_texture(ist->mat->kd_txt, eval_texcoord(ist, ei, uv)));
+            eval_texture_col(ist->mat->kd_txt, eval_texcoord(ist, ei, uv));
         auto km = ist->mat->ks.x *
-                  eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).z;
+                  eval_texture_col(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).z;
         return kb * km + vec3f{0.04f, 0.04f, 0.04f} * (1 - km);
     }
 }
 float eval_roughness(const instance* ist, int ei, const vec2f& uv) {
     if (!ist || !ist->mat) return 1;
-    if (!ist->mat->base_metallic) {
-        auto rs = ist->mat->rs;
-        auto txt_w =
-            eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).w;
-        rs = 1 - ((1 - rs) * txt_w);
-        return rs * rs;
-    } else {
-        auto rs = ist->mat->rs *
-                  eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).y;
-        return rs * rs;
-    }
+    auto rs = ist->mat->rs *
+                eval_texture_scl(ist->mat->rs_txt, eval_texcoord(ist, ei, uv));
+    return rs * rs;
     // rs = clamp(rs, 0.03f * 0.03f, 1.0f);
 }
 vec3f eval_transmission(const instance* ist, int ei, const vec2f& uv) {
     if (!ist || !ist->mat) return zero3f;
     return ist->mat->kt * xyz(eval_color(ist, ei, uv)) *
-           xyz(eval_texture(ist->mat->kt_txt, eval_texcoord(ist, ei, uv)));
+           eval_texture_col(ist->mat->kt_txt, eval_texcoord(ist, ei, uv));
 }
 float eval_opacity(const instance* ist, int ei, const vec2f& uv) {
     if (!ist || !ist->mat) return 1;
     return ist->mat->op * eval_color(ist->shp, ei, uv).w *
-           eval_texture(ist->mat->kd_txt, eval_texcoord(ist, ei, uv)).w;
+           eval_texture_scl(ist->mat->op_txt, eval_texcoord(ist, ei, uv));
 }
 
 // Evaluates the bsdf at a location.
@@ -782,7 +795,8 @@ void print_stats(scene* scn) {
     uint64_t vert_radius = 0;
     uint64_t vert_tangsp = 0;
 
-    uint64_t texel_imgs = 0;
+    uint64_t texel_color = 0;
+    uint64_t texel_scalar = 0;
 
     uint64_t memory_imgs = 0;
     uint64_t memory_elems = 0;
@@ -816,9 +830,10 @@ void print_stats(scene* scn) {
                    vert_tangsp * sizeof(vec4f) + vert_radius * sizeof(float);
 
     for (auto txt : scn->textures) {
-        texel_imgs = (txt->pxl.empty()) ? 0 : (txt->width * txt->height);
+        texel_color += (txt->col.empty()) ? 0 : (txt->width * txt->height);
+        texel_scalar += (txt->scl.empty()) ? 0 : (txt->width * txt->height);
     }
-    memory_imgs = texel_imgs * sizeof(vec4f);
+    memory_imgs = texel_color * sizeof(vec3f) + texel_scalar * sizeof(float);
 
     println("num_cameras: {}", num_cameras);
     println("num_shape_groups: {}", num_shape_groups);
@@ -837,7 +852,8 @@ void print_stats(scene* scn) {
     println("vert_color: {}", vert_color);
     println("vert_radius: {}", vert_radius);
     println("vert_tangsp: {}", vert_tangsp);
-    println("texel_imgs: {}", texel_imgs);
+    println("texel_color: {}", texel_color);
+    println("texel_scalar: {}", texel_scalar);
     println("memory_imgs: {}", memory_imgs);
     println("memory_elems: {}", memory_elems);
     println("memory_verts: {}", memory_verts);
@@ -883,18 +899,18 @@ scene* obj_to_scene(const obj_scene* obj) {
         txt->name = otxt->path;
         txt->path = otxt->path;
         txt->srgb = srgb;
-        txt->wrap_s = !oinfo.clamp;
-        txt->wrap_t = !oinfo.clamp;
+        txt->clamp = oinfo.clamp;
         txt->scale = oinfo.scale;
         if (otxt->width && otxt->height &&
             (!otxt->hdr.empty() || !otxt->ldr.empty())) {
             txt->width = otxt->width;
             txt->height = otxt->height;
             if (!otxt->hdr.empty()) {
-                txt->pxl = otxt->hdr;
+                txt->col = imagef_to_image3f(otxt->hdr, otxt->ncomp);
             } else {
-                txt->pxl = byte_to_float(otxt->ldr);
-                if(srgb) txt->pxl = gamma_to_linear(txt->pxl);
+                txt->col =
+                    imagef_to_image3f(byte_to_float(otxt->ldr), otxt->ncomp);
+                if (srgb) txt->col = gamma_to_linear(txt->col);
             }
         }
         scn->textures.push_back(txt);
@@ -1236,7 +1252,7 @@ obj_scene* scene_to_obj(
         auto oinfo = obj_texture_info();
         if (!txt) return oinfo;
         oinfo.path = txt->path;
-        oinfo.clamp = !txt->wrap_s && !txt->wrap_t;
+        oinfo.clamp = txt->clamp;
         if (bump) oinfo.scale = txt->scale;
         return oinfo;
     };
@@ -1247,12 +1263,14 @@ obj_scene* scene_to_obj(
         otxt->path = txt->path;
         otxt->width = txt->width;
         otxt->height = txt->height;
+        otxt->ncomp = 3;
         if (is_hdr_filename(txt->path)) {
-            otxt->hdr = txt->pxl;
+            otxt->hdr = image3f_to_imagef(txt->col, 3);
         } else if (txt->srgb) {
-            otxt->ldr = float_to_byte(linear_to_gamma(txt->pxl));
+            otxt->ldr =
+                float_to_byte(image3f_to_imagef(linear_to_gamma(txt->col), 3));
         } else {
-            otxt->ldr = float_to_byte(txt->pxl);
+            otxt->ldr = float_to_byte(image3f_to_imagef(txt->col, 3));
         }
         obj->textures.push_back(otxt);
     }
@@ -1497,11 +1515,8 @@ scene* gltf_to_scene(const glTF* gltf) {
         txt->srgb = srgb;
         auto gsmp = gltf->get(gtxt->sampler);
         if (gsmp) {
-            txt->linear = gsmp->magFilter != glTFSamplerMagFilter::Nearest;
-            txt->mipmap = gsmp->minFilter != glTFSamplerMinFilter::Linear &&
-                          gsmp->minFilter != glTFSamplerMinFilter::Nearest;
-            txt->wrap_s = gsmp->wrapS != glTFSamplerWrapS::ClampToEdge;
-            txt->wrap_t = gsmp->wrapT != glTFSamplerWrapT::ClampToEdge;
+            txt->clamp = gsmp->wrapS == glTFSamplerWrapS::ClampToEdge ||
+                         gsmp->wrapT == glTFSamplerWrapT::ClampToEdge;
         }
         if (normal) {
             auto ninfo = (glTFMaterialNormalTextureInfo*)ginfo;
@@ -1516,10 +1531,11 @@ scene* gltf_to_scene(const glTF* gltf) {
             txt->width = gimg->data.width;
             txt->height = gimg->data.height;
             if (!gimg->data.hdr.empty()) {
-                txt->pxl = gimg->data.hdr;
+                txt->col = imagef_to_image3f(gimg->data.hdr, gimg->data.ncomp);
             } else {
-                txt->pxl = byte_to_float(gimg->data.ldr);
-                if(txt->srgb) txt->pxl = gamma_to_linear(txt->pxl);
+                txt->col = imagef_to_image3f(
+                    byte_to_float(gimg->data.ldr), gimg->data.ncomp);
+                if (txt->srgb) txt->col = gamma_to_linear(txt->col);
             }
         }
         scn->textures.push_back(txt);
@@ -1892,12 +1908,14 @@ glTF* scene_to_gltf(
         gimg->uri = txt->path;
         gimg->data.width = txt->width;
         gimg->data.height = txt->height;
+        gimg->data.ncomp = 3;
         if (is_hdr_filename(txt->path)) {
-            gimg->data.hdr = txt->pxl;
+            gimg->data.hdr = image3f_to_imagef(txt->col, 3);
         } else if (txt->srgb) {
-            gimg->data.ldr = float_to_byte(linear_to_gamma(txt->pxl));
+            gimg->data.ldr =
+                float_to_byte(image3f_to_imagef(linear_to_gamma(txt->col), 3));
         } else {
-            gimg->data.ldr = float_to_byte(txt->pxl);
+            gimg->data.ldr = float_to_byte(image3f_to_imagef(txt->col, 3));
         }
         gltf->images.push_back(gimg);
     }
@@ -1918,19 +1936,12 @@ glTF* scene_to_gltf(
         gtxt->source = glTFid<glTFImage>(index(scn->textures, txt));
 
         // check if it is default
-        auto is_default =
-            txt->wrap_s && txt->wrap_t && txt->linear && txt->mipmap;
-        if (!is_default) {
+        if (txt->clamp) {
             auto gsmp = new glTFSampler();
-            gsmp->wrapS = (txt->wrap_s) ? glTFSamplerWrapS::Repeat :
-                                          glTFSamplerWrapS::ClampToEdge;
-            gsmp->wrapT = (txt->wrap_t) ? glTFSamplerWrapT::Repeat :
-                                          glTFSamplerWrapT::ClampToEdge;
-            gsmp->minFilter = (txt->mipmap) ?
-                                  glTFSamplerMinFilter::LinearMipmapLinear :
-                                  glTFSamplerMinFilter::Nearest;
-            gsmp->magFilter = (txt->linear) ? glTFSamplerMagFilter::Linear :
-                                              glTFSamplerMagFilter::Nearest;
+            gsmp->wrapS = glTFSamplerWrapS::ClampToEdge;
+            gsmp->wrapT = glTFSamplerWrapT::ClampToEdge;
+            gsmp->minFilter = glTFSamplerMinFilter::LinearMipmapLinear;
+            gsmp->magFilter = glTFSamplerMagFilter::Linear;
             gtxt->sampler = glTFid<glTFSampler>((int)gltf->samplers.size());
             gltf->samplers.push_back(gsmp);
         }
@@ -2418,13 +2429,25 @@ material* make_material(
 }
 
 texture* make_texture(const std::string& name, const std::string& path,
-    int width, int height, const std::vector<vec4f>& pixels, bool srgb) {
+    int width, int height, const std::vector<vec3f>& pixels, bool srgb) {
     auto txt = new texture();
     txt->name = name;
     txt->path = path;
     txt->width = width;
     txt->height = height;
-    txt->pxl = pixels;
+    txt->col = pixels;
+    txt->srgb = true;
+    return txt;
+}
+
+texture* make_texture(const std::string& name, const std::string& path,
+    int width, int height, const std::vector<float>& pixels, bool srgb) {
+    auto txt = new texture();
+    txt->name = name;
+    txt->path = path;
+    txt->width = width;
+    txt->height = height;
+    txt->scl = pixels;
     txt->srgb = true;
     return txt;
 }

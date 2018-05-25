@@ -151,8 +151,8 @@ int main(int argc, char* argv[]) {
     auto parser = ygl::make_parser(argc, argv, "yimproc", "process images");
     auto exposure =
         ygl::parse_opt(parser, "--exposure", "t", "Hdr exposure", 0.0f);
-    auto gamma = !ygl::parse_opt(
-        parser, "--gamma", "-g", "Display gamma.", 2.2f);
+    auto gamma =
+        !ygl::parse_opt(parser, "--gamma", "-g", "Display gamma.", 2.2f);
     auto filmic = ygl::parse_flag(parser, "--filmic", "-f",
         "apply approximate filmic tone mapping", false);
     auto resize_width = ygl::parse_opt(

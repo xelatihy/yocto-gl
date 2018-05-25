@@ -99,10 +99,9 @@ This library requires a C++14 compiler and is know to compiled on
 OsX (Xcode >= 8), Windows (MSVC 2017) and Linux (gcc >= 6, clang >= 4).
 
 For image loading and saving, Yocto/GL depends on `stb_image.h`,
-`stb_image_write.h`, `stb_image_resize.h` and `tinyexr.h`. These features
-can be disabled by defining YGL_IMAGEIO to 0 before including this file.
-To support Khronos glTF, Yocto/GL depends on `json.hpp`. All dependencies
-are included in the distribution.
+`stb_image_write.h`, `stb_image_resize.h` and `tinyexr.h`.
+To support Khronos glTF, Yocto/GL depends on `json.hpp`. 
+All dependencies are included in the distribution.
 
 OpenGL utilities include the OpenGL libraries, use GLEW on Windows/Linux,
 GLFW for windows handling and Dear ImGui for UI support.

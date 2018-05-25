@@ -139,7 +139,8 @@ void update_display_image(gimage* img) {
     if (img->exposure)
         img->display = ygl::expose_image(img->display, img->exposure);
     if (img->filmic) img->display = ygl::filmic_tonemap_image(img->display);
-    if (img->gamma != 1) img->display = ygl::linear_to_gamma(img->display, img->gamma);
+    if (img->gamma != 1)
+        img->display = ygl::linear_to_gamma(img->display, img->gamma);
     img->updated = false;
 }
 
@@ -152,7 +153,8 @@ void draw_glwidgets(ygl::glwindow* win, app_state* app) {
         auto edited = 0;
         edited += ygl::draw_glwidgets_dragbox(
             win, "exposure", app->img->exposure, -5, 5);
-        edited += ygl::draw_glwidgets_dragbox(win, "gamma", app->img->gamma, 1, 3);
+        edited +=
+            ygl::draw_glwidgets_dragbox(win, "gamma", app->img->gamma, 1, 3);
         edited += ygl::draw_glwidgets_checkbox(win, "filmic", app->img->filmic);
         if (edited) app->img->updated = true;
         auto zoom = app->imframe.x.x;
@@ -189,7 +191,8 @@ void draw(ygl::glwindow* win, app_state* app) {
     auto framebuffer_size = get_glwindow_framebuffer_size(win);
     ygl::set_glviewport(framebuffer_size);
     ygl::clear_glbuffers(app->background);
-    ygl::draw_glimage(app->gl_prog, app->img->gl_txt, window_size, app->imframe);
+    ygl::draw_glimage(
+        app->gl_prog, app->img->gl_txt, window_size, app->imframe);
     draw_glwidgets(win, app);
     ygl::swap_glwindow_buffers(win);
 }
@@ -280,8 +283,7 @@ int main(int argc, char* argv[]) {
 
     // command line params
     auto parser = ygl::make_parser(argc, argv, "yimview", "view images");
-    auto gamma =
-        ygl::parse_opt(parser, "--gamma", "-g", "display gamma", 2.2f);
+    auto gamma = ygl::parse_opt(parser, "--gamma", "-g", "display gamma", 2.2f);
     auto exposure =
         ygl::parse_opt(parser, "--exposure", "-e", "display exposure", 0.0f);
     auto diff = ygl::parse_flag(parser, "--diff", "-d", "compute diff images");

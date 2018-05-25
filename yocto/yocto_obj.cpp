@@ -957,30 +957,27 @@ void save_obj(const std::string& filename, const obj_scene* obj,
 // Load OBJ texture images.
 void load_obj_textures(
     obj_scene* obj, const std::string& dirname, bool skip_missing) {
-#if YGL_IMAGEIO
     for (auto txt : obj->textures) {
         auto filename = dirname + txt->path;
         for (auto& c : filename)
             if (c == '\\') c = '/';
         if (is_hdr_filename(filename)) {
-            txt->hdr = load_image4f(filename, txt->width, txt->height);
+            txt->hdr =
+                load_imagef(filename, txt->width, txt->height, txt->ncomp);
         } else {
-            txt->ldr = load_image4b(filename, txt->width, txt->height);
+            txt->ldr =
+                load_imageb(filename, txt->width, txt->height, txt->ncomp);
         }
         if (txt->ldr.empty() && txt->hdr.empty()) {
             if (skip_missing) continue;
             throw std::runtime_error("cannot laod image " + filename);
         }
     }
-#else
-    throw std::runtime_error("cannot load images");
-#endif
 }
 
 // Save OBJ texture images.
 void save_obj_textures(
     const obj_scene* obj, const std::string& dirname, bool skip_missing) {
-#if YGL_IMAGEIO
     for (auto txt : obj->textures) {
         if (txt->ldr.empty() && txt->hdr.empty()) continue;
         auto filename = dirname + txt->path;
@@ -988,19 +985,18 @@ void save_obj_textures(
             if (c == '\\') c = '/';
         auto ok = false;
         if (!txt->ldr.empty()) {
-            ok = save_image4b(filename, txt->width, txt->height, txt->ldr);
+            ok = save_imageb(
+                filename, txt->width, txt->height, txt->ncomp, txt->ldr);
         }
         if (!txt->hdr.empty()) {
-            ok = save_image4f(filename, txt->width, txt->height, txt->hdr);
+            ok = save_imagef(
+                filename, txt->width, txt->height, txt->ncomp, txt->hdr);
         }
         if (!ok) {
             if (skip_missing) continue;
             throw std::runtime_error("cannot save image " + filename);
         }
     }
-#else
-    throw std::runtime_error("cannot save images");
-#endif
 }
 
 }  // namespace ygl

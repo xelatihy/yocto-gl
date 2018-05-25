@@ -57,8 +57,8 @@ int main(int argc, char** argv) {
         ygl::make_parser(argc, argv, "yscnproc", "converts obj to gltf");
     auto textures =
         ygl::parse_flag(parser, "--textures", "-t", "process textures");
-    auto no_flip_opacity =
-        ygl::parse_flag(parser, "--no-flip-opacity", "", "flip opacity");
+    // auto no_flip_opacity =
+    //     ygl::parse_flag(parser, "--no-flip-opacity", "", "flip opacity");
     // auto facet_non_smooth = ygl::parse_flag(
     //     parser, "--facet-non-smooth", "", "facet non smooth surfaces");
     auto scale = ygl::parse_opt(parser, "--scale", "", "scale the model", 1.0f);

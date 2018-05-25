@@ -1350,7 +1350,6 @@ void save_binary_gltf(
 // Load glTF texture images.
 void load_gltf_textures(
     glTF* gltf, const std::string& dirname, bool skip_missing) {
-#if YGL_IMAGEIO
     for (auto image : gltf->images) {
         auto filename = std::string();
         image->data = gltf_image_data();
@@ -1398,22 +1397,22 @@ void load_gltf_textures(
                 data = (unsigned char*)buffer.data();
             }
             if (is_hdr_filename(filename)) {
-                image->data.hdr = load_image4f_from_memory(
-                    data, data_size, image->data.width, image->data.height);
+                image->data.hdr = load_imagef_from_memory(data, data_size,
+                    image->data.width, image->data.height, image->data.ncomp);
             } else {
-                image->data.ldr = load_image4b_from_memory(
-                    data, data_size, image->data.width, image->data.height);
+                image->data.ldr = load_imageb_from_memory(data, data_size,
+                    image->data.width, image->data.height, image->data.ncomp);
             }
         } else {
             filename = dirname + image->uri;
             for (auto& c : filename)
                 if (c == '\\') c = '/';
             if (is_hdr_filename(filename)) {
-                image->data.hdr = load_image4f(
-                    filename, image->data.width, image->data.height);
+                image->data.hdr = load_imagef(filename, image->data.width,
+                    image->data.height, image->data.ncomp);
             } else {
-                image->data.ldr = load_image4b(
-                    filename, image->data.width, image->data.height);
+                image->data.ldr = load_imageb(filename, image->data.width,
+                    image->data.height, image->data.ncomp);
             }
         }
         if (image->data.hdr.empty() && image->data.ldr.empty()) {
@@ -1421,15 +1420,11 @@ void load_gltf_textures(
             throw std::runtime_error("cannot load image " + filename);
         }
     }
-#else
-    throw std::runtime_error("cannot load images");
-#endif
 }
 
 // Save glTF texture images.
 void save_gltf_textures(
     const glTF* gltf, const std::string& dirname, bool skip_missing) {
-#if YGL_IMAGEIO
     for (auto image : gltf->images) {
         if (image->data.ldr.empty() && image->data.hdr.empty()) continue;
         if (startswith(image->uri, "data:")) {
@@ -1441,21 +1436,18 @@ void save_gltf_textures(
             if (c == '\\') c = '/';
         auto ok = false;
         if (!image->data.ldr.empty()) {
-            ok = save_image4b(filename, image->data.width, image->data.height,
-                image->data.ldr);
+            ok = save_imageb(filename, image->data.width, image->data.height,
+                image->data.ncomp, image->data.ldr);
         }
         if (!image->data.hdr.empty()) {
-            ok = save_image4f(filename, image->data.width, image->data.height,
-                image->data.hdr);
+            ok = save_imagef(filename, image->data.width, image->data.height,
+                image->data.ncomp, image->data.hdr);
         }
         if (!ok) {
             if (skip_missing) continue;
             throw std::runtime_error("cannot save image " + filename);
         }
     }
-#else
-    throw std::runtime_error("cannot save images");
-#endif
 }
 
 accessor_view::accessor_view(const glTF* gltf, const glTFAccessor* accessor) {
