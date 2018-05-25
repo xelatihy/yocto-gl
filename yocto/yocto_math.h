@@ -688,22 +688,80 @@ inline frame3f inverse(const frame3f& a, bool is_rigid = true) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+// Range of values in 1D.
+struct bbox1f {
+    float min = flt_max, max = flt_min;
+};
+
+// Axis aligned bounding box represented as a min/max vector pairs.
+struct bbox2f {
+    vec2f min = {flt_max, flt_max}, max = {flt_min, flt_min};
+};
+
 // Axis aligned bounding box represented as a min/max vector pairs.
 struct bbox3f {
     vec3f min = {flt_max, flt_max, flt_max}, max = {flt_min, flt_min, flt_min};
 };
 
+// Axis aligned bounding box represented as a min/max vector pairs.
+struct bbox4f {
+    vec4f min = {flt_max, flt_max, flt_max, flt_max}, max = {flt_min, flt_min, flt_min, flt_min};
+};
+
 // Empty bbox constant.
+const auto invalid_bbox1f = bbox1f();
+const auto invalid_bbox2f = bbox2f();
 const auto invalid_bbox3f = bbox3f();
+const auto invalid_bbox4f = bbox4f();
 
 // Bounding box comparisons.
+inline bool operator==(const bbox1f& a, const bbox1f& b) {
+    return a.min == b.min && a.max == b.max;
+}
+inline bool operator!=(const bbox1f& a, const bbox1f& b) {
+    return a.min != b.min || a.max != b.max;
+}
+inline bool operator==(const bbox2f& a, const bbox2f& b) {
+    return a.min == b.min && a.max == b.max;
+}
+inline bool operator!=(const bbox2f& a, const bbox2f& b) {
+    return a.min != b.min || a.max != b.max;
+}
 inline bool operator==(const bbox3f& a, const bbox3f& b) {
     return a.min == b.min && a.max == b.max;
 }
 inline bool operator!=(const bbox3f& a, const bbox3f& b) {
     return a.min != b.min || a.max != b.max;
 }
+inline bool operator==(const bbox4f& a, const bbox4f& b) {
+    return a.min == b.min && a.max == b.max;
+}
+inline bool operator!=(const bbox4f& a, const bbox4f& b) {
+    return a.min != b.min || a.max != b.max;
+}
 
+// Bounding box expansions with points and other boxes.
+inline bbox1f& operator+=(bbox1f& a, float b) {
+    a.min = min(a.min, b);
+    a.max = max(a.max, b);
+    return a;
+}
+inline bbox1f& operator+=(bbox1f& a, const bbox1f& b) {
+    a.min = min(a.min, b.min);
+    a.max = max(a.max, b.max);
+    return a;
+}
+// Bounding box expansions with points and other boxes.
+inline bbox2f& operator+=(bbox2f& a, const vec2f& b) {
+    a.min = {min(a.min.x, b.x), min(a.min.y, b.y)};
+    a.max = {max(a.max.x, b.x), max(a.max.y, b.y)};
+    return a;
+}
+inline bbox2f& operator+=(bbox2f& a, const bbox2f& b) {
+    a.min = {min(a.min.x, b.min.x), min(a.min.y, b.min.y)};
+    a.max = {max(a.max.x, b.max.x), max(a.max.y, b.max.y)};
+    return a;
+}
 // Bounding box expansions with points and other boxes.
 inline bbox3f& operator+=(bbox3f& a, const vec3f& b) {
     a.min = {min(a.min.x, b.x), min(a.min.y, b.y), min(a.min.z, b.z)};
@@ -715,6 +773,19 @@ inline bbox3f& operator+=(bbox3f& a, const bbox3f& b) {
         min(a.min.x, b.min.x), min(a.min.y, b.min.y), min(a.min.z, b.min.z)};
     a.max = {
         max(a.max.x, b.max.x), max(a.max.y, b.max.y), max(a.max.z, b.max.z)};
+    return a;
+}
+// Bounding box expansions with points and other boxes.
+inline bbox4f& operator+=(bbox4f& a, const vec4f& b) {
+    a.min = {min(a.min.x, b.x), min(a.min.y, b.y), min(a.min.z, b.z), min(a.min.w, b.w)};
+    a.max = {max(a.max.x, b.x), max(a.max.y, b.y), max(a.max.z, b.z), max(a.max.w, b.w)};
+    return a;
+}
+inline bbox4f& operator+=(bbox4f& a, const bbox4f& b) {
+    a.min = {
+        min(a.min.x, b.min.x), min(a.min.y, b.min.y), min(a.min.z, b.min.z), min(a.min.w, b.min.w)};
+    a.max = {
+        max(a.max.x, b.max.x), max(a.max.y, b.max.y), max(a.max.z, b.max.z), max(a.max.w, b.max.w)};
     return a;
 }
 

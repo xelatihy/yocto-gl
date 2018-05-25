@@ -1625,6 +1625,27 @@ bool draw_glwidgets_dragbox(
     auto modo = draw_glwidgets_dragbox(win, lbl + ".o", val.o, min, max);
     return modx || mody || modz || modo;
 }
+// Drag widget.
+bool draw_glwidgets_dragbox(
+    glwindow* win, const std::string& lbl, bbox1f& val, float min, float max) {
+    auto modmin = draw_glwidgets_dragbox(win, lbl + " min", val.min, min, max);
+    auto modmax = draw_glwidgets_dragbox(win, lbl + " max", val.max, min, max);
+    return modmin || modmax;
+}
+// Drag widget.
+bool draw_glwidgets_dragbox(
+    glwindow* win, const std::string& lbl, bbox2f& val, float min, float max) {
+    auto modmin = draw_glwidgets_dragbox(win, lbl + " min", val.min, min, max);
+    auto modmax = draw_glwidgets_dragbox(win, lbl + " max", val.max, min, max);
+    return modmin || modmax;
+}
+// Drag widget.
+bool draw_glwidgets_dragbox(
+    glwindow* win, const std::string& lbl, bbox3f& val, float min, float max) {
+    auto modmin = draw_glwidgets_dragbox(win, lbl + " min", val.min, min, max);
+    auto modmax = draw_glwidgets_dragbox(win, lbl + " max", val.max, min, max);
+    return modmin || modmax;
+}
 
 // Color widget
 bool draw_glwidgets_colorbox(
