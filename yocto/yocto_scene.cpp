@@ -35,13 +35,8 @@
 #include <array>
 #include <unordered_map>
 
-#if YGL_OBJ
-#include "yocto_obj.h"
-#endif
-
-#if YGL_GLTF
 #include "yocto_gltf.h"
-#endif
+#include "yocto_obj.h"
 
 // -----------------------------------------------------------------------------
 // SCENE DATA
@@ -385,7 +380,8 @@ std::vector<std::string> validate(const scene* scn, bool skip_textures) {
     };
     auto check_empty_textures = [&errs](const std::vector<texture*>& vals) {
         for (auto val : vals) {
-            if (val->col.empty() && val->scl.empty()) errs.push_back("empty texture " + val->name);
+            if (val->col.empty() && val->scl.empty())
+                errs.push_back("empty texture " + val->name);
         }
     };
 
@@ -691,8 +687,8 @@ vec3f eval_diffuse(const instance* ist, int ei, const vec2f& uv) {
         auto kb =
             ist->mat->kd * xyz(eval_color(ist, ei, uv)) *
             eval_texture_col(ist->mat->kd_txt, eval_texcoord(ist, ei, uv));
-        auto km = ist->mat->ks.x *
-                  eval_texture_col(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).z;
+        auto km = ist->mat->ks.x * eval_texture_scl(ist->mat->ks_txt,
+                                       eval_texcoord(ist, ei, uv));
         return kb * (1 - km);
     }
 }
@@ -705,17 +701,16 @@ vec3f eval_specular(const instance* ist, int ei, const vec2f& uv) {
         auto kb =
             ist->mat->kd * xyz(eval_color(ist, ei, uv)) *
             eval_texture_col(ist->mat->kd_txt, eval_texcoord(ist, ei, uv));
-        auto km = ist->mat->ks.x *
-                  eval_texture_col(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).z;
+        auto km = ist->mat->ks.x * eval_texture_scl(ist->mat->ks_txt,
+                                       eval_texcoord(ist, ei, uv));
         return kb * km + vec3f{0.04f, 0.04f, 0.04f} * (1 - km);
     }
 }
 float eval_roughness(const instance* ist, int ei, const vec2f& uv) {
     if (!ist || !ist->mat) return 1;
     auto rs = ist->mat->rs *
-                eval_texture_scl(ist->mat->rs_txt, eval_texcoord(ist, ei, uv));
+              eval_texture_scl(ist->mat->rs_txt, eval_texcoord(ist, ei, uv));
     return rs * rs;
-    // rs = clamp(rs, 0.03f * 0.03f, 1.0f);
 }
 vec3f eval_transmission(const instance* ist, int ei, const vec2f& uv) {
     if (!ist || !ist->mat) return zero3f;
@@ -864,8 +859,6 @@ void print_stats(scene* scn) {
     println("bbox_center: {}", (bbox.max + bbox.min) / 2);
 }
 
-#ifdef YGL_OBJ
-
 template <int N>
 struct obj_array_hash {
     std::hash<int> Th;
@@ -889,32 +882,59 @@ scene* obj_to_scene(const obj_scene* obj) {
     auto otmap = std::unordered_map<std::string, obj_texture*>{{"", nullptr}};
     for (auto otxt : obj->textures) otmap[otxt->path] = otxt;
     auto tmap = std::unordered_map<std::string, texture*>{{"", nullptr}};
-    auto add_texture = [&tmap, &otmap, scn](
-                           const obj_texture_info& oinfo, bool srgb) {
+    auto add_texture = [&tmap, &otmap, scn](const obj_texture_info& oinfo,
+                           const std::string& channel, bool srgb,
+                           bool opt_if_one = false) {
         if (oinfo.path == "") return (texture*)nullptr;
         if (otmap.find(oinfo.path) == otmap.end()) return (texture*)nullptr;
-        if (tmap.find(oinfo.path) != tmap.end()) return tmap.at(oinfo.path);
+        auto tname = oinfo.path + " [" + channel + "] ";
+        if (tmap.find(tname) != tmap.end()) return tmap.at(tname);
         auto otxt = otmap.at(oinfo.path);
+        if (!otxt->width || !otxt->height ||
+            (otxt->hdr.empty() && otxt->ldr.empty()))
+            return (texture*)nullptr;
+        auto rgba = std::vector<vec4f>();
+        if (!otxt->hdr.empty()) {
+            rgba = otxt->hdr;
+        } else if (srgb) {
+            rgba = gamma_to_linear(byte_to_float(otxt->ldr));
+        } else {
+            rgba = byte_to_float(otxt->ldr);
+        }
         auto txt = new texture();
         txt->name = otxt->path;
         txt->path = otxt->path;
         txt->srgb = srgb;
         txt->clamp = oinfo.clamp;
         txt->scale = oinfo.scale;
-        if (otxt->width && otxt->height &&
-            (!otxt->hdr.empty() || !otxt->ldr.empty())) {
-            txt->width = otxt->width;
-            txt->height = otxt->height;
-            if (!otxt->hdr.empty()) {
-                txt->col = imagef_to_image3f(otxt->hdr, otxt->ncomp);
-            } else {
-                txt->col =
-                    imagef_to_image3f(byte_to_float(otxt->ldr), otxt->ncomp);
-                if (srgb) txt->col = gamma_to_linear(txt->col);
+        txt->width = otxt->width;
+        txt->height = otxt->height;
+        if (channel == "rgb") {
+            txt->col = rgba_to_rgb(rgba);
+        } else if (channel == "l") {
+            txt->scl = rgba_to_luminance(rgba);
+        } else if (channel == "r") {
+            txt->scl = rgba_to_red(rgba);
+        } else if (channel == "g") {
+            txt->scl = rgba_to_green(rgba);
+        } else if (channel == "b") {
+            txt->scl = rgba_to_blue(rgba);
+        } else if (channel == "a") {
+            txt->scl = rgba_to_alpha(rgba);
+        } else {
+            throw std::runtime_error("channel not supported");
+        }
+        if (opt_if_one) {
+            auto is_one = true;
+            for (auto v : txt->scl)
+                if (v != 1) is_one = false;
+            if (is_one) {
+                delete txt;
+                return (texture*)nullptr;
             }
         }
         scn->textures.push_back(txt);
-        tmap[oinfo.path] = txt;
+        tmap[tname] = txt;
         return txt;
     };
 
@@ -933,15 +953,17 @@ scene* obj_to_scene(const obj_scene* obj) {
         mat->op = omat->op;
         mat->fresnel = omat->illum == 2 || omat->illum == 5 || omat->illum == 7;
         mat->refract = omat->illum == 6 || omat->illum == 7;
-        mat->ke_txt = add_texture(omat->ke_txt, true);
-        mat->kd_txt = add_texture(omat->kd_txt, true);
-        mat->ks_txt = add_texture(omat->ks_txt, true);
-        mat->kt_txt = add_texture(omat->kt_txt, true);
-        mat->op_txt = add_texture(omat->op_txt, true);
+        mat->ke_txt = add_texture(omat->ke_txt, "rgb", true);
+        mat->kd_txt = add_texture(omat->kd_txt, "rgb", true);
+        mat->ks_txt = add_texture(omat->ks_txt, "rgb", true);
+        mat->kt_txt = add_texture(omat->kt_txt, "rgb", true);
+        mat->op_txt = (omat->op_txt.path != "") ?
+                          add_texture(omat->op_txt, "lum", false) :
+                          add_texture(omat->op_txt, "a", false, true);
         // mat->rs_txt = add_texture(omat->rs_txt, true);
-        mat->norm_txt = add_texture(omat->norm_txt, false);
-        mat->bump_txt = add_texture(omat->bump_txt, false);
-        mat->disp_txt = add_texture(omat->disp_txt, false);
+        mat->norm_txt = add_texture(omat->norm_txt, "rgb", false);
+        mat->bump_txt = add_texture(omat->bump_txt, "l", false);
+        mat->disp_txt = add_texture(omat->disp_txt, "l", false);
         scn->materials.push_back(mat);
         mmap[mat->name] = mat;
     }
@@ -1190,7 +1212,7 @@ scene* obj_to_scene(const obj_scene* obj) {
         auto env = new environment();
         env->name = oenv->name;
         env->ke = oenv->ke;
-        env->ke_txt = add_texture(oenv->ke_txt, true);
+        env->ke_txt = add_texture(oenv->ke_txt, "rgb", true);
         env->frame = oenv->frame;
         scn->environments.push_back(env);
         emap[env->name] = env;
@@ -1248,32 +1270,41 @@ obj_scene* scene_to_obj(
     const scene* scn, bool preserve_instances, bool preserve_subdivs) {
     auto obj = new obj_scene();
 
-    auto make_texture_info = [](const texture* txt, bool bump = false) {
+    auto tmap = std::map<std::string, obj_texture*>();
+    auto add_texture = [&tmap, obj](const texture* txt, const texture* op,
+                           bool srgb, bool bump = false) {
         auto oinfo = obj_texture_info();
         if (!txt) return oinfo;
         oinfo.path = txt->path;
         oinfo.clamp = txt->clamp;
         if (bump) oinfo.scale = txt->scale;
+        if (tmap.find(oinfo.path) == tmap.end()) {
+            auto rgba = std::vector<vec4f>();
+            if (!txt->col.empty()) {
+                rgba = rgb_to_rgba(txt->col);
+            } else {
+                rgba = luminance_to_rgba(txt->scl);
+            }
+            if (op && op->width == txt->width && op->height == txt->height) {
+                for (auto i = 0; i < op->scl.size(); i++)
+                    rgba[i].w = op->scl[i];
+            }
+            auto otxt = new obj_texture();
+            otxt->path = txt->path;
+            otxt->width = txt->width;
+            otxt->height = txt->height;
+            if (is_hdr_filename(txt->path)) {
+                otxt->hdr = rgba;
+            } else if (srgb) {
+                otxt->ldr = float_to_byte(linear_to_gamma(rgba));
+            } else {
+                otxt->ldr = float_to_byte(rgba);
+            }
+            obj->textures.push_back(otxt);
+            tmap[oinfo.path] = otxt;
+        }
         return oinfo;
     };
-
-    // convert textures
-    for (auto txt : scn->textures) {
-        auto otxt = new obj_texture();
-        otxt->path = txt->path;
-        otxt->width = txt->width;
-        otxt->height = txt->height;
-        otxt->ncomp = 3;
-        if (is_hdr_filename(txt->path)) {
-            otxt->hdr = image3f_to_imagef(txt->col, 3);
-        } else if (txt->srgb) {
-            otxt->ldr =
-                float_to_byte(image3f_to_imagef(linear_to_gamma(txt->col), 3));
-        } else {
-            otxt->ldr = float_to_byte(image3f_to_imagef(txt->col, 3));
-        }
-        obj->textures.push_back(otxt);
-    }
 
     // convert materials
     for (auto mat : scn->materials) {
@@ -1283,41 +1314,42 @@ obj_scene* scene_to_obj(
         if (mat->kt != zero3f && mat->refract && !mat->fresnel) omat->illum = 6;
         if (mat->kt != zero3f && mat->refract && mat->fresnel) omat->illum = 7;
         omat->ke = {mat->ke.x, mat->ke.y, mat->ke.z};
-        omat->ke_txt = make_texture_info(mat->ke_txt);
+        omat->ke_txt = add_texture(mat->ke_txt, nullptr, true);
         if (!mat->base_metallic) {
-            omat->kd = {mat->kd.x, mat->kd.y, mat->kd.z};
-            omat->ks = {mat->ks.x, mat->ks.y, mat->ks.z};
-            omat->kt = {mat->kt.x, mat->kt.y, mat->kt.z};
-            omat->ns =
-                clamp(2 / pow(mat->rs + 1e-10f, 4.0f) - 2, 0.0f, 1.0e12f);
+            omat->kd = mat->kd;
+            omat->ks = mat->ks;
             omat->op = mat->op;
-            omat->kd_txt = make_texture_info(mat->kd_txt);
-            omat->ks_txt = make_texture_info(mat->ks_txt);
-            omat->kt_txt = make_texture_info(mat->kt_txt);
-        } else {
-            if (mat->rs >= 1 && mat->ks.x == 0) {
-                omat->kd = mat->kd;
-                omat->ks = {0, 0, 0};
-                omat->ns = 1;
+            if (mat->kd_txt && mat->op_txt &&
+                mat->kd_txt->path == mat->op_txt->path) {
+                omat->kd_txt = add_texture(mat->kd_txt, mat->op_txt, true);
+                omat->ks_txt = add_texture(mat->ks_txt, nullptr, true);
             } else {
-                auto kd = mat->kd * (1 - 0.04f) * (1 - mat->ks.x);
-                auto ks = mat->kd * mat->ks.x +
-                          vec3f{0.04f, 0.04f, 0.04f} * (1 - mat->ks.x);
-                omat->kd = {kd.x, kd.y, kd.z};
-                omat->ks = {ks.x, ks.y, ks.z};
-                omat->ns =
-                    clamp(2 / pow(mat->rs + 1e-10f, 4.0f) - 2, 0.0f, 1.0e12f);
+                omat->kd_txt = add_texture(mat->kd_txt, nullptr, true);
+                omat->ks_txt = add_texture(mat->ks_txt, nullptr, true);
+                omat->op_txt = add_texture(mat->op_txt, nullptr, true);
             }
+        } else {
+            omat->kd = mat->kd;
+            omat->km = mat->ks.x;
             omat->op = mat->op;
-            if (mat->ks.x < 0.5f) {
-                omat->kd_txt = make_texture_info(mat->kd_txt);
+            if (mat->kd_txt && mat->op_txt &&
+                mat->kd_txt->path == mat->op_txt->path) {
+                omat->kd_txt = add_texture(mat->kd_txt, mat->op_txt, true);
+                omat->km_txt = add_texture(mat->ks_txt, nullptr, true);
             } else {
-                omat->ks_txt = make_texture_info(mat->ks_txt);
+                omat->kd_txt = add_texture(mat->kd_txt, nullptr, true);
+                omat->km_txt = add_texture(mat->ks_txt, nullptr, true);
+                omat->op_txt = add_texture(mat->op_txt, nullptr, true);
             }
         }
-        omat->bump_txt = make_texture_info(mat->bump_txt, true);
-        omat->disp_txt = make_texture_info(mat->disp_txt, true);
-        omat->norm_txt = make_texture_info(mat->norm_txt, true);
+        omat->kt = mat->kt;
+        omat->ns = clamp(2 / pow(mat->rs + 1e-10f, 4.0f) - 2, 0.0f, 1.0e12f);
+        omat->rs = mat->rs;
+        omat->kt_txt = add_texture(mat->kt_txt, nullptr, true);
+        omat->rs_txt = add_texture(mat->rs_txt, nullptr, true);
+        omat->bump_txt = add_texture(mat->bump_txt, nullptr, false, true);
+        omat->disp_txt = add_texture(mat->disp_txt, nullptr, false, true);
+        omat->norm_txt = add_texture(mat->norm_txt, nullptr, false, true);
         obj->materials.push_back(omat);
     }
 
@@ -1441,7 +1473,7 @@ obj_scene* scene_to_obj(
         auto oenv = new obj_environment();
         oenv->name = env->name;
         oenv->ke = env->ke;
-        oenv->ke_txt = make_texture_info(env->ke_txt);
+        oenv->ke_txt = add_texture(env->ke_txt, nullptr, true);
         oenv->frame = env->frame;
         obj->environments.push_back(oenv);
     }
@@ -1481,10 +1513,6 @@ obj_scene* scene_to_obj(
     return obj;
 }
 
-#endif
-
-#ifdef YGL_GLTF
-
 static bool startswith(const std::string& str, const std::string& substr) {
     if (str.length() < substr.length()) return false;
     for (auto i = 0; i < substr.length(); i++)
@@ -1498,20 +1526,35 @@ scene* gltf_to_scene(const glTF* gltf) {
     auto scn = new scene();
 
     // add a texture
-    auto tmap = std::unordered_map<glTFImage*, texture*>{{nullptr, nullptr}};
+    auto tmap = std::unordered_map<std::string, texture*>{};
     auto add_texture = [&tmap, gltf, scn](const glTFTextureInfo* ginfo,
-                           bool srgb, bool normal = false,
+                           const std::string& channel, bool srgb,
+                           bool opt_if_one = false, bool normal = false,
                            bool occlusion = false) {
         if (!ginfo) return (texture*)nullptr;
         auto gtxt = gltf->get(ginfo->index);
         if (!gtxt || !gtxt->source) return (texture*)nullptr;
         auto gimg = gltf->get(gtxt->source);
-        if (tmap.find(gimg) != tmap.end()) return tmap.at(gimg);
+        auto tname = std::to_string((uint64_t)gimg) + " [" + channel + "] ";
+        if (tmap.find(tname) != tmap.end()) return tmap.at(tname);
+        if (!gimg->data.width || !gimg->data.height ||
+            (gimg->data.hdr.empty() && gimg->data.ldr.empty()))
+            return (texture*)nullptr;
+        auto rgba = std::vector<vec4f>();
+        if (!gimg->data.hdr.empty()) {
+            rgba = gimg->data.hdr;
+        } else if (srgb) {
+            rgba = gamma_to_linear(byte_to_float(gimg->data.ldr));
+        } else {
+            rgba = byte_to_float(gimg->data.ldr);
+        }
         auto txt = new texture();
         txt->path = (startswith(gimg->uri, "data:")) ?
-                        std::string("[glTF inline]") :
+                        std::string("[glTF-inline].png") :
                         gimg->uri;
         txt->name = txt->path;
+        txt->width = gimg->data.width;
+        txt->height = gimg->data.height;
         txt->srgb = srgb;
         auto gsmp = gltf->get(gtxt->sampler);
         if (gsmp) {
@@ -1526,20 +1569,35 @@ scene* gltf_to_scene(const glTF* gltf) {
             auto ninfo = (glTFMaterialOcclusionTextureInfo*)ginfo;
             txt->scale = ninfo->strength;
         }
-        if (gimg->data.width && gimg->data.height &&
-            (!gimg->data.hdr.empty() || !gimg->data.ldr.empty())) {
-            txt->width = gimg->data.width;
-            txt->height = gimg->data.height;
-            if (!gimg->data.hdr.empty()) {
-                txt->col = imagef_to_image3f(gimg->data.hdr, gimg->data.ncomp);
-            } else {
-                txt->col = imagef_to_image3f(
-                    byte_to_float(gimg->data.ldr), gimg->data.ncomp);
-                if (txt->srgb) txt->col = gamma_to_linear(txt->col);
+        if (channel == "rgb") {
+            txt->col = rgba_to_rgb(rgba);
+        } else if (channel == "l") {
+            txt->scl = rgba_to_luminance(rgba);
+        } else if (channel == "r") {
+            txt->scl = rgba_to_red(rgba);
+        } else if (channel == "g") {
+            txt->scl = rgba_to_green(rgba);
+        } else if (channel == "b") {
+            txt->scl = rgba_to_blue(rgba);
+        } else if (channel == "a") {
+            txt->scl = rgba_to_alpha(rgba);
+        } else if (channel == "ai") {
+            txt->scl = rgba_to_alpha(rgba);
+            for (auto& v : txt->scl) v = 1 - v;
+        } else {
+            throw std::runtime_error("channel not supported");
+        }
+        if (opt_if_one) {
+            auto is_one = true;
+            for (auto v : txt->scl)
+                if (v != 1) is_one = false;
+            if (is_one) {
+                delete txt;
+                return (texture*)nullptr;
             }
         }
         scn->textures.push_back(txt);
-        tmap[gimg] = txt;
+        tmap[tname] = txt;
         return txt;
     };
 
@@ -1547,31 +1605,55 @@ scene* gltf_to_scene(const glTF* gltf) {
     for (auto gmat : gltf->materials) {
         auto mat = new material();
         mat->name = gmat->name;
-        mat->ke = gmat->emissiveFactor;
-        mat->ke_txt = add_texture(gmat->emissiveTexture, true);
         if (gmat->pbrSpecularGlossiness) {
             mat->base_metallic = false;
             auto gsg = gmat->pbrSpecularGlossiness;
+            mat->ke = gmat->emissiveFactor;
             mat->kd = {gsg->diffuseFactor.x, gsg->diffuseFactor.y,
                 gsg->diffuseFactor.z};
             mat->op = gsg->diffuseFactor.w;
             mat->ks = gsg->specularFactor;
             mat->rs = 1 - gsg->glossinessFactor;
-            mat->kd_txt = add_texture(gsg->diffuseTexture, true);
-            mat->ks_txt = add_texture(gsg->specularGlossinessTexture, true);
+            mat->ke_txt = add_texture(gmat->emissiveTexture, "rgb", true);
+            mat->kd_txt = add_texture(gsg->diffuseTexture, "rgb", true);
+            mat->op_txt = add_texture(gsg->diffuseTexture, "a", true);
+            mat->ks_txt =
+                add_texture(gsg->specularGlossinessTexture, "rgb", true);
+            mat->rs_txt =
+                add_texture(gsg->specularGlossinessTexture, "ai", true, true);
+            mat->occ_txt = add_texture(
+                gmat->occlusionTexture, "l", false, true, false, true);
+            mat->norm_txt = add_texture(
+                gmat->normalTexture, "rgb", false, false, true, false);
+            if (mat->rs != 0 && mat->rs_txt)
+                log_warning(
+                    "glTF scaled and textured roughness not fully supported");
         } else if (gmat->pbrMetallicRoughness) {
             mat->base_metallic = true;
             auto gmr = gmat->pbrMetallicRoughness;
+            mat->ke = gmat->emissiveFactor;
             mat->kd = {gmr->baseColorFactor.x, gmr->baseColorFactor.y,
                 gmr->baseColorFactor.z};
             mat->op = gmr->baseColorFactor.w;
             mat->ks = {
                 gmr->metallicFactor, gmr->metallicFactor, gmr->metallicFactor};
             mat->rs = gmr->roughnessFactor;
-            mat->kd_txt = add_texture(gmr->baseColorTexture, true);
-            mat->ks_txt = add_texture(gmr->metallicRoughnessTexture, false);
+            mat->ke_txt = add_texture(gmat->emissiveTexture, "rgb", true);
+            mat->kd_txt = add_texture(gmr->baseColorTexture, "rgb", true);
+            mat->op_txt = add_texture(gmr->baseColorTexture, "a", true, true);
+            mat->ks_txt =
+                add_texture(gmr->metallicRoughnessTexture, "b", false, true);
+            mat->rs_txt =
+                add_texture(gmr->metallicRoughnessTexture, "g", false, true);
+            mat->occ_txt =
+                gmat->occlusionTexture ?
+                    add_texture(
+                        gmat->occlusionTexture, "l", false, true, false, true) :
+                    mat->ks_txt = add_texture(
+                        gmr->metallicRoughnessTexture, "r", false, true);
+            mat->norm_txt = add_texture(
+                gmat->normalTexture, "rgb", false, false, true, false);
         }
-        mat->norm_txt = add_texture(gmat->normalTexture, false, true, false);
         mat->double_sided = gmat->doubleSided;
         scn->materials.push_back(mat);
     }
@@ -1902,24 +1984,6 @@ glTF* scene_to_gltf(
         gltf->cameras.push_back(gcam);
     }
 
-    // convert images
-    for (auto txt : scn->textures) {
-        auto gimg = new glTFImage();
-        gimg->uri = txt->path;
-        gimg->data.width = txt->width;
-        gimg->data.height = txt->height;
-        gimg->data.ncomp = 3;
-        if (is_hdr_filename(txt->path)) {
-            gimg->data.hdr = image3f_to_imagef(txt->col, 3);
-        } else if (txt->srgb) {
-            gimg->data.ldr =
-                float_to_byte(image3f_to_imagef(linear_to_gamma(txt->col), 3));
-        } else {
-            gimg->data.ldr = float_to_byte(image3f_to_imagef(txt->col, 3));
-        }
-        gltf->images.push_back(gimg);
-    }
-
     // index of an object
     auto index = [](const auto& vec, auto& val) -> int {
         auto pos = find(vec.begin(), vec.end(), val);
@@ -1928,12 +1992,55 @@ glTF* scene_to_gltf(
     };
 
     // add a texture and sampler
-    auto add_texture_info = [&gltf, &index, scn](const texture* txt,
-                                bool norm = false, bool occ = false) {
+    auto tmap = std::map<std::string, glTFid<glTFImage>>();
+    auto add_texture = [gltf, &tmap](const texture* txt, const texture* op,
+                           const std::string& channel, bool srgb,
+                           bool norm = false, bool occ = false) {
         if (!txt) return (glTFTextureInfo*)nullptr;
         auto gtxt = new glTFTexture();
         gtxt->name = txt->name;
-        gtxt->source = glTFid<glTFImage>(index(scn->textures, txt));
+        if (tmap.find(txt->path) == tmap.end()) {
+            auto rgba =
+                std::vector<vec4f>(txt->width * txt->height, {0, 0, 0, 1});
+            if (channel == "rgba" || channel == "rgb" || channel == "rgbi") {
+                if (!txt->col.empty()) {
+                    rgba = rgb_to_rgba(txt->col);
+                } else {
+                    rgba = luminance_to_rgba(txt->scl);
+                }
+                if (op && op->width == txt->width &&
+                    op->height == txt->height) {
+                    if (channel == "rgba")
+                        for (auto i = 0; i < op->scl.size(); i++)
+                            rgba[i].w = op->scl[i];
+                    if (channel == "rgbi")
+                        for (auto i = 0; i < op->scl.size(); i++)
+                            rgba[i].w = 1 - op->scl[i];
+                }
+            } else if (channel == "bg") {
+                for (auto i = 0; i < txt->scl.size(); i++)
+                    rgba[i].z = txt->scl[i];
+                if (op && op->width == txt->width &&
+                    op->height == txt->height) {
+                    for (auto i = 0; i < op->scl.size(); i++)
+                        rgba[i].y = op->scl[i];
+                }
+            }
+            auto gimg = new glTFImage();
+            gimg->uri = txt->path;
+            gimg->data.width = txt->width;
+            gimg->data.height = txt->height;
+            if (is_hdr_filename(txt->path)) {
+                gimg->data.hdr = rgba;
+            } else if (srgb) {
+                gimg->data.ldr = float_to_byte(linear_to_gamma(rgba));
+            } else {
+                gimg->data.ldr = float_to_byte(rgba);
+            }
+            tmap[txt->path] = glTFid<glTFImage>(gltf->images.size());
+            gltf->images.push_back(gimg);
+        }
+        gtxt->source = tmap.at(txt->path);
 
         // check if it is default
         if (txt->clamp) {
@@ -1946,21 +2053,21 @@ glTF* scene_to_gltf(
             gltf->samplers.push_back(gsmp);
         }
         gltf->textures.push_back(gtxt);
+        auto ginfo = (glTFTextureInfo*)nullptr;
         if (norm) {
-            auto ginfo = new glTFMaterialNormalTextureInfo();
+            ginfo = new glTFMaterialNormalTextureInfo();
             ginfo->index = glTFid<glTFTexture>{(int)gltf->textures.size() - 1};
-            ginfo->scale = txt->scale;
-            return (glTFTextureInfo*)ginfo;
+            ((glTFMaterialNormalTextureInfo*)ginfo)->scale = txt->scale;
         } else if (occ) {
-            auto ginfo = new glTFMaterialOcclusionTextureInfo();
+            ginfo = new glTFMaterialOcclusionTextureInfo();
             ginfo->index = glTFid<glTFTexture>{(int)gltf->textures.size() - 1};
-            ginfo->strength = txt->scale;
-            return (glTFTextureInfo*)ginfo;
+            ((glTFMaterialOcclusionTextureInfo*)ginfo)->strength = txt->scale;
         } else {
-            auto ginfo = new glTFTextureInfo();
+            ginfo = new glTFTextureInfo();
             ginfo->index = glTFid<glTFTexture>{(int)gltf->textures.size() - 1};
-            return ginfo;
         }
+        if (tmap.find(txt->path) == tmap.end()) {}
+        return ginfo;
     };
 
     // convert materials
@@ -1968,7 +2075,7 @@ glTF* scene_to_gltf(
         auto gmat = new glTFMaterial();
         gmat->name = mat->name;
         gmat->emissiveFactor = mat->ke;
-        gmat->emissiveTexture = add_texture_info(mat->ke_txt);
+        gmat->emissiveTexture = add_texture(mat->ke_txt, nullptr, "rgb", true);
         if (!mat->base_metallic) {
             gmat->pbrSpecularGlossiness =
                 new glTFMaterialPbrSpecularGlossiness();
@@ -1976,19 +2083,23 @@ glTF* scene_to_gltf(
             gsg->diffuseFactor = {mat->kd.x, mat->kd.y, mat->kd.z, mat->op};
             gsg->specularFactor = mat->ks;
             gsg->glossinessFactor = 1 - mat->rs;
-            gsg->diffuseTexture = add_texture_info(mat->kd_txt);
-            gsg->specularGlossinessTexture = add_texture_info(mat->ks_txt);
+            gsg->diffuseTexture =
+                add_texture(mat->kd_txt, mat->op_txt, "rgba", true);
+            gsg->specularGlossinessTexture =
+                add_texture(mat->ks_txt, mat->rs_txt, "rgbi", true);
         } else {
             gmat->pbrMetallicRoughness = new glTFMaterialPbrMetallicRoughness();
             auto gmr = gmat->pbrMetallicRoughness;
             gmr->baseColorFactor = {mat->kd.x, mat->kd.y, mat->kd.z, mat->op};
             gmr->metallicFactor = mat->ks.x;
             gmr->roughnessFactor = mat->rs;
-            gmr->baseColorTexture = add_texture_info(mat->kd_txt);
-            gmr->metallicRoughnessTexture = add_texture_info(mat->ks_txt);
+            gmr->baseColorTexture =
+                add_texture(mat->kd_txt, mat->op_txt, "rgba", true);
+            gmr->metallicRoughnessTexture =
+                add_texture(mat->ks_txt, mat->rs_txt, "bg", false);
         }
-        gmat->normalTexture = (glTFMaterialNormalTextureInfo*)(add_texture_info(
-            mat->norm_txt, true, false));
+        gmat->normalTexture = (glTFMaterialNormalTextureInfo*)(add_texture(
+            mat->norm_txt, nullptr, "rgb", true, false));
         gmat->doubleSided = mat->double_sided;
         gltf->materials.push_back(gmat);
     }
@@ -2296,34 +2407,24 @@ glTF* scene_to_gltf(
     return gltf;
 }
 
-#endif
-
 // Load a scene
 scene* load_scene(const std::string& filename, bool load_txts,
     bool split_obj_shapes, bool skip_missing) {
     auto ext = path_extension(filename);
     auto scn = (scene*)nullptr;
     if (ext == ".obj" || ext == ".OBJ") {
-#if YGL_OBJ
         auto oscn = load_obj(filename, split_obj_shapes, true, true);
         if (load_txts)
             load_obj_textures(oscn, path_dirname(filename), skip_missing);
         scn = obj_to_scene(oscn);
         scn->name = path_filename(filename);
         delete oscn;
-#else
-        throw std::runtime_error("Obj not supported");
-#endif
     } else if (ext == ".gltf" || ext == ".GLTF") {
-#if YGL_GLTF
         auto gscn = load_gltf(filename, true);
         if (load_txts)
             load_gltf_textures(gscn, path_dirname(filename), skip_missing);
         scn = gltf_to_scene(gscn);
         delete gscn;
-#else
-        throw std::runtime_error("glTF not supported");
-#endif
     } else {
         throw std::runtime_error("unsupported extension " + ext);
     }
@@ -2348,27 +2449,19 @@ void save_scene(const std::string& filename, const scene* scn, bool save_txt,
     bool gltf_separate_buffers, bool skip_missing) {
     auto ext = path_extension(filename);
     if (ext == ".obj" || ext == ".OBJ") {
-#if YGL_OBJ
         auto oscn =
             scene_to_obj(scn, preserve_obj_instances, preserve_obj_subdivs);
         save_obj(filename, oscn, true, false);
         if (save_txt)
             save_obj_textures(oscn, path_dirname(filename), skip_missing);
         delete oscn;
-#else
-        throw std::runtime_error("unsupported Obj");
-#endif
     } else if (ext == ".gltf" || ext == ".GLTF") {
-#if YGL_GLTF
         auto buffer_uri = path_basename(filename) + ".bin";
         auto gscn = scene_to_gltf(scn, buffer_uri, gltf_separate_buffers);
         save_gltf(filename, gscn);
         if (save_txt)
             save_gltf_textures(gscn, path_dirname(filename), skip_missing);
         delete gscn;
-#else
-        throw std::runtime_error("unsupported glTF");
-#endif
     } else {
         throw std::runtime_error("unsupported extension " + ext);
     }
@@ -2429,25 +2522,15 @@ material* make_material(
 }
 
 texture* make_texture(const std::string& name, const std::string& path,
-    int width, int height, const std::vector<vec3f>& pixels, bool srgb) {
+    int width, int height, const std::vector<vec3f>& rgb,
+    const std::vector<float>& scl, bool srgb) {
     auto txt = new texture();
     txt->name = name;
     txt->path = path;
     txt->width = width;
     txt->height = height;
-    txt->col = pixels;
-    txt->srgb = true;
-    return txt;
-}
-
-texture* make_texture(const std::string& name, const std::string& path,
-    int width, int height, const std::vector<float>& pixels, bool srgb) {
-    auto txt = new texture();
-    txt->name = name;
-    txt->path = path;
-    txt->width = width;
-    txt->height = height;
-    txt->scl = pixels;
+    txt->col = rgb;
+    txt->scl = scl;
     txt->srgb = true;
     return txt;
 }
@@ -2792,7 +2875,7 @@ texture* make_bumpnorm_texture(
     return make_texture(name, name + ".png", res, res,
         bump_to_normal_map(
             res, res, make_bumpdimple_image(res, res, tile), scale),
-        false);
+        {}, false);
 }
 texture* make_sky_texture(const std::string& name, int res, float skyangle) {
     return make_texture(name, name + ".hdr", res * 2, res,

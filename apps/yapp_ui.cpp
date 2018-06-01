@@ -67,7 +67,7 @@ void update_gldata(texture* txt) {
     if (!txt->col.empty()) {
         update_gltexture(
             gtxt, txt->width, txt->height, txt->col, true, true, false);
-    } else if(!txt->scl.empty()) {
+    } else if (!txt->scl.empty()) {
         update_gltexture(
             gtxt, txt->width, txt->height, txt->scl, true, true, false);
     }
@@ -152,8 +152,9 @@ void draw_glshape(const shape* shp, const material* mat, const mat4f& xform,
     auto faceted = shp->norm.empty();
 
     set_glsurface_material(prog, mat->ke, mat->kd, mat->ks, mat->rs, mat->op,
-        txt(mat->ke_txt), txt(mat->kd_txt), txt(mat->ks_txt),
-        txt(mat->norm_txt), mat->double_sided, mat->base_metallic);
+        txt(mat->ke_txt), txt(mat->kd_txt), txt(mat->ks_txt), txt(mat->rs_txt),
+        txt(mat->op_txt), txt(mat->norm_txt), mat->double_sided,
+        mat->base_metallic);
 
     set_glsurface_vert(
         prog, gshp.pos, gshp.norm, gshp.texcoord, gshp.color, gshp.tangsp);

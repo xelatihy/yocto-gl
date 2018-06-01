@@ -9,14 +9,6 @@ Please consider this to be just development notes and not any real planning.
 - better material rendering
 - better rendering
 
-## no gl image shading
-
-- gl_drawimage draws on the entire screen
-- remove shader for images (just blit)
-- enable background with checkers if desired
-- proper alpha compositing in renderer
-    - can we use a background color and avoid the issues?
-
 ## giacomo
 
 - pbrt export
@@ -34,6 +26,8 @@ Please consider this to be just development notes and not any real planning.
 
 ## image
 
+- examples as vec3f/vec4f
+- examples using size instead of tiling
 - tone curve
 - 3D lut
 - implement correction workflow

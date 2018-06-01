@@ -962,11 +962,9 @@ void load_obj_textures(
         for (auto& c : filename)
             if (c == '\\') c = '/';
         if (is_hdr_filename(filename)) {
-            txt->hdr =
-                load_imagef(filename, txt->width, txt->height, txt->ncomp);
+            txt->hdr = load_image4f(filename, txt->width, txt->height);
         } else {
-            txt->ldr =
-                load_imageb(filename, txt->width, txt->height, txt->ncomp);
+            txt->ldr = load_image4b(filename, txt->width, txt->height);
         }
         if (txt->ldr.empty() && txt->hdr.empty()) {
             if (skip_missing) continue;
@@ -985,12 +983,10 @@ void save_obj_textures(
             if (c == '\\') c = '/';
         auto ok = false;
         if (!txt->ldr.empty()) {
-            ok = save_imageb(
-                filename, txt->width, txt->height, txt->ncomp, txt->ldr);
+            ok = save_image4b(filename, txt->width, txt->height, txt->ldr);
         }
         if (!txt->hdr.empty()) {
-            ok = save_imagef(
-                filename, txt->width, txt->height, txt->ncomp, txt->hdr);
+            ok = save_image4f(filename, txt->width, txt->height, txt->hdr);
         }
         if (!ok) {
             if (skip_missing) continue;

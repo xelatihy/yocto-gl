@@ -196,8 +196,10 @@ const auto zero4i = vec4i();
 const auto zero4b = vec4b();
 
 // Access xyz component of a vec4 typically used for color operation.
-inline vec3f xyz(const vec4f& a) { return {a.x, a.y, a.z}; }
-inline vec3i xyz(const vec4i& a) { return {a.x, a.y, a.z}; }
+inline const vec3f& xyz(const vec4f& a) { return (const vec3f&)a; }
+inline const vec3i& xyz(const vec4i& a) { return (const vec3i&)a; }
+inline vec3f& xyz(vec4f& a) { return (vec3f&)a; }
+inline vec3i& xyz(vec4i& a) { return (vec3i&)a; }
 
 // Vector comparison operations.
 inline bool operator==(const vec2f& a, const vec2f& b) {
@@ -705,7 +707,8 @@ struct bbox3f {
 
 // Axis aligned bounding box represented as a min/max vector pairs.
 struct bbox4f {
-    vec4f min = {flt_max, flt_max, flt_max, flt_max}, max = {flt_min, flt_min, flt_min, flt_min};
+    vec4f min = {flt_max, flt_max, flt_max, flt_max},
+          max = {flt_min, flt_min, flt_min, flt_min};
 };
 
 // Empty bbox constant.
@@ -777,15 +780,17 @@ inline bbox3f& operator+=(bbox3f& a, const bbox3f& b) {
 }
 // Bounding box expansions with points and other boxes.
 inline bbox4f& operator+=(bbox4f& a, const vec4f& b) {
-    a.min = {min(a.min.x, b.x), min(a.min.y, b.y), min(a.min.z, b.z), min(a.min.w, b.w)};
-    a.max = {max(a.max.x, b.x), max(a.max.y, b.y), max(a.max.z, b.z), max(a.max.w, b.w)};
+    a.min = {min(a.min.x, b.x), min(a.min.y, b.y), min(a.min.z, b.z),
+        min(a.min.w, b.w)};
+    a.max = {max(a.max.x, b.x), max(a.max.y, b.y), max(a.max.z, b.z),
+        max(a.max.w, b.w)};
     return a;
 }
 inline bbox4f& operator+=(bbox4f& a, const bbox4f& b) {
-    a.min = {
-        min(a.min.x, b.min.x), min(a.min.y, b.min.y), min(a.min.z, b.min.z), min(a.min.w, b.min.w)};
-    a.max = {
-        max(a.max.x, b.max.x), max(a.max.y, b.max.y), max(a.max.z, b.max.z), max(a.max.w, b.max.w)};
+    a.min = {min(a.min.x, b.min.x), min(a.min.y, b.min.y),
+        min(a.min.z, b.min.z), min(a.min.w, b.min.w)};
+    a.max = {max(a.max.x, b.max.x), max(a.max.y, b.max.y),
+        max(a.max.z, b.max.z), max(a.max.w, b.max.w)};
     return a;
 }
 
