@@ -41,7 +41,7 @@ struct gimage {
 
     int width = 0;                // width
     int height = 0;               // height
-    std::vector<ygl::vec4f> pxl;  // pixels
+    std::vector<ygl::vec4f> img;  // pixels
 
     // min/max values
     ygl::bbox4f pxl_bounds = ygl::invalid_bbox4f;
@@ -79,7 +79,7 @@ struct app_state {
 void update_minmax(gimage* img) {
     img->pxl_bounds = ygl::invalid_bbox4f;
     img->lum_bounds = ygl::invalid_bbox1f;
-    for (auto& p : img->pxl) {
+    for (auto& p : img->img) {
         img->pxl_bounds += p;
         img->lum_bounds += ygl::luminance(xyz(p));
     }
@@ -92,8 +92,8 @@ gimage* load_gimage(const std::string& filename, float exposure, float gamma) {
     img->name = ygl::path_filename(filename);
     img->exposure = exposure;
     img->gamma = gamma;
-    img->pxl = ygl::load_image4f(filename, img->width, img->height, img->gamma);
-    if (img->pxl.empty()) {
+    img->img = ygl::load_image(filename, img->width, img->height, img->gamma);
+    if (img->img.empty()) {
         throw std::runtime_error("cannot load image " + img->filename);
     }
     update_minmax(img);
@@ -102,27 +102,27 @@ gimage* load_gimage(const std::string& filename, float exposure, float gamma) {
 
 gimage* diff_gimage(gimage* a, gimage* b, bool color) {
     if (a->width != b->width || a->height != b->height) return nullptr;
-    if (a->pxl.empty() && !b->pxl.empty()) return nullptr;
+    if (a->img.empty() && !b->img.empty()) return nullptr;
     auto d = new gimage();
     d->name = "diff " + a->name + " " + b->name;
     d->filename = "";
     d->width = a->width;
     d->height = a->height;
-    if (!a->pxl.empty()) {
-        d->pxl.resize(a->pxl.size());
+    if (!a->img.empty()) {
+        d->img.resize(a->img.size());
         if (color) {
-            for (auto i = 0; i < a->pxl.size(); i++) {
-                d->pxl[i] = {std::abs(a->pxl[i].x - b->pxl[i].x),
-                    std::abs(a->pxl[i].y - b->pxl[i].y),
-                    std::abs(a->pxl[i].z - b->pxl[i].z),
-                    std::max(a->pxl[i].w, b->pxl[i].w)};
+            for (auto i = 0; i < a->img.size(); i++) {
+                d->img[i] = {std::abs(a->img[i].x - b->img[i].x),
+                    std::abs(a->img[i].y - b->img[i].y),
+                    std::abs(a->img[i].z - b->img[i].z),
+                    std::max(a->img[i].w, b->img[i].w)};
             }
         } else {
-            for (auto i = 0; i < a->pxl.size(); i++) {
-                auto la = (a->pxl[i].x + a->pxl[i].y + a->pxl[i].z) / 3;
-                auto lb = (b->pxl[i].x + b->pxl[i].y + b->pxl[i].z) / 3;
+            for (auto i = 0; i < a->img.size(); i++) {
+                auto la = (a->img[i].x + a->img[i].y + a->img[i].z) / 3;
+                auto lb = (b->img[i].x + b->img[i].y + b->img[i].z) / 3;
                 auto ld = fabsf(la - lb);
-                d->pxl[i] = {ld, ld, ld, std::max(a->pxl[i].w, b->pxl[i].w)};
+                d->img[i] = {ld, ld, ld, std::max(a->img[i].w, b->img[i].w)};
             }
         }
     }
@@ -131,7 +131,7 @@ gimage* diff_gimage(gimage* a, gimage* b, bool color) {
 }
 
 void update_display_image(gimage* img) {
-    img->display = img->pxl;
+    img->display = img->img;
     if (img->exposure)
         img->display = ygl::expose_image(img->display, img->exposure);
     if (img->filmic) img->display = ygl::filmic_tonemap_image(img->display);
@@ -165,10 +165,10 @@ void draw_glwidgets(ygl::glwindow* win, app_state* app) {
         auto pixel = ygl::zero4f;
         if (ij.x >= 0 && ij.x < app->img->width && ij.y >= 0 &&
             ij.y < app->img->height) {
-            pixel = app->img->pxl.at(ij.x + ij.y * app->img->width);
+            pixel = app->img->img.at(ij.x + ij.y * app->img->width);
         }
         ygl::draw_glwidgets_colorbox(win, "pixel", pixel);
-        if (!app->img->pxl.empty()) {
+        if (!app->img->img.empty()) {
             ygl::draw_glwidgets_dragbox(win, "pxl", app->img->pxl_bounds);
             ygl::draw_glwidgets_dragbox(
                 win, "lum min/max", app->img->lum_bounds);
@@ -249,7 +249,7 @@ void run_ui(app_state* app) {
         }
         if (app->img->gl_updated) {
             update_gltexture(app->img->gl_txt, app->img->width,
-                app->img->height, app->img->display, false, false, true);
+                app->img->height, app->img->display, false, false, true, false);
             app->img->gl_updated = false;
         }
 

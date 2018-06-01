@@ -64,12 +64,9 @@ struct glshape {
 void update_gldata(texture* txt) {
     if (!txt->gl_data) txt->gl_data = new gltexture();
     auto& gtxt = *(gltexture*)txt->gl_data;
-    if (!txt->col.empty()) {
+    if (!txt->img.empty()) {
         update_gltexture(
-            gtxt, txt->width, txt->height, txt->col, true, true, false);
-    } else if (!txt->scl.empty()) {
-        update_gltexture(
-            gtxt, txt->width, txt->height, txt->scl, true, true, false);
+            gtxt, txt->width, txt->height, txt->img, true, true, false, false);
     }
 }
 void update_gldata(shape* shp) {
@@ -581,11 +578,8 @@ bool draw_glwidgets_scene_inspector(glwindow* win, texture* val, scene* scn) {
     auto edited = 0;
     edited += draw_glwidgets_text(win, "name", val->name);
     edited += draw_glwidgets_text(win, "path", val->path);
-    draw_glwidgets_label(win, "col", val->col);
-    draw_glwidgets_label(win, "scl", val->scl);
     edited += draw_glwidgets_checkbox(win, "clamp", val->clamp);
     edited += draw_glwidgets_dragbox(win, "scale", val->scale);
-    edited += draw_glwidgets_checkbox(win, "srgb", val->srgb);
     return edited;
 }
 

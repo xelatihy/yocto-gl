@@ -181,12 +181,12 @@ int main(int argc, char* argv[]) {
 
     // load
     auto width = 0, height = 0;
-    auto img = ygl::load_image4f(filename, width, height, gamma);
+    auto img = ygl::load_image(filename, width, height, gamma);
 
     // set alpha
     if (set_alpha_filename != "") {
         auto alpha_width = 0, alpha_height = 0;
-        auto alpha_img = ygl::load_image4f(
+        auto alpha_img = ygl::load_image(
             set_alpha_filename, alpha_width, alpha_height, gamma);
         if (width != alpha_width || height != alpha_height)
             ygl::log_fatal("bad image size");
@@ -196,7 +196,7 @@ int main(int argc, char* argv[]) {
     // set alpha
     if (set_color_as_alpha_filename != "") {
         auto alpha_width = 0, alpha_height = 0;
-        auto alpha_img = ygl::load_image4f(
+        auto alpha_img = ygl::load_image(
             set_color_as_alpha_filename, alpha_width, alpha_height, gamma);
         if (width != alpha_width || height != alpha_height)
             ygl::log_fatal("bad image size");
@@ -229,7 +229,7 @@ int main(int argc, char* argv[]) {
     if (filmic) img = filmic_tonemap_image(img);
 
     // save
-    ygl::save_image4f(output, width, height, img, gamma);
+    ygl::save_image(output, width, height, img, gamma);
 
     // done
     return 0;
