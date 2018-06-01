@@ -148,7 +148,7 @@ int main(int argc, char* argv[]) {
                 ygl::path_dirname(imfilename), ygl::path_basename(imfilename),
                 sample, ygl::path_extension(imfilename));
             ygl::log_info("saving image {}", filename);
-            ygl::save_image4f(
+            ygl::save_image(
                 filename, width, height, ygl::expose_image(img, exposure));
         }
         ygl::log_info_begin("rendering sample {}/{}", sample, nsamples);
@@ -167,7 +167,7 @@ int main(int argc, char* argv[]) {
 
     // save image
     ygl::log_info("saving image {}", imfilename);
-    ygl::save_image4f(
+    ygl::save_image(
         imfilename, width, height, ygl::expose_image(img, exposure));
 
     // cleanup

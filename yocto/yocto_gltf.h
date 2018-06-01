@@ -120,8 +120,7 @@ using gltf_buffer_data = std::vector<unsigned char>;
 struct gltf_image_data {
     int width = 0;           // width
     int height = 0;          // height
-    std::vector<vec4f> hdr;  // hdr pixels
-    std::vector<vec4b> ldr;  // ldr pixels
+    std::vector<vec4f> img;  // pixels values
 };
 
 // Id for glTF references.

@@ -233,7 +233,7 @@ void run_ui(app_state* app) {
             ygl::log_info("taking screenshot and exiting...");
             auto width = 0, height = 0;
             auto img = ygl::take_glwindow_screenshot(win, width, height);
-            ygl::save_image4f(app->imfilename, width, height, img);
+            ygl::save_image(app->imfilename, width, height, img);
             break;
         }
 

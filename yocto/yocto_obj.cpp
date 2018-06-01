@@ -957,16 +957,31 @@ void save_obj(const std::string& filename, const obj_scene* obj,
 // Load OBJ texture images.
 void load_obj_textures(
     obj_scene* obj, const std::string& dirname, bool skip_missing) {
+    // set gamma
+    auto ldr_gamma = std::unordered_map<std::string, float>{{"", 1.0f}};
+    for (auto txt : obj->textures) ldr_gamma[txt->path] = 2.2f;
+    for (auto mat : obj->materials) {
+        ldr_gamma[mat->ke_txt.path] = 2.2f;
+        ldr_gamma[mat->kd_txt.path] = 2.2f;
+        ldr_gamma[mat->ks_txt.path] = 2.2f;
+        ldr_gamma[mat->kr_txt.path] = 2.2f;
+        ldr_gamma[mat->kt_txt.path] = 2.2f;
+        ldr_gamma[mat->rs_txt.path] = 1;
+        ldr_gamma[mat->op_txt.path] = 1;
+        ldr_gamma[mat->norm_txt.path] = 1;
+        ldr_gamma[mat->disp_txt.path] = 1;
+        ldr_gamma[mat->bump_txt.path] = 1;
+    }
+    for (auto env : obj->environments) { ldr_gamma[env->ke_txt.path] = 2.2f; }
+
+    // load images
     for (auto txt : obj->textures) {
         auto filename = dirname + txt->path;
         for (auto& c : filename)
             if (c == '\\') c = '/';
-        if (is_hdr_filename(filename)) {
-            txt->hdr = load_image4f(filename, txt->width, txt->height);
-        } else {
-            txt->ldr = load_image4b(filename, txt->width, txt->height);
-        }
-        if (txt->ldr.empty() && txt->hdr.empty()) {
+        txt->img = load_image(
+            filename, txt->width, txt->height, ldr_gamma.at(txt->path));
+        if (txt->img.empty()) {
             if (skip_missing) continue;
             throw std::runtime_error("cannot laod image " + filename);
         }
@@ -976,17 +991,33 @@ void load_obj_textures(
 // Save OBJ texture images.
 void save_obj_textures(
     const obj_scene* obj, const std::string& dirname, bool skip_missing) {
+    // set gamma
+    auto ldr_gamma = std::unordered_map<std::string, float>{{"", 1.0f}};
+    for (auto txt : obj->textures) ldr_gamma[txt->path] = 2.2f;
+    for (auto mat : obj->materials) {
+        ldr_gamma[mat->ke_txt.path] = 2.2f;
+        ldr_gamma[mat->kd_txt.path] = 2.2f;
+        ldr_gamma[mat->ks_txt.path] = 2.2f;
+        ldr_gamma[mat->kr_txt.path] = 2.2f;
+        ldr_gamma[mat->kt_txt.path] = 2.2f;
+        ldr_gamma[mat->rs_txt.path] = 1;
+        ldr_gamma[mat->op_txt.path] = 1;
+        ldr_gamma[mat->norm_txt.path] = 1;
+        ldr_gamma[mat->disp_txt.path] = 1;
+        ldr_gamma[mat->bump_txt.path] = 1;
+    }
+    for (auto env : obj->environments) { ldr_gamma[env->ke_txt.path] = 2.2f; }
+
+    // save images
     for (auto txt : obj->textures) {
-        if (txt->ldr.empty() && txt->hdr.empty()) continue;
+        if (txt->img.empty()) continue;
         auto filename = dirname + txt->path;
         for (auto& c : filename)
             if (c == '\\') c = '/';
         auto ok = false;
-        if (!txt->ldr.empty()) {
-            ok = save_image4b(filename, txt->width, txt->height, txt->ldr);
-        }
-        if (!txt->hdr.empty()) {
-            ok = save_image4f(filename, txt->width, txt->height, txt->hdr);
+        if (!txt->img.empty()) {
+            ok = save_image(filename, txt->width, txt->height, txt->img,
+                ldr_gamma.at(txt->path));
         }
         if (!ok) {
             if (skip_missing) continue;

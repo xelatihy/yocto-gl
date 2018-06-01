@@ -112,42 +112,45 @@ struct gltexture {
     int width = 0;          // width
     int height = 0;         // height
     int ncomp = 0;          // number of components
+    bool floats = false;    // input was float
     bool as_float = false;  // store as float
     bool mipmap = true;     // store with mipmaps
     bool linear = true;     // use linear interpolation
+    bool srgb = true;       // use srgb interpolation
 };
 
 // Implementation of update_texture.
 void update_gltexture(gltexture& txt, int w, int h, int nc, const void* pixels,
-    bool floats, bool linear, bool mipmap, bool as_float);
+    bool floats, bool linear, bool mipmap, bool as_float, bool srgb);
 
 // Updates a texture with pixels values of size w, h with nc number of
 // components (1-4). Internally use bytes/floats (as_float), linear/sRGB
 // (as_srgb) nearest/linear filtering (linear) and mipmmapping (mipmap).
 inline void update_gltexture(gltexture& txt, int w, int h, int nc,
-    const float* pixels, bool linear, bool mipmap, bool as_float) {
-    update_gltexture(txt, w, h, nc, pixels, true, linear, mipmap, as_float);
+    const float* pixels, bool linear, bool mipmap, bool as_float,
+    bool as_srgb) {
+    update_gltexture(
+        txt, w, h, nc, pixels, true, linear, mipmap, as_float, as_srgb);
 }
 inline void update_gltexture(gltexture& txt, int w, int h, int nc,
-    const unsigned char* pixels, bool linear, bool mipmap, bool as_float) {
-    update_gltexture(txt, w, h, nc, pixels, false, linear, mipmap, as_float);
+    const unsigned char* pixels, bool linear, bool mipmap, bool as_float,
+    bool as_srgb) {
+    update_gltexture(
+        txt, w, h, nc, pixels, false, linear, mipmap, as_float, as_srgb);
 }
 
 // Updates a texture with pixels values from an image.
 inline void update_gltexture(gltexture& txt, int width, int height,
-    const std::vector<float>& pixels, bool linear, bool mipmap, bool as_float) {
-    update_gltexture(
-        txt, width, height, 1, pixels.data(), linear, mipmap, as_float);
+    const std::vector<vec4f>& pixels, bool linear, bool mipmap, bool as_float,
+    bool as_srgb) {
+    update_gltexture(txt, width, height, 4, (float*)pixels.data(), linear,
+        mipmap, as_float, as_srgb);
 }
 inline void update_gltexture(gltexture& txt, int width, int height,
-    const std::vector<vec3f>& pixels, bool linear, bool mipmap, bool as_float) {
-    update_gltexture(
-        txt, width, height, 3, (float*)pixels.data(), linear, mipmap, as_float);
-}
-inline void update_gltexture(gltexture& txt, int width, int height,
-    const std::vector<vec4f>& pixels, bool linear, bool mipmap, bool as_float) {
-    update_gltexture(
-        txt, width, height, 4, (float*)pixels.data(), linear, mipmap, as_float);
+    const std::vector<vec4b>& pixels, bool linear, bool mipmap, bool as_float,
+    bool as_srgb) {
+    update_gltexture(txt, width, height, 4, (unsigned char*)pixels.data(),
+        linear, mipmap, as_float, as_srgb);
 }
 
 // Binds/unbinds a texture to a texture unit.

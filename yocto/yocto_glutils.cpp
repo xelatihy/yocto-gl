@@ -165,21 +165,30 @@ namespace ygl {
 
 // Implementation of update_texture.
 void update_gltexture(gltexture& txt, int w, int h, int nc, const void* pixels,
-    bool floats, bool linear, bool mipmap, bool as_float) {
+    bool floats, bool linear, bool mipmap, bool as_float, bool srgb) {
     auto refresh = !txt.tid || txt.width != w || txt.height != h ||
-                   txt.ncomp != nc || txt.mipmap != mipmap ||
-                   txt.linear != linear || txt.as_float != as_float;
+                   txt.ncomp != nc || txt.floats != floats ||
+                   txt.mipmap != mipmap || txt.linear != linear ||
+                   txt.as_float != as_float || txt.srgb != srgb;
     txt.width = w;
     txt.height = h;
     txt.ncomp = nc;
     txt.mipmap = mipmap;
     txt.linear = linear;
     txt.as_float = as_float;
+    txt.srgb = srgb;
     assert(check_glerror());
     if (w * h) {
         int formats_ub[4] = {GL_RED, GL_RG, GL_RGB, GL_RGBA};
         int formats_f[4] = {GL_R32F, GL_RG32F, GL_RGB32F, GL_RGBA32F};
-        int* formats = (as_float) ? formats_f : formats_ub;
+        int formats_srgb[4] = {GL_RED, GL_RG, GL_SRGB, GL_SRGB_ALPHA};
+        int* formats = nullptr;
+        if (as_float)
+            formats = formats_f;
+        else if (srgb)
+            formats = formats_srgb;
+        else
+            formats = formats = formats_ub;
         assert(check_glerror());
         if (!txt.tid) glGenTextures(1, &txt.tid);
         glBindTexture(GL_TEXTURE_2D, txt.tid);

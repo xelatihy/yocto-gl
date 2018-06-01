@@ -55,10 +55,11 @@
 //
 
 #include "yocto_gltf.h"
-
 #include "yocto_image.h"
 
 #include <fstream>
+#include <unordered_map>
+
 #include "ext/json.hpp"
 
 // -----------------------------------------------------------------------------
@@ -1350,23 +1351,51 @@ void save_binary_gltf(
 // Load glTF texture images.
 void load_gltf_textures(
     glTF* gltf, const std::string& dirname, bool skip_missing) {
-    for (auto image : gltf->images) {
+    // set gamma
+    auto ldr_gamma = std::unordered_map<glTFImage*, float>{{nullptr, 1.0f}};
+    for (auto gimg : gltf->images) ldr_gamma[gimg] = 2.2f;
+    auto set_gamma = [&ldr_gamma, gltf](glTFTextureInfo* info, float gamma) {
+        if (!info) return;
+        auto gtxt = gltf->get(info->index);
+        if (!gtxt) return;
+        auto gimg = gltf->get(gtxt->source);
+        if (!gimg) return;
+        ldr_gamma[gimg] = gamma;
+    };
+    for (auto mat : gltf->materials) {
+        set_gamma(mat->emissiveTexture, 2.2f);
+        if (mat->pbrMetallicRoughness) {
+            auto mr = mat->pbrMetallicRoughness;
+            set_gamma(mr->baseColorTexture, 2.2f);
+            set_gamma(mr->metallicRoughnessTexture, 1);
+        }
+        if (mat->pbrSpecularGlossiness) {
+            auto sg = mat->pbrSpecularGlossiness;
+            set_gamma(sg->diffuseTexture, 2.2f);
+            set_gamma(sg->specularGlossinessTexture, 1);
+        }
+        set_gamma(mat->normalTexture, 1.0f);
+        set_gamma(mat->occlusionTexture, 1.0f);
+    }
+
+    // load images
+    for (auto gimg : gltf->images) {
         auto filename = std::string();
-        image->data = gltf_image_data();
-        if (image->bufferView || startswith(image->uri, "data:")) {
+        gimg->data = gltf_image_data();
+        if (gimg->bufferView || startswith(gimg->uri, "data:")) {
             auto buffer = std::string();
             auto data = (unsigned char*)nullptr;
             auto data_size = 0;
-            if (image->bufferView) {
-                auto view = gltf->get(image->bufferView);
+            if (gimg->bufferView) {
+                auto view = gltf->get(gimg->bufferView);
                 auto buffer = gltf->get(view->buffer);
                 if (!view || !buffer || view->byteStride) {
                     if (skip_missing) continue;
                     throw std::runtime_error("invalid image buffer view");
                 }
-                if (image->mimeType == glTFImageMimeType::ImagePng)
+                if (gimg->mimeType == glTFImageMimeType::ImagePng)
                     filename = "internal_data.png";
-                else if (image->mimeType == glTFImageMimeType::ImageJpeg)
+                else if (gimg->mimeType == glTFImageMimeType::ImageJpeg)
                     filename = "internal_data.jpg";
                 else {
                     if (skip_missing) continue;
@@ -1376,12 +1405,12 @@ void load_gltf_textures(
                 data_size = view->byteLength;
             } else {
                 // assume it is base64 and find ','
-                auto pos = image->uri.find(',');
-                if (pos == image->uri.npos) {
+                auto pos = gimg->uri.find(',');
+                if (pos == gimg->uri.npos) {
                     if (skip_missing) continue;
                     throw std::runtime_error("could not decode base64 data");
                 }
-                auto header = image->uri.substr(0, pos);
+                auto header = gimg->uri.substr(0, pos);
                 for (auto format : {"png", "jpg", "jpeg", "tga", "ppm", "hdr"})
                     if (header.find(format) != header.npos)
                         filename = std::string("fake.") + format;
@@ -1392,30 +1421,20 @@ void load_gltf_textures(
                         header.substr(0, pos));
                 }
                 // decode
-                buffer = base64_decode(image->uri.substr(pos + 1));
+                buffer = base64_decode(gimg->uri.substr(pos + 1));
                 data_size = (int)buffer.size();
                 data = (unsigned char*)buffer.data();
             }
-            if (is_hdr_filename(filename)) {
-                image->data.hdr = load_image4f_from_memory(
-                    data, data_size, image->data.width, image->data.height);
-            } else {
-                image->data.ldr = load_image4b_from_memory(
-                    data, data_size, image->data.width, image->data.height);
-            }
+            gimg->data.img = load_image_from_memory(data, data_size,
+                gimg->data.width, gimg->data.height, ldr_gamma.at(gimg));
         } else {
-            filename = dirname + image->uri;
+            filename = dirname + gimg->uri;
             for (auto& c : filename)
                 if (c == '\\') c = '/';
-            if (is_hdr_filename(filename)) {
-                image->data.hdr = load_image4f(
-                    filename, image->data.width, image->data.height);
-            } else {
-                image->data.ldr = load_image4b(
-                    filename, image->data.width, image->data.height);
-            }
+            gimg->data.img = load_image(filename, gimg->data.width,
+                gimg->data.height, ldr_gamma.at(gimg));
         }
-        if (image->data.hdr.empty() && image->data.ldr.empty()) {
+        if (gimg->data.img.empty()) {
             if (skip_missing) continue;
             throw std::runtime_error("cannot load image " + filename);
         }
@@ -1425,23 +1444,47 @@ void load_gltf_textures(
 // Save glTF texture images.
 void save_gltf_textures(
     const glTF* gltf, const std::string& dirname, bool skip_missing) {
-    for (auto image : gltf->images) {
-        if (image->data.ldr.empty() && image->data.hdr.empty()) continue;
-        if (startswith(image->uri, "data:")) {
+    // set gamma
+    auto ldr_gamma = std::unordered_map<glTFImage*, float>{{nullptr, 1.0f}};
+    for (auto gimg : gltf->images) ldr_gamma[gimg] = 2.2f;
+    auto set_gamma = [&ldr_gamma, gltf](glTFTextureInfo* info, float gamma) {
+        if (!info) return;
+        auto gtxt = gltf->get(info->index);
+        if (!gtxt) return;
+        auto gimg = gltf->get(gtxt->source);
+        if (!gimg) return;
+        ldr_gamma[gimg] = gamma;
+    };
+    for (auto mat : gltf->materials) {
+        set_gamma(mat->emissiveTexture, 2.2f);
+        if (mat->pbrMetallicRoughness) {
+            auto mr = mat->pbrMetallicRoughness;
+            set_gamma(mr->baseColorTexture, 2.2f);
+            set_gamma(mr->metallicRoughnessTexture, 1);
+        }
+        if (mat->pbrSpecularGlossiness) {
+            auto sg = mat->pbrSpecularGlossiness;
+            set_gamma(sg->diffuseTexture, 2.2f);
+            set_gamma(sg->specularGlossinessTexture, 1);
+        }
+        set_gamma(mat->normalTexture, 1.0f);
+        set_gamma(mat->occlusionTexture, 1.0f);
+    }
+
+    // save images
+    for (auto gimg : gltf->images) {
+        if (gimg->data.img.empty()) continue;
+        if (startswith(gimg->uri, "data:")) {
             if (skip_missing) continue;
             throw std::runtime_error("saving of embedded data not supported");
         }
-        auto filename = dirname + image->uri;
+        auto filename = dirname + gimg->uri;
         for (auto& c : filename)
             if (c == '\\') c = '/';
         auto ok = false;
-        if (!image->data.ldr.empty()) {
-            ok = save_image4b(filename, image->data.width, image->data.height,
-                image->data.ldr);
-        }
-        if (!image->data.hdr.empty()) {
-            ok = save_image4f(filename, image->data.width, image->data.height,
-                image->data.hdr);
+        if (!gimg->data.img.empty()) {
+            ok = save_image(filename, gimg->data.width, gimg->data.height,
+                gimg->data.img, ldr_gamma.at(gimg));
         }
         if (!ok) {
             if (skip_missing) continue;

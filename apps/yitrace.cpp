@@ -100,8 +100,8 @@ auto trace_names = std::map<ygl::trace_func, std::string>{
 
 void draw(ygl::glwindow* win, app_state* app) {
     // update image
-    ygl::update_gltexture(
-        app->gl_txt, app->width, app->height, app->img, false, false, true);
+    ygl::update_gltexture(app->gl_txt, app->width, app->height, app->img, false,
+        false, true, false);
     // draw image
     auto window_size = get_glwindow_size(win);
     auto framebuffer_size = get_glwindow_framebuffer_size(win);
@@ -256,8 +256,8 @@ void run_ui(app_state* app) {
 
     // load textures
     app->gl_prog = ygl::make_glimage_program();
-    ygl::update_gltexture(
-        app->gl_txt, app->width, app->height, app->img, false, false, true);
+    ygl::update_gltexture(app->gl_txt, app->width, app->height, app->img, false,
+        false, true, false);
 
     // init widget
     ygl::init_glwidgets(win);

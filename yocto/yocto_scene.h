@@ -102,12 +102,10 @@ struct texture {
     std::string path = "";        // file path
     int width = 0;                // width
     int height = 0;               // height
-    std::vector<vec3f> col = {};  // color pixels values
-    std::vector<float> scl = {};  // scalar pixels values
+    std::vector<vec4f> img = {};  // pixels values
     bool clamp = false;           // clamp textures coordinates
     float scale = 1;              // scale for occ, normal, bumps
-    bool srgb = true;         // whether to use srgb when loading/saving to 8bit
-    void* gl_data = nullptr;  // unmanaged data for OpenGL viewer
+    void* gl_data = nullptr;      // unmanaged data for OpenGL viewer
 };
 
 // Material for surfaces, lines and triangles.
@@ -401,8 +399,7 @@ vec3f eval_direction(const environment* env, const vec2f& uv);
 vec3f eval_environment(const environment* env, const vec3f& i);
 
 // Evaluate a texture.
-vec3f eval_texture_col(const texture* info, const vec2f& texcoord);
-float eval_texture_scl(const texture* info, const vec2f& texcoord);
+vec4f eval_texture(const texture* info, const vec2f& texcoord);
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
 float eval_camera_fovy(const camera* cam);
@@ -460,8 +457,7 @@ camera* make_camera(const std::string& name, const frame3f& frame,
 camera* make_bbox_camera(const std::string& name, const bbox3f& bbox,
     float width = 0.036f, float height = 0.024f, float focal = 0.050f);
 texture* make_texture(const std::string& name, const std::string& path = "",
-    int width = 0, int height = 0, const std::vector<vec3f>& rgb = {},
-    const std::vector<float>& scl = {}, bool srgb = true);
+    int width = 0, int height = 0, const std::vector<vec4f>& pxl = {});
 material* make_material(const std::string& name,
     const vec3f& kd = {0.2f, 0.2f, 0.2f}, const vec3f& ks = {0, 0, 0},
     float rs = 1);
