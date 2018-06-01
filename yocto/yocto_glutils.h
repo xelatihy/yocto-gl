@@ -401,8 +401,9 @@ struct glsurface_program {
         cam_proj_id, lamb_id, lnum_id, lpos_id[16], lke_id[16], ltype_id[16],
         shp_xform_id, shp_normal_offset_id, highlight_id, mtype_id, ke_id,
         kd_id, ks_id, rs_id, op_id, ke_txt_id, ke_txt_on_id, kd_txt_id,
-        kd_txt_on_id, ks_txt_id, ks_txt_on_id, norm_txt_id, norm_txt_on_id,
-        etype_id, efaceted_id, double_sided_id;
+        kd_txt_on_id, ks_txt_id, ks_txt_on_id, rs_txt_id, rs_txt_on_id,
+        op_txt_id, op_txt_on_id, norm_txt_id, norm_txt_on_id, etype_id,
+        efaceted_id, double_sided_id;
     // vertex attribute locations
     int pos_id, norm_id, texcoord_id, color_id, tangsp_id;
 };
@@ -455,7 +456,8 @@ void set_glsurface_highlight(
 void set_glsurface_material(const glsurface_program& prog, const vec3f& ke,
     const vec3f& kd, const vec3f& ks, float rs, float op,
     const gltexture_info& ke_txt, const gltexture_info& kd_txt,
-    const gltexture_info& ks_txt, const gltexture_info& norm_txt,
+    const gltexture_info& ks_txt, const gltexture_info& rs_txt,
+    const gltexture_info& op_txt, const gltexture_info& norm_txt,
     bool double_sided, bool base_metallic);
 
 // Set constant material with emission `ke` and opacity `op`.
@@ -611,6 +613,8 @@ bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, bbox1f& val,
 bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, bbox2f& val,
     float min = -10, float max = 10);
 bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, bbox3f& val,
+    float min = -10, float max = 10);
+bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, bbox4f& val,
     float min = -10, float max = 10);
 
 // Color widget.

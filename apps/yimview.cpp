@@ -44,8 +44,8 @@ struct gimage {
     std::vector<ygl::vec4f> pxl;  // pixels
 
     // min/max values
-    ygl::vec4f min = ygl::zero4f, max = ygl::zero4f;
-    float max_lum = 0;
+    ygl::bbox4f pxl_bounds = ygl::invalid_bbox4f;
+    ygl::bbox1f lum_bounds = ygl::invalid_bbox1f;
 
     // image adjustment
     bool updated = true;
@@ -77,15 +77,11 @@ struct app_state {
 
 // compute min/max
 void update_minmax(gimage* img) {
-    img->min = {ygl::flt_max, ygl::flt_max, ygl::flt_max, ygl::flt_max};
-    img->max = {ygl::flt_min, ygl::flt_min, ygl::flt_min, ygl::flt_min};
-    img->max_lum = ygl::flt_min;
+    img->pxl_bounds = ygl::invalid_bbox4f;
+    img->lum_bounds = ygl::invalid_bbox1f;
     for (auto& p : img->pxl) {
-        img->min = {ygl::min(img->min.x, p.x), ygl::min(img->min.y, p.y),
-            ygl::min(img->min.z, p.z), ygl::min(img->min.w, p.w)};
-        img->max = {ygl::max(img->max.x, p.x), ygl::max(img->max.y, p.y),
-            ygl::max(img->max.z, p.z), ygl::max(img->max.w, p.w)};
-        img->max_lum = ygl::max(img->max_lum, (p.x + p.y + p.z) / 3);
+        img->pxl_bounds += p;
+        img->lum_bounds += ygl::luminance(xyz(p));
     }
 }
 
@@ -166,21 +162,16 @@ void draw_glwidgets(ygl::glwindow* win, app_state* app) {
         auto ij = ygl::get_glimage_coords(get_glwidnow_mouse_posf(win),
             app->imframe, {app->img->width, app->img->height});
         ygl::draw_glwidgets_dragbox(win, "mouse", ij);
+        auto pixel = ygl::zero4f;
         if (ij.x >= 0 && ij.x < app->img->width && ij.y >= 0 &&
             ij.y < app->img->height) {
-            ygl::draw_glwidgets_colorbox(
-                win, "pixel", app->img->pxl.at(ij.x + ij.y * app->img->width));
-
-        } else {
-            auto zero4f_ = ygl::zero4f;
-            ygl::draw_glwidgets_colorbox(win, "pixel", zero4f_);
+            pixel = app->img->pxl.at(ij.x + ij.y * app->img->width);
         }
+        ygl::draw_glwidgets_colorbox(win, "pixel", pixel);
         if (!app->img->pxl.empty()) {
-            ygl::draw_glwidgets_colorbox(win, "min", app->img->min);
-            ygl::draw_glwidgets_colorbox(win, "max", app->img->max);
-            float max_exposure = log(app->img->max_lum + 0.00001f) / log(2);
-            ygl::draw_glwidgets_dragbox(win, "max l", app->img->max_lum);
-            ygl::draw_glwidgets_dragbox(win, "max e", max_exposure);
+            ygl::draw_glwidgets_dragbox(win, "pxl", app->img->pxl_bounds);
+            ygl::draw_glwidgets_dragbox(
+                win, "lum min/max", app->img->lum_bounds);
         }
     }
     ygl::end_glwidgets_frame(win);

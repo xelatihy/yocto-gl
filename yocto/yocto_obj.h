@@ -135,9 +135,8 @@ struct obj_texture {
     std::string path;        // path
     int width = 0;           // width
     int height = 0;          // height
-    int ncomp = 0;           // number of components
-    std::vector<byte> ldr;   // ldr image data
-    std::vector<float> hdr;  // hdr image data
+    std::vector<vec4b> ldr;  // ldr image data
+    std::vector<vec4f> hdr;  // hdr image data
 };
 
 // Obj texture information.

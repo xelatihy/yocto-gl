@@ -65,37 +65,6 @@
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Element-wise float to byte conversion.
-vec4b float_to_byte(const vec4f& a) {
-    return {float_to_byte(a.x), float_to_byte(a.y), float_to_byte(a.z),
-        float_to_byte(a.w)};
-}
-vec4f byte_to_float(const vec4b& a) {
-    return {byte_to_float(a.x), byte_to_float(a.y), byte_to_float(a.z),
-        byte_to_float(a.w)};
-}
-
-// Conversion between linear and gamma-encoded images.
-vec4f gamma_to_linear(const vec4f& srgb, float gamma) {
-    return {gamma_to_linear(srgb.x, gamma), gamma_to_linear(srgb.y, gamma),
-        gamma_to_linear(srgb.z, gamma), srgb.w};
-}
-vec4f linear_to_gamma(const vec4f& lin, float gamma) {
-    return {linear_to_gamma(lin.x, gamma), linear_to_gamma(lin.y, gamma),
-        linear_to_gamma(lin.z, gamma), lin.w};
-}
-vec3f gamma_to_linear(const vec3f& srgb, float gamma) {
-    return {gamma_to_linear(srgb.x, gamma), gamma_to_linear(srgb.y, gamma),
-        gamma_to_linear(srgb.z, gamma)};
-}
-vec3f linear_to_gamma(const vec3f& lin, float gamma) {
-    return {linear_to_gamma(lin.x, gamma), linear_to_gamma(lin.y, gamma),
-        linear_to_gamma(lin.z, gamma)};
-}
-
-// Approximate luminance estimation
-float luminance(const vec3f& a) { return (a.x + a.y + a.z) / 3; }
-
 // Convert between CIE XYZ and xyY
 vec3f xyz_to_xyY(const vec3f& xyz) {
     if (xyz == zero3f) return zero3f;
@@ -176,87 +145,17 @@ namespace ygl {
 std::vector<vec4f> gamma_to_linear(
     const std::vector<vec4f>& srgb, float gamma) {
     auto lin = std::vector<vec4f>(srgb.size());
-    for (auto i = 0; i < srgb.size(); i++)
-        lin[i] = gamma_to_linear(srgb[i], gamma);
+    for (auto i = 0; i < srgb.size(); i++) {
+        xyz(lin[i]) = gamma_to_linear(xyz(srgb[i]), gamma);
+        lin[i].w = srgb[i].w;
+    }
     return lin;
 }
 std::vector<vec4f> linear_to_gamma(const std::vector<vec4f>& lin, float gamma) {
     auto srgb = std::vector<vec4f>(lin.size());
-    for (auto i = 0; i < lin.size(); i++)
-        srgb[i] = linear_to_gamma(lin[i], gamma);
-    return srgb;
-}
-std::vector<vec3f> gamma_to_linear(
-    const std::vector<vec3f>& srgb, float gamma) {
-    auto lin = std::vector<vec3f>(srgb.size());
-    for (auto i = 0; i < srgb.size(); i++)
-        lin[i] = gamma_to_linear(srgb[i], gamma);
-    return lin;
-}
-std::vector<vec3f> linear_to_gamma(const std::vector<vec3f>& lin, float gamma) {
-    auto srgb = std::vector<vec3f>(lin.size());
-    for (auto i = 0; i < lin.size(); i++)
-        srgb[i] = linear_to_gamma(lin[i], gamma);
-    return srgb;
-}
-// Conversion between linear and gamma-encoded images.
-std::vector<float> gamma_to_linear(
-    const std::vector<float>& srgb, int ncomp, float gamma) {
-    auto lin = std::vector<float>(srgb.size());
-    if (ncomp == 1) {
-        for (auto i = 0; i < srgb.size(); i++) {
-            lin[i] = gamma_to_linear(srgb[i], gamma);
-        }
-    } else if (ncomp == 2) {
-        for (auto i = 0; i < srgb.size() / 2; i++) {
-            lin[i * 2 + 0] = gamma_to_linear(srgb[i * 2 + 0], gamma);
-            lin[i * 2 + 1] = srgb[i * 2 + 1];
-        }
-    } else if (ncomp == 3) {
-        for (auto i = 0; i < srgb.size() / 3; i++) {
-            lin[i * 3 + 0] = gamma_to_linear(srgb[i * 3 + 0], gamma);
-            lin[i * 3 + 1] = gamma_to_linear(srgb[i * 3 + 1], gamma);
-            lin[i * 3 + 2] = gamma_to_linear(srgb[i * 3 + 2], gamma);
-        }
-    } else if (ncomp == 4) {
-        for (auto i = 0; i < srgb.size() / 4; i++) {
-            lin[i * 4 + 0] = gamma_to_linear(srgb[i * 4 + 0], gamma);
-            lin[i * 4 + 1] = gamma_to_linear(srgb[i * 4 + 1], gamma);
-            lin[i * 4 + 2] = gamma_to_linear(srgb[i * 4 + 2], gamma);
-            lin[i * 4 + 3] = srgb[i * 4 + 3];
-        }
-    } else {
-        throw std::runtime_error("number of components not supported");
-    }
-    return lin;
-}
-std::vector<float> linear_to_gamma(
-    const std::vector<float>& lin, int ncomp, float gamma) {
-    auto srgb = std::vector<float>(lin.size());
-    if (ncomp == 1) {
-        for (auto i = 0; i < lin.size(); i++) {
-            srgb[i] = linear_to_gamma(srgb[i], gamma);
-        }
-    } else if (ncomp == 2) {
-        for (auto i = 0; i < lin.size() / 2; i++) {
-            srgb[i * 2 + 0] = linear_to_gamma(lin[i * 2 + 0], gamma);
-            srgb[i * 2 + 1] = lin[i * 2 + 1];
-        }
-    } else if (ncomp == 3) {
-        for (auto i = 0; i < lin.size() / 3; i++) {
-            srgb[i * 3 + 0] = linear_to_gamma(lin[i * 3 + 0], gamma);
-            srgb[i * 3 + 1] = linear_to_gamma(lin[i * 3 + 1], gamma);
-            srgb[i * 3 + 2] = linear_to_gamma(lin[i * 3 + 2], gamma);
-        }
-    } else if (ncomp == 4) {
-        for (auto i = 0; i < lin.size() / 4; i++) {
-            srgb[i * 4 + 0] = linear_to_gamma(lin[i * 4 + 0], gamma);
-            srgb[i * 4 + 1] = linear_to_gamma(lin[i * 4 + 1], gamma);
-            srgb[i * 4 + 2] = linear_to_gamma(lin[i * 4 + 2], gamma);
-            srgb[i * 4 + 3] = lin[i * 4 + 3];
-        }
-    } else {
-        throw std::runtime_error("number of components not supported");
+    for (auto i = 0; i < lin.size(); i++) {
+        xyz(srgb[i]) = linear_to_gamma(xyz(lin[i]), gamma);
+        srgb[i].w = lin[i].w;
     }
     return srgb;
 }
@@ -272,183 +171,52 @@ std::vector<vec4b> float_to_byte(const std::vector<vec4f>& fl) {
     for (auto i = 0; i < fl.size(); i++) bt[i] = float_to_byte(fl[i]);
     return bt;
 }
-// Conversion from/to floats.
-std::vector<float> byte_to_float(const std::vector<byte>& bt) {
-    auto fl = std::vector<float>(bt.size());
-    for (auto i = 0; i < bt.size(); i++) fl[i] = byte_to_float(bt[i]);
-    return fl;
-}
-std::vector<byte> float_to_byte(const std::vector<float>& fl) {
-    auto bt = std::vector<byte>(fl.size());
-    for (auto i = 0; i < fl.size(); i++) bt[i] = float_to_byte(fl[i]);
-    return bt;
-}
 
 // Conversion between different number of channels
-std::vector<vec4f> imagef_to_image4f(const std::vector<float>& ax, int ncomp) {
-    auto npixels = (int)ax.size() / ncomp;
-    auto a4 = std::vector<vec4f>(npixels);
-    if (ncomp == 1) {
-        for (auto i = 0; i < npixels; i++) { a4[i] = {ax[i], ax[i], ax[i], 1}; }
-    } else if (ncomp == 2) {
-        for (auto i = 0; i < npixels; i++) {
-            a4[i] = {
-                ax[i * 2 + 0], ax[i * 2 + 0], ax[i * 2 + 0], ax[i * 2 + 1]};
-        }
-    } else if (ncomp == 3) {
-        for (auto i = 0; i < npixels; i++) {
-            a4[i] = {ax[i * 3 + 0], ax[i * 3 + 1], ax[i * 3 + 2], 1};
-        }
-    } else if (ncomp == 4) {
-        for (auto i = 0; i < npixels; i++) {
-            a4[i] = {
-                ax[i * 4 + 0], ax[i * 4 + 1], ax[i * 4 + 2], ax[i * 4 + 3]};
-        }
-    } else {
-        throw std::runtime_error("number of components not supported");
+std::vector<vec4f> rgb_to_rgba(const std::vector<vec3f>& rgb) {
+    auto rgba = std::vector<vec4f>(rgb.size(), {0, 0, 0, 1});
+    for (auto i = 0; i < rgb.size(); i++) {
+        xyz(rgba[i]) = rgb[i];
+        rgba[i].w = 1;
     }
-    return a4;
+    return rgba;
 }
-std::vector<float> image4f_to_imagef(const std::vector<vec4f>& a4, int ncomp) {
-    auto npixels = (int)a4.size();
-    auto ax = std::vector<float>(npixels * ncomp);
-    if (ncomp == 1) {
-        for (auto i = 0; i < npixels; i++) {
-            ax[i] = (a4[i].x + a4[i].y + a4[i].z) / 3.0f;
-        }
-    } else if (ncomp == 2) {
-        for (auto i = 0; i < npixels; i++) {
-            ax[i * 2 + 0] = (a4[i].x + a4[i].y + a4[i].z) / 3.0f;
-            ax[i * 2 + 1] = a4[i].w;
-        }
-    } else if (ncomp == 3) {
-        for (auto i = 0; i < npixels; i++) {
-            ax[i * 3 + 0] = a4[i].x;
-            ax[i * 3 + 1] = a4[i].y;
-            ax[i * 3 + 2] = a4[i].z;
-        }
-    } else if (ncomp == 4) {
-        for (auto i = 0; i < npixels; i++) {
-            ax[i * 4 + 0] = a4[i].x;
-            ax[i * 4 + 1] = a4[i].y;
-            ax[i * 4 + 2] = a4[i].z;
-            ax[i * 4 + 3] = a4[i].w;
-        }
-    } else {
-        throw std::runtime_error("number of components not supported");
-    }
-    return ax;
+std::vector<vec3f> rgba_to_rgb(const std::vector<vec4f>& rgba) {
+    auto rgb = std::vector<vec3f>(rgba.size());
+    for (auto i = 0; i < rgb.size(); i++) { rgb[i] = xyz(rgba[i]); }
+    return rgb;
 }
-std::vector<vec4b> imageb_to_image4b(const std::vector<byte>& ax, int ncomp) {
-    auto npixels = (int)ax.size() / ncomp;
-    auto a4 = std::vector<vec4b>(npixels);
-    if (ncomp == 1) {
-        for (auto i = 0; i < npixels; i++) {
-            a4[i] = {ax[i], ax[i], ax[i], (byte)255};
-        }
-    } else if (ncomp == 2) {
-        for (auto i = 0; i < npixels; i++) {
-            a4[i] = {
-                ax[i * 2 + 0], ax[i * 2 + 0], ax[i * 2 + 0], ax[i * 2 + 1]};
-        }
-    } else if (ncomp == 3) {
-        for (auto i = 0; i < npixels; i++) {
-            a4[i] = {ax[i * 3 + 0], ax[i * 3 + 1], ax[i * 3 + 2], (byte)255};
-        }
-    } else if (ncomp == 4) {
-        for (auto i = 0; i < npixels; i++) {
-            a4[i] = {
-                ax[i * 4 + 0], ax[i * 4 + 1], ax[i * 4 + 2], ax[i * 4 + 3]};
-        }
-    } else {
-        throw std::runtime_error("number of components not supported");
-    }
-    return a4;
+std::vector<float> rgba_to_red(const std::vector<vec4f>& rgba) {
+    auto scl = std::vector<float>(rgba.size());
+    for (auto i = 0; i < rgba.size(); i++) { scl[i] = rgba[i].x; }
+    return scl;
 }
-std::vector<byte> image4b_to_imageb(const std::vector<vec4b>& a4, int ncomp) {
-    auto npixels = (int)a4.size();
-    auto ax = std::vector<byte>(npixels * ncomp);
-    if (ncomp == 1) {
-        for (auto i = 0; i < npixels; i++) {
-            ax[i] = (byte)((a4[i].x + a4[i].y + a4[i].z) / 3.0f);
-        }
-    } else if (ncomp == 2) {
-        for (auto i = 0; i < npixels; i++) {
-            ax[i * 2 + 0] = (byte)((a4[i].x + a4[i].y + a4[i].z) / 3.0f);
-            ax[i * 2 + 1] = a4[i].w;
-        }
-    } else if (ncomp == 3) {
-        for (auto i = 0; i < npixels; i++) {
-            ax[i * 3 + 0] = a4[i].x;
-            ax[i * 3 + 1] = a4[i].y;
-            ax[i * 3 + 2] = a4[i].z;
-        }
-    } else if (ncomp == 4) {
-        for (auto i = 0; i < npixels; i++) {
-            ax[i * 4 + 0] = a4[i].x;
-            ax[i * 4 + 1] = a4[i].y;
-            ax[i * 4 + 2] = a4[i].z;
-            ax[i * 4 + 3] = a4[i].w;
-        }
-    } else {
-        throw std::runtime_error("number of components not supported");
-    }
-    return ax;
+std::vector<float> rgba_to_green(const std::vector<vec4f>& rgba) {
+    auto scl = std::vector<float>(rgba.size());
+    for (auto i = 0; i < rgba.size(); i++) { scl[i] = rgba[i].y; }
+    return scl;
 }
-// Conversion between different number of channels
-std::vector<vec3f> imagef_to_image3f(const std::vector<float>& ax, int ncomp) {
-    auto npixels = (int)ax.size() / ncomp;
-    auto a3 = std::vector<vec3f>(npixels);
-    if (ncomp == 1) {
-        for (auto i = 0; i < npixels; i++) { a3[i] = {ax[i], ax[i], ax[i]}; }
-    } else if (ncomp == 2) {
-        for (auto i = 0; i < npixels; i++) {
-            a3[i] = {
-                ax[i * 2 + 0], ax[i * 2 + 0], ax[i * 2 + 0]};
-        }
-    } else if (ncomp == 3) {
-        for (auto i = 0; i < npixels; i++) {
-            a3[i] = {ax[i * 3 + 0], ax[i * 3 + 1], ax[i * 3 + 2]};
-        }
-    } else if (ncomp == 4) {
-        for (auto i = 0; i < npixels; i++) {
-            a3[i] = {
-                ax[i * 4 + 0], ax[i * 4 + 1], ax[i * 4 + 2]};
-        }
-    } else {
-        throw std::runtime_error("number of components not supported");
-    }
-    return a3;
+std::vector<float> rgba_to_blue(const std::vector<vec4f>& rgba) {
+    auto scl = std::vector<float>(rgba.size());
+    for (auto i = 0; i < rgba.size(); i++) { scl[i] = rgba[i].z; }
+    return scl;
 }
-std::vector<float> image3f_to_imagef(const std::vector<vec3f>& a3, int ncomp) {
-    auto npixels = (int)a3.size();
-    auto ax = std::vector<float>(npixels * ncomp);
-    if (ncomp == 1) {
-        for (auto i = 0; i < npixels; i++) {
-            ax[i] = (a3[i].x + a3[i].y + a3[i].z) / 3.0f;
-        }
-    } else if (ncomp == 2) {
-        for (auto i = 0; i < npixels; i++) {
-            ax[i * 2 + 0] = (a3[i].x + a3[i].y + a3[i].z) / 3.0f;
-            ax[i * 2 + 1] = 1;
-        }
-    } else if (ncomp == 3) {
-        for (auto i = 0; i < npixels; i++) {
-            ax[i * 3 + 0] = a3[i].x;
-            ax[i * 3 + 1] = a3[i].y;
-            ax[i * 3 + 2] = a3[i].z;
-        }
-    } else if (ncomp == 4) {
-        for (auto i = 0; i < npixels; i++) {
-            ax[i * 4 + 0] = a3[i].x;
-            ax[i * 4 + 1] = a3[i].y;
-            ax[i * 4 + 2] = a3[i].z;
-            ax[i * 4 + 3] = 1;
-        }
-    } else {
-        throw std::runtime_error("number of components not supported");
+std::vector<float> rgba_to_alpha(const std::vector<vec4f>& rgba) {
+    auto scl = std::vector<float>(rgba.size());
+    for (auto i = 0; i < rgba.size(); i++) { scl[i] = rgba[i].w; }
+    return scl;
+}
+std::vector<float> rgba_to_luminance(const std::vector<vec4f>& rgba) {
+    auto scl = std::vector<float>(rgba.size());
+    for (auto i = 0; i < rgba.size(); i++) { scl[i] = luminance(xyz(rgba[i])); }
+    return scl;
+}
+std::vector<vec4f> luminance_to_rgba(const std::vector<float>& lum) {
+    auto rgba = std::vector<vec4f>(lum.size());
+    for (auto i = 0; i < rgba.size(); i++) {
+        rgba[i] = {lum[i], lum[i], lum[i], 1};
     }
-    return ax;
+    return rgba;
 }
 
 vec3f filmic_tonemap(const vec3f& hdr) {
@@ -466,9 +234,10 @@ std::vector<vec4f> expose_image(const std::vector<vec4f>& hdr, float exposure) {
     if (!exposure) return hdr;
     auto ldr = std::vector<vec4f>(hdr.size());
     auto scale = pow(2.0f, exposure);
-    for (auto i = 0; i < hdr.size(); i++)
-        ldr[i] = {
-            hdr[i].x * scale, hdr[i].y * scale, hdr[i].z * scale, hdr[i].w};
+    for (auto i = 0; i < hdr.size(); i++) {
+        xyz(ldr[i]) = xyz(hdr[i]) * scale;
+        ldr[i].w = hdr[i].w;
+    }
     return ldr;
 }
 
@@ -476,8 +245,8 @@ std::vector<vec4f> expose_image(const std::vector<vec4f>& hdr, float exposure) {
 std::vector<vec4f> filmic_tonemap_image(const std::vector<vec4f>& hdr) {
     auto ldr = std::vector<vec4f>(hdr.size());
     for (auto i = 0; i < hdr.size(); i++) {
-        auto h = filmic_tonemap({hdr[i].x, hdr[i].y, hdr[i].z});
-        ldr[i] = {h.x, h.y, h.z, hdr[i].w};
+        xyz(ldr[i]) = filmic_tonemap(xyz(hdr[i]));
+        ldr[i].w = hdr[i].w;
     }
     return ldr;
 }
@@ -660,166 +429,126 @@ bool is_hdr_filename(const std::string& filename) {
 std::vector<vec4b> load_image4b(
     const std::string& filename, int& width, int& height) {
     auto ncomp = 0;
-    auto pixels = load_imageb(filename, width, height, ncomp);
-    return imageb_to_image4b(pixels, ncomp);
+    auto pixels =
+        (vec4b*)stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
+    if (!pixels) return {};
+    auto img = std::vector<vec4b>(pixels, pixels + width * height);
+    free(pixels);
+    return img;
 }
 
 // Loads an hdr image.
 std::vector<vec4f> load_image4f(
     const std::string& filename, int& width, int& height, float ldr_gamma) {
-    auto ncomp = 0;
-    auto pixels = load_imagef(filename, width, height, ncomp);
-    return imagef_to_image4f(pixels, ncomp);
+    auto ext = path_extension(filename);
+    if (ext == ".exr") {
+        auto pixels = (vec4f*)nullptr;
+        if (LoadEXR((float**)&pixels, &width, &height, filename.c_str(),
+                nullptr) < 0)
+            return {};
+        if (!pixels) return {};
+        auto img = std::vector<vec4f>(pixels, pixels + width * height);
+        free(pixels);
+        return img;
+    } else if (ext == ".pfm") {
+        auto ncomp = 0;
+        auto pixels =
+            (vec4f*)load_pfm(filename.c_str(), &width, &height, &ncomp, 4);
+        if (!pixels) return {};
+        auto img = std::vector<vec4f>(pixels, pixels + width * height);
+        free(pixels);
+        return img;
+    } else if (ext == ".hdr") {
+        auto ncomp = 0;
+        auto pixels =
+            (vec4f*)stbi_loadf(filename.c_str(), &width, &height, &ncomp, 4);
+        if (!pixels) return {};
+        auto img = std::vector<vec4f>(pixels, pixels + width * height);
+        free(pixels);
+        return img;
+    } else {
+        auto ncomp = 0;
+        auto pixels =
+            (vec4b*)stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
+        if (!pixels) return {};
+        auto img8 = std::vector<vec4b>(pixels, pixels + width * height);
+        free(pixels);
+        auto img = gamma_to_linear(byte_to_float(img8), ldr_gamma);
+        return img;
+    }
 }
 
 // Saves an ldr image.
 bool save_image4b(const std::string& filename, int width, int height,
     const std::vector<vec4b>& img) {
-    auto pxl = image4b_to_imageb(img, 4);
-    return save_imageb(filename, width, height, 4, pxl);
+    if (path_extension(filename) == ".png") {
+        return stbi_write_png(
+            filename.c_str(), width, height, 4, img.data(), width * 4);
+    } else if (path_extension(filename) == ".jpg") {
+        return stbi_write_jpg(
+            filename.c_str(), width, height, 4, img.data(), 75);
+    } else if (path_extension(filename) == ".tga") {
+        return stbi_write_tga(filename.c_str(), width, height, 4, img.data());
+    } else if (path_extension(filename) == ".bmp") {
+        return stbi_write_bmp(filename.c_str(), width, height, 4, img.data());
+    } else {
+        return false;
+    }
 }
 
 // Saves an hdr image.
 bool save_image4f(const std::string& filename, int width, int height,
     const std::vector<vec4f>& img, float ldr_gamma) {
-    auto pxl = image4f_to_imagef(img, 4);
-    return save_imagef(filename, width, height, 4, pxl, ldr_gamma);
+    if (path_extension(filename) == ".png") {
+        auto ldr = float_to_byte(linear_to_gamma(img));
+        return stbi_write_png(
+            filename.c_str(), width, height, 4, (byte*)ldr.data(), width * 4);
+    } else if (path_extension(filename) == ".jpg") {
+        auto ldr = float_to_byte(linear_to_gamma(img));
+        return stbi_write_jpg(
+            filename.c_str(), width, height, 4, (byte*)ldr.data(), 75);
+    } else if (path_extension(filename) == ".tga") {
+        auto ldr = float_to_byte(linear_to_gamma(img));
+        return stbi_write_tga(
+            filename.c_str(), width, height, 4, (byte*)ldr.data());
+    } else if (path_extension(filename) == ".bmp") {
+        auto ldr = float_to_byte(linear_to_gamma(img));
+        return stbi_write_bmp(
+            filename.c_str(), width, height, 4, (byte*)ldr.data());
+    } else if (path_extension(filename) == ".hdr") {
+        return stbi_write_hdr(
+            filename.c_str(), width, height, 4, (float*)img.data());
+    } else if (path_extension(filename) == ".pfm") {
+        return save_pfm(filename.c_str(), width, height, 4, (float*)img.data());
+    } else if (path_extension(filename) == ".exr") {
+        return !SaveEXR((float*)img.data(), width, height, 4, filename.c_str());
+    } else {
+        return false;
+    }
 }
 
 // Loads an ldr image.
 std::vector<vec4b> load_image4b_from_memory(
     const byte* data, int data_size, int& width, int& height) {
     auto ncomp = 0;
-    auto pixels = load_imageb_from_memory(data, data_size, width, height, ncomp);
-    return imageb_to_image4b(pixels, ncomp);
+    auto pixels = (vec4b*)stbi_load_from_memory(
+        data, data_size, &width, &height, &ncomp, 4);
+    if (!pixels) return {};
+    auto img = std::vector<vec4b>(pixels, pixels + width * height);
+    free(pixels);
+    return img;
 }
 
 // Loads an hdr image.
 std::vector<vec4f> load_image4f_from_memory(
     const byte* data, int data_size, int& width, int& height, float ldr_gamma) {
-    auto ncomp = 0;
-    auto pixels = load_imagef_from_memory(data, data_size, width, height, ncomp);
-    return imagef_to_image4f(pixels, ncomp);
-}
-
-// Loads an ldr image.
-std::vector<byte> load_imageb(
-    const std::string& filename, int& width, int& height, int& ncomp) {
-    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 0);
-    if (!pixels) return {};
-    auto img = std::vector<byte>(pixels, pixels + width * height * ncomp);
-    free(pixels);
-    return img;
-}
-
-// Loads an hdr image.
-std::vector<float> load_imagef(const std::string& filename, int& width,
-    int& height, int& ncomp, float ldr_gamma) {
-    auto ext = path_extension(filename);
-    if (ext == ".exr") {
-        auto pixels = (float*)nullptr;
-        if (LoadEXR((float**)&pixels, &width, &height, filename.c_str(),
-                nullptr) < 0)
-            return {};
-        if (!pixels) return {};
-        ncomp = 4;
-        auto img = std::vector<float>(pixels, pixels + width * height * ncomp);
-        free(pixels);
-        return img;
-    } else if (ext == ".pfm") {
-        auto pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, 0);
-        if (!pixels) return {};
-        auto img = std::vector<float>(pixels, pixels + width * height * ncomp);
-        free(pixels);
-        return img;
-    } else if (ext == ".hdr") {
-        auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 0);
-        if (!pixels) return {};
-        auto img = std::vector<float>(pixels, pixels + width * height * ncomp);
-        free(pixels);
-        return img;
-    } else {
-        auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 0);
-        if (!pixels) return {};
-        auto img8 = std::vector<byte>(pixels, pixels + width * height * ncomp);
-        free(pixels);
-        auto img = gamma_to_linear(byte_to_float(img8), ncomp, ldr_gamma);
-        return img;
-    }
-}
-
-// Saves an ldr image.
-bool save_imageb(const std::string& filename, int width, int height, int ncomp,
-    const std::vector<byte>& img) {
-    if (path_extension(filename) == ".png") {
-        return stbi_write_png(
-            filename.c_str(), width, height, ncomp, img.data(), width * ncomp);
-    } else if (path_extension(filename) == ".jpg") {
-        return stbi_write_jpg(
-            filename.c_str(), width, height, ncomp, img.data(), 75);
-    } else if (path_extension(filename) == ".tga") {
-        return stbi_write_tga(
-            filename.c_str(), width, height, ncomp, img.data());
-    } else if (path_extension(filename) == ".bmp") {
-        return stbi_write_bmp(
-            filename.c_str(), width, height, ncomp, img.data());
-    } else {
-        return false;
-    }
-}
-
-// Saves an hdr image.
-bool save_imagef(const std::string& filename, int width, int height, int ncomp,
-    const std::vector<float>& img, float ldr_gamma) {
-    if (path_extension(filename) == ".png") {
-        auto ldr = float_to_byte(linear_to_gamma(img, ncomp));
-        return stbi_write_png(filename.c_str(), width, height, ncomp,
-            (byte*)ldr.data(), width * ncomp);
-    } else if (path_extension(filename) == ".jpg") {
-        auto ldr = float_to_byte(linear_to_gamma(img, ncomp));
-        return stbi_write_jpg(
-            filename.c_str(), width, height, ncomp, (byte*)ldr.data(), 75);
-    } else if (path_extension(filename) == ".tga") {
-        auto ldr = float_to_byte(linear_to_gamma(img, ncomp));
-        return stbi_write_tga(
-            filename.c_str(), width, height, ncomp, (byte*)ldr.data());
-    } else if (path_extension(filename) == ".bmp") {
-        auto ldr = float_to_byte(linear_to_gamma(img, ncomp));
-        return stbi_write_bmp(
-            filename.c_str(), width, height, ncomp, (byte*)ldr.data());
-    } else if (path_extension(filename) == ".hdr") {
-        return stbi_write_hdr(
-            filename.c_str(), width, height, ncomp, (float*)img.data());
-    } else if (path_extension(filename) == ".pfm") {
-        return save_pfm(filename.c_str(), width, height, ncomp, img.data());
-    } else if (path_extension(filename) == ".exr") {
-        return !SaveEXR(
-            (float*)img.data(), width, height, ncomp, filename.c_str());
-    } else {
-        return false;
-    }
-}
-
-// Loads an ldr image.
-std::vector<byte> load_imageb_from_memory(
-    const byte* data, int data_size, int& width, int& height, int& ncomp) {
-    auto pixels =
-        stbi_load_from_memory(data, data_size, &width, &height, &ncomp, 0);
-    if (!pixels) return {};
-    auto img = std::vector<byte>(pixels, pixels + width * height * ncomp);
-    free(pixels);
-    return img;
-}
-
-// Loads an hdr image.
-std::vector<float> load_imagef_from_memory(const byte* data, int data_size,
-    int& width, int& height, int& ncomp, float ldr_gamma) {
     stbi_ldr_to_hdr_gamma(ldr_gamma);
-    auto pixels =
-        stbi_loadf_from_memory(data, data_size, &width, &height, &ncomp, 0);
+    auto ncomp = 0;
+    auto pixels = (vec4f*)stbi_loadf_from_memory(
+        data, data_size, &width, &height, &ncomp, 4);
     stbi_ldr_to_hdr_gamma(2.2f);
     if (!pixels) return {};
-    auto img = std::vector<float>(pixels, pixels + width * height * ncomp);
+    auto img = std::vector<vec4f>(pixels, pixels + width * height);
     delete pixels;
     return img;
 }
@@ -1121,9 +850,7 @@ std::vector<vec3f> make_sunsky_image(int width, int height, float thetaSun,
             }
         }
         for (auto j = height / 2; j < height; j++) {
-            for (int i = 0; i < width; i++) {
-                img[i + j * width] = ground;
-            }
+            for (int i = 0; i < width; i++) { img[i + j * width] = ground; }
         }
     }
 

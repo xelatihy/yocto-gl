@@ -70,25 +70,27 @@
 namespace ygl {
 
 // Element-wise float to byte conversion.
-inline byte float_to_byte(float a) { return (byte)clamp(int(a * 256), 0, 255); }
-inline float byte_to_float(byte a) { return a / 255.0f; }
-vec4b float_to_byte(const vec4f& a);
-vec4f byte_to_float(const vec4b& a);
+inline vec4b float_to_byte(const vec4f& a) {
+    return {(byte)clamp(int(a.x * 256), 0, 255),
+        (byte)clamp(int(a.y * 256), 0, 255),
+        (byte)clamp(int(a.z * 256), 0, 255),
+        (byte)clamp(int(a.w * 256), 0, 255)};
+}
+inline vec4f byte_to_float(const vec4b& a) {
+    return {a.x / 255.0f, a.y / 255.0f, a.z / 255.0f, a.w / 255.0f};
+}
 
 // Conversion between linear and gamma-encoded images.
-inline float gamma_to_linear(float srgb, float gamma = 2.2f) {
-    return pow(srgb, gamma);
+inline vec3f gamma_to_linear(const vec3f& srgb, float gamma) {
+    return {pow(srgb.x, gamma), pow(srgb.y, gamma), pow(srgb.z, gamma)};
 }
-inline float linear_to_gamma(float lin, float gamma = 2.2f) {
-    return pow(lin, 1 / gamma);
+inline vec3f linear_to_gamma(const vec3f& lin, float gamma) {
+    return {
+        pow(lin.x, 1 / gamma), pow(lin.y, 1 / gamma), pow(lin.z, 1 / gamma)};
 }
-vec4f gamma_to_linear(const vec4f& srgb, float gamma = 2.2f);
-vec4f linear_to_gamma(const vec4f& lin, float gamma = 2.2f);
-vec3f gamma_to_linear(const vec3f& srgb, float gamma = 2.2f);
-vec3f linear_to_gamma(const vec3f& lin, float gamma = 2.2f);
 
 // Approximate luminance estimate
-float luminance(const vec3f& a);
+inline float luminance(const vec3f& a) { return (a.x + a.y + a.z) / 3; }
 
 // Converts HSV to RGB.
 vec3f hsv_to_rgb(const vec3f& hsv);
@@ -112,28 +114,20 @@ std::vector<vec4f> gamma_to_linear(
     const std::vector<vec4f>& srgb, float gamma = 2.2f);
 std::vector<vec4f> linear_to_gamma(
     const std::vector<vec4f>& lin, float gamma = 2.2f);
-std::vector<vec3f> gamma_to_linear(
-    const std::vector<vec3f>& srgb, float gamma = 2.2f);
-std::vector<vec3f> linear_to_gamma(
-    const std::vector<vec3f>& lin, float gamma = 2.2f);
-std::vector<float> gamma_to_linear(
-    const std::vector<float>& srgb, int ncomp, float gamma = 2.2f);
-std::vector<float> linear_to_gamma(
-    const std::vector<float>& lin, int ncomp, float gamma = 2.2f);
 
 // Conversion from/to floats.
 std::vector<vec4f> byte_to_float(const std::vector<vec4b>& bt);
 std::vector<vec4b> float_to_byte(const std::vector<vec4f>& fl);
-std::vector<float> byte_to_float(const std::vector<byte>& bt);
-std::vector<byte> float_to_byte(const std::vector<float>& fl);
 
 // Conversion between different number of channels
-std::vector<vec4f> imagef_to_image4f(const std::vector<float>& ax, int ncomp);
-std::vector<float> image4f_to_imagef(const std::vector<vec4f>& a4, int ncomp);
-std::vector<vec4b> imageb_to_image4b(const std::vector<byte>& ax, int ncomp);
-std::vector<byte> image4b_to_imageb(const std::vector<vec4b>& a4, int ncomp);
-std::vector<vec3f> imagef_to_image3f(const std::vector<float>& ax, int ncomp);
-std::vector<float> image3f_to_imagef(const std::vector<vec3f>& a4, int ncomp);
+std::vector<vec4f> rgb_to_rgba(const std::vector<vec3f>& rgb);
+std::vector<vec3f> rgba_to_rgb(const std::vector<vec4f>& rgba);
+std::vector<float> rgba_to_red(const std::vector<vec4f>& rgba);
+std::vector<float> rgba_to_green(const std::vector<vec4f>& rgba);
+std::vector<float> rgba_to_blue(const std::vector<vec4f>& rgba);
+std::vector<float> rgba_to_alpha(const std::vector<vec4f>& rgba);
+std::vector<float> rgba_to_luminance(const std::vector<vec4f>& rgba);
+std::vector<vec4f> luminance_to_rgba(const std::vector<float>& lum);
 
 // Apply exposure and filmic tone mapping
 std::vector<vec4f> expose_image(const std::vector<vec4f>& hdr, float exposure);
@@ -184,20 +178,6 @@ std::vector<vec4b> load_image4b_from_memory(
 std::vector<vec4f> load_image4f_from_memory(const byte* data, int data_size,
     int& width, int& height, float ldr_gamma = 2.2f);
 
-// Loads/saves an ldr/hdr image with 1 to 4 channels.
-std::vector<byte> load_imageb(
-    const std::string& filename, int& width, int& height, int& ncomp);
-std::vector<float> load_imagef(const std::string& filename, int& width,
-    int& height, int& ncomp, float ldr_gamma = 2.2f);
-bool save_imageb(const std::string& filename, int width, int height, int ncomp,
-    const std::vector<byte>& img);
-bool save_imagef(const std::string& filename, int width, int height, int ncomp,
-    const std::vector<float>& img, float ldr_gamma = 2.2f);
-std::vector<byte> load_imageb_from_memory(
-    const byte* data, int data_size, int& width, int& height, int& ncomp);
-std::vector<float> load_imagef_from_memory(const byte* data, int data_size,
-    int& width, int& height, int& ncomp, float ldr_gamma = 2.2f);
-
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
@@ -207,11 +187,9 @@ namespace ygl {
 
 // Make example images.
 std::vector<vec3f> make_grid_image(int width, int height, int tile = 8,
-    const vec3f& c0 = {0.5f, 0.5f, 0.5f},
-    const vec3f& c1 = {0.8f, 0.8f, 0.8f});
+    const vec3f& c0 = {0.5f, 0.5f, 0.5f}, const vec3f& c1 = {0.8f, 0.8f, 0.8f});
 std::vector<vec3f> make_checker_image(int width, int height, int tile = 8,
-    const vec3f& c0 = {0.5f, 0.5f, 0.5f},
-    const vec3f& c1 = {0.8f, 0.8f, 0.8f});
+    const vec3f& c0 = {0.5f, 0.5f, 0.5f}, const vec3f& c1 = {0.8f, 0.8f, 0.8f});
 std::vector<vec3f> make_bumpdimple_image(int width, int height, int tile = 8);
 std::vector<vec3f> make_ramp_image(int width, int height, const vec3f& c0,
     const vec3f& c1, float srgb = false);

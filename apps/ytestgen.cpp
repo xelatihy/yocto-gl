@@ -56,9 +56,11 @@ void rmdir(const std::string& dir) {
 void save_scene(const ygl::scene* scn, const std::string& sname,
     const std::string& dirname, bool preserve_instances) {
     try {
-        save_scene(dirname + sname + ".gltf", scn, true);
+        mkdir(dirname + "/gltf");
+        save_scene(dirname + "/gltf/" + sname + ".gltf", scn, true);
+        mkdir(dirname + "/obj");
         ygl::save_scene(
-            dirname + sname + ".obj", scn, true, preserve_instances);
+            dirname + "/obj/" + sname + ".obj", scn, true, preserve_instances);
     } catch (std::exception& e) { ygl::log_fatal("error {}", e.what()); }
 }
 
@@ -444,12 +446,12 @@ int main(int argc, char* argv[]) {
         for (auto scn : scns) {
             if (noparallel) {
                 ygl::log_info("saving scene {}/{}", sname, scn->name);
-                save_scene(scn, scn->name, dirname + "/" + sname + "/",
+                save_scene(scn, scn->name, dirname + "/" + sname,
                     sname == "instances");
             } else {
                 threads.push_back(std::thread([=]() {
                     ygl::log_info("start saving scene {}/{}", sname, scn->name);
-                    save_scene(scn, scn->name, dirname + "/" + sname + "/",
+                    save_scene(scn, scn->name, dirname + "/" + sname,
                         sname == "instances");
                     ygl::log_info("end saving scene {}/{}", sname, scn->name);
                 }));

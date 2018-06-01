@@ -69,20 +69,6 @@
 #ifndef _YGL_SCENE_H_
 #define _YGL_SCENE_H_
 
-// -----------------------------------------------------------------------------
-// COMPILATION OPTIONS AND INCLUDES
-// -----------------------------------------------------------------------------
-
-// OBJ support
-#ifndef YGL_OBJ
-#define YGL_OBJ 1
-#endif
-
-// glTF support
-#ifndef YGL_GLTF
-#define YGL_GLTF 1
-#endif
-
 #include "yocto_math.h"
 
 #include <string>
@@ -474,8 +460,8 @@ camera* make_camera(const std::string& name, const frame3f& frame,
 camera* make_bbox_camera(const std::string& name, const bbox3f& bbox,
     float width = 0.036f, float height = 0.024f, float focal = 0.050f);
 texture* make_texture(const std::string& name, const std::string& path = "",
-    int width = 0, int height = 0, const std::vector<vec3f>& pixels = {},
-    bool srgb = true);
+    int width = 0, int height = 0, const std::vector<vec3f>& rgb = {},
+    const std::vector<float>& scl = {}, bool srgb = true);
 material* make_material(const std::string& name,
     const vec3f& kd = {0.2f, 0.2f, 0.2f}, const vec3f& ks = {0, 0, 0},
     float rs = 1);

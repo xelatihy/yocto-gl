@@ -859,6 +859,10 @@ glsurface_program make_glsurface_program() {
         uniform sampler2D mat_txt_kd;  // material kd texture
         uniform bool mat_txt_ks_on;    // material ks texture on
         uniform sampler2D mat_txt_ks;  // material ks texture
+        uniform bool mat_txt_rs_on;    // material rs texture on
+        uniform sampler2D mat_txt_rs;  // material rs texture
+        uniform bool mat_txt_op_on;    // material op texture on
+        uniform sampler2D mat_txt_op;  // material op texture
 
         uniform bool mat_txt_norm_on;    // material norm texture on
         uniform sampler2D mat_txt_norm;  // material norm texture
@@ -883,34 +887,22 @@ glsurface_program make_glsurface_program() {
             rs = mat_rs;
             op = color.w * mat_op;
 
-            vec4 ke_txt = (mat_txt_ke_on) ? texture(mat_txt_ke,texcoord) : vec4(1);
-            vec4 kd_txt = (mat_txt_kd_on) ? texture(mat_txt_kd,texcoord) : vec4(1);
-            vec4 ks_txt = (mat_txt_ks_on) ? texture(mat_txt_ks,texcoord) : vec4(1);
-
-            // scale common values
-            ke *= ke_txt.xyz;
+            if(mat_txt_ke_on) ke *= texture(mat_txt_ke,texcoord).xyz;
+            if(mat_txt_kd_on) kd *= texture(mat_txt_kd,texcoord).xyz;
+            if(mat_txt_ks_on) ks *= texture(mat_txt_ks,texcoord).xyz;
+            if(mat_txt_rs_on) rs *= texture(mat_txt_rs,texcoord).x;
+            if(mat_txt_op_on) op *= texture(mat_txt_op,texcoord).x;
 
             // get material color from textures and adjust values
-            if(mat_type == 0) {
-            } else if(mat_type == 1) {
-                kd *= kd_txt.xyz;
-                ks *= ks_txt.xyz;
-                rs = rs*rs;
-            } else if(mat_type == 2) {
-                vec3 kb = kd * kd_txt.xyz;
-                float km = ks.x * ks_txt.z;
+            if(mat_type == 2) {
+                vec3 kb = kd;
+                float km = ks.x;
                 kd = kb * (1 - km);
                 ks = kb * km + vec3(0.04) * (1 - km);
-                rs *= ks_txt.y;
-                rs = rs*rs;
-                op *= kd_txt.w;
-            } else if(mat_type == 3) {
-                kd *= kd_txt.xyz;
-                ks *= ks_txt.xyz;
-                rs *= ks_txt.w;
-                rs = (1 - rs) * (1 - rs);
-                op *= kd_txt.w;
             }
+
+            // adjust values
+            rs = rs*rs;
 
             return true;
         }
@@ -1057,6 +1049,10 @@ glsurface_program make_glsurface_program() {
     prog.kd_txt_on_id = get_gluniform_location(prog.prog, "mat_txt_kd_on");
     prog.ks_txt_id = get_gluniform_location(prog.prog, "mat_txt_ks");
     prog.ks_txt_on_id = get_gluniform_location(prog.prog, "mat_txt_ks_on");
+    prog.rs_txt_id = get_gluniform_location(prog.prog, "mat_txt_rs");
+    prog.rs_txt_on_id = get_gluniform_location(prog.prog, "mat_txt_rs_on");
+    prog.op_txt_id = get_gluniform_location(prog.prog, "mat_txt_op");
+    prog.op_txt_on_id = get_gluniform_location(prog.prog, "mat_txt_op_on");
     prog.norm_txt_id = get_gluniform_location(prog.prog, "mat_txt_norm");
     prog.norm_txt_on_id = get_gluniform_location(prog.prog, "mat_txt_norm_on");
     prog.double_sided_id =
@@ -1157,7 +1153,8 @@ void set_glsurface_highlight(
 void set_glsurface_material(const glsurface_program& prog, const vec3f& ke,
     const vec3f& kd, const vec3f& ks, float rs, float op,
     const gltexture_info& ke_txt, const gltexture_info& kd_txt,
-    const gltexture_info& ks_txt, const gltexture_info& norm_txt,
+    const gltexture_info& ks_txt, const gltexture_info& rs_txt,
+    const gltexture_info& op_txt, const gltexture_info& norm_txt,
     bool double_sided, bool base_metallic) {
     assert(check_glerror());
     set_gluniform(prog.prog, prog.mtype_id, base_metallic ? 2 : 1);
@@ -1174,7 +1171,11 @@ void set_glsurface_material(const glsurface_program& prog, const vec3f& ke,
     set_gluniform_texture(
         prog.prog, prog.ks_txt_id, prog.ks_txt_on_id, ks_txt, 2);
     set_gluniform_texture(
-        prog.prog, prog.norm_txt_id, prog.norm_txt_on_id, norm_txt, 4);
+        prog.prog, prog.rs_txt_id, prog.rs_txt_on_id, rs_txt, 3);
+    set_gluniform_texture(
+        prog.prog, prog.op_txt_id, prog.op_txt_on_id, op_txt, 4);
+    set_gluniform_texture(
+        prog.prog, prog.norm_txt_id, prog.norm_txt_on_id, norm_txt, 5);
     assert(check_glerror());
 }
 
@@ -1628,9 +1629,7 @@ bool draw_glwidgets_dragbox(
 // Drag widget.
 bool draw_glwidgets_dragbox(
     glwindow* win, const std::string& lbl, bbox1f& val, float min, float max) {
-    auto modmin = draw_glwidgets_dragbox(win, lbl + " min", val.min, min, max);
-    auto modmax = draw_glwidgets_dragbox(win, lbl + " max", val.max, min, max);
-    return modmin || modmax;
+    return draw_glwidgets_dragbox(win, lbl, (vec2f&)val, min, max);
 }
 // Drag widget.
 bool draw_glwidgets_dragbox(
@@ -1642,6 +1641,13 @@ bool draw_glwidgets_dragbox(
 // Drag widget.
 bool draw_glwidgets_dragbox(
     glwindow* win, const std::string& lbl, bbox3f& val, float min, float max) {
+    auto modmin = draw_glwidgets_dragbox(win, lbl + " min", val.min, min, max);
+    auto modmax = draw_glwidgets_dragbox(win, lbl + " max", val.max, min, max);
+    return modmin || modmax;
+}
+// Drag widget.
+bool draw_glwidgets_dragbox(
+    glwindow* win, const std::string& lbl, bbox4f& val, float min, float max) {
     auto modmin = draw_glwidgets_dragbox(win, lbl + " min", val.min, min, max);
     auto modmax = draw_glwidgets_dragbox(win, lbl + " max", val.max, min, max);
     return modmin || modmax;

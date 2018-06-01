@@ -1397,22 +1397,22 @@ void load_gltf_textures(
                 data = (unsigned char*)buffer.data();
             }
             if (is_hdr_filename(filename)) {
-                image->data.hdr = load_imagef_from_memory(data, data_size,
-                    image->data.width, image->data.height, image->data.ncomp);
+                image->data.hdr = load_image4f_from_memory(
+                    data, data_size, image->data.width, image->data.height);
             } else {
-                image->data.ldr = load_imageb_from_memory(data, data_size,
-                    image->data.width, image->data.height, image->data.ncomp);
+                image->data.ldr = load_image4b_from_memory(
+                    data, data_size, image->data.width, image->data.height);
             }
         } else {
             filename = dirname + image->uri;
             for (auto& c : filename)
                 if (c == '\\') c = '/';
             if (is_hdr_filename(filename)) {
-                image->data.hdr = load_imagef(filename, image->data.width,
-                    image->data.height, image->data.ncomp);
+                image->data.hdr = load_image4f(
+                    filename, image->data.width, image->data.height);
             } else {
-                image->data.ldr = load_imageb(filename, image->data.width,
-                    image->data.height, image->data.ncomp);
+                image->data.ldr = load_image4b(
+                    filename, image->data.width, image->data.height);
             }
         }
         if (image->data.hdr.empty() && image->data.ldr.empty()) {
@@ -1436,12 +1436,12 @@ void save_gltf_textures(
             if (c == '\\') c = '/';
         auto ok = false;
         if (!image->data.ldr.empty()) {
-            ok = save_imageb(filename, image->data.width, image->data.height,
-                image->data.ncomp, image->data.ldr);
+            ok = save_image4b(filename, image->data.width, image->data.height,
+                image->data.ldr);
         }
         if (!image->data.hdr.empty()) {
-            ok = save_imagef(filename, image->data.width, image->data.height,
-                image->data.ncomp, image->data.hdr);
+            ok = save_image4f(filename, image->data.width, image->data.height,
+                image->data.hdr);
         }
         if (!ok) {
             if (skip_missing) continue;
