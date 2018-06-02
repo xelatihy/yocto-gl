@@ -33,6 +33,7 @@
 #include <regex>
 #include <fstream>
 #include "../../yocto/yocto_scene.h"
+#include "../../yocto/yocto_sceneio.h"
 #include "../../yocto/yocto_trace.h"
 #include "../../yocto/yocto_utils.h"
 #include "../../yocto/yocto_shape.h"
@@ -821,7 +822,7 @@ int main(int argc, char** argv) {
 
     // save scene
     system(("mkdir -p " + path_dirname(outfilename)).c_str());
-    save_scene(outfilename, scn, false, true, true);
+    ygl::save_scene(outfilename, scn);
 
     return 0;
 }

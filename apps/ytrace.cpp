@@ -26,8 +26,9 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_bvh.h"
 #include "../yocto/yocto_image.h"
+#include "../yocto/yocto_scene.h"
+#include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_trace.h"
 #include "../yocto/yocto_utils.h"
 using namespace std::literals;

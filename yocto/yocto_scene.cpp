@@ -35,13 +35,11 @@
 #include <array>
 #include <unordered_map>
 
-#include "yocto_gltf.h"
-#include "yocto_obj.h"
-
 // -----------------------------------------------------------------------------
 // SCENE DATA
 // -----------------------------------------------------------------------------
 namespace ygl {
+
 shape::~shape() {
     if (bvh) delete bvh;
 }
@@ -679,15 +677,17 @@ vec3f eval_specular(const instance* ist, int ei, const vec2f& uv) {
 float eval_roughness(const instance* ist, int ei, const vec2f& uv) {
     if (!ist || !ist->mat) return 1;
     if (!ist->mat->base_metallic) {
-        if(!ist->mat->gltf_textures) {
-            auto rs = ist->mat->rs *
-                    eval_texture(ist->mat->rs_txt, eval_texcoord(ist, ei, uv)).x;
+        if (!ist->mat->gltf_textures) {
+            auto rs =
+                ist->mat->rs *
+                eval_texture(ist->mat->rs_txt, eval_texcoord(ist, ei, uv)).x;
             return rs * rs;
         } else {
-            auto gs = (1-ist->mat->rs) *
-                    eval_texture(ist->mat->rs_txt, eval_texcoord(ist, ei, uv)).w;
-            auto rs = 1- gs;
-            return rs * rs;            
+            auto gs =
+                (1 - ist->mat->rs) *
+                eval_texture(ist->mat->rs_txt, eval_texcoord(ist, ei, uv)).w;
+            auto rs = 1 - gs;
+            return rs * rs;
         }
     } else {
         auto rs = ist->mat->rs *
@@ -738,6 +738,13 @@ std::pair<int, vec2f> sample_shape(
         return {0, zero2f};
     }
 }
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF SCENE UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
 
 // Merge scene into one another
 void merge_into(scene* merge_into, scene* merge_from) {
@@ -840,1463 +847,6 @@ void print_stats(scene* scn) {
     println("bbox_center: {}", (bbox.max + bbox.min) / 2);
 }
 
-template <int N>
-struct obj_array_hash {
-    std::hash<int> Th;
-    size_t operator()(const std::array<int, N>& vv) const {
-        auto v = (const int*)&vv;
-        size_t h = 0;
-        for (auto i = 0; i < N; i++) {
-            // embads hash_combine below
-            h ^= (Th(v[i]) + 0x9e3779b9 + (h << 6) + (h >> 2));
-        }
-        return h;
-    }
-};
-
-// Flattens an scene
-scene* obj_to_scene(const obj_scene* obj) {
-    // clear scene
-    auto scn = new scene();
-
-    // convert textures
-    auto tmap = std::unordered_map<std::string, texture*>{};
-    for (auto otxt : obj->textures) {
-        auto txt = new texture();
-        txt->name = otxt->path;
-        txt->path = otxt->path;
-        txt->width = otxt->width;
-        txt->height = otxt->height;
-        txt->img = otxt->img;
-        scn->textures.push_back(txt);
-        tmap[txt->path] = txt;
-    }
-
-    // convert textures
-    auto add_texture = [&tmap](const obj_texture_info& oinfo) {
-        if (oinfo.path == "") return (texture*)nullptr;
-        if (tmap.find(oinfo.path) == tmap.end()) return (texture*)nullptr;
-        auto txt = tmap.at(oinfo.path);
-        txt->clamp = oinfo.clamp;
-        txt->scale = oinfo.scale;
-        return txt;
-    };
-
-    // convert materials and build textures
-    auto mmap = std::unordered_map<std::string, material*>{{"", nullptr}};
-    for (auto omat : obj->materials) {
-        auto mat = new material();
-        mat->name = omat->name;
-        mat->ke = omat->ke;
-        mat->kd = omat->kd;
-        mat->ks = omat->ks;
-        mat->kt = omat->kt;
-        if(omat->rs >= 0) {
-            mat->rs = omat->rs;
-        } else {
-            mat->rs = pow(2 / (omat->ns + 2), 1 / 4.0f);
-            if (mat->rs < 0.01f) mat->rs = 0;
-            if (mat->rs > 0.99f) mat->rs = 1;
-        }
-        mat->op = omat->op;
-        mat->fresnel = omat->illum == 2 || omat->illum == 5 || omat->illum == 7;
-        mat->refract = omat->illum == 6 || omat->illum == 7;
-        mat->ke_txt = add_texture(omat->ke_txt);
-        mat->kd_txt = add_texture(omat->kd_txt);
-        mat->ks_txt = add_texture(omat->ks_txt);
-        mat->kt_txt = add_texture(omat->kt_txt);
-        mat->op_txt = add_texture(omat->op_txt);
-        mat->rs_txt = add_texture(omat->rs_txt);
-        mat->norm_txt = add_texture(omat->norm_txt);
-        mat->bump_txt = add_texture(omat->bump_txt);
-        mat->disp_txt = add_texture(omat->disp_txt);
-        scn->materials.push_back(mat);
-        mmap[mat->name] = mat;
-    }
-
-    // convert meshes
-    auto omap = std::unordered_map<std::string, instance*>{{"", nullptr}};
-    for (auto oobj : obj->objects) {
-        if (oobj->verts_pos.empty() || oobj->elems.empty()) continue;
-        if (oobj->materials.size() > 1 || oobj->groups.size() > 1)
-            log_error("assume materials and groups are split between shapes");
-
-        auto ist = new instance();
-        ist->name = oobj->name;
-        ist->frame = oobj->frame;
-        ist->mat = mmap[oobj->materials.front()];
-        scn->instances.push_back(ist);
-        omap[oobj->name] = ist;
-
-        auto make_unique_verts1 = [](auto& nverts, auto& verts) {
-            nverts = 0;
-            std::unordered_map<int, int> vert_map;
-            std::vector<int> elem_verts;
-            for (auto vid = 0; vid < verts.size(); vid++) {
-                auto vert = verts[vid];
-                auto it = vert_map.find(vert);
-                if (it == vert_map.end()) {
-                    vert_map.insert(it, {vert, nverts});
-                    elem_verts.push_back(nverts);
-                    nverts += 1;
-                } else {
-                    elem_verts.push_back(it->second);
-                }
-            }
-            return elem_verts;
-        };
-
-        auto make_unique_verts3 = [](auto& nverts, auto& verts_pos,
-                                      auto& verts_norm, auto& verts_texcoord) {
-            nverts = 0;
-            std::unordered_map<std::array<int, 3>, int, obj_array_hash<3>>
-                vert_map;
-            std::vector<int> elem_verts;
-            for (auto vid = 0; vid < verts_pos.size(); vid++) {
-                auto vert = std::array<int, 3>{{-1, -1, -1}};
-                if (!verts_pos.empty()) vert[0] = verts_pos[vid];
-                if (!verts_norm.empty()) vert[1] = verts_norm[vid];
-                if (!verts_texcoord.empty()) vert[2] = verts_texcoord[vid];
-                auto it = vert_map.find(vert);
-                if (it == vert_map.end()) {
-                    vert_map.insert(it, {vert, nverts});
-                    elem_verts.push_back(nverts);
-                    nverts += 1;
-                } else {
-                    elem_verts.push_back(it->second);
-                }
-            }
-            return elem_verts;
-        };
-
-        auto make_unique_verts5 = [](auto& nverts, auto& verts_pos,
-                                      auto& verts_norm, auto& verts_texcoord,
-                                      auto& verts_color, auto& verts_radius) {
-            nverts = 0;
-            std::unordered_map<std::array<int, 5>, int, obj_array_hash<5>>
-                vert_map;
-            std::vector<int> elem_verts;
-            for (auto vid = 0; vid < verts_pos.size(); vid++) {
-                auto vert = std::array<int, 5>{{-1, -1, -1, -1, -1}};
-                if (!verts_pos.empty()) vert[0] = verts_pos[vid];
-                if (!verts_norm.empty()) vert[1] = verts_norm[vid];
-                if (!verts_texcoord.empty()) vert[2] = verts_texcoord[vid];
-                if (!verts_color.empty()) vert[3] = verts_color[vid];
-                if (!verts_radius.empty()) vert[4] = verts_radius[vid];
-                auto it = vert_map.find(vert);
-                if (it == vert_map.end()) {
-                    vert_map.insert(it, {vert, nverts});
-                    elem_verts.push_back(nverts);
-                    nverts += 1;
-                } else {
-                    elem_verts.push_back(it->second);
-                }
-            }
-            return elem_verts;
-        };
-
-        auto convert_vert = [](int nverts, auto& vert, auto& overt,
-                                auto& elem_verts, auto& obj_verts) {
-            if (obj_verts.empty()) return;
-            vert.resize(nverts);
-            for (auto ev = 0; ev < elem_verts.size(); ev++) {
-                if (obj_verts[ev] < 0) continue;
-                vert[elem_verts[ev]] = overt[obj_verts[ev]];
-            }
-        };
-
-        auto check_points = [](auto& elems) {
-            for (auto& elem : elems) {
-                if (elem.type != obj_element_type::point) continue;
-                log_error("points not supported");
-                break;
-            }
-        };
-        auto convert_lines = [](auto& elems, auto& elem_verts, auto& lines) {
-            for (auto& elem : elems) {
-                if (elem.type != obj_element_type::line) continue;
-                for (auto i = elem.start; i < elem.start + elem.size - 1; i++) {
-                    lines.push_back({elem_verts[i], elem_verts[i + 1]});
-                }
-            }
-        };
-        auto convert_triangles = [](auto& elems, auto& elem_verts,
-                                     auto& triangles) {
-            for (auto& elem : elems) {
-                if (elem.type != obj_element_type::face) continue;
-                for (auto i = elem.start + 2; i < elem.start + elem.size; i++) {
-                    triangles.push_back({elem_verts[elem.start],
-                        elem_verts[i - 1], elem_verts[i]});
-                }
-            }
-        };
-        auto convert_quads = [](auto& elems, auto& elem_verts, auto& quads) {
-            for (auto& elem : elems) {
-                if (elem.type != obj_element_type::face) continue;
-                if (elem.size == 4) {
-                    quads.push_back({elem_verts[elem.start + 0],
-                        elem_verts[elem.start + 1], elem_verts[elem.start + 2],
-                        elem_verts[elem.start + 3]});
-                } else {
-                    for (auto i = elem.start + 2; i < elem.start + elem.size;
-                         i++) {
-                        quads.push_back({elem_verts[elem.start],
-                            elem_verts[i - 1], elem_verts[i], elem_verts[i]});
-                    }
-                }
-            }
-        };
-
-        if (oobj->subdiv == zero2i) {
-            ist->shp = new shape();
-            ist->shp->name = oobj->name;
-            scn->shapes.push_back(ist->shp);
-
-            // insert all vertices
-            auto nverts = 0;
-            auto elem_verts = std::vector<int>();
-            if (oobj->verts_color.empty() && oobj->verts_radius.empty()) {
-                elem_verts = make_unique_verts3(nverts, oobj->verts_pos,
-                    oobj->verts_norm, oobj->verts_texcoord);
-            } else {
-                elem_verts = make_unique_verts5(nverts, oobj->verts_pos,
-                    oobj->verts_norm, oobj->verts_texcoord, oobj->verts_color,
-                    oobj->verts_radius);
-            }
-
-            // convert elements
-            check_points(oobj->elems);
-            convert_lines(oobj->elems, elem_verts, ist->shp->lines);
-            convert_triangles(oobj->elems, elem_verts, ist->shp->triangles);
-
-            // copy vertex data
-            convert_vert(
-                nverts, ist->shp->pos, obj->pos, elem_verts, oobj->verts_pos);
-            convert_vert(nverts, ist->shp->norm, obj->norm, elem_verts,
-                oobj->verts_norm);
-            convert_vert(nverts, ist->shp->texcoord, obj->texcoord, elem_verts,
-                oobj->verts_texcoord);
-            convert_vert(nverts, ist->shp->color, obj->color, elem_verts,
-                oobj->verts_color);
-            convert_vert(nverts, ist->shp->radius, obj->radius, elem_verts,
-                oobj->verts_radius);
-
-            if (oobj->frame != identity_frame3f) {
-                auto iframe = inverse(oobj->frame);
-                for (auto& p : ist->shp->pos) p = transform_point(iframe, p);
-                for (auto& n : ist->shp->norm)
-                    n = transform_direction(iframe, n);
-            }
-        } else {
-            ist->sbd = new subdiv();
-            ist->sbd->name = oobj->name;
-            ist->sbd->level = oobj->subdiv.x;
-            ist->sbd->catmull_clark = oobj->subdiv.y / 2 == 1;
-            ist->sbd->compute_normals = oobj->subdiv.y % 2 == 1;
-            scn->subdivs.push_back(ist->sbd);
-
-            // insert all vertices
-            if (!oobj->verts_pos.empty()) {
-                auto nverts = 0;
-                auto elem_verts = make_unique_verts1(nverts, oobj->verts_pos);
-                convert_vert(nverts, ist->sbd->pos, obj->pos, elem_verts,
-                    oobj->verts_pos);
-                convert_quads(oobj->elems, elem_verts, ist->sbd->quads_pos);
-            }
-            if (!oobj->verts_texcoord.empty()) {
-                auto nverts = 0;
-                auto elem_verts =
-                    make_unique_verts1(nverts, oobj->verts_texcoord);
-                convert_vert(nverts, ist->sbd->texcoord, obj->texcoord,
-                    elem_verts, oobj->verts_texcoord);
-                convert_quads(
-                    oobj->elems, elem_verts, ist->sbd->quads_texcoord);
-            }
-            if (!oobj->verts_color.empty()) {
-                auto nverts = 0;
-                auto elem_verts = make_unique_verts1(nverts, oobj->verts_color);
-                convert_vert(nverts, ist->sbd->color, obj->color, elem_verts,
-                    oobj->verts_color);
-                convert_quads(oobj->elems, elem_verts, ist->sbd->quads_color);
-            }
-
-            if (oobj->frame != identity_frame3f) {
-                auto iframe = inverse(oobj->frame);
-                for (auto& p : ist->sbd->pos) p = transform_point(iframe, p);
-            }
-
-            ist->shp = new shape();
-            ist->shp->name = oobj->name;
-            scn->shapes.push_back(ist->shp);
-
-            ist->shp->pos = ist->sbd->pos;
-            ist->shp->triangles =
-                convert_quads_to_triangles(ist->sbd->quads_pos);
-        }
-    }
-
-    // convert cameras
-    auto cmap = std::unordered_map<std::string, camera*>{{"", nullptr}};
-    for (auto ocam : obj->cameras) {
-        auto cam = new camera();
-        cam->name = ocam->name;
-        cam->ortho = ocam->ortho;
-        cam->width = ocam->width;
-        cam->height = ocam->height;
-        cam->focal = ocam->focal;
-        cam->focus = ocam->focus;
-        cam->aperture = ocam->aperture;
-        cam->frame = ocam->frame;
-        scn->cameras.push_back(cam);
-        cmap[cam->name] = cam;
-    }
-
-    // convert envs
-    std::unordered_set<material*> env_mat;
-    auto emap = std::unordered_map<std::string, environment*>{{"", nullptr}};
-    for (auto oenv : obj->environments) {
-        auto env = new environment();
-        env->name = oenv->name;
-        env->ke = oenv->ke;
-        env->ke_txt = add_texture(oenv->ke_txt);
-        env->frame = oenv->frame;
-        scn->environments.push_back(env);
-        emap[env->name] = env;
-    }
-
-    // convert nodes
-    if (!obj->nodes.empty()) {
-        auto ists = scn->instances;
-        scn->instances.clear();
-
-        for (auto onde : obj->nodes) {
-            auto nde = new node();
-            nde->name = onde->name;
-            nde->cam = cmap.at(onde->camname);
-            auto ist = omap.at(onde->objname);
-            if (ist) {
-                nde->ist = new instance(*ist);
-                scn->instances.push_back(nde->ist);
-            }
-            nde->env = emap.at(onde->envname);
-            nde->translation = onde->translation;
-            nde->rotation = onde->rotation;
-            nde->scale = onde->scale;
-            nde->frame = onde->frame;
-            scn->nodes.push_back(nde);
-        }
-
-        // set up parent pointers
-        for (auto nid = 0; nid < obj->nodes.size(); nid++) {
-            auto onde = obj->nodes[nid];
-            if (onde->parent.empty()) continue;
-            auto nde = scn->nodes[nid];
-            for (auto parent : scn->nodes) {
-                if (parent->name == onde->parent) {
-                    nde->parent = parent;
-                    break;
-                }
-            }
-        }
-
-        // clear instances
-        for (auto ist : ists) delete ist;
-    }
-
-    // update transforms and bboxes
-    update_transforms(scn);
-    update_bbox(scn);
-
-    // done
-    return scn;
-}
-
-// Save an scene
-obj_scene* scene_to_obj(
-    const scene* scn, bool preserve_instances, bool preserve_subdivs) {
-    auto obj = new obj_scene();
-
-    // convert textures
-    for (auto txt : scn->textures) {
-        auto otxt = new obj_texture();
-        otxt->path = txt->path;
-        otxt->width = txt->width;
-        otxt->height = txt->height;
-        otxt->img = txt->img;
-        obj->textures.push_back(otxt);
-    }
-
-    auto add_texture = [](const texture* txt, bool srgb, bool bump = false) {
-        auto oinfo = obj_texture_info();
-        if (!txt) return oinfo;
-        oinfo.path = txt->path;
-        oinfo.clamp = txt->clamp;
-        if (bump) oinfo.scale = txt->scale;
-        return oinfo;
-    };
-
-    // convert materials
-    for (auto mat : scn->materials) {
-        auto omat = new obj_material();
-        omat->name = mat->name;
-        omat->illum = 2;
-        if (mat->kt != zero3f && mat->refract && !mat->fresnel) omat->illum = 6;
-        if (mat->kt != zero3f && mat->refract && mat->fresnel) omat->illum = 7;
-        omat->ke = {mat->ke.x, mat->ke.y, mat->ke.z};
-        omat->ke_txt = add_texture(mat->ke_txt, true);
-        if (!mat->base_metallic) {
-            omat->kd = mat->kd;
-            omat->ks = mat->ks;
-            omat->kd_txt = add_texture(mat->kd_txt, true);
-            omat->ks_txt = add_texture(mat->ks_txt, true);
-        } else {
-            omat->kd = mat->kd;
-            omat->km = mat->ks.x;
-            omat->op = mat->op;
-            omat->kd_txt = add_texture(mat->kd_txt, mat->op_txt, true);
-            omat->km_txt = add_texture(mat->ks_txt, true);
-        }
-        omat->kt = mat->kt;
-        omat->ns = clamp(2 / pow(mat->rs + 1e-10f, 4.0f) - 2, 0.0f, 1.0e12f);
-        omat->rs = mat->rs;
-        omat->op = mat->op;
-        omat->kt_txt = add_texture(mat->kt_txt, true);
-        omat->rs_txt = add_texture(mat->rs_txt, false);
-        omat->op_txt = add_texture(mat->op_txt, false);
-        omat->bump_txt = add_texture(mat->bump_txt, false, true);
-        omat->disp_txt = add_texture(mat->disp_txt, false, true);
-        omat->norm_txt = add_texture(mat->norm_txt, false, true);
-        obj->materials.push_back(omat);
-    }
-
-    // add elem
-    auto add_elem = [](auto oobj, auto etype, auto esize) {
-        auto elem = obj_element();
-        elem.start = (uint32_t)oobj->verts_pos.size();
-        elem.type = etype;
-        elem.size = (uint16_t)esize;
-        elem.group = 0;
-        elem.material = 0;
-        elem.smoothing = 0;
-        oobj->elems.push_back(elem);
-    };
-    // add vertex
-    auto add_vert = [](auto shp, auto oobj, auto& offset, int vid) {
-        if (!shp->pos.empty()) oobj->verts_pos.push_back(offset[0] + vid);
-        if (!shp->norm.empty()) oobj->verts_norm.push_back(offset[1] + vid);
-        if (!shp->texcoord.empty())
-            oobj->verts_texcoord.push_back(offset[2] + vid);
-        if (!shp->color.empty()) oobj->verts_color.push_back(offset[3] + vid);
-        if (!shp->radius.empty()) oobj->verts_radius.push_back(offset[4] + vid);
-    };
-
-    // convert shapes
-    auto shape_mat = std::unordered_map<shape*, material*>();
-    for (auto ist : scn->instances) {
-        if (preserve_instances) {
-            if (shape_mat.find(ist->shp) != shape_mat.end()) {
-                if (shape_mat.at(ist->shp) != ist->mat)
-                    log_error("different shape and material pairs in obj");
-                continue;
-            }
-            shape_mat[ist->shp] = ist->mat;
-        }
-        auto oobj = new obj_object();
-        oobj->name = (preserve_instances) ? ist->shp->name : ist->name;
-        oobj->frame = (preserve_instances) ? identity_frame3f : ist->frame;
-        auto offset = std::array<int, 5>{{(int)obj->pos.size(),
-            (int)obj->norm.size(), (int)obj->texcoord.size(),
-            (int)obj->color.size(), (int)obj->radius.size()}};
-        if (!preserve_subdivs || !ist->sbd) {
-            if (!preserve_instances && ist->frame != identity_frame3f) {
-                for (auto& v : ist->shp->pos)
-                    obj->pos.push_back(transform_point(ist->frame, v));
-                for (auto& v : ist->shp->norm)
-                    obj->norm.push_back(transform_direction(ist->frame, v));
-            } else {
-                for (auto& v : ist->shp->pos) obj->pos.push_back(v);
-                for (auto& v : ist->shp->norm) obj->norm.push_back(v);
-            }
-            for (auto& v : ist->shp->texcoord) obj->texcoord.push_back(v);
-            for (auto& v : ist->shp->color) obj->color.push_back(v);
-            for (auto& v : ist->shp->radius) obj->radius.push_back(v);
-            if (ist->mat) oobj->materials.push_back(ist->mat->name);
-            for (auto ei = 0; ei < ist->shp->lines.size(); ei++) {
-                auto l = ist->shp->lines[ei];
-                add_elem(oobj, obj_element_type::line, 2);
-                for (auto vid : {l.x, l.y})
-                    add_vert(ist->shp, oobj, offset, vid);
-            }
-            for (auto ei = 0; ei < ist->shp->triangles.size(); ei++) {
-                auto t = ist->shp->triangles[ei];
-                add_elem(oobj, obj_element_type::face, 3);
-                for (auto vid : {t.x, t.y, t.z})
-                    add_vert(ist->shp, oobj, offset, vid);
-            }
-            if (ist->shp->lines.empty() && ist->shp->triangles.empty()) {
-                for (auto i = 0; i < ist->shp->pos.size(); i++) {
-                    add_elem(oobj, obj_element_type::point, 1);
-                    add_vert(ist->shp, oobj, offset, i);
-                }
-            }
-        } else {
-            oobj->subdiv.x = ist->sbd->level;
-            oobj->subdiv.y = ((ist->sbd->catmull_clark) ? 2 : 0) +
-                             ((ist->sbd->compute_normals) ? 1 : 0);
-            if (!preserve_instances && ist->frame != identity_frame3f) {
-                for (auto& v : ist->sbd->pos)
-                    obj->pos.push_back(transform_point(ist->frame, v));
-            } else {
-                for (auto& v : ist->sbd->pos) obj->pos.push_back(v);
-            }
-            for (auto& v : ist->sbd->texcoord) obj->texcoord.push_back(v);
-            for (auto& v : ist->sbd->color) obj->color.push_back(v);
-            // for (auto& v : ist->shp->radius) obj->radius.push_back(v);
-            if (ist->mat) oobj->materials.push_back(ist->mat->name);
-            for (auto q : ist->sbd->quads_pos) {
-                add_elem(oobj, obj_element_type::face, ((q.z == q.w) ? 3 : 4));
-                for (auto i = 0; i < ((q.z == q.w) ? 3 : 4); i++)
-                    oobj->verts_pos.push_back(offset[0] + (&q.x)[i]);
-            }
-            for (auto q : ist->sbd->quads_texcoord) {
-                for (auto i = 0; i < ((q.z == q.w) ? 3 : 4); i++)
-                    oobj->verts_texcoord.push_back(offset[2] + (&q.x)[i]);
-            }
-            for (auto q : ist->sbd->quads_color) {
-                for (auto i = 0; i < ((q.z == q.w) ? 3 : 4); i++)
-                    oobj->verts_color.push_back(offset[3] + (&q.x)[i]);
-            }
-        }
-        obj->objects.push_back(oobj);
-    }
-
-    // convert cameras
-    for (auto cam : scn->cameras) {
-        auto ocam = new obj_camera();
-        ocam->name = cam->name;
-        ocam->ortho = cam->ortho;
-        ocam->width = cam->width;
-        ocam->height = cam->height;
-        ocam->focal = cam->focal;
-        ocam->focus = cam->focus;
-        ocam->aperture = cam->aperture;
-        ocam->frame = cam->frame;
-        obj->cameras.push_back(ocam);
-    }
-
-    // convert envs
-    for (auto env : scn->environments) {
-        auto oenv = new obj_environment();
-        oenv->name = env->name;
-        oenv->ke = env->ke;
-        oenv->ke_txt = add_texture(env->ke_txt, true);
-        oenv->frame = env->frame;
-        obj->environments.push_back(oenv);
-    }
-
-    // convert hierarchy
-    if (!scn->nodes.empty()) {
-        for (auto nde : scn->nodes) {
-            auto onde = new obj_node();
-            onde->name = nde->name;
-            if (nde->cam) onde->camname = nde->cam->name;
-            if (nde->ist) onde->objname = nde->ist->shp->name;
-            if (nde->env) onde->envname = nde->env->name;
-            onde->frame = nde->frame;
-            onde->translation = nde->translation;
-            onde->rotation = nde->rotation;
-            onde->scale = nde->scale;
-            obj->nodes.push_back(onde);
-        }
-
-        // parent
-        for (auto idx = 0; idx < scn->nodes.size(); idx++) {
-            auto nde = scn->nodes.at(idx);
-            if (!nde->parent) continue;
-            auto onde = obj->nodes.at(idx);
-            onde->parent = nde->parent->name;
-        }
-    } else if (preserve_instances) {
-        for (auto ist : scn->instances) {
-            auto onde = new obj_node();
-            onde->name = ist->name;
-            onde->objname = ist->shp->name;
-            onde->frame = ist->frame;
-            obj->nodes.push_back(onde);
-        }
-    }
-
-    return obj;
-}
-
-static bool startswith(const std::string& str, const std::string& substr) {
-    if (str.length() < substr.length()) return false;
-    for (auto i = 0; i < substr.length(); i++)
-        if (str[i] != substr[i]) return false;
-    return true;
-}
-
-// Flattens a gltf file into a flattened asset.
-scene* gltf_to_scene(const glTF* gltf) {
-    // clear asset
-    auto scn = new scene();
-
-    // convert textures
-    auto tmap = std::map<glTFImage*, texture*>{};
-    for (auto gimg : gltf->images) {
-        auto txt = new texture();
-        txt->name = gimg->name;
-        txt->path = (startswith(gimg->uri, "data:")) ?
-                        std::string("[glTF-inline].png") :
-                        gimg->uri;
-        txt->width = gimg->data.width;
-        txt->height = gimg->data.height;
-        txt->img = gimg->data.img;
-        scn->textures.push_back(txt);
-        tmap[gimg] = txt;
-    }
-
-    // add a texture
-    auto add_texture = [&tmap, gltf](const glTFTextureInfo* ginfo,
-                           bool normal = false, bool occlusion = false) {
-        if (!ginfo) return (texture*)nullptr;
-        auto gtxt = gltf->get(ginfo->index);
-        if (!gtxt || !gtxt->source) return (texture*)nullptr;
-        auto gimg = gltf->get(gtxt->source);
-        if (!gimg) return (texture*)nullptr;
-        auto txt = tmap.at(gimg);
-        auto gsmp = gltf->get(gtxt->sampler);
-        if (gsmp) {
-            txt->clamp = gsmp->wrapS == glTFSamplerWrapS::ClampToEdge ||
-                         gsmp->wrapT == glTFSamplerWrapT::ClampToEdge;
-        }
-        if (normal) {
-            auto ninfo = (glTFMaterialNormalTextureInfo*)ginfo;
-            txt->scale = ninfo->scale;
-        }
-        if (occlusion) {
-            auto ninfo = (glTFMaterialOcclusionTextureInfo*)ginfo;
-            txt->scale = ninfo->strength;
-        }
-        return txt;
-    };
-
-    // convert materials
-    for (auto gmat : gltf->materials) {
-        auto mat = new material();
-        mat->name = gmat->name;
-        mat->ke = gmat->emissiveFactor;
-        mat->ke_txt = add_texture(gmat->emissiveTexture);
-        if (gmat->pbrSpecularGlossiness) {
-            mat->base_metallic = false;
-            mat->gltf_textures = true;
-            auto gsg = gmat->pbrSpecularGlossiness;
-            mat->kd = {gsg->diffuseFactor.x, gsg->diffuseFactor.y,
-                gsg->diffuseFactor.z};
-            mat->op = gsg->diffuseFactor.w;
-            mat->ks = gsg->specularFactor;
-            mat->rs = 1 - gsg->glossinessFactor;
-            mat->kd_txt = add_texture(gsg->diffuseTexture);
-            mat->ks_txt = add_texture(gsg->specularGlossinessTexture);
-            mat->rs_txt = mat->ks_txt;
-        } else if (gmat->pbrMetallicRoughness) {
-            mat->base_metallic = true;
-            mat->gltf_textures = true;
-            auto gmr = gmat->pbrMetallicRoughness;
-            mat->ke = gmat->emissiveFactor;
-            mat->kd = {gmr->baseColorFactor.x, gmr->baseColorFactor.y,
-                gmr->baseColorFactor.z};
-            mat->op = gmr->baseColorFactor.w;
-            mat->ks = {
-                gmr->metallicFactor, gmr->metallicFactor, gmr->metallicFactor};
-            mat->rs = gmr->roughnessFactor;
-            mat->kd_txt = add_texture(gmr->baseColorTexture, true);
-            mat->ks_txt = add_texture(gmr->metallicRoughnessTexture, true);
-            mat->rs_txt = mat->ks_txt;
-        }
-        mat->occ_txt = add_texture(gmat->occlusionTexture, false, true);
-        mat->norm_txt = add_texture(gmat->normalTexture, true, false);
-        mat->double_sided = gmat->doubleSided;
-        scn->materials.push_back(mat);
-    }
-
-    // convert meshes
-    auto meshes = std::vector<std::vector<std::pair<shape*, material*>>>();
-    for (auto gmesh : gltf->meshes) {
-        meshes.push_back({});
-        auto sid = 0;
-        for (auto gprim : gmesh->primitives) {
-            auto shp = new shape();
-            shp->name =
-                gmesh->name + ((sid) ? std::to_string(sid) : std::string());
-            sid++;
-            for (auto gattr : gprim->attributes) {
-                auto semantic = gattr.first;
-                auto vals = accessor_view(gltf, gltf->get(gattr.second));
-                if (semantic == "POSITION") {
-                    shp->pos.reserve(vals.size());
-                    for (auto i = 0; i < vals.size(); i++)
-                        shp->pos.push_back(vals.getv3f(i));
-                } else if (semantic == "NORMAL") {
-                    shp->norm.reserve(vals.size());
-                    for (auto i = 0; i < vals.size(); i++)
-                        shp->norm.push_back(vals.getv3f(i));
-                } else if (semantic == "TEXCOORD" || semantic == "TEXCOORD_0") {
-                    shp->texcoord.reserve(vals.size());
-                    for (auto i = 0; i < vals.size(); i++)
-                        shp->texcoord.push_back(vals.getv2f(i));
-                } else if (semantic == "COLOR" || semantic == "COLOR_0") {
-                    shp->color.reserve(vals.size());
-                    for (auto i = 0; i < vals.size(); i++)
-                        shp->color.push_back(vals.getv4f(i, {0, 0, 0, 1}));
-                } else if (semantic == "TANGENT") {
-                    shp->tangsp.reserve(vals.size());
-                    for (auto i = 0; i < vals.size(); i++)
-                        shp->tangsp.push_back(vals.getv4f(i));
-                    for (auto& t : shp->tangsp) t.w = -t.w;
-                } else if (semantic == "RADIUS") {
-                    shp->radius.reserve(vals.size());
-                    for (auto i = 0; i < vals.size(); i++)
-                        shp->radius.push_back(vals.get(i, 0));
-                } else {
-                    // ignore
-                }
-            }
-            // indices
-            if (!gprim->indices) {
-                if (gprim->mode == glTFMeshPrimitiveMode::Triangles) {
-                    shp->triangles.reserve(shp->pos.size() / 3);
-                    for (auto i = 0; i < shp->pos.size() / 3; i++)
-                        shp->triangles.push_back(
-                            {i * 3 + 0, i * 3 + 1, i * 3 + 2});
-                } else if (gprim->mode == glTFMeshPrimitiveMode::TriangleFan) {
-                    shp->triangles.reserve(shp->pos.size() - 2);
-                    for (auto i = 2; i < shp->pos.size(); i++)
-                        shp->triangles.push_back({0, i - 1, i});
-                } else if (gprim->mode ==
-                           glTFMeshPrimitiveMode::TriangleStrip) {
-                    shp->triangles.reserve(shp->pos.size() - 2);
-                    for (auto i = 2; i < shp->pos.size(); i++)
-                        shp->triangles.push_back({i - 2, i - 1, i});
-                } else if (gprim->mode == glTFMeshPrimitiveMode::Lines) {
-                    shp->lines.reserve(shp->pos.size() / 2);
-                    for (auto i = 0; i < shp->pos.size() / 2; i++)
-                        shp->lines.push_back({i * 2 + 0, i * 2 + 1});
-                } else if (gprim->mode == glTFMeshPrimitiveMode::LineLoop) {
-                    shp->lines.reserve(shp->pos.size());
-                    for (auto i = 1; i < shp->pos.size(); i++)
-                        shp->lines.push_back({i - 1, i});
-                    shp->lines.back() = {(int)shp->pos.size() - 1, 0};
-                } else if (gprim->mode == glTFMeshPrimitiveMode::LineStrip) {
-                    shp->lines.reserve(shp->pos.size() - 1);
-                    for (auto i = 1; i < shp->pos.size(); i++)
-                        shp->lines.push_back({i - 1, i});
-                } else if (gprim->mode == glTFMeshPrimitiveMode::NotSet ||
-                           gprim->mode == glTFMeshPrimitiveMode::Points) {
-                    log_warning("points not supported");
-                } else {
-                    throw std::runtime_error("unknown primitive type");
-                }
-            } else {
-                auto indices = accessor_view(gltf, gltf->get(gprim->indices));
-                if (gprim->mode == glTFMeshPrimitiveMode::Triangles) {
-                    shp->triangles.reserve(indices.size());
-                    for (auto i = 0; i < indices.size() / 3; i++)
-                        shp->triangles.push_back({indices.geti(i * 3 + 0),
-                            indices.geti(i * 3 + 1), indices.geti(i * 3 + 2)});
-                } else if (gprim->mode == glTFMeshPrimitiveMode::TriangleFan) {
-                    shp->triangles.reserve(indices.size() - 2);
-                    for (auto i = 2; i < indices.size(); i++)
-                        shp->triangles.push_back({indices.geti(0),
-                            indices.geti(i - 1), indices.geti(i)});
-                } else if (gprim->mode ==
-                           glTFMeshPrimitiveMode::TriangleStrip) {
-                    shp->triangles.reserve(indices.size() - 2);
-                    for (auto i = 2; i < indices.size(); i++)
-                        shp->triangles.push_back({indices.geti(i - 2),
-                            indices.geti(i - 1), indices.geti(i)});
-                } else if (gprim->mode == glTFMeshPrimitiveMode::Lines) {
-                    shp->lines.reserve(indices.size() / 2);
-                    for (auto i = 0; i < indices.size() / 2; i++)
-                        shp->lines.push_back(
-                            {indices.geti(i * 2 + 0), indices.geti(i * 2 + 1)});
-                } else if (gprim->mode == glTFMeshPrimitiveMode::LineLoop) {
-                    shp->lines.reserve(indices.size());
-                    for (auto i = 1; i < indices.size(); i++)
-                        shp->lines.push_back(
-                            {indices.geti(i - 1), indices.geti(i)});
-                    shp->lines.back() = {
-                        indices.geti(indices.size() - 1), indices.geti(0)};
-                } else if (gprim->mode == glTFMeshPrimitiveMode::LineStrip) {
-                    shp->lines.reserve(indices.size() - 1);
-                    for (auto i = 1; i < indices.size(); i++)
-                        shp->lines.push_back(
-                            {indices.geti(i - 1), indices.geti(i)});
-                } else if (gprim->mode == glTFMeshPrimitiveMode::NotSet ||
-                           gprim->mode == glTFMeshPrimitiveMode::Points) {
-                    log_warning("points not supported");
-                } else {
-                    throw std::runtime_error("unknown primitive type");
-                }
-            }
-            meshes.back().push_back(
-                {shp, scn->materials[(int)gprim->material]});
-            scn->shapes.push_back(shp);
-        }
-    }
-
-    // convert cameras
-    for (auto gcam : gltf->cameras) {
-        auto cam = new camera();
-        cam->name = gcam->name;
-        cam->ortho = gcam->type == glTFCameraType::Orthographic;
-        if (cam->ortho) {
-            log_warning("orthographic not supported well");
-            auto ortho = gcam->orthographic;
-            set_camera_fovy(cam, ortho->ymag, ortho->xmag / ortho->ymag);
-            cam->near = ortho->znear;
-            cam->far = ortho->zfar;
-            cam->focus = flt_max;
-            cam->aperture = 0;
-        } else {
-            auto persp = gcam->perspective;
-            set_camera_fovy(cam, persp->yfov, persp->aspectRatio);
-            cam->near = persp->znear;
-            cam->far = (persp->zfar) ? persp->zfar : flt_max;
-            cam->focus = flt_max;
-            cam->aperture = 0;
-        }
-        scn->cameras.push_back(cam);
-    }
-
-    // convert nodes
-    for (auto gnde : gltf->nodes) {
-        auto nde = new node();
-        nde->name = gnde->name;
-        if (gnde->camera) nde->cam = scn->cameras[(int)gnde->camera];
-        nde->translation = gnde->translation;
-        nde->rotation = gnde->rotation;
-        nde->scale = gnde->scale;
-        nde->frame = mat_to_frame(gnde->matrix);
-        scn->nodes.push_back(nde);
-    }
-
-    // set up parent pointers
-    for (auto nid = 0; nid < gltf->nodes.size(); nid++) {
-        auto gnde = gltf->nodes[nid];
-        auto nde = scn->nodes[nid];
-        for (auto cid : gnde->children) scn->nodes[(int)cid]->parent = nde;
-    }
-
-    // set up instances
-    for (auto nid = 0; nid < gltf->nodes.size(); nid++) {
-        auto gnde = gltf->nodes[nid];
-        if (!gnde->mesh) continue;
-        auto nde = scn->nodes[nid];
-        auto& shps = meshes.at((int)gnde->mesh);
-        if (shps.empty()) continue;
-        if (shps.size() == 1) {
-            nde->ist = new instance();
-            nde->ist->name = nde->name;
-            nde->ist->shp = shps[0].first;
-            nde->ist->mat = shps[0].second;
-            scn->instances.push_back(nde->ist);
-        } else {
-            for (auto shp : shps) {
-                auto child = new node();
-                child->name = nde->name + "_" + shp.first->name;
-                child->parent = nde;
-                child->ist = new instance();
-                child->ist->name = child->name;
-                child->ist->shp = shp.first;
-                child->ist->mat = shp.second;
-                scn->instances.push_back(child->ist);
-            }
-        }
-    }
-
-    // keyframe type conversion
-    static auto keyframe_types =
-        std::unordered_map<glTFAnimationSamplerInterpolation, animation_type>{
-            {glTFAnimationSamplerInterpolation::NotSet, animation_type::linear},
-            {glTFAnimationSamplerInterpolation::Linear, animation_type::linear},
-            {glTFAnimationSamplerInterpolation::Step, animation_type::step},
-            {glTFAnimationSamplerInterpolation::CubicSpline,
-                animation_type::bezier},
-        };
-
-    // convert animations
-    for (auto ganm : gltf->animations) {
-        auto aid = 0;
-        auto sampler_map = std::unordered_map<vec2i, int>();
-        for (auto gchannel : ganm->channels) {
-            if (sampler_map.find({(int)gchannel->sampler,
-                    (int)gchannel->target->path}) == sampler_map.end()) {
-                auto gsampler = ganm->get(gchannel->sampler);
-                auto anm = new animation();
-                anm->name = ((ganm->name != "") ? ganm->name : "anim") +
-                            std::to_string(aid++);
-                anm->group = ganm->name;
-                auto input_view =
-                    accessor_view(gltf, gltf->get(gsampler->input));
-                anm->times.resize(input_view.size());
-                for (auto i = 0; i < input_view.size(); i++)
-                    anm->times[i] = input_view.get(i);
-                anm->type = keyframe_types.at(gsampler->interpolation);
-                auto output_view =
-                    accessor_view(gltf, gltf->get(gsampler->output));
-                switch (gchannel->target->path) {
-                    case glTFAnimationChannelTargetPath::Translation: {
-                        anm->translation.reserve(output_view.size());
-                        for (auto i = 0; i < output_view.size(); i++)
-                            anm->translation.push_back(output_view.getv3f(i));
-                    } break;
-                    case glTFAnimationChannelTargetPath::Rotation: {
-                        anm->rotation.reserve(output_view.size());
-                        for (auto i = 0; i < output_view.size(); i++)
-                            anm->rotation.push_back(output_view.getv4f(i));
-                    } break;
-                    case glTFAnimationChannelTargetPath::Scale: {
-                        anm->scale.reserve(output_view.size());
-                        for (auto i = 0; i < output_view.size(); i++)
-                            anm->scale.push_back(output_view.getv3f(i));
-                    } break;
-                    case glTFAnimationChannelTargetPath::Weights: {
-                        // get a node that it refers to
-                        auto ncomp = 0;
-                        auto gnode = gltf->get(gchannel->target->node);
-                        auto gmesh = gltf->get(gnode->mesh);
-                        if (gmesh) {
-                            for (auto gshp : gmesh->primitives) {
-                                ncomp = max((int)gshp->targets.size(), ncomp);
-                            }
-                        }
-                        if (ncomp) {
-                            auto values = std::vector<float>();
-                            values.reserve(output_view.size());
-                            for (auto i = 0; i < output_view.size(); i++)
-                                values.push_back(output_view.get(i));
-                            anm->weights.resize(values.size() / ncomp);
-                            for (auto i = 0; i < anm->weights.size(); i++) {
-                                anm->weights[i].resize(ncomp);
-                                for (auto j = 0; j < ncomp; j++)
-                                    anm->weights[i][j] = values[i * ncomp + j];
-                            }
-                        }
-                    } break;
-                    default: {
-                        throw std::runtime_error("should not have gotten here");
-                    }
-                }
-                sampler_map[{(int)gchannel->sampler,
-                    (int)gchannel->target->path}] = (int)scn->animations.size();
-                scn->animations.push_back(anm);
-            }
-            scn->animations[sampler_map.at({(int)gchannel->sampler,
-                                (int)gchannel->target->path})]
-                ->targets.push_back(scn->nodes[(int)gchannel->target->node]);
-        }
-    }
-
-    // compute transforms and bbox
-    update_transforms(scn, 0);
-    update_bbox(scn);
-
-    // fix camera focus
-    for (auto cam : scn->cameras) {
-        auto center = (scn->bbox.min + scn->bbox.max) / 2;
-        auto dist = dot(-cam->frame.z, center - cam->frame.o);
-        if (dist > 0) cam->focus = dist;
-    }
-
-    return scn;
-}
-
-// Unflattnes gltf
-glTF* scene_to_gltf(
-    const scene* scn, const std::string& buffer_uri, bool separate_buffers) {
-    auto gltf = new glTF();
-
-    // add asset info
-    gltf->asset = new glTFAsset();
-    gltf->asset->generator = "Yocto/gltf";
-    gltf->asset->version = "2.0";
-
-    // convert cameras
-    for (auto cam : scn->cameras) {
-        auto gcam = new glTFCamera();
-        gcam->name = cam->name;
-        gcam->type = (cam->ortho) ? glTFCameraType::Orthographic :
-                                    glTFCameraType::Perspective;
-        if (cam->ortho) {
-            auto ortho = new glTFCameraOrthographic();
-            ortho->ymag = cam->width;
-            ortho->xmag = cam->height;
-            ortho->znear = cam->near;
-            ortho->zfar = cam->far;
-            gcam->orthographic = ortho;
-        } else {
-            auto persp = new glTFCameraPerspective();
-            persp->yfov = eval_camera_fovy(cam);
-            persp->aspectRatio = cam->width / cam->height;
-            persp->znear = cam->near;
-            persp->zfar = (cam->far >= flt_max) ? 0 : cam->far;
-            gcam->perspective = persp;
-        }
-        gltf->cameras.push_back(gcam);
-    }
-
-    // convert textures
-    auto tmap = std::map<texture*, glTFid<glTFImage>>{};
-    for (auto txt : scn->textures) {
-        auto gimg = new glTFImage();
-        gimg->name = txt->name;
-        gimg->uri = txt->path;
-        gimg->data.width = txt->width;
-        gimg->data.height = txt->height;
-        gimg->data.img = txt->img;
-        tmap[txt] = glTFid<glTFImage>((int)gltf->images.size());
-        gltf->images.push_back(gimg);
-    }
-
-    // index of an object
-    auto index = [](const auto& vec, auto& val) -> int {
-        auto pos = find(vec.begin(), vec.end(), val);
-        if (pos == vec.end()) return -1;
-        return (int)(pos - vec.begin());
-    };
-
-    // add a texture and sampler
-    auto add_texture = [gltf, &tmap](texture* txt, bool srgb, bool norm = false,
-                           bool occ = false) {
-        if (!txt) return (glTFTextureInfo*)nullptr;
-        auto gtxt = new glTFTexture();
-        gtxt->name = txt->name;
-        gtxt->source = tmap.at(txt);
-
-        // check if it is default
-        if (txt->clamp) {
-            auto gsmp = new glTFSampler();
-            gsmp->wrapS = glTFSamplerWrapS::ClampToEdge;
-            gsmp->wrapT = glTFSamplerWrapT::ClampToEdge;
-            gsmp->minFilter = glTFSamplerMinFilter::LinearMipmapLinear;
-            gsmp->magFilter = glTFSamplerMagFilter::Linear;
-            gtxt->sampler = glTFid<glTFSampler>((int)gltf->samplers.size());
-            gltf->samplers.push_back(gsmp);
-        }
-        gltf->textures.push_back(gtxt);
-        auto ginfo = (glTFTextureInfo*)nullptr;
-        if (norm) {
-            ginfo = new glTFMaterialNormalTextureInfo();
-            ginfo->index = glTFid<glTFTexture>{(int)gltf->textures.size() - 1};
-            ((glTFMaterialNormalTextureInfo*)ginfo)->scale = txt->scale;
-        } else if (occ) {
-            ginfo = new glTFMaterialOcclusionTextureInfo();
-            ginfo->index = glTFid<glTFTexture>{(int)gltf->textures.size() - 1};
-            ((glTFMaterialOcclusionTextureInfo*)ginfo)->strength = txt->scale;
-        } else {
-            ginfo = new glTFTextureInfo();
-            ginfo->index = glTFid<glTFTexture>{(int)gltf->textures.size() - 1};
-        }
-        return ginfo;
-    };
-
-    // convert materials
-    for (auto mat : scn->materials) {
-        auto gmat = new glTFMaterial();
-        gmat->name = mat->name;
-        gmat->emissiveFactor = mat->ke;
-        gmat->emissiveTexture = add_texture(mat->ke_txt, true);
-        if (!mat->base_metallic) {
-            gmat->pbrSpecularGlossiness =
-                new glTFMaterialPbrSpecularGlossiness();
-            auto gsg = gmat->pbrSpecularGlossiness;
-            gsg->diffuseFactor = {mat->kd.x, mat->kd.y, mat->kd.z, mat->op};
-            gsg->specularFactor = mat->ks;
-            gsg->glossinessFactor = 1 - mat->rs;
-            gsg->diffuseTexture = add_texture(mat->kd_txt, true);
-            gsg->specularGlossinessTexture = add_texture(mat->ks_txt, true);
-        } else {
-            gmat->pbrMetallicRoughness = new glTFMaterialPbrMetallicRoughness();
-            auto gmr = gmat->pbrMetallicRoughness;
-            gmr->baseColorFactor = {mat->kd.x, mat->kd.y, mat->kd.z, mat->op};
-            gmr->metallicFactor = mat->ks.x;
-            gmr->roughnessFactor = mat->rs;
-            gmr->baseColorTexture = add_texture(mat->kd_txt, true);
-            gmr->metallicRoughnessTexture = add_texture(mat->ks_txt, false);
-        }
-        gmat->normalTexture = (glTFMaterialNormalTextureInfo*)(add_texture(
-            mat->norm_txt, false, true, false));
-        gmat->occlusionTexture =
-            (glTFMaterialOcclusionTextureInfo*)(add_texture(
-                mat->occ_txt, false, false, true));
-        gmat->doubleSided = mat->double_sided;
-        gltf->materials.push_back(gmat);
-    }
-
-    // add buffer
-    auto add_buffer = [&gltf](const std::string& buffer_uri) {
-        auto gbuffer = new glTFBuffer();
-        gltf->buffers.push_back(gbuffer);
-        gbuffer->uri = buffer_uri;
-        return gbuffer;
-    };
-
-    // init buffers
-    auto gbuffer_global = add_buffer(buffer_uri);
-
-    // add an optional buffer
-    auto add_opt_buffer = [&gbuffer_global, buffer_uri, &add_buffer,
-                              separate_buffers](const std::string& uri) {
-        if (separate_buffers && uri != "") {
-            return add_buffer(uri);
-        } else {
-            if (!gbuffer_global) gbuffer_global = add_buffer(buffer_uri);
-            return gbuffer_global;
-        }
-    };
-
-    // attribute handling
-    auto add_accessor = [&gltf, &index](glTFBuffer* gbuffer,
-                            const std::string& name, glTFAccessorType type,
-                            glTFAccessorComponentType ctype, int count,
-                            int csize, const void* data, bool save_min_max) {
-        gltf->bufferViews.push_back(new glTFBufferView());
-        auto bufferView = gltf->bufferViews.back();
-        bufferView->buffer = glTFid<glTFBuffer>(index(gltf->buffers, gbuffer));
-        bufferView->byteOffset = (int)gbuffer->data.size();
-        bufferView->byteStride = 0;
-        bufferView->byteLength = count * csize;
-        gbuffer->data.resize(gbuffer->data.size() + bufferView->byteLength);
-        gbuffer->byteLength += bufferView->byteLength;
-        auto ptr = gbuffer->data.data() + gbuffer->data.size() -
-                   bufferView->byteLength;
-        bufferView->target = glTFBufferViewTarget::ArrayBuffer;
-        memcpy(ptr, data, bufferView->byteLength);
-        gltf->accessors.push_back(new glTFAccessor());
-        auto accessor = gltf->accessors.back();
-        accessor->bufferView =
-            glTFid<glTFBufferView>((int)gltf->bufferViews.size() - 1);
-        accessor->byteOffset = 0;
-        accessor->componentType = ctype;
-        accessor->count = count;
-        accessor->type = type;
-        if (save_min_max && count &&
-            ctype == glTFAccessorComponentType::Float) {
-            float dmin[4] = {flt_max, flt_max, flt_max, flt_max};
-            float dmax[4] = {flt_min, flt_min, flt_min, flt_min};
-            auto d = (float*)data;
-            auto nc = 0;
-            switch (type) {
-                case glTFAccessorType::Scalar: nc = 1; break;
-                case glTFAccessorType::Vec2: nc = 2; break;
-                case glTFAccessorType::Vec3: nc = 3; break;
-                case glTFAccessorType::Vec4: nc = 4; break;
-                default: break;
-            }
-            for (auto i = 0; i < count; i++) {
-                for (auto c = 0; c < nc; c++) {
-                    dmin[c] = min(dmin[c], d[i * nc + c]);
-                    dmax[c] = max(dmax[c], d[i * nc + c]);
-                }
-            }
-            for (auto c = 0; c < nc; c++) {
-                accessor->min.push_back(dmin[c]);
-                accessor->max.push_back(dmax[c]);
-            }
-        }
-        return glTFid<glTFAccessor>((int)gltf->accessors.size() - 1);
-    };
-
-    // instances
-    auto shape_mats = std::map<shape*, material*>();
-    for (auto shp : scn->shapes) shape_mats[shp] = nullptr;
-    for (auto ist : scn->instances) {
-        if (shape_mats.at(ist->shp) && shape_mats.at(ist->shp) != ist->mat)
-            log_error("shapes can only have one material associated");
-        else
-            shape_mats[ist->shp] = ist->mat;
-    }
-
-    // convert meshes
-    for (auto shp : scn->shapes) {
-        auto gmesh = new glTFMesh();
-        gmesh->name = shp->name;
-        auto gbuffer = add_opt_buffer(shp->path);
-        auto gprim = new glTFMeshPrimitive();
-        gprim->material =
-            glTFid<glTFMaterial>(index(scn->materials, shape_mats.at(shp)));
-        if (!shp->pos.empty())
-            gprim->attributes["POSITION"] =
-                add_accessor(gbuffer, shp->name + "_pos",
-                    glTFAccessorType::Vec3, glTFAccessorComponentType::Float,
-                    (int)shp->pos.size(), sizeof(vec3f), shp->pos.data(), true);
-        if (!shp->norm.empty())
-            gprim->attributes["NORMAL"] = add_accessor(gbuffer,
-                shp->name + "_norm", glTFAccessorType::Vec3,
-                glTFAccessorComponentType::Float, (int)shp->norm.size(),
-                sizeof(vec3f), shp->norm.data(), false);
-        if (!shp->texcoord.empty())
-            gprim->attributes["TEXCOORD_0"] = add_accessor(gbuffer,
-                shp->name + "_texcoord", glTFAccessorType::Vec2,
-                glTFAccessorComponentType::Float, (int)shp->texcoord.size(),
-                sizeof(vec2f), shp->texcoord.data(), false);
-        if (!shp->color.empty())
-            gprim->attributes["COLOR_0"] = add_accessor(gbuffer,
-                shp->name + "_color", glTFAccessorType::Vec4,
-                glTFAccessorComponentType::Float, (int)shp->color.size(),
-                sizeof(vec4f), shp->color.data(), false);
-        if (!shp->radius.empty())
-            gprim->attributes["RADIUS"] = add_accessor(gbuffer,
-                shp->name + "_radius", glTFAccessorType::Scalar,
-                glTFAccessorComponentType::Float, (int)shp->radius.size(),
-                sizeof(float), shp->radius.data(), false);
-        if (!shp->lines.empty()) {
-            gprim->indices = add_accessor(gbuffer, shp->name + "_lines",
-                glTFAccessorType::Scalar,
-                glTFAccessorComponentType::UnsignedInt,
-                (int)shp->lines.size() * 2, sizeof(int),
-                (int*)shp->lines.data(), false);
-            gprim->mode = glTFMeshPrimitiveMode::Lines;
-        } else if (!shp->triangles.empty()) {
-            gprim->indices = add_accessor(gbuffer, shp->name + "_triangles",
-                glTFAccessorType::Scalar,
-                glTFAccessorComponentType::UnsignedInt,
-                (int)shp->triangles.size() * 3, sizeof(int),
-                (int*)shp->triangles.data(), false);
-            gprim->mode = glTFMeshPrimitiveMode::Triangles;
-        }
-        gmesh->primitives.push_back(gprim);
-        gltf->meshes.push_back(gmesh);
-    }
-
-    // hierarchy
-    if (scn->nodes.empty()) {
-        // shapes
-        for (auto ist : scn->instances) {
-            auto gnode = new glTFNode();
-            gnode->name = ist->name;
-            gnode->mesh = glTFid<glTFMesh>(index(scn->shapes, ist->shp));
-            gnode->matrix = frame_to_mat(ist->frame);
-            gltf->nodes.push_back(gnode);
-        }
-
-        // cameras
-        for (auto cam : scn->cameras) {
-            auto gnode = new glTFNode();
-            gnode->name = cam->name;
-            gnode->camera = glTFid<glTFCamera>(index(scn->cameras, cam));
-            gnode->matrix = frame_to_mat(cam->frame);
-            gltf->nodes.push_back(gnode);
-        }
-
-        // scenes
-        if (!gltf->nodes.empty()) {
-            auto gscene = new glTFScene();
-            gscene->name = "scene";
-            for (auto i = 0; i < gltf->nodes.size(); i++) {
-                gscene->nodes.push_back(glTFid<glTFNode>(i));
-            }
-            gltf->scenes.push_back(gscene);
-            gltf->scene = glTFid<glTFScene>(0);
-        }
-    } else {
-        for (auto nde : scn->nodes) {
-            auto gnode = new glTFNode();
-            gnode->name = nde->name;
-            if (nde->cam) {
-                gnode->camera =
-                    glTFid<glTFCamera>(index(scn->cameras, nde->cam));
-            }
-            if (nde->ist) {
-                gnode->mesh =
-                    glTFid<glTFMesh>(index(scn->shapes, nde->ist->shp));
-            }
-            gnode->matrix = frame_to_mat(nde->frame);
-            gnode->translation = nde->translation;
-            gnode->rotation = nde->rotation;
-            gnode->scale = nde->scale;
-            gltf->nodes.push_back(gnode);
-        }
-
-        // children
-        for (auto idx = 0; idx < scn->nodes.size(); idx++) {
-            auto nde = scn->nodes.at(idx);
-            if (!nde->parent) continue;
-            auto gnde = gltf->nodes.at(index(scn->nodes, nde->parent));
-            gnde->children.push_back(glTFid<glTFNode>(idx));
-        }
-
-        // root nodes
-        auto is_root = std::vector<bool>(gltf->nodes.size(), true);
-        for (auto idx = 0; idx < gltf->nodes.size(); idx++) {
-            auto gnde = gltf->nodes.at(idx);
-            for (auto idx1 = 0; idx1 < gnde->children.size(); idx1++) {
-                is_root[(int)gnde->children.at(idx1)] = false;
-            }
-        }
-
-        // scene with root nodes
-        auto gscene = new glTFScene();
-        gscene->name = "scene";
-        for (auto idx = 0; idx < gltf->nodes.size(); idx++) {
-            if (is_root[idx]) gscene->nodes.push_back(glTFid<glTFNode>(idx));
-        }
-        gltf->scenes.push_back(gscene);
-        gltf->scene = glTFid<glTFScene>(0);
-    }
-
-    // interpolation map
-    static const auto interpolation_map =
-        std::map<animation_type, glTFAnimationSamplerInterpolation>{
-            {animation_type::step, glTFAnimationSamplerInterpolation::Step},
-            {animation_type::linear, glTFAnimationSamplerInterpolation::Linear},
-            {animation_type::bezier,
-                glTFAnimationSamplerInterpolation::CubicSpline},
-        };
-
-    // gruop animations
-    struct anim_group {
-        std::string path;
-        std::string name;
-        std::vector<animation*> animations;
-    };
-
-    std::map<std::string, anim_group> anim_groups;
-    for (auto anm : scn->animations) {
-        auto agr = &anim_groups[anm->group];
-        if (agr->path == "") agr->path = anm->path;
-        agr->animations.push_back(anm);
-    }
-
-    // animation
-    for (auto& agr_kv : anim_groups) {
-        auto agr = &agr_kv.second;
-        auto ganm = new glTFAnimation();
-        ganm->name = agr->name;
-        auto gbuffer = add_opt_buffer(agr->path);
-        auto count = 0;
-        for (auto anm : scn->animations) {
-            auto aid = ganm->name + "_" + std::to_string(count++);
-            auto gsmp = new glTFAnimationSampler();
-            gsmp->input =
-                add_accessor(gbuffer, aid + "_time", glTFAccessorType::Scalar,
-                    glTFAccessorComponentType::Float, (int)anm->times.size(),
-                    sizeof(float), anm->times.data(), false);
-            auto path = glTFAnimationChannelTargetPath::NotSet;
-            if (!anm->translation.empty()) {
-                gsmp->output = add_accessor(gbuffer, aid + "_translation",
-                    glTFAccessorType::Vec3, glTFAccessorComponentType::Float,
-                    (int)anm->translation.size(), sizeof(vec3f),
-                    anm->translation.data(), false);
-                path = glTFAnimationChannelTargetPath::Translation;
-            } else if (!anm->rotation.empty()) {
-                gsmp->output = add_accessor(gbuffer, aid + "_rotation",
-                    glTFAccessorType::Vec4, glTFAccessorComponentType::Float,
-                    (int)anm->rotation.size(), sizeof(vec4f),
-                    anm->rotation.data(), false);
-                path = glTFAnimationChannelTargetPath::Rotation;
-            } else if (!anm->scale.empty()) {
-                gsmp->output = add_accessor(gbuffer, aid + "_scale",
-                    glTFAccessorType::Vec3, glTFAccessorComponentType::Float,
-                    (int)anm->scale.size(), sizeof(vec3f), anm->scale.data(),
-                    false);
-                path = glTFAnimationChannelTargetPath::Scale;
-            } else if (!anm->weights.empty()) {
-                auto values = std::vector<float>();
-                values.reserve(anm->weights.size() * anm->weights[0].size());
-                for (auto i = 0; i < anm->weights.size(); i++) {
-                    values.insert(values.end(), anm->weights[i].begin(),
-                        anm->weights[i].end());
-                }
-                gsmp->output = add_accessor(gbuffer, aid + "_weights",
-                    glTFAccessorType::Scalar, glTFAccessorComponentType::Float,
-                    (int)values.size(), sizeof(float), values.data(), false);
-                path = glTFAnimationChannelTargetPath::Weights;
-            } else {
-                throw std::runtime_error("should not have gotten here");
-            }
-            gsmp->interpolation = interpolation_map.at(anm->type);
-            for (auto target : anm->targets) {
-                auto gchan = new glTFAnimationChannel();
-                gchan->sampler =
-                    glTFid<glTFAnimationSampler>{(int)ganm->samplers.size()};
-                gchan->target = new glTFAnimationChannelTarget();
-                gchan->target->node =
-                    glTFid<glTFNode>{index(scn->nodes, target)};
-                gchan->target->path = path;
-                ganm->channels.push_back(gchan);
-            }
-            ganm->samplers.push_back(gsmp);
-        }
-
-        gltf->animations.push_back(ganm);
-    }
-
-    // done
-    return gltf;
-}
-
-// Load a scene
-scene* load_scene(const std::string& filename, bool load_txts,
-    bool split_obj_shapes, bool skip_missing) {
-    auto ext = path_extension(filename);
-    auto scn = (scene*)nullptr;
-    if (ext == ".obj" || ext == ".OBJ") {
-        auto oscn = load_obj(filename, split_obj_shapes, true, true);
-        if (load_txts)
-            load_obj_textures(oscn, path_dirname(filename), skip_missing);
-        scn = obj_to_scene(oscn);
-        scn->name = path_filename(filename);
-        delete oscn;
-    } else if (ext == ".gltf" || ext == ".GLTF") {
-        auto gscn = load_gltf(filename, true);
-        if (load_txts)
-            load_gltf_textures(gscn, path_dirname(filename), skip_missing);
-        scn = gltf_to_scene(gscn);
-        delete gscn;
-    } else {
-        throw std::runtime_error("unsupported extension " + ext);
-    }
-    if (scn->name == "") scn->name = path_filename(filename);
-    if (!scn) throw std::runtime_error("could not convert gltf scene");
-    auto mat = (material*)nullptr;
-    for (auto ist : scn->instances) {
-        if (ist->mat) continue;
-        if (!mat) {
-            mat = make_matte_material("<default>", {0.2f, 0.2f, 0.2f});
-            scn->materials.push_back(mat);
-        }
-        ist->mat = mat;
-    }
-    return scn;
-}
-
-// Save a scene
-void save_scene(const std::string& filename, const scene* scn, bool save_txt,
-
-    bool preserve_obj_instances, bool preserve_obj_subdivs,
-    bool gltf_separate_buffers, bool skip_missing) {
-    auto ext = path_extension(filename);
-    if (ext == ".obj" || ext == ".OBJ") {
-        auto oscn =
-            scene_to_obj(scn, preserve_obj_instances, preserve_obj_subdivs);
-        save_obj(filename, oscn, true, false);
-        if (save_txt)
-            save_obj_textures(oscn, path_dirname(filename), skip_missing);
-        delete oscn;
-    } else if (ext == ".gltf" || ext == ".GLTF") {
-        auto buffer_uri = path_basename(filename) + ".bin";
-        auto gscn = scene_to_gltf(scn, buffer_uri, gltf_separate_buffers);
-        save_gltf(filename, gscn);
-        if (save_txt)
-            save_gltf_textures(gscn, path_dirname(filename), skip_missing);
-        delete gscn;
-    } else {
-        throw std::runtime_error("unsupported extension " + ext);
-    }
-}
-
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
@@ -2362,6 +912,42 @@ texture* make_texture(const std::string& name, const std::string& path,
     return txt;
 }
 
+shape* make_shape(const std::string& name, const std::string& path,
+    const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
+    const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
+    const std::vector<vec2f>& texcoord, const std::vector<vec4f>& color,
+    const std::vector<float>& radius) {
+    auto shp = new shape();
+    shp->name = name;
+    shp->path = path;
+    shp->pos = pos;
+    shp->norm = norm;
+    shp->texcoord = texcoord;
+    shp->color = color;
+    shp->radius = radius;
+    shp->lines = lines;
+    shp->triangles = triangles;
+    return shp;
+}
+
+subdiv* make_subdiv(const std::string& name, const std::string& path, int level,
+    const std::vector<vec4i>& quads_pos, const std::vector<vec3f>& pos,
+    const std::vector<vec4i>& quads_texcoord,
+    const std::vector<vec2f>& texcoord, const std::vector<vec4i>& quads_color,
+    const std::vector<vec4f>& color) {
+    auto sbd = new subdiv();
+    sbd->name = name;
+    sbd->path = path;
+    sbd->level = level;
+    sbd->pos = pos;
+    sbd->texcoord = texcoord;
+    sbd->color = color;
+    sbd->quads_pos = quads_pos;
+    sbd->quads_texcoord = quads_texcoord;
+    sbd->quads_color = quads_color;
+    return sbd;
+}
+
 instance* make_instance(const std::string& name, shape* shp, material* mat,
     subdiv* sbd, const frame3f& frame) {
     auto ist = new instance();
@@ -2394,12 +980,13 @@ environment* make_environment(const std::string& name, const vec3f& ke,
     return env;
 }
 
-animation* make_animation(const std::string& name,
+animation* make_animation(const std::string& name, const std::string& path,
     const std::vector<float>& times, const std::vector<vec3f>& translation,
     const std::vector<vec4f>& rotation, const std::vector<vec3f>& scale,
     const std::vector<node*>& targets, bool bezier) {
     auto anm = new animation();
     anm->name = name;
+    anm->path = path;
     anm->times = times;
     anm->translation = translation;
     anm->rotation = rotation;
@@ -2447,132 +1034,155 @@ scene* make_scene(const std::string& name, const std::vector<camera*>& cams,
 
 // example shapes
 shape* make_floor_shape(const std::string& name, int tesselation, float size) {
-    auto shp = new shape();
-    shp->name = name;
-    auto quads = std::vector<vec4i>();
-    make_quad(quads, shp->pos, shp->norm, shp->texcoord,
-        {1 << tesselation, 1 << tesselation}, {size, size},
-        {size / 2, size / 2});
-    for (auto& p : shp->pos) p = {p.x, p.z, p.y};
-    for (auto& n : shp->norm) n = {n.x, n.z, n.y};
-    shp->triangles = convert_quads_to_triangles(quads);
-    return shp;
-}
-shape* make_quad_shape(const std::string& name, int tesselation, float size) {
-    auto shp = new shape();
-    shp->name = name;
-    auto quads = std::vector<vec4i>();
-    make_quad(quads, shp->pos, shp->norm, shp->texcoord,
-        {1 << tesselation, 1 << tesselation}, {size, size},
-        {size / 2, size / 2});
-    shp->triangles = convert_quads_to_triangles(quads);
-    return shp;
-}
-shape* make_sphere_shape(const std::string& name, int tesselation, float size) {
-    auto shp = new shape();
-    shp->name = name;
-    auto quads = std::vector<vec4i>();
-    make_sphere(quads, shp->pos, shp->norm, shp->texcoord,
-        {1 << (tesselation + 1), 1 << tesselation}, size, {size, size / 2});
-    for (auto& p : shp->pos) p = {p.x, p.z, p.y};
-    for (auto& n : shp->norm) n = {n.x, n.z, n.y};
-    shp->triangles = convert_quads_to_triangles(quads);
-    return shp;
-}
-shape* make_spherecube_shape(
-    const std::string& name, int tesselation, float size) {
-    auto shp = new shape();
-    shp->name = name;
-    auto quads = std::vector<vec4i>();
-    make_sphere_cube(quads, shp->pos, shp->norm, shp->texcoord,
-        1 << tesselation, size, size / 2);
-    shp->triangles = convert_quads_to_triangles(quads);
-    return shp;
-}
-shape* make_sphereflipcap_shape(
-    const std::string& name, int tesselation, float size) {
-    auto shp = new shape();
-    shp->name = name;
-    auto quads = std::vector<vec4i>();
-    make_sphere_flipcap(quads, shp->pos, shp->norm, shp->texcoord,
-        {1 << (tesselation + 1), 1 << tesselation}, size, {size, size / 2},
-        {-0.75f, 0.75f});
-    shp->triangles = convert_quads_to_triangles(quads);
-    return shp;
-}
-shape* make_cube_shape(const std::string& name, int tesselation, float size) {
-    auto shp = new shape();
-    shp->name = name;
-    auto quads = std::vector<vec4i>();
-    make_cube(quads, shp->pos, shp->norm, shp->texcoord,
-        {1 << tesselation, 1 << tesselation, 1 << tesselation},
-        {size, size, size}, {size / 2, size / 2, size / 2});
-    shp->triangles = convert_quads_to_triangles(quads);
-    return shp;
-}
-shape* make_cuberounded_shape(
-    const std::string& name, int tesselation, float size) {
-    auto shp = new shape();
-    shp->name = name;
-    auto quads = std::vector<vec4i>();
-    make_cube_rounded(quads, shp->pos, shp->norm, shp->texcoord,
-        {1 << tesselation, 1 << tesselation, 1 << tesselation},
-        {size, size, size}, {size / 2, size / 2, size / 2}, 0.15f * size);
-    shp->triangles = convert_quads_to_triangles(quads);
-    return shp;
-}
-shape* make_matball_shape(
-    const std::string& name, int tesselation, float size) {
-    auto shp = new shape();
-    shp->name = name;
-    auto quads = std::vector<vec4i>();
-    make_sphere(quads, shp->pos, shp->norm, shp->texcoord,
-        {1 << (tesselation + 1), 1 << tesselation}, size, {size, size / 2});
-    for (auto& p : shp->pos) p = {p.x, p.z, p.y};
-    for (auto& n : shp->norm) n = {n.x, n.z, n.y};
-    shp->triangles = convert_quads_to_triangles(quads);
-    return shp;
-}
-shape* make_quadstack_shape(const std::string& name, int stack_tesselation,
-    int tesselation, float size) {
-    auto shp = new shape();
-    shp->name = name;
-    auto quads = std::vector<vec4i>();
-    make_quad_stack(quads, shp->pos, shp->norm, shp->texcoord,
-        {1 << tesselation, 1 << tesselation, 1 << stack_tesselation},
-        {size, size, size}, {size / 2, size / 2});
-    shp->triangles = convert_quads_to_triangles(quads);
-    return shp;
-}
-shape* make_hairball_shape(const std::string& name, int hair_tesselation,
-    int tesselation, float size, const vec2f& len, const vec2f& noise,
-    const vec2f& clump, const vec2f& radius) {
-    auto shp1 = new shape();
-    auto quads = std::vector<vec4i>();
     auto pos = std::vector<vec3f>();
     auto norm = std::vector<vec3f>();
     auto texcoord = std::vector<vec2f>();
-    make_sphere_cube(quads, pos, norm, texcoord, 1 << 4, size * 0.8f, 1);
-    auto shp = new shape();
-    shp->name = name;
-    make_hair(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius,
+    auto triangles = std::vector<vec3i>();
+    auto quads = std::vector<vec4i>();
+    make_quad(quads, pos, norm, texcoord, {1 << tesselation, 1 << tesselation},
+        {size, size}, {size / 2, size / 2});
+    for (auto& p : pos) p = {p.x, p.z, p.y};
+    for (auto& n : norm) n = {n.x, n.z, n.y};
+    triangles = convert_quads_to_triangles(quads);
+    return make_shape(
+        name, "meshes/" + name + ".ply", {}, triangles, pos, norm, texcoord);
+}
+shape* make_quad_shape(const std::string& name, int tesselation, float size) {
+    auto pos = std::vector<vec3f>();
+    auto norm = std::vector<vec3f>();
+    auto texcoord = std::vector<vec2f>();
+    auto triangles = std::vector<vec3i>();
+    auto quads = std::vector<vec4i>();
+    make_quad(quads, pos, norm, texcoord, {1 << tesselation, 1 << tesselation},
+        {size, size}, {size / 2, size / 2});
+    triangles = convert_quads_to_triangles(quads);
+    return make_shape(
+        name, "meshes/" + name + ".ply", {}, triangles, pos, norm, texcoord);
+}
+shape* make_sphere_shape(const std::string& name, int tesselation, float size) {
+    auto pos = std::vector<vec3f>();
+    auto norm = std::vector<vec3f>();
+    auto texcoord = std::vector<vec2f>();
+    auto triangles = std::vector<vec3i>();
+    auto quads = std::vector<vec4i>();
+    make_sphere(quads, pos, norm, texcoord,
+        {1 << (tesselation + 1), 1 << tesselation}, size, {size, size / 2});
+    for (auto& p : pos) p = {p.x, p.z, p.y};
+    for (auto& n : norm) n = {n.x, n.z, n.y};
+    triangles = convert_quads_to_triangles(quads);
+    return make_shape(
+        name, "meshes/" + name + ".ply", {}, triangles, pos, norm, texcoord);
+}
+shape* make_spherecube_shape(
+    const std::string& name, int tesselation, float size) {
+    auto pos = std::vector<vec3f>();
+    auto norm = std::vector<vec3f>();
+    auto texcoord = std::vector<vec2f>();
+    auto triangles = std::vector<vec3i>();
+    auto quads = std::vector<vec4i>();
+    make_sphere_cube(
+        quads, pos, norm, texcoord, 1 << tesselation, size, size / 2);
+    triangles = convert_quads_to_triangles(quads);
+    return make_shape(
+        name, "meshes/" + name + ".ply", {}, triangles, pos, norm, texcoord);
+}
+shape* make_sphereflipcap_shape(
+    const std::string& name, int tesselation, float size) {
+    auto pos = std::vector<vec3f>();
+    auto norm = std::vector<vec3f>();
+    auto texcoord = std::vector<vec2f>();
+    auto triangles = std::vector<vec3i>();
+    auto quads = std::vector<vec4i>();
+    make_sphere_flipcap(quads, pos, norm, texcoord,
+        {1 << (tesselation + 1), 1 << tesselation}, size, {size, size / 2},
+        {-0.75f, 0.75f});
+    triangles = convert_quads_to_triangles(quads);
+    return make_shape(
+        name, "meshes/" + name + ".ply", {}, triangles, pos, norm, texcoord);
+}
+shape* make_cube_shape(const std::string& name, int tesselation, float size) {
+    auto pos = std::vector<vec3f>();
+    auto norm = std::vector<vec3f>();
+    auto texcoord = std::vector<vec2f>();
+    auto triangles = std::vector<vec3i>();
+    auto quads = std::vector<vec4i>();
+    make_cube(quads, pos, norm, texcoord,
+        {1 << tesselation, 1 << tesselation, 1 << tesselation},
+        {size, size, size}, {size / 2, size / 2, size / 2});
+    triangles = convert_quads_to_triangles(quads);
+    return make_shape(
+        name, "meshes/" + name + ".ply", {}, triangles, pos, norm, texcoord);
+}
+shape* make_cuberounded_shape(
+    const std::string& name, int tesselation, float size) {
+    auto pos = std::vector<vec3f>();
+    auto norm = std::vector<vec3f>();
+    auto texcoord = std::vector<vec2f>();
+    auto triangles = std::vector<vec3i>();
+    auto quads = std::vector<vec4i>();
+    make_cube_rounded(quads, pos, norm, texcoord,
+        {1 << tesselation, 1 << tesselation, 1 << tesselation},
+        {size, size, size}, {size / 2, size / 2, size / 2}, 0.15f * size);
+    triangles = convert_quads_to_triangles(quads);
+    return make_shape(
+        name, "meshes/" + name + ".ply", {}, triangles, pos, norm, texcoord);
+}
+shape* make_matball_shape(
+    const std::string& name, int tesselation, float size) {
+    auto pos = std::vector<vec3f>();
+    auto norm = std::vector<vec3f>();
+    auto texcoord = std::vector<vec2f>();
+    auto triangles = std::vector<vec3i>();
+    auto quads = std::vector<vec4i>();
+    make_sphere(quads, pos, norm, texcoord,
+        {1 << (tesselation + 1), 1 << tesselation}, size, {size, size / 2});
+    for (auto& p : pos) p = {p.x, p.z, p.y};
+    for (auto& n : norm) n = {n.x, n.z, n.y};
+    triangles = convert_quads_to_triangles(quads);
+    return make_shape(
+        name, "meshes/" + name + ".ply", {}, triangles, pos, norm, texcoord);
+}
+shape* make_quadstack_shape(const std::string& name, int stack_tesselation,
+    int tesselation, float size) {
+    auto pos = std::vector<vec3f>();
+    auto norm = std::vector<vec3f>();
+    auto texcoord = std::vector<vec2f>();
+    auto triangles = std::vector<vec3i>();
+    auto quads = std::vector<vec4i>();
+    make_quad_stack(quads, pos, norm, texcoord,
+        {1 << tesselation, 1 << tesselation, 1 << stack_tesselation},
+        {size, size, size}, {size / 2, size / 2});
+    triangles = convert_quads_to_triangles(quads);
+    return make_shape(
+        name, "meshes/" + name + ".ply", {}, triangles, pos, norm, texcoord);
+}
+shape* make_hairball_shape(const std::string& name, int hair_tesselation,
+    int tesselation, float size, const vec2f& len, const vec2f& noise,
+    const vec2f& clump, const vec2f& rad) {
+    auto pos1 = std::vector<vec3f>();
+    auto norm1 = std::vector<vec3f>();
+    auto texcoord1 = std::vector<vec2f>();
+    auto quads1 = std::vector<vec4i>();
+    make_sphere_cube(quads1, pos1, norm1, texcoord1, 1 << 4, size * 0.8f, 1);
+    auto pos = std::vector<vec3f>();
+    auto norm = std::vector<vec3f>();
+    auto texcoord = std::vector<vec2f>();
+    auto radius = std::vector<float>();
+    auto lines = std::vector<vec2i>();
+    make_hair(lines, pos, norm, texcoord, radius,
         {1 << tesselation, 1 << hair_tesselation},
-        convert_quads_to_triangles(quads), pos, norm, texcoord, len, radius,
+        convert_quads_to_triangles(quads1), pos1, norm1, texcoord1, len, rad,
         noise, clump);
-    delete shp1;
-    return shp;
+    return make_shape(name, "meshes/" + name + ".ply", lines, {}, pos, norm,
+        texcoord, {}, radius);
 }
 
 subdiv* make_suzanne_subdiv(const std::string& name, int subdivision) {
     auto pos = std::vector<vec3f>();
     auto quads = std::vector<vec4i>();
     make_suzanne(quads, pos);
-    auto sbd = new subdiv();
-    sbd->name = name;
-    sbd->pos = pos;
-    sbd->quads_pos = quads;
-    sbd->level = subdivision;
-    return sbd;
+    return make_subdiv(name, "meshes/" + name + ".obj", subdivision, quads, pos,
+        {}, {}, {}, {});
 }
 subdiv* make_cube_subdiv(
     const std::string& name, int tesselation, int subdivision, float size) {
@@ -2582,14 +1192,8 @@ subdiv* make_cube_subdiv(
     make_fvcube(quads_pos, pos, quads_norm, norm, quads_texcoord, texcoord,
         vec3i{1 << tesselation, 1 << tesselation, 1 << tesselation},
         vec3f{1, 1, 1} * size, vec3f{1, 1, 1} * size / 2);
-    auto sbd = new subdiv();
-    sbd->name = name;
-    sbd->pos = pos;
-    sbd->quads_pos = quads_pos;
-    sbd->texcoord = texcoord;
-    sbd->quads_texcoord = quads_texcoord;
-    sbd->level = subdivision;
-    return sbd;
+    return make_subdiv(name, "meshes/" + name + ".obj", subdivision, quads_pos,
+        pos, quads_texcoord, texcoord, {}, {});
 }
 subdiv* make_quad_subdiv(
     const std::string& name, int tesselation, int subdivision, float size) {
@@ -2598,14 +1202,8 @@ subdiv* make_quad_subdiv(
     std::vector<vec2f> texcoord;
     make_quad(quads, pos, norm, texcoord, {1 << tesselation, 1 << tesselation},
         vec2f{1, 1} * size, vec2f{1, 1} * size / 2);
-    auto sbd = new subdiv();
-    sbd->name = name;
-    sbd->pos = pos;
-    sbd->quads_pos = quads;
-    sbd->texcoord = texcoord;
-    sbd->quads_texcoord = quads;
-    sbd->level = subdivision;
-    return sbd;
+    return make_subdiv(
+        name, "meshes/" + name + ".obj", subdivision, quads, pos);
 }
 subdiv* make_opencube_subdiv(
     const std::string& name, int tesselation, int subdivision, float size) {
@@ -2618,14 +1216,8 @@ subdiv* make_opencube_subdiv(
     quads_pos.pop_back();
     quads_norm.pop_back();
     quads_texcoord.pop_back();
-    auto sbd = new subdiv();
-    sbd->name = name;
-    sbd->pos = pos;
-    sbd->quads_pos = quads_pos;
-    sbd->texcoord = texcoord;
-    sbd->quads_texcoord = quads_texcoord;
-    sbd->level = subdivision;
-    return sbd;
+    return make_subdiv(name, "meshes/" + name + ".obj", subdivision, quads_pos,
+        pos, quads_texcoord, texcoord, {}, {});
 }
 
 // example materials
@@ -2686,30 +1278,30 @@ material* make_transparent_material(const std::string& name, const vec3f& col,
 
 // example textures
 texture* make_uvgrid_texture(const std::string& name, int res, int tile) {
-    return make_texture(
-        name, name + ".png", res, res, make_uvgrid_image(res, res, tile));
+    return make_texture(name, "textures/" + name + ".png", res, res,
+        make_uvgrid_image(res, res, tile));
 }
 texture* make_grid_texture(const std::string& name, int res, int tile) {
-    return make_texture(
-        name, name + ".png", res, res, make_grid_image(res, res, tile));
+    return make_texture(name, "textures/" + name + ".png", res, res,
+        make_grid_image(res, res, tile));
 }
 texture* make_bump_texture(const std::string& name, int res, int tile) {
-    return make_texture(
-        name, name + ".png", res, res, make_bumpdimple_image(res, res, tile));
+    return make_texture(name, "textures/" + name + ".png", res, res,
+        make_bumpdimple_image(res, res, tile));
 }
 texture* make_bumpnorm_texture(
     const std::string& name, int res, int tile, float scale) {
-    return make_texture(name, name + ".png", res, res,
+    return make_texture(name, "textures/" + name + ".png", res, res,
         bump_to_normal_map(
             res, res, make_bumpdimple_image(res, res, tile), scale));
 }
 texture* make_sky_texture(const std::string& name, int res, float skyangle) {
-    return make_texture(name, name + ".hdr", res * 2, res,
+    return make_texture(name, "textures/" + name + ".hdr", res * 2, res,
         make_sunsky_image(res * 2, res, skyangle));
 }
 texture* make_lights_texture(const std::string& name, int res, const vec3f& le,
     int nlights, float langle, float lwidth, float lheight) {
-    return make_texture(name, name + ".hdr", res * 2, res,
+    return make_texture(name, "textures/" + name + ".hdr", res * 2, res,
         make_lights_image(res * 2, res, le, nlights, langle, lwidth, lheight));
 }
 

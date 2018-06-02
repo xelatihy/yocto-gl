@@ -29,6 +29,7 @@
 #include <thread>
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_scene.h"
+#include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_utils.h"
 using namespace std::literals;
 
@@ -56,11 +57,18 @@ void rmdir(const std::string& dir) {
 void save_scene(const ygl::scene* scn, const std::string& sname,
     const std::string& dirname, bool preserve_instances) {
     try {
+        mkdir(dirname + "/json");
+        mkdir(dirname + "/json/meshes");
+        mkdir(dirname + "/json/textures");
+        ygl::save_json_scene(dirname + "/json/" + sname + ".json", scn);
         mkdir(dirname + "/gltf");
-        save_scene(dirname + "/gltf/" + sname + ".gltf", scn, true);
+        mkdir(dirname + "/gltf/meshes");
+        mkdir(dirname + "/gltf/textures");
+        ygl::save_gltf_scene(dirname + "/gltf/" + sname + ".gltf", scn);
         mkdir(dirname + "/obj");
-        ygl::save_scene(
-            dirname + "/obj/" + sname + ".obj", scn, true, preserve_instances);
+        mkdir(dirname + "/obj/meshes");
+        mkdir(dirname + "/obj/textures");
+        ygl::save_obj_scene(dirname + "/obj/" + sname + ".obj", scn);
     } catch (std::exception& e) { ygl::log_fatal("error {}", e.what()); }
 }
 
@@ -375,11 +383,11 @@ std::vector<ygl::scene*> make_proc_scenes(const std::string& name) {
             },
             false,
             {
-                ygl::make_animation("obj1", {0, 1, 2}, {}, {},
+                ygl::make_animation("obj1", "", {0, 1, 2}, {}, {},
                     {{1, 1, 1}, {0.7f, 0.7f, 0.7f}, {1, 1, 1}}),
                 ygl::make_animation(
-                    "obj2", {0, 1, 2}, {{0, 1, 0}, {0, 2, 0}, {0, 1, 0}}),
-                ygl::make_animation("obj3", {0, 1, 2}, {},
+                    "obj2", "", {0, 1, 2}, {{0, 1, 0}, {0, 2, 0}, {0, 1, 0}}),
+                ygl::make_animation("obj3", "", {0, 1, 2}, {},
                     {ygl::rotation_quat({0, 1, 0}, 0),
                         ygl::rotation_quat({0, 1, 0}, ygl::pi),
                         ygl::rotation_quat({0, 1, 0}, 0)}),

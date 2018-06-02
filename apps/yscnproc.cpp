@@ -27,6 +27,7 @@
 //
 
 #include "../yocto/yocto_scene.h"
+#include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_utils.h"
 using namespace std::literals;
 
@@ -89,7 +90,7 @@ int main(int argc, char** argv) {
     for (auto filename : filenames) {
         auto to_merge = (ygl::scene*)nullptr;
         try {
-            to_merge = ygl::load_scene(filename, textures, true);
+            to_merge = ygl::load_scene(filename, textures);
 
         } catch (const std::exception& e) {
             ygl::log_fatal("unable to load file %s with error {}\n",
@@ -151,7 +152,7 @@ int main(int argc, char** argv) {
     }
     // save scene
     try {
-        ygl::save_scene(output, scn, textures, false, save_separate_buffers);
+        ygl::save_scene(output, scn);
     } catch (const std::exception& e) {
         ygl::log_fatal("unable to save scene %s with error {}\n",
             output.c_str(), e.what());

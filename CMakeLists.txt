@@ -42,6 +42,7 @@ set(YOCTO_FILES
     yocto/yocto_obj.h yocto/yocto_obj.cpp
     yocto/yocto_gltf.h yocto/yocto_gltf.cpp
     yocto/yocto_scene.h yocto/yocto_scene.cpp
+    yocto/yocto_sceneio.h yocto/yocto_sceneio.cpp
     yocto/yocto_trace.h yocto/yocto_trace.cpp
 )
 

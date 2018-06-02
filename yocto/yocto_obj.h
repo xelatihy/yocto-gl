@@ -17,6 +17,13 @@
 // Again we let the user choose the conversion and set the default to the
 // one found on the web.
 //
+// Yocto/Obj stores all parsed data in its data structures. This design
+// decision does not scale particularly well with very large models. The main
+// reasons is the OBJ file format vertices are global for the entire scene and
+// not single objects. To avoid memory allocation problems, we internally store
+// vertices in queues during reading and make them unique per object right after
+// parsing.
+//
 // In the high level interface, shapes are indexed meshes and are described
 // by arrays of vertex indices for points/lines/triangles and arrays for vertex
 // positions, normals, texcoords, color and radius. The latter two as
@@ -78,6 +85,7 @@
 
 #include "yocto_math.h"
 
+#include <deque>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -118,12 +126,10 @@ struct obj_object {
     std::vector<std::string> materials;  // materials
     std::vector<std::string> groups;     // groups
     std::vector<bool> smoothing;         // smoothing groups
-    std::vector<int> verts_pos;          // vertices pos
-    std::vector<int> verts_norm;         // vertices norm
-    std::vector<int> verts_texcoord;     // vertices texcoord
-    std::vector<int> verts_color;        // vertices color [extension]
-    std::vector<int> verts_radius;       // vertices radius [extension]
-    std::vector<obj_element> elems;      // faces
+    std::vector<int> verts_pos;          // element pos
+    std::vector<int> verts_norm;         // element norm
+    std::vector<int> verts_texcoord;     // element texcoord
+    std::vector<obj_element> elems;      // elements
     frame3f frame = identity_frame3f;    // frame [extension]
     vec2i subdiv = zero2i;  // type/level of subdivision [extension]
     // Properties not explicitly handled [extension].
@@ -213,33 +219,17 @@ struct obj_environment {
     obj_texture_info ke_txt;           // emission texture
 };
 
-// Obj node [extension].
-struct obj_node {
-    std::string name;                  // name
-    std::string parent;                // parent node
-    std::string camname;               // camera name
-    std::string objname;               // object name
-    std::string envname;               // environment name
-    frame3f frame = identity_frame3f;  // transform
-    vec3f translation = zero3f;        // translation
-    vec4f rotation = {0, 0, 0, 1};     // rotation
-    vec3f scale = {1, 1, 1};           // scale
-};
-
 // Obj scene.
 struct obj_scene {
-    std::vector<vec3f> pos;       // vertex positions
-    std::vector<vec3f> norm;      // vertex normals
-    std::vector<vec2f> texcoord;  // vertex texcoords
-    std::vector<vec4f> color;     // vertex colors [extension]
-    std::vector<float> radius;    // vertex radia [extension]
+    std::deque<vec3f> pos;       // vertex positions
+    std::deque<vec3f> norm;      // vertex normals
+    std::deque<vec2f> texcoord;  // vertex texcoords
 
     std::vector<obj_object*> objects;            // objects
     std::vector<obj_material*> materials;        // materials
     std::vector<obj_texture*> textures;          // textures
     std::vector<obj_camera*> cameras;            // cameras [extension]
     std::vector<obj_environment*> environments;  // environments [extension]
-    std::vector<obj_node*> nodes;                // nodes [extension]
 
     // Cleanup.
     ~obj_scene() {
@@ -248,7 +238,6 @@ struct obj_scene {
         for (auto v : textures) delete v;
         for (auto v : cameras) delete v;
         for (auto v : environments) delete v;
-        for (auto v : nodes) delete v;
     }
 };
 
@@ -273,6 +262,28 @@ void load_obj_textures(
 // Save OBJ texture images.
 void save_obj_textures(
     const obj_scene* obj, const std::string& dirname, bool skip_missing = true);
+
+// Callback object
+struct obj_callbacks {
+    bool (*object)(void*, const std::string&) = nullptr;  // object callback
+    bool (*group)(void*, const std::string&) = nullptr;   // group callback
+    bool (*usemat)(void*, const std::string&) = nullptr;  // use material cb
+    bool (*smoothing)(void*, bool) = nullptr;             // smoothing callback
+    bool (*vertex)(void*, const vec3f&) = nullptr;        // vertex callback
+    bool (*normal)(void*, const vec3f&) = nullptr;        // normal callback
+    bool (*texcoord)(void*, const vec2f&) = nullptr;      // texcoord callback
+    bool (*face)(void*, int, const vec3i*) = nullptr;     // face callback
+    bool (*line)(void*, int, const vec3i*) = nullptr;     // line callback
+    bool (*point)(void*, int, const vec3i*) = nullptr;    // point callback
+    bool (*material)(
+        void*, const obj_material&) = nullptr;           // material callback
+    bool (*camera)(void*, const obj_camera&) = nullptr;  // camera callback
+    bool (*environment)(void*, const obj_environment&) = nullptr;  // envmap cb
+};
+
+// Load OBJ with callbacks
+void load_obj(
+    const std::string& filename, const obj_callbacks& callbacks, void* ctx);
 
 }  // namespace ygl
 

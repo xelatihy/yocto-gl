@@ -259,6 +259,13 @@ sample_triangles_points(const std::vector<vec3i>& triangles,
     const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
     const std::vector<vec2f>& texcoord, int npoints, int seed = 7);
 
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// SHAPE EXAMPLES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
 // Make examples triangle shapes with shared vertices (not watertight).
 void make_quad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,

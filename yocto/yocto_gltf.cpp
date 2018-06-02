@@ -71,7 +71,7 @@ namespace ygl {
 using json = nlohmann::json;
 
 // Parse int function.
-void serialize(int& val, json& js, bool reading) {
+static void serialize(int& val, json& js, bool reading) {
     if (reading) {
         if (!js.is_number_integer())
             throw std::runtime_error("integer expected");
@@ -82,7 +82,7 @@ void serialize(int& val, json& js, bool reading) {
 }
 
 // Parse float function.
-void serialize(float& val, json& js, bool reading) {
+static void serialize(float& val, json& js, bool reading) {
     if (reading) {
         if (!js.is_number()) throw std::runtime_error("number expected");
         val = js;
@@ -92,7 +92,7 @@ void serialize(float& val, json& js, bool reading) {
 }
 
 // Parse bool function.
-void serialize(bool& val, json& js, bool reading) {
+static void serialize(bool& val, json& js, bool reading) {
     if (reading) {
         if (!js.is_boolean()) throw std::runtime_error("bool expected");
         val = js;
@@ -102,7 +102,7 @@ void serialize(bool& val, json& js, bool reading) {
 }
 
 // Parse string function.
-void serialize(std::string& val, json& js, bool reading) {
+static void serialize(std::string& val, json& js, bool reading) {
     if (reading) {
         if (!js.is_string()) throw std::runtime_error("string expected");
         val = js;
@@ -111,18 +111,9 @@ void serialize(std::string& val, json& js, bool reading) {
     }
 }
 
-// Parse json function.
-void serialize(json& val, json& js, bool reading) {
-    if (reading) {
-        val = js;
-    } else {
-        js = val;
-    }
-}
-
 // Parse support function.
 template <typename T>
-void serialize(T*& val, json& js, bool reading) {
+static void serialize(T*& val, json& js, bool reading) {
     if (reading) {
         if (js.is_null()) {
             if (val) delete val;
@@ -144,7 +135,7 @@ void serialize(T*& val, json& js, bool reading) {
 
 // Parse support function.
 template <typename T>
-void serialize(std::vector<T>& vals, json& js, bool reading) {
+static void serialize(std::vector<T>& vals, json& js, bool reading) {
     if (reading) {
         if (!js.is_array()) throw std::runtime_error("array expected");
         vals.resize(js.size());
@@ -163,7 +154,7 @@ void serialize(std::vector<T>& vals, json& js, bool reading) {
 
 // Parse support function.
 template <typename T, size_t N>
-void serialize(std::array<T, N>& vals, json& js, bool reading) {
+static void serialize(std::array<T, N>& vals, json& js, bool reading) {
     if (reading) {
         if (!js.is_array()) throw std::runtime_error("array expected");
         if (N != js.size()) throw std::runtime_error("wrong array size");
@@ -176,7 +167,7 @@ void serialize(std::array<T, N>& vals, json& js, bool reading) {
 
 // Parse support function.
 template <typename T>
-void serialize(std::map<std::string, T>& vals, json& js, bool reading) {
+static void serialize(std::map<std::string, T>& vals, json& js, bool reading) {
     if (reading) {
         if (!js.is_object()) throw std::runtime_error("object expected");
         for (auto kv = js.begin(); kv != js.end(); ++kv) {
@@ -190,7 +181,7 @@ void serialize(std::map<std::string, T>& vals, json& js, bool reading) {
 
 // Parse support function.
 template <typename T, typename T1>
-void serialize(T& val, json& js, bool reading,
+static void serialize(T& val, json& js, bool reading,
     const std::vector<std::pair<T1, T>>& table) {
     if (reading) {
         auto v = T1();
@@ -221,7 +212,8 @@ void serialize(T& val, json& js, bool reading,
 
 // Parse support function.
 template <typename T, typename T1>
-void serialize(T& val, json& js, bool reading, const std::map<T, T1>& table) {
+static void serialize(
+    T& val, json& js, bool reading, const std::map<T, T1>& table) {
     if (reading) {
         auto v = T1();
         serialize(v, js, reading);
@@ -250,36 +242,18 @@ void serialize(T& val, json& js, bool reading, const std::map<T, T1>& table) {
 }
 
 // Parse support function.
-void serialize(vec2f& vals, json& js, bool reading) {
-    serialize((std::array<float, 2>&)vals, js, reading);
-}
-void serialize(vec3f& vals, json& js, bool reading) {
+static void serialize(vec3f& vals, json& js, bool reading) {
     serialize((std::array<float, 3>&)vals, js, reading);
 }
-void serialize(vec4f& vals, json& js, bool reading) {
+static void serialize(vec4f& vals, json& js, bool reading) {
     serialize((std::array<float, 4>&)vals, js, reading);
 }
-void serialize(vec2i& vals, json& js, bool reading) {
-    serialize((std::array<int, 2>&)vals, js, reading);
-}
-void serialize(vec3i& vals, json& js, bool reading) {
-    serialize((std::array<int, 3>&)vals, js, reading);
-}
-void serialize(vec4i& vals, json& js, bool reading) {
-    serialize((std::array<int, 4>&)vals, js, reading);
-}
-void serialize(mat3f& vals, json& js, bool reading) {
-    serialize((std::array<float, 9>&)vals, js, reading);
-}
-void serialize(mat4f& vals, json& js, bool reading) {
+static void serialize(mat4f& vals, json& js, bool reading) {
     serialize((std::array<float, 16>&)vals, js, reading);
-}
-void serialize(frame3f& vals, json& js, bool reading) {
-    serialize((std::array<float, 12>&)vals, js, reading);
 }
 
 // Parse support function.
-void serialize_obj(json& js, bool reading) {
+static void serialize_obj(json& js, bool reading) {
     if (reading) {
         if (!js.is_object()) throw std::runtime_error("object expected");
     } else {
@@ -289,7 +263,7 @@ void serialize_obj(json& js, bool reading) {
 
 // Parse support function.
 template <typename T>
-void serialize_attr(T& val, json& js, const char* name, bool reading,
+static void serialize_attr(T& val, json& js, const char* name, bool reading,
     bool required = true, const T& def = {}) {
     if (reading) {
         if (required) {
@@ -308,7 +282,7 @@ void serialize_attr(T& val, json& js, const char* name, bool reading,
 
 // Dump support function.
 template <typename T>
-void serialize_attr(std::vector<T>& val, json& js, const char* name,
+static void serialize_attr(std::vector<T>& val, json& js, const char* name,
     bool reading, bool required = true, const std::vector<T>& def = {}) {
     if (reading) {
         if (required) {
@@ -327,8 +301,8 @@ void serialize_attr(std::vector<T>& val, json& js, const char* name,
 
 // Dump support function.
 template <typename T>
-void serialize_attr(std::map<std::string, T>& val, json& js, const char* name,
-    bool reading, bool required = true,
+static void serialize_attr(std::map<std::string, T>& val, json& js,
+    const char* name, bool reading, bool required = true,
     const std::map<std::string, T>& def = {}) {
     if (reading) {
         if (required) {

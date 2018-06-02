@@ -29,6 +29,7 @@
 #include "../yocto/yocto_glutils.h"
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_scene.h"
+#include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_utils.h"
 #include "yapp_ui.h"
 using namespace std::literals;
@@ -126,12 +127,12 @@ inline void draw(ygl::glwindow* win, app_state* app) {
         if (ygl::draw_glwidgets_button(win, "load")) {
             ygl::clear_gldata(app->scn);
             delete app->scn;
-            app->scn = ygl::load_scene(app->filename, {});
+            app->scn = ygl::load_scene(app->filename);
             ygl::update_gldata(app->scn);
         }
         ygl::continue_glwidgets_line(win);
         if (ygl::draw_glwidgets_button(win, "save")) {
-            ygl::save_scene(app->filename, app->scn, {});
+            ygl::save_scene(app->filename, app->scn);
         }
         ygl::continue_glwidgets_line(win);
         if (ygl::draw_glwidgets_button(win, "print stats"))
@@ -326,7 +327,7 @@ int main(int argc, char* argv[]) {
     // scene loading
     try {
         ygl::log_info("loading scene {}", app->filename);
-        app->scn = ygl::load_scene(app->filename, true, true);
+        app->scn = ygl::load_scene(app->filename);
     } catch (std::exception e) {
         ygl::log_fatal("cannot load scene {}", app->filename);
     }

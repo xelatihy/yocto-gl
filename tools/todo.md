@@ -9,20 +9,24 @@ Please consider this to be just development notes and not any real planning.
 - better material rendering
 - better rendering
 
+## New loader
+
+- easier parsing of obj
+    - parse_functions that return
+    - use exceptions if needed or disabled them with global flag
+- merge parse functions into one
+- write ply parser using obj functions
+- write glTF directly
+- load glTF directly
+
+## Reduce internal code
+
+- switch to cli11
+
 ## giacomo
 
 - pbrt export
 - volumetric values
-
-## mega refactor
-
-- texture load in models
-- builtin materials
-- volumetric values
-
-## testing
-
-- test all yocto tests
 
 ## image
 

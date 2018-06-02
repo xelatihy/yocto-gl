@@ -9,13 +9,12 @@
 // lines, triangles, quads and bezier segments. Each shape may contain
 // only one element type. Shapes are organized into a scene by creating shape
 // instances, each its own transform. Materials are specified like in OBJ and
-// glTF andinclude emission, base-metallic and diffuse-specular parametrization,
-// normal, occlusion and displacement mapping. Finally, the scene containers
-// cameras and environment maps. Quad support in shapes is experimental and
-// mostly supported for loading and saving. Lights in Yocto/Scene are pointers
-// to either instances or environments.
-// The scene supports an optional node hierarchy with animation modeled on
-// the glTF model.
+// glTF and include emission, base-metallic and diffuse-specular
+// parametrization, normal, occlusion and displacement mapping. Finally, the
+// scene containers cameras and environment maps. Quad support in shapes is
+// experimental and mostly supported for loading and saving. Lights in
+// Yocto/Scene are pointers to either instances or environments. The scene
+// supports an optional node hierarchy with animation modeled on the glTF model.
 //
 // Shapes are parametrized as in Yocto/Bvh with (u,v) for triangles written
 // w.r.t the (v1-v0) and (v2-v0) axis respetively. Quads are internally handled
@@ -26,8 +25,7 @@
 //
 // ## Usage
 //
-// 1. load a scene with `load_scene()` and save it with `save_scene()`,
-//    currently supporting OBJ and glTF
+// 1. load a scene with Yocto/SceneIO,
 // 2. add missing data with `add_XXX()` functions
 // 3. use `compute_bbox()` to compute element bounds
 // 4. can merge scene together with `merge_into()`
@@ -172,6 +170,7 @@ struct shape {
 // Subdivision surface.
 struct subdiv {
     std::string name = "";        // name
+    std::string path = "";        // path for glTF buffers
     int level = 0;                // subdivision level
     bool catmull_clark = true;    // catmull clark subdiv
     bool compute_normals = true;  // faceted subdivision
@@ -280,17 +279,9 @@ struct scene {
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
-// SCENE INPUT AND OUTPUT AND STATS
+// SCENE UTILITIES
 // -----------------------------------------------------------------------------
 namespace ygl {
-
-// Loads/saves a scene in OBJ and glTF formats.
-scene* load_scene(const std::string& filename, bool load_textures = true,
-    bool split_obj_shapes = true, bool skip_missing = true);
-void save_scene(const std::string& filename, const scene* scn,
-    bool save_textures = true, bool preserve_obj_instances = false,
-    bool preserve_obj_subdivs = true, bool gltf_separate_buffers = false,
-    bool skip_missing = true);
 
 // Print scene statistics.
 void print_stats(scene* scn);
@@ -462,6 +453,20 @@ texture* make_texture(const std::string& name, const std::string& path = "",
 material* make_material(const std::string& name,
     const vec3f& kd = {0.2f, 0.2f, 0.2f}, const vec3f& ks = {0, 0, 0},
     float rs = 1);
+shape* make_shape(const std::string& name, const std::string& path = "",
+    const std::vector<vec2i>& lines = {},
+    const std::vector<vec3i>& triangles = {},
+    const std::vector<vec3f>& pos = {}, const std::vector<vec3f>& norm = {},
+    const std::vector<vec2f>& texcoord = {},
+    const std::vector<vec4f>& color = {},
+    const std::vector<float>& radius = {});
+subdiv* make_subdiv(const std::string& name, const std::string& path = "",
+    int level = 2, const std::vector<vec4i>& quads_pos = {},
+    const std::vector<vec3f>& pos = {},
+    const std::vector<vec4i>& quads_texcoord = {},
+    const std::vector<vec2f>& texcoord = {},
+    const std::vector<vec4i>& quads_color = {},
+    const std::vector<vec4f>& color = {});
 instance* make_instance(const std::string& name, shape* shp = nullptr,
     material* mat = nullptr, subdiv* sbd = nullptr,
     const frame3f& frame = identity_frame3f);
@@ -471,7 +476,7 @@ node* make_node(const std::string& name, camera* cam = nullptr,
 environment* make_environment(const std::string& name,
     const vec3f& ke = {1, 1, 1}, texture* ke_txt = nullptr,
     const frame3f& frame = identity_frame3f);
-animation* make_animation(const std::string& name,
+animation* make_animation(const std::string& name, const std::string& path,
     const std::vector<float>& times = {},
     const std::vector<vec3f>& translation = {},
     const std::vector<vec4f>& rotation = {},

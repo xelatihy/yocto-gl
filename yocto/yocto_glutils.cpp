@@ -1183,9 +1183,7 @@ void set_glsurface_material(const glsurface_program& prog, const vec3f& ke,
     bool double_sided, bool base_metallic, bool gltf_textures) {
     assert(check_glerror());
     auto mtype = 1;
-    if(gltf_textures) {
-        mtype = (base_metallic) ? 2 : 3;
-    }
+    if (gltf_textures) { mtype = (base_metallic) ? 2 : 3; }
     set_gluniform(prog.prog, prog.mtype_id, base_metallic ? 2 : 1);
     set_gluniform(prog.prog, prog.ke_id, ke);
     set_gluniform(prog.prog, prog.kd_id, kd);
