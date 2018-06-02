@@ -151,7 +151,7 @@ void draw_glshape(const shape* shp, const material* mat, const mat4f& xform,
     set_glsurface_material(prog, mat->ke, mat->kd, mat->ks, mat->rs, mat->op,
         txt(mat->ke_txt), txt(mat->kd_txt), txt(mat->ks_txt), txt(mat->rs_txt),
         txt(mat->op_txt), txt(mat->norm_txt), mat->double_sided,
-        mat->base_metallic);
+        mat->base_metallic, mat->gltf_textures);
 
     set_glsurface_vert(
         prog, gshp.pos, gshp.norm, gshp.texcoord, gshp.color, gshp.tangsp);

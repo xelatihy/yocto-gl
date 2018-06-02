@@ -461,7 +461,7 @@ void set_glsurface_material(const glsurface_program& prog, const vec3f& ke,
     const gltexture_info& ke_txt, const gltexture_info& kd_txt,
     const gltexture_info& ks_txt, const gltexture_info& rs_txt,
     const gltexture_info& op_txt, const gltexture_info& norm_txt,
-    bool double_sided, bool base_metallic);
+    bool double_sided, bool base_metallic, bool gltf_textures);
 
 // Set constant material with emission `ke` and opacity `op`.
 void set_glsurface_constmaterial(
