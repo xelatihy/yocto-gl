@@ -614,6 +614,7 @@ bool draw_glwidgets_scene_inspector(glwindow* win, material* val, scene* scn) {
     edited += draw_glwidgets_combobox(
         win, "norm txt", val->norm_txt, scn->textures, true);
     edited += draw_glwidgets_checkbox(win, "base metallic", val->base_metallic);
+    edited += draw_glwidgets_checkbox(win, "glTF textures", val->gltf_textures);
     return edited;
 }
 
