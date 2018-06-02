@@ -896,22 +896,38 @@ glsurface_program make_glsurface_program() {
             rs = mat_rs;
             op = color.w * mat_op;
 
-            if(mat_txt_ke_on) ke *= texture(mat_txt_ke,texcoord).xyz;
-            if(mat_txt_kd_on) kd *= texture(mat_txt_kd,texcoord).xyz;
-            if(mat_txt_ks_on) ks *= texture(mat_txt_ks,texcoord).xyz;
-            if(mat_txt_rs_on) rs *= texture(mat_txt_rs,texcoord).x;
-            if(mat_txt_op_on) op *= texture(mat_txt_op,texcoord).x;
+            vec4 ke_txt = (mat_txt_ke_on) ? texture(mat_txt_ke,texcoord) : vec4(1,1,1,1);
+            vec4 kd_txt = (mat_txt_kd_on) ? texture(mat_txt_kd,texcoord) : vec4(1,1,1,1);
+            vec4 ks_txt = (mat_txt_ks_on) ? texture(mat_txt_ks,texcoord) : vec4(1,1,1,1);
+            vec4 rs_txt = (mat_txt_rs_on) ? texture(mat_txt_rs,texcoord) : vec4(1,1,1,1);
+            vec4 op_txt = (mat_txt_op_on) ? texture(mat_txt_op,texcoord) : vec4(1,1,1,1);
 
             // get material color from textures and adjust values
-            if(mat_type == 2) {
-                vec3 kb = kd;
-                float km = ks.x;
+            if(mat_type == 1) {
+                ke *= ke_txt.xyz;
+                kd *= kd_txt.xyz;
+                ks *= ks_txt.xyz;
+                rs *= rs_txt.y;
+                rs = rs*rs;
+                op *= op_txt.x * kd_txt.w;
+            } else if(mat_type == 2) {
+                ke *= ke_txt.xyz;
+                vec3 kb = kd * kd_txt.xyz;
+                float km = ks.z;
                 kd = kb * (1 - km);
                 ks = kb * km + vec3(0.04) * (1 - km);
+                rs *= ks_txt.y;
+                rs = rs*rs;
+                op *= kd_txt.w;
+            } else if(mat_type == 3) {
+                ke *= ke_txt.xyz;
+                kd *= kd_txt.xyz;
+                ks *= ks_txt.xyz;
+                float gs = (1 - rs) * ks_txt.w;
+                rs = 1 - gs;
+                rs = rs*rs;
+                op *= kd_txt.w;
             }
-
-            // adjust values
-            rs = rs*rs;
 
             return true;
         }
@@ -1164,8 +1180,12 @@ void set_glsurface_material(const glsurface_program& prog, const vec3f& ke,
     const gltexture_info& ke_txt, const gltexture_info& kd_txt,
     const gltexture_info& ks_txt, const gltexture_info& rs_txt,
     const gltexture_info& op_txt, const gltexture_info& norm_txt,
-    bool double_sided, bool base_metallic) {
+    bool double_sided, bool base_metallic, bool gltf_textures) {
     assert(check_glerror());
+    auto mtype = 1;
+    if(gltf_textures) {
+        mtype = (base_metallic) ? 2 : 3;
+    }
     set_gluniform(prog.prog, prog.mtype_id, base_metallic ? 2 : 1);
     set_gluniform(prog.prog, prog.ke_id, ke);
     set_gluniform(prog.prog, prog.kd_id, kd);
