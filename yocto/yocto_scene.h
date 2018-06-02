@@ -114,7 +114,8 @@ struct texture {
 // For lines, uses Kajija-Kay model. For points, a hacked up shading.
 struct material {
     std::string name = "";       // name
-    bool base_metallic = false;  // base-metallic parametrization (glTF)
+    bool base_metallic = false;  // base-metallic parametrization
+    bool gltf_textures = false;  // glTF packed textures
     bool double_sided = false;   // double sided rendering
 
     // base values

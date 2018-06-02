@@ -679,9 +679,16 @@ vec3f eval_specular(const instance* ist, int ei, const vec2f& uv) {
 float eval_roughness(const instance* ist, int ei, const vec2f& uv) {
     if (!ist || !ist->mat) return 1;
     if (!ist->mat->base_metallic) {
-        auto rs = ist->mat->rs *
-                  eval_texture(ist->mat->rs_txt, eval_texcoord(ist, ei, uv)).x;
-        return rs * rs;
+        if(!ist->mat->gltf_textures) {
+            auto rs = ist->mat->rs *
+                    eval_texture(ist->mat->rs_txt, eval_texcoord(ist, ei, uv)).x;
+            return rs * rs;
+        } else {
+            auto gs = (1-ist->mat->rs) *
+                    eval_texture(ist->mat->rs_txt, eval_texcoord(ist, ei, uv)).w;
+            auto rs = 1- gs;
+            return rs * rs;            
+        }
     } else {
         auto rs = ist->mat->rs *
                   eval_texture(ist->mat->rs_txt, eval_texcoord(ist, ei, uv)).y;
@@ -884,9 +891,13 @@ scene* obj_to_scene(const obj_scene* obj) {
         mat->kd = omat->kd;
         mat->ks = omat->ks;
         mat->kt = omat->kt;
-        mat->rs = pow(2 / (omat->ns + 2), 1 / 4.0f);
-        if (mat->rs < 0.01f) mat->rs = 0;
-        if (mat->rs > 0.99f) mat->rs = 1;
+        if(omat->rs >= 0) {
+            mat->rs = omat->rs;
+        } else {
+            mat->rs = pow(2 / (omat->ns + 2), 1 / 4.0f);
+            if (mat->rs < 0.01f) mat->rs = 0;
+            if (mat->rs > 0.99f) mat->rs = 1;
+        }
         mat->op = omat->op;
         mat->fresnel = omat->illum == 2 || omat->illum == 5 || omat->illum == 7;
         mat->refract = omat->illum == 6 || omat->illum == 7;
@@ -1478,6 +1489,7 @@ scene* gltf_to_scene(const glTF* gltf) {
         mat->ke_txt = add_texture(gmat->emissiveTexture);
         if (gmat->pbrSpecularGlossiness) {
             mat->base_metallic = false;
+            mat->gltf_textures = true;
             auto gsg = gmat->pbrSpecularGlossiness;
             mat->kd = {gsg->diffuseFactor.x, gsg->diffuseFactor.y,
                 gsg->diffuseFactor.z};
@@ -1486,8 +1498,10 @@ scene* gltf_to_scene(const glTF* gltf) {
             mat->rs = 1 - gsg->glossinessFactor;
             mat->kd_txt = add_texture(gsg->diffuseTexture);
             mat->ks_txt = add_texture(gsg->specularGlossinessTexture);
+            mat->rs_txt = mat->ks_txt;
         } else if (gmat->pbrMetallicRoughness) {
             mat->base_metallic = true;
+            mat->gltf_textures = true;
             auto gmr = gmat->pbrMetallicRoughness;
             mat->ke = gmat->emissiveFactor;
             mat->kd = {gmr->baseColorFactor.x, gmr->baseColorFactor.y,
@@ -1498,6 +1512,7 @@ scene* gltf_to_scene(const glTF* gltf) {
             mat->rs = gmr->roughnessFactor;
             mat->kd_txt = add_texture(gmr->baseColorTexture, true);
             mat->ks_txt = add_texture(gmr->metallicRoughnessTexture, true);
+            mat->rs_txt = mat->ks_txt;
         }
         mat->occ_txt = add_texture(gmat->occlusionTexture, false, true);
         mat->norm_txt = add_texture(gmat->normalTexture, true, false);
