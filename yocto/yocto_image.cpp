@@ -470,9 +470,8 @@ std::vector<vec4f> resize_image(int width, int height,
     auto res_img = std::vector<vec4f>(res_width * res_height);
     stbir_resize_float_generic((float*)img.data(), width, height,
         sizeof(vec4f) * width, (float*)res_img.data(), res_width, res_height,
-        sizeof(vec4f) * res_width, 4, 3, 0,
-        STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT,
-        STBIR_COLORSPACE_LINEAR, nullptr);
+        sizeof(vec4f) * res_width, 4, 3, 0, STBIR_EDGE_CLAMP,
+        STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
     return res_img;
 }
 

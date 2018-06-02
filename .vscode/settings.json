@@ -50,6 +50,8 @@
         "limits": "cpp",
         "memory": "cpp",
         "ratio": "cpp",
-        "tuple": "cpp"
+        "tuple": "cpp",
+        "fstream": "cpp",
+        "locale": "cpp"
     },
 } 
