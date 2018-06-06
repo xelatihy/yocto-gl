@@ -61,24 +61,28 @@
 namespace ygl {
 
 // Load/save a scene in the supported formats.
-scene* load_scene(const std::string& filename, bool skip_missing = true);
-void save_scene(
-    const std::string& filename, const scene* scn, bool skip_missing = true);
+scene* load_scene(const std::string& filename, bool load_textures = true,
+    bool skip_missing = true);
+void save_scene(const std::string& filename, const scene* scn,
+    bool save_textures = true, bool skip_missing = true);
 
 // Load/save a scene in the builtin JSON format.
-scene* load_json_scene(const std::string& filename, bool skip_missing = true);
-void save_json_scene(
-    const std::string& filename, const scene* scn, bool skip_missing = true);
+scene* load_json_scene(const std::string& filename, bool load_textures = true,
+    bool skip_missing = true);
+void save_json_scene(const std::string& filename, const scene* scn,
+    bool save_textures = true, bool skip_missing = true);
 
 // Load/save a scene from/to OBJ.
-scene* load_obj_scene(const std::string& filename, bool skip_missing = true);
-void save_obj_scene(
-    const std::string& filename, const scene* scn, bool skip_missing = true);
+scene* load_obj_scene(const std::string& filename, bool load_textures = true,
+    bool skip_missing = true, bool split_shapes = true);
+void save_obj_scene(const std::string& filename, const scene* scn,
+    bool save_textures = true, bool skip_missing = true);
 
 // Load/save a scene from/to glTF.
-scene* load_gltf_scene(const std::string& filename, bool skip_missing = true);
+scene* load_gltf_scene(const std::string& filename, bool load_textures = true,
+    bool skip_missing = true);
 void save_gltf_scene(const std::string& filename, const scene* scn,
-    bool separate_buffers = false, bool skip_missing = true);
+    bool save_textures = true, bool skip_missing = true);
 
 }  // namespace ygl
 

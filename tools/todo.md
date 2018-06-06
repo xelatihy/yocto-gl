@@ -11,6 +11,10 @@ Please consider this to be just development notes and not any real planning.
 
 ## New loader
 
+- put together load_skeleton/load_meshes/load_textures
+- put together save_skeleton/save_meshes/save_textures
+- parser object for struing parser
+- reader/writer object for files
 - easier parsing of obj
     - parse_functions that return
     - use exceptions if needed or disabled them with global flag

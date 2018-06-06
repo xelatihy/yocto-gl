@@ -1190,11 +1190,12 @@ void load_obj_textures(
         auto filename = dirname + txt->path;
         for (auto& c : filename)
             if (c == '\\') c = '/';
-        txt->img = load_image(
-            filename, txt->width, txt->height, ldr_gamma.at(txt->path));
-        if (txt->img.empty()) {
+        try {
+            txt->img = load_image(
+                filename, txt->width, txt->height, ldr_gamma.at(txt->path));
+        } catch (std::exception&) {
             if (skip_missing) continue;
-            throw std::runtime_error("cannot laod image " + filename);
+            throw;
         }
     }
 }
@@ -1225,14 +1226,12 @@ void save_obj_textures(
         auto filename = dirname + txt->path;
         for (auto& c : filename)
             if (c == '\\') c = '/';
-        auto ok = false;
-        if (!txt->img.empty()) {
-            ok = save_image(filename, txt->width, txt->height, txt->img,
+        try {
+            save_image(filename, txt->width, txt->height, txt->img,
                 ldr_gamma.at(txt->path));
-        }
-        if (!ok) {
+        } catch (std::exception&) {
             if (skip_missing) continue;
-            throw std::runtime_error("cannot save image " + filename);
+            throw;
         }
     }
 }

@@ -386,8 +386,10 @@ std::vector<vec4f> load_image(
         auto pixels = (vec4f*)nullptr;
         if (LoadEXR((float**)&pixels, &width, &height, filename.c_str(),
                 nullptr) < 0)
-            return {};
-        if (!pixels) return {};
+            throw std::runtime_error("could not load image " + filename);
+        if (!pixels)
+            throw std::runtime_error("could not load image " + filename);
+
         auto img = std::vector<vec4f>(pixels, pixels + width * height);
         free(pixels);
         return img;
@@ -395,7 +397,9 @@ std::vector<vec4f> load_image(
         auto ncomp = 0;
         auto pixels =
             (vec4f*)load_pfm(filename.c_str(), &width, &height, &ncomp, 4);
-        if (!pixels) return {};
+        if (!pixels)
+            throw std::runtime_error("could not load image " + filename);
+
         auto img = std::vector<vec4f>(pixels, pixels + width * height);
         free(pixels);
         return img;
@@ -403,7 +407,9 @@ std::vector<vec4f> load_image(
         auto ncomp = 0;
         auto pixels =
             (vec4f*)stbi_loadf(filename.c_str(), &width, &height, &ncomp, 4);
-        if (!pixels) return {};
+        if (!pixels)
+            throw std::runtime_error("could not load image " + filename);
+
         auto img = std::vector<vec4f>(pixels, pixels + width * height);
         free(pixels);
         return img;
@@ -411,7 +417,8 @@ std::vector<vec4f> load_image(
         auto ncomp = 0;
         auto pixels =
             (vec4b*)stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
-        if (!pixels) return {};
+        if (!pixels)
+            throw std::runtime_error("could not load image " + filename);
         auto img8 = std::vector<vec4b>(pixels, pixels + width * height);
         free(pixels);
         auto img = gamma_to_linear(byte_to_float(img8), ldr_gamma);
@@ -420,33 +427,41 @@ std::vector<vec4f> load_image(
 }
 
 // Saves an hdr image.
-bool save_image(const std::string& filename, int width, int height,
+void save_image(const std::string& filename, int width, int height,
     const std::vector<vec4f>& img, float ldr_gamma) {
     if (path_extension(filename) == ".png") {
         auto ldr = float_to_byte(linear_to_gamma(img));
-        return stbi_write_png(
-            filename.c_str(), width, height, 4, (byte*)ldr.data(), width * 4);
+        if (!stbi_write_png(filename.c_str(), width, height, 4,
+                (byte*)ldr.data(), width * 4))
+            throw std::runtime_error("could not save image " + filename);
     } else if (path_extension(filename) == ".jpg") {
         auto ldr = float_to_byte(linear_to_gamma(img));
-        return stbi_write_jpg(
-            filename.c_str(), width, height, 4, (byte*)ldr.data(), 75);
+        if (!stbi_write_jpg(
+                filename.c_str(), width, height, 4, (byte*)ldr.data(), 75))
+            throw std::runtime_error("could not save image " + filename);
     } else if (path_extension(filename) == ".tga") {
         auto ldr = float_to_byte(linear_to_gamma(img));
-        return stbi_write_tga(
-            filename.c_str(), width, height, 4, (byte*)ldr.data());
+        if (!stbi_write_tga(
+                filename.c_str(), width, height, 4, (byte*)ldr.data()))
+            throw std::runtime_error("could not save image " + filename);
     } else if (path_extension(filename) == ".bmp") {
         auto ldr = float_to_byte(linear_to_gamma(img));
-        return stbi_write_bmp(
-            filename.c_str(), width, height, 4, (byte*)ldr.data());
+        if (!stbi_write_bmp(
+                filename.c_str(), width, height, 4, (byte*)ldr.data()))
+            throw std::runtime_error("could not save image " + filename);
     } else if (path_extension(filename) == ".hdr") {
-        return stbi_write_hdr(
-            filename.c_str(), width, height, 4, (float*)img.data());
+        if (!stbi_write_hdr(
+                filename.c_str(), width, height, 4, (float*)img.data()))
+            throw std::runtime_error("could not save image " + filename);
     } else if (path_extension(filename) == ".pfm") {
-        return save_pfm(filename.c_str(), width, height, 4, (float*)img.data());
+        if (!save_pfm(filename.c_str(), width, height, 4, (float*)img.data()))
+            throw std::runtime_error("could not save image " + filename);
     } else if (path_extension(filename) == ".exr") {
-        return !SaveEXR((float*)img.data(), width, height, 4, filename.c_str());
+        if (!SaveEXR((float*)img.data(), width, height, 4, filename.c_str()))
+            throw std::runtime_error("could not save image " + filename);
     } else {
-        return false;
+        throw std::runtime_error(
+            "unsupported image format " + path_extension(filename));
     }
 }
 
@@ -458,7 +473,7 @@ std::vector<vec4f> load_image_from_memory(
     auto pixels = (vec4f*)stbi_loadf_from_memory(
         data, data_size, &width, &height, &ncomp, 4);
     stbi_ldr_to_hdr_gamma(2.2f);
-    if (!pixels) return {};
+    if (!pixels) throw std::runtime_error("could not decode image from memory");
     auto img = std::vector<vec4f>(pixels, pixels + width * height);
     delete pixels;
     return img;

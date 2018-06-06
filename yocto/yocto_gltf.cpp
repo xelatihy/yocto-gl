@@ -905,8 +905,9 @@ void serialize(glTF& val, json& js, bool reading) {
 
 // #codegen end gltf-func
 
+#if 0
 // Encode in base64
-std::string base64_encode(
+static std::string base64_encode(
     unsigned char const* bytes_to_encode, unsigned int in_len) {
     static const std::string base64_chars =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -951,9 +952,10 @@ std::string base64_encode(
 
     return ret;
 }
+#endif
 
 // Decode from base64
-std::string base64_decode(std::string const& encoded_string) {
+static std::string base64_decode(std::string const& encoded_string) {
     static const std::string base64_chars =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         "abcdefghijklmnopqrstuvwxyz"
@@ -1399,18 +1401,24 @@ void load_gltf_textures(
                 data_size = (int)buffer.size();
                 data = (unsigned char*)buffer.data();
             }
-            gimg->data.img = load_image_from_memory(data, data_size,
-                gimg->data.width, gimg->data.height, ldr_gamma.at(gimg));
+            try {
+                gimg->data.img = load_image_from_memory(data, data_size,
+                    gimg->data.width, gimg->data.height, ldr_gamma.at(gimg));
+            } catch (std::exception&) {
+                if (skip_missing) continue;
+                throw;
+            }
         } else {
             filename = dirname + gimg->uri;
             for (auto& c : filename)
                 if (c == '\\') c = '/';
-            gimg->data.img = load_image(filename, gimg->data.width,
-                gimg->data.height, ldr_gamma.at(gimg));
-        }
-        if (gimg->data.img.empty()) {
-            if (skip_missing) continue;
-            throw std::runtime_error("cannot load image " + filename);
+            try {
+                gimg->data.img = load_image(filename, gimg->data.width,
+                    gimg->data.height, ldr_gamma.at(gimg));
+            } catch (std::exception&) {
+                if (skip_missing) continue;
+                throw;
+            }
         }
     }
 }
@@ -1455,14 +1463,12 @@ void save_gltf_textures(
         auto filename = dirname + gimg->uri;
         for (auto& c : filename)
             if (c == '\\') c = '/';
-        auto ok = false;
-        if (!gimg->data.img.empty()) {
-            ok = save_image(filename, gimg->data.width, gimg->data.height,
+        try {
+            save_image(filename, gimg->data.width, gimg->data.height,
                 gimg->data.img, ldr_gamma.at(gimg));
-        }
-        if (!ok) {
+        } catch (std::exception&) {
             if (skip_missing) continue;
-            throw std::runtime_error("cannot save image " + filename);
+            throw;
         }
     }
 }
