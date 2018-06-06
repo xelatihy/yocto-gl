@@ -913,7 +913,7 @@ glsurface_program make_glsurface_program() {
             } else if(mat_type == 2) {
                 ke *= ke_txt.xyz;
                 vec3 kb = kd * kd_txt.xyz;
-                float km = ks.z;
+                float km = ks.x * ks_txt.z;
                 kd = kb * (1 - km);
                 ks = kb * km + vec3(0.04) * (1 - km);
                 rs *= ks_txt.y;

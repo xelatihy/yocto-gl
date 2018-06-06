@@ -52,6 +52,8 @@
         "ratio": "cpp",
         "tuple": "cpp",
         "fstream": "cpp",
-        "locale": "cpp"
+        "locale": "cpp",
+        "__bit_reference": "cpp",
+        "system_error": "cpp"
     },
 } 
