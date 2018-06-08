@@ -90,7 +90,7 @@ enum struct glelem_type : int { point = 1, line = 2, triangle = 3 };
 bool check_glerror(bool print = true);
 
 // Clear window.
-void clear_glbuffers(const vec4f& background);
+void clear_glbuffers(vec4f background);
 
 // Enable/disable depth test, culling, wireframe and blending.
 void enable_gldepth_test(bool enabled);
@@ -100,7 +100,7 @@ void enable_glblending(bool enabled);
 void set_glblend_over();
 
 // Set viewport.
-void set_glviewport(const vec2i& v);
+void set_glviewport(vec2i v);
 void set_glviewport(int x, int y, int w, int h);
 
 // Reads an image from the the framebuffer.
@@ -281,9 +281,9 @@ int get_glattrib_location(const glprogram& prog, const std::string& name);
 void set_gluniform(const glprogram& prog, int var, bool val);
 void set_gluniform(const glprogram& prog, int var, int val);
 void set_gluniform(const glprogram& prog, int var, float val);
-void set_gluniform(const glprogram& prog, int var, const vec2f& val);
-void set_gluniform(const glprogram& prog, int var, const vec3f& val);
-void set_gluniform(const glprogram& prog, int var, const vec4f& val);
+void set_gluniform(const glprogram& prog, int var, vec2f val);
+void set_gluniform(const glprogram& prog, int var, vec3f val);
+void set_gluniform(const glprogram& prog, int var, vec4f val);
 void set_gluniform(const glprogram& prog, int var, const mat3f& val);
 void set_gluniform(const glprogram& prog, int var, const mat4f& val);
 void set_gluniform(const glprogram& prog, int var, const frame2f& val);
@@ -324,12 +324,12 @@ inline void set_gluniform_texture(const glprogram& prog, const std::string& var,
 // Binds a buffer to a vertex attribute, or a constant if the buffer is empty.
 void set_glattribute(
     const glprogram& prog, int var, const glvertex_buffer& buf, float def);
-void set_glattribute(const glprogram& prog, int var, const glvertex_buffer& buf,
-    const vec2f& def);
-void set_glattribute(const glprogram& prog, int var, const glvertex_buffer& buf,
-    const vec3f& def);
-void set_glattribute(const glprogram& prog, int var, const glvertex_buffer& buf,
-    const vec4f& def);
+void set_glattribute(
+    const glprogram& prog, int var, const glvertex_buffer& buf, vec2f def);
+void set_glattribute(
+    const glprogram& prog, int var, const glvertex_buffer& buf, vec3f def);
+void set_glattribute(
+    const glprogram& prog, int var, const glvertex_buffer& buf, vec4f def);
 
 // Binds a buffer or constant to a vertex attribute.
 template <typename T>
@@ -369,13 +369,12 @@ glimage_program make_glimage_program();
 
 // Draws an image texture the stdimage program.
 void draw_glimage(const glimage_program& prog, const gltexture& txt,
-    const vec2i& win_size, const frame2f& frame, float exposure = 0,
-    float gamma = 1);
+    vec2i win_size, const frame2f& frame, float exposure = 0, float gamma = 1);
 
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
 inline vec2i get_glimage_coords(
-    const vec2f& mouse_pos, const frame2f& frame, const vec2i& txt_size) {
+    vec2f mouse_pos, const frame2f& frame, vec2i txt_size) {
     // assume an affine without rotation
     auto xyf = (mouse_pos - frame.o) / vec2f{frame.x.x, frame.y.y};
     return vec2i{(int)round(xyf.x + txt_size.x / 2.0f),
@@ -383,8 +382,8 @@ inline vec2i get_glimage_coords(
 }
 
 // Center image and autofit.
-inline void center_glimage(frame2f& frame, const vec2i& imsize,
-    const vec2i& winsize, bool zoom_to_fit) {
+inline void center_glimage(
+    frame2f& frame, vec2i imsize, vec2i winsize, bool zoom_to_fit) {
     if (zoom_to_fit) {
         frame.x.x = frame.y.y =
             ygl::min(winsize.x / (float)imsize.x, winsize.y / (float)imsize.y);
@@ -422,16 +421,15 @@ inline bool is_glprogram_valid(const glsurface_program& prog) {
 // Starts a frame by setting exposure/gamma values, camera transforms and
 // projection. Sets also whether to use full shading or a quick eye light
 // preview.
-void begin_glsurface_frame(const glsurface_program& prog,
-    const vec3f& camera_pos, const mat4f& camera_xform_inv,
-    const mat4f& camera_proj, bool shade_eyelight, float exposure = 0,
-    float gamma = 2.2f);
+void begin_glsurface_frame(const glsurface_program& prog, vec3f camera_pos,
+    const mat4f& camera_xform_inv, const mat4f& camera_proj,
+    bool shade_eyelight, float exposure = 0, float gamma = 2.2f);
 
 // Ends a frame.
 void end_glsurface_frame(const glsurface_program& prog);
 
 // Set shading lights and ambient.
-void set_glsurface_lights(const glsurface_program& prog, const vec3f& amb,
+void set_glsurface_lights(const glsurface_program& prog, vec3f amb,
     const std::vector<vec3f>& lights_pos, const std::vector<vec3f>& lights_ke,
     const std::vector<int>& lights_type);
 
@@ -447,8 +445,7 @@ void set_glsurface_normaloffset(
     const glsurface_program& prog, float normal_offset);
 
 // Set the object as highlighted.
-void set_glsurface_highlight(
-    const glsurface_program& prog, const vec4f& highlight);
+void set_glsurface_highlight(const glsurface_program& prog, vec4f highlight);
 
 // Set material values with emission `ke`, diffuse `kd`, specular `ks` and
 // specular roughness `rs`, opacity `op`. Indicates textures ids with the
@@ -456,16 +453,16 @@ void set_glsurface_highlight(
 // maps. Works for points/lines/triangles indicated by `etype`, (diffuse for
 // points, Kajiya-Kay for lines, GGX/Phong for triangles). Material `type`
 // matches the scene material type.
-void set_glsurface_material(const glsurface_program& prog, const vec3f& ke,
-    const vec3f& kd, const vec3f& ks, float rs, float op,
-    const gltexture_info& ke_txt, const gltexture_info& kd_txt,
-    const gltexture_info& ks_txt, const gltexture_info& rs_txt,
-    const gltexture_info& op_txt, const gltexture_info& norm_txt,
-    bool double_sided, bool base_metallic, bool gltf_textures);
+void set_glsurface_material(const glsurface_program& prog, vec3f ke, vec3f kd,
+    vec3f ks, float rs, float op, const gltexture_info& ke_txt,
+    const gltexture_info& kd_txt, const gltexture_info& ks_txt,
+    const gltexture_info& rs_txt, const gltexture_info& op_txt,
+    const gltexture_info& norm_txt, bool double_sided, bool base_metallic,
+    bool gltf_textures);
 
 // Set constant material with emission `ke` and opacity `op`.
 void set_glsurface_constmaterial(
-    const glsurface_program& prog, const vec3f& ke, float op);
+    const glsurface_program& prog, vec3f ke, float op);
 
 // Set element properties.
 void set_glsurface_elems(
@@ -673,7 +670,7 @@ inline void draw_glwidgets_tree_leaf(
     if (sel == content) selection = content;
 }
 void draw_glwidgets_tree_leaf(glwindow* win, const std::string& lbl,
-    void*& selection, void* content, const vec4f& col);
+    void*& selection, void* content, vec4f col);
 
 // Log widget (internally uses global state, so you can only have one).
 void draw_glwidgets_log(glwindow* win, int height);
@@ -683,9 +680,8 @@ void log_glwidgets_msg(const char* time, const char* tag, const char* msg);
 void clear_glwidgets_log(glwindow* win);
 
 // Image widget.
-void draw_glwidgets_imagebox(
-    glwindow* win, int tid, const vec2i& size, const vec2i& imsize);
-void draw_glwidgets_imagebox(glwindow* win, gltexture& txt, const vec2i& size);
+void draw_glwidgets_imagebox(glwindow* win, int tid, vec2i size, vec2i imsize);
+void draw_glwidgets_imagebox(glwindow* win, gltexture& txt, vec2i size);
 
 // Scroll region widget.
 void begin_glwidgets_scrollarea(
@@ -701,7 +697,7 @@ void push_glwidgets_groupid(glwindow* win, const char* gid);
 void pop_glwidgets_groupid(glwindow* win);
 
 // Widget style.
-void push_glwidgets_style(glwindow* win, const vec4f& color);
+void push_glwidgets_style(glwindow* win, vec4f color);
 void pop_glwidgets_style(glwindow* win);
 
 }  // namespace ygl

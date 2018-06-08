@@ -9,27 +9,40 @@ Please consider this to be just development notes and not any real planning.
 - better material rendering
 - better rendering
 
-## New loader
-
-- put together load_skeleton/load_meshes/load_textures
-- put together save_skeleton/save_meshes/save_textures
-- parser object for struing parser
-- reader/writer object for files
-- easier parsing of obj
-    - parse_functions that return
-    - use exceptions if needed or disabled them with global flag
-- merge parse functions into one
-- write ply parser using obj functions
-- write glTF directly
-- load glTF directly
-
 ## Reduce internal code
 
+- remove testgen
+    - create json files in basic directory
+        - materials
+            - animated
+            - instances
+    - assign somehow paths
+    - maybe consider adding json inside all object? (I'd rather not do it)
+    - create internal and external CornellBox data without proc
+    - use yscnproc to convert to the prior formats
+    - remove testgen
+    - remove test generation
+- image4f / image4b
+- normal map problem
+- ldr_gamma in texture
 - switch to cli11
+    - only doubt is how to handle enums 
+- filesystem
+- [sadly] iostreams
+
+## Recornsider
+
+- OpenGL flips texture coordinates
+
+## Bugs
+
+- animation seems bogus
 
 ## giacomo
 
-- pbrt export
+- pbrt import / export
+    - load textures
+    - copy ypbrt code into load_scene
 - volumetric values
 
 ## image
@@ -58,6 +71,7 @@ Please consider this to be just development notes and not any real planning.
 
 ## Trace
 
+- BAD RNG INITIALIZATION
 - clarify light pdfs
 - one path
     - compute light pdfs with intersection

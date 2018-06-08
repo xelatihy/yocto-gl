@@ -177,13 +177,10 @@ static inline void obj_parse(char*& s, vec2f& val) {
 static inline void obj_parse(char*& s, vec3f& val) {
     for (auto i = 0; i < 3; i++) obj_parse(s, (&val.x)[i]);
 }
-static inline void obj_parse(char*& s, vec4f& val) {
-    for (auto i = 0; i < 4; i++) obj_parse(s, (&val.x)[i]);
-}
 static inline void obj_parse(char*& s, frame3f& val) {
     for (auto i = 0; i < 12; i++) obj_parse(s, (&val.x.x)[i]);
 }
-static inline void obj_parse(char*& s, vec3i& val, const vec3i& vert_size) {
+static inline void obj_parse(char*& s, vec3i& val, vec3i vert_size) {
     char buf[1024];
     obj_parse_base(s, buf);
     val = {-1, -1, -1};
@@ -201,7 +198,7 @@ static inline void obj_parse(char*& s, vec3i& val, const vec3i& vert_size) {
     }
 }
 static inline void obj_parse(
-    char*& s, int& num, vec3i* vert_buf, const vec3i& vert_size) {
+    char*& s, int& num, vec3i* vert_buf, vec3i vert_size) {
     num = 0;
     while (*s) {
         obj_parse(s, vert_buf[num], vert_size);
@@ -938,10 +935,10 @@ inline void obj_dump(char*& s, const float* val, int num) {
         obj_dump(s, val[i]);
     }
 }
-inline void obj_dump(char*& s, const vec2i& val) { obj_dump(s, &val.x, 2); }
-inline void obj_dump(char*& s, const vec2f& val) { obj_dump(s, &val.x, 2); }
-inline void obj_dump(char*& s, const vec3f& val) { obj_dump(s, &val.x, 3); }
-inline void obj_dump(char*& s, const vec4f& val) { obj_dump(s, &val.x, 4); }
+inline void obj_dump(char*& s, vec2i val) { obj_dump(s, &val.x, 2); }
+inline void obj_dump(char*& s, vec2f val) { obj_dump(s, &val.x, 2); }
+inline void obj_dump(char*& s, vec3f val) { obj_dump(s, &val.x, 3); }
+inline void obj_dump(char*& s, vec4f val) { obj_dump(s, &val.x, 4); }
 inline void obj_dump(char*& s, const frame3f& val) {
     obj_dump(s, &val.x.x, 12);
 }

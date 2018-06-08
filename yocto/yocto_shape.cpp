@@ -715,8 +715,8 @@ namespace ygl {
 
 // Make a quad.
 void make_quad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
-    const vec2f& size, const vec2f& uvsize) {
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, vec2i steps,
+    vec2f size, vec2f uvsize) {
     auto vid = [steps](int i, int j) { return j * (steps.x + 1) + i; };
 
     pos.resize((steps.x + 1) * (steps.y + 1));
@@ -743,8 +743,8 @@ void make_quad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
 
 // Make a stack of quads
 void make_quad_stack(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
-    const vec3f& size, const vec2f& uvsize) {
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, vec3i steps,
+    vec3f size, vec2f uvsize) {
     std::vector<vec4i> qquads;
     std::vector<vec3f> qpos;
     std::vector<vec3f> qnorm;
@@ -765,8 +765,8 @@ void make_quad_stack(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
 
 // Make a cube.
 void make_cube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
-    const vec3f& size, const vec3f& uvsize) {
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, vec3i steps,
+    vec3f size, vec3f uvsize) {
     std::vector<vec4i> qquads;
     std::vector<vec3f> qpos;
     std::vector<vec3f> qnorm;
@@ -829,8 +829,8 @@ void make_cube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
 
 // Make a rounded cube.
 void make_cube_rounded(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
-    const vec3f& size, const vec3f& uvsize, float radius) {
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, vec3i steps,
+    vec3f size, vec3f uvsize, float radius) {
     make_cube(quads, pos, norm, texcoord, steps, size, uvsize);
     auto c = size / 2 - vec3f{radius, radius, radius};
     for (auto i = 0; i < pos.size(); i++) {
@@ -863,8 +863,8 @@ void make_cube_rounded(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
 
 // Make a sphere.
 void make_sphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
-    float size, const vec2f& uvsize) {
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, vec2i steps,
+    float size, vec2f uvsize) {
     make_quad(quads, pos, norm, texcoord, steps, {1, 1}, {1, 1});
     for (auto i = 0; i < pos.size(); i++) {
         auto uv = texcoord[i];
@@ -891,8 +891,8 @@ void make_sphere_cube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
 
 // Make a flipped sphere. This is not watertight.
 void make_sphere_flipcap(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
-    float size, const vec2f& uvsize, const vec2f& zflip) {
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, vec2i steps,
+    float size, vec2f uvsize, vec2f zflip) {
     make_sphere(quads, pos, norm, texcoord, steps, size, uvsize);
     for (auto i = 0; i < pos.size(); i++) {
         if (pos[i].z > zflip.y) {
@@ -909,8 +909,8 @@ void make_sphere_flipcap(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
 
 // Make a disk.
 void make_disk(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
-    float size, const vec2f& uvsize) {
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, vec2i steps,
+    float size, vec2f uvsize) {
     make_quad(quads, pos, norm, texcoord, steps, {1, 1}, {1, 1});
     for (auto i = 0; i < pos.size(); i++) {
         auto uv = texcoord[i];
@@ -954,8 +954,8 @@ void make_disk_bulged(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
 
 // Make a cylinder (side-only).
 void make_cylinder_side(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
-    const vec2f& size, const vec2f& uvsize) {
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, vec2i steps,
+    vec2f size, vec2f uvsize) {
     make_quad(quads, pos, norm, texcoord, steps, {1, 1}, {1, 1});
     for (auto i = 0; i < pos.size(); i++) {
         auto uv = texcoord[i];
@@ -969,8 +969,8 @@ void make_cylinder_side(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
 
 // Make a cylinder.
 void make_cylinder(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
-    const vec2f& size, const vec3f& uvsize) {
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, vec3i steps,
+    vec2f size, vec3f uvsize) {
     std::vector<vec4i> qquads;
     std::vector<vec3f> qpos;
     std::vector<vec3f> qnorm;
@@ -1004,8 +1004,8 @@ void make_cylinder(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
 
 // Make a rounded cylinder.
 void make_cylinder_rounded(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
-    const vec2f& size, const vec3f& uvsize, float radius) {
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, vec3i steps,
+    vec2f size, vec3f uvsize, float radius) {
     make_cylinder(quads, pos, norm, texcoord, steps, size, uvsize);
     auto c = size / 2 - vec2f{radius, radius};
     for (auto i = 0; i < pos.size(); i++) {
@@ -1047,7 +1047,7 @@ void make_geodesic_sphere(std::vector<vec3i>& triangles,
 void make_fvcube(std::vector<vec4i>& quads_pos, std::vector<vec3f>& pos,
     std::vector<vec4i>& quads_norm, std::vector<vec3f>& norm,
     std::vector<vec4i>& quads_texcoord, std::vector<vec2f>& texcoord,
-    const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
+    vec3i steps, vec3f size, vec3f uvsize) {
     make_cube(quads_pos, pos, norm, texcoord, steps, size, uvsize);
     quads_norm = quads_pos;
     quads_texcoord = quads_pos;
@@ -1485,8 +1485,8 @@ void make_suzanne(std::vector<vec4i>& quads, std::vector<vec3f>& pos) {
 // Generate lines set along a quad.
 void make_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<float>& radius, const vec2i& steps, const vec2f& size,
-    const vec2f& uvsize, const vec2f& line_radius) {
+    std::vector<float>& radius, vec2i steps, vec2f size, vec2f uvsize,
+    vec2f line_radius) {
     auto nverts = (steps.x + 1) * steps.y;
     auto nlines = steps.x * steps.y;
     auto vid = [steps](int i, int j) { return j * (steps.x + 1) + i; };
@@ -1542,7 +1542,7 @@ void make_points(std::vector<int>& points, std::vector<vec3f>& pos,
 // Generate a point set.
 void make_random_points(std::vector<int>& points, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<float>& radius, int num, const vec3f& size, float uvsize,
+    std::vector<float>& radius, int num, vec3f size, float uvsize,
     float point_radius, uint64_t seed) {
     make_points(points, pos, norm, texcoord, radius, num, uvsize, point_radius);
     auto rng = make_rng(seed);
@@ -1576,11 +1576,10 @@ void make_bezier_circle(std::vector<vec4i>& beziers, std::vector<vec3f>& pos) {
 // Make a hair ball around a shape
 void make_hair(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<float>& radius, const vec2i& steps,
+    std::vector<float>& radius, vec2i steps,
     const std::vector<vec3i>& striangles, const std::vector<vec3f>& spos,
     const std::vector<vec3f>& snorm, const std::vector<vec2f>& stexcoord,
-    const vec2f& len, const vec2f& rad, const vec2f& noise, const vec2f& clump,
-    const vec2f& rotation, int seed) {
+    vec2f len, vec2f rad, vec2f noise, vec2f clump, vec2f rotation, int seed) {
     std::vector<vec3f> bpos;
     std::vector<vec3f> bnorm;
     std::vector<vec2f> btexcoord;

@@ -343,7 +343,8 @@ int main(int argc, char* argv[]) {
     ygl::log_info_begin("loading scene {}", app->filename);
     try {
         app->scn = ygl::load_scene(app->filename);
-    } catch (std::exception e) {
+    } catch (const std::exception& e) {
+        ygl::log_error("error during scene loading: "s + e.what());
         ygl::log_fatal("cannot load scene {}", app->filename);
     }
     ygl::log_info_end();

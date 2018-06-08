@@ -454,8 +454,7 @@ vec4f eval_elem_tangsp(const shape* shp, int ei) {
 
 // Shape value interpolated using barycentric coordinates
 template <typename T>
-T eval_elem(
-    const shape* shp, const std::vector<T>& vals, int ei, const vec2f& uv) {
+T eval_elem(const shape* shp, const std::vector<T>& vals, int ei, vec2f uv) {
     if (vals.empty()) return {};
     if (!shp->triangles.empty()) {
         return interpolate_triangle(vals, shp->triangles[ei], uv);
@@ -469,31 +468,30 @@ T eval_elem(
 }
 
 // Shape values interpolated using barycentric coordinates
-vec3f eval_pos(const shape* shp, int ei, const vec2f& uv) {
+vec3f eval_pos(const shape* shp, int ei, vec2f uv) {
     return eval_elem(shp, shp->pos, ei, uv);
 }
-vec3f eval_norm(const shape* shp, int ei, const vec2f& uv) {
+vec3f eval_norm(const shape* shp, int ei, vec2f uv) {
     if (shp->norm.empty()) return eval_elem_norm(shp, ei);
     return normalize(eval_elem(shp, shp->norm, ei, uv));
 }
-vec2f eval_texcoord(const shape* shp, int ei, const vec2f& uv) {
+vec2f eval_texcoord(const shape* shp, int ei, vec2f uv) {
     if (shp->texcoord.empty()) return uv;
     return eval_elem(shp, shp->texcoord, ei, uv);
 }
-vec4f eval_color(const shape* shp, int ei, const vec2f& uv) {
+vec4f eval_color(const shape* shp, int ei, vec2f uv) {
     if (shp->color.empty()) return {1, 1, 1, 1};
     return eval_elem(shp, shp->color, ei, uv);
 }
-float eval_radius(const shape* shp, int ei, const vec2f& uv) {
+float eval_radius(const shape* shp, int ei, vec2f uv) {
     if (shp->radius.empty()) return 0.001f;
     return eval_elem(shp, shp->radius, ei, uv);
 }
-vec4f eval_tangsp(const shape* shp, int ei, const vec2f& uv) {
+vec4f eval_tangsp(const shape* shp, int ei, vec2f uv) {
     if (shp->tangsp.empty()) return eval_elem_tangsp(shp, ei);
     return eval_elem(shp, shp->tangsp, ei, uv);
 }
-vec3f eval_tangsp(
-    const shape* shp, int ei, const vec2f& uv, bool& left_handed) {
+vec3f eval_tangsp(const shape* shp, int ei, vec2f uv, bool& left_handed) {
     auto tangsp = (shp->tangsp.empty()) ? eval_elem_tangsp(shp, ei) :
                                           eval_elem(shp, shp->tangsp, ei, uv);
     left_handed = tangsp.w < 0;
@@ -501,23 +499,22 @@ vec3f eval_tangsp(
 }
 
 // Instance values interpolated using barycentric coordinates.
-vec3f eval_pos(const instance* ist, int ei, const vec2f& uv) {
+vec3f eval_pos(const instance* ist, int ei, vec2f uv) {
     return transform_point(ist->frame, eval_pos(ist->shp, ei, uv));
 }
-vec3f eval_norm(const instance* ist, int ei, const vec2f& uv) {
+vec3f eval_norm(const instance* ist, int ei, vec2f uv) {
     return transform_direction(ist->frame, eval_norm(ist->shp, ei, uv));
 }
-vec2f eval_texcoord(const instance* ist, int ei, const vec2f& uv) {
+vec2f eval_texcoord(const instance* ist, int ei, vec2f uv) {
     return eval_texcoord(ist->shp, ei, uv);
 }
-vec4f eval_color(const instance* ist, int ei, const vec2f& uv) {
+vec4f eval_color(const instance* ist, int ei, vec2f uv) {
     return eval_color(ist->shp, ei, uv);
 }
-float eval_radius(const instance* ist, int ei, const vec2f& uv) {
+float eval_radius(const instance* ist, int ei, vec2f uv) {
     return eval_radius(ist->shp, ei, uv);
 }
-vec3f eval_tangsp(
-    const instance* ist, int ei, const vec2f& uv, bool& left_handed) {
+vec3f eval_tangsp(const instance* ist, int ei, vec2f uv, bool& left_handed) {
     return transform_direction(
         ist->frame, eval_tangsp(ist->shp, ei, uv, left_handed));
 }
@@ -526,8 +523,7 @@ vec3f eval_elem_norm(const instance* ist, int ei) {
     return transform_direction(ist->frame, eval_elem_norm(ist->shp, ei));
 }
 // Shading normals including material perturbations.
-vec3f eval_shading_norm(
-    const instance* ist, int ei, const vec2f& uv, const vec3f& o) {
+vec3f eval_shading_norm(const instance* ist, int ei, vec2f uv, vec3f o) {
     if (!ist->shp->triangles.empty()) {
         auto n = eval_norm(ist, ei, uv);
         if (ist->mat && ist->mat->norm_txt) {
@@ -550,7 +546,7 @@ vec3f eval_shading_norm(
 }
 
 // Environment texture coordinates from the direction.
-vec2f eval_texcoord(const environment* env, const vec3f& w) {
+vec2f eval_texcoord(const environment* env, vec3f w) {
     auto wl = transform_direction_inverse(env->frame, w);
     auto uv = vec2f{
         atan2(wl.z, wl.x) / (2 * pi), acos(clamp(wl.y, -1.0f, 1.0f)) / pi};
@@ -558,13 +554,13 @@ vec2f eval_texcoord(const environment* env, const vec3f& w) {
     return uv;
 }
 // Evaluate the environment direction.
-vec3f eval_direction(const environment* env, const vec2f& uv) {
+vec3f eval_direction(const environment* env, vec2f uv) {
     return transform_direction(
         env->frame, {cos(uv.x * 2 * pi) * sin(uv.y * pi), cos(uv.y * pi),
                         sin(uv.x * 2 * pi) * sin(uv.y * pi)});
 }
 // Evaluate the environment color.
-vec3f eval_environment(const environment* env, const vec3f& w) {
+vec3f eval_environment(const environment* env, vec3f w) {
     auto ke = env->ke;
     if (env->ke_txt) {
         ke *= xyz(eval_texture(env->ke_txt, eval_texcoord(env, w)));
@@ -573,7 +569,7 @@ vec3f eval_environment(const environment* env, const vec3f& w) {
 }
 
 // Evaluate a texture
-vec4f eval_texture(const texture* txt, const vec2f& texcoord) {
+vec4f eval_texture(const texture* txt, vec2f texcoord) {
     if (!txt || txt->img.empty()) return {1, 1, 1, 1};
 
     // get image width/height
@@ -615,7 +611,7 @@ void set_camera_fovy(camera* cam, float fovy, float aspect, float width) {
 
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
-ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv) {
+ray3f eval_camera_ray(const camera* cam, vec2f uv, vec2f luv) {
     auto dist = cam->focal;
     if (cam->focus < flt_max) {
         dist = cam->focal * cam->focus / (cam->focus - cam->focal);
@@ -634,19 +630,19 @@ ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv) {
 // Generates a ray from a camera for pixel coordinates `ij`, the
 // resolution `res`, the sub-pixel coordinates `puv` and the lens
 // coordinates `luv` and the image resolution `res`.
-ray3f eval_camera_ray(const camera* cam, const vec2i& ij, const vec2i& imsize,
-    const vec2f& puv, const vec2f& luv) {
+ray3f eval_camera_ray(
+    const camera* cam, vec2i ij, vec2i imsize, vec2f puv, vec2f luv) {
     auto uv = vec2f{(ij.x + puv.x) / imsize.x, (ij.y + puv.y) / imsize.y};
     return eval_camera_ray(cam, uv, luv);
 }
 
 // Evaluates material parameters.
-vec3f eval_emission(const instance* ist, int ei, const vec2f& uv) {
+vec3f eval_emission(const instance* ist, int ei, vec2f uv) {
     if (!ist || !ist->mat) return zero3f;
     return ist->mat->ke * xyz(eval_color(ist, ei, uv)) *
            xyz(eval_texture(ist->mat->ke_txt, eval_texcoord(ist, ei, uv)));
 }
-vec3f eval_diffuse(const instance* ist, int ei, const vec2f& uv) {
+vec3f eval_diffuse(const instance* ist, int ei, vec2f uv) {
     if (!ist || !ist->mat) return zero3f;
     if (!ist->mat->base_metallic) {
         return ist->mat->kd * xyz(eval_color(ist, ei, uv)) *
@@ -660,7 +656,7 @@ vec3f eval_diffuse(const instance* ist, int ei, const vec2f& uv) {
         return kb * (1 - km);
     }
 }
-vec3f eval_specular(const instance* ist, int ei, const vec2f& uv) {
+vec3f eval_specular(const instance* ist, int ei, vec2f uv) {
     if (!ist || !ist->mat) return zero3f;
     if (!ist->mat->base_metallic) {
         return ist->mat->ks * xyz(eval_color(ist, ei, uv)) *
@@ -674,7 +670,7 @@ vec3f eval_specular(const instance* ist, int ei, const vec2f& uv) {
         return kb * km + vec3f{0.04f, 0.04f, 0.04f} * (1 - km);
     }
 }
-float eval_roughness(const instance* ist, int ei, const vec2f& uv) {
+float eval_roughness(const instance* ist, int ei, vec2f uv) {
     if (!ist || !ist->mat) return 1;
     if (!ist->mat->base_metallic) {
         if (!ist->mat->gltf_textures) {
@@ -695,12 +691,12 @@ float eval_roughness(const instance* ist, int ei, const vec2f& uv) {
         return rs * rs;
     }
 }
-vec3f eval_transmission(const instance* ist, int ei, const vec2f& uv) {
+vec3f eval_transmission(const instance* ist, int ei, vec2f uv) {
     if (!ist || !ist->mat) return zero3f;
     return ist->mat->kt * xyz(eval_color(ist, ei, uv)) *
            xyz(eval_texture(ist->mat->kt_txt, eval_texcoord(ist, ei, uv)));
 }
-float eval_opacity(const instance* ist, int ei, const vec2f& uv) {
+float eval_opacity(const instance* ist, int ei, vec2f uv) {
     if (!ist || !ist->mat) return 1;
     return ist->mat->op * eval_color(ist->shp, ei, uv).w *
            eval_texture(ist->mat->kd_txt, eval_texcoord(ist, ei, uv)).w *
@@ -708,7 +704,7 @@ float eval_opacity(const instance* ist, int ei, const vec2f& uv) {
 }
 
 // Evaluates the bsdf at a location.
-bsdf eval_bsdf(const instance* ist, int ei, const vec2f& uv) {
+bsdf eval_bsdf(const instance* ist, int ei, vec2f uv) {
     auto f = bsdf();
     f.kd = eval_diffuse(ist, ei, uv);
     f.ks = eval_specular(ist, ei, uv);
@@ -724,8 +720,7 @@ bsdf eval_bsdf(const instance* ist, int ei, const vec2f& uv) {
 bool is_delta_bsdf(const bsdf& f) { return f.rs == 0 && f.kd == zero3f; }
 
 // Sample a shape based on a distribution.
-std::pair<int, vec2f> sample_shape(
-    const shape* shp, float re, const vec2f& ruv) {
+std::pair<int, vec2f> sample_shape(const shape* shp, float re, vec2f ruv) {
     // TODO: implement sampling without cdf
     if (shp->elem_cdf.empty()) return {};
     if (!shp->triangles.empty()) {
@@ -891,8 +886,7 @@ camera* make_bbox_camera(const std::string& name, const bbox3f& bbox,
     return cam;
 }
 
-material* make_material(
-    const std::string& name, const vec3f& kd, const vec3f& ks, float rs) {
+material* make_material(const std::string& name, vec3f kd, vec3f ks, float rs) {
     auto mat = new material();
     mat->name = name;
     mat->kd = kd;
@@ -970,8 +964,8 @@ node* make_node(const std::string& name, camera* cam, instance* ist,
     return nde;
 }
 
-environment* make_environment(const std::string& name, const vec3f& ke,
-    texture* ke_txt, const frame3f& frame) {
+environment* make_environment(
+    const std::string& name, vec3f ke, texture* ke_txt, const frame3f& frame) {
     auto env = new environment();
     env->name = name;
     env->ke = ke;
@@ -1157,8 +1151,8 @@ shape* make_quadstack_shape(const std::string& name, int stack_tesselation,
         name, "meshes/" + name + ".ply", {}, triangles, pos, norm, texcoord);
 }
 shape* make_hairball_shape(const std::string& name, int hair_tesselation,
-    int tesselation, float size, const vec2f& len, const vec2f& noise,
-    const vec2f& clump, const vec2f& rad) {
+    int tesselation, float size, vec2f len, vec2f noise, vec2f clump,
+    vec2f rad) {
     auto pos1 = std::vector<vec3f>();
     auto norm1 = std::vector<vec3f>();
     auto texcoord1 = std::vector<vec2f>();
@@ -1222,7 +1216,7 @@ subdiv* make_opencube_subdiv(
 
 // example materials
 material* make_emission_material(
-    const std::string& name, const vec3f& col, texture* txt, texture* norm) {
+    const std::string& name, vec3f col, texture* txt, texture* norm) {
     auto mat = make_material(name, zero3f, zero3f, 1);
     mat->ke = col;
     mat->ke_txt = txt;
@@ -1230,36 +1224,36 @@ material* make_emission_material(
     return mat;
 }
 material* make_matte_material(
-    const std::string& name, const vec3f& col, texture* txt, texture* norm) {
+    const std::string& name, vec3f col, texture* txt, texture* norm) {
     auto mat = make_material(name, col, zero3f, 1);
     mat->kd_txt = txt;
     mat->norm_txt = norm;
     return mat;
 }
-material* make_plastic_material(const std::string& name, const vec3f& col,
-    float rs, texture* txt, texture* norm) {
+material* make_plastic_material(
+    const std::string& name, vec3f col, float rs, texture* txt, texture* norm) {
     auto mat = make_material(name, col, {0.04f, 0.04f, 0.04f}, rs);
     mat->kd_txt = txt;
     mat->norm_txt = norm;
     return mat;
 }
-material* make_metal_material(const std::string& name, const vec3f& col,
-    float rs, texture* txt, texture* norm) {
+material* make_metal_material(
+    const std::string& name, vec3f col, float rs, texture* txt, texture* norm) {
     auto mat = make_material(name, {0, 0, 0}, col, rs);
     mat->ks_txt = txt;
     mat->norm_txt = norm;
     return mat;
 }
-material* make_glass_material(const std::string& name, const vec3f& col,
-    float rs, texture* txt, texture* norm) {
+material* make_glass_material(
+    const std::string& name, vec3f col, float rs, texture* txt, texture* norm) {
     auto mat = make_material(name, zero3f, {0.04f, 0.04f, 0.04f}, rs);
     mat->kt = col;
     mat->kt_txt = txt;
     mat->norm_txt = norm;
     return mat;
 }
-material* make_solidglass_material(const std::string& name, const vec3f& col,
-    float rs, texture* txt, texture* norm) {
+material* make_solidglass_material(
+    const std::string& name, vec3f col, float rs, texture* txt, texture* norm) {
     auto mat = make_material(name, zero3f, {0.04f, 0.04f, 0.04f}, rs);
     mat->kt = col;
     mat->kt_txt = txt;
@@ -1267,8 +1261,8 @@ material* make_solidglass_material(const std::string& name, const vec3f& col,
     mat->refract = true;
     return mat;
 }
-material* make_transparent_material(const std::string& name, const vec3f& col,
-    float op, texture* txt, texture* norm) {
+material* make_transparent_material(
+    const std::string& name, vec3f col, float op, texture* txt, texture* norm) {
     auto mat = make_material(name, col, zero3f, 1);
     mat->op = op;
     mat->kd_txt = txt;
@@ -1299,7 +1293,7 @@ texture* make_sky_texture(const std::string& name, int res, float skyangle) {
     return make_texture(name, "textures/" + name + ".hdr", res * 2, res,
         make_sunsky_image(res * 2, res, skyangle));
 }
-texture* make_lights_texture(const std::string& name, int res, const vec3f& le,
+texture* make_lights_texture(const std::string& name, int res, vec3f le,
     int nlights, float langle, float lwidth, float lheight) {
     return make_texture(name, "textures/" + name + ".hdr", res * 2, res,
         make_lights_image(res * 2, res, le, nlights, langle, lwidth, lheight));
@@ -1534,8 +1528,8 @@ scene* make_environment_scene(const std::string& name, environment* env) {
 }
 
 // instances shared functions
-scene* make_random_instances_scene(const std::string& name, const vec2i& num,
-    const bbox3f& bbox, uint64_t seed) {
+scene* make_random_instances_scene(
+    const std::string& name, vec2i num, const bbox3f& bbox, uint64_t seed) {
     auto rscale = 0.9f * 0.25f *
                   min((bbox.max.x - bbox.min.x) / num.x,
                       (bbox.max.x - bbox.min.x) / num.y);

@@ -269,9 +269,9 @@ struct obj_callbacks {
     bool (*group)(void*, const std::string&) = nullptr;   // group callback
     bool (*usemat)(void*, const std::string&) = nullptr;  // use material cb
     bool (*smoothing)(void*, bool) = nullptr;             // smoothing callback
-    bool (*vertex)(void*, const vec3f&) = nullptr;        // vertex callback
-    bool (*normal)(void*, const vec3f&) = nullptr;        // normal callback
-    bool (*texcoord)(void*, const vec2f&) = nullptr;      // texcoord callback
+    bool (*vertex)(void*, vec3f) = nullptr;               // vertex callback
+    bool (*normal)(void*, vec3f) = nullptr;               // normal callback
+    bool (*texcoord)(void*, vec2f) = nullptr;             // texcoord callback
     bool (*face)(void*, int, const vec3i*) = nullptr;     // face callback
     bool (*line)(void*, int, const vec3i*) = nullptr;     // line callback
     bool (*point)(void*, int, const vec3i*) = nullptr;    // point callback

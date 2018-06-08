@@ -57,18 +57,18 @@ void rmdir(const std::string& dir) {
 void save_scene(const ygl::scene* scn, const std::string& sname,
     const std::string& dirname, bool preserve_instances) {
     try {
-        mkdir(dirname + "/json");
-        mkdir(dirname + "/json/meshes");
-        mkdir(dirname + "/json/textures");
-        ygl::save_json_scene(dirname + "/json/" + sname + ".json", scn);
-        mkdir(dirname + "/gltf");
-        mkdir(dirname + "/gltf/meshes");
-        mkdir(dirname + "/gltf/textures");
-        ygl::save_gltf_scene(dirname + "/gltf/" + sname + ".gltf", scn);
-        mkdir(dirname + "/obj");
-        mkdir(dirname + "/obj/meshes");
-        mkdir(dirname + "/obj/textures");
-        ygl::save_obj_scene(dirname + "/obj/" + sname + ".obj", scn);
+        mkdir(dirname + "/json/" + sname + "/meshes");
+        mkdir(dirname + "/json/" + sname + "/textures");
+        ygl::save_json_scene(
+            dirname + "/json/" + sname + "/" + sname + ".json", scn);
+        mkdir(dirname + "/gltf/" + sname + "/meshes");
+        mkdir(dirname + "/gltf/" + sname + "/textures");
+        ygl::save_gltf_scene(
+            dirname + "/gltf/" + sname + "/" + sname + ".gltf", scn);
+        mkdir(dirname + "/obj/" + sname + "/meshes");
+        mkdir(dirname + "/obj/" + sname + "/textures");
+        ygl::save_obj_scene(
+            dirname + "/obj/" + sname + "/" + sname + ".obj", scn);
     } catch (std::exception& e) { ygl::log_fatal("error {}", e.what()); }
 }
 
@@ -424,11 +424,15 @@ int main(int argc, char* argv[]) {
 
     // make directories
     if (!noclean) {
-        rmdir(dirname);
+        rmdir(dirname + "/json");
+        rmdir(dirname + "/obj");
+        rmdir(dirname + "/gltf");
         ygl::log_info("cleaning directory {}", dirname);
     }
     ygl::log_info("creating directory {}", dirname);
-    mkdir(dirname);
+    mkdir(dirname + "/json");
+    mkdir(dirname + "/obj");
+    mkdir(dirname + "/gltf");
 
     auto threads = std::vector<std::thread>();
     auto sgroups = std::map<std::string, std::vector<ygl::scene*>>();
@@ -449,18 +453,15 @@ int main(int argc, char* argv[]) {
     threads.clear();
     for (auto sname : snames) {
         auto scns = sgroups[sname];
-        ygl::log_info("creating directory {}", dirname + "/" + sname);
-        mkdir(dirname + "/" + sname);
+        ygl::log_info("creating directory {}", dirname);
         for (auto scn : scns) {
             if (noparallel) {
                 ygl::log_info("saving scene {}/{}", sname, scn->name);
-                save_scene(scn, scn->name, dirname + "/" + sname,
-                    sname == "instances");
+                save_scene(scn, scn->name, dirname, sname == "instances");
             } else {
                 threads.push_back(std::thread([=]() {
                     ygl::log_info("start saving scene {}/{}", sname, scn->name);
-                    save_scene(scn, scn->name, dirname + "/" + sname,
-                        sname == "instances");
+                    save_scene(scn, scn->name, dirname, sname == "instances");
                     ygl::log_info("end saving scene {}/{}", sname, scn->name);
                 }));
             }
