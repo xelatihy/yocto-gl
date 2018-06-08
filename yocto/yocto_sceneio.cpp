@@ -31,6 +31,7 @@
 #include "yocto_shape.h"
 #include "yocto_utils.h"
 
+#include <climits>
 #include <array>
 #include <deque>
 #include <unordered_map>
