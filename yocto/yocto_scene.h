@@ -27,14 +27,12 @@
 //
 // 1. load a scene with Yocto/SceneIO,
 // 2. add missing data with `add_XXX()` functions
-// 3. use `compute_bbox()` to compute element bounds
+// 3. use `update_bbox()` to compute element bounds
 // 4. can merge scene together with `merge_into()`
 // 5. make scene elements with `make_XXX()` functions
 // 6. make procedural elements and scenes with `make_proc_XXX()` functions
 // 7. for ray-intersection and closest point queries, a BVH can be created with
-//    `make_shape_bvh()`/`make_scene_bvh()` and udpated with `refit_shape_bvh()`
-//    and `refit_scene_bvh()` -- see Yocto/Bvh for intersection and
-//    closest point functions
+//    `update_bvh()` and refit with `refit_bvh()`
 // 8. compute interpolated values over scene elements with `eval_XXX()`
 //    functions
 //
