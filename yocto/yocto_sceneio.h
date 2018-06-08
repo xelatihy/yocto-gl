@@ -7,7 +7,8 @@
 // Meshes are stored in a builtin binary format or as PLY or OBJ.
 //
 // We also support loading OBJ and glTF formats, but the conversion is best
-// effort.
+// effort and likely not robust. For more robust support of these formats,
+// please consider Yocto/Obj or Yocto/glTF.
 //
 // ## Usage
 //
@@ -17,6 +18,7 @@
 // 4. if desired, the function `load_scene()` and `save_scene()` will either
 //    load using the internal format or convert on the fly using on the
 //    supported conversions
+// 5. you can use equivalent functions for meshes
 //
 //
 
