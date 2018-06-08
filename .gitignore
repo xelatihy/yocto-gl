@@ -1,6 +1,8 @@
 bin
 cmake
-tests
+tests/obj
+tests/json
+tests/gltf
 build
 run_tests
 cmake-build-debug

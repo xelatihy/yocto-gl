@@ -95,7 +95,8 @@ int main(int argc, char* argv[]) {
     auto scn = (ygl::scene*)nullptr;
     try {
         scn = ygl::load_scene(filename);
-    } catch (std::exception e) {
+    } catch (const std::exception& e) {
+        ygl::log_error("error during scene loading: "s + e.what());
         ygl::log_fatal("cannot load scene {}", filename);
     }
     ygl::log_info_end();

@@ -58,18 +58,10 @@ int main(int argc, char** argv) {
         ygl::make_parser(argc, argv, "yscnproc", "converts obj to gltf");
     auto textures =
         ygl::parse_flag(parser, "--textures", "-t", "process textures");
-    // auto no_flip_opacity =
-    //     ygl::parse_flag(parser, "--no-flip-opacity", "", "flip opacity");
-    // auto facet_non_smooth = ygl::parse_flag(
-    //     parser, "--facet-non-smooth", "", "facet non smooth surfaces");
     auto scale = ygl::parse_opt(parser, "--scale", "", "scale the model", 1.0f);
     auto flipyz =
         ygl::parse_flag(parser, "--flipyz", "", "flip y and z coords");
     auto add_normals = ygl::parse_flag(parser, "--normals", "", "add normals");
-    //    auto add_specgloss =
-    //        ygl::parse_flag( "--specgloss", "", "add spec gloss");
-    auto save_separate_buffers = ygl::parse_flag(
-        parser, "--separate-buffers", "", "save separate buffers");
     auto info =
         ygl::parse_flag(parser, "--print-info", "", "print information");
     auto validate_textures = ygl::parse_flag(
@@ -93,8 +85,8 @@ int main(int argc, char** argv) {
             to_merge = ygl::load_scene(filename, textures);
 
         } catch (const std::exception& e) {
-            ygl::log_fatal("unable to load file %s with error {}\n",
-                filename.c_str(), e.what());
+            ygl::log_error("error during scene loading: "s + e.what());
+            ygl::log_fatal("unable to load " + filename);
         }
 
         // check missing texture

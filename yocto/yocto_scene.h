@@ -355,41 +355,39 @@ scene_intersection intersect_ray(
     const scene* scn, const ray3f& ray, bool find_any = false);
 
 // Shape values interpolated using barycentric coordinates.
-vec3f eval_pos(const shape* shp, int ei, const vec2f& uv);
-vec3f eval_norm(const shape* shp, int ei, const vec2f& uv);
-vec2f eval_texcoord(const shape* shp, int ei, const vec2f& uv);
-vec4f eval_color(const shape* shp, int ei, const vec2f& uv);
-float eval_radius(const shape* shp, int ei, const vec2f& uv);
-vec4f eval_tangsp(const shape* shp, int ei, const vec2f& uv);
-vec3f eval_tangsp(const shape* shp, int ei, const vec2f& uv, bool& left_handed);
+vec3f eval_pos(const shape* shp, int ei, vec2f uv);
+vec3f eval_norm(const shape* shp, int ei, vec2f uv);
+vec2f eval_texcoord(const shape* shp, int ei, vec2f uv);
+vec4f eval_color(const shape* shp, int ei, vec2f uv);
+float eval_radius(const shape* shp, int ei, vec2f uv);
+vec4f eval_tangsp(const shape* shp, int ei, vec2f uv);
+vec3f eval_tangsp(const shape* shp, int ei, vec2f uv, bool& left_handed);
 // Shape element values.
 vec3f eval_elem_norm(const shape* shp, int ei);
 vec4f eval_elem_tangsp(const shape* shp, int ei);
 
 // Instance values interpolated using barycentric coordinates.
 // Handles defaults if data is missing.
-vec3f eval_pos(const instance* ist, int ei, const vec2f& uv);
-vec3f eval_norm(const instance* ist, int ei, const vec2f& uv);
-vec2f eval_texcoord(const instance* ist, int ei, const vec2f& uv);
-vec4f eval_color(const instance* ist, int ei, const vec2f& uv);
-float eval_radius(const instance* ist, int ei, const vec2f& uv);
-vec3f eval_tangsp(
-    const instance* ist, int ei, const vec2f& uv, bool& left_handed);
+vec3f eval_pos(const instance* ist, int ei, vec2f uv);
+vec3f eval_norm(const instance* ist, int ei, vec2f uv);
+vec2f eval_texcoord(const instance* ist, int ei, vec2f uv);
+vec4f eval_color(const instance* ist, int ei, vec2f uv);
+float eval_radius(const instance* ist, int ei, vec2f uv);
+vec3f eval_tangsp(const instance* ist, int ei, vec2f uv, bool& left_handed);
 // Instance element values.
 vec3f eval_elem_norm(const instance* ist, int ei);
 // Shading normals including material perturbations.
-vec3f eval_shading_norm(
-    const instance* ist, int ei, const vec2f& uv, const vec3f& o);
+vec3f eval_shading_norm(const instance* ist, int ei, vec2f uv, vec3f o);
 
 // Environment texture coordinates from the incoming direction.
-vec2f eval_texcoord(const environment* env, const vec3f& i);
+vec2f eval_texcoord(const environment* env, vec3f i);
 // Evaluate the incoming direction from the uv.
-vec3f eval_direction(const environment* env, const vec2f& uv);
+vec3f eval_direction(const environment* env, vec2f uv);
 // Evaluate the environment emission.
-vec3f eval_environment(const environment* env, const vec3f& i);
+vec3f eval_environment(const environment* env, vec3f i);
 
 // Evaluate a texture.
-vec4f eval_texture(const texture* info, const vec2f& texcoord);
+vec4f eval_texture(const texture* info, vec2f texcoord);
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
 float eval_camera_fovy(const camera* cam);
@@ -399,21 +397,21 @@ void set_camera_fovy(
 
 // Generates a ray from a camera image coordinate `uv` and lens coordinates
 // `luv`.
-ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv);
+ray3f eval_camera_ray(const camera* cam, vec2f uv, vec2f luv);
 // Generates a ray from a camera for pixel coordinates `ij`, the resolution
 // `res`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and
 // the image resolution `res`.
-ray3f eval_camera_ray(const camera* cam, const vec2i& ij, const vec2i& imsize,
-    const vec2f& puv, const vec2f& luv);
+ray3f eval_camera_ray(
+    const camera* cam, vec2i ij, vec2i imsize, vec2f puv, vec2f luv);
 
 // Evaluates material parameters: emission, diffuse, specular, transmission,
 // roughness and opacity.
-vec3f eval_emission(const instance* ist, int ei, const vec2f& uv);
-vec3f eval_diffuse(const instance* ist, int ei, const vec2f& uv);
-vec3f eval_specular(const instance* ist, int ei, const vec2f& uv);
-vec3f eval_transmission(const instance* ist, int ei, const vec2f& uv);
-float eval_roughness(const instance* ist, int ei, const vec2f& uv);
-float eval_opacity(const instance* ist, int ei, const vec2f& uv);
+vec3f eval_emission(const instance* ist, int ei, vec2f uv);
+vec3f eval_diffuse(const instance* ist, int ei, vec2f uv);
+vec3f eval_specular(const instance* ist, int ei, vec2f uv);
+vec3f eval_transmission(const instance* ist, int ei, vec2f uv);
+float eval_roughness(const instance* ist, int ei, vec2f uv);
+float eval_opacity(const instance* ist, int ei, vec2f uv);
 
 // Material values packed into a convenience structure.
 struct bsdf {
@@ -423,15 +421,14 @@ struct bsdf {
     float rs = 1;          // roughness
     bool refract = false;  // whether to use refraction in transmission
 };
-bsdf eval_bsdf(const instance* ist, int ei, const vec2f& uv);
+bsdf eval_bsdf(const instance* ist, int ei, vec2f uv);
 bool is_delta_bsdf(const bsdf& f);
 
 // Sample a shape based on a distribution.
-std::pair<int, vec2f> sample_shape(
-    const shape* shp, float re, const vec2f& ruv);
+std::pair<int, vec2f> sample_shape(const shape* shp, float re, vec2f ruv);
 
 // Sample an environment uniformly.
-vec2f sample_environment(const environment* env, const vec2f& ruv);
+vec2f sample_environment(const environment* env, vec2f ruv);
 
 }  // namespace ygl
 
@@ -448,9 +445,8 @@ camera* make_bbox_camera(const std::string& name, const bbox3f& bbox,
     float width = 0.036f, float height = 0.024f, float focal = 0.050f);
 texture* make_texture(const std::string& name, const std::string& path = "",
     int width = 0, int height = 0, const std::vector<vec4f>& pxl = {});
-material* make_material(const std::string& name,
-    const vec3f& kd = {0.2f, 0.2f, 0.2f}, const vec3f& ks = {0, 0, 0},
-    float rs = 1);
+material* make_material(const std::string& name, vec3f kd = {0.2f, 0.2f, 0.2f},
+    vec3f ks = {0, 0, 0}, float rs = 1);
 shape* make_shape(const std::string& name, const std::string& path = "",
     const std::vector<vec2i>& lines = {},
     const std::vector<vec3i>& triangles = {},
@@ -471,9 +467,8 @@ instance* make_instance(const std::string& name, shape* shp = nullptr,
 node* make_node(const std::string& name, camera* cam = nullptr,
     instance* ist = nullptr, environment* env = nullptr,
     const frame3f& frame = identity_frame3f);
-environment* make_environment(const std::string& name,
-    const vec3f& ke = {1, 1, 1}, texture* ke_txt = nullptr,
-    const frame3f& frame = identity_frame3f);
+environment* make_environment(const std::string& name, vec3f ke = {1, 1, 1},
+    texture* ke_txt = nullptr, const frame3f& frame = identity_frame3f);
 animation* make_animation(const std::string& name, const std::string& path,
     const std::vector<float>& times = {},
     const std::vector<vec3f>& translation = {},
@@ -508,9 +503,9 @@ shape* make_matball_shape(
 shape* make_quadstack_shape(const std::string& name, int stack_tesselation = 4,
     int tesselation = 0, float size = 2);
 shape* make_hairball_shape(const std::string& name, int hair_tesselation = 16,
-    int tesselation = 2, float size = 2, const vec2f& len = {0.2f, 0.2f},
-    const vec2f& noise = {0, 0}, const vec2f& clump = {0, 0},
-    const vec2f& radius = {0.001f, 0.001f});
+    int tesselation = 2, float size = 2, vec2f len = {0.2f, 0.2f},
+    vec2f noise = {0, 0}, vec2f clump = {0, 0},
+    vec2f radius = {0.001f, 0.001f});
 
 // example subdivs
 subdiv* make_suzanne_subdiv(const std::string& name, int subdivision = 2);
@@ -522,21 +517,20 @@ subdiv* make_opencube_subdiv(const std::string& name, int tesselation = 0,
     int subdivision = 4, float size = 2);
 
 // example materials
-material* make_emission_material(const std::string& name, const vec3f& col,
+material* make_emission_material(const std::string& name, vec3f col,
     texture* txt = nullptr, texture* norm = nullptr);
-material* make_matte_material(const std::string& name, const vec3f& col,
+material* make_matte_material(const std::string& name, vec3f col,
     texture* txt = nullptr, texture* norm = nullptr);
-material* make_plastic_material(const std::string& name, const vec3f& col,
+material* make_plastic_material(const std::string& name, vec3f col,
     float rs = 0.1f, texture* txt = nullptr, texture* norm = nullptr);
-material* make_metal_material(const std::string& name, const vec3f& col,
+material* make_metal_material(const std::string& name, vec3f col,
     float rs = 0.1f, texture* txt = nullptr, texture* norm = nullptr);
-material* make_glass_material(const std::string& name,
-    const vec3f& col = {1, 1, 1}, float rs = 0, texture* txt = nullptr,
-    texture* norm = nullptr);
+material* make_glass_material(const std::string& name, vec3f col = {1, 1, 1},
+    float rs = 0, texture* txt = nullptr, texture* norm = nullptr);
 material* make_solidglass_material(const std::string& name,
-    const vec3f& col = {1, 1, 1}, float rs = 0, texture* txt = nullptr,
+    vec3f col = {1, 1, 1}, float rs = 0, texture* txt = nullptr,
     texture* norm = nullptr);
-material* make_transparent_material(const std::string& name, const vec3f& col,
+material* make_transparent_material(const std::string& name, vec3f col,
     float op, texture* txt = nullptr, texture* norm = nullptr);
 
 // example textures
@@ -551,7 +545,7 @@ texture* make_bumpnorm_texture(const std::string& name, int resolution = 512,
 texture* make_sky_texture(
     const std::string& name, int resolution = 512, float skyangle = pi / 4);
 texture* make_lights_texture(const std::string& name, int resolution = 512,
-    const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pi / 4,
+    vec3f le = {1, 1, 1}, int nlights = 4, float langle = pi / 4,
     float lwidth = pi / 16, float lheight = pi / 16);
 
 // Makes the Cornell Box scene.
@@ -569,8 +563,8 @@ scene* make_shape_scene(
 // Make a simple scene with a single environment and a mirror ball.
 scene* make_environment_scene(const std::string& name, environment* env);
 // Make a scene with random instances
-scene* make_random_instances_scene(const std::string& name, const vec2i& num,
-    const bbox3f& bbox, uint64_t seed = 13);
+scene* make_random_instances_scene(
+    const std::string& name, vec2i num, const bbox3f& bbox, uint64_t seed = 13);
 
 }  // namespace ygl
 

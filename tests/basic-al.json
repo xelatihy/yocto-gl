@@ -1,0 +1,178 @@
+{
+    "name": "basic-al",
+    "cameras": [
+        {
+            "name": "cam",
+            "!!from": [
+                0,
+                5,
+                14
+            ],
+            "!!to": [
+                0,
+                1,
+                0
+            ],
+            "height": 0.015,
+            "width": 0.036,
+            "focal": 0.06,
+            "aperture": 0.0
+        }
+    ],
+    "instances": [
+        {
+            "name": "floor",
+            "shp": {
+                "name": "floor",
+                "!!type": "floor"
+            },
+            "mat": {
+                "name": "floor",
+                "kd": [
+                    0.7,
+                    0.7,
+                    0.7
+                ]
+            }
+        },
+        {
+            "name": "obj1",
+            "!!translation": [
+                -2.5,
+                1,
+                0
+            ],
+            "shp": {
+                "name": "obj1",
+                "path": "meshes/obj1.ply",
+                "!!type": "sphere_flipcap"
+            },
+            "mat": {
+                "name": "obj1",
+                "kd": [
+                    0.7,
+                    0.5,
+                    0.5
+                ],
+                "ks": [
+                    0.04,
+                    0.04,
+                    0.04
+                ],
+                "rs": 0.1
+            }
+        },
+        {
+            "name": "obj2",
+            "!!translation": [
+                0,
+                1,
+                0
+            ],
+            "shp": {
+                "name": "obj2",
+                "path": "meshes/obj2.ply",
+                "!!type": "sphere"
+            },
+            "mat": {
+                "name": "obj2",
+                "kd": [
+                    0.5,
+                    0.7,
+                    0.5
+                ],
+                "ks": [
+                    0.04,
+                    0.04,
+                    0.04
+                ],
+                "rs": 0.1
+            }
+        },
+        {
+            "name": "obj3",
+            "!!translation": [
+                2.5,
+                1,
+                0
+            ],
+            "shp": {
+                "name": "obj3",
+                "path": "meshes/obj3.ply",
+                "!!type": "cube_rounded"
+            },
+            "mat": {
+                "name": "obj3",
+                "kd": [
+                    0.5,
+                    0.5,
+                    0.7
+                ],
+                "ks": [
+                    0.04,
+                    0.04,
+                    0.04
+                ],
+                "rs": 0.1
+            }
+        },
+        {
+            "name": "light1",
+            "!!from": [
+                -4,
+                8,
+                8
+            ],
+            "!!to": [
+                0,
+                1,
+                0
+            ],
+            "shp": {
+                "name": "light1",
+                "!!type": "quad",
+                "!!size": [
+                    4,
+                    4
+                ]
+            },
+            "mat": {
+                "name": "light1",
+                "ke": [
+                    20,
+                    20,
+                    20
+                ]
+            }
+        },
+        {
+            "name": "light2",
+            "!!from": [
+                4,
+                8,
+                8
+            ],
+            "!!to": [
+                0,
+                1,
+                0
+            ],
+            "shp": {
+                "name": "light2",
+                "!!type": "quad",
+                "!!size": [
+                    4,
+                    4
+                ]
+            },
+            "mat": {
+                "name": "light2",
+                "ke": [
+                    20,
+                    20,
+                    20
+                ]
+            }
+        }
+    ]
+}

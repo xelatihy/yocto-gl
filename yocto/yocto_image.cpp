@@ -66,18 +66,18 @@
 namespace ygl {
 
 // Convert between CIE XYZ and xyY
-vec3f xyz_to_xyY(const vec3f& xyz) {
+vec3f xyz_to_xyY(vec3f xyz) {
     if (xyz == zero3f) return zero3f;
     return {xyz.x / (xyz.x + xyz.y + xyz.z), xyz.y / (xyz.x + xyz.y + xyz.z),
         xyz.y};
 }
 // Convert between CIE XYZ and xyY
-vec3f xyY_to_xyz(const vec3f& xyY) {
+vec3f xyY_to_xyz(vec3f xyY) {
     if (xyY.y == 0) return zero3f;
     return {xyY.x * xyY.z / xyY.y, xyY.z, (1 - xyY.x - xyY.y) * xyY.z / xyY.y};
 }
 // Convert between CIE XYZ and RGB
-vec3f xyz_to_rgb(const vec3f& xyz) {
+vec3f xyz_to_rgb(vec3f xyz) {
     // from http://www.brucelindbloom.com/index.html?Eqn_RGB_to_XYZ.html
     if (xyz == zero3f) return zero3f;
     return {+3.2404542f * xyz.x - 1.5371385f * xyz.y - 0.4985314f * xyz.z,
@@ -85,7 +85,7 @@ vec3f xyz_to_rgb(const vec3f& xyz) {
         +0.0556434f * xyz.x - 0.2040259f * xyz.y + 1.0572252f * xyz.z};
 }
 // Convert between CIE XYZ and RGB
-vec3f rgb_to_xyz(const vec3f& rgb) {
+vec3f rgb_to_xyz(vec3f rgb) {
     // from http://www.brucelindbloom.com/index.html?Eqn_RGB_to_XYZ.html
     if (rgb == zero3f) return zero3f;
     return {0.4124564f * rgb.x + 0.3575761f * rgb.y + 0.1804375f * rgb.z,
@@ -94,7 +94,7 @@ vec3f rgb_to_xyz(const vec3f& rgb) {
 }
 
 // Convert HSV to RGB
-vec3f hsv_to_rgb(const vec3f& hsv) {
+vec3f hsv_to_rgb(vec3f hsv) {
     // from Imgui.cpp
     auto h = hsv.x, s = hsv.y, v = hsv.z;
     if (hsv.y == 0.0f) return {v, v, v};
@@ -116,7 +116,7 @@ vec3f hsv_to_rgb(const vec3f& hsv) {
         default: return {v, p, q};
     }
 }
-vec3f rgb_to_hsv(const vec3f& rgb) {
+vec3f rgb_to_hsv(vec3f rgb) {
     // from Imgui.cpp
     auto r = rgb.x, g = rgb.y, b = rgb.z;
     float K = 0.f;
@@ -172,7 +172,7 @@ std::vector<vec4b> float_to_byte(const std::vector<vec4f>& fl) {
     return bt;
 }
 
-vec3f filmic_tonemap(const vec3f& hdr) {
+vec3f filmic_tonemap(vec3f hdr) {
     // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
     auto x = hdr;
     // x *= 0.6; // brings it back to ACES range
@@ -499,7 +499,7 @@ namespace ygl {
 
 // Make a grid image
 std::vector<vec4f> make_grid_image(
-    int width, int height, int tiles, const vec4f& c0, const vec4f& c1) {
+    int width, int height, int tiles, vec4f c0, vec4f c1) {
     auto img = std::vector<vec4f>(width * height);
     auto tile = width / tiles;
     for (int j = 0; j < width; j++) {
@@ -514,7 +514,7 @@ std::vector<vec4f> make_grid_image(
 
 // Make a checkerboard image
 std::vector<vec4f> make_checker_image(
-    int width, int height, int tiles, const vec4f& c0, const vec4f& c1) {
+    int width, int height, int tiles, vec4f c0, vec4f c1) {
     auto img = std::vector<vec4f>(width * height);
     auto tile = width / tiles;
     for (int j = 0; j < height; j++) {
@@ -545,8 +545,7 @@ std::vector<vec4f> make_bumpdimple_image(int width, int height, int tiles) {
 }
 
 // Make a uv colored grid
-std::vector<vec4f> make_ramp_image(
-    int width, int height, const vec4f& c0, const vec4f& c1) {
+std::vector<vec4f> make_ramp_image(int width, int height, vec4f c0, vec4f c1) {
     auto img = std::vector<vec4f>(width * height);
     for (int j = 0; j < height; j++) {
         for (int i = 0; i < width; i++) {
@@ -636,7 +635,7 @@ std::vector<vec4f> bump_to_normal_map(
 
 // Implementation of sunsky modified heavily from pbrt
 std::vector<vec4f> make_sunsky_image(int width, int height, float thetaSun,
-    float turbidity, bool has_sun, const vec3f& ground_albedo) {
+    float turbidity, bool has_sun, vec3f ground_albedo) {
     auto wSun = vec3f{0, cos(thetaSun), sin(thetaSun)};
 
     // sunSpectralRad =  ComputeAttenuatedSunlight(thetaS, turbidity);
@@ -757,7 +756,7 @@ std::vector<vec4f> make_sunsky_image(int width, int height, float thetaSun,
 }
 
 // Make an image of multiple lights.
-std::vector<vec4f> make_lights_image(int width, int height, const vec3f& le,
+std::vector<vec4f> make_lights_image(int width, int height, vec3f le,
     int nlights, float langle, float lwidth, float lheight) {
     auto img = std::vector<vec4f>(width * height, {0, 0, 0});
     for (auto j = 0; j < height / 2; j++) {

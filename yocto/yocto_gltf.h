@@ -995,19 +995,19 @@ struct accessor_view {
     bool valid() const { return _valid; }
 
     // Get the idx-th element of fixed length width default values.
-    vec2f getv2f(int idx, const vec2f& def = {0, 0}) const {
+    vec2f getv2f(int idx, vec2f def = {0, 0}) const {
         auto v = def;
         for (auto i = 0; i < min(_ncomp, 2); i++) (&v.x)[i] = get(idx, i);
         return v;
     }
     // Get the idx-th element of fixed length width default values.
-    vec3f getv3f(int idx, const vec3f& def = {0, 0, 0}) const {
+    vec3f getv3f(int idx, vec3f def = {0, 0, 0}) const {
         auto v = def;
         for (auto i = 0; i < min(_ncomp, 3); i++) (&v.x)[i] = get(idx, i);
         return v;
     }
     // Get the idx-th element of fixed length width default values.
-    vec4f getv4f(int idx, const vec4f& def = {0, 0, 0, 0}) const {
+    vec4f getv4f(int idx, vec4f def = {0, 0, 0, 0}) const {
         auto v = def;
         for (auto i = 0; i < min(_ncomp, 4); i++) (&v.x)[i] = get(idx, i);
         return v;
@@ -1025,19 +1025,19 @@ struct accessor_view {
     float get(int idx, int c = 0) const;
 
     // Get the idx-th element as integer with fixed length.
-    vec2i getv2i(int idx, const vec2i& def = {0, 0}) const {
+    vec2i getv2i(int idx, vec2i def = {0, 0}) const {
         auto v = def;
         for (auto i = 0; i < min(_ncomp, 2); i++) { (&v.x)[i] = geti(idx, i); }
         return v;
     }
     // Get the idx-th element as integer with fixed length.
-    vec3i getv3i(int idx, const vec3i& def = {0, 0, 0}) const {
+    vec3i getv3i(int idx, vec3i def = {0, 0, 0}) const {
         auto v = def;
         for (auto i = 0; i < min(_ncomp, 3); i++) { (&v.x)[i] = geti(idx, i); }
         return v;
     }
     // Get the idx-th element as integer with fixed length.
-    vec4i getv4i(int idx, const vec4i& def = {0, 0, 0, 0}) const {
+    vec4i getv4i(int idx, vec4i def = {0, 0, 0, 0}) const {
         auto v = def;
         for (auto i = 0; i < min(_ncomp, 4); i++) { (&v.x)[i] = geti(idx, i); }
         return v;

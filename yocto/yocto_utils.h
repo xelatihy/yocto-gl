@@ -158,28 +158,28 @@ inline std::string format_value(const int& val) { return std::to_string(val); }
 inline std::string format_value(const uint64_t& val) {
     return std::to_string(val);
 }
-inline std::string format_value(const vec2i& val) {
+inline std::string format_value(vec2i val) {
     return std::to_string(val.x) + " " + std::to_string(val.y);
 }
-inline std::string format_value(const vec3i& val) {
+inline std::string format_value(vec3i val) {
     return std::to_string(val.x) + " " + std::to_string(val.y) + " " +
            std::to_string(val.z);
 }
-inline std::string format_value(const vec4i& val) {
+inline std::string format_value(vec4i val) {
     return std::to_string(val.x) + " " + std::to_string(val.y) + " " +
            std::to_string(val.z) + " " + std::to_string(val.w);
 }
 inline std::string format_value(const float& val) {
     return std::to_string(val);
 }
-inline std::string format_value(const vec2f& val) {
+inline std::string format_value(vec2f val) {
     return std::to_string(val.x) + " " + std::to_string(val.y);
 }
-inline std::string format_value(const vec3f& val) {
+inline std::string format_value(vec3f val) {
     return std::to_string(val.x) + " " + std::to_string(val.y) + " " +
            std::to_string(val.z);
 }
-inline std::string format_value(const vec4f& val) {
+inline std::string format_value(vec4f val) {
     return std::to_string(val.x) + " " + std::to_string(val.y) + " " +
            std::to_string(val.z) + " " + std::to_string(val.w);
 }

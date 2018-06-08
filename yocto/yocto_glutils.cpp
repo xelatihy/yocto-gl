@@ -68,7 +68,7 @@ bool check_glerror(bool print) {
 }
 
 // Clear window
-void clear_glbuffers(const vec4f& background) {
+void clear_glbuffers(vec4f background) {
     assert(check_glerror());
     glClearColor(background.x, background.y, background.z, background.w);
     glClearDepth(1);
@@ -142,7 +142,7 @@ void set_glviewport(int x, int y, int w, int h) {
 }
 
 // Set viewport
-void set_glviewport(const vec2i& v) {
+void set_glviewport(vec2i v) {
     assert(check_glerror());
     glViewport(0, 0, v.x, v.y);
     assert(check_glerror());
@@ -443,15 +443,15 @@ void set_gluniform(const glprogram& prog, int pos, float val) {
     if (pos < 0) throw std::runtime_error("bad OpenGL id");
     glUniform1f(pos, val);
 }
-void set_gluniform(const glprogram& prog, int pos, const vec2f& val) {
+void set_gluniform(const glprogram& prog, int pos, vec2f val) {
     if (pos < 0) throw std::runtime_error("bad OpenGL id");
     glUniform2f(pos, val.x, val.y);
 }
-void set_gluniform(const glprogram& prog, int pos, const vec3f& val) {
+void set_gluniform(const glprogram& prog, int pos, vec3f val) {
     if (pos < 0) throw std::runtime_error("bad OpenGL id");
     glUniform3f(pos, val.x, val.y, val.z);
 }
-void set_gluniform(const glprogram& prog, int pos, const vec4f& val) {
+void set_gluniform(const glprogram& prog, int pos, vec4f val) {
     if (pos < 0) throw std::runtime_error("bad OpenGL id");
     glUniform4f(pos, val.x, val.y, val.z, val.w);
 }
@@ -553,8 +553,8 @@ void set_glattribute(
     assert(check_glerror());
 }
 // Sets a vartex attribute for program pid and variable var.
-void set_glattribute(const glprogram& prog, int pos, const glvertex_buffer& buf,
-    const vec2f& def) {
+void set_glattribute(
+    const glprogram& prog, int pos, const glvertex_buffer& buf, vec2f def) {
     assert(check_glerror());
     if (pos < 0) throw std::runtime_error("bad OpenGL id");
     if (is_glbuffer_valid(buf)) {
@@ -568,8 +568,8 @@ void set_glattribute(const glprogram& prog, int pos, const glvertex_buffer& buf,
     assert(check_glerror());
 }
 // Sets a vartex attribute for program pid and variable var.
-void set_glattribute(const glprogram& prog, int pos, const glvertex_buffer& buf,
-    const vec3f& def) {
+void set_glattribute(
+    const glprogram& prog, int pos, const glvertex_buffer& buf, vec3f def) {
     assert(check_glerror());
     if (pos < 0) throw std::runtime_error("bad OpenGL id");
     if (is_glbuffer_valid(buf)) {
@@ -583,8 +583,8 @@ void set_glattribute(const glprogram& prog, int pos, const glvertex_buffer& buf,
     assert(check_glerror());
 }
 // Sets a vartex attribute for program pid and variable var.
-void set_glattribute(const glprogram& prog, int pos, const glvertex_buffer& buf,
-    const vec4f& def) {
+void set_glattribute(
+    const glprogram& prog, int pos, const glvertex_buffer& buf, vec4f def) {
     assert(check_glerror());
     if (pos < 0) throw std::runtime_error("bad OpenGL id");
     if (is_glbuffer_valid(buf)) {
@@ -678,7 +678,7 @@ glimage_program make_glimage_program() {
 
 // Draws the stdimage program.
 void draw_glimage(const glimage_program& prog, const gltexture& txt,
-    const vec2i& win_size, const frame2f& frame, float exposure, float gamma) {
+    vec2i win_size, const frame2f& frame, float exposure, float gamma) {
     assert(is_gltexture_valid(txt));
 
     bind_glprogram(prog.prog);
@@ -1097,10 +1097,9 @@ glsurface_program make_glsurface_program() {
 // Starts a frame by setting exposure/gamma values, camera transforms
 // and projection. Sets also whether to use full shading or a quick
 // eyelight preview.
-void begin_glsurface_frame(const glsurface_program& prog,
-    const vec3f& camera_pos, const mat4f& camera_xform_inv,
-    const mat4f& camera_proj, bool shade_eyelight, float exposure,
-    float gamma) {
+void begin_glsurface_frame(const glsurface_program& prog, vec3f camera_pos,
+    const mat4f& camera_xform_inv, const mat4f& camera_proj,
+    bool shade_eyelight, float exposure, float gamma) {
     assert(check_glerror());
     bind_glprogram(prog.prog);
     set_gluniform(prog.prog, prog.cam_pos_id, camera_pos);
@@ -1124,7 +1123,7 @@ void end_glsurface_frame(const glsurface_program& prog) {
 
 // Set num lights with position pos, color ke, type ltype. Also set the
 // ambient illumination amb.
-void set_glsurface_lights(const glsurface_program& prog, const vec3f& amb,
+void set_glsurface_lights(const glsurface_program& prog, vec3f amb,
     const std::vector<vec3f>& lights_pos, const std::vector<vec3f>& lights_ke,
     const std::vector<int>& lights_type) {
     assert(check_glerror());
@@ -1163,8 +1162,7 @@ void set_glsurface_normaloffset(
 }
 
 // Set the object as highlighted.
-void set_glsurface_highlight(
-    const glsurface_program& prog, const vec4f& highlight) {
+void set_glsurface_highlight(const glsurface_program& prog, vec4f highlight) {
     assert(check_glerror());
     set_gluniform(prog.prog, prog.highlight_id, highlight);
     assert(check_glerror());
@@ -1175,12 +1173,12 @@ void set_glsurface_highlight(
 // correspoinding XXX_txt variables. Sets also normal and occlusion
 // maps. Works for points/lines/triangles (diffuse for points,
 // Kajiya-Kay for lines, GGX/Phong for triangles).
-void set_glsurface_material(const glsurface_program& prog, const vec3f& ke,
-    const vec3f& kd, const vec3f& ks, float rs, float op,
-    const gltexture_info& ke_txt, const gltexture_info& kd_txt,
-    const gltexture_info& ks_txt, const gltexture_info& rs_txt,
-    const gltexture_info& op_txt, const gltexture_info& norm_txt,
-    bool double_sided, bool base_metallic, bool gltf_textures) {
+void set_glsurface_material(const glsurface_program& prog, vec3f ke, vec3f kd,
+    vec3f ks, float rs, float op, const gltexture_info& ke_txt,
+    const gltexture_info& kd_txt, const gltexture_info& ks_txt,
+    const gltexture_info& rs_txt, const gltexture_info& op_txt,
+    const gltexture_info& norm_txt, bool double_sided, bool base_metallic,
+    bool gltf_textures) {
     assert(check_glerror());
     auto mtype = 1;
     if (gltf_textures) { mtype = (base_metallic) ? 2 : 3; }
@@ -1208,7 +1206,7 @@ void set_glsurface_material(const glsurface_program& prog, const vec3f& ke,
 
 // Set constant material values with emission ke.
 void set_glsurface_constmaterial(
-    const glsurface_program& prog, const vec3f& ke, float op) {
+    const glsurface_program& prog, vec3f ke, float op) {
     assert(check_glerror());
     set_gluniform(prog.prog, prog.mtype_id, 0);
     set_gluniform(prog.prog, prog.ke_id, ke);
@@ -1794,7 +1792,7 @@ void draw_glwidgets_tree_leaf(
 
 // Selectable tree leaf node
 void draw_glwidgets_tree_leaf(glwindow* win, const std::string& lbl,
-    void*& selection, void* content, const vec4f& col) {
+    void*& selection, void* content, vec4f col) {
     ImGui::PushStyleColor(ImGuiCol_Text, {col.x, col.y, col.z, col.w});
     draw_glwidgets_tree_leaf(win, lbl, selection, content);
     ImGui::PopStyleColor();
@@ -1860,8 +1858,7 @@ void clear_glwidgets_log(glwindow* win) {
 }
 
 // Image widget
-void draw_glwidgets_imagebox(
-    glwindow* win, int tid, const vec2i& size, const vec2i& imsize) {
+void draw_glwidgets_imagebox(glwindow* win, int tid, vec2i size, vec2i imsize) {
     auto w = ImGui::GetContentRegionAvailWidth();
     auto s = vec2f{(float)size.x, (float)size.y};
     auto a = (float)imsize.x / (float)imsize.y;
@@ -1888,8 +1885,7 @@ void draw_glwidgets_imagebox(
 }
 
 // Image widget
-void draw_glwidgets_imagebox(
-    glwindow* win, const gltexture& txt, const vec2i& size) {
+void draw_glwidgets_imagebox(glwindow* win, const gltexture& txt, vec2i size) {
     draw_glwidgets_imagebox(
         win, get_gltexture_id(txt), size, {txt.width, txt.height});
 }
@@ -1920,7 +1916,7 @@ void push_glwidgets_groupid(glwindow* win, const char* gid) {
 void pop_glwidgets_groupid(glwindow* win) { ImGui::PopID(); }
 
 // Widget style
-void push_glwidgets_style(glwindow* win, const vec4f& col) {
+void push_glwidgets_style(glwindow* win, vec4f col) {
     ImGui::PushStyleColor(ImGuiCol_Text, {col.x, col.y, col.z, col.w});
 }
 

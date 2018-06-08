@@ -319,7 +319,7 @@ int main(int argc, char* argv[]) {
     if (!highlight_filename.empty()) {
         try {
             app->inspector_highlights = load_ini(highlight_filename).at("");
-        } catch (std::exception e) {
+        } catch (const std::exception& e) {
             ygl::log_fatal("cannot load highlihgt file {}", highlight_filename);
         }
     }
@@ -328,7 +328,8 @@ int main(int argc, char* argv[]) {
     try {
         ygl::log_info("loading scene {}", app->filename);
         app->scn = ygl::load_scene(app->filename);
-    } catch (std::exception e) {
+    } catch (const std::exception& e) {
+        ygl::log_error("error during scene loading: "s + e.what());
         ygl::log_fatal("cannot load scene {}", app->filename);
     }
 

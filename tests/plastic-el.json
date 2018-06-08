@@ -1,0 +1,112 @@
+{
+    "name": "plastic-el",
+    "cameras": [
+        {
+            "name": "cam",
+            "!!from": [
+                0,
+                5,
+                14
+            ],
+            "!!to": [
+                0,
+                1,
+                0
+            ],
+            "height": 0.015,
+            "width": 0.036,
+            "focal": 0.06,
+            "aperture": 0.0
+        }
+    ],
+    "instances": [
+        {
+            "name": "floor",
+            "shp": {
+                "name": "floor",
+                "!!type": "floor"
+            },
+            "mat": {
+                "name": "floor",
+                "kd": [
+                    0.7,
+                    0.7,
+                    0.7
+                ],
+                "kd_txt": {
+                    "name": "floor",
+                    "path": "textures/floor.png",
+                    "!!type": "grid"
+                }
+            }
+        },
+        {
+            "name": "obj1",
+            "!!translation": [
+                -2.5,
+                1,
+                0
+            ],
+            "shp": {
+                "name": "obj1",
+                "path": "meshes/obj1.ply",
+                "!!type": "matball"
+            },
+            "mat": {
+                "name": "obj1",
+                "kd": [0.7, 0.5, 0.5],
+                "ks": [0.04, 0.04, 0.04],
+                "rs": 0.1
+            }
+        },
+        {
+            "name": "obj2",
+            "!!translation": [
+                0,
+                1,
+                0
+            ],
+            "shp": {
+                "name": "obj2",
+                "path": "meshes/obj2.ply",
+                "!!type": "matball"
+            },
+            "mat": {
+                "name": "obj2",
+                "kd": [0.5, 0.7, 0.5],
+                "ks": [0.04, 0.04, 0.04],
+                "rs": 0.05
+            }
+        },
+        {
+            "name": "obj3",
+            "!!translation": [
+                2.5,
+                1,
+                0
+            ],
+            "shp": {
+                "name": "obj3",
+                "path": "meshes/obj3.ply",
+                "!!type": "matball"
+            },
+            "mat": {
+                "name": "obj3",
+                "kd": [0.5, 0.5, 0.7],
+                "ks": [0.04, 0.04, 0.04],
+                "rs": 0.01
+            }
+        }
+    ],
+    "environments": [
+        {
+            "name": "env",
+            "ke": [1,1,1],
+            "ke_txt": {
+                "name": "sky",
+                "path": "textures/sky.hdr",
+                "!!type": "sky"
+            }
+        }
+    ]
+}
