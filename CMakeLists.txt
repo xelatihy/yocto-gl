@@ -81,12 +81,10 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(yocto_gl Threads::Threads)
 endif(UNIX AND NOT APPLE)
 
-add_executable(ytestgen apps/ytestgen.cpp)
 add_executable(ytrace apps/ytrace.cpp)
 add_executable(yscnproc apps/yscnproc.cpp)
 add_executable(yimproc apps/yimproc.cpp)
 
-target_link_libraries(ytestgen yocto_gl)
 target_link_libraries(ytrace yocto_gl)
 target_link_libraries(yscnproc yocto_gl)
 target_link_libraries(yimproc yocto_gl)

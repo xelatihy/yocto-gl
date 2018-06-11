@@ -12,15 +12,7 @@ Please consider this to be just development notes and not any real planning.
 ## Reduce internal code
 
 - remove testgen
-    - create json files in basic directory
-        - materials
-            - animated
-            - instances
-    - assign somehow paths
-    - maybe consider adding json inside all object? (I'd rather not do it)
     - create internal and external CornellBox data without proc
-    - use yscnproc to convert to the prior formats
-    - remove testgen
     - remove test generation
 - image4f / image4b
 - normal map problem
@@ -30,13 +22,19 @@ Please consider this to be just development notes and not any real planning.
 - filesystem
 - [sadly] iostreams
 
+## Refactor
+
+- use images
+- use shared_ptr
+
 ## Recornsider
 
 - OpenGL flips texture coordinates
 
 ## Bugs
 
-- animation seems bogus
+- animated rotation seems bogus
+- obj output seems busted
 
 ## giacomo
 

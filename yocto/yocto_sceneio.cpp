@@ -61,7 +61,7 @@ scene* load_scene(
     for (auto ist : scn->instances) {
         if (ist->mat) continue;
         if (!mat) {
-            mat = make_matte_material("<default>", {0.2f, 0.2f, 0.2f});
+            mat = make_material("<default>", {0.2f, 0.2f, 0.2f});
             scn->materials.push_back(mat);
         }
         ist->mat = mat;
@@ -1835,7 +1835,7 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
     for (auto ist : scn->instances) {
         if (ist->mat) continue;
         if (!mat) {
-            mat = make_matte_material("<default>", {0.2f, 0.2f, 0.2f});
+            mat = make_material("<default>", {0.2f, 0.2f, 0.2f});
             scn->materials.push_back(mat);
         }
         ist->mat = mat;
@@ -2659,7 +2659,7 @@ scene* load_gltf_scene(
     for (auto ist : scn->instances) {
         if (ist->mat) continue;
         if (!mat) {
-            mat = make_matte_material("<default>", {0.2f, 0.2f, 0.2f});
+            mat = make_material("<default>", {0.2f, 0.2f, 0.2f});
             scn->materials.push_back(mat);
         }
         ist->mat = mat;

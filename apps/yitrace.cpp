@@ -28,6 +28,7 @@
 
 #include "../yocto/yocto_bvh.h"
 #include "../yocto/yocto_glutils.h"
+#include "../yocto/yocto_image.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
@@ -360,8 +361,9 @@ int main(int argc, char* argv[]) {
     // add components
     ygl::log_info("adding scene elements");
     if (add_skyenv && app->scn->environments.empty()) {
-        app->scn->environments.push_back(ygl::make_environment(
-            "sky", {1, 1, 1}, ygl::make_sky_texture("sky")));
+        app->scn->environments.push_back(ygl::make_environment("sky", {1, 1, 1},
+            ygl::make_texture("sky", "sky.exr", 1024, 512,
+                ygl::make_sunsky_image(1024, 512, ygl::pi / 4))));
         app->scn->textures.push_back(app->scn->environments.back()->ke_txt);
     }
     if (double_sided) {

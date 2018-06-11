@@ -315,6 +315,7 @@ void make_fvcube(std::vector<vec4i>& quads_pos, std::vector<vec3f>& pos,
     std::vector<vec4i>& quads_texcoord, std::vector<vec2f>& texcoord,
     vec3i steps, vec3f size, vec3f uvsize);
 void make_suzanne(std::vector<vec4i>& quads, std::vector<vec3f>& pos);
+void make_cube(std::vector<vec4i>& quads, std::vector<vec3f>& pos);
 
 // Generate lines set along a quad.
 void make_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,

@@ -112,8 +112,9 @@ int main(int argc, char* argv[]) {
     // add components
     ygl::log_info("adding scene elements");
     if (add_skyenv && scn->environments.empty()) {
-        scn->environments.push_back(ygl::make_environment(
-            "sky", {1, 1, 1}, ygl::make_sky_texture("sky")));
+        scn->environments.push_back(ygl::make_environment("sky", {1, 1, 1},
+            ygl::make_texture("sky", "sky.exr", 1024, 512,
+                ygl::make_sunsky_image(1024, 512, ygl::pi / 4))));
         scn->textures.push_back(scn->environments.back()->ke_txt);
     }
     if (double_sided) {
