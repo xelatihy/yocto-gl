@@ -71,6 +71,7 @@
 #include "yocto_image.h"
 #include "yocto_math.h"
 
+#include <functional>
 #include <map>
 #include <string>
 #include <vector>
@@ -482,14 +483,10 @@ struct GLFWwindow;
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Forward declaration
-struct glwindow;
-
 // Callbacks.
-using text_glcallback = void (*)(glwindow* win, unsigned int key);
-using mouse_glcallback = void (*)(
-    glwindow* win, int button, bool press, int mods);
-using refresh_glcallback = void (*)(glwindow* win);
+using text_glcallback = std::function<void(unsigned int key)>;
+using mouse_glcallback = std::function<void(int button, bool press, int mods)>;
+using refresh_glcallback = std::function<void()>;
 
 // default widgets width
 const int default_glwidgets_width = 320;
@@ -502,47 +499,47 @@ struct glwindow {
     text_glcallback text_cb = nullptr;            // text callback
     mouse_glcallback mouse_cb = nullptr;          // mouse callback
     refresh_glcallback refresh_cb = nullptr;      // refresh callback
-    void* user_ptr = nullptr;                     // user pointer
 
     ~glwindow();  // cleaup
 };
 
 // Initialize a window.
-glwindow* make_glwindow(int width, int height, const std::string& title,
-    void* user_pointer, bool opengl4 = true);
+std::shared_ptr<glwindow> make_glwindow(
+    int width, int height, const std::string& title, bool opengl4 = true);
 // Set window callbacks.
-void set_glwindow_callbacks(glwindow* win, text_glcallback text_cb,
-    mouse_glcallback mouse_cb, refresh_glcallback refresh_cb);
-// Grab user pointer
-void* get_glwindow_user_pointer(glwindow* win);
+void set_glwindow_callbacks(const std::shared_ptr<glwindow>& win,
+    text_glcallback text_cb, mouse_glcallback mouse_cb,
+    refresh_glcallback refresh_cb);
 
 // Set window title.
-void set_glwindow_title(glwindow* win, const std::string& title);
+void set_glwindow_title(
+    const std::shared_ptr<glwindow>& win, const std::string& title);
 
 // Event processing.
-void wait_glwindow_events(glwindow* win);
-void poll_glwindow_events(glwindow* win);
-void swap_glwindow_buffers(glwindow* win);
+void wait_glwindow_events(const std::shared_ptr<glwindow>& win);
+void poll_glwindow_events(const std::shared_ptr<glwindow>& win);
+void swap_glwindow_buffers(const std::shared_ptr<glwindow>& win);
 // Whether the window should exit the event processing loop.
-bool should_glwindow_close(glwindow* win);
+bool should_glwindow_close(const std::shared_ptr<glwindow>& win);
 
 // Window/framebuffer size.
-vec2i get_glwindow_size(glwindow* win, bool adjust_glwidgets = true);
+vec2i get_glwindow_size(
+    const std::shared_ptr<glwindow>& win, bool adjust_glwidgets = true);
 vec2i get_glwindow_framebuffer_size(
-    glwindow* win, bool adjust_glwidgets = true);
+    const std::shared_ptr<glwindow>& win, bool adjust_glwidgets = true);
 
 // Mouse/keyboard state queries.
-int get_glwindow_mouse_button(glwindow* win);
-vec2i get_glwidnow_mouse_pos(glwindow* win);
-vec2f get_glwidnow_mouse_posf(glwindow* win);
-bool get_glwindow_glkey(glwindow* win, int key);
-bool get_glwindow_alt_key(glwindow* win);
-bool get_glwindow_ctrl_key(glwindow* win);
-bool get_glwindow_shift_key(glwindow* win);
+int get_glwindow_mouse_button(const std::shared_ptr<glwindow>& win);
+vec2i get_glwidnow_mouse_pos(const std::shared_ptr<glwindow>& win);
+vec2f get_glwidnow_mouse_posf(const std::shared_ptr<glwindow>& win);
+bool get_glwindow_glkey(const std::shared_ptr<glwindow>& win, int key);
+bool get_glwindow_alt_key(const std::shared_ptr<glwindow>& win);
+bool get_glwindow_ctrl_key(const std::shared_ptr<glwindow>& win);
+bool get_glwindow_shift_key(const std::shared_ptr<glwindow>& win);
 
 // Read pixels.
 image4f take_glwindow_screenshot(
-    glwindow* win, bool flipy = true, bool back = false);
+    const std::shared_ptr<glwindow>& win, bool flipy = true, bool back = false);
 
 }  // namespace ygl
 
@@ -552,150 +549,183 @@ image4f take_glwindow_screenshot(
 namespace ygl {
 
 // Initialize widgets.
-void init_glwidgets(glwindow* win, int widgets_width = default_glwidgets_width,
-    bool light_style = true, bool extra_font = true);
+void init_glwidgets(const std::shared_ptr<glwindow>& win,
+    int widgets_width = default_glwidgets_width, bool light_style = true,
+    bool extra_font = true);
 
 // Begin/end draw widgets.
-bool begin_glwidgets_frame(glwindow* win, const std::string& title);
-void end_glwidgets_frame(glwindow* win);
+bool begin_glwidgets_frame(
+    const std::shared_ptr<glwindow>& win, const std::string& title);
+void end_glwidgets_frame(const std::shared_ptr<glwindow>& win);
 
 // Whether widgets are active.
-bool get_glwidgets_active(glwindow* win);
+bool get_glwidgets_active(const std::shared_ptr<glwindow>& win);
 
 // Horizontal separator.
-void draw_glwidgets_separator(glwindow* win);
+void draw_glwidgets_separator(const std::shared_ptr<glwindow>& win);
 
 // Indent and line continuation widget.
-void begin_glwidgets_indent(glwindow* win);
-void end_glwidgets_indent(glwindow* win);
-void continue_glwidgets_line(glwindow* win);
+void begin_glwidgets_indent(const std::shared_ptr<glwindow>& win);
+void end_glwidgets_indent(const std::shared_ptr<glwindow>& win);
+void continue_glwidgets_line(const std::shared_ptr<glwindow>& win);
 
 // Label widget.
-void draw_glwidgets_label(
-    glwindow* win, const std::string& lbl, const std::string& msg);
+void draw_glwidgets_label(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, const std::string& msg);
 
 // Checkbox widget
-bool draw_glwidgets_checkbox(glwindow* win, const std::string& lbl, bool& val);
+bool draw_glwidgets_checkbox(
+    const std::shared_ptr<glwindow>& win, const std::string& lbl, bool& val);
 // Text widget.
-bool draw_glwidgets_text(
-    glwindow* win, const std::string& lbl, std::string& str);
-bool draw_glwidgets_multiline_text(
-    glwindow* win, const std::string& lbl, std::string& str);
+bool draw_glwidgets_text(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, std::string& str);
+bool draw_glwidgets_multiline_text(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, std::string& str);
 
 // Drag widget scale (defaults to 1/100).
 void draw_drag_speedscale(float scale);
 // Drag widget.
-bool draw_glwidgets_dragbox(
-    glwindow* win, const std::string& lbl, int& val, int min = 0, int max = 1);
-bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, vec2i& val,
-    int min = 0, int max = 1);
-bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, vec3i& val,
-    int min = 0, int max = 1);
-bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, vec4i& val,
-    int min = 0, int max = 1);
-bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, float& val,
-    float min = 0, float max = 1);
-bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, vec2f& val,
-    float min = 0, float max = 1);
-bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, vec3f& val,
-    float min = 0, float max = 1);
-bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, vec4f& val,
-    float min = 0, float max = 1);
-bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, mat4f& val,
-    float min = -1, float max = 1);
-bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, frame3f& val,
-    float min = -10, float max = 10);
-bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, bbox1f& val,
-    float min = -10, float max = 10);
-bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, bbox2f& val,
-    float min = -10, float max = 10);
-bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, bbox3f& val,
-    float min = -10, float max = 10);
-bool draw_glwidgets_dragbox(glwindow* win, const std::string& lbl, bbox4f& val,
-    float min = -10, float max = 10);
+bool draw_glwidgets_dragbox(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, int& val, int min = 0, int max = 1);
+bool draw_glwidgets_dragbox(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, vec2i& val, int min = 0, int max = 1);
+bool draw_glwidgets_dragbox(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, vec3i& val, int min = 0, int max = 1);
+bool draw_glwidgets_dragbox(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, vec4i& val, int min = 0, int max = 1);
+bool draw_glwidgets_dragbox(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, float& val, float min = 0, float max = 1);
+bool draw_glwidgets_dragbox(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, vec2f& val, float min = 0, float max = 1);
+bool draw_glwidgets_dragbox(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, vec3f& val, float min = 0, float max = 1);
+bool draw_glwidgets_dragbox(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, vec4f& val, float min = 0, float max = 1);
+bool draw_glwidgets_dragbox(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, mat4f& val, float min = -1, float max = 1);
+bool draw_glwidgets_dragbox(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, frame3f& val, float min = -10, float max = 10);
+bool draw_glwidgets_dragbox(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, bbox1f& val, float min = -10, float max = 10);
+bool draw_glwidgets_dragbox(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, bbox2f& val, float min = -10, float max = 10);
+bool draw_glwidgets_dragbox(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, bbox3f& val, float min = -10, float max = 10);
+bool draw_glwidgets_dragbox(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, bbox4f& val, float min = -10, float max = 10);
 
 // Color widget.
-bool draw_glwidgets_colorbox(glwindow* win, const std::string& lbl, vec4f& val);
-bool draw_glwidgets_colorbox(glwindow* win, const std::string& lbl, vec3f& val);
-bool draw_hdr_color_widget(
-    glwindow* win, const std::string& lbl, vec3f& val, float max = 10);
+bool draw_glwidgets_colorbox(
+    const std::shared_ptr<glwindow>& win, const std::string& lbl, vec4f& val);
+bool draw_glwidgets_colorbox(
+    const std::shared_ptr<glwindow>& win, const std::string& lbl, vec3f& val);
+bool draw_hdr_color_widget(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, vec3f& val, float max = 10);
 
 // Combo widget.
-bool begin_glwidgets_combobox(
-    glwindow* win, const std::string& lbl, const std::string& label);
-bool draw_glwidgets_item(
-    glwindow* win, const std::string& label, int idx, bool selected);
-void end_glwidgets_combobox(glwindow* win);
+bool begin_glwidgets_combobox(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, const std::string& label);
+bool draw_glwidgets_item(const std::shared_ptr<glwindow>& win,
+    const std::string& label, int idx, bool selected);
+void end_glwidgets_combobox(const std::shared_ptr<glwindow>& win);
 
 // Combo widgets for lists and enums
-inline bool draw_glwidgets_combobox(glwindow* win, const std::string& lbl,
-    std::string& val, const std::vector<std::string>& labels);
+inline bool draw_glwidgets_combobox(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, std::string& val,
+    const std::vector<std::string>& labels);
 template <typename T>
-inline bool draw_glwidgets_combobox(glwindow* win, const std::string& lbl,
-    T& val, const std::map<T, std::string>& labels);
+inline bool draw_glwidgets_combobox(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, T& val, const std::map<T, std::string>& labels);
 template <typename T>
-inline bool draw_glwidgets_combobox(glwindow* win, const std::string& lbl,
-    T*& val, const std::vector<T*>& vals, bool include_null = false);
+inline bool draw_glwidgets_combobox(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, T*& val, const std::vector<T*>& vals,
+    bool include_null = false);
+template <typename T>
+inline bool draw_glwidgets_combobox(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, std::shared_ptr<T>& val,
+    const std::vector<std::shared_ptr<T>>& vals, bool include_null = false);
 
 // Button widget.
-bool draw_glwidgets_button(glwindow* win, const std::string& lbl);
+bool draw_glwidgets_button(
+    const std::shared_ptr<glwindow>& win, const std::string& lbl);
 
 // Collapsible header widget.
-bool draw_glwidgets_header(glwindow* win, const std::string& lbl);
+bool draw_glwidgets_header(
+    const std::shared_ptr<glwindow>& win, const std::string& lbl);
 
 // Tree widget.
-bool begin_glwidgets_tree(glwindow* win, const std::string& lbl);
-void end_glwidgets_tree(glwindow* win);
 bool begin_glwidgets_tree(
-    glwindow* win, const std::string& lbl, void*& selection, void* content);
+    const std::shared_ptr<glwindow>& win, const std::string& lbl);
+void end_glwidgets_tree(const std::shared_ptr<glwindow>& win);
+bool begin_glwidgets_tree(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, void*& selection, void* content);
 template <typename T>
-inline bool begin_glwidgets_tree(
-    glwindow* win, const std::string& lbl, T*& selection, T* content) {
+inline bool begin_glwidgets_tree(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, T*& selection, T* content) {
     auto sel = selection;
     auto open = begin_glwidgets_tree(win, lbl, (void*&)sel, (void*)content);
     if (sel == content) selection = content;
     return open;
 }
-void end_glwidgets_tree(glwindow* win, void* content);
-void draw_glwidgets_tree_leaf(
-    glwindow* win, const std::string& lbl, void*& selection, void* content);
 template <typename T>
-inline void draw_glwidgets_tree_leaf(
-    glwindow* win, const std::string& lbl, void*& selection, T* content) {
+inline bool begin_glwidgets_tree(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, std::shared_ptr<T>& selection,
+    const std::shared_ptr<T>& content) {
+    auto sel = selection.get();
+    auto open =
+        begin_glwidgets_tree(win, lbl, (void*&)sel, (void*)content.get());
+    if (sel == content.get()) selection = content;
+    return open;
+}
+void end_glwidgets_tree(const std::shared_ptr<glwindow>& win, void* content);
+void draw_glwidgets_tree_leaf(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, void*& selection, void* content);
+template <typename T>
+inline void draw_glwidgets_tree_leaf(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, void*& selection, T* content) {
     auto sel = selection;
     draw_glwidgets_tree_leaf(win, lbl, sel, content);
     if (sel == content) selection = content;
 }
-void draw_glwidgets_tree_leaf(glwindow* win, const std::string& lbl,
-    void*& selection, void* content, vec4f col);
+void draw_glwidgets_tree_leaf(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, void*& selection, void* content, vec4f col);
 
 // Log widget (internally uses global state, so you can only have one).
-void draw_glwidgets_log(glwindow* win, int height);
+void draw_glwidgets_log(const std::shared_ptr<glwindow>& win, int height);
 void log_glwidgets_msg(
     const std::string& time, const std::string& tag, const std::string& msg);
 void log_glwidgets_msg(const char* time, const char* tag, const char* msg);
-void clear_glwidgets_log(glwindow* win);
+void clear_glwidgets_log(const std::shared_ptr<glwindow>& win);
 
 // Image widget.
-void draw_glwidgets_imagebox(glwindow* win, int tid, vec2i size, vec2i imsize);
-void draw_glwidgets_imagebox(glwindow* win, gltexture& txt, vec2i size);
+void draw_glwidgets_imagebox(
+    const std::shared_ptr<glwindow>& win, int tid, vec2i size, vec2i imsize);
+void draw_glwidgets_imagebox(
+    const std::shared_ptr<glwindow>& win, gltexture& txt, vec2i size);
 
 // Scroll region widget.
-void begin_glwidgets_scrollarea(
-    glwindow* win, const std::string& lbl, int height, bool border);
-void end_glwidgets_scrollarea(glwindow* win);
-void move_glwidgets_scrollarea(glwindow* win);
+void begin_glwidgets_scrollarea(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, int height, bool border);
+void end_glwidgets_scrollarea(const std::shared_ptr<glwindow>& win);
+void move_glwidgets_scrollarea(const std::shared_ptr<glwindow>& win);
 
 // Group ids widget.
-void push_glwidgets_groupid(glwindow* win, int gid);
-void push_glwidgets_groupid(glwindow* win, void* gid);
-void push_glwidgets_groupid(glwindow* win, const void* gid);
-void push_glwidgets_groupid(glwindow* win, const char* gid);
-void pop_glwidgets_groupid(glwindow* win);
+void push_glwidgets_groupid(const std::shared_ptr<glwindow>& win, int gid);
+void push_glwidgets_groupid(const std::shared_ptr<glwindow>& win, void* gid);
+void push_glwidgets_groupid(
+    const std::shared_ptr<glwindow>& win, const void* gid);
+void push_glwidgets_groupid(
+    const std::shared_ptr<glwindow>& win, const char* gid);
+void pop_glwidgets_groupid(const std::shared_ptr<glwindow>& win);
+template <typename T>
+inline void push_glwidgets_groupid(
+    const std::shared_ptr<glwindow>& win, const std::shared_ptr<T>& gid) {
+    push_glwidgets_groupid(win, gid.get());
+}
 
 // Widget style.
-void push_glwidgets_style(glwindow* win, vec4f color);
-void pop_glwidgets_style(glwindow* win);
+void push_glwidgets_style(const std::shared_ptr<glwindow>& win, vec4f color);
+void pop_glwidgets_style(const std::shared_ptr<glwindow>& win);
 
 }  // namespace ygl
 
@@ -705,8 +735,9 @@ void pop_glwidgets_style(glwindow* win);
 namespace ygl {
 
 // Combo widget.
-inline bool draw_glwidgets_combobox(glwindow* win, const std::string& lbl,
-    std::string& val, const std::vector<std::string>& labels) {
+inline bool draw_glwidgets_combobox(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, std::string& val,
+    const std::vector<std::string>& labels) {
     if (!begin_glwidgets_combobox(win, lbl, val)) return false;
     auto old_val = val;
     for (auto i = 0; i < labels.size(); i++) {
@@ -719,8 +750,8 @@ inline bool draw_glwidgets_combobox(glwindow* win, const std::string& lbl,
 
 // Combo widget.
 template <typename T>
-inline bool draw_glwidgets_combobox(glwindow* win, const std::string& lbl,
-    T& val, const std::map<T, std::string>& labels) {
+inline bool draw_glwidgets_combobox(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, T& val, const std::map<T, std::string>& labels) {
     if (!begin_glwidgets_combobox(win, lbl, labels.at(val))) return false;
     auto old_val = val;
     auto lid = 0;
@@ -734,8 +765,29 @@ inline bool draw_glwidgets_combobox(glwindow* win, const std::string& lbl,
 
 // Combo widget
 template <typename T>
-inline bool draw_glwidgets_combobox(glwindow* win, const std::string& lbl,
-    T*& val, const std::vector<T*>& vals, bool include_null) {
+inline bool draw_glwidgets_combobox(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, T*& val, const std::vector<T*>& vals,
+    bool include_null) {
+    if (!begin_glwidgets_combobox(win, lbl, (val) ? val->name : "<none>"))
+        return false;
+    auto old_val = val;
+    if (include_null) {
+        if (draw_glwidgets_item(win, "<none>", -1, val == nullptr))
+            val = nullptr;
+    }
+    for (auto i = 0; i < vals.size(); i++) {
+        if (draw_glwidgets_item(win, vals[i]->name, i, val == vals[i]))
+            val = vals[i];
+    }
+    end_glwidgets_combobox(win);
+    return val != old_val;
+}
+
+// Combo widget
+template <typename T>
+inline bool draw_glwidgets_combobox(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, std::shared_ptr<T>& val,
+    const std::vector<std::shared_ptr<T>>& vals, bool include_null) {
     if (!begin_glwidgets_combobox(win, lbl, (val) ? val->name : "<none>"))
         return false;
     auto old_val = val;

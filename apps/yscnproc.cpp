@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
     }
 
     // load obj
-    auto scn = (ygl::scene*)nullptr;
+    auto scn = (std::shared_ptr<ygl::scene>)nullptr;
     try {
         scn = ygl::load_scene(filename, !notextures);
 

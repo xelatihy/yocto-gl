@@ -61,7 +61,7 @@ struct glshape {
     glvertex_buffer edges;      // edge elements
 };
 
-void update_gldata(texture* txt) {
+void update_gldata(const std::shared_ptr<texture>& txt) {
     if (!txt->gl_data) txt->gl_data = new gltexture();
     auto& gtxt = *(gltexture*)txt->gl_data;
     if (!txt->img.pxl.empty()) {
@@ -69,7 +69,7 @@ void update_gldata(texture* txt) {
             true, true, false, false);
     }
 }
-void update_gldata(shape* shp) {
+void update_gldata(const std::shared_ptr<shape>& shp) {
     auto update_vert_buffer = [](auto& buf, const auto& vert) {
         if (vert.empty()) {
             clear_glbuffer(buf);
@@ -96,16 +96,16 @@ void update_gldata(shape* shp) {
     update_elem_buffer(gshp.triangles, shp->triangles);
     update_elem_buffer(gshp.edges, get_edges(shp->triangles));
 }
-void update_gldata(scene* scn) {
+void update_gldata(const std::shared_ptr<scene>& scn) {
     for (auto txt : scn->textures) update_gldata(txt);
     for (auto shp : scn->shapes) update_gldata(shp);
 }
-void clear_gldata(texture* txt) {
+void clear_gldata(const std::shared_ptr<texture>& txt) {
     if (!txt->gl_data) return;
     clear_gltexture(*(gltexture*)txt->gl_data);
     delete (gltexture*)txt->gl_data;
 }
-void clear_gldata(shape* shp) {
+void clear_gldata(const std::shared_ptr<shape>& shp) {
     if (!shp->gl_data) return;
     auto& gshp = *(glshape*)shp->gl_data;
     clear_glbuffer(gshp.pos);
@@ -121,24 +121,19 @@ void clear_gldata(shape* shp) {
     clear_glbuffer(gshp.edges);
     delete (glshape*)shp->gl_data;
 }
-void clear_gldata(scene* scn) {
+void clear_gldata(const std::shared_ptr<scene>& scn) {
     for (auto txt : scn->textures) clear_gldata(txt);
     for (auto shp : scn->shapes) clear_gldata(shp);
 }
 
 // Draw a shape
-void draw_glshape(const shape* shp, const material* mat, const mat4f& xform,
-    bool highlighted, const glsurface_program& prog, bool eyelight,
-    bool wireframe, bool edges) {
-    static auto default_material = material();
-    default_material.kd = {0.2f, 0.2f, 0.2f};
-
-    if (!mat) mat = &default_material;
-
+void draw_glshape(const std::shared_ptr<shape>& shp,
+    const std::shared_ptr<material>& mat, const mat4f& xform, bool highlighted,
+    const glsurface_program& prog, bool eyelight, bool wireframe, bool edges) {
     enable_glwireframe(wireframe);
     begin_glsurface_shape(prog, xform);
 
-    auto txt = [](const texture* txt) -> gltexture_info {
+    auto txt = [](const std::shared_ptr<texture>& txt) -> gltexture_info {
         auto ginfo = gltexture_info();
         if (!txt) return ginfo;
         ginfo.txt = *(gltexture*)txt->gl_data;
@@ -191,10 +186,10 @@ void draw_glshape(const shape* shp, const material* mat, const mat4f& xform,
 }
 
 // Display a scene
-void draw_glscene(const scene* scn, const camera* cam,
-    const glsurface_program& prog, const vec2i& viewport_size,
-    const void* highlighted, bool eyelight, bool wireframe, bool edges,
-    float exposure, float gamma) {
+void draw_glscene(const std::shared_ptr<scene>& scn,
+    const std::shared_ptr<camera>& cam, const glsurface_program& prog,
+    const vec2i& viewport_size, const std::shared_ptr<void>& highlighted,
+    bool eyelight, bool wireframe, bool edges, float exposure, float gamma) {
     // begin frame
     enable_gldepth_test(true);
     set_glviewport(viewport_size);
@@ -251,8 +246,9 @@ void draw_glscene(const scene* scn, const camera* cam,
     enable_glwireframe(false);
 }
 
-float handle_glcamera_turntable_dist(
-    glwindow* win, camera* cam, const scene* scn, const scene_selection& sel) {
+float handle_glcamera_turntable_dist(const std::shared_ptr<glwindow>& win,
+    const std::shared_ptr<camera>& cam, const std::shared_ptr<scene>& scn,
+    const scene_selection& sel) {
     static auto mouse_button_last = false;
     static auto mouse_dist_last = 0.0f;
     auto mouse_button = get_glwindow_mouse_button(win);
@@ -282,7 +278,8 @@ float handle_glcamera_turntable_dist(
 }
 
 // Handles camera navigation
-bool handle_glcamera_turntable(glwindow* win, camera* cam, float dist) {
+bool handle_glcamera_turntable(const std::shared_ptr<glwindow>& win,
+    const std::shared_ptr<camera>& cam, float dist) {
     static auto mouse_last = zero2f;
     auto mouse_pos = get_glwidnow_mouse_posf(win);
     auto mouse_button = get_glwindow_mouse_button(win);
@@ -320,7 +317,8 @@ bool handle_glcamera_turntable(glwindow* win, camera* cam, float dist) {
 }
 
 // Handles camera navigation
-bool handle_glcamera_fps(glwindow* win, camera* cam) {
+bool handle_glcamera_fps(
+    const std::shared_ptr<glwindow>& win, const std::shared_ptr<camera>& cam) {
     static auto mouse_last = zero2f;
     auto mouse_pos = get_glwidnow_mouse_posf(win);
     auto mouse_button = get_glwindow_mouse_button(win);
@@ -371,9 +369,9 @@ bool handle_glcamera_fps(glwindow* win, camera* cam) {
 }
 
 // Handle scene selection
-bool handle_glscene_selection(glwindow* win, const scene* scn,
-    const camera* cam, const vec2i& imsize, const frame2f& imframe,
-    scene_selection& sel) {
+bool handle_glscene_selection(const std::shared_ptr<glwindow>& win,
+    const std::shared_ptr<scene>& scn, const std::shared_ptr<camera>& cam,
+    const vec2i& imsize, const frame2f& imframe, scene_selection& sel) {
     auto mouse_pos = get_glwidnow_mouse_posf(win);
     auto mouse_button = get_glwindow_mouse_button(win);
     auto mouse_mods = get_glwindow_alt_key(win) || get_glwindow_ctrl_key(win) ||
@@ -392,8 +390,8 @@ bool handle_glscene_selection(glwindow* win, const scene* scn,
 }
 
 // Implementation of camera selection
-bool draw_glwidgets_camera_inspector(
-    glwindow* win, const std::string& lbl, camera* cam) {
+bool draw_glwidgets_camera_inspector(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, const std::shared_ptr<camera>& cam) {
     if (!cam) return false;
     auto edited = 0;
     edited += draw_glwidgets_text(win, lbl + " name", cam->name);
@@ -426,13 +424,13 @@ vec4f get_highlight_color(
 }
 
 template <typename T>
-void draw_scene_tree_glwidgets_rec(glwindow* win, const std::string& lbl_,
-    T* val, scene_selection& sel,
+void draw_scene_tree_glwidgets_rec(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl_, T* val, scene_selection& sel,
     const std::unordered_map<std::string, std::string>& highlights) {}
 
 template <typename T>
-void draw_glwidgets_scene_tree(glwindow* win, const std::string& lbl_, T* val,
-    scene_selection& sel,
+void draw_glwidgets_scene_tree(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl_, T* val, scene_selection& sel,
     const std::unordered_map<std::string, std::string>& highlights) {
     if (!val) return;
     auto lbl = val->name;
@@ -449,9 +447,37 @@ void draw_glwidgets_scene_tree(glwindow* win, const std::string& lbl_, T* val,
     }
 }
 
+template <typename T>
+void draw_scene_tree_glwidgets_rec(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl_, const std::shared_ptr<T>& val,
+    scene_selection& sel,
+    const std::unordered_map<std::string, std::string>& highlights) {}
+
+template <typename T>
+void draw_glwidgets_scene_tree(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl_, const std::shared_ptr<T>& val,
+    scene_selection& sel,
+    const std::unordered_map<std::string, std::string>& highlights) {
+    if (!val) return;
+    auto lbl = val->name;
+    if (!lbl_.empty()) lbl = lbl_ + ": " + val->name;
+    auto selection = sel.as<T>();
+    auto color = get_highlight_color(highlights, val->name);
+    if (color != zero4f) push_glwidgets_style(win, color);
+    auto open = begin_glwidgets_tree(win, lbl, selection, val);
+    if (selection == val) sel = {val};
+    if (color != zero4f) pop_glwidgets_style(win);
+    if (selection == val) sel = val;
+    if (open) {
+        draw_scene_tree_glwidgets_rec(win, lbl_, val, sel, highlights);
+        end_glwidgets_tree(win);
+    }
+}
+
 template <>
-void draw_scene_tree_glwidgets_rec<instance>(glwindow* win,
-    const std::string& lbl_, instance* val, scene_selection& sel,
+void draw_scene_tree_glwidgets_rec<instance>(
+    const std::shared_ptr<glwindow>& win, const std::string& lbl_,
+    const std::shared_ptr<instance>& val, scene_selection& sel,
     const std::unordered_map<std::string, std::string>& highlights) {
     draw_glwidgets_scene_tree(win, "shp", val->shp, sel, highlights);
     draw_glwidgets_scene_tree(win, "sbd", val->sbd, sel, highlights);
@@ -459,8 +485,9 @@ void draw_scene_tree_glwidgets_rec<instance>(glwindow* win,
 }
 
 template <>
-void draw_scene_tree_glwidgets_rec<material>(glwindow* win,
-    const std::string& lbl_, material* val, scene_selection& sel,
+void draw_scene_tree_glwidgets_rec<material>(
+    const std::shared_ptr<glwindow>& win, const std::string& lbl_,
+    const std::shared_ptr<material>& val, scene_selection& sel,
     const std::unordered_map<std::string, std::string>& highlights) {
     draw_glwidgets_scene_tree(win, "ke", val->ke_txt, sel, highlights);
     draw_glwidgets_scene_tree(win, "kd", val->kd_txt, sel, highlights);
@@ -470,14 +497,16 @@ void draw_scene_tree_glwidgets_rec<material>(glwindow* win,
     draw_glwidgets_scene_tree(win, "norm", val->norm_txt, sel, highlights);
 }
 template <>
-void draw_scene_tree_glwidgets_rec<environment>(glwindow* win,
-    const std::string& lbl_, environment* val, scene_selection& sel,
+void draw_scene_tree_glwidgets_rec<environment>(
+    const std::shared_ptr<glwindow>& win, const std::string& lbl_,
+    const std::shared_ptr<environment>& val, scene_selection& sel,
     const std::unordered_map<std::string, std::string>& highlights) {
     draw_glwidgets_scene_tree(win, "ke", val->ke_txt, sel, highlights);
 }
 template <>
-void draw_scene_tree_glwidgets_rec<node>(glwindow* win, const std::string& lbl_,
-    node* val, scene_selection& sel,
+void draw_scene_tree_glwidgets_rec<node>(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl_, const std::shared_ptr<node>& val,
+    scene_selection& sel,
     const std::unordered_map<std::string, std::string>& highlights) {
     draw_glwidgets_scene_tree(win, "ist", val->ist, sel, highlights);
     draw_glwidgets_scene_tree(win, "cam", val->cam, sel, highlights);
@@ -486,12 +515,13 @@ void draw_scene_tree_glwidgets_rec<node>(glwindow* win, const std::string& lbl_,
     auto cid = 0;
     for (auto ch : val->children) {
         draw_glwidgets_scene_tree(
-            win, "ch" + std::to_string(cid++), ch, sel, highlights);
+            win, "ch" + std::to_string(cid++), ch.lock(), sel, highlights);
     }
 }
 template <>
-void draw_scene_tree_glwidgets_rec<animation>(glwindow* win,
-    const std::string& lbl_, animation* val, scene_selection& sel,
+void draw_scene_tree_glwidgets_rec<animation>(
+    const std::shared_ptr<glwindow>& win, const std::string& lbl_,
+    const std::shared_ptr<animation>& val, scene_selection& sel,
     const std::unordered_map<std::string, std::string>& highlights) {
     auto tid = 0;
     for (auto tg : val->targets) {
@@ -500,7 +530,8 @@ void draw_scene_tree_glwidgets_rec<animation>(glwindow* win,
     }
 }
 
-void draw_glwidgets_scene_tree(glwindow* win, scene* scn, scene_selection& sel,
+void draw_glwidgets_scene_tree(const std::shared_ptr<glwindow>& win,
+    const std::shared_ptr<scene>& scn, scene_selection& sel,
     const std::unordered_map<std::string, std::string>& highlights) {
     if (!scn->cameras.empty() && begin_glwidgets_tree(win, "cameras")) {
         for (auto v : scn->cameras)
@@ -551,14 +582,16 @@ void draw_glwidgets_scene_tree(glwindow* win, scene* scn, scene_selection& sel,
 }
 
 template <typename T>
-void draw_glwidgets_label(glwindow* win, const std::string& lbl,
-    const std::vector<T>& val, bool skip_if_empty = true) {
+void draw_glwidgets_label(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, const std::vector<T>& val,
+    bool skip_if_empty = true) {
     if (skip_if_empty && val.empty()) return;
     draw_glwidgets_label(win, lbl, std::to_string(val.size()));
 }
 
 /// Visit struct elements.
-bool draw_glwidgets_scene_inspector(glwindow* win, camera* val, scene* scn) {
+bool draw_glwidgets_scene_inspector(const std::shared_ptr<glwindow>& win,
+    const std::shared_ptr<camera>& val, const std::shared_ptr<scene>& scn) {
     auto edited = 0;
     edited += draw_glwidgets_text(win, "name", val->name);
     edited += draw_glwidgets_dragbox(win, "frame", val->frame);
@@ -574,7 +607,8 @@ bool draw_glwidgets_scene_inspector(glwindow* win, camera* val, scene* scn) {
 }
 
 /// Visit struct elements.
-bool draw_glwidgets_scene_inspector(glwindow* win, texture* val, scene* scn) {
+bool draw_glwidgets_scene_inspector(const std::shared_ptr<glwindow>& win,
+    const std::shared_ptr<texture>& val, const std::shared_ptr<scene>& scn) {
     auto edited = 0;
     edited += draw_glwidgets_text(win, "name", val->name);
     edited += draw_glwidgets_text(win, "path", val->path);
@@ -583,7 +617,8 @@ bool draw_glwidgets_scene_inspector(glwindow* win, texture* val, scene* scn) {
     return edited;
 }
 
-bool draw_glwidgets_scene_inspector(glwindow* win, material* val, scene* scn) {
+bool draw_glwidgets_scene_inspector(const std::shared_ptr<glwindow>& win,
+    const std::shared_ptr<material>& val, const std::shared_ptr<scene>& scn) {
     auto edited = 0;
     edited += draw_glwidgets_text(win, "name", val->name);
     edited += draw_hdr_color_widget(win, "ke", val->ke);
@@ -618,7 +653,8 @@ bool draw_glwidgets_scene_inspector(glwindow* win, material* val, scene* scn) {
     return edited;
 }
 
-bool draw_glwidgets_scene_inspector(glwindow* win, shape* val, scene* scn) {
+bool draw_glwidgets_scene_inspector(const std::shared_ptr<glwindow>& win,
+    const std::shared_ptr<shape>& val, const std::shared_ptr<scene>& scn) {
     auto edited = 0;
     edited += draw_glwidgets_text(win, "name", val->name);
     edited += draw_glwidgets_text(win, "path", val->path);
@@ -633,7 +669,8 @@ bool draw_glwidgets_scene_inspector(glwindow* win, shape* val, scene* scn) {
     return edited;
 }
 
-bool draw_glwidgets_scene_inspector(glwindow* win, subdiv* val, scene* scn) {
+bool draw_glwidgets_scene_inspector(const std::shared_ptr<glwindow>& win,
+    const std::shared_ptr<subdiv>& val, const std::shared_ptr<scene>& scn) {
     auto edited = 0;
     edited += draw_glwidgets_text(win, "name", val->name);
     edited += draw_glwidgets_dragbox(win, "level", val->level, 0, 10);
@@ -650,7 +687,8 @@ bool draw_glwidgets_scene_inspector(glwindow* win, subdiv* val, scene* scn) {
     return edited;
 }
 
-bool draw_glwidgets_scene_inspector(glwindow* win, instance* val, scene* scn) {
+bool draw_glwidgets_scene_inspector(const std::shared_ptr<glwindow>& win,
+    const std::shared_ptr<instance>& val, const std::shared_ptr<scene>& scn) {
     auto edited = 0;
     edited += draw_glwidgets_text(win, "name", val->name);
     edited += draw_glwidgets_dragbox(win, "frame", val->frame);
@@ -661,8 +699,9 @@ bool draw_glwidgets_scene_inspector(glwindow* win, instance* val, scene* scn) {
     return edited;
 }
 
-bool draw_glwidgets_scene_inspector(
-    glwindow* win, environment* val, scene* scn) {
+bool draw_glwidgets_scene_inspector(const std::shared_ptr<glwindow>& win,
+    const std::shared_ptr<environment>& val,
+    const std::shared_ptr<scene>& scn) {
     auto edited = 0;
     edited += draw_glwidgets_text(win, "name", val->name);
     edited += draw_glwidgets_dragbox(win, "frame", val->frame);
@@ -672,7 +711,8 @@ bool draw_glwidgets_scene_inspector(
     return edited;
 }
 
-bool draw_glwidgets_scene_inspector(glwindow* win, node* val, scene* scn) {
+bool draw_glwidgets_scene_inspector(const std::shared_ptr<glwindow>& win,
+    const std::shared_ptr<node>& val, const std::shared_ptr<scene>& scn) {
     auto edited = 0;
     edited += draw_glwidgets_text(win, "name", val->name);
     edited +=
@@ -689,7 +729,8 @@ bool draw_glwidgets_scene_inspector(glwindow* win, node* val, scene* scn) {
     return edited;
 }
 
-bool draw_glwidgets_scene_inspector(glwindow* win, animation* val, scene* scn) {
+bool draw_glwidgets_scene_inspector(const std::shared_ptr<glwindow>& win,
+    const std::shared_ptr<animation>& val, const std::shared_ptr<scene>& scn) {
     auto edited = 0;
     edited += draw_glwidgets_text(win, "name", val->name);
     edited += draw_glwidgets_text(win, "path", val->path);
@@ -705,9 +746,10 @@ bool draw_glwidgets_scene_inspector(glwindow* win, animation* val, scene* scn) {
     return edited;
 }
 
-bool draw_glwidgets_scene_tree(glwindow* win, const std::string& lbl,
-    scene* scn, scene_selection& sel,
-    std::vector<ygl::scene_selection>& update_list, int height,
+bool draw_glwidgets_scene_tree(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, const std::shared_ptr<scene>& scn,
+    scene_selection& sel, std::vector<ygl::scene_selection>& update_list,
+    int height,
     const std::unordered_map<std::string, std::string>& inspector_highlights) {
     if (!scn) return false;
     push_glwidgets_groupid(win, scn);
@@ -741,9 +783,10 @@ bool draw_glwidgets_scene_tree(glwindow* win, const std::string& lbl,
     return update_list.size() != update_len;
 }
 
-bool draw_glwidgets_scene_inspector(glwindow* win, const std::string& lbl,
-    scene* scn, scene_selection& sel,
-    std::vector<ygl::scene_selection>& update_list, int height,
+bool draw_glwidgets_scene_inspector(const std::shared_ptr<glwindow>& win,
+    const std::string& lbl, const std::shared_ptr<scene>& scn,
+    scene_selection& sel, std::vector<ygl::scene_selection>& update_list,
+    int height,
     const std::unordered_map<std::string, std::string>& inspector_highlights) {
     if (!scn || !sel.ptr) return false;
     push_glwidgets_groupid(win, sel.ptr);

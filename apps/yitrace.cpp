@@ -38,8 +38,8 @@ using namespace std::literals;
 
 // Application state
 struct app_state {
-    ygl::scene* scn = nullptr;
-    ygl::camera* cam = nullptr;
+    std::shared_ptr<ygl::scene> scn = nullptr;
+    std::shared_ptr<ygl::camera> cam = nullptr;
     std::string filename;
     std::string imfilename;
 
@@ -74,10 +74,6 @@ struct app_state {
     int preview_resolution = 64;
     bool navigation_fps = false;
     bool rendering = false;
-
-    ~app_state() {
-        if (scn) delete scn;
-    }
 };
 
 auto trace_names = std::map<ygl::trace_func, std::string>{
@@ -97,8 +93,11 @@ auto trace_names = std::map<ygl::trace_func, std::string>{
     {ygl::trace_debug_frontfacing, "debug_frontfacing"},
 };
 
-void draw(ygl::glwindow* win, app_state* app) {
+void draw(const std::shared_ptr<ygl::glwindow>& win,
+    const std::shared_ptr<app_state>& app) {
     // update image
+    ygl::center_glimage(app->imframe, {app->img.width, app->img.height},
+        ygl::get_glwindow_size(win), app->zoom_to_fit);
     ygl::update_gltexture(app->gl_txt, app->img.width, app->img.height,
         app->img.pxl, false, false, true, false);
     // draw image
@@ -130,7 +129,7 @@ void draw(ygl::glwindow* win, app_state* app) {
                 draw_glwidgets_dragbox(win, "seed", (int&)app->seed, 0, 1000);
             edited += draw_glwidgets_dragbox(
                 win, "preview", app->preview_resolution, 64, 1080);
-            if (edited) app->update_list.push_back(nullptr);
+            if (edited) app->update_list.push_back(ygl::scene_selection());
             ygl::end_glwidgets_tree(win);
         }
         if (ygl::begin_glwidgets_tree(win, "view settings")) {
@@ -178,7 +177,8 @@ void draw(ygl::glwindow* win, app_state* app) {
     ygl::swap_glwindow_buffers(win);
 }
 
-bool update(ygl::glwindow* win, app_state* app) {
+bool update(const std::shared_ptr<ygl::glwindow>& win,
+    const std::shared_ptr<app_state>& app) {
     // exit if no updated
     if (app->update_list.empty()) return false;
 
@@ -236,20 +236,14 @@ bool update(ygl::glwindow* win, app_state* app) {
     return true;
 }
 
-void refresh(ygl::glwindow* win) {
-    auto app = (app_state*)ygl::get_glwindow_user_pointer(win);
-    ygl::center_glimage(app->imframe, {app->img.width, app->img.height},
-        ygl::get_glwindow_size(win), app->zoom_to_fit);
-    draw(win, (app_state*)ygl::get_glwindow_user_pointer(win));
-}
-
 // run ui loop
-void run_ui(app_state* app) {
+void run_ui(const std::shared_ptr<app_state>& app) {
     // window
     auto win_width = app->img.width + ygl::default_glwidgets_width;
     auto win_height = ygl::clamp(app->img.height, 512, 1024);
-    auto win = ygl::make_glwindow(win_width, win_height, "yitrace", app);
-    ygl::set_glwindow_callbacks(win, nullptr, nullptr, refresh);
+    auto win = ygl::make_glwindow(win_width, win_height, "yitrace");
+    ygl::set_glwindow_callbacks(
+        win, nullptr, nullptr, [app, win]() { draw(win, app); });
     ygl::center_glimage(app->imframe, {app->img.width, app->img.height},
         ygl::get_glwindow_size(win), app->zoom_to_fit);
     ygl::log_callback() = ygl::log_glwidgets_msg;
@@ -295,14 +289,11 @@ void run_ui(app_state* app) {
         // event hadling
         ygl::poll_glwindow_events(win);
     }
-
-    // cleanup
-    delete win;
 }
 
 int main(int argc, char* argv[]) {
     // create empty scene
-    auto app = new app_state();
+    auto app = std::make_shared<app_state>();
 
     // parse command line
     auto parser = ygl::make_parser(
@@ -404,7 +395,6 @@ int main(int argc, char* argv[]) {
 
     // cleanup
     ygl::trace_async_stop(app->async_threads, app->async_stop);
-    delete app;
 
     // done
     return 0;

@@ -30,6 +30,7 @@
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_utils.h"
 
+#include <memory>
 #include <unordered_map>
 
 // Generic image that contains either an HDR or an LDR image, giving access
@@ -59,21 +60,17 @@ struct gimage {
 };
 
 struct app_state {
-    std::vector<gimage*> imgs;
-    gimage* img = nullptr;
+    std::vector<std::shared_ptr<gimage>> imgs;
+    std::shared_ptr<gimage> img = nullptr;
 
     ygl::glimage_program gl_prog = {};
     ygl::frame2f imframe = ygl::identity_frame2f;
     bool zoom_to_fit = false;
     ygl::vec4f background = {0.8f, 0.8f, 0.8f, 0};
-
-    ~app_state() {
-        for (auto v : imgs) delete v;
-    }
 };
 
 // compute min/max
-void update_minmax(gimage* img) {
+void update_minmax(std::shared_ptr<gimage> img) {
     img->pxl_bounds = ygl::invalid_bbox4f;
     img->lum_bounds = ygl::invalid_bbox1f;
     for (auto& p : img->img.pxl) {
@@ -83,8 +80,9 @@ void update_minmax(gimage* img) {
 }
 
 // Loads a generic image
-gimage* load_gimage(const std::string& filename, float exposure, float gamma) {
-    auto img = new gimage();
+std::shared_ptr<gimage> load_gimage(
+    const std::string& filename, float exposure, float gamma) {
+    auto img = std::make_shared<gimage>();
     img->filename = filename;
     img->name = ygl::path_filename(filename);
     img->exposure = exposure;
@@ -94,10 +92,11 @@ gimage* load_gimage(const std::string& filename, float exposure, float gamma) {
     return img;
 }
 
-gimage* diff_gimage(gimage* a, gimage* b, bool color) {
+std::shared_ptr<gimage> diff_gimage(
+    std::shared_ptr<gimage> a, std::shared_ptr<gimage> b, bool color) {
     if (a->img.width != b->img.width || a->img.height != b->img.height)
         return nullptr;
-    auto d = new gimage();
+    auto d = std::make_shared<gimage>();
     d->name = "diff " + a->name + " " + b->name;
     d->filename = "";
     d->img.width = a->img.width;
@@ -123,7 +122,7 @@ gimage* diff_gimage(gimage* a, gimage* b, bool color) {
     return d;
 }
 
-void update_display_image(gimage* img) {
+void update_display_image(const std::shared_ptr<gimage>& img) {
     img->display = img->img;
     if (img->exposure)
         img->display = ygl::expose_image(img->display, img->exposure);
@@ -133,7 +132,8 @@ void update_display_image(gimage* img) {
     img->updated = false;
 }
 
-void draw_glwidgets(ygl::glwindow* win, app_state* app) {
+void draw_glwidgets(const std::shared_ptr<ygl::glwindow>& win,
+    const std::shared_ptr<app_state>& app) {
     if (ygl::begin_glwidgets_frame(win, "yimview")) {
         ygl::draw_glwidgets_combobox(win, "image", app->img, app->imgs);
         ygl::draw_glwidgets_label(win, "filename", app->img->filename);
@@ -170,7 +170,8 @@ void draw_glwidgets(ygl::glwindow* win, app_state* app) {
     ygl::end_glwidgets_frame(win);
 }
 
-void draw(ygl::glwindow* win, app_state* app) {
+void draw(const std::shared_ptr<ygl::glwindow>& win,
+    const std::shared_ptr<app_state>& app) {
     auto window_size = get_glwindow_size(win);
     auto framebuffer_size = get_glwindow_framebuffer_size(win);
     ygl::set_glviewport(framebuffer_size);
@@ -181,20 +182,21 @@ void draw(ygl::glwindow* win, app_state* app) {
     ygl::swap_glwindow_buffers(win);
 }
 
-void refresh(ygl::glwindow* win) {
-    auto app = (app_state*)ygl::get_glwindow_user_pointer(win);
+void refresh(const std::shared_ptr<ygl::glwindow>& win,
+    const std::shared_ptr<app_state>& app) {
     ygl::center_glimage(app->imframe,
         {app->img->img.width, app->img->img.height},
         ygl::get_glwindow_size(win), app->zoom_to_fit);
     draw(win, app);
 }
 
-void run_ui(app_state* app) {
+void run_ui(const std::shared_ptr<app_state>& app) {
     // window
     auto win_width = app->imgs[0]->img.width + ygl::default_glwidgets_width;
     auto win_height = ygl::clamp(app->imgs[0]->img.height, 512, 1024);
-    auto win = ygl::make_glwindow(win_width, win_height, "yimview", app);
-    ygl::set_glwindow_callbacks(win, nullptr, nullptr, refresh);
+    auto win = ygl::make_glwindow(win_width, win_height, "yimview");
+    ygl::set_glwindow_callbacks(
+        win, nullptr, nullptr, [app, win]() { draw(win, app); });
     ygl::center_glimage(app->imframe,
         {app->imgs[0]->img.width, app->imgs[0]->img.height},
         ygl::get_glwindow_size(win), app->zoom_to_fit);
@@ -260,13 +262,10 @@ void run_ui(app_state* app) {
             ygl::wait_glwindow_events(win);
         }
     }
-
-    // cleanup
-    delete win;
 }
 
 int main(int argc, char* argv[]) {
-    auto app = new app_state();
+    auto app = std::make_shared<app_state>();
 
     // command line params
     auto parser = ygl::make_parser(argc, argv, "yimview", "view images");
@@ -304,9 +303,6 @@ int main(int argc, char* argv[]) {
 
     // run ui
     run_ui(app);
-
-    // cleanup
-    delete app;
 
     // done
     return 0;

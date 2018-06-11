@@ -44,10 +44,10 @@ using namespace std::string_literals;
 namespace ygl {
 
 // Load a scene
-scene* load_scene(
+std::shared_ptr<scene> load_scene(
     const std::string& filename, bool load_textures, bool skip_missing) {
     auto ext = path_extension(filename);
-    auto scn = (scene*)nullptr;
+    auto scn = (std::shared_ptr<scene>)nullptr;
     if (ext == ".json" || ext == ".JSON") {
         scn = load_json_scene(filename, load_textures, skip_missing);
     } else if (ext == ".obj" || ext == ".OBJ") {
@@ -57,7 +57,7 @@ scene* load_scene(
     } else {
         throw std::runtime_error("unsupported extension " + ext);
     }
-    auto mat = (material*)nullptr;
+    auto mat = (std::shared_ptr<material>)nullptr;
     for (auto ist : scn->instances) {
         if (ist->mat) continue;
         if (!mat) {
@@ -70,7 +70,7 @@ scene* load_scene(
 }
 
 // Save a scene
-void save_scene(const std::string& filename, const scene* scn,
+void save_scene(const std::string& filename, const std::shared_ptr<scene> scn,
     bool save_textures, bool skip_missing) {
     auto ext = path_extension(filename);
     if (ext == ".json" || ext == ".JSON") {
@@ -539,25 +539,29 @@ void from_json(const json& js, material& val) {
     val.fresnel = js.value("fresnel", def.fresnel);
     val.refract = js.value("refract", def.refract);
     if (js.count("ke_txt"))
-        from_json(js.at("ke_txt"), *(val.ke_txt = new texture()));
+        from_json(js.at("ke_txt"), *(val.ke_txt = std::make_shared<texture>()));
     if (js.count("kd_txt"))
-        from_json(js.at("kd_txt"), *(val.kd_txt = new texture()));
+        from_json(js.at("kd_txt"), *(val.kd_txt = std::make_shared<texture>()));
     if (js.count("ks_txt"))
-        from_json(js.at("ks_txt"), *(val.ks_txt = new texture()));
+        from_json(js.at("ks_txt"), *(val.ks_txt = std::make_shared<texture>()));
     if (js.count("kt_txt"))
-        from_json(js.at("kt_txt"), *(val.kt_txt = new texture()));
+        from_json(js.at("kt_txt"), *(val.kt_txt = std::make_shared<texture>()));
     if (js.count("rs_txt"))
-        from_json(js.at("rs_txt"), *(val.rs_txt = new texture()));
+        from_json(js.at("rs_txt"), *(val.rs_txt = std::make_shared<texture>()));
     if (js.count("op_txt"))
-        from_json(js.at("op_txt"), *(val.op_txt = new texture()));
+        from_json(js.at("op_txt"), *(val.op_txt = std::make_shared<texture>()));
     if (js.count("occ_txt"))
-        from_json(js.at("occ_txt"), *(val.occ_txt = new texture()));
+        from_json(
+            js.at("occ_txt"), *(val.occ_txt = std::make_shared<texture>()));
     if (js.count("bump_txt"))
-        from_json(js.at("bump_txt"), *(val.bump_txt = new texture()));
+        from_json(
+            js.at("bump_txt"), *(val.bump_txt = std::make_shared<texture>()));
     if (js.count("disp_txt"))
-        from_json(js.at("disp_txt"), *(val.disp_txt = new texture()));
+        from_json(
+            js.at("disp_txt"), *(val.disp_txt = std::make_shared<texture>()));
     if (js.count("norm_txt"))
-        from_json(js.at("norm_txt"), *(val.norm_txt = new texture()));
+        from_json(
+            js.at("norm_txt"), *(val.norm_txt = std::make_shared<texture>()));
     from_json_proc(js, val);
 }
 
@@ -730,8 +734,8 @@ void from_json_proc(const json& js, subdiv& val) {
     auto quads_norm = std::vector<vec4i>();
     auto norm = std::vector<vec3f>();
     if (type == "quad") {
-        subdiv* make_quad_subdiv(const std::string& name, int tesselation = 0,
-            int subdivision = 4, float size = 2);
+        std::shared_ptr<subdiv> make_quad_subdiv(const std::string& name,
+            int tesselation = 0, int subdivision = 4, float size = 2);
     } else if (type == "cube") {
         make_fvcube(val.quads_pos, val.pos, quads_norm, norm,
             val.quads_texcoord, val.texcoord,
@@ -804,9 +808,12 @@ void from_json(const json& js, instance& val) {
     static const auto def = instance();
     val.name = js.value("name", def.name);
     val.frame = js.value("frame", def.frame);
-    if (js.count("shp")) from_json(js.at("shp"), *(val.shp = new shape()));
-    if (js.count("mat")) from_json(js.at("mat"), *(val.mat = new material()));
-    if (js.count("sbd")) from_json(js.at("sbd"), *(val.sbd = new subdiv()));
+    if (js.count("shp"))
+        from_json(js.at("shp"), *(val.shp = std::make_shared<shape>()));
+    if (js.count("mat"))
+        from_json(js.at("mat"), *(val.mat = std::make_shared<material>()));
+    if (js.count("sbd"))
+        from_json(js.at("sbd"), *(val.sbd = std::make_shared<subdiv>()));
     from_json_proc(js, val);
 }
 
@@ -834,7 +841,7 @@ void from_json(const json& js, environment& val) {
     val.frame = js.value("frame", def.frame);
     val.ke = js.value("ke", def.ke);
     if (js.count("ke_txt"))
-        from_json(js.at("ke_txt"), *(val.ke_txt = new texture()));
+        from_json(js.at("ke_txt"), *(val.ke_txt = std::make_shared<texture>()));
     from_json_proc(js, val);
 }
 
@@ -873,11 +880,13 @@ void from_json(const json& js, node& val) {
     val.scale = js.value("scale", def.scale);
     val.weights = js.value("weights", def.weights);
     if (js.count("parent"))
-        from_json(js.at("parent"), *(val.parent = new node()));
-    if (js.count("cam")) from_json(js.at("cam"), *(val.cam = new camera()));
-    if (js.count("ist")) from_json(js.at("ist"), *(val.ist = new instance()));
+        from_json(js.at("parent"), *(val.parent = std::make_shared<node>()));
+    if (js.count("cam"))
+        from_json(js.at("cam"), *(val.cam = std::make_shared<camera>()));
+    if (js.count("ist"))
+        from_json(js.at("ist"), *(val.ist = std::make_shared<instance>()));
     if (js.count("env"))
-        from_json(js.at("env"), *(val.env = new environment()));
+        from_json(js.at("env"), *(val.env = std::make_shared<environment>()));
     from_json_proc(js, val);
 }
 
@@ -945,7 +954,7 @@ void from_json(const json& js, animation& val) {
     val.rotation = js.value("rotation", def.rotation);
     val.scale = js.value("scale", def.scale);
     for (auto& j : js.value("targets", json::array())) {
-        val.targets.push_back(new node());
+        val.targets.push_back(std::make_shared<node>());
         from_json(j, *val.targets.back());
     }
     from_json_proc(js, val);
@@ -992,7 +1001,7 @@ void to_json(json& js, const scene& val) {
         for (auto v : val.animations) js["animations"].push_back(*v);
     }
 }
-void to_json(json& js, const scene*& val) {
+void to_json(json& js, const std::shared_ptr<scene>& val) {
     if (!val) {
         js = json();
         return;
@@ -1001,9 +1010,9 @@ void to_json(json& js, const scene*& val) {
 }
 
 template <typename T>
-static std::unordered_map<std::string, T*> make_named_map(
-    const std::vector<T*>& elems) {
-    auto map = std::unordered_map<std::string, T*>();
+static std::unordered_map<std::string, std::shared_ptr<T>> make_named_map(
+    const std::vector<std::shared_ptr<T>>& elems) {
+    auto map = std::unordered_map<std::string, std::shared_ptr<T>>();
     for (auto elem : elems) map[elem->name] = elem;
     return map;
 };
@@ -1014,11 +1023,11 @@ void from_json_proc(const json& js, scene& val) {
         auto& jjs = js.at("!!random_instances");
         auto num = jjs.value("!!num", 100);
         auto seed = jjs.value("!!seed", 13);
-        auto base = new instance();
+        auto base = std::make_shared<instance>();
         from_json(jjs.at("!!base"), *base);
-        auto ists = std::vector<instance*>();
+        auto ists = std::vector<std::shared_ptr<instance>>();
         for (auto& j : jjs.at("!!instances")) {
-            ists.push_back(new instance());
+            ists.push_back(std::make_shared<instance>());
             from_json(j, *ists.back());
         }
 
@@ -1029,13 +1038,13 @@ void from_json_proc(const json& js, scene& val) {
             sample_triangles_points(base->shp->triangles, base->shp->pos,
                 base->shp->norm, base->shp->texcoord, num, seed);
 
-        auto nmap = std::unordered_map<instance*, int>();
+        auto nmap = std::unordered_map<std::shared_ptr<instance>, int>();
         for (auto ist : ists) nmap[ist] = 0;
         auto rng = make_rng(seed, 17);
         for (auto i = 0; i < num; i++) {
             auto ist = ists.at(rand1i(rng, (int)ists.size() - 1));
             nmap[ist] += 1;
-            val.instances.push_back(new instance());
+            val.instances.push_back(std::make_shared<instance>());
             val.instances.back()->name = ist->name + std::to_string(nmap[ist]);
             val.instances.back()->frame =
                 base->frame * translation_frame(pos[i]) * ist->frame;
@@ -1043,9 +1052,6 @@ void from_json_proc(const json& js, scene& val) {
             val.instances.back()->mat = ist->mat;
             val.instances.back()->sbd = ist->sbd;
         }
-
-        for (auto ist : ists) delete ist;
-        delete base;
     }
 }
 
@@ -1053,39 +1059,39 @@ void from_json_proc(const json& js, scene& val) {
 void from_json(const json& js, scene& val) {
     val.name = js.value("name", ""s);
     for (auto& j : js.value("cameras", json::array())) {
-        val.cameras.push_back(new camera());
+        val.cameras.push_back(std::make_shared<camera>());
         from_json(j, *val.cameras.back());
     }
     for (auto& j : js.value("textures", json::array())) {
-        val.textures.push_back(new texture());
+        val.textures.push_back(std::make_shared<texture>());
         from_json(j, *val.textures.back());
     }
     for (auto& j : js.value("materials", json::array())) {
-        val.materials.push_back(new material());
+        val.materials.push_back(std::make_shared<material>());
         from_json(j, *val.materials.back());
     }
     for (auto& j : js.value("shapes", json::array())) {
-        val.shapes.push_back(new shape());
+        val.shapes.push_back(std::make_shared<shape>());
         from_json(j, *val.shapes.back());
     }
     for (auto& j : js.value("subdivs", json::array())) {
-        val.subdivs.push_back(new subdiv());
+        val.subdivs.push_back(std::make_shared<subdiv>());
         from_json(j, *val.subdivs.back());
     }
     for (auto& j : js.value("instances", json::array())) {
-        val.instances.push_back(new instance());
+        val.instances.push_back(std::make_shared<instance>());
         from_json(j, *val.instances.back());
     }
     for (auto& j : js.value("environments", json::array())) {
-        val.environments.push_back(new environment());
+        val.environments.push_back(std::make_shared<environment>());
         from_json(j, *val.environments.back());
     }
     for (auto& j : js.value("nodes", json::array())) {
-        val.nodes.push_back(new node());
+        val.nodes.push_back(std::make_shared<node>());
         from_json(j, *val.nodes.back());
     }
     for (auto& j : js.value("animations", json::array())) {
-        val.animations.push_back(new animation());
+        val.animations.push_back(std::make_shared<animation>());
         from_json(j, *val.animations.back());
     }
     from_json_proc(js, val);
@@ -1098,13 +1104,11 @@ void from_json(const json& js, scene& val) {
     auto imap = make_named_map(val.instances);
     auto emap = make_named_map(val.environments);
     auto nmap = make_named_map(val.nodes);
-    auto fix_ref = [](auto& map, auto& elems, auto*& ref) {
+    auto fix_ref = [](auto& map, auto& elems, auto& ref) {
         if (!ref) return;
         auto name = ref->name;
         if (map.find(ref->name) != map.end()) {
-            auto mref = map.at(name);
-            if (ref != mref) delete ref;
-            ref = mref;
+            ref = map.at(name);
         } else {
             map[ref->name] = ref;
             elems.push_back(ref);
@@ -1142,10 +1146,10 @@ void from_json(const json& js, scene& val) {
 }
 
 // Load a scene in the builtin JSON format.
-scene* load_json_scene(
+std::shared_ptr<scene> load_json_scene(
     const std::string& filename, bool load_textures, bool skip_missing) {
     // load json
-    auto scn = new scene();
+    auto scn = std::make_shared<scene>();
     auto js = load_json(filename);
     from_json(js, *scn);
 
@@ -1173,7 +1177,8 @@ scene* load_json_scene(
     if (!load_textures) return scn;
 
     // set gamma
-    auto ldr_gamma = std::unordered_map<texture*, float>{{nullptr, 1.0f}};
+    auto ldr_gamma =
+        std::unordered_map<std::shared_ptr<texture>, float>{{nullptr, 1.0f}};
     for (auto txt : scn->textures) ldr_gamma[txt] = 2.2f;
     for (auto mat : scn->materials) {
         ldr_gamma[mat->ke_txt] = 2.2f;
@@ -1204,8 +1209,8 @@ scene* load_json_scene(
 }
 
 // Save a scene in the builtin JSON format.
-void save_json_scene(const std::string& filename, const scene* scn,
-    bool save_textures, bool skip_missing) {
+void save_json_scene(const std::string& filename,
+    const std::shared_ptr<scene> scn, bool save_textures, bool skip_missing) {
     // save json
     auto js = json(scn);
     save_json(filename, js);
@@ -1228,7 +1233,8 @@ void save_json_scene(const std::string& filename, const scene* scn,
     if (!save_textures) return;
 
     // set gamma
-    auto ldr_gamma = std::unordered_map<texture*, float>{{nullptr, 1.0f}};
+    auto ldr_gamma =
+        std::unordered_map<std::shared_ptr<texture>, float>{{nullptr, 1.0f}};
     for (auto txt : scn->textures) ldr_gamma[txt] = 2.2f;
     for (auto mat : scn->materials) {
         ldr_gamma[mat->ke_txt] = 2.2f;
@@ -1476,9 +1482,9 @@ inline float read_float(FILE* fs) { return read_value<float>(fs); }
 inline byte read_uchar(FILE* fs) { return read_value<byte>(fs); }
 
 // Loads an OBJ
-scene* load_obj_scene(const std::string& filename, bool load_textures,
-    bool skip_missing, bool split_shapes) {
-    auto scn = new scene();
+std::shared_ptr<scene> load_obj_scene(const std::string& filename,
+    bool load_textures, bool skip_missing, bool split_shapes) {
+    auto scn = std::make_shared<scene>();
 
     // parsing policies
     auto flip_texcoord = true;
@@ -1498,7 +1504,7 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
     auto oname = std::string();
     auto gname = std::string();
     auto smoothing = true;
-    auto ist = (instance*)nullptr;
+    auto ist = (std::shared_ptr<instance>)nullptr;
 
     // vertices
     auto pos = std::deque<vec3f>();
@@ -1506,8 +1512,8 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
     auto texcoord = std::deque<vec2f>();
 
     // object maps
-    auto tmap = std::unordered_map<std::string, texture*>();
-    auto mmap = std::unordered_map<std::string, material*>();
+    auto tmap = std::unordered_map<std::string, std::shared_ptr<texture>>();
+    auto mmap = std::unordered_map<std::string, std::shared_ptr<material>>();
 
     // vertex maps
     auto name_map = std::unordered_map<std::string, int>();
@@ -1517,7 +1523,7 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
     auto texcoord_map = std::unordered_map<int, int>();
 
     // add object if needed
-    auto is_instance_empty = [](instance* ist) {
+    auto is_instance_empty = [](std::shared_ptr<instance> ist) {
         if (ist->sbd) {
             return ist->sbd->pos.empty();
         } else if (ist->shp) {
@@ -1526,14 +1532,15 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
             return true;
         }
     };
-    auto add_instance = [&](scene* scn, const std::string& objname,
+    auto add_instance = [&](std::shared_ptr<scene> scn,
+                            const std::string& objname,
                             const std::string& matname,
                             const std::string& groupname, bool smoothing) {
         if (scn->instances.empty() || objname != scn->instances.back()->name ||
             !is_instance_empty(scn->instances.back())) {
-            auto ist = new instance();
+            auto ist = std::make_shared<instance>();
             scn->instances.push_back(ist);
-            ist->shp = new shape();
+            ist->shp = std::make_shared<shape>();
             scn->shapes.push_back(ist->shp);
         }
         name_map[objname] += 1;
@@ -1656,7 +1663,7 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
             auto add_texture = [scn, &tmap](char*& s) {
                 // get tokens
                 auto tokens = parse_strings(s);
-                if (tokens.empty()) return (texture*)nullptr;
+                if (tokens.empty()) return (std::shared_ptr<texture>)nullptr;
 
                 // texture name
                 auto path = tokens.back();
@@ -1665,7 +1672,7 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
                 if (tmap.find(path) != tmap.end()) { return tmap.at(path); }
 
                 // create texture
-                auto txt = new texture();
+                auto txt = std::make_shared<texture>();
                 txt->name = path;
                 txt->path = path;
                 scn->textures.push_back(txt);
@@ -1681,7 +1688,7 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
             };
 
             // add a material preemptively to avoid crashes
-            scn->materials.push_back(new material());
+            scn->materials.push_back(std::make_shared<material>());
             auto mat = scn->materials.back();
 
             // read the file line by line
@@ -1698,7 +1705,7 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
 
                 // possible token values
                 if (cmd == "newmtl") {
-                    mat = new material();
+                    mat = std::make_shared<material>();
                     mat->name = parse_string(ss);
                     scn->materials.push_back(mat);
                     mmap[mat->name] = mat;
@@ -1770,7 +1777,7 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
             // clone
             fclose(fs);
         } else if (cmd == "c") {
-            auto cam = new camera();
+            auto cam = std::make_shared<camera>();
             cam->name = parse_string(ss);
             cam->ortho = parse_bool(ss);
             cam->width = parse_float(ss);
@@ -1781,13 +1788,13 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
             cam->frame = parse_frame3f(ss);
             scn->cameras.push_back(cam);
         } else if (cmd == "e") {
-            auto env = new environment();
+            auto env = std::make_shared<environment>();
             env->name = parse_string(ss);
             env->ke = parse_vec3f(ss);
             auto ke_txt = parse_string(ss);
             if (ke_txt != "\"\"") {
                 if (tmap.find(ke_txt) == tmap.end()) {
-                    auto txt = new texture();
+                    auto txt = std::make_shared<texture>();
                     txt->name = ke_txt;
                     txt->path = ke_txt;
                     tmap[ke_txt] = txt;
@@ -1809,14 +1816,11 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
         if (ist->shp) {
             scn->shapes.erase(
                 std::find(scn->shapes.begin(), scn->shapes.end(), ist->shp));
-            delete ist->shp;
         }
         if (ist->sbd) {
             scn->subdivs.erase(
                 std::find(scn->subdivs.begin(), scn->subdivs.end(), ist->sbd));
-            delete ist->sbd;
         }
-        delete ist;
         scn->instances.erase(scn->instances.begin() + idx);
         idx--;
     }
@@ -1829,7 +1833,7 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
 
     // fix scene
     scn->name = path_filename(filename);
-    auto mat = (material*)nullptr;
+    auto mat = (std::shared_ptr<material>)nullptr;
     for (auto ist : scn->instances) {
         if (ist->mat) continue;
         if (!mat) {
@@ -1843,7 +1847,8 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
     if (!load_textures) return scn;
 
     // set gamma
-    auto ldr_gamma = std::unordered_map<texture*, float>{{nullptr, 1.0f}};
+    auto ldr_gamma =
+        std::unordered_map<std::shared_ptr<texture>, float>{{nullptr, 1.0f}};
     for (auto txt : scn->textures) ldr_gamma[txt] = 2.2f;
     for (auto mat : scn->materials) {
         ldr_gamma[mat->ke_txt] = 2.2f;
@@ -1874,8 +1879,8 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
     return scn;
 }
 
-void save_obj_scene(const std::string& filename, const scene* scn,
-    bool save_textures, bool skip_missing) {
+void save_obj_scene(const std::string& filename,
+    const std::shared_ptr<scene> scn, bool save_textures, bool skip_missing) {
     // scene
     auto f = fopen(filename.c_str(), "wt");
     if (!f) throw std::runtime_error("cannot save file " + filename);
@@ -2076,7 +2081,8 @@ void save_obj_scene(const std::string& filename, const scene* scn,
     if (!save_textures) return;
 
     // set gamma
-    auto ldr_gamma = std::unordered_map<texture*, float>{{nullptr, 1.0f}};
+    auto ldr_gamma =
+        std::unordered_map<std::shared_ptr<texture>, float>{{nullptr, 1.0f}};
     for (auto txt : scn->textures) ldr_gamma[txt] = 2.2f;
     for (auto mat : scn->materials) {
         ldr_gamma[mat->ke_txt] = 2.2f;
@@ -2120,10 +2126,10 @@ static bool startswith(const std::string& str, const std::string& substr) {
 }
 
 // Load a scene
-scene* load_gltf_scene(
+std::shared_ptr<scene> load_gltf_scene(
     const std::string& filename, bool load_textures, bool skip_missing) {
     auto gltf = load_json(filename);
-    auto scn = new scene();
+    auto scn = std::make_shared<scene>();
 
     // prepare parsing
     auto dirname = path_dirname(filename);
@@ -2132,7 +2138,7 @@ scene* load_gltf_scene(
     if (gltf.count("images")) {
         for (auto iid = 0; iid < gltf.at("images").size(); iid++) {
             auto& gimg = gltf.at("images").at(iid);
-            auto txt = new texture();
+            auto txt = std::make_shared<texture>();
             txt->name = gimg.value("name", ""s);
             txt->path = (startswith(gimg.value("uri", ""s), "data:")) ?
                             std::string("[glTF-inline].png") :
@@ -2177,12 +2183,14 @@ scene* load_gltf_scene(
     // add a texture
     auto add_texture = [scn, &gltf](const json& ginfo) {
         if (!gltf.count("images") || !gltf.count("textures"))
-            return (texture*)nullptr;
-        if (ginfo.is_null() || ginfo.empty()) return (texture*)nullptr;
-        if (ginfo.value("index", -1) < 0) return (texture*)nullptr;
+            return (std::shared_ptr<texture>)nullptr;
+        if (ginfo.is_null() || ginfo.empty())
+            return (std::shared_ptr<texture>)nullptr;
+        if (ginfo.value("index", -1) < 0)
+            return (std::shared_ptr<texture>)nullptr;
         auto& gtxt = gltf.at("textures").at(ginfo.value("index", -1));
         if (gtxt.empty() || gtxt.value("source", -1) < 0)
-            return (texture*)nullptr;
+            return (std::shared_ptr<texture>)nullptr;
         auto txt = scn->textures.at(gtxt.value("source", -1));
         if (!gltf.count("samplers") || gtxt.value("sampler", -1) < 0)
             return txt;
@@ -2197,7 +2205,7 @@ scene* load_gltf_scene(
     if (gltf.count("materials")) {
         for (auto mid = 0; mid < gltf.at("materials").size(); mid++) {
             auto& gmat = gltf.at("materials").at(mid);
-            auto mat = new material();
+            auto mat = std::make_shared<material>();
             mat->name = gmat.value("name", ""s);
             mat->ke = gmat.value("emissiveFactor", zero3f);
             if (gmat.count("emissiveTexture"))
@@ -2302,7 +2310,8 @@ scene* load_gltf_scene(
     };
 
     // convert meshes
-    auto meshes = std::vector<std::vector<std::pair<shape*, material*>>>();
+    auto meshes = std::vector<std::vector<
+        std::pair<std::shared_ptr<shape>, std::shared_ptr<material>>>>();
     if (gltf.count("meshes")) {
         for (auto mid = 0; mid < gltf.at("meshes").size(); mid++) {
             auto& gmesh = gltf.at("meshes").at(mid);
@@ -2310,7 +2319,7 @@ scene* load_gltf_scene(
             auto sid = 0;
             for (auto& gprim : gmesh.value("primitives", json::array())) {
                 if (!gprim.count("attributes")) continue;
-                auto shp = new shape();
+                auto shp = std::make_shared<shape>();
                 shp->name = gmesh.value("name", ""s) +
                             ((sid) ? std::to_string(sid) : std::string());
                 sid++;
@@ -2463,7 +2472,7 @@ scene* load_gltf_scene(
     if (gltf.count("cameras")) {
         for (auto cid = 0; cid < gltf.at("cameras").size(); cid++) {
             auto& gcam = gltf.at("cameras").at(cid);
-            auto cam = new camera();
+            auto cam = std::make_shared<camera>();
             cam->name = gcam.value("name", ""s);
             cam->ortho = gcam.value("type", ""s) == "orthographic";
             if (cam->ortho) {
@@ -2493,7 +2502,7 @@ scene* load_gltf_scene(
     if (gltf.count("nodes")) {
         for (auto nid = 0; nid < gltf.at("nodes").size(); nid++) {
             auto& gnde = gltf.at("nodes").at(nid);
-            auto nde = new node();
+            auto nde = std::make_shared<node>();
             nde->name = gnde.value("name", ""s);
             if (gnde.count("camera"))
                 nde->cam = scn->cameras[gnde.value("camera", 0)];
@@ -2521,17 +2530,17 @@ scene* load_gltf_scene(
             auto& shps = meshes.at(gnde.value("mesh", 0));
             if (shps.empty()) continue;
             if (shps.size() == 1) {
-                nde->ist = new instance();
+                nde->ist = std::make_shared<instance>();
                 nde->ist->name = nde->name;
                 nde->ist->shp = shps[0].first;
                 nde->ist->mat = shps[0].second;
                 scn->instances.push_back(nde->ist);
             } else {
                 for (auto shp : shps) {
-                    auto child = new node();
+                    auto child = std::make_shared<node>();
                     child->name = nde->name + "_" + shp.first->name;
                     child->parent = nde;
-                    child->ist = new instance();
+                    child->ist = std::make_shared<instance>();
                     child->ist->name = child->name;
                     child->ist->shp = shp.first;
                     child->ist->mat = shp.second;
@@ -2558,7 +2567,7 @@ scene* load_gltf_scene(
                         path}) == sampler_map.end()) {
                     auto& gsampler = ganm.at("samplers")
                                          .at(gchannel.at("sampler").get<int>());
-                    auto anm = new animation();
+                    auto anm = std::make_shared<animation>();
                     anm->name = (ganm.count("name") ? ganm.value("name", ""s) :
                                                       "anim") +
                                 std::to_string(aid++);
@@ -2649,7 +2658,7 @@ scene* load_gltf_scene(
     update_bbox(scn);
 
     // fix elements
-    auto mat = (material*)nullptr;
+    auto mat = (std::shared_ptr<material>)nullptr;
     for (auto ist : scn->instances) {
         if (ist->mat) continue;
         if (!mat) {
@@ -2668,7 +2677,8 @@ scene* load_gltf_scene(
     if (!load_textures) return scn;
 
     // set gamma
-    auto ldr_gamma = std::unordered_map<texture*, float>{{nullptr, 1.0f}};
+    auto ldr_gamma =
+        std::unordered_map<std::shared_ptr<texture>, float>{{nullptr, 1.0f}};
     for (auto txt : scn->textures) ldr_gamma[txt] = 2.2f;
     for (auto mat : scn->materials) {
         ldr_gamma[mat->ke_txt] = 2.2f;
@@ -2699,8 +2709,8 @@ scene* load_gltf_scene(
 }
 
 // Save gltf json
-void save_gltf_scene(const std::string& filename, const scene* scn,
-    bool save_textures, bool skip_missing) {
+void save_gltf_scene(const std::string& filename,
+    const std::shared_ptr<scene> scn, bool save_textures, bool skip_missing) {
     // start creating json
     auto js = json::object();
     js["asset"]["version"] = "2.0";
@@ -2722,7 +2732,7 @@ void save_gltf_scene(const std::string& filename, const scene* scn,
     if (!scn->nodes.empty()) js["nodes"] = json::array();
 
     // convert cameras
-    auto cmap = std::unordered_map<camera*, int>();
+    auto cmap = std::unordered_map<std::shared_ptr<camera>, int>();
     for (auto cam : scn->cameras) {
         auto cjs = json();
         cjs["name"] = cam->name;
@@ -2743,7 +2753,7 @@ void save_gltf_scene(const std::string& filename, const scene* scn,
     }
 
     // textures
-    auto tmap = std::unordered_map<texture*, int>();
+    auto tmap = std::unordered_map<std::shared_ptr<texture>, int>();
     for (auto txt : scn->textures) {
         auto tjs = json(), ijs = json();
         tjs["source"] = (int)js["images"].size();
@@ -2754,7 +2764,7 @@ void save_gltf_scene(const std::string& filename, const scene* scn,
     }
 
     // material
-    auto mmap = std::unordered_map<material*, int>();
+    auto mmap = std::unordered_map<std::shared_ptr<material>, int>();
     for (auto mat : scn->materials) {
         auto mjs = json();
         mjs["name"] = mat->name;
@@ -2794,12 +2804,12 @@ void save_gltf_scene(const std::string& filename, const scene* scn,
     }
 
     // determine shape materials
-    auto shape_mats = std::unordered_map<shape*, int>();
+    auto shape_mats = std::unordered_map<std::shared_ptr<shape>, int>();
     for (auto ist : scn->instances)
         if (ist->mat) shape_mats[ist->shp] = mmap.at(ist->mat);
 
     // shapes
-    auto smap = std::unordered_map<shape*, int>();
+    auto smap = std::unordered_map<std::shared_ptr<shape>, int>();
     for (auto shp : scn->shapes) {
         auto mjs = json(), bjs = json(), pjs = json();
         auto bid = js["buffers"].size();
@@ -2859,8 +2869,8 @@ void save_gltf_scene(const std::string& filename, const scene* scn,
     }
 
     // nodes
-    auto nmap = std::unordered_map<node*, int>();
-    for (auto nde : scn->nodes) {
+    auto nmap = std::unordered_map<std::shared_ptr<node>, int>();
+    for (auto& nde : scn->nodes) {
         auto njs = json();
         njs["name"] = nde->name;
         njs["matrix"] = frame_to_mat(nde->frame);
@@ -2871,7 +2881,8 @@ void save_gltf_scene(const std::string& filename, const scene* scn,
         if (nde->ist) njs["mesh"] = smap.at(nde->ist->shp);
         if (!nde->children.empty()) {
             njs["children"] = json::array();
-            for (auto c : nde->children) njs["children"].push_back(nmap.at(c));
+            for (auto& c : nde->children)
+                njs["children"].push_back(nmap.at(c.lock()));
         }
         js["nodes"].push_back(njs);
         nmap[nde] = (int)js["nodes"].size() - 1;
@@ -2931,7 +2942,8 @@ void save_gltf_scene(const std::string& filename, const scene* scn,
     if (!save_textures) return;
 
     // set gamma
-    auto ldr_gamma = std::unordered_map<texture*, float>{{nullptr, 1.0f}};
+    auto ldr_gamma =
+        std::unordered_map<std::shared_ptr<texture>, float>{{nullptr, 1.0f}};
     for (auto txt : scn->textures) ldr_gamma[txt] = 2.2f;
     for (auto mat : scn->materials) {
         ldr_gamma[mat->ke_txt] = 2.2f;

@@ -83,6 +83,7 @@
 #include "yocto_math.h"
 
 #include <deque>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -220,20 +221,12 @@ struct obj_scene {
     std::deque<vec3f> norm;      // vertex normals
     std::deque<vec2f> texcoord;  // vertex texcoords
 
-    std::vector<obj_object*> objects;            // objects
-    std::vector<obj_material*> materials;        // materials
-    std::vector<obj_texture*> textures;          // textures
-    std::vector<obj_camera*> cameras;            // cameras [extension]
-    std::vector<obj_environment*> environments;  // environments [extension]
-
-    // Cleanup.
-    ~obj_scene() {
-        for (auto v : objects) delete v;
-        for (auto v : materials) delete v;
-        for (auto v : textures) delete v;
-        for (auto v : cameras) delete v;
-        for (auto v : environments) delete v;
-    }
+    std::vector<std::shared_ptr<obj_object>> objects;      // objects
+    std::vector<std::shared_ptr<obj_material>> materials;  // materials
+    std::vector<std::shared_ptr<obj_texture>> textures;    // textures
+    std::vector<std::shared_ptr<obj_camera>> cameras;  // cameras [extension]
+    std::vector<std::shared_ptr<obj_environment>>
+        environments;  // environments [extension]
 };
 
 // Load an OBJ from file `filename`. Split shapes at material and group
@@ -241,22 +234,23 @@ struct obj_scene {
 // Load textures if `load_textures` is true, and report errors only if
 // `skip_missing` is false. Texture coordinates and material Tr are flipped
 // if `flip_texcoord` and `flip_tp` are respectively true.
-obj_scene* load_obj(const std::string& filename, bool split_shapes,
-    bool flip_texcoord = true, bool flip_tr = true);
+std::shared_ptr<obj_scene> load_obj(const std::string& filename,
+    bool split_shapes, bool flip_texcoord = true, bool flip_tr = true);
 
 // Save an OBJ to file `filename`. Save textures if `save_textures` is true,
 // and report errors only if `skip_missing` is false.
 // Texture coordinates and material Tr are flipped if `flip_texcoord` and
 // `flip_tp` are respectively true.
-void save_obj(const std::string& filename, const obj_scene* obj,
-    bool flip_texcoord = true, bool flip_tr = true);
+void save_obj(const std::string& filename,
+    const std::shared_ptr<obj_scene>& obj, bool flip_texcoord = true,
+    bool flip_tr = true);
 
 // Load OBJ texture images.
-void load_obj_textures(
-    obj_scene* obj, const std::string& dirname, bool skip_missing = true);
+void load_obj_textures(const std::shared_ptr<obj_scene>& obj,
+    const std::string& dirname, bool skip_missing = true);
 // Save OBJ texture images.
-void save_obj_textures(
-    const obj_scene* obj, const std::string& dirname, bool skip_missing = true);
+void save_obj_textures(const std::shared_ptr<obj_scene>& obj,
+    const std::string& dirname, bool skip_missing = true);
 
 // Callback object
 struct obj_callbacks {
