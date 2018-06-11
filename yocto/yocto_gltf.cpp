@@ -113,15 +113,14 @@ static void serialize(std::string& val, json& js, bool reading) {
 
 // Parse support function.
 template <typename T>
-static void serialize(T*& val, json& js, bool reading) {
+static void serialize(std::shared_ptr<T>& val, json& js, bool reading) {
     if (reading) {
         if (js.is_null()) {
-            if (val) delete val;
             val = nullptr;
             return;
         }
         if (!js.is_object()) throw std::runtime_error("object expected");
-        if (!val) val = new T();
+        if (!val) val = std::make_shared<T>();
         serialize(*val, js, reading);
     } else {
         if (!val) {
@@ -1017,7 +1016,8 @@ static bool startswith(const std::string& str, const std::string& substr) {
 }
 
 // Load buffer data.
-void load_buffers(const glTF* gltf, const std::string& dirname) {
+void load_buffers(
+    const std::shared_ptr<glTF>& gltf, const std::string& dirname) {
     auto fix_path = [](const std::string& path_) {
         auto path = path_;
         for (auto& c : path)
@@ -1073,9 +1073,9 @@ static inline std::string path_dirname(const std::string& filename) {
 }
 
 // Loads a gltf.
-glTF* load_gltf(const std::string& filename, bool load_bin) {
+std::shared_ptr<glTF> load_gltf(const std::string& filename, bool load_bin) {
     // clear data
-    auto gltf = new glTF();
+    auto gltf = std::make_shared<glTF>();
 
     // load json
     std::ifstream stream(filename.c_str());
@@ -1104,7 +1104,8 @@ glTF* load_gltf(const std::string& filename, bool load_bin) {
 }
 
 // Save buffer data.
-void save_buffers(const glTF* gltf, const std::string& dirname) {
+void save_buffers(
+    const std::shared_ptr<glTF>& gltf, const std::string& dirname) {
     auto save_binary = [](const std::string& filename,
                            const std::vector<unsigned char>& data) {
         auto f = fopen(filename.c_str(), "wb");
@@ -1124,7 +1125,8 @@ void save_buffers(const glTF* gltf, const std::string& dirname) {
 }
 
 // Saves a gltf.
-void save_gltf(const std::string& filename, const glTF* gltf, bool save_bin) {
+void save_gltf(const std::string& filename, const std::shared_ptr<glTF>& gltf,
+    bool save_bin) {
     auto save_text = [](const std::string& filename, const std::string& str) {
         auto f = fopen(filename.c_str(), "wb");
         if (!f) throw std::runtime_error("cannot write file " + filename);
@@ -1136,7 +1138,7 @@ void save_gltf(const std::string& filename, const glTF* gltf, bool save_bin) {
 
     // dumps json
     auto js = json();
-    serialize((glTF*&)gltf, js, false);
+    serialize((std::shared_ptr<glTF>&)gltf, js, false);
 
     // save json
     save_text(filename, js.dump(2));
@@ -1161,9 +1163,10 @@ void gltf_fwrite(FILE* f, const T* v, int count) {
 }
 
 // Loads a binary gltf.
-glTF* load_binary_gltf(const std::string& filename, bool load_bin) {
+std::shared_ptr<glTF> load_binary_gltf(
+    const std::string& filename, bool load_bin) {
     // clear data
-    auto gltf = new glTF();
+    auto gltf = std::make_shared<glTF>();
 
     // opens binary file
     auto f = fopen(filename.c_str(), "rb");
@@ -1272,15 +1275,15 @@ glTF* load_binary_gltf(const std::string& filename, bool load_bin) {
 }
 
 // Saves a binary gltf.
-void save_binary_gltf(
-    const std::string& filename, const glTF* gltf, bool save_bin) {
+void save_binary_gltf(const std::string& filename,
+    const std::shared_ptr<glTF>& gltf, bool save_bin) {
     // opens binary file
     auto f = fopen(filename.c_str(), "wb");
     if (!f) throw std::runtime_error("could not write binary file");
 
     // dumps json
     auto js = json();
-    serialize((glTF*&)gltf, js, false);
+    serialize((std::shared_ptr<glTF>&)gltf, js, false);
 
     // fix string
     auto js_str = js.dump(2);
@@ -1328,9 +1331,11 @@ void save_binary_gltf(
 void load_gltf_textures(
     glTF* gltf, const std::string& dirname, bool skip_missing) {
     // set gamma
-    auto ldr_gamma = std::unordered_map<glTFImage*, float>{{nullptr, 1.0f}};
+    auto ldr_gamma =
+        std::unordered_map<std::shared_ptr<glTFImage>, float>{{nullptr, 1.0f}};
     for (auto gimg : gltf->images) ldr_gamma[gimg] = 2.2f;
-    auto set_gamma = [&ldr_gamma, gltf](glTFTextureInfo* info, float gamma) {
+    auto set_gamma = [&ldr_gamma, gltf](
+                         std::shared_ptr<glTFTextureInfo> info, float gamma) {
         if (!info) return;
         auto gtxt = gltf->get(info->index);
         if (!gtxt) return;
@@ -1423,12 +1428,14 @@ void load_gltf_textures(
 }
 
 // Save glTF texture images.
-void save_gltf_textures(
-    const glTF* gltf, const std::string& dirname, bool skip_missing) {
+void save_gltf_textures(const std::shared_ptr<glTF>& gltf,
+    const std::string& dirname, bool skip_missing) {
     // set gamma
-    auto ldr_gamma = std::unordered_map<glTFImage*, float>{{nullptr, 1.0f}};
+    auto ldr_gamma =
+        std::unordered_map<std::shared_ptr<glTFImage>, float>{{nullptr, 1.0f}};
     for (auto gimg : gltf->images) ldr_gamma[gimg] = 2.2f;
-    auto set_gamma = [&ldr_gamma, gltf](glTFTextureInfo* info, float gamma) {
+    auto set_gamma = [&ldr_gamma, gltf](
+                         std::shared_ptr<glTFTextureInfo> info, float gamma) {
         if (!info) return;
         auto gtxt = gltf->get(info->index);
         if (!gtxt) return;
@@ -1471,7 +1478,8 @@ void save_gltf_textures(
     }
 }
 
-accessor_view::accessor_view(const glTF* gltf, const glTFAccessor* accessor) {
+accessor_view::accessor_view(const std::shared_ptr<glTF>& gltf,
+    const std::shared_ptr<glTFAccessor>& accessor) {
     _size = accessor->count;
     _ncomp = _num_components(accessor->type);
     _ctype = accessor->componentType;

@@ -91,7 +91,7 @@ int main(int argc, char* argv[]) {
 
     // scene loading
     ygl::log_info_begin("loading scene {}", filename);
-    auto scn = (ygl::scene*)nullptr;
+    auto scn = std::shared_ptr<ygl::scene>();
     try {
         scn = ygl::load_scene(filename);
     } catch (const std::exception& e) {
@@ -168,9 +168,6 @@ int main(int argc, char* argv[]) {
     // save image
     ygl::log_info("saving image {}", imfilename);
     ygl::save_image(imfilename, ygl::expose_image(img, exposure));
-
-    // cleanup
-    delete scn;
 
     // done
     return 0;

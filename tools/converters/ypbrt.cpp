@@ -299,24 +299,24 @@ void load_ply(const std::string& filename, std::vector<vec3i>& triangles,
     fclose(f);
 }
 
-scene* load_pbrt(const std::string& filename) {
+std::shared_ptr<scene> load_pbrt(const std::string& filename) {
     auto js = pbrt_to_json(filename);
     auto dirname = path_dirname(filename);
 
     struct stack_item {
         frame3f frame = identity_frame3f;
-        material* mat = nullptr;
-        material* light_mat = nullptr;
+        std::shared_ptr<material> mat = nullptr;
+        std::shared_ptr<material> light_mat = nullptr;
         float focus = 1, aspect = 1;
         bool reverse = false;
     };
 
     // parse
-    auto scn = new scene();
+    auto scn = std::make_shared<scene>();
     auto stack = std::vector<stack_item>();
     stack.push_back(stack_item());
-    auto txt_map = std::map<std::string, texture*>();
-    auto mat_map = std::map<std::string, material*>();
+    auto txt_map = std::map<std::string, std::shared_ptr<texture>>();
+    auto mat_map = std::map<std::string, std::shared_ptr<material>>();
     auto mid = 0;
 
     auto get_vec3f = [](const json& js) -> vec3f {
@@ -405,14 +405,14 @@ scene* load_pbrt(const std::string& filename) {
     };
 
     auto get_scaled_texture =
-        [&txt_map, &get_vec3f](const json& js) -> std::pair<vec3f, texture*> {
+    [&txt_map, &get_vec3f](const json& js) -> std::pair<vec3f, std::shared_ptr<texture>> {
         if (js.is_string())
             return {{1, 1, 1}, txt_map.at(js.get<std::string>())};
         return {get_vec3f(js), nullptr};
     };
 
     auto use_hierarchy = false;
-    std::map<std::string, std::vector<instance*>> objects;
+    std::map<std::string, std::vector<std::shared_ptr<instance>>> objects;
     for (auto& jcmd : js) {
         auto cmd = jcmd.at("cmd").get<std::string>();
         if (cmd == "ObjectInstance") {
@@ -454,7 +454,7 @@ scene* load_pbrt(const std::string& filename) {
             stack.back().aspect = jcmd.at("xresolution").get<float>() /
                                   jcmd.at("yresolution").get<float>();
         } else if (cmd == "Camera") {
-            auto cam = new camera();
+            auto cam = std::make_shared<camera>();
             cam->name = "cam" + std::to_string(cid++);
             cam->frame = inverse(stack.back().frame);
             cam->frame.z = -cam->frame.z;
@@ -479,7 +479,7 @@ scene* load_pbrt(const std::string& filename) {
                 }
             }
             if (!found) {
-                auto txt = new texture();
+                auto txt = std::make_shared<texture>();
                 scn->textures.push_back(txt);
                 txt->name = jcmd.at("name").get<std::string>();
                 txt_map[txt->name] = txt;
@@ -505,7 +505,7 @@ scene* load_pbrt(const std::string& filename) {
                 }
             }
             if (!found) {
-                auto mat = new material();
+                auto mat = std::make_shared<material>();
                 scn->materials.push_back(mat);
                 if (cmd == "Material") {
                     mat->name = "unnamed_mat" + std::to_string(mid++);
@@ -529,7 +529,7 @@ scene* load_pbrt(const std::string& filename) {
                             get_scaled_texture(jcmd.at("Kt"));
                     if (jcmd.count("opacity")) {
                         auto op = vec3f{0, 0, 0};
-                        auto op_txt = (texture*)nullptr;
+                        auto op_txt = std::shared_ptr<texture>();
                         std::tie(op, op_txt) =
                             get_scaled_texture(jcmd.at("opacity"));
                         mat->op = (op.x + op.y + op.z) / 3;
@@ -609,7 +609,7 @@ scene* load_pbrt(const std::string& filename) {
         } else if (cmd == "NamedMaterial") {
             stack.back().mat = mat_map.at(jcmd.at("name").get<std::string>());
             if (stack.back().light_mat) {
-                auto mat = new material(*stack.back().mat);
+                auto mat = std::make_shared<material>(*stack.back().mat);
                 mat->name += "_" + std::to_string(lid++);
                 mat->ke = stack.back().light_mat->ke;
                 mat->ke_txt = stack.back().light_mat->ke_txt;
@@ -617,7 +617,7 @@ scene* load_pbrt(const std::string& filename) {
                 stack.back().mat = mat;
             }
         } else if (cmd == "Shape") {
-            auto shp = new shape();
+            auto shp = std::make_shared<shape>();
             auto type = jcmd.at("type").get<std::string>();
             if (type == "plymesh") {
                 auto filename = jcmd.at("filename").get<std::string>();
@@ -662,7 +662,7 @@ scene* load_pbrt(const std::string& filename) {
                 for (auto& t : shp->triangles) std::swap(t.y, t.z);
             }
             scn->shapes.push_back(shp);
-            auto ist = new instance();
+            auto ist = std::make_shared<instance>();
             ist->name = shp->name;
             ist->frame = frame;
             ist->shp = shp;
@@ -678,7 +678,7 @@ scene* load_pbrt(const std::string& filename) {
             auto& object = objects.at(name);
             for (auto shp : object) {
                 instances[shp->name] += 1;
-                auto ist = new instance();
+                auto ist = std::make_shared<instance>();
                 ist->name =
                     shp->name + "_ist" + std::to_string(instances[shp->name]);
                 ist->frame = stack.back().frame * shp->frame;
@@ -688,7 +688,7 @@ scene* load_pbrt(const std::string& filename) {
         } else if (cmd == "AreaLightSource") {
             auto type = jcmd.at("type").get<std::string>();
             if (type == "diffuse") {
-                auto lmat = new material();
+                auto lmat = std::make_shared<material>();
                 lmat->ke = get_vec3f(jcmd.at("L"));
                 stack.back().light_mat = lmat;
             } else {
@@ -697,7 +697,7 @@ scene* load_pbrt(const std::string& filename) {
         } else if (cmd == "LightSource") {
             auto type = jcmd.at("type").get<std::string>();
             if (type == "infinite") {
-                auto env = new environment();
+                auto env = std::make_shared<environment>();
                 env->name = "env" + std::to_string(lid++);
                 // env->frame = frame3f{{1,0,0},{0,0,-1},{0,-1,0},{0,0,0}} *
                 // stack.back().frame;
@@ -706,7 +706,7 @@ scene* load_pbrt(const std::string& filename) {
                 env->ke = {1, 1, 1};
                 if (jcmd.count("scale")) env->ke *= get_vec3f(jcmd.at("scale"));
                 if (jcmd.count("mapname")) {
-                    auto txt = new texture();
+                    auto txt = std::make_shared<texture>();
                     txt->path = jcmd.at("mapname").get<std::string>();
                     txt->name = env->name;
                     scn->textures.push_back(txt);
@@ -715,7 +715,7 @@ scene* load_pbrt(const std::string& filename) {
                 scn->environments.push_back(env);
             } else if (type == "distant") {
                 auto distant_dist = 100;
-                auto shp = new shape();
+                auto shp = std::make_shared<shape>();
                 shp->name = "distant" + std::to_string(lid++);
                 auto from = vec3f{0, 0, 0}, to = vec3f{0, 0, 0};
                 if (jcmd.count("from")) from = get_vec3f(jcmd.at("from"));
@@ -727,14 +727,14 @@ scene* load_pbrt(const std::string& filename) {
                     {1, 1}, {size, size}, {1, 1});
                 shp->triangles = convert_quads_to_triangles(quads);
                 scn->shapes.push_back(shp);
-                auto mat = new material();
+                auto mat = std::make_shared<material>();
                 mat->name = shp->name;
                 mat->ke = {1, 1, 1};
                 if (jcmd.count("L")) mat->ke *= get_vec3f(jcmd.at("L"));
                 if (jcmd.count("scale")) mat->ke *= get_vec3f(jcmd.at("scale"));
                 mat->ke *= (distant_dist * distant_dist) / (size * size);
                 scn->materials.push_back(mat);
-                auto ist = new instance();
+                auto ist = std::make_shared<instance>();
                 ist->name = shp->name;
                 ist->shp = shp;
                 ist->mat = mat;
@@ -767,14 +767,14 @@ scene* load_pbrt(const std::string& filename) {
     }
     if (use_hierarchy) {
         for (auto cam : scn->cameras) {
-            auto nde = new node();
+            auto nde = std::make_shared<node>();
             nde->name = cam->name;
             nde->frame = cam->frame;
             nde->cam = cam;
             scn->nodes.insert(scn->nodes.begin(), nde);
         }
         for (auto env : scn->environments) {
-            auto nde = new node();
+            auto nde = std::make_shared<node>();
             nde->name = env->name;
             nde->frame = env->frame;
             nde->env = env;
@@ -784,7 +784,7 @@ scene* load_pbrt(const std::string& filename) {
     return scn;
 }
 
-void flipyz_scene(scene* scn) {
+void flipyz_scene(const std::shared_ptr<scene>& scn) {
     // flip meshes
     for (auto shp : scn->shapes) {
         for (auto& p : shp->pos) std::swap(p.y, p.z);

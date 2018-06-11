@@ -268,16 +268,17 @@ static inline std::string path_dirname(const std::string& filename) {
 }
 
 // Load MTL
-std::vector<obj_material*> load_mtl(const std::string& filename, bool flip_tr) {
+std::vector<std::shared_ptr<obj_material>> load_mtl(
+    const std::string& filename, bool flip_tr) {
     // clear materials
-    auto materials = std::vector<obj_material*>();
+    auto materials = std::vector<std::shared_ptr<obj_material>>();
 
     // open file
     auto fs = fopen(filename.c_str(), "rt");
     if (!fs) throw std::runtime_error("cannot open filename " + filename);
 
     // add a material preemptively to avoid crashes
-    materials.push_back(new obj_material());
+    materials.push_back(std::make_shared<obj_material>());
     auto mat = materials.back();
 
     // read the file line by line
@@ -299,7 +300,7 @@ std::vector<obj_material*> load_mtl(const std::string& filename, bool flip_tr) {
 
         // possible token values
         if (obj_streq(cmd, "newmtl")) {
-            materials.push_back(new obj_material());
+            materials.push_back(std::make_shared<obj_material>());
             mat = materials.back();
             obj_parse(ss, mat->name);
         } else if (obj_streq(cmd, "illum")) {
@@ -399,10 +400,10 @@ std::vector<obj_material*> load_mtl(const std::string& filename, bool flip_tr) {
 }
 
 // Loads an OBJ
-obj_scene* load_obj(const std::string& filename, bool split_shapes,
-    bool flip_texcoord, bool flip_tr) {
+std::shared_ptr<obj_scene> load_obj(const std::string& filename,
+    bool split_shapes, bool flip_texcoord, bool flip_tr) {
     // clear obj
-    auto obj = new obj_scene();
+    auto obj = std::make_shared<obj_scene>();
 
     // splitting policy
     auto split_material = split_shapes;
@@ -414,10 +415,11 @@ obj_scene* load_obj(const std::string& filename, bool split_shapes,
     if (!fs) throw std::runtime_error("cannot open filename " + filename);
 
     // add object if needed
-    auto add_object = [&](obj_scene* obj, std::string name, std::string matname,
-                          std::string groupname, bool smoothing) {
+    auto add_object = [&](std::shared_ptr<obj_scene> obj, std::string name,
+                          std::string matname, std::string groupname,
+                          bool smoothing) {
         if (obj->objects.empty() || !obj->objects.back()->elems.empty())
-            obj->objects.push_back(new obj_object());
+            obj->objects.push_back(std::make_shared<obj_object>());
         auto oobj = obj->objects.back();
         oobj->name = name;
         if (oobj->materials.empty()) oobj->materials.push_back("");
@@ -567,7 +569,7 @@ obj_scene* load_obj(const std::string& filename, bool split_shapes,
             obj->materials.insert(
                 obj->materials.end(), mats.begin(), mats.end());
         } else if (obj_streq(cmd, "c")) {
-            auto cam = new obj_camera();
+            auto cam = std::make_shared<obj_camera>();
             obj_parse(ss, cam->name);
             obj_parse(ss, cam->ortho);
             obj_parse(ss, cam->width);
@@ -578,7 +580,7 @@ obj_scene* load_obj(const std::string& filename, bool split_shapes,
             obj_parse(ss, cam->frame);
             obj->cameras.push_back(cam);
         } else if (obj_streq(cmd, "e")) {
-            auto env = new obj_environment();
+            auto env = std::make_shared<obj_environment>();
             obj_parse(ss, env->name);
             obj_parse(ss, env->ke);
             obj_parse(ss, env->ke_txt.path);
@@ -604,24 +606,24 @@ obj_scene* load_obj(const std::string& filename, bool split_shapes,
         clear_vert_if_unused(oobj->verts_norm);
         clear_vert_if_unused(oobj->verts_texcoord);
         if (!oobj->elems.empty() || !oobj->verts_pos.empty()) continue;
-        delete oobj;
         obj->objects.erase(obj->objects.begin() + idx);
         idx--;
     }
     auto end = std::remove_if(obj->objects.begin(), obj->objects.end(),
-        [](const obj_object* x) { return !x; });
+        [](const std::shared_ptr<obj_object>& x) { return !x; });
     obj->objects.erase(end, obj->objects.end());
 
     // apply properties
     for (auto oobj : obj->objects) oobj->props = oprops[oobj->name];
 
     // create textures
-    auto txt_set = std::unordered_map<std::string, obj_texture*>();
-    auto add_texture = [](obj_scene* obj, auto& txt_set,
+    auto txt_set =
+        std::unordered_map<std::string, std::shared_ptr<obj_texture>>();
+    auto add_texture = [](std::shared_ptr<obj_scene> obj, auto& txt_set,
                            const obj_texture_info& info) {
         if (info.path == "") return;
         if (txt_set.find(info.path) != txt_set.end()) return;
-        auto txt = new obj_texture();
+        auto txt = std::make_shared<obj_texture>();
         txt->path = info.path;
         txt_set[txt->path] = txt;
         obj->textures.push_back(txt);
@@ -1002,7 +1004,7 @@ inline void obj_dump_nl(FILE* fs) { fputs("\n", fs); }
 
 // Save an MTL file
 void save_mtl(const std::string& filename,
-    const std::vector<obj_material*>& materials, bool flip_tr) {
+    const std::vector<std::shared_ptr<obj_material>>& materials, bool flip_tr) {
     // open file
     auto fs = fopen(filename.c_str(), "wt");
     if (!fs) throw std::runtime_error("cannot open filename " + filename);
@@ -1053,8 +1055,8 @@ void save_mtl(const std::string& filename,
 }
 
 // Save an OBJ
-void save_obj(const std::string& filename, const obj_scene* obj,
-    bool flip_texcoord, bool flip_tr) {
+void save_obj(const std::string& filename,
+    const std::shared_ptr<obj_scene>& obj, bool flip_texcoord, bool flip_tr) {
     // open file
     auto fs = fopen(filename.c_str(), "wt");
     if (!fs) throw std::runtime_error("cannot open filename " + filename);
@@ -1163,8 +1165,8 @@ void save_obj(const std::string& filename, const obj_scene* obj,
 }
 
 // Load OBJ texture images.
-void load_obj_textures(
-    obj_scene* obj, const std::string& dirname, bool skip_missing) {
+void load_obj_textures(const std::shared_ptr<obj_scene>& obj,
+    const std::string& dirname, bool skip_missing) {
     // set gamma
     auto ldr_gamma = std::unordered_map<std::string, float>{{"", 1.0f}};
     for (auto txt : obj->textures) ldr_gamma[txt->path] = 2.2f;
@@ -1197,8 +1199,8 @@ void load_obj_textures(
 }
 
 // Save OBJ texture images.
-void save_obj_textures(
-    const obj_scene* obj, const std::string& dirname, bool skip_missing) {
+void save_obj_textures(const std::shared_ptr<obj_scene>& obj,
+    const std::string& dirname, bool skip_missing) {
     // set gamma
     auto ldr_gamma = std::unordered_map<std::string, float>{{"", 1.0f}};
     for (auto txt : obj->textures) ldr_gamma[txt->path] = 2.2f;

@@ -40,60 +40,56 @@ namespace ygl {
 
 // Scene selection.
 struct scene_selection {
-    scene_selection(std::nullptr_t* val = nullptr)
+    scene_selection()
         : ptr(nullptr), tinfo(nullptr) {}
     template <typename T>
-    scene_selection(T* val) : ptr(val), tinfo(&typeid(T)) {}
+    scene_selection(const std::shared_ptr<T>& val) : ptr(val), tinfo(&typeid(T)) {}
 
     template <typename T>
-    T* as() {
-        return (&typeid(T) == tinfo) ? (T*)ptr : nullptr;
-    }
-    template <typename T>
-    const T* as() const {
-        return (&typeid(T) == tinfo) ? (T*)ptr : nullptr;
+    std::shared_ptr<T> as() const {
+        return (&typeid(T) == tinfo) ? std::static_pointer_cast<T>(ptr) : nullptr;
     }
 
-    void* ptr = nullptr;                    // selected pointer
+    std::shared_ptr<void> ptr = nullptr;                    // selected pointer
     const std::type_info* tinfo = nullptr;  // type info
 };
 
 // Update OpenGL scene data.
-void update_gldata(texture* txt);
-void update_gldata(shape* shp);
-void update_gldata(scene* scn);
-void clear_gldata(texture* txt);
-void clear_gldata(shape* shp);
-void clear_gldata(scene* scn);
+void update_gldata(const std::shared_ptr<texture>& txt);
+void update_gldata(const std::shared_ptr<shape>& shp);
+void update_gldata(const std::shared_ptr<scene>& scn);
+void clear_gldata(const std::shared_ptr<texture>& txt);
+void clear_gldata(const std::shared_ptr<shape>& shp);
+void clear_gldata(const std::shared_ptr<scene>& scn);
 
 // Draw scene with stdsurface program.
-void draw_glscene(const scene* scn, const camera* cam,
+void draw_glscene(const std::shared_ptr<scene>& scn, const std::shared_ptr<camera>& cam,
     const glsurface_program& prog, 
-    const vec2i& viewport_size, const void* highlighted, bool eyelight,
+    const vec2i& viewport_size, const std::shared_ptr<void>& highlighted, bool eyelight,
     bool wireframe = false, bool edges = false, 
     float exposure = 0, float gamma = 2.2f);
 
 // Handle camera navigation and scene selection
-bool handle_glcamera_turntable(glwindow* win, camera* cam, float selected_dist);
-float handle_glcamera_turntable_dist(glwindow* win, camera* cam, const scene* scn, const scene_selection& sel);
-bool handle_glcamera_fps(glwindow* win, camera* cam);
-bool handle_glscene_selection(glwindow* win, const scene* scn,
-    const camera* cam, const vec2i& imsize, const frame2f& imframe,
+bool handle_glcamera_turntable(const std::shared_ptr<glwindow>& win,  const std::shared_ptr<camera>& cam, float selected_dist);
+float handle_glcamera_turntable_dist(const std::shared_ptr<glwindow>& win,  const std::shared_ptr<camera>& cam, const std::shared_ptr<scene>& scn, const scene_selection& sel);
+bool handle_glcamera_fps(const std::shared_ptr<glwindow>& win,  const std::shared_ptr<camera>& cam);
+bool handle_glscene_selection(const std::shared_ptr<glwindow>& win,  const std::shared_ptr<scene>& scn,
+    const std::shared_ptr<camera>& cam, const vec2i& imsize, const frame2f& imframe,
     scene_selection& sel);
 
 // Draws widgets for a camera. Used for quickly making demos.
 bool draw_glwidgets_camera_inspector(
-    glwindow* win, const std::string& lbl, camera* cam);
+    const std::shared_ptr<glwindow>& win, const std::string& lbl, const std::shared_ptr<camera>& cam);
 
 // Draws widgets for a whole scene. Used for quickly making demos.
-bool draw_glwidgets_scene_tree(glwindow* win, const std::string& lbl, scene* scn,
+bool draw_glwidgets_scene_tree(const std::shared_ptr<glwindow>& win,  const std::string& lbl, const std::shared_ptr<scene>& scn,
     scene_selection& sel, std::vector<ygl::scene_selection>& update_list, int height = 240,
     const std::unordered_map<std::string, std::string>& inspector_highlights =
         {});
 
 // Draws widgets for a whole scene. Used for quickly making demos.
-bool draw_glwidgets_scene_inspector(glwindow* win, const std::string& lbl, 
-    scene* scn, scene_selection& sel,
+bool draw_glwidgets_scene_inspector(const std::shared_ptr<glwindow>& win,  const std::string& lbl, 
+    const std::shared_ptr<scene>& scn, scene_selection& sel,
     std::vector<ygl::scene_selection>& update_list, int height = 240,
     const std::unordered_map<std::string, std::string>& inspector_highlights =
         {});

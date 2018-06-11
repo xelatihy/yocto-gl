@@ -36,8 +36,8 @@ using namespace std::literals;
 
 // Application state
 struct app_state {
-    ygl::scene* scn = nullptr;
-    ygl::camera* cam = nullptr;
+    std::shared_ptr<ygl::scene> scn = nullptr;
+    std::shared_ptr<ygl::camera> cam = nullptr;
     std::string filename;
     std::string imfilename;
     std::string outfilename;
@@ -65,14 +65,11 @@ struct app_state {
     bool screenshot_and_exit = false;
     bool no_glwidgets = false;
     std::unordered_map<std::string, std::string> inspector_highlights;
-
-    ~app_state() {
-        if (scn) delete scn;
-    }
 };
 
 // draw with shading
-inline void draw(ygl::glwindow* win, app_state* app) {
+inline void draw(const std::shared_ptr<ygl::glwindow>& win,
+    const std::shared_ptr<app_state>& app) {
     auto framebuffer_size = get_glwindow_framebuffer_size(win);
     app->resolution = framebuffer_size.y;
 
@@ -118,15 +115,13 @@ inline void draw(ygl::glwindow* win, app_state* app) {
     if (ygl::begin_glwidgets_frame(win, "yview")) {
         ygl::draw_glwidgets_text(win, "scene", app->filename);
         if (ygl::draw_glwidgets_button(win, "new")) {
-            delete app->scn;
             ygl::clear_gldata(app->scn);
-            app->scn = new ygl::scene();
+            app->scn = std::make_shared<ygl::scene>();
             ygl::update_gldata(app->scn);
         }
         ygl::continue_glwidgets_line(win);
         if (ygl::draw_glwidgets_button(win, "load")) {
             ygl::clear_gldata(app->scn);
-            delete app->scn;
             app->scn = ygl::load_scene(app->filename);
             ygl::update_gldata(app->scn);
         }
@@ -184,18 +179,15 @@ inline void draw(ygl::glwindow* win, app_state* app) {
     ygl::swap_glwindow_buffers(win);
 }
 
-inline void refresh(ygl::glwindow* win) {
-    return draw(win, (app_state*)ygl::get_glwindow_user_pointer(win));
-}
-
 // run ui loop
-void run_ui(app_state* app) {
+void run_ui(const std::shared_ptr<app_state>& app) {
     // window
     auto win = ygl::make_glwindow(
         (int)std::round(app->resolution * app->cam->width / app->cam->height) +
             ygl::default_glwidgets_width,
-        app->resolution, "yview | " + app->filename, app);
-    ygl::set_glwindow_callbacks(win, nullptr, nullptr, refresh);
+        app->resolution, "yview | " + app->filename);
+    ygl::set_glwindow_callbacks(
+        win, nullptr, nullptr, [win, app]() { draw(win, app); });
 
     // load textures and vbos
     app->prog = ygl::make_glsurface_program();
@@ -245,9 +237,6 @@ void run_ui(app_state* app) {
             ygl::wait_glwindow_events(win);
         }
     }
-
-    // cleanup
-    delete win;
 }
 
 // Load INI file. The implementation does not handle escaping.
@@ -286,7 +275,7 @@ load_ini(const std::string& filename) {
 
 int main(int argc, char* argv[]) {
     // create empty scene
-    auto app = new app_state();
+    auto app = std::make_shared<app_state>();
 
     // parse command line
     auto parser =
@@ -368,9 +357,6 @@ int main(int argc, char* argv[]) {
 
     // run ui
     run_ui(app);
-
-    // cleanup
-    delete app;
 
     // done
     return 0;

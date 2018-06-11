@@ -36,34 +36,12 @@
 #include <unordered_map>
 
 // -----------------------------------------------------------------------------
-// SCENE DATA
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-shape::~shape() {
-    if (bvh) delete bvh;
-}
-scene::~scene() {
-    for (auto v : shapes) delete v;
-    for (auto v : subdivs) delete v;
-    for (auto v : instances) delete v;
-    for (auto v : materials) delete v;
-    for (auto v : textures) delete v;
-    for (auto v : cameras) delete v;
-    for (auto v : environments) delete v;
-    for (auto v : nodes) delete v;
-    for (auto v : animations) delete v;
-    if (bvh) delete bvh;
-}
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
 // UPDATES TO COMPUTED PROPERTIES
 // -----------------------------------------------------------------------------
 namespace ygl {
 
 // Compute shape normals. Supports only non-facevarying shapes.
-void update_normals(shape* shp) {
+void update_normals(const std::shared_ptr<shape>& shp) {
     if (!shp->triangles.empty()) {
         compute_normals(shp->triangles, shp->pos, shp->norm);
     } else if (!shp->lines.empty()) {
@@ -74,13 +52,13 @@ void update_normals(shape* shp) {
 }
 
 // Computes a shape bounding box.
-void update_bbox(shape* shp) {
+void update_bbox(const std::shared_ptr<shape>& shp) {
     shp->bbox = invalid_bbox3f;
     for (auto p : shp->pos) shp->bbox += p;
 }
 
 // Updates the scene and scene's instances bounding boxes
-void update_bbox(scene* scn, bool do_shapes) {
+void update_bbox(const std::shared_ptr<scene>& scn, bool do_shapes) {
     if (do_shapes) {
         for (auto shp : scn->shapes) update_bbox(shp);
     }
@@ -92,7 +70,8 @@ void update_bbox(scene* scn, bool do_shapes) {
 }
 
 // Updates tesselation.
-void update_tesselation(const subdiv* sbd, shape* shp) {
+void update_tesselation(
+    const std::shared_ptr<subdiv>& sbd, std::shared_ptr<shape> shp) {
     shp->name = sbd->name;
     auto quads_pos = sbd->quads_pos;
     auto quads_texcoord = sbd->quads_texcoord;
@@ -112,7 +91,7 @@ void update_tesselation(const subdiv* sbd, shape* shp) {
     shp->triangles = convert_quads_to_triangles(quads);
     update_bbox(shp);
 }
-void update_tesselation(scene* scn) {
+void update_tesselation(const std::shared_ptr<scene>& scn) {
     for (auto ist : scn->instances) {
         if (!ist->sbd) continue;
         update_tesselation(ist->sbd, ist->shp);
@@ -120,8 +99,8 @@ void update_tesselation(scene* scn) {
 }
 
 // Update animation transforms
-void update_transforms(
-    const animation* anm, float time, const std::string& anim_group) {
+void update_transforms(const std::shared_ptr<animation>& anm, float time,
+    const std::string& anim_group) {
     if (anim_group != "" && anim_group != anm->group) return;
 
     if (!anm->translation.empty()) {
@@ -173,27 +152,30 @@ void update_transforms(
 }
 
 // Update node transforms
-void update_transforms(node* nde, const frame3f& parent = identity_frame3f) {
+void update_transforms(const std::shared_ptr<node>& nde,
+    const frame3f& parent = identity_frame3f) {
     auto frame = parent * nde->frame * translation_frame(nde->translation) *
                  rotation_frame(nde->rotation) * scaling_frame(nde->scale);
     if (nde->ist) nde->ist->frame = frame;
     if (nde->cam) nde->cam->frame = frame;
     if (nde->env) nde->env->frame = frame;
-    for (auto child : nde->children) update_transforms(child, frame);
+    for (auto& child : nde->children) update_transforms(child.lock(), frame);
 }
 
 // Update node transforms
-void update_transforms(scene* scn, float time, const std::string& anim_group) {
-    for (auto agr : scn->animations) update_transforms(agr, time, anim_group);
-    for (auto nde : scn->nodes) nde->children.clear();
-    for (auto nde : scn->nodes)
+void update_transforms(const std::shared_ptr<scene>& scn, float time,
+    const std::string& anim_group) {
+    for (auto& agr : scn->animations) update_transforms(agr, time, anim_group);
+    for (auto& nde : scn->nodes) nde->children.clear();
+    for (auto& nde : scn->nodes)
         if (nde->parent) nde->parent->children.push_back(nde);
-    for (auto nde : scn->nodes)
+    for (auto& nde : scn->nodes)
         if (!nde->parent) update_transforms(nde);
 }
 
 // Compute animation range
-vec2f compute_animation_range(const scene* scn, const std::string& anim_group) {
+vec2f compute_animation_range(
+    const std::shared_ptr<scene>& scn, const std::string& anim_group) {
     if (scn->animations.empty()) return zero2f;
     auto range = vec2f{+flt_max, -flt_max};
     for (auto anm : scn->animations) {
@@ -206,7 +188,8 @@ vec2f compute_animation_range(const scene* scn, const std::string& anim_group) {
 }
 
 // Update lights.
-void update_lights(scene* scn, bool do_shapes, bool do_environments) {
+void update_lights(
+    const std::shared_ptr<scene>& scn, bool do_shapes, bool do_environments) {
     if (do_shapes) {
         for (auto shp : scn->shapes) shp->elem_cdf.clear();
     }
@@ -230,7 +213,7 @@ void update_lights(scene* scn, bool do_shapes, bool do_environments) {
 
 // Generate a distribution for sampling a shape uniformly based
 // on area/length.
-void update_shape_cdf(shape* shp) {
+void update_shape_cdf(const std::shared_ptr<shape>& shp) {
     shp->elem_cdf.clear();
     if (!shp->triangles.empty()) {
         shp->elem_cdf = sample_triangles_cdf(shp->triangles, shp->pos);
@@ -244,7 +227,7 @@ void update_shape_cdf(shape* shp) {
 }
 
 // Update environment CDF for sampling.
-void update_environment_cdf(environment* env) {
+void update_environment_cdf(std::shared_ptr<environment> env) {
     env->elem_cdf.clear();
     auto txt = env->ke_txt;
     if (!txt) return;
@@ -261,8 +244,8 @@ void update_environment_cdf(environment* env) {
 }
 
 // Build a shape BVH
-void update_bvh(shape* shp, bool equalsize) {
-    if (!shp->bvh) shp->bvh = new bvh_tree();
+void update_bvh(const std::shared_ptr<shape>& shp, bool equalsize) {
+    if (!shp->bvh) shp->bvh = std::make_shared<bvh_tree>();
     shp->bvh->pos = shp->pos;
     shp->bvh->radius = shp->radius;
     if (shp->bvh->radius.empty())
@@ -273,13 +256,14 @@ void update_bvh(shape* shp, bool equalsize) {
 }
 
 // Build a scene BVH
-void update_bvh(scene* scn, bool do_shapes, bool equalsize) {
+void update_bvh(
+    const std::shared_ptr<scene>& scn, bool do_shapes, bool equalsize) {
     if (do_shapes) {
         for (auto shp : scn->shapes) update_bvh(shp, equalsize);
     }
 
     // tree bvh
-    if (!scn->bvh) scn->bvh = new bvh_tree();
+    if (!scn->bvh) scn->bvh = std::make_shared<bvh_tree>();
     scn->bvh->ist_frames.resize(scn->instances.size());
     scn->bvh->ist_inv_frames.resize(scn->instances.size());
     scn->bvh->ist_bvhs.resize(scn->instances.size());
@@ -293,7 +277,7 @@ void update_bvh(scene* scn, bool do_shapes, bool equalsize) {
 }
 
 // Refits a scene BVH
-void refit_bvh(shape* shp) {
+void refit_bvh(const std::shared_ptr<shape>& shp) {
     shp->bvh->pos = shp->pos;
     shp->bvh->radius = shp->radius;
     if (shp->bvh->radius.empty())
@@ -302,7 +286,7 @@ void refit_bvh(shape* shp) {
 }
 
 // Refits a scene BVH
-void refit_bvh(scene* scn, bool do_shapes) {
+void refit_bvh(const std::shared_ptr<scene>& scn, bool do_shapes) {
     if (do_shapes) {
         for (auto shp : scn->shapes) refit_bvh(shp);
     }
@@ -319,7 +303,7 @@ void refit_bvh(scene* scn, bool do_shapes) {
 }
 
 // Add missing names and resolve duplicated names.
-void add_missing_names(scene* scn) {
+void add_missing_names(const std::shared_ptr<scene>& scn) {
     auto fix_names = [](auto& vals, const std::string& base) {
         auto nmap = std::map<std::string, int>();
         for (auto val : vals) {
@@ -342,14 +326,14 @@ void add_missing_names(scene* scn) {
 }
 
 // Add missing normals.
-void add_missing_normals(scene* scn) {
+void add_missing_normals(const std::shared_ptr<scene>& scn) {
     for (auto shp : scn->shapes) {
         if (shp->norm.empty()) update_normals(shp);
     }
 }
 
 // Add missing tangent space if needed.
-void add_missing_tangent_space(scene* scn) {
+void add_missing_tangent_space(const std::shared_ptr<scene>& scn) {
     for (auto ist : scn->instances) {
         if (!ist->shp->tangsp.empty() || ist->shp->texcoord.empty()) continue;
         if (!ist->mat || (!ist->mat->norm_txt && !ist->mat->bump_txt)) continue;
@@ -364,7 +348,8 @@ void add_missing_tangent_space(scene* scn) {
 }
 
 // Checks for validity of the scene.
-std::vector<std::string> validate(const scene* scn, bool skip_textures) {
+std::vector<std::string> validate(
+    const std::shared_ptr<scene>& scn, bool skip_textures) {
     auto errs = std::vector<std::string>();
     auto check_names = [&errs](const auto& vals, const std::string& base) {
         auto used = std::map<std::string, int>();
@@ -376,12 +361,13 @@ std::vector<std::string> validate(const scene* scn, bool skip_textures) {
                 errs.push_back("duplicated " + base + " name " + kv.first);
         }
     };
-    auto check_empty_textures = [&errs](const std::vector<texture*>& vals) {
-        for (auto val : vals) {
-            if (val->img.pxl.empty())
-                errs.push_back("empty texture " + val->name);
-        }
-    };
+    auto check_empty_textures =
+        [&errs](const std::vector<std::shared_ptr<texture>>& vals) {
+            for (auto val : vals) {
+                if (val->img.pxl.empty())
+                    errs.push_back("empty texture " + val->name);
+            }
+        };
 
     check_names(scn->cameras, "camera");
     check_names(scn->shapes, "shape");
@@ -404,7 +390,7 @@ namespace ygl {
 
 // Scene intersection.
 scene_intersection intersect_ray(
-    const scene* scn, const ray3f& ray, bool find_any) {
+    const std::shared_ptr<scene>& scn, const ray3f& ray, bool find_any) {
     auto iid = 0;
     auto isec = scene_intersection();
     if (!intersect_bvh(
@@ -415,7 +401,7 @@ scene_intersection intersect_ray(
 }
 
 // Shape element normal.
-vec3f eval_elem_norm(const shape* shp, int ei) {
+vec3f eval_elem_norm(const std::shared_ptr<shape>& shp, int ei) {
     auto norm = zero3f;
     if (!shp->triangles.empty()) {
         auto t = shp->triangles[ei];
@@ -430,7 +416,7 @@ vec3f eval_elem_norm(const shape* shp, int ei) {
 }
 
 // Shape element normal.
-vec4f eval_elem_tangsp(const shape* shp, int ei) {
+vec4f eval_elem_tangsp(const std::shared_ptr<shape>& shp, int ei) {
     auto tangsp = zero4f;
     if (!shp->triangles.empty()) {
         auto t = shp->triangles[ei];
@@ -455,7 +441,8 @@ vec4f eval_elem_tangsp(const shape* shp, int ei) {
 
 // Shape value interpolated using barycentric coordinates
 template <typename T>
-T eval_elem(const shape* shp, const std::vector<T>& vals, int ei, vec2f uv) {
+T eval_elem(const std::shared_ptr<shape>& shp, const std::vector<T>& vals,
+    int ei, vec2f uv) {
     if (vals.empty()) return {};
     if (!shp->triangles.empty()) {
         return interpolate_triangle(vals, shp->triangles[ei], uv);
@@ -469,30 +456,31 @@ T eval_elem(const shape* shp, const std::vector<T>& vals, int ei, vec2f uv) {
 }
 
 // Shape values interpolated using barycentric coordinates
-vec3f eval_pos(const shape* shp, int ei, vec2f uv) {
+vec3f eval_pos(const std::shared_ptr<shape>& shp, int ei, vec2f uv) {
     return eval_elem(shp, shp->pos, ei, uv);
 }
-vec3f eval_norm(const shape* shp, int ei, vec2f uv) {
+vec3f eval_norm(const std::shared_ptr<shape>& shp, int ei, vec2f uv) {
     if (shp->norm.empty()) return eval_elem_norm(shp, ei);
     return normalize(eval_elem(shp, shp->norm, ei, uv));
 }
-vec2f eval_texcoord(const shape* shp, int ei, vec2f uv) {
+vec2f eval_texcoord(const std::shared_ptr<shape>& shp, int ei, vec2f uv) {
     if (shp->texcoord.empty()) return uv;
     return eval_elem(shp, shp->texcoord, ei, uv);
 }
-vec4f eval_color(const shape* shp, int ei, vec2f uv) {
+vec4f eval_color(const std::shared_ptr<shape>& shp, int ei, vec2f uv) {
     if (shp->color.empty()) return {1, 1, 1, 1};
     return eval_elem(shp, shp->color, ei, uv);
 }
-float eval_radius(const shape* shp, int ei, vec2f uv) {
+float eval_radius(const std::shared_ptr<shape>& shp, int ei, vec2f uv) {
     if (shp->radius.empty()) return 0.001f;
     return eval_elem(shp, shp->radius, ei, uv);
 }
-vec4f eval_tangsp(const shape* shp, int ei, vec2f uv) {
+vec4f eval_tangsp(const std::shared_ptr<shape>& shp, int ei, vec2f uv) {
     if (shp->tangsp.empty()) return eval_elem_tangsp(shp, ei);
     return eval_elem(shp, shp->tangsp, ei, uv);
 }
-vec3f eval_tangsp(const shape* shp, int ei, vec2f uv, bool& left_handed) {
+vec3f eval_tangsp(
+    const std::shared_ptr<shape>& shp, int ei, vec2f uv, bool& left_handed) {
     auto tangsp = (shp->tangsp.empty()) ? eval_elem_tangsp(shp, ei) :
                                           eval_elem(shp, shp->tangsp, ei, uv);
     left_handed = tangsp.w < 0;
@@ -500,31 +488,33 @@ vec3f eval_tangsp(const shape* shp, int ei, vec2f uv, bool& left_handed) {
 }
 
 // Instance values interpolated using barycentric coordinates.
-vec3f eval_pos(const instance* ist, int ei, vec2f uv) {
+vec3f eval_pos(const std::shared_ptr<instance>& ist, int ei, vec2f uv) {
     return transform_point(ist->frame, eval_pos(ist->shp, ei, uv));
 }
-vec3f eval_norm(const instance* ist, int ei, vec2f uv) {
+vec3f eval_norm(const std::shared_ptr<instance>& ist, int ei, vec2f uv) {
     return transform_direction(ist->frame, eval_norm(ist->shp, ei, uv));
 }
-vec2f eval_texcoord(const instance* ist, int ei, vec2f uv) {
+vec2f eval_texcoord(const std::shared_ptr<instance>& ist, int ei, vec2f uv) {
     return eval_texcoord(ist->shp, ei, uv);
 }
-vec4f eval_color(const instance* ist, int ei, vec2f uv) {
+vec4f eval_color(const std::shared_ptr<instance>& ist, int ei, vec2f uv) {
     return eval_color(ist->shp, ei, uv);
 }
-float eval_radius(const instance* ist, int ei, vec2f uv) {
+float eval_radius(const std::shared_ptr<instance>& ist, int ei, vec2f uv) {
     return eval_radius(ist->shp, ei, uv);
 }
-vec3f eval_tangsp(const instance* ist, int ei, vec2f uv, bool& left_handed) {
+vec3f eval_tangsp(
+    const std::shared_ptr<instance>& ist, int ei, vec2f uv, bool& left_handed) {
     return transform_direction(
         ist->frame, eval_tangsp(ist->shp, ei, uv, left_handed));
 }
 // Instance element values.
-vec3f eval_elem_norm(const instance* ist, int ei) {
+vec3f eval_elem_norm(const std::shared_ptr<instance>& ist, int ei) {
     return transform_direction(ist->frame, eval_elem_norm(ist->shp, ei));
 }
 // Shading normals including material perturbations.
-vec3f eval_shading_norm(const instance* ist, int ei, vec2f uv, vec3f o) {
+vec3f eval_shading_norm(
+    const std::shared_ptr<instance>& ist, int ei, vec2f uv, vec3f o) {
     if (!ist->shp->triangles.empty()) {
         auto n = eval_norm(ist, ei, uv);
         if (ist->mat && ist->mat->norm_txt) {
@@ -547,7 +537,7 @@ vec3f eval_shading_norm(const instance* ist, int ei, vec2f uv, vec3f o) {
 }
 
 // Environment texture coordinates from the direction.
-vec2f eval_texcoord(const environment* env, vec3f w) {
+vec2f eval_texcoord(const std::shared_ptr<environment>& env, vec3f w) {
     auto wl = transform_direction_inverse(env->frame, w);
     auto uv = vec2f{
         atan2(wl.z, wl.x) / (2 * pi), acos(clamp(wl.y, -1.0f, 1.0f)) / pi};
@@ -555,13 +545,13 @@ vec2f eval_texcoord(const environment* env, vec3f w) {
     return uv;
 }
 // Evaluate the environment direction.
-vec3f eval_direction(const environment* env, vec2f uv) {
+vec3f eval_direction(const std::shared_ptr<environment>& env, vec2f uv) {
     return transform_direction(
         env->frame, {cos(uv.x * 2 * pi) * sin(uv.y * pi), cos(uv.y * pi),
                         sin(uv.x * 2 * pi) * sin(uv.y * pi)});
 }
 // Evaluate the environment color.
-vec3f eval_environment(const environment* env, vec3f w) {
+vec3f eval_environment(const std::shared_ptr<environment>& env, vec3f w) {
     auto ke = env->ke;
     if (env->ke_txt) {
         ke *= xyz(eval_texture(env->ke_txt, eval_texcoord(env, w)));
@@ -570,7 +560,7 @@ vec3f eval_environment(const environment* env, vec3f w) {
 }
 
 // Evaluate a texture
-vec4f eval_texture(const texture* txt, vec2f texcoord) {
+vec4f eval_texture(const std::shared_ptr<texture>& txt, vec2f texcoord) {
     if (!txt || txt->img.pxl.empty()) return {1, 1, 1, 1};
 
     // get image width/height
@@ -601,10 +591,11 @@ vec4f eval_texture(const texture* txt, vec2f texcoord) {
 }
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
-float eval_camera_fovy(const camera* cam) {
+float eval_camera_fovy(const std::shared_ptr<camera>& cam) {
     return 2 * std::atan(cam->height / (2 * cam->focal));
 }
-void set_camera_fovy(camera* cam, float fovy, float aspect, float width) {
+void set_camera_fovy(
+    const std::shared_ptr<camera>& cam, float fovy, float aspect, float width) {
     cam->width = width;
     cam->height = width / aspect;
     cam->focal = cam->height / (2 * std::tan(fovy / 2));
@@ -612,7 +603,7 @@ void set_camera_fovy(camera* cam, float fovy, float aspect, float width) {
 
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
-ray3f eval_camera_ray(const camera* cam, vec2f uv, vec2f luv) {
+ray3f eval_camera_ray(const std::shared_ptr<camera>& cam, vec2f uv, vec2f luv) {
     auto dist = cam->focal;
     if (cam->focus < flt_max) {
         dist = cam->focal * cam->focus / (cam->focus - cam->focal);
@@ -631,19 +622,19 @@ ray3f eval_camera_ray(const camera* cam, vec2f uv, vec2f luv) {
 // Generates a ray from a camera for pixel coordinates `ij`, the
 // resolution `res`, the sub-pixel coordinates `puv` and the lens
 // coordinates `luv` and the image resolution `res`.
-ray3f eval_camera_ray(
-    const camera* cam, vec2i ij, vec2i imsize, vec2f puv, vec2f luv) {
+ray3f eval_camera_ray(const std::shared_ptr<camera>& cam, vec2i ij,
+    vec2i imsize, vec2f puv, vec2f luv) {
     auto uv = vec2f{(ij.x + puv.x) / imsize.x, (ij.y + puv.y) / imsize.y};
     return eval_camera_ray(cam, uv, luv);
 }
 
 // Evaluates material parameters.
-vec3f eval_emission(const instance* ist, int ei, vec2f uv) {
+vec3f eval_emission(const std::shared_ptr<instance>& ist, int ei, vec2f uv) {
     if (!ist || !ist->mat) return zero3f;
     return ist->mat->ke * xyz(eval_color(ist, ei, uv)) *
            xyz(eval_texture(ist->mat->ke_txt, eval_texcoord(ist, ei, uv)));
 }
-vec3f eval_diffuse(const instance* ist, int ei, vec2f uv) {
+vec3f eval_diffuse(const std::shared_ptr<instance>& ist, int ei, vec2f uv) {
     if (!ist || !ist->mat) return zero3f;
     if (!ist->mat->base_metallic) {
         return ist->mat->kd * xyz(eval_color(ist, ei, uv)) *
@@ -657,7 +648,7 @@ vec3f eval_diffuse(const instance* ist, int ei, vec2f uv) {
         return kb * (1 - km);
     }
 }
-vec3f eval_specular(const instance* ist, int ei, vec2f uv) {
+vec3f eval_specular(const std::shared_ptr<instance>& ist, int ei, vec2f uv) {
     if (!ist || !ist->mat) return zero3f;
     if (!ist->mat->base_metallic) {
         return ist->mat->ks * xyz(eval_color(ist, ei, uv)) *
@@ -671,7 +662,7 @@ vec3f eval_specular(const instance* ist, int ei, vec2f uv) {
         return kb * km + vec3f{0.04f, 0.04f, 0.04f} * (1 - km);
     }
 }
-float eval_roughness(const instance* ist, int ei, vec2f uv) {
+float eval_roughness(const std::shared_ptr<instance>& ist, int ei, vec2f uv) {
     if (!ist || !ist->mat) return 1;
     if (!ist->mat->base_metallic) {
         if (!ist->mat->gltf_textures) {
@@ -692,12 +683,13 @@ float eval_roughness(const instance* ist, int ei, vec2f uv) {
         return rs * rs;
     }
 }
-vec3f eval_transmission(const instance* ist, int ei, vec2f uv) {
+vec3f eval_transmission(
+    const std::shared_ptr<instance>& ist, int ei, vec2f uv) {
     if (!ist || !ist->mat) return zero3f;
     return ist->mat->kt * xyz(eval_color(ist, ei, uv)) *
            xyz(eval_texture(ist->mat->kt_txt, eval_texcoord(ist, ei, uv)));
 }
-float eval_opacity(const instance* ist, int ei, vec2f uv) {
+float eval_opacity(const std::shared_ptr<instance>& ist, int ei, vec2f uv) {
     if (!ist || !ist->mat) return 1;
     return ist->mat->op * eval_color(ist->shp, ei, uv).w *
            eval_texture(ist->mat->kd_txt, eval_texcoord(ist, ei, uv)).w *
@@ -705,7 +697,7 @@ float eval_opacity(const instance* ist, int ei, vec2f uv) {
 }
 
 // Evaluates the bsdf at a location.
-bsdf eval_bsdf(const instance* ist, int ei, vec2f uv) {
+bsdf eval_bsdf(const std::shared_ptr<instance>& ist, int ei, vec2f uv) {
     auto f = bsdf();
     f.kd = eval_diffuse(ist, ei, uv);
     f.ks = eval_specular(ist, ei, uv);
@@ -721,7 +713,8 @@ bsdf eval_bsdf(const instance* ist, int ei, vec2f uv) {
 bool is_delta_bsdf(const bsdf& f) { return f.rs == 0 && f.kd == zero3f; }
 
 // Sample a shape based on a distribution.
-std::pair<int, vec2f> sample_shape(const shape* shp, float re, vec2f ruv) {
+std::pair<int, vec2f> sample_shape(
+    const std::shared_ptr<shape>& shp, float re, vec2f ruv) {
     // TODO: implement sampling without cdf
     if (shp->elem_cdf.empty()) return {};
     if (!shp->triangles.empty()) {
@@ -743,7 +736,8 @@ std::pair<int, vec2f> sample_shape(const shape* shp, float re, vec2f ruv) {
 namespace ygl {
 
 // Merge scene into one another
-void merge_into(scene* merge_into, scene* merge_from) {
+void merge_into(const std::shared_ptr<scene>& merge_into,
+    std::shared_ptr<scene> merge_from) {
     auto merge = [](auto& v1, auto& v2) {
         v1.insert(v1.end(), v2.begin(), v2.end());
         v2.clear();
@@ -757,7 +751,7 @@ void merge_into(scene* merge_into, scene* merge_from) {
     merge(merge_into->animations, merge_from->animations);
 }
 
-void print_stats(scene* scn) {
+void print_stats(const std::shared_ptr<scene>& scn) {
     uint64_t num_cameras = 0;
     uint64_t num_shape_groups = 0;
     uint64_t num_shapes = 0;
@@ -850,9 +844,10 @@ void print_stats(scene* scn) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-camera* make_camera(const std::string& name, const frame3f& frame, float width,
-    float height, float focal, float focus, float aperture) {
-    auto cam = new camera();
+std::shared_ptr<camera> make_camera(const std::string& name,
+    const frame3f& frame, float width, float height, float focal, float focus,
+    float aperture) {
+    auto cam = std::make_shared<camera>();
     cam->name = name;
     cam->frame = frame;
     cam->width = width;
@@ -866,12 +861,12 @@ camera* make_camera(const std::string& name, const frame3f& frame, float width,
 };
 
 // add missing camera
-camera* make_bbox_camera(const std::string& name, const bbox3f& bbox,
-    float width, float height, float focal) {
+std::shared_ptr<camera> make_bbox_camera(const std::string& name,
+    const bbox3f& bbox, float width, float height, float focal) {
     auto bbox_center = (bbox.max + bbox.min) / 2.0f;
     auto bbox_size = bbox.max - bbox.min;
     auto bbox_msize = max(bbox_size.x, max(bbox_size.y, bbox_size.z));
-    auto cam = new camera();
+    auto cam = std::make_shared<camera>();
     cam->name = name;
     auto camera_dir = vec3f{1, 0.4f, 1};
     auto from = camera_dir * bbox_msize + bbox_center;
@@ -887,8 +882,9 @@ camera* make_bbox_camera(const std::string& name, const bbox3f& bbox,
     return cam;
 }
 
-material* make_material(const std::string& name, vec3f kd, vec3f ks, float rs) {
-    auto mat = new material();
+std::shared_ptr<material> make_material(
+    const std::string& name, vec3f kd, vec3f ks, float rs) {
+    auto mat = std::make_shared<material>();
     mat->name = name;
     mat->kd = kd;
     mat->ks = ks;
@@ -896,21 +892,21 @@ material* make_material(const std::string& name, vec3f kd, vec3f ks, float rs) {
     return mat;
 }
 
-texture* make_texture(
+std::shared_ptr<texture> make_texture(
     const std::string& name, const std::string& path, const image4f& img) {
-    auto txt = new texture();
+    auto txt = std::make_shared<texture>();
     txt->name = name;
     txt->path = path;
     txt->img = img;
     return txt;
 }
 
-shape* make_shape(const std::string& name, const std::string& path,
-    const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
-    const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
-    const std::vector<vec2f>& texcoord, const std::vector<vec4f>& color,
-    const std::vector<float>& radius) {
-    auto shp = new shape();
+std::shared_ptr<shape> make_shape(const std::string& name,
+    const std::string& path, const std::vector<vec2i>& lines,
+    const std::vector<vec3i>& triangles, const std::vector<vec3f>& pos,
+    const std::vector<vec3f>& norm, const std::vector<vec2f>& texcoord,
+    const std::vector<vec4f>& color, const std::vector<float>& radius) {
+    auto shp = std::make_shared<shape>();
     shp->name = name;
     shp->path = path;
     shp->pos = pos;
@@ -923,12 +919,12 @@ shape* make_shape(const std::string& name, const std::string& path,
     return shp;
 }
 
-subdiv* make_subdiv(const std::string& name, const std::string& path, int level,
-    const std::vector<vec4i>& quads_pos, const std::vector<vec3f>& pos,
-    const std::vector<vec4i>& quads_texcoord,
+std::shared_ptr<subdiv> make_subdiv(const std::string& name,
+    const std::string& path, int level, const std::vector<vec4i>& quads_pos,
+    const std::vector<vec3f>& pos, const std::vector<vec4i>& quads_texcoord,
     const std::vector<vec2f>& texcoord, const std::vector<vec4i>& quads_color,
     const std::vector<vec4f>& color) {
-    auto sbd = new subdiv();
+    auto sbd = std::make_shared<subdiv>();
     sbd->name = name;
     sbd->path = path;
     sbd->level = level;
@@ -941,9 +937,10 @@ subdiv* make_subdiv(const std::string& name, const std::string& path, int level,
     return sbd;
 }
 
-instance* make_instance(const std::string& name, shape* shp, material* mat,
-    subdiv* sbd, const frame3f& frame) {
-    auto ist = new instance();
+std::shared_ptr<instance> make_instance(const std::string& name,
+    std::shared_ptr<shape> shp, std::shared_ptr<material> mat,
+    std::shared_ptr<subdiv> sbd, const frame3f& frame) {
+    auto ist = std::make_shared<instance>();
     ist->name = name;
     ist->shp = shp;
     ist->mat = mat;
@@ -952,9 +949,10 @@ instance* make_instance(const std::string& name, shape* shp, material* mat,
     return ist;
 }
 
-node* make_node(const std::string& name, camera* cam, instance* ist,
-    environment* env, const frame3f& frame) {
-    auto nde = new node();
+std::shared_ptr<node> make_node(const std::string& name,
+    std::shared_ptr<camera> cam, std::shared_ptr<instance> ist,
+    std::shared_ptr<environment> env, const frame3f& frame) {
+    auto nde = std::make_shared<node>();
     nde->name = name;
     nde->cam = cam;
     nde->ist = ist;
@@ -963,9 +961,9 @@ node* make_node(const std::string& name, camera* cam, instance* ist,
     return nde;
 }
 
-environment* make_environment(
-    const std::string& name, vec3f ke, texture* ke_txt, const frame3f& frame) {
-    auto env = new environment();
+std::shared_ptr<environment> make_environment(const std::string& name, vec3f ke,
+    std::shared_ptr<texture> ke_txt, const frame3f& frame) {
+    auto env = std::make_shared<environment>();
     env->name = name;
     env->ke = ke;
     env->ke_txt = ke_txt;
@@ -973,11 +971,12 @@ environment* make_environment(
     return env;
 }
 
-animation* make_animation(const std::string& name, const std::string& path,
-    const std::vector<float>& times, const std::vector<vec3f>& translation,
-    const std::vector<vec4f>& rotation, const std::vector<vec3f>& scale,
-    const std::vector<node*>& targets, bool bezier) {
-    auto anm = new animation();
+std::shared_ptr<animation> make_animation(const std::string& name,
+    const std::string& path, const std::vector<float>& times,
+    const std::vector<vec3f>& translation, const std::vector<vec4f>& rotation,
+    const std::vector<vec3f>& scale,
+    const std::vector<std::shared_ptr<node>>& targets, bool bezier) {
+    auto anm = std::make_shared<animation>();
     anm->name = name;
     anm->path = path;
     anm->times = times;
@@ -989,9 +988,11 @@ animation* make_animation(const std::string& name, const std::string& path,
     return anm;
 }
 
-scene* make_scene(const std::string& name, const std::vector<camera*>& cams,
-    const std::vector<instance*>& ists, const std::vector<environment*>& envs) {
-    auto scn = new scene();
+std::shared_ptr<scene> make_scene(const std::string& name,
+    const std::vector<std::shared_ptr<camera>>& cams,
+    const std::vector<std::shared_ptr<instance>>& ists,
+    const std::vector<std::shared_ptr<environment>>& envs) {
+    auto scn = std::make_shared<scene>();
     scn->name = name;
     scn->cameras = cams;
     scn->instances = ists;
@@ -1016,9 +1017,12 @@ scene* make_scene(const std::string& name, const std::vector<camera*>& cams,
     return scn;
 }
 
-scene* make_scene(const std::string& name, const std::vector<camera*>& cams,
-    const std::vector<instance*>& ists, const std::vector<environment*>& envs,
-    const std::vector<node*>& ndes, const std::vector<animation*>& anms) {
+std::shared_ptr<scene> make_scene(const std::string& name,
+    const std::vector<std::shared_ptr<camera>>& cams,
+    const std::vector<std::shared_ptr<instance>>& ists,
+    const std::vector<std::shared_ptr<environment>>& envs,
+    const std::vector<std::shared_ptr<node>>& ndes,
+    const std::vector<std::shared_ptr<animation>>& anms) {
     auto scn = make_scene(name, cams, ists, envs);
     scn->nodes = ndes;
     scn->animations = anms;

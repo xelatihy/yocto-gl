@@ -11,21 +11,13 @@ Please consider this to be just development notes and not any real planning.
 
 ## Reduce internal code
 
-- remove testgen
-    - create internal and external CornellBox data without proc
-    - remove test generation
-- image4f / image4b
+- use shared_ptr
 - normal map problem
 - ldr_gamma in texture
 - switch to cli11
     - only doubt is how to handle enums 
 - filesystem
 - [sadly] iostreams
-
-## Refactor
-
-- use images
-- use shared_ptr
 
 ## Recornsider
 

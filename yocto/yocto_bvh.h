@@ -177,33 +177,33 @@ struct bvh_tree {
     std::vector<vec3i> triangles;  // Triangles for shape BVHs.
 
     // data for instance BVH
-    std::vector<frame3f> ist_frames;      // instance frames
-    std::vector<frame3f> ist_inv_frames;  // instance inverse frames
-    std::vector<bvh_tree*> ist_bvhs;      // instance shape bvhs
+    std::vector<frame3f> ist_frames;                  // instance frames
+    std::vector<frame3f> ist_inv_frames;              // instance inverse frames
+    std::vector<std::shared_ptr<bvh_tree>> ist_bvhs;  // instance shape bvhs
 
     // bvh nodes
     std::vector<bvh_node> nodes;  // Internal nodes.
 };
 
 // Build a BVH from the given set of primitives.
-void build_bvh(bvh_tree* bvh, bool equalsize);
+void build_bvh(std::shared_ptr<bvh_tree> bvh, bool equalsize);
 // Update the node bounds for a shape bvh.
-void refit_bvh(bvh_tree* bvh);
+void refit_bvh(std::shared_ptr<bvh_tree> bvh);
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance `dist`, the instance
 // id `iid`, the shape id `sid`, the shape element index `eid` and the
 // shape barycentric coordinates `uv`.
-bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray, bool find_any,
-    float& dist, int& iid, int& eid, vec2f& uv);
+bool intersect_bvh(const std::shared_ptr<bvh_tree> bvh, const ray3f& ray,
+    bool find_any, float& dist, int& iid, int& eid, vec2f& uv);
 
 // Find a shape element that overlaps a point within a given distance
 // `max_dist`, returning either the closest or any overlap depending on
 // `find_any`. Returns the point distance `dist`, the instance id `iid`, the
 // shape id `sid`, the shape element index `eid` and the shape barycentric
 // coordinates `uv`.
-bool overlap_bvh(const bvh_tree* bvh, vec3f pos, float max_dist, bool find_any,
-    float& dist, int& iid, int& eid, vec2f& uv);
+bool overlap_bvh(const std::shared_ptr<bvh_tree> bvh, vec3f pos, float max_dist,
+    bool find_any, float& dist, int& iid, int& eid, vec2f& uv);
 
 }  // namespace ygl
 

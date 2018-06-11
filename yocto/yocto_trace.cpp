@@ -39,8 +39,8 @@
 namespace ygl {
 
 // Intersect a scene handling opacity.
-scene_intersection intersect_ray_cutout(
-    const scene* scn, const ray3f& ray_, rng_state& rng, int nbounces) {
+scene_intersection intersect_ray_cutout(const std::shared_ptr<scene> scn,
+    const ray3f& ray_, rng_state& rng, int nbounces) {
     auto ray = ray_;
     for (auto b = 0; b < nbounces; b++) {
         auto isec = intersect_ray(scn, ray);
@@ -267,7 +267,7 @@ float sample_delta_brdf_pdf(const bsdf& f, vec3f n, vec3f o, vec3f i) {
 }
 
 // Sample pdf for an environment.
-float sample_environment_pdf(const environment* env, vec3f i) {
+float sample_environment_pdf(const std::shared_ptr<environment> env, vec3f i) {
     auto txt = env->ke_txt;
     if (!env->elem_cdf.empty() && txt) {
         auto texcoord = eval_texcoord(env, i);
@@ -285,7 +285,8 @@ float sample_environment_pdf(const environment* env, vec3f i) {
 }
 
 // Picks a point on an environment.
-vec3f sample_environment(const environment* env, float rel, vec2f ruv) {
+vec3f sample_environment(
+    const std::shared_ptr<environment> env, float rel, vec2f ruv) {
     auto txt = env->ke_txt;
     if (!env->elem_cdf.empty() && txt) {
         auto idx = sample_discrete(env->elem_cdf, rel);
@@ -298,14 +299,15 @@ vec3f sample_environment(const environment* env, float rel, vec2f ruv) {
 }
 
 // Picks a point on a light.
-vec3f sample_light(const instance* ist, vec3f p, float rel, vec2f ruv) {
+vec3f sample_light(
+    const std::shared_ptr<instance> ist, vec3f p, float rel, vec2f ruv) {
     auto sample = sample_shape(ist->shp, rel, ruv);
     return normalize(eval_pos(ist, sample.first, sample.second) - p);
 }
 
 // Sample pdf for a light point.
 float sample_light_pdf(
-    const instance* ist, vec3f p, vec3f i, vec3f lp, vec3f ln) {
+    const std::shared_ptr<instance> ist, vec3f p, vec3f i, vec3f lp, vec3f ln) {
     if (ist->mat->ke == zero3f) return 0;
     // prob triangle * area triangle = area triangle mesh
     auto area = ist->shp->elem_cdf.back();
@@ -313,7 +315,8 @@ float sample_light_pdf(
 }
 
 // Test occlusion.
-vec3f eval_transmission(const scene* scn, vec3f from, vec3f to, int nbounces) {
+vec3f eval_transmission(
+    const std::shared_ptr<scene> scn, vec3f from, vec3f to, int nbounces) {
     auto weight = vec3f{1, 1, 1};
     auto p = from;
     for (auto bounce = 0; bounce < nbounces; bounce++) {
@@ -330,8 +333,8 @@ vec3f eval_transmission(const scene* scn, vec3f from, vec3f to, int nbounces) {
 }
 
 // Recursive path tracing.
-vec3f trace_path(const scene* scn, const ray3f& ray_, rng_state& rng,
-    int nbounces, bool* hit) {
+vec3f trace_path(const std::shared_ptr<scene> scn, const ray3f& ray_,
+    rng_state& rng, int nbounces, bool* hit) {
     if (scn->lights.empty() && scn->environments.empty()) return zero3f;
 
     // initialize
@@ -435,8 +438,8 @@ vec3f trace_path(const scene* scn, const ray3f& ray_, rng_state& rng,
 }
 
 // Recursive path tracing.
-vec3f trace_path_naive(const scene* scn, const ray3f& ray_, rng_state& rng,
-    int nbounces, bool* hit) {
+vec3f trace_path_naive(const std::shared_ptr<scene> scn, const ray3f& ray_,
+    rng_state& rng, int nbounces, bool* hit) {
     if (scn->lights.empty() && scn->environments.empty()) return zero3f;
 
     // initialize
@@ -498,8 +501,8 @@ vec3f trace_path_naive(const scene* scn, const ray3f& ray_, rng_state& rng,
 }
 
 // Recursive path tracing.
-vec3f trace_path_nomis(const scene* scn, const ray3f& ray_, rng_state& rng,
-    int nbounces, bool* hit) {
+vec3f trace_path_nomis(const std::shared_ptr<scene> scn, const ray3f& ray_,
+    rng_state& rng, int nbounces, bool* hit) {
     if (scn->lights.empty() && scn->environments.empty()) return zero3f;
 
     // initialize
@@ -581,8 +584,8 @@ vec3f trace_path_nomis(const scene* scn, const ray3f& ray_, rng_state& rng,
 }
 
 // Direct illumination.
-vec3f trace_direct(const scene* scn, const ray3f& ray, rng_state& rng,
-    int nbounces, bool* hit) {
+vec3f trace_direct(const std::shared_ptr<scene> scn, const ray3f& ray,
+    rng_state& rng, int nbounces, bool* hit) {
     if (scn->lights.empty() && scn->environments.empty()) return zero3f;
 
     // intersect scene
@@ -667,8 +670,8 @@ vec3f trace_direct(const scene* scn, const ray3f& ray, rng_state& rng,
 }
 
 // Direct illumination.
-vec3f trace_direct_nomis(const scene* scn, const ray3f& ray, rng_state& rng,
-    int nbounces, bool* hit) {
+vec3f trace_direct_nomis(const std::shared_ptr<scene> scn, const ray3f& ray,
+    rng_state& rng, int nbounces, bool* hit) {
     if (scn->lights.empty() && scn->environments.empty()) return zero3f;
 
     // intersect scene
@@ -741,8 +744,8 @@ vec3f trace_direct_nomis(const scene* scn, const ray3f& ray, rng_state& rng,
 }
 
 // Environment illumination only with no shadows.
-vec3f trace_environment(const scene* scn, const ray3f& ray, rng_state& rng,
-    int nbounces, bool* hit) {
+vec3f trace_environment(const std::shared_ptr<scene> scn, const ray3f& ray,
+    rng_state& rng, int nbounces, bool* hit) {
     if (scn->environments.empty()) return zero3f;
 
     // intersect scene
@@ -799,8 +802,8 @@ vec3f trace_environment(const scene* scn, const ray3f& ray, rng_state& rng,
 }
 
 // Eyelight for quick previewing.
-vec3f trace_eyelight(const scene* scn, const ray3f& ray, rng_state& rng,
-    int nbounces, bool* hit) {
+vec3f trace_eyelight(const std::shared_ptr<scene> scn, const ray3f& ray,
+    rng_state& rng, int nbounces, bool* hit) {
     // intersect scene
     auto isec = intersect_ray(scn, ray);
     auto l = zero3f;
@@ -840,8 +843,8 @@ vec3f trace_eyelight(const scene* scn, const ray3f& ray, rng_state& rng,
 }
 
 // Debug previewing.
-vec3f trace_debug_normal(const scene* scn, const ray3f& ray, rng_state& rng,
-    int nbounces, bool* hit) {
+vec3f trace_debug_normal(const std::shared_ptr<scene> scn, const ray3f& ray,
+    rng_state& rng, int nbounces, bool* hit) {
     // intersect scene
     auto isec = intersect_ray(scn, ray);
     if (!isec.ist) return zero3f;
@@ -856,8 +859,8 @@ vec3f trace_debug_normal(const scene* scn, const ray3f& ray, rng_state& rng,
 }
 
 // Debug frontfacing.
-vec3f trace_debug_frontfacing(const scene* scn, const ray3f& ray,
-    rng_state& rng, int nbounces, bool* hit) {
+vec3f trace_debug_frontfacing(const std::shared_ptr<scene> scn,
+    const ray3f& ray, rng_state& rng, int nbounces, bool* hit) {
     // intersect scene
     auto isec = intersect_ray(scn, ray);
     if (!isec.ist) return zero3f;
@@ -872,8 +875,8 @@ vec3f trace_debug_frontfacing(const scene* scn, const ray3f& ray,
 }
 
 // Debug previewing.
-vec3f trace_debug_albedo(const scene* scn, const ray3f& ray, rng_state& rng,
-    int nbounces, bool* hit) {
+vec3f trace_debug_albedo(const std::shared_ptr<scene> scn, const ray3f& ray,
+    rng_state& rng, int nbounces, bool* hit) {
     // intersect scene
     auto isec = intersect_ray(scn, ray);
     if (!isec.ist) return zero3f;
@@ -887,8 +890,8 @@ vec3f trace_debug_albedo(const scene* scn, const ray3f& ray, rng_state& rng,
 }
 
 // Debug previewing.
-vec3f trace_debug_diffuse(const scene* scn, const ray3f& ray, rng_state& rng,
-    int nbounces, bool* hit) {
+vec3f trace_debug_diffuse(const std::shared_ptr<scene> scn, const ray3f& ray,
+    rng_state& rng, int nbounces, bool* hit) {
     // intersect scene
     auto isec = intersect_ray(scn, ray);
     if (!isec.ist) return zero3f;
@@ -902,8 +905,8 @@ vec3f trace_debug_diffuse(const scene* scn, const ray3f& ray, rng_state& rng,
 }
 
 // Debug previewing.
-vec3f trace_debug_specular(const scene* scn, const ray3f& ray, rng_state& rng,
-    int nbounces, bool* hit) {
+vec3f trace_debug_specular(const std::shared_ptr<scene> scn, const ray3f& ray,
+    rng_state& rng, int nbounces, bool* hit) {
     // intersect scene
     auto isec = intersect_ray(scn, ray);
     if (!isec.ist) return zero3f;
@@ -917,8 +920,8 @@ vec3f trace_debug_specular(const scene* scn, const ray3f& ray, rng_state& rng,
 }
 
 // Debug previewing.
-vec3f trace_debug_roughness(const scene* scn, const ray3f& ray, rng_state& rng,
-    int nbounces, bool* hit) {
+vec3f trace_debug_roughness(const std::shared_ptr<scene> scn, const ray3f& ray,
+    rng_state& rng, int nbounces, bool* hit) {
     // intersect scene
     auto isec = intersect_ray(scn, ray);
     if (!isec.ist) return zero3f;
@@ -932,8 +935,8 @@ vec3f trace_debug_roughness(const scene* scn, const ray3f& ray, rng_state& rng,
 }
 
 // Debug previewing.
-vec3f trace_debug_texcoord(const scene* scn, const ray3f& ray, rng_state& rng,
-    int nbounces, bool* hit) {
+vec3f trace_debug_texcoord(const std::shared_ptr<scene> scn, const ray3f& ray,
+    rng_state& rng, int nbounces, bool* hit) {
     // intersect scene
     auto isec = intersect_ray(scn, ray);
     if (!isec.ist) return zero3f;
@@ -947,9 +950,9 @@ vec3f trace_debug_texcoord(const scene* scn, const ray3f& ray, rng_state& rng,
 }
 
 // Trace a single sample
-vec4f trace_sample(const scene* scn, const camera* cam, int i, int j, int width,
-    int height, rng_state& rng, trace_func tracer, int nbounces,
-    float pixel_clamp = 100) {
+vec4f trace_sample(const std::shared_ptr<scene> scn,
+    const std::shared_ptr<camera> cam, int i, int j, int width, int height,
+    rng_state& rng, trace_func tracer, int nbounces, float pixel_clamp = 100) {
     auto ray =
         eval_camera_ray(cam, {i, j}, {width, height}, rand2f(rng), rand2f(rng));
     auto hit = false;
@@ -963,7 +966,8 @@ vec4f trace_sample(const scene* scn, const camera* cam, int i, int j, int width,
 }
 
 // Trace the next nsamples.
-void trace_samples(const scene* scn, const camera* cam, image4f& img,
+void trace_samples(const std::shared_ptr<scene> scn,
+    const std::shared_ptr<camera> cam, image4f& img,
     std::vector<rng_state>& rngs, int sample, int nsamples, trace_func tracer,
     int nbounces, float pixel_clamp) {
     for (auto j = 0; j < img.height; j++) {
@@ -979,7 +983,8 @@ void trace_samples(const scene* scn, const camera* cam, image4f& img,
 }
 
 // Trace the next nsamples.
-void trace_samples_mt(const scene* scn, const camera* cam, image4f& img,
+void trace_samples_mt(const std::shared_ptr<scene> scn,
+    const std::shared_ptr<camera> cam, image4f& img,
     std::vector<rng_state>& rngs, int sample, int nsamples, trace_func tracer,
     int nbounces, float pixel_clamp) {
     auto nthreads = std::thread::hardware_concurrency();
@@ -1004,7 +1009,8 @@ void trace_samples_mt(const scene* scn, const camera* cam, image4f& img,
 }
 
 // Starts an anyncrhounous renderer.
-void trace_async_start(const scene* scn, const camera* cam, image4f& img,
+void trace_async_start(const std::shared_ptr<scene> scn,
+    const std::shared_ptr<camera> cam, image4f& img,
     std::vector<rng_state>& rngs, int nsamples, trace_func tracer, int nbounces,
     std::vector<std::thread>& threads, bool& stop_flag, int& cur_sample,
     float pixel_clamp) {

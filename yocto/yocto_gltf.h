@@ -222,17 +222,12 @@ struct glTFAccessorSparse : glTFProperty {
     // Index array of size `count` that points to those accessor attributes
     // that deviate from their initialization value. Indices must strictly
     // increase. [required]
-    glTFAccessorSparseIndices* indices = nullptr;
+    std::shared_ptr<glTFAccessorSparseIndices> indices = nullptr;
     // Array of size `count` times number of components, storing the displaced
     // accessor attributes pointed by `indices`. Substituted values must have
     // the same `componentType` and number of components as the base accessor.
     // [required]
-    glTFAccessorSparseValues* values = nullptr;
-
-    ~glTFAccessorSparse() {
-        if (indices) delete indices;
-        if (values) delete values;
-    }
+    std::shared_ptr<glTFAccessorSparseValues> values = nullptr;
 };
 
 // Values for glTFAccessor::componentType
@@ -296,11 +291,7 @@ struct glTFAccessor : glTFChildOfRootProperty {
     std::vector<float> min = {};
     // Sparse storage of attributes that deviate from their initialization
     // value.
-    glTFAccessorSparse* sparse = nullptr;
-
-    ~glTFAccessor() {
-        if (sparse) delete sparse;
-    }
+    std::shared_ptr<glTFAccessorSparse> sparse = nullptr;
 };
 
 // Values for glTFAnimationChannelTarget::path
@@ -333,11 +324,7 @@ struct glTFAnimationChannel : glTFProperty {
     // the target. [required]
     glTFid<glTFAnimationSampler> sampler = {};
     // The index of the node and TRS property to target. [required]
-    glTFAnimationChannelTarget* target = nullptr;
-
-    ~glTFAnimationChannel() {
-        if (target) delete target;
-    }
+    std::shared_ptr<glTFAnimationChannelTarget> target = nullptr;
 };
 
 // Values for glTFAnimationSampler::interpolation
@@ -379,26 +366,23 @@ struct glTFAnimation : glTFChildOfRootProperty {
     // An array of channels, each of which targets an animation's sampler at a
     // node's property. Different channels of the same animation can't have
     // equal targets. [required]
-    std::vector<glTFAnimationChannel*> channels = {};
+    std::vector<std::shared_ptr<glTFAnimationChannel>> channels = {};
     // An array of samplers that combines input and output accessors with an
     // interpolation algorithm to define a keyframe graph (but not its target).
     // [required]
-    std::vector<glTFAnimationSampler*> samplers = {};
+    std::vector<std::shared_ptr<glTFAnimationSampler>> samplers = {};
 
     // typed access for nodes
-    glTFAnimationChannel* get(const glTFid<glTFAnimationChannel>& id) const {
+    std::shared_ptr<glTFAnimationChannel> get(
+        const glTFid<glTFAnimationChannel>& id) const {
         if (!id) return nullptr;
         return channels.at((int)id);
     }
     // typed access for nodes
-    glTFAnimationSampler* get(const glTFid<glTFAnimationSampler>& id) const {
+    std::shared_ptr<glTFAnimationSampler> get(
+        const glTFid<glTFAnimationSampler>& id) const {
         if (!id) return nullptr;
         return samplers.at((int)id);
-    }
-
-    ~glTFAnimation() {
-        for (auto v : channels) delete v;
-        for (auto v : samplers) delete v;
     }
 };
 
@@ -490,18 +474,13 @@ enum class glTFCameraType {
 struct glTFCamera : glTFChildOfRootProperty {
     // An orthographic camera containing properties to create an orthographic
     // projection matrix.
-    glTFCameraOrthographic* orthographic = nullptr;
+    std::shared_ptr<glTFCameraOrthographic> orthographic = nullptr;
     // A perspective camera containing properties to create a perspective
     // projection matrix.
-    glTFCameraPerspective* perspective = nullptr;
+    std::shared_ptr<glTFCameraPerspective> perspective = nullptr;
     // Specifies if the camera uses a perspective or orthographic projection.
     // [required]
     glTFCameraType type = glTFCameraType::NotSet;
-
-    ~glTFCamera() {
-        if (orthographic) delete orthographic;
-        if (perspective) delete perspective;
-    }
 };
 
 // Values for glTFImage::mimeType
@@ -566,18 +545,13 @@ struct glTFMaterialPbrMetallicRoughness : glTFProperty {
     // The material's base color factor.
     vec4f baseColorFactor = {1, 1, 1, 1};
     // The base color texture.
-    glTFTextureInfo* baseColorTexture = nullptr;
+    std::shared_ptr<glTFTextureInfo> baseColorTexture = nullptr;
     // The metalness of the material.
     float metallicFactor = 1;
     // The roughness of the material.
     float roughnessFactor = 1;
     // The metallic-roughness texture.
-    glTFTextureInfo* metallicRoughnessTexture = nullptr;
-
-    ~glTFMaterialPbrMetallicRoughness() {
-        if (baseColorTexture) delete baseColorTexture;
-        if (metallicRoughnessTexture) delete metallicRoughnessTexture;
-    }
+    std::shared_ptr<glTFTextureInfo> metallicRoughnessTexture = nullptr;
 };
 
 // glTF extension that defines the specular-glossiness material model from
@@ -586,18 +560,13 @@ struct glTFMaterialPbrSpecularGlossiness : glTFProperty {
     // The reflected diffuse factor of the material.
     vec4f diffuseFactor = {1, 1, 1, 1};
     // The diffuse texture.
-    glTFTextureInfo* diffuseTexture = nullptr;
+    std::shared_ptr<glTFTextureInfo> diffuseTexture = nullptr;
     // The specular RGB color of the material.
     vec3f specularFactor = {1, 1, 1};
     // The glossiness or smoothness of the material.
     float glossinessFactor = 1;
     // The specular-glossiness texture.
-    glTFTextureInfo* specularGlossinessTexture = nullptr;
-
-    ~glTFMaterialPbrSpecularGlossiness() {
-        if (diffuseTexture) delete diffuseTexture;
-        if (specularGlossinessTexture) delete specularGlossinessTexture;
-    }
+    std::shared_ptr<glTFTextureInfo> specularGlossinessTexture = nullptr;
 };
 
 // Values for glTFMaterial::alphaMode
@@ -620,18 +589,21 @@ struct glTFMaterial : glTFChildOfRootProperty {
     // A set of parameter values that are used to define the metallic-roughness
     // material model from Physically-Based Rendering (PBR) methodology. When
     // not specified, all the default values of `pbrMetallicRoughness` apply.
-    glTFMaterialPbrMetallicRoughness* pbrMetallicRoughness = nullptr;
+    std::shared_ptr<glTFMaterialPbrMetallicRoughness> pbrMetallicRoughness =
+        nullptr;
     // A set of parameter values that are used to define the
     // specular-glossiness material model from Physically-Based Rendering (PBR)
     // methodology. When not specified, all the default values of
     // `pbrMetallicRoughness` apply.
-    glTFMaterialPbrSpecularGlossiness* pbrSpecularGlossiness = nullptr;
+    std::shared_ptr<glTFMaterialPbrSpecularGlossiness> pbrSpecularGlossiness =
+        nullptr;
     // The normal map texture.
-    glTFMaterialNormalTextureInfo* normalTexture = nullptr;
+    std::shared_ptr<glTFMaterialNormalTextureInfo> normalTexture = nullptr;
     // The occlusion map texture.
-    glTFMaterialOcclusionTextureInfo* occlusionTexture = nullptr;
+    std::shared_ptr<glTFMaterialOcclusionTextureInfo> occlusionTexture =
+        nullptr;
     // The emissive map texture.
-    glTFTextureInfo* emissiveTexture = nullptr;
+    std::shared_ptr<glTFTextureInfo> emissiveTexture = nullptr;
     // The emissive color of the material.
     vec3f emissiveFactor = {0, 0, 0};
     // The alpha rendering mode of the material.
@@ -640,14 +612,6 @@ struct glTFMaterial : glTFChildOfRootProperty {
     float alphaCutoff = 0.5;
     // Specifies whether the material is double sided.
     bool doubleSided = false;
-
-    ~glTFMaterial() {
-        if (pbrMetallicRoughness) delete pbrMetallicRoughness;
-        if (pbrSpecularGlossiness) delete pbrSpecularGlossiness;
-        if (normalTexture) delete normalTexture;
-        if (occlusionTexture) delete occlusionTexture;
-        if (emissiveTexture) delete emissiveTexture;
-    }
 };
 
 // Values for glTFMeshPrimitive::mode
@@ -693,13 +657,9 @@ struct glTFMeshPrimitive : glTFProperty {
 struct glTFMesh : glTFChildOfRootProperty {
     // An array of primitives, each defining geometry to be rendered with a
     // material. [required]
-    std::vector<glTFMeshPrimitive*> primitives = {};
+    std::vector<std::shared_ptr<glTFMeshPrimitive>> primitives = {};
     // Array of weights to be applied to the Morph Targets.
     std::vector<float> weights = {};
-
-    ~glTFMesh() {
-        for (auto v : primitives) delete v;
-    }
 };
 
 // A node in the node hierarchy.  When the node contains `skin`, all
@@ -825,142 +785,128 @@ struct glTF : glTFProperty {
     // Names of glTF extensions required to properly load this asset.
     std::vector<std::string> extensionsRequired = {};
     // An array of accessors.
-    std::vector<glTFAccessor*> accessors = {};
+    std::vector<std::shared_ptr<glTFAccessor>> accessors = {};
     // An array of keyframe animations.
-    std::vector<glTFAnimation*> animations = {};
+    std::vector<std::shared_ptr<glTFAnimation>> animations = {};
     // Metadata about the glTF asset. [required]
-    glTFAsset* asset = nullptr;
+    std::shared_ptr<glTFAsset> asset = nullptr;
     // An array of buffers.
-    std::vector<glTFBuffer*> buffers = {};
+    std::vector<std::shared_ptr<glTFBuffer>> buffers = {};
     // An array of bufferViews.
-    std::vector<glTFBufferView*> bufferViews = {};
+    std::vector<std::shared_ptr<glTFBufferView>> bufferViews = {};
     // An array of cameras.
-    std::vector<glTFCamera*> cameras = {};
+    std::vector<std::shared_ptr<glTFCamera>> cameras = {};
     // An array of images.
-    std::vector<glTFImage*> images = {};
+    std::vector<std::shared_ptr<glTFImage>> images = {};
     // An array of materials.
-    std::vector<glTFMaterial*> materials = {};
+    std::vector<std::shared_ptr<glTFMaterial>> materials = {};
     // An array of meshes.
-    std::vector<glTFMesh*> meshes = {};
+    std::vector<std::shared_ptr<glTFMesh>> meshes = {};
     // An array of nodes.
-    std::vector<glTFNode*> nodes = {};
+    std::vector<std::shared_ptr<glTFNode>> nodes = {};
     // An array of samplers.
-    std::vector<glTFSampler*> samplers = {};
+    std::vector<std::shared_ptr<glTFSampler>> samplers = {};
     // The index of the default scene.
     glTFid<glTFScene> scene = {};
     // An array of scenes.
-    std::vector<glTFScene*> scenes = {};
+    std::vector<std::shared_ptr<glTFScene>> scenes = {};
     // An array of skins.
-    std::vector<glTFSkin*> skins = {};
+    std::vector<std::shared_ptr<glTFSkin>> skins = {};
     // An array of textures.
-    std::vector<glTFTexture*> textures = {};
+    std::vector<std::shared_ptr<glTFTexture>> textures = {};
 
     // typed access for nodes
-    glTFAccessor* get(const glTFid<glTFAccessor>& id) const {
+    std::shared_ptr<glTFAccessor> get(const glTFid<glTFAccessor>& id) const {
         if (!id) return nullptr;
         return accessors.at((int)id);
     }
     // typed access for nodes
-    glTFAnimation* get(const glTFid<glTFAnimation>& id) const {
+    std::shared_ptr<glTFAnimation> get(const glTFid<glTFAnimation>& id) const {
         if (!id) return nullptr;
         return animations.at((int)id);
     }
     // typed access for nodes
-    glTFBuffer* get(const glTFid<glTFBuffer>& id) const {
+    std::shared_ptr<glTFBuffer> get(const glTFid<glTFBuffer>& id) const {
         if (!id) return nullptr;
         return buffers.at((int)id);
     }
     // typed access for nodes
-    glTFBufferView* get(const glTFid<glTFBufferView>& id) const {
+    std::shared_ptr<glTFBufferView> get(
+        const glTFid<glTFBufferView>& id) const {
         if (!id) return nullptr;
         return bufferViews.at((int)id);
     }
     // typed access for nodes
-    glTFCamera* get(const glTFid<glTFCamera>& id) const {
+    std::shared_ptr<glTFCamera> get(const glTFid<glTFCamera>& id) const {
         if (!id) return nullptr;
         return cameras.at((int)id);
     }
     // typed access for nodes
-    glTFImage* get(const glTFid<glTFImage>& id) const {
+    std::shared_ptr<glTFImage> get(const glTFid<glTFImage>& id) const {
         if (!id) return nullptr;
         return images.at((int)id);
     }
     // typed access for nodes
-    glTFMaterial* get(const glTFid<glTFMaterial>& id) const {
+    std::shared_ptr<glTFMaterial> get(const glTFid<glTFMaterial>& id) const {
         if (!id) return nullptr;
         return materials.at((int)id);
     }
     // typed access for nodes
-    glTFMesh* get(const glTFid<glTFMesh>& id) const {
+    std::shared_ptr<glTFMesh> get(const glTFid<glTFMesh>& id) const {
         if (!id) return nullptr;
         return meshes.at((int)id);
     }
     // typed access for nodes
-    glTFNode* get(const glTFid<glTFNode>& id) const {
+    std::shared_ptr<glTFNode> get(const glTFid<glTFNode>& id) const {
         if (!id) return nullptr;
         return nodes.at((int)id);
     }
     // typed access for nodes
-    glTFSampler* get(const glTFid<glTFSampler>& id) const {
+    std::shared_ptr<glTFSampler> get(const glTFid<glTFSampler>& id) const {
         if (!id) return nullptr;
         return samplers.at((int)id);
     }
     // typed access for nodes
-    glTFScene* get(const glTFid<glTFScene>& id) const {
+    std::shared_ptr<glTFScene> get(const glTFid<glTFScene>& id) const {
         if (!id) return nullptr;
         return scenes.at((int)id);
     }
     // typed access for nodes
-    glTFSkin* get(const glTFid<glTFSkin>& id) const {
+    std::shared_ptr<glTFSkin> get(const glTFid<glTFSkin>& id) const {
         if (!id) return nullptr;
         return skins.at((int)id);
     }
     // typed access for nodes
-    glTFTexture* get(const glTFid<glTFTexture>& id) const {
+    std::shared_ptr<glTFTexture> get(const glTFid<glTFTexture>& id) const {
         if (!id) return nullptr;
         return textures.at((int)id);
-    }
-
-    ~glTF() {
-        for (auto v : accessors) delete v;
-        for (auto v : animations) delete v;
-        if (asset) delete asset;
-        for (auto v : buffers) delete v;
-        for (auto v : bufferViews) delete v;
-        for (auto v : cameras) delete v;
-        for (auto v : images) delete v;
-        for (auto v : materials) delete v;
-        for (auto v : meshes) delete v;
-        for (auto v : nodes) delete v;
-        for (auto v : samplers) delete v;
-        for (auto v : scenes) delete v;
-        for (auto v : skins) delete v;
-        for (auto v : textures) delete v;
     }
 };
 // #codegen end gltf-type
 
 // Load a gltf file `filename` from disk.
-glTF* load_gltf(const std::string& filename, bool load_bin = true);
+std::shared_ptr<glTF> load_gltf(
+    const std::string& filename, bool load_bin = true);
 // Load a binary gltf file `filename` from disk.
-glTF* load_binary_gltf(const std::string& filename, bool load_bin = true);
+std::shared_ptr<glTF> load_binary_gltf(
+    const std::string& filename, bool load_bin = true);
 
 // Save a gltf file `filename` to disk.
-void save_gltf(
-    const std::string& filename, const glTF* gltf, bool save_bin = true);
+void save_gltf(const std::string& filename, const std::shared_ptr<glTF>& gltf,
+    bool save_bin = true);
 // Save a gltf file `filename` to disk.
-void save_binary_gltf(
-    const std::string& filename, const glTF* gltf, bool save_bin = true);
+void save_binary_gltf(const std::string& filename,
+    const std::shared_ptr<glTF>& gltf, bool save_bin = true);
 
 // Load glTF texture images.
-void load_gltf_textures(
-    glTF* gltf, const std::string& dirname, bool skip_missing = true);
+void load_gltf_textures(const std::shared_ptr<glTF>& gltf,
+    const std::string& dirname, bool skip_missing = true);
 // Save glTF texture images.
-void save_gltf_textures(
-    const glTF* gltf, const std::string& dirname, bool skip_missing = true);
+void save_gltf_textures(const std::shared_ptr<glTF>& gltf,
+    const std::string& dirname, bool skip_missing = true);
 
 // Computes the local node transform and its inverse.
-inline mat4f node_transform(const glTFNode* node) {
+inline mat4f node_transform(const std::shared_ptr<glTFNode> node) {
     return frame_to_mat(translation_frame(node->translation) *
                         rotation_frame(node->rotation) *
                         scaling_frame(node->scale)) *
@@ -970,7 +916,8 @@ inline mat4f node_transform(const glTFNode* node) {
 // A view for gltf array buffers that allows for typed access.
 struct accessor_view {
     // Construct a view from an accessor.
-    accessor_view(const glTF* gltf, const glTFAccessor* accessor);
+    accessor_view(const std::shared_ptr<glTF>& gltf,
+        const std::shared_ptr<glTFAccessor>& accessor);
 
     // Number of elements in the view.
     int size() const { return _size; }
