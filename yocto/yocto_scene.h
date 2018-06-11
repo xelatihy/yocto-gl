@@ -65,6 +65,7 @@
 #ifndef _YGL_SCENE_H_
 #define _YGL_SCENE_H_
 
+#include "yocto_image.h"
 #include "yocto_math.h"
 
 #include <string>
@@ -94,14 +95,12 @@ struct camera {
 
 // Texture containing either an LDR or HDR image.
 struct texture {
-    std::string name = "";        // name
-    std::string path = "";        // file path
-    int width = 0;                // width
-    int height = 0;               // height
-    std::vector<vec4f> img = {};  // pixels values
-    bool clamp = false;           // clamp textures coordinates
-    float scale = 1;              // scale for occ, normal, bumps
-    void* gl_data = nullptr;      // unmanaged data for OpenGL viewer
+    std::string name = "";    // name
+    std::string path = "";    // file path
+    image4f img = {};         // image
+    bool clamp = false;       // clamp textures coordinates
+    float scale = 1;          // scale for occ, normal, bumps
+    void* gl_data = nullptr;  // unmanaged data for OpenGL viewer
 };
 
 // Material for surfaces, lines and triangles.
@@ -444,7 +443,7 @@ camera* make_camera(const std::string& name, const frame3f& frame,
 camera* make_bbox_camera(const std::string& name, const bbox3f& bbox,
     float width = 0.036f, float height = 0.024f, float focal = 0.050f);
 texture* make_texture(const std::string& name, const std::string& path = "",
-    int width = 0, int height = 0, const std::vector<vec4f>& pxl = {});
+    const image4f& img = {});
 material* make_material(const std::string& name, vec3f kd = {0.2f, 0.2f, 0.2f},
     vec3f ks = {0, 0, 0}, float rs = 1);
 shape* make_shape(const std::string& name, const std::string& path = "",

@@ -248,11 +248,11 @@ void update_environment_cdf(environment* env) {
     env->elem_cdf.clear();
     auto txt = env->ke_txt;
     if (!txt) return;
-    env->elem_cdf.resize(txt->width * txt->height);
-    if (!txt->img.empty()) {
+    env->elem_cdf.resize(txt->img.width * txt->img.height);
+    if (!txt->img.pxl.empty()) {
         for (auto i = 0; i < env->elem_cdf.size(); i++) {
-            auto th = (i / txt->width + 0.5f) * pi / txt->height;
-            env->elem_cdf[i] = max(xyz(txt->img[i])) * sin(th);
+            auto th = (i / txt->img.width + 0.5f) * pi / txt->img.height;
+            env->elem_cdf[i] = max(xyz(txt->img.pxl[i])) * sin(th);
             if (i) env->elem_cdf[i] += env->elem_cdf[i - 1];
         }
     } else {
@@ -378,7 +378,8 @@ std::vector<std::string> validate(const scene* scn, bool skip_textures) {
     };
     auto check_empty_textures = [&errs](const std::vector<texture*>& vals) {
         for (auto val : vals) {
-            if (val->img.empty()) errs.push_back("empty texture " + val->name);
+            if (val->img.pxl.empty())
+                errs.push_back("empty texture " + val->name);
         }
     };
 
@@ -570,10 +571,10 @@ vec3f eval_environment(const environment* env, vec3f w) {
 
 // Evaluate a texture
 vec4f eval_texture(const texture* txt, vec2f texcoord) {
-    if (!txt || txt->img.empty()) return {1, 1, 1, 1};
+    if (!txt || txt->img.pxl.empty()) return {1, 1, 1, 1};
 
     // get image width/height
-    auto w = txt->width, h = txt->height;
+    auto w = txt->img.width, h = txt->img.height;
 
     // get coordinates normalized for tiling
     auto s = 0.0f, t = 0.0f;
@@ -593,10 +594,10 @@ vec4f eval_texture(const texture* txt, vec2f texcoord) {
     auto u = s - i, v = t - j;
 
     // handle interpolation
-    return txt->img[j * txt->width + i] * (1 - u) * (1 - v) +
-           txt->img[jj * txt->width + i] * (1 - u) * v +
-           txt->img[j * txt->width + ii] * u * (1 - v) +
-           txt->img[jj * txt->width + ii] * u * v;
+    return txt->img.pxl[j * txt->img.width + i] * (1 - u) * (1 - v) +
+           txt->img.pxl[jj * txt->img.width + i] * (1 - u) * v +
+           txt->img.pxl[j * txt->img.width + ii] * u * (1 - v) +
+           txt->img.pxl[jj * txt->img.width + ii] * u * v;
 }
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
@@ -810,7 +811,7 @@ void print_stats(scene* scn) {
                    vert_texcoord * sizeof(vec3f) + vert_color * sizeof(vec4f) +
                    vert_tangsp * sizeof(vec4f) + vert_radius * sizeof(float);
 
-    for (auto txt : scn->textures) { texel_hdr += txt->img.size(); }
+    for (auto txt : scn->textures) { texel_hdr += txt->img.pxl.size(); }
     memory_imgs = texel_hdr * sizeof(vec4f) + texel_ldr * sizeof(vec4b);
 
     println("num_cameras: {}", num_cameras);
@@ -895,14 +896,12 @@ material* make_material(const std::string& name, vec3f kd, vec3f ks, float rs) {
     return mat;
 }
 
-texture* make_texture(const std::string& name, const std::string& path,
-    int width, int height, const std::vector<vec4f>& pxl) {
+texture* make_texture(
+    const std::string& name, const std::string& path, const image4f& img) {
     auto txt = new texture();
     txt->name = name;
     txt->path = path;
-    txt->width = width;
-    txt->height = height;
-    txt->img = pxl;
+    txt->img = img;
     return txt;
 }
 

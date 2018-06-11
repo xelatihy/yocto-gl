@@ -1455,19 +1455,17 @@ bool get_glwindow_shift_key(glwindow* win) {
 }
 
 // Read pixels
-std::vector<ygl::vec4f> take_glwindow_screenshot(
-    glwindow* win, int& width, int& height, bool flipy, bool back) {
+image4f take_glwindow_screenshot(glwindow* win, bool flipy, bool back) {
     auto wh = get_glwindow_framebuffer_size(win);
-    width = wh.x;
-    height = wh.y;
-    auto img = std::vector<ygl::vec4f>(wh.x * wh.y);
+    auto img = make_image4f(wh.x, wh.y);
     glReadBuffer((back) ? GL_BACK : GL_FRONT);
-    glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, img.data());
+    glReadPixels(
+        0, 0, img.width, img.height, GL_RGBA, GL_UNSIGNED_BYTE, img.pxl.data());
     if (flipy) {
-        for (int j = 0; j < height / 2; j++) {
-            for (auto i = 0; i < width; i++) {
-                std::swap(
-                    img[i + width * j], img[i + width * (height - 1 - j)]);
+        for (int j = 0; j < img.height / 2; j++) {
+            for (auto i = 0; i < img.width; i++) {
+                std::swap(img.pxl[i + img.width * j],
+                    img.pxl[i + img.width * (img.height - 1 - j)]);
             }
         }
     }

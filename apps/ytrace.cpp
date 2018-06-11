@@ -26,7 +26,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_image.h"
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_trace.h"
@@ -113,7 +112,7 @@ int main(int argc, char* argv[]) {
     ygl::log_info("adding scene elements");
     if (add_skyenv && scn->environments.empty()) {
         scn->environments.push_back(ygl::make_environment("sky", {1, 1, 1},
-            ygl::make_texture("sky", "sky.exr", 1024, 512,
+            ygl::make_texture("sky", "sky.exr",
                 ygl::make_sunsky_image(1024, 512, ygl::pi / 4))));
         scn->textures.push_back(scn->environments.back()->ke_txt);
     }
@@ -138,10 +137,9 @@ int main(int argc, char* argv[]) {
 
     // initialize rendering objects
     ygl::log_info("initializing tracer data");
-    auto width = (int)round(resolution * cam->width / cam->height);
-    auto height = resolution;
-    auto img = std::vector<ygl::vec4f>(width * height);
-    auto rngs = ygl::make_rng_seq(width * height, seed);
+    auto img = ygl::make_image4f(
+        (int)round(resolution * cam->width / cam->height), resolution);
+    auto rngs = ygl::make_rng_seq(img.width * img.height, seed);
 
     // render
     ygl::log_info_begin("rendering image");
@@ -151,16 +149,15 @@ int main(int argc, char* argv[]) {
                 ygl::path_dirname(imfilename), ygl::path_basename(imfilename),
                 sample, ygl::path_extension(imfilename));
             ygl::log_info("saving image {}", filename);
-            ygl::save_image(
-                filename, width, height, ygl::expose_image(img, exposure));
+            ygl::save_image(filename, ygl::expose_image(img, exposure));
         }
         ygl::log_info_begin("rendering sample {}/{}", sample, nsamples);
         if (noparallel) {
-            ygl::trace_samples(scn, cam, width, height, img, rngs, sample,
+            ygl::trace_samples(scn, cam, img, rngs, sample,
                 std::min(batch_size, nsamples - sample), tracer, max_depth,
                 pixel_clamp);
         } else {
-            ygl::trace_samples_mt(scn, cam, width, height, img, rngs, sample,
+            ygl::trace_samples_mt(scn, cam, img, rngs, sample,
                 std::min(batch_size, nsamples - sample), tracer, max_depth,
                 pixel_clamp);
         }
@@ -170,8 +167,7 @@ int main(int argc, char* argv[]) {
 
     // save image
     ygl::log_info("saving image {}", imfilename);
-    ygl::save_image(
-        imfilename, width, height, ygl::expose_image(img, exposure));
+    ygl::save_image(imfilename, ygl::expose_image(img, exposure));
 
     // cleanup
     delete scn;

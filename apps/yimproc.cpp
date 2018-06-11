@@ -30,21 +30,6 @@
 #include "../yocto/yocto_utils.h"
 using namespace std::literals;
 
-// Resize image.
-template <typename T>
-std::vector<T> resize_image(int width, int height, const std::vector<T>& img,
-    int res_width, int res_height) {
-    if (!res_width && !res_height)
-        ygl::log_fatal("at least argument should be >0");
-    if (!res_width)
-        res_width = (int)round(width * (res_height / (float)height));
-    if (!res_height)
-        res_height = (int)round(height * (res_width / (float)width));
-    auto res = std::vector<T>(res_width * res_height);
-    ygl::resize_image(width, height, img, res_width, res_height, res);
-    return res;
-}
-
 #if 0
 template <typename Image>
 Image make_image_grid(const std::vector<Image>& imgs, int tilex) {
@@ -77,40 +62,40 @@ Image make_image_grid(const std::vector<Image>& imgs, int tilex) {
 }
 #endif
 
-std::vector<ygl::vec4f> filter_bilateral(int width, int height,
-    const std::vector<ygl::vec4f>& img, float spatial_sigma, float range_sigma,
-    const std::vector<std::vector<ygl::vec4f>>& features,
+ygl::image4f filter_bilateral(const ygl::image4f& img, float spatial_sigma,
+    float range_sigma, const std::vector<ygl::image4f>& features,
     const std::vector<float>& features_sigma) {
-    auto filtered = std::vector<ygl::vec4f>(width * height);
+    auto filtered = ygl::make_image4f(img.width, img.height);
     auto filter_width = (int)ceil(2.57f * spatial_sigma);
     auto sw = 1 / (2.0f * spatial_sigma * spatial_sigma);
     auto rw = 1 / (2.0f * range_sigma * range_sigma);
     auto fw = std::vector<float>();
     for (auto feature_sigma : features_sigma)
         fw.push_back(1 / (2.0f * feature_sigma * feature_sigma));
-    for (auto j = 0; j < height; j++) {
-        for (auto i = 0; i < width; i++) {
+    for (auto j = 0; j < img.height; j++) {
+        for (auto i = 0; i < img.width; i++) {
             auto av = ygl::zero4f;
             auto aw = 0.0f;
             for (auto fj = -filter_width; fj <= filter_width; fj++) {
                 for (auto fi = -filter_width; fi <= filter_width; fi++) {
                     auto ii = i + fi, jj = j + fj;
                     if (ii < 0 || jj < 0) continue;
-                    if (ii >= width || jj >= height) continue;
+                    if (ii >= img.width || jj >= img.height) continue;
                     auto uv = ygl::vec2f{float(i - ii), float(j - jj)};
-                    auto rgb = img[i + j * width] - img[ii + width * jj];
+                    auto rgb = img.pxl[i + j * img.width] -
+                               img.pxl[ii + img.width * jj];
                     auto w = (float)std::exp(-dot(uv, uv) * sw) *
                              (float)std::exp(-dot(rgb, rgb) * rw);
                     for (auto fi = 0; fi < features.size(); fi++) {
-                        auto feat = features[fi][i + width * j] -
-                                    features[fi][ii + width * jj];
+                        auto feat = features[fi].pxl[i + img.width * j] -
+                                    features[fi].pxl[ii + img.width * jj];
                         w *= exp(-dot(feat, feat) * fw[fi]);
                     }
-                    av += w * img[ii + width * jj];
+                    av += w * img.pxl[ii + img.width * jj];
                     aw += w;
                 }
             }
-            filtered[i + j * width] = av / aw;
+            filtered.pxl[i + j * img.width] = av / aw;
         }
     }
     return filtered;
@@ -180,46 +165,40 @@ int main(int argc, char* argv[]) {
     }
 
     // load
-    auto width = 0, height = 0;
-    auto img = ygl::load_image(filename, width, height, gamma);
+    auto img = ygl::load_image(filename, gamma);
 
     // set alpha
     if (set_alpha_filename != "") {
-        auto alpha_width = 0, alpha_height = 0;
-        auto alpha_img = ygl::load_image(
-            set_alpha_filename, alpha_width, alpha_height, gamma);
-        if (width != alpha_width || height != alpha_height)
+        auto alpha = ygl::load_image(set_alpha_filename, gamma);
+        if (img.width != alpha.width || img.height != alpha.height)
             ygl::log_fatal("bad image size");
-        for (auto i = 0; i < img.size(); i++) img[i].w = alpha_img[i].w;
+        for (auto i = 0; i < img.pxl.size(); i++) img.pxl[i].w = alpha.pxl[i].w;
     }
 
     // set alpha
     if (set_color_as_alpha_filename != "") {
-        auto alpha_width = 0, alpha_height = 0;
-        auto alpha_img = ygl::load_image(
-            set_color_as_alpha_filename, alpha_width, alpha_height, gamma);
-        if (width != alpha_width || height != alpha_height)
+        auto alpha = ygl::load_image(set_color_as_alpha_filename, gamma);
+        if (img.width != alpha.width || img.height != alpha.height)
             ygl::log_fatal("bad image size");
-        for (auto i = 0; i < img.size(); i++) {
-            auto& p = alpha_img[i];
-            img[i].w = (p.x + p.y + p.z) / 3;
+        for (auto i = 0; i < img.pxl.size(); i++) {
+            auto& p = alpha.pxl[i];
+            img.pxl[i].w = (p.x + p.y + p.z) / 3;
         }
     }
 
     // multiply
     if (multiply_color != ygl::vec4f{1, 1, 1, 1}) {
-        for (auto& c : img) c *= multiply_color;
+        for (auto& c : img.pxl) c *= multiply_color;
     }
 
     // resize
     if (resize_width || resize_height) {
-        img = resize_image(width, height, img, resize_width, resize_height);
+        img = resize_image(img, resize_width, resize_height);
     }
 
     // bilateral
     if (spatial_sigma && range_sigma) {
-        img = filter_bilateral(
-            width, height, img, spatial_sigma, range_sigma, {}, {});
+        img = filter_bilateral(img, spatial_sigma, range_sigma, {}, {});
     }
 
     // exposure
@@ -229,7 +208,7 @@ int main(int argc, char* argv[]) {
     if (filmic) img = filmic_tonemap_image(img);
 
     // save
-    ygl::save_image(output, width, height, img, gamma);
+    ygl::save_image(output, img, gamma);
 
     // done
     return 0;

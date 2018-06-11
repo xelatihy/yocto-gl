@@ -271,13 +271,13 @@ float sample_environment_pdf(const environment* env, vec3f i) {
     auto txt = env->ke_txt;
     if (!env->elem_cdf.empty() && txt) {
         auto texcoord = eval_texcoord(env, i);
-        auto i = (int)(texcoord.x * txt->width);
-        auto j = (int)(texcoord.y * txt->height);
-        auto idx = j * txt->width + i;
+        auto i = (int)(texcoord.x * txt->img.width);
+        auto j = (int)(texcoord.y * txt->img.height);
+        auto idx = j * txt->img.width + i;
         auto prob =
             sample_discrete_pdf(env->elem_cdf, idx) / env->elem_cdf.back();
-        auto angle = (2 * pi / txt->width) * (pi / txt->height) *
-                     sin(pi * (j + 0.5f) / txt->height);
+        auto angle = (2 * pi / txt->img.width) * (pi / txt->img.height) *
+                     sin(pi * (j + 0.5f) / txt->img.height);
         return prob / angle;
     } else {
         return 1 / (4 * pi);
@@ -289,8 +289,8 @@ vec3f sample_environment(const environment* env, float rel, vec2f ruv) {
     auto txt = env->ke_txt;
     if (!env->elem_cdf.empty() && txt) {
         auto idx = sample_discrete(env->elem_cdf, rel);
-        auto u = (idx % txt->width + 0.5f) / txt->width;
-        auto v = (idx / txt->width + 0.5f) / txt->height;
+        auto u = (idx % txt->img.width + 0.5f) / txt->img.width;
+        auto v = (idx / txt->img.width + 0.5f) / txt->img.height;
         return eval_direction(env, {u, v});
     } else {
         return sample_sphere(ruv);
@@ -963,38 +963,38 @@ vec4f trace_sample(const scene* scn, const camera* cam, int i, int j, int width,
 }
 
 // Trace the next nsamples.
-void trace_samples(const scene* scn, const camera* cam, int width, int height,
-    std::vector<vec4f>& img, std::vector<rng_state>& rngs, int sample,
-    int nsamples, trace_func tracer, int nbounces, float pixel_clamp) {
-    for (auto j = 0; j < height; j++) {
-        for (auto i = 0; i < width; i++) {
-            auto pid = i + j * width;
-            img[pid] *= sample;
+void trace_samples(const scene* scn, const camera* cam, image4f& img,
+    std::vector<rng_state>& rngs, int sample, int nsamples, trace_func tracer,
+    int nbounces, float pixel_clamp) {
+    for (auto j = 0; j < img.height; j++) {
+        for (auto i = 0; i < img.width; i++) {
+            auto pid = i + j * img.width;
+            img.pxl[pid] *= sample;
             for (auto s = 0; s < nsamples; s++)
-                img[pid] += trace_sample(scn, cam, i, j, width, height,
-                    rngs[pid], tracer, nbounces, pixel_clamp);
-            img[pid] /= sample + nsamples;
+                img.pxl[pid] += trace_sample(scn, cam, i, j, img.width,
+                    img.height, rngs[pid], tracer, nbounces, pixel_clamp);
+            img.pxl[pid] /= sample + nsamples;
         }
     }
 }
 
 // Trace the next nsamples.
-void trace_samples_mt(const scene* scn, const camera* cam, int width,
-    int height, std::vector<vec4f>& img, std::vector<rng_state>& rngs,
-    int sample, int nsamples, trace_func tracer, int nbounces,
-    float pixel_clamp) {
+void trace_samples_mt(const scene* scn, const camera* cam, image4f& img,
+    std::vector<rng_state>& rngs, int sample, int nsamples, trace_func tracer,
+    int nbounces, float pixel_clamp) {
     auto nthreads = std::thread::hardware_concurrency();
     auto threads = std::vector<std::thread>();
     for (auto tid = 0; tid < std::thread::hardware_concurrency(); tid++) {
         threads.push_back(std::thread([=, &img, &rngs]() {
-            for (auto j = tid; j < height; j += nthreads) {
-                for (auto i = 0; i < width; i++) {
-                    auto pid = i + j * width;
-                    img[pid] *= sample;
+            for (auto j = tid; j < img.height; j += nthreads) {
+                for (auto i = 0; i < img.width; i++) {
+                    auto pid = i + j * img.width;
+                    img.pxl[pid] *= sample;
                     for (auto s = 0; s < nsamples; s++)
-                        img[pid] += trace_sample(scn, cam, i, j, width, height,
-                            rngs[pid], tracer, nbounces, pixel_clamp);
-                    img[pid] /= sample + nsamples;
+                        img.pxl[pid] +=
+                            trace_sample(scn, cam, i, j, img.width, img.height,
+                                rngs[pid], tracer, nbounces, pixel_clamp);
+                    img.pxl[pid] /= sample + nsamples;
                 }
             }
         }));
@@ -1004,9 +1004,8 @@ void trace_samples_mt(const scene* scn, const camera* cam, int width,
 }
 
 // Starts an anyncrhounous renderer.
-void trace_async_start(const scene* scn, const camera* cam, int width,
-    int height, std::vector<vec4f>& img, std::vector<rng_state>& rngs,
-    int nsamples, trace_func tracer, int nbounces,
+void trace_async_start(const scene* scn, const camera* cam, image4f& img,
+    std::vector<rng_state>& rngs, int nsamples, trace_func tracer, int nbounces,
     std::vector<std::thread>& threads, bool& stop_flag, int& cur_sample,
     float pixel_clamp) {
     auto nthreads = std::thread::hardware_concurrency();
@@ -1015,13 +1014,14 @@ void trace_async_start(const scene* scn, const camera* cam, int width,
             std::thread([=, &img, &rngs, &stop_flag, &cur_sample]() {
                 for (auto sample = 0; sample < nsamples; sample++) {
                     if (!tid) cur_sample = sample;
-                    for (auto j = tid; j < height; j += nthreads) {
-                        for (auto i = 0; i < width; i++) {
-                            auto pid = i + j * width;
+                    for (auto j = tid; j < img.height; j += nthreads) {
+                        for (auto i = 0; i < img.width; i++) {
+                            auto pid = i + j * img.width;
                             if (stop_flag) return;
-                            auto l = trace_sample(scn, cam, i, j, width, height,
-                                rngs[pid], tracer, nbounces);
-                            img[pid] = (img[pid] * sample + l) / (sample + 1);
+                            auto l = trace_sample(scn, cam, i, j, img.width,
+                                img.height, rngs[pid], tracer, nbounces);
+                            img.pxl[pid] =
+                                (img.pxl[pid] * sample + l) / (sample + 1);
                         }
                     }
                     if (!tid) cur_sample = nsamples;

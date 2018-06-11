@@ -232,9 +232,8 @@ void run_ui(app_state* app) {
         // check if exiting is needed
         if (app->screenshot_and_exit) {
             ygl::log_info("taking screenshot and exiting...");
-            auto width = 0, height = 0;
-            auto img = ygl::take_glwindow_screenshot(win, width, height);
-            ygl::save_image(app->imfilename, width, height, img);
+            auto img = ygl::take_glwindow_screenshot(win);
+            ygl::save_image(app->imfilename, img);
             break;
         }
 

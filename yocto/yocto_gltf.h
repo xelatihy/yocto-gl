@@ -89,14 +89,11 @@
 #ifndef _YGL_GLTF_H_
 #define _YGL_GLTF_H_
 
-// -----------------------------------------------------------------------------
-// COMPILATION OPTIONS AND INCLUDES
-// -----------------------------------------------------------------------------
-
 #ifndef YGL_GLTFJSON
 #define YGL_GLTFJSON 0
 #endif
 
+#include "yocto_image.h"
 #include "yocto_math.h"
 
 #include <map>
@@ -112,16 +109,6 @@
 // KHRONOS GLTF SUPPORT
 // -----------------------------------------------------------------------------
 namespace ygl {
-
-// Generic buffer data.
-using gltf_buffer_data = std::vector<unsigned char>;
-
-// Generic image data.
-struct gltf_image_data {
-    int width = 0;           // width
-    int height = 0;          // height
-    std::vector<vec4f> img;  // pixels values
-};
 
 // Id for glTF references.
 template <typename T>
@@ -434,7 +421,7 @@ struct glTFBuffer : glTFChildOfRootProperty {
     // The length of the buffer in bytes. [required]
     int byteLength = 0;
     // Stores buffer content after loading. [required]
-    gltf_buffer_data data = {};
+    std::vector<unsigned char> data = {};
 };
 
 // Values for glTFBufferView::target
@@ -539,7 +526,7 @@ struct glTFImage : glTFChildOfRootProperty {
     glTFid<glTFBufferView> bufferView = {};
 
     // Image data (if loaded).
-    gltf_image_data data = {};
+    image4f data = {};
 };
 
 // Reference to a texture.

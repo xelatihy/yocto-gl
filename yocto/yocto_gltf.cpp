@@ -1357,7 +1357,7 @@ void load_gltf_textures(
     // load images
     for (auto gimg : gltf->images) {
         auto filename = std::string();
-        gimg->data = gltf_image_data();
+        gimg->data = {};
         if (gimg->bufferView || startswith(gimg->uri, "data:")) {
             auto buffer = std::string();
             auto data = (unsigned char*)nullptr;
@@ -1402,8 +1402,8 @@ void load_gltf_textures(
                 data = (unsigned char*)buffer.data();
             }
             try {
-                gimg->data.img = load_image_from_memory(data, data_size,
-                    gimg->data.width, gimg->data.height, ldr_gamma.at(gimg));
+                gimg->data =
+                    load_image_from_memory(data, data_size, ldr_gamma.at(gimg));
             } catch (std::exception&) {
                 if (skip_missing) continue;
                 throw;
@@ -1413,8 +1413,7 @@ void load_gltf_textures(
             for (auto& c : filename)
                 if (c == '\\') c = '/';
             try {
-                gimg->data.img = load_image(filename, gimg->data.width,
-                    gimg->data.height, ldr_gamma.at(gimg));
+                gimg->data = load_image(filename, ldr_gamma.at(gimg));
             } catch (std::exception&) {
                 if (skip_missing) continue;
                 throw;
@@ -1455,7 +1454,7 @@ void save_gltf_textures(
 
     // save images
     for (auto gimg : gltf->images) {
-        if (gimg->data.img.empty()) continue;
+        if (gimg->data.pxl.empty()) continue;
         if (startswith(gimg->uri, "data:")) {
             if (skip_missing) continue;
             throw std::runtime_error("saving of embedded data not supported");
@@ -1464,8 +1463,7 @@ void save_gltf_textures(
         for (auto& c : filename)
             if (c == '\\') c = '/';
         try {
-            save_image(filename, gimg->data.width, gimg->data.height,
-                gimg->data.img, ldr_gamma.at(gimg));
+            save_image(filename, gimg->data, ldr_gamma.at(gimg));
         } catch (std::exception&) {
             if (skip_missing) continue;
             throw;
