@@ -45,7 +45,8 @@ int main(int argc, char** argv) {
     // command line params
     auto parser =
         ygl::make_parser(argc, argv, "yscnproc", "converts obj to gltf");
-    auto notextures = ygl::parse_flag(parser, "--notextures", "", "Disable textures.", false);
+    auto notextures =
+        ygl::parse_flag(parser, "--notextures", "", "Disable textures.", false);
     auto output = ygl::parse_opt(
         parser, "--output", "-o", "output scene filename", "out.obj"s);
     auto filename = ygl::parse_arg(parser, "scene", "input scene", ""s);
@@ -75,8 +76,8 @@ int main(int argc, char** argv) {
     try {
         ygl::save_scene(output, scn);
     } catch (const std::exception& e) {
-        ygl::log_fatal("unable to save scene {} with error {}",
-            output, e.what());
+        ygl::log_fatal(
+            "unable to save scene {} with error {}", output, e.what());
     }
 
     // done

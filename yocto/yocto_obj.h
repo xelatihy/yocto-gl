@@ -74,15 +74,12 @@
 #ifndef _YGL_OBJ_H_
 #define _YGL_OBJ_H_
 
-// -----------------------------------------------------------------------------
-// COMPILATION OPTIONS AND INCLUDES
-// -----------------------------------------------------------------------------
-
 // enable fast OBJ parsing
 #ifndef YGL_FASTOBJ
 #define YGL_FASTOBJ 1
 #endif
 
+#include "yocto_image.h"
 #include "yocto_math.h"
 
 #include <deque>
@@ -138,10 +135,8 @@ struct obj_object {
 
 // Obj texture. Texture data is loaded only if desired.
 struct obj_texture {
-    std::string path;        // path
-    int width = 0;           // width
-    int height = 0;          // height
-    std::vector<vec4f> img;  // image data
+    std::string path;  // path
+    image4f img;       // image data
 };
 
 // Obj texture information.

@@ -64,9 +64,9 @@ struct glshape {
 void update_gldata(texture* txt) {
     if (!txt->gl_data) txt->gl_data = new gltexture();
     auto& gtxt = *(gltexture*)txt->gl_data;
-    if (!txt->img.empty()) {
-        update_gltexture(
-            gtxt, txt->width, txt->height, txt->img, true, true, false, false);
+    if (!txt->img.pxl.empty()) {
+        update_gltexture(gtxt, txt->img.width, txt->img.height, txt->img.pxl,
+            true, true, false, false);
     }
 }
 void update_gldata(shape* shp) {

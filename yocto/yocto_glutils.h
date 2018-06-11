@@ -68,10 +68,7 @@
 #ifndef _YGLU_H_
 #define _YGLU_H_
 
-// -----------------------------------------------------------------------------
-// COMPILATION OPTIONS AND INCLUDES
-// -----------------------------------------------------------------------------
-
+#include "yocto_image.h"
 #include "yocto_math.h"
 
 #include <map>
@@ -544,8 +541,8 @@ bool get_glwindow_ctrl_key(glwindow* win);
 bool get_glwindow_shift_key(glwindow* win);
 
 // Read pixels.
-std::vector<vec4f> take_glwindow_screenshot(glwindow* win, int& width,
-    int& height, bool flipy = true, bool back = false);
+image4f take_glwindow_screenshot(
+    glwindow* win, bool flipy = true, bool back = false);
 
 }  // namespace ygl
 

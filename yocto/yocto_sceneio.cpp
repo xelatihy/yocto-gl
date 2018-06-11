@@ -349,6 +349,18 @@ inline void from_json(const json& js, bbox4f& val) {
     (std::array<float, 8>&)val = js.get<std::array<float, 8>>();
 }
 
+inline void to_json(json& js, const image4f& val) {
+    js = json::object();
+    js["width"] = val.width;
+    js["height"] = val.height;
+    js["pxl"] = val.pxl;
+}
+inline void from_json(const json& js, image4f& val) {
+    val.width = js.at("width").get<int>();
+    val.height = js.at("height").get<int>();
+    val.pxl = js.at("pxl").get<std::vector<vec4f>>();
+}
+
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
@@ -401,9 +413,7 @@ void to_json(json& js, const texture& val) {
     if (val.clamp != def.clamp) js["clamp"] = val.clamp;
     if (val.scale != def.scale) js["scale"] = val.scale;
     if (val.path == "") {
-        if (val.width != def.width) js["width"] = val.width;
-        if (val.height != def.height) js["height"] = val.height;
-        if (val.img != def.img) js["img"] = val.img;
+        if (!val.img.pxl.empty()) js["img"] = val.img;
     }
 }
 
@@ -412,58 +422,55 @@ void from_json_proc(const json& js, texture& val) {
     auto type = js.value("!!type", ""s);
     if (type == "") return;
     auto is_hdr = false;
-    val.width = js.value("!!width", 512);
-    val.height = js.value("!!height", 512);
+    auto width = js.value("!!width", 512);
+    auto height = js.value("!!height", 512);
     if (js.count("!!resolution")) {
-        val.height = js.value("!!resolution", 512);
-        val.width = val.height;
+        height = js.value("!!resolution", 512);
+        width = height;
     }
     if (type == "grid") {
-        val.img = make_grid_image(val.width, val.height, js.value("!!tile", 8),
+        val.img = make_grid_image(width, height, js.value("!!tile", 8),
             js.value("!!c0", vec4f{0.5f, 0.5f, 0.5f, 1}),
             js.value("!!c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "checker") {
-        val.img = make_checker_image(val.width, val.height,
-            js.value("!!tile", 8), js.value("!!c0", vec4f{0.5f, 0.5f, 0.5f, 1}),
+        val.img = make_checker_image(width, height, js.value("!!tile", 8),
+            js.value("!!c0", vec4f{0.5f, 0.5f, 0.5f, 1}),
             js.value("!!c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "bump") {
-        val.img =
-            make_bumpdimple_image(val.width, val.height, js.value("!!tile", 8));
+        val.img = make_bumpdimple_image(width, height, js.value("!!tile", 8));
     } else if (type == "uv") {
-        val.img = make_uv_image(val.width, val.height);
+        val.img = make_uv_image(width, height);
     } else if (type == "uvgrid") {
-        val.img = make_uvgrid_image(val.width, val.height);
+        val.img = make_uvgrid_image(width, height);
     } else if (type == "sky") {
-        if (val.width < val.height * 2) val.width = val.height * 2;
-        val.img = make_sunsky_image(val.width, val.height,
-            js.value("!!sun_angle", pi / 4), js.value("!!turbidity", 3.0f),
-            js.value("!!has_sun", false),
-            js.value("!!ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
+        if (width < height * 2) width = height * 2;
+        val.img =
+            make_sunsky_image(width, height, js.value("!!sun_angle", pi / 4),
+                js.value("!!turbidity", 3.0f), js.value("!!has_sun", false),
+                js.value("!!ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
         is_hdr = true;
     } else if (type == "noise") {
-        val.img = make_noise_image(val.width, val.height,
-            js.value("!!scale", 1.0f), js.value("!!wrap", true));
+        val.img = make_noise_image(
+            width, height, js.value("!!scale", 1.0f), js.value("!!wrap", true));
     } else if (type == "fbm") {
+        val.img = make_fbm_image(width, height, js.value("!!scale", 1.0f),
+            js.value("!!lacunarity", 2.0f), js.value("!!gain", 0.5f),
+            js.value("!!octaves", 6), js.value("!!wrap", true));
+    } else if (type == "ridge") {
+        val.img = make_ridge_image(width, height, js.value("!!scale", 1.0f),
+            js.value("!!lacunarity", 2.0f), js.value("!!gain", 0.5f),
+            js.value("!!offset", 1.0f), js.value("!!octaves", 6),
+            js.value("!!wrap", true));
+    } else if (type == "turbulence") {
         val.img =
-            make_fbm_image(val.width, val.height, js.value("!!scale", 1.0f),
+            make_turbulence_image(width, height, js.value("!!scale", 1.0f),
                 js.value("!!lacunarity", 2.0f), js.value("!!gain", 0.5f),
                 js.value("!!octaves", 6), js.value("!!wrap", true));
-    } else if (type == "ridge") {
-        val.img = make_ridge_image(val.width, val.height,
-            js.value("!!scale", 1.0f), js.value("!!lacunarity", 2.0f),
-            js.value("!!gain", 0.5f), js.value("!!offset", 1.0f),
-            js.value("!!octaves", 6), js.value("!!wrap", true));
-    } else if (type == "turbulence") {
-        val.img = make_turbulence_image(val.width, val.height,
-            js.value("!!scale", 1.0f), js.value("!!lacunarity", 2.0f),
-            js.value("!!gain", 0.5f), js.value("!!octaves", 6),
-            js.value("!!wrap", true));
     } else {
         throw std::runtime_error("unknown texture type " + type);
     }
     if (js.value("!!bump_to_normal", false)) {
-        val.img = bump_to_normal_map(
-            val.width, val.height, val.img, js.value("!!bump_scale", 1.0f));
+        val.img = bump_to_normal_map(val.img, js.value("!!bump_scale", 1.0f));
     }
     if (val.path == "")
         val.path = "textures/" + val.name + ((is_hdr) ? ".png" : ".hdr");
@@ -476,8 +483,6 @@ void from_json(const json& js, texture& val) {
     val.path = js.value("path", def.path);
     val.clamp = js.value("clamp", def.clamp);
     val.scale = js.value("scale", def.scale);
-    val.width = js.value("width", def.width);
-    val.height = js.value("height", def.height);
     val.img = js.value("img", def.img);
     from_json_proc(js, val);
 }
@@ -1185,15 +1190,13 @@ scene* load_json_scene(
 
     // load images
     for (auto txt : scn->textures) {
-        if (txt->path == "" || !txt->img.empty()) continue;
-        auto filename = dirname + txt->path;
-        for (auto& c : filename)
-            if (c == '\\') c = '/';
-        txt->img =
-            load_image(filename, txt->width, txt->height, ldr_gamma.at(txt));
-        if (txt->img.empty()) {
+        if (txt->path == "" || !txt->img.pxl.empty()) continue;
+        auto filename = fix_path(dirname + txt->path);
+        try {
+            txt->img = load_image(filename, ldr_gamma.at(txt));
+        } catch (const std::exception&) {
             if (skip_missing) continue;
-            throw std::runtime_error("cannot laod image " + filename);
+            throw;
         }
     }
 
@@ -1211,9 +1214,7 @@ void save_json_scene(const std::string& filename, const scene* scn,
     auto dirname = path_dirname(filename);
     for (auto shp : scn->shapes) {
         if (shp->path == "") continue;
-        auto filename = dirname + shp->path;
-        for (auto& c : filename)
-            if (c == '\\') c = '/';
+        auto filename = fix_path(dirname + shp->path);
         try {
             save_mesh(filename, shp->lines, shp->triangles, shp->pos, shp->norm,
                 shp->texcoord, shp->color, shp->radius);
@@ -1244,13 +1245,10 @@ void save_json_scene(const std::string& filename, const scene* scn,
 
     // save images
     for (auto txt : scn->textures) {
-        if (txt->img.empty()) continue;
-        auto filename = dirname + txt->path;
-        for (auto& c : filename)
-            if (c == '\\') c = '/';
+        if (txt->img.pxl.empty()) continue;
+        auto filename = fix_path(dirname + txt->path);
         try {
-            save_image(
-                filename, txt->width, txt->height, txt->img, ldr_gamma.at(txt));
+            save_image(filename, txt->img, ldr_gamma.at(txt));
         } catch (std::exception&) {
             if (skip_missing) continue;
             throw;
@@ -1865,8 +1863,7 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
     for (auto txt : scn->textures) {
         auto filename = fix_path(dirname + txt->path);
         try {
-            txt->img = load_image(
-                filename, txt->width, txt->height, ldr_gamma.at(txt));
+            txt->img = load_image(filename, ldr_gamma.at(txt));
         } catch (std::exception&) {
             if (skip_missing) continue;
             throw;
@@ -2097,13 +2094,10 @@ void save_obj_scene(const std::string& filename, const scene* scn,
     // save images
     auto dirname = path_dirname(filename);
     for (auto txt : scn->textures) {
-        if (txt->img.empty()) continue;
-        auto filename = dirname + txt->path;
-        for (auto& c : filename)
-            if (c == '\\') c = '/';
+        if (txt->img.pxl.empty()) continue;
+        auto filename = fix_path(dirname + txt->path);
         try {
-            save_image(
-                filename, txt->width, txt->height, txt->img, ldr_gamma.at(txt));
+            save_image(filename, txt->img, ldr_gamma.at(txt));
         } catch (std::exception&) {
             if (skip_missing) continue;
             throw;
@@ -2692,11 +2686,11 @@ scene* load_gltf_scene(
     // load images
     for (auto txt : scn->textures) {
         auto filename = fix_path(dirname + txt->path);
-        txt->img =
-            load_image(filename, txt->width, txt->height, ldr_gamma.at(txt));
-        if (txt->img.empty()) {
+        try {
+            txt->img = load_image(filename, ldr_gamma.at(txt));
+        } catch (const std::exception&) {
             if (skip_missing) continue;
-            throw std::runtime_error("cannot laod image " + filename);
+            throw;
         }
     }
 
@@ -2954,13 +2948,10 @@ void save_gltf_scene(const std::string& filename, const scene* scn,
 
     // save images
     for (auto txt : scn->textures) {
-        if (txt->img.empty()) continue;
-        auto filename = dirname + txt->path;
-        for (auto& c : filename)
-            if (c == '\\') c = '/';
+        if (txt->img.pxl.empty()) continue;
+        auto filename = fix_path(dirname + txt->path);
         try {
-            save_image(
-                filename, txt->width, txt->height, txt->img, ldr_gamma.at(txt));
+            save_image(filename, txt->img, ldr_gamma.at(txt));
         } catch (std::exception&) {
             if (skip_missing) continue;
             throw;

@@ -1188,8 +1188,7 @@ void load_obj_textures(
         for (auto& c : filename)
             if (c == '\\') c = '/';
         try {
-            txt->img = load_image(
-                filename, txt->width, txt->height, ldr_gamma.at(txt->path));
+            txt->img = load_image(filename, ldr_gamma.at(txt->path));
         } catch (std::exception&) {
             if (skip_missing) continue;
             throw;
@@ -1219,13 +1218,12 @@ void save_obj_textures(
 
     // save images
     for (auto txt : obj->textures) {
-        if (txt->img.empty()) continue;
+        if (txt->img.pxl.empty()) continue;
         auto filename = dirname + txt->path;
         for (auto& c : filename)
             if (c == '\\') c = '/';
         try {
-            save_image(filename, txt->width, txt->height, txt->img,
-                ldr_gamma.at(txt->path));
+            save_image(filename, txt->img, ldr_gamma.at(txt->path));
         } catch (std::exception&) {
             if (skip_missing) continue;
             throw;

@@ -75,19 +75,17 @@ using trace_func = vec3f (*)(const scene* scn, const ray3f& ray, rng_state& rng,
 
 // Trace the next nsamples samples. Assumes that the
 // image contains cur_samples already. Returns true when done.
-void trace_samples(const scene* scn, const camera* cam, int width, int height,
-    std::vector<vec4f>& img, std::vector<rng_state>& rngs, int cur_samples,
-    int nsamples, trace_func tracer, int nbounces, float pixel_clamp = 100);
+void trace_samples(const scene* scn, const camera* cam, image4f& img,
+    std::vector<rng_state>& rngs, int cur_samples, int nsamples,
+    trace_func tracer, int nbounces, float pixel_clamp = 100);
 // Like before but with multiplthreading.
-void trace_samples_mt(const scene* scn, const camera* cam, int width,
-    int height, std::vector<vec4f>& img, std::vector<rng_state>& rngs,
-    int cur_samples, int nsamples, trace_func tracer, int nbounces,
-    float pixel_clamp = 100);
+void trace_samples_mt(const scene* scn, const camera* cam, image4f& img,
+    std::vector<rng_state>& rngs, int cur_samples, int nsamples,
+    trace_func tracer, int nbounces, float pixel_clamp = 100);
 
 // Starts an anyncrhounous renderer.
-void trace_async_start(const scene* scn, const camera* cam, int width,
-    int height, std::vector<vec4f>& img, std::vector<rng_state>& rngs,
-    int nsamples, trace_func tracer, int nbounces,
+void trace_async_start(const scene* scn, const camera* cam, image4f& img,
+    std::vector<rng_state>& rngs, int nsamples, trace_func tracer, int nbounces,
     std::vector<std::thread>& threads, bool& stop_flag, int& cur_sample,
     float pixel_clamp = 100);
 // Stop the asynchronous renderer.

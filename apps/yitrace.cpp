@@ -26,11 +26,9 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_bvh.h"
 #include "../yocto/yocto_glutils.h"
-#include "../yocto/yocto_image.h"
+#include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
-#include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
 #include "../yocto/yocto_utils.h"
 #include "yapp_ui.h"
@@ -54,8 +52,7 @@ struct app_state {
     float pixel_clamp = 100.0f;                // pixel clamping
 
     // rendered image
-    int width = 0, height = 512;
-    std::vector<ygl::vec4f> img;
+    ygl::image4f img = {};
 
     // rendering state
     std::vector<ygl::rng_state> rngs;
@@ -102,8 +99,8 @@ auto trace_names = std::map<ygl::trace_func, std::string>{
 
 void draw(ygl::glwindow* win, app_state* app) {
     // update image
-    ygl::update_gltexture(app->gl_txt, app->width, app->height, app->img, false,
-        false, true, false);
+    ygl::update_gltexture(app->gl_txt, app->img.width, app->img.height,
+        app->img.pxl, false, false, true, false);
     // draw image
     auto window_size = get_glwindow_size(win);
     auto framebuffer_size = get_glwindow_framebuffer_size(win);
@@ -115,7 +112,7 @@ void draw(ygl::glwindow* win, app_state* app) {
     if (ygl::begin_glwidgets_frame(win, "yitrace")) {
         ygl::draw_glwidgets_label(win, "scene", app->filename);
         ygl::draw_glwidgets_label(win, "image",
-            ygl::format("{} x {} @ {} samples", app->width, app->height,
+            ygl::format("{} x {} @ {} samples", app->img.width, app->img.height,
                 app->cur_sample));
         if (ygl::begin_glwidgets_tree(win, "render settings")) {
             auto edited = 0;
@@ -147,12 +144,12 @@ void draw(ygl::glwindow* win, app_state* app) {
             ygl::continue_glwidgets_line(win);
             ygl::draw_glwidgets_checkbox(win, "fps", app->navigation_fps);
             auto ij = ygl::get_glimage_coords(get_glwidnow_mouse_posf(win),
-                app->imframe, {app->width, app->height});
+                app->imframe, {app->img.width, app->img.height});
             ygl::draw_glwidgets_dragbox(win, "mouse", ij);
-            if (ij.x >= 0 && ij.x < app->width && ij.y >= 0 &&
-                ij.y < app->height) {
+            if (ij.x >= 0 && ij.x < app->img.width && ij.y >= 0 &&
+                ij.y < app->img.height) {
                 ygl::draw_glwidgets_colorbox(
-                    win, "pixel", app->img[ij.x + ij.y * app->width]);
+                    win, "pixel", app->img.pxl[ij.x + ij.y * app->img.width]);
             } else {
                 auto zero4f_ = ygl::zero4f;
                 ygl::draw_glwidgets_colorbox(win, "pixel", zero4f_);
@@ -209,30 +206,31 @@ bool update(ygl::glwindow* win, app_state* app) {
     // render preview image
     if (app->preview_resolution) {
         auto pwidth = (int)std::round(
-            app->preview_resolution * app->width / (float)app->height);
+            app->preview_resolution * app->img.width / (float)app->img.height);
         auto pheight = app->preview_resolution;
-        auto pimg = std::vector<ygl::vec4f>(pwidth * pheight);
+        auto pimg = ygl::make_image4f(pwidth, pheight);
         auto prngs = ygl::make_rng_seq(pwidth * pheight, 7);
-        trace_samples(app->scn, app->cam, pwidth, pheight, pimg, prngs, 0, 1,
-            app->tracer, app->nbounces);
+        trace_samples(
+            app->scn, app->cam, pimg, prngs, 0, 1, app->tracer, app->nbounces);
         auto pratio = app->resolution / app->preview_resolution;
-        for (auto j = 0; j < app->height; j++) {
-            for (auto i = 0; i < app->width; i++) {
+        for (auto j = 0; j < app->img.height; j++) {
+            for (auto i = 0; i < app->img.width; i++) {
                 auto pi = ygl::clamp(i / pratio, 0, pwidth - 1),
                      pj = ygl::clamp(j / pratio, 0, pheight - 1);
-                app->img[i + j * app->width] = pimg[pi + pwidth * pj];
+                app->img.pxl[i + j * app->img.width] =
+                    pimg.pxl[pi + pwidth * pj];
             }
         }
     } else {
-        for (auto& p : app->img) p = ygl::zero4f;
+        for (auto& p : app->img.pxl) p = ygl::zero4f;
     }
 
     // restart renderer
     ygl::log_info("restart renderer");
-    app->rngs = ygl::make_rng_seq(app->img.size(), app->seed);
-    ygl::trace_async_start(app->scn, app->cam, app->width, app->height,
-        app->img, app->rngs, app->nsamples, app->tracer, app->nbounces,
-        app->async_threads, app->async_stop, app->cur_sample, app->pixel_clamp);
+    app->rngs = ygl::make_rng_seq(app->img.pxl.size(), app->seed);
+    ygl::trace_async_start(app->scn, app->cam, app->img, app->rngs,
+        app->nsamples, app->tracer, app->nbounces, app->async_threads,
+        app->async_stop, app->cur_sample, app->pixel_clamp);
 
     // updated
     return true;
@@ -240,7 +238,7 @@ bool update(ygl::glwindow* win, app_state* app) {
 
 void refresh(ygl::glwindow* win) {
     auto app = (app_state*)ygl::get_glwindow_user_pointer(win);
-    ygl::center_glimage(app->imframe, {app->width, app->height},
+    ygl::center_glimage(app->imframe, {app->img.width, app->img.height},
         ygl::get_glwindow_size(win), app->zoom_to_fit);
     draw(win, (app_state*)ygl::get_glwindow_user_pointer(win));
 }
@@ -248,18 +246,18 @@ void refresh(ygl::glwindow* win) {
 // run ui loop
 void run_ui(app_state* app) {
     // window
-    auto win_width = app->width + ygl::default_glwidgets_width;
-    auto win_height = ygl::clamp(app->height, 512, 1024);
+    auto win_width = app->img.width + ygl::default_glwidgets_width;
+    auto win_height = ygl::clamp(app->img.height, 512, 1024);
     auto win = ygl::make_glwindow(win_width, win_height, "yitrace", app);
     ygl::set_glwindow_callbacks(win, nullptr, nullptr, refresh);
-    ygl::center_glimage(app->imframe, {app->width, app->height},
+    ygl::center_glimage(app->imframe, {app->img.width, app->img.height},
         ygl::get_glwindow_size(win), app->zoom_to_fit);
     ygl::log_callback() = ygl::log_glwidgets_msg;
 
     // load textures
     app->gl_prog = ygl::make_glimage_program();
-    ygl::update_gltexture(app->gl_txt, app->width, app->height, app->img, false,
-        false, true, false);
+    ygl::update_gltexture(app->gl_txt, app->img.width, app->img.height,
+        app->img.pxl, false, false, true, false);
 
     // init widget
     ygl::init_glwidgets(win);
@@ -279,10 +277,10 @@ void run_ui(app_state* app) {
             }
         }
         ygl::handle_glscene_selection(win, app->scn, app->cam,
-            {app->width, app->height}, app->imframe, app->selection);
+            {app->img.width, app->img.height}, app->imframe, app->selection);
 
         // draw
-        ygl::center_glimage(app->imframe, {app->width, app->height},
+        ygl::center_glimage(app->imframe, {app->img.width, app->img.height},
             ygl::get_glwindow_size(win), app->zoom_to_fit);
         draw(win, app);
 
@@ -362,7 +360,7 @@ int main(int argc, char* argv[]) {
     ygl::log_info("adding scene elements");
     if (add_skyenv && app->scn->environments.empty()) {
         app->scn->environments.push_back(ygl::make_environment("sky", {1, 1, 1},
-            ygl::make_texture("sky", "sky.exr", 1024, 512,
+            ygl::make_texture("sky", "sky.exr",
                 ygl::make_sunsky_image(1024, 512, ygl::pi / 4))));
         app->scn->textures.push_back(app->scn->environments.back()->ke_txt);
     }
@@ -395,11 +393,10 @@ int main(int argc, char* argv[]) {
 
     // initialize rendering objects
     ygl::log_info("initializing tracer data");
-    app->width =
-        (int)round(app->resolution * app->cam->width / app->cam->height);
-    app->height = app->resolution;
-    app->img = std::vector<ygl::vec4f>(app->width * app->height);
-    app->rngs = ygl::make_rng_seq(app->width * app->height, app->seed);
+    app->img = ygl::make_image4f(
+        (int)round(app->resolution * app->cam->width / app->cam->height),
+        app->resolution);
+    app->rngs = ygl::make_rng_seq(app->img.width * app->img.height, app->seed);
     app->update_list.push_back(app->scn);
 
     // run interactive
