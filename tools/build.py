@@ -56,5 +56,18 @@ def format():
     for glob in ['yocto/yocto_*.h', 'yocto/yocto_*.cpp', 'apps/y*.cpp']:
         os.system('clang-format -i -style=file ' + glob)
 
+@run.command()
+def tests():
+    for ext in ['obj', 'gltf', 'json']:
+        os.system(f'rm -rf tests/{ext}; mkdir tests/{ext}')
+    for filename in glob.glob('tests/*.json'):
+        print(filename)
+        basename = os.path.basename(filename).replace('.json','')
+        for ext in ['obj', 'gltf', 'json']:
+            os.system(f'mkdir tests/{ext}/{basename}')
+            os.system(f'mkdir tests/{ext}/{basename}/textures')
+            os.system(f'mkdir tests/{ext}/{basename}/meshes')
+            os.system(f'./bin/yscnproc -o tests/{ext}/{basename}/{basename}.{ext} {filename}')
+
 if __name__ == '__main__':
     run()

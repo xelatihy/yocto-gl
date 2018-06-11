@@ -41,122 +41,42 @@ void mkdir(const std::string& dir) {
 #endif
 }
 
-void validate_texture_paths(ygl::scene* obj, const std::string& filename) {
-    auto dirname = ygl::path_dirname(filename);
-    for (auto txt : obj->textures) {
-        auto f = fopen((dirname + txt->path).c_str(), "rb");
-        if (!f)
-            printf("Missing texture: %s\n", txt->path.c_str());
-        else
-            fclose(f);
-    }
-}
-
 int main(int argc, char** argv) {
     // command line params
     auto parser =
         ygl::make_parser(argc, argv, "yscnproc", "converts obj to gltf");
-    auto textures =
-        ygl::parse_flag(parser, "--textures", "-t", "process textures");
-    auto scale = ygl::parse_opt(parser, "--scale", "", "scale the model", 1.0f);
-    auto flipyz =
-        ygl::parse_flag(parser, "--flipyz", "", "flip y and z coords");
-    auto add_normals = ygl::parse_flag(parser, "--normals", "", "add normals");
-    auto info =
-        ygl::parse_flag(parser, "--print-info", "", "print information");
-    auto validate_textures = ygl::parse_flag(
-        parser, "--validate-textures", "", "validate texture paths");
-    auto validate =
-        ygl::parse_flag(parser, "--validate", "", "validate after saving");
+    auto notextures = ygl::parse_flag(parser, "--notextures", "", "Disable textures.", false);
     auto output = ygl::parse_opt(
         parser, "--output", "-o", "output scene filename", "out.obj"s);
-    auto filenames = ygl::parse_args(
-        parser, "scenes", "input scene filenames", std::vector<std::string>{});
+    auto filename = ygl::parse_arg(parser, "scene", "input scene", ""s);
     if (ygl::should_exit(parser)) {
         printf("%s\n", get_usage(parser).c_str());
         exit(1);
     }
 
     // load obj
-    auto scn = new ygl::scene();
-    for (auto filename : filenames) {
-        auto to_merge = (ygl::scene*)nullptr;
-        try {
-            to_merge = ygl::load_scene(filename, textures);
+    auto scn = (ygl::scene*)nullptr;
+    try {
+        scn = ygl::load_scene(filename, !notextures);
 
-        } catch (const std::exception& e) {
-            ygl::log_error("error during scene loading: "s + e.what());
-            ygl::log_fatal("unable to load " + filename);
-        }
-
-        // check missing texture
-        if (validate_textures) validate_texture_paths(to_merge, filename);
-
-        // print information
-        if (info) {
-            printf("information ------------------------\n");
-            printf("filename: %s\n", filename.c_str());
-            ygl::print_stats(to_merge);
-        }
-
-        // merge the scene into the other
-        ygl::merge_into(scn, to_merge);
-        delete to_merge;
-    }
-
-    // print information
-    if (info && filenames.size() > 1) {
-        printf("information ------------------------\n");
-        printf("merged\n");
-        ygl::print_stats(scn);
-    }
-
-    // add missing elements
-    if (add_normals) ygl::add_missing_normals(scn);
-
-    // process geometry
-    if (scale != 1.0f) {
-        for (auto shp : scn->shapes) {
-            for (auto& p : shp->pos) p *= scale;
-        }
-    }
-
-    if (flipyz) {
-        for (auto shp : scn->shapes) {
-            for (auto& p : shp->pos) std::swap(p.y, p.z);
-            for (auto& n : shp->norm) std::swap(n.y, n.z);
-        }
-    }
-
-    // print infomation again if needed
-    if (info && scale != 1.0f) {
-        printf("post-correction information -------\n");
-        printf("output: %s\n", output.c_str());
-        ygl::print_stats(scn);
+    } catch (const std::exception& e) {
+        ygl::log_error("error during scene loading: "s + e.what());
+        ygl::log_fatal("unable to load " + filename);
     }
 
     // make a directory if needed
     try {
         mkdir(ygl::path_dirname(output));
     } catch (const std::exception& e) {
-        ygl::log_fatal("unable to make directory %s with error {}\n",
+        ygl::log_fatal("unable to make directory {} with error {}",
             ygl::path_dirname(output), e.what());
     }
     // save scene
     try {
         ygl::save_scene(output, scn);
     } catch (const std::exception& e) {
-        ygl::log_fatal("unable to save scene %s with error {}\n",
-            output.c_str(), e.what());
-    }
-
-    // validate
-    if (validate) {
-        auto vscn = ygl::load_scene(output);
-        if (info) {
-            printf("validate information -----------------\n");
-            ygl::print_stats(vscn);
-        }
+        ygl::log_fatal("unable to save scene {} with error {}",
+            output, e.what());
     }
 
     // done

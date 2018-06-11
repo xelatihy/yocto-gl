@@ -1482,6 +1482,19 @@ void make_suzanne(std::vector<vec4i>& quads, std::vector<vec3f>& pos) {
     for (auto t : suzanne_triangles) { quads.push_back({t.x, t.y, t.z, t.z}); }
 }
 
+// Watertight cube
+void make_cube(std::vector<vec4i>& quads, std::vector<vec3f>& pos) {
+    static auto cube_pos = std::vector<vec3f>{{-1, -1, -1}, {-1, +1, -1},
+        {+1, +1, -1}, {+1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {+1, +1, +1},
+        {+1, -1, +1}};
+    static auto cube_quads = std::vector<vec4i>{{0, 1, 2, 3}, {7, 6, 5, 4},
+        {4, 5, 1, 0}, {6, 7, 3, 2}, {2, 1, 5, 6}, {0, 3, 7, 4}};
+    static auto cube_quad_uv =
+        std::vector<vec2f>{{0, 0}, {1, 0}, {1, 1}, {0, 1}};
+    quads = cube_quads;
+    pos = cube_pos;
+}
+
 // Generate lines set along a quad.
 void make_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
