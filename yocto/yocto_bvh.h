@@ -68,7 +68,8 @@ namespace ygl {
 
 // Intersect a ray with a point (approximate).
 // Based on http://geomalgorithms.com/a02-lines.html.
-bool intersect_point(const ray3f& ray, vec3f p, float r, float& dist);
+bool intersect_point(
+    const ray3f& ray, vec3f p, float r, float& dist, vec2f& uv);
 
 // Intersect a ray with a line (approximate).
 // Based on http://geomalgorithms.com/a05-intersect-1.html and
@@ -98,7 +99,8 @@ bool intersect_bbox(
     const ray3f& ray, vec3f ray_dinv, vec3i ray_dsign, const bbox3f& bbox);
 
 // Check if a point overlaps a position within a max distance.
-bool overlap_point(vec3f pos, float dist_max, vec3f v0, float r0, float& dist);
+bool overlap_point(
+    vec3f pos, float dist_max, vec3f v0, float r0, float& dist, vec2f& uv);
 
 // Find closest line point to a position.
 float closestuv_line(vec3f pos, vec3f v0, vec3f v1);
@@ -137,6 +139,7 @@ struct bvh_tree;
 // Type of BVH node.
 enum struct bvh_node_type : uint8_t {
     internal,
+    point,
     line,
     triangle,
     vertex,
@@ -173,6 +176,7 @@ struct bvh_tree {
     // data for shape BVH
     std::vector<vec3f> pos;        // Positions for shape BVHs.
     std::vector<float> radius;     // Radius for shape BVHs.
+    std::vector<int> points;       // Points for shape BVHs.
     std::vector<vec2i> lines;      // Lines for shape BVHs.
     std::vector<vec3i> triangles;  // Triangles for shape BVHs.
 

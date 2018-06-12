@@ -571,6 +571,7 @@ void to_json(json& js, const shape& val) {
     if (val.name != def.name) js["name"] = val.name;
     if (val.path != def.path) js["path"] = val.path;
     if (val.path == "") {
+        if (val.points != def.points) js["points"] = val.points;
         if (val.lines != def.lines) js["lines"] = val.lines;
         if (val.triangles != def.triangles) js["triangles"] = val.triangles;
         if (val.pos != def.pos) js["pos"] = val.pos;
@@ -694,6 +695,7 @@ void from_json(const json& js, shape& val) {
     static const auto def = shape();
     val.name = js.value("name", def.name);
     val.path = js.value("path", def.path);
+    val.points = js.value("points", def.points);
     val.lines = js.value("lines", def.lines);
     val.triangles = js.value("triangles", def.triangles);
     val.pos = js.value("pos", def.pos);
@@ -1161,8 +1163,8 @@ std::shared_ptr<scene> load_json_scene(
         for (auto& c : filename)
             if (c == '\\') c = '/';
         try {
-            load_mesh(filename, shp->lines, shp->triangles, shp->pos, shp->norm,
-                shp->texcoord, shp->color, shp->radius);
+            load_mesh(filename, shp->points, shp->lines, shp->triangles,
+                shp->pos, shp->norm, shp->texcoord, shp->color, shp->radius);
         } catch (std::exception&) {
             if (skip_missing) continue;
             throw;
@@ -1221,8 +1223,8 @@ void save_json_scene(const std::string& filename,
         if (shp->path == "") continue;
         auto filename = fix_path(dirname + shp->path);
         try {
-            save_mesh(filename, shp->lines, shp->triangles, shp->pos, shp->norm,
-                shp->texcoord, shp->color, shp->radius);
+            save_mesh(filename, shp->points, shp->lines, shp->triangles,
+                shp->pos, shp->norm, shp->texcoord, shp->color, shp->radius);
         } catch (std::exception&) {
             if (skip_missing) continue;
             throw;
@@ -1583,7 +1585,7 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
         } else if (cmd == "vt") {
             texcoord.push_back(parse_vec2f(ss));
             if (flip_texcoord) texcoord.back().y = 1 - texcoord.back().y;
-        } else if (cmd == "f" || cmd == "l") {
+        } else if (cmd == "f" || cmd == "l" || cmd == "p") {
             auto num = 0;
             vec3i verts[128];
             int vids[128];
@@ -1624,9 +1626,11 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
                     for (auto i = 1; i < num; i++)
                         ist->shp->lines.push_back({vids[i - 1], vids[i]});
                 }
+                if (cmd == "p") {
+                    for (auto i = 0; i < num; i++)
+                        ist->shp->points.push_back(vids[i]);
+                }
             }
-        } else if (cmd == "p") {
-            // TODO: support points
         } else if (cmd == "o") {
             oname = parse_string(ss);
             gname = "";
@@ -1953,6 +1957,9 @@ void save_obj_scene(const std::string& filename,
                         l.x + offset.y + 1, l.x + offset.z + 1,
                         l.y + offset.x + 1, l.y + offset.y + 1,
                         l.y + offset.z + 1);
+                for (auto& p : ist->shp->points)
+                    fprintf(f, "p %d/%d/%d\n", p + offset.x + 1,
+                        p + offset.y + 1, p + offset.z + 1);
             } else if (!ist->shp->texcoord.empty() && ist->shp->norm.empty()) {
                 for (auto& t : ist->shp->triangles)
                     fprintf(f, "f %d/%d %d/%d %d/%d\n", t.x + offset.x + 1,
@@ -1963,6 +1970,8 @@ void save_obj_scene(const std::string& filename,
                     fprintf(f, "l %d/%d %d/%d\n", l.x + offset.x + 1,
                         l.x + offset.y + 1, l.y + offset.x + 1,
                         l.y + offset.y + 1);
+                for (auto& p : ist->shp->points)
+                    fprintf(f, "p %d/%d\n", p + offset.x + 1, p + offset.y + 1);
             } else if (ist->shp->texcoord.empty() && !ist->shp->norm.empty()) {
                 for (auto& t : ist->shp->triangles)
                     fprintf(f, "f %d//%d %d//%d %d//%d\n", t.x + offset.x + 1,
@@ -1973,6 +1982,9 @@ void save_obj_scene(const std::string& filename,
                     fprintf(f, "l %d//%d %d//%d\n", l.x + offset.x + 1,
                         l.x + offset.z + 1, l.y + offset.x + 1,
                         l.y + offset.z + 1);
+                for (auto& p : ist->shp->points)
+                    fprintf(
+                        f, "p %d//%d\n", p + offset.x + 1, p + offset.z + 1);
             } else {
                 for (auto& t : ist->shp->triangles)
                     fprintf(f, "f %d %d %d\n", t.x + offset.x + 1,
@@ -1980,6 +1992,8 @@ void save_obj_scene(const std::string& filename,
                 for (auto& l : ist->shp->lines)
                     fprintf(
                         f, "l %d %d\n", l.x + offset.x + 1, l.y + offset.x + 1);
+                for (auto& p : ist->shp->points)
+                    fprintf(f, "p %d\n", p + offset.x + 1);
             }
             offset.x += ist->shp->pos.size();
             offset.y += ist->shp->texcoord.size();
@@ -2979,33 +2993,34 @@ void save_gltf_scene(const std::string& filename,
 namespace ygl {
 
 // Load ply mesh
-void load_mesh(const std::string& filename, std::vector<vec2i>& lines,
-    std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<vec4f>& color, std::vector<float>& radius) {
+void load_mesh(const std::string& filename, std::vector<int>& points,
+    std::vector<vec2i>& lines, std::vector<vec3i>& triangles,
+    std::vector<vec3f>& pos, std::vector<vec3f>& norm,
+    std::vector<vec2f>& texcoord, std::vector<vec4f>& color,
+    std::vector<float>& radius) {
     auto ext = path_extension(filename);
     if (ext == ".ply" || ext == ".PLY") {
-        load_ply_mesh(
-            filename, lines, triangles, pos, norm, texcoord, color, radius);
+        load_ply_mesh(filename, points, lines, triangles, pos, norm, texcoord,
+            color, radius);
     } else if (ext == ".obj" || ext == ".OBJ") {
-        load_obj_mesh(filename, lines, triangles, pos, norm, texcoord);
+        load_obj_mesh(filename, points, lines, triangles, pos, norm, texcoord);
     } else {
         throw std::runtime_error("unsupported mesh extensions " + ext);
     }
 }
 
 // Save ply mesh
-void save_mesh(const std::string& filename, const std::vector<vec2i>& lines,
-    const std::vector<vec3i>& triangles, const std::vector<vec3f>& pos,
-    const std::vector<vec3f>& norm, const std::vector<vec2f>& texcoord,
-    const std::vector<vec4f>& color, const std::vector<float>& radius,
-    bool ascii) {
+void save_mesh(const std::string& filename, const std::vector<int>& points,
+    const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
+    const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
+    const std::vector<vec2f>& texcoord, const std::vector<vec4f>& color,
+    const std::vector<float>& radius, bool ascii) {
     auto ext = path_extension(filename);
     if (ext == ".ply" || ext == ".PLY") {
-        save_ply_mesh(filename, lines, triangles, pos, norm, texcoord, color,
-            radius, ascii);
+        save_ply_mesh(filename, points, lines, triangles, pos, norm, texcoord,
+            color, radius, ascii);
     } else if (ext == ".obj" || ext == ".OBJ") {
-        save_obj_mesh(filename, lines, triangles, pos, norm, texcoord);
+        save_obj_mesh(filename, points, lines, triangles, pos, norm, texcoord);
     } else {
         throw std::runtime_error("unsupported mesh extensions " + ext);
     }
@@ -3014,16 +3029,18 @@ void save_mesh(const std::string& filename, const std::vector<vec2i>& lines,
 #if 1
 
 // Load ply mesh
-void load_ply_mesh(const std::string& filename, std::vector<vec2i>& lines,
-    std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<vec4f>& color, std::vector<float>& radius) {
+void load_ply_mesh(const std::string& filename, std::vector<int>& points,
+    std::vector<vec2i>& lines, std::vector<vec3i>& triangles,
+    std::vector<vec3f>& pos, std::vector<vec3f>& norm,
+    std::vector<vec2f>& texcoord, std::vector<vec4f>& color,
+    std::vector<float>& radius) {
     // clear data
     pos.clear();
     norm.clear();
     texcoord.clear();
     color.clear();
     radius.clear();
+    points.clear();
     lines.clear();
     triangles.clear();
 
@@ -3330,11 +3347,11 @@ void load_ply_mesh(const std::string& filename, std::vector<vec2i>& lines,
 #endif
 
 // Save ply mesh
-void save_ply_mesh(const std::string& filename, const std::vector<vec2i>& lines,
-    const std::vector<vec3i>& triangles, const std::vector<vec3f>& pos,
-    const std::vector<vec3f>& norm, const std::vector<vec2f>& texcoord,
-    const std::vector<vec4f>& color, const std::vector<float>& radius,
-    bool ascii) {
+void save_ply_mesh(const std::string& filename, const std::vector<int>& points,
+    const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
+    const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
+    const std::vector<vec2f>& texcoord, const std::vector<vec4f>& color,
+    const std::vector<float>& radius, bool ascii) {
     auto f = fopen(filename.c_str(), "w");
     if (!f) throw std::runtime_error("cannot save file " + filename);
 
@@ -3415,10 +3432,10 @@ void save_ply_mesh(const std::string& filename, const std::vector<vec2i>& lines,
 }
 
 // Load ply mesh
-void load_obj_mesh(const std::string& filename, std::vector<vec2i>& lines,
-    std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    bool flip_texcoord) {
+void load_obj_mesh(const std::string& filename, std::vector<int>& points,
+    std::vector<vec2i>& lines, std::vector<vec3i>& triangles,
+    std::vector<vec3f>& pos, std::vector<vec3f>& norm,
+    std::vector<vec2f>& texcoord, bool flip_texcoord) {
     // open file
     auto fs = fopen(filename.c_str(), "rt");
     if (!fs) throw std::runtime_error("cannot open filename " + filename);
@@ -3452,7 +3469,7 @@ void load_obj_mesh(const std::string& filename, std::vector<vec2i>& lines,
         } else if (cmd == "vt") {
             texcoord.push_back(parse_vec2f(ss));
             if (flip_texcoord) texcoord.back().y = 1 - texcoord.back().y;
-        } else if (cmd == "f" || cmd == "l") {
+        } else if (cmd == "f" || cmd == "l" || cmd == "p") {
             auto num = 0;
             vec3i verts[128];
             int vids[128];
@@ -3486,6 +3503,9 @@ void load_obj_mesh(const std::string& filename, std::vector<vec2i>& lines,
                 for (auto i = 1; i < num; i++)
                     lines.push_back({vids[i - 1], vids[i]});
             }
+            if (cmd == "p") {
+                for (auto i = 0; i < num; i++) points.push_back(vids[i]);
+            }
         }
     }
 
@@ -3494,10 +3514,10 @@ void load_obj_mesh(const std::string& filename, std::vector<vec2i>& lines,
 }
 
 // Load ply mesh
-void save_obj_mesh(const std::string& filename, const std::vector<vec2i>& lines,
-    const std::vector<vec3i>& triangles, const std::vector<vec3f>& pos,
-    const std::vector<vec3f>& norm, const std::vector<vec2f>& texcoord,
-    bool flip_texcoord) {
+void save_obj_mesh(const std::string& filename, const std::vector<int>& points,
+    const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
+    const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
+    const std::vector<vec2f>& texcoord, bool flip_texcoord) {
     auto f = fopen(filename.c_str(), "wt");
     if (!f) throw std::runtime_error("cannot save file " + filename);
     for (auto& p : pos) fprintf(f, "v %g %g %g\n", p.x, p.y, p.z);
@@ -3513,22 +3533,26 @@ void save_obj_mesh(const std::string& filename, const std::vector<vec2i>& lines,
         for (auto& l : lines)
             fprintf(f, "l %d/%d/%d %d/%d/%d\n", l.x + 1, l.x + 1, l.x + 1,
                 l.y + 1, l.y + 1, l.y + 1);
+        for (auto& p : points) fprintf(f, "p %d/%d/%d\n", p + 1, p + 1, p + 1);
     } else if (!texcoord.empty() && norm.empty()) {
         for (auto& t : triangles)
             fprintf(f, "f %d/%d %d/%d %d/%d\n", t.x + 1, t.x + 1, t.y + 1,
                 t.y + 1, t.z + 1, t.z + 1);
         for (auto& l : lines)
             fprintf(f, "l %d/%d %d/%d\n", l.x + 1, l.x + 1, l.y + 1, l.y + 1);
+        for (auto& p : points) fprintf(f, "p %d/%d\n", p + 1, p + 1);
     } else if (texcoord.empty() && !norm.empty()) {
         for (auto& t : triangles)
             fprintf(f, "f %d//%d %d//%d %d//%d\n", t.x + 1, t.x + 1, t.y + 1,
                 t.y + 1, t.z + 1, t.z + 1);
         for (auto& l : lines)
             fprintf(f, "l %d//%d %d//%d\n", l.x + 1, l.x + 1, l.y + 1, l.y + 1);
+        for (auto& p : points) fprintf(f, "l %d//%d\n", p + 1, p + 1);
     } else {
         for (auto& t : triangles)
             fprintf(f, "f %d %d %d\n", t.x + 1, t.y + 1, t.z + 1);
         for (auto& l : lines) fprintf(f, "l %d %d\n", l.x + 1, l.y + 1);
+        for (auto& p : points) fprintf(f, "p %d\n", p);
     }
     fclose(f);
 }

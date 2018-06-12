@@ -98,36 +98,38 @@ void save_gltf_scene(const std::string& filename,
 namespace ygl {
 
 // Load/Save a mesh
-void load_mesh(const std::string& filename, std::vector<vec2i>& lines,
-    std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<vec4f>& color, std::vector<float>& radius);
-void save_mesh(const std::string& filename, const std::vector<vec2i>& lines,
-    const std::vector<vec3i>& triangles, const std::vector<vec3f>& pos,
-    const std::vector<vec3f>& norm, const std::vector<vec2f>& texcoord,
-    const std::vector<vec4f>& color, const std::vector<float>& radius,
-    bool ascii = false);
+void load_mesh(const std::string& filename, std::vector<int>& points,
+    std::vector<vec2i>& lines, std::vector<vec3i>& triangles,
+    std::vector<vec3f>& pos, std::vector<vec3f>& norm,
+    std::vector<vec2f>& texcoord, std::vector<vec4f>& color,
+    std::vector<float>& radius);
+void save_mesh(const std::string& filename, const std::vector<int>& points,
+    const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
+    const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
+    const std::vector<vec2f>& texcoord, const std::vector<vec4f>& color,
+    const std::vector<float>& radius, bool ascii = false);
 
 // Load/Save a ply mesh
-void load_ply_mesh(const std::string& filename, std::vector<vec2i>& lines,
-    std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<vec4f>& color, std::vector<float>& radius);
-void save_ply_mesh(const std::string& filename, const std::vector<vec2i>& lines,
-    const std::vector<vec3i>& triangles, const std::vector<vec3f>& pos,
-    const std::vector<vec3f>& norm, const std::vector<vec2f>& texcoord,
-    const std::vector<vec4f>& color, const std::vector<float>& radius,
-    bool ascii = false);
+void load_ply_mesh(const std::string& filename, std::vector<int>& points,
+    std::vector<vec2i>& lines, std::vector<vec3i>& triangles,
+    std::vector<vec3f>& pos, std::vector<vec3f>& norm,
+    std::vector<vec2f>& texcoord, std::vector<vec4f>& color,
+    std::vector<float>& radius);
+void save_ply_mesh(const std::string& filename, const std::vector<int>& points,
+    const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
+    const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
+    const std::vector<vec2f>& texcoord, const std::vector<vec4f>& color,
+    const std::vector<float>& radius, bool ascii = false);
 
 // Load/Save an OBJ mesh
-void load_obj_mesh(const std::string& filename, std::vector<vec2i>& lines,
-    std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    bool flip_texcoord = true);
-void save_obj_mesh(const std::string& filename, const std::vector<vec2i>& lines,
-    const std::vector<vec3i>& triangles, const std::vector<vec3f>& pos,
-    const std::vector<vec3f>& norm, const std::vector<vec2f>& texcoord,
-    bool flip_texcoord = true);
+void load_obj_mesh(const std::string& filename, std::vector<int>& points,
+    std::vector<vec2i>& lines, std::vector<vec3i>& triangles,
+    std::vector<vec3f>& pos, std::vector<vec3f>& norm,
+    std::vector<vec2f>& texcoord, bool flip_texcoord = true);
+void save_obj_mesh(const std::string& filename, const std::vector<int>& points,
+    const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
+    const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
+    const std::vector<vec2f>& texcoord, bool flip_texcoord = true);
 
 }  // namespace ygl
 

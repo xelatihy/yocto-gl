@@ -92,6 +92,7 @@ void update_gldata(const std::shared_ptr<shape>& shp) {
     update_vert_buffer(gshp.texcoord, shp->texcoord);
     update_vert_buffer(gshp.color, shp->color);
     update_vert_buffer(gshp.tangsp, shp->tangsp);
+    update_elem_buffer(gshp.points, shp->points);
     update_elem_buffer(gshp.lines, shp->lines);
     update_elem_buffer(gshp.triangles, shp->triangles);
     update_elem_buffer(gshp.edges, get_edges(shp->triangles));
