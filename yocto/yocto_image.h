@@ -65,23 +65,51 @@
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Float image.
-struct image4f {
-    int width = 0;
-    int height = 0;
-    std::vector<vec4f> pxl;
+// Image container.
+template <typename T>
+struct image {
+    // constructors
+    image() : w(0), h(0), pxl() {}
+    image(int width, int height, const T& c = T())
+        : w(width), h(height), pxl(width * height, c) {}
+    image(int width, int height, const std::vector<T>& p)
+        : w(width), h(height), pxl(p) {}
+
+    // size checks
+    int width() const { return w; };
+    int height() const { return h; };
+    int size() const { return w * h; };
+    bool empty() const { return !w || !h; };
+
+    // pixel access
+    T& operator[](int idx) { return pxl[idx]; }
+    const T& operator[](int idx) const { return pxl[idx]; }
+    T& operator[](vec2i ij) { return pxl[ij.y * w + ij.x]; }
+    const T& operator[](vec2i ij) const { return pxl[ij.y * w + ij.x]; }
+    T& at(int idx) { return pxl.at(idx); }
+    const T& at(int idx) const { return pxl.at(idx); }
+    T& at(vec2i ij) { return pxl.at(ij.y * w + ij.x); }
+    const T& at(vec2i ij) const { return pxl.at(ij.y * w + ij.x); }
+
+    // data access
+    T* data() { return pxl.data(); }
+    const T* data() const { return pxl.data(); }
+    std::vector<T>& pixels() { return pxl; }
+    const std::vector<T>& pixels() const { return pxl; }
+    T* begin() { return pxl.data(); }
+    T* end() { return pxl.data() + pxl.size(); }
+    const T* begin() const { return pxl.data(); }
+    const T* end() const { return pxl.data() + pxl.size(); }
+
+   private:
+    int w = 0;
+    int h = 0;
+    std::vector<T> pxl;
 };
 
-// Byte image.
-struct image4b {
-    int width = 0;
-    int height = 0;
-    std::vector<vec4b> pxl;
-};
-
-// Create image.
-image4f make_image4f(int width, int height, vec4f c = {0, 0, 0, 0});
-image4b make_image4b(int width, int height, vec4b c = {0, 0, 0, 0});
+// Type aliases
+using image4f = image<vec4f>;
+using image4b = image<vec4b>;
 
 }  // namespace ygl
 
@@ -130,7 +158,7 @@ image4f load_image_from_memory(
 namespace ygl {
 
 // Element-wise float to byte conversion.
-inline vec4b float_to_byte(vec4f a) {
+inline vec4b float_to_byte(const vec4f& a) {
     return {(byte)clamp(int(a.x * 256), 0, 255),
         (byte)clamp(int(a.y * 256), 0, 255),
         (byte)clamp(int(a.z * 256), 0, 255),
@@ -141,33 +169,33 @@ inline vec4f byte_to_float(const vec4b& a) {
 }
 
 // Conversion between linear and gamma-encoded images.
-inline vec3f gamma_to_linear(vec3f srgb, float gamma = 2.2f) {
+inline vec3f gamma_to_linear(const vec3f& srgb, float gamma = 2.2f) {
     return {pow(srgb.x, gamma), pow(srgb.y, gamma), pow(srgb.z, gamma)};
 }
-inline vec3f linear_to_gamma(vec3f lin, float gamma = 2.2f) {
+inline vec3f linear_to_gamma(const vec3f& lin, float gamma = 2.2f) {
     return {
         pow(lin.x, 1 / gamma), pow(lin.y, 1 / gamma), pow(lin.z, 1 / gamma)};
 }
-inline vec4f gamma_to_linear(vec4f srgb, float gamma = 2.2f) {
+inline vec4f gamma_to_linear(const vec4f& srgb, float gamma = 2.2f) {
     return {pow(srgb.x, gamma), pow(srgb.y, gamma), pow(srgb.z, gamma), srgb.w};
 }
-inline vec4f linear_to_gamma(vec4f lin, float gamma = 2.2f) {
+inline vec4f linear_to_gamma(const vec4f& lin, float gamma = 2.2f) {
     return {pow(lin.x, 1 / gamma), pow(lin.y, 1 / gamma), pow(lin.z, 1 / gamma),
         lin.w};
 }
 
 // Approximate luminance estimate
-inline float luminance(vec3f a) { return (a.x + a.y + a.z) / 3; }
+inline float luminance(const vec3f& a) { return (a.x + a.y + a.z) / 3; }
 
 // Converts HSV to RGB.
-vec3f hsv_to_rgb(vec3f hsv);
-vec3f rgb_to_hsv(vec3f rgb);
+vec3f hsv_to_rgb(const vec3f& hsv);
+vec3f rgb_to_hsv(const vec3f& rgb);
 // Convert between CIE XYZ and xyY
-vec3f xyz_to_xyY(vec3f xyz);
-vec3f xyY_to_xyz(vec3f xyY);
+vec3f xyz_to_xyY(const vec3f& xyz);
+vec3f xyY_to_xyz(const vec3f& xyY);
 // Convert between CIE XYZ and RGB
-vec3f xyz_to_rgb(vec3f xyz);
-vec3f rgb_to_xyz(vec3f rgb);
+vec3f xyz_to_rgb(const vec3f& xyz);
+vec3f rgb_to_xyz(const vec3f& rgb);
 
 }  // namespace ygl
 
@@ -178,12 +206,14 @@ namespace ygl {
 
 // Make example images.
 image4f make_grid_image(int width, int height, int tile = 8,
-    vec4f c0 = {0.5f, 0.5f, 0.5f, 1}, vec4f c1 = {0.8f, 0.8f, 0.8f, 1});
+    const vec4f& c0 = {0.5f, 0.5f, 0.5f, 1},
+    const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
 image4f make_checker_image(int width, int height, int tile = 8,
-    vec4f c0 = {0.5f, 0.5f, 0.5f, 1}, vec4f c1 = {0.8f, 0.8f, 0.8f, 1});
+    const vec4f& c0 = {0.5f, 0.5f, 0.5f, 1},
+    const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
 image4f make_bumpdimple_image(int width, int height, int tile = 8);
-image4f make_ramp_image(
-    int width, int height, vec4f c0, vec4f c1, float srgb = false);
+image4f make_ramp_image(int width, int height, const vec4f& c0, const vec4f& c1,
+    float srgb = false);
 image4f make_gammaramp_image(int width, int height);
 image4f make_uv_image(int width, int height);
 image4f make_uvgrid_image(
@@ -198,7 +228,7 @@ image4f make_sunsky_image(int width, int height, float thetaSun,
     float turbidity = 3, bool has_sun = false,
     vec3f ground_albedo = {0.7f, 0.7f, 0.7f});
 // Make an image of multiple lights.
-image4f make_lights_image(int width, int height, vec3f le = {1, 1, 1},
+image4f make_lights_image(int width, int height, const vec3f& le = {1, 1, 1},
     int nlights = 4, float langle = pi / 4, float lwidth = pi / 16,
     float lheight = pi / 16);
 

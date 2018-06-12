@@ -83,7 +83,7 @@ struct app_state {
 void update_minmax(std::shared_ptr<gimage> img) {
     img->pxl_bounds = ygl::invalid_bbox4f;
     img->lum_bounds = ygl::invalid_bbox1f;
-    for (auto& p : img->img.pxl) {
+    for (auto& p : img->img) {
         img->pxl_bounds += p;
         img->lum_bounds += ygl::luminance(xyz(p));
     }
@@ -104,28 +104,25 @@ std::shared_ptr<gimage> load_gimage(
 
 std::shared_ptr<gimage> diff_gimage(
     std::shared_ptr<gimage> a, std::shared_ptr<gimage> b, bool color) {
-    if (a->img.width != b->img.width || a->img.height != b->img.height)
+    if (a->img.width() != b->img.width() || a->img.height() != b->img.height())
         return nullptr;
     auto d = std::make_shared<gimage>();
     d->name = "diff " + a->name + " " + b->name;
     d->filename = "";
-    d->img.width = a->img.width;
-    d->img.height = a->img.height;
-    d->img.pxl.resize(a->img.pxl.size());
+    d->img = a->img;
     if (color) {
-        for (auto i = 0; i < a->img.pxl.size(); i++) {
-            d->img.pxl[i] = {std::abs(a->img.pxl[i].x - b->img.pxl[i].x),
-                std::abs(a->img.pxl[i].y - b->img.pxl[i].y),
-                std::abs(a->img.pxl[i].z - b->img.pxl[i].z),
-                std::max(a->img.pxl[i].w, b->img.pxl[i].w)};
+        for (auto i = 0; i < a->img.size(); i++) {
+            d->img[i] = {std::abs(a->img[i].x - b->img[i].x),
+                std::abs(a->img[i].y - b->img[i].y),
+                std::abs(a->img[i].z - b->img[i].z),
+                std::max(a->img[i].w, b->img[i].w)};
         }
     } else {
-        for (auto i = 0; i < a->img.pxl.size(); i++) {
-            auto la = (a->img.pxl[i].x + a->img.pxl[i].y + a->img.pxl[i].z) / 3;
-            auto lb = (b->img.pxl[i].x + b->img.pxl[i].y + b->img.pxl[i].z) / 3;
+        for (auto i = 0; i < a->img.size(); i++) {
+            auto la = (a->img[i].x + a->img[i].y + a->img[i].z) / 3;
+            auto lb = (b->img[i].x + b->img[i].y + b->img[i].z) / 3;
             auto ld = fabsf(la - lb);
-            d->img.pxl[i] = {
-                ld, ld, ld, std::max(a->img.pxl[i].w, b->img.pxl[i].w)};
+            d->img[i] = {ld, ld, ld, std::max(a->img[i].w, b->img[i].w)};
         }
     }
     update_minmax(d);
@@ -148,7 +145,8 @@ void draw_glwidgets(const std::shared_ptr<ygl::glwindow>& win,
         ygl::draw_glwidgets_combobox(win, "image", app->img, app->imgs);
         ygl::draw_glwidgets_label(win, "filename", app->img->filename);
         ygl::draw_glwidgets_label(win, "size",
-            ygl::format("{} x {}", app->img->img.width, app->img->img.height));
+            ygl::format(
+                "{} x {}", app->img->img.width(), app->img->img.height()));
         auto edited = 0;
         edited += ygl::draw_glwidgets_dragbox(
             win, "exposure", app->img->exposure, -5, 5);
@@ -163,15 +161,15 @@ void draw_glwidgets(const std::shared_ptr<ygl::glwindow>& win,
         ygl::draw_glwidgets_colorbox(win, "background", app->background);
         ygl::draw_glwidgets_separator(win);
         auto ij = ygl::get_glimage_coords(get_glwidnow_mouse_posf(win),
-            app->imframe, {app->img->img.width, app->img->img.height});
+            app->imframe, {app->img->img.width(), app->img->img.height()});
         ygl::draw_glwidgets_dragbox(win, "mouse", ij);
         auto pixel = ygl::zero4f;
-        if (ij.x >= 0 && ij.x < app->img->img.width && ij.y >= 0 &&
-            ij.y < app->img->img.height) {
-            pixel = app->img->img.pxl.at(ij.x + ij.y * app->img->img.width);
+        if (ij.x >= 0 && ij.x < app->img->img.width() && ij.y >= 0 &&
+            ij.y < app->img->img.height()) {
+            pixel = app->img->img.at(ij);
         }
         ygl::draw_glwidgets_colorbox(win, "pixel", pixel);
-        if (!app->img->img.pxl.empty()) {
+        if (!app->img->img.empty()) {
             ygl::draw_glwidgets_dragbox(win, "pxl", app->img->pxl_bounds);
             ygl::draw_glwidgets_dragbox(
                 win, "lum min/max", app->img->lum_bounds);
@@ -195,20 +193,20 @@ void draw(const std::shared_ptr<ygl::glwindow>& win,
 void refresh(const std::shared_ptr<ygl::glwindow>& win,
     const std::shared_ptr<app_state>& app) {
     ygl::center_glimage(app->imframe,
-        {app->img->img.width, app->img->img.height},
+        {app->img->img.width(), app->img->img.height()},
         ygl::get_glwindow_size(win), app->zoom_to_fit);
     draw(win, app);
 }
 
 void run_ui(const std::shared_ptr<app_state>& app) {
     // window
-    auto win_width = app->imgs[0]->img.width + ygl::default_glwidgets_width;
-    auto win_height = ygl::clamp(app->imgs[0]->img.height, 512, 1024);
+    auto win_width = app->imgs[0]->img.width() + ygl::default_glwidgets_width;
+    auto win_height = ygl::clamp(app->imgs[0]->img.height(), 512, 1024);
     auto win = ygl::make_glwindow(win_width, win_height, "yimview");
     ygl::set_glwindow_callbacks(
         win, nullptr, nullptr, [app, win]() { draw(win, app); });
     ygl::center_glimage(app->imframe,
-        {app->imgs[0]->img.width, app->imgs[0]->img.height},
+        {app->imgs[0]->img.width(), app->imgs[0]->img.height()},
         ygl::get_glwindow_size(win), app->zoom_to_fit);
 
     // window values
@@ -228,7 +226,7 @@ void run_ui(const std::shared_ptr<app_state>& app) {
 
         ygl::set_glwindow_title(
             win, ygl::format("yimview | {} | {}x{}", app->img->filename,
-                     app->img->img.width, app->img->img.height));
+                     app->img->img.width(), app->img->img.height()));
 
         // handle mouse
         auto alt_down = get_glwindow_alt_key(win);
@@ -246,7 +244,7 @@ void run_ui(const std::shared_ptr<app_state>& app) {
         }
         // auto center
         ygl::center_glimage(app->imframe,
-            {app->img->img.width, app->img->img.height},
+            {app->img->img.width(), app->img->img.height()},
             ygl::get_glwindow_size(win), app->zoom_to_fit);
 
         // update texture
@@ -255,9 +253,9 @@ void run_ui(const std::shared_ptr<app_state>& app) {
             app->img->gl_updated = true;
         }
         if (app->img->gl_updated) {
-            update_gltexture(app->img->gl_txt, app->img->img.width,
-                app->img->img.height, app->img->display.pxl, false, false, true,
-                false);
+            update_gltexture(app->img->gl_txt, app->img->img.width(),
+                app->img->img.height(), app->img->display.pixels(), false,
+                false, true, false);
             app->img->gl_updated = false;
         }
 

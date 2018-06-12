@@ -1464,15 +1464,14 @@ bool get_glwindow_shift_key(const std::shared_ptr<glwindow>& win) {
 image4f take_glwindow_screenshot(
     const std::shared_ptr<glwindow>& win, bool flipy, bool back) {
     auto wh = get_glwindow_framebuffer_size(win);
-    auto img = make_image4f(wh.x, wh.y);
+    auto img = image4f{wh.x, wh.y};
     glReadBuffer((back) ? GL_BACK : GL_FRONT);
     glReadPixels(
-        0, 0, img.width, img.height, GL_RGBA, GL_UNSIGNED_BYTE, img.pxl.data());
+        0, 0, img.width(), img.height(), GL_RGBA, GL_UNSIGNED_BYTE, img.data());
     if (flipy) {
-        for (int j = 0; j < img.height / 2; j++) {
-            for (auto i = 0; i < img.width; i++) {
-                std::swap(img.pxl[i + img.width * j],
-                    img.pxl[i + img.width * (img.height - 1 - j)]);
+        for (int j = 0; j < img.height() / 2; j++) {
+            for (auto i = 0; i < img.width(); i++) {
+                std::swap(img[{i, j}], img[{i, img.height() - 1 - j}]);
             }
         }
     }

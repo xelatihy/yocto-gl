@@ -167,17 +167,32 @@ struct vec;
 // Small size vectors.
 template <typename T>
 struct vec<T, 2> {
+    // constructurs
+    vec() : x{0}, y{0} {}
+    vec(T x_, T y_) : x{x_}, y{y_} {}
+
+    // elements
     T x = 0;
     T y = 0;
 };
 template <typename T>
 struct vec<T, 3> {
+    // constructurs
+    vec() : x{0}, y{0}, z{0} {}
+    vec(T x_, T y_, T z_) : x{x_}, y{y_}, z{z_} {}
+
+    // elements
     T x = 0;
     T y = 0;
     T z = 0;
 };
 template <typename T>
 struct vec<T, 4> {
+    // constructurs
+    vec() : x{0}, y{0}, z{0}, w{0} {}
+    vec(T x_, T y_, T z_, T w_) : x{x_}, y{y_}, z{z_}, w{w_} {}
+
+    // elements
     T x = 0;
     T y = 0;
     T z = 0;
@@ -555,34 +570,19 @@ std::istream& operator>>(std::istream& is, vec<T, 4>& a) {
 }  // namespace ygl
 
 namespace std {
+
 // Hash functor for vector for use with unordered_map
 template <typename T, int N>
-inline size_t array_hash(const T* v) {
-    auto vh = hash<T>();
-    auto h = (size_t)0;
-    for (auto i = 0; i < N; i++)
-        h ^= vh(v[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
-    return h;
-}
-// Hash functor for vector for use with unordered_map
-template <>
-struct hash<ygl::vec2i> {
-    size_t operator()(const ygl::vec2i& v) const {
-        return array_hash<int, 2>(&v.x);
+struct hash<ygl::vec<T, N>> {
+    size_t operator()(const ygl::vec<T, N>& v) const {
+        auto vh = hash<T>();
+        auto h = (size_t)0;
+        for (auto i = 0; i < N; i++)
+            h ^= vh((&v.x)[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        return h;
     }
 };
-template <>
-struct hash<ygl::vec3i> {
-    size_t operator()(const ygl::vec3i& v) const {
-        return array_hash<int, 3>(&v.x);
-    }
-};
-template <>
-struct hash<ygl::vec4i> {
-    size_t operator()(const ygl::vec4i& v) const {
-        return array_hash<int, 4>(&v.x);
-    }
-};
+
 }  // namespace std
 
 // -----------------------------------------------------------------------------
@@ -597,17 +597,35 @@ struct mat;
 // Small Fixed-size square matrices stored in column major format.
 template <typename T>
 struct mat<T, 2> {
+    // constructors
+    mat() : x{1, 0}, y{0, 1} {}
+    mat(const vec<T, 2>& x_, const vec<T, 2>& y_) : x{x_}, y{y_} {}
+
+    // elements
     vec<T, 2> x = {1, 0};
     vec<T, 2> y = {0, 1};
 };
 template <typename T>
 struct mat<T, 3> {
+    // constructors
+    mat() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1} {}
+    mat(const vec<T, 3>& x_, const vec<T, 3>& y_, const vec<T, 3>& z_)
+        : x{x_}, y{y_}, z{z_} {}
+
+    // elements
     vec<T, 3> x = {1, 0, 0};
     vec<T, 3> y = {0, 1, 0};
     vec<T, 3> z = {0, 0, 1};
 };
 template <typename T>
 struct mat<T, 4> {
+    // constructors
+    mat() : x{1, 0, 0, 0}, y{0, 1, 0, 0}, z{0, 0, 1, 0}, w{0, 0, 0, 1} {}
+    mat(const vec<T, 4>& x_, const vec<T, 4>& y_, const vec<T, 4>& z_,
+        const vec<T, 4>& w_)
+        : x{x_}, y{y_}, z{z_}, w{w_} {}
+
+    // elements
     vec<T, 4> x = {1, 0, 0, 0};
     vec<T, 4> y = {0, 1, 0, 0};
     vec<T, 4> z = {0, 0, 1, 0};
@@ -831,12 +849,25 @@ struct frame;
 // Rigid frames stored as a column-major affine transform matrix.
 template <typename T>
 struct frame<T, 2> {
+    // constructors
+    frame() : x{1, 0}, y{0, 1}, o{0, 0} {}
+    frame(const vec<T, 2>& x_, const vec<T, 2>& y_, const vec<T, 2>& o_)
+        : x{x_}, y{y_}, o{o_} {}
+
+    // elements
     vec<T, 2> x = {1, 0};
     vec<T, 2> y = {0, 1};
     vec<T, 2> o = {0, 0};
 };
 template <typename T>
 struct frame<T, 3> {
+    // constructors
+    frame() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{0, 0, 0} {}
+    frame(const vec<T, 3>& x_, const vec<T, 3>& y_, const vec<T, 3>& z_,
+        const vec<T, 3>& o_)
+        : x{x_}, y{y_}, z{z_}, o{o_} {}
+
+    // elements
     vec<T, 3> x = {1, 0, 0};
     vec<T, 3> y = {0, 1, 0};
     vec<T, 3> z = {0, 0, 1};
@@ -957,6 +988,13 @@ struct bbox;
 // Range of values in 1D.
 template <typename T>
 struct bbox<T, 1> {
+    // constructors
+    bbox()
+        : min{std::numeric_limits<T>::max()}
+        , max{std::numeric_limits<T>::lowest()} {}
+    bbox(T min_, T max_) : min{min_}, max{max_} {}
+
+    // elements
     T min = std::numeric_limits<T>::max();
     T max = std::numeric_limits<T>::lowest();
 };
@@ -964,6 +1002,14 @@ struct bbox<T, 1> {
 // Axis aligned bounding box represented as a min/max vector pairs.
 template <typename T>
 struct bbox<T, 2> {
+    // constructors
+    bbox()
+        : min{std::numeric_limits<T>::max(), std::numeric_limits<T>::max()}
+        , max{std::numeric_limits<T>::lowest(),
+              std::numeric_limits<T>::lowest()} {}
+    bbox(const vec<T, 2>& min_, const vec<T, 2>& max_) : min{min_}, max{max_} {}
+
+    // elements
     vec<T, 2> min = {
         std::numeric_limits<T>::max(), std::numeric_limits<T>::max()};
     vec<T, 2> max = {
@@ -973,6 +1019,16 @@ struct bbox<T, 2> {
 // Axis aligned bounding box represented as a min/max vector pairs.
 template <typename T>
 struct bbox<T, 3> {
+    // constructors
+    bbox()
+        : min{std::numeric_limits<T>::max(), std::numeric_limits<T>::max(),
+              std::numeric_limits<T>::max()}
+        , max{std::numeric_limits<T>::lowest(),
+              std::numeric_limits<T>::lowest(),
+              std::numeric_limits<T>::lowest()} {}
+    bbox(const vec<T, 3>& min_, const vec<T, 3>& max_) : min{min_}, max{max_} {}
+
+    // elements
     vec<T, 3> min = {std::numeric_limits<T>::max(),
         std::numeric_limits<T>::max(), std::numeric_limits<T>::max()};
     vec<T, 3> max = {std::numeric_limits<T>::lowest(),
@@ -982,6 +1038,16 @@ struct bbox<T, 3> {
 // Axis aligned bounding box represented as a min/max vector pairs.
 template <typename T>
 struct bbox<T, 4> {
+    // constructors
+    bbox()
+        : min{std::numeric_limits<T>::max(), std::numeric_limits<T>::max(),
+              std::numeric_limits<T>::max(), std::numeric_limits<T>::max()}
+        , max{std::numeric_limits<T>::lowest(),
+              std::numeric_limits<T>::lowest(),
+              std::numeric_limits<T>::lowest(),
+              std::numeric_limits<T>::lowest()} {}
+    bbox(const vec<T, 4>& min_, const vec<T, 4>& max_) : min{min_}, max{max_} {}
+
     vec<T, 4> min = {std::numeric_limits<T>::max(),
         std::numeric_limits<T>::max(), std::numeric_limits<T>::max(),
         std::numeric_limits<T>::max()};
@@ -1166,19 +1232,35 @@ struct ray;
 // Rays with origin, direction and min/max t value.
 template <typename T>
 struct ray<T, 2> {
+    // constructors
+    ray() : o{0, 0}, d{0, 1}, tmin{0}, tmax{std::numeric_limits<T>::max()} {}
+    ray(const vec<T, 2>& o_, const vec<T, 2>& d_, T tmin_, T tmax_)
+        : o{o_}, d{d_}, tmin{tmin_}, tmax{tmax_} {}
+
+    // elements
     vec<T, 2> o = {0, 0};
     vec<T, 2> d = {0, 1};
     T tmin = 0;
-    T tmax = flt_max;
+    T tmax = std::numeric_limits<T>::max();
 };
 
 // Rays with origin, direction and min/max t value.
 template <typename T>
 struct ray<T, 3> {
+    // constructors
+    ray()
+        : o{0, 0, 0}
+        , d{0, 0, 1}
+        , tmin{0}
+        , tmax{std::numeric_limits<T>::max()} {}
+    ray(const vec<T, 3>& o_, const vec<T, 3>& d_, T tmin_, T tmax_)
+        : o{o_}, d{d_}, tmin{tmin_}, tmax{tmax_} {}
+
+    // elements
     vec<T, 3> o = {0, 0, 0};
     vec<T, 3> d = {0, 0, 1};
     T tmin = 0;
-    T tmax = flt_max;
+    T tmax = std::numeric_limits<T>::max();
 };
 
 // Type aliases
@@ -1490,13 +1572,6 @@ inline rng_state make_rng(uint64_t seed, uint64_t seq = 1) {
     rng.state += seed;
     advance_rng(rng);
     return rng;
-}
-
-// Init a sequence of random number generators.
-inline std::vector<rng_state> make_rng_seq(int num, uint64_t seed) {
-    auto rngs = std::vector<rng_state>(num);
-    for (auto i = 0; i < num; i++) rngs[i] = make_rng(seed, 2 * i + 1);
-    return rngs;
 }
 
 // Next random numbers: floats in [0,1), ints in [0,n).

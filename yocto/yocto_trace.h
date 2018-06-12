@@ -21,7 +21,7 @@
 // 1. prepare the scene for tracing
 //    - build the ray-tracing acceleration structure with `update_bvh()`
 //     - prepare lights for rendering with `update_lights()`
-// 2. create the inmage buffer and random number generators `make_rng_seq()`
+// 2. create the inmage buffer and random number generators `make_trace_rngs()`
 // 3. render blocks of samples with `trace_samples()`
 // 4. you can also start an asynchronous renderer with `trace_asynch_start()`
 //
@@ -71,71 +71,82 @@
 namespace ygl {
 
 // Trace evaluation function.
-using trace_func = std::function<vec3f(const std::shared_ptr<scene> scn,
+using trace_func = std::function<vec3f(const std::shared_ptr<scene>& scn,
     const ray3f& ray, rng_state& rng, int nbounces, bool* hit)>;
+
+// Init a sequence of random number generators.
+inline image<rng_state> make_trace_rngs(int w, int h, uint64_t seed) {
+    auto rngs = image<rng_state>{w, h};
+    int rseed = 1301081;  // large prime
+    for (auto i = 0; i < w * h; i++) {
+        rngs[i] = make_rng(seed, rseed + 1);
+        rseed = (rseed * 1103515245 + 12345) & ((1U << 31) - 1);  // bsd rand
+    }
+    return rngs;
+}
 
 // Trace the next nsamples samples. Assumes that the
 // image contains cur_samples already. Returns true when done.
-void trace_samples(const std::shared_ptr<scene> scn,
-    const std::shared_ptr<camera> cam, image4f& img,
-    std::vector<rng_state>& rngs, int cur_samples, int nsamples,
-    trace_func tracer, int nbounces, float pixel_clamp = 100);
+void trace_samples(const std::shared_ptr<scene>& scn,
+    const std::shared_ptr<camera>& cam, image4f& img, image<rng_state>& rngs,
+    int cur_samples, int nsamples, trace_func tracer, int nbounces,
+    float pixel_clamp = 100);
 // Like before but with multiplthreading.
-void trace_samples_mt(const std::shared_ptr<scene> scn,
-    const std::shared_ptr<camera> cam, image4f& img,
-    std::vector<rng_state>& rngs, int cur_samples, int nsamples,
-    trace_func tracer, int nbounces, float pixel_clamp = 100);
+void trace_samples_mt(const std::shared_ptr<scene>& scn,
+    const std::shared_ptr<camera>& cam, image4f& img, image<rng_state>& rngs,
+    int cur_samples, int nsamples, trace_func tracer, int nbounces,
+    float pixel_clamp = 100);
 
 // Starts an anyncrhounous renderer.
-void trace_async_start(const std::shared_ptr<scene> scn,
-    const std::shared_ptr<camera> cam, image4f& img,
-    std::vector<rng_state>& rngs, int nsamples, trace_func tracer, int nbounces,
+void trace_async_start(const std::shared_ptr<scene>& scn,
+    const std::shared_ptr<camera>& cam, image4f& img, image<rng_state>& rngs,
+    int nsamples, trace_func tracer, int nbounces,
     std::vector<std::thread>& threads, bool& stop_flag, int& cur_sample,
     float pixel_clamp = 100);
 // Stop the asynchronous renderer.
 void trace_async_stop(std::vector<std::thread>& threads, bool& stop_flag);
 
 // Trace function - path tracer.
-vec3f trace_path(const std::shared_ptr<scene> scn, const ray3f& ray,
+vec3f trace_path(const std::shared_ptr<scene>& scn, const ray3f& ray,
     rng_state& rng, int nbounces, bool* hit = nullptr);
 // Trace function - path tracer without mis.
-vec3f trace_path_nomis(const std::shared_ptr<scene> scn, const ray3f& ray,
+vec3f trace_path_nomis(const std::shared_ptr<scene>& scn, const ray3f& ray,
     rng_state& rng, int nbounces, bool* hit = nullptr);
 // Trace function - naive path tracer.
-vec3f trace_path_naive(const std::shared_ptr<scene> scn, const ray3f& ray,
+vec3f trace_path_naive(const std::shared_ptr<scene>& scn, const ray3f& ray,
     rng_state& rng, int nbounces, bool* hit = nullptr);
 // Trace function - direct illumination.
-vec3f trace_direct(const std::shared_ptr<scene> scn, const ray3f& ray,
+vec3f trace_direct(const std::shared_ptr<scene>& scn, const ray3f& ray,
     rng_state& rng, int nbounces, bool* hit = nullptr);
 // Trace function - direct illumination without mis.
-vec3f trace_direct_nomis(const std::shared_ptr<scene> scn, const ray3f& ray,
+vec3f trace_direct_nomis(const std::shared_ptr<scene>& scn, const ray3f& ray,
     rng_state& rng, int nbounces, bool* hit = nullptr);
 // Trace function - pure environment illumination with no shadows.
-vec3f trace_environment(const std::shared_ptr<scene> scn, const ray3f& ray,
+vec3f trace_environment(const std::shared_ptr<scene>& scn, const ray3f& ray,
     rng_state& rng, int nbounces, bool* hit = nullptr);
 // Trace function - eyelight rendering.
-vec3f trace_eyelight(const std::shared_ptr<scene> scn, const ray3f& ray,
+vec3f trace_eyelight(const std::shared_ptr<scene>& scn, const ray3f& ray,
     rng_state& rng, int nbounces, bool* hit = nullptr);
 // Trace function - normal debug visualization.
-vec3f trace_debug_normal(const std::shared_ptr<scene> scn, const ray3f& ray,
+vec3f trace_debug_normal(const std::shared_ptr<scene>& scn, const ray3f& ray,
     rng_state& rng, int nbounces, bool* hit = nullptr);
 // Trace function - faceforward debug visualization.
-vec3f trace_debug_frontfacing(const std::shared_ptr<scene> scn,
+vec3f trace_debug_frontfacing(const std::shared_ptr<scene>& scn,
     const ray3f& ray, rng_state& rng, int nbounces, bool* hit = nullptr);
 // Trace function - albedo debug visualization.
-vec3f trace_debug_albedo(const std::shared_ptr<scene> scn, const ray3f& ray,
+vec3f trace_debug_albedo(const std::shared_ptr<scene>& scn, const ray3f& ray,
     rng_state& rng, int nbounces, bool* hit = nullptr);
 // Trace function - diffuse debug visualization.
-vec3f trace_debug_diffuse(const std::shared_ptr<scene> scn, const ray3f& ray,
+vec3f trace_debug_diffuse(const std::shared_ptr<scene>& scn, const ray3f& ray,
     rng_state& rng, int nbounces, bool* hit = nullptr);
 // Trace function - specular debug visualization.
-vec3f trace_debug_specular(const std::shared_ptr<scene> scn, const ray3f& ray,
+vec3f trace_debug_specular(const std::shared_ptr<scene>& scn, const ray3f& ray,
     rng_state& rng, int nbounces, bool* hit = nullptr);
 // Trace function - roughness debug visualization.
-vec3f trace_debug_roughness(const std::shared_ptr<scene> scn, const ray3f& ray,
+vec3f trace_debug_roughness(const std::shared_ptr<scene>& scn, const ray3f& ray,
     rng_state& rng, int nbounces, bool* hit = nullptr);
 // Trace function - texcoord debug visualization.
-vec3f trace_debug_texcoord(const std::shared_ptr<scene> scn, const ray3f& ray,
+vec3f trace_debug_texcoord(const std::shared_ptr<scene>& scn, const ray3f& ray,
     rng_state& rng, int nbounces, bool* hit = nullptr);
 
 }  // namespace ygl
