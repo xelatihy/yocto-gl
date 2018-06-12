@@ -396,7 +396,7 @@ int main(int argc, char* argv[]) {
 
     // fix renderer type if no lights
     if (app->scn->lights.empty() && app->scn->environments.empty() &&
-        app->tracef != ygl::trace_eyelight) {
+        app->tracer != "eyelight") {
         ygl::log_info("no lights presents, switching to eyelight shader");
         app->tracer = "eyelight";
         app->tracef = ygl::trace_eyelight;
