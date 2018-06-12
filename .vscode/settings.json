@@ -55,6 +55,7 @@
         "locale": "cpp",
         "__bit_reference": "cpp",
         "system_error": "cpp",
-        "iosfwd": "cpp"
+        "iosfwd": "cpp",
+        "istream": "cpp"
     },
 } 

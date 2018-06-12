@@ -118,6 +118,9 @@
 #include <limits>
 #include <string>
 #include <vector>
+#include <iostream>
+#include <sstream>
+#include <fstream>
 
 // -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
@@ -2517,54 +2520,44 @@ inline std::string replace_path_extension(
 
 // Load a text file
 inline std::string load_text(const std::string& filename) {
-    // https://stackoverflow.com/questions/2912520/read-file-contents-into-a-string-in-c
-    auto f = fopen(filename.c_str(), "r");
-    if (!f) throw std::runtime_error("could not load " + filename);
-    // Determine file size
-    fseek(f, 0, SEEK_END);
-    auto size = ftell(f);
-    rewind(f);
-    // read
-    auto buf = std::vector<char>(size);
-    if (fread(buf.data(), sizeof(char), size, f) != size)
-        throw std::runtime_error("could not load " + filename);
-    return std::string(buf.data(), buf.size());
+    // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
+    auto fs = std::ifstream(filename);
+    if (!fs) throw std::runtime_error("could not load " + filename);
+    std::stringstream buf;
+    buf << fs.rdbuf();
+    fs.close();
+    return buf.str();
 }
 
 // Save a text file
 inline void save_text(const std::string& filename, const std::string& str) {
-    auto f = fopen(filename.c_str(), "wb");
-    if (!f) throw std::runtime_error("cannot write file " + filename);
-    auto num = fwrite(str.c_str(), 1, str.size(), f);
-    if (num != str.size())
-        throw std::runtime_error("cannot write file " + filename);
-    fclose(f);
+    auto fs = std::ofstream(filename);
+    if (!fs) throw std::runtime_error("could not save " + filename);
+    fs << str;
+    fs.close();
 }
 
 // Load a binary file
 inline std::vector<byte> load_binary(const std::string& filename) {
-    // https://stackoverflow.com/questions/174531/easiest-way-to-get-files-contents-in-c
-    auto f = fopen(filename.c_str(), "rb");
-    if (!f) throw std::runtime_error("cannot read file " + filename);
-    fseek(f, 0, SEEK_END);
-    auto len = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    auto buf = std::vector<unsigned char>(len);
-    if (fread(buf.data(), 1, len, f) != len)
-        throw std::runtime_error("cannot read file " + filename);
-    fclose(f);
+    // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
+    auto fs = std::ifstream(filename, std::ios::binary);
+    if (!fs) throw std::runtime_error("could not load " + filename);
+    fs.seekg(0, std::ios::end);
+    size_t size = fs.tellg();
+    auto buf = std::vector<byte>(size);
+    fs.seekg(0);
+    fs.read((char*)&buf[0], size);
+    fs.close();
     return buf;
 }
 
 // Save a binary file
 inline void save_binary(
     const std::string& filename, const std::vector<byte>& data) {
-    auto f = fopen(filename.c_str(), "wb");
-    if (!f) throw std::runtime_error("cannot write file " + filename);
-    auto num = fwrite(data.data(), 1, data.size(), f);
-    if (num != data.size())
-        throw std::runtime_error("cannot write file " + filename);
-    fclose(f);
+    auto fs = std::ofstream(filename, std::ios::binary);
+    if (!fs) throw std::runtime_error("could not save " + filename);
+    fs.write((char*)data.data(), data.size());
+    fs.close();
 }
 
 }  // namespace ygl
