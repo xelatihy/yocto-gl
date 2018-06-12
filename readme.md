@@ -68,6 +68,7 @@ Yocto/GL is split into many small libraries to make code navigation easier.
 - `yocto_bvh.{h,cpp}`: ray-scene intersection and closest point queries
   accelerated by a two-level bounding volume hierarchy
 - `yocto_scene.{h,cpp}`: simple scene data structure for demos and path tracing
+- `yocto_sceneio.{h,cpp}`: loading and saving of scene data structure
 - `yocto_trace.{h,cpp}`: path tracing with GGX material, hair and point shading,
   mesh lights, environment illumination, all with MIS sampling
 - `yocto_obj.{h,cpp}`: Wavefront OBJ loading and saving
@@ -85,7 +86,6 @@ test the library:
 - `ytrace.cpp`: offline path-tracer
 - `yitrace.cpp`: interactive path-tracer
 - `yscnproc.cpp`: scene manipulation and conversion to/from OBJ and glTF
-- `ytestgen.cpp`: creates test cases for the path tracer and GL viewer
 - `yimview.cpp`: HDR/PNG/JPG image viewer with exposure/gamma tone mapping
 - `yimproc.cpp`: offline image manipulation.
 
@@ -124,16 +124,12 @@ explicit data is both more hackable and easier to understand.
 
 The use of templates in Yocto was the reason for many refactorings, going
 from no template to heavy template use. After many changes, we settled
-onn using as little templates as possible. This makes code more readable,
-and compilation errors easier to handle. I guess with C++ concepts this
-could change, but for now the complexity of using teplates was not 
-outweighted by their generic use since in graphics, especially when using
-a data-driven programming mode, the number of types we handle is very low.
+on using templates following the established convention in the C++ standard 
+library.
 
 We make use of exception for error reporting. This makes the code
 much cleaner and more in line with the expectation of most other programming
 languages.
 
 Finally, we import math symbols from the standard library rather than
-using the `std::name` pattern. This makes math code cleaner for graphics
-applications that generally use float rather than doubles.
+using the `std::name` pattern. This makes math code cleaner for our domain.
