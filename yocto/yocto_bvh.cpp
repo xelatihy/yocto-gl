@@ -494,7 +494,7 @@ int make_bvh_node(std::vector<bvh_node>& nodes, std::vector<bvh_prim>& prims,
 }
 
 // Build a BVH from a set of primitives.
-void build_bvh(std::shared_ptr<bvh_tree> bvh, bool equal_size) {
+void build_bvh(const std::shared_ptr<bvh_tree>& bvh, bool equal_size) {
     // get the number of primitives and the primitive type
     auto prims = std::vector<bvh_prim>();
     auto type = bvh_node_type::internal;
@@ -542,7 +542,7 @@ void build_bvh(std::shared_ptr<bvh_tree> bvh, bool equal_size) {
 }
 
 // Recursively recomputes the node bounds for a shape bvh
-void refit_bvh(std::shared_ptr<bvh_tree> bvh, int nodeid) {
+void refit_bvh(const std::shared_ptr<bvh_tree>& bvh, int nodeid) {
     // refit
     auto& node = bvh->nodes[nodeid];
     node.bbox = invalid_bbox3f;
@@ -590,10 +590,10 @@ void refit_bvh(std::shared_ptr<bvh_tree> bvh, int nodeid) {
 }
 
 // Recursively recomputes the node bounds for a shape bvh
-void refit_bvh(std::shared_ptr<bvh_tree> bvh) { refit_bvh(bvh, 0); }
+void refit_bvh(const std::shared_ptr<bvh_tree>& bvh) { refit_bvh(bvh, 0); }
 
 // Intersect ray with a bvh.
-bool intersect_bvh(const std::shared_ptr<bvh_tree> bvh, const ray3f& ray_,
+bool intersect_bvh(const std::shared_ptr<bvh_tree>& bvh, const ray3f& ray_,
     bool find_any, float& dist, int& iid, int& eid, vec2f& uv) {
     // node stack
     int node_stack[128];
@@ -699,7 +699,7 @@ bool intersect_bvh(const std::shared_ptr<bvh_tree> bvh, const ray3f& ray_,
 }
 
 // Finds the closest element with a bvh.
-bool overlap_bvh(const std::shared_ptr<bvh_tree> bvh, const vec3f& pos,
+bool overlap_bvh(const std::shared_ptr<bvh_tree>& bvh, const vec3f& pos,
     float max_dist, bool find_any, float& dist, int& iid, int& eid, vec2f& uv) {
     // node stack
     int node_stack[64];
@@ -795,7 +795,7 @@ bool overlap_bvh(const std::shared_ptr<bvh_tree> bvh, const vec3f& pos,
 #if 0
     // Finds the overlap between BVH leaf nodes.
     template <typename OverlapElem>
-    void overlap_bvh_elems(const std::shared_ptr<bvh_tree> bvh1, const std::shared_ptr<bvh_tree> bvh2,
+    void overlap_bvh_elems(const std::shared_ptr<bvh_tree>& bvh1, const std::shared_ptr<bvh_tree>& bvh2,
                            bool skip_duplicates, bool skip_self, std::vector<vec2i>& overlaps,
                            const OverlapElem& overlap_elems) {
         // node stack

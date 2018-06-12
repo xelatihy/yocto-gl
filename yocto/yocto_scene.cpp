@@ -974,7 +974,7 @@ std::shared_ptr<node> make_node(const std::string& name,
 }
 
 std::shared_ptr<environment> make_environment(const std::string& name, vec3f ke,
-    std::shared_ptr<texture> ke_txt, const frame3f& frame) {
+    const std::shared_ptr<texture>& ke_txt, const frame3f& frame) {
     auto env = std::make_shared<environment>();
     env->name = name;
     env->ke = ke;

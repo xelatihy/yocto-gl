@@ -393,7 +393,7 @@ vec3f eval_direction(const std::shared_ptr<environment>& env, const vec2f& uv);
 vec3f eval_environment(const std::shared_ptr<environment>& env, vec3f i);
 
 // Evaluate a texture.
-vec4f eval_texture(const std::shared_ptr<texture>& info, const vec2f& texcoord);
+vec4f eval_texture(const std::shared_ptr<texture>& txt, const vec2f& texcoord);
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
 float eval_camera_fovy(const std::shared_ptr<camera>& cam);
@@ -489,7 +489,7 @@ std::shared_ptr<node> make_node(const std::string& name,
     std::shared_ptr<environment> env = nullptr,
     const frame3f& frame = identity_frame3f);
 std::shared_ptr<environment> make_environment(const std::string& name,
-    vec3f ke = {1, 1, 1}, std::shared_ptr<texture> ke_txt = nullptr,
+    vec3f ke = {1, 1, 1}, const std::shared_ptr<texture>& ke_txt = nullptr,
     const frame3f& frame = identity_frame3f);
 std::shared_ptr<animation> make_animation(const std::string& name,
     const std::string& path, const std::vector<float>& times = {},
