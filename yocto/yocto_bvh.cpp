@@ -58,8 +58,8 @@ bool intersect_point(
 }
 
 // Intersect a ray with a line
-bool intersect_line(const ray3f& ray, const vec3f& v0, const vec3f& v1, float r0, float r1,
-    float& dist, vec2f& uv) {
+bool intersect_line(const ray3f& ray, const vec3f& v0, const vec3f& v1,
+    float r0, float r1, float& dist, vec2f& uv) {
     // setup intersection params
     auto u = ray.d;
     auto v = v1 - v0;
@@ -105,8 +105,8 @@ bool intersect_line(const ray3f& ray, const vec3f& v0, const vec3f& v1, float r0
 }
 
 // Intersect a ray with a triangle
-bool intersect_triangle(
-    const ray3f& ray, const vec3f& v0, const vec3f& v1, const vec3f& v2, float& dist, vec2f& uv) {
+bool intersect_triangle(const ray3f& ray, const vec3f& v0, const vec3f& v1,
+    const vec3f& v2, float& dist, vec2f& uv) {
     // compute triangle edges
     auto edge1 = v1 - v0;
     auto edge2 = v2 - v0;
@@ -142,8 +142,8 @@ bool intersect_triangle(
 }
 
 // Intersect a ray with a quad.
-bool intersect_quad(const ray3f& ray, const vec3f& v0, const vec3f& v1, const vec3f& v2, const vec3f& v3,
-    float& dist, vec2f& uv) {
+bool intersect_quad(const ray3f& ray, const vec3f& v0, const vec3f& v1,
+    const vec3f& v2, const vec3f& v3, float& dist, vec2f& uv) {
     auto hit = false;
     auto tray = ray;
     if (intersect_triangle(tray, v0, v1, v3, dist, uv)) {
@@ -209,8 +209,8 @@ bool intersect_bbox(
 namespace ygl {
 
 // TODO: documentation
-bool overlap_point(
-    const vec3f& pos, float dist_max, const vec3f& p, float r, float& dist, vec2f& uv) {
+bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p, float r,
+    float& dist, vec2f& uv) {
     auto d2 = dot(pos - p, pos - p);
     if (d2 > (dist_max + r) * (dist_max + r)) return false;
     dist = sqrt(d2);
@@ -230,8 +230,8 @@ float closestuv_line(const vec3f& pos, const vec3f& v0, const vec3f& v1) {
 }
 
 // TODO: documentation
-bool overlap_line(const vec3f& pos, float dist_max, const vec3f& v0, const vec3f& v1, float r0,
-    float r1, float& dist, vec2f& uv) {
+bool overlap_line(const vec3f& pos, float dist_max, const vec3f& v0,
+    const vec3f& v1, float r0, float r1, float& dist, vec2f& uv) {
     auto u = closestuv_line(pos, v0, v1);
     // Compute projected position from the clamped t d = a + t * ab;
     auto p = v0 + (v1 - v0) * u;
@@ -248,7 +248,8 @@ bool overlap_line(const vec3f& pos, float dist_max, const vec3f& v0, const vec3f
 // TODO: documentation
 // this is a complicated test -> I probably "--"+prefix to use a sequence of
 // test (triangle body, and 3 edges)
-vec2f closestuv_triangle(const vec3f& pos, const vec3f& v0, const vec3f& v1, const vec3f& v2) {
+vec2f closestuv_triangle(
+    const vec3f& pos, const vec3f& v0, const vec3f& v1, const vec3f& v2) {
     auto ab = v1 - v0;
     auto ac = v2 - v0;
     auto ap = pos - v0;
@@ -289,8 +290,9 @@ vec2f closestuv_triangle(const vec3f& pos, const vec3f& v0, const vec3f& v1, con
 }
 
 // TODO: documentation
-bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& v0, const vec3f& v1, const vec3f& v2,
-    float r0, float r1, float r2, float& dist, vec2f& uv) {
+bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& v0,
+    const vec3f& v1, const vec3f& v2, float r0, float r1, float r2, float& dist,
+    vec2f& uv) {
     uv = closestuv_triangle(pos, v0, v1, v2);
     auto p = interpolate_triangle(v0, v1, v2, uv);
     auto r = interpolate_triangle(r0, r1, r2, uv);
@@ -301,8 +303,9 @@ bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& v0, const v
 }
 
 // TODO: documentation
-bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& v0, const vec3f& v1, const vec3f& v2,
-    const vec3f& v3, float r0, float r1, float r2, float r3, float& dist, vec2f& uv) {
+bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& v0,
+    const vec3f& v1, const vec3f& v2, const vec3f& v3, float r0, float r1,
+    float r2, float r3, float& dist, vec2f& uv) {
     auto hit = false;
     if (overlap_triangle(pos, dist_max, v0, v1, v3, r0, r1, r3, dist, uv)) {
         dist_max = dist;
@@ -317,8 +320,8 @@ bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& v0, const vec3f
 }
 
 // TODO: documentation
-bool overlap_tetrahedron(
-    const vec3f& pos, const vec3f& v0, const vec3f& v1, const vec3f& v2, const vec3f& v3, vec4f& uv) {
+bool overlap_tetrahedron(const vec3f& pos, const vec3f& v0, const vec3f& v1,
+    const vec3f& v2, const vec3f& v3, vec4f& uv) {
     // TODO: fix uv
     auto vol = dot(v3 - v0, cross(v3 - v1, v3 - v0));
     if (vol == 0) return false;
@@ -333,9 +336,9 @@ bool overlap_tetrahedron(
 }
 
 // TODO: documentation
-bool overlap_tetrahedron(const vec3f& pos, float dist_max, const vec3f& v0, const vec3f& v1,
-    const vec3f& v2, const vec3f& v3, float r0, float r1, float r2, float r3, float& dist,
-    vec4f& uv) {
+bool overlap_tetrahedron(const vec3f& pos, float dist_max, const vec3f& v0,
+    const vec3f& v1, const vec3f& v2, const vec3f& v3, float r0, float r1,
+    float r2, float r3, float& dist, vec4f& uv) {
     // TODO: FIX UVs
     // check interior
     if (overlap_tetrahedron(pos, v0, v1, v2, v3, uv)) {
@@ -696,8 +699,8 @@ bool intersect_bvh(const std::shared_ptr<bvh_tree> bvh, const ray3f& ray_,
 }
 
 // Finds the closest element with a bvh.
-bool overlap_bvh(const std::shared_ptr<bvh_tree> bvh, const vec3f& pos, float max_dist,
-    bool find_any, float& dist, int& iid, int& eid, vec2f& uv) {
+bool overlap_bvh(const std::shared_ptr<bvh_tree> bvh, const vec3f& pos,
+    float max_dist, bool find_any, float& dist, int& iid, int& eid, vec2f& uv) {
     // node stack
     int node_stack[64];
     auto node_cur = 0;
