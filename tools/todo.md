@@ -5,6 +5,13 @@ Please consider this to be just development notes and not any real planning.
 
 ## Reduce internal code
 
+- streams in in/out
+    - obj out
+    - mesh obj out
+    - mesh ply out
+    - obj in
+    - mesh obj out
+    - mesh ply int
 - POINTS
 - filesystem
 - ldr_gamma in texture

@@ -33,8 +33,10 @@
 #include <array>
 #include <climits>
 #include <deque>
+#include <fstream>
 #include <unordered_map>
 using namespace std::string_literals;
+
 #include "ext/json.hpp"
 
 // -----------------------------------------------------------------------------
@@ -1382,6 +1384,43 @@ inline int read_int(FILE* fs) { return read_value<int>(fs); }
 inline float read_float(FILE* fs) { return read_value<float>(fs); }
 inline byte read_uchar(FILE* fs) { return read_value<byte>(fs); }
 
+// OBJ vertex
+struct obj_vertex {
+    int pos = 0;
+    int texcoord = 0;
+    int norm = 0;
+};
+
+// Input/Output for OBJ vertex
+inline std::istream& operator>>(std::istream& is, obj_vertex& v) {
+    v = {0, 0, 0};
+    is >> v.pos;
+    if (is.peek() == '/') {
+        is.get();
+        if (is.peek() == '/') {
+            is.get();
+            is >> v.norm;
+        } else {
+            is >> v.texcoord;
+            if (is.peek() == '/') {
+                is.get();
+                is >> v.norm;
+            }
+        }
+    }
+    return is;
+}
+inline std::ostream& operator<<(std::ostream& os, const obj_vertex& v) {
+    os << v.pos;
+    if (v.texcoord) {
+        os << "/" << v.texcoord;
+        if (v.norm) os << "/" << v.norm;
+    } else {
+        if (v.norm) os << "//" << v.norm;
+    }
+    return os;
+}
+
 // Loads an OBJ
 std::shared_ptr<scene> load_obj_scene(const std::string& filename,
     bool load_textures, bool skip_missing, bool split_shapes) {
@@ -1397,7 +1436,7 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
     auto split_smoothing = split_shapes;
 
     // open file
-    auto fs = fopen(filename.c_str(), "rt");
+    auto fs = std::ifstream(filename);
     if (!fs) throw std::runtime_error("cannot open filename " + filename);
 
     // current parsing values
@@ -1465,24 +1504,29 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
     ist = add_instance(scn, "", "", "", true);
 
     // read the file line by line
-    char line[4096];
-    while (parse_getline(fs, line, sizeof(line))) {
+    std::string line;
+    while (std::getline(fs, line)) {
+        // remove comments
+        if (line.find("#") != line.npos) line = line.substr(0, line.find("#"));
+
         // prepare to parse
-        auto ss = line;
-        parse_skipws(ss);
-        parse_remove_comment(ss, '#');
+        auto ss = std::stringstream(line);
 
         // get command
-        auto cmd = parse_string(ss);
+        auto cmd = ""s;
+        ss >> cmd;
         if (cmd == "") continue;
 
         // possible token values
         if (cmd == "v") {
-            pos.push_back(parse_vec3f(ss));
+            pos.push_back(zero3f);
+            ss >> pos.back();
         } else if (cmd == "vn") {
-            norm.push_back(parse_vec3f(ss));
+            norm.push_back({});
+            ss >> norm.back();
         } else if (cmd == "vt") {
-            texcoord.push_back(parse_vec2f(ss));
+            texcoord.push_back({});
+            ss >> texcoord.back();
             if (flip_texcoord) texcoord.back().y = 1 - texcoord.back().y;
         } else if (cmd == "f" || cmd == "l" || cmd == "p") {
             auto num = 0;
@@ -1491,10 +1535,22 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
             auto vert_size =
                 vec3i{(int)pos.size(), (int)texcoord.size(), (int)norm.size()};
             // elem.material = (int)oobj->materials.size() - 1;
-            parse_skipws(ss);
-            while (*ss) {
-                verts[num++] = parse_objvert(ss, vert_size);
-                parse_skipws(ss);
+            while (true) {
+                auto vert = obj_vertex();
+                ss >> vert;
+                if (!vert.pos) break;
+                verts[num] = {-1, -1, -1};
+                if (vert.pos)
+                    verts[num].x = (vert.pos < 0) ? (vert_size.x + vert.pos) :
+                                                    (vert.pos - 1);
+                if (vert.texcoord)
+                    verts[num].y = (vert.texcoord < 0) ?
+                                       (vert_size.y + vert.texcoord) :
+                                       (vert.texcoord - 1);
+                if (vert.norm)
+                    verts[num].z = (vert.norm < 0) ? (vert_size.z + vert.norm) :
+                                                     (vert.norm - 1);
+                num++;
             }
             if (ist->sbd) {
                 // TODO: subdivs
@@ -1510,7 +1566,7 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
                         if (verts[i].y >= 0)
                             ist->shp->texcoord.push_back(
                                 texcoord.at(verts[i].y));
-                        if (verts[i].z >= 0)
+                        if (verts[i].x >= 0)
                             ist->shp->norm.push_back(norm.at(verts[i].z));
                     } else {
                         vids[i] = it->second;
@@ -1531,47 +1587,53 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
                 }
             }
         } else if (cmd == "o") {
-            oname = parse_string(ss);
+            ss >> oname;
             gname = "";
             matname = "";
             smoothing = true;
             ist = add_instance(scn, oname, matname, gname, smoothing);
         } else if (cmd == "usemtl") {
-            matname = parse_string(ss);
+            ss >> matname;
             if (split_material) {
                 ist = add_instance(scn, oname, matname, gname, smoothing);
             } else {
                 if (matname != "") ist->mat = mmap.at(matname);
             }
         } else if (cmd == "g") {
-            gname = parse_string(ss);
+            ss >> gname;
             if (split_group) {
                 ist = add_instance(scn, oname, matname, gname, smoothing);
             }
         } else if (cmd == "s") {
-            auto name = parse_string(ss);
+            auto name = ""s;
+            ss >> name;
             smoothing = (name == "on");
             if (split_smoothing) {
                 ist = add_instance(scn, oname, matname, gname, smoothing);
             }
         } else if (cmd == "mtllib") {
-            auto mtlname = parse_string(ss);
+            auto mtlname = ""s;
+            ss >> mtlname;
             auto mtlpath = get_dirname(filename) + "/" + mtlname;
             // open file
-            auto fs = fopen(mtlpath.c_str(), "rt");
+            auto fs = std::ifstream(mtlpath);
             if (!fs)
                 throw std::runtime_error("cannot open filename " + mtlpath);
 
             // Parse texture options and name
-            auto add_texture = [scn, &tmap](char*& s) {
+            auto add_texture = [scn, &tmap](std::stringstream& ss) {
                 // get tokens
-                auto tokens = parse_strings(s);
+                auto tokens = std::vector<std::string>();
+                while (true) {
+                    auto v = ""s;
+                    ss >> v;
+                    if (v == "") break;
+                    tokens.push_back(v);
+                }
                 if (tokens.empty()) return (std::shared_ptr<texture>)nullptr;
 
                 // texture name
-                auto path = tokens.back();
-                for (auto& c : path)
-                    if (c == '\\') c = '/';
+                auto path = normalize_path(tokens.back());
                 if (tmap.find(path) != tmap.end()) { return tmap.at(path); }
 
                 // create texture
@@ -1595,61 +1657,59 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
             auto mat = scn->materials.back();
 
             // read the file line by line
-            char line[4096];
-            while (parse_getline(fs, line, sizeof(line))) {
+            std::string line;
+            while (std::getline(fs, line)) {
+                // remove comment
+                if (line.find("#") != line.npos)
+                    line = line.substr(0, line.find("#"));
+
                 // prepare to parse
-                auto ss = line;
-                parse_skipws(ss);
-                parse_remove_comment(ss, '#');
+                auto ss = std::stringstream(line);
 
                 // get command
-                auto cmd = parse_string(ss);
+                auto cmd = ""s;
+                ss >> cmd;
                 if (cmd == "") continue;
 
                 // possible token values
                 if (cmd == "newmtl") {
                     mat = std::make_shared<material>();
-                    mat->name = parse_string(ss);
+                    ss >> mat->name;
                     scn->materials.push_back(mat);
                     mmap[mat->name] = mat;
                 } else if (cmd == "illum") {
                     // auto illum = parse_int(ss);
                     // TODO: something with illum
                 } else if (cmd == "Ke") {
-                    mat->ke = parse_vec3f(ss);
+                    ss >> mat->ke;
                 } else if (cmd == "Kd") {
-                    mat->kd = parse_vec3f(ss);
+                    ss >> mat->kd;
                 } else if (cmd == "Ks") {
-                    mat->ks = parse_vec3f(ss);
+                    ss >> mat->ks;
                 } else if (cmd == "Kt") {
-                    mat->kt = parse_vec3f(ss);
+                    ss >> mat->kt;
                 } else if (cmd == "Tf") {
-                    auto nchan = 0;
-                    while (*ss && nchan < 3) {
-                        (&mat->kt.x)[nchan++] = parse_float(ss);
-                        parse_skipws(ss);
-                    }
-                    if (nchan < 3) mat->kt = {mat->kt.x, mat->kt.x, mat->kt.x};
+                    mat->kt = {-1, -1, -1};
+                    ss >> mat->kt;
+                    if (mat->kt.y < 0)
+                        mat->kt = {mat->kt.x, mat->kt.x, mat->kt.x};
                     if (flip_tr) mat->kt = vec3f{1, 1, 1} - mat->kt;
                 } else if (cmd == "Tr") {
-                    auto nchan = 0;
-                    auto tr = zero3f;
-                    while (*ss && nchan < 3) {
-                        (&tr.x)[nchan++] = parse_float(ss);
-                        parse_skipws(ss);
-                    }
-                    if (nchan < 3) tr = {tr.x, tr.x, tr.x};
+                    auto tr = vec3f{-1, -1, -1};
+                    ss >> tr;
+                    if (tr.y < 0) tr = {tr.x, tr.x, tr.x};
                     mat->op = (tr.x + tr.y + tr.z) / 3;
                     if (flip_tr) mat->op = 1 - mat->op;
                 } else if (cmd == "Ns") {
-                    auto ns = parse_float(ss);
+                    auto ns = 0.0f;
+                    ss >> ns;
                     mat->rs = pow(2 / (ns + 2), 1 / 4.0f);
                     if (mat->rs < 0.01f) mat->rs = 0;
                     if (mat->rs > 0.99f) mat->rs = 1;
                 } else if (cmd == "d") {
-                    mat->op = parse_float(ss);
+                    ss >> mat->op;
                 } else if (cmd == "Pr" || cmd == "rs") {
-                    mat->rs = parse_float(ss);
+                    ss >> mat->rs;
                 } else if (cmd == "map_Ke") {
                     mat->ke_txt = add_texture(ss);
                 } else if (cmd == "map_Kd") {
@@ -1678,23 +1738,16 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
                 scn->materials.erase(scn->materials.begin());
 
             // clone
-            fclose(fs);
+            fs.close();
         } else if (cmd == "c") {
             auto cam = std::make_shared<camera>();
-            cam->name = parse_string(ss);
-            cam->ortho = parse_bool(ss);
-            cam->width = parse_float(ss);
-            cam->height = parse_float(ss);
-            cam->focal = parse_float(ss);
-            cam->focus = parse_float(ss);
-            cam->aperture = parse_float(ss);
-            cam->frame = parse_frame3f(ss);
+            ss >> cam->name >> cam->ortho >> cam->width >> cam->height >>
+                cam->focal >> cam->focus >> cam->aperture >> cam->frame;
             scn->cameras.push_back(cam);
         } else if (cmd == "e") {
+            auto ke_txt = ""s;
             auto env = std::make_shared<environment>();
-            env->name = parse_string(ss);
-            env->ke = parse_vec3f(ss);
-            auto ke_txt = parse_string(ss);
+            ss >> env->name >> env->ke >> ke_txt >> env->frame;
             if (ke_txt != "\"\"") {
                 if (tmap.find(ke_txt) == tmap.end()) {
                     auto txt = std::make_shared<texture>();
@@ -1705,7 +1758,6 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
                 }
                 env->ke_txt = tmap.at(ke_txt);
             }
-            env->frame = parse_frame3f(ss);
             scn->environments.push_back(env);
         } else {
             // unused
@@ -1729,7 +1781,7 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
     }
 
     // close file
-    fclose(fs);
+    fs.close();
 
     // updates
     update_bbox(scn);
@@ -1785,158 +1837,100 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
 void save_obj_scene(const std::string& filename,
     const std::shared_ptr<scene> scn, bool save_textures, bool skip_missing) {
     // scene
-    auto f = fopen(filename.c_str(), "wt");
-    if (!f) throw std::runtime_error("cannot save file " + filename);
+    auto fs = std::ofstream(filename);
+    if (!fs) throw std::runtime_error("cannot save file " + filename);
 
     // material library
     if (!scn->materials.empty()) {
-        auto mtlname = replace_path_extension(filename, "mtl");
-        fprintf(f, "mtllib %s\n", mtlname.c_str());
+        auto mtlname = replace_path_extension(get_filename(filename), "mtl");
+        fs << "mtllib " << mtlname << "\n";
     }
 
     // cameras
     for (auto cam : scn->cameras) {
-        fprintf(f, "c");
-        fprintf(f, " %s", cam->name.c_str());
-        fprintf(f, " %d", (int)cam->ortho);
-        fprintf(f, " %g", cam->width);
-        fprintf(f, " %g", cam->height);
-        fprintf(f, " %g", cam->focal);
-        fprintf(f, " %g", cam->focus);
-        fprintf(f, " %g", cam->aperture);
-        for (auto i = 0; i < 12; i++) fprintf(f, " %g", (&cam->frame.x.x)[i]);
-        fprintf(f, "\n");
+        fs << "c " << cam->name << " " << cam->ortho << " " << cam->width << " "
+           << cam->height << " " << cam->focal << " " << cam->focus << " "
+           << cam->aperture << " " << cam->frame << "\n";
     }
 
     // environments
     for (auto env : scn->environments) {
-        fprintf(f, "e");
-        fprintf(f, " %s", env->name.c_str());
-        fprintf(f, " %g %g %g", env->ke.x, env->ke.y, env->ke.z);
-        fprintf(f, " %s", (env->ke_txt) ? env->ke_txt->path.c_str() : "\"\"");
-        for (auto i = 0; i < 12; i++) fprintf(f, " %g", (&env->frame.x.x)[i]);
-        fprintf(f, "\n");
+        fs << "e " << env->name << " " << env->ke << " "
+           << ((env->ke_txt) ? env->ke_txt->path : "\"\""s) << " " << env->frame
+           << "\n";
     }
 
     // shapes
-    auto offset = zero3i;
+    auto offset = vec3i{0, 0, 0};
     for (auto ist : scn->instances) {
-        fprintf(f, "o %s\n", ist->name.c_str());
-        if (ist->mat) fprintf(f, "usemtl %s\n", ist->mat->name.c_str());
+        fs << "o " << ist->name << "\n";
+        if (ist->mat) fs << "usemtl " << ist->mat->name << "\n";
         if (!ist->sbd) {
             if (ist->frame == identity_frame3f) {
+                for (auto& p : ist->shp->pos) fs << "v " << p << "\n";
+                for (auto& n : ist->shp->norm) fs << "vn " << n << "\n";
+                for (auto& t : ist->shp->texcoord) fs << "vt " << t << "\n";
+            } else {
                 for (auto& p : ist->shp->pos)
-                    fprintf(f, "v %g %g %g\n", p.x, p.y, p.z);
+                    fs << "v " << transform_point(ist->frame, p) << "\n";
                 for (auto& n : ist->shp->norm)
-                    fprintf(f, "vn %g %g %g\n", n.x, n.y, n.z);
-                for (auto& t : ist->shp->texcoord)
-                    fprintf(f, "vt %g %g\n", t.x, t.y);
-            } else {
-                for (auto& p : ist->shp->pos) {
-                    auto tp = transform_point(ist->frame, p);
-                    fprintf(f, "v %g %g %g\n", tp.x, tp.y, tp.z);
-                }
-                for (auto& n : ist->shp->norm) {
-                    auto tn = transform_direction(ist->frame, n);
-                    fprintf(f, "vn %g %g %g\n", tn.x, tn.y, tn.z);
-                }
-                for (auto& t : ist->shp->texcoord)
-                    fprintf(f, "vt %g %g\n", t.x, t.y);
+                    fs << "vn " << transform_direction(ist->frame, n) << "\n";
+                for (auto& t : ist->shp->texcoord) fs << "vt " << t << "\n";
             }
-            if (!ist->shp->texcoord.empty() && !ist->shp->norm.empty()) {
-                for (auto& t : ist->shp->triangles)
-                    fprintf(f, "f %d/%d/%d %d/%d/%d %d/%d/%d\n",
-                        t.x + offset.x + 1, t.x + offset.y + 1,
-                        t.x + offset.z + 1, t.y + offset.x + 1,
-                        t.y + offset.y + 1, t.y + offset.z + 1,
-                        t.z + offset.x + 1, t.z + offset.y + 1,
-                        t.z + offset.z + 1);
-                for (auto& l : ist->shp->lines)
-                    fprintf(f, "l %d/%d/%d %d/%d/%d\n", l.x + offset.x + 1,
-                        l.x + offset.y + 1, l.x + offset.z + 1,
-                        l.y + offset.x + 1, l.y + offset.y + 1,
-                        l.y + offset.z + 1);
-                for (auto& p : ist->shp->points)
-                    fprintf(f, "p %d/%d/%d\n", p + offset.x + 1,
-                        p + offset.y + 1, p + offset.z + 1);
-            } else if (!ist->shp->texcoord.empty() && ist->shp->norm.empty()) {
-                for (auto& t : ist->shp->triangles)
-                    fprintf(f, "f %d/%d %d/%d %d/%d\n", t.x + offset.x + 1,
-                        t.x + offset.y + 1, t.y + offset.x + 1,
-                        t.y + offset.y + 1, t.z + offset.x + 1,
-                        t.z + offset.y + 1);
-                for (auto& l : ist->shp->lines)
-                    fprintf(f, "l %d/%d %d/%d\n", l.x + offset.x + 1,
-                        l.x + offset.y + 1, l.y + offset.x + 1,
-                        l.y + offset.y + 1);
-                for (auto& p : ist->shp->points)
-                    fprintf(f, "p %d/%d\n", p + offset.x + 1, p + offset.y + 1);
-            } else if (ist->shp->texcoord.empty() && !ist->shp->norm.empty()) {
-                for (auto& t : ist->shp->triangles)
-                    fprintf(f, "f %d//%d %d//%d %d//%d\n", t.x + offset.x + 1,
-                        t.x + offset.z + 1, t.y + offset.x + 1,
-                        t.y + offset.z + 1, t.z + offset.x + 1,
-                        t.z + offset.z + 1);
-                for (auto& l : ist->shp->lines)
-                    fprintf(f, "l %d//%d %d//%d\n", l.x + offset.x + 1,
-                        l.x + offset.z + 1, l.y + offset.x + 1,
-                        l.y + offset.z + 1);
-                for (auto& p : ist->shp->points)
-                    fprintf(
-                        f, "p %d//%d\n", p + offset.x + 1, p + offset.z + 1);
-            } else {
-                for (auto& t : ist->shp->triangles)
-                    fprintf(f, "f %d %d %d\n", t.x + offset.x + 1,
-                        t.y + offset.x + 1, t.z + offset.x + 1);
-                for (auto& l : ist->shp->lines)
-                    fprintf(
-                        f, "l %d %d\n", l.x + offset.x + 1, l.y + offset.x + 1);
-                for (auto& p : ist->shp->points)
-                    fprintf(f, "p %d\n", p + offset.x + 1);
-            }
+            auto mask = vec3i{1, ist->shp->texcoord.empty() ? 0 : 1,
+                ist->shp->norm.empty() ? 0 : 1};
+            auto vert = [mask, offset](int i) {
+                auto vert = (vec3i{i, i, i} + offset + vec3i{1, 1, 1}) * mask;
+                return obj_vertex{vert.x, vert.y, vert.z};
+            };
+            for (auto& t : ist->shp->triangles)
+                fs << "f " << vert(t.x) << " " << vert(t.y) << " " << vert(t.z)
+                   << "\n";
+            for (auto& l : ist->shp->lines)
+                fs << "l " << vert(l.x) << " " << vert(l.y) << "\n";
             offset.x += ist->shp->pos.size();
             offset.y += ist->shp->texcoord.size();
             offset.z += ist->shp->norm.size();
         } else {
             if (ist->frame == identity_frame3f) {
-                for (auto& p : ist->sbd->pos)
-                    fprintf(f, "v %g %g %g\n", p.x, p.y, p.z);
-                for (auto& t : ist->sbd->texcoord)
-                    fprintf(f, "vt %g %g\n", t.x, t.y);
+                for (auto& p : ist->sbd->pos) fs << "v " << p << "\n";
+                for (auto& t : ist->sbd->texcoord) fs << "vt " << t << "\n";
             } else {
-                for (auto& p : ist->sbd->pos) {
-                    auto tp = transform_point(ist->frame, p);
-                    fprintf(f, "v %g %g %g\n", tp.x, tp.y, tp.z);
-                }
-                for (auto& t : ist->sbd->texcoord)
-                    fprintf(f, "vt %g %g\n", t.x, t.y);
+                for (auto& p : ist->sbd->pos)
+                    fs << "v " << transform_point(ist->frame, p) << "\n";
+                for (auto& t : ist->sbd->texcoord) fs << "vt " << t << "\n";
             }
             if (!ist->sbd->texcoord.empty()) {
+                auto vert = [offset](int ip, int it) {
+                    auto vert = (vec3i{ip, it, 0} + offset + vec3i{1, 1, 1}) *
+                                vec3i{1, 1, 0};
+                    return obj_vertex{vert.x, vert.y, vert.x};
+                };
                 for (auto i = 0; i < ist->sbd->quads_pos.size(); i++) {
                     auto qp = ist->sbd->quads_pos[i];
                     auto qt = ist->sbd->quads_texcoord[i];
                     if (qp.z == qp.w) {
-                        fprintf(f, "f %d/%d %d/%d %d/%d\n", qp.x + offset.x + 1,
-                            qt.x + offset.y + 1, qp.y + offset.x + 1,
-                            qt.y + offset.y + 1, qp.z + offset.x + 1,
-                            qt.z + offset.y + 1);
+                        fs << "f " << vert(qp.x, qt.x) << " "
+                           << vert(qp.y, qt.y) << " " << vert(qp.z, qt.z)
+                           << "\n";
                     } else {
-                        fprintf(f, "f %d/%d %d/%d %d/%d %d/%d\n",
-                            qp.x + offset.x + 1, qt.x + offset.y + 1,
-                            qp.y + offset.x + 1, qt.y + offset.y + 1,
-                            qp.z + offset.x + 1, qt.z + offset.y + 1,
-                            qp.w + offset.x + 1, qt.w + offset.y + 1);
+                        fs << "f " << vert(qp.x, qt.x) << " "
+                           << vert(qp.y, qt.y) << " " << vert(qp.z, qt.z) << " "
+                           << vert(qp.w, qt.w) << "\n";
                     }
                 }
             } else {
+                auto vert = [offset](int ip) {
+                    auto vert = (vec3i{ip, 0, 0} + offset) * vec3i{1, 0, 0};
+                    return obj_vertex{vert.x, vert.y, vert.x};
+                };
                 for (auto& q : ist->sbd->quads_pos) {
                     if (q.z == q.w) {
-                        fprintf(f, "f %d %d %d\n", q.x + offset.x + 1,
-                            q.y + offset.x + 1, q.z + offset.x + 1);
+                        fs << "f " << vert(q.x) << " " << vert(q.y) << " "
+                           << vert(q.z) << "\n";
                     } else {
-                        fprintf(f, "f %d %d %d %d\n", q.x + offset.x + 1,
-                            q.y + offset.x + 1, q.z + offset.x + 1,
-                            q.w + offset.x + 1);
+                        fs << "f " << vert(q.x) << " " << vert(q.y) << " "
+                           << vert(q.z) << " " << vert(q.w) << "\n";
                     }
                 }
             }
@@ -1945,50 +1939,43 @@ void save_obj_scene(const std::string& filename,
         }
     }
 
-    fclose(f);
+    fs.close();
 
     // save materials
     if (scn->materials.empty()) return;
 
     auto mtlname = replace_path_extension(filename, ".mtl");
-    f = fopen(mtlname.c_str(), "wt");
-    if (!f) throw std::runtime_error("cannot open filename " + mtlname);
+    fs = std::ofstream(mtlname);
+    if (!fs) throw std::runtime_error("cannot open filename " + mtlname);
 
     // for each material, dump all the values
     for (auto mat : scn->materials) {
-        fprintf(f, "newmtl %s\n", mat->name.c_str());
-        fprintf(f, "  illum %d\n", 2);
-        if (mat->ke != zero3f)
-            fprintf(f, "  Ke %g %g %g\n", mat->ke.x, mat->ke.y, mat->ke.z);
-        if (mat->kd != zero3f)
-            fprintf(f, "  Kd %g %g %g\n", mat->kd.x, mat->kd.y, mat->kd.z);
-        if (mat->ks != zero3f)
-            fprintf(f, "  Ks %g %g %g\n", mat->ks.x, mat->ks.y, mat->ks.z);
-        if (mat->kt != zero3f)
-            fprintf(f, "  Kt %g %g %g\n", mat->kt.x, mat->kt.y, mat->kt.z);
+        fs << "newmtl " << mat->name << "\n";
+        fs << "  illum 2\n";
+        if (mat->ke != zero3f) fs << "  Ke " << mat->ke << "\n";
+        if (mat->kd != zero3f) fs << "  Kd " << mat->kd << "\n";
+        if (mat->ks != zero3f) fs << "  Ks " << mat->ks << "\n";
+        if (mat->kt != zero3f) fs << "  Kt " << mat->kt << "\n";
         if (mat->rs != 1.0f)
-            fprintf(f, "  Ns %d\n",
-                (int)clamp(2 / pow(mat->rs + 1e-10f, 4.0f) - 2, 0.0f, 1.0e12f));
-        if (mat->op != 1.0f) fprintf(f, "  d %g\n", mat->op);
-        if (mat->rs != -1.0f) fprintf(f, "  Pr %g\n", mat->rs);
-        if (mat->ke_txt) fprintf(f, "  map_Ke %s\n", mat->ke_txt->path.c_str());
-        if (mat->kd_txt) fprintf(f, "  map_Kd %s\n", mat->kd_txt->path.c_str());
-        if (mat->ks_txt) fprintf(f, "  map_Ks %s\n", mat->ks_txt->path.c_str());
-        if (mat->kt_txt) fprintf(f, "  map_Kt %s\n", mat->kt_txt->path.c_str());
-        if (mat->op_txt) fprintf(f, "  map_d %s\n", mat->op_txt->path.c_str());
-        if (mat->rs_txt) fprintf(f, "  map_Pr %s\n", mat->rs_txt->path.c_str());
-        if (mat->occ_txt)
-            fprintf(f, "  map_occ %s\n", mat->occ_txt->path.c_str());
-        if (mat->bump_txt)
-            fprintf(f, "  map_bump %s\n", mat->bump_txt->path.c_str());
-        if (mat->disp_txt)
-            fprintf(f, "  map_disp %s\n", mat->disp_txt->path.c_str());
-        if (mat->norm_txt)
-            fprintf(f, "  map_norm %s\n", mat->norm_txt->path.c_str());
-        fprintf(f, "\n");
+            fs << "  Ns "
+               << (int)clamp(2 / pow(mat->rs + 1e-10f, 4.0f) - 2, 0.0f, 1.0e12f)
+               << "\n";
+        if (mat->op != 1.0f) fs << "  d " << mat->op << "\n";
+        if (mat->rs != -1.0f) fs << "  Pr " << mat->rs << "\n";
+        if (mat->ke_txt) fs << "  map_Ke " << mat->ke_txt->path << "\n";
+        if (mat->kd_txt) fs << "  map_Kd " << mat->kd_txt->path << "\n";
+        if (mat->ks_txt) fs << "  map_Ks " << mat->ks_txt->path << "\n";
+        if (mat->kt_txt) fs << "  map_Kt " << mat->kt_txt->path << "\n";
+        if (mat->op_txt) fs << "  map_d  " << mat->op_txt->path << "\n";
+        if (mat->rs_txt) fs << "  map_Pr " << mat->rs_txt->path << "\n";
+        if (mat->occ_txt) fs << "  map_occ " << mat->occ_txt->path << "\n";
+        if (mat->bump_txt) fs << "  map_bump " << mat->bump_txt->path << "\n";
+        if (mat->disp_txt) fs << "  map_disp " << mat->disp_txt->path << "\n";
+        if (mat->norm_txt) fs << "  map_norm " << mat->norm_txt->path << "\n";
+        fs << "\n";
     }
 
-    fclose(f);
+    fs.close();
 
     // skip textures if needed
     if (!save_textures) return;
@@ -2832,20 +2819,18 @@ void save_gltf_scene(const std::string& filename,
         if (shp->path == "") continue;
         auto filename = normalize_path(dirname + "/" + shp->path);
         filename = replace_path_extension(filename, ".bin");
-        for (auto& c : filename)
-            if (c == '\\') c = '/';
         try {
-            auto fs = fopen(filename.c_str(), "wb");
+            auto fs = std::ofstream(filename, std::ios::binary);
             if (!fs)
                 throw std::runtime_error("could not open file " + filename);
-            fwrite(shp->pos.data(), 3 * 4, shp->pos.size(), fs);
-            fwrite(shp->norm.data(), 3 * 4, shp->norm.size(), fs);
-            fwrite(shp->texcoord.data(), 2 * 4, shp->pos.size(), fs);
-            fwrite(shp->color.data(), 4 * 4, shp->color.size(), fs);
-            fwrite(shp->radius.data(), 4, shp->radius.size(), fs);
-            fwrite(shp->lines.data(), 2 * 4, shp->lines.size(), fs);
-            fwrite(shp->triangles.data(), 3 * 4, shp->triangles.size(), fs);
-            fclose(fs);
+            fs.write((char*)shp->pos.data(), 3 * 4 * shp->pos.size());
+            fs.write((char*)shp->norm.data(), 3 * 4* shp->norm.size());
+            fs.write((char*)shp->texcoord.data(), 2 * 4* shp->pos.size());
+            fs.write((char*)shp->color.data(), 4 * 4* shp->color.size());
+            fs.write((char*)shp->radius.data(), 1 * 4* shp->radius.size());
+            fs.write((char*)shp->lines.data(), 2 * 4* shp->lines.size());
+            fs.write((char*)shp->triangles.data(), 3 * 4* shp->triangles.size());
+            fs.close();
         } catch (std::exception&) {
             if (skip_missing) continue;
             throw;
@@ -2958,35 +2943,39 @@ void load_ply_mesh(const std::string& filename, std::vector<int>& points,
         std::vector<property> props;
     };
 
-    auto fs = fopen(filename.c_str(), "r");
+    auto fs = std::ifstream(filename);
     if (!fs) throw std::runtime_error("could not open file " + filename);
 
     // parse header
-    char line[4096];
     auto ascii = false;
     auto elems = std::vector<element>();
-    while (parse_getline(fs, line, sizeof(line))) {
-        auto ss = line;
-        auto cmd = parse_string(ss);
-        if (cmd.empty()) continue;
+    std::string line;
+    while (std::getline(fs, line)) {
+        auto ss = std::stringstream(line);
+        auto cmd = ""s;
+        ss >> cmd;
+        if (cmd == "") continue;
         if (cmd == "ply") {
         } else if (cmd == "comment") {
         } else if (cmd == "format") {
-            auto fmt = parse_string(ss);
+            auto fmt = ""s;
+            ss >> fmt;
             if (fmt != "ascii" && fmt != "binary_little_endian")
                 throw std::runtime_error("format not supported");
             ascii = fmt == "ascii";
         } else if (cmd == "element") {
             auto elem = element();
-            elem.name = parse_string(ss);
-            elem.count = parse_int(ss);
+            ss >> elem.name;
+            ss >> elem.count;
             elems.push_back(elem);
         } else if (cmd == "property") {
             auto prop = property();
-            auto type = parse_string(ss);
+            auto type = ""s;
+            ss >> type;
             if (type == "list") {
-                auto count_type = parse_string(ss);
-                auto elem_type = parse_string(ss);
+                auto count_type = ""s, elem_type = ""s;
+                ss >> count_type;
+                ss >> elem_type;
                 if (count_type != "uchar" && count_type != "uint8")
                     throw std::runtime_error("unsupported ply list type");
                 if (elem_type != "int")
@@ -3001,7 +2990,7 @@ void load_ply_mesh(const std::string& filename, std::vector<int>& points,
             } else {
                 throw std::runtime_error("unsupported ply type");
             }
-            prop.name = parse_string(ss);
+            ss >> prop.name;
             prop.scalars.resize(elems.back().count);
             if (prop.type == int_list_type)
                 prop.lists.resize(elems.back().count);
@@ -3016,28 +3005,51 @@ void load_ply_mesh(const std::string& filename, std::vector<int>& points,
     // parse content
     for (auto& elem : elems) {
         for (auto vid = 0; vid < elem.count; vid++) {
-            auto ss = (char*)nullptr;
+            auto ss = std::stringstream();
             if (ascii) {
-                if (!parse_getline(fs, line, sizeof(line)))
+                if (!std::getline(fs, line))
                     throw std::runtime_error("error reading ply");
-                ss = line;
+                ss = std::stringstream(line);
             }
             for (auto pid = 0; pid < elem.props.size(); pid++) {
                 auto& prop = elem.props[pid];
                 if (prop.type == float_type) {
-                    prop.scalars[vid] =
-                        (ascii) ? parse_float(ss) : read_float(fs);
+                    auto v = 0.0f;
+                    if (ascii)
+                        ss >> v;
+                    else
+                        fs.read((char*)&v, 4);
+                    prop.scalars[vid] = v;
                 } else if (prop.type == int_type) {
-                    prop.scalars[vid] = (ascii) ? parse_int(ss) : read_int(fs);
+                    auto v = 0;
+                    if (ascii)
+                        ss >> v;
+                    else
+                        fs.read((char*)&v, 4);
+                    prop.scalars[vid] = v;
                 } else if (prop.type == uchar_type) {
-                    prop.scalars[vid] = (ascii) ? parse_uchar(ss) / 255.0 :
-                                                  read_uchar(fs) / 255.0;
+                    auto vc = (unsigned char)0;
+                    if (ascii) {
+                        auto v = 0;
+                        ss >> v;
+                        vc = (unsigned char)v;
+                    } else
+                        fs.read((char*)&vc, 1);
+                    prop.scalars[vid] = vc / 255.0f;
                 } else if (prop.type == int_list_type) {
-                    prop.scalars[vid] =
-                        (ascii) ? parse_uchar(ss) : read_uchar(fs);
+                    auto vc = (unsigned char)0;
+                    if (ascii) {
+                        auto v = 0;
+                        ss >> v;
+                        vc = (unsigned char)v;
+                    } else
+                        fs.read((char*)&vc, 1);
+                    prop.scalars[vid] = vc;
                     for (auto i = 0; i < (int)prop.scalars[vid]; i++)
-                        prop.lists[vid][i] =
-                            (ascii) ? parse_int(ss) : read_int(fs);
+                        if (ascii)
+                            ss >> prop.lists[vid][i];
+                        else
+                            fs.read((char*)&prop.lists[vid][i], 4);
                 } else {
                     throw std::runtime_error("unsupported ply type");
                 }
@@ -3092,7 +3104,7 @@ void load_ply_mesh(const std::string& filename, std::vector<int>& points,
         }
     }
 
-    fclose(fs);
+    fs.close();
 }
 
 #else
@@ -3252,83 +3264,76 @@ void save_ply_mesh(const std::string& filename, const std::vector<int>& points,
     const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
     const std::vector<vec2f>& texcoord, const std::vector<vec4f>& color,
     const std::vector<float>& radius, bool ascii) {
-    auto f = fopen(filename.c_str(), "w");
-    if (!f) throw std::runtime_error("cannot save file " + filename);
+    auto fs = std::ofstream(filename);
+    if (!fs) throw std::runtime_error("cannot save file " + filename);
 
     // header
-    fprintf(f, "ply\n");
-    fprintf(f, "format %s 1.0\n", (ascii) ? "ascii" : "binary_little_endian");
-    fprintf(f, "element vertex %d\n", (int)pos.size());
+    fs << "ply\n";
+    if (ascii)
+        fs << "format ascii 1.0\n";
+    else
+        fs << "format binary_little_endian 1.0\n";
+    fs << "element vertex " << (int)pos.size() << "\n";
     if (!pos.empty())
-        fprintf(f, "property float x\nproperty float y\nproperty float z\n");
+        fs << "property float x\nproperty float y\nproperty float z\n";
     if (!norm.empty())
-        fprintf(f, "property float nx\nproperty float ny\nproperty float nz\n");
-    if (!texcoord.empty()) fprintf(f, "property float u\nproperty float v\n");
+        fs << "property float nx\nproperty float ny\nproperty float nz\n";
+    if (!texcoord.empty()) fs << "property float u\nproperty float v\n";
     if (!color.empty())
-        fprintf(f,
-            "property float red\nproperty float green\nproperty float "
-            "blue\nproperty float alpha\n");
-    if (!radius.empty()) fprintf(f, "property float radius\n");
+        fs << "property float red\nproperty float green\nproperty float "
+              "blue\nproperty float alpha\n";
+    if (!radius.empty()) fs << "property float radius\n";
     if (!triangles.empty()) {
-        fprintf(f, "element face %d\n", (int)triangles.size());
-        fprintf(f, "property list uchar int vertex_indices\n");
+        fs << "element face " << (int)triangles.size() << "\n";
+        fs << "property list uchar int vertex_indices\n";
     }
     if (!lines.empty()) {
-        fprintf(f, "element line %d\n", (int)triangles.size());
-        fprintf(f, "property list uchar int vertex_indices\n");
+        fs << "element line " << (int)lines.size() << "\n";
+        fs << "property list uchar int vertex_indices\n";
     }
-    fprintf(f, "end_header\n");
+    fs << "end_header\n";
 
     // body
     if (ascii) {
         // write vertex data
         for (auto i = 0; i < pos.size(); i++) {
-            if (!pos.empty())
-                fprintf(f, "%g %g %g ", pos[i].x, pos[i].y, pos[i].z);
-            if (!norm.empty())
-                fprintf(f, "%g %g %g ", norm[i].x, norm[i].y, norm[i].z);
-            if (!texcoord.empty())
-                fprintf(f, "%g %g ", texcoord[i].x, texcoord[i].y);
-            if (!color.empty())
-                fprintf(f, "%g %g %g %g ", color[i].x, color[i].y, color[i].z,
-                    color[i].w);
-            if (!radius.empty()) fprintf(f, "%g ", radius[i]);
-            fprintf(f, "\n");
+            if (!pos.empty()) fs << pos[i] << " ";
+            if (!norm.empty()) fs << norm[i] << " ";
+            if (!texcoord.empty()) fs << texcoord[i] << " ";
+            if (!color.empty()) fs << color[i] << " ";
+            if (!radius.empty()) fs << radius[i] << " ";
+            fs << "\n";
         }
 
         // write face data
-        for (auto i = 0; i < triangles.size(); i++) {
-            fprintf(f, "3 %d %d %d\n", triangles[i].x, triangles[i].y,
-                triangles[i].z);
-        }
-        for (auto i = 0; i < lines.size(); i++) {
-            fprintf(f, "2 %d %d\n", lines[i].x, lines[i].y);
-        }
+        for (auto i = 0; i < triangles.size(); i++)
+            fs << "3 " << triangles[i] << "\n";
+        for (auto i = 0; i < lines.size(); i++) fs << "2 " << lines[i] << "\n";
     } else {
         // write vertex data
         for (auto i = 0; i < pos.size(); i++) {
-            if (!pos.empty()) fwrite(&pos[i], 4, 3, f);
-            if (!norm.empty()) fwrite(&norm[i], 4, 3, f);
-            if (!texcoord.empty()) fwrite(&texcoord[i], 4, 2, f);
-            if (!color.empty()) fwrite(&color[i], 4, 4, f);
-            if (!radius.empty()) fwrite(&radius[i], 4, 1, f);
+            if (!pos.empty()) fs.write((char*)&pos[i], 4 * 3);
+            if (!norm.empty()) fs.write((char*)&norm[i], 4 * 3);
+            if (!texcoord.empty()) fs.write((char*)&texcoord[i], 4 * 2);
+            if (!color.empty()) fs.write((char*)&color[i], 4 * 4);
+            if (!radius.empty()) fs.write((char*)&radius[i], 4 * 1);
         }
 
         // write face data
         for (auto i = 0; i < triangles.size(); i++) {
             auto n = (byte)3;
-            fwrite(&n, 1, 1, f);
-            fwrite(&triangles[i], 4, 3, f);
+            fs.write((char*)&n, 1);
+            fs.write((char*)&triangles[i], 4 * 3);
         }
         for (auto i = 0; i < lines.size(); i++) {
             auto n = (byte)3;
-            fwrite(&n, 1, 1, f);
-            fwrite(&lines[i], 4, 2, f);
+            fs.write((char*)&n, 1);
+            fs.write((char*)&lines[i], 4 * 2);
         }
     }
 
     // done
-    fclose(f);
+    fs.close();
 }
 
 // Load ply mesh
@@ -3337,7 +3342,7 @@ void load_obj_mesh(const std::string& filename, std::vector<int>& points,
     std::vector<vec3f>& pos, std::vector<vec3f>& norm,
     std::vector<vec2f>& texcoord, bool flip_texcoord) {
     // open file
-    auto fs = fopen(filename.c_str(), "rt");
+    auto fs = std::ifstream(filename);
     if (!fs) throw std::runtime_error("cannot open filename " + filename);
 
     pos.clear();
@@ -3350,24 +3355,29 @@ void load_obj_mesh(const std::string& filename, std::vector<int>& points,
     auto vert_map = std::unordered_map<vec3i, int>();
 
     // read the file line by line
-    char line[4096];
-    while (parse_getline(fs, line, sizeof(line))) {
+    std::string line;
+    while (std::getline(fs, line)) {
+        // remove comment
+        if (line.find("#") != line.npos) line = line.substr(0, line.find("#"));
+
         // prepare to parse
-        auto ss = line;
-        parse_skipws(ss);
-        parse_remove_comment(ss, '#');
+        auto ss = std::stringstream(line);
 
         // get command
-        auto cmd = parse_string(ss);
+        auto cmd = ""s;
+        ss >> cmd;
         if (cmd == "") continue;
 
         // possible token values
         if (cmd == "v") {
-            pos.push_back(parse_vec3f(ss));
+            pos.push_back({});
+            ss >> pos.back();
         } else if (cmd == "vn") {
-            norm.push_back(parse_vec3f(ss));
+            norm.push_back({});
+            ss >> norm.back();
         } else if (cmd == "vt") {
-            texcoord.push_back(parse_vec2f(ss));
+            texcoord.push_back({});
+            ss >> texcoord.back();
             if (flip_texcoord) texcoord.back().y = 1 - texcoord.back().y;
         } else if (cmd == "f" || cmd == "l" || cmd == "p") {
             auto num = 0;
@@ -3376,10 +3386,22 @@ void load_obj_mesh(const std::string& filename, std::vector<int>& points,
             auto vert_size =
                 vec3i{(int)pos.size(), (int)texcoord.size(), (int)norm.size()};
             // elem.material = (int)oobj->materials.size() - 1;
-            parse_skipws(ss);
-            while (*ss) {
-                verts[num++] = parse_objvert(ss, vert_size);
-                parse_skipws(ss);
+            while (true) {
+                auto vert = obj_vertex();
+                ss >> vert;
+                if (!vert.pos) break;
+                verts[num] = {-1, -1, -1};
+                if (vert.pos)
+                    verts[num].x = (vert.pos < 0) ? (vert_size.x + vert.pos) :
+                                                    (vert.pos - 1);
+                if (vert.texcoord)
+                    verts[num].y = (vert.texcoord < 0) ?
+                                       (vert_size.y + vert.texcoord) :
+                                       (vert.texcoord - 1);
+                if (vert.norm)
+                    verts[num].z = (vert.norm < 0) ? (vert_size.z + vert.norm) :
+                                                     (vert.norm - 1);
+                num++;
             }
             for (auto i = 0; i < num; i++) {
                 auto it = vert_map.find(verts[i]);
@@ -3390,7 +3412,7 @@ void load_obj_mesh(const std::string& filename, std::vector<int>& points,
                     if (verts[i].x >= 0) pos.push_back(pos.at(verts[i].x));
                     if (verts[i].y >= 0)
                         texcoord.push_back(texcoord.at(verts[i].y));
-                    if (verts[i].z >= 0) norm.push_back(norm.at(verts[i].z));
+                    if (verts[i].x >= 0) norm.push_back(norm.at(verts[i].z));
                 } else {
                     vids[i] = it->second;
                 }
@@ -3410,7 +3432,7 @@ void load_obj_mesh(const std::string& filename, std::vector<int>& points,
     }
 
     // close file
-    fclose(fs);
+    fs.close();
 }
 
 // Load ply mesh
@@ -3418,43 +3440,24 @@ void save_obj_mesh(const std::string& filename, const std::vector<int>& points,
     const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
     const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
     const std::vector<vec2f>& texcoord, bool flip_texcoord) {
-    auto f = fopen(filename.c_str(), "wt");
-    if (!f) throw std::runtime_error("cannot save file " + filename);
-    for (auto& p : pos) fprintf(f, "v %g %g %g\n", p.x, p.y, p.z);
-    for (auto& n : norm) fprintf(f, "vn %g %g %g\n", n.x, n.y, n.z);
+    auto fs = std::ofstream(filename);
+    if (!fs) throw std::runtime_error("cannot save file " + filename);
+    for (auto& p : pos) fs << "v " << p << "\n";
+    for (auto& n : norm) fs << "vn " << n << "\n";
     if (flip_texcoord)
-        for (auto& t : texcoord) fprintf(f, "vt %g %g\n", t.x, 1 - t.y);
+        for (auto& t : texcoord) fs << "vt " << vec2f{t.x, 1 - t.y} << "\n";
     else
-        for (auto& t : texcoord) fprintf(f, "vt %g %g\n", t.x, t.y);
-    if (!texcoord.empty() && !norm.empty()) {
-        for (auto& t : triangles)
-            fprintf(f, "f %d/%d/%d %d/%d/%d %d/%d/%d\n", t.x + 1, t.x + 1,
-                t.x + 1, t.y + 1, t.y + 1, t.y + 1, t.z + 1, t.z + 1, t.z + 1);
-        for (auto& l : lines)
-            fprintf(f, "l %d/%d/%d %d/%d/%d\n", l.x + 1, l.x + 1, l.x + 1,
-                l.y + 1, l.y + 1, l.y + 1);
-        for (auto& p : points) fprintf(f, "p %d/%d/%d\n", p + 1, p + 1, p + 1);
-    } else if (!texcoord.empty() && norm.empty()) {
-        for (auto& t : triangles)
-            fprintf(f, "f %d/%d %d/%d %d/%d\n", t.x + 1, t.x + 1, t.y + 1,
-                t.y + 1, t.z + 1, t.z + 1);
-        for (auto& l : lines)
-            fprintf(f, "l %d/%d %d/%d\n", l.x + 1, l.x + 1, l.y + 1, l.y + 1);
-        for (auto& p : points) fprintf(f, "p %d/%d\n", p + 1, p + 1);
-    } else if (texcoord.empty() && !norm.empty()) {
-        for (auto& t : triangles)
-            fprintf(f, "f %d//%d %d//%d %d//%d\n", t.x + 1, t.x + 1, t.y + 1,
-                t.y + 1, t.z + 1, t.z + 1);
-        for (auto& l : lines)
-            fprintf(f, "l %d//%d %d//%d\n", l.x + 1, l.x + 1, l.y + 1, l.y + 1);
-        for (auto& p : points) fprintf(f, "l %d//%d\n", p + 1, p + 1);
-    } else {
-        for (auto& t : triangles)
-            fprintf(f, "f %d %d %d\n", t.x + 1, t.y + 1, t.z + 1);
-        for (auto& l : lines) fprintf(f, "l %d %d\n", l.x + 1, l.y + 1);
-        for (auto& p : points) fprintf(f, "p %d\n", p);
-    }
-    fclose(f);
+        for (auto& t : texcoord) fs << "vt " << t << "\n";
+    auto mask = vec3i{1, texcoord.empty() ? 0 : 1, norm.empty() ? 0 : 1};
+    auto vert = [mask](int i) {
+        auto vert = (vec3i{i, i, i} + vec3i{1, 1, 1}) * mask;
+        return obj_vertex{vert.x, vert.y, vert.z};
+    };
+    for (auto& t : triangles)
+        fs << "f " << vert(t.x) << " " << vert(t.y) << " " << vert(t.z) << "\n";
+    for (auto& l : lines) fs << "l " << vert(l.x) << " " << vert(l.y) << "\n";
+    for (auto& p : points) fs << "p " << vert(p) << "\n";
+    fs.close();
 }
 
 }  // namespace ygl
