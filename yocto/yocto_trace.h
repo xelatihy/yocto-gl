@@ -149,27 +149,28 @@ namespace ygl {
 float specular_exponent_to_roughness(float n);
 
 // Specular to fresnel eta.
-void specular_fresnel_from_ks(vec3f ks, vec3f& es, vec3f& esk);
-float specular_to_eta(vec3f ks);
+void specular_fresnel_from_ks(const vec3f& ks, vec3f& es, vec3f& esk);
+float specular_to_eta(const vec3f& ks);
 // Compute the fresnel term for dielectrics.
-vec3f fresnel_dielectric(float cosw, vec3f eta_);
+vec3f fresnel_dielectric(float cosw, const vec3f& eta_);
 // Compute the fresnel term for metals.
-vec3f fresnel_metal(float cosw, vec3f eta, vec3f etak);
+vec3f fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak);
 // Schlick approximation of Fresnel term, optionally weighted by rs;
-vec3f fresnel_schlick(vec3f ks, float cosw);
-vec3f fresnel_schlick(vec3f ks, float cosw, float rs);
-vec3f fresnel_schlick(vec3f ks, vec3f h, vec3f o);
-vec3f fresnel_schlick(vec3f ks, vec3f h, vec3f o, float rs);
+vec3f fresnel_schlick(const vec3f& ks, float cosw);
+vec3f fresnel_schlick(const vec3f& ks, float cosw, float rs);
+vec3f fresnel_schlick(const vec3f& ks, const vec3f& h, const vec3f& o);
+vec3f fresnel_schlick(
+    const vec3f& ks, const vec3f& h, const vec3f& o, float rs);
 
 // Evaluates the GGX distribution and geometric term.
 float eval_ggx(float rs, float ndh, float ndi, float ndo);
 // Sample the GGX distribution.
-vec3f sample_ggx(float rs, vec2f rn);
+vec3f sample_ggx(float rs, const vec2f& rn);
 float sample_ggx_pdf(float rs, float ndh);
 
 // Evaluates the GGX distribution and geometric term.
-float eval_ggx_dist(float rs, vec3f n, vec3f h);
-float eval_ggx_sm(float rs, vec3f n, vec3f o, vec3f i);
+float eval_ggx_dist(float rs, const vec3f& n, const vec3f& h);
+float eval_ggx_sm(float rs, const vec3f& n, const vec3f& o, const vec3f& i);
 
 }  // namespace ygl
 

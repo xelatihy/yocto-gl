@@ -356,42 +356,44 @@ scene_intersection intersect_ray(
     const std::shared_ptr<scene>& scn, const ray3f& ray, bool find_any = false);
 
 // Shape values interpolated using barycentric coordinates.
-vec3f eval_pos(const std::shared_ptr<shape>& shp, int ei, vec2f uv);
-vec3f eval_norm(const std::shared_ptr<shape>& shp, int ei, vec2f uv);
-vec2f eval_texcoord(const std::shared_ptr<shape>& shp, int ei, vec2f uv);
-vec4f eval_color(const std::shared_ptr<shape>& shp, int ei, vec2f uv);
-float eval_radius(const std::shared_ptr<shape>& shp, int ei, vec2f uv);
-vec4f eval_tangsp(const std::shared_ptr<shape>& shp, int ei, vec2f uv);
-vec3f eval_tangsp(
-    const std::shared_ptr<shape>& shp, int ei, vec2f uv, bool& left_handed);
+vec3f eval_pos(const std::shared_ptr<shape>& shp, int ei, const vec2f& uv);
+vec3f eval_norm(const std::shared_ptr<shape>& shp, int ei, const vec2f& uv);
+vec2f eval_texcoord(const std::shared_ptr<shape>& shp, int ei, const vec2f& uv);
+vec4f eval_color(const std::shared_ptr<shape>& shp, int ei, const vec2f& uv);
+float eval_radius(const std::shared_ptr<shape>& shp, int ei, const vec2f& uv);
+vec4f eval_tangsp(const std::shared_ptr<shape>& shp, int ei, const vec2f& uv);
+vec3f eval_tangsp(const std::shared_ptr<shape>& shp, int ei, const vec2f& uv,
+    bool& left_handed);
 // Shape element values.
 vec3f eval_elem_norm(const std::shared_ptr<shape>& shp, int ei);
 vec4f eval_elem_tangsp(const std::shared_ptr<shape>& shp, int ei);
 
 // Instance values interpolated using barycentric coordinates.
 // Handles defaults if data is missing.
-vec3f eval_pos(const std::shared_ptr<instance>& ist, int ei, vec2f uv);
-vec3f eval_norm(const std::shared_ptr<instance>& ist, int ei, vec2f uv);
-vec2f eval_texcoord(const std::shared_ptr<instance>& ist, int ei, vec2f uv);
-vec4f eval_color(const std::shared_ptr<instance>& ist, int ei, vec2f uv);
-float eval_radius(const std::shared_ptr<instance>& ist, int ei, vec2f uv);
-vec3f eval_tangsp(
-    const std::shared_ptr<instance>& ist, int ei, vec2f uv, bool& left_handed);
+vec3f eval_pos(const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
+vec3f eval_norm(const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
+vec2f eval_texcoord(
+    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
+vec4f eval_color(const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
+float eval_radius(
+    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
+vec3f eval_tangsp(const std::shared_ptr<instance>& ist, int ei, const vec2f& uv,
+    bool& left_handed);
 // Instance element values.
 vec3f eval_elem_norm(const std::shared_ptr<instance>& ist, int ei);
 // Shading normals including material perturbations.
 vec3f eval_shading_norm(
-    const std::shared_ptr<instance>& ist, int ei, vec2f uv, vec3f o);
+    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv, vec3f o);
 
 // Environment texture coordinates from the incoming direction.
 vec2f eval_texcoord(const std::shared_ptr<environment>& env, vec3f i);
 // Evaluate the incoming direction from the uv.
-vec3f eval_direction(const std::shared_ptr<environment>& env, vec2f uv);
+vec3f eval_direction(const std::shared_ptr<environment>& env, const vec2f& uv);
 // Evaluate the environment emission.
 vec3f eval_environment(const std::shared_ptr<environment>& env, vec3f i);
 
 // Evaluate a texture.
-vec4f eval_texture(const std::shared_ptr<texture>& info, vec2f texcoord);
+vec4f eval_texture(const std::shared_ptr<texture>& info, const vec2f& texcoord);
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
 float eval_camera_fovy(const std::shared_ptr<camera>& cam);
@@ -401,21 +403,28 @@ void set_camera_fovy(const std::shared_ptr<camera>& cam, float fovy,
 
 // Generates a ray from a camera image coordinate `uv` and lens coordinates
 // `luv`.
-ray3f eval_camera_ray(const std::shared_ptr<camera>& cam, vec2f uv, vec2f luv);
+ray3f eval_camera_ray(
+    const std::shared_ptr<camera>& cam, const vec2f& uv, const vec2f& luv);
 // Generates a ray from a camera for pixel coordinates `ij`, the resolution
 // `res`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and
 // the image resolution `res`.
-ray3f eval_camera_ray(const std::shared_ptr<camera>& cam, vec2i ij,
-    vec2i imsize, vec2f puv, vec2f luv);
+ray3f eval_camera_ray(const std::shared_ptr<camera>& cam, const vec2i& ij,
+    const vec2i& imsize, const vec2f& puv, const vec2f& luv);
 
 // Evaluates material parameters: emission, diffuse, specular, transmission,
 // roughness and opacity.
-vec3f eval_emission(const std::shared_ptr<instance>& ist, int ei, vec2f uv);
-vec3f eval_diffuse(const std::shared_ptr<instance>& ist, int ei, vec2f uv);
-vec3f eval_specular(const std::shared_ptr<instance>& ist, int ei, vec2f uv);
-vec3f eval_transmission(const std::shared_ptr<instance>& ist, int ei, vec2f uv);
-float eval_roughness(const std::shared_ptr<instance>& ist, int ei, vec2f uv);
-float eval_opacity(const std::shared_ptr<instance>& ist, int ei, vec2f uv);
+vec3f eval_emission(
+    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
+vec3f eval_diffuse(
+    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
+vec3f eval_specular(
+    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
+vec3f eval_transmission(
+    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
+float eval_roughness(
+    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
+float eval_opacity(
+    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
 
 // Material values packed into a convenience structure.
 struct bsdf {
@@ -425,15 +434,16 @@ struct bsdf {
     float rs = 1;          // roughness
     bool refract = false;  // whether to use refraction in transmission
 };
-bsdf eval_bsdf(const std::shared_ptr<instance>& ist, int ei, vec2f uv);
+bsdf eval_bsdf(const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
 bool is_delta_bsdf(const bsdf& f);
 
 // Sample a shape based on a distribution.
 std::pair<int, vec2f> sample_shape(
-    const std::shared_ptr<shape>& shp, float re, vec2f ruv);
+    const std::shared_ptr<shape>& shp, float re, const vec2f& ruv);
 
 // Sample an environment uniformly.
-vec2f sample_environment(const std::shared_ptr<environment>& env, vec2f ruv);
+vec2f sample_environment(
+    const std::shared_ptr<environment>& env, const vec2f& ruv);
 
 }  // namespace ygl
 

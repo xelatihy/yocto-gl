@@ -443,7 +443,7 @@ vec4f eval_elem_tangsp(const std::shared_ptr<shape>& shp, int ei) {
 // Shape value interpolated using barycentric coordinates
 template <typename T>
 T eval_elem(const std::shared_ptr<shape>& shp, const std::vector<T>& vals,
-    int ei, vec2f uv) {
+    int ei, const vec2f& uv) {
     if (vals.empty()) return {};
     if (!shp->triangles.empty()) {
         return interpolate_triangle(vals, shp->triangles[ei], uv);
@@ -459,31 +459,32 @@ T eval_elem(const std::shared_ptr<shape>& shp, const std::vector<T>& vals,
 }
 
 // Shape values interpolated using barycentric coordinates
-vec3f eval_pos(const std::shared_ptr<shape>& shp, int ei, vec2f uv) {
+vec3f eval_pos(const std::shared_ptr<shape>& shp, int ei, const vec2f& uv) {
     return eval_elem(shp, shp->pos, ei, uv);
 }
-vec3f eval_norm(const std::shared_ptr<shape>& shp, int ei, vec2f uv) {
+vec3f eval_norm(const std::shared_ptr<shape>& shp, int ei, const vec2f& uv) {
     if (shp->norm.empty()) return eval_elem_norm(shp, ei);
     return normalize(eval_elem(shp, shp->norm, ei, uv));
 }
-vec2f eval_texcoord(const std::shared_ptr<shape>& shp, int ei, vec2f uv) {
+vec2f eval_texcoord(
+    const std::shared_ptr<shape>& shp, int ei, const vec2f& uv) {
     if (shp->texcoord.empty()) return uv;
     return eval_elem(shp, shp->texcoord, ei, uv);
 }
-vec4f eval_color(const std::shared_ptr<shape>& shp, int ei, vec2f uv) {
+vec4f eval_color(const std::shared_ptr<shape>& shp, int ei, const vec2f& uv) {
     if (shp->color.empty()) return {1, 1, 1, 1};
     return eval_elem(shp, shp->color, ei, uv);
 }
-float eval_radius(const std::shared_ptr<shape>& shp, int ei, vec2f uv) {
+float eval_radius(const std::shared_ptr<shape>& shp, int ei, const vec2f& uv) {
     if (shp->radius.empty()) return 0.001f;
     return eval_elem(shp, shp->radius, ei, uv);
 }
-vec4f eval_tangsp(const std::shared_ptr<shape>& shp, int ei, vec2f uv) {
+vec4f eval_tangsp(const std::shared_ptr<shape>& shp, int ei, const vec2f& uv) {
     if (shp->tangsp.empty()) return eval_elem_tangsp(shp, ei);
     return eval_elem(shp, shp->tangsp, ei, uv);
 }
-vec3f eval_tangsp(
-    const std::shared_ptr<shape>& shp, int ei, vec2f uv, bool& left_handed) {
+vec3f eval_tangsp(const std::shared_ptr<shape>& shp, int ei, const vec2f& uv,
+    bool& left_handed) {
     auto tangsp = (shp->tangsp.empty()) ? eval_elem_tangsp(shp, ei) :
                                           eval_elem(shp, shp->tangsp, ei, uv);
     left_handed = tangsp.w < 0;
@@ -491,23 +492,26 @@ vec3f eval_tangsp(
 }
 
 // Instance values interpolated using barycentric coordinates.
-vec3f eval_pos(const std::shared_ptr<instance>& ist, int ei, vec2f uv) {
+vec3f eval_pos(const std::shared_ptr<instance>& ist, int ei, const vec2f& uv) {
     return transform_point(ist->frame, eval_pos(ist->shp, ei, uv));
 }
-vec3f eval_norm(const std::shared_ptr<instance>& ist, int ei, vec2f uv) {
+vec3f eval_norm(const std::shared_ptr<instance>& ist, int ei, const vec2f& uv) {
     return transform_direction(ist->frame, eval_norm(ist->shp, ei, uv));
 }
-vec2f eval_texcoord(const std::shared_ptr<instance>& ist, int ei, vec2f uv) {
+vec2f eval_texcoord(
+    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv) {
     return eval_texcoord(ist->shp, ei, uv);
 }
-vec4f eval_color(const std::shared_ptr<instance>& ist, int ei, vec2f uv) {
+vec4f eval_color(
+    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv) {
     return eval_color(ist->shp, ei, uv);
 }
-float eval_radius(const std::shared_ptr<instance>& ist, int ei, vec2f uv) {
+float eval_radius(
+    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv) {
     return eval_radius(ist->shp, ei, uv);
 }
-vec3f eval_tangsp(
-    const std::shared_ptr<instance>& ist, int ei, vec2f uv, bool& left_handed) {
+vec3f eval_tangsp(const std::shared_ptr<instance>& ist, int ei, const vec2f& uv,
+    bool& left_handed) {
     return transform_direction(
         ist->frame, eval_tangsp(ist->shp, ei, uv, left_handed));
 }
@@ -517,7 +521,7 @@ vec3f eval_elem_norm(const std::shared_ptr<instance>& ist, int ei) {
 }
 // Shading normals including material perturbations.
 vec3f eval_shading_norm(
-    const std::shared_ptr<instance>& ist, int ei, vec2f uv, vec3f o) {
+    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv, vec3f o) {
     if (!ist->shp->triangles.empty()) {
         auto n = eval_norm(ist, ei, uv);
         if (ist->mat && ist->mat->norm_txt) {
@@ -548,7 +552,7 @@ vec2f eval_texcoord(const std::shared_ptr<environment>& env, vec3f w) {
     return uv;
 }
 // Evaluate the environment direction.
-vec3f eval_direction(const std::shared_ptr<environment>& env, vec2f uv) {
+vec3f eval_direction(const std::shared_ptr<environment>& env, const vec2f& uv) {
     return transform_direction(
         env->frame, {cos(uv.x * 2 * pi) * sin(uv.y * pi), cos(uv.y * pi),
                         sin(uv.x * 2 * pi) * sin(uv.y * pi)});
@@ -563,7 +567,7 @@ vec3f eval_environment(const std::shared_ptr<environment>& env, vec3f w) {
 }
 
 // Evaluate a texture
-vec4f eval_texture(const std::shared_ptr<texture>& txt, vec2f texcoord) {
+vec4f eval_texture(const std::shared_ptr<texture>& txt, const vec2f& texcoord) {
     if (!txt || txt->img.pxl.empty()) return {1, 1, 1, 1};
 
     // get image width/height
@@ -606,7 +610,8 @@ void set_camera_fovy(
 
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
-ray3f eval_camera_ray(const std::shared_ptr<camera>& cam, vec2f uv, vec2f luv) {
+ray3f eval_camera_ray(
+    const std::shared_ptr<camera>& cam, const vec2f& uv, const vec2f& luv) {
     auto dist = cam->focal;
     if (cam->focus < flt_max) {
         dist = cam->focal * cam->focus / (cam->focus - cam->focal);
@@ -625,19 +630,21 @@ ray3f eval_camera_ray(const std::shared_ptr<camera>& cam, vec2f uv, vec2f luv) {
 // Generates a ray from a camera for pixel coordinates `ij`, the
 // resolution `res`, the sub-pixel coordinates `puv` and the lens
 // coordinates `luv` and the image resolution `res`.
-ray3f eval_camera_ray(const std::shared_ptr<camera>& cam, vec2i ij,
-    vec2i imsize, vec2f puv, vec2f luv) {
+ray3f eval_camera_ray(const std::shared_ptr<camera>& cam, const vec2i& ij,
+    const vec2i& imsize, const vec2f& puv, const vec2f& luv) {
     auto uv = vec2f{(ij.x + puv.x) / imsize.x, (ij.y + puv.y) / imsize.y};
     return eval_camera_ray(cam, uv, luv);
 }
 
 // Evaluates material parameters.
-vec3f eval_emission(const std::shared_ptr<instance>& ist, int ei, vec2f uv) {
+vec3f eval_emission(
+    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv) {
     if (!ist || !ist->mat) return zero3f;
     return ist->mat->ke * xyz(eval_color(ist, ei, uv)) *
            xyz(eval_texture(ist->mat->ke_txt, eval_texcoord(ist, ei, uv)));
 }
-vec3f eval_diffuse(const std::shared_ptr<instance>& ist, int ei, vec2f uv) {
+vec3f eval_diffuse(
+    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv) {
     if (!ist || !ist->mat) return zero3f;
     if (!ist->mat->base_metallic) {
         return ist->mat->kd * xyz(eval_color(ist, ei, uv)) *
@@ -651,7 +658,8 @@ vec3f eval_diffuse(const std::shared_ptr<instance>& ist, int ei, vec2f uv) {
         return kb * (1 - km);
     }
 }
-vec3f eval_specular(const std::shared_ptr<instance>& ist, int ei, vec2f uv) {
+vec3f eval_specular(
+    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv) {
     if (!ist || !ist->mat) return zero3f;
     if (!ist->mat->base_metallic) {
         return ist->mat->ks * xyz(eval_color(ist, ei, uv)) *
@@ -665,7 +673,8 @@ vec3f eval_specular(const std::shared_ptr<instance>& ist, int ei, vec2f uv) {
         return kb * km + vec3f{0.04f, 0.04f, 0.04f} * (1 - km);
     }
 }
-float eval_roughness(const std::shared_ptr<instance>& ist, int ei, vec2f uv) {
+float eval_roughness(
+    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv) {
     if (!ist || !ist->mat) return 1;
     if (!ist->mat->base_metallic) {
         if (!ist->mat->gltf_textures) {
@@ -687,12 +696,13 @@ float eval_roughness(const std::shared_ptr<instance>& ist, int ei, vec2f uv) {
     }
 }
 vec3f eval_transmission(
-    const std::shared_ptr<instance>& ist, int ei, vec2f uv) {
+    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv) {
     if (!ist || !ist->mat) return zero3f;
     return ist->mat->kt * xyz(eval_color(ist, ei, uv)) *
            xyz(eval_texture(ist->mat->kt_txt, eval_texcoord(ist, ei, uv)));
 }
-float eval_opacity(const std::shared_ptr<instance>& ist, int ei, vec2f uv) {
+float eval_opacity(
+    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv) {
     if (!ist || !ist->mat) return 1;
     return ist->mat->op * eval_color(ist->shp, ei, uv).w *
            eval_texture(ist->mat->kd_txt, eval_texcoord(ist, ei, uv)).w *
@@ -700,7 +710,7 @@ float eval_opacity(const std::shared_ptr<instance>& ist, int ei, vec2f uv) {
 }
 
 // Evaluates the bsdf at a location.
-bsdf eval_bsdf(const std::shared_ptr<instance>& ist, int ei, vec2f uv) {
+bsdf eval_bsdf(const std::shared_ptr<instance>& ist, int ei, const vec2f& uv) {
     auto f = bsdf();
     f.kd = eval_diffuse(ist, ei, uv);
     f.ks = eval_specular(ist, ei, uv);
@@ -717,7 +727,7 @@ bool is_delta_bsdf(const bsdf& f) { return f.rs == 0 && f.kd == zero3f; }
 
 // Sample a shape based on a distribution.
 std::pair<int, vec2f> sample_shape(
-    const std::shared_ptr<shape>& shp, float re, vec2f ruv) {
+    const std::shared_ptr<shape>& shp, float re, const vec2f& ruv) {
     // TODO: implement sampling without cdf
     if (shp->elem_cdf.empty()) return {};
     if (!shp->triangles.empty()) {
