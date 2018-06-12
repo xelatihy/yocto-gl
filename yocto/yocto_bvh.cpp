@@ -36,7 +36,8 @@
 namespace ygl {
 
 // Intersect a ray with a point (approximate)
-bool intersect_point(const ray3f& ray, vec3f p, float r, float& dist) {
+bool intersect_point(
+    const ray3f& ray, vec3f p, float r, float& dist, vec2f& uv) {
     // find parameter for line-point minimum distance
     auto w = p - ray.o;
     auto t = dot(w, ray.d) / dot(ray.d, ray.d);
@@ -51,6 +52,7 @@ bool intersect_point(const ray3f& ray, vec3f p, float r, float& dist) {
 
     // intersection occurred: set params and exit
     dist = t;
+    uv = {0, 0};
 
     return true;
 }
@@ -207,10 +209,12 @@ bool intersect_bbox(
 namespace ygl {
 
 // TODO: documentation
-bool overlap_point(vec3f pos, float dist_max, vec3f p, float r, float& dist) {
+bool overlap_point(
+    vec3f pos, float dist_max, vec3f p, float r, float& dist, vec2f& uv) {
     auto d2 = dot(pos - p, pos - p);
     if (d2 > (dist_max + r) * (dist_max + r)) return false;
     dist = sqrt(d2);
+    uv = {0, 0};
     return true;
 }
 
@@ -491,7 +495,12 @@ void build_bvh(std::shared_ptr<bvh_tree> bvh, bool equal_size) {
     // get the number of primitives and the primitive type
     auto prims = std::vector<bvh_prim>();
     auto type = bvh_node_type::internal;
-    if (!bvh->lines.empty()) {
+    if (!bvh->points.empty()) {
+        for (auto& p : bvh->points) {
+            prims.push_back({point_bbox(bvh->pos[p], bvh->radius[p])});
+        }
+        type = bvh_node_type::point;
+    } else if (!bvh->lines.empty()) {
         for (auto& l : bvh->lines) {
             prims.push_back({line_bbox(bvh->pos[l.x], bvh->pos[l.y],
                 bvh->radius[l.x], bvh->radius[l.y])});
@@ -553,6 +562,12 @@ void refit_bvh(std::shared_ptr<bvh_tree> bvh, int nodeid) {
                 auto& l = bvh->lines[node.prims[i]];
                 node.bbox += line_bbox(bvh->pos[l.x], bvh->pos[l.y],
                     bvh->radius[l.x], bvh->radius[l.y]);
+            }
+        } break;
+        case bvh_node_type::point: {
+            for (auto i = 0; i < node.count; i++) {
+                auto& p = bvh->points[node.prims[i]];
+                node.bbox += point_bbox(bvh->pos[p], bvh->radius[p]);
             }
         } break;
         case bvh_node_type::vertex: {
@@ -637,15 +652,25 @@ bool intersect_bvh(const std::shared_ptr<bvh_tree> bvh, const ray3f& ray_,
                     }
                 }
             } break;
+            case bvh_node_type::point: {
+                for (auto i = 0; i < node.count; i++) {
+                    auto& p = bvh->points[node.prims[i]];
+                    if (intersect_point(
+                            ray, bvh->pos[p], bvh->radius[p], dist, uv)) {
+                        hit = true;
+                        ray.tmax = dist;
+                        eid = node.prims[i];
+                    }
+                }
+            } break;
             case bvh_node_type::vertex: {
                 for (auto i = 0; i < node.count; i++) {
                     auto idx = node.prims[i];
                     if (intersect_point(
-                            ray, bvh->pos[idx], bvh->radius[idx], dist)) {
+                            ray, bvh->pos[idx], bvh->radius[idx], dist, uv)) {
                         hit = true;
                         ray.tmax = dist;
                         eid = node.prims[i];
-                        uv = {1, 0};
                     }
                 }
             } break;
@@ -721,15 +746,25 @@ bool overlap_bvh(const std::shared_ptr<bvh_tree> bvh, vec3f pos, float max_dist,
                     }
                 }
             } break;
+            case bvh_node_type::point: {
+                for (auto i = 0; i < node.count; i++) {
+                    auto& p = bvh->points[node.prims[i]];
+                    if (overlap_point(pos, max_dist, bvh->pos[p],
+                            bvh->radius[p], dist, uv)) {
+                        hit = true;
+                        max_dist = dist;
+                        eid = node.prims[i];
+                    }
+                }
+            } break;
             case bvh_node_type::vertex: {
                 for (auto i = 0; i < node.count; i++) {
                     auto idx = node.prims[i];
                     if (overlap_point(pos, max_dist, bvh->pos[idx],
-                            bvh->radius[idx], dist)) {
+                            bvh->radius[idx], dist, uv)) {
                         hit = true;
                         max_dist = dist;
                         eid = node.prims[i];
-                        uv = {1, 0};
                     }
                 }
             } break;

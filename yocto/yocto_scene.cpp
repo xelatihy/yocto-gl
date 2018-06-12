@@ -250,6 +250,7 @@ void update_bvh(const std::shared_ptr<shape>& shp, bool equalsize) {
     shp->bvh->radius = shp->radius;
     if (shp->bvh->radius.empty())
         shp->bvh->radius.assign(shp->bvh->radius.size(), 0.001f);
+    shp->bvh->points = shp->points;
     shp->bvh->lines = shp->lines;
     shp->bvh->triangles = shp->triangles;
     build_bvh(shp->bvh, equalsize);
@@ -448,6 +449,8 @@ T eval_elem(const std::shared_ptr<shape>& shp, const std::vector<T>& vals,
         return interpolate_triangle(vals, shp->triangles[ei], uv);
     } else if (!shp->lines.empty()) {
         return interpolate_line(vals, shp->lines[ei], uv.x);
+    } else if (!shp->points.empty()) {
+        return vals[shp->points[ei]];
     } else if (!shp->pos.empty()) {
         return vals[ei];
     } else {

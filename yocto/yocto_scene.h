@@ -143,6 +143,7 @@ struct shape {
     std::string path = "";  // path for glTF buffers
 
     // primitives
+    std::vector<int> points;       // points
     std::vector<vec2i> lines;      // lines
     std::vector<vec3i> triangles;  // triangles
 
