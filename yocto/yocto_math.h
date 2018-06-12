@@ -358,15 +358,15 @@ inline vec<T, 4> operator/(T1 a, const vec<T, 4>& b) {
 
 // Vector assignments
 template <typename T, int N>
-inline vec<T, N>& operator+=(vec<T, N>& a, vec<T, N> b) {
+inline vec<T, N>& operator+=(vec<T, N>& a, const vec<T, N>& b) {
     return a = a + b;
 }
 template <typename T, int N>
-inline vec<T, N>& operator-=(vec<T, N>& a, vec<T, N> b) {
+inline vec<T, N>& operator-=(vec<T, N>& a, const vec<T, N>& b) {
     return a = a - b;
 }
 template <typename T, int N, typename T1>
-inline vec<T, N>& operator*=(vec<T, N>& a, vec<T, N> b) {
+inline vec<T, N>& operator*=(vec<T, N>& a, const vec<T, N>& b) {
     return a = a * b;
 }
 template <typename T, int N, typename T1>
@@ -374,7 +374,7 @@ inline vec<T, N>& operator*=(vec<T, N>& a, T1 b) {
     return a = a * b;
 }
 template <typename T, int N>
-inline vec<T, N>& operator/=(vec<T, N>& a, vec<T, N> b) {
+inline vec<T, N>& operator/=(vec<T, N>& a, const vec<T, N>& b) {
     return a = a / b;
 }
 template <typename T, int N, typename T1>
@@ -405,19 +405,19 @@ inline vec<T, 3> cross(const vec<T, 3>& a, const vec<T, 3>& b) {
         a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
 }
 template <typename T, int N>
-inline T length(vec<T, N> a) {
+inline T length(const vec<T, N>& a) {
     return sqrt(dot(a, a));
 }
 template <typename T, int N>
-inline T length_sqr(vec<T, N> a) {
+inline T length_sqr(const vec<T, N>& a) {
     return dot(a, a);
 }
 template <typename T, int N>
-inline vec<T, N> normalize(vec<T, N> a) {
+inline vec<T, N> normalize(const vec<T, N>& a) {
     return length(a) ? a / length(a) : a;
 }
 template <typename T, int N>
-inline T adot(vec<T, N> a, vec<T, N> b) {
+inline T adot(const vec<T, N>& a, const vec<T, N>& b) {
     return fabs(dot(a, b));
 }
 
@@ -854,7 +854,7 @@ const auto identity_frame3f =
 
 // Frame construction from axis.
 template <typename T>
-inline frame<T, 3> make_frame_fromz(const vec<T, 3>& o, vec<T, 3> z_) {
+inline frame<T, 3> make_frame_fromz(const vec<T, 3>& o, const vec<T, 3>& z_) {
     auto z = normalize(z_);
     auto x = normalize(orthogonal(z));
     auto y = normalize(cross(z, x));
@@ -862,7 +862,7 @@ inline frame<T, 3> make_frame_fromz(const vec<T, 3>& o, vec<T, 3> z_) {
 }
 template <typename T>
 inline frame<T, 3> make_frame_fromzx(
-    const vec<T, 3>& o, vec<T, 3> z_, vec<T, 3> x_) {
+    const vec<T, 3>& o, const vec<T, 3>& z_, const vec<T, 3>& x_) {
     auto z = normalize(z_);
     auto x = orthonormalize(x_, z);
     auto y = normalize(cross(z, x));
@@ -1104,7 +1104,7 @@ inline bbox<T, 3> point_bbox(const vec<T, 3>& p, T1 r = 0) {
     return bbox;
 }
 template <typename T, typename T1>
-inline bbox<T, 3> line_bbox(vec<T, 3> v0, vec<T, 3> v1, T1 r0 = 0, T1 r1 = 0) {
+inline bbox<T, 3> line_bbox(const vec<T, 3>& v0, const vec<T, 3>& v1, T1 r0 = 0, T1 r1 = 0) {
     auto bbox = ygl::bbox<T, 3>{};
     bbox += v0 - vec<T, 3>{r0, r0, r0};
     bbox += v0 + vec<T, 3>{r0, r0, r0};
@@ -1113,7 +1113,7 @@ inline bbox<T, 3> line_bbox(vec<T, 3> v0, vec<T, 3> v1, T1 r0 = 0, T1 r1 = 0) {
     return bbox;
 }
 template <typename T>
-inline bbox<T, 3> triangle_bbox(vec<T, 3> v0, vec<T, 3> v1, vec<T, 3> v2) {
+inline bbox<T, 3> triangle_bbox(const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2) {
     auto bbox = ygl::bbox<T, 3>{};
     bbox += v0;
     bbox += v1;
@@ -1122,7 +1122,7 @@ inline bbox<T, 3> triangle_bbox(vec<T, 3> v0, vec<T, 3> v1, vec<T, 3> v2) {
 }
 template <typename T>
 inline bbox<T, 3> quad_bbox(
-    vec<T, 3> v0, vec<T, 3> v1, vec<T, 3> v2, vec<T, 3> v3) {
+    const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2, const vec<T, 3>& v3) {
     auto bbox = ygl::bbox<T, 3>{};
     bbox += v0;
     bbox += v1;
@@ -1132,7 +1132,7 @@ inline bbox<T, 3> quad_bbox(
 }
 template <typename T>
 inline bbox<T, 3> tetrahedron_bbox(
-    vec<T, 3> v0, vec<T, 3> v1, vec<T, 3> v2, vec<T, 3> v3) {
+    const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2, const vec<T, 3>& v3) {
     auto bbox = ygl::bbox<T, 3>{};
     bbox += v0;
     bbox += v1;
@@ -1185,11 +1185,11 @@ using ray3f = ray<float, 3>;
 
 // Construct a ray from dirction or segments using a default epsilon.
 template <typename T, int N>
-inline ray<T, N> make_ray(vec<T, N> o, vec<T, N> d, T eps = (T)1e-4) {
+inline ray<T, N> make_ray(const vec<T, N>& o, const vec<T, N>& d, T eps = (T)1e-4) {
     return ray<T, N>{o, d, eps, std::numeric_limits<T>::max()};
 }
 template <typename T, int N>
-inline ray<T, N> make_segment(vec<T, N> p1, vec<T, N> p2, T eps = (T)1e-4) {
+inline ray<T, N> make_segment(const vec<T, N>& p1, const vec<T, N>& p2, T eps = (T)1e-4) {
     return ray<T, N>{p1, normalize(p2 - p1), eps, length(p2 - p1) - 2 * eps};
 }
 
@@ -1347,7 +1347,7 @@ inline frame<T, 3> scaling_frame(const vec<T, 3>& a) {
     return {{a.x, 0, 0}, {0, a.y, 0}, {0, 0, a.z}, {0, 0, 0}};
 }
 template <typename T, typename T1>
-inline frame<T, 3> rotation_frame(vec<T, 3> axis, T1 angle) {
+inline frame<T, 3> rotation_frame(const vec<T, 3>& axis, T1 angle) {
     auto s = sin(angle), c = cos(angle);
     auto vv = normalize(axis);
     return {{c + (1 - c) * vv.x * vv.x, (1 - c) * vv.x * vv.y + s * vv.z,
@@ -1359,7 +1359,7 @@ inline frame<T, 3> rotation_frame(vec<T, 3> axis, T1 angle) {
         {0, 0, 0}};
 }
 template <typename T>
-inline frame<T, 3> rotation_frame(vec<T, 4> quat) {
+inline frame<T, 3> rotation_frame(const vec<T, 4>& quat) {
     auto v = quat;
     return {{v.w * v.w + v.x * v.x - v.y * v.y - v.z * v.z,
                 (v.x * v.y + v.z * v.w) * 2, (v.z * v.x - v.y * v.w) * 2},
@@ -1378,7 +1378,7 @@ inline frame<T, 3> rotation_frame(const mat<T, 3>& rot) {
 // Lookat frame. Z-axis can be inverted with inv_xz.
 template <typename T>
 inline frame<T, 3> lookat_frame(
-    vec<T, 3> eye, vec<T, 3> center, vec<T, 3> up, bool inv_xz = false) {
+    const vec<T, 3>& eye, const vec<T, 3>& center, const vec<T, 3>& up, bool inv_xz = false) {
     auto w = normalize(eye - center);
     auto u = normalize(cross(up, w));
     auto v = normalize(cross(w, u));
@@ -1427,11 +1427,11 @@ inline mat<T, 4> perspective_mat(T fovy, T aspect, T near) {
 
 // Rotation conversions.
 template <typename T>
-inline std::pair<vec<T, 3>, T> rotation_axisangle(vec<T, 4> quat) {
+inline std::pair<vec<T, 3>, T> rotation_axisangle(const vec<T, 4>& quat) {
     return {normalize(vec<T, 3>{quat.x, quat.y, quat.z}), 2 * acos(quat.w)};
 }
 template <typename T, typename T1>
-inline vec<T, 4> rotation_quat(vec<T, 3> axis, T1 angle) {
+inline vec<T, 4> rotation_quat(const vec<T, 3>& axis, T1 angle) {
     auto len = length(axis);
     if (!len) return {0, 0, 0, 1};
     return vec<T, 4>{sin(angle / 2) * axis.x / len,
@@ -1439,7 +1439,7 @@ inline vec<T, 4> rotation_quat(vec<T, 3> axis, T1 angle) {
         cos(angle / 2)};
 }
 template <typename T>
-inline vec<T, 4> rotation_quat(vec<T, 4> axisangle) {
+inline vec<T, 4> rotation_quat(const vec<T, 4>& axisangle) {
     return rotation_quat(
         vec<T, 3>{axisangle.x, axisangle.y, axisangle.z}, axisangle.w);
 }
@@ -1447,12 +1447,12 @@ inline vec<T, 4> rotation_quat(vec<T, 4> axisangle) {
 // Turntable and FPS Camera navigation.
 template <typename T, typename T1>
 inline void camera_turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
-    vec<T, 2> rotate, T1 dolly, vec<T, 2> pan);
+    const vec<T, 2>& rotate, T1 dolly, const vec<T, 2>& pan);
 template <typename T, typename T1>
-inline void camera_turntable(frame<T, 3>& frame, float& focus, vec<T, 2> rotate,
-    T1 dolly, vec<T, 2> pan);
+inline void camera_turntable(frame<T, 3>& frame, float& focus, const vec<T, 2>& rotate,
+    T1 dolly, const vec<T, 2>& pan);
 template <typename T>
-inline void camera_fps(frame<T, 3>& frame, vec<T, 3> transl, vec<T, 2> rotate);
+inline void camera_fps(frame<T, 3>& frame, const vec<T, 3>& transl, const vec<T, 2>& rotate);
 
 }  // namespace ygl
 
@@ -1521,7 +1521,7 @@ namespace ygl {
 
 // Sample an hemispherical direction with uniform distribution.
 template <typename T>
-inline vec<T, 3> sample_hemisphere(vec<T, 2> ruv) {
+inline vec<T, 3> sample_hemisphere(const vec<T, 2>& ruv) {
     auto z = ruv.y;
     auto r = sqrt(1 - z * z);
     auto phi = 2 * pi * ruv.x;
@@ -1534,7 +1534,7 @@ inline T sample_hemisphere_pdf(const vec<T, 3>& w) {
 
 // Sample a spherical direction with uniform distribution.
 template <typename T>
-inline vec<T, 3> sample_sphere(vec<T, 2> ruv) {
+inline vec<T, 3> sample_sphere(const vec<T, 2>& ruv) {
     auto z = 2 * ruv.y - 1;
     auto r = sqrt(1 - z * z);
     auto phi = 2 * pi * ruv.x;
@@ -1547,7 +1547,7 @@ inline T sample_sphere_pdf(const vec<T, 3>& w) {
 
 // Sample spherical coordinates uniformly.
 template <typename T>
-inline vec<T, 2> sample_spherical(vec<T, 2> ruv) {
+inline vec<T, 2> sample_spherical(const vec<T, 2>& ruv) {
     // BUG: FIXME this is not uniform at all!!!!
     return {ruv.x, ruv.y};
 }
@@ -1558,7 +1558,7 @@ inline T sample_spherical_pdf(const vec<T, 2>& w) {
 
 // Sample an hemispherical direction with cosine distribution.
 template <typename T>
-inline vec<T, 3> sample_hemisphere_cosine(vec<T, 2> ruv) {
+inline vec<T, 3> sample_hemisphere_cosine(const vec<T, 2>& ruv) {
     auto z = sqrt(ruv.y);
     auto r = sqrt(1 - z * z);
     auto phi = 2 * pi * ruv.x;
@@ -1571,7 +1571,7 @@ inline T sample_hemisphere_cosine_pdf(const vec<T, 3>& w) {
 
 // Sample an hemispherical direction with cosine power distribution.
 template <typename T>
-inline vec<T, 3> sample_hemisphere_cospower(T n, vec<T, 2> ruv) {
+inline vec<T, 3> sample_hemisphere_cospower(T n, const vec<T, 2>& ruv) {
     auto z = pow(ruv.y, 1 / (n + 1));
     auto r = sqrt(1 - z * z);
     auto phi = 2 * pi * ruv.x;
@@ -1584,7 +1584,7 @@ inline float sample_hemisphere_cospower_pdf(T n, const vec<T, 3>& w) {
 
 // Sample a point uniformly on a disk.
 template <typename T>
-inline vec<T, 3> sample_disk(vec<T, 2> ruv) {
+inline vec<T, 3> sample_disk(const vec<T, 2>& ruv) {
     auto r = sqrt(ruv.y);
     auto phi = 2 * pi * ruv.x;
     return {cos(phi) * r, sin(phi) * r, 0};
@@ -1596,7 +1596,7 @@ inline T sample_disk_pdf() {
 
 // Sample a point uniformly on a cylinder, without caps.
 template <typename T>
-inline vec<T, 3> sample_cylinder(vec<T, 2> ruv) {
+inline vec<T, 3> sample_cylinder(const vec<T, 2>& ruv) {
     auto phi = 2 * pi * ruv.x;
     return {sin(phi), cos(phi), ruv.y * 2 - 1};
 }
@@ -1607,18 +1607,18 @@ inline T sample_cylinder_pdf() {
 
 // Sample a point uniformly on a triangle.
 template <typename T>
-inline vec<T, 2> sample_triangle(vec<T, 2> ruv) {
+inline vec<T, 2> sample_triangle(const vec<T, 2>& ruv) {
     return {1 - sqrt(ruv.x), ruv.y * sqrt(ruv.x)};
 }
 template <typename T>
 inline vec<T, 3> sample_triangle(
-    vec<T, 3> v0, vec<T, 3> v1, vec<T, 3> v2, vec<T, 2> ruv) {
+    const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2, const vec<T, 2>& ruv) {
     auto uv = sample_triangle(ruv);
     return v0 * (1 - uv.x - uv.y) + v1 * uv.x + v2 * uv.y;
 }
 // Pdf for uniform triangle sampling, i.e. triangle area.
 template <typename T>
-inline T sample_triangle_pdf(vec<T, 3> v0, vec<T, 3> v1, vec<T, 3> v2) {
+inline T sample_triangle_pdf(const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2) {
     return 2 / length(cross(v1 - v0, v2 - v0));
 }
 
@@ -1678,39 +1678,39 @@ namespace ygl {
 
 // Line properties.
 template <typename T>
-inline vec<T, 3> line_tangent(vec<T, 3> v0, vec<T, 3> v1) {
+inline vec<T, 3> line_tangent(const vec<T, 3>& v0, const vec<T, 3>& v1) {
     return normalize(v1 - v0);
 }
 template <typename T>
-inline T line_length(vec<T, 3> v0, vec<T, 3> v1) {
+inline T line_length(const vec<T, 3>& v0, const vec<T, 3>& v1) {
     return length(v1 - v0);
 }
 
 // Triangle properties.
 template <typename T>
-inline vec<T, 3> triangle_normal(vec<T, 3> v0, vec<T, 3> v1, vec<T, 3> v2) {
+inline vec<T, 3> triangle_normal(const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2) {
     return normalize(cross(v1 - v0, v2 - v0));
 }
 template <typename T>
-inline T triangle_area(vec<T, 3> v0, vec<T, 3> v1, vec<T, 3> v2) {
+inline T triangle_area(const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2) {
     return length(cross(v1 - v0, v2 - v0)) / 2;
 }
 
 // Quad propeties.
 template <typename T>
 inline vec<T, 3> quad_normal(
-    vec<T, 3> v0, vec<T, 3> v1, vec<T, 3> v2, vec<T, 3> v3) {
+    const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2, const vec<T, 3>& v3) {
     return normalize(triangle_normal(v0, v1, v3) + triangle_normal(v2, v3, v1));
 }
 template <typename T>
-inline T quad_area(vec<T, 3> v0, vec<T, 3> v1, vec<T, 3> v2, vec<T, 3> v3) {
+inline T quad_area(const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2, const vec<T, 3>& v3) {
     return triangle_area(v0, v1, v3) + triangle_area(v2, v3, v1);
 }
 
 // Triangle tangent and bitangent from uv
 template <typename T>
-inline std::pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(vec<T, 3> v0,
-    vec<T, 3> v1, vec<T, 3> v2, vec<T, 2> uv0, vec<T, 2> uv1, vec<T, 2> uv2) {
+inline std::pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(const vec<T, 3>& v0,
+    const vec<T, 3>& v1, const vec<T, 3>& v2, const vec<T, 2>& uv0, const vec<T, 2>& uv1, const vec<T, 2>& uv2) {
     // Follows the definition in http://www.terathon.com/code/tangent.html and
     // https://gist.github.com/aras-p/2843984
     // normal points up from texture space
@@ -1746,7 +1746,7 @@ inline TT interpolate_line(const TT& v0, const TT& v1, T u) {
     return v0 * (1 - u) + v1 * u;
 }
 template <typename TT, typename T>
-inline TT interpolate_line(const std::vector<TT>& vals, vec<int, 2> l, T u) {
+inline TT interpolate_line(const std::vector<TT>& vals, const vec<int, 2>& l, T u) {
     if (vals.empty()) return TT();
     return vals[l.x] * (1 - u) + vals[l.y] * u;
 }
@@ -1755,12 +1755,12 @@ inline TT interpolate_line(const std::vector<TT>& vals, vec<int, 2> l, T u) {
 // (v1-v0) and (v2-v0) directions. Same as barycentric interpolation.
 template <typename TT, typename T>
 inline TT interpolate_triangle(
-    const TT& v0, const TT& v1, const TT& v2, vec<T, 2> uv) {
+    const TT& v0, const TT& v1, const TT& v2, const vec<T, 2>& uv) {
     return v0 * (1 - uv.x - uv.y) + v1 * uv.x + v2 * uv.y;
 }
 template <typename TT, typename T>
 inline TT interpolate_triangle(
-    const std::vector<TT>& vals, vec<int, 3> t, vec<T, 2> uv) {
+    const std::vector<TT>& vals, const vec<int, 3>& t, const vec<T, 2>& uv) {
     if (vals.empty()) return TT();
     return vals[t.x] * (1 - uv.x - uv.y) + vals[t.y] * uv.x + vals[t.z] * uv.y;
 }
@@ -1768,12 +1768,12 @@ inline TT interpolate_triangle(
 // (v1-v0) and (v2-v1) directions. Same as bilear interpolation.
 template <typename T>
 inline T interpolate_quad(
-    const T& v0, const T& v1, const T& v2, const T& v3, vec<T, 2> uv) {
+    const T& v0, const T& v1, const T& v2, const T& v3, const vec<T, 2>& uv) {
     return v0 * (1 - uv.x) * (1 - uv.y) + v1 * uv.x * (1 - uv.y) +
            v2 * uv.x * uv.y + v3 * (1 - uv.x) * uv.y;
 }
 template <typename T>
-inline T interpolate_quad(const std::vector<T>& vals, vec4i t, vec<T, 2> uv) {
+inline T interpolate_quad(const std::vector<T>& vals, vec4i t, const vec<T, 2>& uv) {
     if (vals.empty()) return T();
     return vals[t.x] * (1 - uv.x) * (1 - uv.y) + vals[t.y] * uv.x * (1 - uv.y) +
            vals[t.z] * uv.x * uv.y + vals[t.w] * (1 - uv.x) * uv.y;
@@ -2018,7 +2018,7 @@ namespace ygl {
 // Turntable for UI navigation.
 template <typename T, typename T1>
 inline void camera_turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
-    vec<T, 2> rotate, T1 dolly, vec<T, 2> pan) {
+    const vec<T, 2>& rotate, T1 dolly, const vec<T, 2>& pan) {
     // rotate if necessary
     if (rotate.x || rotate.y) {
         auto z = normalize(to - from);
@@ -2053,8 +2053,8 @@ inline void camera_turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
 
 // Turntable for UI navigation.
 template <typename T, typename T1>
-inline void camera_turntable(frame<T, 3>& frame, float& focus, vec<T, 2> rotate,
-    T1 dolly, vec<T, 2> pan) {
+inline void camera_turntable(frame<T, 3>& frame, float& focus, const vec<T, 2>& rotate,
+    T1 dolly, const vec<T, 2>& pan) {
     // rotate if necessary
     if (rotate != zero2f) {
         auto phi = atan2(frame.z.z, frame.z.x) + rotate.x;
@@ -2081,7 +2081,7 @@ inline void camera_turntable(frame<T, 3>& frame, float& focus, vec<T, 2> rotate,
 
 // FPS camera for UI navigation for a frame parametrization.
 template <typename T>
-inline void camera_fps(frame<T, 3>& frame, vec<T, 3> transl, vec<T, 2> rotate) {
+inline void camera_fps(frame<T, 3>& frame, const vec<T, 3>& transl, const vec<T, 2>& rotate) {
     // https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up
     auto y = vec<T, 3>{0, 1, 0};
     auto z = orthonormalize(frame.z, y);

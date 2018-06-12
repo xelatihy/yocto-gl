@@ -76,18 +76,18 @@ bool intersect_point(
 // Based on http://geomalgorithms.com/a05-intersect-1.html and
 // http://geomalgorithms.com/a07-distance.html#
 //     dist3D_Segment_to_Segment
-bool intersect_line(const ray3f& ray, vec3f v0, vec3f v1, float r0, float r1,
+bool intersect_line(const ray3f& ray, const vec3f& v0, const vec3f& v1, float r0, float r1,
     float& dist, vec2f& uv);
 
 // Intersect a ray with a triangle.
 bool intersect_triangle(
-    const ray3f& ray, vec3f v0, vec3f v1, vec3f v2, float& dist, vec2f& uv);
+    const ray3f& ray, const vec3f& v0, const vec3f& v1, const vec3f& v2, float& dist, vec2f& uv);
 
 // Intersect a ray with a quad represented as two triangles (0,1,3) and
 // (2,3,1), with the uv coordinates of the second triangle corrected by u =
 // 1-u' and v = 1-v' to produce a quad parametrization where u and v go from 0
 // to 1. This is equivalent to Intel's Embree.
-bool intersect_quad(const ray3f& ray, vec3f v0, vec3f v1, vec3f v2, vec3f v3,
+bool intersect_quad(const ray3f& ray, const vec3f& v0, const vec3f& v1, const vec3f& v2, const vec3f& v3,
     float& dist, vec2f& uv);
 
 // Intersect a ray with a axis-aligned bounding box.
@@ -101,28 +101,28 @@ bool intersect_bbox(
 
 // Check if a point overlaps a position within a max distance.
 bool overlap_point(
-    vec3f pos, float dist_max, vec3f v0, float r0, float& dist, vec2f& uv);
+    const vec3f& pos, float dist_max, const vec3f& v0, float r0, float& dist, vec2f& uv);
 
 // Find closest line point to a position.
-float closestuv_line(vec3f pos, vec3f v0, vec3f v1);
+float closestuv_line(const vec3f& pos, const vec3f& v0, const vec3f& v1);
 
 // Check if a line overlaps a position within a max distance.
-bool overlap_line(vec3f pos, float dist_max, vec3f v0, vec3f v1, float r0,
+bool overlap_line(const vec3f& pos, float dist_max, const vec3f& v0, const vec3f& v1, float r0,
     float r1, float& dist, vec2f& uv);
 
 // Find closest triangle point to a position.
-vec2f closestuv_triangle(vec3f pos, vec3f v0, vec3f v1, vec3f v2);
+vec2f closestuv_triangle(const vec3f& pos, const vec3f& v0, const vec3f& v1, const vec3f& v2);
 
 // Check if a triangle overlaps a position within a max distance.
-bool overlap_triangle(vec3f pos, float dist_max, vec3f v0, vec3f v1, vec3f v2,
+bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& v0, const vec3f& v1, const vec3f& v2,
     float r0, float r1, float r2, float& dist, vec2f& uv);
 
 // Check if a quad overlaps a position within a max distance.
-bool overlap_quad(vec3f pos, float dist_max, vec3f v0, vec3f v1, vec3f v2,
-    vec3f v3, float r0, float r1, float r2, float r3, float& dist, vec2f& uv);
+bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& v0, const vec3f& v1, const vec3f& v2,
+    const vec3f& v3, float r0, float r1, float r2, float r3, float& dist, vec2f& uv);
 
 // Check if a bouning box overlaps a position within a max distance.
-bool overlap_bbox(vec3f pos, float dist_max, const bbox3f& bbox);
+bool overlap_bbox(const vec3f& pos, float dist_max, const bbox3f& bbox);
 
 // Check if two bouning boxes overlap.
 bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2);
@@ -207,7 +207,7 @@ bool intersect_bvh(const std::shared_ptr<bvh_tree> bvh, const ray3f& ray,
 // `find_any`. Returns the point distance `dist`, the instance id `iid`, the
 // shape id `sid`, the shape element index `eid` and the shape barycentric
 // coordinates `uv`.
-bool overlap_bvh(const std::shared_ptr<bvh_tree> bvh, vec3f pos, float max_dist,
+bool overlap_bvh(const std::shared_ptr<bvh_tree> bvh, const vec3f& pos, float max_dist,
     bool find_any, float& dist, int& iid, int& eid, vec2f& uv);
 
 }  // namespace ygl
