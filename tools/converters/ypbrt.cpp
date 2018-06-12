@@ -38,6 +38,7 @@
 #include "../../yocto/yocto_utils.h"
 #include "../../yocto/yocto_shape.h"
 #include "ext/json.hpp"
+#include "../../apps/CLI11.hpp"
 
 using namespace ygl;
 using namespace nlohmann;
@@ -797,18 +798,18 @@ void flipyz_scene(const std::shared_ptr<scene>& scn) {
 }
 
 int main(int argc, char** argv) {
+    auto flipyz = false;
+    auto filename = ""s;
+    auto outfilename = ""s;
+
     // parse command line
-    auto parser =
-        ygl::make_parser(argc, argv, "ypbrt", "convert pbrt files to yocto");
-    auto flipyz = ygl::parse_flag(parser, "--flipyz", "", "flip y and z axes");
-    auto outfilename = ygl::parse_opt(
-        parser, "--output", "-o", "output scene filename", "out.obj"s);
-    auto filename =
-        ygl::parse_arg(parser, "scene", "input scene filenames", ""s);
-    if (ygl::should_exit(parser)) {
-        printf("%s\n", get_usage(parser).c_str());
-        exit(1);
-    }
+    CLI::App parser("convert pbrt scenes", "ypbrt");
+    parser.add_flag("--flipyz", flipyz, "flip y and z axes");
+    parser.add_option("--output,-o", outfilename, "output scene")->required(true);
+    parser.add_option("scene", filename, "input scene")->required(true);
+    try {
+        parser.parse(argc, argv);
+    } catch (const CLI::ParseError& e) { return parser.exit(e); }
 
     // load image
     auto scn = load_pbrt(filename);

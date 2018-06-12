@@ -11,12 +11,13 @@ Please consider this to be just development notes and not any real planning.
 
 ## Reduce internal code
 
-- use shared_ptr
-- normal map problem
-- ldr_gamma in texture
 - switch to cli11
     - only doubt is how to handle enums 
+- [sadly] math with template specialization
+- [sadly] trace with std::function
 - filesystem
+- normal map problem
+- ldr_gamma in texture
 - [sadly] iostreams
 
 ## Recornsider
@@ -25,8 +26,9 @@ Please consider this to be just development notes and not any real planning.
 
 ## Bugs
 
+- yimview
 - animated rotation seems bogus
-- obj output seems busted
+- obj flipped textures
 
 ## giacomo
 

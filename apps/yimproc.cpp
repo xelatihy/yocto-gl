@@ -28,7 +28,26 @@
 
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_utils.h"
+#include "CLI11.hpp"
 using namespace std::literals;
+
+struct app_state {
+    std::string filename = "img.png";
+    std::string output = "out.png";
+    float exposure = 0.0f;
+    float gamma = 2.2f;
+    bool filmic = false;
+    int resize_width = 0;
+    int resize_height = 0;
+    ygl::vec4f multiply_color = {1, 1, 1, 1};
+    std::string alpha_filename = ""s;
+    std::string coloralpha_filename = ""s;
+
+    float spatial_sigma = 0.0f;
+    float range_sigma = 0.0f;
+
+    ygl::image4f img = {};
+};
 
 #if 0
 template <typename Image>
@@ -132,83 +151,82 @@ std::vector<ygl::vec4f> filter_bilateral(int width, int height,
 }
 
 int main(int argc, char* argv[]) {
+    auto app = std::make_shared<app_state>();
+
     // command line params
-    auto parser = ygl::make_parser(argc, argv, "yimproc", "process images");
-    auto exposure =
-        ygl::parse_opt(parser, "--exposure", "t", "Hdr exposure", 0.0f);
-    auto gamma =
-        !ygl::parse_opt(parser, "--gamma", "-g", "Display gamma.", 2.2f);
-    auto filmic = ygl::parse_flag(parser, "--filmic", "-f",
-        "apply approximate filmic tone mapping", false);
-    auto resize_width = ygl::parse_opt(
-        parser, "--resize-width", "-w", "width (0 to maintain aspect)", 0);
-    auto resize_height = ygl::parse_opt(
-        parser, "--resize-height", "-h", "height (0 to maintain aspect)", 0);
-    auto multiply_color = ygl::parse_opt(parser, "--multiply-color", "",
-        "multiply b y this color", ygl::vec4f{1, 1, 1, 1});
-    auto spatial_sigma = ygl::parse_opt(
-        parser, "--spatial-sigma", "-s", "blur spatial sigma", 0.0f);
-    auto range_sigma = ygl::parse_opt(
-        parser, "--range-sigma", "-r", "bilateral blur range sigma", 0.0f);
-    auto set_alpha_filename = ygl::parse_opt(
-        parser, "--set-alpha", "", "set alpha as this image alpha", ""s);
-    auto set_color_as_alpha_filename = ygl::parse_opt(parser,
-        "--set-color-as-alpha", "", "set alpha as this image color", ""s);
-    auto output = ygl::parse_opt(
-        parser, "--output", "-o", "output image filename", ""s, true);
-    auto filename =
-        ygl::parse_arg(parser, "filename", "input image filename", ""s);
-    // check parsing
-    if (ygl::should_exit(parser)) {
-        printf("%s\n", get_usage(parser).c_str());
-        exit(1);
-    }
+    CLI::App parser("image processing utility", "yimproc");
+    parser.add_option("--exposure,-e", app->exposure, "Hdr exposure");
+    parser.add_option("--gamma,-g", app->gamma, "Display gamma.");
+    parser.add_flag("--filmic,-f", app->filmic, "filmic tone mapping");
+    parser.add_option("--resize-width,-w", app->resize_width,
+        "width (0 to maintain aspect)", 0);
+    parser.add_option("--resize-height,-h", app->resize_height,
+        "height (0 to maintain aspect)", 0);
+    // parser.add_option("--multiply-color", app->multiply_color,
+    //     "multiply by this color");
+    parser.add_option(
+        "--spatial-sigma,-s", app->spatial_sigma, "blur spatial sigma");
+    parser.add_option(
+        "--range-sigma,-r", app->range_sigma, "bilateral blur range sigma");
+    parser.add_option(
+        "--set-alpha", app->alpha_filename, "set alpha as this image alpha");
+    parser.add_option("--set-color-as-alpha", app->coloralpha_filename,
+        "set alpha as this image color");
+    parser.add_option("--output,-o", app->output, "output image filename");
+    parser.add_option("filename", app->filename, "input image filename")
+        ->required(true);
+    try {
+        parser.parse(argc, argv);
+    } catch (const CLI::ParseError& e) { return parser.exit(e); }
 
     // load
-    auto img = ygl::load_image(filename, gamma);
+    app->img = ygl::load_image(app->filename, app->gamma);
 
     // set alpha
-    if (set_alpha_filename != "") {
-        auto alpha = ygl::load_image(set_alpha_filename, gamma);
-        if (img.width != alpha.width || img.height != alpha.height)
+    if (app->alpha_filename != "") {
+        auto alpha = ygl::load_image(app->alpha_filename, app->gamma);
+        if (app->img.width != alpha.width || app->img.height != alpha.height)
             ygl::log_fatal("bad image size");
-        for (auto i = 0; i < img.pxl.size(); i++) img.pxl[i].w = alpha.pxl[i].w;
+        for (auto i = 0; i < app->img.pxl.size(); i++)
+            app->img.pxl[i].w = alpha.pxl[i].w;
     }
 
     // set alpha
-    if (set_color_as_alpha_filename != "") {
-        auto alpha = ygl::load_image(set_color_as_alpha_filename, gamma);
-        if (img.width != alpha.width || img.height != alpha.height)
+    if (app->coloralpha_filename != "") {
+        auto alpha = ygl::load_image(app->coloralpha_filename, app->gamma);
+        if (app->img.width != alpha.width || app->img.height != alpha.height)
             ygl::log_fatal("bad image size");
-        for (auto i = 0; i < img.pxl.size(); i++) {
+        for (auto i = 0; i < app->img.pxl.size(); i++) {
             auto& p = alpha.pxl[i];
-            img.pxl[i].w = (p.x + p.y + p.z) / 3;
+            app->img.pxl[i].w = (p.x + p.y + p.z) / 3;
         }
     }
 
     // multiply
-    if (multiply_color != ygl::vec4f{1, 1, 1, 1}) {
-        for (auto& c : img.pxl) c *= multiply_color;
+    if (app->multiply_color != ygl::vec4f{1, 1, 1, 1}) {
+        for (auto& c : app->img.pxl) c *= app->multiply_color;
     }
 
     // resize
-    if (resize_width || resize_height) {
-        img = resize_image(img, resize_width, resize_height);
+    if (app->resize_width || app->resize_height) {
+        app->img =
+            resize_image(app->img, app->resize_width, app->resize_height);
     }
 
     // bilateral
-    if (spatial_sigma && range_sigma) {
-        img = filter_bilateral(img, spatial_sigma, range_sigma, {}, {});
+    if (app->spatial_sigma && app->range_sigma) {
+        app->img = filter_bilateral(
+            app->img, app->spatial_sigma, app->range_sigma, {}, {});
     }
 
     // exposure
-    if (exposure) img = expose_image(img, exposure);
+    if (app->exposure) app->img = expose_image(app->img, app->exposure);
 
     // filmic tone transformations
-    if (filmic) img = filmic_tonemap_image(img);
+    if (app->filmic) app->img = filmic_tonemap_image(app->img);
 
     // save
-    ygl::save_image(output, img, gamma);
+    ygl::save_image(app->output, app->img, app->gamma);
 
     // done
     return 0;
