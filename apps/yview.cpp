@@ -31,6 +31,7 @@
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_utils.h"
+#include "CLI11.hpp"
 #include "yapp_ui.h"
 using namespace std::literals;
 
@@ -38,9 +39,9 @@ using namespace std::literals;
 struct app_state {
     std::shared_ptr<ygl::scene> scn = nullptr;
     std::shared_ptr<ygl::camera> cam = nullptr;
-    std::string filename;
-    std::string imfilename;
-    std::string outfilename;
+    std::string filename = "scene.json";
+    std::string imfilename = "out.png";
+    std::string outfilename = "scene.json";
 
     int resolution = 512;                           // image resolution
     bool wireframe = false;                         // wireframe drawing
@@ -65,6 +66,8 @@ struct app_state {
     bool screenshot_and_exit = false;
     bool no_glwidgets = false;
     std::unordered_map<std::string, std::string> inspector_highlights;
+    bool double_sided = false;
+    std::string highlight_filename = ""s;
 };
 
 // draw with shading
@@ -278,37 +281,33 @@ int main(int argc, char* argv[]) {
     auto app = std::make_shared<app_state>();
 
     // parse command line
-    auto parser =
-        ygl::make_parser(argc, argv, "yview", "views scenes inteactively");
-    app->eyelight = ygl::parse_flag(
-        parser, "--eyelight", "-c", "Eyelight rendering.", false);
-    auto double_sided = ygl::parse_flag(
-        parser, "--double-sided", "-D", "Double-sided rendering.", false);
-    app->quiet =
-        ygl::parse_flag(parser, "--quiet", "-q", "Print only errors messages");
-    app->screenshot_and_exit = ygl::parse_flag(
-        parser, "--screenshot-and-exit", "", "Take a screenshot and exit");
-    app->no_glwidgets =
-        ygl::parse_flag(parser, "--no-widgets", "", "Disable widgets");
-    auto highlight_filename =
-        ygl::parse_opt(parser, "--highlights", "", "Highlight filename", ""s);
-    app->imfilename = ygl::parse_opt(
-        parser, "--output-image", "-o", "Image filename", "out.png"s);
-    app->filename = ygl::parse_arg(parser, "scene", "Scene filename", ""s);
-    if (ygl::should_exit(parser)) {
-        printf("%s\n", get_usage(parser).c_str());
-        exit(1);
-    }
+    CLI::App parser("views scenes inteactively", "yview");
+    parser.add_flag("--eyelight,-c", app->eyelight, "Eyelight rendering.");
+    parser.add_flag(
+        "--double-sided,-D", app->double_sided, "Double-sided rendering.");
+    parser.add_flag("--quiet,-q", app->quiet, "Print only errors messages");
+    parser.add_flag("--screenshot-and-exit", app->screenshot_and_exit,
+        "Take a screenshot and exit");
+    parser.add_flag("--no-widgets", app->no_glwidgets, "Disable widgets");
+    parser.add_option(
+        "--highlights", app->highlight_filename, "Highlight filename");
+    parser.add_option("--output-image,-o", app->imfilename, "Image filename");
+    parser.add_option("scene", app->filename, "Scene filename")->required(true);
+    try {
+        parser.parse(argc, argv);
+    } catch (const CLI::ParseError& e) { return parser.exit(e); }
 
     // setup logger
     if (app->quiet) ygl::log_verbose() = false;
 
     // fix hilights
-    if (!highlight_filename.empty()) {
+    if (!app->highlight_filename.empty()) {
         try {
-            app->inspector_highlights = load_ini(highlight_filename).at("");
+            app->inspector_highlights =
+                load_ini(app->highlight_filename).at("");
         } catch (const std::exception& e) {
-            ygl::log_fatal("cannot load highlihgt file {}", highlight_filename);
+            ygl::log_fatal(
+                "cannot load highlihgt file {}", app->highlight_filename);
         }
     }
 
@@ -331,7 +330,7 @@ int main(int argc, char* argv[]) {
 
     // add components
     ygl::log_info("adding scene elements");
-    if (double_sided) {
+    if (app->double_sided) {
         for (auto mat : app->scn->materials) mat->double_sided = true;
     }
     if (app->scn->cameras.empty()) {
@@ -341,11 +340,6 @@ int main(int argc, char* argv[]) {
     app->cam = app->scn->cameras[0];
     ygl::add_missing_names(app->scn);
     for (auto err : ygl::validate(app->scn)) ygl::log_warning(err);
-
-    // double sided
-    if (double_sided) {
-        for (auto mat : app->scn->materials) mat->double_sided = true;
-    }
 
     // animation
     app->time_range = ygl::compute_animation_range(app->scn);

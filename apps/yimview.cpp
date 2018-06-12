@@ -29,6 +29,8 @@
 #include "../yocto/yocto_glutils.h"
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_utils.h"
+#include "CLI11.hpp"
+using namespace std::literals;
 
 #include <memory>
 #include <unordered_map>
@@ -37,9 +39,9 @@
 // to both. This is helpful when writing viewers or generic image
 // manipulation code
 struct gimage {
-    std::string name;
-    std::string filename;  // path
-    ygl::image4f img;      // image
+    std::string name = ""s;
+    std::string filename = ""s;  // path
+    ygl::image4f img = {};       // image
 
     // min/max values
     ygl::bbox4f pxl_bounds = ygl::invalid_bbox4f;
@@ -67,6 +69,14 @@ struct app_state {
     ygl::frame2f imframe = ygl::identity_frame2f;
     bool zoom_to_fit = false;
     ygl::vec4f background = {0.8f, 0.8f, 0.8f, 0};
+
+    // parameters for command line
+    std::vector<std::string> filenames = {"img.png"};
+    float gamma = 2.2f;     // hdr gamma
+    float exposure = 0.0f;  // hdr exposure
+    bool filmic = false;    // filmic tone mapping
+    bool diff = false;      // compute diffs
+    bool lum_diff = false;  // compute luminance diffs
 };
 
 // compute min/max
@@ -268,34 +278,32 @@ int main(int argc, char* argv[]) {
     auto app = std::make_shared<app_state>();
 
     // command line params
-    auto parser = ygl::make_parser(argc, argv, "yimview", "view images");
-    auto gamma = ygl::parse_opt(parser, "--gamma", "-g", "display gamma", 2.2f);
-    auto exposure =
-        ygl::parse_opt(parser, "--exposure", "-e", "display exposure", 0.0f);
-    auto diff = ygl::parse_flag(parser, "--diff", "-d", "compute diff images");
-    auto lum_diff = ygl::parse_flag(
-        parser, "--luminance-diff", "-D", "compute luminance diffs");
-    auto filenames = ygl::parse_args(
-        parser, "image", "image filename", std::vector<std::string>{});
-    // check parsing
-    if (ygl::should_exit(parser)) {
-        printf("%s\n", get_usage(parser).c_str());
-        exit(1);
-    }
+    CLI::App parser("view images", "yimview");
+    parser.add_option("--gamma,-g", app->gamma, "display gamma");
+    parser.add_option("--exposure,-e", app->exposure, "display exposure");
+    parser.add_flag("--diff,-d", app->diff, "compute diff images");
+    parser.add_flag(
+        "--luminance-diff,-D", app->lum_diff, "compute luminance diffs");
+    parser.add_option("images", app->filenames, "image filenames")
+        ->required(true);
+    try {
+        parser.parse(argc, argv);
+    } catch (const CLI::ParseError& e) { return parser.exit(e); }
 
     // loading images
-    for (auto filename : filenames) {
+    for (auto filename : app->filenames) {
         ygl::log_info("loading {}", filename);
-        app->imgs.push_back(load_gimage(filename, exposure, gamma));
+        app->imgs.push_back(load_gimage(filename, app->exposure, app->gamma));
     }
     app->img = app->imgs.at(0);
-    if (diff) {
+    if (app->diff) {
         auto num = app->imgs.size();
         for (auto i = 0; i < num; i++) {
             for (auto j = i + 1; j < num; j++) {
                 ygl::log_info("diffing {} {}", app->imgs[i]->filename,
                     app->imgs[j]->filename);
-                auto diff = diff_gimage(app->imgs[i], app->imgs[j], !lum_diff);
+                auto diff =
+                    diff_gimage(app->imgs[i], app->imgs[j], !app->lum_diff);
                 if (diff) app->imgs.push_back(diff);
             }
         }

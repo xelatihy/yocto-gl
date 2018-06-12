@@ -29,7 +29,16 @@
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_utils.h"
+#include "CLI11.hpp"
 using namespace std::literals;
+
+struct app_state {
+    std::string filename = "scene.json"s;
+    std::string output = "output.json"s;
+    bool notextures = false;
+
+    std::shared_ptr<ygl::scene> scn = nullptr;
+};
 
 void mkdir(const std::string& dir) {
     if (dir == "" || dir == "." || dir == ".." || dir == "./" || dir == "../")
@@ -42,42 +51,40 @@ void mkdir(const std::string& dir) {
 }
 
 int main(int argc, char** argv) {
+    auto app = std::make_shared<app_state>();
+
     // command line params
-    auto parser =
-        ygl::make_parser(argc, argv, "yscnproc", "converts obj to gltf");
-    auto notextures =
-        ygl::parse_flag(parser, "--notextures", "", "Disable textures.", false);
-    auto output = ygl::parse_opt(
-        parser, "--output", "-o", "output scene filename", "out.obj"s);
-    auto filename = ygl::parse_arg(parser, "scene", "input scene", ""s);
-    if (ygl::should_exit(parser)) {
-        printf("%s\n", get_usage(parser).c_str());
-        exit(1);
-    }
+    CLI::App parser("scene processing utility", "yscnproc");
+    parser.add_flag("--notextures", app->notextures, "Disable textures.");
+    parser.add_option("--output,-o", app->output, "output scene")
+        ->required(true);
+    parser.add_option("scene", app->filename, "input scene")->required(true);
+    try {
+        parser.parse(argc, argv);
+    } catch (const CLI::ParseError& e) { return parser.exit(e); }
 
     // load obj
-    auto scn = (std::shared_ptr<ygl::scene>)nullptr;
     try {
-        scn = ygl::load_scene(filename, !notextures);
+        app->scn = ygl::load_scene(app->filename, !app->notextures);
 
     } catch (const std::exception& e) {
         ygl::log_error("error during scene loading: "s + e.what());
-        ygl::log_fatal("unable to load " + filename);
+        ygl::log_fatal("unable to load " + app->filename);
     }
 
     // make a directory if needed
     try {
-        mkdir(ygl::path_dirname(output));
+        mkdir(ygl::path_dirname(app->output));
     } catch (const std::exception& e) {
         ygl::log_fatal("unable to make directory {} with error {}",
-            ygl::path_dirname(output), e.what());
+            ygl::path_dirname(app->output), e.what());
     }
     // save scene
     try {
-        ygl::save_scene(output, scn);
+        ygl::save_scene(app->output, app->scn);
     } catch (const std::exception& e) {
         ygl::log_fatal(
-            "unable to save scene {} with error {}", output, e.what());
+            "unable to save scene {} with error {}", app->output, e.what());
     }
 
     // done
