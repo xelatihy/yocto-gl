@@ -162,8 +162,8 @@ int main(int argc, char* argv[]) {
         "width (0 to maintain aspect)", 0);
     parser.add_option("--resize-height,-h", app->resize_height,
         "height (0 to maintain aspect)", 0);
-    // parser.add_option("--multiply-color", app->multiply_color,
-    //     "multiply by this color");
+    parser.add_option(
+        "--multiply-color", app->multiply_color, "multiply by this color");
     parser.add_option(
         "--spatial-sigma,-s", app->spatial_sigma, "blur spatial sigma");
     parser.add_option(
