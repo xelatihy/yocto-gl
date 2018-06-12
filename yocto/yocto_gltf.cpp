@@ -1018,12 +1018,6 @@ static bool startswith(const std::string& str, const std::string& substr) {
 // Load buffer data.
 void load_buffers(
     const std::shared_ptr<glTF>& gltf, const std::string& dirname) {
-    auto fix_path = [](const std::string& path_) {
-        auto path = path_;
-        for (auto& c : path)
-            if (c == '\\') c = '/';
-        return path;
-    };
     auto load_binary = [](const std::string& filename) {
         // https://stackoverflow.com/questions/174531/easiest-way-to-get-files-contents-in-c
         auto f = fopen(filename.c_str(), "rb");
@@ -1052,24 +1046,16 @@ void load_buffers(
                 std::vector<unsigned char>((unsigned char*)data.c_str(),
                     (unsigned char*)data.c_str() + data.length());
         } else {
-            buffer->data = load_binary(fix_path(dirname + buffer->uri));
+            buffer->data = load_binary(normalize_path(dirname + "/" + buffer->uri));
             if (buffer->data.empty()) {
                 throw std::runtime_error("could not load binary file " +
-                                         fix_path(dirname + buffer->uri));
+                                         dirname + "/" + buffer->uri);
             }
         }
         if (buffer->byteLength != buffer->data.size()) {
             throw std::runtime_error("mismatched buffer size");
         }
     }
-}
-
-// Path dirname
-static inline std::string path_dirname(const std::string& filename) {
-    auto pos = filename.rfind('/');
-    if (pos == std::string::npos) pos = filename.rfind('\\');
-    if (pos == std::string::npos) return "";
-    return filename.substr(0, pos + 1);
 }
 
 // Loads a gltf.
@@ -1096,7 +1082,7 @@ std::shared_ptr<glTF> load_gltf(const std::string& filename, bool load_bin) {
     }
 
     // load external resources
-    auto dirname = path_dirname(filename);
+    auto dirname = get_dirname(filename);
     if (load_bin) load_buffers(gltf, dirname);
 
     // done
@@ -1120,7 +1106,7 @@ void save_buffers(
         if (startswith(buffer->uri, "data:")) {
             throw std::runtime_error("saving of embedded data not supported");
         }
-        save_binary(dirname + buffer->uri, buffer->data);
+        save_binary(dirname + "/" + buffer->uri, buffer->data);
     }
 }
 
@@ -1144,7 +1130,7 @@ void save_gltf(const std::string& filename, const std::shared_ptr<glTF>& gltf,
     save_text(filename, js.dump(2));
 
     // save external resources
-    auto dirname = path_dirname(filename);
+    auto dirname = get_dirname(filename);
     if (save_bin) save_buffers(gltf, dirname);
 }
 
@@ -1264,7 +1250,7 @@ std::shared_ptr<glTF> load_binary_gltf(
     if (load_bin) { buffer->data = buffer_bytes; }
 
     // load external resources
-    auto dirname = path_dirname(filename);
+    auto dirname = get_dirname(filename);
     if (load_bin) load_buffers(gltf, dirname);
 
     // close
@@ -1323,7 +1309,7 @@ void save_binary_gltf(const std::string& filename,
     fclose(f);
 
     // save external resources
-    auto dirname = path_dirname(filename);
+    auto dirname = get_dirname(filename);
     if (save_bin) save_buffers(gltf, dirname);
 }
 
@@ -1414,9 +1400,7 @@ void load_gltf_textures(
                 throw;
             }
         } else {
-            filename = dirname + gimg->uri;
-            for (auto& c : filename)
-                if (c == '\\') c = '/';
+            filename = normalize_path(dirname + "/" + gimg->uri);
             try {
                 gimg->data = load_image(filename, ldr_gamma.at(gimg));
             } catch (std::exception&) {
@@ -1466,9 +1450,7 @@ void save_gltf_textures(const std::shared_ptr<glTF>& gltf,
             if (skip_missing) continue;
             throw std::runtime_error("saving of embedded data not supported");
         }
-        auto filename = dirname + gimg->uri;
-        for (auto& c : filename)
-            if (c == '\\') c = '/';
+        auto filename = normalize_path(dirname + "/" + gimg->uri);
         try {
             save_image(filename, gimg->data, ldr_gamma.at(gimg));
         } catch (std::exception&) {

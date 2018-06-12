@@ -94,7 +94,7 @@ std::shared_ptr<gimage> load_gimage(
     const std::string& filename, float exposure, float gamma) {
     auto img = std::make_shared<gimage>();
     img->filename = filename;
-    img->name = ygl::path_filename(filename);
+    img->name = ygl::get_filename(filename);
     img->exposure = exposure;
     img->gamma = gamma;
     img->img = ygl::load_image(filename, img->gamma);

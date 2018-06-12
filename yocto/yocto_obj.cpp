@@ -260,13 +260,6 @@ inline void obj_parse(char*& s, obj_texture_info& info) {
     }
 }
 
-static inline std::string path_dirname(const std::string& filename) {
-    auto pos = filename.rfind('/');
-    if (pos == std::string::npos) pos = filename.rfind('\\');
-    if (pos == std::string::npos) return "";
-    return filename.substr(0, pos + 1);
-}
-
 // Load MTL
 std::vector<std::shared_ptr<obj_material>> load_mtl(
     const std::string& filename, bool flip_tr) {
@@ -564,7 +557,7 @@ std::shared_ptr<obj_scene> load_obj(const std::string& filename,
         } else if (obj_streq(cmd, "mtllib")) {
             auto mtlname = std::string();
             obj_parse(ss, mtlname);
-            auto mtlpath = path_dirname(filename) + mtlname;
+            auto mtlpath = get_dirname(filename) + "/" + mtlname;
             auto mats = load_mtl(mtlpath, flip_tr);
             obj->materials.insert(
                 obj->materials.end(), mats.begin(), mats.end());
@@ -878,7 +871,7 @@ void load_obj(const std::string& filename, const obj_callbacks& callbacks,
         } else if (obj_streq(cmd, "mtllib")) {
             auto mtlname = std::string();
             obj_parse(ss, mtlname);
-            auto mtlpath = path_dirname(filename) + mtlname;
+            auto mtlpath = get_dirname(filename) + "/" + mtlname;
             load_mtl(mtlpath, callbacks, ctx, flip_tr);
         } else if (obj_streq(cmd, "c")) {
             if (callbacks.camera) {
@@ -1062,11 +1055,9 @@ void save_obj(const std::string& filename,
     if (!fs) throw std::runtime_error("cannot open filename " + filename);
 
     // linkup to mtl
-    auto dirname = path_dirname(filename);
-    auto basename = filename.substr(dirname.length());
-    basename = basename.substr(0, basename.length() - 4);
+    auto mtlname = replace_path_extension(filename, "mtl");
     if (!obj->materials.empty()) {
-        obj_dump_line(fs, "mtllib", basename + ".mtl");
+        obj_dump_line(fs, "mtllib", mtlname);
     }
 
     // save cameras
@@ -1161,7 +1152,7 @@ void save_obj(const std::string& filename,
 
     // save materials
     if (!obj->materials.empty())
-        save_mtl(dirname + basename + ".mtl", obj->materials, flip_tr);
+        save_mtl(replace_path_extension(filename, "mtl"), obj->materials, flip_tr);
 }
 
 // Load OBJ texture images.

@@ -164,10 +164,8 @@ int main(int argc, char* argv[]) {
     ygl::log_info_begin("rendering image");
     for (auto sample = 0; sample < app->nsamples; sample += app->batch_size) {
         if (app->save_batch && sample) {
-            auto filename =
-                ygl::format("{}{}.{}{}", ygl::path_dirname(app->imfilename),
-                    ygl::path_basename(app->imfilename), sample,
-                    ygl::path_extension(app->imfilename));
+            auto filename = ygl::replace_path_extension(app->imfilename, 
+                std::to_string(sample) + "." + ygl::get_extension(app->imfilename));
             ygl::log_info("saving image {}", app->filename);
             ygl::save_image(filename, ygl::expose_image(img, app->exposure));
         }

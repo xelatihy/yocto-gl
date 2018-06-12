@@ -373,16 +373,16 @@ bool save_pfm(const char* filename, int w, int h, int nc, const float* pixels) {
 
 // check hdr extensions
 bool is_hdr_filename(const std::string& filename) {
-    auto ext = path_extension(filename);
-    return ext == ".hdr" || ext == ".exr" || ext == ".pfm";
+    auto ext = get_extension(filename);
+    return ext == "hdr" || ext == "exr" || ext == "pfm";
 }
 
 // Loads an hdr image.
 image4f load_image(const std::string& filename, float ldr_gamma) {
-    auto ext = path_extension(filename);
+    auto ext = get_extension(filename);
     auto width = 0, height = 0;
     auto img = image4f();
-    if (ext == ".exr") {
+    if (ext == "exr") {
         auto pixels = (vec4f*)nullptr;
         if (LoadEXR((float**)&pixels, &width, &height, filename.c_str(),
                 nullptr) < 0)
@@ -393,7 +393,7 @@ image4f load_image(const std::string& filename, float ldr_gamma) {
         img = image4f{
             width, height, std::vector<vec4f>(pixels, pixels + width * height)};
         free(pixels);
-    } else if (ext == ".pfm") {
+    } else if (ext == "pfm") {
         auto ncomp = 0;
         auto pixels =
             (vec4f*)load_pfm(filename.c_str(), &width, &height, &ncomp, 4);
@@ -403,7 +403,7 @@ image4f load_image(const std::string& filename, float ldr_gamma) {
         img = image4f{
             width, height, std::vector<vec4f>(pixels, pixels + width * height)};
         free(pixels);
-    } else if (ext == ".hdr") {
+    } else if (ext == "hdr") {
         auto ncomp = 0;
         auto pixels =
             (vec4f*)stbi_loadf(filename.c_str(), &width, &height, &ncomp, 4);
@@ -430,41 +430,42 @@ image4f load_image(const std::string& filename, float ldr_gamma) {
 // Saves an hdr image.
 void save_image(
     const std::string& filename, const image4f& img, float ldr_gamma) {
-    if (path_extension(filename) == ".png") {
+    auto ext = get_extension(filename);
+    if(ext == "png") {
         auto ldr = float_to_byte(linear_to_gamma(img));
         if (!stbi_write_png(filename.c_str(), img.width(), img.height(), 4,
                 (byte*)ldr.data(), img.width() * 4))
             throw std::runtime_error("could not save image " + filename);
-    } else if (path_extension(filename) == ".jpg") {
+    } else if(ext == "jpg") {
         auto ldr = float_to_byte(linear_to_gamma(img));
         if (!stbi_write_jpg(filename.c_str(), img.width(), img.height(), 4,
                 (byte*)ldr.data(), 75))
             throw std::runtime_error("could not save image " + filename);
-    } else if (path_extension(filename) == ".tga") {
+    } else if(ext == "tga") {
         auto ldr = float_to_byte(linear_to_gamma(img));
         if (!stbi_write_tga(filename.c_str(), img.width(), img.height(), 4,
                 (byte*)ldr.data()))
             throw std::runtime_error("could not save image " + filename);
-    } else if (path_extension(filename) == ".bmp") {
+    } else if(ext == "bmp") {
         auto ldr = float_to_byte(linear_to_gamma(img));
         if (!stbi_write_bmp(filename.c_str(), img.width(), img.height(), 4,
                 (byte*)ldr.data()))
             throw std::runtime_error("could not save image " + filename);
-    } else if (path_extension(filename) == ".hdr") {
+    } else if(ext == "hdr") {
         if (!stbi_write_hdr(filename.c_str(), img.width(), img.height(), 4,
                 (float*)img.data()))
             throw std::runtime_error("could not save image " + filename);
-    } else if (path_extension(filename) == ".pfm") {
+    } else if(ext == "pfm") {
         if (!save_pfm(filename.c_str(), img.width(), img.height(), 4,
                 (float*)img.data()))
             throw std::runtime_error("could not save image " + filename);
-    } else if (path_extension(filename) == ".exr") {
+    } else if(ext == "exr") {
         if (!SaveEXR((float*)img.data(), img.width(), img.height(), 4,
                 filename.c_str()))
             throw std::runtime_error("could not save image " + filename);
     } else {
         throw std::runtime_error(
-            "unsupported image format " + path_extension(filename));
+            "unsupported image format " + ext);
     }
 }
 
@@ -500,40 +501,41 @@ image4b load_image4b(const std::string& filename, float ldr_gamma) {
 // Saves an hdr image.
 void save_image4b(
     const std::string& filename, const image4b& img, float ldr_gamma) {
-    if (path_extension(filename) == ".png") {
+    auto ext = get_extension(filename);
+    if(ext == "png") {
         if (!stbi_write_png(filename.c_str(), img.width(), img.height(), 4,
                 (byte*)img.data(), img.width() * 4))
             throw std::runtime_error("could not save image " + filename);
-    } else if (path_extension(filename) == ".jpg") {
+    } else if(ext == "jpg") {
         if (!stbi_write_jpg(filename.c_str(), img.width(), img.height(), 4,
                 (byte*)img.data(), 75))
             throw std::runtime_error("could not save image " + filename);
-    } else if (path_extension(filename) == ".tga") {
+    } else if(ext == "tga") {
         if (!stbi_write_tga(filename.c_str(), img.width(), img.height(), 4,
                 (byte*)img.data()))
             throw std::runtime_error("could not save image " + filename);
-    } else if (path_extension(filename) == ".bmp") {
+    } else if(ext == "bmp") {
         if (!stbi_write_bmp(filename.c_str(), img.width(), img.height(), 4,
                 (byte*)img.data()))
             throw std::runtime_error("could not save image " + filename);
-    } else if (path_extension(filename) == ".hdr") {
+    } else if(ext == "hdr") {
         auto hdr = linear_to_gamma(byte_to_float(img), ldr_gamma);
         if (!stbi_write_hdr(filename.c_str(), img.width(), img.height(), 4,
                 (float*)hdr.data()))
             throw std::runtime_error("could not save image " + filename);
-    } else if (path_extension(filename) == ".pfm") {
+    } else if(ext == "pfm") {
         auto hdr = linear_to_gamma(byte_to_float(img), ldr_gamma);
         if (!save_pfm(filename.c_str(), img.width(), img.height(), 4,
                 (float*)hdr.data()))
             throw std::runtime_error("could not save image " + filename);
-    } else if (path_extension(filename) == ".exr") {
+    } else if(ext == "exr") {
         auto hdr = linear_to_gamma(byte_to_float(img), ldr_gamma);
         if (!SaveEXR((float*)hdr.data(), img.width(), img.height(), 4,
                 filename.c_str()))
             throw std::runtime_error("could not save image " + filename);
     } else {
         throw std::runtime_error(
-            "unsupported image format " + path_extension(filename));
+            "unsupported image format " + ext);
     }
 }
 

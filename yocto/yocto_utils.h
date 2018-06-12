@@ -4,8 +4,8 @@
 // Yocto/Utils is a collection of generic utility functions mostly for building
 // command line applications.
 //
-// 1. Path-like path operations: `path_dirname()`, `path_extension()`,
-//    `path_basename()`, `path_filename()`, `replace_path_extension()`,
+// 1. Path-like path operations: `get_dirname()`, `get_extension()`,
+//    `path_basename()`, `get_filename()`, `replace_path_extension()`,
 //    `prepend_path_extension()`, `split_path()`
 // 2. Python-like format strings (only support for position arguments and no
 //    formatting commands): `format()`, `print()`
@@ -66,8 +66,9 @@
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+#if 0
 // Get directory name (including '/').
-inline std::string path_dirname(const std::string& filename) {
+inline std::string get_dirname(const std::string& filename) {
     auto pos = filename.rfind('/');
     if (pos == std::string::npos) pos = filename.rfind('\\');
     if (pos == std::string::npos) return "";
@@ -75,7 +76,7 @@ inline std::string path_dirname(const std::string& filename) {
 }
 
 // Get extension (including '.').
-inline std::string path_extension(const std::string& filename) {
+inline std::string get_extension(const std::string& filename) {
     auto pos = filename.rfind('.');
     if (pos == std::string::npos) return "";
     return filename.substr(pos);
@@ -83,30 +84,31 @@ inline std::string path_extension(const std::string& filename) {
 
 // Get file basename.
 inline std::string path_basename(const std::string& filename) {
-    auto dirname = path_dirname(filename);
-    auto extension = path_extension(filename);
+    auto dirname = get_dirname(filename);
+    auto extension = get_extension(filename);
     return filename.substr(
         dirname.size(), filename.size() - dirname.size() - extension.size());
 }
 
 // Get filename without directory (equiv to get_basename() +
 // get_extension()).
-inline std::string path_filename(const std::string& filename) {
-    return path_basename(filename) + path_extension(filename);
+inline std::string get_filename(const std::string& filename) {
+    return path_basename(filename) + get_extension(filename);
 }
 
 // Replace extension.
 inline std::string replace_path_extension(
     const std::string& filename, const std::string& ext) {
-    return path_dirname(filename) + path_basename(filename) + ext;
+    return get_dirname(filename) + path_basename(filename) + ext;
 }
 
 // Prepend a string to the extension.
 inline std::string prepend_path_extension(
     const std::string& filename, const std::string& prep) {
-    return path_dirname(filename) + path_basename(filename) + prep +
-           path_extension(filename);
+    return get_dirname(filename) + path_basename(filename) + prep +
+           get_extension(filename);
 }
+#endif
 
 // Really-minimal Python like string format. The implementation is not fast
 // nor memory efficient. But it is good enough for some needs.
