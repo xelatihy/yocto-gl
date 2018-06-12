@@ -27,7 +27,6 @@
 //
 
 #include "yocto_glutils.h"
-#include "yocto_utils.h"
 
 #include <cassert>
 #include <unordered_map>
@@ -1253,7 +1252,7 @@ glwindow::~glwindow() {
 
 // Support
 void _glfw_error_cb(int error, const char* description) {
-    log_error("GLFW error: {}\n", description);
+    std::cout << "GLFW error: " << description << "\n";
 }
 
 // Support

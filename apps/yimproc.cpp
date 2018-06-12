@@ -27,7 +27,6 @@
 //
 
 #include "../yocto/yocto_image.h"
-#include "../yocto/yocto_utils.h"
 #include "CLI11.hpp"
 using namespace std::literals;
 
@@ -179,14 +178,22 @@ int main(int argc, char* argv[]) {
     } catch (const CLI::ParseError& e) { return parser.exit(e); }
 
     // load
-    app->img = ygl::load_image(app->filename, app->gamma);
+    try {
+        app->img = ygl::load_image(app->filename, app->gamma);
+    } catch (std::exception& e) {
+        std::cout << "cannot load image" << app->filename << "\n";
+        std::cout << "error: " << e.what() << "\n";
+        exit(1);
+    }
 
     // set alpha
     if (app->alpha_filename != "") {
         auto alpha = ygl::load_image(app->alpha_filename, app->gamma);
         if (app->img.width() != alpha.width() ||
-            app->img.height() != alpha.height())
-            ygl::log_fatal("bad image size");
+            app->img.height() != alpha.height()) {
+            std::cout << "bad image size\n";
+            exit(1);
+        }
         for (auto i = 0; i < app->img.size(); i++) app->img[i].w = alpha[i].w;
     }
 
@@ -194,8 +201,10 @@ int main(int argc, char* argv[]) {
     if (app->coloralpha_filename != "") {
         auto alpha = ygl::load_image(app->coloralpha_filename, app->gamma);
         if (app->img.width() != alpha.width() ||
-            app->img.height() != alpha.height())
-            ygl::log_fatal("bad image size");
+            app->img.height() != alpha.height()) {
+            std::cout << "bad image size\n";
+            exit(1);
+        }
         for (auto i = 0; i < app->img.size(); i++) {
             auto& p = alpha[i];
             app->img[i].w = (p.x + p.y + p.z) / 3;
@@ -226,7 +235,13 @@ int main(int argc, char* argv[]) {
     if (app->filmic) app->img = filmic_tonemap_image(app->img);
 
     // save
-    ygl::save_image(app->output, app->img, app->gamma);
+    try {
+        ygl::save_image(app->output, app->img, app->gamma);
+    } catch (std::exception& e) {
+        std::cout << "cannot save image" << app->output << "\n";
+        std::cout << "error: " << e.what() << "\n";
+        exit(1);
+    }
 
     // done
     return 0;

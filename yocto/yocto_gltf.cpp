@@ -1046,7 +1046,8 @@ void load_buffers(
                 std::vector<unsigned char>((unsigned char*)data.c_str(),
                     (unsigned char*)data.c_str() + data.length());
         } else {
-            buffer->data = load_binary(normalize_path(dirname + "/" + buffer->uri));
+            buffer->data =
+                load_binary(normalize_path(dirname + "/" + buffer->uri));
             if (buffer->data.empty()) {
                 throw std::runtime_error("could not load binary file " +
                                          dirname + "/" + buffer->uri);

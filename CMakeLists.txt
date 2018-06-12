@@ -35,7 +35,6 @@ endif(YOCTO_OPENGL)
 
 set(YOCTO_FILES
     yocto/yocto_math.h
-    yocto/yocto_utils.h
     yocto/yocto_image.h yocto/yocto_image.cpp
     yocto/yocto_bvh.h yocto/yocto_bvh.cpp
     yocto/yocto_shape.h yocto/yocto_shape.cpp

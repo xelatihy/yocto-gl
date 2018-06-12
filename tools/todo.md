@@ -5,6 +5,7 @@ Please consider this to be just development notes and not any real planning.
 
 ## Reduce internal code
 
+- POINTS
 - filesystem
 - ldr_gamma in texture
 

@@ -30,15 +30,14 @@
 // Converts scenes from https://benedikt-bitterli.me/resources/ to Yocto/GL.
 //
 
-#include <regex>
 #include <fstream>
+#include <regex>
+#include "../../apps/CLI11.hpp"
 #include "../../yocto/yocto_scene.h"
 #include "../../yocto/yocto_sceneio.h"
-#include "../../yocto/yocto_trace.h"
-#include "../../yocto/yocto_utils.h"
 #include "../../yocto/yocto_shape.h"
+#include "../../yocto/yocto_trace.h"
 #include "ext/json.hpp"
-#include "../../apps/CLI11.hpp"
 
 using namespace ygl;
 using namespace nlohmann;
@@ -329,7 +328,7 @@ std::shared_ptr<scene> load_pbrt(const std::string& filename) {
         if (js.is_array() && js.size() == 3)
             return {js.at(0).get<float>(), js.at(1).get<float>(),
                 js.at(2).get<float>()};
-        log_error("cannot handle vec3f");
+        std::cout << "cannot handle vec3f\n";
         return zero3f;
     };
 
@@ -340,13 +339,13 @@ std::shared_ptr<scene> load_pbrt(const std::string& filename) {
         if (js.is_array() && js.size() == 4)
             return {js.at(0).get<float>(), js.at(1).get<float>(),
                 js.at(2).get<float>(), js.at(3).get<float>()};
-        log_error("cannot handle vec4f");
+        std::cout << "cannot handle vec4f\n";
         return zero4f;
     };
 
     auto get_mat4f = [](const json& js) -> mat4f {
         if (!js.is_array() || js.size() != 16) {
-            log_error("cannot handle mat4f");
+            std::cout << "cannot handle vec4f\n";
             return identity_mat4f;
         }
         auto m = identity_mat4f;
@@ -356,7 +355,7 @@ std::shared_ptr<scene> load_pbrt(const std::string& filename) {
 
     auto get_mat3f = [](const json& js) -> mat3f {
         if (!js.is_array() || js.size() != 9) {
-            log_error("cannot handle mat3f");
+            std::cout << "cannot handle mat3f\n";
             return identity_mat3f;
         }
         auto m = identity_mat3f;
@@ -366,7 +365,7 @@ std::shared_ptr<scene> load_pbrt(const std::string& filename) {
 
     auto get_vector_vec3i = [](const json& js) -> std::vector<vec3i> {
         if (!js.is_array() || js.size() % 3) {
-            log_error("cannot handle vector<vec3f>");
+            std::cout << "cannot handle vector<vec3f>";
             return {};
         }
         auto vals = std::vector<vec3i>(js.size() / 3);
@@ -380,7 +379,7 @@ std::shared_ptr<scene> load_pbrt(const std::string& filename) {
 
     auto get_vector_vec3f = [](const json& js) -> std::vector<vec3f> {
         if (!js.is_array() || js.size() % 3) {
-            log_error("cannot handle vector<vec3f>");
+            std::cout << "cannot handle vector<vec3f>\n";
             return {};
         }
         auto vals = std::vector<vec3f>(js.size() / 3);
@@ -394,7 +393,7 @@ std::shared_ptr<scene> load_pbrt(const std::string& filename) {
 
     auto get_vector_vec2f = [](const json& js) -> std::vector<vec2f> {
         if (!js.is_array() || js.size() % 2) {
-            log_error("cannot handle vector<vec3f>");
+            std::cout << "cannot handle vector<vec3f>\n";
             return {};
         }
         auto vals = std::vector<vec2f>(js.size() / 2);
@@ -406,7 +405,8 @@ std::shared_ptr<scene> load_pbrt(const std::string& filename) {
     };
 
     auto get_scaled_texture =
-    [&txt_map, &get_vec3f](const json& js) -> std::pair<vec3f, std::shared_ptr<texture>> {
+        [&txt_map, &get_vec3f](
+            const json& js) -> std::pair<vec3f, std::shared_ptr<texture>> {
         if (js.is_string())
             return {{1, 1, 1}, txt_map.at(js.get<std::string>())};
         return {get_vec3f(js), nullptr};
@@ -466,7 +466,7 @@ std::shared_ptr<scene> load_pbrt(const std::string& filename) {
             if (type == "perspective") {
                 fovy = jcmd.at("fov").get<float>() * pi / 180;
             } else {
-                log_error("{} camera not supported", type);
+                std::cout << type << " camera not supported\n";
             }
             ygl::set_camera_fovy(cam, fovy, aspect);
             scn->cameras.push_back(cam);
@@ -491,7 +491,7 @@ std::shared_ptr<scene> load_pbrt(const std::string& filename) {
                         txt->path =
                             ygl::replace_path_extension(txt->path, ".hdr");
                 } else {
-                    log_error("{} texture not supported", type);
+                    std::cout << type << " texture not supported\n";
                 }
             }
         } else if (cmd == "MakeNamedMaterial" || cmd == "Material") {
@@ -534,7 +534,8 @@ std::shared_ptr<scene> load_pbrt(const std::string& filename) {
                         std::tie(op, op_txt) =
                             get_scaled_texture(jcmd.at("opacity"));
                         mat->op = (op.x + op.y + op.z) / 3;
-                        if(op_txt) log_error("opacity texture not supported");
+                        if (op_txt)
+                            std::cout << "opacity texture not supported\n";
                     }
                     mat->rs = 0;
                 } else if (type == "matte") {
@@ -572,7 +573,7 @@ std::shared_ptr<scene> load_pbrt(const std::string& filename) {
                             get_scaled_texture(jcmd.at("Kt"));
                     mat->rs = 0;
                 } else if (type == "mix") {
-                    log_warning("mix material not properly supported");
+                    std::cout << "mix material not properly supported\n";
                     if (jcmd.count("namedmaterial1")) {
                         auto mat1 =
                             jcmd.at("namedmaterial1").get<std::string>();
@@ -580,11 +581,11 @@ std::shared_ptr<scene> load_pbrt(const std::string& filename) {
                         *mat = *mat_map.at(mat1);
                         mat->name = saved_name;
                     } else {
-                        log_error("mix material missing front material");
+                        std::cout << "mix material missing front material\n";
                     }
                 } else {
                     mat->kd = {1, 0, 0};
-                    log_error("{} material not supported", type);
+                    std::cout << type << " material not supported\n";
                 }
                 if (jcmd.count("uroughness")) {
                     auto remap = js.count("remaproughness") &&
@@ -592,7 +593,7 @@ std::shared_ptr<scene> load_pbrt(const std::string& filename) {
                     if (jcmd.count("uroughness"))
                         mat->rs = jcmd.at("uroughness").get<float>();
                     // if (!remap) mat->rs = mat->rs * mat->rs;
-                    if (remap) log_error("remap roughness not supported");
+                    if (remap) std::cout << "remap roughness not supported\n";
                 }
                 if (jcmd.count("roughness")) {
                     auto remap = js.count("remaproughness") &&
@@ -600,7 +601,7 @@ std::shared_ptr<scene> load_pbrt(const std::string& filename) {
                     if (jcmd.count("roughness"))
                         mat->rs = jcmd.at("roughness").get<float>();
                     // if (!remap) mat->rs = mat->rs * mat->rs;
-                    if (remap) log_error("remap roughness not supported");
+                    if (remap) std::cout << "remap roughness not supported\n";
                 }
                 if (stack.back().light_mat) {
                     mat->ke = stack.back().light_mat->ke;
@@ -639,8 +640,8 @@ std::shared_ptr<scene> load_pbrt(const std::string& filename) {
                 if (jcmd.count("radius"))
                     radius = jcmd.at("radius").get<float>();
                 auto quads = std::vector<vec4i>();
-                make_sphere(quads, shp->pos, shp->norm, shp->texcoord,
-                    {64, 32}, 2 * radius, {1, 1});
+                make_sphere(quads, shp->pos, shp->norm, shp->texcoord, {64, 32},
+                    2 * radius, {1, 1});
                 shp->triangles = convert_quads_to_triangles(quads);
             } else if (type == "disk") {
                 shp->name = "disk" + std::to_string(sid++);
@@ -648,11 +649,11 @@ std::shared_ptr<scene> load_pbrt(const std::string& filename) {
                 if (jcmd.count("radius"))
                     radius = jcmd.at("radius").get<float>();
                 auto quads = std::vector<vec4i>();
-                make_disk(quads, shp->pos, shp->norm, shp->texcoord,
-                    {32, 16}, 2 * radius, {1, 1});
+                make_disk(quads, shp->pos, shp->norm, shp->texcoord, {32, 16},
+                    2 * radius, {1, 1});
                 shp->triangles = convert_quads_to_triangles(quads);
             } else {
-                log_error("{} shape not supported", type);
+                std::cout << type << " shape not supported\n";
             }
             auto frame = stack.back().frame;
             auto scl = vec3f{length(frame.x), length(frame.y), length(frame.z)};
@@ -693,7 +694,7 @@ std::shared_ptr<scene> load_pbrt(const std::string& filename) {
                 lmat->ke = get_vec3f(jcmd.at("L"));
                 stack.back().light_mat = lmat;
             } else {
-                log_error("{} area light not supported", type);
+                std::cout << type << " area light not supported\n";
             }
         } else if (cmd == "LightSource") {
             auto type = jcmd.at("type").get<std::string>();
@@ -724,8 +725,8 @@ std::shared_ptr<scene> load_pbrt(const std::string& filename) {
                 auto dir = normalize(from - to);
                 auto size = distant_dist * sin(5 * pi / 180);
                 auto quads = std::vector<vec4i>();
-                make_quad(quads, shp->pos, shp->norm, shp->texcoord,
-                    {1, 1}, {size, size}, {1, 1});
+                make_quad(quads, shp->pos, shp->norm, shp->texcoord, {1, 1},
+                    {size, size}, {1, 1});
                 shp->triangles = convert_quads_to_triangles(quads);
                 scn->shapes.push_back(shp);
                 auto mat = std::make_shared<material>();
@@ -740,12 +741,12 @@ std::shared_ptr<scene> load_pbrt(const std::string& filename) {
                 ist->shp = shp;
                 ist->mat = mat;
                 ist->frame =
-                stack.back().frame *
-                lookat_frame(dir * distant_dist, zero3f, {0, 1, 0}, true);
+                    stack.back().frame *
+                    lookat_frame(dir * distant_dist, zero3f, {0, 1, 0}, true);
                 scn->instances.push_back(ist);
-                log_error("distant light not properly supported", type);
+                std::cout << type << " light not properly supported\n";
             } else {
-                log_error("{} light not supported", type);
+                std::cout << type << " light not supported\n";
             }
         } else if (cmd == "WorldBegin") {
             stack.push_back(stack_item());
@@ -763,7 +764,7 @@ std::shared_ptr<scene> load_pbrt(const std::string& filename) {
                    cmd == "TransformEnd") {
             stack.pop_back();
         } else {
-            log_error("{} command not supported", cmd);
+            std::cout << cmd << " command not supported\n";
         }
     }
     if (use_hierarchy) {
@@ -805,7 +806,8 @@ int main(int argc, char** argv) {
     // parse command line
     CLI::App parser("convert pbrt scenes", "ypbrt");
     parser.add_flag("--flipyz", flipyz, "flip y and z axes");
-    parser.add_option("--output,-o", outfilename, "output scene")->required(true);
+    parser.add_option("--output,-o", outfilename, "output scene")
+        ->required(true);
     parser.add_option("scene", filename, "input scene")->required(true);
     try {
         parser.parse(argc, argv);
@@ -816,7 +818,8 @@ int main(int argc, char** argv) {
     if (flipyz) flipyz_scene(scn);
 
     // validate
-    for(auto err : ygl::validate(scn, true)) ygl::log_warning(err);
+    for (auto err : ygl::validate(scn, true))
+        std::cout << "warning: " << err << "\n";
 
     // add paths for meshes
     for (auto shp : scn->shapes) { shp->path = "models/" + shp->name + ".bin"; }

@@ -28,7 +28,6 @@
 
 #include "../yocto/yocto_glutils.h"
 #include "../yocto/yocto_image.h"
-#include "../yocto/yocto_utils.h"
 #include "CLI11.hpp"
 using namespace std::literals;
 
@@ -77,6 +76,7 @@ struct app_state {
     bool filmic = false;    // filmic tone mapping
     bool diff = false;      // compute diffs
     bool lum_diff = false;  // compute luminance diffs
+    bool quiet = false;     // quiet mode
 };
 
 // compute min/max
@@ -145,8 +145,8 @@ void draw_glwidgets(const std::shared_ptr<ygl::glwindow>& win,
         ygl::draw_glwidgets_combobox(win, "image", app->img, app->imgs);
         ygl::draw_glwidgets_label(win, "filename", app->img->filename);
         ygl::draw_glwidgets_label(win, "size",
-            ygl::format(
-                "{} x {}", app->img->img.width(), app->img->img.height()));
+            std::to_string(app->img->img.width()) + " x " +
+                std::to_string(app->img->img.height()));
         auto edited = 0;
         edited += ygl::draw_glwidgets_dragbox(
             win, "exposure", app->img->exposure, -5, 5);
@@ -224,9 +224,7 @@ void run_ui(const std::shared_ptr<app_state>& app) {
         mouse_pos = ygl::get_glwidnow_mouse_posf(win);
         mouse_button = ygl::get_glwindow_mouse_button(win);
 
-        ygl::set_glwindow_title(
-            win, ygl::format("yimview | {} | {}x{}", app->img->filename,
-                     app->img->img.width(), app->img->img.height()));
+        ygl::set_glwindow_title(win, "yimview");
 
         // handle mouse
         auto alt_down = get_glwindow_alt_key(win);
@@ -290,7 +288,7 @@ int main(int argc, char* argv[]) {
 
     // loading images
     for (auto filename : app->filenames) {
-        ygl::log_info("loading {}", filename);
+        if (!app->quiet) std::cout << "loading " << filename << "\n";
         app->imgs.push_back(load_gimage(filename, app->exposure, app->gamma));
     }
     app->img = app->imgs.at(0);
@@ -298,8 +296,9 @@ int main(int argc, char* argv[]) {
         auto num = app->imgs.size();
         for (auto i = 0; i < num; i++) {
             for (auto j = i + 1; j < num; j++) {
-                ygl::log_info("diffing {} {}", app->imgs[i]->filename,
-                    app->imgs[j]->filename);
+                if (!app->quiet)
+                    std::cout << "diffing " << app->imgs[i]->filename << " "
+                              << app->imgs[j]->filename << "\n";
                 auto diff =
                     diff_gimage(app->imgs[i], app->imgs[j], !app->lum_diff);
                 if (diff) app->imgs.push_back(diff);

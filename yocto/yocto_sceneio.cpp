@@ -29,7 +29,6 @@
 #include "yocto_sceneio.h"
 #include "yocto_image.h"
 #include "yocto_shape.h"
-#include "yocto_utils.h"
 
 #include <array>
 #include <climits>
@@ -2084,8 +2083,9 @@ std::shared_ptr<scene> load_gltf_scene(
             } else {
                 data = load_binary(normalize_path(dirname + "/" + uri));
                 if (data.empty()) {
-                    throw std::runtime_error("could not load binary file " +
-                                             normalize_path(dirname + "/" + uri));
+                    throw std::runtime_error(
+                        "could not load binary file " +
+                        normalize_path(dirname + "/" + uri));
                 }
             }
             if (gbuf.value("byteLength", -1) != data.size()) {
@@ -2317,7 +2317,7 @@ std::shared_ptr<scene> load_gltf_scene(
                             shp->lines.push_back({i - 1, i});
                     } else if (mode == -1 || mode == 0) {
                         // points
-                        log_warning("points not supported");
+                        std::cout << "points not supported\n";
                     } else {
                         throw std::runtime_error("unknown primitive type");
                     }
@@ -2368,7 +2368,7 @@ std::shared_ptr<scene> load_gltf_scene(
                                 {(int)indices[i - 1][0], (int)indices[i][0]});
                     } else if (mode == -1 || mode == 0) {
                         // points
-                        log_warning("points not supported");
+                        std::cout << "points not supported\n";
                     } else {
                         throw std::runtime_error("unknown primitive type");
                     }
@@ -2390,7 +2390,7 @@ std::shared_ptr<scene> load_gltf_scene(
             cam->name = gcam.value("name", ""s);
             cam->ortho = gcam.value("type", ""s) == "orthographic";
             if (cam->ortho) {
-                log_warning("orthographic not supported well");
+                std::cout << "orthographic not supported well\n";
                 auto ortho = gcam.value("orthographic", json::object());
                 set_camera_fovy(cam, ortho.value("ymag", 0.0f),
                     ortho.value("xmag", 0.0f) / ortho.value("ymag", 0.0f));
@@ -2524,7 +2524,7 @@ std::shared_ptr<scene> load_gltf_scene(
                                     (float)output_view[i][2]});
                         } break;
                         case 3: {  // weights
-                            log_warning("weights not supported for now");
+                            std::cout << "weights not supported for now\n";
 #if 0
                         // get a node that it refers to
                         auto ncomp = 0;
@@ -2803,7 +2803,7 @@ void save_gltf_scene(const std::string& filename,
     }
 
     // animations not supported yet
-    if (!scn->animations.empty()) log_warning("animation not supported yet");
+    if (!scn->animations.empty()) std::cout << "animation not supported yet\n";
 
     // nodes from instances
     if (scn->nodes.empty()) {

@@ -30,7 +30,6 @@
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
-#include "../yocto/yocto_utils.h"
 #include "CLI11.hpp"
 #include "yapp_ui.h"
 using namespace std::literals;
@@ -226,7 +225,7 @@ void run_ui(const std::shared_ptr<app_state>& app) {
 
         // check if exiting is needed
         if (app->screenshot_and_exit) {
-            ygl::log_info("taking screenshot and exiting...");
+            if (!app->quiet) std::cout << "taking screenshot and exiting\n";
             auto img = ygl::take_glwindow_screenshot(win);
             ygl::save_image(app->imfilename, img);
             break;
@@ -297,31 +296,31 @@ int main(int argc, char* argv[]) {
         parser.parse(argc, argv);
     } catch (const CLI::ParseError& e) { return parser.exit(e); }
 
-    // setup logger
-    if (app->quiet) ygl::log_verbose() = false;
-
     // fix hilights
     if (!app->highlight_filename.empty()) {
         try {
             app->inspector_highlights =
                 load_ini(app->highlight_filename).at("");
         } catch (const std::exception& e) {
-            ygl::log_fatal(
-                "cannot load highlihgt file {}", app->highlight_filename);
+            std::cout << "cannot load highlight " << app->highlight_filename
+                      << "\n";
+            std::cout << "error: " << e.what() << "\n";
+            exit(1);
         }
     }
 
     // scene loading
+    if (!app->quiet) std::cout << "loading scene" << app->filename << "\n";
     try {
-        ygl::log_info("loading scene {}", app->filename);
         app->scn = ygl::load_scene(app->filename);
     } catch (const std::exception& e) {
-        ygl::log_error("error during scene loading: "s + e.what());
-        ygl::log_fatal("cannot load scene {}", app->filename);
+        std::cout << "cannot load scene " << app->filename << "\n";
+        std::cout << "error: " << e.what() << "\n";
+        exit(1);
     }
 
     // tesselate
-    ygl::log_info("tesselating scene elements");
+    if (!app->quiet) std::cout << "tesselating scene elements\n";
     ygl::update_tesselation(app->scn);
 
     // update bbox and transforms
@@ -329,7 +328,7 @@ int main(int argc, char* argv[]) {
     ygl::update_bbox(app->scn);
 
     // add components
-    ygl::log_info("adding scene elements");
+    if (!app->quiet) std::cout << "adding scene elements\n";
     if (app->double_sided) {
         for (auto mat : app->scn->materials) mat->double_sided = true;
     }
@@ -339,7 +338,8 @@ int main(int argc, char* argv[]) {
     }
     app->cam = app->scn->cameras[0];
     ygl::add_missing_names(app->scn);
-    for (auto err : ygl::validate(app->scn)) ygl::log_warning(err);
+    for (auto err : ygl::validate(app->scn))
+        std::cout << "warning: " << err << "\n";
 
     // animation
     app->time_range = ygl::compute_animation_range(app->scn);

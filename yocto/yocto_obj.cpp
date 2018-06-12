@@ -1056,9 +1056,7 @@ void save_obj(const std::string& filename,
 
     // linkup to mtl
     auto mtlname = replace_path_extension(filename, "mtl");
-    if (!obj->materials.empty()) {
-        obj_dump_line(fs, "mtllib", mtlname);
-    }
+    if (!obj->materials.empty()) { obj_dump_line(fs, "mtllib", mtlname); }
 
     // save cameras
     for (auto cam : obj->cameras) {
@@ -1152,7 +1150,8 @@ void save_obj(const std::string& filename,
 
     // save materials
     if (!obj->materials.empty())
-        save_mtl(replace_path_extension(filename, "mtl"), obj->materials, flip_tr);
+        save_mtl(
+            replace_path_extension(filename, "mtl"), obj->materials, flip_tr);
 }
 
 // Load OBJ texture images.

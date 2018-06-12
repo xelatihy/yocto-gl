@@ -29,7 +29,6 @@
 #include "yocto_trace.h"
 #include "yocto_bvh.h"
 #include "yocto_image.h"
-#include "yocto_utils.h"
 
 #include <cassert>
 
@@ -965,7 +964,7 @@ vec4f trace_sample(const std::shared_ptr<scene>& scn,
     auto hit = false;
     auto l = tracer(scn, ray, rng, nbounces, &hit);
     if (!isfinite(l.x) || !isfinite(l.y) || !isfinite(l.z)) {
-        log_error("NaN detected");
+        std::cout << "NaN detected\n";
         l = zero3f;
     }
     if (max(l) > pixel_clamp) l = l * (pixel_clamp / max(l));
