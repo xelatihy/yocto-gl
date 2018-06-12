@@ -46,13 +46,13 @@ namespace ygl {
 // Load a scene
 std::shared_ptr<scene> load_scene(
     const std::string& filename, bool load_textures, bool skip_missing) {
-    auto ext = path_extension(filename);
+    auto ext = get_extension(filename);
     auto scn = (std::shared_ptr<scene>)nullptr;
-    if (ext == ".json" || ext == ".JSON") {
+    if (ext == "json" || ext == "JSON") {
         scn = load_json_scene(filename, load_textures, skip_missing);
-    } else if (ext == ".obj" || ext == ".OBJ") {
+    } else if (ext == "obj" || ext == "OBJ") {
         scn = load_obj_scene(filename, load_textures, skip_missing);
-    } else if (ext == ".gltf" || ext == ".GLTF") {
+    } else if (ext == "gltf" || ext == "GLTF") {
         scn = load_gltf_scene(filename, load_textures, skip_missing);
     } else {
         throw std::runtime_error("unsupported extension " + ext);
@@ -72,12 +72,12 @@ std::shared_ptr<scene> load_scene(
 // Save a scene
 void save_scene(const std::string& filename, const std::shared_ptr<scene> scn,
     bool save_textures, bool skip_missing) {
-    auto ext = path_extension(filename);
-    if (ext == ".json" || ext == ".JSON") {
+    auto ext = get_extension(filename);
+    if (ext == "json" || ext == "JSON") {
         save_json_scene(filename, scn, save_textures, skip_missing);
-    } else if (ext == ".obj" || ext == ".OBJ") {
+    } else if (ext == "obj" || ext == "OBJ") {
         save_obj_scene(filename, scn, save_textures, skip_missing);
-    } else if (ext == ".gltf" || ext == ".GLTF") {
+    } else if (ext == "gltf" || ext == "GLTF") {
         save_gltf_scene(filename, scn, save_textures, skip_missing);
     } else {
         throw std::runtime_error("unsupported extension " + ext);
@@ -90,14 +90,6 @@ void save_scene(const std::string& filename, const std::shared_ptr<scene> scn,
 // IO UTILITIES
 // -----------------------------------------------------------------------------
 namespace ygl {
-
-// Fix path separators
-std::string fix_path(const std::string& path_) {
-    auto path = path_;
-    for (auto& c : path)
-        if (c == '\\') c = '/';
-    return path;
-};
 
 // Encode in base64
 std::string base64_encode(
@@ -199,57 +191,6 @@ std::string base64_decode(std::string const& encoded_string) {
     }
 
     return ret;
-}
-
-// Load a text file
-std::string load_text(const std::string& filename) {
-    // https://stackoverflow.com/questions/2912520/read-file-contents-into-a-string-in-c
-    auto f = fopen(filename.c_str(), "r");
-    if (!f) throw std::runtime_error("could not load " + filename);
-    // Determine file size
-    fseek(f, 0, SEEK_END);
-    auto size = ftell(f);
-    rewind(f);
-    // read
-    auto buf = std::vector<char>(size);
-    if (fread(buf.data(), sizeof(char), size, f) != size)
-        throw std::runtime_error("could not load " + filename);
-    return std::string(buf.data(), buf.size());
-}
-
-// Save a text file
-void save_text(const std::string& filename, const std::string& str) {
-    auto f = fopen(filename.c_str(), "wb");
-    if (!f) throw std::runtime_error("cannot write file " + filename);
-    auto num = fwrite(str.c_str(), 1, str.size(), f);
-    if (num != str.size())
-        throw std::runtime_error("cannot write file " + filename);
-    fclose(f);
-}
-
-// Load a binary file
-std::vector<byte> load_binary(const std::string& filename) {
-    // https://stackoverflow.com/questions/174531/easiest-way-to-get-files-contents-in-c
-    auto f = fopen(filename.c_str(), "rb");
-    if (!f) throw std::runtime_error("cannot read file " + filename);
-    fseek(f, 0, SEEK_END);
-    auto len = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    auto buf = std::vector<unsigned char>(len);
-    if (fread(buf.data(), 1, len, f) != len)
-        throw std::runtime_error("cannot read file " + filename);
-    fclose(f);
-    return buf;
-}
-
-// Save a binary file
-void save_binary(const std::string& filename, const std::vector<byte>& data) {
-    auto f = fopen(filename.c_str(), "wb");
-    if (!f) throw std::runtime_error("cannot write file " + filename);
-    auto num = fwrite(data.data(), 1, data.size(), f);
-    if (num != data.size())
-        throw std::runtime_error("cannot write file " + filename);
-    fclose(f);
 }
 
 }  // namespace ygl
@@ -1117,12 +1058,10 @@ std::shared_ptr<scene> load_json_scene(
     from_json(js, *scn);
 
     // load meshes
-    auto dirname = path_dirname(filename);
+    auto dirname = get_dirname(filename);
     for (auto shp : scn->shapes) {
         if (shp->path == "" || !shp->pos.empty()) continue;
-        auto filename = dirname + shp->path;
-        for (auto& c : filename)
-            if (c == '\\') c = '/';
+        auto filename = normalize_path(dirname + "/" + shp->path);
         try {
             load_mesh(filename, shp->points, shp->lines, shp->triangles,
                 shp->pos, shp->norm, shp->texcoord, shp->color, shp->radius);
@@ -1159,7 +1098,7 @@ std::shared_ptr<scene> load_json_scene(
     // load images
     for (auto txt : scn->textures) {
         if (txt->path == "" || !txt->img.empty()) continue;
-        auto filename = fix_path(dirname + txt->path);
+        auto filename = normalize_path(dirname + "/" + txt->path);
         try {
             txt->img = load_image(filename, ldr_gamma.at(txt));
         } catch (const std::exception&) {
@@ -1179,10 +1118,10 @@ void save_json_scene(const std::string& filename,
     save_json(filename, js);
 
     // save meshes
-    auto dirname = path_dirname(filename);
+    auto dirname = get_dirname(filename);
     for (auto shp : scn->shapes) {
         if (shp->path == "") continue;
-        auto filename = fix_path(dirname + shp->path);
+        auto filename = normalize_path(dirname + "/" + shp->path);
         try {
             save_mesh(filename, shp->points, shp->lines, shp->triangles,
                 shp->pos, shp->norm, shp->texcoord, shp->color, shp->radius);
@@ -1215,7 +1154,7 @@ void save_json_scene(const std::string& filename,
     // save images
     for (auto txt : scn->textures) {
         if (txt->img.empty()) continue;
-        auto filename = fix_path(dirname + txt->path);
+        auto filename = normalize_path(dirname + "/" + txt->path);
         try {
             save_image(filename, txt->img, ldr_gamma.at(txt));
         } catch (std::exception&) {
@@ -1618,7 +1557,7 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
             }
         } else if (cmd == "mtllib") {
             auto mtlname = parse_string(ss);
-            auto mtlpath = path_dirname(filename) + mtlname;
+            auto mtlpath = get_dirname(filename) + "/" + mtlname;
             // open file
             auto fs = fopen(mtlpath.c_str(), "rt");
             if (!fs)
@@ -1797,7 +1736,7 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
     update_bbox(scn);
 
     // fix scene
-    scn->name = path_filename(filename);
+    scn->name = get_filename(filename);
     auto mat = (std::shared_ptr<material>)nullptr;
     for (auto ist : scn->instances) {
         if (ist->mat) continue;
@@ -1829,9 +1768,9 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
     for (auto env : scn->environments) { ldr_gamma[env->ke_txt] = 2.2f; }
 
     // load images
-    auto dirname = path_dirname(filename);
+    auto dirname = get_dirname(filename);
     for (auto txt : scn->textures) {
-        auto filename = fix_path(dirname + txt->path);
+        auto filename = normalize_path(dirname + "/" + txt->path);
         try {
             txt->img = load_image(filename, ldr_gamma.at(txt));
         } catch (std::exception&) {
@@ -1852,7 +1791,7 @@ void save_obj_scene(const std::string& filename,
 
     // material library
     if (!scn->materials.empty()) {
-        auto mtlname = path_basename(filename) + ".mtl";
+        auto mtlname = replace_path_extension(filename, "mtl");
         fprintf(f, "mtllib %s\n", mtlname.c_str());
     }
 
@@ -2073,10 +2012,10 @@ void save_obj_scene(const std::string& filename,
     for (auto env : scn->environments) { ldr_gamma[env->ke_txt] = 2.2f; }
 
     // save images
-    auto dirname = path_dirname(filename);
+    auto dirname = get_dirname(filename);
     for (auto txt : scn->textures) {
         if (txt->img.empty()) continue;
-        auto filename = fix_path(dirname + txt->path);
+        auto filename = normalize_path(dirname + "/" + txt->path);
         try {
             save_image(filename, txt->img, ldr_gamma.at(txt));
         } catch (std::exception&) {
@@ -2107,7 +2046,7 @@ std::shared_ptr<scene> load_gltf_scene(
     auto scn = std::make_shared<scene>();
 
     // prepare parsing
-    auto dirname = path_dirname(filename);
+    auto dirname = get_dirname(filename);
 
     // convert textures
     if (gltf.count("images")) {
@@ -2143,10 +2082,10 @@ std::shared_ptr<scene> load_gltf_scene(
                     (unsigned char*)data_char.c_str(),
                     (unsigned char*)data_char.c_str() + data_char.length());
             } else {
-                data = load_binary(fix_path(dirname + uri));
+                data = load_binary(normalize_path(dirname + "/" + uri));
                 if (data.empty()) {
                     throw std::runtime_error("could not load binary file " +
-                                             fix_path(dirname + uri));
+                                             normalize_path(dirname + "/" + uri));
                 }
             }
             if (gbuf.value("byteLength", -1) != data.size()) {
@@ -2670,7 +2609,7 @@ std::shared_ptr<scene> load_gltf_scene(
 
     // load images
     for (auto txt : scn->textures) {
-        auto filename = fix_path(dirname + txt->path);
+        auto filename = normalize_path(dirname + "/" + txt->path);
         try {
             txt->img = load_image(filename, ldr_gamma.at(txt));
         } catch (const std::exception&) {
@@ -2888,10 +2827,10 @@ void save_gltf_scene(const std::string& filename,
     save_json(filename, js);
 
     // meshes
-    auto dirname = path_dirname(filename);
+    auto dirname = get_dirname(filename);
     for (auto shp : scn->shapes) {
         if (shp->path == "") continue;
-        auto filename = dirname + shp->path;
+        auto filename = normalize_path(dirname + "/" + shp->path);
         filename = replace_path_extension(filename, ".bin");
         for (auto& c : filename)
             if (c == '\\') c = '/';
@@ -2936,7 +2875,7 @@ void save_gltf_scene(const std::string& filename,
     // save images
     for (auto txt : scn->textures) {
         if (txt->img.empty()) continue;
-        auto filename = fix_path(dirname + txt->path);
+        auto filename = normalize_path(dirname + "/" + txt->path);
         try {
             save_image(filename, txt->img, ldr_gamma.at(txt));
         } catch (std::exception&) {
@@ -2959,11 +2898,11 @@ void load_mesh(const std::string& filename, std::vector<int>& points,
     std::vector<vec3f>& pos, std::vector<vec3f>& norm,
     std::vector<vec2f>& texcoord, std::vector<vec4f>& color,
     std::vector<float>& radius) {
-    auto ext = path_extension(filename);
-    if (ext == ".ply" || ext == ".PLY") {
+    auto ext = get_extension(filename);
+    if (ext == "ply" || ext == "PLY") {
         load_ply_mesh(filename, points, lines, triangles, pos, norm, texcoord,
             color, radius);
-    } else if (ext == ".obj" || ext == ".OBJ") {
+    } else if (ext == "obj" || ext == "OBJ") {
         load_obj_mesh(filename, points, lines, triangles, pos, norm, texcoord);
     } else {
         throw std::runtime_error("unsupported mesh extensions " + ext);
@@ -2976,11 +2915,11 @@ void save_mesh(const std::string& filename, const std::vector<int>& points,
     const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
     const std::vector<vec2f>& texcoord, const std::vector<vec4f>& color,
     const std::vector<float>& radius, bool ascii) {
-    auto ext = path_extension(filename);
-    if (ext == ".ply" || ext == ".PLY") {
+    auto ext = get_extension(filename);
+    if (ext == "ply" || ext == "PLY") {
         save_ply_mesh(filename, points, lines, triangles, pos, norm, texcoord,
             color, radius, ascii);
-    } else if (ext == ".obj" || ext == ".OBJ") {
+    } else if (ext == "obj" || ext == "OBJ") {
         save_obj_mesh(filename, points, lines, triangles, pos, norm, texcoord);
     } else {
         throw std::runtime_error("unsupported mesh extensions " + ext);

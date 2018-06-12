@@ -58,6 +58,11 @@
 //     the PDF with `sample_xxx_pdf()`.
 //
 //
+// ## Utilities
+//
+// For lack of a better place to include them, this library provides some 
+// small utlities for string, path and container manipulation.
+//
 
 //
 // LICENSE:
@@ -110,6 +115,8 @@
 #include <iostream>
 #include <limits>
 #include <vector>
+#include <string>
+#include <cstdio>
 
 // -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
@@ -2000,6 +2007,30 @@ inline T eval_keyframed_bezier(
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
+// PATH UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Normalize path delimiters.
+inline std::string normalize_path(const std::string& filename);
+// Get directory name (not including '/').
+inline std::string get_dirname(const std::string& filename);
+// Get extension (not including '.').
+inline std::string get_extension(const std::string& filename);
+// Get filename without directory.
+inline std::string get_filename(const std::string& filename);
+// Load a text file
+inline std::string load_text(const std::string& filename);
+// Save a text file
+inline void save_text(const std::string& filename, const std::string& str);
+// Load a binary file
+inline std::vector<byte> load_binary(const std::string& filename);
+// Save a binary file
+inline void save_binary(const std::string& filename, const std::vector<byte>& data);
+
+}
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR MATRICES
 // -----------------------------------------------------------------------------
 namespace ygl {
@@ -2414,5 +2445,111 @@ inline float perlin_turbulence_noise(
 }
 
 }  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF PATH UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+inline std::string normalize_path(const std::string& filename_) {
+    auto filename = filename_;
+    for(auto& c : filename) if(c == '\\') c = '/';
+    if(filename.size() > 1 && filename[0] == '/' && filename[1] == '/') 
+        throw std::runtime_error("no absolute paths");
+    if(filename.size() > 3 && filename[1] == ':' && filename[2] == '/' && filename[3] == '/') 
+        throw std::runtime_error("no absolute paths");
+    auto pos = (size_t)0;
+    while((pos = filename.find("//")) != filename.npos)
+        filename = filename.substr(0, pos) + filename.substr(pos+1);
+    return filename;
+}
+
+// Get directory name (not including '/').
+inline std::string get_dirname(const std::string& filename_) {
+    auto filename = normalize_path(filename_);
+    auto pos = filename.rfind('/');
+    if (pos == std::string::npos) return "";
+    return filename.substr(0, pos);
+}
+
+// Get extension (not including '.').
+inline std::string get_extension(const std::string& filename_) {
+    auto filename = normalize_path(filename_);
+    auto pos = filename.rfind('.');
+    if (pos == std::string::npos) return "";
+    return filename.substr(pos+1);
+}
+
+// Get filename without directory.
+inline std::string get_filename(const std::string& filename_) {
+    auto filename = normalize_path(filename_);
+    auto pos = filename.rfind('/');
+    if (pos == std::string::npos) return "";
+    return filename.substr(pos+1);
+}
+
+// Replace extension.
+inline std::string replace_path_extension(
+    const std::string& filename_, const std::string& ext_) {
+    auto filename = normalize_path(filename_);
+    auto ext = normalize_path(ext_);
+    if(ext.at(0) == '.') ext = ext.substr(1);
+    auto pos = filename.rfind('.');
+    if (pos == std::string::npos) return filename;
+    return filename.substr(0, pos) + "." + ext;
+}
+
+// Load a text file
+inline std::string load_text(const std::string& filename) {
+    // https://stackoverflow.com/questions/2912520/read-file-contents-into-a-string-in-c
+    auto f = fopen(filename.c_str(), "r");
+    if (!f) throw std::runtime_error("could not load " + filename);
+    // Determine file size
+    fseek(f, 0, SEEK_END);
+    auto size = ftell(f);
+    rewind(f);
+    // read
+    auto buf = std::vector<char>(size);
+    if (fread(buf.data(), sizeof(char), size, f) != size)
+        throw std::runtime_error("could not load " + filename);
+    return std::string(buf.data(), buf.size());
+}
+
+// Save a text file
+inline void save_text(const std::string& filename, const std::string& str) {
+    auto f = fopen(filename.c_str(), "wb");
+    if (!f) throw std::runtime_error("cannot write file " + filename);
+    auto num = fwrite(str.c_str(), 1, str.size(), f);
+    if (num != str.size())
+        throw std::runtime_error("cannot write file " + filename);
+    fclose(f);
+}
+
+// Load a binary file
+inline std::vector<byte> load_binary(const std::string& filename) {
+    // https://stackoverflow.com/questions/174531/easiest-way-to-get-files-contents-in-c
+    auto f = fopen(filename.c_str(), "rb");
+    if (!f) throw std::runtime_error("cannot read file " + filename);
+    fseek(f, 0, SEEK_END);
+    auto len = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    auto buf = std::vector<unsigned char>(len);
+    if (fread(buf.data(), 1, len, f) != len)
+        throw std::runtime_error("cannot read file " + filename);
+    fclose(f);
+    return buf;
+}
+
+// Save a binary file
+inline void save_binary(const std::string& filename, const std::vector<byte>& data) {
+    auto f = fopen(filename.c_str(), "wb");
+    if (!f) throw std::runtime_error("cannot write file " + filename);
+    auto num = fwrite(data.data(), 1, data.size(), f);
+    if (num != data.size())
+        throw std::runtime_error("cannot write file " + filename);
+    fclose(f);
+}
+
+}
 
 #endif

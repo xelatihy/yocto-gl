@@ -74,10 +74,10 @@ int main(int argc, char** argv) {
 
     // make a directory if needed
     try {
-        mkdir(ygl::path_dirname(app->output));
+        mkdir(ygl::get_dirname(app->output));
     } catch (const std::exception& e) {
         ygl::log_fatal("unable to make directory {} with error {}",
-            ygl::path_dirname(app->output), e.what());
+            ygl::get_dirname(app->output), e.what());
     }
     // save scene
     try {

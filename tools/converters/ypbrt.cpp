@@ -302,7 +302,7 @@ void load_ply(const std::string& filename, std::vector<vec3i>& triangles,
 
 std::shared_ptr<scene> load_pbrt(const std::string& filename) {
     auto js = pbrt_to_json(filename);
-    auto dirname = path_dirname(filename);
+    auto dirname = get_dirname(filename);
 
     struct stack_item {
         frame3f frame = identity_frame3f;
@@ -487,7 +487,7 @@ std::shared_ptr<scene> load_pbrt(const std::string& filename) {
                 auto type = jcmd.at("type").get<std::string>();
                 if (type == "imagemap") {
                     txt->path = jcmd.at("filename").get<std::string>();
-                    if (ygl::path_extension(txt->path) == ".pfm")
+                    if (ygl::get_extension(txt->path) == "pfm")
                         txt->path =
                             ygl::replace_path_extension(txt->path, ".hdr");
                 } else {
@@ -622,8 +622,8 @@ std::shared_ptr<scene> load_pbrt(const std::string& filename) {
             auto type = jcmd.at("type").get<std::string>();
             if (type == "plymesh") {
                 auto filename = jcmd.at("filename").get<std::string>();
-                shp->name = path_basename(filename);
-                load_ply(dirname + filename, shp->triangles, shp->pos,
+                shp->name = get_filename(filename);
+                load_ply(dirname + "/" + filename, shp->triangles, shp->pos,
                     shp->norm, shp->texcoord);
             } else if (type == "trianglemesh") {
                 shp->name = "mesh" + std::to_string(sid++);
@@ -822,7 +822,7 @@ int main(int argc, char** argv) {
     for (auto shp : scn->shapes) { shp->path = "models/" + shp->name + ".bin"; }
 
     // save scene
-    system(("mkdir -p " + path_dirname(outfilename)).c_str());
+    system(("mkdir -p " + get_dirname(outfilename)).c_str());
     ygl::save_scene(outfilename, scn);
 
     return 0;
