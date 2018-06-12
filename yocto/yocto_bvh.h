@@ -60,6 +60,7 @@
 #include "yocto_math.h"
 
 #include <vector>
+#include <memory>
 
 // -----------------------------------------------------------------------------
 // RAY INTERSECTION AND CLOSEST POINT FUNCTIONS
