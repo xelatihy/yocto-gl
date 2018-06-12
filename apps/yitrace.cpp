@@ -59,7 +59,7 @@ struct app_state {
     ygl::image4f img = {};
 
     // rendering state
-    std::vector<ygl::rng_state> rngs;
+    ygl::image<ygl::rng_state> rngs;
     std::vector<std::thread> async_threads;
     bool async_stop = false;
     int cur_sample = 0;
@@ -114,10 +114,10 @@ auto tracer_names = std::unordered_map<std::string, ygl::trace_func>{
 void draw(const std::shared_ptr<ygl::glwindow>& win,
     const std::shared_ptr<app_state>& app) {
     // update image
-    ygl::center_glimage(app->imframe, {app->img.width, app->img.height},
+    ygl::center_glimage(app->imframe, {app->img.width(), app->img.height()},
         ygl::get_glwindow_size(win), app->zoom_to_fit);
-    ygl::update_gltexture(app->gl_txt, app->img.width, app->img.height,
-        app->img.pxl, false, false, true, false);
+    ygl::update_gltexture(app->gl_txt, app->img.width(), app->img.height(),
+        app->img.pixels(), false, false, true, false);
     // draw image
     auto window_size = get_glwindow_size(win);
     auto framebuffer_size = get_glwindow_framebuffer_size(win);
@@ -129,8 +129,8 @@ void draw(const std::shared_ptr<ygl::glwindow>& win,
     if (ygl::begin_glwidgets_frame(win, "yitrace")) {
         ygl::draw_glwidgets_label(win, "scene", app->filename);
         ygl::draw_glwidgets_label(win, "image",
-            ygl::format("{} x {} @ {} samples", app->img.width, app->img.height,
-                app->cur_sample));
+            ygl::format("{} x {} @ {} samples", app->img.width(),
+                app->img.height(), app->cur_sample));
         if (ygl::begin_glwidgets_tree(win, "render settings")) {
             auto edited = 0;
             edited += ygl::draw_glwidgets_combobox(
@@ -162,12 +162,11 @@ void draw(const std::shared_ptr<ygl::glwindow>& win,
             ygl::continue_glwidgets_line(win);
             ygl::draw_glwidgets_checkbox(win, "fps", app->navigation_fps);
             auto ij = ygl::get_glimage_coords(get_glwidnow_mouse_posf(win),
-                app->imframe, {app->img.width, app->img.height});
+                app->imframe, {app->img.width(), app->img.height()});
             ygl::draw_glwidgets_dragbox(win, "mouse", ij);
-            if (ij.x >= 0 && ij.x < app->img.width && ij.y >= 0 &&
-                ij.y < app->img.height) {
-                ygl::draw_glwidgets_colorbox(
-                    win, "pixel", app->img.pxl[ij.x + ij.y * app->img.width]);
+            if (ij.x >= 0 && ij.x < app->img.width() && ij.y >= 0 &&
+                ij.y < app->img.height()) {
+                ygl::draw_glwidgets_colorbox(win, "pixel", app->img[ij]);
             } else {
                 auto zero4f_ = ygl::zero4f;
                 ygl::draw_glwidgets_colorbox(win, "pixel", zero4f_);
@@ -224,29 +223,30 @@ bool update(const std::shared_ptr<ygl::glwindow>& win,
 
     // render preview image
     if (app->preview_resolution) {
-        auto pwidth = (int)std::round(
-            app->preview_resolution * app->img.width / (float)app->img.height);
+        auto pwidth =
+            (int)std::round(app->preview_resolution * app->img.width() /
+                            (float)app->img.height());
         auto pheight = app->preview_resolution;
-        auto pimg = ygl::make_image4f(pwidth, pheight);
-        auto prngs = ygl::make_rng_seq(pwidth * pheight, 7);
+        auto pimg = ygl::image4f{pwidth, pheight};
+        auto prngs = ygl::make_trace_rngs(pwidth, pheight, 7);
         trace_samples(
             app->scn, app->cam, pimg, prngs, 0, 1, app->tracef, app->nbounces);
         auto pratio = app->resolution / app->preview_resolution;
-        for (auto j = 0; j < app->img.height; j++) {
-            for (auto i = 0; i < app->img.width; i++) {
+        for (auto j = 0; j < app->img.height(); j++) {
+            for (auto i = 0; i < app->img.width(); i++) {
                 auto pi = ygl::clamp(i / pratio, 0, pwidth - 1),
                      pj = ygl::clamp(j / pratio, 0, pheight - 1);
-                app->img.pxl[i + j * app->img.width] =
-                    pimg.pxl[pi + pwidth * pj];
+                app->img[{i, j}] = pimg[{pi, pj}];
             }
         }
     } else {
-        for (auto& p : app->img.pxl) p = ygl::zero4f;
+        for (auto& p : app->img) p = ygl::zero4f;
     }
 
     // restart renderer
     ygl::log_info("restart renderer");
-    app->rngs = ygl::make_rng_seq(app->img.pxl.size(), app->seed);
+    app->rngs =
+        ygl::make_trace_rngs(app->img.width(), app->img.height(), app->seed);
     ygl::trace_async_start(app->scn, app->cam, app->img, app->rngs,
         app->nsamples, app->tracef, app->nbounces, app->async_threads,
         app->async_stop, app->cur_sample, app->pixel_clamp);
@@ -258,19 +258,19 @@ bool update(const std::shared_ptr<ygl::glwindow>& win,
 // run ui loop
 void run_ui(const std::shared_ptr<app_state>& app) {
     // window
-    auto win_width = app->img.width + ygl::default_glwidgets_width;
-    auto win_height = ygl::clamp(app->img.height, 512, 1024);
+    auto win_width = app->img.width() + ygl::default_glwidgets_width;
+    auto win_height = ygl::clamp(app->img.height(), 512, 1024);
     auto win = ygl::make_glwindow(win_width, win_height, "yitrace");
     ygl::set_glwindow_callbacks(
         win, nullptr, nullptr, [app, win]() { draw(win, app); });
-    ygl::center_glimage(app->imframe, {app->img.width, app->img.height},
+    ygl::center_glimage(app->imframe, {app->img.width(), app->img.height()},
         ygl::get_glwindow_size(win), app->zoom_to_fit);
     ygl::log_callback() = ygl::log_glwidgets_msg;
 
     // load textures
     app->gl_prog = ygl::make_glimage_program();
-    ygl::update_gltexture(app->gl_txt, app->img.width, app->img.height,
-        app->img.pxl, false, false, true, false);
+    ygl::update_gltexture(app->gl_txt, app->img.width(), app->img.height(),
+        app->img.pixels(), false, false, true, false);
 
     // init widget
     ygl::init_glwidgets(win);
@@ -290,10 +290,11 @@ void run_ui(const std::shared_ptr<app_state>& app) {
             }
         }
         ygl::handle_glscene_selection(win, app->scn, app->cam,
-            {app->img.width, app->img.height}, app->imframe, app->selection);
+            {app->img.width(), app->img.height()}, app->imframe,
+            app->selection);
 
         // draw
-        ygl::center_glimage(app->imframe, {app->img.width, app->img.height},
+        ygl::center_glimage(app->imframe, {app->img.width(), app->img.height()},
             ygl::get_glwindow_size(win), app->zoom_to_fit);
         draw(win, app);
 
@@ -404,10 +405,11 @@ int main(int argc, char* argv[]) {
 
     // initialize rendering objects
     ygl::log_info("initializing tracer data");
-    app->img = ygl::make_image4f(
+    app->img = ygl::image4f{
         (int)round(app->resolution * app->cam->width / app->cam->height),
-        app->resolution);
-    app->rngs = ygl::make_rng_seq(app->img.width * app->img.height, app->seed);
+        app->resolution};
+    app->rngs =
+        ygl::make_trace_rngs(app->img.width(), app->img.height(), app->seed);
     app->update_list.push_back(app->scn);
 
     // run interactive

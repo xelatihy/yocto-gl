@@ -1461,7 +1461,7 @@ void save_gltf_textures(const std::shared_ptr<glTF>& gltf,
 
     // save images
     for (auto gimg : gltf->images) {
-        if (gimg->data.pxl.empty()) continue;
+        if (gimg->data.empty()) continue;
         if (startswith(gimg->uri, "data:")) {
             if (skip_missing) continue;
             throw std::runtime_error("saving of embedded data not supported");

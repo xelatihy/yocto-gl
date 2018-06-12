@@ -1220,7 +1220,7 @@ void save_obj_textures(const std::shared_ptr<obj_scene>& obj,
 
     // save images
     for (auto txt : obj->textures) {
-        if (txt->img.pxl.empty()) continue;
+        if (txt->img.empty()) continue;
         auto filename = dirname + txt->path;
         for (auto& c : filename)
             if (c == '\\') c = '/';

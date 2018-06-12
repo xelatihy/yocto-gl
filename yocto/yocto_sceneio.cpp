@@ -274,91 +274,52 @@ void save_json(const std::string& filename, const json& js) {
 }
 
 // json conversions
-inline void to_json(json& js, vec2i val) {
-    js = json((const std::array<int, 2>&)val);
+template <typename T, int N>
+inline void to_json(json& js, const vec<T, N>& val) {
+    js = json((const std::array<T, N>&)val);
 }
-inline void from_json(const json& js, vec2i& val) {
-    (std::array<int, 2>&)val = js.get<std::array<int, 2>>();
-}
-inline void to_json(json& js, vec3i val) {
-    js = json((const std::array<int, 3>&)val);
-}
-inline void from_json(const json& js, vec3i& val) {
-    (std::array<int, 3>&)val = js.get<std::array<int, 3>>();
-}
-inline void to_json(json& js, vec4i val) {
-    js = json((const std::array<int, 4>&)val);
-}
-inline void from_json(const json& js, vec4i& val) {
-    (std::array<int, 4>&)val = js.get<std::array<int, 4>>();
+template <typename T, int N>
+inline void from_json(const json& js, vec<T, N>& val) {
+    (std::array<T, N>&)val = js.get<std::array<T, N>>();
 }
 
-inline void to_json(json& js, vec2f val) {
-    js = json((const std::array<float, 2>&)val);
+template <typename T, int N>
+inline void to_json(json& js, const frame<T, N>& val) {
+    js = json((const std::array<T, N*(N + 1)>&)val);
 }
-inline void from_json(const json& js, vec2f& val) {
-    (std::array<float, 2>&)val = js.get<std::array<float, 2>>();
+template <typename T, int N>
+inline void from_json(const json& js, frame<T, N>& val) {
+    (std::array<T, N*(N + 1)>&)val = js.get<std::array<T, N*(N + 1)>>();
 }
-inline void to_json(json& js, vec3f val) {
-    js = json((const std::array<float, 3>&)val);
+template <typename T, int N>
+inline void to_json(json& js, const mat<T, N>& val) {
+    js = json((const std::array<T, N * N>&)val);
 }
-inline void from_json(const json& js, vec3f& val) {
-    (std::array<float, 3>&)val = js.get<std::array<float, 3>>();
-}
-inline void to_json(json& js, vec4f val) {
-    js = json((const std::array<float, 4>&)val);
-}
-inline void from_json(const json& js, vec4f& val) {
-    (std::array<float, 4>&)val = js.get<std::array<float, 4>>();
-}
-inline void to_json(json& js, const frame3f& val) {
-    js = json((const std::array<float, 12>&)val);
-}
-inline void from_json(const json& js, frame3f& val) {
-    (std::array<float, 12>&)val = js.get<std::array<float, 12>>();
-}
-inline void to_json(json& js, const mat4f& val) {
-    js = json((const std::array<float, 16>&)val);
-}
-inline void from_json(const json& js, mat4f& val) {
-    (std::array<float, 16>&)val = js.get<std::array<float, 16>>();
+template <typename T, int N>
+inline void from_json(const json& js, mat<T, N>& val) {
+    (std::array<T, N * N>&)val = js.get<std::array<T, N * N>>();
 }
 
-inline void to_json(json& js, const bbox1f& val) {
-    js = json((const std::array<float, 2>&)val);
+template <typename T, int N>
+inline void to_json(json& js, const bbox<T, N>& val) {
+    js = json((const std::array<T, 2 * N>&)val);
 }
-inline void from_json(const json& js, bbox1f& val) {
-    (std::array<float, 2>&)val = js.get<std::array<float, 2>>();
-}
-inline void to_json(json& js, const bbox2f& val) {
-    js = json((const std::array<float, 4>&)val);
-}
-inline void from_json(const json& js, bbox2f& val) {
-    (std::array<float, 4>&)val = js.get<std::array<float, 4>>();
-}
-inline void to_json(json& js, const bbox3f& val) {
-    js = json((const std::array<float, 6>&)val);
-}
-inline void from_json(const json& js, bbox3f& val) {
-    (std::array<float, 6>&)val = js.get<std::array<float, 6>>();
-}
-inline void to_json(json& js, const bbox4f& val) {
-    js = json((const std::array<float, 8>&)val);
-}
-inline void from_json(const json& js, bbox4f& val) {
-    (std::array<float, 8>&)val = js.get<std::array<float, 8>>();
+template <typename T, int N>
+inline void from_json(const json& js, bbox<T, N>& val) {
+    (std::array<T, 2 * N>&)val = js.get<std::array<T, 2 * N>>();
 }
 
 inline void to_json(json& js, const image4f& val) {
     js = json::object();
-    js["width"] = val.width;
-    js["height"] = val.height;
-    js["pxl"] = val.pxl;
+    js["width"] = val.width();
+    js["height"] = val.height();
+    js["pixels"] = val.pixels();
 }
 inline void from_json(const json& js, image4f& val) {
-    val.width = js.at("width").get<int>();
-    val.height = js.at("height").get<int>();
-    val.pxl = js.at("pxl").get<std::vector<vec4f>>();
+    auto width = js.at("width").get<int>();
+    auto height = js.at("height").get<int>();
+    auto pixels = js.at("pixels").get<std::vector<vec4f>>();
+    val = image4f{width, height, pixels};
 }
 
 }  // namespace ygl
@@ -413,7 +374,7 @@ void to_json(json& js, const texture& val) {
     if (val.clamp != def.clamp) js["clamp"] = val.clamp;
     if (val.scale != def.scale) js["scale"] = val.scale;
     if (val.path == "") {
-        if (!val.img.pxl.empty()) js["img"] = val.img;
+        if (!val.img.empty()) js["img"] = val.img;
     }
 }
 
@@ -1197,7 +1158,7 @@ std::shared_ptr<scene> load_json_scene(
 
     // load images
     for (auto txt : scn->textures) {
-        if (txt->path == "" || !txt->img.pxl.empty()) continue;
+        if (txt->path == "" || !txt->img.empty()) continue;
         auto filename = fix_path(dirname + txt->path);
         try {
             txt->img = load_image(filename, ldr_gamma.at(txt));
@@ -1253,7 +1214,7 @@ void save_json_scene(const std::string& filename,
 
     // save images
     for (auto txt : scn->textures) {
-        if (txt->img.pxl.empty()) continue;
+        if (txt->img.empty()) continue;
         auto filename = fix_path(dirname + txt->path);
         try {
             save_image(filename, txt->img, ldr_gamma.at(txt));
@@ -2114,7 +2075,7 @@ void save_obj_scene(const std::string& filename,
     // save images
     auto dirname = path_dirname(filename);
     for (auto txt : scn->textures) {
-        if (txt->img.pxl.empty()) continue;
+        if (txt->img.empty()) continue;
         auto filename = fix_path(dirname + txt->path);
         try {
             save_image(filename, txt->img, ldr_gamma.at(txt));
@@ -2974,7 +2935,7 @@ void save_gltf_scene(const std::string& filename,
 
     // save images
     for (auto txt : scn->textures) {
-        if (txt->img.pxl.empty()) continue;
+        if (txt->img.empty()) continue;
         auto filename = fix_path(dirname + txt->path);
         try {
             save_image(filename, txt->img, ldr_gamma.at(txt));

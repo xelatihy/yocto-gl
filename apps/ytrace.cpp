@@ -155,10 +155,10 @@ int main(int argc, char* argv[]) {
 
     // initialize rendering objects
     ygl::log_info("initializing tracer data");
-    auto img = ygl::make_image4f(
-        (int)round(app->resolution * cam->width / cam->height),
-        app->resolution);
-    auto rngs = ygl::make_rng_seq(img.width * img.height, app->seed);
+    auto img =
+        ygl::image4f{(int)round(app->resolution * cam->width / cam->height),
+            app->resolution};
+    auto rngs = ygl::make_trace_rngs(img.width(), img.height(), app->seed);
 
     // render
     ygl::log_info_begin("rendering image");
