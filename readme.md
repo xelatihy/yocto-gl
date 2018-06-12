@@ -74,7 +74,6 @@ Yocto/GL is split into many small libraries to make code navigation easier.
 - `yocto_obj.{h,cpp}`: Wavefront OBJ loading and saving
 - `yocto_gltf.{h,cpp}`: Khronos glTF loading and saving
 - `yocto_glutils.{h,cpp}`: OpenGL utilities, GLFW and dear ImGui UIs wrapper
-- `yocto_utils.h`: utilities for command line applications
 
 
 ## Example Applications

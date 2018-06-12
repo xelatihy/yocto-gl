@@ -30,7 +30,6 @@
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_trace.h"
-#include "../yocto/yocto_utils.h"
 #include "CLI11.hpp"
 #include "yapp_ui.h"
 using namespace std::literals;
@@ -129,8 +128,9 @@ void draw(const std::shared_ptr<ygl::glwindow>& win,
     if (ygl::begin_glwidgets_frame(win, "yitrace")) {
         ygl::draw_glwidgets_label(win, "scene", app->filename);
         ygl::draw_glwidgets_label(win, "image",
-            ygl::format("{} x {} @ {} samples", app->img.width(),
-                app->img.height(), app->cur_sample));
+            std::to_string(app->img.width()) + " x " +
+                std::to_string(app->img.height()) + " @ " +
+                std::to_string(app->cur_sample));
         if (ygl::begin_glwidgets_tree(win, "render settings")) {
             auto edited = 0;
             edited += ygl::draw_glwidgets_combobox(
@@ -206,15 +206,15 @@ bool update(const std::shared_ptr<ygl::glwindow>& win,
     // update BVH
     for (auto sel : app->update_list) {
         if (sel.as<ygl::shape>()) {
-            ygl::log_info("refit shape bvh");
+            if (!app->quiet) std::cout << "refit shape bvh\n";
             ygl::refit_bvh(sel.as<ygl::shape>());
         }
         if (sel.as<ygl::instance>()) {
-            ygl::log_info("refit scene bvh");
+            if (!app->quiet) std::cout << "refit scene bvh\n";
             ygl::refit_bvh(app->scn, false);
         }
         if (sel.as<ygl::node>()) {
-            ygl::log_info("refit scene bvh");
+            if (!app->quiet) std::cout << "refit scene bvh\n";
             ygl::update_transforms(app->scn, 0);
             ygl::refit_bvh(app->scn, false);
         }
@@ -244,7 +244,7 @@ bool update(const std::shared_ptr<ygl::glwindow>& win,
     }
 
     // restart renderer
-    ygl::log_info("restart renderer");
+    if (!app->quiet) std::cout << "restart renderer\n";
     app->rngs =
         ygl::make_trace_rngs(app->img.width(), app->img.height(), app->seed);
     ygl::trace_async_start(app->scn, app->cam, app->img, app->rngs,
@@ -265,7 +265,6 @@ void run_ui(const std::shared_ptr<app_state>& app) {
         win, nullptr, nullptr, [app, win]() { draw(win, app); });
     ygl::center_glimage(app->imframe, {app->img.width(), app->img.height()},
         ygl::get_glwindow_size(win), app->zoom_to_fit);
-    ygl::log_callback() = ygl::log_glwidgets_msg;
 
     // load textures
     app->gl_prog = ygl::make_glimage_program();
@@ -346,21 +345,22 @@ int main(int argc, char* argv[]) {
     } catch (const CLI::ParseError& e) { return parser.exit(e); }
     app->tracef = tracer_names.at(app->tracer);
 
-    // setup logger
-    if (app->quiet) ygl::log_verbose() = false;
-
     // scene loading
-    ygl::log_info_begin("loading scene {}", app->filename);
+    if (!app->quiet) std::cout << "loading scene" << app->filename << "\n";
+    auto load_start = ygl::get_time();
     try {
         app->scn = ygl::load_scene(app->filename);
     } catch (const std::exception& e) {
-        ygl::log_error("error during scene loading: "s + e.what());
-        ygl::log_fatal("cannot load scene {}", app->filename);
+        std::cout << "cannot load scene " << app->filename << "\n";
+        std::cout << "error: " << e.what() << "\n";
+        exit(1);
     }
-    ygl::log_info_end();
+    if (!app->quiet)
+        std::cout << "loading in "
+                  << ygl::format_duration(ygl::get_time() - load_start) << "\n";
 
     // tesselate
-    ygl::log_info("tesselating scene elements");
+    if (!app->quiet) std::cout << "tesselating scene elements\n";
     ygl::update_tesselation(app->scn);
 
     // update bbox and transforms
@@ -368,7 +368,7 @@ int main(int argc, char* argv[]) {
     ygl::update_bbox(app->scn);
 
     // add components
-    ygl::log_info("adding scene elements");
+    if (!app->quiet) std::cout << "adding scene elements\n";
     if (app->add_skyenv && app->scn->environments.empty()) {
         app->scn->environments.push_back(ygl::make_environment("sky", {1, 1, 1},
             ygl::make_texture("sky", "sky.exr",
@@ -384,27 +384,32 @@ int main(int argc, char* argv[]) {
     }
     app->cam = app->scn->cameras[0];
     ygl::add_missing_names(app->scn);
-    for (auto err : ygl::validate(app->scn)) ygl::log_warning(err);
+    for (auto err : ygl::validate(app->scn))
+        std::cout << "warning: " << err << "\n";
 
     // build bvh
-    ygl::log_info_begin("building bvh");
+    if (!app->quiet) std::cout << "building bvh\n";
+    auto bvh_start = ygl::get_time();
     ygl::update_bvh(app->scn);
-    ygl::log_info_end();
+    if (!app->quiet)
+        std::cout << "building bvh in "
+                  << ygl::format_duration(ygl::get_time() - bvh_start) << "\n";
 
     // init renderer
-    ygl::log_info("initializing lights");
+    if (!app->quiet) std::cout << "initializing lights\n";
     ygl::update_lights(app->scn);
 
     // fix renderer type if no lights
     if (app->scn->lights.empty() && app->scn->environments.empty() &&
         app->tracer != "eyelight") {
-        ygl::log_info("no lights presents, switching to eyelight shader");
+        if (!app->quiet)
+            std::cout << "no lights presents, switching to eyelight shader\n";
         app->tracer = "eyelight";
         app->tracef = ygl::trace_eyelight;
     }
 
     // initialize rendering objects
-    ygl::log_info("initializing tracer data");
+    if (!app->quiet) std::cout << "initializing tracer data\n";
     app->img = ygl::image4f{
         (int)round(app->resolution * app->cam->width / app->cam->height),
         app->resolution};

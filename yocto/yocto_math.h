@@ -60,7 +60,7 @@
 //
 // ## Utilities
 //
-// For lack of a better place to include them, this library provides some 
+// For lack of a better place to include them, this library provides some
 // small utlities for string, path and container manipulation.
 //
 
@@ -107,16 +107,17 @@
 #include <algorithm>  // for std::upper_bound
 #include <cctype>
 #include <cfloat>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <functional>  // for std::hash
 #include <iostream>
 #include <limits>
-#include <vector>
 #include <string>
-#include <cstdio>
+#include <vector>
 
 // -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
@@ -2007,7 +2008,7 @@ inline T eval_keyframed_bezier(
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
-// PATH UTILITIES
+// FILE AND PATH UTILITIES
 // -----------------------------------------------------------------------------
 namespace ygl {
 
@@ -2026,9 +2027,22 @@ inline void save_text(const std::string& filename, const std::string& str);
 // Load a binary file
 inline std::vector<byte> load_binary(const std::string& filename);
 // Save a binary file
-inline void save_binary(const std::string& filename, const std::vector<byte>& data);
+inline void save_binary(
+    const std::string& filename, const std::vector<byte>& data);
 
-}
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// TIMER UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// get the timer time in nanoseconds
+inline int64_t get_time();
+// get duration string from nanoseconds
+inline std::string format_duration(int64_t duration);
+
+}  // namespace ygl
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR MATRICES
@@ -2453,14 +2467,16 @@ namespace ygl {
 
 inline std::string normalize_path(const std::string& filename_) {
     auto filename = filename_;
-    for(auto& c : filename) if(c == '\\') c = '/';
-    if(filename.size() > 1 && filename[0] == '/' && filename[1] == '/') 
+    for (auto& c : filename)
+        if (c == '\\') c = '/';
+    if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/')
         throw std::runtime_error("no absolute paths");
-    if(filename.size() > 3 && filename[1] == ':' && filename[2] == '/' && filename[3] == '/') 
+    if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
+        filename[3] == '/')
         throw std::runtime_error("no absolute paths");
     auto pos = (size_t)0;
-    while((pos = filename.find("//")) != filename.npos)
-        filename = filename.substr(0, pos) + filename.substr(pos+1);
+    while ((pos = filename.find("//")) != filename.npos)
+        filename = filename.substr(0, pos) + filename.substr(pos + 1);
     return filename;
 }
 
@@ -2477,7 +2493,7 @@ inline std::string get_extension(const std::string& filename_) {
     auto filename = normalize_path(filename_);
     auto pos = filename.rfind('.');
     if (pos == std::string::npos) return "";
-    return filename.substr(pos+1);
+    return filename.substr(pos + 1);
 }
 
 // Get filename without directory.
@@ -2485,7 +2501,7 @@ inline std::string get_filename(const std::string& filename_) {
     auto filename = normalize_path(filename_);
     auto pos = filename.rfind('/');
     if (pos == std::string::npos) return "";
-    return filename.substr(pos+1);
+    return filename.substr(pos + 1);
 }
 
 // Replace extension.
@@ -2493,7 +2509,7 @@ inline std::string replace_path_extension(
     const std::string& filename_, const std::string& ext_) {
     auto filename = normalize_path(filename_);
     auto ext = normalize_path(ext_);
-    if(ext.at(0) == '.') ext = ext.substr(1);
+    if (ext.at(0) == '.') ext = ext.substr(1);
     auto pos = filename.rfind('.');
     if (pos == std::string::npos) return filename;
     return filename.substr(0, pos) + "." + ext;
@@ -2541,7 +2557,8 @@ inline std::vector<byte> load_binary(const std::string& filename) {
 }
 
 // Save a binary file
-inline void save_binary(const std::string& filename, const std::vector<byte>& data) {
+inline void save_binary(
+    const std::string& filename, const std::vector<byte>& data) {
     auto f = fopen(filename.c_str(), "wb");
     if (!f) throw std::runtime_error("cannot write file " + filename);
     auto num = fwrite(data.data(), 1, data.size(), f);
@@ -2550,6 +2567,31 @@ inline void save_binary(const std::string& filename, const std::vector<byte>& da
     fclose(f);
 }
 
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF TIMER UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// get the timer time
+inline int64_t get_time() {
+    return std::chrono::high_resolution_clock::now().time_since_epoch().count();
 }
+// get elapsed timer time in seconds
+inline std::string format_duration(int64_t duration) {
+    auto elapsed = duration / 1000000;  // milliseconds
+    auto hours = (int)(elapsed / 3600000);
+    elapsed %= 3600000;
+    auto mins = (int)(elapsed / 60000);
+    elapsed %= 60000;
+    auto secs = (int)(elapsed / 1000);
+    auto msecs = (int)(elapsed % 1000);
+    char buf[256];
+    sprintf(buf, "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
+    return buf;
+}
+
+}  // namespace ygl
 
 #endif

@@ -28,7 +28,6 @@
 
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
-#include "../yocto/yocto_utils.h"
 #include "CLI11.hpp"
 using namespace std::literals;
 
@@ -66,25 +65,28 @@ int main(int argc, char** argv) {
     // load obj
     try {
         app->scn = ygl::load_scene(app->filename, !app->notextures);
-
     } catch (const std::exception& e) {
-        ygl::log_error("error during scene loading: "s + e.what());
-        ygl::log_fatal("unable to load " + app->filename);
+        std::cout << "cannot load scene " << app->filename << "\n";
+        std::cout << "error: " << e.what() << "\n";
+        exit(1);
     }
 
     // make a directory if needed
     try {
         mkdir(ygl::get_dirname(app->output));
     } catch (const std::exception& e) {
-        ygl::log_fatal("unable to make directory {} with error {}",
-            ygl::get_dirname(app->output), e.what());
+        std::cout << "cannot create directory " << ygl::get_dirname(app->output)
+                  << "\n";
+        std::cout << "error: " << e.what() << "\n";
+        exit(1);
     }
     // save scene
     try {
         ygl::save_scene(app->output, app->scn);
     } catch (const std::exception& e) {
-        ygl::log_fatal(
-            "unable to save scene {} with error {}", app->output, e.what());
+        std::cout << "cannot save scene " << app->output << "\n";
+        std::cout << "error: " << e.what() << "\n";
+        exit(1);
     }
 
     // done

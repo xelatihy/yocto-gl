@@ -30,7 +30,6 @@
 #include "yocto_bvh.h"
 #include "yocto_image.h"
 #include "yocto_shape.h"
-#include "yocto_utils.h"
 
 #include <array>
 #include <unordered_map>
@@ -306,7 +305,7 @@ void refit_bvh(const std::shared_ptr<scene>& scn, bool do_shapes) {
 // Add missing names and resolve duplicated names.
 void add_missing_names(const std::shared_ptr<scene>& scn) {
     auto fix_names = [](auto& vals, const std::string& base) {
-        auto nmap = std::map<std::string, int>();
+        auto nmap = std::unordered_map<std::string, int>();
         for (auto val : vals) {
             if (val->name == "") val->name = base;
             if (nmap.find(val->name) == nmap.end()) {
@@ -353,7 +352,7 @@ std::vector<std::string> validate(
     const std::shared_ptr<scene>& scn, bool skip_textures) {
     auto errs = std::vector<std::string>();
     auto check_names = [&errs](const auto& vals, const std::string& base) {
-        auto used = std::map<std::string, int>();
+        auto used = std::unordered_map<std::string, int>();
         for (auto val : vals) used[val->name] += 1;
         for (auto& kv : used) {
             if (kv.first == "")
@@ -820,33 +819,29 @@ void print_stats(const std::shared_ptr<scene>& scn) {
     for (auto txt : scn->textures) { texel_hdr += txt->img.size(); }
     memory_imgs = texel_hdr * sizeof(vec4f) + texel_ldr * sizeof(vec4b);
 
-    println("num_cameras: {}", num_cameras);
-    println("num_shape_groups: {}", num_shape_groups);
-    println("num_shapes: {}", num_shapes);
-    println("num_instances: {}", num_instances);
-    println("num_materials: {}", num_materials);
-    println("num_textures: {}", num_textures);
-    println("num_environments: {}", num_environments);
-    println("num_nodes: {}", num_nodes);
-    println("num_animations: {}", num_animations);
-    println("elem_lines: {}", elem_lines);
-    println("elem_triangles: {}", elem_triangles);
-    println("vert_pos: {}", vert_pos);
-    println("vert_norm: {}", vert_norm);
-    println("vert_texcoord: {}", vert_texcoord);
-    println("vert_color: {}", vert_color);
-    println("vert_radius: {}", vert_radius);
-    println("vert_tangsp: {}", vert_tangsp);
-    println("texel_hdr: {}", texel_hdr);
-    println("texel_ldr: {}", texel_ldr);
-    println("memory_imgs: {}", memory_imgs);
-    println("memory_elems: {}", memory_elems);
-    println("memory_verts: {}", memory_verts);
-    println("bbox_scn: {} {}", bbox.min, bbox.max);
-    println("bbox_min   : {}", bbox.min);
-    println("bbox_max   : {}", bbox.max);
-    println("bbox_size  : {}", bbox.max - bbox.min);
-    println("bbox_center: {}", (bbox.max + bbox.min) / 2);
+    std::cout << "num_cameras: " << num_cameras << "\n";
+    std::cout << "num_shape_groups: " << num_shape_groups << "\n";
+    std::cout << "num_shapes: " << num_shapes << "\n";
+    std::cout << "num_instances: " << num_instances << "\n";
+    std::cout << "num_materials: " << num_materials << "\n";
+    std::cout << "num_textures: " << num_textures << "\n";
+    std::cout << "num_environments: " << num_environments << "\n";
+    std::cout << "num_nodes: " << num_nodes << "\n";
+    std::cout << "num_animations: " << num_animations << "\n";
+    std::cout << "elem_lines: " << elem_lines << "\n";
+    std::cout << "elem_triangles: " << elem_triangles << "\n";
+    std::cout << "vert_pos: " << vert_pos << "\n";
+    std::cout << "vert_norm: " << vert_norm << "\n";
+    std::cout << "vert_texcoord: " << vert_texcoord << "\n";
+    std::cout << "vert_color: " << vert_color << "\n";
+    std::cout << "vert_radius: " << vert_radius << "\n";
+    std::cout << "vert_tangsp: " << vert_tangsp << "\n";
+    std::cout << "texel_hdr: " << texel_hdr << "\n";
+    std::cout << "texel_ldr: " << texel_ldr << "\n";
+    std::cout << "memory_imgs: " << memory_imgs << "\n";
+    std::cout << "memory_elems: " << memory_elems << "\n";
+    std::cout << "memory_verts: " << memory_verts << "\n";
+    std::cout << "bbox: " << bbox << "\n";
 }
 
 }  // namespace ygl

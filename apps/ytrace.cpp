@@ -29,11 +29,15 @@
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_trace.h"
-#include "../yocto/yocto_utils.h"
 #include "CLI11.hpp"
 using namespace std::literals;
 
 struct app_state {
+    std::shared_ptr<ygl::scene> scn;
+    std::shared_ptr<ygl::camera> cam;
+    ygl::image4f img;
+    ygl::image<ygl::rng_state> rngs;
+
     std::string filename = "scene.json"s;
     std::string imfilename = "out.hdr"s;
     int resolution = 512;
@@ -104,88 +108,107 @@ int main(int argc, char* argv[]) {
     } catch (const CLI::ParseError& e) { return parser.exit(e); }
     app->tracef = tracer_names.at(app->tracer);
 
-    // setup logger
-    if (app->quiet) ygl::log_verbose() = false;
-
     // scene loading
-    ygl::log_info_begin("loading scene {}", app->filename);
-    auto scn = std::shared_ptr<ygl::scene>();
+    if (!app->quiet) std::cout << "loading scene" << app->filename << "\n";
+    auto load_start = ygl::get_time();
     try {
-        scn = ygl::load_scene(app->filename);
+        app->scn = ygl::load_scene(app->filename);
     } catch (const std::exception& e) {
-        ygl::log_error("error during scene loading: "s + e.what());
-        ygl::log_fatal("cannot load scene {}", app->filename);
+        std::cout << "cannot load scene " << app->filename << "\n";
+        std::cout << "error: " << e.what() << "\n";
+        exit(1);
     }
-    ygl::log_info_end();
+    if (!app->quiet)
+        std::cout << "loading in "
+                  << ygl::format_duration(ygl::get_time() - load_start) << "\n";
 
     // tesselate
-    ygl::log_info("tesselating scene elements");
-    ygl::update_tesselation(scn);
+    if (!app->quiet) std::cout << "tesselating scene elements\n";
+    ygl::update_tesselation(app->scn);
 
     // update bbox and transforms
-    ygl::update_transforms(scn);
-    ygl::update_bbox(scn);
+    ygl::update_transforms(app->scn);
+    ygl::update_bbox(app->scn);
 
     // add components
-    ygl::log_info("adding scene elements");
-    if (app->add_skyenv && scn->environments.empty()) {
-        scn->environments.push_back(ygl::make_environment("sky", {1, 1, 1},
+    if (!app->quiet) std::cout << "adding scene elements\n";
+    if (app->add_skyenv && app->scn->environments.empty()) {
+        app->scn->environments.push_back(ygl::make_environment("sky", {1, 1, 1},
             ygl::make_texture("sky", "sky.exr",
                 ygl::make_sunsky_image(1024, 512, ygl::pi / 4))));
-        scn->textures.push_back(scn->environments.back()->ke_txt);
+        app->scn->textures.push_back(app->scn->environments.back()->ke_txt);
     }
     if (app->double_sided) {
-        for (auto mat : scn->materials) mat->double_sided = true;
+        for (auto mat : app->scn->materials) mat->double_sided = true;
     }
-    if (scn->cameras.empty()) {
-        scn->cameras.push_back(ygl::make_bbox_camera("<view>", scn->bbox));
+    if (app->scn->cameras.empty()) {
+        app->scn->cameras.push_back(
+            ygl::make_bbox_camera("<view>", app->scn->bbox));
     }
-    auto cam = scn->cameras[0];
-    ygl::add_missing_names(scn);
-    for (auto err : ygl::validate(scn)) ygl::log_warning(err);
+    app->cam = app->scn->cameras[0];
+    ygl::add_missing_names(app->scn);
+    for (auto err : ygl::validate(app->scn))
+        std::cout << "warning: " << err << "\n";
 
     // build bvh
-    ygl::log_info_begin("building bvh");
-    ygl::update_bvh(scn);
-    ygl::log_info_end();
+    if (!app->quiet) std::cout << "building bvh\n";
+    auto bvh_start = ygl::get_time();
+    ygl::update_bvh(app->scn);
+    if (!app->quiet)
+        std::cout << "building bvh in "
+                  << ygl::format_duration(ygl::get_time() - bvh_start) << "\n";
 
     // init renderer
-    ygl::log_info("initializing lights");
-    ygl::update_lights(scn);
+    if (!app->quiet) std::cout << "initializing lights\n";
+    ygl::update_lights(app->scn);
 
     // initialize rendering objects
-    ygl::log_info("initializing tracer data");
-    auto img =
-        ygl::image4f{(int)round(app->resolution * cam->width / cam->height),
-            app->resolution};
-    auto rngs = ygl::make_trace_rngs(img.width(), img.height(), app->seed);
+    if (!app->quiet) std::cout << "initializing tracer data\n";
+    app->img = ygl::image4f{
+        (int)round(app->resolution * app->cam->width / app->cam->height),
+        app->resolution};
+    app->rngs =
+        ygl::make_trace_rngs(app->img.width(), app->img.height(), app->seed);
 
     // render
-    ygl::log_info_begin("rendering image");
+    if (!app->quiet) std::cout << "rendering image\n";
+    auto render_start = ygl::get_time();
     for (auto sample = 0; sample < app->nsamples; sample += app->batch_size) {
         if (app->save_batch && sample) {
-            auto filename = ygl::replace_path_extension(app->imfilename, 
-                std::to_string(sample) + "." + ygl::get_extension(app->imfilename));
-            ygl::log_info("saving image {}", app->filename);
-            ygl::save_image(filename, ygl::expose_image(img, app->exposure));
+            auto filename = ygl::replace_path_extension(
+                app->imfilename, std::to_string(sample) + "." +
+                                     ygl::get_extension(app->imfilename));
+            if (!app->quiet) std::cout << "saving image " << filename << "\n";
+            ygl::save_image(
+                filename, ygl::expose_image(app->img, app->exposure));
         }
-        ygl::log_info_begin("rendering sample {}/{}", sample, app->nsamples);
+        if (!app->quiet)
+            std::cout << "rendering sample " << sample << "/" << app->nsamples
+                      << "\n";
+        auto block_start = ygl::get_time();
         if (app->noparallel) {
-            ygl::trace_samples(scn, cam, img, rngs, sample,
+            ygl::trace_samples(app->scn, app->cam, app->img, app->rngs, sample,
                 std::min(app->batch_size, app->nsamples - sample), app->tracef,
                 app->nbounces, app->pixel_clamp);
         } else {
-            ygl::trace_samples_mt(scn, cam, img, rngs, sample,
-                std::min(app->batch_size, app->nsamples - sample), app->tracef,
-                app->nbounces, app->pixel_clamp);
+            ygl::trace_samples_mt(app->scn, app->cam, app->img, app->rngs,
+                sample, std::min(app->batch_size, app->nsamples - sample),
+                app->tracef, app->nbounces, app->pixel_clamp);
         }
-        ygl::log_info_end();
+        if (!app->quiet)
+            std::cout << "rendering block in "
+                      << ygl::format_duration(ygl::get_time() - block_start)
+                      << "\n";
     }
-    ygl::log_info_end();
+    if (!app->quiet)
+        std::cout << "rendering image in "
+                  << ygl::format_duration(ygl::get_time() - render_start)
+                  << "\n";
 
     // save image
-    ygl::log_info("saving image {}", app->imfilename);
-    ygl::save_image(app->imfilename, ygl::expose_image(img, app->exposure));
+    if (!app->quiet) std::cout << "saving image " << app->imfilename << "\n";
+    ygl::save_image(
+        app->imfilename, ygl::expose_image(app->img, app->exposure));
 
     // done
     return 0;
