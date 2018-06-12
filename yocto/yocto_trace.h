@@ -63,6 +63,7 @@
 
 #include <thread>
 #include <unordered_map>
+#include <functional>
 
 // -----------------------------------------------------------------------------
 // PATH TRACING
@@ -70,8 +71,8 @@
 namespace ygl {
 
 // Trace evaluation function.
-using trace_func = vec3f (*)(const std::shared_ptr<scene> scn, const ray3f& ray,
-    rng_state& rng, int nbounces, bool* hit);
+using trace_func = std::function<vec3f(const std::shared_ptr<scene> scn, const ray3f& ray,
+    rng_state& rng, int nbounces, bool* hit)>;
 
 // Trace the next nsamples samples. Assumes that the
 // image contains cur_samples already. Returns true when done.

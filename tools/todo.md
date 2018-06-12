@@ -3,22 +3,10 @@
 This file contains notes on future improvements of Yocto.
 Please consider this to be just development notes and not any real planning.
 
-## Main features
-
-- better tests
-- better material rendering
-- better rendering
-
 ## Reduce internal code
 
-- switch to cli11
-    - only doubt is how to handle enums 
-- [sadly] math with template specialization
-- [sadly] trace with std::function
 - filesystem
-- normal map problem
 - ldr_gamma in texture
-- [sadly] iostreams
 
 ## Recornsider
 
@@ -27,6 +15,7 @@ Please consider this to be just development notes and not any real planning.
 ## Bugs
 
 - yimview
+- normal map problem
 - animated rotation seems bogus
 - obj flipped textures
 
@@ -39,27 +28,8 @@ Please consider this to be just development notes and not any real planning.
 
 ## image
 
-- examples as vec3f/vec4f
-- examples using size instead of tiling
 - tone curve
 - 3D lut
-- implement correction workflow
-
-## planned cleanup
-
-- remove texture info back into texture
-    - consider only wrap
-- more image operations to floats
-    - make explicit the use of 1/3/4 channel images
-    - bumps and dimples should be sphere
-- single material representation converted on load
-- convert textures on load
-    - srgb -> float on load with correct convention
-
-## split material
-
-- remap material values
-- split textures on load
 
 ## Trace
 
