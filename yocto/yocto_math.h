@@ -1104,7 +1104,8 @@ inline bbox<T, 3> point_bbox(const vec<T, 3>& p, T1 r = 0) {
     return bbox;
 }
 template <typename T, typename T1>
-inline bbox<T, 3> line_bbox(const vec<T, 3>& v0, const vec<T, 3>& v1, T1 r0 = 0, T1 r1 = 0) {
+inline bbox<T, 3> line_bbox(
+    const vec<T, 3>& v0, const vec<T, 3>& v1, T1 r0 = 0, T1 r1 = 0) {
     auto bbox = ygl::bbox<T, 3>{};
     bbox += v0 - vec<T, 3>{r0, r0, r0};
     bbox += v0 + vec<T, 3>{r0, r0, r0};
@@ -1113,7 +1114,8 @@ inline bbox<T, 3> line_bbox(const vec<T, 3>& v0, const vec<T, 3>& v1, T1 r0 = 0,
     return bbox;
 }
 template <typename T>
-inline bbox<T, 3> triangle_bbox(const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2) {
+inline bbox<T, 3> triangle_bbox(
+    const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2) {
     auto bbox = ygl::bbox<T, 3>{};
     bbox += v0;
     bbox += v1;
@@ -1121,8 +1123,8 @@ inline bbox<T, 3> triangle_bbox(const vec<T, 3>& v0, const vec<T, 3>& v1, const 
     return bbox;
 }
 template <typename T>
-inline bbox<T, 3> quad_bbox(
-    const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2, const vec<T, 3>& v3) {
+inline bbox<T, 3> quad_bbox(const vec<T, 3>& v0, const vec<T, 3>& v1,
+    const vec<T, 3>& v2, const vec<T, 3>& v3) {
     auto bbox = ygl::bbox<T, 3>{};
     bbox += v0;
     bbox += v1;
@@ -1131,8 +1133,8 @@ inline bbox<T, 3> quad_bbox(
     return bbox;
 }
 template <typename T>
-inline bbox<T, 3> tetrahedron_bbox(
-    const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2, const vec<T, 3>& v3) {
+inline bbox<T, 3> tetrahedron_bbox(const vec<T, 3>& v0, const vec<T, 3>& v1,
+    const vec<T, 3>& v2, const vec<T, 3>& v3) {
     auto bbox = ygl::bbox<T, 3>{};
     bbox += v0;
     bbox += v1;
@@ -1185,11 +1187,13 @@ using ray3f = ray<float, 3>;
 
 // Construct a ray from dirction or segments using a default epsilon.
 template <typename T, int N>
-inline ray<T, N> make_ray(const vec<T, N>& o, const vec<T, N>& d, T eps = (T)1e-4) {
+inline ray<T, N> make_ray(
+    const vec<T, N>& o, const vec<T, N>& d, T eps = (T)1e-4) {
     return ray<T, N>{o, d, eps, std::numeric_limits<T>::max()};
 }
 template <typename T, int N>
-inline ray<T, N> make_segment(const vec<T, N>& p1, const vec<T, N>& p2, T eps = (T)1e-4) {
+inline ray<T, N> make_segment(
+    const vec<T, N>& p1, const vec<T, N>& p2, T eps = (T)1e-4) {
     return ray<T, N>{p1, normalize(p2 - p1), eps, length(p2 - p1) - 2 * eps};
 }
 
@@ -1377,8 +1381,8 @@ inline frame<T, 3> rotation_frame(const mat<T, 3>& rot) {
 
 // Lookat frame. Z-axis can be inverted with inv_xz.
 template <typename T>
-inline frame<T, 3> lookat_frame(
-    const vec<T, 3>& eye, const vec<T, 3>& center, const vec<T, 3>& up, bool inv_xz = false) {
+inline frame<T, 3> lookat_frame(const vec<T, 3>& eye, const vec<T, 3>& center,
+    const vec<T, 3>& up, bool inv_xz = false) {
     auto w = normalize(eye - center);
     auto u = normalize(cross(up, w));
     auto v = normalize(cross(w, u));
@@ -1449,10 +1453,11 @@ template <typename T, typename T1>
 inline void camera_turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
     const vec<T, 2>& rotate, T1 dolly, const vec<T, 2>& pan);
 template <typename T, typename T1>
-inline void camera_turntable(frame<T, 3>& frame, float& focus, const vec<T, 2>& rotate,
-    T1 dolly, const vec<T, 2>& pan);
+inline void camera_turntable(frame<T, 3>& frame, float& focus,
+    const vec<T, 2>& rotate, T1 dolly, const vec<T, 2>& pan);
 template <typename T>
-inline void camera_fps(frame<T, 3>& frame, const vec<T, 3>& transl, const vec<T, 2>& rotate);
+inline void camera_fps(
+    frame<T, 3>& frame, const vec<T, 3>& transl, const vec<T, 2>& rotate);
 
 }  // namespace ygl
 
@@ -1611,14 +1616,15 @@ inline vec<T, 2> sample_triangle(const vec<T, 2>& ruv) {
     return {1 - sqrt(ruv.x), ruv.y * sqrt(ruv.x)};
 }
 template <typename T>
-inline vec<T, 3> sample_triangle(
-    const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2, const vec<T, 2>& ruv) {
+inline vec<T, 3> sample_triangle(const vec<T, 3>& v0, const vec<T, 3>& v1,
+    const vec<T, 3>& v2, const vec<T, 2>& ruv) {
     auto uv = sample_triangle(ruv);
     return v0 * (1 - uv.x - uv.y) + v1 * uv.x + v2 * uv.y;
 }
 // Pdf for uniform triangle sampling, i.e. triangle area.
 template <typename T>
-inline T sample_triangle_pdf(const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2) {
+inline T sample_triangle_pdf(
+    const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2) {
     return 2 / length(cross(v1 - v0, v2 - v0));
 }
 
@@ -1688,29 +1694,33 @@ inline T line_length(const vec<T, 3>& v0, const vec<T, 3>& v1) {
 
 // Triangle properties.
 template <typename T>
-inline vec<T, 3> triangle_normal(const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2) {
+inline vec<T, 3> triangle_normal(
+    const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2) {
     return normalize(cross(v1 - v0, v2 - v0));
 }
 template <typename T>
-inline T triangle_area(const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2) {
+inline T triangle_area(
+    const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2) {
     return length(cross(v1 - v0, v2 - v0)) / 2;
 }
 
 // Quad propeties.
 template <typename T>
-inline vec<T, 3> quad_normal(
-    const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2, const vec<T, 3>& v3) {
+inline vec<T, 3> quad_normal(const vec<T, 3>& v0, const vec<T, 3>& v1,
+    const vec<T, 3>& v2, const vec<T, 3>& v3) {
     return normalize(triangle_normal(v0, v1, v3) + triangle_normal(v2, v3, v1));
 }
 template <typename T>
-inline T quad_area(const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2, const vec<T, 3>& v3) {
+inline T quad_area(const vec<T, 3>& v0, const vec<T, 3>& v1,
+    const vec<T, 3>& v2, const vec<T, 3>& v3) {
     return triangle_area(v0, v1, v3) + triangle_area(v2, v3, v1);
 }
 
 // Triangle tangent and bitangent from uv
 template <typename T>
-inline std::pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(const vec<T, 3>& v0,
-    const vec<T, 3>& v1, const vec<T, 3>& v2, const vec<T, 2>& uv0, const vec<T, 2>& uv1, const vec<T, 2>& uv2) {
+inline std::pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(
+    const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2,
+    const vec<T, 2>& uv0, const vec<T, 2>& uv1, const vec<T, 2>& uv2) {
     // Follows the definition in http://www.terathon.com/code/tangent.html and
     // https://gist.github.com/aras-p/2843984
     // normal points up from texture space
@@ -1746,7 +1756,8 @@ inline TT interpolate_line(const TT& v0, const TT& v1, T u) {
     return v0 * (1 - u) + v1 * u;
 }
 template <typename TT, typename T>
-inline TT interpolate_line(const std::vector<TT>& vals, const vec<int, 2>& l, T u) {
+inline TT interpolate_line(
+    const std::vector<TT>& vals, const vec<int, 2>& l, T u) {
     if (vals.empty()) return TT();
     return vals[l.x] * (1 - u) + vals[l.y] * u;
 }
@@ -1773,7 +1784,8 @@ inline T interpolate_quad(
            v2 * uv.x * uv.y + v3 * (1 - uv.x) * uv.y;
 }
 template <typename T>
-inline T interpolate_quad(const std::vector<T>& vals, vec4i t, const vec<T, 2>& uv) {
+inline T interpolate_quad(
+    const std::vector<T>& vals, vec4i t, const vec<T, 2>& uv) {
     if (vals.empty()) return T();
     return vals[t.x] * (1 - uv.x) * (1 - uv.y) + vals[t.y] * uv.x * (1 - uv.y) +
            vals[t.z] * uv.x * uv.y + vals[t.w] * (1 - uv.x) * uv.y;
@@ -2053,8 +2065,8 @@ inline void camera_turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
 
 // Turntable for UI navigation.
 template <typename T, typename T1>
-inline void camera_turntable(frame<T, 3>& frame, float& focus, const vec<T, 2>& rotate,
-    T1 dolly, const vec<T, 2>& pan) {
+inline void camera_turntable(frame<T, 3>& frame, float& focus,
+    const vec<T, 2>& rotate, T1 dolly, const vec<T, 2>& pan) {
     // rotate if necessary
     if (rotate != zero2f) {
         auto phi = atan2(frame.z.z, frame.z.x) + rotate.x;
@@ -2081,7 +2093,8 @@ inline void camera_turntable(frame<T, 3>& frame, float& focus, const vec<T, 2>& 
 
 // FPS camera for UI navigation for a frame parametrization.
 template <typename T>
-inline void camera_fps(frame<T, 3>& frame, const vec<T, 3>& transl, const vec<T, 2>& rotate) {
+inline void camera_fps(
+    frame<T, 3>& frame, const vec<T, 3>& transl, const vec<T, 2>& rotate) {
     // https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up
     auto y = vec<T, 3>{0, 1, 0};
     auto z = orthonormalize(frame.z, y);
