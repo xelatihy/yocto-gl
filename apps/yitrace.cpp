@@ -26,10 +26,9 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_gl.h"
+#include "../yocto/yocto_glio.h"
 #include "../yocto/yocto_glutils.h"
-#include "../yocto/yocto_scene.h"
-#include "../yocto/yocto_sceneio.h"
-#include "../yocto/yocto_trace.h"
 #include "CLI11.hpp"
 #include "yapp_ui.h"
 using namespace std::literals;
@@ -370,18 +369,14 @@ int main(int argc, char* argv[]) {
     // add components
     if (!app->quiet) std::cout << "adding scene elements\n";
     if (app->add_skyenv && app->scn->environments.empty()) {
-        app->scn->environments.push_back(ygl::make_environment("sky", {1, 1, 1},
-            ygl::make_texture("sky", "sky.exr",
-                ygl::make_sunsky_image(1024, 512, ygl::pi / 4))));
+        app->scn->environments.push_back(ygl::make_sky_environment("sky"));
         app->scn->textures.push_back(app->scn->environments.back()->ke_txt);
     }
-    if (app->double_sided) {
+    if (app->double_sided)
         for (auto mat : app->scn->materials) mat->double_sided = true;
-    }
-    if (app->scn->cameras.empty()) {
+    if (app->scn->cameras.empty())
         app->scn->cameras.push_back(
             ygl::make_bbox_camera("<view>", app->scn->bbox));
-    }
     app->cam = app->scn->cameras[0];
     ygl::add_missing_names(app->scn);
     for (auto err : ygl::validate(app->scn))

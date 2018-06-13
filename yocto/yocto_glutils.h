@@ -68,8 +68,7 @@
 #ifndef _YGLU_H_
 #define _YGLU_H_
 
-#include "yocto_image.h"
-#include "yocto_math.h"
+#include "yocto_gl.h"
 
 #include <functional>
 #include <map>

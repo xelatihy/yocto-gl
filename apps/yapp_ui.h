@@ -30,8 +30,8 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_gl.h"
 #include "../yocto/yocto_glutils.h"
-#include "../yocto/yocto_scene.h"
 
 #include <unordered_map>
 #include <typeinfo>

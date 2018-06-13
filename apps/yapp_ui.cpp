@@ -31,8 +31,6 @@
 //
 
 #include "yapp_ui.h"
-#include "../yocto/yocto_bvh.h"
-#include "../yocto/yocto_shape.h"
 
 namespace ygl {
 

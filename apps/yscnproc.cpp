@@ -26,8 +26,8 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_scene.h"
-#include "../yocto/yocto_sceneio.h"
+#include "../yocto/yocto_gl.h"
+#include "../yocto/yocto_glio.h"
 #include "CLI11.hpp"
 using namespace std::literals;
 

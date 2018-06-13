@@ -33,10 +33,8 @@
 #include <fstream>
 #include <regex>
 #include "../../apps/CLI11.hpp"
-#include "../../yocto/yocto_scene.h"
-#include "../../yocto/yocto_sceneio.h"
-#include "../../yocto/yocto_shape.h"
-#include "../../yocto/yocto_trace.h"
+#include "../../yocto/yocto_gl.h"
+#include "../../yocto/yocto_glio.h"
 #include "ext/json.hpp"
 
 using namespace ygl;
@@ -489,7 +487,7 @@ std::shared_ptr<scene> load_pbrt(const std::string& filename) {
                     txt->path = jcmd.at("filename").get<std::string>();
                     if (ygl::get_extension(txt->path) == "pfm")
                         txt->path =
-                            ygl::replace_path_extension(txt->path, ".hdr");
+                            ygl::replace_extension(txt->path, ".hdr");
                 } else {
                     std::cout << type << " texture not supported\n";
                 }

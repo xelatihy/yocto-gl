@@ -1,5 +1,5 @@
 //
-// Implementation for Yocto/Scene.
+// Implementation for Yocto/GL Input and Output functions.
 //
 
 //
@@ -26,21 +26,542 @@
 // SOFTWARE.
 //
 
-#include "yocto_sceneio.h"
-#include "yocto_image.h"
-#include "yocto_shape.h"
+//
+//
+// LICENSE OF INCLUDED CODE FOR BASE64 (base64.h, base64.cpp)
+//
+// Copyright (C) 2004-2008 René Nyffenegger
+//
+// This source code is provided 'as-is', without any express or implied
+// warranty. In no event will the author be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this source code must not be misrepresented; you must not
+// claim that you wrote the original source code. If you use this source code
+// in a product, an acknowledgment in the product documentation would be
+// appreciated but is not required.
+//
+// 2. Altered source versions must be plainly marked as such, and must not be
+// misrepresented as being the original source code.
+//
+// 3. This notice may not be removed or altered from any source distribution.
+//
+// René Nyffenegger rene.nyffenegger@adp-gmbh.ch
+//
+//
+
+#include "yocto_glio.h"
+
+#include <cstdlib>
+#include <deque>
+#include <fstream>
+#include <sstream>
 
 #include <array>
 #include <climits>
-#include <deque>
-#include <fstream>
-#include <unordered_map>
 using namespace std::string_literals;
 
 #include "ext/json.hpp"
 
+#ifndef _WIN32
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#ifndef __clang__
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
+#endif
+
+#ifndef __clang_analyzer__
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "ext/stb_image.h"
+
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "ext/stb_image_write.h"
+
+#define STB_IMAGE_RESIZE_IMPLEMENTATION
+#include "ext/stb_image_resize.h"
+
+#define TINYEXR_IMPLEMENTATION
+#include "ext/tinyexr.h"
+
+#endif
+
+#ifndef _WIN32
+#pragma GCC diagnostic pop
+#endif
+
 // -----------------------------------------------------------------------------
-// GENERIC METHOD
+// IMPLEMENTATION OF PATH UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+std::string normalize_path(const std::string& filename_) {
+    auto filename = filename_;
+    for (auto& c : filename)
+        if (c == '\\') c = '/';
+    if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/')
+        throw std::runtime_error("no absolute paths");
+    if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
+        filename[3] == '/')
+        throw std::runtime_error("no absolute paths");
+    auto pos = (size_t)0;
+    while ((pos = filename.find("//")) != filename.npos)
+        filename = filename.substr(0, pos) + filename.substr(pos + 1);
+    return filename;
+}
+
+// Get directory name (not including '/').
+std::string get_dirname(const std::string& filename_) {
+    auto filename = normalize_path(filename_);
+    auto pos = filename.rfind('/');
+    if (pos == std::string::npos) return "";
+    return filename.substr(0, pos);
+}
+
+// Get extension (not including '.').
+std::string get_extension(const std::string& filename_) {
+    auto filename = normalize_path(filename_);
+    auto pos = filename.rfind('.');
+    if (pos == std::string::npos) return "";
+    return filename.substr(pos + 1);
+}
+
+// Get filename without directory.
+std::string get_filename(const std::string& filename_) {
+    auto filename = normalize_path(filename_);
+    auto pos = filename.rfind('/');
+    if (pos == std::string::npos) return "";
+    return filename.substr(pos + 1);
+}
+
+// Replace extension.
+std::string replace_extension(
+    const std::string& filename_, const std::string& ext_) {
+    auto filename = normalize_path(filename_);
+    auto ext = normalize_path(ext_);
+    if (ext.at(0) == '.') ext = ext.substr(1);
+    auto pos = filename.rfind('.');
+    if (pos == std::string::npos) return filename;
+    return filename.substr(0, pos) + "." + ext;
+}
+
+// Load a text file
+std::string load_text(const std::string& filename) {
+    // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
+    auto fs = std::ifstream(filename);
+    if (!fs) throw std::runtime_error("could not load " + filename);
+    std::stringstream buf;
+    buf << fs.rdbuf();
+    fs.close();
+    return buf.str();
+}
+
+// Save a text file
+void save_text(const std::string& filename, const std::string& str) {
+    auto fs = std::ofstream(filename);
+    if (!fs) throw std::runtime_error("could not save " + filename);
+    fs << str;
+    fs.close();
+}
+
+// Load a binary file
+std::vector<byte> load_binary(const std::string& filename) {
+    // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
+    auto fs = std::ifstream(filename, std::ios::binary);
+    if (!fs) throw std::runtime_error("could not load " + filename);
+    fs.seekg(0, std::ios::end);
+    size_t size = fs.tellg();
+    auto buf = std::vector<byte>(size);
+    fs.seekg(0);
+    fs.read((char*)&buf[0], size);
+    fs.close();
+    return buf;
+}
+
+// Save a binary file
+void save_binary(const std::string& filename, const std::vector<byte>& data) {
+    auto fs = std::ofstream(filename, std::ios::binary);
+    if (!fs) throw std::runtime_error("could not save " + filename);
+    fs.write((char*)data.data(), data.size());
+    fs.close();
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR IMAGEIO
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Pfm load
+float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
+    auto split = [](const std::string& str) {
+        auto ret = std::vector<std::string>();
+        if (str.empty()) return ret;
+        auto lpos = (size_t)0;
+        while (lpos != str.npos) {
+            auto pos = str.find_first_of(" \t\n\r", lpos);
+            if (pos != str.npos) {
+                if (pos > lpos) ret.push_back(str.substr(lpos, pos - lpos));
+                lpos = pos + 1;
+            } else {
+                if (lpos < str.size()) ret.push_back(str.substr(lpos));
+                lpos = pos;
+            }
+        }
+        return ret;
+    };
+
+    auto f = fopen(filename, "rb");
+    if (!f) return nullptr;
+
+    // buffer
+    char buf[256];
+    auto toks = std::vector<std::string>();
+
+    // read magic
+    if (!fgets(buf, 256, f)) return nullptr;
+    toks = split(buf);
+    if (toks[0] == "Pf")
+        *nc = 1;
+    else if (toks[0] == "PF")
+        *nc = 3;
+    else
+        return nullptr;
+
+    // read w, h
+    if (!fgets(buf, 256, f)) return nullptr;
+    toks = split(buf);
+    *w = atoi(toks[0].c_str());
+    *h = atoi(toks[1].c_str());
+
+    // read scale
+    if (!fgets(buf, 256, f)) return nullptr;
+    toks = split(buf);
+    auto s = atof(toks[0].c_str());
+
+    // read the data (flip y)
+    auto npixels = (*w) * (*h);
+    auto nvalues = (*w) * (*h) * (*nc);
+    auto nrow = (*w) * (*nc);
+    auto pixels = new float[nvalues];
+    for (auto j = *h - 1; j >= 0; j--) {
+        if (fread(pixels + j * nrow, sizeof(float), nrow, f) != nrow) {
+            delete[] pixels;
+            return nullptr;
+        }
+    }
+
+    // done reading
+    fclose(f);
+
+    // endian conversion
+    if (s > 0) {
+        for (auto i = 0; i < nvalues; ++i) {
+            auto dta = (uint8_t*)(pixels + i);
+            std::swap(dta[0], dta[3]);
+            std::swap(dta[1], dta[2]);
+        }
+    }
+
+    // scale
+    auto scl = (s > 0) ? s : -s;
+    if (scl != 1) {
+        for (auto i = 0; i < nvalues; i++) pixels[i] *= scl;
+    }
+
+    // proper number of channels
+    if (!req || *nc == req) return pixels;
+
+    // pack into channels
+    if (req < 0 || req > 4) {
+        delete[] pixels;
+        return nullptr;
+    }
+    auto cpixels = new float[req * npixels];
+    for (auto i = 0; i < npixels; i++) {
+        auto vp = pixels + i * (*nc);
+        auto cp = cpixels + i * req;
+        if (*nc == 1) {
+            switch (req) {
+                case 1: cp[0] = vp[0]; break;
+                case 2:
+                    cp[0] = vp[0];
+                    cp[1] = vp[0];
+                    break;
+                case 3:
+                    cp[0] = vp[0];
+                    cp[1] = vp[0];
+                    cp[2] = vp[0];
+                    break;
+                case 4:
+                    cp[0] = vp[0];
+                    cp[1] = vp[0];
+                    cp[2] = vp[0];
+                    cp[3] = 1;
+                    break;
+            }
+        } else {
+            switch (req) {
+                case 1: cp[0] = vp[0]; break;
+                case 2:
+                    cp[0] = vp[0];
+                    cp[1] = vp[1];
+                    break;
+                case 3:
+                    cp[0] = vp[0];
+                    cp[1] = vp[1];
+                    cp[2] = vp[2];
+                    break;
+                case 4:
+                    cp[0] = vp[0];
+                    cp[1] = vp[1];
+                    cp[2] = vp[2];
+                    cp[3] = 1;
+                    break;
+            }
+        }
+    }
+    delete[] pixels;
+    return cpixels;
+}
+
+// save pfm
+bool save_pfm(const char* filename, int w, int h, int nc, const float* pixels) {
+    auto f = fopen(filename, "wb");
+    if (!f) return false;
+
+    fprintf(f, "%s\n", (nc == 1) ? "Pf" : "PF");
+    fprintf(f, "%d %d\n", w, h);
+    fprintf(f, "-1\n");
+    if (nc == 1 || nc == 3) {
+        fwrite(pixels, sizeof(float), w * h * nc, f);
+    } else {
+        for (auto i = 0; i < w * h; i++) {
+            auto vz = 0.0f;
+            auto v = pixels + i * nc;
+            fwrite(v + 0, sizeof(float), 1, f);
+            fwrite(v + 1, sizeof(float), 1, f);
+            if (nc == 2)
+                fwrite(&vz, sizeof(float), 1, f);
+            else
+                fwrite(v + 2, sizeof(float), 1, f);
+        }
+    }
+
+    fclose(f);
+
+    return true;
+}
+
+// check hdr extensions
+bool is_hdr_filename(const std::string& filename) {
+    auto ext = get_extension(filename);
+    return ext == "hdr" || ext == "exr" || ext == "pfm";
+}
+
+// Loads an hdr image.
+image4f load_image(const std::string& filename, float ldr_gamma) {
+    auto ext = get_extension(filename);
+    auto width = 0, height = 0;
+    auto img = image4f();
+    if (ext == "exr") {
+        auto pixels = (vec4f*)nullptr;
+        if (LoadEXR((float**)&pixels, &width, &height, filename.c_str(),
+                nullptr) < 0)
+            throw std::runtime_error("could not load image " + filename);
+        if (!pixels)
+            throw std::runtime_error("could not load image " + filename);
+
+        img = image4f{
+            width, height, std::vector<vec4f>(pixels, pixels + width * height)};
+        free(pixels);
+    } else if (ext == "pfm") {
+        auto ncomp = 0;
+        auto pixels =
+            (vec4f*)load_pfm(filename.c_str(), &width, &height, &ncomp, 4);
+        if (!pixels)
+            throw std::runtime_error("could not load image " + filename);
+
+        img = image4f{
+            width, height, std::vector<vec4f>(pixels, pixels + width * height)};
+        free(pixels);
+    } else if (ext == "hdr") {
+        auto ncomp = 0;
+        auto pixels =
+            (vec4f*)stbi_loadf(filename.c_str(), &width, &height, &ncomp, 4);
+        if (!pixels)
+            throw std::runtime_error("could not load image " + filename);
+
+        img = image4f{
+            width, height, std::vector<vec4f>(pixels, pixels + width * height)};
+        free(pixels);
+    } else {
+        auto ncomp = 0;
+        auto pixels =
+            (vec4b*)stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
+        if (!pixels)
+            throw std::runtime_error("could not load image " + filename);
+        auto img8 = image4b{
+            width, height, std::vector<vec4b>(pixels, pixels + width * height)};
+        free(pixels);
+        img = gamma_to_linear(byte_to_float(img8), ldr_gamma);
+    }
+    return img;
+}
+
+// Saves an hdr image.
+void save_image(
+    const std::string& filename, const image4f& img, float ldr_gamma) {
+    auto ext = get_extension(filename);
+    if (ext == "png") {
+        auto ldr = float_to_byte(linear_to_gamma(img));
+        if (!stbi_write_png(filename.c_str(), img.width(), img.height(), 4,
+                (byte*)ldr.data(), img.width() * 4))
+            throw std::runtime_error("could not save image " + filename);
+    } else if (ext == "jpg") {
+        auto ldr = float_to_byte(linear_to_gamma(img));
+        if (!stbi_write_jpg(filename.c_str(), img.width(), img.height(), 4,
+                (byte*)ldr.data(), 75))
+            throw std::runtime_error("could not save image " + filename);
+    } else if (ext == "tga") {
+        auto ldr = float_to_byte(linear_to_gamma(img));
+        if (!stbi_write_tga(filename.c_str(), img.width(), img.height(), 4,
+                (byte*)ldr.data()))
+            throw std::runtime_error("could not save image " + filename);
+    } else if (ext == "bmp") {
+        auto ldr = float_to_byte(linear_to_gamma(img));
+        if (!stbi_write_bmp(filename.c_str(), img.width(), img.height(), 4,
+                (byte*)ldr.data()))
+            throw std::runtime_error("could not save image " + filename);
+    } else if (ext == "hdr") {
+        if (!stbi_write_hdr(filename.c_str(), img.width(), img.height(), 4,
+                (float*)img.data()))
+            throw std::runtime_error("could not save image " + filename);
+    } else if (ext == "pfm") {
+        if (!save_pfm(filename.c_str(), img.width(), img.height(), 4,
+                (float*)img.data()))
+            throw std::runtime_error("could not save image " + filename);
+    } else if (ext == "exr") {
+        if (!SaveEXR((float*)img.data(), img.width(), img.height(), 4,
+                filename.c_str()))
+            throw std::runtime_error("could not save image " + filename);
+    } else {
+        throw std::runtime_error("unsupported image format " + ext);
+    }
+}
+
+// Loads an hdr image.
+image4f load_image_from_memory(
+    const byte* data, int data_size, float ldr_gamma) {
+    stbi_ldr_to_hdr_gamma(ldr_gamma);
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = (vec4f*)stbi_loadf_from_memory(
+        data, data_size, &width, &height, &ncomp, 4);
+    stbi_ldr_to_hdr_gamma(2.2f);
+    if (!pixels) throw std::runtime_error("could not decode image from memory");
+    auto img = image4f{
+        width, height, std::vector<vec4f>(pixels, pixels + width * height)};
+    delete pixels;
+    return img;
+}
+
+// Loads an hdr image.
+image4b load_image4b(const std::string& filename, float ldr_gamma) {
+    stbi_hdr_to_ldr_gamma(ldr_gamma);
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels =
+        (vec4b*)stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
+    stbi_hdr_to_ldr_gamma(2.2f);
+    if (!pixels) throw std::runtime_error("could not decode image from memory");
+    auto img = image4b{
+        width, height, std::vector<vec4b>(pixels, pixels + width * height)};
+    delete pixels;
+    return img;
+}
+
+// Saves an hdr image.
+void save_image4b(
+    const std::string& filename, const image4b& img, float ldr_gamma) {
+    auto ext = get_extension(filename);
+    if (ext == "png") {
+        if (!stbi_write_png(filename.c_str(), img.width(), img.height(), 4,
+                (byte*)img.data(), img.width() * 4))
+            throw std::runtime_error("could not save image " + filename);
+    } else if (ext == "jpg") {
+        if (!stbi_write_jpg(filename.c_str(), img.width(), img.height(), 4,
+                (byte*)img.data(), 75))
+            throw std::runtime_error("could not save image " + filename);
+    } else if (ext == "tga") {
+        if (!stbi_write_tga(filename.c_str(), img.width(), img.height(), 4,
+                (byte*)img.data()))
+            throw std::runtime_error("could not save image " + filename);
+    } else if (ext == "bmp") {
+        if (!stbi_write_bmp(filename.c_str(), img.width(), img.height(), 4,
+                (byte*)img.data()))
+            throw std::runtime_error("could not save image " + filename);
+    } else if (ext == "hdr") {
+        auto hdr = linear_to_gamma(byte_to_float(img), ldr_gamma);
+        if (!stbi_write_hdr(filename.c_str(), img.width(), img.height(), 4,
+                (float*)hdr.data()))
+            throw std::runtime_error("could not save image " + filename);
+    } else if (ext == "pfm") {
+        auto hdr = linear_to_gamma(byte_to_float(img), ldr_gamma);
+        if (!save_pfm(filename.c_str(), img.width(), img.height(), 4,
+                (float*)hdr.data()))
+            throw std::runtime_error("could not save image " + filename);
+    } else if (ext == "exr") {
+        auto hdr = linear_to_gamma(byte_to_float(img), ldr_gamma);
+        if (!SaveEXR((float*)hdr.data(), img.width(), img.height(), 4,
+                filename.c_str()))
+            throw std::runtime_error("could not save image " + filename);
+    } else {
+        throw std::runtime_error("unsupported image format " + ext);
+    }
+}
+
+// Loads an hdr image.
+image4b load_image4b_from_memory(
+    const byte* data, int data_size, float ldr_gamma) {
+    stbi_hdr_to_ldr_gamma(ldr_gamma);
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = (vec4b*)stbi_load_from_memory(
+        data, data_size, &width, &height, &ncomp, 4);
+    stbi_hdr_to_ldr_gamma(2.2f);
+    if (!pixels) throw std::runtime_error("could not decode image from memory");
+    auto img = image4b{
+        width, height, std::vector<vec4b>(pixels, pixels + width * height)};
+    delete pixels;
+    return img;
+}
+
+// Resize image.
+image4f resize_image(const image4f& img, int res_width, int res_height) {
+    if (!res_width && !res_height) throw std::runtime_error("bad image size");
+    if (!res_width)
+        res_width =
+            (int)round(img.width() * (res_height / (float)img.height()));
+    if (!res_height)
+        res_height =
+            (int)round(img.height() * (res_width / (float)img.width()));
+    auto res_img = image4f{res_width, res_height};
+    stbir_resize_float_generic((float*)img.data(), img.width(), img.height(),
+        sizeof(vec4f) * img.width(), (float*)res_img.data(), res_width,
+        res_height, sizeof(vec4f) * res_width, 4, 3, 0, STBIR_EDGE_CLAMP,
+        STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
+    return res_img;
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// GENERIC IMAGE LOADING
 // -----------------------------------------------------------------------------
 namespace ygl {
 
@@ -58,11 +579,11 @@ std::shared_ptr<scene> load_scene(
     } else {
         throw std::runtime_error("unsupported extension " + ext);
     }
-    auto mat = (std::shared_ptr<material>)nullptr;
+    auto mat = std::shared_ptr<material>();
     for (auto ist : scn->instances) {
         if (ist->mat) continue;
         if (!mat) {
-            mat = make_material("<default>", {0.2f, 0.2f, 0.2f});
+            mat = make_default_material("<default>");
             scn->materials.push_back(mat);
         }
         ist->mat = mat;
@@ -1788,15 +2309,7 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
 
     // fix scene
     scn->name = get_filename(filename);
-    auto mat = (std::shared_ptr<material>)nullptr;
-    for (auto ist : scn->instances) {
-        if (ist->mat) continue;
-        if (!mat) {
-            mat = make_material("<default>", {0.2f, 0.2f, 0.2f});
-            scn->materials.push_back(mat);
-        }
-        ist->mat = mat;
-    }
+    add_missing_materials(scn);
 
     // skip if needed
     if (!load_textures) return scn;
@@ -1842,7 +2355,7 @@ void save_obj_scene(const std::string& filename,
 
     // material library
     if (!scn->materials.empty()) {
-        auto mtlname = replace_path_extension(get_filename(filename), "mtl");
+        auto mtlname = replace_extension(get_filename(filename), "mtl");
         fs << "mtllib " << mtlname << "\n";
     }
 
@@ -1944,7 +2457,7 @@ void save_obj_scene(const std::string& filename,
     // save materials
     if (scn->materials.empty()) return;
 
-    auto mtlname = replace_path_extension(filename, ".mtl");
+    auto mtlname = replace_extension(filename, ".mtl");
     fs = std::ofstream(mtlname);
     if (!fs) throw std::runtime_error("cannot open filename " + mtlname);
 
@@ -2559,15 +3072,7 @@ std::shared_ptr<scene> load_gltf_scene(
     update_bbox(scn);
 
     // fix elements
-    auto mat = (std::shared_ptr<material>)nullptr;
-    for (auto ist : scn->instances) {
-        if (ist->mat) continue;
-        if (!mat) {
-            mat = make_material("<default>", {0.2f, 0.2f, 0.2f});
-            scn->materials.push_back(mat);
-        }
-        ist->mat = mat;
-    }
+    add_missing_materials(scn);
     for (auto cam : scn->cameras) {
         auto center = (scn->bbox.min + scn->bbox.max) / 2;
         auto dist = dot(-cam->frame.z, center - cam->frame.o);
@@ -2718,7 +3223,7 @@ void save_gltf_scene(const std::string& filename,
         mjs["primitives"] = json::array();
         bjs["name"] = shp->name;
         bjs["byteLength"] = 0;
-        bjs["uri"] = replace_path_extension(shp->path, ".bin");
+        bjs["uri"] = replace_extension(shp->path, ".bin");
         auto mat_it = shape_mats.find(shp);
         if (mat_it != shape_mats.end()) pjs["material"] = mat_it->second;
         auto add_accessor = [&js, &bjs, bid](int count, std::string type,
@@ -2818,18 +3323,19 @@ void save_gltf_scene(const std::string& filename,
     for (auto shp : scn->shapes) {
         if (shp->path == "") continue;
         auto filename = normalize_path(dirname + "/" + shp->path);
-        filename = replace_path_extension(filename, ".bin");
+        filename = replace_extension(filename, ".bin");
         try {
             auto fs = std::ofstream(filename, std::ios::binary);
             if (!fs)
                 throw std::runtime_error("could not open file " + filename);
             fs.write((char*)shp->pos.data(), 3 * 4 * shp->pos.size());
-            fs.write((char*)shp->norm.data(), 3 * 4* shp->norm.size());
-            fs.write((char*)shp->texcoord.data(), 2 * 4* shp->pos.size());
-            fs.write((char*)shp->color.data(), 4 * 4* shp->color.size());
-            fs.write((char*)shp->radius.data(), 1 * 4* shp->radius.size());
-            fs.write((char*)shp->lines.data(), 2 * 4* shp->lines.size());
-            fs.write((char*)shp->triangles.data(), 3 * 4* shp->triangles.size());
+            fs.write((char*)shp->norm.data(), 3 * 4 * shp->norm.size());
+            fs.write((char*)shp->texcoord.data(), 2 * 4 * shp->pos.size());
+            fs.write((char*)shp->color.data(), 4 * 4 * shp->color.size());
+            fs.write((char*)shp->radius.data(), 1 * 4 * shp->radius.size());
+            fs.write((char*)shp->lines.data(), 2 * 4 * shp->lines.size());
+            fs.write(
+                (char*)shp->triangles.data(), 3 * 4 * shp->triangles.size());
             fs.close();
         } catch (std::exception&) {
             if (skip_missing) continue;

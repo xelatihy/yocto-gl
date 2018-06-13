@@ -34,15 +34,9 @@ else(YOCTO_OPENGL)
 endif(YOCTO_OPENGL)
 
 set(YOCTO_FILES
-    yocto/yocto_math.h
-    yocto/yocto_image.h yocto/yocto_image.cpp
-    yocto/yocto_bvh.h yocto/yocto_bvh.cpp
-    yocto/yocto_shape.h yocto/yocto_shape.cpp
-    yocto/yocto_obj.h yocto/yocto_obj.cpp
-    yocto/yocto_gltf.h yocto/yocto_gltf.cpp
-    yocto/yocto_scene.h yocto/yocto_scene.cpp
-    yocto/yocto_sceneio.h yocto/yocto_sceneio.cpp
-    yocto/yocto_trace.h yocto/yocto_trace.cpp
+    yocto/yocto_gl.h yocto/yocto_gl.cpp
+    yocto/yocto_glio.h yocto/yocto_glio.cpp
+    yocto/yocto_obj.h yocto/yocto_gltf.h
 )
 
 if(YOCTO_OPENGL)
