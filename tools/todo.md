@@ -3,26 +3,40 @@
 This file contains notes on future improvements of Yocto.
 Please consider this to be just development notes and not any real planning.
 
-## Reduce internal code
+## Library
 
-- streams in in/out
-    - obj out
-    - mesh obj out
-    - mesh ply out
-    - obj in
-    - mesh obj out
-    - mesh ply int
-- POINTS
-- filesystem
-- ldr_gamma in texture
-
-## Recornsider
-
-- OpenGL flips texture coordinates
+- library
+    - shape -> ygl
+    - image -> ygl
+    - scene -> ygl
+    - trace -> ygl
+    - math == ygl
+    - imageio -> glio
+    - sceneio -> glio
+    - io funcs -> glio
+    - obj header only
+    - gltf header only
+- homebrew tap
+    - build latest GLFW
+    - build embree
+    - consider inserting this in the main repo 
+- tesselate once
+- make scene much shorter and header only
+- make obj/glTF single file
+- quad
+    - verify interpolation for degenerate
+    - verify if we can write interpolation as two triangles
+    - verify sampling for degenerate
+- merge shape into math if possible
+    - makeXXX take triangle/quads option
+    - simplify split code for shapes, going back to before Yocto
+- merge simple image code to Yocto
+- move complex shape examples in scene
+- merge image into math?
 
 ## Bugs
 
-- yimview
+- make sure we cam parse face-varying data in OBJ models
 - normal map problem
 - animated rotation seems bogus
 - obj flipped textures
@@ -34,6 +48,15 @@ Please consider this to be just development notes and not any real planning.
     - copy ypbrt code into load_scene
 - volumetric values
 
+## Scene changes
+
+- simpler shapes functions
+    - add functions on quads using embree parametrization
+    - quad tangent field
+    - add quads to shape
+- ldr_gamma in texture
+- embree
+
 ## image
 
 - tone curve
@@ -41,7 +64,6 @@ Please consider this to be just development notes and not any real planning.
 
 ## Trace
 
-- BAD RNG INITIALIZATION
 - clarify light pdfs
 - one path
     - compute light pdfs with intersection

@@ -1,8 +1,10 @@
 //
-// # Yocto/Math: Tiny C++ Library of Math function for 3D Graphics
+// # Yocto/GL: Tiny C++ Library for Physically-Based Rendering
 //
-// Yocto/Math is a collection of simple math types and utilities for 3D
-// graphics.
+//
+// Yocto/GL is a collection of utilities for creating a simple path tracer.
+// The list of utilities is described below.
+//
 //
 // ## Small Vectors and Matrices, Frames, Bounding Boxes and Transforms
 //
@@ -35,10 +37,65 @@
 // For rotation we support axis-angle and quaternions, with slerp.
 //
 //
+// ## Geometry functions
+//
+// The library supports basic geomtry functions such as computing
+// line/triangle/quad normals and areas, picking points on triangles
+// and the like. In these functions triangles are parametrized with us written
+// w.r.t the (v1-v0) and (v2-v0) axis respetively. Quads are internally handled
+// as pairs of two triangles v0,v1,v3 and v2,v3,v1, with the u/v coordinates
+// of the second triangle corrected as 1-u and 1-v to produce a quad
+// parametrization where u and v go from 0 to 1. Degenerate quads with v2==v3
+// represent triangles correctly, an this convention is used throught the
+// library. This is equivalent to Intel's Embree.
+//
+//
+// ## Shape functions
+//
+// We provide a small number of utlities for shape manipulation for index
+// triangle and quad meshes, indexed line and point sets and indexed beziers.
+// The utlities collected here are written to support a global illujmination
+// rendering and not for generic geometry processing. We support operation for
+// shape smoothing, shape subdivision (including Catmull-Clark subdivs), and
+// example shape creation.
+//
+// 1. compute line tangents, and triangle and quad areas and normals with
+//    `compute_line_tangents()`, `compute_triangle_normals()`,
+//    `compute_quad_normals()`
+// 2. interpolate values over primitives with `eval_line()`,
+//    `eval_triangle()` and `eval_quad()`
+// 3. evaluate Bezier curves and derivatives with `eval_bezier()` and
+//    `eval_bezier_derivative()`
+// 4. compute smooth normals and tangents with `compute_normals()`
+//   `compute_tangents()`
+// 5. compute tangent frames from texture coordinates with
+//    `compute_tangent_space()`
+// 6. compute skinning with `compute_skinning()` and
+//    `compute_matrix_skinning()`
+// 6. create shapes with `make_cube()`, `make_sphere()`, `make_quad()`,
+//    `make_fvcube()`, `make_hair()`, `make_suzanne()`, `make_lines()`,
+//    `make_points()`, `make_sphere_cube()`, `make_cube_rounded()`,
+//    `make_sphere_flipcap()`, `make_cylinder()`, `make_cylinder_rounded()`,
+//    `make_disk()`, `make_cylinder_side()`, `make_disk_quad()`
+// 7. merge element with `marge_lines()`, `marge_triangles()`, `marge_quads()`
+// 8. shape sampling with `sample_points()`, `sample_lines()`,
+//    `sample_triangles()`; initialize the sampling CDFs with
+//    `sample_points_cdf()`, `sample_lines_cdf()`, `sample_triangles_cdf()`
+// 9.  samnple a could of point over a surface with `sample_triangles_points()`
+// 10. get edges and boundaries with `get_edges()`
+// 11. convert quads to triangles with `convert_quads_to_triangles()`
+// 12. convert face varying to vertex shared representations with
+//     `convert_face_varying()`
+// 13. subdivide elements by edge splits with `subdivide_lines()`,
+//     `subdivide_triangles()`, `subdivide_quads()`, `subdivide_beziers()`
+// 14. Catmull-Clark subdivision surface with `subdivide_catmullclark()`
+//
+//
 // ## Random Number Generation, Noise, and Monte Carlo support
 //
 // This library supports many facilities helpful in writing sampling
-// functions targeting path tracing and shape generations.
+// functions targeting path tracing and shape generations. Implementation of
+// Perlin noise is include based on stb libraries.
 //
 // 1. Random number generation with PCG32:
 //     1. initialize the random number generator with `make_rng()`
@@ -58,10 +115,97 @@
 //     the PDF with `sample_xxx_pdf()`.
 //
 //
-// ## Utilities
+// ## Ray-Scene and Closest-Point Queries
 //
-// For lack of a better place to include them, this library provides some
-// small utlities for string, path and container manipulation.
+// Yocto/GL provides ray-scene intersection for points, lines, triangles and
+// quads accelerated by a two-level BVH data structure. Our BVH is written for
+// minimal code and not maximum speed, but still gives reasonable results. We
+// suggest the use of Intel's Embree as a more efficient alternative.
+//
+// In Yocto/Bvh, shapes are described as collections of indexed primitives
+// (points/lines/triangles/quads) like the standard triangle mesh used in
+// real-time graphics. A scene if represented as transformed instances of
+// shapes. The internal data structure is a two-level BVH, with a BVH for each
+// shape and one top-level BVH for the whole scene. This design support
+// ionstancing for large scenes and easy BVH refitting for interactive
+// applictions.
+//
+// 1. fill the shape or instance data
+// 2. build the BVH with `build_bvh()`
+// 3. perform ray-element intersection with `intersect_bvh()`
+// 4. perform point overlap queries with `overlap_bvh()`
+// 5. refit the BVH with `refit_bvh()` after updating internal data
+//
+//
+// ## Image Utilities
+//
+// Yocto/GL supports a very small set is color and image utilities including
+// color utilitis, example image creation, tonempping, image resizing, and
+// sunsky procedural images. Yocto/Image is written to support the need of a
+// minimal, but fully-featured, global illumination renderer, rather than the
+// need of generic image editing.
+//
+// 0. load and save image with Yocto/GLIO
+// 1. create images with `image<T>` data structure
+// 2. resize images with `resize_image()`
+// 3. tonemap images with `tonemap_image()`
+// 5. make various image examples with the `make_XXX_image()` functions
+// 6. create procedural sun-sky images with `make_sunsky_image()`
+//
+//
+// # Simple scene representation
+//
+// Yocto/GL define a simple scene data structure useful to create quick demos
+// and as the repsetnation upon which the path tracer works.
+//
+// In Yocto scenes, shapes are represented as indexed collections of points,
+// lines, triangles, quads and bezier segments. Each shape may contain
+// only one element type. Shapes are organized into a scene by creating shape
+// instances, each its own transform. Materials are specified like in OBJ and
+// glTF and include emission, base-metallic and diffuse-specular
+// parametrization, normal, occlusion and displacement mapping. Finally, the
+// scene containers cameras and environment maps. Quad support in shapes is
+// experimental and mostly supported for loading and saving. Lights in
+// Yocto/Scene are pointers to either instances or environments. The scene
+// supports an optional node hierarchy with animation modeled on the glTF model.
+//
+// 1. load a scene with Yocto/GLIO,
+// 2. add missing data with `add_XXX()` functions
+// 3. use `update_bbox()` to compute element bounds
+// 4. can merge scene together with `merge_into()`
+// 5. make scene elements with `make_XXX()` functions
+// 6. make procedural elements and scenes with `make_proc_XXX()` functions
+// 7. for ray-intersection and closest point queries, a BVH can be created with
+//    `update_bvh()` and refit with `refit_bvh()`
+// 8. compute interpolated values over scene elements with `eval_XXX()`
+//    functions
+//
+//
+// ## Physically-based Path Tracing
+//
+// Yocto/GL includes a tiny, but fully featured, path tracer with support for
+// textured mesh area lights, GGX materials, environment mapping. The algorithm
+// makes heavy use of MIS for fast convergence.
+// The interface supports progressive parallel execution both synchronously,
+// for CLI applications, and asynchronously for interactive viewing.
+//
+// Materials are represented as sums of an emission term, a diffuse term and
+// a specular microfacet term (GGX or Phong), and a transmission term for
+// this sheet glass.
+// Lights are defined as any shape with a material emission term. Additionally
+// one can also add environment maps. But even if you can, you might want to
+// add a large triangle mesh with inward normals instead. The latter is more
+// general (you can even more an arbitrary shape sun). For now only the first
+// env is used.
+//
+// 1. prepare the scene for tracing
+//    - build the ray-tracing acceleration structure with `update_bvh()`
+//     - prepare lights for rendering with `update_lights()`
+// 2. create the inmage buffer and random number generators `make_trace_rngs()`
+// 3. render blocks of samples with `trace_samples()`
+// 4. you can also start an asynchronous renderer with `trace_asynch_start()`
+//
+//
 //
 
 //
@@ -97,8 +241,8 @@
 //
 //
 
-#ifndef _YGL_MATH_H_
-#define _YGL_MATH_H_
+#ifndef _YGL_H_
+#define _YGL_H_
 
 // -----------------------------------------------------------------------------
 // INCLUDES
@@ -117,10 +261,10 @@
 #include <iostream>
 #include <limits>
 #include <string>
+#include <thread>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
-#include <iostream>
-#include <sstream>
-#include <fstream>
 
 // -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
@@ -1845,7 +1989,7 @@ template <typename TT, typename T>
 inline TT interpolate_line(
     const std::vector<TT>& vals, const vec<int, 2>& l, T u) {
     if (vals.empty()) return TT();
-    return vals[l.x] * (1 - u) + vals[l.y] * u;
+    return interpolate_line(vals[l.x], vals[l.y], u);
 }
 
 // Interpolates values over a triangle parametrized by u and v along the
@@ -1859,22 +2003,23 @@ template <typename TT, typename T>
 inline TT interpolate_triangle(
     const std::vector<TT>& vals, const vec<int, 3>& t, const vec<T, 2>& uv) {
     if (vals.empty()) return TT();
-    return vals[t.x] * (1 - uv.x - uv.y) + vals[t.y] * uv.x + vals[t.z] * uv.y;
+    return interpolate_triangle(vals[t.x], vals[t.y], vals[t.z], uv);
 }
 // Interpolates values over a quad parametrized by u and v along the
 // (v1-v0) and (v2-v1) directions. Same as bilear interpolation.
-template <typename T>
-inline T interpolate_quad(
-    const T& v0, const T& v1, const T& v2, const T& v3, const vec<T, 2>& uv) {
+template <typename TT, typename T>
+inline TT interpolate_quad(const TT& v0, const TT& v1, const TT& v2,
+    const TT& v3, const vec<T, 2>& uv) {
     return v0 * (1 - uv.x) * (1 - uv.y) + v1 * uv.x * (1 - uv.y) +
            v2 * uv.x * uv.y + v3 * (1 - uv.x) * uv.y;
 }
-template <typename T>
-inline T interpolate_quad(
-    const std::vector<T>& vals, vec4i t, const vec<T, 2>& uv) {
+template <typename TT, typename T>
+inline TT interpolate_quad(
+    const std::vector<TT>& vals, const vec<int, 4>& q, const vec<T, 2>& uv) {
     if (vals.empty()) return T();
-    return vals[t.x] * (1 - uv.x) * (1 - uv.y) + vals[t.y] * uv.x * (1 - uv.y) +
-           vals[t.z] * uv.x * uv.y + vals[t.w] * (1 - uv.x) * uv.y;
+    if (q.z == q.w)
+        return interpolate_triangle(vals[q.x], vals[q.y], vals[q.z]);
+    return interpolate_quad(vals[q.x], vals[q.y], vals[q.z], vals[q.w], uv);
 }
 
 // Evaluates the i-th Bernstein polynomial of degree degree at u.
@@ -1948,6 +2093,598 @@ inline T interpolate_bezier_derivative(
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
+// SHAPE UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Compute per-vertex normals/tangents for lines/triangles/quads.
+void compute_tangents(const std::vector<vec2i>& lines,
+    const std::vector<vec3f>& pos, std::vector<vec3f>& tang);
+void compute_normals(const std::vector<vec3i>& triangles,
+    const std::vector<vec3f>& pos, std::vector<vec3f>& norm);
+void compute_normals(const std::vector<vec4i>& quads,
+    const std::vector<vec3f>& pos, std::vector<vec3f>& norm);
+
+// Compute per-vertex tangent space for triangle meshes.
+// Tangent space is defined by a four component vector.
+// The first three components are the tangent with respect to the u texcoord.
+// The fourth component is the sign of the tangent wrt the v texcoord.
+// Tangent frame is useful in normal mapping.
+void compute_tangent_space(const std::vector<vec3i>& triangles,
+    const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
+    const std::vector<vec2f>& texcoord, std::vector<vec4f>& tangsp,
+    bool weighted = true);
+
+// Apply skinning to vertex position and normals.
+void compute_skinning(const std::vector<vec3f>& pos,
+    const std::vector<vec3f>& norm, const std::vector<vec4f>& weights,
+    const std::vector<vec4i>& joints, const std::vector<mat4f>& xforms,
+    std::vector<vec3f>& skinned_pos, std::vector<vec3f>& skinned_norm);
+void compute_skinning(const std::vector<vec3f>& pos,
+    const std::vector<vec3f>& norm, const std::vector<vec4f>& weights,
+    const std::vector<vec4i>& joints, const std::vector<frame3f>& xforms,
+    std::vector<vec3f>& skinned_pos, std::vector<vec3f>& skinned_norm);
+// Apply skinning as specified in Khronos glTF.
+void compute_matrix_skinning(const std::vector<vec3f>& pos,
+    const std::vector<vec3f>& norm, const std::vector<vec4f>& weights,
+    const std::vector<vec4i>& joints, const std::vector<mat4f>& xforms,
+    std::vector<vec3f>& skinned_pos, std::vector<vec3f>& skinned_norm);
+
+// Create an array of edges.
+std::vector<vec2i> get_edges(const std::vector<vec3i>& triangles);
+std::vector<vec2i> get_edges(const std::vector<vec4i>& quads);
+
+// Convert quads to triangles
+std::vector<vec3i> convert_quads_to_triangles(const std::vector<vec4i>& quads);
+// Convert quads to triangles with a diamond-like topology.
+// Quads have to be consecutive one row after another.
+std::vector<vec3i> convert_quads_to_triangles(
+    const std::vector<vec4i>& quads, int row_length);
+
+// Convert beziers to lines using 3 lines for each bezier.
+std::vector<vec2i> convert_bezier_to_lines(const std::vector<vec4i>& beziers);
+
+// Convert face-varying data to single primitives. Returns the quads indices
+// and face ids and filled vectors for pos, norm and texcoord.
+void convert_face_varying(std::vector<vec4i>& qquads, std::vector<vec3f>& qpos,
+    std::vector<vec3f>& qnorm, std::vector<vec2f>& qtexcoord,
+    std::vector<vec4f>& qcolor, const std::vector<vec4i>& quads_pos,
+    const std::vector<vec4i>& quads_norm,
+    const std::vector<vec4i>& quads_texcoord,
+    const std::vector<vec4i>& quads_color, const std::vector<vec3f>& pos,
+    const std::vector<vec3f>& norm, const std::vector<vec2f>& texcoord,
+    const std::vector<vec4f>& color);
+
+// Subdivide lines by splitting each line in half.
+template <typename T>
+void subdivide_lines(
+    std::vector<vec2i>& lines, std::vector<T>& vert, int level);
+// Subdivide triangle by splitting each triangle in four, creating new
+// vertices for each edge.
+template <typename T>
+void subdivide_triangles(
+    std::vector<vec3i>& triangles, std::vector<T>& vert, int level);
+// Subdivide quads by splitting each quads in four, creating new
+// vertices for each edge and for each face.
+template <typename T>
+void subdivide_quads(
+    std::vector<vec4i>& quads, std::vector<T>& vert, int level);
+// Subdivide beziers by splitting each segment in two.
+template <typename T>
+void subdivide_beziers(
+    std::vector<vec4i>& beziers, std::vector<T>& vert, int level);
+// Subdivide quads using Carmull-Clark subdivision rules.
+template <typename T>
+void subdivide_catmullclark(std::vector<vec4i>& quads, std::vector<T>& vert,
+    int level, bool lock_boundary = false);
+
+// Merge lines between shapes.
+void merge_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    const std::vector<vec2i>& lines1, const std::vector<vec3f>& pos1,
+    const std::vector<vec3f>& norm1, const std::vector<vec2f>& texcoord1);
+// Merge triangles between shapes.
+void merge_triangles(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    const std::vector<vec3i>& triangles1, const std::vector<vec3f>& pos1,
+    const std::vector<vec3f>& norm1, const std::vector<vec2f>& texcoord1);
+// Merge quads between shapes.
+void merge_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    const std::vector<vec4i>& quads1, const std::vector<vec3f>& pos1,
+    const std::vector<vec3f>& norm1, const std::vector<vec2f>& texcoord1);
+
+// Weld vertices within a threshold. For noe the implementation is O(n^2).
+std::vector<int> weld_vertices(std::vector<vec3f>& pos, float threshold);
+void weld_triangles(
+    std::vector<vec3i>& triangles, std::vector<vec3f>& pos, float threshold);
+void weld_quads(
+    std::vector<vec4i>& quads, std::vector<vec3f>& pos, float threshold);
+
+// Pick a point in a point set uniformly.
+inline int sample_points(int npoints, float re) {
+    return sample_index(npoints, re);
+}
+inline std::vector<float> sample_points_cdf(int npoints) {
+    auto cdf = std::vector<float>(npoints);
+    for (auto i = 0; i < cdf.size(); i++) cdf[i] = 1 + (i ? cdf[i - 1] : 0);
+    return cdf;
+}
+inline int sample_points(const std::vector<float>& cdf, float re) {
+    return sample_discrete(cdf, re);
+}
+
+// Pick a point on lines uniformly.
+inline std::vector<float> sample_lines_cdf(
+    const std::vector<vec2i>& lines, const std::vector<vec3f>& pos) {
+    auto cdf = std::vector<float>(lines.size());
+    for (auto i = 0; i < cdf.size(); i++) {
+        auto l = lines[i];
+        auto w = line_length(pos[l.x], pos[l.y]);
+        cdf[i] = w + (i ? cdf[i - 1] : 0);
+    }
+    return cdf;
+}
+inline std::pair<int, float> sample_lines(
+    const std::vector<float>& cdf, float re, float ru) {
+    return {sample_discrete(cdf, re), ru};
+}
+
+// Pick a point on a triangle mesh uniformly.
+inline std::vector<float> sample_triangles_cdf(
+    const std::vector<vec3i>& triangles, const std::vector<vec3f>& pos) {
+    auto cdf = std::vector<float>(triangles.size());
+    for (auto i = 0; i < cdf.size(); i++) {
+        auto t = triangles[i];
+        auto w = triangle_area(pos[t.x], pos[t.y], pos[t.z]);
+        cdf[i] = w + (i ? cdf[i - 1] : 0);
+    }
+    return cdf;
+}
+inline std::pair<int, vec2f> sample_triangles(
+    const std::vector<float>& cdf, float re, const vec2f& ruv) {
+    return {sample_discrete(cdf, re), sample_triangle(ruv)};
+}
+
+// Pick a point on a quad mesh uniformly.
+inline std::vector<float> sample_quads_cdf(
+    const std::vector<vec4i>& quads, const std::vector<vec3f>& pos) {
+    auto cdf = std::vector<float>(quads.size());
+    for (auto i = 0; i < cdf.size(); i++) {
+        auto q = quads[i];
+        auto w = quad_area(pos[q.x], pos[q.y], pos[q.z], pos[q.w]);
+        cdf[i] = w + (i ? cdf[i - 1] : 0);
+    }
+    return cdf;
+}
+inline std::pair<int, vec2f> sample_quads(
+    const std::vector<float>& cdf, float re, const vec2f& ruv) {
+    return {sample_discrete(cdf, re), ruv};
+}
+
+// Samples a set of points over a triangle mesh uniformly. Returns pos, norm
+// and tecoord of the sampled points.
+std::tuple<std::vector<vec3f>, std::vector<vec3f>, std::vector<vec2f>>
+sample_triangles_points(const std::vector<vec3i>& triangles,
+    const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
+    const std::vector<vec2f>& texcoord, int npoints, int seed = 7);
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// RAY INTERSECTION AND CLOSEST POINT FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Intersect a ray with a point (approximate).
+// Based on http://geomalgorithms.com/a02-lines.html.
+bool intersect_point(
+    const ray3f& ray, vec3f p, float r, float& dist, vec2f& uv);
+
+// Intersect a ray with a line (approximate).
+// Based on http://geomalgorithms.com/a05-intersect-1.html and
+// http://geomalgorithms.com/a07-distance.html#
+//     dist3D_Segment_to_Segment
+bool intersect_line(const ray3f& ray, const vec3f& v0, const vec3f& v1,
+    float r0, float r1, float& dist, vec2f& uv);
+
+// Intersect a ray with a triangle.
+bool intersect_triangle(const ray3f& ray, const vec3f& v0, const vec3f& v1,
+    const vec3f& v2, float& dist, vec2f& uv);
+
+// Intersect a ray with a quad represented as two triangles (0,1,3) and
+// (2,3,1), with the uv coordinates of the second triangle corrected by u =
+// 1-u' and v = 1-v' to produce a quad parametrization where u and v go from 0
+// to 1. This is equivalent to Intel's Embree.
+bool intersect_quad(const ray3f& ray, const vec3f& v0, const vec3f& v1,
+    const vec3f& v2, const vec3f& v3, float& dist, vec2f& uv);
+
+// Intersect a ray with a axis-aligned bounding box.
+bool intersect_bbox(const ray3f& ray, const bbox3f& bbox);
+
+// Intersect a ray with a axis-aligned bounding box, implemented as
+// "Robust BVH Ray Traversal" by T. Ize published at
+// http://jcgt.org/published/0002/02/02/paper.pdf
+bool intersect_bbox(
+    const ray3f& ray, vec3f ray_dinv, vec3i ray_dsign, const bbox3f& bbox);
+
+// Check if a point overlaps a position within a max distance.
+bool overlap_point(const vec3f& pos, float dist_max, const vec3f& v0, float r0,
+    float& dist, vec2f& uv);
+
+// Find closest line point to a position.
+float closestuv_line(const vec3f& pos, const vec3f& v0, const vec3f& v1);
+
+// Check if a line overlaps a position within a max distance.
+bool overlap_line(const vec3f& pos, float dist_max, const vec3f& v0,
+    const vec3f& v1, float r0, float r1, float& dist, vec2f& uv);
+
+// Find closest triangle point to a position.
+vec2f closestuv_triangle(
+    const vec3f& pos, const vec3f& v0, const vec3f& v1, const vec3f& v2);
+
+// Check if a triangle overlaps a position within a max distance.
+bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& v0,
+    const vec3f& v1, const vec3f& v2, float r0, float r1, float r2, float& dist,
+    vec2f& uv);
+
+// Check if a quad overlaps a position within a max distance.
+bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& v0,
+    const vec3f& v1, const vec3f& v2, const vec3f& v3, float r0, float r1,
+    float r2, float r3, float& dist, vec2f& uv);
+
+// Check if a bouning box overlaps a position within a max distance.
+bool overlap_bbox(const vec3f& pos, float dist_max, const bbox3f& bbox);
+
+// Check if two bouning boxes overlap.
+bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2);
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// BVH FOR RAY INTERSECTION AND CLOSEST ELEMENT
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Type of BVH node.
+enum struct bvh_node_type : uint8_t {
+    internal,
+    point,
+    line,
+    triangle,
+    vertex,
+    instance
+};
+
+// Maximum number of primitives per BVH node.
+const int bvh_max_prims = 4;
+
+// BVH tree node containing its bounds, indices to the BVH arrays of either
+// primitives or internal nodes, the node element type,
+// and the split axis. Leaf and internal nodes are identical, except that
+// indices refer to primitives for leaf nodes or other nodes for internal
+// nodes. See bvh_tree for more details.
+struct bvh_node {
+    bbox3f bbox;                    // bouds
+    uint32_t prims[bvh_max_prims];  // primitives
+    uint16_t count;                 // number of prims
+    bvh_node_type type;             // node type
+    uint8_t split_axis;             // split axis
+};
+
+// BVH tree, stored as a node array. The tree structure is encoded using array
+// indices instead of pointers, both for speed but also to simplify code.
+// BVH nodes indices refer to either the node array, for internal nodes,
+// or the primitive arrays, for leaf nodes. BVH trees may contain only one type
+// of geometric primitive, like points, lines, triangle or instances of other
+// BVHs. To handle multiple primitive types and transformed primitives, build
+// a two-level hierarchy with the outer BVH, the scene BVH, containing inner
+// BVHs, shape BVHs, each of which of a uniform primitive type.
+// To build a BVH, first fill in either the shape or instance data, then
+// call `build_bvh()`.
+struct bvh_tree {
+    // data for shape BVH
+    std::vector<vec3f> pos;        // Positions for shape BVHs.
+    std::vector<float> radius;     // Radius for shape BVHs.
+    std::vector<int> points;       // Points for shape BVHs.
+    std::vector<vec2i> lines;      // Lines for shape BVHs.
+    std::vector<vec3i> triangles;  // Triangles for shape BVHs.
+
+    // data for instance BVH
+    std::vector<frame3f> ist_frames;                  // instance frames
+    std::vector<frame3f> ist_inv_frames;              // instance inverse frames
+    std::vector<std::shared_ptr<bvh_tree>> ist_bvhs;  // instance shape bvhs
+
+    // bvh nodes
+    std::vector<bvh_node> nodes;  // Internal nodes.
+};
+
+// Build a BVH from the given set of primitives.
+void build_bvh(const std::shared_ptr<bvh_tree>& bvh, bool equalsize);
+// Update the node bounds for a shape bvh.
+void refit_bvh(const std::shared_ptr<bvh_tree>& bvh);
+
+// Intersect ray with a bvh returning either the first or any intersection
+// depending on `find_any`. Returns the ray distance `dist`, the instance
+// id `iid`, the shape id `sid`, the shape element index `eid` and the
+// shape barycentric coordinates `uv`.
+bool intersect_bvh(const std::shared_ptr<bvh_tree>& bvh, const ray3f& ray,
+    bool find_any, float& dist, int& iid, int& eid, vec2f& uv);
+
+// Find a shape element that overlaps a point within a given distance
+// `max_dist`, returning either the closest or any overlap depending on
+// `find_any`. Returns the point distance `dist`, the instance id `iid`, the
+// shape id `sid`, the shape element index `eid` and the shape barycentric
+// coordinates `uv`.
+bool overlap_bvh(const std::shared_ptr<bvh_tree>& bvh, const vec3f& pos,
+    float max_dist, bool find_any, float& dist, int& iid, int& eid, vec2f& uv);
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// SHAPE EXAMPLES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Make examples triangle shapes with shared vertices (not watertight).
+void make_quad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
+    const vec2f& size, const vec2f& uvsize);
+void make_quad_stack(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
+    const vec3f& size, const vec2f& uvsize);
+void make_cube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
+    const vec3f& size, const vec3f& uvsize);
+void make_cube_rounded(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
+    const vec3f& size, const vec3f& uvsize, float radius);
+void make_sphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
+    float size, const vec2f& uvsize);
+void make_sphere_cube(std::vector<vec4i>& quadss, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int steps,
+    float size, float uvsize);
+void make_sphere_flipcap(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
+    float size, const vec2f& uvsize, const vec2f& zflip);
+void make_disk(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
+    float size, const vec2f& uvsize);
+void make_disk_quad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int steps,
+    float size, float uvsize);
+void make_disk_bulged(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int steps,
+    float size, float uvsize, float height);
+void make_cylinder_side(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
+    const vec2f& size, const vec2f& uvsize);
+void make_cylinder(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
+    const vec2f& size, const vec3f& uvsize);
+void make_cylinder_rounded(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
+    const vec2f& size, const vec3f& uvsize, float radius);
+void make_geodesic_sphere(std::vector<vec3i>& triangles,
+    std::vector<vec3f>& pos, int tesselation, float size);
+
+// Make example watertight quad meshes for subdivision surfaces.
+void make_fvcube(std::vector<vec4i>& quads_pos, std::vector<vec3f>& pos,
+    std::vector<vec4i>& quads_norm, std::vector<vec3f>& norm,
+    std::vector<vec4i>& quads_texcoord, std::vector<vec2f>& texcoord,
+    vec3i steps, const vec3f& size, const vec3f& uvsize);
+void make_suzanne(std::vector<vec4i>& quads, std::vector<vec3f>& pos);
+void make_cube(std::vector<vec4i>& quads, std::vector<vec3f>& pos);
+
+// Generate lines set along a quad.
+void make_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<float>& radius, const vec2i& steps, const vec2f& size,
+    const vec2f& uvsize, vec2f line_radius = {0.001f, 0.001f});
+
+// Make point primitives
+void make_point(std::vector<int>& points, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<float>& radius, float point_radius = 0.001f);
+void make_points(std::vector<int>& points, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<float>& radius, int num, float uvsize,
+    float point_radius = 0.001f);
+void make_random_points(std::vector<int>& points, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<float>& radius, int num, const vec3f& size, float uvsize,
+    float point_radius = 0.001f, uint64_t seed = 0);
+
+// Make a bezier circle. Returns bezier, pos.
+void make_bezier_circle(std::vector<vec4i>& beziers, std::vector<vec3f>& pos);
+
+// Make a hair ball around a shape.
+// length: minimum and maximum length
+// rad: minimum and maximum radius from base to tip
+// noise: noise added to hair (strength/scale)
+// clump: clump added to hair (number/strength)
+// rotation: rotation added to hair (angle/strength)
+void make_hair(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
+    std::vector<vec3f>& tang, std::vector<vec2f>& texcoord,
+    std::vector<float>& radius, const vec2i& steps,
+    const std::vector<vec3i>& striangles, const std::vector<vec3f>& spos,
+    const std::vector<vec3f>& snorm, const std::vector<vec2f>& stexcoord,
+    const vec2f& length = {0.1f, 0.1f}, const vec2f& rad = {0.001f, 0.001f},
+    const vec2f& noise = zero2f, const vec2f& clump = zero2f,
+    const vec2f& rotation = zero2f, int seed = 7);
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMAGE TYPE
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Image container.
+template <typename T>
+struct image {
+    // constructors
+    image() : w(0), h(0), pxl() {}
+    image(int width, int height, const T& c = T())
+        : w(width), h(height), pxl(width * height, c) {}
+    image(int width, int height, const std::vector<T>& p)
+        : w(width), h(height), pxl(p) {}
+
+    // size checks
+    int width() const { return w; };
+    int height() const { return h; };
+    int size() const { return w * h; };
+    bool empty() const { return !w || !h; };
+
+    // pixel access
+    T& operator[](int idx) { return pxl[idx]; }
+    const T& operator[](int idx) const { return pxl[idx]; }
+    T& operator[](vec2i ij) { return pxl[ij.y * w + ij.x]; }
+    const T& operator[](vec2i ij) const { return pxl[ij.y * w + ij.x]; }
+    T& at(int idx) { return pxl.at(idx); }
+    const T& at(int idx) const { return pxl.at(idx); }
+    T& at(vec2i ij) { return pxl.at(ij.y * w + ij.x); }
+    const T& at(vec2i ij) const { return pxl.at(ij.y * w + ij.x); }
+
+    // data access
+    T* data() { return pxl.data(); }
+    const T* data() const { return pxl.data(); }
+    std::vector<T>& pixels() { return pxl; }
+    const std::vector<T>& pixels() const { return pxl; }
+    T* begin() { return pxl.data(); }
+    T* end() { return pxl.data() + pxl.size(); }
+    const T* begin() const { return pxl.data(); }
+    const T* end() const { return pxl.data() + pxl.size(); }
+
+   private:
+    int w = 0;
+    int h = 0;
+    std::vector<T> pxl;
+};
+
+// Type aliases
+using image4f = image<vec4f>;
+using image4b = image<vec4b>;
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMAGE UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Conversion from/to floats.
+image4f byte_to_float(const image4b& bt);
+image4b float_to_byte(const image4f& fl);
+
+// Conversion between linear and gamma-encoded images.
+image4f gamma_to_linear(const image4f& srgb, float gamma = 2.2f);
+image4f linear_to_gamma(const image4f& lin, float gamma = 2.2f);
+
+// Apply exposure and filmic tone mapping
+image4f expose_image(const image4f& hdr, float exposure);
+image4f filmic_tonemap_image(const image4f& hdr);
+
+// Resize an image.
+image4f resize_image(const image4f& img, int res_width, int res_height);
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// COLOR CONVERSION UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Element-wise float to byte conversion.
+inline vec4b float_to_byte(const vec4f& a) {
+    return {(byte)clamp(int(a.x * 256), 0, 255),
+        (byte)clamp(int(a.y * 256), 0, 255),
+        (byte)clamp(int(a.z * 256), 0, 255),
+        (byte)clamp(int(a.w * 256), 0, 255)};
+}
+inline vec4f byte_to_float(const vec4b& a) {
+    return {a.x / 255.0f, a.y / 255.0f, a.z / 255.0f, a.w / 255.0f};
+}
+
+// Conversion between linear and gamma-encoded images.
+inline vec3f gamma_to_linear(const vec3f& srgb, float gamma = 2.2f) {
+    return {pow(srgb.x, gamma), pow(srgb.y, gamma), pow(srgb.z, gamma)};
+}
+inline vec3f linear_to_gamma(const vec3f& lin, float gamma = 2.2f) {
+    return {
+        pow(lin.x, 1 / gamma), pow(lin.y, 1 / gamma), pow(lin.z, 1 / gamma)};
+}
+inline vec4f gamma_to_linear(const vec4f& srgb, float gamma = 2.2f) {
+    return {pow(srgb.x, gamma), pow(srgb.y, gamma), pow(srgb.z, gamma), srgb.w};
+}
+inline vec4f linear_to_gamma(const vec4f& lin, float gamma = 2.2f) {
+    return {pow(lin.x, 1 / gamma), pow(lin.y, 1 / gamma), pow(lin.z, 1 / gamma),
+        lin.w};
+}
+
+// Approximate luminance estimate
+inline float luminance(const vec3f& a) { return (a.x + a.y + a.z) / 3; }
+
+// Converts HSV to RGB.
+vec3f hsv_to_rgb(const vec3f& hsv);
+vec3f rgb_to_hsv(const vec3f& rgb);
+// Convert between CIE XYZ and xyY
+vec3f xyz_to_xyY(const vec3f& xyz);
+vec3f xyY_to_xyz(const vec3f& xyY);
+// Convert between CIE XYZ and RGB
+vec3f xyz_to_rgb(const vec3f& xyz);
+vec3f rgb_to_xyz(const vec3f& rgb);
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// EXAMPLE IMAGES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Make example images.
+image4f make_grid_image(int width, int height, int tile = 8,
+    const vec4f& c0 = {0.5f, 0.5f, 0.5f, 1},
+    const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
+image4f make_checker_image(int width, int height, int tile = 8,
+    const vec4f& c0 = {0.5f, 0.5f, 0.5f, 1},
+    const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
+image4f make_bumpdimple_image(int width, int height, int tile = 8);
+image4f make_ramp_image(int width, int height, const vec4f& c0, const vec4f& c1,
+    float srgb = false);
+image4f make_gammaramp_image(int width, int height);
+image4f make_uv_image(int width, int height);
+image4f make_uvgrid_image(
+    int width, int height, int tile = 8, bool colored = true);
+
+// Comvert a bump map to a normal map.
+image4f bump_to_normal_map(const image4f& img, float scale = 1);
+
+// Make a sunsky HDR model with sun at theta elevation in [0,pi/2], turbidity
+// in [1.7,10] with or without sun.
+image4f make_sunsky_image(int width, int height, float thetaSun,
+    float turbidity = 3, bool has_sun = false,
+    vec3f ground_albedo = {0.7f, 0.7f, 0.7f});
+// Make an image of multiple lights.
+image4f make_lights_image(int width, int height, const vec3f& le = {1, 1, 1},
+    int nlights = 4, float langle = pi / 4, float lwidth = pi / 16,
+    float lheight = pi / 16);
+
+// Make a noise image. Wrap works only if both resx and resy are powers of two.
+image4f make_noise_image(
+    int width, int height, float scale = 1, bool wrap = true);
+image4f make_fbm_image(int width, int height, float scale = 1,
+    float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
+image4f make_ridge_image(int width, int height, float scale = 1,
+    float lacunarity = 2, float gain = 0.5f, float offset = 1.0f,
+    int octaves = 6, bool wrap = true);
+image4f make_turbulence_image(int width, int height, float scale = 1,
+    float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
 // ANIMATION UTILITIES
 // -----------------------------------------------------------------------------
 namespace ygl {
@@ -2011,27 +2748,526 @@ inline T eval_keyframed_bezier(
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
-// FILE AND PATH UTILITIES
+// SCENE DATA
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Normalize path delimiters.
-inline std::string normalize_path(const std::string& filename);
-// Get directory name (not including '/').
-inline std::string get_dirname(const std::string& filename);
-// Get extension (not including '.').
-inline std::string get_extension(const std::string& filename);
-// Get filename without directory.
-inline std::string get_filename(const std::string& filename);
-// Load a text file
-inline std::string load_text(const std::string& filename);
-// Save a text file
-inline void save_text(const std::string& filename, const std::string& str);
-// Load a binary file
-inline std::vector<byte> load_binary(const std::string& filename);
-// Save a binary file
-inline void save_binary(
-    const std::string& filename, const std::vector<byte>& data);
+// forward declaration
+struct bvh_tree;
+
+// Camera.
+struct camera {
+    std::string name = "";             // name
+    frame3f frame = identity_frame3f;  // transform frame
+    bool ortho = false;                // orthographic
+    float width = 0.036f;              // film width (default to 35mm)
+    float height = 0.024f;             // film height (default to 35mm)
+    float focal = 0.050f;              // focal length (defaul to 50 mm)
+    float focus = flt_max;             // focal distance (default to inf focus)
+    float aperture = 0;                // lens aperture
+    float near = 0.01f;                // near plane distance
+    float far = 10000;                 // far plane distance
+};
+
+// Texture containing either an LDR or HDR image.
+struct texture {
+    std::string name = "";    // name
+    std::string path = "";    // file path
+    image4f img = {};         // image
+    bool clamp = false;       // clamp textures coordinates
+    float scale = 1;          // scale for occ, normal, bumps
+    void* gl_data = nullptr;  // unmanaged data for OpenGL viewer
+};
+
+// Material for surfaces, lines and triangles.
+// For surfaces, uses a microfacet model with thin sheet transmission.
+// The model is based on glTF for compatibility and adapted to OBJ.
+// For lines, uses Kajija-Kay model. For points, a hacked up shading.
+struct material {
+    std::string name = "";       // name
+    bool base_metallic = false;  // base-metallic parametrization
+    bool gltf_textures = false;  // glTF packed textures
+    bool double_sided = false;   // double sided rendering
+
+    // base values
+    vec3f ke = {0, 0, 0};  // emission color
+    vec3f kd = {0, 0, 0};  // diffuse/base color
+    vec3f ks = {0, 0, 0};  // specular color / metallic factor
+    vec3f kt = {0, 0, 0};  // transmission color
+    float rs = 0.0001;     // roughness mapped as glTF
+    float op = 1;          // opacity
+    bool fresnel = true;   // whether to use fresnel in reflections/transmission
+    bool refract = false;  // whether to use use refraction in tranmission
+
+    // textures
+    std::shared_ptr<texture> ke_txt;    // emission texture
+    std::shared_ptr<texture> kd_txt;    // diffuse texture
+    std::shared_ptr<texture> ks_txt;    // specular texture
+    std::shared_ptr<texture> kt_txt;    // transmission texture
+    std::shared_ptr<texture> rs_txt;    // roughness texture
+    std::shared_ptr<texture> op_txt;    // opacity texture
+    std::shared_ptr<texture> occ_txt;   // occlusion texture
+    std::shared_ptr<texture> bump_txt;  // bump map texture (heighfield)
+    std::shared_ptr<texture> disp_txt;  // displacement map texture (heighfield)
+    std::shared_ptr<texture> norm_txt;  // normal texture
+};
+
+// Shape data represented as an indexed meshes of elements.
+// May contain either tringles, lines or a set of vertices.
+struct shape {
+    std::string name = "";  // name
+    std::string path = "";  // path for glTF buffers
+
+    // primitives
+    std::vector<int> points;       // points
+    std::vector<vec2i> lines;      // lines
+    std::vector<vec3i> triangles;  // triangles
+
+    // vertex data
+    std::vector<vec3f> pos;       // positions
+    std::vector<vec3f> norm;      // normals/tangents
+    std::vector<vec2f> texcoord;  // texcoord coordinates
+    std::vector<vec4f> color;     // colors
+    std::vector<float> radius;    // radia for lines/points
+    std::vector<vec4f> tangsp;    // tangent space for triangles
+
+    // computed properties
+    bbox3f bbox = invalid_bbox3f;             // boudning box
+    std::vector<float> elem_cdf = {};         // element cdf for sampling
+    std::shared_ptr<bvh_tree> bvh = nullptr;  // bvh for ray intersection
+    void* gl_data = nullptr;  // unmanaged data for OpenGL viewer
+};
+
+// Subdivision surface.
+struct subdiv {
+    std::string name = "";        // name
+    std::string path = "";        // path for glTF buffers
+    int level = 0;                // subdivision level
+    bool catmull_clark = true;    // catmull clark subdiv
+    bool compute_normals = true;  // faceted subdivision
+
+    // primitives
+    std::vector<vec4i> quads_pos;       // quads for position
+    std::vector<vec4i> quads_texcoord;  // quads for texture coordinates
+    std::vector<vec4i> quads_color;     // quads for color
+
+    // creases
+    std::vector<vec3i> crease_pos;       // crease for position
+    std::vector<vec3i> crease_texcoord;  // crease for texture coordinates
+
+    // vertex data
+    std::vector<vec3f> pos;       // positions
+    std::vector<vec2f> texcoord;  // texcoord coordinates
+    std::vector<vec4f> color;     // colors
+};
+
+// Shape instance.
+struct instance {
+    std::string name;                         // name
+    frame3f frame = identity_frame3f;         // transform frame
+    std::shared_ptr<shape> shp = nullptr;     // shape
+    std::shared_ptr<material> mat = nullptr;  // material
+    std::shared_ptr<subdiv> sbd = nullptr;    // subdivision shape
+
+    // compute properties
+    bbox3f bbox = invalid_bbox3f;  // boudning box
+};
+
+// Envinonment map.
+struct environment {
+    std::string name = "";                 // name
+    frame3f frame = identity_frame3f;      // transform frame
+    vec3f ke = {0, 0, 0};                  // emission color
+    std::shared_ptr<texture> ke_txt = {};  // emission texture
+
+    // computed properties
+    std::vector<float> elem_cdf;  // element cdf for sampling
+};
+
+// Node in a transform hierarchy.
+struct node {
+    std::string name = "";                       // name
+    std::shared_ptr<node> parent = nullptr;      // parent
+    frame3f frame = identity_frame3f;            // transform frame
+    vec3f translation = {0, 0, 0};               // translation
+    vec4f rotation = {0, 0, 0, 1};               // rotation
+    vec3f scale = {1, 1, 1};                     // scale
+    std::vector<float> weights = {};             // morph weights
+    std::shared_ptr<camera> cam = nullptr;       // camera
+    std::shared_ptr<instance> ist = nullptr;     // instance
+    std::shared_ptr<environment> env = nullptr;  // environment
+
+    // compute properties
+    std::vector<std::weak_ptr<node>> children = {};  // child nodes
+};
+
+// Keyframe type.
+enum struct animation_type { linear, step, bezier };
+
+// Keyframe data.
+struct animation {
+    std::string name;                              // name
+    std::string path = "";                         // path for glTF buffer
+    std::string group;                             // group
+    animation_type type = animation_type::linear;  // type
+    std::vector<float> times;                      // keyframe times
+    std::vector<vec3f> translation;                // translation keyframes
+    std::vector<vec4f> rotation;                   // rotation keyframes
+    std::vector<vec3f> scale;                      // scale keyframes
+    std::vector<std::vector<float>> weights;       // mprph weight keyframes
+    std::vector<std::shared_ptr<node>> targets;    // target nodes
+};
+
+// Scene comprised an array of objects whose memory is owened by the scene.
+// All members are optional,Scene objects (camera, instances, environments)
+// have transforms defined internally. A scene can optionally contain a
+// node hierarchy where each node might point to a camera, instance or
+// environment. In that case, the element transforms are computed from
+// the hierarchy. Animation is also optional, with keyframe data that
+// updates node transformations only if defined.
+struct scene {
+    std::string name;                                       // name
+    std::vector<std::shared_ptr<camera>> cameras = {};      // cameras
+    std::vector<std::shared_ptr<shape>> shapes = {};        // shapes
+    std::vector<std::shared_ptr<subdiv>> subdivs = {};      // subdivs
+    std::vector<std::shared_ptr<instance>> instances = {};  // instances
+    std::vector<std::shared_ptr<material>> materials = {};  // materials
+    std::vector<std::shared_ptr<texture>> textures = {};    // textures
+    std::vector<std::shared_ptr<environment>> environments =
+        {};  // environments
+
+    std::vector<std::shared_ptr<node>> nodes = {};  // node hierarchy [optional]
+    std::vector<std::shared_ptr<animation>> animations =
+        {};  // animations [optional]
+
+    // compute properties
+    std::vector<std::shared_ptr<instance>> lights;
+    bbox3f bbox = invalid_bbox3f;  // boudning box
+    std::shared_ptr<bvh_tree> bvh = nullptr;
+};
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// SCENE UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Print scene statistics.
+void print_stats(const std::shared_ptr<scene>& scn);
+
+// Merge scene into one another. Note that the objects are _moved_ from
+// merge_from to merged_into, so merge_from will be empty after this function.
+void merge_into(const std::shared_ptr<scene>& merge_into,
+    std::shared_ptr<scene> merge_from);
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// UPDATES TO COMPUTED PROPERTIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Update the normals of a shape.
+void update_normals(const std::shared_ptr<shape>& shp);
+
+// Update node transforms.
+void update_transforms(const std::shared_ptr<scene>& scn, float time = 0,
+    const std::string& anim_group = "");
+// Compute animation range.
+vec2f compute_animation_range(
+    const std::shared_ptr<scene>& scn, const std::string& anim_group = "");
+
+// Computes shape/scene approximate bounds.
+void udpate_bbox(const std::shared_ptr<shape>& shp);
+void update_bbox(const std::shared_ptr<scene>& scn, bool do_shapes = true);
+
+// Update lights.
+void update_lights(const std::shared_ptr<scene>& scn, bool do_shapes = true,
+    bool do_environments = false);
+// Generate a distribution for sampling a shape uniformly based on area/length.
+void update_shape_cdf(const std::shared_ptr<shape>& shp);
+// Generate a distribution for sampling an environment texture uniformly
+// based on angle and texture intensity.
+void update_environment_cdf(std::shared_ptr<environment> env);
+
+// Updates/refits bvh.
+void update_bvh(const std::shared_ptr<shape>& shp, bool equalsize = false);
+void update_bvh(const std::shared_ptr<scene>& scn, bool do_shapes = true,
+    bool equalsize = false);
+void refit_bvh(const std::shared_ptr<shape>& shp);
+void refit_bvh(const std::shared_ptr<scene>& scn, bool do_shapes = true);
+
+// Updates tesselation.
+void update_tesselation(
+    const std::shared_ptr<subdiv>& sbd, std::shared_ptr<shape> shp);
+void update_tesselation(const std::shared_ptr<scene>& scn);
+
+// Add missing names, normals, tangents and hierarchy.
+void add_missing_names(const std::shared_ptr<scene>& scn);
+void add_missing_normals(const std::shared_ptr<scene>& scn);
+void add_missing_tangent_space(const std::shared_ptr<scene>& scn);
+void add_missing_materials(const std::shared_ptr<scene>& scn);
+// Checks for validity of the scene.
+std::vector<std::string> validate(
+    const std::shared_ptr<scene>& scn, bool skip_textures = false);
+
+// make camera
+std::shared_ptr<camera> make_bbox_camera(const std::string& name,
+    const bbox3f& bbox, float width = 0.036f, float height = 0.024f,
+    float focal = 0.050f);
+// make default material
+inline std::shared_ptr<material> make_default_material(
+    const std::string& name) {
+    auto mat = std::make_shared<material>();
+    mat->name = name;
+    mat->kd = {0.2f, 0.2f, 0.2f};
+    return mat;
+}
+
+// Add a sky environment
+inline std::shared_ptr<environment> make_sky_environment(
+    const std::string& name, float sun_angle = pi / 4) {
+    auto txt = std::make_shared<texture>();
+    txt->name = name;
+    txt->path = "textures/" + name + ".hdr";
+    txt->img = make_sunsky_image(1024, 512, sun_angle);
+    auto env = std::make_shared<environment>();
+    env->name = name;
+    env->ke = {1, 1, 1};
+    env->ke_txt = txt;
+    return env;
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// INTERSECTION, EVAL AND SAMPLING FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Scene intersection.
+struct scene_intersection {
+    std::shared_ptr<instance> ist =
+        nullptr;        // instance or null for no intersection
+    int ei = 0;         // shape element index
+    vec2f uv = zero2f;  // shape element coordinates
+    float dist = 0;     // ray/point distance
+};
+
+// Intersects a ray with the scene.
+scene_intersection intersect_ray(
+    const std::shared_ptr<scene>& scn, const ray3f& ray, bool find_any = false);
+
+// Shape values interpolated using barycentric coordinates.
+vec3f eval_pos(const std::shared_ptr<shape>& shp, int ei, const vec2f& uv);
+vec3f eval_norm(const std::shared_ptr<shape>& shp, int ei, const vec2f& uv);
+vec2f eval_texcoord(const std::shared_ptr<shape>& shp, int ei, const vec2f& uv);
+vec4f eval_color(const std::shared_ptr<shape>& shp, int ei, const vec2f& uv);
+float eval_radius(const std::shared_ptr<shape>& shp, int ei, const vec2f& uv);
+vec4f eval_tangsp(const std::shared_ptr<shape>& shp, int ei, const vec2f& uv);
+vec3f eval_tangsp(const std::shared_ptr<shape>& shp, int ei, const vec2f& uv,
+    bool& left_handed);
+// Shape element values.
+vec3f eval_elem_norm(const std::shared_ptr<shape>& shp, int ei);
+vec4f eval_elem_tangsp(const std::shared_ptr<shape>& shp, int ei);
+
+// Instance values interpolated using barycentric coordinates.
+// Handles defaults if data is missing.
+vec3f eval_pos(const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
+vec3f eval_norm(const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
+vec2f eval_texcoord(
+    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
+vec4f eval_color(const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
+float eval_radius(
+    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
+vec3f eval_tangsp(const std::shared_ptr<instance>& ist, int ei, const vec2f& uv,
+    bool& left_handed);
+// Instance element values.
+vec3f eval_elem_norm(const std::shared_ptr<instance>& ist, int ei);
+// Shading normals including material perturbations.
+vec3f eval_shading_norm(
+    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv, vec3f o);
+
+// Environment texture coordinates from the incoming direction.
+vec2f eval_texcoord(const std::shared_ptr<environment>& env, vec3f i);
+// Evaluate the incoming direction from the uv.
+vec3f eval_direction(const std::shared_ptr<environment>& env, const vec2f& uv);
+// Evaluate the environment emission.
+vec3f eval_environment(const std::shared_ptr<environment>& env, vec3f i);
+
+// Evaluate a texture.
+vec4f eval_texture(const std::shared_ptr<texture>& txt, const vec2f& texcoord);
+
+// Set and evaluate camera parameters. Setters take zeros as default values.
+float eval_camera_fovy(const std::shared_ptr<camera>& cam);
+float eval_camera_aspect(const std::shared_ptr<camera>& cam);
+void set_camera_fovy(const std::shared_ptr<camera>& cam, float fovy,
+    float aspect, float width = 0.036f);
+
+// Generates a ray from a camera image coordinate `uv` and lens coordinates
+// `luv`.
+ray3f eval_camera_ray(
+    const std::shared_ptr<camera>& cam, const vec2f& uv, const vec2f& luv);
+// Generates a ray from a camera for pixel coordinates `ij`, the resolution
+// `res`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and
+// the image resolution `res`.
+ray3f eval_camera_ray(const std::shared_ptr<camera>& cam, const vec2i& ij,
+    const vec2i& imsize, const vec2f& puv, const vec2f& luv);
+
+// Evaluates material parameters: emission, diffuse, specular, transmission,
+// roughness and opacity.
+vec3f eval_emission(
+    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
+vec3f eval_diffuse(
+    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
+vec3f eval_specular(
+    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
+vec3f eval_transmission(
+    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
+float eval_roughness(
+    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
+float eval_opacity(
+    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
+
+// Material values packed into a convenience structure.
+struct bsdf {
+    vec3f kd = zero3f;     // diffuse
+    vec3f ks = zero3f;     // specular
+    vec3f kt = zero3f;     // transmission
+    float rs = 1;          // roughness
+    bool refract = false;  // whether to use refraction in transmission
+};
+bsdf eval_bsdf(const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
+bool is_delta_bsdf(const bsdf& f);
+
+// Sample a shape based on a distribution.
+std::pair<int, vec2f> sample_shape(
+    const std::shared_ptr<shape>& shp, float re, const vec2f& ruv);
+
+// Sample an environment uniformly.
+vec2f sample_environment(
+    const std::shared_ptr<environment>& env, const vec2f& ruv);
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// PATH TRACING
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Trace evaluation function.
+using trace_func = std::function<vec3f(const std::shared_ptr<scene>& scn,
+    const ray3f& ray, rng_state& rng, int nbounces, bool* hit)>;
+
+// Init a sequence of random number generators.
+inline image<rng_state> make_trace_rngs(int w, int h, uint64_t seed) {
+    auto rngs = image<rng_state>{w, h};
+    int rseed = 1301081;  // large prime
+    for (auto i = 0; i < w * h; i++) {
+        rngs[i] = make_rng(seed, rseed + 1);
+        rseed = (rseed * 1103515245 + 12345) & ((1U << 31) - 1);  // bsd rand
+    }
+    return rngs;
+}
+
+// Trace the next nsamples samples. Assumes that the
+// image contains cur_samples already. Returns true when done.
+void trace_samples(const std::shared_ptr<scene>& scn,
+    const std::shared_ptr<camera>& cam, image4f& img, image<rng_state>& rngs,
+    int cur_samples, int nsamples, trace_func tracer, int nbounces,
+    float pixel_clamp = 100);
+// Like before but with multiplthreading.
+void trace_samples_mt(const std::shared_ptr<scene>& scn,
+    const std::shared_ptr<camera>& cam, image4f& img, image<rng_state>& rngs,
+    int cur_samples, int nsamples, trace_func tracer, int nbounces,
+    float pixel_clamp = 100);
+
+// Starts an anyncrhounous renderer.
+void trace_async_start(const std::shared_ptr<scene>& scn,
+    const std::shared_ptr<camera>& cam, image4f& img, image<rng_state>& rngs,
+    int nsamples, trace_func tracer, int nbounces,
+    std::vector<std::thread>& threads, bool& stop_flag, int& cur_sample,
+    float pixel_clamp = 100);
+// Stop the asynchronous renderer.
+void trace_async_stop(std::vector<std::thread>& threads, bool& stop_flag);
+
+// Trace function - path tracer.
+vec3f trace_path(const std::shared_ptr<scene>& scn, const ray3f& ray,
+    rng_state& rng, int nbounces, bool* hit = nullptr);
+// Trace function - path tracer without mis.
+vec3f trace_path_nomis(const std::shared_ptr<scene>& scn, const ray3f& ray,
+    rng_state& rng, int nbounces, bool* hit = nullptr);
+// Trace function - naive path tracer.
+vec3f trace_path_naive(const std::shared_ptr<scene>& scn, const ray3f& ray,
+    rng_state& rng, int nbounces, bool* hit = nullptr);
+// Trace function - direct illumination.
+vec3f trace_direct(const std::shared_ptr<scene>& scn, const ray3f& ray,
+    rng_state& rng, int nbounces, bool* hit = nullptr);
+// Trace function - direct illumination without mis.
+vec3f trace_direct_nomis(const std::shared_ptr<scene>& scn, const ray3f& ray,
+    rng_state& rng, int nbounces, bool* hit = nullptr);
+// Trace function - pure environment illumination with no shadows.
+vec3f trace_environment(const std::shared_ptr<scene>& scn, const ray3f& ray,
+    rng_state& rng, int nbounces, bool* hit = nullptr);
+// Trace function - eyelight rendering.
+vec3f trace_eyelight(const std::shared_ptr<scene>& scn, const ray3f& ray,
+    rng_state& rng, int nbounces, bool* hit = nullptr);
+// Trace function - normal debug visualization.
+vec3f trace_debug_normal(const std::shared_ptr<scene>& scn, const ray3f& ray,
+    rng_state& rng, int nbounces, bool* hit = nullptr);
+// Trace function - faceforward debug visualization.
+vec3f trace_debug_frontfacing(const std::shared_ptr<scene>& scn,
+    const ray3f& ray, rng_state& rng, int nbounces, bool* hit = nullptr);
+// Trace function - albedo debug visualization.
+vec3f trace_debug_albedo(const std::shared_ptr<scene>& scn, const ray3f& ray,
+    rng_state& rng, int nbounces, bool* hit = nullptr);
+// Trace function - diffuse debug visualization.
+vec3f trace_debug_diffuse(const std::shared_ptr<scene>& scn, const ray3f& ray,
+    rng_state& rng, int nbounces, bool* hit = nullptr);
+// Trace function - specular debug visualization.
+vec3f trace_debug_specular(const std::shared_ptr<scene>& scn, const ray3f& ray,
+    rng_state& rng, int nbounces, bool* hit = nullptr);
+// Trace function - roughness debug visualization.
+vec3f trace_debug_roughness(const std::shared_ptr<scene>& scn, const ray3f& ray,
+    rng_state& rng, int nbounces, bool* hit = nullptr);
+// Trace function - texcoord debug visualization.
+vec3f trace_debug_texcoord(const std::shared_ptr<scene>& scn, const ray3f& ray,
+    rng_state& rng, int nbounces, bool* hit = nullptr);
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// PATH TRACING SUPPORT FUNCTION
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Phong exponent to roughness.
+float specular_exponent_to_roughness(float n);
+
+// Specular to fresnel eta.
+void specular_fresnel_from_ks(const vec3f& ks, vec3f& es, vec3f& esk);
+float specular_to_eta(const vec3f& ks);
+// Compute the fresnel term for dielectrics.
+vec3f fresnel_dielectric(float cosw, const vec3f& eta_);
+// Compute the fresnel term for metals.
+vec3f fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak);
+// Schlick approximation of Fresnel term, optionally weighted by rs;
+vec3f fresnel_schlick(const vec3f& ks, float cosw);
+vec3f fresnel_schlick(const vec3f& ks, float cosw, float rs);
+vec3f fresnel_schlick(const vec3f& ks, const vec3f& h, const vec3f& o);
+vec3f fresnel_schlick(
+    const vec3f& ks, const vec3f& h, const vec3f& o, float rs);
+
+// Evaluates the GGX distribution and geometric term.
+float eval_ggx(float rs, float ndh, float ndi, float ndo);
+// Sample the GGX distribution.
+vec3f sample_ggx(float rs, const vec2f& rn);
+float sample_ggx_pdf(float rs, float ndh);
+
+// Evaluates the GGX distribution and geometric term.
+float eval_ggx_dist(float rs, const vec3f& n, const vec3f& h);
+float eval_ggx_sm(float rs, const vec3f& n, const vec3f& o, const vec3f& i);
 
 }  // namespace ygl
 
@@ -2041,9 +3277,22 @@ inline void save_binary(
 namespace ygl {
 
 // get the timer time in nanoseconds
-inline int64_t get_time();
+inline int64_t get_time() {
+    return std::chrono::high_resolution_clock::now().time_since_epoch().count();
+}
 // get duration string from nanoseconds
-inline std::string format_duration(int64_t duration);
+inline std::string format_duration(int64_t duration) {
+    auto elapsed = duration / 1000000;  // milliseconds
+    auto hours = (int)(elapsed / 3600000);
+    elapsed %= 3600000;
+    auto mins = (int)(elapsed / 60000);
+    elapsed %= 60000;
+    auto secs = (int)(elapsed / 1000);
+    auto msecs = (int)(elapsed % 1000);
+    char buf[256];
+    sprintf(buf, "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
+    return buf;
+}
 
 }  // namespace ygl
 
@@ -2229,360 +3478,6 @@ inline void camera_fps(
     auto pos = frame.o + transl.x * x + transl.y * y + transl.z * z;
 
     frame = {rot.x, rot.y, rot.z, pos};
-}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR PERLIN NOISE
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-// clang-format off
-inline  float stb__perlin_lerp(float a, float b, float t)
-{
-   return a + (b-a) * t;
-}
-
-inline  int stb__perlin_fastfloor(float a)
-{
-	int ai = (int) a;
-	return (a < ai) ? ai-1 : ai;
-}
-
-// different grad function from Perlin's, but easy to modify to match reference
-inline  float stb__perlin_grad(int hash, float x, float y, float z)
-{
-   static float basis[12][4] =
-   {
-      {  1, 1, 0 },
-      { -1, 1, 0 },
-      {  1,-1, 0 },
-      { -1,-1, 0 },
-      {  1, 0, 1 },
-      { -1, 0, 1 },
-      {  1, 0,-1 },
-      { -1, 0,-1 },
-      {  0, 1, 1 },
-      {  0,-1, 1 },
-      {  0, 1,-1 },
-      {  0,-1,-1 },
-   };
-
-   // perlin's gradient has 12 cases so some get used 1/16th of the time
-   // and some 2/16ths. We reduce bias by changing those fractions
-   // to 5/64ths and 6/64ths, and the same 4 cases get the extra weight.
-   static unsigned char indices[64] =
-   {
-      0,1,2,3,4,5,6,7,8,9,10,11,
-      0,9,1,11,
-      0,1,2,3,4,5,6,7,8,9,10,11,
-      0,1,2,3,4,5,6,7,8,9,10,11,
-      0,1,2,3,4,5,6,7,8,9,10,11,
-      0,1,2,3,4,5,6,7,8,9,10,11,
-   };
-
-   // if you use reference permutation table, change 63 below to 15 to match reference
-   // (this is why the ordering of the table above is funky)
-   float *grad = basis[indices[hash & 63]];
-   return grad[0]*x + grad[1]*y + grad[2]*z;
-}
-
-inline float stb_perlin_noise3(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap)
-{
-    // not same permutation table as Perlin's reference to avoid copyright issues;
-    // Perlin's table can be found at http://mrl.nyu.edu/~perlin/noise/
-    // @OPTIMIZE: should this be unsigned char instead of int for cache?
-    static unsigned char stb__perlin_randtab[512] =
-    {
-    23, 125, 161, 52, 103, 117, 70, 37, 247, 101, 203, 169, 124, 126, 44, 123,
-    152, 238, 145, 45, 171, 114, 253, 10, 192, 136, 4, 157, 249, 30, 35, 72,
-    175, 63, 77, 90, 181, 16, 96, 111, 133, 104, 75, 162, 93, 56, 66, 240,
-    8, 50, 84, 229, 49, 210, 173, 239, 141, 1, 87, 18, 2, 198, 143, 57,
-    225, 160, 58, 217, 168, 206, 245, 204, 199, 6, 73, 60, 20, 230, 211, 233,
-    94, 200, 88, 9, 74, 155, 33, 15, 219, 130, 226, 202, 83, 236, 42, 172,
-    165, 218, 55, 222, 46, 107, 98, 154, 109, 67, 196, 178, 127, 158, 13, 243,
-    65, 79, 166, 248, 25, 224, 115, 80, 68, 51, 184, 128, 232, 208, 151, 122,
-    26, 212, 105, 43, 179, 213, 235, 148, 146, 89, 14, 195, 28, 78, 112, 76,
-    250, 47, 24, 251, 140, 108, 186, 190, 228, 170, 183, 139, 39, 188, 244, 246,
-    132, 48, 119, 144, 180, 138, 134, 193, 82, 182, 120, 121, 86, 220, 209, 3,
-    91, 241, 149, 85, 205, 150, 113, 216, 31, 100, 41, 164, 177, 214, 153, 231,
-    38, 71, 185, 174, 97, 201, 29, 95, 7, 92, 54, 254, 191, 118, 34, 221,
-    131, 11, 163, 99, 234, 81, 227, 147, 156, 176, 17, 142, 69, 12, 110, 62,
-    27, 255, 0, 194, 59, 116, 242, 252, 19, 21, 187, 53, 207, 129, 64, 135,
-    61, 40, 167, 237, 102, 223, 106, 159, 197, 189, 215, 137, 36, 32, 22, 5,
-
-    // and a second copy so we don't need an extra mask or static initializer
-    23, 125, 161, 52, 103, 117, 70, 37, 247, 101, 203, 169, 124, 126, 44, 123,
-    152, 238, 145, 45, 171, 114, 253, 10, 192, 136, 4, 157, 249, 30, 35, 72,
-    175, 63, 77, 90, 181, 16, 96, 111, 133, 104, 75, 162, 93, 56, 66, 240,
-    8, 50, 84, 229, 49, 210, 173, 239, 141, 1, 87, 18, 2, 198, 143, 57,
-    225, 160, 58, 217, 168, 206, 245, 204, 199, 6, 73, 60, 20, 230, 211, 233,
-    94, 200, 88, 9, 74, 155, 33, 15, 219, 130, 226, 202, 83, 236, 42, 172,
-    165, 218, 55, 222, 46, 107, 98, 154, 109, 67, 196, 178, 127, 158, 13, 243,
-    65, 79, 166, 248, 25, 224, 115, 80, 68, 51, 184, 128, 232, 208, 151, 122,
-    26, 212, 105, 43, 179, 213, 235, 148, 146, 89, 14, 195, 28, 78, 112, 76,
-    250, 47, 24, 251, 140, 108, 186, 190, 228, 170, 183, 139, 39, 188, 244, 246,
-    132, 48, 119, 144, 180, 138, 134, 193, 82, 182, 120, 121, 86, 220, 209, 3,
-    91, 241, 149, 85, 205, 150, 113, 216, 31, 100, 41, 164, 177, 214, 153, 231,
-    38, 71, 185, 174, 97, 201, 29, 95, 7, 92, 54, 254, 191, 118, 34, 221,
-    131, 11, 163, 99, 234, 81, 227, 147, 156, 176, 17, 142, 69, 12, 110, 62,
-    27, 255, 0, 194, 59, 116, 242, 252, 19, 21, 187, 53, 207, 129, 64, 135,
-    61, 40, 167, 237, 102, 223, 106, 159, 197, 189, 215, 137, 36, 32, 22, 5,
-    };
-
-   float u,v,w;
-   float n000,n001,n010,n011,n100,n101,n110,n111;
-   float n00,n01,n10,n11;
-   float n0,n1;
-
-   unsigned int x_mask = (x_wrap-1) & 255;
-   unsigned int y_mask = (y_wrap-1) & 255;
-   unsigned int z_mask = (z_wrap-1) & 255;
-   int px = stb__perlin_fastfloor(x);
-   int py = stb__perlin_fastfloor(y);
-   int pz = stb__perlin_fastfloor(z);
-   int x0 = px & x_mask, x1 = (px+1) & x_mask;
-   int y0 = py & y_mask, y1 = (py+1) & y_mask;
-   int z0 = pz & z_mask, z1 = (pz+1) & z_mask;
-   int r0,r1, r00,r01,r10,r11;
-
-   #define stb__perlin_ease(a)   (((a*6-15)*a + 10) * a * a * a)
-
-   x -= px; u = stb__perlin_ease(x);
-   y -= py; v = stb__perlin_ease(y);
-   z -= pz; w = stb__perlin_ease(z);
-
-   r0 = stb__perlin_randtab[x0];
-   r1 = stb__perlin_randtab[x1];
-
-   r00 = stb__perlin_randtab[r0+y0];
-   r01 = stb__perlin_randtab[r0+y1];
-   r10 = stb__perlin_randtab[r1+y0];
-   r11 = stb__perlin_randtab[r1+y1];
-
-   n000 = stb__perlin_grad(stb__perlin_randtab[r00+z0], x  , y  , z   );
-   n001 = stb__perlin_grad(stb__perlin_randtab[r00+z1], x  , y  , z-1 );
-   n010 = stb__perlin_grad(stb__perlin_randtab[r01+z0], x  , y-1, z   );
-   n011 = stb__perlin_grad(stb__perlin_randtab[r01+z1], x  , y-1, z-1 );
-   n100 = stb__perlin_grad(stb__perlin_randtab[r10+z0], x-1, y  , z   );
-   n101 = stb__perlin_grad(stb__perlin_randtab[r10+z1], x-1, y  , z-1 );
-   n110 = stb__perlin_grad(stb__perlin_randtab[r11+z0], x-1, y-1, z   );
-   n111 = stb__perlin_grad(stb__perlin_randtab[r11+z1], x-1, y-1, z-1 );
-
-   n00 = stb__perlin_lerp(n000,n001,w);
-   n01 = stb__perlin_lerp(n010,n011,w);
-   n10 = stb__perlin_lerp(n100,n101,w);
-   n11 = stb__perlin_lerp(n110,n111,w);
-
-   n0 = stb__perlin_lerp(n00,n01,v);
-   n1 = stb__perlin_lerp(n10,n11,v);
-
-   return stb__perlin_lerp(n0,n1,u);
-}
-
-inline float stb_perlin_ridge_noise3(float x, float y, float z,float lacunarity, float gain, float offset, int octaves,int x_wrap, int y_wrap, int z_wrap)
-{
-   int i;
-   float frequency = 1.0f;
-   float prev = 1.0f;
-   float amplitude = 0.5f;
-   float sum = 0.0f;
-
-   for (i = 0; i < octaves; i++) {
-      float r = (float)(stb_perlin_noise3(x*frequency,y*frequency,z*frequency,x_wrap,y_wrap,z_wrap));
-      r = r<0 ? -r : r; // fabs()
-      r = offset - r;
-      r = r*r;
-      sum += r*amplitude*prev;
-      prev = r;
-      frequency *= lacunarity;
-      amplitude *= gain;
-   }
-   return sum;
-}
-
-inline float stb_perlin_fbm_noise3(float x, float y, float z,float lacunarity, float gain, int octaves,int x_wrap, int y_wrap, int z_wrap)
-{
-   int i;
-   float frequency = 1.0f;
-   float amplitude = 1.0f;
-   float sum = 0.0f;
-
-   for (i = 0; i < octaves; i++) {
-      sum += stb_perlin_noise3(x*frequency,y*frequency,z*frequency,x_wrap,y_wrap,z_wrap)*amplitude;
-      frequency *= lacunarity;
-      amplitude *= gain;
-   }
-   return sum;
-}
-
-inline float stb_perlin_turbulence_noise3(float x, float y, float z, float lacunarity, float gain, int octaves,int x_wrap, int y_wrap, int z_wrap)
-{
-   int i;
-   float frequency = 1.0f;
-   float amplitude = 1.0f;
-   float sum = 0.0f;
-
-   for (i = 0; i < octaves; i++) {
-      float r = stb_perlin_noise3(x*frequency,y*frequency,z*frequency,x_wrap,y_wrap,z_wrap)*amplitude;
-      r = r<0 ? -r : r; // fabs()
-      sum += r;
-      frequency *= lacunarity;
-      amplitude *= gain;
-   }
-   return sum;
-}
-// clang-format on
-
-// adapeted  stb_perlin.h
-inline float perlin_noise(vec3f p, vec3i wrap) {
-    return stb_perlin_noise3(p.x, p.y, p.z, wrap.x, wrap.y, wrap.z);
-}
-
-// adapeted  stb_perlin.h
-inline float perlin_ridge_noise(vec3f p, float lacunarity, float gain,
-    float offset, int octaves, vec3i wrap) {
-    return stb_perlin_ridge_noise3(p.x, p.y, p.z, lacunarity, gain, offset,
-        octaves, wrap.x, wrap.y, wrap.z);
-}
-
-// adapeted  stb_perlin.h
-inline float perlin_fbm_noise(
-    vec3f p, float lacunarity, float gain, int octaves, vec3i wrap) {
-    return stb_perlin_fbm_noise3(
-        p.x, p.y, p.z, lacunarity, gain, octaves, wrap.x, wrap.y, wrap.z);
-}
-
-// adapeted  stb_perlin.h
-inline float perlin_turbulence_noise(
-    vec3f p, float lacunarity, float gain, int octaves, vec3i wrap) {
-    return stb_perlin_turbulence_noise3(
-        p.x, p.y, p.z, lacunarity, gain, octaves, wrap.x, wrap.y, wrap.z);
-}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF PATH UTILITIES
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-inline std::string normalize_path(const std::string& filename_) {
-    auto filename = filename_;
-    for (auto& c : filename)
-        if (c == '\\') c = '/';
-    if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/')
-        throw std::runtime_error("no absolute paths");
-    if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
-        filename[3] == '/')
-        throw std::runtime_error("no absolute paths");
-    auto pos = (size_t)0;
-    while ((pos = filename.find("//")) != filename.npos)
-        filename = filename.substr(0, pos) + filename.substr(pos + 1);
-    return filename;
-}
-
-// Get directory name (not including '/').
-inline std::string get_dirname(const std::string& filename_) {
-    auto filename = normalize_path(filename_);
-    auto pos = filename.rfind('/');
-    if (pos == std::string::npos) return "";
-    return filename.substr(0, pos);
-}
-
-// Get extension (not including '.').
-inline std::string get_extension(const std::string& filename_) {
-    auto filename = normalize_path(filename_);
-    auto pos = filename.rfind('.');
-    if (pos == std::string::npos) return "";
-    return filename.substr(pos + 1);
-}
-
-// Get filename without directory.
-inline std::string get_filename(const std::string& filename_) {
-    auto filename = normalize_path(filename_);
-    auto pos = filename.rfind('/');
-    if (pos == std::string::npos) return "";
-    return filename.substr(pos + 1);
-}
-
-// Replace extension.
-inline std::string replace_path_extension(
-    const std::string& filename_, const std::string& ext_) {
-    auto filename = normalize_path(filename_);
-    auto ext = normalize_path(ext_);
-    if (ext.at(0) == '.') ext = ext.substr(1);
-    auto pos = filename.rfind('.');
-    if (pos == std::string::npos) return filename;
-    return filename.substr(0, pos) + "." + ext;
-}
-
-// Load a text file
-inline std::string load_text(const std::string& filename) {
-    // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
-    auto fs = std::ifstream(filename);
-    if (!fs) throw std::runtime_error("could not load " + filename);
-    std::stringstream buf;
-    buf << fs.rdbuf();
-    fs.close();
-    return buf.str();
-}
-
-// Save a text file
-inline void save_text(const std::string& filename, const std::string& str) {
-    auto fs = std::ofstream(filename);
-    if (!fs) throw std::runtime_error("could not save " + filename);
-    fs << str;
-    fs.close();
-}
-
-// Load a binary file
-inline std::vector<byte> load_binary(const std::string& filename) {
-    // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
-    auto fs = std::ifstream(filename, std::ios::binary);
-    if (!fs) throw std::runtime_error("could not load " + filename);
-    fs.seekg(0, std::ios::end);
-    size_t size = fs.tellg();
-    auto buf = std::vector<byte>(size);
-    fs.seekg(0);
-    fs.read((char*)&buf[0], size);
-    fs.close();
-    return buf;
-}
-
-// Save a binary file
-inline void save_binary(
-    const std::string& filename, const std::vector<byte>& data) {
-    auto fs = std::ofstream(filename, std::ios::binary);
-    if (!fs) throw std::runtime_error("could not save " + filename);
-    fs.write((char*)data.data(), data.size());
-    fs.close();
-}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF TIMER UTILITIES
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-// get the timer time
-inline int64_t get_time() {
-    return std::chrono::high_resolution_clock::now().time_since_epoch().count();
-}
-// get elapsed timer time in seconds
-inline std::string format_duration(int64_t duration) {
-    auto elapsed = duration / 1000000;  // milliseconds
-    auto hours = (int)(elapsed / 3600000);
-    elapsed %= 3600000;
-    auto mins = (int)(elapsed / 60000);
-    elapsed %= 60000;
-    auto secs = (int)(elapsed / 1000);
-    auto msecs = (int)(elapsed % 1000);
-    char buf[256];
-    sprintf(buf, "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
-    return buf;
 }
 
 }  // namespace ygl

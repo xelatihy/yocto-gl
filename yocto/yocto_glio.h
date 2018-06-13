@@ -1,24 +1,23 @@
 //
-// # Yocto/SceneIO: Loader and converter for Yocto/Scene
+// # Yocto/GLIO: Inpuot and output functions for Yocto/GL
 //
-// Yocto/SceneIO provides loading and saving functionality for Yocto/Scene
-// in a simple to use JSON format. The JSON serialization is a straight copy
-// of the in-memory scene data. Textures are stored in standard image formats.
-// Meshes are stored in a builtin binary format or as PLY or OBJ.
-//
-// We also support loading OBJ and glTF formats, but the conversion is best
-// effort and likely not robust. For more robust support of these formats,
-// please consider Yocto/Obj or Yocto/glTF.
+// Yocto/GLIO provides loading and saving functionality for images and scenes
+// in Yocto/GL. For images we support PNG, JPG, TGA, HDR, EXR formats. For
+// scene we support a simple to use JSON format, PLY, OBJ and glTF.
+// The JSON serialization is a straight copy of the in-memory scene data.
 //
 // ## Usage
 //
-// 1. load a scene with `load_json_scene()` and save it with `save_json_scene()`
-// 2. convert from and to OBJ with `load_obj_scene()` and `save_obj_scene()`
-// 3. convert from and to glTF with `load_gltf_scene()` and `save_gltf_scene()`
-// 4. if desired, the function `load_scene()` and `save_scene()` will either
+// 1. manipulate paths withe path utilities
+// 2. load and save text files with `load_text()` and `save_text()`
+// 3. load and save binary files with `load_binary()` and `save_binary()`
+// 4. load and save images with `load_image()` and `save_image()`
+// 5. load a scene with `load_json_scene()` and save it with `save_json_scene()`
+// 6. load and save OBJs with `load_obj_scene()` and `save_obj_scene()`
+// 7. load and save glTFs with `load_gltf_scene()` and `save_gltf_scene()`
+// 6. if desired, the function `load_scene()` and `save_scene()` will either
 //    load using the internal format or convert on the fly using on the
 //    supported conversions
-// 5. you can use equivalent functions for meshes
 //
 //
 
@@ -46,16 +45,62 @@
 // SOFTWARE.
 //
 
-#ifndef _YGL_SCENEIO_H_
-#define _YGL_SCENEIO_H_
+#ifndef _YGLIO_H_
+#define _YGLIO_H_
 
-// enable fast parsing
-#ifndef YGL_FASTPARSE
-#define YGL_FASTPARSE 1
-#endif
+#include "yocto_gl.h"
 
-#include "yocto_math.h"
-#include "yocto_scene.h"
+// -----------------------------------------------------------------------------
+// PATH UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Normalize path delimiters.
+std::string normalize_path(const std::string& filename);
+// Get directory name (not including '/').
+std::string get_dirname(const std::string& filename);
+// Get extension (not including '.').
+std::string get_extension(const std::string& filename);
+// Get filename without directory.
+std::string get_filename(const std::string& filename);
+// Replace extension.
+std::string replace_extension(
+    const std::string& filename, const std::string& ext);
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// FILE IO
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Load a text file
+std::string load_text(const std::string& filename);
+// Save a text file
+void save_text(const std::string& filename, const std::string& str);
+// Load a binary file
+std::vector<byte> load_binary(const std::string& filename);
+// Save a binary file
+void save_binary(const std::string& filename, const std::vector<byte>& data);
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMAGE IO
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Check if an image is HDR based on filename.
+bool is_hdr_filename(const std::string& filename);
+
+// Loads/saves a 4 channel image.
+image4f load_image(const std::string& filename, float ldr_gamma = 2.2f);
+void save_image(
+    const std::string& filename, const image4f& img, float ldr_gamma = 2.2f);
+image4f load_image_from_memory(
+    const byte* data, int data_size, float ldr_gamma = 2.2f);
+
+}  // namespace ygl
 
 // -----------------------------------------------------------------------------
 // SCENE IO FUNCTIONS
