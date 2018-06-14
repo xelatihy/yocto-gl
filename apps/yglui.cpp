@@ -26,20 +26,11 @@
 // SOFTWARE.
 //
 
-#include "yocto_glutils.h"
+#include "yglui.h"
 
 #include <cassert>
 #include <unordered_map>
 
-#ifdef __APPLE__
-#include <OpenGL/gl3.h>
-#define GLFW_INCLUDE_GLCOREARB
-#else
-#include <GL/glew.h>
-#endif
-#include <GLFW/glfw3.h>
-#include "ext/imgui/imgui.h"
-#include "ext/imgui/imgui_impl_glfw_gl3.h"
 unsigned int imgui_extrafont_compressed_size();
 const unsigned int* imgui_extrafont_compressed_data();
 

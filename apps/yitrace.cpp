@@ -26,11 +26,11 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_gl.h"
-#include "../yocto/yocto_glio.h"
-#include "../yocto/yocto_glutils.h"
+#include "../yocto/ygl.h"
+#include "../yocto/yglio.h"
 #include "CLI11.hpp"
 #include "yapp_ui.h"
+#include "yglui.h"
 using namespace std::literals;
 
 #include <map>
@@ -73,6 +73,7 @@ struct app_state {
     ygl::scene_selection selection = {};
     std::vector<ygl::scene_selection> update_list;
     bool quiet = false;
+    int widgets_width = 320;
     int preview_resolution = 64;
     bool navigation_fps = false;
     bool rendering = false;
@@ -109,93 +110,89 @@ auto tracer_names = std::unordered_map<std::string, ygl::trace_func>{
     {"debug-frontfacing", ygl::trace_debug_frontfacing},
 };
 
-void draw(const std::shared_ptr<ygl::glwindow>& win,
-    const std::shared_ptr<app_state>& app) {
+void draw(GLFWwindow* win) {
+    auto app = (app_state*)glfwGetWindowUserPointer(win);
     // update image
-    ygl::center_glimage(app->imframe, {app->img.width(), app->img.height()},
-        ygl::get_glwindow_size(win), app->zoom_to_fit);
+    auto window_size = ygl::zero2i, framebuffer_size = ygl::zero2i;
+    glfwGetWindowSize(win, &window_size.x, &window_size.y);
+    glfwGetFramebufferSize(win, &framebuffer_size.x, &framebuffer_size.y);
+    framebuffer_size.x -= (int)(app->widgets_width * (float)framebuffer_size.y /
+                                (float)window_size.y);
+    window_size.x -= app->widgets_width;
+    ygl::center_glimage(app->imframe,
+        {app->img.width(), app->img.height()}, window_size,
+        app->zoom_to_fit);
     ygl::update_gltexture(app->gl_txt, app->img.width(), app->img.height(),
         app->img.pixels(), false, false, true, false);
+
     // draw image
-    auto window_size = get_glwindow_size(win);
-    auto framebuffer_size = get_glwindow_framebuffer_size(win);
     ygl::set_glviewport(framebuffer_size);
     ygl::clear_glbuffers(app->background);
     ygl::draw_glimage(app->gl_prog, app->gl_txt, window_size, app->imframe,
         app->exposure, app->gamma);
 
-    if (ygl::begin_glwidgets_frame(win, "yitrace")) {
-        ygl::draw_glwidgets_label(win, "scene", app->filename);
-        ygl::draw_glwidgets_label(win, "image",
-            std::to_string(app->img.width()) + " x " +
-                std::to_string(app->img.height()) + " @ " +
-                std::to_string(app->cur_sample));
-        if (ygl::begin_glwidgets_tree(win, "render settings")) {
+    if (begin_widgets_frame(win, "yitrace", app->widgets_width)) {
+        ImGui::LabelText("scene", "%s", app->filename.c_str());
+        ImGui::LabelText("image", "%d x %d @ %d", app->img.width(),
+            app->img.height(), app->cur_sample);
+        if (ImGui::TreeNode("render settings")) {
             auto edited = 0;
-            edited += ygl::draw_glwidgets_combobox(
-                win, "camera", app->cam, app->scn->cameras);
-            edited += draw_glwidgets_dragbox(
-                win, "resolution", app->resolution, 256, 4096);
-            edited += draw_glwidgets_dragbox(
-                win, "nsamples", app->nsamples, 16, 4096);
-            edited += draw_glwidgets_combobox(
-                win, "tracer", app->tracer, trace_names);
+            edited +=
+                ImGui::Combo("camera", &app->cam, app->scn->cameras, false);
+            edited += ImGui::DragInt("resolution", &app->resolution, 256, 4096);
+            edited += ImGui::DragInt("nsamples", &app->nsamples, 16, 4096);
+            edited += ImGui::Combo("tracer", &app->tracer, trace_names);
             app->tracef = tracer_names.at(app->tracer);
+            edited += ImGui::DragInt("nbounces", &app->nbounces, 1, 10);
+            edited += ImGui::DragInt("seed", (int*)&app->seed, 0, 1000);
             edited +=
-                draw_glwidgets_dragbox(win, "nbounces", app->nbounces, 1, 10);
-            edited +=
-                draw_glwidgets_dragbox(win, "seed", (int&)app->seed, 0, 1000);
-            edited += draw_glwidgets_dragbox(
-                win, "preview", app->preview_resolution, 64, 1080);
+                ImGui::DragInt("preview", &app->preview_resolution, 64, 1080);
             if (edited) app->update_list.push_back(ygl::scene_selection());
-            ygl::end_glwidgets_tree(win);
+            ImGui::TreePop();
         }
-        if (ygl::begin_glwidgets_tree(win, "view settings")) {
-            ygl::draw_glwidgets_dragbox(win, "exposure", app->exposure, -5, 5);
-            ygl::draw_glwidgets_dragbox(win, "gamma", app->gamma, 1, 3);
-            ygl::draw_glwidgets_colorbox(win, "background", app->background);
+        if (ImGui::TreeNode("view settings")) {
+            ImGui::DragFloat("exposure", &app->exposure, -5, 5);
+            ImGui::DragFloat("gamma", &app->gamma, 1, 3);
+            ImGui::ColorEdit4("background", &app->background.x);
             auto zoom = app->imframe.x.x;
-            if (ygl::draw_glwidgets_dragbox(win, "zoom", zoom, 0.1, 10))
+            if (ImGui::DragFloat("zoom", &zoom, 0.1, 10))
                 app->imframe.x.x = app->imframe.y.y = zoom;
-            ygl::draw_glwidgets_checkbox(win, "zoom to fit", app->zoom_to_fit);
-            ygl::continue_glwidgets_line(win);
-            ygl::draw_glwidgets_checkbox(win, "fps", app->navigation_fps);
-            auto ij = ygl::get_glimage_coords(get_glwidnow_mouse_posf(win),
-                app->imframe, {app->img.width(), app->img.height()});
-            ygl::draw_glwidgets_dragbox(win, "mouse", ij);
+            ImGui::Checkbox("zoom to fit", &app->zoom_to_fit);
+            ImGui::SameLine();
+            ImGui::Checkbox("fps", &app->navigation_fps);
+            auto mouse_x = 0.0, mouse_y = 0.0;
+            glfwGetCursorPos(win, &mouse_x, &mouse_y);
+            auto ij = ygl::get_glimage_coords(
+                ygl::vec2f{(float)mouse_x, (float)mouse_y}, app->imframe,
+                {app->img.width(), app->img.height()});
+            ImGui::DragInt2("mouse", &ij.x);
             if (ij.x >= 0 && ij.x < app->img.width() && ij.y >= 0 &&
                 ij.y < app->img.height()) {
-                ygl::draw_glwidgets_colorbox(win, "pixel", app->img[ij]);
+                ImGui::ColorEdit4("pixel", &app->img[ij].x);
             } else {
                 auto zero4f_ = ygl::zero4f;
-                ygl::draw_glwidgets_colorbox(win, "pixel", zero4f_);
+                ImGui::ColorEdit4("pixel", &zero4f_.x);
             }
-            ygl::end_glwidgets_tree(win);
+            ImGui::TreePop();
         }
-        if (ygl::begin_glwidgets_tree(win, "scene tree")) {
-            if (ygl::draw_glwidgets_button(win, "print stats"))
-                ygl::print_stats(app->scn);
+        if (ImGui::TreeNode("scene tree")) {
+            if (ImGui::Button("print stats")) ygl::print_stats(app->scn);
             ygl::draw_glwidgets_scene_tree(
-                win, "", app->scn, app->selection, app->update_list);
-            ygl::end_glwidgets_tree(win);
+                "", app->scn, app->selection, app->update_list);
+            ImGui::TreePop();
         }
-        if (ygl::begin_glwidgets_tree(win, "scene object")) {
+        if (ImGui::TreeNode("scene object")) {
             ygl::draw_glwidgets_scene_inspector(
-                win, "", app->scn, app->selection, app->update_list);
-            ygl::end_glwidgets_tree(win);
-        }
-        if (ygl::begin_glwidgets_tree(win, "log")) {
-            ygl::draw_glwidgets_log(win, 200);
-            ygl::end_glwidgets_tree(win);
+                "", app->scn, app->selection, app->update_list);
+            ImGui::TreePop();
         }
     }
-    ygl::end_glwidgets_frame(win);
+    end_widgets_frame();
 
-    ygl::swap_glwindow_buffers(win);
+    glfwSwapBuffers(win);
 }
 
-bool update(const std::shared_ptr<ygl::glwindow>& win,
-    const std::shared_ptr<app_state>& app) {
+bool update(const std::shared_ptr<app_state>& app) {
     // exit if no updated
     if (app->update_list.empty()) return false;
 
@@ -259,11 +256,7 @@ void run_ui(const std::shared_ptr<app_state>& app) {
     // window
     auto win_width = app->img.width() + ygl::default_glwidgets_width;
     auto win_height = ygl::clamp(app->img.height(), 512, 1024);
-    auto win = ygl::make_glwindow(win_width, win_height, "yitrace");
-    ygl::set_glwindow_callbacks(
-        win, nullptr, nullptr, [app, win]() { draw(win, app); });
-    ygl::center_glimage(app->imframe, {app->img.width(), app->img.height()},
-        ygl::get_glwindow_size(win), app->zoom_to_fit);
+    auto win = make_window(win_width, win_height, "yitrace", app.get(), draw);
 
     // load textures
     app->gl_prog = ygl::make_glimage_program();
@@ -271,41 +264,69 @@ void run_ui(const std::shared_ptr<app_state>& app) {
         app->img.pixels(), false, false, true, false);
 
     // init widget
-    ygl::init_glwidgets(win);
+    init_widgets(win, app->widgets_width, true, true);
 
     // loop
-    while (!ygl::should_glwindow_close(win)) {
+    auto mouse_pos = ygl::zero2f, last_pos = ygl::zero2f;
+    auto mouse_center = ygl::zero3f;
+    auto mouse_button = 0, last_button = 0;
+    while (!glfwWindowShouldClose(win)) {
+        last_pos = mouse_pos;
+        last_button = mouse_button;
+        glfwGetCursorPosExt(win, &mouse_pos.x, &mouse_pos.y);
+        mouse_button = glfwGetMouseButtonIndexExt(win);
+        auto alt_down = glfwGetAltKeyExt(win);
+        auto shift_down = glfwGetShiftKeyExt(win);
+        auto widgets_active = ImGui::GetWidgetsActiveExt();
+
         // handle mouse and keyboard for navigation
-        if (app->navigation_fps) {
-            if (ygl::handle_glcamera_fps(win, app->cam)) {
-                app->update_list.push_back(app->cam);
+        if (mouse_button && alt_down && !widgets_active) {
+            if (!last_button) {
+                if (app->selection.as<ygl::instance>()) {
+                    auto ist = app->selection.as<ygl::instance>();
+                    mouse_center = transform_point(ist->frame,
+                        (ist->shp->bbox.min + ist->shp->bbox.max) / 2);
+                } else {
+                    mouse_center =
+                        (app->scn->bbox.min + app->scn->bbox.max) / 2;
+                }
             }
-        } else {
-            if (ygl::handle_glcamera_turntable(win, app->cam,
-                    ygl::handle_glcamera_turntable_dist(
-                        win, app->cam, app->scn, app->selection))) {
-                app->update_list.push_back(app->cam);
+            auto dolly = 0.0f;
+            auto pan = ygl::zero2f;
+            auto rotate = ygl::zero2f;
+            if (mouse_button == 1) rotate = (mouse_pos - last_pos) / 100.0f;
+            if (mouse_button == 2) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
+            if (mouse_button == 3 || (mouse_button == 1 && shift_down))
+                pan = (mouse_pos - last_pos) / 100.0f;
+            ygl::camera_turntable(app->cam->frame.o, mouse_center,
+                app->cam->frame.z, rotate, dolly, pan);
+            app->cam->frame = ygl::lookat_frame(
+                app->cam->frame.o, mouse_center, ygl::vec3f{0, 1, 0});
+            app->update_list.push_back(app->cam);
+        }
+
+        // selection
+        if (mouse_button && !alt_down && !widgets_active) {
+            auto ij = get_glimage_coords(mouse_pos, app->imframe,
+                ygl::vec2i{app->img.width(), app->img.height()});
+            if (ij.x < 0 || ij.x >= app->img.width() || ij.y < 0 ||
+                ij.y >= app->img.height()) {
+                auto ray = eval_camera_ray(app->cam, ij,
+                    ygl::vec2i{app->img.width(), app->img.height()},
+                    {0.5f, 0.5f}, ygl::zero2f);
+                auto isec = intersect_ray(app->scn, ray);
+                if (isec.ist) app->selection = isec.ist;
             }
         }
-        ygl::handle_glscene_selection(win, app->scn, app->cam,
-            {app->img.width(), app->img.height()}, app->imframe,
-            app->selection);
-
-        // draw
-        ygl::center_glimage(app->imframe, {app->img.width(), app->img.height()},
-            ygl::get_glwindow_size(win), app->zoom_to_fit);
-        draw(win, app);
 
         // update
-        update(win, app);
+        update(app);
+
+        // draw
+        draw(win);
 
         // event hadling
-        if (!ygl::get_glwindow_mouse_button(win) &&
-            !ygl::get_glwidgets_active(win)) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        }
-        // event hadling
-        ygl::poll_glwindow_events(win);
+        glfwPollEvents();
     }
 }
 

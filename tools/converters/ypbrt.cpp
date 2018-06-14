@@ -33,8 +33,8 @@
 #include <fstream>
 #include <regex>
 #include "../../apps/CLI11.hpp"
-#include "../../yocto/yocto_gl.h"
-#include "../../yocto/yocto_glio.h"
+#include "../../yocto/ygl.h"
+#include "../../yocto/yglio.h"
 #include "ext/json.hpp"
 
 using namespace ygl;

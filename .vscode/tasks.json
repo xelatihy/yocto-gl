@@ -7,7 +7,8 @@
             "label": "release",
             "type": "shell",
             "command": "./tools/build.py release",
-            "group": "build"
+            "group": "build",
+            "problemMatcher": "$gcc"
         },
         {
             "label": "debug",
@@ -16,7 +17,8 @@
             "group": {
                 "kind": "build",
                 "isDefault": true
-            }    
+            },
+            "problemMatcher": "$gcc"
         }
     ]
 }

@@ -5,21 +5,14 @@ Please consider this to be just development notes and not any real planning.
 
 ## Library
 
-- library
-    - shape -> ygl
-    - image -> ygl
-    - scene -> ygl
-    - trace -> ygl
-    - math == ygl
-    - imageio -> glio
-    - sceneio -> glio
-    - io funcs -> glio
-    - obj header only
-    - gltf header only
-- homebrew tap
-    - build latest GLFW
-    - build embree
-    - consider inserting this in the main repo 
+- no gl wrapper
+    - make data global and remove glfw wrapper
+    - leave imgui wrapper
+- all image correction in software
+    - simpler tonemap in one function (like book)
+    - yimview has hdr flag check
+    - show values in native format
+- images back to simplicity
 - tesselate once
 - make scene much shorter and header only
 - make obj/glTF single file
