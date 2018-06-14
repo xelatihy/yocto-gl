@@ -54,7 +54,7 @@
 //
 //
 
-#include "yocto_glio.h"
+#include "yglio.h"
 
 #include <cstdlib>
 #include <deque>
@@ -65,7 +65,7 @@
 #include <climits>
 using namespace std::string_literals;
 
-#include "ext/json.hpp"
+#include "json.hpp"
 
 #ifndef _WIN32
 #pragma GCC diagnostic push
@@ -79,16 +79,16 @@ using namespace std::string_literals;
 #ifndef __clang_analyzer__
 
 #define STB_IMAGE_IMPLEMENTATION
-#include "ext/stb_image.h"
+#include "stb_image.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "ext/stb_image_write.h"
+#include "stb_image_write.h"
 
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
-#include "ext/stb_image_resize.h"
+#include "stb_image_resize.h"
 
 #define TINYEXR_IMPLEMENTATION
-#include "ext/tinyexr.h"
+#include "tinyexr.h"
 
 #endif
 
@@ -1693,218 +1693,6 @@ void save_json_scene(const std::string& filename,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// skip whitespace
-inline void parse_skipws(char*& s) {
-    while (*s == ' ' || *s == '\t' || *s == '\r' || *s == '\n') s++;
-}
-// check if whitespace
-inline bool parse_isws(char*& s) {
-    return *s == ' ' || *s == '\t' || *s == '\r' || *s == '\n';
-}
-// check if whitespace
-inline void parse_remove_comment(char*& s, char cmd_char) {
-    auto ss = s;
-    while (*ss) {
-        if (*ss == cmd_char) {
-            *ss = 0;
-            break;
-        }
-        ss++;
-    }
-}
-
-#if YGL_FASTPARSE
-// parse base value
-inline int parse_int_base(char*& s) {
-    parse_skipws(s);
-    auto val = 0;
-    auto sn = (*s == '-') ? -1 : 1;
-    if (*s == '-' || *s == '+') s++;
-    while (*s >= '0' && *s <= '9') val = val * 10 + (*s++ - '0');
-    val *= sn;
-    return val;
-}
-
-// parse base value
-inline float parse_float_base(char*& s) {
-    parse_skipws(s);
-    //    auto ss = s; auto sss = ss;
-    auto mantissa = 0, fractional = 0, fractional_length = 0, exponent = 0;
-    auto sn = (*s == '-') ? -1 : 1;
-    if (*s == '-' || *s == '+') s++;
-    while (*s >= '0' && *s <= '9') mantissa = mantissa * 10 + (*s++ - '0');
-    if (*s == '.') {
-        s++;
-        while (*s >= '0' && *s <= '9') {
-            fractional = fractional * 10 + (*s++ - '0');
-            fractional_length++;
-        }
-    }
-    mantissa *= sn;
-    fractional *= sn;
-    if (*s == 'e' || *s == 'E') {
-        s++;
-        auto en = (*s == '-') ? -1 : 1;
-        if (*s == '-' || *s == '+') s++;
-        while (*s >= '0' && *s <= '9') exponent = exponent * 10 + (*s++ - '0');
-        exponent *= en;
-    }
-    auto dval = (double)mantissa;
-    if (fractional)
-        dval += fractional * std::pow(10.0, -(double)fractional_length);
-    if (exponent) dval *= std::pow(10.0, (double)exponent);
-    auto val = (float)dval;
-    return val;
-#if 0
-    auto cval = val;
-    sscanf(ss, "%f", &cval);
-    if(abs(val - cval) > 0.01f) {
-        printf("- %g %g %s\n", val, cval, sss);
-    }
-    auto len = 0;
-    sscanf(s, "%f%n", &val, &len);
-    s += len;
-#endif
-}
-
-// parse base value
-inline std::string parse_string_base(char*& s) {
-    parse_skipws(s);
-    char buf[4096];
-    auto val = buf;
-    while (*s && !parse_isws(s)) *val++ = *s++;
-    *val = 0;
-    return buf;
-}
-
-#else
-
-// parse base value
-inline int parse_int_base(char*& s) {
-    auto len = 0;
-    auto val = 0;
-    sscanf(s, "%d%n", &val, &len);
-    s += len;
-    return val;
-}
-
-// parse base value
-inline float parse_float_base(char*& s) {
-    auto len = 0;
-    auto val = 0.0f;
-    sscanf(s, "%f%n", &val, &len);
-    s += len;
-    return val;
-}
-
-// parse base value
-inline std::string parse_string_base(char*& s) {
-    char buf[4096];
-    auto val = buf;
-    auto len = 0;
-    sscanf(s, "%s%n", buf, &len);
-    if (len) {
-        s += len;
-        val = buf;
-    } else {
-        val = "";
-    }
-    return val;
-}
-
-#endif
-
-// parse value
-inline int parse_int(char*& s) { return parse_int_base(s); }
-inline float parse_float(char*& s) { return parse_float_base(s); }
-inline std::string parse_string(char*& s) { return parse_string_base(s); }
-inline byte parse_uchar(char*& s) { return (byte)parse_int_base(s); }
-inline std::vector<std::string> parse_strings(char*& s) {
-    auto vals = std::vector<std::string>();
-    parse_skipws(s);
-    while (*s) {
-        auto val = parse_string(s);
-        if (val == "") break;
-        vals.push_back(val);
-        parse_skipws(s);
-    }
-    return vals;
-}
-inline float parse_bool(char*& s) { return parse_int(s); }
-inline vec2i parse_vec2i(char*& s) {
-    auto x = parse_int(s);
-    auto y = parse_int(s);
-    return {x, y};
-}
-inline vec2f parse_vec2f(char*& s) {
-    auto x = parse_float(s);
-    auto y = parse_float(s);
-    return {x, y};
-}
-inline vec3f parse_vec3f(char*& s) {
-    auto x = parse_float(s);
-    auto y = parse_float(s);
-    auto z = parse_float(s);
-    return {x, y, z};
-}
-inline vec4f parse_vec4f(char*& s) {
-    auto x = parse_float(s);
-    auto y = parse_float(s);
-    auto z = parse_float(s);
-    auto w = parse_float(s);
-    return {x, y, z, w};
-}
-inline frame3f parse_frame3f(char*& s) {
-    auto val = identity_frame3f;
-    for (auto i = 0; i < 12; i++) (&val.x.x)[i] = parse_float(s);
-    return val;
-}
-inline bool parse_getline(FILE* f, char* buf, int max_length) {
-    if (fgets(buf, max_length, f)) {
-        auto ss = buf;
-        while (*ss) {
-            if (*ss == '\r' || *ss == '\n') {
-                *ss = 0;
-                break;
-            }
-            ss++;
-        }
-        return true;
-    } else {
-        return false;
-    }
-}
-
-inline vec3i parse_objvert(char*& s, vec3i vert_size) {
-    auto token = parse_string(s);
-    auto val = vec3i{-1, -1, -1};
-    auto i = 0;
-    auto sb = (char*)token.c_str();
-    while (i < 3 && *sb) {
-        (&val.x)[i] = parse_int(sb);
-        (&val.x)[i] = ((&val.x)[i] < 0) ? (&vert_size.x)[i] + (&val.x)[i] :
-                                          (&val.x)[i] - 1;
-        if (*sb != '/') break;
-        while (*sb == '/') {
-            sb++;
-            i++;
-        }
-    }
-    return val;
-}
-
-template <typename T>
-inline T read_value(FILE* fs) {
-    T val;
-    if (fread(&val, sizeof(val), 1, fs) != 1)
-        throw std::runtime_error("error reading value");
-    return val;
-}
-
-inline int read_int(FILE* fs) { return read_value<int>(fs); }
-inline float read_float(FILE* fs) { return read_value<float>(fs); }
-inline byte read_uchar(FILE* fs) { return read_value<byte>(fs); }
-
 // OBJ vertex
 struct obj_vertex {
     int pos = 0;
@@ -2199,7 +1987,6 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
                     scn->materials.push_back(mat);
                     mmap[mat->name] = mat;
                 } else if (cmd == "illum") {
-                    // auto illum = parse_int(ss);
                     // TODO: something with illum
                 } else if (cmd == "Ke") {
                     ss >> mat->ke;

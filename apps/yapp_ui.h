@@ -30,8 +30,8 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_gl.h"
-#include "../yocto/yocto_glutils.h"
+#include "../yocto/ygl.h"
+#include "yglui.h"
 
 #include <unordered_map>
 #include <typeinfo>
@@ -77,18 +77,14 @@ bool handle_glscene_selection(const std::shared_ptr<glwindow>& win,  const std::
     const std::shared_ptr<camera>& cam, const vec2i& imsize, const frame2f& imframe,
     scene_selection& sel);
 
-// Draws widgets for a camera. Used for quickly making demos.
-bool draw_glwidgets_camera_inspector(
-    const std::shared_ptr<glwindow>& win, const std::string& lbl, const std::shared_ptr<camera>& cam);
-
 // Draws widgets for a whole scene. Used for quickly making demos.
-bool draw_glwidgets_scene_tree(const std::shared_ptr<glwindow>& win,  const std::string& lbl, const std::shared_ptr<scene>& scn,
+bool draw_glwidgets_scene_tree(const std::string& lbl, const std::shared_ptr<scene>& scn,
     scene_selection& sel, std::vector<ygl::scene_selection>& update_list, int height = 240,
     const std::unordered_map<std::string, std::string>& inspector_highlights =
         {});
 
 // Draws widgets for a whole scene. Used for quickly making demos.
-bool draw_glwidgets_scene_inspector(const std::shared_ptr<glwindow>& win,  const std::string& lbl, 
+bool draw_glwidgets_scene_inspector(const std::string& lbl,
     const std::shared_ptr<scene>& scn, scene_selection& sel,
     std::vector<ygl::scene_selection>& update_list, int height = 240,
     const std::unordered_map<std::string, std::string>& inspector_highlights =

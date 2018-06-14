@@ -48,7 +48,7 @@
 #ifndef _YGLIO_H_
 #define _YGLIO_H_
 
-#include "yocto_gl.h"
+#include "ygl.h"
 
 // -----------------------------------------------------------------------------
 // PATH UTILITIES

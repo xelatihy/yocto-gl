@@ -1,5 +1,5 @@
 //
-// # Yocto/GLUtils: Tiny OpenGL utilities for writing simple interactive apps.
+// # Yocto/GLUI: Tiny OpenGL utilities for writing simple interactive apps.
 //
 // Small set of utilities to support writing OpenGL 3.3, manage
 // windows with GLFW and draw immediate-mode widgets with ImGui.
@@ -65,15 +65,225 @@
 //
 //
 
-#ifndef _YGLU_H_
-#define _YGLU_H_
+#ifndef _YGLUI_H_
+#define _YGLUI_H_
 
-#include "yocto_gl.h"
+#include "../yocto/ygl.h"
 
-#include <functional>
+#ifdef __APPLE__
+#include <OpenGL/gl3.h>
+#define GLFW_INCLUDE_GLCOREARB
+#else
+#include <GL/glew.h>
+#endif
+#include <GLFW/glfw3.h>
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_glfw_gl3.h"
+unsigned int imgui_extrafont_compressed_size();
+const unsigned int* imgui_extrafont_compressed_data();
+
 #include <map>
-#include <string>
-#include <vector>
+
+// Create GLFW window
+inline GLFWwindow* make_window(
+    int width, int height, const std::string& title, void* user_ptr, void (*refresh)(GLFWwindow*)) {
+    // glwindow
+    if (!glfwInit()) throw std::runtime_error("cannot open glwindow");
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+#if __APPLE__
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
+
+    auto win = glfwCreateWindow(width, height, title.c_str(), 0, 0);
+    glfwMakeContextCurrent(win);
+    glfwSwapInterval(1);  // Enable vsync
+
+    glfwSetCharCallback(win, ImGui_ImplGlfw_CharCallback);
+    glfwSetKeyCallback(win, ImGui_ImplGlfw_KeyCallback);
+    glfwSetMouseButtonCallback(win, ImGui_ImplGlfw_MouseButtonCallback);
+    glfwSetScrollCallback(win, ImGui_ImplGlfw_ScrollCallback);
+    if(refresh) glfwSetWindowRefreshCallback(win, refresh);
+
+    if(user_ptr) glfwSetWindowUserPointer(win, user_ptr);
+
+// init gl extensions
+#ifndef __APPLE__
+    if (glewInit() != GLEW_OK) return nullptr;
+#endif
+    return win;
+}
+
+// Initialize ImGui widgets
+inline void init_widgets(GLFWwindow* win, int width, bool light_style, bool alt_font) {
+    ImGui::CreateContext();
+    ImGui_ImplGlfwGL3_Init(win, false);
+    ImGuiIO& io = ImGui::GetIO();
+    // io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard
+    // Controls io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable
+    // Gamepad Controls
+    ImGui::GetStyle().WindowRounding = 0;
+    io.IniFilename = nullptr;
+    auto size = ygl::zero2i;
+    glfwGetWindowSize(win, &size.x, &size.y);
+    ImGui::SetNextWindowPos({(float)size.x-width, 0});
+    ImGui::SetNextWindowSize({(float)width, (float)size.y});
+    ImGui::SetNextWindowCollapsed(false);
+    if (light_style)
+        ImGui::StyleColorsLight();
+    else
+        ImGui::StyleColorsDark();
+    if (alt_font) {
+        io.Fonts->AddFontFromMemoryCompressedTTF(
+            imgui_extrafont_compressed_data(),
+            imgui_extrafont_compressed_size(), 16);
+    } else {
+        io.Fonts->AddFontDefault();
+    }
+}
+
+// Begin draw widget
+inline bool begin_widgets_frame(GLFWwindow* win, const char* title, int width) {
+    ImGui_ImplGlfwGL3_NewFrame();
+    auto size = ygl::zero2i;
+    glfwGetWindowSize(win, &size.x, &size.y);
+    ImGui::SetNextWindowPos({(float)size.x-width, 0});
+    ImGui::SetNextWindowSize({(float)width, (float)size.y});
+    ImGui::SetNextWindowCollapsed(false);
+    ImGui::Begin(title, nullptr,
+                 ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove |
+                 ImGuiWindowFlags_NoResize);
+    return true;
+}
+
+// End draw widget
+inline void end_widgets_frame() {
+    ImGui::End();
+    ImGui::Render();
+    ImGui_ImplGlfwGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+// Whether widget are active
+inline bool get_widgets_active() {
+    auto io = &ImGui::GetIO();
+    return io->WantTextInput || io->WantCaptureMouse || io->WantCaptureKeyboard;
+}
+
+// GLFW extension
+inline void glfwGetCursorPosExt(GLFWwindow* win, float* x, float* y) {
+    auto xx = 0.0, yy = 0.0;
+    glfwGetCursorPos(win, &xx, &yy);
+    *x = (float)xx;
+    *y = (float)yy;
+}
+
+// GLFW extension
+inline int glfwGetMouseButtonIndexExt(GLFWwindow* win) {
+    if(glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) return 1;
+    if(glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS) return 2;
+    if(glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS) return 3;
+    return 0;
+}
+
+// GLFW extension
+inline bool glfwGetAltKeyExt(GLFWwindow* win) {
+    return glfwGetKey(win, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
+    glfwGetKey(win, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
+}
+inline bool glfwGetCtrlKeyExt(GLFWwindow* win) {
+    return glfwGetKey(win, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
+    glfwGetKey(win, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
+}
+inline bool glfwGetShiftKeyExt(GLFWwindow* win) {
+    return glfwGetKey(win, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
+    glfwGetKey(win, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+}
+
+// ImGui extensions
+namespace ImGui {
+    // Check if active widgets
+    inline bool GetWidgetsActiveExt() {
+        auto io = &ImGui::GetIO();
+        return io->WantTextInput || io->WantCaptureMouse || io->WantCaptureKeyboard;
+    }
+
+// Input text
+    inline bool InputText(const char* label, std::string* str) {
+        char buf[4096];
+        return InputText(label, buf, sizeof(buf));
+    }
+    
+    // Start selectable tree node
+    inline bool SelectableTreeNode(const char* lbl, void** selection, void* content) {
+        ImGuiTreeNodeFlags node_flags =
+        ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+        if (*selection == content) node_flags |= ImGuiTreeNodeFlags_Selected;
+        auto open = ImGui::TreeNodeEx(content, node_flags, "%s", lbl);
+        if (ImGui::IsItemClicked()) *selection = content;
+        return open;
+    }
+    
+    // Start selectable tree node
+    template<typename T>
+    inline bool SelectableTreeNode(const char* lbl, std::shared_ptr<T>* selection, const std::shared_ptr<T>& content) {
+        ImGuiTreeNodeFlags node_flags =
+        ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+        if (*selection == content) node_flags |= ImGuiTreeNodeFlags_Selected;
+        auto open = ImGui::TreeNodeEx(content.get(), node_flags, "%s", lbl);
+        if (ImGui::IsItemClicked()) *selection = content;
+        return open;
+    }
+    
+    // Selectable tree leaf node
+    inline void SelectableTreeLeaf(const char* lbl, void*& selection, void* content) {
+        ImGuiTreeNodeFlags node_flags =
+        ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+        if (selection == content) node_flags |= ImGuiTreeNodeFlags_Selected;
+        ImGui::TreeNodeEx(content, node_flags, "%s", lbl);
+        if (ImGui::IsItemClicked()) selection = content;
+    }
+
+    // Combo widget.
+    inline bool Combo(const char* lbl, std::string* val_,
+                                        const std::vector<std::string>& labels) {
+        auto& val = *val_;
+        if (!ImGui::BeginCombo(lbl, val.c_str())) return false;
+        auto old_val = val;
+        for (auto i = 0; i < labels.size(); i++) {
+            ImGui::PushID(i);
+            if(ImGui::Selectable(labels[i].c_str(), val == labels[i])) val = labels[i];
+            if (val == labels[i]) ImGui::SetItemDefaultFocus();
+            ImGui::PopID();
+        }
+        ImGui::EndCombo();
+        return val != old_val;
+    }
+
+    // Combo widget
+    template <typename T>
+    inline bool Combo(const char* lbl, std::shared_ptr<T>* val_,
+                              const std::vector<std::shared_ptr<T>>& vals, bool include_null) {
+        auto& val = *val_;
+        if (!ImGui::BeginCombo(lbl, (val) ? val->name.c_str() : "<none>")) return false;
+        auto old_val = val;
+        if (include_null) {
+            ImGui::PushID(100000);
+            if(ImGui::Selectable("<none>", val == nullptr)) val = nullptr;
+            if (val == nullptr) ImGui::SetItemDefaultFocus();
+            ImGui::PopID();
+        }
+        for (auto i = 0; i < vals.size(); i++) {
+            ImGui::PushID(i);
+            if(ImGui::Selectable(vals[i]->name.c_str(), val == vals[i])) val = vals[i];
+            if (val == vals[i]) ImGui::SetItemDefaultFocus();
+            ImGui::PopID();
+        }
+        ImGui::EndCombo();
+        return val != old_val;
+    }
+
+}
 
 // -----------------------------------------------------------------------------
 // OPENGL OBJECTS AND FUNCTIONS

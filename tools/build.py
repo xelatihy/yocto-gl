@@ -53,7 +53,7 @@ def clean():
 
 @run.command()
 def format():
-    for glob in ['yocto/yocto_*.h', 'yocto/yocto_*.cpp', 'apps/y*.cpp']:
+    for glob in ['yocto/y*.h', 'yocto/y*.cpp', 'apps/y*.cpp']:
         os.system('clang-format -i -style=file ' + glob)
 
 @run.command()

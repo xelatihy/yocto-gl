@@ -92,7 +92,8 @@
 #define YGL_GLTFJSON 0
 #endif
 
-#include "yocto_gl.h"
+#include "ygl.h"
+#include "yglio.h"
 
 #include <map>
 #include <string>
@@ -996,7 +997,7 @@ struct accessor_view {
 #include <fstream>
 #include <unordered_map>
 
-#include "ext/json.hpp"
+#include "json.hpp"
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR KHRONOS GLTF
