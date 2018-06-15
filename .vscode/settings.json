@@ -57,6 +57,7 @@
         "system_error": "cpp",
         "iosfwd": "cpp",
         "istream": "cpp",
-        "cassert": "cpp"
+        "cassert": "cpp",
+        "thread": "cpp"
     },
 } 

@@ -77,10 +77,9 @@ if(YOCTO_OPENGL)
     endif(UNIX AND NOT APPLE)
 
     add_library(yglui
-        apps/yglui.h apps/yglui.cpp        
+        apps/yglui.h        
         apps/imgui/imgui.cpp apps/imgui/imgui_draw.cpp apps/imgui/imgui_demo.cpp 
         apps/imgui/imgui_impl_glfw_gl3.cpp apps/imgui/imgui_extra_fonts.cpp
-        apps/yapp_ui.h  apps/yapp_ui.cpp
     )
 
     target_link_libraries(yglui ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GLEW_LIBRARIES})

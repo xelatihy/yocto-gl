@@ -1696,6 +1696,31 @@ template <typename T>
 inline void camera_fps(
     frame<T, 3>& frame, const vec<T, 3>& transl, const vec<T, 2>& rotate);
 
+// Computes the image uv coordinates corresponding to the view parameters.
+// Returns negative coordinates if out of the image.
+template <typename T>
+inline vec<int, 2> get_image_coords(const vec<T, 2>& mouse_pos,
+    const frame<T, 2>& frame, const vec<int, 2>& txt_size) {
+    // assume an affine without rotation
+    auto xyf = (mouse_pos - frame.o) / vec2f{frame.x.x, frame.y.y};
+    return vec2i{(int)round(xyf.x + txt_size.x / 2.0f),
+        (int)round(xyf.y + txt_size.y / 2.0f)};
+}
+
+// Center image and autofit.
+template <typename T>
+inline void center_image(frame<T, 2>& frame, const vec<int, 2>& imsize,
+    const vec<int, 2>& winsize, bool zoom_to_fit) {
+    if (zoom_to_fit) {
+        frame.x.x = frame.y.y =
+            ygl::min(winsize.x / (float)imsize.x, winsize.y / (float)imsize.y);
+        frame.o = {(float)winsize.x / 2, (float)winsize.y / 2};
+    } else {
+        if (winsize.x >= imsize.x * frame.x.x) frame.o.x = winsize.x / 2;
+        if (winsize.y >= imsize.y * frame.y.y) frame.o.y = winsize.y / 2;
+    }
+}
+
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
@@ -2771,12 +2796,12 @@ struct camera {
 
 // Texture containing either an LDR or HDR image.
 struct texture {
-    std::string name = "";    // name
-    std::string path = "";    // file path
-    image4f img = {};         // image
-    bool clamp = false;       // clamp textures coordinates
-    float scale = 1;          // scale for occ, normal, bumps
-    void* gl_data = nullptr;  // unmanaged data for OpenGL viewer
+    std::string name = "";  // name
+    std::string path = "";  // file path
+    image4f img = {};       // image
+    bool clamp = false;     // clamp textures coordinates
+    float scale = 1;        // scale for occ, normal, bumps
+    uint gl_txt = 0;        // unmanaged data for OpenGL viewer
 };
 
 // Material for surfaces, lines and triangles.
@@ -2835,7 +2860,9 @@ struct shape {
     bbox3f bbox = invalid_bbox3f;             // boudning box
     std::vector<float> elem_cdf = {};         // element cdf for sampling
     std::shared_ptr<bvh_tree> bvh = nullptr;  // bvh for ray intersection
-    void* gl_data = nullptr;  // unmanaged data for OpenGL viewer
+    uint gl_pos = 0, gl_norm = 0, gl_texcoord = 0, gl_color = 0, gl_tangsp = 0,
+         gl_points = 0, gl_lines = 0,
+         gl_triangles = 0;  // unmanaged data for OpenGL viewer
 };
 
 // Subdivision surface.
