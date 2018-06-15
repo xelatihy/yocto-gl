@@ -2123,41 +2123,88 @@ inline T interpolate_bezier_derivative(
 namespace ygl {
 
 // Compute per-vertex normals/tangents for lines/triangles/quads.
-void compute_tangents(const std::vector<vec2i>& lines,
-    const std::vector<vec3f>& pos, std::vector<vec3f>& tang);
-void compute_normals(const std::vector<vec3i>& triangles,
-    const std::vector<vec3f>& pos, std::vector<vec3f>& norm);
-void compute_normals(const std::vector<vec4i>& quads,
-    const std::vector<vec3f>& pos, std::vector<vec3f>& norm);
+std::vector<vec3f> compute_tangents(
+    const std::vector<vec2i>& lines, const std::vector<vec3f>& pos);
+std::vector<vec3f> compute_normals(
+    const std::vector<vec3i>& triangles, const std::vector<vec3f>& pos);
+std::vector<vec3f> compute_normals(
+    const std::vector<vec4i>& quads, const std::vector<vec3f>& pos);
 
 // Compute per-vertex tangent space for triangle meshes.
 // Tangent space is defined by a four component vector.
 // The first three components are the tangent with respect to the u texcoord.
 // The fourth component is the sign of the tangent wrt the v texcoord.
 // Tangent frame is useful in normal mapping.
-void compute_tangent_space(const std::vector<vec3i>& triangles,
+std::vector<vec4f> compute_tangent_space(const std::vector<vec3i>& triangles,
     const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
-    const std::vector<vec2f>& texcoord, std::vector<vec4f>& tangsp,
-    bool weighted = true);
+    const std::vector<vec2f>& texcoord);
 
 // Apply skinning to vertex position and normals.
-void compute_skinning(const std::vector<vec3f>& pos,
-    const std::vector<vec3f>& norm, const std::vector<vec4f>& weights,
-    const std::vector<vec4i>& joints, const std::vector<mat4f>& xforms,
-    std::vector<vec3f>& skinned_pos, std::vector<vec3f>& skinned_norm);
-void compute_skinning(const std::vector<vec3f>& pos,
-    const std::vector<vec3f>& norm, const std::vector<vec4f>& weights,
-    const std::vector<vec4i>& joints, const std::vector<frame3f>& xforms,
-    std::vector<vec3f>& skinned_pos, std::vector<vec3f>& skinned_norm);
+std::pair<std::vector<vec3f>, std::vector<vec3f>> compute_skinning(
+    const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
+    const std::vector<vec4f>& weights, const std::vector<vec4i>& joints,
+    const std::vector<frame3f>& xforms);
 // Apply skinning as specified in Khronos glTF.
-void compute_matrix_skinning(const std::vector<vec3f>& pos,
-    const std::vector<vec3f>& norm, const std::vector<vec4f>& weights,
-    const std::vector<vec4i>& joints, const std::vector<mat4f>& xforms,
-    std::vector<vec3f>& skinned_pos, std::vector<vec3f>& skinned_norm);
+std::pair<std::vector<vec3f>, std::vector<vec3f>> compute_matrix_skinning(
+    const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
+    const std::vector<vec4f>& weights, const std::vector<vec4i>& joints,
+    const std::vector<mat4f>& xforms);
+
+// Dictionary of edges used in subdivision.
+struct edge_map {
+    // constructors
+    edge_map() {}
+    edge_map(const std::vector<vec3i>& triangles) {
+        for (auto& t : triangles) {
+            insert({t.x, t.y});
+            insert({t.y, t.z});
+            insert({t.z, t.x});
+        }
+    }
+    edge_map(const std::vector<vec4i>& quads) {
+        for (auto& q : quads) {
+            insert({q.x, q.y});
+            insert({q.y, q.z});
+            if (q.z != q.w) insert({q.z, q.w});
+            insert({q.w, q.x});
+        }
+    }
+
+    // insert an edge and return its index
+    int insert(const vec2i& e) {
+        auto es = vec2i{min(e.x, e.y), max(e.x, e.y)};
+        auto it = emap.find(es);
+        if (it == emap.end()) {
+            auto idx = (int)edges.size();
+            emap.insert(it, {es, idx});
+            edges.push_back(es);
+            return idx;
+        } else {
+            return it->second;
+        }
+    }
+
+    // lookup an edge index
+    int edge_index(const vec2i& e) {
+        auto es = vec2i{min(e.x, e.y), max(e.x, e.y)};
+        return emap.at(es);
+    }
+
+    // get all edges sorted by insertion order
+    const std::vector<vec2i>& get_edges() const { return edges; }
+
+   private:
+    std::unordered_map<vec2i, int> emap;
+    std::vector<vec2i> edges;
+};
 
 // Create an array of edges.
-std::vector<vec2i> get_edges(const std::vector<vec3i>& triangles);
-std::vector<vec2i> get_edges(const std::vector<vec4i>& quads);
+inline std::vector<vec2i> get_edges(const std::vector<vec3i>& triangles) {
+    return edge_map(triangles).get_edges();
+}
+inline std::vector<vec2i> get_edges(const std::vector<vec4i>& quads) {
+    return edge_map(quads).get_edges();
+}
 
 // Convert quads to triangles
 std::vector<vec3i> convert_quads_to_triangles(const std::vector<vec4i>& quads);
@@ -2182,26 +2229,27 @@ void convert_face_varying(std::vector<vec4i>& qquads, std::vector<vec3f>& qpos,
 
 // Subdivide lines by splitting each line in half.
 template <typename T>
-void subdivide_lines(
-    std::vector<vec2i>& lines, std::vector<T>& vert, int level);
+std::pair<std::vector<vec2i>, std::vector<T>> subdivide_lines(
+    const std::vector<vec2i>& lines, const std::vector<T>& vert);
 // Subdivide triangle by splitting each triangle in four, creating new
 // vertices for each edge.
 template <typename T>
-void subdivide_triangles(
-    std::vector<vec3i>& triangles, std::vector<T>& vert, int level);
+std::pair<std::vector<vec3i>, std::vector<T>> subdivide_triangles(
+    const std::vector<vec3i>& triangles, const std::vector<T>& vert);
 // Subdivide quads by splitting each quads in four, creating new
 // vertices for each edge and for each face.
 template <typename T>
-void subdivide_quads(
-    std::vector<vec4i>& quads, std::vector<T>& vert, int level);
+std::pair<std::vector<vec4i>, std::vector<T>> subdivide_quads(
+    const std::vector<vec4i>& quads, const std::vector<T>& vert);
 // Subdivide beziers by splitting each segment in two.
 template <typename T>
-void subdivide_beziers(
-    std::vector<vec4i>& beziers, std::vector<T>& vert, int level);
+std::pair<std::vector<vec4i>, std::vector<T>> subdivide_beziers(
+    const std::vector<vec4i>& beziers, const std::vector<T>& vert);
 // Subdivide quads using Carmull-Clark subdivision rules.
 template <typename T>
-void subdivide_catmullclark(std::vector<vec4i>& quads, std::vector<T>& vert,
-    int level, bool lock_boundary = false);
+std::pair<std::vector<vec4i>, std::vector<T>> subdivide_catmullclark(
+    const std::vector<vec4i>& quads, const std::vector<T>& vert,
+    bool lock_boundary = false);
 
 // Merge lines between shapes.
 void merge_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
@@ -2218,13 +2266,22 @@ void merge_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
     const std::vector<vec4i>& quads1, const std::vector<vec3f>& pos1,
     const std::vector<vec3f>& norm1, const std::vector<vec2f>& texcoord1);
+// Merge triangles and quads between shapes.
+void merge_faces(std::vector<vec3i>& triangles, std::vector<vec4i>& quads,
+    std::vector<vec3f>& pos, std::vector<vec3f>& norm,
+    std::vector<vec2f>& texcoord, const std::vector<vec3i>& triangles1,
+    const std::vector<vec4i>& quads1, const std::vector<vec3f>& pos1,
+    const std::vector<vec3f>& norm1, const std::vector<vec2f>& texcoord1);
 
 // Weld vertices within a threshold. For noe the implementation is O(n^2).
-std::vector<int> weld_vertices(std::vector<vec3f>& pos, float threshold);
-void weld_triangles(
-    std::vector<vec3i>& triangles, std::vector<vec3f>& pos, float threshold);
-void weld_quads(
-    std::vector<vec4i>& quads, std::vector<vec3f>& pos, float threshold);
+std::pair<std::vector<vec3f>, std::vector<int>> weld_vertices(
+    const std::vector<vec3f>& pos, float threshold);
+std::pair<std::vector<vec3i>, std::vector<vec3f>> weld_triangles(
+    const std::vector<vec3i>& triangles, const std::vector<vec3f>& pos,
+    float threshold);
+std::pair<std::vector<vec4i>, std::vector<vec3f>> weld_quads(
+    const std::vector<vec4i>& quads, const std::vector<vec3f>& pos,
+    float threshold);
 
 // Pick a point in a point set uniformly.
 inline int sample_points(int npoints, float re) {
@@ -2451,93 +2508,95 @@ bool overlap_bvh(const std::shared_ptr<bvh_tree>& bvh, const vec3f& pos,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Make examples triangle shapes with shared vertices (not watertight).
-void make_quad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
-    const vec2f& size, const vec2f& uvsize);
-void make_quad_stack(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
-    const vec3f& size, const vec2f& uvsize);
-void make_cube(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
-    const vec3f& size, const vec3f& uvsize);
-void make_cube_rounded(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
-    const vec3f& size, const vec3f& uvsize, float radius);
-void make_sphere(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
-    float size, const vec2f& uvsize);
-void make_sphere_cube(std::vector<vec4i>& quadss, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int steps,
-    float size, float uvsize);
-void make_sphere_flipcap(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
-    float size, const vec2f& uvsize, const vec2f& zflip);
-void make_disk(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
-    float size, const vec2f& uvsize);
-void make_disk_quad(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int steps,
-    float size, float uvsize);
-void make_disk_bulged(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, int steps,
-    float size, float uvsize, float height);
-void make_cylinder_side(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec2i& steps,
-    const vec2f& size, const vec2f& uvsize);
-void make_cylinder(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
-    const vec2f& size, const vec3f& uvsize);
-void make_cylinder_rounded(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord, const vec3i& steps,
-    const vec2f& size, const vec3f& uvsize, float radius);
-void make_geodesic_sphere(std::vector<vec3i>& triangles,
-    std::vector<vec3f>& pos, int tesselation, float size);
+// Shape data returned by make_<shape> functions.
+struct make_shape_data {
+    std::vector<vec3f> pos;       // positions
+    std::vector<vec3f> norm;      // normals/tangents
+    std::vector<vec2f> texcoord;  // texture coordinates
+    std::vector<float> radius;    // radius for lines and points
 
-// Make example watertight quad meshes for subdivision surfaces.
-void make_fvcube(std::vector<vec4i>& quads_pos, std::vector<vec3f>& pos,
-    std::vector<vec4i>& quads_norm, std::vector<vec3f>& norm,
-    std::vector<vec4i>& quads_texcoord, std::vector<vec2f>& texcoord,
-    vec3i steps, const vec3f& size, const vec3f& uvsize);
-void make_suzanne(std::vector<vec4i>& quads, std::vector<vec3f>& pos);
-void make_cube(std::vector<vec4i>& quads, std::vector<vec3f>& pos);
+    std::vector<int> points;       // points
+    std::vector<vec2i> lines;      // lines
+    std::vector<vec3i> triangles;  // triangles
+    std::vector<vec4i> quads;      // quads
+    std::vector<vec4i> beziers;    // beziers
 
-// Generate lines set along a quad.
-void make_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<float>& radius, const vec2i& steps, const vec2f& size,
+    std::vector<vec4i> quads_pos;       // facevarying quads for pos
+    std::vector<vec4i> quads_norm;      // facevarying quads for norm
+    std::vector<vec4i> quads_texcoord;  // facevarying quads for texcoord
+};
+
+// Make examples shapes that are not watertight (besides quads).
+// Return (triangles, quads, pos, norm, texcoord)
+make_shape_data make_quad(const vec2i& steps, const vec2f& size,
+    const vec2f& uvsize, bool as_triangles);
+make_shape_data make_quad_stack(const vec3i& steps, const vec3f& size,
+    const vec2f& uvsize, bool as_triangles);
+make_shape_data make_floor(const vec2i& steps, const vec2f& size,
+    const vec2f& uvsize, bool as_triangles);
+make_shape_data make_cube(const vec3i& steps, const vec3f& size,
+    const vec3f& uvsize, bool as_triangles);
+make_shape_data make_cube_rounded(const vec3i& steps, const vec3f& size,
+    const vec3f& uvsize, float radius, bool as_triangles);
+make_shape_data make_sphere(
+    const vec2i& steps, float size, const vec2f& uvsize, bool as_triangles);
+make_shape_data make_sphere_cube(
+    int steps, float size, float uvsize, bool as_triangles);
+make_shape_data make_sphere_flipcap(const vec2i& steps, float size,
+    const vec2f& uvsize, const vec2f& zflip, bool as_triangles);
+make_shape_data make_disk(
+    const vec2i& steps, float size, const vec2f& uvsize, bool as_triangles);
+make_shape_data make_disk_quad(
+    int steps, float size, float uvsize, bool as_triangles);
+make_shape_data make_disk_bulged(
+    int steps, float size, float uvsize, float height, bool as_triangles);
+make_shape_data make_cylinder_side(const vec2i& steps, const vec2f& size,
+    const vec2f& uvsize, bool as_triangles);
+make_shape_data make_cylinder(const vec3i& steps, const vec2f& size,
+    const vec3f& uvsize, bool as_triangles);
+make_shape_data make_cylinder_rounded(const vec3i& steps, const vec2f& size,
+    const vec3f& uvsize, float radius, bool as_triangles);
+make_shape_data make_geodesic_sphere(
+    int tesselation, float size, bool as_triangles);
+
+// Make examples shapes with are watertight (good for subdivs).
+// Returns (triangles, quads, pos)
+make_shape_data make_suzanne(float size, bool as_triangles);
+make_shape_data make_cube(const vec3f& size, bool as_triangles);
+
+// Make facevarying example shapes that are watertight (good for subdivs).
+make_shape_data make_fvcube(
+    const vec3i& steps, const vec3f& size, const vec3f& uvsize);
+
+// Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
+make_shape_data make_lines(const vec2i& steps, const vec2f& size,
     const vec2f& uvsize, vec2f line_radius = {0.001f, 0.001f});
 
-// Make point primitives
-void make_point(std::vector<int>& points, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<float>& radius, float point_radius = 0.001f);
-void make_points(std::vector<int>& points, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<float>& radius, int num, float uvsize,
-    float point_radius = 0.001f);
-void make_random_points(std::vector<int>& points, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<float>& radius, int num, const vec3f& size, float uvsize,
+// Make point primitives. Returns points, pos, norm, texcoord, radius.
+make_shape_data make_point(float point_radius = 0.001f);
+make_shape_data make_points(int num, float uvsize, float point_radius = 0.001f);
+make_shape_data make_random_points(int num, const vec3f& size, float uvsize,
     float point_radius = 0.001f, uint64_t seed = 0);
 
 // Make a bezier circle. Returns bezier, pos.
-void make_bezier_circle(std::vector<vec4i>& beziers, std::vector<vec3f>& pos);
+make_shape_data make_bezier_circle(
+    std::vector<vec4i>& beziers, std::vector<vec3f>& pos);
 
-// Make a hair ball around a shape.
+// Make a hair ball around a shape.  Returns lines, pos, norm, texcoord, radius.
 // length: minimum and maximum length
 // rad: minimum and maximum radius from base to tip
 // noise: noise added to hair (strength/scale)
 // clump: clump added to hair (number/strength)
 // rotation: rotation added to hair (angle/strength)
-void make_hair(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
-    std::vector<vec3f>& tang, std::vector<vec2f>& texcoord,
-    std::vector<float>& radius, const vec2i& steps,
+make_shape_data make_hair(const vec2i& steps,
     const std::vector<vec3i>& striangles, const std::vector<vec3f>& spos,
     const std::vector<vec3f>& snorm, const std::vector<vec2f>& stexcoord,
     const vec2f& length = {0.1f, 0.1f}, const vec2f& rad = {0.001f, 0.001f},
     const vec2f& noise = zero2f, const vec2f& clump = zero2f,
     const vec2f& rotation = zero2f, int seed = 7);
+
+// Helper to concatenated shape data for non-facevarying shapes.
+make_shape_data merge_shape_data(const std::vector<make_shape_data>& shapes);
 
 }  // namespace ygl
 
@@ -2608,8 +2667,8 @@ image4f gamma_to_linear(const image4f& srgb, float gamma = 2.2f);
 image4f linear_to_gamma(const image4f& lin, float gamma = 2.2f);
 
 // Apply exposure and filmic tone mapping
-image4f expose_image(const image4f& hdr, float exposure);
-image4f filmic_tonemap_image(const image4f& hdr);
+image4f tonemap_image(
+    const image4f& hdr, float exposure, float gamma, bool filmic);
 
 // Resize an image.
 image4f resize_image(const image4f& img, int res_width, int res_height);
@@ -2801,6 +2860,7 @@ struct texture {
     image4f img = {};       // image
     bool clamp = false;     // clamp textures coordinates
     float scale = 1;        // scale for occ, normal, bumps
+    float gamma = 1;        // gamma correction for ldr textures
     uint gl_txt = 0;        // unmanaged data for OpenGL viewer
 };
 
@@ -3183,41 +3243,53 @@ vec2f sample_environment(
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+// Default trace seed
+const auto trace_default_seed = 961748941;
+
 // Trace evaluation function.
 using trace_func = std::function<vec3f(const std::shared_ptr<scene>& scn,
     const ray3f& ray, rng_state& rng, int nbounces, bool* hit)>;
 
-// Init a sequence of random number generators.
-inline image<rng_state> make_trace_rngs(int w, int h, uint64_t seed) {
-    auto rngs = image<rng_state>{w, h};
-    int rseed = 1301081;  // large prime
-    for (auto i = 0; i < w * h; i++) {
-        rngs[i] = make_rng(seed, rseed + 1);
-        rseed = (rseed * 1103515245 + 12345) & ((1U << 31) - 1);  // bsd rand
-    }
-    return rngs;
-}
+// Progressively compute an image by calling trace_samples multiple times.
+image4f trace_image(const std::shared_ptr<scene>& scn, int camid,
+    int yresolution, int nsamples, trace_func tracer, int nbounces = 8,
+    float pixel_clamp = 100, bool noparallel = false,
+    int seed = trace_default_seed);
 
-// Trace the next nsamples samples. Assumes that the
-// image contains cur_samples already. Returns true when done.
-void trace_samples(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<camera>& cam, image4f& img, image<rng_state>& rngs,
-    int cur_samples, int nsamples, trace_func tracer, int nbounces,
-    float pixel_clamp = 100);
-// Like before but with multiplthreading.
-void trace_samples_mt(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<camera>& cam, image4f& img, image<rng_state>& rngs,
-    int cur_samples, int nsamples, trace_func tracer, int nbounces,
-    float pixel_clamp = 100);
+// Progressive trace state
+struct trace_state {
+    image4f img = {};           // computed image
+    image4f acc = {};           // accumulation buffer
+    image<rng_state> rng = {};  // random number generators
+    int sample = 0;             // next sample to render
+};
+
+// Progressively compute an image by calling trace_samples multiple times.
+// Start with an empty state and then successively call this function to
+// render the next batch of samples.
+bool trace_samples(trace_state& st, const std::shared_ptr<scene>& scn,
+    int camid, int yresolution, int nsamples, trace_func tracer, int nbatch,
+    int nbounces = 8, float pixel_clamp = 100, bool noparallel = false,
+    int seed = trace_default_seed);
+
+// Asynchronous trace state
+struct trace_async_state {
+    image4f img = {};                       // computed image
+    image4f display = {};                   // display image
+    image4f acc = {};                       // accumulation buffer
+    image<rng_state> rng = {};              // random number generators
+    int sample = 0;                         // next sample to render
+    bool stop_flag = false;                 // stop flag
+    std::vector<std::thread> threads = {};  // rendering threads
+};
 
 // Starts an anyncrhounous renderer.
-void trace_async_start(const std::shared_ptr<scene>& scn,
-    const std::shared_ptr<camera>& cam, image4f& img, image<rng_state>& rngs,
-    int nsamples, trace_func tracer, int nbounces,
-    std::vector<std::thread>& threads, bool& stop_flag, int& cur_sample,
-    float pixel_clamp = 100);
+void trace_async_start(trace_async_state& st, const std::shared_ptr<scene>& scn,
+    int camid, int yresolution, int nsamples, trace_func tracer, float exposure,
+    float gamma, bool filmic, int preview_ratio, int nbounces = 8,
+    float pixel_clamp = 100, int seed = trace_default_seed);
 // Stop the asynchronous renderer.
-void trace_async_stop(std::vector<std::thread>& threads, bool& stop_flag);
+void trace_async_stop(trace_async_state& st);
 
 // Trace function - path tracer.
 vec3f trace_path(const std::shared_ptr<scene>& scn, const ray3f& ray,

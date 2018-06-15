@@ -37,12 +37,12 @@ using namespace std::literals;
 // Application state
 struct app_state {
     std::shared_ptr<ygl::scene> scn = nullptr;
-    std::shared_ptr<ygl::camera> cam = nullptr;
     std::string filename = "scene.json"s;
     std::string imfilename = "out.obj"s;
 
     // rendering params
-    int resolution = 512;                      // image vertical resolution
+    int camid = 0;                             // camera index
+    int resolution = 512;                      // image resolution
     int nsamples = 256;                        // number of samples
     std::string tracer = "pathtrace"s;         // tracer name
     ygl::trace_func tracef = ygl::trace_path;  // tracer
@@ -51,29 +51,23 @@ struct app_state {
     float pixel_clamp = 100.0f;                // pixel clamping
     bool double_sided = false;                 // double sided
     bool add_skyenv = false;                   // add sky environment
-
-    // rendered image
-    ygl::image4f img = {};
+    int pratio = 8;                            // preview ratio
 
     // rendering state
-    ygl::image<ygl::rng_state> rngs;
-    std::vector<std::thread> async_threads;
-    bool async_stop = false;
-    int cur_sample = 0;
+    ygl::trace_async_state trace_state = {};
 
     // view image
     ygl::frame2f imframe = ygl::identity_frame2f;
     bool zoom_to_fit = true;
     float exposure = 0;
     float gamma = 2.2f;
+    bool filmic = false;
     ygl::vec4f background = {0.8f, 0.8f, 0.8f, 0};
     uint gl_txt = 0;
     uint gl_prog = 0, gl_vbo = 0, gl_ebo;
     ygl::scene_selection selection = {};
     std::vector<ygl::scene_selection> update_list;
     bool quiet = false;
-    int widgets_width = 320;
-    int preview_resolution = 64;
     bool navigation_fps = false;
     bool rendering = false;
 };
@@ -114,17 +108,15 @@ void draw_image(GLFWwindow* win) {
     auto window_size = ygl::zero2i, framebuffer_size = ygl::zero2i;
     glfwGetWindowSize(win, &window_size.x, &window_size.y);
     glfwGetFramebufferSize(win, &framebuffer_size.x, &framebuffer_size.y);
-    framebuffer_size.x -= (int)(app->widgets_width * (float)framebuffer_size.y /
-                                (float)window_size.y);
-    window_size.x -= app->widgets_width;
 
-    ygl::center_image(app->imframe, {app->img.width(), app->img.height()},
-        window_size, app->zoom_to_fit);
+    auto& img = app->trace_state.display;
+    ygl::center_image(app->imframe, {img.width(), img.height()}, window_size,
+        app->zoom_to_fit);
 
     assert(glGetError() == GL_NO_ERROR);
     glBindTexture(GL_TEXTURE_2D, app->gl_txt);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, app->img.width(), app->img.height(),
-        GL_RGBA, GL_FLOAT, app->img.data());
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.width(), img.height(), GL_RGBA,
+        GL_FLOAT, img.data());
     assert(glGetError() == GL_NO_ERROR);
 
     assert(glGetError() == GL_NO_ERROR);
@@ -141,12 +133,10 @@ void draw_image(GLFWwindow* win) {
     assert(glGetError() == GL_NO_ERROR);
     glUniform2f(glGetUniformLocation(app->gl_prog, "win_size"), window_size.x,
         window_size.y);
-    glUniform2f(glGetUniformLocation(app->gl_prog, "txt_size"),
-        app->img.width(), app->img.height());
+    glUniform2f(glGetUniformLocation(app->gl_prog, "txt_size"), img.width(),
+        img.height());
     glUniformMatrix3x2fv(glGetUniformLocation(app->gl_prog, "frame"), 1, false,
         &app->imframe.x.x);
-    glUniform1f(glGetUniformLocation(app->gl_prog, "exposure"), app->exposure);
-    glUniform1f(glGetUniformLocation(app->gl_prog, "gamma"), app->gamma);
     glUniform1i(glGetUniformLocation(app->gl_prog, "img"), 0);
     assert(glGetError() == GL_NO_ERROR);
 
@@ -169,31 +159,32 @@ void draw_image(GLFWwindow* win) {
 
 void draw_widgets(GLFWwindow* win) {
     auto app = (app_state*)glfwGetWindowUserPointer(win);
-    if (begin_widgets_frame(win, "yitrace", app->widgets_width)) {
+    if (begin_widgets_frame(win, "yitrace")) {
         ImGui::LabelText("scene", "%s", app->filename.c_str());
-        ImGui::LabelText("image", "%d x %d @ %d", app->img.width(),
-            app->img.height(), app->cur_sample);
+        ImGui::LabelText("image", "%d x %d @ %d", app->trace_state.img.width(),
+            app->trace_state.img.height(), app->trace_state.sample);
         if (ImGui::TreeNode("render settings")) {
             auto edited = 0;
+            edited += ImGui::Combo("camera", &app->camid,
+                app->scn->cameras.size(),
+                [&app](int i) { return app->scn->cameras[i]->name.c_str(); });
             edited +=
-                ImGui::Combo("camera", &app->cam, app->scn->cameras, false);
-            edited += ImGui::DragInt("resolution", &app->resolution, 256, 4096);
-            edited += ImGui::DragInt("nsamples", &app->nsamples, 16, 4096);
+                ImGui::SliderInt("resolution", &app->resolution, 256, 4096);
+            edited += ImGui::SliderInt("nsamples", &app->nsamples, 16, 4096);
             edited += ImGui::Combo("tracer", &app->tracer, trace_names);
             app->tracef = tracer_names.at(app->tracer);
-            edited += ImGui::DragInt("nbounces", &app->nbounces, 1, 10);
-            edited += ImGui::DragInt("seed", (int*)&app->seed, 0, 1000);
-            edited +=
-                ImGui::DragInt("preview", &app->preview_resolution, 64, 1080);
+            edited += ImGui::SliderInt("nbounces", &app->nbounces, 1, 10);
+            edited += ImGui::SliderInt("seed", (int*)&app->seed, 0, 1000);
+            edited += ImGui::SliderInt("pratio", &app->pratio, 1, 64);
             if (edited) app->update_list.push_back(ygl::scene_selection());
             ImGui::TreePop();
         }
         if (ImGui::TreeNode("view settings")) {
-            ImGui::DragFloat("exposure", &app->exposure, -5, 5);
-            ImGui::DragFloat("gamma", &app->gamma, 1, 3);
+            ImGui::SliderFloat("exposure", &app->exposure, -5, 5);
+            ImGui::SliderFloat("gamma", &app->gamma, 1, 3);
             ImGui::ColorEdit4("background", &app->background.x);
             auto zoom = app->imframe.x.x;
-            if (ImGui::DragFloat("zoom", &zoom, 0.1, 10))
+            if (ImGui::SliderFloat("zoom", &zoom, 0.1, 10))
                 app->imframe.x.x = app->imframe.y.y = zoom;
             ImGui::Checkbox("zoom to fit", &app->zoom_to_fit);
             ImGui::SameLine();
@@ -202,11 +193,11 @@ void draw_widgets(GLFWwindow* win) {
             glfwGetCursorPos(win, &mouse_x, &mouse_y);
             auto ij = ygl::get_image_coords(
                 ygl::vec2f{(float)mouse_x, (float)mouse_y}, app->imframe,
-                {app->img.width(), app->img.height()});
+                {app->trace_state.img.width(), app->trace_state.img.height()});
             ImGui::DragInt2("mouse", &ij.x);
-            if (ij.x >= 0 && ij.x < app->img.width() && ij.y >= 0 &&
-                ij.y < app->img.height()) {
-                ImGui::ColorEdit4("pixel", &app->img[ij].x);
+            if (ij.x >= 0 && ij.x < app->trace_state.img.width() && ij.y >= 0 &&
+                ij.y < app->trace_state.img.height()) {
+                ImGui::ColorEdit4("pixel", &app->trace_state.img[ij].x);
             } else {
                 auto zero4f_ = ygl::zero4f;
                 ImGui::ColorEdit4("pixel", &zero4f_.x);
@@ -265,20 +256,17 @@ static const char* fragment =
     in vec2 texcoord;
 
     uniform sampler2D img;
-    uniform float exposure;
-    uniform float gamma;
 
     out vec4 color;
 
     void main() {
-        vec4 c = texture(img,texcoord);
-        c.xyz = pow(c.xyz * pow(2,exposure), vec3(1/gamma));
-        color = c;
+        color = texture(img,texcoord);
     }
     )";
 
 void init_drawimage(GLFWwindow* win) {
     auto app = (app_state*)glfwGetWindowUserPointer(win);
+    auto& img = app->trace_state.display;
     app->gl_prog = make_glprogram(vertex, fragment);
     auto uv = std::vector<ygl::vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}};
     auto triangles = std::vector<ygl::vec3i>{{0, 1, 2}, {0, 2, 3}};
@@ -296,8 +284,8 @@ void init_drawimage(GLFWwindow* win) {
     assert(glGetError() == GL_NO_ERROR);
     glGenTextures(1, &app->gl_txt);
     glBindTexture(GL_TEXTURE_2D, app->gl_txt);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, app->img.width(), app->img.height(),
-        0, GL_RGBA, GL_FLOAT, app->img.data());
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.width(), img.height(), 0,
+        GL_RGBA, GL_FLOAT, img.data());
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -309,7 +297,7 @@ bool update(const std::shared_ptr<app_state>& app) {
     if (app->update_list.empty()) return false;
 
     // stop renderer
-    ygl::trace_async_stop(app->async_threads, app->async_stop);
+    ygl::trace_async_stop(app->trace_state);
 
     // update BVH
     for (auto sel : app->update_list) {
@@ -329,35 +317,10 @@ bool update(const std::shared_ptr<app_state>& app) {
     }
     app->update_list.clear();
 
-    // render preview image
-    if (app->preview_resolution) {
-        auto pwidth =
-            (int)std::round(app->preview_resolution * app->img.width() /
-                            (float)app->img.height());
-        auto pheight = app->preview_resolution;
-        auto pimg = ygl::image4f{pwidth, pheight};
-        auto prngs = ygl::make_trace_rngs(pwidth, pheight, 7);
-        trace_samples(
-            app->scn, app->cam, pimg, prngs, 0, 1, app->tracef, app->nbounces);
-        auto pratio = app->resolution / app->preview_resolution;
-        for (auto j = 0; j < app->img.height(); j++) {
-            for (auto i = 0; i < app->img.width(); i++) {
-                auto pi = ygl::clamp(i / pratio, 0, pwidth - 1),
-                     pj = ygl::clamp(j / pratio, 0, pheight - 1);
-                app->img[{i, j}] = pimg[{pi, pj}];
-            }
-        }
-    } else {
-        for (auto& p : app->img) p = ygl::zero4f;
-    }
-
-    // restart renderer
-    if (!app->quiet) std::cout << "restart renderer\n";
-    app->rngs =
-        ygl::make_trace_rngs(app->img.width(), app->img.height(), app->seed);
-    ygl::trace_async_start(app->scn, app->cam, app->img, app->rngs,
-        app->nsamples, app->tracef, app->nbounces, app->async_threads,
-        app->async_stop, app->cur_sample, app->pixel_clamp);
+    app->trace_state = {};
+    ygl::trace_async_start(app->trace_state, app->scn, app->camid,
+        app->resolution, app->nsamples, app->tracef, app->exposure, app->gamma,
+        app->filmic, app->pratio, app->nbounces, app->pixel_clamp, app->seed);
 
     // updated
     return true;
@@ -366,15 +329,15 @@ bool update(const std::shared_ptr<app_state>& app) {
 // run ui loop
 void run_ui(const std::shared_ptr<app_state>& app) {
     // window
-    auto win_width = app->img.width() + app->widgets_width;
-    auto win_height = ygl::clamp(app->img.height(), 512, 1024);
+    auto win_width = ygl::clamp(app->trace_state.img.width(), 512, 1024);
+    auto win_height = ygl::clamp(app->trace_state.img.height(), 512, 1024);
     auto win = make_window(win_width, win_height, "yitrace", app.get(), draw);
 
     // load textures
     init_drawimage(win);
 
     // init widget
-    init_widgets(win, app->widgets_width, true, true);
+    init_widgets(win);
 
     // loop
     auto mouse_pos = ygl::zero2f, last_pos = ygl::zero2f;
@@ -390,7 +353,7 @@ void run_ui(const std::shared_ptr<app_state>& app) {
         auto widgets_active = ImGui::GetWidgetsActiveExt();
 
         // handle mouse and keyboard for navigation
-        if (mouse_button && alt_down && !widgets_active) {
+        if (mouse_button && !alt_down && !widgets_active) {
             if (!last_button) {
                 if (app->selection.as<ygl::instance>()) {
                     auto ist = app->selection.as<ygl::instance>();
@@ -408,21 +371,25 @@ void run_ui(const std::shared_ptr<app_state>& app) {
             if (mouse_button == 2) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
             if (mouse_button == 3 || (mouse_button == 1 && shift_down))
                 pan = (mouse_pos - last_pos) / 100.0f;
-            ygl::camera_turntable(app->cam->frame.o, mouse_center,
-                app->cam->frame.z, rotate, dolly, pan);
-            app->cam->frame = ygl::lookat_frame(
-                app->cam->frame.o, mouse_center, ygl::vec3f{0, 1, 0});
-            app->update_list.push_back(app->cam);
+            auto cam = app->scn->cameras.at(app->camid);
+            ygl::camera_turntable(
+                cam->frame.o, mouse_center, cam->frame.z, rotate, dolly, pan);
+            cam->frame = ygl::lookat_frame(
+                cam->frame.o, mouse_center, ygl::vec3f{0, 1, 0});
+            app->update_list.push_back(cam);
         }
 
         // selection
-        if (mouse_button && !alt_down && !widgets_active) {
+        if (mouse_button && alt_down && !widgets_active) {
             auto ij = ygl::get_image_coords(mouse_pos, app->imframe,
-                ygl::vec2i{app->img.width(), app->img.height()});
-            if (ij.x < 0 || ij.x >= app->img.width() || ij.y < 0 ||
-                ij.y >= app->img.height()) {
-                auto ray = eval_camera_ray(app->cam, ij,
-                    ygl::vec2i{app->img.width(), app->img.height()},
+                ygl::vec2i{app->trace_state.img.width(),
+                    app->trace_state.img.height()});
+            if (ij.x < 0 || ij.x >= app->trace_state.img.width() || ij.y < 0 ||
+                ij.y >= app->trace_state.img.height()) {
+                auto cam = app->scn->cameras.at(app->camid);
+                auto ray = eval_camera_ray(cam, ij,
+                    ygl::vec2i{app->trace_state.img.width(),
+                        app->trace_state.img.height()},
                     {0.5f, 0.5f}, ygl::zero2f);
                 auto isec = intersect_ray(app->scn, ray);
                 if (isec.ist) app->selection = isec.ist;
@@ -446,6 +413,7 @@ int main(int argc, char* argv[]) {
 
     // parse command line
     CLI::App parser("progressive path tracing", "yitrace");
+    parser.add_option("--camera", app->camid, "Camera index.");
     parser.add_option(
         "--resolution,-r", app->resolution, "Image vertical resolution.");
     parser.add_option("--nsamples,-s", app->nsamples, "Number of samples.");
@@ -466,8 +434,8 @@ int main(int argc, char* argv[]) {
         "--double-sided,-D", app->double_sided, "Double-sided rendering.");
     parser.add_flag("--add-skyenv,-E", app->add_skyenv, "add missing env map");
     parser.add_flag("--quiet,-q", app->quiet, "Print only errors messages");
-    parser.add_option("--preview-resolution", app->preview_resolution,
-        "Preview resolution for async rendering.");
+    parser.add_option(
+        "--pration", app->pratio, "Preview ratio for async rendering.");
     parser.add_option("--output-image,-o", app->imfilename, "Image filename");
     parser.add_option("scene", app->filename, "Scene filename")->required(true);
     try {
@@ -508,7 +476,6 @@ int main(int argc, char* argv[]) {
     if (app->scn->cameras.empty())
         app->scn->cameras.push_back(
             ygl::make_bbox_camera("<view>", app->scn->bbox));
-    app->cam = app->scn->cameras[0];
     ygl::add_missing_names(app->scn);
     for (auto err : ygl::validate(app->scn))
         std::cout << "warning: " << err << "\n";
@@ -535,19 +502,16 @@ int main(int argc, char* argv[]) {
     }
 
     // initialize rendering objects
-    if (!app->quiet) std::cout << "initializing tracer data\n";
-    app->img = ygl::image4f{
-        (int)round(app->resolution * app->cam->width / app->cam->height),
-        app->resolution};
-    app->rngs =
-        ygl::make_trace_rngs(app->img.width(), app->img.height(), app->seed);
-    app->update_list.push_back(app->scn);
+    if (!app->quiet) std::cout << "starting async renderer\n";
+    ygl::trace_async_start(app->trace_state, app->scn, app->camid,
+        app->resolution, app->nsamples, app->tracef, app->exposure, app->gamma,
+        app->filmic, app->pratio, app->nbounces, app->pixel_clamp, app->seed);
 
     // run interactive
     run_ui(app);
 
     // cleanup
-    ygl::trace_async_stop(app->async_threads, app->async_stop);
+    ygl::trace_async_stop(app->trace_state);
 
     // done
     return 0;

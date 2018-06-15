@@ -76,19 +76,17 @@ if(YOCTO_OPENGL)
         find_package(GLEW REQUIRED)
     endif(UNIX AND NOT APPLE)
 
-    add_library(yglui
-        apps/yglui.h        
-        apps/imgui/imgui.cpp apps/imgui/imgui_draw.cpp apps/imgui/imgui_demo.cpp 
-        apps/imgui/imgui_impl_glfw_gl3.cpp apps/imgui/imgui_extra_fonts.cpp
-    )
+    add_executable(yview apps/yview.cpp apps/yglui.h        
+        apps/imgui/imgui.cpp apps/imgui/imgui_draw.cpp
+        apps/imgui/imgui_impl_glfw_gl3.cpp)
+    add_executable(yitrace apps/yitrace.cpp apps/yglui.h        
+        apps/imgui/imgui.cpp apps/imgui/imgui_draw.cpp
+        apps/imgui/imgui_impl_glfw_gl3.cpp)
+    add_executable(yimview apps/yimview.cpp apps/yglui.h        
+        apps/imgui/imgui.cpp apps/imgui/imgui_draw.cpp
+        apps/imgui/imgui_impl_glfw_gl3.cpp)
 
-    target_link_libraries(yglui ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GLEW_LIBRARIES})
-
-    add_executable(yview apps/yview.cpp)
-    add_executable(yitrace apps/yitrace.cpp)
-    add_executable(yimview apps/yimview.cpp)
-
-    target_link_libraries(yview ygl yglui)
-    target_link_libraries(yitrace ygl yglui)
-    target_link_libraries(yimview ygl yglui)
+    target_link_libraries(yview ygl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GLEW_LIBRARIES})
+    target_link_libraries(yitrace ygl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GLEW_LIBRARIES})
+    target_link_libraries(yimview ygl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GLEW_LIBRARIES})
 endif(YOCTO_OPENGL)

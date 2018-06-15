@@ -637,19 +637,22 @@ std::shared_ptr<scene> load_pbrt(const std::string& filename) {
                 auto radius = 1.0f;
                 if (jcmd.count("radius"))
                     radius = jcmd.at("radius").get<float>();
-                auto quads = std::vector<vec4i>();
-                make_sphere(quads, shp->pos, shp->norm, shp->texcoord, {64, 32},
-                    2 * radius, {1, 1});
-                shp->triangles = convert_quads_to_triangles(quads);
+                auto sshp = make_sphere({64, 32}, 2 * radius, {1, 1}, true);
+                shp->pos = sshp.pos;
+                shp->norm = sshp.norm;
+                shp->texcoord = sshp.texcoord;
+                shp->triangles = sshp.triangles;
             } else if (type == "disk") {
                 shp->name = "disk" + std::to_string(sid++);
                 auto radius = 1.0f;
                 if (jcmd.count("radius"))
                     radius = jcmd.at("radius").get<float>();
-                auto quads = std::vector<vec4i>();
-                make_disk(quads, shp->pos, shp->norm, shp->texcoord, {32, 16},
-                    2 * radius, {1, 1});
-                shp->triangles = convert_quads_to_triangles(quads);
+                auto sshp = make_disk({32, 16},
+                    2 * radius, {1, 1}, true);
+                shp->pos = sshp.pos;
+                shp->norm = sshp.norm;
+                shp->texcoord = sshp.texcoord;
+                shp->triangles = sshp.triangles;
             } else {
                 std::cout << type << " shape not supported\n";
             }
@@ -722,10 +725,11 @@ std::shared_ptr<scene> load_pbrt(const std::string& filename) {
                 if (jcmd.count("to")) to = get_vec3f(jcmd.at("to"));
                 auto dir = normalize(from - to);
                 auto size = distant_dist * sin(5 * pi / 180);
-                auto quads = std::vector<vec4i>();
-                make_quad(quads, shp->pos, shp->norm, shp->texcoord, {1, 1},
-                    {size, size}, {1, 1});
-                shp->triangles = convert_quads_to_triangles(quads);
+                auto sshp = make_quad({1, 1}, {size, size}, {1, 1}, true);
+                shp->pos = sshp.pos;
+                shp->norm = sshp.norm;
+                shp->texcoord = sshp.texcoord;
+                shp->triangles = sshp.triangles;
                 scn->shapes.push_back(shp);
                 auto mat = std::make_shared<material>();
                 mat->name = shp->name;

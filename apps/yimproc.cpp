@@ -31,24 +31,6 @@
 #include "CLI11.hpp"
 using namespace std::literals;
 
-struct app_state {
-    std::string filename = "img.png";
-    std::string output = "out.png";
-    float exposure = 0.0f;
-    float gamma = 2.2f;
-    bool filmic = false;
-    int resize_width = 0;
-    int resize_height = 0;
-    ygl::vec4f multiply_color = {1, 1, 1, 1};
-    std::string alpha_filename = ""s;
-    std::string coloralpha_filename = ""s;
-
-    float spatial_sigma = 0.0f;
-    float range_sigma = 0.0f;
-
-    ygl::image4f img = {};
-};
-
 #if 0
 template <typename Image>
 Image make_image_grid(const std::vector<Image>& imgs, int tilex) {
@@ -150,96 +132,104 @@ std::vector<ygl::vec4f> filter_bilateral(int width, int height,
 }
 
 int main(int argc, char* argv[]) {
-    auto app = std::make_shared<app_state>();
+    // command line parameters
+    auto filename = "img.png"s;                    // input image
+    auto output = "out.png"s;                      // output image
+    auto tonemap = false;                          // enable tonemapping
+    auto exposure = 0.0f;                          // tonemap exposure
+    auto gamma = 1.0f;                             // tonemap gamma
+    auto filmic = false;                           // tonemap filmic
+    auto resize_width = 0;                         // resize width
+    auto resize_height = 0;                        // resize height
+    auto multiply_color = ygl::vec4f{1, 1, 1, 1};  // multiply color
+    auto alpha_filename = ""s;                     // file to copy alpha from
+    auto coloralpha_filename = ""s;  // file to set alpha from color
+    auto spatial_sigma = 0.0f;       // spatial sigma for bilateral blur
+    auto range_sigma = 0.0f;         // range sigma for bilateral blur
 
     // command line params
     CLI::App parser("image processing utility", "yimproc");
-    parser.add_option("--exposure,-e", app->exposure, "Hdr exposure");
-    parser.add_option("--gamma,-g", app->gamma, "Display gamma.");
-    parser.add_flag("--filmic,-f", app->filmic, "filmic tone mapping");
-    parser.add_option("--resize-width,-w", app->resize_width,
-        "width (0 to maintain aspect)", 0);
-    parser.add_option("--resize-height,-h", app->resize_height,
+    parser.add_flag("--tonemap,-t", tonemap, "Tonemap image");
+    parser.add_option("--exposure,-e", exposure, "Tonemap exposure");
+    parser.add_option("--gamma,-g", gamma, "Tonemap gamma.");
+    parser.add_flag("--filmic,-f", filmic, "Tonemap uses filmic curve");
+    parser.add_option(
+        "--resize-width,-w", resize_width, "width (0 to maintain aspect)", 0);
+    parser.add_option("--resize-height,-h", resize_height,
         "height (0 to maintain aspect)", 0);
     parser.add_option(
-        "--multiply-color", app->multiply_color, "multiply by this color");
+        "--multiply-color", multiply_color, "multiply by this color");
     parser.add_option(
-        "--spatial-sigma,-s", app->spatial_sigma, "blur spatial sigma");
+        "--spatial-sigma,-s", spatial_sigma, "blur spatial sigma");
     parser.add_option(
-        "--range-sigma,-r", app->range_sigma, "bilateral blur range sigma");
+        "--range-sigma,-r", range_sigma, "bilateral blur range sigma");
     parser.add_option(
-        "--set-alpha", app->alpha_filename, "set alpha as this image alpha");
-    parser.add_option("--set-color-as-alpha", app->coloralpha_filename,
+        "--set-alpha", alpha_filename, "set alpha as this image alpha");
+    parser.add_option("--set-color-as-alpha", coloralpha_filename,
         "set alpha as this image color");
-    parser.add_option("--output,-o", app->output, "output image filename");
-    parser.add_option("filename", app->filename, "input image filename")
+    parser.add_option("--output,-o", output, "output image filename");
+    parser.add_option("filename", filename, "input image filename")
         ->required(true);
     try {
         parser.parse(argc, argv);
     } catch (const CLI::ParseError& e) { return parser.exit(e); }
 
     // load
+    auto img = ygl::image4f();
     try {
-        app->img = ygl::load_image(app->filename, app->gamma);
+        img = ygl::load_image(filename);
     } catch (std::exception& e) {
-        std::cout << "cannot load image" << app->filename << "\n";
+        std::cout << "cannot load image" << filename << "\n";
         std::cout << "error: " << e.what() << "\n";
         exit(1);
     }
 
     // set alpha
-    if (app->alpha_filename != "") {
-        auto alpha = ygl::load_image(app->alpha_filename, app->gamma);
-        if (app->img.width() != alpha.width() ||
-            app->img.height() != alpha.height()) {
+    if (alpha_filename != "") {
+        auto alpha = ygl::load_image(alpha_filename);
+        if (img.width() != alpha.width() || img.height() != alpha.height()) {
             std::cout << "bad image size\n";
             exit(1);
         }
-        for (auto i = 0; i < app->img.size(); i++) app->img[i].w = alpha[i].w;
+        for (auto i = 0; i < img.size(); i++) img[i].w = alpha[i].w;
     }
 
     // set alpha
-    if (app->coloralpha_filename != "") {
-        auto alpha = ygl::load_image(app->coloralpha_filename, app->gamma);
-        if (app->img.width() != alpha.width() ||
-            app->img.height() != alpha.height()) {
+    if (coloralpha_filename != "") {
+        auto alpha = ygl::load_image(coloralpha_filename);
+        if (img.width() != alpha.width() || img.height() != alpha.height()) {
             std::cout << "bad image size\n";
             exit(1);
         }
-        for (auto i = 0; i < app->img.size(); i++) {
+        for (auto i = 0; i < img.size(); i++) {
             auto& p = alpha[i];
-            app->img[i].w = (p.x + p.y + p.z) / 3;
+            img[i].w = (p.x + p.y + p.z) / 3;
         }
     }
 
     // multiply
-    if (app->multiply_color != ygl::vec4f{1, 1, 1, 1}) {
-        for (auto& c : app->img) c *= app->multiply_color;
+    if (multiply_color != ygl::vec4f{1, 1, 1, 1}) {
+        for (auto& c : img) c *= multiply_color;
     }
 
     // resize
-    if (app->resize_width || app->resize_height) {
-        app->img =
-            resize_image(app->img, app->resize_width, app->resize_height);
+    if (resize_width || resize_height) {
+        img = resize_image(img, resize_width, resize_height);
     }
 
     // bilateral
-    if (app->spatial_sigma && app->range_sigma) {
-        app->img = filter_bilateral(
-            app->img, app->spatial_sigma, app->range_sigma, {}, {});
+    if (spatial_sigma && range_sigma) {
+        img = filter_bilateral(img, spatial_sigma, range_sigma, {}, {});
     }
 
-    // exposure
-    if (app->exposure) app->img = expose_image(app->img, app->exposure);
-
-    // filmic tone transformations
-    if (app->filmic) app->img = filmic_tonemap_image(app->img);
+    // hdr correction
+    if (tonemap) img = ygl::tonemap_image(img, exposure, gamma, filmic);
 
     // save
     try {
-        ygl::save_image(app->output, app->img, app->gamma);
+        ygl::save_image(output, img);
     } catch (std::exception& e) {
-        std::cout << "cannot save image" << app->output << "\n";
+        std::cout << "cannot save image" << output << "\n";
         std::cout << "error: " << e.what() << "\n";
         exit(1);
     }
