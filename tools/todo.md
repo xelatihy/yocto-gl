@@ -6,8 +6,17 @@ Please consider this to be just development notes and not any real planning.
 ## Library
 
 - no gl wrapper
+    - no gl wrapper
+        - imview
+        - itrace
+        - view
     - make data global and remove glfw wrapper
     - leave imgui wrapper
+    - no gl init
+    - back to gl2
+        - imview
+        - yitrace
+        - yview with vertex arrays
 - all image correction in software
     - simpler tonemap in one function (like book)
     - yimview has hdr flag check
