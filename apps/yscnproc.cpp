@@ -31,14 +31,6 @@
 #include "CLI11.hpp"
 using namespace std::literals;
 
-struct app_state {
-    std::string filename = "scene.json"s;
-    std::string output = "output.json"s;
-    bool notextures = false;
-
-    std::shared_ptr<ygl::scene> scn = nullptr;
-};
-
 void mkdir(const std::string& dir) {
     if (dir == "" || dir == "." || dir == ".." || dir == "./" || dir == "../")
         return;
@@ -50,41 +42,44 @@ void mkdir(const std::string& dir) {
 }
 
 int main(int argc, char** argv) {
-    auto app = std::make_shared<app_state>();
+    // command line parameters
+    auto filename = "scene.json"s;
+    auto output = "output.json"s;
+    auto notextures = false;
 
     // command line params
     CLI::App parser("scene processing utility", "yscnproc");
-    parser.add_flag("--notextures", app->notextures, "Disable textures.");
-    parser.add_option("--output,-o", app->output, "output scene")
-        ->required(true);
-    parser.add_option("scene", app->filename, "input scene")->required(true);
+    parser.add_flag("--notextures", notextures, "Disable textures.");
+    parser.add_option("--output,-o", output, "output scene")->required(true);
+    parser.add_option("scene", filename, "input scene")->required(true);
     try {
         parser.parse(argc, argv);
     } catch (const CLI::ParseError& e) { return parser.exit(e); }
 
-    // load obj
+    // load scene
+    auto scn = std::shared_ptr<ygl::scene>();
     try {
-        app->scn = ygl::load_scene(app->filename, !app->notextures);
+        scn = ygl::load_scene(filename, !notextures);
     } catch (const std::exception& e) {
-        std::cout << "cannot load scene " << app->filename << "\n";
+        std::cout << "cannot load scene " << filename << "\n";
         std::cout << "error: " << e.what() << "\n";
         exit(1);
     }
 
     // make a directory if needed
     try {
-        mkdir(ygl::get_dirname(app->output));
+        mkdir(ygl::get_dirname(output));
     } catch (const std::exception& e) {
-        std::cout << "cannot create directory " << ygl::get_dirname(app->output)
+        std::cout << "cannot create directory " << ygl::get_dirname(output)
                   << "\n";
         std::cout << "error: " << e.what() << "\n";
         exit(1);
     }
     // save scene
     try {
-        ygl::save_scene(app->output, app->scn);
+        ygl::save_scene(output, scn);
     } catch (const std::exception& e) {
-        std::cout << "cannot save scene " << app->output << "\n";
+        std::cout << "cannot save scene " << output << "\n";
         std::cout << "error: " << e.what() << "\n";
         exit(1);
     }

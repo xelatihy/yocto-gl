@@ -52,12 +52,12 @@ struct gimage {
     float exposure = 0;
     float gamma = 2.2f;
     bool filmic = false;
+    bool is_hdr = false;
 
     // display image
     ygl::image4f display;
 
     // opengl texture
-    bool gl_updated = true;
     uint gl_txt = 0;
 };
 
@@ -65,20 +65,11 @@ struct app_state {
     std::vector<std::shared_ptr<gimage>> imgs;
     std::shared_ptr<gimage> img = nullptr;
 
+    // viewing properties
     uint gl_prog = 0, gl_vbo = 0, gl_ebo = 0;
     ygl::frame2f imframe = ygl::identity_frame2f;
     bool zoom_to_fit = false;
     ygl::vec4f background = {0.8f, 0.8f, 0.8f, 0};
-
-    // parameters for command line
-    std::vector<std::string> filenames = {"img.png"};
-    float gamma = 2.2f;     // hdr gamma
-    float exposure = 0.0f;  // hdr exposure
-    bool filmic = false;    // filmic tone mapping
-    bool diff = false;      // compute diffs
-    bool lum_diff = false;  // compute luminance diffs
-    bool quiet = false;     // quiet mode
-    int widgets_width = 320;
 };
 
 // compute min/max
@@ -93,13 +84,15 @@ void update_minmax(std::shared_ptr<gimage> img) {
 
 // Loads a generic image
 std::shared_ptr<gimage> load_gimage(
-    const std::string& filename, float exposure, float gamma) {
+    const std::string& filename, float exposure, float gamma, bool filmic) {
     auto img = std::make_shared<gimage>();
     img->filename = filename;
     img->name = ygl::get_filename(filename);
     img->exposure = exposure;
     img->gamma = gamma;
-    img->img = ygl::load_image(filename, img->gamma);
+    img->filmic = filmic;
+    img->is_hdr = ygl::is_hdr_filename(filename);
+    img->img = ygl::load_image(filename);
     update_minmax(img);
     return img;
 }
@@ -133,28 +126,26 @@ std::shared_ptr<gimage> diff_gimage(
 
 void update_display_image(const std::shared_ptr<gimage>& img) {
     img->display = img->img;
-    if (img->exposure)
-        img->display = ygl::expose_image(img->display, img->exposure);
-    if (img->filmic) img->display = ygl::filmic_tonemap_image(img->display);
-    if (img->gamma != 1)
-        img->display = ygl::linear_to_gamma(img->display, img->gamma);
-    img->updated = false;
+    if (img->is_hdr) {
+        img->display = ygl::tonemap_image(
+            img->display, img->exposure, img->gamma, img->filmic);
+    }
 }
 
 void draw_widgets(GLFWwindow* win) {
     auto app = (app_state*)glfwGetWindowUserPointer(win);
-    if (begin_widgets_frame(win, "yimview", app->widgets_width)) {
+    if (begin_widgets_frame(win, "yimview")) {
         ImGui::Combo("image", &app->img, app->imgs, false);
         ImGui::LabelText("filename", "%s", app->img->filename.c_str());
         ImGui::LabelText(
             "size", "%d x %d ", app->img->img.width(), app->img->img.height());
         auto edited = 0;
-        edited += ImGui::DragFloat("exposure", &app->img->exposure, -5, 5);
-        edited += ImGui::DragFloat("gamma", &app->img->gamma, 1, 3);
+        edited += ImGui::SliderFloat("exposure", &app->img->exposure, -5, 5);
+        edited += ImGui::SliderFloat("gamma", &app->img->gamma, 1, 3);
         edited += ImGui::Checkbox("filmic", &app->img->filmic);
         if (edited) app->img->updated = true;
         auto zoom = app->imframe.x.x;
-        if (ImGui::DragFloat("zoom", &zoom, 0.1, 10))
+        if (ImGui::SliderFloat("zoom", &zoom, 0.1, 10))
             app->imframe.x.x = app->imframe.y.y = zoom;
         ImGui::Checkbox("zoom to fit", &app->zoom_to_fit);
         ImGui::ColorEdit4("background", &app->background.x);
@@ -186,9 +177,6 @@ void draw_image(GLFWwindow* win) {
     auto window_size = ygl::zero2i, framebuffer_size = ygl::zero2i;
     glfwGetWindowSize(win, &window_size.x, &window_size.y);
     glfwGetFramebufferSize(win, &framebuffer_size.x, &framebuffer_size.y);
-    framebuffer_size.x -= (int)(app->widgets_width * (float)framebuffer_size.y /
-                                (float)window_size.y);
-    window_size.x -= app->widgets_width;
 
     ygl::center_image(app->imframe,
         {app->img->img.width(), app->img->img.height()}, window_size,
@@ -212,9 +200,6 @@ void draw_image(GLFWwindow* win) {
         app->img->img.width(), app->img->img.height());
     glUniformMatrix3x2fv(glGetUniformLocation(app->gl_prog, "frame"), 1, false,
         &app->imframe.x.x);
-    glUniform1f(
-        glGetUniformLocation(app->gl_prog, "exposure"), app->img->exposure);
-    glUniform1f(glGetUniformLocation(app->gl_prog, "gamma"), app->img->gamma);
     glUniform1i(glGetUniformLocation(app->gl_prog, "img"), 0);
     assert(glGetError() == GL_NO_ERROR);
 
@@ -270,17 +255,11 @@ static const char* fragment =
     #version 330
 
     in vec2 texcoord;
-
     uniform sampler2D img;
-    uniform float exposure;
-    uniform float gamma;
-
     out vec4 color;
 
     void main() {
-        vec4 c = texture(img,texcoord);
-        c.xyz = pow(c.xyz * pow(2,exposure), vec3(1/gamma));
-        color = c;
+        color = texture(img,texcoord);
     }
     )";
 
@@ -315,12 +294,12 @@ void init_drawimage(GLFWwindow* win) {
 
 void run_ui(const std::shared_ptr<app_state>& app) {
     // window
-    auto win_width = app->imgs[0]->img.width() + app->widgets_width;
+    auto win_width = ygl::clamp(app->imgs[0]->img.width(), 512, 1024);
     auto win_height = ygl::clamp(app->imgs[0]->img.height(), 512, 1024);
     auto win = make_window(win_width, win_height, "yimview", app.get(), draw);
 
     // init widgets
-    init_widgets(win, app->widgets_width, true, true);
+    init_widgets(win);
 
     // load textures
     init_drawimage(win);
@@ -332,11 +311,10 @@ void run_ui(const std::shared_ptr<app_state>& app) {
         last_pos = mouse_pos;
         glfwGetCursorPosExt(win, &mouse_pos.x, &mouse_pos.y);
         mouse_button = glfwGetMouseButtonIndexExt(win);
-        auto key_alt = glfwGetAltKeyExt(win);
         auto widgets_active = ImGui::GetWidgetsActiveExt();
 
         // handle mouse
-        if (mouse_button && key_alt && !widgets_active) {
+        if (mouse_button && !widgets_active) {
             if (mouse_button == 1) app->imframe.o += mouse_pos - last_pos;
             if (mouse_button == 2) {
                 auto zoom = powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
@@ -348,14 +326,11 @@ void run_ui(const std::shared_ptr<app_state>& app) {
         // update texture
         if (app->img->updated) {
             update_display_image(app->img);
-            app->img->gl_updated = true;
-        }
-        if (app->img->gl_updated) {
             glBindTexture(GL_TEXTURE_2D, app->img->gl_txt);
             glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, app->img->img.width(),
                 app->img->img.height(), GL_RGBA, GL_FLOAT,
                 app->img->display.data());
-            app->img->gl_updated = false;
+            app->img->updated = false;
         }
 
         // draw
@@ -371,36 +346,44 @@ void run_ui(const std::shared_ptr<app_state>& app) {
 }
 
 int main(int argc, char* argv[]) {
-    auto app = std::make_shared<app_state>();
+    // command line parameters
+    std::vector<std::string> filenames = {"img.png"};
+    float gamma = 2.2f;     // hdr gamma
+    float exposure = 0.0f;  // hdr exposure
+    bool filmic = false;    // filmic tone mapping
+    bool diff = false;      // compute diffs
+    bool lum_diff = false;  // compute luminance diffs
+    bool quiet = false;     // quiet mode
 
     // command line params
     CLI::App parser("view images", "yimview");
-    parser.add_option("--gamma,-g", app->gamma, "display gamma");
-    parser.add_option("--exposure,-e", app->exposure, "display exposure");
-    parser.add_flag("--diff,-d", app->diff, "compute diff images");
-    parser.add_flag(
-        "--luminance-diff,-D", app->lum_diff, "compute luminance diffs");
-    parser.add_option("images", app->filenames, "image filenames")
-        ->required(true);
+    parser.add_option("--gamma,-g", gamma, "display gamma");
+    parser.add_option("--exposure,-e", exposure, "display exposure");
+    parser.add_flag("--filmic", filmic, "display filmic");
+    parser.add_flag("--diff,-d", diff, "compute diff images");
+    parser.add_flag("--luminance-diff,-D", lum_diff, "compute luminance diffs");
+    parser.add_flag("--quiet,-q", quiet, "Print only errors messages");
+    parser.add_option("images", filenames, "image filenames")->required(true);
     try {
         parser.parse(argc, argv);
     } catch (const CLI::ParseError& e) { return parser.exit(e); }
 
+    // prepare application
+    auto app = std::make_shared<app_state>();
+
     // loading images
-    for (auto filename : app->filenames) {
-        if (!app->quiet) std::cout << "loading " << filename << "\n";
-        app->imgs.push_back(load_gimage(filename, app->exposure, app->gamma));
+    for (auto filename : filenames) {
+        if (!quiet) std::cout << "loading " << filename << "\n";
+        app->imgs.push_back(load_gimage(filename, exposure, gamma, filmic));
     }
     app->img = app->imgs.at(0);
-    if (app->diff) {
-        auto num = app->imgs.size();
-        for (auto i = 0; i < num; i++) {
-            for (auto j = i + 1; j < num; j++) {
-                if (!app->quiet)
+    if (diff) {
+        for (auto i = 0; i < app->imgs.size(); i++) {
+            for (auto j = i + 1; j < app->imgs.size(); j++) {
+                if (!quiet)
                     std::cout << "diffing " << app->imgs[i]->filename << " "
                               << app->imgs[j]->filename << "\n";
-                auto diff =
-                    diff_gimage(app->imgs[i], app->imgs[j], !app->lum_diff);
+                auto diff = diff_gimage(app->imgs[i], app->imgs[j], !lum_diff);
                 if (diff) app->imgs.push_back(diff);
             }
         }

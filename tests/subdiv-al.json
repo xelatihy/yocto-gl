@@ -36,6 +36,7 @@
                 "kd_txt": {
                     "name": "floor",
                     "path": "textures/floor.png",
+                    "gamma": 2.2,
                     "!!type": "grid"
                 }
             }
@@ -70,6 +71,7 @@
                 "kd_txt": {
                     "name": "uvgrid",
                     "path": "textures/uvgrid.png",
+                    "gamma": 2.2,
                     "!!type": "uvgrid"
                 }
             }

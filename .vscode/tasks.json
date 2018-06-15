@@ -6,17 +6,23 @@
         {
             "label": "release",
             "type": "shell",
-            "command": "./tools/build.py release",
+            "command": "ninja",
             "group": "build",
+            "options": {
+                "cwd": "./build/release"
+            },
             "problemMatcher": "$gcc"
         },
         {
             "label": "debug",
             "type": "shell",
-            "command": "./tools/build.py debug",
+            "command": "ninja",
             "group": {
                 "kind": "build",
                 "isDefault": true
+            },
+            "options": {
+                "cwd": "./build/debug"
             },
             "problemMatcher": "$gcc"
         }

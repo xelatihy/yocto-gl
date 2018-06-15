@@ -5,36 +5,23 @@ Please consider this to be just development notes and not any real planning.
 
 ## Library
 
+- cleanup yitrace cmdline 
+- cleanup yview cmdline 
+- simpler imgui with open
+    - check better imgui examples
 - no gl wrapper
-    - no gl wrapper
-        - imview
-        - itrace
-        - view
-    - make data global and remove glfw wrapper
-    - leave imgui wrapper
-    - no gl init
     - back to gl2
         - imview
         - yitrace
         - yview with vertex arrays
-- all image correction in software
-    - simpler tonemap in one function (like book)
-    - yimview has hdr flag check
-    - show values in native format
-- images back to simplicity
-- tesselate once
-- make scene much shorter and header only
-- make obj/glTF single file
+- simpler image drawing code
 - quad
     - verify interpolation for degenerate
     - verify if we can write interpolation as two triangles
     - verify sampling for degenerate
-- merge shape into math if possible
-    - makeXXX take triangle/quads option
+- simplfy shape
+    - catmull-clark takes boundary
     - simplify split code for shapes, going back to before Yocto
-- merge simple image code to Yocto
-- move complex shape examples in scene
-- merge image into math?
 
 ## Bugs
 

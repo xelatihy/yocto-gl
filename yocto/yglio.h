@@ -94,11 +94,9 @@ namespace ygl {
 bool is_hdr_filename(const std::string& filename);
 
 // Loads/saves a 4 channel image.
-image4f load_image(const std::string& filename, float ldr_gamma = 2.2f);
-void save_image(
-    const std::string& filename, const image4f& img, float ldr_gamma = 2.2f);
-image4f load_image_from_memory(
-    const byte* data, int data_size, float ldr_gamma = 2.2f);
+image4f load_image(const std::string& filename);
+void save_image(const std::string& filename, const image4f& img);
+image4f load_image_from_memory(const byte* data, int data_size);
 
 }  // namespace ygl
 

@@ -35,11 +35,11 @@ using namespace std::literals;
 // Application state
 struct app_state {
     std::shared_ptr<ygl::scene> scn = nullptr;
-    std::shared_ptr<ygl::camera> cam = nullptr;
     std::string filename = "scene.json";
     std::string imfilename = "out.png";
     std::string outfilename = "scene.json";
 
+    int camid = 0;                                  // camera index
     int resolution = 512;                           // image resolution
     bool wireframe = false;                         // wireframe drawing
     bool edges = false;                             // draw edges
@@ -49,7 +49,6 @@ struct app_state {
     float gamma = 2.2f;                             // gamma
     ygl::vec4f background = {0.8f, 0.8f, 0.8f, 0};  // background
     ygl::vec3f ambient = {0, 0, 0};                 // ambient lighting
-    int widgets_width = 320;
 
     uint gl_prog = 0;
 
@@ -61,14 +60,12 @@ struct app_state {
     ygl::vec2f time_range = ygl::zero2f;
     bool animate = false;
     bool quiet = false;
-    bool no_glwidgets = false;
     std::unordered_map<std::string, std::string> inspector_highlights;
     bool double_sided = false;
     std::string highlight_filename = ""s;
 };
 
-void draw_glscene(const std::shared_ptr<ygl::scene>& scn,
-    const std::shared_ptr<ygl::camera>& cam, uint prog,
+void draw_glscene(const std::shared_ptr<ygl::scene>& scn, int camid, uint prog,
     const ygl::vec2i& viewport_size, const std::shared_ptr<void>& highlighted,
     bool eyelight, bool wireframe, bool edges, float exposure, float gamma);
 
@@ -79,9 +76,6 @@ void draw(GLFWwindow* win) {
     auto framebuffer_size = ygl::zero2i;
     glfwGetWindowSize(win, &window_size.x, &window_size.y);
     glfwGetFramebufferSize(win, &framebuffer_size.x, &framebuffer_size.y);
-    framebuffer_size.x -= (int)(app->widgets_width * (float)framebuffer_size.y /
-                                (float)window_size.y);
-    window_size.x -= app->widgets_width;
     app->resolution = framebuffer_size.y;
 
     static auto last_time = 0.0f;
@@ -115,27 +109,23 @@ void draw(GLFWwindow* win) {
         app->background.w);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
-    draw_glscene(app->scn, app->cam, app->gl_prog, framebuffer_size,
+    draw_glscene(app->scn, app->camid, app->gl_prog, framebuffer_size,
         app->selection.ptr, app->eyelight, app->wireframe, app->edges,
         app->exposure, app->gamma);
 
-    if (app->no_glwidgets) {
-        glfwSwapBuffers(win);
-        return;
-    }
-
-    if (begin_widgets_frame(win, "yview", app->widgets_width)) {
+    if (begin_widgets_frame(win, "yview")) {
         ImGui::LabelText("scene", "%s", app->filename.c_str());
         if (ImGui::Button("print stats")) ygl::print_stats(app->scn);
         if (app->time_range != ygl::zero2f) {
-            ImGui::DragFloat(
+            ImGui::SliderFloat(
                 "time", &app->time, app->time_range.x, app->time_range.y);
             ImGui::InputText("anim group", &app->anim_group);
             ImGui::Checkbox("animate", &app->animate);
         }
         if (ImGui::TreeNode("render settings")) {
-            ImGui::Combo("camera", &app->cam, app->scn->cameras, false);
-            ImGui::DragInt("resolution", &app->resolution, 256, 4096);
+            ImGui::Combo("camera", &app->camid, app->scn->cameras.size(),
+                [&app](int i) { return app->scn->cameras[i]->name.c_str(); });
+            ImGui::SliderInt("resolution", &app->resolution, 256, 4096);
             ImGui::Checkbox("eyelight", &app->eyelight);
             ImGui::SameLine();
             ImGui::Checkbox("wireframe", &app->wireframe);
@@ -144,8 +134,8 @@ void draw(GLFWwindow* win) {
             ImGui::TreePop();
         }
         if (ImGui::TreeNode("view settings")) {
-            ImGui::DragFloat("exposure", &app->exposure, -10, 10);
-            ImGui::DragFloat("gamma", &app->gamma, 0.1f, 4);
+            ImGui::SliderFloat("exposure", &app->exposure, -10, 10);
+            ImGui::SliderFloat("gamma", &app->gamma, 0.1f, 4);
             ImGui::ColorEdit4("background", &app->background.x);
             ImGui::Checkbox("fps", &app->navigation_fps);
             ImGui::TreePop();
@@ -340,6 +330,10 @@ static const char* fragment =
             vec4 ks_txt = (mat_ks_txt_on) ? texture(mat_ks_txt,texcoord) : vec4(1,1,1,1);
             vec4 rs_txt = (mat_rs_txt_on) ? texture(mat_rs_txt,texcoord) : vec4(1,1,1,1);
             vec4 op_txt = (mat_op_txt_on) ? texture(mat_op_txt,texcoord) : vec4(1,1,1,1);
+
+            ke_txt.xyz = pow(ke_txt.xyz, vec3(2.2));
+            kd_txt.xyz = pow(kd_txt.xyz, vec3(2.2));
+            ks_txt.xyz = pow(ks_txt.xyz, vec3(2.2));
 
             // get material color from textures and adjust values
             if(mat_type == 1) {
@@ -615,11 +609,12 @@ void draw_glshape(const std::shared_ptr<ygl::shape>& shp,
 }
 
 // Display a scene
-void draw_glscene(const std::shared_ptr<ygl::scene>& scn,
-    const std::shared_ptr<ygl::camera>& cam, uint prog,
+void draw_glscene(const std::shared_ptr<ygl::scene>& scn, int camid, uint prog,
     const ygl::vec2i& viewport_size, const std::shared_ptr<void>& highlighted,
     bool eyelight, bool wireframe, bool edges, float exposure, float gamma) {
     glViewport(0, 0, viewport_size.x, viewport_size.y);
+
+    auto cam = scn->cameras.at(camid);
 
     auto camera_view = frame_to_mat(inverse(cam->frame));
     auto camera_proj =
@@ -748,10 +743,11 @@ void init_drawscene(GLFWwindow* win) {
 // run ui loop
 void run_ui(const std::shared_ptr<app_state>& app) {
     // window
-    auto win = make_window(
-        (int)std::round(app->resolution * app->cam->width / app->cam->height) +
-            app->widgets_width,
-        app->resolution, "yview", app.get(), draw);
+    auto win =
+        make_window((int)std::round(app->resolution *
+                                    app->scn->cameras.at(app->camid)->width /
+                                    app->scn->cameras.at(app->camid)->height),
+            app->resolution, "yview", app.get(), draw);
 
     // load textures and vbos
     ygl::update_transforms(app->scn, app->time);
@@ -759,7 +755,7 @@ void run_ui(const std::shared_ptr<app_state>& app) {
     if (app->scn->lights.empty()) app->eyelight = true;
 
     // init widget
-    init_widgets(win, app->widgets_width, true, true);
+    init_widgets(win);
 
     // init gl data
     init_drawscene(win);
@@ -773,12 +769,11 @@ void run_ui(const std::shared_ptr<app_state>& app) {
         last_button = mouse_button;
         glfwGetCursorPosExt(win, &mouse_pos.x, &mouse_pos.y);
         mouse_button = glfwGetMouseButtonIndexExt(win);
-        auto alt_down = glfwGetAltKeyExt(win);
         auto shift_down = glfwGetShiftKeyExt(win);
         auto widgets_active = ImGui::GetWidgetsActiveExt();
 
         // handle mouse and keyboard for navigation
-        if (mouse_button && alt_down && !widgets_active) {
+        if (mouse_button && !widgets_active) {
             if (!last_button) {
                 if (app->selection.as<ygl::instance>()) {
                     auto ist = app->selection.as<ygl::instance>();
@@ -796,10 +791,11 @@ void run_ui(const std::shared_ptr<app_state>& app) {
             if (mouse_button == 2) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
             if (mouse_button == 3 || (mouse_button == 1 && shift_down))
                 pan = (mouse_pos - last_pos) / 100.0f;
-            ygl::camera_turntable(app->cam->frame.o, mouse_center,
-                app->cam->frame.z, rotate, dolly, pan);
-            app->cam->frame = ygl::lookat_frame(
-                app->cam->frame.o, mouse_center, ygl::vec3f{0, 1, 0});
+            auto cam = app->scn->cameras.at(app->camid);
+            ygl::camera_turntable(
+                cam->frame.o, mouse_center, cam->frame.z, rotate, dolly, pan);
+            cam->frame = ygl::lookat_frame(
+                cam->frame.o, mouse_center, ygl::vec3f{0, 1, 0});
         }
 
         // animation
@@ -862,11 +858,11 @@ int main(int argc, char* argv[]) {
 
     // parse command line
     CLI::App parser("views scenes inteactively", "yview");
+    parser.add_option("--camera", app->camid, "Camera index.");
     parser.add_flag("--eyelight,-c", app->eyelight, "Eyelight rendering.");
     parser.add_flag(
         "--double-sided,-D", app->double_sided, "Double-sided rendering.");
     parser.add_flag("--quiet,-q", app->quiet, "Print only errors messages");
-    parser.add_flag("--no-widgets", app->no_glwidgets, "Disable widgets");
     parser.add_option(
         "--highlights", app->highlight_filename, "Highlight filename");
     parser.add_option("--output-image,-o", app->imfilename, "Image filename");
@@ -915,7 +911,6 @@ int main(int argc, char* argv[]) {
         app->scn->cameras.push_back(
             ygl::make_bbox_camera("<view>", app->scn->bbox));
     }
-    app->cam = app->scn->cameras[0];
     ygl::add_missing_names(app->scn);
     for (auto err : ygl::validate(app->scn))
         std::cout << "warning: " << err << "\n";

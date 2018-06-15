@@ -367,7 +367,7 @@ bool is_hdr_filename(const std::string& filename) {
 }
 
 // Loads an hdr image.
-image4f load_image(const std::string& filename, float ldr_gamma) {
+image4f load_image(const std::string& filename) {
     auto ext = get_extension(filename);
     auto width = 0, height = 0;
     auto img = image4f();
@@ -411,32 +411,31 @@ image4f load_image(const std::string& filename, float ldr_gamma) {
         auto img8 = image4b{
             width, height, std::vector<vec4b>(pixels, pixels + width * height)};
         free(pixels);
-        img = gamma_to_linear(byte_to_float(img8), ldr_gamma);
+        img = byte_to_float(img8);
     }
     return img;
 }
 
 // Saves an hdr image.
-void save_image(
-    const std::string& filename, const image4f& img, float ldr_gamma) {
+void save_image(const std::string& filename, const image4f& img) {
     auto ext = get_extension(filename);
     if (ext == "png") {
-        auto ldr = float_to_byte(linear_to_gamma(img));
+        auto ldr = float_to_byte(img);
         if (!stbi_write_png(filename.c_str(), img.width(), img.height(), 4,
                 (byte*)ldr.data(), img.width() * 4))
             throw std::runtime_error("could not save image " + filename);
     } else if (ext == "jpg") {
-        auto ldr = float_to_byte(linear_to_gamma(img));
+        auto ldr = float_to_byte(img);
         if (!stbi_write_jpg(filename.c_str(), img.width(), img.height(), 4,
                 (byte*)ldr.data(), 75))
             throw std::runtime_error("could not save image " + filename);
     } else if (ext == "tga") {
-        auto ldr = float_to_byte(linear_to_gamma(img));
+        auto ldr = float_to_byte(img);
         if (!stbi_write_tga(filename.c_str(), img.width(), img.height(), 4,
                 (byte*)ldr.data()))
             throw std::runtime_error("could not save image " + filename);
     } else if (ext == "bmp") {
-        auto ldr = float_to_byte(linear_to_gamma(img));
+        auto ldr = float_to_byte(img);
         if (!stbi_write_bmp(filename.c_str(), img.width(), img.height(), 4,
                 (byte*)ldr.data()))
             throw std::runtime_error("could not save image " + filename);
@@ -458,9 +457,8 @@ void save_image(
 }
 
 // Loads an hdr image.
-image4f load_image_from_memory(
-    const byte* data, int data_size, float ldr_gamma) {
-    stbi_ldr_to_hdr_gamma(ldr_gamma);
+image4f load_image_from_memory(const byte* data, int data_size) {
+    stbi_ldr_to_hdr_gamma(1);
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = (vec4f*)stbi_loadf_from_memory(
         data, data_size, &width, &height, &ncomp, 4);
@@ -468,75 +466,6 @@ image4f load_image_from_memory(
     if (!pixels) throw std::runtime_error("could not decode image from memory");
     auto img = image4f{
         width, height, std::vector<vec4f>(pixels, pixels + width * height)};
-    delete pixels;
-    return img;
-}
-
-// Loads an hdr image.
-image4b load_image4b(const std::string& filename, float ldr_gamma) {
-    stbi_hdr_to_ldr_gamma(ldr_gamma);
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels =
-        (vec4b*)stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
-    stbi_hdr_to_ldr_gamma(2.2f);
-    if (!pixels) throw std::runtime_error("could not decode image from memory");
-    auto img = image4b{
-        width, height, std::vector<vec4b>(pixels, pixels + width * height)};
-    delete pixels;
-    return img;
-}
-
-// Saves an hdr image.
-void save_image4b(
-    const std::string& filename, const image4b& img, float ldr_gamma) {
-    auto ext = get_extension(filename);
-    if (ext == "png") {
-        if (!stbi_write_png(filename.c_str(), img.width(), img.height(), 4,
-                (byte*)img.data(), img.width() * 4))
-            throw std::runtime_error("could not save image " + filename);
-    } else if (ext == "jpg") {
-        if (!stbi_write_jpg(filename.c_str(), img.width(), img.height(), 4,
-                (byte*)img.data(), 75))
-            throw std::runtime_error("could not save image " + filename);
-    } else if (ext == "tga") {
-        if (!stbi_write_tga(filename.c_str(), img.width(), img.height(), 4,
-                (byte*)img.data()))
-            throw std::runtime_error("could not save image " + filename);
-    } else if (ext == "bmp") {
-        if (!stbi_write_bmp(filename.c_str(), img.width(), img.height(), 4,
-                (byte*)img.data()))
-            throw std::runtime_error("could not save image " + filename);
-    } else if (ext == "hdr") {
-        auto hdr = linear_to_gamma(byte_to_float(img), ldr_gamma);
-        if (!stbi_write_hdr(filename.c_str(), img.width(), img.height(), 4,
-                (float*)hdr.data()))
-            throw std::runtime_error("could not save image " + filename);
-    } else if (ext == "pfm") {
-        auto hdr = linear_to_gamma(byte_to_float(img), ldr_gamma);
-        if (!save_pfm(filename.c_str(), img.width(), img.height(), 4,
-                (float*)hdr.data()))
-            throw std::runtime_error("could not save image " + filename);
-    } else if (ext == "exr") {
-        auto hdr = linear_to_gamma(byte_to_float(img), ldr_gamma);
-        if (!SaveEXR((float*)hdr.data(), img.width(), img.height(), 4,
-                filename.c_str()))
-            throw std::runtime_error("could not save image " + filename);
-    } else {
-        throw std::runtime_error("unsupported image format " + ext);
-    }
-}
-
-// Loads an hdr image.
-image4b load_image4b_from_memory(
-    const byte* data, int data_size, float ldr_gamma) {
-    stbi_hdr_to_ldr_gamma(ldr_gamma);
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = (vec4b*)stbi_load_from_memory(
-        data, data_size, &width, &height, &ncomp, 4);
-    stbi_hdr_to_ldr_gamma(2.2f);
-    if (!pixels) throw std::runtime_error("could not decode image from memory");
-    auto img = image4b{
-        width, height, std::vector<vec4b>(pixels, pixels + width * height)};
     delete pixels;
     return img;
 }
@@ -836,6 +765,7 @@ void to_json(json& js, const texture& val) {
     if (val.path != def.path) js["path"] = val.path;
     if (val.clamp != def.clamp) js["clamp"] = val.clamp;
     if (val.scale != def.scale) js["scale"] = val.scale;
+    if (val.gamma != def.gamma) js["gamma"] = val.gamma;
     if (val.path == "") {
         if (!val.img.empty()) js["img"] = val.img;
     }
@@ -907,6 +837,7 @@ void from_json(const json& js, texture& val) {
     val.path = js.value("path", def.path);
     val.clamp = js.value("clamp", def.clamp);
     val.scale = js.value("scale", def.scale);
+    val.gamma = js.value("gamma", def.gamma);
     val.img = js.value("img", def.img);
     from_json_proc(js, val);
 }
@@ -1011,106 +942,97 @@ void to_json(json& js, const shape& val) {
 void from_json_proc(const json& js, shape& val) {
     auto type = js.value("!!type", ""s);
     if (type == "") return;
-    auto quads = std::vector<vec4i>();
+    auto shp = make_shape_data();
     if (type == "quad") {
-        make_quad(quads, val.pos, val.norm, val.texcoord,
-            js.value("!!steps", vec2i{1, 1}), js.value("!!size", vec2f{2, 2}),
-            js.value("!!uvsize", vec2f{1, 1}));
+        shp = make_quad(js.value("!!steps", vec2i{1, 1}),
+            js.value("!!size", vec2f{2, 2}), js.value("!!uvsize", vec2f{1, 1}),
+            true);
     } else if (type == "quady") {
-        make_quad(quads, val.pos, val.norm, val.texcoord,
-            js.value("!!steps", vec2i{1, 1}), js.value("!!size", vec2f{2, 2}),
-            js.value("!!uvsize", vec2f{1, 1}));
+        shp = make_quad(js.value("!!steps", vec2i{1, 1}),
+            js.value("!!size", vec2f{2, 2}), js.value("!!uvsize", vec2f{1, 1}),
+            true);
     } else if (type == "quad_stack") {
-        make_quad_stack(quads, val.pos, val.norm, val.texcoord,
-            js.value("!!steps", vec3i{1, 1, 1}),
+        shp = make_quad_stack(js.value("!!steps", vec3i{1, 1, 1}),
             js.value("!!size", vec3f{2, 2, 2}),
-            js.value("!!uvsize", vec2f{1, 1}));
+            js.value("!!uvsize", vec2f{1, 1}), true);
     } else if (type == "cube") {
-        make_cube(quads, val.pos, val.norm, val.texcoord,
-            js.value("!!steps", vec3i{1, 1, 1}),
+        shp = make_cube(js.value("!!steps", vec3i{1, 1, 1}),
             js.value("!!size", vec3f{2, 2, 2}),
-            js.value("!!uvsize", vec3f{1, 1, 1}));
+            js.value("!!uvsize", vec3f{1, 1, 1}), true);
     } else if (type == "cube_rounded") {
-        make_cube_rounded(quads, val.pos, val.norm, val.texcoord,
-            js.value("!!steps", vec3i{32, 32, 32}),
+        shp = make_cube_rounded(js.value("!!steps", vec3i{32, 32, 32}),
             js.value("!!size", vec3f{2, 2, 2}),
-            js.value("!!uvsize", vec3f{1, 1, 1}), js.value("!!radius", 0.3f));
+            js.value("!!uvsize", vec3f{1, 1, 1}), js.value("!!radius", 0.3f),
+            true);
     } else if (type == "sphere") {
-        make_sphere(quads, val.pos, val.norm, val.texcoord,
-            js.value("!!steps", vec2i{64, 32}), js.value("!!size", 2.0f),
-            js.value("!!uvsize", vec2f{1, 1}));
+        shp = make_sphere(js.value("!!steps", vec2i{64, 32}),
+            js.value("!!size", 2.0f), js.value("!!uvsize", vec2f{1, 1}), true);
     } else if (type == "sphere_cube") {
-        make_sphere_cube(quads, val.pos, val.norm, val.texcoord,
-            js.value("!!steps", 32), js.value("!!size", 2.0f),
-            js.value("!!uvsize", 1.0f));
+        shp = make_sphere_cube(js.value("!!steps", 32),
+            js.value("!!size", 2.0f), js.value("!!uvsize", 1.0f), true);
     } else if (type == "sphere_flipcap") {
-        make_sphere_flipcap(quads, val.pos, val.norm, val.texcoord,
-            js.value("!!steps", vec2i{64, 32}), js.value("!!size", 2.0f),
-            js.value("!!uvsize", vec2f{1, 1}),
-            js.value("!!zflip", vec2f{-0.75f, +0.75f}));
+        shp = make_sphere_flipcap(js.value("!!steps", vec2i{64, 32}),
+            js.value("!!size", 2.0f), js.value("!!uvsize", vec2f{1, 1}),
+            js.value("!!zflip", vec2f{-0.75f, +0.75f}), true);
     } else if (type == "disk") {
-        make_disk(quads, val.pos, val.norm, val.texcoord,
-            js.value("!!steps", vec2i{32, 16}), js.value("!!size", 2.0f),
-            js.value("!!uvsize", vec2f{1, 1}));
+        shp = make_disk(js.value("!!steps", vec2i{32, 16}),
+            js.value("!!size", 2.0f), js.value("!!uvsize", vec2f{1, 1}), true);
     } else if (type == "disk_quad") {
-        make_disk_quad(quads, val.pos, val.norm, val.texcoord,
-            js.value("!!steps", 32), js.value("!!size", 2.0f),
-            js.value("!!uvsize", 1.0f));
+        shp = make_disk_quad(js.value("!!steps", 32), js.value("!!size", 2.0f),
+            js.value("!!uvsize", 1.0f), true);
     } else if (type == "disk_bulged") {
-        make_disk_bulged(quads, val.pos, val.norm, val.texcoord,
-            js.value("!!steps", 32), js.value("!!size", 2.0f),
-            js.value("!!uvsize", 1.0f), js.value("!!height", 0.25f));
+        shp =
+            make_disk_bulged(js.value("!!steps", 32), js.value("!!size", 2.0f),
+                js.value("!!uvsize", 1.0f), js.value("!!height", 0.25f), true);
     } else if (type == "cylinder_side") {
-        make_cylinder_side(quads, val.pos, val.norm, val.texcoord,
-            js.value("!!steps", vec2i{64, 32}),
+        shp = make_cylinder_side(js.value("!!steps", vec2i{64, 32}),
             js.value("!!size", vec2f{2.0f, 2.0f}),
-            js.value("!!uvsize", vec2f{1, 1}));
+            js.value("!!uvsize", vec2f{1, 1}), true);
     } else if (type == "cylinder") {
-        make_cylinder(quads, val.pos, val.norm, val.texcoord,
-            js.value("!!steps", vec3i{64, 32, 16}),
+        shp = make_cylinder(js.value("!!steps", vec3i{64, 32, 16}),
             js.value("!!size", vec2f{2.0f, 2.0f}),
-            js.value("!!uvsize", vec3f{1, 1, 1}));
+            js.value("!!uvsize", vec3f{1, 1, 1}), true);
     } else if (type == "cylinder_rounded") {
-        make_cylinder_rounded(quads, val.pos, val.norm, val.texcoord,
-            js.value("!!steps", vec3i{64, 32, 16}),
+        shp = make_cylinder_rounded(js.value("!!steps", vec3i{64, 32, 16}),
             js.value("!!size", vec2f{2.0f, 2.0f}),
-            js.value("!!uvsize", vec3f{1, 1, 1}), js.value("!!radius", 0.15f));
+            js.value("!!uvsize", vec3f{1, 1, 1}), js.value("!!radius", 0.15f),
+            true);
     } else if (type == "sphere_geodesic") {
-        make_geodesic_sphere(val.triangles, val.pos,
-            js.value("!!tesselation", 4), js.value("!!radius", 1.0f));
+        shp = make_geodesic_sphere(
+            js.value("!!tesselation", 4), js.value("!!size", 2.0f), true);
     } else if (type == "floor") {
-        make_quad(quads, val.pos, val.norm, val.texcoord,
-            js.value("!!steps", vec2i{1, 1}), js.value("!!size", vec2f{40, 40}),
-            js.value("!!uvsize", vec2f{20, 20}));
-        for (auto& p : val.pos) p = {p.x, p.z, p.y};
-        for (auto& n : val.norm) n = {n.x, n.z, n.y};
+        shp = make_floor(js.value("!!steps", vec2i{1, 1}),
+            js.value("!!size", vec2f{40, 40}),
+            js.value("!!uvsize", vec2f{20, 20}), true);
     } else if (type == "matball") {
-        make_sphere(quads, val.pos, val.norm, val.texcoord,
-            js.value("!!steps", vec2i{64, 32}), js.value("!!size", 2.0f),
-            js.value("!!uvsize", vec2f{1, 1}));
+        shp = make_sphere(js.value("!!steps", vec2i{64, 32}),
+            js.value("!!size", 2.0f), js.value("!!uvsize", vec2f{1, 1}), true);
     } else if (type == "hairball") {
-        auto pos1 = std::vector<vec3f>();
-        auto norm1 = std::vector<vec3f>();
-        auto texcoord1 = std::vector<vec2f>();
-        auto quads1 = std::vector<vec4i>();
-        make_sphere_cube(quads1, pos1, norm1, texcoord1, 32,
-            js.value("!!size", 2.0f) * 0.8f, 1);
-        auto triangles1 = convert_quads_to_triangles(quads1);
-        make_hair(val.lines, val.pos, val.norm, val.texcoord, val.radius,
-            js.value("!!steps", vec2i{4, 65536}), triangles1, pos1, norm1,
-            texcoord1, js.value("!!length", vec2f{0.2f, 0.2f}),
+        auto base =
+            make_sphere_cube(32, js.value("!!size", 2.0f) * 0.8f, 1, true);
+        shp = make_hair(js.value("!!steps", vec2i{4, 65536}), base.triangles,
+            base.pos, base.norm, base.texcoord,
+            js.value("!!length", vec2f{0.2f, 0.2f}),
             js.value("!!radius", vec2f{0.001f, 0.001f}),
             js.value("!!noise", vec2f{0, 0}), js.value("!!clump", vec2f{0, 0}));
+    } else if (type == "hairball_interior") {
+        shp = make_sphere_cube(32, js.value("!!size", 2.0f) * 0.8f, 1, true);
     } else if (type == "suzanne") {
-        make_suzanne(quads, val.pos);
+        shp = make_suzanne(js.value("!!size", 2.0f), true);
     } else {
         throw std::runtime_error("unknown shape type " + type);
     }
     if (js.value("!!flipyz", false)) {
-        for (auto& p : val.pos) p = {p.x, p.z, p.y};
-        for (auto& n : val.norm) n = {n.x, n.z, n.y};
+        for (auto& p : shp.pos) p = {p.x, p.z, p.y};
+        for (auto& n : shp.norm) n = {n.x, n.z, n.y};
     }
-    if (!quads.empty()) { val.triangles = convert_quads_to_triangles(quads); }
+    val.points = shp.points;
+    val.lines = shp.lines;
+    val.triangles = shp.triangles;
+    val.pos = shp.pos;
+    val.norm = shp.norm;
+    val.texcoord = shp.texcoord;
+    val.radius = shp.radius;
     if (val.path == "") val.path = "meshes/" + val.name + ".ply";
 }
 
@@ -1157,30 +1079,28 @@ void to_json(json& js, const subdiv& val) {
 void from_json_proc(const json& js, subdiv& val) {
     auto type = js.value("!!type", ""s);
     if (type == "") return;
-    auto quads_norm = std::vector<vec4i>();
-    auto norm = std::vector<vec3f>();
-    if (type == "quad") {
-        std::shared_ptr<subdiv> make_quad_subdiv(const std::string& name,
-            int tesselation = 0, int subdivision = 4, float size = 2);
-    } else if (type == "cube") {
-        make_fvcube(val.quads_pos, val.pos, quads_norm, norm,
-            val.quads_texcoord, val.texcoord,
-            js.value("!!steps", vec3i{1, 1, 1}),
+    auto shp = make_shape_data();
+    if (type == "cube") {
+        shp = make_fvcube(js.value("!!steps", vec3i{1, 1, 1}),
             js.value("!!size", vec3f{2, 2, 2}),
             js.value("!!uvsize", vec3f{1, 1, 1}));
     } else if (type == "cube_open") {
-        make_fvcube(val.quads_pos, val.pos, quads_norm, norm,
-            val.quads_texcoord, val.texcoord,
-            js.value("!!steps", vec3i{1, 1, 1}),
+        shp = make_fvcube(js.value("!!steps", vec3i{1, 1, 1}),
             js.value("!!size", vec3f{2, 2, 2}),
             js.value("!!uvsize", vec3f{1, 1, 1}));
-        val.quads_pos.pop_back();
-        val.quads_texcoord.pop_back();
+        shp.quads_pos.pop_back();
+        shp.quads_norm.pop_back();
+        shp.quads_texcoord.pop_back();
     } else if (type == "suzanne") {
-        make_suzanne(val.quads_pos, val.pos);
+        shp = make_suzanne(js.value("!!size", 2.0f), false);
+        std::swap(shp.quads_pos, shp.quads);
     } else {
         throw std::runtime_error("unknown shape type " + type);
     }
+    val.quads_pos = shp.quads_pos;
+    val.pos = shp.pos;
+    val.quads_texcoord = shp.quads_texcoord;
+    val.texcoord = shp.texcoord;
     if (val.path == "") val.path = "meshes/" + val.name + ".obj";
 }
 
@@ -1600,29 +1520,12 @@ std::shared_ptr<scene> load_json_scene(
     // skip textures
     if (!load_textures) return scn;
 
-    // set gamma
-    auto ldr_gamma =
-        std::unordered_map<std::shared_ptr<texture>, float>{{nullptr, 1.0f}};
-    for (auto txt : scn->textures) ldr_gamma[txt] = 2.2f;
-    for (auto mat : scn->materials) {
-        ldr_gamma[mat->ke_txt] = 2.2f;
-        ldr_gamma[mat->kd_txt] = 2.2f;
-        ldr_gamma[mat->ks_txt] = 2.2f;
-        ldr_gamma[mat->kt_txt] = 2.2f;
-        ldr_gamma[mat->rs_txt] = 1;
-        ldr_gamma[mat->op_txt] = 1;
-        ldr_gamma[mat->norm_txt] = 1;
-        ldr_gamma[mat->disp_txt] = 1;
-        ldr_gamma[mat->bump_txt] = 1;
-    }
-    for (auto env : scn->environments) { ldr_gamma[env->ke_txt] = 2.2f; }
-
     // load images
     for (auto txt : scn->textures) {
         if (txt->path == "" || !txt->img.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         try {
-            txt->img = load_image(filename, ldr_gamma.at(txt));
+            txt->img = load_image(filename);
         } catch (const std::exception&) {
             if (skip_missing) continue;
             throw;
@@ -1656,29 +1559,12 @@ void save_json_scene(const std::string& filename,
     // skip textures
     if (!save_textures) return;
 
-    // set gamma
-    auto ldr_gamma =
-        std::unordered_map<std::shared_ptr<texture>, float>{{nullptr, 1.0f}};
-    for (auto txt : scn->textures) ldr_gamma[txt] = 2.2f;
-    for (auto mat : scn->materials) {
-        ldr_gamma[mat->ke_txt] = 2.2f;
-        ldr_gamma[mat->kd_txt] = 2.2f;
-        ldr_gamma[mat->ks_txt] = 2.2f;
-        ldr_gamma[mat->kt_txt] = 2.2f;
-        ldr_gamma[mat->rs_txt] = 1;
-        ldr_gamma[mat->op_txt] = 1;
-        ldr_gamma[mat->norm_txt] = 1;
-        ldr_gamma[mat->disp_txt] = 1;
-        ldr_gamma[mat->bump_txt] = 1;
-    }
-    for (auto env : scn->environments) { ldr_gamma[env->ke_txt] = 2.2f; }
-
     // save images
     for (auto txt : scn->textures) {
         if (txt->img.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         try {
-            save_image(filename, txt->img, ldr_gamma.at(txt));
+            save_image(filename, txt->img);
         } catch (std::exception&) {
             if (skip_missing) continue;
             throw;
@@ -1930,7 +1816,7 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
                 throw std::runtime_error("cannot open filename " + mtlpath);
 
             // Parse texture options and name
-            auto add_texture = [scn, &tmap](std::stringstream& ss) {
+            auto add_texture = [scn, &tmap](std::stringstream& ss, bool srgb) {
                 // get tokens
                 auto tokens = std::vector<std::string>();
                 while (true) {
@@ -1949,6 +1835,7 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
                 auto txt = std::make_shared<texture>();
                 txt->name = path;
                 txt->path = path;
+                if (srgb && !is_hdr_filename(path)) txt->gamma = 2.2f;
                 scn->textures.push_back(txt);
                 tmap[path] = txt;
 
@@ -2019,25 +1906,25 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
                 } else if (cmd == "Pr" || cmd == "rs") {
                     ss >> mat->rs;
                 } else if (cmd == "map_Ke") {
-                    mat->ke_txt = add_texture(ss);
+                    mat->ke_txt = add_texture(ss, true);
                 } else if (cmd == "map_Kd") {
-                    mat->kd_txt = add_texture(ss);
+                    mat->kd_txt = add_texture(ss, true);
                 } else if (cmd == "map_Ks") {
-                    mat->ks_txt = add_texture(ss);
+                    mat->ks_txt = add_texture(ss, true);
                 } else if (cmd == "map_Tr") {
-                    mat->kt_txt = add_texture(ss);
+                    mat->kt_txt = add_texture(ss, true);
                 } else if (cmd == "map_d" || cmd == "map_Tr") {
-                    mat->op_txt = add_texture(ss);
+                    mat->op_txt = add_texture(ss, false);
                 } else if (cmd == "map_Pr" || cmd == "map_rs") {
-                    mat->rs_txt = add_texture(ss);
+                    mat->rs_txt = add_texture(ss, false);
                 } else if (cmd == "map_occ" || cmd == "occ") {
-                    mat->occ_txt = add_texture(ss);
+                    mat->occ_txt = add_texture(ss, false);
                 } else if (cmd == "map_bump" || cmd == "bump") {
-                    mat->bump_txt = add_texture(ss);
+                    mat->bump_txt = add_texture(ss, false);
                 } else if (cmd == "map_disp" || cmd == "disp") {
-                    mat->disp_txt = add_texture(ss);
+                    mat->disp_txt = add_texture(ss, false);
                 } else if (cmd == "map_norm" || cmd == "norm") {
-                    mat->norm_txt = add_texture(ss);
+                    mat->norm_txt = add_texture(ss, false);
                 }
             }
 
@@ -2101,29 +1988,12 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
     // skip if needed
     if (!load_textures) return scn;
 
-    // set gamma
-    auto ldr_gamma =
-        std::unordered_map<std::shared_ptr<texture>, float>{{nullptr, 1.0f}};
-    for (auto txt : scn->textures) ldr_gamma[txt] = 2.2f;
-    for (auto mat : scn->materials) {
-        ldr_gamma[mat->ke_txt] = 2.2f;
-        ldr_gamma[mat->kd_txt] = 2.2f;
-        ldr_gamma[mat->ks_txt] = 2.2f;
-        ldr_gamma[mat->kt_txt] = 2.2f;
-        ldr_gamma[mat->rs_txt] = 1;
-        ldr_gamma[mat->op_txt] = 1;
-        ldr_gamma[mat->norm_txt] = 1;
-        ldr_gamma[mat->disp_txt] = 1;
-        ldr_gamma[mat->bump_txt] = 1;
-    }
-    for (auto env : scn->environments) { ldr_gamma[env->ke_txt] = 2.2f; }
-
     // load images
     auto dirname = get_dirname(filename);
     for (auto txt : scn->textures) {
         auto filename = normalize_path(dirname + "/" + txt->path);
         try {
-            txt->img = load_image(filename, ldr_gamma.at(txt));
+            txt->img = load_image(filename);
         } catch (std::exception&) {
             if (skip_missing) continue;
             throw;
@@ -2280,30 +2150,13 @@ void save_obj_scene(const std::string& filename,
     // skip textures if needed
     if (!save_textures) return;
 
-    // set gamma
-    auto ldr_gamma =
-        std::unordered_map<std::shared_ptr<texture>, float>{{nullptr, 1.0f}};
-    for (auto txt : scn->textures) ldr_gamma[txt] = 2.2f;
-    for (auto mat : scn->materials) {
-        ldr_gamma[mat->ke_txt] = 2.2f;
-        ldr_gamma[mat->kd_txt] = 2.2f;
-        ldr_gamma[mat->ks_txt] = 2.2f;
-        ldr_gamma[mat->kt_txt] = 2.2f;
-        ldr_gamma[mat->rs_txt] = 1;
-        ldr_gamma[mat->op_txt] = 1;
-        ldr_gamma[mat->norm_txt] = 1;
-        ldr_gamma[mat->disp_txt] = 1;
-        ldr_gamma[mat->bump_txt] = 1;
-    }
-    for (auto env : scn->environments) { ldr_gamma[env->ke_txt] = 2.2f; }
-
     // save images
     auto dirname = get_dirname(filename);
     for (auto txt : scn->textures) {
         if (txt->img.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         try {
-            save_image(filename, txt->img, ldr_gamma.at(txt));
+            save_image(filename, txt->img);
         } catch (std::exception&) {
             if (skip_missing) continue;
             throw;
@@ -2382,7 +2235,7 @@ std::shared_ptr<scene> load_gltf_scene(
     }
 
     // add a texture
-    auto add_texture = [scn, &gltf](const json& ginfo) {
+    auto add_texture = [scn, &gltf](const json& ginfo, bool srgb) {
         if (!gltf.count("images") || !gltf.count("textures"))
             return (std::shared_ptr<texture>)nullptr;
         if (ginfo.is_null() || ginfo.empty())
@@ -2399,6 +2252,7 @@ std::shared_ptr<scene> load_gltf_scene(
         txt->clamp = gsmp.value("wrapS", ""s) == "ClampToEdge" ||
                      gsmp.value("wrapT", ""s) == "ClampToEdge";
         txt->scale = gsmp.value("scale", 1.0f) * gsmp.value("strength", 1.0f);
+        if (!is_hdr_filename(txt->path) && srgb) txt->gamma = 2.2f;
         return txt;
     };
 
@@ -2410,7 +2264,7 @@ std::shared_ptr<scene> load_gltf_scene(
             mat->name = gmat.value("name", ""s);
             mat->ke = gmat.value("emissiveFactor", zero3f);
             if (gmat.count("emissiveTexture"))
-                mat->ke_txt = add_texture(gmat.at("emissiveTexture"));
+                mat->ke_txt = add_texture(gmat.at("emissiveTexture"), true);
             if (gmat.count("extensions") &&
                 gmat.at("extensions")
                     .count("KHR_materials_pbrSpecularGlossiness")) {
@@ -2424,10 +2278,10 @@ std::shared_ptr<scene> load_gltf_scene(
                 mat->ks = gsg.value("specularFactor", vec3f{1, 1, 1});
                 mat->rs = 1 - gsg.value("glossinessFactor", 1.0f);
                 if (gsg.count("diffuseTexture"))
-                    mat->kd_txt = add_texture(gsg.at("diffuseTexture"));
+                    mat->kd_txt = add_texture(gsg.at("diffuseTexture"), true);
                 if (gsg.count("specularGlossinessTexture"))
                     mat->ks_txt =
-                        add_texture(gsg.at("specularGlossinessTexture"));
+                        add_texture(gsg.at("specularGlossinessTexture"), true);
                 mat->rs_txt = mat->ks_txt;
             } else if (gmat.count("pbrMetallicRoughness")) {
                 mat->base_metallic = true;
@@ -2440,16 +2294,16 @@ std::shared_ptr<scene> load_gltf_scene(
                 mat->ks = {km, km, km};
                 mat->rs = gmr.value("roughnessFactor", 1.0f);
                 if (gmr.count("baseColorTexture"))
-                    mat->kd_txt = add_texture(gmr.at("baseColorTexture"));
+                    mat->kd_txt = add_texture(gmr.at("baseColorTexture"), true);
                 if (gmr.count("metallicRoughnessTexture"))
                     mat->ks_txt =
-                        add_texture(gmr.at("metallicRoughnessTexture"));
+                        add_texture(gmr.at("metallicRoughnessTexture"), false);
                 mat->rs_txt = mat->ks_txt;
             }
             if (gmat.count("occlusionTexture"))
-                mat->occ_txt = add_texture(gmat.at("occlusionTexture"));
+                mat->occ_txt = add_texture(gmat.at("occlusionTexture"), false);
             if (gmat.count("normalTexture"))
-                mat->norm_txt = add_texture(gmat.at("normalTexture"));
+                mat->norm_txt = add_texture(gmat.at("normalTexture"), false);
             mat->double_sided = gmat.value("doubleSided", false);
             scn->materials.push_back(mat);
         }
@@ -2869,28 +2723,11 @@ std::shared_ptr<scene> load_gltf_scene(
     // skip textures if needed
     if (!load_textures) return scn;
 
-    // set gamma
-    auto ldr_gamma =
-        std::unordered_map<std::shared_ptr<texture>, float>{{nullptr, 1.0f}};
-    for (auto txt : scn->textures) ldr_gamma[txt] = 2.2f;
-    for (auto mat : scn->materials) {
-        ldr_gamma[mat->ke_txt] = 2.2f;
-        ldr_gamma[mat->kd_txt] = 2.2f;
-        ldr_gamma[mat->ks_txt] = (mat->base_metallic) ? 1.0f : 2.2f;
-        ldr_gamma[mat->kt_txt] = 2.2f;
-        ldr_gamma[mat->rs_txt] = 1;
-        ldr_gamma[mat->op_txt] = 1;
-        ldr_gamma[mat->norm_txt] = 1;
-        ldr_gamma[mat->disp_txt] = 1;
-        ldr_gamma[mat->bump_txt] = 1;
-    }
-    for (auto env : scn->environments) { ldr_gamma[env->ke_txt] = 2.2f; }
-
     // load images
     for (auto txt : scn->textures) {
         auto filename = normalize_path(dirname + "/" + txt->path);
         try {
-            txt->img = load_image(filename, ldr_gamma.at(txt));
+            txt->img = load_image(filename);
         } catch (const std::exception&) {
             if (skip_missing) continue;
             throw;
@@ -3133,29 +2970,12 @@ void save_gltf_scene(const std::string& filename,
     // skip textures if necessary
     if (!save_textures) return;
 
-    // set gamma
-    auto ldr_gamma =
-        std::unordered_map<std::shared_ptr<texture>, float>{{nullptr, 1.0f}};
-    for (auto txt : scn->textures) ldr_gamma[txt] = 2.2f;
-    for (auto mat : scn->materials) {
-        ldr_gamma[mat->ke_txt] = 2.2f;
-        ldr_gamma[mat->kd_txt] = 2.2f;
-        ldr_gamma[mat->ks_txt] = (!mat->base_metallic) ? 2.2f : 1.0f;
-        ldr_gamma[mat->kt_txt] = 2.2f;
-        ldr_gamma[mat->rs_txt] = 1;
-        ldr_gamma[mat->op_txt] = 1;
-        ldr_gamma[mat->norm_txt] = 1;
-        ldr_gamma[mat->disp_txt] = 1;
-        ldr_gamma[mat->bump_txt] = 1;
-    }
-    for (auto env : scn->environments) { ldr_gamma[env->ke_txt] = 2.2f; }
-
     // save images
     for (auto txt : scn->textures) {
         if (txt->img.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         try {
-            save_image(filename, txt->img, ldr_gamma.at(txt));
+            save_image(filename, txt->img);
         } catch (std::exception&) {
             if (skip_missing) continue;
             throw;

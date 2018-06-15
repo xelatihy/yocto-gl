@@ -1,12 +1,5 @@
 {
-    "python.pythonPath": "/usr/local/bin/python3",
     "C_Cpp.clang_format_path": "/usr/local/bin/clang-format",
-    "cmake.configureSettings": {
-        "YOCTO_GL": true,
-        "YOCTO_EXPERIMENTAL": true,
-        "YOCTO_TOOLS": true
-    },
-    "cmake.buildDirectory": "${workspaceRoot}/build/vscode",
     "files.associations": {
         "__config": "cpp",
         "__nullptr": "cpp",
@@ -60,4 +53,5 @@
         "cassert": "cpp",
         "thread": "cpp"
     },
+    "C_Cpp.intelliSenseEngineFallback": "Disabled",
 } 

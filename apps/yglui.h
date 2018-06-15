@@ -45,8 +45,6 @@
 #include <GLFW/glfw3.h>
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_glfw_gl3.h"
-unsigned int imgui_extrafont_compressed_size();
-const unsigned int* imgui_extrafont_compressed_data();
 
 #include <map>
 
@@ -146,46 +144,26 @@ inline GLFWwindow* make_window(int width, int height, const std::string& title,
 }
 
 // Initialize ImGui widgets
-inline void init_widgets(
-    GLFWwindow* win, int width, bool light_style, bool alt_font) {
+inline void init_widgets(GLFWwindow* win) {
     ImGui::CreateContext();
     ImGui_ImplGlfwGL3_Init(win, false);
     ImGuiIO& io = ImGui::GetIO();
     // io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard
     // Controls io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable
-    // Gamepad Controls
-    ImGui::GetStyle().WindowRounding = 0;
     io.IniFilename = nullptr;
-    auto size = ygl::zero2i;
-    glfwGetWindowSize(win, &size.x, &size.y);
-    ImGui::SetNextWindowPos({(float)size.x - width, 0});
-    ImGui::SetNextWindowSize({(float)width, (float)size.y});
-    ImGui::SetNextWindowCollapsed(false);
-    if (light_style)
-        ImGui::StyleColorsLight();
-    else
-        ImGui::StyleColorsDark();
-    if (alt_font) {
-        io.Fonts->AddFontFromMemoryCompressedTTF(
-            imgui_extrafont_compressed_data(),
-            imgui_extrafont_compressed_size(), 16);
-    } else {
-        io.Fonts->AddFontDefault();
-    }
 }
 
 // Begin draw widget
-inline bool begin_widgets_frame(GLFWwindow* win, const char* title, int width) {
+inline bool begin_widgets_frame(GLFWwindow* win, const char* title) {
+    static auto first_time = true;
     ImGui_ImplGlfwGL3_NewFrame();
-    auto size = ygl::zero2i;
-    glfwGetWindowSize(win, &size.x, &size.y);
-    ImGui::SetNextWindowPos({(float)size.x - width, 0});
-    ImGui::SetNextWindowSize({(float)width, (float)size.y});
-    ImGui::SetNextWindowCollapsed(false);
-    ImGui::Begin(title, nullptr,
-        ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove |
-            ImGuiWindowFlags_NoResize);
-    return true;
+    if(first_time) {
+        ImGui::SetNextWindowPos({0,0});
+        ImGui::SetNextWindowSize({320,0});
+        ImGui::SetNextWindowCollapsed(true);
+        first_time = false;
+    }
+    return ImGui::Begin(title);
 }
 
 // End draw widget
@@ -244,7 +222,12 @@ inline bool GetWidgetsActiveExt() {
 // Input text
 inline bool InputText(const char* label, std::string* str) {
     char buf[4096];
-    return InputText(label, buf, sizeof(buf));
+    auto num = 0;
+    for(auto c : *str) buf[num++] = c;
+    buf[num] = 0;
+    auto edited = InputText(label, buf, sizeof(buf));
+    if(edited) *str = buf;
+    return edited;
 }
 
 // Start selectable tree node
@@ -278,6 +261,22 @@ inline void SelectableTreeLeaf(
     if (selection == content) node_flags |= ImGuiTreeNodeFlags_Selected;
     ImGui::TreeNodeEx(content, node_flags, "%s", lbl);
     if (ImGui::IsItemClicked()) selection = content;
+}
+
+// Combo widget.
+inline bool Combo(const char* lbl, int* idx_, int nitems,
+    const std::function<const char*(int)>& label) {
+    auto& idx = *idx_;
+    if (!ImGui::BeginCombo(lbl, label(idx))) return false;
+    auto old_idx = idx;
+    for (auto i = 0; i < nitems; i++) {
+        ImGui::PushID(i);
+        if (ImGui::Selectable(label(i), idx == i)) idx = i;
+        if (idx == i) ImGui::SetItemDefaultFocus();
+        ImGui::PopID();
+    }
+    ImGui::EndCombo();
+    return idx != old_idx;
 }
 
 // Combo widget.
@@ -525,18 +524,18 @@ inline bool draw_glwidgets_scene_inspector(
     const std::shared_ptr<camera>& val, const std::shared_ptr<scene>& scn) {
     auto edited = 0;
     edited += ImGui::InputText("name", &val->name);
-    edited += ImGui::DragFloat3("frame.x", &val->frame.x.x, -1, 1);
-    edited += ImGui::DragFloat3("frame.y", &val->frame.y.x, -1, 1);
-    edited += ImGui::DragFloat3("frame.z", &val->frame.z.x, -1, 1);
-    edited += ImGui::DragFloat3("frame.o", &val->frame.o.x, -10, 10);
+    edited += ImGui::SliderFloat3("frame.x", &val->frame.x.x, -1, 1);
+    edited += ImGui::SliderFloat3("frame.y", &val->frame.y.x, -1, 1);
+    edited += ImGui::SliderFloat3("frame.z", &val->frame.z.x, -1, 1);
+    edited += ImGui::SliderFloat3("frame.o", &val->frame.o.x, -10, 10);
     edited += ImGui::Checkbox("ortho", &val->ortho);
-    edited += ImGui::DragFloat("width", &val->width, 0.01f, 1);
-    edited += ImGui::DragFloat("height", &val->height, 0.01f, 1);
-    edited += ImGui::DragFloat("focal", &val->focal, 0.01f, 1);
-    edited += ImGui::DragFloat("focus", &val->focus, 0.01f, 1000);
-    edited += ImGui::DragFloat("aperture", &val->aperture, 0, 5);
-    edited += ImGui::DragFloat("near", &val->near, 0.01f, 10);
-    edited += ImGui::DragFloat("far", &val->far, 10, 10000);
+    edited += ImGui::SliderFloat("width", &val->width, 0.01f, 1);
+    edited += ImGui::SliderFloat("height", &val->height, 0.01f, 1);
+    edited += ImGui::SliderFloat("focal", &val->focal, 0.01f, 1);
+    edited += ImGui::SliderFloat("focus", &val->focus, 0.01f, 1000);
+    edited += ImGui::SliderFloat("aperture", &val->aperture, 0, 5);
+    edited += ImGui::SliderFloat("near", &val->near, 0.01f, 10);
+    edited += ImGui::SliderFloat("far", &val->far, 10, 10000);
     return edited;
 }
 
@@ -547,7 +546,9 @@ inline bool draw_glwidgets_scene_inspector(
     edited += ImGui::InputText("name", &val->name);
     edited += ImGui::InputText("path", &val->path);
     edited += ImGui::Checkbox("clamp", &val->clamp);
-    edited += ImGui::DragFloat("scale", &val->scale);
+    edited += ImGui::SliderFloat("scale", &val->scale, 0, 1);
+    edited += ImGui::SliderFloat("gamma", &val->gamma, 1, 2.2f);
+    ImGui::LabelText("img", "%d x %d", val->img.width(), val->img.height());
     return edited;
 }
 
@@ -559,8 +560,8 @@ inline bool draw_glwidgets_scene_inspector(
     edited += ImGui::ColorEdit3("kd", &val->kd.x);
     edited += ImGui::ColorEdit3("ks", &val->ks.x);
     edited += ImGui::ColorEdit3("kt", &val->kt.x);
-    edited += ImGui::DragFloat("rs", &val->rs);
-    edited += ImGui::DragFloat("op", &val->op);
+    edited += ImGui::SliderFloat("rs", &val->rs, 0, 1);
+    edited += ImGui::SliderFloat("op", &val->op, 0, 1);
     edited += ImGui::Checkbox("fresnel", &val->fresnel);
     ImGui::SameLine();
     edited += ImGui::Checkbox("refract", &val->refract);
@@ -598,7 +599,7 @@ inline bool draw_glwidgets_scene_inspector(
     const std::shared_ptr<subdiv>& val, const std::shared_ptr<scene>& scn) {
     auto edited = 0;
     edited += ImGui::InputText("name", &val->name);
-    edited += ImGui::DragInt("level", &val->level, 0, 10);
+    edited += ImGui::SliderInt("level", &val->level, 0, 10);
     edited += ImGui::Checkbox("catmull-clark", &val->catmull_clark);
     ImGui::SameLine();
     edited += ImGui::Checkbox("compute normals", &val->compute_normals);
@@ -615,10 +616,10 @@ inline bool draw_glwidgets_scene_inspector(
     const std::shared_ptr<instance>& val, const std::shared_ptr<scene>& scn) {
     auto edited = 0;
     edited += ImGui::InputText("name", &val->name);
-    edited += ImGui::DragFloat3("frame.x", &val->frame.x.x, -1, 1);
-    edited += ImGui::DragFloat3("frame.y", &val->frame.y.x, -1, 1);
-    edited += ImGui::DragFloat3("frame.z", &val->frame.z.x, -1, 1);
-    edited += ImGui::DragFloat3("frame.o", &val->frame.o.x, -10, 10);
+    edited += ImGui::SliderFloat3("frame.x", &val->frame.x.x, -1, 1);
+    edited += ImGui::SliderFloat3("frame.y", &val->frame.y.x, -1, 1);
+    edited += ImGui::SliderFloat3("frame.z", &val->frame.z.x, -1, 1);
+    edited += ImGui::SliderFloat3("frame.o", &val->frame.o.x, -10, 10);
     edited += ImGui::Combo("shp", &val->shp, scn->shapes, true);
     edited += ImGui::Combo("sbd", &val->sbd, scn->subdivs, true);
     edited += ImGui::Combo("mat", &val->mat, scn->materials, true);
@@ -630,10 +631,10 @@ inline bool draw_glwidgets_scene_inspector(
     const std::shared_ptr<scene>& scn) {
     auto edited = 0;
     edited += ImGui::InputText("name", &val->name);
-    edited += ImGui::DragFloat3("frame.x", &val->frame.x.x, -1, 1);
-    edited += ImGui::DragFloat3("frame.y", &val->frame.y.x, -1, 1);
-    edited += ImGui::DragFloat3("frame.z", &val->frame.z.x, -1, 1);
-    edited += ImGui::DragFloat3("frame.o", &val->frame.o.x, -10, 10);
+    edited += ImGui::SliderFloat3("frame.x", &val->frame.x.x, -1, 1);
+    edited += ImGui::SliderFloat3("frame.y", &val->frame.y.x, -1, 1);
+    edited += ImGui::SliderFloat3("frame.z", &val->frame.z.x, -1, 1);
+    edited += ImGui::SliderFloat3("frame.o", &val->frame.o.x, -10, 10);
     edited += ImGui::ColorEdit4("ke", &val->ke.x);  // TODO: HDR
     edited += ImGui::Combo("ke txt", &val->ke_txt, scn->textures, true);
     return edited;
@@ -644,13 +645,13 @@ inline bool draw_glwidgets_scene_inspector(
     auto edited = 0;
     edited += ImGui::InputText("name", &val->name);
     edited += ImGui::Combo("parent", &val->parent, scn->nodes, true);
-    edited += ImGui::DragFloat3("frame.x", &val->frame.x.x, -1, 1);
-    edited += ImGui::DragFloat3("frame.y", &val->frame.y.x, -1, 1);
-    edited += ImGui::DragFloat3("frame.z", &val->frame.z.x, -1, 1);
-    edited += ImGui::DragFloat3("frame.o", &val->frame.o.x, -10, 10);
-    edited += ImGui::DragFloat3("translation", &val->translation.x);
-    edited += ImGui::DragFloat4("rotation", &val->rotation.x, -1, 1);
-    edited += ImGui::DragFloat3("scale", &val->scale.x, 0, 10);
+    edited += ImGui::SliderFloat3("frame.x", &val->frame.x.x, -1, 1);
+    edited += ImGui::SliderFloat3("frame.y", &val->frame.y.x, -1, 1);
+    edited += ImGui::SliderFloat3("frame.z", &val->frame.z.x, -1, 1);
+    edited += ImGui::SliderFloat3("frame.o", &val->frame.o.x, -10, 10);
+    edited += ImGui::SliderFloat3("translation", &val->translation.x, -10, 10);
+    edited += ImGui::SliderFloat4("rotation", &val->rotation.x, -1, 1);
+    edited += ImGui::SliderFloat3("scale", &val->scale.x, 0, 10);
     edited += ImGui::Combo("cam", &val->cam, scn->cameras, true);
     edited += ImGui::Combo("ist", &val->ist, scn->instances, true);
     edited += ImGui::Combo("env", &val->env, scn->environments, true);

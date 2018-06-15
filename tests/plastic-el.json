@@ -36,6 +36,7 @@
                 "kd_txt": {
                     "name": "floor",
                     "path": "textures/floor.png",
+                    "gamma": 2.2,
                     "!!type": "grid"
                 }
             }
