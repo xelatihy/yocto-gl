@@ -5,16 +5,12 @@ Please consider this to be just development notes and not any real planning.
 
 ## Library
 
-- cleanup yitrace cmdline 
-- cleanup yview cmdline 
-- simpler imgui with open
-    - check better imgui examples
+- simpler image drawing code
 - no gl wrapper
     - back to gl2
         - imview
         - yitrace
         - yview with vertex arrays
-- simpler image drawing code
 - quad
     - verify interpolation for degenerate
     - verify if we can write interpolation as two triangles
@@ -22,6 +18,8 @@ Please consider this to be just development notes and not any real planning.
 - simplfy shape
     - catmull-clark takes boundary
     - simplify split code for shapes, going back to before Yocto
+- simpler imgui with open
+    - check better imgui examples
 
 ## Bugs
 

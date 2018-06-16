@@ -67,6 +67,7 @@ struct app_state {
 
     // viewing properties
     uint gl_prog = 0, gl_vbo = 0, gl_ebo = 0;
+    bool widgets_open = false;
     ygl::frame2f imframe = ygl::identity_frame2f;
     bool zoom_to_fit = false;
     ygl::vec4f background = {0.8f, 0.8f, 0.8f, 0};
@@ -134,7 +135,7 @@ void update_display_image(const std::shared_ptr<gimage>& img) {
 
 void draw_widgets(GLFWwindow* win) {
     auto app = (app_state*)glfwGetWindowUserPointer(win);
-    if (begin_widgets_frame(win, "yimview")) {
+    if (begin_widgets_frame(win, "yimview", &app->widgets_open)) {
         ImGui::Combo("image", &app->img, app->imgs, false);
         ImGui::LabelText("filename", "%s", app->img->filename.c_str());
         ImGui::LabelText(
