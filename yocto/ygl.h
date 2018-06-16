@@ -2150,60 +2150,27 @@ std::pair<std::vector<vec3f>, std::vector<vec3f>> compute_matrix_skinning(
     const std::vector<vec4f>& weights, const std::vector<vec4i>& joints,
     const std::vector<mat4f>& xforms);
 
-// Dictionary of edges used in subdivision.
-struct edge_map {
-    // constructors
-    edge_map() {}
-    edge_map(const std::vector<vec3i>& triangles) {
-        for (auto& t : triangles) {
-            insert({t.x, t.y});
-            insert({t.y, t.z});
-            insert({t.z, t.x});
-        }
-    }
-    edge_map(const std::vector<vec4i>& quads) {
-        for (auto& q : quads) {
-            insert({q.x, q.y});
-            insert({q.y, q.z});
-            if (q.z != q.w) insert({q.z, q.w});
-            insert({q.w, q.x});
-        }
-    }
+// Dictionary to store edge information.
+using edge_map = std::unordered_map<vec2i, vec2i>;
 
-    // insert an edge and return its index
-    int insert(const vec2i& e) {
-        auto es = vec2i{min(e.x, e.y), max(e.x, e.y)};
-        auto it = emap.find(es);
-        if (it == emap.end()) {
-            auto idx = (int)edges.size();
-            emap.insert(it, {es, idx});
-            edges.push_back(es);
-            return idx;
-        } else {
-            return it->second;
-        }
-    }
-
-    // lookup an edge index
-    int edge_index(const vec2i& e) {
-        auto es = vec2i{min(e.x, e.y), max(e.x, e.y)};
-        return emap.at(es);
-    }
-
-    // get all edges sorted by insertion order
-    const std::vector<vec2i>& get_edges() const { return edges; }
-
-   private:
-    std::unordered_map<vec2i, int> emap;
-    std::vector<vec2i> edges;
-};
+// Initialize an edge map with elements.
+edge_map make_edge_map(const std::vector<vec3i>& triangles);
+edge_map make_edge_map(const std::vector<vec4i>& quads);
+// Insert an edge and return its index
+int insert_edge(edge_map& emap, const vec2i& edge);
+// Get the edge index / insertion count
+int get_edge_index(const edge_map& emap, const vec2i& edge);
+int get_edge_count(const edge_map& emap, const vec2i& edge);
+// Get list of edges / boundary edges
+std::vector<vec2i> get_edges(const edge_map& emap);
+std::vector<vec2i> get_boundary(const edge_map& emap);
 
 // Create an array of edges.
 inline std::vector<vec2i> get_edges(const std::vector<vec3i>& triangles) {
-    return edge_map(triangles).get_edges();
+    return get_edges(make_edge_map(triangles));
 }
 inline std::vector<vec2i> get_edges(const std::vector<vec4i>& quads) {
-    return edge_map(quads).get_edges();
+    return get_edges(make_edge_map(quads));
 }
 
 // Convert quads to triangles

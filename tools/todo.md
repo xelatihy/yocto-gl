@@ -5,7 +5,6 @@ Please consider this to be just development notes and not any real planning.
 
 ## Library
 
-- width/height -> vec2i
 - no gl wrapper
     - back to gl2
         - imview
@@ -15,9 +14,6 @@ Please consider this to be just development notes and not any real planning.
     - verify interpolation for degenerate
     - verify if we can write interpolation as two triangles
     - verify sampling for degenerate
-- simplfy shape
-    - catmull-clark takes boundary
-    - simplify split code for shapes, going back to before Yocto
 - simpler imgui with open
     - check better imgui examples
 
