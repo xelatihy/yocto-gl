@@ -41,7 +41,7 @@ add_library(ygl
 
 if(UNIX AND NOT APPLE)
     find_package(Threads REQUIRED)
-    target_link_libraries(yocto_gl Threads::Threads)
+    target_link_libraries(ygl Threads::Threads)
 endif(UNIX AND NOT APPLE)
 
 add_executable(ytrace apps/ytrace.cpp)
