@@ -379,8 +379,8 @@ image4f load_image(const std::string& filename) {
         if (!pixels)
             throw std::runtime_error("could not load image " + filename);
 
-        img = image4f{
-            width, height, std::vector<vec4f>(pixels, pixels + width * height)};
+        img = image4f{{width, height},
+            std::vector<vec4f>(pixels, pixels + width * height)};
         free(pixels);
     } else if (ext == "pfm") {
         auto ncomp = 0;
@@ -389,8 +389,8 @@ image4f load_image(const std::string& filename) {
         if (!pixels)
             throw std::runtime_error("could not load image " + filename);
 
-        img = image4f{
-            width, height, std::vector<vec4f>(pixels, pixels + width * height)};
+        img = image4f{{width, height},
+            std::vector<vec4f>(pixels, pixels + width * height)};
         free(pixels);
     } else if (ext == "hdr") {
         auto ncomp = 0;
@@ -399,8 +399,8 @@ image4f load_image(const std::string& filename) {
         if (!pixels)
             throw std::runtime_error("could not load image " + filename);
 
-        img = image4f{
-            width, height, std::vector<vec4f>(pixels, pixels + width * height)};
+        img = image4f{{width, height},
+            std::vector<vec4f>(pixels, pixels + width * height)};
         free(pixels);
     } else {
         auto ncomp = 0;
@@ -408,8 +408,8 @@ image4f load_image(const std::string& filename) {
             (vec4b*)stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
         if (!pixels)
             throw std::runtime_error("could not load image " + filename);
-        auto img8 = image4b{
-            width, height, std::vector<vec4b>(pixels, pixels + width * height)};
+        auto img8 = image4b{{width, height},
+            std::vector<vec4b>(pixels, pixels + width * height)};
         free(pixels);
         img = byte_to_float(img8);
     }
@@ -421,34 +421,34 @@ void save_image(const std::string& filename, const image4f& img) {
     auto ext = get_extension(filename);
     if (ext == "png") {
         auto ldr = float_to_byte(img);
-        if (!stbi_write_png(filename.c_str(), img.width(), img.height(), 4,
-                (byte*)ldr.data(), img.width() * 4))
+        if (!stbi_write_png(filename.c_str(), img.size.x, img.size.y, 4,
+                (byte*)ldr.pxl.data(), img.size.x * 4))
             throw std::runtime_error("could not save image " + filename);
     } else if (ext == "jpg") {
         auto ldr = float_to_byte(img);
-        if (!stbi_write_jpg(filename.c_str(), img.width(), img.height(), 4,
-                (byte*)ldr.data(), 75))
+        if (!stbi_write_jpg(filename.c_str(), img.size.x, img.size.y, 4,
+                (byte*)ldr.pxl.data(), 75))
             throw std::runtime_error("could not save image " + filename);
     } else if (ext == "tga") {
         auto ldr = float_to_byte(img);
-        if (!stbi_write_tga(filename.c_str(), img.width(), img.height(), 4,
-                (byte*)ldr.data()))
+        if (!stbi_write_tga(filename.c_str(), img.size.x, img.size.y, 4,
+                (byte*)ldr.pxl.data()))
             throw std::runtime_error("could not save image " + filename);
     } else if (ext == "bmp") {
         auto ldr = float_to_byte(img);
-        if (!stbi_write_bmp(filename.c_str(), img.width(), img.height(), 4,
-                (byte*)ldr.data()))
+        if (!stbi_write_bmp(filename.c_str(), img.size.x, img.size.y, 4,
+                (byte*)ldr.pxl.data()))
             throw std::runtime_error("could not save image " + filename);
     } else if (ext == "hdr") {
-        if (!stbi_write_hdr(filename.c_str(), img.width(), img.height(), 4,
-                (float*)img.data()))
+        if (!stbi_write_hdr(filename.c_str(), img.size.x, img.size.y, 4,
+                (float*)img.pxl.data()))
             throw std::runtime_error("could not save image " + filename);
     } else if (ext == "pfm") {
-        if (!save_pfm(filename.c_str(), img.width(), img.height(), 4,
-                (float*)img.data()))
+        if (!save_pfm(filename.c_str(), img.size.x, img.size.y, 4,
+                (float*)img.pxl.data()))
             throw std::runtime_error("could not save image " + filename);
     } else if (ext == "exr") {
-        if (!SaveEXR((float*)img.data(), img.width(), img.height(), 4,
+        if (!SaveEXR((float*)img.pxl.data(), img.size.x, img.size.y, 4,
                 filename.c_str()))
             throw std::runtime_error("could not save image " + filename);
     } else {
@@ -465,24 +465,23 @@ image4f load_image_from_memory(const byte* data, int data_size) {
     stbi_ldr_to_hdr_gamma(2.2f);
     if (!pixels) throw std::runtime_error("could not decode image from memory");
     auto img = image4f{
-        width, height, std::vector<vec4f>(pixels, pixels + width * height)};
+        {width, height}, std::vector<vec4f>(pixels, pixels + width * height)};
     delete pixels;
     return img;
 }
 
 // Resize image.
-image4f resize_image(const image4f& img, int res_width, int res_height) {
-    if (!res_width && !res_height) throw std::runtime_error("bad image size");
-    if (!res_width)
-        res_width =
-            (int)round(img.width() * (res_height / (float)img.height()));
-    if (!res_height)
-        res_height =
-            (int)round(img.height() * (res_width / (float)img.width()));
-    auto res_img = image4f{res_width, res_height};
-    stbir_resize_float_generic((float*)img.data(), img.width(), img.height(),
-        sizeof(vec4f) * img.width(), (float*)res_img.data(), res_width,
-        res_height, sizeof(vec4f) * res_width, 4, 3, 0, STBIR_EDGE_CLAMP,
+image4f resize_image(const image4f& img, const vec2i& size) {
+    auto imsize = size;
+    if (imsize == zero2i) throw std::runtime_error("bad image size");
+    if (!imsize.x)
+        imsize.x = (int)round(img.size.x * (imsize.y / (float)img.size.y));
+    if (!imsize.y)
+        imsize.y = (int)round(img.size.y * (imsize.x / (float)img.size.x));
+    auto res_img = image4f{imsize};
+    stbir_resize_float_generic((float*)img.pxl.data(), img.size.x, img.size.y,
+        sizeof(vec4f) * img.size.x, (float*)res_img.pxl.data(), imsize.x,
+        imsize.y, sizeof(vec4f) * imsize.x, 4, 3, 0, STBIR_EDGE_CLAMP,
         STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
     return res_img;
 }
@@ -703,15 +702,15 @@ inline void from_json(const json& js, bbox<T, N>& val) {
 
 inline void to_json(json& js, const image4f& val) {
     js = json::object();
-    js["width"] = val.width();
-    js["height"] = val.height();
-    js["pixels"] = val.pixels();
+    js["width"] = val.size.x;
+    js["height"] = val.size.y;
+    js["pixels"] = val.pxl;
 }
 inline void from_json(const json& js, image4f& val) {
     auto width = js.at("width").get<int>();
     auto height = js.at("height").get<int>();
     auto pixels = js.at("pixels").get<std::vector<vec4f>>();
-    val = image4f{width, height, pixels};
+    val = image4f{{width, height}, pixels};
 }
 
 }  // namespace ygl
@@ -727,8 +726,7 @@ void to_json(json& js, const camera& val) {
     if (val.name != def.name) js["name"] = val.name;
     if (val.frame != def.frame) js["frame"] = val.frame;
     if (val.ortho != def.ortho) js["ortho"] = val.ortho;
-    if (val.width != def.width) js["width"] = val.width;
-    if (val.height != def.height) js["height"] = val.height;
+    if (val.imsize != def.imsize) js["imsize"] = val.imsize;
     if (val.focal != def.focal) js["focal"] = val.focal;
     if (val.focus != def.focus) js["focus"] = val.focus;
     if (val.aperture != def.aperture) js["aperture"] = val.aperture;
@@ -750,8 +748,7 @@ void from_json(const json& js, camera& val) {
     static const auto def = camera();
     val.name = js.value("name", def.name);
     val.frame = js.value("frame", def.frame);
-    val.width = js.value("width", def.width);
-    val.height = js.value("height", def.height);
+    val.imsize = js.value("imsize", def.imsize);
     val.focal = js.value("focal", def.focal);
     val.focus = js.value("focus", def.focus);
     val.aperture = js.value("aperture", def.aperture);
@@ -767,7 +764,7 @@ void to_json(json& js, const texture& val) {
     if (val.scale != def.scale) js["scale"] = val.scale;
     if (val.gamma != def.gamma) js["gamma"] = val.gamma;
     if (val.path == "") {
-        if (!val.img.empty()) js["img"] = val.img;
+        if (!val.img.pxl.empty()) js["img"] = val.img;
     }
 }
 
@@ -776,50 +773,47 @@ void from_json_proc(const json& js, texture& val) {
     auto type = js.value("!!type", ""s);
     if (type == "") return;
     auto is_hdr = false;
-    auto width = js.value("!!width", 512);
-    auto height = js.value("!!height", 512);
+    auto imsize = js.value("!!size", vec2i{512, 512});
     if (js.count("!!resolution")) {
-        height = js.value("!!resolution", 512);
-        width = height;
+        imsize.y = js.value("!!resolution", 512);
+        imsize.x = imsize.y;
     }
     if (type == "grid") {
-        val.img = make_grid_image(width, height, js.value("!!tile", 8),
+        val.img = make_grid_image(imsize, js.value("!!tile", 8),
             js.value("!!c0", vec4f{0.5f, 0.5f, 0.5f, 1}),
             js.value("!!c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "checker") {
-        val.img = make_checker_image(width, height, js.value("!!tile", 8),
+        val.img = make_checker_image(imsize, js.value("!!tile", 8),
             js.value("!!c0", vec4f{0.5f, 0.5f, 0.5f, 1}),
             js.value("!!c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "bump") {
-        val.img = make_bumpdimple_image(width, height, js.value("!!tile", 8));
+        val.img = make_bumpdimple_image(imsize, js.value("!!tile", 8));
     } else if (type == "uvramp") {
-        val.img = make_uvramp_image(width, height);
+        val.img = make_uvramp_image(imsize);
     } else if (type == "uvgrid") {
-        val.img = make_uvgrid_image(width, height);
+        val.img = make_uvgrid_image(imsize);
     } else if (type == "sky") {
-        if (width < height * 2) width = height * 2;
-        val.img =
-            make_sunsky_image(width, height, js.value("!!sun_angle", pi / 4),
-                js.value("!!turbidity", 3.0f), js.value("!!has_sun", false),
-                js.value("!!ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
+        if (imsize.x < imsize.y * 2) imsize.x = imsize.y * 2;
+        val.img = make_sunsky_image(imsize, js.value("!!sun_angle", pi / 4),
+            js.value("!!turbidity", 3.0f), js.value("!!has_sun", false),
+            js.value("!!ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
         is_hdr = true;
     } else if (type == "noise") {
         val.img = make_noise_image(
-            width, height, js.value("!!scale", 1.0f), js.value("!!wrap", true));
+            imsize, js.value("!!scale", 1.0f), js.value("!!wrap", true));
     } else if (type == "fbm") {
-        val.img = make_fbm_image(width, height, js.value("!!scale", 1.0f),
+        val.img = make_fbm_image(imsize, js.value("!!scale", 1.0f),
             js.value("!!lacunarity", 2.0f), js.value("!!gain", 0.5f),
             js.value("!!octaves", 6), js.value("!!wrap", true));
     } else if (type == "ridge") {
-        val.img = make_ridge_image(width, height, js.value("!!scale", 1.0f),
+        val.img = make_ridge_image(imsize, js.value("!!scale", 1.0f),
             js.value("!!lacunarity", 2.0f), js.value("!!gain", 0.5f),
             js.value("!!offset", 1.0f), js.value("!!octaves", 6),
             js.value("!!wrap", true));
     } else if (type == "turbulence") {
-        val.img =
-            make_turbulence_image(width, height, js.value("!!scale", 1.0f),
-                js.value("!!lacunarity", 2.0f), js.value("!!gain", 0.5f),
-                js.value("!!octaves", 6), js.value("!!wrap", true));
+        val.img = make_turbulence_image(imsize, js.value("!!scale", 1.0f),
+            js.value("!!lacunarity", 2.0f), js.value("!!gain", 0.5f),
+            js.value("!!octaves", 6), js.value("!!wrap", true));
     } else {
         throw std::runtime_error("unknown texture type " + type);
     }
@@ -1522,7 +1516,7 @@ std::shared_ptr<scene> load_json_scene(
 
     // load images
     for (auto txt : scn->textures) {
-        if (txt->path == "" || !txt->img.empty()) continue;
+        if (txt->path == "" || !txt->img.pxl.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         try {
             txt->img = load_image(filename);
@@ -1561,7 +1555,7 @@ void save_json_scene(const std::string& filename,
 
     // save images
     for (auto txt : scn->textures) {
-        if (txt->img.empty()) continue;
+        if (txt->img.pxl.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         try {
             save_image(filename, txt->img);
@@ -1936,8 +1930,8 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
             fs.close();
         } else if (cmd == "c") {
             auto cam = std::make_shared<camera>();
-            ss >> cam->name >> cam->ortho >> cam->width >> cam->height >>
-                cam->focal >> cam->focus >> cam->aperture >> cam->frame;
+            ss >> cam->name >> cam->ortho >> cam->imsize >> cam->focal >>
+                cam->focus >> cam->aperture >> cam->frame;
             scn->cameras.push_back(cam);
         } else if (cmd == "e") {
             auto ke_txt = ""s;
@@ -2018,9 +2012,9 @@ void save_obj_scene(const std::string& filename,
 
     // cameras
     for (auto cam : scn->cameras) {
-        fs << "c " << cam->name << " " << cam->ortho << " " << cam->width << " "
-           << cam->height << " " << cam->focal << " " << cam->focus << " "
-           << cam->aperture << " " << cam->frame << "\n";
+        fs << "c " << cam->name << " " << cam->ortho << " " << cam->imsize
+           << " " << cam->focal << " " << cam->focus << " " << cam->aperture
+           << " " << cam->frame << "\n";
     }
 
     // environments
@@ -2153,7 +2147,7 @@ void save_obj_scene(const std::string& filename,
     // save images
     auto dirname = get_dirname(filename);
     for (auto txt : scn->textures) {
-        if (txt->img.empty()) continue;
+        if (txt->img.pxl.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         try {
             save_image(filename, txt->img);
@@ -2768,13 +2762,13 @@ void save_gltf_scene(const std::string& filename,
         cjs["name"] = cam->name;
         if (!cam->ortho) {
             cjs["type"] = "perspective";
-            cjs["perspective"]["aspectRatio"] = cam->width / cam->height;
+            cjs["perspective"]["aspectRatio"] = cam->imsize.x / cam->imsize.y;
             cjs["perspective"]["yfov"] = eval_camera_fovy(cam);
             cjs["perspective"]["znear"] = cam->near;
         } else {
             cjs["type"] = "orthographic";
-            cjs["orthographic"]["xmag"] = cam->width / 2;
-            cjs["orthographic"]["ymag"] = cam->height / 2;
+            cjs["orthographic"]["xmag"] = cam->imsize.x / 2;
+            cjs["orthographic"]["ymag"] = cam->imsize.y / 2;
             cjs["orthographic"]["zfar"] = cam->far;
             cjs["orthographic"]["znear"] = cam->near;
         }
@@ -2972,7 +2966,7 @@ void save_gltf_scene(const std::string& filename,
 
     // save images
     for (auto txt : scn->textures) {
-        if (txt->img.empty()) continue;
+        if (txt->img.pxl.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         try {
             save_image(filename, txt->img);

@@ -57,6 +57,13 @@ def format():
         os.system('clang-format -i -style=file ' + glob)
 
 @run.command()
+def formattests():
+    import json, collections
+    for filename in glob.glob('tests/*.json'):
+        with open(filename, "rt") as f: js = json.load(f, object_pairs_hook=collections.OrderedDict)
+        with open(filename, "wt") as f: json.dump(js, f, indent=4)
+
+@run.command()
 def tests():
     for ext in ['obj', 'gltf', 'json']:
         os.system(f'rm -rf tests/{ext}; mkdir tests/{ext}')

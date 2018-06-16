@@ -147,7 +147,7 @@ inline void draw_image(const ygl::image4f& img, const ygl::frame2f& imframe,
     static uint gl_prog = 0, gl_pbo = 0, gl_tbo = 0, gl_ebo = 0, gl_txt = 0;
     static ygl::vec2i gl_imsize = ygl::zero2i;
 
-    auto imsize = ygl::vec2i{img.width(), img.height()};
+    auto imsize = img.size;
     auto pos_ = std::vector<ygl::vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}};
     auto texcoord = std::vector<ygl::vec2f>{{0, 0}, {1, 0}, {1, 1}, {0, 1}};
     auto triangles = std::vector<ygl::vec3i>{{0, 1, 2}, {0, 2, 3}};
@@ -187,8 +187,8 @@ inline void draw_image(const ygl::image4f& img, const ygl::frame2f& imframe,
         assert(glGetError() == GL_NO_ERROR);
         glGenTextures(1, &gl_txt);
         glBindTexture(GL_TEXTURE_2D, gl_txt);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.width(),
-            img.height(), 0, GL_RGBA, GL_FLOAT, img.data());
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.size.x,
+            img.size.y, 0, GL_RGBA, GL_FLOAT, img.pxl.data());
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glBindTexture(GL_TEXTURE_2D, 0);
@@ -198,10 +198,10 @@ inline void draw_image(const ygl::image4f& img, const ygl::frame2f& imframe,
         assert(glGetError() == GL_NO_ERROR);
         glBindTexture(GL_TEXTURE_2D, gl_txt);
         if(imsize != gl_imsize) {
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imsize.x, imsize.y, 0, GL_RGBA, GL_FLOAT, img.data());
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imsize.x, imsize.y, 0, GL_RGBA, GL_FLOAT, img.pxl.data());
             gl_imsize = imsize;
         } else {
-            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, imsize.x, imsize.y, GL_RGBA, GL_FLOAT, img.data());
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, imsize.x, imsize.y, GL_RGBA, GL_FLOAT, img.pxl.data());
         }
         glBindTexture(GL_TEXTURE_2D, 0);
         assert(glGetError() == GL_NO_ERROR);
@@ -262,7 +262,7 @@ inline void draw_image(GLFWwindow* win, const ygl::image4f& img, ygl::frame2f& i
     glfwGetWindowSize(win, &win_size.x, &win_size.y);
     glfwGetFramebufferSize(win, &framebuffer_size.x, &framebuffer_size.y);
 
-    ygl::center_image(imframe, img.imsize(), win_size, zoom_to_fit);
+    ygl::center_image(imframe, img.size, win_size, zoom_to_fit);
 
     assert(glGetError() == GL_NO_ERROR);
     glViewport(0, 0, framebuffer_size.x, framebuffer_size.y);
@@ -280,7 +280,7 @@ inline void draw_image(GLFWwindow* win, const ygl::image4f& img, ygl::frame2f& i
 }
 
 // Create GLFW window
-inline GLFWwindow* make_window(int width, int height, const std::string& title,
+inline GLFWwindow* make_window(const ygl::vec2i& size, const std::string& title,
     void* user_ptr, void (*refresh)(GLFWwindow*)) {
     // glwindow
     if (!glfwInit()) throw std::runtime_error("cannot open glwindow");
@@ -291,7 +291,7 @@ inline GLFWwindow* make_window(int width, int height, const std::string& title,
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-    auto win = glfwCreateWindow(width, height, title.c_str(), 0, 0);
+    auto win = glfwCreateWindow(size.x, size.y, title.c_str(), 0, 0);
     glfwMakeContextCurrent(win);
     glfwSwapInterval(1);  // Enable vsync
 
@@ -696,8 +696,7 @@ inline bool draw_glwidgets_scene_inspector(
     edited += ImGui::SliderFloat3("frame.z", &val->frame.z.x, -1, 1);
     edited += ImGui::SliderFloat3("frame.o", &val->frame.o.x, -10, 10);
     edited += ImGui::Checkbox("ortho", &val->ortho);
-    edited += ImGui::SliderFloat("width", &val->width, 0.01f, 1);
-    edited += ImGui::SliderFloat("height", &val->height, 0.01f, 1);
+    edited += ImGui::SliderFloat2("imsize", &val->imsize.x, 0.01f, 1);
     edited += ImGui::SliderFloat("focal", &val->focal, 0.01f, 1);
     edited += ImGui::SliderFloat("focus", &val->focus, 0.01f, 1000);
     edited += ImGui::SliderFloat("aperture", &val->aperture, 0, 5);
@@ -715,7 +714,7 @@ inline bool draw_glwidgets_scene_inspector(
     edited += ImGui::Checkbox("clamp", &val->clamp);
     edited += ImGui::SliderFloat("scale", &val->scale, 0, 1);
     edited += ImGui::SliderFloat("gamma", &val->gamma, 1, 2.2f);
-    ImGui::LabelText("img", "%d x %d", val->img.width(), val->img.height());
+    ImGui::LabelText("img", "%d x %d", val->img.size.x, val->img.size.y);
     return edited;
 }
 

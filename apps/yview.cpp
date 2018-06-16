@@ -705,8 +705,8 @@ void init_drawscene(GLFWwindow* win) {
         assert(glGetError() == GL_NO_ERROR);
         glGenTextures(1, &txt->gl_txt);
         glBindTexture(GL_TEXTURE_2D, txt->gl_txt);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, txt->img.width(),
-            txt->img.height(), 0, GL_RGBA, GL_FLOAT, txt->img.data());
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, txt->img.size.x,
+            txt->img.size.y, 0, GL_RGBA, GL_FLOAT, txt->img.pxl.data());
         glGenerateMipmap(GL_TEXTURE_2D);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(
@@ -745,10 +745,9 @@ void init_drawscene(GLFWwindow* win) {
 void run_ui(const std::shared_ptr<app_state>& app) {
     // window
     auto win =
-        make_window((int)std::round(app->resolution *
-                                    app->scn->cameras.at(app->camid)->width /
-                                    app->scn->cameras.at(app->camid)->height),
-            app->resolution, "yview", app.get(), draw);
+        make_window(ygl::eval_image_resolution(
+                        app->scn->cameras.at(app->camid), app->resolution),
+            "yview", app.get(), draw);
 
     // load textures and vbos
     ygl::update_transforms(app->scn, app->time);
