@@ -3,8 +3,6 @@ cmake_minimum_required (VERSION 3.5)
 project (yocto-gl)
 
 option(YOCTO_OPENGL "Build OpenGL apps" ON)
-option(YOCTO_EXPERIMENTAL "Build experimental apps" OFF)
-option(YOCTO_TOOLS "Build tools apps" OFF)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -51,11 +49,6 @@ add_executable(yimproc apps/yimproc.cpp)
 target_link_libraries(ytrace ygl)
 target_link_libraries(yscnproc ygl)
 target_link_libraries(yimproc ygl)
-
-if(YOCTO_TOOLS)
-    add_executable(ypbrt tools/converters/ypbrt.cpp)
-    target_link_libraries(ypbrt ygl)
-endif(YOCTO_TOOLS)
 
 if(YOCTO_OPENGL)
     find_package(OpenGL REQUIRED)

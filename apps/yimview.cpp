@@ -139,7 +139,7 @@ void update_display_image(const std::shared_ptr<gimage>& img) {
 }
 
 void draw_widgets(GLFWwindow* win, app_state* app) {
-    if (begin_widgets_frame(win, "yimview", &app->widgets_open)) {
+    if (ygl::begin_widgets_frame(win, "yimview", &app->widgets_open)) {
         ImGui::Combo("image", &app->img, app->imgs, false);
         ImGui::LabelText("filename", "%s", app->img->filename.c_str());
         ImGui::LabelText(
@@ -174,12 +174,12 @@ void draw_widgets(GLFWwindow* win, app_state* app) {
             ImGui::DragFloat("lum max", &app->img->lum_bounds.max);
         }
     }
-    end_widgets_frame();
+    ygl::end_widgets_frame();
 }
 
 void draw(GLFWwindow* win) {
     auto app = (app_state*)glfwGetWindowUserPointer(win);
-    draw_image(win, app->img->display, app->imframe, app->zoom_to_fit,
+    draw_glimage(win, app->img->display, app->imframe, app->zoom_to_fit,
         app->background);
     draw_widgets(win, app);
     glfwSwapBuffers(win);
@@ -191,7 +191,7 @@ void run_ui(const std::shared_ptr<app_state>& app) {
     auto win = make_window(win_size, "yimview", app.get(), draw);
 
     // init widgets
-    init_widgets(win);
+    ygl::init_widgets(win);
 
     // window values
     auto mouse_pos = ygl::zero2f, last_pos = ygl::zero2f;

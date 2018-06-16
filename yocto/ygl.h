@@ -2401,6 +2401,7 @@ enum struct bvh_node_type : uint8_t {
     point,
     line,
     triangle,
+    quad,
     vertex,
     instance
 };
@@ -2438,6 +2439,7 @@ struct bvh_tree {
     std::vector<int> points;       // Points for shape BVHs.
     std::vector<vec2i> lines;      // Lines for shape BVHs.
     std::vector<vec3i> triangles;  // Triangles for shape BVHs.
+    std::vector<vec4i> quads;      // Quads for shape BVHs.
 
     // data for instance BVH
     std::vector<frame3f> ist_frames;                  // instance frames
@@ -2806,7 +2808,8 @@ struct texture {
     image4f img = {};       // image
     bool clamp = false;     // clamp textures coordinates
     float scale = 1;        // scale for occ, normal, bumps
-    float gamma = 1;        // gamma correction for ldr textures
+    float gamma = 2.2f;     // gamma correction for ldr textures in IO
+    bool has_opacity = false;// check whether alpha != 0
     uint gl_txt = 0;        // unmanaged data for OpenGL viewer
 };
 

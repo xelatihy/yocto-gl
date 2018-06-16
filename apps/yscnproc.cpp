@@ -46,10 +46,12 @@ int main(int argc, char** argv) {
     auto filename = "scene.json"s;
     auto output = "output.json"s;
     auto notextures = false;
+    auto uniform_txt = false;
 
     // command line params
     CLI::App parser("scene processing utility", "yscnproc");
     parser.add_flag("--notextures", notextures, "Disable textures.");
+    parser.add_flag("--uniform-txt", uniform_txt, "uniform texture formats");
     parser.add_option("--output,-o", output, "output scene")->required(true);
     parser.add_option("scene", filename, "input scene")->required(true);
     try {
@@ -64,6 +66,22 @@ int main(int argc, char** argv) {
         std::cout << "cannot load scene " << filename << "\n";
         std::cout << "error: " << e.what() << "\n";
         exit(1);
+    }
+
+    // change texture names
+    if(uniform_txt) {
+        for(auto txt : scn->textures) {
+            auto ext = ygl::get_extension(txt->path);
+            if(ygl::is_hdr_filename(txt->path)) {
+                if(ext == "hdr" || ext == "exr") continue;
+                if(ext == "pfm") ygl::replace_extension(filename, "hdr");
+                else std::cout << "unknown texture format " << ext;
+            } else {
+                if(ext == "png" || ext == "jpg") continue;
+                if(ext == "tga" || ext == "bmp") ygl::replace_extension(filename, "png");
+                else std::cout << "unknown texture format " << ext;
+            }
+        }
     }
 
     // make a directory if needed

@@ -3,22 +3,24 @@
     "cameras": [
         {
             "name": "cam",
-            "!!from": [
-                0,
-                5,
-                14
-            ],
-            "!!to": [
-                0,
-                1,
-                0
-            ],
             "imsize": [
                 0.036,
                 0.015
             ],
             "focal": 0.06,
-            "aperture": 0.0
+            "aperture": 0.0,
+            "!!proc": {
+                "from": [
+                    0,
+                    5,
+                    14
+                ],
+                "to": [
+                    0,
+                    1,
+                    0
+                ]
+            }
         }
     ],
     "instances": [
@@ -26,7 +28,9 @@
             "name": "floor",
             "shp": {
                 "name": "floor",
-                "!!type": "floor"
+                "!!proc": {
+                    "type": "floor"
+                }
             },
             "mat": {
                 "name": "floor",
@@ -39,29 +43,28 @@
                     "name": "floor",
                     "path": "textures/floor.png",
                     "gamma": 2.2,
-                    "!!type": "grid"
+                    "!!proc": {
+                        "type": "grid"
+                    }
                 }
             }
         },
         {
             "name": "obj1",
-            "!!translation": [
-                -2.5,
-                1,
-                0
-            ],
             "shp": {
                 "name": "obj1",
                 "path": "meshes/obj1.ply",
-                "!!type": "hairball",
-                "!!length": [
-                    0.15,
-                    0.2
-                ],
-                "!!noise": [
-                    0.05,
-                    100
-                ]
+                "!!proc": {
+                    "type": "hairball",
+                    "length": [
+                        0.15,
+                        0.2
+                    ],
+                    "noise": [
+                        0.05,
+                        100
+                    ]
+                }
             },
             "mat": {
                 "name": "obj1",
@@ -69,24 +72,28 @@
                     0.7,
                     0.7,
                     0.7
+                ]
+            },
+            "!!proc": {
+                "translation": [
+                    -2.5,
+                    1,
+                    0
                 ]
             }
         },
         {
             "name": "obj2",
-            "!!translation": [
-                0,
-                1,
-                0
-            ],
             "shp": {
                 "name": "obj2",
                 "path": "meshes/obj2.ply",
-                "!!type": "hairball",
-                "!!length": [
-                    0.15,
-                    0.2
-                ]
+                "!!proc": {
+                    "type": "hairball",
+                    "length": [
+                        0.15,
+                        0.2
+                    ]
+                }
             },
             "mat": {
                 "name": "obj2",
@@ -94,28 +101,32 @@
                     0.7,
                     0.7,
                     0.7
+                ]
+            },
+            "!!proc": {
+                "translation": [
+                    0,
+                    1,
+                    0
                 ]
             }
         },
         {
             "name": "obj3",
-            "!!translation": [
-                2.5,
-                1,
-                0
-            ],
             "shp": {
                 "name": "obj3",
                 "path": "meshes/obj3.ply",
-                "!!type": "hairball",
-                "!!length": [
-                    0.15,
-                    0.2
-                ],
-                "!!clump": [
-                    0.5,
-                    128
-                ]
+                "!!proc": {
+                    "type": "hairball",
+                    "length": [
+                        0.15,
+                        0.2
+                    ],
+                    "clump": [
+                        0.5,
+                        128
+                    ]
+                }
             },
             "mat": {
                 "name": "obj3",
@@ -123,21 +134,25 @@
                     0.7,
                     0.7,
                     0.7
+                ]
+            },
+            "!!proc": {
+                "translation": [
+                    2.5,
+                    1,
+                    0
                 ]
             }
         },
         {
             "name": "obj11",
-            "!!translation": [
-                -2.5,
-                1,
-                0
-            ],
             "shp": {
                 "name": "obj11",
                 "path": "meshes/obj11.ply",
-                "!!type": "sphere_cube",
-                "!!size": 1.6
+                "!!proc": {
+                    "type": "sphere_cube",
+                    "size": 1.6
+                }
             },
             "mat": {
                 "name": "obj11",
@@ -145,21 +160,25 @@
                     0.7,
                     0.7,
                     0.7
+                ]
+            },
+            "!!proc": {
+                "translation": [
+                    -2.5,
+                    1,
+                    0
                 ]
             }
         },
         {
             "name": "obj21",
-            "!!translation": [
-                0,
-                1,
-                0
-            ],
             "shp": {
                 "name": "obj21",
                 "path": "meshes/obj21.ply",
-                "!!type": "sphere_cube",
-                "!!size": 1.6
+                "!!proc": {
+                    "type": "sphere_cube",
+                    "size": 1.6
+                }
             },
             "mat": {
                 "name": "obj21",
@@ -167,21 +186,25 @@
                     0.7,
                     0.7,
                     0.7
+                ]
+            },
+            "!!proc": {
+                "translation": [
+                    0,
+                    1,
+                    0
                 ]
             }
         },
         {
             "name": "obj31",
-            "!!translation": [
-                2.5,
-                1,
-                0
-            ],
             "shp": {
                 "name": "obj31",
                 "path": "meshes/obj31.ply",
-                "!!type": "sphere_cube",
-                "!!size": 1.6
+                "!!proc": {
+                    "type": "sphere_cube",
+                    "size": 1.6
+                }
             },
             "mat": {
                 "name": "obj31",
@@ -190,27 +213,26 @@
                     0.7,
                     0.7
                 ]
+            },
+            "!!proc": {
+                "translation": [
+                    2.5,
+                    1,
+                    0
+                ]
             }
         },
         {
             "name": "light1",
-            "!!from": [
-                -4,
-                8,
-                8
-            ],
-            "!!to": [
-                0,
-                1,
-                0
-            ],
             "shp": {
                 "name": "light1",
-                "!!type": "quad",
-                "!!size": [
-                    4,
-                    4
-                ]
+                "!!proc": {
+                    "type": "quad",
+                    "size": [
+                        4,
+                        4
+                    ]
+                }
             },
             "mat": {
                 "name": "light1",
@@ -218,28 +240,32 @@
                     20,
                     20,
                     20
+                ]
+            },
+            "!!proc": {
+                "from": [
+                    -4,
+                    8,
+                    8
+                ],
+                "to": [
+                    0,
+                    1,
+                    0
                 ]
             }
         },
         {
             "name": "light2",
-            "!!from": [
-                4,
-                8,
-                8
-            ],
-            "!!to": [
-                0,
-                1,
-                0
-            ],
             "shp": {
                 "name": "light2",
-                "!!type": "quad",
-                "!!size": [
-                    4,
-                    4
-                ]
+                "!!proc": {
+                    "type": "quad",
+                    "size": [
+                        4,
+                        4
+                    ]
+                }
             },
             "mat": {
                 "name": "light2",
@@ -247,6 +273,18 @@
                     20,
                     20,
                     20
+                ]
+            },
+            "!!proc": {
+                "from": [
+                    4,
+                    8,
+                    8
+                ],
+                "to": [
+                    0,
+                    1,
+                    0
                 ]
             }
         }
