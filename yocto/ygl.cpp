@@ -399,6 +399,62 @@ std::pair<std::vector<vec3f>, std::vector<vec3f>> compute_matrix_skinning(
     return {skinned_pos, skinned_norm};
 }
 
+// Initialize an edge map with elements.
+edge_map make_edge_map(const std::vector<vec3i>& triangles) {
+    auto emap = edge_map{};
+    for (auto& t : triangles) {
+        insert_edge(emap, {t.x, t.y});
+        insert_edge(emap, {t.y, t.z});
+        insert_edge(emap, {t.z, t.x});
+    }
+    return emap;
+}
+edge_map make_edge_map(const std::vector<vec4i>& quads) {
+    auto emap = edge_map{};
+    for (auto& q : quads) {
+        insert_edge(emap, {q.x, q.y});
+        insert_edge(emap, {q.y, q.z});
+        if (q.z != q.w) insert_edge(emap, {q.z, q.w});
+        insert_edge(emap, {q.w, q.x});
+    }
+    return emap;
+}
+// Insert an edge and return its index
+int insert_edge(edge_map& emap, const vec2i& e) {
+    auto es = vec2i{min(e.x, e.y), max(e.x, e.y)};
+    auto it = emap.find(es);
+    if (it == emap.end()) {
+        auto idx = (int)emap.size();
+        emap.insert(it, {es, {idx, 1}});
+        return idx;
+    } else {
+        it->second.y += 1;
+        return it->second.x;
+    }
+}
+// Get the edge index
+int get_edge_index(const edge_map& emap, const vec2i& e) {
+    auto es = vec2i{min(e.x, e.y), max(e.x, e.y)};
+    return emap.at(es).x;
+}
+// Get the edge index
+int get_edge_count(const edge_map& emap, const vec2i& e) {
+    auto es = vec2i{min(e.x, e.y), max(e.x, e.y)};
+    return emap.at(es).y;
+}
+// Get a list of edges, boundary edges, boundary vertices
+std::vector<vec2i> get_edges(const edge_map& emap) {
+    auto edges = std::vector<vec2i>(emap.size());
+    for (auto& kv : emap) edges[kv.second.x] = kv.first;
+    return edges;
+}
+std::vector<vec2i> get_boundary(const edge_map& emap) {
+    auto boundary = std::vector<vec2i>();
+    for (auto& kv : emap)
+        if (kv.second.y < 2) boundary.push_back(kv.first);
+    return boundary;
+}
+
 // Convert quads to triangles
 std::vector<vec3i> convert_quads_to_triangles(const std::vector<vec4i>& quads) {
     auto triangles = std::vector<vec3i>();
@@ -508,13 +564,19 @@ void convert_face_varying(std::vector<vec4i>& qquads, std::vector<vec3f>& qpos,
 template <typename T>
 std::pair<std::vector<vec2i>, std::vector<T>> subdivide_lines(
     const std::vector<vec2i>& lines, const std::vector<T>& vert) {
+    // create vertices
     auto tvert = vert;
+    auto eoffset = (int)tvert.size();
+    for (auto& l : lines) tvert.push_back((vert[l.x] + vert[l.y]) / 2);
+    // create lines
     auto tlines = std::vector<vec2i>();
-    for (auto l : lines) {
-        tlines.push_back({l.x, (int)tvert.size()});
-        tlines.push_back({(int)tvert.size(), l.y});
-        tvert.push_back((vert[l.x] + vert[l.y]) / 2);
+    auto li = 0;
+    for (auto& l : lines) {
+        tlines.push_back({l.x, eoffset + li});
+        tlines.push_back({eoffset + li, l.y});
+        li += 1;
     }
+    // done
     return {tlines, tvert};
 }
 
@@ -531,22 +593,26 @@ template std::pair<std::vector<vec2i>, std::vector<vec4f>> subdivide_lines(
 template <typename T>
 std::pair<std::vector<vec3i>, std::vector<T>> subdivide_triangles(
     const std::vector<vec3i>& triangles, const std::vector<T>& vert) {
+    // get edges
+    auto emap = make_edge_map(triangles);
+    auto edges = get_edges(emap);
+    // create vertices
     auto tvert = vert;
+    auto eoffset = (int)tvert.size();
+    for (auto& e : edges) tvert.push_back((vert[e.x] + vert[e.y]) / 2);
+    // create triangles
     auto ttriangles = std::vector<vec3i>();
-    auto emap = std::unordered_map<vec2i, int>();
-    for (auto t : triangles) {
-        for (auto e : {vec2i{t.x, t.y}, vec2i{t.y, t.z}, vec2i{t.z, t.x}}) {
-            if (emap.find(e) != emap.end()) continue;
-            emap[{e.x, e.y}] = (int)tvert.size();
-            emap[{e.y, e.x}] = (int)tvert.size();
-            tvert.push_back((vert[e.x] + vert[e.y]) / 2);
-        }
-        ttriangles.push_back({t.x, emap.at({t.x, t.y}), emap.at({t.z, t.x})});
-        ttriangles.push_back({t.y, emap.at({t.y, t.z}), emap.at({t.x, t.y})});
-        ttriangles.push_back({t.z, emap.at({t.z, t.x}), emap.at({t.y, t.z})});
-        ttriangles.push_back(
-            {emap.at({t.x, t.y}), emap.at({t.y, t.z}), emap.at({t.z, t.x})});
+    for (auto& t : triangles) {
+        ttriangles.push_back({t.x, eoffset + get_edge_index(emap, {t.x, t.y}),
+            eoffset + get_edge_index(emap, {t.z, t.x})});
+        ttriangles.push_back({t.y, eoffset + get_edge_index(emap, {t.y, t.z}),
+            eoffset + get_edge_index(emap, {t.x, t.y})});
+        ttriangles.push_back({t.z, eoffset + get_edge_index(emap, {t.z, t.x}),
+            eoffset + get_edge_index(emap, {t.y, t.z})});
+        ttriangles.push_back({eoffset + get_edge_index(emap, {t.x, t.y}),
+            eoffset + get_edge_index(emap, {t.y, t.z}), eoffset + get_edge_index(emap, {t.z, t.x})});
     }
+    // done
     return {ttriangles, tvert};
 }
 
@@ -563,40 +629,42 @@ template std::pair<std::vector<vec3i>, std::vector<vec4f>> subdivide_triangles(
 template <typename T>
 std::pair<std::vector<vec4i>, std::vector<T>> subdivide_quads(
     const std::vector<vec4i>& quads, const std::vector<T>& vert) {
+    // get edges
+    auto emap = make_edge_map(quads);
+    auto edges = get_edges(emap);
+    // create vertices
     auto tvert = vert;
+    auto eoffset = (int)tvert.size();
+    for (auto& e : edges) tvert.push_back((vert[e.x] + vert[e.y]) / 2);
+    auto foffset = (int)tvert.size();
+    for (auto& q : quads)
+        tvert.push_back(
+            q.z != q.w ? (vert[q.x] + vert[q.y] + vert[q.z] + vert[q.w]) / 4 :
+                         (vert[q.x] + vert[q.y] + vert[q.y]) / 3);
+    // create quads
     auto tquads = std::vector<vec4i>();
-    auto emap = std::unordered_map<vec2i, int>();
-    for (auto q : quads) {
-        for (auto e : {vec2i{q.x, q.y}, vec2i{q.y, q.z}, vec2i{q.z, q.w},
-                 vec2i{q.w, q.x}}) {
-            if (e.x == e.y) continue;
-            if (emap.find(e) != emap.end()) continue;
-            emap[{e.x, e.y}] = (int)tvert.size();
-            emap[{e.y, e.x}] = (int)tvert.size();
-            tvert.push_back((vert[e.x] + vert[e.y]) / 2);
-        }
+    auto qi = 0;
+    for (auto& q : quads) {
         if (q.z != q.w) {
-            tquads.push_back({q.x, emap.at({q.x, q.y}), (int)tvert.size(),
-                emap.at({q.w, q.x})});
-            tquads.push_back({q.y, emap.at({q.y, q.z}), (int)tvert.size(),
-                emap.at({q.x, q.y})});
-            tquads.push_back({q.z, emap.at({q.z, q.w}), (int)tvert.size(),
-                emap.at({q.y, q.z})});
-            tquads.push_back({q.w, emap.at({q.w, q.x}), (int)tvert.size(),
-                emap.at({q.z, q.w})});
-            tvert.push_back(
-                (vert[q.x] + vert[q.y] + vert[q.z] + vert[q.w]) / 4);
+            tquads.push_back({q.x, eoffset + get_edge_index(emap, {q.x, q.y}), foffset + qi,
+                eoffset + get_edge_index(emap, {q.w, q.x})});
+            tquads.push_back({q.y, eoffset + get_edge_index(emap, {q.y, q.z}), foffset + qi,
+                eoffset + get_edge_index(emap, {q.x, q.y})});
+            tquads.push_back({q.z, eoffset + get_edge_index(emap, {q.z, q.w}), foffset + qi,
+                eoffset + get_edge_index(emap, {q.y, q.z})});
+            tquads.push_back({q.w, eoffset + get_edge_index(emap, {q.w, q.x}), foffset + qi,
+                eoffset + get_edge_index(emap, {q.z, q.w})});
         } else {
-            tquads.push_back({q.x, emap.at({q.x, q.y}), (int)tvert.size(),
-                emap.at({q.z, q.x})});
-            tquads.push_back({q.y, emap.at({q.y, q.z}), (int)tvert.size(),
-                emap.at({q.x, q.y})});
-            tquads.push_back({q.z, emap.at({q.z, q.x}), (int)tvert.size(),
-                emap.at({q.y, q.z})});
-            tvert.push_back((vert[q.x] + vert[q.y] + vert[q.y]) / 3);
+            tquads.push_back({q.x, eoffset + get_edge_index(emap, {q.x, q.y}), foffset + qi,
+                eoffset + get_edge_index(emap, {q.z, q.x})});
+            tquads.push_back({q.y, eoffset + get_edge_index(emap, {q.y, q.z}), foffset + qi,
+                eoffset + get_edge_index(emap, {q.x, q.y})});
+            tquads.push_back({q.z, eoffset + get_edge_index(emap, {q.z, q.x}),foffset + qi,
+                eoffset + get_edge_index(emap, {q.y, q.z})});
         }
+        qi += 1;
     }
-
+    // done
     return {tquads, tvert};
 }
 
@@ -653,78 +721,67 @@ template <typename T>
 std::pair<std::vector<vec4i>, std::vector<T>> subdivide_catmullclark(
     const std::vector<vec4i>& quads, const std::vector<T>& vert,
     bool lock_boundary) {
-    // split elements ------------------------------------
-    auto tvert = vert;
-    auto tquads = std::vector<vec4i>();
-    auto emap = std::unordered_map<vec2i, int>();
-    for (auto q : quads) {
-        for (auto e : {vec2i{q.x, q.y}, vec2i{q.y, q.z}, vec2i{q.z, q.w},
-                 vec2i{q.w, q.x}}) {
-            if (e.x == e.y) continue;
-            if (emap.find(e) != emap.end()) continue;
-            emap[{e.x, e.y}] = (int)tvert.size();
-            emap[{e.y, e.x}] = (int)tvert.size();
-            tvert.push_back((vert[e.x] + vert[e.y]) / 2);
-        }
-        if (q.z != q.w) {
-            tquads.push_back({q.x, emap.at({q.x, q.y}), (int)tvert.size(),
-                emap.at({q.w, q.x})});
-            tquads.push_back({q.y, emap.at({q.y, q.z}), (int)tvert.size(),
-                emap.at({q.x, q.y})});
-            tquads.push_back({q.z, emap.at({q.z, q.w}), (int)tvert.size(),
-                emap.at({q.y, q.z})});
-            tquads.push_back({q.w, emap.at({q.w, q.x}), (int)tvert.size(),
-                emap.at({q.z, q.w})});
-            tvert.push_back(
-                (vert[q.x] + vert[q.y] + vert[q.z] + vert[q.w]) / 4);
-        } else {
-            tquads.push_back({q.x, emap.at({q.x, q.y}), (int)tvert.size(),
-                emap.at({q.z, q.x})});
-            tquads.push_back({q.y, emap.at({q.y, q.z}), (int)tvert.size(),
-                emap.at({q.x, q.y})});
-            tquads.push_back({q.z, emap.at({q.z, q.x}), (int)tvert.size(),
-                emap.at({q.y, q.z})});
-            tvert.push_back((vert[q.x] + vert[q.y] + vert[q.y]) / 3);
-        }
-    }
+    // get edges
+    auto emap = make_edge_map(quads);
+    auto edges = get_edges(emap);
+    auto boundary = get_boundary(emap);
 
-    // find boundary -------------------------------------
-    auto eset = std::unordered_set<vec2i>();
-    for (auto q : quads) {
-        for (auto e : {vec2i{q.x, q.y}, vec2i{q.y, q.z}, vec2i{q.z, q.w},
-                 vec2i{q.w, q.x}}) {
-            if (e.x == e.y) continue;
-            eset.insert({e.x, e.y});
+    // split elements ------------------------------------
+    // create vertices
+    auto tvert = vert;
+    auto eoffset = (int)tvert.size();
+    for (auto& e : edges) tvert.push_back((vert[e.x] + vert[e.y]) / 2);
+    auto foffset = (int)tvert.size();
+    for (auto& q : quads)
+        tvert.push_back(
+            q.z != q.w ? (vert[q.x] + vert[q.y] + vert[q.z] + vert[q.w]) / 4 :
+                         (vert[q.x] + vert[q.y] + vert[q.y]) / 3);
+    // create quads
+    auto tquads = std::vector<vec4i>();
+    auto qi = 0;
+    for (auto& q : quads) {
+        if (q.z != q.w) {
+            tquads.push_back({q.x, eoffset + get_edge_index(emap, {q.x, q.y}), foffset + qi,
+                eoffset + get_edge_index(emap, {q.w, q.x})});
+            tquads.push_back({q.y, eoffset + get_edge_index(emap, {q.y, q.z}), foffset + qi,
+                eoffset + get_edge_index(emap, {q.x, q.y})});
+            tquads.push_back({q.z, eoffset + get_edge_index(emap, {q.z, q.w}), foffset + qi,
+                eoffset + get_edge_index(emap, {q.y, q.z})});
+            tquads.push_back({q.w, eoffset + get_edge_index(emap, {q.w, q.x}), foffset + qi,
+                eoffset + get_edge_index(emap, {q.z, q.w})});
+        } else {
+            tquads.push_back({q.x, eoffset + get_edge_index(emap, {q.x, q.y}), foffset + qi,
+                eoffset + get_edge_index(emap, {q.z, q.x})});
+            tquads.push_back({q.y, eoffset + get_edge_index(emap, {q.y, q.z}), foffset + qi,
+                eoffset + get_edge_index(emap, {q.x, q.y})});
+            tquads.push_back({q.z, eoffset + get_edge_index(emap, {q.z, q.x}),foffset + qi,
+                eoffset + get_edge_index(emap, {q.y, q.z})});
         }
-    }
-    auto boundary = std::vector<vec2i>();
-    for (auto e : eset) {
-        if (eset.find({e.y, e.x}) != eset.end()) continue;
-        boundary.push_back(e);
+        qi += 1;
     }
 
     // split boundary
     auto tboundary = std::vector<vec2i>();
-    for (auto e : boundary) {
-        tboundary.push_back({e.x, emap.at(e)});
-        tboundary.push_back({emap.at(e), e.y});
+    for (auto& e : boundary) {
+        tboundary.push_back({e.x, eoffset + get_edge_index(emap, e)});
+        tboundary.push_back({eoffset + get_edge_index(emap, e), e.y});
     }
 
     // setup creases -----------------------------------
     auto tcrease_edges = std::vector<vec2i>();
     auto tcrease_verts = std::vector<int>();
     if (lock_boundary) {
-        for (auto b : tboundary) {
+        for (auto& b : tboundary) {
             tcrease_verts.push_back(b.x);
             tcrease_verts.push_back(b.y);
         }
     } else {
-        for (auto b : tboundary) tcrease_edges.push_back(b);
+        for (auto& b : tboundary) tcrease_edges.push_back(b);
     }
 
     // define vertex valence ---------------------------
     auto tvert_val = std::vector<int>(tvert.size(), 2);
-    for (auto e : tboundary) {
+    for (auto& e : tboundary) {
         tvert_val[e.x] = (lock_boundary) ? 0 : 1;
         tvert_val[e.y] = (lock_boundary) ? 0 : 1;
     }
@@ -737,7 +794,7 @@ std::pair<std::vector<vec4i>, std::vector<T>> subdivide_catmullclark(
         avert[p] += tvert[p];
         acount[p] += 1;
     }
-    for (auto e : tcrease_edges) {
+    for (auto& e : tcrease_edges) {
         auto c = (tvert[e.x] + tvert[e.y]) / 2.0f;
         for (auto vid : {e.x, e.y}) {
             if (tvert_val[vid] != 1) continue;
@@ -745,7 +802,7 @@ std::pair<std::vector<vec4i>, std::vector<T>> subdivide_catmullclark(
             acount[vid] += 1;
         }
     }
-    for (auto q : tquads) {
+    for (auto& q : tquads) {
         auto c = (tvert[q.x] + tvert[q.y] + tvert[q.z] + tvert[q.w]) / 4.0f;
         for (auto vid : {q.x, q.y, q.z, q.w}) {
             if (tvert_val[vid] != 2) continue;
