@@ -32,18 +32,18 @@
 using namespace std::literals;
 
 auto tracer_names = std::unordered_map<std::string, ygl::trace_func>{
-    {"pathtrace", ygl::trace_path},
-    {"direct", ygl::trace_direct},
-    {"environment", ygl::trace_environment},
-    {"eyelight", ygl::trace_eyelight},
+    {"pathtrace", ygl::trace_path}, {"direct", ygl::trace_direct},
+    {"environment", ygl::trace_environment}, {"eyelight", ygl::trace_eyelight},
     {"pathtrace-nomis", ygl::trace_path_nomis},
     {"pathtrace-naive", ygl::trace_path_naive},
     {"direct-nomis", ygl::trace_direct_nomis},
-    {"debug-normal", ygl::trace_debug_normal},
-    {"debug-albedo", ygl::trace_debug_albedo},
-    {"debug-texcoord", ygl::trace_debug_texcoord},
-    {"debug-frontfacing", ygl::trace_debug_frontfacing},
-};
+    {"debug_normal", ygl::trace_debug_normal},
+    {"debug_albedo", ygl::trace_debug_albedo},
+    {"debug_texcoord", ygl::trace_debug_texcoord},
+    {"debug_frontfacing", ygl::trace_debug_frontfacing},
+    {"debug_diffuse", ygl::trace_debug_diffuse},
+    {"debug_specular", ygl::trace_debug_specular},
+    {"debug_roughness", ygl::trace_debug_roughness}};
 
 int main(int argc, char* argv[]) {
     // command line parameters

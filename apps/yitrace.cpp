@@ -70,93 +70,26 @@ struct app_state {
     bool navigation_fps = false;
 };
 
-auto trace_names = std::vector<std::string>{
-    "pathtrace",
-    "direct",
-    "environment",
-    "eyelight",
-    "pathtrace_nomis",
-    "pathtrace_naive",
-    "direct_nomis",
-    "debug_normal",
-    "debug_albedo",
-    "debug_diffuse",
-    "debug_specular",
-    "debug_roughness",
-    "debug_texcoord",
-    "debug_frontfacing",
-};
+auto trace_names = std::vector<std::string>{"pathtrace", "direct",
+    "environment", "eyelight", "pathtrace_nomis", "pathtrace_naive",
+    "direct_nomis", "debug_normal", "debug_albedo", "debug_texcoord",
+    "debug_frontfacing", "debug_diffuse", "debug_specular", "debug_roughness"};
 
 auto tracer_names = std::unordered_map<std::string, ygl::trace_func>{
-    {"pathtrace", ygl::trace_path},
-    {"direct", ygl::trace_direct},
-    {"environment", ygl::trace_environment},
-    {"eyelight", ygl::trace_eyelight},
+    {"pathtrace", ygl::trace_path}, {"direct", ygl::trace_direct},
+    {"environment", ygl::trace_environment}, {"eyelight", ygl::trace_eyelight},
     {"pathtrace-nomis", ygl::trace_path_nomis},
     {"pathtrace-naive", ygl::trace_path_naive},
     {"direct-nomis", ygl::trace_direct_nomis},
-    {"debug-normal", ygl::trace_debug_normal},
-    {"debug-albedo", ygl::trace_debug_albedo},
-    {"debug-texcoord", ygl::trace_debug_texcoord},
-    {"debug-frontfacing", ygl::trace_debug_frontfacing},
-};
+    {"debug_normal", ygl::trace_debug_normal},
+    {"debug_albedo", ygl::trace_debug_albedo},
+    {"debug_texcoord", ygl::trace_debug_texcoord},
+    {"debug_frontfacing", ygl::trace_debug_frontfacing},
+    {"debug_diffuse", ygl::trace_debug_diffuse},
+    {"debug_specular", ygl::trace_debug_specular},
+    {"debug_roughness", ygl::trace_debug_roughness}};
 
-void draw_image(GLFWwindow* win) {
-    auto app = (app_state*)glfwGetWindowUserPointer(win);
-    auto window_size = ygl::zero2i, framebuffer_size = ygl::zero2i;
-    glfwGetWindowSize(win, &window_size.x, &window_size.y);
-    glfwGetFramebufferSize(win, &framebuffer_size.x, &framebuffer_size.y);
-
-    auto& img = app->trace_state.display;
-    ygl::center_image(app->imframe, {img.width(), img.height()}, window_size,
-        app->zoom_to_fit);
-
-    assert(glGetError() == GL_NO_ERROR);
-    glBindTexture(GL_TEXTURE_2D, app->gl_txt);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.width(), img.height(), GL_RGBA,
-        GL_FLOAT, img.data());
-    assert(glGetError() == GL_NO_ERROR);
-
-    assert(glGetError() == GL_NO_ERROR);
-    glViewport(0, 0, framebuffer_size.x, framebuffer_size.y);
-    glClearColor(app->background.x, app->background.y, app->background.z,
-        app->background.w);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glEnable(GL_BLEND);
-    glUseProgram(app->gl_prog);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, app->gl_txt);
-    assert(glGetError() == GL_NO_ERROR);
-
-    assert(glGetError() == GL_NO_ERROR);
-    glUniform2f(glGetUniformLocation(app->gl_prog, "win_size"), window_size.x,
-        window_size.y);
-    glUniform2f(glGetUniformLocation(app->gl_prog, "txt_size"), img.width(),
-        img.height());
-    glUniformMatrix3x2fv(glGetUniformLocation(app->gl_prog, "frame"), 1, false,
-        &app->imframe.x.x);
-    glUniform1i(glGetUniformLocation(app->gl_prog, "img"), 0);
-    assert(glGetError() == GL_NO_ERROR);
-
-    assert(glGetError() == GL_NO_ERROR);
-    glEnableVertexAttribArray(
-        glGetAttribLocation(app->gl_prog, "vert_texcoord"));
-    glBindBuffer(GL_ARRAY_BUFFER, app->gl_vbo);
-    glVertexAttribPointer(glGetAttribLocation(app->gl_prog, "vert_texcoord"), 2,
-        GL_FLOAT, false, 0, 0);
-    assert(glGetError() == GL_NO_ERROR);
-
-    assert(glGetError() == GL_NO_ERROR);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app->gl_ebo);
-    glDrawElements(GL_TRIANGLES, 3 * 4, GL_UNSIGNED_INT, 0);
-    assert(glGetError() == GL_NO_ERROR);
-
-    glUseProgram(0);
-    glDisable(GL_BLEND);
-}
-
-void draw_widgets(GLFWwindow* win) {
-    auto app = (app_state*)glfwGetWindowUserPointer(win);
+void draw_widgets(GLFWwindow* win, app_state* app) {
     if (begin_widgets_frame(win, "yitrace", &app->widgets_open)) {
         ImGui::LabelText("scene", "%s", app->filename.c_str());
         ImGui::LabelText("image", "%d x %d @ %d", app->trace_state.img.width(),
@@ -218,76 +151,11 @@ void draw_widgets(GLFWwindow* win) {
 }
 
 void draw(GLFWwindow* win) {
-    draw_image(win);
-    draw_widgets(win);
-    glfwSwapBuffers(win);
-}
-
-static const char* vertex =
-    R"(
-    #version 330
-
-    layout(location = 0) in vec2 vert_texcoord;
-
-    uniform mat3x2 frame;
-    uniform vec2 txt_size;
-    uniform vec2 win_size;
-    uniform sampler2D img;
-
-    out vec2 texcoord;
-
-    void main() {
-        texcoord = vert_texcoord.xy;
-        vec2 pos = frame * vec3(txt_size.x * (vert_texcoord.x - 0.5), 
-                                txt_size.y * (vert_texcoord.y - 0.5), 1);
-        vec2 upos = 2 * pos / win_size - vec2(1,1);
-        upos.y = - upos.y;
-        gl_Position = vec4(upos.x, upos.y, 0, 1);
-    }
-
-    )";
-
-static const char* fragment =
-    R"(
-    #version 330
-
-    in vec2 texcoord;
-
-    uniform sampler2D img;
-
-    out vec4 color;
-
-    void main() {
-        color = texture(img,texcoord);
-    }
-    )";
-
-void init_drawimage(GLFWwindow* win) {
     auto app = (app_state*)glfwGetWindowUserPointer(win);
-    auto& img = app->trace_state.display;
-    app->gl_prog = make_glprogram(vertex, fragment);
-    auto uv = std::vector<ygl::vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}};
-    auto triangles = std::vector<ygl::vec3i>{{0, 1, 2}, {0, 2, 3}};
-    assert(glGetError() == GL_NO_ERROR);
-    glGenBuffers(1, &app->gl_vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, app->gl_vbo);
-    glBufferData(GL_ARRAY_BUFFER, 4 * 2 * 4, uv.data(), GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glGenBuffers(1, &app->gl_ebo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app->gl_ebo);
-    glBufferData(
-        GL_ELEMENT_ARRAY_BUFFER, 2 * 3 * 4, triangles.data(), GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    assert(glGetError() == GL_NO_ERROR);
-    assert(glGetError() == GL_NO_ERROR);
-    glGenTextures(1, &app->gl_txt);
-    glBindTexture(GL_TEXTURE_2D, app->gl_txt);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.width(), img.height(), 0,
-        GL_RGBA, GL_FLOAT, img.data());
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    assert(glGetError() == GL_NO_ERROR);
+    draw_image(win, app->trace_state.display, app->imframe, app->zoom_to_fit,
+        app->background);
+    draw_widgets(win, app);
+    glfwSwapBuffers(win);
 }
 
 bool update(const std::shared_ptr<app_state>& app) {
@@ -323,9 +191,6 @@ void run_ui(const std::shared_ptr<app_state>& app) {
     auto win_width = ygl::clamp(app->trace_state.img.width(), 512, 1024);
     auto win_height = ygl::clamp(app->trace_state.img.height(), 512, 1024);
     auto win = make_window(win_width, win_height, "yitrace", app.get(), draw);
-
-    // load textures
-    init_drawimage(win);
 
     // init widget
     init_widgets(win);

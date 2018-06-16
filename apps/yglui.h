@@ -112,6 +112,173 @@ inline uint make_glprogram(const char* vertex, const char* fragment) {
     return make_glprogram(vertex, fragment, vid, fid, vao);
 }
 
+static const char* draw_image_vertex =
+    R"(
+    #version 330
+
+    layout(location = 0) in vec2 vert_pos;
+    layout(location = 1) in vec2 vert_texcoord;
+
+    out vec2 texcoord;
+
+    void main() {
+        texcoord = vert_texcoord.xy;
+        vec2 upos = vert_pos;
+        gl_Position = vec4(upos.x, upos.y, 0, 1);
+    }
+
+    )";
+
+static const char* draw_image_fragment =
+    R"(
+    #version 330
+
+    in vec2 texcoord;
+    uniform sampler2D img;
+    out vec4 color;
+
+    void main() {
+        color = texture(img,texcoord);
+    }
+    )";
+
+inline void draw_image(const ygl::image4f& img, const ygl::frame2f& imframe, 
+    const ygl::vec2i& win_size) {
+    static uint gl_prog = 0, gl_pbo = 0, gl_tbo = 0, gl_ebo = 0, gl_txt = 0;
+    static ygl::vec2i gl_imsize = ygl::zero2i;
+
+    auto imsize = ygl::vec2i{img.width(), img.height()};
+    auto pos_ = std::vector<ygl::vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}};
+    auto texcoord = std::vector<ygl::vec2f>{{0, 0}, {1, 0}, {1, 1}, {0, 1}};
+    auto triangles = std::vector<ygl::vec3i>{{0, 1, 2}, {0, 2, 3}};
+
+    if(!gl_prog) {
+        assert(glGetError() == GL_NO_ERROR);
+        gl_prog = make_glprogram(draw_image_vertex, draw_image_fragment);
+        assert(glGetError() == GL_NO_ERROR);
+    }
+    if(!gl_pbo) {
+        assert(glGetError() == GL_NO_ERROR);
+        glGenBuffers(1, &gl_pbo);
+        glBindBuffer(GL_ARRAY_BUFFER, gl_pbo);
+        glBufferData(GL_ARRAY_BUFFER, 4 * 2 * 4, pos_.data(), GL_STATIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        assert(glGetError() == GL_NO_ERROR);
+    }
+    if(!gl_tbo) {
+        assert(glGetError() == GL_NO_ERROR);
+        glGenBuffers(1, &gl_tbo);
+        glBindBuffer(GL_ARRAY_BUFFER, gl_tbo);
+        glBufferData(GL_ARRAY_BUFFER, 4 * 2 * 4, texcoord.data(), GL_STATIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        assert(glGetError() == GL_NO_ERROR);
+    }
+    if(!gl_ebo) {
+        assert(glGetError() == GL_NO_ERROR);
+        glGenBuffers(1, &gl_ebo);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gl_ebo);
+        glBufferData(
+            GL_ELEMENT_ARRAY_BUFFER, 2 * 3 * 4, triangles.data(), GL_STATIC_DRAW);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        assert(glGetError() == GL_NO_ERROR);
+    }
+
+    if(!gl_txt) {
+        assert(glGetError() == GL_NO_ERROR);
+        glGenTextures(1, &gl_txt);
+        glBindTexture(GL_TEXTURE_2D, gl_txt);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.width(),
+            img.height(), 0, GL_RGBA, GL_FLOAT, img.data());
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        assert(glGetError() == GL_NO_ERROR);
+        gl_imsize = imsize;
+    } else {
+        assert(glGetError() == GL_NO_ERROR);
+        glBindTexture(GL_TEXTURE_2D, gl_txt);
+        if(imsize != gl_imsize) {
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imsize.x, imsize.y, 0, GL_RGBA, GL_FLOAT, img.data());
+            gl_imsize = imsize;
+        } else {
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, imsize.x, imsize.y, GL_RGBA, GL_FLOAT, img.data());
+        }
+        glBindTexture(GL_TEXTURE_2D, 0);
+        assert(glGetError() == GL_NO_ERROR);
+    }
+
+    assert(glGetError() == GL_NO_ERROR);
+    glUseProgram(gl_prog);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, gl_txt);
+    assert(glGetError() == GL_NO_ERROR);
+
+    assert(glGetError() == GL_NO_ERROR);
+    glUniform1i(glGetUniformLocation(gl_prog, "img"), 0);
+    assert(glGetError() == GL_NO_ERROR);
+
+    assert(glGetError() == GL_NO_ERROR);
+    auto pos = std::vector<ygl::vec2f>{{-imsize.x/2.0f, -imsize.y/2.0f}, 
+        {imsize.x/2.0f, -imsize.y/2.0f}, {imsize.x/2.0f, imsize.y/2.0f}, 
+        {-imsize.x/2.0f, imsize.y/2.0f}};
+    for(auto& p : pos) p = ygl::transform_point(imframe, p);
+    for(auto& p : pos) {
+        p.x = 2 * p.x / win_size.x - 1;
+        p.y = 2 * p.y / win_size.y - 1;
+        p.y = -p.y;
+    }
+    glBindBuffer(GL_ARRAY_BUFFER, gl_pbo);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, 4 * 2 * 4, pos.data());
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    assert(glGetError() == GL_NO_ERROR);
+
+    assert(glGetError() == GL_NO_ERROR);
+    glEnableVertexAttribArray(
+        glGetAttribLocation(gl_prog, "vert_pos"));
+    glBindBuffer(GL_ARRAY_BUFFER, gl_pbo);
+    glVertexAttribPointer(glGetAttribLocation(gl_prog, "vert_pos"), 2,
+        GL_FLOAT, false, 0, 0);
+    assert(glGetError() == GL_NO_ERROR);
+
+    assert(glGetError() == GL_NO_ERROR);
+    glEnableVertexAttribArray(
+        glGetAttribLocation(gl_prog, "vert_texcoord"));
+    glBindBuffer(GL_ARRAY_BUFFER, gl_tbo);
+    glVertexAttribPointer(glGetAttribLocation(gl_prog, "vert_texcoord"), 2,
+        GL_FLOAT, false, 0, 0);
+    assert(glGetError() == GL_NO_ERROR);
+
+    assert(glGetError() == GL_NO_ERROR);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gl_ebo);
+    glDrawElements(GL_TRIANGLES, 3 * 4, GL_UNSIGNED_INT, 0);
+    assert(glGetError() == GL_NO_ERROR);
+
+    glUseProgram(0);
+}
+
+inline void draw_image(GLFWwindow* win, const ygl::image4f& img, ygl::frame2f& imframe,
+    bool zoom_to_fit, const ygl::vec4f& background) {
+    auto win_size = ygl::zero2i, framebuffer_size = ygl::zero2i;
+    glfwGetWindowSize(win, &win_size.x, &win_size.y);
+    glfwGetFramebufferSize(win, &framebuffer_size.x, &framebuffer_size.y);
+
+    ygl::center_image(imframe, img.imsize(), win_size, zoom_to_fit);
+
+    assert(glGetError() == GL_NO_ERROR);
+    glViewport(0, 0, framebuffer_size.x, framebuffer_size.y);
+    glClearColor(background.x, background.y, background.z,
+        background.w);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glEnable(GL_BLEND);
+    assert(glGetError() == GL_NO_ERROR);
+
+    draw_image(img, imframe, win_size);
+
+    assert(glGetError() == GL_NO_ERROR);
+    glDisable(GL_BLEND);
+    assert(glGetError() == GL_NO_ERROR);
+}
+
 // Create GLFW window
 inline GLFWwindow* make_window(int width, int height, const std::string& title,
     void* user_ptr, void (*refresh)(GLFWwindow*)) {

@@ -1645,7 +1645,7 @@ inline mat<T, 4> ortho_mat(T l, T r, T b, T t, T n, T f) {
 }
 template <typename T>
 inline mat<T, 4> ortho2d_mat(T left, T right, T bottom, T top) {
-    return ortho_mat(left, right, bottom, top, -1, 1);
+    return ortho_mat<T>(left, right, bottom, top, -1, 1);
 }
 template <typename T>
 inline mat<T, 4> ortho_mat(T xmag, T ymag, T near, T far) {
@@ -2616,8 +2616,9 @@ struct image {
         : w(width), h(height), pxl(p) {}
 
     // size checks
-    int width() const { return w; };
-    int height() const { return h; };
+    int width() const { return w; }
+    int height() const { return h; }
+    vec2i imsize() const { return {w, h}; }
     int size() const { return w * h; };
     bool empty() const { return !w || !h; };
 
@@ -2738,7 +2739,7 @@ image4f make_bumpdimple_image(int width, int height, int tile = 8);
 image4f make_ramp_image(int width, int height, const vec4f& c0, const vec4f& c1,
     float srgb = false);
 image4f make_gammaramp_image(int width, int height);
-image4f make_uv_image(int width, int height);
+image4f make_uvramp_image(int width, int height);
 image4f make_uvgrid_image(
     int width, int height, int tile = 8, bool colored = true);
 
