@@ -3,22 +3,24 @@
     "cameras": [
         {
             "name": "cam",
-            "!!from": [
-                0,
-                5,
-                14
-            ],
-            "!!to": [
-                0,
-                1,
-                0
-            ],
             "imsize": [
                 0.036,
                 0.015
             ],
             "focal": 0.06,
-            "aperture": 0.0
+            "aperture": 0.0,
+            "!!proc": {
+                "from": [
+                    0,
+                    5,
+                    14
+                ],
+                "to": [
+                    0,
+                    1,
+                    0
+                ]
+            }
         }
     ],
     "instances": [
@@ -26,7 +28,9 @@
             "name": "floor",
             "shp": {
                 "name": "floor",
-                "!!type": "floor"
+                "!!proc": {
+                    "type": "floor"
+                }
             },
             "mat": {
                 "name": "floor",
@@ -39,21 +43,20 @@
                     "name": "floor",
                     "path": "textures/floor.png",
                     "gamma": 2.2,
-                    "!!type": "grid"
+                    "!!proc": {
+                        "type": "grid"
+                    }
                 }
             }
         },
         {
             "name": "obj1",
-            "!!translation": [
-                -2.5,
-                1,
-                0
-            ],
             "shp": {
                 "name": "obj1",
                 "path": "meshes/obj1.ply",
-                "!!type": "quad"
+                "!!proc": {
+                    "type": "quad"
+                }
             },
             "mat": {
                 "name": "obj1",
@@ -72,21 +75,27 @@
                     "name": "uvgrid",
                     "path": "textures/uvgrid.png",
                     "gamma": 2.2,
-                    "!!type": "uvgrid"
+                    "!!proc": {
+                        "type": "uvgrid"
+                    }
                 }
+            },
+            "!!proc": {
+                "translation": [
+                    -2.5,
+                    1,
+                    0
+                ]
             }
         },
         {
             "name": "obj2",
-            "!!translation": [
-                0,
-                1,
-                0
-            ],
             "shp": {
                 "name": "obj2",
                 "path": "meshes/obj2.ply",
-                "!!type": "quad"
+                "!!proc": {
+                    "type": "quad"
+                }
             },
             "mat": {
                 "name": "obj2",
@@ -105,21 +114,27 @@
                     "name": "uvramp",
                     "path": "textures/uvramp.png",
                     "gamma": 2.2,
-                    "!!type": "uvramp"
+                    "!!proc": {
+                        "type": "uvramp"
+                    }
                 }
+            },
+            "!!proc": {
+                "translation": [
+                    0,
+                    1,
+                    0
+                ]
             }
         },
         {
             "name": "obj3",
-            "!!translation": [
-                2.5,
-                1,
-                0
-            ],
             "shp": {
                 "name": "obj3",
                 "path": "meshes/obj3.ply",
-                "!!type": "quad"
+                "!!proc": {
+                    "type": "quad"
+                }
             },
             "mat": {
                 "name": "obj3",
@@ -137,27 +152,26 @@
                 "kd_txt": {
                     "name": "uvramp"
                 }
+            },
+            "!!proc": {
+                "translation": [
+                    2.5,
+                    1,
+                    0
+                ]
             }
         },
         {
             "name": "light1",
-            "!!from": [
-                -4,
-                8,
-                8
-            ],
-            "!!to": [
-                0,
-                1,
-                0
-            ],
             "shp": {
                 "name": "light1",
-                "!!type": "quad",
-                "!!size": [
-                    4,
-                    4
-                ]
+                "!!proc": {
+                    "type": "quad",
+                    "size": [
+                        4,
+                        4
+                    ]
+                }
             },
             "mat": {
                 "name": "light1",
@@ -165,28 +179,32 @@
                     20,
                     20,
                     20
+                ]
+            },
+            "!!proc": {
+                "from": [
+                    -4,
+                    8,
+                    8
+                ],
+                "to": [
+                    0,
+                    1,
+                    0
                 ]
             }
         },
         {
             "name": "light2",
-            "!!from": [
-                4,
-                8,
-                8
-            ],
-            "!!to": [
-                0,
-                1,
-                0
-            ],
             "shp": {
                 "name": "light2",
-                "!!type": "quad",
-                "!!size": [
-                    4,
-                    4
-                ]
+                "!!proc": {
+                    "type": "quad",
+                    "size": [
+                        4,
+                        4
+                    ]
+                }
             },
             "mat": {
                 "name": "light2",
@@ -194,6 +212,18 @@
                     20,
                     20,
                     20
+                ]
+            },
+            "!!proc": {
+                "from": [
+                    4,
+                    8,
+                    8
+                ],
+                "to": [
+                    0,
+                    1,
+                    0
                 ]
             }
         }

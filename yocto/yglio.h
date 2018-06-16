@@ -108,14 +108,14 @@ namespace ygl {
 // Load/save a scene in the supported formats.
 std::shared_ptr<scene> load_scene(const std::string& filename,
     bool load_textures = true, bool skip_missing = true);
-void save_scene(const std::string& filename, const std::shared_ptr<scene> scn,
+void save_scene(const std::string& filename, const std::shared_ptr<scene>& scn,
     bool save_textures = true, bool skip_missing = true);
 
 // Load/save a scene in the builtin JSON format.
 std::shared_ptr<scene> load_json_scene(const std::string& filename,
     bool load_textures = true, bool skip_missing = true);
 void save_json_scene(const std::string& filename,
-    const std::shared_ptr<scene> scn, bool save_textures = true,
+    const std::shared_ptr<scene>& scn, bool save_textures = true,
     bool skip_missing = true);
 
 // Load/save a scene from/to OBJ.
@@ -123,14 +123,23 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
     bool load_textures = true, bool skip_missing = true,
     bool split_shapes = true);
 void save_obj_scene(const std::string& filename,
-    const std::shared_ptr<scene> scn, bool save_textures = true,
+    const std::shared_ptr<scene>& scn, bool save_textures = true,
     bool skip_missing = true);
 
 // Load/save a scene from/to glTF.
 std::shared_ptr<scene> load_gltf_scene(const std::string& filename,
     bool load_textures = true, bool skip_missing = true);
 void save_gltf_scene(const std::string& filename,
-    const std::shared_ptr<scene> scn, bool save_textures = true,
+    const std::shared_ptr<scene>& scn, bool save_textures = true,
+    bool skip_missing = true);
+
+// Load/save a scene from/to pbrt. This is not robust at all and only
+// works on scene that have been previously adapted since the two renderers
+// are too different to match.
+std::shared_ptr<scene> load_pbrt_scene(const std::string& filename,
+    bool load_textures = true, bool skip_missing = true);
+void save_pbrt_scene(const std::string& filename,
+    const std::shared_ptr<scene>& scn, bool save_textures = true,
     bool skip_missing = true);
 
 }  // namespace ygl

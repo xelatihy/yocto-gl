@@ -3,22 +3,24 @@
     "cameras": [
         {
             "name": "cam",
-            "!!from": [
-                0,
-                5,
-                14
-            ],
-            "!!to": [
-                0,
-                1,
-                0
-            ],
             "imsize": [
                 0.036,
                 0.015
             ],
             "focal": 0.06,
-            "aperture": 0.0
+            "aperture": 0.0,
+            "!!proc": {
+                "from": [
+                    0,
+                    5,
+                    14
+                ],
+                "to": [
+                    0,
+                    1,
+                    0
+                ]
+            }
         }
     ],
     "instances": [
@@ -26,7 +28,9 @@
             "name": "floor",
             "shp": {
                 "name": "floor",
-                "!!type": "floor"
+                "!!proc": {
+                    "type": "floor"
+                }
             },
             "mat": {
                 "name": "floor",
@@ -39,21 +43,20 @@
                     "name": "floor",
                     "path": "textures/floor.png",
                     "gamma": 2.2,
-                    "!!type": "grid"
+                    "!!proc": {
+                        "type": "grid"
+                    }
                 }
             }
         },
         {
             "name": "obj1",
-            "!!translation": [
-                -2.5,
-                1,
-                0
-            ],
             "shp": {
                 "name": "obj1",
                 "path": "meshes/obj1.ply",
-                "!!type": "sphere_flipcap"
+                "!!proc": {
+                    "type": "sphere_flipcap"
+                }
             },
             "mat": {
                 "name": "obj1",
@@ -72,21 +75,27 @@
                     "name": "uvgrid",
                     "path": "textures/uvgrid.png",
                     "gamma": 2.2,
-                    "!!type": "uvgrid"
+                    "!!proc": {
+                        "type": "uvgrid"
+                    }
                 }
+            },
+            "!!proc": {
+                "translation": [
+                    -2.5,
+                    1,
+                    0
+                ]
             }
         },
         {
             "name": "obj2",
-            "!!translation": [
-                0,
-                1,
-                0
-            ],
             "shp": {
                 "name": "obj2",
                 "path": "meshes/obj2.ply",
-                "!!type": "sphere_cube"
+                "!!proc": {
+                    "type": "sphere_cube"
+                }
             },
             "mat": {
                 "name": "obj2",
@@ -104,19 +113,23 @@
                 "kd_txt": {
                     "name": "uvgrid"
                 }
+            },
+            "!!proc": {
+                "translation": [
+                    0,
+                    1,
+                    0
+                ]
             }
         },
         {
             "name": "obj3",
-            "!!translation": [
-                2.5,
-                1,
-                0
-            ],
             "shp": {
                 "name": "obj3",
                 "path": "meshes/obj3.ply",
-                "!!type": "cube_rounded"
+                "!!proc": {
+                    "type": "cube_rounded"
+                }
             },
             "mat": {
                 "name": "obj3",
@@ -134,6 +147,13 @@
                 "kd_txt": {
                     "name": "uvgrid"
                 }
+            },
+            "!!proc": {
+                "translation": [
+                    2.5,
+                    1,
+                    0
+                ]
             }
         }
     ],
@@ -148,7 +168,9 @@
             "ke_txt": {
                 "name": "sky",
                 "path": "textures/sky.hdr",
-                "!!type": "sky"
+                "!!proc": {
+                    "type": "sky"
+                }
             }
         }
     ]

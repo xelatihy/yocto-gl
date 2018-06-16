@@ -53,10 +53,10 @@ int main(int argc, char* argv[]) {
     auto resolution = 512;          // image vertical resolution
     auto nsamples = 256;            // image samples
     auto tracer = "pathtrace"s;     // tracer algorithm
-    auto nbounces = 8;              // number of bounces
+    auto nbounces = 4;              // number of bounces
     auto pixel_clamp = 100.0f;      // pixel clamping
     auto noparallel = false;        // disable parallel
-    auto seed = 7;                  // random seed
+    auto seed = ygl::trace_default_seed;                  // random seed
     auto nbatch = 16;               // batch size
     auto save_batch = false;        // whether to save bacthes
     auto exposure = 0.0f;           // exposure

@@ -1450,6 +1450,12 @@ void build_bvh(const std::shared_ptr<bvh_tree>& bvh, bool equal_size) {
                 {triangle_bbox(bvh->pos[t.x], bvh->pos[t.y], bvh->pos[t.z])});
         }
         type = bvh_node_type::triangle;
+    } else if (!bvh->quads.empty()) {
+        for (auto& q : bvh->quads) {
+            prims.push_back(
+                {quad_bbox(bvh->pos[q.x], bvh->pos[q.y], bvh->pos[q.z], bvh->pos[q.w])});
+        }
+        type = bvh_node_type::quad;
     } else if (!bvh->pos.empty()) {
         for (auto i = 0; i < bvh->pos.size(); i++) {
             prims.push_back({point_bbox(bvh->pos[i], bvh->radius[i])});
@@ -1493,6 +1499,13 @@ void refit_bvh(const std::shared_ptr<bvh_tree>& bvh, int nodeid) {
                 auto& t = bvh->triangles[node.prims[i]];
                 node.bbox +=
                     triangle_bbox(bvh->pos[t.x], bvh->pos[t.y], bvh->pos[t.z]);
+            }
+        } break;
+        case bvh_node_type::quad: {
+            for (auto i = 0; i < node.count; i++) {
+                auto& t = bvh->quads[node.prims[i]];
+                node.bbox +=
+                    quad_bbox(bvh->pos[t.x], bvh->pos[t.y], bvh->pos[t.z], bvh->pos[t.w]);
             }
         } break;
         case bvh_node_type::line: {
@@ -1573,6 +1586,17 @@ bool intersect_bvh(const std::shared_ptr<bvh_tree>& bvh, const ray3f& ray_,
                     auto& t = bvh->triangles[node.prims[i]];
                     if (intersect_triangle(ray, bvh->pos[t.x], bvh->pos[t.y],
                             bvh->pos[t.z], dist, uv)) {
+                        hit = true;
+                        ray.tmax = dist;
+                        eid = node.prims[i];
+                    }
+                }
+            } break;
+            case bvh_node_type::quad: {
+                for (auto i = 0; i < node.count; i++) {
+                    auto& t = bvh->quads[node.prims[i]];
+                    if (intersect_quad(ray, bvh->pos[t.x], bvh->pos[t.y],
+                            bvh->pos[t.z], bvh->pos[t.w], dist, uv)) {
                         hit = true;
                         ray.tmax = dist;
                         eid = node.prims[i];
@@ -1666,6 +1690,18 @@ bool overlap_bvh(const std::shared_ptr<bvh_tree>& bvh, const vec3f& pos,
                     if (overlap_triangle(pos, max_dist, bvh->pos[t.x],
                             bvh->pos[t.y], bvh->pos[t.z], bvh->radius[t.x],
                             bvh->radius[t.y], bvh->radius[t.z], dist, uv)) {
+                        hit = true;
+                        max_dist = dist;
+                        eid = node.prims[i];
+                    }
+                }
+            } break;
+            case bvh_node_type::quad: {
+                for (auto i = 0; i < node.count; i++) {
+                    auto& q = bvh->quads[node.prims[i]];
+                    if (overlap_quad(pos, max_dist, bvh->pos[q.x],
+                            bvh->pos[q.y], bvh->pos[q.z], bvh->pos[q.w], bvh->radius[q.x],
+                            bvh->radius[q.y], bvh->radius[q.z], bvh->radius[q.w], dist, uv)) {
                         hit = true;
                         max_dist = dist;
                         eid = node.prims[i];
@@ -2873,6 +2909,7 @@ namespace ygl {
 
 // Conversion between linear and gamma-encoded images.
 image4f gamma_to_linear(const image4f& srgb, float gamma) {
+    if(gamma == 1) return srgb;
     auto lin = image4f{srgb.size};
     for (auto j = 0; j < srgb.size.y; j++) {
         for (auto i = 0; i < srgb.size.x; i++) {
@@ -2883,6 +2920,7 @@ image4f gamma_to_linear(const image4f& srgb, float gamma) {
     return lin;
 }
 image4f linear_to_gamma(const image4f& lin, float gamma) {
+    if(gamma == 1) return lin;
     auto srgb = image4f{lin.size};
     for (auto j = 0; j < lin.size.y; j++) {
         for (auto i = 0; i < lin.size.x; i++) {
@@ -3664,7 +3702,7 @@ std::shared_ptr<camera> make_bbox_camera(const std::string& name,
     cam->ortho = false;
     cam->imsize = imsize;
     cam->focal = focal;
-    cam->focus = flt_max;
+    cam->focus = length(from - to);
     cam->aperture = 0;
     return cam;
 }
@@ -3878,16 +3916,9 @@ vec4f eval_texture(const std::shared_ptr<texture>& txt, const vec2f& texcoord) {
     auto u = s - i, v = t - j;
 
     // handle interpolation
-    if (txt->gamma != 1) {
-        return gamma_to_linear(txt->img[{i, j}]) * (1 - u) * (1 - v) +
-               gamma_to_linear(txt->img[{i, jj}]) * (1 - u) * v +
-               gamma_to_linear(txt->img[{ii, j}]) * u * (1 - v) +
-               gamma_to_linear(txt->img[{ii, jj}]) * u * v;
-    } else {
-        return txt->img[{i, j}] * (1 - u) * (1 - v) +
-               txt->img[{i, jj}] * (1 - u) * v +
-               txt->img[{ii, j}] * u * (1 - v) + txt->img[{ii, jj}] * u * v;
-    }
+    return txt->img[{i, j}] * (1 - u) * (1 - v) +
+            txt->img[{i, jj}] * (1 - u) * v +
+            txt->img[{ii, j}] * u * (1 - v) + txt->img[{ii, jj}] * u * v;
 }
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
@@ -4004,8 +4035,7 @@ float eval_opacity(
     const std::shared_ptr<instance>& ist, int ei, const vec2f& uv) {
     if (!ist || !ist->mat) return 1;
     return ist->mat->op * eval_color(ist->shp, ei, uv).w *
-           eval_texture(ist->mat->kd_txt, eval_texcoord(ist, ei, uv)).w *
-           eval_texture(ist->mat->op_txt, eval_texcoord(ist, ei, uv)).x;
+           eval_texture(ist->mat->op_txt, eval_texcoord(ist, ei, uv)).w;
 }
 
 // Evaluates the bsdf at a location.

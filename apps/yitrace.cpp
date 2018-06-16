@@ -47,8 +47,8 @@ struct app_state {
     int nsamples = 256;                        // number of samples
     std::string tracer = "pathtrace"s;         // tracer name
     ygl::trace_func tracef = ygl::trace_path;  // tracer
-    int nbounces = 8;                          // max depth
-    int seed = 7;                              // seed
+    int nbounces = 4;                          // max depth
+    int seed = ygl::trace_default_seed;        // seed
     float pixel_clamp = 100.0f;                // pixel clamping
     int pratio = 8;                            // preview ratio
 
@@ -90,7 +90,7 @@ auto tracer_names = std::unordered_map<std::string, ygl::trace_func>{
     {"debug_roughness", ygl::trace_debug_roughness}};
 
 void draw_widgets(GLFWwindow* win, app_state* app) {
-    if (begin_widgets_frame(win, "yitrace", &app->widgets_open)) {
+    if (ygl::begin_widgets_frame(win, "yitrace", &app->widgets_open)) {
         ImGui::LabelText("scene", "%s", app->filename.c_str());
         ImGui::LabelText("image", "%d x %d @ %d", app->trace_state.img.size.x,
             app->trace_state.img.size.y, app->trace_state.sample);
@@ -147,12 +147,12 @@ void draw_widgets(GLFWwindow* win, app_state* app) {
             ImGui::TreePop();
         }
     }
-    end_widgets_frame();
+    ygl::end_widgets_frame();
 }
 
 void draw(GLFWwindow* win) {
     auto app = (app_state*)glfwGetWindowUserPointer(win);
-    draw_image(win, app->trace_state.display, app->imframe, app->zoom_to_fit,
+    ygl::draw_glimage(win, app->trace_state.display, app->imframe, app->zoom_to_fit,
         app->background);
     draw_widgets(win, app);
     glfwSwapBuffers(win);
@@ -167,7 +167,10 @@ bool update(const std::shared_ptr<app_state>& app) {
 
     // update BVH
     for (auto sel : app->update_list) {
-        if (sel.as<ygl::shape>()) { ygl::refit_bvh(sel.as<ygl::shape>()); }
+        if (sel.as<ygl::shape>()) {
+            ygl::refit_bvh(sel.as<ygl::shape>());
+            ygl::refit_bvh(app->scn, false);
+        }
         if (sel.as<ygl::instance>()) { ygl::refit_bvh(app->scn, false); }
         if (sel.as<ygl::node>()) {
             ygl::update_transforms(app->scn, 0);
@@ -176,6 +179,7 @@ bool update(const std::shared_ptr<app_state>& app) {
     }
     app->update_list.clear();
 
+    app->tracef = tracer_names.at(app->tracer);
     app->trace_state = {};
     ygl::trace_async_start(app->trace_state, app->scn, app->camid,
         app->resolution, app->nsamples, app->tracef, app->exposure, app->gamma,
@@ -189,18 +193,16 @@ bool update(const std::shared_ptr<app_state>& app) {
 void run_ui(const std::shared_ptr<app_state>& app) {
     // window
     auto win_size = ygl::clamp(app->trace_state.img.size, 512, 1024);
-    auto win = make_window(win_size, "yitrace", app.get(), draw);
+    auto win = ygl::make_window(win_size, "yitrace", app.get(), draw);
 
     // init widget
-    init_widgets(win);
+    ygl::init_widgets(win);
 
     // loop
     auto mouse_pos = ygl::zero2f, last_pos = ygl::zero2f;
-    auto mouse_center = ygl::zero3f;
-    auto mouse_button = 0, last_button = 0;
+    auto mouse_button = 0;
     while (!glfwWindowShouldClose(win)) {
         last_pos = mouse_pos;
-        last_button = mouse_button;
         glfwGetCursorPosExt(win, &mouse_pos.x, &mouse_pos.y);
         mouse_button = glfwGetMouseButtonIndexExt(win);
         auto alt_down = glfwGetAltKeyExt(win);
@@ -209,16 +211,6 @@ void run_ui(const std::shared_ptr<app_state>& app) {
 
         // handle mouse and keyboard for navigation
         if (mouse_button && !alt_down && !widgets_active) {
-            if (!last_button) {
-                if (app->selection.as<ygl::instance>()) {
-                    auto ist = app->selection.as<ygl::instance>();
-                    mouse_center = transform_point(ist->frame,
-                        (ist->shp->bbox.min + ist->shp->bbox.max) / 2);
-                } else {
-                    mouse_center =
-                        (app->scn->bbox.min + app->scn->bbox.max) / 2;
-                }
-            }
             auto dolly = 0.0f;
             auto pan = ygl::zero2f;
             auto rotate = ygl::zero2f;
@@ -227,10 +219,7 @@ void run_ui(const std::shared_ptr<app_state>& app) {
             if (mouse_button == 3 || (mouse_button == 1 && shift_down))
                 pan = (mouse_pos - last_pos) / 100.0f;
             auto cam = app->scn->cameras.at(app->camid);
-            ygl::camera_turntable(
-                cam->frame.o, mouse_center, cam->frame.z, rotate, dolly, pan);
-            cam->frame = ygl::lookat_frame(
-                cam->frame.o, mouse_center, ygl::vec3f{0, 1, 0});
+            ygl::camera_turntable(cam->frame, cam->focus, rotate, dolly, pan);
             app->update_list.push_back(cam);
         }
 
@@ -257,6 +246,8 @@ void run_ui(const std::shared_ptr<app_state>& app) {
         draw(win);
 
         // event hadling
+        if(!mouse_button && !widgets_active)
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         glfwPollEvents();
     }
 }
@@ -369,6 +360,7 @@ int main(int argc, char* argv[]) {
     app->resolution = resolution;
     app->nsamples = nsamples;
     app->tracer = tracer;
+    app->tracef = tracer_names.at(tracer);
     app->nbounces = nbounces;
     app->seed = seed;
     app->pixel_clamp = pixel_clamp;

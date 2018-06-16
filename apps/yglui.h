@@ -48,14 +48,21 @@
 
 #include <map>
 
+// -----------------------------------------------------------------------------
+// LIGHTWEIGHT OPENGL UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
 using uint = unsigned int;
+
+inline void check_glerror() { assert(glGetError() == GL_NO_ERROR); }
 
 inline uint make_glprogram(
     const char* vertex, const char* fragment, uint& vid, uint& fid, uint& vao) {
-    assert(glGetError() == GL_NO_ERROR);
+    check_glerror();
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
-    assert(glGetError() == GL_NO_ERROR);
+    check_glerror();
 
     int errflags;
     char errbuf[10000];
@@ -70,7 +77,7 @@ inline uint make_glprogram(
         throw std::runtime_error(
             std::string("shader not compiled\n\n") + errbuf);
     }
-    assert(glGetError() == GL_NO_ERROR);
+    check_glerror();
 
     // create fragment
     fid = glCreateShader(GL_FRAGMENT_SHADER);
@@ -82,7 +89,7 @@ inline uint make_glprogram(
         throw std::runtime_error(
             std::string("shader not compiled\n\n") + errbuf);
     }
-    assert(glGetError() == GL_NO_ERROR);
+    check_glerror();
 
     // create program
     auto pid = glCreateProgram();
@@ -102,7 +109,7 @@ inline uint make_glprogram(
         throw std::runtime_error(
             std::string("program not linked\n\n") + errbuf);
     }
-    assert(glGetError() == GL_NO_ERROR);
+    check_glerror();
 
     return pid;
 }
@@ -110,6 +117,194 @@ inline uint make_glprogram(
 inline uint make_glprogram(const char* vertex, const char* fragment) {
     uint vid = 0, fid = 0, vao = 0;
     return make_glprogram(vertex, fragment, vid, fid, vao);
+}
+
+template <typename T>
+inline uint make_glbuffer(
+    const std::vector<T>& data, bool elems, bool dynamic = false) {
+    auto bid = (uint)0;
+    auto target = (elems) ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER;
+    auto usage = (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW;
+    check_glerror();
+    glGenBuffers(1, &bid);
+    glBindBuffer(target, bid);
+    glBufferData(target, sizeof(T) * data.size(), data.data(), usage);
+    glBindBuffer(target, 0);
+    check_glerror();
+    return bid;
+}
+
+template <typename T>
+inline void update_glbuffer(uint bid, const std::vector<T>& data, bool elems) {
+    auto target = (elems) ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER;
+    check_glerror();
+    glBindBuffer(target, bid);
+    glBufferSubData(target, 0, sizeof(T) * data.size(), data.data());
+    glBindBuffer(target, 0);
+    check_glerror();
+}
+
+inline uint make_gltexture(const image4f& img, bool linear, bool mipmap) {
+    auto tid = (uint)0;
+    check_glerror();
+    glGenTextures(1, &tid);
+    glBindTexture(GL_TEXTURE_2D, tid);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.size.x, img.size.y, 0, GL_RGBA,
+        GL_FLOAT, img.pxl.data());
+    if(!linear) {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    } else if(!mipmap) {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    } else {
+        glGenerateMipmap(GL_TEXTURE_2D);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    }
+    glBindTexture(GL_TEXTURE_2D, 0);
+    check_glerror();
+    return tid;
+}
+
+inline void update_gltexture(uint tid, const image4f& img, 
+    const vec2i& old_imsize, bool mipmap) {
+    check_glerror();
+    glBindTexture(GL_TEXTURE_2D, tid);
+    if (img.size != old_imsize) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.size.x, img.size.y, 0,
+            GL_RGBA, GL_FLOAT, img.pxl.data());
+    } else {
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size.x, img.size.y, GL_RGBA,
+            GL_FLOAT, img.pxl.data());
+    }
+    if(mipmap) glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    check_glerror();
+}
+
+inline void set_gluniform(uint loc, int val) {
+    check_glerror();
+    glUniform1i(loc, val);
+    check_glerror();
+}
+inline void set_gluniform(uint loc, float val) {
+    check_glerror();
+    glUniform1f(loc, val);
+    check_glerror();
+}
+inline void set_gluniform(uint loc, const vec2f& val) {
+    check_glerror();
+    glUniform2f(loc, val.x, val.y);
+    check_glerror();
+}
+inline void set_gluniform(uint loc, const vec3f& val) {
+    check_glerror();
+    glUniform3f(loc, val.x, val.y, val.z);
+    check_glerror();
+}
+inline void set_gluniform(uint loc, const vec4f& val) {
+    check_glerror();
+    glUniform4f(loc, val.x, val.y, val.z, val.w);
+    check_glerror();
+}
+inline void set_gluniform(uint loc, const mat4f& val) {
+    check_glerror();
+    glUniformMatrix4fv(loc, 1, false, &val.x.x);
+    check_glerror();
+}
+
+template<typename T>
+inline void set_gluniform(uint pid, const char* name, const T& val) {
+    check_glerror();
+    set_gluniform(glGetUniformLocation(pid, name), val);
+    check_glerror();
+}
+
+inline void set_gluniform_texture(uint loc, uint tid, int unit) {
+    check_glerror();
+    glActiveTexture(GL_TEXTURE0 + unit);
+    glBindTexture(GL_TEXTURE_2D, tid);
+    check_glerror();
+    glUniform1i(loc, unit);
+    check_glerror();
+}
+
+inline void set_gluniform_texture(uint pid, const char* name, uint tid, int unit) {
+    check_glerror();
+    set_gluniform_texture(glGetUniformLocation(pid, name), tid, unit);
+    check_glerror();
+}
+
+inline void set_glvertattrib(uint loc, uint bid, const vec2f& val) {
+    check_glerror();
+    if(bid) {
+        glEnableVertexAttribArray(loc);
+        glBindBuffer(GL_ARRAY_BUFFER, bid);
+        glVertexAttribPointer(loc, 2,
+            GL_FLOAT, false, 0, 0);
+    } else {
+        glVertexAttrib2f(loc, val.x, val.y);
+    }
+    check_glerror();
+}
+
+inline void set_glvertattrib(uint loc, uint bid, const vec3f& val) {
+    check_glerror();
+    if(bid) {
+        glEnableVertexAttribArray(loc);
+        glBindBuffer(GL_ARRAY_BUFFER, bid);
+        glVertexAttribPointer(loc, 3,
+            GL_FLOAT, false, 0, 0);
+    } else {
+        glVertexAttrib3f(loc, val.x, val.y, val.z);
+    }
+    check_glerror();
+}
+
+inline void set_glvertattrib(uint loc, uint bid, const vec4f& val) {
+    check_glerror();
+    if(bid) {
+        glEnableVertexAttribArray(loc);
+        glBindBuffer(GL_ARRAY_BUFFER, bid);
+        glVertexAttribPointer(loc, 4,
+            GL_FLOAT, false, 0, 0);
+    } else {
+        glVertexAttrib4f(loc, val.x, val.y, val.z, val.w);
+    }
+    check_glerror();
+}
+
+template<typename T>
+inline void set_glvertattrib(uint pid, const char* name, uint bid, const T& val) {
+    check_glerror();
+    set_glvertattrib(glGetAttribLocation(pid, name), bid, val);
+    check_glerror();
+}
+
+inline void draw_glpoints(uint bid, int num) {
+    check_glerror();
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bid);
+    glDrawElements(GL_POINTS, 1 * num, GL_UNSIGNED_INT, 0);
+    check_glerror();
+}
+inline void draw_gllines(uint bid, int num) {
+    check_glerror();
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bid);
+    glDrawElements(GL_LINES, 2 * num, GL_UNSIGNED_INT, 0);
+    check_glerror();
+}
+inline void draw_gltriangles(uint bid, int num) {
+    check_glerror();
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bid);
+    glDrawElements(GL_TRIANGLES, 3 * num, GL_UNSIGNED_INT, 0);
+    check_glerror();
+}
+
+inline void bind_glprog(uint pid) {
+    check_glerror();
+    glUseProgram(pid);
+    check_glerror();
 }
 
 static const char* draw_image_vertex =
@@ -142,145 +337,77 @@ static const char* draw_image_fragment =
     }
     )";
 
-inline void draw_image(const ygl::image4f& img, const ygl::frame2f& imframe, 
-    const ygl::vec2i& win_size) {
+inline void draw_glimage(const image4f& img, const frame2f& imframe,
+    const vec2i& win_size) {
     static uint gl_prog = 0, gl_pbo = 0, gl_tbo = 0, gl_ebo = 0, gl_txt = 0;
-    static ygl::vec2i gl_imsize = ygl::zero2i;
+    static vec2i gl_imsize = zero2i;
 
     auto imsize = img.size;
-    auto pos_ = std::vector<ygl::vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}};
-    auto texcoord = std::vector<ygl::vec2f>{{0, 0}, {1, 0}, {1, 1}, {0, 1}};
-    auto triangles = std::vector<ygl::vec3i>{{0, 1, 2}, {0, 2, 3}};
+    auto pos_ = std::vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}};
+    auto texcoord = std::vector<vec2f>{{0, 0}, {1, 0}, {1, 1}, {0, 1}};
+    auto triangles = std::vector<vec3i>{{0, 1, 2}, {0, 2, 3}};
 
-    if(!gl_prog) {
-        assert(glGetError() == GL_NO_ERROR);
+    if (!gl_prog)
         gl_prog = make_glprogram(draw_image_vertex, draw_image_fragment);
-        assert(glGetError() == GL_NO_ERROR);
-    }
-    if(!gl_pbo) {
-        assert(glGetError() == GL_NO_ERROR);
-        glGenBuffers(1, &gl_pbo);
-        glBindBuffer(GL_ARRAY_BUFFER, gl_pbo);
-        glBufferData(GL_ARRAY_BUFFER, 4 * 2 * 4, pos_.data(), GL_STATIC_DRAW);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        assert(glGetError() == GL_NO_ERROR);
-    }
-    if(!gl_tbo) {
-        assert(glGetError() == GL_NO_ERROR);
-        glGenBuffers(1, &gl_tbo);
-        glBindBuffer(GL_ARRAY_BUFFER, gl_tbo);
-        glBufferData(GL_ARRAY_BUFFER, 4 * 2 * 4, texcoord.data(), GL_STATIC_DRAW);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        assert(glGetError() == GL_NO_ERROR);
-    }
-    if(!gl_ebo) {
-        assert(glGetError() == GL_NO_ERROR);
-        glGenBuffers(1, &gl_ebo);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gl_ebo);
-        glBufferData(
-            GL_ELEMENT_ARRAY_BUFFER, 2 * 3 * 4, triangles.data(), GL_STATIC_DRAW);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-        assert(glGetError() == GL_NO_ERROR);
-    }
+    if (!gl_pbo) gl_pbo = make_glbuffer(pos_, false);
+    if (!gl_tbo) gl_tbo = make_glbuffer(texcoord, false);
+    if (!gl_ebo) gl_ebo = make_glbuffer(triangles, true);
 
-    if(!gl_txt) {
-        assert(glGetError() == GL_NO_ERROR);
-        glGenTextures(1, &gl_txt);
-        glBindTexture(GL_TEXTURE_2D, gl_txt);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.size.x,
-            img.size.y, 0, GL_RGBA, GL_FLOAT, img.pxl.data());
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glBindTexture(GL_TEXTURE_2D, 0);
-        assert(glGetError() == GL_NO_ERROR);
-        gl_imsize = imsize;
+    if (!gl_txt) {
+        gl_txt = make_gltexture(img, false, false);
     } else {
-        assert(glGetError() == GL_NO_ERROR);
-        glBindTexture(GL_TEXTURE_2D, gl_txt);
-        if(imsize != gl_imsize) {
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imsize.x, imsize.y, 0, GL_RGBA, GL_FLOAT, img.pxl.data());
-            gl_imsize = imsize;
-        } else {
-            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, imsize.x, imsize.y, GL_RGBA, GL_FLOAT, img.pxl.data());
-        }
-        glBindTexture(GL_TEXTURE_2D, 0);
-        assert(glGetError() == GL_NO_ERROR);
+        update_gltexture(gl_txt, img, gl_imsize, false);
+        gl_imsize = img.size;
     }
 
-    assert(glGetError() == GL_NO_ERROR);
-    glUseProgram(gl_prog);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, gl_txt);
-    assert(glGetError() == GL_NO_ERROR);
+    bind_glprog(gl_prog);
 
-    assert(glGetError() == GL_NO_ERROR);
-    glUniform1i(glGetUniformLocation(gl_prog, "img"), 0);
-    assert(glGetError() == GL_NO_ERROR);
+    set_gluniform_texture(gl_prog, "img", gl_txt, 0);
 
-    assert(glGetError() == GL_NO_ERROR);
-    auto pos = std::vector<ygl::vec2f>{{-imsize.x/2.0f, -imsize.y/2.0f}, 
-        {imsize.x/2.0f, -imsize.y/2.0f}, {imsize.x/2.0f, imsize.y/2.0f}, 
-        {-imsize.x/2.0f, imsize.y/2.0f}};
-    for(auto& p : pos) p = ygl::transform_point(imframe, p);
-    for(auto& p : pos) {
+    auto pos = std::vector<vec2f>{{-imsize.x / 2.0f, -imsize.y / 2.0f},
+        {imsize.x / 2.0f, -imsize.y / 2.0f}, {imsize.x / 2.0f, imsize.y / 2.0f},
+        {-imsize.x / 2.0f, imsize.y / 2.0f}};
+    for (auto& p : pos) p = transform_point(imframe, p);
+    for (auto& p : pos) {
         p.x = 2 * p.x / win_size.x - 1;
         p.y = 2 * p.y / win_size.y - 1;
         p.y = -p.y;
     }
-    glBindBuffer(GL_ARRAY_BUFFER, gl_pbo);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, 4 * 2 * 4, pos.data());
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    assert(glGetError() == GL_NO_ERROR);
+    update_glbuffer(gl_pbo, pos, false);
 
-    assert(glGetError() == GL_NO_ERROR);
-    glEnableVertexAttribArray(
-        glGetAttribLocation(gl_prog, "vert_pos"));
-    glBindBuffer(GL_ARRAY_BUFFER, gl_pbo);
-    glVertexAttribPointer(glGetAttribLocation(gl_prog, "vert_pos"), 2,
-        GL_FLOAT, false, 0, 0);
-    assert(glGetError() == GL_NO_ERROR);
+    set_glvertattrib(gl_prog, "vert_pos", gl_pbo, zero2f);
+    set_glvertattrib(gl_prog, "vert_texcoord", gl_tbo, zero2f);
 
-    assert(glGetError() == GL_NO_ERROR);
-    glEnableVertexAttribArray(
-        glGetAttribLocation(gl_prog, "vert_texcoord"));
-    glBindBuffer(GL_ARRAY_BUFFER, gl_tbo);
-    glVertexAttribPointer(glGetAttribLocation(gl_prog, "vert_texcoord"), 2,
-        GL_FLOAT, false, 0, 0);
-    assert(glGetError() == GL_NO_ERROR);
-
-    assert(glGetError() == GL_NO_ERROR);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gl_ebo);
-    glDrawElements(GL_TRIANGLES, 3 * 4, GL_UNSIGNED_INT, 0);
-    assert(glGetError() == GL_NO_ERROR);
+    draw_gltriangles(gl_ebo, 4);
 
     glUseProgram(0);
 }
 
-inline void draw_image(GLFWwindow* win, const ygl::image4f& img, ygl::frame2f& imframe,
-    bool zoom_to_fit, const ygl::vec4f& background) {
-    auto win_size = ygl::zero2i, framebuffer_size = ygl::zero2i;
+inline void draw_glimage(GLFWwindow* win, const image4f& img,
+    frame2f& imframe, bool zoom_to_fit, const vec4f& background) {
+    auto win_size = zero2i, framebuffer_size = zero2i;
     glfwGetWindowSize(win, &win_size.x, &win_size.y);
     glfwGetFramebufferSize(win, &framebuffer_size.x, &framebuffer_size.y);
 
-    ygl::center_image(imframe, img.size, win_size, zoom_to_fit);
+    center_image(imframe, img.size, win_size, zoom_to_fit);
 
-    assert(glGetError() == GL_NO_ERROR);
+    check_glerror();
     glViewport(0, 0, framebuffer_size.x, framebuffer_size.y);
-    glClearColor(background.x, background.y, background.z,
-        background.w);
+    glClearColor(background.x, background.y, background.z, background.w);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_BLEND);
-    assert(glGetError() == GL_NO_ERROR);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    check_glerror();
 
-    draw_image(img, imframe, win_size);
+    draw_glimage(img, imframe, win_size);
 
-    assert(glGetError() == GL_NO_ERROR);
+    check_glerror();
     glDisable(GL_BLEND);
-    assert(glGetError() == GL_NO_ERROR);
+    check_glerror();
 }
 
 // Create GLFW window
-inline GLFWwindow* make_window(const ygl::vec2i& size, const std::string& title,
+inline GLFWwindow* make_window(const vec2i& size, const std::string& title,
     void* user_ptr, void (*refresh)(GLFWwindow*)) {
     // glwindow
     if (!glfwInit()) throw std::runtime_error("cannot open glwindow");
@@ -321,12 +448,13 @@ inline void init_widgets(GLFWwindow* win) {
 }
 
 // Begin draw widget
-inline bool begin_widgets_frame(GLFWwindow* win, const char* title, bool* open) {
+inline bool begin_widgets_frame(
+    GLFWwindow* win, const char* title, bool* open) {
     static auto first_time = true;
     ImGui_ImplGlfwGL3_NewFrame();
-    if(first_time) {
-        ImGui::SetNextWindowPos({0,0});
-        ImGui::SetNextWindowSize({320,0});
+    if (first_time) {
+        ImGui::SetNextWindowPos({0, 0});
+        ImGui::SetNextWindowSize({320, 0});
         ImGui::SetNextWindowCollapsed(true);
         first_time = false;
     }
@@ -345,6 +473,12 @@ inline bool get_widgets_active() {
     auto io = &ImGui::GetIO();
     return io->WantTextInput || io->WantCaptureMouse || io->WantCaptureKeyboard;
 }
+
+}
+
+// -----------------------------------------------------------------------------
+// GLFW EXTENSIONS
+// -----------------------------------------------------------------------------
 
 // GLFW extension
 inline void glfwGetCursorPosExt(GLFWwindow* win, float* x, float* y) {
@@ -378,6 +512,10 @@ inline bool glfwGetShiftKeyExt(GLFWwindow* win) {
            glfwGetKey(win, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
 }
 
+// -----------------------------------------------------------------------------
+// IMGUI EXTENSIONS
+// -----------------------------------------------------------------------------
+
 // ImGui extensions
 namespace ImGui {
 // Check if active widgets
@@ -390,10 +528,10 @@ inline bool GetWidgetsActiveExt() {
 inline bool InputText(const char* label, std::string* str) {
     char buf[4096];
     auto num = 0;
-    for(auto c : *str) buf[num++] = c;
+    for (auto c : *str) buf[num++] = c;
     buf[num] = 0;
     auto edited = InputText(label, buf, sizeof(buf));
-    if(edited) *str = buf;
+    if (edited) *str = buf;
     return edited;
 }
 

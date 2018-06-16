@@ -114,7 +114,7 @@ void draw(GLFWwindow* win) {
         app->selection.ptr, app->eyelight, app->wireframe, app->edges,
         app->exposure, app->gamma);
 
-    if (begin_widgets_frame(win, "yview", &app->widgets_open)) {
+    if (ygl::begin_widgets_frame(win, "yview", &app->widgets_open)) {
         ImGui::LabelText("scene", "%s", app->filename.c_str());
         if (ImGui::Button("print stats")) ygl::print_stats(app->scn);
         if (app->time_range != ygl::zero2f) {
@@ -152,7 +152,7 @@ void draw(GLFWwindow* win) {
             ImGui::TreePop();
         }
     }
-    end_widgets_frame();
+    ygl::end_widgets_frame();
 
     glfwSwapBuffers(win);
 }
@@ -471,142 +471,79 @@ static const char* fragment =
 void draw_glshape(const std::shared_ptr<ygl::shape>& shp,
     const std::shared_ptr<ygl::material>& mat, const ygl::mat4f& xform,
     bool highlighted, uint prog, bool eyelight, bool edges) {
-    assert(glGetError() == GL_NO_ERROR);
-    glUniformMatrix4fv(
-        glGetUniformLocation(prog, "shape_xform"), 1, false, &xform.x.x);
-    glUniform1f(glGetUniformLocation(prog, "shape_normal_offset"), 0.0f);
-    assert(glGetError() == GL_NO_ERROR);
+    ygl::set_gluniform(prog, "shape_xform", xform);
+    ygl::set_gluniform(prog, "shape_normal_offset", 0.0f);
 
     auto uniform_texture = [](auto& prog, const char* name, const char* name_on,
                                const std::shared_ptr<ygl::texture>& txt,
                                int unit) {
         if (txt) {
-            glActiveTexture(GL_TEXTURE0 + unit);
-            glBindTexture(GL_TEXTURE_2D, txt->gl_txt);
-            glUniform1i(glGetUniformLocation(prog, name), unit);
-            glUniform1f(glGetUniformLocation(prog, name_on), 1);
+            ygl::set_gluniform_texture(prog, name, txt->gl_txt, unit);
+            ygl::set_gluniform(prog, name_on, 1);
         } else {
-            glUniform1f(glGetUniformLocation(prog, name_on), 0);
+            ygl::set_gluniform(prog, name_on, 0);
         }
     };
 
-    assert(glGetError() == GL_NO_ERROR);
     auto mtype = 1;
     if (mat->base_metallic) mtype = 2;
     if (mat->gltf_textures) mtype = (mat->base_metallic) ? 2 : 3;
-    glUniform1i(glGetUniformLocation(prog, "mat_type"), mtype);
-    glUniform3f(
-        glGetUniformLocation(prog, "mat_ke"), mat->ke.x, mat->ke.y, mat->ke.z);
-    glUniform3f(
-        glGetUniformLocation(prog, "mat_kd"), mat->kd.x, mat->kd.y, mat->kd.z);
-    glUniform3f(
-        glGetUniformLocation(prog, "mat_ks"), mat->ks.x, mat->ks.y, mat->ks.z);
-    glUniform1f(glGetUniformLocation(prog, "mat_rs"), mat->rs);
-    glUniform1f(glGetUniformLocation(prog, "mat_op"), mat->op);
-    glUniform1i(
-        glGetUniformLocation(prog, "mat_double_sided"), (int)mat->double_sided);
+    ygl::set_gluniform(prog, "mat_type", mtype);
+    ygl::set_gluniform(prog, "mat_ke", mat->ke);
+    ygl::set_gluniform(prog, "mat_kd", mat->kd);
+    ygl::set_gluniform(prog, "mat_ks", mat->ks);
+    ygl::set_gluniform(prog, "mat_rs", mat->rs);
+    ygl::set_gluniform(prog, "mat_op", mat->op);
+    ygl::set_gluniform(prog, "mat_double_sided", (int)mat->double_sided);
     uniform_texture(prog, "mat_ke_txt", "mat_ke_txt_on", mat->ke_txt, 0);
     uniform_texture(prog, "mat_kd_txt", "mat_kd_txt_on", mat->kd_txt, 1);
     uniform_texture(prog, "mat_ks_txt", "mat_ks_txt_on", mat->ks_txt, 2);
     uniform_texture(prog, "mat_rs_txt", "mat_rs_txt_on", mat->rs_txt, 3);
     uniform_texture(prog, "mat_op_txt", "mat_op_txt_on", mat->op_txt, 4);
     uniform_texture(prog, "mat_norm_txt", "mat_norm_txt_on", mat->norm_txt, 5);
-    assert(glGetError() == GL_NO_ERROR);
 
-    assert(glGetError() == GL_NO_ERROR);
-    glUniform1i(
-        glGetUniformLocation(prog, "elem_faceted"), (int)shp->norm.empty());
-    if (!shp->pos.empty()) {
-        glEnableVertexAttribArray(glGetAttribLocation(prog, "vert_pos"));
-        glBindBuffer(GL_ARRAY_BUFFER, shp->gl_pos);
-        glVertexAttribPointer(
-            glGetAttribLocation(prog, "vert_pos"), 3, GL_FLOAT, false, 0, 0);
-    } else {
-        glVertexAttrib3f(glGetAttribLocation(prog, "vert_pos"), 0, 0, 0);
-    }
-    if (!shp->norm.empty()) {
-        glEnableVertexAttribArray(glGetAttribLocation(prog, "vert_norm"));
-        glBindBuffer(GL_ARRAY_BUFFER, shp->gl_norm);
-        glVertexAttribPointer(
-            glGetAttribLocation(prog, "vert_norm"), 3, GL_FLOAT, false, 0, 0);
-    } else {
-        glVertexAttrib3f(glGetAttribLocation(prog, "vert_norm"), 0, 0, 0);
-    }
-    if (!shp->texcoord.empty()) {
-        glEnableVertexAttribArray(glGetAttribLocation(prog, "vert_texcoord"));
-        glBindBuffer(GL_ARRAY_BUFFER, shp->gl_texcoord);
-        glVertexAttribPointer(glGetAttribLocation(prog, "vert_texcoord"), 2,
-            GL_FLOAT, false, 0, 0);
-    } else {
-        glVertexAttrib2f(glGetAttribLocation(prog, "vert_texcoord"), 0, 0);
-    }
-    if (!shp->color.empty()) {
-        glEnableVertexAttribArray(glGetAttribLocation(prog, "vert_color"));
-        glBindBuffer(GL_ARRAY_BUFFER, shp->gl_color);
-        glVertexAttribPointer(
-            glGetAttribLocation(prog, "vert_color"), 4, GL_FLOAT, false, 0, 0);
-    } else {
-        glVertexAttrib4f(glGetAttribLocation(prog, "vert_color"), 1, 1, 1, 1);
-    }
-    if (!shp->tangsp.empty()) {
-        glEnableVertexAttribArray(glGetAttribLocation(prog, "vert_tangsp"));
-        glBindBuffer(GL_ARRAY_BUFFER, shp->gl_norm);
-        glVertexAttribPointer(
-            glGetAttribLocation(prog, "vert_tangsp"), 4, GL_FLOAT, false, 0, 0);
-    } else {
-        glVertexAttrib4f(glGetAttribLocation(prog, "vert_tangsp"), 0, 0, 1, 1);
-    }
-    assert(glGetError() == GL_NO_ERROR);
+    ygl::set_gluniform(prog, "elem_faceted", (int)shp->norm.empty());
+    ygl::set_glvertattrib(prog, "vert_pos", shp->gl_pos, ygl::zero3f);
+    ygl::set_glvertattrib(prog, "vert_norm", shp->gl_norm, ygl::zero3f);
+    ygl::set_glvertattrib(prog, "vert_texcoord", shp->gl_texcoord, ygl::zero2f);
+    ygl::set_glvertattrib(
+        prog, "vert_color", shp->gl_color, ygl::vec4f{1, 1, 1, 1});
+    ygl::set_glvertattrib(
+        prog, "vert_tangsp", shp->gl_norm, ygl::vec4f{0, 0, 1, 1});
 
     if (!shp->points.empty()) {
-        assert(glGetError() == GL_NO_ERROR);
-        glUniform1i(glGetUniformLocation(prog, "elem_type"), 1);
-        assert(glGetError() == GL_NO_ERROR);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shp->gl_points);
-        glDrawElements(GL_POINTS, shp->points.size(), GL_UNSIGNED_INT, nullptr);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-        assert(glGetError() == GL_NO_ERROR);
+        ygl::set_gluniform(prog, "elem_type", 1);
+        ygl::draw_glpoints(shp->gl_points, shp->points.size());
     }
     if (!shp->lines.empty()) {
-        assert(glGetError() == GL_NO_ERROR);
-        glUniform1i(glGetUniformLocation(prog, "elem_type"), 2);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shp->gl_lines);
-        glDrawElements(
-            GL_LINES, shp->lines.size() * 2, GL_UNSIGNED_INT, nullptr);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-        assert(glGetError() == GL_NO_ERROR);
+        ygl::set_gluniform(prog, "elem_type", 2);
+        ygl::draw_gllines(shp->gl_lines, shp->lines.size());
     }
     if (!shp->triangles.empty()) {
-        assert(glGetError() == GL_NO_ERROR);
-        glUniform1i(glGetUniformLocation(prog, "elem_type"), 3);
-        assert(glGetError() == GL_NO_ERROR);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shp->gl_triangles);
-        glDrawElements(
-            GL_TRIANGLES, shp->triangles.size() * 3, GL_UNSIGNED_INT, nullptr);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-        assert(glGetError() == GL_NO_ERROR);
+        ygl::set_gluniform(prog, "elem_type", 3);
+        ygl::draw_gltriangles(shp->gl_triangles, shp->triangles.size());
     }
 
 #if 0
     if ((shp->gl_edges && edges && !wireframe) || highlighted) {
         ygl::enable_glculling(false);
-        assert(glGetError() == GL_NO_ERROR);
+        check_glerror();
         glUniform1i(glGetUniformLocation(prog, "mtype"), 0);
         glUniform3f(glGetUniformLocation(prog, "ke"), 0, 0, 0);
         glUniform1f(glGetUniformLocation(prog, "op"), mat->op);
         glUniform1f(glGetUniformLocation(prog, "shp_normal_offset"), 0.01f);
-        assert(glGetError() == GL_NO_ERROR);
+        check_glerror();
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shp->gl_edges);
         glDrawElements(GL_LINES, shp->triangles.size() * 3, GL_UNSIGNED_INT, nullptr);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-        assert(glGetError() == GL_NO_ERROR);
+        check_glerror();
     }
 #endif
     if (edges) std::cout << "edges are momentarily disabled\n";
 
-    assert(glGetError() == GL_NO_ERROR);
+    ygl::check_glerror();
     for (int i = 0; i < 16; i++) { glDisableVertexAttribArray(i); }
-    assert(glGetError() == GL_NO_ERROR);
+    ygl::check_glerror();
 }
 
 // Display a scene
@@ -626,18 +563,13 @@ void draw_glscene(const std::shared_ptr<ygl::scene>& scn, int camid, uint prog,
                 (float)viewport_size.x / (float)viewport_size.y, cam->near,
                 cam->far);
 
-    assert(glGetError() == GL_NO_ERROR);
-    glUseProgram(prog);
-    glUniform3f(glGetUniformLocation(prog, "cam_pos"), cam->frame.o.x,
-        cam->frame.o.y, cam->frame.o.z);
-    glUniformMatrix4fv(glGetUniformLocation(prog, "cam_xform_inv"), 1, false,
-        &camera_view.x.x);
-    glUniformMatrix4fv(
-        glGetUniformLocation(prog, "cam_proj"), 1, false, &camera_proj.x.x);
-    glUniform1i(glGetUniformLocation(prog, "eyelight"), (int)eyelight);
-    glUniform1f(glGetUniformLocation(prog, "exposure"), exposure);
-    glUniform1f(glGetUniformLocation(prog, "gamma"), gamma);
-    assert(glGetError() == GL_NO_ERROR);
+    ygl::bind_glprog(prog);
+    ygl::set_gluniform(prog, "cam_pos", cam->frame.o);
+    ygl::set_gluniform(prog, "cam_xform_inv", camera_view);
+    ygl::set_gluniform(prog, "cam_proj", camera_proj);
+    ygl::set_gluniform(prog, "eyelight", (int)eyelight);
+    ygl::set_gluniform(prog, "exposure", exposure);
+    ygl::set_gluniform(prog, "gamma", gamma);
 
     if (!eyelight) {
         auto lights_pos = std::vector<ygl::vec3f>();
@@ -664,21 +596,18 @@ void draw_glscene(const std::shared_ptr<ygl::scene>& scn, int camid, uint prog,
             lights_ke.push_back(ke);
             lights_type.push_back(0);
         }
-        assert(glGetError() == GL_NO_ERROR);
-        glUniform3f(glGetUniformLocation(prog, "lamb"), 0, 0, 0);
-        glUniform1i(glGetUniformLocation(prog, "lnum"), (int)lights_pos.size());
+        ygl::check_glerror();
+        ygl::set_gluniform(prog, "lamb", ygl::zero3f);
+        ygl::set_gluniform(prog, "lnum", (int)lights_pos.size());
         for (auto i = 0; i < lights_pos.size(); i++) {
             auto is = std::to_string(i);
-            glUniform3f(
-                glGetUniformLocation(prog, ("lpos[" + is + "]").c_str()),
-                lights_pos[i].x, lights_pos[i].y, lights_pos[i].z);
-            glUniform3f(glGetUniformLocation(prog, ("lke[" + is + "]").c_str()),
-                lights_ke[i].x, lights_ke[i].y, lights_ke[i].z);
-            glUniform1i(
-                glGetUniformLocation(prog, ("ltype[" + is + "]").c_str()),
-                (int)lights_type[i]);
+            ygl::set_gluniform(
+                prog, ("lpos[" + is + "]").c_str(), lights_pos[i]);
+            ygl::set_gluniform(prog, ("lke[" + is + "]").c_str(), lights_ke[i]);
+            ygl::set_gluniform(
+                prog, ("ltype[" + is + "]").c_str(), (int)lights_type[i]);
         }
-        assert(glGetError() == GL_NO_ERROR);
+        ygl::check_glerror();
     }
 
     if (wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -689,55 +618,37 @@ void draw_glscene(const std::shared_ptr<ygl::scene>& scn, int camid, uint prog,
             prog, eyelight, edges);
     }
 
-    assert(glGetError() == GL_NO_ERROR);
+    ygl::check_glerror();
     glUseProgram(0);
     //    glBindVertexArray(0);
     //    glUseProgram(0);
-    assert(glGetError() == GL_NO_ERROR);
+    ygl::check_glerror();
     if (wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
 void init_drawscene(GLFWwindow* win) {
     auto app = (app_state*)glfwGetWindowUserPointer(win);
     // load textures and vbos
-    app->gl_prog = make_glprogram(vertex, fragment);
-    for (auto& txt : app->scn->textures) {
-        assert(glGetError() == GL_NO_ERROR);
-        glGenTextures(1, &txt->gl_txt);
-        glBindTexture(GL_TEXTURE_2D, txt->gl_txt);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, txt->img.size.x,
-            txt->img.size.y, 0, GL_RGBA, GL_FLOAT, txt->img.pxl.data());
-        glGenerateMipmap(GL_TEXTURE_2D);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(
-            GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glBindTexture(GL_TEXTURE_2D, 0);
-    }
-    auto update_vert_buffer = [](uint& buf, const auto& vert) {
-        if (vert.empty()) return;
-        glGenBuffers(1, &buf);
-        glBindBuffer(GL_ARRAY_BUFFER, buf);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vert.front()) * vert.size(),
-            vert.data(), GL_STATIC_DRAW);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-    };
-    auto update_elem_buffer = [](uint& buf, const auto& elem) {
-        if (elem.empty()) return;
-        glGenBuffers(1, &buf);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-            sizeof(elem.front()) * elem.size(), elem.data(), GL_STATIC_DRAW);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    };
+    app->gl_prog = ygl::make_glprogram(vertex, fragment);
+    for (auto& txt : app->scn->textures)
+        txt->gl_txt = ygl::make_gltexture(txt->img, true, true);
     for (auto& shp : app->scn->shapes) {
-        update_vert_buffer(shp->gl_pos, shp->pos);
-        update_vert_buffer(shp->gl_norm, shp->norm);
-        update_vert_buffer(shp->gl_texcoord, shp->texcoord);
-        update_vert_buffer(shp->gl_color, shp->color);
-        update_vert_buffer(shp->gl_tangsp, shp->tangsp);
-        update_elem_buffer(shp->gl_points, shp->points);
-        update_elem_buffer(shp->gl_lines, shp->lines);
-        update_elem_buffer(shp->gl_triangles, shp->triangles);
+        if (!shp->pos.empty())
+            shp->gl_pos = ygl::make_glbuffer(shp->pos, false);
+        if (!shp->norm.empty())
+            shp->gl_norm = ygl::make_glbuffer(shp->norm, false);
+        if (!shp->texcoord.empty())
+            shp->gl_texcoord = ygl::make_glbuffer(shp->texcoord, false);
+        if (!shp->color.empty())
+            shp->gl_color = ygl::make_glbuffer(shp->color, false);
+        if (!shp->tangsp.empty())
+            shp->gl_tangsp = ygl::make_glbuffer(shp->tangsp, false);
+        if (!shp->points.empty())
+            shp->gl_points = ygl::make_glbuffer(shp->points, true);
+        if (!shp->lines.empty())
+            shp->gl_lines = ygl::make_glbuffer(shp->lines, true);
+        if (!shp->triangles.empty())
+            shp->gl_triangles = ygl::make_glbuffer(shp->triangles, true);
     }
 }
 
@@ -755,18 +666,16 @@ void run_ui(const std::shared_ptr<app_state>& app) {
     if (app->scn->lights.empty()) app->eyelight = true;
 
     // init widget
-    init_widgets(win);
+    ygl::init_widgets(win);
 
     // init gl data
     init_drawscene(win);
 
     // loop
     auto mouse_pos = ygl::zero2f, last_pos = ygl::zero2f;
-    auto mouse_center = ygl::zero3f;
-    auto mouse_button = 0, last_button = 0;
+    auto mouse_button = 0;
     while (!glfwWindowShouldClose(win)) {
         last_pos = mouse_pos;
-        last_button = mouse_button;
         glfwGetCursorPosExt(win, &mouse_pos.x, &mouse_pos.y);
         mouse_button = glfwGetMouseButtonIndexExt(win);
         auto shift_down = glfwGetShiftKeyExt(win);
@@ -774,16 +683,6 @@ void run_ui(const std::shared_ptr<app_state>& app) {
 
         // handle mouse and keyboard for navigation
         if (mouse_button && !widgets_active) {
-            if (!last_button) {
-                if (app->selection.as<ygl::instance>()) {
-                    auto ist = app->selection.as<ygl::instance>();
-                    mouse_center = transform_point(ist->frame,
-                        (ist->shp->bbox.min + ist->shp->bbox.max) / 2);
-                } else {
-                    mouse_center =
-                        (app->scn->bbox.min + app->scn->bbox.max) / 2;
-                }
-            }
             auto dolly = 0.0f;
             auto pan = ygl::zero2f;
             auto rotate = ygl::zero2f;
@@ -792,10 +691,8 @@ void run_ui(const std::shared_ptr<app_state>& app) {
             if (mouse_button == 3 || (mouse_button == 1 && shift_down))
                 pan = (mouse_pos - last_pos) / 100.0f;
             auto cam = app->scn->cameras.at(app->camid);
-            ygl::camera_turntable(
-                cam->frame.o, mouse_center, cam->frame.z, rotate, dolly, pan);
-            cam->frame = ygl::lookat_frame(
-                cam->frame.o, mouse_center, ygl::vec3f{0, 1, 0});
+            ygl::camera_turntable(cam->frame, cam->focus, rotate, dolly, pan);
+            app->update_list.push_back(cam);
         }
 
         // animation
