@@ -13,8 +13,10 @@
                 1,
                 0
             ],
-            "height": 0.015,
-            "width": 0.036,
+            "imsize": [
+                0.036,
+                0.015
+            ],
             "focal": 0.06,
             "aperture": 0.0
         }
@@ -55,8 +57,16 @@
             },
             "mat": {
                 "name": "obj1",
-                "kd": [0.5, 0.5, 0.7],
-                "ks": [0.04, 0.04, 0.04],
+                "kd": [
+                    0.5,
+                    0.5,
+                    0.7
+                ],
+                "ks": [
+                    0.04,
+                    0.04,
+                    0.04
+                ],
                 "rs": 0.01,
                 "norm_txt": {
                     "name": "obj1norm",
@@ -64,7 +74,7 @@
                     "!!type": "bump",
                     "!!bump_to_normal": true,
                     "!!bump_scale": 4
-                } 
+                }
             }
         },
         {
@@ -81,8 +91,16 @@
             },
             "mat": {
                 "name": "obj2",
-                "kd": [0.5, 0.5, 0.7],
-                "ks": [0.04, 0.04, 0.04],
+                "kd": [
+                    0.5,
+                    0.5,
+                    0.7
+                ],
+                "ks": [
+                    0.04,
+                    0.04,
+                    0.04
+                ],
                 "rs": 0.01,
                 "norm_txt": {
                     "name": "obj1norm",
@@ -90,7 +108,7 @@
                     "!!type": "bump",
                     "!!bump_to_normal": true,
                     "!!bump_scale": 4
-                } 
+                }
             }
         },
         {
@@ -107,8 +125,16 @@
             },
             "mat": {
                 "name": "obj3",
-                "kd": [0.5, 0.5, 0.7],
-                "ks": [0.04, 0.04, 0.04],
+                "kd": [
+                    0.5,
+                    0.5,
+                    0.7
+                ],
+                "ks": [
+                    0.04,
+                    0.04,
+                    0.04
+                ],
                 "rs": 0.01,
                 "norm_txt": {
                     "name": "obj1norm",
@@ -116,14 +142,18 @@
                     "!!type": "bump",
                     "!!bump_to_normal": true,
                     "!!bump_scale": 4
-                } 
+                }
             }
         }
     ],
     "environments": [
         {
             "name": "env",
-            "ke": [1,1,1],
+            "ke": [
+                1,
+                1,
+                1
+            ],
             "ke_txt": {
                 "name": "sky",
                 "path": "textures/sky.hdr",

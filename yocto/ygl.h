@@ -2609,43 +2609,21 @@ namespace ygl {
 template <typename T>
 struct image {
     // constructors
-    image() : w(0), h(0), pxl() {}
-    image(int width, int height, const T& c = T())
-        : w(width), h(height), pxl(width * height, c) {}
-    image(int width, int height, const std::vector<T>& p)
-        : w(width), h(height), pxl(p) {}
-
-    // size checks
-    int width() const { return w; }
-    int height() const { return h; }
-    vec2i imsize() const { return {w, h}; }
-    int size() const { return w * h; };
-    bool empty() const { return !w || !h; };
+    image() : size{0, 0}, pxl{} {}
+    image(const vec2i& size_, const T& c = T())
+        : size{size_}, pxl(size_.x * size_.y, c) {}
+    image(const vec2i& size_, const std::vector<T>& p) : size{size_}, pxl(p) {}
 
     // pixel access
-    T& operator[](int idx) { return pxl[idx]; }
-    const T& operator[](int idx) const { return pxl[idx]; }
-    T& operator[](vec2i ij) { return pxl[ij.y * w + ij.x]; }
-    const T& operator[](vec2i ij) const { return pxl[ij.y * w + ij.x]; }
-    T& at(int idx) { return pxl.at(idx); }
-    const T& at(int idx) const { return pxl.at(idx); }
-    T& at(vec2i ij) { return pxl.at(ij.y * w + ij.x); }
-    const T& at(vec2i ij) const { return pxl.at(ij.y * w + ij.x); }
+    T& operator[](const vec2i& ij) { return pxl[ij.y * size.x + ij.x]; }
+    const T& operator[](const vec2i& ij) const {
+        return pxl[ij.y * size.x + ij.x];
+    }
+    T& at(const vec2i& ij) { return pxl.at(ij.y * size.x + ij.x); }
+    const T& at(const vec2i& ij) const { return pxl.at(ij.y * size.x + ij.x); }
 
-    // data access
-    T* data() { return pxl.data(); }
-    const T* data() const { return pxl.data(); }
-    std::vector<T>& pixels() { return pxl; }
-    const std::vector<T>& pixels() const { return pxl; }
-    T* begin() { return pxl.data(); }
-    T* end() { return pxl.data() + pxl.size(); }
-    const T* begin() const { return pxl.data(); }
-    const T* end() const { return pxl.data() + pxl.size(); }
-
-   private:
-    int w = 0;
-    int h = 0;
-    std::vector<T> pxl;
+    vec2i size = {0, 0};
+    std::vector<T> pxl = {};
 };
 
 // Type aliases
@@ -2672,7 +2650,7 @@ image4f tonemap_image(
     const image4f& hdr, float exposure, float gamma, bool filmic);
 
 // Resize an image.
-image4f resize_image(const image4f& img, int res_width, int res_height);
+image4f resize_image(const image4f& img, const vec2i& size);
 
 }  // namespace ygl
 
@@ -2710,6 +2688,7 @@ inline vec4f linear_to_gamma(const vec4f& lin, float gamma = 2.2f) {
 
 // Approximate luminance estimate
 inline float luminance(const vec3f& a) { return (a.x + a.y + a.z) / 3; }
+inline float luminance(const vec4f& a) { return (a.x + a.y + a.z) / 3; }
 
 // Converts HSV to RGB.
 vec3f hsv_to_rgb(const vec3f& hsv);
@@ -2729,42 +2708,42 @@ vec3f rgb_to_xyz(const vec3f& rgb);
 namespace ygl {
 
 // Make example images.
-image4f make_grid_image(int width, int height, int tile = 8,
+image4f make_grid_image(const vec2i& imsize, int tile = 8,
     const vec4f& c0 = {0.5f, 0.5f, 0.5f, 1},
     const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
-image4f make_checker_image(int width, int height, int tile = 8,
+image4f make_checker_image(const vec2i& imsize, int tile = 8,
     const vec4f& c0 = {0.5f, 0.5f, 0.5f, 1},
     const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
-image4f make_bumpdimple_image(int width, int height, int tile = 8);
-image4f make_ramp_image(int width, int height, const vec4f& c0, const vec4f& c1,
-    float srgb = false);
-image4f make_gammaramp_image(int width, int height);
-image4f make_uvramp_image(int width, int height);
+image4f make_bumpdimple_image(const vec2i& imsize, int tile = 8);
+image4f make_ramp_image(
+    const vec2i& imsize, const vec4f& c0, const vec4f& c1, float srgb = false);
+image4f make_gammaramp_image(const vec2i& imsize);
+image4f make_uvramp_image(const vec2i& imsize);
 image4f make_uvgrid_image(
-    int width, int height, int tile = 8, bool colored = true);
+    const vec2i& imsize, int tile = 8, bool colored = true);
 
 // Comvert a bump map to a normal map.
 image4f bump_to_normal_map(const image4f& img, float scale = 1);
 
 // Make a sunsky HDR model with sun at theta elevation in [0,pi/2], turbidity
 // in [1.7,10] with or without sun.
-image4f make_sunsky_image(int width, int height, float thetaSun,
+image4f make_sunsky_image(const vec2i& imsize, float thetaSun,
     float turbidity = 3, bool has_sun = false,
     vec3f ground_albedo = {0.7f, 0.7f, 0.7f});
 // Make an image of multiple lights.
-image4f make_lights_image(int width, int height, const vec3f& le = {1, 1, 1},
+image4f make_lights_image(const vec2i& imsize, const vec3f& le = {1, 1, 1},
     int nlights = 4, float langle = pi / 4, float lwidth = pi / 16,
     float lheight = pi / 16);
 
 // Make a noise image. Wrap works only if both resx and resy are powers of two.
 image4f make_noise_image(
-    int width, int height, float scale = 1, bool wrap = true);
-image4f make_fbm_image(int width, int height, float scale = 1,
+    const vec2i& imsize, float scale = 1, bool wrap = true);
+image4f make_fbm_image(const vec2i& imsize, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
-image4f make_ridge_image(int width, int height, float scale = 1,
+image4f make_ridge_image(const vec2i& imsize, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, float offset = 1.0f,
     int octaves = 6, bool wrap = true);
-image4f make_turbulence_image(int width, int height, float scale = 1,
+image4f make_turbulence_image(const vec2i& imsize, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
 
 }  // namespace ygl
@@ -2845,10 +2824,9 @@ struct camera {
     std::string name = "";             // name
     frame3f frame = identity_frame3f;  // transform frame
     bool ortho = false;                // orthographic
-    float width = 0.036f;              // film width (default to 35mm)
-    float height = 0.024f;             // film height (default to 35mm)
-    float focal = 0.050f;              // focal length (defaul to 50 mm)
-    float focus = flt_max;             // focal distance (default to inf focus)
+    vec2f imsize = {0.036f, 0.024f};   // film width and height (default: 35mm)
+    float focal = 0.050f;              // focal length (defaut: 50 mm)
+    float focus = flt_max;             // focal distance (default: infinite)
     float aperture = 0;                // lens aperture
     float near = 0.01f;                // near plane distance
     float far = 10000;                 // far plane distance
@@ -3102,7 +3080,7 @@ std::vector<std::string> validate(
 
 // make camera
 std::shared_ptr<camera> make_bbox_camera(const std::string& name,
-    const bbox3f& bbox, float width = 0.036f, float height = 0.024f,
+    const bbox3f& bbox, const vec2f& imsize = {0.036f, 0.024f},
     float focal = 0.050f);
 // make default material
 inline std::shared_ptr<material> make_default_material(
@@ -3119,7 +3097,7 @@ inline std::shared_ptr<environment> make_sky_environment(
     auto txt = std::make_shared<texture>();
     txt->name = name;
     txt->path = "textures/" + name + ".hdr";
-    txt->img = make_sunsky_image(1024, 512, sun_angle);
+    txt->img = make_sunsky_image({1024, 512}, sun_angle);
     auto env = std::make_shared<environment>();
     env->name = name;
     env->ke = {1, 1, 1};
@@ -3192,6 +3170,8 @@ float eval_camera_fovy(const std::shared_ptr<camera>& cam);
 float eval_camera_aspect(const std::shared_ptr<camera>& cam);
 void set_camera_fovy(const std::shared_ptr<camera>& cam, float fovy,
     float aspect, float width = 0.036f);
+vec2i eval_image_resolution(
+    const std::shared_ptr<camera>& cam, int yresolution);
 
 // Generates a ray from a camera image coordinate `uv` and lens coordinates
 // `luv`.

@@ -74,7 +74,7 @@ struct app_state {
 void update_minmax(std::shared_ptr<gimage> img) {
     img->pxl_bounds = ygl::invalid_bbox4f;
     img->lum_bounds = ygl::invalid_bbox1f;
-    for (auto& p : img->img) {
+    for (auto& p : img->img.pxl) {
         img->pxl_bounds += p;
         img->lum_bounds += ygl::luminance(xyz(p));
     }
@@ -97,25 +97,33 @@ std::shared_ptr<gimage> load_gimage(
 
 std::shared_ptr<gimage> diff_gimage(
     std::shared_ptr<gimage> a, std::shared_ptr<gimage> b, bool color) {
-    if (a->img.width() != b->img.width() || a->img.height() != b->img.height())
-        return nullptr;
+    if (a->img.size != b->img.size) return nullptr;
     auto d = std::make_shared<gimage>();
     d->name = "diff " + a->name + " " + b->name;
     d->filename = "";
     d->img = a->img;
     if (color) {
-        for (auto i = 0; i < a->img.size(); i++) {
-            d->img[i] = {std::abs(a->img[i].x - b->img[i].x),
-                std::abs(a->img[i].y - b->img[i].y),
-                std::abs(a->img[i].z - b->img[i].z),
-                std::max(a->img[i].w, b->img[i].w)};
+        for (auto j = 0; j < a->img.size.y; j++) {
+            for (auto i = 0; i < a->img.size.x; i++) {
+                d->img[{i, j}] = {std::abs(a->img[{i, j}].x - b->img[{i, j}].x),
+                    std::abs(a->img[{i, j}].y - b->img[{i, j}].y),
+                    std::abs(a->img[{i, j}].z - b->img[{i, j}].z),
+                    std::max(a->img[{i, j}].w, b->img[{i, j}].w)};
+            }
         }
     } else {
-        for (auto i = 0; i < a->img.size(); i++) {
-            auto la = (a->img[i].x + a->img[i].y + a->img[i].z) / 3;
-            auto lb = (b->img[i].x + b->img[i].y + b->img[i].z) / 3;
-            auto ld = fabsf(la - lb);
-            d->img[i] = {ld, ld, ld, std::max(a->img[i].w, b->img[i].w)};
+        for (auto j = 0; j < a->img.size.y; j++) {
+            for (auto i = 0; i < a->img.size.x; i++) {
+                auto la =
+                    (a->img[{i, j}].x + a->img[{i, j}].y + a->img[{i, j}].z) /
+                    3;
+                auto lb =
+                    (b->img[{i, j}].x + b->img[{i, j}].y + b->img[{i, j}].z) /
+                    3;
+                auto ld = fabsf(la - lb);
+                d->img[{i, j}] = {
+                    ld, ld, ld, std::max(a->img[{i, j}].w, b->img[{i, j}].w)};
+            }
         }
     }
     update_minmax(d);
@@ -135,7 +143,7 @@ void draw_widgets(GLFWwindow* win, app_state* app) {
         ImGui::Combo("image", &app->img, app->imgs, false);
         ImGui::LabelText("filename", "%s", app->img->filename.c_str());
         ImGui::LabelText(
-            "size", "%d x %d ", app->img->img.width(), app->img->img.height());
+            "size", "%d x %d ", app->img->img.size.x, app->img->img.size.y);
         auto edited = 0;
         edited += ImGui::SliderFloat("exposure", &app->img->exposure, -5, 5);
         edited += ImGui::SliderFloat("gamma", &app->img->gamma, 1, 3);
@@ -151,15 +159,15 @@ void draw_widgets(GLFWwindow* win, app_state* app) {
         glfwGetCursorPos(win, &mouse_x, &mouse_y);
         auto ij =
             ygl::get_image_coords(ygl::vec2f{(float)mouse_x, (float)mouse_y},
-                app->imframe, {app->img->img.width(), app->img->img.height()});
+                app->imframe, {app->img->img.size.x, app->img->img.size.y});
         ImGui::DragInt2("mouse", &ij.x);
         auto pixel = ygl::zero4f;
-        if (ij.x >= 0 && ij.x < app->img->img.width() && ij.y >= 0 &&
-            ij.y < app->img->img.height()) {
+        if (ij.x >= 0 && ij.x < app->img->img.size.x && ij.y >= 0 &&
+            ij.y < app->img->img.size.y) {
             pixel = app->img->img.at(ij);
         }
         ImGui::ColorEdit4("pixel", &pixel.x);
-        if (!app->img->img.empty()) {
+        if (!app->img->img.pxl.empty()) {
             ImGui::DragFloat4("pxl min", &app->img->pxl_bounds.min.x);
             ImGui::DragFloat4("pxl max", &app->img->pxl_bounds.max.y);
             ImGui::DragFloat("lum min", &app->img->lum_bounds.min);
@@ -179,9 +187,8 @@ void draw(GLFWwindow* win) {
 
 void run_ui(const std::shared_ptr<app_state>& app) {
     // window
-    auto win_width = ygl::clamp(app->imgs[0]->img.width(), 512, 1024);
-    auto win_height = ygl::clamp(app->imgs[0]->img.height(), 512, 1024);
-    auto win = make_window(win_width, win_height, "yimview", app.get(), draw);
+    auto win_size = ygl::clamp(app->imgs[0]->img.size, 512, 1024);
+    auto win = make_window(win_size, "yimview", app.get(), draw);
 
     // init widgets
     init_widgets(win);
