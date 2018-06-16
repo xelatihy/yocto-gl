@@ -36,11 +36,12 @@ using namespace std::literals;
 
 // Application state
 struct app_state {
+    // scene
     std::shared_ptr<ygl::scene> scn = nullptr;
-    std::string filename = "scene.json"s;
-    std::string imfilename = "out.obj"s;
 
     // rendering params
+    std::string filename = "scene.json"s;
+    std::string imfilename = "out.obj"s;
     int camid = 0;                             // camera index
     int resolution = 512;                      // image resolution
     int nsamples = 256;                        // number of samples
@@ -49,8 +50,6 @@ struct app_state {
     int nbounces = 8;                          // max depth
     int seed = 7;                              // seed
     float pixel_clamp = 100.0f;                // pixel clamping
-    bool double_sided = false;                 // double sided
-    bool add_skyenv = false;                   // add sky environment
     int pratio = 8;                            // preview ratio
 
     // rendering state
@@ -65,11 +64,10 @@ struct app_state {
     ygl::vec4f background = {0.8f, 0.8f, 0.8f, 0};
     uint gl_txt = 0;
     uint gl_prog = 0, gl_vbo = 0, gl_ebo;
+    bool widgets_open = false;
     ygl::scene_selection selection = {};
     std::vector<ygl::scene_selection> update_list;
-    bool quiet = false;
     bool navigation_fps = false;
-    bool rendering = false;
 };
 
 auto trace_names = std::vector<std::string>{
@@ -159,7 +157,7 @@ void draw_image(GLFWwindow* win) {
 
 void draw_widgets(GLFWwindow* win) {
     auto app = (app_state*)glfwGetWindowUserPointer(win);
-    if (begin_widgets_frame(win, "yitrace")) {
+    if (begin_widgets_frame(win, "yitrace", &app->widgets_open)) {
         ImGui::LabelText("scene", "%s", app->filename.c_str());
         ImGui::LabelText("image", "%d x %d @ %d", app->trace_state.img.width(),
             app->trace_state.img.height(), app->trace_state.sample);
@@ -301,16 +299,9 @@ bool update(const std::shared_ptr<app_state>& app) {
 
     // update BVH
     for (auto sel : app->update_list) {
-        if (sel.as<ygl::shape>()) {
-            if (!app->quiet) std::cout << "refit shape bvh\n";
-            ygl::refit_bvh(sel.as<ygl::shape>());
-        }
-        if (sel.as<ygl::instance>()) {
-            if (!app->quiet) std::cout << "refit scene bvh\n";
-            ygl::refit_bvh(app->scn, false);
-        }
+        if (sel.as<ygl::shape>()) { ygl::refit_bvh(sel.as<ygl::shape>()); }
+        if (sel.as<ygl::instance>()) { ygl::refit_bvh(app->scn, false); }
         if (sel.as<ygl::node>()) {
-            if (!app->quiet) std::cout << "refit scene bvh\n";
             ygl::update_transforms(app->scn, 0);
             ygl::refit_bvh(app->scn, false);
         }
@@ -408,101 +399,120 @@ void run_ui(const std::shared_ptr<app_state>& app) {
 }
 
 int main(int argc, char* argv[]) {
-    // create empty scene
-    auto app = std::make_shared<app_state>();
+    // command line parameters
+    auto filename = "scene.json"s;  // input filename
+    auto imfilename = "out.obj"s;   // image filewname
+    auto camid = 0;                 // camera index
+    auto resolution = 512;          // image resolution
+    auto nsamples = 256;            // number of samples
+    auto tracer = "pathtrace"s;     // tracer name
+    auto nbounces = 8;              // max depth
+    auto seed = 7;                  // seed
+    auto pixel_clamp = 100.0f;      // pixel clamping
+    auto double_sided = false;      // double sided
+    auto add_skyenv = false;        // add sky environment
+    auto pratio = 8;                // preview ratio
+    auto quiet = false;             // quiet mode
 
     // parse command line
     CLI::App parser("progressive path tracing", "yitrace");
-    parser.add_option("--camera", app->camid, "Camera index.");
+    parser.add_option("--camera", camid, "Camera index.");
     parser.add_option(
-        "--resolution,-r", app->resolution, "Image vertical resolution.");
-    parser.add_option("--nsamples,-s", app->nsamples, "Number of samples.");
-    parser.add_option("--tracer,-t", app->tracer, "Trace type.")
+        "--resolution,-r", resolution, "Image vertical resolution.");
+    parser.add_option("--nsamples,-s", nsamples, "Number of samples.");
+    parser.add_option("--tracer,-t", tracer, "Trace type.")
         ->check([](const std::string& s) -> std::string {
             if (tracer_names.find(s) == tracer_names.end())
                 throw CLI::ValidationError("unknown tracer name");
             return s;
         });
-    parser.add_option(
-        "--nbounces", app->nbounces, "Maximum number of bounces.");
-    parser.add_option(
-        "--pixel-clamp", app->pixel_clamp, "Final pixel clamping.");
-    parser.add_option(
-        "--seed", app->seed, "Seed for the random number generators.");
-    parser.add_option("--exposure,-e", app->exposure, "Hdr exposure");
+    parser.add_option("--nbounces", nbounces, "Maximum number of bounces.");
+    parser.add_option("--pixel-clamp", pixel_clamp, "Final pixel clamping.");
+    parser.add_option("--seed", seed, "Seed for the random number generators.");
     parser.add_flag(
-        "--double-sided,-D", app->double_sided, "Double-sided rendering.");
-    parser.add_flag("--add-skyenv,-E", app->add_skyenv, "add missing env map");
-    parser.add_flag("--quiet,-q", app->quiet, "Print only errors messages");
+        "--double-sided,-D", double_sided, "Double-sided rendering.");
+    parser.add_flag("--add-skyenv,-E", add_skyenv, "add missing env map");
+    parser.add_flag("--quiet,-q", quiet, "Print only errors messages");
     parser.add_option(
-        "--pration", app->pratio, "Preview ratio for async rendering.");
-    parser.add_option("--output-image,-o", app->imfilename, "Image filename");
-    parser.add_option("scene", app->filename, "Scene filename")->required(true);
+        "--pration", pratio, "Preview ratio for async rendering.");
+    parser.add_option("--output-image,-o", imfilename, "Image filename");
+    parser.add_option("scene", filename, "Scene filename")->required(true);
     try {
         parser.parse(argc, argv);
     } catch (const CLI::ParseError& e) { return parser.exit(e); }
-    app->tracef = tracer_names.at(app->tracer);
 
     // scene loading
-    if (!app->quiet) std::cout << "loading scene" << app->filename << "\n";
+    auto scn = std::shared_ptr<ygl::scene>();
+    if (!quiet) std::cout << "loading scene" << filename << "\n";
     auto load_start = ygl::get_time();
     try {
-        app->scn = ygl::load_scene(app->filename);
+        scn = ygl::load_scene(filename);
     } catch (const std::exception& e) {
-        std::cout << "cannot load scene " << app->filename << "\n";
+        std::cout << "cannot load scene " << filename << "\n";
         std::cout << "error: " << e.what() << "\n";
         exit(1);
     }
-    if (!app->quiet)
+    if (!quiet)
         std::cout << "loading in "
                   << ygl::format_duration(ygl::get_time() - load_start) << "\n";
 
     // tesselate
-    if (!app->quiet) std::cout << "tesselating scene elements\n";
-    ygl::update_tesselation(app->scn);
+    if (!quiet) std::cout << "tesselating scene elements\n";
+    ygl::update_tesselation(scn);
 
     // update bbox and transforms
-    ygl::update_transforms(app->scn);
-    ygl::update_bbox(app->scn);
+    ygl::update_transforms(scn);
+    ygl::update_bbox(scn);
 
     // add components
-    if (!app->quiet) std::cout << "adding scene elements\n";
-    if (app->add_skyenv && app->scn->environments.empty()) {
-        app->scn->environments.push_back(ygl::make_sky_environment("sky"));
-        app->scn->textures.push_back(app->scn->environments.back()->ke_txt);
+    if (!quiet) std::cout << "adding scene elements\n";
+    if (add_skyenv && scn->environments.empty()) {
+        scn->environments.push_back(ygl::make_sky_environment("sky"));
+        scn->textures.push_back(scn->environments.back()->ke_txt);
     }
-    if (app->double_sided)
-        for (auto mat : app->scn->materials) mat->double_sided = true;
-    if (app->scn->cameras.empty())
-        app->scn->cameras.push_back(
-            ygl::make_bbox_camera("<view>", app->scn->bbox));
-    ygl::add_missing_names(app->scn);
-    for (auto err : ygl::validate(app->scn))
-        std::cout << "warning: " << err << "\n";
+    if (double_sided)
+        for (auto mat : scn->materials) mat->double_sided = true;
+    if (scn->cameras.empty())
+        scn->cameras.push_back(ygl::make_bbox_camera("<view>", scn->bbox));
+    ygl::add_missing_names(scn);
+    for (auto err : ygl::validate(scn)) std::cout << "warning: " << err << "\n";
 
     // build bvh
-    if (!app->quiet) std::cout << "building bvh\n";
+    if (!quiet) std::cout << "building bvh\n";
     auto bvh_start = ygl::get_time();
-    ygl::update_bvh(app->scn);
-    if (!app->quiet)
+    ygl::update_bvh(scn);
+    if (!quiet)
         std::cout << "building bvh in "
                   << ygl::format_duration(ygl::get_time() - bvh_start) << "\n";
 
     // init renderer
-    if (!app->quiet) std::cout << "initializing lights\n";
-    ygl::update_lights(app->scn);
+    if (!quiet) std::cout << "initializing lights\n";
+    ygl::update_lights(scn);
 
     // fix renderer type if no lights
-    if (app->scn->lights.empty() && app->scn->environments.empty() &&
-        app->tracer != "eyelight") {
-        if (!app->quiet)
+    if (scn->lights.empty() && scn->environments.empty() &&
+        tracer != "eyelight") {
+        if (!quiet)
             std::cout << "no lights presents, switching to eyelight shader\n";
-        app->tracer = "eyelight";
-        app->tracef = ygl::trace_eyelight;
+        tracer = "eyelight";
     }
 
+    // prepare application
+    auto app = std::make_shared<app_state>();
+    app->scn = scn;
+    app->filename = filename;
+    app->imfilename = imfilename;
+    app->camid = camid;
+    app->resolution = resolution;
+    app->nsamples = nsamples;
+    app->tracer = tracer;
+    app->nbounces = nbounces;
+    app->seed = seed;
+    app->pixel_clamp = pixel_clamp;
+    app->pratio = pratio;
+
     // initialize rendering objects
-    if (!app->quiet) std::cout << "starting async renderer\n";
+    if (!quiet) std::cout << "starting async renderer\n";
     ygl::trace_async_start(app->trace_state, app->scn, app->camid,
         app->resolution, app->nsamples, app->tracef, app->exposure, app->gamma,
         app->filmic, app->pratio, app->nbounces, app->pixel_clamp, app->seed);

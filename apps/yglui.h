@@ -154,7 +154,7 @@ inline void init_widgets(GLFWwindow* win) {
 }
 
 // Begin draw widget
-inline bool begin_widgets_frame(GLFWwindow* win, const char* title) {
+inline bool begin_widgets_frame(GLFWwindow* win, const char* title, bool* open) {
     static auto first_time = true;
     ImGui_ImplGlfwGL3_NewFrame();
     if(first_time) {
@@ -163,7 +163,7 @@ inline bool begin_widgets_frame(GLFWwindow* win, const char* title) {
         ImGui::SetNextWindowCollapsed(true);
         first_time = false;
     }
-    return ImGui::Begin(title);
+    return ImGui::Begin(title, open);
 }
 
 // End draw widget

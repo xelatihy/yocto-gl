@@ -34,11 +34,13 @@ using namespace std::literals;
 
 // Application state
 struct app_state {
+    // scene
     std::shared_ptr<ygl::scene> scn = nullptr;
-    std::string filename = "scene.json";
-    std::string imfilename = "out.png";
-    std::string outfilename = "scene.json";
 
+    // parameters
+    std::string filename = "scene.json";            // scene name
+    std::string imfilename = "out.png";             // output image
+    std::string outfilename = "scene.json";         // save scene name
     int camid = 0;                                  // camera index
     int resolution = 512;                           // image resolution
     bool wireframe = false;                         // wireframe drawing
@@ -52,6 +54,7 @@ struct app_state {
 
     uint gl_prog = 0;
 
+    bool widgets_open = false;
     bool navigation_fps = false;
     ygl::scene_selection selection = {};
     std::vector<ygl::scene_selection> update_list;
@@ -59,9 +62,7 @@ struct app_state {
     std::string anim_group = "";
     ygl::vec2f time_range = ygl::zero2f;
     bool animate = false;
-    bool quiet = false;
     std::unordered_map<std::string, std::string> inspector_highlights;
-    bool double_sided = false;
     std::string highlight_filename = ""s;
 };
 
@@ -113,7 +114,7 @@ void draw(GLFWwindow* win) {
         app->selection.ptr, app->eyelight, app->wireframe, app->edges,
         app->exposure, app->gamma);
 
-    if (begin_widgets_frame(win, "yview")) {
+    if (begin_widgets_frame(win, "yview", &app->widgets_open)) {
         ImGui::LabelText("scene", "%s", app->filename.c_str());
         if (ImGui::Button("print stats")) ygl::print_stats(app->scn);
         if (app->time_range != ygl::zero2f) {
@@ -853,75 +854,91 @@ load_ini(const std::string& filename) {
 }
 
 int main(int argc, char* argv[]) {
-    // create empty scene
-    auto app = std::make_shared<app_state>();
+    // command line parameters
+    auto filename = "scene.json"s;  // scene name
+    auto imfilename = "out.png"s;   // output image
+    auto camid = 0;                 // camera index
+    auto resolution = 512;          // image resolution
+    auto eyelight = false;          // camera light mode
+    auto double_sided = false;      // double sided
+    auto highlight_filename = ""s;  // highlight name
+    auto quiet = false;             // quiet mode
 
     // parse command line
     CLI::App parser("views scenes inteactively", "yview");
-    parser.add_option("--camera", app->camid, "Camera index.");
-    parser.add_flag("--eyelight,-c", app->eyelight, "Eyelight rendering.");
+    parser.add_option("--camera", camid, "Camera index.");
+    parser.add_flag("--eyelight,-c", eyelight, "Eyelight rendering.");
     parser.add_flag(
-        "--double-sided,-D", app->double_sided, "Double-sided rendering.");
-    parser.add_flag("--quiet,-q", app->quiet, "Print only errors messages");
-    parser.add_option(
-        "--highlights", app->highlight_filename, "Highlight filename");
-    parser.add_option("--output-image,-o", app->imfilename, "Image filename");
-    parser.add_option("scene", app->filename, "Scene filename")->required(true);
+        "--double-sided,-D", double_sided, "Double-sided rendering.");
+    parser.add_flag("--quiet,-q", quiet, "Print only errors messages");
+    parser.add_option("--highlights", highlight_filename, "Highlight filename");
+    parser.add_option("--output-image,-o", imfilename, "Image filename");
+    parser.add_option("scene", filename, "Scene filename")->required(true);
     try {
         parser.parse(argc, argv);
     } catch (const CLI::ParseError& e) { return parser.exit(e); }
 
     // fix hilights
-    if (!app->highlight_filename.empty()) {
+    auto inspector_highlights = std::unordered_map<std::string, std::string>();
+    if (!highlight_filename.empty()) {
         try {
-            app->inspector_highlights =
-                load_ini(app->highlight_filename).at("");
+            inspector_highlights = load_ini(highlight_filename).at("");
         } catch (const std::exception& e) {
-            std::cout << "cannot load highlight " << app->highlight_filename
-                      << "\n";
+            std::cout << "cannot load highlight " << highlight_filename << "\n";
             std::cout << "error: " << e.what() << "\n";
             exit(1);
         }
     }
 
     // scene loading
-    if (!app->quiet) std::cout << "loading scene" << app->filename << "\n";
+    auto scn = std::shared_ptr<ygl::scene>();
+    if (!quiet) std::cout << "loading scene" << filename << "\n";
     try {
-        app->scn = ygl::load_scene(app->filename);
+        scn = ygl::load_scene(filename);
     } catch (const std::exception& e) {
-        std::cout << "cannot load scene " << app->filename << "\n";
+        std::cout << "cannot load scene " << filename << "\n";
         std::cout << "error: " << e.what() << "\n";
         exit(1);
     }
 
     // tesselate
-    if (!app->quiet) std::cout << "tesselating scene elements\n";
-    ygl::update_tesselation(app->scn);
+    if (!quiet) std::cout << "tesselating scene elements\n";
+    ygl::update_tesselation(scn);
 
     // update bbox and transforms
-    ygl::update_transforms(app->scn);
-    ygl::update_bbox(app->scn);
+    ygl::update_transforms(scn);
+    ygl::update_bbox(scn);
 
     // add components
-    if (!app->quiet) std::cout << "adding scene elements\n";
-    if (app->double_sided) {
-        for (auto mat : app->scn->materials) mat->double_sided = true;
+    if (!quiet) std::cout << "adding scene elements\n";
+    if (double_sided) {
+        for (auto mat : scn->materials) mat->double_sided = true;
     }
-    if (app->scn->cameras.empty()) {
-        app->scn->cameras.push_back(
-            ygl::make_bbox_camera("<view>", app->scn->bbox));
+    if (scn->cameras.empty()) {
+        scn->cameras.push_back(ygl::make_bbox_camera("<view>", scn->bbox));
     }
-    ygl::add_missing_names(app->scn);
-    for (auto err : ygl::validate(app->scn))
-        std::cout << "warning: " << err << "\n";
+    ygl::add_missing_names(scn);
+    for (auto err : ygl::validate(scn)) std::cout << "warning: " << err << "\n";
 
     // animation
-    app->time_range = ygl::compute_animation_range(app->scn);
-    app->time = app->time_range.x;
+    auto time_range = ygl::compute_animation_range(scn);
+    auto time = time_range.x;
 
     // lights
-    ygl::update_bbox(app->scn);
-    ygl::update_lights(app->scn);
+    ygl::update_bbox(scn);
+    ygl::update_lights(scn);
+
+    // initialize app
+    auto app = std::make_shared<app_state>();
+    app->scn = scn;
+    app->filename = filename;
+    app->imfilename = imfilename;
+    app->camid = camid;
+    app->resolution = resolution;
+    app->eyelight = eyelight;
+    app->inspector_highlights = inspector_highlights;
+    app->time = time;
+    app->time_range = time_range;
 
     // run ui
     run_ui(app);
