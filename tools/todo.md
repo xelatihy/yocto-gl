@@ -5,7 +5,7 @@ Please consider this to be just development notes and not any real planning.
 
 ## Library
 
-- simpler image drawing code
+- width/height -> vec2i
 - no gl wrapper
     - back to gl2
         - imview

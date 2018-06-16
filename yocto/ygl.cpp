@@ -2942,7 +2942,7 @@ image4f make_gammaramp_imagef(int width, int height) {
 
 // Make an image color with red/green in the [0,1] range. Helpful to
 // visualize uv texture coordinate application.
-image4f make_uv_image(int width, int height) {
+image4f make_uvramp_image(int width, int height) {
     auto img = image4f{width, height};
     for (int j = 0; j < height; j++) {
         for (int i = 0; i < width; i++) {

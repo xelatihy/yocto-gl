@@ -792,8 +792,8 @@ void from_json_proc(const json& js, texture& val) {
             js.value("!!c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "bump") {
         val.img = make_bumpdimple_image(width, height, js.value("!!tile", 8));
-    } else if (type == "uv") {
-        val.img = make_uv_image(width, height);
+    } else if (type == "uvramp") {
+        val.img = make_uvramp_image(width, height);
     } else if (type == "uvgrid") {
         val.img = make_uvgrid_image(width, height);
     } else if (type == "sky") {

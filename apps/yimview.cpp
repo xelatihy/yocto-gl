@@ -56,9 +56,6 @@ struct gimage {
 
     // display image
     ygl::image4f display;
-
-    // opengl texture
-    uint gl_txt = 0;
 };
 
 struct app_state {
@@ -66,7 +63,7 @@ struct app_state {
     std::shared_ptr<gimage> img = nullptr;
 
     // viewing properties
-    uint gl_prog = 0, gl_vbo = 0, gl_ebo = 0;
+    uint gl_prog = 0, gl_pbo = 0, gl_tbo = 0, gl_ebo = 0;
     bool widgets_open = false;
     ygl::frame2f imframe = ygl::identity_frame2f;
     bool zoom_to_fit = false;
@@ -133,8 +130,7 @@ void update_display_image(const std::shared_ptr<gimage>& img) {
     }
 }
 
-void draw_widgets(GLFWwindow* win) {
-    auto app = (app_state*)glfwGetWindowUserPointer(win);
+void draw_widgets(GLFWwindow* win, app_state* app) {
     if (begin_widgets_frame(win, "yimview", &app->widgets_open)) {
         ImGui::Combo("image", &app->img, app->imgs, false);
         ImGui::LabelText("filename", "%s", app->img->filename.c_str());
@@ -173,124 +169,12 @@ void draw_widgets(GLFWwindow* win) {
     end_widgets_frame();
 }
 
-void draw_image(GLFWwindow* win) {
-    auto app = (app_state*)glfwGetWindowUserPointer(win);
-    auto window_size = ygl::zero2i, framebuffer_size = ygl::zero2i;
-    glfwGetWindowSize(win, &window_size.x, &window_size.y);
-    glfwGetFramebufferSize(win, &framebuffer_size.x, &framebuffer_size.y);
-
-    ygl::center_image(app->imframe,
-        {app->img->img.width(), app->img->img.height()}, window_size,
-        app->zoom_to_fit);
-
-    assert(glGetError() == GL_NO_ERROR);
-    glViewport(0, 0, framebuffer_size.x, framebuffer_size.y);
-    glClearColor(app->background.x, app->background.y, app->background.z,
-        app->background.w);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glEnable(GL_BLEND);
-    glUseProgram(app->gl_prog);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, app->img->gl_txt);
-    assert(glGetError() == GL_NO_ERROR);
-
-    assert(glGetError() == GL_NO_ERROR);
-    glUniform2f(glGetUniformLocation(app->gl_prog, "win_size"), window_size.x,
-        window_size.y);
-    glUniform2f(glGetUniformLocation(app->gl_prog, "txt_size"),
-        app->img->img.width(), app->img->img.height());
-    glUniformMatrix3x2fv(glGetUniformLocation(app->gl_prog, "frame"), 1, false,
-        &app->imframe.x.x);
-    glUniform1i(glGetUniformLocation(app->gl_prog, "img"), 0);
-    assert(glGetError() == GL_NO_ERROR);
-
-    assert(glGetError() == GL_NO_ERROR);
-    glEnableVertexAttribArray(
-        glGetAttribLocation(app->gl_prog, "vert_texcoord"));
-    glBindBuffer(GL_ARRAY_BUFFER, app->gl_vbo);
-    glVertexAttribPointer(glGetAttribLocation(app->gl_prog, "vert_texcoord"), 2,
-        GL_FLOAT, false, 0, 0);
-    assert(glGetError() == GL_NO_ERROR);
-
-    assert(glGetError() == GL_NO_ERROR);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app->gl_ebo);
-    glDrawElements(GL_TRIANGLES, 3 * 4, GL_UNSIGNED_INT, 0);
-    assert(glGetError() == GL_NO_ERROR);
-
-    glUseProgram(0);
-    glDisable(GL_BLEND);
-}
-
 void draw(GLFWwindow* win) {
-    draw_image(win);
-    draw_widgets(win);
-    glfwSwapBuffers(win);
-}
-
-static const char* vertex =
-    R"(
-    #version 330
-
-    layout(location = 0) in vec2 vert_texcoord;
-
-    uniform mat3x2 frame;
-    uniform vec2 txt_size;
-    uniform vec2 win_size;
-    uniform sampler2D img;
-
-    out vec2 texcoord;
-
-    void main() {
-        texcoord = vert_texcoord.xy;
-        vec2 pos = frame * vec3(txt_size.x * (vert_texcoord.x - 0.5), 
-                                txt_size.y * (vert_texcoord.y - 0.5), 1);
-        vec2 upos = 2 * pos / win_size - vec2(1,1);
-        upos.y = - upos.y;
-        gl_Position = vec4(upos.x, upos.y, 0, 1);
-    }
-
-    )";
-
-static const char* fragment =
-    R"(
-    #version 330
-
-    in vec2 texcoord;
-    uniform sampler2D img;
-    out vec4 color;
-
-    void main() {
-        color = texture(img,texcoord);
-    }
-    )";
-
-void init_drawimage(GLFWwindow* win) {
     auto app = (app_state*)glfwGetWindowUserPointer(win);
-    app->gl_prog = make_glprogram(vertex, fragment);
-    auto uv = std::vector<ygl::vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}};
-    auto triangles = std::vector<ygl::vec3i>{{0, 1, 2}, {0, 2, 3}};
-    assert(glGetError() == GL_NO_ERROR);
-    glGenBuffers(1, &app->gl_vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, app->gl_vbo);
-    glBufferData(GL_ARRAY_BUFFER, 4 * 2 * 4, uv.data(), GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glGenBuffers(1, &app->gl_ebo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app->gl_ebo);
-    glBufferData(
-        GL_ELEMENT_ARRAY_BUFFER, 2 * 3 * 4, triangles.data(), GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    assert(glGetError() == GL_NO_ERROR);
-    for (auto& img : app->imgs) {
-        assert(glGetError() == GL_NO_ERROR);
-        glGenTextures(1, &img->gl_txt);
-        glBindTexture(GL_TEXTURE_2D, img->gl_txt);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img->img.width(),
-            img->img.height(), 0, GL_RGBA, GL_FLOAT, img->img.data());
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glBindTexture(GL_TEXTURE_2D, 0);
-        assert(glGetError() == GL_NO_ERROR);
-    }
+    draw_image(win, app->img->display, app->imframe, app->zoom_to_fit,
+        app->background);
+    draw_widgets(win, app);
+    glfwSwapBuffers(win);
 }
 
 void run_ui(const std::shared_ptr<app_state>& app) {
@@ -301,9 +185,6 @@ void run_ui(const std::shared_ptr<app_state>& app) {
 
     // init widgets
     init_widgets(win);
-
-    // load textures
-    init_drawimage(win);
 
     // window values
     auto mouse_pos = ygl::zero2f, last_pos = ygl::zero2f;
@@ -327,10 +208,6 @@ void run_ui(const std::shared_ptr<app_state>& app) {
         // update texture
         if (app->img->updated) {
             update_display_image(app->img);
-            glBindTexture(GL_TEXTURE_2D, app->img->gl_txt);
-            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, app->img->img.width(),
-                app->img->img.height(), GL_RGBA, GL_FLOAT,
-                app->img->display.data());
             app->img->updated = false;
         }
 
