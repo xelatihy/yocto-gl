@@ -185,4 +185,33 @@ void save_obj_mesh(const std::string& filename, const std::vector<int>& points,
 
 }  // namespace ygl
 
+// -----------------------------------------------------------------------------
+// FACE-VARYING IO FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Load/Save a mesh
+void load_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
+    std::vector<vec3f>& pos, std::vector<vec4i>& quads_norm, 
+    std::vector<vec3f>& norm, std::vector<vec4i>& quads_texcoord,
+    std::vector<vec2f>& texcoord, std::vector<vec4i>& quads_color,
+    std::vector<vec4f>& color);
+void save_fvmesh(const std::string& filename, const std::vector<vec4i>& quads_pos,
+    const std::vector<vec3f>& pos, const std::vector<vec4i>& quads_norm, 
+    const std::vector<vec3f>& norm, const std::vector<vec4i>& quads_texcoord,
+    const std::vector<vec2f>& texcoord, const std::vector<vec4i>& quads_color,
+    const std::vector<vec4f>& color, bool ascii = false);
+
+// Load/Save an OBJ mesh
+void load_obj_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
+    std::vector<vec3f>& pos, std::vector<vec4i>& quads_norm, 
+    std::vector<vec3f>& norm, std::vector<vec4i>& quads_texcoord,
+    std::vector<vec2f>& texcoord, bool flip_texcoord = true);
+void save_obj_fvmesh(const std::string& filename, const std::vector<vec4i>& quads_pos,
+    const std::vector<vec3f>& pos, const std::vector<vec4i>& quads_norm, 
+    const std::vector<vec3f>& norm, const std::vector<vec4i>& quads_texcoord,
+    const std::vector<vec2f>& texcoord, bool flip_texcoord = true);
+
+}  // namespace ygl
+
 #endif

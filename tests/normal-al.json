@@ -77,7 +77,7 @@
                     "!!proc": {
                         "type": "bump",
                         "bump_to_normal": true,
-                        "bump_scale": 4
+                        "bump_scale": 0.05
                     }
                 }
             },

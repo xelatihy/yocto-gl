@@ -3092,14 +3092,15 @@ image4f make_uvgrid_image(const vec2i& imsize, int tiles, bool colored) {
 // Comvert a bump map to a normal map.
 image4f bump_to_normal_map(const image4f& img, float scale) {
     auto norm = image4f{img.size};
+    auto dx = 1.0f / img.size.x, dy = 1.0f / img.size.y;
     for (int j = 0; j < img.size.y; j++) {
         for (int i = 0; i < img.size.x; i++) {
             auto i1 = (i + 1) % img.size.x, j1 = (j + 1) % img.size.y;
             auto p00 = img[{i, j}], p10 = img[{i1, j}], p01 = img[{i, j1}];
-            auto g00 = (float(p00.x) + float(p00.y) + float(p00.z)) / (3 * 255);
-            auto g01 = (float(p01.x) + float(p01.y) + float(p01.z)) / (3 * 255);
-            auto g10 = (float(p10.x) + float(p10.y) + float(p10.z)) / (3 * 255);
-            auto n = vec3f{scale * (g00 - g10), scale * (g00 - g01), 1.0f};
+            auto g00 = (p00.x + p00.y + p00.z) / 3;
+            auto g01 = (p01.x + p01.y + p01.z) / 3;
+            auto g10 = (p10.x + p10.y + p10.z) / 3;
+            auto n = vec3f{scale * (g00 - g10) / dx, scale * (g00 - g01) / dy, 1.0f};
             n.y = -n.y;  // make green pointing up, even if y axis points down
             n = normalize(n) * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
             norm[{i, j}] = {n.x, n.y, n.z, 1};
