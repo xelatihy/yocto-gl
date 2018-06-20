@@ -52,6 +52,8 @@
 
 #include "ygl.h"
 
+#include <atomic>
+
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PERLIN NOISE
 // -----------------------------------------------------------------------------
@@ -610,7 +612,8 @@ std::pair<std::vector<vec3i>, std::vector<T>> subdivide_triangles(
         ttriangles.push_back({t.z, eoffset + get_edge_index(emap, {t.z, t.x}),
             eoffset + get_edge_index(emap, {t.y, t.z})});
         ttriangles.push_back({eoffset + get_edge_index(emap, {t.x, t.y}),
-            eoffset + get_edge_index(emap, {t.y, t.z}), eoffset + get_edge_index(emap, {t.z, t.x})});
+            eoffset + get_edge_index(emap, {t.y, t.z}),
+            eoffset + get_edge_index(emap, {t.z, t.x})});
     }
     // done
     return {ttriangles, tvert};
@@ -646,21 +649,21 @@ std::pair<std::vector<vec4i>, std::vector<T>> subdivide_quads(
     auto qi = 0;
     for (auto& q : quads) {
         if (q.z != q.w) {
-            tquads.push_back({q.x, eoffset + get_edge_index(emap, {q.x, q.y}), foffset + qi,
-                eoffset + get_edge_index(emap, {q.w, q.x})});
-            tquads.push_back({q.y, eoffset + get_edge_index(emap, {q.y, q.z}), foffset + qi,
-                eoffset + get_edge_index(emap, {q.x, q.y})});
-            tquads.push_back({q.z, eoffset + get_edge_index(emap, {q.z, q.w}), foffset + qi,
-                eoffset + get_edge_index(emap, {q.y, q.z})});
-            tquads.push_back({q.w, eoffset + get_edge_index(emap, {q.w, q.x}), foffset + qi,
-                eoffset + get_edge_index(emap, {q.z, q.w})});
+            tquads.push_back({q.x, eoffset + get_edge_index(emap, {q.x, q.y}),
+                foffset + qi, eoffset + get_edge_index(emap, {q.w, q.x})});
+            tquads.push_back({q.y, eoffset + get_edge_index(emap, {q.y, q.z}),
+                foffset + qi, eoffset + get_edge_index(emap, {q.x, q.y})});
+            tquads.push_back({q.z, eoffset + get_edge_index(emap, {q.z, q.w}),
+                foffset + qi, eoffset + get_edge_index(emap, {q.y, q.z})});
+            tquads.push_back({q.w, eoffset + get_edge_index(emap, {q.w, q.x}),
+                foffset + qi, eoffset + get_edge_index(emap, {q.z, q.w})});
         } else {
-            tquads.push_back({q.x, eoffset + get_edge_index(emap, {q.x, q.y}), foffset + qi,
-                eoffset + get_edge_index(emap, {q.z, q.x})});
-            tquads.push_back({q.y, eoffset + get_edge_index(emap, {q.y, q.z}), foffset + qi,
-                eoffset + get_edge_index(emap, {q.x, q.y})});
-            tquads.push_back({q.z, eoffset + get_edge_index(emap, {q.z, q.x}),foffset + qi,
-                eoffset + get_edge_index(emap, {q.y, q.z})});
+            tquads.push_back({q.x, eoffset + get_edge_index(emap, {q.x, q.y}),
+                foffset + qi, eoffset + get_edge_index(emap, {q.z, q.x})});
+            tquads.push_back({q.y, eoffset + get_edge_index(emap, {q.y, q.z}),
+                foffset + qi, eoffset + get_edge_index(emap, {q.x, q.y})});
+            tquads.push_back({q.z, eoffset + get_edge_index(emap, {q.z, q.x}),
+                foffset + qi, eoffset + get_edge_index(emap, {q.y, q.z})});
         }
         qi += 1;
     }
@@ -741,21 +744,21 @@ std::pair<std::vector<vec4i>, std::vector<T>> subdivide_catmullclark(
     auto qi = 0;
     for (auto& q : quads) {
         if (q.z != q.w) {
-            tquads.push_back({q.x, eoffset + get_edge_index(emap, {q.x, q.y}), foffset + qi,
-                eoffset + get_edge_index(emap, {q.w, q.x})});
-            tquads.push_back({q.y, eoffset + get_edge_index(emap, {q.y, q.z}), foffset + qi,
-                eoffset + get_edge_index(emap, {q.x, q.y})});
-            tquads.push_back({q.z, eoffset + get_edge_index(emap, {q.z, q.w}), foffset + qi,
-                eoffset + get_edge_index(emap, {q.y, q.z})});
-            tquads.push_back({q.w, eoffset + get_edge_index(emap, {q.w, q.x}), foffset + qi,
-                eoffset + get_edge_index(emap, {q.z, q.w})});
+            tquads.push_back({q.x, eoffset + get_edge_index(emap, {q.x, q.y}),
+                foffset + qi, eoffset + get_edge_index(emap, {q.w, q.x})});
+            tquads.push_back({q.y, eoffset + get_edge_index(emap, {q.y, q.z}),
+                foffset + qi, eoffset + get_edge_index(emap, {q.x, q.y})});
+            tquads.push_back({q.z, eoffset + get_edge_index(emap, {q.z, q.w}),
+                foffset + qi, eoffset + get_edge_index(emap, {q.y, q.z})});
+            tquads.push_back({q.w, eoffset + get_edge_index(emap, {q.w, q.x}),
+                foffset + qi, eoffset + get_edge_index(emap, {q.z, q.w})});
         } else {
-            tquads.push_back({q.x, eoffset + get_edge_index(emap, {q.x, q.y}), foffset + qi,
-                eoffset + get_edge_index(emap, {q.z, q.x})});
-            tquads.push_back({q.y, eoffset + get_edge_index(emap, {q.y, q.z}), foffset + qi,
-                eoffset + get_edge_index(emap, {q.x, q.y})});
-            tquads.push_back({q.z, eoffset + get_edge_index(emap, {q.z, q.x}),foffset + qi,
-                eoffset + get_edge_index(emap, {q.y, q.z})});
+            tquads.push_back({q.x, eoffset + get_edge_index(emap, {q.x, q.y}),
+                foffset + qi, eoffset + get_edge_index(emap, {q.z, q.x})});
+            tquads.push_back({q.y, eoffset + get_edge_index(emap, {q.y, q.z}),
+                foffset + qi, eoffset + get_edge_index(emap, {q.x, q.y})});
+            tquads.push_back({q.z, eoffset + get_edge_index(emap, {q.z, q.x}),
+                foffset + qi, eoffset + get_edge_index(emap, {q.y, q.z})});
         }
         qi += 1;
     }
@@ -1452,8 +1455,8 @@ void build_bvh(const std::shared_ptr<bvh_tree>& bvh, bool equal_size) {
         type = bvh_node_type::triangle;
     } else if (!bvh->quads.empty()) {
         for (auto& q : bvh->quads) {
-            prims.push_back(
-                {quad_bbox(bvh->pos[q.x], bvh->pos[q.y], bvh->pos[q.z], bvh->pos[q.w])});
+            prims.push_back({quad_bbox(
+                bvh->pos[q.x], bvh->pos[q.y], bvh->pos[q.z], bvh->pos[q.w])});
         }
         type = bvh_node_type::quad;
     } else if (!bvh->pos.empty()) {
@@ -1504,8 +1507,8 @@ void refit_bvh(const std::shared_ptr<bvh_tree>& bvh, int nodeid) {
         case bvh_node_type::quad: {
             for (auto i = 0; i < node.count; i++) {
                 auto& t = bvh->quads[node.prims[i]];
-                node.bbox +=
-                    quad_bbox(bvh->pos[t.x], bvh->pos[t.y], bvh->pos[t.z], bvh->pos[t.w]);
+                node.bbox += quad_bbox(
+                    bvh->pos[t.x], bvh->pos[t.y], bvh->pos[t.z], bvh->pos[t.w]);
             }
         } break;
         case bvh_node_type::line: {
@@ -1700,8 +1703,9 @@ bool overlap_bvh(const std::shared_ptr<bvh_tree>& bvh, const vec3f& pos,
                 for (auto i = 0; i < node.count; i++) {
                     auto& q = bvh->quads[node.prims[i]];
                     if (overlap_quad(pos, max_dist, bvh->pos[q.x],
-                            bvh->pos[q.y], bvh->pos[q.z], bvh->pos[q.w], bvh->radius[q.x],
-                            bvh->radius[q.y], bvh->radius[q.z], bvh->radius[q.w], dist, uv)) {
+                            bvh->pos[q.y], bvh->pos[q.z], bvh->pos[q.w],
+                            bvh->radius[q.x], bvh->radius[q.y],
+                            bvh->radius[q.z], bvh->radius[q.w], dist, uv)) {
                         hit = true;
                         max_dist = dist;
                         eid = node.prims[i];
@@ -2909,7 +2913,7 @@ namespace ygl {
 
 // Conversion between linear and gamma-encoded images.
 image4f gamma_to_linear(const image4f& srgb, float gamma) {
-    if(gamma == 1) return srgb;
+    if (gamma == 1) return srgb;
     auto lin = image4f{srgb.size};
     for (auto j = 0; j < srgb.size.y; j++) {
         for (auto i = 0; i < srgb.size.x; i++) {
@@ -2920,7 +2924,7 @@ image4f gamma_to_linear(const image4f& srgb, float gamma) {
     return lin;
 }
 image4f linear_to_gamma(const image4f& lin, float gamma) {
-    if(gamma == 1) return lin;
+    if (gamma == 1) return lin;
     auto srgb = image4f{lin.size};
     for (auto j = 0; j < lin.size.y; j++) {
         for (auto i = 0; i < lin.size.x; i++) {
@@ -3917,8 +3921,8 @@ vec4f eval_texture(const std::shared_ptr<texture>& txt, const vec2f& texcoord) {
 
     // handle interpolation
     return txt->img[{i, j}] * (1 - u) * (1 - v) +
-            txt->img[{i, jj}] * (1 - u) * v +
-            txt->img[{ii, j}] * u * (1 - v) + txt->img[{ii, jj}] * u * v;
+           txt->img[{i, jj}] * (1 - u) * v + txt->img[{ii, j}] * u * (1 - v) +
+           txt->img[{ii, jj}] * u * v;
 }
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
@@ -4183,11 +4187,16 @@ void print_stats(const std::shared_ptr<scene>& scn) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+// Trace stats.
+std::atomic<uint64_t> _trace_npaths{0};
+std::atomic<uint64_t> _trace_nrays{0};
+
 // Intersect a scene handling opacity.
 scene_intersection intersect_ray_cutout(const std::shared_ptr<scene>& scn,
     const ray3f& ray_, rng_state& rng, int nbounces) {
     auto ray = ray_;
     for (auto b = 0; b < nbounces; b++) {
+        _trace_nrays += 1;
         auto isec = intersect_ray(scn, ray);
         if (!isec.ist) return isec;
         auto op = eval_opacity(isec.ist, isec.ei, isec.uv);
@@ -5105,6 +5114,7 @@ vec3f trace_debug_texcoord(const std::shared_ptr<scene>& scn, const ray3f& ray,
 vec4f trace_sample(const std::shared_ptr<scene>& scn,
     const std::shared_ptr<camera>& cam, const vec2i& ij, const vec2i& imsize,
     rng_state& rng, trace_func tracer, int nbounces, float pixel_clamp = 100) {
+    _trace_npaths += 1;
     auto ray = eval_camera_ray(cam, ij, imsize, rand2f(rng), rand2f(rng));
     auto hit = false;
     auto l = tracer(scn, ray, rng, nbounces, &hit);
@@ -5274,6 +5284,16 @@ void trace_async_stop(trace_async_state& st) {
     for (auto& t : st.threads) t.join();
     st.stop_flag = false;
     st.threads.clear();
+}
+
+// Trace statistics for last run used for fine tuning implementation.
+// For now returns number of paths and number of rays.
+std::pair<uint64_t, uint64_t> get_trace_stats() {
+    return {_trace_nrays, _trace_npaths};
+}
+void reset_trace_stats() {
+    _trace_nrays = 0;
+    _trace_npaths = 0;
 }
 
 }  // namespace ygl

@@ -47,24 +47,24 @@ auto tracer_names = std::unordered_map<std::string, ygl::trace_func>{
 
 int main(int argc, char* argv[]) {
     // command line parameters
-    auto filename = "scene.json"s;  // scene filename
-    auto imfilename = "out.hdr"s;   // image output filename
-    auto camid = 0;                 // camera index
-    auto resolution = 512;          // image vertical resolution
-    auto nsamples = 256;            // image samples
-    auto tracer = "pathtrace"s;     // tracer algorithm
-    auto nbounces = 4;              // number of bounces
-    auto pixel_clamp = 100.0f;      // pixel clamping
-    auto noparallel = false;        // disable parallel
-    auto seed = ygl::trace_default_seed;                  // random seed
-    auto nbatch = 16;               // batch size
-    auto save_batch = false;        // whether to save bacthes
-    auto exposure = 0.0f;           // exposure
-    auto gamma = 2.2;               // gamma
-    auto filmic = false;            // filmic
-    auto double_sided = false;      // double sided
-    auto add_skyenv = false;        // add environment
-    auto quiet = false;             // quiet mode
+    auto filename = "scene.json"s;        // scene filename
+    auto imfilename = "out.hdr"s;         // image output filename
+    auto camid = 0;                       // camera index
+    auto resolution = 512;                // image vertical resolution
+    auto nsamples = 256;                  // image samples
+    auto tracer = "pathtrace"s;           // tracer algorithm
+    auto nbounces = 4;                    // number of bounces
+    auto pixel_clamp = 100.0f;            // pixel clamping
+    auto noparallel = false;              // disable parallel
+    auto seed = ygl::trace_default_seed;  // random seed
+    auto nbatch = 16;                     // batch size
+    auto save_batch = false;              // whether to save bacthes
+    auto exposure = 0.0f;                 // exposure
+    auto gamma = 2.2;                     // gamma
+    auto filmic = false;                  // filmic
+    auto double_sided = false;            // double sided
+    auto add_skyenv = false;              // add environment
+    auto quiet = false;                   // quiet mode
 
     // parse command line
     CLI::App parser("Offline path tracing", "ytrace");
@@ -180,6 +180,15 @@ int main(int argc, char* argv[]) {
         std::cout << "rendering image in "
                   << ygl::format_duration(ygl::get_time() - render_start)
                   << "\n";
+
+    // stata
+    if (!quiet) {
+        std::cout << "using " << ygl::format_num(ygl::get_trace_stats().first)
+                  << " rays in "
+                  << ygl::format_num(ygl::get_trace_stats().second)
+                  << " paths\n";
+    }
+
     // save image
     if (!quiet) std::cout << "saving image " << imfilename << "\n";
     if (ygl::is_hdr_filename(imfilename)) {

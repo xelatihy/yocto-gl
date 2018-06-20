@@ -69,17 +69,21 @@ int main(int argc, char** argv) {
     }
 
     // change texture names
-    if(uniform_txt) {
-        for(auto txt : scn->textures) {
+    if (uniform_txt) {
+        for (auto txt : scn->textures) {
             auto ext = ygl::get_extension(txt->path);
-            if(ygl::is_hdr_filename(txt->path)) {
-                if(ext == "hdr" || ext == "exr") continue;
-                if(ext == "pfm") ygl::replace_extension(filename, "hdr");
-                else std::cout << "unknown texture format " << ext;
+            if (ygl::is_hdr_filename(txt->path)) {
+                if (ext == "hdr" || ext == "exr") continue;
+                if (ext == "pfm")
+                    ygl::replace_extension(filename, "hdr");
+                else
+                    std::cout << "unknown texture format " << ext;
             } else {
-                if(ext == "png" || ext == "jpg") continue;
-                if(ext == "tga" || ext == "bmp") ygl::replace_extension(filename, "png");
-                else std::cout << "unknown texture format " << ext;
+                if (ext == "png" || ext == "jpg") continue;
+                if (ext == "tga" || ext == "bmp")
+                    ygl::replace_extension(filename, "png");
+                else
+                    std::cout << "unknown texture format " << ext;
             }
         }
     }
