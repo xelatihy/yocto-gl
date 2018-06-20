@@ -3,26 +3,10 @@
 This file contains notes on future improvements of Yocto.
 Please consider this to be just development notes and not any real planning.
 
-## Library
+## next
 
-- io
-    - consider json i/o inline
-    - consider tinyobjloader
-- quad
-    - add edge visualization
-    - diamond triangles
-    - verify interpolation for degenerate
-    - verify if we can write interpolation as two triangles
-    - verify sampling for degenerate
-    - add to shape
-    - add to intersect
-    - add to io
-
-## Bugs
-
-- make sure we cam parse face-varying data in OBJ models
-- normal map problem
-- animated rotation seems bogus
+- tonyobjloader
+- openmp
 
 ## giacomo
 
@@ -47,6 +31,21 @@ Please consider this to be just development notes and not any real planning.
 
 - tone curve
 - 3D lut
+
+## Library
+
+- io
+    - consider json i/o inline
+    - consider tinyobjloader
+- quad
+    - add edge visualization
+    - diamond triangles
+    - verify interpolation for degenerate
+    - verify if we can write interpolation as two triangles
+    - verify sampling for degenerate
+    - add to shape
+    - add to intersect
+    - add to io
 
 ## Trace
 
@@ -149,3 +148,18 @@ Please consider this to be just development notes and not any real planning.
 - frame inverse with flag
 - check random shuffle
 - check random number generation for float/double
+
+## OpenMP
+
+On Apple Clang, you need to add several options to use OpenMP's front end
+instead of the standard driver option. This usually looks like
+  -Xpreprocessor -fopenmp -lomp
+
+You might need to make sure the lib and include directories are discoverable
+if /usr/local is not searched:
+
+  -L/usr/local/opt/libomp/lib -I/usr/local/opt/libomp/include
+
+For CMake, the following flags will cause the OpenMP::OpenMP_CXX target to
+be set up correctly:
+  -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include" -DOpenMP_CXX_LIB_NAMES="omp" -DOpenMP_omp_LIBRARY=/usr/local/opt/libomp/lib/libomp.dylib

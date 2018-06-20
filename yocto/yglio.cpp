@@ -1497,12 +1497,28 @@ std::shared_ptr<scene> load_json_scene(
 
     // load meshes
     auto dirname = get_dirname(filename);
-    for (auto shp : scn->shapes) {
+    for (auto& shp : scn->shapes) {
         if (shp->path == "" || !shp->pos.empty()) continue;
         auto filename = normalize_path(dirname + "/" + shp->path);
         try {
             load_mesh(filename, shp->points, shp->lines, shp->triangles,
                 shp->pos, shp->norm, shp->texcoord, shp->color, shp->radius);
+        } catch (std::exception&) {
+            if (skip_missing) continue;
+            throw;
+        }
+    }
+
+    // load suddivs
+    for (auto& sbd : scn->subdivs) {
+        if (sbd->path == "" || !sbd->pos.empty()) continue;
+        auto filename = normalize_path(dirname + "/" + sbd->path);
+        try {
+            auto quads_norm = std::vector<vec4i>();
+            auto norm = std::vector<vec3f>();
+            load_fvmesh(filename, sbd->quads_pos, sbd->pos, quads_norm, norm,
+                sbd->quads_texcoord, sbd->texcoord, sbd->quads_color,
+                sbd->color);
         } catch (std::exception&) {
             if (skip_missing) continue;
             throw;
@@ -1542,12 +1558,26 @@ void save_json_scene(const std::string& filename,
 
     // save meshes
     auto dirname = get_dirname(filename);
-    for (auto shp : scn->shapes) {
+    for (auto& shp : scn->shapes) {
         if (shp->path == "") continue;
         auto filename = normalize_path(dirname + "/" + shp->path);
         try {
             save_mesh(filename, shp->points, shp->lines, shp->triangles,
                 shp->pos, shp->norm, shp->texcoord, shp->color, shp->radius);
+        } catch (std::exception&) {
+            if (skip_missing) continue;
+            throw;
+        }
+    }
+
+    // save subdivs
+    for (auto& sbd : scn->subdivs) {
+        if (sbd->path == "") continue;
+        auto filename = normalize_path(dirname + "/" + sbd->path);
+        try {
+            save_fvmesh(filename, sbd->quads_pos, sbd->pos, {}, {},
+                sbd->quads_texcoord, sbd->texcoord, sbd->quads_color,
+                sbd->color);
         } catch (std::exception&) {
             if (skip_missing) continue;
             throw;
@@ -2059,9 +2089,9 @@ void save_obj_scene(const std::string& filename,
     // shapes
     auto offset = vec3i{0, 0, 0};
     for (auto ist : scn->instances) {
-        fs << "o " << ist->name << "\n";
-        if (ist->mat) fs << "usemtl " << ist->mat->name << "\n";
         if (!ist->sbd) {
+            fs << "o " << ist->name << "\n";
+            if (ist->mat) fs << "usemtl " << ist->mat->name << "\n";
             if (ist->frame == identity_frame3f) {
                 for (auto& p : ist->shp->pos) fs << "v " << p << "\n";
                 for (auto& n : ist->shp->norm) fs << "vn " << n << "\n";
@@ -2096,6 +2126,8 @@ void save_obj_scene(const std::string& filename,
             offset.y += ist->shp->texcoord.size();
             offset.z += ist->shp->norm.size();
         } else {
+            fs << "o " << ist->name << "\n";
+            if (ist->mat) fs << "usemtl " << ist->mat->name << "\n";
             if (ist->frame == identity_frame3f) {
                 for (auto& p : ist->sbd->pos) fs << "v " << p << "\n";
                 for (auto& t : ist->sbd->texcoord) fs << "vt " << t << "\n";
@@ -2999,7 +3031,7 @@ void save_gltf_scene(const std::string& filename,
 
     // meshes
     auto dirname = get_dirname(filename);
-    for (auto shp : scn->shapes) {
+    for (auto& shp : scn->shapes) {
         if (shp->path == "") continue;
         auto filename = normalize_path(dirname + "/" + shp->path);
         filename = replace_extension(filename, ".bin");
@@ -4198,6 +4230,10 @@ void load_obj_mesh(const std::string& filename, std::vector<int>& points,
     auto fs = std::ifstream(filename);
     if (!fs) throw std::runtime_error("cannot open filename " + filename);
 
+    auto opos = std::deque<vec3f>();
+    auto onorm = std::deque<vec3f>();
+    auto otexcoord = std::deque<vec2f>();
+
     pos.clear();
     norm.clear();
     texcoord.clear();
@@ -4223,15 +4259,15 @@ void load_obj_mesh(const std::string& filename, std::vector<int>& points,
 
         // possible token values
         if (cmd == "v") {
-            pos.push_back({});
-            ss >> pos.back();
+            opos.push_back({});
+            ss >> opos.back();
         } else if (cmd == "vn") {
-            norm.push_back({});
-            ss >> norm.back();
+            onorm.push_back({});
+            ss >> onorm.back();
         } else if (cmd == "vt") {
-            texcoord.push_back({});
-            ss >> texcoord.back();
-            if (flip_texcoord) texcoord.back().y = 1 - texcoord.back().y;
+            otexcoord.push_back({});
+            ss >> otexcoord.back();
+            if (flip_texcoord) otexcoord.back().y = 1 - otexcoord.back().y;
         } else if (cmd == "f" || cmd == "l" || cmd == "p") {
             auto num = 0;
             vec3i verts[128];
@@ -4262,10 +4298,10 @@ void load_obj_mesh(const std::string& filename, std::vector<int>& points,
                     auto nverts = (int)pos.size();
                     vert_map.insert(it, {verts[i], nverts});
                     vids[i] = nverts;
-                    if (verts[i].x >= 0) pos.push_back(pos.at(verts[i].x));
+                    if (verts[i].x >= 0) pos.push_back(opos.at(verts[i].x));
                     if (verts[i].y >= 0)
-                        texcoord.push_back(texcoord.at(verts[i].y));
-                    if (verts[i].x >= 0) norm.push_back(norm.at(verts[i].z));
+                        texcoord.push_back(otexcoord.at(verts[i].y));
+                    if (verts[i].z >= 0) norm.push_back(onorm.at(verts[i].z));
                 } else {
                     vids[i] = it->second;
                 }
@@ -4310,6 +4346,236 @@ void save_obj_mesh(const std::string& filename, const std::vector<int>& points,
         fs << "f " << vert(t.x) << " " << vert(t.y) << " " << vert(t.z) << "\n";
     for (auto& l : lines) fs << "l " << vert(l.x) << " " << vert(l.y) << "\n";
     for (auto& p : points) fs << "p " << vert(p) << "\n";
+    fs.close();
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF SHAPE IO
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Load mesh
+void load_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
+    std::vector<vec3f>& pos, std::vector<vec4i>& quads_norm,
+    std::vector<vec3f>& norm, std::vector<vec4i>& quads_texcoord,
+    std::vector<vec2f>& texcoord, std::vector<vec4i>& quads_color,
+    std::vector<vec4f>& color) {
+    auto ext = get_extension(filename);
+    if (ext == "obj" || ext == "OBJ") {
+        load_obj_fvmesh(
+            filename, quads_pos, pos, quads_norm, norm, quads_texcoord, texcoord);
+    } else {
+        throw std::runtime_error("unsupported mesh extensions " + ext);
+    }
+}
+
+// Save mesh
+void save_fvmesh(const std::string& filename,
+    const std::vector<vec4i>& quads_pos, const std::vector<vec3f>& pos,
+    const std::vector<vec4i>& quads_norm, const std::vector<vec3f>& norm,
+    const std::vector<vec4i>& quads_texcoord,
+    const std::vector<vec2f>& texcoord, const std::vector<vec4i>& quads_color,
+    const std::vector<vec4f>& color, bool ascii) {
+    auto ext = get_extension(filename);
+    if (ext == "obj" || ext == "OBJ") {
+        save_obj_fvmesh(
+            filename, quads_pos, pos, quads_norm, norm, quads_texcoord, texcoord);
+    } else {
+        throw std::runtime_error("unsupported mesh extensions " + ext);
+    }
+}
+
+// Load obj mesh
+void load_obj_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
+    std::vector<vec3f>& pos, std::vector<vec4i>& quads_norm,
+    std::vector<vec3f>& norm, std::vector<vec4i>& quads_texcoord,
+    std::vector<vec2f>& texcoord, bool flip_texcoord) {
+    // open file
+    auto fs = std::ifstream(filename);
+    if (!fs) throw std::runtime_error("cannot open filename " + filename);
+
+    auto opos = std::deque<vec3f>();
+    auto onorm = std::deque<vec3f>();
+    auto otexcoord = std::deque<vec2f>();
+    
+    pos.clear();
+    norm.clear();
+    texcoord.clear();
+    quads_pos.clear();
+    quads_norm.clear();
+    quads_texcoord.clear();
+
+    // vertex maps
+    auto pos_map = std::unordered_map<int, int>();
+    auto texcoord_map = std::unordered_map<int, int>();
+    auto norm_map = std::unordered_map<int, int>();
+
+    // read the file line by line
+    std::string line;
+    while (std::getline(fs, line)) {
+        // remove comment
+        if (line.find("#") != line.npos) line = line.substr(0, line.find("#"));
+
+        // prepare to parse
+        auto ss = std::stringstream(line);
+
+        // get command
+        auto cmd = ""s;
+        ss >> cmd;
+        if (cmd == "") continue;
+
+        // possible token values
+        if (cmd == "v") {
+            opos.push_back({});
+            ss >> opos.back();
+        } else if (cmd == "vn") {
+            onorm.push_back({});
+            ss >> onorm.back();
+        } else if (cmd == "vt") {
+            otexcoord.push_back({});
+            ss >> otexcoord.back();
+            if (flip_texcoord) otexcoord.back().y = 1 - otexcoord.back().y;
+        } else if (cmd == "f" || cmd == "l" || cmd == "p") {
+            auto num = 0;
+            vec3i verts[128];
+            int pos_vids[128], texcoord_vids[128], norm_vids[128];            
+            auto vert_size =
+                vec3i{(int)pos.size(), (int)texcoord.size(), (int)norm.size()};
+            // elem.material = (int)oobj->materials.size() - 1;
+            while (true) {
+                auto vert = obj_vertex();
+                ss >> vert;
+                if (!vert.pos) break;
+                verts[num] = {-1, -1, -1};
+                if (vert.pos)
+                    verts[num].x = (vert.pos < 0) ? (vert_size.x + vert.pos) :
+                                                    (vert.pos - 1);
+                if (vert.texcoord)
+                    verts[num].y = (vert.texcoord < 0) ?
+                                       (vert_size.y + vert.texcoord) :
+                                       (vert.texcoord - 1);
+                if (vert.norm)
+                    verts[num].z = (vert.norm < 0) ? (vert_size.z + vert.norm) :
+                                                     (vert.norm - 1);
+                num++;
+            }
+            if(verts[0].x >= 0) {
+                for (auto i = 0; i < num; i++) {
+                    auto pos_it = pos_map.find(verts[i].x);
+                    if (pos_it == pos_map.end()) {
+                        auto nverts = (int)pos.size();
+                        pos_map.insert(pos_it, {verts[i].x, nverts});
+                        pos_vids[i] = nverts;
+                        if (verts[i].x >= 0) pos.push_back(opos.at(verts[i].x));
+                    } else {
+                        pos_vids[i] = pos_it->second;
+                    }
+                }
+            }
+            if(verts[0].y >= 0) {
+                for (auto i = 0; i < num; i++) {
+                    auto texcoord_it = texcoord_map.find(verts[i].y);
+                    if (texcoord_it == texcoord_map.end()) {
+                        auto nverts = (int)texcoord.size();
+                        texcoord_map.insert(texcoord_it, {verts[i].y, nverts});
+                        texcoord_vids[i] = nverts;
+                        texcoord.push_back(otexcoord.at(verts[i].y));
+                    } else {
+                        texcoord_vids[i] = texcoord_it->second;
+                    }
+                }
+            }
+            if(verts[0].z >= 0) {
+                for (auto i = 0; i < num; i++) {
+                    auto norm_it = norm_map.find(verts[i].z);
+                    if (norm_it == norm_map.end()) {
+                        auto nverts = (int)norm.size();
+                        norm_map.insert(norm_it, {verts[i].z, nverts});
+                        norm_vids[i] = nverts;
+                        norm.push_back(onorm.at(verts[i].z));
+                    } else {
+                        norm_vids[i] = norm_it->second;
+                    }
+                }
+            }
+            if (cmd == "f") {
+                if(num == 4) {
+                    if(verts[0].x >= 0) {
+                        quads_pos.push_back({pos_vids[0], pos_vids[1], pos_vids[2], pos_vids[3]});
+                    }
+                    if(verts[0].y >= 0) {
+                        quads_texcoord.push_back({texcoord_vids[0], texcoord_vids[1], texcoord_vids[2], texcoord_vids[3]});
+                    }
+                    if(verts[0].z >= 0) {
+                        quads_norm.push_back({norm_vids[0], norm_vids[1], norm_vids[2], norm_vids[3]});
+                    }
+                } else {
+                    if(verts[0].x >= 0) {
+                        for (auto i = 2; i < num; i++)
+                            quads_pos.push_back({pos_vids[0], pos_vids[i - 1], pos_vids[i], pos_vids[i]});
+                    }
+                    if(verts[0].y >= 0) {
+                        for (auto i = 2; i < num; i++)
+                            quads_texcoord.push_back({texcoord_vids[0], texcoord_vids[i - 1], texcoord_vids[i], texcoord_vids[i]});
+                    }
+                    if(verts[0].z >= 0) {
+                        for (auto i = 2; i < num; i++)
+                            quads_pos.push_back({norm_vids[0], norm_vids[i - 1], norm_vids[i], norm_vids[i]});
+                    }
+                }
+            }
+#if 0
+            if (cmd == "l") { // interpret as crease edges?
+                for (auto i = 1; i < num; i++)
+                    lines.push_back({vids[i - 1], vids[i]});
+            }
+            if (cmd == "p") { // interpret as crease points?
+                for (auto i = 0; i < num; i++) points.push_back(vids[i]);
+            }
+#endif
+        }
+    }
+
+    // close file
+    fs.close();
+}
+
+// Load ply mesh
+void save_obj_fvmesh(const std::string& filename,
+    const std::vector<vec4i>& quads_pos, const std::vector<vec3f>& pos,
+    const std::vector<vec4i>& quads_norm, const std::vector<vec3f>& norm,
+    const std::vector<vec4i>& quads_texcoord,
+    const std::vector<vec2f>& texcoord, bool flip_texcoord) {
+    auto fs = std::ofstream(filename);
+    if (!fs) throw std::runtime_error("cannot save file " + filename);
+    for (auto& p : pos) fs << "v " << p << "\n";
+    for (auto& n : norm) fs << "vn " << n << "\n";
+    if (flip_texcoord)
+        for (auto& t : texcoord) fs << "vt " << vec2f{t.x, 1 - t.y} << "\n";
+    else
+        for (auto& t : texcoord) fs << "vt " << t << "\n";
+    auto mask = vec3i{1, texcoord.empty() ? 0 : 1, norm.empty() ? 0 : 1};
+    auto vert = [mask](int pi, int ti, int ni) {
+        auto vert = (vec3i{pi, ti, ni} + vec3i{1, 1, 1}) * mask;
+        return obj_vertex{vert.x, vert.y, vert.z};
+    };
+    for (auto i = 0; i < quads_pos.size(); i++) {
+        auto qp = quads_pos.at(i);
+        auto qt = !quads_texcoord.empty() ? quads_texcoord.at(i) :
+                                            vec4i{-1, -1, -1, -1};
+        auto qn =
+            !quads_norm.empty() ? quads_norm.at(i) : vec4i{-1, -1, -1, -1};
+        if (qp.z != qp.w)
+            fs << "f " << vert(qp.x, qt.x, qn.x) << " "
+               << vert(qp.y, qt.y, qn.y) << " " << vert(qp.z, qt.z, qn.z) << " "
+               << vert(qp.w, qt.w, qn.w) << "\n";
+        else
+            fs << "f " << vert(qp.x, qt.x, qn.x) << " "
+               << vert(qp.y, qt.y, qn.y) << " " << vert(qp.z, qt.z, qn.z)
+               << "\n";
+    }
     fs.close();
 }
 
