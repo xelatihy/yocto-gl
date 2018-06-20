@@ -23,7 +23,6 @@ Please consider this to be just development notes and not any real planning.
 - make sure we cam parse face-varying data in OBJ models
 - normal map problem
 - animated rotation seems bogus
-- obj flipped textures
 
 ## giacomo
 

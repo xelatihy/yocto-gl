@@ -2803,14 +2803,14 @@ struct camera {
 
 // Texture containing either an LDR or HDR image.
 struct texture {
-    std::string name = "";  // name
-    std::string path = "";  // file path
-    image4f img = {};       // image
-    bool clamp = false;     // clamp textures coordinates
-    float scale = 1;        // scale for occ, normal, bumps
-    float gamma = 2.2f;     // gamma correction for ldr textures in IO
-    bool has_opacity = false;// check whether alpha != 0
-    uint gl_txt = 0;        // unmanaged data for OpenGL viewer
+    std::string name = "";     // name
+    std::string path = "";     // file path
+    image4f img = {};          // image
+    bool clamp = false;        // clamp textures coordinates
+    float scale = 1;           // scale for occ, normal, bumps
+    float gamma = 2.2f;        // gamma correction for ldr textures in IO
+    bool has_opacity = false;  // check whether alpha != 0
+    uint gl_txt = 0;           // unmanaged data for OpenGL viewer
 };
 
 // Material for surfaces, lines and triangles.
@@ -3285,6 +3285,11 @@ vec3f trace_debug_roughness(const std::shared_ptr<scene>& scn, const ray3f& ray,
 vec3f trace_debug_texcoord(const std::shared_ptr<scene>& scn, const ray3f& ray,
     rng_state& rng, int nbounces, bool* hit = nullptr);
 
+// Trace statistics for last run used for fine tuning implementation.
+// For now returns number of paths and number of rays.
+std::pair<uint64_t, uint64_t> get_trace_stats();
+void reset_trace_stats();
+
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
@@ -3322,7 +3327,7 @@ float eval_ggx_sm(float rs, const vec3f& n, const vec3f& o, const vec3f& i);
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
-// TIMER UTILITIES
+// TIMER AND FORMAT UTILITIES
 // -----------------------------------------------------------------------------
 namespace ygl {
 
@@ -3342,6 +3347,13 @@ inline std::string format_duration(int64_t duration) {
     char buf[256];
     sprintf(buf, "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
     return buf;
+}
+// format a large integer number in human readable form
+inline std::string format_num(uint64_t num) {
+    auto rem = num % 1000;
+    auto div = num / 1000;
+    if (div > 0) return format_num(div) + "," + std::to_string(rem);
+    return std::to_string(rem);
 }
 
 }  // namespace ygl

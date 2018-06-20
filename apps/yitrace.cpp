@@ -68,6 +68,8 @@ struct app_state {
     ygl::scene_selection selection = {};
     std::vector<ygl::scene_selection> update_list;
     bool navigation_fps = false;
+    bool quiet = false;
+    int64_t trace_start = 0;
 };
 
 auto trace_names = std::vector<std::string>{"pathtrace", "direct",
@@ -108,6 +110,11 @@ void draw_widgets(GLFWwindow* win, app_state* app) {
             edited += ImGui::SliderInt("seed", (int*)&app->seed, 0, 1000);
             edited += ImGui::SliderInt("pratio", &app->pratio, 1, 64);
             if (edited) app->update_list.push_back(ygl::scene_selection());
+            ImGui::LabelText("time/sample", "%0.3lf",
+                (app->trace_state.sample) ?
+                    (ygl::get_time() - app->trace_start) /
+                        (1000000000.0 * app->trace_state.sample) :
+                    0.0);
             ImGui::TreePop();
         }
         if (ImGui::TreeNode("view settings")) {
@@ -152,8 +159,8 @@ void draw_widgets(GLFWwindow* win, app_state* app) {
 
 void draw(GLFWwindow* win) {
     auto app = (app_state*)glfwGetWindowUserPointer(win);
-    ygl::draw_glimage(win, app->trace_state.display, app->imframe, app->zoom_to_fit,
-        app->background);
+    ygl::draw_glimage(win, app->trace_state.display, app->imframe,
+        app->zoom_to_fit, app->background);
     draw_widgets(win, app);
     glfwSwapBuffers(win);
 }
@@ -181,6 +188,7 @@ bool update(const std::shared_ptr<app_state>& app) {
 
     app->tracef = tracer_names.at(app->tracer);
     app->trace_state = {};
+    app->trace_start = ygl::get_time();
     ygl::trace_async_start(app->trace_state, app->scn, app->camid,
         app->resolution, app->nsamples, app->tracef, app->exposure, app->gamma,
         app->filmic, app->pratio, app->nbounces, app->pixel_clamp, app->seed);
@@ -246,7 +254,7 @@ void run_ui(const std::shared_ptr<app_state>& app) {
         draw(win);
 
         // event hadling
-        if(!mouse_button && !widgets_active)
+        if (!mouse_button && !widgets_active)
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         glfwPollEvents();
     }
@@ -368,6 +376,7 @@ int main(int argc, char* argv[]) {
 
     // initialize rendering objects
     if (!quiet) std::cout << "starting async renderer\n";
+    app->trace_start = ygl::get_time();
     ygl::trace_async_start(app->trace_state, app->scn, app->camid,
         app->resolution, app->nsamples, app->tracef, app->exposure, app->gamma,
         app->filmic, app->pratio, app->nbounces, app->pixel_clamp, app->seed);
