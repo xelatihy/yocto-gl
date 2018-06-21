@@ -1,7 +1,7 @@
 //
 // LICENSE:
 //
-// Copyright (c) 2016 -- 2017 Fabio Pellacini
+// Copyright (c) 2016 -- 2018 Fabio Pellacini
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -26,112 +26,177 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_gl.h"
+#include "../yocto/ygl.h"
+#include "../yocto/yglio.h"
+#include "CLI11.hpp"
 using namespace std::literals;
 
-// Application state
-struct app_state {
-    ygl::scene* scn = nullptr;
-    ygl::camera* view = nullptr;
-    ygl::camera* cam = nullptr;
-    ygl::bvh_tree* bvh = nullptr;
-    std::string filename;
-    std::string imfilename;
-    ygl::image4f img;
-    ygl::image<ygl::trace_pixel> pixels;
-    ygl::trace_params params;
-    ygl::trace_lights lights;
-    float exposure = 0, gamma = 2.2f;
-    bool filmic = false;
-    ygl::vec4f background = {0, 0, 0, 0};
-    bool save_batch = false;
-    int batch_size = 16;
-
-    ~app_state() {
-        if (scn) delete scn;
-        if (view) delete view;
-        if (bvh) delete bvh;
-    }
-};
+auto tracer_names = std::unordered_map<std::string, ygl::trace_func>{
+    {"pathtrace", ygl::trace_path}, {"direct", ygl::trace_direct},
+    {"environment", ygl::trace_environment}, {"eyelight", ygl::trace_eyelight},
+    {"pathtrace-nomis", ygl::trace_path_nomis},
+    {"pathtrace-naive", ygl::trace_path_naive},
+    {"direct-nomis", ygl::trace_direct_nomis},
+    {"debug_normal", ygl::trace_debug_normal},
+    {"debug_albedo", ygl::trace_debug_albedo},
+    {"debug_texcoord", ygl::trace_debug_texcoord},
+    {"debug_frontfacing", ygl::trace_debug_frontfacing},
+    {"debug_diffuse", ygl::trace_debug_diffuse},
+    {"debug_specular", ygl::trace_debug_specular},
+    {"debug_roughness", ygl::trace_debug_roughness}};
 
 int main(int argc, char* argv[]) {
-    // create empty scene
-    auto app = new app_state();
+    // command line parameters
+    auto filename = "scene.json"s;        // scene filename
+    auto imfilename = "out.hdr"s;         // image output filename
+    auto camid = 0;                       // camera index
+    auto resolution = 512;                // image vertical resolution
+    auto nsamples = 256;                  // image samples
+    auto tracer = "pathtrace"s;           // tracer algorithm
+    auto nbounces = 4;                    // number of bounces
+    auto pixel_clamp = 100.0f;            // pixel clamping
+    auto noparallel = false;              // disable parallel
+    auto seed = ygl::trace_default_seed;  // random seed
+    auto nbatch = 16;                     // batch size
+    auto save_batch = false;              // whether to save bacthes
+    auto exposure = 0.0f;                 // exposure
+    auto gamma = 2.2;                     // gamma
+    auto filmic = false;                  // filmic
+    auto double_sided = false;            // double sided
+    auto add_skyenv = false;              // add environment
+    auto quiet = false;                   // quiet mode
 
     // parse command line
-    auto parser =
-        ygl::make_parser(argc, argv, "ytrace", "Offline oath tracing");
-    app->params = ygl::parse_params(parser, "", app->params);
-    app->batch_size = ygl::parse_opt(parser, "--batch-size", "",
-        "Compute images in <val> samples batches", 16);
-    app->save_batch = ygl::parse_flag(
-        parser, "--save-batch", "", "Save images progressively");
-    app->imfilename = ygl::parse_opt(
-        parser, "--output-image", "-o", "Image filename", "out.hdr"s);
-    app->filename = ygl::parse_arg(parser, "scene", "Scene filename", ""s);
-    if (ygl::should_exit(parser)) {
-        printf("%s\n", get_usage(parser).c_str());
+    CLI::App parser("Offline path tracing", "ytrace");
+    parser.add_option("--camera", camid, "Camera index.");
+    parser.add_option(
+        "--resolution,-r", resolution, "Image vertical resolution.");
+    parser.add_option("--nsamples,-s", nsamples, "Number of samples.");
+    parser.add_option("--tracer,-t", tracer, "Trace type.")
+        ->check([](const std::string& s) -> std::string {
+            if (tracer_names.find(s) == tracer_names.end())
+                throw CLI::ValidationError("unknown tracer name");
+            return s;
+        });
+    parser.add_option("--nbounces", nbounces, "Maximum number of bounces.");
+    parser.add_option("--pixel-clamp", pixel_clamp, "Final pixel clamping.");
+    parser.add_flag("--noparallel", noparallel, "Disable parallel execution.");
+    parser.add_option("--seed", seed, "Seed for the random number generators.");
+    parser.add_option("--nbatch", nbatch, "Sample batch size.");
+    parser.add_flag("--save-batch", save_batch, "Save images progressively");
+    parser.add_option("--exposure,-e", exposure, "Hdr exposure");
+    parser.add_flag(
+        "--double-sided,-D", double_sided, "Double-sided rendering.");
+    parser.add_flag("--add-skyenv,-E", add_skyenv, "add missing env map");
+    parser.add_flag("--quiet,-q", quiet, "Print only errors messages");
+    parser.add_option("--output-image,-o", imfilename, "Image filename");
+    parser.add_option("scene", filename, "Scene filename")->required(true);
+    try {
+        parser.parse(argc, argv);
+    } catch (const CLI::ParseError& e) { return parser.exit(e); }
+
+    // scene loading
+    auto scn = std::shared_ptr<ygl::scene>();
+    if (!quiet) std::cout << "loading scene" << filename << "\n";
+    auto load_start = ygl::get_time();
+    try {
+        scn = ygl::load_scene(filename);
+    } catch (const std::exception& e) {
+        std::cout << "cannot load scene " << filename << "\n";
+        std::cout << "error: " << e.what() << "\n";
         exit(1);
     }
+    if (!quiet)
+        std::cout << "loading in "
+                  << ygl::format_duration(ygl::get_time() - load_start) << "\n";
 
-    // setting up rendering
-    ygl::log_info("loading scene {}", app->filename);
-    try {
-        app->scn = ygl::load_scene(app->filename);
-    } catch (std::exception e) {
-        ygl::log_fatal("cannot load scene {}", app->filename);
-        return 1;
+    // tesselate
+    if (!quiet) std::cout << "tesselating scene elements\n";
+    ygl::update_tesselation(scn);
+
+    // update bbox and transforms
+    ygl::update_transforms(scn);
+    ygl::update_bbox(scn);
+
+    // add components
+    if (!quiet) std::cout << "adding scene elements\n";
+    if (add_skyenv && scn->environments.empty()) {
+        scn->environments.push_back(ygl::make_sky_environment("sky"));
+        scn->textures.push_back(scn->environments.back()->ke_txt);
     }
-
-    // add elements
-    auto opts = ygl::add_elements_options();
-    add_elements(app->scn, opts);
-
-    // view camera
-    app->view = make_view_camera(app->scn, 0);
-    app->cam = app->view;
+    if (double_sided)
+        for (auto mat : scn->materials) mat->double_sided = true;
+    if (scn->cameras.empty())
+        scn->cameras.push_back(ygl::make_bbox_camera("<view>", scn->bbox));
+    ygl::add_missing_names(scn);
+    for (auto err : ygl::validate(scn)) std::cout << "warning: " << err << "\n";
 
     // build bvh
-    ygl::log_info("building bvh");
-    app->bvh = make_bvh(app->scn);
+    if (!quiet) std::cout << "building bvh\n";
+    auto bvh_start = ygl::get_time();
+    ygl::update_bvh(scn);
+    if (!quiet)
+        std::cout << "building bvh in "
+                  << ygl::format_duration(ygl::get_time() - bvh_start) << "\n";
 
     // init renderer
-    ygl::log_info("initializing tracer");
-    app->lights = make_trace_lights(app->scn);
+    if (!quiet) std::cout << "initializing lights\n";
+    ygl::update_lights(scn);
 
     // initialize rendering objects
-    app->img =
-        ygl::image4f((int)round(app->cam->aspect * app->params.resolution),
-            app->params.resolution);
-    app->pixels = ygl::make_trace_pixels(app->img, app->params);
+    if (!quiet) std::cout << "initializing tracer data\n";
+    auto tracef = tracer_names.at(tracer);
+    auto st = ygl::trace_state();
 
     // render
-    ygl::log_info("starting renderer");
-    for (auto cur_sample = 0; cur_sample < app->params.nsamples;
-         cur_sample += app->batch_size) {
-        if (app->save_batch && cur_sample) {
-            auto imfilename =
-                ygl::format("{}{}.{}{}", ygl::path_dirname(app->imfilename),
-                    ygl::path_basename(app->imfilename), cur_sample,
-                    ygl::path_extension(app->imfilename));
-            ygl::log_info("saving image {}", imfilename);
-            save_image(
-                imfilename, app->img, app->exposure, app->gamma, app->filmic);
+    if (!quiet) std::cout << "rendering image\n";
+    auto render_start = ygl::get_time();
+    auto done = false;
+    while (!done) {
+        if (!quiet)
+            std::cout << "rendering sample " << st.sample << "/" << nsamples
+                      << "\n";
+        auto block_start = ygl::get_time();
+        done = ygl::trace_samples(st, scn, camid, resolution, nsamples, tracef,
+            nbatch, nbounces, pixel_clamp, noparallel, seed);
+        if (!quiet)
+            std::cout << "rendering block in "
+                      << ygl::format_duration(ygl::get_time() - block_start)
+                      << "\n";
+        if (save_batch) {
+            auto filename = ygl::replace_extension(
+                imfilename, std::to_string(st.sample) + "." +
+                                ygl::get_extension(imfilename));
+            if (!quiet) std::cout << "saving image " << filename << "\n";
+            if (ygl::is_hdr_filename(filename)) {
+                ygl::save_image(filename, st.img);
+            } else {
+                ygl::save_image(filename,
+                    ygl::tonemap_image(st.img, exposure, gamma, filmic));
+            }
         }
-        ygl::log_info(
-            "rendering sample {}/{}", cur_sample, app->params.nsamples);
-        trace_samples(app->scn, app->cam, app->bvh, app->lights, app->img,
-            app->pixels, app->batch_size, app->params);
     }
-    ygl::log_info("rendering done");
+    if (!quiet)
+        std::cout << "rendering image in "
+                  << ygl::format_duration(ygl::get_time() - render_start)
+                  << "\n";
+
+    // stata
+    if (!quiet) {
+        std::cout << "using " << ygl::format_num(ygl::get_trace_stats().first)
+                  << " rays in "
+                  << ygl::format_num(ygl::get_trace_stats().second)
+                  << " paths\n";
+    }
 
     // save image
-    ygl::log_info("saving image {}", app->imfilename);
-    ygl::save_image(
-        app->imfilename, app->img, app->exposure, app->gamma, app->filmic);
-
-    // cleanup
-    delete app;
+    if (!quiet) std::cout << "saving image " << imfilename << "\n";
+    if (ygl::is_hdr_filename(imfilename)) {
+        ygl::save_image(imfilename, st.img);
+    } else {
+        ygl::save_image(
+            imfilename, ygl::tonemap_image(st.img, exposure, gamma, filmic));
+    }
 
     // done
     return 0;
