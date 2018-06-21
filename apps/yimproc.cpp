@@ -1,7 +1,7 @@
 //
 // LICENSE:
 //
-// Copyright (c) 2016 -- 2017 Fabio Pellacini
+// Copyright (c) 2016 -- 2018 Fabio Pellacini
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -26,75 +26,34 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_gl.h"
+#include "../yocto/ygl.h"
+#include "../yocto/yglio.h"
+#include "CLI11.hpp"
 using namespace std::literals;
 
-// Load hdr
-ygl::image4f load_hdr(const std::string& filename) {
-    auto img = ygl::load_image4f(filename);
-    if (img.empty()) ygl::log_fatal("cannot load image {}", filename);
-    return img;
-}
-
-// Load ldr
-ygl::image4b load_ldr(const std::string& filename) {
-    auto img = ygl::load_image4b(filename);
-    if (img.empty()) ygl::log_fatal("cannot load image {}", filename);
-    return img;
-}
-
-// Save hdr
-void save_hdr(const std::string& filename, const ygl::image4f& img) {
-    if (!save_image4f(filename, img))
-        ygl::log_fatal("cannot save image {}", filename);
-}
-
-// Save ldr
-void save_ldr(const std::string& filename, const ygl::image4b& img) {
-    if (!save_image4b(filename, img))
-        ygl::log_fatal("cannot save image {}", filename);
-}
-
-// Resize image.
-template <typename Image>
-Image resize_image(const Image& img, int res_width, int res_height) {
-    if (res_width < 0 && res_height < 0)
-        ygl::log_fatal("at least argument should be >0");
-    if (res_width < 0)
-        res_width =
-            (int)round(img.width() * (res_height / (float)img.height()));
-    if (res_height < 0)
-        res_height =
-            (int)round(img.height() * (res_width / (float)img.width()));
-    auto res = Image(res_width, res_height);
-    ygl::resize_image(img, res);
-    return res;
-}
-
+#if 0
 template <typename Image>
 Image make_image_grid(const std::vector<Image>& imgs, int tilex) {
     auto nimgs = (int)imgs.size();
-    auto width = imgs[0].width() * tilex;
-    auto height =
-        imgs[0].height() * (nimgs / tilex + ((nimgs % tilex) ? 1 : 0));
-    auto ret = ygl::make_image(width, height, (bool)imgs[0].hdr);
+    auto width = imgs[0].width * tilex;
+    auto height = imgs[0].height * (nimgs / tilex + ((nimgs % tilex) ? 1 : 0));
+    auto ret = ygl::make_image4f(width, height, (bool)imgs[0].hdr);
     auto img_idx = 0;
     for (auto& img : imgs) {
-        if (img.width() != imgs[0].width() ||
-            img.height() != imgs[0].height()) {
+        if (img.size != imgs[0].size) {
             ygl::log_fatal("images of different sizes are not accepted");
         }
-        auto ox = (img_idx % tilex) * img.width(),
-             oy = (img_idx / tilex) * img.height();
+        auto ox = (img_idx % tilex) * img.size.x,
+             oy = (img_idx / tilex) * img.size.y;
         if (ret.hdr) {
-            for (auto j = 0; j < img.height(); j++) {
-                for (auto i = 0; i < img.width(); i++) {
+            for (auto j = 0; j < img.size.y; j++) {
+                for (auto i = 0; i < img.size.x; i++) {
                     ret.hdr[{i + ox, j + oy}] = img.hdr.at(i, j);
                 }
             }
         } else {
-            for (auto j = 0; j < img.height(); j++) {
-                for (auto i = 0; i < img.width(); i++) {
+            for (auto j = 0; j < img.size.y; j++) {
+                for (auto i = 0; i < img.size.x; i++) {
                     ret.ldr[{i + ox, j + oy}] = img.ldr.at(i, j);
                 }
             }
@@ -102,39 +61,41 @@ Image make_image_grid(const std::vector<Image>& imgs, int tilex) {
     }
     return ret;
 }
+#endif
 
 ygl::image4f filter_bilateral(const ygl::image4f& img, float spatial_sigma,
     float range_sigma, const std::vector<ygl::image4f>& features,
     const std::vector<float>& features_sigma) {
-    auto filtered = ygl::image4f(img.width(), img.height());
-    auto width = (int)ceil(2.57f * spatial_sigma);
+    auto filtered = ygl::image4f{img.size};
+    auto filter_width = (int)ceil(2.57f * spatial_sigma);
     auto sw = 1 / (2.0f * spatial_sigma * spatial_sigma);
     auto rw = 1 / (2.0f * range_sigma * range_sigma);
     auto fw = std::vector<float>();
     for (auto feature_sigma : features_sigma)
         fw.push_back(1 / (2.0f * feature_sigma * feature_sigma));
-    for (auto j = 0; j < img.height(); j++) {
-        for (auto i = 0; i < img.width(); i++) {
+    for (auto j = 0; j < img.size.y; j++) {
+        for (auto i = 0; i < img.size.x; i++) {
             auto av = ygl::zero4f;
             auto aw = 0.0f;
-            for (auto fj = -width; fj <= width; fj++) {
-                for (auto fi = -width; fi <= width; fi++) {
+            for (auto fj = -filter_width; fj <= filter_width; fj++) {
+                for (auto fi = -filter_width; fi <= filter_width; fi++) {
                     auto ii = i + fi, jj = j + fj;
                     if (ii < 0 || jj < 0) continue;
-                    if (ii >= img.width() || jj >= img.height()) continue;
+                    if (ii >= img.size.x || jj >= img.size.y) continue;
                     auto uv = ygl::vec2f{float(i - ii), float(j - jj)};
-                    auto rgb = img.at(i, j) - img.at(ii, jj);
-                    auto w = exp(-dot(uv, uv) * sw) * exp(-dot(rgb, rgb) * rw);
+                    auto rgb = img[{i, j}] - img[{ii, jj}];
+                    auto w = (float)std::exp(-dot(uv, uv) * sw) *
+                             (float)std::exp(-dot(rgb, rgb) * rw);
                     for (auto fi = 0; fi < features.size(); fi++) {
                         auto feat =
-                            features[fi].at(i, j) - features[fi].at(ii, jj);
+                            features[fi][{i, j}] - features[fi][{ii, jj}];
                         w *= exp(-dot(feat, feat) * fw[fi]);
                     }
-                    av += w * img.at(ii, jj);
+                    av += w * img[{ii, jj}];
                     aw += w;
                 }
             }
-            filtered.at(i, j) = av / aw;
+            filtered[{i, j}] = av / aw;
         }
     }
     return filtered;
@@ -142,110 +103,129 @@ ygl::image4f filter_bilateral(const ygl::image4f& img, float spatial_sigma,
 
 ygl::image4f filter_bilateral(
     const ygl::image4f& img, float spatial_sigma, float range_sigma) {
-    auto filtered = ygl::image4f(img.width(), img.height());
-    auto width = (int)ceil(2.57f * spatial_sigma);
+    auto filtered = ygl::image4f{img.size};
+    auto fwidth = (int)ceil(2.57f * spatial_sigma);
     auto sw = 1 / (2.0f * spatial_sigma * spatial_sigma);
     auto rw = 1 / (2.0f * range_sigma * range_sigma);
-    for (auto j = 0; j < img.height(); j++) {
-        for (auto i = 0; i < img.width(); i++) {
+    for (auto j = 0; j < img.size.y; j++) {
+        for (auto i = 0; i < img.size.x; i++) {
             auto av = ygl::zero4f;
             auto aw = 0.0f;
-            for (auto fj = -width; fj <= width; fj++) {
-                for (auto fi = -width; fi <= width; fi++) {
+            for (auto fj = -fwidth; fj <= fwidth; fj++) {
+                for (auto fi = -fwidth; fi <= fwidth; fi++) {
                     auto ii = i + fi, jj = j + fj;
                     if (ii < 0 || jj < 0) continue;
-                    if (ii >= img.width() || jj >= img.height()) continue;
+                    if (ii >= img.size.x || jj >= img.size.y) continue;
                     auto uv = ygl::vec2f{float(i - ii), float(j - jj)};
-                    auto rgb = img.at(i, j) - img.at(ii, jj);
-                    auto w = exp(-dot(uv, uv) * sw) * exp(-dot(rgb, rgb) * rw);
-                    av += w * img.at(ii, jj);
+                    auto rgb = img[{i, j}] - img[{ii, jj}];
+                    auto w = std::exp(-dot(uv, uv) * sw) *
+                             std::exp(-dot(rgb, rgb) * rw);
+                    av += w * img[{ii, jj}];
                     aw += w;
                 }
             }
-            filtered.at(i, j) = av / aw;
+            filtered[{i, j}] = av / aw;
         }
     }
     return filtered;
 }
 
 int main(int argc, char* argv[]) {
+    // command line parameters
+    auto filename = "img.png"s;                    // input image
+    auto output = "out.png"s;                      // output image
+    auto tonemap = false;                          // enable tonemapping
+    auto exposure = 0.0f;                          // tonemap exposure
+    auto gamma = 1.0f;                             // tonemap gamma
+    auto filmic = false;                           // tonemap filmic
+    auto resize = ygl::zero2i;                     // resize size
+    auto multiply_color = ygl::vec4f{1, 1, 1, 1};  // multiply color
+    auto alpha_filename = ""s;                     // file to copy alpha from
+    auto coloralpha_filename = ""s;  // file to set alpha from color
+    auto spatial_sigma = 0.0f;       // spatial sigma for bilateral blur
+    auto range_sigma = 0.0f;         // range sigma for bilateral blur
+
     // command line params
-    auto parser = ygl::make_parser(argc, argv, "yimproc", "process images");
-    auto command = ygl::parse_arg(parser, "command", "command to execute", ""s,
-        true, {"resize", "tonemap", "bilateral"});
-    auto output =
-        ygl::parse_opt(parser, "--output", "-o", "output image filename", ""s);
-    if (command == "resize") {
-        auto width = ygl::parse_opt(
-            parser, "--width", "-w", "width (-1 to maintain aspect)", -1);
-        auto height = ygl::parse_opt(
-            parser, "--height", "-h", "height (-1 to maintain aspect)", -1);
-        auto filename =
-            ygl::parse_arg(parser, "filename", "input image filename", ""s);
-        // check parsing
-        if (ygl::should_exit(parser)) {
-            printf("%s\n", get_usage(parser).c_str());
-            exit(1);
-        }
+    CLI::App parser("image processing utility", "yimproc");
+    parser.add_flag("--tonemap,-t", tonemap, "Tonemap image");
+    parser.add_option("--exposure,-e", exposure, "Tonemap exposure");
+    parser.add_option("--gamma,-g", gamma, "Tonemap gamma.");
+    parser.add_flag("--filmic,-f", filmic, "Tonemap uses filmic curve");
+    parser.add_option(
+        "--resize,-r", resize, "resize size (0 to maintain aspect)");
+    parser.add_option(
+        "--multiply-color", multiply_color, "multiply by this color");
+    parser.add_option("--spatial-sigma", spatial_sigma, "blur spatial sigma");
+    parser.add_option(
+        "--range-sigma", range_sigma, "bilateral blur range sigma");
+    parser.add_option(
+        "--set-alpha", alpha_filename, "set alpha as this image alpha");
+    parser.add_option("--set-color-as-alpha", coloralpha_filename,
+        "set alpha as this image color");
+    parser.add_option("--output,-o", output, "output image filename");
+    parser.add_option("filename", filename, "input image filename")
+        ->required(true);
+    try {
+        parser.parse(argc, argv);
+    } catch (const CLI::ParseError& e) { return parser.exit(e); }
 
-        if (ygl::is_hdr_filename(filename)) {
-            auto img = load_hdr(filename);
-            auto out = resize_image(img, width, height);
-            save_hdr(output, out);
-        } else {
-            auto img = load_ldr(filename);
-            auto out = resize_image(img, width, height);
-            save_ldr(output, out);
-        }
-    } else if (command == "tonemap") {
-        auto exposure =
-            ygl::parse_opt(parser, "--exposure", "-e", "hdr exposure", 0.0f);
-        auto gamma = ygl::parse_opt(parser, "--gamma", "-g", "hdr gamma", 2.2f);
-        auto filmic = ygl::parse_flag(parser, "--filmic", "-F", "hdr filmic");
-        auto filename =
-            ygl::parse_arg(parser, "filename", "input image filename", ""s);
-        // check parsing
-        if (ygl::should_exit(parser)) {
-            printf("%s\n", get_usage(parser).c_str());
-            exit(1);
-        }
+    // load
+    auto img = ygl::image4f();
+    try {
+        img = ygl::load_image(filename);
+    } catch (std::exception& e) {
+        std::cout << "cannot load image" << filename << "\n";
+        std::cout << "error: " << e.what() << "\n";
+        exit(1);
+    }
 
-        auto img = load_hdr(filename);
-        auto out = tonemap_image(img, exposure, gamma, filmic);
-        save_ldr(output, out);
-    } else if (command == "bilateral") {
-        auto spatial_sigma =
-            ygl::parse_opt(parser, "--spatial-sigma", "-s", "spatial sigma", 3);
-        auto range_sigma =
-            ygl::parse_opt(parser, "--range-sigma", "-r", "range sigma", 0.1f);
-        auto feature_sigma = ygl::parse_opt(
-            parser, "--features-sigma", "-f", "features sigmas", 0.1f);
-        auto filename =
-            ygl::parse_arg(parser, "filename", "input image filename", ""s);
-        auto ffilenames = ygl::parse_args(parser, "features",
-            "input features filename", std::vector<std::string>{}, false);
-        // check parsing
-        if (ygl::should_exit(parser)) {
-            printf("%s\n", get_usage(parser).c_str());
+    // set alpha
+    if (alpha_filename != "") {
+        auto alpha = ygl::load_image(alpha_filename);
+        if (img.size != alpha.size) {
+            std::cout << "bad image size\n";
             exit(1);
         }
+        for (auto j = 0; j < img.size.y; j++)
+            for (auto i = 0; i < img.size.x; i++)
+                img[{i, j}].w = alpha[{i, j}].w;
+    }
 
-        auto img = load_hdr(filename);
-        auto features = std::vector<ygl::image4f>();
-        auto features_sigma = std::vector<float>();
-        for (auto ffilename : ffilenames) {
-            features.push_back(load_hdr(ffilename));
-            features_sigma.push_back(feature_sigma);
-        }
-        auto out = filter_bilateral(
-            img, spatial_sigma, range_sigma, features, features_sigma);
-        save_hdr(output, out);
-    } else {
-        // check parsing
-        if (ygl::should_exit(parser)) {
-            printf("%s\n", get_usage(parser).c_str());
+    // set alpha
+    if (coloralpha_filename != "") {
+        auto alpha = ygl::load_image(coloralpha_filename);
+        if (img.size != alpha.size) {
+            std::cout << "bad image size\n";
             exit(1);
         }
+        for (auto j = 0; j < img.size.y; j++)
+            for (auto i = 0; i < img.size.x; i++)
+                img[{i, j}].w = ygl::luminance(alpha[{i, j}]);
+    }
+
+    // multiply
+    if (multiply_color != ygl::vec4f{1, 1, 1, 1}) {
+        for (auto& c : img.pxl) c *= multiply_color;
+    }
+
+    // resize
+    if (resize != ygl::zero2i) { img = resize_image(img, resize); }
+
+    // bilateral
+    if (spatial_sigma && range_sigma) {
+        img = filter_bilateral(img, spatial_sigma, range_sigma, {}, {});
+    }
+
+    // hdr correction
+    if (tonemap) img = ygl::tonemap_image(img, exposure, gamma, filmic);
+
+    // save
+    try {
+        ygl::save_image(output, img);
+    } catch (std::exception& e) {
+        std::cout << "cannot save image" << output << "\n";
+        std::cout << "error: " << e.what() << "\n";
+        exit(1);
     }
 
     // done
