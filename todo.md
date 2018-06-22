@@ -5,12 +5,10 @@ Please consider this to be just development notes and not any real planning.
 
 ## next
 
-- simpler obj loader
-    - load to internal data structure with unique vertices
-    - simpler material loading
-        - create only when needed
-- tonyobjloader
-- openmp
+- tinyobjloader
+    - modified with lines
+    - use only callbacks, but with triangulate?
+- happly library cmu
 
 ## giacomo
 
@@ -30,6 +28,12 @@ Please consider this to be just development notes and not any real planning.
     - convert everything
         - mcguire
         - gltf
+
+## example
+
+- crane subdivs
+- utah teapot
+- bunny embed
 
 ## image
 
