@@ -5,6 +5,7 @@ Please consider this to be just development notes and not any real planning.
 
 ## next
 
+- inlined json
 - tinyobjloader
     - modified with lines
     - use only callbacks, but with triangulate?
