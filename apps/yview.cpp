@@ -35,7 +35,7 @@ using namespace std::literals;
 // Application state
 struct app_state {
     // scene
-    std::shared_ptr<ygl::scene> scn = nullptr;
+    ygl::scene* scn = nullptr;
 
     // parameters
     std::string filename = "scene.json";            // scene name
@@ -64,11 +64,15 @@ struct app_state {
     bool animate = false;
     std::unordered_map<std::string, std::string> inspector_highlights;
     std::string highlight_filename = ""s;
+
+    ~app_state() {
+        if (scn) delete scn;
+    }
 };
 
-void draw_glscene(const std::shared_ptr<ygl::scene>& scn, int camid, uint prog,
-    const ygl::vec2i& viewport_size, const std::shared_ptr<void>& highlighted,
-    bool eyelight, bool wireframe, bool edges, float exposure, float gamma);
+void draw_glscene(const ygl::scene* scn, int camid, uint prog,
+    const ygl::vec2i& viewport_size, const void* highlighted, bool eyelight,
+    bool wireframe, bool edges, float exposure, float gamma);
 
 // draw with shading
 void draw(GLFWwindow* win) {
@@ -468,15 +472,14 @@ static const char* fragment =
 #endif
 
 // Draw a shape
-void draw_glshape(const std::shared_ptr<ygl::shape>& shp,
-    const std::shared_ptr<ygl::material>& mat, const ygl::mat4f& xform,
-    bool highlighted, uint prog, bool eyelight, bool edges) {
+void draw_glshape(const ygl::shape* shp, const ygl::material* mat,
+    const ygl::mat4f& xform, bool highlighted, uint prog, bool eyelight,
+    bool edges) {
     ygl::set_gluniform(prog, "shape_xform", xform);
     ygl::set_gluniform(prog, "shape_normal_offset", 0.0f);
 
     auto uniform_texture = [](auto& prog, const char* name, const char* name_on,
-                               const std::shared_ptr<ygl::texture>& txt,
-                               int unit) {
+                               const ygl::texture* txt, int unit) {
         if (txt) {
             ygl::set_gluniform_texture(prog, name, txt->gl_txt, unit);
             ygl::set_gluniform(prog, name_on, 1);
@@ -547,9 +550,9 @@ void draw_glshape(const std::shared_ptr<ygl::shape>& shp,
 }
 
 // Display a scene
-void draw_glscene(const std::shared_ptr<ygl::scene>& scn, int camid, uint prog,
-    const ygl::vec2i& viewport_size, const std::shared_ptr<void>& highlighted,
-    bool eyelight, bool wireframe, bool edges, float exposure, float gamma) {
+void draw_glscene(const ygl::scene* scn, int camid, uint prog,
+    const ygl::vec2i& viewport_size, const void* highlighted, bool eyelight,
+    bool wireframe, bool edges, float exposure, float gamma) {
     glViewport(0, 0, viewport_size.x, viewport_size.y);
 
     auto cam = scn->cameras.at(camid);
@@ -787,7 +790,7 @@ int main(int argc, char* argv[]) {
     }
 
     // scene loading
-    auto scn = std::shared_ptr<ygl::scene>();
+    auto scn = new ygl::scene();
     if (!quiet) std::cout << "loading scene" << filename << "\n";
     try {
         scn = ygl::load_scene(filename);

@@ -172,3 +172,14 @@ if /usr/local is not searched:
 For CMake, the following flags will cause the OpenMP::OpenMP_CXX target to
 be set up correctly:
   -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include" -DOpenMP_CXX_LIB_NAMES="omp" -DOpenMP_omp_LIBRARY=/usr/local/opt/libomp/lib/libomp.dylib
+
+## Book
+
+- apps
+    - tonemap
+    - naivetrace
+    - pathtrace
+    - itrace
+- lib
+    - trace.h / trace.cpp
+    - traceio.h / traceio.cpp

@@ -96,7 +96,7 @@ int main(int argc, char* argv[]) {
     } catch (const CLI::ParseError& e) { return parser.exit(e); }
 
     // scene loading
-    auto scn = std::shared_ptr<ygl::scene>();
+    auto scn = (ygl::scene*)nullptr;
     if (!quiet) std::cout << "loading scene" << filename << "\n";
     auto load_start = ygl::get_time();
     try {

@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
     } catch (const CLI::ParseError& e) { return parser.exit(e); }
 
     // load scene
-    auto scn = std::shared_ptr<ygl::scene>();
+    auto scn = (ygl::scene*)nullptr;
     try {
         scn = ygl::load_scene(filename, !notextures);
     } catch (const std::exception& e) {

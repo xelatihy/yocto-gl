@@ -23,60 +23,159 @@
             }
         }
     ],
-    "instances": [
+    "textures": [
         {
             "name": "floor",
-            "shp": {
-                "name": "floor",
-                "!!proc": {
-                    "type": "floor"
-                }
-            },
-            "mat": {
-                "name": "floor",
-                "kd": [
-                    0.7,
-                    0.7,
-                    0.7
-                ],
-                "kd_txt": {
-                    "name": "floor",
-                    "path": "textures/floor.png",
-                    "gamma": 2.2,
-                    "!!proc": {
-                        "type": "grid"
-                    }
-                }
+            "path": "textures/floor.png",
+            "gamma": 2.2,
+            "!!proc": {
+                "type": "grid"
+            }
+        }
+    ],
+    "materials": [
+        {
+            "name": "floor",
+            "kd": [
+                0.7,
+                0.7,
+                0.7
+            ],
+            "kd_txt": "floor"
+        },
+        {
+            "name": "obj1",
+            "kd": [
+                0,
+                0,
+                0
+            ],
+            "ks": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "kt": [
+                1,
+                1,
+                1
+            ],
+            "rs": 0
+        },
+        {
+            "name": "obj2",
+            "kd": [
+                0,
+                0,
+                0
+            ],
+            "ks": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "kt": [
+                1,
+                0.7,
+                0.7
+            ],
+            "rs": 0
+        },
+        {
+            "name": "obj3",
+            "kd": [
+                0,
+                0,
+                0
+            ],
+            "ks": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "kt": [
+                1,
+                1,
+                1
+            ],
+            "rs": 0.1
+        },
+        {
+            "name": "light1",
+            "ke": [
+                20,
+                20,
+                20
+            ]
+        },
+        {
+            "name": "light2",
+            "ke": [
+                20,
+                20,
+                20
+            ]
+        }
+    ],
+    "shapes": [
+        {
+            "name": "floor",
+            "!!proc": {
+                "type": "floor"
             }
         },
         {
             "name": "obj1",
-            "shp": {
-                "name": "obj1",
-                "path": "meshes/obj1.ply",
-                "!!proc": {
-                    "type": "matball"
-                }
-            },
-            "mat": {
-                "name": "obj1",
-                "kd": [
-                    0,
-                    0,
-                    0
-                ],
-                "ks": [
-                    0.04,
-                    0.04,
-                    0.04
-                ],
-                "kt": [
-                    1,
-                    1,
-                    1
-                ],
-                "rs": 0
-            },
+            "path": "meshes/obj1.ply",
+            "!!proc": {
+                "type": "matball"
+            }
+        },
+        {
+            "name": "obj2",
+            "path": "meshes/obj2.ply",
+            "!!proc": {
+                "type": "matball"
+            }
+        },
+        {
+            "name": "obj3",
+            "path": "meshes/obj3.ply",
+            "!!proc": {
+                "type": "matball"
+            }
+        },
+        {
+            "name": "light1",
+            "!!proc": {
+                "type": "quad",
+                "size": [
+                    4,
+                    4
+                ]
+            }
+        },
+        {
+            "name": "light2",
+            "!!proc": {
+                "type": "quad",
+                "size": [
+                    4,
+                    4
+                ]
+            }
+        }
+    ],
+    "instances": [
+        {
+            "name": "floor",
+            "shp": "floor",
+            "mat": "floor"
+        },
+        {
+            "name": "obj1",
+            "shp": "obj1",
+            "mat": "obj1",
             "!!proc": {
                 "translation": [
                     -2.5,
@@ -87,32 +186,8 @@
         },
         {
             "name": "obj2",
-            "shp": {
-                "name": "obj2",
-                "path": "meshes/obj2.ply",
-                "!!proc": {
-                    "type": "matball"
-                }
-            },
-            "mat": {
-                "name": "obj2",
-                "kd": [
-                    0,
-                    0,
-                    0
-                ],
-                "ks": [
-                    0.04,
-                    0.04,
-                    0.04
-                ],
-                "kt": [
-                    1,
-                    0.7,
-                    0.7
-                ],
-                "rs": 0
-            },
+            "shp": "obj2",
+            "mat": "obj2",
             "!!proc": {
                 "translation": [
                     0,
@@ -123,32 +198,8 @@
         },
         {
             "name": "obj3",
-            "shp": {
-                "name": "obj3",
-                "path": "meshes/obj3.ply",
-                "!!proc": {
-                    "type": "matball"
-                }
-            },
-            "mat": {
-                "name": "obj3",
-                "kd": [
-                    0,
-                    0,
-                    0
-                ],
-                "ks": [
-                    0.04,
-                    0.04,
-                    0.04
-                ],
-                "kt": [
-                    1,
-                    1,
-                    1
-                ],
-                "rs": 0.1
-            },
+            "shp": "obj3",
+            "mat": "obj3",
             "!!proc": {
                 "translation": [
                     2.5,
@@ -159,24 +210,8 @@
         },
         {
             "name": "light1",
-            "shp": {
-                "name": "light1",
-                "!!proc": {
-                    "type": "quad",
-                    "size": [
-                        4,
-                        4
-                    ]
-                }
-            },
-            "mat": {
-                "name": "light1",
-                "ke": [
-                    20,
-                    20,
-                    20
-                ]
-            },
+            "shp": "light1",
+            "mat": "light1",
             "!!proc": {
                 "from": [
                     -4,
@@ -192,24 +227,8 @@
         },
         {
             "name": "light2",
-            "shp": {
-                "name": "light2",
-                "!!proc": {
-                    "type": "quad",
-                    "size": [
-                        4,
-                        4
-                    ]
-                }
-            },
-            "mat": {
-                "name": "light2",
-                "ke": [
-                    20,
-                    20,
-                    20
-                ]
-            },
+            "shp": "light2",
+            "mat": "light2",
             "!!proc": {
                 "from": [
                     4,
@@ -223,5 +242,6 @@
                 ]
             }
         }
-    ]
+    ],
+    "environments": []
 }

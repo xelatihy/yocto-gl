@@ -558,11 +558,11 @@ inline bool SelectableTreeNode(
 // Start selectable tree node
 template <typename T>
 inline bool SelectableTreeNode(const char* lbl, std::shared_ptr<T>* selection,
-    const std::shared_ptr<T>& content) {
+    T*content) {
     ImGuiTreeNodeFlags node_flags =
         ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
     if (*selection == content) node_flags |= ImGuiTreeNodeFlags_Selected;
-    auto open = ImGui::TreeNodeEx(content.get(), node_flags, "%s", lbl);
+    auto open = ImGui::TreeNodeEx(content, node_flags, "%s", lbl);
     if (ImGui::IsItemClicked()) *selection = content;
     return open;
 }
@@ -635,6 +635,31 @@ inline bool Combo(const char* lbl, std::shared_ptr<T>* val_,
     return val != old_val;
 }
 
+// Combo widget
+template <typename T>
+inline bool Combo(const char* lbl, T** val_,
+    const std::vector<T*>& vals, bool include_null) {
+    auto& val = *val_;
+    if (!ImGui::BeginCombo(lbl, (val) ? val->name.c_str() : "<none>"))
+        return false;
+    auto old_val = val;
+    if (include_null) {
+        ImGui::PushID(100000);
+        if (ImGui::Selectable("<none>", val == nullptr)) val = nullptr;
+        if (val == nullptr) ImGui::SetItemDefaultFocus();
+        ImGui::PopID();
+    }
+    for (auto i = 0; i < vals.size(); i++) {
+        ImGui::PushID(i);
+        if (ImGui::Selectable(vals[i]->name.c_str(), val == vals[i]))
+            val = vals[i];
+        if (val == vals[i]) ImGui::SetItemDefaultFocus();
+        ImGui::PopID();
+    }
+    ImGui::EndCombo();
+    return val != old_val;
+}
+
 }  // namespace ImGui
 
 // Yocto/GL scene widgets
@@ -644,16 +669,15 @@ namespace ygl {
 struct scene_selection {
     scene_selection() : ptr(nullptr), tinfo(nullptr) {}
     template <typename T>
-    scene_selection(const std::shared_ptr<T>& val)
+    scene_selection(T* val)
         : ptr(val), tinfo(&typeid(T)) {}
 
     template <typename T>
-    std::shared_ptr<T> as() const {
-        return (&typeid(T) == tinfo) ? std::static_pointer_cast<T>(ptr) :
-                                       nullptr;
+    T* as() const {
+        return (&typeid(T) == tinfo) ? (T*)ptr : nullptr;
     }
 
-    std::shared_ptr<void> ptr = nullptr;    // selected pointer
+    void* ptr = nullptr;    // selected pointer
     const std::type_info* tinfo = nullptr;  // type info
 };
 
@@ -696,7 +720,7 @@ inline void draw_glwidgets_scene_tree(const std::string& lbl_, T* val,
     if (color != zero4f)
         ImGui::PushStyleColor(
             ImGuiCol_Text, {color.x, color.y, color.z, color.w});
-    auto open = begin_glwidgets_tree(lbl.c_str(), selection, val);
+    auto open = ImGui::SelectableTreeNode(lbl.c_str(), &selection, val);
     if (color != zero4f) ImGui::PopStyleColor();
     if (selection == val) sel = val;
     if (open) {
@@ -705,36 +729,9 @@ inline void draw_glwidgets_scene_tree(const std::string& lbl_, T* val,
     }
 }
 
-template <typename T>
-inline void draw_scene_tree_glwidgets_rec(const std::string& lbl_,
-    const std::shared_ptr<T>& val, scene_selection& sel,
-    const std::unordered_map<std::string, std::string>& highlights) {}
-
-template <typename T>
-inline void draw_glwidgets_scene_tree(const std::string& lbl_,
-    const std::shared_ptr<T>& val, scene_selection& sel,
-    const std::unordered_map<std::string, std::string>& highlights) {
-    if (!val) return;
-    auto lbl = val->name;
-    if (!lbl_.empty()) lbl = lbl_ + ": " + val->name;
-    auto selection = sel.as<T>();
-    auto color = get_highlight_color(highlights, val->name);
-    if (color != zero4f)
-        ImGui::PushStyleColor(
-            ImGuiCol_Text, {color.x, color.y, color.z, color.w});
-    auto open = ImGui::SelectableTreeNode(lbl.c_str(), &selection, val);
-    if (selection == val) sel = {val};
-    if (color != zero4f) ImGui::PopStyleColor();
-    if (selection == val) sel = val;
-    if (open) {
-        draw_scene_tree_glwidgets_rec(lbl_.c_str(), val, sel, highlights);
-        ImGui::TreePop();
-    }
-}
-
 template <>
 inline void draw_scene_tree_glwidgets_rec<instance>(const std::string& lbl_,
-    const std::shared_ptr<instance>& val, scene_selection& sel,
+    instance*val, scene_selection& sel,
     const std::unordered_map<std::string, std::string>& highlights) {
     draw_glwidgets_scene_tree("shp", val->shp, sel, highlights);
     draw_glwidgets_scene_tree("sbd", val->sbd, sel, highlights);
@@ -743,7 +740,7 @@ inline void draw_scene_tree_glwidgets_rec<instance>(const std::string& lbl_,
 
 template <>
 inline void draw_scene_tree_glwidgets_rec<material>(const std::string& lbl_,
-    const std::shared_ptr<material>& val, scene_selection& sel,
+    material*val, scene_selection& sel,
     const std::unordered_map<std::string, std::string>& highlights) {
     draw_glwidgets_scene_tree("ke", val->ke_txt, sel, highlights);
     draw_glwidgets_scene_tree("kd", val->kd_txt, sel, highlights);
@@ -754,13 +751,13 @@ inline void draw_scene_tree_glwidgets_rec<material>(const std::string& lbl_,
 }
 template <>
 inline void draw_scene_tree_glwidgets_rec<environment>(const std::string& lbl_,
-    const std::shared_ptr<environment>& val, scene_selection& sel,
+    environment*val, scene_selection& sel,
     const std::unordered_map<std::string, std::string>& highlights) {
     draw_glwidgets_scene_tree("ke", val->ke_txt, sel, highlights);
 }
 template <>
 inline void draw_scene_tree_glwidgets_rec<node>(const std::string& lbl_,
-    const std::shared_ptr<node>& val, scene_selection& sel,
+    node*val, scene_selection& sel,
     const std::unordered_map<std::string, std::string>& highlights) {
     draw_glwidgets_scene_tree("ist", val->ist, sel, highlights);
     draw_glwidgets_scene_tree("cam", val->cam, sel, highlights);
@@ -769,12 +766,12 @@ inline void draw_scene_tree_glwidgets_rec<node>(const std::string& lbl_,
     auto cid = 0;
     for (auto ch : val->children) {
         draw_glwidgets_scene_tree(
-            "ch" + std::to_string(cid++), ch.lock(), sel, highlights);
+            "ch" + std::to_string(cid++), ch, sel, highlights);
     }
 }
 template <>
 inline void draw_scene_tree_glwidgets_rec<animation>(const std::string& lbl_,
-    const std::shared_ptr<animation>& val, scene_selection& sel,
+    animation*val, scene_selection& sel,
     const std::unordered_map<std::string, std::string>& highlights) {
     auto tid = 0;
     for (auto tg : val->targets) {
@@ -783,7 +780,7 @@ inline void draw_scene_tree_glwidgets_rec<animation>(const std::string& lbl_,
     }
 }
 
-inline void draw_glwidgets_scene_tree(const std::shared_ptr<scene>& scn,
+inline void draw_glwidgets_scene_tree(scene*scn,
     scene_selection& sel,
     const std::unordered_map<std::string, std::string>& highlights) {
     if (!scn->cameras.empty() && ImGui::TreeNode("cameras")) {
@@ -835,7 +832,7 @@ inline void draw_glwidgets_scene_tree(const std::shared_ptr<scene>& scn,
 
 /// Visit struct elements.
 inline bool draw_glwidgets_scene_inspector(
-    const std::shared_ptr<camera>& val, const std::shared_ptr<scene>& scn) {
+    camera*val, scene*scn) {
     auto edited = 0;
     edited += ImGui::InputText("name", &val->name);
     edited += ImGui::SliderFloat3("frame.x", &val->frame.x.x, -1, 1);
@@ -854,7 +851,7 @@ inline bool draw_glwidgets_scene_inspector(
 
 /// Visit struct elements.
 inline bool draw_glwidgets_scene_inspector(
-    const std::shared_ptr<texture>& val, const std::shared_ptr<scene>& scn) {
+    texture*val, scene*scn) {
     auto edited = 0;
     edited += ImGui::InputText("name", &val->name);
     edited += ImGui::InputText("path", &val->path);
@@ -866,7 +863,7 @@ inline bool draw_glwidgets_scene_inspector(
 }
 
 inline bool draw_glwidgets_scene_inspector(
-    const std::shared_ptr<material>& val, const std::shared_ptr<scene>& scn) {
+    material*val, scene*scn) {
     auto edited = 0;
     edited += ImGui::InputText("name", &val->name);
     edited += ImGui::ColorEdit3("ke", &val->ke.x);  // TODO: HDR
@@ -893,7 +890,7 @@ inline bool draw_glwidgets_scene_inspector(
 }
 
 inline bool draw_glwidgets_scene_inspector(
-    const std::shared_ptr<shape>& val, const std::shared_ptr<scene>& scn) {
+    shape*val, scene*scn) {
     auto edited = 0;
     edited += ImGui::InputText("name", &val->name);
     edited += ImGui::InputText("path", &val->path);
@@ -909,7 +906,7 @@ inline bool draw_glwidgets_scene_inspector(
 }
 
 inline bool draw_glwidgets_scene_inspector(
-    const std::shared_ptr<subdiv>& val, const std::shared_ptr<scene>& scn) {
+    subdiv*val, scene*scn) {
     auto edited = 0;
     edited += ImGui::InputText("name", &val->name);
     edited += ImGui::SliderInt("level", &val->level, 0, 10);
@@ -926,7 +923,7 @@ inline bool draw_glwidgets_scene_inspector(
 }
 
 inline bool draw_glwidgets_scene_inspector(
-    const std::shared_ptr<instance>& val, const std::shared_ptr<scene>& scn) {
+    instance*val, scene*scn) {
     auto edited = 0;
     edited += ImGui::InputText("name", &val->name);
     edited += ImGui::SliderFloat3("frame.x", &val->frame.x.x, -1, 1);
@@ -940,8 +937,8 @@ inline bool draw_glwidgets_scene_inspector(
 }
 
 inline bool draw_glwidgets_scene_inspector(
-    const std::shared_ptr<environment>& val,
-    const std::shared_ptr<scene>& scn) {
+    environment*val,
+    scene*scn) {
     auto edited = 0;
     edited += ImGui::InputText("name", &val->name);
     edited += ImGui::SliderFloat3("frame.x", &val->frame.x.x, -1, 1);
@@ -954,7 +951,7 @@ inline bool draw_glwidgets_scene_inspector(
 }
 
 inline bool draw_glwidgets_scene_inspector(
-    const std::shared_ptr<node>& val, const std::shared_ptr<scene>& scn) {
+    node*val, scene*scn) {
     auto edited = 0;
     edited += ImGui::InputText("name", &val->name);
     edited += ImGui::Combo("parent", &val->parent, scn->nodes, true);
@@ -972,7 +969,7 @@ inline bool draw_glwidgets_scene_inspector(
 }
 
 inline bool draw_glwidgets_scene_inspector(
-    const std::shared_ptr<animation>& val, const std::shared_ptr<scene>& scn) {
+    animation*val, scene*scn) {
     auto edited = 0;
     edited += ImGui::InputText("name", &val->name);
     edited += ImGui::InputText("path", &val->path);
@@ -988,11 +985,11 @@ inline bool draw_glwidgets_scene_inspector(
 }
 
 inline bool draw_glwidgets_scene_tree(const std::string& lbl,
-    const std::shared_ptr<scene>& scn, scene_selection& sel,
+    scene*scn, scene_selection& sel,
     std::vector<ygl::scene_selection>& update_list, int height,
     const std::unordered_map<std::string, std::string>& inspector_highlights) {
     if (!scn) return false;
-    ImGui::PushID(scn.get());
+    ImGui::PushID(scn);
     ImGui::BeginChild("scrolling scene tree", ImVec2(0, height), false);
     draw_glwidgets_scene_tree(scn, sel, inspector_highlights);
 
@@ -1024,11 +1021,11 @@ inline bool draw_glwidgets_scene_tree(const std::string& lbl,
 }
 
 inline bool draw_glwidgets_scene_inspector(const std::string& lbl,
-    const std::shared_ptr<scene>& scn, scene_selection& sel,
+    scene*scn, scene_selection& sel,
     std::vector<ygl::scene_selection>& update_list, int height,
     const std::unordered_map<std::string, std::string>& inspector_highlights) {
     if (!scn || !sel.ptr) return false;
-    ImGui::PushID(sel.ptr.get());
+    ImGui::PushID(sel.ptr);
     ImGui::BeginChild("scrolling scene inspector", ImVec2(0, height), false);
 
     auto update_len = update_list.size();
