@@ -71,13 +71,13 @@ if(YOCTO_OPENGL)
 
     add_executable(yview apps/yview.cpp apps/yglui.h        
         apps/imgui/imgui.cpp apps/imgui/imgui_draw.cpp
-        apps/imgui/imgui_impl_glfw_gl3.cpp)
+        apps/imgui/imgui_impl_glfw.cpp apps/imgui/imgui_impl_opengl3.cpp)
     add_executable(yitrace apps/yitrace.cpp apps/yglui.h        
         apps/imgui/imgui.cpp apps/imgui/imgui_draw.cpp
-        apps/imgui/imgui_impl_glfw_gl3.cpp)
+        apps/imgui/imgui_impl_glfw.cpp apps/imgui/imgui_impl_opengl3.cpp)
     add_executable(yimview apps/yimview.cpp apps/yglui.h        
         apps/imgui/imgui.cpp apps/imgui/imgui_draw.cpp
-        apps/imgui/imgui_impl_glfw_gl3.cpp)
+        apps/imgui/imgui_impl_glfw.cpp apps/imgui/imgui_impl_opengl3.cpp)
 
     target_link_libraries(yview ygl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GLEW_LIBRARIES})
     target_link_libraries(yitrace ygl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GLEW_LIBRARIES})
