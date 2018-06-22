@@ -44,7 +44,8 @@
 #endif
 #include <GLFW/glfw3.h>
 #include "imgui/imgui.h"
-#include "imgui/imgui_impl_glfw_gl3.h"
+#include "imgui/imgui_impl_glfw.h"
+#include "imgui/imgui_impl_opengl3.h"
 
 #include <map>
 
@@ -418,40 +419,48 @@ inline GLFWwindow* make_window(const vec2i& size, const std::string& title,
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-    auto win = glfwCreateWindow(size.x, size.y, title.c_str(), 0, 0);
+    auto win = glfwCreateWindow(size.x, size.y, title.c_str(), nullptr, nullptr);
     glfwMakeContextCurrent(win);
     glfwSwapInterval(1);  // Enable vsync
 
-    glfwSetCharCallback(win, ImGui_ImplGlfw_CharCallback);
-    glfwSetKeyCallback(win, ImGui_ImplGlfw_KeyCallback);
-    glfwSetMouseButtonCallback(win, ImGui_ImplGlfw_MouseButtonCallback);
-    glfwSetScrollCallback(win, ImGui_ImplGlfw_ScrollCallback);
-    if (refresh) glfwSetWindowRefreshCallback(win, refresh);
-
-    if (user_ptr) glfwSetWindowUserPointer(win, user_ptr);
-
-// init gl extensions
+    // init gl extensions
 #ifndef __APPLE__
     if (glewInit() != GLEW_OK) return nullptr;
 #endif
+
+//    glfwSetCharCallback(win, ImGui_ImplGlfw_CharCallback);
+//    glfwSetKeyCallback(win, ImGui_ImplGlfw_KeyCallback);
+//    glfwSetMouseButtonCallback(win, ImGui_ImplGlfw_MouseButtonCallback);
+//    glfwSetScrollCallback(win, ImGui_ImplGlfw_ScrollCallback);
+    
+    if (refresh) glfwSetWindowRefreshCallback(win, refresh);
+    if (user_ptr) glfwSetWindowUserPointer(win, user_ptr);
+
     return win;
 }
 
 // Initialize ImGui widgets
 inline void init_widgets(GLFWwindow* win) {
     ImGui::CreateContext();
-    ImGui_ImplGlfwGL3_Init(win, false);
-    ImGuiIO& io = ImGui::GetIO();
-    // io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard
-    // Controls io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable Gamepad Controls
     io.IniFilename = nullptr;
+
+    // ImGui_ImplGlfwGL3_Init(win, false);
+    ImGui_ImplGlfw_InitForOpenGL(win, true);
+    ImGui_ImplOpenGL3_Init();
+    ImGui::StyleColorsDark();
 }
 
 // Begin draw widget
 inline bool begin_widgets_frame(
     GLFWwindow* win, const char* title, bool* open) {
     static auto first_time = true;
-    ImGui_ImplGlfwGL3_NewFrame();
+    // Start the ImGui frame
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
     if (first_time) {
         ImGui::SetNextWindowPos({0, 0});
         ImGui::SetNextWindowSize({320, 0});
@@ -465,7 +474,7 @@ inline bool begin_widgets_frame(
 inline void end_widgets_frame() {
     ImGui::End();
     ImGui::Render();
-    ImGui_ImplGlfwGL3_RenderDrawData(ImGui::GetDrawData());
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
 // Whether widget are active
