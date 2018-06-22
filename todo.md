@@ -5,6 +5,10 @@ Please consider this to be just development notes and not any real planning.
 
 ## next
 
+- simpler obj loader
+    - load to internal data structure with unique vertices
+    - simpler material loading
+        - create only when needed
 - tonyobjloader
 - openmp
 
