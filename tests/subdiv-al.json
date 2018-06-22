@@ -23,41 +23,153 @@
             }
         }
     ],
-    "instances": [
+    "textures": [
         {
             "name": "floor",
-            "shp": {
-                "name": "floor",
-                "!!proc": {
-                    "type": "floor"
-                }
-            },
-            "mat": {
-                "name": "floor",
-                "kd": [
-                    0.7,
-                    0.7,
-                    0.7
-                ],
-                "kd_txt": {
-                    "name": "floor",
-                    "path": "textures/floor.png",
-                    "gamma": 2.2,
-                    "!!proc": {
-                        "type": "grid"
-                    }
-                }
+            "path": "textures/floor.png",
+            "gamma": 2.2,
+            "!!proc": {
+                "type": "grid"
+            }
+        },
+        {
+            "name": "uvgrid",
+            "path": "textures/uvgrid.png",
+            "gamma": 2.2,
+            "!!proc": {
+                "type": "uvgrid"
+            }
+        }
+    ],
+    "materials": [
+        {
+            "name": "floor",
+            "kd": [
+                0.7,
+                0.7,
+                0.7
+            ],
+            "kd_txt": "floor"
+        },
+        {
+            "name": "obj1",
+            "kd": [
+                1,
+                1,
+                1
+            ],
+            "ks": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "rs": 0.1,
+            "kd_txt": "uvgrid"
+        },
+        {
+            "name": "obj2",
+            "kd": [
+                0.5,
+                0.5,
+                0.7
+            ],
+            "ks": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "rs": 0.1
+        },
+        {
+            "name": "obj3",
+            "kd": [
+                1,
+                1,
+                1
+            ],
+            "ks": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "rs": 0.1,
+            "kd_txt": "uvgrid"
+        },
+        {
+            "name": "light1",
+            "ke": [
+                20,
+                20,
+                20
+            ]
+        },
+        {
+            "name": "light2",
+            "ke": [
+                20,
+                20,
+                20
+            ]
+        }
+    ],
+    "shapes": [
+        {
+            "name": "floor",
+            "!!proc": {
+                "type": "floor"
             }
         },
         {
             "name": "obj1",
-            "shp": {
-                "name": "obj1",
-                "path": "meshes/obj1.ply",
-                "!!proc": {
-                    "type": "cube"
-                }
-            },
+            "path": "meshes/obj1.ply",
+            "!!proc": {
+                "type": "cube"
+            }
+        },
+        {
+            "name": "obj2",
+            "path": "meshes/obj2.ply",
+            "!!proc": {
+                "type": "suzanne"
+            }
+        },
+        {
+            "name": "obj3",
+            "path": "meshes/obj3.ply",
+            "!!proc": {
+                "type": "cube"
+            }
+        },
+        {
+            "name": "light1",
+            "!!proc": {
+                "type": "quad",
+                "size": [
+                    4,
+                    4
+                ]
+            }
+        },
+        {
+            "name": "light2",
+            "!!proc": {
+                "type": "quad",
+                "size": [
+                    4,
+                    4
+                ]
+            }
+        }
+    ],
+    "instances": [
+        {
+            "name": "floor",
+            "shp": "floor",
+            "mat": "floor"
+        },
+        {
+            "name": "obj1",
+            "shp": "obj1",
             "sbd": {
                 "name": "obj1",
                 "path": "meshes/obj1.obj",
@@ -66,28 +178,7 @@
                     "type": "cube"
                 }
             },
-            "mat": {
-                "name": "obj1",
-                "kd": [
-                    1,
-                    1,
-                    1
-                ],
-                "ks": [
-                    0.04,
-                    0.04,
-                    0.04
-                ],
-                "rs": 0.1,
-                "kd_txt": {
-                    "name": "uvgrid",
-                    "path": "textures/uvgrid.png",
-                    "gamma": 2.2,
-                    "!!proc": {
-                        "type": "uvgrid"
-                    }
-                }
-            },
+            "mat": "obj1",
             "!!proc": {
                 "translation": [
                     -2.5,
@@ -98,13 +189,7 @@
         },
         {
             "name": "obj2",
-            "shp": {
-                "name": "obj2",
-                "path": "meshes/obj2.ply",
-                "!!proc": {
-                    "type": "suzanne"
-                }
-            },
+            "shp": "obj2",
             "sbd": {
                 "name": "obj2",
                 "path": "meshes/obj2.obj",
@@ -113,20 +198,7 @@
                     "type": "suzanne"
                 }
             },
-            "mat": {
-                "name": "obj2",
-                "kd": [
-                    0.5,
-                    0.5,
-                    0.7
-                ],
-                "ks": [
-                    0.04,
-                    0.04,
-                    0.04
-                ],
-                "rs": 0.1
-            },
+            "mat": "obj2",
             "!!proc": {
                 "translation": [
                     0,
@@ -137,13 +209,7 @@
         },
         {
             "name": "obj3",
-            "shp": {
-                "name": "obj3",
-                "path": "meshes/obj3.ply",
-                "!!proc": {
-                    "type": "cube"
-                }
-            },
+            "shp": "obj3",
             "sbd": {
                 "name": "obj3",
                 "path": "meshes/obj3.obj",
@@ -152,23 +218,7 @@
                     "type": "cube"
                 }
             },
-            "mat": {
-                "name": "obj3",
-                "kd": [
-                    1,
-                    1,
-                    1
-                ],
-                "ks": [
-                    0.04,
-                    0.04,
-                    0.04
-                ],
-                "rs": 0.1,
-                "kd_txt": {
-                    "name": "uvgrid"
-                }
-            },
+            "mat": "obj3",
             "!!proc": {
                 "translation": [
                     2.5,
@@ -179,24 +229,8 @@
         },
         {
             "name": "light1",
-            "shp": {
-                "name": "light1",
-                "!!proc": {
-                    "type": "quad",
-                    "size": [
-                        4,
-                        4
-                    ]
-                }
-            },
-            "mat": {
-                "name": "light1",
-                "ke": [
-                    20,
-                    20,
-                    20
-                ]
-            },
+            "shp": "light1",
+            "mat": "light1",
             "!!proc": {
                 "from": [
                     -4,
@@ -212,24 +246,8 @@
         },
         {
             "name": "light2",
-            "shp": {
-                "name": "light2",
-                "!!proc": {
-                    "type": "quad",
-                    "size": [
-                        4,
-                        4
-                    ]
-                }
-            },
-            "mat": {
-                "name": "light2",
-                "ke": [
-                    20,
-                    20,
-                    20
-                ]
-            },
+            "shp": "light2",
+            "mat": "light2",
             "!!proc": {
                 "from": [
                     4,
@@ -243,5 +261,6 @@
                 ]
             }
         }
-    ]
+    ],
+    "environments": []
 }

@@ -23,44 +23,71 @@
             }
         }
     ],
-    "instances": [
+    "textures": [],
+    "materials": [
         {
             "name": "floor",
-            "shp": {
-                "name": "floor",
-                "!!proc": {
-                    "type": "floor"
-                }
-            },
-            "mat": {
-                "name": "floor",
-                "kd": [
-                    0.7,
-                    0.7,
-                    0.7
-                ]
+            "kd": [
+                0.7,
+                0.7,
+                0.7
+            ]
+        },
+        {
+            "name": "light1",
+            "ke": [
+                20,
+                20,
+                20
+            ]
+        },
+        {
+            "name": "light2",
+            "ke": [
+                20,
+                20,
+                20
+            ]
+        }
+    ],
+    "shapes": [
+        {
+            "name": "floor",
+            "!!proc": {
+                "type": "floor"
             }
         },
         {
             "name": "light1",
-            "shp": {
-                "name": "light1",
-                "!!proc": {
-                    "type": "quad",
-                    "size": [
-                        4,
-                        4
-                    ]
-                }
-            },
-            "mat": {
-                "name": "light1",
-                "ke": [
-                    20,
-                    20,
-                    20
+            "!!proc": {
+                "type": "quad",
+                "size": [
+                    4,
+                    4
                 ]
-            },
+            }
+        },
+        {
+            "name": "light2",
+            "!!proc": {
+                "type": "quad",
+                "size": [
+                    4,
+                    4
+                ]
+            }
+        }
+    ],
+    "instances": [
+        {
+            "name": "floor",
+            "shp": "floor",
+            "mat": "floor"
+        },
+        {
+            "name": "light1",
+            "shp": "light1",
+            "mat": "light1",
             "!!proc": {
                 "from": [
                     -4,
@@ -76,24 +103,8 @@
         },
         {
             "name": "light2",
-            "shp": {
-                "name": "light2",
-                "!!proc": {
-                    "type": "quad",
-                    "size": [
-                        4,
-                        4
-                    ]
-                }
-            },
-            "mat": {
-                "name": "light2",
-                "ke": [
-                    20,
-                    20,
-                    20
-                ]
-            },
+            "shp": "light2",
+            "mat": "light2",
             "!!proc": {
                 "from": [
                     4,
@@ -108,98 +119,5 @@
             }
         }
     ],
-    "!!proc": {
-        "random_instances": {
-            "num": 100,
-            "base": {
-                "name": "base",
-                "frame": [
-                    1,
-                    0,
-                    0,
-                    0,
-                    0,
-                    -1,
-                    0,
-                    1,
-                    0,
-                    0,
-                    1,
-                    0
-                ],
-                "shp": {
-                    "!!proc": {
-                        "type": "quad",
-                        "size": [
-                            5,
-                            5
-                        ]
-                    }
-                }
-            },
-            "instances": [
-                {
-                    "name": "obj1",
-                    "shp": {
-                        "name": "obj1",
-                        "!!proc": {
-                            "type": "sphere",
-                            "size": 0.25
-                        }
-                    },
-                    "mat": {
-                        "name": "obj1",
-                        "kd": [
-                            0.5,
-                            0.7,
-                            0.7
-                        ]
-                    }
-                },
-                {
-                    "name": "obj2",
-                    "shp": {
-                        "name": "obj2",
-                        "!!proc": {
-                            "type": "cube",
-                            "size": [
-                                0.25,
-                                0.25,
-                                0.25
-                            ]
-                        }
-                    },
-                    "mat": {
-                        "name": "obj2",
-                        "kd": [
-                            0.7,
-                            0.5,
-                            0.7
-                        ]
-                    }
-                },
-                {
-                    "name": "obj3",
-                    "shp": {
-                        "name": "obj3",
-                        "!!proc": {
-                            "type": "cylinder",
-                            "size": [
-                                0.25,
-                                0.25
-                            ]
-                        }
-                    },
-                    "mat": {
-                        "name": "obj3",
-                        "kd": [
-                            0.7,
-                            0.7,
-                            0.5
-                        ]
-                    }
-                }
-            ]
-        }
-    }
+    "environments": []
 }

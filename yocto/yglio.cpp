@@ -472,7 +472,7 @@ image4f load_image_from_memory(const byte* data, int data_size) {
 }
 
 // Resize image.
-image4f resize_image(const image4f& img, const vec2i& size) {
+image4f resize_image(const image4f& img, vec2i size) {
     auto imsize = size;
     if (imsize == zero2i) throw std::runtime_error("bad image size");
     if (!imsize.x)
@@ -495,10 +495,10 @@ image4f resize_image(const image4f& img, const vec2i& size) {
 namespace ygl {
 
 // Load a scene
-std::shared_ptr<scene> load_scene(
+scene* load_scene(
     const std::string& filename, bool load_textures, bool skip_missing) {
     auto ext = get_extension(filename);
-    auto scn = (std::shared_ptr<scene>)nullptr;
+    auto scn = (scene*)nullptr;
     if (ext == "json" || ext == "JSON") {
         scn = load_json_scene(filename, load_textures, skip_missing);
     } else if (ext == "obj" || ext == "OBJ") {
@@ -510,7 +510,7 @@ std::shared_ptr<scene> load_scene(
     } else {
         throw std::runtime_error("unsupported extension " + ext);
     }
-    auto mat = std::shared_ptr<material>();
+    auto mat = (material*)nullptr;
     for (auto ist : scn->instances) {
         if (ist->mat) continue;
         if (!mat) {
@@ -523,7 +523,7 @@ std::shared_ptr<scene> load_scene(
 }
 
 // Save a scene
-void save_scene(const std::string& filename, const std::shared_ptr<scene>& scn,
+void save_scene(const std::string& filename, const scene* scn,
     bool save_textures, bool skip_missing) {
     auto ext = get_extension(filename);
     if (ext == "json" || ext == "JSON") {
@@ -892,30 +892,46 @@ void from_json(const json& js, material& val) {
     val.op = js.value("op", def.op);
     val.fresnel = js.value("fresnel", def.fresnel);
     val.refract = js.value("refract", def.refract);
-    if (js.count("ke_txt"))
-        from_json(js.at("ke_txt"), *(val.ke_txt = std::make_shared<texture>()));
-    if (js.count("kd_txt"))
-        from_json(js.at("kd_txt"), *(val.kd_txt = std::make_shared<texture>()));
-    if (js.count("ks_txt"))
-        from_json(js.at("ks_txt"), *(val.ks_txt = std::make_shared<texture>()));
-    if (js.count("kt_txt"))
-        from_json(js.at("kt_txt"), *(val.kt_txt = std::make_shared<texture>()));
-    if (js.count("rs_txt"))
-        from_json(js.at("rs_txt"), *(val.rs_txt = std::make_shared<texture>()));
-    if (js.count("op_txt"))
-        from_json(js.at("op_txt"), *(val.op_txt = std::make_shared<texture>()));
-    if (js.count("occ_txt"))
-        from_json(
-            js.at("occ_txt"), *(val.occ_txt = std::make_shared<texture>()));
-    if (js.count("bump_txt"))
-        from_json(
-            js.at("bump_txt"), *(val.bump_txt = std::make_shared<texture>()));
-    if (js.count("disp_txt"))
-        from_json(
-            js.at("disp_txt"), *(val.disp_txt = std::make_shared<texture>()));
-    if (js.count("norm_txt"))
-        from_json(
-            js.at("norm_txt"), *(val.norm_txt = std::make_shared<texture>()));
+    if (js.count("ke_txt")) {
+        val.ke_txt = new texture();
+        val.ke_txt->name = js.at("ke_txt").get<std::string>();
+    }
+    if (js.count("kd_txt")) {
+        val.kd_txt = new texture();
+        val.kd_txt->name = js.at("kd_txt").get<std::string>();
+    }
+    if (js.count("ks_txt")) {
+        val.ks_txt = new texture();
+        val.ks_txt->name = js.at("ks_txt").get<std::string>();
+    }
+    if (js.count("kt_txt")) {
+        val.kt_txt = new texture();
+        val.kt_txt->name = js.at("kt_txt").get<std::string>();
+    }
+    if (js.count("rs_txt")) {
+        val.rs_txt = new texture();
+        val.rs_txt->name = js.at("rs_txt").get<std::string>();
+    }
+    if (js.count("op_txt")) {
+        val.op_txt = new texture();
+        val.op_txt->name = js.at("op_txt").get<std::string>();
+    }
+    if (js.count("occ_txt")) {
+        val.occ_txt = new texture();
+        val.occ_txt->name = js.at("occ_txt").get<std::string>();
+    }
+    if (js.count("bump_txt")) {
+        val.bump_txt = new texture();
+        val.bump_txt->name = js.at("bump_txt").get<std::string>();
+    }
+    if (js.count("disp_txt")) {
+        val.disp_txt = new texture();
+        val.disp_txt->name = js.at("disp_txt").get<std::string>();
+    }
+    if (js.count("norm_txt")) {
+        val.norm_txt = new texture();
+        val.norm_txt->name = js.at("norm_txt").get<std::string>();
+    }
     if (js.count("!!proc")) from_json_proc(js.at("!!proc"), val);
 }
 
@@ -1072,7 +1088,7 @@ void to_json(json& js, const subdiv& val) {
     }
 }
 
-// Procedural commands for materials
+// Procedural commands for subdivs
 void from_json_proc(const json& js, subdiv& val) {
     auto type = js.value("type", ""s);
     if (type == "") return;
@@ -1150,12 +1166,18 @@ void from_json(const json& js, instance& val) {
     static const auto def = instance();
     val.name = js.value("name", def.name);
     val.frame = js.value("frame", def.frame);
-    if (js.count("shp"))
-        from_json(js.at("shp"), *(val.shp = std::make_shared<shape>()));
-    if (js.count("mat"))
-        from_json(js.at("mat"), *(val.mat = std::make_shared<material>()));
-    if (js.count("sbd"))
-        from_json(js.at("sbd"), *(val.sbd = std::make_shared<subdiv>()));
+    if (js.count("shp")) {
+        val.shp = new shape();
+        val.shp->name = js.at("shp").get<std::string>();
+    }
+    if (js.count("mat")) {
+        val.mat = new material();
+        val.mat->name = js.at("mat").get<std::string>();
+    }
+    if (js.count("sbd")) {
+        val.sbd = new subdiv();
+        val.sbd->name = js.at("sbd").get<std::string>();
+    }
     if (js.count("!!proc")) from_json_proc(js.at("!!proc"), val);
 }
 
@@ -1182,8 +1204,10 @@ void from_json(const json& js, environment& val) {
     val.name = js.value("name", def.name);
     val.frame = js.value("frame", def.frame);
     val.ke = js.value("ke", def.ke);
-    if (js.count("ke_txt"))
-        from_json(js.at("ke_txt"), *(val.ke_txt = std::make_shared<texture>()));
+    if (js.count("ke_txt")) {
+        val.ke_txt = new texture();
+        val.ke_txt->name = js.at("ke_txt").get<std::string>();
+    }
     if (js.count("!!proc")) from_json_proc(js.at("!!proc"), val);
 }
 
@@ -1221,14 +1245,22 @@ void from_json(const json& js, node& val) {
     val.rotation = js.value("rotation", def.rotation);
     val.scale = js.value("scale", def.scale);
     val.weights = js.value("weights", def.weights);
-    if (js.count("parent"))
-        from_json(js.at("parent"), *(val.parent = std::make_shared<node>()));
-    if (js.count("cam"))
-        from_json(js.at("cam"), *(val.cam = std::make_shared<camera>()));
-    if (js.count("ist"))
-        from_json(js.at("ist"), *(val.ist = std::make_shared<instance>()));
-    if (js.count("env"))
-        from_json(js.at("env"), *(val.env = std::make_shared<environment>()));
+    if (js.count("parent")) {
+        val.parent = new node();
+        val.parent->name = js.at("parent").get<std::string>();
+    }
+    if (js.count("cam")) {
+        val.cam = new camera();
+        val.cam->name = js.at("cam").get<std::string>();
+    }
+    if (js.count("ist")) {
+        val.ist = new instance();
+        val.ist->name = js.at("ist").get<std::string>();
+    }
+    if (js.count("env")) {
+        val.env = new environment();
+        val.env->name = js.at("env").get<std::string>();
+    }
     if (js.count("!!proc")) from_json_proc(js.at("!!proc"), val);
 }
 
@@ -1296,8 +1328,8 @@ void from_json(const json& js, animation& val) {
     val.rotation = js.value("rotation", def.rotation);
     val.scale = js.value("scale", def.scale);
     for (auto& j : js.value("targets", json::array())) {
-        val.targets.push_back(std::make_shared<node>());
-        from_json(j, *val.targets.back());
+        val.targets.push_back(new node());
+        val.targets.back()->name = j.get<std::string>();
     }
     if (js.count("!!proc")) from_json_proc(js.at("!!proc"), val);
 }
@@ -1343,7 +1375,7 @@ void to_json(json& js, const scene& val) {
         for (auto v : val.animations) js["animations"].push_back(*v);
     }
 }
-void to_json(json& js, const std::shared_ptr<scene>& val) {
+void to_json(json& js, const scene* val) {
     if (!val) {
         js = json();
         return;
@@ -1359,17 +1391,25 @@ static std::unordered_map<std::string, std::shared_ptr<T>> make_named_map(
     return map;
 };
 
+template <typename T>
+static std::unordered_map<std::string, T*> make_named_map(
+    const std::vector<T*>& elems) {
+    auto map = std::unordered_map<std::string, T*>();
+    for (auto elem : elems) map[elem->name] = elem;
+    return map;
+};
+
 // Procedural commands for scenes
 void from_json_proc(const json& js, scene& val) {
     if (js.count("random_instances")) {
         auto& jjs = js.at("random_instances");
         auto num = jjs.value("num", 100);
         auto seed = jjs.value("seed", 13);
-        auto base = std::make_shared<instance>();
+        auto base = new instance();
         from_json(jjs.at("base"), *base);
-        auto ists = std::vector<std::shared_ptr<instance>>();
+        auto ists = std::vector<instance*>();
         for (auto& j : jjs.at("instances")) {
-            ists.push_back(std::make_shared<instance>());
+            ists.push_back(new instance());
             from_json(j, *ists.back());
         }
 
@@ -1380,13 +1420,13 @@ void from_json_proc(const json& js, scene& val) {
             sample_triangles_points(base->shp->triangles, base->shp->pos,
                 base->shp->norm, base->shp->texcoord, num, seed);
 
-        auto nmap = std::unordered_map<std::shared_ptr<instance>, int>();
+        auto nmap = std::unordered_map<instance*, int>();
         for (auto ist : ists) nmap[ist] = 0;
         auto rng = make_rng(seed, 17);
         for (auto i = 0; i < num; i++) {
             auto ist = ists.at(rand1i(rng, (int)ists.size() - 1));
             nmap[ist] += 1;
-            val.instances.push_back(std::make_shared<instance>());
+            val.instances.push_back(new instance());
             val.instances.back()->name = ist->name + std::to_string(nmap[ist]);
             val.instances.back()->frame =
                 base->frame * translation_frame(pos[i]) * ist->frame;
@@ -1397,55 +1437,62 @@ void from_json_proc(const json& js, scene& val) {
     }
 }
 
-// Serialize struct
-void from_json(const json& js, scene& val) {
-    val.name = js.value("name", ""s);
+// Load a scene in the builtin JSON format.
+scene* load_json_scene(
+    const std::string& filename, bool load_textures, bool skip_missing) {
+    // load json
+    auto scn = new scene();
+    auto js = load_json(filename);
+
+    // parse json scene
+    scn->name = js.value("name", ""s);
     for (auto& j : js.value("cameras", json::array())) {
-        val.cameras.push_back(std::make_shared<camera>());
-        from_json(j, *val.cameras.back());
+        scn->cameras.push_back(new camera());
+        from_json(j, *scn->cameras.back());
     }
     for (auto& j : js.value("textures", json::array())) {
-        val.textures.push_back(std::make_shared<texture>());
-        from_json(j, *val.textures.back());
+        scn->textures.push_back(new texture());
+        from_json(j, *scn->textures.back());
     }
     for (auto& j : js.value("materials", json::array())) {
-        val.materials.push_back(std::make_shared<material>());
-        from_json(j, *val.materials.back());
+        scn->materials.push_back(new material());
+        from_json(j, *scn->materials.back());
     }
     for (auto& j : js.value("shapes", json::array())) {
-        val.shapes.push_back(std::make_shared<shape>());
-        from_json(j, *val.shapes.back());
+        scn->shapes.push_back(new shape());
+        from_json(j, *scn->shapes.back());
     }
     for (auto& j : js.value("subdivs", json::array())) {
-        val.subdivs.push_back(std::make_shared<subdiv>());
-        from_json(j, *val.subdivs.back());
+        scn->subdivs.push_back(new subdiv());
+        from_json(j, *scn->subdivs.back());
     }
     for (auto& j : js.value("instances", json::array())) {
-        val.instances.push_back(std::make_shared<instance>());
-        from_json(j, *val.instances.back());
+        scn->instances.push_back(new instance());
+        from_json(j, *scn->instances.back());
     }
     for (auto& j : js.value("environments", json::array())) {
-        val.environments.push_back(std::make_shared<environment>());
-        from_json(j, *val.environments.back());
+        scn->environments.push_back(new environment());
+        from_json(j, *scn->environments.back());
     }
     for (auto& j : js.value("nodes", json::array())) {
-        val.nodes.push_back(std::make_shared<node>());
-        from_json(j, *val.nodes.back());
+        scn->nodes.push_back(new node());
+        from_json(j, *scn->nodes.back());
     }
     for (auto& j : js.value("animations", json::array())) {
-        val.animations.push_back(std::make_shared<animation>());
-        from_json(j, *val.animations.back());
+        scn->animations.push_back(new animation());
+        from_json(j, *scn->animations.back());
     }
-    if (js.count("!!proc")) from_json_proc(js.at("!!proc"), val);
+    if (js.count("!!proc")) from_json_proc(js.at("!!proc"), *scn);
+
     // fix references
-    auto cmap = make_named_map(val.cameras);
-    auto tmap = make_named_map(val.textures);
-    auto mmap = make_named_map(val.materials);
-    auto smap = make_named_map(val.shapes);
-    auto rmap = make_named_map(val.subdivs);
-    auto imap = make_named_map(val.instances);
-    auto emap = make_named_map(val.environments);
-    auto nmap = make_named_map(val.nodes);
+    auto cmap = make_named_map(scn->cameras);
+    auto tmap = make_named_map(scn->textures);
+    auto mmap = make_named_map(scn->materials);
+    auto smap = make_named_map(scn->shapes);
+    auto rmap = make_named_map(scn->subdivs);
+    auto imap = make_named_map(scn->instances);
+    auto emap = make_named_map(scn->environments);
+    auto nmap = make_named_map(scn->nodes);
     auto fix_ref = [](auto& map, auto& elems, auto& ref) {
         if (!ref) return;
         auto name = ref->name;
@@ -1456,44 +1503,35 @@ void from_json(const json& js, scene& val) {
             elems.push_back(ref);
         }
     };
-    for (auto anm : val.animations) {
-        for (auto& nde : anm->targets) fix_ref(nmap, val.nodes, nde);
+    for (auto anm : scn->animations) {
+        for (auto& nde : anm->targets) fix_ref(nmap, scn->nodes, nde);
     }
-    for (auto nde : val.nodes) {
-        fix_ref(nmap, val.nodes, nde->parent);
-        fix_ref(cmap, val.cameras, nde->cam);
-        fix_ref(imap, val.instances, nde->ist);
-        fix_ref(emap, val.environments, nde->env);
+    for (auto nde : scn->nodes) {
+        fix_ref(nmap, scn->nodes, nde->parent);
+        fix_ref(cmap, scn->cameras, nde->cam);
+        fix_ref(imap, scn->instances, nde->ist);
+        fix_ref(emap, scn->environments, nde->env);
     }
-    for (auto env : val.environments) {
-        fix_ref(tmap, val.textures, env->ke_txt);
+    for (auto env : scn->environments) {
+        fix_ref(tmap, scn->textures, env->ke_txt);
     }
-    for (auto ist : val.instances) {
-        fix_ref(mmap, val.materials, ist->mat);
-        fix_ref(smap, val.shapes, ist->shp);
-        fix_ref(rmap, val.subdivs, ist->sbd);
+    for (auto ist : scn->instances) {
+        fix_ref(mmap, scn->materials, ist->mat);
+        fix_ref(smap, scn->shapes, ist->shp);
+        fix_ref(rmap, scn->subdivs, ist->sbd);
     }
-    for (auto mat : val.materials) {
-        fix_ref(tmap, val.textures, mat->ke_txt);
-        fix_ref(tmap, val.textures, mat->kd_txt);
-        fix_ref(tmap, val.textures, mat->ks_txt);
-        fix_ref(tmap, val.textures, mat->kt_txt);
-        fix_ref(tmap, val.textures, mat->op_txt);
-        fix_ref(tmap, val.textures, mat->rs_txt);
-        fix_ref(tmap, val.textures, mat->occ_txt);
-        fix_ref(tmap, val.textures, mat->norm_txt);
-        fix_ref(tmap, val.textures, mat->bump_txt);
-        fix_ref(tmap, val.textures, mat->disp_txt);
+    for (auto mat : scn->materials) {
+        fix_ref(tmap, scn->textures, mat->ke_txt);
+        fix_ref(tmap, scn->textures, mat->kd_txt);
+        fix_ref(tmap, scn->textures, mat->ks_txt);
+        fix_ref(tmap, scn->textures, mat->kt_txt);
+        fix_ref(tmap, scn->textures, mat->op_txt);
+        fix_ref(tmap, scn->textures, mat->rs_txt);
+        fix_ref(tmap, scn->textures, mat->occ_txt);
+        fix_ref(tmap, scn->textures, mat->norm_txt);
+        fix_ref(tmap, scn->textures, mat->bump_txt);
+        fix_ref(tmap, scn->textures, mat->disp_txt);
     }
-}
-
-// Load a scene in the builtin JSON format.
-std::shared_ptr<scene> load_json_scene(
-    const std::string& filename, bool load_textures, bool skip_missing) {
-    // load json
-    auto scn = std::make_shared<scene>();
-    auto js = load_json(filename);
-    from_json(js, *scn);
 
     // load meshes
     auto dirname = get_dirname(filename);
@@ -1550,8 +1588,8 @@ std::shared_ptr<scene> load_json_scene(
 }
 
 // Save a scene in the builtin JSON format.
-void save_json_scene(const std::string& filename,
-    const std::shared_ptr<scene>& scn, bool save_textures, bool skip_missing) {
+void save_json_scene(const std::string& filename, const scene* scn,
+    bool save_textures, bool skip_missing) {
     // save json
     auto js = json(scn);
     save_json(filename, js);
@@ -1648,9 +1686,9 @@ inline std::ostream& operator<<(std::ostream& os, const obj_vertex& v) {
 }
 
 // Loads an OBJ
-std::shared_ptr<scene> load_obj_scene(const std::string& filename,
-    bool load_textures, bool skip_missing, bool split_shapes) {
-    auto scn = std::make_shared<scene>();
+scene* load_obj_scene(const std::string& filename, bool load_textures,
+    bool skip_missing, bool split_shapes) {
+    auto scn = new scene();
 
     // parsing policies
     auto flip_texcoord = true;
@@ -1670,7 +1708,7 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
     auto oname = std::string();
     auto gname = std::string();
     auto smoothing = true;
-    auto ist = (std::shared_ptr<instance>)nullptr;
+    auto ist = (instance*)nullptr;
 
     // vertices
     auto pos = std::deque<vec3f>();
@@ -1678,8 +1716,8 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
     auto texcoord = std::deque<vec2f>();
 
     // object maps
-    auto tmap = std::unordered_map<std::string, std::shared_ptr<texture>>();
-    auto mmap = std::unordered_map<std::string, std::shared_ptr<material>>();
+    auto tmap = std::unordered_map<std::string, texture*>();
+    auto mmap = std::unordered_map<std::string, material*>();
 
     // vertex maps
     auto name_map = std::unordered_map<std::string, int>();
@@ -1689,7 +1727,7 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
     auto texcoord_map = std::unordered_map<int, int>();
 
     // add object if needed
-    auto is_instance_empty = [](std::shared_ptr<instance> ist) {
+    auto is_instance_empty = [](instance* ist) {
         if (ist->sbd) {
             return ist->sbd->pos.empty();
         } else if (ist->shp) {
@@ -1698,15 +1736,14 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
             return true;
         }
     };
-    auto add_instance = [&](std::shared_ptr<scene> scn,
-                            const std::string& objname,
+    auto add_instance = [&](scene* scn, const std::string& objname,
                             const std::string& matname,
                             const std::string& groupname, bool smoothing) {
         if (scn->instances.empty() || objname != scn->instances.back()->name ||
             !is_instance_empty(scn->instances.back())) {
-            auto ist = std::make_shared<instance>();
+            auto ist = new instance();
             scn->instances.push_back(ist);
-            ist->shp = std::make_shared<shape>();
+            ist->shp = new shape();
             scn->shapes.push_back(ist->shp);
         }
         name_map[objname] += 1;
@@ -1861,14 +1898,14 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
                     if (v == "") break;
                     tokens.push_back(v);
                 }
-                if (tokens.empty()) return (std::shared_ptr<texture>)nullptr;
+                if (tokens.empty()) return (texture*)nullptr;
 
                 // texture name
                 auto path = normalize_path(tokens.back());
                 if (tmap.find(path) != tmap.end()) { return tmap.at(path); }
 
                 // create texture
-                auto txt = std::make_shared<texture>();
+                auto txt = new texture();
                 txt->name = path;
                 txt->path = path;
                 txt->gamma = (srgb && !is_hdr_filename(path)) ? 2.2f : 1.0f;
@@ -1885,7 +1922,7 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
             };
 
             // add a material preemptively to avoid crashes
-            scn->materials.push_back(std::make_shared<material>());
+            scn->materials.push_back(new material());
             auto mat = scn->materials.back();
 
             // read the file line by line
@@ -1905,7 +1942,7 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
 
                 // possible token values
                 if (cmd == "newmtl") {
-                    mat = std::make_shared<material>();
+                    mat = new material();
                     ss >> mat->name;
                     scn->materials.push_back(mat);
                     mmap[mat->name] = mat;
@@ -1971,17 +2008,17 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
             // clone
             fs.close();
         } else if (cmd == "c") {
-            auto cam = std::make_shared<camera>();
+            auto cam = new camera();
             ss >> cam->name >> cam->ortho >> cam->imsize >> cam->focal >>
                 cam->focus >> cam->aperture >> cam->frame;
             scn->cameras.push_back(cam);
         } else if (cmd == "e") {
             auto ke_txt = ""s;
-            auto env = std::make_shared<environment>();
+            auto env = new environment();
             ss >> env->name >> env->ke >> ke_txt >> env->frame;
             if (ke_txt != "\"\"") {
                 if (tmap.find(ke_txt) == tmap.end()) {
-                    auto txt = std::make_shared<texture>();
+                    auto txt = new texture();
                     txt->name = ke_txt;
                     txt->path = ke_txt;
                     tmap[ke_txt] = txt;
@@ -1996,6 +2033,7 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
     }
 
     // cleanup empty
+    // TODO: delete unused
     for (auto idx = 0; idx < scn->instances.size(); idx++) {
         if (!is_instance_empty(scn->instances[idx])) continue;
         auto ist = scn->instances[idx];
@@ -2039,7 +2077,7 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
     }
 
     // assign opacity texture if needed
-    auto has_opacity = std::unordered_map<std::shared_ptr<texture>, bool>();
+    auto has_opacity = std::unordered_map<texture*, bool>();
     for (auto& txt : scn->textures) {
         has_opacity[txt] = false;
         for (auto& p : txt->img.pxl)
@@ -2057,8 +2095,8 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
     return scn;
 }
 
-void save_obj_scene(const std::string& filename,
-    const std::shared_ptr<scene>& scn, bool save_textures, bool skip_missing) {
+void save_obj_scene(const std::string& filename, const scene* scn,
+    bool save_textures, bool skip_missing) {
     // scene
     auto fs = std::ofstream(filename);
     if (!fs) throw std::runtime_error("cannot save file " + filename);
@@ -2249,10 +2287,10 @@ static bool startswith(const std::string& str, const std::string& substr) {
 }
 
 // Load a scene
-std::shared_ptr<scene> load_gltf_scene(
+scene* load_gltf_scene(
     const std::string& filename, bool load_textures, bool skip_missing) {
     auto gltf = load_json(filename);
-    auto scn = std::make_shared<scene>();
+    auto scn = new scene();
 
     // prepare parsing
     auto dirname = get_dirname(filename);
@@ -2261,7 +2299,7 @@ std::shared_ptr<scene> load_gltf_scene(
     if (gltf.count("images")) {
         for (auto iid = 0; iid < gltf.at("images").size(); iid++) {
             auto& gimg = gltf.at("images").at(iid);
-            auto txt = std::make_shared<texture>();
+            auto txt = new texture();
             txt->name = gimg.value("name", ""s);
             txt->path = (startswith(gimg.value("uri", ""s), "data:")) ?
                             std::string("[glTF-inline].png") :
@@ -2307,14 +2345,12 @@ std::shared_ptr<scene> load_gltf_scene(
     // add a texture
     auto add_texture = [scn, &gltf](const json& ginfo, bool srgb) {
         if (!gltf.count("images") || !gltf.count("textures"))
-            return (std::shared_ptr<texture>)nullptr;
-        if (ginfo.is_null() || ginfo.empty())
-            return (std::shared_ptr<texture>)nullptr;
-        if (ginfo.value("index", -1) < 0)
-            return (std::shared_ptr<texture>)nullptr;
+            return (texture*)nullptr;
+        if (ginfo.is_null() || ginfo.empty()) return (texture*)nullptr;
+        if (ginfo.value("index", -1) < 0) return (texture*)nullptr;
         auto& gtxt = gltf.at("textures").at(ginfo.value("index", -1));
         if (gtxt.empty() || gtxt.value("source", -1) < 0)
-            return (std::shared_ptr<texture>)nullptr;
+            return (texture*)nullptr;
         auto txt = scn->textures.at(gtxt.value("source", -1));
         if (!gltf.count("samplers") || gtxt.value("sampler", -1) < 0)
             return txt;
@@ -2330,7 +2366,7 @@ std::shared_ptr<scene> load_gltf_scene(
     if (gltf.count("materials")) {
         for (auto mid = 0; mid < gltf.at("materials").size(); mid++) {
             auto& gmat = gltf.at("materials").at(mid);
-            auto mat = std::make_shared<material>();
+            auto mat = new material();
             mat->name = gmat.value("name", ""s);
             mat->ke = gmat.value("emissiveFactor", zero3f);
             if (gmat.count("emissiveTexture"))
@@ -2435,8 +2471,7 @@ std::shared_ptr<scene> load_gltf_scene(
     };
 
     // convert meshes
-    auto meshes = std::vector<std::vector<
-        std::pair<std::shared_ptr<shape>, std::shared_ptr<material>>>>();
+    auto meshes = std::vector<std::vector<std::pair<shape*, material*>>>();
     if (gltf.count("meshes")) {
         for (auto mid = 0; mid < gltf.at("meshes").size(); mid++) {
             auto& gmesh = gltf.at("meshes").at(mid);
@@ -2444,7 +2479,7 @@ std::shared_ptr<scene> load_gltf_scene(
             auto sid = 0;
             for (auto& gprim : gmesh.value("primitives", json::array())) {
                 if (!gprim.count("attributes")) continue;
-                auto shp = std::make_shared<shape>();
+                auto shp = new shape();
                 shp->name = gmesh.value("name", ""s) +
                             ((sid) ? std::to_string(sid) : std::string());
                 sid++;
@@ -2597,7 +2632,7 @@ std::shared_ptr<scene> load_gltf_scene(
     if (gltf.count("cameras")) {
         for (auto cid = 0; cid < gltf.at("cameras").size(); cid++) {
             auto& gcam = gltf.at("cameras").at(cid);
-            auto cam = std::make_shared<camera>();
+            auto cam = new camera();
             cam->name = gcam.value("name", ""s);
             cam->ortho = gcam.value("type", ""s) == "orthographic";
             if (cam->ortho) {
@@ -2627,7 +2662,7 @@ std::shared_ptr<scene> load_gltf_scene(
     if (gltf.count("nodes")) {
         for (auto nid = 0; nid < gltf.at("nodes").size(); nid++) {
             auto& gnde = gltf.at("nodes").at(nid);
-            auto nde = std::make_shared<node>();
+            auto nde = new node();
             nde->name = gnde.value("name", ""s);
             if (gnde.count("camera"))
                 nde->cam = scn->cameras[gnde.value("camera", 0)];
@@ -2655,17 +2690,17 @@ std::shared_ptr<scene> load_gltf_scene(
             auto& shps = meshes.at(gnde.value("mesh", 0));
             if (shps.empty()) continue;
             if (shps.size() == 1) {
-                nde->ist = std::make_shared<instance>();
+                nde->ist = new instance();
                 nde->ist->name = nde->name;
                 nde->ist->shp = shps[0].first;
                 nde->ist->mat = shps[0].second;
                 scn->instances.push_back(nde->ist);
             } else {
                 for (auto shp : shps) {
-                    auto child = std::make_shared<node>();
+                    auto child = new node();
                     child->name = nde->name + "_" + shp.first->name;
                     child->parent = nde;
-                    child->ist = std::make_shared<instance>();
+                    child->ist = new instance();
                     child->ist->name = child->name;
                     child->ist->shp = shp.first;
                     child->ist->mat = shp.second;
@@ -2692,7 +2727,7 @@ std::shared_ptr<scene> load_gltf_scene(
                         path}) == sampler_map.end()) {
                     auto& gsampler = ganm.at("samplers")
                                          .at(gchannel.at("sampler").get<int>());
-                    auto anm = std::make_shared<animation>();
+                    auto anm = new animation();
                     anm->name = (ganm.count("name") ? ganm.value("name", ""s) :
                                                       "anim") +
                                 std::to_string(aid++);
@@ -2807,7 +2842,7 @@ std::shared_ptr<scene> load_gltf_scene(
     }
 
     // assign opacity texture if needed
-    auto has_opacity = std::unordered_map<std::shared_ptr<texture>, bool>();
+    auto has_opacity = std::unordered_map<texture*, bool>();
     for (auto& txt : scn->textures) {
         has_opacity[txt] = false;
         for (auto& p : txt->img.pxl)
@@ -2826,8 +2861,8 @@ std::shared_ptr<scene> load_gltf_scene(
 }
 
 // Save gltf json
-void save_gltf_scene(const std::string& filename,
-    const std::shared_ptr<scene>& scn, bool save_textures, bool skip_missing) {
+void save_gltf_scene(const std::string& filename, const scene* scn,
+    bool save_textures, bool skip_missing) {
     // start creating json
     auto js = json::object();
     js["asset"]["version"] = "2.0";
@@ -2849,7 +2884,7 @@ void save_gltf_scene(const std::string& filename,
     if (!scn->nodes.empty()) js["nodes"] = json::array();
 
     // convert cameras
-    auto cmap = std::unordered_map<std::shared_ptr<camera>, int>();
+    auto cmap = std::unordered_map<camera*, int>();
     for (auto cam : scn->cameras) {
         auto cjs = json();
         cjs["name"] = cam->name;
@@ -2870,7 +2905,7 @@ void save_gltf_scene(const std::string& filename,
     }
 
     // textures
-    auto tmap = std::unordered_map<std::shared_ptr<texture>, int>();
+    auto tmap = std::unordered_map<texture*, int>();
     for (auto& txt : scn->textures) {
         auto tjs = json(), ijs = json();
         tjs["source"] = (int)js["images"].size();
@@ -2881,7 +2916,7 @@ void save_gltf_scene(const std::string& filename,
     }
 
     // material
-    auto mmap = std::unordered_map<std::shared_ptr<material>, int>();
+    auto mmap = std::unordered_map<material*, int>();
     for (auto mat : scn->materials) {
         auto mjs = json();
         mjs["name"] = mat->name;
@@ -2921,12 +2956,12 @@ void save_gltf_scene(const std::string& filename,
     }
 
     // determine shape materials
-    auto shape_mats = std::unordered_map<std::shared_ptr<shape>, int>();
+    auto shape_mats = std::unordered_map<shape*, int>();
     for (auto ist : scn->instances)
         if (ist->mat) shape_mats[ist->shp] = mmap.at(ist->mat);
 
     // shapes
-    auto smap = std::unordered_map<std::shared_ptr<shape>, int>();
+    auto smap = std::unordered_map<shape*, int>();
     for (auto shp : scn->shapes) {
         auto mjs = json(), bjs = json(), pjs = json();
         auto bid = js["buffers"].size();
@@ -2986,7 +3021,7 @@ void save_gltf_scene(const std::string& filename,
     }
 
     // nodes
-    auto nmap = std::unordered_map<std::shared_ptr<node>, int>();
+    auto nmap = std::unordered_map<node*, int>();
     for (auto& nde : scn->nodes) {
         auto njs = json();
         njs["name"] = nde->name;
@@ -2998,8 +3033,7 @@ void save_gltf_scene(const std::string& filename,
         if (nde->ist) njs["mesh"] = smap.at(nde->ist->shp);
         if (!nde->children.empty()) {
             njs["children"] = json::array();
-            for (auto& c : nde->children)
-                njs["children"].push_back(nmap.at(c.lock()));
+            for (auto& c : nde->children) njs["children"].push_back(nmap.at(c));
         }
         js["nodes"].push_back(njs);
         nmap[nde] = (int)js["nodes"].size() - 1;
@@ -3226,25 +3260,25 @@ json pbrt_to_json(const std::string& filename) {
 }
 
 // load pbrt scenes
-std::shared_ptr<scene> load_pbrt_scene(
+scene* load_pbrt_scene(
     const std::string& filename, bool load_textures, bool skip_missing) {
     auto js = pbrt_to_json(filename);
     auto dirname = get_dirname(filename);
 
     struct stack_item {
         frame3f frame = identity_frame3f;
-        std::shared_ptr<material> mat = nullptr;
-        std::shared_ptr<material> light_mat = nullptr;
+        material* mat = nullptr;
+        material* light_mat = nullptr;
         float focus = 1, aspect = 1;
         bool reverse = false;
     };
 
     // parse
-    auto scn = std::make_shared<scene>();
+    auto scn = new scene();
     auto stack = std::vector<stack_item>();
     stack.push_back(stack_item());
-    auto txt_map = std::map<std::string, std::shared_ptr<texture>>();
-    auto mat_map = std::map<std::string, std::shared_ptr<material>>();
+    auto txt_map = std::map<std::string, texture*>();
+    auto mat_map = std::map<std::string, material*>();
     auto mid = 0;
 
     auto get_vec3f = [](const json& js) -> vec3f {
@@ -3333,15 +3367,14 @@ std::shared_ptr<scene> load_pbrt_scene(
     };
 
     auto get_scaled_texture =
-        [&txt_map, &get_vec3f](
-            const json& js) -> std::pair<vec3f, std::shared_ptr<texture>> {
+        [&txt_map, &get_vec3f](const json& js) -> std::pair<vec3f, texture*> {
         if (js.is_string())
             return {{1, 1, 1}, txt_map.at(js.get<std::string>())};
         return {get_vec3f(js), nullptr};
     };
 
     auto use_hierarchy = false;
-    std::map<std::string, std::vector<std::shared_ptr<instance>>> objects;
+    std::map<std::string, std::vector<instance*>> objects;
     for (auto& jcmd : js) {
         auto cmd = jcmd.at("cmd").get<std::string>();
         if (cmd == "ObjectInstance") {
@@ -3383,7 +3416,7 @@ std::shared_ptr<scene> load_pbrt_scene(
             stack.back().aspect = jcmd.at("xresolution").get<float>() /
                                   jcmd.at("yresolution").get<float>();
         } else if (cmd == "Camera") {
-            auto cam = std::make_shared<camera>();
+            auto cam = new camera();
             cam->name = "cam" + std::to_string(cid++);
             cam->frame = inverse(stack.back().frame);
             cam->frame.z = -cam->frame.z;
@@ -3408,7 +3441,7 @@ std::shared_ptr<scene> load_pbrt_scene(
                 }
             }
             if (!found) {
-                auto txt = std::make_shared<texture>();
+                auto txt = new texture();
                 scn->textures.push_back(txt);
                 txt->name = jcmd.at("name").get<std::string>();
                 txt_map[txt->name] = txt;
@@ -3433,7 +3466,7 @@ std::shared_ptr<scene> load_pbrt_scene(
                 }
             }
             if (!found) {
-                auto mat = std::make_shared<material>();
+                auto mat = new material();
                 scn->materials.push_back(mat);
                 if (cmd == "Material") {
                     mat->name = "unnamed_mat" + std::to_string(mid++);
@@ -3457,7 +3490,7 @@ std::shared_ptr<scene> load_pbrt_scene(
                             get_scaled_texture(jcmd.at("Kt"));
                     if (jcmd.count("opacity")) {
                         auto op = vec3f{0, 0, 0};
-                        auto op_txt = std::shared_ptr<texture>();
+                        auto op_txt = (texture*)nullptr;
                         std::tie(op, op_txt) =
                             get_scaled_texture(jcmd.at("opacity"));
                         mat->op = (op.x + op.y + op.z) / 3;
@@ -3537,7 +3570,7 @@ std::shared_ptr<scene> load_pbrt_scene(
         } else if (cmd == "NamedMaterial") {
             stack.back().mat = mat_map.at(jcmd.at("name").get<std::string>());
             if (stack.back().light_mat) {
-                auto mat = std::make_shared<material>(*stack.back().mat);
+                auto mat = new material(*stack.back().mat);
                 mat->name += "_" + std::to_string(lid++);
                 mat->ke = stack.back().light_mat->ke;
                 mat->ke_txt = stack.back().light_mat->ke_txt;
@@ -3545,7 +3578,7 @@ std::shared_ptr<scene> load_pbrt_scene(
                 stack.back().mat = mat;
             }
         } else if (cmd == "Shape") {
-            auto shp = std::make_shared<shape>();
+            auto shp = new shape();
             auto type = jcmd.at("type").get<std::string>();
             if (type == "plymesh") {
                 auto filename = jcmd.at("filename").get<std::string>();
@@ -3597,7 +3630,7 @@ std::shared_ptr<scene> load_pbrt_scene(
                 for (auto& t : shp->triangles) std::swap(t.y, t.z);
             }
             scn->shapes.push_back(shp);
-            auto ist = std::make_shared<instance>();
+            auto ist = new instance();
             ist->name = shp->name;
             ist->frame = frame;
             ist->shp = shp;
@@ -3613,7 +3646,7 @@ std::shared_ptr<scene> load_pbrt_scene(
             auto& object = objects.at(name);
             for (auto shp : object) {
                 instances[shp->name] += 1;
-                auto ist = std::make_shared<instance>();
+                auto ist = new instance();
                 ist->name =
                     shp->name + "_ist" + std::to_string(instances[shp->name]);
                 ist->frame = stack.back().frame * shp->frame;
@@ -3623,7 +3656,7 @@ std::shared_ptr<scene> load_pbrt_scene(
         } else if (cmd == "AreaLightSource") {
             auto type = jcmd.at("type").get<std::string>();
             if (type == "diffuse") {
-                auto lmat = std::make_shared<material>();
+                auto lmat = new material();
                 lmat->ke = get_vec3f(jcmd.at("L"));
                 stack.back().light_mat = lmat;
             } else {
@@ -3632,7 +3665,7 @@ std::shared_ptr<scene> load_pbrt_scene(
         } else if (cmd == "LightSource") {
             auto type = jcmd.at("type").get<std::string>();
             if (type == "infinite") {
-                auto env = std::make_shared<environment>();
+                auto env = new environment();
                 env->name = "env" + std::to_string(lid++);
                 // env->frame = frame3f{{1,0,0},{0,0,-1},{0,-1,0},{0,0,0}} *
                 // stack.back().frame;
@@ -3641,7 +3674,7 @@ std::shared_ptr<scene> load_pbrt_scene(
                 env->ke = {1, 1, 1};
                 if (jcmd.count("scale")) env->ke *= get_vec3f(jcmd.at("scale"));
                 if (jcmd.count("mapname")) {
-                    auto txt = std::make_shared<texture>();
+                    auto txt = new texture();
                     txt->path = jcmd.at("mapname").get<std::string>();
                     txt->name = env->name;
                     scn->textures.push_back(txt);
@@ -3650,7 +3683,7 @@ std::shared_ptr<scene> load_pbrt_scene(
                 scn->environments.push_back(env);
             } else if (type == "distant") {
                 auto distant_dist = 100;
-                auto shp = std::make_shared<shape>();
+                auto shp = new shape();
                 shp->name = "distant" + std::to_string(lid++);
                 auto from = vec3f{0, 0, 0}, to = vec3f{0, 0, 0};
                 if (jcmd.count("from")) from = get_vec3f(jcmd.at("from"));
@@ -3663,14 +3696,14 @@ std::shared_ptr<scene> load_pbrt_scene(
                 shp->texcoord = sshp.texcoord;
                 shp->triangles = sshp.triangles;
                 scn->shapes.push_back(shp);
-                auto mat = std::make_shared<material>();
+                auto mat = new material();
                 mat->name = shp->name;
                 mat->ke = {1, 1, 1};
                 if (jcmd.count("L")) mat->ke *= get_vec3f(jcmd.at("L"));
                 if (jcmd.count("scale")) mat->ke *= get_vec3f(jcmd.at("scale"));
                 mat->ke *= (distant_dist * distant_dist) / (size * size);
                 scn->materials.push_back(mat);
-                auto ist = std::make_shared<instance>();
+                auto ist = new instance();
                 ist->name = shp->name;
                 ist->shp = shp;
                 ist->mat = mat;
@@ -3703,14 +3736,14 @@ std::shared_ptr<scene> load_pbrt_scene(
     }
     if (use_hierarchy) {
         for (auto cam : scn->cameras) {
-            auto nde = std::make_shared<node>();
+            auto nde = new node();
             nde->name = cam->name;
             nde->frame = cam->frame;
             nde->cam = cam;
             scn->nodes.insert(scn->nodes.begin(), nde);
         }
         for (auto env : scn->environments) {
-            auto nde = std::make_shared<node>();
+            auto nde = new node();
             nde->name = env->name;
             nde->frame = env->frame;
             nde->env = env;
@@ -3743,7 +3776,7 @@ std::shared_ptr<scene> load_pbrt_scene(
 }
 
 // Attempt to fix pbrt z-up.
-void pbrt_flipyz_scene(const std::shared_ptr<scene>& scn) {
+void pbrt_flipyz_scene(const scene* scn) {
     // flip meshes
     for (auto shp : scn->shapes) {
         for (auto& p : shp->pos) std::swap(p.y, p.z);
@@ -4364,8 +4397,8 @@ void load_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
     std::vector<vec4f>& color) {
     auto ext = get_extension(filename);
     if (ext == "obj" || ext == "OBJ") {
-        load_obj_fvmesh(
-            filename, quads_pos, pos, quads_norm, norm, quads_texcoord, texcoord);
+        load_obj_fvmesh(filename, quads_pos, pos, quads_norm, norm,
+            quads_texcoord, texcoord);
     } else {
         throw std::runtime_error("unsupported mesh extensions " + ext);
     }
@@ -4380,8 +4413,8 @@ void save_fvmesh(const std::string& filename,
     const std::vector<vec4f>& color, bool ascii) {
     auto ext = get_extension(filename);
     if (ext == "obj" || ext == "OBJ") {
-        save_obj_fvmesh(
-            filename, quads_pos, pos, quads_norm, norm, quads_texcoord, texcoord);
+        save_obj_fvmesh(filename, quads_pos, pos, quads_norm, norm,
+            quads_texcoord, texcoord);
     } else {
         throw std::runtime_error("unsupported mesh extensions " + ext);
     }
@@ -4399,7 +4432,7 @@ void load_obj_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
     auto opos = std::deque<vec3f>();
     auto onorm = std::deque<vec3f>();
     auto otexcoord = std::deque<vec2f>();
-    
+
     pos.clear();
     norm.clear();
     texcoord.clear();
@@ -4440,7 +4473,7 @@ void load_obj_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
         } else if (cmd == "f" || cmd == "l" || cmd == "p") {
             auto num = 0;
             vec3i verts[128];
-            int pos_vids[128], texcoord_vids[128], norm_vids[128];            
+            int pos_vids[128], texcoord_vids[128], norm_vids[128];
             auto vert_size =
                 vec3i{(int)pos.size(), (int)texcoord.size(), (int)norm.size()};
             // elem.material = (int)oobj->materials.size() - 1;
@@ -4461,7 +4494,7 @@ void load_obj_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
                                                      (vert.norm - 1);
                 num++;
             }
-            if(verts[0].x >= 0) {
+            if (verts[0].x >= 0) {
                 for (auto i = 0; i < num; i++) {
                     auto pos_it = pos_map.find(verts[i].x);
                     if (pos_it == pos_map.end()) {
@@ -4474,7 +4507,7 @@ void load_obj_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
                     }
                 }
             }
-            if(verts[0].y >= 0) {
+            if (verts[0].y >= 0) {
                 for (auto i = 0; i < num; i++) {
                     auto texcoord_it = texcoord_map.find(verts[i].y);
                     if (texcoord_it == texcoord_map.end()) {
@@ -4487,7 +4520,7 @@ void load_obj_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
                     }
                 }
             }
-            if(verts[0].z >= 0) {
+            if (verts[0].z >= 0) {
                 for (auto i = 0; i < num; i++) {
                     auto norm_it = norm_map.find(verts[i].z);
                     if (norm_it == norm_map.end()) {
@@ -4501,28 +4534,36 @@ void load_obj_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
                 }
             }
             if (cmd == "f") {
-                if(num == 4) {
-                    if(verts[0].x >= 0) {
-                        quads_pos.push_back({pos_vids[0], pos_vids[1], pos_vids[2], pos_vids[3]});
+                if (num == 4) {
+                    if (verts[0].x >= 0) {
+                        quads_pos.push_back({pos_vids[0], pos_vids[1],
+                            pos_vids[2], pos_vids[3]});
                     }
-                    if(verts[0].y >= 0) {
-                        quads_texcoord.push_back({texcoord_vids[0], texcoord_vids[1], texcoord_vids[2], texcoord_vids[3]});
+                    if (verts[0].y >= 0) {
+                        quads_texcoord.push_back(
+                            {texcoord_vids[0], texcoord_vids[1],
+                                texcoord_vids[2], texcoord_vids[3]});
                     }
-                    if(verts[0].z >= 0) {
-                        quads_norm.push_back({norm_vids[0], norm_vids[1], norm_vids[2], norm_vids[3]});
+                    if (verts[0].z >= 0) {
+                        quads_norm.push_back({norm_vids[0], norm_vids[1],
+                            norm_vids[2], norm_vids[3]});
                     }
                 } else {
-                    if(verts[0].x >= 0) {
+                    if (verts[0].x >= 0) {
                         for (auto i = 2; i < num; i++)
-                            quads_pos.push_back({pos_vids[0], pos_vids[i - 1], pos_vids[i], pos_vids[i]});
+                            quads_pos.push_back({pos_vids[0], pos_vids[i - 1],
+                                pos_vids[i], pos_vids[i]});
                     }
-                    if(verts[0].y >= 0) {
+                    if (verts[0].y >= 0) {
                         for (auto i = 2; i < num; i++)
-                            quads_texcoord.push_back({texcoord_vids[0], texcoord_vids[i - 1], texcoord_vids[i], texcoord_vids[i]});
+                            quads_texcoord.push_back(
+                                {texcoord_vids[0], texcoord_vids[i - 1],
+                                    texcoord_vids[i], texcoord_vids[i]});
                     }
-                    if(verts[0].z >= 0) {
+                    if (verts[0].z >= 0) {
                         for (auto i = 2; i < num; i++)
-                            quads_pos.push_back({norm_vids[0], norm_vids[i - 1], norm_vids[i], norm_vids[i]});
+                            quads_pos.push_back({norm_vids[0], norm_vids[i - 1],
+                                norm_vids[i], norm_vids[i]});
                     }
                 }
             }

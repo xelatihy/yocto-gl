@@ -23,61 +23,133 @@
             }
         }
     ],
-    "instances": [
+    "textures": [
         {
             "name": "floor",
-            "shp": {
-                "name": "floor",
-                "!!proc": {
-                    "type": "floor"
-                }
-            },
-            "mat": {
-                "name": "floor",
-                "kd": [
-                    0.7,
-                    0.7,
-                    0.7
-                ],
-                "kd_txt": {
-                    "name": "floor",
-                    "path": "textures/floor.png",
-                    "gamma": 2.2,
-                    "!!proc": {
-                        "type": "grid"
-                    }
-                }
+            "path": "textures/floor.png",
+            "gamma": 2.2,
+            "!!proc": {
+                "type": "grid"
+            }
+        },
+        {
+            "name": "sky",
+            "path": "textures/sky.hdr",
+            "!!proc": {
+                "type": "sky"
+            }
+        }
+    ],
+    "materials": [
+        {
+            "name": "floor",
+            "kd": [
+                0.7,
+                0.7,
+                0.7
+            ],
+            "kd_txt": "floor"
+        },
+        {
+            "name": "obj1",
+            "kd": [
+                0,
+                0,
+                0
+            ],
+            "ks": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "kt": [
+                1,
+                1,
+                1
+            ],
+            "rs": 0,
+            "refract": true
+        },
+        {
+            "name": "obj2",
+            "kd": [
+                0,
+                0,
+                0
+            ],
+            "ks": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "kt": [
+                1,
+                0.7,
+                0.7
+            ],
+            "rs": 0,
+            "refract": true
+        },
+        {
+            "name": "obj3",
+            "kd": [
+                0,
+                0,
+                0
+            ],
+            "ks": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "kt": [
+                1,
+                1,
+                1
+            ],
+            "rs": 0.1,
+            "refract": true
+        }
+    ],
+    "shapes": [
+        {
+            "name": "floor",
+            "!!proc": {
+                "type": "floor"
             }
         },
         {
             "name": "obj1",
-            "shp": {
-                "name": "obj1",
-                "path": "meshes/obj1.ply",
-                "!!proc": {
-                    "type": "matball"
-                }
-            },
-            "mat": {
-                "name": "obj1",
-                "kd": [
-                    0,
-                    0,
-                    0
-                ],
-                "ks": [
-                    0.04,
-                    0.04,
-                    0.04
-                ],
-                "kt": [
-                    1,
-                    1,
-                    1
-                ],
-                "rs": 0,
-                "refract": true
-            },
+            "path": "meshes/obj1.ply",
+            "!!proc": {
+                "type": "matball"
+            }
+        },
+        {
+            "name": "obj2",
+            "path": "meshes/obj2.ply",
+            "!!proc": {
+                "type": "matball"
+            }
+        },
+        {
+            "name": "obj3",
+            "path": "meshes/obj3.ply",
+            "!!proc": {
+                "type": "matball"
+            }
+        }
+    ],
+    "instances": [
+        {
+            "name": "floor",
+            "shp": "floor",
+            "mat": "floor"
+        },
+        {
+            "name": "obj1",
+            "shp": "obj1",
+            "mat": "obj1",
             "!!proc": {
                 "translation": [
                     -2.5,
@@ -88,33 +160,8 @@
         },
         {
             "name": "obj2",
-            "shp": {
-                "name": "obj2",
-                "path": "meshes/obj2.ply",
-                "!!proc": {
-                    "type": "matball"
-                }
-            },
-            "mat": {
-                "name": "obj2",
-                "kd": [
-                    0,
-                    0,
-                    0
-                ],
-                "ks": [
-                    0.04,
-                    0.04,
-                    0.04
-                ],
-                "kt": [
-                    1,
-                    0.7,
-                    0.7
-                ],
-                "rs": 0,
-                "refract": true
-            },
+            "shp": "obj2",
+            "mat": "obj2",
             "!!proc": {
                 "translation": [
                     0,
@@ -125,33 +172,8 @@
         },
         {
             "name": "obj3",
-            "shp": {
-                "name": "obj3",
-                "path": "meshes/obj3.ply",
-                "!!proc": {
-                    "type": "matball"
-                }
-            },
-            "mat": {
-                "name": "obj3",
-                "kd": [
-                    0,
-                    0,
-                    0
-                ],
-                "ks": [
-                    0.04,
-                    0.04,
-                    0.04
-                ],
-                "kt": [
-                    1,
-                    1,
-                    1
-                ],
-                "rs": 0.1,
-                "refract": true
-            },
+            "shp": "obj3",
+            "mat": "obj3",
             "!!proc": {
                 "translation": [
                     2.5,
@@ -169,13 +191,7 @@
                 1,
                 1
             ],
-            "ke_txt": {
-                "name": "sky",
-                "path": "textures/sky.hdr",
-                "!!proc": {
-                    "type": "sky"
-                }
-            }
+            "ke_txt": "sky"
         }
     ]
 }

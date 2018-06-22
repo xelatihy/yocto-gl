@@ -106,41 +106,36 @@ image4f load_image_from_memory(const byte* data, int data_size);
 namespace ygl {
 
 // Load/save a scene in the supported formats.
-std::shared_ptr<scene> load_scene(const std::string& filename,
-    bool load_textures = true, bool skip_missing = true);
-void save_scene(const std::string& filename, const std::shared_ptr<scene>& scn,
+scene* load_scene(const std::string& filename, bool load_textures = true,
+    bool skip_missing = true);
+void save_scene(const std::string& filename, const scene* scn,
     bool save_textures = true, bool skip_missing = true);
 
 // Load/save a scene in the builtin JSON format.
-std::shared_ptr<scene> load_json_scene(const std::string& filename,
-    bool load_textures = true, bool skip_missing = true);
-void save_json_scene(const std::string& filename,
-    const std::shared_ptr<scene>& scn, bool save_textures = true,
+scene* load_json_scene(const std::string& filename, bool load_textures = true,
     bool skip_missing = true);
+void save_json_scene(const std::string& filename, const scene* scn,
+    bool save_textures = true, bool skip_missing = true);
 
 // Load/save a scene from/to OBJ.
-std::shared_ptr<scene> load_obj_scene(const std::string& filename,
-    bool load_textures = true, bool skip_missing = true,
-    bool split_shapes = true);
-void save_obj_scene(const std::string& filename,
-    const std::shared_ptr<scene>& scn, bool save_textures = true,
-    bool skip_missing = true);
+scene* load_obj_scene(const std::string& filename, bool load_textures = true,
+    bool skip_missing = true, bool split_shapes = true);
+void save_obj_scene(const std::string& filename, const scene* scn,
+    bool save_textures = true, bool skip_missing = true);
 
 // Load/save a scene from/to glTF.
-std::shared_ptr<scene> load_gltf_scene(const std::string& filename,
-    bool load_textures = true, bool skip_missing = true);
-void save_gltf_scene(const std::string& filename,
-    const std::shared_ptr<scene>& scn, bool save_textures = true,
+scene* load_gltf_scene(const std::string& filename, bool load_textures = true,
     bool skip_missing = true);
+void save_gltf_scene(const std::string& filename, const scene* scn,
+    bool save_textures = true, bool skip_missing = true);
 
 // Load/save a scene from/to pbrt. This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
-std::shared_ptr<scene> load_pbrt_scene(const std::string& filename,
-    bool load_textures = true, bool skip_missing = true);
-void save_pbrt_scene(const std::string& filename,
-    const std::shared_ptr<scene>& scn, bool save_textures = true,
+scene* load_pbrt_scene(const std::string& filename, bool load_textures = true,
     bool skip_missing = true);
+void save_pbrt_scene(const std::string& filename, const scene* scn,
+    bool save_textures = true, bool skip_missing = true);
 
 }  // namespace ygl
 
@@ -192,24 +187,26 @@ namespace ygl {
 
 // Load/Save a mesh
 void load_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
-    std::vector<vec3f>& pos, std::vector<vec4i>& quads_norm, 
+    std::vector<vec3f>& pos, std::vector<vec4i>& quads_norm,
     std::vector<vec3f>& norm, std::vector<vec4i>& quads_texcoord,
     std::vector<vec2f>& texcoord, std::vector<vec4i>& quads_color,
     std::vector<vec4f>& color);
-void save_fvmesh(const std::string& filename, const std::vector<vec4i>& quads_pos,
-    const std::vector<vec3f>& pos, const std::vector<vec4i>& quads_norm, 
-    const std::vector<vec3f>& norm, const std::vector<vec4i>& quads_texcoord,
+void save_fvmesh(const std::string& filename,
+    const std::vector<vec4i>& quads_pos, const std::vector<vec3f>& pos,
+    const std::vector<vec4i>& quads_norm, const std::vector<vec3f>& norm,
+    const std::vector<vec4i>& quads_texcoord,
     const std::vector<vec2f>& texcoord, const std::vector<vec4i>& quads_color,
     const std::vector<vec4f>& color, bool ascii = false);
 
 // Load/Save an OBJ mesh
 void load_obj_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
-    std::vector<vec3f>& pos, std::vector<vec4i>& quads_norm, 
+    std::vector<vec3f>& pos, std::vector<vec4i>& quads_norm,
     std::vector<vec3f>& norm, std::vector<vec4i>& quads_texcoord,
     std::vector<vec2f>& texcoord, bool flip_texcoord = true);
-void save_obj_fvmesh(const std::string& filename, const std::vector<vec4i>& quads_pos,
-    const std::vector<vec3f>& pos, const std::vector<vec4i>& quads_norm, 
-    const std::vector<vec3f>& norm, const std::vector<vec4i>& quads_texcoord,
+void save_obj_fvmesh(const std::string& filename,
+    const std::vector<vec4i>& quads_pos, const std::vector<vec3f>& pos,
+    const std::vector<vec4i>& quads_norm, const std::vector<vec3f>& norm,
+    const std::vector<vec4i>& quads_texcoord,
     const std::vector<vec2f>& texcoord, bool flip_texcoord = true);
 
 }  // namespace ygl

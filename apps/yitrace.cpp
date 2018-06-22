@@ -37,7 +37,7 @@ using namespace std::literals;
 // Application state
 struct app_state {
     // scene
-    std::shared_ptr<ygl::scene> scn = nullptr;
+    ygl::scene* scn = nullptr;
 
     // rendering params
     std::string filename = "scene.json"s;
@@ -70,6 +70,10 @@ struct app_state {
     bool navigation_fps = false;
     bool quiet = false;
     int64_t trace_start = 0;
+
+    ~app_state() {
+        if (scn) delete scn;
+    }
 };
 
 auto trace_names = std::vector<std::string>{"pathtrace", "direct",
@@ -165,7 +169,7 @@ void draw(GLFWwindow* win) {
     glfwSwapBuffers(win);
 }
 
-bool update(const std::shared_ptr<app_state>& app) {
+bool update(app_state* app) {
     // exit if no updated
     if (app->update_list.empty()) return false;
 
@@ -198,10 +202,10 @@ bool update(const std::shared_ptr<app_state>& app) {
 }
 
 // run ui loop
-void run_ui(const std::shared_ptr<app_state>& app) {
+void run_ui(app_state* app) {
     // window
     auto win_size = ygl::clamp(app->trace_state.img.size, 512, 1024);
-    auto win = ygl::make_window(win_size, "yitrace", app.get(), draw);
+    auto win = ygl::make_window(win_size, "yitrace", app, draw);
 
     // init widget
     ygl::init_widgets(win);
@@ -304,7 +308,7 @@ int main(int argc, char* argv[]) {
     } catch (const CLI::ParseError& e) { return parser.exit(e); }
 
     // scene loading
-    auto scn = std::shared_ptr<ygl::scene>();
+    auto scn = (ygl::scene*)nullptr;
     if (!quiet) std::cout << "loading scene" << filename << "\n";
     auto load_start = ygl::get_time();
     try {
@@ -360,7 +364,7 @@ int main(int argc, char* argv[]) {
     }
 
     // prepare application
-    auto app = std::make_shared<app_state>();
+    auto app = new app_state();
     app->scn = scn;
     app->filename = filename;
     app->imfilename = imfilename;
@@ -386,6 +390,7 @@ int main(int argc, char* argv[]) {
 
     // cleanup
     ygl::trace_async_stop(app->trace_state);
+    delete app;
 
     // done
     return 0;
