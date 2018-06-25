@@ -79,8 +79,7 @@
 #define YGL_FASTOBJ 1
 #endif
 
-#include "yocto_image.h"
-#include "yocto_math.h"
+#include "ygl.h"
 
 #include <algorithm>
 #include <array>
@@ -223,12 +222,11 @@ struct obj_scene {
     std::deque<vec3f> norm;      // vertex normals
     std::deque<vec2f> texcoord;  // vertex texcoords
 
-    std::vector<std::shared_ptr<obj_object>> objects;      // objects
-    std::vector<std::shared_ptr<obj_material>> materials;  // materials
-    std::vector<std::shared_ptr<obj_texture>> textures;    // textures
-    std::vector<std::shared_ptr<obj_camera>> cameras;  // cameras [extension]
-    std::vector<std::shared_ptr<obj_environment>>
-        environments;  // environments [extension]
+    std::vector<obj_object*> objects;      // objects
+    std::vector<obj_material*> materials;  // materials
+    std::vector<obj_texture*> textures;    // textures
+    std::vector<obj_camera*> cameras;  // cameras [extension]
+    std::vector<obj_environment*> environments;  // environments [extension]
 };
 
 // Load an OBJ from file `filename`. Split shapes at material and group
@@ -236,7 +234,7 @@ struct obj_scene {
 // Load textures if `load_textures` is true, and report errors only if
 // `skip_missing` is false. Texture coordinates and material Tr are flipped
 // if `flip_texcoord` and `flip_tp` are respectively true.
-inline std::shared_ptr<obj_scene> load_obj(const std::string& filename,
+inline obj_scene* load_obj(const std::string& filename,
     bool split_shapes, bool flip_texcoord = true, bool flip_tr = true);
 
 // Save an OBJ to file `filename`. Save textures if `save_textures` is true,
@@ -244,14 +242,14 @@ inline std::shared_ptr<obj_scene> load_obj(const std::string& filename,
 // Texture coordinates and material Tr are flipped if `flip_texcoord` and
 // `flip_tp` are respectively true.
 inline void save_obj(const std::string& filename,
-    const std::shared_ptr<obj_scene>& obj, bool flip_texcoord = true,
+    const obj_scene* obj, bool flip_texcoord = true,
     bool flip_tr = true);
 
 // Load OBJ texture images.
-inline void load_obj_textures(const std::shared_ptr<obj_scene>& obj,
+inline void load_obj_textures(const obj_scene* obj,
     const std::string& dirname, bool skip_missing = true);
 // Save OBJ texture images.
-inline void save_obj_textures(const std::shared_ptr<obj_scene>& obj,
+inline void save_obj_textures(const obj_scene* obj,
     const std::string& dirname, bool skip_missing = true);
 
 // Callback object
@@ -505,17 +503,17 @@ inline void obj_parse(char*& s, obj_texture_info& info) {
 }
 
 // Load MTL
-inline std::vector<std::shared_ptr<obj_material>> load_mtl(
+inline std::vector<obj_material*> load_mtl(
     const std::string& filename, bool flip_tr) {
     // clear materials
-    auto materials = std::vector<std::shared_ptr<obj_material>>();
+    auto materials = std::vector<obj_material*>();
 
     // open file
     auto fs = fopen(filename.c_str(), "rt");
     if (!fs) throw std::runtime_error("cannot open filename " + filename);
 
     // add a material preemptively to avoid crashes
-    materials.push_back(std::make_shared<obj_material>());
+    materials.push_back(new obj_material());
     auto mat = materials.back();
 
     // read the file line by line
@@ -637,7 +635,7 @@ inline std::vector<std::shared_ptr<obj_material>> load_mtl(
 }
 
 // Loads an OBJ
-inline std::shared_ptr<obj_scene> load_obj(const std::string& filename,
+inline obj_scene* load_obj(const std::string& filename,
     bool split_shapes, bool flip_texcoord, bool flip_tr) {
     // clear obj
     auto obj = std::make_shared<obj_scene>();
@@ -652,11 +650,11 @@ inline std::shared_ptr<obj_scene> load_obj(const std::string& filename,
     if (!fs) throw std::runtime_error("cannot open filename " + filename);
 
     // add object if needed
-    auto add_object = [&](std::shared_ptr<obj_scene> obj, std::string name,
+    auto add_object = [&](obj_scene* obj, std::string name,
                           std::string matname, std::string groupname,
                           bool smoothing) {
         if (obj->objects.empty() || !obj->objects.back()->elems.empty())
-            obj->objects.push_back(std::make_shared<obj_object>());
+            obj->objects.push_back(new obj_object());
         auto oobj = obj->objects.back();
         oobj->name = name;
         if (oobj->materials.empty()) oobj->materials.push_back("");
@@ -806,7 +804,7 @@ inline std::shared_ptr<obj_scene> load_obj(const std::string& filename,
             obj->materials.insert(
                 obj->materials.end(), mats.begin(), mats.end());
         } else if (obj_streq(cmd, "c")) {
-            auto cam = std::make_shared<obj_camera>();
+            auto cam = new obj_camera();
             obj_parse(ss, cam->name);
             obj_parse(ss, cam->ortho);
             obj_parse(ss, cam->width);
@@ -817,7 +815,7 @@ inline std::shared_ptr<obj_scene> load_obj(const std::string& filename,
             obj_parse(ss, cam->frame);
             obj->cameras.push_back(cam);
         } else if (obj_streq(cmd, "e")) {
-            auto env = std::make_shared<obj_environment>();
+            auto env = new obj_environment();
             obj_parse(ss, env->name);
             obj_parse(ss, env->ke);
             obj_parse(ss, env->ke_txt.path);
@@ -847,7 +845,7 @@ inline std::shared_ptr<obj_scene> load_obj(const std::string& filename,
         idx--;
     }
     auto end = std::remove_if(obj->objects.begin(), obj->objects.end(),
-        [](const std::shared_ptr<obj_object>& x) { return !x; });
+        [](const obj_object*& x) { return !x; });
     obj->objects.erase(end, obj->objects.end());
 
     // apply properties
@@ -855,8 +853,8 @@ inline std::shared_ptr<obj_scene> load_obj(const std::string& filename,
 
     // create textures
     auto txt_set =
-        std::unordered_map<std::string, std::shared_ptr<obj_texture>>();
-    auto add_texture = [](std::shared_ptr<obj_scene> obj, auto& txt_set,
+        std::unordered_map<std::string, obj_texture*>();
+    auto add_texture = [](obj_scene* obj, auto& txt_set,
                            const obj_texture_info& info) {
         if (info.path == "") return;
         if (txt_set.find(info.path) != txt_set.end()) return;
@@ -1242,7 +1240,7 @@ inline void obj_dump_nl(FILE* fs) { fputs("\n", fs); }
 
 // Save an MTL file
 inline void save_mtl(const std::string& filename,
-    const std::vector<std::shared_ptr<obj_material>>& materials, bool flip_tr) {
+    const std::vector<obj_material*>& materials, bool flip_tr) {
     // open file
     auto fs = fopen(filename.c_str(), "wt");
     if (!fs) throw std::runtime_error("cannot open filename " + filename);
@@ -1294,7 +1292,7 @@ inline void save_mtl(const std::string& filename,
 
 // Save an OBJ
 inline void save_obj(const std::string& filename,
-    const std::shared_ptr<obj_scene>& obj, bool flip_texcoord, bool flip_tr) {
+    const obj_scene*& obj, bool flip_texcoord, bool flip_tr) {
     // open file
     auto fs = fopen(filename.c_str(), "wt");
     if (!fs) throw std::runtime_error("cannot open filename " + filename);
@@ -1400,7 +1398,7 @@ inline void save_obj(const std::string& filename,
 }
 
 // Load OBJ texture images.
-inline void load_obj_textures(const std::shared_ptr<obj_scene>& obj,
+inline void load_obj_textures(const obj_scene*& obj,
     const std::string& dirname, bool skip_missing) {
     // set gamma
     auto ldr_gamma = std::unordered_map<std::string, float>{{"", 1.0f}};
@@ -1434,7 +1432,7 @@ inline void load_obj_textures(const std::shared_ptr<obj_scene>& obj,
 }
 
 // Save OBJ texture images.
-void save_obj_textures(const std::shared_ptr<obj_scene>& obj,
+void save_obj_textures(const obj_scene*& obj,
     const std::string& dirname, bool skip_missing) {
     // set gamma
     auto ldr_gamma = std::unordered_map<std::string, float>{{"", 1.0f}};
@@ -1475,7 +1473,7 @@ void save_obj_textures(const std::shared_ptr<obj_scene>& obj,
 // Load textures if `load_textures` is true, and report errors only if
 // `skip_missing` is false. Texture coordinates and material Tr are flipped
 // if `flip_texcoord` and `flip_tp` are respectively true.
-inline std::shared_ptr<obj_scene> load_obj(const std::string& filename,
+inline obj_scene* load_obj(const std::string& filename,
     bool split_shapes, bool flip_texcoord, bool flip_tr) {
     return detail::load_obj(filename, split_shapes, flip_texcoord, flip_tr);
 }
@@ -1485,17 +1483,17 @@ inline std::shared_ptr<obj_scene> load_obj(const std::string& filename,
 // Texture coordinates and material Tr are flipped if `flip_texcoord` and
 // `flip_tp` are respectively true.
 inline void save_obj(const std::string& filename,
-    const std::shared_ptr<obj_scene>& obj, bool flip_texcoord, bool flip_tr) {
+    const obj_scene*& obj, bool flip_texcoord, bool flip_tr) {
     return detail::save_obj(filename, obj, flip_texcoord, flip_tr);
 }
 
 // Load OBJ texture images.
-inline void load_obj_textures(const std::shared_ptr<obj_scene>& obj,
+inline void load_obj_textures(const obj_scene*& obj,
     const std::string& dirname, bool skip_missing) {
     return detail::load_obj_textures(obj, dirname, skip_missing);
 }
 // Save OBJ texture images.
-inline void save_obj_textures(const std::shared_ptr<obj_scene>& obj,
+inline void save_obj_textures(const obj_scene*& obj,
     const std::string& dirname, bool skip_missing) {
     return detail::save_obj_textures(obj, dirname, skip_missing);
 }

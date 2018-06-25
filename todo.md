@@ -3,22 +3,18 @@
 This file contains notes on future improvements of Yocto.
 Please consider this to be just development notes and not any real planning.
 
-## next
+## Next features
 
-- inlined json
-- tinyobjloader
-    - modified with lines
-    - use only callbacks, but with triangulate?
-- happly library cmu
+- embree
+- luts
+- tone curve
 
 ## giacomo
 
-- pbrt import / export
-    - load textures
-    - copy ypbrt code into load_scene
+- pbrt export
 - volumetric values
 
-## Scene changes
+## scene changes
 
 - simpler shapes functions
     - add functions on quads using embree parametrization
@@ -36,16 +32,12 @@ Please consider this to be just development notes and not any real planning.
 - utah teapot
 - bunny embed
 
-## image
-
-- tone curve
-- 3D lut
-
 ## Library
 
 - io
     - consider json i/o inline
     - consider tinyobjloader
+    - consider happly library cmu
 - quad
     - add edge visualization
     - diamond triangles

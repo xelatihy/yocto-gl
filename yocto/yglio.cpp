@@ -859,19 +859,16 @@ void to_json(json& js, const material& val) {
     if (val.op != def.op) js["op"] = val.op;
     if (val.fresnel != def.fresnel) js["fresnel"] = val.fresnel;
     if (val.refract != def.refract) js["refract"] = val.refract;
-    if (val.ke_txt != def.ke_txt) js["ke_txt"]["name"] = val.ke_txt->name;
-    if (val.kd_txt != def.kd_txt) js["kd_txt"]["name"] = val.kd_txt->name;
-    if (val.ks_txt != def.ks_txt) js["ks_txt"]["name"] = val.ks_txt->name;
-    if (val.kt_txt != def.kt_txt) js["kt_txt"]["name"] = val.kt_txt->name;
-    if (val.rs_txt != def.rs_txt) js["rs_txt"]["name"] = val.rs_txt->name;
-    if (val.op_txt != def.op_txt) js["op_txt"]["name"] = val.op_txt->name;
-    if (val.occ_txt != def.occ_txt) js["occ_txt"]["name"] = val.occ_txt->name;
-    if (val.bump_txt != def.bump_txt)
-        js["bump_txt"]["name"] = val.bump_txt->name;
-    if (val.disp_txt != def.disp_txt)
-        js["disp_txt"]["name"] = val.disp_txt->name;
-    if (val.norm_txt != def.norm_txt)
-        js["norm_txt"]["name"] = val.norm_txt->name;
+    if (val.ke_txt != def.ke_txt) js["ke_txt"] = val.ke_txt->name;
+    if (val.kd_txt != def.kd_txt) js["kd_txt"] = val.kd_txt->name;
+    if (val.ks_txt != def.ks_txt) js["ks_txt"] = val.ks_txt->name;
+    if (val.kt_txt != def.kt_txt) js["kt_txt"] = val.kt_txt->name;
+    if (val.rs_txt != def.rs_txt) js["rs_txt"] = val.rs_txt->name;
+    if (val.op_txt != def.op_txt) js["op_txt"] = val.op_txt->name;
+    if (val.occ_txt != def.occ_txt) js["occ_txt"] = val.occ_txt->name;
+    if (val.bump_txt != def.bump_txt) js["bump_txt"] = val.bump_txt->name;
+    if (val.disp_txt != def.disp_txt) js["disp_txt"] = val.disp_txt->name;
+    if (val.norm_txt != def.norm_txt) js["norm_txt"] = val.norm_txt->name;
 }
 
 // Procedural commands for materials
@@ -1139,9 +1136,9 @@ void to_json(json& js, const instance& val) {
     static const auto def = instance();
     if (val.name != def.name) js["name"] = val.name;
     if (val.frame != def.frame) js["frame"] = val.frame;
-    if (val.shp != def.shp) js["shp"]["name"] = val.shp->name;
-    if (val.mat != def.mat) js["mat"]["name"] = val.mat->name;
-    if (val.sbd != def.sbd) js["sbd"]["name"] = val.sbd->name;
+    if (val.shp != def.shp) js["shp"] = val.shp->name;
+    if (val.mat != def.mat) js["mat"] = val.mat->name;
+    if (val.sbd != def.sbd) js["sbd"] = val.sbd->name;
 }
 
 // Procedural commands for instances
@@ -1220,10 +1217,10 @@ void to_json(json& js, const node& val) {
     if (val.rotation != def.rotation) js["rotation"] = val.rotation;
     if (val.scale != def.scale) js["scale"] = val.scale;
     if (val.weights != def.weights) js["weights"] = val.weights;
-    if (val.parent != def.parent) js["parent"]["name"] = val.parent->name;
-    if (val.cam != def.cam) js["cam"]["name"] = val.cam->name;
-    if (val.ist != def.ist) js["ist"]["name"] = val.ist->name;
-    if (val.env != def.env) js["env"]["name"] = val.env->name;
+    if (val.parent != def.parent) js["parent"] = val.parent->name;
+    if (val.cam != def.cam) js["cam"] = val.cam->name;
+    if (val.ist != def.ist) js["ist"] = val.ist->name;
+    if (val.env != def.env) js["env"] = val.env->name;
 }
 
 // Procedural commands for nodes
@@ -1300,10 +1297,7 @@ void to_json(json& js, const animation& val) {
     }
     if (val.targets != def.targets) {
         js["targets"] = json::array();
-        for (auto v : val.targets) {
-            js["targets"].push_back(json::object());
-            js["targets"].back()["name"] = v->name;
-        }
+        for (auto v : val.targets) js["targets"].push_back(v->name);
     }
 }
 
@@ -1685,6 +1679,119 @@ inline std::ostream& operator<<(std::ostream& os, const obj_vertex& v) {
     return os;
 }
 
+// fast unsafe string parser
+struct fastparsestream {
+    fastparsestream(const std::string& str_) {
+        str = str_;
+        for(auto& c : str) if(c == '\t' || c == '\r' || c == '\n') c = ' ';
+        s = str.c_str();
+    }
+    std::string str;
+    const char* s = nullptr;
+};
+
+// parse stream
+inline fastparsestream& operator>>(fastparsestream& is, int& val) {
+    val = 0;
+    if(!*is.s) return is;
+    while (*is.s == ' ') is.s++;
+    auto sn = (*is.s == '-') ? -1 : 1;
+    if (*is.s == '-' || *is.s == '+') is.s++;
+    while (*is.s >= '0' && *is.s <= '9') val = val * 10 + (*is.s++ - '0');
+    val *= sn;
+    return is;
+}
+inline fastparsestream& operator>>(fastparsestream& is, bool& val) {
+    val = false;
+    if(!*is.s) return is;
+    auto vali = 0;
+    is >> vali;
+    val = (bool)vali;
+    return is;
+}
+inline fastparsestream& operator>>(fastparsestream& is, double& val) {
+    val = 0;
+    if(!*is.s) return is;
+    while (*is.s == ' ') is.s++;
+    //    auto ss = s; auto sss = ss;
+    auto mantissa = 0, fractional = 0, fractional_length = 0, exponent = 0;
+    auto sn = (*is.s == '-') ? -1 : 1;
+    if (*is.s == '-' || *is.s == '+') is.s++;
+    while (*is.s >= '0' && *is.s <= '9') mantissa = mantissa * 10 + (*is.s++ - '0');
+    if (*is.s == '.') {
+        is.s++;
+        while (*is.s >= '0' && *is.s <= '9') {
+            fractional = fractional * 10 + (*is.s++ - '0');
+            fractional_length++;
+        }
+    }
+    mantissa *= sn;
+    fractional *= sn;
+    if (*is.s == 'e' || *is.s == 'E') {
+        is.s++;
+        auto en = (*is.s == '-') ? -1 : 1;
+        if (*is.s == '-' || *is.s == '+') is.s++;
+        while (*is.s >= '0' && *is.s <= '9') exponent = exponent * 10 + (*is.s++ - '0');
+        exponent *= en;
+    }
+    val = (double)mantissa;
+    if (fractional)
+        val += fractional * std::pow(10.0, -(double)fractional_length);
+    if (exponent) val *= std::pow(10.0, (double)exponent);
+    return is;
+}
+inline fastparsestream& operator>>(fastparsestream& is, float& val) {
+    val = 0;
+    if(!*is.s) return is;
+    auto vald = 0.0;
+    is >> vald;
+    val = (float)vald;
+    return is;
+}
+inline fastparsestream& operator>>(fastparsestream& is, std::string& val) {
+    val = "";
+    if(!*is.s) return is;
+    char buf[4096];
+    auto valb = buf;
+    while (*is.s == ' ') is.s++;
+    while (*is.s && *is.s != ' ') *valb++ = *is.s++;
+    *valb = 0;
+    val = buf;
+    return is;
+}
+template<typename T, int N>
+inline fastparsestream& operator>>(fastparsestream& is, vec<T, N>& val) {
+    val = {};
+    if(!*is.s) return is;
+    for(auto i = 0; i < N; i ++) is >> (&val.x)[i];
+    return is;
+}
+template<typename T, int N>
+inline fastparsestream& operator>>(fastparsestream& is, frame<T, N>& val) {
+    val = {};
+    if(!*is.s) return is;
+    for(auto i = 0; i < N+1; i ++) is >> (&val.x)[i];
+    return is;
+}
+inline fastparsestream& operator>>(fastparsestream& is, obj_vertex& v) {
+    v = {0, 0, 0};
+    is >> v.pos;
+    if (*is.s == '/') {
+        is.s++;
+        if (*is.s == '/') {
+            is.s++;
+            is >> v.norm;
+        } else {
+            is >> v.texcoord;
+            if (*is.s == '/') {
+                is.s++;
+                is >> v.norm;
+            }
+        }
+    }
+    return is;
+}
+
 // Loads an OBJ
 scene* load_obj_scene(const std::string& filename, bool load_textures,
     bool skip_missing, bool split_shapes) {
@@ -1778,7 +1885,11 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
         if (line.find("#") != line.npos) line = line.substr(0, line.find("#"));
 
         // prepare to parse
+        #if YGL_FASTPARSE != 0
+        auto ss = fastparsestream(line);
+        #else
         auto ss = std::stringstream(line);
+        #endif
 
         // get command
         auto cmd = ""s;
@@ -3829,6 +3940,153 @@ void save_mesh(const std::string& filename, const std::vector<int>& points,
     }
 }
 
+// ply type
+enum struct ply_type { ply_uchar, ply_int, ply_float, ply_int_list };
+
+// ply property
+struct ply_property {
+    std::string name = "";
+    ply_type type = ply_type::ply_float;
+    std::vector<float> scalars = {};
+    std::vector<std::array<int, 8>> lists = {};
+};
+
+// ply element
+struct ply_element {
+    std::string name = "";
+    int count = 0;
+    std::vector<ply_property> properties = {};
+};
+
+// simple ply api data
+struct ply_data {
+    std::vector<ply_element> elements = {};
+};
+
+// Load ply mesh
+ply_data load_ply(const std::string& filename) {
+    auto fs = std::ifstream(filename);
+    if (!fs) throw std::runtime_error("could not open file " + filename);
+
+    // parse header
+    auto ascii = false;
+    auto ply = ply_data();
+    std::string line;
+    while (std::getline(fs, line)) {
+        auto ss = std::stringstream(line);
+        auto cmd = ""s;
+        ss >> cmd;
+        if (cmd == "") continue;
+        if (cmd == "ply") {
+        } else if (cmd == "comment") {
+        } else if (cmd == "format") {
+            auto fmt = ""s;
+            ss >> fmt;
+            if (fmt != "ascii" && fmt != "binary_little_endian")
+                throw std::runtime_error("format not supported");
+            ascii = fmt == "ascii";
+        } else if (cmd == "element") {
+            auto elem = ply_element();
+            ss >> elem.name;
+            ss >> elem.count;
+            ply.elements.push_back(elem);
+        } else if (cmd == "property") {
+            auto prop = ply_property();
+            auto type = ""s;
+            ss >> type;
+            if (type == "list") {
+                auto count_type = ""s, elem_type = ""s;
+                ss >> count_type;
+                ss >> elem_type;
+                if (count_type != "uchar" && count_type != "uint8")
+                    throw std::runtime_error("unsupported ply list type");
+                if (elem_type != "int")
+                    throw std::runtime_error("unsupported ply list type");
+                prop.type = ply_type::ply_int_list;
+            } else if (type == "float") {
+                prop.type = ply_type::ply_float;
+            } else if (type == "uchar" || type == "uint8") {
+                prop.type = ply_type::ply_uchar;
+            } else if (type == "int") {
+                prop.type = ply_type::ply_int;
+            } else {
+                throw std::runtime_error("unsupported ply type");
+            }
+            ss >> prop.name;
+            prop.scalars.resize(ply.elements.back().count);
+            if (prop.type == ply_type::ply_int_list)
+                prop.lists.resize(ply.elements.back().count);
+            ply.elements.back().properties.push_back(prop);
+        } else if (cmd == "end_header") {
+            break;
+        } else {
+            throw std::runtime_error("command not supported " + cmd);
+        }
+    }
+
+    // parse content
+    for (auto& elem : ply.elements) {
+        for (auto vid = 0; vid < elem.count; vid++) {
+            auto ss = std::stringstream();
+            if (ascii) {
+                if (!std::getline(fs, line))
+                    throw std::runtime_error("error reading ply");
+                ss = std::stringstream(line);
+            }
+            for (auto pid = 0; pid < elem.properties.size(); pid++) {
+                auto& prop = elem.properties[pid];
+                if (prop.type == ply_type::ply_float) {
+                    auto v = 0.0f;
+                    if (ascii) {
+                        ss >> v;
+                    } else {
+                        fs.read((char*)&v, 4);
+                    }
+                    prop.scalars[vid] = v;
+                } else if (prop.type == ply_type::ply_int) {
+                    auto v = 0;
+                    if (ascii) {
+                        ss >> v;
+                    } else {
+                        fs.read((char*)&v, 4);
+                    }
+                    prop.scalars[vid] = v;
+                } else if (prop.type == ply_type::ply_uchar) {
+                    auto vc = (unsigned char)0;
+                    if (ascii) {
+                        auto v = 0;
+                        ss >> v;
+                        vc = (unsigned char)v;
+                    } else
+                        fs.read((char*)&vc, 1);
+                    prop.scalars[vid] = vc / 255.0f;
+                } else if (prop.type == ply_type::ply_int_list) {
+                    auto vc = (unsigned char)0;
+                    if (ascii) {
+                        auto v = 0;
+                        ss >> v;
+                        vc = (unsigned char)v;
+                    } else
+                        fs.read((char*)&vc, 1);
+                    prop.scalars[vid] = vc;
+                    for (auto i = 0; i < (int)prop.scalars[vid]; i++)
+                        if (ascii) {
+                            ss >> prop.lists[vid][i];
+                        } else {
+                            fs.read((char*)&prop.lists[vid][i], 4);
+                        }
+                } else {
+                    throw std::runtime_error("unsupported ply type");
+                }
+            }
+        }
+    }
+
+    fs.close();
+
+    return ply;
+}
+
 #if 1
 
 // Load ply mesh
@@ -3847,139 +4105,13 @@ void load_ply_mesh(const std::string& filename, std::vector<int>& points,
     lines.clear();
     triangles.clear();
 
-    // ply header parsed
-    enum property_type { uchar_type, int_type, float_type, int_list_type };
-    struct property {
-        std::string name = "";
-        property_type type = float_type;
-        std::vector<float> scalars;
-        std::vector<std::array<int, 8>> lists;
-    };
-    struct element {
-        std::string name = "";
-        int count = 0;
-        std::vector<property> props;
-    };
-
-    auto fs = std::ifstream(filename);
-    if (!fs) throw std::runtime_error("could not open file " + filename);
-
-    // parse header
-    auto ascii = false;
-    auto elems = std::vector<element>();
-    std::string line;
-    while (std::getline(fs, line)) {
-        auto ss = std::stringstream(line);
-        auto cmd = ""s;
-        ss >> cmd;
-        if (cmd == "") continue;
-        if (cmd == "ply") {
-        } else if (cmd == "comment") {
-        } else if (cmd == "format") {
-            auto fmt = ""s;
-            ss >> fmt;
-            if (fmt != "ascii" && fmt != "binary_little_endian")
-                throw std::runtime_error("format not supported");
-            ascii = fmt == "ascii";
-        } else if (cmd == "element") {
-            auto elem = element();
-            ss >> elem.name;
-            ss >> elem.count;
-            elems.push_back(elem);
-        } else if (cmd == "property") {
-            auto prop = property();
-            auto type = ""s;
-            ss >> type;
-            if (type == "list") {
-                auto count_type = ""s, elem_type = ""s;
-                ss >> count_type;
-                ss >> elem_type;
-                if (count_type != "uchar" && count_type != "uint8")
-                    throw std::runtime_error("unsupported ply list type");
-                if (elem_type != "int")
-                    throw std::runtime_error("unsupported ply list type");
-                prop.type = int_list_type;
-            } else if (type == "float") {
-                prop.type = float_type;
-            } else if (type == "uchar" || type == "uint8") {
-                prop.type = uchar_type;
-            } else if (type == "int") {
-                prop.type = int_type;
-            } else {
-                throw std::runtime_error("unsupported ply type");
-            }
-            ss >> prop.name;
-            prop.scalars.resize(elems.back().count);
-            if (prop.type == int_list_type)
-                prop.lists.resize(elems.back().count);
-            elems.back().props.push_back(prop);
-        } else if (cmd == "end_header") {
-            break;
-        } else {
-            throw std::runtime_error("command not supported " + cmd);
-        }
-    }
-
-    // parse content
-    for (auto& elem : elems) {
-        for (auto vid = 0; vid < elem.count; vid++) {
-            auto ss = std::stringstream();
-            if (ascii) {
-                if (!std::getline(fs, line))
-                    throw std::runtime_error("error reading ply");
-                ss = std::stringstream(line);
-            }
-            for (auto pid = 0; pid < elem.props.size(); pid++) {
-                auto& prop = elem.props[pid];
-                if (prop.type == float_type) {
-                    auto v = 0.0f;
-                    if (ascii)
-                        ss >> v;
-                    else
-                        fs.read((char*)&v, 4);
-                    prop.scalars[vid] = v;
-                } else if (prop.type == int_type) {
-                    auto v = 0;
-                    if (ascii)
-                        ss >> v;
-                    else
-                        fs.read((char*)&v, 4);
-                    prop.scalars[vid] = v;
-                } else if (prop.type == uchar_type) {
-                    auto vc = (unsigned char)0;
-                    if (ascii) {
-                        auto v = 0;
-                        ss >> v;
-                        vc = (unsigned char)v;
-                    } else
-                        fs.read((char*)&vc, 1);
-                    prop.scalars[vid] = vc / 255.0f;
-                } else if (prop.type == int_list_type) {
-                    auto vc = (unsigned char)0;
-                    if (ascii) {
-                        auto v = 0;
-                        ss >> v;
-                        vc = (unsigned char)v;
-                    } else
-                        fs.read((char*)&vc, 1);
-                    prop.scalars[vid] = vc;
-                    for (auto i = 0; i < (int)prop.scalars[vid]; i++)
-                        if (ascii)
-                            ss >> prop.lists[vid][i];
-                        else
-                            fs.read((char*)&prop.lists[vid][i], 4);
-                } else {
-                    throw std::runtime_error("unsupported ply type");
-                }
-            }
-        }
-    }
+    auto ply = load_ply(filename);
 
     // copy vertex data
-    for (auto& elem : elems) {
+    for (auto& elem : ply.elements) {
         if (elem.name != "vertex") continue;
         auto count = elem.count;
-        for (auto& prop : elem.props) {
+        for (auto& prop : elem.properties) {
             auto vals = prop.scalars.data();
             auto copy_floats = [vals, count](auto& vert, const auto& def,
                                    int stride, int offset) {
@@ -4008,10 +4140,10 @@ void load_ply_mesh(const std::string& filename, std::vector<int>& points,
     }
 
     // copy triangle data
-    for (auto& elem : elems) {
+    for (auto& elem : ply.elements) {
         if (elem.name != "face") continue;
         auto count = elem.count;
-        for (auto& prop : elem.props) {
+        for (auto& prop : elem.properties) {
             if (prop.name == "vertex_indices") {
                 for (auto fid = 0; fid < count; fid++) {
                     auto& list = prop.lists[fid];
@@ -4021,161 +4153,10 @@ void load_ply_mesh(const std::string& filename, std::vector<int>& points,
             }
         }
     }
-
-    fs.close();
-}
-
-#else
-
-// Load ply mesh
-void load_ply_mesh(const std::string& filename, std::vector<vec2i>& lines,
-    std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<vec4f>& color, std::vector<float>& radius) {
-    // clear data
-    pos.clear();
-    norm.clear();
-    texcoord.clear();
-    color.clear();
-    radius.clear();
-    lines.clear();
-    triangles.clear();
-
-    // open ply and read its header
-    auto error_cb = [](p_ply ply, const char* message) {};
-    auto ply = ply_open(filename.c_str(), error_cb, 0, nullptr);
-    if (!ply) throw std::runtime_error("could not open ply file " + filename);
-    if (!ply_read_header(ply))
-        throw std::runtime_error("could not read ply file " + filename);
-
-    // read polygons
-    static constexpr int poly_size = 8;
-    auto polys = std::vector<std::array<int, poly_size>>();
-    auto plines = std::vector<std::array<int, poly_size>>();
-
-    // check contained data
-    auto elem = (p_ply_element) nullptr;
-    while ((elem = ply_get_next_element(ply, elem)) != nullptr) {
-        auto elem_name_buf = (const char*)nullptr;
-        auto elem_num = (long)0;
-        ply_get_element_info(elem, &elem_name_buf, &elem_num);
-        auto elem_name = std::string(elem_name_buf);
-        if (elem_name == "vertex") {
-            auto prop = (p_ply_property) nullptr;
-            while ((prop = ply_get_next_property(elem, prop)) != nullptr) {
-                auto prop_name_buf = (const char*)nullptr;
-                ply_get_property_info(
-                    prop, &prop_name_buf, nullptr, nullptr, nullptr);
-                auto prop_name = std::string(prop_name_buf);
-                if (prop_name == "x") pos.assign(elem_num, zero3f);
-                if (prop_name == "nx") norm.assign(elem_num, zero3f);
-                if (prop_name == "u" || elem_name == "s" ||
-                    elem_name == "texture_u" || elem_name == "texture_s")
-                    texcoord.assign(elem_num, zero2f);
-                if (prop_name == "red") color.assign(elem_num, {0, 0, 0, 1});
-                if (prop_name == "radius") radius.assign(elem_num, 0);
-            }
-        } else if (elem_name == "face") {
-            auto prop = (p_ply_property) nullptr;
-            while ((prop = ply_get_next_property(elem, prop)) != nullptr) {
-                auto prop_name_buf = (const char*)nullptr;
-                ply_get_property_info(
-                    prop, &prop_name_buf, nullptr, nullptr, nullptr);
-                auto prop_name = std::string(prop_name_buf);
-                if (prop_name == "vertex_indices")
-                    polys.assign(elem_num, {{0, 0, 0, 0, 0, 0, 0, 0}});
-            }
-        } else if (elem_name == "line") {
-            auto prop = (p_ply_property) nullptr;
-            while ((prop = ply_get_next_property(elem, prop)) != nullptr) {
-                auto prop_name_buf = (const char*)nullptr;
-                ply_get_property_info(
-                    prop, &prop_name_buf, nullptr, nullptr, nullptr);
-                auto prop_name = std::string(prop_name_buf);
-                if (prop_name == "vertex_indices")
-                    plines.assign(elem_num, {{0, 0, 0, 0, 0, 0, 0, 0}});
-            }
-        }
-    }
-
-    // vertex data callback
-    auto vert_cb = [](p_ply_argument arg) {
-        auto data = (float*)nullptr;
-        auto idx = (long)0, flags = (long)0;
-        ply_get_argument_user_data(arg, (void**)&data, &flags);
-        ply_get_argument_element(arg, nullptr, &idx);
-        auto stride = (flags & 0x0F0) >> 4;
-        auto offset = flags & 0x00F;
-        data[idx * stride + offset] = (float)ply_get_argument_value(arg);
-        return 1;
-    };
-
-    // face data callback
-    auto face_cb = [](p_ply_argument arg) {
-        auto data = (int*)nullptr;
-        auto idx = (long)0, flags = (long)0, len = (long)0, vidx = (long)0;
-        ply_get_argument_user_data(arg, (void**)&data, &flags);
-        ply_get_argument_element(arg, nullptr, &idx);
-        ply_get_argument_property(arg, nullptr, &len, &vidx);
-        if (len >= poly_size) throw std::runtime_error("bad face length");
-        data[idx * poly_size + (vidx + 1)] = (int)ply_get_argument_value(arg);
-        return 1;
-    };
-
-    // set up vertex callbacks
-    ply_set_read_cb(ply, "vertex", "x", vert_cb, pos.data(), 0x30);
-    ply_set_read_cb(ply, "vertex", "y", vert_cb, pos.data(), 0x31);
-    ply_set_read_cb(ply, "vertex", "z", vert_cb, pos.data(), 0x32);
-    ply_set_read_cb(ply, "vertex", "nx", vert_cb, norm.data(), 0x30);
-    ply_set_read_cb(ply, "vertex", "ny", vert_cb, norm.data(), 0x31);
-    ply_set_read_cb(ply, "vertex", "nz", vert_cb, norm.data(), 0x32);
-    ply_set_read_cb(ply, "vertex", "u", vert_cb, texcoord.data(), 0x20);
-    ply_set_read_cb(ply, "vertex", "v", vert_cb, texcoord.data(), 0x21);
-    ply_set_read_cb(ply, "vertex", "s", vert_cb, texcoord.data(), 0x20);
-    ply_set_read_cb(ply, "vertex", "t", vert_cb, texcoord.data(), 0x21);
-    ply_set_read_cb(ply, "vertex", "texture_u", vert_cb, texcoord.data(), 0x20);
-    ply_set_read_cb(ply, "vertex", "texture_v", vert_cb, texcoord.data(), 0x21);
-    ply_set_read_cb(ply, "vertex", "texture_s", vert_cb, texcoord.data(), 0x20);
-    ply_set_read_cb(ply, "vertex", "texture_t", vert_cb, texcoord.data(), 0x21);
-    ply_set_read_cb(ply, "vertex", "red", vert_cb, color.data(), 0x40);
-    ply_set_read_cb(ply, "vertex", "green", vert_cb, color.data(), 0x41);
-    ply_set_read_cb(ply, "vertex", "blue", vert_cb, color.data(), 0x42);
-    ply_set_read_cb(ply, "vertex", "alpha", vert_cb, color.data(), 0x43);
-    ply_set_read_cb(ply, "vertex", "radius", vert_cb, radius.data(), 0x10);
-
-    // set up triangle and line callbacks
-    ply_set_read_cb(ply, "face", "vertex_indices", face_cb, polys.data(), 0x10);
-    ply_set_read_cb(
-        ply, "line", "vertex_indices", face_cb, plines.data(), 0x10);
-
-    // read file
-    if (!ply_read(ply))
-        throw std::runtime_error("error reading ply file " + filename);
-    ply_close(ply);
-
-    // convert polygons to triangles
-    auto ntriangles = 0;
-    for (auto& poly : polys) ntriangles += poly[0] - 2;
-    triangles.resize(ntriangles);
-    auto ti = 0;
-    for (auto& poly : polys) {
-        for (auto i = 3; i <= poly[0]; i++)
-            triangles[ti++] = {poly[1], poly[i - 1], poly[i]};
-    }
-
-    // convert polylines to lines
-    auto nlines = 0;
-    for (auto& poly : plines) nlines += poly[0] - 1;
-    lines.resize(nlines);
-    auto li = 0;
-    for (auto& pline : plines) {
-        for (auto i = 1; i <= pline[0]; i++)
-            lines[li++] = {pline[i - 1], pline[i]};
-    }
 }
 
 #endif
-
+    
 // Save ply mesh
 void save_ply_mesh(const std::string& filename, const std::vector<int>& points,
     const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
