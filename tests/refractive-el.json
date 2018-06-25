@@ -114,6 +114,7 @@
     "shapes": [
         {
             "name": "floor",
+            "path": "meshes/floor.ply",
             "!!proc": {
                 "type": "floor"
             }

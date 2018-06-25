@@ -115,6 +115,7 @@
     "shapes": [
         {
             "name": "floor",
+            "path": "meshes/floor.ply",
             "!!proc": {
                 "type": "floor"
             }
@@ -161,6 +162,32 @@
             }
         }
     ],
+    "subdivs": [
+        {
+            "name": "obj1",
+            "path": "meshes/obj1.obj",
+            "level": 4,
+            "!!proc": {
+                "type": "cube"
+            }
+        },
+        {
+            "name": "obj2",
+            "path": "meshes/obj2.obj",
+            "level": 2,
+            "!!proc": {
+                "type": "suzanne"
+            }
+        },
+        {
+            "name": "obj3",
+            "path": "meshes/obj3.obj",
+            "level": 4,
+            "!!proc": {
+                "type": "cube"
+            }
+        }
+    ],
     "instances": [
         {
             "name": "floor",
@@ -170,14 +197,7 @@
         {
             "name": "obj1",
             "shp": "obj1",
-            "sbd": {
-                "name": "obj1",
-                "path": "meshes/obj1.obj",
-                "level": 4,
-                "!!proc": {
-                    "type": "cube"
-                }
-            },
+            "sbd": "obj1",
             "mat": "obj1",
             "!!proc": {
                 "translation": [
@@ -190,14 +210,7 @@
         {
             "name": "obj2",
             "shp": "obj2",
-            "sbd": {
-                "name": "obj2",
-                "path": "meshes/obj2.obj",
-                "level": 2,
-                "!!proc": {
-                    "type": "suzanne"
-                }
-            },
+            "sbd": "obj2",
             "mat": "obj2",
             "!!proc": {
                 "translation": [
@@ -210,14 +223,7 @@
         {
             "name": "obj3",
             "shp": "obj3",
-            "sbd": {
-                "name": "obj3",
-                "path": "meshes/obj3.obj",
-                "level": 4,
-                "!!proc": {
-                    "type": "cube"
-                }
-            },
+            "sbd": "obj3",
             "mat": "obj3",
             "!!proc": {
                 "translation": [
