@@ -64,6 +64,7 @@ int main(int argc, char* argv[]) {
     auto filmic = false;                  // filmic
     auto double_sided = false;            // double sided
     auto add_skyenv = false;              // add environment
+    auto embree = false;                  // use embree
     auto quiet = false;                   // quiet mode
 
     // parse command line
@@ -88,6 +89,7 @@ int main(int argc, char* argv[]) {
     parser.add_flag(
         "--double-sided,-D", double_sided, "Double-sided rendering.");
     parser.add_flag("--add-skyenv,-E", add_skyenv, "add missing env map");
+    parser.add_flag("--embree", embree, "Use Embree ratracer");
     parser.add_flag("--quiet,-q", quiet, "Print only errors messages");
     parser.add_option("--output-image,-o", imfilename, "Image filename");
     parser.add_option("scene", filename, "Scene filename")->required(true);
@@ -135,6 +137,9 @@ int main(int argc, char* argv[]) {
     if (!quiet) std::cout << "building bvh\n";
     auto bvh_start = ygl::get_time();
     ygl::update_bvh(scn);
+#if YGL_EMBREE
+    if (embree) ygl::build_bvh_embree(scn);
+#endif
     if (!quiet)
         std::cout << "building bvh in "
                   << ygl::format_duration(ygl::get_time() - bvh_start) << "\n";

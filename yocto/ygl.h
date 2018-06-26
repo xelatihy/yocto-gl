@@ -244,6 +244,10 @@
 #ifndef _YGL_H_
 #define _YGL_H_
 
+#ifndef YGL_EMBREE
+#define YGL_EMBREE 1
+#endif
+
 // -----------------------------------------------------------------------------
 // INCLUDES
 // -----------------------------------------------------------------------------
@@ -2722,7 +2726,8 @@ struct shape {
     bvh_tree* bvh = nullptr;           // bvh for ray intersection
     uint gl_pos = 0, gl_norm = 0, gl_texcoord = 0, gl_color = 0, gl_tangsp = 0,
          gl_points = 0, gl_lines = 0,
-         gl_triangles = 0;  // unmanaged data for OpenGL viewer
+         gl_triangles = 0;       // unmanaged data for OpenGL viewer
+    void* embree_bvh = nullptr;  // unmanaged data for Embree raytracer
 
     // cleanup
     ~shape();
@@ -2832,6 +2837,8 @@ struct scene {
     std::vector<instance*> lights;
     bbox3f bbox = invalid_bbox3f;  // boudning box
     bvh_tree* bvh = nullptr;
+    void* embree_bvh = nullptr;     // unmanaged data for Embree raytracer
+    void* embree_device = nullptr;  // unmanaged data for Embree raytracer
 
     // cleanup
     ~scene();
@@ -2882,10 +2889,15 @@ void update_shape_cdf(shape* shp);
 void update_environment_cdf(environment* env);
 
 // Updates/refits bvh.
-void update_bvh(shape* shp, bool equalsize = true);
-void update_bvh(scene* scn, bool do_shapes = true, bool equalsize = true);
+void update_bvh(shape* shp, bool equalsize = false);
+void update_bvh(scene* scn, bool do_shapes = true, bool equalsize = false);
 void refit_bvh(shape* shp);
 void refit_bvh(scene* scn, bool do_shapes = true);
+
+#if YGL_EMBREE
+// Build/update Embree BVH
+void build_bvh_embree(scene* scn);
+#endif
 
 // Updates tesselation.
 void update_tesselation(const subdiv* sbd, shape* shp);

@@ -1683,7 +1683,8 @@ inline std::ostream& operator<<(std::ostream& os, const obj_vertex& v) {
 struct fastparsestream {
     fastparsestream(const std::string& str_) {
         str = str_;
-        for(auto& c : str) if(c == '\t' || c == '\r' || c == '\n') c = ' ';
+        for (auto& c : str)
+            if (c == '\t' || c == '\r' || c == '\n') c = ' ';
         s = str.c_str();
     }
     std::string str;
@@ -1693,7 +1694,7 @@ struct fastparsestream {
 // parse stream
 inline fastparsestream& operator>>(fastparsestream& is, int& val) {
     val = 0;
-    if(!*is.s) return is;
+    if (!*is.s) return is;
     while (*is.s == ' ') is.s++;
     auto sn = (*is.s == '-') ? -1 : 1;
     if (*is.s == '-' || *is.s == '+') is.s++;
@@ -1703,7 +1704,7 @@ inline fastparsestream& operator>>(fastparsestream& is, int& val) {
 }
 inline fastparsestream& operator>>(fastparsestream& is, bool& val) {
     val = false;
-    if(!*is.s) return is;
+    if (!*is.s) return is;
     auto vali = 0;
     is >> vali;
     val = (bool)vali;
@@ -1711,13 +1712,14 @@ inline fastparsestream& operator>>(fastparsestream& is, bool& val) {
 }
 inline fastparsestream& operator>>(fastparsestream& is, double& val) {
     val = 0;
-    if(!*is.s) return is;
+    if (!*is.s) return is;
     while (*is.s == ' ') is.s++;
     //    auto ss = s; auto sss = ss;
     auto mantissa = 0, fractional = 0, fractional_length = 0, exponent = 0;
     auto sn = (*is.s == '-') ? -1 : 1;
     if (*is.s == '-' || *is.s == '+') is.s++;
-    while (*is.s >= '0' && *is.s <= '9') mantissa = mantissa * 10 + (*is.s++ - '0');
+    while (*is.s >= '0' && *is.s <= '9')
+        mantissa = mantissa * 10 + (*is.s++ - '0');
     if (*is.s == '.') {
         is.s++;
         while (*is.s >= '0' && *is.s <= '9') {
@@ -1731,7 +1733,8 @@ inline fastparsestream& operator>>(fastparsestream& is, double& val) {
         is.s++;
         auto en = (*is.s == '-') ? -1 : 1;
         if (*is.s == '-' || *is.s == '+') is.s++;
-        while (*is.s >= '0' && *is.s <= '9') exponent = exponent * 10 + (*is.s++ - '0');
+        while (*is.s >= '0' && *is.s <= '9')
+            exponent = exponent * 10 + (*is.s++ - '0');
         exponent *= en;
     }
     val = (double)mantissa;
@@ -1742,7 +1745,7 @@ inline fastparsestream& operator>>(fastparsestream& is, double& val) {
 }
 inline fastparsestream& operator>>(fastparsestream& is, float& val) {
     val = 0;
-    if(!*is.s) return is;
+    if (!*is.s) return is;
     auto vald = 0.0;
     is >> vald;
     val = (float)vald;
@@ -1750,7 +1753,7 @@ inline fastparsestream& operator>>(fastparsestream& is, float& val) {
 }
 inline fastparsestream& operator>>(fastparsestream& is, std::string& val) {
     val = "";
-    if(!*is.s) return is;
+    if (!*is.s) return is;
     char buf[4096];
     auto valb = buf;
     while (*is.s == ' ') is.s++;
@@ -1759,18 +1762,18 @@ inline fastparsestream& operator>>(fastparsestream& is, std::string& val) {
     val = buf;
     return is;
 }
-template<typename T, int N>
+template <typename T, int N>
 inline fastparsestream& operator>>(fastparsestream& is, vec<T, N>& val) {
     val = {};
-    if(!*is.s) return is;
-    for(auto i = 0; i < N; i ++) is >> (&val.x)[i];
+    if (!*is.s) return is;
+    for (auto i = 0; i < N; i++) is >> (&val.x)[i];
     return is;
 }
-template<typename T, int N>
+template <typename T, int N>
 inline fastparsestream& operator>>(fastparsestream& is, frame<T, N>& val) {
     val = {};
-    if(!*is.s) return is;
-    for(auto i = 0; i < N+1; i ++) is >> (&val.x)[i];
+    if (!*is.s) return is;
+    for (auto i = 0; i < N + 1; i++) is >> (&val.x)[i];
     return is;
 }
 inline fastparsestream& operator>>(fastparsestream& is, obj_vertex& v) {
@@ -1884,12 +1887,12 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
         // remove comments
         if (line.find("#") != line.npos) line = line.substr(0, line.find("#"));
 
-        // prepare to parse
-        #if YGL_FASTPARSE != 0
+// prepare to parse
+#if YGL_FASTPARSE != 0
         auto ss = fastparsestream(line);
-        #else
+#else
         auto ss = std::stringstream(line);
-        #endif
+#endif
 
         // get command
         auto cmd = ""s;
@@ -4156,7 +4159,7 @@ void load_ply_mesh(const std::string& filename, std::vector<int>& points,
 }
 
 #endif
-    
+
 // Save ply mesh
 void save_ply_mesh(const std::string& filename, const std::vector<int>& points,
     const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,

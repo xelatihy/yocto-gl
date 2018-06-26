@@ -6,15 +6,21 @@ Please consider this to be just development notes and not any real planning.
 ## Next features
 
 - embree
+    - build/update do not work with embree
 - luts
 - tone curve
+    - from web?
+    - no implementation of Photoshop curve
+    - maybe try monotonic spline interpolation
+    - otherwise a simple Bezier with contraints
+    - use lookup tables for this
 
-## giacomo
+## Giacomo
 
 - pbrt export
 - volumetric values
 
-## scene changes
+## Scene changes
 
 - simpler shapes functions
     - add functions on quads using embree parametrization
@@ -26,7 +32,7 @@ Please consider this to be just development notes and not any real planning.
         - mcguire
         - gltf
 
-## example
+## Example
 
 - crane subdivs
 - utah teapot
