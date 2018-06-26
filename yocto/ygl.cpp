@@ -54,6 +54,10 @@
 
 #include <atomic>
 
+#if YGL_EMBREE
+#include <embree3/rtcore.h>
+#endif
+
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PERLIN NOISE
 // -----------------------------------------------------------------------------
@@ -3578,6 +3582,61 @@ void update_bvh(scene* scn, bool do_shapes, bool equalsize) {
     build_bvh(scn->bvh, equalsize);
 }
 
+#if YGL_EMBREE
+void embree_error(void* ctx, RTCError code, const char* str) {
+    switch (code) {
+        case RTC_ERROR_UNKNOWN: printf("RTC_ERROR_UNKNOWN"); break;
+        case RTC_ERROR_INVALID_ARGUMENT:
+            printf("RTC_ERROR_INVALID_ARGUMENT");
+            break;
+        case RTC_ERROR_INVALID_OPERATION:
+            printf("RTC_ERROR_INVALID_OPERATION");
+            break;
+        case RTC_ERROR_OUT_OF_MEMORY: printf("RTC_ERROR_OUT_OF_MEMORY"); break;
+        case RTC_ERROR_UNSUPPORTED_CPU:
+            printf("RTC_ERROR_UNSUPPORTED_CPU");
+            break;
+        case RTC_ERROR_CANCELLED: printf("RTC_ERROR_CANCELLED"); break;
+        default: printf("invalid error code"); break;
+    }
+    printf("%s", str);
+}
+
+// Build a scene BVH
+void build_bvh_embree(scene* scn) {
+    scn->embree_device = rtcNewDevice("");
+    rtcSetDeviceErrorFunction(
+        (RTCDevice)scn->embree_device, embree_error, nullptr);
+    scn->embree_bvh = rtcNewScene((RTCDevice)scn->embree_device);
+    auto sid = 0;
+    for (auto ist : scn->instances) {
+        if (!ist->shp->triangles.empty()) {
+            ist->shp->embree_bvh = rtcNewGeometry(
+                (RTCDevice)scn->embree_device, RTC_GEOMETRY_TYPE_TRIANGLE);
+            rtcSetGeometryVertexAttributeCount(
+                (RTCGeometry)ist->shp->embree_bvh, 1);
+            auto vert = rtcSetNewGeometryBuffer(
+                (RTCGeometry)ist->shp->embree_bvh, RTC_BUFFER_TYPE_VERTEX, 0,
+                RTC_FORMAT_FLOAT3, 3 * 4, ist->shp->pos.size());
+            auto triangles = rtcSetNewGeometryBuffer(
+                (RTCGeometry)ist->shp->embree_bvh, RTC_BUFFER_TYPE_INDEX, 0,
+                RTC_FORMAT_UINT3, 3 * 4, ist->shp->triangles.size());
+            auto pos = ist->shp->pos;
+            for (auto& p : pos) p = transform_point(ist->frame, p);
+            memcpy(vert, pos.data(), pos.size() * 12);
+            memcpy(triangles, ist->shp->triangles.data(),
+                ist->shp->triangles.size() * 12);
+            rtcCommitGeometry((RTCGeometry)ist->shp->embree_bvh);
+            rtcAttachGeometryByID((RTCScene)scn->embree_bvh,
+                (RTCGeometry)ist->shp->embree_bvh, sid++);
+        } else if (!ist->shp->lines.empty()) {
+            // TODO: lines
+        }
+    }
+    rtcCommitScene((RTCScene)scn->embree_bvh);
+}
+#endif
+
 // Refits a scene BVH
 void refit_bvh(shape* shp) {
     shp->bvh->pos = shp->pos;
@@ -3723,7 +3782,35 @@ camera* make_bbox_camera(
 namespace ygl {
 
 // Scene intersection.
+scene_intersection intersect_ray_embree(
+    const scene* scn, ray3f ray, bool find_any) {
+    RTCRayHit embree_ray;
+    embree_ray.ray.org_x = ray.o.x;
+    embree_ray.ray.org_y = ray.o.y;
+    embree_ray.ray.org_z = ray.o.z;
+    embree_ray.ray.dir_x = ray.d.x;
+    embree_ray.ray.dir_y = ray.d.y;
+    embree_ray.ray.dir_z = ray.d.z;
+    embree_ray.ray.tnear = ray.tmin;
+    embree_ray.ray.tfar = ray.tmax;
+    embree_ray.ray.flags = 0;
+    embree_ray.hit.geomID = RTC_INVALID_GEOMETRY_ID;
+    embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
+    RTCIntersectContext embree_ctx;
+    rtcInitIntersectContext(&embree_ctx);
+    rtcIntersect1((RTCScene)scn->embree_bvh, &embree_ctx, &embree_ray);
+    if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return {};
+    auto isec = scene_intersection{};
+    isec.dist = embree_ray.ray.tfar;
+    isec.uv = {embree_ray.hit.u, embree_ray.hit.v};
+    isec.ei = embree_ray.hit.primID;
+    isec.ist = scn->instances.at(embree_ray.hit.geomID);
+    return isec;
+}
+
+// Scene intersection.
 scene_intersection intersect_ray(const scene* scn, ray3f ray, bool find_any) {
+    if (scn->embree_bvh) return intersect_ray_embree(scn, ray, find_any);
     auto iid = 0;
     auto isec = scene_intersection();
     if (!intersect_bvh(

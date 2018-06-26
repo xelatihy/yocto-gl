@@ -3,6 +3,7 @@ cmake_minimum_required (VERSION 3.5)
 project (yocto-gl)
 
 option(YOCTO_OPENGL "Build OpenGL apps" ON)
+option(YOCTO_EMBREE "Use Intel's Embree raytracer" ON)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -18,18 +19,29 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 # compile flags
-if(APPLE)
-    add_definitions(-Wall)
-endif(APPLE)
-if(MSVC)
-    add_definitions(/D_CRT_SECURE_NO_WARNINGS /wd4018 /wd4244 /wd4305 /wd4800 /wd4267)
-    set(CMAKE_CXX_FLAGS "/EHsc")
-endif(MSVC)
 if(YOCTO_OPENGL)
     add_definitions(-DYGL_OPENGL=1)
 else(YOCTO_OPENGL)
     add_definitions(-DYGL_OPENGL=0)
 endif(YOCTO_OPENGL)
+if(YOCTO_EMBREE)
+    add_definitions(-DYGL_EMBREE=1)
+else(YOCTO_EMBREE)
+    add_definitions(-DYGL_EMBREE=0)
+endif(YOCTO_EMBREE)
+
+# platform compile flags
+if(APPLE)
+    add_definitions(-Wall)
+    if(YOCTO_EMBREE)
+    include_directories(/opt/local/include)
+    link_directories(/opt/local/lib)
+    endif(YOCTO_EMBREE)
+endif(APPLE)
+if(MSVC)
+    add_definitions(/D_CRT_SECURE_NO_WARNINGS /wd4018 /wd4244 /wd4305 /wd4800 /wd4267)
+    set(CMAKE_CXX_FLAGS "/EHsc")
+endif(MSVC)
 
 add_library(ygl 
     yocto/ygl.h yocto/ygl.cpp
@@ -41,6 +53,10 @@ if(UNIX AND NOT APPLE)
     find_package(Threads REQUIRED)
     target_link_libraries(ygl Threads::Threads)
 endif(UNIX AND NOT APPLE)
+
+if(YOCTO_EMBREE)
+target_link_libraries(ygl libembree3.dylib)
+endif(YOCTO_EMBREE)
 
 add_executable(ytrace apps/ytrace.cpp)
 add_executable(yscnproc apps/yscnproc.cpp)

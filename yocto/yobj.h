@@ -222,10 +222,10 @@ struct obj_scene {
     std::deque<vec3f> norm;      // vertex normals
     std::deque<vec2f> texcoord;  // vertex texcoords
 
-    std::vector<obj_object*> objects;      // objects
-    std::vector<obj_material*> materials;  // materials
-    std::vector<obj_texture*> textures;    // textures
-    std::vector<obj_camera*> cameras;  // cameras [extension]
+    std::vector<obj_object*> objects;            // objects
+    std::vector<obj_material*> materials;        // materials
+    std::vector<obj_texture*> textures;          // textures
+    std::vector<obj_camera*> cameras;            // cameras [extension]
     std::vector<obj_environment*> environments;  // environments [extension]
 };
 
@@ -234,23 +234,22 @@ struct obj_scene {
 // Load textures if `load_textures` is true, and report errors only if
 // `skip_missing` is false. Texture coordinates and material Tr are flipped
 // if `flip_texcoord` and `flip_tp` are respectively true.
-inline obj_scene* load_obj(const std::string& filename,
-    bool split_shapes, bool flip_texcoord = true, bool flip_tr = true);
+inline obj_scene* load_obj(const std::string& filename, bool split_shapes,
+    bool flip_texcoord = true, bool flip_tr = true);
 
 // Save an OBJ to file `filename`. Save textures if `save_textures` is true,
 // and report errors only if `skip_missing` is false.
 // Texture coordinates and material Tr are flipped if `flip_texcoord` and
 // `flip_tp` are respectively true.
-inline void save_obj(const std::string& filename,
-    const obj_scene* obj, bool flip_texcoord = true,
-    bool flip_tr = true);
+inline void save_obj(const std::string& filename, const obj_scene* obj,
+    bool flip_texcoord = true, bool flip_tr = true);
 
 // Load OBJ texture images.
-inline void load_obj_textures(const obj_scene* obj,
-    const std::string& dirname, bool skip_missing = true);
+inline void load_obj_textures(
+    const obj_scene* obj, const std::string& dirname, bool skip_missing = true);
 // Save OBJ texture images.
-inline void save_obj_textures(const obj_scene* obj,
-    const std::string& dirname, bool skip_missing = true);
+inline void save_obj_textures(
+    const obj_scene* obj, const std::string& dirname, bool skip_missing = true);
 
 // Callback object
 struct obj_callbacks {
@@ -635,8 +634,8 @@ inline std::vector<obj_material*> load_mtl(
 }
 
 // Loads an OBJ
-inline obj_scene* load_obj(const std::string& filename,
-    bool split_shapes, bool flip_texcoord, bool flip_tr) {
+inline obj_scene* load_obj(const std::string& filename, bool split_shapes,
+    bool flip_texcoord, bool flip_tr) {
     // clear obj
     auto obj = std::make_shared<obj_scene>();
 
@@ -650,9 +649,8 @@ inline obj_scene* load_obj(const std::string& filename,
     if (!fs) throw std::runtime_error("cannot open filename " + filename);
 
     // add object if needed
-    auto add_object = [&](obj_scene* obj, std::string name,
-                          std::string matname, std::string groupname,
-                          bool smoothing) {
+    auto add_object = [&](obj_scene* obj, std::string name, std::string matname,
+                          std::string groupname, bool smoothing) {
         if (obj->objects.empty() || !obj->objects.back()->elems.empty())
             obj->objects.push_back(new obj_object());
         auto oobj = obj->objects.back();
@@ -852,8 +850,7 @@ inline obj_scene* load_obj(const std::string& filename,
     for (auto oobj : obj->objects) oobj->props = oprops[oobj->name];
 
     // create textures
-    auto txt_set =
-        std::unordered_map<std::string, obj_texture*>();
+    auto txt_set = std::unordered_map<std::string, obj_texture*>();
     auto add_texture = [](obj_scene* obj, auto& txt_set,
                            const obj_texture_info& info) {
         if (info.path == "") return;
@@ -1291,8 +1288,8 @@ inline void save_mtl(const std::string& filename,
 }
 
 // Save an OBJ
-inline void save_obj(const std::string& filename,
-    const obj_scene*& obj, bool flip_texcoord, bool flip_tr) {
+inline void save_obj(const std::string& filename, const obj_scene*& obj,
+    bool flip_texcoord, bool flip_tr) {
     // open file
     auto fs = fopen(filename.c_str(), "wt");
     if (!fs) throw std::runtime_error("cannot open filename " + filename);
@@ -1398,8 +1395,8 @@ inline void save_obj(const std::string& filename,
 }
 
 // Load OBJ texture images.
-inline void load_obj_textures(const obj_scene*& obj,
-    const std::string& dirname, bool skip_missing) {
+inline void load_obj_textures(
+    const obj_scene*& obj, const std::string& dirname, bool skip_missing) {
     // set gamma
     auto ldr_gamma = std::unordered_map<std::string, float>{{"", 1.0f}};
     for (auto txt : obj->textures) ldr_gamma[txt->path] = 2.2f;
@@ -1432,8 +1429,8 @@ inline void load_obj_textures(const obj_scene*& obj,
 }
 
 // Save OBJ texture images.
-void save_obj_textures(const obj_scene*& obj,
-    const std::string& dirname, bool skip_missing) {
+void save_obj_textures(
+    const obj_scene*& obj, const std::string& dirname, bool skip_missing) {
     // set gamma
     auto ldr_gamma = std::unordered_map<std::string, float>{{"", 1.0f}};
     for (auto txt : obj->textures) ldr_gamma[txt->path] = 2.2f;
@@ -1473,8 +1470,8 @@ void save_obj_textures(const obj_scene*& obj,
 // Load textures if `load_textures` is true, and report errors only if
 // `skip_missing` is false. Texture coordinates and material Tr are flipped
 // if `flip_texcoord` and `flip_tp` are respectively true.
-inline obj_scene* load_obj(const std::string& filename,
-    bool split_shapes, bool flip_texcoord, bool flip_tr) {
+inline obj_scene* load_obj(const std::string& filename, bool split_shapes,
+    bool flip_texcoord, bool flip_tr) {
     return detail::load_obj(filename, split_shapes, flip_texcoord, flip_tr);
 }
 
@@ -1482,19 +1479,19 @@ inline obj_scene* load_obj(const std::string& filename,
 // and report errors only if `skip_missing` is false.
 // Texture coordinates and material Tr are flipped if `flip_texcoord` and
 // `flip_tp` are respectively true.
-inline void save_obj(const std::string& filename,
-    const obj_scene*& obj, bool flip_texcoord, bool flip_tr) {
+inline void save_obj(const std::string& filename, const obj_scene*& obj,
+    bool flip_texcoord, bool flip_tr) {
     return detail::save_obj(filename, obj, flip_texcoord, flip_tr);
 }
 
 // Load OBJ texture images.
-inline void load_obj_textures(const obj_scene*& obj,
-    const std::string& dirname, bool skip_missing) {
+inline void load_obj_textures(
+    const obj_scene*& obj, const std::string& dirname, bool skip_missing) {
     return detail::load_obj_textures(obj, dirname, skip_missing);
 }
 // Save OBJ texture images.
-inline void save_obj_textures(const obj_scene*& obj,
-    const std::string& dirname, bool skip_missing) {
+inline void save_obj_textures(
+    const obj_scene*& obj, const std::string& dirname, bool skip_missing) {
     return detail::save_obj_textures(obj, dirname, skip_missing);
 }
 
