@@ -2318,7 +2318,7 @@ struct bvh_tree {
 };
 
 // Build a BVH from the given set of primitives.
-void build_bvh(bvh_tree* bvh, bool equalsize);
+void build_bvh(bvh_tree* bvh, bool sah);
 // Update the node bounds for a shape bvh.
 void refit_bvh(bvh_tree* bvh);
 
@@ -2889,8 +2889,8 @@ void update_shape_cdf(shape* shp);
 void update_environment_cdf(environment* env);
 
 // Updates/refits bvh.
-void update_bvh(shape* shp, bool equalsize = false);
-void update_bvh(scene* scn, bool do_shapes = true, bool equalsize = false);
+void update_bvh(shape* shp, bool sah = true);
+void update_bvh(scene* scn, bool do_shapes = true, bool sah = true);
 void refit_bvh(shape* shp);
 void refit_bvh(scene* scn, bool do_shapes = true);
 
