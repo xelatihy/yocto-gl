@@ -1351,7 +1351,7 @@ struct bvh_prim {
 // used and nodes added sequentially in the preallocated nodes array and
 // the number of nodes nnodes is updated.
 int make_bvh_node(std::vector<bvh_node>& nodes, std::vector<bvh_prim>& prims,
-    int start, int end, bvh_node_type type, bool equal_size) {
+    int start, int end, bvh_node_type type, bool sah) {
     // add a new node
     auto nodeid = (int)nodes.size();
     nodes.push_back({});
@@ -1374,14 +1374,74 @@ int make_bvh_node(std::vector<bvh_node>& nodes, std::vector<bvh_prim>& prims,
 
         // choose the split axis and position
         if (csize != zero3f) {
-            // split along largest
-            auto largest_axis = 0;
-            if (csize.x >= csize.y && csize.x >= csize.z) largest_axis = 0;
-            if (csize.y >= csize.x && csize.y >= csize.z) largest_axis = 1;
-            if (csize.z >= csize.x && csize.z >= csize.y) largest_axis = 2;
-
             // check heuristic
-            if (equal_size) {
+            if (sah) {
+                // consider N bins, compute their cost and keep the minimum
+                const int nbins = 16;
+                auto middle = 0.0f;
+                auto min_cost = flt_max;
+                auto bbox_area = [](auto& b) {
+                    auto size = b.max - b.min;
+                    return 1e-12f + 2 * size.x * size.y + 2 * size.x * size.z +
+                           2 * size.y * size.z;
+                };
+                auto min_left = 0, min_right = 0;
+                for (auto axis = 0; axis < 3; axis++) {
+                    for (auto b = 1; b < nbins; b++) {
+                        auto split =
+                            (&cbbox.min.x)[axis] + b * (&csize.x)[axis] / nbins;
+                        auto left_bbox = invalid_bbox3f,
+                             right_bbox = invalid_bbox3f;
+                        auto left_nprims = 0, right_nprims = 0;
+                        for (auto i = start; i < end; i++) {
+                            if ((&prims[i].center.x)[axis] < split) {
+                                left_bbox += prims[i].bbox;
+                                left_nprims += 1;
+                            } else {
+                                right_bbox += prims[i].bbox;
+                                right_nprims += 1;
+                            }
+                        }
+                        auto cost = 1 +
+                                    left_nprims * bbox_area(left_bbox) /
+                                        bbox_area(cbbox) +
+                                    right_nprims * bbox_area(right_bbox) /
+                                        bbox_area(cbbox);
+                        if (cost < min_cost) {
+                            min_cost = cost;
+                            middle = split;
+                            split_axis = axis;
+                            min_left = left_nprims;
+                            min_right = right_nprims;
+                        }
+                    }
+                }
+                // split
+                mid = (int)(std::partition(prims.data() + start,
+                                prims.data() + end,
+                                [split_axis, middle](auto& a) {
+                                    return (&a.center.x)[split_axis] < middle;
+                                }) -
+                            prims.data());
+                if (mid == start || mid == end) printf("cacca");
+            } else {
+                // split along largest
+                auto largest_axis = 0;
+                if (csize.x >= csize.y && csize.x >= csize.z) largest_axis = 0;
+                if (csize.y >= csize.x && csize.y >= csize.z) largest_axis = 1;
+                if (csize.z >= csize.x && csize.z >= csize.y) largest_axis = 2;
+                // balanced tree split: find the largest axis of the bounding
+                // box and split along this one right in the middle
+#if 1
+                split_axis = largest_axis;
+                mid = (start + end) / 2;
+                std::nth_element(prims.data() + start, prims.data() + mid,
+                    prims.data() + end, [split_axis](auto& a, auto& b) {
+                        return (&a.center.x)[split_axis] <
+                               (&b.center.x)[split_axis];
+                    });
+#endif
+#if 0
                 // split the space in the middle along the largest axis
                 split_axis = largest_axis;
                 auto csize = (cbbox.max + cbbox.min) / 2;
@@ -1392,19 +1452,10 @@ int make_bvh_node(std::vector<bvh_node>& nodes, std::vector<bvh_prim>& prims,
                                     return (&a.center.x)[split_axis] < middle;
                                 }) -
                             prims.data());
-            } else {
-                // balanced tree split: find the largest axis of the bounding
-                // box and split along this one right in the middle
-                split_axis = largest_axis;
-                mid = (start + end) / 2;
-                std::nth_element(prims.data() + start, prims.data() + mid,
-                    prims.data() + end, [split_axis](auto& a, auto& b) {
-                        return (&a.center.x)[split_axis] <
-                               (&b.center.x)[split_axis];
-                    });
+#endif
             }
 
-            // if we were able to split, just break the primitives in half
+            // if we were not able to split, just break the primitives in half
             if (mid == start || mid == end) {
                 split_axis = 0;
                 mid = (start + end) / 2;
@@ -1415,9 +1466,8 @@ int make_bvh_node(std::vector<bvh_node>& nodes, std::vector<bvh_prim>& prims,
         node.type = bvh_node_type::internal;
         node.split_axis = split_axis;
         node.count = 2;
-        node.prims[0] =
-            make_bvh_node(nodes, prims, start, mid, type, equal_size);
-        node.prims[1] = make_bvh_node(nodes, prims, mid, end, type, equal_size);
+        node.prims[0] = make_bvh_node(nodes, prims, start, mid, type, sah);
+        node.prims[1] = make_bvh_node(nodes, prims, mid, end, type, sah);
     } else {
         // Make a leaf node
         node.type = type;
@@ -1431,7 +1481,7 @@ int make_bvh_node(std::vector<bvh_node>& nodes, std::vector<bvh_prim>& prims,
 }
 
 // Build a BVH from a set of primitives.
-void build_bvh(bvh_tree* bvh, bool equal_size) {
+void build_bvh(bvh_tree* bvh, bool sah) {
     // get the number of primitives and the primitive type
     auto prims = std::vector<bvh_prim>();
     auto type = bvh_node_type::internal;
@@ -1480,7 +1530,7 @@ void build_bvh(bvh_tree* bvh, bool equal_size) {
     // build nodes
     bvh->nodes.clear();
     bvh->nodes.reserve(prims.size() * 2);
-    make_bvh_node(bvh->nodes, prims, 0, (int)prims.size(), type, equal_size);
+    make_bvh_node(bvh->nodes, prims, 0, (int)prims.size(), type, sah);
     bvh->nodes.shrink_to_fit();
 }
 
@@ -3550,7 +3600,7 @@ void update_environment_cdf(environment* env) {
 }
 
 // Build a shape BVH
-void update_bvh(shape* shp, bool equalsize) {
+void update_bvh(shape* shp, bool sah) {
     if (!shp->bvh) shp->bvh = new bvh_tree();
     shp->bvh->pos = shp->pos;
     shp->bvh->radius = shp->radius;
@@ -3559,13 +3609,13 @@ void update_bvh(shape* shp, bool equalsize) {
     shp->bvh->points = shp->points;
     shp->bvh->lines = shp->lines;
     shp->bvh->triangles = shp->triangles;
-    build_bvh(shp->bvh, equalsize);
+    build_bvh(shp->bvh, sah);
 }
 
 // Build a scene BVH
-void update_bvh(scene* scn, bool do_shapes, bool equalsize) {
+void update_bvh(scene* scn, bool do_shapes, bool sah) {
     if (do_shapes) {
-        for (auto shp : scn->shapes) update_bvh(shp, equalsize);
+        for (auto shp : scn->shapes) update_bvh(shp, sah);
     }
 
     // tree bvh
@@ -3579,7 +3629,7 @@ void update_bvh(scene* scn, bool do_shapes, bool equalsize) {
         scn->bvh->ist_inv_frames[i] = inverse(ist->frame, false);
         scn->bvh->ist_bvhs[i] = ist->shp->bvh;
     }
-    build_bvh(scn->bvh, equalsize);
+    build_bvh(scn->bvh, sah);
 }
 
 #if YGL_EMBREE
