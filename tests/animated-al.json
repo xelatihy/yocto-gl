@@ -3,10 +3,6 @@
     "cameras": [
         {
             "name": "cam",
-            "imsize": [
-                0.036,
-                0.015
-            ],
             "focal": 0.06,
             "aperture": 0.0,
             "!!proc": {
@@ -20,7 +16,9 @@
                     1,
                     0
                 ]
-            }
+            },
+            "width": 0.036,
+            "height": 0.015
         }
     ],
     "textures": [
@@ -308,7 +306,9 @@
     "animations": [
         {
             "name": "obj1",
-            "targets": [ "obj1" ],
+            "targets": [
+                "obj1"
+            ],
             "times": [
                 0,
                 1,
@@ -334,7 +334,9 @@
         },
         {
             "name": "obj2",
-            "targets": [ "obj2" ],
+            "targets": [
+                "obj2"
+            ],
             "times": [
                 0,
                 1,
@@ -360,7 +362,9 @@
         },
         {
             "name": "obj3",
-            "targets": [ "obj3" ],
+            "targets": [
+                "obj3"
+            ],
             "times": [
                 0,
                 1,

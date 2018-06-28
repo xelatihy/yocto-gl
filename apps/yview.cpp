@@ -658,10 +658,9 @@ void init_drawscene(GLFWwindow* win) {
 // run ui loop
 void run_ui(const std::shared_ptr<app_state>& app) {
     // window
-    auto win =
-        make_window(ygl::eval_image_resolution(
-                        app->scn->cameras.at(app->camid), app->resolution),
-            "yview", app.get(), draw);
+    auto win = ygl::make_window(
+        ygl::image_width(app->scn->cameras.at(app->camid), app->resolution),
+        app->resolution, "yview", app.get(), draw);
 
     // load textures and vbos
     ygl::update_transforms(app->scn, app->time);

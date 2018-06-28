@@ -98,8 +98,8 @@ auto tracer_names = std::unordered_map<std::string, ygl::trace_func>{
 void draw_widgets(GLFWwindow* win, app_state* app) {
     if (ygl::begin_widgets_frame(win, "yitrace", &app->widgets_open)) {
         ImGui::LabelText("scene", "%s", app->filename.c_str());
-        ImGui::LabelText("image", "%d x %d @ %d", app->trace_state.img.size.x,
-            app->trace_state.img.size.y, app->trace_state.sample);
+        ImGui::LabelText("image", "%d x %d @ %d", app->trace_state.img.width,
+            app->trace_state.img.height, app->trace_state.sample);
         if (ImGui::TreeNode("render settings")) {
             auto edited = 0;
             edited += ImGui::Combo("camera", &app->camid,
@@ -135,11 +135,12 @@ void draw_widgets(GLFWwindow* win, app_state* app) {
             glfwGetCursorPos(win, &mouse_x, &mouse_y);
             auto ij = ygl::get_image_coords(
                 ygl::vec2f{(float)mouse_x, (float)mouse_y}, app->imframe,
-                {app->trace_state.img.size.x, app->trace_state.img.size.y});
+                {app->trace_state.img.width, app->trace_state.img.height});
             ImGui::DragInt2("mouse", &ij.x);
-            if (ij.x >= 0 && ij.x < app->trace_state.img.size.x && ij.y >= 0 &&
-                ij.y < app->trace_state.img.size.y) {
-                ImGui::ColorEdit4("pixel", &app->trace_state.img[ij].x);
+            if (ij.x >= 0 && ij.x < app->trace_state.img.width && ij.y >= 0 &&
+                ij.y < app->trace_state.img.height) {
+                ImGui::ColorEdit4(
+                    "pixel", &app->trace_state.img.at(ij.x, ij.y).x);
             } else {
                 auto zero4f_ = ygl::zero4f;
                 ImGui::ColorEdit4("pixel", &zero4f_.x);
@@ -204,8 +205,9 @@ bool update(app_state* app) {
 // run ui loop
 void run_ui(app_state* app) {
     // window
-    auto win_size = ygl::clamp(app->trace_state.img.size, 512, 1024);
-    auto win = ygl::make_window(win_size, "yitrace", app, draw);
+    auto ww = ygl::clamp(app->trace_state.img.width, 512, 1024);
+    auto wh = ygl::clamp(app->trace_state.img.height, 512, 1024);
+    auto win = ygl::make_window(ww, wh, "yitrace", app, draw);
 
     // init widget
     ygl::init_widgets(win);
@@ -237,15 +239,14 @@ void run_ui(app_state* app) {
 
         // selection
         if (mouse_button && alt_down && !widgets_active) {
-            auto ij = ygl::get_image_coords(
-                mouse_pos, app->imframe, app->trace_state.img.size);
-            if (ij.x < 0 || ij.x >= app->trace_state.img.size.x || ij.y < 0 ||
-                ij.y >= app->trace_state.img.size.y) {
+            auto ij = ygl::get_image_coords(mouse_pos, app->imframe,
+                {app->trace_state.img.width, app->trace_state.img.height});
+            if (ij.x < 0 || ij.x >= app->trace_state.img.width || ij.y < 0 ||
+                ij.y >= app->trace_state.img.height) {
                 auto cam = app->scn->cameras.at(app->camid);
-                auto ray = eval_camera_ray(cam, ij,
-                    ygl::vec2i{app->trace_state.img.size.x,
-                        app->trace_state.img.size.y},
-                    {0.5f, 0.5f}, ygl::zero2f);
+                auto ray =
+                    eval_camera_ray(cam, ij.x, ij.y, app->trace_state.img.width,
+                        app->trace_state.img.height, {0.5f, 0.5f}, ygl::zero2f);
                 auto isec = intersect_ray(app->scn, ray);
                 if (isec.ist) app->selection = isec.ist;
             }

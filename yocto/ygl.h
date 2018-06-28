@@ -2442,25 +2442,34 @@ namespace ygl {
 // Image container.
 template <typename T>
 struct image {
-    // constructors
-    image() : size{0, 0}, pxl{} {}
-    image(vec2i size_, const T& c = T())
-        : size{size_}, pxl(size_.x * size_.y, c) {}
-    image(vec2i size_, const std::vector<T>& p) : size{size_}, pxl(p) {}
+    int width = 0;
+    int height = 0;
+    std::vector<T> pxl = {};
 
     // pixel access
-    T& operator[](vec2i ij) { return pxl[ij.y * size.x + ij.x]; }
-    const T& operator[](vec2i ij) const { return pxl[ij.y * size.x + ij.x]; }
-    T& at(vec2i ij) { return pxl.at(ij.y * size.x + ij.x); }
-    const T& at(vec2i ij) const { return pxl.at(ij.y * size.x + ij.x); }
-
-    vec2i size = {0, 0};
-    std::vector<T> pxl = {};
+    T& at(int i, int j) { return pxl.at(j * width + i); }
+    const T& at(int i, int j) const { return pxl.at(j * width + i); }
 };
 
 // Type aliases
 using image4f = image<vec4f>;
 using image4b = image<vec4b>;
+
+// Image creation.
+template <typename T>
+inline image<T> make_image(int width, int height, T c = T{}) {
+    auto img = image<T>{};
+    img.width = width;
+    img.height = height;
+    img.pxl.resize(width * height, c);
+    return img;
+}
+inline image4f make_image4f(int width, int height, vec4f c = {0, 0, 0, 0}) {
+    return make_image<vec4f>(width, height, c);
+}
+inline image4b make_image4b(int width, int height, vec4b c = {0, 0, 0, 0}) {
+    return make_image<vec4b>(width, height, c);
+}
 
 }  // namespace ygl
 
@@ -2482,7 +2491,7 @@ image4f tonemap_image(
     const image4f& hdr, float exposure, float gamma, bool filmic);
 
 // Resize an image.
-image4f resize_image(const image4f& img, vec2i size);
+image4f resize_image(const image4f& img, int width, int height);
 
 }  // namespace ygl
 
@@ -2540,34 +2549,40 @@ vec3f rgb_to_xyz(vec3f rgb);
 namespace ygl {
 
 // Make example images.
-image4f make_grid_image(vec2i imsize, int tile = 8,
+image4f make_grid_image(int width, int height, int tile = 8,
     vec4f c0 = {0.5f, 0.5f, 0.5f, 1}, vec4f c1 = {0.8f, 0.8f, 0.8f, 1});
-image4f make_checker_image(vec2i imsize, int tile = 8,
+image4f make_checker_image(int width, int height, int tile = 8,
     vec4f c0 = {0.5f, 0.5f, 0.5f, 1}, vec4f c1 = {0.8f, 0.8f, 0.8f, 1});
-image4f make_bumpdimple_image(vec2i imsize, int tile = 8);
-image4f make_ramp_image(vec2i imsize, vec4f c0, vec4f c1, float srgb = false);
-image4f make_gammaramp_image(vec2i imsize);
-image4f make_uvramp_image(vec2i imsize);
-image4f make_uvgrid_image(vec2i imsize, int tile = 8, bool colored = true);
+image4f make_bumpdimple_image(int width, int height, int tile = 8);
+image4f make_ramp_image(
+    int width, int height, vec4f c0, vec4f c1, float srgb = false);
+image4f make_gammaramp_image(int width, int height);
+image4f make_uvramp_image(int width, int height);
+image4f make_uvgrid_image(
+    int width, int height, int tile = 8, bool colored = true);
 
 // Comvert a bump map to a normal map.
 image4f bump_to_normal_map(const image4f& img, float scale = 1);
 
 // Make a sunsky HDR model with sun at theta elevation in [0,pi/2], turbidity
 // in [1.7,10] with or without sun.
-image4f make_sunsky_image(vec2i imsize, float thetaSun, float turbidity = 3,
-    bool has_sun = false, vec3f ground_albedo = {0.7f, 0.7f, 0.7f});
+image4f make_sunsky_image(int width, int height, float thetaSun,
+    float turbidity = 3, bool has_sun = false,
+    vec3f ground_albedo = {0.7f, 0.7f, 0.7f});
 // Make an image of multiple lights.
-image4f make_lights_image(vec2i imsize, vec3f le = {1, 1, 1}, int nlights = 4,
-    float langle = pi / 4, float lwidth = pi / 16, float lheight = pi / 16);
+image4f make_lights_image(int width, int height, vec3f le = {1, 1, 1},
+    int nlights = 4, float langle = pi / 4, float lwidth = pi / 16,
+    float lheight = pi / 16);
 
 // Make a noise image. Wrap works only if both resx and resy are powers of two.
-image4f make_noise_image(vec2i imsize, float scale = 1, bool wrap = true);
-image4f make_fbm_image(vec2i imsize, float scale = 1, float lacunarity = 2,
-    float gain = 0.5f, int octaves = 6, bool wrap = true);
-image4f make_ridge_image(vec2i imsize, float scale = 1, float lacunarity = 2,
-    float gain = 0.5f, float offset = 1.0f, int octaves = 6, bool wrap = true);
-image4f make_turbulence_image(vec2i imsize, float scale = 1,
+image4f make_noise_image(
+    int width, int height, float scale = 1, bool wrap = true);
+image4f make_fbm_image(int width, int height, float scale = 1,
+    float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
+image4f make_ridge_image(int width, int height, float scale = 1,
+    float lacunarity = 2, float gain = 0.5f, float offset = 1.0f,
+    int octaves = 6, bool wrap = true);
+image4f make_turbulence_image(int width, int height, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
 
 }  // namespace ygl
@@ -2648,7 +2663,8 @@ struct camera {
     std::string name = "";             // name
     frame3f frame = identity_frame3f;  // transform frame
     bool ortho = false;                // orthographic
-    vec2f imsize = {0.036f, 0.024f};   // film width and height (default: 35mm)
+    float width = 0.036f;              // film width (default: 35mm)
+    float height = 0.024f;             // film height (default: 35mm)
     float focal = 0.050f;              // focal length (defaut: 50 mm)
     float focus = flt_max;             // focal distance (default: infinite)
     float aperture = 0;                // lens aperture
@@ -2913,7 +2929,7 @@ std::vector<std::string> validate(const scene* scn, bool skip_textures = false);
 
 // make camera
 camera* make_bbox_camera(const std::string& name, bbox3f bbox,
-    vec2f imsize = {0.036f, 0.024f}, float focal = 0.050f);
+    float width = 0.036f, float height = 0.024f, float focal = 0.050f);
 // make default material
 inline material* make_default_material(const std::string& name) {
     auto mat = new material();
@@ -2928,7 +2944,7 @@ inline environment* make_sky_environment(
     auto txt = new texture();
     txt->name = name;
     txt->path = "textures/" + name + ".hdr";
-    txt->img = make_sunsky_image({1024, 512}, sun_angle);
+    txt->img = make_sunsky_image(1024, 512, sun_angle);
     auto env = new environment();
     env->name = name;
     env->ke = {1, 1, 1};
@@ -2995,7 +3011,8 @@ float eval_camera_fovy(const camera* cam);
 float eval_camera_aspect(const camera* cam);
 void set_camera_fovy(
     camera* cam, float fovy, float aspect, float width = 0.036f);
-vec2i eval_image_resolution(const camera* cam, int yresolution);
+int image_width(const camera* cam, int yresolution);
+int image_height(const camera* cam, int yresolution);
 
 // Generates a ray from a camera image coordinate `uv` and lens coordinates
 // `luv`.
@@ -3004,7 +3021,7 @@ ray3f eval_camera_ray(const camera* cam, vec2f uv, vec2f luv);
 // `res`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and
 // the image resolution `res`.
 ray3f eval_camera_ray(
-    const camera* cam, vec2i ij, vec2i imsize, vec2f puv, vec2f luv);
+    const camera* cam, int i, int j, int w, int h, vec2f puv, vec2f luv);
 
 // Evaluates material parameters: emission, diffuse, specular, transmission,
 // roughness and opacity.

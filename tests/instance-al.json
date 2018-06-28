@@ -3,10 +3,6 @@
     "cameras": [
         {
             "name": "cam",
-            "imsize": [
-                0.036,
-                0.015
-            ],
             "focal": 0.06,
             "aperture": 0.0,
             "!!proc": {
@@ -20,7 +16,9 @@
                     1,
                     0
                 ]
-            }
+            },
+            "width": 0.036,
+            "height": 0.015
         }
     ],
     "textures": [],
