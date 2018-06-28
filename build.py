@@ -53,37 +53,11 @@ def formattests():
     from collections import OrderedDict
     for filename in glob.glob('tests/*.json'):
         def fix_proc(js):
-            njs = OrderedDict();
-            njs["name"] = js["name"]
-            njs["cameras"] = js["cameras"]
-            njs["textures"] = []
-            njs["materials"] = []
-            njs["shapes"] = []
-            njs["instances"] = js["instances"]
-            njs["environments"] = js["environments"] if "environments" in js else []
-            snames = set()
-            mnames = set()
-            tnames = set()
-            for ist in njs["instances"]:
-                sname = ist["shp"]["name"]
-                mname = ist["mat"]["name"]
-                if sname not in snames:
-                    njs["shapes"] += [ ist["shp"] ]
-                    snames.add(sname)
-                if mname not in mnames:
-                    njs["materials"] += [ ist["mat"] ]
-                    mnames.add(mname)
-                ist["shp"] = sname
-                ist["mat"] = mname
-            for mat in njs["materials"] + njs["environments"]:
-                for txt in ['ke_txt', 'kd_txt', 'ks_txt', 'norm_txt']:
-                    if txt not in mat: continue
-                    tname = mat[txt]["name"]
-                    if tname not in tnames:
-                        tnames.add(tname)
-                        njs["textures"] += [ mat[txt] ]
-                    mat[txt] = tname
-            return njs
+            for c in js["cameras"]:
+                c["width"] = c["imsize"][0]
+                c["height"] = c["imsize"][1]
+                del c["imsize"]
+            return js
         with open(filename, "rt") as f: js = json.load(f, object_pairs_hook=OrderedDict)
         js = fix_proc(js)
         with open(filename, "wt") as f: json.dump(js, f, indent=4)
