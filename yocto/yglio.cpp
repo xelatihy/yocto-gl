@@ -1642,43 +1642,6 @@ void save_json_scene(const std::string& filename, const scene* scn,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// OBJ vertex
-struct obj_vertex {
-    int pos = 0;
-    int texcoord = 0;
-    int norm = 0;
-};
-
-// Input/Output for OBJ vertex
-inline std::istream& operator>>(std::istream& is, obj_vertex& v) {
-    v = {0, 0, 0};
-    is >> v.pos;
-    if (is.peek() == '/') {
-        is.get();
-        if (is.peek() == '/') {
-            is.get();
-            is >> v.norm;
-        } else {
-            is >> v.texcoord;
-            if (is.peek() == '/') {
-                is.get();
-                is >> v.norm;
-            }
-        }
-    }
-    return is;
-}
-inline std::ostream& operator<<(std::ostream& os, const obj_vertex& v) {
-    os << v.pos;
-    if (v.texcoord) {
-        os << "/" << v.texcoord;
-        if (v.norm) os << "/" << v.norm;
-    } else {
-        if (v.norm) os << "//" << v.norm;
-    }
-    return os;
-}
-
 // fast unsafe string parser
 struct fastparsestream {
     fastparsestream(const std::string& str_) {
@@ -1776,6 +1739,128 @@ inline fastparsestream& operator>>(fastparsestream& is, frame<T, N>& val) {
     for (auto i = 0; i < N + 1; i++) is >> (&val.x)[i];
     return is;
 }
+
+// OBJ vertex
+struct obj_vertex {
+    int pos = 0;
+    int texcoord = 0;
+    int norm = 0;
+};
+
+// Obj texture information.
+struct obj_texture_info {
+    std::string path = "";  // file path
+    bool clamp = false;     // clamp to edge
+    float scale = 1;        // scale for bump/displacement
+    // Properties not explicitly handled.
+    std::unordered_map<std::string, std::vector<float>> props;
+};
+
+// Obj material.
+struct obj_material {
+    std::string name;  // name
+    int illum = 0;     // MTL illum mode
+
+    // base values
+    vec3f ke = {0, 0, 0};  // emission color
+    vec3f ka = {0, 0, 0};  // ambient color
+    vec3f kd = {0, 0, 0};  // diffuse color
+    vec3f ks = {0, 0, 0};  // specular color
+    vec3f kr = {0, 0, 0};  // reflection color
+    vec3f kt = {0, 0, 0};  // transmission color
+    float ns = 0;          // Phong exponent color
+    float ior = 1;         // index of refraction
+    float op = 1;          // opacity
+    float rs = -1;         // roughness (-1 not defined)
+    float km = -1;         // metallic  (-1 not defined)
+
+    obj_texture_info ke_txt;    // emission texture
+    obj_texture_info ka_txt;    // ambient texture
+    obj_texture_info kd_txt;    // diffuse texture
+    obj_texture_info ks_txt;    // specular texture
+    obj_texture_info kr_txt;    // reflection texture
+    obj_texture_info kt_txt;    // transmission texture
+    obj_texture_info ns_txt;    // Phong exponent texture
+    obj_texture_info op_txt;    // opacity texture
+    obj_texture_info rs_txt;    // roughness texture
+    obj_texture_info km_txt;    // metallic texture
+    obj_texture_info ior_txt;   // ior texture
+    obj_texture_info occ_txt;   // occlusion map
+    obj_texture_info bump_txt;  // bump map
+    obj_texture_info disp_txt;  // displacement map
+    obj_texture_info norm_txt;  // normal map
+
+    // Properties not explicitly handled.
+    std::unordered_map<std::string, std::vector<std::string>> props;
+};
+
+// Obj camera [extension].
+struct obj_camera {
+    std::string name;                  // name
+    frame3f frame = identity_frame3f;  // transform
+    bool ortho = false;                // orthographic
+    float width = 0.036f;              // film width (default to 35mm)
+    float height = 0.024f;             // film height (default to 35mm)
+    float focal = 0.050f;              // focal length
+    float aspect = 16.0f / 9.0f;       // aspect ratio
+    float aperture = 0;                // lens aperture
+    float focus = flt_max;             // focus distance
+};
+
+// Obj environment [extension].
+struct obj_environment {
+    std::string name;                  // name
+    frame3f frame = identity_frame3f;  // transform
+    vec3f ke = zero3f;                 // emission color
+    obj_texture_info ke_txt;           // emission texture
+};
+
+// Obj callbacks
+struct obj_callbacks {
+    std::function<void(vec3f)> vert = [](auto) {};
+    std::function<void(vec3f)> norm = [](auto) {};
+    std::function<void(vec2f)> texcoord = [](auto) {};
+    std::function<void(const std::vector<obj_vertex>&)> face = [](auto&) {};
+    std::function<void(const std::vector<obj_vertex>&)> line = [](auto&) {};
+    std::function<void(const std::vector<obj_vertex>&)> point = [](auto&) {};
+    std::function<void(const std::string& name)> object = [](auto&) {};
+    std::function<void(const std::string& name)> group = [](auto&) {};
+    std::function<void(const std::string& name)> usemtl = [](auto&) {};
+    std::function<void(const std::string& name)> smoothing = [](auto&) {};
+    std::function<void(const obj_material&)> material = [](auto&) {};
+    std::function<void(const obj_camera&)> camera = [](auto&) {};
+    std::function<void(const obj_environment&)> environmnet = [](auto&) {};
+};
+
+// Input/Output for OBJ vertex
+inline std::istream& operator>>(std::istream& is, obj_vertex& v) {
+    v = {0, 0, 0};
+    is >> v.pos;
+    if (is.peek() == '/') {
+        is.get();
+        if (is.peek() == '/') {
+            is.get();
+            is >> v.norm;
+        } else {
+            is >> v.texcoord;
+            if (is.peek() == '/') {
+                is.get();
+                is >> v.norm;
+            }
+        }
+    }
+    return is;
+}
+inline std::ostream& operator<<(std::ostream& os, const obj_vertex& v) {
+    os << v.pos;
+    if (v.texcoord) {
+        os << "/" << v.texcoord;
+        if (v.norm) os << "/" << v.norm;
+    } else {
+        if (v.norm) os << "//" << v.norm;
+    }
+    return os;
+}
 inline fastparsestream& operator>>(fastparsestream& is, obj_vertex& v) {
     v = {0, 0, 0};
     is >> v.pos;
@@ -1794,24 +1879,287 @@ inline fastparsestream& operator>>(fastparsestream& is, obj_vertex& v) {
     }
     return is;
 }
+// Input for OBJ textures
+inline std::istream& operator>>(std::istream& is, obj_texture_info& info) {
+    // initialize
+    info = obj_texture_info();
+
+    // get tokens
+    auto tokens = std::vector<std::string>();
+    while (true) {
+        auto v = ""s;
+        is >> v;
+        if (v == "") break;
+        tokens.push_back(v);
+    }
+    if (tokens.empty()) return is;
+
+    // texture name
+    info.path = normalize_path(tokens.back());
+
+    // texture options
+    auto last = std::string();
+    for (auto i = 0; i < tokens.size() - 1; i++) {
+        if (tokens[i] == "-bm") info.scale = atof(tokens[i + 1].c_str());
+        if (tokens[i] == "-clamp") info.clamp = true;
+    }
+
+    return is;
+}
+
+inline bool operator==(obj_vertex a, obj_vertex b) {
+    return a.pos == b.pos && a.texcoord == b.texcoord && a.norm == b.norm;
+}
+
+struct obj_vertex_hash {
+    size_t operator()(const obj_vertex& v) const {
+        auto vh = std::hash<int>();
+        auto h = (size_t)0;
+        for (auto i = 0; i < 3; i++)
+            h ^= vh((&v.pos)[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        return h;
+    }
+};
+
+// Load obj materials
+void load_mtl(
+    const std::string& filename, const obj_callbacks& cb, bool flip_tr = true) {
+    // open file
+    auto fs = std::ifstream(filename);
+    if (!fs) throw std::runtime_error("cannot open filename " + filename);
+
+    // currently parsed material
+    auto mat = obj_material();
+    auto first = true;
+
+    // read the file line by line
+    std::string line;
+    while (std::getline(fs, line)) {
+        // remove comment
+        if (line.find("#") != line.npos) line = line.substr(0, line.find("#"));
+
+        // prepare to parse
+        auto ss = std::stringstream(line);
+
+        // get command
+        auto cmd = ""s;
+        ss >> cmd;
+        if (cmd == "") continue;
+
+        // possible token values
+        if (cmd == "newmtl") {
+            if (!first) cb.material(mat);
+            first = false;
+            mat = obj_material();
+            ss >> mat.name;
+        } else if (cmd == "illum") {
+            ss >> mat.illum;
+        } else if (cmd == "Ke") {
+            ss >> mat.ke;
+        } else if (cmd == "Kd") {
+            ss >> mat.kd;
+        } else if (cmd == "Ks") {
+            ss >> mat.ks;
+        } else if (cmd == "Kt") {
+            ss >> mat.kt;
+        } else if (cmd == "Tf") {
+            mat.kt = {-1, -1, -1};
+            ss >> mat.kt;
+            if (mat.kt.y < 0) mat.kt = {mat.kt.x, mat.kt.x, mat.kt.x};
+            if (flip_tr) mat.kt = vec3f{1, 1, 1} - mat.kt;
+        } else if (cmd == "Tr") {
+            auto tr = vec3f{-1, -1, -1};
+            ss >> tr;
+            if (tr.y < 0) tr = {tr.x, tr.x, tr.x};
+            mat.op = (tr.x + tr.y + tr.z) / 3;
+            if (flip_tr) mat.op = 1 - mat.op;
+        } else if (cmd == "Ns") {
+            ss >> mat.ns;
+            mat.rs = pow(2 / (mat.ns + 2), 1 / 4.0f);
+            if (mat.rs < 0.01f) mat.rs = 0;
+            if (mat.rs > 0.99f) mat.rs = 1;
+        } else if (cmd == "d") {
+            ss >> mat.op;
+        } else if (cmd == "Pr" || cmd == "rs") {
+            ss >> mat.rs;
+        } else if (cmd == "map_Ke") {
+            ss >> mat.ke_txt;
+        } else if (cmd == "map_Kd") {
+            ss >> mat.kd_txt;
+        } else if (cmd == "map_Ks") {
+            ss >> mat.ks_txt;
+        } else if (cmd == "map_Tr") {
+            ss >> mat.kt_txt;
+        } else if (cmd == "map_d" || cmd == "map_Tr") {
+            ss >> mat.op_txt;
+        } else if (cmd == "map_Pr" || cmd == "map_rs") {
+            ss >> mat.rs_txt;
+        } else if (cmd == "map_occ" || cmd == "occ") {
+            ss >> mat.occ_txt;
+        } else if (cmd == "map_bump" || cmd == "bump") {
+            ss >> mat.bump_txt;
+        } else if (cmd == "map_disp" || cmd == "disp") {
+            ss >> mat.disp_txt;
+        } else if (cmd == "map_norm" || cmd == "norm") {
+            ss >> mat.norm_txt;
+        }
+    }
+
+    // issue current material
+    if (!first) cb.material(mat);
+
+    // clone
+    fs.close();
+}
+
+// Load obj extensions
+void load_objx(const std::string& filename, const obj_callbacks& cb) {
+    // open file
+    auto fs = std::ifstream(filename);
+    if (!fs) throw std::runtime_error("cannot open filename " + filename);
+
+    // read the file line by line
+    std::string line;
+    while (std::getline(fs, line)) {
+        // remove comments
+        if (line.find("#") != line.npos) line = line.substr(0, line.find("#"));
+
+        // prepare to parse
+        auto ss = std::stringstream(line);
+
+        // get command
+        auto cmd = ""s;
+        ss >> cmd;
+        if (cmd == "") continue;
+
+        // possible token values
+        if (cmd == "c") {
+            auto cam = obj_camera();
+            ss >> cam.name >> cam.ortho >> cam.width >> cam.height >>
+                cam.focal >> cam.focus >> cam.aperture >> cam.frame;
+            cb.camera(cam);
+        } else if (cmd == "e") {
+            auto env = obj_environment();
+            ss >> env.name >> env.ke >> env.ke_txt.path >> env.frame;
+            if (env.ke_txt.path == "\"\"") env.ke_txt.path = "";
+            cb.environmnet(env);
+        } else {
+            // unused
+        }
+    }
+
+    // close file
+    fs.close();
+}
+
+// Load obj scene
+void load_obj(const std::string& filename, const obj_callbacks& cb,
+    bool flip_texcoord = true, bool flip_tr = true) {
+    // open file
+    auto fs = std::ifstream(filename);
+    if (!fs) throw std::runtime_error("cannot open filename " + filename);
+
+    // track vertex size
+    auto vert_size = obj_vertex();
+    auto verts = std::vector<obj_vertex>();  // buffer to avoid reallocation
+
+    // read the file line by line
+    std::string line;
+    while (std::getline(fs, line)) {
+        // remove comments
+        if (line.find("#") != line.npos) line = line.substr(0, line.find("#"));
+
+// prepare to parse
+#if YGL_FASTPARSE != 0
+        auto ss = fastparsestream(line);
+#else
+        auto ss = std::stringstream(line);
+#endif
+
+        // get command
+        auto cmd = ""s;
+        ss >> cmd;
+        if (cmd == "") continue;
+
+        // possible token values
+        if (cmd == "v") {
+            auto v = zero3f;
+            ss >> v;
+            cb.vert(v);
+            vert_size.pos += 1;
+        } else if (cmd == "vn") {
+            auto v = zero3f;
+            ss >> v;
+            cb.norm(v);
+            vert_size.norm += 1;
+        } else if (cmd == "vt") {
+            auto v = zero2f;
+            ss >> v;
+            if (flip_texcoord) v.y = 1 - v.y;
+            cb.texcoord(v);
+            vert_size.texcoord += 1;
+        } else if (cmd == "f" || cmd == "l" || cmd == "p") {
+            verts.clear();
+            while (true) {
+                auto vert = obj_vertex();
+                ss >> vert;
+                if (!vert.pos) break;
+                if (vert.pos < 0) vert.pos = vert_size.pos + vert.pos + 1;
+                if (vert.texcoord < 0)
+                    vert.texcoord = vert_size.texcoord + vert.texcoord + 1;
+                if (vert.norm < 0) vert.norm = vert_size.norm + vert.norm + 1;
+                verts.push_back(vert);
+            }
+            if (cmd == "f") cb.face(verts);
+            if (cmd == "l") cb.line(verts);
+            if (cmd == "p") cb.point(verts);
+        } else if (cmd == "o") {
+            auto v = ""s;
+            ss >> v;
+            cb.object(v);
+        } else if (cmd == "usemtl") {
+            auto v = ""s;
+            ss >> v;
+            cb.usemtl(v);
+        } else if (cmd == "g") {
+            auto v = ""s;
+            ss >> v;
+            cb.group(v);
+        } else if (cmd == "s") {
+            auto v = ""s;
+            ss >> v;
+            cb.smoothing(v);
+        } else if (cmd == "mtllib") {
+            auto mtlname = ""s;
+            ss >> mtlname;
+            auto mtlpath = get_dirname(filename) + "/" + mtlname;
+            load_mtl(mtlpath, cb, flip_tr);
+        } else {
+            // unused
+        }
+    }
+
+    // parse extensions if presents
+    auto extname = replace_extension(filename, "objx");
+    auto f = fopen(extname.c_str(), "rt");
+    if (f) {
+        fclose(f);
+        load_objx(extname, cb);
+    }
+
+    // close file
+    fs.close();
+}
 
 // Loads an OBJ
 scene* load_obj_scene(const std::string& filename, bool load_textures,
     bool skip_missing, bool split_shapes) {
     auto scn = new scene();
 
-    // parsing policies
-    auto flip_texcoord = true;
-    auto flip_tr = true;
-
     // splitting policy
     auto split_material = split_shapes;
     auto split_group = split_shapes;
     auto split_smoothing = split_shapes;
-
-    // open file
-    auto fs = std::ifstream(filename);
-    if (!fs) throw std::runtime_error("cannot open filename " + filename);
 
     // current parsing values
     auto matname = std::string();
@@ -1831,7 +2179,7 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
 
     // vertex maps
     auto name_map = std::unordered_map<std::string, int>();
-    auto vert_map = std::unordered_map<vec3i, int>();
+    auto vert_map = std::unordered_map<obj_vertex, int, obj_vertex_hash>();
     auto pos_map = std::unordered_map<int, int>();
     auto norm_map = std::unordered_map<int, int>();
     auto texcoord_map = std::unordered_map<int, int>();
@@ -1877,274 +2225,132 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
         texcoord_map.clear();
         return ist;
     };
+    // Parse texture options and name
+    auto add_texture = [scn, &tmap](const obj_texture_info& info, bool srgb) {
+        if (info.path == "") return (texture*)nullptr;
+        if (tmap.find(info.path) != tmap.end()) { return tmap.at(info.path); }
+
+        // create texture
+        auto txt = new texture();
+        txt->name = info.path;
+        txt->path = info.path;
+        txt->clamp = info.clamp;
+        txt->scale = info.scale;
+        txt->gamma = (srgb && !is_hdr_filename(info.path)) ? 2.2f : 1.0f;
+        scn->textures.push_back(txt);
+        tmap[info.path] = txt;
+
+        return txt;
+    };
+    // Add  vertices to the current shape
+    auto add_verts = [&](const std::vector<obj_vertex>& verts) {
+        for (auto& vert : verts) {
+            auto it = vert_map.find(vert);
+            if (it != vert_map.end()) continue;
+            auto nverts = (int)ist->shp->pos.size();
+            vert_map.insert(it, {vert, nverts});
+            if (vert.pos) ist->shp->pos.push_back(pos.at(vert.pos - 1));
+            if (vert.texcoord)
+                ist->shp->texcoord.push_back(texcoord.at(vert.texcoord - 1));
+            if (vert.norm) ist->shp->norm.push_back(norm.at(vert.norm - 1));
+        }
+    };
 
     // current objet
     ist = add_instance(scn, "", "", "", true);
 
-    // read the file line by line
-    std::string line;
-    while (std::getline(fs, line)) {
-        // remove comments
-        if (line.find("#") != line.npos) line = line.substr(0, line.find("#"));
-
-// prepare to parse
-#if YGL_FASTPARSE != 0
-        auto ss = fastparsestream(line);
-#else
-        auto ss = std::stringstream(line);
-#endif
-
-        // get command
-        auto cmd = ""s;
-        ss >> cmd;
-        if (cmd == "") continue;
-
-        // possible token values
-        if (cmd == "v") {
-            pos.push_back(zero3f);
-            ss >> pos.back();
-        } else if (cmd == "vn") {
-            norm.push_back({});
-            ss >> norm.back();
-        } else if (cmd == "vt") {
-            texcoord.push_back({});
-            ss >> texcoord.back();
-            if (flip_texcoord) texcoord.back().y = 1 - texcoord.back().y;
-        } else if (cmd == "f" || cmd == "l" || cmd == "p") {
-            auto num = 0;
-            vec3i verts[128];
-            int vids[128];
-            auto vert_size =
-                vec3i{(int)pos.size(), (int)texcoord.size(), (int)norm.size()};
-            // elem.material = (int)oobj->materials.size() - 1;
-            while (true) {
-                auto vert = obj_vertex();
-                ss >> vert;
-                if (!vert.pos) break;
-                verts[num] = {-1, -1, -1};
-                if (vert.pos)
-                    verts[num].x = (vert.pos < 0) ? (vert_size.x + vert.pos) :
-                                                    (vert.pos - 1);
-                if (vert.texcoord)
-                    verts[num].y = (vert.texcoord < 0) ?
-                                       (vert_size.y + vert.texcoord) :
-                                       (vert.texcoord - 1);
-                if (vert.norm)
-                    verts[num].z = (vert.norm < 0) ? (vert_size.z + vert.norm) :
-                                                     (vert.norm - 1);
-                num++;
-            }
-            if (ist->sbd) {
-                // TODO: subdivs
-            } else if (ist->shp) {
-                for (auto i = 0; i < num; i++) {
-                    auto it = vert_map.find(verts[i]);
-                    if (it == vert_map.end()) {
-                        auto nverts = (int)ist->shp->pos.size();
-                        vert_map.insert(it, {verts[i], nverts});
-                        vids[i] = nverts;
-                        if (verts[i].x >= 0)
-                            ist->shp->pos.push_back(pos.at(verts[i].x));
-                        if (verts[i].y >= 0)
-                            ist->shp->texcoord.push_back(
-                                texcoord.at(verts[i].y));
-                        if (verts[i].z >= 0)
-                            ist->shp->norm.push_back(norm.at(verts[i].z));
-                    } else {
-                        vids[i] = it->second;
-                    }
-                }
-                if (cmd == "f") {
-                    for (auto i = 2; i < num; i++)
-                        ist->shp->triangles.push_back(
-                            {vids[0], vids[i - 1], vids[i]});
-                }
-                if (cmd == "l") {
-                    for (auto i = 1; i < num; i++)
-                        ist->shp->lines.push_back({vids[i - 1], vids[i]});
-                }
-                if (cmd == "p") {
-                    for (auto i = 0; i < num; i++)
-                        ist->shp->points.push_back(vids[i]);
-                }
-            }
-        } else if (cmd == "o") {
-            ss >> oname;
-            gname = "";
-            matname = "";
-            smoothing = true;
+    // callbacks
+    auto cb = obj_callbacks();
+    cb.vert = [&](vec3f v) { pos.push_back(v); };
+    cb.norm = [&](vec3f v) { norm.push_back(v); };
+    cb.texcoord = [&](vec2f v) { texcoord.push_back(v); };
+    cb.face = [&](const std::vector<obj_vertex>& verts) {
+        add_verts(verts);
+        for (auto i = 2; i < verts.size(); i++)
+            ist->shp->triangles.push_back({vert_map.at(verts[0]),
+                vert_map.at(verts[i - 1]), vert_map.at(verts[i])});
+    };
+    cb.line = [&](const std::vector<obj_vertex>& verts) {
+        add_verts(verts);
+        for (auto i = 1; i < verts.size(); i++)
+            ist->shp->lines.push_back(
+                {vert_map.at(verts[i - 1]), vert_map.at(verts[i])});
+    };
+    cb.point = [&](const std::vector<obj_vertex>& verts) {
+        add_verts(verts);
+        for (auto i = 0; i < verts.size(); i++)
+            ist->shp->points.push_back(vert_map.at(verts[i]));
+    };
+    cb.object = [&](const std::string& name) {
+        oname = name;
+        gname = "";
+        matname = "";
+        smoothing = true;
+        ist = add_instance(scn, oname, matname, gname, smoothing);
+    };
+    cb.group = [&](const std::string& name) {
+        gname = name;
+        if (split_group) {
             ist = add_instance(scn, oname, matname, gname, smoothing);
-        } else if (cmd == "usemtl") {
-            ss >> matname;
-            if (split_material) {
-                ist = add_instance(scn, oname, matname, gname, smoothing);
-            } else {
-                if (matname != "") ist->mat = mmap.at(matname);
-            }
-        } else if (cmd == "g") {
-            ss >> gname;
-            if (split_group) {
-                ist = add_instance(scn, oname, matname, gname, smoothing);
-            }
-        } else if (cmd == "s") {
-            auto name = ""s;
-            ss >> name;
-            smoothing = (name == "on");
-            if (split_smoothing) {
-                ist = add_instance(scn, oname, matname, gname, smoothing);
-            }
-        } else if (cmd == "mtllib") {
-            auto mtlname = ""s;
-            ss >> mtlname;
-            auto mtlpath = get_dirname(filename) + "/" + mtlname;
-            // open file
-            auto fs = std::ifstream(mtlpath);
-            if (!fs)
-                throw std::runtime_error("cannot open filename " + mtlpath);
-
-            // Parse texture options and name
-            auto add_texture = [scn, &tmap](std::stringstream& ss, bool srgb) {
-                // get tokens
-                auto tokens = std::vector<std::string>();
-                while (true) {
-                    auto v = ""s;
-                    ss >> v;
-                    if (v == "") break;
-                    tokens.push_back(v);
-                }
-                if (tokens.empty()) return (texture*)nullptr;
-
-                // texture name
-                auto path = normalize_path(tokens.back());
-                if (tmap.find(path) != tmap.end()) { return tmap.at(path); }
-
-                // create texture
-                auto txt = new texture();
-                txt->name = path;
-                txt->path = path;
-                txt->gamma = (srgb && !is_hdr_filename(path)) ? 2.2f : 1.0f;
-                scn->textures.push_back(txt);
-                tmap[path] = txt;
-
-                // texture options
-                for (auto i = 0; i < tokens.size(); i++) {
-                    if (tokens[i] == "-clamp") txt->clamp = true;
-                    // TODO: bump scale
-                }
-
-                return txt;
-            };
-
-            // add a material preemptively to avoid crashes
-            scn->materials.push_back(new material());
-            auto mat = scn->materials.back();
-
-            // read the file line by line
-            std::string line;
-            while (std::getline(fs, line)) {
-                // remove comment
-                if (line.find("#") != line.npos)
-                    line = line.substr(0, line.find("#"));
-
-                // prepare to parse
-                auto ss = std::stringstream(line);
-
-                // get command
-                auto cmd = ""s;
-                ss >> cmd;
-                if (cmd == "") continue;
-
-                // possible token values
-                if (cmd == "newmtl") {
-                    mat = new material();
-                    ss >> mat->name;
-                    scn->materials.push_back(mat);
-                    mmap[mat->name] = mat;
-                } else if (cmd == "illum") {
-                    // TODO: something with illum
-                } else if (cmd == "Ke") {
-                    ss >> mat->ke;
-                } else if (cmd == "Kd") {
-                    ss >> mat->kd;
-                } else if (cmd == "Ks") {
-                    ss >> mat->ks;
-                } else if (cmd == "Kt") {
-                    ss >> mat->kt;
-                } else if (cmd == "Tf") {
-                    mat->kt = {-1, -1, -1};
-                    ss >> mat->kt;
-                    if (mat->kt.y < 0)
-                        mat->kt = {mat->kt.x, mat->kt.x, mat->kt.x};
-                    if (flip_tr) mat->kt = vec3f{1, 1, 1} - mat->kt;
-                } else if (cmd == "Tr") {
-                    auto tr = vec3f{-1, -1, -1};
-                    ss >> tr;
-                    if (tr.y < 0) tr = {tr.x, tr.x, tr.x};
-                    mat->op = (tr.x + tr.y + tr.z) / 3;
-                    if (flip_tr) mat->op = 1 - mat->op;
-                } else if (cmd == "Ns") {
-                    auto ns = 0.0f;
-                    ss >> ns;
-                    mat->rs = pow(2 / (ns + 2), 1 / 4.0f);
-                    if (mat->rs < 0.01f) mat->rs = 0;
-                    if (mat->rs > 0.99f) mat->rs = 1;
-                } else if (cmd == "d") {
-                    ss >> mat->op;
-                } else if (cmd == "Pr" || cmd == "rs") {
-                    ss >> mat->rs;
-                } else if (cmd == "map_Ke") {
-                    mat->ke_txt = add_texture(ss, true);
-                } else if (cmd == "map_Kd") {
-                    mat->kd_txt = add_texture(ss, true);
-                } else if (cmd == "map_Ks") {
-                    mat->ks_txt = add_texture(ss, true);
-                } else if (cmd == "map_Tr") {
-                    mat->kt_txt = add_texture(ss, true);
-                } else if (cmd == "map_d" || cmd == "map_Tr") {
-                    mat->op_txt = add_texture(ss, false);
-                } else if (cmd == "map_Pr" || cmd == "map_rs") {
-                    mat->rs_txt = add_texture(ss, false);
-                } else if (cmd == "map_occ" || cmd == "occ") {
-                    mat->occ_txt = add_texture(ss, false);
-                } else if (cmd == "map_bump" || cmd == "bump") {
-                    mat->bump_txt = add_texture(ss, false);
-                } else if (cmd == "map_disp" || cmd == "disp") {
-                    mat->disp_txt = add_texture(ss, false);
-                } else if (cmd == "map_norm" || cmd == "norm") {
-                    mat->norm_txt = add_texture(ss, false);
-                }
-            }
-
-            // remove first fake material
-            if (scn->materials.front()->name == "")
-                scn->materials.erase(scn->materials.begin());
-
-            // clone
-            fs.close();
-        } else if (cmd == "c") {
-            auto cam = new camera();
-            ss >> cam->name >> cam->ortho >> cam->imsize >> cam->focal >>
-                cam->focus >> cam->aperture >> cam->frame;
-            scn->cameras.push_back(cam);
-        } else if (cmd == "e") {
-            auto ke_txt = ""s;
-            auto env = new environment();
-            ss >> env->name >> env->ke >> ke_txt >> env->frame;
-            if (ke_txt != "\"\"") {
-                if (tmap.find(ke_txt) == tmap.end()) {
-                    auto txt = new texture();
-                    txt->name = ke_txt;
-                    txt->path = ke_txt;
-                    tmap[ke_txt] = txt;
-                    scn->textures.push_back(txt);
-                }
-                env->ke_txt = tmap.at(ke_txt);
-            }
-            scn->environments.push_back(env);
-        } else {
-            // unused
         }
-    }
+    };
+    cb.smoothing = [&](const std::string& name) {
+        smoothing = (name == "on");
+        if (split_smoothing) {
+            ist = add_instance(scn, oname, matname, gname, smoothing);
+        }
+    };
+    cb.usemtl = [&](const std::string& name) {
+        matname = name;
+        if (split_material) {
+            ist = add_instance(scn, oname, matname, gname, smoothing);
+        } else {
+            if (matname != "") ist->mat = mmap.at(matname);
+        }
+    };
+    cb.material = [&](const obj_material& omat) {
+        auto mat = new material();
+        mat->name = omat.name;
+        mat->ke = omat.ke;
+        mat->kd = omat.kd;
+        mat->ks = omat.ks;
+        mat->kt = omat.kt;
+        mat->rs = omat.rs;
+        mat->op = omat.op;
+        mat->ke_txt = add_texture(omat.ke_txt, true);
+        mat->kd_txt = add_texture(omat.kd_txt, true);
+        mat->ks_txt = add_texture(omat.ks_txt, true);
+        mat->kt_txt = add_texture(omat.kt_txt, true);
+        mat->op_txt = add_texture(omat.op_txt, false);
+        mat->rs_txt = add_texture(omat.rs_txt, false);
+        mat->occ_txt = add_texture(omat.occ_txt, false);
+        mat->bump_txt = add_texture(omat.bump_txt, false);
+        mat->disp_txt = add_texture(omat.disp_txt, false);
+        mat->norm_txt = add_texture(omat.norm_txt, false);
+        scn->materials.push_back(mat);
+        mmap[mat->name] = mat;
+    };
+    cb.camera = [&](const obj_camera& ocam) {
+        auto cam = new camera();
+        cam->name = ocam.name;
+        cam->ortho = ocam.ortho;
+        cam->imsize = {ocam.width, ocam.height};
+        cam->focal = ocam.focal;
+        cam->focus = ocam.focus;
+        cam->aperture = ocam.aperture;
+        cam->frame = ocam.frame;
+        scn->cameras.push_back(cam);
+    };
+    cb.environmnet = [&](const obj_environment& oenv) {
+        auto env = new environment();
+        env->name = oenv.name;
+        env->ke = oenv.ke;
+        env->ke_txt = add_texture(oenv.ke_txt, true);
+        scn->environments.push_back(env);
+    };
+
+    // Parse obj
+    load_obj(filename, cb);
 
     // cleanup empty
     // TODO: delete unused
@@ -2162,9 +2368,6 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
         scn->instances.erase(scn->instances.begin() + idx);
         idx--;
     }
-
-    // close file
-    fs.close();
 
     // updates
     update_bbox(scn);
@@ -2209,20 +2412,48 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
     return scn;
 }
 
-void save_obj_scene(const std::string& filename, const scene* scn,
-    bool save_textures, bool skip_missing) {
-    // scene
+void save_mtl(
+    const std::string& filename, const scene* scn, bool flip_tr = true) {
+    // open
     auto fs = std::ofstream(filename);
     if (!fs) throw std::runtime_error("cannot save file " + filename);
 
-    // parsing policies
-    auto flip_texcoord = true;
-
-    // material library
-    if (!scn->materials.empty()) {
-        auto mtlname = replace_extension(get_filename(filename), "mtl");
-        fs << "mtllib " << mtlname << "\n";
+    // for each material, dump all the values
+    for (auto mat : scn->materials) {
+        fs << "newmtl " << mat->name << "\n";
+        fs << "  illum 2\n";
+        if (mat->ke != zero3f) fs << "  Ke " << mat->ke << "\n";
+        if (mat->kd != zero3f) fs << "  Kd " << mat->kd << "\n";
+        if (mat->ks != zero3f) fs << "  Ks " << mat->ks << "\n";
+        if (mat->kt != zero3f) fs << "  Kt " << mat->kt << "\n";
+        if (mat->rs != 1.0f)
+            fs << "  Ns "
+               << (int)clamp(2 / pow(mat->rs + 1e-10f, 4.0f) - 2, 0.0f, 1.0e12f)
+               << "\n";
+        if (mat->op != 1.0f) fs << "  d " << mat->op << "\n";
+        if (mat->rs != -1.0f) fs << "  Pr " << mat->rs << "\n";
+        if (mat->ke_txt) fs << "  map_Ke " << mat->ke_txt->path << "\n";
+        if (mat->kd_txt) fs << "  map_Kd " << mat->kd_txt->path << "\n";
+        if (mat->ks_txt) fs << "  map_Ks " << mat->ks_txt->path << "\n";
+        if (mat->kt_txt) fs << "  map_Kt " << mat->kt_txt->path << "\n";
+        if (mat->op_txt && mat->op_txt != mat->kd_txt)
+            fs << "  map_d  " << mat->op_txt->path << "\n";
+        if (mat->rs_txt) fs << "  map_Pr " << mat->rs_txt->path << "\n";
+        if (mat->occ_txt) fs << "  map_occ " << mat->occ_txt->path << "\n";
+        if (mat->bump_txt) fs << "  map_bump " << mat->bump_txt->path << "\n";
+        if (mat->disp_txt) fs << "  map_disp " << mat->disp_txt->path << "\n";
+        if (mat->norm_txt) fs << "  map_norm " << mat->norm_txt->path << "\n";
+        fs << "\n";
     }
+
+    // done
+    fs.close();
+}
+
+void save_objx(const std::string& filename, const scene* scn) {
+    // scene
+    auto fs = std::ofstream(filename);
+    if (!fs) throw std::runtime_error("cannot save file " + filename);
 
     // cameras
     for (auto cam : scn->cameras) {
@@ -2236,6 +2467,22 @@ void save_obj_scene(const std::string& filename, const scene* scn,
         fs << "e " << env->name << " " << env->ke << " "
            << ((env->ke_txt) ? env->ke_txt->path : "\"\""s) << " " << env->frame
            << "\n";
+    }
+
+    // done
+    fs.close();
+}
+
+void save_obj(
+    const std::string& filename, const scene* scn, bool flip_texcoord = true) {
+    // scene
+    auto fs = std::ofstream(filename);
+    if (!fs) throw std::runtime_error("cannot save file " + filename);
+
+    // material library
+    if (!scn->materials.empty()) {
+        auto mtlname = replace_extension(get_filename(filename), "mtl");
+        fs << "mtllib " << mtlname << "\n";
     }
 
     // shapes
@@ -2328,43 +2575,15 @@ void save_obj_scene(const std::string& filename, const scene* scn,
     }
 
     fs.close();
+}
 
-    // save materials
-    if (scn->materials.empty()) return;
-
-    auto mtlname = replace_extension(filename, ".mtl");
-    fs = std::ofstream(mtlname);
-    if (!fs) throw std::runtime_error("cannot open filename " + mtlname);
-
-    // for each material, dump all the values
-    for (auto mat : scn->materials) {
-        fs << "newmtl " << mat->name << "\n";
-        fs << "  illum 2\n";
-        if (mat->ke != zero3f) fs << "  Ke " << mat->ke << "\n";
-        if (mat->kd != zero3f) fs << "  Kd " << mat->kd << "\n";
-        if (mat->ks != zero3f) fs << "  Ks " << mat->ks << "\n";
-        if (mat->kt != zero3f) fs << "  Kt " << mat->kt << "\n";
-        if (mat->rs != 1.0f)
-            fs << "  Ns "
-               << (int)clamp(2 / pow(mat->rs + 1e-10f, 4.0f) - 2, 0.0f, 1.0e12f)
-               << "\n";
-        if (mat->op != 1.0f) fs << "  d " << mat->op << "\n";
-        if (mat->rs != -1.0f) fs << "  Pr " << mat->rs << "\n";
-        if (mat->ke_txt) fs << "  map_Ke " << mat->ke_txt->path << "\n";
-        if (mat->kd_txt) fs << "  map_Kd " << mat->kd_txt->path << "\n";
-        if (mat->ks_txt) fs << "  map_Ks " << mat->ks_txt->path << "\n";
-        if (mat->kt_txt) fs << "  map_Kt " << mat->kt_txt->path << "\n";
-        if (mat->op_txt && mat->op_txt != mat->kd_txt)
-            fs << "  map_d  " << mat->op_txt->path << "\n";
-        if (mat->rs_txt) fs << "  map_Pr " << mat->rs_txt->path << "\n";
-        if (mat->occ_txt) fs << "  map_occ " << mat->occ_txt->path << "\n";
-        if (mat->bump_txt) fs << "  map_bump " << mat->bump_txt->path << "\n";
-        if (mat->disp_txt) fs << "  map_disp " << mat->disp_txt->path << "\n";
-        if (mat->norm_txt) fs << "  map_norm " << mat->norm_txt->path << "\n";
-        fs << "\n";
-    }
-
-    fs.close();
+void save_obj_scene(const std::string& filename, const scene* scn,
+    bool save_textures, bool skip_missing) {
+    save_obj(filename, scn, true);
+    if (!scn->materials.empty())
+        save_mtl(replace_extension(filename, ".mtl"), scn, true);
+    if (!scn->cameras.empty() || !scn->environments.empty())
+        save_objx(replace_extension(filename, ".objx"), scn);
 
     // skip textures if needed
     if (!save_textures) return;
