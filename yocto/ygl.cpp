@@ -1430,8 +1430,8 @@ int make_bvh_node(std::vector<bvh_node>& nodes, std::vector<bvh_prim>& prims,
                 if (csize.x >= csize.y && csize.x >= csize.z) largest_axis = 0;
                 if (csize.y >= csize.x && csize.y >= csize.z) largest_axis = 1;
                 if (csize.z >= csize.x && csize.z >= csize.y) largest_axis = 2;
-                // balanced tree split: find the largest axis of the bounding
-                // box and split along this one right in the middle
+                    // balanced tree split: find the largest axis of the
+                    // bounding box and split along this one right in the middle
 #if 1
                 split_axis = largest_axis;
                 mid = (start + end) / 2;
