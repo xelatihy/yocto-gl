@@ -44,8 +44,8 @@ struct gimage {
     ygl::image4f img = {};       // image
 
     // min/max values
-    ygl::bbox4f pxl_bounds = ygl::invalid_bbox4f;
-    ygl::bbox1f lum_bounds = ygl::invalid_bbox1f;
+    ygl::vec4f pxl_min = ygl::zero4f, pxl_max = ygl::zero4f;
+    float lum_min = 0, lum_max = 0;
 
     // image adjustment
     bool updated = true;
@@ -59,31 +59,46 @@ struct gimage {
 };
 
 struct app_state {
-    std::vector<std::shared_ptr<gimage>> imgs;
-    std::shared_ptr<gimage> img = nullptr;
+    std::vector<gimage*> imgs;
+    gimage* img = nullptr;
 
     // viewing properties
     uint gl_prog = 0, gl_pbo = 0, gl_tbo = 0, gl_ebo = 0;
     bool widgets_open = false;
-    ygl::frame2f imframe = ygl::identity_frame2f;
+    ygl::vec2f imcenter = ygl::zero2f;
+    float imscale = 1;
     bool zoom_to_fit = false;
     ygl::vec4f background = {0.8f, 0.8f, 0.8f, 0};
+
+    ~app_state() {
+        for (auto v : imgs) delete v;
+    }
 };
 
 // compute min/max
-void update_minmax(std::shared_ptr<gimage> img) {
-    img->pxl_bounds = ygl::invalid_bbox4f;
-    img->lum_bounds = ygl::invalid_bbox1f;
-    for (auto& p : img->img.pxl) {
-        img->pxl_bounds += p;
-        img->lum_bounds += ygl::luminance(xyz(p));
+void update_minmax(gimage* img) {
+    img->pxl_min = {ygl::flt_max, ygl::flt_max, ygl::flt_max, ygl::flt_max};
+    img->pxl_max = {ygl::flt_min, ygl::flt_min, ygl::flt_min, ygl::flt_min};
+    img->lum_min = ygl::flt_max;
+    img->lum_max = ygl::flt_min;
+    for (auto p : img->img.pxl) {
+        img->pxl_min.x = ygl::min(img->pxl_min.x, p.x);
+        img->pxl_min.y = ygl::min(img->pxl_min.y, p.y);
+        img->pxl_min.z = ygl::min(img->pxl_min.z, p.z);
+        img->pxl_min.w = ygl::min(img->pxl_min.w, p.w);
+        img->pxl_max.x = ygl::min(img->pxl_max.x, p.x);
+        img->pxl_max.y = ygl::min(img->pxl_max.y, p.y);
+        img->pxl_max.z = ygl::min(img->pxl_max.z, p.z);
+        img->pxl_max.w = ygl::min(img->pxl_max.w, p.w);
+        img->lum_min = ygl::min(img->lum_min, ygl::luminance(xyz(p)));
+        img->lum_max = ygl::max(img->lum_max, ygl::luminance(xyz(p)));
     }
 }
 
 // Loads a generic image
-std::shared_ptr<gimage> load_gimage(
+gimage* load_gimage(
     const std::string& filename, float exposure, float gamma, bool filmic) {
-    auto img = std::make_shared<gimage>();
+    auto img = new gimage();
     img->filename = filename;
     img->name = ygl::get_filename(filename);
     img->exposure = exposure;
@@ -95,11 +110,10 @@ std::shared_ptr<gimage> load_gimage(
     return img;
 }
 
-std::shared_ptr<gimage> diff_gimage(
-    std::shared_ptr<gimage> a, std::shared_ptr<gimage> b, bool color) {
+gimage* diff_gimage(const gimage* a, const gimage* b, bool color) {
     if (a->img.width != b->img.width || a->img.height != b->img.height)
         return nullptr;
-    auto d = std::make_shared<gimage>();
+    auto d = new gimage();
     d->name = "diff " + a->name + " " + b->name;
     d->filename = "";
     d->img = a->img;
@@ -132,7 +146,7 @@ std::shared_ptr<gimage> diff_gimage(
     return d;
 }
 
-void update_display_image(const std::shared_ptr<gimage>& img) {
+void update_display_image(gimage* img) {
     img->display = img->img;
     if (img->is_hdr) {
         img->display = ygl::tonemap_image(
@@ -151,17 +165,15 @@ void draw_widgets(GLFWwindow* win, app_state* app) {
         edited += ImGui::SliderFloat("gamma", &app->img->gamma, 1, 3);
         edited += ImGui::Checkbox("filmic", &app->img->filmic);
         if (edited) app->img->updated = true;
-        auto zoom = app->imframe.x.x;
-        if (ImGui::SliderFloat("zoom", &zoom, 0.1, 10))
-            app->imframe.x.x = app->imframe.y.y = zoom;
+        ImGui::SliderFloat("zoom", &app->imscale, 0.1, 10);
         ImGui::Checkbox("zoom to fit", &app->zoom_to_fit);
         ImGui::ColorEdit4("background", &app->background.x);
         ImGui::Separator();
         auto mouse_x = 0.0, mouse_y = 0.0;
         glfwGetCursorPos(win, &mouse_x, &mouse_y);
-        auto ij =
-            ygl::get_image_coords(ygl::vec2f{(float)mouse_x, (float)mouse_y},
-                app->imframe, {app->img->img.width, app->img->img.height});
+        auto ij = ygl::get_image_coords(
+            ygl::vec2f{(float)mouse_x, (float)mouse_y}, app->imcenter,
+            app->imscale, {app->img->img.width, app->img->img.height});
         ImGui::DragInt2("mouse", &ij.x);
         auto pixel = ygl::zero4f;
         if (ij.x >= 0 && ij.x < app->img->img.width && ij.y >= 0 &&
@@ -170,10 +182,10 @@ void draw_widgets(GLFWwindow* win, app_state* app) {
         }
         ImGui::ColorEdit4("pixel", &pixel.x);
         if (!app->img->img.pxl.empty()) {
-            ImGui::DragFloat4("pxl min", &app->img->pxl_bounds.min.x);
-            ImGui::DragFloat4("pxl max", &app->img->pxl_bounds.max.y);
-            ImGui::DragFloat("lum min", &app->img->lum_bounds.min);
-            ImGui::DragFloat("lum max", &app->img->lum_bounds.max);
+            ImGui::DragFloat4("pxl min", &app->img->pxl_min.x);
+            ImGui::DragFloat4("pxl max", &app->img->pxl_max.y);
+            ImGui::DragFloat("lum min", &app->img->lum_min);
+            ImGui::DragFloat("lum max", &app->img->lum_max);
         }
     }
     ygl::end_widgets_frame();
@@ -181,8 +193,8 @@ void draw_widgets(GLFWwindow* win, app_state* app) {
 
 void draw(GLFWwindow* win) {
     auto app = (app_state*)glfwGetWindowUserPointer(win);
-    draw_glimage(win, app->img->display, app->imframe, app->zoom_to_fit,
-        app->background);
+    draw_glimage(win, app->img->display, app->imcenter, app->imscale,
+        app->zoom_to_fit, app->background);
     draw_widgets(win, app);
     glfwSwapBuffers(win);
 }
@@ -207,11 +219,9 @@ void run_ui(const std::shared_ptr<app_state>& app) {
 
         // handle mouse
         if (mouse_button && !widgets_active) {
-            if (mouse_button == 1) app->imframe.o += mouse_pos - last_pos;
+            if (mouse_button == 1) app->imcenter += mouse_pos - last_pos;
             if (mouse_button == 2) {
-                auto zoom = powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
-                app->imframe =
-                    app->imframe * ygl::frame2f{{zoom, 0}, {0, zoom}, {0, 0}};
+                app->imscale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
             }
         }
 

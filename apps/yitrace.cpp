@@ -38,11 +38,11 @@ using namespace std::literals;
 struct app_state {
     // scene
     ygl::scene* scn = nullptr;
+    ygl::camera* cam = nullptr;
 
     // rendering params
     std::string filename = "scene.json"s;
     std::string imfilename = "out.obj"s;
-    int camid = 0;                             // camera index
     int resolution = 512;                      // image resolution
     int nsamples = 256;                        // number of samples
     std::string tracer = "pathtrace"s;         // tracer name
@@ -53,10 +53,16 @@ struct app_state {
     int pratio = 8;                            // preview ratio
 
     // rendering state
-    ygl::trace_async_state trace_state = {};
+    ygl::image4f img = {};
+    ygl::image4f display = {};
+    std::vector<ygl::rng_state> rng = {};
+    bool stop = false;
+    std::vector<std::thread> threads;
+    int sample = 0;
 
     // view image
-    ygl::frame2f imframe = ygl::identity_frame2f;
+    ygl::vec2f imcenter = ygl::zero2f;
+    float imscale = 1;
     bool zoom_to_fit = true;
     float exposure = 0;
     float gamma = 2.2f;
@@ -98,13 +104,12 @@ auto tracer_names = std::unordered_map<std::string, ygl::trace_func>{
 void draw_widgets(GLFWwindow* win, app_state* app) {
     if (ygl::begin_widgets_frame(win, "yitrace", &app->widgets_open)) {
         ImGui::LabelText("scene", "%s", app->filename.c_str());
-        ImGui::LabelText("image", "%d x %d @ %d", app->trace_state.img.width,
-            app->trace_state.img.height, app->trace_state.sample);
+        ImGui::LabelText("image", "%d x %d @ %d", app->img.width,
+            app->img.height, app->sample);
         if (ImGui::TreeNode("render settings")) {
             auto edited = 0;
-            edited += ImGui::Combo("camera", &app->camid,
-                app->scn->cameras.size(),
-                [&app](int i) { return app->scn->cameras[i]->name.c_str(); });
+            edited +=
+                ImGui::Combo("camera", &app->cam, app->scn->cameras, false);
             edited +=
                 ImGui::SliderInt("resolution", &app->resolution, 256, 4096);
             edited += ImGui::SliderInt("nsamples", &app->nsamples, 16, 4096);
@@ -115,32 +120,28 @@ void draw_widgets(GLFWwindow* win, app_state* app) {
             edited += ImGui::SliderInt("pratio", &app->pratio, 1, 64);
             if (edited) app->update_list.push_back(ygl::scene_selection());
             ImGui::LabelText("time/sample", "%0.3lf",
-                (app->trace_state.sample) ?
-                    (ygl::get_time() - app->trace_start) /
-                        (1000000000.0 * app->trace_state.sample) :
-                    0.0);
+                (app->sample) ? (ygl::get_time() - app->trace_start) /
+                                    (1000000000.0 * app->sample) :
+                                0.0);
             ImGui::TreePop();
         }
         if (ImGui::TreeNode("view settings")) {
             ImGui::SliderFloat("exposure", &app->exposure, -5, 5);
             ImGui::SliderFloat("gamma", &app->gamma, 1, 3);
             ImGui::ColorEdit4("background", &app->background.x);
-            auto zoom = app->imframe.x.x;
-            if (ImGui::SliderFloat("zoom", &zoom, 0.1, 10))
-                app->imframe.x.x = app->imframe.y.y = zoom;
+            ImGui::SliderFloat("zoom", &app->imscale, 0.1, 10);
             ImGui::Checkbox("zoom to fit", &app->zoom_to_fit);
             ImGui::SameLine();
             ImGui::Checkbox("fps", &app->navigation_fps);
             auto mouse_x = 0.0, mouse_y = 0.0;
             glfwGetCursorPos(win, &mouse_x, &mouse_y);
             auto ij = ygl::get_image_coords(
-                ygl::vec2f{(float)mouse_x, (float)mouse_y}, app->imframe,
-                {app->trace_state.img.width, app->trace_state.img.height});
+                ygl::vec2f{(float)mouse_x, (float)mouse_y}, app->imcenter,
+                app->imscale, {app->img.width, app->img.height});
             ImGui::DragInt2("mouse", &ij.x);
-            if (ij.x >= 0 && ij.x < app->trace_state.img.width && ij.y >= 0 &&
-                ij.y < app->trace_state.img.height) {
-                ImGui::ColorEdit4(
-                    "pixel", &app->trace_state.img.at(ij.x, ij.y).x);
+            if (ij.x >= 0 && ij.x < app->img.width && ij.y >= 0 &&
+                ij.y < app->img.height) {
+                ImGui::ColorEdit4("pixel", &app->img.at(ij.x, ij.y).x);
             } else {
                 auto zero4f_ = ygl::zero4f;
                 ImGui::ColorEdit4("pixel", &zero4f_.x);
@@ -148,7 +149,6 @@ void draw_widgets(GLFWwindow* win, app_state* app) {
             ImGui::TreePop();
         }
         if (ImGui::TreeNode("scene tree")) {
-            if (ImGui::Button("print stats")) ygl::print_stats(app->scn);
             ygl::draw_glwidgets_scene_tree(
                 "", app->scn, app->selection, app->update_list, 200, {});
             ImGui::TreePop();
@@ -164,7 +164,7 @@ void draw_widgets(GLFWwindow* win, app_state* app) {
 
 void draw(GLFWwindow* win) {
     auto app = (app_state*)glfwGetWindowUserPointer(win);
-    ygl::draw_glimage(win, app->trace_state.display, app->imframe,
+    ygl::draw_glimage(win, app->display, app->imcenter, app->imscale,
         app->zoom_to_fit, app->background);
     draw_widgets(win, app);
     glfwSwapBuffers(win);
@@ -175,28 +175,28 @@ bool update(app_state* app) {
     if (app->update_list.empty()) return false;
 
     // stop renderer
-    ygl::trace_async_stop(app->trace_state);
+    ygl::trace_async_stop(&app->threads, &app->stop);
 
     // update BVH
     for (auto sel : app->update_list) {
         if (sel.as<ygl::shape>()) {
             ygl::refit_bvh(sel.as<ygl::shape>());
-            ygl::refit_bvh(app->scn, false);
+            ygl::refit_bvh(app->scn);
         }
-        if (sel.as<ygl::instance>()) { ygl::refit_bvh(app->scn, false); }
+        if (sel.as<ygl::instance>()) { ygl::refit_bvh(app->scn); }
         if (sel.as<ygl::node>()) {
             ygl::update_transforms(app->scn, 0);
-            ygl::refit_bvh(app->scn, false);
+            ygl::refit_bvh(app->scn);
         }
     }
     app->update_list.clear();
 
     app->tracef = tracer_names.at(app->tracer);
-    app->trace_state = {};
     app->trace_start = ygl::get_time();
-    ygl::trace_async_start(app->trace_state, app->scn, app->camid,
-        app->resolution, app->nsamples, app->tracef, app->exposure, app->gamma,
-        app->filmic, app->pratio, app->nbounces, app->pixel_clamp, app->seed);
+    ygl::trace_async_start(app->scn, app->cam, app->nsamples, app->tracef,
+        &app->img, &app->display, &app->rng, &app->threads, &app->stop,
+        &app->sample, &app->exposure, &app->gamma, &app->filmic, app->pratio,
+        app->nbounces, app->pixel_clamp, app->seed);
 
     // updated
     return true;
@@ -205,8 +205,8 @@ bool update(app_state* app) {
 // run ui loop
 void run_ui(app_state* app) {
     // window
-    auto ww = ygl::clamp(app->trace_state.img.width, 512, 1024);
-    auto wh = ygl::clamp(app->trace_state.img.height, 512, 1024);
+    auto ww = ygl::clamp(app->img.width, 512, 1024);
+    auto wh = ygl::clamp(app->img.height, 512, 1024);
     auto win = ygl::make_window(ww, wh, "yitrace", app, draw);
 
     // init widget
@@ -232,21 +232,19 @@ void run_ui(app_state* app) {
             if (mouse_button == 2) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
             if (mouse_button == 3 || (mouse_button == 1 && shift_down))
                 pan = (mouse_pos - last_pos) / 100.0f;
-            auto cam = app->scn->cameras.at(app->camid);
-            ygl::camera_turntable(cam->frame, cam->focus, rotate, dolly, pan);
-            app->update_list.push_back(cam);
+            ygl::camera_turntable(
+                app->cam->frame, app->cam->focus, rotate, dolly, pan);
+            app->update_list.push_back(app->cam);
         }
 
         // selection
         if (mouse_button && alt_down && !widgets_active) {
-            auto ij = ygl::get_image_coords(mouse_pos, app->imframe,
-                {app->trace_state.img.width, app->trace_state.img.height});
-            if (ij.x < 0 || ij.x >= app->trace_state.img.width || ij.y < 0 ||
-                ij.y >= app->trace_state.img.height) {
-                auto cam = app->scn->cameras.at(app->camid);
-                auto ray =
-                    eval_camera_ray(cam, ij.x, ij.y, app->trace_state.img.width,
-                        app->trace_state.img.height, {0.5f, 0.5f}, ygl::zero2f);
+            auto ij = ygl::get_image_coords(mouse_pos, app->imcenter,
+                app->imscale, {app->img.width, app->img.height});
+            if (ij.x < 0 || ij.x >= app->img.width || ij.y < 0 ||
+                ij.y >= app->img.height) {
+                auto ray = eval_camera_ray(app->cam, ij.x, ij.y, app->img.width,
+                    app->img.height, {0.5f, 0.5f}, ygl::zero2f);
                 auto isec = intersect_ray(app->scn, ray);
                 if (isec.ist) app->selection = isec.ist;
             }
@@ -327,11 +325,7 @@ int main(int argc, char* argv[]) {
 
     // tesselate
     if (!quiet) std::cout << "tesselating scene elements\n";
-    ygl::update_tesselation(scn);
-
-    // update bbox and transforms
-    ygl::update_transforms(scn);
-    ygl::update_bbox(scn);
+    ygl::tesselate_subdivs(scn);
 
     // add components
     if (!quiet) std::cout << "adding scene elements\n";
@@ -342,14 +336,15 @@ int main(int argc, char* argv[]) {
     if (double_sided)
         for (auto mat : scn->materials) mat->double_sided = true;
     if (scn->cameras.empty())
-        scn->cameras.push_back(ygl::make_bbox_camera("<view>", scn->bbox));
+        scn->cameras.push_back(
+            ygl::make_bbox_camera("<view>", ygl::compute_bbox(scn)));
     ygl::add_missing_names(scn);
     for (auto err : ygl::validate(scn)) std::cout << "warning: " << err << "\n";
 
     // build bvh
     if (!quiet) std::cout << "building bvh\n";
     auto bvh_start = ygl::get_time();
-    ygl::update_bvh(scn);
+    ygl::build_bvh(scn);
 #if YGL_EMBREE
     if (embree) ygl::build_bvh_embree(scn);
 #endif
@@ -359,7 +354,7 @@ int main(int argc, char* argv[]) {
 
     // init renderer
     if (!quiet) std::cout << "initializing lights\n";
-    ygl::update_lights(scn);
+    ygl::init_lights(scn);
 
     // fix renderer type if no lights
     if (scn->lights.empty() && scn->environments.empty() &&
@@ -374,11 +369,17 @@ int main(int argc, char* argv[]) {
     app->scn = scn;
     app->filename = filename;
     app->imfilename = imfilename;
-    app->camid = camid;
+    app->cam = scn->cameras.at(camid);
     app->resolution = resolution;
     app->nsamples = nsamples;
     app->tracer = tracer;
     app->tracef = tracer_names.at(tracer);
+    app->img = ygl::make_image4f(ygl::image_width(app->cam, resolution),
+        ygl::image_height(app->cam, resolution));
+    app->display = ygl::make_image4f(ygl::image_width(app->cam, resolution),
+        ygl::image_height(app->cam, resolution));
+    app->rng = ygl::make_trace_rngs(ygl::image_width(app->cam, resolution),
+        ygl::image_height(app->cam, resolution), seed);
     app->nbounces = nbounces;
     app->seed = seed;
     app->pixel_clamp = pixel_clamp;
@@ -387,15 +388,16 @@ int main(int argc, char* argv[]) {
     // initialize rendering objects
     if (!quiet) std::cout << "starting async renderer\n";
     app->trace_start = ygl::get_time();
-    ygl::trace_async_start(app->trace_state, app->scn, app->camid,
-        app->resolution, app->nsamples, app->tracef, app->exposure, app->gamma,
-        app->filmic, app->pratio, app->nbounces, app->pixel_clamp, app->seed);
+    ygl::trace_async_start(app->scn, app->cam, app->nsamples, app->tracef,
+        &app->img, &app->display, &app->rng, &app->threads, &app->stop,
+        &app->sample, &app->exposure, &app->gamma, &app->filmic, app->pratio,
+        app->nbounces, app->pixel_clamp, app->seed);
 
     // run interactive
     run_ui(app);
 
     // cleanup
-    ygl::trace_async_stop(app->trace_state);
+    ygl::trace_async_stop(&app->threads, &app->stop);
     delete app;
 
     // done

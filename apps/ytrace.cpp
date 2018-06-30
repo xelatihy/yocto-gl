@@ -114,11 +114,7 @@ int main(int argc, char* argv[]) {
 
     // tesselate
     if (!quiet) std::cout << "tesselating scene elements\n";
-    ygl::update_tesselation(scn);
-
-    // update bbox and transforms
-    ygl::update_transforms(scn);
-    ygl::update_bbox(scn);
+    ygl::tesselate_subdivs(scn);
 
     // add components
     if (!quiet) std::cout << "adding scene elements\n";
@@ -129,14 +125,15 @@ int main(int argc, char* argv[]) {
     if (double_sided)
         for (auto mat : scn->materials) mat->double_sided = true;
     if (scn->cameras.empty())
-        scn->cameras.push_back(ygl::make_bbox_camera("<view>", scn->bbox));
+        scn->cameras.push_back(
+            ygl::make_bbox_camera("<view>", ygl::compute_bbox(scn)));
     ygl::add_missing_names(scn);
     for (auto err : ygl::validate(scn)) std::cout << "warning: " << err << "\n";
 
     // build bvh
     if (!quiet) std::cout << "building bvh\n";
     auto bvh_start = ygl::get_time();
-    ygl::update_bvh(scn);
+    ygl::build_bvh(scn);
 #if YGL_EMBREE
     if (embree) ygl::build_bvh_embree(scn);
 #endif
@@ -146,38 +143,40 @@ int main(int argc, char* argv[]) {
 
     // init renderer
     if (!quiet) std::cout << "initializing lights\n";
-    ygl::update_lights(scn);
+    ygl::init_lights(scn);
 
     // initialize rendering objects
     if (!quiet) std::cout << "initializing tracer data\n";
     auto tracef = tracer_names.at(tracer);
-    auto st = ygl::trace_state();
+    auto cam = scn->cameras.at(camid);
+    auto img = ygl::make_image4f(
+        ygl::image_width(cam, resolution), ygl::image_height(cam, resolution));
+    auto rng = ygl::make_trace_rngs(ygl::image_width(cam, resolution),
+        ygl::image_height(cam, resolution), seed);
 
     // render
     if (!quiet) std::cout << "rendering image\n";
     auto render_start = ygl::get_time();
-    auto done = false;
-    while (!done) {
+    for (auto sample = 0; sample < nsamples; sample += nbatch) {
         if (!quiet)
-            std::cout << "rendering sample " << st.sample << "/" << nsamples
+            std::cout << "rendering sample " << sample << "/" << nsamples
                       << "\n";
         auto block_start = ygl::get_time();
-        done = ygl::trace_samples(st, scn, camid, resolution, nsamples, tracef,
-            nbatch, nbounces, pixel_clamp, noparallel, seed);
+        ygl::trace_samples(scn, cam, nbatch, tracef, &img, &rng, sample,
+            nbounces, pixel_clamp, noparallel);
         if (!quiet)
             std::cout << "rendering block in "
                       << ygl::format_duration(ygl::get_time() - block_start)
                       << "\n";
         if (save_batch) {
-            auto filename = ygl::replace_extension(
-                imfilename, std::to_string(st.sample) + "." +
-                                ygl::get_extension(imfilename));
+            auto filename = ygl::replace_extension(imfilename,
+                std::to_string(sample) + "." + ygl::get_extension(imfilename));
             if (!quiet) std::cout << "saving image " << filename << "\n";
             if (ygl::is_hdr_filename(filename)) {
-                ygl::save_image(filename, st.img);
+                ygl::save_image(filename, img);
             } else {
-                ygl::save_image(filename,
-                    ygl::tonemap_image(st.img, exposure, gamma, filmic));
+                ygl::save_image(
+                    filename, ygl::tonemap_image(img, exposure, gamma, filmic));
             }
         }
     }
@@ -197,11 +196,14 @@ int main(int argc, char* argv[]) {
     // save image
     if (!quiet) std::cout << "saving image " << imfilename << "\n";
     if (ygl::is_hdr_filename(imfilename)) {
-        ygl::save_image(imfilename, st.img);
+        ygl::save_image(imfilename, img);
     } else {
         ygl::save_image(
-            imfilename, ygl::tonemap_image(st.img, exposure, gamma, filmic));
+            imfilename, ygl::tonemap_image(img, exposure, gamma, filmic));
     }
+
+    // cleanup
+    delete scn;
 
     // done
     return 0;
