@@ -152,24 +152,25 @@ inline uint make_gltexture(const image4f& img, bool linear, bool mipmap) {
     glBindTexture(GL_TEXTURE_2D, tid);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.width, img.height, 0, GL_RGBA,
         GL_FLOAT, img.pxl.data());
-    if(!linear) {
+    if (!linear) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    } else if(!mipmap) {
+    } else if (!mipmap) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     } else {
         glGenerateMipmap(GL_TEXTURE_2D);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(
+            GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     }
     glBindTexture(GL_TEXTURE_2D, 0);
     check_glerror();
     return tid;
 }
 
-inline void update_gltexture(uint tid, const image4f& img, 
-    int old_width, int old_height, bool mipmap) {
+inline void update_gltexture(
+    uint tid, const image4f& img, int old_width, int old_height, bool mipmap) {
     check_glerror();
     glBindTexture(GL_TEXTURE_2D, tid);
     if (img.width != old_width || img.height != old_height) {
@@ -179,7 +180,7 @@ inline void update_gltexture(uint tid, const image4f& img,
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.width, img.height, GL_RGBA,
             GL_FLOAT, img.pxl.data());
     }
-    if(mipmap) glGenerateMipmap(GL_TEXTURE_2D);
+    if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, 0);
     check_glerror();
 }
@@ -215,7 +216,7 @@ inline void set_gluniform(uint loc, const mat4f& val) {
     check_glerror();
 }
 
-template<typename T>
+template <typename T>
 inline void set_gluniform(uint pid, const char* name, const T& val) {
     check_glerror();
     set_gluniform(glGetUniformLocation(pid, name), val);
@@ -231,7 +232,8 @@ inline void set_gluniform_texture(uint loc, uint tid, int unit) {
     check_glerror();
 }
 
-inline void set_gluniform_texture(uint pid, const char* name, uint tid, int unit) {
+inline void set_gluniform_texture(
+    uint pid, const char* name, uint tid, int unit) {
     check_glerror();
     set_gluniform_texture(glGetUniformLocation(pid, name), tid, unit);
     check_glerror();
@@ -239,11 +241,10 @@ inline void set_gluniform_texture(uint pid, const char* name, uint tid, int unit
 
 inline void set_glvertattrib(uint loc, uint bid, const vec2f& val) {
     check_glerror();
-    if(bid) {
+    if (bid) {
         glEnableVertexAttribArray(loc);
         glBindBuffer(GL_ARRAY_BUFFER, bid);
-        glVertexAttribPointer(loc, 2,
-            GL_FLOAT, false, 0, 0);
+        glVertexAttribPointer(loc, 2, GL_FLOAT, false, 0, 0);
     } else {
         glVertexAttrib2f(loc, val.x, val.y);
     }
@@ -252,11 +253,10 @@ inline void set_glvertattrib(uint loc, uint bid, const vec2f& val) {
 
 inline void set_glvertattrib(uint loc, uint bid, const vec3f& val) {
     check_glerror();
-    if(bid) {
+    if (bid) {
         glEnableVertexAttribArray(loc);
         glBindBuffer(GL_ARRAY_BUFFER, bid);
-        glVertexAttribPointer(loc, 3,
-            GL_FLOAT, false, 0, 0);
+        glVertexAttribPointer(loc, 3, GL_FLOAT, false, 0, 0);
     } else {
         glVertexAttrib3f(loc, val.x, val.y, val.z);
     }
@@ -265,19 +265,19 @@ inline void set_glvertattrib(uint loc, uint bid, const vec3f& val) {
 
 inline void set_glvertattrib(uint loc, uint bid, const vec4f& val) {
     check_glerror();
-    if(bid) {
+    if (bid) {
         glEnableVertexAttribArray(loc);
         glBindBuffer(GL_ARRAY_BUFFER, bid);
-        glVertexAttribPointer(loc, 4,
-            GL_FLOAT, false, 0, 0);
+        glVertexAttribPointer(loc, 4, GL_FLOAT, false, 0, 0);
     } else {
         glVertexAttrib4f(loc, val.x, val.y, val.z, val.w);
     }
     check_glerror();
 }
 
-template<typename T>
-inline void set_glvertattrib(uint pid, const char* name, uint bid, const T& val) {
+template <typename T>
+inline void set_glvertattrib(
+    uint pid, const char* name, uint bid, const T& val) {
     check_glerror();
     set_glvertattrib(glGetAttribLocation(pid, name), bid, val);
     check_glerror();
@@ -338,8 +338,8 @@ static const char* draw_image_fragment =
     }
     )";
 
-inline void draw_glimage(const image4f& img, const frame2f& imframe,
-    const vec2i& win_size) {
+inline void draw_glimage(
+    const image4f& img, vec2f imcenter, float imscale, vec2i win_size) {
     static uint gl_prog = 0, gl_pbo = 0, gl_tbo = 0, gl_ebo = 0, gl_txt = 0;
     static int gl_width = 0, gl_height = 0;
 
@@ -369,7 +369,7 @@ inline void draw_glimage(const image4f& img, const frame2f& imframe,
     auto pos = std::vector<vec2f>{{-imsize.x / 2.0f, -imsize.y / 2.0f},
         {imsize.x / 2.0f, -imsize.y / 2.0f}, {imsize.x / 2.0f, imsize.y / 2.0f},
         {-imsize.x / 2.0f, imsize.y / 2.0f}};
-    for (auto& p : pos) p = transform_point(imframe, p);
+    for (auto& p : pos) p = p * imscale + imcenter;
     for (auto& p : pos) {
         p.x = 2 * p.x / win_size.x - 1;
         p.y = 2 * p.y / win_size.y - 1;
@@ -385,13 +385,14 @@ inline void draw_glimage(const image4f& img, const frame2f& imframe,
     glUseProgram(0);
 }
 
-inline void draw_glimage(GLFWwindow* win, const image4f& img,
-    frame2f& imframe, bool zoom_to_fit, const vec4f& background) {
+inline void draw_glimage(GLFWwindow* win, const image4f& img, vec2f& imcenter,
+    float& imscale, bool zoom_to_fit, const vec4f& background) {
     auto win_size = zero2i, framebuffer_size = zero2i;
     glfwGetWindowSize(win, &win_size.x, &win_size.y);
     glfwGetFramebufferSize(win, &framebuffer_size.x, &framebuffer_size.y);
 
-    center_image(imframe, {img.width, img.height}, win_size, zoom_to_fit);
+    center_image(
+        imcenter, imscale, {img.width, img.height}, win_size, zoom_to_fit);
 
     check_glerror();
     glViewport(0, 0, framebuffer_size.x, framebuffer_size.y);
@@ -401,7 +402,7 @@ inline void draw_glimage(GLFWwindow* win, const image4f& img,
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     check_glerror();
 
-    draw_glimage(img, imframe, win_size);
+    draw_glimage(img, imcenter, imscale, win_size);
 
     check_glerror();
     glDisable(GL_BLEND);
@@ -429,11 +430,11 @@ inline GLFWwindow* make_window(int w, int h, const std::string& title,
     if (glewInit() != GLEW_OK) return nullptr;
 #endif
 
-//    glfwSetCharCallback(win, ImGui_ImplGlfw_CharCallback);
-//    glfwSetKeyCallback(win, ImGui_ImplGlfw_KeyCallback);
-//    glfwSetMouseButtonCallback(win, ImGui_ImplGlfw_MouseButtonCallback);
-//    glfwSetScrollCallback(win, ImGui_ImplGlfw_ScrollCallback);
-    
+    //    glfwSetCharCallback(win, ImGui_ImplGlfw_CharCallback);
+    //    glfwSetKeyCallback(win, ImGui_ImplGlfw_KeyCallback);
+    //    glfwSetMouseButtonCallback(win, ImGui_ImplGlfw_MouseButtonCallback);
+    //    glfwSetScrollCallback(win, ImGui_ImplGlfw_ScrollCallback);
+
     if (refresh) glfwSetWindowRefreshCallback(win, refresh);
     if (user_ptr) glfwSetWindowUserPointer(win, user_ptr);
 
@@ -443,9 +444,11 @@ inline GLFWwindow* make_window(int w, int h, const std::string& title,
 // Initialize ImGui widgets
 inline void init_widgets(GLFWwindow* win) {
     ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable Gamepad Controls
+    ImGuiIO& io = ImGui::GetIO();
+    (void)io;
+    // io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard
+    // Controls io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable
+    // Gamepad Controls
     io.IniFilename = nullptr;
 
     // ImGui_ImplGlfwGL3_Init(win, false);
@@ -484,7 +487,7 @@ inline bool get_widgets_active() {
     return io->WantTextInput || io->WantCaptureMouse || io->WantCaptureKeyboard;
 }
 
-}
+}  // namespace ygl
 
 // -----------------------------------------------------------------------------
 // GLFW EXTENSIONS
@@ -558,8 +561,8 @@ inline bool SelectableTreeNode(
 
 // Start selectable tree node
 template <typename T>
-inline bool SelectableTreeNode(const char* lbl, std::shared_ptr<T>* selection,
-    T*content) {
+inline bool SelectableTreeNode(
+    const char* lbl, std::shared_ptr<T>* selection, T* content) {
     ImGuiTreeNodeFlags node_flags =
         ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
     if (*selection == content) node_flags |= ImGuiTreeNodeFlags_Selected;
@@ -613,33 +616,8 @@ inline bool Combo(const char* lbl, std::string* val_,
 
 // Combo widget
 template <typename T>
-inline bool Combo(const char* lbl, std::shared_ptr<T>* val_,
-    const std::vector<std::shared_ptr<T>>& vals, bool include_null) {
-    auto& val = *val_;
-    if (!ImGui::BeginCombo(lbl, (val) ? val->name.c_str() : "<none>"))
-        return false;
-    auto old_val = val;
-    if (include_null) {
-        ImGui::PushID(100000);
-        if (ImGui::Selectable("<none>", val == nullptr)) val = nullptr;
-        if (val == nullptr) ImGui::SetItemDefaultFocus();
-        ImGui::PopID();
-    }
-    for (auto i = 0; i < vals.size(); i++) {
-        ImGui::PushID(i);
-        if (ImGui::Selectable(vals[i]->name.c_str(), val == vals[i]))
-            val = vals[i];
-        if (val == vals[i]) ImGui::SetItemDefaultFocus();
-        ImGui::PopID();
-    }
-    ImGui::EndCombo();
-    return val != old_val;
-}
-
-// Combo widget
-template <typename T>
-inline bool Combo(const char* lbl, T** val_,
-    const std::vector<T*>& vals, bool include_null) {
+inline bool Combo(
+    const char* lbl, T** val_, const std::vector<T*>& vals, bool include_null) {
     auto& val = *val_;
     if (!ImGui::BeginCombo(lbl, (val) ? val->name.c_str() : "<none>"))
         return false;
@@ -670,15 +648,14 @@ namespace ygl {
 struct scene_selection {
     scene_selection() : ptr(nullptr), tinfo(nullptr) {}
     template <typename T>
-    scene_selection(T* val)
-        : ptr(val), tinfo(&typeid(T)) {}
+    scene_selection(T* val) : ptr(val), tinfo(&typeid(T)) {}
 
     template <typename T>
     T* as() const {
         return (&typeid(T) == tinfo) ? (T*)ptr : nullptr;
     }
 
-    void* ptr = nullptr;    // selected pointer
+    void* ptr = nullptr;                    // selected pointer
     const std::type_info* tinfo = nullptr;  // type info
 };
 
@@ -732,7 +709,7 @@ inline void draw_glwidgets_scene_tree(const std::string& lbl_, T* val,
 
 template <>
 inline void draw_scene_tree_glwidgets_rec<instance>(const std::string& lbl_,
-    instance*val, scene_selection& sel,
+    instance* val, scene_selection& sel,
     const std::unordered_map<std::string, std::string>& highlights) {
     draw_glwidgets_scene_tree("shp", val->shp, sel, highlights);
     draw_glwidgets_scene_tree("sbd", val->sbd, sel, highlights);
@@ -741,7 +718,7 @@ inline void draw_scene_tree_glwidgets_rec<instance>(const std::string& lbl_,
 
 template <>
 inline void draw_scene_tree_glwidgets_rec<material>(const std::string& lbl_,
-    material*val, scene_selection& sel,
+    material* val, scene_selection& sel,
     const std::unordered_map<std::string, std::string>& highlights) {
     draw_glwidgets_scene_tree("ke", val->ke_txt, sel, highlights);
     draw_glwidgets_scene_tree("kd", val->kd_txt, sel, highlights);
@@ -752,13 +729,13 @@ inline void draw_scene_tree_glwidgets_rec<material>(const std::string& lbl_,
 }
 template <>
 inline void draw_scene_tree_glwidgets_rec<environment>(const std::string& lbl_,
-    environment*val, scene_selection& sel,
+    environment* val, scene_selection& sel,
     const std::unordered_map<std::string, std::string>& highlights) {
     draw_glwidgets_scene_tree("ke", val->ke_txt, sel, highlights);
 }
 template <>
 inline void draw_scene_tree_glwidgets_rec<node>(const std::string& lbl_,
-    node*val, scene_selection& sel,
+    node* val, scene_selection& sel,
     const std::unordered_map<std::string, std::string>& highlights) {
     draw_glwidgets_scene_tree("ist", val->ist, sel, highlights);
     draw_glwidgets_scene_tree("cam", val->cam, sel, highlights);
@@ -772,7 +749,7 @@ inline void draw_scene_tree_glwidgets_rec<node>(const std::string& lbl_,
 }
 template <>
 inline void draw_scene_tree_glwidgets_rec<animation>(const std::string& lbl_,
-    animation*val, scene_selection& sel,
+    animation* val, scene_selection& sel,
     const std::unordered_map<std::string, std::string>& highlights) {
     auto tid = 0;
     for (auto tg : val->targets) {
@@ -781,8 +758,7 @@ inline void draw_scene_tree_glwidgets_rec<animation>(const std::string& lbl_,
     }
 }
 
-inline void draw_glwidgets_scene_tree(scene*scn,
-    scene_selection& sel,
+inline void draw_glwidgets_scene_tree(scene* scn, scene_selection& sel,
     const std::unordered_map<std::string, std::string>& highlights) {
     if (!scn->cameras.empty() && ImGui::TreeNode("cameras")) {
         for (auto v : scn->cameras)
@@ -832,8 +808,7 @@ inline void draw_glwidgets_scene_tree(scene*scn,
 }
 
 /// Visit struct elements.
-inline bool draw_glwidgets_scene_inspector(
-    camera*val, scene*scn) {
+inline bool draw_glwidgets_scene_inspector(camera* val, scene* scn) {
     auto edited = 0;
     edited += ImGui::InputText("name", &val->name);
     edited += ImGui::SliderFloat3("frame.x", &val->frame.x.x, -1, 1);
@@ -852,8 +827,7 @@ inline bool draw_glwidgets_scene_inspector(
 }
 
 /// Visit struct elements.
-inline bool draw_glwidgets_scene_inspector(
-    texture*val, scene*scn) {
+inline bool draw_glwidgets_scene_inspector(texture* val, scene* scn) {
     auto edited = 0;
     edited += ImGui::InputText("name", &val->name);
     edited += ImGui::InputText("path", &val->path);
@@ -864,8 +838,7 @@ inline bool draw_glwidgets_scene_inspector(
     return edited;
 }
 
-inline bool draw_glwidgets_scene_inspector(
-    material*val, scene*scn) {
+inline bool draw_glwidgets_scene_inspector(material* val, scene* scn) {
     auto edited = 0;
     edited += ImGui::InputText("name", &val->name);
     edited += ImGui::ColorEdit3("ke", &val->ke.x);  // TODO: HDR
@@ -891,8 +864,7 @@ inline bool draw_glwidgets_scene_inspector(
     return edited;
 }
 
-inline bool draw_glwidgets_scene_inspector(
-    shape*val, scene*scn) {
+inline bool draw_glwidgets_scene_inspector(shape* val, scene* scn) {
     auto edited = 0;
     edited += ImGui::InputText("name", &val->name);
     edited += ImGui::InputText("path", &val->path);
@@ -907,8 +879,7 @@ inline bool draw_glwidgets_scene_inspector(
     return edited;
 }
 
-inline bool draw_glwidgets_scene_inspector(
-    subdiv*val, scene*scn) {
+inline bool draw_glwidgets_scene_inspector(subdiv* val, scene* scn) {
     auto edited = 0;
     edited += ImGui::InputText("name", &val->name);
     edited += ImGui::SliderInt("level", &val->level, 0, 10);
@@ -924,8 +895,7 @@ inline bool draw_glwidgets_scene_inspector(
     return edited;
 }
 
-inline bool draw_glwidgets_scene_inspector(
-    instance*val, scene*scn) {
+inline bool draw_glwidgets_scene_inspector(instance* val, scene* scn) {
     auto edited = 0;
     edited += ImGui::InputText("name", &val->name);
     edited += ImGui::SliderFloat3("frame.x", &val->frame.x.x, -1, 1);
@@ -938,9 +908,7 @@ inline bool draw_glwidgets_scene_inspector(
     return edited;
 }
 
-inline bool draw_glwidgets_scene_inspector(
-    environment*val,
-    scene*scn) {
+inline bool draw_glwidgets_scene_inspector(environment* val, scene* scn) {
     auto edited = 0;
     edited += ImGui::InputText("name", &val->name);
     edited += ImGui::SliderFloat3("frame.x", &val->frame.x.x, -1, 1);
@@ -952,15 +920,14 @@ inline bool draw_glwidgets_scene_inspector(
     return edited;
 }
 
-inline bool draw_glwidgets_scene_inspector(
-    node*val, scene*scn) {
+inline bool draw_glwidgets_scene_inspector(node* val, scene* scn) {
     auto edited = 0;
     edited += ImGui::InputText("name", &val->name);
     edited += ImGui::Combo("parent", &val->parent, scn->nodes, true);
-    edited += ImGui::SliderFloat3("frame.x", &val->frame.x.x, -1, 1);
-    edited += ImGui::SliderFloat3("frame.y", &val->frame.y.x, -1, 1);
-    edited += ImGui::SliderFloat3("frame.z", &val->frame.z.x, -1, 1);
-    edited += ImGui::SliderFloat3("frame.o", &val->frame.o.x, -10, 10);
+    edited += ImGui::SliderFloat3("local.x", &val->local.x.x, -1, 1);
+    edited += ImGui::SliderFloat3("local.y", &val->local.y.x, -1, 1);
+    edited += ImGui::SliderFloat3("local.z", &val->local.z.x, -1, 1);
+    edited += ImGui::SliderFloat3("local.o", &val->local.o.x, -10, 10);
     edited += ImGui::SliderFloat3("translation", &val->translation.x, -10, 10);
     edited += ImGui::SliderFloat4("rotation", &val->rotation.x, -1, 1);
     edited += ImGui::SliderFloat3("scale", &val->scale.x, 0, 10);
@@ -970,8 +937,7 @@ inline bool draw_glwidgets_scene_inspector(
     return edited;
 }
 
-inline bool draw_glwidgets_scene_inspector(
-    animation*val, scene*scn) {
+inline bool draw_glwidgets_scene_inspector(animation* val, scene* scn) {
     auto edited = 0;
     edited += ImGui::InputText("name", &val->name);
     edited += ImGui::InputText("path", &val->path);
@@ -986,9 +952,9 @@ inline bool draw_glwidgets_scene_inspector(
     return edited;
 }
 
-inline bool draw_glwidgets_scene_tree(const std::string& lbl,
-    scene*scn, scene_selection& sel,
-    std::vector<ygl::scene_selection>& update_list, int height,
+inline bool draw_glwidgets_scene_tree(const std::string& lbl, scene* scn,
+    scene_selection& sel, std::vector<ygl::scene_selection>& update_list,
+    int height,
     const std::unordered_map<std::string, std::string>& inspector_highlights) {
     if (!scn) return false;
     ImGui::PushID(scn);
@@ -1022,9 +988,9 @@ inline bool draw_glwidgets_scene_tree(const std::string& lbl,
     return update_list.size() != update_len;
 }
 
-inline bool draw_glwidgets_scene_inspector(const std::string& lbl,
-    scene*scn, scene_selection& sel,
-    std::vector<ygl::scene_selection>& update_list, int height,
+inline bool draw_glwidgets_scene_inspector(const std::string& lbl, scene* scn,
+    scene_selection& sel, std::vector<ygl::scene_selection>& update_list,
+    int height,
     const std::unordered_map<std::string, std::string>& inspector_highlights) {
     if (!scn || !sel.ptr) return false;
     ImGui::PushID(sel.ptr);

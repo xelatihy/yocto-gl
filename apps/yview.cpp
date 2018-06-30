@@ -36,12 +36,12 @@ using namespace std::literals;
 struct app_state {
     // scene
     ygl::scene* scn = nullptr;
+    ygl::camera* cam = nullptr;
 
     // parameters
     std::string filename = "scene.json";            // scene name
     std::string imfilename = "out.png";             // output image
     std::string outfilename = "scene.json";         // save scene name
-    int camid = 0;                                  // camera index
     int resolution = 512;                           // image resolution
     bool wireframe = false;                         // wireframe drawing
     bool edges = false;                             // draw edges
@@ -70,7 +70,7 @@ struct app_state {
     }
 };
 
-void draw_glscene(const ygl::scene* scn, int camid, uint prog,
+void draw_glscene(const ygl::scene* scn, const ygl::camera* cam, uint prog,
     const ygl::vec2i& viewport_size, const void* highlighted, bool eyelight,
     bool wireframe, bool edges, float exposure, float gamma);
 
@@ -104,7 +104,7 @@ void draw(GLFWwindow* win) {
         }
         if (sel.as<ygl::shape>() || sel.as<ygl::material>() ||
             sel.as<ygl::node>()) {
-            ygl::update_lights(app->scn);
+            ygl::init_lights(app->scn);
             if (app->scn->lights.empty()) app->eyelight = true;
         }
     }
@@ -114,13 +114,12 @@ void draw(GLFWwindow* win) {
         app->background.w);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
-    draw_glscene(app->scn, app->camid, app->gl_prog, framebuffer_size,
+    draw_glscene(app->scn, app->cam, app->gl_prog, framebuffer_size,
         app->selection.ptr, app->eyelight, app->wireframe, app->edges,
         app->exposure, app->gamma);
 
     if (ygl::begin_widgets_frame(win, "yview", &app->widgets_open)) {
         ImGui::LabelText("scene", "%s", app->filename.c_str());
-        if (ImGui::Button("print stats")) ygl::print_stats(app->scn);
         if (app->time_range != ygl::zero2f) {
             ImGui::SliderFloat(
                 "time", &app->time, app->time_range.x, app->time_range.y);
@@ -128,8 +127,7 @@ void draw(GLFWwindow* win) {
             ImGui::Checkbox("animate", &app->animate);
         }
         if (ImGui::TreeNode("render settings")) {
-            ImGui::Combo("camera", &app->camid, app->scn->cameras.size(),
-                [&app](int i) { return app->scn->cameras[i]->name.c_str(); });
+            ImGui::Combo("camera", &app->cam, app->scn->cameras, false);
             ImGui::SliderInt("resolution", &app->resolution, 256, 4096);
             ImGui::Checkbox("eyelight", &app->eyelight);
             ImGui::SameLine();
@@ -550,12 +548,10 @@ void draw_glshape(const ygl::shape* shp, const ygl::material* mat,
 }
 
 // Display a scene
-void draw_glscene(const ygl::scene* scn, int camid, uint prog,
+void draw_glscene(const ygl::scene* scn, const ygl::camera* cam, uint prog,
     const ygl::vec2i& viewport_size, const void* highlighted, bool eyelight,
     bool wireframe, bool edges, float exposure, float gamma) {
     glViewport(0, 0, viewport_size.x, viewport_size.y);
-
-    auto cam = scn->cameras.at(camid);
 
     auto camera_view = frame_to_mat(inverse(cam->frame));
     auto camera_proj =
@@ -581,7 +577,7 @@ void draw_glscene(const ygl::scene* scn, int camid, uint prog,
         for (auto lgt : scn->lights) {
             if (lights_pos.size() >= 16) break;
             auto shp = lgt->shp;
-            auto bbox = shp->bbox;
+            auto bbox = compute_bbox(shp);
             auto pos = (bbox.max + bbox.min) / 2;
             auto area = 0.0f;
             if (!shp->triangles.empty()) {
@@ -658,13 +654,12 @@ void init_drawscene(GLFWwindow* win) {
 // run ui loop
 void run_ui(const std::shared_ptr<app_state>& app) {
     // window
-    auto win = ygl::make_window(
-        ygl::image_width(app->scn->cameras.at(app->camid), app->resolution),
+    auto win = ygl::make_window(ygl::image_width(app->cam, app->resolution),
         app->resolution, "yview", app.get(), draw);
 
     // load textures and vbos
     ygl::update_transforms(app->scn, app->time);
-    ygl::update_lights(app->scn);
+    ygl::init_lights(app->scn);
     if (app->scn->lights.empty()) app->eyelight = true;
 
     // init widget
@@ -692,9 +687,9 @@ void run_ui(const std::shared_ptr<app_state>& app) {
             if (mouse_button == 2) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
             if (mouse_button == 3 || (mouse_button == 1 && shift_down))
                 pan = (mouse_pos - last_pos) / 100.0f;
-            auto cam = app->scn->cameras.at(app->camid);
-            ygl::camera_turntable(cam->frame, cam->focus, rotate, dolly, pan);
-            app->update_list.push_back(cam);
+            ygl::camera_turntable(
+                app->cam->frame, app->cam->focus, rotate, dolly, pan);
+            app->update_list.push_back(app->cam);
         }
 
         // animation
@@ -801,20 +796,16 @@ int main(int argc, char* argv[]) {
 
     // tesselate
     if (!quiet) std::cout << "tesselating scene elements\n";
-    ygl::update_tesselation(scn);
-
-    // update bbox and transforms
-    ygl::update_transforms(scn);
-    ygl::update_bbox(scn);
+    ygl::tesselate_subdivs(scn);
 
     // add components
     if (!quiet) std::cout << "adding scene elements\n";
     if (double_sided) {
         for (auto mat : scn->materials) mat->double_sided = true;
     }
-    if (scn->cameras.empty()) {
-        scn->cameras.push_back(ygl::make_bbox_camera("<view>", scn->bbox));
-    }
+    if (scn->cameras.empty())
+        scn->cameras.push_back(
+            ygl::make_bbox_camera("<view>", ygl::compute_bbox(scn)));
     ygl::add_missing_names(scn);
     for (auto err : ygl::validate(scn)) std::cout << "warning: " << err << "\n";
 
@@ -823,15 +814,14 @@ int main(int argc, char* argv[]) {
     auto time = time_range.x;
 
     // lights
-    ygl::update_bbox(scn);
-    ygl::update_lights(scn);
+    ygl::init_lights(scn);
 
     // initialize app
     auto app = std::make_shared<app_state>();
     app->scn = scn;
     app->filename = filename;
     app->imfilename = imfilename;
-    app->camid = camid;
+    app->cam = scn->cameras.at(camid);
     app->resolution = resolution;
     app->eyelight = eyelight;
     app->inspector_highlights = inspector_highlights;

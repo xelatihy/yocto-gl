@@ -1209,7 +1209,7 @@ void from_json(const json& js, environment& val) {
 void to_json(json& js, const node& val) {
     static const auto def = node();
     if (val.name != def.name) js["name"] = val.name;
-    if (val.frame != def.frame) js["frame"] = val.frame;
+    if (val.local != def.local) js["local"] = val.local;
     if (val.translation != def.translation) js["translation"] = val.translation;
     if (val.rotation != def.rotation) js["rotation"] = val.rotation;
     if (val.scale != def.scale) js["scale"] = val.scale;
@@ -1226,7 +1226,7 @@ void from_json_proc(const json& js, node& val) {
         auto from = js.value("from", zero3f);
         auto to = js.value("to", zero3f);
         auto up = js.value("up", vec3f{0, 1, 0});
-        val.frame = lookat_frame(from, to, up, true);
+        val.local = lookat_frame(from, to, up, true);
     }
 }
 
@@ -1234,7 +1234,7 @@ void from_json_proc(const json& js, node& val) {
 void from_json(const json& js, node& val) {
     static const auto def = node();
     val.name = js.value("name", def.name);
-    val.frame = js.value("frame", def.frame);
+    val.local = js.value("local", def.local);
     val.translation = js.value("translation", def.translation);
     val.rotation = js.value("rotation", def.rotation);
     val.scale = js.value("scale", def.scale);
@@ -1415,7 +1415,7 @@ void from_json_proc(const json& js, scene& val) {
         for (auto ist : ists) nmap[ist] = 0;
         auto rng = make_rng(seed, 17);
         for (auto i = 0; i < num; i++) {
-            auto ist = ists.at(rand1i(rng, (int)ists.size() - 1));
+            auto ist = ists.at(rand1i(&rng, (int)ists.size() - 1));
             nmap[ist] += 1;
             val.instances.push_back(new instance());
             val.instances.back()->name = ist->name + std::to_string(nmap[ist]);
@@ -1556,7 +1556,6 @@ scene* load_json_scene(
 
     // update data
     update_transforms(scn);
-    update_bbox(scn);
 
     // skip textures
     if (!load_textures) return scn;
@@ -2367,9 +2366,6 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
         idx--;
     }
 
-    // updates
-    update_bbox(scn);
-
     // fix scene
     scn->name = get_filename(filename);
     add_missing_materials(scn);
@@ -3000,7 +2996,7 @@ scene* load_gltf_scene(
             nde->translation = gnde.value("translation", zero3f);
             nde->rotation = gnde.value("rotation", vec4f{0, 0, 0, 1});
             nde->scale = gnde.value("scale", vec3f{1, 1, 1});
-            nde->frame = mat_to_frame(gnde.value("matrix", identity_mat4f));
+            nde->local = mat_to_frame(gnde.value("matrix", identity_mat4f));
             scn->nodes.push_back(nde);
         }
 
@@ -3146,12 +3142,12 @@ scene* load_gltf_scene(
 
     // compute transforms and bbox
     update_transforms(scn, 0);
-    update_bbox(scn);
 
     // fix elements
     add_missing_materials(scn);
+    auto bbox = compute_bbox(scn);
     for (auto cam : scn->cameras) {
-        auto center = (scn->bbox.min + scn->bbox.max) / 2;
+        auto center = (bbox.min + bbox.max) / 2;
         auto dist = dot(-cam->frame.z, center - cam->frame.o);
         if (dist > 0) cam->focus = dist;
     }
@@ -3356,7 +3352,7 @@ void save_gltf_scene(const std::string& filename, const scene* scn,
     for (auto& nde : scn->nodes) {
         auto njs = json();
         njs["name"] = nde->name;
-        njs["matrix"] = frame_to_mat(nde->frame);
+        njs["matrix"] = frame_to_mat(nde->local);
         njs["translation"] = nde->translation;
         njs["rotation"] = nde->rotation;
         njs["scale"] = nde->scale;
@@ -4069,14 +4065,14 @@ scene* load_pbrt_scene(
         for (auto cam : scn->cameras) {
             auto nde = new node();
             nde->name = cam->name;
-            nde->frame = cam->frame;
+            nde->local = cam->frame;
             nde->cam = cam;
             scn->nodes.insert(scn->nodes.begin(), nde);
         }
         for (auto env : scn->environments) {
             auto nde = new node();
             nde->name = env->name;
-            nde->frame = env->frame;
+            nde->local = env->frame;
             nde->env = env;
             scn->nodes.push_back(nde);
         }
@@ -4084,7 +4080,6 @@ scene* load_pbrt_scene(
 
     // update data
     update_transforms(scn);
-    update_bbox(scn);
 
     // skip textures
     if (!load_textures) return scn;

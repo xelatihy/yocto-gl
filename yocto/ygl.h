@@ -199,8 +199,8 @@
 // env is used.
 //
 // 1. prepare the scene for tracing
-//    - build the ray-tracing acceleration structure with `update_bvh()`
-//     - prepare lights for rendering with `update_lights()`
+//    - build the ray-tracing acceleration structure with `build_bvh()`
+//     - prepare lights for rendering with `init_lights()`
 // 2. create the inmage buffer and random number generators `make_trace_rngs()`
 // 3. render blocks of samples with `trace_samples()`
 // 4. you can also start an asynchronous renderer with `trace_asynch_start()`
@@ -1578,24 +1578,23 @@ inline void camera_fps(frame<T, 3>& frame, vec<T, 3> transl, vec<T, 2> rotate);
 // Returns negative coordinates if out of the image.
 template <typename T>
 inline vec<int, 2> get_image_coords(
-    vec<T, 2> mouse_pos, frame<T, 2> frame, vec<int, 2> txt_size) {
-    // assume an affine without rotation
-    auto xyf = (mouse_pos - frame.o) / vec2f{frame.x.x, frame.y.y};
+    vec<T, 2> mouse_pos, vec<T, 2> center, T scale, vec<int, 2> txt_size) {
+    auto xyf = (mouse_pos - center) / scale;
     return vec2i{(int)round(xyf.x + txt_size.x / 2.0f),
         (int)round(xyf.y + txt_size.y / 2.0f)};
 }
 
 // Center image and autofit.
 template <typename T>
-inline void center_image(frame<T, 2>& frame, vec<int, 2> imsize,
+inline void center_image(vec<T, 2>& center, T& scale, vec<int, 2> imsize,
     vec<int, 2> winsize, bool zoom_to_fit) {
     if (zoom_to_fit) {
-        frame.x.x = frame.y.y =
-            ygl::min(winsize.x / (float)imsize.x, winsize.y / (float)imsize.y);
-        frame.o = {(float)winsize.x / 2, (float)winsize.y / 2};
+        scale =
+        ygl::min(winsize.x / (float)imsize.x, winsize.y / (float)imsize.y);
+        center = {(float)winsize.x / 2, (float)winsize.y / 2};
     } else {
-        if (winsize.x >= imsize.x * frame.x.x) frame.o.x = winsize.x / 2;
-        if (winsize.y >= imsize.y * frame.y.y) frame.o.y = winsize.y / 2;
+        if (winsize.x >= imsize.x * scale) center.x = winsize.x / 2;
+        if (winsize.y >= imsize.y * scale) center.y = winsize.y / 2;
     }
 }
 
@@ -1613,9 +1612,9 @@ struct rng_state {
 };
 
 // Next random number.
-inline uint32_t advance_rng(rng_state& rng) {
-    uint64_t oldstate = rng.state;
-    rng.state = oldstate * 6364136223846793005ULL + rng.inc;
+inline uint32_t advance_rng(rng_state* rng) {
+    uint64_t oldstate = rng->state;
+    rng->state = oldstate * 6364136223846793005ULL + rng->inc;
     uint32_t xorshifted = (uint32_t)(((oldstate >> 18u) ^ oldstate) >> 27u);
     uint32_t rot = (uint32_t)(oldstate >> 59u);
     return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
@@ -1626,15 +1625,15 @@ inline rng_state make_rng(uint64_t seed, uint64_t seq = 1) {
     auto rng = rng_state();
     rng.state = 0U;
     rng.inc = (seq << 1u) | 1u;
-    advance_rng(rng);
+    advance_rng(&rng);
     rng.state += seed;
-    advance_rng(rng);
+    advance_rng(&rng);
     return rng;
 }
 
 // Next random numbers: floats in [0,1), ints in [0,n).
-inline int rand1i(rng_state& rng, int n) { return advance_rng(rng) % n; }
-inline float rand1f(rng_state& rng) {
+inline int rand1i(rng_state* rng, int n) { return advance_rng(rng) % n; }
+inline float rand1f(rng_state* rng) {
     union {
         uint32_t u;
         float f;
@@ -1645,8 +1644,8 @@ inline float rand1f(rng_state& rng) {
     // const static auto scale = (float)(1.0 / numeric_limits<uint32_t>::max());
     // return advance_rng(rng) * scale;
 }
-inline vec2f rand2f(rng_state& rng) { return {rand1f(rng), rand1f(rng)}; }
-inline vec3f rand3f(rng_state& rng) {
+inline vec2f rand2f(rng_state* rng) { return {rand1f(rng), rand1f(rng)}; }
+inline vec3f rand3f(rng_state* rng) {
     return {rand1f(rng), rand1f(rng), rand1f(rng)};
 }
 
@@ -2737,7 +2736,6 @@ struct shape {
     std::vector<vec4f> tangsp;    // tangent space for triangles
 
     // computed properties
-    bbox3f bbox = invalid_bbox3f;      // boudning box
     std::vector<float> elem_cdf = {};  // element cdf for sampling
     bvh_tree* bvh = nullptr;           // bvh for ray intersection
     uint gl_pos = 0, gl_norm = 0, gl_texcoord = 0, gl_color = 0, gl_tangsp = 0,
@@ -2779,9 +2777,6 @@ struct instance {
     shape* shp = nullptr;              // shape
     material* mat = nullptr;           // material
     subdiv* sbd = nullptr;             // subdivision shape
-
-    // compute properties
-    bbox3f bbox = invalid_bbox3f;  // boudning box
 };
 
 // Envinonment map.
@@ -2799,7 +2794,7 @@ struct environment {
 struct node {
     std::string name = "";             // name
     node* parent = nullptr;            // parent
-    frame3f frame = identity_frame3f;  // transform frame
+    frame3f local = identity_frame3f;  // transform frame
     vec3f translation = {0, 0, 0};     // translation
     vec4f rotation = {0, 0, 0, 1};     // rotation
     vec3f scale = {1, 1, 1};           // scale
@@ -2851,7 +2846,6 @@ struct scene {
 
     // compute properties
     std::vector<instance*> lights;
-    bbox3f bbox = invalid_bbox3f;  // boudning box
     bvh_tree* bvh = nullptr;
     void* embree_bvh = nullptr;     // unmanaged data for Embree raytracer
     void* embree_device = nullptr;  // unmanaged data for Embree raytracer
@@ -2881,9 +2875,6 @@ void merge_into(const scene* merge_into, scene* merge_from);
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Update the normals of a shape.
-void update_normals(shape* shp);
-
 // Update node transforms.
 void update_transforms(
     scene* scn, float time = 0, const std::string& anim_group = "");
@@ -2892,11 +2883,11 @@ vec2f compute_animation_range(
     const scene* scn, const std::string& anim_group = "");
 
 // Computes shape/scene approximate bounds.
-void udpate_bbox(shape* shp);
-void update_bbox(scene* scn, bool do_shapes = true);
+bbox3f compute_bbox(const shape* shp);
+bbox3f compute_bbox(const scene* scn);
 
 // Update lights.
-void update_lights(
+void init_lights(
     scene* scn, bool do_shapes = true, bool do_environments = false);
 // Generate a distribution for sampling a shape uniformly based on area/length.
 void update_shape_cdf(shape* shp);
@@ -2905,10 +2896,10 @@ void update_shape_cdf(shape* shp);
 void update_environment_cdf(environment* env);
 
 // Updates/refits bvh.
-void update_bvh(shape* shp, bool sah = true);
-void update_bvh(scene* scn, bool do_shapes = true, bool sah = true);
+void build_bvh(shape* shp, bool sah = true);
+void build_bvh(scene* scn, bool sah = true);
 void refit_bvh(shape* shp);
-void refit_bvh(scene* scn, bool do_shapes = true);
+void refit_bvh(scene* scn);
 
 #if YGL_EMBREE
 // Build/update Embree BVH
@@ -2916,8 +2907,8 @@ void build_bvh_embree(scene* scn);
 #endif
 
 // Updates tesselation.
-void update_tesselation(const subdiv* sbd, shape* shp);
-void update_tesselation(scene* scn);
+void tesselate_subdiv(const subdiv* sbd, shape* shp);
+void tesselate_subdivs(scene* scn);
 
 // Add missing names, normals, tangents and hierarchy.
 void add_missing_names(scene* scn);
@@ -3060,90 +3051,75 @@ namespace ygl {
 const auto trace_default_seed = 961748941;
 
 // Trace evaluation function.
-using trace_func = std::function<vec3f(
-    const scene* scn, ray3f ray, rng_state& rng, int nbounces, bool* hit)>;
+using trace_func = vec3f (*)(
+    const scene* scn, ray3f ray, rng_state* rng, int nbounces, bool* hit);
 
 // Progressively compute an image by calling trace_samples multiple times.
-image4f trace_image(const scene* scn, int camid, int yresolution, int nsamples,
-    trace_func tracer, int nbounces = 8, float pixel_clamp = 100,
+image4f trace_image(const scene* scn, const camera* cam, int yresolution,
+    int nsamples, trace_func tracer, int nbounces = 8, float pixel_clamp = 100,
     bool noparallel = false, int seed = trace_default_seed);
 
-// Progressive trace state
-struct trace_state {
-    image4f img = {};           // computed image
-    image4f acc = {};           // accumulation buffer
-    image<rng_state> rng = {};  // random number generators
-    int sample = 0;             // next sample to render
-};
+// Initialize trace rngs
+std::vector<rng_state> make_trace_rngs(int width, int height, uint64_t seed);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
-bool trace_samples(trace_state& st, const scene* scn, int camid,
-    int yresolution, int nsamples, trace_func tracer, int nbatch,
+void trace_samples(const scene* scn, const camera* cam, int nsamples,
+    trace_func tracer, image4f* img, std::vector<rng_state>* rngs, int sample,
     int nbounces = 8, float pixel_clamp = 100, bool noparallel = false,
     int seed = trace_default_seed);
 
-// Asynchronous trace state
-struct trace_async_state {
-    image4f img = {};                       // computed image
-    image4f display = {};                   // display image
-    image4f acc = {};                       // accumulation buffer
-    image<rng_state> rng = {};              // random number generators
-    int sample = 0;                         // next sample to render
-    bool stop_flag = false;                 // stop flag
-    std::vector<std::thread> threads = {};  // rendering threads
-};
-
 // Starts an anyncrhounous renderer.
-void trace_async_start(trace_async_state& st, const scene* scn, int camid,
-    int yresolution, int nsamples, trace_func tracer, float exposure,
-    float gamma, bool filmic, int preview_ratio, int nbounces = 8,
-    float pixel_clamp = 100, int seed = trace_default_seed);
+void trace_async_start(const scene* scn, const camera* cam, int nsamples,
+    trace_func tracer, image4f* img, image4f* display,
+    std::vector<rng_state>* rngs, std::vector<std::thread>* threads, bool* stop,
+    int* sample, float* exposure, float* gamma, bool* filmic, int preview_ratio,
+    int nbounces = 8, float pixel_clamp = 100, int seed = trace_default_seed);
 // Stop the asynchronous renderer.
-void trace_async_stop(trace_async_state& st);
+void trace_async_stop(std::vector<std::thread>* threads, bool* stop);
 
 // Trace function - path tracer.
-vec3f trace_path(const scene* scn, ray3f ray, rng_state& rng, int nbounces,
+vec3f trace_path(const scene* scn, ray3f ray, rng_state* rng, int nbounces,
     bool* hit = nullptr);
 // Trace function - path tracer without mis.
-vec3f trace_path_nomis(const scene* scn, ray3f ray, rng_state& rng,
+vec3f trace_path_nomis(const scene* scn, ray3f ray, rng_state* rng,
     int nbounces, bool* hit = nullptr);
 // Trace function - naive path tracer.
-vec3f trace_path_naive(const scene* scn, ray3f ray, rng_state& rng,
+vec3f trace_path_naive(const scene* scn, ray3f ray, rng_state* rng,
     int nbounces, bool* hit = nullptr);
 // Trace function - direct illumination.
-vec3f trace_direct(const scene* scn, ray3f ray, rng_state& rng, int nbounces,
+vec3f trace_direct(const scene* scn, ray3f ray, rng_state* rng, int nbounces,
     bool* hit = nullptr);
 // Trace function - direct illumination without mis.
-vec3f trace_direct_nomis(const scene* scn, ray3f ray, rng_state& rng,
+vec3f trace_direct_nomis(const scene* scn, ray3f ray, rng_state* rng,
     int nbounces, bool* hit = nullptr);
 // Trace function - pure environment illumination with no shadows.
-vec3f trace_environment(const scene* scn, ray3f ray, rng_state& rng,
+vec3f trace_environment(const scene* scn, ray3f ray, rng_state* rng,
     int nbounces, bool* hit = nullptr);
 // Trace function - eyelight rendering.
-vec3f trace_eyelight(const scene* scn, ray3f ray, rng_state& rng, int nbounces,
+vec3f trace_eyelight(const scene* scn, ray3f ray, rng_state* rng, int nbounces,
     bool* hit = nullptr);
 // Trace function - normal debug visualization.
-vec3f trace_debug_normal(const scene* scn, ray3f ray, rng_state& rng,
+vec3f trace_debug_normal(const scene* scn, ray3f ray, rng_state* rng,
     int nbounces, bool* hit = nullptr);
 // Trace function - faceforward debug visualization.
-vec3f trace_debug_frontfacing(const scene* scn, ray3f ray, rng_state& rng,
+vec3f trace_debug_frontfacing(const scene* scn, ray3f ray, rng_state* rng,
     int nbounces, bool* hit = nullptr);
 // Trace function - albedo debug visualization.
-vec3f trace_debug_albedo(const scene* scn, ray3f ray, rng_state& rng,
+vec3f trace_debug_albedo(const scene* scn, ray3f ray, rng_state* rng,
     int nbounces, bool* hit = nullptr);
 // Trace function - diffuse debug visualization.
-vec3f trace_debug_diffuse(const scene* scn, ray3f ray, rng_state& rng,
+vec3f trace_debug_diffuse(const scene* scn, ray3f ray, rng_state* rng,
     int nbounces, bool* hit = nullptr);
 // Trace function - specular debug visualization.
-vec3f trace_debug_specular(const scene* scn, ray3f ray, rng_state& rng,
+vec3f trace_debug_specular(const scene* scn, ray3f ray, rng_state* rng,
     int nbounces, bool* hit = nullptr);
 // Trace function - roughness debug visualization.
-vec3f trace_debug_roughness(const scene* scn, ray3f ray, rng_state& rng,
+vec3f trace_debug_roughness(const scene* scn, ray3f ray, rng_state* rng,
     int nbounces, bool* hit = nullptr);
 // Trace function - texcoord debug visualization.
-vec3f trace_debug_texcoord(const scene* scn, ray3f ray, rng_state& rng,
+vec3f trace_debug_texcoord(const scene* scn, ray3f ray, rng_state* rng,
     int nbounces, bool* hit = nullptr);
 
 // Trace statistics for last run used for fine tuning implementation.
