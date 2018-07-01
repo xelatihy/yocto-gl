@@ -58,9 +58,7 @@
 
 #include <cstdlib>
 #include <deque>
-#include <fstream>
 #include <regex>
-#include <sstream>
 
 #include <array>
 #include <climits>
@@ -155,42 +153,43 @@ std::string replace_extension(
 // Load a text file
 std::string load_text(const std::string& filename) {
     // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
-    auto fs = std::ifstream(filename);
-    if (!fs) throw std::runtime_error("could not load " + filename);
-    std::stringstream buf;
-    buf << fs.rdbuf();
-    fs.close();
-    return buf.str();
+    auto fs = fopen(filename.c_str(), "rb");
+    fseek(fs, 0, SEEK_END);
+    auto fsize = ftell(fs);
+    fseek(fs, 0, SEEK_SET);
+    auto buf = std::vector<char>(fsize);
+    fread(buf.data(), fsize, 1, fs);
+    fclose(fs);
+    return {buf.begin(), buf.end()};
 }
 
 // Save a text file
 void save_text(const std::string& filename, const std::string& str) {
-    auto fs = std::ofstream(filename);
+    auto fs = fopen(filename.c_str(), "wt");
     if (!fs) throw std::runtime_error("could not save " + filename);
-    fs << str;
-    fs.close();
+    fprintf(fs, "%s", str.c_str());
+    fclose(fs);
 }
 
 // Load a binary file
 std::vector<byte> load_binary(const std::string& filename) {
     // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
-    auto fs = std::ifstream(filename, std::ios::binary);
-    if (!fs) throw std::runtime_error("could not load " + filename);
-    fs.seekg(0, std::ios::end);
-    size_t size = fs.tellg();
-    auto buf = std::vector<byte>(size);
-    fs.seekg(0);
-    fs.read((char*)&buf[0], size);
-    fs.close();
+    auto fs = fopen(filename.c_str(), "rb");
+    fseek(fs, 0, SEEK_END);
+    auto fsize = ftell(fs);
+    fseek(fs, 0, SEEK_SET);
+    auto buf = std::vector<byte>(fsize);
+    fread((char*)buf.data(), fsize, 1, fs);
+    fclose(fs);
     return buf;
 }
 
 // Save a binary file
 void save_binary(const std::string& filename, const std::vector<byte>& data) {
-    auto fs = std::ofstream(filename, std::ios::binary);
+    auto fs = fopen(filename.c_str(), "wb");
     if (!fs) throw std::runtime_error("could not save " + filename);
-    fs.write((char*)data.data(), data.size());
-    fs.close();
+    fwrite((char*)data.data(), 1, data.size(), fs);
+    fclose(fs);
 }
 
 }  // namespace ygl
@@ -1638,104 +1637,6 @@ void save_json_scene(const std::string& filename, const scene* scn,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// fast unsafe string parser
-struct fastparsestream {
-    fastparsestream(const std::string& str_) {
-        str = str_;
-        for (auto& c : str)
-            if (c == '\t' || c == '\r' || c == '\n') c = ' ';
-        s = str.c_str();
-    }
-    std::string str;
-    const char* s = nullptr;
-};
-
-// parse stream
-inline fastparsestream& operator>>(fastparsestream& is, int& val) {
-    val = 0;
-    if (!*is.s) return is;
-    while (*is.s == ' ') is.s++;
-    auto sn = (*is.s == '-') ? -1 : 1;
-    if (*is.s == '-' || *is.s == '+') is.s++;
-    while (*is.s >= '0' && *is.s <= '9') val = val * 10 + (*is.s++ - '0');
-    val *= sn;
-    return is;
-}
-inline fastparsestream& operator>>(fastparsestream& is, bool& val) {
-    val = false;
-    if (!*is.s) return is;
-    auto vali = 0;
-    is >> vali;
-    val = (bool)vali;
-    return is;
-}
-inline fastparsestream& operator>>(fastparsestream& is, double& val) {
-    val = 0;
-    if (!*is.s) return is;
-    while (*is.s == ' ') is.s++;
-    //    auto ss = s; auto sss = ss;
-    auto mantissa = 0, fractional = 0, fractional_length = 0, exponent = 0;
-    auto sn = (*is.s == '-') ? -1 : 1;
-    if (*is.s == '-' || *is.s == '+') is.s++;
-    while (*is.s >= '0' && *is.s <= '9')
-        mantissa = mantissa * 10 + (*is.s++ - '0');
-    if (*is.s == '.') {
-        is.s++;
-        while (*is.s >= '0' && *is.s <= '9') {
-            fractional = fractional * 10 + (*is.s++ - '0');
-            fractional_length++;
-        }
-    }
-    mantissa *= sn;
-    fractional *= sn;
-    if (*is.s == 'e' || *is.s == 'E') {
-        is.s++;
-        auto en = (*is.s == '-') ? -1 : 1;
-        if (*is.s == '-' || *is.s == '+') is.s++;
-        while (*is.s >= '0' && *is.s <= '9')
-            exponent = exponent * 10 + (*is.s++ - '0');
-        exponent *= en;
-    }
-    val = (double)mantissa;
-    if (fractional)
-        val += fractional * std::pow(10.0, -(double)fractional_length);
-    if (exponent) val *= std::pow(10.0, (double)exponent);
-    return is;
-}
-inline fastparsestream& operator>>(fastparsestream& is, float& val) {
-    val = 0;
-    if (!*is.s) return is;
-    auto vald = 0.0;
-    is >> vald;
-    val = (float)vald;
-    return is;
-}
-inline fastparsestream& operator>>(fastparsestream& is, std::string& val) {
-    val = "";
-    if (!*is.s) return is;
-    char buf[4096];
-    auto valb = buf;
-    while (*is.s == ' ') is.s++;
-    while (*is.s && *is.s != ' ') *valb++ = *is.s++;
-    *valb = 0;
-    val = buf;
-    return is;
-}
-template <typename T, int N>
-inline fastparsestream& operator>>(fastparsestream& is, vec<T, N>& val) {
-    val = {};
-    if (!*is.s) return is;
-    for (auto i = 0; i < N; i++) is >> (&val.x)[i];
-    return is;
-}
-template <typename T, int N>
-inline fastparsestream& operator>>(fastparsestream& is, frame<T, N>& val) {
-    val = {};
-    if (!*is.s) return is;
-    for (auto i = 0; i < N + 1; i++) is >> (&val.x)[i];
-    return is;
-}
-
 // OBJ vertex
 struct obj_vertex {
     int pos = 0;
@@ -1828,81 +1729,6 @@ struct obj_callbacks {
     std::function<void(const obj_environment&)> environmnet = [](auto&) {};
 };
 
-// Input/Output for OBJ vertex
-inline std::istream& operator>>(std::istream& is, obj_vertex& v) {
-    v = {0, 0, 0};
-    is >> v.pos;
-    if (is.peek() == '/') {
-        is.get();
-        if (is.peek() == '/') {
-            is.get();
-            is >> v.norm;
-        } else {
-            is >> v.texcoord;
-            if (is.peek() == '/') {
-                is.get();
-                is >> v.norm;
-            }
-        }
-    }
-    return is;
-}
-inline std::ostream& operator<<(std::ostream& os, const obj_vertex& v) {
-    os << v.pos;
-    if (v.texcoord) {
-        os << "/" << v.texcoord;
-        if (v.norm) os << "/" << v.norm;
-    } else {
-        if (v.norm) os << "//" << v.norm;
-    }
-    return os;
-}
-inline fastparsestream& operator>>(fastparsestream& is, obj_vertex& v) {
-    v = {0, 0, 0};
-    is >> v.pos;
-    if (*is.s == '/') {
-        is.s++;
-        if (*is.s == '/') {
-            is.s++;
-            is >> v.norm;
-        } else {
-            is >> v.texcoord;
-            if (*is.s == '/') {
-                is.s++;
-                is >> v.norm;
-            }
-        }
-    }
-    return is;
-}
-// Input for OBJ textures
-inline std::istream& operator>>(std::istream& is, obj_texture_info& info) {
-    // initialize
-    info = obj_texture_info();
-
-    // get tokens
-    auto tokens = std::vector<std::string>();
-    while (true) {
-        auto v = ""s;
-        is >> v;
-        if (v == "") break;
-        tokens.push_back(v);
-    }
-    if (tokens.empty()) return is;
-
-    // texture name
-    info.path = normalize_path(tokens.back());
-
-    // texture options
-    auto last = std::string();
-    for (auto i = 0; i < tokens.size() - 1; i++) {
-        if (tokens[i] == "-bm") info.scale = atof(tokens[i + 1].c_str());
-        if (tokens[i] == "-clamp") info.clamp = true;
-    }
-
-    return is;
-}
-
 inline bool operator==(obj_vertex a, obj_vertex b) {
     return a.pos == b.pos && a.texcoord == b.texcoord && a.norm == b.norm;
 }
@@ -1917,11 +1743,143 @@ struct obj_vertex_hash {
     }
 };
 
+// prepare obj line (remove comments and normalize whitespace)
+void normalize_obj_line(char* s) {
+    while (*s) {
+        if (*s == '\t' || *s == '\r' || *s == '\n') {
+            *s++ = ' ';
+        } else if (*s == '#') {
+            *s = 0;
+            break;
+        } else {
+            s++;
+        }
+    }
+}
+
+// parse stream
+inline int parse_int(char*& s) {
+    if (!*s) return 0;
+    while (*s == ' ') s++;
+    if (!*s) return 0;
+    auto val = 0;
+    auto sn = (*s == '-') ? -1 : 1;
+    if (*s == '-' || *s == '+') s++;
+    while (*s >= '0' && *s <= '9') val = val * 10 + (*s++ - '0');
+    val *= sn;
+    return val;
+}
+inline bool parse_bool(char*& s) { return (bool)parse_int(s); }
+inline double parse_double(char*& s) {
+    if (!*s) return 0;
+    while (*s == ' ') s++;
+    auto val = 0.0;
+    auto mantissa = 0, fractional = 0, fractional_length = 0, exponent = 0;
+    auto sn = (*s == '-') ? -1 : 1;
+    if (*s == '-' || *s == '+') s++;
+    while (*s >= '0' && *s <= '9') mantissa = mantissa * 10 + (*s++ - '0');
+    if (*s == '.') {
+        s++;
+        while (*s >= '0' && *s <= '9') {
+            fractional = fractional * 10 + (*s++ - '0');
+            fractional_length++;
+        }
+    }
+    mantissa *= sn;
+    fractional *= sn;
+    if (*s == 'e' || *s == 'E') {
+        s++;
+        auto en = (*s == '-') ? -1 : 1;
+        if (*s == '-' || *s == '+') s++;
+        while (*s >= '0' && *s <= '9') exponent = exponent * 10 + (*s++ - '0');
+        exponent *= en;
+    }
+    val = (double)mantissa;
+    if (fractional)
+        val += fractional * std::pow(10.0, -(double)fractional_length);
+    if (exponent) val *= std::pow(10.0, (double)exponent);
+    return val;
+}
+inline float parse_float(char*& s) { return (float)parse_double(s); }
+inline std::string parse_string(char*& s) {
+    if (!*s) return "";
+    char buf[4096];
+    auto valb = buf;
+    while (*s == ' ') s++;
+    while (*s && *s != ' ') *valb++ = *s++;
+    *valb = 0;
+    return buf;
+}
+inline vec2f parse_vec2f(char*& s) { return {parse_float(s), parse_float(s)}; }
+inline vec3f parse_vec3f(char*& s) {
+    return {parse_float(s), parse_float(s), parse_float(s)};
+}
+inline vec4f parse_vec4f(char*& s) {
+    return {parse_float(s), parse_float(s), parse_float(s), parse_float(s)};
+}
+inline vec2i parse_vec2i(char*& s) { return {parse_int(s), parse_int(s)}; }
+inline vec3i parse_vec3i(char*& s) {
+    return {parse_int(s), parse_int(s), parse_int(s)};
+}
+inline vec4i parse_vec4i(char*& s) {
+    return {parse_int(s), parse_int(s), parse_int(s), parse_int(s)};
+}
+inline frame3f parse_frame3f(char*& s) {
+    if (!*s) return identity_frame3f;
+    return {parse_vec3f(s), parse_vec3f(s), parse_vec3f(s), parse_vec3f(s)};
+}
+
+inline obj_vertex parse_obj_vertex(char*& s) {
+    auto val = obj_vertex{0, 0, 0};
+    val.pos = parse_int(s);
+    if (*s == '/') {
+        s++;
+        if (*s == '/') {
+            s++;
+            val.norm = parse_int(s);
+        } else {
+            val.texcoord = parse_int(s);
+            if (*s == '/') {
+                s++;
+                val.norm = parse_int(s);
+            }
+        }
+    }
+    return val;
+}
+
+// Input for OBJ textures
+inline obj_texture_info parse_obj_texture_info(char*& s) {
+    // initialize
+    auto info = obj_texture_info();
+
+    // get tokens
+    auto tokens = std::vector<std::string>();
+    while (true) {
+        auto v = parse_string(s);
+        if (v == "") break;
+        tokens.push_back(v);
+    }
+    if (tokens.empty()) return info;
+
+    // texture name
+    info.path = normalize_path(tokens.back());
+
+    // texture options
+    auto last = std::string();
+    for (auto i = 0; i < tokens.size() - 1; i++) {
+        if (tokens[i] == "-bm") info.scale = atof(tokens[i + 1].c_str());
+        if (tokens[i] == "-clamp") info.clamp = true;
+    }
+
+    return info;
+}
+
 // Load obj materials
 void load_mtl(
     const std::string& filename, const obj_callbacks& cb, bool flip_tr = true) {
     // open file
-    auto fs = std::ifstream(filename);
+    auto fs = fopen(filename.c_str(), "rt");
     if (!fs) throw std::runtime_error("cannot open filename " + filename);
 
     // currently parsed material
@@ -1929,17 +1887,14 @@ void load_mtl(
     auto first = true;
 
     // read the file line by line
-    std::string line;
-    while (std::getline(fs, line)) {
-        // remove comment
-        if (line.find("#") != line.npos) line = line.substr(0, line.find("#"));
-
-        // prepare to parse
-        auto ss = std::stringstream(line);
+    char buf[4096];
+    while (fgets(buf, 4096, fs)) {
+        // line
+        normalize_obj_line(buf);
+        auto ss = buf;
 
         // get command
-        auto cmd = ""s;
-        ss >> cmd;
+        auto cmd = parse_string(ss);
         if (cmd == "") continue;
 
         // possible token values
@@ -1947,57 +1902,57 @@ void load_mtl(
             if (!first) cb.material(mat);
             first = false;
             mat = obj_material();
-            ss >> mat.name;
+            mat.name = parse_string(ss);
         } else if (cmd == "illum") {
-            ss >> mat.illum;
+            mat.illum = parse_int(ss);
         } else if (cmd == "Ke") {
-            ss >> mat.ke;
+            mat.ke = parse_vec3f(ss);
         } else if (cmd == "Kd") {
-            ss >> mat.kd;
+            mat.kd = parse_vec3f(ss);
         } else if (cmd == "Ks") {
-            ss >> mat.ks;
+            mat.ks = parse_vec3f(ss);
         } else if (cmd == "Kt") {
-            ss >> mat.kt;
+            mat.kt = parse_vec3f(ss);
         } else if (cmd == "Tf") {
             mat.kt = {-1, -1, -1};
-            ss >> mat.kt;
+            mat.kt = parse_vec3f(ss);
             if (mat.kt.y < 0) mat.kt = {mat.kt.x, mat.kt.x, mat.kt.x};
             if (flip_tr) mat.kt = vec3f{1, 1, 1} - mat.kt;
         } else if (cmd == "Tr") {
             auto tr = vec3f{-1, -1, -1};
-            ss >> tr;
+            tr = parse_vec3f(ss);
             if (tr.y < 0) tr = {tr.x, tr.x, tr.x};
             mat.op = (tr.x + tr.y + tr.z) / 3;
             if (flip_tr) mat.op = 1 - mat.op;
         } else if (cmd == "Ns") {
-            ss >> mat.ns;
+            mat.ns = parse_float(ss);
             mat.rs = pow(2 / (mat.ns + 2), 1 / 4.0f);
             if (mat.rs < 0.01f) mat.rs = 0;
             if (mat.rs > 0.99f) mat.rs = 1;
         } else if (cmd == "d") {
-            ss >> mat.op;
+            mat.op = parse_float(ss);
         } else if (cmd == "Pr" || cmd == "rs") {
-            ss >> mat.rs;
+            mat.rs = parse_float(ss);
         } else if (cmd == "map_Ke") {
-            ss >> mat.ke_txt;
+            mat.ke_txt = parse_obj_texture_info(ss);
         } else if (cmd == "map_Kd") {
-            ss >> mat.kd_txt;
+            mat.kd_txt = parse_obj_texture_info(ss);
         } else if (cmd == "map_Ks") {
-            ss >> mat.ks_txt;
+            mat.ks_txt = parse_obj_texture_info(ss);
         } else if (cmd == "map_Tr") {
-            ss >> mat.kt_txt;
+            mat.kt_txt = parse_obj_texture_info(ss);
         } else if (cmd == "map_d" || cmd == "map_Tr") {
-            ss >> mat.op_txt;
+            mat.op_txt = parse_obj_texture_info(ss);
         } else if (cmd == "map_Pr" || cmd == "map_rs") {
-            ss >> mat.rs_txt;
+            mat.rs_txt = parse_obj_texture_info(ss);
         } else if (cmd == "map_occ" || cmd == "occ") {
-            ss >> mat.occ_txt;
+            mat.occ_txt = parse_obj_texture_info(ss);
         } else if (cmd == "map_bump" || cmd == "bump") {
-            ss >> mat.bump_txt;
+            mat.bump_txt = parse_obj_texture_info(ss);
         } else if (cmd == "map_disp" || cmd == "disp") {
-            ss >> mat.disp_txt;
+            mat.disp_txt = parse_obj_texture_info(ss);
         } else if (cmd == "map_norm" || cmd == "norm") {
-            ss >> mat.norm_txt;
+            mat.norm_txt = parse_obj_texture_info(ss);
         }
     }
 
@@ -2005,38 +1960,43 @@ void load_mtl(
     if (!first) cb.material(mat);
 
     // clone
-    fs.close();
+    fclose(fs);
 }
 
 // Load obj extensions
 void load_objx(const std::string& filename, const obj_callbacks& cb) {
     // open file
-    auto fs = std::ifstream(filename);
+    auto fs = fopen(filename.c_str(), "rt");
     if (!fs) throw std::runtime_error("cannot open filename " + filename);
 
     // read the file line by line
-    std::string line;
-    while (std::getline(fs, line)) {
-        // remove comments
-        if (line.find("#") != line.npos) line = line.substr(0, line.find("#"));
-
-        // prepare to parse
-        auto ss = std::stringstream(line);
+    char buf[4096];
+    while (fgets(buf, 4096, fs)) {
+        // line
+        normalize_obj_line(buf);
+        auto ss = buf;
 
         // get command
-        auto cmd = ""s;
-        ss >> cmd;
+        auto cmd = parse_string(ss);
         if (cmd == "") continue;
 
         // possible token values
         if (cmd == "c") {
             auto cam = obj_camera();
-            ss >> cam.name >> cam.ortho >> cam.width >> cam.height >>
-                cam.focal >> cam.focus >> cam.aperture >> cam.frame;
+            cam.name = parse_string(ss);
+            cam.ortho = parse_bool(ss);
+            cam.width = parse_float(ss);
+            cam.height = parse_float(ss);
+            cam.focal = parse_float(ss);
+            cam.focus = parse_float(ss);
+            cam.aperture = parse_float(ss);
+            cam.frame = parse_frame3f(ss);
             cb.camera(cam);
         } else if (cmd == "e") {
             auto env = obj_environment();
-            ss >> env.name >> env.ke >> env.ke_txt.path >> env.frame;
+            env.name = parse_string(ss);
+            env.ke = parse_vec3f(ss);
+            env.ke_txt.path = parse_string(ss);
             if (env.ke_txt.path == "\"\"") env.ke_txt.path = "";
             cb.environmnet(env);
         } else {
@@ -2045,14 +2005,14 @@ void load_objx(const std::string& filename, const obj_callbacks& cb) {
     }
 
     // close file
-    fs.close();
+    fclose(fs);
 }
 
 // Load obj scene
 void load_obj(const std::string& filename, const obj_callbacks& cb,
     bool flip_texcoord = true, bool flip_tr = true) {
     // open file
-    auto fs = std::ifstream(filename);
+    auto fs = fopen(filename.c_str(), "rt");
     if (!fs) throw std::runtime_error("cannot open filename " + filename);
 
     // track vertex size
@@ -2060,45 +2020,32 @@ void load_obj(const std::string& filename, const obj_callbacks& cb,
     auto verts = std::vector<obj_vertex>();  // buffer to avoid reallocation
 
     // read the file line by line
-    std::string line;
-    while (std::getline(fs, line)) {
-        // remove comments
-        if (line.find("#") != line.npos) line = line.substr(0, line.find("#"));
-
-// prepare to parse
-#if YGL_FASTPARSE != 0
-        auto ss = fastparsestream(line);
-#else
-        auto ss = std::stringstream(line);
-#endif
+    char buf[4096];
+    while (fgets(buf, 4096, fs)) {
+        // prepare to parse
+        normalize_obj_line(buf);
+        auto ss = buf;
 
         // get command
-        auto cmd = ""s;
-        ss >> cmd;
+        auto cmd = parse_string(ss);
         if (cmd == "") continue;
 
         // possible token values
         if (cmd == "v") {
-            auto v = zero3f;
-            ss >> v;
-            cb.vert(v);
+            cb.vert(parse_vec3f(ss));
             vert_size.pos += 1;
         } else if (cmd == "vn") {
-            auto v = zero3f;
-            ss >> v;
-            cb.norm(v);
+            cb.norm(parse_vec3f(ss));
             vert_size.norm += 1;
         } else if (cmd == "vt") {
-            auto v = zero2f;
-            ss >> v;
+            auto v = parse_vec2f(ss);
             if (flip_texcoord) v.y = 1 - v.y;
             cb.texcoord(v);
             vert_size.texcoord += 1;
         } else if (cmd == "f" || cmd == "l" || cmd == "p") {
             verts.clear();
             while (true) {
-                auto vert = obj_vertex();
-                ss >> vert;
+                auto vert = parse_obj_vertex(ss);
                 if (!vert.pos) break;
                 if (vert.pos < 0) vert.pos = vert_size.pos + vert.pos + 1;
                 if (vert.texcoord < 0)
@@ -2110,24 +2057,15 @@ void load_obj(const std::string& filename, const obj_callbacks& cb,
             if (cmd == "l") cb.line(verts);
             if (cmd == "p") cb.point(verts);
         } else if (cmd == "o") {
-            auto v = ""s;
-            ss >> v;
-            cb.object(v);
+            cb.object(parse_string(ss));
         } else if (cmd == "usemtl") {
-            auto v = ""s;
-            ss >> v;
-            cb.usemtl(v);
+            cb.usemtl(parse_string(ss));
         } else if (cmd == "g") {
-            auto v = ""s;
-            ss >> v;
-            cb.group(v);
+            cb.group(parse_string(ss));
         } else if (cmd == "s") {
-            auto v = ""s;
-            ss >> v;
-            cb.smoothing(v);
+            cb.smoothing(parse_string(ss));
         } else if (cmd == "mtllib") {
-            auto mtlname = ""s;
-            ss >> mtlname;
+            auto mtlname = parse_string(ss);
             auto mtlpath = get_dirname(filename) + "/" + mtlname;
             load_mtl(mtlpath, cb, flip_tr);
         } else {
@@ -2144,7 +2082,7 @@ void load_obj(const std::string& filename, const obj_callbacks& cb,
     }
 
     // close file
-    fs.close();
+    fclose(fs);
 }
 
 // Loads an OBJ
@@ -2165,9 +2103,9 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
     auto ist = (instance*)nullptr;
 
     // vertices
-    auto pos = std::deque<vec3f>();
-    auto norm = std::deque<vec3f>();
-    auto texcoord = std::deque<vec2f>();
+    auto opos = std::deque<vec3f>();
+    auto onorm = std::deque<vec3f>();
+    auto otexcoord = std::deque<vec2f>();
 
     // object maps
     auto tmap = std::unordered_map<std::string, texture*>();
@@ -2245,10 +2183,10 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
             if (it != vert_map.end()) continue;
             auto nverts = (int)ist->shp->pos.size();
             vert_map.insert(it, {vert, nverts});
-            if (vert.pos) ist->shp->pos.push_back(pos.at(vert.pos - 1));
+            if (vert.pos) ist->shp->pos.push_back(opos.at(vert.pos - 1));
             if (vert.texcoord)
-                ist->shp->texcoord.push_back(texcoord.at(vert.texcoord - 1));
-            if (vert.norm) ist->shp->norm.push_back(norm.at(vert.norm - 1));
+                ist->shp->texcoord.push_back(otexcoord.at(vert.texcoord - 1));
+            if (vert.norm) ist->shp->norm.push_back(onorm.at(vert.norm - 1));
         }
     };
 
@@ -2257,9 +2195,9 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
 
     // callbacks
     auto cb = obj_callbacks();
-    cb.vert = [&](vec3f v) { pos.push_back(v); };
-    cb.norm = [&](vec3f v) { norm.push_back(v); };
-    cb.texcoord = [&](vec2f v) { texcoord.push_back(v); };
+    cb.vert = [&](vec3f v) { opos.push_back(v); };
+    cb.norm = [&](vec3f v) { onorm.push_back(v); };
+    cb.texcoord = [&](vec2f v) { otexcoord.push_back(v); };
     cb.face = [&](const std::vector<obj_vertex>& verts) {
         add_verts(verts);
         for (auto i = 2; i < verts.size(); i++)
@@ -2409,100 +2347,133 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
 void save_mtl(
     const std::string& filename, const scene* scn, bool flip_tr = true) {
     // open
-    auto fs = std::ofstream(filename);
+    auto fs = fopen(filename.c_str(), "wt");
     if (!fs) throw std::runtime_error("cannot save file " + filename);
 
     // for each material, dump all the values
     for (auto mat : scn->materials) {
-        fs << "newmtl " << mat->name << "\n";
-        fs << "  illum 2\n";
-        if (mat->ke != zero3f) fs << "  Ke " << mat->ke << "\n";
-        if (mat->kd != zero3f) fs << "  Kd " << mat->kd << "\n";
-        if (mat->ks != zero3f) fs << "  Ks " << mat->ks << "\n";
-        if (mat->kt != zero3f) fs << "  Kt " << mat->kt << "\n";
+        fprintf(fs, "newmtl %s\n", mat->name.c_str());
+        fprintf(fs, "  illum 2\n");
+        if (mat->ke != zero3f)
+            fprintf(fs, "  Ke %g %g %g\n", mat->ke.x, mat->ke.y, mat->ke.z);
+        if (mat->kd != zero3f)
+            fprintf(fs, "  Kd %g %g %g\n", mat->kd.x, mat->kd.y, mat->kd.z);
+        if (mat->ks != zero3f)
+            fprintf(fs, "  Ks %g %g %g\n", mat->ks.x, mat->ks.y, mat->ks.z);
+        if (mat->kt != zero3f)
+            fprintf(fs, "  Kt %g %g %g\n", mat->kt.x, mat->kt.y, mat->kt.z);
         if (mat->rs != 1.0f)
-            fs << "  Ns "
-               << (int)clamp(2 / pow(mat->rs + 1e-10f, 4.0f) - 2, 0.0f, 1.0e12f)
-               << "\n";
-        if (mat->op != 1.0f) fs << "  d " << mat->op << "\n";
-        if (mat->rs != -1.0f) fs << "  Pr " << mat->rs << "\n";
-        if (mat->ke_txt) fs << "  map_Ke " << mat->ke_txt->path << "\n";
-        if (mat->kd_txt) fs << "  map_Kd " << mat->kd_txt->path << "\n";
-        if (mat->ks_txt) fs << "  map_Ks " << mat->ks_txt->path << "\n";
-        if (mat->kt_txt) fs << "  map_Kt " << mat->kt_txt->path << "\n";
+            fprintf(fs, "  Ns %d\n",
+                (int)clamp(2 / pow(mat->rs + 1e-10f, 4.0f) - 2, 0.0f, 1.0e12f));
+        if (mat->op != 1.0f) fprintf(fs, "  d %g\n", mat->op);
+        if (mat->rs != -1.0f) fprintf(fs, "  Pr %g\n", mat->rs);
+        if (mat->ke_txt)
+            fprintf(fs, "  map_Ke %s\n", mat->ke_txt->path.c_str());
+        if (mat->kd_txt)
+            fprintf(fs, "  map_Kd %s\n", mat->kd_txt->path.c_str());
+        if (mat->ks_txt)
+            fprintf(fs, "  map_Ks %s\n", mat->ks_txt->path.c_str());
+        if (mat->kt_txt)
+            fprintf(fs, "  map_Kt %s\n", mat->kt_txt->path.c_str());
         if (mat->op_txt && mat->op_txt != mat->kd_txt)
-            fs << "  map_d  " << mat->op_txt->path << "\n";
-        if (mat->rs_txt) fs << "  map_Pr " << mat->rs_txt->path << "\n";
-        if (mat->occ_txt) fs << "  map_occ " << mat->occ_txt->path << "\n";
-        if (mat->bump_txt) fs << "  map_bump " << mat->bump_txt->path << "\n";
-        if (mat->disp_txt) fs << "  map_disp " << mat->disp_txt->path << "\n";
-        if (mat->norm_txt) fs << "  map_norm " << mat->norm_txt->path << "\n";
-        fs << "\n";
+            fprintf(fs, "  map_d  %s\n", mat->op_txt->path.c_str());
+        if (mat->rs_txt)
+            fprintf(fs, "  map_Pr %s\n", mat->rs_txt->path.c_str());
+        if (mat->occ_txt)
+            fprintf(fs, "  map_occ %s\n", mat->occ_txt->path.c_str());
+        if (mat->bump_txt)
+            fprintf(fs, "  map_bump %s\n", mat->bump_txt->path.c_str());
+        if (mat->disp_txt)
+            fprintf(fs, "  map_disp %s\n", mat->disp_txt->path.c_str());
+        if (mat->norm_txt)
+            fprintf(fs, "  map_norm %s\n", mat->norm_txt->path.c_str());
+        fprintf(fs, "\n");
     }
 
     // done
-    fs.close();
+    fclose(fs);
 }
 
 void save_objx(const std::string& filename, const scene* scn) {
     // scene
-    auto fs = std::ofstream(filename);
+    auto fs = fopen(filename.c_str(), "wt");
     if (!fs) throw std::runtime_error("cannot save file " + filename);
 
     // cameras
     for (auto cam : scn->cameras) {
-        fs << "c " << cam->name << " " << cam->ortho << " " << cam->width << " "
-           << cam->height << " " << cam->focal << " " << cam->focus << " "
-           << cam->aperture << " " << cam->frame << "\n";
+        fprintf(fs, "c %s %d %g %g %g %g %g ", cam->name.c_str(),
+            (int)cam->ortho, cam->width, cam->height, cam->focal, cam->focus,
+            cam->aperture);
+        fprintf(fs, "%g %g %g %g %g %g %g %g %g %g %g %g\n", cam->frame.x.x,
+            cam->frame.x.y, cam->frame.x.z, cam->frame.y.x, cam->frame.y.y,
+            cam->frame.y.z, cam->frame.z.x, cam->frame.z.y, cam->frame.z.z,
+            cam->frame.o.x, cam->frame.o.y, cam->frame.o.z);
     }
 
     // environments
     for (auto env : scn->environments) {
-        fs << "e " << env->name << " " << env->ke << " "
-           << ((env->ke_txt) ? env->ke_txt->path : "\"\""s) << " " << env->frame
-           << "\n";
+        fprintf(fs, "e %s %g %g %g %s ", env->name.c_str(), env->ke.x,
+            env->ke.y, env->ke.z,
+            ((env->ke_txt) ? env->ke_txt->path.c_str() : "\"\""));
+        fprintf(fs, "%g %g %g %g %g %g %g %g %g %g %g %g\n", env->frame.x.x,
+            env->frame.x.y, env->frame.x.z, env->frame.y.x, env->frame.y.y,
+            env->frame.y.z, env->frame.z.x, env->frame.z.y, env->frame.z.z,
+            env->frame.o.x, env->frame.o.y, env->frame.o.z);
     }
 
     // done
-    fs.close();
+    fclose(fs);
+}
+
+std::string to_string(const obj_vertex& v) {
+    auto s = std::to_string(v.pos);
+    if (v.texcoord) {
+        s += "/" + std::to_string(v.texcoord);
+        if (v.norm) s += "/" + std::to_string(v.norm);
+    } else {
+        if (v.norm) s += "//" + std::to_string(v.norm);
+    }
+    return s;
 }
 
 void save_obj(
     const std::string& filename, const scene* scn, bool flip_texcoord = true) {
     // scene
-    auto fs = std::ofstream(filename);
+    auto fs = fopen(filename.c_str(), "wt");
     if (!fs) throw std::runtime_error("cannot save file " + filename);
 
     // material library
     if (!scn->materials.empty()) {
         auto mtlname = replace_extension(get_filename(filename), "mtl");
-        fs << "mtllib " << mtlname << "\n";
+        fprintf(fs, "mtllib %s\n", mtlname.c_str());
     }
 
     // shapes
     auto offset = vec3i{0, 0, 0};
     for (auto ist : scn->instances) {
         if (!ist->sbd) {
-            fs << "o " << ist->name << "\n";
-            if (ist->mat) fs << "usemtl " << ist->mat->name << "\n";
+            fprintf(fs, "o %s\n", ist->name.c_str());
+            if (ist->mat) fprintf(fs, "usemtl %s\n", ist->mat->name.c_str());
             if (ist->frame == identity_frame3f) {
-                for (auto& p : ist->shp->pos) fs << "v " << p << "\n";
-                for (auto& n : ist->shp->norm) fs << "vn " << n << "\n";
-                if (flip_texcoord)
-                    for (auto& t : ist->shp->texcoord)
-                        fs << "vt " << vec2f{t.x, 1 - t.y} << "\n";
-                else
-                    for (auto& t : ist->shp->texcoord) fs << "vt " << t << "\n";
-            } else {
                 for (auto& p : ist->shp->pos)
-                    fs << "v " << transform_point(ist->frame, p) << "\n";
+                    fprintf(fs, "v %g %g %g\n", p.x, p.y, p.z);
                 for (auto& n : ist->shp->norm)
-                    fs << "vn " << transform_direction(ist->frame, n) << "\n";
-                if (flip_texcoord)
-                    for (auto& t : ist->shp->texcoord)
-                        fs << "vt " << vec2f{t.x, 1 - t.y} << "\n";
-                else
-                    for (auto& t : ist->shp->texcoord) fs << "vt " << t << "\n";
+                    fprintf(fs, "vn %g %g %g\n", n.x, n.y, n.z);
+                for (auto& t : ist->shp->texcoord)
+                    fprintf(
+                        fs, "vt %g %g\n", t.x, (flip_texcoord) ? 1 - t.y : t.y);
+            } else {
+                for (auto& pp : ist->shp->pos) {
+                    auto p = transform_point(ist->frame, pp);
+                    fprintf(fs, "v %g %g %g\n", p.x, p.y, p.z);
+                }
+                for (auto& nn : ist->shp->norm) {
+                    auto n = transform_direction(ist->frame, nn);
+                    fprintf(fs, "vn %g %g %g\n", n.x, n.y, n.z);
+                }
+                for (auto& t : ist->shp->texcoord)
+                    fprintf(
+                        fs, "vt %g %g\n", t.x, (flip_texcoord) ? 1 - t.y : t.y);
             }
             auto mask = vec3i{1, ist->shp->texcoord.empty() ? 0 : 1,
                 ist->shp->norm.empty() ? 0 : 1};
@@ -2510,24 +2481,34 @@ void save_obj(
                 auto vert = (vec3i{i, i, i} + offset + vec3i{1, 1, 1}) * mask;
                 return obj_vertex{vert.x, vert.y, vert.z};
             };
-            for (auto& t : ist->shp->triangles)
-                fs << "f " << vert(t.x) << " " << vert(t.y) << " " << vert(t.z)
-                   << "\n";
-            for (auto& l : ist->shp->lines)
-                fs << "l " << vert(l.x) << " " << vert(l.y) << "\n";
+            for (auto& t : ist->shp->triangles) {
+                fprintf(fs, "f %s %s %s\n", to_string(vert(t.x)).c_str(),
+                    to_string(vert(t.y)).c_str(), to_string(vert(t.z)).c_str());
+            }
+            for (auto& l : ist->shp->lines) {
+                fprintf(fs, "l %s %s\n", to_string(vert(l.x)).c_str(),
+                    to_string(vert(l.y)).c_str());
+            }
             offset.x += ist->shp->pos.size();
             offset.y += ist->shp->texcoord.size();
             offset.z += ist->shp->norm.size();
         } else {
-            fs << "o " << ist->name << "\n";
-            if (ist->mat) fs << "usemtl " << ist->mat->name << "\n";
+            fprintf(fs, "o %s\n", ist->name.c_str());
+            if (ist->mat) fprintf(fs, "usemtl %s\n", ist->mat->name.c_str());
             if (ist->frame == identity_frame3f) {
-                for (auto& p : ist->sbd->pos) fs << "v " << p << "\n";
-                for (auto& t : ist->sbd->texcoord) fs << "vt " << t << "\n";
-            } else {
                 for (auto& p : ist->sbd->pos)
-                    fs << "v " << transform_point(ist->frame, p) << "\n";
-                for (auto& t : ist->sbd->texcoord) fs << "vt " << t << "\n";
+                    fprintf(fs, "v %g %g %g\n", p.x, p.y, p.z);
+                for (auto& t : ist->sbd->texcoord)
+                    fprintf(
+                        fs, "vt %g %g\n", t.x, (flip_texcoord) ? 1 - t.y : t.y);
+            } else {
+                for (auto& pp : ist->sbd->pos) {
+                    auto p = transform_point(ist->frame, pp);
+                    fprintf(fs, "v %g %g %g\n", p.x, p.y, p.z);
+                }
+                for (auto& t : ist->sbd->texcoord)
+                    fprintf(
+                        fs, "vt %g %g\n", t.x, (flip_texcoord) ? 1 - t.y : t.y);
             }
             if (!ist->sbd->texcoord.empty()) {
                 auto vert = [offset](int ip, int it) {
@@ -2539,13 +2520,16 @@ void save_obj(
                     auto qp = ist->sbd->quads_pos[i];
                     auto qt = ist->sbd->quads_texcoord[i];
                     if (qp.z == qp.w) {
-                        fs << "f " << vert(qp.x, qt.x) << " "
-                           << vert(qp.y, qt.y) << " " << vert(qp.z, qt.z)
-                           << "\n";
+                        fprintf(fs, "f %s %s %s\n",
+                            to_string(vert(qp.x, qt.x)).c_str(),
+                            to_string(vert(qp.y, qt.y)).c_str(),
+                            to_string(vert(qp.z, qt.z)).c_str());
                     } else {
-                        fs << "f " << vert(qp.x, qt.x) << " "
-                           << vert(qp.y, qt.y) << " " << vert(qp.z, qt.z) << " "
-                           << vert(qp.w, qt.w) << "\n";
+                        fprintf(fs, "f %s %s %s %s\n",
+                            to_string(vert(qp.x, qt.x)).c_str(),
+                            to_string(vert(qp.y, qt.y)).c_str(),
+                            to_string(vert(qp.z, qt.z)).c_str(),
+                            to_string(vert(qp.w, qt.w)).c_str());
                     }
                 }
             } else {
@@ -2555,11 +2539,16 @@ void save_obj(
                 };
                 for (auto& q : ist->sbd->quads_pos) {
                     if (q.z == q.w) {
-                        fs << "f " << vert(q.x) << " " << vert(q.y) << " "
-                           << vert(q.z) << "\n";
+                        fprintf(fs, "f %s %s %s\n",
+                            to_string(vert(q.x)).c_str(),
+                            to_string(vert(q.y)).c_str(),
+                            to_string(vert(q.z)).c_str());
                     } else {
-                        fs << "f " << vert(q.x) << " " << vert(q.y) << " "
-                           << vert(q.z) << " " << vert(q.w) << "\n";
+                        fprintf(fs, "f %s %s %s %s\n",
+                            to_string(vert(q.x)).c_str(),
+                            to_string(vert(q.y)).c_str(),
+                            to_string(vert(q.z)).c_str(),
+                            to_string(vert(q.w)).c_str());
                     }
                 }
             }
@@ -2568,7 +2557,7 @@ void save_obj(
         }
     }
 
-    fs.close();
+    fclose(fs);
 }
 
 void save_obj_scene(const std::string& filename, const scene* scn,
@@ -2890,7 +2879,7 @@ scene* load_gltf_scene(
                             shp->lines.push_back({i - 1, i});
                     } else if (mode == -1 || mode == 0) {
                         // points
-                        std::cout << "points not supported\n";
+                        printf("points not supported\n");
                     } else {
                         throw std::runtime_error("unknown primitive type");
                     }
@@ -2941,7 +2930,7 @@ scene* load_gltf_scene(
                                 {(int)indices[i - 1][0], (int)indices[i][0]});
                     } else if (mode == -1 || mode == 0) {
                         // points
-                        std::cout << "points not supported\n";
+                        printf("points not supported\n");
                     } else {
                         throw std::runtime_error("unknown primitive type");
                     }
@@ -2963,7 +2952,7 @@ scene* load_gltf_scene(
             cam->name = gcam.value("name", ""s);
             cam->ortho = gcam.value("type", ""s) == "orthographic";
             if (cam->ortho) {
-                std::cout << "orthographic not supported well\n";
+                printf("orthographic not supported well\n");
                 auto ortho = gcam.value("orthographic", json::object());
                 set_camera_fovy(cam, ortho.value("ymag", 0.0f),
                     ortho.value("xmag", 0.0f) / ortho.value("ymag", 0.0f));
@@ -3097,7 +3086,7 @@ scene* load_gltf_scene(
                                     (float)output_view[i][2]});
                         } break;
                         case 3: {  // weights
-                            std::cout << "weights not supported for now\n";
+                            printf("weights not supported for now\n");
 #if 0
                         // get a node that it refers to
                         auto ncomp = 0;
@@ -3367,7 +3356,7 @@ void save_gltf_scene(const std::string& filename, const scene* scn,
     }
 
     // animations not supported yet
-    if (!scn->animations.empty()) std::cout << "animation not supported yet\n";
+    if (!scn->animations.empty()) printf("animation not supported yet\n");
 
     // nodes from instances
     if (scn->nodes.empty()) {
@@ -3397,18 +3386,18 @@ void save_gltf_scene(const std::string& filename, const scene* scn,
         auto filename = normalize_path(dirname + "/" + shp->path);
         filename = replace_extension(filename, ".bin");
         try {
-            auto fs = std::ofstream(filename, std::ios::binary);
+            auto fs = fopen(filename.c_str(), "wb");
             if (!fs)
                 throw std::runtime_error("could not open file " + filename);
-            fs.write((char*)shp->pos.data(), 3 * 4 * shp->pos.size());
-            fs.write((char*)shp->norm.data(), 3 * 4 * shp->norm.size());
-            fs.write((char*)shp->texcoord.data(), 2 * 4 * shp->pos.size());
-            fs.write((char*)shp->color.data(), 4 * 4 * shp->color.size());
-            fs.write((char*)shp->radius.data(), 1 * 4 * shp->radius.size());
-            fs.write((char*)shp->lines.data(), 2 * 4 * shp->lines.size());
-            fs.write(
-                (char*)shp->triangles.data(), 3 * 4 * shp->triangles.size());
-            fs.close();
+            fwrite((char*)shp->pos.data(), 3 * 4, shp->pos.size(), fs);
+            fwrite((char*)shp->norm.data(), 3 * 4, shp->norm.size(), fs);
+            fwrite((char*)shp->texcoord.data(), 2 * 4, shp->pos.size(), fs);
+            fwrite((char*)shp->color.data(), 4 * 4, shp->color.size(), fs);
+            fwrite((char*)shp->radius.data(), 1 * 4, shp->radius.size(), fs);
+            fwrite((char*)shp->lines.data(), 2 * 4, shp->lines.size(), fs);
+            fwrite(
+                (char*)shp->triangles.data(), 3 * 4, shp->triangles.size(), fs);
+            fclose(fs);
         } catch (std::exception&) {
             if (skip_missing) continue;
             throw;
@@ -3617,7 +3606,7 @@ scene* load_pbrt_scene(
         if (js.is_array() && js.size() == 3)
             return {js.at(0).get<float>(), js.at(1).get<float>(),
                 js.at(2).get<float>()};
-        std::cout << "cannot handle vec3f\n";
+        printf("cannot handle vec3f\n");
         return zero3f;
     };
 
@@ -3628,13 +3617,13 @@ scene* load_pbrt_scene(
         if (js.is_array() && js.size() == 4)
             return {js.at(0).get<float>(), js.at(1).get<float>(),
                 js.at(2).get<float>(), js.at(3).get<float>()};
-        std::cout << "cannot handle vec4f\n";
+        printf("cannot handle vec4f\n");
         return zero4f;
     };
 
     auto get_mat4f = [](const json& js) -> mat4f {
         if (!js.is_array() || js.size() != 16) {
-            std::cout << "cannot handle vec4f\n";
+            printf("cannot handle vec4f\n");
             return identity_mat4f;
         }
         auto m = identity_mat4f;
@@ -3644,7 +3633,7 @@ scene* load_pbrt_scene(
 
     auto get_mat3f = [](const json& js) -> mat3f {
         if (!js.is_array() || js.size() != 9) {
-            std::cout << "cannot handle mat3f\n";
+            printf("cannot handle mat3f\n");
             return identity_mat3f;
         }
         auto m = identity_mat3f;
@@ -3654,7 +3643,7 @@ scene* load_pbrt_scene(
 
     auto get_vector_vec3i = [](const json& js) -> std::vector<vec3i> {
         if (!js.is_array() || js.size() % 3) {
-            std::cout << "cannot handle vector<vec3f>";
+            printf("cannot handle vector<vec3f>\n");
             return {};
         }
         auto vals = std::vector<vec3i>(js.size() / 3);
@@ -3668,7 +3657,7 @@ scene* load_pbrt_scene(
 
     auto get_vector_vec3f = [](const json& js) -> std::vector<vec3f> {
         if (!js.is_array() || js.size() % 3) {
-            std::cout << "cannot handle vector<vec3f>\n";
+            printf("cannot handle vector<vec3f>\n");
             return {};
         }
         auto vals = std::vector<vec3f>(js.size() / 3);
@@ -3682,7 +3671,7 @@ scene* load_pbrt_scene(
 
     auto get_vector_vec2f = [](const json& js) -> std::vector<vec2f> {
         if (!js.is_array() || js.size() % 2) {
-            std::cout << "cannot handle vector<vec3f>\n";
+            printf("cannot handle vector<vec3f>\n");
             return {};
         }
         auto vals = std::vector<vec2f>(js.size() / 2);
@@ -3754,7 +3743,7 @@ scene* load_pbrt_scene(
             if (type == "perspective") {
                 fovy = jcmd.at("fov").get<float>() * pi / 180;
             } else {
-                std::cout << type << " camera not supported\n";
+                printf("%s camera not supported\n", type.c_str());
             }
             ygl::set_camera_fovy(cam, fovy, aspect);
             scn->cameras.push_back(cam);
@@ -3778,7 +3767,7 @@ scene* load_pbrt_scene(
                     if (ygl::get_extension(txt->path) == "pfm")
                         txt->path = ygl::replace_extension(txt->path, ".hdr");
                 } else {
-                    std::cout << type << " texture not supported\n";
+                    printf("%s texture not supported\n", type.c_str());
                 }
             }
         } else if (cmd == "MakeNamedMaterial" || cmd == "Material") {
@@ -3859,7 +3848,7 @@ scene* load_pbrt_scene(
                             get_scaled_texture(jcmd.at("Kt"));
                     mat->rs = 0;
                 } else if (type == "mix") {
-                    std::cout << "mix material not properly supported\n";
+                    printf("mix material not properly supported\n");
                     if (jcmd.count("namedmaterial1")) {
                         auto mat1 =
                             jcmd.at("namedmaterial1").get<std::string>();
@@ -3867,11 +3856,11 @@ scene* load_pbrt_scene(
                         *mat = *mat_map.at(mat1);
                         mat->name = saved_name;
                     } else {
-                        std::cout << "mix material missing front material\n";
+                        printf("mix material missing front material\n");
                     }
                 } else {
                     mat->kd = {1, 0, 0};
-                    std::cout << type << " material not supported\n";
+                    printf("%s material not supported\n", type.c_str());
                 }
                 if (jcmd.count("uroughness")) {
                     auto remap = js.count("remaproughness") &&
@@ -3879,7 +3868,7 @@ scene* load_pbrt_scene(
                     if (jcmd.count("uroughness"))
                         mat->rs = jcmd.at("uroughness").get<float>();
                     // if (!remap) mat->rs = mat->rs * mat->rs;
-                    if (remap) std::cout << "remap roughness not supported\n";
+                    if (remap) printf("remap roughness not supported\n");
                 }
                 if (jcmd.count("roughness")) {
                     auto remap = js.count("remaproughness") &&
@@ -3887,7 +3876,7 @@ scene* load_pbrt_scene(
                     if (jcmd.count("roughness"))
                         mat->rs = jcmd.at("roughness").get<float>();
                     // if (!remap) mat->rs = mat->rs * mat->rs;
-                    if (remap) std::cout << "remap roughness not supported\n";
+                    if (remap) printf("remap roughness not supported\n");
                 }
                 if (stack.back().light_mat) {
                     mat->ke = stack.back().light_mat->ke;
@@ -3946,7 +3935,7 @@ scene* load_pbrt_scene(
                 shp->texcoord = sshp.texcoord;
                 shp->triangles = sshp.triangles;
             } else {
-                std::cout << type << " shape not supported\n";
+                printf("%s shape not supported\n", type.c_str());
             }
             auto frame = stack.back().frame;
             auto scl = vec3f{length(frame.x), length(frame.y), length(frame.z)};
@@ -3987,7 +3976,7 @@ scene* load_pbrt_scene(
                 lmat->ke = get_vec3f(jcmd.at("L"));
                 stack.back().light_mat = lmat;
             } else {
-                std::cout << type << " area light not supported\n";
+                printf("%s area light not supported\n", type.c_str());
             }
         } else if (cmd == "LightSource") {
             auto type = jcmd.at("type").get<std::string>();
@@ -4038,9 +4027,9 @@ scene* load_pbrt_scene(
                     stack.back().frame *
                     lookat_frame(dir * distant_dist, zero3f, {0, 1, 0}, true);
                 scn->instances.push_back(ist);
-                std::cout << type << " light not properly supported\n";
+                printf("%s light not properly supported\n", type.c_str());
             } else {
-                std::cout << type << " light not supported\n";
+                printf("%s light not supported\n", type.c_str());
             }
         } else if (cmd == "WorldBegin") {
             stack.push_back(stack_item());
@@ -4058,7 +4047,7 @@ scene* load_pbrt_scene(
                    cmd == "TransformEnd") {
             stack.pop_back();
         } else {
-            std::cout << cmd << " command not supported\n";
+            printf("%s command not supported\n", cmd.c_str());
         }
     }
     if (use_hierarchy) {
@@ -4178,41 +4167,49 @@ struct ply_data {
     std::vector<ply_element> elements = {};
 };
 
+// prepare obj line (remove comments and normalize whitespace)
+void normalize_ply_line(char* s) {
+    while (*s) {
+        if (*s == '\t' || *s == '\r' || *s == '\n') {
+            *s++ = ' ';
+        } else {
+            s++;
+        }
+    }
+}
+
 // Load ply mesh
 ply_data load_ply(const std::string& filename) {
-    auto fs = std::ifstream(filename);
+    auto fs = fopen(filename.c_str(), "rb");
     if (!fs) throw std::runtime_error("could not open file " + filename);
 
     // parse header
     auto ascii = false;
     auto ply = ply_data();
-    std::string line;
-    while (std::getline(fs, line)) {
-        auto ss = std::stringstream(line);
-        auto cmd = ""s;
-        ss >> cmd;
+    char line[4096];
+    while (fgets(line, sizeof(line), fs)) {
+        normalize_ply_line(line);
+        auto ss = line;
+        auto cmd = parse_string(ss);
         if (cmd == "") continue;
         if (cmd == "ply") {
         } else if (cmd == "comment") {
         } else if (cmd == "format") {
-            auto fmt = ""s;
-            ss >> fmt;
+            auto fmt = parse_string(ss);
             if (fmt != "ascii" && fmt != "binary_little_endian")
                 throw std::runtime_error("format not supported");
             ascii = fmt == "ascii";
         } else if (cmd == "element") {
             auto elem = ply_element();
-            ss >> elem.name;
-            ss >> elem.count;
+            elem.name = parse_string(ss);
+            elem.count = parse_int(ss);
             ply.elements.push_back(elem);
         } else if (cmd == "property") {
             auto prop = ply_property();
-            auto type = ""s;
-            ss >> type;
+            auto type = parse_string(ss);
             if (type == "list") {
-                auto count_type = ""s, elem_type = ""s;
-                ss >> count_type;
-                ss >> elem_type;
+                auto count_type = parse_string(ss);
+                auto elem_type = parse_string(ss);
                 if (count_type != "uchar" && count_type != "uint8")
                     throw std::runtime_error("unsupported ply list type");
                 if (elem_type != "int")
@@ -4227,7 +4224,7 @@ ply_data load_ply(const std::string& filename) {
             } else {
                 throw std::runtime_error("unsupported ply type");
             }
-            ss >> prop.name;
+            prop.name = parse_string(ss);
             prop.scalars.resize(ply.elements.back().count);
             if (prop.type == ply_type::ply_int_list)
                 prop.lists.resize(ply.elements.back().count);
@@ -4242,53 +4239,53 @@ ply_data load_ply(const std::string& filename) {
     // parse content
     for (auto& elem : ply.elements) {
         for (auto vid = 0; vid < elem.count; vid++) {
-            auto ss = std::stringstream();
+            auto ss = (char*)nullptr;
             if (ascii) {
-                if (!std::getline(fs, line))
+                if (!fgets(line, sizeof(line), fs))
                     throw std::runtime_error("error reading ply");
-                ss = std::stringstream(line);
+                ss = line;
             }
             for (auto pid = 0; pid < elem.properties.size(); pid++) {
                 auto& prop = elem.properties[pid];
                 if (prop.type == ply_type::ply_float) {
                     auto v = 0.0f;
                     if (ascii) {
-                        ss >> v;
+                        v = parse_float(ss);
                     } else {
-                        fs.read((char*)&v, 4);
+                        fread((char*)&v, 1, 4, fs);
                     }
                     prop.scalars[vid] = v;
                 } else if (prop.type == ply_type::ply_int) {
                     auto v = 0;
                     if (ascii) {
-                        ss >> v;
+                        v = parse_int(ss);
                     } else {
-                        fs.read((char*)&v, 4);
+                        fread((char*)&v, 1, 4, fs);
                     }
                     prop.scalars[vid] = v;
                 } else if (prop.type == ply_type::ply_uchar) {
                     auto vc = (unsigned char)0;
                     if (ascii) {
-                        auto v = 0;
-                        ss >> v;
+                        auto v = parse_int(ss);
                         vc = (unsigned char)v;
-                    } else
-                        fs.read((char*)&vc, 1);
+                    } else {
+                        fread((char*)&vc, 1, 1, fs);
+                    }
                     prop.scalars[vid] = vc / 255.0f;
                 } else if (prop.type == ply_type::ply_int_list) {
                     auto vc = (unsigned char)0;
                     if (ascii) {
-                        auto v = 0;
-                        ss >> v;
+                        auto v = parse_int(ss);
                         vc = (unsigned char)v;
-                    } else
-                        fs.read((char*)&vc, 1);
+                    } else {
+                        fread((char*)&vc, 1, 1, fs);
+                    }
                     prop.scalars[vid] = vc;
                     for (auto i = 0; i < (int)prop.scalars[vid]; i++)
                         if (ascii) {
-                            ss >> prop.lists[vid][i];
+                            prop.lists[vid][i] = parse_int(ss);
                         } else {
-                            fs.read((char*)&prop.lists[vid][i], 4);
+                            fread((char*)&prop.lists[vid][i], 1, 4, fs);
                         }
                 } else {
                     throw std::runtime_error("unsupported ply type");
@@ -4297,7 +4294,7 @@ ply_data load_ply(const std::string& filename) {
         }
     }
 
-    fs.close();
+    fclose(fs);
 
     return ply;
 }
@@ -4378,76 +4375,88 @@ void save_ply_mesh(const std::string& filename, const std::vector<int>& points,
     const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
     const std::vector<vec2f>& texcoord, const std::vector<vec4f>& color,
     const std::vector<float>& radius, bool ascii) {
-    auto fs = std::ofstream(filename);
+    auto fs = fopen(filename.c_str(), "wb");
     if (!fs) throw std::runtime_error("cannot save file " + filename);
 
     // header
-    fs << "ply\n";
+    fprintf(fs, "ply\n");
     if (ascii)
-        fs << "format ascii 1.0\n";
+        fprintf(fs, "format ascii 1.0\n");
     else
-        fs << "format binary_little_endian 1.0\n";
-    fs << "element vertex " << (int)pos.size() << "\n";
+        fprintf(fs, "format binary_little_endian 1.0\n");
+    fprintf(fs, "element vertex %d\n", (int)pos.size());
     if (!pos.empty())
-        fs << "property float x\nproperty float y\nproperty float z\n";
+        fprintf(fs, "property float x\nproperty float y\nproperty float z\n");
     if (!norm.empty())
-        fs << "property float nx\nproperty float ny\nproperty float nz\n";
-    if (!texcoord.empty()) fs << "property float u\nproperty float v\n";
+        fprintf(
+            fs, "property float nx\nproperty float ny\nproperty float nz\n");
+    if (!texcoord.empty()) fprintf(fs, "property float u\nproperty float v\n");
     if (!color.empty())
-        fs << "property float red\nproperty float green\nproperty float "
-              "blue\nproperty float alpha\n";
-    if (!radius.empty()) fs << "property float radius\n";
+        fprintf(fs,
+            "property float red\nproperty float green\nproperty float "
+            "blue\nproperty float alpha\n");
+    if (!radius.empty()) fprintf(fs, "property float radius\n");
     if (!triangles.empty()) {
-        fs << "element face " << (int)triangles.size() << "\n";
-        fs << "property list uchar int vertex_indices\n";
+        fprintf(fs, "element face %d\n", (int)triangles.size());
+        fprintf(fs, "property list uchar int vertex_indices\n");
     }
     if (!lines.empty()) {
-        fs << "element line " << (int)lines.size() << "\n";
-        fs << "property list uchar int vertex_indices\n";
+        fprintf(fs, "element line %d\n", (int)lines.size());
+        fprintf(fs, "property list uchar int vertex_indices\n");
     }
-    fs << "end_header\n";
+    fprintf(fs, "end_header\n");
 
     // body
     if (ascii) {
         // write vertex data
         for (auto i = 0; i < pos.size(); i++) {
-            if (!pos.empty()) fs << pos[i] << " ";
-            if (!norm.empty()) fs << norm[i] << " ";
-            if (!texcoord.empty()) fs << texcoord[i] << " ";
-            if (!color.empty()) fs << color[i] << " ";
-            if (!radius.empty()) fs << radius[i] << " ";
-            fs << "\n";
+            if (!pos.empty())
+                fprintf(fs, "%g %g %g ", pos[i].x, pos[i].y, pos[i].z);
+            if (!norm.empty())
+                fprintf(fs, "%g %g %g ", norm[i].x, norm[i].y, norm[i].z);
+            if (!texcoord.empty())
+                fprintf(fs, "%g %g ", texcoord[i].x, texcoord[i].y);
+            if (!color.empty())
+                fprintf(fs, "%g %g %g %g ", color[i].x, color[i].y, color[i].z,
+                    color[i].w);
+            if (!radius.empty()) fprintf(fs, "%g ", radius[i]);
+            fprintf(fs, "\n");
         }
 
         // write face data
         for (auto i = 0; i < triangles.size(); i++)
-            fs << "3 " << triangles[i] << "\n";
-        for (auto i = 0; i < lines.size(); i++) fs << "2 " << lines[i] << "\n";
+            fprintf(fs, "3 %d %d %d\n", triangles[i].x, triangles[i].y,
+                triangles[i].z);
+        for (auto i = 0; i < lines.size(); i++)
+            fprintf(fs, "2 %d %d\n", lines[i].x, lines[i].y);
     } else {
         // write vertex data
         for (auto i = 0; i < pos.size(); i++) {
-            if (!pos.empty()) fs.write((char*)&pos[i], 4 * 3);
-            if (!norm.empty()) fs.write((char*)&norm[i], 4 * 3);
-            if (!texcoord.empty()) fs.write((char*)&texcoord[i], 4 * 2);
-            if (!color.empty()) fs.write((char*)&color[i], 4 * 4);
-            if (!radius.empty()) fs.write((char*)&radius[i], 4 * 1);
+            if (!pos.empty()) fwrite((char*)&pos[i], 1, sizeof(pos[i]), fs);
+            if (!norm.empty()) fwrite((char*)&norm[i], 1, sizeof(norm[i]), fs);
+            if (!texcoord.empty())
+                fwrite((char*)&texcoord[i], 1, sizeof(texcoord[i]), fs);
+            if (!color.empty())
+                fwrite((char*)&color[i], 1, sizeof(color[i]), fs);
+            if (!radius.empty())
+                fwrite((char*)&radius[i], 1, sizeof(radius[i]), fs);
         }
 
         // write face data
         for (auto i = 0; i < triangles.size(); i++) {
             auto n = (byte)3;
-            fs.write((char*)&n, 1);
-            fs.write((char*)&triangles[i], 4 * 3);
+            fwrite((char*)&n, 1, sizeof(n), fs);
+            fwrite((char*)&triangles[i], 1, sizeof(triangles[i]), fs);
         }
         for (auto i = 0; i < lines.size(); i++) {
             auto n = (byte)3;
-            fs.write((char*)&n, 1);
-            fs.write((char*)&lines[i], 4 * 2);
+            fwrite((char*)&n, 1, sizeof(n), fs);
+            fwrite((char*)&lines[i], 1, sizeof(lines[i]), fs);
         }
     }
 
     // done
-    fs.close();
+    fclose(fs);
 }
 
 // Load ply mesh
@@ -4455,102 +4464,58 @@ void load_obj_mesh(const std::string& filename, std::vector<int>& points,
     std::vector<vec2i>& lines, std::vector<vec3i>& triangles,
     std::vector<vec3f>& pos, std::vector<vec3f>& norm,
     std::vector<vec2f>& texcoord, bool flip_texcoord) {
-    // open file
-    auto fs = std::ifstream(filename);
-    if (!fs) throw std::runtime_error("cannot open filename " + filename);
+    pos.clear();
+    norm.clear();
+    texcoord.clear();
+    points.clear();
+    lines.clear();
+    triangles.clear();
 
+    // obj vertices
     auto opos = std::deque<vec3f>();
     auto onorm = std::deque<vec3f>();
     auto otexcoord = std::deque<vec2f>();
 
-    pos.clear();
-    norm.clear();
-    texcoord.clear();
-    lines.clear();
-    triangles.clear();
-
     // vertex maps
-    auto vert_map = std::unordered_map<vec3i, int>();
+    auto vert_map = std::unordered_map<obj_vertex, int, obj_vertex_hash>();
 
-    // read the file line by line
-    std::string line;
-    while (std::getline(fs, line)) {
-        // remove comment
-        if (line.find("#") != line.npos) line = line.substr(0, line.find("#"));
-
-        // prepare to parse
-        auto ss = std::stringstream(line);
-
-        // get command
-        auto cmd = ""s;
-        ss >> cmd;
-        if (cmd == "") continue;
-
-        // possible token values
-        if (cmd == "v") {
-            opos.push_back({});
-            ss >> opos.back();
-        } else if (cmd == "vn") {
-            onorm.push_back({});
-            ss >> onorm.back();
-        } else if (cmd == "vt") {
-            otexcoord.push_back({});
-            ss >> otexcoord.back();
-            if (flip_texcoord) otexcoord.back().y = 1 - otexcoord.back().y;
-        } else if (cmd == "f" || cmd == "l" || cmd == "p") {
-            auto num = 0;
-            vec3i verts[128];
-            int vids[128];
-            auto vert_size =
-                vec3i{(int)pos.size(), (int)texcoord.size(), (int)norm.size()};
-            // elem.material = (int)oobj->materials.size() - 1;
-            while (true) {
-                auto vert = obj_vertex();
-                ss >> vert;
-                if (!vert.pos) break;
-                verts[num] = {-1, -1, -1};
-                if (vert.pos)
-                    verts[num].x = (vert.pos < 0) ? (vert_size.x + vert.pos) :
-                                                    (vert.pos - 1);
-                if (vert.texcoord)
-                    verts[num].y = (vert.texcoord < 0) ?
-                                       (vert_size.y + vert.texcoord) :
-                                       (vert.texcoord - 1);
-                if (vert.norm)
-                    verts[num].z = (vert.norm < 0) ? (vert_size.z + vert.norm) :
-                                                     (vert.norm - 1);
-                num++;
-            }
-            for (auto i = 0; i < num; i++) {
-                auto it = vert_map.find(verts[i]);
-                if (it == vert_map.end()) {
-                    auto nverts = (int)pos.size();
-                    vert_map.insert(it, {verts[i], nverts});
-                    vids[i] = nverts;
-                    if (verts[i].x >= 0) pos.push_back(opos.at(verts[i].x));
-                    if (verts[i].y >= 0)
-                        texcoord.push_back(otexcoord.at(verts[i].y));
-                    if (verts[i].z >= 0) norm.push_back(onorm.at(verts[i].z));
-                } else {
-                    vids[i] = it->second;
-                }
-            }
-            if (cmd == "f") {
-                for (auto i = 2; i < num; i++)
-                    triangles.push_back({vids[0], vids[i - 1], vids[i]});
-            }
-            if (cmd == "l") {
-                for (auto i = 1; i < num; i++)
-                    lines.push_back({vids[i - 1], vids[i]});
-            }
-            if (cmd == "p") {
-                for (auto i = 0; i < num; i++) points.push_back(vids[i]);
-            }
+    // Add  vertices to the current shape
+    auto add_verts = [&](const std::vector<obj_vertex>& verts) {
+        for (auto& vert : verts) {
+            auto it = vert_map.find(vert);
+            if (it != vert_map.end()) continue;
+            auto nverts = (int)pos.size();
+            vert_map.insert(it, {vert, nverts});
+            if (vert.pos) pos.push_back(opos.at(vert.pos - 1));
+            if (vert.texcoord)
+                texcoord.push_back(otexcoord.at(vert.texcoord - 1));
+            if (vert.norm) norm.push_back(onorm.at(vert.norm - 1));
         }
-    }
+    };
 
-    // close file
-    fs.close();
+    auto cb = obj_callbacks();
+    cb.vert = [&](vec3f v) { opos.push_back(v); };
+    cb.norm = [&](vec3f v) { onorm.push_back(v); };
+    cb.texcoord = [&](vec2f v) { otexcoord.push_back(v); };
+    cb.face = [&](const std::vector<obj_vertex>& verts) {
+        add_verts(verts);
+        for (auto i = 2; i < verts.size(); i++)
+            triangles.push_back({vert_map.at(verts[0]),
+                vert_map.at(verts[i - 1]), vert_map.at(verts[i])});
+    };
+    cb.line = [&](const std::vector<obj_vertex>& verts) {
+        add_verts(verts);
+        for (auto i = 1; i < verts.size(); i++)
+            lines.push_back({vert_map.at(verts[i - 1]), vert_map.at(verts[i])});
+    };
+    cb.point = [&](const std::vector<obj_vertex>& verts) {
+        add_verts(verts);
+        for (auto i = 0; i < verts.size(); i++)
+            points.push_back(vert_map.at(verts[i]));
+    };
+
+    // load obj
+    load_obj(filename, cb, flip_texcoord);
 }
 
 // Load ply mesh
@@ -4558,24 +4523,25 @@ void save_obj_mesh(const std::string& filename, const std::vector<int>& points,
     const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
     const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
     const std::vector<vec2f>& texcoord, bool flip_texcoord) {
-    auto fs = std::ofstream(filename);
+    auto fs = fopen(filename.c_str(), "wt");
     if (!fs) throw std::runtime_error("cannot save file " + filename);
-    for (auto& p : pos) fs << "v " << p << "\n";
-    for (auto& n : norm) fs << "vn " << n << "\n";
-    if (flip_texcoord)
-        for (auto& t : texcoord) fs << "vt " << vec2f{t.x, 1 - t.y} << "\n";
-    else
-        for (auto& t : texcoord) fs << "vt " << t << "\n";
+    for (auto& p : pos) fprintf(fs, "v %g %g %g\n", p.x, p.y, p.z);
+    for (auto& n : norm) fprintf(fs, "vn %g %g %g\n", n.x, n.y, n.z);
+    for (auto& t : texcoord)
+        fprintf(fs, "vt %g %g\n", t.x, (flip_texcoord) ? 1 - t.y : t.y);
     auto mask = vec3i{1, texcoord.empty() ? 0 : 1, norm.empty() ? 0 : 1};
     auto vert = [mask](int i) {
         auto vert = (vec3i{i, i, i} + vec3i{1, 1, 1}) * mask;
         return obj_vertex{vert.x, vert.y, vert.z};
     };
     for (auto& t : triangles)
-        fs << "f " << vert(t.x) << " " << vert(t.y) << " " << vert(t.z) << "\n";
-    for (auto& l : lines) fs << "l " << vert(l.x) << " " << vert(l.y) << "\n";
-    for (auto& p : points) fs << "p " << vert(p) << "\n";
-    fs.close();
+        fprintf(fs, "f %s %s %s\n", to_string(vert(t.x)).c_str(),
+            to_string(vert(t.y)).c_str(), to_string(vert(t.z)).c_str());
+    for (auto& l : lines)
+        fprintf(fs, "l %s %s\n", to_string(vert(l.x)).c_str(),
+            to_string(vert(l.y)).c_str());
+    for (auto& p : points) fprintf(fs, "p %s\n", to_string(vert(p)).c_str());
+    fclose(fs);
 }
 
 }  // namespace ygl
@@ -4621,14 +4587,6 @@ void load_obj_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
     std::vector<vec3f>& pos, std::vector<vec4i>& quads_norm,
     std::vector<vec3f>& norm, std::vector<vec4i>& quads_texcoord,
     std::vector<vec2f>& texcoord, bool flip_texcoord) {
-    // open file
-    auto fs = std::ifstream(filename);
-    if (!fs) throw std::runtime_error("cannot open filename " + filename);
-
-    auto opos = std::deque<vec3f>();
-    auto onorm = std::deque<vec3f>();
-    auto otexcoord = std::deque<vec2f>();
-
     pos.clear();
     norm.clear();
     texcoord.clear();
@@ -4636,147 +4594,93 @@ void load_obj_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
     quads_norm.clear();
     quads_texcoord.clear();
 
+    // obj vertex
+    auto opos = std::deque<vec3f>();
+    auto onorm = std::deque<vec3f>();
+    auto otexcoord = std::deque<vec2f>();
+
     // vertex maps
     auto pos_map = std::unordered_map<int, int>();
     auto texcoord_map = std::unordered_map<int, int>();
     auto norm_map = std::unordered_map<int, int>();
 
-    // read the file line by line
-    std::string line;
-    while (std::getline(fs, line)) {
-        // remove comment
-        if (line.find("#") != line.npos) line = line.substr(0, line.find("#"));
-
-        // prepare to parse
-        auto ss = std::stringstream(line);
-
-        // get command
-        auto cmd = ""s;
-        ss >> cmd;
-        if (cmd == "") continue;
-
-        // possible token values
-        if (cmd == "v") {
-            opos.push_back({});
-            ss >> opos.back();
-        } else if (cmd == "vn") {
-            onorm.push_back({});
-            ss >> onorm.back();
-        } else if (cmd == "vt") {
-            otexcoord.push_back({});
-            ss >> otexcoord.back();
-            if (flip_texcoord) otexcoord.back().y = 1 - otexcoord.back().y;
-        } else if (cmd == "f" || cmd == "l" || cmd == "p") {
-            auto num = 0;
-            vec3i verts[128];
-            int pos_vids[128], texcoord_vids[128], norm_vids[128];
-            auto vert_size =
-                vec3i{(int)pos.size(), (int)texcoord.size(), (int)norm.size()};
-            // elem.material = (int)oobj->materials.size() - 1;
-            while (true) {
-                auto vert = obj_vertex();
-                ss >> vert;
-                if (!vert.pos) break;
-                verts[num] = {-1, -1, -1};
-                if (vert.pos)
-                    verts[num].x = (vert.pos < 0) ? (vert_size.x + vert.pos) :
-                                                    (vert.pos - 1);
-                if (vert.texcoord)
-                    verts[num].y = (vert.texcoord < 0) ?
-                                       (vert_size.y + vert.texcoord) :
-                                       (vert.texcoord - 1);
-                if (vert.norm)
-                    verts[num].z = (vert.norm < 0) ? (vert_size.z + vert.norm) :
-                                                     (vert.norm - 1);
-                num++;
-            }
-            if (verts[0].x >= 0) {
-                for (auto i = 0; i < num; i++) {
-                    auto pos_it = pos_map.find(verts[i].x);
-                    if (pos_it == pos_map.end()) {
-                        auto nverts = (int)pos.size();
-                        pos_map.insert(pos_it, {verts[i].x, nverts});
-                        pos_vids[i] = nverts;
-                        if (verts[i].x >= 0) pos.push_back(opos.at(verts[i].x));
-                    } else {
-                        pos_vids[i] = pos_it->second;
-                    }
-                }
-            }
-            if (verts[0].y >= 0) {
-                for (auto i = 0; i < num; i++) {
-                    auto texcoord_it = texcoord_map.find(verts[i].y);
-                    if (texcoord_it == texcoord_map.end()) {
-                        auto nverts = (int)texcoord.size();
-                        texcoord_map.insert(texcoord_it, {verts[i].y, nverts});
-                        texcoord_vids[i] = nverts;
-                        texcoord.push_back(otexcoord.at(verts[i].y));
-                    } else {
-                        texcoord_vids[i] = texcoord_it->second;
-                    }
-                }
-            }
-            if (verts[0].z >= 0) {
-                for (auto i = 0; i < num; i++) {
-                    auto norm_it = norm_map.find(verts[i].z);
-                    if (norm_it == norm_map.end()) {
-                        auto nverts = (int)norm.size();
-                        norm_map.insert(norm_it, {verts[i].z, nverts});
-                        norm_vids[i] = nverts;
-                        norm.push_back(onorm.at(verts[i].z));
-                    } else {
-                        norm_vids[i] = norm_it->second;
-                    }
-                }
-            }
-            if (cmd == "f") {
-                if (num == 4) {
-                    if (verts[0].x >= 0) {
-                        quads_pos.push_back({pos_vids[0], pos_vids[1],
-                            pos_vids[2], pos_vids[3]});
-                    }
-                    if (verts[0].y >= 0) {
-                        quads_texcoord.push_back(
-                            {texcoord_vids[0], texcoord_vids[1],
-                                texcoord_vids[2], texcoord_vids[3]});
-                    }
-                    if (verts[0].z >= 0) {
-                        quads_norm.push_back({norm_vids[0], norm_vids[1],
-                            norm_vids[2], norm_vids[3]});
-                    }
-                } else {
-                    if (verts[0].x >= 0) {
-                        for (auto i = 2; i < num; i++)
-                            quads_pos.push_back({pos_vids[0], pos_vids[i - 1],
-                                pos_vids[i], pos_vids[i]});
-                    }
-                    if (verts[0].y >= 0) {
-                        for (auto i = 2; i < num; i++)
-                            quads_texcoord.push_back(
-                                {texcoord_vids[0], texcoord_vids[i - 1],
-                                    texcoord_vids[i], texcoord_vids[i]});
-                    }
-                    if (verts[0].z >= 0) {
-                        for (auto i = 2; i < num; i++)
-                            quads_pos.push_back({norm_vids[0], norm_vids[i - 1],
-                                norm_vids[i], norm_vids[i]});
-                    }
-                }
-            }
-#if 0
-            if (cmd == "l") { // interpret as crease edges?
-                for (auto i = 1; i < num; i++)
-                    lines.push_back({vids[i - 1], vids[i]});
-            }
-            if (cmd == "p") { // interpret as crease points?
-                for (auto i = 0; i < num; i++) points.push_back(vids[i]);
-            }
-#endif
+    // add vertex
+    auto add_verts = [&](const std::vector<obj_vertex>& verts) {
+        for (auto& vert : verts) {
+            if (!vert.pos) continue;
+            auto pos_it = pos_map.find(vert.pos);
+            if (pos_it != pos_map.end()) continue;
+            auto nverts = (int)pos.size();
+            pos_map.insert(pos_it, {vert.pos, nverts});
+            pos.push_back(opos.at(vert.pos - 1));
         }
-    }
+        for (auto& vert : verts) {
+            if (!vert.texcoord) continue;
+            auto texcoord_it = texcoord_map.find(vert.texcoord);
+            if (texcoord_it != texcoord_map.end()) continue;
+            auto nverts = (int)texcoord.size();
+            texcoord_map.insert(texcoord_it, {vert.texcoord, nverts});
+            texcoord.push_back(otexcoord.at(vert.texcoord - 1));
+        }
+        for (auto& vert : verts) {
+            if (!vert.norm) continue;
+            auto norm_it = norm_map.find(vert.norm);
+            if (norm_it != norm_map.end()) continue;
+            auto nverts = (int)norm.size();
+            norm_map.insert(norm_it, {vert.norm, nverts});
+            norm.push_back(onorm.at(vert.norm - 1));
+        }
+    };
 
-    // close file
-    fs.close();
+    auto cb = obj_callbacks();
+    cb.vert = [&](vec3f v) { opos.push_back(v); };
+    cb.norm = [&](vec3f v) { onorm.push_back(v); };
+    cb.texcoord = [&](vec2f v) { otexcoord.push_back(v); };
+    cb.face = [&](const std::vector<obj_vertex>& verts) {
+        add_verts(verts);
+        if (verts.size() == 4) {
+            if (verts[0].pos) {
+                quads_pos.push_back(
+                    {pos_map.at(verts[0].pos), pos_map.at(verts[1].pos),
+                        pos_map.at(verts[2].pos), pos_map.at(verts[3].pos)});
+            }
+            if (verts[0].texcoord) {
+                quads_texcoord.push_back({texcoord_map.at(verts[0].texcoord),
+                    texcoord_map.at(verts[1].texcoord),
+                    texcoord_map.at(verts[2].texcoord),
+                    texcoord_map.at(verts[3].texcoord)});
+            }
+            if (verts[0].norm) {
+                quads_norm.push_back({norm_map.at(verts[0].norm),
+                    norm_map.at(verts[1].norm), norm_map.at(verts[2].norm),
+                    norm_map.at(verts[3].norm)});
+            }
+        } else {
+            if (verts[0].pos) {
+                for (auto i = 2; i < verts.size(); i++)
+                    quads_pos.push_back({pos_map.at(verts[0].pos),
+                        pos_map.at(verts[1].pos), pos_map.at(verts[i].pos),
+                        pos_map.at(verts[i].pos)});
+            }
+            if (verts[0].texcoord) {
+                for (auto i = 2; i < verts.size(); i++)
+                    quads_texcoord.push_back(
+                        {texcoord_map.at(verts[0].texcoord),
+                            texcoord_map.at(verts[1].texcoord),
+                            texcoord_map.at(verts[i].texcoord),
+                            texcoord_map.at(verts[i].texcoord)});
+            }
+            if (verts[0].norm) {
+                for (auto i = 2; i < verts.size(); i++)
+                    quads_norm.push_back({norm_map.at(verts[0].norm),
+                        norm_map.at(verts[1].norm), norm_map.at(verts[i].norm),
+                        norm_map.at(verts[i].norm)});
+            }
+        }
+    };
+
+    // load obj
+    load_obj(filename, cb, flip_texcoord);
 }
 
 // Load ply mesh
@@ -4785,14 +4689,12 @@ void save_obj_fvmesh(const std::string& filename,
     const std::vector<vec4i>& quads_norm, const std::vector<vec3f>& norm,
     const std::vector<vec4i>& quads_texcoord,
     const std::vector<vec2f>& texcoord, bool flip_texcoord) {
-    auto fs = std::ofstream(filename);
+    auto fs = fopen(filename.c_str(), "wt");
     if (!fs) throw std::runtime_error("cannot save file " + filename);
-    for (auto& p : pos) fs << "v " << p << "\n";
-    for (auto& n : norm) fs << "vn " << n << "\n";
-    if (flip_texcoord)
-        for (auto& t : texcoord) fs << "vt " << vec2f{t.x, 1 - t.y} << "\n";
-    else
-        for (auto& t : texcoord) fs << "vt " << t << "\n";
+    for (auto& p : pos) fprintf(fs, "v %g %g %g\n", p.x, p.y, p.z);
+    for (auto& n : norm) fprintf(fs, "vn %g %g %g\n", n.x, n.y, n.z);
+    for (auto& t : texcoord)
+        fprintf(fs, "vt %g %g\n", t.x, (flip_texcoord) ? 1 - t.y : t.y);
     auto mask = vec3i{1, texcoord.empty() ? 0 : 1, norm.empty() ? 0 : 1};
     auto vert = [mask](int pi, int ti, int ni) {
         auto vert = (vec3i{pi, ti, ni} + vec3i{1, 1, 1}) * mask;
@@ -4805,15 +4707,18 @@ void save_obj_fvmesh(const std::string& filename,
         auto qn =
             !quads_norm.empty() ? quads_norm.at(i) : vec4i{-1, -1, -1, -1};
         if (qp.z != qp.w)
-            fs << "f " << vert(qp.x, qt.x, qn.x) << " "
-               << vert(qp.y, qt.y, qn.y) << " " << vert(qp.z, qt.z, qn.z) << " "
-               << vert(qp.w, qt.w, qn.w) << "\n";
+            fprintf(fs, "f %s %s %s %s\n",
+                to_string(vert(qp.x, qt.x, qn.x)).c_str(),
+                to_string(vert(qp.y, qt.y, qn.y)).c_str(),
+                to_string(vert(qp.z, qt.z, qn.z)).c_str(),
+                to_string(vert(qp.w, qt.w, qn.w)).c_str());
         else
-            fs << "f " << vert(qp.x, qt.x, qn.x) << " "
-               << vert(qp.y, qt.y, qn.y) << " " << vert(qp.z, qt.z, qn.z)
-               << "\n";
+            fprintf(fs, "f %s %s %s\n",
+                to_string(vert(qp.x, qt.x, qn.x)).c_str(),
+                to_string(vert(qp.y, qt.y, qn.y)).c_str(),
+                to_string(vert(qp.z, qt.z, qn.z)).c_str());
     }
-    fs.close();
+    fclose(fs);
 }
 
 }  // namespace ygl

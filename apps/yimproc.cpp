@@ -132,16 +132,15 @@ ygl::image4f filter_bilateral(
 
 int main(int argc, char* argv[]) {
     // command line parameters
-    auto filename = "img.png"s;                    // input image
-    auto output = "out.png"s;                      // output image
-    auto tonemap = false;                          // enable tonemapping
-    auto exposure = 0.0f;                          // tonemap exposure
-    auto gamma = 1.0f;                             // tonemap gamma
-    auto filmic = false;                           // tonemap filmic
-    auto res_width = 0;                            // resize width
-    auto res_height = 0;                           // resize height
-    auto multiply_color = ygl::vec4f{1, 1, 1, 1};  // multiply color
-    auto alpha_filename = ""s;                     // file to copy alpha from
+    auto filename = "img.png"s;      // input image
+    auto output = "out.png"s;        // output image
+    auto tonemap = false;            // enable tonemapping
+    auto exposure = 0.0f;            // tonemap exposure
+    auto gamma = 1.0f;               // tonemap gamma
+    auto filmic = false;             // tonemap filmic
+    auto res_width = 0;              // resize width
+    auto res_height = 0;             // resize height
+    auto alpha_filename = ""s;       // file to copy alpha from
     auto coloralpha_filename = ""s;  // file to set alpha from color
     auto spatial_sigma = 0.0f;       // spatial sigma for bilateral blur
     auto range_sigma = 0.0f;         // range sigma for bilateral blur
@@ -156,8 +155,6 @@ int main(int argc, char* argv[]) {
         "--res-width", res_width, "resize width (0 to maintain aspect)");
     parser.add_option(
         "--res-height", res_height, "resize height (0 to maintain aspect)");
-    parser.add_option(
-        "--multiply-color", multiply_color, "multiply by this color");
     parser.add_option("--spatial-sigma", spatial_sigma, "blur spatial sigma");
     parser.add_option(
         "--range-sigma", range_sigma, "bilateral blur range sigma");
@@ -177,8 +174,8 @@ int main(int argc, char* argv[]) {
     try {
         img = ygl::load_image(filename);
     } catch (std::exception& e) {
-        std::cout << "cannot load image" << filename << "\n";
-        std::cout << "error: " << e.what() << "\n";
+        printf("cannot load image %s\n", filename.c_str());
+        printf("error: %s\n", e.what());
         exit(1);
     }
 
@@ -186,7 +183,7 @@ int main(int argc, char* argv[]) {
     if (alpha_filename != "") {
         auto alpha = ygl::load_image(alpha_filename);
         if (img.width != alpha.width || img.height != alpha.height) {
-            std::cout << "bad image size\n";
+            printf("bad image size\n");
             exit(1);
         }
         for (auto j = 0; j < img.height; j++)
@@ -198,17 +195,12 @@ int main(int argc, char* argv[]) {
     if (coloralpha_filename != "") {
         auto alpha = ygl::load_image(coloralpha_filename);
         if (img.width != alpha.width || img.height != alpha.height) {
-            std::cout << "bad image size\n";
+            printf("bad image size\n");
             exit(1);
         }
         for (auto j = 0; j < img.height; j++)
             for (auto i = 0; i < img.width; i++)
                 img.at(i, j).w = ygl::luminance(alpha.at(i, j));
-    }
-
-    // multiply
-    if (multiply_color != ygl::vec4f{1, 1, 1, 1}) {
-        for (auto& c : img.pxl) c *= multiply_color;
     }
 
     // resize
@@ -228,8 +220,8 @@ int main(int argc, char* argv[]) {
     try {
         ygl::save_image(output, img);
     } catch (std::exception& e) {
-        std::cout << "cannot save image" << output << "\n";
-        std::cout << "error: " << e.what() << "\n";
+        printf("cannot save image %s\n", output.c_str());
+        printf("error: %s\n", e.what());
         exit(1);
     }
 

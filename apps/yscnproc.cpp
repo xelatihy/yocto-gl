@@ -63,8 +63,8 @@ int main(int argc, char** argv) {
     try {
         scn = ygl::load_scene(filename, !notextures);
     } catch (const std::exception& e) {
-        std::cout << "cannot load scene " << filename << "\n";
-        std::cout << "error: " << e.what() << "\n";
+        printf("cannot load scene %s\n", filename.c_str());
+        printf("error: %s\n", e.what());
         exit(1);
     }
 
@@ -77,13 +77,13 @@ int main(int argc, char** argv) {
                 if (ext == "pfm")
                     ygl::replace_extension(filename, "hdr");
                 else
-                    std::cout << "unknown texture format " << ext;
+                    printf("unknown texture format %s\n", ext.c_str());
             } else {
                 if (ext == "png" || ext == "jpg") continue;
                 if (ext == "tga" || ext == "bmp")
                     ygl::replace_extension(filename, "png");
                 else
-                    std::cout << "unknown texture format " << ext;
+                    printf("unknown texture format %s\n", ext.c_str());
             }
         }
     }
@@ -92,17 +92,17 @@ int main(int argc, char** argv) {
     try {
         mkdir(ygl::get_dirname(output));
     } catch (const std::exception& e) {
-        std::cout << "cannot create directory " << ygl::get_dirname(output)
-                  << "\n";
-        std::cout << "error: " << e.what() << "\n";
+        printf(
+            "cannot create directory %s\n", ygl::get_dirname(output).c_str());
+        printf("error: %s\n", e.what());
         exit(1);
     }
     // save scene
     try {
         ygl::save_scene(output, scn);
     } catch (const std::exception& e) {
-        std::cout << "cannot save scene " << output << "\n";
-        std::cout << "error: " << e.what() << "\n";
+        printf("cannot save scene %s\n", output.c_str());
+        printf("error: %s\n", e.what());
         exit(1);
     }
 

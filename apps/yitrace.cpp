@@ -310,25 +310,25 @@ int main(int argc, char* argv[]) {
 
     // scene loading
     auto scn = (ygl::scene*)nullptr;
-    if (!quiet) std::cout << "loading scene" << filename << "\n";
+    if (!quiet) printf("loading scene %s\n", filename.c_str());
     auto load_start = ygl::get_time();
     try {
         scn = ygl::load_scene(filename);
     } catch (const std::exception& e) {
-        std::cout << "cannot load scene " << filename << "\n";
-        std::cout << "error: " << e.what() << "\n";
+        printf("cannot load scene %s\n", filename.c_str());
+        printf("error: %s\n", e.what());
         exit(1);
     }
     if (!quiet)
-        std::cout << "loading in "
-                  << ygl::format_duration(ygl::get_time() - load_start) << "\n";
+        printf("loading in %s\n",
+            ygl::format_duration(ygl::get_time() - load_start).c_str());
 
     // tesselate
-    if (!quiet) std::cout << "tesselating scene elements\n";
+    if (!quiet) printf("tesselating scene elements\n");
     ygl::tesselate_subdivs(scn);
 
     // add components
-    if (!quiet) std::cout << "adding scene elements\n";
+    if (!quiet) printf("adding scene elements\n");
     if (add_skyenv && scn->environments.empty()) {
         scn->environments.push_back(ygl::make_sky_environment("sky"));
         scn->textures.push_back(scn->environments.back()->ke_txt);
@@ -339,28 +339,28 @@ int main(int argc, char* argv[]) {
         scn->cameras.push_back(
             ygl::make_bbox_camera("<view>", ygl::compute_bbox(scn)));
     ygl::add_missing_names(scn);
-    for (auto err : ygl::validate(scn)) std::cout << "warning: " << err << "\n";
+    for (auto& err : ygl::validate(scn)) printf("warning: %s\n", err.c_str());
 
     // build bvh
-    if (!quiet) std::cout << "building bvh\n";
+    if (!quiet) printf("building bvh\n");
     auto bvh_start = ygl::get_time();
     ygl::build_bvh(scn);
 #if YGL_EMBREE
     if (embree) ygl::build_bvh_embree(scn);
 #endif
     if (!quiet)
-        std::cout << "building bvh in "
-                  << ygl::format_duration(ygl::get_time() - bvh_start) << "\n";
+        printf("building bvh in %s\n",
+            ygl::format_duration(ygl::get_time() - bvh_start).c_str());
 
     // init renderer
-    if (!quiet) std::cout << "initializing lights\n";
+    if (!quiet) printf("initializing lights\n");
     ygl::init_lights(scn);
 
     // fix renderer type if no lights
     if (scn->lights.empty() && scn->environments.empty() &&
         tracer != "eyelight") {
         if (!quiet)
-            std::cout << "no lights presents, switching to eyelight shader\n";
+            printf("no lights presents, switching to eyelight shader\n");
         tracer = "eyelight";
     }
 
@@ -386,7 +386,7 @@ int main(int argc, char* argv[]) {
     app->pratio = pratio;
 
     // initialize rendering objects
-    if (!quiet) std::cout << "starting async renderer\n";
+    if (!quiet) printf("starting async renderer\n");
     app->trace_start = ygl::get_time();
     ygl::trace_async_start(app->scn, app->cam, app->nsamples, app->tracef,
         &app->img, &app->display, &app->rng, &app->threads, &app->stop,
