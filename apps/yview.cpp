@@ -87,15 +87,15 @@ void draw(GLFWwindow* win) {
     for (auto& sel : app->update_list) {
         if (sel.as<ygl::texture>()) {
             // TODO: update texture
-            std::cout << "texture update not supported\n";
+            printf("texture update not supported\n");
         }
         if (sel.as<ygl::subdiv>()) {
             // TODO: update subdiv
-            std::cout << "texture update not supported\n";
+            printf("texture update not supported\n");
         }
         if (sel.as<ygl::shape>()) {
             // TODO: update shape
-            std::cout << "texture update not supported\n";
+            printf("texture update not supported\n");
         }
         if (sel.as<ygl::node>() || sel.as<ygl::animation>() ||
             app->time != last_time) {
@@ -540,7 +540,7 @@ void draw_glshape(const ygl::shape* shp, const ygl::material* mat,
         check_glerror();
     }
 #endif
-    if (edges) std::cout << "edges are momentarily disabled\n";
+    if (edges) printf("edges are momentarily disabled\n");
 
     ygl::check_glerror();
     for (int i = 0; i < 16; i++) { glDisableVertexAttribArray(i); }
@@ -777,29 +777,29 @@ int main(int argc, char* argv[]) {
         try {
             inspector_highlights = load_ini(highlight_filename).at("");
         } catch (const std::exception& e) {
-            std::cout << "cannot load highlight " << highlight_filename << "\n";
-            std::cout << "error: " << e.what() << "\n";
+            printf("cannot load highlight %s\n", highlight_filename.c_str());
+            printf("error: %s\n", e.what());
             exit(1);
         }
     }
 
     // scene loading
     auto scn = new ygl::scene();
-    if (!quiet) std::cout << "loading scene" << filename << "\n";
+    if (!quiet) printf("loading scene %s\n", filename.c_str());
     try {
         scn = ygl::load_scene(filename);
     } catch (const std::exception& e) {
-        std::cout << "cannot load scene " << filename << "\n";
-        std::cout << "error: " << e.what() << "\n";
+        printf("cannot load scene %s\n", filename.c_str());
+        printf("error: %s\n", e.what());
         exit(1);
     }
 
     // tesselate
-    if (!quiet) std::cout << "tesselating scene elements\n";
+    if (!quiet) printf("tesselating scene elements\n");
     ygl::tesselate_subdivs(scn);
 
     // add components
-    if (!quiet) std::cout << "adding scene elements\n";
+    if (!quiet) printf("adding scene elements\n");
     if (double_sided) {
         for (auto mat : scn->materials) mat->double_sided = true;
     }
@@ -807,7 +807,7 @@ int main(int argc, char* argv[]) {
         scn->cameras.push_back(
             ygl::make_bbox_camera("<view>", ygl::compute_bbox(scn)));
     ygl::add_missing_names(scn);
-    for (auto err : ygl::validate(scn)) std::cout << "warning: " << err << "\n";
+    for (auto& err : ygl::validate(scn)) printf("warning: %s\n", err.c_str());
 
     // animation
     auto time_range = ygl::compute_animation_range(scn);

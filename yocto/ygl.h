@@ -262,7 +262,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <functional>  // for std::hash
-#include <iostream>
 #include <limits>
 #include <string>
 #include <thread>
@@ -680,31 +679,6 @@ inline vec<T, 4> quat_inverse(const vec<T, 4>& a) {
     return quat_conjugate(a) / length_sqr(a);
 }
 
-template <typename T>
-std::ostream& operator<<(std::ostream& os, const vec<T, 2>& a) {
-    return os << a.x << " " << a.y;
-}
-template <typename T>
-std::ostream& operator<<(std::ostream& os, const vec<T, 3>& a) {
-    return os << a.x << " " << a.y << " " << a.z;
-}
-template <typename T>
-std::ostream& operator<<(std::ostream& os, const vec<T, 4>& a) {
-    return os << a.x << " " << a.y << " " << a.z << " " << a.w;
-}
-template <typename T>
-std::istream& operator>>(std::istream& is, vec<T, 2>& a) {
-    return is >> a.x >> a.y;
-}
-template <typename T>
-std::istream& operator>>(std::istream& is, vec<T, 3>& a) {
-    return is >> a.x >> a.y >> a.z;
-}
-template <typename T>
-std::istream& operator>>(std::istream& is, vec<T, 4>& a) {
-    return is >> a.x >> a.y >> a.z >> a.w;
-}
-
 }  // namespace ygl
 
 namespace std {
@@ -925,31 +899,6 @@ inline mat<T, 4> inverse(const mat<T, 4>& a) {
     return adjugate(a) * (1 / determinant(a));
 }
 
-template <typename T>
-std::ostream& operator<<(std::ostream& os, const mat<T, 2>& a) {
-    return os << a.x << " " << a.y;
-}
-template <typename T>
-std::ostream& operator<<(std::ostream& os, const mat<T, 3>& a) {
-    return os << a.x << " " << a.y << " " << a.z;
-}
-template <typename T>
-std::ostream& operator<<(std::ostream& os, const mat<T, 4>& a) {
-    return os << a.x << " " << a.y << " " << a.z << " " << a.w;
-}
-template <typename T>
-std::istream& operator>>(std::istream& is, mat<T, 2>& a) {
-    return is >> a.x >> a.y;
-}
-template <typename T>
-std::istream& operator>>(std::istream& is, mat<T, 3>& a) {
-    return is >> a.x >> a.y >> a.z;
-}
-template <typename T>
-std::istream& operator>>(std::istream& is, mat<T, 4>& a) {
-    return is >> a.x >> a.y >> a.z >> a.w;
-}
-
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
@@ -1052,23 +1001,6 @@ inline frame<T, 3> inverse(const frame<T, 3>& a, bool is_rigid = true) {
     auto minv = (is_rigid) ? transpose(mat<T, 3>{a.x, a.y, a.z}) :
                              inverse(mat<T, 3>{a.x, a.y, a.z});
     return {minv.x, minv.y, minv.z, -(minv * a.o)};
-}
-
-template <typename T>
-std::ostream& operator<<(std::ostream& os, const frame<T, 2>& a) {
-    return os << a.x << " " << a.y << " " << a.o;
-}
-template <typename T>
-std::ostream& operator<<(std::ostream& os, const frame<T, 3>& a) {
-    return os << a.x << " " << a.y << " " << a.z << " " << a.o;
-}
-template <typename T>
-std::istream& operator>>(std::istream& is, frame<T, 2>& a) {
-    return is >> a.x >> a.y >> a.o;
-}
-template <typename T>
-std::istream& operator>>(std::istream& is, frame<T, 3>& a) {
-    return is >> a.x >> a.y >> a.z >> a.o;
 }
 
 }  // namespace ygl
@@ -1271,15 +1203,6 @@ inline bbox<T, 3> tetrahedron_bbox(const vec<T, 3>& v0, const vec<T, 3>& v1,
     return bbox;
 }
 
-template <typename T, int N>
-std::ostream& operator<<(std::ostream& os, const bbox<T, N>& a) {
-    return os << a.min << " " << a.max;
-}
-template <typename T, int N>
-std::istream& operator>>(std::istream& is, const bbox<T, N>&& a) {
-    return is >> a.min >> a.max;
-}
-
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
@@ -1323,15 +1246,6 @@ template <typename T, int N>
 inline ray<T, N> make_segment(
     const vec<T, N>& p1, const vec<T, N>& p2, T eps = (T)1e-4) {
     return ray<T, N>{p1, normalize(p2 - p1), eps, length(p2 - p1) - 2 * eps};
-}
-
-template <typename T, int N>
-std::ostream& operator<<(std::ostream& os, ray<T, N> a) {
-    return os << a.o << " " << a.d << a.tmin << a.tmax;
-}
-template <typename T, int N>
-std::istream& operator>>(std::istream& is, ray<T, N>& a) {
-    return is >> a.o >> a.d >> a.tmin >> a.tmax;
 }
 
 }  // namespace ygl

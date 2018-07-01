@@ -4270,29 +4270,30 @@ void print_stats(const scene* scn) {
         texel_hdr += txt->img.width * txt->img.height;
     memory_imgs = texel_hdr * sizeof(vec4f) + texel_ldr * sizeof(vec4b);
 
-    std::cout << "num_cameras: " << num_cameras << "\n";
-    std::cout << "num_shape_groups: " << num_shape_groups << "\n";
-    std::cout << "num_shapes: " << num_shapes << "\n";
-    std::cout << "num_instances: " << num_instances << "\n";
-    std::cout << "num_materials: " << num_materials << "\n";
-    std::cout << "num_textures: " << num_textures << "\n";
-    std::cout << "num_environments: " << num_environments << "\n";
-    std::cout << "num_nodes: " << num_nodes << "\n";
-    std::cout << "num_animations: " << num_animations << "\n";
-    std::cout << "elem_lines: " << elem_lines << "\n";
-    std::cout << "elem_triangles: " << elem_triangles << "\n";
-    std::cout << "vert_pos: " << vert_pos << "\n";
-    std::cout << "vert_norm: " << vert_norm << "\n";
-    std::cout << "vert_texcoord: " << vert_texcoord << "\n";
-    std::cout << "vert_color: " << vert_color << "\n";
-    std::cout << "vert_radius: " << vert_radius << "\n";
-    std::cout << "vert_tangsp: " << vert_tangsp << "\n";
-    std::cout << "texel_hdr: " << texel_hdr << "\n";
-    std::cout << "texel_ldr: " << texel_ldr << "\n";
-    std::cout << "memory_imgs: " << memory_imgs << "\n";
-    std::cout << "memory_elems: " << memory_elems << "\n";
-    std::cout << "memory_verts: " << memory_verts << "\n";
-    std::cout << "bbox: " << bbox << "\n";
+    printf("num_cameras: %llu\n", num_cameras);
+    printf("num_shape_groups: %llu\n", num_shape_groups);
+    printf("num_shapes: %llu\n", num_shapes);
+    printf("num_instances: %llu\n", num_instances);
+    printf("num_materials: %llu\n", num_materials);
+    printf("num_textures: %llu\n", num_textures);
+    printf("num_environments: %llu\n", num_environments);
+    printf("num_nodes: %llu\n", num_nodes);
+    printf("num_animations: %llu\n", num_animations);
+    printf("elem_lines: %llu\n", elem_lines);
+    printf("elem_triangles: %llu\n", elem_triangles);
+    printf("vert_pos: %llu\n", vert_pos);
+    printf("vert_norm: %llu\n", vert_norm);
+    printf("vert_texcoord: %llu\n", vert_texcoord);
+    printf("vert_color: %llu\n", vert_color);
+    printf("vert_radius: %llu\n", vert_radius);
+    printf("vert_tangsp: %llu\n", vert_tangsp);
+    printf("texel_hdr: %llu\n", texel_hdr);
+    printf("texel_ldr: %llu\n", texel_ldr);
+    printf("memory_imgs: %llu\n", memory_imgs);
+    printf("memory_elems: %llu\n", memory_elems);
+    printf("memory_verts: %llu\n", memory_verts);
+    printf("bbox min: %g %g %g\n", bbox.min.x, bbox.min.y, bbox.min.z);
+    printf("bbox max: %g %g %g\n", bbox.max.x, bbox.max.y, bbox.max.z);
 }
 
 }  // namespace ygl
@@ -5233,7 +5234,7 @@ vec4f trace_sample(const scene* scn, const camera* cam, int i, int j, int width,
     auto hit = false;
     auto l = tracer(scn, ray, rng, nbounces, &hit);
     if (!isfinite(l.x) || !isfinite(l.y) || !isfinite(l.z)) {
-        std::cout << "NaN detected\n";
+        printf("NaN detected\n");
         l = zero3f;
     }
     if (max(l) > pixel_clamp) l = l * (pixel_clamp / max(l));

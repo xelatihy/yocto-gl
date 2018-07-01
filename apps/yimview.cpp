@@ -271,7 +271,7 @@ int main(int argc, char* argv[]) {
 
     // loading images
     for (auto filename : filenames) {
-        if (!quiet) std::cout << "loading " << filename << "\n";
+        if (!quiet) printf("loading %s\n", filename.c_str());
         app->imgs.push_back(load_gimage(filename, exposure, gamma, filmic));
     }
     app->img = app->imgs.at(0);
@@ -279,8 +279,8 @@ int main(int argc, char* argv[]) {
         for (auto i = 0; i < app->imgs.size(); i++) {
             for (auto j = i + 1; j < app->imgs.size(); j++) {
                 if (!quiet)
-                    std::cout << "diffing " << app->imgs[i]->filename << " "
-                              << app->imgs[j]->filename << "\n";
+                    printf("diffing %s %s\n", app->imgs[i]->filename.c_str(),
+                        app->imgs[j]->filename.c_str());
                 auto diff = diff_gimage(app->imgs[i], app->imgs[j], !lum_diff);
                 if (diff) app->imgs.push_back(diff);
             }
