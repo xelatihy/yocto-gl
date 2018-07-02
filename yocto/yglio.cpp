@@ -803,40 +803,72 @@ void save_json(const std::string& filename, const json& js) {
     save_text(filename, js.dump(4));
 }
 
-// json conversions
-template <typename T, int N>
-inline void to_json(json& js, const vec<T, N>& val) {
-    js = json((const std::array<T, N>&)val);
+inline void to_json(json& js, const vec2f& val) {
+    js = std::array<float, 2>{{val.x, val.y}};
 }
-template <typename T, int N>
-inline void from_json(const json& js, vec<T, N>& val) {
-    (std::array<T, N>&)val = js.get<std::array<T, N>>();
+inline void from_json(const json& js, vec2f& val) {
+    auto vala = js.get<std::array<float, 2>>();
+    val = {vala[0], vala[1]};
 }
-
-template <typename T, int N>
-inline void to_json(json& js, const frame<T, N>& val) {
-    js = json((const std::array<T, N*(N + 1)>&)val);
+inline void to_json(json& js, const vec3f& val) {
+    js = std::array<float, 3>{{val.x, val.y, val.z}};
 }
-template <typename T, int N>
-inline void from_json(const json& js, frame<T, N>& val) {
-    (std::array<T, N*(N + 1)>&)val = js.get<std::array<T, N*(N + 1)>>();
+inline void from_json(const json& js, vec3f& val) {
+    auto vala = js.get<std::array<float, 3>>();
+    val = {vala[0], vala[1], vala[2]};
 }
-template <typename T, int N>
-inline void to_json(json& js, const mat<T, N>& val) {
-    js = json((const std::array<T, N * N>&)val);
+inline void to_json(json& js, const vec4f& val) {
+    js = std::array<float, 4>{{val.x, val.y, val.z, val.w}};
 }
-template <typename T, int N>
-inline void from_json(const json& js, mat<T, N>& val) {
-    (std::array<T, N * N>&)val = js.get<std::array<T, N * N>>();
+inline void from_json(const json& js, vec4f& val) {
+    auto vala = js.get<std::array<float, 4>>();
+    val = {vala[0], vala[1], vala[2], vala[3]};
 }
 
-template <typename T, int N>
-inline void to_json(json& js, const bbox<T, N>& val) {
-    js = json((const std::array<T, 2 * N>&)val);
+inline void to_json(json& js, const vec2i& val) {
+    js = std::array<int, 2>{{val.x, val.y}};
 }
-template <typename T, int N>
-inline void from_json(const json& js, bbox<T, N>& val) {
-    (std::array<T, 2 * N>&)val = js.get<std::array<T, 2 * N>>();
+inline void from_json(const json& js, vec2i& val) {
+    auto vala = js.get<std::array<int, 2>>();
+    val = {vala[0], vala[1]};
+}
+inline void to_json(json& js, const vec3i& val) {
+    js = std::array<int, 3>{{val.x, val.y, val.z}};
+}
+inline void from_json(const json& js, vec3i& val) {
+    auto vala = js.get<std::array<int, 3>>();
+    val = {vala[0], vala[1], vala[2]};
+}
+inline void to_json(json& js, const vec4i& val) {
+    js = std::array<int, 4>{{val.x, val.y, val.z, val.w}};
+}
+inline void from_json(const json& js, vec4i& val) {
+    auto vala = js.get<std::array<int, 4>>();
+    val = {vala[0], vala[1], vala[2], vala[3]};
+}
+
+inline void to_json(json& js, const frame3f& val) {
+    js = std::array<vec3f, 4>{{val.x, val.y, val.z, val.o}};
+}
+inline void from_json(const json& js, frame3f& val) {
+    auto vala = js.get<std::array<vec3f, 4>>();
+    val = {vala[0], vala[1], vala[2], vala[3]};
+}
+
+inline void to_json(json& js, const mat4f& val) {
+    js = std::array<vec4f, 4>{{val.x, val.y, val.z, val.w}};
+}
+inline void from_json(const json& js, mat4f& val) {
+    auto vala = js.get<std::array<vec4f, 4>>();
+    val = {vala[0], vala[1], vala[2], vala[3]};
+}
+
+inline void to_json(json& js, const bbox3f& val) {
+    js = std::array<vec3f, 2>{{val.min, val.max}};
+}
+inline void from_json(const json& js, bbox3f& val) {
+    auto vala = js.get<std::array<vec3f, 2>>();
+    val = {vala[0], vala[1]};
 }
 
 inline void to_json(json& js, const image4f& val) {
@@ -2592,7 +2624,7 @@ void save_obj(
     }
 
     // shapes
-    auto offset = vec3i{0, 0, 0};
+    auto offset = obj_vertex{0, 0, 0};
     for (auto ist : scn->instances) {
         if (!ist->sbd) {
             fprintf(fs, "o %s\n", ist->name.c_str());
@@ -2618,11 +2650,12 @@ void save_obj(
                     fprintf(
                         fs, "vt %g %g\n", t.x, (flip_texcoord) ? 1 - t.y : t.y);
             }
-            auto mask = vec3i{1, ist->shp->texcoord.empty() ? 0 : 1,
+            auto mask = obj_vertex{1, ist->shp->texcoord.empty() ? 0 : 1,
                 ist->shp->norm.empty() ? 0 : 1};
             auto vert = [mask, offset](int i) {
-                auto vert = (vec3i{i, i, i} + offset + vec3i{1, 1, 1}) * mask;
-                return obj_vertex{vert.x, vert.y, vert.z};
+                return obj_vertex{(i + offset.pos + 1) * mask.pos,
+                    (i + offset.texcoord + 1) * mask.texcoord,
+                    (i + offset.norm + 1) * mask.norm};
             };
             for (auto& t : ist->shp->triangles) {
                 fprintf(fs, "f %s %s %s\n", to_string(vert(t.x)).c_str(),
@@ -2632,9 +2665,9 @@ void save_obj(
                 fprintf(fs, "l %s %s\n", to_string(vert(l.x)).c_str(),
                     to_string(vert(l.y)).c_str());
             }
-            offset.x += ist->shp->pos.size();
-            offset.y += ist->shp->texcoord.size();
-            offset.z += ist->shp->norm.size();
+            offset.pos += ist->shp->pos.size();
+            offset.texcoord += ist->shp->texcoord.size();
+            offset.norm += ist->shp->norm.size();
         } else {
             fprintf(fs, "o %s\n", ist->name.c_str());
             if (ist->mat) fprintf(fs, "usemtl %s\n", ist->mat->name.c_str());
@@ -2655,9 +2688,8 @@ void save_obj(
             }
             if (!ist->sbd->texcoord.empty()) {
                 auto vert = [offset](int ip, int it) {
-                    auto vert = (vec3i{ip, it, 0} + offset + vec3i{1, 1, 1}) *
-                                vec3i{1, 1, 0};
-                    return obj_vertex{vert.x, vert.y, vert.x};
+                    return obj_vertex{
+                        ip + offset.pos + 1, it + offset.texcoord + 1, 0};
                 };
                 for (auto i = 0; i < ist->sbd->quads_pos.size(); i++) {
                     auto qp = ist->sbd->quads_pos[i];
@@ -2677,8 +2709,7 @@ void save_obj(
                 }
             } else {
                 auto vert = [offset](int ip) {
-                    auto vert = (vec3i{ip, 0, 0} + offset) * vec3i{1, 0, 0};
-                    return obj_vertex{vert.x, vert.y, vert.x};
+                    return obj_vertex{ip + offset.pos + 1, 0, 0};
                 };
                 for (auto& q : ist->sbd->quads_pos) {
                     if (q.z == q.w) {
@@ -2695,8 +2726,8 @@ void save_obj(
                     }
                 }
             }
-            offset.x += ist->sbd->pos.size();
-            offset.y += ist->sbd->texcoord.size();
+            offset.pos += ist->sbd->pos.size();
+            offset.texcoord += ist->sbd->texcoord.size();
         }
     }
 
@@ -4672,10 +4703,10 @@ void save_obj_mesh(const std::string& filename, const std::vector<int>& points,
     for (auto& n : norm) fprintf(fs, "vn %g %g %g\n", n.x, n.y, n.z);
     for (auto& t : texcoord)
         fprintf(fs, "vt %g %g\n", t.x, (flip_texcoord) ? 1 - t.y : t.y);
-    auto mask = vec3i{1, texcoord.empty() ? 0 : 1, norm.empty() ? 0 : 1};
+    auto mask = obj_vertex{1, texcoord.empty() ? 0 : 1, norm.empty() ? 0 : 1};
     auto vert = [mask](int i) {
-        auto vert = (vec3i{i, i, i} + vec3i{1, 1, 1}) * mask;
-        return obj_vertex{vert.x, vert.y, vert.z};
+        return obj_vertex{
+            (i + 1) * mask.pos, (i + 1) * mask.texcoord, (i + 1) * mask.norm};
     };
     for (auto& t : triangles)
         fprintf(fs, "f %s %s %s\n", to_string(vert(t.x)).c_str(),
@@ -4838,10 +4869,10 @@ void save_obj_fvmesh(const std::string& filename,
     for (auto& n : norm) fprintf(fs, "vn %g %g %g\n", n.x, n.y, n.z);
     for (auto& t : texcoord)
         fprintf(fs, "vt %g %g\n", t.x, (flip_texcoord) ? 1 - t.y : t.y);
-    auto mask = vec3i{1, texcoord.empty() ? 0 : 1, norm.empty() ? 0 : 1};
+    auto mask = obj_vertex{1, texcoord.empty() ? 0 : 1, norm.empty() ? 0 : 1};
     auto vert = [mask](int pi, int ti, int ni) {
-        auto vert = (vec3i{pi, ti, ni} + vec3i{1, 1, 1}) * mask;
-        return obj_vertex{vert.x, vert.y, vert.z};
+        return obj_vertex{(pi + 1) * mask.pos, (ti + 1) * mask.texcoord,
+            (ni + 1) * mask.norm};
     };
     for (auto i = 0; i < quads_pos.size(); i++) {
         auto qp = quads_pos.at(i);
