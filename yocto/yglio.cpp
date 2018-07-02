@@ -195,6 +195,144 @@ void save_binary(const std::string& filename, const std::vector<byte>& data) {
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
+// TRIVIAL COMMAND LINE PARSING
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// initialize a command line parser
+cmdline_parser make_cmdline_parser(
+    int argc, char** argv, const std::string& help) {
+    auto parser = cmdline_parser();
+    parser.args = {argv + 1, argv + argc};
+    parser.help_cmd = argv[0];
+    if (help != "") parser.help_cmd += ": " + help;
+    return parser;
+}
+
+// check if option or argument
+bool is_option(const std::string& name) {
+    return name.size() > 1 && name.front() == '-';
+}
+
+// get names from string
+std::vector<std::string> get_option_names(const std::string& name_) {
+    auto names = std::vector<std::string>();
+    auto name = name_;
+    while (name.find(',') != name.npos) {
+        names.push_back(name.substr(0, name.find(',')));
+        name = name.substr(name.find(',') + 1);
+    }
+    names.push_back(name);
+    return names;
+}
+
+// add help
+std::string get_option_help(const std::string& name, const std::string& var,
+    const std::string& help, const std::string& def_) {
+    auto def = def_;
+    if (def != "") def = "[" + def + "]";
+    auto namevar = name;
+    if (var != "") namevar += " " + var;
+    char buf[4096];
+    sprintf(buf, "  %32s %s %s\n", namevar.c_str(), help.c_str(), def.c_str());
+    return buf;
+}
+
+// check if any error occurred and exit appropriately
+void check_cmdline(cmdline_parser& parser) {}
+
+// Parse a flag. Name should start with either "--" or "-".
+bool parse_flag(cmdline_parser& parser, const std::string& name,
+    const std::string& shortname, const std::string& help) {
+    parser.help_opt += get_option_help(name, "", help, "");
+    if (parser.error != "") return false;
+    auto names = get_option_names(name);
+    auto pos = parser.args.end();
+    for (auto& name : names)
+        pos = std::min(
+            pos, std::find(parser.args.begin(), parser.args.end(), name));
+    if (pos == parser.args.end()) return false;
+    parser.args.erase(pos);
+    return true;
+}
+
+// Parse an option string. Name should start with "--" or "-".
+std::string parse_option(cmdline_parser& parser, const std::string& name,
+    const std::string& def, const std::string& help, bool req) {
+    parser.help_opt += get_option_help(name, "", help, def);
+    if (parser.error != "") return def;
+    auto names = get_option_names(name);
+    auto pos = parser.args.end();
+    for (auto& name : names) {
+        pos = std::min(
+            pos, std::find(parser.args.begin(), parser.args.end(), name));
+    }
+    if (pos == parser.args.end()) {
+        if (req) parser.error += "missing value for " + name;
+        return def;
+    }
+    if (pos == parser.args.end() - 1) {
+        parser.error += "missing value for " + name;
+        return def;
+    }
+    auto val = *(pos + 1);
+    parser.args.erase(pos, pos + 2);
+    return val;
+}
+
+// Parse an argument string. Name should not start with "--" or "-".
+std::string parse_argument(cmdline_parser& parser, const std::string& name,
+    const std::string& def, const std::string& help, bool req) {
+    parser.help_arg += get_option_help(name, "", help, def);
+    if (parser.error != "") return def;
+    auto pos = std::find_if(parser.args.begin(), parser.args.end(),
+        [](auto& v) { return v[0] != '-'; });
+    if (pos == parser.args.end()) {
+        if (req) parser.error += "missing value for " + name;
+        return def;
+    }
+    auto val = *pos;
+    parser.args.erase(pos);
+    return val;
+}
+
+// Parse an integer, float, string. If name starts with "--" or "-", then it is
+// an option, otherwise it is a position argument.
+std::string parse_string(cmdline_parser& parser, const std::string& name,
+    const std::string& def, const std::string& help, bool req) {
+    return is_option(name) ? parse_option(parser, name, def, help, req) :
+                             parse_argument(parser, name, def, help, req);
+}
+int parse_int(cmdline_parser& parser, const std::string& name, int def,
+    const std::string& help, bool req) {
+    auto val = parse_string(parser, name, std::to_string(def), help, req);
+    return std::atoi(val.c_str());
+}
+float parse_float(cmdline_parser& parser, const std::string& name, float def,
+    const std::string& help, bool req) {
+    auto val = parse_string(parser, name, std::to_string(def), help, req);
+    return std::atof(val.c_str());
+}
+
+// Parser an argument
+std::vector<std::string> parse_strings(cmdline_parser& parser,
+    const std::string& name, const std::string& help, bool req) {
+    parser.help_arg += get_option_help(name, "", help, "[]");
+    if (parser.error != "") return {};
+    auto pos = std::find_if(parser.args.begin(), parser.args.end(),
+        [](auto& v) { return v[0] != '-'; });
+    if (pos == parser.args.end()) {
+        if (req) parser.error += "missing value for " + name;
+        return {};
+    }
+    auto val = std::vector<std::string>{pos, parser.args.end()};
+    parser.args.erase(pos, parser.args.end());
+    return val;
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGEIO
 // -----------------------------------------------------------------------------
 namespace ygl {

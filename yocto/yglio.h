@@ -74,6 +74,43 @@ std::string replace_extension(
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
+// TRIVIAL COMMAND LINE PARSING
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Command line parser data. All data should be considered private.
+struct cmdline_parser {
+    std::vector<std::string> args = {};  // command line arguments
+    std::string help_cmd = "";           // help message
+    std::string help_opt = "";           // help message
+    std::string help_arg = "";           // help message
+    std::string error = "";              // current parse error
+};
+
+// initialize a command line parser
+cmdline_parser make_cmdline_parser(
+    int argc, char** argv, const std::string& help);
+// check if any error occurred and exit appropriately
+void check_cmdline(cmdline_parser& parser);
+
+// Parse a flag. Name should start with either "--" or "-".
+bool parse_flag(
+    cmdline_parser& parser, const std::string& name, const std::string& help);
+
+// Parse an integer, float, string. If name starts with "--" or "-", then it is
+// an option, otherwise it is a position argument.
+int parse_int(cmdline_parser& parser, const std::string& name, int def,
+    const std::string& help, bool req = false);
+float parse_float(cmdline_parser& parser, const std::string& name, float def,
+    const std::string& help, bool req = false);
+std::string parse_string(cmdline_parser& parser, const std::string& name,
+    const std::string& def, const std::string& help, bool req = false);
+std::vector<std::string> parse_strings(cmdline_parser& parser,
+    const std::string& name, const std::string& help, bool req = false);
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
 // FILE IO
 // -----------------------------------------------------------------------------
 namespace ygl {
