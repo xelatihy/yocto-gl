@@ -3848,9 +3848,9 @@ scene_intersection intersect_ray_embree(
 // Scene intersection.
 scene_intersection intersect_ray(
     const scene* scn, const ray3f& ray, bool find_any) {
-    #if YGL_EMBREE
+#if YGL_EMBREE
     if (scn->embree_bvh) return intersect_ray_embree(scn, ray, find_any);
-    #endif
+#endif
     auto iid = 0;
     auto isec = scene_intersection();
     if (!intersect_bvh(

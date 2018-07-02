@@ -3882,7 +3882,8 @@ scene* load_pbrt_scene(
         } else if (cmd == "Transform") {
             stack.back().frame = get_mat4f(jcmd.at("values"));
         } else if (cmd == "ConcatTransform") {
-            stack.back().frame = stack.back().frame * get_mat4f(jcmd.at("values"));
+            stack.back().frame =
+                stack.back().frame * get_mat4f(jcmd.at("values"));
         } else if (cmd == "Scale") {
             auto v = get_vec3f(jcmd.at("values"));
             stack.back().frame = stack.back().frame * scaling_frame(v);
