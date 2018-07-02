@@ -538,41 +538,46 @@ image4f load_image(const std::string& filename) {
         img.pxl = std::vector<vec4f>(pixels, pixels + width * height);
         free(pixels);
     } else {
+        stbi_ldr_to_hdr_gamma(1);
         auto ncomp = 0;
         auto pixels =
-            (vec4b*)stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
+            (vec4f*)stbi_loadf(filename.c_str(), &width, &height, &ncomp, 4);
         if (!pixels)
             throw std::runtime_error("could not load image " + filename);
-        auto img8 = make_image4b(width, height);
-        img8.pxl = std::vector<vec4b>(pixels, pixels + width * height);
+        img = make_image4f(width, height);
+        img.pxl = std::vector<vec4f>(pixels, pixels + width * height);
         free(pixels);
-        img = byte_to_float(img8);
+        stbi_ldr_to_hdr_gamma(2.2f);
     }
     return img;
 }
 
 // Saves an hdr image.
 void save_image(const std::string& filename, const image4f& img) {
+    auto pxl8 = std::vector<byte>();
+    if (!is_hdr_filename(filename)) {
+        pxl8.resize(img.width * img.height * 4);
+        for (auto i = 0; i < pxl8.size(); i++) {
+            pxl8[i] =
+                (byte)clamp((int)((&img.pxl[i / 4].x)[i % 4] * 255), 0, 255);
+        }
+    }
     auto ext = get_extension(filename);
     if (ext == "png") {
-        auto ldr = float_to_byte(img);
         if (!stbi_write_png(filename.c_str(), img.width, img.height, 4,
-                (byte*)ldr.pxl.data(), img.width * 4))
+                pxl8.data(), img.width * 4))
             throw std::runtime_error("could not save image " + filename);
     } else if (ext == "jpg") {
-        auto ldr = float_to_byte(img);
-        if (!stbi_write_jpg(filename.c_str(), img.width, img.height, 4,
-                (byte*)ldr.pxl.data(), 75))
+        if (!stbi_write_jpg(
+                filename.c_str(), img.width, img.height, 4, pxl8.data(), 75))
             throw std::runtime_error("could not save image " + filename);
     } else if (ext == "tga") {
-        auto ldr = float_to_byte(img);
-        if (!stbi_write_tga(filename.c_str(), img.width, img.height, 4,
-                (byte*)ldr.pxl.data()))
+        if (!stbi_write_tga(
+                filename.c_str(), img.width, img.height, 4, pxl8.data()))
             throw std::runtime_error("could not save image " + filename);
     } else if (ext == "bmp") {
-        auto ldr = float_to_byte(img);
-        if (!stbi_write_bmp(filename.c_str(), img.width, img.height, 4,
-                (byte*)ldr.pxl.data()))
+        if (!stbi_write_bmp(
+                filename.c_str(), img.width, img.height, 4, pxl8.data()))
             throw std::runtime_error("could not save image " + filename);
     } else if (ext == "hdr") {
         if (!stbi_write_hdr(filename.c_str(), img.width, img.height, 4,
@@ -1771,7 +1776,7 @@ void save_json_scene(const std::string& filename, const scene* scn,
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
-// OBJ CONVESION
+// OBJ CONVERSION
 // -----------------------------------------------------------------------------
 namespace ygl {
 
