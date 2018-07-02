@@ -28,20 +28,18 @@
 
 #include "../yocto/ygl.h"
 #include "../yocto/yglio.h"
-#include "CLI11.hpp"
-using namespace std::literals;
 
 #ifdef __APPLE__
 #include <OpenGL/gl.h>
 #else
-#include <GL/glew.h>
+#include <GL/gl.h>
 #endif
 #include <GLFW/glfw3.h>
 
 struct app_state {
     // image
-    std::string name = ""s;
-    std::string filename = ""s;
+    std::string name = "";
+    std::string filename = "";
     ygl::image4f img = {};
 
     // image adjustment
@@ -121,14 +119,15 @@ int main(int argc, char* argv[]) {
     auto app = new app_state();
 
     // command line params
-    CLI::App parser("view images", "yimview");
-    parser.add_option("--gamma,-g", app->gamma, "display gamma");
-    parser.add_option("--exposure,-e", app->exposure, "display exposure");
-    parser.add_flag("--filmic", app->filmic, "display filmic");
-    parser.add_option("image", app->filename, "image filename")->required(true);
-    try {
-        parser.parse(argc, argv);
-    } catch (const CLI::ParseError& e) { return parser.exit(e); }
+    auto parser =
+        ygl::make_cmdline_parser(argc, argv, "view images", "yimview");
+    app->gamma = ygl::parse_float(parser, "--gamma,-g", 2.2f, "display gamma");
+    app->exposure =
+        ygl::parse_float(parser, "--exposure,-e", 0, "display exposure");
+    app->filmic = ygl::parse_flag(parser, "--filmic", false, "display filmic");
+    app->filename = ygl::parse_string(
+        parser, "image", app->filename, "image filename", true);
+    ygl::check_cmdline(parser);
 
     // loading image
     app->name = ygl::get_filename(app->filename);

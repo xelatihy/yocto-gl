@@ -28,143 +28,76 @@
 
 #include "../yocto/ygl.h"
 #include "../yocto/yglio.h"
-#include "CLI11.hpp"
 #include "yglui.h"
-using namespace std::literals;
 
 #include <memory>
 #include <unordered_map>
 
-// Generic image that contains either an HDR or an LDR image, giving access
-// to both. This is helpful when writing viewers or generic image
-// manipulation code
-struct gimage {
-    std::string name = ""s;
-    std::string filename = ""s;  // path
-    ygl::image4f img = {};       // image
+struct app_state {
+    std::vector<std::string> filenames;
+    std::vector<std::string> names;
+    std::vector<ygl::image4f> imgs;
+    int img_id = 0;
 
-    // min/max values
+    // image display
+    ygl::image4f display;
     ygl::vec4f pxl_min = ygl::zero4f, pxl_max = ygl::zero4f;
     float lum_min = 0, lum_max = 0;
-
-    // image adjustment
-    bool updated = true;
     float exposure = 0;
     float gamma = 2.2f;
     bool filmic = false;
-    bool is_hdr = false;
-
-    // display image
-    ygl::image4f display;
-};
-
-struct app_state {
-    std::vector<gimage*> imgs;
-    gimage* img = nullptr;
 
     // viewing properties
-    uint gl_prog = 0, gl_pbo = 0, gl_tbo = 0, gl_ebo = 0;
     bool widgets_open = false;
     ygl::vec2f imcenter = ygl::zero2f;
     float imscale = 1;
     bool zoom_to_fit = false;
     ygl::vec4f background = {0.8f, 0.8f, 0.8f, 0};
-
-    ~app_state() {
-        for (auto v : imgs) delete v;
-    }
 };
 
 // compute min/max
-void update_minmax(gimage* img) {
-    img->pxl_min = {ygl::flt_max, ygl::flt_max, ygl::flt_max, ygl::flt_max};
-    img->pxl_max = {ygl::flt_min, ygl::flt_min, ygl::flt_min, ygl::flt_min};
-    img->lum_min = ygl::flt_max;
-    img->lum_max = ygl::flt_min;
-    for (auto p : img->img.pxl) {
-        img->pxl_min.x = ygl::min(img->pxl_min.x, p.x);
-        img->pxl_min.y = ygl::min(img->pxl_min.y, p.y);
-        img->pxl_min.z = ygl::min(img->pxl_min.z, p.z);
-        img->pxl_min.w = ygl::min(img->pxl_min.w, p.w);
-        img->pxl_max.x = ygl::min(img->pxl_max.x, p.x);
-        img->pxl_max.y = ygl::min(img->pxl_max.y, p.y);
-        img->pxl_max.z = ygl::min(img->pxl_max.z, p.z);
-        img->pxl_max.w = ygl::min(img->pxl_max.w, p.w);
-        img->lum_min = ygl::min(img->lum_min, ygl::luminance(xyz(p)));
-        img->lum_max = ygl::max(img->lum_max, ygl::luminance(xyz(p)));
+void update_minmax(app_state* app) {
+    app->pxl_min = {ygl::flt_max, ygl::flt_max, ygl::flt_max, ygl::flt_max};
+    app->pxl_max = {ygl::flt_min, ygl::flt_min, ygl::flt_min, ygl::flt_min};
+    app->lum_min = ygl::flt_max;
+    app->lum_max = ygl::flt_min;
+    for (auto p : app->imgs.at(app->img_id).pxl) {
+        app->pxl_min.x = ygl::min(app->pxl_min.x, p.x);
+        app->pxl_min.y = ygl::min(app->pxl_min.y, p.y);
+        app->pxl_min.z = ygl::min(app->pxl_min.z, p.z);
+        app->pxl_min.w = ygl::min(app->pxl_min.w, p.w);
+        app->pxl_max.x = ygl::min(app->pxl_max.x, p.x);
+        app->pxl_max.y = ygl::min(app->pxl_max.y, p.y);
+        app->pxl_max.z = ygl::min(app->pxl_max.z, p.z);
+        app->pxl_max.w = ygl::min(app->pxl_max.w, p.w);
+        app->lum_min = ygl::min(app->lum_min, ygl::luminance(xyz(p)));
+        app->lum_max = ygl::max(app->lum_max, ygl::luminance(xyz(p)));
     }
 }
 
-// Loads a generic image
-gimage* load_gimage(
-    const std::string& filename, float exposure, float gamma, bool filmic) {
-    auto img = new gimage();
-    img->filename = filename;
-    img->name = ygl::get_filename(filename);
-    img->exposure = exposure;
-    img->gamma = gamma;
-    img->filmic = filmic;
-    img->is_hdr = ygl::is_hdr_filename(filename);
-    img->img = ygl::load_image(filename);
-    update_minmax(img);
-    return img;
-}
-
-gimage* diff_gimage(const gimage* a, const gimage* b, bool color) {
-    if (a->img.width != b->img.width || a->img.height != b->img.height)
-        return nullptr;
-    auto d = new gimage();
-    d->name = "diff " + a->name + " " + b->name;
-    d->filename = "";
-    d->img = a->img;
-    if (color) {
-        for (auto j = 0; j < a->img.height; j++) {
-            for (auto i = 0; i < a->img.width; i++) {
-                d->img.at(i, j) = {
-                    std::abs(a->img.at(i, j).x - b->img.at(i, j).x),
-                    std::abs(a->img.at(i, j).y - b->img.at(i, j).y),
-                    std::abs(a->img.at(i, j).z - b->img.at(i, j).z),
-                    std::max(a->img.at(i, j).w, b->img.at(i, j).w)};
-            }
-        }
-    } else {
-        for (auto j = 0; j < a->img.height; j++) {
-            for (auto i = 0; i < a->img.width; i++) {
-                auto la = (a->img.at(i, j).x + a->img.at(i, j).y +
-                              a->img.at(i, j).z) /
-                          3;
-                auto lb = (b->img.at(i, j).x + b->img.at(i, j).y +
-                              b->img.at(i, j).z) /
-                          3;
-                auto ld = fabsf(la - lb);
-                d->img.at(i, j) = {
-                    ld, ld, ld, std::max(a->img.at(i, j).w, b->img.at(i, j).w)};
-            }
-        }
-    }
-    update_minmax(d);
-    return d;
-}
-
-void update_display_image(gimage* img) {
-    img->display = img->img;
-    if (img->is_hdr) {
-        img->display = ygl::tonemap_image(
-            img->display, img->exposure, img->gamma, img->filmic);
+void update_display_image(app_state* app) {
+    app->display = app->imgs.at(app->img_id);
+    if (ygl::is_hdr_filename(app->filenames.at(app->img_id))) {
+        app->display = ygl::tonemap_image(
+            app->display, app->exposure, app->gamma, app->filmic);
     }
 }
 
 void draw_widgets(GLFWwindow* win, app_state* app) {
     if (ygl::begin_widgets_frame(win, "yimview", &app->widgets_open)) {
-        ImGui::Combo("image", &app->img, app->imgs, false);
-        ImGui::LabelText("filename", "%s", app->img->filename.c_str());
-        ImGui::LabelText(
-            "size", "%d x %d ", app->img->img.width, app->img->img.height);
         auto edited = 0;
-        edited += ImGui::SliderFloat("exposure", &app->img->exposure, -5, 5);
-        edited += ImGui::SliderFloat("gamma", &app->img->gamma, 1, 3);
-        edited += ImGui::Checkbox("filmic", &app->img->filmic);
-        if (edited) app->img->updated = true;
+        edited += ImGui::Combo("image", &app->img_id, app->names);
+        auto& img = app->imgs.at(app->img_id);
+        ImGui::LabelText("filename", "%s", app->filenames[app->img_id].c_str());
+        ImGui::LabelText(
+            "size", "%d x %d ", img.width, img.height);
+        edited += ImGui::SliderFloat("exposure", &app->exposure, -5, 5);
+        edited += ImGui::SliderFloat("gamma", &app->gamma, 1, 3);
+        edited += ImGui::Checkbox("filmic", &app->filmic);
+        if (edited) {
+            update_display_image(app);
+            update_minmax(app);
+        }
         ImGui::SliderFloat("zoom", &app->imscale, 0.1, 10);
         ImGui::Checkbox("zoom to fit", &app->zoom_to_fit);
         ImGui::ColorEdit4("background", &app->background.x);
@@ -173,19 +106,19 @@ void draw_widgets(GLFWwindow* win, app_state* app) {
         glfwGetCursorPos(win, &mouse_x, &mouse_y);
         auto ij = ygl::get_image_coords(
             ygl::vec2f{(float)mouse_x, (float)mouse_y}, app->imcenter,
-            app->imscale, {app->img->img.width, app->img->img.height});
+            app->imscale, {img.width, img.height});
         ImGui::DragInt2("mouse", &ij.x);
         auto pixel = ygl::zero4f;
-        if (ij.x >= 0 && ij.x < app->img->img.width && ij.y >= 0 &&
-            ij.y < app->img->img.height) {
-            pixel = app->img->img.at(ij.x, ij.y);
+        if (ij.x >= 0 && ij.x < img.width && ij.y >= 0 &&
+            ij.y < img.height) {
+            pixel = img.at(ij.x, ij.y);
         }
         ImGui::ColorEdit4("pixel", &pixel.x);
-        if (!app->img->img.pxl.empty()) {
-            ImGui::DragFloat4("pxl min", &app->img->pxl_min.x);
-            ImGui::DragFloat4("pxl max", &app->img->pxl_max.y);
-            ImGui::DragFloat("lum min", &app->img->lum_min);
-            ImGui::DragFloat("lum max", &app->img->lum_max);
+        if (!img.pxl.empty()) {
+            ImGui::DragFloat4("pxl min", &app->pxl_min.x);
+            ImGui::DragFloat4("pxl max", &app->pxl_max.y);
+            ImGui::DragFloat("lum min", &app->lum_min);
+            ImGui::DragFloat("lum max", &app->lum_max);
         }
     }
     ygl::end_widgets_frame();
@@ -193,17 +126,17 @@ void draw_widgets(GLFWwindow* win, app_state* app) {
 
 void draw(GLFWwindow* win) {
     auto app = (app_state*)glfwGetWindowUserPointer(win);
-    draw_glimage(win, app->img->display, app->imcenter, app->imscale,
+    draw_glimage(win, app->display, app->imcenter, app->imscale,
         app->zoom_to_fit, app->background);
     draw_widgets(win, app);
     glfwSwapBuffers(win);
 }
 
-void run_ui(const std::shared_ptr<app_state>& app) {
+void run_ui(app_state* app) {
     // window
-    auto ww = ygl::clamp(app->imgs[0]->img.width, 512, 1024);
-    auto wh = ygl::clamp(app->imgs[0]->img.height, 512, 1024);
-    auto win = ygl::make_window(ww, wh, "yimview", app.get(), draw);
+    auto ww = ygl::clamp(app->imgs[0].width, 512, 1024);
+    auto wh = ygl::clamp(app->imgs[0].height, 512, 1024);
+    auto win = ygl::make_window(ww, wh, "yimview", app, draw);
 
     // init widgets
     ygl::init_widgets(win);
@@ -225,12 +158,6 @@ void run_ui(const std::shared_ptr<app_state>& app) {
             }
         }
 
-        // update texture
-        if (app->img->updated) {
-            update_display_image(app->img);
-            app->img->updated = false;
-        }
-
         // draw
         draw(win);
 
@@ -244,51 +171,39 @@ void run_ui(const std::shared_ptr<app_state>& app) {
 }
 
 int main(int argc, char* argv[]) {
-    // command line parameters
-    std::vector<std::string> filenames = {"img.png"};
-    float gamma = 2.2f;     // hdr gamma
-    float exposure = 0.0f;  // hdr exposure
-    bool filmic = false;    // filmic tone mapping
-    bool diff = false;      // compute diffs
-    bool lum_diff = false;  // compute luminance diffs
-    bool quiet = false;     // quiet mode
+    // prepare application
+    auto app = new app_state();
 
     // command line params
-    CLI::App parser("view images", "yimview");
-    parser.add_option("--gamma,-g", gamma, "display gamma");
-    parser.add_option("--exposure,-e", exposure, "display exposure");
-    parser.add_flag("--filmic", filmic, "display filmic");
-    parser.add_flag("--diff,-d", diff, "compute diff images");
-    parser.add_flag("--luminance-diff,-D", lum_diff, "compute luminance diffs");
-    parser.add_flag("--quiet,-q", quiet, "Print only errors messages");
-    parser.add_option("images", filenames, "image filenames")->required(true);
-    try {
-        parser.parse(argc, argv);
-    } catch (const CLI::ParseError& e) { return parser.exit(e); }
-
-    // prepare application
-    auto app = std::make_shared<app_state>();
+    auto parser =
+        ygl::make_cmdline_parser(argc, argv, "view images", "yimview");
+    app->gamma = ygl::parse_float(parser, "--gamma,-g", 2.2f, "display gamma");
+    app->exposure =
+        ygl::parse_float(parser, "--exposure,-e", 0, "display exposure");
+    app->filmic = ygl::parse_flag(parser, "--filmic", false, "display filmic");
+    auto quiet = ygl::parse_flag(
+        parser, "--quiet,-q", false, "Print only errors messages");
+    app->filenames =
+        ygl::parse_strings(parser, "images", {}, "image filenames", true);
+    ygl::check_cmdline(parser);
 
     // loading images
-    for (auto filename : filenames) {
+    for (auto filename : app->filenames) {
         if (!quiet) printf("loading %s\n", filename.c_str());
-        app->imgs.push_back(load_gimage(filename, exposure, gamma, filmic));
+        app->imgs.push_back(ygl::load_image(filename));
+        app->names.push_back(ygl::get_filename(filename));
     }
-    app->img = app->imgs.at(0);
-    if (diff) {
-        for (auto i = 0; i < app->imgs.size(); i++) {
-            for (auto j = i + 1; j < app->imgs.size(); j++) {
-                if (!quiet)
-                    printf("diffing %s %s\n", app->imgs[i]->filename.c_str(),
-                        app->imgs[j]->filename.c_str());
-                auto diff = diff_gimage(app->imgs[i], app->imgs[j], !lum_diff);
-                if (diff) app->imgs.push_back(diff);
-            }
-        }
-    }
+    app->img_id = 0;
+
+    // init
+    update_display_image(app);
+    update_minmax(app);
 
     // run ui
     run_ui(app);
+
+    // cleanup
+    delete app;
 
     // done
     return 0;

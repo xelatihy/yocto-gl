@@ -28,8 +28,6 @@
 
 #include "../yocto/ygl.h"
 #include "../yocto/yglio.h"
-#include "CLI11.hpp"
-using namespace std::literals;
 
 #if 0
 template <typename Image>
@@ -131,43 +129,33 @@ ygl::image4f filter_bilateral(
 }
 
 int main(int argc, char* argv[]) {
-    // command line parameters
-    auto filename = "img.png"s;      // input image
-    auto output = "out.png"s;        // output image
-    auto tonemap = false;            // enable tonemapping
-    auto exposure = 0.0f;            // tonemap exposure
-    auto gamma = 1.0f;               // tonemap gamma
-    auto filmic = false;             // tonemap filmic
-    auto res_width = 0;              // resize width
-    auto res_height = 0;             // resize height
-    auto alpha_filename = ""s;       // file to copy alpha from
-    auto coloralpha_filename = ""s;  // file to set alpha from color
-    auto spatial_sigma = 0.0f;       // spatial sigma for bilateral blur
-    auto range_sigma = 0.0f;         // range sigma for bilateral blur
-
-    // command line params
-    CLI::App parser("image processing utility", "yimproc");
-    parser.add_flag("--tonemap,-t", tonemap, "Tonemap image");
-    parser.add_option("--exposure,-e", exposure, "Tonemap exposure");
-    parser.add_option("--gamma,-g", gamma, "Tonemap gamma.");
-    parser.add_flag("--filmic,-f", filmic, "Tonemap uses filmic curve");
-    parser.add_option(
-        "--res-width", res_width, "resize width (0 to maintain aspect)");
-    parser.add_option(
-        "--res-height", res_height, "resize height (0 to maintain aspect)");
-    parser.add_option("--spatial-sigma", spatial_sigma, "blur spatial sigma");
-    parser.add_option(
-        "--range-sigma", range_sigma, "bilateral blur range sigma");
-    parser.add_option(
-        "--set-alpha", alpha_filename, "set alpha as this image alpha");
-    parser.add_option("--set-color-as-alpha", coloralpha_filename,
-        "set alpha as this image color");
-    parser.add_option("--output,-o", output, "output image filename");
-    parser.add_option("filename", filename, "input image filename")
-        ->required(true);
-    try {
-        parser.parse(argc, argv);
-    } catch (const CLI::ParseError& e) { return parser.exit(e); }
+    // parse command line
+    auto parser =
+        ygl::make_cmdline_parser(argc, argv, "Process images", "yimproc");
+    auto tonemap =
+        ygl::parse_flag(parser, "--tonemap,-t", false, "Tonemap image");
+    auto exposure =
+        ygl::parse_float(parser, "--exposure,-e", 0, "Tonemap exposure");
+    auto gamma = ygl::parse_float(parser, "--gamma,-g", 2.2f, "Tonemap gamma.");
+    auto filmic = ygl::parse_flag(
+        parser, "--filmic,-f", false, "Tonemap uses filmic curve");
+    auto res_width = ygl::parse_int(
+        parser, "--res-width", 0, "resize width (0 to maintain aspect)");
+    auto res_height = ygl::parse_int(
+        parser, "--res-height", 0, "resize height (0 to maintain aspect)");
+    auto spatial_sigma =
+        ygl::parse_float(parser, "--spatial-sigma", 0, "blur spatial sigma");
+    auto range_sigma = ygl::parse_float(
+        parser, "--range-sigma", 0, "bilateral blur range sigma");
+    auto alpha_filename = ygl::parse_string(
+        parser, "--set-alpha", "", "set alpha as this image alpha");
+    auto coloralpha_filename = ygl::parse_string(
+        parser, "--set-color-as-alpha", "", "set alpha as this image color");
+    auto output = ygl::parse_string(
+        parser, "--output,-o", "out.png", "output image filename", true);
+    auto filename = ygl::parse_string(
+        parser, "filename", "img.hdr", "input image filename", true);
+    ygl::check_cmdline(parser);
 
     // load
     auto img = ygl::image4f();

@@ -201,11 +201,11 @@ namespace ygl {
 
 // initialize a command line parser
 cmdline_parser make_cmdline_parser(
-    int argc, char** argv, const std::string& help) {
+    int argc, char** argv, const std::string& usage, const std::string& cmd) {
     auto parser = cmdline_parser();
     parser.args = {argv + 1, argv + argc};
-    parser.help_cmd = argv[0];
-    if (help != "") parser.help_cmd += ": " + help;
+    parser.usage_cmd = (cmd.empty()) ? argv[0] : cmd;
+    parser.usage_hlp = usage;
     return parser;
 }
 
@@ -227,39 +227,75 @@ std::vector<std::string> get_option_names(const std::string& name_) {
 }
 
 // add help
-std::string get_option_help(const std::string& name, const std::string& var,
-    const std::string& help, const std::string& def_) {
+std::string get_option_usage(const std::string& name, const std::string& var,
+    const std::string& usage, const std::string& def_,
+    const std::vector<std::string>& choices) {
     auto def = def_;
     if (def != "") def = "[" + def + "]";
     auto namevar = name;
     if (var != "") namevar += " " + var;
     char buf[4096];
-    sprintf(buf, "  %32s %s %s\n", namevar.c_str(), help.c_str(), def.c_str());
-    return buf;
+    sprintf(
+        buf, "  %-24s %s %s\n", namevar.c_str(), usage.c_str(), def.c_str());
+    auto usagelines = std::string(buf);
+    if (!choices.empty()) {
+        usagelines += "        accepted values:";
+        for (auto& c : choices) usagelines += " " + c;
+        usagelines += "\n";
+    }
+    return usagelines;
+}
+
+// print cmdline help
+void print_cmdline_usage(const cmdline_parser& parser) {
+    printf("%s: %s\n", parser.usage_cmd.c_str(), parser.usage_hlp.c_str());
+    printf("usage: %s %s %s\n\n", parser.usage_cmd.c_str(),
+        (parser.usage_opt.empty()) ? "" : "[options]",
+        (parser.usage_arg.empty()) ? "" : "arguments");
+    if (!parser.usage_opt.empty()) {
+        printf("options:\n");
+        printf("%s\n", parser.usage_opt.c_str());
+    }
+    if (!parser.usage_arg.empty()) {
+        printf("arguments:\n");
+        printf("%s\n", parser.usage_arg.c_str());
+    }
 }
 
 // check if any error occurred and exit appropriately
-void check_cmdline(cmdline_parser& parser) {}
+void check_cmdline(cmdline_parser& parser) {
+    if (parse_flag(parser, "--help,-?", false, "print help")) {
+        print_cmdline_usage(parser);
+        exit(0);
+    }
+    if (!parser.args.empty()) parser.error += "unmatched arguments remaining\n";
+    if (!parser.error.empty()) {
+        printf("error: %s", parser.error.c_str());
+        print_cmdline_usage(parser);
+        exit(1);
+    }
+}
 
 // Parse a flag. Name should start with either "--" or "-".
-bool parse_flag(cmdline_parser& parser, const std::string& name,
-    const std::string& shortname, const std::string& help) {
-    parser.help_opt += get_option_help(name, "", help, "");
-    if (parser.error != "") return false;
+bool parse_flag(cmdline_parser& parser, const std::string& name, bool def,
+    const std::string& usage) {
+    parser.usage_opt += get_option_usage(name, "", usage, "", {});
+    if (parser.error != "") return def;
     auto names = get_option_names(name);
     auto pos = parser.args.end();
     for (auto& name : names)
         pos = std::min(
             pos, std::find(parser.args.begin(), parser.args.end(), name));
-    if (pos == parser.args.end()) return false;
+    if (pos == parser.args.end()) return def;
     parser.args.erase(pos);
-    return true;
+    return !def;
 }
 
 // Parse an option string. Name should start with "--" or "-".
 std::string parse_option(cmdline_parser& parser, const std::string& name,
-    const std::string& def, const std::string& help, bool req) {
-    parser.help_opt += get_option_help(name, "", help, def);
+    const std::string& def, const std::string& usage, bool req,
+    const std::vector<std::string>& choices) {
+    parser.usage_opt += get_option_usage(name, "", usage, def, choices);
     if (parser.error != "") return def;
     auto names = get_option_names(name);
     auto pos = parser.args.end();
@@ -277,13 +313,19 @@ std::string parse_option(cmdline_parser& parser, const std::string& name,
     }
     auto val = *(pos + 1);
     parser.args.erase(pos, pos + 2);
+    if (!choices.empty() &&
+        std::find(choices.begin(), choices.end(), val) == choices.end()) {
+        parser.error += "bad value for " + name;
+        return def;
+    }
     return val;
 }
 
 // Parse an argument string. Name should not start with "--" or "-".
 std::string parse_argument(cmdline_parser& parser, const std::string& name,
-    const std::string& def, const std::string& help, bool req) {
-    parser.help_arg += get_option_help(name, "", help, def);
+    const std::string& def, const std::string& usage, bool req,
+    const std::vector<std::string>& choices) {
+    parser.usage_arg += get_option_usage(name, "", usage, def, choices);
     if (parser.error != "") return def;
     auto pos = std::find_if(parser.args.begin(), parser.args.end(),
         [](auto& v) { return v[0] != '-'; });
@@ -293,31 +335,47 @@ std::string parse_argument(cmdline_parser& parser, const std::string& name,
     }
     auto val = *pos;
     parser.args.erase(pos);
+    if (!choices.empty() &&
+        std::find(choices.begin(), choices.end(), val) == choices.end()) {
+        parser.error += "bad value for " + name;
+        return def;
+    }
     return val;
 }
 
 // Parse an integer, float, string. If name starts with "--" or "-", then it is
 // an option, otherwise it is a position argument.
 std::string parse_string(cmdline_parser& parser, const std::string& name,
-    const std::string& def, const std::string& help, bool req) {
-    return is_option(name) ? parse_option(parser, name, def, help, req) :
-                             parse_argument(parser, name, def, help, req);
+    const std::string& def, const std::string& usage, bool req,
+    const std::vector<std::string>& choices) {
+    return is_option(name) ?
+               parse_option(parser, name, def, usage, req, choices) :
+               parse_argument(parser, name, def, usage, req, choices);
 }
 int parse_int(cmdline_parser& parser, const std::string& name, int def,
-    const std::string& help, bool req) {
-    auto val = parse_string(parser, name, std::to_string(def), help, req);
+    const std::string& usage, bool req) {
+    auto val = parse_string(parser, name, std::to_string(def), usage, req);
     return std::atoi(val.c_str());
 }
 float parse_float(cmdline_parser& parser, const std::string& name, float def,
-    const std::string& help, bool req) {
-    auto val = parse_string(parser, name, std::to_string(def), help, req);
+    const std::string& usage, bool req) {
+    auto val = parse_string(parser, name, std::to_string(def), usage, req);
     return std::atof(val.c_str());
+}
+int parse_enum(cmdline_parser& parser, const std::string& name, int def,
+    const std::string& usage, const std::vector<std::string>& labels,
+    bool req) {
+    auto val = parse_string(parser, name, labels.at(def), usage, req, labels);
+    return (int)(std::find(labels.begin(), labels.end(), val) - labels.begin());
 }
 
 // Parser an argument
 std::vector<std::string> parse_strings(cmdline_parser& parser,
-    const std::string& name, const std::string& help, bool req) {
-    parser.help_arg += get_option_help(name, "", help, "[]");
+    const std::string& name, const std::vector<std::string>& def,
+    const std::string& usage, bool req) {
+    auto defs = std::string();
+    for (auto& d : def) defs += " " + d;
+    parser.usage_arg += get_option_usage(name, "", usage, defs, {});
     if (parser.error != "") return {};
     auto pos = std::find_if(parser.args.begin(), parser.args.end(),
         [](auto& v) { return v[0] != '-'; });
@@ -655,6 +713,10 @@ scene* load_scene(
         }
         ist->mat = mat;
     }
+    if (scn->cameras.empty()) {
+        scn->cameras.push_back(make_bbox_camera("<view>", compute_bbox(scn)));
+    }
+    ygl::add_missing_names(scn);
     return scn;
 }
 
@@ -1547,14 +1609,6 @@ void to_json(json& js, const scene* val) {
     }
     to_json(js, *val);
 }
-
-template <typename T>
-static std::unordered_map<std::string, std::shared_ptr<T>> make_named_map(
-    const std::vector<std::shared_ptr<T>>& elems) {
-    auto map = std::unordered_map<std::string, std::shared_ptr<T>>();
-    for (auto elem : elems) map[elem->name] = elem;
-    return map;
-};
 
 template <typename T>
 static std::unordered_map<std::string, T*> make_named_map(

@@ -559,18 +559,6 @@ inline bool SelectableTreeNode(
     return open;
 }
 
-// Start selectable tree node
-template <typename T>
-inline bool SelectableTreeNode(
-    const char* lbl, std::shared_ptr<T>* selection, T* content) {
-    ImGuiTreeNodeFlags node_flags =
-        ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
-    if (*selection == content) node_flags |= ImGuiTreeNodeFlags_Selected;
-    auto open = ImGui::TreeNodeEx(content, node_flags, "%s", lbl);
-    if (ImGui::IsItemClicked()) *selection = content;
-    return open;
-}
-
 // Selectable tree leaf node
 inline void SelectableTreeLeaf(
     const char* lbl, void*& selection, void* content) {
@@ -595,6 +583,23 @@ inline bool Combo(const char* lbl, int* idx_, int nitems,
     }
     ImGui::EndCombo();
     return idx != old_idx;
+}
+
+// Combo widget.
+inline bool Combo(const char* lbl, int* val_,
+    const std::vector<std::string>& labels) {
+    auto& val = *val_;
+    if (!ImGui::BeginCombo(lbl, labels[val].c_str())) return false;
+    auto old_val = val;
+    for (auto i = 0; i < labels.size(); i++) {
+        ImGui::PushID(i);
+        if (ImGui::Selectable(labels[i].c_str(), val == i))
+            val = i;
+        if (val == i) ImGui::SetItemDefaultFocus();
+        ImGui::PopID();
+    }
+    ImGui::EndCombo();
+    return val != old_val;
 }
 
 // Combo widget.
