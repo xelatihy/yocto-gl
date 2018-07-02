@@ -3006,7 +3006,8 @@ image4f trace_image(const scene* scn, const camera* cam, int yresolution,
     bool noparallel = false, int seed = trace_default_seed);
 
 // Initialize trace rngs
-std::vector<rng_state> make_trace_rngs(int width, int height, uint64_t seed);
+std::vector<rng_state> make_trace_rngs(
+    int width, int height, uint64_t seed = trace_default_seed);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
@@ -3020,8 +3021,9 @@ void trace_samples(const scene* scn, const camera* cam, int nsamples,
 void trace_async_start(const scene* scn, const camera* cam, int nsamples,
     trace_func tracer, image4f* img, image4f* display,
     std::vector<rng_state>* rngs, std::vector<std::thread>* threads, bool* stop,
-    int* sample, float* exposure, float* gamma, bool* filmic, int preview_ratio,
-    int nbounces = 8, float pixel_clamp = 100, int seed = trace_default_seed);
+    int* sample, float* exposure, float* gamma, bool* filmic,
+    int preview_ratio = 8, int nbounces = 8, float pixel_clamp = 100,
+    int seed = trace_default_seed);
 // Stop the asynchronous renderer.
 void trace_async_stop(std::vector<std::thread>* threads, bool* stop);
 

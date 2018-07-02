@@ -28,8 +28,6 @@
 
 #include "../yocto/ygl.h"
 #include "../yocto/yglio.h"
-#include "CLI11.hpp"
-using namespace std::literals;
 
 void mkdir(const std::string& dir) {
     if (dir == "" || dir == "." || dir == ".." || dir == "./" || dir == "../")
@@ -42,21 +40,18 @@ void mkdir(const std::string& dir) {
 }
 
 int main(int argc, char** argv) {
-    // command line parameters
-    auto filename = "scene.json"s;
-    auto output = "output.json"s;
-    auto notextures = false;
-    auto uniform_txt = false;
-
-    // command line params
-    CLI::App parser("scene processing utility", "yscnproc");
-    parser.add_flag("--notextures", notextures, "Disable textures.");
-    parser.add_flag("--uniform-txt", uniform_txt, "uniform texture formats");
-    parser.add_option("--output,-o", output, "output scene")->required(true);
-    parser.add_option("scene", filename, "input scene")->required(true);
-    try {
-        parser.parse(argc, argv);
-    } catch (const CLI::ParseError& e) { return parser.exit(e); }
+    // parse command line
+    auto parser =
+        ygl::make_cmdline_parser(argc, argv, "Process scene", "yscnproc");
+    auto notextures =
+        ygl::parse_flag(parser, "--notextures", false, "Disable textures.");
+    auto uniform_txt = ygl::parse_flag(
+        parser, "--uniform-txt", false, "uniform texture formats");
+    auto output = ygl::parse_string(
+        parser, "--output,-o", "out.json", "output scene", true);
+    auto filename =
+        ygl::parse_string(parser, "scene", "scene.json", "input scene", true);
+    ygl::check_cmdline(parser);
 
     // load scene
     auto scn = (ygl::scene*)nullptr;

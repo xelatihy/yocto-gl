@@ -81,32 +81,38 @@ namespace ygl {
 // Command line parser data. All data should be considered private.
 struct cmdline_parser {
     std::vector<std::string> args = {};  // command line arguments
-    std::string help_cmd = "";           // help message
-    std::string help_opt = "";           // help message
-    std::string help_arg = "";           // help message
+    std::string usage_cmd = "";          // program name
+    std::string usage_hlp = "";          // program help
+    std::string usage_opt = "";          // options help
+    std::string usage_arg = "";          // arguments help
     std::string error = "";              // current parse error
 };
 
-// initialize a command line parser
-cmdline_parser make_cmdline_parser(
-    int argc, char** argv, const std::string& help);
+// Initialize a command line parser.
+cmdline_parser make_cmdline_parser(int argc, char** argv,
+    const std::string& usage, const std::string& cmd = "");
 // check if any error occurred and exit appropriately
 void check_cmdline(cmdline_parser& parser);
 
 // Parse a flag. Name should start with either "--" or "-".
-bool parse_flag(
-    cmdline_parser& parser, const std::string& name, const std::string& help);
+bool parse_flag(cmdline_parser& parser, const std::string& name, bool def,
+    const std::string& usage);
 
 // Parse an integer, float, string. If name starts with "--" or "-", then it is
 // an option, otherwise it is a position argument.
 int parse_int(cmdline_parser& parser, const std::string& name, int def,
-    const std::string& help, bool req = false);
+    const std::string& usage, bool req = false);
 float parse_float(cmdline_parser& parser, const std::string& name, float def,
-    const std::string& help, bool req = false);
+    const std::string& usage, bool req = false);
 std::string parse_string(cmdline_parser& parser, const std::string& name,
-    const std::string& def, const std::string& help, bool req = false);
+    const std::string& def, const std::string& usage, bool req = false,
+    const std::vector<std::string>& choices = {});
+int parse_enum(cmdline_parser& parser, const std::string& name, int def,
+    const std::string& usage, const std::vector<std::string>& labels,
+    bool req = false);
 std::vector<std::string> parse_strings(cmdline_parser& parser,
-    const std::string& name, const std::string& help, bool req = false);
+    const std::string& name, const std::vector<std::string>& def,
+    const std::string& usage, bool req = false);
 
 }  // namespace ygl
 

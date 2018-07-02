@@ -61,10 +61,12 @@ endif(YOCTO_EMBREE)
 add_executable(ytrace apps/ytrace.cpp)
 add_executable(yscnproc apps/yscnproc.cpp)
 add_executable(yimproc apps/yimproc.cpp)
+add_executable(ytrace2 apps/ytrace2.cpp)
 
 target_link_libraries(ytrace ygl)
 target_link_libraries(yscnproc ygl)
 target_link_libraries(yimproc ygl)
+target_link_libraries(ytrace2 ygl)
 
 if(YOCTO_OPENGL)
     find_package(OpenGL REQUIRED)
