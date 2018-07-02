@@ -3795,14 +3795,15 @@ scene* load_pbrt_scene(
         return zero4f;
     };
 
-    auto get_mat4f = [](const json& js) -> mat4f {
+    auto get_mat4f = [](const json& js) -> frame3f {
         if (!js.is_array() || js.size() != 16) {
             printf("cannot handle vec4f\n");
-            return identity_mat4f;
+            return identity_frame3f;
         }
-        auto m = identity_mat4f;
-        for (auto i = 0; i < 16; i++) (&m.x.x)[i] = js.at(i).get<float>();
-        return m;
+        float m[16] = {0};
+        for (auto i = 0; i < 16; i++) m[i] = js.at(i).get<float>();
+        return {{m[0], m[1], m[2]}, {m[4], m[5], m[6]}, {m[8], m[9], m[10]},
+            {m[12], m[13], m[14]}};
     };
 
     auto get_mat3f = [](const json& js) -> frame3f {
@@ -3879,11 +3880,9 @@ scene* load_pbrt_scene(
         auto cmd = jcmd.at("cmd").get<std::string>();
         if (cmd == "Integrator" || cmd == "Sampler" || cmd == "PixelFilter") {
         } else if (cmd == "Transform") {
-            auto m = get_mat4f(jcmd.at("values"));
-            stack.back().frame = mat_to_frame(m);
+            stack.back().frame = get_mat4f(jcmd.at("values"));
         } else if (cmd == "ConcatTransform") {
-            auto m = get_mat4f(jcmd.at("values"));
-            stack.back().frame = stack.back().frame * mat_to_frame(m);
+            stack.back().frame = stack.back().frame * get_mat4f(jcmd.at("values"));
         } else if (cmd == "Scale") {
             auto v = get_vec3f(jcmd.at("values"));
             stack.back().frame = stack.back().frame * scaling_frame(v);
