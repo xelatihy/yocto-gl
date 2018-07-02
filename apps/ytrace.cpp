@@ -183,7 +183,7 @@ int main(int argc, char* argv[]) {
 
     // stata
     if (!quiet) {
-        printf("using %s rays in %d paths\n",
+        printf("using %s rays in %s paths\n",
             ygl::format_num(ygl::get_trace_stats().first).c_str(),
             ygl::format_num(ygl::get_trace_stats().second).c_str());
     }
