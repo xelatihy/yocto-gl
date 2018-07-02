@@ -3805,12 +3805,12 @@ scene* load_pbrt_scene(
         return m;
     };
 
-    auto get_mat3f = [](const json& js) -> mat3f {
+    auto get_mat3f = [](const json& js) -> frame3f {
         if (!js.is_array() || js.size() != 9) {
             printf("cannot handle mat3f\n");
-            return identity_mat3f;
+            return identity_frame3f;
         }
-        auto m = identity_mat3f;
+        auto m = identity_frame3f;
         for (auto i = 0; i < 9; i++) (&m.x.x)[i] = js.at(i).get<float>();
         return m;
     };
