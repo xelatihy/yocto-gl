@@ -17,5 +17,5 @@ install: []
 
 build_script:
   - IF "%APPVEYOR_BUILD_WORKER_IMAGE%" == "Visual Studio 2015" ( SET GEN="Visual Studio 14 2015") ELSE (SET GEN="Visual Studio 15 2017")
-  - cmake . -G%GEN% -DCMAKE_CXX_FLAGS="%additional_flags%"
+  - cmake . -G%GEN% -DCMAKE_CXX_FLAGS="%additional_flags%" -DYOCTO_EMBREE=OFF
   - cmake --build . --config Release

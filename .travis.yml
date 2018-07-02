@@ -20,7 +20,7 @@ matrix:
     compiler: gcc
     env:
       - COMPILER=g++-7
-      - CMAKE_OPTIONS=-DYOCTO_OPENGL=OFF
+      - CMAKE_OPTIONS=-DYOCTO_OPENGL=OFF -DYOCTO_EMBREE=OFF
     addons:
       apt:
         # sources: ['ubuntu-toolchain-r-test', 'sourceline': 'deb http://ppa.launchpad.net/keithw/glfw3/ubuntu trusty main']
@@ -32,7 +32,7 @@ matrix:
     compiler: clang
     env:
       - COMPILER=clang++-5.0
-      - CMAKE_OPTIONS=-DYOCTO_OPENGL=OFF
+      - CMAKE_OPTIONS=-DYOCTO_OPENGL=OFF -DYOCTO_EMBREE=OFF
     addons:
       apt:
         # sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-5.0', 'sourceline': 'deb http://ppa.launchpad.net/keithw/glfw3/ubuntu trusty main']
@@ -44,7 +44,7 @@ matrix:
     compiler: gcc
     env:
       - COMPILER=g++-8
-      - CMAKE_OPTIONS=-DYOCTO_OPENGL=OFF
+      - CMAKE_OPTIONS=-DYOCTO_OPENGL=OFF -DYOCTO_EMBREE=OFF
     addons:
       apt:
         # sources: ['ubuntu-toolchain-r-test', 'sourceline': 'deb http://ppa.launchpad.net/keithw/glfw3/ubuntu trusty main']
