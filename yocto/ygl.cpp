@@ -3816,6 +3816,7 @@ camera* make_bbox_camera(const std::string& name, const bbox3f& bbox,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+#if YGL_EMBREE
 // Scene intersection.
 scene_intersection intersect_ray_embree(
     const scene* scn, const ray3f& ray, bool find_any) {
@@ -3842,11 +3843,14 @@ scene_intersection intersect_ray_embree(
     isec.ist = scn->instances.at(embree_ray.hit.geomID);
     return isec;
 }
+#endif
 
 // Scene intersection.
 scene_intersection intersect_ray(
     const scene* scn, const ray3f& ray, bool find_any) {
+    #if YGL_EMBREE
     if (scn->embree_bvh) return intersect_ray_embree(scn, ray, find_any);
+    #endif
     auto iid = 0;
     auto isec = scene_intersection();
     if (!intersect_bvh(
