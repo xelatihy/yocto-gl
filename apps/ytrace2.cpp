@@ -110,23 +110,13 @@ int main(int argc, char* argv[]) {
             auto filename = ygl::replace_extension(imfilename,
                 std::to_string(sample) + "." + ygl::get_extension(imfilename));
             printf("saving image %s\n", filename.c_str());
-            if (ygl::is_hdr_filename(filename)) {
-                ygl::save_image(filename, img);
-            } else {
-                ygl::save_image(
-                    filename, ygl::tonemap_image(img, exposure, gamma, filmic));
-            }
+            ygl::save_ldr_or_hdr_image(filename, img, exposure, gamma, filmic);
         }
     }
 
     // save image
     printf("saving image %s\n", imfilename.c_str());
-    if (ygl::is_hdr_filename(imfilename)) {
-        ygl::save_image(imfilename, img);
-    } else {
-        ygl::save_image(
-            imfilename, ygl::tonemap_image(img, exposure, gamma, filmic));
-    }
+    ygl::save_ldr_or_hdr_image(filename, img, exposure, gamma, filmic);
 
     // cleanup
     delete scn;

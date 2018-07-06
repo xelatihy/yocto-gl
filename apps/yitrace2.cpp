@@ -151,33 +151,27 @@ void run_ui(app_state* app) {
 
     // loop
     auto mouse_pos = ygl::zero2f, last_pos = ygl::zero2f;
-    auto mouse_button = 0;
     while (!glfwWindowShouldClose(win)) {
-        auto mx = 0.0, my = 0.0;
         last_pos = mouse_pos;
-        glfwGetCursorPos(win, &mx, &my);
-        mouse_pos = {(float)mx, (float)my};
-        if (glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
-            mouse_button = 1;
-        else if (glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)
-            mouse_button = 2;
-        else if (glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_MIDDLE) ==
-                 GLFW_PRESS)
-            mouse_button = 3;
-        else
-            mouse_button = 0;
+        double mouse_posx, mouse_posy;
+        glfwGetCursorPos(win, &mouse_posx, &mouse_posy);
+        mouse_pos = {(float)mouse_posx, (float)mouse_posy};
+        auto mouse_left =
+            glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+        auto mouse_right =
+            glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
         auto shift_down = glfwGetKey(win, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
                           glfwGetKey(win, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
 
         // handle mouse and keyboard for navigation
-        if (mouse_button) {
+        if (mouse_left || mouse_right) {
             auto dolly = 0.0f;
             auto pan = ygl::zero2f;
             auto rotate = ygl::zero2f;
-            if (mouse_button == 1) rotate = (mouse_pos - last_pos) / 100.0f;
-            if (mouse_button == 2) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
-            if (mouse_button == 3 || (mouse_button == 1 && shift_down))
-                pan = (mouse_pos - last_pos) / 100.0f;
+            if (mouse_left && !shift_down)
+                rotate = (mouse_pos - last_pos) / 100.0f;
+            if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
+            if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
             auto cam = app->scn->cameras.at(app->camid);
             ygl::camera_turntable(cam->frame, cam->focus, rotate, dolly, pan);
             restart(app);
@@ -187,7 +181,7 @@ void run_ui(app_state* app) {
         draw(win);
 
         // event hadling
-        if (!mouse_button)
+        if (!(mouse_left || mouse_right))
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         glfwPollEvents();
     }

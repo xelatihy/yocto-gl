@@ -74,8 +74,6 @@ int main(int argc, char* argv[]) {
         parser, "--double-sided,-D", false, "Double-sided rendering.");
     auto add_skyenv = ygl::parse_flag(
         parser, "--add-skyenv,-E", false, "add missing env map");
-    auto quiet = ygl::parse_flag(
-        parser, "--quiet,-q", false, "Print only errors messages");
     auto imfilename = ygl::parse_string(
         parser, "--output-image,-o", "out.hdr", "Image filename");
     auto filename = ygl::parse_string(
@@ -84,54 +82,47 @@ int main(int argc, char* argv[]) {
 
     // scene loading
     auto scn = (ygl::scene*)nullptr;
-    if (!quiet) printf("loading scene %s\n", filename.c_str());
+    printf("loading scene %s\n", filename.c_str());
     auto load_start = ygl::get_time();
     try {
         scn = ygl::load_scene(filename);
     } catch (const std::exception& e) {
-        printf("cannot load scene %s\n", filename.c_str());
-        printf("error: %s\n", e.what());
+        printf("cannot load scene %s\nerror: %s\n", filename.c_str(), e.what());
         exit(1);
     }
-    if (!quiet)
-        printf("loading in %s\n",
-            ygl::format_duration(ygl::get_time() - load_start).c_str());
+    printf("loading in %s\n",
+        ygl::format_duration(ygl::get_time() - load_start).c_str());
 
     // tesselate
-    if (!quiet) printf("tesselating scene elements\n");
+    printf("tesselating scene elements\n");
     ygl::tesselate_subdivs(scn);
 
     // add components
-    if (!quiet) printf("adding scene elements\n");
+    printf("adding scene elements\n");
     if (add_skyenv && scn->environments.empty()) {
         scn->environments.push_back(ygl::make_sky_environment("sky"));
         scn->textures.push_back(scn->environments.back()->ke_txt);
     }
     if (double_sided)
         for (auto mat : scn->materials) mat->double_sided = true;
-    if (scn->cameras.empty())
-        scn->cameras.push_back(
-            ygl::make_bbox_camera("<view>", ygl::compute_bbox(scn)));
-    ygl::add_missing_names(scn);
-    for (auto err : ygl::validate(scn)) printf("warning: %s\n", err.c_str());
+    for (auto& err : ygl::validate(scn)) printf("warning: %s\n", err.c_str());
 
     // build bvh
-    if (!quiet) printf("building bvh\n");
+    printf("building bvh\n");
     auto bvh_start = ygl::get_time();
     ygl::build_bvh(scn);
 #if YGL_EMBREE
     if (embree) ygl::build_bvh_embree(scn);
 #endif
-    if (!quiet)
-        printf("building bvh in %s\n",
-            ygl::format_duration(ygl::get_time() - bvh_start).c_str());
+    printf("building bvh in %s\n",
+        ygl::format_duration(ygl::get_time() - bvh_start).c_str());
 
     // init renderer
-    if (!quiet) printf("initializing lights\n");
+    printf("initializing lights\n");
     ygl::init_lights(scn);
 
     // initialize rendering objects
-    if (!quiet) printf("initializing tracer data\n");
+    printf("initializing tracer data\n");
     auto tracer_func = tracer_funcs.at(tracer_id);
     auto cam = scn->cameras.at(camid);
     auto img = ygl::make_image4f(
@@ -140,47 +131,28 @@ int main(int argc, char* argv[]) {
         ygl::image_height(cam, resolution), seed);
 
     // render
-    if (!quiet) printf("rendering image\n");
+    printf("rendering image\n");
     auto render_start = ygl::get_time();
     for (auto sample = 0; sample < nsamples; sample += nbatch) {
-        if (!quiet) printf("rendering sample %04d/%04d", sample, nsamples);
+        printf("rendering sample %04d/%04d", sample, nsamples);
         auto block_start = ygl::get_time();
         ygl::trace_samples(scn, cam, nbatch, tracer_func, &img, &rng, sample,
             nbounces, pixel_clamp, noparallel);
-        if (!quiet)
-            printf("rendering block in %s\n",
-                ygl::format_duration(ygl::get_time() - block_start).c_str());
+        printf("rendering block in %s\n",
+            ygl::format_duration(ygl::get_time() - block_start).c_str());
         if (save_batch) {
             auto filename = ygl::replace_extension(imfilename,
                 std::to_string(sample) + "." + ygl::get_extension(imfilename));
-            if (!quiet) printf("saving image %s\n", filename.c_str());
-            if (ygl::is_hdr_filename(filename)) {
-                ygl::save_image(filename, img);
-            } else {
-                ygl::save_image(
-                    filename, ygl::tonemap_image(img, exposure, gamma, filmic));
-            }
+            printf("saving image %s\n", filename.c_str());
+            ygl::save_ldr_or_hdr_image(filename, img, exposure, gamma, filmic);
         }
     }
-    if (!quiet)
-        printf("rendering image in %s\n",
-            ygl::format_duration(ygl::get_time() - render_start).c_str());
-
-    // stata
-    if (!quiet) {
-        printf("using %s rays in %s paths\n",
-            ygl::format_num(ygl::get_trace_stats().first).c_str(),
-            ygl::format_num(ygl::get_trace_stats().second).c_str());
-    }
+    printf("rendering image in %s\n",
+        ygl::format_duration(ygl::get_time() - render_start).c_str());
 
     // save image
-    if (!quiet) printf("saving image %s\n", imfilename.c_str());
-    if (ygl::is_hdr_filename(imfilename)) {
-        ygl::save_image(imfilename, img);
-    } else {
-        ygl::save_image(
-            imfilename, ygl::tonemap_image(img, exposure, gamma, filmic));
-    }
+    printf("saving image %s\n", imfilename.c_str());
+    ygl::save_ldr_or_hdr_image(filename, img, exposure, gamma, filmic);
 
     // cleanup
     delete scn;
