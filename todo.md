@@ -6,8 +6,7 @@ Please consider this to be just development notes and not any real planning.
 ## Next features
 
 - simpler cmdline, at least for the simple apps
-    - enums
-    - move to internal for all apps
+    - simpler timer
     - internal verbose flags to remove some apps (like trace)?
 - split apps
 - simpler example by removing make_XXX commands

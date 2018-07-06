@@ -28,10 +28,17 @@
 
 #include "../yocto/ygl.h"
 #include "../yocto/yglio.h"
-#include "yglui.h"
 
-#include <memory>
-#include <unordered_map>
+#ifdef __APPLE__
+#include <OpenGL/gl.h>
+#else
+#include <GL/gl.h>
+#endif
+#include <GLFW/glfw3.h>
+#include "imgui/imgui.h"
+#include "imgui/imgui_ext.h"
+#include "imgui/imgui_impl_glfw.h"
+#include "imgui/imgui_impl_opengl2.h"
 
 struct app_state {
     std::vector<std::string> filenames;
@@ -48,7 +55,6 @@ struct app_state {
     bool filmic = false;
 
     // viewing properties
-    bool widgets_open = false;
     ygl::vec2f imcenter = ygl::zero2f;
     float imscale = 1;
     bool zoom_to_fit = false;
@@ -66,10 +72,10 @@ void update_minmax(app_state* app) {
         app->pxl_min.y = ygl::min(app->pxl_min.y, p.y);
         app->pxl_min.z = ygl::min(app->pxl_min.z, p.z);
         app->pxl_min.w = ygl::min(app->pxl_min.w, p.w);
-        app->pxl_max.x = ygl::min(app->pxl_max.x, p.x);
-        app->pxl_max.y = ygl::min(app->pxl_max.y, p.y);
-        app->pxl_max.z = ygl::min(app->pxl_max.z, p.z);
-        app->pxl_max.w = ygl::min(app->pxl_max.w, p.w);
+        app->pxl_max.x = ygl::max(app->pxl_max.x, p.x);
+        app->pxl_max.y = ygl::max(app->pxl_max.y, p.y);
+        app->pxl_max.z = ygl::max(app->pxl_max.z, p.z);
+        app->pxl_max.w = ygl::max(app->pxl_max.w, p.w);
         app->lum_min = ygl::min(app->lum_min, ygl::luminance(xyz(p)));
         app->lum_max = ygl::max(app->lum_max, ygl::luminance(xyz(p)));
     }
@@ -83,14 +89,24 @@ void update_display_image(app_state* app) {
     }
 }
 
-void draw_widgets(GLFWwindow* win, app_state* app) {
-    if (ygl::begin_widgets_frame(win, "yimview", &app->widgets_open)) {
+void draw_widgets(GLFWwindow* win) {
+    static auto first_time = true;
+    auto app = (app_state*)glfwGetWindowUserPointer(win);
+    ImGui_ImplOpenGL2_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+    if (first_time) {
+        ImGui::SetNextWindowPos({0, 0});
+        ImGui::SetNextWindowSize({320, 0});
+        ImGui::SetNextWindowCollapsed(true);
+        first_time = false;
+    }
+    if (ImGui::Begin("yimview")) {
         auto edited = 0;
         edited += ImGui::Combo("image", &app->img_id, app->names);
         auto& img = app->imgs.at(app->img_id);
         ImGui::LabelText("filename", "%s", app->filenames[app->img_id].c_str());
-        ImGui::LabelText(
-            "size", "%d x %d ", img.width, img.height);
+        ImGui::LabelText("size", "%d x %d ", img.width, img.height);
         edited += ImGui::SliderFloat("exposure", &app->exposure, -5, 5);
         edited += ImGui::SliderFloat("gamma", &app->gamma, 1, 3);
         edited += ImGui::Checkbox("filmic", &app->filmic);
@@ -104,13 +120,12 @@ void draw_widgets(GLFWwindow* win, app_state* app) {
         ImGui::Separator();
         auto mouse_x = 0.0, mouse_y = 0.0;
         glfwGetCursorPos(win, &mouse_x, &mouse_y);
-        auto ij = ygl::get_image_coords(
-            ygl::vec2f{(float)mouse_x, (float)mouse_y}, app->imcenter,
-            app->imscale, {img.width, img.height});
+        auto ij =
+            ygl::get_image_coords(ygl::vec2f{(float)mouse_x, (float)mouse_y},
+                app->imcenter, app->imscale, {img.width, img.height});
         ImGui::DragInt2("mouse", &ij.x);
         auto pixel = ygl::zero4f;
-        if (ij.x >= 0 && ij.x < img.width && ij.y >= 0 &&
-            ij.y < img.height) {
+        if (ij.x >= 0 && ij.x < img.width && ij.y >= 0 && ij.y < img.height) {
             pixel = img.at(ij.x, ij.y);
         }
         ImGui::ColorEdit4("pixel", &pixel.x);
@@ -121,14 +136,20 @@ void draw_widgets(GLFWwindow* win, app_state* app) {
             ImGui::DragFloat("lum max", &app->lum_max);
         }
     }
-    ygl::end_widgets_frame();
+    ImGui::End();
+    ImGui::Render();
+    ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
 }
 
 void draw(GLFWwindow* win) {
     auto app = (app_state*)glfwGetWindowUserPointer(win);
-    draw_glimage(win, app->display, app->imcenter, app->imscale,
-        app->zoom_to_fit, app->background);
-    draw_widgets(win, app);
+    glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glRasterPos2f(-1, 1);
+    glPixelZoom(2, -2);
+    glDrawPixels(app->display.width, app->display.height, GL_RGBA, GL_FLOAT,
+        app->display.pxl.data());
+    draw_widgets(win);
     glfwSwapBuffers(win);
 }
 
@@ -136,38 +157,54 @@ void run_ui(app_state* app) {
     // window
     auto ww = ygl::clamp(app->imgs[0].width, 512, 1024);
     auto wh = ygl::clamp(app->imgs[0].height, 512, 1024);
-    auto win = ygl::make_window(ww, wh, "yimview", app, draw);
+    if (!glfwInit()) throw std::runtime_error("cannot open glwindow");
+
+    auto win = glfwCreateWindow(ww, wh, "yimview", nullptr, nullptr);
+    glfwMakeContextCurrent(win);
+    glfwSwapInterval(1);  // Enable vsync
+
+    glfwSetWindowRefreshCallback(win, draw);
+    glfwSetWindowUserPointer(win, app);
 
     // init widgets
-    ygl::init_widgets(win);
+    ImGui::CreateContext();
+    ImGui::GetIO().IniFilename = nullptr;
+    ImGui_ImplGlfw_InitForOpenGL(win, true);
+    ImGui_ImplOpenGL2_Init();
+    ImGui::StyleColorsDark();
 
     // window values
     auto mouse_pos = ygl::zero2f, last_pos = ygl::zero2f;
-    auto mouse_button = 0;
     while (!glfwWindowShouldClose(win)) {
         last_pos = mouse_pos;
-        glfwGetCursorPosExt(win, &mouse_pos.x, &mouse_pos.y);
-        mouse_button = glfwGetMouseButtonIndexExt(win);
+        double mouse_posx, mouse_posy;
+        glfwGetCursorPos(win, &mouse_posx, &mouse_posy);
+        mouse_pos = {(float)mouse_posx, (float)mouse_posy};
+        auto mouse_left =
+            glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+        auto mouse_right =
+            glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
         auto widgets_active = ImGui::GetWidgetsActiveExt();
 
         // handle mouse
-        if (mouse_button && !widgets_active) {
-            if (mouse_button == 1) app->imcenter += mouse_pos - last_pos;
-            if (mouse_button == 2) {
-                app->imscale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
-            }
-        }
+        if (mouse_left && !widgets_active)
+            app->imcenter += mouse_pos - last_pos;
+        if (mouse_right && !widgets_active)
+            app->imscale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
 
         // draw
         draw(win);
 
         // event hadling
-        if (mouse_button || widgets_active) {
+        if (mouse_left || mouse_right || widgets_active) {
             glfwPollEvents();
         } else {
             glfwWaitEvents();
         }
     }
+
+    // cleanup
+    glfwTerminate();
 }
 
 int main(int argc, char* argv[]) {

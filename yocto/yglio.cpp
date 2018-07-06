@@ -96,6 +96,43 @@ using namespace std::string_literals;
 #endif
 
 // -----------------------------------------------------------------------------
+// IMPLEMENTATION OF STRING FORMAT UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Converts a string from printf formats. Unsafe: works only for short strings.
+std::string format_str(const char* fmt, ...) {
+    char buf[4096];
+    va_list args;
+    va_start(args, fmt);
+    vsprintf(buf, fmt, args);
+    va_end(args);
+    return buf;
+}
+// Format duration string from nanoseconds
+std::string format_duration(int64_t duration) {
+    auto elapsed = duration / 1000000;  // milliseconds
+    auto hours = (int)(elapsed / 3600000);
+    elapsed %= 3600000;
+    auto mins = (int)(elapsed / 60000);
+    elapsed %= 60000;
+    auto secs = (int)(elapsed / 1000);
+    auto msecs = (int)(elapsed % 1000);
+    char buf[256];
+    sprintf(buf, "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
+    return buf;
+}
+// Format a large integer number in human readable form
+std::string format_num(uint64_t num) {
+    auto rem = num % 1000;
+    auto div = num / 1000;
+    if (div > 0) return format_num(div) + "," + std::to_string(rem);
+    return std::to_string(rem);
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION OF PATH UTILITIES
 // -----------------------------------------------------------------------------
 namespace ygl {

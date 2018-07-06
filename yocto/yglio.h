@@ -50,9 +50,37 @@
 
 #include "ygl.h"
 
+#include <chrono>
+
 #ifndef YGL_FASTPARSE
 #define YGL_FASTPARSE 1
 #endif
+
+// -----------------------------------------------------------------------------
+// TIMER UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// get time in nanoseconds - useful only to compute difference of times
+inline int64_t get_time() {
+    return std::chrono::high_resolution_clock::now().time_since_epoch().count();
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// STRING FORMAT UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Converts a string from printf formats. Unsafe: works only for short strings.
+std::string format_str(const char* fmt, ...);
+// Format duration string from nanoseconds
+std::string format_duration(int64_t duration);
+// Format a large integer number in human readable form
+std::string format_num(uint64_t num);
+
+}  // namespace ygl
 
 // -----------------------------------------------------------------------------
 // PATH UTILITIES
@@ -144,6 +172,17 @@ bool is_hdr_filename(const std::string& filename);
 image4f load_image(const std::string& filename);
 void save_image(const std::string& filename, const image4f& img);
 image4f load_image_from_memory(const byte* data, int data_size);
+
+// Convenience helper that saves an HDR images as wither a linear HDR file or
+// a tonemapped LDR file depending on file name
+inline void save_ldr_or_hdr_image(const std::string& filename,
+    const image4f& hdr, float exposure = 0, float gamma = 2.2f,
+    bool filmic = false) {
+    if (is_hdr_filename(filename))
+        save_image(filename, hdr);
+    else
+        save_image(filename, tonemap_image(hdr, exposure, gamma, filmic));
+}
 
 }  // namespace ygl
 

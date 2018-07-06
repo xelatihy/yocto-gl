@@ -255,7 +255,6 @@
 #include <algorithm>  // for std::upper_bound
 #include <cctype>
 #include <cfloat>
-#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -3108,38 +3107,6 @@ float sample_ggx_pdf(float rs, float ndh);
 // Evaluates the GGX distribution and geometric term.
 float eval_ggx_dist(float rs, const vec3f& n, const vec3f& h);
 float eval_ggx_sm(float rs, const vec3f& n, const vec3f& o, const vec3f& i);
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// TIMER AND FORMAT UTILITIES
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-// get the timer time in nanoseconds
-inline int64_t get_time() {
-    return std::chrono::high_resolution_clock::now().time_since_epoch().count();
-}
-// get duration string from nanoseconds
-inline std::string format_duration(int64_t duration) {
-    auto elapsed = duration / 1000000;  // milliseconds
-    auto hours = (int)(elapsed / 3600000);
-    elapsed %= 3600000;
-    auto mins = (int)(elapsed / 60000);
-    elapsed %= 60000;
-    auto secs = (int)(elapsed / 1000);
-    auto msecs = (int)(elapsed % 1000);
-    char buf[256];
-    sprintf(buf, "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
-    return buf;
-}
-// format a large integer number in human readable form
-inline std::string format_num(uint64_t num) {
-    auto rem = num % 1000;
-    auto div = num / 1000;
-    if (div > 0) return format_num(div) + "," + std::to_string(rem);
-    return std::to_string(rem);
-}
 
 }  // namespace ygl
 

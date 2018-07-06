@@ -28,9 +28,19 @@
 
 #include "../yocto/ygl.h"
 #include "../yocto/yglio.h"
-#include "yglui.h"
 
-#include <map>
+#ifdef __APPLE__
+#include <OpenGL/gl.h>
+#else
+#include <GL/gl.h>
+#endif
+#include <GLFW/glfw3.h>
+#include "imgui/imgui.h"
+#include "imgui/imgui_ext.h"
+#include "imgui/imgui_impl_glfw.h"
+#include "imgui/imgui_impl_opengl2.h"
+
+#include "ysceneui.h"
 
 // Application state
 struct app_state {
@@ -68,8 +78,8 @@ struct app_state {
     unsigned int gl_txt = 0;
     unsigned int gl_prog = 0, gl_vbo = 0, gl_ebo;
     bool widgets_open = false;
-    ygl::scene_selection selection = {};
-    std::vector<ygl::scene_selection> update_list;
+    void* selection = nullptr;
+    std::vector<std::pair<std::string, void*>> update_list;
     bool navigation_fps = false;
     bool quiet = false;
     int64_t trace_start = 0;
@@ -91,8 +101,19 @@ auto tracer_funcs = std::vector<ygl::trace_func>{ygl::trace_path,
     ygl::trace_debug_frontfacing, ygl::trace_debug_diffuse,
     ygl::trace_debug_specular, ygl::trace_debug_roughness};
 
-void draw_widgets(GLFWwindow* win, app_state* app) {
-    if (ygl::begin_widgets_frame(win, "yitrace", &app->widgets_open)) {
+void draw_widgets(GLFWwindow* win) {
+    static auto first_time = true;
+    auto app = (app_state*)glfwGetWindowUserPointer(win);
+    ImGui_ImplOpenGL2_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+    if (first_time) {
+        ImGui::SetNextWindowPos({0, 0});
+        ImGui::SetNextWindowSize({320, 0});
+        ImGui::SetNextWindowCollapsed(true);
+        first_time = false;
+    }
+    if (ImGui::Begin("yitrace")) {
         ImGui::LabelText("scene", "%s", app->filename.c_str());
         ImGui::LabelText("image", "%d x %d @ %d", app->img.width,
             app->img.height, app->sample);
@@ -108,7 +129,7 @@ void draw_widgets(GLFWwindow* win, app_state* app) {
             edited += ImGui::SliderInt("nbounces", &app->nbounces, 1, 10);
             edited += ImGui::SliderInt("seed", (int*)&app->seed, 0, 1000);
             edited += ImGui::SliderInt("pratio", &app->pratio, 1, 64);
-            if (edited) app->update_list.push_back(ygl::scene_selection());
+            if (edited) app->update_list.push_back({"app", app});
             ImGui::LabelText("time/sample", "%0.3lf",
                 (app->sample) ? (ygl::get_time() - app->trace_start) /
                                     (1000000000.0 * app->sample) :
@@ -139,24 +160,30 @@ void draw_widgets(GLFWwindow* win, app_state* app) {
             ImGui::TreePop();
         }
         if (ImGui::TreeNode("scene tree")) {
-            ygl::draw_glwidgets_scene_tree(
-                "", app->scn, app->selection, app->update_list, 200, {});
+            draw_glwidgets_scene_tree(
+                "", app->scn, app->selection, app->update_list, 200);
             ImGui::TreePop();
         }
         if (ImGui::TreeNode("scene object")) {
-            ygl::draw_glwidgets_scene_inspector(
-                "", app->scn, app->selection, app->update_list, 200, {});
+            draw_glwidgets_scene_inspector(
+                "", app->scn, app->selection, app->update_list, 200);
             ImGui::TreePop();
         }
     }
-    ygl::end_widgets_frame();
+    ImGui::End();
+    ImGui::Render();
+    ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
 }
 
 void draw(GLFWwindow* win) {
     auto app = (app_state*)glfwGetWindowUserPointer(win);
-    ygl::draw_glimage(win, app->display, app->imcenter, app->imscale,
-        app->zoom_to_fit, app->background);
-    draw_widgets(win, app);
+    glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glRasterPos2f(-1, 1);
+    glPixelZoom(2, -2);
+    glDrawPixels(app->display.width, app->display.height, GL_RGBA, GL_FLOAT,
+        app->display.pxl.data());
+    draw_widgets(win);
     glfwSwapBuffers(win);
 }
 
@@ -168,13 +195,13 @@ bool update(app_state* app) {
     ygl::trace_async_stop(&app->threads, &app->stop);
 
     // update BVH
-    for (auto sel : app->update_list) {
-        if (sel.as<ygl::shape>()) {
-            ygl::refit_bvh(sel.as<ygl::shape>());
+    for (auto& sel : app->update_list) {
+        if (sel.first == "shape") {
+            ygl::refit_bvh((ygl::shape*)sel.second);
             ygl::refit_bvh(app->scn);
         }
-        if (sel.as<ygl::instance>()) { ygl::refit_bvh(app->scn); }
-        if (sel.as<ygl::node>()) {
+        if (sel.first == "instance") { ygl::refit_bvh(app->scn); }
+        if (sel.first == "node") {
             ygl::update_transforms(app->scn, 0);
             ygl::refit_bvh(app->scn);
         }
@@ -198,38 +225,55 @@ void run_ui(app_state* app) {
     // window
     auto ww = ygl::clamp(app->img.width, 512, 1024);
     auto wh = ygl::clamp(app->img.height, 512, 1024);
-    auto win = ygl::make_window(ww, wh, "yitrace", app, draw);
+    if (!glfwInit()) throw std::runtime_error("cannot open glwindow");
 
-    // init widget
-    ygl::init_widgets(win);
+    auto win = glfwCreateWindow(ww, wh, "yimview", nullptr, nullptr);
+    glfwMakeContextCurrent(win);
+    glfwSwapInterval(1);  // Enable vsync
+
+    glfwSetWindowRefreshCallback(win, draw);
+    glfwSetWindowUserPointer(win, app);
+
+    // init widgets
+    ImGui::CreateContext();
+    ImGui::GetIO().IniFilename = nullptr;
+    ImGui_ImplGlfw_InitForOpenGL(win, true);
+    ImGui_ImplOpenGL2_Init();
+    ImGui::StyleColorsDark();
 
     // loop
     auto mouse_pos = ygl::zero2f, last_pos = ygl::zero2f;
-    auto mouse_button = 0;
     while (!glfwWindowShouldClose(win)) {
         last_pos = mouse_pos;
-        glfwGetCursorPosExt(win, &mouse_pos.x, &mouse_pos.y);
-        mouse_button = glfwGetMouseButtonIndexExt(win);
-        auto alt_down = glfwGetAltKeyExt(win);
-        auto shift_down = glfwGetShiftKeyExt(win);
+        double mouse_posx, mouse_posy;
+        glfwGetCursorPos(win, &mouse_posx, &mouse_posy);
+        mouse_pos = {(float)mouse_posx, (float)mouse_posy};
+        auto mouse_left =
+            glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+        auto mouse_right =
+            glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+        auto alt_down = glfwGetKey(win, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
+                        glfwGetKey(win, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
+        auto shift_down = glfwGetKey(win, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
+                          glfwGetKey(win, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
         auto widgets_active = ImGui::GetWidgetsActiveExt();
 
         // handle mouse and keyboard for navigation
-        if (mouse_button && !alt_down && !widgets_active) {
+        if ((mouse_left || mouse_right) && !alt_down && !widgets_active) {
             auto dolly = 0.0f;
             auto pan = ygl::zero2f;
             auto rotate = ygl::zero2f;
-            if (mouse_button == 1) rotate = (mouse_pos - last_pos) / 100.0f;
-            if (mouse_button == 2) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
-            if (mouse_button == 3 || (mouse_button == 1 && shift_down))
-                pan = (mouse_pos - last_pos) / 100.0f;
+            if (mouse_left && !shift_down)
+                rotate = (mouse_pos - last_pos) / 100.0f;
+            if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
+            if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
             auto cam = app->scn->cameras.at(app->camid);
             ygl::camera_turntable(cam->frame, cam->focus, rotate, dolly, pan);
-            app->update_list.push_back(cam);
+            app->update_list.push_back({"camera", cam});
         }
 
         // selection
-        if (mouse_button && alt_down && !widgets_active) {
+        if ((mouse_left || mouse_right) && alt_down && !widgets_active) {
             auto ij = ygl::get_image_coords(mouse_pos, app->imcenter,
                 app->imscale, {app->img.width, app->img.height});
             if (ij.x < 0 || ij.x >= app->img.width || ij.y < 0 ||
@@ -249,7 +293,7 @@ void run_ui(app_state* app) {
         draw(win);
 
         // event hadling
-        if (!mouse_button && !widgets_active)
+        if (!(mouse_left || mouse_right) && !widgets_active)
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         glfwPollEvents();
     }
