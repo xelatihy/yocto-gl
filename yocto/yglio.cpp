@@ -1980,19 +1980,19 @@ struct obj_environment {
 
 // Obj callbacks
 struct obj_callbacks {
-    std::function<void(vec3f)> vert = [](auto) {};
-    std::function<void(vec3f)> norm = [](auto) {};
-    std::function<void(vec2f)> texcoord = [](auto) {};
-    std::function<void(const std::vector<obj_vertex>&)> face = [](auto&) {};
-    std::function<void(const std::vector<obj_vertex>&)> line = [](auto&) {};
-    std::function<void(const std::vector<obj_vertex>&)> point = [](auto&) {};
-    std::function<void(const std::string& name)> object = [](auto&) {};
-    std::function<void(const std::string& name)> group = [](auto&) {};
-    std::function<void(const std::string& name)> usemtl = [](auto&) {};
-    std::function<void(const std::string& name)> smoothing = [](auto&) {};
-    std::function<void(const obj_material&)> material = [](auto&) {};
-    std::function<void(const obj_camera&)> camera = [](auto&) {};
-    std::function<void(const obj_environment&)> environmnet = [](auto&) {};
+    std::function<void(vec3f)> vert = {};
+    std::function<void(vec3f)> norm = {};
+    std::function<void(vec2f)> texcoord = {};
+    std::function<void(const std::vector<obj_vertex>&)> face = {};
+    std::function<void(const std::vector<obj_vertex>&)> line = {};
+    std::function<void(const std::vector<obj_vertex>&)> point = {};
+    std::function<void(const std::string& name)> object = {};
+    std::function<void(const std::string& name)> group = {};
+    std::function<void(const std::string& name)> usemtl = {};
+    std::function<void(const std::string& name)> smoothing = {};
+    std::function<void(const obj_material&)> material = {};
+    std::function<void(const obj_camera&)> camera = {};
+    std::function<void(const obj_environment&)> environmnet = {};
 };
 
 inline bool operator==(obj_vertex a, obj_vertex b) {
@@ -2165,7 +2165,7 @@ void load_mtl(
 
         // possible token values
         if (cmd == "newmtl") {
-            if (!first) cb.material(mat);
+            if (!first && cb.material) cb.material(mat);
             first = false;
             mat = obj_material();
             mat.name = parse_string(ss);
@@ -2223,7 +2223,7 @@ void load_mtl(
     }
 
     // issue current material
-    if (!first) cb.material(mat);
+    if (!first && cb.material) cb.material(mat);
 
     // clone
     fclose(fs);
@@ -2257,14 +2257,14 @@ void load_objx(const std::string& filename, const obj_callbacks& cb) {
             cam.focus = parse_float(ss);
             cam.aperture = parse_float(ss);
             cam.frame = parse_frame3f(ss);
-            cb.camera(cam);
+            if (cb.camera) cb.camera(cam);
         } else if (cmd == "e") {
             auto env = obj_environment();
             env.name = parse_string(ss);
             env.ke = parse_vec3f(ss);
             env.ke_txt.path = parse_string(ss);
             if (env.ke_txt.path == "\"\"") env.ke_txt.path = "";
-            cb.environmnet(env);
+            if (cb.environmnet) cb.environmnet(env);
         } else {
             // unused
         }
@@ -2298,15 +2298,15 @@ void load_obj(const std::string& filename, const obj_callbacks& cb,
 
         // possible token values
         if (cmd == "v") {
-            cb.vert(parse_vec3f(ss));
+            if (cb.vert) cb.vert(parse_vec3f(ss));
             vert_size.pos += 1;
         } else if (cmd == "vn") {
-            cb.norm(parse_vec3f(ss));
+            if (cb.norm) cb.norm(parse_vec3f(ss));
             vert_size.norm += 1;
         } else if (cmd == "vt") {
             auto v = parse_vec2f(ss);
             if (flip_texcoord) v.y = 1 - v.y;
-            cb.texcoord(v);
+            if (cb.texcoord) cb.texcoord(v);
             vert_size.texcoord += 1;
         } else if (cmd == "f" || cmd == "l" || cmd == "p") {
             verts.clear();
@@ -2319,17 +2319,17 @@ void load_obj(const std::string& filename, const obj_callbacks& cb,
                 if (vert.norm < 0) vert.norm = vert_size.norm + vert.norm + 1;
                 verts.push_back(vert);
             }
-            if (cmd == "f") cb.face(verts);
-            if (cmd == "l") cb.line(verts);
-            if (cmd == "p") cb.point(verts);
+            if (cmd == "f" && cb.face) cb.face(verts);
+            if (cmd == "l" && cb.line) cb.line(verts);
+            if (cmd == "p" && cb.point) cb.point(verts);
         } else if (cmd == "o") {
-            cb.object(parse_string(ss));
+            if (cb.object) cb.object(parse_string(ss));
         } else if (cmd == "usemtl") {
-            cb.usemtl(parse_string(ss));
+            if (cb.usemtl) cb.usemtl(parse_string(ss));
         } else if (cmd == "g") {
-            cb.group(parse_string(ss));
+            if (cb.group) cb.group(parse_string(ss));
         } else if (cmd == "s") {
-            cb.smoothing(parse_string(ss));
+            if (cb.smoothing) cb.smoothing(parse_string(ss));
         } else if (cmd == "mtllib") {
             auto mtlname = parse_string(ss);
             auto mtlpath = get_dirname(filename) + "/" + mtlname;

@@ -124,9 +124,8 @@ void draw(GLFWwindow* win) {
         app->background.w);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
-    draw_glscene(app->scn, cam, app->gl_prog, framebuffer_size,
-        app->selection, app->eyelight, app->wireframe, app->edges,
-        app->exposure, app->gamma);
+    draw_glscene(app->scn, cam, app->gl_prog, framebuffer_size, app->selection,
+        app->eyelight, app->wireframe, app->edges, app->exposure, app->gamma);
 
     static auto first_time = true;
     // auto app = (app_state*)glfwGetWindowUserPointer(win);
