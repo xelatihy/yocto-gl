@@ -192,7 +192,7 @@ bool update(app_state* app) {
     if (app->update_list.empty()) return false;
 
     // stop renderer
-    ygl::trace_async_stop(&app->threads, &app->stop);
+    ygl::trace_async_stop(app->threads, app->stop);
 
     // update BVH
     for (auto& sel : app->update_list) {
@@ -211,9 +211,9 @@ bool update(app_state* app) {
     auto cam = app->scn->cameras.at(app->camid);
     auto tracer_func = tracer_funcs.at(app->tracer_id);
     app->trace_start = ygl::get_time();
-    ygl::trace_async_start(app->scn, cam, app->nsamples, tracer_func, &app->img,
-        &app->display, &app->rng, &app->threads, &app->stop, &app->sample,
-        &app->exposure, &app->gamma, &app->filmic, app->pratio, app->nbounces,
+    ygl::trace_async_start(app->scn, cam, app->nsamples, tracer_func, app->img,
+        app->display, app->rng, app->threads, app->stop, app->sample,
+        app->exposure, app->gamma, app->filmic, app->pratio, app->nbounces,
         app->pixel_clamp, app->seed);
 
     // updated
@@ -402,16 +402,16 @@ int main(int argc, char* argv[]) {
     // initialize rendering objects
     if (!quiet) printf("starting async renderer\n");
     app->trace_start = ygl::get_time();
-    ygl::trace_async_start(app->scn, cam, app->nsamples, tracer_func, &app->img,
-        &app->display, &app->rng, &app->threads, &app->stop, &app->sample,
-        &app->exposure, &app->gamma, &app->filmic, app->pratio, app->nbounces,
+    ygl::trace_async_start(app->scn, cam, app->nsamples, tracer_func, app->img,
+        app->display, app->rng, app->threads, app->stop, app->sample,
+        app->exposure, app->gamma, app->filmic, app->pratio, app->nbounces,
         app->pixel_clamp, app->seed);
 
     // run interactive
     run_ui(app);
 
     // cleanup
-    ygl::trace_async_stop(&app->threads, &app->stop);
+    ygl::trace_async_stop(app->threads, app->stop);
     delete app;
 
     // done

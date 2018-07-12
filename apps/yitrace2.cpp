@@ -94,12 +94,12 @@ void draw(GLFWwindow* win) {
 
 void restart(app_state* app) {
     // stop renderer
-    ygl::trace_async_stop(&app->threads, &app->stop);
+    ygl::trace_async_stop(app->threads, app->stop);
     auto cam = app->scn->cameras.at(app->camid);
     auto tracer_func = tracer_funcs.at(app->tracer_id);
-    ygl::trace_async_start(app->scn, cam, app->nsamples, tracer_func, &app->img,
-        &app->display, &app->rng, &app->threads, &app->stop, &app->sample,
-        &app->exposure, &app->gamma, &app->filmic);
+    ygl::trace_async_start(app->scn, cam, app->nsamples, tracer_func, app->img,
+        app->display, app->rng, app->threads, app->stop, app->sample,
+        app->exposure, app->gamma, app->filmic);
 }
 
 void char_callback(GLFWwindow* win, unsigned int key) {
@@ -242,15 +242,15 @@ int main(int argc, char* argv[]) {
 
     // initialize rendering objects
     printf("starting async renderer\n");
-    ygl::trace_async_start(app->scn, cam, app->nsamples, tracer_func, &app->img,
-        &app->display, &app->rng, &app->threads, &app->stop, &app->sample,
-        &app->exposure, &app->gamma, &app->filmic);
+    ygl::trace_async_start(app->scn, cam, app->nsamples, tracer_func, app->img,
+        app->display, app->rng, app->threads, app->stop, app->sample,
+        app->exposure, app->gamma, app->filmic);
 
     // run interactive
     run_ui(app);
 
     // cleanup
-    ygl::trace_async_stop(&app->threads, &app->stop);
+    ygl::trace_async_stop(app->threads, app->stop);
     delete app;
 
     // done
