@@ -116,7 +116,7 @@ int main(int argc, char* argv[]) {
 
     // save image
     printf("saving image %s\n", imfilename.c_str());
-    ygl::save_ldr_or_hdr_image(filename, img, exposure, gamma, filmic);
+    ygl::save_ldr_or_hdr_image(imfilename, img, exposure, gamma, filmic);
 
     // cleanup
     delete scn;
