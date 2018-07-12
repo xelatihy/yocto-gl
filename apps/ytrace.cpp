@@ -134,7 +134,7 @@ int main(int argc, char* argv[]) {
     printf("rendering image\n");
     auto render_start = ygl::get_time();
     for (auto sample = 0; sample < nsamples; sample += nbatch) {
-        printf("rendering sample %04d/%04d", sample, nsamples);
+        printf("rendering sample %04d/%04d\n", sample, nsamples);
         auto block_start = ygl::get_time();
         ygl::trace_samples(scn, cam, nbatch, tracer_func, img, rng, sample,
             nbounces, pixel_clamp, noparallel);
@@ -152,7 +152,7 @@ int main(int argc, char* argv[]) {
 
     // save image
     printf("saving image %s\n", imfilename.c_str());
-    ygl::save_ldr_or_hdr_image(filename, img, exposure, gamma, filmic);
+    ygl::save_ldr_or_hdr_image(imfilename, img, exposure, gamma, filmic);
 
     // cleanup
     delete scn;
