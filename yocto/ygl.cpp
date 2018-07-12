@@ -4677,12 +4677,12 @@ vec3f trace_path(const scene* scn, const ray3f& ray_, rng_state* rng,
                 auto lp = eval_pos(isec.ist, isec.ei, isec.uv);
                 auto ln = eval_shading_norm(isec.ist, isec.ei, isec.uv, -i);
                 pdf += 0.5f * sample_light_pdf(isec.ist, p, i, lp, ln) *
-                       sample_index_pdf<float>(nlights);
+                       sample_index_pdf(nlights);
                 le += eval_emission(isec.ist, isec.ei, isec.uv);
             } else {
                 for (auto env : scn->environments) {
                     pdf += 0.5f * sample_environment_pdf(env, i) *
-                           sample_index_pdf<float>(nlights);
+                           sample_index_pdf(nlights);
                     le += eval_environment(env, i);
                 }
             }
@@ -4829,7 +4829,7 @@ vec3f trace_path_nomis(const scene* scn, const ray3f& ray_, rng_state* rng,
                 auto lp = eval_pos(isec.ist, isec.ei, isec.uv);
                 auto ln = eval_shading_norm(isec.ist, isec.ei, isec.uv, -i);
                 auto pdf = sample_light_pdf(isec.ist, p, i, lp, ln) *
-                           sample_index_pdf<float>(scn->lights.size());
+                           sample_index_pdf(scn->lights.size());
                 auto le = eval_emission(isec.ist, isec.ei, isec.uv);
                 auto brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
                 if (pdf != 0) l += weight * le * brdfcos / pdf;
