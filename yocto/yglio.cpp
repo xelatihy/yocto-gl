@@ -1680,7 +1680,7 @@ void from_json_proc(const json& js, scene& val) {
         for (auto ist : ists) nmap[ist] = 0;
         auto rng = make_rng(seed, 17);
         for (auto i = 0; i < num; i++) {
-            auto ist = ists.at(rand1i(&rng, (int)ists.size() - 1));
+            auto ist = ists.at(rand1i(rng, (int)ists.size() - 1));
             nmap[ist] += 1;
             val.instances.push_back(new instance());
             val.instances.back()->name = ist->name + std::to_string(nmap[ist]);

@@ -319,13 +319,19 @@ namespace ygl {
 
 // Small size vectors.
 struct vec2f {
-    float x = 0, y = 0;
+    float x = 0;
+    float y = 0;
 };
 struct vec3f {
-    float x = 0, y = 0, z = 0;
+    float x = 0;
+    float y = 0;
+    float z = 0;
 };
 struct vec4f {
-    float x = 0, y = 0, z = 0, w = 0;
+    float x = 0;
+    float y = 0;
+    float z = 0;
+    float w = 0;
 };
 
 // Zero vector constants.
@@ -564,16 +570,25 @@ namespace ygl {
 
 // Small size vectors.
 struct vec2i {
-    int x = 0, y = 0;
+    int x = 0;
+    int y = 0;
 };
 struct vec3i {
-    int x = 0, y = 0, z = 0;
+    int x = 0;
+    int y = 0;
+    int z = 0;
 };
 struct vec4i {
-    int x = 0, y = 0, z = 0, w = 0;
+    int x = 0;
+    int y = 0;
+    int z = 0;
+    int w = 0;
 };
 struct vec4b {
-    byte x = 0, y = 0, z = 0, w = 0;
+    byte x = 0;
+    byte y = 0;
+    byte z = 0;
+    byte w = 0;
 };
 
 // Zero vector constants.
@@ -649,14 +664,19 @@ namespace ygl {
 
 // Small Fixed-size square matrices stored in column major format.
 struct mat2f {
-    vec2f x = {1, 0}, y = {0, 1};
+    vec2f x = {1, 0};
+    vec2f y = {0, 1};
 };
 struct mat3f {
-    vec3f x = {1, 0, 0}, y = {0, 1, 0}, z = {0, 0, 1};
+    vec3f x = {1, 0, 0};
+    vec3f y = {0, 1, 0};
+    vec3f z = {0, 0, 1};
 };
 struct mat4f {
-    vec4f x = {1, 0, 0, 0}, y = {0, 1, 0, 0}, z = {0, 0, 1, 0},
-          w = {0, 0, 0, 1};
+    vec4f x = {1, 0, 0, 0};
+    vec4f y = {0, 1, 0, 0};
+    vec4f z = {0, 0, 1, 0};
+    vec4f w = {0, 0, 0, 1};
 };
 
 // Identity matrices constants.
@@ -788,10 +808,15 @@ namespace ygl {
 
 // Rigid frames stored as a column-major affine transform matrix.
 struct frame2f {
-    vec2f x = {1, 0}, y = {0, 1}, o = {0, 0};
+    vec2f x = {1, 0};
+    vec2f y = {0, 1};
+    vec2f o = {0, 0};
 };
 struct frame3f {
-    vec3f x = {1, 0, 0}, y = {0, 1, 0}, z = {0, 0, 1}, o = {0, 0, 0};
+    vec3f x = {1, 0, 0};
+    vec3f y = {0, 1, 0};
+    vec3f z = {0, 0, 1};
+    vec3f o = {0, 0, 0};
 };
 
 // Indentity frames.
@@ -1277,9 +1302,9 @@ struct rng_state {
 };
 
 // Next random number.
-inline uint32_t advance_rng(rng_state* rng) {
-    uint64_t oldstate = rng->state;
-    rng->state = oldstate * 6364136223846793005ULL + rng->inc;
+inline uint32_t advance_rng(rng_state& rng) {
+    uint64_t oldstate = rng.state;
+    rng.state = oldstate * 6364136223846793005ULL + rng.inc;
     uint32_t xorshifted = (uint32_t)(((oldstate >> 18u) ^ oldstate) >> 27u);
     uint32_t rot = (uint32_t)(oldstate >> 59u);
     return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
@@ -1290,15 +1315,15 @@ inline rng_state make_rng(uint64_t seed, uint64_t seq = 1) {
     auto rng = rng_state();
     rng.state = 0U;
     rng.inc = (seq << 1u) | 1u;
-    advance_rng(&rng);
+    advance_rng(rng);
     rng.state += seed;
-    advance_rng(&rng);
+    advance_rng(rng);
     return rng;
 }
 
 // Next random numbers: floats in [0,1), ints in [0,n).
-inline int rand1i(rng_state* rng, int n) { return advance_rng(rng) % n; }
-inline float rand1f(rng_state* rng) {
+inline int rand1i(rng_state& rng, int n) { return advance_rng(rng) % n; }
+inline float rand1f(rng_state& rng) {
     union {
         uint32_t u;
         float f;
@@ -1309,8 +1334,8 @@ inline float rand1f(rng_state* rng) {
     // const static auto scale = (float)(1.0 / numeric_limits<uint32_t>::max());
     // return advance_rng(rng) * scale;
 }
-inline vec2f rand2f(rng_state* rng) { return {rand1f(rng), rand1f(rng)}; }
-inline vec3f rand3f(rng_state* rng) {
+inline vec2f rand2f(rng_state& rng) { return {rand1f(rng), rand1f(rng)}; }
+inline vec3f rand3f(rng_state& rng) {
     return {rand1f(rng), rand1f(rng), rand1f(rng)};
 }
 
@@ -1501,36 +1526,17 @@ inline std::pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& v0,
     }
 }
 
-// Copies of point value. Here only for completeness.
-template <typename TT>
-inline TT interpolate_point(const std::vector<TT>& vals, int p) {
-    if (vals.empty()) return TT();
-    return vals[p];
-}
-
 // Interpolates values over a line parametrized from a to b by u. Same as lerp.
 template <typename T>
 inline T interpolate_line(const T& v0, const T& v1, float u) {
     return v0 * (1 - u) + v1 * u;
 }
-template <typename T>
-inline T interpolate_line(const std::vector<T>& vals, const vec2i& l, float u) {
-    if (vals.empty()) return T();
-    return interpolate_line(vals[l.x], vals[l.y], u);
-}
-
 // Interpolates values over a triangle parametrized by u and v along the
 // (v1-v0) and (v2-v0) directions. Same as barycentric interpolation.
 template <typename T>
 inline T interpolate_triangle(
     const T& v0, const T& v1, const T& v2, const vec2f& uv) {
     return v0 * (1 - uv.x - uv.y) + v1 * uv.x + v2 * uv.y;
-}
-template <typename T>
-inline T interpolate_triangle(
-    const std::vector<T>& vals, const vec3i& t, const vec2f& uv) {
-    if (vals.empty()) return T();
-    return interpolate_triangle(vals[t.x], vals[t.y], vals[t.z], uv);
 }
 // Interpolates values over a quad parametrized by u and v along the
 // (v1-v0) and (v2-v1) directions. Same as bilear interpolation.
@@ -1539,14 +1545,6 @@ inline T interpolate_quad(
     const T& v0, const T& v1, const T& v2, const T& v3, const vec2f& uv) {
     return v0 * (1 - uv.x) * (1 - uv.y) + v1 * uv.x * (1 - uv.y) +
            v2 * uv.x * uv.y + v3 * (1 - uv.x) * uv.y;
-}
-template <typename T>
-inline T interpolate_quad(
-    const std::vector<T>& vals, const vec4i& q, const vec2f& uv) {
-    if (vals.empty()) return T();
-    if (q.z == q.w)
-        return interpolate_triangle(vals[q.x], vals[q.y], vals[q.z]);
-    return interpolate_quad(vals[q.x], vals[q.y], vals[q.z], vals[q.w], uv);
 }
 
 // Evaluates the i-th Bernstein polynomial of degree degree at u.
@@ -1595,25 +1593,12 @@ inline T interpolate_bezier(
     return v0 * (1 - u) * (1 - u) * (1 - u) + v1 * 3 * u * (1 - u) * (1 - u) +
            v2 * 3 * u * u * (1 - u) + v3 * u * u * u;
 }
-template <typename T>
-inline T interpolate_bezier(
-    const std::vector<T>& vals, const vec4i& b, float u) {
-    if (vals.empty()) return T();
-    return interpolate_bezier(vals[b.x], vals[b.y], vals[b.z], vals[b.w], u);
-}
 // Computes the derivative of a cubic Bezier segment parametrized by u.
 template <typename T>
 inline T interpolate_bezier_derivative(
     const T& v0, const T& v1, const T& v2, const T& v3, float u) {
     return (v1 - v0) * 3 * (1 - u) * (1 - u) + (v2 - v1) * 6 * u * (1 - u) +
            (v3 - v2) * 3 * u * u;
-}
-template <typename T>
-inline T interpolate_bezier_derivative(
-    const std::vector<T>& vals, const vec4i& b, float u) {
-    if (vals.empty()) return T();
-    return interpolate_bezier_derivative(
-        vals[b.x], vals[b.y], vals[b.z], vals[b.w], u);
 }
 
 }  // namespace ygl
@@ -2695,8 +2680,8 @@ namespace ygl {
 const auto trace_default_seed = 961748941;
 
 // Trace evaluation function.
-using trace_func = vec3f (*)(const scene* scn, const ray3f& ray, rng_state* rng,
-    int nbounces, bool* hit);
+using trace_func = std::function<vec3f(const scene* scn, const ray3f& ray,
+    rng_state& rng, int nbounces, bool* hit)>;
 
 // Progressively compute an image by calling trace_samples multiple times.
 image4f trace_image(const scene* scn, const camera* cam, int yresolution,
@@ -2711,61 +2696,61 @@ std::vector<rng_state> make_trace_rngs(
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
 void trace_samples(const scene* scn, const camera* cam, int nsamples,
-    trace_func tracer, image4f* img, std::vector<rng_state>* rngs, int sample,
+    trace_func tracer, image4f& img, std::vector<rng_state>& rngs, int sample,
     int nbounces = 8, float pixel_clamp = 100, bool noparallel = false,
     int seed = trace_default_seed);
 
 // Starts an anyncrhounous renderer.
 void trace_async_start(const scene* scn, const camera* cam, int nsamples,
-    trace_func tracer, image4f* img, image4f* display,
-    std::vector<rng_state>* rngs, std::vector<std::thread>* threads, bool* stop,
-    int* sample, float* exposure, float* gamma, bool* filmic,
+    trace_func tracer, image4f& img, image4f& display,
+    std::vector<rng_state>& rngs, std::vector<std::thread>& threads, bool& stop,
+    int& sample, float& exposure, float& gamma, bool& filmic,
     int preview_ratio = 8, int nbounces = 8, float pixel_clamp = 100,
     int seed = trace_default_seed);
 // Stop the asynchronous renderer.
-void trace_async_stop(std::vector<std::thread>* threads, bool* stop);
+void trace_async_stop(std::vector<std::thread>& threads, bool& stop);
 
 // Trace function - path tracer.
-vec3f trace_path(const scene* scn, const ray3f& ray, rng_state* rng,
+vec3f trace_path(const scene* scn, const ray3f& ray, rng_state& rng,
     int nbounces, bool* hit = nullptr);
 // Trace function - path tracer without mis.
-vec3f trace_path_nomis(const scene* scn, const ray3f& ray, rng_state* rng,
+vec3f trace_path_nomis(const scene* scn, const ray3f& ray, rng_state& rng,
     int nbounces, bool* hit = nullptr);
 // Trace function - naive path tracer.
-vec3f trace_path_naive(const scene* scn, const ray3f& ray, rng_state* rng,
+vec3f trace_path_naive(const scene* scn, const ray3f& ray, rng_state& rng,
     int nbounces, bool* hit = nullptr);
 // Trace function - direct illumination.
-vec3f trace_direct(const scene* scn, const ray3f& ray, rng_state* rng,
+vec3f trace_direct(const scene* scn, const ray3f& ray, rng_state& rng,
     int nbounces, bool* hit = nullptr);
 // Trace function - direct illumination without mis.
-vec3f trace_direct_nomis(const scene* scn, const ray3f& ray, rng_state* rng,
+vec3f trace_direct_nomis(const scene* scn, const ray3f& ray, rng_state& rng,
     int nbounces, bool* hit = nullptr);
 // Trace function - pure environment illumination with no shadows.
-vec3f trace_environment(const scene* scn, const ray3f& ray, rng_state* rng,
+vec3f trace_environment(const scene* scn, const ray3f& ray, rng_state& rng,
     int nbounces, bool* hit = nullptr);
 // Trace function - eyelight rendering.
-vec3f trace_eyelight(const scene* scn, const ray3f& ray, rng_state* rng,
+vec3f trace_eyelight(const scene* scn, const ray3f& ray, rng_state& rng,
     int nbounces, bool* hit = nullptr);
 // Trace function - normal debug visualization.
-vec3f trace_debug_normal(const scene* scn, const ray3f& ray, rng_state* rng,
+vec3f trace_debug_normal(const scene* scn, const ray3f& ray, rng_state& rng,
     int nbounces, bool* hit = nullptr);
 // Trace function - faceforward debug visualization.
 vec3f trace_debug_frontfacing(const scene* scn, const ray3f& ray,
-    rng_state* rng, int nbounces, bool* hit = nullptr);
+    rng_state& rng, int nbounces, bool* hit = nullptr);
 // Trace function - albedo debug visualization.
-vec3f trace_debug_albedo(const scene* scn, const ray3f& ray, rng_state* rng,
+vec3f trace_debug_albedo(const scene* scn, const ray3f& ray, rng_state& rng,
     int nbounces, bool* hit = nullptr);
 // Trace function - diffuse debug visualization.
-vec3f trace_debug_diffuse(const scene* scn, const ray3f& ray, rng_state* rng,
+vec3f trace_debug_diffuse(const scene* scn, const ray3f& ray, rng_state& rng,
     int nbounces, bool* hit = nullptr);
 // Trace function - specular debug visualization.
-vec3f trace_debug_specular(const scene* scn, const ray3f& ray, rng_state* rng,
+vec3f trace_debug_specular(const scene* scn, const ray3f& ray, rng_state& rng,
     int nbounces, bool* hit = nullptr);
 // Trace function - roughness debug visualization.
-vec3f trace_debug_roughness(const scene* scn, const ray3f& ray, rng_state* rng,
+vec3f trace_debug_roughness(const scene* scn, const ray3f& ray, rng_state& rng,
     int nbounces, bool* hit = nullptr);
 // Trace function - texcoord debug visualization.
-vec3f trace_debug_texcoord(const scene* scn, const ray3f& ray, rng_state* rng,
+vec3f trace_debug_texcoord(const scene* scn, const ray3f& ray, rng_state& rng,
     int nbounces, bool* hit = nullptr);
 
 // Trace statistics for last run used for fine tuning implementation.

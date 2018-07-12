@@ -136,7 +136,7 @@ int main(int argc, char* argv[]) {
     for (auto sample = 0; sample < nsamples; sample += nbatch) {
         printf("rendering sample %04d/%04d", sample, nsamples);
         auto block_start = ygl::get_time();
-        ygl::trace_samples(scn, cam, nbatch, tracer_func, &img, &rng, sample,
+        ygl::trace_samples(scn, cam, nbatch, tracer_func, img, rng, sample,
             nbounces, pixel_clamp, noparallel);
         printf("rendering block in %s\n",
             ygl::format_duration(ygl::get_time() - block_start).c_str());

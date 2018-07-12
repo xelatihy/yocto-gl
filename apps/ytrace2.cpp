@@ -104,7 +104,7 @@ int main(int argc, char* argv[]) {
     printf("rendering image\n");
     for (auto sample = 0; sample < nsamples; sample += nbatch) {
         printf("rendering sample %d/%d\n", sample, nsamples);
-        ygl::trace_samples(scn, cam, nbatch, tracer_func, &img, &rng, sample,
+        ygl::trace_samples(scn, cam, nbatch, tracer_func, img, rng, sample,
             nbounces, 100, noparallel);
         if (save_batch) {
             auto filename = ygl::replace_extension(imfilename,
