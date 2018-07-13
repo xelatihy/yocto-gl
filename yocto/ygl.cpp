@@ -574,17 +574,17 @@ std::pair<std::vector<vec2i>, std::vector<T>> subdivide_lines(
     auto nlines = (int)lines.size();
     // create vertices
     auto tvert = std::vector<T>(nverts + nlines);
-    for(auto i = 0; i < nverts; i ++) tvert[i] = vert[i];
-    for(auto i = 0; i < nlines; i ++) {
+    for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
+    for (auto i = 0; i < nlines; i++) {
         auto l = lines[i];
         tvert[nverts + i] = (vert[l.x] + vert[l.y]) / 2;
     }
     // create lines
     auto tlines = std::vector<vec2i>(nlines * 2);
-    for(auto i = 0; i < nlines; i ++) {
+    for (auto i = 0; i < nlines; i++) {
         auto l = lines[i];
-        tlines[i*2+0] = {l.x, nverts + i};
-        tlines[i*2+0] = {nverts + i, l.y};
+        tlines[i * 2 + 0] = {l.x, nverts + i};
+        tlines[i * 2 + 0] = {nverts + i, l.y};
     }
     // done
     return {tlines, tvert};
@@ -612,22 +612,22 @@ std::pair<std::vector<vec3i>, std::vector<T>> subdivide_triangles(
     auto nfaces = (int)triangles.size();
     // create vertices
     auto tvert = std::vector<T>(nverts + nedges);
-    for(auto i = 0; i < nverts; i ++) tvert[i] = vert[i];
-    for(auto i = 0; i < nedges; i ++) {
+    for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
+    for (auto i = 0; i < nedges; i++) {
         auto e = edges[i];
         tvert[nverts + i] = (vert[e.x] + vert[e.y]) / 2;
     }
     // create triangles
     auto ttriangles = std::vector<vec3i>(nfaces * 4);
-    for(auto i = 0; i < nfaces; i ++) {
+    for (auto i = 0; i < nfaces; i++) {
         auto t = triangles[i];
-        ttriangles[i*4+0] = {t.x, nverts + get_edge_index(emap, {t.x, t.y}),
+        ttriangles[i * 4 + 0] = {t.x, nverts + get_edge_index(emap, {t.x, t.y}),
             nverts + get_edge_index(emap, {t.z, t.x})};
-        ttriangles[i*4+1] = {t.y, nverts + get_edge_index(emap, {t.y, t.z}),
+        ttriangles[i * 4 + 1] = {t.y, nverts + get_edge_index(emap, {t.y, t.z}),
             nverts + get_edge_index(emap, {t.x, t.y})};
-        ttriangles[i*4+2] = {t.z, nverts + get_edge_index(emap, {t.z, t.x}),
+        ttriangles[i * 4 + 2] = {t.z, nverts + get_edge_index(emap, {t.z, t.x}),
             nverts + get_edge_index(emap, {t.y, t.z})};
-        ttriangles[i*4+3] = {nverts + get_edge_index(emap, {t.x, t.y}),
+        ttriangles[i * 4 + 3] = {nverts + get_edge_index(emap, {t.x, t.y}),
             nverts + get_edge_index(emap, {t.y, t.z}),
             nverts + get_edge_index(emap, {t.z, t.x})};
     }
@@ -657,23 +657,25 @@ std::pair<std::vector<vec4i>, std::vector<T>> subdivide_quads(
     auto nfaces = (int)quads.size();
     // create vertices
     auto tvert = std::vector<T>(nverts + nedges + nfaces);
-    for(auto i = 0; i < nverts; i ++) tvert[i] = vert[i];
-    for(auto i = 0; i < nedges; i ++) {
+    for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
+    for (auto i = 0; i < nedges; i++) {
         auto e = edges[i];
         tvert[nverts + i] = (vert[e.x] + vert[e.y]) / 2;
     }
-    for(auto i = 0; i < nfaces; i ++) {
+    for (auto i = 0; i < nfaces; i++) {
         auto q = quads[i];
-        if(q.z != q.w) {
-            tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.z] + vert[q.w]) / 4;
+        if (q.z != q.w) {
+            tvert[nverts + nedges + i] =
+                (vert[q.x] + vert[q.y] + vert[q.z] + vert[q.w]) / 4;
         } else {
-            tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.y]) / 3;
+            tvert[nverts + nedges + i] =
+                (vert[q.x] + vert[q.y] + vert[q.y]) / 3;
         }
     }
     // create quads
-    auto tquads = std::vector<vec4i>(nfaces * 4); // conservative allocation
+    auto tquads = std::vector<vec4i>(nfaces * 4);  // conservative allocation
     auto qi = 0;
-    for(auto i = 0; i < nfaces; i ++) {
+    for (auto i = 0; i < nfaces; i++) {
         auto q = quads[i];
         if (q.z != q.w) {
             tquads[qi++] = {q.x, nverts + get_edge_index(emap, {q.x, q.y}),
@@ -764,23 +766,25 @@ std::pair<std::vector<vec4i>, std::vector<T>> subdivide_catmullclark(
     // split elements ------------------------------------
     // create vertices
     auto tvert = std::vector<T>(nverts + nedges + nfaces);
-    for(auto i = 0; i < nverts; i ++) tvert[i] = vert[i];
-    for(auto i = 0; i < nedges; i ++) {
+    for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
+    for (auto i = 0; i < nedges; i++) {
         auto e = edges[i];
         tvert[nverts + i] = (vert[e.x] + vert[e.y]) / 2;
     }
-    for(auto i = 0; i < nfaces; i ++) {
+    for (auto i = 0; i < nfaces; i++) {
         auto q = quads[i];
-        if(q.z != q.w) {
-            tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.z] + vert[q.w]) / 4;
+        if (q.z != q.w) {
+            tvert[nverts + nedges + i] =
+                (vert[q.x] + vert[q.y] + vert[q.z] + vert[q.w]) / 4;
         } else {
-            tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.y]) / 3;
+            tvert[nverts + nedges + i] =
+                (vert[q.x] + vert[q.y] + vert[q.y]) / 3;
         }
     }
     // create quads
-    auto tquads = std::vector<vec4i>(nfaces * 4); // conservative allocation
+    auto tquads = std::vector<vec4i>(nfaces * 4);  // conservative allocation
     auto qi = 0;
-    for(auto i = 0; i < nfaces; i ++) {
+    for (auto i = 0; i < nfaces; i++) {
         auto q = quads[i];
         if (q.z != q.w) {
             tquads[qi++] = {q.x, nverts + get_edge_index(emap, {q.x, q.y}),
@@ -804,7 +808,7 @@ std::pair<std::vector<vec4i>, std::vector<T>> subdivide_catmullclark(
 
     // split boundary
     auto tboundary = std::vector<vec2i>(nboundary * 2);
-    for(auto i = 0; i < nboundary; i ++) {
+    for (auto i = 0; i < nboundary; i++) {
         auto e = boundary[i];
         tboundary.push_back({e.x, nverts + get_edge_index(emap, e)});
         tboundary.push_back({nverts + get_edge_index(emap, e), e.y});
@@ -1108,7 +1112,7 @@ static inline const float& _safemax(const float& a, const float& b) {
 // Intersect a ray with a axis-aligned bounding box
 bool intersect_bbox(const ray3f& ray, const bbox3f& bbox) {
     // determine intersection ranges
-    auto invd = 1.0f / ray.d;
+    auto invd = vec3f{1, 1, 1} / ray.d;
     auto t0 = (bbox.min - ray.o) * invd;
     auto t1 = (bbox.max - ray.o) * invd;
     // flip based on range directions
@@ -5441,14 +5445,14 @@ float specular_to_eta(const vec3f& ks) {
 vec3f fresnel_dielectric(float cosw, const vec3f& eta_) {
     auto eta = eta_;
     if (cosw < 0) {
-        eta = 1.0f / eta;
+        eta = vec3f{1, 1, 1} / eta;
         cosw = -cosw;
     }
 
     auto sin2 = 1 - cosw * cosw;
     auto eta2 = eta * eta;
 
-    auto cos2t = vec3f{1, 1, 1} - sin2 / eta2;
+    auto cos2t = vec3f{1, 1, 1} - vec3f{sin2, sin2, sin2} / eta2;
     if (cos2t.x < 0 || cos2t.y < 0 || cos2t.z < 0)
         return vec3f{1, 1, 1};  // tir
 

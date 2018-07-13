@@ -50,6 +50,7 @@
 
 #include "ygl.h"
 
+#include <array>
 #include <chrono>
 
 #ifndef YGL_FASTPARSE
@@ -294,6 +295,142 @@ void save_obj_fvmesh(const std::string& filename,
     const std::vector<vec4i>& quads_norm, const std::vector<vec3f>& norm,
     const std::vector<vec4i>& quads_texcoord,
     const std::vector<vec2f>& texcoord, bool flip_texcoord = true);
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// SIMPLE OBJ LOADER
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// OBJ vertex
+struct obj_vertex {
+    int pos = 0;
+    int texcoord = 0;
+    int norm = 0;
+};
+
+// Obj texture information.
+struct obj_texture_info {
+    std::string path = "";  // file path
+    bool clamp = false;     // clamp to edge
+    float scale = 1;        // scale for bump/displacement
+    // Properties not explicitly handled.
+    std::unordered_map<std::string, std::vector<float>> props;
+};
+
+// Obj material.
+struct obj_material {
+    std::string name;  // name
+    int illum = 0;     // MTL illum mode
+
+    // base values
+    vec3f ke = {0, 0, 0};  // emission color
+    vec3f ka = {0, 0, 0};  // ambient color
+    vec3f kd = {0, 0, 0};  // diffuse color
+    vec3f ks = {0, 0, 0};  // specular color
+    vec3f kr = {0, 0, 0};  // reflection color
+    vec3f kt = {0, 0, 0};  // transmission color
+    float ns = 0;          // Phong exponent color
+    float ior = 1;         // index of refraction
+    float op = 1;          // opacity
+    float rs = -1;         // roughness (-1 not defined)
+    float km = -1;         // metallic  (-1 not defined)
+
+    obj_texture_info ke_txt;    // emission texture
+    obj_texture_info ka_txt;    // ambient texture
+    obj_texture_info kd_txt;    // diffuse texture
+    obj_texture_info ks_txt;    // specular texture
+    obj_texture_info kr_txt;    // reflection texture
+    obj_texture_info kt_txt;    // transmission texture
+    obj_texture_info ns_txt;    // Phong exponent texture
+    obj_texture_info op_txt;    // opacity texture
+    obj_texture_info rs_txt;    // roughness texture
+    obj_texture_info km_txt;    // metallic texture
+    obj_texture_info ior_txt;   // ior texture
+    obj_texture_info occ_txt;   // occlusion map
+    obj_texture_info bump_txt;  // bump map
+    obj_texture_info disp_txt;  // displacement map
+    obj_texture_info norm_txt;  // normal map
+
+    // Properties not explicitly handled.
+    std::unordered_map<std::string, std::vector<std::string>> props;
+};
+
+// Obj camera [extension].
+struct obj_camera {
+    std::string name;                  // name
+    frame3f frame = identity_frame3f;  // transform
+    bool ortho = false;                // orthographic
+    float width = 0.036f;              // film width (default to 35mm)
+    float height = 0.024f;             // film height (default to 35mm)
+    float focal = 0.050f;              // focal length
+    float aspect = 16.0f / 9.0f;       // aspect ratio
+    float aperture = 0;                // lens aperture
+    float focus = flt_max;             // focus distance
+};
+
+// Obj environment [extension].
+struct obj_environment {
+    std::string name;                  // name
+    frame3f frame = identity_frame3f;  // transform
+    vec3f ke = zero3f;                 // emission color
+    obj_texture_info ke_txt;           // emission texture
+};
+
+// Obj callbacks
+struct obj_callbacks {
+    std::function<void(vec3f)> vert = {};
+    std::function<void(vec3f)> norm = {};
+    std::function<void(vec2f)> texcoord = {};
+    std::function<void(const std::vector<obj_vertex>&)> face = {};
+    std::function<void(const std::vector<obj_vertex>&)> line = {};
+    std::function<void(const std::vector<obj_vertex>&)> point = {};
+    std::function<void(const std::string& name)> object = {};
+    std::function<void(const std::string& name)> group = {};
+    std::function<void(const std::string& name)> usemtl = {};
+    std::function<void(const std::string& name)> smoothing = {};
+    std::function<void(const obj_material&)> material = {};
+    std::function<void(const obj_camera&)> camera = {};
+    std::function<void(const obj_environment&)> environmnet = {};
+};
+
+// Load obj scene
+void load_obj(const std::string& filename, const obj_callbacks& cb,
+    bool flip_texcoord = true, bool flip_tr = true);
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// SIMPLE PLY LOADER
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// ply type
+enum struct ply_type { ply_uchar, ply_int, ply_float, ply_int_list };
+
+// ply property
+struct ply_property {
+    std::string name = "";
+    ply_type type = ply_type::ply_float;
+    std::vector<float> scalars = {};
+    std::vector<std::array<int, 8>> lists = {};
+};
+
+// ply element
+struct ply_element {
+    std::string name = "";
+    int count = 0;
+    std::vector<ply_property> properties = {};
+};
+
+// simple ply api data
+struct ply_data {
+    std::vector<ply_element> elements = {};
+};
+
+// Load ply mesh
+ply_data* load_ply(const std::string& filename);
 
 }  // namespace ygl
 
