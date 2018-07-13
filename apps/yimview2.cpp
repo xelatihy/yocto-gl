@@ -95,8 +95,8 @@ void char_callback(GLFWwindow* win, unsigned int key) {
 
 void run_ui(app_state* app) {
     // window
-    auto ww = ygl::clamp(app->img.width, 512, 1024);
-    auto wh = ygl::clamp(app->img.height, 512, 1024);
+    auto ww = ygl::clamp(app->img.width, 256, 1440);
+    auto wh = ygl::clamp(app->img.height,256, 1440);
     if (!glfwInit()) throw std::runtime_error("cannot open glwindow");
 
     auto win = glfwCreateWindow(ww, wh, "yimview", nullptr, nullptr);

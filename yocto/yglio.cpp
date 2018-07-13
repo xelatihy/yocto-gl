@@ -391,13 +391,47 @@ std::string parse_string(cmdline_parser& parser, const std::string& name,
 }
 int parse_int(cmdline_parser& parser, const std::string& name, int def,
     const std::string& usage, bool req) {
-    auto val = parse_string(parser, name, std::to_string(def), usage, req);
-    return std::atoi(val.c_str());
+    auto vals = parse_string(parser, name, std::to_string(def), usage, req);
+    auto val = def;
+    if (sscanf(vals.c_str(), "%d", &val) != 1) {
+        parser.error += "bad value for " + name;
+        return def;
+    }
+    return val;
 }
 float parse_float(cmdline_parser& parser, const std::string& name, float def,
     const std::string& usage, bool req) {
-    auto val = parse_string(parser, name, std::to_string(def), usage, req);
-    return std::atof(val.c_str());
+    auto vals = parse_string(parser, name, std::to_string(def), usage, req);
+    auto val = def;
+    if (sscanf(vals.c_str(), "%f", &val) != 1) {
+        parser.error += "bad value for " + name;
+        return def;
+    }
+    return val;
+}
+vec2f parse_vec2f(cmdline_parser& parser, const std::string& name,
+    const vec2f& def, const std::string& usage, bool req) {
+    auto vals = parse_string(parser, name,
+        std::to_string(def.x) + " " + std::to_string(def.y), usage, req);
+    auto val = def;
+    if (sscanf(vals.c_str(), "%f %f", &val.x, &val.y) != 2) {
+        parser.error += "bad value for " + name;
+        return def;
+    }
+    return val;
+}
+vec3f parse_vec3f(cmdline_parser& parser, const std::string& name,
+    const vec3f& def, const std::string& usage, bool req) {
+    auto vals = parse_string(parser, name,
+        std::to_string(def.x) + " " + std::to_string(def.y) + " " +
+            std::to_string(def.z),
+        usage, req);
+    auto val = def;
+    if (sscanf(vals.c_str(), "%f %f %f", &val.x, &val.y, &val.z) != 3) {
+        parser.error += "bad value for " + name;
+        return def;
+    }
+    return val;
 }
 int parse_enum(cmdline_parser& parser, const std::string& name, int def,
     const std::string& usage, const std::vector<std::string>& labels,
@@ -2243,6 +2277,7 @@ void load_obj(const std::string& filename, const obj_callbacks& cb,
             if (cb.smoothing) cb.smoothing(parse_string(ss));
         } else if (cmd == "mtllib") {
             auto mtlname = parse_string(ss);
+            if (cb.mtllib) cb.mtllib(mtlname);
             auto mtlpath = get_dirname(filename) + "/" + mtlname;
             load_mtl(mtlpath, cb, flip_tr);
         } else {

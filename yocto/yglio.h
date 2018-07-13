@@ -128,11 +128,16 @@ bool parse_flag(cmdline_parser& parser, const std::string& name, bool def,
     const std::string& usage);
 
 // Parse an integer, float, string. If name starts with "--" or "-", then it is
-// an option, otherwise it is a position argument.
+// an option, otherwise it is a position argument. vecXX options use space-
+// separated values but all in one argument (use " or ' from the common line).
 int parse_int(cmdline_parser& parser, const std::string& name, int def,
     const std::string& usage, bool req = false);
 float parse_float(cmdline_parser& parser, const std::string& name, float def,
     const std::string& usage, bool req = false);
+vec2f parse_vec2f(cmdline_parser& parser, const std::string& name,
+    const vec2f& def, const std::string& usage, bool req = false);
+vec3f parse_vec3f(cmdline_parser& parser, const std::string& name,
+    const vec3f& def, const std::string& usage, bool req = false);
 std::string parse_string(cmdline_parser& parser, const std::string& name,
     const std::string& def, const std::string& usage, bool req = false,
     const std::vector<std::string>& choices = {});
@@ -380,9 +385,9 @@ struct obj_environment {
 
 // Obj callbacks
 struct obj_callbacks {
-    std::function<void(vec3f)> vert = {};
-    std::function<void(vec3f)> norm = {};
-    std::function<void(vec2f)> texcoord = {};
+    std::function<void(const vec3f&)> vert = {};
+    std::function<void(const vec3f&)> norm = {};
+    std::function<void(const vec2f&)> texcoord = {};
     std::function<void(const std::vector<obj_vertex>&)> face = {};
     std::function<void(const std::vector<obj_vertex>&)> line = {};
     std::function<void(const std::vector<obj_vertex>&)> point = {};
@@ -390,6 +395,7 @@ struct obj_callbacks {
     std::function<void(const std::string& name)> group = {};
     std::function<void(const std::string& name)> usemtl = {};
     std::function<void(const std::string& name)> smoothing = {};
+    std::function<void(const std::string& name)> mtllib = {};
     std::function<void(const obj_material&)> material = {};
     std::function<void(const obj_camera&)> camera = {};
     std::function<void(const obj_environment&)> environmnet = {};
