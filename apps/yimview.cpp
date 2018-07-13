@@ -155,8 +155,8 @@ void draw(GLFWwindow* win) {
 
 void run_ui(app_state* app) {
     // window
-    auto ww = ygl::clamp(app->imgs[0].width, 512, 1024);
-    auto wh = ygl::clamp(app->imgs[0].height, 512, 1024);
+    auto ww = ygl::min(app->imgs[0].width, 1440);
+    auto wh = ygl::min(app->imgs[0].height, 1440);
     if (!glfwInit()) throw std::runtime_error("cannot open glwindow");
 
     auto win = glfwCreateWindow(ww, wh, "yimview", nullptr, nullptr);

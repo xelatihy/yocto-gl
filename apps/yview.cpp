@@ -797,8 +797,8 @@ void init_drawscene(GLFWwindow* win) {
 void run_ui(app_state* app) {
     // window
     auto cam = app->scn->cameras.at(app->camid);
-    auto ww = ygl::clamp(ygl::image_width(cam, app->resolution), 512, 1024);
-    auto wh = ygl::clamp(app->resolution, 512, 1024);
+    auto ww = ygl::clamp(ygl::image_width(cam, app->resolution), 256, 1440);
+    auto wh = ygl::clamp(app->resolution, 256, 1440);
     if (!glfwInit()) throw std::runtime_error("cannot open glwindow");
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
