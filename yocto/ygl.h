@@ -1457,13 +1457,13 @@ namespace ygl {
 // lacunarity=~2.0 (spacing between successive octaves: 2.0 for warpping
 // output), gain=0.5 (relative weighting applied to each successive octave),
 // offset=1.0 (used to invert the ridges).
-inline float perlin_noise(const vec3f& p, const vec3i& wrap = zero3i);
-inline float perlin_ridge_noise(const vec3f& p, float lacunarity = 2.0f,
+float perlin_noise(const vec3f& p, const vec3i& wrap = zero3i);
+float perlin_ridge_noise(const vec3f& p, float lacunarity = 2.0f,
     float gain = 0.5f, float offset = 1.0f, int octaves = 6,
     const vec3i& wrap = zero3i);
-inline float perlin_fbm_noise(const vec3f& p, float lacunarity = 2.0f,
+float perlin_fbm_noise(const vec3f& p, float lacunarity = 2.0f,
     float gain = 0.5f, int octaves = 6, const vec3i& wrap = zero3i);
-inline float perlin_turbulence_noise(const vec3f& p, float lacunarity = 2.0f,
+float perlin_turbulence_noise(const vec3f& p, float lacunarity = 2.0f,
     float gain = 0.5f, int octaves = 6, const vec3i& wrap = zero3i);
 
 }  // namespace ygl
@@ -1703,28 +1703,6 @@ template <typename T>
 std::pair<std::vector<vec4i>, std::vector<T>> subdivide_catmullclark(
     const std::vector<vec4i>& quads, const std::vector<T>& vert,
     bool lock_boundary = false);
-
-// Merge lines between shapes.
-void merge_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    const std::vector<vec2i>& lines1, const std::vector<vec3f>& pos1,
-    const std::vector<vec3f>& norm1, const std::vector<vec2f>& texcoord1);
-// Merge triangles between shapes.
-void merge_triangles(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    const std::vector<vec3i>& triangles1, const std::vector<vec3f>& pos1,
-    const std::vector<vec3f>& norm1, const std::vector<vec2f>& texcoord1);
-// Merge quads between shapes.
-void merge_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    const std::vector<vec4i>& quads1, const std::vector<vec3f>& pos1,
-    const std::vector<vec3f>& norm1, const std::vector<vec2f>& texcoord1);
-// Merge triangles and quads between shapes.
-void merge_faces(std::vector<vec3i>& triangles, std::vector<vec4i>& quads,
-    std::vector<vec3f>& pos, std::vector<vec3f>& norm,
-    std::vector<vec2f>& texcoord, const std::vector<vec3i>& triangles1,
-    const std::vector<vec4i>& quads1, const std::vector<vec3f>& pos1,
-    const std::vector<vec3f>& norm1, const std::vector<vec2f>& texcoord1);
 
 // Weld vertices within a threshold. For noe the implementation is O(n^2).
 std::pair<std::vector<vec3f>, std::vector<int>> weld_vertices(
@@ -1983,58 +1961,59 @@ struct make_shape_data {
 
 // Make examples shapes that are not watertight (besides quads).
 // Return (triangles, quads, pos, norm, texcoord)
-make_shape_data make_quad(const vec2i& steps, const vec2f& size,
+make_shape_data* make_quad(const vec2i& steps, const vec2f& size,
     const vec2f& uvsize, bool as_triangles);
-make_shape_data make_quad_stack(const vec3i& steps, const vec3f& size,
+make_shape_data* make_quad_stack(const vec3i& steps, const vec3f& size,
     const vec2f& uvsize, bool as_triangles);
-make_shape_data make_floor(const vec2i& steps, const vec2f& size,
+make_shape_data* make_floor(const vec2i& steps, const vec2f& size,
     const vec2f& uvsize, bool as_triangles);
-make_shape_data make_cube(const vec3i& steps, const vec3f& size,
+make_shape_data* make_cube(const vec3i& steps, const vec3f& size,
     const vec3f& uvsize, bool as_triangles);
-make_shape_data make_cube_rounded(const vec3i& steps, const vec3f& size,
+make_shape_data* make_cube_rounded(const vec3i& steps, const vec3f& size,
     const vec3f& uvsize, float radius, bool as_triangles);
-make_shape_data make_sphere(
+make_shape_data* make_sphere(
     const vec2i& steps, float size, const vec2f& uvsize, bool as_triangles);
-make_shape_data make_sphere_cube(
+make_shape_data* make_sphere_cube(
     int steps, float size, float uvsize, bool as_triangles);
-make_shape_data make_sphere_flipcap(const vec2i& steps, float size,
+make_shape_data* make_sphere_flipcap(const vec2i& steps, float size,
     const vec2f& uvsize, const vec2f& zflip, bool as_triangles);
-make_shape_data make_disk(
+make_shape_data* make_disk(
     const vec2i& steps, float size, const vec2f& uvsize, bool as_triangles);
-make_shape_data make_disk_quad(
+make_shape_data* make_disk_quad(
     int steps, float size, float uvsize, bool as_triangles);
-make_shape_data make_disk_bulged(
+make_shape_data* make_disk_bulged(
     int steps, float size, float uvsize, float height, bool as_triangles);
-make_shape_data make_cylinder_side(const vec2i& steps, const vec2f& size,
+make_shape_data* make_cylinder_side(const vec2i& steps, const vec2f& size,
     const vec2f& uvsize, bool as_triangles);
-make_shape_data make_cylinder(const vec3i& steps, const vec2f& size,
+make_shape_data* make_cylinder(const vec3i& steps, const vec2f& size,
     const vec3f& uvsize, bool as_triangles);
-make_shape_data make_cylinder_rounded(const vec3i& steps, const vec2f& size,
+make_shape_data* make_cylinder_rounded(const vec3i& steps, const vec2f& size,
     const vec3f& uvsize, float radius, bool as_triangles);
-make_shape_data make_geodesic_sphere(
+make_shape_data* make_geodesic_sphere(
     int tesselation, float size, bool as_triangles);
 
 // Make examples shapes with are watertight (good for subdivs).
 // Returns (triangles, quads, pos)
-make_shape_data make_suzanne(float size, bool as_triangles);
-make_shape_data make_cube(const vec3f& size, bool as_triangles);
+make_shape_data* make_suzanne(float size, bool as_triangles);
+make_shape_data* make_cube(const vec3f& size, bool as_triangles);
 
 // Make facevarying example shapes that are watertight (good for subdivs).
-make_shape_data make_fvcube(
+make_shape_data* make_fvcube(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
-make_shape_data make_lines(const vec2i& steps, const vec2f& size,
+make_shape_data* make_lines(const vec2i& steps, const vec2f& size,
     const vec2f& uvsize, const vec2f& line_radius = {0.001f, 0.001f});
 
 // Make point primitives. Returns points, pos, norm, texcoord, radius.
-make_shape_data make_point(float point_radius = 0.001f);
-make_shape_data make_points(int num, float uvsize, float point_radius = 0.001f);
-make_shape_data make_random_points(int num, const vec3f& size, float uvsize,
+make_shape_data* make_point(float point_radius = 0.001f);
+make_shape_data* make_points(
+    int num, float uvsize, float point_radius = 0.001f);
+make_shape_data* make_random_points(int num, const vec3f& size, float uvsize,
     float point_radius = 0.001f, uint64_t seed = 0);
 
 // Make a bezier circle. Returns bezier, pos.
-make_shape_data make_bezier_circle(
+make_shape_data* make_bezier_circle(
     std::vector<vec4i>& beziers, std::vector<vec3f>& pos);
 
 // Make a hair ball around a shape.  Returns lines, pos, norm, texcoord, radius.
@@ -2043,7 +2022,7 @@ make_shape_data make_bezier_circle(
 // noise: noise added to hair (strength/scale)
 // clump: clump added to hair (number/strength)
 // rotation: rotation added to hair (angle/strength)
-make_shape_data make_hair(const vec2i& steps,
+make_shape_data* make_hair(const vec2i& steps,
     const std::vector<vec3i>& striangles, const std::vector<vec3f>& spos,
     const std::vector<vec3f>& snorm, const std::vector<vec2f>& stexcoord,
     const vec2f& length = {0.1f, 0.1f}, const vec2f& rad = {0.001f, 0.001f},
@@ -2051,7 +2030,7 @@ make_shape_data make_hair(const vec2i& steps,
     const vec2f& rotation = zero2f, int seed = 7);
 
 // Helper to concatenated shape data for non-facevarying shapes.
-make_shape_data merge_shape_data(const std::vector<make_shape_data>& shapes);
+make_shape_data* merge_shape_data(const std::vector<make_shape_data*>& shapes);
 
 }  // namespace ygl
 

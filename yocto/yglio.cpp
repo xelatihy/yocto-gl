@@ -1224,7 +1224,7 @@ void to_json(json& js, const shape& val) {
 void from_json_proc(const json& js, shape& val) {
     auto type = js.value("type", ""s);
     if (type == "") return;
-    auto shp = make_shape_data();
+    auto shp = (make_shape_data*)nullptr;
     if (type == "quad") {
         shp = make_quad(js.value("steps", vec2i{1, 1}),
             js.value("size", vec2f{2, 2}), js.value("uvsize", vec2f{1, 1}),
@@ -1290,11 +1290,12 @@ void from_json_proc(const json& js, shape& val) {
     } else if (type == "hairball") {
         auto base =
             make_sphere_cube(32, js.value("size", 2.0f) * 0.8f, 1, true);
-        shp = make_hair(js.value("steps", vec2i{4, 65536}), base.triangles,
-            base.pos, base.norm, base.texcoord,
+        shp = make_hair(js.value("steps", vec2i{4, 65536}), base->triangles,
+            base->pos, base->norm, base->texcoord,
             js.value("length", vec2f{0.2f, 0.2f}),
             js.value("radius", vec2f{0.001f, 0.001f}),
             js.value("noise", vec2f{0, 0}), js.value("clump", vec2f{0, 0}));
+        delete base;
     } else if (type == "hairball_interior") {
         shp = make_sphere_cube(32, js.value("size", 2.0f) * 0.8f, 1, true);
     } else if (type == "suzanne") {
@@ -1303,16 +1304,17 @@ void from_json_proc(const json& js, shape& val) {
         throw std::runtime_error("unknown shape type " + type);
     }
     if (js.value("flipyz", false)) {
-        for (auto& p : shp.pos) p = {p.x, p.z, p.y};
-        for (auto& n : shp.norm) n = {n.x, n.z, n.y};
+        for (auto& p : shp->pos) p = {p.x, p.z, p.y};
+        for (auto& n : shp->norm) n = {n.x, n.z, n.y};
     }
-    val.points = shp.points;
-    val.lines = shp.lines;
-    val.triangles = shp.triangles;
-    val.pos = shp.pos;
-    val.norm = shp.norm;
-    val.texcoord = shp.texcoord;
-    val.radius = shp.radius;
+    val.points = shp->points;
+    val.lines = shp->lines;
+    val.triangles = shp->triangles;
+    val.pos = shp->pos;
+    val.norm = shp->norm;
+    val.texcoord = shp->texcoord;
+    val.radius = shp->radius;
+    delete shp;
     if (val.path == "") val.path = "meshes/" + val.name + ".ply";
 }
 
@@ -1359,7 +1361,7 @@ void to_json(json& js, const subdiv& val) {
 void from_json_proc(const json& js, subdiv& val) {
     auto type = js.value("type", ""s);
     if (type == "") return;
-    auto shp = make_shape_data();
+    auto shp = (make_shape_data*)nullptr;
     if (type == "cube") {
         shp = make_fvcube(js.value("steps", vec3i{1, 1, 1}),
             js.value("size", vec3f{2, 2, 2}),
@@ -1368,19 +1370,20 @@ void from_json_proc(const json& js, subdiv& val) {
         shp = make_fvcube(js.value("steps", vec3i{1, 1, 1}),
             js.value("size", vec3f{2, 2, 2}),
             js.value("uvsize", vec3f{1, 1, 1}));
-        shp.quads_pos.pop_back();
-        shp.quads_norm.pop_back();
-        shp.quads_texcoord.pop_back();
+        shp->quads_pos.pop_back();
+        shp->quads_norm.pop_back();
+        shp->quads_texcoord.pop_back();
     } else if (type == "suzanne") {
         shp = make_suzanne(js.value("size", 2.0f), false);
-        std::swap(shp.quads_pos, shp.quads);
+        std::swap(shp->quads_pos, shp->quads);
     } else {
         throw std::runtime_error("unknown shape type " + type);
     }
-    val.quads_pos = shp.quads_pos;
-    val.pos = shp.pos;
-    val.quads_texcoord = shp.quads_texcoord;
-    val.texcoord = shp.texcoord;
+    val.quads_pos = shp->quads_pos;
+    val.pos = shp->pos;
+    val.quads_texcoord = shp->quads_texcoord;
+    val.texcoord = shp->texcoord;
+    delete shp;
     if (val.path == "") val.path = "meshes/" + val.name + ".obj";
 }
 
@@ -4184,10 +4187,11 @@ scene* load_pbrt_scene(
                 if (jcmd.count("radius"))
                     radius = jcmd.at("radius").get<float>();
                 auto sshp = make_sphere({64, 32}, 2 * radius, {1, 1}, true);
-                shp->pos = sshp.pos;
-                shp->norm = sshp.norm;
-                shp->texcoord = sshp.texcoord;
-                shp->triangles = sshp.triangles;
+                shp->pos = sshp->pos;
+                shp->norm = sshp->norm;
+                shp->texcoord = sshp->texcoord;
+                shp->triangles = sshp->triangles;
+                delete sshp;
             } else if (type == "disk") {
                 shp->name = "disk" + std::to_string(sid++);
                 shp->path = "models/" + shp->name + ".ply";
@@ -4195,10 +4199,11 @@ scene* load_pbrt_scene(
                 if (jcmd.count("radius"))
                     radius = jcmd.at("radius").get<float>();
                 auto sshp = make_disk({32, 16}, 2 * radius, {1, 1}, true);
-                shp->pos = sshp.pos;
-                shp->norm = sshp.norm;
-                shp->texcoord = sshp.texcoord;
-                shp->triangles = sshp.triangles;
+                shp->pos = sshp->pos;
+                shp->norm = sshp->norm;
+                shp->texcoord = sshp->texcoord;
+                shp->triangles = sshp->triangles;
+                delete sshp;
             } else {
                 printf("%s shape not supported\n", type.c_str());
             }
@@ -4272,10 +4277,11 @@ scene* load_pbrt_scene(
                 auto dir = normalize(from - to);
                 auto size = distant_dist * sin(5 * pi / 180);
                 auto sshp = make_quad({1, 1}, {size, size}, {1, 1}, true);
-                shp->pos = sshp.pos;
-                shp->norm = sshp.norm;
-                shp->texcoord = sshp.texcoord;
-                shp->triangles = sshp.triangles;
+                shp->pos = sshp->pos;
+                shp->norm = sshp->norm;
+                shp->texcoord = sshp->texcoord;
+                shp->triangles = sshp->triangles;
+                delete sshp;
                 scn->shapes.push_back(shp);
                 auto mat = new material();
                 mat->name = shp->name;
