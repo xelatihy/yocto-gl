@@ -261,7 +261,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <functional>  // for std::hash
-#include <limits>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -380,7 +379,6 @@ inline vec2f operator/(const vec2f& a, const vec2f& b) {
     return {a.x / b.x, a.y / b.y};
 }
 inline vec2f operator/(const vec2f& a, float b) { return {a.x / b, a.y / b}; }
-inline vec2f operator/(float a, const vec2f& b) { return {a / b.x, a / b.y}; }
 
 // Vector operations.
 inline vec3f operator+(const vec3f& a) { return a; }
@@ -406,9 +404,6 @@ inline vec3f operator/(const vec3f& a, const vec3f& b) {
 inline vec3f operator/(const vec3f& a, float b) {
     return {a.x / b, a.y / b, a.z / b};
 }
-inline vec3f operator/(float a, const vec3f& b) {
-    return {a / b.x, a / b.y, a / b.z};
-}
 
 // Vector operations.
 inline vec4f operator-(const vec4f& a) { return {-a.x, -a.y, -a.z, -a.w}; }
@@ -432,9 +427,6 @@ inline vec4f operator/(const vec4f& a, const vec4f& b) {
 }
 inline vec4f operator/(const vec4f& a, float b) {
     return {a.x / b, a.y / b, a.z / b, a.w / b};
-}
-inline vec4f operator/(float a, const vec4f& b) {
-    return {a / b.x, a / b.y, a / b.z, a / b.w};
 }
 
 // Vector assignments
@@ -478,16 +470,25 @@ inline vec3f cross(const vec3f& a, const vec3f& b) {
     return {
         a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
 }
-inline float length(const vec2f& a) { return sqrt(dot(a, a)); }
-inline float length(const vec3f& a) { return sqrt(dot(a, a)); }
-inline float length(const vec4f& a) { return sqrt(dot(a, a)); }
-inline float length_sqr(const vec2f& a) { return dot(a, a); }
-inline float length_sqr(const vec3f& a) { return dot(a, a); }
-inline float length_sqr(const vec4f& a) { return dot(a, a); }
-inline vec2f normalize(const vec2f& a) { return length(a) ? a / length(a) : a; }
-inline vec3f normalize(const vec3f& a) { return length(a) ? a / length(a) : a; }
-inline vec4f normalize(const vec4f& a) { return length(a) ? a / length(a) : a; }
-inline float adot(const vec3f& a, const vec3f& b) { return fabs(dot(a, b)); }
+inline float length(const vec2f& a) { return sqrt(a.x * a.x + a.y * a.y); }
+inline float length(const vec3f& a) {
+    return sqrt(a.x * a.x + a.y * a.y + a.z * a.z);
+}
+inline float length(const vec4f& a) {
+    return sqrt(a.x * a.x + a.y * a.y + a.z * a.z + a.w * a.w);
+}
+inline vec2f normalize(const vec2f& a) {
+    auto l = length(a);
+    return (l) ? a / l : a;
+}
+inline vec3f normalize(const vec3f& a) {
+    auto l = length(a);
+    return (l) ? a / l : a;
+}
+inline vec4f normalize(const vec4f& a) {
+    auto l = length(a);
+    return (l) ? a / l : a;
+}
 
 // Vecror angles and slerps.
 inline float angle(const vec3f& a, const vec3f& b) {
@@ -523,7 +524,7 @@ inline vec3f reflect(const vec3f& w, const vec3f& n) {
 inline vec3f refract(const vec3f& w, const vec3f& n, float eta) {
     // auto k = 1.0 - eta * eta * (1.0 - dot(n, w) * dot(n, w));
     auto k = 1 - eta * eta * max(0.0f, 1 - dot(n, w) * dot(n, w));
-    if (k < 0) return vec3f();  // tir
+    if (k < 0) return {0, 0, 0};  // tir
     return -w * eta + (eta * dot(n, w) - sqrt(k)) * n;
 }
 
@@ -558,7 +559,7 @@ inline vec4f quat_mul(const vec4f& a, const vec4f& b) {
 }
 inline vec4f quat_conjugate(const vec4f& a) { return {-a.x, -a.y, -a.z, a.w}; }
 inline vec4f quat_inverse(const vec4f& a) {
-    return quat_conjugate(a) / length_sqr(a);
+    return quat_conjugate(a) / dot(a, a);
 }
 
 }  // namespace ygl
@@ -703,7 +704,6 @@ inline mat2f operator+(const mat2f& a, const mat2f& b) {
     return {a.x + b.x, a.y + b.y};
 }
 inline mat2f operator*(const mat2f& a, float b) { return {a.x * b, a.y * b}; }
-inline mat2f operator/(const mat2f& a, float b) { return {a.x / b, a.y / b}; }
 inline vec2f operator*(const mat2f& a, const vec2f& b) {
     return a.x * b.x + a.y * b.y;
 }
@@ -720,9 +720,6 @@ inline mat3f operator+(const mat3f& a, const mat3f& b) {
 }
 inline mat3f operator*(const mat3f& a, float b) {
     return {a.x * b, a.y * b, a.z * b};
-}
-inline mat3f operator/(const mat3f& a, float b) {
-    return {a.x / b, a.y / b, a.z / b};
 }
 inline vec3f operator*(const mat3f& a, const vec3f& b) {
     return a.x * b.x + a.y * b.y + a.z * b.z;
@@ -770,17 +767,9 @@ inline mat4f& operator*=(mat4f& a, float b) { return a = a * b; }
 inline vec2f diagonal(const mat2f& a) { return {a.x.x, a.y.y}; }
 inline vec3f diagonal(const mat3f& a) { return {a.x.x, a.y.y, a.z.z}; }
 inline vec4f diagonal(const mat4f& a) { return {a.x.x, a.y.y, a.z.z, a.w.w}; }
-inline mat2f transpose(const mat2f& a) {
-    return {{a.x.x, a.y.x}, {a.x.y, a.y.y}};
-}
-inline mat3f transpose(const mat3f& a) {
-    return {
-        {a.x.x, a.y.x, a.z.x}, {a.x.y, a.y.y, a.z.y}, {a.x.z, a.y.z, a.z.z}};
-}
-inline mat4f transpose(const mat4f& a) {
-    return {{a.x.x, a.y.x, a.z.x, a.w.x}, {a.x.y, a.y.y, a.z.y, a.w.y},
-        {a.x.z, a.y.z, a.z.z, a.w.z}, {a.x.w, a.y.w, a.z.w, a.w.w}};
-}
+inline mat2f transpose(const mat2f& a);
+inline mat3f transpose(const mat3f& a);
+inline mat4f transpose(const mat4f& a);
 
 // Matrix adjugates, determinant and inverses.
 inline mat2f adjugate(const mat2f& a);
@@ -841,12 +830,20 @@ inline frame3f make_frame_fromzx(
 
 // Frame to matrix conversion.
 inline mat4f frame_to_mat(const frame3f& a) {
-    return {{a.x.x, a.x.y, a.x.z, 0}, {a.y.x, a.y.y, a.y.z, 0},
-        {a.z.x, a.z.y, a.z.z, 0}, {a.o.x, a.o.y, a.o.z, 1}};
+    return {
+        {a.x.x, a.x.y, a.x.z, 0},
+        {a.y.x, a.y.y, a.y.z, 0},
+        {a.z.x, a.z.y, a.z.z, 0},
+        {a.o.x, a.o.y, a.o.z, 1},
+    };
 }
 inline frame3f mat_to_frame(const mat4f& a) {
-    return {{a.x.x, a.x.y, a.x.z}, {a.y.x, a.y.y, a.y.z}, {a.z.x, a.z.y, a.z.z},
-        {a.w.x, a.w.y, a.w.z}};
+    return {
+        {a.x.x, a.x.y, a.x.z},
+        {a.y.x, a.y.y, a.y.z},
+        {a.z.x, a.z.y, a.z.z},
+        {a.w.x, a.w.y, a.w.z},
+    };
 }
 
 // Frame comparisons.
@@ -1020,15 +1017,6 @@ inline bbox3f triangle_bbox(const vec3f& v0, const vec3f& v1, const vec3f& v2) {
     return bbox;
 }
 inline bbox3f quad_bbox(
-    const vec3f& v0, const vec3f& v1, const vec3f& v2, const vec3f& v3) {
-    auto bbox = ygl::bbox3f{};
-    bbox += v0;
-    bbox += v1;
-    bbox += v2;
-    bbox += v3;
-    return bbox;
-}
-inline bbox3f tetrahedron_bbox(
     const vec3f& v0, const vec3f& v1, const vec3f& v2, const vec3f& v3) {
     auto bbox = ygl::bbox3f{};
     bbox += v0;
@@ -1545,45 +1533,6 @@ inline T interpolate_quad(
     const T& v0, const T& v1, const T& v2, const T& v3, const vec2f& uv) {
     return v0 * (1 - uv.x) * (1 - uv.y) + v1 * uv.x * (1 - uv.y) +
            v2 * uv.x * uv.y + v3 * (1 - uv.x) * uv.y;
-}
-
-// Evaluates the i-th Bernstein polynomial of degree degree at u.
-inline float eval_bernstein(float u, int i, int degree) {
-    if (i < 0 or i > degree) return 0;
-    if (degree == 0)
-        return 1;
-    else if (degree == 1) {
-        if (i == 0)
-            return 1 - u;
-        else if (i == 1)
-            return u;
-    } else if (degree == 2) {
-        if (i == 0)
-            return (1 - u) * (1 - u);
-        else if (i == 1)
-            return 2 * u * (1 - u);
-        else if (i == 2)
-            return u * u;
-    } else if (degree == 3) {
-        if (i == 0)
-            return (1 - u) * (1 - u) * (1 - u);
-        else if (i == 1)
-            return 3 * u * (1 - u) * (1 - u);
-        else if (i == 2)
-            return 3 * u * u * (1 - u);
-        else if (i == 3)
-            return u * u * u;
-    } else {
-        return (1 - u) * eval_bernstein(u, i, degree - 1) +
-               u * eval_bernstein(u, i - 1, degree - 1);
-    }
-    return 0;
-}
-
-// Evaluates the derivative of i-th Bernstein polynomial of degree degree at u.
-inline float eval_bernstein_derivative(float u, int i, int degree) {
-    return degree * (eval_bernstein(u, i - 1, degree - 1) -
-                        eval_bernstein(u, i, degree - 1));
 }
 
 // Interpolates values along a cubic Bezier segment parametrized by u.
@@ -2778,34 +2727,69 @@ float eval_ggx_sm(float rs, const vec3f& n, const vec3f& o, const vec3f& i);
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+// Matrix diagonals and transposes.
+inline mat2f transpose(const mat2f& a) {
+    return {{a.x.x, a.y.x}, {a.x.y, a.y.y}};
+}
+inline mat3f transpose(const mat3f& a) {
+    return {
+        {a.x.x, a.y.x, a.z.x},
+        {a.x.y, a.y.y, a.z.y},
+        {a.x.z, a.y.z, a.z.z},
+    };
+}
+inline mat4f transpose(const mat4f& a) {
+    return {
+        {a.x.x, a.y.x, a.z.x, a.w.x},
+        {a.x.y, a.y.y, a.z.y, a.w.y},
+        {a.x.z, a.y.z, a.z.z, a.w.z},
+        {a.x.w, a.y.w, a.z.w, a.w.w},
+    };
+}
+
 // Matrix adjugates, determinant and inverses.
 inline mat2f adjugate(const mat2f& a) {
     return {{a.y.y, -a.x.y}, {-a.y.x, a.x.x}};
 }
 inline mat3f adjugate(const mat3f& a) {
-    return {{a.y.y * a.z.z - a.z.y * a.y.z, a.z.y * a.x.z - a.x.y * a.z.z,
-                a.x.y * a.y.z - a.y.y * a.x.z},
-        {a.y.z * a.z.x - a.z.z * a.y.x, a.z.z * a.x.x - a.x.z * a.z.x,
-            a.x.z * a.y.x - a.y.z * a.x.x},
-        {a.y.x * a.z.y - a.z.x * a.y.y, a.z.x * a.x.y - a.x.x * a.z.y,
-            a.x.x * a.y.y - a.y.x * a.x.y}};
+    return {
+        {
+            a.y.y * a.z.z - a.z.y * a.y.z,
+            a.z.y * a.x.z - a.x.y * a.z.z,
+            a.x.y * a.y.z - a.y.y * a.x.z,
+        },
+        {
+            a.y.z * a.z.x - a.z.z * a.y.x,
+            a.z.z * a.x.x - a.x.z * a.z.x,
+            a.x.z * a.y.x - a.y.z * a.x.x,
+        },
+        {
+            a.y.x * a.z.y - a.z.x * a.y.y,
+            a.z.x * a.x.y - a.x.x * a.z.y,
+            a.x.x * a.y.y - a.y.x * a.x.y,
+        },
+    };
 }
 inline mat4f adjugate(const mat4f& a) {
-    return {{a.y.y * a.z.z * a.w.w + a.w.y * a.y.z * a.z.w +
-                    a.z.y * a.w.z * a.y.w - a.y.y * a.w.z * a.z.w -
-                    a.z.y * a.y.z * a.w.w - a.w.y * a.z.z * a.y.w,
-                a.x.y * a.w.z * a.z.w + a.z.y * a.x.z * a.w.w +
-                    a.w.y * a.z.z * a.x.w - a.w.y * a.x.z * a.z.w -
-                    a.z.y * a.w.z * a.x.w - a.x.y * a.z.z * a.w.w,
-                a.x.y * a.y.z * a.w.w + a.w.y * a.x.z * a.y.w +
-                    a.y.y * a.w.z * a.x.w - a.x.y * a.w.z * a.y.w -
-                    a.y.y * a.x.z * a.w.w - a.w.y * a.y.z * a.x.w,
-                a.x.y * a.z.z * a.y.w + a.y.y * a.x.z * a.z.w +
-                    a.z.y * a.y.z * a.x.w - a.x.y * a.y.z * a.z.w -
-                    a.z.y * a.x.z * a.y.w - a.y.y * a.z.z * a.x.w},
-        {a.y.z * a.w.w * a.z.x + a.z.z * a.y.w * a.w.x + a.w.z * a.z.w * a.y.x -
-                a.y.z * a.z.w * a.w.x - a.w.z * a.y.w * a.z.x -
-                a.z.z * a.w.w * a.y.x,
+    return {
+        {
+            a.y.y * a.z.z * a.w.w + a.w.y * a.y.z * a.z.w +
+                a.z.y * a.w.z * a.y.w - a.y.y * a.w.z * a.z.w -
+                a.z.y * a.y.z * a.w.w - a.w.y * a.z.z * a.y.w,
+            a.x.y * a.w.z * a.z.w + a.z.y * a.x.z * a.w.w +
+                a.w.y * a.z.z * a.x.w - a.w.y * a.x.z * a.z.w -
+                a.z.y * a.w.z * a.x.w - a.x.y * a.z.z * a.w.w,
+            a.x.y * a.y.z * a.w.w + a.w.y * a.x.z * a.y.w +
+                a.y.y * a.w.z * a.x.w - a.x.y * a.w.z * a.y.w -
+                a.y.y * a.x.z * a.w.w - a.w.y * a.y.z * a.x.w,
+            a.x.y * a.z.z * a.y.w + a.y.y * a.x.z * a.z.w +
+                a.z.y * a.y.z * a.x.w - a.x.y * a.y.z * a.z.w -
+                a.z.y * a.x.z * a.y.w - a.y.y * a.z.z * a.x.w,
+        },
+        {
+            a.y.z * a.w.w * a.z.x + a.z.z * a.y.w * a.w.x +
+                a.w.z * a.z.w * a.y.x - a.y.z * a.z.w * a.w.x -
+                a.w.z * a.y.w * a.z.x - a.z.z * a.w.w * a.y.x,
             a.x.z * a.z.w * a.w.x + a.w.z * a.x.w * a.z.x +
                 a.z.z * a.w.w * a.x.x - a.x.z * a.w.w * a.z.x -
                 a.z.z * a.x.w * a.w.x - a.w.z * a.z.w * a.x.x,
@@ -2814,10 +2798,12 @@ inline mat4f adjugate(const mat4f& a) {
                 a.w.z * a.x.w * a.y.x - a.y.z * a.w.w * a.x.x,
             a.x.z * a.y.w * a.z.x + a.z.z * a.x.w * a.y.x +
                 a.y.z * a.z.w * a.x.x - a.x.z * a.z.w * a.y.x -
-                a.y.z * a.x.w * a.z.x - a.z.z * a.y.w * a.x.x},
-        {a.y.w * a.z.x * a.w.y + a.w.w * a.y.x * a.z.y + a.z.w * a.w.x * a.y.y -
-                a.y.w * a.w.x * a.z.y - a.z.w * a.y.x * a.w.y -
-                a.w.w * a.z.x * a.y.y,
+                a.y.z * a.x.w * a.z.x - a.z.z * a.y.w * a.x.x,
+        },
+        {
+            a.y.w * a.z.x * a.w.y + a.w.w * a.y.x * a.z.y +
+                a.z.w * a.w.x * a.y.y - a.y.w * a.w.x * a.z.y -
+                a.z.w * a.y.x * a.w.y - a.w.w * a.z.x * a.y.y,
             a.x.w * a.w.x * a.z.y + a.z.w * a.x.x * a.w.y +
                 a.w.w * a.z.x * a.x.y - a.x.w * a.z.x * a.w.y -
                 a.w.w * a.x.x * a.z.y - a.z.w * a.w.x * a.x.y,
@@ -2826,10 +2812,12 @@ inline mat4f adjugate(const mat4f& a) {
                 a.y.w * a.x.x * a.w.y - a.w.w * a.y.x * a.x.y,
             a.x.w * a.z.x * a.y.y + a.y.w * a.x.x * a.z.y +
                 a.z.w * a.y.x * a.x.y - a.x.w * a.y.x * a.z.y -
-                a.z.w * a.x.x * a.y.y - a.y.w * a.z.x * a.x.y},
-        {a.y.x * a.w.y * a.z.z + a.z.x * a.y.y * a.w.z + a.w.x * a.z.y * a.y.z -
-                a.y.x * a.z.y * a.w.z - a.w.x * a.y.y * a.z.z -
-                a.z.x * a.w.y * a.y.z,
+                a.z.w * a.x.x * a.y.y - a.y.w * a.z.x * a.x.y,
+        },
+        {
+            a.y.x * a.w.y * a.z.z + a.z.x * a.y.y * a.w.z +
+                a.w.x * a.z.y * a.y.z - a.y.x * a.z.y * a.w.z -
+                a.w.x * a.y.y * a.z.z - a.z.x * a.w.y * a.y.z,
             a.x.x * a.z.y * a.w.z + a.w.x * a.x.y * a.z.z +
                 a.z.x * a.w.y * a.x.z - a.x.x * a.w.y * a.z.z -
                 a.z.x * a.x.y * a.w.z - a.w.x * a.z.y * a.x.z,
@@ -2838,7 +2826,9 @@ inline mat4f adjugate(const mat4f& a) {
                 a.w.x * a.x.y * a.y.z - a.y.x * a.w.y * a.x.z,
             a.x.x * a.y.y * a.z.z + a.z.x * a.x.y * a.y.z +
                 a.y.x * a.z.y * a.x.z - a.x.x * a.z.y * a.y.z -
-                a.y.x * a.x.y * a.z.z - a.z.x * a.y.y * a.x.z}};
+                a.y.x * a.x.y * a.z.z - a.z.x * a.y.y * a.x.z,
+        },
+    };
 }
 inline float determinant(const mat2f& a) {
     return a.x.x * a.y.y - a.x.y * a.y.x;

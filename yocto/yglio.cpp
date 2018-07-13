@@ -1906,98 +1906,6 @@ void save_json_scene(const std::string& filename, const scene* scn,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// OBJ vertex
-struct obj_vertex {
-    int pos = 0;
-    int texcoord = 0;
-    int norm = 0;
-};
-
-// Obj texture information.
-struct obj_texture_info {
-    std::string path = "";  // file path
-    bool clamp = false;     // clamp to edge
-    float scale = 1;        // scale for bump/displacement
-    // Properties not explicitly handled.
-    std::unordered_map<std::string, std::vector<float>> props;
-};
-
-// Obj material.
-struct obj_material {
-    std::string name;  // name
-    int illum = 0;     // MTL illum mode
-
-    // base values
-    vec3f ke = {0, 0, 0};  // emission color
-    vec3f ka = {0, 0, 0};  // ambient color
-    vec3f kd = {0, 0, 0};  // diffuse color
-    vec3f ks = {0, 0, 0};  // specular color
-    vec3f kr = {0, 0, 0};  // reflection color
-    vec3f kt = {0, 0, 0};  // transmission color
-    float ns = 0;          // Phong exponent color
-    float ior = 1;         // index of refraction
-    float op = 1;          // opacity
-    float rs = -1;         // roughness (-1 not defined)
-    float km = -1;         // metallic  (-1 not defined)
-
-    obj_texture_info ke_txt;    // emission texture
-    obj_texture_info ka_txt;    // ambient texture
-    obj_texture_info kd_txt;    // diffuse texture
-    obj_texture_info ks_txt;    // specular texture
-    obj_texture_info kr_txt;    // reflection texture
-    obj_texture_info kt_txt;    // transmission texture
-    obj_texture_info ns_txt;    // Phong exponent texture
-    obj_texture_info op_txt;    // opacity texture
-    obj_texture_info rs_txt;    // roughness texture
-    obj_texture_info km_txt;    // metallic texture
-    obj_texture_info ior_txt;   // ior texture
-    obj_texture_info occ_txt;   // occlusion map
-    obj_texture_info bump_txt;  // bump map
-    obj_texture_info disp_txt;  // displacement map
-    obj_texture_info norm_txt;  // normal map
-
-    // Properties not explicitly handled.
-    std::unordered_map<std::string, std::vector<std::string>> props;
-};
-
-// Obj camera [extension].
-struct obj_camera {
-    std::string name;                  // name
-    frame3f frame = identity_frame3f;  // transform
-    bool ortho = false;                // orthographic
-    float width = 0.036f;              // film width (default to 35mm)
-    float height = 0.024f;             // film height (default to 35mm)
-    float focal = 0.050f;              // focal length
-    float aspect = 16.0f / 9.0f;       // aspect ratio
-    float aperture = 0;                // lens aperture
-    float focus = flt_max;             // focus distance
-};
-
-// Obj environment [extension].
-struct obj_environment {
-    std::string name;                  // name
-    frame3f frame = identity_frame3f;  // transform
-    vec3f ke = zero3f;                 // emission color
-    obj_texture_info ke_txt;           // emission texture
-};
-
-// Obj callbacks
-struct obj_callbacks {
-    std::function<void(vec3f)> vert = {};
-    std::function<void(vec3f)> norm = {};
-    std::function<void(vec2f)> texcoord = {};
-    std::function<void(const std::vector<obj_vertex>&)> face = {};
-    std::function<void(const std::vector<obj_vertex>&)> line = {};
-    std::function<void(const std::vector<obj_vertex>&)> point = {};
-    std::function<void(const std::string& name)> object = {};
-    std::function<void(const std::string& name)> group = {};
-    std::function<void(const std::string& name)> usemtl = {};
-    std::function<void(const std::string& name)> smoothing = {};
-    std::function<void(const obj_material&)> material = {};
-    std::function<void(const obj_camera&)> camera = {};
-    std::function<void(const obj_environment&)> environmnet = {};
-};
-
 inline bool operator==(obj_vertex a, obj_vertex b) {
     return a.pos == b.pos && a.texcoord == b.texcoord && a.norm == b.norm;
 }
@@ -2146,7 +2054,7 @@ inline obj_texture_info parse_obj_texture_info(char*& s) {
 
 // Load obj materials
 void load_mtl(
-    const std::string& filename, const obj_callbacks& cb, bool flip_tr = true) {
+    const std::string& filename, const obj_callbacks& cb, bool flip_tr) {
     // open file
     auto fs = fopen(filename.c_str(), "rt");
     if (!fs) throw std::runtime_error("cannot open filename " + filename);
@@ -2279,7 +2187,7 @@ void load_objx(const std::string& filename, const obj_callbacks& cb) {
 
 // Load obj scene
 void load_obj(const std::string& filename, const obj_callbacks& cb,
-    bool flip_texcoord = true, bool flip_tr = true) {
+    bool flip_texcoord, bool flip_tr) {
     // open file
     auto fs = fopen(filename.c_str(), "rt");
     if (!fs) throw std::runtime_error("cannot open filename " + filename);
@@ -4415,29 +4323,6 @@ void save_mesh(const std::string& filename, const std::vector<int>& points,
     }
 }
 
-// ply type
-enum struct ply_type { ply_uchar, ply_int, ply_float, ply_int_list };
-
-// ply property
-struct ply_property {
-    std::string name = "";
-    ply_type type = ply_type::ply_float;
-    std::vector<float> scalars = {};
-    std::vector<std::array<int, 8>> lists = {};
-};
-
-// ply element
-struct ply_element {
-    std::string name = "";
-    int count = 0;
-    std::vector<ply_property> properties = {};
-};
-
-// simple ply api data
-struct ply_data {
-    std::vector<ply_element> elements = {};
-};
-
 // prepare obj line (remove comments and normalize whitespace)
 void normalize_ply_line(char* s) {
     while (*s) {
@@ -4450,13 +4335,13 @@ void normalize_ply_line(char* s) {
 }
 
 // Load ply mesh
-ply_data load_ply(const std::string& filename) {
+ply_data* load_ply(const std::string& filename) {
     auto fs = fopen(filename.c_str(), "rb");
     if (!fs) throw std::runtime_error("could not open file " + filename);
 
     // parse header
     auto ascii = false;
-    auto ply = ply_data();
+    auto ply = new ply_data();
     char line[4096];
     while (fgets(line, sizeof(line), fs)) {
         normalize_ply_line(line);
@@ -4474,7 +4359,7 @@ ply_data load_ply(const std::string& filename) {
             auto elem = ply_element();
             elem.name = parse_string(ss);
             elem.count = parse_int(ss);
-            ply.elements.push_back(elem);
+            ply->elements.push_back(elem);
         } else if (cmd == "property") {
             auto prop = ply_property();
             auto type = parse_string(ss);
@@ -4496,10 +4381,10 @@ ply_data load_ply(const std::string& filename) {
                 throw std::runtime_error("unsupported ply type");
             }
             prop.name = parse_string(ss);
-            prop.scalars.resize(ply.elements.back().count);
+            prop.scalars.resize(ply->elements.back().count);
             if (prop.type == ply_type::ply_int_list)
-                prop.lists.resize(ply.elements.back().count);
-            ply.elements.back().properties.push_back(prop);
+                prop.lists.resize(ply->elements.back().count);
+            ply->elements.back().properties.push_back(prop);
         } else if (cmd == "end_header") {
             break;
         } else {
@@ -4508,7 +4393,7 @@ ply_data load_ply(const std::string& filename) {
     }
 
     // parse content
-    for (auto& elem : ply.elements) {
+    for (auto& elem : ply->elements) {
         for (auto vid = 0; vid < elem.count; vid++) {
             auto ss = (char*)nullptr;
             if (ascii) {
@@ -4589,9 +4474,10 @@ void load_ply_mesh(const std::string& filename, std::vector<int>& points,
     triangles.clear();
 
     auto ply = load_ply(filename);
+    if (!ply) throw std::runtime_error("cannot load ply " + filename);
 
     // copy vertex data
-    for (auto& elem : ply.elements) {
+    for (auto& elem : ply->elements) {
         if (elem.name != "vertex") continue;
         auto count = elem.count;
         for (auto& prop : elem.properties) {
@@ -4623,7 +4509,7 @@ void load_ply_mesh(const std::string& filename, std::vector<int>& points,
     }
 
     // copy triangle data
-    for (auto& elem : ply.elements) {
+    for (auto& elem : ply->elements) {
         if (elem.name != "face") continue;
         auto count = elem.count;
         for (auto& prop : elem.properties) {
@@ -4636,6 +4522,9 @@ void load_ply_mesh(const std::string& filename, std::vector<int>& points,
             }
         }
     }
+
+    // cleanup
+    delete ply;
 }
 
 #endif
