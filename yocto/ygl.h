@@ -2204,6 +2204,49 @@ inline T eval_keyframed_bezier(
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
+// VOLUME TYPE
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Volume container.
+template <typename T>
+struct volume {
+    int width = 0;
+    int height = 0;
+    int depth = 0;
+    std::vector<T> pxl = {};
+
+    // pixel access
+    T& at(int i, int j, int k) { return pxl.at(k * height * width + j * width + i); }
+    const T& at(int i, int j, int k) const { return pxl.at(k * height * width + j * width + i); }
+};
+
+// Type aliases
+using volume4f = volume<vec4f>;
+using volume1f = volume<float>;
+
+// Image creation.
+template <typename T>
+inline volume<T> make_volume(int width, int height, int depth,  T c = T{}) {
+    auto img = volume<T>{};
+    img.width = width;
+    img.height = height;
+    img.depth = depth;
+    img.pxl.resize(width * height * depth, c);
+    return img;
+}
+inline volume4f make_volume4f(
+    int width, int height, int depth, const vec4f& c = {0, 0, 0, 0}) {
+    return make_volume<vec4f>(width, height, depth, c);
+}
+inline volume1f make_volume1f(
+    int width, int height, int depth, float c = 0) {
+    return make_volume<float>(width, height, depth, c);
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
 // SCENE DATA
 // -----------------------------------------------------------------------------
 namespace ygl {
@@ -2230,6 +2273,7 @@ struct texture {
     std::string name = "";     // name
     std::string path = "";     // file path
     image4f img = {};          // image
+    volume1f vol = {};         // volume
     bool clamp = false;        // clamp textures coordinates
     float scale = 1;           // scale for occ, normal, bumps
     float gamma = 2.2f;        // gamma correction for ldr textures in IO
@@ -2268,6 +2312,15 @@ struct material {
     texture* bump_txt = nullptr;  // bump map texture (heighfield)
     texture* disp_txt = nullptr;  // displacement map texture (heighfield)
     texture* norm_txt = nullptr;  // normal texture
+
+    // volume properties
+    vec3f ve = zero3f; // volume emission
+    vec3f va = zero3f; // albedo: scattering / (absorption + scattering)
+    vec3f vd = zero3f; // density: absorption + scattering
+    float vg = 0;      // phase function shape
+
+    // volume textures
+    texture* vd_txt = nullptr; // density
 };
 
 // Shape data represented as an indexed meshes of elements.

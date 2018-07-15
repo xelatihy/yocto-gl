@@ -1015,6 +1015,19 @@ inline void from_json(const json& js, image4f& val) {
     val.height = js.at("height").get<int>();
     val.pxl = js.at("pixels").get<std::vector<vec4f>>();
 }
+inline void to_json(json& js, const volume1f& val) {
+    js = json::object();
+    js["width"] = val.width;
+    js["height"] = val.height;
+    js["depth"] = val.depth;
+    js["pixels"] = val.pxl;
+}
+inline void from_json(const json& js, volume1f& val) {
+    val.width = js.at("width").get<int>();
+    val.height = js.at("height").get<int>();
+    val.depth = js.at("depth").get<int>();
+    val.pxl = js.at("pixels").get<std::vector<float>>();
+}
 
 }  // namespace ygl
 
@@ -1070,6 +1083,7 @@ void to_json(json& js, const texture& val) {
     if (val.gamma != def.gamma) js["gamma"] = val.gamma;
     if (val.path == "") {
         if (!val.img.pxl.empty()) js["img"] = val.img;
+        if (!val.vol.pxl.empty()) js["vol"] = val.vol;
     }
 }
 
@@ -1142,6 +1156,7 @@ void from_json(const json& js, texture& val) {
     val.scale = js.value("scale", def.scale);
     val.gamma = js.value("gamma", def.gamma);
     val.img = js.value("img", def.img);
+    val.vol = js.value("vol", def.vol);
     if (js.count("!!proc")) from_json_proc(js.at("!!proc"), val);
 }
 
@@ -2164,6 +2179,16 @@ void load_mtl(
             mat.disp_txt = parse_obj_texture_info(ss);
         } else if (cmd == "map_norm" || cmd == "norm") {
             mat.norm_txt = parse_obj_texture_info(ss);
+        } else if (cmd == "Ve") {
+            mat.ve = parse_vec3f(ss);
+        } else if (cmd == "Va") {
+            mat.va = parse_vec3f(ss);
+        } else if (cmd == "Vd") {
+            mat.vd = parse_vec3f(ss);
+        } else if (cmd == "Vg") {
+            mat.vg = parse_float(ss);
+        } else if (cmd == "map_Vd") {
+            mat.vd_txt = parse_obj_texture_info(ss);
         }
     }
 
@@ -2473,6 +2498,11 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
         mat->bump_txt = add_texture(omat.bump_txt, false);
         mat->disp_txt = add_texture(omat.disp_txt, false);
         mat->norm_txt = add_texture(omat.norm_txt, false);
+        mat->ve = omat.ve;
+        mat->va = omat.va;
+        mat->vd = omat.vd;
+        mat->vg = omat.vg;
+        mat->vd_txt = add_texture(omat.vd_txt, false);
         scn->materials.push_back(mat);
         mmap[mat->name] = mat;
     };
@@ -2599,6 +2629,16 @@ void save_mtl(
             fprintf(fs, "  map_disp %s\n", mat->disp_txt->path.c_str());
         if (mat->norm_txt)
             fprintf(fs, "  map_norm %s\n", mat->norm_txt->path.c_str());
+        if (mat->ve != zero3f)
+            fprintf(fs, "  Ve %g %g %g\n", mat->ve.x, mat->ve.y, mat->ve.z);
+        if (mat->vd != zero3f)
+            fprintf(fs, "  Vd %g %g %g\n", mat->vd.x, mat->vd.y, mat->vd.z);
+        if (mat->va != zero3f)
+            fprintf(fs, "  Va %g %g %g\n", mat->va.x, mat->va.y, mat->va.z);
+        if (mat->vg != 0)
+            fprintf(fs, "  Vg %g\n", mat->vg);
+        if (mat->vd_txt)
+            fprintf(fs, "  map_Vd %s\n", mat->vd_txt->path.c_str());
         fprintf(fs, "\n");
     }
 
