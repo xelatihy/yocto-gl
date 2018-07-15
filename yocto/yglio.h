@@ -342,6 +342,7 @@ struct obj_material {
     float rs = -1;         // roughness (-1 not defined)
     float km = -1;         // metallic  (-1 not defined)
 
+    // textures
     obj_texture_info ke_txt;    // emission texture
     obj_texture_info ka_txt;    // ambient texture
     obj_texture_info kd_txt;    // diffuse texture
@@ -357,6 +358,15 @@ struct obj_material {
     obj_texture_info bump_txt;  // bump map
     obj_texture_info disp_txt;  // displacement map
     obj_texture_info norm_txt;  // normal map
+
+    // volume data [extension]
+    vec3f ve = {0,0,0}; // volume emission
+    vec3f va = {0,0,0}; // albedo: scattering / (absorption + scattering)
+    vec3f vd = {0,0,0}; // density: absorption + scattering
+    float vg = 0;       // phase function shape
+
+    // volume textures [extension]
+    obj_texture_info vd_txt; // density
 
     // Properties not explicitly handled.
     std::unordered_map<std::string, std::vector<std::string>> props;
