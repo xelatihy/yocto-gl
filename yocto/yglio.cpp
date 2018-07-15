@@ -2635,8 +2635,7 @@ void save_mtl(
             fprintf(fs, "  Vd %g %g %g\n", mat->vd.x, mat->vd.y, mat->vd.z);
         if (mat->va != zero3f)
             fprintf(fs, "  Va %g %g %g\n", mat->va.x, mat->va.y, mat->va.z);
-        if (mat->vg != 0)
-            fprintf(fs, "  Vg %g\n", mat->vg);
+        if (mat->vg != 0) fprintf(fs, "  Vg %g\n", mat->vg);
         if (mat->vd_txt)
             fprintf(fs, "  map_Vd %s\n", mat->vd_txt->path.c_str());
         fprintf(fs, "\n");

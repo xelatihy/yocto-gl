@@ -360,13 +360,13 @@ struct obj_material {
     obj_texture_info norm_txt;  // normal map
 
     // volume data [extension]
-    vec3f ve = {0,0,0}; // volume emission
-    vec3f va = {0,0,0}; // albedo: scattering / (absorption + scattering)
-    vec3f vd = {0,0,0}; // density: absorption + scattering
-    float vg = 0;       // phase function shape
+    vec3f ve = {0, 0, 0};  // volume emission
+    vec3f va = {0, 0, 0};  // albedo: scattering / (absorption + scattering)
+    vec3f vd = {0, 0, 0};  // density: absorption + scattering
+    float vg = 0;          // phase function shape
 
     // volume textures [extension]
-    obj_texture_info vd_txt; // density
+    obj_texture_info vd_txt;  // density
 
     // Properties not explicitly handled.
     std::unordered_map<std::string, std::vector<std::string>> props;
