@@ -46,8 +46,8 @@ int main(int argc, char* argv[]) {
         argc, argv, "Process obj files directly", "yobjproc");
     auto translation = ygl::parse_vec3f(
         parser, "--translation,-t", ygl::zero3f, "translation");
-    auto scale = ygl::parse_vec3f(
-        parser, "--scale,-s", ygl::vec3f{1,1,1}, "scale");
+    auto scale =
+        ygl::parse_vec3f(parser, "--scale,-s", ygl::vec3f{1, 1, 1}, "scale");
     auto print_info =
         ygl::parse_flag(parser, "--print-info,-i", false, "print obj info");
     auto output = ygl::parse_string(
@@ -149,7 +149,7 @@ int main(int argc, char* argv[]) {
             "bbox max: % 6g % 6g % 6g\n", bbox.max.x, bbox.max.y, bbox.max.z);
         printf("bbox cen: % 6g % 6g % 6g\n", center.x, center.y, center.z);
         printf("bbox siz: % 6g % 6g % 6g\n", size.x, size.y, size.z);
-        if (translation != ygl::zero3f || scale != ygl::vec3f{1,1,1}) {
+        if (translation != ygl::zero3f || scale != ygl::vec3f{1, 1, 1}) {
             auto center = (tbox.max + tbox.min) / 2;
             auto size = tbox.max - tbox.min;
             printf("tbox min: % 6g % 6g % 6g\n", tbox.min.x, tbox.min.y,
