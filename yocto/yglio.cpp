@@ -747,11 +747,11 @@ void save_tonemapped_image4f(const std::string& filename,
     if (is_hdr_filename(filename))
         save_image4f(filename, hdr);
     else
-        save_image4f(filename, tonemap_image(hdr, exposure, gamma, filmic));
+        save_image4f(filename, tonemap_image4f(hdr, exposure, gamma, filmic));
 }
 
 // Resize image.
-image4f resize_image(const image4f& img, int width, int height) {
+image4f resize_image4f(const image4f& img, int width, int height) {
     if (!width && !height) throw std::runtime_error("bad image size");
     if (!width) width = (int)round(img.width * (height / (float)img.height));
     if (!height) height = (int)round(img.height * (width / (float)img.width));
@@ -1110,41 +1110,41 @@ void from_json_proc(const json& js, texture& val) {
         width = height;
     }
     if (type == "grid") {
-        val.img = make_grid_image(width, height, js.value("tile", 8),
+        val.img = make_grid_image4f(width, height, js.value("tile", 8),
             js.value("c0", vec4f{0.5f, 0.5f, 0.5f, 1}),
             js.value("c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "checker") {
-        val.img = make_checker_image(width, height, js.value("tile", 8),
+        val.img = make_checker_image4f(width, height, js.value("tile", 8),
             js.value("c0", vec4f{0.5f, 0.5f, 0.5f, 1}),
             js.value("c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "bump") {
-        val.img = make_bumpdimple_image(width, height, js.value("tile", 8));
+        val.img = make_bumpdimple_image4f(width, height, js.value("tile", 8));
     } else if (type == "uvramp") {
-        val.img = make_uvramp_image(width, height);
+        val.img = make_uvramp_image4f(width, height);
     } else if (type == "uvgrid") {
-        val.img = make_uvgrid_image(width, height);
+        val.img = make_uvgrid_image4f(width, height);
     } else if (type == "sky") {
         if (width < height * 2) width = height * 2;
         val.img =
-            make_sunsky_image(width, height, js.value("sun_angle", pi / 4),
+            make_sunsky_image4f(width, height, js.value("sun_angle", pi / 4),
                 js.value("turbidity", 3.0f), js.value("has_sun", false),
                 js.value("ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
         val.gamma = 1;
         is_hdr = true;
     } else if (type == "noise") {
-        val.img = make_noise_image(
+        val.img = make_noise_image4f(
             width, height, js.value("scale", 1.0f), js.value("wrap", true));
     } else if (type == "fbm") {
-        val.img = make_fbm_image(width, height, js.value("scale", 1.0f),
+        val.img = make_fbm_image4f(width, height, js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else if (type == "ridge") {
-        val.img = make_ridge_image(width, height, js.value("scale", 1.0f),
+        val.img = make_ridge_image4f(width, height, js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("offset", 1.0f), js.value("octaves", 6),
             js.value("wrap", true));
     } else if (type == "turbulence") {
-        val.img = make_turbulence_image(width, height, js.value("scale", 1.0f),
+        val.img = make_turbulence_image4f(width, height, js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else {
