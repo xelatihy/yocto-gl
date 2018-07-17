@@ -25,7 +25,7 @@
 //
 // We represent coordinate bounds with axis-aligned bounding boxes with
 // `bbox1f`, `bbox2f`, `bbox3f`, `bbox4f`, with support for
-// expansion operations for points and other bounding boxes. We provide 
+// expansion operations for points and other bounding boxes. We provide
 // operations to compute bounds for points, lines, triangles and quads.
 //
 // For both matrices and frames we support transform operations for points,
@@ -2082,6 +2082,14 @@ inline vec4f linear_to_gamma(const vec4f& lin, float gamma = 2.2f) {
 // Approximate luminance estimate
 inline float luminance(const vec3f& a) { return (a.x + a.y + a.z) / 3; }
 inline float luminance(const vec4f& a) { return (a.x + a.y + a.z) / 3; }
+
+// Fitted ACES tonemapping
+inline vec3f tonemap_filmic(const vec3f& hdr) {
+    // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
+    // hdr *= 0.6; // brings it back to ACES range
+    return (hdr * hdr * 2.51f + hdr * 0.03f) /
+           (hdr * hdr * 2.43f + hdr * 0.59f + vec3f{0.14f, 0.14f, 0.14f});
+}
 
 // Converts HSV to RGB.
 vec3f hsv_to_rgb(const vec3f& hsv);

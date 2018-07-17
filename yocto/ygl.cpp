@@ -2955,16 +2955,6 @@ vec3f rgb_to_hsv(const vec3f& rgb) {
         fabsf(K + (g - b) / (6.f * chroma + 1e-20f)), chroma / (r + 1e-20f), r};
 }
 
-vec3f tonemap_filmic(const vec3f& hdr) {
-    // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
-    auto x = hdr;
-    // x *= 0.6; // brings it back to ACES range
-    x = (x * (2.51f * x + vec3f{0.03f, 0.03f, 0.03f})) /
-        (x * (2.43f * x + vec3f{0.59f, 0.59f, 0.59f}) +
-            vec3f{0.14f, 0.14f, 0.14f});
-    return x;
-}
-
 vec3f tonemap_hdr(const vec3f& hdr, float exposure, float gamma, bool filmic) {
     auto ldr = hdr * pow(2.0f, exposure);
     if (filmic) ldr = tonemap_filmic(ldr);
