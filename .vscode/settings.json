@@ -54,4 +54,15 @@
         "thread": "cpp"
     },
     "C_Cpp.intelliSenseEngineFallback": "Disabled",
+    "cSpell.words": [
+        "bezier",
+        "beziers",
+        "cdfs",
+        "embree",
+        "fabio",
+        "glio",
+        "pellacini",
+        "phong",
+        "yocto"
+    ],
 } 
