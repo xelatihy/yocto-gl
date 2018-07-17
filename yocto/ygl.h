@@ -25,12 +25,12 @@
 //
 // We represent coordinate bounds with axis-aligned bounding boxes with
 // `bbox1f`, `bbox2f`, `bbox3f`, `bbox4f`, with support for
-// expansion operations for points and otehr bboxes. We provide operations to
-// compute bounds for points, lines, triangles and quads.
+// expansion operations for points and other bounding boxes. We provide 
+// operations to compute bounds for points, lines, triangles and quads.
 //
 // For both matrices and frames we support transform operations for points,
-// vectors and directions (`trasform_point()`, `trasform_vector()`,
-// `trasform_direction()`). For frames we also the support inverse operations
+// vectors and directions (`transform_point()`, `transform_vector()`,
+// `transform_direction()`). For frames we also the support inverse operations
 // (`transform_xxx_inverse()`). Transform matrices and frames can be
 // constructed from basic translation, rotation and scaling, e.g. with
 // `translation_mat<T, 4>()` or `translation_frame<T, 3>()` respectively, etc.
@@ -41,8 +41,8 @@
 //
 // The library supports basic geomtry functions such as computing
 // line/triangle/quad normals and areas, picking points on triangles
-// and the like. In these functions triangles are parametrized with us written
-// w.r.t the (v1-v0) and (v2-v0) axis respetively. Quads are internally handled
+// and the like. In these functions triangles are parameterized with us written
+// w.r.t the (v1-v0) and (v2-v0) axis respectively. Quads are internally handled
 // as pairs of two triangles v0,v1,v3 and v2,v3,v1, with the u/v coordinates
 // of the second triangle corrected as 1-u and 1-v to produce a quad
 // parametrization where u and v go from 0 to 1. Degenerate quads with v2==v3
@@ -52,9 +52,9 @@
 //
 // ## Shape functions
 //
-// We provide a small number of utlities for shape manipulation for index
+// We provide a small number of utilities for shape manipulation for index
 // triangle and quad meshes, indexed line and point sets and indexed beziers.
-// The utlities collected here are written to support a global illujmination
+// The utliities collected here are written to support a global illumination
 // rendering and not for generic geometry processing. We support operation for
 // shape smoothing, shape subdivision (including Catmull-Clark subdivs), and
 // example shape creation.
@@ -81,7 +81,7 @@
 // 8. shape sampling with `sample_points()`, `sample_lines()`,
 //    `sample_triangles()`; initialize the sampling CDFs with
 //    `sample_points_cdf()`, `sample_lines_cdf()`, `sample_triangles_cdf()`
-// 9.  samnple a could of point over a surface with `sample_triangles_points()`
+// 9.  sample a could of point over a surface with `sample_triangles_points()`
 // 10. get edges and boundaries with `get_edges()`
 // 11. convert quads to triangles with `convert_quads_to_triangles()`
 // 12. convert face varying to vertex shared representations with
@@ -127,8 +127,8 @@
 // real-time graphics. A scene if represented as transformed instances of
 // shapes. The internal data structure is a two-level BVH, with a BVH for each
 // shape and one top-level BVH for the whole scene. This design support
-// ionstancing for large scenes and easy BVH refitting for interactive
-// applictions.
+// instancing for large scenes and easy BVH refitting for interactive
+// applications.
 //
 // 1. fill the shape or instance data
 // 2. build the BVH with `build_bvh()`
@@ -140,7 +140,7 @@
 // ## Image Utilities
 //
 // Yocto/GL supports a very small set is color and image utilities including
-// color utilitis, example image creation, tonempping, image resizing, and
+// color utilities, example image creation, tone mapping, image resizing, and
 // sunsky procedural images. Yocto/Image is written to support the need of a
 // minimal, but fully-featured, global illumination renderer, rather than the
 // need of generic image editing.
@@ -201,7 +201,7 @@
 // 1. prepare the scene for tracing
 //    - build the ray-tracing acceleration structure with `build_bvh()`
 //     - prepare lights for rendering with `init_lights()`
-// 2. create the inmage buffer and random number generators `make_trace_rngs()`
+// 2. create the image buffer and random number generators `make_trace_rngs()`
 // 3. render blocks of samples with `trace_samples()`
 // 4. you can also start an asynchronous renderer with `trace_asynch_start()`
 //
@@ -454,36 +454,37 @@ inline vec4f& operator/=(vec4f& a, const vec4f& b) { return a = a / b; }
 inline vec4f& operator/=(vec4f& a, float b) { return a = a / b; }
 
 // Vector products and lengths.
+// Vector products and lengths.
 inline float dot(const vec2f& a, const vec2f& b) {
     return a.x * b.x + a.y * b.y;
+}
+inline float length(const vec2f& a) { return sqrt(a.x * a.x + a.y * a.y); }
+inline vec2f normalize(const vec2f& a) {
+    auto l = length(a);
+    return (l) ? a / l : a;
+}
+inline float cross(const vec2f& a, const vec2f& b) {
+    return a.x * b.y - a.y * b.x;
 }
 inline float dot(const vec3f& a, const vec3f& b) {
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
-inline float dot(const vec4f& a, const vec4f& b) {
-    return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+inline float length(const vec3f& a) {
+    return sqrt(a.x * a.x + a.y * a.y + a.z * a.z);
 }
-inline float cross(const vec2f& a, const vec2f& b) {
-    return a.x * b.y - a.y * b.x;
+inline vec3f normalize(const vec3f& a) {
+    auto l = length(a);
+    return (l) ? a / l : a;
 }
 inline vec3f cross(const vec3f& a, const vec3f& b) {
     return {
         a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
 }
-inline float length(const vec2f& a) { return sqrt(a.x * a.x + a.y * a.y); }
-inline float length(const vec3f& a) {
-    return sqrt(a.x * a.x + a.y * a.y + a.z * a.z);
+inline float dot(const vec4f& a, const vec4f& b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 }
 inline float length(const vec4f& a) {
     return sqrt(a.x * a.x + a.y * a.y + a.z * a.z + a.w * a.w);
-}
-inline vec2f normalize(const vec2f& a) {
-    auto l = length(a);
-    return (l) ? a / l : a;
-}
-inline vec3f normalize(const vec3f& a) {
-    auto l = length(a);
-    return (l) ? a / l : a;
 }
 inline vec4f normalize(const vec4f& a) {
     auto l = length(a);
@@ -814,8 +815,8 @@ const auto identity_frame3f =
     frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
 
 // Frame construction from axis.
-inline frame3f make_frame_fromz(const vec3f& o, const vec3f& z_) {
-    auto z = normalize(z_);
+inline frame3f make_frame_fromz(const vec3f& o, const vec3f& v) {
+    auto z = normalize(v);
     auto x = normalize(orthogonal(z));
     auto y = normalize(cross(z, x));
     return {x, y, z, o};
