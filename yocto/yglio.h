@@ -11,7 +11,7 @@
 // 1. manipulate paths withe path utilities
 // 2. load and save text files with `load_text()` and `save_text()`
 // 3. load and save binary files with `load_binary()` and `save_binary()`
-// 4. load and save images with `load_image()` and `save_image()`
+// 4. load and save images with `load_image4f()` and `save_image4f()`
 // 5. load a scene with `load_json_scene()` and save it with `save_json_scene()`
 // 6. load and save OBJs with `load_obj_scene()` and `save_obj_scene()`
 // 7. load and save glTFs with `load_gltf_scene()` and `save_gltf_scene()`
@@ -175,20 +175,15 @@ namespace ygl {
 bool is_hdr_filename(const std::string& filename);
 
 // Loads/saves a 4 channel image.
-image4f load_image(const std::string& filename);
-void save_image(const std::string& filename, const image4f& img);
-image4f load_image_from_memory(const byte* data, int data_size);
+image4f load_image4f(const std::string& filename);
+void save_image4f(const std::string& filename, const image4f& img);
+image4f load_image4f_from_memory(const byte* data, int data_size);
 
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
-inline void save_ldr_or_hdr_image(const std::string& filename,
+void save_tonemapped_image4f(const std::string& filename,
     const image4f& hdr, float exposure = 0, float gamma = 2.2f,
-    bool filmic = false) {
-    if (is_hdr_filename(filename))
-        save_image(filename, hdr);
-    else
-        save_image(filename, tonemap_image(hdr, exposure, gamma, filmic));
-}
+    bool filmic = false);
 
 }  // namespace ygl
 
