@@ -132,7 +132,7 @@ int main(int argc, char* argv[]) {
     // loading image
     app->name = ygl::get_filename(app->filename);
     app->is_hdr = ygl::is_hdr_filename(app->filename);
-    app->img = ygl::load_image(app->filename);
+    app->img = ygl::load_image4f(app->filename);
 
     // prepare display image
     update_display_image(app);

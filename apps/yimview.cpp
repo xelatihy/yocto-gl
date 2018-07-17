@@ -227,7 +227,7 @@ int main(int argc, char* argv[]) {
     // loading images
     for (auto filename : app->filenames) {
         if (!quiet) printf("loading %s\n", filename.c_str());
-        app->imgs.push_back(ygl::load_image(filename));
+        app->imgs.push_back(ygl::load_image4f(filename));
         app->names.push_back(ygl::get_filename(filename));
     }
     app->img_id = 0;

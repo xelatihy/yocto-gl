@@ -160,7 +160,7 @@ int main(int argc, char* argv[]) {
     // load
     auto img = ygl::image4f();
     try {
-        img = ygl::load_image(filename);
+        img = ygl::load_image4f(filename);
     } catch (std::exception& e) {
         printf("cannot load image %s\n", filename.c_str());
         printf("error: %s\n", e.what());
@@ -169,7 +169,7 @@ int main(int argc, char* argv[]) {
 
     // set alpha
     if (alpha_filename != "") {
-        auto alpha = ygl::load_image(alpha_filename);
+        auto alpha = ygl::load_image4f(alpha_filename);
         if (img.width != alpha.width || img.height != alpha.height) {
             printf("bad image size\n");
             exit(1);
@@ -181,7 +181,7 @@ int main(int argc, char* argv[]) {
 
     // set alpha
     if (coloralpha_filename != "") {
-        auto alpha = ygl::load_image(coloralpha_filename);
+        auto alpha = ygl::load_image4f(coloralpha_filename);
         if (img.width != alpha.width || img.height != alpha.height) {
             printf("bad image size\n");
             exit(1);
@@ -206,7 +206,7 @@ int main(int argc, char* argv[]) {
 
     // save
     try {
-        ygl::save_image(output, img);
+        ygl::save_image4f(output, img);
     } catch (std::exception& e) {
         printf("cannot save image %s\n", output.c_str());
         printf("error: %s\n", e.what());

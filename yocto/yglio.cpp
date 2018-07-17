@@ -634,7 +634,7 @@ bool is_hdr_filename(const std::string& filename) {
 }
 
 // Loads an hdr image.
-image4f load_image(const std::string& filename) {
+image4f load_image4f(const std::string& filename) {
     auto ext = get_extension(filename);
     auto width = 0, height = 0;
     auto img = image4f();
@@ -682,7 +682,7 @@ image4f load_image(const std::string& filename) {
 }
 
 // Saves an hdr image.
-void save_image(const std::string& filename, const image4f& img) {
+void save_image4f(const std::string& filename, const image4f& img) {
     auto pxl8 = std::vector<byte>();
     if (!is_hdr_filename(filename)) {
         pxl8.resize(img.width * img.height * 4);
@@ -726,7 +726,7 @@ void save_image(const std::string& filename, const image4f& img) {
 }
 
 // Loads an hdr image.
-image4f load_image_from_memory(const byte* data, int data_size) {
+image4f load_image4f_from_memory(const byte* data, int data_size) {
     stbi_ldr_to_hdr_gamma(1);
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = (vec4f*)stbi_loadf_from_memory(
@@ -737,6 +737,17 @@ image4f load_image_from_memory(const byte* data, int data_size) {
     img.pxl = std::vector<vec4f>(pixels, pixels + width * height);
     delete pixels;
     return img;
+}
+
+// Convenience helper that saves an HDR images as wither a linear HDR file or
+// a tonemapped LDR file depending on file name
+void save_tonemapped_image4f(const std::string& filename,
+    const image4f& hdr, float exposure, float gamma,
+    bool filmic) {
+    if (is_hdr_filename(filename))
+        save_image4f(filename, hdr);
+    else
+        save_image4f(filename, tonemap_image(hdr, exposure, gamma, filmic));
 }
 
 // Resize image.
@@ -1882,7 +1893,7 @@ scene* load_json_scene(
         if (txt->path == "" || !txt->img.pxl.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         try {
-            txt->img = load_image(filename);
+            txt->img = load_image4f(filename);
             if (!is_hdr_filename(filename) && txt->gamma != 1)
                 txt->img = gamma_to_linear(txt->img, txt->gamma);
         } catch (const std::exception&) {
@@ -1937,7 +1948,7 @@ void save_json_scene(const std::string& filename, const scene* scn,
         if (txt->img.pxl.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         try {
-            save_image(
+            save_image4f(
                 filename, (is_hdr_filename(filename) || txt->gamma == 1) ?
                               txt->img :
                               linear_to_gamma(txt->img, txt->gamma));
@@ -2558,7 +2569,7 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
     for (auto& txt : scn->textures) {
         auto filename = normalize_path(dirname + "/" + txt->path);
         try {
-            txt->img = load_image(filename);
+            txt->img = load_image4f(filename);
             if (!is_hdr_filename(filename) && txt->gamma != 1)
                 txt->img = gamma_to_linear(txt->img, txt->gamma);
         } catch (std::exception&) {
@@ -2827,7 +2838,7 @@ void save_obj_scene(const std::string& filename, const scene* scn,
         if (txt->img.pxl.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         try {
-            save_image(
+            save_image4f(
                 filename, (is_hdr_filename(filename) || txt->gamma == 1) ?
                               txt->img :
                               linear_to_gamma(txt->img, txt->gamma));
@@ -3398,7 +3409,7 @@ scene* load_gltf_scene(
     for (auto& txt : scn->textures) {
         auto filename = normalize_path(dirname + "/" + txt->path);
         try {
-            txt->img = load_image(filename);
+            txt->img = load_image4f(filename);
             if (!is_hdr_filename(filename) && txt->gamma != 1)
                 txt->img = gamma_to_linear(txt->img, txt->gamma);
         } catch (const std::exception&) {
@@ -3662,7 +3673,7 @@ void save_gltf_scene(const std::string& filename, const scene* scn,
         if (txt->img.pxl.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         try {
-            save_image(
+            save_image4f(
                 filename, (is_hdr_filename(filename) || txt->gamma == 1) ?
                               txt->img :
                               linear_to_gamma(txt->img, txt->gamma));
@@ -4331,7 +4342,7 @@ scene* load_pbrt_scene(
         if (txt->path == "" || !txt->img.pxl.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         try {
-            txt->img = load_image(filename);
+            txt->img = load_image4f(filename);
             if (!is_hdr_filename(filename) && txt->gamma != 1)
                 txt->img = gamma_to_linear(txt->img, txt->gamma);
         } catch (const std::exception&) {

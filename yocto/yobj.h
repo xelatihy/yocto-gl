@@ -1420,7 +1420,7 @@ inline void load_obj_textures(
         for (auto& c : filename)
             if (c == '\\') c = '/';
         try {
-            txt->img = load_image(filename, ldr_gamma.at(txt->path));
+            txt->img = load_image4f(filename, ldr_gamma.at(txt->path));
         } catch (std::exception&) {
             if (skip_missing) continue;
             throw;
@@ -1455,7 +1455,7 @@ void save_obj_textures(
         for (auto& c : filename)
             if (c == '\\') c = '/';
         try {
-            save_image(filename, txt->img, ldr_gamma.at(txt->path));
+            save_image4f(filename, txt->img, ldr_gamma.at(txt->path));
         } catch (std::exception&) {
             if (skip_missing) continue;
             throw;

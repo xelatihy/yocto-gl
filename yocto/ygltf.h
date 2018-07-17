@@ -2348,7 +2348,7 @@ void load_gltf_textures(
         } else {
             filename = normalize_path(dirname + "/" + gimg->uri);
             try {
-                gimg->data = load_image(filename, ldr_gamma.at(gimg));
+                gimg->data = load_image4f(filename, ldr_gamma.at(gimg));
             } catch (std::exception&) {
                 if (skip_missing) continue;
                 throw;
@@ -2398,7 +2398,7 @@ void save_gltf_textures(const std::shared_ptr<glTF>& gltf,
         }
         auto filename = normalize_path(dirname + "/" + gimg->uri);
         try {
-            save_image(filename, gimg->data, ldr_gamma.at(gimg));
+            save_image4f(filename, gimg->data, ldr_gamma.at(gimg));
         } catch (std::exception&) {
             if (skip_missing) continue;
             throw;
