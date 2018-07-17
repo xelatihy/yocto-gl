@@ -55,7 +55,7 @@ struct app_state {
 void update_display_image(app_state* app) {
     app->display = app->img;
     if (app->is_hdr) {
-        app->display = ygl::tonemap_image(
+        app->display = ygl::tonemap_image4f(
             app->display, app->exposure, app->gamma, app->filmic);
     }
 }

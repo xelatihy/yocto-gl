@@ -84,7 +84,7 @@ void update_minmax(app_state* app) {
 void update_display_image(app_state* app) {
     app->display = app->imgs.at(app->img_id);
     if (ygl::is_hdr_filename(app->filenames.at(app->img_id))) {
-        app->display = ygl::tonemap_image(
+        app->display = ygl::tonemap_image4f(
             app->display, app->exposure, app->gamma, app->filmic);
     }
 }
