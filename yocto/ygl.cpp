@@ -998,12 +998,12 @@ bool intersect_point(
 }
 
 // Intersect a ray with a line
-bool intersect_line(const ray3f& ray, const vec3f& v0, const vec3f& v1,
+bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
     float r0, float r1, float& dist, vec2f& uv) {
     // setup intersection params
     auto u = ray.d;
-    auto v = v1 - v0;
-    auto w = ray.o - v0;
+    auto v = p1 - p0;
+    auto w = ray.o - p0;
 
     // compute values to solve a linear system
     auto a = dot(u, u);
@@ -1028,12 +1028,12 @@ bool intersect_line(const ray3f& ray, const vec3f& v0, const vec3f& v1,
     s = clamp(s, (float)0, (float)1);
 
     // compute segment-segment distance on the closest points
-    auto p0 = ray.o + ray.d * t;
-    auto p1 = v0 + (v1 - v0) * s;
-    auto p01 = p0 - p1;
+    auto pr = ray.o + ray.d * t;
+    auto pl = p0 + (p1 - p0) * s;
+    auto prl = pr - pl;
 
     // check with the line radius at the same point
-    auto d2 = dot(p01, p01);
+    auto d2 = dot(prl, prl);
     auto r = r0 * (1 - s) + r1 * s;
     if (d2 > r * r) return false;
 
@@ -1045,11 +1045,11 @@ bool intersect_line(const ray3f& ray, const vec3f& v0, const vec3f& v1,
 }
 
 // Intersect a ray with a triangle
-bool intersect_triangle(const ray3f& ray, const vec3f& v0, const vec3f& v1,
-    const vec3f& v2, float& dist, vec2f& uv) {
+bool intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
+    const vec3f& p2, float& dist, vec2f& uv) {
     // compute triangle edges
-    auto edge1 = v1 - v0;
-    auto edge2 = v2 - v0;
+    auto edge1 = p1 - p0;
+    auto edge2 = p2 - p0;
 
     // compute determinant to solve a linear system
     auto pvec = cross(ray.d, edge2);
@@ -1061,7 +1061,7 @@ bool intersect_triangle(const ray3f& ray, const vec3f& v0, const vec3f& v1,
     auto inv_det = 1.0f / det;
 
     // compute and check first bricentric coordinated
-    auto tvec = ray.o - v0;
+    auto tvec = ray.o - p0;
     auto u = dot(tvec, pvec) * inv_det;
     if (u < 0 || u > 1) return false;
 
@@ -1082,15 +1082,15 @@ bool intersect_triangle(const ray3f& ray, const vec3f& v0, const vec3f& v1,
 }
 
 // Intersect a ray with a quad.
-bool intersect_quad(const ray3f& ray, const vec3f& v0, const vec3f& v1,
-    const vec3f& v2, const vec3f& v3, float& dist, vec2f& uv) {
+bool intersect_quad(const ray3f& ray, const vec3f& p0, const vec3f& p1,
+    const vec3f& p2, const vec3f& p3, float& dist, vec2f& uv) {
     auto hit = false;
     auto tray = ray;
-    if (intersect_triangle(tray, v0, v1, v3, dist, uv)) {
+    if (intersect_triangle(tray, p0, p1, p3, dist, uv)) {
         tray.tmax = dist;
         hit = true;
     }
-    if (intersect_triangle(tray, v2, v3, v1, dist, uv)) {
+    if (intersect_triangle(tray, p2, p3, p1, dist, uv)) {
         uv = {1 - uv.x, 1 - uv.y};
         tray.tmax = dist;
         hit = true;
@@ -1159,22 +1159,22 @@ bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p, float r,
 }
 
 // TODO: documentation
-float closestuv_line(const vec3f& pos, const vec3f& v0, const vec3f& v1) {
-    auto ab = v1 - v0;
+float closestuv_line(const vec3f& pos, const vec3f& p0, const vec3f& p1) {
+    auto ab = p1 - p0;
     auto d = dot(ab, ab);
     // Project c onto ab, computing parameterized position d(t) = a + t*(b –
     // a)
-    auto u = dot(pos - v0, ab) / d;
+    auto u = dot(pos - p0, ab) / d;
     u = clamp(u, (float)0, (float)1);
     return u;
 }
 
 // TODO: documentation
-bool overlap_line(const vec3f& pos, float dist_max, const vec3f& v0,
-    const vec3f& v1, float r0, float r1, float& dist, vec2f& uv) {
-    auto u = closestuv_line(pos, v0, v1);
+bool overlap_line(const vec3f& pos, float dist_max, const vec3f& p0,
+    const vec3f& p1, float r0, float r1, float& dist, vec2f& uv) {
+    auto u = closestuv_line(pos, p0, p1);
     // Compute projected position from the clamped t d = a + t * ab;
-    auto p = v0 + (v1 - v0) * u;
+    auto p = p0 + (p1 - p0) * u;
     auto r = r0 + (r1 - r0) * u;
     auto d2 = dot(pos - p, pos - p);
     // check distance
@@ -1189,10 +1189,10 @@ bool overlap_line(const vec3f& pos, float dist_max, const vec3f& v0,
 // this is a complicated test -> I probably "--"+prefix to use a sequence of
 // test (triangle body, and 3 edges)
 vec2f closestuv_triangle(
-    const vec3f& pos, const vec3f& v0, const vec3f& v1, const vec3f& v2) {
-    auto ab = v1 - v0;
-    auto ac = v2 - v0;
-    auto ap = pos - v0;
+    const vec3f& pos, const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+    auto ab = p1 - p0;
+    auto ac = p2 - p0;
+    auto ap = pos - p0;
 
     auto d1 = dot(ab, ap);
     auto d2 = dot(ac, ap);
@@ -1200,7 +1200,7 @@ vec2f closestuv_triangle(
     // corner and edge cases
     if (d1 <= 0 && d2 <= 0) return {0, 0};
 
-    auto bp = pos - v1;
+    auto bp = pos - p1;
     auto d3 = dot(ab, bp);
     auto d4 = dot(ac, bp);
     if (d3 >= 0 && d4 <= d3) return {1, 0};
@@ -1208,7 +1208,7 @@ vec2f closestuv_triangle(
     auto vc = d1 * d4 - d3 * d2;
     if ((vc <= 0) && (d1 >= 0) && (d3 <= 0)) return {d1 / (d1 - d3), 0};
 
-    auto cp = pos - v2;
+    auto cp = pos - p2;
     auto d5 = dot(ab, cp);
     auto d6 = dot(ac, cp);
     if (d6 >= 0 && d5 <= d6) return {0, 1};
@@ -1230,11 +1230,11 @@ vec2f closestuv_triangle(
 }
 
 // TODO: documentation
-bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& v0,
-    const vec3f& v1, const vec3f& v2, float r0, float r1, float r2, float& dist,
+bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, float r0, float r1, float r2, float& dist,
     vec2f& uv) {
-    uv = closestuv_triangle(pos, v0, v1, v2);
-    auto p = interpolate_triangle(v0, v1, v2, uv);
+    uv = closestuv_triangle(pos, p0, p1, p2);
+    auto p = interpolate_triangle(p0, p1, p2, uv);
     auto r = interpolate_triangle(r0, r1, r2, uv);
     auto dd = dot(p - pos, p - pos);
     if (dd > (dist_max + r) * (dist_max + r)) return false;
@@ -1243,69 +1243,19 @@ bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& v0,
 }
 
 // TODO: documentation
-bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& v0,
-    const vec3f& v1, const vec3f& v2, const vec3f& v3, float r0, float r1,
+bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, const vec3f& p3, float r0, float r1,
     float r2, float r3, float& dist, vec2f& uv) {
     auto hit = false;
-    if (overlap_triangle(pos, dist_max, v0, v1, v3, r0, r1, r3, dist, uv)) {
+    if (overlap_triangle(pos, dist_max, p0, p1, p3, r0, r1, r3, dist, uv)) {
         dist_max = dist;
         hit = true;
     }
-    if (overlap_triangle(pos, dist_max, v2, v3, v1, r2, r3, r1, dist, uv)) {
+    if (overlap_triangle(pos, dist_max, p2, p3, p1, r2, r3, r1, dist, uv)) {
         // dist_max = dist;
         uv = {1 - uv.x, 1 - uv.y};
         hit = true;
     }
-    return hit;
-}
-
-// TODO: documentation
-bool overlap_tetrahedron(const vec3f& pos, const vec3f& v0, const vec3f& v1,
-    const vec3f& v2, const vec3f& v3, vec4f& uv) {
-    // TODO: fix uv
-    auto vol = dot(v3 - v0, cross(v3 - v1, v3 - v0));
-    if (vol == 0) return false;
-    auto u = dot(v3 - v0, cross(v3 - v1, v3 - v0)) / vol;
-    if (u < 0 || u > 1) return false;
-    auto v = dot(v3 - v0, cross(v3 - v1, v3 - v0)) / vol;
-    if (v < 0 || v > 1 || u + v > 1) return false;
-    auto w = dot(v3 - v0, cross(v3 - v1, v3 - v0)) / vol;
-    if (w < 0 || w > 1 || u + v + w > 1) return false;
-    uv = {u, v, w, 1 - u - v - w};
-    return true;
-}
-
-// TODO: documentation
-bool overlap_tetrahedron(const vec3f& pos, float dist_max, const vec3f& v0,
-    const vec3f& v1, const vec3f& v2, const vec3f& v3, float r0, float r1,
-    float r2, float r3, float& dist, vec4f& uv) {
-    // TODO: FIX UVs
-    // check interior
-    if (overlap_tetrahedron(pos, v0, v1, v2, v3, uv)) {
-        dist = 0;
-        return true;
-    }
-
-    // check faces
-    auto hit = false;
-    auto tuv = zero2f;
-    if (overlap_triangle(pos, dist_max, v0, v1, v2, r0, r1, r2, dist, tuv)) {
-        hit = true;
-        dist_max = dist;
-    }
-    if (overlap_triangle(pos, dist_max, v0, v1, v3, r0, r1, r3, dist, tuv)) {
-        hit = true;
-        dist_max = dist;
-    }
-    if (overlap_triangle(pos, dist_max, v0, v2, v3, r0, r2, r3, dist, tuv)) {
-        hit = true;
-        dist_max = dist;
-    }
-    if (overlap_triangle(pos, dist_max, v1, v2, v3, r1, r2, r3, dist, tuv)) {
-        hit = true;
-        // dist_max = dist;
-    }
-
     return hit;
 }
 
