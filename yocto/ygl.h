@@ -42,10 +42,10 @@
 // The library supports basic geomtry functions such as computing
 // line/triangle/quad normals and areas, picking points on triangles
 // and the like. In these functions triangles are parameterized with us written
-// w.r.t the (v1-v0) and (v2-v0) axis respectively. Quads are internally handled
-// as pairs of two triangles v0,v1,v3 and v2,v3,v1, with the u/v coordinates
+// w.r.t the (p1-p0) and (p2-p0) axis respectively. Quads are internally handled
+// as pairs of two triangles p0,p1,p3 and p2,p3,p1, with the u/v coordinates
 // of the second triangle corrected as 1-u and 1-v to produce a quad
-// parametrization where u and v go from 0 to 1. Degenerate quads with v2==v3
+// parametrization where u and v go from 0 to 1. Degenerate quads with p2==p3
 // represent triangles correctly, an this convention is used throught the
 // library. This is equivalent to Intel's Embree.
 //
@@ -1002,28 +1002,28 @@ inline bbox3f point_bbox(const vec3f& p, float r = 0) {
     return bbox;
 }
 inline bbox3f line_bbox(
-    const vec3f& v0, const vec3f& v1, float r0 = 0, float r1 = 0) {
+    const vec3f& p0, const vec3f& p1, float r0 = 0, float r1 = 0) {
     auto bbox = ygl::bbox3f{};
-    bbox += v0 - vec3f{r0, r0, r0};
-    bbox += v0 + vec3f{r0, r0, r0};
-    bbox += v1 - vec3f{r1, r1, r1};
-    bbox += v1 + vec3f{r1, r1, r1};
+    bbox += p0 - vec3f{r0, r0, r0};
+    bbox += p0 + vec3f{r0, r0, r0};
+    bbox += p1 - vec3f{r1, r1, r1};
+    bbox += p1 + vec3f{r1, r1, r1};
     return bbox;
 }
-inline bbox3f triangle_bbox(const vec3f& v0, const vec3f& v1, const vec3f& v2) {
+inline bbox3f triangle_bbox(const vec3f& p0, const vec3f& p1, const vec3f& p2) {
     auto bbox = ygl::bbox3f{};
-    bbox += v0;
-    bbox += v1;
-    bbox += v2;
+    bbox += p0;
+    bbox += p1;
+    bbox += p2;
     return bbox;
 }
 inline bbox3f quad_bbox(
-    const vec3f& v0, const vec3f& v1, const vec3f& v2, const vec3f& v3) {
+    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
     auto bbox = ygl::bbox3f{};
-    bbox += v0;
-    bbox += v1;
-    bbox += v2;
-    bbox += v3;
+    bbox += p0;
+    bbox += p1;
+    bbox += p2;
+    bbox += p3;
     return bbox;
 }
 
@@ -1404,14 +1404,14 @@ inline vec2f sample_triangle(const vec2f& ruv) {
     return {1 - sqrt(ruv.x), ruv.y * sqrt(ruv.x)};
 }
 inline vec3f sample_triangle(
-    const vec3f& v0, const vec3f& v1, const vec3f& v2, const vec2f& ruv) {
+    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec2f& ruv) {
     auto uv = sample_triangle(ruv);
-    return v0 * (1 - uv.x - uv.y) + v1 * uv.x + v2 * uv.y;
+    return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
 }
 // Pdf for uniform triangle sampling, i.e. triangle area.
 inline float sample_triangle_pdf(
-    const vec3f& v0, const vec3f& v1, const vec3f& v2) {
-    return 2 / length(cross(v1 - v0, v2 - v0));
+    const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+    return 2 / length(cross(p1 - p0, p2 - p0));
 }
 
 // Sample an index with uniform distribution.
@@ -1463,41 +1463,41 @@ float perlin_turbulence_noise(const vec3f& p, float lacunarity = 2.0f,
 namespace ygl {
 
 // Line properties.
-inline vec3f line_tangent(const vec3f& v0, const vec3f& v1) {
-    return normalize(v1 - v0);
+inline vec3f line_tangent(const vec3f& p0, const vec3f& p1) {
+    return normalize(p1 - p0);
 }
-inline float line_length(const vec3f& v0, const vec3f& v1) {
-    return length(v1 - v0);
+inline float line_length(const vec3f& p0, const vec3f& p1) {
+    return length(p1 - p0);
 }
 
 // Triangle properties.
 inline vec3f triangle_normal(
-    const vec3f& v0, const vec3f& v1, const vec3f& v2) {
-    return normalize(cross(v1 - v0, v2 - v0));
+    const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+    return normalize(cross(p1 - p0, p2 - p0));
 }
-inline float triangle_area(const vec3f& v0, const vec3f& v1, const vec3f& v2) {
-    return length(cross(v1 - v0, v2 - v0)) / 2;
+inline float triangle_area(const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+    return length(cross(p1 - p0, p2 - p0)) / 2;
 }
 
 // Quad propeties.
 inline vec3f quad_normal(
-    const vec3f& v0, const vec3f& v1, const vec3f& v2, const vec3f& v3) {
-    return normalize(triangle_normal(v0, v1, v3) + triangle_normal(v2, v3, v1));
+    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
+    return normalize(triangle_normal(p0, p1, p3) + triangle_normal(p2, p3, p1));
 }
 inline float quad_area(
-    const vec3f& v0, const vec3f& v1, const vec3f& v2, const vec3f& v3) {
-    return triangle_area(v0, v1, v3) + triangle_area(v2, v3, v1);
+    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
+    return triangle_area(p0, p1, p3) + triangle_area(p2, p3, p1);
 }
 
 // Triangle tangent and bitangent from uv
-inline std::pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& v0,
-    const vec3f& v1, const vec3f& v2, const vec2f& uv0, const vec2f& uv1,
+inline std::pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
     const vec2f& uv2) {
     // Follows the definition in http://www.terathon.com/code/tangent.html and
     // https://gist.github.com/aras-p/2843984
     // normal points up from texture space
-    auto p = v1 - v0;
-    auto q = v2 - v0;
+    auto p = p1 - p0;
+    auto q = p2 - p0;
     auto s = vec2f{uv1.x - uv0.x, uv2.x - uv0.x};
     auto t = vec2f{uv1.y - uv0.y, uv2.y - uv0.y};
     auto div = s.x * t.y - s.y * t.x;
@@ -1517,38 +1517,38 @@ inline std::pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& v0,
 
 // Interpolates values over a line parametrized from a to b by u. Same as lerp.
 template <typename T>
-inline T interpolate_line(const T& v0, const T& v1, float u) {
-    return v0 * (1 - u) + v1 * u;
+inline T interpolate_line(const T& p0, const T& p1, float u) {
+    return p0 * (1 - u) + p1 * u;
 }
 // Interpolates values over a triangle parametrized by u and v along the
-// (v1-v0) and (v2-v0) directions. Same as barycentric interpolation.
+// (p1-p0) and (p2-p0) directions. Same as barycentric interpolation.
 template <typename T>
 inline T interpolate_triangle(
-    const T& v0, const T& v1, const T& v2, const vec2f& uv) {
-    return v0 * (1 - uv.x - uv.y) + v1 * uv.x + v2 * uv.y;
+    const T& p0, const T& p1, const T& p2, const vec2f& uv) {
+    return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
 }
 // Interpolates values over a quad parametrized by u and v along the
-// (v1-v0) and (v2-v1) directions. Same as bilear interpolation.
+// (p1-p0) and (p2-p1) directions. Same as bilear interpolation.
 template <typename T>
 inline T interpolate_quad(
-    const T& v0, const T& v1, const T& v2, const T& v3, const vec2f& uv) {
-    return v0 * (1 - uv.x) * (1 - uv.y) + v1 * uv.x * (1 - uv.y) +
-           v2 * uv.x * uv.y + v3 * (1 - uv.x) * uv.y;
+    const T& p0, const T& p1, const T& p2, const T& p3, const vec2f& uv) {
+    return p0 * (1 - uv.x) * (1 - uv.y) + p1 * uv.x * (1 - uv.y) +
+           p2 * uv.x * uv.y + p3 * (1 - uv.x) * uv.y;
 }
 
 // Interpolates values along a cubic Bezier segment parametrized by u.
 template <typename T>
 inline T interpolate_bezier(
-    const T& v0, const T& v1, const T& v2, const T& v3, float u) {
-    return v0 * (1 - u) * (1 - u) * (1 - u) + v1 * 3 * u * (1 - u) * (1 - u) +
-           v2 * 3 * u * u * (1 - u) + v3 * u * u * u;
+    const T& p0, const T& p1, const T& p2, const T& p3, float u) {
+    return p0 * (1 - u) * (1 - u) * (1 - u) + p1 * 3 * u * (1 - u) * (1 - u) +
+           p2 * 3 * u * u * (1 - u) + p3 * u * u * u;
 }
 // Computes the derivative of a cubic Bezier segment parametrized by u.
 template <typename T>
 inline T interpolate_bezier_derivative(
-    const T& v0, const T& v1, const T& v2, const T& v3, float u) {
-    return (v1 - v0) * 3 * (1 - u) * (1 - u) + (v2 - v1) * 6 * u * (1 - u) +
-           (v3 - v2) * 3 * u * u;
+    const T& p0, const T& p1, const T& p2, const T& p3, float u) {
+    return (p1 - p0) * 3 * (1 - u) * (1 - u) + (p2 - p1) * 6 * u * (1 - u) +
+           (p3 - p2) * 3 * u * u;
 }
 
 }  // namespace ygl
@@ -1726,7 +1726,7 @@ inline std::pair<int, vec2f> sample_quads(
 }
 
 // Samples a set of points over a triangle mesh uniformly. Returns pos, norm
-// and tecoord of the sampled points.
+// and texcoord of the sampled points.
 std::tuple<std::vector<vec3f>, std::vector<vec3f>, std::vector<vec2f>>
 sample_triangles_points(const std::vector<vec3i>& triangles,
     const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
@@ -1748,19 +1748,19 @@ bool intersect_point(
 // Based on http://geomalgorithms.com/a05-intersect-1.html and
 // http://geomalgorithms.com/a07-distance.html#
 //     dist3D_Segment_to_Segment
-bool intersect_line(const ray3f& ray, const vec3f& v0, const vec3f& v1,
+bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
     float r0, float r1, float& dist, vec2f& uv);
 
 // Intersect a ray with a triangle.
-bool intersect_triangle(const ray3f& ray, const vec3f& v0, const vec3f& v1,
-    const vec3f& v2, float& dist, vec2f& uv);
+bool intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
+    const vec3f& p2, float& dist, vec2f& uv);
 
 // Intersect a ray with a quad represented as two triangles (0,1,3) and
 // (2,3,1), with the uv coordinates of the second triangle corrected by u =
 // 1-u' and v = 1-v' to produce a quad parametrization where u and v go from 0
 // to 1. This is equivalent to Intel's Embree.
-bool intersect_quad(const ray3f& ray, const vec3f& v0, const vec3f& v1,
-    const vec3f& v2, const vec3f& v3, float& dist, vec2f& uv);
+bool intersect_quad(const ray3f& ray, const vec3f& p0, const vec3f& p1,
+    const vec3f& p2, const vec3f& p3, float& dist, vec2f& uv);
 
 // Intersect a ray with a axis-aligned bounding box.
 bool intersect_bbox(const ray3f& ray, const bbox3f& bbox);
@@ -1772,28 +1772,28 @@ bool intersect_bbox(const ray3f& ray, const vec3f& ray_dinv,
     const vec3i& ray_dsign, const bbox3f& bbox);
 
 // Check if a point overlaps a position within a max distance.
-bool overlap_point(const vec3f& pos, float dist_max, const vec3f& v0, float r0,
+bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p0, float r0,
     float& dist, vec2f& uv);
 
 // Find closest line point to a position.
-float closestuv_line(const vec3f& pos, const vec3f& v0, const vec3f& v1);
+float closestuv_line(const vec3f& pos, const vec3f& p0, const vec3f& p1);
 
 // Check if a line overlaps a position within a max distance.
-bool overlap_line(const vec3f& pos, float dist_max, const vec3f& v0,
-    const vec3f& v1, float r0, float r1, float& dist, vec2f& uv);
+bool overlap_line(const vec3f& pos, float dist_max, const vec3f& p0,
+    const vec3f& p1, float r0, float r1, float& dist, vec2f& uv);
 
 // Find closest triangle point to a position.
 vec2f closestuv_triangle(
-    const vec3f& pos, const vec3f& v0, const vec3f& v1, const vec3f& v2);
+    const vec3f& pos, const vec3f& p0, const vec3f& p1, const vec3f& p2);
 
 // Check if a triangle overlaps a position within a max distance.
-bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& v0,
-    const vec3f& v1, const vec3f& v2, float r0, float r1, float r2, float& dist,
+bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, float r0, float r1, float r2, float& dist,
     vec2f& uv);
 
 // Check if a quad overlaps a position within a max distance.
-bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& v0,
-    const vec3f& v1, const vec3f& v2, const vec3f& v3, float r0, float r1,
+bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, const vec3f& p3, float r0, float r1,
     float r2, float r3, float& dist, vec2f& uv);
 
 // Check if a bouning box overlaps a position within a max distance.
