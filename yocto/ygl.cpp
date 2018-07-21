@@ -4008,6 +4008,44 @@ vec4f eval_texture(const texture* txt, const vec2f& texcoord) {
            txt->img.at(ii, jj) * u * v;
 }
 
+// Evaluate a volume texture
+float eval_texture(const texture* txt, const vec3f& texcoord, bool filter) {
+    if (!txt || txt->vol.pxl.empty()) return 1;
+
+    // get image width/height
+    auto width = txt->vol.width;
+    auto height = txt->vol.height;
+    auto depth = txt->vol.depth;
+
+    // get coordinates normalized for tiling
+    float s = clamp((texcoord.x + 1.0f) * 0.5f, 0.0f, 1.0f) * width;
+    float t = clamp((texcoord.y + 1.0f) * 0.5f, 0.0f, 1.0f) * height;
+    float r = clamp((texcoord.z + 1.0f) * 0.5f, 0.0f, 1.0f) * depth;
+
+    // get image coordinates and residuals
+    auto i = clamp((int)s, 0, width - 1);
+    auto j = clamp((int)t, 0, height - 1);
+    auto k = clamp((int)r, 0, depth - 1);
+    auto ii = (i + 1) % width, jj = (j + 1) % height, kk = (k + 1) % depth;
+    auto u = s - i, v = t - j, w = r - k;
+    if (not filter) {
+        i = u<0.5? i : min(i+1, width-1);
+        j = v<0.5? j : min(j+1, height-1);
+        k = w<0.5? k : min(k+1, depth-1);
+        return txt->vol.at(i, j, k);
+    }
+    // tri-linear filtering
+    return
+        txt->vol.at(i, j, k)  * (1 - u) * (1 - v) * (1 - w) +
+        txt->vol.at(ii, j, k) *    u    * (1 - v) * (1 - w) +
+        txt->vol.at(i, jj, k) * (1 - u) *    v    * (1 - w) +
+        txt->vol.at(i, j, kk) * (1 - u) * (1 - v) *    w    +
+        txt->vol.at(i, jj, kk)* (1 - u) *    v    *    w    +
+        txt->vol.at(ii, j, kk)*    u    * (1 - v) *    w    +
+        txt->vol.at(ii, jj, k)*    u    *    v    * (1 - w) +
+        txt->vol.at(ii, jj, kk)*   u    *    v    *    w    ;
+}
+
 // Set and evaluate camera parameters. Setters take zeros as default values.
 float eval_camera_fovy(const camera* cam) {
     return 2 * std::atan(cam->height / (2 * cam->focal));
@@ -5155,19 +5193,23 @@ vec3f trace_debug_specular(const scene* scn, const ray3f& ray, rng_state& rng,
     return f.ks;
 }
 
+#include "yocto_volume.h"
 // Debug previewing.
 vec3f trace_debug_roughness(const scene* scn, const ray3f& ray, rng_state& rng,
     int nbounces, bool* hit) {
-    // intersect scene
-    auto isec = intersect_ray(scn, ray);
-    if (!isec.ist) return zero3f;
-    if (hit) *hit = true;
+    *hit = true;
+    return trace_path_volume(scn, ray, rng, nbounces, hit);
 
-    // point
-    auto f = eval_bsdf(isec.ist, isec.ei, isec.uv);
+    // // intersect scene
+    // auto isec = intersect_ray(scn, ray);
+    // if (!isec.ist) return zero3f;
+    // if (hit) *hit = true;
 
-    // shade
-    return {f.rs, f.rs, f.rs};
+    // // point
+    // auto f = eval_bsdf(isec.ist, isec.ei, isec.uv);
+
+    // // shade
+    // return {f.rs, f.rs, f.rs};
 }
 
 // Debug previewing.

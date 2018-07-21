@@ -2334,10 +2334,10 @@ struct material {
     texture* norm_txt = nullptr;  // normal texture
 
     // volume properties
-    vec3f ve = zero3f;  // volume emission
-    vec3f va = zero3f;  // albedo: scattering / (absorption + scattering)
-    vec3f vd = zero3f;  // density: absorption + scattering
-    float vg = 0;       // phase function shape
+    vec3f ve = {0, 0, 0};  // volume emission
+    vec3f va = {0, 0, 0};  // albedo: scattering / (absorption + scattering)
+    vec3f vd = {0, 0, 0};  // density: absorption + scattering
+    float vg = 0;          // phase function shape
 
     // volume textures
     texture* vd_txt = nullptr;  // density
@@ -2625,6 +2625,7 @@ vec3f eval_environment(const environment* env, const vec3f& i);
 
 // Evaluate a texture.
 vec4f eval_texture(const texture* txt, const vec2f& texcoord);
+float eval_texture(const texture* txt, const vec3f& texcoord, bool filter);
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
 float eval_camera_fovy(const camera* cam);
