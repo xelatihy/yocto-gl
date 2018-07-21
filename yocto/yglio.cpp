@@ -1929,7 +1929,7 @@ scene* load_json_scene(
         if(get_extension(filename) == "vol") {
             try {
                 txt->vol = read_volume1f(filename);
-                printf("vol size %d\n", txt->vol.pxl.size());
+                printf("vol size %ld\n", txt->vol.pxl.size());
             } catch (const std::exception&) {
                 if (skip_missing) continue;
                 throw;

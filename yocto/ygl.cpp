@@ -4009,7 +4009,7 @@ vec4f eval_texture(const texture* txt, const vec2f& texcoord) {
 }
 
 // Evaluate a volume texture
-float eval_texture(const texture* txt, const vec3f& texcoord, bool filter) {
+float eval_texture(const texture* txt, const vec3f& texcoord, bool trilinear) {
     if (!txt || txt->vol.pxl.empty()) return 1;
 
     // get image width/height
@@ -4028,13 +4028,16 @@ float eval_texture(const texture* txt, const vec3f& texcoord, bool filter) {
     auto k = clamp((int)r, 0, depth - 1);
     auto ii = (i + 1) % width, jj = (j + 1) % height, kk = (k + 1) % depth;
     auto u = s - i, v = t - j, w = r - k;
-    if (not filter) {
+    
+    // nearest-neighbor interpolation
+    if (not trilinear) {
         i = u<0.5? i : min(i+1, width-1);
         j = v<0.5? j : min(j+1, height-1);
         k = w<0.5? k : min(k+1, depth-1);
         return txt->vol.at(i, j, k);
     }
-    // tri-linear filtering
+    
+    // trilinear interpolation
     return
         txt->vol.at(i, j, k)  * (1 - u) * (1 - v) * (1 - w) +
         txt->vol.at(ii, j, k) *    u    * (1 - v) * (1 - w) +
@@ -5193,23 +5196,19 @@ vec3f trace_debug_specular(const scene* scn, const ray3f& ray, rng_state& rng,
     return f.ks;
 }
 
-#include "yocto_volume.h"
 // Debug previewing.
 vec3f trace_debug_roughness(const scene* scn, const ray3f& ray, rng_state& rng,
     int nbounces, bool* hit) {
-    *hit = true;
-    return trace_path_volume(scn, ray, rng, nbounces, hit);
-
-    // // intersect scene
-    // auto isec = intersect_ray(scn, ray);
-    // if (!isec.ist) return zero3f;
-    // if (hit) *hit = true;
-
-    // // point
-    // auto f = eval_bsdf(isec.ist, isec.ei, isec.uv);
-
-    // // shade
-    // return {f.rs, f.rs, f.rs};
+    // intersect scene
+    auto isec = intersect_ray(scn, ray);
+    if (!isec.ist) return zero3f;
+    if (hit) *hit = true;
+    
+    // point
+    auto f = eval_bsdf(isec.ist, isec.ei, isec.uv);
+    
+    // shade
+    return {f.rs, f.rs, f.rs};
 }
 
 // Debug previewing.
