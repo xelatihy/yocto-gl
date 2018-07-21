@@ -2625,7 +2625,7 @@ vec3f eval_environment(const environment* env, const vec3f& i);
 
 // Evaluate a texture.
 vec4f eval_texture(const texture* txt, const vec2f& texcoord);
-float eval_texture(const texture* txt, const vec3f& texcoord, bool filter);
+float eval_texture(const texture* txt, const vec3f& texcoord, bool trilinear);
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
 float eval_camera_fovy(const camera* cam);
