@@ -2715,6 +2715,9 @@ void trace_async_stop(std::vector<std::thread>& threads, bool& stop);
 // Trace function - path tracer.
 vec3f trace_path(const scene* scn, const ray3f& ray, rng_state& rng,
     int nbounces, bool* hit = nullptr);
+// Trace function - volume path tracer.
+vec3f trace_path_volume(const scene* scn, const ray3f& ray, rng_state& rng,
+    int nbounces, bool* hit = nullptr);
 // Trace function - path tracer without mis.
 vec3f trace_path_nomis(const scene* scn, const ray3f& ray, rng_state& rng,
     int nbounces, bool* hit = nullptr);
