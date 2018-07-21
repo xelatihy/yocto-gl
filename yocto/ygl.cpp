@@ -4714,11 +4714,189 @@ vec3f trace_path(const scene* scn, const ray3f& ray_, rng_state& rng,
     return l;
 }
 
+#include "volume_utils.h"
 // Iterative volume path tracing.
 vec3f trace_path_volume(const scene* scn, const ray3f& ray_, rng_state& rng,
     int nbounces, bool* hit) {
-    // Implementation in next pull request.
-    return zero3f;
+    if (scn->lights.empty() && scn->environments.empty()) return zero3f;
+
+    // initialize
+    auto radiance = zero3f;
+    auto weight = vec3f{1, 1, 1};
+    auto emission = true;
+    auto ray = ray_;    
+
+    // @Hack: air volume properties should be set in the scene struct.
+    if(air == nullptr) {
+        air = new instance();
+        air->name = "air";
+        air->mat = new material();
+        air->mat->vd = vec3f{0.0,0.0,0.0};
+        air->mat->va = vec3f{0.0, 0.0, 0.0};
+        air->mat->vg = 0.0;
+    }
+    
+    // List of mediums that contains the path. The path starts in air.
+    std::vector<instance*> mediums = {air};
+
+    // Sample color channel. This won't matter if there are no heterogeneus materials.
+    int ch = sample_index(3, rand1f(rng));
+    bool single_channel = false;
+
+
+    //for (auto bounce = 0; -bounce < nbounces; bounce++) { 
+    for(int bounce = 0; true; bounce++) { // @Hack
+        instance* medium = mediums.back();
+        const vec3f& ve = medium->mat->ve;
+        const vec3f& va = medium->mat->va;
+        const vec3f& vd = medium->mat->vd;
+        const float& vg = medium->mat->vg;
+
+        // If medium has color but must use delta tracking, follow only the sampled spectrum.
+        if(not single_channel and has_volume_color(medium->mat) and not is_homogeneus(medium->mat)) {
+            at(weight, ch) *= 3;
+            at(weight, (ch+1)%3) = 0;
+            at(weight, (ch+2)%3) = 0;
+            single_channel = true;
+        }
+
+        // Sample distance of next absorption/scattering event in the medium.
+        // dist_pdf is unknown due to delta tracking.
+        float dist = sample_distance(medium, ray.o, ray.d, ch, rng);
+       
+        // Create ray and clamp it to make the intersection faster.
+        ray = make_ray(ray.o, ray.d);
+        ray.tmax = dist;
+        auto isec = intersect_ray(scn, ray);
+
+        float scene_size = max(scn->bvh->nodes[0].bbox.max - scn->bvh->nodes[0].bbox.min); // @Hack
+        // environment
+        if(isec.ist == nullptr and dist > scene_size) {
+            if (emission) {
+                for (auto env : scn->environments)
+                    radiance += weight * eval_environment(env, ray.d);
+            }
+            break;
+        }
+        *hit = true;
+
+        // surface intersection
+        if(isec.ist) {
+            auto o = -ray.d;
+            auto p = eval_pos(isec.ist, isec.ei, isec.uv);
+            auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv, o);
+            auto f = eval_bsdf(isec.ist, isec.ei, isec.uv);
+
+            // distance sampling pdf is unknown due to delta tracking, but we do know
+            // the value of transmission / pdf_dist
+            weight *= eval_transmission_div_pdf(vd, isec.dist, ch);
+
+            // emission
+            if (emission) radiance += weight * eval_emission(isec.ist, isec.ei, isec.uv);
+
+            // early exit
+            if (f.kd + f.ks + f.kt == zero3f || bounce >= nbounces - 1) break;
+
+            // direct lighting
+            if(rand1f(rng) < prob_direct(f)) {
+                vec3f direct = zero3f;
+                float pdf;
+                vec3f i = direct_illumination(scn, o, p, ch, mediums, rng, pdf, direct);
+                if (pdf != 0) {
+                    auto brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
+                    radiance += weight * direct * brdfcos / pdf;
+                    emission = false;
+                }
+            }
+            else emission = true;
+
+            // continue path
+            auto i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
+            float ndi = dot(n, i);
+            float ndo = dot(n, o);
+            auto brdfcos = eval_bsdf(f, n, o, i) * fabs(ndi);
+            auto pdf = sample_brdf_pdf(f, n, o, i);
+            
+            // accumulate weight
+            if (pdf == 0) break;
+            weight *= brdfcos / pdf;
+            if (weight == zero3f) break;
+            ray.o = p;
+            ray.d = i;
+            bool transmitted = (ndi > 0) != (ndo > 0);
+
+            // transmission in medium
+            if(transmitted) {
+                float tr = 0.05;
+                if(ndo < -tr) {
+                    // Exiting from medium.
+                    if(isec.ist != mediums.back()) {
+                        printf("ERROR: (ndo = %f) exiting from %s, but was in %s\n", ndo, isec.ist->name.c_str(), mediums.back()->name.c_str());
+                        break;
+                    }
+                    if(mediums.size() <= 1) {
+                        printf("ERROR: (ndo = %f) exiting from %s, but medium ha size %d\n", ndo, mediums.back()->name.c_str(), mediums.size());
+                        break;
+                    }
+                    mediums.pop_back();
+                }
+                else if(ndo > tr) {
+                    // Entering new medium.
+                    if(isec.ist == mediums.back()) {
+                        printf("ERROR: (ndo = %f) entering in %s, but was already in it\n", ndo, isec.ist->name.c_str());
+                        break;
+                    }
+                    mediums.push_back(isec.ist);
+                }
+                else
+                    break;
+            }
+        }
+        // no surface is intersected, new medium interaction 
+        else {
+            assert(medium->mat->kt != zero3f);
+            ray.o += ray.d * dist;
+
+            
+            float scattering_prob = at(va, ch);
+
+            // absorption and emission
+            if(rand1f(rng) >= scattering_prob) {
+                weight /= 1 - scattering_prob;
+                radiance += weight * ve;
+                break;
+            }
+
+            // scattering event
+            assert(scattering_prob > 0);
+            weight /= scattering_prob;
+            weight *= eval_transmission_div_pdf(vd, dist, ch);
+            
+            // direct lighting
+            vec3f direct = zero3f;
+            float pdf_direct;
+            vec3f l = direct_illumination(scn, -ray.d, ray.o, ch, mediums, rng, pdf_direct, direct);
+            if (pdf_direct != 0) {
+                auto f = eval_phase_function(dot(l, -ray.d), vg);
+                radiance += weight * direct * f / pdf_direct;
+                emission = false;
+            }
+            
+            // indirect
+            vec3f i = sample_phase_function(vg, rand2f(rng));
+            weight *= va;
+            ray.d = transform_direction(make_frame_fromz(zero3f, ray.d), i);
+        }
+
+        // russian roulette
+        if (bounce > 2) {
+            auto rrprob = 1.0f - min(max(weight), 0.95f);
+            if (rand1f(rng) < rrprob) break;
+            weight *= 1 / (1 - rrprob);
+        }
+    }
+
+    return radiance;
 }
 
 // Recursive path tracing.
