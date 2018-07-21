@@ -763,6 +763,29 @@ image4f resize_image4f(const image4f& img, int width, int height) {
     return res_img;
 }
 
+// Loads volume data in binary format
+volume1f read_volume1f(const std::string& filename) {
+    auto file = fopen(filename.c_str(), "r");
+    throw std::runtime_error("could not load volume " + filename);
+    volume1f vol;
+    fread(&vol, sizeof(int), 3, file);
+    int n = vol.width * vol.height * vol.depth;
+    vol.pxl = std::vector<float>(n);
+    fread(vol.pxl.data(), sizeof(float), n, file);
+    fclose(file);
+    return vol;
+}
+
+// Saves volume data in binary format
+void save_volume1f(const ygl::volume1f& tex, const std::string& filename) {
+    auto file = fopen(filename.c_str(), "w");
+    if (!file) throw std::runtime_error("could not save " + filename);
+    int dims[3] = {tex.width, tex.height, tex.depth};
+    fwrite(dims, sizeof(int), 3, file); 
+    fwrite(tex.pxl.data(), sizeof(float), tex.pxl.size(), file);
+    fclose(file);
+}
+
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
@@ -1199,6 +1222,7 @@ void to_json(json& js, const material& val) {
     if (val.bump_txt != def.bump_txt) js["bump_txt"] = val.bump_txt->name;
     if (val.disp_txt != def.disp_txt) js["disp_txt"] = val.disp_txt->name;
     if (val.norm_txt != def.norm_txt) js["norm_txt"] = val.norm_txt->name;
+    if (val.vd_txt != def.vd_txt) js["vd_txt"] = val.vd_txt->name;
 }
 
 // Procedural commands for materials
@@ -1217,6 +1241,10 @@ void from_json(const json& js, material& val) {
     val.kt = js.value("kt", def.kt);
     val.rs = js.value("rs", def.rs);
     val.op = js.value("op", def.op);
+    val.ve = js.value("ve", def.ve);
+    val.va = js.value("va", def.va);
+    val.vd = js.value("vd", def.vd);
+    val.vg = js.value("vg", def.vg);
     val.fresnel = js.value("fresnel", def.fresnel);
     val.refract = js.value("refract", def.refract);
     if (js.count("ke_txt")) {
@@ -1258,6 +1286,10 @@ void from_json(const json& js, material& val) {
     if (js.count("norm_txt")) {
         val.norm_txt = new texture();
         val.norm_txt->name = js.at("norm_txt").get<std::string>();
+    }
+    if (js.count("vd_txt")) {
+        val.vd_txt = new texture();
+        val.vd_txt->name = js.at("vd_txt").get<std::string>();
     }
     if (js.count("!!proc")) from_json_proc(js.at("!!proc"), val);
 }
@@ -1850,6 +1882,7 @@ scene* load_json_scene(
         fix_ref(tmap, scn->textures, mat->norm_txt);
         fix_ref(tmap, scn->textures, mat->bump_txt);
         fix_ref(tmap, scn->textures, mat->disp_txt);
+        fix_ref(tmap, scn->textures, mat->vd_txt);
     }
 
     // load meshes
@@ -1890,15 +1923,26 @@ scene* load_json_scene(
 
     // load images
     for (auto& txt : scn->textures) {
-        if (txt->path == "" || !txt->img.pxl.empty()) continue;
+        if (txt->path == "" || !txt->img.pxl.empty() || !txt->vol.pxl.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
-        try {
-            txt->img = load_image4f(filename);
-            if (!is_hdr_filename(filename) && txt->gamma != 1)
-                txt->img = gamma_to_linear(txt->img, txt->gamma);
-        } catch (const std::exception&) {
-            if (skip_missing) continue;
-            throw;
+
+        if(get_extension(filename) == "vol") {
+            try {
+                txt->vol = read_volume1f(filename);
+                printf("vol size %d\n", txt->vol.pxl.size());
+            } catch (const std::exception&) {
+                if (skip_missing) continue;
+                throw;
+            }
+        } else {       
+            try {
+                txt->img = load_image4f(filename);
+                if (!is_hdr_filename(filename) && txt->gamma != 1)
+                    txt->img = gamma_to_linear(txt->img, txt->gamma);
+            } catch (const std::exception&) {
+                if (skip_missing) continue;
+                throw;
+            }
         }
     }
 

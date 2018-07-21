@@ -185,6 +185,10 @@ void save_tonemapped_image4f(const std::string& filename,
     const image4f& hdr, float exposure = 0, float gamma = 2.2f,
     bool filmic = false);
 
+// Loads/saves a 1 channle volume.
+volume1f read_volume1f(const std::string& filename);
+void save_volume1f(const ygl::volume1f& tex, const std::string& filename);
+
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
