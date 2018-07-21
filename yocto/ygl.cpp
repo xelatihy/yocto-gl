@@ -4714,6 +4714,13 @@ vec3f trace_path(const scene* scn, const ray3f& ray_, rng_state& rng,
     return l;
 }
 
+// Iterative volume path tracing.
+vec3f trace_path_volume(const scene* scn, const ray3f& ray_, rng_state& rng,
+    int nbounces, bool* hit) {
+    // Implementation in next pull request.
+    return zero3f;
+}
+
 // Recursive path tracing.
 vec3f trace_path_naive(const scene* scn, const ray3f& ray_, rng_state& rng,
     int nbounces, bool* hit) {
