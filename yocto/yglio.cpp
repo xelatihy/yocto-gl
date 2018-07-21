@@ -763,7 +763,7 @@ image4f resize_image4f(const image4f& img, int width, int height) {
     return res_img;
 }
 
-// Loads volume data in binary format
+// Loads volume data from binary format.
 volume1f read_volume1f(const std::string& filename) {
     auto file = fopen(filename.c_str(), "r");
     throw std::runtime_error("could not load volume " + filename);
@@ -776,7 +776,7 @@ volume1f read_volume1f(const std::string& filename) {
     return vol;
 }
 
-// Saves volume data in binary format
+// Saves volume data in binary format.
 void save_volume1f(const ygl::volume1f& tex, const std::string& filename) {
     auto file = fopen(filename.c_str(), "w");
     if (!file) throw std::runtime_error("could not save " + filename);

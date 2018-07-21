@@ -5203,10 +5203,10 @@ vec3f trace_debug_roughness(const scene* scn, const ray3f& ray, rng_state& rng,
     auto isec = intersect_ray(scn, ray);
     if (!isec.ist) return zero3f;
     if (hit) *hit = true;
-    
+
     // point
     auto f = eval_bsdf(isec.ist, isec.ei, isec.uv);
-    
+
     // shade
     return {f.rs, f.rs, f.rs};
 }
