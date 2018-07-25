@@ -4196,6 +4196,105 @@ std::pair<int, vec2f> sample_shape(
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
+// VOLUME, EVAL AND SAMPLING FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+    bool is_homogeneus(const material* vol) { 
+        return vol->vd_txt == nullptr;
+    }
+
+    bool has_volume_color(const material* vol) { 
+        return not (vol->vd.x == vol->vd.y and vol->vd.y == vol->vd.z);
+    }
+    
+    vec3f eval_transmission(const material* vol, const vec3f& from, const vec3f& dir, float dist, int channel, rng_state& rng) {
+        const vec3f& vd = vol->vd;
+        if(is_homogeneus(vol))
+            return vec3f{exp(-dist * vd.x), exp(-dist * vd.y), exp(-dist * vd.z)};
+        
+        // ratio tracking
+        float tr = 1.0f;
+        float t = 0.0f;
+        vec3f pos = from;
+        while (true) {
+            float step = -log(1 - rand1f(rng)) / at(vd, channel);
+            t += step;
+            if (t >= dist) break;
+            pos += dir * step;
+            vec3f density = vol->vd * eval_texture(vol->vd_txt, pos, true);
+
+            tr *= 1.0f - max(0.0f, at(density, channel) / at(vd, channel));
+        }
+        return tr * vec3f{1, 1, 1};
+    }
+
+    float sample_distance(const material* vol, const vec3f& from, const vec3f& dir, int channel, rng_state& rng) {
+        vec3f pos = from;    
+        float majorant = at(vol->vd, channel);
+        if(majorant == 0) return flt_max;
+        float dist = 0;
+        
+        // delta tracking
+        while(1) {
+            float r = rand1f(rng);
+            if(r == 0) return flt_max;
+            float step = -log(r) / majorant;
+            if(is_homogeneus(vol))
+                return step;
+            
+            pos += dir * step;
+            dist += step;
+            vec3f density = vol->vd * eval_texture(vol->vd_txt, pos, true);
+
+            if(at(density, channel) / majorant >= rand1f(rng))
+                return dist;
+
+            // Escape from volume.
+            if(pos.x >  1 or pos.y >  1 or pos.z >  1) return flt_max;
+            if(pos.x < -1 or pos.y < -1 or pos.z < -1) return flt_max;
+        }
+    }
+
+    float sample_distance(const instance* ist, vec3f from, vec3f dir, int channel, rng_state& rng) {
+        if(ist->mat->vd == zero3f) return MAXFLOAT;
+
+        // Transform coordinates so that every position in the bounding box of the
+        // instance is mapped to the cube [-1,1]^3 (the same space of volume texture sampling).
+        const auto& bvh = ist->shp->bvh;
+        vec3f scale = bvh->nodes[0].bbox.max - bvh->nodes[0].bbox.min;
+        frame3f frame = ist->frame;
+        from = transform_point_inverse(frame, from) / scale;
+        dir =  transform_direction_inverse(frame, dir) / scale;
+        float ll = length(dir);
+        float dist = sample_distance(ist->mat, from, dir/ll, channel, rng);
+        return dist * ll;
+    }
+
+    vec3f sample_phase_function(float g, const vec2f& u) {
+        float cos_theta;
+        if (abs(g) < 1e-3) {
+            cos_theta = 1 - 2 * u.x;
+        }
+        else {
+            float square = (1 - g * g) / (1 - g + 2 * g * u.x);
+            cos_theta = (1 + g * g - square * square) / (2 * g);
+        }
+
+        float sin_theta = sqrt(max(0.0f, 1 - cos_theta * cos_theta));
+        float phi = 2 * pi * u.y;
+        return vec3f{sin_theta * cos(phi), sin_theta * sin(phi), cos_theta};
+    }
+
+    float eval_phase_function(float cos_theta, float g) {
+        auto denom = 1 + g * g + 2 * g * cos_theta;
+        return (1 - g * g) / (4 * pi * denom * sqrt(denom));
+    }
+
+}  // namespace ygl
+
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SCENE UTILITIES
 // -----------------------------------------------------------------------------
 namespace ygl {
@@ -4609,6 +4708,96 @@ vec3f eval_transmission(
     return weight;
 }
 
+// Probability of computing direct illumination.
+float prob_direct(const bsdf& f) {
+    // This is just heuristic. Any other choice is equally correct.
+    if(f.kd + f.ks == zero3f) return 0;
+    auto kd = max(f.kd);
+    auto ks = max(f.ks);
+    return (kd + f.rs * ks) / (kd + ks);
+}
+
+// Sample a direction of direct illumination from the point p, which is inside mediums.back().
+// pdf and incoming radiance le are returned in reference.
+// It works for both surface rendering and volume rendering.
+vec3f direct_illumination(const scene* scn, const vec3f& p, int channel, std::vector<instance*> mediums, rng_state& rng, float& pdf, vec3f& le)
+{
+    auto i = zero3f;
+    vec3f weight = vec3f{1, 1, 1};
+
+    auto nlights = (int)(scn->lights.size() + scn->environments.size());
+    auto idx = sample_index(nlights, rand1f(rng));
+    pdf = 1.0 / nlights;
+    if (idx < scn->lights.size()) {
+        auto lgt = scn->lights[idx];
+        i = sample_light(lgt, p, rand1f(rng), rand2f(rng));
+        pdf *= 1.0 / lgt->shp->elem_cdf.back();
+    } else {
+        auto env = scn->environments[idx - scn->lights.size()];
+        i = sample_environment(env, rand1f(rng), rand2f(rng));
+        pdf *= sample_environment_pdf(env, i);
+        auto isec = intersect_ray_cutout(scn, make_ray(p, i), rng, 10);
+        if(isec.ist == nullptr) {
+            le = eval_environment(env, i);
+            return i;
+        }
+    }
+
+    auto isec = intersect_ray(scn, make_ray(p, i));
+
+    while (isec.ist) {
+        auto lp = eval_pos(isec.ist, isec.ei, isec.uv);
+        auto ln = eval_shading_norm(isec.ist, isec.ei, isec.uv, -i);
+        auto emission = eval_emission(isec.ist, isec.ei, isec.uv);
+        
+        instance* medium = mediums.back();
+        if(medium->mat->vd != zero3f)
+            weight *= eval_transmission(medium->mat, lp, i, isec.dist, channel, rng);
+
+        // Hack: Uncomment this or the result will be biased
+        // If mediums refracts, the transmission ray won't reach the sampled light point
+        // if(isec.ist->mat->refract) break;
+        
+        if(emission != zero3f) {
+            // Geometric term.
+            weight *= fabs(dot(ln, i)) / dot(lp - p, lp - p);
+            le += weight * emission;
+            break;
+        }
+        
+        auto ndi = dot(i, ln);
+        float threshold = 0.05;
+        
+        if(ndi > threshold) {
+            // Exiting from medium.
+            if(isec.ist != mediums.back()) { // exiting a different medium??
+                pdf = 0; return zero3f;
+            }
+            if(mediums.size() <= 1) {
+                pdf = 0; return zero3f;
+            }
+            mediums.pop_back();
+        }
+        else if(ndi < -threshold) {
+            // Entering new medium.
+            if(isec.ist == mediums.back()) { // entering the same medium??
+                pdf = 0; return zero3f;
+            }
+            mediums.push_back(isec.ist);
+        }
+        else {
+            pdf = 0;
+            return zero3f;
+        }
+        
+        auto lbsdf = eval_bsdf(isec.ist, isec.ei, isec.uv);
+        if(lbsdf.kt == zero3f) break;
+        isec = intersect_ray(scn, make_ray(lp, i)); //@Hack: 10? Don't know...
+    }
+
+    return i;
+}
+
 // Recursive path tracing.
 vec3f trace_path(const scene* scn, const ray3f& ray_, rng_state& rng,
     int nbounces, bool* hit) {
@@ -4714,7 +4903,26 @@ vec3f trace_path(const scene* scn, const ray3f& ray_, rng_state& rng,
     return l;
 }
 
-#include "volume_utils.h"
+// Evaluates the weight after sampling distance in a medium.
+vec3f eval_transmission_div_pdf(const vec3f& vd, float dist, int ch) {
+    vec3f weight;
+
+    // For the sampled channel, transmission / pdf == 1.0
+    at(weight, ch) = 1.0;
+
+    // Compute weight for the remaining channels i.
+    // In order to avoid numerical nasties (NaNs) transmission / pdf is evaluated.
+    // transmission[i] = exp(-dist * vd[i])
+    // pdf             = exp(-dist * vd[channel])
+    int i = (ch+1)%3, j = (ch+2)%3;
+    at(weight, i) = exp(-dist * (at(vd, i) - at(vd, ch)));
+    at(weight, j) = exp(-dist * (at(vd, j) - at(vd, ch)));
+    return weight;
+}
+
+// @Hack: air volume properties should be set in the scene struct.
+static instance* air = nullptr;
+
 // Iterative volume path tracing.
 vec3f trace_path_volume(const scene* scn, const ray3f& ray_, rng_state& rng,
     int nbounces, bool* hit) {
@@ -4802,9 +5010,9 @@ vec3f trace_path_volume(const scene* scn, const ray3f& ray_, rng_state& rng,
 
             // direct lighting
             if(rand1f(rng) < prob_direct(f)) {
-                vec3f direct = zero3f;
+                vec3f direct;
                 float pdf;
-                vec3f i = direct_illumination(scn, o, p, ch, mediums, rng, pdf, direct);
+                vec3f i = direct_illumination(scn, p, ch, mediums, rng, pdf, direct);
                 if (pdf != 0) {
                     auto brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
                     radiance += weight * direct * brdfcos / pdf;
@@ -4814,8 +5022,8 @@ vec3f trace_path_volume(const scene* scn, const ray3f& ray_, rng_state& rng,
             else emission = true;
 
             // continue path            
-            auto i = zero3f, brdfcos = zero3f;
-            auto pdf = 0.0f;
+            vec3f i, brdfcos;
+            float pdf = 0;
             if (!is_delta_bsdf(f)) {
                 i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
                 brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
@@ -4825,8 +5033,8 @@ vec3f trace_path_volume(const scene* scn, const ray3f& ray_, rng_state& rng,
                 brdfcos = eval_delta_brdf(f, n, o, i) * fabs(dot(n, i));
                 pdf = sample_delta_brdf_pdf(f, n, o, i);
             }
-            float ndi = dot(n, i);
-            float ndo = dot(n, o);
+            auto ndi = dot(n, i);
+            auto ndo = dot(n, o);
             
             // accumulate weight
             if (pdf == 0) break;
@@ -4866,14 +5074,13 @@ vec3f trace_path_volume(const scene* scn, const ray3f& ray_, rng_state& rng,
             }
 
             // scattering event
-            assert(scattering_prob > 0);
             weight /= scattering_prob;
             weight *= eval_transmission_div_pdf(vd, dist, ch);
             
             // direct lighting
-            vec3f direct = zero3f;
+            vec3f direct;
             float pdf_direct;
-            vec3f l = direct_illumination(scn, -ray.d, ray.o, ch, mediums, rng, pdf_direct, direct);
+            vec3f l = direct_illumination(scn, ray.o, ch, mediums, rng, pdf_direct, direct);
             if (pdf_direct != 0) {
                 auto f = eval_phase_function(dot(l, -ray.d), vg);
                 radiance += weight * direct * f / pdf_direct;
