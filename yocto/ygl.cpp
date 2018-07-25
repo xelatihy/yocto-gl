@@ -4228,7 +4228,7 @@ namespace ygl {
 bool is_homogeneus(const material* vol) { return vol->vd_txt == nullptr; }
 
 bool has_volume_color(const material* vol) {
-    return not(vol->vd.x == vol->vd.y and vol->vd.y == vol->vd.z);
+    return !(vol->vd.x == vol->vd.y && vol->vd.y == vol->vd.z);
 }
 
 vec3f eval_transmission(const material* vol, const vec3f& from,
@@ -4274,8 +4274,8 @@ float sample_distance(const material* vol, const vec3f& from, const vec3f& dir,
         if (at(density, channel) / majorant >= rand1f(rng)) return dist;
 
         // Escape from volume.
-        if (pos.x > 1 or pos.y > 1 or pos.z > 1) return flt_max;
-        if (pos.x < -1 or pos.y < -1 or pos.z < -1) return flt_max;
+        if (pos.x > 1 || pos.y > 1 || pos.z > 1) return flt_max;
+        if (pos.x < -1 || pos.y < -1 || pos.z < -1) return flt_max;
     }
 }
 
@@ -4992,8 +4992,8 @@ vec3f trace_path_volume(const scene* scn, const ray3f& ray_, rng_state& rng,
 
         // If medium has color but must use delta tracking, integrate only the
         // sampled spectrum.
-        if (not single_channel and has_volume_color(medium->mat) and
-            not is_homogeneus(medium->mat)) {
+        if (! single_channel and has_volume_color(medium->mat) &&
+            ! is_homogeneus(medium->mat)) {
             at(weight, ch) *= 3;
             at(weight, (ch + 1) % 3) = 0;
             at(weight, (ch + 2) % 3) = 0;
