@@ -785,7 +785,8 @@ volume1f load_volume1f(const std::string& filename) {
     if (fread(&vol.depth, sizeof(int), 1, file) != 1)
         throw std::runtime_error("problem reading " + filename);
     vol.pxl = std::vector<float>(vol.width * vol.height * vol.depth);
-    if (fread(vol.pxl.data(), sizeof(float), vol.pxl.size(), file) != vol.pxl.size())
+    if (fread(vol.pxl.data(), sizeof(float), vol.pxl.size(), file) !=
+        vol.pxl.size())
         throw std::runtime_error("problem reading " + filename);
     fclose(file);
     return vol;
@@ -4569,7 +4570,7 @@ ply_data* load_ply(const std::string& filename) {
                     } else {
                         if (fread((char*)&v, 4, 1, fs) != 1)
                             throw std::runtime_error(
-                                "problem reading " + filename)
+                                "problem reading " + filename);
                     }
                     prop.scalars[vid] = v;
                 } else if (prop.type == ply_type::ply_int) {

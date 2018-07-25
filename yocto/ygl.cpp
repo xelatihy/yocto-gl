@@ -4394,28 +4394,28 @@ void print_stats(const scene* scn) {
         texel_hdr += txt->img.width * txt->img.height;
     memory_imgs = texel_hdr * sizeof(vec4f) + texel_ldr * sizeof(vec4b);
 
-    printf("num_cameras: %lu\n", num_cameras);
-    printf("num_shape_groups: %lu\n", num_shape_groups);
-    printf("num_shapes: %lu\n", num_shapes);
-    printf("num_instances: %lu\n", num_instances);
-    printf("num_materials: %lu\n", num_materials);
-    printf("num_textures: %lu\n", num_textures);
-    printf("num_environments: %lu\n", num_environments);
-    printf("num_nodes: %lu\n", num_nodes);
-    printf("num_animations: %lu\n", num_animations);
-    printf("elem_lines: %lu\n", elem_lines);
-    printf("elem_triangles: %lu\n", elem_triangles);
-    printf("vert_pos: %lu\n", vert_pos);
-    printf("vert_norm: %lu\n", vert_norm);
-    printf("vert_texcoord: %lu\n", vert_texcoord);
-    printf("vert_color: %lu\n", vert_color);
-    printf("vert_radius: %lu\n", vert_radius);
-    printf("vert_tangsp: %lu\n", vert_tangsp);
-    printf("texel_hdr: %lu\n", texel_hdr);
-    printf("texel_ldr: %lu\n", texel_ldr);
-    printf("memory_imgs: %lu\n", memory_imgs);
-    printf("memory_elems: %lu\n", memory_elems);
-    printf("memory_verts: %lu\n", memory_verts);
+    printf("num_cameras: %" PRIu64 "\n", num_cameras);
+    printf("num_shape_groups: %" PRIu64 "\n", num_shape_groups);
+    printf("num_shapes: %" PRIu64 "\n", num_shapes);
+    printf("num_instances: %" PRIu64 "\n", num_instances);
+    printf("num_materials: %" PRIu64 "\n", num_materials);
+    printf("num_textures: %" PRIu64 "\n", num_textures);
+    printf("num_environments: %" PRIu64 "\n", num_environments);
+    printf("num_nodes: %" PRIu64 "\n", num_nodes);
+    printf("num_animations: %" PRIu64 "\n", num_animations);
+    printf("elem_lines: %" PRIu64 "\n", elem_lines);
+    printf("elem_triangles: %" PRIu64 "\n", elem_triangles);
+    printf("vert_pos: %" PRIu64 "\n", vert_pos);
+    printf("vert_norm: %" PRIu64 "\n", vert_norm);
+    printf("vert_texcoord: %" PRIu64 "\n", vert_texcoord);
+    printf("vert_color: %" PRIu64 "\n", vert_color);
+    printf("vert_radius: %" PRIu64 "\n", vert_radius);
+    printf("vert_tangsp: %" PRIu64 "\n", vert_tangsp);
+    printf("texel_hdr: %" PRIu64 "\n", texel_hdr);
+    printf("texel_ldr: %" PRIu64 "\n", texel_ldr);
+    printf("memory_imgs: %" PRIu64 "\n", memory_imgs);
+    printf("memory_elems: %" PRIu64 "\n", memory_elems);
+    printf("memory_verts: %" PRIu64 "\n", memory_verts);
     printf("bbox min: %g %g %g\n", bbox.min.x, bbox.min.y, bbox.min.z);
     printf("bbox max: %g %g %g\n", bbox.max.x, bbox.max.y, bbox.max.z);
 }
@@ -5958,7 +5958,7 @@ double integrate_func(std::function<double(double)> f, double a, double b,
 void print_integration_test() {
     auto f = [](double x) { return 1.0 - (3.0 / 4.0) * x * x; };
     auto a = 0.0, b = 1.0;
-    auto expected = 3.0 / 4.0;
+    // auto expected = 3.0 / 4.0;
     auto rng = rng_state();
     // for(auto ns = 10; ns < 10000; ns += 10) {
     for (auto ns = 10; ns < 10000; ns += 10) {
