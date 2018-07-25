@@ -4281,7 +4281,7 @@ float sample_distance(const material* vol, const vec3f& from, const vec3f& dir,
 
 float sample_distance(
     const instance* ist, vec3f from, vec3f dir, int channel, rng_state& rng) {
-    if (ist->mat->vd == zero3f) return MAXFLOAT;
+    if (ist->mat->vd == zero3f) return flt_max;
 
     // Transform coordinates so that every position in the bounding box of the
     // instance is mapped to the cube [-1,1]^3 (the same space of volume texture
@@ -4394,28 +4394,28 @@ void print_stats(const scene* scn) {
         texel_hdr += txt->img.width * txt->img.height;
     memory_imgs = texel_hdr * sizeof(vec4f) + texel_ldr * sizeof(vec4b);
 
-    printf("num_cameras: %llu\n", num_cameras);
-    printf("num_shape_groups: %llu\n", num_shape_groups);
-    printf("num_shapes: %llu\n", num_shapes);
-    printf("num_instances: %llu\n", num_instances);
-    printf("num_materials: %llu\n", num_materials);
-    printf("num_textures: %llu\n", num_textures);
-    printf("num_environments: %llu\n", num_environments);
-    printf("num_nodes: %llu\n", num_nodes);
-    printf("num_animations: %llu\n", num_animations);
-    printf("elem_lines: %llu\n", elem_lines);
-    printf("elem_triangles: %llu\n", elem_triangles);
-    printf("vert_pos: %llu\n", vert_pos);
-    printf("vert_norm: %llu\n", vert_norm);
-    printf("vert_texcoord: %llu\n", vert_texcoord);
-    printf("vert_color: %llu\n", vert_color);
-    printf("vert_radius: %llu\n", vert_radius);
-    printf("vert_tangsp: %llu\n", vert_tangsp);
-    printf("texel_hdr: %llu\n", texel_hdr);
-    printf("texel_ldr: %llu\n", texel_ldr);
-    printf("memory_imgs: %llu\n", memory_imgs);
-    printf("memory_elems: %llu\n", memory_elems);
-    printf("memory_verts: %llu\n", memory_verts);
+    printf("num_cameras: %lu\n", num_cameras);
+    printf("num_shape_groups: %lu\n", num_shape_groups);
+    printf("num_shapes: %lu\n", num_shapes);
+    printf("num_instances: %lu\n", num_instances);
+    printf("num_materials: %lu\n", num_materials);
+    printf("num_textures: %lu\n", num_textures);
+    printf("num_environments: %lu\n", num_environments);
+    printf("num_nodes: %lu\n", num_nodes);
+    printf("num_animations: %lu\n", num_animations);
+    printf("elem_lines: %lu\n", elem_lines);
+    printf("elem_triangles: %lu\n", elem_triangles);
+    printf("vert_pos: %lu\n", vert_pos);
+    printf("vert_norm: %lu\n", vert_norm);
+    printf("vert_texcoord: %lu\n", vert_texcoord);
+    printf("vert_color: %lu\n", vert_color);
+    printf("vert_radius: %lu\n", vert_radius);
+    printf("vert_tangsp: %lu\n", vert_tangsp);
+    printf("texel_hdr: %lu\n", texel_hdr);
+    printf("texel_ldr: %lu\n", texel_ldr);
+    printf("memory_imgs: %lu\n", memory_imgs);
+    printf("memory_elems: %lu\n", memory_elems);
+    printf("memory_verts: %lu\n", memory_verts);
     printf("bbox min: %g %g %g\n", bbox.min.x, bbox.min.y, bbox.min.z);
     printf("bbox max: %g %g %g\n", bbox.max.x, bbox.max.y, bbox.max.z);
 }

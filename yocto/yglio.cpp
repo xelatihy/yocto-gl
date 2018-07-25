@@ -191,11 +191,13 @@ std::string replace_extension(
 std::string load_text(const std::string& filename) {
     // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
     auto fs = fopen(filename.c_str(), "rb");
+    if (!fs) throw std::runtime_error("cannot open file " + filename);
     fseek(fs, 0, SEEK_END);
     auto fsize = ftell(fs);
     fseek(fs, 0, SEEK_SET);
     auto buf = std::vector<char>(fsize);
-    fread(buf.data(), fsize, 1, fs);
+    if (fread(buf.data(), 1, fsize, fs) != fsize)
+        throw std::runtime_error("problem reading " + filename);
     fclose(fs);
     return {buf.begin(), buf.end()};
 }
@@ -212,11 +214,13 @@ void save_text(const std::string& filename, const std::string& str) {
 std::vector<byte> load_binary(const std::string& filename) {
     // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
     auto fs = fopen(filename.c_str(), "rb");
+    if (!fs) throw std::runtime_error("cannot open file " + filename);
     fseek(fs, 0, SEEK_END);
     auto fsize = ftell(fs);
     fseek(fs, 0, SEEK_SET);
     auto buf = std::vector<byte>(fsize);
-    fread((char*)buf.data(), fsize, 1, fs);
+    if (fread((char*)buf.data(), 1, fsize, fs) != fsize)
+        throw std::runtime_error("problem reading " + filename);
     fclose(fs);
     return buf;
 }
@@ -773,11 +777,16 @@ namespace ygl {
 volume1f load_volume1f(const std::string& filename) {
     auto file = fopen(filename.c_str(), "r");
     throw std::runtime_error("could not load volume " + filename);
-    volume1f vol;
-    fread(&vol, sizeof(int), 3, file);
-    int n = vol.width * vol.height * vol.depth;
-    vol.pxl = std::vector<float>(n);
-    fread(vol.pxl.data(), sizeof(float), n, file);
+    auto vol = volume1f{};
+    if (fread(&vol.width, sizeof(int), 1, file) != 1)
+        throw std::runtime_error("problem reading " + filename);
+    if (fread(&vol.height, sizeof(int), 1, file) != 1)
+        throw std::runtime_error("problem reading " + filename);
+    if (fread(&vol.depth, sizeof(int), 1, file) != 1)
+        throw std::runtime_error("problem reading " + filename);
+    vol.pxl = std::vector<float>(vol.width * vol.height * vol.depth);
+    if (fread(vol.pxl.data(), sizeof(float), vol.pxl.size(), file) != vol.pxl.size())
+        throw std::runtime_error("problem reading " + filename);
     fclose(file);
     return vol;
 }
@@ -4558,7 +4567,9 @@ ply_data* load_ply(const std::string& filename) {
                     if (ascii) {
                         v = parse_float(ss);
                     } else {
-                        fread((char*)&v, 1, 4, fs);
+                        if (fread((char*)&v, 4, 1, fs) != 1)
+                            throw std::runtime_error(
+                                "problem reading " + filename)
                     }
                     prop.scalars[vid] = v;
                 } else if (prop.type == ply_type::ply_int) {
@@ -4566,7 +4577,9 @@ ply_data* load_ply(const std::string& filename) {
                     if (ascii) {
                         v = parse_int(ss);
                     } else {
-                        fread((char*)&v, 1, 4, fs);
+                        if (fread((char*)&v, 4, 1, fs) != 1)
+                            throw std::runtime_error(
+                                "problem reading " + filename);
                     }
                     prop.scalars[vid] = v;
                 } else if (prop.type == ply_type::ply_uchar) {
@@ -4575,7 +4588,9 @@ ply_data* load_ply(const std::string& filename) {
                         auto v = parse_int(ss);
                         vc = (unsigned char)v;
                     } else {
-                        fread((char*)&vc, 1, 1, fs);
+                        if (fread((char*)&vc, 1, 1, fs) != 1)
+                            throw std::runtime_error(
+                                "problem reading " + filename);
                     }
                     prop.scalars[vid] = vc / 255.0f;
                 } else if (prop.type == ply_type::ply_int_list) {
@@ -4584,14 +4599,19 @@ ply_data* load_ply(const std::string& filename) {
                         auto v = parse_int(ss);
                         vc = (unsigned char)v;
                     } else {
-                        fread((char*)&vc, 1, 1, fs);
+                        if (fread((char*)&vc, 1, 1, fs) != 1)
+                            throw std::runtime_error(
+                                "problem reading " + filename);
                     }
                     prop.scalars[vid] = vc;
                     for (auto i = 0; i < (int)prop.scalars[vid]; i++)
                         if (ascii) {
                             prop.lists[vid][i] = parse_int(ss);
                         } else {
-                            fread((char*)&prop.lists[vid][i], 1, 4, fs);
+                            if (fread((char*)&prop.lists[vid][i], 4, 1, fs) !=
+                                1)
+                                throw std::runtime_error(
+                                    "problem reading " + filename);
                         }
                 } else {
                     throw std::runtime_error("unsupported ply type");
