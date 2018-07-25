@@ -4170,13 +4170,13 @@ scene* load_pbrt_scene(
                     if (jcmd.count("Kd"))
                         std::tie(mat->kd, mat->kd_txt) =
                             get_scaled_texture(jcmd.at("Kd"));
-                    mat->ks = {0.04, 0.04, 0.04};
+                    mat->ks = {0.04f, 0.04f, 0.04f};
                     if (jcmd.count("Ks"))
                         std::tie(mat->ks, mat->ks_txt) =
                             get_scaled_texture(jcmd.at("Ks"));
                     mat->rs = 0;
                 } else if (type == "glass") {
-                    mat->ks = {0.04, 0.04, 0.04};
+                    mat->ks = {0.04f, 0.04f, 0.04f};
                     mat->kt = {1, 1, 1};
                     if (jcmd.count("Ks"))
                         std::tie(mat->ks, mat->ks_txt) =
