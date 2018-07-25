@@ -4338,31 +4338,32 @@ void merge_into(scene* merge_into, scene* merge_from) {
 }
 
 void print_stats(const scene* scn) {
-    uint64_t num_cameras = 0;
-    uint64_t num_shape_groups = 0;
-    uint64_t num_shapes = 0;
-    uint64_t num_instances = 0;
-    uint64_t num_materials = 0;
-    uint64_t num_textures = 0;
-    uint64_t num_environments = 0;
-    uint64_t num_nodes = 0;
-    uint64_t num_animations = 0;
+    // using long long instead of uint64_t to avoid printf macros
+    auto num_cameras = (long long)0;
+    auto num_shape_groups = (long long)0;
+    auto num_shapes = (long long)0;
+    auto num_instances = (long long)0;
+    auto num_materials = (long long)0;
+    auto num_textures = (long long)0;
+    auto num_environments = (long long)0;
+    auto num_nodes = (long long)0;
+    auto num_animations = (long long)0;
 
-    uint64_t elem_lines = 0;
-    uint64_t elem_triangles = 0;
-    uint64_t vert_pos = 0;
-    uint64_t vert_norm = 0;
-    uint64_t vert_texcoord = 0;
-    uint64_t vert_color = 0;
-    uint64_t vert_radius = 0;
-    uint64_t vert_tangsp = 0;
+    auto elem_lines = (long long)0;
+    auto elem_triangles = (long long)0;
+    auto vert_pos = (long long)0;
+    auto vert_norm = (long long)0;
+    auto vert_texcoord = (long long)0;
+    auto vert_color = (long long)0;
+    auto vert_radius = (long long)0;
+    auto vert_tangsp = (long long)0;
 
-    uint64_t texel_hdr = 0;
-    uint64_t texel_ldr = 0;
+    auto texel_hdr = (long long)0;
+    auto texel_ldr = (long long)0;
 
-    uint64_t memory_imgs = 0;
-    uint64_t memory_elems = 0;
-    uint64_t memory_verts = 0;
+    auto memory_imgs = (long long)0;
+    auto memory_elems = (long long)0;
+    auto memory_verts = (long long)0;
 
     auto bbox = compute_bbox(scn);
 
@@ -4394,28 +4395,28 @@ void print_stats(const scene* scn) {
         texel_hdr += txt->img.width * txt->img.height;
     memory_imgs = texel_hdr * sizeof(vec4f) + texel_ldr * sizeof(vec4b);
 
-    printf("num_cameras: %" PRIu64 "\n", num_cameras);
-    printf("num_shape_groups: %" PRIu64 "\n", num_shape_groups);
-    printf("num_shapes: %" PRIu64 "\n", num_shapes);
-    printf("num_instances: %" PRIu64 "\n", num_instances);
-    printf("num_materials: %" PRIu64 "\n", num_materials);
-    printf("num_textures: %" PRIu64 "\n", num_textures);
-    printf("num_environments: %" PRIu64 "\n", num_environments);
-    printf("num_nodes: %" PRIu64 "\n", num_nodes);
-    printf("num_animations: %" PRIu64 "\n", num_animations);
-    printf("elem_lines: %" PRIu64 "\n", elem_lines);
-    printf("elem_triangles: %" PRIu64 "\n", elem_triangles);
-    printf("vert_pos: %" PRIu64 "\n", vert_pos);
-    printf("vert_norm: %" PRIu64 "\n", vert_norm);
-    printf("vert_texcoord: %" PRIu64 "\n", vert_texcoord);
-    printf("vert_color: %" PRIu64 "\n", vert_color);
-    printf("vert_radius: %" PRIu64 "\n", vert_radius);
-    printf("vert_tangsp: %" PRIu64 "\n", vert_tangsp);
-    printf("texel_hdr: %" PRIu64 "\n", texel_hdr);
-    printf("texel_ldr: %" PRIu64 "\n", texel_ldr);
-    printf("memory_imgs: %" PRIu64 "\n", memory_imgs);
-    printf("memory_elems: %" PRIu64 "\n", memory_elems);
-    printf("memory_verts: %" PRIu64 "\n", memory_verts);
+    printf("num_cameras: %lld\n", num_cameras);
+    printf("num_shape_groups: %lld\n", num_shape_groups);
+    printf("num_shapes: %lld\n", num_shapes);
+    printf("num_instances: %lld\n", num_instances);
+    printf("num_materials: %lld\n", num_materials);
+    printf("num_textures: %lld\n", num_textures);
+    printf("num_environments: %lld\n", num_environments);
+    printf("num_nodes: %lld\n", num_nodes);
+    printf("num_animations: %lld\n", num_animations);
+    printf("elem_lines: %lld\n", elem_lines);
+    printf("elem_triangles: %lld\n", elem_triangles);
+    printf("vert_pos: %lld\n", vert_pos);
+    printf("vert_norm: %lld\n", vert_norm);
+    printf("vert_texcoord: %lld\n", vert_texcoord);
+    printf("vert_color: %lld\n", vert_color);
+    printf("vert_radius: %lld\n", vert_radius);
+    printf("vert_tangsp: %lld\n", vert_tangsp);
+    printf("texel_hdr: %lld\n", texel_hdr);
+    printf("texel_ldr: %lld\n", texel_ldr);
+    printf("memory_imgs: %lld\n", memory_imgs);
+    printf("memory_elems: %lld\n", memory_elems);
+    printf("memory_verts: %lld\n", memory_verts);
     printf("bbox min: %g %g %g\n", bbox.min.x, bbox.min.y, bbox.min.z);
     printf("bbox max: %g %g %g\n", bbox.max.x, bbox.max.y, bbox.max.z);
 }
