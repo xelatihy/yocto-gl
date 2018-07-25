@@ -2582,7 +2582,7 @@ struct scene_intersection {
     instance* ist = nullptr;  // instance or null for no intersection
     int ei = 0;               // shape element index
     vec2f uv = zero2f;        // shape element coordinates
-    float dist = 0;           // ray/point distance
+    float dist = flt_max;           // ray/point distance
 };
 
 // Intersects a ray with the scene.

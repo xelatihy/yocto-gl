@@ -71,8 +71,8 @@ float stb__perlin_lerp(float a, float b, float t)
 
 int stb__perlin_fastfloor(float a)
 {
-	int ai = (int) a;
-	return (a < ai) ? ai-1 : ai;
+    int ai = (int) a;
+    return (a < ai) ? ai-1 : ai;
 }
 
 // different grad function from Perlin's, but easy to modify to match reference
@@ -4719,7 +4719,7 @@ vec3f trace_path(const scene* scn, const ray3f& ray_, rng_state& rng,
 vec3f trace_path_volume(const scene* scn, const ray3f& ray_, rng_state& rng,
     int nbounces, bool* hit) {
     if (scn->lights.empty() && scn->environments.empty()) return zero3f;
-
+    
     // initialize
     auto radiance = zero3f;
     auto weight = vec3f{1, 1, 1};
@@ -4767,7 +4767,7 @@ vec3f trace_path_volume(const scene* scn, const ray3f& ray_, rng_state& rng,
         // Create ray and clamp it to make the intersection faster.
         ray = make_ray(ray.o, ray.d);
         ray.tmax = dist;
-        auto isec = intersect_ray(scn, ray);
+        auto isec = intersect_ray_cutout(scn, ray, rng, nbounces);
 
         float scene_size = max(scn->bvh->nodes[0].bbox.max - scn->bvh->nodes[0].bbox.min); // @Hack
         // environment
@@ -4776,7 +4776,7 @@ vec3f trace_path_volume(const scene* scn, const ray3f& ray_, rng_state& rng,
                 for (auto env : scn->environments)
                     radiance += weight * eval_environment(env, ray.d);
             }
-            break;
+            return radiance;
         }
         *hit = true;
 
@@ -4788,7 +4788,10 @@ vec3f trace_path_volume(const scene* scn, const ray3f& ray_, rng_state& rng,
             auto f = eval_bsdf(isec.ist, isec.ei, isec.uv);
 
             // distance sampling pdf is unknown due to delta tracking, but we do know
-            // the value of transmission / pdf_dist
+            // the value of transmission / pdf_dist.
+            // 1 - ∫_(dist)^(inf) tr(t) dt = tr(dist)
+            // 1 - ∫_(dist)^(inf) prd(t) dt = pdf(dist)
+
             weight *= eval_transmission_div_pdf(vd, isec.dist, ch);
 
             // emission
@@ -4810,12 +4813,20 @@ vec3f trace_path_volume(const scene* scn, const ray3f& ray_, rng_state& rng,
             }
             else emission = true;
 
-            // continue path
-            auto i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
+            // continue path            
+            auto i = zero3f, brdfcos = zero3f;
+            auto pdf = 0.0f;
+            if (!is_delta_bsdf(f)) {
+                i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
+                brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
+                pdf = sample_brdf_pdf(f, n, o, i);
+            } else {
+                i = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
+                brdfcos = eval_delta_brdf(f, n, o, i) * fabs(dot(n, i));
+                pdf = sample_delta_brdf_pdf(f, n, o, i);
+            }
             float ndi = dot(n, i);
             float ndo = dot(n, o);
-            auto brdfcos = eval_bsdf(f, n, o, i) * fabs(ndi);
-            auto pdf = sample_brdf_pdf(f, n, o, i);
             
             // accumulate weight
             if (pdf == 0) break;
@@ -4830,34 +4841,21 @@ vec3f trace_path_volume(const scene* scn, const ray3f& ray_, rng_state& rng,
                 float tr = 0.05;
                 if(ndo < -tr) {
                     // Exiting from medium.
-                    if(isec.ist != mediums.back()) {
-                        printf("ERROR: (ndo = %f) exiting from %s, but was in %s\n", ndo, isec.ist->name.c_str(), mediums.back()->name.c_str());
-                        break;
-                    }
-                    if(mediums.size() <= 1) {
-                        printf("ERROR: (ndo = %f) exiting from %s, but medium ha size %d\n", ndo, mediums.back()->name.c_str(), mediums.size());
-                        break;
-                    }
+                    if(isec.ist != medium) break;
+                    if(mediums.size() <= 1) break;
                     mediums.pop_back();
                 }
                 else if(ndo > tr) {
                     // Entering new medium.
-                    if(isec.ist == mediums.back()) {
-                        printf("ERROR: (ndo = %f) entering in %s, but was already in it\n", ndo, isec.ist->name.c_str());
-                        break;
-                    }
+                    if(isec.ist == medium) break;
                     mediums.push_back(isec.ist);
                 }
-                else
-                    break;
+                else break;
             }
         }
         // no surface is intersected, new medium interaction 
         else {
-            assert(medium->mat->kt != zero3f);
             ray.o += ray.d * dist;
-
-            
             float scattering_prob = at(va, ch);
 
             // absorption and emission
