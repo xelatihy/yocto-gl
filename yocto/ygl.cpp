@@ -71,8 +71,8 @@ float stb__perlin_lerp(float a, float b, float t)
 
 int stb__perlin_fastfloor(float a)
 {
-    int ai = (int) a;
-    return (a < ai) ? ai-1 : ai;
+        int ai = (int) a;
+        return (a < ai) ? ai-1 : ai;
 }
 
 // different grad function from Perlin's, but easy to modify to match reference
@@ -4764,6 +4764,9 @@ vec3f direct_illumination(const scene* scn, const vec3f& p, int channel, std::ve
             le += weight * emission;
             break;
         }
+
+        auto bsdf = eval_bsdf(isec.ist, isec.ei, isec.uv);
+        if(bsdf.kt == zero3f) { le = zero3f; break; }
         
         auto ndi = dot(i, ln);
         float threshold = 0.05;
@@ -4790,8 +4793,6 @@ vec3f direct_illumination(const scene* scn, const vec3f& p, int channel, std::ve
             return zero3f;
         }
         
-        auto lbsdf = eval_bsdf(isec.ist, isec.ei, isec.uv);
-        if(lbsdf.kt == zero3f) break;
         isec = intersect_ray(scn, make_ray(lp, i)); //@Hack: 10? Don't know...
     }
 
