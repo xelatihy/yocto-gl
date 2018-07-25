@@ -4056,7 +4056,7 @@ float eval_texture(const texture* txt, const vec3f& texcoord, bool trilinear) {
     auto u = s - i, v = t - j, w = r - k;
 
     // nearest-neighbor interpolation
-    if (not trilinear) {
+    if (!trilinear) {
         i = u < 0.5 ? i : min(i + 1, width - 1);
         j = v < 0.5 ? j : min(j + 1, height - 1);
         k = w < 0.5 ? k : min(k + 1, depth - 1);
