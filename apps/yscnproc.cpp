@@ -47,6 +47,8 @@ int main(int argc, char** argv) {
         ygl::parse_flag(parser, "--notextures", false, "Disable textures.");
     auto uniform_txt = ygl::parse_flag(
         parser, "--uniform-txt", false, "uniform texture formats");
+    auto build_bvh = ygl::parse_flag(
+        parser, "--build-bvh", false, "build bvh");
     auto output = ygl::parse_string(
         parser, "--output,-o", "out.json", "output scene", true);
     auto filename =
@@ -82,6 +84,9 @@ int main(int argc, char** argv) {
             }
         }
     }
+
+    // build bvh
+    if(build_bvh) ygl::build_bvh(scn);
 
     // make a directory if needed
     try {

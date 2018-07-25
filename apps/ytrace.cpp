@@ -29,17 +29,18 @@
 #include "../yocto/ygl.h"
 #include "../yocto/yglio.h"
 
-auto tracer_names = std::vector<std::string>{"pathtrace", "pathtrace_volume", "direct",
-    "environment", "eyelight", "pathtrace-nomis", "pathtrace-naive",
+auto tracer_names = std::vector<std::string>{"pathtrace", "pathtrace_volume",
+    "direct", "environment", "eyelight", "pathtrace-nomis", "pathtrace-naive",
     "direct-nomis", "debug_normal", "debug_albedo", "debug_texcoord",
     "debug_frontfacing", "debug_diffuse", "debug_specular", "debug_roughness"};
 
-auto tracer_funcs = std::vector<ygl::trace_func>{ygl::trace_path, ygl::trace_path_volume,
-    ygl::trace_direct, ygl::trace_environment, ygl::trace_eyelight,
-    ygl::trace_path_nomis, ygl::trace_path_naive, ygl::trace_direct_nomis,
-    ygl::trace_debug_normal, ygl::trace_debug_albedo, ygl::trace_debug_texcoord,
-    ygl::trace_debug_frontfacing, ygl::trace_debug_diffuse,
-    ygl::trace_debug_specular, ygl::trace_debug_roughness};
+auto tracer_funcs = std::vector<ygl::trace_func>{ygl::trace_path,
+    ygl::trace_path_volume, ygl::trace_direct, ygl::trace_environment,
+    ygl::trace_eyelight, ygl::trace_path_nomis, ygl::trace_path_naive,
+    ygl::trace_direct_nomis, ygl::trace_debug_normal, ygl::trace_debug_albedo,
+    ygl::trace_debug_texcoord, ygl::trace_debug_frontfacing,
+    ygl::trace_debug_diffuse, ygl::trace_debug_specular,
+    ygl::trace_debug_roughness};
 
 int main(int argc, char* argv[]) {
     // parse command line
@@ -144,7 +145,8 @@ int main(int argc, char* argv[]) {
             auto filename = ygl::replace_extension(imfilename,
                 std::to_string(sample) + "." + ygl::get_extension(imfilename));
             printf("saving image %s\n", filename.c_str());
-            ygl::save_tonemapped_image4f(filename, img, exposure, gamma, filmic);
+            ygl::save_tonemapped_image4f(
+                filename, img, exposure, gamma, filmic);
         }
     }
     printf("rendering image in %s\n",

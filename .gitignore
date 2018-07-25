@@ -3,6 +3,7 @@ cmake
 tests/obj
 tests/json
 tests/gltf
+tests/ybin
 build
 run_tests
 cmake-build-debug

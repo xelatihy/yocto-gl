@@ -191,7 +191,7 @@ std::string replace_extension(
 std::string load_text(const std::string& filename) {
     // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
     auto fs = fopen(filename.c_str(), "rb");
-    if (!fs) throw std::runtime_error("cannot open file " + filename);
+    if (!fs) throw std::runtime_error("could not open file " + filename);
     fseek(fs, 0, SEEK_END);
     auto fsize = ftell(fs);
     fseek(fs, 0, SEEK_SET);
@@ -214,7 +214,7 @@ void save_text(const std::string& filename, const std::string& str) {
 std::vector<byte> load_binary(const std::string& filename) {
     // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
     auto fs = fopen(filename.c_str(), "rb");
-    if (!fs) throw std::runtime_error("cannot open file " + filename);
+    if (!fs) throw std::runtime_error("could not open file " + filename);
     fseek(fs, 0, SEEK_END);
     auto fsize = ftell(fs);
     fseek(fs, 0, SEEK_SET);
@@ -822,6 +822,8 @@ scene* load_scene(
         scn = load_gltf_scene(filename, load_textures, skip_missing);
     } else if (ext == "pbrt" || ext == "PBRT") {
         scn = load_pbrt_scene(filename, load_textures, skip_missing);
+    } else if (ext == "ybin" || ext == "YBIN") {
+        scn = load_ybin_scene(filename, load_textures, skip_missing);
     } else {
         throw std::runtime_error("unsupported extension " + ext);
     }
@@ -851,6 +853,8 @@ void save_scene(const std::string& filename, const scene* scn,
         save_obj_scene(filename, scn, save_textures, skip_missing);
     } else if (ext == "gltf" || ext == "GLTF") {
         save_gltf_scene(filename, scn, save_textures, skip_missing);
+    } else if (ext == "ybin" || ext == "YBIN") {
+        save_ybin_scene(filename, scn, save_textures, skip_missing);
     } else {
         throw std::runtime_error("unsupported extension " + ext);
     }
@@ -2204,7 +2208,7 @@ void load_mtl(
     const std::string& filename, const obj_callbacks& cb, bool flip_tr) {
     // open file
     auto fs = fopen(filename.c_str(), "rt");
-    if (!fs) throw std::runtime_error("cannot open filename " + filename);
+    if (!fs) throw std::runtime_error("could not open filename " + filename);
 
     // currently parsed material
     auto mat = obj_material();
@@ -2301,7 +2305,7 @@ void load_mtl(
 void load_objx(const std::string& filename, const obj_callbacks& cb) {
     // open file
     auto fs = fopen(filename.c_str(), "rt");
-    if (!fs) throw std::runtime_error("cannot open filename " + filename);
+    if (!fs) throw std::runtime_error("could not open filename " + filename);
 
     // read the file line by line
     char buf[4096];
@@ -2347,7 +2351,7 @@ void load_obj(const std::string& filename, const obj_callbacks& cb,
     bool flip_texcoord, bool flip_tr) {
     // open file
     auto fs = fopen(filename.c_str(), "rt");
-    if (!fs) throw std::runtime_error("cannot open filename " + filename);
+    if (!fs) throw std::runtime_error("could not open filename " + filename);
 
     // track vertex size
     auto vert_size = obj_vertex();
@@ -3853,7 +3857,7 @@ json pbrt_to_json(const std::string& filename) {
     };
 
     auto f = fopen(filename.c_str(), "rt");
-    if (!f) throw std::runtime_error("cannot open filename " + filename);
+    if (!f) throw std::runtime_error("could not open filename " + filename);
     auto pbrt = std::string();
     char buf[4096];
     while (fgets(buf, 4096, f)) {
@@ -4440,6 +4444,360 @@ void pbrt_flipyz_scene(const scene* scn) {
         ist->frame =
             ist->frame * frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
     }
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF BINARY SCENE FORMAT
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// serialize_bin( ) can both save/load data to/from a binary file. The behaviour
+// is set by the boolean 'save'. serialize_bin(var, file, true) : writes var as
+// binary into file serialize_bin(var, file, false): read file as binary and set
+// var
+
+// Serialize type or struct with no allocated resource
+template <typename T>
+void serialize_bin_value(T& val, FILE* fs, bool save) {
+    if (save) {
+        fwrite(&val, sizeof(T), 1, fs);
+    } else {
+        fread(&val, sizeof(T), 1, fs);
+    }
+}
+
+// Serialize std::vector
+template <typename T>
+void serialize_bin_value(std::vector<T>& vec, FILE* fs, bool save) {
+    if (save) {
+        auto count = (size_t)vec.size();
+        serialize_bin_value(count, fs, true);
+        fwrite(vec.data(), sizeof(T), count, fs);
+    } else {
+        auto count = (size_t)0;
+        serialize_bin_value(count, fs, false);
+        vec = std::vector<T>(count);
+        fread(vec.data(), sizeof(T), count, fs);
+    }
+}
+
+// Serialize std::string
+void serialize_bin_value(std::string& vec, FILE* fs, bool save) {
+    if (save) {
+        auto count = (size_t)vec.size();
+        serialize_bin_value(count, fs, true);
+        fwrite(vec.data(), sizeof(char), count, fs);
+    } else {
+        auto count = (size_t)0;
+        serialize_bin_value(count, fs, false);
+        vec = std::string(count, ' ');
+        fread((void*)vec.data(), sizeof(char), count, fs);
+    }
+}
+
+// Serialize std::vector of pointers
+template <typename T>
+void serialize_bin_object(std::vector<T*>& vec, FILE* fs, bool save) {
+    if (save) {
+        auto count = (size_t)vec.size();
+        serialize_bin_value(count, fs, true);
+        for (auto i = 0; i < vec.size(); ++i)
+            serialize_bin_object(vec[i], fs, true);
+    } else {
+        auto count = (size_t)0;
+        serialize_bin_value(count, fs, false);
+        vec = std::vector<T*>(count);
+        for (auto i = 0; i < vec.size(); ++i) {
+            vec[i] = new T();
+            serialize_bin_object(vec[i], fs, false);
+        }
+    }
+}
+
+// Serialize std::vector of pointers
+template <typename T>
+void serialize_bin_object(
+    std::vector<T*>& vec, const scene* scn, FILE* fs, bool save) {
+    if (save) {
+        auto count = (size_t)vec.size();
+        serialize_bin_value(count, fs, true);
+        for (auto i = 0; i < vec.size(); ++i)
+            serialize_bin_object(vec[i], scn, fs, true);
+    } else {
+        auto count = (size_t)0;
+        serialize_bin_value(count, fs, false);
+        vec = std::vector<T*>(count);
+        for (auto i = 0; i < vec.size(); ++i) {
+            vec[i] = new T();
+            serialize_bin_object(vec[i], scn, fs, false);
+        }
+    }
+}
+
+// Serialize a pointer. It is saved as an integer index (handle) of the array of
+// pointers vec. On loading, the handle is converted back into a pointer.
+template <typename T>
+void serialize_bin_handle(
+    T*& val, const std::vector<T*>& vec, FILE* fs, bool save) {
+    if (save) {
+        auto handle = -1;
+        for (auto i = 0; i < vec.size(); ++i)
+            if (vec[i] == val) {
+                handle = i;
+                break;
+            }
+        serialize_bin_value(handle, fs, true);
+    } else {
+        auto handle = -1;
+        serialize_bin_value(handle, fs, false);
+        val = (handle == -1) ? nullptr : vec[handle];
+    }
+}
+
+// Serialize a pointer. It is saved as an integer index (handle) of the array of
+// pointers vec. On loading, the handle is converted back into a pointer.
+template <typename T>
+void serialize_bin_handle(
+    std::vector<T*>& vals, const std::vector<T*>& vec_, FILE* fs, bool save) {
+    if (save) {
+        auto count = (size_t)vals.size();
+        serialize_bin_value(count, fs, true);
+        for (auto i = 0; i < vals.size(); ++i)
+            serialize_bin_handle(vals[i], vec_, fs, true);
+    } else {
+        auto count = (size_t)0;
+        serialize_bin_value(count, fs, false);
+        vals = std::vector<T*>(count);
+        for (auto i = 0; i < vals.size(); ++i) {
+            serialize_bin_handle(vals[i], vec_, fs, false);
+        }
+    }
+}
+
+// Serialize yocto types. This is mostly boiler plate code.
+void serialize_bin_object(camera* cam, FILE* fs, bool save) {
+    serialize_bin_value(cam->name, fs, save);
+    serialize_bin_value(cam->frame, fs, save);
+    serialize_bin_value(cam->ortho, fs, save);
+    serialize_bin_value(cam->width, fs, save);
+    serialize_bin_value(cam->height, fs, save);
+    serialize_bin_value(cam->focal, fs, save);
+    serialize_bin_value(cam->focus, fs, save);
+    serialize_bin_value(cam->aperture, fs, save);
+    serialize_bin_value(cam->near, fs, save);
+    serialize_bin_value(cam->far, fs, save);
+}
+
+// @TODO: merge these two (serialize_shape_bvh and serialize_scene_bvh)
+void serialize_shape_bvh(bvh_tree* bvh, FILE* fs, bool save) {
+    serialize_bin_value(bvh->pos, fs, save);
+    serialize_bin_value(bvh->radius, fs, save);
+    serialize_bin_value(bvh->points, fs, save);
+    serialize_bin_value(bvh->lines, fs, save);
+    serialize_bin_value(bvh->triangles, fs, save);
+    serialize_bin_value(bvh->quads, fs, save);
+    serialize_bin_value(bvh->nodes, fs, save);
+    assert(bvh->nodes.size());
+    assert(bvh->ist_bvhs.empty());
+}
+
+void serialize_scene_bvh(bvh_tree* bvh, const scene* scn, FILE* fs, bool save) {
+    serialize_bin_value(bvh->ist_frames, fs, save);
+    serialize_bin_value(bvh->ist_inv_frames, fs, save);
+    serialize_bin_value(bvh->nodes, fs, save);
+
+    if (save) {
+        auto shp = (long long int)-1;
+        auto count = (size_t)bvh->ist_bvhs.size();
+        serialize_bin_value(count, fs, true);
+        for (int i = 0; i < bvh->ist_bvhs.size(); ++i) {
+            bvh_tree* b = bvh->ist_bvhs[i];
+            // Tha shape handle is saved instead of its bvh.
+            if (b) {
+                for (int s = 0; s < scn->shapes.size(); s++) {
+                    if (scn->shapes[s]->bvh == b) {
+                        shp = s;
+                        break;
+                    }
+                }
+            }
+            assert(shp != -1);
+            serialize_bin_value(shp, fs, true);
+        }
+    } else {
+        auto shp = (long long int)-1;
+        auto count = (size_t)0;
+        serialize_bin_value(count, fs, false);
+        bvh->ist_bvhs = std::vector<bvh_tree*>(count);
+        for (int i = 0; i < count; ++i) {
+            // Knowing the handle of the shape, we can recover its bvh.
+            serialize_bin_value(shp, fs, false);
+            bvh->ist_bvhs[i] = scn->shapes[shp]->bvh;
+        }
+    }
+}
+
+void serialize_bin_object(shape* shp, const scene* scn, FILE* fs, bool save) {
+    serialize_bin_value(shp->name, fs, save);
+    serialize_bin_value(shp->path, fs, save);
+    serialize_bin_value(shp->points, fs, save);
+    serialize_bin_value(shp->lines, fs, save);
+    serialize_bin_value(shp->triangles, fs, save);
+    serialize_bin_value(shp->pos, fs, save);
+    serialize_bin_value(shp->norm, fs, save);
+    serialize_bin_value(shp->texcoord, fs, save);
+    serialize_bin_value(shp->color, fs, save);
+    serialize_bin_value(shp->radius, fs, save);
+    serialize_bin_value(shp->tangsp, fs, save);
+    serialize_bin_value(shp->elem_cdf, fs, save);
+    auto has_bvh = (bool)shp->bvh;
+    serialize_bin_value(has_bvh, fs, save);
+    if(has_bvh) {
+        if (!save) shp->bvh = new bvh_tree();
+        serialize_shape_bvh(shp->bvh, fs, save);
+    }
+}
+
+void serialize_bin_object(subdiv* sbd, FILE* fs, bool save) {
+    serialize_bin_value(sbd->name, fs, save);
+    serialize_bin_value(sbd->path, fs, save);
+    serialize_bin_value(sbd->level, fs, save);
+    serialize_bin_value(sbd->catmull_clark, fs, save);
+    serialize_bin_value(sbd->compute_normals, fs, save);
+    serialize_bin_value(sbd->quads_pos, fs, save);
+    serialize_bin_value(sbd->quads_texcoord, fs, save);
+    serialize_bin_value(sbd->quads_color, fs, save);
+    serialize_bin_value(sbd->crease_pos, fs, save);
+    serialize_bin_value(sbd->crease_texcoord, fs, save);
+    serialize_bin_value(sbd->pos, fs, save);
+    serialize_bin_value(sbd->texcoord, fs, save);
+    serialize_bin_value(sbd->color, fs, save);
+}
+
+void serialize_bin_value(image4f& img, FILE* fs, bool save) {
+    serialize_bin_value(img.width, fs, save);
+    serialize_bin_value(img.height, fs, save);
+    serialize_bin_value(img.pxl, fs, save);
+}
+
+void serialize_bin_value(volume1f& vol, FILE* fs, bool save) {
+    serialize_bin_value(vol.width, fs, save);
+    serialize_bin_value(vol.height, fs, save);
+    serialize_bin_value(vol.depth, fs, save);
+    serialize_bin_value(vol.pxl, fs, save);
+}
+
+void serialize_bin_object(texture* tex, FILE* fs, bool save) {
+    serialize_bin_value(tex->name, fs, save);
+    serialize_bin_value(tex->path, fs, save);
+    serialize_bin_value(tex->img, fs, save);
+    serialize_bin_value(tex->vol, fs, save);
+    serialize_bin_value(tex->clamp, fs, save);
+    serialize_bin_value(tex->scale, fs, save);
+    serialize_bin_value(tex->gamma, fs, save);
+    serialize_bin_value(tex->has_opacity, fs, save);
+}
+
+void serialize_bin_object(
+    environment* env, const scene* scn, FILE* fs, bool save) {
+    serialize_bin_value(env->name, fs, save);
+    serialize_bin_value(env->frame, fs, save);
+    serialize_bin_value(env->ke, fs, save);
+    serialize_bin_handle(env->ke_txt, scn->textures, fs, save);
+    serialize_bin_value(env->elem_cdf, fs, save);
+}
+
+void serialize_bin_object(
+    material* mat, const scene* scn, FILE* fs, bool save) {
+    serialize_bin_value(mat->name, fs, save);
+    serialize_bin_value(mat->base_metallic, fs, save);
+    serialize_bin_value(mat->gltf_textures, fs, save);
+    serialize_bin_value(mat->double_sided, fs, save);
+    serialize_bin_value(mat->ke, fs, save);
+    serialize_bin_value(mat->kd, fs, save);
+    serialize_bin_value(mat->ks, fs, save);
+    serialize_bin_value(mat->kt, fs, save);
+    serialize_bin_value(mat->rs, fs, save);
+    serialize_bin_value(mat->op, fs, save);
+    serialize_bin_value(mat->fresnel, fs, save);
+    serialize_bin_value(mat->refract, fs, save);
+    serialize_bin_handle(mat->ke_txt, scn->textures, fs, save);
+    serialize_bin_handle(mat->kd_txt, scn->textures, fs, save);
+    serialize_bin_handle(mat->ks_txt, scn->textures, fs, save);
+    serialize_bin_handle(mat->kt_txt, scn->textures, fs, save);
+    serialize_bin_handle(mat->rs_txt, scn->textures, fs, save);
+    serialize_bin_handle(mat->op_txt, scn->textures, fs, save);
+    serialize_bin_handle(mat->occ_txt, scn->textures, fs, save);
+    serialize_bin_handle(mat->bump_txt, scn->textures, fs, save);
+    serialize_bin_handle(mat->disp_txt, scn->textures, fs, save);
+    serialize_bin_handle(mat->norm_txt, scn->textures, fs, save);
+    serialize_bin_value(mat->ve, fs, save);
+    serialize_bin_value(mat->va, fs, save);
+    serialize_bin_value(mat->vd, fs, save);
+    serialize_bin_value(mat->vg, fs, save);
+    serialize_bin_handle(mat->vd_txt, scn->textures, fs, save);
+};
+
+void serialize_bin_object(
+    instance* ist, const scene* scn, FILE* fs, bool save) {
+    serialize_bin_value(ist->name, fs, save);
+    serialize_bin_value(ist->frame, fs, save);
+    serialize_bin_handle(ist->shp, scn->shapes, fs, save);
+    serialize_bin_handle(ist->mat, scn->materials, fs, save);
+    serialize_bin_handle(ist->sbd, scn->subdivs, fs, save);
+};
+
+void serialize_scene(scene* scn, FILE* fs, bool save) {
+    serialize_bin_value(scn->name, fs, save);
+    serialize_bin_object(scn->cameras, fs, save);
+    serialize_bin_object(scn->shapes, scn, fs, save);
+    serialize_bin_object(scn->subdivs, fs, save);
+    serialize_bin_object(scn->textures, fs, save);
+    serialize_bin_object(scn->environments, scn, fs, save);
+    serialize_bin_object(scn->materials, scn, fs, save);
+    serialize_bin_object(scn->instances, scn, fs, save);
+
+    // @TODO: Saving lights can be shortened. This is basically
+    // serialize_bin(vector<instace*>, fs, save)
+    size_t count;
+    if (save) {
+        count = scn->lights.size();
+        serialize_bin_value(count, fs, true);
+    } else {
+        serialize_bin_value(count, fs, false);
+        scn->lights = std::vector<instance*>(count);
+    }
+    for (int i = 0; i < scn->lights.size(); i++)
+        serialize_bin_handle(scn->lights[i], scn->instances, fs, save);
+
+    auto has_bvh = (bool)scn->bvh;
+    serialize_bin_value(has_bvh, fs, save);
+    if(has_bvh) {
+        if (!save) scn->bvh = new bvh_tree();
+        serialize_scene_bvh(scn->bvh, scn, fs, save);
+    }
+}
+
+// Load/save a binary dump useful for very fast scene IO.
+scene* load_ybin_scene(
+    const std::string& filename, bool load_textures, bool skip_missing) {
+    auto fs = fopen(filename.c_str(), "rb");
+    if (!fs) throw std::runtime_error("could not open file " + filename);
+    auto scn = new scene();
+    serialize_scene(scn, fs, false);
+    fclose(fs);
+    return scn;
+}
+
+// Load/save a binary dump useful for very fast scene IO.
+void save_ybin_scene(const std::string& filename, const scene* scn,
+    bool save_textures, bool skip_missing) {
+    auto fs = fopen(filename.c_str(), "wb");
+    if (!fs) throw std::runtime_error("could not open file " + filename);
+    serialize_scene((scene*)scn, fs, true);
+    fclose(fs);
 }
 
 }  // namespace ygl
