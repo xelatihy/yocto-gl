@@ -5,6 +5,8 @@
 // in Yocto/GL. For images we support PNG, JPG, TGA, HDR, EXR formats. For
 // scene we support a simple to use JSON format, PLY, OBJ and glTF.
 // The JSON serialization is a straight copy of the in-memory scene data.
+// To speed up testing, we also support a binary format that is a dump of
+// the current scene. This format should not be use for archival though.
 //
 // ## Usage
 //
@@ -15,7 +17,8 @@
 // 5. load a scene with `load_json_scene()` and save it with `save_json_scene()`
 // 6. load and save OBJs with `load_obj_scene()` and `save_obj_scene()`
 // 7. load and save glTFs with `load_gltf_scene()` and `save_gltf_scene()`
-// 6. if desired, the function `load_scene()` and `save_scene()` will either
+// 8. load and save binary dumps with `load_ybin_scene()`and `save_ybin_scene()`
+// 9. if desired, the function `load_scene()` and `save_scene()` will either
 //    load using the internal format or convert on the fly using on the
 //    supported conversions
 //
@@ -225,6 +228,13 @@ void save_gltf_scene(const std::string& filename, const scene* scn,
 scene* load_pbrt_scene(const std::string& filename, bool load_textures = true,
     bool skip_missing = true);
 void save_pbrt_scene(const std::string& filename, const scene* scn,
+    bool save_textures = true, bool skip_missing = true);
+
+// Load/save a binary dump useful for very fast scene IO. This format is not
+// an archival format and should only be used as an intermediate format.
+scene* load_ybin_scene(const std::string& filename, bool load_textures = true,
+    bool skip_missing = true);
+void save_ybin_scene(const std::string& filename, const scene* scn,
     bool save_textures = true, bool skip_missing = true);
 
 }  // namespace ygl

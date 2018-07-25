@@ -110,7 +110,8 @@ int main(int argc, char* argv[]) {
             auto filename = ygl::replace_extension(imfilename,
                 std::to_string(sample) + "." + ygl::get_extension(imfilename));
             printf("saving image %s\n", filename.c_str());
-            ygl::save_tonemapped_image4f(filename, img, exposure, gamma, filmic);
+            ygl::save_tonemapped_image4f(
+                filename, img, exposure, gamma, filmic);
         }
     }
 

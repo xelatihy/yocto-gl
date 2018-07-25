@@ -89,17 +89,18 @@ struct app_state {
     }
 };
 
-auto tracer_names = std::vector<std::string>{"pathtrace", "pathtrace_volume", "direct",
-    "environment", "eyelight", "pathtrace-nomis", "pathtrace-naive",
+auto tracer_names = std::vector<std::string>{"pathtrace", "pathtrace_volume",
+    "direct", "environment", "eyelight", "pathtrace-nomis", "pathtrace-naive",
     "direct-nomis", "debug_normal", "debug_albedo", "debug_texcoord",
     "debug_frontfacing", "debug_diffuse", "debug_specular", "debug_roughness"};
 
-auto tracer_funcs = std::vector<ygl::trace_func>{ygl::trace_path, ygl::trace_path_volume,
-    ygl::trace_direct, ygl::trace_environment, ygl::trace_eyelight,
-    ygl::trace_path_nomis, ygl::trace_path_naive, ygl::trace_direct_nomis,
-    ygl::trace_debug_normal, ygl::trace_debug_albedo, ygl::trace_debug_texcoord,
-    ygl::trace_debug_frontfacing, ygl::trace_debug_diffuse,
-    ygl::trace_debug_specular, ygl::trace_debug_roughness};
+auto tracer_funcs = std::vector<ygl::trace_func>{ygl::trace_path,
+    ygl::trace_path_volume, ygl::trace_direct, ygl::trace_environment,
+    ygl::trace_eyelight, ygl::trace_path_nomis, ygl::trace_path_naive,
+    ygl::trace_direct_nomis, ygl::trace_debug_normal, ygl::trace_debug_albedo,
+    ygl::trace_debug_texcoord, ygl::trace_debug_frontfacing,
+    ygl::trace_debug_diffuse, ygl::trace_debug_specular,
+    ygl::trace_debug_roughness};
 
 void draw_widgets(GLFWwindow* win) {
     static auto first_time = true;
