@@ -26,6 +26,11 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+// #define BINARY
+// #ifdef BINARY
+#include "../yocto/serialize_yocto_new.h"
+// #endif
+
 #include "../yocto/ygl.h"
 #include "../yocto/yglio.h"
 
@@ -333,6 +338,7 @@ int main(int argc, char* argv[]) {
         parser, "scene", "scene.json", "Scene filename", true);
     ygl::check_cmdline(parser);
 
+    #ifndef BINARY
     // scene loading
     if (!quiet) printf("loading scene %s\n", app->filename.c_str());
     auto load_start = ygl::get_time();
@@ -388,6 +394,10 @@ int main(int argc, char* argv[]) {
             printf("no lights presents, switching to eyelight shader\n");
         app->tracer_id = 3;
     }
+    save_binary_scene(app->scn, app->filename + ".bin");
+    #else
+    app->scn = load_binary_scene(app->filename + ".bin");
+    #endif
 
     // prepare renderer
     auto cam = app->scn->cameras.at(app->camid);
