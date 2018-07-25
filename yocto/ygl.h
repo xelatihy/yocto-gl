@@ -260,6 +260,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <cinttypes>
 #include <functional>  // for std::hash
 #include <string>
 #include <thread>
