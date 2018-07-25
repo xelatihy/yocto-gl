@@ -64,5 +64,6 @@
         "pellacini",
         "phong",
         "yocto"
-    ]
-} 
+    ],
+    "cmake.buildDirectory": "${workspaceRoot}/build/vscode"
+}
