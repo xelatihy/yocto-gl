@@ -5516,3 +5516,34 @@ vec3f sample_ggx(float rs, const vec2f& rn) {
 }
 
 }  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// NUMERICAL TESTS FOR MONTE CARLO INTEGRATION
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+double integrate_func(std::function<double(double)> f, double a, double b, 
+    int nsamples, rng_state& rng) {
+    auto integral = 0.0;
+    for(auto i = 0; i < nsamples; i ++) {
+        auto r = a + rand1f(rng) * (b-a);
+        integral += f(r) * (b - a);
+    }
+    integral /= nsamples;
+    return integral;
+}
+
+void print_integration_test() {
+    auto f = [](double x) { return 1.0 - (3.0/4.0) * x * x; };
+    auto a = 0.0, b = 1.0;
+    auto expected = 3.0 / 4.0;
+    auto rng = rng_state();
+    // for(auto ns = 10; ns < 10000; ns += 10) {
+    for(auto ns = 10; ns < 10000; ns += 10) {
+        auto integral = integrate_func(f, a, b, ns, rng);
+        // printf("%d %lg\n", ns, fabs(integral - expected) / expected);
+        printf("%d %lg\n", ns, integral);
+    }
+}
+
+}  // namespace ygl
