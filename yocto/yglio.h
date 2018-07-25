@@ -181,9 +181,8 @@ image4f load_image4f_from_memory(const byte* data, int data_size);
 
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
-void save_tonemapped_image4f(const std::string& filename,
-    const image4f& hdr, float exposure = 0, float gamma = 2.2f,
-    bool filmic = false);
+void save_tonemapped_image4f(const std::string& filename, const image4f& hdr,
+    float exposure = 0, float gamma = 2.2f, bool filmic = false);
 
 // Loads/saves a 1 channel volume.
 volume1f read_volume1f(const std::string& filename);

@@ -2128,8 +2128,8 @@ image4f make_checker_image4f(int width, int height, int tile = 8,
     const vec4f& c0 = {0.5f, 0.5f, 0.5f, 1},
     const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
 image4f make_bumpdimple_image4f(int width, int height, int tile = 8);
-image4f make_ramp_image4f(int width, int height, const vec4f& c0, const vec4f& c1,
-    float srgb = false);
+image4f make_ramp_image4f(int width, int height, const vec4f& c0,
+    const vec4f& c1, float srgb = false);
 image4f make_gammaramp_image4f(int width, int height);
 image4f make_uvramp_image4f(int width, int height);
 image4f make_uvgrid_image4f(
@@ -2267,6 +2267,17 @@ inline volume4f make_volume4f(
 inline volume1f make_volume1f(int width, int height, int depth, float c = 0) {
     return make_volume<float>(width, height, depth, c);
 }
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// SCENE DATA
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// make a simple example volume
+volume1f make_test_volume1f(
+    int width, int height, int depth, float scale = 10, float exponent = 6);
 
 }  // namespace ygl
 
@@ -2586,7 +2597,7 @@ struct scene_intersection {
     instance* ist = nullptr;  // instance or null for no intersection
     int ei = 0;               // shape element index
     vec2f uv = zero2f;        // shape element coordinates
-    float dist = flt_max;           // ray/point distance
+    float dist = flt_max;     // ray/point distance
 };
 
 // Intersects a ray with the scene.
@@ -2681,18 +2692,21 @@ vec2f sample_environment(const environment* env, const vec2f& ruv);
 // VOLUME, EVAL AND SAMPLING FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace ygl {
-    // Check volume properties.
-    bool is_homogeneus(const material* vol);
-    bool has_volume_color(const material* vol);
-    
-    // Evaluate and sample transmission.
-    vec3f eval_transmission(const material* vol, const vec3f& from, const vec3f& dir, float dist, int channel, rng_state& rng);
-    float sample_distance(const material* vol, const vec3f& from, const vec3f& dir, int channel, rng_state& rng);
-    float sample_distance(const instance* vol, vec3f from, vec3f dir, int channel, rng_state& rng);
+// Check volume properties.
+bool is_homogeneus(const material* vol);
+bool has_volume_color(const material* vol);
 
-    // Evaluate and sample phase function.
-    vec3f sample_phase_function(float vg, const vec2f& u);
-    float eval_phase_function(float cos_theta, float vg);
+// Evaluate and sample transmission.
+vec3f eval_transmission(const material* vol, const vec3f& from,
+    const vec3f& dir, float dist, int channel, rng_state& rng);
+float sample_distance(const material* vol, const vec3f& from, const vec3f& dir,
+    int channel, rng_state& rng);
+float sample_distance(
+    const instance* vol, vec3f from, vec3f dir, int channel, rng_state& rng);
+
+// Evaluate and sample phase function.
+vec3f sample_phase_function(float vg, const vec2f& u);
+float eval_phase_function(float cos_theta, float vg);
 
 }  // namespace ygl
 

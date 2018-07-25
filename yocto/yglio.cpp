@@ -741,9 +741,8 @@ image4f load_image4f_from_memory(const byte* data, int data_size) {
 
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
-void save_tonemapped_image4f(const std::string& filename,
-    const image4f& hdr, float exposure, float gamma,
-    bool filmic) {
+void save_tonemapped_image4f(const std::string& filename, const image4f& hdr,
+    float exposure, float gamma, bool filmic) {
     if (is_hdr_filename(filename))
         save_image4f(filename, hdr);
     else
@@ -763,8 +762,15 @@ image4f resize_image4f(const image4f& img, int width, int height) {
     return res_img;
 }
 
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR VOLUMEIO
+// -----------------------------------------------------------------------------
+namespace ygl {
+
 // Loads volume data from binary format.
-volume1f read_volume1f(const std::string& filename) {
+volume1f load_volume1f(const std::string& filename) {
     auto file = fopen(filename.c_str(), "r");
     throw std::runtime_error("could not load volume " + filename);
     volume1f vol;
@@ -777,11 +783,11 @@ volume1f read_volume1f(const std::string& filename) {
 }
 
 // Saves volume data in binary format.
-void save_volume1f(const ygl::volume1f& tex, const std::string& filename) {
+void save_volume1f(const std::string& filename, const ygl::volume1f& tex) {
     auto file = fopen(filename.c_str(), "w");
     if (!file) throw std::runtime_error("could not save " + filename);
-    int dims[3] = {tex.width, tex.height, tex.depth};
-    fwrite(dims, sizeof(int), 3, file); 
+    auto dims = vec3i{tex.width, tex.height, tex.depth};
+    fwrite(&dims, 3 * sizeof(int), 1, file);
     fwrite(tex.pxl.data(), sizeof(float), tex.pxl.size(), file);
     fclose(file);
 }
@@ -837,6 +843,34 @@ void save_scene(const std::string& filename, const scene* scn,
         save_gltf_scene(filename, scn, save_textures, skip_missing);
     } else {
         throw std::runtime_error("unsupported extension " + ext);
+    }
+}
+
+// helper to load texture
+void load_texture(
+    const std::string& filename, image4f& img, volume1f& vol, float gamma) {
+    img = {};
+    vol = {};
+    if (get_extension(filename) == "vol") {
+        vol = load_volume1f(filename);
+    } else {
+        img = load_image4f(filename);
+        if (!is_hdr_filename(filename) && gamma != 1) {
+            img = gamma_to_linear(img, gamma);
+        }
+    }
+}
+
+// helper to save texture
+void save_texture(const std::string& filename, const image4f& img,
+    const volume1f& vol, float gamma) {
+    if (!vol.pxl.empty()) { save_volume1f(filename, vol); }
+    if (!img.pxl.empty()) {
+        if (is_hdr_filename(filename) || gamma == 1) {
+            save_image4f(filename, img);
+        } else {
+            save_image4f(filename, linear_to_gamma(img, gamma));
+        }
     }
 }
 
@@ -1126,11 +1160,14 @@ void from_json_proc(const json& js, texture& val) {
     auto type = js.value("type", ""s);
     if (type == "") return;
     auto is_hdr = false;
+    auto is_vol = false;
     auto width = js.value("width", 512);
     auto height = js.value("height", 512);
+    auto depth = js.value("depth", 512);
     if (js.count("resolution")) {
         height = js.value("resolution", 512);
         width = height;
+        depth = height;
     }
     if (type == "grid") {
         val.img = make_grid_image4f(width, height, js.value("tile", 8),
@@ -1167,9 +1204,14 @@ void from_json_proc(const json& js, texture& val) {
             js.value("offset", 1.0f), js.value("octaves", 6),
             js.value("wrap", true));
     } else if (type == "turbulence") {
-        val.img = make_turbulence_image4f(width, height, js.value("scale", 1.0f),
-            js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
-            js.value("octaves", 6), js.value("wrap", true));
+        val.img =
+            make_turbulence_image4f(width, height, js.value("scale", 1.0f),
+                js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
+                js.value("octaves", 6), js.value("wrap", true));
+    } else if (type == "test_volume") {
+        val.vol = make_test_volume1f(width, height, depth,
+            js.value("scale", 10.0f), js.value("exponent", 6.0f));
+        is_vol = true;
     } else {
         throw std::runtime_error("unknown texture type " + type);
     }
@@ -1177,8 +1219,14 @@ void from_json_proc(const json& js, texture& val) {
         val.img = bump_to_normal_map(val.img, js.value("bump_scale", 1.0f));
         val.gamma = 1;
     }
-    if (val.path == "")
-        val.path = "textures/" + val.name + ((is_hdr) ? ".png" : ".hdr");
+    if (val.path == "") {
+        auto ext = std::string("png");
+        if (is_hdr)
+            ext = "hdr";
+        else if (is_vol)
+            ext = "vol";
+        val.path = "textures/" + val.name + "." + ext;
+    }
 }
 
 // Serialize struct
@@ -1923,25 +1971,14 @@ scene* load_json_scene(
 
     // load images
     for (auto& txt : scn->textures) {
-        if (txt->path == "" || !txt->img.pxl.empty() || !txt->vol.pxl.empty()) continue;
+        if (txt->path == "" || !txt->img.pxl.empty() || !txt->vol.pxl.empty())
+            continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
-
-        if(get_extension(filename) == "vol") {
-            try {
-                txt->vol = read_volume1f(filename);
-            } catch (const std::exception&) {
-                if (skip_missing) continue;
-                throw;
-            }
-        } else {       
-            try {
-                txt->img = load_image4f(filename);
-                if (!is_hdr_filename(filename) && txt->gamma != 1)
-                    txt->img = gamma_to_linear(txt->img, txt->gamma);
-            } catch (const std::exception&) {
-                if (skip_missing) continue;
-                throw;
-            }
+        try {
+            load_texture(filename, txt->img, txt->vol, txt->gamma);
+        } catch (const std::exception&) {
+            if (skip_missing) continue;
+            throw;
         }
     }
 
@@ -1991,10 +2028,7 @@ void save_json_scene(const std::string& filename, const scene* scn,
         if (txt->img.pxl.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         try {
-            save_image4f(
-                filename, (is_hdr_filename(filename) || txt->gamma == 1) ?
-                              txt->img :
-                              linear_to_gamma(txt->img, txt->gamma));
+            save_texture(filename, txt->img, txt->vol, txt->gamma);
         } catch (std::exception&) {
             if (skip_missing) continue;
             throw;
@@ -2612,9 +2646,7 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
     for (auto& txt : scn->textures) {
         auto filename = normalize_path(dirname + "/" + txt->path);
         try {
-            txt->img = load_image4f(filename);
-            if (!is_hdr_filename(filename) && txt->gamma != 1)
-                txt->img = gamma_to_linear(txt->img, txt->gamma);
+            load_texture(filename, txt->img, txt->vol, txt->gamma);
         } catch (std::exception&) {
             if (skip_missing) continue;
             throw;
@@ -2881,10 +2913,7 @@ void save_obj_scene(const std::string& filename, const scene* scn,
         if (txt->img.pxl.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         try {
-            save_image4f(
-                filename, (is_hdr_filename(filename) || txt->gamma == 1) ?
-                              txt->img :
-                              linear_to_gamma(txt->img, txt->gamma));
+            save_texture(filename, txt->img, txt->vol, txt->gamma);
         } catch (std::exception&) {
             if (skip_missing) continue;
             throw;
@@ -3452,9 +3481,7 @@ scene* load_gltf_scene(
     for (auto& txt : scn->textures) {
         auto filename = normalize_path(dirname + "/" + txt->path);
         try {
-            txt->img = load_image4f(filename);
-            if (!is_hdr_filename(filename) && txt->gamma != 1)
-                txt->img = gamma_to_linear(txt->img, txt->gamma);
+            load_texture(filename, txt->img, txt->vol, txt->gamma);
         } catch (const std::exception&) {
             if (skip_missing) continue;
             throw;
@@ -3716,10 +3743,7 @@ void save_gltf_scene(const std::string& filename, const scene* scn,
         if (txt->img.pxl.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         try {
-            save_image4f(
-                filename, (is_hdr_filename(filename) || txt->gamma == 1) ?
-                              txt->img :
-                              linear_to_gamma(txt->img, txt->gamma));
+            save_texture(filename, txt->img, txt->vol, txt->gamma);
         } catch (std::exception&) {
             if (skip_missing) continue;
             throw;
@@ -4385,9 +4409,7 @@ scene* load_pbrt_scene(
         if (txt->path == "" || !txt->img.pxl.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         try {
-            txt->img = load_image4f(filename);
-            if (!is_hdr_filename(filename) && txt->gamma != 1)
-                txt->img = gamma_to_linear(txt->img, txt->gamma);
+            load_texture(filename, txt->img, txt->vol, txt->gamma);
         } catch (const std::exception&) {
             if (skip_missing) continue;
             throw;
