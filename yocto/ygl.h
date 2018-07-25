@@ -338,6 +338,10 @@ const auto zero2f = vec2f{0, 0};
 const auto zero3f = vec3f{0, 0, 0};
 const auto zero4f = vec4f{0, 0, 0, 0};
 
+// Access component by index.
+inline float at(const vec3f& v, int i) { return *(&v.x + i); }
+inline float& at(vec3f& v, int i) { return *(&v.x + i); }
+
 // Access xyz component of a vec4 typically used for color operation.
 inline vec3f& xyz(const vec4f& a) { return (vec3f&)a; }
 inline vec3f& xyz(vec4f& a) { return (vec3f&)a; }
@@ -2582,7 +2586,7 @@ struct scene_intersection {
     instance* ist = nullptr;  // instance or null for no intersection
     int ei = 0;               // shape element index
     vec2f uv = zero2f;        // shape element coordinates
-    float dist = 0;           // ray/point distance
+    float dist = flt_max;           // ray/point distance
 };
 
 // Intersects a ray with the scene.
@@ -2670,6 +2674,25 @@ std::pair<int, vec2f> sample_shape(
 
 // Sample an environment uniformly.
 vec2f sample_environment(const environment* env, const vec2f& ruv);
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// VOLUME, EVAL AND SAMPLING FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace ygl {
+    // Check volume properties.
+    bool is_homogeneus(const material* vol);
+    bool has_volume_color(const material* vol);
+    
+    // Evaluate and sample transmission.
+    vec3f eval_transmission(const material* vol, const vec3f& from, const vec3f& dir, float dist, int channel, rng_state& rng);
+    float sample_distance(const material* vol, const vec3f& from, const vec3f& dir, int channel, rng_state& rng);
+    float sample_distance(const instance* vol, vec3f from, vec3f dir, int channel, rng_state& rng);
+
+    // Evaluate and sample phase function.
+    vec3f sample_phase_function(float vg, const vec2f& u);
+    float eval_phase_function(float cos_theta, float vg);
 
 }  // namespace ygl
 
