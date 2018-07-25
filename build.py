@@ -8,16 +8,10 @@ import click, os, platform, markdown, glob, textwrap
 
 def build(target, dirname, buildtype, cmakeopts=''):
     os.system('mkdir -p build/{dirname}; cd build/{dirname}; cmake ../../ -GNinja -DCMAKE_BUILD_TYPE={buildtype} {cmakeopts}; cmake --build . {target}'.format(target=target, dirname=dirname, buildtype=buildtype, cmakeopts=cmakeopts))
-    os.system('ln -Ffs {dirname} build/latest'.format(dirname=dirname))
 
 @click.group()
 def run():
     pass
-
-@run.command()
-@click.argument('target', required=False, default='')
-def latest(target=''):
-    os.system('cd build/latest; cmake --build . {target}'.format(target=target))
 
 @run.command()
 @click.argument('target', required=False, default='')
