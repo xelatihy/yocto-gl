@@ -4992,8 +4992,8 @@ vec3f trace_path_volume(const scene* scn, const ray3f& ray_, rng_state& rng,
 
         // If medium has color but must use delta tracking, integrate only the
         // sampled spectrum.
-        if (! single_channel and has_volume_color(medium->mat) &&
-            ! is_homogeneus(medium->mat)) {
+        if (!single_channel && has_volume_color(medium->mat) &&
+            !is_homogeneus(medium->mat)) {
             at(weight, ch) *= 3;
             at(weight, (ch + 1) % 3) = 0;
             at(weight, (ch + 2) % 3) = 0;
@@ -5017,7 +5017,7 @@ vec3f trace_path_volume(const scene* scn, const ray3f& ray_, rng_state& rng,
             max(scn->bvh->nodes[0].bbox.max - scn->bvh->nodes[0].bbox.min);
 
         // environment
-        if (isec.ist == nullptr and dist > scene_size) {
+        if (isec.ist == nullptr && dist > scene_size) {
             if (emission) {
                 for (auto env : scn->environments)
                     radiance += weight * eval_environment(env, ray.d);
