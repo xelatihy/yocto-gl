@@ -71,8 +71,8 @@ float stb__perlin_lerp(float a, float b, float t)
 
 int stb__perlin_fastfloor(float a)
 {
-        int ai = (int) a;
-        return (a < ai) ? ai-1 : ai;
+    int ai = (int) a;
+    return (a < ai) ? ai-1 : ai;
 }
 
 // different grad function from Perlin's, but easy to modify to match reference
@@ -4952,16 +4952,15 @@ vec3f trace_path_volume(const scene* scn, const ray3f& ray_, rng_state& rng,
     int ch = sample_index(3, rand1f(rng));
     bool single_channel = false;
 
-
-    //for (auto bounce = 0; -bounce < nbounces; bounce++) { 
-    for(int bounce = 0; true; bounce++) { // @Hack
+    int bounce = 0;
+    while (bounce < nbounces) {
         instance* medium = mediums.back();
         const vec3f& ve = medium->mat->ve;
         const vec3f& va = medium->mat->va;
         const vec3f& vd = medium->mat->vd;
         const float& vg = medium->mat->vg;
 
-        // If medium has color but must use delta tracking, follow only the sampled spectrum.
+        // If medium has color but must use delta tracking, integrate only the sampled spectrum.
         if(not single_channel and has_volume_color(medium->mat) and not is_homogeneus(medium->mat)) {
             at(weight, ch) *= 3;
             at(weight, (ch+1)%3) = 0;
@@ -4978,7 +4977,10 @@ vec3f trace_path_volume(const scene* scn, const ray3f& ray_, rng_state& rng,
         ray.tmax = dist;
         auto isec = intersect_ray_cutout(scn, ray, rng, nbounces);
 
-        float scene_size = max(scn->bvh->nodes[0].bbox.max - scn->bvh->nodes[0].bbox.min); // @Hack
+        // @Hack: When isec.ist == nullptr, we must discern if the ray hit nothing (the environment)
+        //        or a medium interaction was sampled. Doing isec.dist == flt_max doesn't work, why??
+        float scene_size = max(scn->bvh->nodes[0].bbox.max - scn->bvh->nodes[0].bbox.min); 
+        
         // environment
         if(isec.ist == nullptr and dist > scene_size) {
             if (emission) {
@@ -4998,9 +5000,6 @@ vec3f trace_path_volume(const scene* scn, const ray3f& ray_, rng_state& rng,
 
             // distance sampling pdf is unknown due to delta tracking, but we do know
             // the value of transmission / pdf_dist.
-            // 1 - ∫_(dist)^(inf) tr(t) dt = tr(dist)
-            // 1 - ∫_(dist)^(inf) prd(t) dt = pdf(dist)
-
             weight *= eval_transmission_div_pdf(vd, isec.dist, ch);
 
             // emission
@@ -5011,6 +5010,7 @@ vec3f trace_path_volume(const scene* scn, const ray3f& ray_, rng_state& rng,
 
             // direct lighting
             if(rand1f(rng) < prob_direct(f)) {
+                // With some probabilty, this is a naive path tracer (works great with delta-like brdfs)
                 vec3f direct;
                 float pdf;
                 vec3f i = direct_illumination(scn, p, ch, mediums, rng, pdf, direct);
@@ -5047,7 +5047,7 @@ vec3f trace_path_volume(const scene* scn, const ray3f& ray_, rng_state& rng,
 
             // transmission in medium
             if(transmitted) {
-                float tr = 0.05;
+                float tr = 0.05; // avoid numerical errors
                 if(ndo < -tr) {
                     // Exiting from medium.
                     if(isec.ist != medium) break;
@@ -5061,8 +5061,9 @@ vec3f trace_path_volume(const scene* scn, const ray3f& ray_, rng_state& rng,
                 }
                 else break;
             }
+            bounce += 1;
         }
-        // no surface is intersected, new medium interaction 
+        // medium interaction 
         else {
             ray.o += ray.d * dist;
             float scattering_prob = at(va, ch);
