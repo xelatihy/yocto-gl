@@ -1304,7 +1304,7 @@ struct bvh_prim {
 // used and nodes added sequentially in the preallocated nodes array and
 // the number of nodes nnodes is updated.
 int make_bvh_node(std::vector<bvh_node>& nodes, std::vector<bvh_prim>& prims,
-    int start, int end, bvh_node_type type, bool sah) {
+    int start, int end, bool sah) {
     // add a new node
     auto nodeid = (int)nodes.size();
     nodes.push_back({});
@@ -1416,14 +1416,14 @@ int make_bvh_node(std::vector<bvh_node>& nodes, std::vector<bvh_prim>& prims,
         }
 
         // make an internal node
-        node.type = bvh_node_type::internal;
+        node.internal = true;
         node.split_axis = split_axis;
         node.count = 2;
-        node.prims[0] = make_bvh_node(nodes, prims, start, mid, type, sah);
-        node.prims[1] = make_bvh_node(nodes, prims, mid, end, type, sah);
+        node.prims[0] = make_bvh_node(nodes, prims, start, mid, sah);
+        node.prims[1] = make_bvh_node(nodes, prims, mid, end, sah);
     } else {
         // Make a leaf node
-        node.type = type;
+        node.internal = false;
         node.count = end - start;
         for (auto i = 0; i < node.count; i++)
             node.prims[i] = prims[start + i].primid;
@@ -1437,41 +1437,30 @@ int make_bvh_node(std::vector<bvh_node>& nodes, std::vector<bvh_prim>& prims,
 void build_bvh(bvh_tree* bvh, bool sah) {
     // get the number of primitives and the primitive type
     auto prims = std::vector<bvh_prim>();
-    auto type = bvh_node_type::internal;
     if (!bvh->points.empty()) {
         for (auto& p : bvh->points) {
             prims.push_back({point_bbox(bvh->pos[p], bvh->radius[p])});
         }
-        type = bvh_node_type::point;
     } else if (!bvh->lines.empty()) {
         for (auto& l : bvh->lines) {
             prims.push_back({line_bbox(bvh->pos[l.x], bvh->pos[l.y],
                 bvh->radius[l.x], bvh->radius[l.y])});
         }
-        type = bvh_node_type::line;
     } else if (!bvh->triangles.empty()) {
         for (auto& t : bvh->triangles) {
             prims.push_back(
                 {triangle_bbox(bvh->pos[t.x], bvh->pos[t.y], bvh->pos[t.z])});
         }
-        type = bvh_node_type::triangle;
     } else if (!bvh->quads.empty()) {
         for (auto& q : bvh->quads) {
             prims.push_back({quad_bbox(
                 bvh->pos[q.x], bvh->pos[q.y], bvh->pos[q.z], bvh->pos[q.w])});
         }
-        type = bvh_node_type::quad;
-    } else if (!bvh->pos.empty()) {
-        for (auto i = 0; i < bvh->pos.size(); i++) {
-            prims.push_back({point_bbox(bvh->pos[i], bvh->radius[i])});
+    } else if (!bvh->instances.empty()) {
+        for (auto& ist : bvh->instances) {
+            auto sbvh = bvh->shape_bvhs[ist.sid];
+            prims.push_back({transform_bbox(ist.frame, sbvh->nodes[0].bbox)});
         }
-        type = bvh_node_type::vertex;
-    } else if (!bvh->ist_bvhs.empty()) {
-        for (auto i = 0; i < bvh->ist_bvhs.size(); i++) {
-            prims.push_back({transform_bbox(
-                bvh->ist_frames[i], bvh->ist_bvhs[i]->nodes[0].bbox)});
-        }
-        type = bvh_node_type::instance;
     }
 
     // create an array of primitives to sort
@@ -1483,7 +1472,7 @@ void build_bvh(bvh_tree* bvh, bool sah) {
     // build nodes
     bvh->nodes.clear();
     bvh->nodes.reserve(prims.size() * 2);
-    make_bvh_node(bvh->nodes, prims, 0, (int)prims.size(), type, sah);
+    make_bvh_node(bvh->nodes, prims, 0, (int)prims.size(), sah);
     bvh->nodes.shrink_to_fit();
 }
 
@@ -1492,53 +1481,42 @@ void refit_bvh(bvh_tree* bvh, int nodeid) {
     // refit
     auto& node = bvh->nodes[nodeid];
     node.bbox = invalid_bbox3f;
-    switch (node.type) {
-        case bvh_node_type::internal: {
-            for (auto i = 0; i < 2; i++) {
-                refit_bvh(bvh, node.prims[i]);
-                node.bbox += bvh->nodes[node.prims[i]].bbox;
-            }
-        } break;
-        case bvh_node_type::triangle: {
-            for (auto i = 0; i < node.count; i++) {
-                auto& t = bvh->triangles[node.prims[i]];
-                node.bbox +=
-                    triangle_bbox(bvh->pos[t.x], bvh->pos[t.y], bvh->pos[t.z]);
-            }
-        } break;
-        case bvh_node_type::quad: {
-            for (auto i = 0; i < node.count; i++) {
-                auto& t = bvh->quads[node.prims[i]];
-                node.bbox += quad_bbox(
-                    bvh->pos[t.x], bvh->pos[t.y], bvh->pos[t.z], bvh->pos[t.w]);
-            }
-        } break;
-        case bvh_node_type::line: {
-            for (auto i = 0; i < node.count; i++) {
-                auto& l = bvh->lines[node.prims[i]];
-                node.bbox += line_bbox(bvh->pos[l.x], bvh->pos[l.y],
-                    bvh->radius[l.x], bvh->radius[l.y]);
-            }
-        } break;
-        case bvh_node_type::point: {
-            for (auto i = 0; i < node.count; i++) {
-                auto& p = bvh->points[node.prims[i]];
-                node.bbox += point_bbox(bvh->pos[p], bvh->radius[p]);
-            }
-        } break;
-        case bvh_node_type::vertex: {
-            for (auto i = 0; i < node.count; i++) {
-                auto idx = node.prims[i];
-                node.bbox += point_bbox(bvh->pos[idx], bvh->radius[idx]);
-            }
-        } break;
-        case bvh_node_type::instance: {
-            for (auto i = 0; i < node.count; i++) {
-                auto idx = node.prims[i];
-                node.bbox += transform_bbox(
-                    bvh->ist_frames[idx], bvh->ist_bvhs[idx]->nodes[0].bbox);
-            }
-        } break;
+    if (node.internal) {
+        for (auto i = 0; i < 2; i++) {
+            refit_bvh(bvh, node.prims[i]);
+            node.bbox += bvh->nodes[node.prims[i]].bbox;
+        }
+    } else if (!bvh->triangles.empty()) {
+        for (auto i = 0; i < node.count; i++) {
+            auto& t = bvh->triangles[node.prims[i]];
+            node.bbox +=
+                triangle_bbox(bvh->pos[t.x], bvh->pos[t.y], bvh->pos[t.z]);
+        }
+    } else if (!bvh->quads.empty()) {
+        for (auto i = 0; i < node.count; i++) {
+            auto& t = bvh->quads[node.prims[i]];
+            node.bbox += quad_bbox(
+                bvh->pos[t.x], bvh->pos[t.y], bvh->pos[t.z], bvh->pos[t.w]);
+        }
+    } else if (!bvh->lines.empty()) {
+        for (auto i = 0; i < node.count; i++) {
+            auto& l = bvh->lines[node.prims[i]];
+            node.bbox += line_bbox(bvh->pos[l.x], bvh->pos[l.y],
+                bvh->radius[l.x], bvh->radius[l.y]);
+        }
+    } else if (!bvh->points.empty()) {
+        for (auto i = 0; i < node.count; i++) {
+            auto& p = bvh->points[node.prims[i]];
+            node.bbox += point_bbox(bvh->pos[p], bvh->radius[p]);
+        }
+    } else if (!bvh->instances.empty()) {
+        for (auto i = 0; i < node.count; i++) {
+            auto& ist = bvh->instances[node.prims[i]];
+            auto sbvh = bvh->shape_bvhs[ist.sid];
+            node.bbox += transform_bbox(ist.frame, sbvh->nodes[0].bbox);
+        }
+    } else {
+        throw std::runtime_error("empty bvh");
     }
 }
 
@@ -1574,85 +1552,69 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
 
         // intersect node, switching based on node type
         // for each type, iterate over the the primitive list
-        switch (node.type) {
-            case bvh_node_type::internal: {
-                // for internal nodes, attempts to proceed along the
-                // split axis from smallest to largest nodes
-                if ((&ray_dsign.x)[node.split_axis]) {
-                    node_stack[node_cur++] = node.prims[0];
-                    node_stack[node_cur++] = node.prims[1];
-                } else {
-                    node_stack[node_cur++] = node.prims[1];
-                    node_stack[node_cur++] = node.prims[0];
+        if (node.internal) {
+            // for internal nodes, attempts to proceed along the
+            // split axis from smallest to largest nodes
+            if ((&ray_dsign.x)[node.split_axis]) {
+                node_stack[node_cur++] = node.prims[0];
+                node_stack[node_cur++] = node.prims[1];
+            } else {
+                node_stack[node_cur++] = node.prims[1];
+                node_stack[node_cur++] = node.prims[0];
+            }
+        } else if (!bvh->triangles.empty()) {
+            for (auto i = 0; i < node.count; i++) {
+                auto& t = bvh->triangles[node.prims[i]];
+                if (intersect_triangle(ray, bvh->pos[t.x], bvh->pos[t.y],
+                        bvh->pos[t.z], dist, uv)) {
+                    hit = true;
+                    ray.tmax = dist;
+                    eid = node.prims[i];
                 }
-            } break;
-            case bvh_node_type::triangle: {
-                for (auto i = 0; i < node.count; i++) {
-                    auto& t = bvh->triangles[node.prims[i]];
-                    if (intersect_triangle(ray, bvh->pos[t.x], bvh->pos[t.y],
-                            bvh->pos[t.z], dist, uv)) {
-                        hit = true;
-                        ray.tmax = dist;
-                        eid = node.prims[i];
-                    }
+            }
+        } else if (!bvh->quads.empty()) {
+            for (auto i = 0; i < node.count; i++) {
+                auto& t = bvh->quads[node.prims[i]];
+                if (intersect_quad(ray, bvh->pos[t.x], bvh->pos[t.y],
+                        bvh->pos[t.z], bvh->pos[t.w], dist, uv)) {
+                    hit = true;
+                    ray.tmax = dist;
+                    eid = node.prims[i];
                 }
-            } break;
-            case bvh_node_type::quad: {
-                for (auto i = 0; i < node.count; i++) {
-                    auto& t = bvh->quads[node.prims[i]];
-                    if (intersect_quad(ray, bvh->pos[t.x], bvh->pos[t.y],
-                            bvh->pos[t.z], bvh->pos[t.w], dist, uv)) {
-                        hit = true;
-                        ray.tmax = dist;
-                        eid = node.prims[i];
-                    }
+            }
+        } else if (!bvh->lines.empty()) {
+            for (auto i = 0; i < node.count; i++) {
+                auto& l = bvh->lines[node.prims[i]];
+                if (intersect_line(ray, bvh->pos[l.x], bvh->pos[l.y],
+                        bvh->radius[l.x], bvh->radius[l.y], dist, uv)) {
+                    hit = true;
+                    ray.tmax = dist;
+                    eid = node.prims[i];
                 }
-            } break;
-            case bvh_node_type::line: {
-                for (auto i = 0; i < node.count; i++) {
-                    auto& l = bvh->lines[node.prims[i]];
-                    if (intersect_line(ray, bvh->pos[l.x], bvh->pos[l.y],
-                            bvh->radius[l.x], bvh->radius[l.y], dist, uv)) {
-                        hit = true;
-                        ray.tmax = dist;
-                        eid = node.prims[i];
-                    }
+            }
+        } else if (!bvh->points.empty()) {
+            for (auto i = 0; i < node.count; i++) {
+                auto& p = bvh->points[node.prims[i]];
+                if (intersect_point(
+                        ray, bvh->pos[p], bvh->radius[p], dist, uv)) {
+                    hit = true;
+                    ray.tmax = dist;
+                    eid = node.prims[i];
                 }
-            } break;
-            case bvh_node_type::point: {
-                for (auto i = 0; i < node.count; i++) {
-                    auto& p = bvh->points[node.prims[i]];
-                    if (intersect_point(
-                            ray, bvh->pos[p], bvh->radius[p], dist, uv)) {
-                        hit = true;
-                        ray.tmax = dist;
-                        eid = node.prims[i];
-                    }
+            }
+        } else if (!bvh->instances.empty()) {
+            for (auto i = 0; i < node.count; i++) {
+                auto& ist = bvh->instances[node.prims[i]];
+                if (intersect_bvh(bvh->shape_bvhs[ist.sid],
+                        transform_ray(ist.frame_inv, ray), find_any, dist, iid,
+                        eid, uv)) {
+                    hit = true;
+                    ray.tmax = dist;
+                    iid = node.prims[i];
                 }
-            } break;
-            case bvh_node_type::vertex: {
-                for (auto i = 0; i < node.count; i++) {
-                    auto idx = node.prims[i];
-                    if (intersect_point(
-                            ray, bvh->pos[idx], bvh->radius[idx], dist, uv)) {
-                        hit = true;
-                        ray.tmax = dist;
-                        eid = node.prims[i];
-                    }
-                }
-            } break;
-            case bvh_node_type::instance: {
-                for (auto i = 0; i < node.count; i++) {
-                    auto idx = node.prims[i];
-                    if (intersect_bvh(bvh->ist_bvhs[idx],
-                            transform_ray(bvh->ist_inv_frames[idx], ray),
-                            find_any, dist, iid, eid, uv)) {
-                        hit = true;
-                        ray.tmax = dist;
-                        iid = node.prims[i];
-                    }
-                }
-            } break;
+            }
+        } else {
+            throw std::runtime_error("empty bvh");
         }
 
         // check for early exit
@@ -1683,83 +1645,66 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
 
         // intersect node, switching based on node type
         // for each type, iterate over the the primitive list
-        switch (node.type) {
-            case bvh_node_type::internal: {
-                // internal node
-                node_stack[node_cur++] = node.prims[0];
-                node_stack[node_cur++] = node.prims[1];
-            } break;
-            case bvh_node_type::triangle: {
-                for (auto i = 0; i < node.count; i++) {
-                    auto& t = bvh->triangles[node.prims[i]];
-                    if (overlap_triangle(pos, max_dist, bvh->pos[t.x],
-                            bvh->pos[t.y], bvh->pos[t.z], bvh->radius[t.x],
-                            bvh->radius[t.y], bvh->radius[t.z], dist, uv)) {
-                        hit = true;
-                        max_dist = dist;
-                        eid = node.prims[i];
-                    }
+        if (node.internal) {
+            // internal node
+            node_stack[node_cur++] = node.prims[0];
+            node_stack[node_cur++] = node.prims[1];
+        } else if (!bvh->triangles.empty()) {
+            for (auto i = 0; i < node.count; i++) {
+                auto& t = bvh->triangles[node.prims[i]];
+                if (overlap_triangle(pos, max_dist, bvh->pos[t.x],
+                        bvh->pos[t.y], bvh->pos[t.z], bvh->radius[t.x],
+                        bvh->radius[t.y], bvh->radius[t.z], dist, uv)) {
+                    hit = true;
+                    max_dist = dist;
+                    eid = node.prims[i];
                 }
-            } break;
-            case bvh_node_type::quad: {
-                for (auto i = 0; i < node.count; i++) {
-                    auto& q = bvh->quads[node.prims[i]];
-                    if (overlap_quad(pos, max_dist, bvh->pos[q.x],
-                            bvh->pos[q.y], bvh->pos[q.z], bvh->pos[q.w],
-                            bvh->radius[q.x], bvh->radius[q.y],
-                            bvh->radius[q.z], bvh->radius[q.w], dist, uv)) {
-                        hit = true;
-                        max_dist = dist;
-                        eid = node.prims[i];
-                    }
+            }
+        } else if (!bvh->quads.empty()) {
+            for (auto i = 0; i < node.count; i++) {
+                auto& q = bvh->quads[node.prims[i]];
+                if (overlap_quad(pos, max_dist, bvh->pos[q.x], bvh->pos[q.y],
+                        bvh->pos[q.z], bvh->pos[q.w], bvh->radius[q.x],
+                        bvh->radius[q.y], bvh->radius[q.z], bvh->radius[q.w],
+                        dist, uv)) {
+                    hit = true;
+                    max_dist = dist;
+                    eid = node.prims[i];
                 }
-            } break;
-            case bvh_node_type::line: {
-                for (auto i = 0; i < node.count; i++) {
-                    auto& l = bvh->lines[node.prims[i]];
-                    if (overlap_line(pos, max_dist, bvh->pos[l.x],
-                            bvh->pos[l.y], bvh->radius[l.x], bvh->radius[l.y],
-                            dist, uv)) {
-                        hit = true;
-                        max_dist = dist;
-                        eid = node.prims[i];
-                    }
+            }
+        } else if (!bvh->lines.empty()) {
+            for (auto i = 0; i < node.count; i++) {
+                auto& l = bvh->lines[node.prims[i]];
+                if (overlap_line(pos, max_dist, bvh->pos[l.x], bvh->pos[l.y],
+                        bvh->radius[l.x], bvh->radius[l.y], dist, uv)) {
+                    hit = true;
+                    max_dist = dist;
+                    eid = node.prims[i];
                 }
-            } break;
-            case bvh_node_type::point: {
-                for (auto i = 0; i < node.count; i++) {
-                    auto& p = bvh->points[node.prims[i]];
-                    if (overlap_point(pos, max_dist, bvh->pos[p],
-                            bvh->radius[p], dist, uv)) {
-                        hit = true;
-                        max_dist = dist;
-                        eid = node.prims[i];
-                    }
+            }
+        } else if (!bvh->points.empty()) {
+            for (auto i = 0; i < node.count; i++) {
+                auto& p = bvh->points[node.prims[i]];
+                if (overlap_point(
+                        pos, max_dist, bvh->pos[p], bvh->radius[p], dist, uv)) {
+                    hit = true;
+                    max_dist = dist;
+                    eid = node.prims[i];
                 }
-            } break;
-            case bvh_node_type::vertex: {
-                for (auto i = 0; i < node.count; i++) {
-                    auto idx = node.prims[i];
-                    if (overlap_point(pos, max_dist, bvh->pos[idx],
-                            bvh->radius[idx], dist, uv)) {
-                        hit = true;
-                        max_dist = dist;
-                        eid = node.prims[i];
-                    }
+            }
+        } else if (!bvh->instances.empty()) {
+            for (auto i = 0; i < node.count; i++) {
+                auto& ist = bvh->instances[node.prims[i]];
+                if (overlap_bvh(bvh->shape_bvhs[ist.sid],
+                        transform_point(ist.frame_inv, pos), max_dist, find_any,
+                        dist, iid, eid, uv)) {
+                    hit = true;
+                    max_dist = dist;
+                    iid = node.prims[i];
                 }
-            } break;
-            case bvh_node_type::instance: {
-                for (auto i = 0; i < node.count; i++) {
-                    auto idx = node.prims[i];
-                    if (overlap_bvh(bvh->ist_bvhs[idx],
-                            transform_point(bvh->ist_inv_frames[idx], pos),
-                            max_dist, find_any, dist, iid, eid, uv)) {
-                        hit = true;
-                        max_dist = dist;
-                        iid = node.prims[i];
-                    }
-                }
-            } break;
+            }
+        } else {
+            throw std::runtime_error("empty bvh");
         }
 
         // check for early exit
@@ -3366,11 +3311,6 @@ volume1f make_test_volume1f(
 namespace ygl {
 
 // cleanup
-shape::~shape() {
-    if (bvh) delete bvh;
-}
-
-// cleanup
 scene::~scene() {
     if (bvh) delete bvh;
     for (auto v : cameras) delete v;
@@ -3573,36 +3513,41 @@ void update_environment_cdf(environment* env) {
     }
 }
 
-// Build a shape BVH
-void build_bvh(shape* shp, bool sah) {
-    if (!shp->bvh) shp->bvh = new bvh_tree();
-    shp->bvh->pos = shp->pos;
-    shp->bvh->radius = shp->radius;
-    if (shp->bvh->radius.empty())
-        shp->bvh->radius.assign(shp->bvh->radius.size(), 0.001f);
-    shp->bvh->points = shp->points;
-    shp->bvh->lines = shp->lines;
-    shp->bvh->triangles = shp->triangles;
-    build_bvh(shp->bvh, sah);
-}
-
 // Build a scene BVH
 void build_bvh(scene* scn, bool sah) {
-    // shapes
-    for (auto shp : scn->shapes) build_bvh(shp, sah);
+    // create bvh
+    auto bvh = new bvh_tree();
 
-    // tree bvh
-    if (!scn->bvh) scn->bvh = new bvh_tree();
-    scn->bvh->ist_frames.resize(scn->instances.size());
-    scn->bvh->ist_inv_frames.resize(scn->instances.size());
-    scn->bvh->ist_bvhs.resize(scn->instances.size());
+    // shapes
+    auto shape_ids = std::unordered_map<shape*, int>();
+    for (auto shp : scn->shapes) {
+        auto sbvh = new bvh_tree();
+        sbvh->pos = shp->pos;
+        sbvh->radius = shp->radius;
+        sbvh->points = shp->points;
+        sbvh->lines = shp->lines;
+        sbvh->triangles = shp->triangles;
+        bvh->shape_bvhs.push_back(sbvh);
+        shape_ids[shp] = (int)bvh->shape_bvhs.size() - 1;
+    }
+
+    // instances
     for (auto i = 0; i < scn->instances.size(); i++) {
         auto ist = scn->instances[i];
-        scn->bvh->ist_frames[i] = ist->frame;
-        scn->bvh->ist_inv_frames[i] = inverse(ist->frame, false);
-        scn->bvh->ist_bvhs[i] = ist->shp->bvh;
+        bvh->instances.push_back(
+            {ist->frame, inverse(ist->frame, false), shape_ids[ist->shp]});
     }
-    build_bvh(scn->bvh, sah);
+
+    // build bvh
+    for (auto sbvh : bvh->shape_bvhs) build_bvh(sbvh, sah);
+    build_bvh(bvh, sah);
+
+    // set bvh
+    if (scn->bvh) delete scn->bvh;
+    scn->bvh = bvh;
+    for (auto i = 0; i < scn->shapes.size(); i++) {
+        scn->shapes[i]->bvh = bvh->shape_bvhs[i];
+    }
 }
 
 #if YGL_EMBREE
@@ -3660,25 +3605,22 @@ void build_bvh_embree(scene* scn) {
 }
 #endif
 
-// Refits a scene BVH
+// Refits a shape BVH
 void refit_bvh(shape* shp) {
     shp->bvh->pos = shp->pos;
     shp->bvh->radius = shp->radius;
-    if (shp->bvh->radius.empty())
-        shp->bvh->radius.assign(shp->bvh->radius.size(), 0.001f);
     refit_bvh(shp->bvh);
 }
 
 // Refits a scene BVH
 void refit_bvh(scene* scn) {
-    scn->bvh->ist_frames.resize(scn->instances.size());
-    scn->bvh->ist_inv_frames.resize(scn->instances.size());
-    scn->bvh->ist_bvhs.resize(scn->instances.size());
-    for (auto i = 0; i < scn->instances.size(); i++) {
-        auto ist = scn->instances[i];
-        scn->bvh->ist_frames[i] = ist->frame;
-        scn->bvh->ist_inv_frames[i] = inverse(ist->frame);
-        scn->bvh->ist_bvhs[i] = ist->shp->bvh;
+    auto shape_ids = std::unordered_map<shape*, int>();
+    for (auto sid = 0; sid < scn->shapes.size(); sid++)
+        shape_ids[scn->shapes[sid]] = sid;
+    for (auto iid = 0; iid < scn->instances.size(); iid++) {
+        auto ist = scn->instances[iid];
+        scn->bvh->instances[iid] = {
+            ist->frame, inverse(ist->frame), shape_ids[ist->shp]};
     }
     refit_bvh(scn->bvh);
 }
@@ -4233,43 +4175,41 @@ bool has_volume_color(const material* vol) {
 
 vec3f eval_transmission(const material* vol, const vec3f& from,
     const vec3f& dir, float dist, int channel, rng_state& rng) {
-    const vec3f& vd = vol->vd;
+    auto& vd = vol->vd;
     if (is_homogeneus(vol))
         return vec3f{exp(-dist * vd.x), exp(-dist * vd.y), exp(-dist * vd.z)};
 
     // ratio tracking
-    float tr = 1.0f;
-    float t = 0.0f;
-    vec3f pos = from;
+    auto tr = 1.0f, t = 0.0f;
+    auto pos = from;
     while (true) {
-        float step = -log(1 - rand1f(rng)) / at(vd, channel);
+        auto step = -log(1 - rand1f(rng)) / at(vd, channel);
         t += step;
         if (t >= dist) break;
         pos += dir * step;
-        vec3f density = vol->vd * eval_texture(vol->vd_txt, pos, true);
-
+        auto density = vol->vd * eval_texture(vol->vd_txt, pos, true);
         tr *= 1.0f - max(0.0f, at(density, channel) / at(vd, channel));
     }
-    return tr * vec3f{1, 1, 1};
+    return {tr, tr, tr};
 }
 
 float sample_distance(const material* vol, const vec3f& from, const vec3f& dir,
     int channel, rng_state& rng) {
-    vec3f pos = from;
-    float majorant = at(vol->vd, channel);
+    auto pos = from;
+    auto majorant = at(vol->vd, channel);
     if (majorant == 0) return flt_max;
-    float dist = 0;
 
     // delta tracking
-    while (1) {
-        float r = rand1f(rng);
+    auto dist = 0.0f;
+    while (true) {
+        auto r = rand1f(rng);
         if (r == 0) return flt_max;
-        float step = -log(r) / majorant;
+        auto step = -log(r) / majorant;
         if (is_homogeneus(vol)) return step;
 
         pos += dir * step;
         dist += step;
-        vec3f density = vol->vd * eval_texture(vol->vd_txt, pos, true);
+        auto density = vol->vd * eval_texture(vol->vd_txt, pos, true);
 
         if (at(density, channel) / majorant >= rand1f(rng)) return dist;
 
@@ -4279,25 +4219,25 @@ float sample_distance(const material* vol, const vec3f& from, const vec3f& dir,
     }
 }
 
-float sample_distance(
-    const instance* ist, vec3f from, vec3f dir, int channel, rng_state& rng) {
+float sample_distance(const instance* ist, const vec3f& from, const vec3f& dir,
+    int channel, rng_state& rng) {
     if (ist->mat->vd == zero3f) return flt_max;
 
     // Transform coordinates so that every position in the bounding box of the
     // instance is mapped to the cube [-1,1]^3 (the same space of volume texture
     // sampling).
-    const auto& bvh = ist->shp->bvh;
-    vec3f scale = bvh->nodes[0].bbox.max - bvh->nodes[0].bbox.min;
-    frame3f frame = ist->frame;
-    from = transform_point_inverse(frame, from) / scale;
-    dir = transform_direction_inverse(frame, dir) / scale;
-    float ll = length(dir);
-    float dist = sample_distance(ist->mat, from, dir / ll, channel, rng);
+    auto bvh = ist->shp->bvh;
+    auto scale = bvh->nodes[0].bbox.max - bvh->nodes[0].bbox.min;
+    auto frame = ist->frame;
+    auto froml = transform_point_inverse(frame, from) / scale;
+    auto dirl = transform_direction_inverse(frame, dir) / scale;
+    auto ll = length(dirl);
+    auto dist = sample_distance(ist->mat, froml, dirl / ll, channel, rng);
     return dist * ll;
 }
 
 vec3f sample_phase_function(float g, const vec2f& u) {
-    float cos_theta;
+    auto cos_theta = 0.0f;
     if (abs(g) < 1e-3) {
         cos_theta = 1 - 2 * u.x;
     } else {
@@ -4305,9 +4245,9 @@ vec3f sample_phase_function(float g, const vec2f& u) {
         cos_theta = (1 + g * g - square * square) / (2 * g);
     }
 
-    float sin_theta = sqrt(max(0.0f, 1 - cos_theta * cos_theta));
-    float phi = 2 * pi * u.y;
-    return vec3f{sin_theta * cos(phi), sin_theta * sin(phi), cos_theta};
+    auto sin_theta = sqrt(max(0.0f, 1 - cos_theta * cos_theta));
+    auto phi = 2 * pi * u.y;
+    return {sin_theta * cos(phi), sin_theta * sin(phi), cos_theta};
 }
 
 float eval_phase_function(float cos_theta, float g) {
@@ -4935,7 +4875,7 @@ vec3f trace_path(const scene* scn, const ray3f& ray_, rng_state& rng,
 
 // Evaluates the weight after sampling distance in a medium.
 vec3f eval_transmission_div_pdf(const vec3f& vd, float dist, int ch) {
-    vec3f weight;
+    auto weight = zero3f;
 
     // For the sampled channel, transmission / pdf == 1.0
     at(weight, ch) = 1.0;
@@ -4975,20 +4915,20 @@ vec3f trace_path_volume(const scene* scn, const ray3f& ray_, rng_state& rng,
     }
 
     // List of mediums that contains the path. The path starts in air.
-    std::vector<instance*> mediums = {air};
+    auto mediums = std::vector<instance*>{air};
 
     // Sample color channel. This won't matter if there are no heterogeneus
     // materials.
-    int ch = sample_index(3, rand1f(rng));
-    bool single_channel = false;
+    auto ch = sample_index(3, rand1f(rng));
+    auto single_channel = false;
 
     int bounce = 0;
     while (bounce < nbounces) {
-        instance* medium = mediums.back();
-        const vec3f& ve = medium->mat->ve;
-        const vec3f& va = medium->mat->va;
-        const vec3f& vd = medium->mat->vd;
-        const float& vg = medium->mat->vg;
+        auto medium = mediums.back();
+        const auto& ve = medium->mat->ve;
+        const auto& va = medium->mat->va;
+        const auto& vd = medium->mat->vd;
+        const auto& vg = medium->mat->vg;
 
         // If medium has color but must use delta tracking, integrate only the
         // sampled spectrum.
@@ -5002,7 +4942,7 @@ vec3f trace_path_volume(const scene* scn, const ray3f& ray_, rng_state& rng,
 
         // Sample distance of next absorption/scattering event in the medium.
         // dist_pdf is unknown due to delta tracking.
-        float dist = sample_distance(medium, ray.o, ray.d, ch, rng);
+        auto dist = sample_distance(medium, ray.o, ray.d, ch, rng);
 
         // Create ray and clamp it to make the intersection faster.
         ray = make_ray(ray.o, ray.d);
@@ -5013,7 +4953,7 @@ vec3f trace_path_volume(const scene* scn, const ray3f& ray_, rng_state& rng,
         // nothing (the environment)
         //        or a medium interaction was sampled. Doing isec.dist ==
         //        flt_max doesn't work, why??
-        float scene_size =
+        auto scene_size =
             max(scn->bvh->nodes[0].bbox.max - scn->bvh->nodes[0].bbox.min);
 
         // environment

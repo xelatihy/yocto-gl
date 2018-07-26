@@ -4590,8 +4590,7 @@ void serialize_bin_object(camera* cam, FILE* fs, bool save) {
     serialize_bin_value(cam->far, fs, save);
 }
 
-// @TODO: merge these two (serialize_shape_bvh and serialize_scene_bvh)
-void serialize_shape_bvh(bvh_tree* bvh, FILE* fs, bool save) {
+void serialize_bin_object(bvh_tree* bvh, FILE* fs, bool save) {
     serialize_bin_value(bvh->pos, fs, save);
     serialize_bin_value(bvh->radius, fs, save);
     serialize_bin_value(bvh->points, fs, save);
@@ -4599,44 +4598,9 @@ void serialize_shape_bvh(bvh_tree* bvh, FILE* fs, bool save) {
     serialize_bin_value(bvh->triangles, fs, save);
     serialize_bin_value(bvh->quads, fs, save);
     serialize_bin_value(bvh->nodes, fs, save);
-    assert(bvh->nodes.size());
-    assert(bvh->ist_bvhs.empty());
-}
-
-void serialize_scene_bvh(bvh_tree* bvh, const scene* scn, FILE* fs, bool save) {
-    serialize_bin_value(bvh->ist_frames, fs, save);
-    serialize_bin_value(bvh->ist_inv_frames, fs, save);
+    serialize_bin_value(bvh->instances, fs, save);
+    serialize_bin_object(bvh->shape_bvhs, fs, save);
     serialize_bin_value(bvh->nodes, fs, save);
-
-    if (save) {
-        auto shp = (long long int)-1;
-        auto count = (size_t)bvh->ist_bvhs.size();
-        serialize_bin_value(count, fs, true);
-        for (int i = 0; i < bvh->ist_bvhs.size(); ++i) {
-            bvh_tree* b = bvh->ist_bvhs[i];
-            // Tha shape handle is saved instead of its bvh.
-            if (b) {
-                for (int s = 0; s < scn->shapes.size(); s++) {
-                    if (scn->shapes[s]->bvh == b) {
-                        shp = s;
-                        break;
-                    }
-                }
-            }
-            assert(shp != -1);
-            serialize_bin_value(shp, fs, true);
-        }
-    } else {
-        auto shp = (long long int)-1;
-        auto count = (size_t)0;
-        serialize_bin_value(count, fs, false);
-        bvh->ist_bvhs = std::vector<bvh_tree*>(count);
-        for (int i = 0; i < count; ++i) {
-            // Knowing the handle of the shape, we can recover its bvh.
-            serialize_bin_value(shp, fs, false);
-            bvh->ist_bvhs[i] = scn->shapes[shp]->bvh;
-        }
-    }
 }
 
 void serialize_bin_object(shape* shp, const scene* scn, FILE* fs, bool save) {
@@ -4652,12 +4616,6 @@ void serialize_bin_object(shape* shp, const scene* scn, FILE* fs, bool save) {
     serialize_bin_value(shp->radius, fs, save);
     serialize_bin_value(shp->tangsp, fs, save);
     serialize_bin_value(shp->elem_cdf, fs, save);
-    auto has_bvh = (bool)shp->bvh;
-    serialize_bin_value(has_bvh, fs, save);
-    if(has_bvh) {
-        if (!save) shp->bvh = new bvh_tree();
-        serialize_shape_bvh(shp->bvh, fs, save);
-    }
 }
 
 void serialize_bin_object(subdiv* sbd, FILE* fs, bool save) {
@@ -4776,7 +4734,12 @@ void serialize_scene(scene* scn, FILE* fs, bool save) {
     serialize_bin_value(has_bvh, fs, save);
     if(has_bvh) {
         if (!save) scn->bvh = new bvh_tree();
-        serialize_scene_bvh(scn->bvh, scn, fs, save);
+        serialize_bin_object(scn->bvh, fs, save);
+        if (!save) {
+            for(auto i = 0; i < scn->shapes.size(); i ++) {
+                scn->shapes[i]->bvh = scn->bvh->shape_bvhs[i];
+            }
+        }
     }
 }
 

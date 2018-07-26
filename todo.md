@@ -5,17 +5,21 @@ Please consider this to be just development notes and not any real planning.
 
 ## Next features
 
-- simpler cmdline, at least for the simple apps
-    - simpler timer
-    - internal verbose flags to remove some apps (like trace)?
+- simpler bvh
+    - consider splitting shape and scene bvh
+    - bvh editing and refitting
+        - change selection model?
+    - OpenGL with dictionaries to avoid crap
+    - consider bvh outside of the scene to simplify things
+- simpler timer
 - split apps
 - simpler example by removing make_XXX commands
-- luts
+- LUTs
 - tone curve
     - from web?
     - no implementation of Photoshop curve
     - maybe try monotonic spline interpolation
-    - otherwise a simple Bezier with contraints
+    - otherwise a simple Bezier with constraints
     - use lookup tables for this
 
 ## Giacomo
@@ -85,9 +89,9 @@ Please consider this to be just development notes and not any real planning.
         - triangle
         - line
         - point
-    - line/point parametrization that mnatches pbrt and embree
+    - line/point parametrization that matches pbrt and embree
     - radius in offsetting rays
-        - check embree to avoid 
+        - check embree to avoid
 - bvh
     - sah
     - opacity
@@ -128,7 +132,7 @@ Please consider this to be just development notes and not any real planning.
     - pbrt include parser
 - gltf exports
 
-## Test scenes: simnplify shape generation
+## Test scenes: simplify shape generation
 
 - bent floor
 - 0 roughness
@@ -136,18 +140,18 @@ Please consider this to be just development notes and not any real planning.
 ## OpenGL/Trace
 
 - investigate bump map on GPU
-    - https://www.opengl.org/discussion_boards/showthread.php/162857-Computing-the-tangent-space-in-the-fragment-shader
-    - http://jbit.net/~sparky/sfgrad_bump/mm_sfgrad_bump.pdf
+    - <https://www.opengl.org/discussion_boards/showthread.php/162857-Computing-the-tangent-space-in-the-fragment-shader>
+    - <http://jbit.net/~sparky/sfgrad_bump/mm_sfgrad_bump.pdf>
 
 ## BVH
 
 - SAH based build?
-- simplify build code: can we avoid preallocating nodes?
+- simplify build code: can we avoid pre-allocating nodes?
 - move away from special functions in BVH?
     - always use sort
     - provide a sort buffer
 - add cutout to trace
-- simplify build functions: 
+- simplify build functions
 - maybe put axis with internal
 - simplify partition and nth_element function
     - include wrapper functions
