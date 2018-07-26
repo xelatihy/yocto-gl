@@ -495,7 +495,7 @@ inline vec4f normalize(const vec4f& a) {
     return (l) ? a / l : a;
 }
 
-// Vecror angles and slerps.
+// Vector angles and slerps.
 inline float angle(const vec3f& a, const vec3f& b) {
     return acos(clamp(dot(normalize(a), normalize(b)), -1.0f, 1.0f));
 }
@@ -1054,7 +1054,7 @@ struct ray3f {
     float tmax = flt_max;
 };
 
-// Construct a ray from dirction or segments using a default epsilon.
+// Construct a ray from direction or segments using a default epsilon.
 inline ray3f make_ray(const vec3f& o, const vec3f& d, float eps = 1e-4f) {
     return {o, d, eps, flt_max};
 }
@@ -1270,7 +1270,7 @@ inline vec2i get_image_coords(const vec2f& mouse_pos, const vec2f& center,
 
 // Center image and autofit.
 inline void center_image4f(vec2f& center, float& scale, const vec2i& imsize,
-    vec2i winsize, bool zoom_to_fit) {
+    const vec2i& winsize, bool zoom_to_fit) {
     if (zoom_to_fit) {
         scale =
             ygl::min(winsize.x / (float)imsize.x, winsize.y / (float)imsize.y);
@@ -1444,7 +1444,7 @@ inline float sample_discrete_pdf(const std::vector<float>& cdf, int idx) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Compute the revised Pelin noise function. Wrap provides a wrapping noise
+// Compute the revised Perlin noise function. Wrap provides a wrapping noise
 // but must be power of two (wraps at 256 anyway). For octave based noise,
 // good values are obtained with octaves=6 (numerber of noise calls),
 // lacunarity=~2.0 (spacing between successive octaves: 2.0 for warpping
@@ -1519,20 +1519,20 @@ inline std::pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
     }
 }
 
-// Interpolates values over a line parametrized from a to b by u. Same as lerp.
+// Interpolates values over a line parameterized from a to b by u. Same as lerp.
 template <typename T>
 inline T interpolate_line(const T& p0, const T& p1, float u) {
     return p0 * (1 - u) + p1 * u;
 }
-// Interpolates values over a triangle parametrized by u and v along the
+// Interpolates values over a triangle parameterized by u and v along the
 // (p1-p0) and (p2-p0) directions. Same as barycentric interpolation.
 template <typename T>
 inline T interpolate_triangle(
     const T& p0, const T& p1, const T& p2, const vec2f& uv) {
     return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
 }
-// Interpolates values over a quad parametrized by u and v along the
-// (p1-p0) and (p2-p1) directions. Same as bilear interpolation.
+// Interpolates values over a quad parameterized by u and v along the
+// (p1-p0) and (p2-p1) directions. Same as bilinear interpolation.
 template <typename T>
 inline T interpolate_quad(
     const T& p0, const T& p1, const T& p2, const T& p3, const vec2f& uv) {
@@ -1800,10 +1800,10 @@ bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0,
     const vec3f& p1, const vec3f& p2, const vec3f& p3, float r0, float r1,
     float r2, float r3, float& dist, vec2f& uv);
 
-// Check if a bouning box overlaps a position within a max distance.
+// Check if a bounding box overlaps a position within a max distance.
 bool overlap_bbox(const vec3f& pos, float dist_max, const bbox3f& bbox);
 
-// Check if two bouning boxes overlap.
+// Check if two bounding boxes overlap.
 bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2);
 
 }  // namespace ygl
@@ -1812,17 +1812,6 @@ bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2);
 // BVH FOR RAY INTERSECTION AND CLOSEST ELEMENT
 // -----------------------------------------------------------------------------
 namespace ygl {
-
-// Type of BVH node.
-enum struct bvh_node_type : uint8_t {
-    internal,
-    point,
-    line,
-    triangle,
-    quad,
-    vertex,
-    instance
-};
 
 // Maximum number of primitives per BVH node.
 const int bvh_max_prims = 4;
@@ -1833,11 +1822,18 @@ const int bvh_max_prims = 4;
 // indices refer to primitives for leaf nodes or other nodes for internal
 // nodes. See bvh_tree for more details.
 struct bvh_node {
-    bbox3f bbox;                    // bouds
+    bbox3f bbox;                    // bounds
     uint32_t prims[bvh_max_prims];  // primitives
     uint16_t count;                 // number of prims
-    bvh_node_type type;             // node type
+    bool internal;                  // whether it is an internal node or a leaf
     uint8_t split_axis;             // split axis
+};
+
+// Instance for a scene BVH.
+struct bvh_instance {
+    frame3f frame = identity_frame3f;      // frame
+    frame3f frame_inv = identity_frame3f;  // frame inverse
+    int sid = -1;                          // shape index
 };
 
 // BVH tree, stored as a node array. The tree structure is encoded using array
@@ -1860,12 +1856,16 @@ struct bvh_tree {
     std::vector<vec4i> quads;      // Quads for shape BVHs.
 
     // data for instance BVH
-    std::vector<frame3f> ist_frames;      // instance frames
-    std::vector<frame3f> ist_inv_frames;  // instance inverse frames
-    std::vector<bvh_tree*> ist_bvhs;      // instance shape bvhs
+    std::vector<bvh_instance> instances;  // instances
+    std::vector<bvh_tree*> shape_bvhs;    // shape bvhs
 
     // bvh nodes
     std::vector<bvh_node> nodes;  // Internal nodes.
+
+    // cleanup
+    ~bvh_tree() {
+        for (auto sbvh : shape_bvhs) delete sbvh;
+    }
 };
 
 // Build a BVH from the given set of primitives.
@@ -2174,7 +2174,7 @@ inline int eval_keyframed_index(
     return (int)times.size();
 }
 
-// Evalautes a keyframed value using step interpolation.
+// Evaluates a keyframed value using step interpolation.
 template <typename T>
 inline T eval_keyframed_step(
     const std::vector<float>& times, const std::vector<T>& vals, float time) {
@@ -2185,7 +2185,7 @@ inline T eval_keyframed_step(
     return vals.at(idx - 1);
 }
 
-// Evalautes a keyframed value using linear interpolation.
+// Evaluates a keyframed value using linear interpolation.
 template <typename T>
 inline vec4f eval_keyframed_slerp(const std::vector<float>& times,
     const std::vector<vec4f>& vals, float time) {
@@ -2197,7 +2197,7 @@ inline vec4f eval_keyframed_slerp(const std::vector<float>& times,
     return slerp(vals.at(idx - 1), vals.at(idx), t);
 }
 
-// Evalautes a keyframed value using linear interpolation.
+// Evaluates a keyframed value using linear interpolation.
 template <typename T>
 inline T eval_keyframed_linear(
     const std::vector<float>& times, const std::vector<T>& vals, float time) {
@@ -2209,7 +2209,7 @@ inline T eval_keyframed_linear(
     return vals.at(idx - 1) * (1 - t) + vals.at(idx) * t;
 }
 
-// Evalautes a keyframed value using Bezier interpolation.
+// Evaluates a keyframed value using Bezier interpolation.
 template <typename T>
 inline T eval_keyframed_bezier(
     const std::vector<float>& times, const std::vector<T>& vals, float time) {
@@ -2319,7 +2319,6 @@ struct texture {
 // Material for surfaces, lines and triangles.
 // For surfaces, uses a microfacet model with thin sheet transmission.
 // The model is based on glTF for compatibility and adapted to OBJ.
-// For lines, uses Kajija-Kay model. For points, a hacked up shading.
 struct material {
     std::string name = "";       // name
     bool base_metallic = false;  // base-metallic parametrization
@@ -2378,15 +2377,12 @@ struct shape {
     std::vector<vec4f> tangsp;    // tangent space for triangles
 
     // computed properties
+    bvh_tree* bvh = nullptr;  // pointer to bvh used for volume rendering
     std::vector<float> elem_cdf = {};  // element cdf for sampling
-    bvh_tree* bvh = nullptr;           // bvh for ray intersection
     uint gl_pos = 0, gl_norm = 0, gl_texcoord = 0, gl_color = 0, gl_tangsp = 0,
          gl_points = 0, gl_lines = 0,
          gl_triangles = 0;       // unmanaged data for OpenGL viewer
     void* embree_bvh = nullptr;  // unmanaged data for Embree raytracer
-
-    // cleanup
-    ~shape();
 };
 
 // Subdivision surface.
@@ -2421,7 +2417,7 @@ struct instance {
     subdiv* sbd = nullptr;             // subdivision shape
 };
 
-// Envinonment map.
+// Environment map.
 struct environment {
     std::string name = "";             // name
     frame3f frame = identity_frame3f;  // transform frame
@@ -2462,7 +2458,7 @@ struct animation {
     std::vector<vec3f> translation;                // translation keyframes
     std::vector<vec4f> rotation;                   // rotation keyframes
     std::vector<vec3f> scale;                      // scale keyframes
-    std::vector<std::vector<float>> weights;       // mprph weight keyframes
+    std::vector<std::vector<float>> weights;       // morph weight keyframes
     std::vector<node*> targets;                    // target nodes
 };
 
@@ -2701,8 +2697,8 @@ vec3f eval_transmission(const material* vol, const vec3f& from,
     const vec3f& dir, float dist, int channel, rng_state& rng);
 float sample_distance(const material* vol, const vec3f& from, const vec3f& dir,
     int channel, rng_state& rng);
-float sample_distance(
-    const instance* vol, vec3f from, vec3f dir, int channel, rng_state& rng);
+float sample_distance(const instance* vol, const vec3f& from, const vec3f& dir,
+    int channel, rng_state& rng);
 
 // Evaluate and sample phase function.
 vec3f sample_phase_function(float vg, const vec2f& u);

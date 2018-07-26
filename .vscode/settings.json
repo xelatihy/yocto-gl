@@ -54,16 +54,6 @@
         "thread": "cpp"
     },
     "C_Cpp.intelliSenseEngineFallback": "Disabled",
-    "cSpell.words": [
-        "bezier",
-        "beziers",
-        "cdfs",
-        "embree",
-        "fabio",
-        "glio",
-        "pellacini",
-        "phong",
-        "yocto"
-    ],
-    "cmake.buildDirectory": "${workspaceRoot}/build/vscode"
+    "cmake.buildDirectory": "${workspaceRoot}/build/vscode",
+    "cmake.configureOnOpen": true
 }
