@@ -5885,27 +5885,66 @@ vec3f sample_ggx(float rs, const vec2f& rn) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-double integrate_func(std::function<double(double)> f, double a, double b,
+float integrate_func_base(std::function<float(float)> f, float a, float b,
     int nsamples, rng_state& rng) {
-    auto integral = 0.0;
+    auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
-        auto r = a + rand1f(rng) * (b - a);
-        integral += f(r) * (b - a);
+        auto r = rand1f(rng);
+        auto x = a + r * (b - a);
+        integral += f(x) * (b - a);
     }
     integral /= nsamples;
     return integral;
 }
 
-void print_integration_test() {
-    auto f = [](double x) { return 1.0 - (3.0 / 4.0) * x * x; };
-    auto a = 0.0, b = 1.0;
-    // auto expected = 3.0 / 4.0;
+float integrate_func_stratified(std::function<float(float)> f, float a, float b,
+    int nsamples, rng_state& rng) {
+    auto integral = 0.0f;
+    for (auto i = 0; i < nsamples; i++) {
+        auto r = (i + rand1f(rng)) / nsamples;
+        auto x = a + r * (b - a);
+        integral += f(x) * (b - a);
+    }
+    integral /= nsamples;
+    return integral;
+}
+
+float integrate_func_importance(std::function<float(float)> f, 
+    std::function<float(float)> pdf, std::function<float(float)> warp, 
+    int nsamples, rng_state& rng) {
+    auto integral = 0.0f;
+    for (auto i = 0; i < nsamples; i++) {
+        auto r = rand1f(rng);
+        auto x = warp(r);
+        integral += f(x) / pdf(x);
+    }
+    integral /= nsamples;
+    return integral;
+}
+
+// compute the integral and error using different Monte Carlo scehems
+// example 1: ---------
+// auto f = [](double x) { return 1.0 - (3.0 / 4.0) * x * x; };
+// auto a = 0.0, b = 1.0;
+// auto expected = 3.0 / 4.0;
+// auto nsamples = 10000
+// example 2: ---------
+// auto f = [](double x) { return sin(x); }
+// auto a = 0.0, b = (double)M_PI;
+// auto expected = (double)M_PI;
+void print_integrate_func_test(std::function<float(float)> f, 
+    float a, float b, float expected, int nsamples,
+    std::function<float(float)> pdf, std::function<float(float)> warp) {
     auto rng = rng_state();
-    // for(auto ns = 10; ns < 10000; ns += 10) {
-    for (auto ns = 10; ns < 10000; ns += 10) {
-        auto integral = integrate_func(f, a, b, ns, rng);
-        // printf("%d %lg\n", ns, fabs(integral - expected) / expected);
-        printf("%d %lg\n", ns, integral);
+    printf("nsamples base base-err stratified-err importance-err\n");
+    for (auto ns = 10; ns < nsamples; ns += 10) {
+        auto integral_base = integrate_func_base(f, a, b, ns, rng);
+        auto integral_stratified = integrate_func_stratified(f, a, b, ns, rng);
+        auto integral_importance = integrate_func_importance(f, pdf, warp, ns, rng);
+        auto error_base = fabs(integral_base - expected) / expected;
+        auto error_stratified = fabs(integral_stratified - expected) / expected;
+        auto error_importance = fabs(integral_importance - expected) / expected;
+        printf("%d %g %g %g %g\n", ns, integral_base, error_base, error_stratified, error_importance);
     }
 }
 
