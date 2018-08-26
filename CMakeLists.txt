@@ -39,7 +39,7 @@ add_library(ygl
 
 if(UNIX AND NOT APPLE)
     find_package(Threads REQUIRED)
-    target_link_libraries(ygl Threads::Threads)
+    target_link_libraries(ygl Threads::Threads X11 dl)
 endif(UNIX AND NOT APPLE)
 
 add_executable(ytrace apps/ytrace.cpp)
