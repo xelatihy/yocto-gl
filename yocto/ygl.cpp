@@ -5062,7 +5062,7 @@ vec3f trace_path_volume(const scene* scn, const ray3f& ray_, rng_state& rng,
             vec3f l = direct_illumination(
                 scn, ray.o, ch, mediums, rng, pdf_direct, direct);
             if (pdf_direct != 0) {
-                auto f = eval_phase_function(dot(l, -ray.d), vg);
+                auto f = va * eval_phase_function(dot(l, -ray.d), vg);
                 radiance += weight * direct * f / pdf_direct;
                 emission = false;
             }
