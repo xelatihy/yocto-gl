@@ -5948,4 +5948,67 @@ void print_integrate_func_test(std::function<float(float)> f,
     }
 }
 
+float integrate_func2_base(std::function<float(vec2f)> f, vec2f a, vec2f b,
+    int nsamples, rng_state& rng) {
+    auto integral = 0.0f;
+    for (auto i = 0; i < nsamples; i++) {
+        auto r = rand2f(rng);
+        auto x = a + r * (b - a);
+        integral += f(x) * (b.x - a.x) * (b.y - a.y);
+    }
+    integral /= nsamples;
+    return integral;
+}
+
+float integrate_func2_stratified(std::function<float(vec2f)> f, vec2f a, vec2f b,
+    int nsamples, rng_state& rng) {
+    auto integral = 0.0f;
+    auto nsamples2 = (int)sqrt(nsamples);
+    for (auto i = 0; i < nsamples2; i++) {
+        for (auto j = 0; j < nsamples2; j++) {
+            auto r = vec2f{(i + rand1f(rng)) / nsamples2, 
+                           (j + rand1f(rng)) / nsamples2};
+            auto x = a + r * (b - a);
+            integral += f(x) * (b.x - a.x) * (b.y - a.y);
+        }
+    }
+    integral /= nsamples2 * nsamples2;
+    return integral;
+}
+
+float integrate_func2_importance(std::function<float(vec2f)> f, 
+    std::function<float(vec2f)> pdf, std::function<vec2f(vec2f)> warp, 
+    int nsamples, rng_state& rng) {
+    auto integral = 0.0f;
+    for (auto i = 0; i < nsamples; i++) {
+        auto r = rand2f(rng);
+        auto x = warp(r);
+        integral += f(x) / pdf(x);
+    }
+    integral /= nsamples;
+    return integral;
+}
+
+// compute the integral and error using different Monte Carlo scehems
+// example 1: ---------
+// auto f = [](double x) { return 1.0 - (3.0 / 4.0) * x * x; };
+// auto a = 0.0, b = 1.0;
+// auto expected = 3.0 / 4.0;
+// auto nsamples = 10000
+void print_integrate_func2_test(std::function<float(vec2f)> f, 
+    vec2f a, vec2f b, float expected, int nsamples,
+    std::function<float(vec2f)> pdf, std::function<vec2f(vec2f)> warp) {
+    auto rng = rng_state();
+    printf("nsamples base base-err stratified-err importance-err\n");
+    for (auto ns = 10; ns < nsamples; ns += 10) {
+        auto integral_base = integrate_func2_base(f, a, b, ns, rng);
+        auto integral_stratified = integrate_func2_stratified(f, a, b, ns, rng);
+        auto integral_importance = integrate_func2_importance(f, pdf, warp, ns, rng);
+        auto error_base = fabs(integral_base - expected) / expected;
+        auto error_stratified = fabs(integral_stratified - expected) / expected;
+        auto error_importance = fabs(integral_importance - expected) / expected;
+        printf("%d %g %g %g %g\n", ns, integral_base, error_base, error_stratified, error_importance);
+    }
+}
+
 }  // namespace ygl
