@@ -814,7 +814,10 @@ void run_ui(app_state* app) {
 
     // init gl extensions
 #ifndef __APPLE__
-    if (glewInit() != GLEW_OK) return nullptr;
+    if (glewInit() != GLEW_OK) {
+        printf("cannot initialize GL\n");
+        exit(1);
+    }
 #endif
 
     glfwSetWindowRefreshCallback(win, draw);
