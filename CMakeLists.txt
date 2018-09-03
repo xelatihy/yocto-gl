@@ -78,6 +78,7 @@ if(YOCTO_OPENGL)
         include_directories(/usr/local/include)
         link_directories(/usr/local/lib)
         find_library(GLFW_LIBRARY NAMES glfw3 glfw PATHS /usr/local/lib)
+        add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_CUSTOM=<OpenGL/gl3.h>)
     endif(APPLE)
     if(WIN32)
         include_directories(${CMAKE_SOURCE_DIR}/apps/glw32/include)
@@ -92,13 +93,13 @@ if(YOCTO_OPENGL)
     endif(UNIX AND NOT APPLE)
 
     add_executable(yview apps/yview.cpp       
-        apps/imgui/imgui.cpp apps/imgui/imgui_draw.cpp
+        apps/imgui/imgui.cpp apps/imgui/imgui_draw.cpp apps/imgui/imgui_widgets.cpp
         apps/imgui/imgui_impl_glfw.cpp apps/imgui/imgui_impl_opengl3.cpp)
     add_executable(yitrace apps/yitrace.cpp        
-        apps/imgui/imgui.cpp apps/imgui/imgui_draw.cpp
+        apps/imgui/imgui.cpp apps/imgui/imgui_draw.cpp apps/imgui/imgui_widgets.cpp
         apps/imgui/imgui_impl_glfw.cpp apps/imgui/imgui_impl_opengl2.cpp)
     add_executable(yimview apps/yimview.cpp        
-        apps/imgui/imgui.cpp apps/imgui/imgui_draw.cpp
+        apps/imgui/imgui.cpp apps/imgui/imgui_draw.cpp apps/imgui/imgui_widgets.cpp
         apps/imgui/imgui_impl_glfw.cpp apps/imgui/imgui_impl_opengl2.cpp)
     add_executable(yimview2 apps/yimview2.cpp)
     add_executable(yitrace2 apps/yitrace2.cpp)

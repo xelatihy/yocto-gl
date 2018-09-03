@@ -827,7 +827,11 @@ void run_ui(app_state* app) {
     ImGui::CreateContext();
     ImGui::GetIO().IniFilename = nullptr;
     ImGui_ImplGlfw_InitForOpenGL(win, true);
+#ifndef __APPLE__
     ImGui_ImplOpenGL3_Init();
+#else
+    ImGui_ImplOpenGL3_Init("#version 330");
+#endif
     ImGui::StyleColorsDark();
 
     // load textures and vbos
