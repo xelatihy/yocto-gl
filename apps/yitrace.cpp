@@ -28,16 +28,7 @@
 
 #include "../yocto/ygl.h"
 #include "../yocto/yglio.h"
-
-#ifdef __APPLE__
-#include <OpenGL/gl.h>
-#endif
-#include <GLFW/glfw3.h>
-#include "imgui/imgui.h"
-#include "imgui/imgui_ext.h"
-#include "imgui/imgui_impl_glfw.h"
-#include "imgui/imgui_impl_opengl2.h"
-
+#include "yglutils.h"
 #include "ysceneui.h"
 
 // Application state
@@ -103,7 +94,7 @@ auto tracer_funcs = std::vector<ygl::trace_func>{ygl::trace_path,
 void draw_widgets(GLFWwindow* win) {
     static auto first_time = true;
     auto app = (app_state*)glfwGetWindowUserPointer(win);
-    ImGui_ImplOpenGL2_NewFrame();
+    ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
     if (first_time) {
@@ -171,17 +162,24 @@ void draw_widgets(GLFWwindow* win) {
     }
     ImGui::End();
     ImGui::Render();
-    ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
 void draw(GLFWwindow* win) {
     auto app = (app_state*)glfwGetWindowUserPointer(win);
+    auto win_width = 0, win_height = 0;
+    auto fb_width = 0, fb_height = 0;
+    glfwGetFramebufferSize(win, &fb_width, &fb_height);
+    glViewport(0, 0, fb_width, fb_height);
+    glfwGetWindowSize(win, &win_width, &win_height);
     glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glRasterPos2f(-1, 1);
-    glPixelZoom(2, -2);
-    glDrawPixels(app->display.width, app->display.height, GL_RGBA, GL_FLOAT,
-        app->display.pxl.data());
+    ygl::center_image4f(app->imcenter, app->imscale,
+        {app->display.width, app->display.height}, {win_width, win_height},
+        app->zoom_to_fit);
+    draw_glimage({app->display.width, app->display.height},
+                 app->display.pxl.data(), true, {win_width, win_height}, app->imcenter,
+                 app->imscale);
     draw_widgets(win);
     glfwSwapBuffers(win);
 }
@@ -224,21 +222,10 @@ void run_ui(app_state* app) {
     // window
     auto ww = ygl::clamp(app->img.width, 256, 1440);
     auto wh = ygl::clamp(app->img.height, 256, 1440);
-    if (!glfwInit()) throw std::runtime_error("cannot open glwindow");
-
-    auto win = glfwCreateWindow(ww, wh, "yimview", nullptr, nullptr);
-    glfwMakeContextCurrent(win);
-    glfwSwapInterval(1);  // Enable vsync
-
-    glfwSetWindowRefreshCallback(win, draw);
-    glfwSetWindowUserPointer(win, app);
+    auto win = init_glfw_window(ww, wh, "yitrace", app, draw);
 
     // init widgets
-    ImGui::CreateContext();
-    ImGui::GetIO().IniFilename = nullptr;
-    ImGui_ImplGlfw_InitForOpenGL(win, true);
-    ImGui_ImplOpenGL2_Init();
-    ImGui::StyleColorsDark();
+    init_imgui_widgets(win);
 
     // loop
     auto mouse_pos = ygl::zero2f, last_pos = ygl::zero2f;

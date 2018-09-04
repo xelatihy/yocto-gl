@@ -98,10 +98,10 @@ if(YOCTO_OPENGL)
         apps/imgui/imgui_impl_glfw.cpp apps/imgui/imgui_impl_opengl3.cpp)
     add_executable(yitrace apps/yitrace.cpp        
         apps/imgui/imgui.cpp apps/imgui/imgui_draw.cpp apps/imgui/imgui_widgets.cpp
-        apps/imgui/imgui_impl_glfw.cpp apps/imgui/imgui_impl_opengl2.cpp)
+        apps/imgui/imgui_impl_glfw.cpp apps/imgui/imgui_impl_opengl3.cpp)
     add_executable(yimview apps/yimview.cpp        
         apps/imgui/imgui.cpp apps/imgui/imgui_draw.cpp apps/imgui/imgui_widgets.cpp
-        apps/imgui/imgui_impl_glfw.cpp apps/imgui/imgui_impl_opengl2.cpp)
+        apps/imgui/imgui_impl_glfw.cpp apps/imgui/imgui_impl_opengl3.cpp)
     add_executable(yimview2 apps/yimview2.cpp)
     add_executable(yitrace2 apps/yitrace2.cpp)
 
