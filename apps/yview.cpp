@@ -28,21 +28,8 @@
 
 #include "../yocto/ygl.h"
 #include "../yocto/yglio.h"
-
-#ifdef __APPLE__
-#include <OpenGL/gl3.h>
-#define GLFW_INCLUDE_GLCOREARB
-#else
-#include <GL/glew.h>
-#endif
-#include <GLFW/glfw3.h>
-
+#include "yglutils.h"
 #include "ysceneui.h"
-
-#include "imgui/imgui.h"
-#include "imgui/imgui_ext.h"
-#include "imgui/imgui_impl_glfw.h"
-#include "imgui/imgui_impl_opengl3.h"
 
 // Application state
 struct app_state {
@@ -692,63 +679,6 @@ void draw_glscene(const ygl::scene* scn, const ygl::camera* cam,
     if (wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
-inline unsigned int make_glprogram(const char* vertex, const char* fragment,
-    unsigned int& vid, unsigned int& fid, unsigned int& vao) {
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
-
-    int errflags;
-    char errbuf[10000];
-
-    // create vertex
-    vid = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vid, 1, &vertex, NULL);
-    glCompileShader(vid);
-    glGetShaderiv(vid, GL_COMPILE_STATUS, &errflags);
-    if (!errflags) {
-        glGetShaderInfoLog(vid, 10000, 0, errbuf);
-        throw std::runtime_error(
-            std::string("shader not compiled\n\n") + errbuf);
-    }
-
-    // create fragment
-    fid = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fid, 1, &fragment, NULL);
-    glCompileShader(fid);
-    glGetShaderiv(fid, GL_COMPILE_STATUS, &errflags);
-    if (!errflags) {
-        glGetShaderInfoLog(fid, 10000, 0, errbuf);
-        throw std::runtime_error(
-            std::string("shader not compiled\n\n") + errbuf);
-    }
-
-    // create program
-    auto pid = glCreateProgram();
-    glAttachShader(pid, vid);
-    glAttachShader(pid, fid);
-    glLinkProgram(pid);
-    glValidateProgram(pid);
-    glGetProgramiv(pid, GL_LINK_STATUS, &errflags);
-    if (!errflags) {
-        glGetProgramInfoLog(pid, 10000, 0, errbuf);
-        throw std::runtime_error(
-            std::string("program not linked\n\n") + errbuf);
-    }
-    glGetProgramiv(pid, GL_VALIDATE_STATUS, &errflags);
-    if (!errflags) {
-        glGetProgramInfoLog(pid, 10000, 0, errbuf);
-        throw std::runtime_error(
-            std::string("program not linked\n\n") + errbuf);
-    }
-
-    return pid;
-}
-
-inline unsigned int make_glprogram(const char* vertex, const char* fragment) {
-    unsigned int vid = 0, fid = 0, vao = 0;
-    return make_glprogram(vertex, fragment, vid, fid, vao);
-}
-
 void init_drawscene(GLFWwindow* win) {
     auto app = (app_state*)glfwGetWindowUserPointer(win);
     // load textures and vbos
@@ -800,39 +730,10 @@ void run_ui(app_state* app) {
     auto cam = app->scn->cameras.at(app->camid);
     auto ww = ygl::clamp(ygl::image_width(cam, app->resolution), 256, 1440);
     auto wh = ygl::clamp(app->resolution, 256, 1440);
-    if (!glfwInit()) throw std::runtime_error("cannot open glwindow");
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-#if __APPLE__
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#endif
-
-    auto win = glfwCreateWindow(ww, wh, "yview", nullptr, nullptr);
-    glfwMakeContextCurrent(win);
-    glfwSwapInterval(1);  // Enable vsync
-
-    // init gl extensions
-#ifndef __APPLE__
-    if (glewInit() != GLEW_OK) {
-        printf("cannot initialize GL\n");
-        exit(1);
-    }
-#endif
-
-    glfwSetWindowRefreshCallback(win, draw);
-    glfwSetWindowUserPointer(win, app);
+    auto win = init_glfw_window(ww, wh, "yview", app, draw);
 
     // init widget
-    ImGui::CreateContext();
-    ImGui::GetIO().IniFilename = nullptr;
-    ImGui_ImplGlfw_InitForOpenGL(win, true);
-#ifndef __APPLE__
-    ImGui_ImplOpenGL3_Init();
-#else
-    ImGui_ImplOpenGL3_Init("#version 330");
-#endif
-    ImGui::StyleColorsDark();
+    init_imgui_widgets(win);
 
     // load textures and vbos
     ygl::update_transforms(app->scn, app->time);

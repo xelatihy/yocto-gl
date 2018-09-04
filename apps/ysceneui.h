@@ -1,9 +1,5 @@
 //
-// # Yocto/GLUI: Tiny OpenGL utilities for writing simple interactive apps.
-//
-// Small set of utilities to support writing OpenGL 3.3, manage
-// windows with GLFW and draw immediate-mode widgets with ImGui.
-//
+// Utilities to display a scene graph using ImGui.
 //
 
 //
@@ -39,21 +35,6 @@
 #include "imgui/imgui_ext.h"
 
 #include <map>
-
-// Scene selection.
-struct scene_selection {
-    scene_selection() : ptr(nullptr), tinfo(nullptr) {}
-    template <typename T>
-    scene_selection(T* val) : ptr(val), tinfo(&typeid(T)) {}
-
-    template <typename T>
-    T* as() const {
-        return (&typeid(T) == tinfo) ? (T*)ptr : nullptr;
-    }
-
-    void* ptr = nullptr;                    // selected pointer
-    const std::type_info* tinfo = nullptr;  // type info
-};
 
 inline const std::map<ygl::animation_type, std::string>& animation_type_names() {
     static auto names = std::map<ygl::animation_type, std::string>{
