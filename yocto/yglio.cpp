@@ -4732,11 +4732,11 @@ void serialize_scene(scene* scn, FILE* fs, bool save) {
 
     auto has_bvh = (bool)scn->bvh;
     serialize_bin_value(has_bvh, fs, save);
-    if(has_bvh) {
+    if (has_bvh) {
         if (!save) scn->bvh = new bvh_tree();
         serialize_bin_object(scn->bvh, fs, save);
         if (!save) {
-            for(auto i = 0; i < scn->shapes.size(); i ++) {
+            for (auto i = 0; i < scn->shapes.size(); i++) {
                 scn->shapes[i]->bvh = scn->bvh->shape_bvhs[i];
             }
         }
