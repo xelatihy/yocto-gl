@@ -32,12 +32,7 @@
 
 #include "../yocto/ygl.h"
 
-#ifdef __APPLE__
-#include <OpenGL/gl3.h>
-#define GLFW_INCLUDE_GLCOREARB
-#else
-#include <GL/glew.h>
-#endif
+#include "glad/glad.h"
 #include <GLFW/glfw3.h>
 
 #include "imgui/imgui.h"
@@ -202,11 +197,7 @@ inline GLFWwindow* init_glfw_window(int width, int height, const char* title,
     glfwSetWindowUserPointer(win, user_pointer);
 
     // init gl extensions
-#ifndef __APPLE__
-    if (glewInit() != GLEW_OK) {
-        throw std::runtime_error("cannot initialize GL");
-    }
-#endif
+    if(!gladLoadGL()) throw std::runtime_error("cannot initialize glad");
 
     return win;
 }

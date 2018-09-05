@@ -78,36 +78,31 @@ if(YOCTO_OPENGL)
         include_directories(/usr/local/include)
         link_directories(/usr/local/lib)
         find_library(GLFW_LIBRARY NAMES glfw3 glfw PATHS /usr/local/lib)
-        add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_CUSTOM=<OpenGL/gl3.h>)
     endif(APPLE)
     if(WIN32)
-        add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GLEW)
         include_directories(${CMAKE_SOURCE_DIR}/apps/glw32/include)
         link_directories(${CMAKE_SOURCE_DIR}/apps/glw32/lib-vc2015)
-        find_library(GLEW_LIBRARIES NAMES glew32 PATHS ${CMAKE_SOURCE_DIR}/apps/glw32/lib-vc2015)
         find_library(GLFW_LIBRARY NAMES glfw3dll PATHS ${CMAKE_SOURCE_DIR}/apps/glw32/lib-vc2015)
     endif(WIN32)
     if(UNIX AND NOT APPLE)
         include_directories(/usr/include /usr/local/include)
         find_library(GLFW_LIBRARY NAMES glfw3 glfw PATHS /usr/lib /usr/local/lib64 /usr/lib64 /usr/local/lib /usr/lib/x86_64-linux-gnu)
-        find_package(GLEW REQUIRED)
     endif(UNIX AND NOT APPLE)
+    include_directories(apps/)
+    add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GLAD)
 
-    add_executable(yview apps/yview.cpp       
-        apps/imgui/imgui.cpp apps/imgui/imgui_draw.cpp apps/imgui/imgui_widgets.cpp
-        apps/imgui/imgui_impl_glfw.cpp apps/imgui/imgui_impl_opengl3.cpp)
-    add_executable(yitrace apps/yitrace.cpp        
-        apps/imgui/imgui.cpp apps/imgui/imgui_draw.cpp apps/imgui/imgui_widgets.cpp
-        apps/imgui/imgui_impl_glfw.cpp apps/imgui/imgui_impl_opengl3.cpp)
-    add_executable(yimview apps/yimview.cpp        
-        apps/imgui/imgui.cpp apps/imgui/imgui_draw.cpp apps/imgui/imgui_widgets.cpp
-        apps/imgui/imgui_impl_glfw.cpp apps/imgui/imgui_impl_opengl3.cpp)
+    add_library(yopengl apps/imgui/imgui.cpp apps/imgui/imgui_draw.cpp apps/imgui/imgui_widgets.cpp
+        apps/imgui/imgui_impl_glfw.cpp apps/imgui/imgui_impl_opengl3.cpp apps/glad/glad.c)
+
+    add_executable(yview apps/yview.cpp)
+    add_executable(yitrace apps/yitrace.cpp)
+    add_executable(yimview apps/yimview.cpp)
     add_executable(yimview2 apps/yimview2.cpp)
     add_executable(yitrace2 apps/yitrace2.cpp)
 
-    target_link_libraries(yview ygl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GLEW_LIBRARIES})
-    target_link_libraries(yitrace ygl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GLEW_LIBRARIES})
-    target_link_libraries(yimview ygl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GLEW_LIBRARIES})
+    target_link_libraries(yview ygl yopengl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY})
+    target_link_libraries(yitrace ygl yopengl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY})
+    target_link_libraries(yimview ygl yopengl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY})
     target_link_libraries(yimview2 ygl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY})
     target_link_libraries(yitrace2 ygl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY})
 endif(YOCTO_OPENGL)

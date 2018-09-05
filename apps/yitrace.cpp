@@ -178,8 +178,8 @@ void draw(GLFWwindow* win) {
         {app->display.width, app->display.height}, {win_width, win_height},
         app->zoom_to_fit);
     draw_glimage({app->display.width, app->display.height},
-                 app->display.pxl.data(), true, {win_width, win_height}, app->imcenter,
-                 app->imscale);
+        app->display.pxl.data(), true, {win_width, win_height}, app->imcenter,
+        app->imscale);
     draw_widgets(win);
     glfwSwapBuffers(win);
 }
