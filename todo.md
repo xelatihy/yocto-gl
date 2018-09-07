@@ -5,9 +5,6 @@ Please consider this to be just development notes and not any real planning.
 
 ## Next features
 
-- opengl glad
-    - gl3
-    - imview with zoom
 - simpler bvh
     - consider splitting shape and scene bvh
     - bvh editing and refitting
