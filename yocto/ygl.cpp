@@ -1291,6 +1291,20 @@ bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+// Cleanup
+bvh_tree::~bvh_tree() {
+#if YGL_EMBREE
+    if (embree_bvh) {
+        for (auto i = 0; i < max(1, (int)instances.size()); i++) {
+            auto geom = rtcGetGeometry((RTCScene)embree_bvh, i);
+            rtcDetachGeometry((RTCScene)embree_bvh, i);
+            rtcReleaseGeometry(geom);
+        }
+        rtcReleaseScene((RTCScene)embree_bvh);
+    }
+#endif
+}
+
 // BVH primitive with its bbox, its center and the index to the primitive
 struct bvh_prim {
     bbox3f bbox = invalid_bbox3f;
@@ -1304,7 +1318,7 @@ struct bvh_prim {
 // used and nodes added sequentially in the preallocated nodes array and
 // the number of nodes nnodes is updated.
 int make_bvh_node(std::vector<bvh_node>& nodes, std::vector<bvh_prim>& prims,
-    int start, int end, bool sah) {
+    int start, int end, bool high_quality) {
     // add a new node
     auto nodeid = (int)nodes.size();
     nodes.push_back({});
@@ -1328,7 +1342,7 @@ int make_bvh_node(std::vector<bvh_node>& nodes, std::vector<bvh_prim>& prims,
         // choose the split axis and position
         if (csize != zero3f) {
             // check heuristic
-            if (sah) {
+            if (high_quality) {
                 // consider N bins, compute their cost and keep the minimum
                 const int nbins = 16;
                 auto middle = 0.0f;
@@ -1419,8 +1433,8 @@ int make_bvh_node(std::vector<bvh_node>& nodes, std::vector<bvh_prim>& prims,
         node.internal = true;
         node.split_axis = split_axis;
         node.count = 2;
-        node.prims[0] = make_bvh_node(nodes, prims, start, mid, sah);
-        node.prims[1] = make_bvh_node(nodes, prims, mid, end, sah);
+        node.prims[0] = make_bvh_node(nodes, prims, start, mid, high_quality);
+        node.prims[1] = make_bvh_node(nodes, prims, mid, end, high_quality);
     } else {
         // Make a leaf node
         node.internal = false;
@@ -1434,7 +1448,7 @@ int make_bvh_node(std::vector<bvh_node>& nodes, std::vector<bvh_prim>& prims,
 }
 
 // Build a BVH from a set of primitives.
-void build_bvh(bvh_tree* bvh, bool sah) {
+void build_bvh(bvh_tree* bvh, bool high_quality) {
     // get the number of primitives and the primitive type
     auto prims = std::vector<bvh_prim>();
     if (!bvh->points.empty()) {
@@ -1472,7 +1486,7 @@ void build_bvh(bvh_tree* bvh, bool sah) {
     // build nodes
     bvh->nodes.clear();
     bvh->nodes.reserve(prims.size() * 2);
-    make_bvh_node(bvh->nodes, prims, 0, (int)prims.size(), sah);
+    make_bvh_node(bvh->nodes, prims, 0, (int)prims.size(), high_quality);
     bvh->nodes.shrink_to_fit();
 }
 
@@ -1523,9 +1537,130 @@ void refit_bvh(bvh_tree* bvh, int nodeid) {
 // Recursively recomputes the node bounds for a shape bvh
 void refit_bvh(bvh_tree* bvh) { refit_bvh(bvh, 0); }
 
+#if YGL_EMBREE
+void embree_error(void* ctx, RTCError code, const char* str) {
+    switch (code) {
+        case RTC_ERROR_UNKNOWN: printf("RTC_ERROR_UNKNOWN"); break;
+        case RTC_ERROR_INVALID_ARGUMENT:
+            printf("RTC_ERROR_INVALID_ARGUMENT");
+            break;
+        case RTC_ERROR_INVALID_OPERATION:
+            printf("RTC_ERROR_INVALID_OPERATION");
+            break;
+        case RTC_ERROR_OUT_OF_MEMORY: printf("RTC_ERROR_OUT_OF_MEMORY"); break;
+        case RTC_ERROR_UNSUPPORTED_CPU:
+            printf("RTC_ERROR_UNSUPPORTED_CPU");
+            break;
+        case RTC_ERROR_CANCELLED: printf("RTC_ERROR_CANCELLED"); break;
+        default: printf("invalid error code"); break;
+    }
+    printf(": %s\n", str);
+}
+
+// Get Embree device
+RTCDevice get_embree_device() {
+    static RTCDevice device = nullptr;
+    if (!device) {
+        device = rtcNewDevice("");
+        rtcSetDeviceErrorFunction(device, embree_error, nullptr);
+    }
+    return device;
+}
+
+// Build a BVH using Embree. Calls `build_bvh()` if Embree is not available.
+void build_embree_bvh(bvh_tree* bvh) {
+    auto embree_device = get_embree_device();
+    auto embree_scene = rtcNewScene(embree_device);
+    if (!bvh->points.empty()) {
+        throw std::runtime_error("embree does not support points");
+    } else if (!bvh->lines.empty()) {
+        throw std::runtime_error("not yet implemented");
+    } else if (!bvh->triangles.empty()) {
+        auto embree_geom =
+            rtcNewGeometry(embree_device, RTC_GEOMETRY_TYPE_TRIANGLE);
+        rtcSetGeometryVertexAttributeCount(embree_geom, 1);
+        auto vert = rtcSetNewGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_VERTEX,
+            0, RTC_FORMAT_FLOAT3, 3 * 4, bvh->pos.size());
+        auto triangles =
+            rtcSetNewGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_INDEX, 0,
+                RTC_FORMAT_UINT3, 3 * 4, bvh->triangles.size());
+        memcpy(vert, bvh->pos.data(), bvh->pos.size() * 12);
+        memcpy(triangles, bvh->triangles.data(), bvh->triangles.size() * 12);
+        rtcCommitGeometry(embree_geom);
+        rtcAttachGeometryByID(embree_scene, embree_geom, 0);
+    } else if (!bvh->quads.empty()) {
+        throw std::runtime_error("not yet implemented");
+    } else if (!bvh->instances.empty()) {
+        for (auto iid = 0; iid < bvh->instances.size(); iid++) {
+            auto ist = bvh->instances[iid];
+            auto embree_geom =
+                rtcNewGeometry(embree_device, RTC_GEOMETRY_TYPE_INSTANCE);
+            rtcSetGeometryInstancedScene(
+                embree_geom, (RTCScene)bvh->shape_bvhs[ist.sid]->embree_bvh);
+            rtcSetGeometryTransform(
+                embree_geom, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &ist.frame);
+            rtcCommitGeometry(embree_geom);
+            rtcAttachGeometryByID(embree_scene, embree_geom, iid);
+        }
+    }
+    rtcCommitScene(embree_scene);
+    bvh->embree_bvh = embree_scene;
+}
+// Refit a BVH using Embree. Calls `refit_bvh()` if Embree is not available.
+void refit_embree_bvh(bvh_tree* bvh) {
+    throw std::runtime_error("not yet implemented");
+}
+bool intersect_embree_bvh(const bvh_tree* bvh, const ray3f& ray, bool find_any,
+    float& dist, int& iid, int& eid, vec2f& uv) {
+    RTCRayHit embree_ray;
+    embree_ray.ray.org_x = ray.o.x;
+    embree_ray.ray.org_y = ray.o.y;
+    embree_ray.ray.org_z = ray.o.z;
+    embree_ray.ray.dir_x = ray.d.x;
+    embree_ray.ray.dir_y = ray.d.y;
+    embree_ray.ray.dir_z = ray.d.z;
+    embree_ray.ray.tnear = ray.tmin;
+    embree_ray.ray.tfar = ray.tmax;
+    embree_ray.ray.flags = 0;
+    embree_ray.hit.geomID = RTC_INVALID_GEOMETRY_ID;
+    embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
+    RTCIntersectContext embree_ctx;
+    rtcInitIntersectContext(&embree_ctx);
+    rtcIntersect1((RTCScene)bvh->embree_bvh, &embree_ctx, &embree_ray);
+    if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
+    dist = embree_ray.ray.tfar;
+    uv = {embree_ray.hit.u, embree_ray.hit.v};
+    eid = embree_ray.hit.primID;
+    iid = embree_ray.hit.instID[0];
+    return true;
+}
+#else
+// Build a BVH using Embree. Calls `build_bvh()` if Embree is not available.
+void build_embree_bvh(bvh_tree* bvh) { return build_bvh(bvh, true); }
+// Refit a BVH using Embree. Calls `refit_bvh()` if Embree is not available.
+void refit_embree_bvh(bvh_tree* bvh) { return refit_bvh(bvh); }
+// Intersect BVH using Embree
+bool intersect_embree_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
+    float& dist, int& iid, int& eid, vec2f& uv) {
+    throw std::runtime_error("this should not have been called");
+}
+#endif
+
+// Build a BVH from a set of primitives.
+void build_bvh(bvh_tree* bvh, bool high_quality, bool embree) {
+#if YGL_EMBREE
+    if (embree) return build_embree_bvh(bvh);
+#endif
+    build_bvh(bvh, high_quality);
+}
+
 // Intersect ray with a bvh.
 bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
     float& dist, int& iid, int& eid, vec2f& uv) {
+    // call Embree if needed
+    if (bvh->embree_bvh)
+        return intersect_embree_bvh(bvh, ray_, find_any, dist, iid, eid, uv);
+
     // node stack
     int node_stack[128];
     auto node_cur = 0;
@@ -2860,7 +2995,9 @@ inline float tonemap_filmic(float hdr) {
 
 vec4f tonemap_hdr(const vec4f& hdr, float exposure, float gamma, bool filmic) {
     auto ldr = vec3f{hdr.x, hdr.y, hdr.z} * pow(2.0f, exposure);
-    if (filmic) ldr = {tonemap_filmic(ldr.x), tonemap_filmic(ldr.y), tonemap_filmic(ldr.z)};
+    if (filmic)
+        ldr = {tonemap_filmic(ldr.x), tonemap_filmic(ldr.y),
+            tonemap_filmic(ldr.z)};
     ldr = linear_to_gamma(ldr, gamma);
     return {ldr.x, ldr.y, ldr.z, hdr.w};
 }
@@ -2875,7 +3012,7 @@ namespace ygl {
 // Conversion between linear and gamma-encoded images.
 image4f gamma_to_linear(const image4f& srgb, float gamma) {
     if (gamma == 1) return srgb;
-    auto lin = make_image4f(srgb.width, srgb.height);
+    auto lin = image4f{srgb.width, srgb.height};
     for (auto j = 0; j < srgb.height; j++) {
         for (auto i = 0; i < srgb.width; i++) {
             xyz(lin.at(i, j)) = gamma_to_linear(xyz(srgb.at(i, j)), gamma);
@@ -2886,7 +3023,7 @@ image4f gamma_to_linear(const image4f& srgb, float gamma) {
 }
 image4f linear_to_gamma(const image4f& lin, float gamma) {
     if (gamma == 1) return lin;
-    auto srgb = make_image4f(lin.width, lin.height);
+    auto srgb = image4f{lin.width, lin.height};
     for (auto j = 0; j < lin.height; j++) {
         for (auto i = 0; i < lin.width; i++) {
             xyz(srgb.at(i, j)) = linear_to_gamma(xyz(lin.at(i, j)), gamma);
@@ -2898,14 +3035,14 @@ image4f linear_to_gamma(const image4f& lin, float gamma) {
 
 // Conversion from/to floats.
 image4f byte_to_float(const image4b& bt) {
-    auto fl = make_image4f(bt.width, bt.height);
+    auto fl = image4f{bt.width, bt.height};
     for (auto j = 0; j < bt.height; j++)
         for (auto i = 0; i < bt.width; i++)
             fl.at(i, j) = byte_to_float(bt.at(i, j));
     return fl;
 }
 image4b float_to_byte(const image4f& fl) {
-    auto bt = make_image4b(fl.width, fl.height);
+    auto bt = image4b{fl.width, fl.height};
     for (auto j = 0; j < fl.height; j++)
         for (auto i = 0; i < fl.width; i++)
             bt.at(i, j) = float_to_byte(fl.at(i, j));
@@ -2915,10 +3052,10 @@ image4b float_to_byte(const image4f& fl) {
 // Tonemap image
 image4f tonemap_image4f(
     const image4f& hdr, float exposure, float gamma, bool filmic) {
-    auto ldr = make_image4f(hdr.width, hdr.height);
+    auto ldr = image4f{hdr.width, hdr.height};
     for (auto j = 0; j < hdr.height; j++)
         for (auto i = 0; i < hdr.width; i++)
-            ldr.at(i,j) = tonemap_hdr(hdr.at(i,j), exposure, gamma, filmic);
+            ldr.at(i, j) = tonemap_hdr(hdr.at(i, j), exposure, gamma, filmic);
     return ldr;
 }
 
@@ -2932,7 +3069,7 @@ namespace ygl {
 // Make a grid image
 image4f make_grid_image4f(
     int width, int height, int tiles, const vec4f& c0, const vec4f& c1) {
-    auto img = make_image4f(width, height);
+    auto img = image4f{width, height};
     auto tile = width / tiles;
     for (int j = 0; j < height; j++) {
         for (int i = 0; i < width; i++) {
@@ -2947,7 +3084,7 @@ image4f make_grid_image4f(
 // Make a checkerboard image
 image4f make_checker_image4f(
     int width, int height, int tiles, const vec4f& c0, const vec4f& c1) {
-    auto img = make_image4f(width, height);
+    auto img = image4f{width, height};
     auto tile = width / tiles;
     for (int j = 0; j < height; j++) {
         for (int i = 0; i < width; i++) {
@@ -2960,7 +3097,7 @@ image4f make_checker_image4f(
 
 // Make an image with bumps and dimples.
 image4f make_bumpdimple_image4f(int width, int height, int tiles) {
-    auto img = make_image4f(width, height);
+    auto img = image4f{width, height};
     auto tile = width / tiles;
     for (int j = 0; j < height; j++) {
         for (int i = 0; i < width; i++) {
@@ -2979,7 +3116,7 @@ image4f make_bumpdimple_image4f(int width, int height, int tiles) {
 // Make a uv colored grid
 image4f make_ramp_image4f(
     int width, int height, const vec4f& c0, const vec4f& c1) {
-    auto img = make_image4f(width, height);
+    auto img = image4f{width, height};
     for (int j = 0; j < height; j++) {
         for (int i = 0; i < width; i++) {
             auto u = (float)i / (float)width;
@@ -2991,7 +3128,7 @@ image4f make_ramp_image4f(
 
 // Make a gamma ramp image
 image4f make_gammaramp_imagef(int width, int height) {
-    auto img = make_image4f(width, height);
+    auto img = image4f{width, height};
     for (int j = 0; j < height; j++) {
         for (int i = 0; i < width; i++) {
             auto u = j / float(height - 1);
@@ -3006,7 +3143,7 @@ image4f make_gammaramp_imagef(int width, int height) {
 // Make an image color with red/green in the [0,1] range. Helpful to
 // visualize uv texture coordinate application.
 image4f make_uvramp_image4f(int width, int height) {
-    auto img = make_image4f(width, height);
+    auto img = image4f{width, height};
     for (int j = 0; j < height; j++) {
         for (int i = 0; i < width; i++) {
             img.at(i, j) = {
@@ -3018,7 +3155,7 @@ image4f make_uvramp_image4f(int width, int height) {
 
 // Make a uv colored grid
 image4f make_uvgrid_image4f(int width, int height, int tiles, bool colored) {
-    auto img = make_image4f(width, height);
+    auto img = image4f{width, height};
     auto tile = width / tiles;
     for (int j = 0; j < height; j++) {
         for (int i = 0; i < width; i++) {
@@ -3046,7 +3183,7 @@ image4f make_uvgrid_image4f(int width, int height, int tiles, bool colored) {
 
 // Comvert a bump map to a normal map.
 image4f bump_to_normal_map(const image4f& img, float scale) {
-    auto norm = make_image4f(img.width, img.height);
+    auto norm = image4f{img.width, img.height};
     auto dx = 1.0f / img.width, dy = 1.0f / img.height;
     for (int j = 0; j < img.height; j++) {
         for (int i = 0; i < img.width; i++) {
@@ -3152,7 +3289,7 @@ image4f make_sunsky_image4f(int width, int height, float thetaSun,
                                                        zero3f;
     };
 
-    auto img = make_image4f(width, height, {0, 0, 0, 1});
+    auto img = image4f{width, height, {0, 0, 0, 1}};
     for (auto j = 0; j < height / 2; j++) {
         auto theta = pi * ((j + 0.5f) / height);
         theta = clamp(theta, 0.0f, pi / 2 - flt_eps);
@@ -3190,7 +3327,7 @@ image4f make_sunsky_image4f(int width, int height, float thetaSun,
 // Make an image of multiple lights.
 image4f make_lights_image4f(int width, int height, const vec3f& le, int nlights,
     float langle, float lwidth, float lheight) {
-    auto img = make_image4f(width, height, {0, 0, 0, 1});
+    auto img = image4f{width, height, {0, 0, 0, 1}};
     for (auto j = 0; j < height / 2; j++) {
         auto theta = pi * ((j + 0.5f) / height);
         theta = clamp(theta, 0.0f, pi / 2 - flt_eps);
@@ -3212,7 +3349,7 @@ image4f make_lights_image4f(int width, int height, const vec3f& le, int nlights,
 // of two.
 image4f make_noise_image4f(int width, int height, float scale, bool wrap) {
     auto wrap3i = (wrap) ? vec3i{width, height, 2} : zero3i;
-    auto img = make_image4f(width, height);
+    auto img = image4f{width, height};
     for (auto j = 0; j < height; j++) {
         for (auto i = 0; i < width; i++) {
             auto p = vec3f{i / (float)width, j / (float)height, 0.5f} * scale;
@@ -3229,7 +3366,7 @@ image4f make_noise_image4f(int width, int height, float scale, bool wrap) {
 image4f make_fbm_image4f(int width, int height, float scale, float lacunarity,
     float gain, int octaves, bool wrap) {
     auto wrap3i = (wrap) ? vec3i{width, height, 2} : zero3i;
-    auto img = make_image4f(width, height);
+    auto img = image4f{width, height};
     for (auto j = 0; j < height; j++) {
         for (auto i = 0; i < width; i++) {
             auto p = vec3f{i / (float)width, j / (float)height, 0.5f} * scale;
@@ -3246,7 +3383,7 @@ image4f make_fbm_image4f(int width, int height, float scale, float lacunarity,
 image4f make_ridge_image4f(int width, int height, float scale, float lacunarity,
     float gain, float offset, int octaves, bool wrap) {
     auto wrap3i = (wrap) ? vec3i{width, height, 2} : zero3i;
-    auto img = make_image4f(width, height);
+    auto img = image4f{width, height};
     for (auto j = 0; j < height; j++) {
         for (auto i = 0; i < width; i++) {
             auto p = vec3f{i / (float)width, j / (float)height, 0.5f} * scale;
@@ -3264,7 +3401,7 @@ image4f make_ridge_image4f(int width, int height, float scale, float lacunarity,
 image4f make_turbulence_image4f(int width, int height, float scale,
     float lacunarity, float gain, int octaves, bool wrap) {
     auto wrap3i = (wrap) ? vec3i{width, height, 2} : zero3i;
-    auto img = make_image4f(width, height);
+    auto img = image4f{width, height};
     for (auto j = 0; j < height; j++) {
         for (auto i = 0; i < width; i++) {
             auto p = vec3f{i / (float)width, j / (float)height, 0.5f} * scale;
@@ -3287,7 +3424,7 @@ namespace ygl {
 // make a simple example volume
 volume1f make_test_volume1f(
     int width, int height, int depth, float scale, float exponent) {
-    auto vol = make_volume1f(width, height, depth);
+    auto vol = volume1f{width, height, depth};
     for (auto k = 0; k < depth; k++) {
         for (auto j = 0; j < height; j++) {
             for (auto i = 0; i < width; i++) {
@@ -3313,9 +3450,6 @@ namespace ygl {
 // cleanup
 shape::~shape() {
     if (bvh) delete bvh;
-#if YGL_EMBREE
-    if (embree_bvh) rtcReleaseScene((RTCScene)embree_bvh);
-#endif
 }
 
 // cleanup
@@ -3331,10 +3465,6 @@ scene::~scene() {
     for (auto v : voltextures) delete v;
     for (auto v : nodes) delete v;
     for (auto v : animations) delete v;
-#if YGL_EMBREE
-    if (embree_bvh) rtcReleaseScene((RTCScene)embree_bvh);
-    if (embree_device) rtcReleaseDevice((RTCDevice)embree_device);
-#endif
 }
 
 // Computes a shape bounding box.
@@ -3526,21 +3656,37 @@ void update_environment_cdf(environment* env) {
     }
 }
 
+// Build a shape BVH
+void build_bvh(shape* shp, bool high_quality, bool embree) {
+    // create bvh
+    auto bvh = new bvh_tree();
+
+    // set data
+    bvh->pos = shp->pos;
+    bvh->radius = shp->radius;
+    bvh->points = shp->points;
+    bvh->lines = shp->lines;
+    bvh->triangles = shp->triangles;
+
+    // build bvh
+    build_bvh(bvh, high_quality, embree);
+
+    // set bvh
+    shp->bvh = bvh;
+}
+
 // Build a scene BVH
-void build_bvh(scene* scn, bool sah) {
+void build_bvh(scene* scn, bool high_quality, bool embree) {
+    // build shape bvhs
+    for (auto shp : scn->shapes) build_bvh(shp, high_quality, embree);
+
     // create bvh
     auto bvh = new bvh_tree();
 
     // shapes
     auto shape_ids = std::unordered_map<shape*, int>();
     for (auto shp : scn->shapes) {
-        auto sbvh = new bvh_tree();
-        sbvh->pos = shp->pos;
-        sbvh->radius = shp->radius;
-        sbvh->points = shp->points;
-        sbvh->lines = shp->lines;
-        sbvh->triangles = shp->triangles;
-        bvh->shape_bvhs.push_back(sbvh);
+        bvh->shape_bvhs.push_back(shp->bvh);
         shape_ids[shp] = (int)bvh->shape_bvhs.size() - 1;
     }
 
@@ -3552,71 +3698,12 @@ void build_bvh(scene* scn, bool sah) {
     }
 
     // build bvh
-    for (auto sbvh : bvh->shape_bvhs) build_bvh(sbvh, sah);
-    build_bvh(bvh, sah);
+    build_bvh(bvh, high_quality, embree);
 
     // set bvh
     if (scn->bvh) delete scn->bvh;
     scn->bvh = bvh;
-    for (auto i = 0; i < scn->shapes.size(); i++) {
-        scn->shapes[i]->bvh = bvh->shape_bvhs[i];
-    }
 }
-
-#if YGL_EMBREE
-void embree_error(void* ctx, RTCError code, const char* str) {
-    switch (code) {
-        case RTC_ERROR_UNKNOWN: printf("RTC_ERROR_UNKNOWN"); break;
-        case RTC_ERROR_INVALID_ARGUMENT:
-            printf("RTC_ERROR_INVALID_ARGUMENT");
-            break;
-        case RTC_ERROR_INVALID_OPERATION:
-            printf("RTC_ERROR_INVALID_OPERATION");
-            break;
-        case RTC_ERROR_OUT_OF_MEMORY: printf("RTC_ERROR_OUT_OF_MEMORY"); break;
-        case RTC_ERROR_UNSUPPORTED_CPU:
-            printf("RTC_ERROR_UNSUPPORTED_CPU");
-            break;
-        case RTC_ERROR_CANCELLED: printf("RTC_ERROR_CANCELLED"); break;
-        default: printf("invalid error code"); break;
-    }
-    printf("%s", str);
-}
-
-// Build a scene BVH
-void build_bvh_embree(scene* scn) {
-    scn->embree_device = rtcNewDevice("");
-    rtcSetDeviceErrorFunction(
-        (RTCDevice)scn->embree_device, embree_error, nullptr);
-    scn->embree_bvh = rtcNewScene((RTCDevice)scn->embree_device);
-    auto sid = 0;
-    for (auto ist : scn->instances) {
-        if (!ist->shp->triangles.empty()) {
-            ist->shp->embree_bvh = rtcNewGeometry(
-                (RTCDevice)scn->embree_device, RTC_GEOMETRY_TYPE_TRIANGLE);
-            rtcSetGeometryVertexAttributeCount(
-                (RTCGeometry)ist->shp->embree_bvh, 1);
-            auto vert = rtcSetNewGeometryBuffer(
-                (RTCGeometry)ist->shp->embree_bvh, RTC_BUFFER_TYPE_VERTEX, 0,
-                RTC_FORMAT_FLOAT3, 3 * 4, ist->shp->pos.size());
-            auto triangles = rtcSetNewGeometryBuffer(
-                (RTCGeometry)ist->shp->embree_bvh, RTC_BUFFER_TYPE_INDEX, 0,
-                RTC_FORMAT_UINT3, 3 * 4, ist->shp->triangles.size());
-            auto pos = ist->shp->pos;
-            for (auto& p : pos) p = transform_point(ist->frame, p);
-            memcpy(vert, pos.data(), pos.size() * 12);
-            memcpy(triangles, ist->shp->triangles.data(),
-                ist->shp->triangles.size() * 12);
-            rtcCommitGeometry((RTCGeometry)ist->shp->embree_bvh);
-            rtcAttachGeometryByID((RTCScene)scn->embree_bvh,
-                (RTCGeometry)ist->shp->embree_bvh, sid++);
-        } else if (!ist->shp->lines.empty()) {
-            // TODO: lines
-        }
-    }
-    rtcCommitScene((RTCScene)scn->embree_bvh);
-}
-#endif
 
 // Refits a shape BVH
 void refit_bvh(shape* shp) {
@@ -3752,41 +3839,9 @@ camera* make_bbox_camera(const std::string& name, const bbox3f& bbox,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-#if YGL_EMBREE
-// Scene intersection.
-scene_intersection intersect_ray_embree(
-    const scene* scn, const ray3f& ray, bool find_any) {
-    RTCRayHit embree_ray;
-    embree_ray.ray.org_x = ray.o.x;
-    embree_ray.ray.org_y = ray.o.y;
-    embree_ray.ray.org_z = ray.o.z;
-    embree_ray.ray.dir_x = ray.d.x;
-    embree_ray.ray.dir_y = ray.d.y;
-    embree_ray.ray.dir_z = ray.d.z;
-    embree_ray.ray.tnear = ray.tmin;
-    embree_ray.ray.tfar = ray.tmax;
-    embree_ray.ray.flags = 0;
-    embree_ray.hit.geomID = RTC_INVALID_GEOMETRY_ID;
-    embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
-    RTCIntersectContext embree_ctx;
-    rtcInitIntersectContext(&embree_ctx);
-    rtcIntersect1((RTCScene)scn->embree_bvh, &embree_ctx, &embree_ray);
-    if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return {};
-    auto isec = scene_intersection{};
-    isec.dist = embree_ray.ray.tfar;
-    isec.uv = {embree_ray.hit.u, embree_ray.hit.v};
-    isec.ei = embree_ray.hit.primID;
-    isec.ist = scn->instances.at(embree_ray.hit.geomID);
-    return isec;
-}
-#endif
-
 // Scene intersection.
 scene_intersection intersect_ray(
     const scene* scn, const ray3f& ray, bool find_any) {
-#if YGL_EMBREE
-    if (scn->embree_bvh) return intersect_ray_embree(scn, ray, find_any);
-#endif
     auto iid = 0;
     auto isec = scene_intersection();
     if (!intersect_bvh(
@@ -5662,7 +5717,7 @@ vec4f trace_sample(
     trace_state* stt, const scene* scn, int i, int j, const trace_params& prm) {
     _trace_npaths += 1;
     auto cam = scn->cameras.at(prm.camid);
-    auto& rng = stt->rngs.at(j * stt->img.width + i);
+    auto& rng = stt->rng.at(i, j);
     auto ray = eval_camera_ray(
         cam, i, j, stt->img.width, stt->img.height, rand2f(rng), rand2f(rng));
     auto hit = false;
@@ -5676,12 +5731,12 @@ vec4f trace_sample(
 }
 
 // Init a sequence of random number generators.
-std::vector<rng_state> make_trace_rngs(int width, int height, uint64_t seed) {
-    auto rngs = std::vector<rng_state>(width * height);
+image<rng_state> make_trace_rngs(int width, int height, uint64_t seed) {
+    auto rngs = image<rng_state>{width, height};
     int rseed = 1301081;  // large prime
     for (auto j = 0; j < height; j++) {
         for (auto i = 0; i < width; i++) {
-            rngs[j * width + i] = make_rng(seed, rseed + 1);
+            rngs.at(i, j) = make_rng(seed, rseed + 1);
             rseed =
                 (rseed * 1103515245 + 12345) & ((1U << 31) - 1);  // bsd rand
         }
@@ -5695,9 +5750,9 @@ trace_state* make_trace_state(const scene* scn, const trace_params& prm) {
     auto cam = scn->cameras[prm.camid];
     auto width = image_width(cam, prm.yresolution);
     auto height = image_height(cam, prm.yresolution);
-    stt->img = make_image4f(width, height);
-    stt->display = make_image4f(width, height);
-    stt->rngs = make_trace_rngs(width, height, prm.seed);
+    stt->img = image4f{width, height};
+    stt->display = image4f{width, height};
+    stt->rng = make_trace_rngs(width, height, prm.seed);
     return stt;
 }
 

@@ -649,7 +649,7 @@ image4f load_image4f(const std::string& filename) {
             throw std::runtime_error("could not load image " + filename);
         if (!pixels)
             throw std::runtime_error("could not load image " + filename);
-        img = make_image4f(width, height);
+        img = image4f{width, height};
         img.pxl = std::vector<vec4f>(pixels, pixels + width * height);
         free(pixels);
     } else if (ext == "pfm") {
@@ -658,7 +658,7 @@ image4f load_image4f(const std::string& filename) {
             (vec4f*)load_pfm(filename.c_str(), &width, &height, &ncomp, 4);
         if (!pixels)
             throw std::runtime_error("could not load image " + filename);
-        img = make_image4f(width, height);
+        img = image4f{width, height};
         img.pxl = std::vector<vec4f>(pixels, pixels + width * height);
         free(pixels);
     } else if (ext == "hdr") {
@@ -667,7 +667,7 @@ image4f load_image4f(const std::string& filename) {
             (vec4f*)stbi_loadf(filename.c_str(), &width, &height, &ncomp, 4);
         if (!pixels)
             throw std::runtime_error("could not load image " + filename);
-        img = make_image4f(width, height);
+        img = image4f{width, height};
         img.pxl = std::vector<vec4f>(pixels, pixels + width * height);
         free(pixels);
     } else {
@@ -677,7 +677,7 @@ image4f load_image4f(const std::string& filename) {
             (vec4f*)stbi_loadf(filename.c_str(), &width, &height, &ncomp, 4);
         if (!pixels)
             throw std::runtime_error("could not load image " + filename);
-        img = make_image4f(width, height);
+        img = image4f{width, height};
         img.pxl = std::vector<vec4f>(pixels, pixels + width * height);
         free(pixels);
         stbi_ldr_to_hdr_gamma(2.2f);
@@ -737,7 +737,7 @@ image4f load_image4f_from_memory(const byte* data, int data_size) {
         data, data_size, &width, &height, &ncomp, 4);
     stbi_ldr_to_hdr_gamma(2.2f);
     if (!pixels) throw std::runtime_error("could not decode image from memory");
-    auto img = make_image4f(width, height);
+    auto img = image4f{width, height};
     img.pxl = std::vector<vec4f>(pixels, pixels + width * height);
     delete pixels;
     return img;
@@ -758,7 +758,7 @@ image4f resize_image4f(const image4f& img, int width, int height) {
     if (!width && !height) throw std::runtime_error("bad image size");
     if (!width) width = (int)round(img.width * (height / (float)img.height));
     if (!height) height = (int)round(img.height * (width / (float)img.width));
-    auto res_img = make_image4f(width, height);
+    auto res_img = image4f{width, height};
     stbir_resize_float_generic((float*)img.pxl.data(), img.width, img.height,
         sizeof(vec4f) * img.width, (float*)res_img.pxl.data(), width, height,
         sizeof(vec4f) * width, 4, 3, 0, STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT,

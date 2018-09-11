@@ -64,7 +64,7 @@ Image make_image_grid(const std::vector<Image>& imgs, int tilex) {
 ygl::image4f filter_bilateral(const ygl::image4f& img, float spatial_sigma,
     float range_sigma, const std::vector<ygl::image4f>& features,
     const std::vector<float>& features_sigma) {
-    auto filtered = ygl::make_image4f(img.width, img.height);
+    auto filtered = ygl::image4f{img.width, img.height};
     auto filter_width = (int)ceil(2.57f * spatial_sigma);
     auto sw = 1 / (2.0f * spatial_sigma * spatial_sigma);
     auto rw = 1 / (2.0f * range_sigma * range_sigma);
@@ -101,7 +101,7 @@ ygl::image4f filter_bilateral(const ygl::image4f& img, float spatial_sigma,
 
 ygl::image4f filter_bilateral(
     const ygl::image4f& img, float spatial_sigma, float range_sigma) {
-    auto filtered = ygl::make_image4f(img.width, img.height);
+    auto filtered = ygl::image4f{img.width, img.height};
     auto fwidth = (int)ceil(2.57f * spatial_sigma);
     auto sw = 1 / (2.0f * spatial_sigma * spatial_sigma);
     auto rw = 1 / (2.0f * range_sigma * range_sigma);
