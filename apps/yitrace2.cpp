@@ -196,10 +196,7 @@ int main(int argc, char* argv[]) {
 
     // build bvh
     printf("building bvh\n");
-    ygl::build_bvh(app->scn);
-#if YGL_EMBREE
-    if (app->embree) ygl::build_bvh_embree(app->scn);
-#endif
+    ygl::build_bvh(app->scn, true, app->embree);
 
     // init renderer
     printf("initializing lights\n");

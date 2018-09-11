@@ -1861,12 +1861,22 @@ struct bvh_tree {
 
     // bvh nodes
     std::vector<bvh_node> nodes;  // Internal nodes.
+
+    // Embree opaque data
+    void* embree_bvh = nullptr;
+
+    // cleanup
+    ~bvh_tree();
 };
 
 // Build a BVH from the given set of primitives.
-void build_bvh(bvh_tree* bvh, bool sah);
+void build_bvh(bvh_tree* bvh, bool high_quality);
 // Update the node bounds for a shape bvh.
 void refit_bvh(bvh_tree* bvh);
+
+// Build a BVH from the given set of primitives.
+// Uses Embree if available and requested, otherwise the standard build.
+void build_bvh(bvh_tree* bvh, bool high_quality, bool embree);
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance `dist`, the instance
@@ -1995,6 +2005,11 @@ struct image {
     int height = 0;
     std::vector<T> pxl = {};
 
+    // constructors
+    image() : width(0), height(0), pxl() {}
+    image(int w, int h, const T& v = T{})
+        : width(w), height(h), pxl(w * h, v) {}
+
     // pixel access
     T& at(int i, int j) { return pxl.at(j * width + i); }
     const T& at(int i, int j) const { return pxl.at(j * width + i); }
@@ -2003,32 +2018,6 @@ struct image {
 // Type aliases
 using image4f = image<vec4f>;
 using image4b = image<vec4b>;
-
-// Image creation.
-template <typename T>
-inline image<T> make_image(int width, int height, T c = T{}) {
-    auto img = image<T>{};
-    img.width = width;
-    img.height = height;
-    img.pxl.resize(width * height, c);
-    return img;
-}
-inline image4f make_image4f(
-    int width, int height, const vec4f& c = {0, 0, 0, 0}) {
-    auto img = image4f{};
-    img.width = width;
-    img.height = height;
-    img.pxl.resize(width * height, c);
-    return img;
-}
-inline image4b make_image4b(
-    int width, int height, const vec4b& c = {0, 0, 0, 0}) {
-    auto img = image4b{};
-    img.width = width;
-    img.height = height;
-    img.pxl.resize(width * height, c);
-    return img;
-}
 
 }  // namespace ygl
 
@@ -2046,8 +2035,8 @@ image4f gamma_to_linear(const image4f& srgb, float gamma = 2.2f);
 image4f linear_to_gamma(const image4f& lin, float gamma = 2.2f);
 
 // Apply exposure and filmic tone mapping
-image4f tonemap_image4f(const image4f& hdr, float exposure, float gamma, 
-    bool filmic);
+image4f tonemap_image4f(
+    const image4f& hdr, float exposure, float gamma, bool filmic);
 
 // Resize an image.
 image4f resize_image4f(const image4f& img, int width, int height);
@@ -2090,7 +2079,7 @@ inline vec4f linear_to_gamma(const vec4f& lin, float gamma = 2.2f) {
 inline float luminance(const vec3f& a) { return (a.x + a.y + a.z) / 3; }
 inline float luminance(const vec4f& a) { return (a.x + a.y + a.z) / 3; }
 
-// Tonemap a color value according to an exposure-gamma tone mapper, with 
+// Tonemap a color value according to an exposure-gamma tone mapper, with
 // an optional filmic curve.
 vec4f tonemap_hdr(const vec4f& hdr, float exposure, float gamma, bool filmic);
 
@@ -2228,6 +2217,11 @@ struct volume {
     int depth = 0;
     std::vector<T> pxl = {};
 
+    // constructor
+    volume() : width(0), height(0), depth(0), pxl() {}
+    volume(int w, int h, int d, const T& v = T{})
+        : width{w}, height{h}, depth{d}, pxl(w * h * d, v) {}
+
     // pixel access
     T& at(int i, int j, int k) {
         return pxl.at(k * height * width + j * width + i);
@@ -2240,24 +2234,6 @@ struct volume {
 // Type aliases
 using volume4f = volume<vec4f>;
 using volume1f = volume<float>;
-
-// Image creation.
-template <typename T>
-inline volume<T> make_volume(int width, int height, int depth, T c = T{}) {
-    auto img = volume<T>{};
-    img.width = width;
-    img.height = height;
-    img.depth = depth;
-    img.pxl.resize(width * height * depth, c);
-    return img;
-}
-inline volume4f make_volume4f(
-    int width, int height, int depth, const vec4f& c = {0, 0, 0, 0}) {
-    return make_volume<vec4f>(width, height, depth, c);
-}
-inline volume1f make_volume1f(int width, int height, int depth, float c = 0) {
-    return make_volume<float>(width, height, depth, c);
-}
 
 }  // namespace ygl
 
@@ -2381,8 +2357,7 @@ struct shape {
     std::vector<float> elem_cdf = {};  // element cdf for sampling
     uint gl_pos = 0, gl_norm = 0, gl_texcoord = 0, gl_color = 0, gl_tangsp = 0,
          gl_points = 0, gl_lines = 0,
-         gl_triangles = 0;       // unmanaged data for OpenGL viewer
-    void* embree_bvh = nullptr;  // unmanaged data for Embree raytracer
+         gl_triangles = 0;  // unmanaged data for OpenGL viewer
 
     // cleanup
     ~shape();
@@ -2489,8 +2464,6 @@ struct scene {
     // compute properties
     std::vector<instance*> lights;
     bvh_tree* bvh = nullptr;
-    void* embree_bvh = nullptr;     // unmanaged data for Embree raytracer
-    void* embree_device = nullptr;  // unmanaged data for Embree raytracer
 
     // cleanup
     ~scene();
@@ -2538,15 +2511,10 @@ void update_shape_cdf(shape* shp);
 void update_environment_cdf(environment* env);
 
 // Updates/refits bvh.
-void build_bvh(shape* shp, bool sah = true);
-void build_bvh(scene* scn, bool sah = true);
+void build_bvh(shape* shp, bool high_quality, bool embree = false);
+void build_bvh(scene* scn, bool high_quality, bool embree = false);
 void refit_bvh(shape* shp);
 void refit_bvh(scene* scn);
-
-#if YGL_EMBREE
-// Build/update Embree BVH
-void build_bvh_embree(scene* scn);
-#endif
 
 // Updates tesselation.
 void tesselate_subdiv(const subdiv* sbd, shape* shp);
@@ -2759,13 +2727,13 @@ struct trace_params {
     int seed = trace_default_seed;         // trace seed
 };
 
-// Trace data used during rendering. Initialize with `make_trace_state()`.
+// Trace data used during rendering. Initialize with `make_trace_state()`
 struct trace_state {
     image4f img = {};      // image being rendered
     image4f display = {};  // image tone mapped for display
 
     // internal data used during rendering
-    std::vector<rng_state> rngs;       // random number generators
+    image<rng_state> rng = {};         // random number generators
     int sample = 0;                    // current sample being rendered
     std::vector<std::thread> threads;  // threads used during rendering
     bool stop = false;                 // stop flag for threads

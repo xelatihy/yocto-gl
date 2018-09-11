@@ -101,10 +101,7 @@ int main(int argc, char* argv[]) {
     // build bvh
     printf("building bvh\n");
     auto bvh_start = ygl::get_time();
-    ygl::build_bvh(scn);
-#if YGL_EMBREE
-    if (embree) ygl::build_bvh_embree(scn);
-#endif
+    ygl::build_bvh(scn, true, embree);
     printf("building bvh in %s\n",
         ygl::format_duration(ygl::get_time() - bvh_start).c_str());
 

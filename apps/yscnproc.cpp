@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
     }
 
     // build bvh
-    if (build_bvh) ygl::build_bvh(scn);
+    if (build_bvh) ygl::build_bvh(scn, false);
 
     // make a directory if needed
     try {
