@@ -2850,11 +2850,19 @@ vec3f rgb_to_hsv(const vec3f& rgb) {
         fabsf(K + (g - b) / (6.f * chroma + 1e-20f)), chroma / (r + 1e-20f), r};
 }
 
-vec3f tonemap_hdr(const vec3f& hdr, float exposure, float gamma, bool filmic) {
-    auto ldr = hdr * pow(2.0f, exposure);
-    if (filmic) ldr = tonemap_filmic(ldr);
-    ldr = linear_to_gamma(ldr);
-    return ldr;
+// Fitted ACES tonemapping
+inline float tonemap_filmic(float hdr) {
+    // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
+    // hdr *= 0.6; // brings it back to ACES range
+    return (hdr * hdr * 2.51f + hdr * 0.03f) /
+           (hdr * hdr * 2.43f + hdr * 0.59f + 0.14f);
+}
+
+vec4f tonemap_hdr(const vec4f& hdr, float exposure, float gamma, bool filmic) {
+    auto ldr = vec3f{hdr.x, hdr.y, hdr.z} * pow(2.0f, exposure);
+    if (filmic) ldr = {tonemap_filmic(ldr.x), tonemap_filmic(ldr.y), tonemap_filmic(ldr.z)};
+    ldr = linear_to_gamma(ldr, gamma);
+    return {ldr.x, ldr.y, ldr.z, hdr.w};
 }
 
 }  // namespace ygl
@@ -2908,17 +2916,9 @@ image4b float_to_byte(const image4f& fl) {
 image4f tonemap_image4f(
     const image4f& hdr, float exposure, float gamma, bool filmic) {
     auto ldr = make_image4f(hdr.width, hdr.height);
-    auto scale = pow(2.0f, exposure);
-    for (auto j = 0; j < hdr.height; j++) {
-        for (auto i = 0; i < hdr.width; i++) {
-            auto h = hdr.at(i, j);
-            auto c = vec3f{h.x, h.y, h.z};
-            c = c * scale;
-            if (filmic) c = tonemap_filmic(c);
-            if (gamma != 1) c = linear_to_gamma(c);
-            ldr.at(i, j) = {c.x, c.y, c.z, h.w};
-        }
-    }
+    for (auto j = 0; j < hdr.height; j++)
+        for (auto i = 0; i < hdr.width; i++)
+            ldr.at(i,j) = tonemap_hdr(hdr.at(i,j), exposure, gamma, filmic);
     return ldr;
 }
 
@@ -3311,6 +3311,14 @@ volume1f make_test_volume1f(
 namespace ygl {
 
 // cleanup
+shape::~shape() {
+    if (bvh) delete bvh;
+#if YGL_EMBREE
+    if (embree_bvh) rtcReleaseScene((RTCScene)embree_bvh);
+#endif
+}
+
+// cleanup
 scene::~scene() {
     if (bvh) delete bvh;
     for (auto v : cameras) delete v;
@@ -3323,6 +3331,10 @@ scene::~scene() {
     for (auto v : voltextures) delete v;
     for (auto v : nodes) delete v;
     for (auto v : animations) delete v;
+#if YGL_EMBREE
+    if (embree_bvh) rtcReleaseScene((RTCScene)embree_bvh);
+    if (embree_device) rtcReleaseDevice((RTCDevice)embree_device);
+#endif
 }
 
 // Computes a shape bounding box.
@@ -4902,7 +4914,7 @@ vec3f eval_transmission_div_pdf(const vec3f& vd, float dist, int ch) {
 static instance* air = nullptr;
 
 // Iterative volume path tracing.
-vec3f trace_path_volume(const scene* scn, const ray3f& ray_, rng_state& rng,
+vec3f trace_volpath(const scene* scn, const ray3f& ray_, rng_state& rng,
     int nbounces, bool* hit) {
     if (scn->lights.empty() && scn->environments.empty()) return zero3f;
 
@@ -5379,19 +5391,21 @@ vec3f trace_direct_nomis(const scene* scn, const ray3f& ray, rng_state& rng,
     // reflection
     if (f.ks != zero3f && !f.rs) {
         auto i = reflect(o, n);
-        l += f.ks * trace_direct(scn, make_ray(p, i), rng, nbounces - 1);
+        l += f.ks * trace_direct_nomis(
+                        scn, make_ray(p, i), rng, nbounces - 1, nullptr);
     }
 
     // opacity
     if (f.kt != zero3f) {
-        l += f.kt * trace_direct(scn, make_ray(p, -o), rng, nbounces - 1);
+        l += f.kt * trace_direct_nomis(
+                        scn, make_ray(p, -o), rng, nbounces - 1, nullptr);
     }
 
     // opacity
     auto op = eval_opacity(isec.ist, isec.ei, isec.uv);
     if (op != 1) {
-        l = op * l +
-            (1 - op) * trace_direct(scn, make_ray(p, -o), rng, nbounces - 1);
+        l = op * l + (1 - op) * trace_direct_nomis(scn, make_ray(p, -o), rng,
+                                    nbounces - 1, nullptr);
     }
 
     // done
@@ -5479,18 +5493,19 @@ vec3f trace_eyelight(const scene* scn, const ray3f& ray, rng_state& rng,
     // emission
     l += eval_emission(isec.ist, isec.ei, isec.uv);
 
-    // bsdf*light
+    // bsdf * light
     l += eval_bsdf(f, n, o, o) * fabs(dot(n, o)) * pi;
 
     // opacity
     if (nbounces <= 0) return l;
     if (f.kt != zero3f) {
-        l += f.kt * trace_eyelight(scn, make_ray(p, -o), rng, nbounces - 1);
+        l += f.kt *
+             trace_eyelight(scn, make_ray(p, -o), rng, nbounces - 1, nullptr);
     }
     auto op = eval_opacity(isec.ist, isec.ei, isec.uv);
     if (op != 1) {
-        l = op * l +
-            (1 - op) * trace_eyelight(scn, make_ray(p, -o), rng, nbounces - 1);
+        l = op * l + (1 - op) * trace_eyelight(scn, make_ray(p, -o), rng,
+                                    nbounces - 1, nullptr);
     }
 
     // done
@@ -5604,20 +5619,59 @@ vec3f trace_debug_texcoord(const scene* scn, const ray3f& ray, rng_state& rng,
     return {texcoord.x, texcoord.y, 0};
 }
 
+// Trace a single ray from the camera using the given algorithm.
+vec3f trace_func(const scene* scn, trace_type tracer, const ray3f& ray,
+    rng_state& rng, int nbounces, bool* hit) {
+    switch (tracer) {
+        case trace_type::path: return trace_path(scn, ray, rng, nbounces, hit);
+        case trace_type::volpath:
+            return trace_volpath(scn, ray, rng, nbounces, hit);
+        case trace_type::direct:
+            return trace_direct(scn, ray, rng, nbounces, hit);
+        case trace_type::environment:
+            return trace_environment(scn, ray, rng, nbounces, hit);
+        case trace_type::eyelight:
+            return trace_eyelight(scn, ray, rng, nbounces, hit);
+        case trace_type::path_nomis:
+            return trace_path_nomis(scn, ray, rng, nbounces, hit);
+        case trace_type::path_naive:
+            return trace_path_naive(scn, ray, rng, nbounces, hit);
+        case trace_type::direct_nomis:
+            return trace_direct_nomis(scn, ray, rng, nbounces, hit);
+        case trace_type::debug_normal:
+            return trace_debug_normal(scn, ray, rng, nbounces, hit);
+        case trace_type::debug_albedo:
+            return trace_debug_albedo(scn, ray, rng, nbounces, hit);
+        case trace_type::debug_texcoord:
+            return trace_debug_texcoord(scn, ray, rng, nbounces, hit);
+        case trace_type::debug_frontfacing:
+            return trace_debug_frontfacing(scn, ray, rng, nbounces, hit);
+        case trace_type::debug_diffuse:
+            return trace_debug_diffuse(scn, ray, rng, nbounces, hit);
+        case trace_type::debug_specular:
+            return trace_debug_specular(scn, ray, rng, nbounces, hit);
+        case trace_type::debug_roughness:
+            return trace_debug_roughness(scn, ray, rng, nbounces, hit);
+        default: throw std::runtime_error("should not have gotten here");
+    }
+    return zero3f;
+}
+
 // Trace a single sample
-vec4f trace_sample(const scene* scn, const camera* cam, int i, int j, int width,
-    int height, rng_state& rng, trace_func tracer, int nbounces,
-    float pixel_clamp = 100) {
+vec4f trace_sample(
+    trace_state* stt, const scene* scn, int i, int j, const trace_params& prm) {
     _trace_npaths += 1;
-    auto ray =
-        eval_camera_ray(cam, i, j, width, height, rand2f(rng), rand2f(rng));
+    auto cam = scn->cameras.at(prm.camid);
+    auto& rng = stt->rngs.at(j * stt->img.width + i);
+    auto ray = eval_camera_ray(
+        cam, i, j, stt->img.width, stt->img.height, rand2f(rng), rand2f(rng));
     auto hit = false;
-    auto l = tracer(scn, ray, rng, nbounces, &hit);
+    auto l = trace_func(scn, prm.tracer, ray, rng, prm.nbounces, &hit);
     if (!isfinite(l.x) || !isfinite(l.y) || !isfinite(l.z)) {
         printf("NaN detected\n");
         l = zero3f;
     }
-    if (max(l) > pixel_clamp) l = l * (pixel_clamp / max(l));
+    if (max(l) > prm.pixel_clamp) l = l * (prm.pixel_clamp / max(l));
     return {l.x, l.y, l.z, (hit || !scn->environments.empty()) ? 1.0f : 0.0f};
 }
 
@@ -5635,136 +5689,142 @@ std::vector<rng_state> make_trace_rngs(int width, int height, uint64_t seed) {
     return rngs;
 }
 
+// Init trace state
+trace_state* make_trace_state(const scene* scn, const trace_params& prm) {
+    auto stt = new trace_state();
+    auto cam = scn->cameras[prm.camid];
+    auto width = image_width(cam, prm.yresolution);
+    auto height = image_height(cam, prm.yresolution);
+    stt->img = make_image4f(width, height);
+    stt->display = make_image4f(width, height);
+    stt->rngs = make_trace_rngs(width, height, prm.seed);
+    return stt;
+}
+
 // Progressively compute an image by calling trace_samples multiple times.
-image4f trace_image4f(const scene* scn, const camera* cam, int yresolution,
-    int nsamples, trace_func tracer, int nbounces, float pixel_clamp,
-    bool noparallel, int seed) {
-    auto width = image_width(cam, yresolution);
-    auto height = image_height(cam, yresolution);
+image4f trace_image4f(const scene* scn, const trace_params& prm) {
+    auto stt = make_trace_state(scn, prm);
 
-    auto img = make_image4f(width, height, zero4f);
-    auto rng = make_trace_rngs(width, height, seed);
-
-    if (noparallel) {
-        for (auto j = 0; j < height; j++) {
-            for (auto i = 0; i < width; i++) {
-                for (auto s = 0; s < nsamples; s++)
-                    img.at(i, j) += trace_sample(scn, cam, i, j, width, height,
-                        rng[j * width + i], tracer, nbounces, pixel_clamp);
-                img.at(i, j) /= nsamples;
+    if (prm.noparallel) {
+        for (auto j = 0; j < stt->img.height; j++) {
+            for (auto i = 0; i < stt->img.width; i++) {
+                for (auto s = 0; s < prm.nsamples; s++)
+                    stt->img.at(i, j) += trace_sample(stt, scn, i, j, prm);
+                stt->img.at(i, j) /= prm.nsamples;
             }
         }
     } else {
         auto nthreads = std::thread::hardware_concurrency();
         auto threads = std::vector<std::thread>();
-        for (auto tid = 0; tid < std::thread::hardware_concurrency(); tid++) {
-            threads.push_back(std::thread([=, &img, &rng]() {
-                for (auto j = tid; j < height; j += nthreads) {
-                    for (auto i = 0; i < width; i++) {
-                        for (auto s = 0; s < nsamples; s++)
-                            img.at(i, j) += trace_sample(scn, cam, i, j, width,
-                                height, rng[j * width + i], tracer, nbounces,
-                                pixel_clamp);
-                        img.at(i, j) /= nsamples;
+        for (auto tid = 0; tid < nthreads; tid++) {
+            threads.push_back(std::thread([=]() {
+                for (auto j = tid; j < stt->img.height; j += nthreads) {
+                    for (auto i = 0; i < stt->img.width; i++) {
+                        for (auto s = 0; s < prm.nsamples; s++)
+                            stt->img.at(i, j) +=
+                                trace_sample(stt, scn, i, j, prm);
+                        stt->img.at(i, j) /= prm.nsamples;
                     }
                 }
             }));
         }
         for (auto& t : threads) t.join();
     }
+    auto img = stt->img;
+    delete stt;
     return img;
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-void trace_samples(const scene* scn, const camera* cam, int nsamples,
-    trace_func tracer, image4f& img, std::vector<rng_state>& rng, int sample,
-    int nbounces, float pixel_clamp, bool noparallel, int seed) {
-    if (noparallel) {
-        for (auto j = 0; j < img.height; j++) {
-            for (auto i = 0; i < img.width; i++) {
-                img.at(i, j) *= sample;
-                for (auto s = 0; s < nsamples; s++)
-                    img.at(i, j) += trace_sample(scn, cam, i, j, img.width,
-                        img.height, rng.at(j * img.width + i), tracer, nbounces,
-                        pixel_clamp);
-                img.at(i, j) /= sample + nsamples;
+bool trace_samples(
+    trace_state* stt, const scene* scn, const trace_params& prm) {
+    auto nbatch = min(prm.nbatch, prm.nsamples - stt->sample);
+    if (prm.noparallel) {
+        for (auto j = 0; j < stt->img.height; j++) {
+            for (auto i = 0; i < stt->img.width; i++) {
+                stt->img.at(i, j) *= stt->sample;
+                for (auto s = 0; s < nbatch; s++)
+                    stt->img.at(i, j) += trace_sample(stt, scn, i, j, prm);
+                stt->img.at(i, j) /= stt->sample + nbatch;
+                stt->display.at(i, j) = tonemap_hdr(
+                    stt->img.at(i, j), prm.exposure, prm.gamma, prm.filmic);
             }
         }
     } else {
         auto nthreads = std::thread::hardware_concurrency();
         auto threads = std::vector<std::thread>();
-        for (auto tid = 0; tid < std::thread::hardware_concurrency(); tid++) {
-            threads.push_back(std::thread([=, &img, &rng]() {
-                for (auto j = tid; j < img.height; j += nthreads) {
-                    for (auto i = 0; i < img.width; i++) {
-                        img.at(i, j) *= sample;
-                        for (auto s = 0; s < nsamples; s++)
-                            img.at(i, j) +=
-                                trace_sample(scn, cam, i, j, img.width,
-                                    img.height, rng.at(j * img.width + i),
-                                    tracer, nbounces, pixel_clamp);
-                        img.at(i, j) /= sample + nsamples;
+        for (auto tid = 0; tid < nthreads; tid++) {
+            threads.push_back(std::thread([=]() {
+                for (auto j = tid; j < stt->img.height; j += nthreads) {
+                    for (auto i = 0; i < stt->img.width; i++) {
+                        stt->img.at(i, j) *= stt->sample;
+                        for (auto s = 0; s < nbatch; s++)
+                            stt->img.at(i, j) +=
+                                trace_sample(stt, scn, i, j, prm);
+                        stt->img.at(i, j) /= stt->sample + nbatch;
+                        stt->display.at(i, j) = tonemap_hdr(stt->img.at(i, j),
+                            prm.exposure, prm.gamma, prm.filmic);
                     }
                 }
             }));
         }
         for (auto& t : threads) t.join();
     }
+    stt->sample += nbatch;
+    return stt->sample >= prm.nsamples;
 }
 
 // Starts an anyncrhounous renderer.
-void trace_async_start(const scene* scn, const camera* cam, int nsamples,
-    trace_func tracer, image4f& img, image4f& display,
-    std::vector<rng_state>& rng, std::vector<std::thread>& threads, bool& stop,
-    int& sample, float& exposure, float& gamma, bool& filmic, int preview_ratio,
-    int nbounces, float pixel_clamp, int seed) {
+void trace_async_start(
+    trace_state* stt, const scene* scn, const trace_params& prm) {
     // render preview image
-    if (preview_ratio) {
-        auto pimg = ygl::trace_image4f(scn, cam, img.height / preview_ratio, 1,
-            tracer, nbounces, pixel_clamp, true, seed);
+    if (prm.preview_ratio) {
+        auto pprm = prm;
+        pprm.yresolution = stt->img.height / prm.preview_ratio;
+        pprm.nsamples = 1;
+        auto pimg = ygl::trace_image4f(scn, pprm);
         auto pwidth = pimg.width, pheight = pimg.height;
-        for (auto j = 0; j < img.height; j++) {
-            for (auto i = 0; i < img.width; i++) {
-                auto pi = clamp(i / preview_ratio, 0, pwidth - 1),
-                     pj = clamp(j / preview_ratio, 0, pheight - 1);
-                img.at(i, j) = pimg.at(pi, pj);
+        for (auto j = 0; j < stt->img.height; j++) {
+            for (auto i = 0; i < stt->img.width; i++) {
+                auto pi = clamp(i / prm.preview_ratio, 0, pwidth - 1),
+                     pj = clamp(j / prm.preview_ratio, 0, pheight - 1);
+                stt->img.at(i, j) = pimg.at(pi, pj);
+                stt->display.at(i, j) = tonemap_hdr(
+                    stt->img.at(i, j), prm.exposure, prm.gamma, prm.filmic);
             }
         }
-        display = ygl::tonemap_image4f(img, exposure, gamma, filmic);
+        // stt->display = ygl::tonemap_image4f(stt->img, prm.exposure,
+        // prm.gamma, prm.filmic);
     }
 
     auto nthreads = std::thread::hardware_concurrency();
-    threads.clear();
-    stop = false;
+    stt->threads.clear();
+    stt->stop = false;
     for (auto tid = 0; tid < nthreads; tid++) {
-        threads.push_back(std::thread(
-            [=, &img, &display, &rng, &sample, &exposure, &gamma, &stop]() {
-                for (auto s = 0; s < nsamples; s++) {
-                    if (!tid) sample = s;
-                    for (auto j = tid; j < img.height; j += nthreads) {
-                        for (auto i = 0; i < img.width; i++) {
-                            if (stop) return;
-                            img.at(i, j) *= s;
-                            img.at(i, j) += trace_sample(scn, cam, i, j,
-                                img.width, img.height,
-                                rng.at(j * img.width + i), tracer, nbounces);
-                            img.at(i, j) /= s + 1;
-                            xyz(display.at(i, j)) = tonemap_hdr(
-                                xyz(img.at(i, j)), exposure, gamma, filmic);
-                            display.at(i, j).w = img.at(i, j).w;
-                        }
+        stt->threads.push_back(std::thread([=, &prm]() {
+            for (auto s = 0; s < prm.nsamples; s++) {
+                if (!tid) stt->sample = s;
+                for (auto j = tid; j < stt->img.height; j += nthreads) {
+                    for (auto i = 0; i < stt->img.width; i++) {
+                        if (stt->stop) return;
+                        stt->img.at(i, j) *= s;
+                        stt->img.at(i, j) += trace_sample(stt, scn, i, j, prm);
+                        stt->img.at(i, j) /= s + 1;
+                        stt->display.at(i, j) = tonemap_hdr(stt->img.at(i, j),
+                            prm.exposure, prm.gamma, prm.filmic);
                     }
                 }
-                if (!tid) sample = nsamples;
-            }));
+            }
+            if (!tid) stt->sample = prm.nsamples;
+        }));
     }
 }
 
 // Stop the asynchronous renderer.
-void trace_async_stop(std::vector<std::thread>& threads, bool& stop) {
-    stop = true;
-    for (auto& t : threads) t.join();
-    threads.clear();
+void trace_async_stop(trace_state* stt) {
+    stt->stop = true;
+    for (auto& t : stt->threads) t.join();
+    stt->threads.clear();
 }
 
 // Trace statistics for last run used for fine tuning implementation.

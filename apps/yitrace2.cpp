@@ -40,22 +40,9 @@ struct app_state {
     std::string filename = "scene.json";
     std::string imfilename = "out.obj";
     ygl::scene* scn = nullptr;
-
-    // rendering params
-    int camid = 0;         // camera id
-    int resolution = 512;  // image resolution
-    int nsamples = 256;    // number of samples
-    int tracer_id = 0;     // tracer id
-    int nbounces = 4;      // max depth
-    bool embree = false;   // Embree acceleration
-
-    // rendering state
-    ygl::image4f img = {};
-    ygl::image4f display = {};
-    std::vector<ygl::rng_state> rng = {};
-    bool stop = false;
-    std::vector<std::thread> threads;
-    int sample = 0;
+    ygl::trace_params prm = {};
+    ygl::trace_state* stt = nullptr;
+    bool embree = false;  // Embree acceleration
 
     // view image
     float exposure = 0;
@@ -64,20 +51,9 @@ struct app_state {
 
     ~app_state() {
         if (scn) delete scn;
+        if (stt) delete stt;
     }
 };
-
-auto tracer_names = std::vector<std::string>{"pathtrace", "direct",
-    "environment", "eyelight", "pathtrace-nomis", "pathtrace-naive",
-    "direct-nomis", "debug_normal", "debug_albedo", "debug_texcoord",
-    "debug_frontfacing", "debug_diffuse", "debug_specular", "debug_roughness"};
-
-auto tracer_funcs = std::vector<ygl::trace_func>{ygl::trace_path,
-    ygl::trace_direct, ygl::trace_environment, ygl::trace_eyelight,
-    ygl::trace_path_nomis, ygl::trace_path_naive, ygl::trace_direct_nomis,
-    ygl::trace_debug_normal, ygl::trace_debug_albedo, ygl::trace_debug_texcoord,
-    ygl::trace_debug_frontfacing, ygl::trace_debug_diffuse,
-    ygl::trace_debug_specular, ygl::trace_debug_roughness};
 
 void draw(GLFWwindow* win) {
     auto app = (app_state*)glfwGetWindowUserPointer(win);
@@ -85,19 +61,17 @@ void draw(GLFWwindow* win) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glRasterPos2f(-1, 1);
     glPixelZoom(2, -2);
-    glDrawPixels(app->display.width, app->display.height, GL_RGBA, GL_FLOAT,
-        app->display.pxl.data());
+    glDrawPixels(app->stt->display.width, app->stt->display.height, GL_RGBA,
+        GL_FLOAT, app->stt->display.pxl.data());
     glfwSwapBuffers(win);
 }
 
 void restart(app_state* app) {
     // stop renderer
-    ygl::trace_async_stop(app->threads, app->stop);
-    auto cam = app->scn->cameras.at(app->camid);
-    auto tracer_func = tracer_funcs.at(app->tracer_id);
-    ygl::trace_async_start(app->scn, cam, app->nsamples, tracer_func, app->img,
-        app->display, app->rng, app->threads, app->stop, app->sample,
-        app->exposure, app->gamma, app->filmic);
+    ygl::trace_async_stop(app->stt);
+    delete app->stt;
+    app->stt = ygl::make_trace_state(app->scn, app->prm);
+    ygl::trace_async_start(app->stt, app->scn, app->prm);
 }
 
 void char_callback(GLFWwindow* win, unsigned int key) {
@@ -109,24 +83,27 @@ void char_callback(GLFWwindow* win, unsigned int key) {
         case '}': app->gamma += 0.1f; break;
         case 'f': app->filmic = !app->filmic; break;
         case 'c':
-            app->camid = (app->camid + 1) % app->scn->cameras.size();
+            app->prm.camid = (app->prm.camid + 1) % app->scn->cameras.size();
             break;
         case 'C':
-            app->camid = (app->camid - 1 + app->scn->cameras.size()) %
-                         app->scn->cameras.size();
+            app->prm.camid = (app->prm.camid - 1 + app->scn->cameras.size()) %
+                             app->scn->cameras.size();
             break;
         case 't':
-            app->tracer_id = (app->tracer_id + 1) % tracer_names.size();
+            app->prm.tracer = (ygl::trace_type)(
+                ((int)app->prm.tracer + 1) % ygl::trace_type_names.size());
             break;
         case 'T':
-            app->tracer_id = (app->tracer_id - 1 + tracer_names.size()) %
-                             tracer_names.size();
+            app->prm.tracer = (ygl::trace_type)(
+                ((int)app->prm.tracer - 1 + ygl::trace_type_names.size()) %
+                ygl::trace_type_names.size());
             break;
         case ' ': break;  // restart
     }
-    auto cam = app->scn->cameras.at(app->camid);
+    auto cam = app->scn->cameras.at(app->prm.camid);
     printf("trace with %s from %s camera\n",
-        tracer_names.at(app->tracer_id).c_str(), cam->name.c_str());
+        ygl::trace_type_names.at((int)app->prm.tracer).c_str(),
+        cam->name.c_str());
     printf("tonemap with %g exposure, %g gamma and %d filmic\n", app->exposure,
         app->gamma, (int)app->filmic);
     restart(app);
@@ -135,8 +112,8 @@ void char_callback(GLFWwindow* win, unsigned int key) {
 // run ui loop
 void run_ui(app_state* app) {
     // window
-    auto ww = ygl::clamp(app->img.width, 960, 1440);
-    auto wh = ygl::clamp(app->img.height, 960, 1440);
+    auto ww = ygl::clamp(app->stt->img.width, 256, 1440);
+    auto wh = ygl::clamp(app->stt->img.height, 256, 1440);
     if (!glfwInit()) throw std::runtime_error("cannot open glwindow");
 
     auto win = glfwCreateWindow(ww, wh, "yimview", nullptr, nullptr);
@@ -170,7 +147,7 @@ void run_ui(app_state* app) {
                 rotate = (mouse_pos - last_pos) / 100.0f;
             if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
             if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
-            auto cam = app->scn->cameras.at(app->camid);
+            auto cam = app->scn->cameras.at(app->prm.camid);
             ygl::camera_turntable(cam->frame, cam->focus, rotate, dolly, pan);
             restart(app);
         }
@@ -192,14 +169,14 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser = ygl::make_cmdline_parser(
         argc, argv, "progressive path tracing", "yitrace");
-    app->camid = ygl::parse_int(parser, "--camera", 0, "Camera index.");
-    app->resolution = ygl::parse_int(
+    app->prm.camid = ygl::parse_int(parser, "--camera", 0, "Camera index.");
+    app->prm.yresolution = ygl::parse_int(
         parser, "--resolution,-r", 512, "Image vertical resolution.");
-    app->nsamples =
+    app->prm.nsamples =
         ygl::parse_int(parser, "--nsamples,-s", 4096, "Number of samples.");
-    app->tracer_id =
-        ygl::parse_enum(parser, "--tracer,-t", 0, "Trace type.", tracer_names);
-    app->nbounces =
+    app->prm.tracer = (ygl::trace_type)ygl::parse_enum(
+        parser, "--tracer,-t", 0, "Trace type.", ygl::trace_type_names);
+    app->prm.nbounces =
         ygl::parse_int(parser, "--nbounces", 4, "Maximum number of bounces.");
     app->embree =
         ygl::parse_flag(parser, "--embree", false, "Use Embree ratracer");
@@ -229,26 +206,17 @@ int main(int argc, char* argv[]) {
     ygl::init_lights(app->scn);
 
     // prepare application
-    auto cam = app->scn->cameras.at(app->camid);
-    auto tracer_func = tracer_funcs.at(app->tracer_id);
-    app->img = ygl::make_image4f(ygl::image_width(cam, app->resolution),
-        ygl::image_height(cam, app->resolution));
-    app->display = ygl::make_image4f(ygl::image_width(cam, app->resolution),
-        ygl::image_height(cam, app->resolution));
-    app->rng = ygl::make_trace_rngs(ygl::image_width(cam, app->resolution),
-        ygl::image_height(cam, app->resolution));
+    app->stt = ygl::make_trace_state(app->scn, app->prm);
 
     // initialize rendering objects
     printf("starting async renderer\n");
-    ygl::trace_async_start(app->scn, cam, app->nsamples, tracer_func, app->img,
-        app->display, app->rng, app->threads, app->stop, app->sample,
-        app->exposure, app->gamma, app->filmic);
+    ygl::trace_async_start(app->stt, app->scn, app->prm);
 
     // run interactive
     run_ui(app);
 
     // cleanup
-    ygl::trace_async_stop(app->threads, app->stop);
+    ygl::trace_async_stop(app->stt);
     delete app;
 
     // done
