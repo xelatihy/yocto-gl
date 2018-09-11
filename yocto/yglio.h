@@ -187,11 +187,18 @@ image4f load_image4f_from_memory(const byte* data, int data_size);
 void save_tonemapped_image4f(const std::string& filename, const image4f& hdr,
     float exposure = 0, float gamma = 2.2f, bool filmic = false);
 
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// VOLUME IMAGE IO
+// -----------------------------------------------------------------------------
+namespace ygl {
+
 // Loads/saves a 1 channel volume.
 volume1f read_volume1f(const std::string& filename);
 void save_volume1f(const ygl::volume1f& tex, const std::string& filename);
 
-}  // namespace ygl
+}
 
 // -----------------------------------------------------------------------------
 // SCENE IO FUNCTIONS

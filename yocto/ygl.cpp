@@ -3320,6 +3320,7 @@ scene::~scene() {
     for (auto v : materials) delete v;
     for (auto v : textures) delete v;
     for (auto v : environments) delete v;
+    for (auto v : voltextures) delete v;
     for (auto v : nodes) delete v;
     for (auto v : animations) delete v;
 }
@@ -3951,24 +3952,31 @@ vec4f eval_texture(const texture* txt, const vec2f& texcoord) {
     if (!txt || txt->img.pxl.empty()) return {1, 1, 1, 1};
 
     // get image width/height
-    auto w = txt->img.width, h = txt->img.height;
+    auto width = txt->img.width, height = txt->img.height;
 
     // get coordinates normalized for tiling
     auto s = 0.0f, t = 0.0f;
     if (txt->clamp) {
-        s = clamp(texcoord.x, 0.0f, 1.0f) * w;
-        t = clamp(texcoord.y, 0.0f, 1.0f) * h;
+        s = clamp(texcoord.x, 0.0f, 1.0f) * width;
+        t = clamp(texcoord.y, 0.0f, 1.0f) * height;
     } else {
-        s = std::fmod(texcoord.x, 1.0f) * w;
-        if (s < 0) s += w;
-        t = std::fmod(texcoord.y, 1.0f) * h;
-        if (t < 0) t += h;
+        s = std::fmod(texcoord.x, 1.0f) * width;
+        if (s < 0) s += width;
+        t = std::fmod(texcoord.y, 1.0f) * height;
+        if (t < 0) t += height;
     }
 
     // get image coordinates and residuals
-    auto i = clamp((int)s, 0, w - 1), j = clamp((int)t, 0, h - 1);
-    auto ii = (i + 1) % w, jj = (j + 1) % h;
+    auto i = clamp((int)s, 0, width - 1), j = clamp((int)t, 0, height - 1);
+    auto ii = (i + 1) % width, jj = (j + 1) % height;
     auto u = s - i, v = t - j;
+
+    // nearest-neighbor interpolation
+    if (!txt->linear) {
+        i = u < 0.5 ? i : min(i + 1, width - 1);
+        j = v < 0.5 ? j : min(j + 1, height - 1);
+        return txt->img.at(i, j);
+    }
 
     // handle interpolation
     return txt->img.at(i, j) * (1 - u) * (1 - v) +
@@ -3977,7 +3985,7 @@ vec4f eval_texture(const texture* txt, const vec2f& texcoord) {
 }
 
 // Evaluate a volume texture
-float eval_texture(const texture* txt, const vec3f& texcoord, bool trilinear) {
+float eval_voltexture(const voltexture* txt, const vec3f& texcoord) {
     if (!txt || txt->vol.pxl.empty()) return 1;
 
     // get image width/height
@@ -3986,9 +3994,9 @@ float eval_texture(const texture* txt, const vec3f& texcoord, bool trilinear) {
     auto depth = txt->vol.depth;
 
     // get coordinates normalized for tiling
-    float s = clamp((texcoord.x + 1.0f) * 0.5f, 0.0f, 1.0f) * width;
-    float t = clamp((texcoord.y + 1.0f) * 0.5f, 0.0f, 1.0f) * height;
-    float r = clamp((texcoord.z + 1.0f) * 0.5f, 0.0f, 1.0f) * depth;
+    auto s = clamp((texcoord.x + 1.0f) * 0.5f, 0.0f, 1.0f) * width;
+    auto t = clamp((texcoord.y + 1.0f) * 0.5f, 0.0f, 1.0f) * height;
+    auto r = clamp((texcoord.z + 1.0f) * 0.5f, 0.0f, 1.0f) * depth;
 
     // get image coordinates and residuals
     auto i = clamp((int)s, 0, width - 1);
@@ -3998,7 +4006,7 @@ float eval_texture(const texture* txt, const vec3f& texcoord, bool trilinear) {
     auto u = s - i, v = t - j, w = r - k;
 
     // nearest-neighbor interpolation
-    if (!trilinear) {
+    if (!txt->linear) {
         i = u < 0.5 ? i : min(i + 1, width - 1);
         j = v < 0.5 ? j : min(j + 1, height - 1);
         k = w < 0.5 ? k : min(k + 1, depth - 1);
@@ -4187,7 +4195,7 @@ vec3f eval_transmission(const material* vol, const vec3f& from,
         t += step;
         if (t >= dist) break;
         pos += dir * step;
-        auto density = vol->vd * eval_texture(vol->vd_txt, pos, true);
+        auto density = vol->vd * eval_voltexture(vol->vd_txt, pos);
         tr *= 1.0f - max(0.0f, at(density, channel) / at(vd, channel));
     }
     return {tr, tr, tr};
@@ -4209,7 +4217,7 @@ float sample_distance(const material* vol, const vec3f& from, const vec3f& dir,
 
         pos += dir * step;
         dist += step;
-        auto density = vol->vd * eval_texture(vol->vd_txt, pos, true);
+        auto density = vol->vd * eval_voltexture(vol->vd_txt, pos);
 
         if (at(density, channel) / majorant >= rand1f(rng)) return dist;
 
