@@ -769,7 +769,7 @@ image4f resize_image4f(const image4f& img, int width, int height) {
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR VOLUMEIO
+// IMPLEMENTATION FOR VOLUME IMAGE IO
 // -----------------------------------------------------------------------------
 namespace ygl {
 
@@ -860,30 +860,82 @@ void save_scene(const std::string& filename, const scene* scn,
     }
 }
 
-// helper to load texture
-void load_texture(
-    const std::string& filename, image4f& img, volume1f& vol, float gamma) {
-    img = {};
-    vol = {};
-    if (get_extension(filename) == "vol") {
-        vol = load_volume1f(filename);
-    } else {
-        img = load_image4f(filename);
-        if (!is_hdr_filename(filename) && gamma != 1) {
-            img = gamma_to_linear(img, gamma);
+void load_scene_textures(
+    scene* scn, const std::string& dirname, bool skip_missing, bool assign_opacity) {
+    // load images
+    for (auto txt : scn->textures) {
+        if (txt->path == "" || !txt->img.pxl.empty()) continue;
+        auto filename = normalize_path(dirname + "/" + txt->path);
+        try {
+            txt->img = load_image4f(filename);
+            if (!is_hdr_filename(filename) && txt->gamma != 1) {
+                txt->img = gamma_to_linear(txt->img, txt->gamma);
+            }
+        } catch (const std::exception&) {
+            if (skip_missing) continue;
+            throw;
+        }
+    }
+
+    // load volumes
+    for (auto txt : scn->voltextures) {
+        if (txt->path == "" || !txt->vol.pxl.empty()) continue;
+        auto filename = normalize_path(dirname + "/" + txt->path);
+        try {
+            txt->vol = load_volume1f(filename);
+        } catch (const std::exception&) {
+            if (skip_missing) continue;
+            throw;
+        }
+    }
+
+    // assign opacity texture if needed
+    if(assign_opacity) {
+        auto has_opacity = std::unordered_map<texture*, bool>();
+        for (auto& txt : scn->textures) {
+            has_opacity[txt] = false;
+            for (auto& p : txt->img.pxl)
+                if (p.w < 0.999f) {
+                    has_opacity[txt] = true;
+                    break;
+                }
+        }
+        for (auto& mat : scn->materials) {
+            if (mat->kd_txt && !mat->op_txt && has_opacity.at(mat->kd_txt))
+                mat->op_txt = mat->kd_txt;
         }
     }
 }
 
-// helper to save texture
-void save_texture(const std::string& filename, const image4f& img,
-    const volume1f& vol, float gamma) {
-    if (!vol.pxl.empty()) { save_volume1f(filename, vol); }
-    if (!img.pxl.empty()) {
-        if (is_hdr_filename(filename) || gamma == 1) {
-            save_image4f(filename, img);
-        } else {
-            save_image4f(filename, linear_to_gamma(img, gamma));
+// helper to save textures
+void save_scene_textures(const scene* scn, const std::string& dirname, bool skip_missing) {
+    // save images
+    for (auto txt : scn->textures) {
+        if (txt->img.pxl.empty()) continue;
+        auto filename = normalize_path(dirname + "/" + txt->path);
+        try {
+            if (!txt->img.pxl.empty()) {
+                if (is_hdr_filename(filename) || txt->gamma == 1) {
+                    save_image4f(filename, txt->img);
+                } else {
+                    save_image4f(filename, linear_to_gamma(txt->img, txt->gamma));
+                }
+            }
+        } catch (std::exception&) {
+            if (skip_missing) continue;
+            throw;
+        }
+    }
+
+    // save volumes
+    for (auto txt : scn->voltextures) {
+        if (txt->vol.pxl.empty()) continue;
+        auto filename = normalize_path(dirname + "/" + txt->path);
+        try {
+            if (!txt->vol.pxl.empty()) { save_volume1f(filename, txt->vol); }
+        } catch (std::exception&) {
+            if (skip_missing) continue;
+            throw;
         }
     }
 }
@@ -1165,7 +1217,6 @@ void to_json(json& js, const texture& val) {
     if (val.gamma != def.gamma) js["gamma"] = val.gamma;
     if (val.path == "") {
         if (!val.img.pxl.empty()) js["img"] = val.img;
-        if (!val.vol.pxl.empty()) js["vol"] = val.vol;
     }
 }
 
@@ -1174,14 +1225,11 @@ void from_json_proc(const json& js, texture& val) {
     auto type = js.value("type", ""s);
     if (type == "") return;
     auto is_hdr = false;
-    auto is_vol = false;
     auto width = js.value("width", 512);
     auto height = js.value("height", 512);
-    auto depth = js.value("depth", 512);
     if (js.count("resolution")) {
         height = js.value("resolution", 512);
         width = height;
-        depth = height;
     }
     if (type == "grid") {
         val.img = make_grid_image4f(width, height, js.value("tile", 8),
@@ -1222,10 +1270,6 @@ void from_json_proc(const json& js, texture& val) {
             make_turbulence_image4f(width, height, js.value("scale", 1.0f),
                 js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
                 js.value("octaves", 6), js.value("wrap", true));
-    } else if (type == "test_volume") {
-        val.vol = make_test_volume1f(width, height, depth,
-            js.value("scale", 10.0f), js.value("exponent", 6.0f));
-        is_vol = true;
     } else {
         throw std::runtime_error("unknown texture type " + type);
     }
@@ -1234,11 +1278,7 @@ void from_json_proc(const json& js, texture& val) {
         val.gamma = 1;
     }
     if (val.path == "") {
-        auto ext = std::string("png");
-        if (is_hdr)
-            ext = "hdr";
-        else if (is_vol)
-            ext = "vol";
+        auto ext = (is_hdr) ? std::string("hdr") : std::string("png");
         val.path = "textures/" + val.name + "." + ext;
     }
 }
@@ -1252,6 +1292,49 @@ void from_json(const json& js, texture& val) {
     val.scale = js.value("scale", def.scale);
     val.gamma = js.value("gamma", def.gamma);
     val.img = js.value("img", def.img);
+    if (js.count("!!proc")) from_json_proc(js.at("!!proc"), val);
+}
+
+// Serialize struct
+void to_json(json& js, const voltexture& val) {
+    static const auto def = voltexture();
+    if (val.name != def.name) js["name"] = val.name;
+    if (val.path != def.path) js["path"] = val.path;
+    if (val.clamp != def.clamp) js["clamp"] = val.clamp;
+    if (val.path == "") {
+        if (!val.vol.pxl.empty()) js["vol"] = val.vol;
+    }
+}
+
+// Procedural commands for textures
+void from_json_proc(const json& js, voltexture& val) {
+    auto type = js.value("type", ""s);
+    if (type == "") return;
+    auto width = js.value("width", 512);
+    auto height = js.value("height", 512);
+    auto depth = js.value("depth", 512);
+    if (js.count("resolution")) {
+        height = js.value("resolution", 512);
+        width = height;
+        depth = height;
+    }
+    if (type == "test_volume") {
+        val.vol = make_test_volume1f(width, height, depth,
+            js.value("scale", 10.0f), js.value("exponent", 6.0f));
+    } else {
+        throw std::runtime_error("unknown texture type " + type);
+    }
+    if (val.path == "") {
+        auto ext = std::string("vol");
+        val.path = "textures/" + val.name + "." + ext;
+    }
+}
+
+// Serialize struct
+void from_json(const json& js, voltexture& val) {
+    static const auto def = voltexture();
+    val.name = js.value("name", def.name);
+    val.path = js.value("path", def.path);
     val.vol = js.value("vol", def.vol);
     if (js.count("!!proc")) from_json_proc(js.at("!!proc"), val);
 }
@@ -1350,7 +1433,7 @@ void from_json(const json& js, material& val) {
         val.norm_txt->name = js.at("norm_txt").get<std::string>();
     }
     if (js.count("vd_txt")) {
-        val.vd_txt = new texture();
+        val.vd_txt = new voltexture();
         val.vd_txt->name = js.at("vd_txt").get<std::string>();
     }
     if (js.count("!!proc")) from_json_proc(js.at("!!proc"), val);
@@ -1887,6 +1970,10 @@ scene* load_json_scene(
         scn->environments.push_back(new environment());
         from_json(j, *scn->environments.back());
     }
+    for (auto& j : js.value("voltextures", json::array())) {
+        scn->voltextures.push_back(new voltexture());
+        from_json(j, *scn->voltextures.back());
+    }
     for (auto& j : js.value("nodes", json::array())) {
         scn->nodes.push_back(new node());
         from_json(j, *scn->nodes.back());
@@ -1900,6 +1987,7 @@ scene* load_json_scene(
     // fix references
     auto cmap = make_named_map(scn->cameras);
     auto tmap = make_named_map(scn->textures);
+    auto vmap = make_named_map(scn->voltextures);
     auto mmap = make_named_map(scn->materials);
     auto smap = make_named_map(scn->shapes);
     auto rmap = make_named_map(scn->subdivs);
@@ -1944,7 +2032,7 @@ scene* load_json_scene(
         fix_ref(tmap, scn->textures, mat->norm_txt);
         fix_ref(tmap, scn->textures, mat->bump_txt);
         fix_ref(tmap, scn->textures, mat->disp_txt);
-        fix_ref(tmap, scn->textures, mat->vd_txt);
+        fix_ref(vmap, scn->voltextures, mat->vd_txt);
     }
 
     // load meshes
@@ -1981,20 +2069,7 @@ scene* load_json_scene(
     update_transforms(scn);
 
     // skip textures
-    if (!load_textures) return scn;
-
-    // load images
-    for (auto& txt : scn->textures) {
-        if (txt->path == "" || !txt->img.pxl.empty() || !txt->vol.pxl.empty())
-            continue;
-        auto filename = normalize_path(dirname + "/" + txt->path);
-        try {
-            load_texture(filename, txt->img, txt->vol, txt->gamma);
-        } catch (const std::exception&) {
-            if (skip_missing) continue;
-            throw;
-        }
-    }
+    if (load_textures) load_scene_textures(scn, dirname, skip_missing, false);
 
     return scn;
 }
@@ -2035,19 +2110,7 @@ void save_json_scene(const std::string& filename, const scene* scn,
     }
 
     // skip textures
-    if (!save_textures) return;
-
-    // save images
-    for (auto& txt : scn->textures) {
-        if (txt->img.pxl.empty()) continue;
-        auto filename = normalize_path(dirname + "/" + txt->path);
-        try {
-            save_texture(filename, txt->img, txt->vol, txt->gamma);
-        } catch (std::exception&) {
-            if (skip_missing) continue;
-            throw;
-        }
-    }
+    if (save_textures) save_scene_textures(scn, dirname, skip_missing);
 }
 
 }  // namespace ygl
@@ -2448,6 +2511,7 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
 
     // object maps
     auto tmap = std::unordered_map<std::string, texture*>();
+    auto vmap = std::unordered_map<std::string, voltexture*>();
     auto mmap = std::unordered_map<std::string, material*>();
 
     // vertex maps
@@ -2512,6 +2576,20 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
         txt->gamma = (srgb && !is_hdr_filename(info.path)) ? 2.2f : 1.0f;
         scn->textures.push_back(txt);
         tmap[info.path] = txt;
+
+        return txt;
+    };
+    // Parse texture options and name
+    auto add_voltexture = [scn, &vmap](const obj_texture_info& info, bool srgb) {
+        if (info.path == "") return (voltexture*)nullptr;
+        if (vmap.find(info.path) != vmap.end()) { return vmap.at(info.path); }
+
+        // create texture
+        auto txt = new voltexture();
+        txt->name = info.path;
+        txt->path = info.path;
+        scn->voltextures.push_back(txt);
+        vmap[info.path] = txt;
 
         return txt;
     };
@@ -2604,7 +2682,7 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
         mat->va = omat.va;
         mat->vd = omat.vd;
         mat->vg = omat.vg;
-        mat->vd_txt = add_texture(omat.vd_txt, false);
+        mat->vd_txt = add_voltexture(omat.vd_txt, false);
         scn->materials.push_back(mat);
         mmap[mat->name] = mat;
     };
@@ -2652,35 +2730,9 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
     scn->name = get_filename(filename);
     add_missing_materials(scn);
 
-    // skip if needed
-    if (!load_textures) return scn;
-
-    // load images
+    // load textures
     auto dirname = get_dirname(filename);
-    for (auto& txt : scn->textures) {
-        auto filename = normalize_path(dirname + "/" + txt->path);
-        try {
-            load_texture(filename, txt->img, txt->vol, txt->gamma);
-        } catch (std::exception&) {
-            if (skip_missing) continue;
-            throw;
-        }
-    }
-
-    // assign opacity texture if needed
-    auto has_opacity = std::unordered_map<texture*, bool>();
-    for (auto& txt : scn->textures) {
-        has_opacity[txt] = false;
-        for (auto& p : txt->img.pxl)
-            if (p.w < 0.999f) {
-                has_opacity[txt] = true;
-                break;
-            }
-    }
-    for (auto& mat : scn->materials) {
-        if (mat->kd_txt && !mat->op_txt && has_opacity.at(mat->kd_txt))
-            mat->op_txt = mat->kd_txt;
-    }
+    if (load_textures) load_scene_textures(scn, dirname, skip_missing, true);
 
     // done
     return scn;
@@ -2919,20 +2971,8 @@ void save_obj_scene(const std::string& filename, const scene* scn,
         save_objx(replace_extension(filename, ".objx"), scn);
 
     // skip textures if needed
-    if (!save_textures) return;
-
-    // save images
     auto dirname = get_dirname(filename);
-    for (auto& txt : scn->textures) {
-        if (txt->img.pxl.empty()) continue;
-        auto filename = normalize_path(dirname + "/" + txt->path);
-        try {
-            save_texture(filename, txt->img, txt->vol, txt->gamma);
-        } catch (std::exception&) {
-            if (skip_missing) continue;
-            throw;
-        }
-    }
+    if (save_textures) save_scene_textures(scn, dirname, skip_missing);
 }
 
 }  // namespace ygl
@@ -3489,33 +3529,7 @@ scene* load_gltf_scene(
     }
 
     // skip textures if needed
-    if (!load_textures) return scn;
-
-    // load images
-    for (auto& txt : scn->textures) {
-        auto filename = normalize_path(dirname + "/" + txt->path);
-        try {
-            load_texture(filename, txt->img, txt->vol, txt->gamma);
-        } catch (const std::exception&) {
-            if (skip_missing) continue;
-            throw;
-        }
-    }
-
-    // assign opacity texture if needed
-    auto has_opacity = std::unordered_map<texture*, bool>();
-    for (auto& txt : scn->textures) {
-        has_opacity[txt] = false;
-        for (auto& p : txt->img.pxl)
-            if (p.w < 0.999f) {
-                has_opacity[txt] = true;
-                break;
-            }
-    }
-    for (auto& mat : scn->materials) {
-        if (mat->kd_txt && !mat->op_txt && has_opacity.at(mat->kd_txt))
-            mat->op_txt = mat->kd_txt;
-    }
+    if (load_textures) load_scene_textures(scn, dirname, skip_missing, true);
 
     // done
     return scn;
@@ -3750,19 +3764,7 @@ void save_gltf_scene(const std::string& filename, const scene* scn,
     }
 
     // skip textures if necessary
-    if (!save_textures) return;
-
-    // save images
-    for (auto& txt : scn->textures) {
-        if (txt->img.pxl.empty()) continue;
-        auto filename = normalize_path(dirname + "/" + txt->path);
-        try {
-            save_texture(filename, txt->img, txt->vol, txt->gamma);
-        } catch (std::exception&) {
-            if (skip_missing) continue;
-            throw;
-        }
-    }
+    if (save_textures) save_scene_textures(scn, dirname, skip_missing);
 }
 
 }  // namespace ygl
@@ -4416,19 +4418,7 @@ scene* load_pbrt_scene(
     update_transforms(scn);
 
     // skip textures
-    if (!load_textures) return scn;
-
-    // load images
-    for (auto& txt : scn->textures) {
-        if (txt->path == "" || !txt->img.pxl.empty()) continue;
-        auto filename = normalize_path(dirname + "/" + txt->path);
-        try {
-            load_texture(filename, txt->img, txt->vol, txt->gamma);
-        } catch (const std::exception&) {
-            if (skip_missing) continue;
-            throw;
-        }
-    }
+    if (load_textures) load_scene_textures(scn, dirname, skip_missing, false);
 
     return scn;
 }
@@ -4651,11 +4641,17 @@ void serialize_bin_object(texture* tex, FILE* fs, bool save) {
     serialize_bin_value(tex->name, fs, save);
     serialize_bin_value(tex->path, fs, save);
     serialize_bin_value(tex->img, fs, save);
-    serialize_bin_value(tex->vol, fs, save);
     serialize_bin_value(tex->clamp, fs, save);
     serialize_bin_value(tex->scale, fs, save);
     serialize_bin_value(tex->gamma, fs, save);
     serialize_bin_value(tex->has_opacity, fs, save);
+}
+
+void serialize_bin_object(voltexture* tex, FILE* fs, bool save) {
+    serialize_bin_value(tex->name, fs, save);
+    serialize_bin_value(tex->path, fs, save);
+    serialize_bin_value(tex->vol, fs, save);
+    serialize_bin_value(tex->clamp, fs, save);
 }
 
 void serialize_bin_object(
@@ -4695,7 +4691,7 @@ void serialize_bin_object(
     serialize_bin_value(mat->va, fs, save);
     serialize_bin_value(mat->vd, fs, save);
     serialize_bin_value(mat->vg, fs, save);
-    serialize_bin_handle(mat->vd_txt, scn->textures, fs, save);
+    serialize_bin_handle(mat->vd_txt, scn->voltextures, fs, save);
 };
 
 void serialize_bin_object(
@@ -4713,9 +4709,10 @@ void serialize_scene(scene* scn, FILE* fs, bool save) {
     serialize_bin_object(scn->shapes, scn, fs, save);
     serialize_bin_object(scn->subdivs, fs, save);
     serialize_bin_object(scn->textures, fs, save);
-    serialize_bin_object(scn->environments, scn, fs, save);
+    serialize_bin_object(scn->voltextures, fs, save);
     serialize_bin_object(scn->materials, scn, fs, save);
     serialize_bin_object(scn->instances, scn, fs, save);
+    serialize_bin_object(scn->environments, scn, fs, save);
 
     // @TODO: Saving lights can be shortened. This is basically
     // serialize_bin(vector<instace*>, fs, save)

@@ -2308,12 +2308,21 @@ struct texture {
     std::string name = "";     // name
     std::string path = "";     // file path
     image4f img = {};          // image
-    volume1f vol = {};         // volume
     bool clamp = false;        // clamp textures coordinates
+    bool linear = true;        // use bilinear interpolation
     float scale = 1;           // scale for occ, normal, bumps
     float gamma = 2.2f;        // gamma correction for ldr textures in IO
     bool has_opacity = false;  // check whether alpha != 0
     uint gl_txt = 0;           // unmanaged data for OpenGL viewer
+};
+
+// Volumetric texture containing either an HDR image.
+struct voltexture {
+    std::string name = "";     // name
+    std::string path = "";     // file path
+    volume1f vol = {};         // volume
+    bool clamp = false;        // clamp textures coordinates
+    bool linear = true;        // use trilinear interpolation
 };
 
 // Material for surfaces, lines and triangles.
@@ -2354,7 +2363,7 @@ struct material {
     float vg = 0;          // phase function shape
 
     // volume textures
-    texture* vd_txt = nullptr;  // density
+    voltexture* vd_txt = nullptr;  // density
 };
 
 // Shape data represented as an indexed meshes of elements.
@@ -2478,6 +2487,7 @@ struct scene {
     std::vector<material*> materials = {};        // materials
     std::vector<texture*> textures = {};          // textures
     std::vector<environment*> environments = {};  // environments
+    std::vector<voltexture*> voltextures = {};    // volume textures
 
     std::vector<node*> nodes = {};            // node hierarchy [optional]
     std::vector<animation*> animations = {};  // animations [optional]
@@ -2636,7 +2646,7 @@ vec3f eval_environment(const environment* env, const vec3f& i);
 
 // Evaluate a texture.
 vec4f eval_texture(const texture* txt, const vec2f& texcoord);
-float eval_texture(const texture* txt, const vec3f& texcoord, bool trilinear);
+float eval_voltexture(const voltexture* txt, const vec3f& texcoord);
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
 float eval_camera_fovy(const camera* cam);
