@@ -198,7 +198,7 @@ namespace ygl {
 volume1f read_volume1f(const std::string& filename);
 void save_volume1f(const ygl::volume1f& tex, const std::string& filename);
 
-}
+}  // namespace ygl
 
 // -----------------------------------------------------------------------------
 // SCENE IO FUNCTIONS

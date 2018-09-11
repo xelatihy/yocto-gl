@@ -860,8 +860,8 @@ void save_scene(const std::string& filename, const scene* scn,
     }
 }
 
-void load_scene_textures(
-    scene* scn, const std::string& dirname, bool skip_missing, bool assign_opacity) {
+void load_scene_textures(scene* scn, const std::string& dirname,
+    bool skip_missing, bool assign_opacity) {
     // load images
     for (auto txt : scn->textures) {
         if (txt->path == "" || !txt->img.pxl.empty()) continue;
@@ -890,7 +890,7 @@ void load_scene_textures(
     }
 
     // assign opacity texture if needed
-    if(assign_opacity) {
+    if (assign_opacity) {
         auto has_opacity = std::unordered_map<texture*, bool>();
         for (auto& txt : scn->textures) {
             has_opacity[txt] = false;
@@ -908,7 +908,8 @@ void load_scene_textures(
 }
 
 // helper to save textures
-void save_scene_textures(const scene* scn, const std::string& dirname, bool skip_missing) {
+void save_scene_textures(
+    const scene* scn, const std::string& dirname, bool skip_missing) {
     // save images
     for (auto txt : scn->textures) {
         if (txt->img.pxl.empty()) continue;
@@ -918,7 +919,8 @@ void save_scene_textures(const scene* scn, const std::string& dirname, bool skip
                 if (is_hdr_filename(filename) || txt->gamma == 1) {
                     save_image4f(filename, txt->img);
                 } else {
-                    save_image4f(filename, linear_to_gamma(txt->img, txt->gamma));
+                    save_image4f(
+                        filename, linear_to_gamma(txt->img, txt->gamma));
                 }
             }
         } catch (std::exception&) {
@@ -2580,7 +2582,8 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
         return txt;
     };
     // Parse texture options and name
-    auto add_voltexture = [scn, &vmap](const obj_texture_info& info, bool srgb) {
+    auto add_voltexture = [scn, &vmap](
+                              const obj_texture_info& info, bool srgb) {
         if (info.path == "") return (voltexture*)nullptr;
         if (vmap.find(info.path) != vmap.end()) { return vmap.at(info.path); }
 

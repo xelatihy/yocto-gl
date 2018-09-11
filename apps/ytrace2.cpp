@@ -29,34 +29,25 @@
 #include "../yocto/ygl.h"
 #include "../yocto/yglio.h"
 
-auto tracer_names = std::vector<std::string>{"pathtrace", "direct",
-    "environment", "eyelight", "pathtrace-nomis", "pathtrace-naive",
-    "direct-nomis", "debug_normal", "debug_albedo", "debug_texcoord",
-    "debug_frontfacing", "debug_diffuse", "debug_specular", "debug_roughness"};
-
-auto tracer_funcs = std::vector<ygl::trace_func>{ygl::trace_path,
-    ygl::trace_direct, ygl::trace_environment, ygl::trace_eyelight,
-    ygl::trace_path_nomis, ygl::trace_path_naive, ygl::trace_direct_nomis,
-    ygl::trace_debug_normal, ygl::trace_debug_albedo, ygl::trace_debug_texcoord,
-    ygl::trace_debug_frontfacing, ygl::trace_debug_diffuse,
-    ygl::trace_debug_specular, ygl::trace_debug_roughness};
-
 int main(int argc, char* argv[]) {
+    // trace options
+    auto prm = ygl::trace_params();
+
     // parse command line
     auto parser =
         ygl::make_cmdline_parser(argc, argv, "Offline path tracing", "ytrace");
-    auto camid = ygl::parse_int(parser, "--camera", 0, "Camera index.");
-    auto resolution = ygl::parse_int(
+    prm.camid = ygl::parse_int(parser, "--camera", 0, "Camera index.");
+    prm.yresolution = ygl::parse_int(
         parser, "--resolution,-r", 512, "Image vertical resolution.");
-    auto nsamples =
+    prm.nsamples =
         ygl::parse_int(parser, "--nsamples,-s", 256, "Number of samples.");
-    auto tracer_id =
-        ygl::parse_enum(parser, "--tracer,-t", 0, "Trace type.", tracer_names);
-    auto nbounces =
+    prm.tracer = (ygl::trace_type)ygl::parse_enum(
+        parser, "--tracer,-t", 0, "Trace type.", ygl::trace_type_names);
+    prm.nbounces =
         ygl::parse_int(parser, "--nbounces", 8, "Maximum number of bounces.");
-    auto noparallel = ygl::parse_flag(
+    prm.noparallel = ygl::parse_flag(
         parser, "--noparallel", false, "Disable parallel execution.");
-    auto nbatch =
+    prm.nbatch =
         ygl::parse_int(parser, "--nbatch,-b", 16, "Samples per batch.");
     auto save_batch = ygl::parse_flag(
         parser, "--save-batch", false, "Save images progressively");
@@ -93,31 +84,27 @@ int main(int argc, char* argv[]) {
 
     // initialize rendering objects
     printf("initializing tracer data\n");
-    auto tracer_func = tracer_funcs.at(tracer_id);
-    auto cam = scn->cameras.at(camid);
-    auto img = ygl::make_image4f(
-        ygl::image_width(cam, resolution), ygl::image_height(cam, resolution));
-    auto rng = ygl::make_trace_rngs(
-        ygl::image_width(cam, resolution), ygl::image_height(cam, resolution));
+    auto stt = ygl::make_trace_state(scn, prm);
 
     // render
     printf("rendering image\n");
-    for (auto sample = 0; sample < nsamples; sample += nbatch) {
-        printf("rendering sample %d/%d\n", sample, nsamples);
-        ygl::trace_samples(scn, cam, nbatch, tracer_func, img, rng, sample,
-            nbounces, 100, noparallel);
+    auto done = false;
+    while (!done) {
+        printf("rendering sample %d/%d\n", stt->sample, prm.nsamples);
+        done = ygl::trace_samples(stt, scn, prm);
         if (save_batch) {
-            auto filename = ygl::replace_extension(imfilename,
-                std::to_string(sample) + "." + ygl::get_extension(imfilename));
+            auto filename = ygl::replace_extension(
+                imfilename, std::to_string(stt->sample) + "." +
+                                ygl::get_extension(imfilename));
             printf("saving image %s\n", filename.c_str());
             ygl::save_tonemapped_image4f(
-                filename, img, exposure, gamma, filmic);
+                filename, stt->img, exposure, gamma, filmic);
         }
     }
 
     // save image
     printf("saving image %s\n", imfilename.c_str());
-    ygl::save_tonemapped_image4f(imfilename, img, exposure, gamma, filmic);
+    ygl::save_tonemapped_image4f(imfilename, stt->img, exposure, gamma, filmic);
 
     // cleanup
     delete scn;

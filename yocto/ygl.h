@@ -1861,11 +1861,6 @@ struct bvh_tree {
 
     // bvh nodes
     std::vector<bvh_node> nodes;  // Internal nodes.
-
-    // cleanup
-    ~bvh_tree() {
-        for (auto sbvh : shape_bvhs) delete sbvh;
-    }
 };
 
 // Build a BVH from the given set of primitives.
@@ -2051,8 +2046,8 @@ image4f gamma_to_linear(const image4f& srgb, float gamma = 2.2f);
 image4f linear_to_gamma(const image4f& lin, float gamma = 2.2f);
 
 // Apply exposure and filmic tone mapping
-image4f tonemap_image4f(
-    const image4f& hdr, float exposure, float gamma, bool filmic);
+image4f tonemap_image4f(const image4f& hdr, float exposure, float gamma, 
+    bool filmic);
 
 // Resize an image.
 image4f resize_image4f(const image4f& img, int width, int height);
@@ -2095,13 +2090,9 @@ inline vec4f linear_to_gamma(const vec4f& lin, float gamma = 2.2f) {
 inline float luminance(const vec3f& a) { return (a.x + a.y + a.z) / 3; }
 inline float luminance(const vec4f& a) { return (a.x + a.y + a.z) / 3; }
 
-// Fitted ACES tonemapping
-inline vec3f tonemap_filmic(const vec3f& hdr) {
-    // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
-    // hdr *= 0.6; // brings it back to ACES range
-    return (hdr * hdr * 2.51f + hdr * 0.03f) /
-           (hdr * hdr * 2.43f + hdr * 0.59f + vec3f{0.14f, 0.14f, 0.14f});
-}
+// Tonemap a color value according to an exposure-gamma tone mapper, with 
+// an optional filmic curve.
+vec4f tonemap_hdr(const vec4f& hdr, float exposure, float gamma, bool filmic);
 
 // Converts HSV to RGB.
 vec3f hsv_to_rgb(const vec3f& hsv);
@@ -2318,11 +2309,11 @@ struct texture {
 
 // Volumetric texture containing either an HDR image.
 struct voltexture {
-    std::string name = "";     // name
-    std::string path = "";     // file path
-    volume1f vol = {};         // volume
-    bool clamp = false;        // clamp textures coordinates
-    bool linear = true;        // use trilinear interpolation
+    std::string name = "";  // name
+    std::string path = "";  // file path
+    volume1f vol = {};      // volume
+    bool clamp = false;     // clamp textures coordinates
+    bool linear = true;     // use trilinear interpolation
 };
 
 // Material for surfaces, lines and triangles.
@@ -2392,6 +2383,9 @@ struct shape {
          gl_points = 0, gl_lines = 0,
          gl_triangles = 0;       // unmanaged data for OpenGL viewer
     void* embree_bvh = nullptr;  // unmanaged data for Embree raytracer
+
+    // cleanup
+    ~shape();
 };
 
 // Subdivision surface.
@@ -2724,82 +2718,75 @@ namespace ygl {
 // Default trace seed
 const auto trace_default_seed = 961748941;
 
-// Trace evaluation function.
-using trace_func = std::function<vec3f(const scene* scn, const ray3f& ray,
-    rng_state& rng, int nbounces, bool* hit)>;
+// Type of tracing algorithm to use
+enum struct trace_type {
+    path,               // path tracing
+    volpath,            // volumetric path tracing
+    direct,             // direct illumination
+    environment,        // environment illumination only
+    eyelight,           // eyelight rendering
+    path_nomis,         // path tracer without mis
+    path_naive,         // naive path tracing
+    direct_nomis,       // direct illumition without mis
+    debug_normal,       // debug - normal
+    debug_albedo,       // debug - albedo
+    debug_texcoord,     // debug - texcoord
+    debug_frontfacing,  // debug - faceforward
+    debug_diffuse,      // debug - diffuse
+    debug_specular,     // debug - specular
+    debug_roughness,    // debug - roughness
+};
+
+const auto trace_type_names = std::vector<std::string>{"path", "volpath",
+    "direct", "environment", "eyelight", "path_nomis", "path_naive",
+    "direct_nomis", "debug_normal", "debug_albedo", "debug_texcoord",
+    "debug_frontfacing", "debug_diffuse", "debug_specular", "debug_roughness"};
+
+// Trace options
+struct trace_params {
+    int camid = 0;                         // camera index
+    int yresolution = 256;                 // vertical resolution
+    trace_type tracer = trace_type::path;  // tracer type
+    int nsamples = 256;                    // number of samples
+    int nbounces = 8;                      // max number of bounces
+    float pixel_clamp = 100;               // pixel clamping
+    int nbatch = 16;                       // number of samples per batch
+    bool noparallel = false;               // serial or parallel execution
+    int preview_ratio = 8;                 // preview ratio for asycn rendering
+    float exposure = 0;                    // tone mapping exposure
+    float gamma = 2.2f;                    // tone mapping gamma
+    bool filmic = false;                   // tone mapping filmic
+    int seed = trace_default_seed;         // trace seed
+};
+
+// Trace data used during rendering. Initialize with `make_trace_state()`.
+struct trace_state {
+    image4f img = {};      // image being rendered
+    image4f display = {};  // image tone mapped for display
+
+    // internal data used during rendering
+    std::vector<rng_state> rngs;       // random number generators
+    int sample = 0;                    // current sample being rendered
+    std::vector<std::thread> threads;  // threads used during rendering
+    bool stop = false;                 // stop flag for threads
+};
+
+// Initialize state of the renderer.
+trace_state* make_trace_state(const scene* scn, const trace_params& prm);
 
 // Progressively compute an image by calling trace_samples multiple times.
-image4f trace_image4f(const scene* scn, const camera* cam, int yresolution,
-    int nsamples, trace_func tracer, int nbounces = 8, float pixel_clamp = 100,
-    bool noparallel = false, int seed = trace_default_seed);
-
-// Initialize trace rngs
-std::vector<rng_state> make_trace_rngs(
-    int width, int height, uint64_t seed = trace_default_seed);
+image4f trace_image4f(const scene* scn, const trace_params& prm);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
-void trace_samples(const scene* scn, const camera* cam, int nsamples,
-    trace_func tracer, image4f& img, std::vector<rng_state>& rngs, int sample,
-    int nbounces = 8, float pixel_clamp = 100, bool noparallel = false,
-    int seed = trace_default_seed);
+bool trace_samples(trace_state* stt, const scene* scn, const trace_params& prm);
 
-// Starts an anyncrhounous renderer.
-void trace_async_start(const scene* scn, const camera* cam, int nsamples,
-    trace_func tracer, image4f& img, image4f& display,
-    std::vector<rng_state>& rngs, std::vector<std::thread>& threads, bool& stop,
-    int& sample, float& exposure, float& gamma, bool& filmic,
-    int preview_ratio = 8, int nbounces = 8, float pixel_clamp = 100,
-    int seed = trace_default_seed);
+// Starts an anyncrhounous renderer. The function will keep a reference to prm.
+void trace_async_start(
+    trace_state* stt, const scene* scn, const trace_params& prm);
 // Stop the asynchronous renderer.
-void trace_async_stop(std::vector<std::thread>& threads, bool& stop);
-
-// Trace function - path tracer.
-vec3f trace_path(const scene* scn, const ray3f& ray, rng_state& rng,
-    int nbounces, bool* hit = nullptr);
-// Trace function - volume path tracer.
-vec3f trace_path_volume(const scene* scn, const ray3f& ray, rng_state& rng,
-    int nbounces, bool* hit = nullptr);
-// Trace function - path tracer without mis.
-vec3f trace_path_nomis(const scene* scn, const ray3f& ray, rng_state& rng,
-    int nbounces, bool* hit = nullptr);
-// Trace function - naive path tracer.
-vec3f trace_path_naive(const scene* scn, const ray3f& ray, rng_state& rng,
-    int nbounces, bool* hit = nullptr);
-// Trace function - direct illumination.
-vec3f trace_direct(const scene* scn, const ray3f& ray, rng_state& rng,
-    int nbounces, bool* hit = nullptr);
-// Trace function - direct illumination without mis.
-vec3f trace_direct_nomis(const scene* scn, const ray3f& ray, rng_state& rng,
-    int nbounces, bool* hit = nullptr);
-// Trace function - pure environment illumination with no shadows.
-vec3f trace_environment(const scene* scn, const ray3f& ray, rng_state& rng,
-    int nbounces, bool* hit = nullptr);
-// Trace function - eyelight rendering.
-vec3f trace_eyelight(const scene* scn, const ray3f& ray, rng_state& rng,
-    int nbounces, bool* hit = nullptr);
-// Trace function - normal debug visualization.
-vec3f trace_debug_normal(const scene* scn, const ray3f& ray, rng_state& rng,
-    int nbounces, bool* hit = nullptr);
-// Trace function - faceforward debug visualization.
-vec3f trace_debug_frontfacing(const scene* scn, const ray3f& ray,
-    rng_state& rng, int nbounces, bool* hit = nullptr);
-// Trace function - albedo debug visualization.
-vec3f trace_debug_albedo(const scene* scn, const ray3f& ray, rng_state& rng,
-    int nbounces, bool* hit = nullptr);
-// Trace function - diffuse debug visualization.
-vec3f trace_debug_diffuse(const scene* scn, const ray3f& ray, rng_state& rng,
-    int nbounces, bool* hit = nullptr);
-// Trace function - specular debug visualization.
-vec3f trace_debug_specular(const scene* scn, const ray3f& ray, rng_state& rng,
-    int nbounces, bool* hit = nullptr);
-// Trace function - roughness debug visualization.
-vec3f trace_debug_roughness(const scene* scn, const ray3f& ray, rng_state& rng,
-    int nbounces, bool* hit = nullptr);
-// Trace function - texcoord debug visualization.
-vec3f trace_debug_texcoord(const scene* scn, const ray3f& ray, rng_state& rng,
-    int nbounces, bool* hit = nullptr);
+void trace_async_stop(trace_state* stt);
 
 // Trace statistics for last run used for fine tuning implementation.
 // For now returns number of paths and number of rays.
