@@ -4716,31 +4716,6 @@ void serialize_scene(scene* scn, FILE* fs, bool save) {
     serialize_bin_object(scn->materials, scn, fs, save);
     serialize_bin_object(scn->instances, scn, fs, save);
     serialize_bin_object(scn->environments, scn, fs, save);
-
-    // @TODO: Saving lights can be shortened. This is basically
-    // serialize_bin(vector<instace*>, fs, save)
-    size_t count;
-    if (save) {
-        count = scn->lights.size();
-        serialize_bin_value(count, fs, true);
-    } else {
-        serialize_bin_value(count, fs, false);
-        scn->lights = std::vector<instance*>(count);
-    }
-    for (int i = 0; i < scn->lights.size(); i++)
-        serialize_bin_handle(scn->lights[i], scn->instances, fs, save);
-
-    auto has_bvh = (bool)scn->bvh;
-    serialize_bin_value(has_bvh, fs, save);
-    if (has_bvh) {
-        if (!save) scn->bvh = new bvh_tree();
-        serialize_bin_object(scn->bvh, fs, save);
-        if (!save) {
-            for (auto i = 0; i < scn->shapes.size(); i++) {
-                scn->shapes[i]->bvh = scn->bvh->shape_bvhs[i];
-            }
-        }
-    }
 }
 
 // Load/save a binary dump useful for very fast scene IO.

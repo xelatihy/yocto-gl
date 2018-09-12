@@ -35,6 +35,7 @@
 struct app_state {
     // scene
     ygl::scene* scn = nullptr;
+    ygl::bvh_tree* bvh = nullptr;
 
     // rendering params
     std::string filename = "scene.json";
@@ -58,6 +59,7 @@ struct app_state {
 
     ~app_state() {
         if (scn) delete scn;
+        if (bvh) delete bvh;
         if (stt) delete stt;
     }
 };
@@ -168,13 +170,18 @@ bool update(app_state* app) {
     // update BVH
     for (auto& sel : app->update_list) {
         if (sel.first == "shape") {
-            ygl::refit_bvh((ygl::shape*)sel.second);
-            ygl::refit_bvh(app->scn);
+            for(auto sid = 0; sid < app->scn->shapes.size(); sid++) {
+                if(app->scn->shapes[sid] == sel.second) {
+                    ygl::refit_bvh((ygl::shape*)sel.second, app->bvh->shape_bvhs[sid]);
+                    break;
+                }
+            }
+            ygl::refit_bvh(app->scn, app->bvh);
         }
-        if (sel.first == "instance") { ygl::refit_bvh(app->scn); }
+        if (sel.first == "instance") { ygl::refit_bvh(app->scn, app->bvh); }
         if (sel.first == "node") {
             ygl::update_transforms(app->scn, 0);
-            ygl::refit_bvh(app->scn);
+            ygl::refit_bvh(app->scn, app->bvh);
         }
     }
     app->update_list.clear();
@@ -182,7 +189,7 @@ bool update(app_state* app) {
     delete app->stt;
     app->trace_start = ygl::get_time();
     app->stt = ygl::make_trace_state(app->scn, app->prm);
-    ygl::trace_async_start(app->stt, app->scn, app->prm);
+    ygl::trace_async_start(app->stt, app->scn, app->bvh, app->prm);
 
     // updated
     return true;
@@ -238,7 +245,7 @@ void run_ui(app_state* app) {
                 auto cam = app->scn->cameras.at(app->prm.camid);
                 auto ray = eval_camera_ray(cam, ij.x, ij.y, app->stt->img.width,
                     app->stt->img.height, {0.5f, 0.5f}, ygl::zero2f);
-                auto isec = intersect_ray(app->scn, ray);
+                auto isec = intersect_ray(app->scn, app->bvh, ray);
                 if (isec.ist) app->selection = isec.ist;
             }
         }
@@ -326,7 +333,7 @@ int main(int argc, char* argv[]) {
     // build bvh
     if (!quiet) printf("building bvh\n");
     auto bvh_start = ygl::get_time();
-    ygl::build_bvh(app->scn, true, embree);
+    app->bvh = ygl::build_bvh(app->scn, true, embree);
     if (!quiet)
         printf("building bvh in %s\n",
             ygl::format_duration(ygl::get_time() - bvh_start).c_str());
@@ -349,7 +356,7 @@ int main(int argc, char* argv[]) {
     // initialize rendering objects
     if (!quiet) printf("starting async renderer\n");
     app->trace_start = ygl::get_time();
-    ygl::trace_async_start(app->stt, app->scn, app->prm);
+    ygl::trace_async_start(app->stt, app->scn, app->bvh, app->prm);
 
     // run interactive
     run_ui(app);

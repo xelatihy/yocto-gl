@@ -40,6 +40,7 @@ struct app_state {
     std::string filename = "scene.json";
     std::string imfilename = "out.obj";
     ygl::scene* scn = nullptr;
+    ygl::bvh_tree* bvh = nullptr;
     ygl::trace_params prm = {};
     ygl::trace_state* stt = nullptr;
     bool embree = false;  // Embree acceleration
@@ -51,6 +52,7 @@ struct app_state {
 
     ~app_state() {
         if (scn) delete scn;
+        if (bvh) delete bvh;
         if (stt) delete stt;
     }
 };
@@ -71,7 +73,7 @@ void restart(app_state* app) {
     ygl::trace_async_stop(app->stt);
     delete app->stt;
     app->stt = ygl::make_trace_state(app->scn, app->prm);
-    ygl::trace_async_start(app->stt, app->scn, app->prm);
+    ygl::trace_async_start(app->stt, app->scn, app->bvh, app->prm);
 }
 
 void char_callback(GLFWwindow* win, unsigned int key) {
@@ -207,7 +209,7 @@ int main(int argc, char* argv[]) {
 
     // initialize rendering objects
     printf("starting async renderer\n");
-    ygl::trace_async_start(app->stt, app->scn, app->prm);
+    ygl::trace_async_start(app->stt, app->scn, app->bvh, app->prm);
 
     // run interactive
     run_ui(app);

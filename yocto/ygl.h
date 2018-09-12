@@ -2353,14 +2353,10 @@ struct shape {
     std::vector<vec4f> tangsp;    // tangent space for triangles
 
     // computed properties
-    bvh_tree* bvh = nullptr;  // pointer to bvh used for volume rendering
     std::vector<float> elem_cdf = {};  // element cdf for sampling
     uint gl_pos = 0, gl_norm = 0, gl_texcoord = 0, gl_color = 0, gl_tangsp = 0,
          gl_points = 0, gl_lines = 0,
          gl_triangles = 0;  // unmanaged data for OpenGL viewer
-
-    // cleanup
-    ~shape();
 };
 
 // Subdivision surface.
@@ -2463,7 +2459,6 @@ struct scene {
 
     // compute properties
     std::vector<instance*> lights;
-    bvh_tree* bvh = nullptr;
 
     // cleanup
     ~scene();
@@ -2511,10 +2506,10 @@ void update_shape_cdf(shape* shp);
 void update_environment_cdf(environment* env);
 
 // Updates/refits bvh.
-void build_bvh(shape* shp, bool high_quality, bool embree = false);
-void build_bvh(scene* scn, bool high_quality, bool embree = false);
-void refit_bvh(shape* shp);
-void refit_bvh(scene* scn);
+bvh_tree* build_bvh(const shape* shp, bool high_quality, bool embree = false);
+bvh_tree* build_bvh(const scene* scn, bool high_quality, bool embree = false);
+void refit_bvh(const shape* shp, bvh_tree* bvh);
+void refit_bvh(const scene* scn, bvh_tree* bvh);
 
 // Updates tesselation.
 void tesselate_subdiv(const subdiv* sbd, shape* shp);
@@ -2569,8 +2564,8 @@ struct scene_intersection {
 };
 
 // Intersects a ray with the scene.
-scene_intersection intersect_ray(
-    const scene* scn, const ray3f& ray, bool find_any = false);
+scene_intersection intersect_ray(const scene* scn, const bvh_tree* bvh,
+    const ray3f& ray, bool find_any = false);
 
 // Shape values interpolated using barycentric coordinates.
 vec3f eval_pos(const shape* shp, int ei, const vec2f& uv);
@@ -2743,16 +2738,18 @@ struct trace_state {
 trace_state* make_trace_state(const scene* scn, const trace_params& prm);
 
 // Progressively compute an image by calling trace_samples multiple times.
-image4f trace_image4f(const scene* scn, const trace_params& prm);
+image4f trace_image4f(
+    const scene* scn, const bvh_tree* bvh, const trace_params& prm);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
-bool trace_samples(trace_state* stt, const scene* scn, const trace_params& prm);
+bool trace_samples(trace_state* stt, const scene* scn, const bvh_tree* bvh,
+    const trace_params& prm);
 
 // Starts an anyncrhounous renderer. The function will keep a reference to prm.
-void trace_async_start(
-    trace_state* stt, const scene* scn, const trace_params& prm);
+void trace_async_start(trace_state* stt, const scene* scn, const bvh_tree* bvh,
+    const trace_params& prm);
 // Stop the asynchronous renderer.
 void trace_async_stop(trace_state* stt);
 
