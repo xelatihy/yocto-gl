@@ -5,15 +5,14 @@ Please consider this to be just development notes and not any real planning.
 
 ## Next features
 
-- simpler bvh
-    - consider splitting shape and scene bvh
-    - bvh editing and refitting
-        - change selection model?
-    - OpenGL with dictionaries to avoid crap
-    - consider bvh outside of the scene to simplify things
-- simpler timer
+- test with shadow rays on a sphere or stack
+    - images should match at that point
+- direct with deltas
+- OpenGL with dictionaries to avoid crap
 - split apps
-- simpler example by removing make_XXX commands
+
+## Next features
+
 - LUTs
 - tone curve
     - from web?
@@ -21,11 +20,6 @@ Please consider this to be just development notes and not any real planning.
     - maybe try monotonic spline interpolation
     - otherwise a simple Bezier with constraints
     - use lookup tables for this
-
-## Giacomo
-
-- pbrt export
-- volumetric values
 
 ## Scene changes
 
