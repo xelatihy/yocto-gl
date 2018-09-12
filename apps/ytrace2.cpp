@@ -73,7 +73,7 @@ int main(int argc, char* argv[]) {
 
     // build bvh
     printf("building bvh\n");
-    ygl::build_bvh(scn, true, embree);
+    auto bvh = ygl::build_bvh(scn, true, embree);
 
     // init renderer
     printf("initializing lights\n");
@@ -88,7 +88,7 @@ int main(int argc, char* argv[]) {
     auto done = false;
     while (!done) {
         printf("rendering sample %d/%d\n", stt->sample, prm.nsamples);
-        done = ygl::trace_samples(stt, scn, prm);
+        done = ygl::trace_samples(stt, scn, bvh, prm);
         if (save_batch) {
             auto filename = ygl::replace_extension(
                 imfilename, std::to_string(stt->sample) + "." +

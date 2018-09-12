@@ -101,7 +101,7 @@ int main(int argc, char* argv[]) {
     // build bvh
     printf("building bvh\n");
     auto bvh_start = ygl::get_time();
-    ygl::build_bvh(scn, true, embree);
+    auto bvh = ygl::build_bvh(scn, true, embree);
     printf("building bvh in %s\n",
         ygl::format_duration(ygl::get_time() - bvh_start).c_str());
 
@@ -120,7 +120,7 @@ int main(int argc, char* argv[]) {
     while (!done) {
         printf("rendering sample %04d/%04d\n", stt->sample, prm.nsamples);
         auto block_start = ygl::get_time();
-        done = ygl::trace_samples(stt, scn, prm);
+        done = ygl::trace_samples(stt, scn, bvh, prm);
         printf("rendering block in %s\n",
             ygl::format_duration(ygl::get_time() - block_start).c_str());
         if (save_batch) {
