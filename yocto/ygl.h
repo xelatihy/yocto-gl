@@ -2353,7 +2353,6 @@ struct shape {
     std::vector<vec4f> tangsp;    // tangent space for triangles
 
     // computed properties
-    std::vector<float> elem_cdf = {};  // element cdf for sampling
     uint gl_pos = 0, gl_norm = 0, gl_texcoord = 0, gl_color = 0, gl_tangsp = 0,
          gl_points = 0, gl_lines = 0,
          gl_triangles = 0;  // unmanaged data for OpenGL viewer
@@ -2384,7 +2383,7 @@ struct subdiv {
 
 // Shape instance.
 struct instance {
-    std::string name;                  // name
+    std::string name = "";             // name
     frame3f frame = identity_frame3f;  // transform frame
     shape* shp = nullptr;              // shape
     material* mat = nullptr;           // material
@@ -2397,9 +2396,6 @@ struct environment {
     frame3f frame = identity_frame3f;  // transform frame
     vec3f ke = {0, 0, 0};              // emission color
     texture* ke_txt = nullptr;         // emission texture
-
-    // computed properties
-    std::vector<float> elem_cdf;  // element cdf for sampling
 };
 
 // Node in a transform hierarchy.
@@ -2424,9 +2420,9 @@ enum struct animation_type { linear, step, bezier };
 
 // Keyframe data.
 struct animation {
-    std::string name;                              // name
+    std::string name = "";                         // name
     std::string path = "";                         // path for glTF buffer
-    std::string group;                             // group
+    std::string group = "";                        // group
     animation_type type = animation_type::linear;  // type
     std::vector<float> times;                      // keyframe times
     std::vector<vec3f> translation;                // translation keyframes
@@ -2456,9 +2452,6 @@ struct scene {
 
     std::vector<node*> nodes = {};            // node hierarchy [optional]
     std::vector<animation*> animations = {};  // animations [optional]
-
-    // compute properties
-    std::vector<instance*> lights;
 
     // cleanup
     ~scene();
@@ -2496,14 +2489,11 @@ vec2f compute_animation_range(
 bbox3f compute_bbox(const shape* shp);
 bbox3f compute_bbox(const scene* scn);
 
-// Update lights.
-void init_lights(
-    scene* scn, bool do_shapes = true, bool do_environments = false);
 // Generate a distribution for sampling a shape uniformly based on area/length.
-void update_shape_cdf(shape* shp);
+std::vector<float> compute_shape_cdf(const shape* shp);
 // Generate a distribution for sampling an environment texture uniformly
 // based on angle and texture intensity.
-void update_environment_cdf(environment* env);
+std::vector<float> compute_environment_cdf(const environment* env);
 
 // Updates/refits bvh.
 bvh_tree* build_bvh(const shape* shp, bool high_quality, bool embree = false);
@@ -2551,7 +2541,7 @@ inline environment* make_sky_environment(
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
-// INTERSECTION, EVAL AND SAMPLING FUNCTIONS
+// EVALUATION OF SCENE PROPERTIES
 // -----------------------------------------------------------------------------
 namespace ygl {
 
@@ -2642,34 +2632,9 @@ struct bsdf {
 bsdf eval_bsdf(const instance* ist, int ei, const vec2f& uv);
 bool is_delta_bsdf(const bsdf& f);
 
-// Sample a shape based on a distribution.
-std::pair<int, vec2f> sample_shape(
-    const shape* shp, float re, const vec2f& ruv);
-
-// Sample an environment uniformly.
-vec2f sample_environment(const environment* env, const vec2f& ruv);
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// VOLUME, EVAL AND SAMPLING FUNCTIONS
-// -----------------------------------------------------------------------------
-namespace ygl {
 // Check volume properties.
-bool is_homogeneus(const material* vol);
+bool is_volume_homogeneus(const material* vol);
 bool has_volume_color(const material* vol);
-
-// Evaluate and sample transmission.
-vec3f eval_transmission(const material* vol, const vec3f& from,
-    const vec3f& dir, float dist, int channel, rng_state& rng);
-float sample_distance(const material* vol, const vec3f& from, const vec3f& dir,
-    int channel, rng_state& rng);
-float sample_distance(const instance* vol, const vec3f& from, const vec3f& dir,
-    int channel, rng_state& rng);
-
-// Evaluate and sample phase function.
-vec3f sample_phase_function(float vg, const vec2f& u);
-float eval_phase_function(float cos_theta, float vg);
 
 }  // namespace ygl
 
@@ -2722,6 +2687,14 @@ struct trace_params {
     int seed = trace_default_seed;         // trace seed
 };
 
+// Trace lights used during rendering.
+struct trace_lights {
+    std::vector<instance*> lights;           // instance lights
+    std::vector<environment*> environments;  // environments lights
+    std::unordered_map<shape*, std::vector<float>> shape_cdf;      // shape cdfs
+    std::unordered_map<environment*, std::vector<float>> env_cdf;  // env cdfs
+};
+
 // Trace data used during rendering. Initialize with `make_trace_state()`
 struct trace_state {
     image4f img = {};      // image being rendered
@@ -2734,24 +2707,29 @@ struct trace_state {
     bool stop = false;                 // stop flag for threads
 };
 
+// Initialize lights.
+trace_lights* make_trace_lights(const scene* scn, const trace_params& params);
+
 // Initialize state of the renderer.
-trace_state* make_trace_state(const scene* scn, const trace_params& prm);
+trace_state* make_trace_state(const scene* scn, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
-image4f trace_image4f(
-    const scene* scn, const bvh_tree* bvh, const trace_params& prm);
+image4f trace_image4f(const scene* scn, const bvh_tree* bvh,
+    const trace_lights* lights, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
-bool trace_samples(trace_state* stt, const scene* scn, const bvh_tree* bvh,
-    const trace_params& prm);
+bool trace_samples(trace_state* state, const scene* scn, const bvh_tree* bvh,
+    const trace_lights* lights, const trace_params& params);
 
-// Starts an anyncrhounous renderer. The function will keep a reference to prm.
-void trace_async_start(trace_state* stt, const scene* scn, const bvh_tree* bvh,
-    const trace_params& prm);
+// Starts an anyncrhounous renderer. The function will keep a reference to
+// params.
+void trace_async_start(trace_state* state, const scene* scn,
+    const bvh_tree* bvh, const trace_lights* lights,
+    const trace_params& params);
 // Stop the asynchronous renderer.
-void trace_async_stop(trace_state* stt);
+void trace_async_stop(trace_state* state);
 
 // Trace statistics for last run used for fine tuning implementation.
 // For now returns number of paths and number of rays.
@@ -2791,6 +2769,10 @@ float sample_ggx_pdf(float rs, float ndh);
 // Evaluates the GGX distribution and geometric term.
 float eval_ggx_dist(float rs, const vec3f& n, const vec3f& h);
 float eval_ggx_sm(float rs, const vec3f& n, const vec3f& o, const vec3f& i);
+
+// Evaluate and sample volume phase function.
+vec3f sample_phase_function(float vg, const vec2f& u);
+float eval_phase_function(float cos_theta, float vg);
 
 }  // namespace ygl
 

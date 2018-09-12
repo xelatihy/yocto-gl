@@ -31,27 +31,27 @@
 
 int main(int argc, char* argv[]) {
     // trace options
-    auto prm = ygl::trace_params();
+    auto params = ygl::trace_params();
 
     // parse command line
     auto parser =
         ygl::make_cmdline_parser(argc, argv, "Offline path tracing", "ytrace");
-    prm.camid = ygl::parse_int(parser, "--camera", 0, "Camera index.");
-    prm.yresolution = ygl::parse_int(
+    params.camid = ygl::parse_int(parser, "--camera", 0, "Camera index.");
+    params.yresolution = ygl::parse_int(
         parser, "--resolution,-r", 512, "Image vertical resolution.");
-    prm.nsamples =
+    params.nsamples =
         ygl::parse_int(parser, "--nsamples,-s", 256, "Number of samples.");
-    prm.tracer = (ygl::trace_type)ygl::parse_enum(
+    params.tracer = (ygl::trace_type)ygl::parse_enum(
         parser, "--tracer,-t", 0, "Trace type.", ygl::trace_type_names);
-    prm.nbounces =
+    params.nbounces =
         ygl::parse_int(parser, "--nbounces", 8, "Maximum number of bounces.");
-    prm.pixel_clamp =
+    params.pixel_clamp =
         ygl::parse_float(parser, "--pixel-clamp", 100, "Final pixel clamping.");
-    prm.noparallel = ygl::parse_flag(
+    params.noparallel = ygl::parse_flag(
         parser, "--noparallel", false, "Disable parallel execution.");
-    prm.seed = ygl::parse_int(
+    params.seed = ygl::parse_int(
         parser, "--seed", 13, "Seed for the random number generators.");
-    prm.nbatch =
+    params.nbatch =
         ygl::parse_int(parser, "--nbatch,-b", 16, "Samples per batch.");
     auto save_batch = ygl::parse_flag(
         parser, "--save-batch", false, "Save images progressively");
@@ -107,29 +107,29 @@ int main(int argc, char* argv[]) {
 
     // init renderer
     printf("initializing lights\n");
-    ygl::init_lights(scn);
+    auto lights = ygl::make_trace_lights(scn, params);
 
     // initialize rendering objects
     printf("initializing tracer data\n");
-    auto stt = ygl::make_trace_state(scn, prm);
+    auto state = ygl::make_trace_state(scn, params);
 
     // render
     printf("rendering image\n");
     auto render_start = ygl::get_time();
     auto done = false;
     while (!done) {
-        printf("rendering sample %04d/%04d\n", stt->sample, prm.nsamples);
+        printf("rendering sample %04d/%04d\n", state->sample, params.nsamples);
         auto block_start = ygl::get_time();
-        done = ygl::trace_samples(stt, scn, bvh, prm);
+        done = ygl::trace_samples(state, scn, bvh, lights, params);
         printf("rendering block in %s\n",
             ygl::format_duration(ygl::get_time() - block_start).c_str());
         if (save_batch) {
             auto filename = ygl::replace_extension(
-                imfilename, std::to_string(stt->sample) + "." +
+                imfilename, std::to_string(state->sample) + "." +
                                 ygl::get_extension(imfilename));
             printf("saving image %s\n", filename.c_str());
             ygl::save_tonemapped_image4f(
-                filename, stt->img, exposure, gamma, filmic);
+                filename, state->img, exposure, gamma, filmic);
         }
     }
     printf("rendering image in %s\n",
@@ -137,11 +137,14 @@ int main(int argc, char* argv[]) {
 
     // save image
     printf("saving image %s\n", imfilename.c_str());
-    ygl::save_tonemapped_image4f(imfilename, stt->img, exposure, gamma, filmic);
+    ygl::save_tonemapped_image4f(
+        imfilename, state->img, exposure, gamma, filmic);
 
     // cleanup
-    delete stt;
+    delete state;
     delete scn;
+    delete bvh;
+    delete lights;
 
     // done
     return 0;

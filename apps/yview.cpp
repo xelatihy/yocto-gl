@@ -99,11 +99,6 @@ void draw(GLFWwindow* win) {
             ygl::update_transforms(app->scn, app->time, app->anim_group);
             last_time = app->time;
         }
-        if (sel.first == "shape" || sel.first == "material" ||
-            sel.first == "node") {
-            ygl::init_lights(app->scn);
-            if (app->scn->lights.empty()) app->eyelight = true;
-        }
     }
     app->update_list.clear();
 
@@ -631,7 +626,8 @@ void draw_glscene(const ygl::scene* scn, const ygl::camera* cam,
         auto lights_pos = std::vector<ygl::vec3f>();
         auto lights_ke = std::vector<ygl::vec3f>();
         auto lights_type = std::vector<int>();
-        for (auto lgt : scn->lights) {
+        for (auto lgt : scn->instances) {
+            if (lgt->mat->ke == ygl::zero3f) continue;
             if (lights_pos.size() >= 16) break;
             auto shp = lgt->shp;
             auto bbox = compute_bbox(shp);
@@ -652,6 +648,7 @@ void draw_glscene(const ygl::scene* scn, const ygl::camera* cam,
             lights_ke.push_back(ke);
             lights_type.push_back(0);
         }
+        if (lights_pos.empty()) eyelight = false;
         glUniform3f(glGetUniformLocation(prog, "lamb"), 0, 0, 0);
         glUniform1i(glGetUniformLocation(prog, "lnum"), (int)lights_pos.size());
         for (auto i = 0; i < lights_pos.size(); i++) {
@@ -737,8 +734,6 @@ void run_ui(app_state* app) {
 
     // load textures and vbos
     ygl::update_transforms(app->scn, app->time);
-    ygl::init_lights(app->scn);
-    if (app->scn->lights.empty()) app->eyelight = true;
 
     // init gl data
     init_drawscene(win);
@@ -881,9 +876,6 @@ int main(int argc, char* argv[]) {
     // animation
     auto time_range = ygl::compute_animation_range(app->scn);
     app->time = time_range.x;
-
-    // lights
-    ygl::init_lights(app->scn);
 
     // run ui
     run_ui(app);
