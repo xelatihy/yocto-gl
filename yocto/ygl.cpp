@@ -4260,28 +4260,20 @@ float sample_distance(const material* vol, const vec3f& from, const vec3f& dir,
     }
 }
 
-float sample_distance(const instance* ist, const vec3f& from, const vec3f& dir,
+float sample_distance(const instance* ist, const bbox3f& bbox, const vec3f& from, const vec3f& dir,
     int channel, rng_state& rng) {
     if (ist->mat->vd == zero3f) return flt_max;
 
-    // TODO: NEED TO PASS IN THE SHAPE BOUNDS
-    throw std::runtime_error("not implemented exception");
-
-#if 0
     // Transform coordinates so that every position in the bounding box of the
     // instance is mapped to the cube [-1,1]^3 (the same space of volume texture
     // sampling).
-    auto bvh = ist->shp->bvh;
-    auto scale = bvh->nodes[0].bbox.max - bvh->nodes[0].bbox.min;
+    auto scale = bbox.max - bbox.min;
     auto frame = ist->frame;
     auto froml = transform_point_inverse(frame, from) / scale;
     auto dirl = transform_direction_inverse(frame, dir) / scale;
     auto ll = length(dirl);
     auto dist = sample_distance(ist->mat, froml, dirl / ll, channel, rng);
     return dist * ll;
-#else
-    return 0;
-#endif
 }
 
 vec3f sample_phase_function(float g, const vec2f& u) {
@@ -4953,7 +4945,12 @@ vec3f eval_transmission_div_pdf(const vec3f& vd, float dist, int ch) {
 }
 
 // @Hack: air volume properties should be set in the scene struct.
-static instance* air = nullptr;
+static instance* air = new instance{
+    "air", {},
+    nullptr,
+    new material{},
+    nullptr
+};
 
 // Iterative volume path tracing.
 vec3f trace_volpath(const scene* scn, const bvh_tree* bvh,
@@ -4967,6 +4964,7 @@ vec3f trace_volpath(const scene* scn, const bvh_tree* bvh,
     auto emission = true;
     auto ray = ray_;
 
+#if 0
     // @Hack: air volume properties should be set in the scene struct.
     if (air == nullptr) {
         air = new instance();
@@ -4976,6 +4974,7 @@ vec3f trace_volpath(const scene* scn, const bvh_tree* bvh,
         air->mat->va = vec3f{0.0, 0.0, 0.0};
         air->mat->vg = 0.0;
     }
+#endif
 
     // List of mediums that contains the path. The path starts in air.
     auto mediums = std::vector<instance*>{air};
@@ -5003,9 +5002,11 @@ vec3f trace_volpath(const scene* scn, const bvh_tree* bvh,
             single_channel = true;
         }
 
+        // TODO: FIXME REMOVING BBOX
         // Sample distance of next absorption/scattering event in the medium.
         // dist_pdf is unknown due to delta tracking.
-        auto dist = sample_distance(medium, ray.o, ray.d, ch, rng);
+        auto bbox = transform_bbox(medium->frame, bbox3f{{-1,-1,-1},{1,1,1}});
+        auto dist = sample_distance(medium, bbox, ray.o, ray.d, ch, rng);
 
         // Create ray and clamp it to make the intersection faster.
         ray = make_ray(ray.o, ray.d);
