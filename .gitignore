@@ -4,6 +4,7 @@ tests/obj
 tests/json
 tests/gltf
 tests/ybin
+tests/pbrt
 build
 run_tests
 cmake-build-debug

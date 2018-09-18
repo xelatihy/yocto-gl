@@ -4260,8 +4260,8 @@ float sample_distance(const material* vol, const vec3f& from, const vec3f& dir,
     }
 }
 
-float sample_distance(const instance* ist, const bbox3f& bbox, const vec3f& from, const vec3f& dir,
-    int channel, rng_state& rng) {
+float sample_distance(const instance* ist, const bbox3f& bbox,
+    const vec3f& from, const vec3f& dir, int channel, rng_state& rng) {
     if (ist->mat->vd == zero3f) return flt_max;
 
     // Transform coordinates so that every position in the bounding box of the
@@ -4945,12 +4945,8 @@ vec3f eval_transmission_div_pdf(const vec3f& vd, float dist, int ch) {
 }
 
 // @Hack: air volume properties should be set in the scene struct.
-static instance* air = new instance{
-    "air", {},
-    nullptr,
-    new material{},
-    nullptr
-};
+static instance* air =
+    new instance{"air", {}, nullptr, new material{}, nullptr};
 
 // Iterative volume path tracing.
 vec3f trace_volpath(const scene* scn, const bvh_tree* bvh,
@@ -5005,7 +5001,8 @@ vec3f trace_volpath(const scene* scn, const bvh_tree* bvh,
         // TODO: FIXME REMOVING BBOX
         // Sample distance of next absorption/scattering event in the medium.
         // dist_pdf is unknown due to delta tracking.
-        auto bbox = transform_bbox(medium->frame, bbox3f{{-1,-1,-1},{1,1,1}});
+        auto bbox =
+            transform_bbox(medium->frame, bbox3f{{-1, -1, -1}, {1, 1, 1}});
         auto dist = sample_distance(medium, bbox, ray.o, ray.d, ch, rng);
 
         // Create ray and clamp it to make the intersection faster.
