@@ -198,6 +198,9 @@ inline bool draw_glwidgets_scene_inspector(ygl::material* val, ygl::scene* scn) 
     edited += ImGui::Checkbox("fresnel", &val->fresnel);
     ImGui::SameLine();
     edited += ImGui::Checkbox("refract", &val->refract);
+    edited += ImGui::ColorEdit3("vd", &val->vd.x); // 0, 10
+    edited += ImGui::ColorEdit3("va", &val->va.x); // 0, 1
+    edited += ImGui::SliderFloat("vg", &val->vg, -1, 1);
     edited += ImGui::Combo("ke txt", &val->ke_txt, scn->textures, true);
     edited += ImGui::Combo("kd txt", &val->kd_txt, scn->textures, true);
     edited += ImGui::Combo("ks txt", &val->ks_txt, scn->textures, true);
