@@ -1,0 +1,244 @@
+{
+    "name": "simple-sl",
+    "cameras": [
+        {
+            "name": "cam",
+            "focal": 0.06,
+            "aperture": 0.0,
+            "!!proc": {
+                "from": [
+                    0,
+                    5,
+                    14
+                ],
+                "to": [
+                    0,
+                    1,
+                    0
+                ]
+            },
+            "width": 0.036,
+            "height": 0.015
+        }
+    ],
+    "textures": [
+        {
+            "name": "floor",
+            "path": "textures/floor.png",
+            "gamma": 2.2,
+            "!!proc": {
+                "type": "grid"
+            }
+        },
+        {
+            "name": "uvgrid",
+            "path": "textures/uvgrid.png",
+            "gamma": 2.2,
+            "!!proc": {
+                "type": "uvgrid"
+            }
+        }
+    ],
+    "materials": [
+        {
+            "name": "floor",
+            "kd": [
+                0.7,
+                0.7,
+                0.7
+            ],
+            "kd_txt": "floor"
+        },
+        {
+            "name": "obj1",
+            "kd": [
+                1,
+                1,
+                1
+            ],
+            "ks": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "rs": 0.1,
+            "kd_txt": "uvgrid"
+        },
+        {
+            "name": "obj2",
+            "kd": [
+                1,
+                1,
+                1
+            ],
+            "ks": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "rs": 0.1,
+            "kd_txt": "uvgrid"
+        },
+        {
+            "name": "obj3",
+            "kd": [
+                1,
+                1,
+                1
+            ],
+            "ks": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "rs": 0.1,
+            "kd_txt": "uvgrid"
+        },
+        {
+            "name": "light1",
+            "ke": [
+                20,
+                20,
+                20
+            ]
+        },
+        {
+            "name": "light2",
+            "ke": [
+                20,
+                20,
+                20
+            ]
+        }
+    ],
+    "shapes": [
+        {
+            "name": "floor",
+            "path": "meshes/floor.ply",
+            "!!proc": {
+                "type": "floor"
+            }
+        },
+        {
+            "name": "obj1",
+            "path": "meshes/obj1.ply",
+            "!!proc": {
+                "type": "sphere_flipcap"
+            }
+        },
+        {
+            "name": "obj2",
+            "path": "meshes/obj2.ply",
+            "!!proc": {
+                "type": "sphere_cube"
+            }
+        },
+        {
+            "name": "obj3",
+            "path": "meshes/obj3.ply",
+            "!!proc": {
+                "type": "cube_rounded"
+            }
+        },
+        {
+            "name": "light1",
+            "!!proc": {
+                "type": "quad_stack",
+                "size": [
+                    4,
+                    4,
+                    4
+                ]
+            }
+        },
+        {
+            "name": "light2",
+            "!!proc": {
+                "type": "quad_stack",
+                "size": [
+                    4,
+                    4,
+                    4
+                ]
+            }
+        }
+    ],
+    "instances": [
+        {
+            "name": "floor",
+            "shp": "floor",
+            "mat": "floor"
+        },
+        {
+            "name": "obj1",
+            "shp": "obj1",
+            "mat": "obj1",
+            "!!proc": {
+                "translation": [
+                    -2.5,
+                    1,
+                    0
+                ]
+            }
+        },
+        {
+            "name": "obj2",
+            "shp": "obj2",
+            "mat": "obj2",
+            "!!proc": {
+                "translation": [
+                    0,
+                    1,
+                    0
+                ]
+            }
+        },
+        {
+            "name": "obj3",
+            "shp": "obj3",
+            "mat": "obj3",
+            "!!proc": {
+                "translation": [
+                    2.5,
+                    1,
+                    0
+                ]
+            }
+        },
+        {
+            "name": "light1",
+            "shp": "light1",
+            "mat": "light1",
+            "!!proc": {
+                "from": [
+                    -4,
+                    8,
+                    8
+                ],
+                "to": [
+                    0,
+                    1,
+                    0
+                ]
+            }
+        },
+        {
+            "name": "light2",
+            "shp": "light2",
+            "mat": "light2",
+            "!!proc": {
+                "from": [
+                    4,
+                    8,
+                    8
+                ],
+                "to": [
+                    0,
+                    1,
+                    0
+                ]
+            }
+        }
+    ],
+    "environments": []
+}
