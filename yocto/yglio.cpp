@@ -853,6 +853,8 @@ void save_scene(const std::string& filename, const scene* scn,
         save_obj_scene(filename, scn, save_textures, skip_missing);
     } else if (ext == "gltf" || ext == "GLTF") {
         save_gltf_scene(filename, scn, save_textures, skip_missing);
+    } else if (ext == "pbrt" || ext == "PBRT") {
+        save_pbrt_scene(filename, scn, save_textures, skip_missing);
     } else if (ext == "ybin" || ext == "YBIN") {
         save_ybin_scene(filename, scn, save_textures, skip_missing);
     } else {
@@ -4424,6 +4426,136 @@ scene* load_pbrt_scene(
     if (load_textures) load_scene_textures(scn, dirname, skip_missing, false);
 
     return scn;
+}
+
+// Convert a scene to pbrt format
+void save_pbrt(const std::string& filename, const scene* scn) {
+    auto f = fopen(filename.c_str(), "wt");
+    if (!f) throw std::runtime_error("cannot save file " + filename);
+
+#if 0
+WorldBegin
+
+#uniform blue - ish illumination from all directions
+LightSource "infinite" "rgb L" [.4 .45 .5]
+
+#approximate the sun
+LightSource "distant"  "point from" [ -30 40  100 ]
+   "blackbody L" [3000 1.5]
+
+AttributeBegin
+  Material "glass"
+  Shape "sphere" "float radius" 1
+AttributeEnd
+
+AttributeBegin
+  Texture "checks" "spectrum" "checkerboard"
+          "float uscale" [8] "float vscale" [8]
+          "rgb tex1" [.1 .1 .1] "rgb tex2" [.8 .8 .8]
+  Material "matte" "texture Kd" "checks"
+  Translate 0 0 -1
+  Shape "trianglemesh"
+      "integer indices" [0 1 2 0 2 3]
+      "point P" [ -20 -20 0   20 -20 0   20 20 0   -20 20 0 ]
+      "float st" [ 0 0   1 0    1 1   0 1 ]
+AttributeEnd
+
+WorldEnd
+#endif
+
+    // convert camera and settings
+    auto cam = scn->cameras.front();
+    auto from = cam->frame.o;
+    auto to = cam->frame.o - cam->frame.z;
+    auto up = cam->frame.y;
+    fprintf(f, "LookAt %g %g %g %g %g %g %g %g %g\n", from.x, from.y, from.z,
+        to.x, to.y, to.z, up.x, up.y, up.z);
+    fprintf(f, "Camera \"perspective\" \"float fov\" %g\n",
+        eval_camera_fovy(cam) * 180 / pi);
+
+    // save renderer
+    fprintf(f, "Sampler \"random\" \"integer pixelsamples\" [64]\n");
+    // fprintf(f, "Sampler \"sobol\" \"interger pixelsamples\" [64]\n");
+    fprintf(f, "Integrator \"path\"\n");
+    fprintf(f,
+        "Film \"image\" \"string filename\" [\"%s\"] "
+        "\"integer xresolution\" [%d] \"integer yresolution\" [%d]\n",
+        replace_extension(filename, "exr").c_str(), image_width(cam, 512),
+        image_height(cam, 512));
+
+    // start world
+    fprintf(f, "WorldBegin\n");
+
+    // convert textures
+    for (auto txt : scn->textures) {
+        fprintf(f,
+            "Texture \"%s\" \"spectrum\" \"imagemap\" "
+            "\"string filename\" [\"%s\"]\n",
+            txt->name.c_str(), txt->path.c_str());
+    }
+
+    // convert materials
+    for (auto mat : scn->materials) {
+        fprintf(f, "MakeNamedMaterial \"%s\" ", mat->name.c_str());
+        fprintf(f, "\"string type\" \"%s\" ", "uber");
+        if (mat->kd_txt)
+            fprintf(f, "\"texture Kd\" [\"%s\"] ", mat->kd_txt->name.c_str());
+        else
+            fprintf(
+                f, "\"rgb Kd\" [%g %g %g] ", mat->kd.x, mat->kd.y, mat->kd.z);
+        if (mat->ks_txt)
+            fprintf(f, "\"texture Ks\" [\"%s\"] ", mat->ks_txt->name.c_str());
+        else
+            fprintf(
+                f, "\"rgb Ks\" [%g %g %g] ", mat->ks.x, mat->ks.y, mat->ks.z);
+        fprintf(f, "\"float roughness\" [%g] ", mat->rs);
+        fprintf(f, "\n");
+    }
+
+    // convert instances
+    for (auto ist : scn->instances) {
+        fprintf(f, "AttributeBegin\n");
+        fprintf(f, "TransformBegin\n");
+        auto m = frame_to_mat(ist->frame);
+        fprintf(f, "ConcatTransform [");
+        for (auto i = 0; i < 16; i++) fprintf(f, " %g", (&m.x.x)[i]);
+        fprintf(f, "]\n");
+        if (ist->mat->ke != zero3f)
+            fprintf(f, "AreaLightSource \"diffuse\" \"rgb L\" [ %g %g %g ]\n",
+                ist->mat->ke.x, ist->mat->ke.y, ist->mat->ke.z);
+        fprintf(f, "NamedMaterial \"%s\"\n", ist->mat->name.c_str());
+        fprintf(f, "Shape \"plymesh\" \"string filename\" [\"%s\"]\n",
+            ist->shp->path.c_str());
+        fprintf(f, "TransformEnd\n");
+        fprintf(f, "AttributeEnd\n");
+    }
+
+    // end world
+    fprintf(f, "WorldEnd\n");
+}
+
+// Save a pbrt scene
+void save_pbrt_scene(const std::string& filename, const scene* scn,
+    bool save_textures, bool skip_missing) {
+    // save json
+    save_pbrt(filename, scn);
+
+    // save meshes
+    auto dirname = get_dirname(filename);
+    for (auto& shp : scn->shapes) {
+        if (shp->path == "") continue;
+        auto filename = normalize_path(dirname + "/" + shp->path);
+        try {
+            save_mesh(filename, shp->points, shp->lines, shp->triangles,
+                shp->pos, shp->norm, shp->texcoord, shp->color, shp->radius);
+        } catch (std::exception&) {
+            if (skip_missing) continue;
+            throw;
+        }
+    }
+
+    // skip textures
+    if (save_textures) save_scene_textures(scn, dirname, skip_missing);
 }
 
 // Attempt to fix pbrt z-up.
