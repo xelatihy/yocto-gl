@@ -4608,7 +4608,6 @@ void serialize_bin_object(shape* shp, const scene* scn, FILE* fs, bool save) {
     serialize_bin_value(shp->color, fs, save);
     serialize_bin_value(shp->radius, fs, save);
     serialize_bin_value(shp->tangsp, fs, save);
-    serialize_bin_value(shp->elem_cdf, fs, save);
 }
 
 void serialize_bin_object(subdiv* sbd, FILE* fs, bool save) {
@@ -4663,7 +4662,6 @@ void serialize_bin_object(
     serialize_bin_value(env->frame, fs, save);
     serialize_bin_value(env->ke, fs, save);
     serialize_bin_handle(env->ke_txt, scn->textures, fs, save);
-    serialize_bin_value(env->elem_cdf, fs, save);
 }
 
 void serialize_bin_object(
