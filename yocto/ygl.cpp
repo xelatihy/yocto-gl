@@ -3650,17 +3650,16 @@ bvh_tree* build_bvh(const scene* scn, bool high_quality, bool embree) {
     auto bvh = new bvh_tree();
 
     // shapes
-    auto shape_ids = std::unordered_map<shape*, int>();
     for (auto shp : scn->shapes) {
         bvh->shape_bvhs.push_back(build_bvh(shp, high_quality, embree));
-        shape_ids[shp] = (int)bvh->shape_bvhs.size() - 1;
+        bvh->shape_ids[shp] = (int)bvh->shape_bvhs.size() - 1;
     }
 
     // instances
-    for (auto i = 0; i < scn->instances.size(); i++) {
-        auto ist = scn->instances[i];
+    for (auto ist : scn->instances) {
         bvh->instances.push_back(
-            {ist->frame, inverse(ist->frame, false), shape_ids[ist->shp]});
+            {ist->frame, inverse(ist->frame, false), bvh->shape_ids[ist->shp]});
+        bvh->instance_ids[ist] = (int)bvh->instances.size() - 1;
     }
 
     // build bvh
@@ -3803,6 +3802,18 @@ camera* make_bbox_camera(const std::string& name, const bbox3f& bbox,
 // IMPLEMENTATION FOR EVAL AND SAMPLING FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace ygl {
+
+// Instance intersection.
+scene_intersection intersect_ray(
+    const instance* ist, const bvh_tree* sbvh, const ray3f& ray, bool find_any) {
+    auto iid = 0;
+    auto isec = scene_intersection();
+    auto tray = transform_ray_inverse(ist->frame, ray);
+    if (!intersect_bvh(sbvh, tray, find_any, isec.dist, iid, isec.ei, isec.uv))
+        return {};
+    isec.ist = (instance*)ist;
+    return isec;
+}
 
 // Scene intersection.
 scene_intersection intersect_ray(
@@ -3976,6 +3987,12 @@ vec3f eval_environment(const environment* env, const vec3f& w) {
         ke *= xyz(eval_texture(env->ke_txt, eval_texcoord(env, w)));
     }
     return ke;
+}
+// Evaluate all environment color.
+vec3f eval_environment(const scene* scn, const vec3f& w) {
+    auto ke = zero3f;
+    for(auto env : scn->environments) ke += eval_environment(env, w);
+    return  ke;
 }
 
 // Evaluate a texture
@@ -4695,6 +4712,53 @@ float sample_light_pdf(const instance* ist, const std::vector<float>& elem_cdf,
     return dot(lp - p, lp - p) / (fabs(dot(ln, i)) * area);
 }
 
+// Sample lights wrt solid angle
+vec3f sample_lights(const trace_lights* lights, const bvh_tree* bvh, 
+    const vec3f& p, float lrn, float rel, const vec2f& ruv) {
+    auto nlights = (int)(lights->lights.size() + lights->environments.size());
+    auto idx = sample_index(nlights, lrn);
+    if (idx < lights->lights.size()) {
+        auto lgt = lights->lights[idx];
+        auto& elem_cdf = lights->shape_cdf.at(lgt->shp);
+        return sample_light(lgt, elem_cdf, p, rel, ruv);
+    } else {
+        auto lgt = lights->environments[idx - lights->lights.size()];
+        auto& elem_cdf = lights->env_cdf.at(lgt);
+        return sample_environment(lgt, elem_cdf, rel, ruv);
+    }
+}
+
+// Sample lights pdf
+float sample_lights_pdf(const scene* scn, const trace_lights* lights, 
+                        const bvh_tree* bvh, const vec3f& p, const vec3f& i) {
+    auto nlights = (int)(lights->lights.size() + lights->environments.size());
+    auto pdf = 0.0f;
+    // instances
+    for(auto lgt : lights->lights) {
+        // get cdf and bvh
+        auto sbvh = bvh->shape_bvhs[bvh->shape_ids.at(lgt->shp)];
+        auto& elem_cdf = lights->shape_cdf.at(lgt->shp);
+        // check all intersection
+        auto ray = make_ray(p, i);
+        auto isec = intersect_ray(lgt, sbvh, ray);
+        while(isec.ist) {
+            // accumulate pdf
+            auto lp = eval_pos(isec.ist, isec.ei, isec.uv);
+            auto ln = eval_norm(isec.ist, isec.ei, isec.uv);
+            pdf += sample_light_pdf(lgt, elem_cdf, p, i, lp, ln) * sample_index_pdf(nlights);
+            // continue
+            ray = make_ray(lp, i);
+            isec = intersect_ray(lgt, sbvh, ray);
+        }
+    }
+    // environments
+    for(auto lgt : lights->environments) {
+        auto& elem_cdf = lights->env_cdf.at(lgt);
+        pdf += sample_environment_pdf(lgt, elem_cdf, i) * sample_index_pdf(nlights);
+    }
+    return pdf;
+}
+
 // Test occlusion.
 vec3f eval_transmission(const scene* scn, const bvh_tree* bvh,
     const vec3f& from, const vec3f& to, int nbounces) {
@@ -4858,47 +4922,18 @@ vec3f trace_path(const scene* scn, const bvh_tree* bvh,
         // direct
         if (!is_delta_bsdf(f) &&
             (!lights->lights.empty() || !lights->environments.empty())) {
-            auto i = zero3f;
-            auto nlights =
-                (int)(lights->lights.size() + lights->environments.size());
-            if (rand1f(rng) < 0.5f) {
-                auto idx = sample_index(nlights, rand1f(rng));
-                if (idx < lights->lights.size()) {
-                    auto lgt = lights->lights[idx];
-                    auto& elem_cdf = lights->shape_cdf.at(lgt->shp);
-                    i = sample_light(
-                        lgt, elem_cdf, p, rand1f(rng), rand2f(rng));
-                } else {
-                    auto lgt = scn->environments[idx - lights->lights.size()];
-                    auto& elem_cdf = lights->env_cdf.at(lgt);
-                    i = sample_environment(
-                        lgt, elem_cdf, rand1f(rng), rand2f(rng));
-                }
-            } else {
-                i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
-            }
+            auto i = (rand1f(rng) < 0.5f) ? 
+                sample_lights(lights, bvh, p, rand1f(rng), rand1f(rng), rand2f(rng)) : 
+                sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
             auto isec =
                 intersect_ray_cutout(scn, bvh, make_ray(p, i), rng, nbounces);
-            auto pdf = 0.5f * sample_brdf_pdf(f, n, o, i);
-            auto le = zero3f;
-            if (isec.ist && isec.ist->mat->ke != zero3f) {
-                auto lp = eval_pos(isec.ist, isec.ei, isec.uv);
-                auto ln = eval_shading_norm(isec.ist, isec.ei, isec.uv, -i);
-                auto& elem_cdf = lights->shape_cdf.at(isec.ist->shp);
-                pdf += 0.5f *
-                       sample_light_pdf(isec.ist, elem_cdf, p, i, lp, ln) *
-                       sample_index_pdf(nlights);
-                le += eval_emission(isec.ist, isec.ei, isec.uv);
-            } else if (!isec.ist) {
-                for (auto env : lights->environments) {
-                    auto& elem_cdf = lights->env_cdf.at(env);
-                    pdf += 0.5f * sample_environment_pdf(env, elem_cdf, i) *
-                           sample_index_pdf(nlights);
-                    le += eval_environment(env, i);
-                }
-            }
+            auto le = (isec.ist) ? eval_emission(isec.ist, isec.ei, isec.uv) : eval_environment(scn, i);
             auto brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
-            if (pdf != 0) l += weight * le * brdfcos / pdf;
+            if(le * brdfcos != zero3f) {            
+                auto pdf = 0.5f * sample_brdf_pdf(f, n, o, i) + 
+                        0.5f * sample_lights_pdf(scn, lights, bvh, p, i);
+                if(pdf != 0) l += weight * le * brdfcos / pdf;
+            }
         }
 
         // continue path
@@ -5254,18 +5289,22 @@ vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
                 lights
                     ->lights[sample_index(lights->lights.size(), rand1f(rng))];
             auto& elem_cdf = lights->shape_cdf.at(lgt->shp);
-            auto i = sample_light(lgt, elem_cdf, p, rand1f(rng), rand2f(rng));
+            auto eid = 0;
+            auto euv = zero2f;
+            std::tie(eid, euv) =
+                sample_shape(lgt->shp, elem_cdf, rand1f(rng), rand2f(rng));
+            auto lp = eval_pos(lgt, eid, euv);
+            auto i = normalize(lp - p);
+            auto ln = eval_shading_norm(lgt, eid, euv, -i);
             auto isec =
                 intersect_ray_cutout(scn, bvh, make_ray(p, i), rng, nbounces);
-            if (isec.ist && isec.ist->mat->ke != zero3f) {
-                auto lp = eval_pos(isec.ist, isec.ei, isec.uv);
-                auto ln = eval_shading_norm(isec.ist, isec.ei, isec.uv, -i);
-                auto& elem_cdf = lights->shape_cdf.at(isec.ist->shp);
-                auto pdf = sample_light_pdf(isec.ist, elem_cdf, p, i, lp, ln) *
-                           sample_index_pdf(lights->lights.size());
-                auto le = eval_emission(isec.ist, isec.ei, isec.uv);
+            if (isec.ist == lgt && isec.ei == eid) {
+                auto larea = elem_cdf.back();
+                auto pdf = sample_index_pdf(lights->lights.size()) / larea;
+                auto le = eval_emission(lgt, eid, euv);
                 auto brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
-                if (pdf != 0) l += weight * le * brdfcos / pdf;
+                auto gterm = fabs(dot(ln, i)) / dot(lp - p, lp - p);
+                if (pdf != 0) l += weight * le * brdfcos * gterm / pdf;
             }
         }
 
@@ -5404,40 +5443,36 @@ vec3f trace_direct_nomis(const scene* scn, const bvh_tree* bvh,
     l += eval_emission(isec.ist, isec.ei, isec.uv);
 
     // direct
-    if (!is_delta_bsdf(f)) {
-        auto i = zero3f;
-        auto nlights =
-            (int)(lights->lights.size() + lights->environments.size());
-        auto idx = sample_index(nlights, rand1f(rng));
-        if (idx < lights->lights.size()) {
-            auto lgt = lights->lights[idx];
-            auto& elem_cdf = lights->shape_cdf.at(lgt->shp);
-            i = sample_light(lgt, elem_cdf, p, rand1f(rng), rand2f(rng));
-        } else {
-            auto env = scn->environments[idx - lights->lights.size()];
-            auto& elem_cdf = lights->env_cdf.at(env);
-            i = sample_environment(env, elem_cdf, rand1f(rng), rand2f(rng));
-        }
+    if (!is_delta_bsdf(f) && !lights->lights.empty()) {
+        auto lgt =
+            lights->lights[sample_index(lights->lights.size(), rand1f(rng))];
+        auto& elem_cdf = lights->shape_cdf.at(lgt->shp);
+        auto eid = 0;
+        auto euv = zero2f;
+        std::tie(eid, euv) =
+            sample_shape(lgt->shp, elem_cdf, rand1f(rng), rand2f(rng));
+        auto lp = eval_pos(lgt, eid, euv);
+        auto i = normalize(lp - p);
+        auto ln = eval_shading_norm(lgt, eid, euv, -i);
         auto isec =
             intersect_ray_cutout(scn, bvh, make_ray(p, i), rng, nbounces);
-        auto pdf = 0.0f;
-        auto le = zero3f;
-        if (isec.ist && isec.ist->mat->ke != zero3f) {
-            auto lp = eval_pos(isec.ist, isec.ei, isec.uv);
-            auto ln = eval_shading_norm(isec.ist, isec.ei, isec.uv, -i);
-            auto& elem_cdf = lights->shape_cdf.at(isec.ist->shp);
-            pdf += sample_light_pdf(isec.ist, elem_cdf, p, i, lp, ln) *
-                   sample_index_pdf(nlights);
-            le += eval_emission(isec.ist, isec.ei, isec.uv);
-        } else if (!isec.ist) {
-            for (auto env : scn->environments) {
-                auto& elem_cdf = lights->env_cdf.at(env);
-                pdf += sample_environment_pdf(env, elem_cdf, i) *
-                       sample_index_pdf(nlights);
-                le += eval_environment(env, i);
-            }
+        if (isec.ist == lgt && isec.ei == eid) {
+            auto larea = elem_cdf.back();
+            auto pdf = sample_index_pdf(lights->lights.size()) / larea;
+            auto le = eval_emission(lgt, eid, euv);
+            auto brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
+            auto gterm = fabs(dot(ln, i)) / dot(lp - p, lp - p);
+            if (pdf != 0) l += le * brdfcos * gterm / pdf;
         }
+    }
+
+    // environment
+    if (!is_delta_bsdf(f) && !lights->environments.empty()) {
+        auto i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
         auto brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
+        auto pdf = sample_brdf_pdf(f, n, o, i);
+        auto le = zero3f;
+        for (auto env : scn->environments) le += eval_environment(env, i);
         if (pdf != 0) l += le * brdfcos / pdf;
     }
 
@@ -5446,9 +5481,11 @@ vec3f trace_direct_nomis(const scene* scn, const bvh_tree* bvh,
         auto i = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
         auto brdfcos = eval_delta_brdf(f, n, o, i) * fabs(dot(n, i));
         auto pdf = sample_delta_brdf_pdf(f, n, o, i);
-        l += brdfcos *
-             trace_direct(scn, bvh, lights, ray, rng, nbounces - 1, nullptr) /
-             pdf;
+        if (pdf != 0)
+            l += brdfcos *
+                 trace_direct(
+                     scn, bvh, lights, ray, rng, nbounces - 1, nullptr) /
+                 pdf;
     }
 
     // done
@@ -5531,7 +5568,7 @@ vec3f trace_eyelight(const scene* scn, const bvh_tree* bvh,
 
     // point
     auto o = -ray.d;
-    auto p = eval_pos(isec.ist, isec.ei, isec.uv);
+    // auto p = eval_pos(isec.ist, isec.ei, isec.uv);
     auto n = eval_shading_norm(isec.ist, isec.ei, isec.uv, o);
     auto f = eval_bsdf(isec.ist, isec.ei, isec.uv);
 
