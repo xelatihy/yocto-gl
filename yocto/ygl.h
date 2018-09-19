@@ -1859,6 +1859,10 @@ struct bvh_tree {
     std::vector<bvh_instance> instances;  // instances
     std::vector<bvh_tree*> shape_bvhs;    // shape bvhs
 
+    // optional application specific data to key from a pointer to internal ids
+    std::unordered_map<void*, int> instance_ids;
+    std::unordered_map<void*, int> shape_ids;
+
     // bvh nodes
     std::vector<bvh_node> nodes;  // Internal nodes.
 
@@ -2553,6 +2557,9 @@ struct scene_intersection {
     float dist = flt_max;     // ray/point distance
 };
 
+// Intersects a ray with an instance. The bvh refers is the shape bvh.
+scene_intersection intersect_ray(const instance* ist, const bvh_tree* sbvh,
+    const ray3f& ray, bool find_any = false);
 // Intersects a ray with the scene.
 scene_intersection intersect_ray(const scene* scn, const bvh_tree* bvh,
     const ray3f& ray, bool find_any = false);
@@ -2590,6 +2597,8 @@ vec2f eval_texcoord(const environment* env, const vec3f& i);
 vec3f eval_direction(const environment* env, const vec2f& uv);
 // Evaluate the environment emission.
 vec3f eval_environment(const environment* env, const vec3f& i);
+// Evaluate all environment emission.
+vec3f eval_environment(const scene* scn, const vec3f& i);
 
 // Evaluate a texture.
 vec4f eval_texture(const texture* txt, const vec2f& texcoord);
