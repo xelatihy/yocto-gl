@@ -63,7 +63,7 @@ struct app_state {
     std::shared_ptr<gimage> img = nullptr;
 
     // viewing properties
-    uint gl_prog = 0, gl_pbo = 0, gl_tbo = 0, gl_ebo = 0;
+    ygl::uint gl_prog = 0, gl_pbo = 0, gl_tbo = 0, gl_ebo = 0;
     bool widgets_open = false;
     ygl::frame2f imframe = ygl::identity_frame2f;
     bool zoom_to_fit = false;
