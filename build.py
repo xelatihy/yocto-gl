@@ -7,7 +7,7 @@
 import click, os, platform, markdown, glob, textwrap
 
 def build(target, dirname, buildtype, cmakeopts=''):
-    os.system('mkdir -p build/{dirname}; cd build/{dirname}; cmake ../../ -GNinja -DCMAKE_BUILD_TYPE={buildtype} {cmakeopts}; cmake --build . {target}'.format(target=target, dirname=dirname, buildtype=buildtype, cmakeopts=cmakeopts))
+    os.system('mkdir -p build/{dirname}; cd build/{dirname}; cmake ../../ -GNinja -DYOCTO_EMBREE=ON -DCMAKE_BUILD_TYPE={buildtype} {cmakeopts}; cmake --build . {target}'.format(target=target, dirname=dirname, buildtype=buildtype, cmakeopts=cmakeopts))
 
 @click.group()
 def run():

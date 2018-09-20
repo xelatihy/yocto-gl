@@ -3804,8 +3804,8 @@ camera* make_bbox_camera(const std::string& name, const bbox3f& bbox,
 namespace ygl {
 
 // Instance intersection.
-scene_intersection intersect_ray(
-    const instance* ist, const bvh_tree* sbvh, const ray3f& ray, bool find_any) {
+scene_intersection intersect_ray(const instance* ist, const bvh_tree* sbvh,
+    const ray3f& ray, bool find_any) {
     auto iid = 0;
     auto isec = scene_intersection();
     auto tray = transform_ray_inverse(ist->frame, ray);
@@ -3991,8 +3991,8 @@ vec3f eval_environment(const environment* env, const vec3f& w) {
 // Evaluate all environment color.
 vec3f eval_environment(const scene* scn, const vec3f& w) {
     auto ke = zero3f;
-    for(auto env : scn->environments) ke += eval_environment(env, w);
-    return  ke;
+    for (auto env : scn->environments) ke += eval_environment(env, w);
+    return ke;
 }
 
 // Evaluate a texture
@@ -4713,7 +4713,7 @@ float sample_light_pdf(const instance* ist, const std::vector<float>& elem_cdf,
 }
 
 // Sample lights wrt solid angle
-vec3f sample_lights(const trace_lights* lights, const bvh_tree* bvh, 
+vec3f sample_lights(const trace_lights* lights, const bvh_tree* bvh,
     const vec3f& p, float lrn, float rel, const vec2f& ruv) {
     auto nlights = (int)(lights->lights.size() + lights->environments.size());
     auto idx = sample_index(nlights, lrn);
@@ -4729,32 +4729,34 @@ vec3f sample_lights(const trace_lights* lights, const bvh_tree* bvh,
 }
 
 // Sample lights pdf
-float sample_lights_pdf(const scene* scn, const trace_lights* lights, 
-                        const bvh_tree* bvh, const vec3f& p, const vec3f& i) {
+float sample_lights_pdf(const scene* scn, const trace_lights* lights,
+    const bvh_tree* bvh, const vec3f& p, const vec3f& i) {
     auto nlights = (int)(lights->lights.size() + lights->environments.size());
     auto pdf = 0.0f;
     // instances
-    for(auto lgt : lights->lights) {
+    for (auto lgt : lights->lights) {
         // get cdf and bvh
         auto sbvh = bvh->shape_bvhs[bvh->shape_ids.at(lgt->shp)];
         auto& elem_cdf = lights->shape_cdf.at(lgt->shp);
         // check all intersection
         auto ray = make_ray(p, i);
         auto isec = intersect_ray(lgt, sbvh, ray);
-        while(isec.ist) {
+        while (isec.ist) {
             // accumulate pdf
             auto lp = eval_pos(isec.ist, isec.ei, isec.uv);
             auto ln = eval_norm(isec.ist, isec.ei, isec.uv);
-            pdf += sample_light_pdf(lgt, elem_cdf, p, i, lp, ln) * sample_index_pdf(nlights);
+            pdf += sample_light_pdf(lgt, elem_cdf, p, i, lp, ln) *
+                   sample_index_pdf(nlights);
             // continue
             ray = make_ray(lp, i);
             isec = intersect_ray(lgt, sbvh, ray);
         }
     }
     // environments
-    for(auto lgt : lights->environments) {
+    for (auto lgt : lights->environments) {
         auto& elem_cdf = lights->env_cdf.at(lgt);
-        pdf += sample_environment_pdf(lgt, elem_cdf, i) * sample_index_pdf(nlights);
+        pdf += sample_environment_pdf(lgt, elem_cdf, i) *
+               sample_index_pdf(nlights);
     }
     return pdf;
 }
@@ -4922,17 +4924,19 @@ vec3f trace_path(const scene* scn, const bvh_tree* bvh,
         // direct
         if (!is_delta_bsdf(f) &&
             (!lights->lights.empty() || !lights->environments.empty())) {
-            auto i = (rand1f(rng) < 0.5f) ? 
-                sample_lights(lights, bvh, p, rand1f(rng), rand1f(rng), rand2f(rng)) : 
-                sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
+            auto i = (rand1f(rng) < 0.5f) ?
+                         sample_lights(lights, bvh, p, rand1f(rng), rand1f(rng),
+                             rand2f(rng)) :
+                         sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
             auto isec =
                 intersect_ray_cutout(scn, bvh, make_ray(p, i), rng, nbounces);
-            auto le = (isec.ist) ? eval_emission(isec.ist, isec.ei, isec.uv) : eval_environment(scn, i);
+            auto le = (isec.ist) ? eval_emission(isec.ist, isec.ei, isec.uv) :
+                                   eval_environment(scn, i);
             auto brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
-            if(le * brdfcos != zero3f) {            
-                auto pdf = 0.5f * sample_brdf_pdf(f, n, o, i) + 
-                        0.5f * sample_lights_pdf(scn, lights, bvh, p, i);
-                if(pdf != 0) l += weight * le * brdfcos / pdf;
+            if (le * brdfcos != zero3f) {
+                auto pdf = 0.5f * sample_brdf_pdf(f, n, o, i) +
+                           0.5f * sample_lights_pdf(scn, lights, bvh, p, i);
+                if (pdf != 0) l += weight * le * brdfcos / pdf;
             }
         }
 
@@ -5362,44 +5366,20 @@ vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
 
     // direct
     if (!is_delta_bsdf(f)) {
-        auto i = zero3f;
-        auto nlights =
-            (int)(lights->lights.size() + lights->environments.size());
-        if (rand1f(rng) < 0.5f) {
-            auto idx = sample_index(nlights, rand1f(rng));
-            if (idx < lights->lights.size()) {
-                auto lgt = lights->lights[idx];
-                auto& elem_cdf = lights->shape_cdf.at(lgt->shp);
-                i = sample_light(lgt, elem_cdf, p, rand1f(rng), rand2f(rng));
-            } else {
-                auto env = scn->environments[idx - lights->lights.size()];
-                auto& elem_cdf = lights->env_cdf.at(env);
-                i = sample_environment(env, elem_cdf, rand1f(rng), rand2f(rng));
-            }
-        } else {
-            i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
-        }
+        auto i = (rand1f(rng) < 0.5f) ?
+                     sample_lights(lights, bvh, p, rand1f(rng), rand1f(rng),
+                         rand2f(rng)) :
+                     sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
         auto isec =
             intersect_ray_cutout(scn, bvh, make_ray(p, i), rng, nbounces);
-        auto pdf = 0.5f * sample_brdf_pdf(f, n, o, i);
-        auto le = zero3f;
-        if (isec.ist && isec.ist->mat->ke != zero3f) {
-            auto lp = eval_pos(isec.ist, isec.ei, isec.uv);
-            auto ln = eval_shading_norm(isec.ist, isec.ei, isec.uv, -i);
-            auto& elem_cdf = lights->shape_cdf.at(isec.ist->shp);
-            pdf += 0.5f * sample_light_pdf(isec.ist, elem_cdf, p, i, lp, ln) *
-                   sample_index_pdf(nlights);
-            le += eval_emission(isec.ist, isec.ei, isec.uv);
-        } else if (!isec.ist) {
-            for (auto env : scn->environments) {
-                auto& elem_cdf = lights->env_cdf.at(env);
-                pdf += 0.5f * sample_environment_pdf(env, elem_cdf, i) *
-                       sample_index_pdf(nlights);
-                le += eval_environment(env, i);
-            }
-        }
+        auto le = (isec.ist) ? eval_emission(isec.ist, isec.ei, isec.uv) :
+                               eval_environment(scn, i);
         auto brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
-        if (pdf != 0) l += le * brdfcos / pdf;
+        if (le * brdfcos != zero3f) {
+            auto pdf = 0.5f * sample_brdf_pdf(f, n, o, i) +
+                       0.5f * sample_lights_pdf(scn, lights, bvh, p, i);
+            if (pdf != 0) l += le * brdfcos / pdf;
+        }
     }
 
     // deltas
