@@ -4587,9 +4587,9 @@ namespace ygl {
 template <typename T>
 void serialize_bin_value(T& val, FILE* fs, bool save) {
     if (save) {
-        fwrite(&val, sizeof(T), 1, fs);
+        if(fwrite(&val, sizeof(T), 1, fs) != 1)  throw std::runtime_error("error saving file");;
     } else {
-        fread(&val, sizeof(T), 1, fs);
+        if(!fread(&val, sizeof(T), 1, fs) != 1)  throw std::runtime_error("error reading file");;
     }
 }
 
@@ -4599,12 +4599,12 @@ void serialize_bin_value(std::vector<T>& vec, FILE* fs, bool save) {
     if (save) {
         auto count = (size_t)vec.size();
         serialize_bin_value(count, fs, true);
-        fwrite(vec.data(), sizeof(T), count, fs);
+        if(fwrite(vec.data(), sizeof(T), count, fs) != count)  throw std::runtime_error("error saving file");;
     } else {
         auto count = (size_t)0;
         serialize_bin_value(count, fs, false);
         vec = std::vector<T>(count);
-        fread(vec.data(), sizeof(T), count, fs);
+        if(fread(vec.data(), sizeof(T), count, fs) != count)  throw std::runtime_error("error reading file");;
     }
 }
 
@@ -4613,12 +4613,12 @@ void serialize_bin_value(std::string& vec, FILE* fs, bool save) {
     if (save) {
         auto count = (size_t)vec.size();
         serialize_bin_value(count, fs, true);
-        fwrite(vec.data(), sizeof(char), count, fs);
+        if(fwrite(vec.data(), sizeof(char), count, fs) != count)  throw std::runtime_error("error saving file");;
     } else {
         auto count = (size_t)0;
         serialize_bin_value(count, fs, false);
         vec = std::string(count, ' ');
-        fread((void*)vec.data(), sizeof(char), count, fs);
+        if(fread((void*)vec.data(), sizeof(char), count, fs) != count) throw std::runtime_error("error reading file");
     }
 }
 
