@@ -33,6 +33,10 @@
 #include "../yocto/ygl.h"
 #include "imgui/imgui.h"
 #include "imgui/imgui_ext.h"
+#ifdef _WIN32
+#undef near
+#undef far
+#endif
 
 #include <map>
 
