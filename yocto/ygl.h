@@ -2284,7 +2284,6 @@ struct texture {
     float scale = 1;           // scale for occ, normal, bumps
     float gamma = 2.2f;        // gamma correction for ldr textures in IO
     bool has_opacity = false;  // check whether alpha != 0
-    uint gl_txt = 0;           // unmanaged data for OpenGL viewer
 };
 
 // Volumetric texture containing either an HDR image.
@@ -2355,11 +2354,6 @@ struct shape {
     std::vector<vec4f> color;     // colors
     std::vector<float> radius;    // radia for lines/points
     std::vector<vec4f> tangsp;    // tangent space for triangles
-
-    // computed properties
-    uint gl_pos = 0, gl_norm = 0, gl_texcoord = 0, gl_color = 0, gl_tangsp = 0,
-         gl_points = 0, gl_lines = 0,
-         gl_triangles = 0;  // unmanaged data for OpenGL viewer
 };
 
 // Subdivision surface.
