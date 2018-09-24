@@ -4896,10 +4896,7 @@ vec3f trace_path(const scene* scn, const bvh_tree* bvh,
         // intersect ray
         auto isec = intersect_ray_cutout(scn, bvh, ray, rng, nbounces);
         if (!isec.ist) {
-            if (emission) {
-                for (auto env : scn->environments)
-                    l += weight * eval_environment(env, ray.d);
-            }
+            if (emission) l += weight * eval_environment(scn, ray.d);
             break;
         }
         if (hit) *hit = true;

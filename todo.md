@@ -5,10 +5,18 @@ Please consider this to be just development notes and not any real planning.
 
 ## Next features
 
-- test with shadow rays on a sphere or stack
-    - images should match at that point
+- path tracing with pbrt MIS
+- simple renderers for book
+    - simple intersection
+    - eyelight
+    - anti-aliasing
+    - naive path tracing
+    - mirrors / glass
+    - volume ?
+    - product path tracing
+- consider introducing trace_point
+- refactor renderers into smaller pieces for readability
 - direct with deltas
-- OpenGL with dictionaries to avoid crap
 - split apps
 
 ## Next features
