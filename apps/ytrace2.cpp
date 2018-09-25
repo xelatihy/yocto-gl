@@ -94,15 +94,14 @@ int main(int argc, char* argv[]) {
                 imfilename, std::to_string(state->sample) + "." +
                                 ygl::get_extension(imfilename));
             printf("saving image %s\n", filename.c_str());
-            ygl::save_tonemapped_image4f(
+            ygl::save_tonemapped_image(
                 filename, state->img, exposure, gamma, filmic);
         }
     }
 
     // save image
     printf("saving image %s\n", imfilename.c_str());
-    ygl::save_tonemapped_image4f(
-        imfilename, state->img, exposure, gamma, filmic);
+    ygl::save_tonemapped_image(imfilename, state->img, exposure, gamma, filmic);
 
     // cleanup
     delete scn;

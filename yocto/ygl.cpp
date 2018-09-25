@@ -2985,23 +2985,6 @@ vec3f rgb_to_hsv(const vec3f& rgb) {
         fabsf(K + (g - b) / (6.f * chroma + 1e-20f)), chroma / (r + 1e-20f), r};
 }
 
-// Fitted ACES tonemapping
-inline float tonemap_filmic(float hdr) {
-    // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
-    // hdr *= 0.6; // brings it back to ACES range
-    return (hdr * hdr * 2.51f + hdr * 0.03f) /
-           (hdr * hdr * 2.43f + hdr * 0.59f + 0.14f);
-}
-
-vec4f tonemap_hdr(const vec4f& hdr, float exposure, float gamma, bool filmic) {
-    auto ldr = vec3f{hdr.x, hdr.y, hdr.z} * pow(2.0f, exposure);
-    if (filmic)
-        ldr = {tonemap_filmic(ldr.x), tonemap_filmic(ldr.y),
-            tonemap_filmic(ldr.z)};
-    ldr = linear_to_gamma(ldr, gamma);
-    return {ldr.x, ldr.y, ldr.z, hdr.w};
-}
-
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
@@ -3050,12 +3033,13 @@ image4b float_to_byte(const image4f& fl) {
 }
 
 // Tonemap image
-image4f tonemap_image4f(
+image4f tonemap_exposuregamma(
     const image4f& hdr, float exposure, float gamma, bool filmic) {
     auto ldr = image4f{hdr.width, hdr.height};
     for (auto j = 0; j < hdr.height; j++)
         for (auto i = 0; i < hdr.width; i++)
-            ldr.at(i, j) = tonemap_hdr(hdr.at(i, j), exposure, gamma, filmic);
+            ldr.at(i, j) =
+                tonemap_exposuregamma(hdr.at(i, j), exposure, gamma, filmic);
     return ldr;
 }
 
@@ -5834,8 +5818,9 @@ bool trace_samples(trace_state* state, const scene* scn, const bvh_tree* bvh,
                     state->img.at(i, j) +=
                         trace_sample(state, scn, bvh, lights, i, j, params);
                 state->img.at(i, j) /= state->sample + nbatch;
-                state->display.at(i, j) = tonemap_hdr(state->img.at(i, j),
-                    params.exposure, params.gamma, params.filmic);
+                state->display.at(i, j) =
+                    tonemap_exposuregamma(state->img.at(i, j), params.exposure,
+                        params.gamma, params.filmic);
             }
         }
     } else {
@@ -5851,8 +5836,8 @@ bool trace_samples(trace_state* state, const scene* scn, const bvh_tree* bvh,
                                 state, scn, bvh, lights, i, j, params);
                         state->img.at(i, j) /= state->sample + nbatch;
                         state->display.at(i, j) =
-                            tonemap_hdr(state->img.at(i, j), params.exposure,
-                                params.gamma, params.filmic);
+                            tonemap_exposuregamma(state->img.at(i, j),
+                                params.exposure, params.gamma, params.filmic);
                     }
                 }
             }));
@@ -5879,8 +5864,9 @@ void trace_async_start(trace_state* state, const scene* scn,
                 auto pi = clamp(i / params.preview_ratio, 0, pwidth - 1),
                      pj = clamp(j / params.preview_ratio, 0, pheight - 1);
                 state->img.at(i, j) = pimg.at(pi, pj);
-                state->display.at(i, j) = tonemap_hdr(state->img.at(i, j),
-                    params.exposure, params.gamma, params.filmic);
+                state->display.at(i, j) =
+                    tonemap_exposuregamma(state->img.at(i, j), params.exposure,
+                        params.gamma, params.filmic);
             }
         }
         // state->display = ygl::tonemap_image4f(state->img, params.exposure,
@@ -5902,8 +5888,8 @@ void trace_async_start(trace_state* state, const scene* scn,
                             trace_sample(state, scn, bvh, lights, i, j, params);
                         state->img.at(i, j) /= s + 1;
                         state->display.at(i, j) =
-                            tonemap_hdr(state->img.at(i, j), params.exposure,
-                                params.gamma, params.filmic);
+                            tonemap_exposuregamma(state->img.at(i, j),
+                                params.exposure, params.gamma, params.filmic);
                     }
                 }
             }

@@ -745,16 +745,17 @@ image4f load_image4f_from_memory(const byte* data, int data_size) {
 
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
-void save_tonemapped_image4f(const std::string& filename, const image4f& hdr,
+void save_tonemapped_image(const std::string& filename, const image4f& hdr,
     float exposure, float gamma, bool filmic) {
     if (is_hdr_filename(filename))
         save_image4f(filename, hdr);
     else
-        save_image4f(filename, tonemap_image4f(hdr, exposure, gamma, filmic));
+        save_image4f(
+            filename, tonemap_exposuregamma(hdr, exposure, gamma, filmic));
 }
 
 // Resize image.
-image4f resize_image4f(const image4f& img, int width, int height) {
+image4f resize_image(const image4f& img, int width, int height) {
     if (!width && !height) throw std::runtime_error("bad image size");
     if (!width) width = (int)round(img.width * (height / (float)img.height));
     if (!height) height = (int)round(img.height * (width / (float)img.width));
@@ -4587,9 +4588,13 @@ namespace ygl {
 template <typename T>
 void serialize_bin_value(T& val, FILE* fs, bool save) {
     if (save) {
-        if(fwrite(&val, sizeof(T), 1, fs) != 1)  throw std::runtime_error("error saving file");;
+        if (fwrite(&val, sizeof(T), 1, fs) != 1)
+            throw std::runtime_error("error saving file");
+        ;
     } else {
-        if(!fread(&val, sizeof(T), 1, fs) != 1)  throw std::runtime_error("error reading file");;
+        if (fread(&val, sizeof(T), 1, fs) != 1)
+            throw std::runtime_error("error reading file");
+        ;
     }
 }
 
@@ -4599,12 +4604,16 @@ void serialize_bin_value(std::vector<T>& vec, FILE* fs, bool save) {
     if (save) {
         auto count = (size_t)vec.size();
         serialize_bin_value(count, fs, true);
-        if(fwrite(vec.data(), sizeof(T), count, fs) != count)  throw std::runtime_error("error saving file");;
+        if (fwrite(vec.data(), sizeof(T), count, fs) != count)
+            throw std::runtime_error("error saving file");
+        ;
     } else {
         auto count = (size_t)0;
         serialize_bin_value(count, fs, false);
         vec = std::vector<T>(count);
-        if(fread(vec.data(), sizeof(T), count, fs) != count)  throw std::runtime_error("error reading file");;
+        if (fread(vec.data(), sizeof(T), count, fs) != count)
+            throw std::runtime_error("error reading file");
+        ;
     }
 }
 
@@ -4613,12 +4622,15 @@ void serialize_bin_value(std::string& vec, FILE* fs, bool save) {
     if (save) {
         auto count = (size_t)vec.size();
         serialize_bin_value(count, fs, true);
-        if(fwrite(vec.data(), sizeof(char), count, fs) != count)  throw std::runtime_error("error saving file");;
+        if (fwrite(vec.data(), sizeof(char), count, fs) != count)
+            throw std::runtime_error("error saving file");
+        ;
     } else {
         auto count = (size_t)0;
         serialize_bin_value(count, fs, false);
         vec = std::string(count, ' ');
-        if(fread((void*)vec.data(), sizeof(char), count, fs) != count) throw std::runtime_error("error reading file");
+        if (fread((void*)vec.data(), sizeof(char), count, fs) != count)
+            throw std::runtime_error("error reading file");
     }
 }
 

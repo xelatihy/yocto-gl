@@ -278,6 +278,7 @@ using std::atan;
 using std::atan2;
 using std::cos;
 using std::exp;
+using std::exp2;
 using std::fabs;
 using std::floor;
 using std::isfinite;
@@ -2026,28 +2027,6 @@ using image4b = image<vec4b>;
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
-// IMAGE UTILITIES
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-// Conversion from/to floats.
-image4f byte_to_float(const image4b& bt);
-image4b float_to_byte(const image4f& fl);
-
-// Conversion between linear and gamma-encoded images.
-image4f gamma_to_linear(const image4f& srgb, float gamma = 2.2f);
-image4f linear_to_gamma(const image4f& lin, float gamma = 2.2f);
-
-// Apply exposure and filmic tone mapping
-image4f tonemap_image4f(
-    const image4f& hdr, float exposure, float gamma, bool filmic);
-
-// Resize an image.
-image4f resize_image4f(const image4f& img, int width, int height);
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
 // COLOR CONVERSION UTILITIES
 // -----------------------------------------------------------------------------
 namespace ygl {
@@ -2083,9 +2062,28 @@ inline vec4f linear_to_gamma(const vec4f& lin, float gamma = 2.2f) {
 inline float luminance(const vec3f& a) { return (a.x + a.y + a.z) / 3; }
 inline float luminance(const vec4f& a) { return (a.x + a.y + a.z) / 3; }
 
+// Fitted ACES tonemapping curve.
+inline float tonemap_filmic_curve(float hdr) {
+    // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
+    // hdr *= 0.6; // brings it back to ACES range
+    return (hdr * hdr * 2.51f + hdr * 0.03f) /
+           (hdr * hdr * 2.43f + hdr * 0.59f + 0.14f);
+}
+// Apply ACES fitted curve.
+inline vec4f tonemap_filmic_curve(const vec4f& hdr) {
+    return {tonemap_filmic_curve(hdr.x), tonemap_filmic_curve(hdr.y),
+        tonemap_filmic_curve(hdr.z), hdr.w};
+}
+
 // Tonemap a color value according to an exposure-gamma tone mapper, with
 // an optional filmic curve.
-vec4f tonemap_hdr(const vec4f& hdr, float exposure, float gamma, bool filmic);
+inline vec4f tonemap_exposuregamma(
+    const vec4f& hdr, float exposure, float gamma, bool filmic) {
+    auto scale = pow(2.0f, exposure);
+    auto ldr = vec4f{hdr.x * scale, hdr.y * scale, hdr.z * scale, hdr.w};
+    if (filmic) ldr = tonemap_filmic_curve(ldr);
+    return linear_to_gamma(ldr, gamma);
+}
 
 // Converts HSV to RGB.
 vec3f hsv_to_rgb(const vec3f& hsv);
@@ -2096,6 +2094,28 @@ vec3f xyY_to_xyz(const vec3f& xyY);
 // Convert between CIE XYZ and RGB
 vec3f xyz_to_rgb(const vec3f& xyz);
 vec3f rgb_to_xyz(const vec3f& rgb);
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMAGE UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Conversion from/to floats.
+image4f byte_to_float(const image4b& bt);
+image4b float_to_byte(const image4f& fl);
+
+// Conversion between linear and gamma-encoded images.
+image4f gamma_to_linear(const image4f& srgb, float gamma = 2.2f);
+image4f linear_to_gamma(const image4f& lin, float gamma = 2.2f);
+
+// Apply exposure and filmic tone mapping
+image4f tonemap_exposuregamma(
+    const image4f& hdr, float exposure, float gamma, bool filmic);
+
+// Resize an image.
+image4f resize_image(const image4f& img, int width, int height);
 
 }  // namespace ygl
 

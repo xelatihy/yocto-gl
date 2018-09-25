@@ -30,171 +30,259 @@
 #include "../yocto/yglio.h"
 #include "yglutils.h"
 
-struct app_state {
-    std::vector<std::string> filenames;
-    std::vector<std::string> names;
-    std::vector<ygl::image4f> imgs;
-    int img_id = 0;
+struct image_stats {
+    ygl::bbox4f pxl_bounds = {ygl::zero4f, ygl::zero4f};
+    ygl::bbox1f lum_bounds = {0, 0};
+};
 
-    // image display
+struct app_image {
+    // original data
+    std::string filename;
+    std::string name;
+    ygl::image4f img;
+    bool is_hdr = false;
+
+    // diplay image
     ygl::image4f display;
-    ygl::vec4f pxl_min = ygl::zero4f, pxl_max = ygl::zero4f;
-    float lum_min = 0, lum_max = 0;
+    ygl::uint gl_txt = 0;
+
+    // image stats
+    image_stats stats;
+
+    // tonemapping values
     float exposure = 0;
     float gamma = 2.2f;
     bool filmic = false;
 
+    // computation futures
+    std::atomic<bool> load_done, display_done, stats_done, texture_done;
+    std::thread load_thread, display_thread, stats_thread;
+    std::atomic<bool> display_stop;
+    std::string error_msg = "";
+
     // viewing properties
     ygl::vec2f imcenter = ygl::zero2f;
     float imscale = 1;
-    bool zoom_to_fit = false;
-    ygl::vec4f background = {0.8f, 0.8f, 0.8f, 0};
+    bool zoom_to_fit = true;
+
+    // cleanup and stop threads
+    ~app_image() {
+        display_stop = true;
+        if (load_thread.joinable()) load_thread.join();
+        if (display_thread.joinable()) display_thread.join();
+        if (stats_thread.joinable()) stats_thread.join();
+    }
+};
+
+struct app_state {
+    // images
+    std::vector<app_image*> imgs;
+    int img_id = 0;
+
+    ~app_state() {
+        for (auto img : imgs) delete img;
+    }
 };
 
 // compute min/max
-void update_minmax(app_state* app) {
-    app->pxl_min = {ygl::flt_max, ygl::flt_max, ygl::flt_max, ygl::flt_max};
-    app->pxl_max = {ygl::flt_min, ygl::flt_min, ygl::flt_min, ygl::flt_min};
-    app->lum_min = ygl::flt_max;
-    app->lum_max = ygl::flt_min;
-    for (auto p : app->imgs.at(app->img_id).pxl) {
-        app->pxl_min.x = ygl::min(app->pxl_min.x, p.x);
-        app->pxl_min.y = ygl::min(app->pxl_min.y, p.y);
-        app->pxl_min.z = ygl::min(app->pxl_min.z, p.z);
-        app->pxl_min.w = ygl::min(app->pxl_min.w, p.w);
-        app->pxl_max.x = ygl::max(app->pxl_max.x, p.x);
-        app->pxl_max.y = ygl::max(app->pxl_max.y, p.y);
-        app->pxl_max.z = ygl::max(app->pxl_max.z, p.z);
-        app->pxl_max.w = ygl::max(app->pxl_max.w, p.w);
-        app->lum_min = ygl::min(app->lum_min, ygl::luminance(xyz(p)));
-        app->lum_max = ygl::max(app->lum_max, ygl::luminance(xyz(p)));
+void update_image_stats(app_image* img) {
+    img->stats_done = false;
+    img->stats.pxl_bounds = ygl::invalid_bbox4f;
+    img->stats.lum_bounds = ygl::invalid_bbox1f;
+    for (auto p : img->img.pxl) {
+        img->stats.pxl_bounds += p;
+        img->stats.lum_bounds += ygl::luminance(xyz(p));
+    }
+    img->stats_done = true;
+}
+
+void update_display_image(app_image* img) {
+    auto start = ygl::get_time();
+    img->display_done = false;
+    img->texture_done = false;
+    if (img->is_hdr) {
+        if (img->img.width * img->img.height > 1024 * 1024) {
+            auto nthreads = std::thread::hardware_concurrency();
+            auto threads = std::vector<std::thread>();
+            for (auto tid = 0; tid < nthreads; tid++) {
+                threads.push_back(std::thread([img, tid, nthreads]() {
+                    for (auto j = tid; j < img->img.height; j += nthreads) {
+                        if (img->display_stop) break;
+                        for (auto i = 0; i < img->img.width; i++) {
+                            img->display.at(i, j) =
+                                ygl::tonemap_exposuregamma(img->img.at(i, j),
+                                    img->exposure, img->gamma, img->filmic);
+                        }
+                    }
+                }));
+            }
+            for (auto& t : threads) t.join();
+        } else {
+            for (auto j = 0; j < img->img.height; j++) {
+                if (img->display_stop) break;
+                for (auto i = 0; i < img->img.width; i++) {
+                    img->display.at(i, j) =
+                        ygl::tonemap_exposuregamma(img->img.at(i, j),
+                            img->exposure, img->gamma, img->filmic);
+                }
+            }
+        }
+    } else {
+        img->display = img->img;
+    }
+    img->display_done = true;
+    if (!img->display_stop) {
+        printf("display: %s\n",
+            ygl::format_duration(ygl::get_time() - start).c_str());
+        fflush(stdout);
     }
 }
 
-void update_display_image(app_state* app) {
-    app->display = app->imgs.at(app->img_id);
-    if (ygl::is_hdr_filename(app->filenames.at(app->img_id))) {
-        app->display = ygl::tonemap_image4f(
-            app->display, app->exposure, app->gamma, app->filmic);
+// load image
+void load_image(app_image* img) {
+    auto start = ygl::get_time();
+    try {
+        img->img = ygl::load_image4f(img->filename);
+    } catch (...) {
+        img->error_msg = "cannot load image";
+        return;
     }
+    img->load_done = true;
+    img->display = img->img;
+    printf("load: %s\n", ygl::format_duration(ygl::get_time() - start).c_str());
+    fflush(stdout);
+    img->display_thread = std::thread(update_display_image, img);
+    img->stats_thread = std::thread(update_image_stats, img);
 }
 
-void draw_widgets(GLFWwindow* win) {
-    static auto first_time = true;
-    auto app = (app_state*)glfwGetWindowUserPointer(win);
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
-    if (first_time) {
-        ImGui::SetNextWindowPos({0, 0});
-        ImGui::SetNextWindowSize({320, 0});
-        ImGui::SetNextWindowCollapsed(true);
-        first_time = false;
-    }
-    if (ImGui::Begin("yimview")) {
+void draw_widgets(ygl::glwindow* win) {
+    auto app = (app_state*)ygl::get_glfw_user_pointer(win);
+    ygl::begin_imgui_frame(win);
+    if (ygl::begin_imgui_window(win, "yimview")) {
         auto edited = 0;
-        edited += ImGui::Combo("image", &app->img_id, app->names);
-        auto& img = app->imgs.at(app->img_id);
-        ImGui::LabelText("filename", "%s", app->filenames[app->img_id].c_str());
-        ImGui::LabelText("size", "%d x %d ", img.width, img.height);
-        edited += ImGui::SliderFloat("exposure", &app->exposure, -5, 5);
-        edited += ImGui::SliderFloat("gamma", &app->gamma, 1, 3);
-        edited += ImGui::Checkbox("filmic", &app->filmic);
+        edited += ygl::draw_imgui_combobox(win, "image", app->img_id,
+            app->imgs.size(),
+            [app](int i) { return app->imgs.at(i)->name.c_str(); });
+        auto img = app->imgs.at(app->img_id);
+        ygl::draw_imgui_label(win, "filename", "%s", img->filename.c_str());
+        auto status = std::string();
+        if (img->error_msg != "")
+            status = "error: " + img->error_msg;
+        else if (!img->load_done)
+            status = "loading...";
+        else if (!img->display_done)
+            status = "displaying...";
+        else
+            status = "done";
+        ygl::draw_imgui_label(win, "status", status.c_str());
+        ygl::draw_imgui_label(
+            win, "size", "%d x %d ", img->img.width, img->img.height);
+        edited += ygl::draw_imgui_slider(win, "exposure", img->exposure, -5, 5);
+        edited += ygl::draw_imgui_slider(win, "gamma", img->gamma, 1, 3);
+        edited += ygl::draw_imgui_checkbox(win, "filmic", img->filmic);
         if (edited) {
-            update_display_image(app);
-            update_minmax(app);
+            if (img->display_thread.joinable()) {
+                img->display_stop = true;
+                img->display_thread.join();
+            }
+            img->display_stop = false;
+            img->display_thread = std::thread(update_display_image, img);
         }
-        ImGui::SliderFloat("zoom", &app->imscale, 0.1, 10);
-        ImGui::Checkbox("zoom to fit", &app->zoom_to_fit);
-        ImGui::ColorEdit4("background", &app->background.x);
-        ImGui::Separator();
-        auto mouse_x = 0.0, mouse_y = 0.0;
-        glfwGetCursorPos(win, &mouse_x, &mouse_y);
-        auto ij =
-            ygl::get_image_coords(ygl::vec2f{(float)mouse_x, (float)mouse_y},
-                app->imcenter, app->imscale, {img.width, img.height});
-        ImGui::DragInt2("mouse", &ij.x);
+        ygl::draw_imgui_slider(win, "zoom", img->imscale, 0.1, 10);
+        ygl::draw_imgui_checkbox(win, "zoom to fit", img->zoom_to_fit);
+        ygl::draw_imgui_separator(win);
+        auto mouse_pos = ygl::get_glfw_mouse_pos(win);
+        auto ij = ygl::get_image_coords(mouse_pos, img->imcenter, img->imscale,
+            {img->img.width, img->img.height});
+        ygl::draw_imgui_dragger(win, "mouse", ij);
         auto pixel = ygl::zero4f;
-        if (ij.x >= 0 && ij.x < img.width && ij.y >= 0 && ij.y < img.height) {
-            pixel = img.at(ij.x, ij.y);
+        if (ij.x >= 0 && ij.x < img->img.width && ij.y >= 0 &&
+            ij.y < img->img.height) {
+            pixel = img->img.at(ij.x, ij.y);
         }
-        ImGui::ColorEdit4("pixel", &pixel.x);
-        if (!img.pxl.empty()) {
-            ImGui::DragFloat4("pxl min", &app->pxl_min.x);
-            ImGui::DragFloat4("pxl max", &app->pxl_max.y);
-            ImGui::DragFloat("lum min", &app->lum_min);
-            ImGui::DragFloat("lum max", &app->lum_max);
-        }
+        ygl::draw_imgui_coloredit(win, "pixel", pixel);
+        auto stats = (img->stats_done) ? img->stats : image_stats{};
+        ygl::draw_imgui_dragger(win, "pxl min", stats.pxl_bounds.min);
+        ygl::draw_imgui_dragger(win, "pxl max", stats.pxl_bounds.max);
+        ygl::draw_imgui_dragger(win, "lum min", stats.lum_bounds.min);
+        ygl::draw_imgui_dragger(win, "lum max", stats.lum_bounds.max);
     }
-    ImGui::End();
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    ygl::end_imgui_frame(win);
 }
 
-void draw(GLFWwindow* win) {
-    auto app = (app_state*)glfwGetWindowUserPointer(win);
-    auto win_width = 0, win_height = 0;
-    auto fb_width = 0, fb_height = 0;
-    glfwGetFramebufferSize(win, &fb_width, &fb_height);
-    glViewport(0, 0, fb_width, fb_height);
-    glfwGetWindowSize(win, &win_width, &win_height);
-    glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    ygl::center_image4f(app->imcenter, app->imscale,
-        {app->display.width, app->display.height}, {win_width, win_height},
-        app->zoom_to_fit);
-    draw_glimage({app->display.width, app->display.height},
-        app->display.pxl.data(), true, {win_width, win_height}, app->imcenter,
-        app->imscale);
+void draw(ygl::glwindow* win) {
+    auto app = (app_state*)ygl::get_glfw_user_pointer(win);
+    auto img = app->imgs.at(app->img_id);
+    auto win_size = ygl::get_glfw_window_size(win);
+    auto fb_size = ygl::get_glfw_framebuffer_size(win);
+    ygl::set_glviewport(fb_size);
+    ygl::clear_glframebuffer(ygl::vec4f{0.8f, 0.8f, 0.8f, 1.0f});
+    if (img->gl_txt) {
+        ygl::center_image4f(img->imcenter, img->imscale,
+            {img->display.width, img->display.height}, win_size,
+            img->zoom_to_fit);
+        ygl::draw_glimage(img->gl_txt,
+            {img->display.width, img->display.height}, win_size, img->imcenter,
+            img->imscale);
+    }
     draw_widgets(win);
-    glfwSwapBuffers(win);
+    ygl::swap_glfw_buffers(win);
+}
+
+void update(app_state* app) {
+    for (auto img : app->imgs) {
+        if (!img->display_done || img->texture_done) continue;
+        if (!img->gl_txt) {
+            img->gl_txt = ygl::make_gltexture(img->display, false, false);
+        } else {
+            ygl::update_gltexture(img->gl_txt, img->display, false, false);
+        }
+        img->texture_done = true;
+    }
 }
 
 void run_ui(app_state* app) {
     // window
-    auto ww = ygl::min(app->imgs[0].width, 1440);
-    auto wh = ygl::min(app->imgs[0].height, 1440);
-    auto win = init_glfw_window(ww, wh, "yimview", app, draw);
+    auto img = app->imgs.at(app->img_id);
+    auto ww = ygl::clamp(img->img.width, 512, 1440);
+    auto wh = ygl::clamp(img->img.height, 512, 1440);
+    auto win = ygl::make_glfw_window(ww, wh, "yimview", app, draw);
 
     // init widgets
-    init_imgui_widgets(win);
+    ygl::init_imgui_widgets(win);
 
     // center image
-    ygl::center_image4f(app->imcenter, app->imscale,
-        {app->imgs[0].width, app->imgs[0].height}, {ww, wh}, false);
+    ygl::center_image4f(img->imcenter, img->imscale,
+        {img->img.width, img->img.height}, {ww, wh}, false);
 
     // window values
     auto mouse_pos = ygl::zero2f, last_pos = ygl::zero2f;
-    while (!glfwWindowShouldClose(win)) {
+    while (!ygl::should_glfw_window_close(win)) {
         last_pos = mouse_pos;
-        double mouse_posx, mouse_posy;
-        glfwGetCursorPos(win, &mouse_posx, &mouse_posy);
-        mouse_pos = {(float)mouse_posx, (float)mouse_posy};
-        auto mouse_left =
-            glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
-        auto mouse_right =
-            glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
-        auto widgets_active = ImGui::GetWidgetsActiveExt();
+        mouse_pos = ygl::get_glfw_mouse_pos(win);
+        auto mouse_left = ygl::get_glfw_mouse_left(win);
+        auto mouse_right = ygl::get_glfw_mouse_right(win);
+        auto widgets_active = ygl::get_imgui_widgets_active(win);
 
         // handle mouse
         if (mouse_left && !widgets_active)
-            app->imcenter += mouse_pos - last_pos;
+            img->imcenter += mouse_pos - last_pos;
         if (mouse_right && !widgets_active)
-            app->imscale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
+            img->imscale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
+
+        // update
+        update(app);
 
         // draw
         draw(win);
 
         // event hadling
-        if (mouse_left || mouse_right || widgets_active) {
-            glfwPollEvents();
-        } else {
-            glfwWaitEvents();
-        }
+        // could also wait if (mouse_left || mouse_right || widgets_active)
+        ygl::process_glfw_events(win);
     }
 
     // cleanup
-    glfwTerminate();
+    ygl::delete_glfw_window(win);
 }
 
 int main(int argc, char* argv[]) {
@@ -204,27 +292,32 @@ int main(int argc, char* argv[]) {
     // command line params
     auto parser =
         ygl::make_cmdline_parser(argc, argv, "view images", "yimview");
-    app->gamma = ygl::parse_float(parser, "--gamma,-g", 2.2f, "display gamma");
-    app->exposure =
+    auto gamma = ygl::parse_float(parser, "--gamma,-g", 2.2f, "display gamma");
+    auto exposure =
         ygl::parse_float(parser, "--exposure,-e", 0, "display exposure");
-    app->filmic = ygl::parse_flag(parser, "--filmic", false, "display filmic");
-    auto quiet = ygl::parse_flag(
-        parser, "--quiet,-q", false, "Print only errors messages");
-    app->filenames =
+    auto filmic = ygl::parse_flag(parser, "--filmic", false, "display filmic");
+    // auto quiet = ygl::parse_flag(
+    //     parser, "--quiet,-q", false, "Print only errors messages");
+    auto filenames =
         ygl::parse_strings(parser, "images", {}, "image filenames", true);
     ygl::check_cmdline(parser);
 
     // loading images
-    for (auto filename : app->filenames) {
-        if (!quiet) printf("loading %s\n", filename.c_str());
-        app->imgs.push_back(ygl::load_image4f(filename));
-        app->names.push_back(ygl::get_filename(filename));
+    for (auto filename : filenames) {
+        auto img = new app_image();
+        img->filename = filename;
+        img->name = ygl::get_filename(filename);
+        img->is_hdr = ygl::is_hdr_filename(filename);
+        img->exposure = exposure;
+        img->gamma = gamma;
+        img->filmic = filmic;
+        img->load_thread = std::thread(load_image, img);
+        app->imgs.push_back(img);
     }
     app->img_id = 0;
 
-    // init
-    update_display_image(app);
-    update_minmax(app);
+    // wait a bit to see if the first image gets loaded
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     // run ui
     run_ui(app);

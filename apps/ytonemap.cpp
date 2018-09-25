@@ -45,7 +45,7 @@ int main(int argc, char* argv[]) {
     ygl::check_cmdline(parser);
 
     auto hdr = ygl::load_image4f(filename);
-    auto ldr = ygl::tonemap_image4f(hdr, exposure, gamma, filmic);
+    auto ldr = ygl::tonemap_exposuregamma(hdr, exposure, gamma, filmic);
     ygl::save_image4f(output, ldr);
 
     // done
