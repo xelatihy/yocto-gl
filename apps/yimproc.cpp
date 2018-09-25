@@ -193,7 +193,7 @@ int main(int argc, char* argv[]) {
 
     // resize
     if (res_width || res_height) {
-        img = resize_image4f(img, res_width, res_height);
+        img = resize_image(img, res_width, res_height);
     }
 
     // bilateral
@@ -202,7 +202,7 @@ int main(int argc, char* argv[]) {
     }
 
     // hdr correction
-    if (tonemap) img = ygl::tonemap_image4f(img, exposure, gamma, filmic);
+    if (tonemap) img = ygl::tonemap_exposuregamma(img, exposure, gamma, filmic);
 
     // save
     try {
