@@ -62,8 +62,8 @@ struct app_state {
     float gamma = 2.2f;
     bool filmic = false;
     ygl::vec4f background = {0.8f, 0.8f, 0.8f, 0};
-    uint gl_txt = 0;
-    uint gl_prog = 0, gl_vbo = 0, gl_ebo;
+    ygl::uint gl_txt = 0;
+    ygl::uint gl_prog = 0, gl_vbo = 0, gl_ebo;
     bool widgets_open = false;
     ygl::scene_selection selection = {};
     std::vector<ygl::scene_selection> update_list;
