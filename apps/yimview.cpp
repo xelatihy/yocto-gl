@@ -31,6 +31,7 @@
 #include "CLI11.hpp"
 #include "yglui.h"
 using namespace std::literals;
+using uint = ygl::uint;
 
 #include <memory>
 #include <unordered_map>
