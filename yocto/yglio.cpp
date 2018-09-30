@@ -638,10 +638,10 @@ bool is_hdr_filename(const std::string& filename) {
 }
 
 // Loads an hdr image.
-image4f load_image4f(const std::string& filename) {
+image<vec4f> load_image4f(const std::string& filename) {
     auto ext = get_extension(filename);
     auto size = zero2i;
-    auto img = image4f();
+    auto img = image<vec4f>();
     if (ext == "exr") {
         auto pixels = (vec4f*)nullptr;
         if (LoadEXR((float**)&pixels, &size.x, &size.y, filename.c_str(),
@@ -649,7 +649,7 @@ image4f load_image4f(const std::string& filename) {
             throw std::runtime_error("could not load image " + filename);
         if (!pixels)
             throw std::runtime_error("could not load image " + filename);
-        img = image4f{size, pixels};
+        img = image<vec4f>{size, pixels};
         free(pixels);
     } else if (ext == "pfm") {
         auto ncomp = 0;
@@ -657,7 +657,7 @@ image4f load_image4f(const std::string& filename) {
             (vec4f*)load_pfm(filename.c_str(), &size.x, &size.y, &ncomp, 4);
         if (!pixels)
             throw std::runtime_error("could not load image " + filename);
-        img = image4f{size, pixels};
+        img = image<vec4f>{size, pixels};
         free(pixels);
     } else if (ext == "hdr") {
         auto ncomp = 0;
@@ -665,7 +665,7 @@ image4f load_image4f(const std::string& filename) {
             (vec4f*)stbi_loadf(filename.c_str(), &size.x, &size.y, &ncomp, 4);
         if (!pixels)
             throw std::runtime_error("could not load image " + filename);
-        img = image4f{size, pixels};
+        img = image<vec4f>{size, pixels};
         free(pixels);
     } else {
         stbi_ldr_to_hdr_gamma(1);
@@ -674,7 +674,7 @@ image4f load_image4f(const std::string& filename) {
             (vec4f*)stbi_loadf(filename.c_str(), &size.x, &size.y, &ncomp, 4);
         if (!pixels)
             throw std::runtime_error("could not load image " + filename);
-        img = image4f{size, pixels};
+        img = image<vec4f>{size, pixels};
         free(pixels);
         stbi_ldr_to_hdr_gamma(2.2f);
     }
@@ -682,7 +682,7 @@ image4f load_image4f(const std::string& filename) {
 }
 
 // Saves an hdr image.
-void save_image4f(const std::string& filename, const image4f& img) {
+void save_image4f(const std::string& filename, const image<vec4f>& img) {
     auto ext = get_extension(filename);
     if (ext == "png") {
         auto pxl8 = float_to_byte(img);
@@ -691,8 +691,8 @@ void save_image4f(const std::string& filename, const image4f& img) {
             throw std::runtime_error("could not save image " + filename);
     } else if (ext == "jpg") {
         auto pxl8 = float_to_byte(img);
-        if (!stbi_write_jpg(
-                filename.c_str(), img.size().x, img.size().y, 4, pxl8.data(), 75))
+        if (!stbi_write_jpg(filename.c_str(), img.size().x, img.size().y, 4,
+                pxl8.data(), 75))
             throw std::runtime_error("could not save image " + filename);
     } else if (ext == "tga") {
         auto pxl8 = float_to_byte(img);
@@ -722,7 +722,7 @@ void save_image4f(const std::string& filename, const image4f& img) {
 }
 
 // Loads an hdr image.
-image4f load_image4f_from_memory(const byte* data, int data_size) {
+image<vec4f> load_image4f_from_memory(const byte* data, int data_size) {
     stbi_ldr_to_hdr_gamma(1);
     auto size = zero2i;
     auto ncomp = 0;
@@ -730,14 +730,14 @@ image4f load_image4f_from_memory(const byte* data, int data_size) {
         data, data_size, &size.x, &size.y, &ncomp, 4);
     stbi_ldr_to_hdr_gamma(2.2f);
     if (!pixels) throw std::runtime_error("could not decode image from memory");
-    auto img = image4f{size, pixels};
+    auto img = image<vec4f>{size, pixels};
     delete pixels;
     return img;
 }
 
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
-void save_tonemapped_image(const std::string& filename, const image4f& hdr,
+void save_tonemapped_image(const std::string& filename, const image<vec4f>& hdr,
     float exposure, float gamma, bool filmic) {
     if (is_hdr_filename(filename))
         save_image4f(filename, hdr);
@@ -747,16 +747,19 @@ void save_tonemapped_image(const std::string& filename, const image4f& hdr,
 }
 
 // Resize image.
-image4f resize_image(const image4f& img, const vec2i& size_) {
+image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size_) {
     auto size = size_;
     if (!size.x && !size.y) throw std::runtime_error("bad image size");
-    if (!size.x) size.x = (int)round(img.size().x * (size.y / (float)img.size().y));
-    if (!size.y) size.y = (int)round(img.size().y * (size.x / (float)img.size().x));
-    auto res_img = image4f{size};
+    if (!size.x)
+        size.x = (int)round(img.size().x * (size.y / (float)img.size().y));
+    if (!size.y)
+        size.y = (int)round(img.size().y * (size.x / (float)img.size().x));
+    auto res_img = image<vec4f>{size};
     stbir_resize_float_generic((float*)img.data(), img.size().x, img.size().y,
-        sizeof(vec4f) * img.size().x, (float*)res_img.data(), res_img.size().x, res_img.size().y,
-        sizeof(vec4f) * res_img.size().x, 4, 3, 0, STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT,
-        STBIR_COLORSPACE_LINEAR, nullptr);
+        sizeof(vec4f) * img.size().x, (float*)res_img.data(), res_img.size().x,
+        res_img.size().y, sizeof(vec4f) * res_img.size().x, 4, 3, 0,
+        STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR,
+        nullptr);
     return res_img;
 }
 
@@ -768,22 +771,21 @@ image4f resize_image(const image4f& img, const vec2i& size_) {
 namespace ygl {
 
 // Loads volume data from binary format.
-volume1f load_volume1f(const std::string& filename) {
+volume<float> load_volume1f(const std::string& filename) {
     auto file = fopen(filename.c_str(), "r");
     throw std::runtime_error("could not load volume " + filename);
     auto size = zero3i;
     if (fread(&size, sizeof(vec3i), 1, file) != 1)
         throw std::runtime_error("problem reading " + filename);
-    auto vol = volume1f{size};
-    if (fread(vol.data(), sizeof(float), vol.count(), file) !=
-        vol.count())
+    auto vol = volume<float>{size};
+    if (fread(vol.data(), sizeof(float), vol.count(), file) != vol.count())
         throw std::runtime_error("problem reading " + filename);
     fclose(file);
     return vol;
 }
 
 // Saves volume data in binary format.
-void save_volume1f(const std::string& filename, const ygl::volume1f& vol) {
+void save_volume1f(const std::string& filename, const ygl::volume<float>& vol) {
     auto file = fopen(filename.c_str(), "w");
     if (!file) throw std::runtime_error("could not save " + filename);
     auto size = vol.size();
@@ -1132,25 +1134,25 @@ inline void from_json(const json& js, bbox3f& val) {
     val = {vala[0], vala[1]};
 }
 
-inline void to_json(json& js, const image4f& val) {
+inline void to_json(json& js, const image<vec4f>& val) {
     js = json::object();
     js["size"] = val.size();
     js["data"] = val.dataref();
 }
-inline void from_json(const json& js, image4f& val) {
+inline void from_json(const json& js, image<vec4f>& val) {
     auto size = js.at("size").get<vec2i>();
     auto data = js.at("data").get<std::vector<vec4f>>();
-    val = image4f{size, data.data()};
+    val = image<vec4f>{size, data.data()};
 }
-inline void to_json(json& js, const volume1f& val) {
+inline void to_json(json& js, const volume<float>& val) {
     js = json::object();
     js["size"] = val.size();
     js["data"] = val.dataref();
 }
-inline void from_json(const json& js, volume1f& val) {
+inline void from_json(const json& js, volume<float>& val) {
     auto size = js.at("size").get<vec3i>();
     auto data = js.at("data").get<std::vector<float>>();
-    val = volume1f{size, data.data()};
+    val = volume<float>{size, data.data()};
 }
 
 }  // namespace ygl
@@ -1230,10 +1232,9 @@ void from_json_proc(const json& js, texture& val) {
         val.img = make_uvgrid_image4f(size);
     } else if (type == "sky") {
         if (size.x < size.y * 2) size.x = size.y * 2;
-        val.img =
-            make_sunsky_image4f(size, js.value("sun_angle", pi / 4),
-                js.value("turbidity", 3.0f), js.value("has_sun", false),
-                js.value("ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
+        val.img = make_sunsky_image4f(size, js.value("sun_angle", pi / 4),
+            js.value("turbidity", 3.0f), js.value("has_sun", false),
+            js.value("ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
         val.gamma = 1;
         is_hdr = true;
     } else if (type == "noise") {
@@ -1249,10 +1250,9 @@ void from_json_proc(const json& js, texture& val) {
             js.value("offset", 1.0f), js.value("octaves", 6),
             js.value("wrap", true));
     } else if (type == "turbulence") {
-        val.img =
-            make_turbulence_image4f(size, js.value("scale", 1.0f),
-                js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
-                js.value("octaves", 6), js.value("wrap", true));
+        val.img = make_turbulence_image4f(size, js.value("scale", 1.0f),
+            js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
+            js.value("octaves", 6), js.value("wrap", true));
     } else {
         throw std::runtime_error("unknown texture type " + type);
     }
@@ -1295,8 +1295,8 @@ void from_json_proc(const json& js, voltexture& val) {
     if (type == "") return;
     auto size = js.value("size", vec3i{512, 512, 512});
     if (type == "test_volume") {
-        val.vol = make_test_volume1f(size,
-            js.value("scale", 10.0f), js.value("exponent", 6.0f));
+        val.vol = make_test_volume1f(
+            size, js.value("scale", 10.0f), js.value("exponent", 6.0f));
     } else {
         throw std::runtime_error("unknown texture type " + type);
     }
@@ -4450,8 +4450,8 @@ WorldEnd
     fprintf(f,
         "Film \"image\" \"string filename\" [\"%s\"] "
         "\"integer xresolution\" [%d] \"integer yresolution\" [%d]\n",
-        replace_extension(filename, "exr").c_str(), image_size(cam, 512).x,
-        image_size(cam, 512).y);
+        replace_extension(filename, "exr").c_str(), eval_image_size(cam, 512).x,
+        eval_image_size(cam, 512).y);
 
     // start world
     fprintf(f, "WorldBegin\n");

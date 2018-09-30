@@ -2019,12 +2019,11 @@ namespace ygl {
 template <typename T>
 struct image {
     // constructors
-    image() : _size{0,0}, _data() {}
+    image() : _size{0, 0}, _data() {}
     image(const vec2i& wh, const T& v = T{})
         : _size{wh}, _data(wh.x * wh.y, v) {}
-    image(const vec2i& wh, const T* v)
-        : _size{wh}, _data(v, v + wh.x * wh.y) {}
-    
+    image(const vec2i& wh, const T* v) : _size{wh}, _data(v, v + wh.x * wh.y) {}
+
     // size
     vec2i size() const { return _size; }
     size_t count() const { return _data.size(); }
@@ -2034,7 +2033,9 @@ struct image {
     T& operator[](int idx) { return _data[idx]; }
     const T& operator[](int idx) const { return _data[idx]; }
     T& operator[](const vec2i& ij) { return _data[ij.y * _size.x + ij.x]; }
-    const T& operator[](const vec2i& ij) const { return _data[ij.y * _size.x + ij.x]; }
+    const T& operator[](const vec2i& ij) const {
+        return _data[ij.y * _size.x + ij.x];
+    }
     // T& at(int idx) { return _data.at(idx); }
     // const T& at(int idx) const { return _data.at(idx); }
     // T& at(int i, int j) { return _data.at(j * _size.x + i); }
@@ -2050,14 +2051,10 @@ struct image {
     const std::vector<T>& dataref() const { return _data; }
 
     // private data
-    private:
+   private:
     vec2i _size = {0, 0};
     std::vector<T> _data = {};
 };
-
-// Type aliases
-using image4f = image<vec4f>;
-using image4b = image<vec4b>;
 
 }  // namespace ygl
 
@@ -2138,19 +2135,19 @@ vec3f rgb_to_xyz(const vec3f& rgb);
 namespace ygl {
 
 // Conversion from/to floats.
-image4f byte_to_float(const image4b& bt);
-image4b float_to_byte(const image4f& fl);
+image<vec4f> byte_to_float(const image<vec4b>& bt);
+image<vec4b> float_to_byte(const image<vec4f>& fl);
 
 // Conversion between linear and gamma-encoded images.
-image4f gamma_to_linear(const image4f& srgb, float gamma = 2.2f);
-image4f linear_to_gamma(const image4f& lin, float gamma = 2.2f);
+image<vec4f> gamma_to_linear(const image<vec4f>& srgb, float gamma = 2.2f);
+image<vec4f> linear_to_gamma(const image<vec4f>& lin, float gamma = 2.2f);
 
 // Apply exposure and filmic tone mapping
-image4f tonemap_exposuregamma(
-    const image4f& hdr, float exposure, float gamma, bool filmic);
+image<vec4f> tonemap_exposuregamma(
+    const image<vec4f>& hdr, float exposure, float gamma, bool filmic);
 
 // Resize an image.
-image4f resize_image(const image4f& img, const vec2i& size);
+image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size);
 
 }  // namespace ygl
 
@@ -2160,42 +2157,42 @@ image4f resize_image(const image4f& img, const vec2i& size);
 namespace ygl {
 
 // Make example images.
-image4f make_grid_image4f(const vec2i& size, int tile = 8,
+image<vec4f> make_grid_image4f(const vec2i& size, int tile = 8,
     const vec4f& c0 = {0.5f, 0.5f, 0.5f, 1},
     const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
-image4f make_checker_image4f(const vec2i& size, int tile = 8,
+image<vec4f> make_checker_image4f(const vec2i& size, int tile = 8,
     const vec4f& c0 = {0.5f, 0.5f, 0.5f, 1},
     const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
-image4f make_bumpdimple_image4f(const vec2i& size, int tile = 8);
-image4f make_ramp_image4f(const vec2i& size, const vec4f& c0,
-    const vec4f& c1, float srgb = false);
-image4f make_gammaramp_image4f(const vec2i& size);
-image4f make_uvramp_image4f(const vec2i& size);
-image4f make_uvgrid_image4f(
+image<vec4f> make_bumpdimple_image4f(const vec2i& size, int tile = 8);
+image<vec4f> make_ramp_image4f(
+    const vec2i& size, const vec4f& c0, const vec4f& c1, float srgb = false);
+image<vec4f> make_gammaramp_image4f(const vec2i& size);
+image<vec4f> make_uvramp_image4f(const vec2i& size);
+image<vec4f> make_uvgrid_image4f(
     const vec2i& size, int tile = 8, bool colored = true);
 
 // Comvert a bump map to a normal map.
-image4f bump_to_normal_map(const image4f& img, float scale = 1);
+image<vec4f> bump_to_normal_map(const image<vec4f>& img, float scale = 1);
 
 // Make a sunsky HDR model with sun at theta elevation in [0,pi/2], turbidity
 // in [1.7,10] with or without sun.
-image4f make_sunsky_image4f(const vec2i& size, float thetaSun,
+image<vec4f> make_sunsky_image4f(const vec2i& size, float thetaSun,
     float turbidity = 3, bool has_sun = false,
     const vec3f& ground_albedo = {0.7f, 0.7f, 0.7f});
 // Make an image of multiple lights.
-image4f make_lights_image4f(const vec2i& size, const vec3f& le = {1, 1, 1},
+image<vec4f> make_lights_image4f(const vec2i& size, const vec3f& le = {1, 1, 1},
     int nlights = 4, float langle = pi / 4, float lwidth = pi / 16,
     float lheight = pi / 16);
 
 // Make a noise image. Wrap works only if both resx and resy are powers of two.
-image4f make_noise_image4f(
+image<vec4f> make_noise_image4f(
     const vec2i& size, float scale = 1, bool wrap = true);
-image4f make_fbm_image4f(const vec2i& size, float scale = 1,
+image<vec4f> make_fbm_image4f(const vec2i& size, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
-image4f make_ridge_image4f(const vec2i& size, float scale = 1,
+image<vec4f> make_ridge_image4f(const vec2i& size, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, float offset = 1.0f,
     int octaves = 6, bool wrap = true);
-image4f make_turbulence_image4f(const vec2i& size, float scale = 1,
+image<vec4f> make_turbulence_image4f(const vec2i& size, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
 
 }  // namespace ygl
@@ -2272,26 +2269,31 @@ namespace ygl {
 template <typename T>
 struct volume {
     // constructors
-    volume() : _size{0,0}, _data() {}
+    volume() : _size{0, 0}, _data() {}
     volume(const vec3i& size, const T& v = T{})
         : _size{size}, _data(size.x * size.y, v) {}
     volume(const vec3i& size, const T* v)
         : _size{size}, _data(v, v + size.x * size.y * size.z) {}
-    
+
     // size
     vec3i size() const { return _size; }
-    size_t count() const { return  _data.size(); }
+    size_t count() const { return _data.size(); }
     bool empty() const { return _data.empty(); }
 
     // pixel access
     T& operator[](int idx) { return _data[idx]; }
     const T& operator[](int idx) const { return _data[idx]; }
-    T& operator[](const vec3i& ijk) { return _data[ijk.z * _size.x * _size.y + ijk.y * _size.x + ijk.x]; }
-    const T& operator[](const vec3i& ijk) const { return _data[ijk.z * _size.x * _size.y + ijk.y * _size.x + ijk.x]; }
+    T& operator[](const vec3i& ijk) {
+        return _data[ijk.z * _size.x * _size.y + ijk.y * _size.x + ijk.x];
+    }
+    const T& operator[](const vec3i& ijk) const {
+        return _data[ijk.z * _size.x * _size.y + ijk.y * _size.x + ijk.x];
+    }
     // T& at(int idx) { return _data.at(idx); }
     // const T& at(int idx) const { return _data.at(idx); }
-    // T& at(int i, int j) { return _data.at(ij.z * _size.x * _size.y + j * _size.x + i); }
-    // const T& at(int i, int j) const { return _data.at(ij.z * _size.x * _size.y + j * _size.x + i); }
+    // T& at(int i, int j) { return _data.at(ij.z * _size.x * _size.y + j *
+    // _size.x + i); } const T& at(int i, int j) const { return _data.at(ij.z *
+    // _size.x * _size.y + j * _size.x + i); }
 
     // data acess
     T* data() { return _data.data(); }
@@ -2303,14 +2305,10 @@ struct volume {
     const std::vector<T>& dataref() const { return _data; }
 
     // private data
-    private:
+   private:
     vec3i _size = {0, 0};
     std::vector<T> _data = {};
 };
-
-// Type aliases
-using volume4f = volume<vec4f>;
-using volume1f = volume<float>;
 
 }  // namespace ygl
 
@@ -2320,7 +2318,8 @@ using volume1f = volume<float>;
 namespace ygl {
 
 // make a simple example volume
-volume1f make_test_volume1f(const vec3i& size, float scale = 10, float exponent = 6);
+volume<float> make_test_volume1f(
+    const vec3i& size, float scale = 10, float exponent = 6);
 
 }  // namespace ygl
 
@@ -2349,7 +2348,7 @@ struct camera {
 struct texture {
     std::string name = "";     // name
     std::string path = "";     // file path
-    image4f img = {};          // image
+    image<vec4f> img = {};     // image
     bool clamp = false;        // clamp textures coordinates
     bool linear = true;        // use bilinear interpolation
     float scale = 1;           // scale for occ, normal, bumps
@@ -2359,11 +2358,11 @@ struct texture {
 
 // Volumetric texture containing either an HDR image.
 struct voltexture {
-    std::string name = "";  // name
-    std::string path = "";  // file path
-    volume1f vol = {};      // volume
-    bool clamp = false;     // clamp textures coordinates
-    bool linear = true;     // use trilinear interpolation
+    std::string name = "";   // name
+    std::string path = "";   // file path
+    volume<float> vol = {};  // volume
+    bool clamp = false;      // clamp textures coordinates
+    bool linear = true;      // use trilinear interpolation
 };
 
 // Material for surfaces, lines and triangles.
@@ -2674,15 +2673,20 @@ float eval_camera_fovy(const camera* cam);
 float eval_camera_aspect(const camera* cam);
 void set_camera_fovy(
     camera* cam, float fovy, float aspect, float width = 0.036f);
-vec2i image_size(const camera* cam, int yresolution);
+vec2i eval_image_size(const camera* cam, int yresolution);
 
 // Generates a ray from a camera image coordinate `uv` and lens coordinates
 // `luv`.
 ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv);
-// Generates a ray from a camera for pixel coordinates `ij`, the resolution
-// `res`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and
+// Generates a ray from a camera for pixel coordinates `ij`, the image size
+// `imsize`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and
 // the image resolution `res`.
-ray3f eval_camera_ray(const camera* cam, int i, int j, int w, int h,
+ray3f eval_camera_ray(const camera* cam, const vec2i& ij, const vec2i& imsize,
+    const vec2f& puv, const vec2f& luv);
+// Generates a ray from a camera for pixel index `idx`, the image size
+// `imsize`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and
+// the image resolution `res`.
+ray3f eval_camera_ray(const camera* cam, int idx, const vec2i& imsize,
     const vec2f& puv, const vec2f& luv);
 
 // Evaluates material parameters: emission, diffuse, specular, transmission,
@@ -2770,10 +2774,12 @@ struct trace_lights {
 
 // Trace data used during rendering. Initialize with `make_trace_state()`
 struct trace_state {
-    image4f img = {};      // image being rendered
-    image4f display = {};  // image tone mapped for display
+    image<vec4f> img = {};      // image being rendered
+    image<vec4f> display = {};  // image tone mapped for display
 
     // internal data used during rendering
+    image<vec4f> acc = {};             // accumulation buffer
+    image<int> samples = {};           // samples per pixel
     image<rng_state> rng = {};         // random number generators
     int sample = 0;                    // current sample being rendered
     std::vector<std::thread> threads;  // threads used during rendering
@@ -2787,7 +2793,7 @@ trace_lights* make_trace_lights(const scene* scn, const trace_params& params);
 trace_state* make_trace_state(const scene* scn, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
-image4f trace_image4f(const scene* scn, const bvh_tree* bvh,
+image<vec4f> trace_image4f(const scene* scn, const bvh_tree* bvh,
     const trace_lights* lights, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.

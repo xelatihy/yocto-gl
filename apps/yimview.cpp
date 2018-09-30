@@ -39,11 +39,11 @@ struct app_image {
     // original data
     std::string filename;
     std::string name;
-    ygl::image4f img;
+    ygl::image<ygl::vec4f> img;
     bool is_hdr = false;
 
     // diplay image
-    ygl::image4f display;
+    ygl::image<ygl::vec4f> display;
     ygl::uint gl_txt = 0;
 
     // image stats
@@ -222,8 +222,8 @@ void draw(ygl::glwindow* win) {
             {img->display.size().x, img->display.size().y}, win_size,
             img->zoom_to_fit);
         ygl::draw_glimage(img->gl_txt,
-            {img->display.size().x, img->display.size().y}, win_size, img->imcenter,
-            img->imscale);
+            {img->display.size().x, img->display.size().y}, win_size,
+            img->imcenter, img->imscale);
     }
     draw_glwidgets(win);
     ygl::swap_glbuffers(win);
@@ -251,8 +251,8 @@ void run_ui(app_state* app) {
     ygl::init_glwidgets(win);
 
     // center image
-    ygl::center_image4f(img->imcenter, img->imscale,
-        img->img.size(), win_size, false);
+    ygl::center_image4f(
+        img->imcenter, img->imscale, img->img.size(), win_size, false);
 
     // window values
     auto mouse_pos = ygl::zero2f, last_pos = ygl::zero2f;
