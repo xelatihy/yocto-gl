@@ -130,14 +130,14 @@ uint make_gltexture(const image4f& img, bool linear, bool mipmap) {
     assert(glGetError() == GL_NO_ERROR);
     glGenTextures(1, &tid);
     glBindTexture(GL_TEXTURE_2D, tid);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.width, img.height, 0, GL_RGBA,
-        GL_FLOAT, img.pxl.data());
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.size().x, img.size().y, 0, GL_RGBA,
+        GL_FLOAT, img.data());
     if (mipmap) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
             (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
             (linear) ? GL_LINEAR : GL_NEAREST);
-        if (!img.pxl.empty()) glGenerateMipmap(GL_TEXTURE_2D);
+        if (!img.empty()) glGenerateMipmap(GL_TEXTURE_2D);
     } else {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
             (linear) ? GL_LINEAR : GL_NEAREST);
@@ -151,14 +151,14 @@ uint make_gltexture(const image4f& img, bool linear, bool mipmap) {
 void update_gltexture(int tid, const image4f& img, bool linear, bool mipmap) {
     assert(glGetError() == GL_NO_ERROR);
     glBindTexture(GL_TEXTURE_2D, tid);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.width, img.height, GL_RGBA,
-        GL_FLOAT, img.pxl.data());
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size().x, img.size().y, GL_RGBA,
+        GL_FLOAT, img.data());
     if (mipmap) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
             (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
             (linear) ? GL_LINEAR : GL_NEAREST);
-        if (!img.pxl.empty()) glGenerateMipmap(GL_TEXTURE_2D);
+        if (!img.empty()) glGenerateMipmap(GL_TEXTURE_2D);
     } else {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
             (linear) ? GL_LINEAR : GL_NEAREST);
@@ -427,7 +427,7 @@ void draw_glimage(
     bind_glprogram(0);
 }
 
-glwindow* make_glwindow(int width, int height, const char* title,
+glwindow* make_glwindow(const vec2i& size, const char* title,
     void* user_pointer, void (*refresh)(GLFWwindow*)) {
     // init glfw
     if (!glfwInit()) throw std::runtime_error("cannot open glwindow");
@@ -439,7 +439,7 @@ glwindow* make_glwindow(int width, int height, const char* title,
 #endif
 
     // create window
-    auto win = glfwCreateWindow(width, height, title, nullptr, nullptr);
+    auto win = glfwCreateWindow(size.x, size.y, title, nullptr, nullptr);
     glfwMakeContextCurrent(win);
     glfwSwapInterval(1);  // Enable vsync
 

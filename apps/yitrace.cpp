@@ -72,7 +72,7 @@ void draw_glwidgets(ygl::glwindow* win) {
     if (ygl::begin_glwidgets_window(win, "yitrace")) {
         ygl::draw_imgui_label(win, "scene", app->filename);
         ygl::draw_imgui_label(win, "image", "%d x %d @ %d",
-            app->state->img.width, app->state->img.height, app->state->sample);
+            app->state->img.size().x, app->state->img.size().y, app->state->sample);
         if (ygl::begin_treenode_glwidget(win, "render settings")) {
             auto cam_names = std::vector<std::string>();
             for (auto cam : app->scn->cameras) cam_names.push_back(cam->name);
@@ -108,12 +108,12 @@ void draw_glwidgets(ygl::glwindow* win) {
             ygl::draw_checkbox_glwidget(win, "fps", app->navigation_fps);
             auto mouse_pos = ygl::get_glmouse_pos(win);
             auto ij = ygl::get_image_coords(mouse_pos, app->imcenter,
-                app->imscale, {app->state->img.width, app->state->img.height});
+                app->imscale, app->state->img.size());
             ygl::draw_dragger_glwidget(win, "mouse", ij);
-            if (ij.x >= 0 && ij.x < app->state->img.width && ij.y >= 0 &&
-                ij.y < app->state->img.height) {
+            if (ij.x >= 0 && ij.x < app->state->img.size().x && ij.y >= 0 &&
+                ij.y < app->state->img.size().y) {
                 ygl::draw_coloredit_glwidget(
-                    win, "pixel", app->state->img.at(ij.x, ij.y));
+                    win, "pixel", app->state->img[{ij.x, ij.y}]);
             } else {
                 auto zero4f_ = ygl::zero4f;
                 ygl::draw_coloredit_glwidget(win, "pixel", zero4f_);
@@ -141,15 +141,14 @@ void draw(ygl::glwindow* win) {
     ygl::set_glviewport(fb_size);
     ygl::clear_glframebuffer(ygl::vec4f{0.8f, 0.8f, 0.8f, 1.0f});
     ygl::center_image4f(app->imcenter, app->imscale,
-        {app->state->display.width, app->state->display.height}, win_size,
+        app->state->display.size(), win_size,
         app->zoom_to_fit);
     if (!app->gl_txt) {
         app->gl_txt = ygl::make_gltexture(app->state->display, false, false);
     } else {
         ygl::update_gltexture(app->gl_txt, app->state->display, false, false);
     }
-    ygl::draw_glimage(app->gl_txt,
-        {app->state->display.width, app->state->display.height}, win_size,
+    ygl::draw_glimage(app->gl_txt, app->state->display.size(), win_size,
         app->imcenter, app->imscale);
     draw_glwidgets(win);
     ygl::swap_glbuffers(win);
@@ -195,9 +194,8 @@ bool update(app_state* app) {
 // run ui loop
 void run_ui(app_state* app) {
     // window
-    auto ww = ygl::clamp(app->state->img.width, 256, 1440);
-    auto wh = ygl::clamp(app->state->img.height, 256, 1440);
-    auto win = ygl::make_glwindow(ww, wh, "yitrace", app, draw);
+    auto win_size = ygl::clamp(app->state->img.size(), 256, 1440);
+    auto win = ygl::make_glwindow(win_size, "yitrace", app, draw);
 
     // init widgets
     ygl::init_glwidgets(win);
@@ -230,13 +228,13 @@ void run_ui(app_state* app) {
         // selection
         if ((mouse_left || mouse_right) && alt_down && !widgets_active) {
             auto ij = ygl::get_image_coords(mouse_pos, app->imcenter,
-                app->imscale, {app->state->img.width, app->state->img.height});
-            if (ij.x < 0 || ij.x >= app->state->img.width || ij.y < 0 ||
-                ij.y >= app->state->img.height) {
+                app->imscale, {app->state->img.size().x, app->state->img.size().y});
+            if (ij.x < 0 || ij.x >= app->state->img.size().x || ij.y < 0 ||
+                ij.y >= app->state->img.size().y) {
                 auto cam = app->scn->cameras.at(app->params.camid);
                 auto ray =
-                    eval_camera_ray(cam, ij.x, ij.y, app->state->img.width,
-                        app->state->img.height, {0.5f, 0.5f}, ygl::zero2f);
+                    eval_camera_ray(cam, ij.x, ij.y, app->state->img.size().x,
+                        app->state->img.size().y, {0.5f, 0.5f}, ygl::zero2f);
                 auto isec = intersect_ray(app->scn, app->bvh, ray);
                 if (isec.ist) app->selection = isec.ist;
             }

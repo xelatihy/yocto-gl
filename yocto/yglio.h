@@ -392,8 +392,7 @@ struct obj_camera {
     std::string name;                  // name
     frame3f frame = identity_frame3f;  // transform
     bool ortho = false;                // orthographic
-    float width = 0.036f;              // film width (default to 35mm)
-    float height = 0.024f;             // film height (default to 35mm)
+    vec2f film = {0.036f, 0.024f};     // film size (default to 35mm)
     float focal = 0.050f;              // focal length
     float aspect = 16.0f / 9.0f;       // aspect ratio
     float aperture = 0;                // lens aperture
