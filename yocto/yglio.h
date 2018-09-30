@@ -178,13 +178,13 @@ namespace ygl {
 bool is_hdr_filename(const std::string& filename);
 
 // Loads/saves a 4 channel image.
-image4f load_image4f(const std::string& filename);
-void save_image4f(const std::string& filename, const image4f& img);
-image4f load_image4f_from_memory(const byte* data, int data_size);
+image<vec4f> load_image4f(const std::string& filename);
+void save_image4f(const std::string& filename, const image<vec4f>& img);
+image<vec4f> load_image4f_from_memory(const byte* data, int data_size);
 
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
-void save_tonemapped_image(const std::string& filename, const image4f& hdr,
+void save_tonemapped_image(const std::string& filename, const image<vec4f>& hdr,
     float exposure = 0, float gamma = 2.2f, bool filmic = false);
 
 }  // namespace ygl
@@ -195,8 +195,8 @@ void save_tonemapped_image(const std::string& filename, const image4f& hdr,
 namespace ygl {
 
 // Loads/saves a 1 channel volume.
-volume1f read_volume1f(const std::string& filename);
-void save_volume1f(const ygl::volume1f& tex, const std::string& filename);
+volume<float> read_volume1f(const std::string& filename);
+void save_volume1f(const ygl::volume<float>& tex, const std::string& filename);
 
 }  // namespace ygl
 

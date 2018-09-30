@@ -61,10 +61,11 @@ Image make_image_grid(const std::vector<Image>& imgs, int tilex) {
 }
 #endif
 
-ygl::image4f filter_bilateral(const ygl::image4f& img, float spatial_sigma,
-    float range_sigma, const std::vector<ygl::image4f>& features,
+ygl::image<ygl::vec4f> filter_bilateral(const ygl::image<ygl::vec4f>& img,
+    float spatial_sigma, float range_sigma,
+    const std::vector<ygl::image<ygl::vec4f>>& features,
     const std::vector<float>& features_sigma) {
-    auto filtered = ygl::image4f{img.size()};
+    auto filtered = ygl::image<ygl::vec4f>{img.size()};
     auto filter_width = (int)ceil(2.57f * spatial_sigma);
     auto sw = 1 / (2.0f * spatial_sigma * spatial_sigma);
     auto rw = 1 / (2.0f * range_sigma * range_sigma);
@@ -99,9 +100,9 @@ ygl::image4f filter_bilateral(const ygl::image4f& img, float spatial_sigma,
     return filtered;
 }
 
-ygl::image4f filter_bilateral(
-    const ygl::image4f& img, float spatial_sigma, float range_sigma) {
-    auto filtered = ygl::image4f{img.size()};
+ygl::image<ygl::vec4f> filter_bilateral(
+    const ygl::image<ygl::vec4f>& img, float spatial_sigma, float range_sigma) {
+    auto filtered = ygl::image<ygl::vec4f>{img.size()};
     auto fwidth = (int)ceil(2.57f * spatial_sigma);
     auto sw = 1 / (2.0f * spatial_sigma * spatial_sigma);
     auto rw = 1 / (2.0f * range_sigma * range_sigma);
@@ -158,7 +159,7 @@ int main(int argc, char* argv[]) {
     ygl::check_cmdline(parser);
 
     // load
-    auto img = ygl::image4f();
+    auto img = ygl::image<ygl::vec4f>();
     try {
         img = ygl::load_image4f(filename);
     } catch (std::exception& e) {

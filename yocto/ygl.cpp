@@ -2993,46 +2993,45 @@ vec3f rgb_to_hsv(const vec3f& rgb) {
 namespace ygl {
 
 // Conversion between linear and gamma-encoded images.
-image4f gamma_to_linear(const image4f& srgb, float gamma) {
+image<vec4f> gamma_to_linear(const image<vec4f>& srgb, float gamma) {
     if (gamma == 1) return srgb;
-    auto lin = image4f{srgb.size()};
+    auto lin = image<vec4f>{srgb.size()};
     for (auto idx = 0; idx < srgb.count(); idx++) {
-            xyz(lin[idx]) = gamma_to_linear(xyz(srgb[idx]), gamma);
-            lin[idx].w = srgb[idx].w;
+        xyz(lin[idx]) = gamma_to_linear(xyz(srgb[idx]), gamma);
+        lin[idx].w = srgb[idx].w;
     }
     return lin;
 }
-image4f linear_to_gamma(const image4f& lin, float gamma) {
+image<vec4f> linear_to_gamma(const image<vec4f>& lin, float gamma) {
     if (gamma == 1) return lin;
-    auto srgb = image4f{lin.size()};
+    auto srgb = image<vec4f>{lin.size()};
     for (auto idx = 0; idx < lin.count(); idx++) {
-            xyz(srgb[idx]) = linear_to_gamma(xyz(lin[idx]), gamma);
-            srgb[idx].w = lin[idx].w;
+        xyz(srgb[idx]) = linear_to_gamma(xyz(lin[idx]), gamma);
+        srgb[idx].w = lin[idx].w;
     }
     return srgb;
 }
 
 // Conversion from/to floats.
-image4f byte_to_float(const image4b& bt) {
-    auto fl = image4f{bt.size()};
+image<vec4f> byte_to_float(const image<vec4b>& bt) {
+    auto fl = image<vec4f>{bt.size()};
     for (auto idx = 0; idx < bt.count(); idx++)
-            fl[idx] = byte_to_float(bt[idx]);
+        fl[idx] = byte_to_float(bt[idx]);
     return fl;
 }
-image4b float_to_byte(const image4f& fl) {
-    auto bt = image4b{fl.size()};
+image<vec4b> float_to_byte(const image<vec4f>& fl) {
+    auto bt = image<vec4b>{fl.size()};
     for (auto idx = 0; idx < fl.count(); idx++)
-            bt[idx] = float_to_byte(fl[idx]);
+        bt[idx] = float_to_byte(fl[idx]);
     return bt;
 }
 
 // Tonemap image
-image4f tonemap_exposuregamma(
-    const image4f& hdr, float exposure, float gamma, bool filmic) {
-    auto ldr = image4f{hdr.size()};
+image<vec4f> tonemap_exposuregamma(
+    const image<vec4f>& hdr, float exposure, float gamma, bool filmic) {
+    auto ldr = image<vec4f>{hdr.size()};
     for (auto idx = 0; idx < hdr.count(); idx++)
-            ldr[idx] =
-                tonemap_exposuregamma(hdr[idx], exposure, gamma, filmic);
+        ldr[idx] = tonemap_exposuregamma(hdr[idx], exposure, gamma, filmic);
     return ldr;
 }
 
@@ -3044,9 +3043,9 @@ image4f tonemap_exposuregamma(
 namespace ygl {
 
 // Make a grid image
-image4f make_grid_image4f(const vec2i& size,
-    int tiles, const vec4f& c0, const vec4f& c1) {
-    auto img = image4f{size};
+image<vec4f> make_grid_image4f(
+    const vec2i& size, int tiles, const vec4f& c0, const vec4f& c1) {
+    auto img = image<vec4f>{size};
     auto tile = img.size().x / tiles;
     for (int j = 0; j < img.size().y; j++) {
         for (int i = 0; i < img.size().x; i++) {
@@ -3059,9 +3058,9 @@ image4f make_grid_image4f(const vec2i& size,
 }
 
 // Make a checkerboard image
-image4f make_checker_image4f(
+image<vec4f> make_checker_image4f(
     const vec2i& size, int tiles, const vec4f& c0, const vec4f& c1) {
-    auto img = image4f{size};
+    auto img = image<vec4f>{size};
     auto tile = img.size().x / tiles;
     for (int j = 0; j < img.size().y; j++) {
         for (int i = 0; i < img.size().x; i++) {
@@ -3073,8 +3072,8 @@ image4f make_checker_image4f(
 }
 
 // Make an image with bumps and dimples.
-image4f make_bumpdimple_image4f(const vec2i& size, int tiles) {
-    auto img = image4f{size};
+image<vec4f> make_bumpdimple_image4f(const vec2i& size, int tiles) {
+    auto img = image<vec4f>{size};
     auto tile = img.size().x / tiles;
     for (int j = 0; j < img.size().y; j++) {
         for (int i = 0; i < img.size().x; i++) {
@@ -3091,9 +3090,9 @@ image4f make_bumpdimple_image4f(const vec2i& size, int tiles) {
 }
 
 // Make a uv colored grid
-image4f make_ramp_image4f(
+image<vec4f> make_ramp_image4f(
     const vec2i& size, const vec4f& c0, const vec4f& c1) {
-    auto img = image4f{size};
+    auto img = image<vec4f>{size};
     for (int j = 0; j < img.size().y; j++) {
         for (int i = 0; i < img.size().x; i++) {
             auto u = (float)i / (float)img.size().x;
@@ -3104,8 +3103,8 @@ image4f make_ramp_image4f(
 }
 
 // Make a gamma ramp image
-image4f make_gammaramp_imagef(const vec2i& size) {
-    auto img = image4f{size};
+image<vec4f> make_gammaramp_imagef(const vec2i& size) {
+    auto img = image<vec4f>{size};
     for (int j = 0; j < img.size().y; j++) {
         for (int i = 0; i < img.size().x; i++) {
             auto u = j / float(img.size().y - 1);
@@ -3119,20 +3118,20 @@ image4f make_gammaramp_imagef(const vec2i& size) {
 
 // Make an image color with red/green in the [0,1] range. Helpful to
 // visualize uv texture coordinate application.
-image4f make_uvramp_image4f(const vec2i& size) {
-    auto img = image4f{size};
+image<vec4f> make_uvramp_image4f(const vec2i& size) {
+    auto img = image<vec4f>{size};
     for (int j = 0; j < img.size().y; j++) {
         for (int i = 0; i < img.size().x; i++) {
-            img[{i, j}] = {
-                i / (float)(img.size().x - 1), j / (float)(img.size().y - 1), 0, 1};
+            img[{i, j}] = {i / (float)(img.size().x - 1),
+                j / (float)(img.size().y - 1), 0, 1};
         }
     }
     return img;
 }
 
 // Make a uv colored grid
-image4f make_uvgrid_image4f(const vec2i& size, int tiles, bool colored) {
-    auto img = image4f{size};
+image<vec4f> make_uvgrid_image4f(const vec2i& size, int tiles, bool colored) {
+    auto img = image<vec4f>{size};
     auto tile = img.size().x / tiles;
     for (int j = 0; j < img.size().y; j++) {
         for (int i = 0; i < img.size().x; i++) {
@@ -3159,8 +3158,8 @@ image4f make_uvgrid_image4f(const vec2i& size, int tiles, bool colored) {
 }
 
 // Comvert a bump map to a normal map.
-image4f bump_to_normal_map(const image4f& img, float scale) {
-    auto norm = image4f{img.size()};
+image<vec4f> bump_to_normal_map(const image<vec4f>& img, float scale) {
+    auto norm = image<vec4f>{img.size()};
     auto dx = 1.0f / img.size().x, dy = 1.0f / img.size().y;
     for (int j = 0; j < img.size().y; j++) {
         for (int i = 0; i < img.size().x; i++) {
@@ -3180,7 +3179,7 @@ image4f bump_to_normal_map(const image4f& img, float scale) {
 }
 
 // Implementation of sunsky modified heavily from pbrt
-image4f make_sunsky_image4f(const vec2i& size, float thetaSun,
+image<vec4f> make_sunsky_image4f(const vec2i& size, float thetaSun,
     float turbidity, bool has_sun, const vec3f& ground_albedo) {
     auto wSun = vec3f{0, cos(thetaSun), sin(thetaSun)};
 
@@ -3266,7 +3265,7 @@ image4f make_sunsky_image4f(const vec2i& size, float thetaSun,
                                                        zero3f;
     };
 
-    auto img = image4f{size, {0, 0, 0, 1}};
+    auto img = image<vec4f>{size, {0, 0, 0, 1}};
     for (auto j = 0; j < img.size().y / 2; j++) {
         auto theta = pi * ((j + 0.5f) / img.size().y);
         theta = clamp(theta, 0.0f, pi / 2 - flt_eps);
@@ -3287,7 +3286,8 @@ image4f make_sunsky_image4f(const vec2i& size, float thetaSun,
             for (int i = 0; i < img.size().x; i++) {
                 auto pxl = img[{i, j}];
                 auto le = vec3f{pxl.x, pxl.y, pxl.z};
-                auto angle = sin(theta) * 4 * pi / (img.size().x * img.size().y);
+                auto angle =
+                    sin(theta) * 4 * pi / (img.size().x * img.size().y);
                 ground += le * (ground_albedo / pi) * cos(theta) * angle;
             }
         }
@@ -3302,9 +3302,9 @@ image4f make_sunsky_image4f(const vec2i& size, float thetaSun,
 }
 
 // Make an image of multiple lights.
-image4f make_lights_image4f(const vec2i& size, const vec3f& le, int nlights,
-    float langle, float lwidth, float lheight) {
-    auto img = image4f{size, {0, 0, 0, 1}};
+image<vec4f> make_lights_image4f(const vec2i& size, const vec3f& le,
+    int nlights, float langle, float lwidth, float lheight) {
+    auto img = image<vec4f>{size, {0, 0, 0, 1}};
     for (auto j = 0; j < img.size().y / 2; j++) {
         auto theta = pi * ((j + 0.5f) / img.size().y);
         theta = clamp(theta, 0.0f, pi / 2 - flt_eps);
@@ -3324,12 +3324,14 @@ image4f make_lights_image4f(const vec2i& size, const vec3f& le, int nlights,
 
 // Make a noise image. Wrap works only if both width and height are powers
 // of two.
-image4f make_noise_image4f(const vec2i& size, float scale, bool wrap) {
-    auto img = image4f{size};
+image<vec4f> make_noise_image4f(const vec2i& size, float scale, bool wrap) {
+    auto img = image<vec4f>{size};
     auto wrap3i = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i;
     for (auto j = 0; j < img.size().y; j++) {
         for (auto i = 0; i < img.size().x; i++) {
-            auto p = vec3f{i / (float)img.size().x, j / (float)img.size().y, 0.5f} * scale;
+            auto p =
+                vec3f{i / (float)img.size().x, j / (float)img.size().y, 0.5f} *
+                scale;
             auto g = perlin_noise(p, wrap3i);
             g = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
             img[{i, j}] = {g, g, g, 1};
@@ -3340,13 +3342,15 @@ image4f make_noise_image4f(const vec2i& size, float scale, bool wrap) {
 
 // Make a noise image. Wrap works only if both width and height are powers
 // of two.
-image4f make_fbm_image4f(const vec2i& size, float scale, float lacunarity,
+image<vec4f> make_fbm_image4f(const vec2i& size, float scale, float lacunarity,
     float gain, int octaves, bool wrap) {
-    auto img = image4f{size};
+    auto img = image<vec4f>{size};
     auto wrap3i = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i;
     for (auto j = 0; j < img.size().y; j++) {
         for (auto i = 0; i < img.size().x; i++) {
-            auto p = vec3f{i / (float)img.size().x, j / (float)img.size().y, 0.5f} * scale;
+            auto p =
+                vec3f{i / (float)img.size().x, j / (float)img.size().y, 0.5f} *
+                scale;
             auto g = perlin_fbm_noise(p, lacunarity, gain, octaves, wrap3i);
             g = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
             img[{i, j}] = {g, g, g, 1};
@@ -3357,13 +3361,15 @@ image4f make_fbm_image4f(const vec2i& size, float scale, float lacunarity,
 
 // Make a noise image. Wrap works only if both width and height are powers
 // of two.
-image4f make_ridge_image4f(const vec2i& size, float scale, float lacunarity,
-    float gain, float offset, int octaves, bool wrap) {
-    auto img = image4f{size};
+image<vec4f> make_ridge_image4f(const vec2i& size, float scale,
+    float lacunarity, float gain, float offset, int octaves, bool wrap) {
+    auto img = image<vec4f>{size};
     auto wrap3i = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i;
     for (auto j = 0; j < img.size().y; j++) {
         for (auto i = 0; i < img.size().x; i++) {
-            auto p = vec3f{i / (float)img.size().x, j / (float)img.size().y, 0.5f} * scale;
+            auto p =
+                vec3f{i / (float)img.size().x, j / (float)img.size().y, 0.5f} *
+                scale;
             auto g = perlin_ridge_noise(
                 p, lacunarity, gain, offset, octaves, wrap3i);
             g = clamp(g, 0.0f, 1.0f);
@@ -3375,13 +3381,15 @@ image4f make_ridge_image4f(const vec2i& size, float scale, float lacunarity,
 
 // Make a noise image. Wrap works only if both width and height are powers
 // of two.
-image4f make_turbulence_image4f(const vec2i& size, float scale,
+image<vec4f> make_turbulence_image4f(const vec2i& size, float scale,
     float lacunarity, float gain, int octaves, bool wrap) {
-    auto img = image4f{size};
+    auto img = image<vec4f>{size};
     auto wrap3i = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i;
     for (auto j = 0; j < img.size().y; j++) {
         for (auto i = 0; i < img.size().x; i++) {
-            auto p = vec3f{i / (float)img.size().x, j / (float)img.size().y, 0.5f} * scale;
+            auto p =
+                vec3f{i / (float)img.size().x, j / (float)img.size().y, 0.5f} *
+                scale;
             auto g =
                 perlin_turbulence_noise(p, lacunarity, gain, octaves, wrap3i);
             g = clamp(g, 0.0f, 1.0f);
@@ -3399,9 +3407,9 @@ image4f make_turbulence_image4f(const vec2i& size, float scale,
 namespace ygl {
 
 // make a simple example volume
-volume1f make_test_volume1f(
+volume<float> make_test_volume1f(
     const vec3i& size, float scale, float exponent) {
-    auto vol = volume1f{size};
+    auto vol = volume<float>{size};
     for (auto k = 0; k < vol.size().z; k++) {
         for (auto j = 0; j < vol.size().y; j++) {
             for (auto i = 0; i < vol.size().x; i++) {
@@ -3734,8 +3742,7 @@ std::vector<std::string> validate(const scene* scn, bool skip_textures) {
     };
     auto check_empty_textures = [&errs](const std::vector<texture*>& vals) {
         for (auto val : vals) {
-            if (val->img.empty())
-                errs.push_back("empty texture " + val->name);
+            if (val->img.empty()) errs.push_back("empty texture " + val->name);
         }
     };
 
@@ -4075,20 +4082,22 @@ ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv) {
     return ray;
 }
 
-vec2i image_size(const camera* cam, int yresolution) {
+vec2i eval_image_size(const camera* cam, int yresolution) {
     return {(int)round(yresolution * cam->film.x / cam->film.y), yresolution};
 }
 
-vec2i eval_image_resolution(const camera* cam, int yresolution) {
-    return {(int)round(yresolution * cam->film.x / cam->film.y), yresolution};
-}
-
-// Generates a ray from a camera for pixel coordinates `ij`, the
-// resolution `res`, the sub-pixel coordinates `puv` and the lens
-// coordinates `luv` and the image resolution `res`.
-ray3f eval_camera_ray(const camera* cam, int i, int j, int width, int height,
+// Generates a ray from a camera.
+ray3f eval_camera_ray(const camera* cam, const vec2i& ij, const vec2i& imsize,
     const vec2f& puv, const vec2f& luv) {
-    auto uv = vec2f{(i + puv.x) / width, (j + puv.y) / height};
+    auto uv = vec2f{(ij.x + puv.x) / imsize.x, (ij.y + puv.y) / imsize.y};
+    return eval_camera_ray(cam, uv, luv);
+}
+
+// Generates a ray from a camera.
+ray3f eval_camera_ray(const camera* cam, int idx, const vec2i& imsize,
+    const vec2f& puv, const vec2f& luv) {
+    auto ij = vec2i{idx % imsize.x, idx / imsize.x};
+    auto uv = vec2f{(ij.x + puv.x) / imsize.x, (ij.y + puv.y) / imsize.y};
     return eval_camera_ray(cam, uv, luv);
 }
 
@@ -5697,12 +5706,12 @@ vec3f trace_func(const scene* scn, const bvh_tree* bvh,
 
 // Trace a single sample
 vec4f trace_sample(trace_state* state, const scene* scn, const bvh_tree* bvh,
-    const trace_lights* lights, int i, int j, const trace_params& params) {
+    const trace_lights* lights, int idx, const trace_params& params) {
     _trace_npaths += 1;
     auto cam = scn->cameras.at(params.camid);
-    auto& rng = state->rng[{i, j}];
-    auto ray = eval_camera_ray(cam, i, j, state->img.size().x, state->img.size().y,
-        rand2f(rng), rand2f(rng));
+    auto& rng = state->rng[idx];
+    auto ray =
+        eval_camera_ray(cam, idx, state->img.size(), rand2f(rng), rand2f(rng));
     auto hit = false;
     auto l = trace_func(
         scn, bvh, lights, params.tracer, ray, rng, params.nbounces, &hit);
@@ -5732,9 +5741,11 @@ image<rng_state> make_trace_rngs(const vec2i& size, uint64_t seed) {
 trace_state* make_trace_state(const scene* scn, const trace_params& params) {
     auto state = new trace_state();
     auto cam = scn->cameras[params.camid];
-    auto size = image_size(cam, params.yresolution);
-    state->img = image4f{size};
-    state->display = image4f{size};
+    auto size = eval_image_size(cam, params.yresolution);
+    state->img = image<vec4f>{size, zero4f};
+    state->display = image<vec4f>{size, zero4f};
+    state->acc = image<vec4f>{size, zero4f};
+    state->samples = image<int>{size, 0};
     state->rng = make_trace_rngs(size, params.seed);
     return state;
 }
@@ -5760,31 +5771,28 @@ trace_lights* make_trace_lights(const scene* scn, const trace_params& params) {
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-image4f trace_image4f(const scene* scn, const bvh_tree* bvh,
+image<vec4f> trace_image4f(const scene* scn, const bvh_tree* bvh,
     const trace_lights* lights, const trace_params& params) {
     auto state = make_trace_state(scn, params);
 
     if (params.noparallel) {
-        for (auto j = 0; j < state->img.size().y; j++) {
-            for (auto i = 0; i < state->img.size().x; i++) {
-                for (auto s = 0; s < params.nsamples; s++)
-                    state->img[{i, j}] +=
-                        trace_sample(state, scn, bvh, lights, i, j, params);
-                state->img[{i, j}] /= params.nsamples;
-            }
+        for (auto idx = 0; idx < state->img.count(); idx++) {
+            for (auto s = 0; s < params.nsamples; s++)
+                state->img[idx] +=
+                    trace_sample(state, scn, bvh, lights, idx, params);
+            state->img[idx] /= params.nsamples;
         }
     } else {
         auto nthreads = std::thread::hardware_concurrency();
         auto threads = std::vector<std::thread>();
         for (auto tid = 0; tid < nthreads; tid++) {
             threads.push_back(std::thread([=]() {
-                for (auto j = tid; j < state->img.size().y; j += nthreads) {
-                    for (auto i = 0; i < state->img.size().x; i++) {
-                        for (auto s = 0; s < params.nsamples; s++)
-                            state->img[{i, j}] += trace_sample(
-                                state, scn, bvh, lights, i, j, params);
-                        state->img[{i, j}] /= params.nsamples;
-                    }
+                for (auto idx = tid; idx < state->img.count();
+                     idx += nthreads) {
+                    for (auto s = 0; s < params.nsamples; s++)
+                        state->img[idx] +=
+                            trace_sample(state, scn, bvh, lights, idx, params);
+                    state->img[idx] /= params.nsamples;
                 }
             }));
         }
@@ -5800,34 +5808,29 @@ bool trace_samples(trace_state* state, const scene* scn, const bvh_tree* bvh,
     const trace_lights* lights, const trace_params& params) {
     auto nbatch = min(params.nbatch, params.nsamples - state->sample);
     if (params.noparallel) {
-        for (auto j = 0; j < state->img.size().y; j++) {
-            for (auto i = 0; i < state->img.size().x; i++) {
-                state->img[{i, j}] *= state->sample;
-                for (auto s = 0; s < nbatch; s++)
-                    state->img[{i, j}] +=
-                        trace_sample(state, scn, bvh, lights, i, j, params);
-                state->img[{i, j}] /= state->sample + nbatch;
-                state->display[{i, j}] =
-                    tonemap_exposuregamma(state->img[{i, j}], params.exposure,
-                        params.gamma, params.filmic);
-            }
+        for (auto idx = 0; idx < state->img.count(); idx++) {
+            state->img[idx] *= state->sample;
+            for (auto s = 0; s < nbatch; s++)
+                state->img[idx] +=
+                    trace_sample(state, scn, bvh, lights, idx, params);
+            state->img[idx] /= state->sample + nbatch;
+            state->display[idx] = tonemap_exposuregamma(
+                state->img[idx], params.exposure, params.gamma, params.filmic);
         }
     } else {
         auto nthreads = std::thread::hardware_concurrency();
         auto threads = std::vector<std::thread>();
         for (auto tid = 0; tid < nthreads; tid++) {
             threads.push_back(std::thread([=]() {
-                for (auto j = tid; j < state->img.size().y; j += nthreads) {
-                    for (auto i = 0; i < state->img.size().x; i++) {
-                        state->img[{i, j}] *= state->sample;
-                        for (auto s = 0; s < nbatch; s++)
-                            state->img[{i, j}] += trace_sample(
-                                state, scn, bvh, lights, i, j, params);
-                        state->img[{i, j}] /= state->sample + nbatch;
-                        state->display[{i, j}] =
-                            tonemap_exposuregamma(state->img[{i, j}],
-                                params.exposure, params.gamma, params.filmic);
-                    }
+                for (auto idx = tid; idx < state->img.count();
+                     idx += nthreads) {
+                    state->img[idx] *= state->sample;
+                    for (auto s = 0; s < nbatch; s++)
+                        state->img[idx] +=
+                            trace_sample(state, scn, bvh, lights, idx, params);
+                    state->img[idx] /= state->sample + nbatch;
+                    state->display[idx] = tonemap_exposuregamma(state->img[idx],
+                        params.exposure, params.gamma, params.filmic);
                 }
             }));
         }
@@ -5847,19 +5850,17 @@ void trace_async_start(trace_state* state, const scene* scn,
         pparams.yresolution = state->img.size().y / params.preview_ratio;
         pparams.nsamples = 1;
         auto pimg = ygl::trace_image4f(scn, bvh, lights, pparams);
+        auto pdisplay = ygl::tonemap_exposuregamma(
+            pimg, params.exposure, params.gamma, params.filmic);
         auto pwidth = pimg.size().x, pheight = pimg.size().y;
         for (auto j = 0; j < state->img.size().y; j++) {
             for (auto i = 0; i < state->img.size().x; i++) {
                 auto pi = clamp(i / params.preview_ratio, 0, pwidth - 1),
                      pj = clamp(j / params.preview_ratio, 0, pheight - 1);
                 state->img[{i, j}] = pimg[{pi, pj}];
-                state->display[{i, j}] =
-                    tonemap_exposuregamma(state->img[{i, j}], params.exposure,
-                        params.gamma, params.filmic);
+                state->display[{i, j}] = pdisplay[{pi, pj}];
             }
         }
-        // state->display = ygl::tonemap_image4f(state->img, params.exposure,
-        // params.gamma, params.filmic);
     }
 
     auto nthreads = std::thread::hardware_concurrency();
@@ -5869,17 +5870,15 @@ void trace_async_start(trace_state* state, const scene* scn,
         state->threads.push_back(std::thread([=, &params]() {
             for (auto s = 0; s < params.nsamples; s++) {
                 if (!tid) state->sample = s;
-                for (auto j = tid; j < state->img.size().y; j += nthreads) {
-                    for (auto i = 0; i < state->img.size().x; i++) {
-                        if (state->stop) return;
-                        state->img[{i, j}] *= s;
-                        state->img[{i, j}] +=
-                            trace_sample(state, scn, bvh, lights, i, j, params);
-                        state->img[{i, j}] /= s + 1;
-                        state->display[{i, j}] =
-                            tonemap_exposuregamma(state->img[{i, j}],
-                                params.exposure, params.gamma, params.filmic);
-                    }
+                for (auto idx = tid; idx < state->img.count();
+                     idx += nthreads) {
+                    if (state->stop) return;
+                    state->img[idx] *= s;
+                    state->img[idx] +=
+                        trace_sample(state, scn, bvh, lights, idx, params);
+                    state->img[idx] /= s + 1;
+                    state->display[idx] = tonemap_exposuregamma(state->img[idx],
+                        params.exposure, params.gamma, params.filmic);
                 }
             }
             if (!tid) state->sample = params.nsamples;

@@ -72,7 +72,8 @@ void draw_glwidgets(ygl::glwindow* win) {
     if (ygl::begin_glwidgets_window(win, "yitrace")) {
         ygl::draw_imgui_label(win, "scene", app->filename);
         ygl::draw_imgui_label(win, "image", "%d x %d @ %d",
-            app->state->img.size().x, app->state->img.size().y, app->state->sample);
+            app->state->img.size().x, app->state->img.size().y,
+            app->state->sample);
         if (ygl::begin_treenode_glwidget(win, "render settings")) {
             auto cam_names = std::vector<std::string>();
             for (auto cam : app->scn->cameras) cam_names.push_back(cam->name);
@@ -107,8 +108,8 @@ void draw_glwidgets(ygl::glwindow* win) {
             ygl::continue_glwidgets_line(win);
             ygl::draw_checkbox_glwidget(win, "fps", app->navigation_fps);
             auto mouse_pos = ygl::get_glmouse_pos(win);
-            auto ij = ygl::get_image_coords(mouse_pos, app->imcenter,
-                app->imscale, app->state->img.size());
+            auto ij = ygl::get_image_coords(
+                mouse_pos, app->imcenter, app->imscale, app->state->img.size());
             ygl::draw_dragger_glwidget(win, "mouse", ij);
             if (ij.x >= 0 && ij.x < app->state->img.size().x && ij.y >= 0 &&
                 ij.y < app->state->img.size().y) {
@@ -140,9 +141,8 @@ void draw(ygl::glwindow* win) {
     auto fb_size = ygl::get_glframebuffer_size(win);
     ygl::set_glviewport(fb_size);
     ygl::clear_glframebuffer(ygl::vec4f{0.8f, 0.8f, 0.8f, 1.0f});
-    ygl::center_image4f(app->imcenter, app->imscale,
-        app->state->display.size(), win_size,
-        app->zoom_to_fit);
+    ygl::center_image4f(app->imcenter, app->imscale, app->state->display.size(),
+        win_size, app->zoom_to_fit);
     if (!app->gl_txt) {
         app->gl_txt = ygl::make_gltexture(app->state->display, false, false);
     } else {
@@ -227,14 +227,14 @@ void run_ui(app_state* app) {
 
         // selection
         if ((mouse_left || mouse_right) && alt_down && !widgets_active) {
-            auto ij = ygl::get_image_coords(mouse_pos, app->imcenter,
-                app->imscale, {app->state->img.size().x, app->state->img.size().y});
+            auto ij =
+                ygl::get_image_coords(mouse_pos, app->imcenter, app->imscale,
+                    {app->state->img.size().x, app->state->img.size().y});
             if (ij.x < 0 || ij.x >= app->state->img.size().x || ij.y < 0 ||
                 ij.y >= app->state->img.size().y) {
                 auto cam = app->scn->cameras.at(app->params.camid);
-                auto ray =
-                    eval_camera_ray(cam, ij.x, ij.y, app->state->img.size().x,
-                        app->state->img.size().y, {0.5f, 0.5f}, ygl::zero2f);
+                auto ray = eval_camera_ray(
+                    cam, ij, app->state->img.size(), {0.5f, 0.5f}, ygl::zero2f);
                 auto isec = intersect_ray(app->scn, app->bvh, ray);
                 if (isec.ist) app->selection = isec.ist;
             }

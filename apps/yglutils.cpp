@@ -125,13 +125,13 @@ uint make_glprogram(const char* vertex, const char* fragment) {
     return pid;
 }
 
-uint make_gltexture(const image4f& img, bool linear, bool mipmap) {
+uint make_gltexture(const image<vec4f>& img, bool linear, bool mipmap) {
     auto tid = (uint)0;
     assert(glGetError() == GL_NO_ERROR);
     glGenTextures(1, &tid);
     glBindTexture(GL_TEXTURE_2D, tid);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.size().x, img.size().y, 0, GL_RGBA,
-        GL_FLOAT, img.data());
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.size().x, img.size().y, 0,
+        GL_RGBA, GL_FLOAT, img.data());
     if (mipmap) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
             (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
@@ -148,7 +148,8 @@ uint make_gltexture(const image4f& img, bool linear, bool mipmap) {
     return tid;
 }
 
-void update_gltexture(int tid, const image4f& img, bool linear, bool mipmap) {
+void update_gltexture(
+    int tid, const image<vec4f>& img, bool linear, bool mipmap) {
     assert(glGetError() == GL_NO_ERROR);
     glBindTexture(GL_TEXTURE_2D, tid);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size().x, img.size().y, GL_RGBA,

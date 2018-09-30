@@ -47,8 +47,9 @@ void set_glwireframe(bool enabled);
 uint make_glprogram(const char* vertex, const char* fragment);
 void bind_glprogram(uint pid);
 
-uint make_gltexture(const image4f& img, bool linear, bool mipmap);
-void update_gltexture(int tid, const image4f& img, bool linear, bool mipmap);
+uint make_gltexture(const image<vec4f>& img, bool linear, bool mipmap);
+void update_gltexture(
+    int tid, const image<vec4f>& img, bool linear, bool mipmap);
 
 uint make_glarraybuffer(const std::vector<float>& buf, bool dynamic = false);
 uint make_glarraybuffer(const std::vector<vec2f>& buf, bool dynamic = false);
