@@ -47,10 +47,8 @@ void set_glwireframe(bool enabled);
 uint make_glprogram(const char* vertex, const char* fragment);
 void bind_glprogram(uint pid);
 
-uint make_gltexture(const image4f& img, bool linear, 
-    bool mipmap);
-void update_gltexture(int tid, const image4f& img,
-    bool linear, bool mipmap);
+uint make_gltexture(const image4f& img, bool linear, bool mipmap);
+void update_gltexture(int tid, const image4f& img, bool linear, bool mipmap);
 
 uint make_glarraybuffer(const std::vector<float>& buf, bool dynamic = false);
 uint make_glarraybuffer(const std::vector<vec2f>& buf, bool dynamic = false);
@@ -82,7 +80,8 @@ inline void set_gluniform(uint pid, const char* var, const T& val) {
 void set_gluniform_texture(int loc, uint tid, int unit);
 void set_gluniform_texture(uint pid, const char* var, uint tid, int unit);
 void set_gluniform_texture(int loc, int loc_on, uint tid, int unit);
-void set_gluniform_texture(uint pid, const char* var, const char* var_on, uint tid, int unit);
+void set_gluniform_texture(
+    uint pid, const char* var, const char* var_on, uint tid, int unit);
 
 int get_glvertexattrib_location(uint pid, const char* name);
 
@@ -101,93 +100,123 @@ void draw_glpoints(uint bid, int num);
 void draw_gllines(uint bid, int num);
 void draw_gltriangles(uint bid, int num);
 
-void draw_glimage(uint gl_txt, vec2i imsize, vec2i winsize, vec2f imcenter, float imscale);
+void draw_glimage(
+    uint gl_txt, vec2i imsize, vec2i winsize, vec2f imcenter, float imscale);
 
 using glwindow = ::GLFWwindow;
 
-glwindow* make_glfw_window(int width, int height, const char* title,
+glwindow* make_glwindow(int width, int height, const char* title,
     void* user_pointer, void (*refresh)(GLFWwindow*));
-void delete_glfw_window(glwindow* win);
+void delete_glwindow(glwindow* win);
 
-void* get_glfw_user_pointer(glwindow* win);
+void* get_user_pointer(glwindow* win);
 
-vec2i get_glfw_framebuffer_size(glwindow* win);
-vec2i get_glfw_window_size(glwindow* win);
+vec2i get_glframebuffer_size(glwindow* win);
+vec2i get_glwindow_size(glwindow* win);
 
-bool should_glfw_window_close(glwindow* win);
+bool should_glwindow_close(glwindow* win);
 
-vec2f get_glfw_mouse_pos(glwindow* win);
-bool get_glfw_mouse_left(glwindow* win);
-bool get_glfw_mouse_right(glwindow* win);
-bool get_glfw_alt_key(glwindow* win);
-bool get_glfw_shift_key(glwindow* win);
+vec2f get_glmouse_pos(glwindow* win);
+bool get_glmouse_left(glwindow* win);
+bool get_glmouse_right(glwindow* win);
+bool get_glalt_key(glwindow* win);
+bool get_glshift_key(glwindow* win);
 
-void process_glfw_events(glwindow* win, bool wait = false);
-void swap_glfw_buffers(glwindow* win);
+void process_glevents(glwindow* win, bool wait = false);
+void swap_glbuffers(glwindow* win);
 
-void init_imgui_widgets(glwindow* win);
-bool get_imgui_widgets_active(glwindow* win);
+void init_glwidgets(glwindow* win);
+bool get_glwidgets_active(glwindow* win);
 
-void begin_imgui_frame(glwindow* win);
-void end_imgui_frame(glwindow* win);
+void begin_glwidgets_frame(glwindow* win);
+void end_glwidgets_frame(glwindow* win);
 
-bool begin_imgui_window(glwindow* win, const char* title);
+bool begin_glwidgets_window(glwindow* win, const char* title);
 
 void draw_imgui_label(glwindow* win, const char* lbl, const std::string& txt);
 void draw_imgui_label(glwindow* win, const char* lbl, const char* fmt, ...);
 
-void draw_imgui_separator(glwindow* win);
-void continue_imgui_line(glwindow* win);
+void draw_separator_glwidget(glwindow* win);
+void continue_glwidgets_line(glwindow* win);
 
-bool draw_imgui_inputtext(glwindow* win, const char* lbl, std::string& val);
-bool draw_imgui_slider(glwindow* win, const char* lbl, float& val, float v_min, float v_max);
-bool draw_imgui_slider(glwindow* win, const char* lbl, vec2f& val, float v_min, float v_max);
-bool draw_imgui_slider(glwindow* win, const char* lbl, vec3f& val, float v_min, float v_max);
-bool draw_imgui_slider(glwindow* win, const char* lbl, vec4f& val, float v_min, float v_max);
+bool draw_inputtext_glwidget(glwindow* win, const char* lbl, std::string& val);
+bool draw_slider_glwidget(
+    glwindow* win, const char* lbl, float& val, float min, float max);
+bool draw_slider_glwidget(
+    glwindow* win, const char* lbl, vec2f& val, float min, float max);
+bool draw_slider_glwidget(
+    glwindow* win, const char* lbl, vec3f& val, float min, float max);
+bool draw_slider_glwidget(
+    glwindow* win, const char* lbl, vec4f& val, float min, float max);
 
-bool draw_imgui_slider(glwindow* win, const char* lbl, int& val, int v_min, int v_max);
-bool draw_imgui_slider(glwindow* win, const char* lbl, vec2i& val, int v_min, int v_max);
-bool draw_imgui_slider(glwindow* win, const char* lbl, vec3i& val, int v_min, int v_max);
-bool draw_imgui_slider(glwindow* win, const char* lbl, vec4i& val, int v_min, int v_max);
+bool draw_slider_glwidget(
+    glwindow* win, const char* lbl, int& val, int min, int max);
+bool draw_slider_glwidget(
+    glwindow* win, const char* lbl, vec2i& val, int min, int max);
+bool draw_slider_glwidget(
+    glwindow* win, const char* lbl, vec3i& val, int min, int max);
+bool draw_slider_glwidget(
+    glwindow* win, const char* lbl, vec4i& val, int min, int max);
 
-bool draw_imgui_dragger(glwindow* win, const char* lbl, float& val, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f);
-bool draw_imgui_dragger(glwindow* win, const char* lbl, vec2f& val, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f);
-bool draw_imgui_dragger(glwindow* win, const char* lbl, vec3f& val, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f);
-bool draw_imgui_dragger(glwindow* win, const char* lbl, vec4f& val, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f);
+bool draw_dragger_glwidget(glwindow* win, const char* lbl, float& val,
+    float speed = 1.0f, float min = 0.0f, float max = 0.0f);
+bool draw_dragger_glwidget(glwindow* win, const char* lbl, vec2f& val,
+    float speed = 1.0f, float min = 0.0f, float max = 0.0f);
+bool draw_dragger_glwidget(glwindow* win, const char* lbl, vec3f& val,
+    float speed = 1.0f, float min = 0.0f, float max = 0.0f);
+bool draw_dragger_glwidget(glwindow* win, const char* lbl, vec4f& val,
+    float speed = 1.0f, float min = 0.0f, float max = 0.0f);
 
-bool draw_imgui_dragger(glwindow* win, const char* lbl, int& val, float v_speed = 1, int v_min = 0, int v_max = 0);
-bool draw_imgui_dragger(glwindow* win, const char* lbl, vec2i& val, float v_speed = 1, int v_min = 0, int v_max = 0);
-bool draw_imgui_dragger(glwindow* win, const char* lbl, vec3i& val, float v_speed = 1, int v_min = 0, int v_max = 0);
-bool draw_imgui_dragger(glwindow* win, const char* lbl, vec4i& val, float v_speed = 1, int v_min = 0, int v_max = 0);
+bool draw_dragger_glwidget(glwindow* win, const char* lbl, int& val,
+    float speed = 1, int min = 0, int max = 0);
+bool draw_dragger_glwidget(glwindow* win, const char* lbl, vec2i& val,
+    float speed = 1, int min = 0, int max = 0);
+bool draw_dragger_glwidget(glwindow* win, const char* lbl, vec3i& val,
+    float speed = 1, int min = 0, int max = 0);
+bool draw_dragger_glwidget(glwindow* win, const char* lbl, vec4i& val,
+    float speed = 1, int min = 0, int max = 0);
 
-bool draw_imgui_checkbox(glwindow* win, const char* lbl, bool& val);
+bool draw_checkbox_glwidget(glwindow* win, const char* lbl, bool& val);
 
-bool draw_imgui_coloredit(glwindow* win, const char* lbl, vec3f& val);
-bool draw_imgui_coloredit(glwindow* win, const char* lbl, vec4f& val);
+bool draw_coloredit_glwidget(glwindow* win, const char* lbl, vec3f& val);
+bool draw_coloredit_glwidget(glwindow* win, const char* lbl, vec4f& val);
 
-bool begin_imgui_treenode(glwindow* win, const char* lbl);
-void end_imgui_treenode(glwindow* win);
+bool begin_treenode_glwidget(glwindow* win, const char* lbl);
+void end_treenode_glwidget(glwindow* win);
 
-bool begin_imgui_selectabletreenode(glwindow* win, 
-    const char* lbl, void*& selection, void* content);
-void begin_imgui_selectabletreeleaf(glwindow* win, 
-    const char* lbl, void*& selection, void* content);
+bool begin_selectabletreenode_glwidget(
+    glwindow* win, const char* lbl, void*& selection, void* content);
+void begin_selectabletreeleaf_glwidget(
+    glwindow* win, const char* lbl, void*& selection, void* content);
 
-bool draw_imgui_combobox(glwindow* win, const char* lbl, int& idx, int nitems,
-    const std::function<const char*(int)>& label);
-bool draw_imgui_combobox(glwindow* win, const char* lbl, int& val,
+bool draw_combobox_glwidget(glwindow* win, const char* lbl, int& idx,
     const std::vector<std::string>& labels);
-bool draw_imgui_combobox(glwindow* win, const char* lbl, std::string& val,
+bool draw_combobox_glwidget(glwindow* win, const char* lbl, std::string& val,
     const std::vector<std::string>& labels);
-bool draw_imgui_combobox(glwindow* win, 
-    const char* lbl, void*& val, const std::vector<void*>& vals, const std::function<const char*(void*)>& label, bool include_null);
+bool draw_combobox_glwidget(glwindow* win, const char* lbl, int& idx,
+    const std::vector<void*>& vals, const char* (*label)(void*));
+bool draw_combobox_glwidget(glwindow* win, const char* lbl, void*& val,
+    const std::vector<void*>& vals, const char* (*label)(void*),
+    bool include_null);
 
 template <typename T>
-bool draw_imgui_combobox(glwindow* win, 
-    const char* lbl, T*& val, const std::vector<T*>& vals, bool include_null) {
-    return draw_imgui_combobox(win, lbl, (void*&)val, (const std::vector<void*>&)vals, [](void* val){return ((T*)val)->name.c_str();}, include_null);
+bool draw_combobox_glwidget(
+    glwindow* win, const char* lbl, int& idx, const std::vector<T*>& vals) {
+    return draw_combobox_glwidget(win, lbl, idx,
+        (const std::vector<void*>&)vals,
+        [](void* val) { return ((T*)val)->name.c_str(); });
 }
 
+template <typename T>
+bool draw_combobox_glwidget(glwindow* win, const char* lbl, T*& val,
+    const std::vector<T*>& vals, bool include_null) {
+    return draw_combobox_glwidget(win, lbl, (void*&)val,
+        (const std::vector<void*>&)vals,
+        [](void* val) { return ((T*)val)->name.c_str(); }, include_null);
+}
+
+void begin_child_glwidget(glwindow* win, const char* lbl, const vec2i& size);
+void end_child_glwidget(glwindow* win);
 
 }  // namespace ygl
 

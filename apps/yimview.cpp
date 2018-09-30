@@ -155,14 +155,13 @@ void load_image(app_image* img) {
     img->stats_thread = std::thread(update_image_stats, img);
 }
 
-void draw_widgets(ygl::glwindow* win) {
-    auto app = (app_state*)ygl::get_glfw_user_pointer(win);
-    ygl::begin_imgui_frame(win);
-    if (ygl::begin_imgui_window(win, "yimview")) {
+void draw_glwidgets(ygl::glwindow* win) {
+    auto app = (app_state*)ygl::get_user_pointer(win);
+    ygl::begin_glwidgets_frame(win);
+    if (ygl::begin_glwidgets_window(win, "yimview")) {
         auto edited = 0;
-        edited += ygl::draw_imgui_combobox(win, "image", app->img_id,
-            app->imgs.size(),
-            [app](int i) { return app->imgs.at(i)->name.c_str(); });
+        edited +=
+            ygl::draw_combobox_glwidget(win, "image", app->img_id, app->imgs);
         auto img = app->imgs.at(app->img_id);
         ygl::draw_imgui_label(win, "filename", "%s", img->filename.c_str());
         auto status = std::string();
@@ -177,9 +176,10 @@ void draw_widgets(ygl::glwindow* win) {
         ygl::draw_imgui_label(win, "status", status.c_str());
         ygl::draw_imgui_label(
             win, "size", "%d x %d ", img->img.width, img->img.height);
-        edited += ygl::draw_imgui_slider(win, "exposure", img->exposure, -5, 5);
-        edited += ygl::draw_imgui_slider(win, "gamma", img->gamma, 1, 3);
-        edited += ygl::draw_imgui_checkbox(win, "filmic", img->filmic);
+        edited +=
+            ygl::draw_slider_glwidget(win, "exposure", img->exposure, -5, 5);
+        edited += ygl::draw_slider_glwidget(win, "gamma", img->gamma, 1, 3);
+        edited += ygl::draw_checkbox_glwidget(win, "filmic", img->filmic);
         if (edited) {
             if (img->display_thread.joinable()) {
                 img->display_stop = true;
@@ -188,33 +188,33 @@ void draw_widgets(ygl::glwindow* win) {
             img->display_stop = false;
             img->display_thread = std::thread(update_display_image, img);
         }
-        ygl::draw_imgui_slider(win, "zoom", img->imscale, 0.1, 10);
-        ygl::draw_imgui_checkbox(win, "zoom to fit", img->zoom_to_fit);
-        ygl::draw_imgui_separator(win);
-        auto mouse_pos = ygl::get_glfw_mouse_pos(win);
+        ygl::draw_slider_glwidget(win, "zoom", img->imscale, 0.1, 10);
+        ygl::draw_checkbox_glwidget(win, "zoom to fit", img->zoom_to_fit);
+        ygl::draw_separator_glwidget(win);
+        auto mouse_pos = ygl::get_glmouse_pos(win);
         auto ij = ygl::get_image_coords(mouse_pos, img->imcenter, img->imscale,
             {img->img.width, img->img.height});
-        ygl::draw_imgui_dragger(win, "mouse", ij);
+        ygl::draw_dragger_glwidget(win, "mouse", ij);
         auto pixel = ygl::zero4f;
         if (ij.x >= 0 && ij.x < img->img.width && ij.y >= 0 &&
             ij.y < img->img.height) {
             pixel = img->img.at(ij.x, ij.y);
         }
-        ygl::draw_imgui_coloredit(win, "pixel", pixel);
+        ygl::draw_coloredit_glwidget(win, "pixel", pixel);
         auto stats = (img->stats_done) ? img->stats : image_stats{};
-        ygl::draw_imgui_dragger(win, "pxl min", stats.pxl_bounds.min);
-        ygl::draw_imgui_dragger(win, "pxl max", stats.pxl_bounds.max);
-        ygl::draw_imgui_dragger(win, "lum min", stats.lum_bounds.min);
-        ygl::draw_imgui_dragger(win, "lum max", stats.lum_bounds.max);
+        ygl::draw_dragger_glwidget(win, "pxl min", stats.pxl_bounds.min);
+        ygl::draw_dragger_glwidget(win, "pxl max", stats.pxl_bounds.max);
+        ygl::draw_dragger_glwidget(win, "lum min", stats.lum_bounds.min);
+        ygl::draw_dragger_glwidget(win, "lum max", stats.lum_bounds.max);
     }
-    ygl::end_imgui_frame(win);
+    ygl::end_glwidgets_frame(win);
 }
 
 void draw(ygl::glwindow* win) {
-    auto app = (app_state*)ygl::get_glfw_user_pointer(win);
+    auto app = (app_state*)ygl::get_user_pointer(win);
     auto img = app->imgs.at(app->img_id);
-    auto win_size = ygl::get_glfw_window_size(win);
-    auto fb_size = ygl::get_glfw_framebuffer_size(win);
+    auto win_size = ygl::get_glwindow_size(win);
+    auto fb_size = ygl::get_glframebuffer_size(win);
     ygl::set_glviewport(fb_size);
     ygl::clear_glframebuffer(ygl::vec4f{0.8f, 0.8f, 0.8f, 1.0f});
     if (img->gl_txt) {
@@ -225,8 +225,8 @@ void draw(ygl::glwindow* win) {
             {img->display.width, img->display.height}, win_size, img->imcenter,
             img->imscale);
     }
-    draw_widgets(win);
-    ygl::swap_glfw_buffers(win);
+    draw_glwidgets(win);
+    ygl::swap_glbuffers(win);
 }
 
 void update(app_state* app) {
@@ -246,10 +246,10 @@ void run_ui(app_state* app) {
     auto img = app->imgs.at(app->img_id);
     auto ww = ygl::clamp(img->img.width, 512, 1440);
     auto wh = ygl::clamp(img->img.height, 512, 1440);
-    auto win = ygl::make_glfw_window(ww, wh, "yimview", app, draw);
+    auto win = ygl::make_glwindow(ww, wh, "yimview", app, draw);
 
     // init widgets
-    ygl::init_imgui_widgets(win);
+    ygl::init_glwidgets(win);
 
     // center image
     ygl::center_image4f(img->imcenter, img->imscale,
@@ -257,12 +257,12 @@ void run_ui(app_state* app) {
 
     // window values
     auto mouse_pos = ygl::zero2f, last_pos = ygl::zero2f;
-    while (!ygl::should_glfw_window_close(win)) {
+    while (!ygl::should_glwindow_close(win)) {
         last_pos = mouse_pos;
-        mouse_pos = ygl::get_glfw_mouse_pos(win);
-        auto mouse_left = ygl::get_glfw_mouse_left(win);
-        auto mouse_right = ygl::get_glfw_mouse_right(win);
-        auto widgets_active = ygl::get_imgui_widgets_active(win);
+        mouse_pos = ygl::get_glmouse_pos(win);
+        auto mouse_left = ygl::get_glmouse_left(win);
+        auto mouse_right = ygl::get_glmouse_right(win);
+        auto widgets_active = ygl::get_glwidgets_active(win);
 
         // handle mouse
         if (mouse_left && !widgets_active)
@@ -278,11 +278,11 @@ void run_ui(app_state* app) {
 
         // event hadling
         // could also wait if (mouse_left || mouse_right || widgets_active)
-        ygl::process_glfw_events(win);
+        ygl::process_glevents(win);
     }
 
     // cleanup
-    ygl::delete_glfw_window(win);
+    ygl::delete_glwindow(win);
 }
 
 int main(int argc, char* argv[]) {

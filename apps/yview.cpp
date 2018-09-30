@@ -86,8 +86,8 @@ void draw_glscene(const draw_glstate* state, const ygl::scene* scn,
 
 // draw with shading
 void draw(ygl::glwindow* win) {
-    auto app = (app_state*)ygl::get_glfw_user_pointer(win);
-    auto framebuffer_size = ygl::get_glfw_framebuffer_size(win);
+    auto app = (app_state*)ygl::get_user_pointer(win);
+    auto framebuffer_size = ygl::get_glframebuffer_size(win);
     app->resolution = framebuffer_size.y;
 
     static auto last_time = 0.0f;
@@ -117,47 +117,47 @@ void draw(ygl::glwindow* win) {
     draw_glscene(app->state, app->scn, cam, framebuffer_size, app->selection,
         app->eyelight, app->wireframe, app->edges, app->exposure, app->gamma);
 
-    ygl::begin_imgui_frame(win);
-    if (ygl::begin_imgui_window(win, "yview")) {
+    ygl::begin_glwidgets_frame(win);
+    if (ygl::begin_glwidgets_window(win, "yview")) {
         ygl::draw_imgui_label(win, "scene", "%s", app->filename.c_str());
         if (app->time_range != ygl::zero2f) {
-            ygl::draw_imgui_slider(
+            ygl::draw_slider_glwidget(
                 win, "time", app->time, app->time_range.x, app->time_range.y);
-            ygl::draw_imgui_inputtext(win, "anim group", app->anim_group);
-            ygl::draw_imgui_checkbox(win, "animate", app->animate);
+            ygl::draw_inputtext_glwidget(win, "anim group", app->anim_group);
+            ygl::draw_checkbox_glwidget(win, "animate", app->animate);
         }
-        if (ygl::begin_imgui_treenode(win, "render settings")) {
-            ygl::draw_imgui_combobox(
+        if (ygl::begin_treenode_glwidget(win, "render settings")) {
+            ygl::draw_combobox_glwidget(
                 win, "camera", cam, app->scn->cameras, false);
-            ygl::draw_imgui_slider(
+            ygl::draw_slider_glwidget(
                 win, "resolution", app->resolution, 256, 4096);
-            ygl::draw_imgui_checkbox(win, "eyelight", app->eyelight);
-            ygl::continue_imgui_line(win);
-            ygl::draw_imgui_checkbox(win, "wireframe", app->wireframe);
-            ygl::continue_imgui_line(win);
-            ygl::draw_imgui_checkbox(win, "edges", app->edges);
-            ygl::end_imgui_treenode(win);
+            ygl::draw_checkbox_glwidget(win, "eyelight", app->eyelight);
+            ygl::continue_glwidgets_line(win);
+            ygl::draw_checkbox_glwidget(win, "wireframe", app->wireframe);
+            ygl::continue_glwidgets_line(win);
+            ygl::draw_checkbox_glwidget(win, "edges", app->edges);
+            ygl::end_treenode_glwidget(win);
         }
-        if (ygl::begin_imgui_treenode(win, "view settings")) {
-            ygl::draw_imgui_slider(win, "exposure", app->exposure, -10, 10);
-            ygl::draw_imgui_slider(win, "gamma", app->gamma, 0.1f, 4);
-            ygl::draw_imgui_checkbox(win, "fps", app->navigation_fps);
-            ygl::end_imgui_treenode(win);
+        if (ygl::begin_treenode_glwidget(win, "view settings")) {
+            ygl::draw_slider_glwidget(win, "exposure", app->exposure, -10, 10);
+            ygl::draw_slider_glwidget(win, "gamma", app->gamma, 0.1f, 4);
+            ygl::draw_checkbox_glwidget(win, "fps", app->navigation_fps);
+            ygl::end_treenode_glwidget(win);
         }
-        if (ygl::begin_imgui_treenode(win, "scene tree")) {
+        if (ygl::begin_treenode_glwidget(win, "scene tree")) {
             draw_glwidgets_scene_tree(
                 win, "", app->scn, app->selection, app->update_list, 200);
-            ygl::end_imgui_treenode(win);
+            ygl::end_treenode_glwidget(win);
         }
-        if (ygl::begin_imgui_treenode(win, "scene object")) {
+        if (ygl::begin_treenode_glwidget(win, "scene object")) {
             draw_glwidgets_scene_inspector(
                 win, "", app->scn, app->selection, app->update_list, 200);
-            ygl::end_imgui_treenode(win);
+            ygl::end_treenode_glwidget(win);
         }
     }
-    ygl::end_imgui_frame(win);
+    ygl::end_glwidgets_frame(win);
 
-    ygl::swap_glfw_buffers(win);
+    ygl::swap_glbuffers(win);
 }
 
 #ifndef _WIN32
@@ -625,7 +625,7 @@ void draw_glscene(const draw_glstate* state, const ygl::scene* scn,
 }
 
 draw_glstate* init_draw_state(ygl::glwindow* win) {
-    auto app = (app_state*)ygl::get_glfw_user_pointer(win);
+    auto app = (app_state*)ygl::get_user_pointer(win);
     auto state = new draw_glstate();
     // load textures and vbos
     state->gl_prog = ygl::make_glprogram(vertex, fragment);
@@ -663,10 +663,10 @@ void run_ui(app_state* app) {
     auto cam = app->scn->cameras.at(app->camid);
     auto ww = ygl::clamp(ygl::image_width(cam, app->resolution), 256, 1440);
     auto wh = ygl::clamp(app->resolution, 256, 1440);
-    auto win = ygl::make_glfw_window(ww, wh, "yview", app, draw);
+    auto win = ygl::make_glwindow(ww, wh, "yview", app, draw);
 
     // init widget
-    ygl::init_imgui_widgets(win);
+    ygl::init_glwidgets(win);
 
     // load textures and vbos
     ygl::update_transforms(app->scn, app->time);
@@ -676,14 +676,14 @@ void run_ui(app_state* app) {
 
     // loop
     auto mouse_pos = ygl::zero2f, last_pos = ygl::zero2f;
-    while (!ygl::should_glfw_window_close(win)) {
+    while (!ygl::should_glwindow_close(win)) {
         last_pos = mouse_pos;
-        mouse_pos = ygl::get_glfw_mouse_pos(win);
-        auto mouse_left = ygl::get_glfw_mouse_left(win);
-        auto mouse_right = ygl::get_glfw_mouse_right(win);
-        auto alt_down = ygl::get_glfw_alt_key(win);
-        auto shift_down = ygl::get_glfw_shift_key(win);
-        auto widgets_active = ygl::get_imgui_widgets_active(win);
+        mouse_pos = ygl::get_glmouse_pos(win);
+        auto mouse_left = ygl::get_glmouse_left(win);
+        auto mouse_right = ygl::get_glmouse_right(win);
+        auto alt_down = ygl::get_glalt_key(win);
+        auto shift_down = ygl::get_glshift_key(win);
+        auto widgets_active = ygl::get_glwidgets_active(win);
 
         // handle mouse and keyboard for navigation
         if ((mouse_left || mouse_right) && !alt_down && !widgets_active) {
@@ -711,12 +711,12 @@ void run_ui(app_state* app) {
         draw(win);
 
         // event hadling
-        ygl::process_glfw_events(
+        ygl::process_glevents(
             win, !((mouse_left || mouse_right) || widgets_active));
     }
 
     // clear
-    ygl::delete_glfw_window(win);
+    ygl::delete_glwindow(win);
 }
 
 // Load INI file. The implementation does not handle escaping.
