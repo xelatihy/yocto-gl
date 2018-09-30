@@ -47,6 +47,10 @@ def formattests():
     from collections import OrderedDict
     for filename in glob.glob('tests/*.json'):
         def fix_proc(js):
+            for jcam in js["cameras"]:
+                jcam["film"] = [ jcam["width"], jcam["height"] ]
+                del jcam["width"]
+                del jcam["height"]
             return js
         with open(filename, "rt") as f: js = json.load(f, object_pairs_hook=OrderedDict)
         js = fix_proc(js)

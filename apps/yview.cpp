@@ -661,9 +661,8 @@ draw_glstate* init_draw_state(ygl::glwindow* win) {
 void run_ui(app_state* app) {
     // window
     auto cam = app->scn->cameras.at(app->camid);
-    auto ww = ygl::clamp(ygl::image_width(cam, app->resolution), 256, 1440);
-    auto wh = ygl::clamp(app->resolution, 256, 1440);
-    auto win = ygl::make_glwindow(ww, wh, "yview", app, draw);
+    auto wsize = ygl::clamp(ygl::image_size(cam, app->resolution), 256, 1440);
+    auto win = ygl::make_glwindow(wsize, "yview", app, draw);
 
     // init widget
     ygl::init_glwidgets(win);

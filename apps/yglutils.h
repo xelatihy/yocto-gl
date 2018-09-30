@@ -105,7 +105,7 @@ void draw_glimage(
 
 using glwindow = ::GLFWwindow;
 
-glwindow* make_glwindow(int width, int height, const char* title,
+glwindow* make_glwindow(const vec2i& size, const char* title,
     void* user_pointer, void (*refresh)(GLFWwindow*));
 void delete_glwindow(glwindow* win);
 

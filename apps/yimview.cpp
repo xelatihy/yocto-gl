@@ -89,7 +89,7 @@ void update_image_stats(app_image* img) {
     img->stats_done = false;
     img->stats.pxl_bounds = ygl::invalid_bbox4f;
     img->stats.lum_bounds = ygl::invalid_bbox1f;
-    for (auto p : img->img.pxl) {
+    for (auto p : img->img) {
         img->stats.pxl_bounds += p;
         img->stats.lum_bounds += ygl::luminance(xyz(p));
     }
@@ -101,16 +101,16 @@ void update_display_image(app_image* img) {
     img->display_done = false;
     img->texture_done = false;
     if (img->is_hdr) {
-        if (img->img.width * img->img.height > 1024 * 1024) {
+        if (img->img.size().x * img->img.size().y > 1024 * 1024) {
             auto nthreads = std::thread::hardware_concurrency();
             auto threads = std::vector<std::thread>();
             for (auto tid = 0; tid < nthreads; tid++) {
                 threads.push_back(std::thread([img, tid, nthreads]() {
-                    for (auto j = tid; j < img->img.height; j += nthreads) {
+                    for (auto j = tid; j < img->img.size().y; j += nthreads) {
                         if (img->display_stop) break;
-                        for (auto i = 0; i < img->img.width; i++) {
-                            img->display.at(i, j) =
-                                ygl::tonemap_exposuregamma(img->img.at(i, j),
+                        for (auto i = 0; i < img->img.size().x; i++) {
+                            img->display[{i, j}] =
+                                ygl::tonemap_exposuregamma(img->img[{i, j}],
                                     img->exposure, img->gamma, img->filmic);
                         }
                     }
@@ -118,11 +118,11 @@ void update_display_image(app_image* img) {
             }
             for (auto& t : threads) t.join();
         } else {
-            for (auto j = 0; j < img->img.height; j++) {
+            for (auto j = 0; j < img->img.size().y; j++) {
                 if (img->display_stop) break;
-                for (auto i = 0; i < img->img.width; i++) {
-                    img->display.at(i, j) =
-                        ygl::tonemap_exposuregamma(img->img.at(i, j),
+                for (auto i = 0; i < img->img.size().x; i++) {
+                    img->display[{i, j}] =
+                        ygl::tonemap_exposuregamma(img->img[{i, j}],
                             img->exposure, img->gamma, img->filmic);
                 }
             }
@@ -175,7 +175,7 @@ void draw_glwidgets(ygl::glwindow* win) {
             status = "done";
         ygl::draw_imgui_label(win, "status", status.c_str());
         ygl::draw_imgui_label(
-            win, "size", "%d x %d ", img->img.width, img->img.height);
+            win, "size", "%d x %d ", img->img.size().x, img->img.size().y);
         edited +=
             ygl::draw_slider_glwidget(win, "exposure", img->exposure, -5, 5);
         edited += ygl::draw_slider_glwidget(win, "gamma", img->gamma, 1, 3);
@@ -193,12 +193,12 @@ void draw_glwidgets(ygl::glwindow* win) {
         ygl::draw_separator_glwidget(win);
         auto mouse_pos = ygl::get_glmouse_pos(win);
         auto ij = ygl::get_image_coords(mouse_pos, img->imcenter, img->imscale,
-            {img->img.width, img->img.height});
+            {img->img.size().x, img->img.size().y});
         ygl::draw_dragger_glwidget(win, "mouse", ij);
         auto pixel = ygl::zero4f;
-        if (ij.x >= 0 && ij.x < img->img.width && ij.y >= 0 &&
-            ij.y < img->img.height) {
-            pixel = img->img.at(ij.x, ij.y);
+        if (ij.x >= 0 && ij.x < img->img.size().x && ij.y >= 0 &&
+            ij.y < img->img.size().y) {
+            pixel = img->img[ij];
         }
         ygl::draw_coloredit_glwidget(win, "pixel", pixel);
         auto stats = (img->stats_done) ? img->stats : image_stats{};
@@ -219,10 +219,10 @@ void draw(ygl::glwindow* win) {
     ygl::clear_glframebuffer(ygl::vec4f{0.8f, 0.8f, 0.8f, 1.0f});
     if (img->gl_txt) {
         ygl::center_image4f(img->imcenter, img->imscale,
-            {img->display.width, img->display.height}, win_size,
+            {img->display.size().x, img->display.size().y}, win_size,
             img->zoom_to_fit);
         ygl::draw_glimage(img->gl_txt,
-            {img->display.width, img->display.height}, win_size, img->imcenter,
+            {img->display.size().x, img->display.size().y}, win_size, img->imcenter,
             img->imscale);
     }
     draw_glwidgets(win);
@@ -244,16 +244,15 @@ void update(app_state* app) {
 void run_ui(app_state* app) {
     // window
     auto img = app->imgs.at(app->img_id);
-    auto ww = ygl::clamp(img->img.width, 512, 1440);
-    auto wh = ygl::clamp(img->img.height, 512, 1440);
-    auto win = ygl::make_glwindow(ww, wh, "yimview", app, draw);
+    auto win_size = ygl::clamp(img->img.size(), 512, 1440);
+    auto win = ygl::make_glwindow(win_size, "yimview", app, draw);
 
     // init widgets
     ygl::init_glwidgets(win);
 
     // center image
     ygl::center_image4f(img->imcenter, img->imscale,
-        {img->img.width, img->img.height}, {ww, wh}, false);
+        img->img.size(), win_size, false);
 
     // window values
     auto mouse_pos = ygl::zero2f, last_pos = ygl::zero2f;

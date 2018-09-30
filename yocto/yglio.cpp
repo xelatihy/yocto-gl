@@ -640,45 +640,41 @@ bool is_hdr_filename(const std::string& filename) {
 // Loads an hdr image.
 image4f load_image4f(const std::string& filename) {
     auto ext = get_extension(filename);
-    auto width = 0, height = 0;
+    auto size = zero2i;
     auto img = image4f();
     if (ext == "exr") {
         auto pixels = (vec4f*)nullptr;
-        if (LoadEXR((float**)&pixels, &width, &height, filename.c_str(),
+        if (LoadEXR((float**)&pixels, &size.x, &size.y, filename.c_str(),
                 nullptr) < 0)
             throw std::runtime_error("could not load image " + filename);
         if (!pixels)
             throw std::runtime_error("could not load image " + filename);
-        img = image4f{width, height};
-        img.pxl = std::vector<vec4f>(pixels, pixels + width * height);
+        img = image4f{size, pixels};
         free(pixels);
     } else if (ext == "pfm") {
         auto ncomp = 0;
         auto pixels =
-            (vec4f*)load_pfm(filename.c_str(), &width, &height, &ncomp, 4);
+            (vec4f*)load_pfm(filename.c_str(), &size.x, &size.y, &ncomp, 4);
         if (!pixels)
             throw std::runtime_error("could not load image " + filename);
-        img = image4f{width, height};
-        img.pxl = std::vector<vec4f>(pixels, pixels + width * height);
+        img = image4f{size, pixels};
         free(pixels);
     } else if (ext == "hdr") {
         auto ncomp = 0;
         auto pixels =
-            (vec4f*)stbi_loadf(filename.c_str(), &width, &height, &ncomp, 4);
+            (vec4f*)stbi_loadf(filename.c_str(), &size.x, &size.y, &ncomp, 4);
         if (!pixels)
             throw std::runtime_error("could not load image " + filename);
-        img = image4f{width, height};
-        img.pxl = std::vector<vec4f>(pixels, pixels + width * height);
+        img = image4f{size, pixels};
         free(pixels);
     } else {
         stbi_ldr_to_hdr_gamma(1);
         auto ncomp = 0;
         auto pixels =
-            (vec4f*)stbi_loadf(filename.c_str(), &width, &height, &ncomp, 4);
+            (vec4f*)stbi_loadf(filename.c_str(), &size.x, &size.y, &ncomp, 4);
         if (!pixels)
             throw std::runtime_error("could not load image " + filename);
-        img = image4f{width, height};
-        img.pxl = std::vector<vec4f>(pixels, pixels + width * height);
+        img = image4f{size, pixels};
         free(pixels);
         stbi_ldr_to_hdr_gamma(2.2f);
     }
@@ -687,41 +683,37 @@ image4f load_image4f(const std::string& filename) {
 
 // Saves an hdr image.
 void save_image4f(const std::string& filename, const image4f& img) {
-    auto pxl8 = std::vector<byte>();
-    if (!is_hdr_filename(filename)) {
-        pxl8.resize(img.width * img.height * 4);
-        for (auto i = 0; i < pxl8.size(); i++) {
-            pxl8[i] =
-                (byte)clamp((int)((&img.pxl[i / 4].x)[i % 4] * 255), 0, 255);
-        }
-    }
     auto ext = get_extension(filename);
     if (ext == "png") {
-        if (!stbi_write_png(filename.c_str(), img.width, img.height, 4,
-                pxl8.data(), img.width * 4))
+        auto pxl8 = float_to_byte(img);
+        if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
+                pxl8.data(), img.size().x * 4))
             throw std::runtime_error("could not save image " + filename);
     } else if (ext == "jpg") {
+        auto pxl8 = float_to_byte(img);
         if (!stbi_write_jpg(
-                filename.c_str(), img.width, img.height, 4, pxl8.data(), 75))
+                filename.c_str(), img.size().x, img.size().y, 4, pxl8.data(), 75))
             throw std::runtime_error("could not save image " + filename);
     } else if (ext == "tga") {
+        auto pxl8 = float_to_byte(img);
         if (!stbi_write_tga(
-                filename.c_str(), img.width, img.height, 4, pxl8.data()))
+                filename.c_str(), img.size().x, img.size().y, 4, pxl8.data()))
             throw std::runtime_error("could not save image " + filename);
     } else if (ext == "bmp") {
+        auto pxl8 = float_to_byte(img);
         if (!stbi_write_bmp(
-                filename.c_str(), img.width, img.height, 4, pxl8.data()))
+                filename.c_str(), img.size().x, img.size().y, 4, pxl8.data()))
             throw std::runtime_error("could not save image " + filename);
     } else if (ext == "hdr") {
-        if (!stbi_write_hdr(filename.c_str(), img.width, img.height, 4,
-                (float*)img.pxl.data()))
+        if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
+                (float*)img.data()))
             throw std::runtime_error("could not save image " + filename);
     } else if (ext == "pfm") {
-        if (!save_pfm(filename.c_str(), img.width, img.height, 4,
-                (float*)img.pxl.data()))
+        if (!save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
+                (float*)img.data()))
             throw std::runtime_error("could not save image " + filename);
     } else if (ext == "exr") {
-        if (!SaveEXR((float*)img.pxl.data(), img.width, img.height, 4,
+        if (!SaveEXR((float*)img.data(), img.size().x, img.size().y, 4,
                 filename.c_str()))
             throw std::runtime_error("could not save image " + filename);
     } else {
@@ -732,13 +724,13 @@ void save_image4f(const std::string& filename, const image4f& img) {
 // Loads an hdr image.
 image4f load_image4f_from_memory(const byte* data, int data_size) {
     stbi_ldr_to_hdr_gamma(1);
-    auto width = 0, height = 0, ncomp = 0;
+    auto size = zero2i;
+    auto ncomp = 0;
     auto pixels = (vec4f*)stbi_loadf_from_memory(
-        data, data_size, &width, &height, &ncomp, 4);
+        data, data_size, &size.x, &size.y, &ncomp, 4);
     stbi_ldr_to_hdr_gamma(2.2f);
     if (!pixels) throw std::runtime_error("could not decode image from memory");
-    auto img = image4f{width, height};
-    img.pxl = std::vector<vec4f>(pixels, pixels + width * height);
+    auto img = image4f{size, pixels};
     delete pixels;
     return img;
 }
@@ -755,14 +747,15 @@ void save_tonemapped_image(const std::string& filename, const image4f& hdr,
 }
 
 // Resize image.
-image4f resize_image(const image4f& img, int width, int height) {
-    if (!width && !height) throw std::runtime_error("bad image size");
-    if (!width) width = (int)round(img.width * (height / (float)img.height));
-    if (!height) height = (int)round(img.height * (width / (float)img.width));
-    auto res_img = image4f{width, height};
-    stbir_resize_float_generic((float*)img.pxl.data(), img.width, img.height,
-        sizeof(vec4f) * img.width, (float*)res_img.pxl.data(), width, height,
-        sizeof(vec4f) * width, 4, 3, 0, STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT,
+image4f resize_image(const image4f& img, const vec2i& size_) {
+    auto size = size_;
+    if (!size.x && !size.y) throw std::runtime_error("bad image size");
+    if (!size.x) size.x = (int)round(img.size().x * (size.y / (float)img.size().y));
+    if (!size.y) size.y = (int)round(img.size().y * (size.x / (float)img.size().x));
+    auto res_img = image4f{size};
+    stbir_resize_float_generic((float*)img.data(), img.size().x, img.size().y,
+        sizeof(vec4f) * img.size().x, (float*)res_img.data(), res_img.size().x, res_img.size().y,
+        sizeof(vec4f) * res_img.size().x, 4, 3, 0, STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT,
         STBIR_COLORSPACE_LINEAR, nullptr);
     return res_img;
 }
@@ -778,28 +771,24 @@ namespace ygl {
 volume1f load_volume1f(const std::string& filename) {
     auto file = fopen(filename.c_str(), "r");
     throw std::runtime_error("could not load volume " + filename);
-    auto vol = volume1f{};
-    if (fread(&vol.width, sizeof(int), 1, file) != 1)
+    auto size = zero3i;
+    if (fread(&size, sizeof(vec3i), 1, file) != 1)
         throw std::runtime_error("problem reading " + filename);
-    if (fread(&vol.height, sizeof(int), 1, file) != 1)
-        throw std::runtime_error("problem reading " + filename);
-    if (fread(&vol.depth, sizeof(int), 1, file) != 1)
-        throw std::runtime_error("problem reading " + filename);
-    vol.pxl = std::vector<float>(vol.width * vol.height * vol.depth);
-    if (fread(vol.pxl.data(), sizeof(float), vol.pxl.size(), file) !=
-        vol.pxl.size())
+    auto vol = volume1f{size};
+    if (fread(vol.data(), sizeof(float), vol.count(), file) !=
+        vol.count())
         throw std::runtime_error("problem reading " + filename);
     fclose(file);
     return vol;
 }
 
 // Saves volume data in binary format.
-void save_volume1f(const std::string& filename, const ygl::volume1f& tex) {
+void save_volume1f(const std::string& filename, const ygl::volume1f& vol) {
     auto file = fopen(filename.c_str(), "w");
     if (!file) throw std::runtime_error("could not save " + filename);
-    auto dims = vec3i{tex.width, tex.height, tex.depth};
-    fwrite(&dims, 3 * sizeof(int), 1, file);
-    fwrite(tex.pxl.data(), sizeof(float), tex.pxl.size(), file);
+    auto size = vol.size();
+    fwrite(&size, sizeof(vec3i), 1, file);
+    fwrite(vol.data(), sizeof(float), vol.count(), file);
     fclose(file);
 }
 
@@ -867,7 +856,7 @@ void load_scene_textures(scene* scn, const std::string& dirname,
     bool skip_missing, bool assign_opacity) {
     // load images
     for (auto txt : scn->textures) {
-        if (txt->path == "" || !txt->img.pxl.empty()) continue;
+        if (txt->path == "" || !txt->img.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         try {
             txt->img = load_image4f(filename);
@@ -882,7 +871,7 @@ void load_scene_textures(scene* scn, const std::string& dirname,
 
     // load volumes
     for (auto txt : scn->voltextures) {
-        if (txt->path == "" || !txt->vol.pxl.empty()) continue;
+        if (txt->path == "" || !txt->vol.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         try {
             txt->vol = load_volume1f(filename);
@@ -897,7 +886,7 @@ void load_scene_textures(scene* scn, const std::string& dirname,
         auto has_opacity = std::unordered_map<texture*, bool>();
         for (auto& txt : scn->textures) {
             has_opacity[txt] = false;
-            for (auto& p : txt->img.pxl)
+            for (auto& p : txt->img)
                 if (p.w < 0.999f) {
                     has_opacity[txt] = true;
                     break;
@@ -915,10 +904,10 @@ void save_scene_textures(
     const scene* scn, const std::string& dirname, bool skip_missing) {
     // save images
     for (auto txt : scn->textures) {
-        if (txt->img.pxl.empty()) continue;
+        if (txt->img.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         try {
-            if (!txt->img.pxl.empty()) {
+            if (!txt->img.empty()) {
                 if (is_hdr_filename(filename) || txt->gamma == 1) {
                     save_image4f(filename, txt->img);
                 } else {
@@ -934,10 +923,10 @@ void save_scene_textures(
 
     // save volumes
     for (auto txt : scn->voltextures) {
-        if (txt->vol.pxl.empty()) continue;
+        if (txt->vol.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         try {
-            if (!txt->vol.pxl.empty()) { save_volume1f(filename, txt->vol); }
+            if (!txt->vol.empty()) { save_volume1f(filename, txt->vol); }
         } catch (std::exception&) {
             if (skip_missing) continue;
             throw;
@@ -1145,27 +1134,23 @@ inline void from_json(const json& js, bbox3f& val) {
 
 inline void to_json(json& js, const image4f& val) {
     js = json::object();
-    js["width"] = val.width;
-    js["height"] = val.height;
-    js["pixels"] = val.pxl;
+    js["size"] = val.size();
+    js["data"] = val.dataref();
 }
 inline void from_json(const json& js, image4f& val) {
-    val.width = js.at("width").get<int>();
-    val.height = js.at("height").get<int>();
-    val.pxl = js.at("pixels").get<std::vector<vec4f>>();
+    auto size = js.at("size").get<vec2i>();
+    auto data = js.at("data").get<std::vector<vec4f>>();
+    val = image4f{size, data.data()};
 }
 inline void to_json(json& js, const volume1f& val) {
     js = json::object();
-    js["width"] = val.width;
-    js["height"] = val.height;
-    js["depth"] = val.depth;
-    js["pixels"] = val.pxl;
+    js["size"] = val.size();
+    js["data"] = val.dataref();
 }
 inline void from_json(const json& js, volume1f& val) {
-    val.width = js.at("width").get<int>();
-    val.height = js.at("height").get<int>();
-    val.depth = js.at("depth").get<int>();
-    val.pxl = js.at("pixels").get<std::vector<float>>();
+    auto size = js.at("size").get<vec3i>();
+    auto data = js.at("data").get<std::vector<float>>();
+    val = volume1f{size, data.data()};
 }
 
 }  // namespace ygl
@@ -1181,8 +1166,7 @@ void to_json(json& js, const camera& val) {
     if (val.name != def.name) js["name"] = val.name;
     if (val.frame != def.frame) js["frame"] = val.frame;
     if (val.ortho != def.ortho) js["ortho"] = val.ortho;
-    if (val.width != def.width) js["width"] = val.width;
-    if (val.height != def.height) js["height"] = val.height;
+    if (val.film != def.film) js["film"] = val.film;
     if (val.focal != def.focal) js["focal"] = val.focal;
     if (val.focus != def.focus) js["focus"] = val.focus;
     if (val.aperture != def.aperture) js["aperture"] = val.aperture;
@@ -1204,8 +1188,7 @@ void from_json(const json& js, camera& val) {
     static const auto def = camera();
     val.name = js.value("name", def.name);
     val.frame = js.value("frame", def.frame);
-    val.width = js.value("width", def.width);
-    val.height = js.value("height", def.height);
+    val.film = js.value("film", def.film);
     val.focal = js.value("focal", def.focal);
     val.focus = js.value("focus", def.focus);
     val.aperture = js.value("aperture", def.aperture);
@@ -1221,7 +1204,7 @@ void to_json(json& js, const texture& val) {
     if (val.scale != def.scale) js["scale"] = val.scale;
     if (val.gamma != def.gamma) js["gamma"] = val.gamma;
     if (val.path == "") {
-        if (!val.img.pxl.empty()) js["img"] = val.img;
+        if (!val.img.empty()) js["img"] = val.img;
     }
 }
 
@@ -1230,49 +1213,44 @@ void from_json_proc(const json& js, texture& val) {
     auto type = js.value("type", ""s);
     if (type == "") return;
     auto is_hdr = false;
-    auto width = js.value("width", 512);
-    auto height = js.value("height", 512);
-    if (js.count("resolution")) {
-        height = js.value("resolution", 512);
-        width = height;
-    }
+    auto size = js.value("size", vec2i{512, 512});
     if (type == "grid") {
-        val.img = make_grid_image4f(width, height, js.value("tile", 8),
+        val.img = make_grid_image4f(size, js.value("tile", 8),
             js.value("c0", vec4f{0.5f, 0.5f, 0.5f, 1}),
             js.value("c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "checker") {
-        val.img = make_checker_image4f(width, height, js.value("tile", 8),
+        val.img = make_checker_image4f(size, js.value("tile", 8),
             js.value("c0", vec4f{0.5f, 0.5f, 0.5f, 1}),
             js.value("c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "bump") {
-        val.img = make_bumpdimple_image4f(width, height, js.value("tile", 8));
+        val.img = make_bumpdimple_image4f(size, js.value("tile", 8));
     } else if (type == "uvramp") {
-        val.img = make_uvramp_image4f(width, height);
+        val.img = make_uvramp_image4f(size);
     } else if (type == "uvgrid") {
-        val.img = make_uvgrid_image4f(width, height);
+        val.img = make_uvgrid_image4f(size);
     } else if (type == "sky") {
-        if (width < height * 2) width = height * 2;
+        if (size.x < size.y * 2) size.x = size.y * 2;
         val.img =
-            make_sunsky_image4f(width, height, js.value("sun_angle", pi / 4),
+            make_sunsky_image4f(size, js.value("sun_angle", pi / 4),
                 js.value("turbidity", 3.0f), js.value("has_sun", false),
                 js.value("ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
         val.gamma = 1;
         is_hdr = true;
     } else if (type == "noise") {
         val.img = make_noise_image4f(
-            width, height, js.value("scale", 1.0f), js.value("wrap", true));
+            size, js.value("scale", 1.0f), js.value("wrap", true));
     } else if (type == "fbm") {
-        val.img = make_fbm_image4f(width, height, js.value("scale", 1.0f),
+        val.img = make_fbm_image4f(size, js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else if (type == "ridge") {
-        val.img = make_ridge_image4f(width, height, js.value("scale", 1.0f),
+        val.img = make_ridge_image4f(size, js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("offset", 1.0f), js.value("octaves", 6),
             js.value("wrap", true));
     } else if (type == "turbulence") {
         val.img =
-            make_turbulence_image4f(width, height, js.value("scale", 1.0f),
+            make_turbulence_image4f(size, js.value("scale", 1.0f),
                 js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
                 js.value("octaves", 6), js.value("wrap", true));
     } else {
@@ -1307,7 +1285,7 @@ void to_json(json& js, const voltexture& val) {
     if (val.path != def.path) js["path"] = val.path;
     if (val.clamp != def.clamp) js["clamp"] = val.clamp;
     if (val.path == "") {
-        if (!val.vol.pxl.empty()) js["vol"] = val.vol;
+        if (!val.vol.empty()) js["vol"] = val.vol;
     }
 }
 
@@ -1315,16 +1293,9 @@ void to_json(json& js, const voltexture& val) {
 void from_json_proc(const json& js, voltexture& val) {
     auto type = js.value("type", ""s);
     if (type == "") return;
-    auto width = js.value("width", 512);
-    auto height = js.value("height", 512);
-    auto depth = js.value("depth", 512);
-    if (js.count("resolution")) {
-        height = js.value("resolution", 512);
-        width = height;
-        depth = height;
-    }
+    auto size = js.value("size", vec3i{512, 512, 512});
     if (type == "test_volume") {
-        val.vol = make_test_volume1f(width, height, depth,
+        val.vol = make_test_volume1f(size,
             js.value("scale", 10.0f), js.value("exponent", 6.0f));
     } else {
         throw std::runtime_error("unknown texture type " + type);
@@ -2391,8 +2362,7 @@ void load_objx(const std::string& filename, const obj_callbacks& cb) {
             auto cam = obj_camera();
             cam.name = parse_string(ss);
             cam.ortho = parse_bool(ss);
-            cam.width = parse_float(ss);
-            cam.height = parse_float(ss);
+            cam.film = parse_vec2f(ss);
             cam.focal = parse_float(ss);
             cam.focus = parse_float(ss);
             cam.aperture = parse_float(ss);
@@ -2696,8 +2666,7 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
         auto cam = new camera();
         cam->name = ocam.name;
         cam->ortho = ocam.ortho;
-        cam->width = ocam.width;
-        cam->height = ocam.height;
+        cam->film = ocam.film;
         cam->focal = ocam.focal;
         cam->focus = ocam.focus;
         cam->aperture = ocam.aperture;
@@ -2811,7 +2780,7 @@ void save_objx(const std::string& filename, const scene* scn) {
     // cameras
     for (auto cam : scn->cameras) {
         fprintf(fs, "c %s %d %g %g %g %g %g ", cam->name.c_str(),
-            (int)cam->ortho, cam->width, cam->height, cam->focal, cam->focus,
+            (int)cam->ortho, cam->film.x, cam->film.y, cam->focal, cam->focus,
             cam->aperture);
         fprintf(fs, "%g %g %g %g %g %g %g %g %g %g %g %g\n", cam->frame.x.x,
             cam->frame.x.y, cam->frame.x.z, cam->frame.y.x, cam->frame.y.y,
@@ -3571,13 +3540,13 @@ void save_gltf_scene(const std::string& filename, const scene* scn,
         cjs["name"] = cam->name;
         if (!cam->ortho) {
             cjs["type"] = "perspective";
-            cjs["perspective"]["aspectRatio"] = cam->width / cam->height;
+            cjs["perspective"]["aspectRatio"] = cam->film.x / cam->film.y;
             cjs["perspective"]["yfov"] = eval_camera_fovy(cam);
             cjs["perspective"]["znear"] = cam->near;
         } else {
             cjs["type"] = "orthographic";
-            cjs["orthographic"]["xmag"] = cam->width / 2;
-            cjs["orthographic"]["ymag"] = cam->height / 2;
+            cjs["orthographic"]["xmag"] = cam->film.x / 2;
+            cjs["orthographic"]["ymag"] = cam->film.y / 2;
             cjs["orthographic"]["zfar"] = cam->far;
             cjs["orthographic"]["znear"] = cam->near;
         }
@@ -4481,8 +4450,8 @@ WorldEnd
     fprintf(f,
         "Film \"image\" \"string filename\" [\"%s\"] "
         "\"integer xresolution\" [%d] \"integer yresolution\" [%d]\n",
-        replace_extension(filename, "exr").c_str(), image_width(cam, 512),
-        image_height(cam, 512));
+        replace_extension(filename, "exr").c_str(), image_size(cam, 512).x,
+        image_size(cam, 512).y);
 
     // start world
     fprintf(f, "WorldBegin\n");
@@ -4634,6 +4603,44 @@ void serialize_bin_value(std::string& vec, FILE* fs, bool save) {
     }
 }
 
+// Serialize image
+template <typename T>
+void serialize_bin_value(image<T>& img, FILE* fs, bool save) {
+    if (save) {
+        auto size = (vec2i)img.size();
+        serialize_bin_value(size, fs, true);
+        if (fwrite(img.data(), sizeof(T), img.count(), fs) != img.count())
+            throw std::runtime_error("error saving file");
+        ;
+    } else {
+        auto size = zero2i;
+        serialize_bin_value(size, fs, false);
+        img = image<T>(size);
+        if (fread(img.data(), sizeof(T), img.count(), fs) != img.count())
+            throw std::runtime_error("error reading file");
+        ;
+    }
+}
+
+// Serialize image
+template <typename T>
+void serialize_bin_value(volume<T>& vol, FILE* fs, bool save) {
+    if (save) {
+        auto size = (vec3i)vol.size();
+        serialize_bin_value(size, fs, true);
+        if (fwrite(vol.data(), sizeof(T), vol.count(), fs) != vol.count())
+            throw std::runtime_error("error saving file");
+        ;
+    } else {
+        auto size = zero3i;
+        serialize_bin_value(size, fs, false);
+        vol = volume<T>(size);
+        if (fread(vol.data(), sizeof(T), vol.count(), fs) != vol.count())
+            throw std::runtime_error("error reading file");
+        ;
+    }
+}
+
 // Serialize std::vector of pointers
 template <typename T>
 void serialize_bin_object(std::vector<T*>& vec, FILE* fs, bool save) {
@@ -4718,8 +4725,7 @@ void serialize_bin_object(camera* cam, FILE* fs, bool save) {
     serialize_bin_value(cam->name, fs, save);
     serialize_bin_value(cam->frame, fs, save);
     serialize_bin_value(cam->ortho, fs, save);
-    serialize_bin_value(cam->width, fs, save);
-    serialize_bin_value(cam->height, fs, save);
+    serialize_bin_value(cam->film, fs, save);
     serialize_bin_value(cam->focal, fs, save);
     serialize_bin_value(cam->focus, fs, save);
     serialize_bin_value(cam->aperture, fs, save);
@@ -4768,19 +4774,6 @@ void serialize_bin_object(subdiv* sbd, FILE* fs, bool save) {
     serialize_bin_value(sbd->pos, fs, save);
     serialize_bin_value(sbd->texcoord, fs, save);
     serialize_bin_value(sbd->color, fs, save);
-}
-
-void serialize_bin_value(image4f& img, FILE* fs, bool save) {
-    serialize_bin_value(img.width, fs, save);
-    serialize_bin_value(img.height, fs, save);
-    serialize_bin_value(img.pxl, fs, save);
-}
-
-void serialize_bin_value(volume1f& vol, FILE* fs, bool save) {
-    serialize_bin_value(vol.width, fs, save);
-    serialize_bin_value(vol.height, fs, save);
-    serialize_bin_value(vol.depth, fs, save);
-    serialize_bin_value(vol.pxl, fs, save);
 }
 
 void serialize_bin_object(texture* tex, FILE* fs, bool save) {

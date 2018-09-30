@@ -27,8 +27,10 @@
             ],
             "focal": 0.035,
             "aperture": 0.0,
-            "width": 0.024,
-            "height": 0.024
+            "film": [
+                0.024,
+                0.024
+            ]
         }
     ],
     "textures": [],

@@ -165,8 +165,7 @@ inline bool draw_glwidgets_scene_inspector(
     edited +=
         ygl::draw_slider_glwidget(win, "frame.o", val->frame.o.x, -10, 10);
     edited += ygl::draw_checkbox_glwidget(win, "ortho", val->ortho);
-    edited += ygl::draw_slider_glwidget(win, "width", val->width, 0.01f, 1);
-    edited += ygl::draw_slider_glwidget(win, "height", val->height, 0.01f, 1);
+    edited += ygl::draw_slider_glwidget(win, "film", val->film, 0.01f, 1);
     edited += ygl::draw_slider_glwidget(win, "focal", val->focal, 0.01f, 1);
     edited += ygl::draw_slider_glwidget(win, "focus", val->focus, 0.01f, 1000);
     edited += ygl::draw_slider_glwidget(win, "aperture", val->aperture, 0, 5);
@@ -185,7 +184,7 @@ inline bool draw_glwidgets_scene_inspector(
     edited += ygl::draw_slider_glwidget(win, "scale", val->scale, 0, 1);
     edited += ygl::draw_slider_glwidget(win, "gamma", val->gamma, 1, 2.2f);
     ygl::draw_imgui_label(
-        win, "img", "%d x %d", val->img.width, val->img.height);
+        win, "img", "%d x %d", val->img.size().x, val->img.size().y);
     return edited;
 }
 
