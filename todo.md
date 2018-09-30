@@ -5,8 +5,9 @@ Please consider this to be just development notes and not any real planning.
 
 ## Next features
 
-- async stuff in yimview
-- make images like vectors
+- image loops over pixels
+    - check image operations
+    - check path tracer
 - path tracing with pbrt MIS
 - simple renderers for book
     - simple intersection
