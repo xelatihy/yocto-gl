@@ -258,30 +258,30 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser =
         make_cmdline_parser(argc, argv, "progressive path tracing", "yitrace");
-    app->params.camid = parse_int(parser, "--camera", 0, "Camera index.");
+    app->params.camid = parse_arg(parser, "--camera", 0, "Camera index.");
     app->params.yresolution =
-        parse_int(parser, "--resolution,-r", 512, "Image vertical resolution.");
+        parse_arg(parser, "--resolution,-r", 512, "Image vertical resolution.");
     app->params.nsamples =
-        parse_int(parser, "--nsamples,-s", 4096, "Number of samples.");
-    app->params.tracer = (trace_type)parse_enum(
+        parse_arg(parser, "--nsamples,-s", 4096, "Number of samples.");
+    app->params.tracer = (trace_type)parse_arge(
         parser, "--tracer,-t", 0, "Tracer type.", trace_type_names);
     app->params.nbounces =
-        parse_int(parser, "--nbounces", 4, "Maximum number of bounces.");
+        parse_arg(parser, "--nbounces", 4, "Maximum number of bounces.");
     app->params.pixel_clamp =
-        parse_int(parser, "--pixel-clamp", 100, "Final pixel clamping.");
-    app->params.seed = parse_int(
+        parse_arg(parser, "--pixel-clamp", 100, "Final pixel clamping.");
+    app->params.seed = parse_arg(
         parser, "--seed", 7, "Seed for the random number generators.");
-    auto embree = parse_flag(parser, "--embree", false, "Use Embree ratracer");
+    auto embree = parse_arg(parser, "--embree", false, "Use Embree ratracer");
     auto double_sided =
-        parse_flag(parser, "--double-sided", false, "Double-sided rendering.");
+        parse_arg(parser, "--double-sided", false, "Double-sided rendering.");
     auto add_skyenv =
-        parse_flag(parser, "--add-skyenv", false, "Add missing env map");
+        parse_arg(parser, "--add-skyenv", false, "Add missing env map");
     auto quiet =
-        parse_flag(parser, "--quiet", false, "Print only errors messages");
+        parse_arg(parser, "--quiet", false, "Print only errors messages");
     app->imfilename =
-        parse_string(parser, "--output-image,-o", "out.hdr", "Image filename");
+        parse_arg(parser, "--output-image,-o", "out.hdr", "Image filename");
     app->filename =
-        parse_string(parser, "scene", "scene.json", "Scene filename", true);
+        parse_arg(parser, "scene", "scene.json", "Scene filename", true);
     check_cmdline(parser);
 
     // scene loading

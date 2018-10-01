@@ -5,13 +5,12 @@ Please consider this to be just development notes and not any real planning.
 
 ## Next features
 
-- ycmdline with templates
-- sum and comparisons with literals
-- literals
-- to_string
-- image loops over pixels
-    - check image operations
-    - check path tracer
+- generic
+    - to_string
+    - vec: consider constructors/conversions
+    - cmdline with to_string and parse
+    - min, lerp, clamp
+- move ext files
 - path tracing with pbrt MIS
 - simple renderers for book
     - simple intersection

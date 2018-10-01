@@ -288,13 +288,13 @@ int main(int argc, char* argv[]) {
 
     // command line params
     auto parser = make_cmdline_parser(argc, argv, "view images", "yimview");
-    auto gamma = parse_float(parser, "--gamma,-g", 2.2f, "display gamma");
-    auto exposure = parse_float(parser, "--exposure,-e", 0, "display exposure");
-    auto filmic = parse_flag(parser, "--filmic", false, "display filmic");
+    auto gamma = parse_arg(parser, "--gamma,-g", 2.2f, "display gamma");
+    auto exposure = parse_arg(parser, "--exposure,-e", 0.0f, "display exposure");
+    auto filmic = parse_arg(parser, "--filmic", false, "display filmic");
     // auto quiet = parse_flag(
     //     parser, "--quiet,-q", false, "Print only errors messages");
     auto filenames =
-        parse_strings(parser, "images", {}, "image filenames", true);
+        parse_args(parser, "images", std::vector<std::string>{}, "image filenames", true);
     check_cmdline(parser);
 
     // loading images

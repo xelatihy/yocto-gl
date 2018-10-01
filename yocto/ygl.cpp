@@ -2997,18 +2997,20 @@ namespace ygl {
 image<vec4f> gamma_to_linear(const image<vec4f>& srgb, float gamma) {
     if (gamma == 1) return srgb;
     auto lin = image<vec4f>{srgb.size()};
-    for (auto idx = 0; idx < srgb.count(); idx++) {
-        xyz(lin[idx]) = gamma_to_linear(xyz(srgb[idx]), gamma);
-        lin[idx].w = srgb[idx].w;
+    for (auto j = 0; j < srgb.size().y; j++) {
+        for (auto i = 0; i < srgb.size().x; i++) {
+            lin[{i, j}] = gamma_to_linear(srgb[{i, j}], gamma);
+        }
     }
     return lin;
 }
 image<vec4f> linear_to_gamma(const image<vec4f>& lin, float gamma) {
     if (gamma == 1) return lin;
     auto srgb = image<vec4f>{lin.size()};
-    for (auto idx = 0; idx < lin.count(); idx++) {
-        xyz(srgb[idx]) = linear_to_gamma(xyz(lin[idx]), gamma);
-        srgb[idx].w = lin[idx].w;
+    for (auto j = 0; j < srgb.size().y; j++) {
+        for (auto i = 0; i < srgb.size().x; i++) {
+            srgb[{i, j}] = linear_to_gamma(lin[{i, j}], gamma);
+        }
     }
     return srgb;
 }
@@ -3016,14 +3018,20 @@ image<vec4f> linear_to_gamma(const image<vec4f>& lin, float gamma) {
 // Conversion from/to floats.
 image<vec4f> byte_to_float(const image<vec4b>& bt) {
     auto fl = image<vec4f>{bt.size()};
-    for (auto idx = 0; idx < bt.count(); idx++)
-        fl[idx] = byte_to_float(bt[idx]);
+    for (auto j = 0; j < bt.size().y; j++) {
+        for (auto i = 0; i < bt.size().x; i++) {
+            fl[{i, j}] = byte_to_float(bt[{i, j}]);
+        }
+    }
     return fl;
 }
 image<vec4b> float_to_byte(const image<vec4f>& fl) {
     auto bt = image<vec4b>{fl.size()};
-    for (auto idx = 0; idx < fl.count(); idx++)
-        bt[idx] = float_to_byte(fl[idx]);
+    for (auto j = 0; j < fl.size().y; j++) {
+        for (auto i = 0; i < fl.size().x; i++) {
+            bt[{i, j}] = float_to_byte(fl[{i, j}]);
+        }
+    }
     return bt;
 }
 
@@ -3031,8 +3039,12 @@ image<vec4b> float_to_byte(const image<vec4f>& fl) {
 image<vec4f> tonemap_exposuregamma(
     const image<vec4f>& hdr, float exposure, float gamma, bool filmic) {
     auto ldr = image<vec4f>{hdr.size()};
-    for (auto idx = 0; idx < hdr.count(); idx++)
-        ldr[idx] = tonemap_exposuregamma(hdr[idx], exposure, gamma, filmic);
+    for (auto j = 0; j < hdr.size().y; j++) {
+        for (auto i = 0; i < hdr.size().x; i++) {
+            ldr[{i, j}] =
+                tonemap_exposuregamma(hdr[{i, j}], exposure, gamma, filmic);
+        }
+    }
     return ldr;
 }
 
@@ -3598,11 +3610,12 @@ std::vector<float> compute_shape_cdf(const shape* shp) {
 std::vector<float> compute_environment_cdf(const environment* env) {
     auto txt = env->ke_txt;
     if (!txt) return {};
-    auto elem_cdf = std::vector<float>(txt->img.count());
+    auto elem_cdf = std::vector<float>(txt->img.size().x * txt->img.size().y);
     if (!txt->img.empty()) {
         for (auto i = 0; i < elem_cdf.size(); i++) {
-            auto th = (i / txt->img.size().x + 0.5f) * pif / txt->img.size().y;
-            elem_cdf[i] = max(xyz(txt->img[i])) * sin(th);
+            auto ij = vec2i{i % txt->img.size().x, i / txt->img.size().x};
+            auto th = (ij.y + 0.5f) * pif / txt->img.size().y;
+            elem_cdf[i] = max(xyz(txt->img[ij])) * sin(th);
             if (i) elem_cdf[i] += elem_cdf[i - 1];
         }
     } else {
@@ -5707,12 +5720,12 @@ vec3f trace_func(const scene* scn, const bvh_tree* bvh,
 
 // Trace a single sample
 vec4f trace_sample(trace_state* state, const scene* scn, const bvh_tree* bvh,
-    const trace_lights* lights, int idx, const trace_params& params) {
+    const trace_lights* lights, const vec2i& ij, const trace_params& params) {
     _trace_npaths += 1;
     auto cam = scn->cameras.at(params.camid);
-    auto& rng = state->rng[idx];
+    auto& rng = state->rng[ij];
     auto ray =
-        eval_camera_ray(cam, idx, state->img.size(), rand2f(rng), rand2f(rng));
+        eval_camera_ray(cam, ij, state->img.size(), rand2f(rng), rand2f(rng));
     auto hit = false;
     auto l = trace_func(
         scn, bvh, lights, params.tracer, ray, rng, params.nbounces, &hit);
@@ -5777,23 +5790,26 @@ image<vec4f> trace_image4f(const scene* scn, const bvh_tree* bvh,
     auto state = make_trace_state(scn, params);
 
     if (params.noparallel) {
-        for (auto idx = 0; idx < state->img.count(); idx++) {
-            for (auto s = 0; s < params.nsamples; s++)
-                state->img[idx] +=
-                    trace_sample(state, scn, bvh, lights, idx, params);
-            state->img[idx] /= params.nsamples;
+        for (auto j = 0; j < state->img.size().y; j++) {
+            for (auto i = 0; i < state->img.size().x; i++) {
+                for (auto s = 0; s < params.nsamples; s++)
+                    state->img[{i, j}] +=
+                        trace_sample(state, scn, bvh, lights, {i, j}, params);
+                state->img[{i, j}] /= params.nsamples;
+            }
         }
     } else {
         auto nthreads = std::thread::hardware_concurrency();
         auto threads = std::vector<std::thread>();
         for (auto tid = 0; tid < nthreads; tid++) {
             threads.push_back(std::thread([=]() {
-                for (auto idx = tid; idx < state->img.count();
-                     idx += nthreads) {
-                    for (auto s = 0; s < params.nsamples; s++)
-                        state->img[idx] +=
-                            trace_sample(state, scn, bvh, lights, idx, params);
-                    state->img[idx] /= params.nsamples;
+                for (auto j = tid; j < state->img.size().y; j += nthreads) {
+                    for (auto i = 0; i < state->img.size().x; i++) {
+                        for (auto s = 0; s < params.nsamples; s++)
+                            state->img[{i, j}] += trace_sample(
+                                state, scn, bvh, lights, {i, j}, params);
+                        state->img[{i, j}] /= params.nsamples;
+                    }
                 }
             }));
         }
@@ -5809,29 +5825,33 @@ bool trace_samples(trace_state* state, const scene* scn, const bvh_tree* bvh,
     const trace_lights* lights, const trace_params& params) {
     auto nbatch = min(params.nbatch, params.nsamples - state->sample);
     if (params.noparallel) {
-        for (auto idx = 0; idx < state->img.count(); idx++) {
-            state->img[idx] *= state->sample;
-            for (auto s = 0; s < nbatch; s++)
-                state->img[idx] +=
-                    trace_sample(state, scn, bvh, lights, idx, params);
-            state->img[idx] /= state->sample + nbatch;
-            state->display[idx] = tonemap_exposuregamma(
-                state->img[idx], params.exposure, params.gamma, params.filmic);
+        for (auto j = 0; j < state->img.size().y; j++) {
+            for (auto i = 0; i < state->img.size().x; i++) {
+                state->img[{i, j}] *= state->sample;
+                for (auto s = 0; s < nbatch; s++)
+                    state->img[{i, j}] +=
+                        trace_sample(state, scn, bvh, lights, {i, j}, params);
+                state->img[{i, j}] /= state->sample + nbatch;
+                state->display[{i, j}] = tonemap_exposuregamma(state->img[{i, j}],
+                    params.exposure, params.gamma, params.filmic);
+            }
         }
     } else {
         auto nthreads = std::thread::hardware_concurrency();
         auto threads = std::vector<std::thread>();
         for (auto tid = 0; tid < nthreads; tid++) {
             threads.push_back(std::thread([=]() {
-                for (auto idx = tid; idx < state->img.count();
-                     idx += nthreads) {
-                    state->img[idx] *= state->sample;
-                    for (auto s = 0; s < nbatch; s++)
-                        state->img[idx] +=
-                            trace_sample(state, scn, bvh, lights, idx, params);
-                    state->img[idx] /= state->sample + nbatch;
-                    state->display[idx] = tonemap_exposuregamma(state->img[idx],
-                        params.exposure, params.gamma, params.filmic);
+                for (auto j = tid; j < state->img.size().y; j += nthreads) {
+                    for (auto i = 0; i < state->img.size().x; i++) {
+                        state->img[{i, j}] *= state->sample;
+                        for (auto s = 0; s < nbatch; s++)
+                            state->img[{i, j}] += trace_sample(
+                                state, scn, bvh, lights, {i, j}, params);
+                        state->img[{i, j}] /= state->sample + nbatch;
+                        state->display[{i, j}] =
+                            tonemap_exposuregamma(state->img[{i, j}],
+                                params.exposure, params.gamma, params.filmic);
+                    }
                 }
             }));
         }
@@ -5871,15 +5891,17 @@ void trace_async_start(trace_state* state, const scene* scn,
         state->threads.push_back(std::thread([=, &params]() {
             for (auto s = 0; s < params.nsamples; s++) {
                 if (!tid) state->sample = s;
-                for (auto idx = tid; idx < state->img.count();
-                     idx += nthreads) {
-                    if (state->stop) return;
-                    state->img[idx] *= s;
-                    state->img[idx] +=
-                        trace_sample(state, scn, bvh, lights, idx, params);
-                    state->img[idx] /= s + 1;
-                    state->display[idx] = tonemap_exposuregamma(state->img[idx],
-                        params.exposure, params.gamma, params.filmic);
+                for (auto j = tid; j < state->img.size().y; j += nthreads) {
+                    for (auto i = 0; i < state->img.size().x; i++) {
+                        if (state->stop) return;
+                        state->img[{i, j}] *= s;
+                        state->img[{i, j}] +=
+                            trace_sample(state, scn, bvh, lights, {i, j}, params);
+                        state->img[{i, j}] /= s + 1;
+                        state->display[{i, j}] =
+                            tonemap_exposuregamma(state->img[{i, j}],
+                                params.exposure, params.gamma, params.filmic);
+                    }
                 }
             }
             if (!tid) state->sample = params.nsamples;

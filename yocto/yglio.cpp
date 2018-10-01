@@ -303,6 +303,10 @@ void print_cmdline_usage(const cmdline_parser& parser) {
     }
 }
 
+// forward declaration
+bool parse_flag(cmdline_parser& parser, const std::string& name, bool def,
+    const std::string& usage);
+
 // check if any error occurred and exit appropriately
 void check_cmdline(cmdline_parser& parser) {
     if (parse_flag(parser, "--help,-?", false, "print help")) {
@@ -384,8 +388,7 @@ std::string parse_argument(cmdline_parser& parser, const std::string& name,
     return val;
 }
 
-// Parse an integer, float, string. If name starts with "--" or "-", then it is
-// an option, otherwise it is a position argument.
+// Parse a string argument.
 std::string parse_string(cmdline_parser& parser, const std::string& name,
     const std::string& def, const std::string& usage, bool req,
     const std::vector<std::string>& choices) {
@@ -393,9 +396,24 @@ std::string parse_string(cmdline_parser& parser, const std::string& name,
                parse_option(parser, name, def, usage, req, choices) :
                parse_argument(parser, name, def, usage, req, choices);
 }
-int parse_int(cmdline_parser& parser, const std::string& name, int def,
+
+// Parse an integer, float, string. If name starts with "--" or "-", then it is
+// an option, otherwise it is a position argument.
+bool parse_arg(cmdline_parser& parser, const std::string& name, 
+    bool def, const std::string& usage) {
+    return parse_flag(parser, name, def, usage);
+}
+std::string parse_arg(cmdline_parser& parser, const std::string& name, 
+    const std::string& def, const std::string& usage, bool req) {
+    return parse_string(parser, name, def, usage, req, {});
+}
+std::string parse_arg(cmdline_parser& parser, const std::string& name, 
+    const char* def, const std::string& usage, bool req) {
+    return parse_string(parser, name, def, usage, req, {});
+}
+int parse_arg(cmdline_parser& parser, const std::string& name, int def,
     const std::string& usage, bool req) {
-    auto vals = parse_string(parser, name, std::to_string(def), usage, req);
+    auto vals = parse_string(parser, name, std::to_string(def), usage, req, {});
     auto val = def;
     if (sscanf(vals.c_str(), "%d", &val) != 1) {
         parser.error += "bad value for " + name;
@@ -403,9 +421,9 @@ int parse_int(cmdline_parser& parser, const std::string& name, int def,
     }
     return val;
 }
-float parse_float(cmdline_parser& parser, const std::string& name, float def,
+float parse_arg(cmdline_parser& parser, const std::string& name, float def,
     const std::string& usage, bool req) {
-    auto vals = parse_string(parser, name, std::to_string(def), usage, req);
+    auto vals = parse_string(parser, name, std::to_string(def), usage, req, {});
     auto val = def;
     if (sscanf(vals.c_str(), "%f", &val) != 1) {
         parser.error += "bad value for " + name;
@@ -413,10 +431,10 @@ float parse_float(cmdline_parser& parser, const std::string& name, float def,
     }
     return val;
 }
-vec2f parse_vec2f(cmdline_parser& parser, const std::string& name,
+vec2f parse_arg(cmdline_parser& parser, const std::string& name,
     const vec2f& def, const std::string& usage, bool req) {
     auto vals = parse_string(parser, name,
-        std::to_string(def.x) + " " + std::to_string(def.y), usage, req);
+        std::to_string(def.x) + " " + std::to_string(def.y), usage, req, {});
     auto val = def;
     if (sscanf(vals.c_str(), "%f %f", &val.x, &val.y) != 2) {
         parser.error += "bad value for " + name;
@@ -424,12 +442,12 @@ vec2f parse_vec2f(cmdline_parser& parser, const std::string& name,
     }
     return val;
 }
-vec3f parse_vec3f(cmdline_parser& parser, const std::string& name,
+vec3f parse_arg(cmdline_parser& parser, const std::string& name,
     const vec3f& def, const std::string& usage, bool req) {
     auto vals = parse_string(parser, name,
         std::to_string(def.x) + " " + std::to_string(def.y) + " " +
             std::to_string(def.z),
-        usage, req);
+        usage, req, {});
     auto val = def;
     if (sscanf(vals.c_str(), "%f %f %f", &val.x, &val.y, &val.z) != 3) {
         parser.error += "bad value for " + name;
@@ -437,7 +455,7 @@ vec3f parse_vec3f(cmdline_parser& parser, const std::string& name,
     }
     return val;
 }
-int parse_enum(cmdline_parser& parser, const std::string& name, int def,
+int parse_arge(cmdline_parser& parser, const std::string& name, int def,
     const std::string& usage, const std::vector<std::string>& labels,
     bool req) {
     auto val = parse_string(parser, name, labels.at(def), usage, req, labels);
@@ -445,7 +463,7 @@ int parse_enum(cmdline_parser& parser, const std::string& name, int def,
 }
 
 // Parser an argument
-std::vector<std::string> parse_strings(cmdline_parser& parser,
+std::vector<std::string> parse_args(cmdline_parser& parser,
     const std::string& name, const std::vector<std::string>& def,
     const std::string& usage, bool req) {
     auto defs = std::string();
@@ -778,7 +796,8 @@ volume<float> load_volume1f(const std::string& filename) {
     if (fread(&size, sizeof(vec3i), 1, file) != 1)
         throw std::runtime_error("problem reading " + filename);
     auto vol = volume<float>{size};
-    if (fread(vol.data(), sizeof(float), vol.count(), file) != vol.count())
+    auto count = vol.size().x * vol.size().y * vol.size().z;
+    if (fread(vol.data(), sizeof(float), count, file) != count)
         throw std::runtime_error("problem reading " + filename);
     fclose(file);
     return vol;
@@ -790,7 +809,9 @@ void save_volume1f(const std::string& filename, const volume<float>& vol) {
     if (!file) throw std::runtime_error("could not save " + filename);
     auto size = vol.size();
     fwrite(&size, sizeof(vec3i), 1, file);
-    fwrite(vol.data(), sizeof(float), vol.count(), file);
+    auto count = vol.size().x * vol.size().y * vol.size().z;
+    if(fwrite(vol.data(), sizeof(float), count, file) != count)
+        throw std::runtime_error("problem saving " + filename);
     fclose(file);
 }
 
@@ -4650,14 +4671,16 @@ void serialize_bin_value(image<T>& img, FILE* fs, bool save) {
     if (save) {
         auto size = (vec2i)img.size();
         serialize_bin_value(size, fs, true);
-        if (fwrite(img.data(), sizeof(T), img.count(), fs) != img.count())
+        auto count = size.x * size.y;
+        if (fwrite(img.data(), sizeof(T), count, fs) != count)
             throw std::runtime_error("error saving file");
         ;
     } else {
         auto size = zero2i;
         serialize_bin_value(size, fs, false);
+        auto count = size.x * size.y;
         img = image<T>(size);
-        if (fread(img.data(), sizeof(T), img.count(), fs) != img.count())
+        if (fread(img.data(), sizeof(T), count, fs) != count)
             throw std::runtime_error("error reading file");
         ;
     }
@@ -4669,14 +4692,16 @@ void serialize_bin_value(volume<T>& vol, FILE* fs, bool save) {
     if (save) {
         auto size = (vec3i)vol.size();
         serialize_bin_value(size, fs, true);
-        if (fwrite(vol.data(), sizeof(T), vol.count(), fs) != vol.count())
+        auto count = size.x * size.y* size.z;
+        if (fwrite(vol.data(), sizeof(T), count, fs) != count)
             throw std::runtime_error("error saving file");
         ;
     } else {
         auto size = zero3i;
         serialize_bin_value(size, fs, false);
+        auto count = size.x * size.y* size.z;
         vol = volume<T>(size);
-        if (fread(vol.data(), sizeof(T), vol.count(), fs) != vol.count())
+        if (fread(vol.data(), sizeof(T), count, fs) != count)
             throw std::runtime_error("error reading file");
         ;
     }

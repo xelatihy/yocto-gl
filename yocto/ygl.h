@@ -294,15 +294,14 @@ using std::tan;
 using byte = unsigned char;
 using uint = unsigned int;
 
-inline int min(int x, int y) { return (x < y) ? x : y; }
-inline float min(float x, float y) { return (x < y) ? x : y; }
-inline int max(int x, int y) { return (x > y) ? x : y; }
-inline float max(float x, float y) { return (x > y) ? x : y; }
-inline int clamp(int x, int min_, int max_) { return min(max(x, min_), max_); }
-inline float clamp(float x, float min_, float max_) {
-    return min(max(x, min_), max_);
-}
-inline float lerp(float a, float b, float u) { return a * (1 - u) + b * u; }
+template<typename T>
+inline T min(const T& x, const T& y) { return (x < y) ? x : y; }
+template<typename T>
+inline T max(const T& x, const T& y) { return (x > y) ? x : y; }
+template<typename T>
+inline T clamp(const T& x, const T& min_, const T& max_) { return min(max(x, min_), max_); }
+template<typename T, typename T1>
+inline T lerp(const T& a, const T& b, T1 u) { return a * (1 - u) + b * u; }
 
 template <class T>
 const T mint_ = std::numeric_limits<T>::lowest();
@@ -405,6 +404,14 @@ template <typename T>
 inline bool operator!=(const vec2<T>& a, const vec2<T>& b) {
     return a.x != b.x || a.y != b.y;
 }
+template <typename T, typename T1>
+inline bool operator==(const vec2<T>& a, T1 b) {
+    return a.x == b && a.y == b;
+}
+template <typename T, typename T1>
+inline bool operator!=(const vec2<T>& a, T1 b) {
+    return a.x != b || a.y != b;
+}
 template <typename T>
 inline bool operator==(const vec3<T>& a, const vec3<T>& b) {
     return a.x == b.x && a.y == b.y && a.z == b.z;
@@ -413,6 +420,14 @@ template <typename T>
 inline bool operator!=(const vec3<T>& a, const vec3<T>& b) {
     return a.x != b.x || a.y != b.y || a.z != b.z;
 }
+template <typename T, typename T1>
+inline bool operator==(const vec3<T>& a, T1 b) {
+    return a.x == b && a.y == b && a.z == b;
+}
+template <typename T, typename T1>
+inline bool operator!=(const vec3<T>& a, T1 b) {
+    return a.x != b || a.y != b || a.z != b;
+}
 template <typename T>
 inline bool operator==(const vec4<T>& a, const vec4<T>& b) {
     return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
@@ -420,6 +435,14 @@ inline bool operator==(const vec4<T>& a, const vec4<T>& b) {
 template <typename T>
 inline bool operator!=(const vec4<T>& a, const vec4<T>& b) {
     return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
+}
+template <typename T, typename T1>
+inline bool operator==(const vec4<T>& a, T1 b) {
+    return a.x == b && a.y == b && a.z == b && a.w == b;
+}
+template <typename T, typename T1>
+inline bool operator!=(const vec4<T>& a, T1 b) {
+    return a.x != b || a.y != b || a.z != b || a.w != b;
 }
 
 // Vector operations.
@@ -431,9 +454,25 @@ template <typename T>
 inline vec2<T> operator+(const vec2<T>& a, const vec2<T>& b) {
     return {a.x + b.x, a.y + b.y};
 }
+template <typename T, typename T1>
+inline vec2<T> operator+(const vec2<T>& a, T1 b) {
+    return {a.x + b, a.y + b};
+}
+template <typename T, typename T1>
+inline vec2<T> operator+(T1 a, const vec2<T>& b) {
+    return {a + b.x, a + b.y};
+}
 template <typename T>
 inline vec2<T> operator-(const vec2<T>& a, const vec2<T>& b) {
     return {a.x - b.x, a.y - b.y};
+}
+template <typename T, typename T1>
+inline vec2<T> operator-(const vec2<T>& a, T1 b) {
+    return {a.x - b, a.y - b};
+}
+template <typename T, typename T1>
+inline vec2<T> operator-(T1 a, const vec2<T>& b) {
+    return {a - b.x, a - b.y};
 }
 template <typename T>
 inline vec2<T> operator*(const vec2<T>& a, const vec2<T>& b) {
@@ -455,6 +494,10 @@ template <typename T, typename T1>
 inline vec2<T> operator/(const vec2<T>& a, T1 b) {
     return {a.x / b, a.y / b};
 }
+template <typename T, typename T1>
+inline vec2<T> operator/(T1 a, const vec2<T>& b) {
+    return {a / b.x, a / b.y};
+}
 
 // Vector operations.
 template <typename T>
@@ -469,9 +512,25 @@ template <typename T>
 inline vec3<T> operator+(const vec3<T>& a, const vec3<T>& b) {
     return {a.x + b.x, a.y + b.y, a.z + b.z};
 }
+template <typename T, typename T1>
+inline vec3<T> operator+(const vec3<T>& a, T1 b) {
+    return {a.x + b, a.y + b, a.z + b};
+}
+template <typename T, typename T1>
+inline vec3<T> operator+(T1 a, const vec3<T>& b) {
+    return {a + b.x, a + b.y, a + b.z};
+}
 template <typename T>
 inline vec3<T> operator-(const vec3<T>& a, const vec3<T>& b) {
     return {a.x - b.x, a.y - b.y, a.z - b.z};
+}
+template <typename T, typename T1>
+inline vec3<T> operator-(const vec3<T>& a, T1 b) {
+    return {a.x - b, a.y - b, a.z - b};
+}
+template <typename T, typename T1>
+inline vec3<T> operator-(T1 a, const vec3<T>& b) {
+    return {a - b.x, a - b.y, a - b.z};
 }
 template <typename T>
 inline vec3<T> operator*(const vec3<T>& a, const vec3<T>& b) {
@@ -493,6 +552,10 @@ template <typename T, typename T1>
 inline vec3<T> operator/(const vec3<T>& a, T1 b) {
     return {a.x / b, a.y / b, a.z / b};
 }
+template <typename T, typename T1>
+inline vec3<T> operator/(T1 a, const vec3<T>& b) {
+    return {a / b.x, a / b.y, a / b.z};
+}
 
 // Vector operations.
 template <typename T>
@@ -503,9 +566,25 @@ template <typename T>
 inline vec4<T> operator+(const vec4<T>& a, const vec4<T>& b) {
     return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
 }
+template <typename T, typename T1>
+inline vec4<T> operator+(const vec4<T>& a, T1 b) {
+    return {a.x + b, a.y + b, a.z + b, a.w + b};
+}
+template <typename T, typename T1>
+inline vec4<T> operator+(T1 a, const vec4<T>& b) {
+    return {a + b.x, a + b.y, a + b.z, a + b.w};
+}
 template <typename T>
 inline vec4<T> operator-(const vec4<T>& a, const vec4<T>& b) {
     return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
+}
+template <typename T, typename T1>
+inline vec4<T> operator-(const vec4<T>& a, T1 b) {
+    return {a.x - b, a.y - b, a.z - b, a.w - b};
+}
+template <typename T, typename T1>
+inline vec4<T> operator-(T1 a, const vec4<T>& b) {
+    return {a - b.x, a - b.y, a - b.z, a - b.w};
 }
 template <typename T>
 inline vec4<T> operator*(const vec4<T>& a, const vec4<T>& b) {
@@ -527,14 +606,26 @@ template <typename T, typename T1>
 inline vec4<T> operator/(const vec4<T>& a, T1 b) {
     return {a.x / b, a.y / b, a.z / b, a.w / b};
 }
+template <typename T, typename T1>
+inline vec4<T> operator/(T1 a, const vec4<T>& b) {
+    return {a / b.x, a / b.y, a / b.z, a / b.w};
+}
 
 // Vector assignments
 template <typename T>
 inline vec2<T>& operator+=(vec2<T>& a, const vec2<T>& b) {
     return a = a + b;
 }
+template <typename T, typename T1>
+inline vec2<T>& operator+=(vec2<T>& a, T1 b) {
+    return a = a + b;
+}
 template <typename T>
 inline vec2<T>& operator-=(vec2<T>& a, const vec2<T>& b) {
+    return a = a - b;
+}
+template <typename T, typename T1>
+inline vec2<T>& operator-=(vec2<T>& a, T1 b) {
     return a = a - b;
 }
 template <typename T>
@@ -542,7 +633,7 @@ inline vec2<T>& operator*=(vec2<T>& a, const vec2<T>& b) {
     return a = a * b;
 }
 template <typename T, typename T1>
-inline vec2<T>& operator*=(vec2<T>& a, float b) {
+inline vec2<T>& operator*=(vec2<T>& a, T1 b) {
     return a = a * b;
 }
 template <typename T>
@@ -2335,18 +2426,13 @@ struct image {
 
     // size
     vec2i size() const { return _size; }
-    size_t count() const { return _data.size(); }
     bool empty() const { return _data.empty(); }
 
     // pixel access
-    T& operator[](int idx) { return _data[idx]; }
-    const T& operator[](int idx) const { return _data[idx]; }
     T& operator[](const vec2i& ij) { return _data[ij.y * _size.x + ij.x]; }
     const T& operator[](const vec2i& ij) const {
         return _data[ij.y * _size.x + ij.x];
     }
-    // T& at(int idx) { return _data.at(idx); }
-    // const T& at(int idx) const { return _data.at(idx); }
     // T& at(int i, int j) { return _data.at(j * _size.x + i); }
     // const T& at(int i, int j) const { return _data.at(j * _size.x + i); }
 
@@ -2586,20 +2672,15 @@ struct volume {
 
     // size
     vec3i size() const { return _size; }
-    size_t count() const { return _data.size(); }
     bool empty() const { return _data.empty(); }
 
     // pixel access
-    T& operator[](int idx) { return _data[idx]; }
-    const T& operator[](int idx) const { return _data[idx]; }
     T& operator[](const vec3i& ijk) {
         return _data[ijk.z * _size.x * _size.y + ijk.y * _size.x + ijk.x];
     }
     const T& operator[](const vec3i& ijk) const {
         return _data[ijk.z * _size.x * _size.y + ijk.y * _size.x + ijk.x];
     }
-    // T& at(int idx) { return _data.at(idx); }
-    // const T& at(int idx) const { return _data.at(idx); }
     // T& at(int i, int j) { return _data.at(ij.z * _size.x * _size.y + j *
     // _size.x + i); } const T& at(int i, int j) const { return _data.at(ij.z *
     // _size.x * _size.y + j * _size.x + i); }

@@ -132,26 +132,26 @@ image<vec4f> filter_bilateral(
 int main(int argc, char* argv[]) {
     // parse command line
     auto parser = make_cmdline_parser(argc, argv, "Process images", "yimproc");
-    auto tonemap = parse_flag(parser, "--tonemap,-t", false, "Tonemap image");
-    auto exposure = parse_float(parser, "--exposure,-e", 0, "Tonemap exposure");
-    auto gamma = parse_float(parser, "--gamma,-g", 2.2f, "Tonemap gamma.");
+    auto tonemap = parse_arg(parser, "--tonemap,-t", false, "Tonemap image");
+    auto exposure = parse_arg(parser, "--exposure,-e", 0.0f, "Tonemap exposure");
+    auto gamma = parse_arg(parser, "--gamma,-g", 2.2f, "Tonemap gamma.");
     auto filmic =
-        parse_flag(parser, "--filmic,-f", false, "Tonemap uses filmic curve");
-    auto res_width = parse_int(
+        parse_arg(parser, "--filmic,-f", false, "Tonemap uses filmic curve");
+    auto res_width = parse_arg(
         parser, "--res-width", 0, "resize width (0 to maintain aspect)");
-    auto res_height = parse_int(
+    auto res_height = parse_arg(
         parser, "--res-height", 0, "resize height (0 to maintain aspect)");
     auto spatial_sigma =
-        parse_float(parser, "--spatial-sigma", 0, "blur spatial sigma");
+        parse_arg(parser, "--spatial-sigma", 0.0f, "blur spatial sigma");
     auto range_sigma =
-        parse_float(parser, "--range-sigma", 0, "bilateral blur range sigma");
-    auto alpha_filename = parse_string(
+        parse_arg(parser, "--range-sigma", 0.0f, "bilateral blur range sigma");
+    auto alpha_filename = parse_arg(
         parser, "--set-alpha", "", "set alpha as this image alpha");
-    auto coloralpha_filename = parse_string(
+    auto coloralpha_filename = parse_arg(
         parser, "--set-color-as-alpha", "", "set alpha as this image color");
-    auto output = parse_string(
+    auto output = parse_arg(
         parser, "--output,-o", "out.png", "output image filename", true);
-    auto filename = parse_string(
+    auto filename = parse_arg(
         parser, "filename", "img.hdr", "input image filename", true);
     check_cmdline(parser);
 

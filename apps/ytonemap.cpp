@@ -33,13 +33,13 @@ using namespace ygl;
 int main(int argc, char* argv[]) {
     // parse command line
     auto parser = make_cmdline_parser(argc, argv, "Process images", "ytonemap");
-    auto exposure = parse_float(parser, "--exposure,-e", 0, "Tonemap exposure");
-    auto gamma = parse_float(parser, "--gamma,-g", 2.2f, "Tonemap gamma.");
+    auto exposure = parse_arg(parser, "--exposure,-e", 0.0f, "Tonemap exposure");
+    auto gamma = parse_arg(parser, "--gamma,-g", 2.2f, "Tonemap gamma.");
     auto filmic =
-        parse_flag(parser, "--filmic,-f", false, "Tonemap uses filmic curve");
-    auto output = parse_string(
+        parse_arg(parser, "--filmic,-f", false, "Tonemap uses filmic curve");
+    auto output = parse_arg(
         parser, "--output,-o", "out.png", "output image filename", true);
-    auto filename = parse_string(
+    auto filename = parse_arg(
         parser, "filename", "img.hdr", "input image filename", true);
     check_cmdline(parser);
 

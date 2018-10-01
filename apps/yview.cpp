@@ -755,21 +755,21 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser =
         make_cmdline_parser(argc, argv, "views scenes inteactively", "yview");
-    app->camid = parse_int(parser, "--camera", 0, "Camera index.");
+    app->camid = parse_arg(parser, "--camera", 0, "Camera index.");
     app->resolution =
-        parse_int(parser, "--resolution,-r", 512, "Image vertical resolution.");
+        parse_arg(parser, "--resolution,-r", 512, "Image vertical resolution.");
     app->eyelight =
-        parse_flag(parser, "--eyelight,-c", false, "Eyelight rendering.");
-    auto double_sided = parse_flag(
+        parse_arg(parser, "--eyelight,-c", false, "Eyelight rendering.");
+    auto double_sided = parse_arg(
         parser, "--double-sided,-D", false, "Double-sided rendering.");
     auto quiet =
-        parse_flag(parser, "--quiet,-q", false, "Print only errors messages");
+        parse_arg(parser, "--quiet,-q", false, "Print only errors messages");
     auto highlight_filename =
-        parse_string(parser, "--highlights", "", "Highlight filename");
+        parse_arg(parser, "--highlights", "", "Highlight filename");
     app->imfilename =
-        parse_string(parser, "--output-image,-o", "out.png", "Image filename");
+        parse_arg(parser, "--output-image,-o", "out.png", "Image filename");
     app->filename =
-        parse_string(parser, "scene", "scene.json", "Scene filename", true);
+        parse_arg(parser, "scene", "scene.json", "Scene filename", true);
     check_cmdline(parser);
 
     // scene loading
