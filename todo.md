@@ -153,23 +153,11 @@ Please consider this to be just development notes and not any real planning.
 
 ## BVH
 
-- SAH based build?
-- simplify build code: can we avoid pre-allocating nodes?
-- move away from special functions in BVH?
-    - always use sort
-    - provide a sort buffer
 - add cutout to trace
 - simplify build functions
 - maybe put axis with internal
 - simplify partition and nth_element function
     - include wrapper functions
-
-## Math
-
-- consider removing const refs
-- frame inverse with flag
-- check random shuffle
-- check random number generation for float/double
 
 ## OpenMP
 
