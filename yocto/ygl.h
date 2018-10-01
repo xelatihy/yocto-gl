@@ -7,6 +7,33 @@
 // described below.
 //
 //
+// ## Design Considerations
+//
+// Yocto/GL tries to follow a "data-driven programming model" that makes data
+// explicit. Data is stored in simple structs and access with free functions
+// or directly. All data is public, so we make no attempt at encapsulation.
+// We do this since this makes Yocto/GL easier to extend and quicker to learn,
+// which a more explicit data flow that is easier whrn writing parallel code.
+// Since Yocto/GL is mainly used for research and teaching,
+// explicit data is both more hackable and easier to understand.
+//
+// The use of templates in Yocto was the reason for many refactorings, going
+// from no template to heavy template use. After many changes, we settled
+// on using templates following the established convention in the C++ standard 
+// library.
+//
+// We make use of exception for error reporting. This makes the code
+// cleaner and more in line with the expectation of most other programming
+// languages. At the same time, exception are not as easy to use in C++
+// and are disabled in many libraries. For this reasons, this will likely 
+// change in the future.
+//
+// Finally, we import math symbols from the standard library rather than
+// using the `std::name` pattern into the `ygl` namespace. This makes math code 
+// easier to read, and allows us to override come function implementation when
+// desired.
+//
+//
 // ## Small Vectors and Matrices, Frames, Bounding Boxes and Transforms
 //
 // We provide common operations for small vectors and matrices typically used
