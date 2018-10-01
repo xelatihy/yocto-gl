@@ -28,6 +28,7 @@
 
 #include "../yocto/ygl.h"
 #include "../yocto/yglio.h"
+using namespace ygl;
 
 void mkdir(const std::string& dir) {
     if (dir == "" || dir == "." || dir == ".." || dir == "./" || dir == "../")
@@ -41,23 +42,22 @@ void mkdir(const std::string& dir) {
 
 int main(int argc, char** argv) {
     // parse command line
-    auto parser =
-        ygl::make_cmdline_parser(argc, argv, "Process scene", "yscnproc");
+    auto parser = make_cmdline_parser(argc, argv, "Process scene", "yscnproc");
     auto notextures =
-        ygl::parse_flag(parser, "--notextures", false, "Disable textures.");
-    auto uniform_txt = ygl::parse_flag(
-        parser, "--uniform-txt", false, "uniform texture formats");
-    auto build_bvh = ygl::parse_flag(parser, "--build-bvh", false, "build bvh");
-    auto output = ygl::parse_string(
-        parser, "--output,-o", "out.json", "output scene", true);
+        parse_flag(parser, "--notextures", false, "Disable textures.");
+    auto uniform_txt =
+        parse_flag(parser, "--uniform-txt", false, "uniform texture formats");
+    auto build_bvh = parse_flag(parser, "--build-bvh", false, "build bvh");
+    auto output =
+        parse_string(parser, "--output,-o", "out.json", "output scene", true);
     auto filename =
-        ygl::parse_string(parser, "scene", "scene.json", "input scene", true);
-    ygl::check_cmdline(parser);
+        parse_string(parser, "scene", "scene.json", "input scene", true);
+    check_cmdline(parser);
 
     // load scene
-    auto scn = (ygl::scene*)nullptr;
+    auto scn = (scene*)nullptr;
     try {
-        scn = ygl::load_scene(filename, !notextures);
+        scn = load_scene(filename, !notextures);
     } catch (const std::exception& e) {
         printf("cannot load scene %s\n", filename.c_str());
         printf("error: %s\n", e.what());
@@ -67,17 +67,17 @@ int main(int argc, char** argv) {
     // change texture names
     if (uniform_txt) {
         for (auto txt : scn->textures) {
-            auto ext = ygl::get_extension(txt->path);
-            if (ygl::is_hdr_filename(txt->path)) {
+            auto ext = get_extension(txt->path);
+            if (is_hdr_filename(txt->path)) {
                 if (ext == "hdr" || ext == "exr") continue;
                 if (ext == "pfm")
-                    ygl::replace_extension(filename, "hdr");
+                    replace_extension(filename, "hdr");
                 else
                     printf("unknown texture format %s\n", ext.c_str());
             } else {
                 if (ext == "png" || ext == "jpg") continue;
                 if (ext == "tga" || ext == "bmp")
-                    ygl::replace_extension(filename, "png");
+                    replace_extension(filename, "png");
                 else
                     printf("unknown texture format %s\n", ext.c_str());
             }
@@ -89,16 +89,15 @@ int main(int argc, char** argv) {
 
     // make a directory if needed
     try {
-        mkdir(ygl::get_dirname(output));
+        mkdir(get_dirname(output));
     } catch (const std::exception& e) {
-        printf(
-            "cannot create directory %s\n", ygl::get_dirname(output).c_str());
+        printf("cannot create directory %s\n", get_dirname(output).c_str());
         printf("error: %s\n", e.what());
         exit(1);
     }
     // save scene
     try {
-        ygl::save_scene(output, scn);
+        save_scene(output, scn);
     } catch (const std::exception& e) {
         printf("cannot save scene %s\n", output.c_str());
         printf("error: %s\n", e.what());

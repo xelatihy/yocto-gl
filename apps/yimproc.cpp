@@ -28,6 +28,7 @@
 
 #include "../yocto/ygl.h"
 #include "../yocto/yglio.h"
+using namespace ygl;
 
 #if 0
 template <typename Image>
@@ -35,11 +36,11 @@ Image make_image_grid(const std::vector<Image>& imgs, int tilex) {
     auto nimgs = (int)imgs.size();
     auto width = imgs[0].size().x * tilex;
     auto height = imgs[0].size().y * (nimgs / tilex + ((nimgs % tilex) ? 1 : 0));
-    auto ret = ygl::make_image4f(width, height, (bool)imgs[0].hdr);
+    auto ret = make_image4f(width, height, (bool)imgs[0].hdr);
     auto img_idx = 0;
     for (auto& img : imgs) {
         if (img.size != imgs[0].size) {
-            ygl::log_fatal("images of different sizes are not accepted");
+            log_fatal("images of different sizes are not accepted");
         }
         auto ox = (img_idx % tilex) * img.size().x,
              oy = (img_idx / tilex) * img.size().y;
@@ -61,11 +62,10 @@ Image make_image_grid(const std::vector<Image>& imgs, int tilex) {
 }
 #endif
 
-ygl::image<ygl::vec4f> filter_bilateral(const ygl::image<ygl::vec4f>& img,
-    float spatial_sigma, float range_sigma,
-    const std::vector<ygl::image<ygl::vec4f>>& features,
+image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
+    float range_sigma, const std::vector<image<vec4f>>& features,
     const std::vector<float>& features_sigma) {
-    auto filtered = ygl::image<ygl::vec4f>{img.size()};
+    auto filtered = image<vec4f>{img.size()};
     auto filter_width = (int)ceil(2.57f * spatial_sigma);
     auto sw = 1 / (2.0f * spatial_sigma * spatial_sigma);
     auto rw = 1 / (2.0f * range_sigma * range_sigma);
@@ -74,14 +74,14 @@ ygl::image<ygl::vec4f> filter_bilateral(const ygl::image<ygl::vec4f>& img,
         fw.push_back(1 / (2.0f * feature_sigma * feature_sigma));
     for (auto j = 0; j < img.size().y; j++) {
         for (auto i = 0; i < img.size().x; i++) {
-            auto av = ygl::zero4f;
+            auto av = zero4f;
             auto aw = 0.0f;
             for (auto fj = -filter_width; fj <= filter_width; fj++) {
                 for (auto fi = -filter_width; fi <= filter_width; fi++) {
                     auto ii = i + fi, jj = j + fj;
                     if (ii < 0 || jj < 0) continue;
                     if (ii >= img.size().x || jj >= img.size().y) continue;
-                    auto uv = ygl::vec2f{float(i - ii), float(j - jj)};
+                    auto uv = vec2f{float(i - ii), float(j - jj)};
                     auto rgb = img[{i, j}] - img[{ii, jj}];
                     auto w = (float)std::exp(-dot(uv, uv) * sw) *
                              (float)std::exp(-dot(rgb, rgb) * rw);
@@ -100,22 +100,22 @@ ygl::image<ygl::vec4f> filter_bilateral(const ygl::image<ygl::vec4f>& img,
     return filtered;
 }
 
-ygl::image<ygl::vec4f> filter_bilateral(
-    const ygl::image<ygl::vec4f>& img, float spatial_sigma, float range_sigma) {
-    auto filtered = ygl::image<ygl::vec4f>{img.size()};
+image<vec4f> filter_bilateral(
+    const image<vec4f>& img, float spatial_sigma, float range_sigma) {
+    auto filtered = image<vec4f>{img.size()};
     auto fwidth = (int)ceil(2.57f * spatial_sigma);
     auto sw = 1 / (2.0f * spatial_sigma * spatial_sigma);
     auto rw = 1 / (2.0f * range_sigma * range_sigma);
     for (auto j = 0; j < img.size().y; j++) {
         for (auto i = 0; i < img.size().x; i++) {
-            auto av = ygl::zero4f;
+            auto av = zero4f;
             auto aw = 0.0f;
             for (auto fj = -fwidth; fj <= fwidth; fj++) {
                 for (auto fi = -fwidth; fi <= fwidth; fi++) {
                     auto ii = i + fi, jj = j + fj;
                     if (ii < 0 || jj < 0) continue;
                     if (ii >= img.size().x || jj >= img.size().y) continue;
-                    auto uv = ygl::vec2f{float(i - ii), float(j - jj)};
+                    auto uv = vec2f{float(i - ii), float(j - jj)};
                     auto rgb = img[{i, j}] - img[{ii, jj}];
                     auto w = std::exp(-dot(uv, uv) * sw) *
                              std::exp(-dot(rgb, rgb) * rw);
@@ -131,37 +131,34 @@ ygl::image<ygl::vec4f> filter_bilateral(
 
 int main(int argc, char* argv[]) {
     // parse command line
-    auto parser =
-        ygl::make_cmdline_parser(argc, argv, "Process images", "yimproc");
-    auto tonemap =
-        ygl::parse_flag(parser, "--tonemap,-t", false, "Tonemap image");
-    auto exposure =
-        ygl::parse_float(parser, "--exposure,-e", 0, "Tonemap exposure");
-    auto gamma = ygl::parse_float(parser, "--gamma,-g", 2.2f, "Tonemap gamma.");
-    auto filmic = ygl::parse_flag(
-        parser, "--filmic,-f", false, "Tonemap uses filmic curve");
-    auto res_width = ygl::parse_int(
+    auto parser = make_cmdline_parser(argc, argv, "Process images", "yimproc");
+    auto tonemap = parse_flag(parser, "--tonemap,-t", false, "Tonemap image");
+    auto exposure = parse_float(parser, "--exposure,-e", 0, "Tonemap exposure");
+    auto gamma = parse_float(parser, "--gamma,-g", 2.2f, "Tonemap gamma.");
+    auto filmic =
+        parse_flag(parser, "--filmic,-f", false, "Tonemap uses filmic curve");
+    auto res_width = parse_int(
         parser, "--res-width", 0, "resize width (0 to maintain aspect)");
-    auto res_height = ygl::parse_int(
+    auto res_height = parse_int(
         parser, "--res-height", 0, "resize height (0 to maintain aspect)");
     auto spatial_sigma =
-        ygl::parse_float(parser, "--spatial-sigma", 0, "blur spatial sigma");
-    auto range_sigma = ygl::parse_float(
-        parser, "--range-sigma", 0, "bilateral blur range sigma");
-    auto alpha_filename = ygl::parse_string(
+        parse_float(parser, "--spatial-sigma", 0, "blur spatial sigma");
+    auto range_sigma =
+        parse_float(parser, "--range-sigma", 0, "bilateral blur range sigma");
+    auto alpha_filename = parse_string(
         parser, "--set-alpha", "", "set alpha as this image alpha");
-    auto coloralpha_filename = ygl::parse_string(
+    auto coloralpha_filename = parse_string(
         parser, "--set-color-as-alpha", "", "set alpha as this image color");
-    auto output = ygl::parse_string(
+    auto output = parse_string(
         parser, "--output,-o", "out.png", "output image filename", true);
-    auto filename = ygl::parse_string(
+    auto filename = parse_string(
         parser, "filename", "img.hdr", "input image filename", true);
-    ygl::check_cmdline(parser);
+    check_cmdline(parser);
 
     // load
-    auto img = ygl::image<ygl::vec4f>();
+    auto img = image<vec4f>();
     try {
-        img = ygl::load_image4f(filename);
+        img = load_image4f(filename);
     } catch (std::exception& e) {
         printf("cannot load image %s\n", filename.c_str());
         printf("error: %s\n", e.what());
@@ -170,7 +167,7 @@ int main(int argc, char* argv[]) {
 
     // set alpha
     if (alpha_filename != "") {
-        auto alpha = ygl::load_image4f(alpha_filename);
+        auto alpha = load_image4f(alpha_filename);
         if (img.size().x != alpha.size().x || img.size().y != alpha.size().y) {
             printf("bad image size\n");
             exit(1);
@@ -182,14 +179,14 @@ int main(int argc, char* argv[]) {
 
     // set alpha
     if (coloralpha_filename != "") {
-        auto alpha = ygl::load_image4f(coloralpha_filename);
+        auto alpha = load_image4f(coloralpha_filename);
         if (img.size().x != alpha.size().x || img.size().y != alpha.size().y) {
             printf("bad image size\n");
             exit(1);
         }
         for (auto j = 0; j < img.size().y; j++)
             for (auto i = 0; i < img.size().x; i++)
-                img[{i, j}].w = ygl::luminance(alpha[{i, j}]);
+                img[{i, j}].w = luminance(alpha[{i, j}]);
     }
 
     // resize
@@ -203,11 +200,11 @@ int main(int argc, char* argv[]) {
     }
 
     // hdr correction
-    if (tonemap) img = ygl::tonemap_exposuregamma(img, exposure, gamma, filmic);
+    if (tonemap) img = tonemap_exposuregamma(img, exposure, gamma, filmic);
 
     // save
     try {
-        ygl::save_image4f(output, img);
+        save_image4f(output, img);
     } catch (std::exception& e) {
         printf("cannot save image %s\n", output.c_str());
         printf("error: %s\n", e.what());

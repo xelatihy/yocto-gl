@@ -196,7 +196,7 @@ namespace ygl {
 
 // Loads/saves a 1 channel volume.
 volume<float> read_volume1f(const std::string& filename);
-void save_volume1f(const ygl::volume<float>& tex, const std::string& filename);
+void save_volume1f(const volume<float>& tex, const std::string& filename);
 
 }  // namespace ygl
 
@@ -396,7 +396,7 @@ struct obj_camera {
     float focal = 0.050f;              // focal length
     float aspect = 16.0f / 9.0f;       // aspect ratio
     float aperture = 0;                // lens aperture
-    float focus = flt_max;             // focus distance
+    float focus = maxf;                // focus distance
 };
 
 // Obj environment [extension].

@@ -32,46 +32,46 @@
 
 #include "../yocto/ygl.h"
 #include "yglutils.h"
+using namespace ygl;
 
 #include <map>
 
-inline const std::map<ygl::animation_type, std::string>&
-animation_type_names() {
-    static auto names = std::map<ygl::animation_type, std::string>{
-        {ygl::animation_type::linear, "linear"},
-        {ygl::animation_type::step, "step"},
-        {ygl::animation_type::bezier, "bezier"},
+inline const std::map<animation_type, std::string>& animation_type_names() {
+    static auto names = std::map<animation_type, std::string>{
+        {animation_type::linear, "linear"},
+        {animation_type::step, "step"},
+        {animation_type::bezier, "bezier"},
     };
     return names;
 }
 
 template <typename T>
 inline void draw_scene_tree_glwidgets_rec(
-    ygl::glwindow* win, const std::string& lbl_, T* val, void*& sel) {}
+    glwindow* win, const std::string& lbl_, T* val, void*& sel) {}
 
 template <typename T>
 inline void draw_glwidgets_scene_tree(
-    ygl::glwindow* win, const std::string& lbl_, T* val, void*& sel) {
+    glwindow* win, const std::string& lbl_, T* val, void*& sel) {
     if (!val) return;
     auto lbl = val->name;
     if (!lbl_.empty()) lbl = lbl_ + ": " + val->name;
-    if (ygl::begin_selectabletreenode_glwidget(win, lbl.c_str(), sel, val)) {
+    if (begin_selectabletreenode_glwidget(win, lbl.c_str(), sel, val)) {
         draw_scene_tree_glwidgets_rec(win, lbl_, val, sel);
-        ygl::end_treenode_glwidget(win);
+        end_treenode_glwidget(win);
     }
 }
 
 template <>
-inline void draw_scene_tree_glwidgets_rec<ygl::instance>(ygl::glwindow* win,
-    const std::string& lbl_, ygl::instance* val, void*& sel) {
+inline void draw_scene_tree_glwidgets_rec<instance>(
+    glwindow* win, const std::string& lbl_, instance* val, void*& sel) {
     draw_glwidgets_scene_tree(win, "shp", val->shp, sel);
     draw_glwidgets_scene_tree(win, "sbd", val->sbd, sel);
     draw_glwidgets_scene_tree(win, "mat", val->mat, sel);
 }
 
 template <>
-inline void draw_scene_tree_glwidgets_rec<ygl::material>(ygl::glwindow* win,
-    const std::string& lbl_, ygl::material* val, void*& sel) {
+inline void draw_scene_tree_glwidgets_rec<material>(
+    glwindow* win, const std::string& lbl_, material* val, void*& sel) {
     draw_glwidgets_scene_tree(win, "ke", val->ke_txt, sel);
     draw_glwidgets_scene_tree(win, "kd", val->kd_txt, sel);
     draw_glwidgets_scene_tree(win, "ks", val->ks_txt, sel);
@@ -80,13 +80,13 @@ inline void draw_scene_tree_glwidgets_rec<ygl::material>(ygl::glwindow* win,
     draw_glwidgets_scene_tree(win, "norm", val->norm_txt, sel);
 }
 template <>
-inline void draw_scene_tree_glwidgets_rec<ygl::environment>(ygl::glwindow* win,
-    const std::string& lbl_, ygl::environment* val, void*& sel) {
+inline void draw_scene_tree_glwidgets_rec<environment>(
+    glwindow* win, const std::string& lbl_, environment* val, void*& sel) {
     draw_glwidgets_scene_tree(win, "ke", val->ke_txt, sel);
 }
 template <>
-inline void draw_scene_tree_glwidgets_rec<ygl::node>(
-    ygl::glwindow* win, const std::string& lbl_, ygl::node* val, void*& sel) {
+inline void draw_scene_tree_glwidgets_rec<node>(
+    glwindow* win, const std::string& lbl_, node* val, void*& sel) {
     draw_glwidgets_scene_tree(win, "ist", val->ist, sel);
     draw_glwidgets_scene_tree(win, "cam", val->cam, sel);
     draw_glwidgets_scene_tree(win, "env", val->env, sel);
@@ -97,250 +97,236 @@ inline void draw_scene_tree_glwidgets_rec<ygl::node>(
     }
 }
 template <>
-inline void draw_scene_tree_glwidgets_rec<ygl::animation>(ygl::glwindow* win,
-    const std::string& lbl_, ygl::animation* val, void*& sel) {
+inline void draw_scene_tree_glwidgets_rec<animation>(
+    glwindow* win, const std::string& lbl_, animation* val, void*& sel) {
     auto tid = 0;
     for (auto tg : val->targets) {
         draw_glwidgets_scene_tree(win, "tg" + std::to_string(tid++), tg, sel);
     }
 }
 
-inline void draw_glwidgets_scene_tree(
-    ygl::glwindow* win, ygl::scene* scn, void*& sel) {
-    if (!scn->cameras.empty() && ygl::begin_treenode_glwidget(win, "cameras")) {
+inline void draw_glwidgets_scene_tree(glwindow* win, scene* scn, void*& sel) {
+    if (!scn->cameras.empty() && begin_treenode_glwidget(win, "cameras")) {
         for (auto v : scn->cameras) draw_glwidgets_scene_tree(win, "", v, sel);
-        ygl::end_treenode_glwidget(win);
+        end_treenode_glwidget(win);
     }
-    if (!scn->shapes.empty() && ygl::begin_treenode_glwidget(win, "shapes")) {
+    if (!scn->shapes.empty() && begin_treenode_glwidget(win, "shapes")) {
         for (auto v : scn->shapes) draw_glwidgets_scene_tree(win, "", v, sel);
-        ygl::end_treenode_glwidget(win);
+        end_treenode_glwidget(win);
     }
-    if (!scn->subdivs.empty() && ygl::begin_treenode_glwidget(win, "subdivs")) {
+    if (!scn->subdivs.empty() && begin_treenode_glwidget(win, "subdivs")) {
         for (auto v : scn->subdivs) draw_glwidgets_scene_tree(win, "", v, sel);
-        ygl::end_treenode_glwidget(win);
+        end_treenode_glwidget(win);
     }
-    if (!scn->instances.empty() &&
-        ygl::begin_treenode_glwidget(win, "instances")) {
+    if (!scn->instances.empty() && begin_treenode_glwidget(win, "instances")) {
         for (auto v : scn->instances)
             draw_glwidgets_scene_tree(win, "", v, sel);
-        ygl::end_treenode_glwidget(win);
+        end_treenode_glwidget(win);
     }
-    if (!scn->materials.empty() &&
-        ygl::begin_treenode_glwidget(win, "materials")) {
+    if (!scn->materials.empty() && begin_treenode_glwidget(win, "materials")) {
         for (auto v : scn->materials)
             draw_glwidgets_scene_tree(win, "", v, sel);
-        ygl::end_treenode_glwidget(win);
+        end_treenode_glwidget(win);
     }
-    if (!scn->textures.empty() &&
-        ygl::begin_treenode_glwidget(win, "textures")) {
+    if (!scn->textures.empty() && begin_treenode_glwidget(win, "textures")) {
         for (auto v : scn->textures) draw_glwidgets_scene_tree(win, "", v, sel);
-        ygl::end_treenode_glwidget(win);
+        end_treenode_glwidget(win);
     }
     if (!scn->environments.empty() &&
-        ygl::begin_treenode_glwidget(win, "environments")) {
+        begin_treenode_glwidget(win, "environments")) {
         for (auto v : scn->environments)
             draw_glwidgets_scene_tree(win, "", v, sel);
-        ygl::end_treenode_glwidget(win);
+        end_treenode_glwidget(win);
     }
-    if (!scn->nodes.empty() && ygl::begin_treenode_glwidget(win, "nodes")) {
+    if (!scn->nodes.empty() && begin_treenode_glwidget(win, "nodes")) {
         for (auto v : scn->nodes) draw_glwidgets_scene_tree(win, "", v, sel);
-        ygl::end_treenode_glwidget(win);
+        end_treenode_glwidget(win);
     }
     if (!scn->animations.empty() &&
-        ygl::begin_treenode_glwidget(win, "animations")) {
+        begin_treenode_glwidget(win, "animations")) {
         for (auto v : scn->animations)
             draw_glwidgets_scene_tree(win, "", v, sel);
-        ygl::end_treenode_glwidget(win);
+        end_treenode_glwidget(win);
     }
 }
 
 /// Visit struct elements.
 inline bool draw_glwidgets_scene_inspector(
-    ygl::glwindow* win, ygl::camera* val, ygl::scene* scn) {
+    glwindow* win, camera* val, scene* scn) {
     auto edited = 0;
-    edited += ygl::draw_inputtext_glwidget(win, "name", val->name);
-    edited += ygl::draw_slider_glwidget(win, "frame.x", val->frame.x.x, -1, 1);
-    edited += ygl::draw_slider_glwidget(win, "frame.y", val->frame.y.x, -1, 1);
-    edited += ygl::draw_slider_glwidget(win, "frame.z", val->frame.z.x, -1, 1);
-    edited +=
-        ygl::draw_slider_glwidget(win, "frame.o", val->frame.o.x, -10, 10);
-    edited += ygl::draw_checkbox_glwidget(win, "ortho", val->ortho);
-    edited += ygl::draw_slider_glwidget(win, "film", val->film, 0.01f, 1);
-    edited += ygl::draw_slider_glwidget(win, "focal", val->focal, 0.01f, 1);
-    edited += ygl::draw_slider_glwidget(win, "focus", val->focus, 0.01f, 1000);
-    edited += ygl::draw_slider_glwidget(win, "aperture", val->aperture, 0, 5);
-    edited += ygl::draw_slider_glwidget(win, "near", val->near, 0.01f, 10);
-    edited += ygl::draw_slider_glwidget(win, "far", val->far, 10, 10000);
+    edited += draw_inputtext_glwidget(win, "name", val->name);
+    edited += draw_slider_glwidget(win, "frame.x", val->frame.x.x, -1, 1);
+    edited += draw_slider_glwidget(win, "frame.y", val->frame.y.x, -1, 1);
+    edited += draw_slider_glwidget(win, "frame.z", val->frame.z.x, -1, 1);
+    edited += draw_slider_glwidget(win, "frame.o", val->frame.o.x, -10, 10);
+    edited += draw_checkbox_glwidget(win, "ortho", val->ortho);
+    edited += draw_slider_glwidget(win, "film", val->film, 0.01f, 1);
+    edited += draw_slider_glwidget(win, "focal", val->focal, 0.01f, 1);
+    edited += draw_slider_glwidget(win, "focus", val->focus, 0.01f, 1000);
+    edited += draw_slider_glwidget(win, "aperture", val->aperture, 0, 5);
     return edited;
 }
 
 /// Visit struct elements.
 inline bool draw_glwidgets_scene_inspector(
-    ygl::glwindow* win, ygl::texture* val, ygl::scene* scn) {
+    glwindow* win, texture* val, scene* scn) {
     auto edited = 0;
-    edited += ygl::draw_inputtext_glwidget(win, "name", val->name);
-    edited += ygl::draw_inputtext_glwidget(win, "path", val->path);
-    edited += ygl::draw_checkbox_glwidget(win, "clamp", val->clamp);
-    edited += ygl::draw_slider_glwidget(win, "scale", val->scale, 0, 1);
-    edited += ygl::draw_slider_glwidget(win, "gamma", val->gamma, 1, 2.2f);
-    ygl::draw_imgui_label(
+    edited += draw_inputtext_glwidget(win, "name", val->name);
+    edited += draw_inputtext_glwidget(win, "path", val->path);
+    edited += draw_checkbox_glwidget(win, "clamp", val->clamp);
+    edited += draw_slider_glwidget(win, "scale", val->scale, 0, 1);
+    edited += draw_slider_glwidget(win, "gamma", val->gamma, 1, 2.2f);
+    draw_imgui_label(
         win, "img", "%d x %d", val->img.size().x, val->img.size().y);
     return edited;
 }
 
 inline bool draw_glwidgets_scene_inspector(
-    ygl::glwindow* win, ygl::material* val, ygl::scene* scn) {
+    glwindow* win, material* val, scene* scn) {
     auto edited = 0;
-    edited += ygl::draw_inputtext_glwidget(win, "name", val->name);
-    edited += ygl::draw_coloredit_glwidget(win, "ke", val->ke);  // TODO: HDR
-    edited += ygl::draw_coloredit_glwidget(win, "kd", val->kd);
-    edited += ygl::draw_coloredit_glwidget(win, "ks", val->ks);
-    edited += ygl::draw_coloredit_glwidget(win, "kt", val->kt);
-    edited += ygl::draw_slider_glwidget(win, "rs", val->rs, 0, 1);
-    edited += ygl::draw_slider_glwidget(win, "op", val->op, 0, 1);
-    edited += ygl::draw_checkbox_glwidget(win, "fresnel", val->fresnel);
-    ygl::continue_glwidgets_line(win);
-    edited += ygl::draw_checkbox_glwidget(win, "refract", val->refract);
-    edited += ygl::draw_coloredit_glwidget(win, "vd", val->vd);  // 0, 10
-    edited += ygl::draw_coloredit_glwidget(win, "va", val->va);  // 0, 1
-    edited += ygl::draw_slider_glwidget(win, "vg", val->vg, -1, 1);
-    edited += ygl::draw_combobox_glwidget(
-        win, "ke txt", val->ke_txt, scn->textures, true);
-    edited += ygl::draw_combobox_glwidget(
-        win, "kd txt", val->kd_txt, scn->textures, true);
-    edited += ygl::draw_combobox_glwidget(
-        win, "ks txt", val->ks_txt, scn->textures, true);
-    edited += ygl::draw_combobox_glwidget(
-        win, "kt txt", val->kt_txt, scn->textures, true);
-    edited += ygl::draw_combobox_glwidget(
-        win, "op txt", val->op_txt, scn->textures, true);
-    edited += ygl::draw_combobox_glwidget(
-        win, "rs txt", val->rs_txt, scn->textures, true);
-    edited += ygl::draw_combobox_glwidget(
+    edited += draw_inputtext_glwidget(win, "name", val->name);
+    edited += draw_coloredit_glwidget(win, "ke", val->ke);  // TODO: HDR
+    edited += draw_coloredit_glwidget(win, "kd", val->kd);
+    edited += draw_coloredit_glwidget(win, "ks", val->ks);
+    edited += draw_coloredit_glwidget(win, "kt", val->kt);
+    edited += draw_slider_glwidget(win, "rs", val->rs, 0, 1);
+    edited += draw_slider_glwidget(win, "op", val->op, 0, 1);
+    edited += draw_checkbox_glwidget(win, "fresnel", val->fresnel);
+    continue_glwidgets_line(win);
+    edited += draw_checkbox_glwidget(win, "refract", val->refract);
+    edited += draw_coloredit_glwidget(win, "vd", val->vd);  // 0, 10
+    edited += draw_coloredit_glwidget(win, "va", val->va);  // 0, 1
+    edited += draw_slider_glwidget(win, "vg", val->vg, -1, 1);
+    edited +=
+        draw_combobox_glwidget(win, "ke txt", val->ke_txt, scn->textures, true);
+    edited +=
+        draw_combobox_glwidget(win, "kd txt", val->kd_txt, scn->textures, true);
+    edited +=
+        draw_combobox_glwidget(win, "ks txt", val->ks_txt, scn->textures, true);
+    edited +=
+        draw_combobox_glwidget(win, "kt txt", val->kt_txt, scn->textures, true);
+    edited +=
+        draw_combobox_glwidget(win, "op txt", val->op_txt, scn->textures, true);
+    edited +=
+        draw_combobox_glwidget(win, "rs txt", val->rs_txt, scn->textures, true);
+    edited += draw_combobox_glwidget(
         win, "bump txt", val->bump_txt, scn->textures, true);
-    edited += ygl::draw_combobox_glwidget(
+    edited += draw_combobox_glwidget(
         win, "disp txt", val->disp_txt, scn->textures, true);
-    edited += ygl::draw_combobox_glwidget(
+    edited += draw_combobox_glwidget(
         win, "norm txt", val->norm_txt, scn->textures, true);
-    edited +=
-        ygl::draw_checkbox_glwidget(win, "base metallic", val->base_metallic);
-    edited +=
-        ygl::draw_checkbox_glwidget(win, "glTF textures", val->gltf_textures);
+    edited += draw_checkbox_glwidget(win, "base metallic", val->base_metallic);
+    edited += draw_checkbox_glwidget(win, "glTF textures", val->gltf_textures);
     return edited;
 }
 
 inline bool draw_glwidgets_scene_inspector(
-    ygl::glwindow* win, ygl::shape* val, ygl::scene* scn) {
+    glwindow* win, shape* val, scene* scn) {
     auto edited = 0;
-    edited += ygl::draw_inputtext_glwidget(win, "name", val->name);
-    edited += ygl::draw_inputtext_glwidget(win, "path", val->path);
-    ygl::draw_imgui_label(win, "lines", "%ld", val->lines.size());
-    ygl::draw_imgui_label(win, "triangles", "%ld", val->triangles.size());
-    ygl::draw_imgui_label(win, "pos", "%ld", val->pos.size());
-    ygl::draw_imgui_label(win, "norm", "%ld", val->norm.size());
-    ygl::draw_imgui_label(win, "texcoord", "%ld", val->texcoord.size());
-    ygl::draw_imgui_label(win, "color", "%ld", val->color.size());
-    ygl::draw_imgui_label(win, "radius", "%ld", val->radius.size());
-    ygl::draw_imgui_label(win, "tangsp", "%ld", val->tangsp.size());
+    edited += draw_inputtext_glwidget(win, "name", val->name);
+    edited += draw_inputtext_glwidget(win, "path", val->path);
+    draw_imgui_label(win, "lines", "%ld", val->lines.size());
+    draw_imgui_label(win, "triangles", "%ld", val->triangles.size());
+    draw_imgui_label(win, "pos", "%ld", val->pos.size());
+    draw_imgui_label(win, "norm", "%ld", val->norm.size());
+    draw_imgui_label(win, "texcoord", "%ld", val->texcoord.size());
+    draw_imgui_label(win, "color", "%ld", val->color.size());
+    draw_imgui_label(win, "radius", "%ld", val->radius.size());
+    draw_imgui_label(win, "tangsp", "%ld", val->tangsp.size());
     return edited;
 }
 
 inline bool draw_glwidgets_scene_inspector(
-    ygl::glwindow* win, ygl::subdiv* val, ygl::scene* scn) {
+    glwindow* win, subdiv* val, scene* scn) {
     auto edited = 0;
-    edited += ygl::draw_inputtext_glwidget(win, "name", val->name);
-    edited += ygl::draw_slider_glwidget(win, "level", val->level, 0, 10);
+    edited += draw_inputtext_glwidget(win, "name", val->name);
+    edited += draw_slider_glwidget(win, "level", val->level, 0, 10);
+    edited += draw_checkbox_glwidget(win, "catmull-clark", val->catmull_clark);
+    continue_glwidgets_line(win);
     edited +=
-        ygl::draw_checkbox_glwidget(win, "catmull-clark", val->catmull_clark);
-    ygl::continue_glwidgets_line(win);
-    edited += ygl::draw_checkbox_glwidget(
-        win, "compute normals", val->compute_normals);
-    ygl::draw_imgui_label(win, "quads pos", "%ld", val->quads_pos.size());
-    ygl::draw_imgui_label(
-        win, "quads texcoord", "%ld", val->quads_texcoord.size());
-    ygl::draw_imgui_label(win, "quads color", "%ld", val->quads_color.size());
-    ygl::draw_imgui_label(win, "pos", "%ld", val->pos.size());
-    ygl::draw_imgui_label(win, "texcoord", "%ld", val->texcoord.size());
-    ygl::draw_imgui_label(win, "color", "%ld", val->color.size());
+        draw_checkbox_glwidget(win, "compute normals", val->compute_normals);
+    draw_imgui_label(win, "quads pos", "%ld", val->quads_pos.size());
+    draw_imgui_label(win, "quads texcoord", "%ld", val->quads_texcoord.size());
+    draw_imgui_label(win, "quads color", "%ld", val->quads_color.size());
+    draw_imgui_label(win, "pos", "%ld", val->pos.size());
+    draw_imgui_label(win, "texcoord", "%ld", val->texcoord.size());
+    draw_imgui_label(win, "color", "%ld", val->color.size());
     return edited;
 }
 
 inline bool draw_glwidgets_scene_inspector(
-    ygl::glwindow* win, ygl::instance* val, ygl::scene* scn) {
+    glwindow* win, instance* val, scene* scn) {
     auto edited = 0;
-    edited += ygl::draw_inputtext_glwidget(win, "name", val->name);
-    edited += ygl::draw_slider_glwidget(win, "frame.x", val->frame.x, -1, 1);
-    edited += ygl::draw_slider_glwidget(win, "frame.y", val->frame.y, -1, 1);
-    edited += ygl::draw_slider_glwidget(win, "frame.z", val->frame.z, -1, 1);
-    edited += ygl::draw_slider_glwidget(win, "frame.o", val->frame.o, -10, 10);
+    edited += draw_inputtext_glwidget(win, "name", val->name);
+    edited += draw_slider_glwidget(win, "frame.x", val->frame.x, -1, 1);
+    edited += draw_slider_glwidget(win, "frame.y", val->frame.y, -1, 1);
+    edited += draw_slider_glwidget(win, "frame.z", val->frame.z, -1, 1);
+    edited += draw_slider_glwidget(win, "frame.o", val->frame.o, -10, 10);
+    edited += draw_combobox_glwidget(win, "shp", val->shp, scn->shapes, true);
+    edited += draw_combobox_glwidget(win, "sbd", val->sbd, scn->subdivs, true);
     edited +=
-        ygl::draw_combobox_glwidget(win, "shp", val->shp, scn->shapes, true);
-    edited +=
-        ygl::draw_combobox_glwidget(win, "sbd", val->sbd, scn->subdivs, true);
-    edited +=
-        ygl::draw_combobox_glwidget(win, "mat", val->mat, scn->materials, true);
+        draw_combobox_glwidget(win, "mat", val->mat, scn->materials, true);
     return edited;
 }
 
 inline bool draw_glwidgets_scene_inspector(
-    ygl::glwindow* win, ygl::environment* val, ygl::scene* scn) {
+    glwindow* win, environment* val, scene* scn) {
     auto edited = 0;
-    edited += ygl::draw_inputtext_glwidget(win, "name", val->name);
-    edited += ygl::draw_slider_glwidget(win, "frame.x", val->frame.x, -1, 1);
-    edited += ygl::draw_slider_glwidget(win, "frame.y", val->frame.y, -1, 1);
-    edited += ygl::draw_slider_glwidget(win, "frame.z", val->frame.z, -1, 1);
-    edited += ygl::draw_slider_glwidget(win, "frame.o", val->frame.o, -10, 10);
-    edited += ygl::draw_coloredit_glwidget(win, "ke", val->ke);  // TODO: HDR
-    edited += ygl::draw_combobox_glwidget(
-        win, "ke txt", val->ke_txt, scn->textures, true);
+    edited += draw_inputtext_glwidget(win, "name", val->name);
+    edited += draw_slider_glwidget(win, "frame.x", val->frame.x, -1, 1);
+    edited += draw_slider_glwidget(win, "frame.y", val->frame.y, -1, 1);
+    edited += draw_slider_glwidget(win, "frame.z", val->frame.z, -1, 1);
+    edited += draw_slider_glwidget(win, "frame.o", val->frame.o, -10, 10);
+    edited += draw_coloredit_glwidget(win, "ke", val->ke);  // TODO: HDR
+    edited +=
+        draw_combobox_glwidget(win, "ke txt", val->ke_txt, scn->textures, true);
     return edited;
 }
 
 inline bool draw_glwidgets_scene_inspector(
-    ygl::glwindow* win, ygl::node* val, ygl::scene* scn) {
+    glwindow* win, node* val, scene* scn) {
     auto edited = 0;
-    edited += ygl::draw_inputtext_glwidget(win, "name", val->name);
-    edited += ygl::draw_combobox_glwidget(
-        win, "parent", val->parent, scn->nodes, true);
-    edited += ygl::draw_slider_glwidget(win, "local.x", val->local.x, -1, 1);
-    edited += ygl::draw_slider_glwidget(win, "local.y", val->local.y, -1, 1);
-    edited += ygl::draw_slider_glwidget(win, "local.z", val->local.z, -1, 1);
-    edited += ygl::draw_slider_glwidget(win, "local.o", val->local.o, -10, 10);
-    edited += ygl::draw_slider_glwidget(
-        win, "translation", val->translation, -10, 10);
-    edited += ygl::draw_slider_glwidget(win, "rotation", val->rotation, -1, 1);
-    edited += ygl::draw_slider_glwidget(win, "scale", val->scale, 0, 10);
+    edited += draw_inputtext_glwidget(win, "name", val->name);
     edited +=
-        ygl::draw_combobox_glwidget(win, "cam", val->cam, scn->cameras, true);
+        draw_combobox_glwidget(win, "parent", val->parent, scn->nodes, true);
+    edited += draw_slider_glwidget(win, "local.x", val->local.x, -1, 1);
+    edited += draw_slider_glwidget(win, "local.y", val->local.y, -1, 1);
+    edited += draw_slider_glwidget(win, "local.z", val->local.z, -1, 1);
+    edited += draw_slider_glwidget(win, "local.o", val->local.o, -10, 10);
     edited +=
-        ygl::draw_combobox_glwidget(win, "ist", val->ist, scn->instances, true);
-    edited += ygl::draw_combobox_glwidget(
-        win, "env", val->env, scn->environments, true);
+        draw_slider_glwidget(win, "translation", val->translation, -10, 10);
+    edited += draw_slider_glwidget(win, "rotation", val->rotation, -1, 1);
+    edited += draw_slider_glwidget(win, "scale", val->scale, 0, 10);
+    edited += draw_combobox_glwidget(win, "cam", val->cam, scn->cameras, true);
+    edited +=
+        draw_combobox_glwidget(win, "ist", val->ist, scn->instances, true);
+    edited +=
+        draw_combobox_glwidget(win, "env", val->env, scn->environments, true);
     return edited;
 }
 
 inline bool draw_glwidgets_scene_inspector(
-    ygl::glwindow* win, ygl::animation* val, ygl::scene* scn) {
+    glwindow* win, animation* val, scene* scn) {
     auto edited = 0;
-    edited += ygl::draw_inputtext_glwidget(win, "name", val->name);
-    edited += ygl::draw_inputtext_glwidget(win, "path", val->path);
-    edited += ygl::draw_inputtext_glwidget(win, "group", val->group);
-    // edited += ygl::draw_combobox_glwidget(win, "type", &val->type,
+    edited += draw_inputtext_glwidget(win, "name", val->name);
+    edited += draw_inputtext_glwidget(win, "path", val->path);
+    edited += draw_inputtext_glwidget(win, "group", val->group);
+    // edited += draw_combobox_glwidget(win, "type", &val->type,
     // animation_type_names());
-    ygl::draw_imgui_label(win, "times", "%ld", val->times.size());
-    ygl::draw_imgui_label(win, "translation", "%ld", val->translation.size());
-    ygl::draw_imgui_label(win, "rotation", "%ld", val->rotation.size());
-    ygl::draw_imgui_label(win, "scale", "%ld", val->scale.size());
-    ygl::draw_imgui_label(win, "weights", "%ld", val->weights.size());
-    ygl::draw_imgui_label(win, "targets", "%ld", val->targets.size());
+    draw_imgui_label(win, "times", "%ld", val->times.size());
+    draw_imgui_label(win, "translation", "%ld", val->translation.size());
+    draw_imgui_label(win, "rotation", "%ld", val->rotation.size());
+    draw_imgui_label(win, "scale", "%ld", val->scale.size());
+    draw_imgui_label(win, "weights", "%ld", val->weights.size());
+    draw_imgui_label(win, "targets", "%ld", val->targets.size());
     return edited;
 }
 
-inline bool draw_glwidgets_scene_tree(ygl::glwindow* win,
-    const std::string& lbl, ygl::scene* scn, void*& sel,
+inline bool draw_glwidgets_scene_tree(glwindow* win, const std::string& lbl,
+    scene* scn, void*& sel,
     std::vector<std::pair<std::string, void*>>& update_list, int height) {
     if (!scn) return false;
-    ygl::begin_child_glwidget(win, "scrolling scene tree", {0, height});
+    begin_child_glwidget(win, "scrolling scene tree", {0, height});
     draw_glwidgets_scene_tree(win, scn, sel);
 
     auto update_len = update_list.size();
@@ -365,15 +351,15 @@ inline bool draw_glwidgets_scene_tree(ygl::glwindow* win,
     }
 #endif
 
-    ygl::end_child_glwidget(win);
+    end_child_glwidget(win);
     return update_list.size() != update_len;
 }
 
-inline bool draw_glwidgets_scene_inspector(ygl::glwindow* win,
-    const std::string& lbl, ygl::scene* scn, void*& sel,
+inline bool draw_glwidgets_scene_inspector(glwindow* win,
+    const std::string& lbl, scene* scn, void*& sel,
     std::vector<std::pair<std::string, void*>>& update_list, int height) {
     if (!scn || !sel) return false;
-    ygl::begin_child_glwidget(win, "scrolling scene inspector", {0, height});
+    begin_child_glwidget(win, "scrolling scene inspector", {0, height});
 
     auto update_len = update_list.size();
 
@@ -423,7 +409,7 @@ inline bool draw_glwidgets_scene_inspector(ygl::glwindow* win,
             update_list.push_back({"animation", anm});
     }
 
-    ygl::end_child_glwidget(win);
+    end_child_glwidget(win);
     return update_list.size() != update_len;
 }
 

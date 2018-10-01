@@ -205,7 +205,7 @@ struct obj_camera {
     float focal = 0.050f;              // focal length
     float aspect = 16.0f / 9.0f;       // aspect ratio
     float aperture = 0;                // lens aperture
-    float focus = flt_max;             // focus distance
+    float focus = maxf;                // focus distance
 };
 
 // Obj environment [extension].
