@@ -2,8 +2,9 @@
 // # Yocto/GL: Tiny C++ Library for Physically-Based Rendering
 //
 //
-// Yocto/GL is a collection of utilities for creating a simple path tracer.
-// The list of utilities is described below.
+// Yocto/GL is a collection of utilities for manipukating various graphics 
+// quantities and creating a simple path tracer, The list of utilities is 
+// described below.
 //
 //
 // ## Small Vectors and Matrices, Frames, Bounding Boxes and Transforms
@@ -33,7 +34,7 @@
 // `transform_direction()`). For frames we also the support inverse operations
 // (`transform_xxx_inverse()`). Transform matrices and frames can be
 // constructed from basic translation, rotation and scaling, e.g. with
-// `translation_mat<T, 4>()` or `translation_frame<T, 3>()` respectively, etc.
+// `translation_mat()` or `translation_frame()` respectively, etc.
 // For rotation we support axis-angle and quaternions, with slerp.
 //
 //
@@ -60,12 +61,12 @@
 // example shape creation.
 //
 // 1. compute line tangents, and triangle and quad areas and normals with
-//    `compute_line_tangents()`, `compute_triangle_normals()`,
-//    `compute_quad_normals()`
-// 2. interpolate values over primitives with `eval_line()`,
-//    `eval_triangle()` and `eval_quad()`
-// 3. evaluate Bezier curves and derivatives with `eval_bezier()` and
-//    `eval_bezier_derivative()`
+//    `line_tangent()`, `triamgle_normal()`, `quad_normal()` and 
+//    `line_length()`, `triangle_area()` and `quad_normal()`
+// 2. interpolate values over primitives with `interpolate_line()`,
+//    `interpolate_triangle()` and `interpolate_quad()`
+// 3. evaluate Bezier curves and derivatives with `interpolate_bezier()` and
+//    `interpolate_bezier_derivative()`
 // 4. compute smooth normals and tangents with `compute_normals()`
 //   `compute_tangents()`
 // 5. compute tangent frames from texture coordinates with
@@ -147,8 +148,9 @@
 //
 // 0. load and save image with Yocto/GLIO
 // 1. create images with `image<T>` data structure
-// 2. resize images with `resize_image4f()`
-// 3. tonemap images with `tonemap_image4f()`
+// 2. resize images with `resize_image()`
+// 3. tonemap images with `tonemap_exposuregamma()` that support exposure/gamma
+//    with a filmic curve
 // 5. make various image examples with the `make_XXX_image4f()` functions
 // 6. create procedural sun-sky images with `make_sunsky_image4f()`
 //
@@ -171,13 +173,12 @@
 //
 // 1. load a scene with Yocto/GLIO,
 // 2. add missing data with `add_XXX()` functions
-// 3. use `update_bbox()` to compute element bounds
+// 3. use compute_bbox()` to compute element bounds
 // 4. can merge scene together with `merge_into()`
 // 5. make scene elements with `make_XXX()` functions
-// 6. make procedural elements and scenes with `make_proc_XXX()` functions
-// 7. for ray-intersection and closest point queries, a BVH can be created with
+// 8. for ray-intersection and closest point queries, a BVH can be created with
 //    `update_bvh()` and refit with `refit_bvh()`
-// 8. compute interpolated values over scene elements with `eval_XXX()`
+// 9. compute interpolated values over scene elements with `eval_XXX()`
 //    functions
 //
 //
@@ -198,12 +199,11 @@
 // general (you can even more an arbitrary shape sun). For now only the first
 // env is used.
 //
-// 1. prepare the scene for tracing
-//    - build the ray-tracing acceleration structure with `build_bvh()`
-//     - prepare lights for rendering with `init_lights()`
-// 2. create the image buffer and random number generators `make_trace_rngs()`
-// 3. render blocks of samples with `trace_samples()`
-// 4. you can also start an asynchronous renderer with `trace_asynch_start()`
+// 1. prepare the ray-tracing acceleration structure with `build_bvh()`
+// 2. prepare lights for rendering with `make_trace_lights()`
+// 3. create the image buffer and random number generators `make_trace_state()`
+// 4. render blocks of samples with `trace_samples()`
+// 5. you can also start an asynchronous renderer with `trace_asynch_start()`
 //
 //
 //
