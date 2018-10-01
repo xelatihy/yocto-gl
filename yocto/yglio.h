@@ -8,7 +8,7 @@
 // To speed up testing, we also support a binary format that is a dump of
 // the current scene. This format should not be use for archival though.
 //
-// ## Usage
+// ## File Loading and Saving
 //
 // 1. manipulate paths withe path utilities
 // 2. load and save text files with `load_text()` and `save_text()`
@@ -21,6 +21,25 @@
 // 9. if desired, the function `load_scene()` and `save_scene()` will either
 //    load using the internal format or convert on the fly using on the
 //    supported conversions
+//
+//
+// ## Command-Line Parsing
+//
+// We also provide a simple, immediate-mode, command-line parser. The parser 
+// works in an immediate-mode manner since it reads each value as you call each
+// function, rather than building a data structure and parsing offline. We 
+// support option and position arguments, automatic help generation, and 
+// error checking.
+//  
+// 1. initialize the parser with `make_cmdline_parser(argc, argv, help)`
+// 2. read a value with `value = parse_arg(parser, name, default, help)`
+//    - is name starts with '--' or '-' then it is an option
+//    - otherwise it is a positional arguments
+//    - options and arguments may be intermixed
+//    - the type of each option is determined by the default value `default`
+//    - the value is parsed on the stop
+// 3. finished parsing with `check_cmdline(parser)`
+//    - if an error occurred, the parser will exit and print a usage message
 //
 //
 
