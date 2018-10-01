@@ -64,7 +64,7 @@
 #include <climits>
 using namespace std::string_literals;
 
-#include "json.hpp"
+#include "ext/json.hpp"
 
 #ifndef _WIN32
 #pragma GCC diagnostic push
@@ -78,16 +78,16 @@ using namespace std::string_literals;
 #ifndef __clang_analyzer__
 
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include "ext/stb_image.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
+#include "ext/stb_image_write.h"
 
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
-#include "stb_image_resize.h"
+#include "ext/stb_image_resize.h"
 
 #define TINYEXR_IMPLEMENTATION
-#include "tinyexr.h"
+#include "ext/tinyexr.h"
 
 #endif
 

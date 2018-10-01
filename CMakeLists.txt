@@ -46,7 +46,6 @@ endif(MSVC)
 add_library(ygl 
     yocto/ygl.h yocto/ygl.cpp
     yocto/yglio.h yocto/yglio.cpp
-    yocto/yobj.h yocto/ygltf.h
 )
 
 if(UNIX AND NOT APPLE)
@@ -95,8 +94,8 @@ if(YOCTO_OPENGL)
     add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GLAD)
 
     add_library(yopengl apps/yglutils.h apps/yglutils.cpp 
-        apps/imgui/imgui.cpp apps/imgui/imgui_draw.cpp apps/imgui/imgui_widgets.cpp
-        apps/imgui/imgui_impl_glfw.cpp apps/imgui/imgui_impl_opengl3.cpp apps/glad/glad.c)
+        apps/ext/imgui/imgui.cpp apps/ext/imgui/imgui_draw.cpp apps/ext/imgui/imgui_widgets.cpp
+        apps/ext/imgui/imgui_impl_glfw.cpp apps/ext/imgui/imgui_impl_opengl3.cpp apps/ext/glad/glad.c)
 
     add_executable(yview apps/yview.cpp)
     add_executable(yitrace apps/yitrace.cpp)
