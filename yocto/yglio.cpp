@@ -58,15 +58,13 @@
 
 #include <cstdlib>
 #include <deque>
-#include <fstream>
 #include <regex>
-#include <sstream>
 
 #include <array>
 #include <climits>
 using namespace std::string_literals;
 
-#include "json.hpp"
+#include "ext/json.hpp"
 
 #ifndef _WIN32
 #pragma GCC diagnostic push
@@ -80,22 +78,59 @@ using namespace std::string_literals;
 #ifndef __clang_analyzer__
 
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include "ext/stb_image.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
+#include "ext/stb_image_write.h"
 
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
-#include "stb_image_resize.h"
+#include "ext/stb_image_resize.h"
 
 #define TINYEXR_IMPLEMENTATION
-#include "tinyexr.h"
+#include "ext/tinyexr.h"
 
 #endif
 
 #ifndef _WIN32
 #pragma GCC diagnostic pop
 #endif
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF STRING FORMAT UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Converts a string from printf formats. Unsafe: works only for short strings.
+std::string format_str(const char* fmt, ...) {
+    char buf[4096];
+    va_list args;
+    va_start(args, fmt);
+    vsprintf(buf, fmt, args);
+    va_end(args);
+    return buf;
+}
+// Format duration string from nanoseconds
+std::string format_duration(int64_t duration) {
+    auto elapsed = duration / 1000000;  // milliseconds
+    auto hours = (int)(elapsed / 3600000);
+    elapsed %= 3600000;
+    auto mins = (int)(elapsed / 60000);
+    elapsed %= 60000;
+    auto secs = (int)(elapsed / 1000);
+    auto msecs = (int)(elapsed % 1000);
+    char buf[256];
+    sprintf(buf, "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
+    return buf;
+}
+// Format a large integer number in human readable form
+std::string format_num(uint64_t num) {
+    auto rem = num % 1000;
+    auto div = num / 1000;
+    if (div > 0) return format_num(div) + "," + std::to_string(rem);
+    return std::to_string(rem);
+}
+
+}  // namespace ygl
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF PATH UTILITIES
@@ -155,42 +190,295 @@ std::string replace_extension(
 // Load a text file
 std::string load_text(const std::string& filename) {
     // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
-    auto fs = std::ifstream(filename);
-    if (!fs) throw std::runtime_error("could not load " + filename);
-    std::stringstream buf;
-    buf << fs.rdbuf();
-    fs.close();
-    return buf.str();
+    auto fs = fopen(filename.c_str(), "rb");
+    if (!fs) throw std::runtime_error("could not open file " + filename);
+    fseek(fs, 0, SEEK_END);
+    auto fsize = ftell(fs);
+    fseek(fs, 0, SEEK_SET);
+    auto buf = std::vector<char>(fsize);
+    if (fread(buf.data(), 1, fsize, fs) != fsize)
+        throw std::runtime_error("problem reading " + filename);
+    fclose(fs);
+    return {buf.begin(), buf.end()};
 }
 
 // Save a text file
 void save_text(const std::string& filename, const std::string& str) {
-    auto fs = std::ofstream(filename);
+    auto fs = fopen(filename.c_str(), "wt");
     if (!fs) throw std::runtime_error("could not save " + filename);
-    fs << str;
-    fs.close();
+    fprintf(fs, "%s", str.c_str());
+    fclose(fs);
 }
 
 // Load a binary file
 std::vector<byte> load_binary(const std::string& filename) {
     // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
-    auto fs = std::ifstream(filename, std::ios::binary);
-    if (!fs) throw std::runtime_error("could not load " + filename);
-    fs.seekg(0, std::ios::end);
-    size_t size = fs.tellg();
-    auto buf = std::vector<byte>(size);
-    fs.seekg(0);
-    fs.read((char*)&buf[0], size);
-    fs.close();
+    auto fs = fopen(filename.c_str(), "rb");
+    if (!fs) throw std::runtime_error("could not open file " + filename);
+    fseek(fs, 0, SEEK_END);
+    auto fsize = ftell(fs);
+    fseek(fs, 0, SEEK_SET);
+    auto buf = std::vector<byte>(fsize);
+    if (fread((char*)buf.data(), 1, fsize, fs) != fsize)
+        throw std::runtime_error("problem reading " + filename);
+    fclose(fs);
     return buf;
 }
 
 // Save a binary file
 void save_binary(const std::string& filename, const std::vector<byte>& data) {
-    auto fs = std::ofstream(filename, std::ios::binary);
+    auto fs = fopen(filename.c_str(), "wb");
     if (!fs) throw std::runtime_error("could not save " + filename);
-    fs.write((char*)data.data(), data.size());
-    fs.close();
+    fwrite((char*)data.data(), 1, data.size(), fs);
+    fclose(fs);
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// TRIVIAL COMMAND LINE PARSING
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// initialize a command line parser
+cmdline_parser make_cmdline_parser(
+    int argc, char** argv, const std::string& usage, const std::string& cmd) {
+    auto parser = cmdline_parser();
+    parser.args = {argv + 1, argv + argc};
+    parser.usage_cmd = (cmd.empty()) ? argv[0] : cmd;
+    parser.usage_hlp = usage;
+    return parser;
+}
+
+// check if option or argument
+bool is_option(const std::string& name) {
+    return name.size() > 1 && name.front() == '-';
+}
+
+// get names from string
+std::vector<std::string> get_option_names(const std::string& name_) {
+    auto names = std::vector<std::string>();
+    auto name = name_;
+    while (name.find(',') != name.npos) {
+        names.push_back(name.substr(0, name.find(',')));
+        name = name.substr(name.find(',') + 1);
+    }
+    names.push_back(name);
+    return names;
+}
+
+// add help
+std::string get_option_usage(const std::string& name, const std::string& var,
+    const std::string& usage, const std::string& def_,
+    const std::vector<std::string>& choices) {
+    auto def = def_;
+    if (def != "") def = "[" + def + "]";
+    auto namevar = name;
+    if (var != "") namevar += " " + var;
+    char buf[4096];
+    sprintf(
+        buf, "  %-24s %s %s\n", namevar.c_str(), usage.c_str(), def.c_str());
+    auto usagelines = std::string(buf);
+    if (!choices.empty()) {
+        usagelines += "        accepted values:";
+        for (auto& c : choices) usagelines += " " + c;
+        usagelines += "\n";
+    }
+    return usagelines;
+}
+
+// print cmdline help
+void print_cmdline_usage(const cmdline_parser& parser) {
+    printf("%s: %s\n", parser.usage_cmd.c_str(), parser.usage_hlp.c_str());
+    printf("usage: %s %s %s\n\n", parser.usage_cmd.c_str(),
+        (parser.usage_opt.empty()) ? "" : "[options]",
+        (parser.usage_arg.empty()) ? "" : "arguments");
+    if (!parser.usage_opt.empty()) {
+        printf("options:\n");
+        printf("%s\n", parser.usage_opt.c_str());
+    }
+    if (!parser.usage_arg.empty()) {
+        printf("arguments:\n");
+        printf("%s\n", parser.usage_arg.c_str());
+    }
+}
+
+// forward declaration
+bool parse_flag(cmdline_parser& parser, const std::string& name, bool def,
+    const std::string& usage);
+
+// check if any error occurred and exit appropriately
+void check_cmdline(cmdline_parser& parser) {
+    if (parse_flag(parser, "--help,-?", false, "print help")) {
+        print_cmdline_usage(parser);
+        exit(0);
+    }
+    if (!parser.args.empty()) parser.error += "unmatched arguments remaining\n";
+    if (!parser.error.empty()) {
+        printf("error: %s", parser.error.c_str());
+        print_cmdline_usage(parser);
+        exit(1);
+    }
+}
+
+// Parse a flag. Name should start with either "--" or "-".
+bool parse_flag(cmdline_parser& parser, const std::string& name, bool def,
+    const std::string& usage) {
+    parser.usage_opt += get_option_usage(name, "", usage, "", {});
+    if (parser.error != "") return def;
+    auto names = get_option_names(name);
+    auto pos = parser.args.end();
+    for (auto& name : names)
+        pos = std::min(
+            pos, std::find(parser.args.begin(), parser.args.end(), name));
+    if (pos == parser.args.end()) return def;
+    parser.args.erase(pos);
+    return !def;
+}
+
+// Parse an option string. Name should start with "--" or "-".
+std::string parse_option(cmdline_parser& parser, const std::string& name,
+    const std::string& def, const std::string& usage, bool req,
+    const std::vector<std::string>& choices) {
+    parser.usage_opt += get_option_usage(name, "", usage, def, choices);
+    if (parser.error != "") return def;
+    auto names = get_option_names(name);
+    auto pos = parser.args.end();
+    for (auto& name : names) {
+        pos = std::min(
+            pos, std::find(parser.args.begin(), parser.args.end(), name));
+    }
+    if (pos == parser.args.end()) {
+        if (req) parser.error += "missing value for " + name;
+        return def;
+    }
+    if (pos == parser.args.end() - 1) {
+        parser.error += "missing value for " + name;
+        return def;
+    }
+    auto val = *(pos + 1);
+    parser.args.erase(pos, pos + 2);
+    if (!choices.empty() &&
+        std::find(choices.begin(), choices.end(), val) == choices.end()) {
+        parser.error += "bad value for " + name;
+        return def;
+    }
+    return val;
+}
+
+// Parse an argument string. Name should not start with "--" or "-".
+std::string parse_argument(cmdline_parser& parser, const std::string& name,
+    const std::string& def, const std::string& usage, bool req,
+    const std::vector<std::string>& choices) {
+    parser.usage_arg += get_option_usage(name, "", usage, def, choices);
+    if (parser.error != "") return def;
+    auto pos = std::find_if(parser.args.begin(), parser.args.end(),
+        [](auto& v) { return v[0] != '-'; });
+    if (pos == parser.args.end()) {
+        if (req) parser.error += "missing value for " + name;
+        return def;
+    }
+    auto val = *pos;
+    parser.args.erase(pos);
+    if (!choices.empty() &&
+        std::find(choices.begin(), choices.end(), val) == choices.end()) {
+        parser.error += "bad value for " + name;
+        return def;
+    }
+    return val;
+}
+
+// Parse a string argument.
+std::string parse_string(cmdline_parser& parser, const std::string& name,
+    const std::string& def, const std::string& usage, bool req,
+    const std::vector<std::string>& choices) {
+    return is_option(name) ?
+               parse_option(parser, name, def, usage, req, choices) :
+               parse_argument(parser, name, def, usage, req, choices);
+}
+
+// Parse an integer, float, string. If name starts with "--" or "-", then it is
+// an option, otherwise it is a position argument.
+bool parse_arg(cmdline_parser& parser, const std::string& name, 
+    bool def, const std::string& usage) {
+    return parse_flag(parser, name, def, usage);
+}
+std::string parse_arg(cmdline_parser& parser, const std::string& name, 
+    const std::string& def, const std::string& usage, bool req) {
+    return parse_string(parser, name, def, usage, req, {});
+}
+std::string parse_arg(cmdline_parser& parser, const std::string& name, 
+    const char* def, const std::string& usage, bool req) {
+    return parse_string(parser, name, def, usage, req, {});
+}
+int parse_arg(cmdline_parser& parser, const std::string& name, int def,
+    const std::string& usage, bool req) {
+    auto vals = parse_string(parser, name, std::to_string(def), usage, req, {});
+    auto val = def;
+    if (sscanf(vals.c_str(), "%d", &val) != 1) {
+        parser.error += "bad value for " + name;
+        return def;
+    }
+    return val;
+}
+float parse_arg(cmdline_parser& parser, const std::string& name, float def,
+    const std::string& usage, bool req) {
+    auto vals = parse_string(parser, name, std::to_string(def), usage, req, {});
+    auto val = def;
+    if (sscanf(vals.c_str(), "%f", &val) != 1) {
+        parser.error += "bad value for " + name;
+        return def;
+    }
+    return val;
+}
+vec2f parse_arg(cmdline_parser& parser, const std::string& name,
+    const vec2f& def, const std::string& usage, bool req) {
+    auto vals = parse_string(parser, name,
+        std::to_string(def.x) + " " + std::to_string(def.y), usage, req, {});
+    auto val = def;
+    if (sscanf(vals.c_str(), "%f %f", &val.x, &val.y) != 2) {
+        parser.error += "bad value for " + name;
+        return def;
+    }
+    return val;
+}
+vec3f parse_arg(cmdline_parser& parser, const std::string& name,
+    const vec3f& def, const std::string& usage, bool req) {
+    auto vals = parse_string(parser, name,
+        std::to_string(def.x) + " " + std::to_string(def.y) + " " +
+            std::to_string(def.z),
+        usage, req, {});
+    auto val = def;
+    if (sscanf(vals.c_str(), "%f %f %f", &val.x, &val.y, &val.z) != 3) {
+        parser.error += "bad value for " + name;
+        return def;
+    }
+    return val;
+}
+int parse_arge(cmdline_parser& parser, const std::string& name, int def,
+    const std::string& usage, const std::vector<std::string>& labels,
+    bool req) {
+    auto val = parse_string(parser, name, labels.at(def), usage, req, labels);
+    return (int)(std::find(labels.begin(), labels.end(), val) - labels.begin());
+}
+
+// Parser an argument
+std::vector<std::string> parse_args(cmdline_parser& parser,
+    const std::string& name, const std::vector<std::string>& def,
+    const std::string& usage, bool req) {
+    auto defs = std::string();
+    for (auto& d : def) defs += " " + d;
+    parser.usage_arg += get_option_usage(name, "", usage, defs, {});
+    if (parser.error != "") return {};
+    auto pos = std::find_if(parser.args.begin(), parser.args.end(),
+        [](auto& v) { return v[0] != '-'; });
+    if (pos == parser.args.end()) {
+        if (req) parser.error += "missing value for " + name;
+        return {};
+    }
+    auto val = std::vector<std::string>{pos, parser.args.end()};
+    parser.args.erase(pos, parser.args.end());
+    return val;
 }
 
 }  // namespace ygl
@@ -368,88 +656,82 @@ bool is_hdr_filename(const std::string& filename) {
 }
 
 // Loads an hdr image.
-image4f load_image(const std::string& filename) {
+image<vec4f> load_image4f(const std::string& filename) {
     auto ext = get_extension(filename);
-    auto width = 0, height = 0;
-    auto img = image4f();
+    auto size = zero2i;
+    auto img = image<vec4f>();
     if (ext == "exr") {
         auto pixels = (vec4f*)nullptr;
-        if (LoadEXR((float**)&pixels, &width, &height, filename.c_str(),
+        if (LoadEXR((float**)&pixels, &size.x, &size.y, filename.c_str(),
                 nullptr) < 0)
             throw std::runtime_error("could not load image " + filename);
         if (!pixels)
             throw std::runtime_error("could not load image " + filename);
-
-        img = image4f{{width, height},
-            std::vector<vec4f>(pixels, pixels + width * height)};
+        img = image<vec4f>{size, pixels};
         free(pixels);
     } else if (ext == "pfm") {
         auto ncomp = 0;
         auto pixels =
-            (vec4f*)load_pfm(filename.c_str(), &width, &height, &ncomp, 4);
+            (vec4f*)load_pfm(filename.c_str(), &size.x, &size.y, &ncomp, 4);
         if (!pixels)
             throw std::runtime_error("could not load image " + filename);
-
-        img = image4f{{width, height},
-            std::vector<vec4f>(pixels, pixels + width * height)};
+        img = image<vec4f>{size, pixels};
         free(pixels);
     } else if (ext == "hdr") {
         auto ncomp = 0;
         auto pixels =
-            (vec4f*)stbi_loadf(filename.c_str(), &width, &height, &ncomp, 4);
+            (vec4f*)stbi_loadf(filename.c_str(), &size.x, &size.y, &ncomp, 4);
         if (!pixels)
             throw std::runtime_error("could not load image " + filename);
-
-        img = image4f{{width, height},
-            std::vector<vec4f>(pixels, pixels + width * height)};
+        img = image<vec4f>{size, pixels};
         free(pixels);
     } else {
+        stbi_ldr_to_hdr_gamma(1);
         auto ncomp = 0;
         auto pixels =
-            (vec4b*)stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
+            (vec4f*)stbi_loadf(filename.c_str(), &size.x, &size.y, &ncomp, 4);
         if (!pixels)
             throw std::runtime_error("could not load image " + filename);
-        auto img8 = image4b{{width, height},
-            std::vector<vec4b>(pixels, pixels + width * height)};
+        img = image<vec4f>{size, pixels};
         free(pixels);
-        img = byte_to_float(img8);
+        stbi_ldr_to_hdr_gamma(2.2f);
     }
     return img;
 }
 
 // Saves an hdr image.
-void save_image(const std::string& filename, const image4f& img) {
+void save_image4f(const std::string& filename, const image<vec4f>& img) {
     auto ext = get_extension(filename);
     if (ext == "png") {
-        auto ldr = float_to_byte(img);
-        if (!stbi_write_png(filename.c_str(), img.size.x, img.size.y, 4,
-                (byte*)ldr.pxl.data(), img.size.x * 4))
+        auto pxl8 = float_to_byte(img);
+        if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
+                pxl8.data(), img.size().x * 4))
             throw std::runtime_error("could not save image " + filename);
     } else if (ext == "jpg") {
-        auto ldr = float_to_byte(img);
-        if (!stbi_write_jpg(filename.c_str(), img.size.x, img.size.y, 4,
-                (byte*)ldr.pxl.data(), 75))
+        auto pxl8 = float_to_byte(img);
+        if (!stbi_write_jpg(filename.c_str(), img.size().x, img.size().y, 4,
+                pxl8.data(), 75))
             throw std::runtime_error("could not save image " + filename);
     } else if (ext == "tga") {
-        auto ldr = float_to_byte(img);
-        if (!stbi_write_tga(filename.c_str(), img.size.x, img.size.y, 4,
-                (byte*)ldr.pxl.data()))
+        auto pxl8 = float_to_byte(img);
+        if (!stbi_write_tga(
+                filename.c_str(), img.size().x, img.size().y, 4, pxl8.data()))
             throw std::runtime_error("could not save image " + filename);
     } else if (ext == "bmp") {
-        auto ldr = float_to_byte(img);
-        if (!stbi_write_bmp(filename.c_str(), img.size.x, img.size.y, 4,
-                (byte*)ldr.pxl.data()))
+        auto pxl8 = float_to_byte(img);
+        if (!stbi_write_bmp(
+                filename.c_str(), img.size().x, img.size().y, 4, pxl8.data()))
             throw std::runtime_error("could not save image " + filename);
     } else if (ext == "hdr") {
-        if (!stbi_write_hdr(filename.c_str(), img.size.x, img.size.y, 4,
-                (float*)img.pxl.data()))
+        if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
+                (float*)img.data()))
             throw std::runtime_error("could not save image " + filename);
     } else if (ext == "pfm") {
-        if (!save_pfm(filename.c_str(), img.size.x, img.size.y, 4,
-                (float*)img.pxl.data()))
+        if (!save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
+                (float*)img.data()))
             throw std::runtime_error("could not save image " + filename);
     } else if (ext == "exr") {
-        if (!SaveEXR((float*)img.pxl.data(), img.size.x, img.size.y, 4,
+        if (!SaveEXR((float*)img.data(), img.size().x, img.size().y, 4,
                 filename.c_str()))
             throw std::runtime_error("could not save image " + filename);
     } else {
@@ -458,33 +740,79 @@ void save_image(const std::string& filename, const image4f& img) {
 }
 
 // Loads an hdr image.
-image4f load_image_from_memory(const byte* data, int data_size) {
+image<vec4f> load_image4f_from_memory(const byte* data, int data_size) {
     stbi_ldr_to_hdr_gamma(1);
-    auto width = 0, height = 0, ncomp = 0;
+    auto size = zero2i;
+    auto ncomp = 0;
     auto pixels = (vec4f*)stbi_loadf_from_memory(
-        data, data_size, &width, &height, &ncomp, 4);
+        data, data_size, &size.x, &size.y, &ncomp, 4);
     stbi_ldr_to_hdr_gamma(2.2f);
     if (!pixels) throw std::runtime_error("could not decode image from memory");
-    auto img = image4f{
-        {width, height}, std::vector<vec4f>(pixels, pixels + width * height)};
+    auto img = image<vec4f>{size, pixels};
     delete pixels;
     return img;
 }
 
+// Convenience helper that saves an HDR images as wither a linear HDR file or
+// a tonemapped LDR file depending on file name
+void save_tonemapped_image(const std::string& filename, const image<vec4f>& hdr,
+    float exposure, float gamma, bool filmic) {
+    if (is_hdr_filename(filename))
+        save_image4f(filename, hdr);
+    else
+        save_image4f(
+            filename, tonemap_exposuregamma(hdr, exposure, gamma, filmic));
+}
+
 // Resize image.
-image4f resize_image(const image4f& img, const vec2i& size) {
-    auto imsize = size;
-    if (imsize == zero2i) throw std::runtime_error("bad image size");
-    if (!imsize.x)
-        imsize.x = (int)round(img.size.x * (imsize.y / (float)img.size.y));
-    if (!imsize.y)
-        imsize.y = (int)round(img.size.y * (imsize.x / (float)img.size.x));
-    auto res_img = image4f{imsize};
-    stbir_resize_float_generic((float*)img.pxl.data(), img.size.x, img.size.y,
-        sizeof(vec4f) * img.size.x, (float*)res_img.pxl.data(), imsize.x,
-        imsize.y, sizeof(vec4f) * imsize.x, 4, 3, 0, STBIR_EDGE_CLAMP,
-        STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
+image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size_) {
+    auto size = size_;
+    if (!size.x && !size.y) throw std::runtime_error("bad image size");
+    if (!size.x)
+        size.x = (int)round(img.size().x * (size.y / (float)img.size().y));
+    if (!size.y)
+        size.y = (int)round(img.size().y * (size.x / (float)img.size().x));
+    auto res_img = image<vec4f>{size};
+    stbir_resize_float_generic((float*)img.data(), img.size().x, img.size().y,
+        sizeof(vec4f) * img.size().x, (float*)res_img.data(), res_img.size().x,
+        res_img.size().y, sizeof(vec4f) * res_img.size().x, 4, 3, 0,
+        STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR,
+        nullptr);
     return res_img;
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR VOLUME IMAGE IO
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Loads volume data from binary format.
+volume<float> load_volume1f(const std::string& filename) {
+    auto file = fopen(filename.c_str(), "r");
+    throw std::runtime_error("could not load volume " + filename);
+    auto size = zero3i;
+    if (fread(&size, sizeof(vec3i), 1, file) != 1)
+        throw std::runtime_error("problem reading " + filename);
+    auto vol = volume<float>{size};
+    auto count = vol.size().x * vol.size().y * vol.size().z;
+    if (fread(vol.data(), sizeof(float), count, file) != count)
+        throw std::runtime_error("problem reading " + filename);
+    fclose(file);
+    return vol;
+}
+
+// Saves volume data in binary format.
+void save_volume1f(const std::string& filename, const volume<float>& vol) {
+    auto file = fopen(filename.c_str(), "w");
+    if (!file) throw std::runtime_error("could not save " + filename);
+    auto size = vol.size();
+    fwrite(&size, sizeof(vec3i), 1, file);
+    auto count = vol.size().x * vol.size().y * vol.size().z;
+    if(fwrite(vol.data(), sizeof(float), count, file) != count)
+        throw std::runtime_error("problem saving " + filename);
+    fclose(file);
 }
 
 }  // namespace ygl
@@ -495,10 +823,10 @@ image4f resize_image(const image4f& img, const vec2i& size) {
 namespace ygl {
 
 // Load a scene
-std::shared_ptr<scene> load_scene(
+scene* load_scene(
     const std::string& filename, bool load_textures, bool skip_missing) {
     auto ext = get_extension(filename);
-    auto scn = (std::shared_ptr<scene>)nullptr;
+    auto scn = (scene*)nullptr;
     if (ext == "json" || ext == "JSON") {
         scn = load_json_scene(filename, load_textures, skip_missing);
     } else if (ext == "obj" || ext == "OBJ") {
@@ -507,10 +835,12 @@ std::shared_ptr<scene> load_scene(
         scn = load_gltf_scene(filename, load_textures, skip_missing);
     } else if (ext == "pbrt" || ext == "PBRT") {
         scn = load_pbrt_scene(filename, load_textures, skip_missing);
+    } else if (ext == "ybin" || ext == "YBIN") {
+        scn = load_ybin_scene(filename, load_textures, skip_missing);
     } else {
         throw std::runtime_error("unsupported extension " + ext);
     }
-    auto mat = std::shared_ptr<material>();
+    auto mat = (material*)nullptr;
     for (auto ist : scn->instances) {
         if (ist->mat) continue;
         if (!mat) {
@@ -519,11 +849,15 @@ std::shared_ptr<scene> load_scene(
         }
         ist->mat = mat;
     }
+    if (scn->cameras.empty()) {
+        scn->cameras.push_back(make_bbox_camera("<view>", compute_bbox(scn)));
+    }
+    add_missing_names(scn);
     return scn;
 }
 
 // Save a scene
-void save_scene(const std::string& filename, const std::shared_ptr<scene>& scn,
+void save_scene(const std::string& filename, const scene* scn,
     bool save_textures, bool skip_missing) {
     auto ext = get_extension(filename);
     if (ext == "json" || ext == "JSON") {
@@ -532,8 +866,94 @@ void save_scene(const std::string& filename, const std::shared_ptr<scene>& scn,
         save_obj_scene(filename, scn, save_textures, skip_missing);
     } else if (ext == "gltf" || ext == "GLTF") {
         save_gltf_scene(filename, scn, save_textures, skip_missing);
+    } else if (ext == "pbrt" || ext == "PBRT") {
+        save_pbrt_scene(filename, scn, save_textures, skip_missing);
+    } else if (ext == "ybin" || ext == "YBIN") {
+        save_ybin_scene(filename, scn, save_textures, skip_missing);
     } else {
         throw std::runtime_error("unsupported extension " + ext);
+    }
+}
+
+void load_scene_textures(scene* scn, const std::string& dirname,
+    bool skip_missing, bool assign_opacity) {
+    // load images
+    for (auto txt : scn->textures) {
+        if (txt->path == "" || !txt->img.empty()) continue;
+        auto filename = normalize_path(dirname + "/" + txt->path);
+        try {
+            txt->img = load_image4f(filename);
+            if (!is_hdr_filename(filename) && txt->gamma != 1) {
+                txt->img = gamma_to_linear(txt->img, txt->gamma);
+            }
+        } catch (const std::exception&) {
+            if (skip_missing) continue;
+            throw;
+        }
+    }
+
+    // load volumes
+    for (auto txt : scn->voltextures) {
+        if (txt->path == "" || !txt->vol.empty()) continue;
+        auto filename = normalize_path(dirname + "/" + txt->path);
+        try {
+            txt->vol = load_volume1f(filename);
+        } catch (const std::exception&) {
+            if (skip_missing) continue;
+            throw;
+        }
+    }
+
+    // assign opacity texture if needed
+    if (assign_opacity) {
+        auto has_opacity = std::unordered_map<texture*, bool>();
+        for (auto& txt : scn->textures) {
+            has_opacity[txt] = false;
+            for (auto& p : txt->img)
+                if (p.w < 0.999f) {
+                    has_opacity[txt] = true;
+                    break;
+                }
+        }
+        for (auto& mat : scn->materials) {
+            if (mat->kd_txt && !mat->op_txt && has_opacity.at(mat->kd_txt))
+                mat->op_txt = mat->kd_txt;
+        }
+    }
+}
+
+// helper to save textures
+void save_scene_textures(
+    const scene* scn, const std::string& dirname, bool skip_missing) {
+    // save images
+    for (auto txt : scn->textures) {
+        if (txt->img.empty()) continue;
+        auto filename = normalize_path(dirname + "/" + txt->path);
+        try {
+            if (!txt->img.empty()) {
+                if (is_hdr_filename(filename) || txt->gamma == 1) {
+                    save_image4f(filename, txt->img);
+                } else {
+                    save_image4f(
+                        filename, linear_to_gamma(txt->img, txt->gamma));
+                }
+            }
+        } catch (std::exception&) {
+            if (skip_missing) continue;
+            throw;
+        }
+    }
+
+    // save volumes
+    for (auto txt : scn->voltextures) {
+        if (txt->vol.empty()) continue;
+        auto filename = normalize_path(dirname + "/" + txt->path);
+        try {
+            if (!txt->vol.empty()) { save_volume1f(filename, txt->vol); }
+        } catch (std::exception&) {
+            if (skip_missing) continue;
+            throw;
+        }
     }
 }
 
@@ -667,53 +1087,141 @@ void save_json(const std::string& filename, const json& js) {
     save_text(filename, js.dump(4));
 }
 
-// json conversions
-template <typename T, int N>
-inline void to_json(json& js, const vec<T, N>& val) {
-    js = json((const std::array<T, N>&)val);
+template <typename T>
+inline void to_json(json& js, const vec2<T>& val) {
+    js = std::array<T, 2>{{val.x, val.y}};
 }
-template <typename T, int N>
-inline void from_json(const json& js, vec<T, N>& val) {
-    (std::array<T, N>&)val = js.get<std::array<T, N>>();
+template <typename T>
+inline void from_json(const json& js, vec2<T>& val) {
+    auto vala = js.get<std::array<T, 2>>();
+    val = {vala[0], vala[1]};
 }
-
-template <typename T, int N>
-inline void to_json(json& js, const frame<T, N>& val) {
-    js = json((const std::array<T, N*(N + 1)>&)val);
+template <typename T>
+inline void to_json(json& js, const vec3<T>& val) {
+    js = std::array<T, 3>{{val.x, val.y, val.z}};
 }
-template <typename T, int N>
-inline void from_json(const json& js, frame<T, N>& val) {
-    (std::array<T, N*(N + 1)>&)val = js.get<std::array<T, N*(N + 1)>>();
+template <typename T>
+inline void from_json(const json& js, vec3<T>& val) {
+    auto vala = js.get<std::array<T, 3>>();
+    val = {vala[0], vala[1], vala[2]};
 }
-template <typename T, int N>
-inline void to_json(json& js, const mat<T, N>& val) {
-    js = json((const std::array<T, N * N>&)val);
+template <typename T>
+inline void to_json(json& js, const vec4<T>& val) {
+    js = std::array<T, 4>{{val.x, val.y, val.z, val.w}};
 }
-template <typename T, int N>
-inline void from_json(const json& js, mat<T, N>& val) {
-    (std::array<T, N * N>&)val = js.get<std::array<T, N * N>>();
-}
-
-template <typename T, int N>
-inline void to_json(json& js, const bbox<T, N>& val) {
-    js = json((const std::array<T, 2 * N>&)val);
-}
-template <typename T, int N>
-inline void from_json(const json& js, bbox<T, N>& val) {
-    (std::array<T, 2 * N>&)val = js.get<std::array<T, 2 * N>>();
+template <typename T>
+inline void from_json(const json& js, vec4<T>& val) {
+    auto vala = js.get<std::array<T, 4>>();
+    val = {vala[0], vala[1], vala[2], vala[3]};
 }
 
-inline void to_json(json& js, const image4f& val) {
+template <typename T>
+inline void to_json(json& js, const frame2<T>& val) {
+    js = std::array<vec2<T>, 3>{{val.x, val.y, val.o}};
+}
+template <typename T>
+inline void from_json(const json& js, frame2<T>& val) {
+    auto vala = js.get<std::array<vec2<T>, 3>>();
+    val = {vala[0], vala[1], vala[2]};
+}
+template <typename T>
+inline void to_json(json& js, const frame3<T>& val) {
+    js = std::array<vec3<T>, 4>{{val.x, val.y, val.z, val.o}};
+}
+template <typename T>
+inline void from_json(const json& js, frame3<T>& val) {
+    auto vala = js.get<std::array<vec3<T>, 4>>();
+    val = {vala[0], vala[1], vala[2], vala[3]};
+}
+
+template <typename T>
+inline void to_json(json& js, const mat2<T>& val) {
+    js = std::array<vec2<T>, 2>{{val.x, val.y}};
+}
+template <typename T>
+inline void from_json(const json& js, mat2<T>& val) {
+    auto vala = js.get<std::array<vec2<T>, 2>>();
+    val = {vala[0], vala[1]};
+}
+template <typename T>
+inline void to_json(json& js, const mat3<T>& val) {
+    js = std::array<vec3<T>, 3>{{val.x, val.y, val.z}};
+}
+template <typename T>
+inline void from_json(const json& js, mat3<T>& val) {
+    auto vala = js.get<std::array<vec3<T>, 3>>();
+    val = {vala[0], vala[1], vala[2]};
+}
+template <typename T>
+inline void to_json(json& js, const mat4<T>& val) {
+    js = std::array<vec4<T>, 4>{{val.x, val.y, val.z, val.w}};
+}
+template <typename T>
+inline void from_json(const json& js, mat4<T>& val) {
+    auto vala = js.get<std::array<vec4<T>, 4>>();
+    val = {vala[0], vala[1], vala[2], vala[3]};
+}
+
+template <typename T>
+inline void to_json(json& js, const bbox1<T>& val) {
+    js = std::array<T, 2>{{val.min, val.max}};
+}
+template <typename T>
+inline void from_json(const json& js, bbox1<T>& val) {
+    auto vala = js.get<std::array<T, 2>>();
+    val = {vala[0], vala[1]};
+}
+template <typename T>
+inline void to_json(json& js, const bbox2<T>& val) {
+    js = std::array<vec2<T>, 2>{{val.min, val.max}};
+}
+template <typename T>
+inline void from_json(const json& js, bbox2<T>& val) {
+    auto vala = js.get<std::array<vec2<T>, 2>>();
+    val = {vala[0], vala[1]};
+}
+template <typename T>
+inline void to_json(json& js, const bbox3<T>& val) {
+    js = std::array<vec3<T>, 2>{{val.min, val.max}};
+}
+template <typename T>
+inline void from_json(const json& js, bbox3<T>& val) {
+    auto vala = js.get<std::array<vec3<T>, 2>>();
+    val = {vala[0], vala[1]};
+}
+template <typename T>
+inline void to_json(json& js, const bbox4<T>& val) {
+    js = std::array<vec4<T>, 2>{{val.min, val.max}};
+}
+template <typename T>
+inline void from_json(const json& js, bbox4<T>& val) {
+    auto vala = js.get<std::array<vec4<T>, 2>>();
+    val = {vala[0], vala[1]};
+}
+
+template <typename T>
+inline void to_json(json& js, const image<T>& val) {
     js = json::object();
-    js["width"] = val.size.x;
-    js["height"] = val.size.y;
-    js["pixels"] = val.pxl;
+    js["size"] = val.size();
+    js["data"] = val.dataref();
 }
-inline void from_json(const json& js, image4f& val) {
-    auto width = js.at("width").get<int>();
-    auto height = js.at("height").get<int>();
-    auto pixels = js.at("pixels").get<std::vector<vec4f>>();
-    val = image4f{{width, height}, pixels};
+template <typename T>
+inline void from_json(const json& js, image<T>& val) {
+    auto size = js.at("size").get<vec2i>();
+    auto data = js.at("data").get<std::vector<T>>();
+    val = image<T>{size, data.data()};
+}
+template <typename T>
+inline void to_json(json& js, const volume<T>& val) {
+    js = json::object();
+    js["size"] = val.size();
+    js["data"] = val.dataref();
+}
+template <typename T>
+inline void from_json(const json& js, volume<T>& val) {
+    auto size = js.at("size").get<vec3i>();
+    auto data = js.at("data").get<std::vector<T>>();
+    val = volume<T>{size, data.data()};
 }
 
 }  // namespace ygl
@@ -729,7 +1237,7 @@ void to_json(json& js, const camera& val) {
     if (val.name != def.name) js["name"] = val.name;
     if (val.frame != def.frame) js["frame"] = val.frame;
     if (val.ortho != def.ortho) js["ortho"] = val.ortho;
-    if (val.imsize != def.imsize) js["imsize"] = val.imsize;
+    if (val.film != def.film) js["film"] = val.film;
     if (val.focal != def.focal) js["focal"] = val.focal;
     if (val.focus != def.focus) js["focus"] = val.focus;
     if (val.aperture != def.aperture) js["aperture"] = val.aperture;
@@ -751,7 +1259,7 @@ void from_json(const json& js, camera& val) {
     static const auto def = camera();
     val.name = js.value("name", def.name);
     val.frame = js.value("frame", def.frame);
-    val.imsize = js.value("imsize", def.imsize);
+    val.film = js.value("film", def.film);
     val.focal = js.value("focal", def.focal);
     val.focus = js.value("focus", def.focus);
     val.aperture = js.value("aperture", def.aperture);
@@ -767,7 +1275,7 @@ void to_json(json& js, const texture& val) {
     if (val.scale != def.scale) js["scale"] = val.scale;
     if (val.gamma != def.gamma) js["gamma"] = val.gamma;
     if (val.path == "") {
-        if (!val.img.pxl.empty()) js["img"] = val.img;
+        if (!val.img.empty()) js["img"] = val.img;
     }
 }
 
@@ -776,46 +1284,42 @@ void from_json_proc(const json& js, texture& val) {
     auto type = js.value("type", ""s);
     if (type == "") return;
     auto is_hdr = false;
-    auto imsize = js.value("size", vec2i{512, 512});
-    if (js.count("resolution")) {
-        imsize.y = js.value("resolution", 512);
-        imsize.x = imsize.y;
-    }
+    auto size = js.value("size", vec2i{512, 512});
     if (type == "grid") {
-        val.img = make_grid_image(imsize, js.value("tile", 8),
+        val.img = make_grid_image4f(size, js.value("tile", 8),
             js.value("c0", vec4f{0.5f, 0.5f, 0.5f, 1}),
             js.value("c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "checker") {
-        val.img = make_checker_image(imsize, js.value("tile", 8),
+        val.img = make_checker_image4f(size, js.value("tile", 8),
             js.value("c0", vec4f{0.5f, 0.5f, 0.5f, 1}),
             js.value("c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "bump") {
-        val.img = make_bumpdimple_image(imsize, js.value("tile", 8));
+        val.img = make_bumpdimple_image4f(size, js.value("tile", 8));
     } else if (type == "uvramp") {
-        val.img = make_uvramp_image(imsize);
+        val.img = make_uvramp_image4f(size);
     } else if (type == "uvgrid") {
-        val.img = make_uvgrid_image(imsize);
+        val.img = make_uvgrid_image4f(size);
     } else if (type == "sky") {
-        if (imsize.x < imsize.y * 2) imsize.x = imsize.y * 2;
-        val.img = make_sunsky_image(imsize, js.value("sun_angle", pi / 4),
+        if (size.x < size.y * 2) size.x = size.y * 2;
+        val.img = make_sunsky_image4f(size, js.value("sun_angle", pif / 4),
             js.value("turbidity", 3.0f), js.value("has_sun", false),
             js.value("ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
         val.gamma = 1;
         is_hdr = true;
     } else if (type == "noise") {
-        val.img = make_noise_image(
-            imsize, js.value("scale", 1.0f), js.value("wrap", true));
+        val.img = make_noise_image4f(
+            size, js.value("scale", 1.0f), js.value("wrap", true));
     } else if (type == "fbm") {
-        val.img = make_fbm_image(imsize, js.value("scale", 1.0f),
+        val.img = make_fbm_image4f(size, js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else if (type == "ridge") {
-        val.img = make_ridge_image(imsize, js.value("scale", 1.0f),
+        val.img = make_ridge_image4f(size, js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("offset", 1.0f), js.value("octaves", 6),
             js.value("wrap", true));
     } else if (type == "turbulence") {
-        val.img = make_turbulence_image(imsize, js.value("scale", 1.0f),
+        val.img = make_turbulence_image4f(size, js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else {
@@ -825,8 +1329,10 @@ void from_json_proc(const json& js, texture& val) {
         val.img = bump_to_normal_map(val.img, js.value("bump_scale", 1.0f));
         val.gamma = 1;
     }
-    if (val.path == "")
-        val.path = "textures/" + val.name + ((is_hdr) ? ".png" : ".hdr");
+    if (val.path == "") {
+        auto ext = (is_hdr) ? std::string("hdr") : std::string("png");
+        val.path = "textures/" + val.name + "." + ext;
+    }
 }
 
 // Serialize struct
@@ -838,6 +1344,43 @@ void from_json(const json& js, texture& val) {
     val.scale = js.value("scale", def.scale);
     val.gamma = js.value("gamma", def.gamma);
     val.img = js.value("img", def.img);
+    if (js.count("!!proc")) from_json_proc(js.at("!!proc"), val);
+}
+
+// Serialize struct
+void to_json(json& js, const voltexture& val) {
+    static const auto def = voltexture();
+    if (val.name != def.name) js["name"] = val.name;
+    if (val.path != def.path) js["path"] = val.path;
+    if (val.clamp != def.clamp) js["clamp"] = val.clamp;
+    if (val.path == "") {
+        if (!val.vol.empty()) js["vol"] = val.vol;
+    }
+}
+
+// Procedural commands for textures
+void from_json_proc(const json& js, voltexture& val) {
+    auto type = js.value("type", ""s);
+    if (type == "") return;
+    auto size = js.value("size", vec3i{512, 512, 512});
+    if (type == "test_volume") {
+        val.vol = make_test_volume1f(
+            size, js.value("scale", 10.0f), js.value("exponent", 6.0f));
+    } else {
+        throw std::runtime_error("unknown texture type " + type);
+    }
+    if (val.path == "") {
+        auto ext = std::string("vol");
+        val.path = "textures/" + val.name + "." + ext;
+    }
+}
+
+// Serialize struct
+void from_json(const json& js, voltexture& val) {
+    static const auto def = voltexture();
+    val.name = js.value("name", def.name);
+    val.path = js.value("path", def.path);
+    val.vol = js.value("vol", def.vol);
     if (js.count("!!proc")) from_json_proc(js.at("!!proc"), val);
 }
 
@@ -859,19 +1402,17 @@ void to_json(json& js, const material& val) {
     if (val.op != def.op) js["op"] = val.op;
     if (val.fresnel != def.fresnel) js["fresnel"] = val.fresnel;
     if (val.refract != def.refract) js["refract"] = val.refract;
-    if (val.ke_txt != def.ke_txt) js["ke_txt"]["name"] = val.ke_txt->name;
-    if (val.kd_txt != def.kd_txt) js["kd_txt"]["name"] = val.kd_txt->name;
-    if (val.ks_txt != def.ks_txt) js["ks_txt"]["name"] = val.ks_txt->name;
-    if (val.kt_txt != def.kt_txt) js["kt_txt"]["name"] = val.kt_txt->name;
-    if (val.rs_txt != def.rs_txt) js["rs_txt"]["name"] = val.rs_txt->name;
-    if (val.op_txt != def.op_txt) js["op_txt"]["name"] = val.op_txt->name;
-    if (val.occ_txt != def.occ_txt) js["occ_txt"]["name"] = val.occ_txt->name;
-    if (val.bump_txt != def.bump_txt)
-        js["bump_txt"]["name"] = val.bump_txt->name;
-    if (val.disp_txt != def.disp_txt)
-        js["disp_txt"]["name"] = val.disp_txt->name;
-    if (val.norm_txt != def.norm_txt)
-        js["norm_txt"]["name"] = val.norm_txt->name;
+    if (val.ke_txt != def.ke_txt) js["ke_txt"] = val.ke_txt->name;
+    if (val.kd_txt != def.kd_txt) js["kd_txt"] = val.kd_txt->name;
+    if (val.ks_txt != def.ks_txt) js["ks_txt"] = val.ks_txt->name;
+    if (val.kt_txt != def.kt_txt) js["kt_txt"] = val.kt_txt->name;
+    if (val.rs_txt != def.rs_txt) js["rs_txt"] = val.rs_txt->name;
+    if (val.op_txt != def.op_txt) js["op_txt"] = val.op_txt->name;
+    if (val.occ_txt != def.occ_txt) js["occ_txt"] = val.occ_txt->name;
+    if (val.bump_txt != def.bump_txt) js["bump_txt"] = val.bump_txt->name;
+    if (val.disp_txt != def.disp_txt) js["disp_txt"] = val.disp_txt->name;
+    if (val.norm_txt != def.norm_txt) js["norm_txt"] = val.norm_txt->name;
+    if (val.vd_txt != def.vd_txt) js["vd_txt"] = val.vd_txt->name;
 }
 
 // Procedural commands for materials
@@ -890,32 +1431,56 @@ void from_json(const json& js, material& val) {
     val.kt = js.value("kt", def.kt);
     val.rs = js.value("rs", def.rs);
     val.op = js.value("op", def.op);
+    val.ve = js.value("ve", def.ve);
+    val.va = js.value("va", def.va);
+    val.vd = js.value("vd", def.vd);
+    val.vg = js.value("vg", def.vg);
     val.fresnel = js.value("fresnel", def.fresnel);
     val.refract = js.value("refract", def.refract);
-    if (js.count("ke_txt"))
-        from_json(js.at("ke_txt"), *(val.ke_txt = std::make_shared<texture>()));
-    if (js.count("kd_txt"))
-        from_json(js.at("kd_txt"), *(val.kd_txt = std::make_shared<texture>()));
-    if (js.count("ks_txt"))
-        from_json(js.at("ks_txt"), *(val.ks_txt = std::make_shared<texture>()));
-    if (js.count("kt_txt"))
-        from_json(js.at("kt_txt"), *(val.kt_txt = std::make_shared<texture>()));
-    if (js.count("rs_txt"))
-        from_json(js.at("rs_txt"), *(val.rs_txt = std::make_shared<texture>()));
-    if (js.count("op_txt"))
-        from_json(js.at("op_txt"), *(val.op_txt = std::make_shared<texture>()));
-    if (js.count("occ_txt"))
-        from_json(
-            js.at("occ_txt"), *(val.occ_txt = std::make_shared<texture>()));
-    if (js.count("bump_txt"))
-        from_json(
-            js.at("bump_txt"), *(val.bump_txt = std::make_shared<texture>()));
-    if (js.count("disp_txt"))
-        from_json(
-            js.at("disp_txt"), *(val.disp_txt = std::make_shared<texture>()));
-    if (js.count("norm_txt"))
-        from_json(
-            js.at("norm_txt"), *(val.norm_txt = std::make_shared<texture>()));
+    if (js.count("ke_txt")) {
+        val.ke_txt = new texture();
+        val.ke_txt->name = js.at("ke_txt").get<std::string>();
+    }
+    if (js.count("kd_txt")) {
+        val.kd_txt = new texture();
+        val.kd_txt->name = js.at("kd_txt").get<std::string>();
+    }
+    if (js.count("ks_txt")) {
+        val.ks_txt = new texture();
+        val.ks_txt->name = js.at("ks_txt").get<std::string>();
+    }
+    if (js.count("kt_txt")) {
+        val.kt_txt = new texture();
+        val.kt_txt->name = js.at("kt_txt").get<std::string>();
+    }
+    if (js.count("rs_txt")) {
+        val.rs_txt = new texture();
+        val.rs_txt->name = js.at("rs_txt").get<std::string>();
+    }
+    if (js.count("op_txt")) {
+        val.op_txt = new texture();
+        val.op_txt->name = js.at("op_txt").get<std::string>();
+    }
+    if (js.count("occ_txt")) {
+        val.occ_txt = new texture();
+        val.occ_txt->name = js.at("occ_txt").get<std::string>();
+    }
+    if (js.count("bump_txt")) {
+        val.bump_txt = new texture();
+        val.bump_txt->name = js.at("bump_txt").get<std::string>();
+    }
+    if (js.count("disp_txt")) {
+        val.disp_txt = new texture();
+        val.disp_txt->name = js.at("disp_txt").get<std::string>();
+    }
+    if (js.count("norm_txt")) {
+        val.norm_txt = new texture();
+        val.norm_txt->name = js.at("norm_txt").get<std::string>();
+    }
+    if (js.count("vd_txt")) {
+        val.vd_txt = new voltexture();
+        val.vd_txt->name = js.at("vd_txt").get<std::string>();
+    }
     if (js.count("!!proc")) from_json_proc(js.at("!!proc"), val);
 }
 
@@ -941,7 +1506,7 @@ void to_json(json& js, const shape& val) {
 void from_json_proc(const json& js, shape& val) {
     auto type = js.value("type", ""s);
     if (type == "") return;
-    auto shp = make_shape_data();
+    auto shp = (make_shape_data*)nullptr;
     if (type == "quad") {
         shp = make_quad(js.value("steps", vec2i{1, 1}),
             js.value("size", vec2f{2, 2}), js.value("uvsize", vec2f{1, 1}),
@@ -1007,11 +1572,12 @@ void from_json_proc(const json& js, shape& val) {
     } else if (type == "hairball") {
         auto base =
             make_sphere_cube(32, js.value("size", 2.0f) * 0.8f, 1, true);
-        shp = make_hair(js.value("steps", vec2i{4, 65536}), base.triangles,
-            base.pos, base.norm, base.texcoord,
+        shp = make_hair(js.value("steps", vec2i{4, 65536}), base->triangles,
+            base->pos, base->norm, base->texcoord,
             js.value("length", vec2f{0.2f, 0.2f}),
             js.value("radius", vec2f{0.001f, 0.001f}),
             js.value("noise", vec2f{0, 0}), js.value("clump", vec2f{0, 0}));
+        delete base;
     } else if (type == "hairball_interior") {
         shp = make_sphere_cube(32, js.value("size", 2.0f) * 0.8f, 1, true);
     } else if (type == "suzanne") {
@@ -1020,16 +1586,17 @@ void from_json_proc(const json& js, shape& val) {
         throw std::runtime_error("unknown shape type " + type);
     }
     if (js.value("flipyz", false)) {
-        for (auto& p : shp.pos) p = {p.x, p.z, p.y};
-        for (auto& n : shp.norm) n = {n.x, n.z, n.y};
+        for (auto& p : shp->pos) p = {p.x, p.z, p.y};
+        for (auto& n : shp->norm) n = {n.x, n.z, n.y};
     }
-    val.points = shp.points;
-    val.lines = shp.lines;
-    val.triangles = shp.triangles;
-    val.pos = shp.pos;
-    val.norm = shp.norm;
-    val.texcoord = shp.texcoord;
-    val.radius = shp.radius;
+    val.points = shp->points;
+    val.lines = shp->lines;
+    val.triangles = shp->triangles;
+    val.pos = shp->pos;
+    val.norm = shp->norm;
+    val.texcoord = shp->texcoord;
+    val.radius = shp->radius;
+    delete shp;
     if (val.path == "") val.path = "meshes/" + val.name + ".ply";
 }
 
@@ -1072,11 +1639,11 @@ void to_json(json& js, const subdiv& val) {
     }
 }
 
-// Procedural commands for materials
+// Procedural commands for subdivs
 void from_json_proc(const json& js, subdiv& val) {
     auto type = js.value("type", ""s);
     if (type == "") return;
-    auto shp = make_shape_data();
+    auto shp = (make_shape_data*)nullptr;
     if (type == "cube") {
         shp = make_fvcube(js.value("steps", vec3i{1, 1, 1}),
             js.value("size", vec3f{2, 2, 2}),
@@ -1085,19 +1652,20 @@ void from_json_proc(const json& js, subdiv& val) {
         shp = make_fvcube(js.value("steps", vec3i{1, 1, 1}),
             js.value("size", vec3f{2, 2, 2}),
             js.value("uvsize", vec3f{1, 1, 1}));
-        shp.quads_pos.pop_back();
-        shp.quads_norm.pop_back();
-        shp.quads_texcoord.pop_back();
+        shp->quads_pos.pop_back();
+        shp->quads_norm.pop_back();
+        shp->quads_texcoord.pop_back();
     } else if (type == "suzanne") {
         shp = make_suzanne(js.value("size", 2.0f), false);
-        std::swap(shp.quads_pos, shp.quads);
+        std::swap(shp->quads_pos, shp->quads);
     } else {
         throw std::runtime_error("unknown shape type " + type);
     }
-    val.quads_pos = shp.quads_pos;
-    val.pos = shp.pos;
-    val.quads_texcoord = shp.quads_texcoord;
-    val.texcoord = shp.texcoord;
+    val.quads_pos = shp->quads_pos;
+    val.pos = shp->pos;
+    val.quads_texcoord = shp->quads_texcoord;
+    val.texcoord = shp->texcoord;
+    delete shp;
     if (val.path == "") val.path = "meshes/" + val.name + ".obj";
 }
 
@@ -1123,9 +1691,9 @@ void to_json(json& js, const instance& val) {
     static const auto def = instance();
     if (val.name != def.name) js["name"] = val.name;
     if (val.frame != def.frame) js["frame"] = val.frame;
-    if (val.shp != def.shp) js["shp"]["name"] = val.shp->name;
-    if (val.mat != def.mat) js["mat"]["name"] = val.mat->name;
-    if (val.sbd != def.sbd) js["sbd"]["name"] = val.sbd->name;
+    if (val.shp != def.shp) js["shp"] = val.shp->name;
+    if (val.mat != def.mat) js["mat"] = val.mat->name;
+    if (val.sbd != def.sbd) js["sbd"] = val.sbd->name;
 }
 
 // Procedural commands for instances
@@ -1150,12 +1718,18 @@ void from_json(const json& js, instance& val) {
     static const auto def = instance();
     val.name = js.value("name", def.name);
     val.frame = js.value("frame", def.frame);
-    if (js.count("shp"))
-        from_json(js.at("shp"), *(val.shp = std::make_shared<shape>()));
-    if (js.count("mat"))
-        from_json(js.at("mat"), *(val.mat = std::make_shared<material>()));
-    if (js.count("sbd"))
-        from_json(js.at("sbd"), *(val.sbd = std::make_shared<subdiv>()));
+    if (js.count("shp")) {
+        val.shp = new shape();
+        val.shp->name = js.at("shp").get<std::string>();
+    }
+    if (js.count("mat")) {
+        val.mat = new material();
+        val.mat->name = js.at("mat").get<std::string>();
+    }
+    if (js.count("sbd")) {
+        val.sbd = new subdiv();
+        val.sbd->name = js.at("sbd").get<std::string>();
+    }
     if (js.count("!!proc")) from_json_proc(js.at("!!proc"), val);
 }
 
@@ -1182,8 +1756,10 @@ void from_json(const json& js, environment& val) {
     val.name = js.value("name", def.name);
     val.frame = js.value("frame", def.frame);
     val.ke = js.value("ke", def.ke);
-    if (js.count("ke_txt"))
-        from_json(js.at("ke_txt"), *(val.ke_txt = std::make_shared<texture>()));
+    if (js.count("ke_txt")) {
+        val.ke_txt = new texture();
+        val.ke_txt->name = js.at("ke_txt").get<std::string>();
+    }
     if (js.count("!!proc")) from_json_proc(js.at("!!proc"), val);
 }
 
@@ -1191,15 +1767,15 @@ void from_json(const json& js, environment& val) {
 void to_json(json& js, const node& val) {
     static const auto def = node();
     if (val.name != def.name) js["name"] = val.name;
-    if (val.frame != def.frame) js["frame"] = val.frame;
+    if (val.local != def.local) js["local"] = val.local;
     if (val.translation != def.translation) js["translation"] = val.translation;
     if (val.rotation != def.rotation) js["rotation"] = val.rotation;
     if (val.scale != def.scale) js["scale"] = val.scale;
     if (val.weights != def.weights) js["weights"] = val.weights;
-    if (val.parent != def.parent) js["parent"]["name"] = val.parent->name;
-    if (val.cam != def.cam) js["cam"]["name"] = val.cam->name;
-    if (val.ist != def.ist) js["ist"]["name"] = val.ist->name;
-    if (val.env != def.env) js["env"]["name"] = val.env->name;
+    if (val.parent != def.parent) js["parent"] = val.parent->name;
+    if (val.cam != def.cam) js["cam"] = val.cam->name;
+    if (val.ist != def.ist) js["ist"] = val.ist->name;
+    if (val.env != def.env) js["env"] = val.env->name;
 }
 
 // Procedural commands for nodes
@@ -1208,7 +1784,7 @@ void from_json_proc(const json& js, node& val) {
         auto from = js.value("from", zero3f);
         auto to = js.value("to", zero3f);
         auto up = js.value("up", vec3f{0, 1, 0});
-        val.frame = lookat_frame(from, to, up, true);
+        val.local = lookat_frame(from, to, up, true);
     }
 }
 
@@ -1216,19 +1792,27 @@ void from_json_proc(const json& js, node& val) {
 void from_json(const json& js, node& val) {
     static const auto def = node();
     val.name = js.value("name", def.name);
-    val.frame = js.value("frame", def.frame);
+    val.local = js.value("local", def.local);
     val.translation = js.value("translation", def.translation);
     val.rotation = js.value("rotation", def.rotation);
     val.scale = js.value("scale", def.scale);
     val.weights = js.value("weights", def.weights);
-    if (js.count("parent"))
-        from_json(js.at("parent"), *(val.parent = std::make_shared<node>()));
-    if (js.count("cam"))
-        from_json(js.at("cam"), *(val.cam = std::make_shared<camera>()));
-    if (js.count("ist"))
-        from_json(js.at("ist"), *(val.ist = std::make_shared<instance>()));
-    if (js.count("env"))
-        from_json(js.at("env"), *(val.env = std::make_shared<environment>()));
+    if (js.count("parent")) {
+        val.parent = new node();
+        val.parent->name = js.at("parent").get<std::string>();
+    }
+    if (js.count("cam")) {
+        val.cam = new camera();
+        val.cam->name = js.at("cam").get<std::string>();
+    }
+    if (js.count("ist")) {
+        val.ist = new instance();
+        val.ist->name = js.at("ist").get<std::string>();
+    }
+    if (js.count("env")) {
+        val.env = new environment();
+        val.env->name = js.at("env").get<std::string>();
+    }
     if (js.count("!!proc")) from_json_proc(js.at("!!proc"), val);
 }
 
@@ -1268,10 +1852,7 @@ void to_json(json& js, const animation& val) {
     }
     if (val.targets != def.targets) {
         js["targets"] = json::array();
-        for (auto v : val.targets) {
-            js["targets"].push_back(json::object());
-            js["targets"].back()["name"] = v->name;
-        }
+        for (auto v : val.targets) js["targets"].push_back(v->name);
     }
 }
 
@@ -1296,8 +1877,8 @@ void from_json(const json& js, animation& val) {
     val.rotation = js.value("rotation", def.rotation);
     val.scale = js.value("scale", def.scale);
     for (auto& j : js.value("targets", json::array())) {
-        val.targets.push_back(std::make_shared<node>());
-        from_json(j, *val.targets.back());
+        val.targets.push_back(new node());
+        val.targets.back()->name = j.get<std::string>();
     }
     if (js.count("!!proc")) from_json_proc(js.at("!!proc"), val);
 }
@@ -1343,7 +1924,7 @@ void to_json(json& js, const scene& val) {
         for (auto v : val.animations) js["animations"].push_back(*v);
     }
 }
-void to_json(json& js, const std::shared_ptr<scene>& val) {
+void to_json(json& js, const scene* val) {
     if (!val) {
         js = json();
         return;
@@ -1352,9 +1933,9 @@ void to_json(json& js, const std::shared_ptr<scene>& val) {
 }
 
 template <typename T>
-static std::unordered_map<std::string, std::shared_ptr<T>> make_named_map(
-    const std::vector<std::shared_ptr<T>>& elems) {
-    auto map = std::unordered_map<std::string, std::shared_ptr<T>>();
+static std::unordered_map<std::string, T*> make_named_map(
+    const std::vector<T*>& elems) {
+    auto map = std::unordered_map<std::string, T*>();
     for (auto elem : elems) map[elem->name] = elem;
     return map;
 };
@@ -1365,11 +1946,11 @@ void from_json_proc(const json& js, scene& val) {
         auto& jjs = js.at("random_instances");
         auto num = jjs.value("num", 100);
         auto seed = jjs.value("seed", 13);
-        auto base = std::make_shared<instance>();
+        auto base = new instance();
         from_json(jjs.at("base"), *base);
-        auto ists = std::vector<std::shared_ptr<instance>>();
+        auto ists = std::vector<instance*>();
         for (auto& j : jjs.at("instances")) {
-            ists.push_back(std::make_shared<instance>());
+            ists.push_back(new instance());
             from_json(j, *ists.back());
         }
 
@@ -1380,13 +1961,13 @@ void from_json_proc(const json& js, scene& val) {
             sample_triangles_points(base->shp->triangles, base->shp->pos,
                 base->shp->norm, base->shp->texcoord, num, seed);
 
-        auto nmap = std::unordered_map<std::shared_ptr<instance>, int>();
+        auto nmap = std::unordered_map<instance*, int>();
         for (auto ist : ists) nmap[ist] = 0;
         auto rng = make_rng(seed, 17);
         for (auto i = 0; i < num; i++) {
             auto ist = ists.at(rand1i(rng, (int)ists.size() - 1));
             nmap[ist] += 1;
-            val.instances.push_back(std::make_shared<instance>());
+            val.instances.push_back(new instance());
             val.instances.back()->name = ist->name + std::to_string(nmap[ist]);
             val.instances.back()->frame =
                 base->frame * translation_frame(pos[i]) * ist->frame;
@@ -1397,55 +1978,67 @@ void from_json_proc(const json& js, scene& val) {
     }
 }
 
-// Serialize struct
-void from_json(const json& js, scene& val) {
-    val.name = js.value("name", ""s);
+// Load a scene in the builtin JSON format.
+scene* load_json_scene(
+    const std::string& filename, bool load_textures, bool skip_missing) {
+    // load json
+    auto scn = new scene();
+    auto js = load_json(filename);
+
+    // parse json scene
+    scn->name = js.value("name", ""s);
     for (auto& j : js.value("cameras", json::array())) {
-        val.cameras.push_back(std::make_shared<camera>());
-        from_json(j, *val.cameras.back());
+        scn->cameras.push_back(new camera());
+        from_json(j, *scn->cameras.back());
     }
     for (auto& j : js.value("textures", json::array())) {
-        val.textures.push_back(std::make_shared<texture>());
-        from_json(j, *val.textures.back());
+        scn->textures.push_back(new texture());
+        from_json(j, *scn->textures.back());
     }
     for (auto& j : js.value("materials", json::array())) {
-        val.materials.push_back(std::make_shared<material>());
-        from_json(j, *val.materials.back());
+        scn->materials.push_back(new material());
+        from_json(j, *scn->materials.back());
     }
     for (auto& j : js.value("shapes", json::array())) {
-        val.shapes.push_back(std::make_shared<shape>());
-        from_json(j, *val.shapes.back());
+        scn->shapes.push_back(new shape());
+        from_json(j, *scn->shapes.back());
     }
     for (auto& j : js.value("subdivs", json::array())) {
-        val.subdivs.push_back(std::make_shared<subdiv>());
-        from_json(j, *val.subdivs.back());
+        scn->subdivs.push_back(new subdiv());
+        from_json(j, *scn->subdivs.back());
     }
     for (auto& j : js.value("instances", json::array())) {
-        val.instances.push_back(std::make_shared<instance>());
-        from_json(j, *val.instances.back());
+        scn->instances.push_back(new instance());
+        from_json(j, *scn->instances.back());
     }
     for (auto& j : js.value("environments", json::array())) {
-        val.environments.push_back(std::make_shared<environment>());
-        from_json(j, *val.environments.back());
+        scn->environments.push_back(new environment());
+        from_json(j, *scn->environments.back());
+    }
+    for (auto& j : js.value("voltextures", json::array())) {
+        scn->voltextures.push_back(new voltexture());
+        from_json(j, *scn->voltextures.back());
     }
     for (auto& j : js.value("nodes", json::array())) {
-        val.nodes.push_back(std::make_shared<node>());
-        from_json(j, *val.nodes.back());
+        scn->nodes.push_back(new node());
+        from_json(j, *scn->nodes.back());
     }
     for (auto& j : js.value("animations", json::array())) {
-        val.animations.push_back(std::make_shared<animation>());
-        from_json(j, *val.animations.back());
+        scn->animations.push_back(new animation());
+        from_json(j, *scn->animations.back());
     }
-    if (js.count("!!proc")) from_json_proc(js.at("!!proc"), val);
+    if (js.count("!!proc")) from_json_proc(js.at("!!proc"), *scn);
+
     // fix references
-    auto cmap = make_named_map(val.cameras);
-    auto tmap = make_named_map(val.textures);
-    auto mmap = make_named_map(val.materials);
-    auto smap = make_named_map(val.shapes);
-    auto rmap = make_named_map(val.subdivs);
-    auto imap = make_named_map(val.instances);
-    auto emap = make_named_map(val.environments);
-    auto nmap = make_named_map(val.nodes);
+    auto cmap = make_named_map(scn->cameras);
+    auto tmap = make_named_map(scn->textures);
+    auto vmap = make_named_map(scn->voltextures);
+    auto mmap = make_named_map(scn->materials);
+    auto smap = make_named_map(scn->shapes);
+    auto rmap = make_named_map(scn->subdivs);
+    auto imap = make_named_map(scn->instances);
+    auto emap = make_named_map(scn->environments);
+    auto nmap = make_named_map(scn->nodes);
     auto fix_ref = [](auto& map, auto& elems, auto& ref) {
         if (!ref) return;
         auto name = ref->name;
@@ -1456,44 +2049,36 @@ void from_json(const json& js, scene& val) {
             elems.push_back(ref);
         }
     };
-    for (auto anm : val.animations) {
-        for (auto& nde : anm->targets) fix_ref(nmap, val.nodes, nde);
+    for (auto anm : scn->animations) {
+        for (auto& nde : anm->targets) fix_ref(nmap, scn->nodes, nde);
     }
-    for (auto nde : val.nodes) {
-        fix_ref(nmap, val.nodes, nde->parent);
-        fix_ref(cmap, val.cameras, nde->cam);
-        fix_ref(imap, val.instances, nde->ist);
-        fix_ref(emap, val.environments, nde->env);
+    for (auto nde : scn->nodes) {
+        fix_ref(nmap, scn->nodes, nde->parent);
+        fix_ref(cmap, scn->cameras, nde->cam);
+        fix_ref(imap, scn->instances, nde->ist);
+        fix_ref(emap, scn->environments, nde->env);
     }
-    for (auto env : val.environments) {
-        fix_ref(tmap, val.textures, env->ke_txt);
+    for (auto env : scn->environments) {
+        fix_ref(tmap, scn->textures, env->ke_txt);
     }
-    for (auto ist : val.instances) {
-        fix_ref(mmap, val.materials, ist->mat);
-        fix_ref(smap, val.shapes, ist->shp);
-        fix_ref(rmap, val.subdivs, ist->sbd);
+    for (auto ist : scn->instances) {
+        fix_ref(mmap, scn->materials, ist->mat);
+        fix_ref(smap, scn->shapes, ist->shp);
+        fix_ref(rmap, scn->subdivs, ist->sbd);
     }
-    for (auto mat : val.materials) {
-        fix_ref(tmap, val.textures, mat->ke_txt);
-        fix_ref(tmap, val.textures, mat->kd_txt);
-        fix_ref(tmap, val.textures, mat->ks_txt);
-        fix_ref(tmap, val.textures, mat->kt_txt);
-        fix_ref(tmap, val.textures, mat->op_txt);
-        fix_ref(tmap, val.textures, mat->rs_txt);
-        fix_ref(tmap, val.textures, mat->occ_txt);
-        fix_ref(tmap, val.textures, mat->norm_txt);
-        fix_ref(tmap, val.textures, mat->bump_txt);
-        fix_ref(tmap, val.textures, mat->disp_txt);
+    for (auto mat : scn->materials) {
+        fix_ref(tmap, scn->textures, mat->ke_txt);
+        fix_ref(tmap, scn->textures, mat->kd_txt);
+        fix_ref(tmap, scn->textures, mat->ks_txt);
+        fix_ref(tmap, scn->textures, mat->kt_txt);
+        fix_ref(tmap, scn->textures, mat->op_txt);
+        fix_ref(tmap, scn->textures, mat->rs_txt);
+        fix_ref(tmap, scn->textures, mat->occ_txt);
+        fix_ref(tmap, scn->textures, mat->norm_txt);
+        fix_ref(tmap, scn->textures, mat->bump_txt);
+        fix_ref(tmap, scn->textures, mat->disp_txt);
+        fix_ref(vmap, scn->voltextures, mat->vd_txt);
     }
-}
-
-// Load a scene in the builtin JSON format.
-std::shared_ptr<scene> load_json_scene(
-    const std::string& filename, bool load_textures, bool skip_missing) {
-    // load json
-    auto scn = std::make_shared<scene>();
-    auto js = load_json(filename);
-    from_json(js, *scn);
 
     // load meshes
     auto dirname = get_dirname(filename);
@@ -1527,31 +2112,16 @@ std::shared_ptr<scene> load_json_scene(
 
     // update data
     update_transforms(scn);
-    update_bbox(scn);
 
     // skip textures
-    if (!load_textures) return scn;
-
-    // load images
-    for (auto& txt : scn->textures) {
-        if (txt->path == "" || !txt->img.pxl.empty()) continue;
-        auto filename = normalize_path(dirname + "/" + txt->path);
-        try {
-            txt->img = load_image(filename);
-            if (!is_hdr_filename(filename) && txt->gamma != 1)
-                txt->img = gamma_to_linear(txt->img, txt->gamma);
-        } catch (const std::exception&) {
-            if (skip_missing) continue;
-            throw;
-        }
-    }
+    if (load_textures) load_scene_textures(scn, dirname, skip_missing, false);
 
     return scn;
 }
 
 // Save a scene in the builtin JSON format.
-void save_json_scene(const std::string& filename,
-    const std::shared_ptr<scene>& scn, bool save_textures, bool skip_missing) {
+void save_json_scene(const std::string& filename, const scene* scn,
+    bool save_textures, bool skip_missing) {
     // save json
     auto js = json(scn);
     save_json(filename, js);
@@ -1585,111 +2155,418 @@ void save_json_scene(const std::string& filename,
     }
 
     // skip textures
-    if (!save_textures) return;
-
-    // save images
-    for (auto& txt : scn->textures) {
-        if (txt->img.pxl.empty()) continue;
-        auto filename = normalize_path(dirname + "/" + txt->path);
-        try {
-            save_image(
-                filename, (is_hdr_filename(filename) || txt->gamma == 1) ?
-                              txt->img :
-                              linear_to_gamma(txt->img, txt->gamma));
-        } catch (std::exception&) {
-            if (skip_missing) continue;
-            throw;
-        }
-    }
+    if (save_textures) save_scene_textures(scn, dirname, skip_missing);
 }
 
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
-// OBJ CONVESION
+// OBJ CONVERSION
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// OBJ vertex
-struct obj_vertex {
-    int pos = 0;
-    int texcoord = 0;
-    int norm = 0;
+inline bool operator==(obj_vertex a, obj_vertex b) {
+    return a.pos == b.pos && a.texcoord == b.texcoord && a.norm == b.norm;
+}
+
+struct obj_vertex_hash {
+    size_t operator()(const obj_vertex& v) const {
+        auto vh = std::hash<int>();
+        auto h = (size_t)0;
+        for (auto i = 0; i < 3; i++)
+            h ^= vh((&v.pos)[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        return h;
+    }
 };
 
-// Input/Output for OBJ vertex
-inline std::istream& operator>>(std::istream& is, obj_vertex& v) {
-    v = {0, 0, 0};
-    is >> v.pos;
-    if (is.peek() == '/') {
-        is.get();
-        if (is.peek() == '/') {
-            is.get();
-            is >> v.norm;
+// prepare obj line (remove comments and normalize whitespace)
+void normalize_obj_line(char* s) {
+    while (*s) {
+        if (*s == '\t' || *s == '\r' || *s == '\n') {
+            *s++ = ' ';
+        } else if (*s == '#') {
+            *s = 0;
+            break;
         } else {
-            is >> v.texcoord;
-            if (is.peek() == '/') {
-                is.get();
-                is >> v.norm;
+            s++;
+        }
+    }
+}
+
+// parse stream
+inline int parse_int(char*& s) {
+    if (!*s) return 0;
+    while (*s == ' ') s++;
+    if (!*s) return 0;
+    auto val = 0;
+    auto sn = (*s == '-') ? -1 : 1;
+    if (*s == '-' || *s == '+') s++;
+    while (*s >= '0' && *s <= '9') val = val * 10 + (*s++ - '0');
+    val *= sn;
+    return val;
+}
+inline bool parse_bool(char*& s) { return (bool)parse_int(s); }
+inline double parse_double(char*& s) {
+    if (!*s) return 0;
+    while (*s == ' ') s++;
+    auto val = 0.0;
+    auto mantissa = 0, fractional = 0, fractional_length = 0, exponent = 0;
+    auto sn = (*s == '-') ? -1 : 1;
+    if (*s == '-' || *s == '+') s++;
+    while (*s >= '0' && *s <= '9') mantissa = mantissa * 10 + (*s++ - '0');
+    if (*s == '.') {
+        s++;
+        while (*s >= '0' && *s <= '9') {
+            fractional = fractional * 10 + (*s++ - '0');
+            fractional_length++;
+        }
+    }
+    mantissa *= sn;
+    fractional *= sn;
+    if (*s == 'e' || *s == 'E') {
+        s++;
+        auto en = (*s == '-') ? -1 : 1;
+        if (*s == '-' || *s == '+') s++;
+        while (*s >= '0' && *s <= '9') exponent = exponent * 10 + (*s++ - '0');
+        exponent *= en;
+    }
+    val = (double)mantissa;
+    if (fractional)
+        val += fractional * std::pow(10.0, -(double)fractional_length);
+    if (exponent) val *= std::pow(10.0, (double)exponent);
+    return val;
+}
+inline float parse_float(char*& s) { return (float)parse_double(s); }
+inline std::string parse_string(char*& s) {
+    if (!*s) return "";
+    char buf[4096];
+    auto valb = buf;
+    while (*s == ' ') s++;
+    while (*s && *s != ' ') *valb++ = *s++;
+    *valb = 0;
+    return buf;
+}
+inline vec2f parse_vec2f(char*& s) { return {parse_float(s), parse_float(s)}; }
+inline vec3f parse_vec3f(char*& s) {
+    return {parse_float(s), parse_float(s), parse_float(s)};
+}
+inline vec4f parse_vec4f(char*& s) {
+    return {parse_float(s), parse_float(s), parse_float(s), parse_float(s)};
+}
+inline vec2i parse_vec2i(char*& s) { return {parse_int(s), parse_int(s)}; }
+inline vec3i parse_vec3i(char*& s) {
+    return {parse_int(s), parse_int(s), parse_int(s)};
+}
+inline vec4i parse_vec4i(char*& s) {
+    return {parse_int(s), parse_int(s), parse_int(s), parse_int(s)};
+}
+inline frame3f parse_frame3f(char*& s) {
+    if (!*s) return identity_frame3f;
+    return {parse_vec3f(s), parse_vec3f(s), parse_vec3f(s), parse_vec3f(s)};
+}
+
+inline obj_vertex parse_obj_vertex(char*& s) {
+    auto val = obj_vertex{0, 0, 0};
+    val.pos = parse_int(s);
+    if (*s == '/') {
+        s++;
+        if (*s == '/') {
+            s++;
+            val.norm = parse_int(s);
+        } else {
+            val.texcoord = parse_int(s);
+            if (*s == '/') {
+                s++;
+                val.norm = parse_int(s);
             }
         }
     }
-    return is;
+    return val;
 }
-inline std::ostream& operator<<(std::ostream& os, const obj_vertex& v) {
-    os << v.pos;
-    if (v.texcoord) {
-        os << "/" << v.texcoord;
-        if (v.norm) os << "/" << v.norm;
-    } else {
-        if (v.norm) os << "//" << v.norm;
+
+// Input for OBJ textures
+inline obj_texture_info parse_obj_texture_info(char*& s) {
+    // initialize
+    auto info = obj_texture_info();
+
+    // get tokens
+    auto tokens = std::vector<std::string>();
+    while (true) {
+        auto v = parse_string(s);
+        if (v == "") break;
+        tokens.push_back(v);
     }
-    return os;
+    if (tokens.empty()) return info;
+
+    // texture name
+    info.path = normalize_path(tokens.back());
+
+    // texture options
+    auto last = std::string();
+    for (auto i = 0; i < tokens.size() - 1; i++) {
+        if (tokens[i] == "-bm") info.scale = atof(tokens[i + 1].c_str());
+        if (tokens[i] == "-clamp") info.clamp = true;
+    }
+
+    return info;
+}
+
+// Load obj materials
+void load_mtl(
+    const std::string& filename, const obj_callbacks& cb, bool flip_tr) {
+    // open file
+    auto fs = fopen(filename.c_str(), "rt");
+    if (!fs) throw std::runtime_error("could not open filename " + filename);
+
+    // currently parsed material
+    auto mat = obj_material();
+    auto first = true;
+
+    // read the file line by line
+    char buf[4096];
+    while (fgets(buf, 4096, fs)) {
+        // line
+        normalize_obj_line(buf);
+        auto ss = buf;
+
+        // get command
+        auto cmd = parse_string(ss);
+        if (cmd == "") continue;
+
+        // possible token values
+        if (cmd == "newmtl") {
+            if (!first && cb.material) cb.material(mat);
+            first = false;
+            mat = obj_material();
+            mat.name = parse_string(ss);
+        } else if (cmd == "illum") {
+            mat.illum = parse_int(ss);
+        } else if (cmd == "Ke") {
+            mat.ke = parse_vec3f(ss);
+        } else if (cmd == "Kd") {
+            mat.kd = parse_vec3f(ss);
+        } else if (cmd == "Ks") {
+            mat.ks = parse_vec3f(ss);
+        } else if (cmd == "Kt") {
+            mat.kt = parse_vec3f(ss);
+        } else if (cmd == "Tf") {
+            mat.kt = {-1, -1, -1};
+            mat.kt = parse_vec3f(ss);
+            if (mat.kt.y < 0) mat.kt = {mat.kt.x, mat.kt.x, mat.kt.x};
+            if (flip_tr) mat.kt = vec3f{1, 1, 1} - mat.kt;
+        } else if (cmd == "Tr") {
+            auto tr = vec3f{-1, -1, -1};
+            tr = parse_vec3f(ss);
+            if (tr.y < 0) tr = {tr.x, tr.x, tr.x};
+            mat.op = (tr.x + tr.y + tr.z) / 3;
+            if (flip_tr) mat.op = 1 - mat.op;
+        } else if (cmd == "Ns") {
+            mat.ns = parse_float(ss);
+            mat.rs = pow(2 / (mat.ns + 2), 1 / 4.0f);
+            if (mat.rs < 0.01f) mat.rs = 0;
+            if (mat.rs > 0.99f) mat.rs = 1;
+        } else if (cmd == "d") {
+            mat.op = parse_float(ss);
+        } else if (cmd == "Pr" || cmd == "rs") {
+            mat.rs = parse_float(ss);
+        } else if (cmd == "map_Ke") {
+            mat.ke_txt = parse_obj_texture_info(ss);
+        } else if (cmd == "map_Kd") {
+            mat.kd_txt = parse_obj_texture_info(ss);
+        } else if (cmd == "map_Ks") {
+            mat.ks_txt = parse_obj_texture_info(ss);
+        } else if (cmd == "map_Tr") {
+            mat.kt_txt = parse_obj_texture_info(ss);
+        } else if (cmd == "map_d" || cmd == "map_Tr") {
+            mat.op_txt = parse_obj_texture_info(ss);
+        } else if (cmd == "map_Pr" || cmd == "map_rs") {
+            mat.rs_txt = parse_obj_texture_info(ss);
+        } else if (cmd == "map_occ" || cmd == "occ") {
+            mat.occ_txt = parse_obj_texture_info(ss);
+        } else if (cmd == "map_bump" || cmd == "bump") {
+            mat.bump_txt = parse_obj_texture_info(ss);
+        } else if (cmd == "map_disp" || cmd == "disp") {
+            mat.disp_txt = parse_obj_texture_info(ss);
+        } else if (cmd == "map_norm" || cmd == "norm") {
+            mat.norm_txt = parse_obj_texture_info(ss);
+        } else if (cmd == "Ve") {
+            mat.ve = parse_vec3f(ss);
+        } else if (cmd == "Va") {
+            mat.va = parse_vec3f(ss);
+        } else if (cmd == "Vd") {
+            mat.vd = parse_vec3f(ss);
+        } else if (cmd == "Vg") {
+            mat.vg = parse_float(ss);
+        } else if (cmd == "map_Vd") {
+            mat.vd_txt = parse_obj_texture_info(ss);
+        }
+    }
+
+    // issue current material
+    if (!first && cb.material) cb.material(mat);
+
+    // clone
+    fclose(fs);
+}
+
+// Load obj extensions
+void load_objx(const std::string& filename, const obj_callbacks& cb) {
+    // open file
+    auto fs = fopen(filename.c_str(), "rt");
+    if (!fs) throw std::runtime_error("could not open filename " + filename);
+
+    // read the file line by line
+    char buf[4096];
+    while (fgets(buf, 4096, fs)) {
+        // line
+        normalize_obj_line(buf);
+        auto ss = buf;
+
+        // get command
+        auto cmd = parse_string(ss);
+        if (cmd == "") continue;
+
+        // possible token values
+        if (cmd == "c") {
+            auto cam = obj_camera();
+            cam.name = parse_string(ss);
+            cam.ortho = parse_bool(ss);
+            cam.film = parse_vec2f(ss);
+            cam.focal = parse_float(ss);
+            cam.focus = parse_float(ss);
+            cam.aperture = parse_float(ss);
+            cam.frame = parse_frame3f(ss);
+            if (cb.camera) cb.camera(cam);
+        } else if (cmd == "e") {
+            auto env = obj_environment();
+            env.name = parse_string(ss);
+            env.ke = parse_vec3f(ss);
+            env.ke_txt.path = parse_string(ss);
+            if (env.ke_txt.path == "\"\"") env.ke_txt.path = "";
+            if (cb.environmnet) cb.environmnet(env);
+        } else {
+            // unused
+        }
+    }
+
+    // close file
+    fclose(fs);
+}
+
+// Load obj scene
+void load_obj(const std::string& filename, const obj_callbacks& cb,
+    bool flip_texcoord, bool flip_tr) {
+    // open file
+    auto fs = fopen(filename.c_str(), "rt");
+    if (!fs) throw std::runtime_error("could not open filename " + filename);
+
+    // track vertex size
+    auto vert_size = obj_vertex();
+    auto verts = std::vector<obj_vertex>();  // buffer to avoid reallocation
+
+    // read the file line by line
+    char buf[4096];
+    while (fgets(buf, 4096, fs)) {
+        // prepare to parse
+        normalize_obj_line(buf);
+        auto ss = buf;
+
+        // get command
+        auto cmd = parse_string(ss);
+        if (cmd == "") continue;
+
+        // possible token values
+        if (cmd == "v") {
+            if (cb.vert) cb.vert(parse_vec3f(ss));
+            vert_size.pos += 1;
+        } else if (cmd == "vn") {
+            if (cb.norm) cb.norm(parse_vec3f(ss));
+            vert_size.norm += 1;
+        } else if (cmd == "vt") {
+            auto v = parse_vec2f(ss);
+            if (flip_texcoord) v.y = 1 - v.y;
+            if (cb.texcoord) cb.texcoord(v);
+            vert_size.texcoord += 1;
+        } else if (cmd == "f" || cmd == "l" || cmd == "p") {
+            verts.clear();
+            while (true) {
+                auto vert = parse_obj_vertex(ss);
+                if (!vert.pos) break;
+                if (vert.pos < 0) vert.pos = vert_size.pos + vert.pos + 1;
+                if (vert.texcoord < 0)
+                    vert.texcoord = vert_size.texcoord + vert.texcoord + 1;
+                if (vert.norm < 0) vert.norm = vert_size.norm + vert.norm + 1;
+                verts.push_back(vert);
+            }
+            if (cmd == "f" && cb.face) cb.face(verts);
+            if (cmd == "l" && cb.line) cb.line(verts);
+            if (cmd == "p" && cb.point) cb.point(verts);
+        } else if (cmd == "o") {
+            if (cb.object) cb.object(parse_string(ss));
+        } else if (cmd == "usemtl") {
+            if (cb.usemtl) cb.usemtl(parse_string(ss));
+        } else if (cmd == "g") {
+            if (cb.group) cb.group(parse_string(ss));
+        } else if (cmd == "s") {
+            if (cb.smoothing) cb.smoothing(parse_string(ss));
+        } else if (cmd == "mtllib") {
+            auto mtlname = parse_string(ss);
+            if (cb.mtllib) cb.mtllib(mtlname);
+            auto mtlpath = get_dirname(filename) + "/" + mtlname;
+            load_mtl(mtlpath, cb, flip_tr);
+        } else {
+            // unused
+        }
+    }
+
+    // parse extensions if presents
+    auto extname = replace_extension(filename, "objx");
+    auto f = fopen(extname.c_str(), "rt");
+    if (f) {
+        fclose(f);
+        load_objx(extname, cb);
+    }
+
+    // close file
+    fclose(fs);
 }
 
 // Loads an OBJ
-std::shared_ptr<scene> load_obj_scene(const std::string& filename,
-    bool load_textures, bool skip_missing, bool split_shapes) {
-    auto scn = std::make_shared<scene>();
-
-    // parsing policies
-    auto flip_texcoord = true;
-    auto flip_tr = true;
+scene* load_obj_scene(const std::string& filename, bool load_textures,
+    bool skip_missing, bool split_shapes) {
+    auto scn = new scene();
 
     // splitting policy
     auto split_material = split_shapes;
     auto split_group = split_shapes;
     auto split_smoothing = split_shapes;
 
-    // open file
-    auto fs = std::ifstream(filename);
-    if (!fs) throw std::runtime_error("cannot open filename " + filename);
-
     // current parsing values
     auto matname = std::string();
     auto oname = std::string();
     auto gname = std::string();
     auto smoothing = true;
-    auto ist = (std::shared_ptr<instance>)nullptr;
+    auto ist = (instance*)nullptr;
 
     // vertices
-    auto pos = std::deque<vec3f>();
-    auto norm = std::deque<vec3f>();
-    auto texcoord = std::deque<vec2f>();
+    auto opos = std::deque<vec3f>();
+    auto onorm = std::deque<vec3f>();
+    auto otexcoord = std::deque<vec2f>();
 
     // object maps
-    auto tmap = std::unordered_map<std::string, std::shared_ptr<texture>>();
-    auto mmap = std::unordered_map<std::string, std::shared_ptr<material>>();
+    auto tmap = std::unordered_map<std::string, texture*>();
+    auto vmap = std::unordered_map<std::string, voltexture*>();
+    auto mmap = std::unordered_map<std::string, material*>();
 
     // vertex maps
     auto name_map = std::unordered_map<std::string, int>();
-    auto vert_map = std::unordered_map<vec3i, int>();
+    auto vert_map = std::unordered_map<obj_vertex, int, obj_vertex_hash>();
     auto pos_map = std::unordered_map<int, int>();
     auto norm_map = std::unordered_map<int, int>();
     auto texcoord_map = std::unordered_map<int, int>();
 
     // add object if needed
-    auto is_instance_empty = [](std::shared_ptr<instance> ist) {
+    auto is_instance_empty = [](instance* ist) {
         if (ist->sbd) {
             return ist->sbd->pos.empty();
         } else if (ist->shp) {
@@ -1698,15 +2575,14 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
             return true;
         }
     };
-    auto add_instance = [&](std::shared_ptr<scene> scn,
-                            const std::string& objname,
+    auto add_instance = [&](scene* scn, const std::string& objname,
                             const std::string& matname,
                             const std::string& groupname, bool smoothing) {
         if (scn->instances.empty() || objname != scn->instances.back()->name ||
             !is_instance_empty(scn->instances.back())) {
-            auto ist = std::make_shared<instance>();
+            auto ist = new instance();
             scn->instances.push_back(ist);
-            ist->shp = std::make_shared<shape>();
+            ist->shp = new shape();
             scn->shapes.push_back(ist->shp);
         }
         name_map[objname] += 1;
@@ -1730,272 +2606,155 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
         texcoord_map.clear();
         return ist;
     };
+    // Parse texture options and name
+    auto add_texture = [scn, &tmap](const obj_texture_info& info, bool srgb) {
+        if (info.path == "") return (texture*)nullptr;
+        if (tmap.find(info.path) != tmap.end()) { return tmap.at(info.path); }
+
+        // create texture
+        auto txt = new texture();
+        txt->name = info.path;
+        txt->path = info.path;
+        txt->clamp = info.clamp;
+        txt->scale = info.scale;
+        txt->gamma = (srgb && !is_hdr_filename(info.path)) ? 2.2f : 1.0f;
+        scn->textures.push_back(txt);
+        tmap[info.path] = txt;
+
+        return txt;
+    };
+    // Parse texture options and name
+    auto add_voltexture = [scn, &vmap](
+                              const obj_texture_info& info, bool srgb) {
+        if (info.path == "") return (voltexture*)nullptr;
+        if (vmap.find(info.path) != vmap.end()) { return vmap.at(info.path); }
+
+        // create texture
+        auto txt = new voltexture();
+        txt->name = info.path;
+        txt->path = info.path;
+        scn->voltextures.push_back(txt);
+        vmap[info.path] = txt;
+
+        return txt;
+    };
+    // Add  vertices to the current shape
+    auto add_verts = [&](const std::vector<obj_vertex>& verts) {
+        for (auto& vert : verts) {
+            auto it = vert_map.find(vert);
+            if (it != vert_map.end()) continue;
+            auto nverts = (int)ist->shp->pos.size();
+            vert_map.insert(it, {vert, nverts});
+            if (vert.pos) ist->shp->pos.push_back(opos.at(vert.pos - 1));
+            if (vert.texcoord)
+                ist->shp->texcoord.push_back(otexcoord.at(vert.texcoord - 1));
+            if (vert.norm) ist->shp->norm.push_back(onorm.at(vert.norm - 1));
+        }
+    };
 
     // current objet
     ist = add_instance(scn, "", "", "", true);
 
-    // read the file line by line
-    std::string line;
-    while (std::getline(fs, line)) {
-        // remove comments
-        if (line.find("#") != line.npos) line = line.substr(0, line.find("#"));
-
-        // prepare to parse
-        auto ss = std::stringstream(line);
-
-        // get command
-        auto cmd = ""s;
-        ss >> cmd;
-        if (cmd == "") continue;
-
-        // possible token values
-        if (cmd == "v") {
-            pos.push_back(zero3f);
-            ss >> pos.back();
-        } else if (cmd == "vn") {
-            norm.push_back({});
-            ss >> norm.back();
-        } else if (cmd == "vt") {
-            texcoord.push_back({});
-            ss >> texcoord.back();
-            if (flip_texcoord) texcoord.back().y = 1 - texcoord.back().y;
-        } else if (cmd == "f" || cmd == "l" || cmd == "p") {
-            auto num = 0;
-            vec3i verts[128];
-            int vids[128];
-            auto vert_size =
-                vec3i{(int)pos.size(), (int)texcoord.size(), (int)norm.size()};
-            // elem.material = (int)oobj->materials.size() - 1;
-            while (true) {
-                auto vert = obj_vertex();
-                ss >> vert;
-                if (!vert.pos) break;
-                verts[num] = {-1, -1, -1};
-                if (vert.pos)
-                    verts[num].x = (vert.pos < 0) ? (vert_size.x + vert.pos) :
-                                                    (vert.pos - 1);
-                if (vert.texcoord)
-                    verts[num].y = (vert.texcoord < 0) ?
-                                       (vert_size.y + vert.texcoord) :
-                                       (vert.texcoord - 1);
-                if (vert.norm)
-                    verts[num].z = (vert.norm < 0) ? (vert_size.z + vert.norm) :
-                                                     (vert.norm - 1);
-                num++;
-            }
-            if (ist->sbd) {
-                // TODO: subdivs
-            } else if (ist->shp) {
-                for (auto i = 0; i < num; i++) {
-                    auto it = vert_map.find(verts[i]);
-                    if (it == vert_map.end()) {
-                        auto nverts = (int)ist->shp->pos.size();
-                        vert_map.insert(it, {verts[i], nverts});
-                        vids[i] = nverts;
-                        if (verts[i].x >= 0)
-                            ist->shp->pos.push_back(pos.at(verts[i].x));
-                        if (verts[i].y >= 0)
-                            ist->shp->texcoord.push_back(
-                                texcoord.at(verts[i].y));
-                        if (verts[i].z >= 0)
-                            ist->shp->norm.push_back(norm.at(verts[i].z));
-                    } else {
-                        vids[i] = it->second;
-                    }
-                }
-                if (cmd == "f") {
-                    for (auto i = 2; i < num; i++)
-                        ist->shp->triangles.push_back(
-                            {vids[0], vids[i - 1], vids[i]});
-                }
-                if (cmd == "l") {
-                    for (auto i = 1; i < num; i++)
-                        ist->shp->lines.push_back({vids[i - 1], vids[i]});
-                }
-                if (cmd == "p") {
-                    for (auto i = 0; i < num; i++)
-                        ist->shp->points.push_back(vids[i]);
-                }
-            }
-        } else if (cmd == "o") {
-            ss >> oname;
-            gname = "";
-            matname = "";
-            smoothing = true;
+    // callbacks
+    auto cb = obj_callbacks();
+    cb.vert = [&](vec3f v) { opos.push_back(v); };
+    cb.norm = [&](vec3f v) { onorm.push_back(v); };
+    cb.texcoord = [&](vec2f v) { otexcoord.push_back(v); };
+    cb.face = [&](const std::vector<obj_vertex>& verts) {
+        add_verts(verts);
+        for (auto i = 2; i < verts.size(); i++)
+            ist->shp->triangles.push_back({vert_map.at(verts[0]),
+                vert_map.at(verts[i - 1]), vert_map.at(verts[i])});
+    };
+    cb.line = [&](const std::vector<obj_vertex>& verts) {
+        add_verts(verts);
+        for (auto i = 1; i < verts.size(); i++)
+            ist->shp->lines.push_back(
+                {vert_map.at(verts[i - 1]), vert_map.at(verts[i])});
+    };
+    cb.point = [&](const std::vector<obj_vertex>& verts) {
+        add_verts(verts);
+        for (auto i = 0; i < verts.size(); i++)
+            ist->shp->points.push_back(vert_map.at(verts[i]));
+    };
+    cb.object = [&](const std::string& name) {
+        oname = name;
+        gname = "";
+        matname = "";
+        smoothing = true;
+        ist = add_instance(scn, oname, matname, gname, smoothing);
+    };
+    cb.group = [&](const std::string& name) {
+        gname = name;
+        if (split_group) {
             ist = add_instance(scn, oname, matname, gname, smoothing);
-        } else if (cmd == "usemtl") {
-            ss >> matname;
-            if (split_material) {
-                ist = add_instance(scn, oname, matname, gname, smoothing);
-            } else {
-                if (matname != "") ist->mat = mmap.at(matname);
-            }
-        } else if (cmd == "g") {
-            ss >> gname;
-            if (split_group) {
-                ist = add_instance(scn, oname, matname, gname, smoothing);
-            }
-        } else if (cmd == "s") {
-            auto name = ""s;
-            ss >> name;
-            smoothing = (name == "on");
-            if (split_smoothing) {
-                ist = add_instance(scn, oname, matname, gname, smoothing);
-            }
-        } else if (cmd == "mtllib") {
-            auto mtlname = ""s;
-            ss >> mtlname;
-            auto mtlpath = get_dirname(filename) + "/" + mtlname;
-            // open file
-            auto fs = std::ifstream(mtlpath);
-            if (!fs)
-                throw std::runtime_error("cannot open filename " + mtlpath);
-
-            // Parse texture options and name
-            auto add_texture = [scn, &tmap](std::stringstream& ss, bool srgb) {
-                // get tokens
-                auto tokens = std::vector<std::string>();
-                while (true) {
-                    auto v = ""s;
-                    ss >> v;
-                    if (v == "") break;
-                    tokens.push_back(v);
-                }
-                if (tokens.empty()) return (std::shared_ptr<texture>)nullptr;
-
-                // texture name
-                auto path = normalize_path(tokens.back());
-                if (tmap.find(path) != tmap.end()) { return tmap.at(path); }
-
-                // create texture
-                auto txt = std::make_shared<texture>();
-                txt->name = path;
-                txt->path = path;
-                txt->gamma = (srgb && !is_hdr_filename(path)) ? 2.2f : 1.0f;
-                scn->textures.push_back(txt);
-                tmap[path] = txt;
-
-                // texture options
-                for (auto i = 0; i < tokens.size(); i++) {
-                    if (tokens[i] == "-clamp") txt->clamp = true;
-                    // TODO: bump scale
-                }
-
-                return txt;
-            };
-
-            // add a material preemptively to avoid crashes
-            scn->materials.push_back(std::make_shared<material>());
-            auto mat = scn->materials.back();
-
-            // read the file line by line
-            std::string line;
-            while (std::getline(fs, line)) {
-                // remove comment
-                if (line.find("#") != line.npos)
-                    line = line.substr(0, line.find("#"));
-
-                // prepare to parse
-                auto ss = std::stringstream(line);
-
-                // get command
-                auto cmd = ""s;
-                ss >> cmd;
-                if (cmd == "") continue;
-
-                // possible token values
-                if (cmd == "newmtl") {
-                    mat = std::make_shared<material>();
-                    ss >> mat->name;
-                    scn->materials.push_back(mat);
-                    mmap[mat->name] = mat;
-                } else if (cmd == "illum") {
-                    // TODO: something with illum
-                } else if (cmd == "Ke") {
-                    ss >> mat->ke;
-                } else if (cmd == "Kd") {
-                    ss >> mat->kd;
-                } else if (cmd == "Ks") {
-                    ss >> mat->ks;
-                } else if (cmd == "Kt") {
-                    ss >> mat->kt;
-                } else if (cmd == "Tf") {
-                    mat->kt = {-1, -1, -1};
-                    ss >> mat->kt;
-                    if (mat->kt.y < 0)
-                        mat->kt = {mat->kt.x, mat->kt.x, mat->kt.x};
-                    if (flip_tr) mat->kt = vec3f{1, 1, 1} - mat->kt;
-                } else if (cmd == "Tr") {
-                    auto tr = vec3f{-1, -1, -1};
-                    ss >> tr;
-                    if (tr.y < 0) tr = {tr.x, tr.x, tr.x};
-                    mat->op = (tr.x + tr.y + tr.z) / 3;
-                    if (flip_tr) mat->op = 1 - mat->op;
-                } else if (cmd == "Ns") {
-                    auto ns = 0.0f;
-                    ss >> ns;
-                    mat->rs = pow(2 / (ns + 2), 1 / 4.0f);
-                    if (mat->rs < 0.01f) mat->rs = 0;
-                    if (mat->rs > 0.99f) mat->rs = 1;
-                } else if (cmd == "d") {
-                    ss >> mat->op;
-                } else if (cmd == "Pr" || cmd == "rs") {
-                    ss >> mat->rs;
-                } else if (cmd == "map_Ke") {
-                    mat->ke_txt = add_texture(ss, true);
-                } else if (cmd == "map_Kd") {
-                    mat->kd_txt = add_texture(ss, true);
-                } else if (cmd == "map_Ks") {
-                    mat->ks_txt = add_texture(ss, true);
-                } else if (cmd == "map_Tr") {
-                    mat->kt_txt = add_texture(ss, true);
-                } else if (cmd == "map_d" || cmd == "map_Tr") {
-                    mat->op_txt = add_texture(ss, false);
-                } else if (cmd == "map_Pr" || cmd == "map_rs") {
-                    mat->rs_txt = add_texture(ss, false);
-                } else if (cmd == "map_occ" || cmd == "occ") {
-                    mat->occ_txt = add_texture(ss, false);
-                } else if (cmd == "map_bump" || cmd == "bump") {
-                    mat->bump_txt = add_texture(ss, false);
-                } else if (cmd == "map_disp" || cmd == "disp") {
-                    mat->disp_txt = add_texture(ss, false);
-                } else if (cmd == "map_norm" || cmd == "norm") {
-                    mat->norm_txt = add_texture(ss, false);
-                }
-            }
-
-            // remove first fake material
-            if (scn->materials.front()->name == "")
-                scn->materials.erase(scn->materials.begin());
-
-            // clone
-            fs.close();
-        } else if (cmd == "c") {
-            auto cam = std::make_shared<camera>();
-            ss >> cam->name >> cam->ortho >> cam->imsize >> cam->focal >>
-                cam->focus >> cam->aperture >> cam->frame;
-            scn->cameras.push_back(cam);
-        } else if (cmd == "e") {
-            auto ke_txt = ""s;
-            auto env = std::make_shared<environment>();
-            ss >> env->name >> env->ke >> ke_txt >> env->frame;
-            if (ke_txt != "\"\"") {
-                if (tmap.find(ke_txt) == tmap.end()) {
-                    auto txt = std::make_shared<texture>();
-                    txt->name = ke_txt;
-                    txt->path = ke_txt;
-                    tmap[ke_txt] = txt;
-                    scn->textures.push_back(txt);
-                }
-                env->ke_txt = tmap.at(ke_txt);
-            }
-            scn->environments.push_back(env);
-        } else {
-            // unused
         }
-    }
+    };
+    cb.smoothing = [&](const std::string& name) {
+        smoothing = (name == "on");
+        if (split_smoothing) {
+            ist = add_instance(scn, oname, matname, gname, smoothing);
+        }
+    };
+    cb.usemtl = [&](const std::string& name) {
+        matname = name;
+        if (split_material) {
+            ist = add_instance(scn, oname, matname, gname, smoothing);
+        } else {
+            if (matname != "") ist->mat = mmap.at(matname);
+        }
+    };
+    cb.material = [&](const obj_material& omat) {
+        auto mat = new material();
+        mat->name = omat.name;
+        mat->ke = omat.ke;
+        mat->kd = omat.kd;
+        mat->ks = omat.ks;
+        mat->kt = omat.kt;
+        mat->rs = omat.rs;
+        mat->op = omat.op;
+        mat->ke_txt = add_texture(omat.ke_txt, true);
+        mat->kd_txt = add_texture(omat.kd_txt, true);
+        mat->ks_txt = add_texture(omat.ks_txt, true);
+        mat->kt_txt = add_texture(omat.kt_txt, true);
+        mat->op_txt = add_texture(omat.op_txt, false);
+        mat->rs_txt = add_texture(omat.rs_txt, false);
+        mat->occ_txt = add_texture(omat.occ_txt, false);
+        mat->bump_txt = add_texture(omat.bump_txt, false);
+        mat->disp_txt = add_texture(omat.disp_txt, false);
+        mat->norm_txt = add_texture(omat.norm_txt, false);
+        mat->ve = omat.ve;
+        mat->va = omat.va;
+        mat->vd = omat.vd;
+        mat->vg = omat.vg;
+        mat->vd_txt = add_voltexture(omat.vd_txt, false);
+        scn->materials.push_back(mat);
+        mmap[mat->name] = mat;
+    };
+    cb.camera = [&](const obj_camera& ocam) {
+        auto cam = new camera();
+        cam->name = ocam.name;
+        cam->ortho = ocam.ortho;
+        cam->film = ocam.film;
+        cam->focal = ocam.focal;
+        cam->focus = ocam.focus;
+        cam->aperture = ocam.aperture;
+        cam->frame = ocam.frame;
+        scn->cameras.push_back(cam);
+    };
+    cb.environmnet = [&](const obj_environment& oenv) {
+        auto env = new environment();
+        env->name = oenv.name;
+        env->ke = oenv.ke;
+        env->ke_txt = add_texture(oenv.ke_txt, true);
+        scn->environments.push_back(env);
+    };
+
+    // Parse obj
+    load_obj(filename, cb);
 
     // cleanup empty
+    // TODO: delete unused
     for (auto idx = 0; idx < scn->instances.size(); idx++) {
         if (!is_instance_empty(scn->instances[idx])) continue;
         auto ist = scn->instances[idx];
@@ -2011,227 +2770,253 @@ std::shared_ptr<scene> load_obj_scene(const std::string& filename,
         idx--;
     }
 
-    // close file
-    fs.close();
-
-    // updates
-    update_bbox(scn);
-
     // fix scene
     scn->name = get_filename(filename);
     add_missing_materials(scn);
 
-    // skip if needed
-    if (!load_textures) return scn;
-
-    // load images
+    // load textures
     auto dirname = get_dirname(filename);
-    for (auto& txt : scn->textures) {
-        auto filename = normalize_path(dirname + "/" + txt->path);
-        try {
-            txt->img = load_image(filename);
-            if (!is_hdr_filename(filename) && txt->gamma != 1)
-                txt->img = gamma_to_linear(txt->img, txt->gamma);
-        } catch (std::exception&) {
-            if (skip_missing) continue;
-            throw;
-        }
-    }
-
-    // assign opacity texture if needed
-    auto has_opacity = std::unordered_map<std::shared_ptr<texture>, bool>();
-    for (auto& txt : scn->textures) {
-        has_opacity[txt] = false;
-        for (auto& p : txt->img.pxl)
-            if (p.w < 0.999f) {
-                has_opacity[txt] = true;
-                break;
-            }
-    }
-    for (auto& mat : scn->materials) {
-        if (mat->kd_txt && !mat->op_txt && has_opacity.at(mat->kd_txt))
-            mat->op_txt = mat->kd_txt;
-    }
+    if (load_textures) load_scene_textures(scn, dirname, skip_missing, true);
 
     // done
     return scn;
 }
 
-void save_obj_scene(const std::string& filename,
-    const std::shared_ptr<scene>& scn, bool save_textures, bool skip_missing) {
-    // scene
-    auto fs = std::ofstream(filename);
+void save_mtl(
+    const std::string& filename, const scene* scn, bool flip_tr = true) {
+    // open
+    auto fs = fopen(filename.c_str(), "wt");
     if (!fs) throw std::runtime_error("cannot save file " + filename);
 
-    // parsing policies
-    auto flip_texcoord = true;
-
-    // material library
-    if (!scn->materials.empty()) {
-        auto mtlname = replace_extension(get_filename(filename), "mtl");
-        fs << "mtllib " << mtlname << "\n";
+    // for each material, dump all the values
+    for (auto mat : scn->materials) {
+        fprintf(fs, "newmtl %s\n", mat->name.c_str());
+        fprintf(fs, "  illum 2\n");
+        if (mat->ke != zero3f)
+            fprintf(fs, "  Ke %g %g %g\n", mat->ke.x, mat->ke.y, mat->ke.z);
+        if (mat->kd != zero3f)
+            fprintf(fs, "  Kd %g %g %g\n", mat->kd.x, mat->kd.y, mat->kd.z);
+        if (mat->ks != zero3f)
+            fprintf(fs, "  Ks %g %g %g\n", mat->ks.x, mat->ks.y, mat->ks.z);
+        if (mat->kt != zero3f)
+            fprintf(fs, "  Kt %g %g %g\n", mat->kt.x, mat->kt.y, mat->kt.z);
+        if (mat->rs != 1.0f)
+            fprintf(fs, "  Ns %d\n",
+                (int)clamp(2 / pow(mat->rs + 1e-10f, 4.0f) - 2, 0.0f, 1.0e12f));
+        if (mat->op != 1.0f) fprintf(fs, "  d %g\n", mat->op);
+        if (mat->rs != -1.0f) fprintf(fs, "  Pr %g\n", mat->rs);
+        if (mat->ke_txt)
+            fprintf(fs, "  map_Ke %s\n", mat->ke_txt->path.c_str());
+        if (mat->kd_txt)
+            fprintf(fs, "  map_Kd %s\n", mat->kd_txt->path.c_str());
+        if (mat->ks_txt)
+            fprintf(fs, "  map_Ks %s\n", mat->ks_txt->path.c_str());
+        if (mat->kt_txt)
+            fprintf(fs, "  map_Kt %s\n", mat->kt_txt->path.c_str());
+        if (mat->op_txt && mat->op_txt != mat->kd_txt)
+            fprintf(fs, "  map_d  %s\n", mat->op_txt->path.c_str());
+        if (mat->rs_txt)
+            fprintf(fs, "  map_Pr %s\n", mat->rs_txt->path.c_str());
+        if (mat->occ_txt)
+            fprintf(fs, "  map_occ %s\n", mat->occ_txt->path.c_str());
+        if (mat->bump_txt)
+            fprintf(fs, "  map_bump %s\n", mat->bump_txt->path.c_str());
+        if (mat->disp_txt)
+            fprintf(fs, "  map_disp %s\n", mat->disp_txt->path.c_str());
+        if (mat->norm_txt)
+            fprintf(fs, "  map_norm %s\n", mat->norm_txt->path.c_str());
+        if (mat->ve != zero3f)
+            fprintf(fs, "  Ve %g %g %g\n", mat->ve.x, mat->ve.y, mat->ve.z);
+        if (mat->vd != zero3f)
+            fprintf(fs, "  Vd %g %g %g\n", mat->vd.x, mat->vd.y, mat->vd.z);
+        if (mat->va != zero3f)
+            fprintf(fs, "  Va %g %g %g\n", mat->va.x, mat->va.y, mat->va.z);
+        if (mat->vg != 0) fprintf(fs, "  Vg %g\n", mat->vg);
+        if (mat->vd_txt)
+            fprintf(fs, "  map_Vd %s\n", mat->vd_txt->path.c_str());
+        fprintf(fs, "\n");
     }
+
+    // done
+    fclose(fs);
+}
+
+void save_objx(const std::string& filename, const scene* scn) {
+    // scene
+    auto fs = fopen(filename.c_str(), "wt");
+    if (!fs) throw std::runtime_error("cannot save file " + filename);
 
     // cameras
     for (auto cam : scn->cameras) {
-        fs << "c " << cam->name << " " << cam->ortho << " " << cam->imsize
-           << " " << cam->focal << " " << cam->focus << " " << cam->aperture
-           << " " << cam->frame << "\n";
+        fprintf(fs, "c %s %d %g %g %g %g %g ", cam->name.c_str(),
+            (int)cam->ortho, cam->film.x, cam->film.y, cam->focal, cam->focus,
+            cam->aperture);
+        fprintf(fs, "%g %g %g %g %g %g %g %g %g %g %g %g\n", cam->frame.x.x,
+            cam->frame.x.y, cam->frame.x.z, cam->frame.y.x, cam->frame.y.y,
+            cam->frame.y.z, cam->frame.z.x, cam->frame.z.y, cam->frame.z.z,
+            cam->frame.o.x, cam->frame.o.y, cam->frame.o.z);
     }
 
     // environments
     for (auto env : scn->environments) {
-        fs << "e " << env->name << " " << env->ke << " "
-           << ((env->ke_txt) ? env->ke_txt->path : "\"\""s) << " " << env->frame
-           << "\n";
+        fprintf(fs, "e %s %g %g %g %s ", env->name.c_str(), env->ke.x,
+            env->ke.y, env->ke.z,
+            ((env->ke_txt) ? env->ke_txt->path.c_str() : "\"\""));
+        fprintf(fs, "%g %g %g %g %g %g %g %g %g %g %g %g\n", env->frame.x.x,
+            env->frame.x.y, env->frame.x.z, env->frame.y.x, env->frame.y.y,
+            env->frame.y.z, env->frame.z.x, env->frame.z.y, env->frame.z.z,
+            env->frame.o.x, env->frame.o.y, env->frame.o.z);
+    }
+
+    // done
+    fclose(fs);
+}
+
+std::string to_string(const obj_vertex& v) {
+    auto s = std::to_string(v.pos);
+    if (v.texcoord) {
+        s += "/" + std::to_string(v.texcoord);
+        if (v.norm) s += "/" + std::to_string(v.norm);
+    } else {
+        if (v.norm) s += "//" + std::to_string(v.norm);
+    }
+    return s;
+}
+
+void save_obj(
+    const std::string& filename, const scene* scn, bool flip_texcoord = true) {
+    // scene
+    auto fs = fopen(filename.c_str(), "wt");
+    if (!fs) throw std::runtime_error("cannot save file " + filename);
+
+    // material library
+    if (!scn->materials.empty()) {
+        auto mtlname = replace_extension(get_filename(filename), "mtl");
+        fprintf(fs, "mtllib %s\n", mtlname.c_str());
     }
 
     // shapes
-    auto offset = vec3i{0, 0, 0};
+    auto offset = obj_vertex{0, 0, 0};
     for (auto ist : scn->instances) {
         if (!ist->sbd) {
-            fs << "o " << ist->name << "\n";
-            if (ist->mat) fs << "usemtl " << ist->mat->name << "\n";
+            fprintf(fs, "o %s\n", ist->name.c_str());
+            if (ist->mat) fprintf(fs, "usemtl %s\n", ist->mat->name.c_str());
             if (ist->frame == identity_frame3f) {
-                for (auto& p : ist->shp->pos) fs << "v " << p << "\n";
-                for (auto& n : ist->shp->norm) fs << "vn " << n << "\n";
-                if (flip_texcoord)
-                    for (auto& t : ist->shp->texcoord)
-                        fs << "vt " << vec2f{t.x, 1 - t.y} << "\n";
-                else
-                    for (auto& t : ist->shp->texcoord) fs << "vt " << t << "\n";
-            } else {
                 for (auto& p : ist->shp->pos)
-                    fs << "v " << transform_point(ist->frame, p) << "\n";
+                    fprintf(fs, "v %g %g %g\n", p.x, p.y, p.z);
                 for (auto& n : ist->shp->norm)
-                    fs << "vn " << transform_direction(ist->frame, n) << "\n";
-                if (flip_texcoord)
-                    for (auto& t : ist->shp->texcoord)
-                        fs << "vt " << vec2f{t.x, 1 - t.y} << "\n";
-                else
-                    for (auto& t : ist->shp->texcoord) fs << "vt " << t << "\n";
+                    fprintf(fs, "vn %g %g %g\n", n.x, n.y, n.z);
+                for (auto& t : ist->shp->texcoord)
+                    fprintf(
+                        fs, "vt %g %g\n", t.x, (flip_texcoord) ? 1 - t.y : t.y);
+            } else {
+                for (auto& pp : ist->shp->pos) {
+                    auto p = transform_point(ist->frame, pp);
+                    fprintf(fs, "v %g %g %g\n", p.x, p.y, p.z);
+                }
+                for (auto& nn : ist->shp->norm) {
+                    auto n = transform_direction(ist->frame, nn);
+                    fprintf(fs, "vn %g %g %g\n", n.x, n.y, n.z);
+                }
+                for (auto& t : ist->shp->texcoord)
+                    fprintf(
+                        fs, "vt %g %g\n", t.x, (flip_texcoord) ? 1 - t.y : t.y);
             }
-            auto mask = vec3i{1, ist->shp->texcoord.empty() ? 0 : 1,
+            auto mask = obj_vertex{1, ist->shp->texcoord.empty() ? 0 : 1,
                 ist->shp->norm.empty() ? 0 : 1};
             auto vert = [mask, offset](int i) {
-                auto vert = (vec3i{i, i, i} + offset + vec3i{1, 1, 1}) * mask;
-                return obj_vertex{vert.x, vert.y, vert.z};
+                return obj_vertex{(i + offset.pos + 1) * mask.pos,
+                    (i + offset.texcoord + 1) * mask.texcoord,
+                    (i + offset.norm + 1) * mask.norm};
             };
-            for (auto& t : ist->shp->triangles)
-                fs << "f " << vert(t.x) << " " << vert(t.y) << " " << vert(t.z)
-                   << "\n";
-            for (auto& l : ist->shp->lines)
-                fs << "l " << vert(l.x) << " " << vert(l.y) << "\n";
-            offset.x += ist->shp->pos.size();
-            offset.y += ist->shp->texcoord.size();
-            offset.z += ist->shp->norm.size();
+            for (auto& t : ist->shp->triangles) {
+                fprintf(fs, "f %s %s %s\n", to_string(vert(t.x)).c_str(),
+                    to_string(vert(t.y)).c_str(), to_string(vert(t.z)).c_str());
+            }
+            for (auto& l : ist->shp->lines) {
+                fprintf(fs, "l %s %s\n", to_string(vert(l.x)).c_str(),
+                    to_string(vert(l.y)).c_str());
+            }
+            offset.pos += ist->shp->pos.size();
+            offset.texcoord += ist->shp->texcoord.size();
+            offset.norm += ist->shp->norm.size();
         } else {
-            fs << "o " << ist->name << "\n";
-            if (ist->mat) fs << "usemtl " << ist->mat->name << "\n";
+            fprintf(fs, "o %s\n", ist->name.c_str());
+            if (ist->mat) fprintf(fs, "usemtl %s\n", ist->mat->name.c_str());
             if (ist->frame == identity_frame3f) {
-                for (auto& p : ist->sbd->pos) fs << "v " << p << "\n";
-                for (auto& t : ist->sbd->texcoord) fs << "vt " << t << "\n";
-            } else {
                 for (auto& p : ist->sbd->pos)
-                    fs << "v " << transform_point(ist->frame, p) << "\n";
-                for (auto& t : ist->sbd->texcoord) fs << "vt " << t << "\n";
+                    fprintf(fs, "v %g %g %g\n", p.x, p.y, p.z);
+                for (auto& t : ist->sbd->texcoord)
+                    fprintf(
+                        fs, "vt %g %g\n", t.x, (flip_texcoord) ? 1 - t.y : t.y);
+            } else {
+                for (auto& pp : ist->sbd->pos) {
+                    auto p = transform_point(ist->frame, pp);
+                    fprintf(fs, "v %g %g %g\n", p.x, p.y, p.z);
+                }
+                for (auto& t : ist->sbd->texcoord)
+                    fprintf(
+                        fs, "vt %g %g\n", t.x, (flip_texcoord) ? 1 - t.y : t.y);
             }
             if (!ist->sbd->texcoord.empty()) {
                 auto vert = [offset](int ip, int it) {
-                    auto vert = (vec3i{ip, it, 0} + offset + vec3i{1, 1, 1}) *
-                                vec3i{1, 1, 0};
-                    return obj_vertex{vert.x, vert.y, vert.x};
+                    return obj_vertex{
+                        ip + offset.pos + 1, it + offset.texcoord + 1, 0};
                 };
                 for (auto i = 0; i < ist->sbd->quads_pos.size(); i++) {
                     auto qp = ist->sbd->quads_pos[i];
                     auto qt = ist->sbd->quads_texcoord[i];
                     if (qp.z == qp.w) {
-                        fs << "f " << vert(qp.x, qt.x) << " "
-                           << vert(qp.y, qt.y) << " " << vert(qp.z, qt.z)
-                           << "\n";
+                        fprintf(fs, "f %s %s %s\n",
+                            to_string(vert(qp.x, qt.x)).c_str(),
+                            to_string(vert(qp.y, qt.y)).c_str(),
+                            to_string(vert(qp.z, qt.z)).c_str());
                     } else {
-                        fs << "f " << vert(qp.x, qt.x) << " "
-                           << vert(qp.y, qt.y) << " " << vert(qp.z, qt.z) << " "
-                           << vert(qp.w, qt.w) << "\n";
+                        fprintf(fs, "f %s %s %s %s\n",
+                            to_string(vert(qp.x, qt.x)).c_str(),
+                            to_string(vert(qp.y, qt.y)).c_str(),
+                            to_string(vert(qp.z, qt.z)).c_str(),
+                            to_string(vert(qp.w, qt.w)).c_str());
                     }
                 }
             } else {
                 auto vert = [offset](int ip) {
-                    auto vert = (vec3i{ip, 0, 0} + offset) * vec3i{1, 0, 0};
-                    return obj_vertex{vert.x, vert.y, vert.x};
+                    return obj_vertex{ip + offset.pos + 1, 0, 0};
                 };
                 for (auto& q : ist->sbd->quads_pos) {
                     if (q.z == q.w) {
-                        fs << "f " << vert(q.x) << " " << vert(q.y) << " "
-                           << vert(q.z) << "\n";
+                        fprintf(fs, "f %s %s %s\n",
+                            to_string(vert(q.x)).c_str(),
+                            to_string(vert(q.y)).c_str(),
+                            to_string(vert(q.z)).c_str());
                     } else {
-                        fs << "f " << vert(q.x) << " " << vert(q.y) << " "
-                           << vert(q.z) << " " << vert(q.w) << "\n";
+                        fprintf(fs, "f %s %s %s %s\n",
+                            to_string(vert(q.x)).c_str(),
+                            to_string(vert(q.y)).c_str(),
+                            to_string(vert(q.z)).c_str(),
+                            to_string(vert(q.w)).c_str());
                     }
                 }
             }
-            offset.x += ist->sbd->pos.size();
-            offset.y += ist->sbd->texcoord.size();
+            offset.pos += ist->sbd->pos.size();
+            offset.texcoord += ist->sbd->texcoord.size();
         }
     }
 
-    fs.close();
+    fclose(fs);
+}
 
-    // save materials
-    if (scn->materials.empty()) return;
-
-    auto mtlname = replace_extension(filename, ".mtl");
-    fs = std::ofstream(mtlname);
-    if (!fs) throw std::runtime_error("cannot open filename " + mtlname);
-
-    // for each material, dump all the values
-    for (auto mat : scn->materials) {
-        fs << "newmtl " << mat->name << "\n";
-        fs << "  illum 2\n";
-        if (mat->ke != zero3f) fs << "  Ke " << mat->ke << "\n";
-        if (mat->kd != zero3f) fs << "  Kd " << mat->kd << "\n";
-        if (mat->ks != zero3f) fs << "  Ks " << mat->ks << "\n";
-        if (mat->kt != zero3f) fs << "  Kt " << mat->kt << "\n";
-        if (mat->rs != 1.0f)
-            fs << "  Ns "
-               << (int)clamp(2 / pow(mat->rs + 1e-10f, 4.0f) - 2, 0.0f, 1.0e12f)
-               << "\n";
-        if (mat->op != 1.0f) fs << "  d " << mat->op << "\n";
-        if (mat->rs != -1.0f) fs << "  Pr " << mat->rs << "\n";
-        if (mat->ke_txt) fs << "  map_Ke " << mat->ke_txt->path << "\n";
-        if (mat->kd_txt) fs << "  map_Kd " << mat->kd_txt->path << "\n";
-        if (mat->ks_txt) fs << "  map_Ks " << mat->ks_txt->path << "\n";
-        if (mat->kt_txt) fs << "  map_Kt " << mat->kt_txt->path << "\n";
-        if (mat->op_txt && mat->op_txt != mat->kd_txt)
-            fs << "  map_d  " << mat->op_txt->path << "\n";
-        if (mat->rs_txt) fs << "  map_Pr " << mat->rs_txt->path << "\n";
-        if (mat->occ_txt) fs << "  map_occ " << mat->occ_txt->path << "\n";
-        if (mat->bump_txt) fs << "  map_bump " << mat->bump_txt->path << "\n";
-        if (mat->disp_txt) fs << "  map_disp " << mat->disp_txt->path << "\n";
-        if (mat->norm_txt) fs << "  map_norm " << mat->norm_txt->path << "\n";
-        fs << "\n";
-    }
-
-    fs.close();
+void save_obj_scene(const std::string& filename, const scene* scn,
+    bool save_textures, bool skip_missing) {
+    save_obj(filename, scn, true);
+    if (!scn->materials.empty())
+        save_mtl(replace_extension(filename, ".mtl"), scn, true);
+    if (!scn->cameras.empty() || !scn->environments.empty())
+        save_objx(replace_extension(filename, ".objx"), scn);
 
     // skip textures if needed
-    if (!save_textures) return;
-
-    // save images
     auto dirname = get_dirname(filename);
-    for (auto& txt : scn->textures) {
-        if (txt->img.pxl.empty()) continue;
-        auto filename = normalize_path(dirname + "/" + txt->path);
-        try {
-            save_image(
-                filename, (is_hdr_filename(filename) || txt->gamma == 1) ?
-                              txt->img :
-                              linear_to_gamma(txt->img, txt->gamma));
-        } catch (std::exception&) {
-            if (skip_missing) continue;
-            throw;
-        }
-    }
+    if (save_textures) save_scene_textures(scn, dirname, skip_missing);
 }
 
 }  // namespace ygl
@@ -2249,10 +3034,10 @@ static bool startswith(const std::string& str, const std::string& substr) {
 }
 
 // Load a scene
-std::shared_ptr<scene> load_gltf_scene(
+scene* load_gltf_scene(
     const std::string& filename, bool load_textures, bool skip_missing) {
     auto gltf = load_json(filename);
-    auto scn = std::make_shared<scene>();
+    auto scn = new scene();
 
     // prepare parsing
     auto dirname = get_dirname(filename);
@@ -2261,7 +3046,7 @@ std::shared_ptr<scene> load_gltf_scene(
     if (gltf.count("images")) {
         for (auto iid = 0; iid < gltf.at("images").size(); iid++) {
             auto& gimg = gltf.at("images").at(iid);
-            auto txt = std::make_shared<texture>();
+            auto txt = new texture();
             txt->name = gimg.value("name", ""s);
             txt->path = (startswith(gimg.value("uri", ""s), "data:")) ?
                             std::string("[glTF-inline].png") :
@@ -2307,14 +3092,12 @@ std::shared_ptr<scene> load_gltf_scene(
     // add a texture
     auto add_texture = [scn, &gltf](const json& ginfo, bool srgb) {
         if (!gltf.count("images") || !gltf.count("textures"))
-            return (std::shared_ptr<texture>)nullptr;
-        if (ginfo.is_null() || ginfo.empty())
-            return (std::shared_ptr<texture>)nullptr;
-        if (ginfo.value("index", -1) < 0)
-            return (std::shared_ptr<texture>)nullptr;
+            return (texture*)nullptr;
+        if (ginfo.is_null() || ginfo.empty()) return (texture*)nullptr;
+        if (ginfo.value("index", -1) < 0) return (texture*)nullptr;
         auto& gtxt = gltf.at("textures").at(ginfo.value("index", -1));
         if (gtxt.empty() || gtxt.value("source", -1) < 0)
-            return (std::shared_ptr<texture>)nullptr;
+            return (texture*)nullptr;
         auto txt = scn->textures.at(gtxt.value("source", -1));
         if (!gltf.count("samplers") || gtxt.value("sampler", -1) < 0)
             return txt;
@@ -2330,7 +3113,7 @@ std::shared_ptr<scene> load_gltf_scene(
     if (gltf.count("materials")) {
         for (auto mid = 0; mid < gltf.at("materials").size(); mid++) {
             auto& gmat = gltf.at("materials").at(mid);
-            auto mat = std::make_shared<material>();
+            auto mat = new material();
             mat->name = gmat.value("name", ""s);
             mat->ke = gmat.value("emissiveFactor", zero3f);
             if (gmat.count("emissiveTexture"))
@@ -2435,8 +3218,7 @@ std::shared_ptr<scene> load_gltf_scene(
     };
 
     // convert meshes
-    auto meshes = std::vector<std::vector<
-        std::pair<std::shared_ptr<shape>, std::shared_ptr<material>>>>();
+    auto meshes = std::vector<std::vector<std::pair<shape*, material*>>>();
     if (gltf.count("meshes")) {
         for (auto mid = 0; mid < gltf.at("meshes").size(); mid++) {
             auto& gmesh = gltf.at("meshes").at(mid);
@@ -2444,7 +3226,7 @@ std::shared_ptr<scene> load_gltf_scene(
             auto sid = 0;
             for (auto& gprim : gmesh.value("primitives", json::array())) {
                 if (!gprim.count("attributes")) continue;
-                auto shp = std::make_shared<shape>();
+                auto shp = new shape();
                 shp->name = gmesh.value("name", ""s) +
                             ((sid) ? std::to_string(sid) : std::string());
                 sid++;
@@ -2528,7 +3310,7 @@ std::shared_ptr<scene> load_gltf_scene(
                             shp->lines.push_back({i - 1, i});
                     } else if (mode == -1 || mode == 0) {
                         // points
-                        std::cout << "points not supported\n";
+                        printf("points not supported\n");
                     } else {
                         throw std::runtime_error("unknown primitive type");
                     }
@@ -2579,7 +3361,7 @@ std::shared_ptr<scene> load_gltf_scene(
                                 {(int)indices[i - 1][0], (int)indices[i][0]});
                     } else if (mode == -1 || mode == 0) {
                         // points
-                        std::cout << "points not supported\n";
+                        printf("points not supported\n");
                     } else {
                         throw std::runtime_error("unknown primitive type");
                     }
@@ -2597,26 +3379,21 @@ std::shared_ptr<scene> load_gltf_scene(
     if (gltf.count("cameras")) {
         for (auto cid = 0; cid < gltf.at("cameras").size(); cid++) {
             auto& gcam = gltf.at("cameras").at(cid);
-            auto cam = std::make_shared<camera>();
+            auto cam = new camera();
             cam->name = gcam.value("name", ""s);
             cam->ortho = gcam.value("type", ""s) == "orthographic";
             if (cam->ortho) {
-                std::cout << "orthographic not supported well\n";
+                printf("orthographic not supported well\n");
                 auto ortho = gcam.value("orthographic", json::object());
                 set_camera_fovy(cam, ortho.value("ymag", 0.0f),
                     ortho.value("xmag", 0.0f) / ortho.value("ymag", 0.0f));
-                cam->near = ortho.value("znear", 0.0f);
-                cam->far = ortho.value("zfar", flt_max);
-                cam->focus = flt_max;
+                cam->focus = maxf;
                 cam->aperture = 0;
             } else {
                 auto persp = gcam.value("perspective", json::object());
                 set_camera_fovy(cam, persp.value("yfov", 1.0f),
                     persp.value("aspectRatio", 1.0f));
-                cam->near = persp.value("znear", 0.1f);
-                cam->far =
-                    persp.count("zfar") ? persp.value("zfar", 0.0f) : flt_max;
-                cam->focus = flt_max;
+                cam->focus = maxf;
                 cam->aperture = 0;
             }
             scn->cameras.push_back(cam);
@@ -2627,14 +3404,14 @@ std::shared_ptr<scene> load_gltf_scene(
     if (gltf.count("nodes")) {
         for (auto nid = 0; nid < gltf.at("nodes").size(); nid++) {
             auto& gnde = gltf.at("nodes").at(nid);
-            auto nde = std::make_shared<node>();
+            auto nde = new node();
             nde->name = gnde.value("name", ""s);
             if (gnde.count("camera"))
                 nde->cam = scn->cameras[gnde.value("camera", 0)];
             nde->translation = gnde.value("translation", zero3f);
             nde->rotation = gnde.value("rotation", vec4f{0, 0, 0, 1});
             nde->scale = gnde.value("scale", vec3f{1, 1, 1});
-            nde->frame = mat_to_frame(gnde.value("matrix", identity_mat4f));
+            nde->local = mat_to_frame(gnde.value("matrix", identity_mat4f));
             scn->nodes.push_back(nde);
         }
 
@@ -2655,17 +3432,17 @@ std::shared_ptr<scene> load_gltf_scene(
             auto& shps = meshes.at(gnde.value("mesh", 0));
             if (shps.empty()) continue;
             if (shps.size() == 1) {
-                nde->ist = std::make_shared<instance>();
+                nde->ist = new instance();
                 nde->ist->name = nde->name;
                 nde->ist->shp = shps[0].first;
                 nde->ist->mat = shps[0].second;
                 scn->instances.push_back(nde->ist);
             } else {
                 for (auto shp : shps) {
-                    auto child = std::make_shared<node>();
+                    auto child = new node();
                     child->name = nde->name + "_" + shp.first->name;
                     child->parent = nde;
-                    child->ist = std::make_shared<instance>();
+                    child->ist = new instance();
                     child->ist->name = child->name;
                     child->ist->shp = shp.first;
                     child->ist->mat = shp.second;
@@ -2692,7 +3469,7 @@ std::shared_ptr<scene> load_gltf_scene(
                         path}) == sampler_map.end()) {
                     auto& gsampler = ganm.at("samplers")
                                          .at(gchannel.at("sampler").get<int>());
-                    auto anm = std::make_shared<animation>();
+                    auto anm = new animation();
                     anm->name = (ganm.count("name") ? ganm.value("name", ""s) :
                                                       "anim") +
                                 std::to_string(aid++);
@@ -2735,7 +3512,7 @@ std::shared_ptr<scene> load_gltf_scene(
                                     (float)output_view[i][2]});
                         } break;
                         case 3: {  // weights
-                            std::cout << "weights not supported for now\n";
+                            printf("weights not supported for now\n");
 #if 0
                         // get a node that it refers to
                         auto ncomp = 0;
@@ -2780,54 +3557,26 @@ std::shared_ptr<scene> load_gltf_scene(
 
     // compute transforms and bbox
     update_transforms(scn, 0);
-    update_bbox(scn);
 
     // fix elements
     add_missing_materials(scn);
+    auto bbox = compute_bbox(scn);
     for (auto cam : scn->cameras) {
-        auto center = (scn->bbox.min + scn->bbox.max) / 2;
+        auto center = (bbox.min + bbox.max) / 2;
         auto dist = dot(-cam->frame.z, center - cam->frame.o);
         if (dist > 0) cam->focus = dist;
     }
 
     // skip textures if needed
-    if (!load_textures) return scn;
-
-    // load images
-    for (auto& txt : scn->textures) {
-        auto filename = normalize_path(dirname + "/" + txt->path);
-        try {
-            txt->img = load_image(filename);
-            if (!is_hdr_filename(filename) && txt->gamma != 1)
-                txt->img = gamma_to_linear(txt->img, txt->gamma);
-        } catch (const std::exception&) {
-            if (skip_missing) continue;
-            throw;
-        }
-    }
-
-    // assign opacity texture if needed
-    auto has_opacity = std::unordered_map<std::shared_ptr<texture>, bool>();
-    for (auto& txt : scn->textures) {
-        has_opacity[txt] = false;
-        for (auto& p : txt->img.pxl)
-            if (p.w < 0.999f) {
-                has_opacity[txt] = true;
-                break;
-            }
-    }
-    for (auto& mat : scn->materials) {
-        if (mat->kd_txt && !mat->op_txt && has_opacity.at(mat->kd_txt))
-            mat->op_txt = mat->kd_txt;
-    }
+    if (load_textures) load_scene_textures(scn, dirname, skip_missing, true);
 
     // done
     return scn;
 }
 
 // Save gltf json
-void save_gltf_scene(const std::string& filename,
-    const std::shared_ptr<scene>& scn, bool save_textures, bool skip_missing) {
+void save_gltf_scene(const std::string& filename, const scene* scn,
+    bool save_textures, bool skip_missing) {
     // start creating json
     auto js = json::object();
     js["asset"]["version"] = "2.0";
@@ -2849,28 +3598,26 @@ void save_gltf_scene(const std::string& filename,
     if (!scn->nodes.empty()) js["nodes"] = json::array();
 
     // convert cameras
-    auto cmap = std::unordered_map<std::shared_ptr<camera>, int>();
+    auto cmap = std::unordered_map<camera*, int>();
     for (auto cam : scn->cameras) {
         auto cjs = json();
         cjs["name"] = cam->name;
         if (!cam->ortho) {
             cjs["type"] = "perspective";
-            cjs["perspective"]["aspectRatio"] = cam->imsize.x / cam->imsize.y;
-            cjs["perspective"]["yfov"] = eval_camera_fovy(cam);
-            cjs["perspective"]["znear"] = cam->near;
+            cjs["perspective"]["aspectRatio"] = cam->film.x / cam->film.y;
+            cjs["perspective"]["znear"] = 0.01f;
         } else {
             cjs["type"] = "orthographic";
-            cjs["orthographic"]["xmag"] = cam->imsize.x / 2;
-            cjs["orthographic"]["ymag"] = cam->imsize.y / 2;
-            cjs["orthographic"]["zfar"] = cam->far;
-            cjs["orthographic"]["znear"] = cam->near;
+            cjs["orthographic"]["xmag"] = cam->film.x / 2;
+            cjs["orthographic"]["ymag"] = cam->film.y / 2;
+            cjs["orthographic"]["znear"] = 0.01f;
         }
         cmap[cam] = (int)js["cameras"].size();
         js["cameras"].push_back(cjs);
     }
 
     // textures
-    auto tmap = std::unordered_map<std::shared_ptr<texture>, int>();
+    auto tmap = std::unordered_map<texture*, int>();
     for (auto& txt : scn->textures) {
         auto tjs = json(), ijs = json();
         tjs["source"] = (int)js["images"].size();
@@ -2881,7 +3628,7 @@ void save_gltf_scene(const std::string& filename,
     }
 
     // material
-    auto mmap = std::unordered_map<std::shared_ptr<material>, int>();
+    auto mmap = std::unordered_map<material*, int>();
     for (auto mat : scn->materials) {
         auto mjs = json();
         mjs["name"] = mat->name;
@@ -2921,12 +3668,12 @@ void save_gltf_scene(const std::string& filename,
     }
 
     // determine shape materials
-    auto shape_mats = std::unordered_map<std::shared_ptr<shape>, int>();
+    auto shape_mats = std::unordered_map<shape*, int>();
     for (auto ist : scn->instances)
         if (ist->mat) shape_mats[ist->shp] = mmap.at(ist->mat);
 
     // shapes
-    auto smap = std::unordered_map<std::shared_ptr<shape>, int>();
+    auto smap = std::unordered_map<shape*, int>();
     for (auto shp : scn->shapes) {
         auto mjs = json(), bjs = json(), pjs = json();
         auto bid = js["buffers"].size();
@@ -2986,11 +3733,11 @@ void save_gltf_scene(const std::string& filename,
     }
 
     // nodes
-    auto nmap = std::unordered_map<std::shared_ptr<node>, int>();
+    auto nmap = std::unordered_map<node*, int>();
     for (auto& nde : scn->nodes) {
         auto njs = json();
         njs["name"] = nde->name;
-        njs["matrix"] = frame_to_mat(nde->frame);
+        njs["matrix"] = frame_to_mat(nde->local);
         njs["translation"] = nde->translation;
         njs["rotation"] = nde->rotation;
         njs["scale"] = nde->scale;
@@ -2998,15 +3745,14 @@ void save_gltf_scene(const std::string& filename,
         if (nde->ist) njs["mesh"] = smap.at(nde->ist->shp);
         if (!nde->children.empty()) {
             njs["children"] = json::array();
-            for (auto& c : nde->children)
-                njs["children"].push_back(nmap.at(c.lock()));
+            for (auto& c : nde->children) njs["children"].push_back(nmap.at(c));
         }
         js["nodes"].push_back(njs);
         nmap[nde] = (int)js["nodes"].size() - 1;
     }
 
     // animations not supported yet
-    if (!scn->animations.empty()) std::cout << "animation not supported yet\n";
+    if (!scn->animations.empty()) printf("animation not supported yet\n");
 
     // nodes from instances
     if (scn->nodes.empty()) {
@@ -3036,18 +3782,18 @@ void save_gltf_scene(const std::string& filename,
         auto filename = normalize_path(dirname + "/" + shp->path);
         filename = replace_extension(filename, ".bin");
         try {
-            auto fs = std::ofstream(filename, std::ios::binary);
+            auto fs = fopen(filename.c_str(), "wb");
             if (!fs)
                 throw std::runtime_error("could not open file " + filename);
-            fs.write((char*)shp->pos.data(), 3 * 4 * shp->pos.size());
-            fs.write((char*)shp->norm.data(), 3 * 4 * shp->norm.size());
-            fs.write((char*)shp->texcoord.data(), 2 * 4 * shp->pos.size());
-            fs.write((char*)shp->color.data(), 4 * 4 * shp->color.size());
-            fs.write((char*)shp->radius.data(), 1 * 4 * shp->radius.size());
-            fs.write((char*)shp->lines.data(), 2 * 4 * shp->lines.size());
-            fs.write(
-                (char*)shp->triangles.data(), 3 * 4 * shp->triangles.size());
-            fs.close();
+            fwrite((char*)shp->pos.data(), 3 * 4, shp->pos.size(), fs);
+            fwrite((char*)shp->norm.data(), 3 * 4, shp->norm.size(), fs);
+            fwrite((char*)shp->texcoord.data(), 2 * 4, shp->pos.size(), fs);
+            fwrite((char*)shp->color.data(), 4 * 4, shp->color.size(), fs);
+            fwrite((char*)shp->radius.data(), 1 * 4, shp->radius.size(), fs);
+            fwrite((char*)shp->lines.data(), 2 * 4, shp->lines.size(), fs);
+            fwrite(
+                (char*)shp->triangles.data(), 3 * 4, shp->triangles.size(), fs);
+            fclose(fs);
         } catch (std::exception&) {
             if (skip_missing) continue;
             throw;
@@ -3055,22 +3801,7 @@ void save_gltf_scene(const std::string& filename,
     }
 
     // skip textures if necessary
-    if (!save_textures) return;
-
-    // save images
-    for (auto& txt : scn->textures) {
-        if (txt->img.pxl.empty()) continue;
-        auto filename = normalize_path(dirname + "/" + txt->path);
-        try {
-            save_image(
-                filename, (is_hdr_filename(filename) || txt->gamma == 1) ?
-                              txt->img :
-                              linear_to_gamma(txt->img, txt->gamma));
-        } catch (std::exception&) {
-            if (skip_missing) continue;
-            throw;
-        }
-    }
+    if (save_textures) save_scene_textures(scn, dirname, skip_missing);
 }
 
 }  // namespace ygl
@@ -3165,7 +3896,7 @@ json pbrt_to_json(const std::string& filename) {
     };
 
     auto f = fopen(filename.c_str(), "rt");
-    if (!f) throw std::runtime_error("cannot open filename " + filename);
+    if (!f) throw std::runtime_error("could not open filename " + filename);
     auto pbrt = std::string();
     char buf[4096];
     while (fgets(buf, 4096, f)) {
@@ -3226,25 +3957,25 @@ json pbrt_to_json(const std::string& filename) {
 }
 
 // load pbrt scenes
-std::shared_ptr<scene> load_pbrt_scene(
+scene* load_pbrt_scene(
     const std::string& filename, bool load_textures, bool skip_missing) {
     auto js = pbrt_to_json(filename);
     auto dirname = get_dirname(filename);
 
     struct stack_item {
         frame3f frame = identity_frame3f;
-        std::shared_ptr<material> mat = nullptr;
-        std::shared_ptr<material> light_mat = nullptr;
+        material* mat = nullptr;
+        material* light_mat = nullptr;
         float focus = 1, aspect = 1;
         bool reverse = false;
     };
 
     // parse
-    auto scn = std::make_shared<scene>();
+    auto scn = new scene();
     auto stack = std::vector<stack_item>();
     stack.push_back(stack_item());
-    auto txt_map = std::map<std::string, std::shared_ptr<texture>>();
-    auto mat_map = std::map<std::string, std::shared_ptr<material>>();
+    auto txt_map = std::map<std::string, texture*>();
+    auto mat_map = std::map<std::string, material*>();
     auto mid = 0;
 
     auto get_vec3f = [](const json& js) -> vec3f {
@@ -3256,7 +3987,7 @@ std::shared_ptr<scene> load_pbrt_scene(
         if (js.is_array() && js.size() == 3)
             return {js.at(0).get<float>(), js.at(1).get<float>(),
                 js.at(2).get<float>()};
-        std::cout << "cannot handle vec3f\n";
+        printf("cannot handle vec3f\n");
         return zero3f;
     };
 
@@ -3267,33 +3998,34 @@ std::shared_ptr<scene> load_pbrt_scene(
         if (js.is_array() && js.size() == 4)
             return {js.at(0).get<float>(), js.at(1).get<float>(),
                 js.at(2).get<float>(), js.at(3).get<float>()};
-        std::cout << "cannot handle vec4f\n";
+        printf("cannot handle vec4f\n");
         return zero4f;
     };
 
-    auto get_mat4f = [](const json& js) -> mat4f {
+    auto get_mat4f = [](const json& js) -> frame3f {
         if (!js.is_array() || js.size() != 16) {
-            std::cout << "cannot handle vec4f\n";
-            return identity_mat4f;
+            printf("cannot handle vec4f\n");
+            return identity_frame3f;
         }
-        auto m = identity_mat4f;
-        for (auto i = 0; i < 16; i++) (&m.x.x)[i] = js.at(i).get<float>();
-        return m;
+        float m[16] = {0};
+        for (auto i = 0; i < 16; i++) m[i] = js.at(i).get<float>();
+        return {{m[0], m[1], m[2]}, {m[4], m[5], m[6]}, {m[8], m[9], m[10]},
+            {m[12], m[13], m[14]}};
     };
 
-    auto get_mat3f = [](const json& js) -> mat3f {
+    auto get_mat3f = [](const json& js) -> frame3f {
         if (!js.is_array() || js.size() != 9) {
-            std::cout << "cannot handle mat3f\n";
-            return identity_mat3f;
+            printf("cannot handle mat3f\n");
+            return identity_frame3f;
         }
-        auto m = identity_mat3f;
+        auto m = identity_frame3f;
         for (auto i = 0; i < 9; i++) (&m.x.x)[i] = js.at(i).get<float>();
         return m;
     };
 
     auto get_vector_vec3i = [](const json& js) -> std::vector<vec3i> {
         if (!js.is_array() || js.size() % 3) {
-            std::cout << "cannot handle vector<vec3f>";
+            printf("cannot handle vector<vec3f>\n");
             return {};
         }
         auto vals = std::vector<vec3i>(js.size() / 3);
@@ -3307,7 +4039,7 @@ std::shared_ptr<scene> load_pbrt_scene(
 
     auto get_vector_vec3f = [](const json& js) -> std::vector<vec3f> {
         if (!js.is_array() || js.size() % 3) {
-            std::cout << "cannot handle vector<vec3f>\n";
+            printf("cannot handle vector<vec3f>\n");
             return {};
         }
         auto vals = std::vector<vec3f>(js.size() / 3);
@@ -3321,7 +4053,7 @@ std::shared_ptr<scene> load_pbrt_scene(
 
     auto get_vector_vec2f = [](const json& js) -> std::vector<vec2f> {
         if (!js.is_array() || js.size() % 2) {
-            std::cout << "cannot handle vector<vec3f>\n";
+            printf("cannot handle vector<vec3f>\n");
             return {};
         }
         auto vals = std::vector<vec2f>(js.size() / 2);
@@ -3333,15 +4065,14 @@ std::shared_ptr<scene> load_pbrt_scene(
     };
 
     auto get_scaled_texture =
-        [&txt_map, &get_vec3f](
-            const json& js) -> std::pair<vec3f, std::shared_ptr<texture>> {
+        [&txt_map, &get_vec3f](const json& js) -> std::pair<vec3f, texture*> {
         if (js.is_string())
             return {{1, 1, 1}, txt_map.at(js.get<std::string>())};
         return {get_vec3f(js), nullptr};
     };
 
     auto use_hierarchy = false;
-    std::map<std::string, std::vector<std::shared_ptr<instance>>> objects;
+    std::map<std::string, std::vector<instance*>> objects;
     for (auto& jcmd : js) {
         auto cmd = jcmd.at("cmd").get<std::string>();
         if (cmd == "ObjectInstance") {
@@ -3356,11 +4087,10 @@ std::shared_ptr<scene> load_pbrt_scene(
         auto cmd = jcmd.at("cmd").get<std::string>();
         if (cmd == "Integrator" || cmd == "Sampler" || cmd == "PixelFilter") {
         } else if (cmd == "Transform") {
-            auto m = get_mat4f(jcmd.at("values"));
-            stack.back().frame = mat_to_frame(m);
+            stack.back().frame = get_mat4f(jcmd.at("values"));
         } else if (cmd == "ConcatTransform") {
-            auto m = get_mat4f(jcmd.at("values"));
-            stack.back().frame = stack.back().frame * mat_to_frame(m);
+            stack.back().frame =
+                stack.back().frame * get_mat4f(jcmd.at("values"));
         } else if (cmd == "Scale") {
             auto v = get_vec3f(jcmd.at("values"));
             stack.back().frame = stack.back().frame * scaling_frame(v);
@@ -3371,7 +4101,7 @@ std::shared_ptr<scene> load_pbrt_scene(
             auto v = get_vec4f(jcmd.at("values"));
             stack.back().frame =
                 stack.back().frame *
-                rotation_frame(vec3f{v.y, v.z, v.w}, v.x * pi / 180);
+                rotation_frame(vec3f{v.y, v.z, v.w}, v.x * pif / 180);
         } else if (cmd == "LookAt") {
             auto m = get_mat3f(jcmd.at("values"));
             stack.back().frame =
@@ -3383,7 +4113,7 @@ std::shared_ptr<scene> load_pbrt_scene(
             stack.back().aspect = jcmd.at("xresolution").get<float>() /
                                   jcmd.at("yresolution").get<float>();
         } else if (cmd == "Camera") {
-            auto cam = std::make_shared<camera>();
+            auto cam = new camera();
             cam->name = "cam" + std::to_string(cid++);
             cam->frame = inverse(stack.back().frame);
             cam->frame.z = -cam->frame.z;
@@ -3392,11 +4122,11 @@ std::shared_ptr<scene> load_pbrt_scene(
             auto fovy = 1.0f;
             auto type = jcmd.at("type").get<std::string>();
             if (type == "perspective") {
-                fovy = jcmd.at("fov").get<float>() * pi / 180;
+                fovy = jcmd.at("fov").get<float>() * pif / 180;
             } else {
-                std::cout << type << " camera not supported\n";
+                printf("%s camera not supported\n", type.c_str());
             }
-            ygl::set_camera_fovy(cam, fovy, aspect);
+            set_camera_fovy(cam, fovy, aspect);
             scn->cameras.push_back(cam);
         } else if (cmd == "Texture") {
             auto found = false;
@@ -3408,17 +4138,17 @@ std::shared_ptr<scene> load_pbrt_scene(
                 }
             }
             if (!found) {
-                auto txt = std::make_shared<texture>();
+                auto txt = new texture();
                 scn->textures.push_back(txt);
                 txt->name = jcmd.at("name").get<std::string>();
                 txt_map[txt->name] = txt;
                 auto type = jcmd.at("type").get<std::string>();
                 if (type == "imagemap") {
                     txt->path = jcmd.at("filename").get<std::string>();
-                    if (ygl::get_extension(txt->path) == "pfm")
-                        txt->path = ygl::replace_extension(txt->path, ".hdr");
+                    if (get_extension(txt->path) == "pfm")
+                        txt->path = replace_extension(txt->path, ".hdr");
                 } else {
-                    std::cout << type << " texture not supported\n";
+                    printf("%s texture not supported\n", type.c_str());
                 }
             }
         } else if (cmd == "MakeNamedMaterial" || cmd == "Material") {
@@ -3433,7 +4163,7 @@ std::shared_ptr<scene> load_pbrt_scene(
                 }
             }
             if (!found) {
-                auto mat = std::make_shared<material>();
+                auto mat = new material();
                 scn->materials.push_back(mat);
                 if (cmd == "Material") {
                     mat->name = "unnamed_mat" + std::to_string(mid++);
@@ -3457,7 +4187,7 @@ std::shared_ptr<scene> load_pbrt_scene(
                             get_scaled_texture(jcmd.at("Kt"));
                     if (jcmd.count("opacity")) {
                         auto op = vec3f{0, 0, 0};
-                        auto op_txt = std::shared_ptr<texture>();
+                        auto op_txt = (texture*)nullptr;
                         std::tie(op, op_txt) =
                             get_scaled_texture(jcmd.at("opacity"));
                         mat->op = (op.x + op.y + op.z) / 3;
@@ -3499,7 +4229,7 @@ std::shared_ptr<scene> load_pbrt_scene(
                             get_scaled_texture(jcmd.at("Kt"));
                     mat->rs = 0;
                 } else if (type == "mix") {
-                    std::cout << "mix material not properly supported\n";
+                    printf("mix material not properly supported\n");
                     if (jcmd.count("namedmaterial1")) {
                         auto mat1 =
                             jcmd.at("namedmaterial1").get<std::string>();
@@ -3507,11 +4237,11 @@ std::shared_ptr<scene> load_pbrt_scene(
                         *mat = *mat_map.at(mat1);
                         mat->name = saved_name;
                     } else {
-                        std::cout << "mix material missing front material\n";
+                        printf("mix material missing front material\n");
                     }
                 } else {
                     mat->kd = {1, 0, 0};
-                    std::cout << type << " material not supported\n";
+                    printf("%s material not supported\n", type.c_str());
                 }
                 if (jcmd.count("uroughness")) {
                     auto remap = js.count("remaproughness") &&
@@ -3519,7 +4249,7 @@ std::shared_ptr<scene> load_pbrt_scene(
                     if (jcmd.count("uroughness"))
                         mat->rs = jcmd.at("uroughness").get<float>();
                     // if (!remap) mat->rs = mat->rs * mat->rs;
-                    if (remap) std::cout << "remap roughness not supported\n";
+                    if (remap) printf("remap roughness not supported\n");
                 }
                 if (jcmd.count("roughness")) {
                     auto remap = js.count("remaproughness") &&
@@ -3527,7 +4257,7 @@ std::shared_ptr<scene> load_pbrt_scene(
                     if (jcmd.count("roughness"))
                         mat->rs = jcmd.at("roughness").get<float>();
                     // if (!remap) mat->rs = mat->rs * mat->rs;
-                    if (remap) std::cout << "remap roughness not supported\n";
+                    if (remap) printf("remap roughness not supported\n");
                 }
                 if (stack.back().light_mat) {
                     mat->ke = stack.back().light_mat->ke;
@@ -3537,7 +4267,7 @@ std::shared_ptr<scene> load_pbrt_scene(
         } else if (cmd == "NamedMaterial") {
             stack.back().mat = mat_map.at(jcmd.at("name").get<std::string>());
             if (stack.back().light_mat) {
-                auto mat = std::make_shared<material>(*stack.back().mat);
+                auto mat = new material(*stack.back().mat);
                 mat->name += "_" + std::to_string(lid++);
                 mat->ke = stack.back().light_mat->ke;
                 mat->ke_txt = stack.back().light_mat->ke_txt;
@@ -3545,7 +4275,7 @@ std::shared_ptr<scene> load_pbrt_scene(
                 stack.back().mat = mat;
             }
         } else if (cmd == "Shape") {
-            auto shp = std::make_shared<shape>();
+            auto shp = new shape();
             auto type = jcmd.at("type").get<std::string>();
             if (type == "plymesh") {
                 auto filename = jcmd.at("filename").get<std::string>();
@@ -3570,10 +4300,11 @@ std::shared_ptr<scene> load_pbrt_scene(
                 if (jcmd.count("radius"))
                     radius = jcmd.at("radius").get<float>();
                 auto sshp = make_sphere({64, 32}, 2 * radius, {1, 1}, true);
-                shp->pos = sshp.pos;
-                shp->norm = sshp.norm;
-                shp->texcoord = sshp.texcoord;
-                shp->triangles = sshp.triangles;
+                shp->pos = sshp->pos;
+                shp->norm = sshp->norm;
+                shp->texcoord = sshp->texcoord;
+                shp->triangles = sshp->triangles;
+                delete sshp;
             } else if (type == "disk") {
                 shp->name = "disk" + std::to_string(sid++);
                 shp->path = "models/" + shp->name + ".ply";
@@ -3581,12 +4312,13 @@ std::shared_ptr<scene> load_pbrt_scene(
                 if (jcmd.count("radius"))
                     radius = jcmd.at("radius").get<float>();
                 auto sshp = make_disk({32, 16}, 2 * radius, {1, 1}, true);
-                shp->pos = sshp.pos;
-                shp->norm = sshp.norm;
-                shp->texcoord = sshp.texcoord;
-                shp->triangles = sshp.triangles;
+                shp->pos = sshp->pos;
+                shp->norm = sshp->norm;
+                shp->texcoord = sshp->texcoord;
+                shp->triangles = sshp->triangles;
+                delete sshp;
             } else {
-                std::cout << type << " shape not supported\n";
+                printf("%s shape not supported\n", type.c_str());
             }
             auto frame = stack.back().frame;
             auto scl = vec3f{length(frame.x), length(frame.y), length(frame.z)};
@@ -3597,7 +4329,7 @@ std::shared_ptr<scene> load_pbrt_scene(
                 for (auto& t : shp->triangles) std::swap(t.y, t.z);
             }
             scn->shapes.push_back(shp);
-            auto ist = std::make_shared<instance>();
+            auto ist = new instance();
             ist->name = shp->name;
             ist->frame = frame;
             ist->shp = shp;
@@ -3613,7 +4345,7 @@ std::shared_ptr<scene> load_pbrt_scene(
             auto& object = objects.at(name);
             for (auto shp : object) {
                 instances[shp->name] += 1;
-                auto ist = std::make_shared<instance>();
+                auto ist = new instance();
                 ist->name =
                     shp->name + "_ist" + std::to_string(instances[shp->name]);
                 ist->frame = stack.back().frame * shp->frame;
@@ -3623,16 +4355,16 @@ std::shared_ptr<scene> load_pbrt_scene(
         } else if (cmd == "AreaLightSource") {
             auto type = jcmd.at("type").get<std::string>();
             if (type == "diffuse") {
-                auto lmat = std::make_shared<material>();
+                auto lmat = new material();
                 lmat->ke = get_vec3f(jcmd.at("L"));
                 stack.back().light_mat = lmat;
             } else {
-                std::cout << type << " area light not supported\n";
+                printf("%s area light not supported\n", type.c_str());
             }
         } else if (cmd == "LightSource") {
             auto type = jcmd.at("type").get<std::string>();
             if (type == "infinite") {
-                auto env = std::make_shared<environment>();
+                auto env = new environment();
                 env->name = "env" + std::to_string(lid++);
                 // env->frame = frame3f{{1,0,0},{0,0,-1},{0,-1,0},{0,0,0}} *
                 // stack.back().frame;
@@ -3641,7 +4373,7 @@ std::shared_ptr<scene> load_pbrt_scene(
                 env->ke = {1, 1, 1};
                 if (jcmd.count("scale")) env->ke *= get_vec3f(jcmd.at("scale"));
                 if (jcmd.count("mapname")) {
-                    auto txt = std::make_shared<texture>();
+                    auto txt = new texture();
                     txt->path = jcmd.at("mapname").get<std::string>();
                     txt->name = env->name;
                     scn->textures.push_back(txt);
@@ -3650,27 +4382,28 @@ std::shared_ptr<scene> load_pbrt_scene(
                 scn->environments.push_back(env);
             } else if (type == "distant") {
                 auto distant_dist = 100;
-                auto shp = std::make_shared<shape>();
+                auto shp = new shape();
                 shp->name = "distant" + std::to_string(lid++);
                 auto from = vec3f{0, 0, 0}, to = vec3f{0, 0, 0};
                 if (jcmd.count("from")) from = get_vec3f(jcmd.at("from"));
                 if (jcmd.count("to")) to = get_vec3f(jcmd.at("to"));
                 auto dir = normalize(from - to);
-                auto size = distant_dist * sin(5 * pi / 180);
+                auto size = distant_dist * sin(5 * pif / 180);
                 auto sshp = make_quad({1, 1}, {size, size}, {1, 1}, true);
-                shp->pos = sshp.pos;
-                shp->norm = sshp.norm;
-                shp->texcoord = sshp.texcoord;
-                shp->triangles = sshp.triangles;
+                shp->pos = sshp->pos;
+                shp->norm = sshp->norm;
+                shp->texcoord = sshp->texcoord;
+                shp->triangles = sshp->triangles;
+                delete sshp;
                 scn->shapes.push_back(shp);
-                auto mat = std::make_shared<material>();
+                auto mat = new material();
                 mat->name = shp->name;
                 mat->ke = {1, 1, 1};
                 if (jcmd.count("L")) mat->ke *= get_vec3f(jcmd.at("L"));
                 if (jcmd.count("scale")) mat->ke *= get_vec3f(jcmd.at("scale"));
                 mat->ke *= (distant_dist * distant_dist) / (size * size);
                 scn->materials.push_back(mat);
-                auto ist = std::make_shared<instance>();
+                auto ist = new instance();
                 ist->name = shp->name;
                 ist->shp = shp;
                 ist->mat = mat;
@@ -3678,9 +4411,9 @@ std::shared_ptr<scene> load_pbrt_scene(
                     stack.back().frame *
                     lookat_frame(dir * distant_dist, zero3f, {0, 1, 0}, true);
                 scn->instances.push_back(ist);
-                std::cout << type << " light not properly supported\n";
+                printf("%s light not properly supported\n", type.c_str());
             } else {
-                std::cout << type << " light not supported\n";
+                printf("%s light not supported\n", type.c_str());
             }
         } else if (cmd == "WorldBegin") {
             stack.push_back(stack_item());
@@ -3698,21 +4431,21 @@ std::shared_ptr<scene> load_pbrt_scene(
                    cmd == "TransformEnd") {
             stack.pop_back();
         } else {
-            std::cout << cmd << " command not supported\n";
+            printf("%s command not supported\n", cmd.c_str());
         }
     }
     if (use_hierarchy) {
         for (auto cam : scn->cameras) {
-            auto nde = std::make_shared<node>();
+            auto nde = new node();
             nde->name = cam->name;
-            nde->frame = cam->frame;
+            nde->local = cam->frame;
             nde->cam = cam;
             scn->nodes.insert(scn->nodes.begin(), nde);
         }
         for (auto env : scn->environments) {
-            auto nde = std::make_shared<node>();
+            auto nde = new node();
             nde->name = env->name;
-            nde->frame = env->frame;
+            nde->local = env->frame;
             nde->env = env;
             scn->nodes.push_back(nde);
         }
@@ -3720,30 +4453,145 @@ std::shared_ptr<scene> load_pbrt_scene(
 
     // update data
     update_transforms(scn);
-    update_bbox(scn);
 
     // skip textures
-    if (!load_textures) return scn;
+    if (load_textures) load_scene_textures(scn, dirname, skip_missing, false);
 
-    // load images
-    for (auto& txt : scn->textures) {
-        if (txt->path == "" || !txt->img.pxl.empty()) continue;
-        auto filename = normalize_path(dirname + "/" + txt->path);
+    return scn;
+}
+
+// Convert a scene to pbrt format
+void save_pbrt(const std::string& filename, const scene* scn) {
+    auto f = fopen(filename.c_str(), "wt");
+    if (!f) throw std::runtime_error("cannot save file " + filename);
+
+#if 0
+WorldBegin
+
+#uniform blue - ish illumination from all directions
+LightSource "infinite" "rgb L" [.4 .45 .5]
+
+#approximate the sun
+LightSource "distant"  "point from" [ -30 40  100 ]
+   "blackbody L" [3000 1.5]
+
+AttributeBegin
+  Material "glass"
+  Shape "sphere" "float radius" 1
+AttributeEnd
+
+AttributeBegin
+  Texture "checks" "spectrum" "checkerboard"
+          "float uscale" [8] "float vscale" [8]
+          "rgb tex1" [.1 .1 .1] "rgb tex2" [.8 .8 .8]
+  Material "matte" "texture Kd" "checks"
+  Translate 0 0 -1
+  Shape "trianglemesh"
+      "integer indices" [0 1 2 0 2 3]
+      "point P" [ -20 -20 0   20 -20 0   20 20 0   -20 20 0 ]
+      "float st" [ 0 0   1 0    1 1   0 1 ]
+AttributeEnd
+
+WorldEnd
+#endif
+
+    // convert camera and settings
+    auto cam = scn->cameras.front();
+    auto from = cam->frame.o;
+    auto to = cam->frame.o - cam->frame.z;
+    auto up = cam->frame.y;
+    fprintf(f, "LookAt %g %g %g %g %g %g %g %g %g\n", from.x, from.y, from.z,
+        to.x, to.y, to.z, up.x, up.y, up.z);
+    fprintf(f, "Camera \"perspective\" \"float fov\" %g\n",
+        eval_camera_fovy(cam) * 180 / pif);
+
+    // save renderer
+    fprintf(f, "Sampler \"random\" \"integer pixelsamples\" [64]\n");
+    // fprintf(f, "Sampler \"sobol\" \"interger pixelsamples\" [64]\n");
+    fprintf(f, "Integrator \"path\"\n");
+    fprintf(f,
+        "Film \"image\" \"string filename\" [\"%s\"] "
+        "\"integer xresolution\" [%d] \"integer yresolution\" [%d]\n",
+        replace_extension(filename, "exr").c_str(), eval_image_size(cam, 512).x,
+        eval_image_size(cam, 512).y);
+
+    // start world
+    fprintf(f, "WorldBegin\n");
+
+    // convert textures
+    for (auto txt : scn->textures) {
+        fprintf(f,
+            "Texture \"%s\" \"spectrum\" \"imagemap\" "
+            "\"string filename\" [\"%s\"]\n",
+            txt->name.c_str(), txt->path.c_str());
+    }
+
+    // convert materials
+    for (auto mat : scn->materials) {
+        fprintf(f, "MakeNamedMaterial \"%s\" ", mat->name.c_str());
+        fprintf(f, "\"string type\" \"%s\" ", "uber");
+        if (mat->kd_txt)
+            fprintf(f, "\"texture Kd\" [\"%s\"] ", mat->kd_txt->name.c_str());
+        else
+            fprintf(
+                f, "\"rgb Kd\" [%g %g %g] ", mat->kd.x, mat->kd.y, mat->kd.z);
+        if (mat->ks_txt)
+            fprintf(f, "\"texture Ks\" [\"%s\"] ", mat->ks_txt->name.c_str());
+        else
+            fprintf(
+                f, "\"rgb Ks\" [%g %g %g] ", mat->ks.x, mat->ks.y, mat->ks.z);
+        fprintf(f, "\"float roughness\" [%g] ", mat->rs);
+        fprintf(f, "\n");
+    }
+
+    // convert instances
+    for (auto ist : scn->instances) {
+        fprintf(f, "AttributeBegin\n");
+        fprintf(f, "TransformBegin\n");
+        auto m = frame_to_mat(ist->frame);
+        fprintf(f, "ConcatTransform [");
+        for (auto i = 0; i < 16; i++) fprintf(f, " %g", (&m.x.x)[i]);
+        fprintf(f, "]\n");
+        if (ist->mat->ke != zero3f)
+            fprintf(f, "AreaLightSource \"diffuse\" \"rgb L\" [ %g %g %g ]\n",
+                ist->mat->ke.x, ist->mat->ke.y, ist->mat->ke.z);
+        fprintf(f, "NamedMaterial \"%s\"\n", ist->mat->name.c_str());
+        fprintf(f, "Shape \"plymesh\" \"string filename\" [\"%s\"]\n",
+            ist->shp->path.c_str());
+        fprintf(f, "TransformEnd\n");
+        fprintf(f, "AttributeEnd\n");
+    }
+
+    // end world
+    fprintf(f, "WorldEnd\n");
+}
+
+// Save a pbrt scene
+void save_pbrt_scene(const std::string& filename, const scene* scn,
+    bool save_textures, bool skip_missing) {
+    // save json
+    save_pbrt(filename, scn);
+
+    // save meshes
+    auto dirname = get_dirname(filename);
+    for (auto& shp : scn->shapes) {
+        if (shp->path == "") continue;
+        auto filename = normalize_path(dirname + "/" + shp->path);
         try {
-            txt->img = load_image(filename);
-            if (!is_hdr_filename(filename) && txt->gamma != 1)
-                txt->img = gamma_to_linear(txt->img, txt->gamma);
-        } catch (const std::exception&) {
+            save_mesh(filename, shp->points, shp->lines, shp->triangles,
+                shp->pos, shp->norm, shp->texcoord, shp->color, shp->radius);
+        } catch (std::exception&) {
             if (skip_missing) continue;
             throw;
         }
     }
 
-    return scn;
+    // skip textures
+    if (save_textures) save_scene_textures(scn, dirname, skip_missing);
 }
 
 // Attempt to fix pbrt z-up.
-void pbrt_flipyz_scene(const std::shared_ptr<scene>& scn) {
+void pbrt_flipyz_scene(const scene* scn) {
     // flip meshes
     for (auto shp : scn->shapes) {
         for (auto& p : shp->pos) std::swap(p.y, p.z);
@@ -3753,6 +4601,340 @@ void pbrt_flipyz_scene(const std::shared_ptr<scene>& scn) {
         ist->frame =
             ist->frame * frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
     }
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF BINARY SCENE FORMAT
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// serialize_bin( ) can both save/load data to/from a binary file. The behaviour
+// is set by the boolean 'save'. serialize_bin(var, file, true) : writes var as
+// binary into file serialize_bin(var, file, false): read file as binary and set
+// var
+
+// Serialize type or struct with no allocated resource
+template <typename T>
+void serialize_bin_value(T& val, FILE* fs, bool save) {
+    if (save) {
+        if (fwrite(&val, sizeof(T), 1, fs) != 1)
+            throw std::runtime_error("error saving file");
+        ;
+    } else {
+        if (fread(&val, sizeof(T), 1, fs) != 1)
+            throw std::runtime_error("error reading file");
+        ;
+    }
+}
+
+// Serialize std::vector
+template <typename T>
+void serialize_bin_value(std::vector<T>& vec, FILE* fs, bool save) {
+    if (save) {
+        auto count = (size_t)vec.size();
+        serialize_bin_value(count, fs, true);
+        if (fwrite(vec.data(), sizeof(T), count, fs) != count)
+            throw std::runtime_error("error saving file");
+        ;
+    } else {
+        auto count = (size_t)0;
+        serialize_bin_value(count, fs, false);
+        vec = std::vector<T>(count);
+        if (fread(vec.data(), sizeof(T), count, fs) != count)
+            throw std::runtime_error("error reading file");
+        ;
+    }
+}
+
+// Serialize std::string
+void serialize_bin_value(std::string& vec, FILE* fs, bool save) {
+    if (save) {
+        auto count = (size_t)vec.size();
+        serialize_bin_value(count, fs, true);
+        if (fwrite(vec.data(), sizeof(char), count, fs) != count)
+            throw std::runtime_error("error saving file");
+        ;
+    } else {
+        auto count = (size_t)0;
+        serialize_bin_value(count, fs, false);
+        vec = std::string(count, ' ');
+        if (fread((void*)vec.data(), sizeof(char), count, fs) != count)
+            throw std::runtime_error("error reading file");
+    }
+}
+
+// Serialize image
+template <typename T>
+void serialize_bin_value(image<T>& img, FILE* fs, bool save) {
+    if (save) {
+        auto size = (vec2i)img.size();
+        serialize_bin_value(size, fs, true);
+        auto count = size.x * size.y;
+        if (fwrite(img.data(), sizeof(T), count, fs) != count)
+            throw std::runtime_error("error saving file");
+        ;
+    } else {
+        auto size = zero2i;
+        serialize_bin_value(size, fs, false);
+        auto count = size.x * size.y;
+        img = image<T>(size);
+        if (fread(img.data(), sizeof(T), count, fs) != count)
+            throw std::runtime_error("error reading file");
+        ;
+    }
+}
+
+// Serialize image
+template <typename T>
+void serialize_bin_value(volume<T>& vol, FILE* fs, bool save) {
+    if (save) {
+        auto size = (vec3i)vol.size();
+        serialize_bin_value(size, fs, true);
+        auto count = size.x * size.y* size.z;
+        if (fwrite(vol.data(), sizeof(T), count, fs) != count)
+            throw std::runtime_error("error saving file");
+        ;
+    } else {
+        auto size = zero3i;
+        serialize_bin_value(size, fs, false);
+        auto count = size.x * size.y* size.z;
+        vol = volume<T>(size);
+        if (fread(vol.data(), sizeof(T), count, fs) != count)
+            throw std::runtime_error("error reading file");
+        ;
+    }
+}
+
+// Serialize std::vector of pointers
+template <typename T>
+void serialize_bin_object(std::vector<T*>& vec, FILE* fs, bool save) {
+    if (save) {
+        auto count = (size_t)vec.size();
+        serialize_bin_value(count, fs, true);
+        for (auto i = 0; i < vec.size(); ++i)
+            serialize_bin_object(vec[i], fs, true);
+    } else {
+        auto count = (size_t)0;
+        serialize_bin_value(count, fs, false);
+        vec = std::vector<T*>(count);
+        for (auto i = 0; i < vec.size(); ++i) {
+            vec[i] = new T();
+            serialize_bin_object(vec[i], fs, false);
+        }
+    }
+}
+
+// Serialize std::vector of pointers
+template <typename T>
+void serialize_bin_object(
+    std::vector<T*>& vec, const scene* scn, FILE* fs, bool save) {
+    if (save) {
+        auto count = (size_t)vec.size();
+        serialize_bin_value(count, fs, true);
+        for (auto i = 0; i < vec.size(); ++i)
+            serialize_bin_object(vec[i], scn, fs, true);
+    } else {
+        auto count = (size_t)0;
+        serialize_bin_value(count, fs, false);
+        vec = std::vector<T*>(count);
+        for (auto i = 0; i < vec.size(); ++i) {
+            vec[i] = new T();
+            serialize_bin_object(vec[i], scn, fs, false);
+        }
+    }
+}
+
+// Serialize a pointer. It is saved as an integer index (handle) of the array of
+// pointers vec. On loading, the handle is converted back into a pointer.
+template <typename T>
+void serialize_bin_handle(
+    T*& val, const std::vector<T*>& vec, FILE* fs, bool save) {
+    if (save) {
+        auto handle = -1;
+        for (auto i = 0; i < vec.size(); ++i)
+            if (vec[i] == val) {
+                handle = i;
+                break;
+            }
+        serialize_bin_value(handle, fs, true);
+    } else {
+        auto handle = -1;
+        serialize_bin_value(handle, fs, false);
+        val = (handle == -1) ? nullptr : vec[handle];
+    }
+}
+
+// Serialize a pointer. It is saved as an integer index (handle) of the array of
+// pointers vec. On loading, the handle is converted back into a pointer.
+template <typename T>
+void serialize_bin_handle(
+    std::vector<T*>& vals, const std::vector<T*>& vec_, FILE* fs, bool save) {
+    if (save) {
+        auto count = (size_t)vals.size();
+        serialize_bin_value(count, fs, true);
+        for (auto i = 0; i < vals.size(); ++i)
+            serialize_bin_handle(vals[i], vec_, fs, true);
+    } else {
+        auto count = (size_t)0;
+        serialize_bin_value(count, fs, false);
+        vals = std::vector<T*>(count);
+        for (auto i = 0; i < vals.size(); ++i) {
+            serialize_bin_handle(vals[i], vec_, fs, false);
+        }
+    }
+}
+
+// Serialize yocto types. This is mostly boiler plate code.
+void serialize_bin_object(camera* cam, FILE* fs, bool save) {
+    serialize_bin_value(cam->name, fs, save);
+    serialize_bin_value(cam->frame, fs, save);
+    serialize_bin_value(cam->ortho, fs, save);
+    serialize_bin_value(cam->film, fs, save);
+    serialize_bin_value(cam->focal, fs, save);
+    serialize_bin_value(cam->focus, fs, save);
+    serialize_bin_value(cam->aperture, fs, save);
+}
+
+void serialize_bin_object(bvh_tree* bvh, FILE* fs, bool save) {
+    serialize_bin_value(bvh->pos, fs, save);
+    serialize_bin_value(bvh->radius, fs, save);
+    serialize_bin_value(bvh->points, fs, save);
+    serialize_bin_value(bvh->lines, fs, save);
+    serialize_bin_value(bvh->triangles, fs, save);
+    serialize_bin_value(bvh->quads, fs, save);
+    serialize_bin_value(bvh->nodes, fs, save);
+    serialize_bin_value(bvh->instances, fs, save);
+    serialize_bin_object(bvh->shape_bvhs, fs, save);
+    serialize_bin_value(bvh->nodes, fs, save);
+}
+
+void serialize_bin_object(shape* shp, const scene* scn, FILE* fs, bool save) {
+    serialize_bin_value(shp->name, fs, save);
+    serialize_bin_value(shp->path, fs, save);
+    serialize_bin_value(shp->points, fs, save);
+    serialize_bin_value(shp->lines, fs, save);
+    serialize_bin_value(shp->triangles, fs, save);
+    serialize_bin_value(shp->pos, fs, save);
+    serialize_bin_value(shp->norm, fs, save);
+    serialize_bin_value(shp->texcoord, fs, save);
+    serialize_bin_value(shp->color, fs, save);
+    serialize_bin_value(shp->radius, fs, save);
+    serialize_bin_value(shp->tangsp, fs, save);
+}
+
+void serialize_bin_object(subdiv* sbd, FILE* fs, bool save) {
+    serialize_bin_value(sbd->name, fs, save);
+    serialize_bin_value(sbd->path, fs, save);
+    serialize_bin_value(sbd->level, fs, save);
+    serialize_bin_value(sbd->catmull_clark, fs, save);
+    serialize_bin_value(sbd->compute_normals, fs, save);
+    serialize_bin_value(sbd->quads_pos, fs, save);
+    serialize_bin_value(sbd->quads_texcoord, fs, save);
+    serialize_bin_value(sbd->quads_color, fs, save);
+    serialize_bin_value(sbd->crease_pos, fs, save);
+    serialize_bin_value(sbd->crease_texcoord, fs, save);
+    serialize_bin_value(sbd->pos, fs, save);
+    serialize_bin_value(sbd->texcoord, fs, save);
+    serialize_bin_value(sbd->color, fs, save);
+}
+
+void serialize_bin_object(texture* tex, FILE* fs, bool save) {
+    serialize_bin_value(tex->name, fs, save);
+    serialize_bin_value(tex->path, fs, save);
+    serialize_bin_value(tex->img, fs, save);
+    serialize_bin_value(tex->clamp, fs, save);
+    serialize_bin_value(tex->scale, fs, save);
+    serialize_bin_value(tex->gamma, fs, save);
+    serialize_bin_value(tex->has_opacity, fs, save);
+}
+
+void serialize_bin_object(voltexture* tex, FILE* fs, bool save) {
+    serialize_bin_value(tex->name, fs, save);
+    serialize_bin_value(tex->path, fs, save);
+    serialize_bin_value(tex->vol, fs, save);
+    serialize_bin_value(tex->clamp, fs, save);
+}
+
+void serialize_bin_object(
+    environment* env, const scene* scn, FILE* fs, bool save) {
+    serialize_bin_value(env->name, fs, save);
+    serialize_bin_value(env->frame, fs, save);
+    serialize_bin_value(env->ke, fs, save);
+    serialize_bin_handle(env->ke_txt, scn->textures, fs, save);
+}
+
+void serialize_bin_object(
+    material* mat, const scene* scn, FILE* fs, bool save) {
+    serialize_bin_value(mat->name, fs, save);
+    serialize_bin_value(mat->base_metallic, fs, save);
+    serialize_bin_value(mat->gltf_textures, fs, save);
+    serialize_bin_value(mat->double_sided, fs, save);
+    serialize_bin_value(mat->ke, fs, save);
+    serialize_bin_value(mat->kd, fs, save);
+    serialize_bin_value(mat->ks, fs, save);
+    serialize_bin_value(mat->kt, fs, save);
+    serialize_bin_value(mat->rs, fs, save);
+    serialize_bin_value(mat->op, fs, save);
+    serialize_bin_value(mat->fresnel, fs, save);
+    serialize_bin_value(mat->refract, fs, save);
+    serialize_bin_handle(mat->ke_txt, scn->textures, fs, save);
+    serialize_bin_handle(mat->kd_txt, scn->textures, fs, save);
+    serialize_bin_handle(mat->ks_txt, scn->textures, fs, save);
+    serialize_bin_handle(mat->kt_txt, scn->textures, fs, save);
+    serialize_bin_handle(mat->rs_txt, scn->textures, fs, save);
+    serialize_bin_handle(mat->op_txt, scn->textures, fs, save);
+    serialize_bin_handle(mat->occ_txt, scn->textures, fs, save);
+    serialize_bin_handle(mat->bump_txt, scn->textures, fs, save);
+    serialize_bin_handle(mat->disp_txt, scn->textures, fs, save);
+    serialize_bin_handle(mat->norm_txt, scn->textures, fs, save);
+    serialize_bin_value(mat->ve, fs, save);
+    serialize_bin_value(mat->va, fs, save);
+    serialize_bin_value(mat->vd, fs, save);
+    serialize_bin_value(mat->vg, fs, save);
+    serialize_bin_handle(mat->vd_txt, scn->voltextures, fs, save);
+};
+
+void serialize_bin_object(
+    instance* ist, const scene* scn, FILE* fs, bool save) {
+    serialize_bin_value(ist->name, fs, save);
+    serialize_bin_value(ist->frame, fs, save);
+    serialize_bin_handle(ist->shp, scn->shapes, fs, save);
+    serialize_bin_handle(ist->mat, scn->materials, fs, save);
+    serialize_bin_handle(ist->sbd, scn->subdivs, fs, save);
+};
+
+void serialize_scene(scene* scn, FILE* fs, bool save) {
+    serialize_bin_value(scn->name, fs, save);
+    serialize_bin_object(scn->cameras, fs, save);
+    serialize_bin_object(scn->shapes, scn, fs, save);
+    serialize_bin_object(scn->subdivs, fs, save);
+    serialize_bin_object(scn->textures, fs, save);
+    serialize_bin_object(scn->voltextures, fs, save);
+    serialize_bin_object(scn->materials, scn, fs, save);
+    serialize_bin_object(scn->instances, scn, fs, save);
+    serialize_bin_object(scn->environments, scn, fs, save);
+}
+
+// Load/save a binary dump useful for very fast scene IO.
+scene* load_ybin_scene(
+    const std::string& filename, bool load_textures, bool skip_missing) {
+    auto fs = fopen(filename.c_str(), "rb");
+    if (!fs) throw std::runtime_error("could not open file " + filename);
+    auto scn = new scene();
+    serialize_scene(scn, fs, false);
+    fclose(fs);
+    return scn;
+}
+
+// Load/save a binary dump useful for very fast scene IO.
+void save_ybin_scene(const std::string& filename, const scene* scn,
+    bool save_textures, bool skip_missing) {
+    auto fs = fopen(filename.c_str(), "wb");
+    if (!fs) throw std::runtime_error("could not open file " + filename);
+    serialize_scene((scene*)scn, fs, true);
+    fclose(fs);
 }
 
 }  // namespace ygl
@@ -3796,6 +4978,149 @@ void save_mesh(const std::string& filename, const std::vector<int>& points,
     }
 }
 
+// prepare obj line (remove comments and normalize whitespace)
+void normalize_ply_line(char* s) {
+    while (*s) {
+        if (*s == '\t' || *s == '\r' || *s == '\n') {
+            *s++ = ' ';
+        } else {
+            s++;
+        }
+    }
+}
+
+// Load ply mesh
+ply_data* load_ply(const std::string& filename) {
+    auto fs = fopen(filename.c_str(), "rb");
+    if (!fs) throw std::runtime_error("could not open file " + filename);
+
+    // parse header
+    auto ascii = false;
+    auto ply = new ply_data();
+    char line[4096];
+    while (fgets(line, sizeof(line), fs)) {
+        normalize_ply_line(line);
+        auto ss = line;
+        auto cmd = parse_string(ss);
+        if (cmd == "") continue;
+        if (cmd == "ply") {
+        } else if (cmd == "comment") {
+        } else if (cmd == "format") {
+            auto fmt = parse_string(ss);
+            if (fmt != "ascii" && fmt != "binary_little_endian")
+                throw std::runtime_error("format not supported");
+            ascii = fmt == "ascii";
+        } else if (cmd == "element") {
+            auto elem = ply_element();
+            elem.name = parse_string(ss);
+            elem.count = parse_int(ss);
+            ply->elements.push_back(elem);
+        } else if (cmd == "property") {
+            auto prop = ply_property();
+            auto type = parse_string(ss);
+            if (type == "list") {
+                auto count_type = parse_string(ss);
+                auto elem_type = parse_string(ss);
+                if (count_type != "uchar" && count_type != "uint8")
+                    throw std::runtime_error("unsupported ply list type");
+                if (elem_type != "int")
+                    throw std::runtime_error("unsupported ply list type");
+                prop.type = ply_type::ply_int_list;
+            } else if (type == "float") {
+                prop.type = ply_type::ply_float;
+            } else if (type == "uchar" || type == "uint8") {
+                prop.type = ply_type::ply_uchar;
+            } else if (type == "int") {
+                prop.type = ply_type::ply_int;
+            } else {
+                throw std::runtime_error("unsupported ply type");
+            }
+            prop.name = parse_string(ss);
+            prop.scalars.resize(ply->elements.back().count);
+            if (prop.type == ply_type::ply_int_list)
+                prop.lists.resize(ply->elements.back().count);
+            ply->elements.back().properties.push_back(prop);
+        } else if (cmd == "end_header") {
+            break;
+        } else {
+            throw std::runtime_error("command not supported " + cmd);
+        }
+    }
+
+    // parse content
+    for (auto& elem : ply->elements) {
+        for (auto vid = 0; vid < elem.count; vid++) {
+            auto ss = (char*)nullptr;
+            if (ascii) {
+                if (!fgets(line, sizeof(line), fs))
+                    throw std::runtime_error("error reading ply");
+                ss = line;
+            }
+            for (auto pid = 0; pid < elem.properties.size(); pid++) {
+                auto& prop = elem.properties[pid];
+                if (prop.type == ply_type::ply_float) {
+                    auto v = 0.0f;
+                    if (ascii) {
+                        v = parse_float(ss);
+                    } else {
+                        if (fread((char*)&v, 4, 1, fs) != 1)
+                            throw std::runtime_error(
+                                "problem reading " + filename);
+                    }
+                    prop.scalars[vid] = v;
+                } else if (prop.type == ply_type::ply_int) {
+                    auto v = 0;
+                    if (ascii) {
+                        v = parse_int(ss);
+                    } else {
+                        if (fread((char*)&v, 4, 1, fs) != 1)
+                            throw std::runtime_error(
+                                "problem reading " + filename);
+                    }
+                    prop.scalars[vid] = v;
+                } else if (prop.type == ply_type::ply_uchar) {
+                    auto vc = (unsigned char)0;
+                    if (ascii) {
+                        auto v = parse_int(ss);
+                        vc = (unsigned char)v;
+                    } else {
+                        if (fread((char*)&vc, 1, 1, fs) != 1)
+                            throw std::runtime_error(
+                                "problem reading " + filename);
+                    }
+                    prop.scalars[vid] = vc / 255.0f;
+                } else if (prop.type == ply_type::ply_int_list) {
+                    auto vc = (unsigned char)0;
+                    if (ascii) {
+                        auto v = parse_int(ss);
+                        vc = (unsigned char)v;
+                    } else {
+                        if (fread((char*)&vc, 1, 1, fs) != 1)
+                            throw std::runtime_error(
+                                "problem reading " + filename);
+                    }
+                    prop.scalars[vid] = vc;
+                    for (auto i = 0; i < (int)prop.scalars[vid]; i++)
+                        if (ascii) {
+                            prop.lists[vid][i] = parse_int(ss);
+                        } else {
+                            if (fread((char*)&prop.lists[vid][i], 4, 1, fs) !=
+                                1)
+                                throw std::runtime_error(
+                                    "problem reading " + filename);
+                        }
+                } else {
+                    throw std::runtime_error("unsupported ply type");
+                }
+            }
+        }
+    }
+
+    fclose(fs);
+
+    return ply;
+}
+
 #if 1
 
 // Load ply mesh
@@ -3814,139 +5139,14 @@ void load_ply_mesh(const std::string& filename, std::vector<int>& points,
     lines.clear();
     triangles.clear();
 
-    // ply header parsed
-    enum property_type { uchar_type, int_type, float_type, int_list_type };
-    struct property {
-        std::string name = "";
-        property_type type = float_type;
-        std::vector<float> scalars;
-        std::vector<std::array<int, 8>> lists;
-    };
-    struct element {
-        std::string name = "";
-        int count = 0;
-        std::vector<property> props;
-    };
-
-    auto fs = std::ifstream(filename);
-    if (!fs) throw std::runtime_error("could not open file " + filename);
-
-    // parse header
-    auto ascii = false;
-    auto elems = std::vector<element>();
-    std::string line;
-    while (std::getline(fs, line)) {
-        auto ss = std::stringstream(line);
-        auto cmd = ""s;
-        ss >> cmd;
-        if (cmd == "") continue;
-        if (cmd == "ply") {
-        } else if (cmd == "comment") {
-        } else if (cmd == "format") {
-            auto fmt = ""s;
-            ss >> fmt;
-            if (fmt != "ascii" && fmt != "binary_little_endian")
-                throw std::runtime_error("format not supported");
-            ascii = fmt == "ascii";
-        } else if (cmd == "element") {
-            auto elem = element();
-            ss >> elem.name;
-            ss >> elem.count;
-            elems.push_back(elem);
-        } else if (cmd == "property") {
-            auto prop = property();
-            auto type = ""s;
-            ss >> type;
-            if (type == "list") {
-                auto count_type = ""s, elem_type = ""s;
-                ss >> count_type;
-                ss >> elem_type;
-                if (count_type != "uchar" && count_type != "uint8")
-                    throw std::runtime_error("unsupported ply list type");
-                if (elem_type != "int")
-                    throw std::runtime_error("unsupported ply list type");
-                prop.type = int_list_type;
-            } else if (type == "float") {
-                prop.type = float_type;
-            } else if (type == "uchar" || type == "uint8") {
-                prop.type = uchar_type;
-            } else if (type == "int") {
-                prop.type = int_type;
-            } else {
-                throw std::runtime_error("unsupported ply type");
-            }
-            ss >> prop.name;
-            prop.scalars.resize(elems.back().count);
-            if (prop.type == int_list_type)
-                prop.lists.resize(elems.back().count);
-            elems.back().props.push_back(prop);
-        } else if (cmd == "end_header") {
-            break;
-        } else {
-            throw std::runtime_error("command not supported " + cmd);
-        }
-    }
-
-    // parse content
-    for (auto& elem : elems) {
-        for (auto vid = 0; vid < elem.count; vid++) {
-            auto ss = std::stringstream();
-            if (ascii) {
-                if (!std::getline(fs, line))
-                    throw std::runtime_error("error reading ply");
-                ss = std::stringstream(line);
-            }
-            for (auto pid = 0; pid < elem.props.size(); pid++) {
-                auto& prop = elem.props[pid];
-                if (prop.type == float_type) {
-                    auto v = 0.0f;
-                    if (ascii)
-                        ss >> v;
-                    else
-                        fs.read((char*)&v, 4);
-                    prop.scalars[vid] = v;
-                } else if (prop.type == int_type) {
-                    auto v = 0;
-                    if (ascii)
-                        ss >> v;
-                    else
-                        fs.read((char*)&v, 4);
-                    prop.scalars[vid] = v;
-                } else if (prop.type == uchar_type) {
-                    auto vc = (unsigned char)0;
-                    if (ascii) {
-                        auto v = 0;
-                        ss >> v;
-                        vc = (unsigned char)v;
-                    } else
-                        fs.read((char*)&vc, 1);
-                    prop.scalars[vid] = vc / 255.0f;
-                } else if (prop.type == int_list_type) {
-                    auto vc = (unsigned char)0;
-                    if (ascii) {
-                        auto v = 0;
-                        ss >> v;
-                        vc = (unsigned char)v;
-                    } else
-                        fs.read((char*)&vc, 1);
-                    prop.scalars[vid] = vc;
-                    for (auto i = 0; i < (int)prop.scalars[vid]; i++)
-                        if (ascii)
-                            ss >> prop.lists[vid][i];
-                        else
-                            fs.read((char*)&prop.lists[vid][i], 4);
-                } else {
-                    throw std::runtime_error("unsupported ply type");
-                }
-            }
-        }
-    }
+    auto ply = load_ply(filename);
+    if (!ply) throw std::runtime_error("cannot load ply " + filename);
 
     // copy vertex data
-    for (auto& elem : elems) {
+    for (auto& elem : ply->elements) {
         if (elem.name != "vertex") continue;
         auto count = elem.count;
-        for (auto& prop : elem.props) {
+        for (auto& prop : elem.properties) {
             auto vals = prop.scalars.data();
             auto copy_floats = [vals, count](auto& vert, const auto& def,
                                    int stride, int offset) {
@@ -3975,10 +5175,10 @@ void load_ply_mesh(const std::string& filename, std::vector<int>& points,
     }
 
     // copy triangle data
-    for (auto& elem : elems) {
+    for (auto& elem : ply->elements) {
         if (elem.name != "face") continue;
         auto count = elem.count;
-        for (auto& prop : elem.props) {
+        for (auto& prop : elem.properties) {
             if (prop.name == "vertex_indices") {
                 for (auto fid = 0; fid < count; fid++) {
                     auto& list = prop.lists[fid];
@@ -3989,156 +5189,8 @@ void load_ply_mesh(const std::string& filename, std::vector<int>& points,
         }
     }
 
-    fs.close();
-}
-
-#else
-
-// Load ply mesh
-void load_ply_mesh(const std::string& filename, std::vector<vec2i>& lines,
-    std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    std::vector<vec4f>& color, std::vector<float>& radius) {
-    // clear data
-    pos.clear();
-    norm.clear();
-    texcoord.clear();
-    color.clear();
-    radius.clear();
-    lines.clear();
-    triangles.clear();
-
-    // open ply and read its header
-    auto error_cb = [](p_ply ply, const char* message) {};
-    auto ply = ply_open(filename.c_str(), error_cb, 0, nullptr);
-    if (!ply) throw std::runtime_error("could not open ply file " + filename);
-    if (!ply_read_header(ply))
-        throw std::runtime_error("could not read ply file " + filename);
-
-    // read polygons
-    static constexpr int poly_size = 8;
-    auto polys = std::vector<std::array<int, poly_size>>();
-    auto plines = std::vector<std::array<int, poly_size>>();
-
-    // check contained data
-    auto elem = (p_ply_element) nullptr;
-    while ((elem = ply_get_next_element(ply, elem)) != nullptr) {
-        auto elem_name_buf = (const char*)nullptr;
-        auto elem_num = (long)0;
-        ply_get_element_info(elem, &elem_name_buf, &elem_num);
-        auto elem_name = std::string(elem_name_buf);
-        if (elem_name == "vertex") {
-            auto prop = (p_ply_property) nullptr;
-            while ((prop = ply_get_next_property(elem, prop)) != nullptr) {
-                auto prop_name_buf = (const char*)nullptr;
-                ply_get_property_info(
-                    prop, &prop_name_buf, nullptr, nullptr, nullptr);
-                auto prop_name = std::string(prop_name_buf);
-                if (prop_name == "x") pos.assign(elem_num, zero3f);
-                if (prop_name == "nx") norm.assign(elem_num, zero3f);
-                if (prop_name == "u" || elem_name == "s" ||
-                    elem_name == "texture_u" || elem_name == "texture_s")
-                    texcoord.assign(elem_num, zero2f);
-                if (prop_name == "red") color.assign(elem_num, {0, 0, 0, 1});
-                if (prop_name == "radius") radius.assign(elem_num, 0);
-            }
-        } else if (elem_name == "face") {
-            auto prop = (p_ply_property) nullptr;
-            while ((prop = ply_get_next_property(elem, prop)) != nullptr) {
-                auto prop_name_buf = (const char*)nullptr;
-                ply_get_property_info(
-                    prop, &prop_name_buf, nullptr, nullptr, nullptr);
-                auto prop_name = std::string(prop_name_buf);
-                if (prop_name == "vertex_indices")
-                    polys.assign(elem_num, {{0, 0, 0, 0, 0, 0, 0, 0}});
-            }
-        } else if (elem_name == "line") {
-            auto prop = (p_ply_property) nullptr;
-            while ((prop = ply_get_next_property(elem, prop)) != nullptr) {
-                auto prop_name_buf = (const char*)nullptr;
-                ply_get_property_info(
-                    prop, &prop_name_buf, nullptr, nullptr, nullptr);
-                auto prop_name = std::string(prop_name_buf);
-                if (prop_name == "vertex_indices")
-                    plines.assign(elem_num, {{0, 0, 0, 0, 0, 0, 0, 0}});
-            }
-        }
-    }
-
-    // vertex data callback
-    auto vert_cb = [](p_ply_argument arg) {
-        auto data = (float*)nullptr;
-        auto idx = (long)0, flags = (long)0;
-        ply_get_argument_user_data(arg, (void**)&data, &flags);
-        ply_get_argument_element(arg, nullptr, &idx);
-        auto stride = (flags & 0x0F0) >> 4;
-        auto offset = flags & 0x00F;
-        data[idx * stride + offset] = (float)ply_get_argument_value(arg);
-        return 1;
-    };
-
-    // face data callback
-    auto face_cb = [](p_ply_argument arg) {
-        auto data = (int*)nullptr;
-        auto idx = (long)0, flags = (long)0, len = (long)0, vidx = (long)0;
-        ply_get_argument_user_data(arg, (void**)&data, &flags);
-        ply_get_argument_element(arg, nullptr, &idx);
-        ply_get_argument_property(arg, nullptr, &len, &vidx);
-        if (len >= poly_size) throw std::runtime_error("bad face length");
-        data[idx * poly_size + (vidx + 1)] = (int)ply_get_argument_value(arg);
-        return 1;
-    };
-
-    // set up vertex callbacks
-    ply_set_read_cb(ply, "vertex", "x", vert_cb, pos.data(), 0x30);
-    ply_set_read_cb(ply, "vertex", "y", vert_cb, pos.data(), 0x31);
-    ply_set_read_cb(ply, "vertex", "z", vert_cb, pos.data(), 0x32);
-    ply_set_read_cb(ply, "vertex", "nx", vert_cb, norm.data(), 0x30);
-    ply_set_read_cb(ply, "vertex", "ny", vert_cb, norm.data(), 0x31);
-    ply_set_read_cb(ply, "vertex", "nz", vert_cb, norm.data(), 0x32);
-    ply_set_read_cb(ply, "vertex", "u", vert_cb, texcoord.data(), 0x20);
-    ply_set_read_cb(ply, "vertex", "v", vert_cb, texcoord.data(), 0x21);
-    ply_set_read_cb(ply, "vertex", "s", vert_cb, texcoord.data(), 0x20);
-    ply_set_read_cb(ply, "vertex", "t", vert_cb, texcoord.data(), 0x21);
-    ply_set_read_cb(ply, "vertex", "texture_u", vert_cb, texcoord.data(), 0x20);
-    ply_set_read_cb(ply, "vertex", "texture_v", vert_cb, texcoord.data(), 0x21);
-    ply_set_read_cb(ply, "vertex", "texture_s", vert_cb, texcoord.data(), 0x20);
-    ply_set_read_cb(ply, "vertex", "texture_t", vert_cb, texcoord.data(), 0x21);
-    ply_set_read_cb(ply, "vertex", "red", vert_cb, color.data(), 0x40);
-    ply_set_read_cb(ply, "vertex", "green", vert_cb, color.data(), 0x41);
-    ply_set_read_cb(ply, "vertex", "blue", vert_cb, color.data(), 0x42);
-    ply_set_read_cb(ply, "vertex", "alpha", vert_cb, color.data(), 0x43);
-    ply_set_read_cb(ply, "vertex", "radius", vert_cb, radius.data(), 0x10);
-
-    // set up triangle and line callbacks
-    ply_set_read_cb(ply, "face", "vertex_indices", face_cb, polys.data(), 0x10);
-    ply_set_read_cb(
-        ply, "line", "vertex_indices", face_cb, plines.data(), 0x10);
-
-    // read file
-    if (!ply_read(ply))
-        throw std::runtime_error("error reading ply file " + filename);
-    ply_close(ply);
-
-    // convert polygons to triangles
-    auto ntriangles = 0;
-    for (auto& poly : polys) ntriangles += poly[0] - 2;
-    triangles.resize(ntriangles);
-    auto ti = 0;
-    for (auto& poly : polys) {
-        for (auto i = 3; i <= poly[0]; i++)
-            triangles[ti++] = {poly[1], poly[i - 1], poly[i]};
-    }
-
-    // convert polylines to lines
-    auto nlines = 0;
-    for (auto& poly : plines) nlines += poly[0] - 1;
-    lines.resize(nlines);
-    auto li = 0;
-    for (auto& pline : plines) {
-        for (auto i = 1; i <= pline[0]; i++)
-            lines[li++] = {pline[i - 1], pline[i]};
-    }
+    // cleanup
+    delete ply;
 }
 
 #endif
@@ -4149,76 +5201,88 @@ void save_ply_mesh(const std::string& filename, const std::vector<int>& points,
     const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
     const std::vector<vec2f>& texcoord, const std::vector<vec4f>& color,
     const std::vector<float>& radius, bool ascii) {
-    auto fs = std::ofstream(filename);
+    auto fs = fopen(filename.c_str(), "wb");
     if (!fs) throw std::runtime_error("cannot save file " + filename);
 
     // header
-    fs << "ply\n";
+    fprintf(fs, "ply\n");
     if (ascii)
-        fs << "format ascii 1.0\n";
+        fprintf(fs, "format ascii 1.0\n");
     else
-        fs << "format binary_little_endian 1.0\n";
-    fs << "element vertex " << (int)pos.size() << "\n";
+        fprintf(fs, "format binary_little_endian 1.0\n");
+    fprintf(fs, "element vertex %d\n", (int)pos.size());
     if (!pos.empty())
-        fs << "property float x\nproperty float y\nproperty float z\n";
+        fprintf(fs, "property float x\nproperty float y\nproperty float z\n");
     if (!norm.empty())
-        fs << "property float nx\nproperty float ny\nproperty float nz\n";
-    if (!texcoord.empty()) fs << "property float u\nproperty float v\n";
+        fprintf(
+            fs, "property float nx\nproperty float ny\nproperty float nz\n");
+    if (!texcoord.empty()) fprintf(fs, "property float u\nproperty float v\n");
     if (!color.empty())
-        fs << "property float red\nproperty float green\nproperty float "
-              "blue\nproperty float alpha\n";
-    if (!radius.empty()) fs << "property float radius\n";
+        fprintf(fs,
+            "property float red\nproperty float green\nproperty float "
+            "blue\nproperty float alpha\n");
+    if (!radius.empty()) fprintf(fs, "property float radius\n");
     if (!triangles.empty()) {
-        fs << "element face " << (int)triangles.size() << "\n";
-        fs << "property list uchar int vertex_indices\n";
+        fprintf(fs, "element face %d\n", (int)triangles.size());
+        fprintf(fs, "property list uchar int vertex_indices\n");
     }
     if (!lines.empty()) {
-        fs << "element line " << (int)lines.size() << "\n";
-        fs << "property list uchar int vertex_indices\n";
+        fprintf(fs, "element line %d\n", (int)lines.size());
+        fprintf(fs, "property list uchar int vertex_indices\n");
     }
-    fs << "end_header\n";
+    fprintf(fs, "end_header\n");
 
     // body
     if (ascii) {
         // write vertex data
         for (auto i = 0; i < pos.size(); i++) {
-            if (!pos.empty()) fs << pos[i] << " ";
-            if (!norm.empty()) fs << norm[i] << " ";
-            if (!texcoord.empty()) fs << texcoord[i] << " ";
-            if (!color.empty()) fs << color[i] << " ";
-            if (!radius.empty()) fs << radius[i] << " ";
-            fs << "\n";
+            if (!pos.empty())
+                fprintf(fs, "%g %g %g ", pos[i].x, pos[i].y, pos[i].z);
+            if (!norm.empty())
+                fprintf(fs, "%g %g %g ", norm[i].x, norm[i].y, norm[i].z);
+            if (!texcoord.empty())
+                fprintf(fs, "%g %g ", texcoord[i].x, texcoord[i].y);
+            if (!color.empty())
+                fprintf(fs, "%g %g %g %g ", color[i].x, color[i].y, color[i].z,
+                    color[i].w);
+            if (!radius.empty()) fprintf(fs, "%g ", radius[i]);
+            fprintf(fs, "\n");
         }
 
         // write face data
         for (auto i = 0; i < triangles.size(); i++)
-            fs << "3 " << triangles[i] << "\n";
-        for (auto i = 0; i < lines.size(); i++) fs << "2 " << lines[i] << "\n";
+            fprintf(fs, "3 %d %d %d\n", triangles[i].x, triangles[i].y,
+                triangles[i].z);
+        for (auto i = 0; i < lines.size(); i++)
+            fprintf(fs, "2 %d %d\n", lines[i].x, lines[i].y);
     } else {
         // write vertex data
         for (auto i = 0; i < pos.size(); i++) {
-            if (!pos.empty()) fs.write((char*)&pos[i], 4 * 3);
-            if (!norm.empty()) fs.write((char*)&norm[i], 4 * 3);
-            if (!texcoord.empty()) fs.write((char*)&texcoord[i], 4 * 2);
-            if (!color.empty()) fs.write((char*)&color[i], 4 * 4);
-            if (!radius.empty()) fs.write((char*)&radius[i], 4 * 1);
+            if (!pos.empty()) fwrite((char*)&pos[i], 1, sizeof(pos[i]), fs);
+            if (!norm.empty()) fwrite((char*)&norm[i], 1, sizeof(norm[i]), fs);
+            if (!texcoord.empty())
+                fwrite((char*)&texcoord[i], 1, sizeof(texcoord[i]), fs);
+            if (!color.empty())
+                fwrite((char*)&color[i], 1, sizeof(color[i]), fs);
+            if (!radius.empty())
+                fwrite((char*)&radius[i], 1, sizeof(radius[i]), fs);
         }
 
         // write face data
         for (auto i = 0; i < triangles.size(); i++) {
             auto n = (byte)3;
-            fs.write((char*)&n, 1);
-            fs.write((char*)&triangles[i], 4 * 3);
+            fwrite((char*)&n, 1, sizeof(n), fs);
+            fwrite((char*)&triangles[i], 1, sizeof(triangles[i]), fs);
         }
         for (auto i = 0; i < lines.size(); i++) {
             auto n = (byte)3;
-            fs.write((char*)&n, 1);
-            fs.write((char*)&lines[i], 4 * 2);
+            fwrite((char*)&n, 1, sizeof(n), fs);
+            fwrite((char*)&lines[i], 1, sizeof(lines[i]), fs);
         }
     }
 
     // done
-    fs.close();
+    fclose(fs);
 }
 
 // Load ply mesh
@@ -4226,102 +5290,58 @@ void load_obj_mesh(const std::string& filename, std::vector<int>& points,
     std::vector<vec2i>& lines, std::vector<vec3i>& triangles,
     std::vector<vec3f>& pos, std::vector<vec3f>& norm,
     std::vector<vec2f>& texcoord, bool flip_texcoord) {
-    // open file
-    auto fs = std::ifstream(filename);
-    if (!fs) throw std::runtime_error("cannot open filename " + filename);
+    pos.clear();
+    norm.clear();
+    texcoord.clear();
+    points.clear();
+    lines.clear();
+    triangles.clear();
 
+    // obj vertices
     auto opos = std::deque<vec3f>();
     auto onorm = std::deque<vec3f>();
     auto otexcoord = std::deque<vec2f>();
 
-    pos.clear();
-    norm.clear();
-    texcoord.clear();
-    lines.clear();
-    triangles.clear();
-
     // vertex maps
-    auto vert_map = std::unordered_map<vec3i, int>();
+    auto vert_map = std::unordered_map<obj_vertex, int, obj_vertex_hash>();
 
-    // read the file line by line
-    std::string line;
-    while (std::getline(fs, line)) {
-        // remove comment
-        if (line.find("#") != line.npos) line = line.substr(0, line.find("#"));
-
-        // prepare to parse
-        auto ss = std::stringstream(line);
-
-        // get command
-        auto cmd = ""s;
-        ss >> cmd;
-        if (cmd == "") continue;
-
-        // possible token values
-        if (cmd == "v") {
-            opos.push_back({});
-            ss >> opos.back();
-        } else if (cmd == "vn") {
-            onorm.push_back({});
-            ss >> onorm.back();
-        } else if (cmd == "vt") {
-            otexcoord.push_back({});
-            ss >> otexcoord.back();
-            if (flip_texcoord) otexcoord.back().y = 1 - otexcoord.back().y;
-        } else if (cmd == "f" || cmd == "l" || cmd == "p") {
-            auto num = 0;
-            vec3i verts[128];
-            int vids[128];
-            auto vert_size =
-                vec3i{(int)pos.size(), (int)texcoord.size(), (int)norm.size()};
-            // elem.material = (int)oobj->materials.size() - 1;
-            while (true) {
-                auto vert = obj_vertex();
-                ss >> vert;
-                if (!vert.pos) break;
-                verts[num] = {-1, -1, -1};
-                if (vert.pos)
-                    verts[num].x = (vert.pos < 0) ? (vert_size.x + vert.pos) :
-                                                    (vert.pos - 1);
-                if (vert.texcoord)
-                    verts[num].y = (vert.texcoord < 0) ?
-                                       (vert_size.y + vert.texcoord) :
-                                       (vert.texcoord - 1);
-                if (vert.norm)
-                    verts[num].z = (vert.norm < 0) ? (vert_size.z + vert.norm) :
-                                                     (vert.norm - 1);
-                num++;
-            }
-            for (auto i = 0; i < num; i++) {
-                auto it = vert_map.find(verts[i]);
-                if (it == vert_map.end()) {
-                    auto nverts = (int)pos.size();
-                    vert_map.insert(it, {verts[i], nverts});
-                    vids[i] = nverts;
-                    if (verts[i].x >= 0) pos.push_back(opos.at(verts[i].x));
-                    if (verts[i].y >= 0)
-                        texcoord.push_back(otexcoord.at(verts[i].y));
-                    if (verts[i].z >= 0) norm.push_back(onorm.at(verts[i].z));
-                } else {
-                    vids[i] = it->second;
-                }
-            }
-            if (cmd == "f") {
-                for (auto i = 2; i < num; i++)
-                    triangles.push_back({vids[0], vids[i - 1], vids[i]});
-            }
-            if (cmd == "l") {
-                for (auto i = 1; i < num; i++)
-                    lines.push_back({vids[i - 1], vids[i]});
-            }
-            if (cmd == "p") {
-                for (auto i = 0; i < num; i++) points.push_back(vids[i]);
-            }
+    // Add  vertices to the current shape
+    auto add_verts = [&](const std::vector<obj_vertex>& verts) {
+        for (auto& vert : verts) {
+            auto it = vert_map.find(vert);
+            if (it != vert_map.end()) continue;
+            auto nverts = (int)pos.size();
+            vert_map.insert(it, {vert, nverts});
+            if (vert.pos) pos.push_back(opos.at(vert.pos - 1));
+            if (vert.texcoord)
+                texcoord.push_back(otexcoord.at(vert.texcoord - 1));
+            if (vert.norm) norm.push_back(onorm.at(vert.norm - 1));
         }
-    }
+    };
 
-    // close file
-    fs.close();
+    auto cb = obj_callbacks();
+    cb.vert = [&](vec3f v) { opos.push_back(v); };
+    cb.norm = [&](vec3f v) { onorm.push_back(v); };
+    cb.texcoord = [&](vec2f v) { otexcoord.push_back(v); };
+    cb.face = [&](const std::vector<obj_vertex>& verts) {
+        add_verts(verts);
+        for (auto i = 2; i < verts.size(); i++)
+            triangles.push_back({vert_map.at(verts[0]),
+                vert_map.at(verts[i - 1]), vert_map.at(verts[i])});
+    };
+    cb.line = [&](const std::vector<obj_vertex>& verts) {
+        add_verts(verts);
+        for (auto i = 1; i < verts.size(); i++)
+            lines.push_back({vert_map.at(verts[i - 1]), vert_map.at(verts[i])});
+    };
+    cb.point = [&](const std::vector<obj_vertex>& verts) {
+        add_verts(verts);
+        for (auto i = 0; i < verts.size(); i++)
+            points.push_back(vert_map.at(verts[i]));
+    };
+
+    // load obj
+    load_obj(filename, cb, flip_texcoord);
 }
 
 // Load ply mesh
@@ -4329,24 +5349,25 @@ void save_obj_mesh(const std::string& filename, const std::vector<int>& points,
     const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
     const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
     const std::vector<vec2f>& texcoord, bool flip_texcoord) {
-    auto fs = std::ofstream(filename);
+    auto fs = fopen(filename.c_str(), "wt");
     if (!fs) throw std::runtime_error("cannot save file " + filename);
-    for (auto& p : pos) fs << "v " << p << "\n";
-    for (auto& n : norm) fs << "vn " << n << "\n";
-    if (flip_texcoord)
-        for (auto& t : texcoord) fs << "vt " << vec2f{t.x, 1 - t.y} << "\n";
-    else
-        for (auto& t : texcoord) fs << "vt " << t << "\n";
-    auto mask = vec3i{1, texcoord.empty() ? 0 : 1, norm.empty() ? 0 : 1};
+    for (auto& p : pos) fprintf(fs, "v %g %g %g\n", p.x, p.y, p.z);
+    for (auto& n : norm) fprintf(fs, "vn %g %g %g\n", n.x, n.y, n.z);
+    for (auto& t : texcoord)
+        fprintf(fs, "vt %g %g\n", t.x, (flip_texcoord) ? 1 - t.y : t.y);
+    auto mask = obj_vertex{1, texcoord.empty() ? 0 : 1, norm.empty() ? 0 : 1};
     auto vert = [mask](int i) {
-        auto vert = (vec3i{i, i, i} + vec3i{1, 1, 1}) * mask;
-        return obj_vertex{vert.x, vert.y, vert.z};
+        return obj_vertex{
+            (i + 1) * mask.pos, (i + 1) * mask.texcoord, (i + 1) * mask.norm};
     };
     for (auto& t : triangles)
-        fs << "f " << vert(t.x) << " " << vert(t.y) << " " << vert(t.z) << "\n";
-    for (auto& l : lines) fs << "l " << vert(l.x) << " " << vert(l.y) << "\n";
-    for (auto& p : points) fs << "p " << vert(p) << "\n";
-    fs.close();
+        fprintf(fs, "f %s %s %s\n", to_string(vert(t.x)).c_str(),
+            to_string(vert(t.y)).c_str(), to_string(vert(t.z)).c_str());
+    for (auto& l : lines)
+        fprintf(fs, "l %s %s\n", to_string(vert(l.x)).c_str(),
+            to_string(vert(l.y)).c_str());
+    for (auto& p : points) fprintf(fs, "p %s\n", to_string(vert(p)).c_str());
+    fclose(fs);
 }
 
 }  // namespace ygl
@@ -4364,8 +5385,8 @@ void load_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
     std::vector<vec4f>& color) {
     auto ext = get_extension(filename);
     if (ext == "obj" || ext == "OBJ") {
-        load_obj_fvmesh(
-            filename, quads_pos, pos, quads_norm, norm, quads_texcoord, texcoord);
+        load_obj_fvmesh(filename, quads_pos, pos, quads_norm, norm,
+            quads_texcoord, texcoord);
     } else {
         throw std::runtime_error("unsupported mesh extensions " + ext);
     }
@@ -4380,8 +5401,8 @@ void save_fvmesh(const std::string& filename,
     const std::vector<vec4f>& color, bool ascii) {
     auto ext = get_extension(filename);
     if (ext == "obj" || ext == "OBJ") {
-        save_obj_fvmesh(
-            filename, quads_pos, pos, quads_norm, norm, quads_texcoord, texcoord);
+        save_obj_fvmesh(filename, quads_pos, pos, quads_norm, norm,
+            quads_texcoord, texcoord);
     } else {
         throw std::runtime_error("unsupported mesh extensions " + ext);
     }
@@ -4392,14 +5413,6 @@ void load_obj_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
     std::vector<vec3f>& pos, std::vector<vec4i>& quads_norm,
     std::vector<vec3f>& norm, std::vector<vec4i>& quads_texcoord,
     std::vector<vec2f>& texcoord, bool flip_texcoord) {
-    // open file
-    auto fs = std::ifstream(filename);
-    if (!fs) throw std::runtime_error("cannot open filename " + filename);
-
-    auto opos = std::deque<vec3f>();
-    auto onorm = std::deque<vec3f>();
-    auto otexcoord = std::deque<vec2f>();
-    
     pos.clear();
     norm.clear();
     texcoord.clear();
@@ -4407,139 +5420,93 @@ void load_obj_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
     quads_norm.clear();
     quads_texcoord.clear();
 
+    // obj vertex
+    auto opos = std::deque<vec3f>();
+    auto onorm = std::deque<vec3f>();
+    auto otexcoord = std::deque<vec2f>();
+
     // vertex maps
     auto pos_map = std::unordered_map<int, int>();
     auto texcoord_map = std::unordered_map<int, int>();
     auto norm_map = std::unordered_map<int, int>();
 
-    // read the file line by line
-    std::string line;
-    while (std::getline(fs, line)) {
-        // remove comment
-        if (line.find("#") != line.npos) line = line.substr(0, line.find("#"));
-
-        // prepare to parse
-        auto ss = std::stringstream(line);
-
-        // get command
-        auto cmd = ""s;
-        ss >> cmd;
-        if (cmd == "") continue;
-
-        // possible token values
-        if (cmd == "v") {
-            opos.push_back({});
-            ss >> opos.back();
-        } else if (cmd == "vn") {
-            onorm.push_back({});
-            ss >> onorm.back();
-        } else if (cmd == "vt") {
-            otexcoord.push_back({});
-            ss >> otexcoord.back();
-            if (flip_texcoord) otexcoord.back().y = 1 - otexcoord.back().y;
-        } else if (cmd == "f" || cmd == "l" || cmd == "p") {
-            auto num = 0;
-            vec3i verts[128];
-            int pos_vids[128], texcoord_vids[128], norm_vids[128];            
-            auto vert_size =
-                vec3i{(int)pos.size(), (int)texcoord.size(), (int)norm.size()};
-            // elem.material = (int)oobj->materials.size() - 1;
-            while (true) {
-                auto vert = obj_vertex();
-                ss >> vert;
-                if (!vert.pos) break;
-                verts[num] = {-1, -1, -1};
-                if (vert.pos)
-                    verts[num].x = (vert.pos < 0) ? (vert_size.x + vert.pos) :
-                                                    (vert.pos - 1);
-                if (vert.texcoord)
-                    verts[num].y = (vert.texcoord < 0) ?
-                                       (vert_size.y + vert.texcoord) :
-                                       (vert.texcoord - 1);
-                if (vert.norm)
-                    verts[num].z = (vert.norm < 0) ? (vert_size.z + vert.norm) :
-                                                     (vert.norm - 1);
-                num++;
-            }
-            if(verts[0].x >= 0) {
-                for (auto i = 0; i < num; i++) {
-                    auto pos_it = pos_map.find(verts[i].x);
-                    if (pos_it == pos_map.end()) {
-                        auto nverts = (int)pos.size();
-                        pos_map.insert(pos_it, {verts[i].x, nverts});
-                        pos_vids[i] = nverts;
-                        if (verts[i].x >= 0) pos.push_back(opos.at(verts[i].x));
-                    } else {
-                        pos_vids[i] = pos_it->second;
-                    }
-                }
-            }
-            if(verts[0].y >= 0) {
-                for (auto i = 0; i < num; i++) {
-                    auto texcoord_it = texcoord_map.find(verts[i].y);
-                    if (texcoord_it == texcoord_map.end()) {
-                        auto nverts = (int)texcoord.size();
-                        texcoord_map.insert(texcoord_it, {verts[i].y, nverts});
-                        texcoord_vids[i] = nverts;
-                        texcoord.push_back(otexcoord.at(verts[i].y));
-                    } else {
-                        texcoord_vids[i] = texcoord_it->second;
-                    }
-                }
-            }
-            if(verts[0].z >= 0) {
-                for (auto i = 0; i < num; i++) {
-                    auto norm_it = norm_map.find(verts[i].z);
-                    if (norm_it == norm_map.end()) {
-                        auto nverts = (int)norm.size();
-                        norm_map.insert(norm_it, {verts[i].z, nverts});
-                        norm_vids[i] = nverts;
-                        norm.push_back(onorm.at(verts[i].z));
-                    } else {
-                        norm_vids[i] = norm_it->second;
-                    }
-                }
-            }
-            if (cmd == "f") {
-                if(num == 4) {
-                    if(verts[0].x >= 0) {
-                        quads_pos.push_back({pos_vids[0], pos_vids[1], pos_vids[2], pos_vids[3]});
-                    }
-                    if(verts[0].y >= 0) {
-                        quads_texcoord.push_back({texcoord_vids[0], texcoord_vids[1], texcoord_vids[2], texcoord_vids[3]});
-                    }
-                    if(verts[0].z >= 0) {
-                        quads_norm.push_back({norm_vids[0], norm_vids[1], norm_vids[2], norm_vids[3]});
-                    }
-                } else {
-                    if(verts[0].x >= 0) {
-                        for (auto i = 2; i < num; i++)
-                            quads_pos.push_back({pos_vids[0], pos_vids[i - 1], pos_vids[i], pos_vids[i]});
-                    }
-                    if(verts[0].y >= 0) {
-                        for (auto i = 2; i < num; i++)
-                            quads_texcoord.push_back({texcoord_vids[0], texcoord_vids[i - 1], texcoord_vids[i], texcoord_vids[i]});
-                    }
-                    if(verts[0].z >= 0) {
-                        for (auto i = 2; i < num; i++)
-                            quads_pos.push_back({norm_vids[0], norm_vids[i - 1], norm_vids[i], norm_vids[i]});
-                    }
-                }
-            }
-#if 0
-            if (cmd == "l") { // interpret as crease edges?
-                for (auto i = 1; i < num; i++)
-                    lines.push_back({vids[i - 1], vids[i]});
-            }
-            if (cmd == "p") { // interpret as crease points?
-                for (auto i = 0; i < num; i++) points.push_back(vids[i]);
-            }
-#endif
+    // add vertex
+    auto add_verts = [&](const std::vector<obj_vertex>& verts) {
+        for (auto& vert : verts) {
+            if (!vert.pos) continue;
+            auto pos_it = pos_map.find(vert.pos);
+            if (pos_it != pos_map.end()) continue;
+            auto nverts = (int)pos.size();
+            pos_map.insert(pos_it, {vert.pos, nverts});
+            pos.push_back(opos.at(vert.pos - 1));
         }
-    }
+        for (auto& vert : verts) {
+            if (!vert.texcoord) continue;
+            auto texcoord_it = texcoord_map.find(vert.texcoord);
+            if (texcoord_it != texcoord_map.end()) continue;
+            auto nverts = (int)texcoord.size();
+            texcoord_map.insert(texcoord_it, {vert.texcoord, nverts});
+            texcoord.push_back(otexcoord.at(vert.texcoord - 1));
+        }
+        for (auto& vert : verts) {
+            if (!vert.norm) continue;
+            auto norm_it = norm_map.find(vert.norm);
+            if (norm_it != norm_map.end()) continue;
+            auto nverts = (int)norm.size();
+            norm_map.insert(norm_it, {vert.norm, nverts});
+            norm.push_back(onorm.at(vert.norm - 1));
+        }
+    };
 
-    // close file
-    fs.close();
+    auto cb = obj_callbacks();
+    cb.vert = [&](vec3f v) { opos.push_back(v); };
+    cb.norm = [&](vec3f v) { onorm.push_back(v); };
+    cb.texcoord = [&](vec2f v) { otexcoord.push_back(v); };
+    cb.face = [&](const std::vector<obj_vertex>& verts) {
+        add_verts(verts);
+        if (verts.size() == 4) {
+            if (verts[0].pos) {
+                quads_pos.push_back(
+                    {pos_map.at(verts[0].pos), pos_map.at(verts[1].pos),
+                        pos_map.at(verts[2].pos), pos_map.at(verts[3].pos)});
+            }
+            if (verts[0].texcoord) {
+                quads_texcoord.push_back({texcoord_map.at(verts[0].texcoord),
+                    texcoord_map.at(verts[1].texcoord),
+                    texcoord_map.at(verts[2].texcoord),
+                    texcoord_map.at(verts[3].texcoord)});
+            }
+            if (verts[0].norm) {
+                quads_norm.push_back({norm_map.at(verts[0].norm),
+                    norm_map.at(verts[1].norm), norm_map.at(verts[2].norm),
+                    norm_map.at(verts[3].norm)});
+            }
+        } else {
+            if (verts[0].pos) {
+                for (auto i = 2; i < verts.size(); i++)
+                    quads_pos.push_back({pos_map.at(verts[0].pos),
+                        pos_map.at(verts[1].pos), pos_map.at(verts[i].pos),
+                        pos_map.at(verts[i].pos)});
+            }
+            if (verts[0].texcoord) {
+                for (auto i = 2; i < verts.size(); i++)
+                    quads_texcoord.push_back(
+                        {texcoord_map.at(verts[0].texcoord),
+                            texcoord_map.at(verts[1].texcoord),
+                            texcoord_map.at(verts[i].texcoord),
+                            texcoord_map.at(verts[i].texcoord)});
+            }
+            if (verts[0].norm) {
+                for (auto i = 2; i < verts.size(); i++)
+                    quads_norm.push_back({norm_map.at(verts[0].norm),
+                        norm_map.at(verts[1].norm), norm_map.at(verts[i].norm),
+                        norm_map.at(verts[i].norm)});
+            }
+        }
+    };
+
+    // load obj
+    load_obj(filename, cb, flip_texcoord);
 }
 
 // Load ply mesh
@@ -4548,18 +5515,16 @@ void save_obj_fvmesh(const std::string& filename,
     const std::vector<vec4i>& quads_norm, const std::vector<vec3f>& norm,
     const std::vector<vec4i>& quads_texcoord,
     const std::vector<vec2f>& texcoord, bool flip_texcoord) {
-    auto fs = std::ofstream(filename);
+    auto fs = fopen(filename.c_str(), "wt");
     if (!fs) throw std::runtime_error("cannot save file " + filename);
-    for (auto& p : pos) fs << "v " << p << "\n";
-    for (auto& n : norm) fs << "vn " << n << "\n";
-    if (flip_texcoord)
-        for (auto& t : texcoord) fs << "vt " << vec2f{t.x, 1 - t.y} << "\n";
-    else
-        for (auto& t : texcoord) fs << "vt " << t << "\n";
-    auto mask = vec3i{1, texcoord.empty() ? 0 : 1, norm.empty() ? 0 : 1};
-    auto vert = [mask](int pi, int ti, int ni) {
-        auto vert = (vec3i{pi, ti, ni} + vec3i{1, 1, 1}) * mask;
-        return obj_vertex{vert.x, vert.y, vert.z};
+    for (auto& p : pos) fprintf(fs, "v %g %g %g\n", p.x, p.y, p.z);
+    for (auto& n : norm) fprintf(fs, "vn %g %g %g\n", n.x, n.y, n.z);
+    for (auto& t : texcoord)
+        fprintf(fs, "vt %g %g\n", t.x, (flip_texcoord) ? 1 - t.y : t.y);
+    auto mask = obj_vertex{1, texcoord.empty() ? 0 : 1, norm.empty() ? 0 : 1};
+    auto vert = [mask](int pif, int ti, int ni) {
+        return obj_vertex{(pif + 1) * mask.pos, (ti + 1) * mask.texcoord,
+            (ni + 1) * mask.norm};
     };
     for (auto i = 0; i < quads_pos.size(); i++) {
         auto qp = quads_pos.at(i);
@@ -4568,15 +5533,18 @@ void save_obj_fvmesh(const std::string& filename,
         auto qn =
             !quads_norm.empty() ? quads_norm.at(i) : vec4i{-1, -1, -1, -1};
         if (qp.z != qp.w)
-            fs << "f " << vert(qp.x, qt.x, qn.x) << " "
-               << vert(qp.y, qt.y, qn.y) << " " << vert(qp.z, qt.z, qn.z) << " "
-               << vert(qp.w, qt.w, qn.w) << "\n";
+            fprintf(fs, "f %s %s %s %s\n",
+                to_string(vert(qp.x, qt.x, qn.x)).c_str(),
+                to_string(vert(qp.y, qt.y, qn.y)).c_str(),
+                to_string(vert(qp.z, qt.z, qn.z)).c_str(),
+                to_string(vert(qp.w, qt.w, qn.w)).c_str());
         else
-            fs << "f " << vert(qp.x, qt.x, qn.x) << " "
-               << vert(qp.y, qt.y, qn.y) << " " << vert(qp.z, qt.z, qn.z)
-               << "\n";
+            fprintf(fs, "f %s %s %s\n",
+                to_string(vert(qp.x, qt.x, qn.x)).c_str(),
+                to_string(vert(qp.y, qt.y, qn.y)).c_str(),
+                to_string(vert(qp.z, qt.z, qn.z)).c_str());
     }
-    fs.close();
+    fclose(fs);
 }
 
 }  // namespace ygl

@@ -3,10 +3,6 @@
     "cameras": [
         {
             "name": "cam",
-            "imsize": [
-                0.036,
-                0.015
-            ],
             "focal": 0.06,
             "aperture": 0.0,
             "!!proc": {
@@ -20,67 +16,135 @@
                     1,
                     0
                 ]
+            },
+            "film": [
+                0.036,
+                0.015
+            ]
+        }
+    ],
+    "textures": [
+        {
+            "name": "floor",
+            "path": "textures/floor.png",
+            "gamma": 2.2,
+            "!!proc": {
+                "type": "grid"
+            }
+        },
+        {
+            "name": "obj1norm",
+            "path": "textures/obj1norm.png",
+            "!!proc": {
+                "type": "bump",
+                "bump_to_normal": true,
+                "bump_scale": 4
+            }
+        },
+        {
+            "name": "sky",
+            "path": "textures/sky.hdr",
+            "!!proc": {
+                "type": "sky"
+            }
+        }
+    ],
+    "materials": [
+        {
+            "name": "floor",
+            "kd": [
+                0.7,
+                0.7,
+                0.7
+            ],
+            "kd_txt": "floor"
+        },
+        {
+            "name": "obj1",
+            "kd": [
+                0.5,
+                0.5,
+                0.7
+            ],
+            "ks": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "rs": 0.01,
+            "norm_txt": "obj1norm"
+        },
+        {
+            "name": "obj2",
+            "kd": [
+                0.5,
+                0.5,
+                0.7
+            ],
+            "ks": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "rs": 0.01,
+            "norm_txt": "obj1norm"
+        },
+        {
+            "name": "obj3",
+            "kd": [
+                0.5,
+                0.5,
+                0.7
+            ],
+            "ks": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "rs": 0.01,
+            "norm_txt": "obj1norm"
+        }
+    ],
+    "shapes": [
+        {
+            "name": "floor",
+            "path": "meshes/floor.ply",
+            "!!proc": {
+                "type": "floor"
+            }
+        },
+        {
+            "name": "obj1",
+            "path": "meshes/obj1.ply",
+            "!!proc": {
+                "type": "matball"
+            }
+        },
+        {
+            "name": "obj2",
+            "path": "meshes/obj2.ply",
+            "!!proc": {
+                "type": "matball"
+            }
+        },
+        {
+            "name": "obj3",
+            "path": "meshes/obj3.ply",
+            "!!proc": {
+                "type": "matball"
             }
         }
     ],
     "instances": [
         {
             "name": "floor",
-            "shp": {
-                "name": "floor",
-                "!!proc": {
-                    "type": "floor"
-                }
-            },
-            "mat": {
-                "name": "floor",
-                "kd": [
-                    0.7,
-                    0.7,
-                    0.7
-                ],
-                "kd_txt": {
-                    "name": "floor",
-                    "path": "textures/floor.png",
-                    "gamma": 2.2,
-                    "!!proc": {
-                        "type": "grid"
-                    }
-                }
-            }
+            "shp": "floor",
+            "mat": "floor"
         },
         {
             "name": "obj1",
-            "shp": {
-                "name": "obj1",
-                "path": "meshes/obj1.ply",
-                "!!proc": {
-                    "type": "matball"
-                }
-            },
-            "mat": {
-                "name": "obj1",
-                "kd": [
-                    0.5,
-                    0.5,
-                    0.7
-                ],
-                "ks": [
-                    0.04,
-                    0.04,
-                    0.04
-                ],
-                "rs": 0.01,
-                "norm_txt": {
-                    "name": "obj1norm",
-                    "path": "textures/obj1norm.png",
-                    "!!proc": {
-                        "type": "bump",
-                        "bump_to_normal": true,
-                        "bump_scale": 4
-                    }
-                }
-            },
+            "shp": "obj1",
+            "mat": "obj1",
             "!!proc": {
                 "translation": [
                     -2.5,
@@ -91,36 +155,8 @@
         },
         {
             "name": "obj2",
-            "shp": {
-                "name": "obj2",
-                "path": "meshes/obj2.ply",
-                "!!proc": {
-                    "type": "matball"
-                }
-            },
-            "mat": {
-                "name": "obj2",
-                "kd": [
-                    0.5,
-                    0.5,
-                    0.7
-                ],
-                "ks": [
-                    0.04,
-                    0.04,
-                    0.04
-                ],
-                "rs": 0.01,
-                "norm_txt": {
-                    "name": "obj1norm",
-                    "path": "textures/obj1norm.png",
-                    "!!proc": {
-                        "type": "bump",
-                        "bump_to_normal": true,
-                        "bump_scale": 4
-                    }
-                }
-            },
+            "shp": "obj2",
+            "mat": "obj2",
             "!!proc": {
                 "translation": [
                     0,
@@ -131,36 +167,8 @@
         },
         {
             "name": "obj3",
-            "shp": {
-                "name": "obj3",
-                "path": "meshes/obj3.ply",
-                "!!proc": {
-                    "type": "matball"
-                }
-            },
-            "mat": {
-                "name": "obj3",
-                "kd": [
-                    0.5,
-                    0.5,
-                    0.7
-                ],
-                "ks": [
-                    0.04,
-                    0.04,
-                    0.04
-                ],
-                "rs": 0.01,
-                "norm_txt": {
-                    "name": "obj1norm",
-                    "path": "textures/obj1norm.png",
-                    "!!proc": {
-                        "type": "bump",
-                        "bump_to_normal": true,
-                        "bump_scale": 4
-                    }
-                }
-            },
+            "shp": "obj3",
+            "mat": "obj3",
             "!!proc": {
                 "translation": [
                     2.5,
@@ -178,13 +186,7 @@
                 1,
                 1
             ],
-            "ke_txt": {
-                "name": "sky",
-                "path": "textures/sky.hdr",
-                "!!proc": {
-                    "type": "sky"
-                }
-            }
+            "ke_txt": "sky"
         }
     ]
 }

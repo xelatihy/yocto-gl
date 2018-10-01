@@ -28,133 +28,140 @@
 
 #include "../yocto/ygl.h"
 #include "../yocto/yglio.h"
-#include "CLI11.hpp"
-#include "yglui.h"
-using namespace std::literals;
+#include "yglutils.h"
+#include "ysceneui.h"
+
+struct draw_glshape_vbos {
+    unsigned int gl_pos = 0, gl_norm = 0, gl_texcoord = 0, gl_color = 0,
+                 gl_tangsp = 0, gl_points = 0, gl_lines = 0,
+                 gl_triangles = 0;  // unmanaged data for OpenGL viewer
+};
+
+struct draw_glstate {
+    unsigned int gl_prog = 0;
+    std::unordered_map<const shape*, draw_glshape_vbos> shp_vbos;
+    std::unordered_map<const texture*, unsigned int> txt_id;
+};
 
 // Application state
 struct app_state {
     // scene
-    std::shared_ptr<ygl::scene> scn = nullptr;
+    scene* scn = nullptr;
 
     // parameters
-    std::string filename = "scene.json";            // scene name
-    std::string imfilename = "out.png";             // output image
-    std::string outfilename = "scene.json";         // save scene name
-    int camid = 0;                                  // camera index
-    int resolution = 512;                           // image resolution
-    bool wireframe = false;                         // wireframe drawing
-    bool edges = false;                             // draw edges
-    float edge_offset = 0.01f;                      // offset for edges
-    bool eyelight = false;                          // camera light mode
-    float exposure = 0;                             // exposure
-    float gamma = 2.2f;                             // gamma
-    ygl::vec4f background = {0.8f, 0.8f, 0.8f, 0};  // background
-    ygl::vec3f ambient = {0, 0, 0};                 // ambient lighting
+    std::string filename = "scene.json";     // scene name
+    std::string imfilename = "out.png";      // output image
+    std::string outfilename = "scene.json";  // save scene name
+    int camid = 0;                           // camera id
+    int resolution = 512;                    // image resolution
+    bool wireframe = false;                  // wireframe drawing
+    bool edges = false;                      // draw edges
+    float edge_offset = 0.01f;               // offset for edges
+    bool eyelight = false;                   // camera light mode
+    float exposure = 0;                      // exposure
+    float gamma = 2.2f;                      // gamma
+    vec3f ambient = {0, 0, 0};               // ambient lighting
+    float near_plane = 0.01f;                // near plane
+    float far_plane = 10000.0f;              // far plane
 
-    uint gl_prog = 0;
+    draw_glstate* state = nullptr;
 
     bool widgets_open = false;
     bool navigation_fps = false;
-    ygl::scene_selection selection = {};
-    std::vector<ygl::scene_selection> update_list;
+    void* selection = nullptr;
+    std::vector<std::pair<std::string, void*>> update_list;
     float time = 0;
     std::string anim_group = "";
-    ygl::vec2f time_range = ygl::zero2f;
+    vec2f time_range = zero2f;
     bool animate = false;
-    std::unordered_map<std::string, std::string> inspector_highlights;
-    std::string highlight_filename = ""s;
+
+    ~app_state() {
+        if (scn) delete scn;
+        if (state) delete state;
+    }
 };
 
-void draw_glscene(const std::shared_ptr<ygl::scene>& scn, int camid, uint prog,
-    const ygl::vec2i& viewport_size, const std::shared_ptr<void>& highlighted,
-    bool eyelight, bool wireframe, bool edges, float exposure, float gamma);
+void draw_glscene(const draw_glstate* state, const scene* scn,
+    const camera* cam, const vec2i& viewport_size, const void* highlighted,
+    bool eyelight, bool wireframe, bool edges, float exposure, float gamma,
+    float near_plane, float far_plane);
 
 // draw with shading
-void draw(GLFWwindow* win) {
-    auto app = (app_state*)glfwGetWindowUserPointer(win);
-    auto window_size = ygl::zero2i;
-    auto framebuffer_size = ygl::zero2i;
-    glfwGetWindowSize(win, &window_size.x, &window_size.y);
-    glfwGetFramebufferSize(win, &framebuffer_size.x, &framebuffer_size.y);
+void draw(glwindow* win) {
+    auto app = (app_state*)get_user_pointer(win);
+    auto framebuffer_size = get_glframebuffer_size(win);
     app->resolution = framebuffer_size.y;
 
     static auto last_time = 0.0f;
     for (auto& sel : app->update_list) {
-        if (sel.as<ygl::texture>()) {
+        if (sel.first == "texture") {
             // TODO: update texture
-            std::cout << "texture update not supported\n";
+            printf("texture update not supported\n");
         }
-        if (sel.as<ygl::subdiv>()) {
+        if (sel.first == "subdiv") {
             // TODO: update subdiv
-            std::cout << "texture update not supported\n";
+            printf("subdiv update not supported\n");
         }
-        if (sel.as<ygl::shape>()) {
+        if (sel.first == "shape") {
             // TODO: update shape
-            std::cout << "texture update not supported\n";
+            printf("shape update not supported\n");
         }
-        if (sel.as<ygl::node>() || sel.as<ygl::animation>() ||
+        if (sel.first == "node" || sel.first == "animation" ||
             app->time != last_time) {
-            ygl::update_transforms(app->scn, app->time, app->anim_group);
+            update_transforms(app->scn, app->time, app->anim_group);
             last_time = app->time;
-        }
-        if (sel.as<ygl::shape>() || sel.as<ygl::material>() ||
-            sel.as<ygl::node>()) {
-            ygl::update_lights(app->scn);
-            if (app->scn->lights.empty()) app->eyelight = true;
         }
     }
     app->update_list.clear();
 
-    glClearColor(app->background.x, app->background.y, app->background.z,
-        app->background.w);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glEnable(GL_DEPTH_TEST);
-    draw_glscene(app->scn, app->camid, app->gl_prog, framebuffer_size,
-        app->selection.ptr, app->eyelight, app->wireframe, app->edges,
-        app->exposure, app->gamma);
+    auto cam = app->scn->cameras.at(app->camid);
+    clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
+    draw_glscene(app->state, app->scn, cam, framebuffer_size, app->selection,
+        app->eyelight, app->wireframe, app->edges, app->exposure, app->gamma,
+        app->near_plane, app->far_plane);
 
-    if (ygl::begin_widgets_frame(win, "yview", &app->widgets_open)) {
-        ImGui::LabelText("scene", "%s", app->filename.c_str());
-        if (ImGui::Button("print stats")) ygl::print_stats(app->scn);
-        if (app->time_range != ygl::zero2f) {
-            ImGui::SliderFloat(
-                "time", &app->time, app->time_range.x, app->time_range.y);
-            ImGui::InputText("anim group", &app->anim_group);
-            ImGui::Checkbox("animate", &app->animate);
+    begin_glwidgets_frame(win);
+    if (begin_glwidgets_window(win, "yview")) {
+        draw_imgui_label(win, "scene", "%s", app->filename.c_str());
+        if (app->time_range != zero2f) {
+            draw_slider_glwidget(
+                win, "time", app->time, app->time_range.x, app->time_range.y);
+            draw_inputtext_glwidget(win, "anim group", app->anim_group);
+            draw_checkbox_glwidget(win, "animate", app->animate);
         }
-        if (ImGui::TreeNode("render settings")) {
-            ImGui::Combo("camera", &app->camid, app->scn->cameras.size(),
-                [&app](int i) { return app->scn->cameras[i]->name.c_str(); });
-            ImGui::SliderInt("resolution", &app->resolution, 256, 4096);
-            ImGui::Checkbox("eyelight", &app->eyelight);
-            ImGui::SameLine();
-            ImGui::Checkbox("wireframe", &app->wireframe);
-            ImGui::SameLine();
-            ImGui::Checkbox("edges", &app->edges);
-            ImGui::TreePop();
+        if (begin_treenode_glwidget(win, "render settings")) {
+            draw_combobox_glwidget(
+                win, "camera", cam, app->scn->cameras, false);
+            draw_slider_glwidget(win, "resolution", app->resolution, 256, 4096);
+            draw_checkbox_glwidget(win, "eyelight", app->eyelight);
+            continue_glwidgets_line(win);
+            draw_checkbox_glwidget(win, "wireframe", app->wireframe);
+            continue_glwidgets_line(win);
+            draw_checkbox_glwidget(win, "edges", app->edges);
+            end_treenode_glwidget(win);
         }
-        if (ImGui::TreeNode("view settings")) {
-            ImGui::SliderFloat("exposure", &app->exposure, -10, 10);
-            ImGui::SliderFloat("gamma", &app->gamma, 0.1f, 4);
-            ImGui::ColorEdit4("background", &app->background.x);
-            ImGui::Checkbox("fps", &app->navigation_fps);
-            ImGui::TreePop();
+        if (begin_treenode_glwidget(win, "view settings")) {
+            draw_slider_glwidget(win, "exposure", app->exposure, -10, 10);
+            draw_slider_glwidget(win, "gamma", app->gamma, 0.1f, 4);
+            draw_slider_glwidget(win, "near", app->near_plane, 0.01f, 1.0f);
+            draw_slider_glwidget(win, "far", app->far_plane, 1000.0f, 10000.0f);
+            draw_checkbox_glwidget(win, "fps", app->navigation_fps);
+            end_treenode_glwidget(win);
         }
-        if (ImGui::TreeNode("scene tree")) {
-            ygl::draw_glwidgets_scene_tree("", app->scn, app->selection,
-                app->update_list, 200, app->inspector_highlights);
-            ImGui::TreePop();
+        if (begin_treenode_glwidget(win, "scene tree")) {
+            draw_glwidgets_scene_tree(
+                win, "", app->scn, app->selection, app->update_list, 200);
+            end_treenode_glwidget(win);
         }
-        if (ImGui::TreeNode("scene object")) {
-            ygl::draw_glwidgets_scene_inspector("", app->scn, app->selection,
-                app->update_list, 200, app->inspector_highlights);
-            ImGui::TreePop();
+        if (begin_treenode_glwidget(win, "scene object")) {
+            draw_glwidgets_scene_inspector(
+                win, "", app->scn, app->selection, app->update_list, 200);
+            end_treenode_glwidget(win);
         }
     }
-    ygl::end_widgets_frame();
+    end_glwidgets_frame(win);
 
-    glfwSwapBuffers(win);
+    swap_glbuffers(win);
 }
 
 #ifndef _WIN32
@@ -215,7 +222,7 @@ static const char* fragment =
     R"(
         #version 330
 
-        float pi = 3.14159265;
+        float pif = 3.14159265;
 
         uniform bool eyelight;         // eyelight shading
         uniform vec3 lamb;             // ambient light
@@ -248,30 +255,30 @@ static const char* fragment =
             float ns = 2/(rs*rs)-2;
             float ndi = dot(wi,n), ndo = dot(wo,n), ndh = dot(wh,n);
             if(etype == 1) {
-                return ((1+dot(wo,wi))/2) * kd/pi;
+                return ((1+dot(wo,wi))/2) * kd/pif;
             } else if(etype == 2) {
                 float si = sqrt(1-ndi*ndi);
                 float so = sqrt(1-ndo*ndo);
                 float sh = sqrt(1-ndh*ndh);
                 if(si <= 0) return vec3(0);
-                vec3 diff = si * kd / pi;
+                vec3 diff = si * kd / pif;
                 if(sh<=0) return diff;
-                float d = ((2+ns)/(2*pi)) * pow(si,ns);
+                float d = ((2+ns)/(2*pif)) * pow(si,ns);
                 vec3 spec = si * ks * d / (4*si*so);
                 return diff+spec;
             } else if(etype == 3 || etype == 4) {
                 if(ndi<=0 || ndo <=0) return vec3(0);
-                vec3 diff = ndi * kd / pi;
+                vec3 diff = ndi * kd / pif;
                 if(ndh<=0) return diff;
                 if(etype == 4) {
-                    float d = ((2+ns)/(2*pi)) * pow(ndh,ns);
+                    float d = ((2+ns)/(2*pif)) * pow(ndh,ns);
                     vec3 spec = ndi * ks * d / (4*ndi*ndo);
                     return diff+spec;
                 } else {
                     float cos2 = ndh * ndh;
                     float tan2 = (1 - cos2) / cos2;
                     float alpha2 = rs * rs;
-                    float d = alpha2 / (pi * cos2 * cos2 * (alpha2 + tan2) * (alpha2 + tan2));
+                    float d = alpha2 / (pif * cos2 * cos2 * (alpha2 + tan2) * (alpha2 + tan2));
                     float lambda_o = (-1 + sqrt(1 + (1 - ndo * ndo) / (ndo * ndo))) / 2;
                     float lambda_i = (-1 + sqrt(1 + (1 - ndi * ndi) / (ndi * ndi))) / 2;
                     float g = 1 / (1 + lambda_o + lambda_i);
@@ -437,7 +444,7 @@ static const char* fragment =
                 // eyelight shading
                 if(eyelight) {
                     vec3 wi = wo;
-                    c += pi * brdfcos((has_brdf) ? elem_type : 0, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, n,wi,wo);
+                    c += pif * brdfcos((has_brdf) ? elem_type : 0, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, n,wi,wo);
                 } else {
                     // accumulate ambient
                     c += lamb * brdf_kd;
@@ -468,117 +475,110 @@ static const char* fragment =
 #endif
 
 // Draw a shape
-void draw_glshape(const std::shared_ptr<ygl::shape>& shp,
-    const std::shared_ptr<ygl::material>& mat, const ygl::mat4f& xform,
-    bool highlighted, uint prog, bool eyelight, bool edges) {
-    ygl::set_gluniform(prog, "shape_xform", xform);
-    ygl::set_gluniform(prog, "shape_normal_offset", 0.0f);
-
-    auto uniform_texture = [](auto& prog, const char* name, const char* name_on,
-                               const std::shared_ptr<ygl::texture>& txt,
-                               int unit) {
-        if (txt) {
-            ygl::set_gluniform_texture(prog, name, txt->gl_txt, unit);
-            ygl::set_gluniform(prog, name_on, 1);
-        } else {
-            ygl::set_gluniform(prog, name_on, 0);
-        }
-    };
+void draw_glshape(const draw_glstate* state, const shape* shp,
+    const material* mat, const mat4f& xform, bool highlighted, bool eyelight,
+    bool edges) {
+    set_gluniform(state->gl_prog, "shape_xform", xform);
+    set_gluniform(state->gl_prog, "shape_normal_offset", 0.0f);
 
     auto mtype = 1;
     if (mat->base_metallic) mtype = 2;
     if (mat->gltf_textures) mtype = (mat->base_metallic) ? 2 : 3;
-    ygl::set_gluniform(prog, "mat_type", mtype);
-    ygl::set_gluniform(prog, "mat_ke", mat->ke);
-    ygl::set_gluniform(prog, "mat_kd", mat->kd);
-    ygl::set_gluniform(prog, "mat_ks", mat->ks);
-    ygl::set_gluniform(prog, "mat_rs", mat->rs);
-    ygl::set_gluniform(prog, "mat_op", mat->op);
-    ygl::set_gluniform(prog, "mat_double_sided", (int)mat->double_sided);
-    uniform_texture(prog, "mat_ke_txt", "mat_ke_txt_on", mat->ke_txt, 0);
-    uniform_texture(prog, "mat_kd_txt", "mat_kd_txt_on", mat->kd_txt, 1);
-    uniform_texture(prog, "mat_ks_txt", "mat_ks_txt_on", mat->ks_txt, 2);
-    uniform_texture(prog, "mat_rs_txt", "mat_rs_txt_on", mat->rs_txt, 3);
-    uniform_texture(prog, "mat_op_txt", "mat_op_txt_on", mat->op_txt, 4);
-    uniform_texture(prog, "mat_norm_txt", "mat_norm_txt_on", mat->norm_txt, 5);
+    set_gluniform(state->gl_prog, "mat_type", mtype);
+    set_gluniform(state->gl_prog, "mat_ke", mat->ke);
+    set_gluniform(state->gl_prog, "mat_kd", mat->kd);
+    set_gluniform(state->gl_prog, "mat_ks", mat->ks);
+    set_gluniform(state->gl_prog, "mat_rs", mat->rs);
+    set_gluniform(state->gl_prog, "mat_op", mat->op);
+    set_gluniform(state->gl_prog, "mat_double_sided", (int)mat->double_sided);
+    set_gluniform_texture(state->gl_prog, "mat_ke_txt", "mat_ke_txt_on",
+        mat->ke_txt ? state->txt_id.at(mat->ke_txt) : 0, 0);
+    set_gluniform_texture(state->gl_prog, "mat_kd_txt", "mat_kd_txt_on",
+        mat->kd_txt ? state->txt_id.at(mat->kd_txt) : 0, 1);
+    set_gluniform_texture(state->gl_prog, "mat_ks_txt", "mat_ks_txt_on",
+        mat->ks_txt ? state->txt_id.at(mat->ks_txt) : 0, 2);
+    set_gluniform_texture(state->gl_prog, "mat_rs_txt", "mat_rs_txt_on",
+        mat->rs_txt ? state->txt_id.at(mat->rs_txt) : 0, 3);
+    set_gluniform_texture(state->gl_prog, "mat_op_txt", "mat_op_txt_on",
+        mat->op_txt ? state->txt_id.at(mat->op_txt) : 0, 4);
+    set_gluniform_texture(state->gl_prog, "mat_norm_txt", "mat_norm_txt_on",
+        mat->norm_txt ? state->txt_id.at(mat->norm_txt) : 0, 5);
 
-    ygl::set_gluniform(prog, "elem_faceted", (int)shp->norm.empty());
-    ygl::set_glvertattrib(prog, "vert_pos", shp->gl_pos, ygl::zero3f);
-    ygl::set_glvertattrib(prog, "vert_norm", shp->gl_norm, ygl::zero3f);
-    ygl::set_glvertattrib(prog, "vert_texcoord", shp->gl_texcoord, ygl::zero2f);
-    ygl::set_glvertattrib(
-        prog, "vert_color", shp->gl_color, ygl::vec4f{1, 1, 1, 1});
-    ygl::set_glvertattrib(
-        prog, "vert_tangsp", shp->gl_norm, ygl::vec4f{0, 0, 1, 1});
+    auto& vbos = state->shp_vbos.at(shp);
+    set_gluniform(state->gl_prog, "elem_faceted", (int)shp->norm.empty());
+    set_glvertexattrib(state->gl_prog, "vert_pos", vbos.gl_pos, zero3f);
+    set_glvertexattrib(state->gl_prog, "vert_norm", vbos.gl_norm, zero3f);
+    set_glvertexattrib(
+        state->gl_prog, "vert_texcoord", vbos.gl_texcoord, zero2f);
+    set_glvertexattrib(
+        state->gl_prog, "vert_color", vbos.gl_color, vec4f{1, 1, 1, 1});
+    set_glvertexattrib(
+        state->gl_prog, "vert_tangsp", vbos.gl_tangsp, vec4f{0, 0, 1, 1});
 
     if (!shp->points.empty()) {
-        ygl::set_gluniform(prog, "elem_type", 1);
-        ygl::draw_glpoints(shp->gl_points, shp->points.size());
+        set_gluniform(state->gl_prog, "elem_type", 1);
+        draw_glpoints(vbos.gl_points, shp->points.size());
     }
     if (!shp->lines.empty()) {
-        ygl::set_gluniform(prog, "elem_type", 2);
-        ygl::draw_gllines(shp->gl_lines, shp->lines.size());
+        set_gluniform(state->gl_prog, "elem_type", 2);
+        draw_glpoints(vbos.gl_lines, shp->lines.size());
     }
     if (!shp->triangles.empty()) {
-        ygl::set_gluniform(prog, "elem_type", 3);
-        ygl::draw_gltriangles(shp->gl_triangles, shp->triangles.size());
+        set_gluniform(state->gl_prog, "elem_type", 3);
+        draw_gltriangles(vbos.gl_triangles, shp->triangles.size());
     }
 
 #if 0
-    if ((shp->gl_edges && edges && !wireframe) || highlighted) {
-        ygl::enable_glculling(false);
+    if ((vbos.gl_edges && edges && !wireframe) || highlighted) {
+        enable_glculling(false);
         check_glerror();
-        glUniform1i(glGetUniformLocation(prog, "mtype"), 0);
-        glUniform3f(glGetUniformLocation(prog, "ke"), 0, 0, 0);
-        glUniform1f(glGetUniformLocation(prog, "op"), mat->op);
-        glUniform1f(glGetUniformLocation(prog, "shp_normal_offset"), 0.01f);
+        set_gluniform(state->gl_prog, "mtype"), 0);
+        glUniform3f(glGetUniformLocation(state->gl_prog, "ke"), 0, 0, 0);
+        set_gluniform(state->gl_prog, "op"), mat->op);
+        set_gluniform(state->gl_prog, "shp_normal_offset"), 0.01f);
         check_glerror();
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, shp->gl_edges);
-        glDrawElements(GL_LINES, shp->triangles.size() * 3, GL_UNSIGNED_INT, nullptr);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos.gl_edges);
+        glDrawElements(GL_LINES, vbos.triangles.size() * 3, GL_UNSIGNED_INT, nullptr);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
         check_glerror();
     }
 #endif
-    if (edges) std::cout << "edges are momentarily disabled\n";
+    if (edges) printf("edges are momentarily disabled\n");
 
-    ygl::check_glerror();
-    for (int i = 0; i < 16; i++) { glDisableVertexAttribArray(i); }
-    ygl::check_glerror();
+    // for (int i = 0; i < 16; i++) { glDisableVertexAttribArray(i); }
 }
 
 // Display a scene
-void draw_glscene(const std::shared_ptr<ygl::scene>& scn, int camid, uint prog,
-    const ygl::vec2i& viewport_size, const std::shared_ptr<void>& highlighted,
-    bool eyelight, bool wireframe, bool edges, float exposure, float gamma) {
-    glViewport(0, 0, viewport_size.x, viewport_size.y);
-
-    auto cam = scn->cameras.at(camid);
+void draw_glscene(const draw_glstate* state, const scene* scn,
+    const camera* cam, const vec2i& viewport_size, const void* highlighted,
+    bool eyelight, bool wireframe, bool edges, float exposure, float gamma,
+    float near_plane, float far_plane) {
+    set_glviewport(viewport_size);
 
     auto camera_view = frame_to_mat(inverse(cam->frame));
-    auto camera_proj =
-        (cam->far >= ygl::flt_max) ?
-            ygl::perspective_mat(eval_camera_fovy(cam),
-                (float)viewport_size.x / (float)viewport_size.y, cam->near) :
-            ygl::perspective_mat(eval_camera_fovy(cam),
-                (float)viewport_size.x / (float)viewport_size.y, cam->near,
-                cam->far);
+    // auto camera_proj =
+    //         perspective_mat(eval_camera_fovy(cam),
+    //             (float)viewport_size.x / (float)viewport_size.y, near_plane);
+    auto camera_proj = perspective_mat(eval_camera_fovy(cam),
+        (float)viewport_size.x / (float)viewport_size.y, near_plane, far_plane);
 
-    ygl::bind_glprog(prog);
-    ygl::set_gluniform(prog, "cam_pos", cam->frame.o);
-    ygl::set_gluniform(prog, "cam_xform_inv", camera_view);
-    ygl::set_gluniform(prog, "cam_proj", camera_proj);
-    ygl::set_gluniform(prog, "eyelight", (int)eyelight);
-    ygl::set_gluniform(prog, "exposure", exposure);
-    ygl::set_gluniform(prog, "gamma", gamma);
+    bind_glprogram(state->gl_prog);
+    set_gluniform(state->gl_prog, "cam_pos", cam->frame.o);
+    set_gluniform(state->gl_prog, "cam_xform_inv", camera_view);
+    set_gluniform(state->gl_prog, "cam_proj", camera_proj);
+    set_gluniform(state->gl_prog, "eyelight", (int)eyelight);
+    set_gluniform(state->gl_prog, "exposure", exposure);
+    set_gluniform(state->gl_prog, "gamma", gamma);
 
     if (!eyelight) {
-        auto lights_pos = std::vector<ygl::vec3f>();
-        auto lights_ke = std::vector<ygl::vec3f>();
+        auto lights_pos = std::vector<vec3f>();
+        auto lights_ke = std::vector<vec3f>();
         auto lights_type = std::vector<int>();
-        for (auto lgt : scn->lights) {
+        for (auto lgt : scn->instances) {
+            if (lgt->mat->ke == zero3f) continue;
             if (lights_pos.size() >= 16) break;
             auto shp = lgt->shp;
-            auto bbox = shp->bbox;
+            auto bbox = compute_bbox(shp);
             auto pos = (bbox.max + bbox.min) / 2;
             auto area = 0.0f;
             if (!shp->triangles.empty()) {
@@ -596,103 +596,103 @@ void draw_glscene(const std::shared_ptr<ygl::scene>& scn, int camid, uint prog,
             lights_ke.push_back(ke);
             lights_type.push_back(0);
         }
-        ygl::check_glerror();
-        ygl::set_gluniform(prog, "lamb", ygl::zero3f);
-        ygl::set_gluniform(prog, "lnum", (int)lights_pos.size());
+        if (lights_pos.empty()) eyelight = false;
+        set_gluniform(state->gl_prog, "lamb", zero3f);
+        set_gluniform(state->gl_prog, "lnum", (int)lights_pos.size());
         for (auto i = 0; i < lights_pos.size(); i++) {
             auto is = std::to_string(i);
-            ygl::set_gluniform(
-                prog, ("lpos[" + is + "]").c_str(), lights_pos[i]);
-            ygl::set_gluniform(prog, ("lke[" + is + "]").c_str(), lights_ke[i]);
-            ygl::set_gluniform(
-                prog, ("ltype[" + is + "]").c_str(), (int)lights_type[i]);
+            set_gluniform(
+                state->gl_prog, ("lpos[" + is + "]").c_str(), lights_pos[i]);
+            set_gluniform(
+                state->gl_prog, ("lke[" + is + "]").c_str(), lights_ke[i]);
+            set_gluniform(state->gl_prog, ("ltype[" + is + "]").c_str(),
+                (int)lights_type[i]);
         }
-        ygl::check_glerror();
     }
 
-    if (wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    if (wireframe) set_glwireframe(true);
     for (auto ist : scn->instances) {
-        draw_glshape(ist->shp, ist->mat, frame_to_mat(ist->frame),
+        draw_glshape(state, ist->shp, ist->mat, frame_to_mat(ist->frame),
             ist == highlighted || ist->shp == highlighted ||
                 ist->mat == highlighted,
-            prog, eyelight, edges);
+            eyelight, edges);
     }
 
-    ygl::check_glerror();
-    glUseProgram(0);
-    //    glBindVertexArray(0);
-    //    glUseProgram(0);
-    ygl::check_glerror();
-    if (wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    bind_glprogram(0);
+    if (wireframe) set_glwireframe(false);
 }
 
-void init_drawscene(GLFWwindow* win) {
-    auto app = (app_state*)glfwGetWindowUserPointer(win);
+draw_glstate* init_draw_state(glwindow* win) {
+    auto app = (app_state*)get_user_pointer(win);
+    auto state = new draw_glstate();
     // load textures and vbos
-    app->gl_prog = ygl::make_glprogram(vertex, fragment);
-    for (auto& txt : app->scn->textures)
-        txt->gl_txt = ygl::make_gltexture(txt->img, true, true);
-    for (auto& shp : app->scn->shapes) {
-        if (!shp->pos.empty())
-            shp->gl_pos = ygl::make_glbuffer(shp->pos, false);
-        if (!shp->norm.empty())
-            shp->gl_norm = ygl::make_glbuffer(shp->norm, false);
-        if (!shp->texcoord.empty())
-            shp->gl_texcoord = ygl::make_glbuffer(shp->texcoord, false);
-        if (!shp->color.empty())
-            shp->gl_color = ygl::make_glbuffer(shp->color, false);
-        if (!shp->tangsp.empty())
-            shp->gl_tangsp = ygl::make_glbuffer(shp->tangsp, false);
-        if (!shp->points.empty())
-            shp->gl_points = ygl::make_glbuffer(shp->points, true);
-        if (!shp->lines.empty())
-            shp->gl_lines = ygl::make_glbuffer(shp->lines, true);
-        if (!shp->triangles.empty())
-            shp->gl_triangles = ygl::make_glbuffer(shp->triangles, true);
+    state->gl_prog = make_glprogram(vertex, fragment);
+    state->txt_id[nullptr] = 0;
+    for (auto txt : app->scn->textures) {
+        state->txt_id[txt] = make_gltexture(txt->img, true, true);
     }
+    for (auto& shp : app->scn->shapes) {
+        auto vbos = draw_glshape_vbos();
+        if (!shp->pos.empty())
+            vbos.gl_pos = make_glarraybuffer(shp->pos, false);
+        if (!shp->norm.empty())
+            vbos.gl_norm = make_glarraybuffer(shp->norm, false);
+        if (!shp->texcoord.empty())
+            vbos.gl_texcoord = make_glarraybuffer(shp->texcoord, false);
+        if (!shp->color.empty())
+            vbos.gl_color = make_glarraybuffer(shp->color, false);
+        if (!shp->tangsp.empty())
+            vbos.gl_tangsp = make_glarraybuffer(shp->tangsp, false);
+        if (!shp->points.empty())
+            vbos.gl_points = make_glelementbuffer(shp->points, false);
+        if (!shp->lines.empty())
+            vbos.gl_lines = make_glelementbuffer(shp->lines, false);
+        if (!shp->triangles.empty())
+            vbos.gl_triangles = make_glelementbuffer(shp->triangles, false);
+        state->shp_vbos[shp] = vbos;
+    }
+    return state;
 }
 
 // run ui loop
-void run_ui(const std::shared_ptr<app_state>& app) {
+void run_ui(app_state* app) {
     // window
-    auto win =
-        make_window(ygl::eval_image_resolution(
-                        app->scn->cameras.at(app->camid), app->resolution),
-            "yview", app.get(), draw);
-
-    // load textures and vbos
-    ygl::update_transforms(app->scn, app->time);
-    ygl::update_lights(app->scn);
-    if (app->scn->lights.empty()) app->eyelight = true;
+    auto cam = app->scn->cameras.at(app->camid);
+    auto wsize = clamp(eval_image_size(cam, app->resolution), 256, 1440);
+    auto win = make_glwindow(wsize, "yview", app, draw);
 
     // init widget
-    ygl::init_widgets(win);
+    init_glwidgets(win);
+
+    // load textures and vbos
+    update_transforms(app->scn, app->time);
 
     // init gl data
-    init_drawscene(win);
+    app->state = init_draw_state(win);
 
     // loop
-    auto mouse_pos = ygl::zero2f, last_pos = ygl::zero2f;
-    auto mouse_button = 0;
-    while (!glfwWindowShouldClose(win)) {
+    auto mouse_pos = zero2f, last_pos = zero2f;
+    while (!should_glwindow_close(win)) {
         last_pos = mouse_pos;
-        glfwGetCursorPosExt(win, &mouse_pos.x, &mouse_pos.y);
-        mouse_button = glfwGetMouseButtonIndexExt(win);
-        auto shift_down = glfwGetShiftKeyExt(win);
-        auto widgets_active = ImGui::GetWidgetsActiveExt();
+        mouse_pos = get_glmouse_pos(win);
+        auto mouse_left = get_glmouse_left(win);
+        auto mouse_right = get_glmouse_right(win);
+        auto alt_down = get_glalt_key(win);
+        auto shift_down = get_glshift_key(win);
+        auto widgets_active = get_glwidgets_active(win);
 
         // handle mouse and keyboard for navigation
-        if (mouse_button && !widgets_active) {
+        if ((mouse_left || mouse_right) && !alt_down && !widgets_active) {
             auto dolly = 0.0f;
-            auto pan = ygl::zero2f;
-            auto rotate = ygl::zero2f;
-            if (mouse_button == 1) rotate = (mouse_pos - last_pos) / 100.0f;
-            if (mouse_button == 2) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
-            if (mouse_button == 3 || (mouse_button == 1 && shift_down))
-                pan = (mouse_pos - last_pos) / 100.0f;
+            auto pan = zero2f;
+            auto rotate = zero2f;
+            if (mouse_left && !shift_down)
+                rotate = (mouse_pos - last_pos) / 100.0f;
+            if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
+            if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
             auto cam = app->scn->cameras.at(app->camid);
-            ygl::camera_turntable(cam->frame, cam->focus, rotate, dolly, pan);
-            app->update_list.push_back(cam);
+            camera_turntable(cam->frame, cam->focus, rotate, dolly, pan);
+            app->update_list.push_back({"camera", cam});
         }
 
         // animation
@@ -700,19 +700,18 @@ void run_ui(const std::shared_ptr<app_state>& app) {
             app->time += 1 / 60.0f;
             if (app->time < app->time_range.x || app->time > app->time_range.y)
                 app->time = app->time_range.x;
-            ygl::update_transforms(app->scn, app->time);
+            update_transforms(app->scn, app->time);
         }
 
         // draw
         draw(win);
 
         // event hadling
-        if (mouse_button || widgets_active) {
-            glfwPollEvents();
-        } else {
-            glfwWaitEvents();
-        }
+        process_glevents(win, !((mouse_left || mouse_right) || widgets_active));
     }
+
+    // clear
+    delete_glwindow(win);
 }
 
 // Load INI file. The implementation does not handle escaping.
@@ -722,7 +721,7 @@ load_ini(const std::string& filename) {
     if (!f) throw std::runtime_error("cannot open " + filename);
     auto ret = std::unordered_map<std::string,
         std::unordered_map<std::string, std::string>>();
-    auto cur_group = ""s;
+    auto cur_group = std::string();
     ret[""] = {};
 
     char buf[4096];
@@ -750,94 +749,63 @@ load_ini(const std::string& filename) {
 }
 
 int main(int argc, char* argv[]) {
-    // command line parameters
-    auto filename = "scene.json"s;  // scene name
-    auto imfilename = "out.png"s;   // output image
-    auto camid = 0;                 // camera index
-    auto resolution = 512;          // image resolution
-    auto eyelight = false;          // camera light mode
-    auto double_sided = false;      // double sided
-    auto highlight_filename = ""s;  // highlight name
-    auto quiet = false;             // quiet mode
+    // initialize app
+    auto app = new app_state();
 
     // parse command line
-    CLI::App parser("views scenes inteactively", "yview");
-    parser.add_option("--camera", camid, "Camera index.");
-    parser.add_flag("--eyelight,-c", eyelight, "Eyelight rendering.");
-    parser.add_flag(
-        "--double-sided,-D", double_sided, "Double-sided rendering.");
-    parser.add_flag("--quiet,-q", quiet, "Print only errors messages");
-    parser.add_option("--highlights", highlight_filename, "Highlight filename");
-    parser.add_option("--output-image,-o", imfilename, "Image filename");
-    parser.add_option("scene", filename, "Scene filename")->required(true);
-    try {
-        parser.parse(argc, argv);
-    } catch (const CLI::ParseError& e) { return parser.exit(e); }
-
-    // fix hilights
-    auto inspector_highlights = std::unordered_map<std::string, std::string>();
-    if (!highlight_filename.empty()) {
-        try {
-            inspector_highlights = load_ini(highlight_filename).at("");
-        } catch (const std::exception& e) {
-            std::cout << "cannot load highlight " << highlight_filename << "\n";
-            std::cout << "error: " << e.what() << "\n";
-            exit(1);
-        }
-    }
+    auto parser =
+        make_cmdline_parser(argc, argv, "views scenes inteactively", "yview");
+    app->camid = parse_arg(parser, "--camera", 0, "Camera index.");
+    app->resolution =
+        parse_arg(parser, "--resolution,-r", 512, "Image vertical resolution.");
+    app->eyelight =
+        parse_arg(parser, "--eyelight,-c", false, "Eyelight rendering.");
+    auto double_sided = parse_arg(
+        parser, "--double-sided,-D", false, "Double-sided rendering.");
+    auto quiet =
+        parse_arg(parser, "--quiet,-q", false, "Print only errors messages");
+    auto highlight_filename =
+        parse_arg(parser, "--highlights", "", "Highlight filename");
+    app->imfilename =
+        parse_arg(parser, "--output-image,-o", "out.png", "Image filename");
+    app->filename =
+        parse_arg(parser, "scene", "scene.json", "Scene filename", true);
+    check_cmdline(parser);
 
     // scene loading
-    auto scn = std::shared_ptr<ygl::scene>();
-    if (!quiet) std::cout << "loading scene" << filename << "\n";
+    if (!quiet) printf("loading scene %s\n", app->filename.c_str());
     try {
-        scn = ygl::load_scene(filename);
+        app->scn = load_scene(app->filename);
     } catch (const std::exception& e) {
-        std::cout << "cannot load scene " << filename << "\n";
-        std::cout << "error: " << e.what() << "\n";
+        printf("cannot load scene %s\n", app->filename.c_str());
+        printf("error: %s\n", e.what());
         exit(1);
     }
 
     // tesselate
-    if (!quiet) std::cout << "tesselating scene elements\n";
-    ygl::update_tesselation(scn);
-
-    // update bbox and transforms
-    ygl::update_transforms(scn);
-    ygl::update_bbox(scn);
+    if (!quiet) printf("tesselating scene elements\n");
+    tesselate_subdivs(app->scn);
 
     // add components
-    if (!quiet) std::cout << "adding scene elements\n";
+    if (!quiet) printf("adding scene elements\n");
     if (double_sided) {
-        for (auto mat : scn->materials) mat->double_sided = true;
+        for (auto mat : app->scn->materials) mat->double_sided = true;
     }
-    if (scn->cameras.empty()) {
-        scn->cameras.push_back(ygl::make_bbox_camera("<view>", scn->bbox));
-    }
-    ygl::add_missing_names(scn);
-    for (auto err : ygl::validate(scn)) std::cout << "warning: " << err << "\n";
+    if (app->scn->cameras.empty())
+        app->scn->cameras.push_back(
+            make_bbox_camera("<view>", compute_bbox(app->scn)));
+    add_missing_names(app->scn);
+    for (auto& err : validate(app->scn)) printf("warning: %s\n", err.c_str());
 
     // animation
-    auto time_range = ygl::compute_animation_range(scn);
-    auto time = time_range.x;
-
-    // lights
-    ygl::update_bbox(scn);
-    ygl::update_lights(scn);
-
-    // initialize app
-    auto app = std::make_shared<app_state>();
-    app->scn = scn;
-    app->filename = filename;
-    app->imfilename = imfilename;
-    app->camid = camid;
-    app->resolution = resolution;
-    app->eyelight = eyelight;
-    app->inspector_highlights = inspector_highlights;
-    app->time = time;
-    app->time_range = time_range;
+    auto time_range = compute_animation_range(app->scn);
+    app->time = time_range.x;
 
     // run ui
     run_ui(app);
+
+    // cleanup
+    delete app;
 
     // done
     return 0;
