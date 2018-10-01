@@ -118,7 +118,9 @@ library.
 
 We make use of exception for error reporting. This makes the code
 cleaner and more in line with the expectation of most other programming
-languages.
+languages. At the same time, exception are not as easy to use in C++
+and are disabled in many libraries. For this reasons, this will likely 
+change in the future.
 
 Finally, we import math symbols from the standard library rather than
 using the `std::name` pattern into the `ygl` namespace. This makes math code 
