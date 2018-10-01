@@ -92,8 +92,8 @@
 #define YGL_GLTFJSON 0
 #endif
 
-#include "ygl.h"
-#include "yglio.h"
+#include "../ygl.h"
+#include "../yglio.h"
 
 #include <map>
 #include <string>
@@ -101,7 +101,7 @@
 
 // include json for glTF
 #if YGL_GLTFJSON
-#include "ext/json.hpp"
+#include "../ext/json.hpp"
 #endif
 
 // -----------------------------------------------------------------------------
