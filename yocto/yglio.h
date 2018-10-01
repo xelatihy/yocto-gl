@@ -25,12 +25,12 @@
 //
 // ## Command-Line Parsing
 //
-// We also provide a simple, immediate-mode, command-line parser. The parser 
+// We also provide a simple, immediate-mode, command-line parser. The parser
 // works in an immediate-mode manner since it reads each value as you call each
-// function, rather than building a data structure and parsing offline. We 
-// support option and position arguments, automatic help generation, and 
+// function, rather than building a data structure and parsing offline. We
+// support option and position arguments, automatic help generation, and
 // error checking.
-//  
+//
 // 1. initialize the parser with `make_cmdline_parser(argc, argv, help)`
 // 2. read a value with `value = parse_arg(parser, name, default, help)`
 //    - is name starts with '--' or '-' then it is an option
@@ -131,12 +131,12 @@ namespace ygl {
 
 // Command line parser data. All data should be considered private.
 struct cmdline_parser {
-    std::vector<std::string> args = {};  // command line arguments
-    std::string usage_cmd = "";          // program name
-    std::string usage_hlp = "";          // program help
-    std::string usage_opt = "";          // options help
-    std::string usage_arg = "";          // arguments help
-    std::string error = "";              // current parse error
+    std::vector<std::string> args      = {};  // command line arguments
+    std::string              usage_cmd = "";  // program name
+    std::string              usage_hlp = "";  // program help
+    std::string              usage_opt = "";  // options help
+    std::string              usage_arg = "";  // arguments help
+    std::string              error     = "";  // current parse error
 };
 
 // Initialize a command line parser.
@@ -145,14 +145,14 @@ cmdline_parser make_cmdline_parser(int argc, char** argv,
 // check if any error occurred and exit appropriately
 void check_cmdline(cmdline_parser& parser);
 
-// Parse an int, float, string, vecXX and bool option or positional argument. 
-// Options's names starts with "--" or "-", otherwise they are arguments. 
+// Parse an int, float, string, vecXX and bool option or positional argument.
+// Options's names starts with "--" or "-", otherwise they are arguments.
 // vecXX options use space-separated values but all in one argument
-// (use " or ' from the common line). Booleans are flags. 
-bool parse_arg(cmdline_parser& parser, const std::string& name, bool def,
-    const std::string& usage);
-int parse_arg(cmdline_parser& parser, const std::string& name, int def,
-    const std::string& usage, bool req = false);
+// (use " or ' from the common line). Booleans are flags.
+bool  parse_arg(cmdline_parser& parser, const std::string& name, bool def,
+     const std::string& usage);
+int   parse_arg(cmdline_parser& parser, const std::string& name, int def,
+      const std::string& usage, bool req = false);
 float parse_arg(cmdline_parser& parser, const std::string& name, float def,
     const std::string& usage, bool req = false);
 vec2f parse_arg(cmdline_parser& parser, const std::string& name,
@@ -200,7 +200,7 @@ bool is_hdr_filename(const std::string& filename);
 
 // Loads/saves a 4 channel image.
 image<vec4f> load_image4f(const std::string& filename);
-void save_image4f(const std::string& filename, const image<vec4f>& img);
+void         save_image4f(const std::string& filename, const image<vec4f>& img);
 image<vec4f> load_image4f_from_memory(const byte* data, int data_size);
 
 // Convenience helper that saves an HDR images as wither a linear HDR file or
@@ -229,41 +229,41 @@ namespace ygl {
 // Load/save a scene in the supported formats.
 scene* load_scene(const std::string& filename, bool load_textures = true,
     bool skip_missing = true);
-void save_scene(const std::string& filename, const scene* scn,
-    bool save_textures = true, bool skip_missing = true);
+void   save_scene(const std::string& filename, const scene* scn,
+      bool save_textures = true, bool skip_missing = true);
 
 // Load/save a scene in the builtin JSON format.
 scene* load_json_scene(const std::string& filename, bool load_textures = true,
     bool skip_missing = true);
-void save_json_scene(const std::string& filename, const scene* scn,
-    bool save_textures = true, bool skip_missing = true);
+void   save_json_scene(const std::string& filename, const scene* scn,
+      bool save_textures = true, bool skip_missing = true);
 
 // Load/save a scene from/to OBJ.
 scene* load_obj_scene(const std::string& filename, bool load_textures = true,
     bool skip_missing = true, bool split_shapes = true);
-void save_obj_scene(const std::string& filename, const scene* scn,
-    bool save_textures = true, bool skip_missing = true);
+void   save_obj_scene(const std::string& filename, const scene* scn,
+      bool save_textures = true, bool skip_missing = true);
 
 // Load/save a scene from/to glTF.
 scene* load_gltf_scene(const std::string& filename, bool load_textures = true,
     bool skip_missing = true);
-void save_gltf_scene(const std::string& filename, const scene* scn,
-    bool save_textures = true, bool skip_missing = true);
+void   save_gltf_scene(const std::string& filename, const scene* scn,
+      bool save_textures = true, bool skip_missing = true);
 
 // Load/save a scene from/to pbrt. This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
 scene* load_pbrt_scene(const std::string& filename, bool load_textures = true,
     bool skip_missing = true);
-void save_pbrt_scene(const std::string& filename, const scene* scn,
-    bool save_textures = true, bool skip_missing = true);
+void   save_pbrt_scene(const std::string& filename, const scene* scn,
+      bool save_textures = true, bool skip_missing = true);
 
 // Load/save a binary dump useful for very fast scene IO. This format is not
 // an archival format and should only be used as an intermediate format.
 scene* load_ybin_scene(const std::string& filename, bool load_textures = true,
     bool skip_missing = true);
-void save_ybin_scene(const std::string& filename, const scene* scn,
-    bool save_textures = true, bool skip_missing = true);
+void   save_ybin_scene(const std::string& filename, const scene* scn,
+      bool save_textures = true, bool skip_missing = true);
 
 }  // namespace ygl
 
@@ -346,37 +346,37 @@ namespace ygl {
 
 // OBJ vertex
 struct obj_vertex {
-    int pos = 0;
+    int pos      = 0;
     int texcoord = 0;
-    int norm = 0;
+    int norm     = 0;
 };
 
 // Obj texture information.
 struct obj_texture_info {
-    std::string path = "";  // file path
-    bool clamp = false;     // clamp to edge
-    float scale = 1;        // scale for bump/displacement
+    std::string path  = "";     // file path
+    bool        clamp = false;  // clamp to edge
+    float       scale = 1;      // scale for bump/displacement
     // Properties not explicitly handled.
     std::unordered_map<std::string, std::vector<float>> props;
 };
 
 // Obj material.
 struct obj_material {
-    std::string name;  // name
-    int illum = 0;     // MTL illum mode
+    std::string name;       // name
+    int         illum = 0;  // MTL illum mode
 
     // base values
-    vec3f ke = {0, 0, 0};  // emission color
-    vec3f ka = {0, 0, 0};  // ambient color
-    vec3f kd = {0, 0, 0};  // diffuse color
-    vec3f ks = {0, 0, 0};  // specular color
-    vec3f kr = {0, 0, 0};  // reflection color
-    vec3f kt = {0, 0, 0};  // transmission color
-    float ns = 0;          // Phong exponent color
-    float ior = 1;         // index of refraction
-    float op = 1;          // opacity
-    float rs = -1;         // roughness (-1 not defined)
-    float km = -1;         // metallic  (-1 not defined)
+    vec3f ke  = {0, 0, 0};  // emission color
+    vec3f ka  = {0, 0, 0};  // ambient color
+    vec3f kd  = {0, 0, 0};  // diffuse color
+    vec3f ks  = {0, 0, 0};  // specular color
+    vec3f kr  = {0, 0, 0};  // reflection color
+    vec3f kt  = {0, 0, 0};  // transmission color
+    float ns  = 0;          // Phong exponent color
+    float ior = 1;          // index of refraction
+    float op  = 1;          // opacity
+    float rs  = -1;         // roughness (-1 not defined)
+    float km  = -1;         // metallic  (-1 not defined)
 
     // textures
     obj_texture_info ke_txt;    // emission texture
@@ -410,40 +410,40 @@ struct obj_material {
 
 // Obj camera [extension].
 struct obj_camera {
-    std::string name;                  // name
-    frame3f frame = identity_frame3f;  // transform
-    bool ortho = false;                // orthographic
-    vec2f film = {0.036f, 0.024f};     // film size (default to 35mm)
-    float focal = 0.050f;              // focal length
-    float aspect = 16.0f / 9.0f;       // aspect ratio
-    float aperture = 0;                // lens aperture
-    float focus = maxf;                // focus distance
+    std::string name;                         // name
+    frame3f     frame    = identity_frame3f;  // transform
+    bool        ortho    = false;             // orthographic
+    vec2f       film     = {0.036f, 0.024f};  // film size (default to 35mm)
+    float       focal    = 0.050f;            // focal length
+    float       aspect   = 16.0f / 9.0f;      // aspect ratio
+    float       aperture = 0;                 // lens aperture
+    float       focus    = maxf;              // focus distance
 };
 
 // Obj environment [extension].
 struct obj_environment {
-    std::string name;                  // name
-    frame3f frame = identity_frame3f;  // transform
-    vec3f ke = zero3f;                 // emission color
-    obj_texture_info ke_txt;           // emission texture
+    std::string      name;                      // name
+    frame3f          frame = identity_frame3f;  // transform
+    vec3f            ke    = zero3f;            // emission color
+    obj_texture_info ke_txt;                    // emission texture
 };
 
 // Obj callbacks
 struct obj_callbacks {
-    std::function<void(const vec3f&)> vert = {};
-    std::function<void(const vec3f&)> norm = {};
-    std::function<void(const vec2f&)> texcoord = {};
-    std::function<void(const std::vector<obj_vertex>&)> face = {};
-    std::function<void(const std::vector<obj_vertex>&)> line = {};
-    std::function<void(const std::vector<obj_vertex>&)> point = {};
-    std::function<void(const std::string& name)> object = {};
-    std::function<void(const std::string& name)> group = {};
-    std::function<void(const std::string& name)> usemtl = {};
-    std::function<void(const std::string& name)> smoothing = {};
-    std::function<void(const std::string& name)> mtllib = {};
-    std::function<void(const obj_material&)> material = {};
-    std::function<void(const obj_camera&)> camera = {};
-    std::function<void(const obj_environment&)> environmnet = {};
+    std::function<void(const vec3f&)>                   vert        = {};
+    std::function<void(const vec3f&)>                   norm        = {};
+    std::function<void(const vec2f&)>                   texcoord    = {};
+    std::function<void(const std::vector<obj_vertex>&)> face        = {};
+    std::function<void(const std::vector<obj_vertex>&)> line        = {};
+    std::function<void(const std::vector<obj_vertex>&)> point       = {};
+    std::function<void(const std::string& name)>        object      = {};
+    std::function<void(const std::string& name)>        group       = {};
+    std::function<void(const std::string& name)>        usemtl      = {};
+    std::function<void(const std::string& name)>        smoothing   = {};
+    std::function<void(const std::string& name)>        mtllib      = {};
+    std::function<void(const obj_material&)>            material    = {};
+    std::function<void(const obj_camera&)>              camera      = {};
+    std::function<void(const obj_environment&)>         environmnet = {};
 };
 
 // Load obj scene
@@ -462,16 +462,16 @@ enum struct ply_type { ply_uchar, ply_int, ply_float, ply_int_list };
 
 // ply property
 struct ply_property {
-    std::string name = "";
-    ply_type type = ply_type::ply_float;
-    std::vector<float> scalars = {};
-    std::vector<std::array<int, 8>> lists = {};
+    std::string                     name    = "";
+    ply_type                        type    = ply_type::ply_float;
+    std::vector<float>              scalars = {};
+    std::vector<std::array<int, 8>> lists   = {};
 };
 
 // ply element
 struct ply_element {
-    std::string name = "";
-    int count = 0;
+    std::string               name       = "";
+    int                       count      = 0;
     std::vector<ply_property> properties = {};
 };
 

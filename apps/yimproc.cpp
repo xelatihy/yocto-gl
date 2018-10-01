@@ -65,11 +65,11 @@ Image make_image_grid(const std::vector<Image>& imgs, int tilex) {
 image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
     float range_sigma, const std::vector<image<vec4f>>& features,
     const std::vector<float>& features_sigma) {
-    auto filtered = image<vec4f>{img.size()};
+    auto filtered     = image<vec4f>{img.size()};
     auto filter_width = (int)ceil(2.57f * spatial_sigma);
-    auto sw = 1 / (2.0f * spatial_sigma * spatial_sigma);
-    auto rw = 1 / (2.0f * range_sigma * range_sigma);
-    auto fw = std::vector<float>();
+    auto sw           = 1 / (2.0f * spatial_sigma * spatial_sigma);
+    auto rw           = 1 / (2.0f * range_sigma * range_sigma);
+    auto fw           = std::vector<float>();
     for (auto feature_sigma : features_sigma)
         fw.push_back(1 / (2.0f * feature_sigma * feature_sigma));
     for (auto j = 0; j < img.size().y; j++) {
@@ -81,13 +81,13 @@ image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
                     auto ii = i + fi, jj = j + fj;
                     if (ii < 0 || jj < 0) continue;
                     if (ii >= img.size().x || jj >= img.size().y) continue;
-                    auto uv = vec2f{float(i - ii), float(j - jj)};
+                    auto uv  = vec2f{float(i - ii), float(j - jj)};
                     auto rgb = img[{i, j}] - img[{ii, jj}];
-                    auto w = (float)std::exp(-dot(uv, uv) * sw) *
+                    auto w   = (float)std::exp(-dot(uv, uv) * sw) *
                              (float)std::exp(-dot(rgb, rgb) * rw);
                     for (auto fi = 0; fi < features.size(); fi++) {
-                        auto feat =
-                            features[fi][{i, j}] - features[fi][{ii, jj}];
+                        auto feat = features[fi][{i, j}] -
+                                    features[fi][{ii, jj}];
                         w *= exp(-dot(feat, feat) * fw[fi]);
                     }
                     av += w * img[{ii, jj}];
@@ -103,9 +103,9 @@ image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
 image<vec4f> filter_bilateral(
     const image<vec4f>& img, float spatial_sigma, float range_sigma) {
     auto filtered = image<vec4f>{img.size()};
-    auto fwidth = (int)ceil(2.57f * spatial_sigma);
-    auto sw = 1 / (2.0f * spatial_sigma * spatial_sigma);
-    auto rw = 1 / (2.0f * range_sigma * range_sigma);
+    auto fwidth   = (int)ceil(2.57f * spatial_sigma);
+    auto sw       = 1 / (2.0f * spatial_sigma * spatial_sigma);
+    auto rw       = 1 / (2.0f * range_sigma * range_sigma);
     for (auto j = 0; j < img.size().y; j++) {
         for (auto i = 0; i < img.size().x; i++) {
             auto av = zero4f;
@@ -115,9 +115,9 @@ image<vec4f> filter_bilateral(
                     auto ii = i + fi, jj = j + fj;
                     if (ii < 0 || jj < 0) continue;
                     if (ii >= img.size().x || jj >= img.size().y) continue;
-                    auto uv = vec2f{float(i - ii), float(j - jj)};
+                    auto uv  = vec2f{float(i - ii), float(j - jj)};
                     auto rgb = img[{i, j}] - img[{ii, jj}];
-                    auto w = std::exp(-dot(uv, uv) * sw) *
+                    auto w   = std::exp(-dot(uv, uv) * sw) *
                              std::exp(-dot(rgb, rgb) * rw);
                     av += w * img[{ii, jj}];
                     aw += w;
@@ -131,20 +131,20 @@ image<vec4f> filter_bilateral(
 
 int main(int argc, char* argv[]) {
     // parse command line
-    auto parser = make_cmdline_parser(argc, argv, "Process images", "yimproc");
+    auto parser  = make_cmdline_parser(argc, argv, "Process images", "yimproc");
     auto tonemap = parse_arg(parser, "--tonemap,-t", false, "Tonemap image");
     auto exposure = parse_arg(parser, "--exposure,-e", 0.0f, "Tonemap exposure");
-    auto gamma = parse_arg(parser, "--gamma,-g", 2.2f, "Tonemap gamma.");
-    auto filmic =
-        parse_arg(parser, "--filmic,-f", false, "Tonemap uses filmic curve");
+    auto gamma    = parse_arg(parser, "--gamma,-g", 2.2f, "Tonemap gamma.");
+    auto filmic   = parse_arg(
+        parser, "--filmic,-f", false, "Tonemap uses filmic curve");
     auto res_width = parse_arg(
         parser, "--res-width", 0, "resize width (0 to maintain aspect)");
     auto res_height = parse_arg(
         parser, "--res-height", 0, "resize height (0 to maintain aspect)");
-    auto spatial_sigma =
-        parse_arg(parser, "--spatial-sigma", 0.0f, "blur spatial sigma");
-    auto range_sigma =
-        parse_arg(parser, "--range-sigma", 0.0f, "bilateral blur range sigma");
+    auto spatial_sigma = parse_arg(
+        parser, "--spatial-sigma", 0.0f, "blur spatial sigma");
+    auto range_sigma = parse_arg(
+        parser, "--range-sigma", 0.0f, "bilateral blur range sigma");
     auto alpha_filename = parse_arg(
         parser, "--set-alpha", "", "set alpha as this image alpha");
     auto coloralpha_filename = parse_arg(

@@ -35,38 +35,38 @@ int main(int argc, char* argv[]) {
     auto params = trace_params();
 
     // parse command line
-    auto parser =
-        make_cmdline_parser(argc, argv, "Offline path tracing", "ytrace");
-    params.camid = parse_arg(parser, "--camera", 0, "Camera index.");
-    params.yresolution =
-        parse_arg(parser, "--resolution,-r", 512, "Image vertical resolution.");
-    params.nsamples =
-        parse_arg(parser, "--nsamples,-s", 256, "Number of samples.");
+    auto parser = make_cmdline_parser(
+        argc, argv, "Offline path tracing", "ytrace");
+    params.camid       = parse_arg(parser, "--camera", 0, "Camera index.");
+    params.yresolution = parse_arg(
+        parser, "--resolution,-r", 512, "Image vertical resolution.");
+    params.nsamples = parse_arg(
+        parser, "--nsamples,-s", 256, "Number of samples.");
     params.tracer = (trace_type)parse_arge(
         parser, "--tracer,-t", 0, "Trace type.", trace_type_names);
-    params.nbounces =
-        parse_arg(parser, "--nbounces", 8, "Maximum number of bounces.");
-    params.pixel_clamp =
-        parse_arg(parser, "--pixel-clamp", 100.0f, "Final pixel clamping.");
+    params.nbounces = parse_arg(
+        parser, "--nbounces", 8, "Maximum number of bounces.");
+    params.pixel_clamp = parse_arg(
+        parser, "--pixel-clamp", 100.0f, "Final pixel clamping.");
     params.noparallel = parse_arg(
         parser, "--noparallel", false, "Disable parallel execution.");
     params.seed = parse_arg(
         parser, "--seed", 13, "Seed for the random number generators.");
     params.nbatch = parse_arg(parser, "--nbatch,-b", 16, "Samples per batch.");
-    auto save_batch =
-        parse_arg(parser, "--save-batch", false, "Save images progressively");
+    auto save_batch = parse_arg(
+        parser, "--save-batch", false, "Save images progressively");
     auto exposure = parse_arg(parser, "--exposure,-e", 0.0f, "Hdr exposure");
-    auto gamma = parse_arg(parser, "--gamma,-g", 2.2f, "Hdr gamma");
-    auto filmic = parse_arg(parser, "--filmic", false, "Hdr filmic");
-    auto embree = parse_arg(parser, "--embree", false, "Use Embree ratracer");
+    auto gamma    = parse_arg(parser, "--gamma,-g", 2.2f, "Hdr gamma");
+    auto filmic   = parse_arg(parser, "--filmic", false, "Hdr filmic");
+    auto embree   = parse_arg(parser, "--embree", false, "Use Embree ratracer");
     auto double_sided = parse_arg(
         parser, "--double-sided,-D", false, "Double-sided rendering.");
-    auto add_skyenv =
-        parse_arg(parser, "--add-skyenv,-E", false, "add missing env map");
-    auto imfilename =
-        parse_arg(parser, "--output-image,-o", "out.hdr", "Image filename");
-    auto filename =
-        parse_arg(parser, "scene", "scene.json", "Scene filename", true);
+    auto add_skyenv = parse_arg(
+        parser, "--add-skyenv,-E", false, "add missing env map");
+    auto imfilename = parse_arg(
+        parser, "--output-image,-o", "out.hdr", "Image filename");
+    auto filename = parse_arg(
+        parser, "scene", "scene.json", "Scene filename", true);
     check_cmdline(parser);
 
     // scene loading
@@ -98,7 +98,7 @@ int main(int argc, char* argv[]) {
     // build bvh
     printf("building bvh\n");
     auto bvh_start = get_time();
-    auto bvh = build_bvh(scn, true, embree);
+    auto bvh       = build_bvh(scn, true, embree);
     printf("building bvh in %s\n",
         format_duration(get_time() - bvh_start).c_str());
 
@@ -113,20 +113,18 @@ int main(int argc, char* argv[]) {
     // render
     printf("rendering image\n");
     auto render_start = get_time();
-    auto done = false;
+    auto done         = false;
     while (!done) {
         printf("rendering sample %04d/%04d\n", state->sample, params.nsamples);
         auto block_start = get_time();
-        done = trace_samples(state, scn, bvh, lights, params);
+        done             = trace_samples(state, scn, bvh, lights, params);
         printf("rendering block in %s\n",
             format_duration(get_time() - block_start).c_str());
         if (save_batch) {
-            auto filename = replace_extension(
-                imfilename, std::to_string(state->sample) + "." +
-                                get_extension(imfilename));
+            auto filename = replace_extension(imfilename,
+                std::to_string(state->sample) + "." + get_extension(imfilename));
             printf("saving image %s\n", filename.c_str());
-            save_tonemapped_image(
-                filename, state->img, exposure, gamma, filmic);
+            save_tonemapped_image(filename, state->img, exposure, gamma, filmic);
         }
     }
     printf("rendering image in %s\n",

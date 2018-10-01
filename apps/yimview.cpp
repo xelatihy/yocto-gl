@@ -38,33 +38,33 @@ struct image_stats {
 
 struct app_image {
     // original data
-    std::string filename;
-    std::string name;
+    std::string  filename;
+    std::string  name;
     image<vec4f> img;
-    bool is_hdr = false;
+    bool         is_hdr = false;
 
     // diplay image
     image<vec4f> display;
-    uint gl_txt = 0;
+    uint         gl_txt = 0;
 
     // image stats
     image_stats stats;
 
     // tonemapping values
     float exposure = 0;
-    float gamma = 2.2f;
-    bool filmic = false;
+    float gamma    = 2.2f;
+    bool  filmic   = false;
 
     // computation futures
     std::atomic<bool> load_done, display_done, stats_done, texture_done;
-    std::thread load_thread, display_thread, stats_thread;
+    std::thread       load_thread, display_thread, stats_thread;
     std::atomic<bool> display_stop;
-    std::string error_msg = "";
+    std::string       error_msg = "";
 
     // viewing properties
-    vec2f imcenter = zero2f;
-    float imscale = 1;
-    bool zoom_to_fit = true;
+    vec2f imcenter    = zero2f;
+    float imscale     = 1;
+    bool  zoom_to_fit = true;
 
     // cleanup and stop threads
     ~app_image() {
@@ -78,7 +78,7 @@ struct app_image {
 struct app_state {
     // images
     std::vector<app_image*> imgs;
-    int img_id = 0;
+    int                     img_id = 0;
 
     ~app_state() {
         for (auto img : imgs) delete img;
@@ -87,7 +87,7 @@ struct app_state {
 
 // compute min/max
 void update_image_stats(app_image* img) {
-    img->stats_done = false;
+    img->stats_done       = false;
     img->stats.pxl_bounds = invalid_bbox4f;
     img->stats.lum_bounds = invalid_bbox1f;
     for (auto p : img->img) {
@@ -98,21 +98,21 @@ void update_image_stats(app_image* img) {
 }
 
 void update_display_image(app_image* img) {
-    auto start = get_time();
+    auto start        = get_time();
     img->display_done = false;
     img->texture_done = false;
     if (img->is_hdr) {
         if (img->img.size().x * img->img.size().y > 1024 * 1024) {
             auto nthreads = std::thread::hardware_concurrency();
-            auto threads = std::vector<std::thread>();
+            auto threads  = std::vector<std::thread>();
             for (auto tid = 0; tid < nthreads; tid++) {
                 threads.push_back(std::thread([img, tid, nthreads]() {
                     for (auto j = tid; j < img->img.size().y; j += nthreads) {
                         if (img->display_stop) break;
                         for (auto i = 0; i < img->img.size().x; i++) {
-                            img->display[{i, j}] =
-                                tonemap_exposuregamma(img->img[{i, j}],
-                                    img->exposure, img->gamma, img->filmic);
+                            img->display[{i, j}] = tonemap_exposuregamma(
+                                img->img[{i, j}], img->exposure, img->gamma,
+                                img->filmic);
                         }
                     }
                 }));
@@ -122,9 +122,9 @@ void update_display_image(app_image* img) {
             for (auto j = 0; j < img->img.size().y; j++) {
                 if (img->display_stop) break;
                 for (auto i = 0; i < img->img.size().x; i++) {
-                    img->display[{i, j}] =
-                        tonemap_exposuregamma(img->img[{i, j}], img->exposure,
-                            img->gamma, img->filmic);
+                    img->display[{i, j}] = tonemap_exposuregamma(
+                        img->img[{i, j}], img->exposure, img->gamma,
+                        img->filmic);
                 }
             }
         }
@@ -148,11 +148,11 @@ void load_image(app_image* img) {
         return;
     }
     img->load_done = true;
-    img->display = img->img;
+    img->display   = img->img;
     printf("load: %s\n", format_duration(get_time() - start).c_str());
     fflush(stdout);
     img->display_thread = std::thread(update_display_image, img);
-    img->stats_thread = std::thread(update_image_stats, img);
+    img->stats_thread   = std::thread(update_image_stats, img);
 }
 
 void draw_glwidgets(glwindow* win) {
@@ -183,7 +183,7 @@ void draw_glwidgets(glwindow* win) {
                 img->display_stop = true;
                 img->display_thread.join();
             }
-            img->display_stop = false;
+            img->display_stop   = false;
             img->display_thread = std::thread(update_display_image, img);
         }
         draw_slider_glwidget(win, "zoom", img->imscale, 0.1, 10);
@@ -209,19 +209,18 @@ void draw_glwidgets(glwindow* win) {
 }
 
 void draw(glwindow* win) {
-    auto app = (app_state*)get_user_pointer(win);
-    auto img = app->imgs.at(app->img_id);
+    auto app      = (app_state*)get_user_pointer(win);
+    auto img      = app->imgs.at(app->img_id);
     auto win_size = get_glwindow_size(win);
-    auto fb_size = get_glframebuffer_size(win);
+    auto fb_size  = get_glframebuffer_size(win);
     set_glviewport(fb_size);
     clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
     if (img->gl_txt) {
         center_image4f(img->imcenter, img->imscale,
             {img->display.size().x, img->display.size().y}, win_size,
             img->zoom_to_fit);
-        draw_glimage(img->gl_txt,
-            {img->display.size().x, img->display.size().y}, win_size,
-            img->imcenter, img->imscale);
+        draw_glimage(img->gl_txt, {img->display.size().x, img->display.size().y},
+            win_size, img->imcenter, img->imscale);
     }
     draw_glwidgets(win);
     swap_glbuffers(win);
@@ -241,9 +240,9 @@ void update(app_state* app) {
 
 void run_ui(app_state* app) {
     // window
-    auto img = app->imgs.at(app->img_id);
+    auto img      = app->imgs.at(app->img_id);
     auto win_size = clamp(img->img.size(), 512, 1440);
-    auto win = make_glwindow(win_size, "yimview", app, draw);
+    auto win      = make_glwindow(win_size, "yimview", app, draw);
 
     // init widgets
     init_glwidgets(win);
@@ -255,10 +254,10 @@ void run_ui(app_state* app) {
     // window values
     auto mouse_pos = zero2f, last_pos = zero2f;
     while (!should_glwindow_close(win)) {
-        last_pos = mouse_pos;
-        mouse_pos = get_glmouse_pos(win);
-        auto mouse_left = get_glmouse_left(win);
-        auto mouse_right = get_glmouse_right(win);
+        last_pos            = mouse_pos;
+        mouse_pos           = get_glmouse_pos(win);
+        auto mouse_left     = get_glmouse_left(win);
+        auto mouse_right    = get_glmouse_right(win);
         auto widgets_active = get_glwidgets_active(win);
 
         // handle mouse
@@ -287,25 +286,25 @@ int main(int argc, char* argv[]) {
     auto app = new app_state();
 
     // command line params
-    auto parser = make_cmdline_parser(argc, argv, "view images", "yimview");
-    auto gamma = parse_arg(parser, "--gamma,-g", 2.2f, "display gamma");
+    auto parser   = make_cmdline_parser(argc, argv, "view images", "yimview");
+    auto gamma    = parse_arg(parser, "--gamma,-g", 2.2f, "display gamma");
     auto exposure = parse_arg(parser, "--exposure,-e", 0.0f, "display exposure");
-    auto filmic = parse_arg(parser, "--filmic", false, "display filmic");
+    auto filmic   = parse_arg(parser, "--filmic", false, "display filmic");
     // auto quiet = parse_flag(
     //     parser, "--quiet,-q", false, "Print only errors messages");
-    auto filenames =
-        parse_args(parser, "images", std::vector<std::string>{}, "image filenames", true);
+    auto filenames = parse_args(
+        parser, "images", std::vector<std::string>{}, "image filenames", true);
     check_cmdline(parser);
 
     // loading images
     for (auto filename : filenames) {
-        auto img = new app_image();
-        img->filename = filename;
-        img->name = get_filename(filename);
-        img->is_hdr = is_hdr_filename(filename);
-        img->exposure = exposure;
-        img->gamma = gamma;
-        img->filmic = filmic;
+        auto img         = new app_image();
+        img->filename    = filename;
+        img->name        = get_filename(filename);
+        img->is_hdr      = is_hdr_filename(filename);
+        img->exposure    = exposure;
+        img->gamma       = gamma;
+        img->filmic      = filmic;
         img->load_thread = std::thread(load_image, img);
         app->imgs.push_back(img);
     }

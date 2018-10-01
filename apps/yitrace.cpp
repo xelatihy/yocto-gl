@@ -34,29 +34,29 @@
 // Application state
 struct app_state {
     // scene
-    scene* scn = nullptr;
+    scene*    scn = nullptr;
     bvh_tree* bvh = nullptr;
 
     // rendering params
-    std::string filename = "scene.json";
-    std::string imfilename = "out.obj";
-    trace_params params = {};
+    std::string  filename   = "scene.json";
+    std::string  imfilename = "out.obj";
+    trace_params params     = {};
 
     // rendering state
-    trace_state* state = nullptr;
+    trace_state*  state  = nullptr;
     trace_lights* lights = nullptr;
 
     // view image
-    vec2f imcenter = zero2f;
-    float imscale = 1;
-    bool zoom_to_fit = true;
-    bool widgets_open = false;
-    void* selection = nullptr;
+    vec2f                                      imcenter     = zero2f;
+    float                                      imscale      = 1;
+    bool                                       zoom_to_fit  = true;
+    bool                                       widgets_open = false;
+    void*                                      selection    = nullptr;
     std::vector<std::pair<std::string, void*>> update_list;
-    bool navigation_fps = false;
-    bool quiet = false;
-    int64_t trace_start = 0;
-    uint gl_txt = 0;
+    bool                                       navigation_fps = false;
+    bool                                       quiet          = false;
+    int64_t                                    trace_start    = 0;
+    uint                                       gl_txt         = 0;
 
     ~app_state() {
         if (scn) delete scn;
@@ -106,7 +106,7 @@ void draw_glwidgets(glwindow* win) {
             continue_glwidgets_line(win);
             draw_checkbox_glwidget(win, "fps", app->navigation_fps);
             auto mouse_pos = get_glmouse_pos(win);
-            auto ij = get_image_coords(
+            auto ij        = get_image_coords(
                 mouse_pos, app->imcenter, app->imscale, app->state->img.size());
             draw_dragger_glwidget(win, "mouse", ij);
             if (ij.x >= 0 && ij.x < app->state->img.size().x && ij.y >= 0 &&
@@ -134,9 +134,9 @@ void draw_glwidgets(glwindow* win) {
 }
 
 void draw(glwindow* win) {
-    auto app = (app_state*)get_user_pointer(win);
+    auto app      = (app_state*)get_user_pointer(win);
     auto win_size = get_glwindow_size(win);
-    auto fb_size = get_glframebuffer_size(win);
+    auto fb_size  = get_glframebuffer_size(win);
     set_glviewport(fb_size);
     clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
     center_image4f(app->imcenter, app->imscale, app->state->display.size(),
@@ -180,7 +180,7 @@ bool update(app_state* app) {
 
     delete app->state;
     app->trace_start = get_time();
-    app->state = make_trace_state(app->scn, app->params);
+    app->state       = make_trace_state(app->scn, app->params);
     trace_async_start(app->state, app->scn, app->bvh, app->lights, app->params);
 
     // updated
@@ -191,7 +191,7 @@ bool update(app_state* app) {
 void run_ui(app_state* app) {
     // window
     auto win_size = clamp(app->state->img.size(), 256, 1440);
-    auto win = make_glwindow(win_size, "yitrace", app, draw);
+    auto win      = make_glwindow(win_size, "yitrace", app, draw);
 
     // init widgets
     init_glwidgets(win);
@@ -199,18 +199,18 @@ void run_ui(app_state* app) {
     // loop
     auto mouse_pos = zero2f, last_pos = zero2f;
     while (!should_glwindow_close(win)) {
-        last_pos = mouse_pos;
-        mouse_pos = get_glmouse_pos(win);
-        auto mouse_left = get_glmouse_left(win);
-        auto mouse_right = get_glmouse_right(win);
-        auto alt_down = get_glalt_key(win);
-        auto shift_down = get_glshift_key(win);
+        last_pos            = mouse_pos;
+        mouse_pos           = get_glmouse_pos(win);
+        auto mouse_left     = get_glmouse_left(win);
+        auto mouse_right    = get_glmouse_right(win);
+        auto alt_down       = get_glalt_key(win);
+        auto shift_down     = get_glshift_key(win);
         auto widgets_active = get_glwidgets_active(win);
 
         // handle mouse and keyboard for navigation
         if ((mouse_left || mouse_right) && !alt_down && !widgets_active) {
-            auto dolly = 0.0f;
-            auto pan = zero2f;
+            auto dolly  = 0.0f;
+            auto pan    = zero2f;
             auto rotate = zero2f;
             if (mouse_left && !shift_down)
                 rotate = (mouse_pos - last_pos) / 100.0f;
@@ -256,32 +256,32 @@ int main(int argc, char* argv[]) {
     auto app = new app_state();
 
     // parse command line
-    auto parser =
-        make_cmdline_parser(argc, argv, "progressive path tracing", "yitrace");
-    app->params.camid = parse_arg(parser, "--camera", 0, "Camera index.");
-    app->params.yresolution =
-        parse_arg(parser, "--resolution,-r", 512, "Image vertical resolution.");
-    app->params.nsamples =
-        parse_arg(parser, "--nsamples,-s", 4096, "Number of samples.");
+    auto parser = make_cmdline_parser(
+        argc, argv, "progressive path tracing", "yitrace");
+    app->params.camid       = parse_arg(parser, "--camera", 0, "Camera index.");
+    app->params.yresolution = parse_arg(
+        parser, "--resolution,-r", 512, "Image vertical resolution.");
+    app->params.nsamples = parse_arg(
+        parser, "--nsamples,-s", 4096, "Number of samples.");
     app->params.tracer = (trace_type)parse_arge(
         parser, "--tracer,-t", 0, "Tracer type.", trace_type_names);
-    app->params.nbounces =
-        parse_arg(parser, "--nbounces", 4, "Maximum number of bounces.");
-    app->params.pixel_clamp =
-        parse_arg(parser, "--pixel-clamp", 100, "Final pixel clamping.");
+    app->params.nbounces = parse_arg(
+        parser, "--nbounces", 4, "Maximum number of bounces.");
+    app->params.pixel_clamp = parse_arg(
+        parser, "--pixel-clamp", 100, "Final pixel clamping.");
     app->params.seed = parse_arg(
         parser, "--seed", 7, "Seed for the random number generators.");
     auto embree = parse_arg(parser, "--embree", false, "Use Embree ratracer");
-    auto double_sided =
-        parse_arg(parser, "--double-sided", false, "Double-sided rendering.");
-    auto add_skyenv =
-        parse_arg(parser, "--add-skyenv", false, "Add missing env map");
-    auto quiet =
-        parse_arg(parser, "--quiet", false, "Print only errors messages");
-    app->imfilename =
-        parse_arg(parser, "--output-image,-o", "out.hdr", "Image filename");
-    app->filename =
-        parse_arg(parser, "scene", "scene.json", "Scene filename", true);
+    auto double_sided = parse_arg(
+        parser, "--double-sided", false, "Double-sided rendering.");
+    auto add_skyenv = parse_arg(
+        parser, "--add-skyenv", false, "Add missing env map");
+    auto quiet = parse_arg(
+        parser, "--quiet", false, "Print only errors messages");
+    app->imfilename = parse_arg(
+        parser, "--output-image,-o", "out.hdr", "Image filename");
+    app->filename = parse_arg(
+        parser, "scene", "scene.json", "Scene filename", true);
     check_cmdline(parser);
 
     // scene loading
@@ -319,7 +319,7 @@ int main(int argc, char* argv[]) {
     // build bvh
     if (!quiet) printf("building bvh\n");
     auto bvh_start = get_time();
-    app->bvh = build_bvh(app->scn, true, embree);
+    app->bvh       = build_bvh(app->scn, true, embree);
     if (!quiet)
         printf("building bvh in %s\n",
             format_duration(get_time() - bvh_start).c_str());
