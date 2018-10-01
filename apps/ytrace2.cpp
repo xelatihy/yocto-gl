@@ -28,80 +28,78 @@
 
 #include "../yocto/ygl.h"
 #include "../yocto/yglio.h"
+using namespace ygl;
 
 int main(int argc, char* argv[]) {
     // trace options
-    auto params = ygl::trace_params();
+    auto params = trace_params();
 
     // parse command line
     auto parser =
-        ygl::make_cmdline_parser(argc, argv, "Offline path tracing", "ytrace");
-    params.camid = ygl::parse_int(parser, "--camera", 0, "Camera index.");
-    params.yresolution = ygl::parse_int(
-        parser, "--resolution,-r", 512, "Image vertical resolution.");
+        make_cmdline_parser(argc, argv, "Offline path tracing", "ytrace");
+    params.camid = parse_int(parser, "--camera", 0, "Camera index.");
+    params.yresolution =
+        parse_int(parser, "--resolution,-r", 512, "Image vertical resolution.");
     params.nsamples =
-        ygl::parse_int(parser, "--nsamples,-s", 256, "Number of samples.");
-    params.tracer = (ygl::trace_type)ygl::parse_enum(
-        parser, "--tracer,-t", 0, "Trace type.", ygl::trace_type_names);
+        parse_int(parser, "--nsamples,-s", 256, "Number of samples.");
+    params.tracer = (trace_type)parse_enum(
+        parser, "--tracer,-t", 0, "Trace type.", trace_type_names);
     params.nbounces =
-        ygl::parse_int(parser, "--nbounces", 8, "Maximum number of bounces.");
-    params.noparallel = ygl::parse_flag(
+        parse_int(parser, "--nbounces", 8, "Maximum number of bounces.");
+    params.noparallel = parse_flag(
         parser, "--noparallel", false, "Disable parallel execution.");
-    params.nbatch =
-        ygl::parse_int(parser, "--nbatch,-b", 16, "Samples per batch.");
-    auto save_batch = ygl::parse_flag(
-        parser, "--save-batch", false, "Save images progressively");
-    auto exposure =
-        ygl::parse_float(parser, "--exposure,-e", 0, "Hdr exposure");
-    auto gamma = ygl::parse_float(parser, "--gamma,-g", 2.2f, "Hdr gamma");
-    auto filmic = ygl::parse_flag(parser, "--filmic", false, "Hdr filmic");
-    auto embree =
-        ygl::parse_flag(parser, "--embree", false, "Use Embree ratracer");
-    auto imfilename = ygl::parse_string(
-        parser, "--output-image,-o", "out.hdr", "Image filename");
-    auto filename = ygl::parse_string(
-        parser, "scene", "scene.json", "Scene filename", true);
-    ygl::check_cmdline(parser);
+    params.nbatch = parse_int(parser, "--nbatch,-b", 16, "Samples per batch.");
+    auto save_batch =
+        parse_flag(parser, "--save-batch", false, "Save images progressively");
+    auto exposure = parse_float(parser, "--exposure,-e", 0, "Hdr exposure");
+    auto gamma = parse_float(parser, "--gamma,-g", 2.2f, "Hdr gamma");
+    auto filmic = parse_flag(parser, "--filmic", false, "Hdr filmic");
+    auto embree = parse_flag(parser, "--embree", false, "Use Embree ratracer");
+    auto imfilename =
+        parse_string(parser, "--output-image,-o", "out.hdr", "Image filename");
+    auto filename =
+        parse_string(parser, "scene", "scene.json", "Scene filename", true);
+    check_cmdline(parser);
 
     // scene loading
     printf("loading scene %s\n", filename.c_str());
-    auto scn = ygl::load_scene(filename);
+    auto scn = load_scene(filename);
 
     // tesselate
     printf("tesselating scene elements\n");
-    ygl::tesselate_subdivs(scn);
+    tesselate_subdivs(scn);
 
     // build bvh
     printf("building bvh\n");
-    auto bvh = ygl::build_bvh(scn, true, embree);
+    auto bvh = build_bvh(scn, true, embree);
 
     // init renderer
     printf("initializing lights\n");
-    auto lights = ygl::make_trace_lights(scn, params);
+    auto lights = make_trace_lights(scn, params);
 
     // initialize rendering objects
     printf("initializing tracer data\n");
-    auto state = ygl::make_trace_state(scn, params);
+    auto state = make_trace_state(scn, params);
 
     // render
     printf("rendering image\n");
     auto done = false;
     while (!done) {
         printf("rendering sample %d/%d\n", state->sample, params.nsamples);
-        done = ygl::trace_samples(state, scn, bvh, lights, params);
+        done = trace_samples(state, scn, bvh, lights, params);
         if (save_batch) {
-            auto filename = ygl::replace_extension(
+            auto filename = replace_extension(
                 imfilename, std::to_string(state->sample) + "." +
-                                ygl::get_extension(imfilename));
+                                get_extension(imfilename));
             printf("saving image %s\n", filename.c_str());
-            ygl::save_tonemapped_image(
+            save_tonemapped_image(
                 filename, state->img, exposure, gamma, filmic);
         }
     }
 
     // save image
     printf("saving image %s\n", imfilename.c_str());
-    ygl::save_tonemapped_image(imfilename, state->img, exposure, gamma, filmic);
+    save_tonemapped_image(imfilename, state->img, exposure, gamma, filmic);
 
     // cleanup
     delete scn;

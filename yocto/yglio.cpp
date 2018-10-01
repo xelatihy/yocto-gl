@@ -785,7 +785,7 @@ volume<float> load_volume1f(const std::string& filename) {
 }
 
 // Saves volume data in binary format.
-void save_volume1f(const std::string& filename, const ygl::volume<float>& vol) {
+void save_volume1f(const std::string& filename, const volume<float>& vol) {
     auto file = fopen(filename.c_str(), "w");
     if (!file) throw std::runtime_error("could not save " + filename);
     auto size = vol.size();
@@ -831,7 +831,7 @@ scene* load_scene(
     if (scn->cameras.empty()) {
         scn->cameras.push_back(make_bbox_camera("<view>", compute_bbox(scn)));
     }
-    ygl::add_missing_names(scn);
+    add_missing_names(scn);
     return scn;
 }
 
@@ -1066,93 +1066,141 @@ void save_json(const std::string& filename, const json& js) {
     save_text(filename, js.dump(4));
 }
 
-inline void to_json(json& js, const vec2f& val) {
-    js = std::array<float, 2>{{val.x, val.y}};
+template <typename T>
+inline void to_json(json& js, const vec2<T>& val) {
+    js = std::array<T, 2>{{val.x, val.y}};
 }
-inline void from_json(const json& js, vec2f& val) {
-    auto vala = js.get<std::array<float, 2>>();
+template <typename T>
+inline void from_json(const json& js, vec2<T>& val) {
+    auto vala = js.get<std::array<T, 2>>();
     val = {vala[0], vala[1]};
 }
-inline void to_json(json& js, const vec3f& val) {
-    js = std::array<float, 3>{{val.x, val.y, val.z}};
+template <typename T>
+inline void to_json(json& js, const vec3<T>& val) {
+    js = std::array<T, 3>{{val.x, val.y, val.z}};
 }
-inline void from_json(const json& js, vec3f& val) {
-    auto vala = js.get<std::array<float, 3>>();
+template <typename T>
+inline void from_json(const json& js, vec3<T>& val) {
+    auto vala = js.get<std::array<T, 3>>();
     val = {vala[0], vala[1], vala[2]};
 }
-inline void to_json(json& js, const vec4f& val) {
-    js = std::array<float, 4>{{val.x, val.y, val.z, val.w}};
+template <typename T>
+inline void to_json(json& js, const vec4<T>& val) {
+    js = std::array<T, 4>{{val.x, val.y, val.z, val.w}};
 }
-inline void from_json(const json& js, vec4f& val) {
-    auto vala = js.get<std::array<float, 4>>();
+template <typename T>
+inline void from_json(const json& js, vec4<T>& val) {
+    auto vala = js.get<std::array<T, 4>>();
     val = {vala[0], vala[1], vala[2], vala[3]};
 }
 
-inline void to_json(json& js, const vec2i& val) {
-    js = std::array<int, 2>{{val.x, val.y}};
+template <typename T>
+inline void to_json(json& js, const frame2<T>& val) {
+    js = std::array<vec2<T>, 3>{{val.x, val.y, val.o}};
 }
-inline void from_json(const json& js, vec2i& val) {
-    auto vala = js.get<std::array<int, 2>>();
-    val = {vala[0], vala[1]};
-}
-inline void to_json(json& js, const vec3i& val) {
-    js = std::array<int, 3>{{val.x, val.y, val.z}};
-}
-inline void from_json(const json& js, vec3i& val) {
-    auto vala = js.get<std::array<int, 3>>();
+template <typename T>
+inline void from_json(const json& js, frame2<T>& val) {
+    auto vala = js.get<std::array<vec2<T>, 3>>();
     val = {vala[0], vala[1], vala[2]};
 }
-inline void to_json(json& js, const vec4i& val) {
-    js = std::array<int, 4>{{val.x, val.y, val.z, val.w}};
+template <typename T>
+inline void to_json(json& js, const frame3<T>& val) {
+    js = std::array<vec3<T>, 4>{{val.x, val.y, val.z, val.o}};
 }
-inline void from_json(const json& js, vec4i& val) {
-    auto vala = js.get<std::array<int, 4>>();
+template <typename T>
+inline void from_json(const json& js, frame3<T>& val) {
+    auto vala = js.get<std::array<vec3<T>, 4>>();
     val = {vala[0], vala[1], vala[2], vala[3]};
 }
 
-inline void to_json(json& js, const frame3f& val) {
-    js = std::array<vec3f, 4>{{val.x, val.y, val.z, val.o}};
+template <typename T>
+inline void to_json(json& js, const mat2<T>& val) {
+    js = std::array<vec2<T>, 2>{{val.x, val.y}};
 }
-inline void from_json(const json& js, frame3f& val) {
-    auto vala = js.get<std::array<vec3f, 4>>();
+template <typename T>
+inline void from_json(const json& js, mat2<T>& val) {
+    auto vala = js.get<std::array<vec2<T>, 2>>();
+    val = {vala[0], vala[1]};
+}
+template <typename T>
+inline void to_json(json& js, const mat3<T>& val) {
+    js = std::array<vec3<T>, 3>{{val.x, val.y, val.z}};
+}
+template <typename T>
+inline void from_json(const json& js, mat3<T>& val) {
+    auto vala = js.get<std::array<vec3<T>, 3>>();
+    val = {vala[0], vala[1], vala[2]};
+}
+template <typename T>
+inline void to_json(json& js, const mat4<T>& val) {
+    js = std::array<vec4<T>, 4>{{val.x, val.y, val.z, val.w}};
+}
+template <typename T>
+inline void from_json(const json& js, mat4<T>& val) {
+    auto vala = js.get<std::array<vec4<T>, 4>>();
     val = {vala[0], vala[1], vala[2], vala[3]};
 }
 
-inline void to_json(json& js, const mat4f& val) {
-    js = std::array<vec4f, 4>{{val.x, val.y, val.z, val.w}};
+template <typename T>
+inline void to_json(json& js, const bbox1<T>& val) {
+    js = std::array<T, 2>{{val.min, val.max}};
 }
-inline void from_json(const json& js, mat4f& val) {
-    auto vala = js.get<std::array<vec4f, 4>>();
-    val = {vala[0], vala[1], vala[2], vala[3]};
+template <typename T>
+inline void from_json(const json& js, bbox1<T>& val) {
+    auto vala = js.get<std::array<T, 2>>();
+    val = {vala[0], vala[1]};
 }
-
-inline void to_json(json& js, const bbox3f& val) {
-    js = std::array<vec3f, 2>{{val.min, val.max}};
+template <typename T>
+inline void to_json(json& js, const bbox2<T>& val) {
+    js = std::array<vec2<T>, 2>{{val.min, val.max}};
 }
-inline void from_json(const json& js, bbox3f& val) {
-    auto vala = js.get<std::array<vec3f, 2>>();
+template <typename T>
+inline void from_json(const json& js, bbox2<T>& val) {
+    auto vala = js.get<std::array<vec2<T>, 2>>();
+    val = {vala[0], vala[1]};
+}
+template <typename T>
+inline void to_json(json& js, const bbox3<T>& val) {
+    js = std::array<vec3<T>, 2>{{val.min, val.max}};
+}
+template <typename T>
+inline void from_json(const json& js, bbox3<T>& val) {
+    auto vala = js.get<std::array<vec3<T>, 2>>();
+    val = {vala[0], vala[1]};
+}
+template <typename T>
+inline void to_json(json& js, const bbox4<T>& val) {
+    js = std::array<vec4<T>, 2>{{val.min, val.max}};
+}
+template <typename T>
+inline void from_json(const json& js, bbox4<T>& val) {
+    auto vala = js.get<std::array<vec4<T>, 2>>();
     val = {vala[0], vala[1]};
 }
 
-inline void to_json(json& js, const image<vec4f>& val) {
+template <typename T>
+inline void to_json(json& js, const image<T>& val) {
     js = json::object();
     js["size"] = val.size();
     js["data"] = val.dataref();
 }
-inline void from_json(const json& js, image<vec4f>& val) {
+template <typename T>
+inline void from_json(const json& js, image<T>& val) {
     auto size = js.at("size").get<vec2i>();
-    auto data = js.at("data").get<std::vector<vec4f>>();
-    val = image<vec4f>{size, data.data()};
+    auto data = js.at("data").get<std::vector<T>>();
+    val = image<T>{size, data.data()};
 }
-inline void to_json(json& js, const volume<float>& val) {
+template <typename T>
+inline void to_json(json& js, const volume<T>& val) {
     js = json::object();
     js["size"] = val.size();
     js["data"] = val.dataref();
 }
-inline void from_json(const json& js, volume<float>& val) {
+template <typename T>
+inline void from_json(const json& js, volume<T>& val) {
     auto size = js.at("size").get<vec3i>();
-    auto data = js.at("data").get<std::vector<float>>();
-    val = volume<float>{size, data.data()};
+    auto data = js.at("data").get<std::vector<T>>();
+    val = volume<T>{size, data.data()};
 }
 
 }  // namespace ygl
@@ -1232,7 +1280,7 @@ void from_json_proc(const json& js, texture& val) {
         val.img = make_uvgrid_image4f(size);
     } else if (type == "sky") {
         if (size.x < size.y * 2) size.x = size.y * 2;
-        val.img = make_sunsky_image4f(size, js.value("sun_angle", pi / 4),
+        val.img = make_sunsky_image4f(size, js.value("sun_angle", pif / 4),
             js.value("turbidity", 3.0f), js.value("has_sun", false),
             js.value("ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
         val.gamma = 1;
@@ -3318,18 +3366,13 @@ scene* load_gltf_scene(
                 auto ortho = gcam.value("orthographic", json::object());
                 set_camera_fovy(cam, ortho.value("ymag", 0.0f),
                     ortho.value("xmag", 0.0f) / ortho.value("ymag", 0.0f));
-                cam->near = ortho.value("znear", 0.0f);
-                cam->far = ortho.value("zfar", flt_max);
-                cam->focus = flt_max;
+                cam->focus = maxf;
                 cam->aperture = 0;
             } else {
                 auto persp = gcam.value("perspective", json::object());
                 set_camera_fovy(cam, persp.value("yfov", 1.0f),
                     persp.value("aspectRatio", 1.0f));
-                cam->near = persp.value("znear", 0.1f);
-                cam->far =
-                    persp.count("zfar") ? persp.value("zfar", 0.0f) : flt_max;
-                cam->focus = flt_max;
+                cam->focus = maxf;
                 cam->aperture = 0;
             }
             scn->cameras.push_back(cam);
@@ -3541,14 +3584,12 @@ void save_gltf_scene(const std::string& filename, const scene* scn,
         if (!cam->ortho) {
             cjs["type"] = "perspective";
             cjs["perspective"]["aspectRatio"] = cam->film.x / cam->film.y;
-            cjs["perspective"]["yfov"] = eval_camera_fovy(cam);
-            cjs["perspective"]["znear"] = cam->near;
+            cjs["perspective"]["znear"] = 0.01f;
         } else {
             cjs["type"] = "orthographic";
             cjs["orthographic"]["xmag"] = cam->film.x / 2;
             cjs["orthographic"]["ymag"] = cam->film.y / 2;
-            cjs["orthographic"]["zfar"] = cam->far;
-            cjs["orthographic"]["znear"] = cam->near;
+            cjs["orthographic"]["znear"] = 0.01f;
         }
         cmap[cam] = (int)js["cameras"].size();
         js["cameras"].push_back(cjs);
@@ -4039,7 +4080,7 @@ scene* load_pbrt_scene(
             auto v = get_vec4f(jcmd.at("values"));
             stack.back().frame =
                 stack.back().frame *
-                rotation_frame(vec3f{v.y, v.z, v.w}, v.x * pi / 180);
+                rotation_frame(vec3f{v.y, v.z, v.w}, v.x * pif / 180);
         } else if (cmd == "LookAt") {
             auto m = get_mat3f(jcmd.at("values"));
             stack.back().frame =
@@ -4060,11 +4101,11 @@ scene* load_pbrt_scene(
             auto fovy = 1.0f;
             auto type = jcmd.at("type").get<std::string>();
             if (type == "perspective") {
-                fovy = jcmd.at("fov").get<float>() * pi / 180;
+                fovy = jcmd.at("fov").get<float>() * pif / 180;
             } else {
                 printf("%s camera not supported\n", type.c_str());
             }
-            ygl::set_camera_fovy(cam, fovy, aspect);
+            set_camera_fovy(cam, fovy, aspect);
             scn->cameras.push_back(cam);
         } else if (cmd == "Texture") {
             auto found = false;
@@ -4083,8 +4124,8 @@ scene* load_pbrt_scene(
                 auto type = jcmd.at("type").get<std::string>();
                 if (type == "imagemap") {
                     txt->path = jcmd.at("filename").get<std::string>();
-                    if (ygl::get_extension(txt->path) == "pfm")
-                        txt->path = ygl::replace_extension(txt->path, ".hdr");
+                    if (get_extension(txt->path) == "pfm")
+                        txt->path = replace_extension(txt->path, ".hdr");
                 } else {
                     printf("%s texture not supported\n", type.c_str());
                 }
@@ -4326,7 +4367,7 @@ scene* load_pbrt_scene(
                 if (jcmd.count("from")) from = get_vec3f(jcmd.at("from"));
                 if (jcmd.count("to")) to = get_vec3f(jcmd.at("to"));
                 auto dir = normalize(from - to);
-                auto size = distant_dist * sin(5 * pi / 180);
+                auto size = distant_dist * sin(5 * pif / 180);
                 auto sshp = make_quad({1, 1}, {size, size}, {1, 1}, true);
                 shp->pos = sshp->pos;
                 shp->norm = sshp->norm;
@@ -4441,7 +4482,7 @@ WorldEnd
     fprintf(f, "LookAt %g %g %g %g %g %g %g %g %g\n", from.x, from.y, from.z,
         to.x, to.y, to.z, up.x, up.y, up.z);
     fprintf(f, "Camera \"perspective\" \"float fov\" %g\n",
-        eval_camera_fovy(cam) * 180 / pi);
+        eval_camera_fovy(cam) * 180 / pif);
 
     // save renderer
     fprintf(f, "Sampler \"random\" \"integer pixelsamples\" [64]\n");
@@ -4729,8 +4770,6 @@ void serialize_bin_object(camera* cam, FILE* fs, bool save) {
     serialize_bin_value(cam->focal, fs, save);
     serialize_bin_value(cam->focus, fs, save);
     serialize_bin_value(cam->aperture, fs, save);
-    serialize_bin_value(cam->near, fs, save);
-    serialize_bin_value(cam->far, fs, save);
 }
 
 void serialize_bin_object(bvh_tree* bvh, FILE* fs, bool save) {
@@ -5458,8 +5497,8 @@ void save_obj_fvmesh(const std::string& filename,
     for (auto& t : texcoord)
         fprintf(fs, "vt %g %g\n", t.x, (flip_texcoord) ? 1 - t.y : t.y);
     auto mask = obj_vertex{1, texcoord.empty() ? 0 : 1, norm.empty() ? 0 : 1};
-    auto vert = [mask](int pi, int ti, int ni) {
-        return obj_vertex{(pi + 1) * mask.pos, (ti + 1) * mask.texcoord,
+    auto vert = [mask](int pif, int ti, int ni) {
+        return obj_vertex{(pif + 1) * mask.pos, (ti + 1) * mask.texcoord,
             (ni + 1) * mask.norm};
     };
     for (auto i = 0; i < quads_pos.size(); i++) {

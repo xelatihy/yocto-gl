@@ -28,25 +28,24 @@
 
 #include "../yocto/ygl.h"
 #include "../yocto/yglio.h"
+using namespace ygl;
 
 int main(int argc, char* argv[]) {
     // parse command line
-    auto parser =
-        ygl::make_cmdline_parser(argc, argv, "Process images", "ytonemap");
-    auto exposure =
-        ygl::parse_float(parser, "--exposure,-e", 0, "Tonemap exposure");
-    auto gamma = ygl::parse_float(parser, "--gamma,-g", 2.2f, "Tonemap gamma.");
-    auto filmic = ygl::parse_flag(
-        parser, "--filmic,-f", false, "Tonemap uses filmic curve");
-    auto output = ygl::parse_string(
+    auto parser = make_cmdline_parser(argc, argv, "Process images", "ytonemap");
+    auto exposure = parse_float(parser, "--exposure,-e", 0, "Tonemap exposure");
+    auto gamma = parse_float(parser, "--gamma,-g", 2.2f, "Tonemap gamma.");
+    auto filmic =
+        parse_flag(parser, "--filmic,-f", false, "Tonemap uses filmic curve");
+    auto output = parse_string(
         parser, "--output,-o", "out.png", "output image filename", true);
-    auto filename = ygl::parse_string(
+    auto filename = parse_string(
         parser, "filename", "img.hdr", "input image filename", true);
-    ygl::check_cmdline(parser);
+    check_cmdline(parser);
 
-    auto hdr = ygl::load_image4f(filename);
-    auto ldr = ygl::tonemap_exposuregamma(hdr, exposure, gamma, filmic);
-    ygl::save_image4f(output, ldr);
+    auto hdr = load_image4f(filename);
+    auto ldr = tonemap_exposuregamma(hdr, exposure, gamma, filmic);
+    save_image4f(output, ldr);
 
     // done
     return 0;

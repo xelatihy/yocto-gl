@@ -28,8 +28,9 @@
 
 #include "../yocto/ygl.h"
 #include "../yocto/yglio.h"
+using namespace ygl;
 
-std::string to_string(const ygl::obj_vertex& v) {
+std::string to_string(const obj_vertex& v) {
     auto s = std::to_string(v.pos);
     if (v.texcoord) {
         s += "/" + std::to_string(v.texcoord);
@@ -42,27 +43,26 @@ std::string to_string(const ygl::obj_vertex& v) {
 
 int main(int argc, char* argv[]) {
     // parse command line
-    auto parser = ygl::make_cmdline_parser(
+    auto parser = make_cmdline_parser(
         argc, argv, "Process obj files directly", "yobjproc");
-    auto translation = ygl::parse_vec3f(
-        parser, "--translation,-t", ygl::zero3f, "translation");
-    auto scale =
-        ygl::parse_vec3f(parser, "--scale,-s", ygl::vec3f{1, 1, 1}, "scale");
+    auto translation =
+        parse_vec3f(parser, "--translation,-t", zero3f, "translation");
+    auto scale = parse_vec3f(parser, "--scale,-s", vec3f{1, 1, 1}, "scale");
     auto print_info =
-        ygl::parse_flag(parser, "--print-info,-i", false, "print obj info");
-    auto output = ygl::parse_string(
+        parse_flag(parser, "--print-info,-i", false, "print obj info");
+    auto output = parse_string(
         parser, "--output,-o", "out.obj", "output obj scene", true);
-    auto filename = ygl::parse_string(
-        parser, "filename", "img.obj", "input obj filename", true);
-    ygl::check_cmdline(parser);
+    auto filename =
+        parse_string(parser, "filename", "img.obj", "input obj filename", true);
+    check_cmdline(parser);
 
     // prepare stats
     auto npos = 0, nnorm = 0, ntexcoord = 0;
     auto nobjects = 0, ngroups = 0, nusemtl = 0, nmaterials = 0;
     auto nfaces = 0, nplines = 0, nlines = 0, nppoints = 0, npoints = 0;
     auto ntriangles = 0, nquads = 0, npolys = 0;
-    auto bbox = ygl::invalid_bbox3f;
-    auto tbox = ygl::invalid_bbox3f;
+    auto bbox = invalid_bbox3f;
+    auto tbox = invalid_bbox3f;
 
     // prepare file to output
     auto fs = fopen(output.c_str(), "wt");
@@ -72,25 +72,25 @@ int main(int argc, char* argv[]) {
     }
 
     // obj callbacks
-    auto cb = ygl::obj_callbacks();
+    auto cb = obj_callbacks();
 
     // vertex data
-    cb.vert = [&](const ygl::vec3f& v) {
+    cb.vert = [&](const vec3f& v) {
         auto tv = translation + scale * v;
         fprintf(fs, "v  %6g %6g %6g\n", tv.x, tv.y, tv.z);
         bbox += v;
         tbox += tv;
         npos += 1;
     };
-    cb.norm = [&](const ygl::vec3f& v) {
+    cb.norm = [&](const vec3f& v) {
         fprintf(fs, "vn %6g %6g %6g\n", v.x, v.y, v.z);
         nnorm += 1;
     };
-    cb.texcoord = [&](const ygl::vec2f& v) {
+    cb.texcoord = [&](const vec2f& v) {
         fprintf(fs, "vt %6g %6g\n", v.x, v.y);
         ntexcoord += 1;
     };
-    cb.face = [&](const std::vector<ygl::obj_vertex>& verts) {
+    cb.face = [&](const std::vector<obj_vertex>& verts) {
         fprintf(fs, "f");
         for (auto v : verts) fprintf(fs, " %s", to_string(v).c_str());
         fprintf(fs, "\n");
@@ -99,14 +99,14 @@ int main(int argc, char* argv[]) {
         if (verts.size() == 4) nquads += 1;
         if (verts.size() > 4) npolys += 1;
     };
-    cb.line = [&](const std::vector<ygl::obj_vertex>& verts) {
+    cb.line = [&](const std::vector<obj_vertex>& verts) {
         fprintf(fs, "l");
         for (auto v : verts) fprintf(fs, " %s", to_string(v).c_str());
         fprintf(fs, "\n");
         nplines += 1;
         nlines += (int)verts.size() - 1;
     };
-    cb.point = [&](const std::vector<ygl::obj_vertex>& verts) {
+    cb.point = [&](const std::vector<obj_vertex>& verts) {
         fprintf(fs, "p");
         for (auto v : verts) fprintf(fs, " %s", to_string(v).c_str());
         fprintf(fs, "\n");
@@ -132,7 +132,7 @@ int main(int argc, char* argv[]) {
 
     // parse and write
     try {
-        ygl::load_obj(filename, cb, false, false);
+        load_obj(filename, cb, false, false);
     } catch (std::exception& e) {
         printf(
             "could not load obj %s\nerror: %s\n", filename.c_str(), e.what());
@@ -149,7 +149,7 @@ int main(int argc, char* argv[]) {
             "bbox max: % 6g % 6g % 6g\n", bbox.max.x, bbox.max.y, bbox.max.z);
         printf("bbox cen: % 6g % 6g % 6g\n", center.x, center.y, center.z);
         printf("bbox siz: % 6g % 6g % 6g\n", size.x, size.y, size.z);
-        if (translation != ygl::zero3f || scale != ygl::vec3f{1, 1, 1}) {
+        if (translation != zero3f || scale != vec3f{1, 1, 1}) {
             auto center = (tbox.max + tbox.min) / 2;
             auto size = tbox.max - tbox.min;
             printf("tbox min: % 6g % 6g % 6g\n", tbox.min.x, tbox.min.y,

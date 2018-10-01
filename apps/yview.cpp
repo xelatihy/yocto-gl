@@ -39,14 +39,14 @@ struct draw_glshape_vbos {
 
 struct draw_glstate {
     unsigned int gl_prog = 0;
-    std::unordered_map<const ygl::shape*, draw_glshape_vbos> shp_vbos;
-    std::unordered_map<const ygl::texture*, unsigned int> txt_id;
+    std::unordered_map<const shape*, draw_glshape_vbos> shp_vbos;
+    std::unordered_map<const texture*, unsigned int> txt_id;
 };
 
 // Application state
 struct app_state {
     // scene
-    ygl::scene* scn = nullptr;
+    scene* scn = nullptr;
 
     // parameters
     std::string filename = "scene.json";     // scene name
@@ -60,7 +60,9 @@ struct app_state {
     bool eyelight = false;                   // camera light mode
     float exposure = 0;                      // exposure
     float gamma = 2.2f;                      // gamma
-    ygl::vec3f ambient = {0, 0, 0};          // ambient lighting
+    vec3f ambient = {0, 0, 0};               // ambient lighting
+    float near_plane = 0.01f;                // near plane
+    float far_plane = 10000.0f;              // far plane
 
     draw_glstate* state = nullptr;
 
@@ -70,7 +72,7 @@ struct app_state {
     std::vector<std::pair<std::string, void*>> update_list;
     float time = 0;
     std::string anim_group = "";
-    ygl::vec2f time_range = ygl::zero2f;
+    vec2f time_range = zero2f;
     bool animate = false;
 
     ~app_state() {
@@ -79,15 +81,15 @@ struct app_state {
     }
 };
 
-void draw_glscene(const draw_glstate* state, const ygl::scene* scn,
-    const ygl::camera* cam, const ygl::vec2i& viewport_size,
-    const void* highlighted, bool eyelight, bool wireframe, bool edges,
-    float exposure, float gamma);
+void draw_glscene(const draw_glstate* state, const scene* scn,
+    const camera* cam, const vec2i& viewport_size, const void* highlighted,
+    bool eyelight, bool wireframe, bool edges, float exposure, float gamma,
+    float near_plane, float far_plane);
 
 // draw with shading
-void draw(ygl::glwindow* win) {
-    auto app = (app_state*)ygl::get_user_pointer(win);
-    auto framebuffer_size = ygl::get_glframebuffer_size(win);
+void draw(glwindow* win) {
+    auto app = (app_state*)get_user_pointer(win);
+    auto framebuffer_size = get_glframebuffer_size(win);
     app->resolution = framebuffer_size.y;
 
     static auto last_time = 0.0f;
@@ -106,58 +108,60 @@ void draw(ygl::glwindow* win) {
         }
         if (sel.first == "node" || sel.first == "animation" ||
             app->time != last_time) {
-            ygl::update_transforms(app->scn, app->time, app->anim_group);
+            update_transforms(app->scn, app->time, app->anim_group);
             last_time = app->time;
         }
     }
     app->update_list.clear();
 
     auto cam = app->scn->cameras.at(app->camid);
-    ygl::clear_glframebuffer(ygl::vec4f{0.8f, 0.8f, 0.8f, 1.0f});
+    clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
     draw_glscene(app->state, app->scn, cam, framebuffer_size, app->selection,
-        app->eyelight, app->wireframe, app->edges, app->exposure, app->gamma);
+        app->eyelight, app->wireframe, app->edges, app->exposure, app->gamma,
+        app->near_plane, app->far_plane);
 
-    ygl::begin_glwidgets_frame(win);
-    if (ygl::begin_glwidgets_window(win, "yview")) {
-        ygl::draw_imgui_label(win, "scene", "%s", app->filename.c_str());
-        if (app->time_range != ygl::zero2f) {
-            ygl::draw_slider_glwidget(
+    begin_glwidgets_frame(win);
+    if (begin_glwidgets_window(win, "yview")) {
+        draw_imgui_label(win, "scene", "%s", app->filename.c_str());
+        if (app->time_range != zero2f) {
+            draw_slider_glwidget(
                 win, "time", app->time, app->time_range.x, app->time_range.y);
-            ygl::draw_inputtext_glwidget(win, "anim group", app->anim_group);
-            ygl::draw_checkbox_glwidget(win, "animate", app->animate);
+            draw_inputtext_glwidget(win, "anim group", app->anim_group);
+            draw_checkbox_glwidget(win, "animate", app->animate);
         }
-        if (ygl::begin_treenode_glwidget(win, "render settings")) {
-            ygl::draw_combobox_glwidget(
+        if (begin_treenode_glwidget(win, "render settings")) {
+            draw_combobox_glwidget(
                 win, "camera", cam, app->scn->cameras, false);
-            ygl::draw_slider_glwidget(
-                win, "resolution", app->resolution, 256, 4096);
-            ygl::draw_checkbox_glwidget(win, "eyelight", app->eyelight);
-            ygl::continue_glwidgets_line(win);
-            ygl::draw_checkbox_glwidget(win, "wireframe", app->wireframe);
-            ygl::continue_glwidgets_line(win);
-            ygl::draw_checkbox_glwidget(win, "edges", app->edges);
-            ygl::end_treenode_glwidget(win);
+            draw_slider_glwidget(win, "resolution", app->resolution, 256, 4096);
+            draw_checkbox_glwidget(win, "eyelight", app->eyelight);
+            continue_glwidgets_line(win);
+            draw_checkbox_glwidget(win, "wireframe", app->wireframe);
+            continue_glwidgets_line(win);
+            draw_checkbox_glwidget(win, "edges", app->edges);
+            end_treenode_glwidget(win);
         }
-        if (ygl::begin_treenode_glwidget(win, "view settings")) {
-            ygl::draw_slider_glwidget(win, "exposure", app->exposure, -10, 10);
-            ygl::draw_slider_glwidget(win, "gamma", app->gamma, 0.1f, 4);
-            ygl::draw_checkbox_glwidget(win, "fps", app->navigation_fps);
-            ygl::end_treenode_glwidget(win);
+        if (begin_treenode_glwidget(win, "view settings")) {
+            draw_slider_glwidget(win, "exposure", app->exposure, -10, 10);
+            draw_slider_glwidget(win, "gamma", app->gamma, 0.1f, 4);
+            draw_slider_glwidget(win, "near", app->near_plane, 0.01f, 1.0f);
+            draw_slider_glwidget(win, "far", app->far_plane, 1000.0f, 10000.0f);
+            draw_checkbox_glwidget(win, "fps", app->navigation_fps);
+            end_treenode_glwidget(win);
         }
-        if (ygl::begin_treenode_glwidget(win, "scene tree")) {
+        if (begin_treenode_glwidget(win, "scene tree")) {
             draw_glwidgets_scene_tree(
                 win, "", app->scn, app->selection, app->update_list, 200);
-            ygl::end_treenode_glwidget(win);
+            end_treenode_glwidget(win);
         }
-        if (ygl::begin_treenode_glwidget(win, "scene object")) {
+        if (begin_treenode_glwidget(win, "scene object")) {
             draw_glwidgets_scene_inspector(
                 win, "", app->scn, app->selection, app->update_list, 200);
-            ygl::end_treenode_glwidget(win);
+            end_treenode_glwidget(win);
         }
     }
-    ygl::end_glwidgets_frame(win);
+    end_glwidgets_frame(win);
 
-    ygl::swap_glbuffers(win);
+    swap_glbuffers(win);
 }
 
 #ifndef _WIN32
@@ -218,7 +222,7 @@ static const char* fragment =
     R"(
         #version 330
 
-        float pi = 3.14159265;
+        float pif = 3.14159265;
 
         uniform bool eyelight;         // eyelight shading
         uniform vec3 lamb;             // ambient light
@@ -251,30 +255,30 @@ static const char* fragment =
             float ns = 2/(rs*rs)-2;
             float ndi = dot(wi,n), ndo = dot(wo,n), ndh = dot(wh,n);
             if(etype == 1) {
-                return ((1+dot(wo,wi))/2) * kd/pi;
+                return ((1+dot(wo,wi))/2) * kd/pif;
             } else if(etype == 2) {
                 float si = sqrt(1-ndi*ndi);
                 float so = sqrt(1-ndo*ndo);
                 float sh = sqrt(1-ndh*ndh);
                 if(si <= 0) return vec3(0);
-                vec3 diff = si * kd / pi;
+                vec3 diff = si * kd / pif;
                 if(sh<=0) return diff;
-                float d = ((2+ns)/(2*pi)) * pow(si,ns);
+                float d = ((2+ns)/(2*pif)) * pow(si,ns);
                 vec3 spec = si * ks * d / (4*si*so);
                 return diff+spec;
             } else if(etype == 3 || etype == 4) {
                 if(ndi<=0 || ndo <=0) return vec3(0);
-                vec3 diff = ndi * kd / pi;
+                vec3 diff = ndi * kd / pif;
                 if(ndh<=0) return diff;
                 if(etype == 4) {
-                    float d = ((2+ns)/(2*pi)) * pow(ndh,ns);
+                    float d = ((2+ns)/(2*pif)) * pow(ndh,ns);
                     vec3 spec = ndi * ks * d / (4*ndi*ndo);
                     return diff+spec;
                 } else {
                     float cos2 = ndh * ndh;
                     float tan2 = (1 - cos2) / cos2;
                     float alpha2 = rs * rs;
-                    float d = alpha2 / (pi * cos2 * cos2 * (alpha2 + tan2) * (alpha2 + tan2));
+                    float d = alpha2 / (pif * cos2 * cos2 * (alpha2 + tan2) * (alpha2 + tan2));
                     float lambda_o = (-1 + sqrt(1 + (1 - ndo * ndo) / (ndo * ndo))) / 2;
                     float lambda_i = (-1 + sqrt(1 + (1 - ndi * ndi) / (ndi * ndi))) / 2;
                     float g = 1 / (1 + lambda_o + lambda_i);
@@ -440,7 +444,7 @@ static const char* fragment =
                 // eyelight shading
                 if(eyelight) {
                     vec3 wi = wo;
-                    c += pi * brdfcos((has_brdf) ? elem_type : 0, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, n,wi,wo);
+                    c += pif * brdfcos((has_brdf) ? elem_type : 0, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, n,wi,wo);
                 } else {
                     // accumulate ambient
                     c += lamb * brdf_kd;
@@ -471,66 +475,62 @@ static const char* fragment =
 #endif
 
 // Draw a shape
-void draw_glshape(const draw_glstate* state, const ygl::shape* shp,
-    const ygl::material* mat, const ygl::mat4f& xform, bool highlighted,
-    bool eyelight, bool edges) {
-    ygl::set_gluniform(state->gl_prog, "shape_xform", xform);
-    ygl::set_gluniform(state->gl_prog, "shape_normal_offset", 0.0f);
+void draw_glshape(const draw_glstate* state, const shape* shp,
+    const material* mat, const mat4f& xform, bool highlighted, bool eyelight,
+    bool edges) {
+    set_gluniform(state->gl_prog, "shape_xform", xform);
+    set_gluniform(state->gl_prog, "shape_normal_offset", 0.0f);
 
     auto mtype = 1;
     if (mat->base_metallic) mtype = 2;
     if (mat->gltf_textures) mtype = (mat->base_metallic) ? 2 : 3;
-    ygl::set_gluniform(state->gl_prog, "mat_type", mtype);
-    ygl::set_gluniform(state->gl_prog, "mat_ke", mat->ke);
-    ygl::set_gluniform(state->gl_prog, "mat_kd", mat->kd);
-    ygl::set_gluniform(state->gl_prog, "mat_ks", mat->ks);
-    ygl::set_gluniform(state->gl_prog, "mat_rs", mat->rs);
-    ygl::set_gluniform(state->gl_prog, "mat_op", mat->op);
-    ygl::set_gluniform(
-        state->gl_prog, "mat_double_sided", (int)mat->double_sided);
-    ygl::set_gluniform_texture(state->gl_prog, "mat_ke_txt", "mat_ke_txt_on",
+    set_gluniform(state->gl_prog, "mat_type", mtype);
+    set_gluniform(state->gl_prog, "mat_ke", mat->ke);
+    set_gluniform(state->gl_prog, "mat_kd", mat->kd);
+    set_gluniform(state->gl_prog, "mat_ks", mat->ks);
+    set_gluniform(state->gl_prog, "mat_rs", mat->rs);
+    set_gluniform(state->gl_prog, "mat_op", mat->op);
+    set_gluniform(state->gl_prog, "mat_double_sided", (int)mat->double_sided);
+    set_gluniform_texture(state->gl_prog, "mat_ke_txt", "mat_ke_txt_on",
         mat->ke_txt ? state->txt_id.at(mat->ke_txt) : 0, 0);
-    ygl::set_gluniform_texture(state->gl_prog, "mat_kd_txt", "mat_kd_txt_on",
+    set_gluniform_texture(state->gl_prog, "mat_kd_txt", "mat_kd_txt_on",
         mat->kd_txt ? state->txt_id.at(mat->kd_txt) : 0, 1);
-    ygl::set_gluniform_texture(state->gl_prog, "mat_ks_txt", "mat_ks_txt_on",
+    set_gluniform_texture(state->gl_prog, "mat_ks_txt", "mat_ks_txt_on",
         mat->ks_txt ? state->txt_id.at(mat->ks_txt) : 0, 2);
-    ygl::set_gluniform_texture(state->gl_prog, "mat_rs_txt", "mat_rs_txt_on",
+    set_gluniform_texture(state->gl_prog, "mat_rs_txt", "mat_rs_txt_on",
         mat->rs_txt ? state->txt_id.at(mat->rs_txt) : 0, 3);
-    ygl::set_gluniform_texture(state->gl_prog, "mat_op_txt", "mat_op_txt_on",
+    set_gluniform_texture(state->gl_prog, "mat_op_txt", "mat_op_txt_on",
         mat->op_txt ? state->txt_id.at(mat->op_txt) : 0, 4);
-    ygl::set_gluniform_texture(state->gl_prog, "mat_norm_txt",
-        "mat_norm_txt_on", mat->norm_txt ? state->txt_id.at(mat->norm_txt) : 0,
-        5);
+    set_gluniform_texture(state->gl_prog, "mat_norm_txt", "mat_norm_txt_on",
+        mat->norm_txt ? state->txt_id.at(mat->norm_txt) : 0, 5);
 
     auto& vbos = state->shp_vbos.at(shp);
-    ygl::set_gluniform(state->gl_prog, "elem_faceted", (int)shp->norm.empty());
-    ygl::set_glvertexattrib(
-        state->gl_prog, "vert_pos", vbos.gl_pos, ygl::zero3f);
-    ygl::set_glvertexattrib(
-        state->gl_prog, "vert_norm", vbos.gl_norm, ygl::zero3f);
-    ygl::set_glvertexattrib(
-        state->gl_prog, "vert_texcoord", vbos.gl_texcoord, ygl::zero2f);
-    ygl::set_glvertexattrib(
-        state->gl_prog, "vert_color", vbos.gl_color, ygl::vec4f{1, 1, 1, 1});
-    ygl::set_glvertexattrib(
-        state->gl_prog, "vert_tangsp", vbos.gl_tangsp, ygl::vec4f{0, 0, 1, 1});
+    set_gluniform(state->gl_prog, "elem_faceted", (int)shp->norm.empty());
+    set_glvertexattrib(state->gl_prog, "vert_pos", vbos.gl_pos, zero3f);
+    set_glvertexattrib(state->gl_prog, "vert_norm", vbos.gl_norm, zero3f);
+    set_glvertexattrib(
+        state->gl_prog, "vert_texcoord", vbos.gl_texcoord, zero2f);
+    set_glvertexattrib(
+        state->gl_prog, "vert_color", vbos.gl_color, vec4f{1, 1, 1, 1});
+    set_glvertexattrib(
+        state->gl_prog, "vert_tangsp", vbos.gl_tangsp, vec4f{0, 0, 1, 1});
 
     if (!shp->points.empty()) {
-        ygl::set_gluniform(state->gl_prog, "elem_type", 1);
-        ygl::draw_glpoints(vbos.gl_points, shp->points.size());
+        set_gluniform(state->gl_prog, "elem_type", 1);
+        draw_glpoints(vbos.gl_points, shp->points.size());
     }
     if (!shp->lines.empty()) {
-        ygl::set_gluniform(state->gl_prog, "elem_type", 2);
-        ygl::draw_glpoints(vbos.gl_lines, shp->lines.size());
+        set_gluniform(state->gl_prog, "elem_type", 2);
+        draw_glpoints(vbos.gl_lines, shp->lines.size());
     }
     if (!shp->triangles.empty()) {
-        ygl::set_gluniform(state->gl_prog, "elem_type", 3);
-        ygl::draw_gltriangles(vbos.gl_triangles, shp->triangles.size());
+        set_gluniform(state->gl_prog, "elem_type", 3);
+        draw_gltriangles(vbos.gl_triangles, shp->triangles.size());
     }
 
 #if 0
     if ((vbos.gl_edges && edges && !wireframe) || highlighted) {
-        ygl::enable_glculling(false);
+        enable_glculling(false);
         check_glerror();
         set_gluniform(state->gl_prog, "mtype"), 0);
         glUniform3f(glGetUniformLocation(state->gl_prog, "ke"), 0, 0, 0);
@@ -549,35 +549,33 @@ void draw_glshape(const draw_glstate* state, const ygl::shape* shp,
 }
 
 // Display a scene
-void draw_glscene(const draw_glstate* state, const ygl::scene* scn,
-    const ygl::camera* cam, const ygl::vec2i& viewport_size,
-    const void* highlighted, bool eyelight, bool wireframe, bool edges,
-    float exposure, float gamma) {
-    ygl::set_glviewport(viewport_size);
+void draw_glscene(const draw_glstate* state, const scene* scn,
+    const camera* cam, const vec2i& viewport_size, const void* highlighted,
+    bool eyelight, bool wireframe, bool edges, float exposure, float gamma,
+    float near_plane, float far_plane) {
+    set_glviewport(viewport_size);
 
     auto camera_view = frame_to_mat(inverse(cam->frame));
-    auto camera_proj =
-        (cam->far >= ygl::flt_max) ?
-            ygl::perspective_mat(eval_camera_fovy(cam),
-                (float)viewport_size.x / (float)viewport_size.y, cam->near) :
-            ygl::perspective_mat(eval_camera_fovy(cam),
-                (float)viewport_size.x / (float)viewport_size.y, cam->near,
-                cam->far);
+    // auto camera_proj =
+    //         perspective_mat(eval_camera_fovy(cam),
+    //             (float)viewport_size.x / (float)viewport_size.y, near_plane);
+    auto camera_proj = perspective_mat(eval_camera_fovy(cam),
+        (float)viewport_size.x / (float)viewport_size.y, near_plane, far_plane);
 
-    ygl::bind_glprogram(state->gl_prog);
-    ygl::set_gluniform(state->gl_prog, "cam_pos", cam->frame.o);
-    ygl::set_gluniform(state->gl_prog, "cam_xform_inv", camera_view);
-    ygl::set_gluniform(state->gl_prog, "cam_proj", camera_proj);
-    ygl::set_gluniform(state->gl_prog, "eyelight", (int)eyelight);
-    ygl::set_gluniform(state->gl_prog, "exposure", exposure);
-    ygl::set_gluniform(state->gl_prog, "gamma", gamma);
+    bind_glprogram(state->gl_prog);
+    set_gluniform(state->gl_prog, "cam_pos", cam->frame.o);
+    set_gluniform(state->gl_prog, "cam_xform_inv", camera_view);
+    set_gluniform(state->gl_prog, "cam_proj", camera_proj);
+    set_gluniform(state->gl_prog, "eyelight", (int)eyelight);
+    set_gluniform(state->gl_prog, "exposure", exposure);
+    set_gluniform(state->gl_prog, "gamma", gamma);
 
     if (!eyelight) {
-        auto lights_pos = std::vector<ygl::vec3f>();
-        auto lights_ke = std::vector<ygl::vec3f>();
+        auto lights_pos = std::vector<vec3f>();
+        auto lights_ke = std::vector<vec3f>();
         auto lights_type = std::vector<int>();
         for (auto lgt : scn->instances) {
-            if (lgt->mat->ke == ygl::zero3f) continue;
+            if (lgt->mat->ke == zero3f) continue;
             if (lights_pos.size() >= 16) break;
             auto shp = lgt->shp;
             auto bbox = compute_bbox(shp);
@@ -599,20 +597,20 @@ void draw_glscene(const draw_glstate* state, const ygl::scene* scn,
             lights_type.push_back(0);
         }
         if (lights_pos.empty()) eyelight = false;
-        ygl::set_gluniform(state->gl_prog, "lamb", ygl::zero3f);
-        ygl::set_gluniform(state->gl_prog, "lnum", (int)lights_pos.size());
+        set_gluniform(state->gl_prog, "lamb", zero3f);
+        set_gluniform(state->gl_prog, "lnum", (int)lights_pos.size());
         for (auto i = 0; i < lights_pos.size(); i++) {
             auto is = std::to_string(i);
-            ygl::set_gluniform(
+            set_gluniform(
                 state->gl_prog, ("lpos[" + is + "]").c_str(), lights_pos[i]);
-            ygl::set_gluniform(
+            set_gluniform(
                 state->gl_prog, ("lke[" + is + "]").c_str(), lights_ke[i]);
-            ygl::set_gluniform(state->gl_prog, ("ltype[" + is + "]").c_str(),
+            set_gluniform(state->gl_prog, ("ltype[" + is + "]").c_str(),
                 (int)lights_type[i]);
         }
     }
 
-    if (wireframe) ygl::set_glwireframe(true);
+    if (wireframe) set_glwireframe(true);
     for (auto ist : scn->instances) {
         draw_glshape(state, ist->shp, ist->mat, frame_to_mat(ist->frame),
             ist == highlighted || ist->shp == highlighted ||
@@ -620,38 +618,37 @@ void draw_glscene(const draw_glstate* state, const ygl::scene* scn,
             eyelight, edges);
     }
 
-    ygl::bind_glprogram(0);
-    if (wireframe) ygl::set_glwireframe(false);
+    bind_glprogram(0);
+    if (wireframe) set_glwireframe(false);
 }
 
-draw_glstate* init_draw_state(ygl::glwindow* win) {
-    auto app = (app_state*)ygl::get_user_pointer(win);
+draw_glstate* init_draw_state(glwindow* win) {
+    auto app = (app_state*)get_user_pointer(win);
     auto state = new draw_glstate();
     // load textures and vbos
-    state->gl_prog = ygl::make_glprogram(vertex, fragment);
+    state->gl_prog = make_glprogram(vertex, fragment);
     state->txt_id[nullptr] = 0;
     for (auto txt : app->scn->textures) {
-        state->txt_id[txt] = ygl::make_gltexture(txt->img, true, true);
+        state->txt_id[txt] = make_gltexture(txt->img, true, true);
     }
     for (auto& shp : app->scn->shapes) {
         auto vbos = draw_glshape_vbos();
         if (!shp->pos.empty())
-            vbos.gl_pos = ygl::make_glarraybuffer(shp->pos, false);
+            vbos.gl_pos = make_glarraybuffer(shp->pos, false);
         if (!shp->norm.empty())
-            vbos.gl_norm = ygl::make_glarraybuffer(shp->norm, false);
+            vbos.gl_norm = make_glarraybuffer(shp->norm, false);
         if (!shp->texcoord.empty())
-            vbos.gl_texcoord = ygl::make_glarraybuffer(shp->texcoord, false);
+            vbos.gl_texcoord = make_glarraybuffer(shp->texcoord, false);
         if (!shp->color.empty())
-            vbos.gl_color = ygl::make_glarraybuffer(shp->color, false);
+            vbos.gl_color = make_glarraybuffer(shp->color, false);
         if (!shp->tangsp.empty())
-            vbos.gl_tangsp = ygl::make_glarraybuffer(shp->tangsp, false);
+            vbos.gl_tangsp = make_glarraybuffer(shp->tangsp, false);
         if (!shp->points.empty())
-            vbos.gl_points = ygl::make_glelementbuffer(shp->points, false);
+            vbos.gl_points = make_glelementbuffer(shp->points, false);
         if (!shp->lines.empty())
-            vbos.gl_lines = ygl::make_glelementbuffer(shp->lines, false);
+            vbos.gl_lines = make_glelementbuffer(shp->lines, false);
         if (!shp->triangles.empty())
-            vbos.gl_triangles =
-                ygl::make_glelementbuffer(shp->triangles, false);
+            vbos.gl_triangles = make_glelementbuffer(shp->triangles, false);
         state->shp_vbos[shp] = vbos;
     }
     return state;
@@ -661,41 +658,40 @@ draw_glstate* init_draw_state(ygl::glwindow* win) {
 void run_ui(app_state* app) {
     // window
     auto cam = app->scn->cameras.at(app->camid);
-    auto wsize =
-        ygl::clamp(ygl::eval_image_size(cam, app->resolution), 256, 1440);
-    auto win = ygl::make_glwindow(wsize, "yview", app, draw);
+    auto wsize = clamp(eval_image_size(cam, app->resolution), 256, 1440);
+    auto win = make_glwindow(wsize, "yview", app, draw);
 
     // init widget
-    ygl::init_glwidgets(win);
+    init_glwidgets(win);
 
     // load textures and vbos
-    ygl::update_transforms(app->scn, app->time);
+    update_transforms(app->scn, app->time);
 
     // init gl data
     app->state = init_draw_state(win);
 
     // loop
-    auto mouse_pos = ygl::zero2f, last_pos = ygl::zero2f;
-    while (!ygl::should_glwindow_close(win)) {
+    auto mouse_pos = zero2f, last_pos = zero2f;
+    while (!should_glwindow_close(win)) {
         last_pos = mouse_pos;
-        mouse_pos = ygl::get_glmouse_pos(win);
-        auto mouse_left = ygl::get_glmouse_left(win);
-        auto mouse_right = ygl::get_glmouse_right(win);
-        auto alt_down = ygl::get_glalt_key(win);
-        auto shift_down = ygl::get_glshift_key(win);
-        auto widgets_active = ygl::get_glwidgets_active(win);
+        mouse_pos = get_glmouse_pos(win);
+        auto mouse_left = get_glmouse_left(win);
+        auto mouse_right = get_glmouse_right(win);
+        auto alt_down = get_glalt_key(win);
+        auto shift_down = get_glshift_key(win);
+        auto widgets_active = get_glwidgets_active(win);
 
         // handle mouse and keyboard for navigation
         if ((mouse_left || mouse_right) && !alt_down && !widgets_active) {
             auto dolly = 0.0f;
-            auto pan = ygl::zero2f;
-            auto rotate = ygl::zero2f;
+            auto pan = zero2f;
+            auto rotate = zero2f;
             if (mouse_left && !shift_down)
                 rotate = (mouse_pos - last_pos) / 100.0f;
             if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
             if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
             auto cam = app->scn->cameras.at(app->camid);
-            ygl::camera_turntable(cam->frame, cam->focus, rotate, dolly, pan);
+            camera_turntable(cam->frame, cam->focus, rotate, dolly, pan);
             app->update_list.push_back({"camera", cam});
         }
 
@@ -704,19 +700,18 @@ void run_ui(app_state* app) {
             app->time += 1 / 60.0f;
             if (app->time < app->time_range.x || app->time > app->time_range.y)
                 app->time = app->time_range.x;
-            ygl::update_transforms(app->scn, app->time);
+            update_transforms(app->scn, app->time);
         }
 
         // draw
         draw(win);
 
         // event hadling
-        ygl::process_glevents(
-            win, !((mouse_left || mouse_right) || widgets_active));
+        process_glevents(win, !((mouse_left || mouse_right) || widgets_active));
     }
 
     // clear
-    ygl::delete_glwindow(win);
+    delete_glwindow(win);
 }
 
 // Load INI file. The implementation does not handle escaping.
@@ -758,29 +753,29 @@ int main(int argc, char* argv[]) {
     auto app = new app_state();
 
     // parse command line
-    auto parser = ygl::make_cmdline_parser(
-        argc, argv, "views scenes inteactively", "yview");
-    app->camid = ygl::parse_int(parser, "--camera", 0, "Camera index.");
-    app->resolution = ygl::parse_int(
-        parser, "--resolution,-r", 512, "Image vertical resolution.");
+    auto parser =
+        make_cmdline_parser(argc, argv, "views scenes inteactively", "yview");
+    app->camid = parse_int(parser, "--camera", 0, "Camera index.");
+    app->resolution =
+        parse_int(parser, "--resolution,-r", 512, "Image vertical resolution.");
     app->eyelight =
-        ygl::parse_flag(parser, "--eyelight,-c", false, "Eyelight rendering.");
-    auto double_sided = ygl::parse_flag(
+        parse_flag(parser, "--eyelight,-c", false, "Eyelight rendering.");
+    auto double_sided = parse_flag(
         parser, "--double-sided,-D", false, "Double-sided rendering.");
-    auto quiet = ygl::parse_flag(
-        parser, "--quiet,-q", false, "Print only errors messages");
+    auto quiet =
+        parse_flag(parser, "--quiet,-q", false, "Print only errors messages");
     auto highlight_filename =
-        ygl::parse_string(parser, "--highlights", "", "Highlight filename");
-    app->imfilename = ygl::parse_string(
-        parser, "--output-image,-o", "out.png", "Image filename");
-    app->filename = ygl::parse_string(
-        parser, "scene", "scene.json", "Scene filename", true);
-    ygl::check_cmdline(parser);
+        parse_string(parser, "--highlights", "", "Highlight filename");
+    app->imfilename =
+        parse_string(parser, "--output-image,-o", "out.png", "Image filename");
+    app->filename =
+        parse_string(parser, "scene", "scene.json", "Scene filename", true);
+    check_cmdline(parser);
 
     // scene loading
     if (!quiet) printf("loading scene %s\n", app->filename.c_str());
     try {
-        app->scn = ygl::load_scene(app->filename);
+        app->scn = load_scene(app->filename);
     } catch (const std::exception& e) {
         printf("cannot load scene %s\n", app->filename.c_str());
         printf("error: %s\n", e.what());
@@ -789,7 +784,7 @@ int main(int argc, char* argv[]) {
 
     // tesselate
     if (!quiet) printf("tesselating scene elements\n");
-    ygl::tesselate_subdivs(app->scn);
+    tesselate_subdivs(app->scn);
 
     // add components
     if (!quiet) printf("adding scene elements\n");
@@ -798,13 +793,12 @@ int main(int argc, char* argv[]) {
     }
     if (app->scn->cameras.empty())
         app->scn->cameras.push_back(
-            ygl::make_bbox_camera("<view>", ygl::compute_bbox(app->scn)));
-    ygl::add_missing_names(app->scn);
-    for (auto& err : ygl::validate(app->scn))
-        printf("warning: %s\n", err.c_str());
+            make_bbox_camera("<view>", compute_bbox(app->scn)));
+    add_missing_names(app->scn);
+    for (auto& err : validate(app->scn)) printf("warning: %s\n", err.c_str());
 
     // animation
-    auto time_range = ygl::compute_animation_range(app->scn);
+    auto time_range = compute_animation_range(app->scn);
     app->time = time_range.x;
 
     // run ui

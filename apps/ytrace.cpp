@@ -28,116 +28,113 @@
 
 #include "../yocto/ygl.h"
 #include "../yocto/yglio.h"
+using namespace ygl;
 
 int main(int argc, char* argv[]) {
     // trace options
-    auto params = ygl::trace_params();
+    auto params = trace_params();
 
     // parse command line
     auto parser =
-        ygl::make_cmdline_parser(argc, argv, "Offline path tracing", "ytrace");
-    params.camid = ygl::parse_int(parser, "--camera", 0, "Camera index.");
-    params.yresolution = ygl::parse_int(
-        parser, "--resolution,-r", 512, "Image vertical resolution.");
+        make_cmdline_parser(argc, argv, "Offline path tracing", "ytrace");
+    params.camid = parse_int(parser, "--camera", 0, "Camera index.");
+    params.yresolution =
+        parse_int(parser, "--resolution,-r", 512, "Image vertical resolution.");
     params.nsamples =
-        ygl::parse_int(parser, "--nsamples,-s", 256, "Number of samples.");
-    params.tracer = (ygl::trace_type)ygl::parse_enum(
-        parser, "--tracer,-t", 0, "Trace type.", ygl::trace_type_names);
+        parse_int(parser, "--nsamples,-s", 256, "Number of samples.");
+    params.tracer = (trace_type)parse_enum(
+        parser, "--tracer,-t", 0, "Trace type.", trace_type_names);
     params.nbounces =
-        ygl::parse_int(parser, "--nbounces", 8, "Maximum number of bounces.");
+        parse_int(parser, "--nbounces", 8, "Maximum number of bounces.");
     params.pixel_clamp =
-        ygl::parse_float(parser, "--pixel-clamp", 100, "Final pixel clamping.");
-    params.noparallel = ygl::parse_flag(
+        parse_float(parser, "--pixel-clamp", 100, "Final pixel clamping.");
+    params.noparallel = parse_flag(
         parser, "--noparallel", false, "Disable parallel execution.");
-    params.seed = ygl::parse_int(
+    params.seed = parse_int(
         parser, "--seed", 13, "Seed for the random number generators.");
-    params.nbatch =
-        ygl::parse_int(parser, "--nbatch,-b", 16, "Samples per batch.");
-    auto save_batch = ygl::parse_flag(
-        parser, "--save-batch", false, "Save images progressively");
-    auto exposure =
-        ygl::parse_float(parser, "--exposure,-e", 0, "Hdr exposure");
-    auto gamma = ygl::parse_float(parser, "--gamma,-g", 2.2f, "Hdr gamma");
-    auto filmic = ygl::parse_flag(parser, "--filmic", false, "Hdr filmic");
-    auto embree =
-        ygl::parse_flag(parser, "--embree", false, "Use Embree ratracer");
-    auto double_sided = ygl::parse_flag(
+    params.nbatch = parse_int(parser, "--nbatch,-b", 16, "Samples per batch.");
+    auto save_batch =
+        parse_flag(parser, "--save-batch", false, "Save images progressively");
+    auto exposure = parse_float(parser, "--exposure,-e", 0, "Hdr exposure");
+    auto gamma = parse_float(parser, "--gamma,-g", 2.2f, "Hdr gamma");
+    auto filmic = parse_flag(parser, "--filmic", false, "Hdr filmic");
+    auto embree = parse_flag(parser, "--embree", false, "Use Embree ratracer");
+    auto double_sided = parse_flag(
         parser, "--double-sided,-D", false, "Double-sided rendering.");
-    auto add_skyenv = ygl::parse_flag(
-        parser, "--add-skyenv,-E", false, "add missing env map");
-    auto imfilename = ygl::parse_string(
-        parser, "--output-image,-o", "out.hdr", "Image filename");
-    auto filename = ygl::parse_string(
-        parser, "scene", "scene.json", "Scene filename", true);
-    ygl::check_cmdline(parser);
+    auto add_skyenv =
+        parse_flag(parser, "--add-skyenv,-E", false, "add missing env map");
+    auto imfilename =
+        parse_string(parser, "--output-image,-o", "out.hdr", "Image filename");
+    auto filename =
+        parse_string(parser, "scene", "scene.json", "Scene filename", true);
+    check_cmdline(parser);
 
     // scene loading
-    auto scn = (ygl::scene*)nullptr;
+    auto scn = (scene*)nullptr;
     printf("loading scene %s\n", filename.c_str());
-    auto load_start = ygl::get_time();
+    auto load_start = get_time();
     try {
-        scn = ygl::load_scene(filename);
+        scn = load_scene(filename);
     } catch (const std::exception& e) {
         printf("cannot load scene %s\nerror: %s\n", filename.c_str(), e.what());
         exit(1);
     }
-    printf("loading in %s\n",
-        ygl::format_duration(ygl::get_time() - load_start).c_str());
+    printf("loading in %s\n", format_duration(get_time() - load_start).c_str());
 
     // tesselate
     printf("tesselating scene elements\n");
-    ygl::tesselate_subdivs(scn);
+    tesselate_subdivs(scn);
 
     // add components
     printf("adding scene elements\n");
     if (add_skyenv && scn->environments.empty()) {
-        scn->environments.push_back(ygl::make_sky_environment("sky"));
+        scn->environments.push_back(make_sky_environment("sky"));
         scn->textures.push_back(scn->environments.back()->ke_txt);
     }
     if (double_sided)
         for (auto mat : scn->materials) mat->double_sided = true;
-    for (auto& err : ygl::validate(scn)) printf("warning: %s\n", err.c_str());
+    for (auto& err : validate(scn)) printf("warning: %s\n", err.c_str());
 
     // build bvh
     printf("building bvh\n");
-    auto bvh_start = ygl::get_time();
-    auto bvh = ygl::build_bvh(scn, true, embree);
+    auto bvh_start = get_time();
+    auto bvh = build_bvh(scn, true, embree);
     printf("building bvh in %s\n",
-        ygl::format_duration(ygl::get_time() - bvh_start).c_str());
+        format_duration(get_time() - bvh_start).c_str());
 
     // init renderer
     printf("initializing lights\n");
-    auto lights = ygl::make_trace_lights(scn, params);
+    auto lights = make_trace_lights(scn, params);
 
     // initialize rendering objects
     printf("initializing tracer data\n");
-    auto state = ygl::make_trace_state(scn, params);
+    auto state = make_trace_state(scn, params);
 
     // render
     printf("rendering image\n");
-    auto render_start = ygl::get_time();
+    auto render_start = get_time();
     auto done = false;
     while (!done) {
         printf("rendering sample %04d/%04d\n", state->sample, params.nsamples);
-        auto block_start = ygl::get_time();
-        done = ygl::trace_samples(state, scn, bvh, lights, params);
+        auto block_start = get_time();
+        done = trace_samples(state, scn, bvh, lights, params);
         printf("rendering block in %s\n",
-            ygl::format_duration(ygl::get_time() - block_start).c_str());
+            format_duration(get_time() - block_start).c_str());
         if (save_batch) {
-            auto filename = ygl::replace_extension(
+            auto filename = replace_extension(
                 imfilename, std::to_string(state->sample) + "." +
-                                ygl::get_extension(imfilename));
+                                get_extension(imfilename));
             printf("saving image %s\n", filename.c_str());
-            ygl::save_tonemapped_image(
+            save_tonemapped_image(
                 filename, state->img, exposure, gamma, filmic);
         }
     }
     printf("rendering image in %s\n",
-        ygl::format_duration(ygl::get_time() - render_start).c_str());
+        format_duration(get_time() - render_start).c_str());
 
     // save image
     printf("saving image %s\n", imfilename.c_str());
-    ygl::save_tonemapped_image(imfilename, state->img, exposure, gamma, filmic);
+    save_tonemapped_image(imfilename, state->img, exposure, gamma, filmic);
 
     // cleanup
     delete state;

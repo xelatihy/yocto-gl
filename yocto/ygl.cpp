@@ -1346,7 +1346,7 @@ int make_bvh_node(std::vector<bvh_node>& nodes, std::vector<bvh_prim>& prims,
                 // consider N bins, compute their cost and keep the minimum
                 const int nbins = 16;
                 auto middle = 0.0f;
-                auto min_cost = flt_max;
+                auto min_cost = maxf;
                 auto bbox_area = [](auto& b) {
                     auto size = b.max - b.min;
                     return 1e-12f + 2 * size.x * size.y + 2 * size.x * size.z +
@@ -1390,7 +1390,8 @@ int make_bvh_node(std::vector<bvh_node>& nodes, std::vector<bvh_prim>& prims,
                                     return (&a.center.x)[split_axis] < middle;
                                 }) -
                             prims.data());
-                if (mid == start || mid == end) printf("cacca");
+                if (mid == start || mid == end)
+                    throw std::runtime_error("bad build");
             } else {
                 // split along largest
                 auto largest_axis = 0;
@@ -2080,7 +2081,7 @@ make_shape_data* make_sphere(
     auto shp = make_quad(steps, {1, 1}, {1, 1}, as_triangles);
     for (auto i = 0; i < shp->pos.size(); i++) {
         auto uv = shp->texcoord[i];
-        auto a = vec2f{2 * pi * uv.x, pi * (1 - uv.y)};
+        auto a = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
         auto p = vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
         shp->pos[i] = p * (size / 2);
         shp->norm[i] = normalize(p);
@@ -2126,7 +2127,7 @@ make_shape_data* make_disk(
     auto shp = make_quad(steps, {1, 1}, {1, 1}, as_triangles);
     for (auto i = 0; i < shp->pos.size(); i++) {
         auto uv = shp->texcoord[i];
-        auto phi = 2 * pi * uv.x;
+        auto phi = 2 * pif * uv.x;
         shp->pos[i] = {
             cos(phi) * uv.y * size / 2, sin(phi) * uv.y * size / 2, 0};
         shp->norm[i] = {0, 0, 1};
@@ -2172,7 +2173,7 @@ make_shape_data* make_cylinder_side(const vec2i& steps, const vec2f& size,
     auto shp = make_quad(steps, {1, 1}, {1, 1}, as_triangles);
     for (auto i = 0; i < shp->pos.size(); i++) {
         auto uv = shp->texcoord[i];
-        auto phi = 2 * pi * uv.x;
+        auto phi = 2 * pif * uv.x;
         shp->pos[i] = {cos(phi) * size.x / 2, sin(phi) * size.x / 2,
             (uv.y - 0.5f) * size.y};
         shp->norm[i] = {cos(phi), sin(phi), 0};
@@ -2842,7 +2843,7 @@ make_shape_data* make_hair(const vec2i& steps,
     if (clump.x > 0) {
         for (auto bidx = 0; bidx < bpos.size(); bidx++) {
             cidx.push_back(0);
-            auto cdist = flt_max;
+            auto cdist = maxf;
             for (auto c = 0; c < clump.y; c++) {
                 auto d = length(bpos[bidx] - bpos[c]);
                 if (d < cdist) {
@@ -3200,7 +3201,7 @@ image<vec4f> make_sunsky_image4f(const vec2i& size, float thetaSun,
             (-0.04214f * t3 + 0.08970f * t2 - 0.04153f * t1 + 0.00515f) * T +
             (+0.15346f * t3 - 0.26756f * t2 + 0.06669f * t1 + 0.26688f),
         1000 * (4.0453f * T - 4.9710f) *
-                tan((4.0f / 9.0f - T / 120.0f) * (pi - 2 * t1)) -
+                tan((4.0f / 9.0f - T / 120.0f) * (pif - 2 * t1)) -
             .2155f * T + 2.4192f};
 
     auto perez_A_xyY = vec3f{-0.01925f * T - 0.25922f, -0.01669f * T - 0.26078f,
@@ -3267,10 +3268,10 @@ image<vec4f> make_sunsky_image4f(const vec2i& size, float thetaSun,
 
     auto img = image<vec4f>{size, {0, 0, 0, 1}};
     for (auto j = 0; j < img.size().y / 2; j++) {
-        auto theta = pi * ((j + 0.5f) / img.size().y);
-        theta = clamp(theta, 0.0f, pi / 2 - flt_eps);
+        auto theta = pif * ((j + 0.5f) / img.size().y);
+        theta = clamp(theta, 0.0f, pif / 2 - epsf);
         for (int i = 0; i < img.size().x; i++) {
-            auto phi = 2 * pi * (float(i + 0.5f) / img.size().x);
+            auto phi = 2 * pif * (float(i + 0.5f) / img.size().x);
             auto w =
                 vec3f{cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
             auto gamma = acos(clamp(dot(w, wSun), -1.0f, 1.0f));
@@ -3282,13 +3283,13 @@ image<vec4f> make_sunsky_image4f(const vec2i& size, float thetaSun,
     if (ground_albedo != zero3f) {
         auto ground = zero3f;
         for (auto j = 0; j < img.size().y / 2; j++) {
-            auto theta = pi * ((j + 0.5f) / img.size().y);
+            auto theta = pif * ((j + 0.5f) / img.size().y);
             for (int i = 0; i < img.size().x; i++) {
                 auto pxl = img[{i, j}];
                 auto le = vec3f{pxl.x, pxl.y, pxl.z};
                 auto angle =
-                    sin(theta) * 4 * pi / (img.size().x * img.size().y);
-                ground += le * (ground_albedo / pi) * cos(theta) * angle;
+                    sin(theta) * 4 * pif / (img.size().x * img.size().y);
+                ground += le * (ground_albedo / pif) * cos(theta) * angle;
             }
         }
         for (auto j = img.size().y / 2; j < img.size().y; j++) {
@@ -3306,14 +3307,14 @@ image<vec4f> make_lights_image4f(const vec2i& size, const vec3f& le,
     int nlights, float langle, float lwidth, float lheight) {
     auto img = image<vec4f>{size, {0, 0, 0, 1}};
     for (auto j = 0; j < img.size().y / 2; j++) {
-        auto theta = pi * ((j + 0.5f) / img.size().y);
-        theta = clamp(theta, 0.0f, pi / 2 - flt_eps);
+        auto theta = pif * ((j + 0.5f) / img.size().y);
+        theta = clamp(theta, 0.0f, pif / 2 - epsf);
         if (fabs(theta - langle) > lheight / 2) continue;
         for (int i = 0; i < img.size().x; i++) {
-            auto phi = 2 * pi * (float(i + 0.5f) / img.size().x);
+            auto phi = 2 * pif * (float(i + 0.5f) / img.size().x);
             auto inlight = false;
             for (auto l = 0; l < nlights; l++) {
-                auto lphi = 2 * pi * (l + 0.5f) / nlights;
+                auto lphi = 2 * pif * (l + 0.5f) / nlights;
                 inlight = inlight || fabs(phi - lphi) < lwidth / 2;
             }
             img[{i, j}] = {le.x, le.y, le.z, 1};
@@ -3570,7 +3571,7 @@ void update_transforms(scene* scn, float time, const std::string& anim_group) {
 // Compute animation range
 vec2f compute_animation_range(const scene* scn, const std::string& anim_group) {
     if (scn->animations.empty()) return zero2f;
-    auto range = vec2f{+flt_max, -flt_max};
+    auto range = vec2f{+maxf, -maxf};
     for (auto anm : scn->animations) {
         if (anim_group != "" && anm->group != anim_group) continue;
         range.x = min(range.x, anm->times.front());
@@ -3600,7 +3601,7 @@ std::vector<float> compute_environment_cdf(const environment* env) {
     auto elem_cdf = std::vector<float>(txt->img.count());
     if (!txt->img.empty()) {
         for (auto i = 0; i < elem_cdf.size(); i++) {
-            auto th = (i / txt->img.size().x + 0.5f) * pi / txt->img.size().y;
+            auto th = (i / txt->img.size().x + 0.5f) * pif / txt->img.size().y;
             elem_cdf[i] = max(xyz(txt->img[i])) * sin(th);
             if (i) elem_cdf[i] += elem_cdf[i - 1];
         }
@@ -3953,15 +3954,15 @@ vec3f eval_shading_norm(
 vec2f eval_texcoord(const environment* env, const vec3f& w) {
     auto wl = transform_direction_inverse(env->frame, w);
     auto uv = vec2f{
-        atan2(wl.z, wl.x) / (2 * pi), acos(clamp(wl.y, -1.0f, 1.0f)) / pi};
+        atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
     if (uv.x < 0) uv.x += 1;
     return uv;
 }
 // Evaluate the environment direction.
 vec3f eval_direction(const environment* env, const vec2f& uv) {
     return transform_direction(
-        env->frame, {cos(uv.x * 2 * pi) * sin(uv.y * pi), cos(uv.y * pi),
-                        sin(uv.x * 2 * pi) * sin(uv.y * pi)});
+        env->frame, {cos(uv.x * 2 * pif) * sin(uv.y * pif), cos(uv.y * pif),
+                        sin(uv.x * 2 * pif) * sin(uv.y * pif)});
 }
 // Evaluate the environment color.
 vec3f eval_environment(const environment* env, const vec3f& w) {
@@ -4068,7 +4069,7 @@ void set_camera_fovy(camera* cam, float fovy, float aspect, float width) {
 // the lens coordinates luv.
 ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv) {
     auto dist = cam->focal;
-    if (cam->focus < flt_max) {
+    if (cam->focus < maxf) {
         dist = cam->focal * cam->focus / (cam->focus - cam->focal);
     }
     auto e = vec3f{luv.x * cam->aperture, luv.y * cam->aperture, 0};
@@ -4238,13 +4239,13 @@ float sample_distance(const material* vol, const vec3f& from, const vec3f& dir,
     int channel, rng_state& rng) {
     auto pos = from;
     auto majorant = at(vol->vd, channel);
-    if (majorant == 0) return flt_max;
+    if (majorant == 0) return maxf;
 
     // delta tracking
     auto dist = 0.0f;
     while (true) {
         auto r = rand1f(rng);
-        if (r == 0) return flt_max;
+        if (r == 0) return maxf;
         auto step = -log(r) / majorant;
         if (is_volume_homogeneus(vol)) return step;
 
@@ -4255,14 +4256,14 @@ float sample_distance(const material* vol, const vec3f& from, const vec3f& dir,
         if (at(density, channel) / majorant >= rand1f(rng)) return dist;
 
         // Escape from volume.
-        if (pos.x > 1 || pos.y > 1 || pos.z > 1) return flt_max;
-        if (pos.x < -1 || pos.y < -1 || pos.z < -1) return flt_max;
+        if (pos.x > 1 || pos.y > 1 || pos.z > 1) return maxf;
+        if (pos.x < -1 || pos.y < -1 || pos.z < -1) return maxf;
     }
 }
 
 float sample_distance(const instance* ist, const bbox3f& bbox,
     const vec3f& from, const vec3f& dir, int channel, rng_state& rng) {
-    if (ist->mat->vd == zero3f) return flt_max;
+    if (ist->mat->vd == zero3f) return maxf;
 
     // Transform coordinates so that every position in the bounding box of the
     // instance is mapped to the cube [-1,1]^3 (the same space of volume texture
@@ -4286,13 +4287,13 @@ vec3f sample_phase_function(float g, const vec2f& u) {
     }
 
     auto sin_theta = sqrt(max(0.0f, 1 - cos_theta * cos_theta));
-    auto phi = 2 * pi * u.y;
+    auto phi = 2 * pif * u.y;
     return {sin_theta * cos(phi), sin_theta * sin(phi), cos_theta};
 }
 
 float eval_phase_function(float cos_theta, float g) {
     auto denom = 1 + g * g + 2 * g * cos_theta;
-    return (1 - g * g) / (4 * pi * denom * sqrt(denom));
+    return (1 - g * g) / (4 * pif * denom * sqrt(denom));
 }
 
 }  // namespace ygl
@@ -4449,7 +4450,7 @@ vec3f fresnel_schlick(
 // Evaluates the GGX distribution and geometric term
 float eval_ggx_dist(float rs, const vec3f& n, const vec3f& h) {
     auto di = (dot(n, h) * dot(n, h)) * (rs * rs - 1) + 1;
-    return rs * rs / (pi * di * di);
+    return rs * rs / (pif * di * di);
 }
 float eval_ggx_sm(float rs, const vec3f& n, const vec3f& o, const vec3f& i) {
 #if 0
@@ -4482,7 +4483,7 @@ vec3f eval_bsdf(const bsdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
     if (f.kd != zero3f && dot(n, o) * dot(n, i) > 0) {
         auto h = normalize(i + o);
         auto F = fresnel_schlick(f.ks, h, o);
-        bsdf += f.kd * (vec3f{1, 1, 1} - F) / pi;
+        bsdf += f.kd * (vec3f{1, 1, 1} - F) / pif;
     }
 
     // specular
@@ -4542,7 +4543,7 @@ vec3f sample_brdf(
 
     // sample according to diffuse
     if (f.kd != zero3f && rnl < prob.x) {
-        auto rz = sqrtf(rn.y), rr = sqrtf(1 - rz * rz), rphi = 2 * pi * rn.x;
+        auto rz = sqrtf(rn.y), rr = sqrtf(1 - rz * rz), rphi = 2 * pif * rn.x;
         auto il = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
         auto fp = dot(n, o) >= 0 ? make_frame_fromz(zero3f, n) :
                                    make_frame_fromz(zero3f, -n);
@@ -4613,7 +4614,7 @@ float sample_brdf_pdf(
     auto pdf = 0.0f;
 
     if (f.kd != zero3f && dot(n, o) * dot(n, i) > 0) {
-        pdf += prob.x * fabs(dot(n, i)) / pi;
+        pdf += prob.x * fabs(dot(n, i)) / pif;
     }
     if (f.ks != zero3f && dot(n, o) * dot(n, i) > 0) {
         auto h = normalize(i + o);
@@ -4657,11 +4658,11 @@ float sample_environment_pdf(const environment* env,
         auto j = (int)(texcoord.y * txt->img.size().y);
         auto idx = j * txt->img.size().x + i;
         auto prob = sample_discrete_pdf(elem_cdf, idx) / elem_cdf.back();
-        auto angle = (2 * pi / txt->img.size().x) * (pi / txt->img.size().y) *
-                     sin(pi * (j + 0.5f) / txt->img.size().y);
+        auto angle = (2 * pif / txt->img.size().x) * (pif / txt->img.size().y) *
+                     sin(pif * (j + 0.5f) / txt->img.size().y);
         return prob / angle;
     } else {
-        return 1 / (4 * pi);
+        return 1 / (4 * pif);
     }
 }
 
@@ -5032,7 +5033,7 @@ vec3f trace_volpath(const scene* scn, const bvh_tree* bvh,
         // @Hack: When isec.ist == nullptr, we must discern if the ray hit
         // nothing (the environment)
         //        or a medium interaction was sampled. Doing isec.dist ==
-        //        flt_max doesn't work, why??
+        //        maxf doesn't work, why??
         auto scene_size = max(bvh->nodes[0].bbox.max - bvh->nodes[0].bbox.min);
 
         // environment
@@ -5536,7 +5537,7 @@ vec3f trace_eyelight(const scene* scn, const bvh_tree* bvh,
     l += eval_emission(isec.ist, isec.ei, isec.uv);
 
     // bsdf * light
-    l += eval_bsdf(f, n, o, o) * fabs(dot(n, o)) * pi;
+    l += eval_bsdf(f, n, o, o) * fabs(dot(n, o)) * pif;
 
     // done
     return l;
@@ -5849,16 +5850,16 @@ void trace_async_start(trace_state* state, const scene* scn,
         auto pparams = params;
         pparams.yresolution = state->img.size().y / params.preview_ratio;
         pparams.nsamples = 1;
-        auto pimg = ygl::trace_image4f(scn, bvh, lights, pparams);
-        auto pdisplay = ygl::tonemap_exposuregamma(
+        auto pimg = trace_image4f(scn, bvh, lights, pparams);
+        auto pdisplay = tonemap_exposuregamma(
             pimg, params.exposure, params.gamma, params.filmic);
         auto pwidth = pimg.size().x, pheight = pimg.size().y;
         for (auto j = 0; j < state->img.size().y; j++) {
             for (auto i = 0; i < state->img.size().x; i++) {
-                auto pi = clamp(i / params.preview_ratio, 0, pwidth - 1),
+                auto pif = clamp(i / params.preview_ratio, 0, pwidth - 1),
                      pj = clamp(j / params.preview_ratio, 0, pheight - 1);
-                state->img[{i, j}] = pimg[{pi, pj}];
-                state->display[{i, j}] = pdisplay[{pi, pj}];
+                state->img[{i, j}] = pimg[{pif, pj}];
+                state->display[{i, j}] = pdisplay[{pif, pj}];
             }
         }
     }
@@ -5997,7 +5998,7 @@ vec3f fresnel_schlick(const vec3f& ks, float cosw, float rs) {
 float sample_ggx_pdf(float rs, float ndh) {
     auto alpha2 = rs * rs;
     auto di = (ndh * ndh) * (alpha2 - 1) + 1;
-    auto d = alpha2 / (pi * di * di);
+    auto d = alpha2 / (pif * di * di);
     return d * ndh;
 }
 
@@ -6006,7 +6007,7 @@ vec3f sample_ggx(float rs, const vec2f& rn) {
     auto tan2 = rs * rs * rn.y / (1 - rn.y);
     auto rz = sqrt(1 / (tan2 + 1));
     auto rr = sqrt(1 - rz * rz);
-    auto rphi = 2 * pi * rn.x;
+    auto rphi = 2 * pif * rn.x;
     // set to wh
     auto wh_local = vec3f{rr * cos(rphi), rr * sin(rphi), rz};
     return wh_local;
