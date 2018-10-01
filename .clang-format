@@ -8,6 +8,9 @@ ColumnLimit:     80
 
 AlignAfterOpenBracket: DontAlign
 
+AlignConsecutiveAssignments: true
+AlignConsecutiveDeclarations: true
+
 AllowAllParametersOfDeclarationOnNextLine: false
 
 AllowShortBlocksOnASingleLine: true
@@ -23,14 +26,17 @@ BreakBeforeBinaryOperators: None
 BreakBeforeTernaryOperators: false
 BreakConstructorInitializersBeforeComma: true
 
+Cpp11BracedListStyle: true
+
 DerivePointerAlignment: false
 PointerAlignment: Left
 
 IndentWrappedFunctionNames: false
 
-PenaltyBreakBeforeFirstCallParameter: 1000
-PenaltyBreakComment: 300
-PenaltyBreakFirstLessLess: 120
-PenaltyBreakString: 500
-PenaltyExcessCharacter: 1000
+PenaltyBreakAssignment: 200
+PenaltyBreakBeforeFirstCallParameter: 200
+PenaltyBreakComment: 30
+PenaltyBreakFirstLessLess: 30
+PenaltyBreakString: 30
+PenaltyExcessCharacter: 30
 PenaltyReturnTypeOnItsOwnLine: 200

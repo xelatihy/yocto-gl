@@ -142,8 +142,9 @@ inline void draw_glwidgets_scene_tree(glwindow* win, scene* scn, void*& sel) {
         for (auto v : scn->nodes) draw_glwidgets_scene_tree(win, "", v, sel);
         end_treenode_glwidget(win);
     }
-    if (!scn->animations.empty() &&
-        begin_treenode_glwidget(win, "animations")) {
+    if (!scn->animations.empty() && begin_treenode_glwidget(win,
+                                        "animation"
+                                        "s")) {
         for (auto v : scn->animations)
             draw_glwidgets_scene_tree(win, "", v, sel);
         end_treenode_glwidget(win);
@@ -197,18 +198,18 @@ inline bool draw_glwidgets_scene_inspector(
     edited += draw_coloredit_glwidget(win, "vd", val->vd);  // 0, 10
     edited += draw_coloredit_glwidget(win, "va", val->va);  // 0, 1
     edited += draw_slider_glwidget(win, "vg", val->vg, -1, 1);
-    edited +=
-        draw_combobox_glwidget(win, "ke txt", val->ke_txt, scn->textures, true);
-    edited +=
-        draw_combobox_glwidget(win, "kd txt", val->kd_txt, scn->textures, true);
-    edited +=
-        draw_combobox_glwidget(win, "ks txt", val->ks_txt, scn->textures, true);
-    edited +=
-        draw_combobox_glwidget(win, "kt txt", val->kt_txt, scn->textures, true);
-    edited +=
-        draw_combobox_glwidget(win, "op txt", val->op_txt, scn->textures, true);
-    edited +=
-        draw_combobox_glwidget(win, "rs txt", val->rs_txt, scn->textures, true);
+    edited += draw_combobox_glwidget(
+        win, "ke txt", val->ke_txt, scn->textures, true);
+    edited += draw_combobox_glwidget(
+        win, "kd txt", val->kd_txt, scn->textures, true);
+    edited += draw_combobox_glwidget(
+        win, "ks txt", val->ks_txt, scn->textures, true);
+    edited += draw_combobox_glwidget(
+        win, "kt txt", val->kt_txt, scn->textures, true);
+    edited += draw_combobox_glwidget(
+        win, "op txt", val->op_txt, scn->textures, true);
+    edited += draw_combobox_glwidget(
+        win, "rs txt", val->rs_txt, scn->textures, true);
     edited += draw_combobox_glwidget(
         win, "bump txt", val->bump_txt, scn->textures, true);
     edited += draw_combobox_glwidget(
@@ -243,8 +244,8 @@ inline bool draw_glwidgets_scene_inspector(
     edited += draw_slider_glwidget(win, "level", val->level, 0, 10);
     edited += draw_checkbox_glwidget(win, "catmull-clark", val->catmull_clark);
     continue_glwidgets_line(win);
-    edited +=
-        draw_checkbox_glwidget(win, "compute normals", val->compute_normals);
+    edited += draw_checkbox_glwidget(
+        win, "compute normals", val->compute_normals);
     draw_imgui_label(win, "quads pos", "%ld", val->quads_pos.size());
     draw_imgui_label(win, "quads texcoord", "%ld", val->quads_texcoord.size());
     draw_imgui_label(win, "quads color", "%ld", val->quads_color.size());
@@ -264,8 +265,7 @@ inline bool draw_glwidgets_scene_inspector(
     edited += draw_slider_glwidget(win, "frame.o", val->frame.o, -10, 10);
     edited += draw_combobox_glwidget(win, "shp", val->shp, scn->shapes, true);
     edited += draw_combobox_glwidget(win, "sbd", val->sbd, scn->subdivs, true);
-    edited +=
-        draw_combobox_glwidget(win, "mat", val->mat, scn->materials, true);
+    edited += draw_combobox_glwidget(win, "mat", val->mat, scn->materials, true);
     return edited;
 }
 
@@ -278,8 +278,8 @@ inline bool draw_glwidgets_scene_inspector(
     edited += draw_slider_glwidget(win, "frame.z", val->frame.z, -1, 1);
     edited += draw_slider_glwidget(win, "frame.o", val->frame.o, -10, 10);
     edited += draw_coloredit_glwidget(win, "ke", val->ke);  // TODO: HDR
-    edited +=
-        draw_combobox_glwidget(win, "ke txt", val->ke_txt, scn->textures, true);
+    edited += draw_combobox_glwidget(
+        win, "ke txt", val->ke_txt, scn->textures, true);
     return edited;
 }
 
@@ -287,21 +287,20 @@ inline bool draw_glwidgets_scene_inspector(
     glwindow* win, node* val, scene* scn) {
     auto edited = 0;
     edited += draw_inputtext_glwidget(win, "name", val->name);
-    edited +=
-        draw_combobox_glwidget(win, "parent", val->parent, scn->nodes, true);
+    edited += draw_combobox_glwidget(
+        win, "parent", val->parent, scn->nodes, true);
     edited += draw_slider_glwidget(win, "local.x", val->local.x, -1, 1);
     edited += draw_slider_glwidget(win, "local.y", val->local.y, -1, 1);
     edited += draw_slider_glwidget(win, "local.z", val->local.z, -1, 1);
     edited += draw_slider_glwidget(win, "local.o", val->local.o, -10, 10);
-    edited +=
-        draw_slider_glwidget(win, "translation", val->translation, -10, 10);
+    edited += draw_slider_glwidget(
+        win, "translation", val->translation, -10, 10);
     edited += draw_slider_glwidget(win, "rotation", val->rotation, -1, 1);
     edited += draw_slider_glwidget(win, "scale", val->scale, 0, 10);
     edited += draw_combobox_glwidget(win, "cam", val->cam, scn->cameras, true);
-    edited +=
-        draw_combobox_glwidget(win, "ist", val->ist, scn->instances, true);
-    edited +=
-        draw_combobox_glwidget(win, "env", val->env, scn->environments, true);
+    edited += draw_combobox_glwidget(win, "ist", val->ist, scn->instances, true);
+    edited += draw_combobox_glwidget(
+        win, "env", val->env, scn->environments, true);
     return edited;
 }
 

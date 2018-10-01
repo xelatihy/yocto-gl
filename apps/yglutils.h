@@ -108,7 +108,7 @@ using glwindow = ::GLFWwindow;
 
 glwindow* make_glwindow(const vec2i& size, const char* title,
     void* user_pointer, void (*refresh)(GLFWwindow*));
-void delete_glwindow(glwindow* win);
+void      delete_glwindow(glwindow* win);
 
 void* get_user_pointer(glwindow* win);
 
@@ -118,10 +118,10 @@ vec2i get_glwindow_size(glwindow* win);
 bool should_glwindow_close(glwindow* win);
 
 vec2f get_glmouse_pos(glwindow* win);
-bool get_glmouse_left(glwindow* win);
-bool get_glmouse_right(glwindow* win);
-bool get_glalt_key(glwindow* win);
-bool get_glshift_key(glwindow* win);
+bool  get_glmouse_left(glwindow* win);
+bool  get_glmouse_right(glwindow* win);
+bool  get_glalt_key(glwindow* win);
+bool  get_glshift_key(glwindow* win);
 
 void process_glevents(glwindow* win, bool wait = false);
 void swap_glbuffers(glwindow* win);
@@ -198,13 +198,12 @@ bool draw_combobox_glwidget(glwindow* win, const char* lbl, int& idx,
     const std::vector<void*>& vals, const char* (*label)(void*));
 bool draw_combobox_glwidget(glwindow* win, const char* lbl, void*& val,
     const std::vector<void*>& vals, const char* (*label)(void*),
-    bool include_null);
+    bool                      include_null);
 
 template <typename T>
 bool draw_combobox_glwidget(
     glwindow* win, const char* lbl, int& idx, const std::vector<T*>& vals) {
-    return draw_combobox_glwidget(win, lbl, idx,
-        (const std::vector<void*>&)vals,
+    return draw_combobox_glwidget(win, lbl, idx, (const std::vector<void*>&)vals,
         [](void* val) { return ((T*)val)->name.c_str(); });
 }
 

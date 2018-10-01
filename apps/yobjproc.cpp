@@ -45,15 +45,15 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser = make_cmdline_parser(
         argc, argv, "Process obj files directly", "yobjproc");
-    auto translation =
-        parse_arg(parser, "--translation,-t", zero3f, "translation");
-    auto scale = parse_arg(parser, "--scale,-s", vec3f{1, 1, 1}, "scale");
-    auto print_info =
-        parse_arg(parser, "--print-info,-i", false, "print obj info");
+    auto translation = parse_arg(
+        parser, "--translation,-t", zero3f, "translation");
+    auto scale      = parse_arg(parser, "--scale,-s", vec3f{1, 1, 1}, "scale");
+    auto print_info = parse_arg(
+        parser, "--print-info,-i", false, "print obj info");
     auto output = parse_arg(
         parser, "--output,-o", "out.obj", "output obj scene", true);
-    auto filename =
-        parse_arg(parser, "filename", "img.obj", "input obj filename", true);
+    auto filename = parse_arg(
+        parser, "filename", "img.obj", "input obj filename", true);
     check_cmdline(parser);
 
     // prepare stats
@@ -134,24 +134,21 @@ int main(int argc, char* argv[]) {
     try {
         load_obj(filename, cb, false, false);
     } catch (std::exception& e) {
-        printf(
-            "could not load obj %s\nerror: %s\n", filename.c_str(), e.what());
+        printf("could not load obj %s\nerror: %s\n", filename.c_str(), e.what());
         exit(1);
     }
 
     // print info
     if (print_info) {
         auto center = (bbox.max + bbox.min) / 2;
-        auto size = bbox.max - bbox.min;
-        printf(
-            "bbox min: % 6g % 6g % 6g\n", bbox.min.x, bbox.min.y, bbox.min.z);
-        printf(
-            "bbox max: % 6g % 6g % 6g\n", bbox.max.x, bbox.max.y, bbox.max.z);
+        auto size   = bbox.max - bbox.min;
+        printf("bbox min: % 6g % 6g % 6g\n", bbox.min.x, bbox.min.y, bbox.min.z);
+        printf("bbox max: % 6g % 6g % 6g\n", bbox.max.x, bbox.max.y, bbox.max.z);
         printf("bbox cen: % 6g % 6g % 6g\n", center.x, center.y, center.z);
         printf("bbox siz: % 6g % 6g % 6g\n", size.x, size.y, size.z);
         if (translation != zero3f || scale != vec3f{1, 1, 1}) {
             auto center = (tbox.max + tbox.min) / 2;
-            auto size = tbox.max - tbox.min;
+            auto size   = tbox.max - tbox.min;
             printf("tbox min: % 6g % 6g % 6g\n", tbox.min.x, tbox.min.y,
                 tbox.min.z);
             printf("tbox max: % 6g % 6g % 6g\n", tbox.max.x, tbox.max.y,

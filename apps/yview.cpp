@@ -38,9 +38,9 @@ struct draw_glshape_vbos {
 };
 
 struct draw_glstate {
-    unsigned int gl_prog = 0;
+    unsigned int                                        gl_prog = 0;
     std::unordered_map<const shape*, draw_glshape_vbos> shp_vbos;
-    std::unordered_map<const texture*, unsigned int> txt_id;
+    std::unordered_map<const texture*, unsigned int>    txt_id;
 };
 
 // Application state
@@ -49,31 +49,31 @@ struct app_state {
     scene* scn = nullptr;
 
     // parameters
-    std::string filename = "scene.json";     // scene name
-    std::string imfilename = "out.png";      // output image
+    std::string filename    = "scene.json";  // scene name
+    std::string imfilename  = "out.png";     // output image
     std::string outfilename = "scene.json";  // save scene name
-    int camid = 0;                           // camera id
-    int resolution = 512;                    // image resolution
-    bool wireframe = false;                  // wireframe drawing
-    bool edges = false;                      // draw edges
-    float edge_offset = 0.01f;               // offset for edges
-    bool eyelight = false;                   // camera light mode
-    float exposure = 0;                      // exposure
-    float gamma = 2.2f;                      // gamma
-    vec3f ambient = {0, 0, 0};               // ambient lighting
-    float near_plane = 0.01f;                // near plane
-    float far_plane = 10000.0f;              // far plane
+    int         camid       = 0;             // camera id
+    int         resolution  = 512;           // image resolution
+    bool        wireframe   = false;         // wireframe drawing
+    bool        edges       = false;         // draw edges
+    float       edge_offset = 0.01f;         // offset for edges
+    bool        eyelight    = false;         // camera light mode
+    float       exposure    = 0;             // exposure
+    float       gamma       = 2.2f;          // gamma
+    vec3f       ambient     = {0, 0, 0};     // ambient lighting
+    float       near_plane  = 0.01f;         // near plane
+    float       far_plane   = 10000.0f;      // far plane
 
     draw_glstate* state = nullptr;
 
-    bool widgets_open = false;
-    bool navigation_fps = false;
-    void* selection = nullptr;
+    bool                                       widgets_open   = false;
+    bool                                       navigation_fps = false;
+    void*                                      selection      = nullptr;
     std::vector<std::pair<std::string, void*>> update_list;
-    float time = 0;
-    std::string anim_group = "";
-    vec2f time_range = zero2f;
-    bool animate = false;
+    float                                      time       = 0;
+    std::string                                anim_group = "";
+    vec2f                                      time_range = zero2f;
+    bool                                       animate    = false;
 
     ~app_state() {
         if (scn) delete scn;
@@ -88,9 +88,9 @@ void draw_glscene(const draw_glstate* state, const scene* scn,
 
 // draw with shading
 void draw(glwindow* win) {
-    auto app = (app_state*)get_user_pointer(win);
+    auto app              = (app_state*)get_user_pointer(win);
     auto framebuffer_size = get_glframebuffer_size(win);
-    app->resolution = framebuffer_size.y;
+    app->resolution       = framebuffer_size.y;
 
     static auto last_time = 0.0f;
     for (auto& sel : app->update_list) {
@@ -130,8 +130,7 @@ void draw(glwindow* win) {
             draw_checkbox_glwidget(win, "animate", app->animate);
         }
         if (begin_treenode_glwidget(win, "render settings")) {
-            draw_combobox_glwidget(
-                win, "camera", cam, app->scn->cameras, false);
+            draw_combobox_glwidget(win, "camera", cam, app->scn->cameras, false);
             draw_slider_glwidget(win, "resolution", app->resolution, 256, 4096);
             draw_checkbox_glwidget(win, "eyelight", app->eyelight);
             continue_glwidgets_line(win);
@@ -571,15 +570,15 @@ void draw_glscene(const draw_glstate* state, const scene* scn,
     set_gluniform(state->gl_prog, "gamma", gamma);
 
     if (!eyelight) {
-        auto lights_pos = std::vector<vec3f>();
-        auto lights_ke = std::vector<vec3f>();
+        auto lights_pos  = std::vector<vec3f>();
+        auto lights_ke   = std::vector<vec3f>();
         auto lights_type = std::vector<int>();
         for (auto lgt : scn->instances) {
             if (lgt->mat->ke == zero3f) continue;
             if (lights_pos.size() >= 16) break;
-            auto shp = lgt->shp;
+            auto shp  = lgt->shp;
             auto bbox = compute_bbox(shp);
-            auto pos = (bbox.max + bbox.min) / 2;
+            auto pos  = (bbox.max + bbox.min) / 2;
             auto area = 0.0f;
             if (!shp->triangles.empty()) {
                 for (auto t : shp->triangles)
@@ -623,10 +622,10 @@ void draw_glscene(const draw_glstate* state, const scene* scn,
 }
 
 draw_glstate* init_draw_state(glwindow* win) {
-    auto app = (app_state*)get_user_pointer(win);
+    auto app   = (app_state*)get_user_pointer(win);
     auto state = new draw_glstate();
     // load textures and vbos
-    state->gl_prog = make_glprogram(vertex, fragment);
+    state->gl_prog         = make_glprogram(vertex, fragment);
     state->txt_id[nullptr] = 0;
     for (auto txt : app->scn->textures) {
         state->txt_id[txt] = make_gltexture(txt->img, true, true);
@@ -657,9 +656,9 @@ draw_glstate* init_draw_state(glwindow* win) {
 // run ui loop
 void run_ui(app_state* app) {
     // window
-    auto cam = app->scn->cameras.at(app->camid);
+    auto cam   = app->scn->cameras.at(app->camid);
     auto wsize = clamp(eval_image_size(cam, app->resolution), 256, 1440);
-    auto win = make_glwindow(wsize, "yview", app, draw);
+    auto win   = make_glwindow(wsize, "yview", app, draw);
 
     // init widget
     init_glwidgets(win);
@@ -673,18 +672,18 @@ void run_ui(app_state* app) {
     // loop
     auto mouse_pos = zero2f, last_pos = zero2f;
     while (!should_glwindow_close(win)) {
-        last_pos = mouse_pos;
-        mouse_pos = get_glmouse_pos(win);
-        auto mouse_left = get_glmouse_left(win);
-        auto mouse_right = get_glmouse_right(win);
-        auto alt_down = get_glalt_key(win);
-        auto shift_down = get_glshift_key(win);
+        last_pos            = mouse_pos;
+        mouse_pos           = get_glmouse_pos(win);
+        auto mouse_left     = get_glmouse_left(win);
+        auto mouse_right    = get_glmouse_right(win);
+        auto alt_down       = get_glalt_key(win);
+        auto shift_down     = get_glshift_key(win);
         auto widgets_active = get_glwidgets_active(win);
 
         // handle mouse and keyboard for navigation
         if ((mouse_left || mouse_right) && !alt_down && !widgets_active) {
-            auto dolly = 0.0f;
-            auto pan = zero2f;
+            auto dolly  = 0.0f;
+            auto pan    = zero2f;
             auto rotate = zero2f;
             if (mouse_left && !shift_down)
                 rotate = (mouse_pos - last_pos) / 100.0f;
@@ -719,10 +718,10 @@ std::unordered_map<std::string, std::unordered_map<std::string, std::string>>
 load_ini(const std::string& filename) {
     auto f = fopen(filename.c_str(), "rt");
     if (!f) throw std::runtime_error("cannot open " + filename);
-    auto ret = std::unordered_map<std::string,
+    auto ret       = std::unordered_map<std::string,
         std::unordered_map<std::string, std::string>>();
     auto cur_group = std::string();
-    ret[""] = {};
+    ret[""]        = {};
 
     char buf[4096];
     while (fgets(buf, 4096, f)) {
@@ -732,11 +731,11 @@ load_ini(const std::string& filename) {
         if (line.front() == '#') continue;
         if (line.front() == '[') {
             if (line.back() != ']') throw std::runtime_error("bad INI format");
-            cur_group = line.substr(1, line.length() - 2);
+            cur_group      = line.substr(1, line.length() - 2);
             ret[cur_group] = {};
         } else if (line.find('=') != line.npos) {
-            auto var = line.substr(0, line.find('='));
-            auto val = line.substr(line.find('=') + 1);
+            auto var            = line.substr(0, line.find('='));
+            auto val            = line.substr(line.find('=') + 1);
             ret[cur_group][var] = val;
         } else {
             throw std::runtime_error("bad INI format");
@@ -753,23 +752,23 @@ int main(int argc, char* argv[]) {
     auto app = new app_state();
 
     // parse command line
-    auto parser =
-        make_cmdline_parser(argc, argv, "views scenes inteactively", "yview");
-    app->camid = parse_arg(parser, "--camera", 0, "Camera index.");
-    app->resolution =
-        parse_arg(parser, "--resolution,-r", 512, "Image vertical resolution.");
-    app->eyelight =
-        parse_arg(parser, "--eyelight,-c", false, "Eyelight rendering.");
+    auto parser = make_cmdline_parser(
+        argc, argv, "views scenes inteactively", "yview");
+    app->camid      = parse_arg(parser, "--camera", 0, "Camera index.");
+    app->resolution = parse_arg(
+        parser, "--resolution,-r", 512, "Image vertical resolution.");
+    app->eyelight = parse_arg(
+        parser, "--eyelight,-c", false, "Eyelight rendering.");
     auto double_sided = parse_arg(
         parser, "--double-sided,-D", false, "Double-sided rendering.");
-    auto quiet =
-        parse_arg(parser, "--quiet,-q", false, "Print only errors messages");
-    auto highlight_filename =
-        parse_arg(parser, "--highlights", "", "Highlight filename");
-    app->imfilename =
-        parse_arg(parser, "--output-image,-o", "out.png", "Image filename");
-    app->filename =
-        parse_arg(parser, "scene", "scene.json", "Scene filename", true);
+    auto quiet = parse_arg(
+        parser, "--quiet,-q", false, "Print only errors messages");
+    auto highlight_filename = parse_arg(
+        parser, "--highlights", "", "Highlight filename");
+    app->imfilename = parse_arg(
+        parser, "--output-image,-o", "out.png", "Image filename");
+    app->filename = parse_arg(
+        parser, "scene", "scene.json", "Scene filename", true);
     check_cmdline(parser);
 
     // scene loading
@@ -799,7 +798,7 @@ int main(int argc, char* argv[]) {
 
     // animation
     auto time_range = compute_animation_range(app->scn);
-    app->time = time_range.x;
+    app->time       = time_range.x;
 
     // run ui
     run_ui(app);

@@ -348,7 +348,7 @@ std::vector<vec4f> compute_tangent_space(const std::vector<vec3i>& triangles,
     for (auto t : triangles) {
         auto tutv = triangle_tangents_fromuv(pos[t.x], pos[t.y], pos[t.z],
             texcoord[t.x], texcoord[t.y], texcoord[t.z]);
-        tutv = {normalize(tutv.first), normalize(tutv.second)};
+        tutv      = {normalize(tutv.first), normalize(tutv.second)};
         for (auto vid : {t.x, t.y, t.z}) tangu[vid] += tutv.first;
         for (auto vid : {t.x, t.y, t.z}) tangv[vid] += tutv.second;
     }
@@ -357,7 +357,7 @@ std::vector<vec4f> compute_tangent_space(const std::vector<vec3i>& triangles,
     auto tangsp = std::vector<vec4f>(pos.size(), zero4f);
     for (auto i = 0; i < pos.size(); i++) {
         tangu[i] = orthonormalize(tangu[i], norm[i]);
-        auto s = (dot(cross(norm[i], tangu[i]), tangv[i]) < 0) ? -1.0f : 1.0f;
+        auto s   = (dot(cross(norm[i], tangu[i]), tangv[i]) < 0) ? -1.0f : 1.0f;
         tangsp[i] = {tangu[i].x, tangu[i].y, tangu[i].z, s};
     }
     return tangsp;
@@ -368,14 +368,17 @@ std::pair<std::vector<vec3f>, std::vector<vec3f>> compute_skinning(
     const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
     const std::vector<vec4f>& weights, const std::vector<vec4i>& joints,
     const std::vector<frame3f>& xforms) {
-    auto skinned_pos = std::vector<vec3f>(pos.size());
+    auto skinned_pos  = std::vector<vec3f>(pos.size());
     auto skinned_norm = std::vector<vec3f>(norm.size());
     for (auto i = 0; i < pos.size(); i++) {
-        skinned_pos[i] =
-            transform_point(xforms[joints[i].x], pos[i]) * weights[i].x +
-            transform_point(xforms[joints[i].y], pos[i]) * weights[i].y +
-            transform_point(xforms[joints[i].z], pos[i]) * weights[i].z +
-            transform_point(xforms[joints[i].w], pos[i]) * weights[i].w;
+        skinned_pos[i] = transform_point(xforms[joints[i].x], pos[i]) *
+                             weights[i].x +
+                         transform_point(xforms[joints[i].y], pos[i]) *
+                             weights[i].y +
+                         transform_point(xforms[joints[i].z], pos[i]) *
+                             weights[i].z +
+                         transform_point(xforms[joints[i].w], pos[i]) *
+                             weights[i].w;
     }
     for (auto i = 0; i < pos.size(); i++) {
         skinned_norm[i] = normalize(
@@ -392,14 +395,14 @@ std::pair<std::vector<vec3f>, std::vector<vec3f>> compute_matrix_skinning(
     const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
     const std::vector<vec4f>& weights, const std::vector<vec4i>& joints,
     const std::vector<mat4f>& xforms) {
-    auto skinned_pos = std::vector<vec3f>(pos.size());
+    auto skinned_pos  = std::vector<vec3f>(pos.size());
     auto skinned_norm = std::vector<vec3f>(norm.size());
     for (auto i = 0; i < pos.size(); i++) {
         auto xform = xforms[joints[i].x] * weights[i].x +
                      xforms[joints[i].y] * weights[i].y +
                      xforms[joints[i].z] * weights[i].z +
                      xforms[joints[i].w] * weights[i].w;
-        skinned_pos[i] = transform_point(xform, pos[i]);
+        skinned_pos[i]  = transform_point(xform, pos[i]);
         skinned_norm[i] = normalize(transform_direction(xform, norm[i]));
     }
     return {skinned_pos, skinned_norm};
@@ -576,13 +579,13 @@ std::pair<std::vector<vec2i>, std::vector<T>> subdivide_lines(
     auto tvert = std::vector<T>(nverts + nlines);
     for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
     for (auto i = 0; i < nlines; i++) {
-        auto l = lines[i];
+        auto l            = lines[i];
         tvert[nverts + i] = (vert[l.x] + vert[l.y]) / 2;
     }
     // create lines
     auto tlines = std::vector<vec2i>(nlines * 2);
     for (auto i = 0; i < nlines; i++) {
-        auto l = lines[i];
+        auto l            = lines[i];
         tlines[i * 2 + 0] = {l.x, nverts + i};
         tlines[i * 2 + 0] = {nverts + i, l.y};
     }
@@ -604,7 +607,7 @@ template <typename T>
 std::pair<std::vector<vec3i>, std::vector<T>> subdivide_triangles(
     const std::vector<vec3i>& triangles, const std::vector<T>& vert) {
     // get edges
-    auto emap = make_edge_map(triangles);
+    auto emap  = make_edge_map(triangles);
     auto edges = get_edges(emap);
     // number of elements
     auto nverts = (int)vert.size();
@@ -614,13 +617,13 @@ std::pair<std::vector<vec3i>, std::vector<T>> subdivide_triangles(
     auto tvert = std::vector<T>(nverts + nedges);
     for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
     for (auto i = 0; i < nedges; i++) {
-        auto e = edges[i];
+        auto e            = edges[i];
         tvert[nverts + i] = (vert[e.x] + vert[e.y]) / 2;
     }
     // create triangles
     auto ttriangles = std::vector<vec3i>(nfaces * 4);
     for (auto i = 0; i < nfaces; i++) {
-        auto t = triangles[i];
+        auto t                = triangles[i];
         ttriangles[i * 4 + 0] = {t.x, nverts + get_edge_index(emap, {t.x, t.y}),
             nverts + get_edge_index(emap, {t.z, t.x})};
         ttriangles[i * 4 + 1] = {t.y, nverts + get_edge_index(emap, {t.y, t.z}),
@@ -649,7 +652,7 @@ template <typename T>
 std::pair<std::vector<vec4i>, std::vector<T>> subdivide_quads(
     const std::vector<vec4i>& quads, const std::vector<T>& vert) {
     // get edges
-    auto emap = make_edge_map(quads);
+    auto emap  = make_edge_map(quads);
     auto edges = get_edges(emap);
     // number of elements
     auto nverts = (int)vert.size();
@@ -659,22 +662,22 @@ std::pair<std::vector<vec4i>, std::vector<T>> subdivide_quads(
     auto tvert = std::vector<T>(nverts + nedges + nfaces);
     for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
     for (auto i = 0; i < nedges; i++) {
-        auto e = edges[i];
+        auto e            = edges[i];
         tvert[nverts + i] = (vert[e.x] + vert[e.y]) / 2;
     }
     for (auto i = 0; i < nfaces; i++) {
         auto q = quads[i];
         if (q.z != q.w) {
-            tvert[nverts + nedges + i] =
-                (vert[q.x] + vert[q.y] + vert[q.z] + vert[q.w]) / 4;
+            tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.z] +
+                                             vert[q.w]) /
+                                         4;
         } else {
-            tvert[nverts + nedges + i] =
-                (vert[q.x] + vert[q.y] + vert[q.y]) / 3;
+            tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.y]) / 3;
         }
     }
     // create quads
     auto tquads = std::vector<vec4i>(nfaces * 4);  // conservative allocation
-    auto qi = 0;
+    auto qi     = 0;
     for (auto i = 0; i < nfaces; i++) {
         auto q = quads[i];
         if (q.z != q.w) {
@@ -713,8 +716,8 @@ template std::pair<std::vector<vec4i>, std::vector<vec4f>> subdivide_quads(
 template <typename T>
 std::pair<std::vector<vec4i>, std::vector<T>> subdivide_beziers(
     const std::vector<vec4i>& beziers, const std::vector<T>& vert) {
-    auto vmap = std::unordered_map<int, int>();
-    auto tvert = std::vector<T>();
+    auto vmap     = std::unordered_map<int, int>();
+    auto tvert    = std::vector<T>();
     auto tbeziers = std::vector<vec4i>();
     for (auto b : beziers) {
         if (vmap.find(b.x) == vmap.end()) {
@@ -754,36 +757,36 @@ std::pair<std::vector<vec4i>, std::vector<T>> subdivide_catmullclark(
     const std::vector<vec4i>& quads, const std::vector<T>& vert,
     bool lock_boundary) {
     // get edges
-    auto emap = make_edge_map(quads);
-    auto edges = get_edges(emap);
+    auto emap     = make_edge_map(quads);
+    auto edges    = get_edges(emap);
     auto boundary = get_boundary(emap);
     // number of elements
-    auto nverts = (int)vert.size();
-    auto nedges = (int)edges.size();
+    auto nverts    = (int)vert.size();
+    auto nedges    = (int)edges.size();
     auto nboundary = (int)boundary.size();
-    auto nfaces = (int)quads.size();
+    auto nfaces    = (int)quads.size();
 
     // split elements ------------------------------------
     // create vertices
     auto tvert = std::vector<T>(nverts + nedges + nfaces);
     for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
     for (auto i = 0; i < nedges; i++) {
-        auto e = edges[i];
+        auto e            = edges[i];
         tvert[nverts + i] = (vert[e.x] + vert[e.y]) / 2;
     }
     for (auto i = 0; i < nfaces; i++) {
         auto q = quads[i];
         if (q.z != q.w) {
-            tvert[nverts + nedges + i] =
-                (vert[q.x] + vert[q.y] + vert[q.z] + vert[q.w]) / 4;
+            tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.z] +
+                                             vert[q.w]) /
+                                         4;
         } else {
-            tvert[nverts + nedges + i] =
-                (vert[q.x] + vert[q.y] + vert[q.y]) / 3;
+            tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.y]) / 3;
         }
     }
     // create quads
     auto tquads = std::vector<vec4i>(nfaces * 4);  // conservative allocation
-    auto qi = 0;
+    auto qi     = 0;
     for (auto i = 0; i < nfaces; i++) {
         auto q = quads[i];
         if (q.z != q.w) {
@@ -834,7 +837,7 @@ std::pair<std::vector<vec4i>, std::vector<T>> subdivide_catmullclark(
     }
 
     // averaging pass ----------------------------------
-    auto avert = std::vector<T>(tvert.size(), T());
+    auto avert  = std::vector<T>(tvert.size(), T());
     auto acount = std::vector<int>(tvert.size(), 0);
     for (auto p : tcrease_verts) {
         if (tvert_val[p] != 0) continue;
@@ -870,23 +873,19 @@ std::pair<std::vector<vec4i>, std::vector<T>> subdivide_catmullclark(
     return {tquads, tvert};
 }
 
-template std::pair<std::vector<vec4i>, std::vector<float>>
-subdivide_catmullclark(
+template std::pair<std::vector<vec4i>, std::vector<float>> subdivide_catmullclark(
     const std::vector<vec4i>&, const std::vector<float>&, bool);
-template std::pair<std::vector<vec4i>, std::vector<vec2f>>
-subdivide_catmullclark(
+template std::pair<std::vector<vec4i>, std::vector<vec2f>> subdivide_catmullclark(
     const std::vector<vec4i>&, const std::vector<vec2f>&, bool);
-template std::pair<std::vector<vec4i>, std::vector<vec3f>>
-subdivide_catmullclark(
+template std::pair<std::vector<vec4i>, std::vector<vec3f>> subdivide_catmullclark(
     const std::vector<vec4i>&, const std::vector<vec3f>&, bool);
-template std::pair<std::vector<vec4i>, std::vector<vec4f>>
-subdivide_catmullclark(
+template std::pair<std::vector<vec4i>, std::vector<vec4f>> subdivide_catmullclark(
     const std::vector<vec4i>&, const std::vector<vec4f>&, bool);
 
 // Weld vertices within a threshold. For noe the implementation is O(n^2).
 std::pair<std::vector<vec3f>, std::vector<int>> weld_vertices(
     const std::vector<vec3f>& pos, float threshold) {
-    auto vid = std::vector<int>(pos.size());
+    auto vid  = std::vector<int>(pos.size());
     auto wpos = std::vector<vec3f>();
     for (auto i = 0; i < pos.size(); i++) {
         vid[i] = (int)wpos.size();
@@ -903,10 +902,10 @@ std::pair<std::vector<vec3f>, std::vector<int>> weld_vertices(
 std::pair<std::vector<vec3i>, std::vector<vec3f>> weld_triangles(
     const std::vector<vec3i>& triangles, const std::vector<vec3f>& pos,
     float threshold) {
-    auto vid = std::vector<int>();
-    auto wpos = std::vector<vec3f>();
+    auto vid            = std::vector<int>();
+    auto wpos           = std::vector<vec3f>();
     std::tie(wpos, vid) = weld_vertices(pos, threshold);
-    auto wtriangles = std::vector<vec3i>();
+    auto wtriangles     = std::vector<vec3i>();
     for (auto t : triangles) {
         t.x = vid[t.x];
         t.y = vid[t.y];
@@ -918,10 +917,10 @@ std::pair<std::vector<vec3i>, std::vector<vec3f>> weld_triangles(
 std::pair<std::vector<vec4i>, std::vector<vec3f>> weld_quads(
     const std::vector<vec4i>& quads, const std::vector<vec3f>& pos,
     float threshold) {
-    auto vid = std::vector<int>();
-    auto wpos = std::vector<vec3f>();
+    auto vid            = std::vector<int>();
+    auto wpos           = std::vector<vec3f>();
     std::tie(wpos, vid) = weld_vertices(pos, threshold);
-    auto wquads = std::vector<vec4i>();
+    auto wquads         = std::vector<vec4i>();
     for (auto q : quads) {
         q.x = vid[q.x];
         q.y = vid[q.y];
@@ -939,17 +938,17 @@ std::tuple<std::vector<vec3f>, std::vector<vec3f>, std::vector<vec2f>>
 sample_triangles_points(const std::vector<vec3i>& triangles,
     const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
     const std::vector<vec2f>& texcoord, int npoints, int seed) {
-    auto sampled_pos = std::vector<vec3f>(npoints);
-    auto sampled_norm = std::vector<vec3f>(npoints);
+    auto sampled_pos      = std::vector<vec3f>(npoints);
+    auto sampled_norm     = std::vector<vec3f>(npoints);
     auto sampled_texcoord = std::vector<vec2f>(npoints);
-    auto cdf = sample_triangles_cdf(triangles, pos);
-    auto rng = make_rng(seed);
+    auto cdf              = sample_triangles_cdf(triangles, pos);
+    auto rng              = make_rng(seed);
     for (auto i = 0; i < npoints; i++) {
-        auto ei = 0;
-        auto uv = zero2f;
-        std::tie(ei, uv) =
-            sample_triangles(cdf, rand1f(rng), {rand1f(rng), rand1f(rng)});
-        auto t = triangles[ei];
+        auto ei          = 0;
+        auto uv          = zero2f;
+        std::tie(ei, uv) = sample_triangles(
+            cdf, rand1f(rng), {rand1f(rng), rand1f(rng)});
+        auto t         = triangles[ei];
         sampled_pos[i] = interpolate_triangle(pos[t.x], pos[t.y], pos[t.z], uv);
         if (!sampled_norm.empty()) {
             sampled_norm[i] = normalize(
@@ -986,13 +985,13 @@ bool intersect_point(
     if (t < ray.tmin || t > ray.tmax) return false;
 
     // test for line-point distance vs point radius
-    auto rp = ray.o + ray.d * t;
+    auto rp  = ray.o + ray.d * t;
     auto prp = p - rp;
     if (dot(prp, prp) > r * r) return false;
 
     // intersection occurred: set params and exit
     dist = t;
-    uv = {0, 0};
+    uv   = {0, 0};
 
     return true;
 }
@@ -1006,11 +1005,11 @@ bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
     auto w = ray.o - p0;
 
     // compute values to solve a linear system
-    auto a = dot(u, u);
-    auto b = dot(u, v);
-    auto c = dot(v, v);
-    auto d = dot(u, w);
-    auto e = dot(v, w);
+    auto a   = dot(u, u);
+    auto b   = dot(u, v);
+    auto c   = dot(v, v);
+    auto d   = dot(u, w);
+    auto e   = dot(v, w);
     auto det = a * c - b * b;
 
     // check determinant and exit if lines are parallel
@@ -1028,18 +1027,18 @@ bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
     s = clamp(s, (float)0, (float)1);
 
     // compute segment-segment distance on the closest points
-    auto pr = ray.o + ray.d * t;
-    auto pl = p0 + (p1 - p0) * s;
+    auto pr  = ray.o + ray.d * t;
+    auto pl  = p0 + (p1 - p0) * s;
     auto prl = pr - pl;
 
     // check with the line radius at the same point
     auto d2 = dot(prl, prl);
-    auto r = r0 * (1 - s) + r1 * s;
+    auto r  = r0 * (1 - s) + r1 * s;
     if (d2 > r * r) return false;
 
     // intersection occurred: set params and exit
     dist = t;
-    uv = {s, sqrt(d2) / r};
+    uv   = {s, sqrt(d2) / r};
 
     return true;
 }
@@ -1053,7 +1052,7 @@ bool intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
 
     // compute determinant to solve a linear system
     auto pvec = cross(ray.d, edge2);
-    auto det = dot(edge1, pvec);
+    auto det  = dot(edge1, pvec);
 
     // check determinant and exit if triangle and ray are parallel
     // (could use EPSILONS if desired)
@@ -1062,12 +1061,12 @@ bool intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
 
     // compute and check first bricentric coordinated
     auto tvec = ray.o - p0;
-    auto u = dot(tvec, pvec) * inv_det;
+    auto u    = dot(tvec, pvec) * inv_det;
     if (u < 0 || u > 1) return false;
 
     // compute and check second bricentric coordinated
     auto qvec = cross(tvec, edge1);
-    auto v = dot(ray.d, qvec) * inv_det;
+    auto v    = dot(ray.d, qvec) * inv_det;
     if (v < 0 || u + v > 1) return false;
 
     // compute and check ray parameter
@@ -1076,7 +1075,7 @@ bool intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
 
     // intersection occurred: set params and exit
     dist = t;
-    uv = {u, v};
+    uv   = {u, v};
 
     return true;
 }
@@ -1084,16 +1083,16 @@ bool intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
 // Intersect a ray with a quad.
 bool intersect_quad(const ray3f& ray, const vec3f& p0, const vec3f& p1,
     const vec3f& p2, const vec3f& p3, float& dist, vec2f& uv) {
-    auto hit = false;
+    auto hit  = false;
     auto tray = ray;
     if (intersect_triangle(tray, p0, p1, p3, dist, uv)) {
         tray.tmax = dist;
-        hit = true;
+        hit       = true;
     }
     if (intersect_triangle(tray, p2, p3, p1, dist, uv)) {
-        uv = {1 - uv.x, 1 - uv.y};
+        uv        = {1 - uv.x, 1 - uv.y};
         tray.tmax = dist;
-        hit = true;
+        hit       = true;
     }
     return hit;
 }
@@ -1113,8 +1112,8 @@ static inline const float& _safemax(const float& a, const float& b) {
 bool intersect_bbox(const ray3f& ray, const bbox3f& bbox) {
     // determine intersection ranges
     auto invd = vec3f{1, 1, 1} / ray.d;
-    auto t0 = (bbox.min - ray.o) * invd;
-    auto t1 = (bbox.max - ray.o) * invd;
+    auto t0   = (bbox.min - ray.o) * invd;
+    auto t1   = (bbox.max - ray.o) * invd;
     // flip based on range directions
     if (invd.x < 0.0f) std::swap(t0.x, t1.x);
     if (invd.y < 0.0f) std::swap(t0.y, t1.y);
@@ -1128,15 +1127,15 @@ bool intersect_bbox(const ray3f& ray, const bbox3f& bbox) {
 // Intersect a ray with a axis-aligned bounding box
 bool intersect_bbox(const ray3f& ray, const vec3f& ray_dinv,
     const vec3i& ray_dsign, const bbox3f& bbox_) {
-    auto bbox = &bbox_.min;
+    auto bbox  = &bbox_.min;
     auto txmin = (bbox[ray_dsign.x].x - ray.o.x) * ray_dinv.x;
     auto txmax = (bbox[1 - ray_dsign.x].x - ray.o.x) * ray_dinv.x;
     auto tymin = (bbox[ray_dsign.y].y - ray.o.y) * ray_dinv.y;
     auto tymax = (bbox[1 - ray_dsign.y].y - ray.o.y) * ray_dinv.y;
     auto tzmin = (bbox[ray_dsign.z].z - ray.o.z) * ray_dinv.z;
     auto tzmax = (bbox[1 - ray_dsign.z].z - ray.o.z) * ray_dinv.z;
-    auto tmin = _safemax(tzmin, _safemax(tymin, _safemax(txmin, ray.tmin)));
-    auto tmax = _safemin(tzmax, _safemin(tymax, _safemin(txmax, ray.tmax)));
+    auto tmin  = _safemax(tzmin, _safemax(tymin, _safemax(txmin, ray.tmin)));
+    auto tmax  = _safemin(tzmax, _safemin(tymax, _safemin(txmax, ray.tmax)));
     tmax *= 1.00000024f;  // for double: 1.0000000000000004
     return tmin <= tmax;
 }
@@ -1154,18 +1153,18 @@ bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p, float r,
     auto d2 = dot(pos - p, pos - p);
     if (d2 > (dist_max + r) * (dist_max + r)) return false;
     dist = sqrt(d2);
-    uv = {0, 0};
+    uv   = {0, 0};
     return true;
 }
 
 // TODO: documentation
 float closestuv_line(const vec3f& pos, const vec3f& p0, const vec3f& p1) {
     auto ab = p1 - p0;
-    auto d = dot(ab, ab);
+    auto d  = dot(ab, ab);
     // Project c onto ab, computing parameterized position d(t) = a + t*(b –
     // a)
     auto u = dot(pos - p0, ab) / d;
-    u = clamp(u, (float)0, (float)1);
+    u      = clamp(u, (float)0, (float)1);
     return u;
 }
 
@@ -1174,14 +1173,14 @@ bool overlap_line(const vec3f& pos, float dist_max, const vec3f& p0,
     const vec3f& p1, float r0, float r1, float& dist, vec2f& uv) {
     auto u = closestuv_line(pos, p0, p1);
     // Compute projected position from the clamped t d = a + t * ab;
-    auto p = p0 + (p1 - p0) * u;
-    auto r = r0 + (r1 - r0) * u;
+    auto p  = p0 + (p1 - p0) * u;
+    auto r  = r0 + (r1 - r0) * u;
     auto d2 = dot(pos - p, pos - p);
     // check distance
     if (d2 > (dist_max + r) * (dist_max + r)) return false;
     // done
     dist = sqrt(d2);
-    uv = {u, 0};
+    uv   = {u, 0};
     return true;
 }
 
@@ -1224,8 +1223,8 @@ vec2f closestuv_triangle(
 
     // face case
     auto denom = 1 / (va + vb + vc);
-    auto u = vb * denom;
-    auto v = vc * denom;
+    auto u     = vb * denom;
+    auto v     = vc * denom;
     return {u, v};
 }
 
@@ -1233,9 +1232,9 @@ vec2f closestuv_triangle(
 bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& p0,
     const vec3f& p1, const vec3f& p2, float r0, float r1, float r2, float& dist,
     vec2f& uv) {
-    uv = closestuv_triangle(pos, p0, p1, p2);
-    auto p = interpolate_triangle(p0, p1, p2, uv);
-    auto r = interpolate_triangle(r0, r1, r2, uv);
+    uv      = closestuv_triangle(pos, p0, p1, p2);
+    auto p  = interpolate_triangle(p0, p1, p2, uv);
+    auto r  = interpolate_triangle(r0, r1, r2, uv);
     auto dd = dot(p - pos, p - pos);
     if (dd > (dist_max + r) * (dist_max + r)) return false;
     dist = sqrt(dd);
@@ -1249,11 +1248,11 @@ bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0,
     auto hit = false;
     if (overlap_triangle(pos, dist_max, p0, p1, p3, r0, r1, r3, dist, uv)) {
         dist_max = dist;
-        hit = true;
+        hit      = true;
     }
     if (overlap_triangle(pos, dist_max, p2, p3, p1, r2, r3, r1, dist, uv)) {
         // dist_max = dist;
-        uv = {1 - uv.x, 1 - uv.y};
+        uv  = {1 - uv.x, 1 - uv.y};
         hit = true;
     }
     return hit;
@@ -1307,9 +1306,9 @@ bvh_tree::~bvh_tree() {
 
 // BVH primitive with its bbox, its center and the index to the primitive
 struct bvh_prim {
-    bbox3f bbox = invalid_bbox3f;
-    vec3f center = zero3f;
-    int primid = 0;
+    bbox3f bbox   = invalid_bbox3f;
+    vec3f  center = zero3f;
+    int    primid = 0;
 };
 
 // Initializes the BVH node node that contains the primitives sorted_prims
@@ -1332,7 +1331,7 @@ int make_bvh_node(std::vector<bvh_node>& nodes, std::vector<bvh_prim>& prims,
     if (end - start > bvh_max_prims) {
         // initialize split axis and position
         auto split_axis = 0;
-        auto mid = (start + end) / 2;
+        auto mid        = (start + end) / 2;
 
         // compute primintive bounds and size
         auto cbbox = invalid_bbox3f;
@@ -1344,10 +1343,10 @@ int make_bvh_node(std::vector<bvh_node>& nodes, std::vector<bvh_prim>& prims,
             // check heuristic
             if (high_quality) {
                 // consider N bins, compute their cost and keep the minimum
-                const int nbins = 16;
-                auto middle = 0.0f;
-                auto min_cost = maxf;
-                auto bbox_area = [](auto& b) {
+                const int nbins     = 16;
+                auto      middle    = 0.0f;
+                auto      min_cost  = maxf;
+                auto      bbox_area = [](auto& b) {
                     auto size = b.max - b.min;
                     return 1e-12f + 2 * size.x * size.y + 2 * size.x * size.z +
                            2 * size.y * size.z;
@@ -1355,10 +1354,10 @@ int make_bvh_node(std::vector<bvh_node>& nodes, std::vector<bvh_prim>& prims,
                 auto min_left = 0, min_right = 0;
                 for (auto axis = 0; axis < 3; axis++) {
                     for (auto b = 1; b < nbins; b++) {
-                        auto split =
-                            (&cbbox.min.x)[axis] + b * (&csize.x)[axis] / nbins;
-                        auto left_bbox = invalid_bbox3f,
-                             right_bbox = invalid_bbox3f;
+                        auto split = (&cbbox.min.x)[axis] +
+                                     b * (&csize.x)[axis] / nbins;
+                        auto left_bbox   = invalid_bbox3f,
+                             right_bbox  = invalid_bbox3f;
                         auto left_nprims = 0, right_nprims = 0;
                         for (auto i = start; i < end; i++) {
                             if ((&prims[i].center.x)[axis] < split) {
@@ -1375,11 +1374,11 @@ int make_bvh_node(std::vector<bvh_node>& nodes, std::vector<bvh_prim>& prims,
                                     right_nprims * bbox_area(right_bbox) /
                                         bbox_area(cbbox);
                         if (cost < min_cost) {
-                            min_cost = cost;
-                            middle = split;
+                            min_cost   = cost;
+                            middle     = split;
                             split_axis = axis;
-                            min_left = left_nprims;
-                            min_right = right_nprims;
+                            min_left   = left_nprims;
+                            min_right  = right_nprims;
                         }
                     }
                 }
@@ -1402,7 +1401,7 @@ int make_bvh_node(std::vector<bvh_node>& nodes, std::vector<bvh_prim>& prims,
                     // bounding box and split along this one right in the middle
 #if 1
                 split_axis = largest_axis;
-                mid = (start + end) / 2;
+                mid        = (start + end) / 2;
                 std::nth_element(prims.data() + start, prims.data() + mid,
                     prims.data() + end, [split_axis](auto& a, auto& b) {
                         return (&a.center.x)[split_axis] <
@@ -1426,20 +1425,20 @@ int make_bvh_node(std::vector<bvh_node>& nodes, std::vector<bvh_prim>& prims,
             // if we were not able to split, just break the primitives in half
             if (mid == start || mid == end) {
                 split_axis = 0;
-                mid = (start + end) / 2;
+                mid        = (start + end) / 2;
             }
         }
 
         // make an internal node
-        node.internal = true;
+        node.internal   = true;
         node.split_axis = split_axis;
-        node.count = 2;
-        node.prims[0] = make_bvh_node(nodes, prims, start, mid, high_quality);
-        node.prims[1] = make_bvh_node(nodes, prims, mid, end, high_quality);
+        node.count      = 2;
+        node.prims[0]   = make_bvh_node(nodes, prims, start, mid, high_quality);
+        node.prims[1]   = make_bvh_node(nodes, prims, mid, end, high_quality);
     } else {
         // Make a leaf node
         node.internal = false;
-        node.count = end - start;
+        node.count    = end - start;
         for (auto i = 0; i < node.count; i++)
             node.prims[i] = prims[start + i].primid;
     }
@@ -1495,7 +1494,7 @@ void build_bvh(bvh_tree* bvh, bool high_quality) {
 void refit_bvh(bvh_tree* bvh, int nodeid) {
     // refit
     auto& node = bvh->nodes[nodeid];
-    node.bbox = invalid_bbox3f;
+    node.bbox  = invalid_bbox3f;
     if (node.internal) {
         for (auto i = 0; i < 2; i++) {
             refit_bvh(bvh, node.prims[i]);
@@ -1504,8 +1503,8 @@ void refit_bvh(bvh_tree* bvh, int nodeid) {
     } else if (!bvh->triangles.empty()) {
         for (auto i = 0; i < node.count; i++) {
             auto& t = bvh->triangles[node.prims[i]];
-            node.bbox +=
-                triangle_bbox(bvh->pos[t.x], bvh->pos[t.y], bvh->pos[t.z]);
+            node.bbox += triangle_bbox(
+                bvh->pos[t.x], bvh->pos[t.y], bvh->pos[t.z]);
         }
     } else if (!bvh->quads.empty()) {
         for (auto i = 0; i < node.count; i++) {
@@ -1526,8 +1525,8 @@ void refit_bvh(bvh_tree* bvh, int nodeid) {
         }
     } else if (!bvh->instances.empty()) {
         for (auto i = 0; i < node.count; i++) {
-            auto& ist = bvh->instances[node.prims[i]];
-            auto sbvh = bvh->shape_bvhs[ist.sid];
+            auto& ist  = bvh->instances[node.prims[i]];
+            auto  sbvh = bvh->shape_bvhs[ist.sid];
             node.bbox += transform_bbox(ist.frame, sbvh->nodes[0].bbox);
         }
     } else {
@@ -1571,20 +1570,20 @@ RTCDevice get_embree_device() {
 // Build a BVH using Embree. Calls `build_bvh()` if Embree is not available.
 void build_embree_bvh(bvh_tree* bvh) {
     auto embree_device = get_embree_device();
-    auto embree_scene = rtcNewScene(embree_device);
+    auto embree_scene  = rtcNewScene(embree_device);
     if (!bvh->points.empty()) {
         throw std::runtime_error("embree does not support points");
     } else if (!bvh->lines.empty()) {
         throw std::runtime_error("not yet implemented");
     } else if (!bvh->triangles.empty()) {
-        auto embree_geom =
-            rtcNewGeometry(embree_device, RTC_GEOMETRY_TYPE_TRIANGLE);
+        auto embree_geom = rtcNewGeometry(
+            embree_device, RTC_GEOMETRY_TYPE_TRIANGLE);
         rtcSetGeometryVertexAttributeCount(embree_geom, 1);
         auto vert = rtcSetNewGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_VERTEX,
             0, RTC_FORMAT_FLOAT3, 3 * 4, bvh->pos.size());
-        auto triangles =
-            rtcSetNewGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_INDEX, 0,
-                RTC_FORMAT_UINT3, 3 * 4, bvh->triangles.size());
+        auto triangles = rtcSetNewGeometryBuffer(embree_geom,
+            RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, 3 * 4,
+            bvh->triangles.size());
         memcpy(vert, bvh->pos.data(), bvh->pos.size() * 12);
         memcpy(triangles, bvh->triangles.data(), bvh->triangles.size() * 12);
         rtcCommitGeometry(embree_geom);
@@ -1593,9 +1592,9 @@ void build_embree_bvh(bvh_tree* bvh) {
         throw std::runtime_error("not yet implemented");
     } else if (!bvh->instances.empty()) {
         for (auto iid = 0; iid < bvh->instances.size(); iid++) {
-            auto ist = bvh->instances[iid];
-            auto embree_geom =
-                rtcNewGeometry(embree_device, RTC_GEOMETRY_TYPE_INSTANCE);
+            auto ist         = bvh->instances[iid];
+            auto embree_geom = rtcNewGeometry(
+                embree_device, RTC_GEOMETRY_TYPE_INSTANCE);
             rtcSetGeometryInstancedScene(
                 embree_geom, (RTCScene)bvh->shape_bvhs[ist.sid]->embree_bvh);
             rtcSetGeometryTransform(
@@ -1614,25 +1613,25 @@ void refit_embree_bvh(bvh_tree* bvh) {
 bool intersect_embree_bvh(const bvh_tree* bvh, const ray3f& ray, bool find_any,
     float& dist, int& iid, int& eid, vec2f& uv) {
     RTCRayHit embree_ray;
-    embree_ray.ray.org_x = ray.o.x;
-    embree_ray.ray.org_y = ray.o.y;
-    embree_ray.ray.org_z = ray.o.z;
-    embree_ray.ray.dir_x = ray.d.x;
-    embree_ray.ray.dir_y = ray.d.y;
-    embree_ray.ray.dir_z = ray.d.z;
-    embree_ray.ray.tnear = ray.tmin;
-    embree_ray.ray.tfar = ray.tmax;
-    embree_ray.ray.flags = 0;
-    embree_ray.hit.geomID = RTC_INVALID_GEOMETRY_ID;
+    embree_ray.ray.org_x     = ray.o.x;
+    embree_ray.ray.org_y     = ray.o.y;
+    embree_ray.ray.org_z     = ray.o.z;
+    embree_ray.ray.dir_x     = ray.d.x;
+    embree_ray.ray.dir_y     = ray.d.y;
+    embree_ray.ray.dir_z     = ray.d.z;
+    embree_ray.ray.tnear     = ray.tmin;
+    embree_ray.ray.tfar      = ray.tmax;
+    embree_ray.ray.flags     = 0;
+    embree_ray.hit.geomID    = RTC_INVALID_GEOMETRY_ID;
     embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
     RTCIntersectContext embree_ctx;
     rtcInitIntersectContext(&embree_ctx);
     rtcIntersect1((RTCScene)bvh->embree_bvh, &embree_ctx, &embree_ray);
     if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
     dist = embree_ray.ray.tfar;
-    uv = {embree_ray.hit.u, embree_ray.hit.v};
-    eid = embree_ray.hit.primID;
-    iid = embree_ray.hit.instID[0];
+    uv   = {embree_ray.hit.u, embree_ray.hit.v};
+    eid  = embree_ray.hit.primID;
+    iid  = embree_ray.hit.instID[0];
     return true;
 }
 #else
@@ -1663,8 +1662,8 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
         return intersect_embree_bvh(bvh, ray_, find_any, dist, iid, eid, uv);
 
     // node stack
-    int node_stack[128];
-    auto node_cur = 0;
+    int  node_stack[128];
+    auto node_cur          = 0;
     node_stack[node_cur++] = 0;
 
     // shared variables
@@ -1674,7 +1673,7 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
     auto ray = ray_;
 
     // prepare ray for fast queries
-    auto ray_dinv = vec3f{1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z};
+    auto ray_dinv  = vec3f{1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z};
     auto ray_dsign = vec3i{(ray_dinv.x < 0) ? 1 : 0, (ray_dinv.y < 0) ? 1 : 0,
         (ray_dinv.z < 0) ? 1 : 0};
 
@@ -1703,9 +1702,9 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
                 auto& t = bvh->triangles[node.prims[i]];
                 if (intersect_triangle(ray, bvh->pos[t.x], bvh->pos[t.y],
                         bvh->pos[t.z], dist, uv)) {
-                    hit = true;
+                    hit      = true;
                     ray.tmax = dist;
-                    eid = node.prims[i];
+                    eid      = node.prims[i];
                 }
             }
         } else if (!bvh->quads.empty()) {
@@ -1713,9 +1712,9 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
                 auto& t = bvh->quads[node.prims[i]];
                 if (intersect_quad(ray, bvh->pos[t.x], bvh->pos[t.y],
                         bvh->pos[t.z], bvh->pos[t.w], dist, uv)) {
-                    hit = true;
+                    hit      = true;
                     ray.tmax = dist;
-                    eid = node.prims[i];
+                    eid      = node.prims[i];
                 }
             }
         } else if (!bvh->lines.empty()) {
@@ -1723,19 +1722,18 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
                 auto& l = bvh->lines[node.prims[i]];
                 if (intersect_line(ray, bvh->pos[l.x], bvh->pos[l.y],
                         bvh->radius[l.x], bvh->radius[l.y], dist, uv)) {
-                    hit = true;
+                    hit      = true;
                     ray.tmax = dist;
-                    eid = node.prims[i];
+                    eid      = node.prims[i];
                 }
             }
         } else if (!bvh->points.empty()) {
             for (auto i = 0; i < node.count; i++) {
                 auto& p = bvh->points[node.prims[i]];
-                if (intersect_point(
-                        ray, bvh->pos[p], bvh->radius[p], dist, uv)) {
-                    hit = true;
+                if (intersect_point(ray, bvh->pos[p], bvh->radius[p], dist, uv)) {
+                    hit      = true;
                     ray.tmax = dist;
-                    eid = node.prims[i];
+                    eid      = node.prims[i];
                 }
             }
         } else if (!bvh->instances.empty()) {
@@ -1744,9 +1742,9 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
                 if (intersect_bvh(bvh->shape_bvhs[ist.sid],
                         transform_ray(ist.frame_inv, ray), find_any, dist, iid,
                         eid, uv)) {
-                    hit = true;
+                    hit      = true;
                     ray.tmax = dist;
-                    iid = node.prims[i];
+                    iid      = node.prims[i];
                 }
             }
         } else {
@@ -1764,8 +1762,8 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
 bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
     bool find_any, float& dist, int& iid, int& eid, vec2f& uv) {
     // node stack
-    int node_stack[64];
-    auto node_cur = 0;
+    int  node_stack[64];
+    auto node_cur          = 0;
     node_stack[node_cur++] = 0;
 
     // hit
@@ -1791,9 +1789,9 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
                 if (overlap_triangle(pos, max_dist, bvh->pos[t.x],
                         bvh->pos[t.y], bvh->pos[t.z], bvh->radius[t.x],
                         bvh->radius[t.y], bvh->radius[t.z], dist, uv)) {
-                    hit = true;
+                    hit      = true;
                     max_dist = dist;
-                    eid = node.prims[i];
+                    eid      = node.prims[i];
                 }
             }
         } else if (!bvh->quads.empty()) {
@@ -1803,9 +1801,9 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
                         bvh->pos[q.z], bvh->pos[q.w], bvh->radius[q.x],
                         bvh->radius[q.y], bvh->radius[q.z], bvh->radius[q.w],
                         dist, uv)) {
-                    hit = true;
+                    hit      = true;
                     max_dist = dist;
-                    eid = node.prims[i];
+                    eid      = node.prims[i];
                 }
             }
         } else if (!bvh->lines.empty()) {
@@ -1813,9 +1811,9 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
                 auto& l = bvh->lines[node.prims[i]];
                 if (overlap_line(pos, max_dist, bvh->pos[l.x], bvh->pos[l.y],
                         bvh->radius[l.x], bvh->radius[l.y], dist, uv)) {
-                    hit = true;
+                    hit      = true;
                     max_dist = dist;
-                    eid = node.prims[i];
+                    eid      = node.prims[i];
                 }
             }
         } else if (!bvh->points.empty()) {
@@ -1823,9 +1821,9 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
                 auto& p = bvh->points[node.prims[i]];
                 if (overlap_point(
                         pos, max_dist, bvh->pos[p], bvh->radius[p], dist, uv)) {
-                    hit = true;
+                    hit      = true;
                     max_dist = dist;
-                    eid = node.prims[i];
+                    eid      = node.prims[i];
                 }
             }
         } else if (!bvh->instances.empty()) {
@@ -1834,9 +1832,9 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
                 if (overlap_bvh(bvh->shape_bvhs[ist.sid],
                         transform_point(ist.frame_inv, pos), max_dist, find_any,
                         dist, iid, eid, uv)) {
-                    hit = true;
+                    hit      = true;
                     max_dist = dist;
-                    iid = node.prims[i];
+                    iid      = node.prims[i];
                 }
             }
         } else {
@@ -1930,7 +1928,7 @@ make_shape_data make_quad(const vec2i& steps, const vec2f& size,
             auto uv = vec2f{i / (float)steps.x, j / (float)steps.y};
             shp.pos[j * (steps.x + 1) + i] = {
                 (uv.x - 0.5f) * size.x, (uv.y - 0.5f) * size.y, 0};
-            shp.norm[j * (steps.x + 1) + i] = {0, 0, 1};
+            shp.norm[j * (steps.x + 1) + i]     = {0, 0, 1};
             shp.texcoord[j * (steps.x + 1) + i] = uv * uvsize;
         }
     }
@@ -1990,47 +1988,42 @@ make_shape_data make_cube(const vec3i& steps, const vec3f& size,
     qshps[0] = make_quad({steps.x, steps.y}, {size.x, size.y},
         {uvsize.x, uvsize.y}, as_triangles);
     for (auto i = 0; i < qshps[0].pos.size(); i++) {
-        qshps[0].pos[i] = {qshps[0].pos[i].x, qshps[0].pos[i].y, size.z / 2};
+        qshps[0].pos[i]  = {qshps[0].pos[i].x, qshps[0].pos[i].y, size.z / 2};
         qshps[0].norm[i] = {0, 0, 1};
     }
     // - z
     qshps[1] = make_quad({steps.x, steps.y}, {size.x, size.y},
         {uvsize.x, uvsize.y}, as_triangles);
     for (auto i = 0; i < qshps[1].pos.size(); i++) {
-        qshps[1].pos[i] = {
-            -qshps[1].pos[i].x, qshps[1].pos[i].y, -size.z / 2};
+        qshps[1].pos[i]  = {-qshps[1].pos[i].x, qshps[1].pos[i].y, -size.z / 2};
         qshps[1].norm[i] = {0, 0, -1};
     }
     // + x
     qshps[2] = make_quad({steps.y, steps.z}, {size.y, size.z},
         {uvsize.y, uvsize.z}, as_triangles);
     for (auto i = 0; i < qshps[2].pos.size(); i++) {
-        qshps[2].pos[i] = {
-            size.x / 2, qshps[2].pos[i].y, -qshps[2].pos[i].x};
+        qshps[2].pos[i]  = {size.x / 2, qshps[2].pos[i].y, -qshps[2].pos[i].x};
         qshps[2].norm[i] = {1, 0, 0};
     }
     // - x
     qshps[3] = make_quad({steps.y, steps.z}, {size.y, size.z},
         {uvsize.y, uvsize.z}, as_triangles);
     for (auto i = 0; i < qshps[3].pos.size(); i++) {
-        qshps[3].pos[i] = {
-            -size.x / 2, qshps[3].pos[i].y, qshps[3].pos[i].x};
+        qshps[3].pos[i]  = {-size.x / 2, qshps[3].pos[i].y, qshps[3].pos[i].x};
         qshps[3].norm[i] = {-1, 0, 0};
     }
     // + y
     qshps[4] = make_quad({steps.x, steps.y}, {size.x, size.y},
         {uvsize.x, uvsize.y}, as_triangles);
     for (auto i = 0; i < qshps[4].pos.size(); i++) {
-        qshps[4].pos[i] = {
-            qshps[4].pos[i].x, size.y / 2, -qshps[4].pos[i].y};
+        qshps[4].pos[i]  = {qshps[4].pos[i].x, size.y / 2, -qshps[4].pos[i].y};
         qshps[4].norm[i] = {0, 1, 0};
     }
     // - y
     qshps[5] = make_quad({steps.x, steps.y}, {size.x, size.y},
         {uvsize.x, uvsize.y}, as_triangles);
     for (auto i = 0; i < qshps[5].pos.size(); i++) {
-        qshps[5].pos[i] = {
-            qshps[5].pos[i].x, -size.y / 2, qshps[5].pos[i].y};
+        qshps[5].pos[i]  = {qshps[5].pos[i].x, -size.y / 2, qshps[5].pos[i].y};
         qshps[5].norm[i] = {0, -1, 0};
     }
     return merge_shape_data(qshps);
@@ -2040,27 +2033,27 @@ make_shape_data make_cube(const vec3i& steps, const vec3f& size,
 make_shape_data make_cube_rounded(const vec3i& steps, const vec3f& size,
     const vec3f& uvsize, float radius, bool as_triangles) {
     auto shp = make_cube(steps, size, uvsize, as_triangles);
-    auto c = size / 2 - vec3f{radius, radius, radius};
+    auto c   = size / 2 - vec3f{radius, radius, radius};
     for (auto i = 0; i < shp.pos.size(); i++) {
         auto pc = vec3f{
             fabs(shp.pos[i].x), fabs(shp.pos[i].y), fabs(shp.pos[i].z)};
         auto ps = vec3f{shp.pos[i].x < 0 ? -1.0f : 1.0f,
             shp.pos[i].y < 0 ? -1.0f : 1.0f, shp.pos[i].z < 0 ? -1.0f : 1.0f};
         if (pc.x >= c.x && pc.y >= c.y && pc.z >= c.z) {
-            auto pn = normalize(pc - c);
-            shp.pos[i] = c + radius * pn;
+            auto pn     = normalize(pc - c);
+            shp.pos[i]  = c + radius * pn;
             shp.norm[i] = pn;
         } else if (pc.x >= c.x && pc.y >= c.y) {
-            auto pn = normalize((pc - c) * vec3f{1, 1, 0});
-            shp.pos[i] = {c.x + radius * pn.x, c.y + radius * pn.y, pc.z};
+            auto pn     = normalize((pc - c) * vec3f{1, 1, 0});
+            shp.pos[i]  = {c.x + radius * pn.x, c.y + radius * pn.y, pc.z};
             shp.norm[i] = pn;
         } else if (pc.x >= c.x && pc.z >= c.z) {
-            auto pn = normalize((pc - c) * vec3f{1, 0, 1});
-            shp.pos[i] = {c.x + radius * pn.x, pc.y, c.z + radius * pn.z};
+            auto pn     = normalize((pc - c) * vec3f{1, 0, 1});
+            shp.pos[i]  = {c.x + radius * pn.x, pc.y, c.z + radius * pn.z};
             shp.norm[i] = pn;
         } else if (pc.y >= c.y && pc.z >= c.z) {
-            auto pn = normalize((pc - c) * vec3f{0, 1, 1});
-            shp.pos[i] = {pc.x, c.y + radius * pn.y, c.z + radius * pn.z};
+            auto pn     = normalize((pc - c) * vec3f{0, 1, 1});
+            shp.pos[i]  = {pc.x, c.y + radius * pn.y, c.z + radius * pn.z};
             shp.norm[i] = pn;
         } else {
             continue;
@@ -2076,10 +2069,10 @@ make_shape_data make_sphere(
     const vec2i& steps, float size, const vec2f& uvsize, bool as_triangles) {
     auto shp = make_quad(steps, {1, 1}, {1, 1}, as_triangles);
     for (auto i = 0; i < shp.pos.size(); i++) {
-        auto uv = shp.texcoord[i];
-        auto a = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
-        auto p = vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
-        shp.pos[i] = p * (size / 2);
+        auto uv     = shp.texcoord[i];
+        auto a      = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
+        auto p      = vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
+        shp.pos[i]  = p * (size / 2);
         shp.norm[i] = normalize(p);
         shp.texcoord[i] = uv * uvsize;
     }
@@ -2092,8 +2085,8 @@ make_shape_data make_sphere_cube(
     auto shp = make_cube({steps, steps, steps}, {1, 1, 1},
         {uvsize, uvsize, uvsize}, as_triangles);
     for (auto i = 0; i < shp.pos.size(); i++) {
-        auto p = shp.pos[i];
-        shp.pos[i] = normalize(p) * (size / 2);
+        auto p      = shp.pos[i];
+        shp.pos[i]  = normalize(p) * (size / 2);
         shp.norm[i] = normalize(p);
     }
     return shp;
@@ -2105,11 +2098,11 @@ make_shape_data make_sphere_flipcap(const vec2i& steps, float size,
     auto shp = make_sphere(steps, size, uvsize, as_triangles);
     for (auto i = 0; i < shp.pos.size(); i++) {
         if (shp.pos[i].z > zflip.y) {
-            shp.pos[i].z = 2 * zflip.y - shp.pos[i].z;
+            shp.pos[i].z  = 2 * zflip.y - shp.pos[i].z;
             shp.norm[i].x = -shp.norm[i].x;
             shp.norm[i].y = -shp.norm[i].y;
         } else if (shp.pos[i].z < zflip.x) {
-            shp.pos[i].z = 2 * zflip.x - shp.pos[i].z;
+            shp.pos[i].z  = 2 * zflip.x - shp.pos[i].z;
             shp.norm[i].x = -shp.norm[i].x;
             shp.norm[i].y = -shp.norm[i].y;
         }
@@ -2122,11 +2115,10 @@ make_shape_data make_disk(
     const vec2i& steps, float size, const vec2f& uvsize, bool as_triangles) {
     auto shp = make_quad(steps, {1, 1}, {1, 1}, as_triangles);
     for (auto i = 0; i < shp.pos.size(); i++) {
-        auto uv = shp.texcoord[i];
-        auto phi = 2 * pif * uv.x;
-        shp.pos[i] = {
-            cos(phi) * uv.y * size / 2, sin(phi) * uv.y * size / 2, 0};
-        shp.norm[i] = {0, 0, 1};
+        auto uv    = shp.texcoord[i];
+        auto phi   = 2 * pif * uv.x;
+        shp.pos[i] = {cos(phi) * uv.y * size / 2, sin(phi) * uv.y * size / 2, 0};
+        shp.norm[i]     = {0, 0, 1};
         shp.texcoord[i] = uv * uvsize;
     }
     return shp;
@@ -2135,8 +2127,7 @@ make_shape_data make_disk(
 // Make a disk from a quad.
 make_shape_data make_disk_quad(
     int steps, float size, float uvsize, bool as_triangles) {
-    auto shp =
-        make_quad({steps, steps}, {2, 2}, {uvsize, uvsize}, as_triangles);
+    auto shp = make_quad({steps, steps}, {2, 2}, {uvsize, uvsize}, as_triangles);
     for (auto i = 0; i < shp.pos.size(); i++) {
         // Analytical Methods for Squaring the Disc, by C. Fong
         // https://arxiv.org/abs/1509.06344
@@ -2156,8 +2147,8 @@ make_shape_data make_disk_bulged(
     auto radius = (size * size / 4 + height * height) / (2 * height);
     auto center = vec3f{0, 0, -radius + height};
     for (auto i = 0; i < shp.pos.size(); i++) {
-        auto pn = normalize(shp.pos[i] - center);
-        shp.pos[i] = center + pn * radius;
+        auto pn     = normalize(shp.pos[i] - center);
+        shp.pos[i]  = center + pn * radius;
         shp.norm[i] = pn;
     }
     return shp;
@@ -2168,11 +2159,11 @@ make_shape_data make_cylinder_side(const vec2i& steps, const vec2f& size,
     const vec2f& uvsize, bool as_triangles) {
     auto shp = make_quad(steps, {1, 1}, {1, 1}, as_triangles);
     for (auto i = 0; i < shp.pos.size(); i++) {
-        auto uv = shp.texcoord[i];
-        auto phi = 2 * pif * uv.x;
-        shp.pos[i] = {cos(phi) * size.x / 2, sin(phi) * size.x / 2,
+        auto uv         = shp.texcoord[i];
+        auto phi        = 2 * pif * uv.x;
+        shp.pos[i]      = {cos(phi) * size.x / 2, sin(phi) * size.x / 2,
             (uv.y - 0.5f) * size.y};
-        shp.norm[i] = {cos(phi), sin(phi), 0};
+        shp.norm[i]     = {cos(phi), sin(phi), 0};
         shp.texcoord[i] = uv * uvsize;
     }
     return shp;
@@ -2196,7 +2187,7 @@ make_shape_data make_cylinder(const vec3i& steps, const vec2f& size,
         {steps.x, steps.z}, size.x, {uvsize.x, uvsize.z}, as_triangles);
     for (auto i = 0; i < qshps[2].pos.size(); i++) {
         qshps[2].pos[i].z = -size.y / 2;
-        qshps[2].norm[i] = -qshps[2].norm[i];
+        qshps[2].norm[i]  = -qshps[2].norm[i];
     }
     for (auto i = 0; i < qshps[2].quads.size(); i++)
         std::swap(qshps[2].quads[i].x, qshps[2].quads[i].z);
@@ -2208,16 +2199,16 @@ make_shape_data make_cylinder(const vec3i& steps, const vec2f& size,
 make_shape_data make_cylinder_rounded(const vec3i& steps, const vec2f& size,
     const vec3f& uvsize, float radius, bool as_triangles) {
     auto shp = make_cylinder(steps, size, uvsize, as_triangles);
-    auto c = size / 2 - vec2f{radius, radius};
+    auto c   = size / 2 - vec2f{radius, radius};
     for (auto i = 0; i < shp.pos.size(); i++) {
         auto phi = atan2(shp.pos[i].y, shp.pos[i].x);
-        auto r = length(vec2f{shp.pos[i].x, shp.pos[i].y});
-        auto z = shp.pos[i].z;
-        auto pc = vec2f{r, fabs(z)};
-        auto ps = (z < 0) ? -1.0f : 1.0f;
+        auto r   = length(vec2f{shp.pos[i].x, shp.pos[i].y});
+        auto z   = shp.pos[i].z;
+        auto pc  = vec2f{r, fabs(z)};
+        auto ps  = (z < 0) ? -1.0f : 1.0f;
         if (pc.x >= c.x && pc.y >= c.y) {
-            auto pn = normalize(pc - c);
-            shp.pos[i] = {cos(phi) * c.x + radius * pn.x,
+            auto pn     = normalize(pc - c);
+            shp.pos[i]  = {cos(phi) * c.x + radius * pn.x,
                 sin(phi) * c.x + radius * pn.x, ps * (c.y + radius * pn.y)};
             shp.norm[i] = {cos(phi) * pn.x, sin(phi) * pn.x, ps * pn.y};
         } else {
@@ -2231,21 +2222,21 @@ make_shape_data make_cylinder_rounded(const vec3i& steps, const vec2f& size,
 make_shape_data make_geodesic_sphere(
     int tesselation, float size, bool as_triangles) {
     // https://stackoverflow.com/questions/17705621/algorithm-for-a-geodesic-sphere
-    const float X = 0.525731112119133606f;
-    const float Z = 0.850650808352039932f;
-    static auto pos = std::vector<vec3f>{{-X, 0.0, Z}, {X, 0.0, Z},
+    const float X         = 0.525731112119133606f;
+    const float Z         = 0.850650808352039932f;
+    static auto pos       = std::vector<vec3f>{{-X, 0.0, Z}, {X, 0.0, Z},
         {-X, 0.0, -Z}, {X, 0.0, -Z}, {0.0, Z, X}, {0.0, Z, -X}, {0.0, -Z, X},
         {0.0, -Z, -X}, {Z, X, 0.0}, {-Z, X, 0.0}, {Z, -X, 0.0}, {-Z, -X, 0.0}};
     static auto triangles = std::vector<vec3i>{{0, 1, 4}, {0, 4, 9}, {9, 4, 5},
         {4, 8, 5}, {4, 1, 8}, {8, 1, 10}, {8, 10, 3}, {5, 8, 3}, {5, 3, 2},
         {2, 3, 7}, {7, 3, 10}, {7, 10, 6}, {7, 6, 11}, {11, 6, 0}, {0, 6, 1},
         {6, 10, 1}, {9, 11, 0}, {9, 2, 11}, {9, 5, 2}, {7, 11, 2}};
-    auto shp = make_shape_data();
-    shp.pos = pos;
-    shp.triangles = triangles;
+    auto        shp       = make_shape_data();
+    shp.pos               = pos;
+    shp.triangles         = triangles;
     for (auto l = 0; l < max(0, tesselation - 2); l++) {
-        std::tie(shp.triangles, shp.pos) =
-            subdivide_triangles(shp.triangles, shp.pos);
+        std::tie(shp.triangles, shp.pos) = subdivide_triangles(
+            shp.triangles, shp.pos);
     }
     for (auto& p : shp.pos) p = normalize(p) * size / 2;
     shp.norm = shp.pos;
@@ -2256,10 +2247,10 @@ make_shape_data make_geodesic_sphere(
 // coordinates.
 make_shape_data make_fvcube(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
-    auto shp = make_cube(steps, size, uvsize, false);
-    shp.quads_pos = shp.quads;
-    shp.quads_norm = shp.quads_pos;
-    shp.quads_texcoord = shp.quads_pos;
+    auto shp                         = make_cube(steps, size, uvsize, false);
+    shp.quads_pos                    = shp.quads;
+    shp.quads_norm                   = shp.quads_pos;
+    shp.quads_texcoord               = shp.quads_pos;
     std::tie(shp.quads_pos, shp.pos) = weld_quads(shp.quads_pos, shp.pos,
         min(0.1f * size /
             vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
@@ -2479,8 +2470,7 @@ make_shape_data make_suzanne(float size, bool as_triangles) {
         {-1.03125, -0.0390625, -0.3046875}, {0.828125, -0.0703125, -0.1328125},
         {-0.828125, -0.0703125, -0.1328125}, {0.921875, 0.359375, -0.21875},
         {-0.921875, 0.359375, -0.21875}, {0.9453125, 0.3046875, -0.2890625},
-        {-0.9453125, 0.3046875, -0.2890625},
-        {0.8828125, -0.0234375, -0.2109375},
+        {-0.9453125, 0.3046875, -0.2890625}, {0.8828125, -0.0234375, -0.2109375},
         {-0.8828125, -0.0234375, -0.2109375}, {1.0390625, 0.0, -0.3671875},
         {-1.0390625, 0.0, -0.3671875}, {1.1875, 0.09375, -0.4453125},
         {-1.1875, 0.09375, -0.4453125}, {1.234375, 0.25, -0.4453125},
@@ -2534,7 +2524,7 @@ make_shape_data make_suzanne(float size, bool as_triangles) {
         {341, 347, 383}, {384, 348, 342}, {299, 345, 343}, {344, 346, 300},
         {323, 379, 351}, {352, 380, 324}, {441, 443, 445}, {446, 444, 442},
         {463, 491, 465}, {466, 492, 464}, {495, 497, 499}, {500, 498, 496}};
-    static auto suzanne_quads = std::vector<vec4i>{{46, 0, 2, 44},
+    static auto suzanne_quads     = std::vector<vec4i>{{46, 0, 2, 44},
         {3, 1, 47, 45}, {44, 2, 4, 42}, {5, 3, 45, 43}, {2, 8, 6, 4},
         {7, 9, 3, 5}, {0, 10, 8, 2}, {9, 11, 1, 3}, {10, 12, 14, 8},
         {15, 13, 11, 9}, {8, 14, 16, 6}, {17, 15, 9, 7}, {14, 20, 18, 16},
@@ -2689,7 +2679,7 @@ make_shape_data make_suzanne(float size, bool as_triangles) {
         {319, 321, 503, 389}, {504, 322, 320, 390}};
 
     auto shp = make_shape_data();
-    shp.pos = suzanne_pos;
+    shp.pos  = suzanne_pos;
     for (auto& p : shp.pos) p *= size / 2;
     if (!as_triangles) {
         shp.quads = suzanne_quads;
@@ -2705,15 +2695,15 @@ make_shape_data make_suzanne(float size, bool as_triangles) {
 
 // Watertight cube
 make_shape_data make_cube(const vec3f& size, bool as_triangles) {
-    static auto cube_pos = std::vector<vec3f>{{-1, -1, -1}, {-1, +1, -1},
+    static auto cube_pos     = std::vector<vec3f>{{-1, -1, -1}, {-1, +1, -1},
         {+1, +1, -1}, {+1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {+1, +1, +1},
         {+1, -1, +1}};
-    static auto cube_quads = std::vector<vec4i>{{0, 1, 2, 3}, {7, 6, 5, 4},
+    static auto cube_quads   = std::vector<vec4i>{{0, 1, 2, 3}, {7, 6, 5, 4},
         {4, 5, 1, 0}, {6, 7, 3, 2}, {2, 1, 5, 6}, {0, 3, 7, 4}};
-    static auto cube_quad_uv =
-        std::vector<vec2f>{{0, 0}, {1, 0}, {1, 1}, {0, 1}};
+    static auto cube_quad_uv = std::vector<vec2f>{
+        {0, 0}, {1, 0}, {1, 1}, {0, 1}};
     auto shp = make_shape_data();
-    shp.pos = cube_pos;
+    shp.pos  = cube_pos;
     for (auto& p : shp.pos) p *= size / 2;
     if (!as_triangles) {
         shp.quads = cube_quads;
@@ -2728,8 +2718,8 @@ make_shape_data make_lines(const vec2i& steps, const vec2f& size,
     const vec2f& uvsize, const vec2f& line_radius) {
     auto nverts = (steps.x + 1) * steps.y;
     auto nlines = steps.x * steps.y;
-    auto vid = [steps](int i, int j) { return j * (steps.x + 1) + i; };
-    auto fid = [steps](int i, int j) { return j * steps.x + i; };
+    auto vid    = [steps](int i, int j) { return j * (steps.x + 1) + i; };
+    auto fid    = [steps](int i, int j) { return j * steps.x + i; };
 
     auto shp = make_shape_data();
     shp.pos.resize(nverts);
@@ -2739,19 +2729,19 @@ make_shape_data make_lines(const vec2i& steps, const vec2f& size,
     if (steps.y > 1) {
         for (auto j = 0; j < steps.y; j++) {
             for (auto i = 0; i <= steps.x; i++) {
-                auto uv = vec2f{i / (float)steps.x,
+                auto uv            = vec2f{i / (float)steps.x,
                     j / (float)(steps.y > 1 ? steps.y - 1 : 1)};
                 shp.pos[vid(i, j)] = {
                     (uv.x - 0.5f) * size.x, (uv.y - 0.5f) * size.y, 0};
-                shp.norm[vid(i, j)] = {1, 0, 0};
+                shp.norm[vid(i, j)]     = {1, 0, 0};
                 shp.texcoord[vid(i, j)] = uv * uvsize;
             }
         }
     } else {
         for (auto i = 0; i <= steps.x; i++) {
-            auto uv = vec2f{i / (float)steps.x, 0};
-            shp.pos[vid(i, 0)] = {(uv.x - 0.5f) * size.x, 0, 0};
-            shp.norm[vid(i, 0)] = {1, 0, 0};
+            auto uv                 = vec2f{i / (float)steps.x, 0};
+            shp.pos[vid(i, 0)]      = {(uv.x - 0.5f) * size.x, 0, 0};
+            shp.norm[vid(i, 0)]     = {1, 0, 0};
             shp.texcoord[vid(i, 0)] = uv * uvsize;
         }
     }
@@ -2793,26 +2783,26 @@ make_shape_data make_random_points(int num, const vec3f& size, float uvsize,
 
 // Make a point.
 make_shape_data make_point(float point_radius) {
-    auto shp = make_shape_data();
-    shp.points = {0};
-    shp.pos = {{0, 0, 0}};
-    shp.norm = {{0, 0, 1}};
+    auto shp     = make_shape_data();
+    shp.points   = {0};
+    shp.pos      = {{0, 0, 0}};
+    shp.norm     = {{0, 0, 1}};
     shp.texcoord = {{0, 0}};
-    shp.radius = {point_radius};
+    shp.radius   = {point_radius};
     return shp;
 }
 
 // Make a bezier circle. Returns bezier, pos.
 make_shape_data make_bezier_circle(float size) {
     // constant from http://spencermortensen.com/articles/bezier-circle/
-    const auto c = 0.551915024494f;
+    const auto  c          = 0.551915024494f;
     static auto circle_pos = std::vector<vec3f>{{1, 0, 0}, {1, c, 0}, {c, 1, 0},
         {0, 1, 0}, {-c, 1, 0}, {-1, c, 0}, {-1, 0, 0}, {-1, -c, 0}, {-c, -1, 0},
         {0, -1, 0}, {c, -1, 0}, {1, -c, 0}};
     static auto circle_beziers = std::vector<vec4i>{
         {0, 1, 2, 3}, {3, 4, 5, 6}, {6, 7, 8, 9}, {9, 10, 11, 0}};
-    auto shp = make_shape_data();
-    shp.pos = circle_pos;
+    auto shp    = make_shape_data();
+    shp.pos     = circle_pos;
     shp.beziers = circle_beziers;
     return shp;
 }
@@ -2829,7 +2819,7 @@ make_shape_data make_hair(const vec2i& steps,
     std::tie(bpos, bnorm, btexcoord) = sample_triangles_points(
         striangles, spos, snorm, stexcoord, steps.y, seed);
 
-    auto rng = make_rng(seed, 3);
+    auto rng  = make_rng(seed, 3);
     auto blen = std::vector<float>(bpos.size());
     for (auto& l : blen) l = lerp(len.x, len.y, rand1f(rng));
 
@@ -2841,7 +2831,7 @@ make_shape_data make_hair(const vec2i& steps,
             for (auto c = 0; c < clump.y; c++) {
                 auto d = length(bpos[bidx] - bpos[c]);
                 if (d < cdist) {
-                    cdist = d;
+                    cdist       = d;
                     cidx.back() = c;
                 }
             }
@@ -2850,22 +2840,22 @@ make_shape_data make_hair(const vec2i& steps,
 
     auto shp = make_lines(steps, {1, 1}, {1, 1});
     for (auto i = 0; i < shp.pos.size(); i++) {
-        auto u = shp.texcoord[i].x;
-        auto bidx = i / (steps.x + 1);
-        shp.pos[i] = bpos[bidx] + bnorm[bidx] * u * blen[bidx];
-        shp.norm[i] = bnorm[bidx];
+        auto u        = shp.texcoord[i].x;
+        auto bidx     = i / (steps.x + 1);
+        shp.pos[i]    = bpos[bidx] + bnorm[bidx] * u * blen[bidx];
+        shp.norm[i]   = bnorm[bidx];
         shp.radius[i] = lerp(rad.x, rad.y, u);
         if (clump.x > 0) {
             shp.pos[i] = shp.pos[i] +
-                          (shp.pos[i + (cidx[bidx] - bidx) * (steps.x + 1)] -
-                              shp.pos[i]) *
-                              u * clump.x;
+                         (shp.pos[i + (cidx[bidx] - bidx) * (steps.x + 1)] -
+                             shp.pos[i]) *
+                             u * clump.x;
         }
         if (noise.x > 0) {
-            auto nx =
-                perlin_noise(shp.pos[i] * noise.y + vec3f{0, 0, 0}) * noise.x;
-            auto ny =
-                perlin_noise(shp.pos[i] * noise.y + vec3f{3, 7, 11}) * noise.x;
+            auto nx = perlin_noise(shp.pos[i] * noise.y + vec3f{0, 0, 0}) *
+                      noise.x;
+            auto ny = perlin_noise(shp.pos[i] * noise.y + vec3f{3, 7, 11}) *
+                      noise.x;
             auto nz = perlin_noise(shp.pos[i] * noise.y + vec3f{13, 17, 19}) *
                       noise.x;
             shp.pos[i] += {nx, ny, nz};
@@ -2888,8 +2878,7 @@ make_shape_data merge_shape_data(const std::vector<make_shape_data>& shapes) {
         for (auto& v : sshp.lines)
             shp.lines.push_back({v.x + nverts, v.y + nverts});
         for (auto& v : sshp.triangles)
-            shp.triangles.push_back(
-                {v.x + nverts, v.y + nverts, v.z + nverts});
+            shp.triangles.push_back({v.x + nverts, v.y + nverts, v.z + nverts});
         for (auto& v : sshp.quads)
             shp.quads.push_back(
                 {v.x + nverts, v.y + nverts, v.z + nverts, v.w + nverts});
@@ -2945,8 +2934,8 @@ vec3f hsv_to_rgb(const vec3f& hsv) {
     auto h = hsv.x, s = hsv.y, v = hsv.z;
     if (hsv.y == 0.0f) return {v, v, v};
 
-    h = fmodf(h, 1.0f) / (60.0f / 360.0f);
-    int i = (int)h;
+    h       = fmodf(h, 1.0f) / (60.0f / 360.0f);
+    int   i = (int)h;
     float f = h - (float)i;
     float p = v * (1.0f - s);
     float q = v * (1.0f - s * f);
@@ -2964,7 +2953,7 @@ vec3f hsv_to_rgb(const vec3f& hsv) {
 }
 vec3f rgb_to_hsv(const vec3f& rgb) {
     // from Imgui.cpp
-    auto r = rgb.x, g = rgb.y, b = rgb.z;
+    auto  r = rgb.x, g = rgb.y, b = rgb.z;
     float K = 0.f;
     if (g < b) {
         std::swap(g, b);
@@ -3035,8 +3024,8 @@ image<vec4f> tonemap_exposuregamma(
     auto ldr = image<vec4f>{hdr.size()};
     for (auto j = 0; j < hdr.size().y; j++) {
         for (auto i = 0; i < hdr.size().x; i++) {
-            ldr[{i, j}] =
-                tonemap_exposuregamma(hdr[{i, j}], exposure, gamma, filmic);
+            ldr[{i, j}] = tonemap_exposuregamma(
+                hdr[{i, j}], exposure, gamma, filmic);
         }
     }
     return ldr;
@@ -3052,7 +3041,7 @@ namespace ygl {
 // Make a grid image
 image<vec4f> make_grid_image4f(
     const vec2i& size, int tiles, const vec4f& c0, const vec4f& c1) {
-    auto img = image<vec4f>{size};
+    auto img  = image<vec4f>{size};
     auto tile = img.size().x / tiles;
     for (int j = 0; j < img.size().y; j++) {
         for (int i = 0; i < img.size().x; i++) {
@@ -3067,11 +3056,11 @@ image<vec4f> make_grid_image4f(
 // Make a checkerboard image
 image<vec4f> make_checker_image4f(
     const vec2i& size, int tiles, const vec4f& c0, const vec4f& c1) {
-    auto img = image<vec4f>{size};
+    auto img  = image<vec4f>{size};
     auto tile = img.size().x / tiles;
     for (int j = 0; j < img.size().y; j++) {
         for (int i = 0; i < img.size().x; i++) {
-            auto c = (i / tile + j / tile) % 2 == 0;
+            auto c      = (i / tile + j / tile) % 2 == 0;
             img[{i, j}] = (c) ? c0 : c1;
         }
     }
@@ -3080,14 +3069,14 @@ image<vec4f> make_checker_image4f(
 
 // Make an image with bumps and dimples.
 image<vec4f> make_bumpdimple_image4f(const vec2i& size, int tiles) {
-    auto img = image<vec4f>{size};
+    auto img  = image<vec4f>{size};
     auto tile = img.size().x / tiles;
     for (int j = 0; j < img.size().y; j++) {
         for (int i = 0; i < img.size().x; i++) {
-            auto c = (i / tile + j / tile) % 2 == 0;
+            auto c  = (i / tile + j / tile) % 2 == 0;
             auto ii = i % tile - tile / 2, jj = j % tile - tile / 2;
-            auto r =
-                sqrt(float(ii * ii + jj * jj)) / sqrt(float(tile * tile) / 4);
+            auto r = sqrt(float(ii * ii + jj * jj)) /
+                     sqrt(float(tile * tile) / 4);
             auto h = 0.5f;
             if (r < 0.5f) { h += (c) ? (0.5f - r) : -(0.5f - r); }
             img[{i, j}] = {h, h, h, 1};
@@ -3102,7 +3091,7 @@ image<vec4f> make_ramp_image4f(
     auto img = image<vec4f>{size};
     for (int j = 0; j < img.size().y; j++) {
         for (int i = 0; i < img.size().x; i++) {
-            auto u = (float)i / (float)img.size().x;
+            auto u      = (float)i / (float)img.size().x;
             img[{i, j}] = c0 * (1 - u) + c1 * u;
         }
     }
@@ -3138,14 +3127,14 @@ image<vec4f> make_uvramp_image4f(const vec2i& size) {
 
 // Make a uv colored grid
 image<vec4f> make_uvgrid_image4f(const vec2i& size, int tiles, bool colored) {
-    auto img = image<vec4f>{size};
+    auto img  = image<vec4f>{size};
     auto tile = img.size().x / tiles;
     for (int j = 0; j < img.size().y; j++) {
         for (int i = 0; i < img.size().x; i++) {
             auto ii = i / tile, jj = j / tile;
             auto ww = img.size().x / tile, hh = img.size().y / tile;
-            auto ph =
-                (((256 / (ww * hh)) * (ii + jj * ww) - 64 + 256) % 256) / 360.f;
+            auto ph = (((256 / (ww * hh)) * (ii + jj * ww) - 64 + 256) % 256) /
+                      360.f;
             auto pv = 0.5f;
             auto ps = 0.8f;
             if (i % (tile / 2) && j % (tile / 2)) {
@@ -3175,10 +3164,10 @@ image<vec4f> bump_to_normal_map(const image<vec4f>& img, float scale) {
             auto g00 = (p00.x + p00.y + p00.z) / 3;
             auto g01 = (p01.x + p01.y + p01.z) / 3;
             auto g10 = (p10.x + p10.y + p10.z) / 3;
-            auto n =
-                vec3f{scale * (g00 - g10) / dx, scale * (g00 - g01) / dy, 1.0f};
+            auto n   = vec3f{
+                scale * (g00 - g10) / dx, scale * (g00 - g01) / dy, 1.0f};
             n.y = -n.y;  // make green pointing up, even if y axis points down
-            n = normalize(n) * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
+            n   = normalize(n) * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
             norm[{i, j}] = {n.x, n.y, n.z, 1};
         }
     }
@@ -3192,11 +3181,11 @@ image<vec4f> make_sunsky_image4f(const vec2i& size, float thetaSun,
 
     // sunSpectralRad =  ComputeAttenuatedSunlight(thetaS, turbidity);
     auto sunAngularRadius = 9.35e-03f / 2;  // Wikipedia
-    auto thetaS = thetaSun;
+    auto thetaS           = thetaSun;
 
     auto t1 = thetaSun, t2 = thetaSun * thetaSun,
          t3 = thetaSun * thetaSun * thetaSun;
-    auto T = turbidity;
+    auto T  = turbidity;
     auto T2 = turbidity * turbidity;
 
     auto zenith_xyY = vec3f{
@@ -3243,27 +3232,27 @@ image<vec4f> make_sunsky_image4f(const vec2i& size, float thetaSun,
 
     // compute sun luminance
     // TODO: how this relates to zenith intensity?
-    auto sun_ko = vec3f{0.48f, 0.75f, 0.14f};
-    auto sun_kg = vec3f{0.1f, 0.0f, 0.0f};
-    auto sun_kwa = vec3f{0.02f, 0.0f, 0.0f};
-    auto sun_sol = vec3f{20000.0f, 27000.0f, 30000.0f};
+    auto sun_ko     = vec3f{0.48f, 0.75f, 0.14f};
+    auto sun_kg     = vec3f{0.1f, 0.0f, 0.0f};
+    auto sun_kwa    = vec3f{0.02f, 0.0f, 0.0f};
+    auto sun_sol    = vec3f{20000.0f, 27000.0f, 30000.0f};
     auto sun_lambda = vec3f{680, 530, 480};
-    auto sun_beta = 0.04608365822050f * turbidity - 0.04586025928522f;
-    auto sun_m =
-        1.0f / (cos(thetaSun) + 0.000940f * pow(1.6386f - thetaSun, -1.253f));
+    auto sun_beta   = 0.04608365822050f * turbidity - 0.04586025928522f;
+    auto sun_m      = 1.0f /
+                 (cos(thetaSun) + 0.000940f * pow(1.6386f - thetaSun, -1.253f));
 
     auto sun_le = zero3f;
     for (auto i = 0; i < 3; i++) {
-        auto tauR =
-            exp(-sun_m * 0.008735f * pow((&sun_lambda.x)[i] / 1000, -4.08f));
-        auto tauA =
-            exp(-sun_m * sun_beta * pow((&sun_lambda.x)[i] / 1000, -1.3f));
-        auto tauO = exp(-sun_m * (&sun_ko.x)[i] * .35f);
-        auto tauG = exp(-1.41f * (&sun_kg.x)[i] * sun_m /
+        auto tauR = exp(
+            -sun_m * 0.008735f * pow((&sun_lambda.x)[i] / 1000, -4.08f));
+        auto tauA = exp(
+            -sun_m * sun_beta * pow((&sun_lambda.x)[i] / 1000, -1.3f));
+        auto tauO  = exp(-sun_m * (&sun_ko.x)[i] * .35f);
+        auto tauG  = exp(-1.41f * (&sun_kg.x)[i] * sun_m /
                         pow(1 + 118.93f * (&sun_kg.x)[i] * sun_m, 0.45f));
-        auto tauWA =
-            exp(-0.2385f * (&sun_kwa.x)[i] * 2.0f * sun_m /
-                pow(1 + 20.07f * (&sun_kwa.x)[i] * 2.0f * sun_m, 0.45f));
+        auto tauWA = exp(
+            -0.2385f * (&sun_kwa.x)[i] * 2.0f * sun_m /
+            pow(1 + 20.07f * (&sun_kwa.x)[i] * 2.0f * sun_m, 0.45f));
         (&sun_le.x)[i] = (&sun_sol.x)[i] * tauR * tauA * tauO * tauG * tauWA;
     }
 
@@ -3275,13 +3264,13 @@ image<vec4f> make_sunsky_image4f(const vec2i& size, float thetaSun,
     auto img = image<vec4f>{size, {0, 0, 0, 1}};
     for (auto j = 0; j < img.size().y / 2; j++) {
         auto theta = pif * ((j + 0.5f) / img.size().y);
-        theta = clamp(theta, 0.0f, pif / 2 - epsf);
+        theta      = clamp(theta, 0.0f, pif / 2 - epsf);
         for (int i = 0; i < img.size().x; i++) {
             auto phi = 2 * pif * (float(i + 0.5f) / img.size().x);
-            auto w =
-                vec3f{cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
-            auto gamma = acos(clamp(dot(w, wSun), -1.0f, 1.0f));
-            auto col = sky(theta, gamma) + sun(theta, gamma);
+            auto w   = vec3f{
+                cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
+            auto gamma  = acos(clamp(dot(w, wSun), -1.0f, 1.0f));
+            auto col    = sky(theta, gamma) + sun(theta, gamma);
             img[{i, j}] = {col.x, col.y, col.z, 1};
         }
     }
@@ -3291,10 +3280,10 @@ image<vec4f> make_sunsky_image4f(const vec2i& size, float thetaSun,
         for (auto j = 0; j < img.size().y / 2; j++) {
             auto theta = pif * ((j + 0.5f) / img.size().y);
             for (int i = 0; i < img.size().x; i++) {
-                auto pxl = img[{i, j}];
-                auto le = vec3f{pxl.x, pxl.y, pxl.z};
-                auto angle =
-                    sin(theta) * 4 * pif / (img.size().x * img.size().y);
+                auto pxl   = img[{i, j}];
+                auto le    = vec3f{pxl.x, pxl.y, pxl.z};
+                auto angle = sin(theta) * 4 * pif /
+                             (img.size().x * img.size().y);
                 ground += le * (ground_albedo / pif) * cos(theta) * angle;
             }
         }
@@ -3314,14 +3303,14 @@ image<vec4f> make_lights_image4f(const vec2i& size, const vec3f& le,
     auto img = image<vec4f>{size, {0, 0, 0, 1}};
     for (auto j = 0; j < img.size().y / 2; j++) {
         auto theta = pif * ((j + 0.5f) / img.size().y);
-        theta = clamp(theta, 0.0f, pif / 2 - epsf);
+        theta      = clamp(theta, 0.0f, pif / 2 - epsf);
         if (fabs(theta - langle) > lheight / 2) continue;
         for (int i = 0; i < img.size().x; i++) {
-            auto phi = 2 * pif * (float(i + 0.5f) / img.size().x);
+            auto phi     = 2 * pif * (float(i + 0.5f) / img.size().x);
             auto inlight = false;
             for (auto l = 0; l < nlights; l++) {
                 auto lphi = 2 * pif * (l + 0.5f) / nlights;
-                inlight = inlight || fabs(phi - lphi) < lwidth / 2;
+                inlight   = inlight || fabs(phi - lphi) < lwidth / 2;
             }
             img[{i, j}] = {le.x, le.y, le.z, 1};
         }
@@ -3332,15 +3321,15 @@ image<vec4f> make_lights_image4f(const vec2i& size, const vec3f& le,
 // Make a noise image. Wrap works only if both width and height are powers
 // of two.
 image<vec4f> make_noise_image4f(const vec2i& size, float scale, bool wrap) {
-    auto img = image<vec4f>{size};
+    auto img    = image<vec4f>{size};
     auto wrap3i = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i;
     for (auto j = 0; j < img.size().y; j++) {
         for (auto i = 0; i < img.size().x; i++) {
-            auto p =
-                vec3f{i / (float)img.size().x, j / (float)img.size().y, 0.5f} *
-                scale;
-            auto g = perlin_noise(p, wrap3i);
-            g = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
+            auto p = vec3f{i / (float)img.size().x, j / (float)img.size().y,
+                         0.5f} *
+                     scale;
+            auto g      = perlin_noise(p, wrap3i);
+            g           = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
             img[{i, j}] = {g, g, g, 1};
         }
     }
@@ -3351,15 +3340,15 @@ image<vec4f> make_noise_image4f(const vec2i& size, float scale, bool wrap) {
 // of two.
 image<vec4f> make_fbm_image4f(const vec2i& size, float scale, float lacunarity,
     float gain, int octaves, bool wrap) {
-    auto img = image<vec4f>{size};
+    auto img    = image<vec4f>{size};
     auto wrap3i = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i;
     for (auto j = 0; j < img.size().y; j++) {
         for (auto i = 0; i < img.size().x; i++) {
-            auto p =
-                vec3f{i / (float)img.size().x, j / (float)img.size().y, 0.5f} *
-                scale;
+            auto p = vec3f{i / (float)img.size().x, j / (float)img.size().y,
+                         0.5f} *
+                     scale;
             auto g = perlin_fbm_noise(p, lacunarity, gain, octaves, wrap3i);
-            g = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
+            g      = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
             img[{i, j}] = {g, g, g, 1};
         }
     }
@@ -3370,16 +3359,16 @@ image<vec4f> make_fbm_image4f(const vec2i& size, float scale, float lacunarity,
 // of two.
 image<vec4f> make_ridge_image4f(const vec2i& size, float scale,
     float lacunarity, float gain, float offset, int octaves, bool wrap) {
-    auto img = image<vec4f>{size};
+    auto img    = image<vec4f>{size};
     auto wrap3i = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i;
     for (auto j = 0; j < img.size().y; j++) {
         for (auto i = 0; i < img.size().x; i++) {
-            auto p =
-                vec3f{i / (float)img.size().x, j / (float)img.size().y, 0.5f} *
-                scale;
+            auto p = vec3f{i / (float)img.size().x, j / (float)img.size().y,
+                         0.5f} *
+                     scale;
             auto g = perlin_ridge_noise(
                 p, lacunarity, gain, offset, octaves, wrap3i);
-            g = clamp(g, 0.0f, 1.0f);
+            g           = clamp(g, 0.0f, 1.0f);
             img[{i, j}] = {g, g, g, 1};
         }
     }
@@ -3390,16 +3379,16 @@ image<vec4f> make_ridge_image4f(const vec2i& size, float scale,
 // of two.
 image<vec4f> make_turbulence_image4f(const vec2i& size, float scale,
     float lacunarity, float gain, int octaves, bool wrap) {
-    auto img = image<vec4f>{size};
+    auto img    = image<vec4f>{size};
     auto wrap3i = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i;
     for (auto j = 0; j < img.size().y; j++) {
         for (auto i = 0; i < img.size().x; i++) {
-            auto p =
-                vec3f{i / (float)img.size().x, j / (float)img.size().y, 0.5f} *
-                scale;
-            auto g =
-                perlin_turbulence_noise(p, lacunarity, gain, octaves, wrap3i);
-            g = clamp(g, 0.0f, 1.0f);
+            auto p = vec3f{i / (float)img.size().x, j / (float)img.size().y,
+                         0.5f} *
+                     scale;
+            auto g = perlin_turbulence_noise(
+                p, lacunarity, gain, octaves, wrap3i);
+            g           = clamp(g, 0.0f, 1.0f);
             img[{i, j}] = {g, g, g, 1};
         }
     }
@@ -3422,9 +3411,9 @@ volume<float> make_test_volume1f(
             for (auto i = 0; i < vol.size().x; i++) {
                 auto p = vec3f{
                     i / (float)size.x, j / (float)size.y, k / (float)size.z};
-                float val =
-                    pow(max(max(cos(scale * p.x), cos(scale * p.y)), 0.0f),
-                        exponent);
+                float val = pow(
+                    max(max(cos(scale * p.x), cos(scale * p.y)), 0.0f),
+                    exponent);
                 vol[{i, j, k}] = clamp(val, 0.0f, 1.0f);
             }
         }
@@ -3472,19 +3461,19 @@ bbox3f compute_bbox(const scene* scn) {
 
 // Updates tesselation.
 void tesselate_subdiv(const subdiv* sbd, shape* shp) {
-    shp->name = sbd->name;
-    auto quads_pos = sbd->quads_pos;
+    shp->name           = sbd->name;
+    auto quads_pos      = sbd->quads_pos;
     auto quads_texcoord = sbd->quads_texcoord;
-    auto quads_color = sbd->quads_color;
-    auto pos = sbd->pos;
-    auto texcoord = sbd->texcoord;
-    auto color = sbd->color;
+    auto quads_color    = sbd->quads_color;
+    auto pos            = sbd->pos;
+    auto texcoord       = sbd->texcoord;
+    auto color          = sbd->color;
     for (auto l = 0; l < sbd->level; l++) {
         std::tie(quads_pos, pos) = subdivide_catmullclark(quads_pos, pos);
-        std::tie(quads_texcoord, texcoord) =
-            subdivide_catmullclark(quads_texcoord, texcoord, true);
-        std::tie(quads_color, color) =
-            subdivide_catmullclark(quads_color, color);
+        std::tie(quads_texcoord, texcoord) = subdivide_catmullclark(
+            quads_texcoord, texcoord, true);
+        std::tie(quads_color, color) = subdivide_catmullclark(
+            quads_color, color);
     }
     auto norm = std::vector<vec3f>();
     if (sbd->compute_normals) norm = compute_normals(quads_pos, pos);
@@ -3607,8 +3596,8 @@ std::vector<float> compute_environment_cdf(const environment* env) {
     auto elem_cdf = std::vector<float>(txt->img.size().x * txt->img.size().y);
     if (!txt->img.empty()) {
         for (auto i = 0; i < elem_cdf.size(); i++) {
-            auto ij = vec2i{i % txt->img.size().x, i / txt->img.size().x};
-            auto th = (ij.y + 0.5f) * pif / txt->img.size().y;
+            auto ij     = vec2i{i % txt->img.size().x, i / txt->img.size().x};
+            auto th     = (ij.y + 0.5f) * pif / txt->img.size().y;
             elem_cdf[i] = max(xyz(txt->img[ij])) * sin(th);
             if (i) elem_cdf[i] += elem_cdf[i - 1];
         }
@@ -3624,10 +3613,10 @@ bvh_tree* build_bvh(const shape* shp, bool high_quality, bool embree) {
     auto bvh = new bvh_tree();
 
     // set data
-    bvh->pos = shp->pos;
-    bvh->radius = shp->radius;
-    bvh->points = shp->points;
-    bvh->lines = shp->lines;
+    bvh->pos       = shp->pos;
+    bvh->radius    = shp->radius;
+    bvh->points    = shp->points;
+    bvh->lines     = shp->lines;
     bvh->triangles = shp->triangles;
 
     // build bvh
@@ -3664,7 +3653,7 @@ bvh_tree* build_bvh(const scene* scn, bool high_quality, bool embree) {
 
 // Refits a shape BVH
 void refit_bvh(const shape* shp, bvh_tree* bvh) {
-    bvh->pos = shp->pos;
+    bvh->pos    = shp->pos;
     bvh->radius = shp->radius;
     refit_bvh(bvh);
 }
@@ -3675,7 +3664,7 @@ void refit_bvh(const scene* scn, bvh_tree* bvh) {
     for (auto sid = 0; sid < scn->shapes.size(); sid++)
         shape_ids[scn->shapes[sid]] = sid;
     for (auto iid = 0; iid < scn->instances.size(); iid++) {
-        auto ist = scn->instances[iid];
+        auto ist            = scn->instances[iid];
         bvh->instances[iid] = {
             ist->frame, inverse(ist->frame), shape_ids[ist->shp]};
     }
@@ -3712,8 +3701,8 @@ void add_missing_tangent_space(scene* scn) {
         if (!ist->mat || (!ist->mat->norm_txt && !ist->mat->bump_txt)) continue;
         if (!ist->shp->triangles.empty()) {
             if (ist->shp->norm.empty())
-                ist->shp->norm =
-                    compute_normals(ist->shp->triangles, ist->shp->pos);
+                ist->shp->norm = compute_normals(
+                    ist->shp->triangles, ist->shp->pos);
             ist->shp->tangsp = compute_tangent_space(ist->shp->triangles,
                 ist->shp->pos, ist->shp->norm, ist->shp->texcoord);
         } else {
@@ -3737,7 +3726,7 @@ void add_missing_materials(scene* scn) {
 
 // Checks for validity of the scene.
 std::vector<std::string> validate(const scene* scn, bool skip_textures) {
-    auto errs = std::vector<std::string>();
+    auto errs        = std::vector<std::string>();
     auto check_names = [&errs](const auto& vals, const std::string& base) {
         auto used = std::unordered_map<std::string, int>();
         for (auto val : vals) used[val->name] += 1;
@@ -3770,20 +3759,20 @@ std::vector<std::string> validate(const scene* scn, bool skip_textures) {
 camera* make_bbox_camera(const std::string& name, const bbox3f& bbox,
     const vec2f& film, float focal) {
     auto bbox_center = (bbox.max + bbox.min) / 2.0f;
-    auto bbox_size = bbox.max - bbox.min;
-    auto bbox_msize = max(bbox_size.x, max(bbox_size.y, bbox_size.z));
-    auto cam = new camera();
-    cam->name = name;
-    auto camera_dir = vec3f{1, 0.4f, 1};
-    auto from = camera_dir * bbox_msize + bbox_center;
-    auto to = bbox_center;
-    auto up = vec3f{0, 1, 0};
-    cam->frame = lookat_frame(from, to, up);
-    cam->ortho = false;
-    cam->film = film;
-    cam->focal = focal;
-    cam->focus = length(from - to);
-    cam->aperture = 0;
+    auto bbox_size   = bbox.max - bbox.min;
+    auto bbox_msize  = max(bbox_size.x, max(bbox_size.y, bbox_size.z));
+    auto cam         = new camera();
+    cam->name        = name;
+    auto camera_dir  = vec3f{1, 0.4f, 1};
+    auto from        = camera_dir * bbox_msize + bbox_center;
+    auto to          = bbox_center;
+    auto up          = vec3f{0, 1, 0};
+    cam->frame       = lookat_frame(from, to, up);
+    cam->ortho       = false;
+    cam->film        = film;
+    cam->focal       = focal;
+    cam->focus       = length(from - to);
+    cam->aperture    = 0;
     return cam;
 }
 
@@ -3797,7 +3786,7 @@ namespace ygl {
 // Instance intersection.
 scene_intersection intersect_ray(const instance* ist, const bvh_tree* sbvh,
     const ray3f& ray, bool find_any) {
-    auto iid = 0;
+    auto iid  = 0;
     auto isec = scene_intersection();
     auto tray = transform_ray_inverse(ist->frame, ray);
     if (!intersect_bvh(sbvh, tray, find_any, isec.dist, iid, isec.ei, isec.uv))
@@ -3809,7 +3798,7 @@ scene_intersection intersect_ray(const instance* ist, const bvh_tree* sbvh,
 // Scene intersection.
 scene_intersection intersect_ray(
     const scene* scn, const bvh_tree* bvh, const ray3f& ray, bool find_any) {
-    auto iid = 0;
+    auto iid  = 0;
     auto isec = scene_intersection();
     if (!intersect_bvh(bvh, ray, find_any, isec.dist, iid, isec.ei, isec.uv))
         return {};
@@ -3822,10 +3811,10 @@ vec3f eval_elem_norm(const shape* shp, int ei) {
     auto norm = zero3f;
     if (!shp->triangles.empty()) {
         auto t = shp->triangles[ei];
-        norm = triangle_normal(shp->pos[t.x], shp->pos[t.y], shp->pos[t.z]);
+        norm   = triangle_normal(shp->pos[t.x], shp->pos[t.y], shp->pos[t.z]);
     } else if (!shp->lines.empty()) {
         auto l = shp->lines[ei];
-        norm = line_tangent(shp->pos[l.x], shp->pos[l.y]);
+        norm   = line_tangent(shp->pos[l.x], shp->pos[l.y]);
     } else {
         norm = {0, 0, 1};
     }
@@ -3836,9 +3825,8 @@ vec3f eval_elem_norm(const shape* shp, int ei) {
 vec4f eval_elem_tangsp(const shape* shp, int ei) {
     auto tangsp = zero4f;
     if (!shp->triangles.empty()) {
-        auto t = shp->triangles[ei];
-        auto norm =
-            triangle_normal(shp->pos[t.x], shp->pos[t.y], shp->pos[t.z]);
+        auto t    = shp->triangles[ei];
+        auto norm = triangle_normal(shp->pos[t.x], shp->pos[t.y], shp->pos[t.z]);
         auto txty = std::pair<vec3f, vec3f>();
         if (shp->texcoord.empty()) {
             txty = triangle_tangents_fromuv(shp->pos[t.x], shp->pos[t.y],
@@ -3849,7 +3837,7 @@ vec4f eval_elem_tangsp(const shape* shp, int ei) {
                 shp->texcoord[t.z]);
         }
         auto tx = txty.first, ty = txty.second;
-        tx = orthonormalize(tx, norm);
+        tx     = orthonormalize(tx, norm);
         auto s = (dot(cross(norm, tx), ty) < 0) ? -1.0f : 1.0f;
         tangsp = {tx.x, tx.y, tx.z, s};
     }
@@ -3900,8 +3888,7 @@ vec4f eval_tangsp(const shape* shp, int ei, const vec2f& uv) {
     if (shp->tangsp.empty()) return eval_elem_tangsp(shp, ei);
     return eval_elem(shp, shp->tangsp, ei, uv);
 }
-vec3f eval_tangsp(
-    const shape* shp, int ei, const vec2f& uv, bool& left_handed) {
+vec3f eval_tangsp(const shape* shp, int ei, const vec2f& uv, bool& left_handed) {
     auto tangsp = (shp->tangsp.empty()) ? eval_elem_tangsp(shp, ei) :
                                           eval_elem(shp, shp->tangsp, ei, uv);
     left_handed = tangsp.w < 0;
@@ -3939,14 +3926,14 @@ vec3f eval_shading_norm(
     if (!ist->shp->triangles.empty()) {
         auto n = eval_norm(ist, ei, uv);
         if (ist->mat && ist->mat->norm_txt) {
-            auto texcoord = eval_texcoord(ist, ei, uv);
+            auto texcoord    = eval_texcoord(ist, ei, uv);
             auto left_handed = false;
-            auto txt = xyz(eval_texture(ist->mat->norm_txt, texcoord));
-            txt = txt * 2 - vec3f{1, 1, 1};
+            auto txt         = xyz(eval_texture(ist->mat->norm_txt, texcoord));
+            txt              = txt * 2 - vec3f{1, 1, 1};
             txt.y = -txt.y;  // flip vertical axis to align green with image up
             auto tu = orthonormalize(eval_tangsp(ist, ei, uv, left_handed), n);
             auto tv = normalize(cross(n, tu) * (left_handed ? -1.0f : 1.0f));
-            n = normalize(txt.x * tu + txt.y * tv + txt.z * n);
+            n       = normalize(txt.x * tu + txt.y * tv + txt.z * n);
         }
         if (ist->mat && ist->mat->double_sided && dot(n, o) < 0) n = -n;
         return n;
@@ -4028,9 +4015,9 @@ float eval_voltexture(const voltexture* txt, const vec3f& texcoord) {
     if (!txt || txt->vol.empty()) return 1;
 
     // get image width/height
-    auto width = txt->vol.size().x;
+    auto width  = txt->vol.size().x;
     auto height = txt->vol.size().y;
-    auto depth = txt->vol.size().z;
+    auto depth  = txt->vol.size().z;
 
     // get coordinates normalized for tiling
     auto s = clamp((texcoord.x + 1.0f) * 0.5f, 0.0f, 1.0f) * width;
@@ -4038,9 +4025,9 @@ float eval_voltexture(const voltexture* txt, const vec3f& texcoord) {
     auto r = clamp((texcoord.z + 1.0f) * 0.5f, 0.0f, 1.0f) * depth;
 
     // get image coordinates and residuals
-    auto i = clamp((int)s, 0, width - 1);
-    auto j = clamp((int)t, 0, height - 1);
-    auto k = clamp((int)r, 0, depth - 1);
+    auto i  = clamp((int)s, 0, width - 1);
+    auto j  = clamp((int)t, 0, height - 1);
+    auto k  = clamp((int)r, 0, depth - 1);
     auto ii = (i + 1) % width, jj = (j + 1) % height, kk = (k + 1) % depth;
     auto u = s - i, v = t - j, w = r - k;
 
@@ -4068,7 +4055,7 @@ float eval_camera_fovy(const camera* cam) {
     return 2 * std::atan(cam->film.y / (2 * cam->focal));
 }
 void set_camera_fovy(camera* cam, float fovy, float aspect, float width) {
-    cam->film = {width, width / aspect};
+    cam->film  = {width, width / aspect};
     cam->focal = cam->film.y / (2 * std::tan(fovy / 2));
 }
 
@@ -4083,8 +4070,8 @@ ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv) {
     // auto q = vec3f{cam->width * (uv.x - 0.5f),
     //     cam->height * (uv.y - 0.5f), dist};
     // X flipped for mirror
-    auto q =
-        vec3f{cam->film.x * (0.5f - uv.x), cam->film.y * (uv.y - 0.5f), dist};
+    auto q = vec3f{
+        cam->film.x * (0.5f - uv.x), cam->film.y * (uv.y - 0.5f), dist};
     auto ray = make_ray(transform_point(cam->frame, e),
         transform_direction(cam->frame, normalize(e - q)));
     return ray;
@@ -4121,9 +4108,9 @@ vec3f eval_diffuse(const instance* ist, int ei, const vec2f& uv) {
         return ist->mat->kd * xyz(eval_color(ist, ei, uv)) *
                xyz(eval_texture(ist->mat->kd_txt, eval_texcoord(ist, ei, uv)));
     } else {
-        auto kb =
-            ist->mat->kd * xyz(eval_color(ist, ei, uv)) *
-            xyz(eval_texture(ist->mat->kd_txt, eval_texcoord(ist, ei, uv)));
+        auto kb = ist->mat->kd * xyz(eval_color(ist, ei, uv)) *
+                  xyz(eval_texture(
+                      ist->mat->kd_txt, eval_texcoord(ist, ei, uv)));
         auto km = ist->mat->ks.x *
                   eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).z;
         return kb * (1 - km);
@@ -4135,9 +4122,9 @@ vec3f eval_specular(const instance* ist, int ei, const vec2f& uv) {
         return ist->mat->ks * xyz(eval_color(ist, ei, uv)) *
                xyz(eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)));
     } else {
-        auto kb =
-            ist->mat->kd * xyz(eval_color(ist, ei, uv)) *
-            xyz(eval_texture(ist->mat->kd_txt, eval_texcoord(ist, ei, uv)));
+        auto kb = ist->mat->kd * xyz(eval_color(ist, ei, uv)) *
+                  xyz(eval_texture(
+                      ist->mat->kd_txt, eval_texcoord(ist, ei, uv)));
         auto km = ist->mat->ks.x *
                   eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).z;
         return kb * km + vec3f{0.04f, 0.04f, 0.04f} * (1 - km);
@@ -4147,14 +4134,12 @@ float eval_roughness(const instance* ist, int ei, const vec2f& uv) {
     if (!ist || !ist->mat) return 1;
     if (!ist->mat->base_metallic) {
         if (!ist->mat->gltf_textures) {
-            auto rs =
-                ist->mat->rs *
-                eval_texture(ist->mat->rs_txt, eval_texcoord(ist, ei, uv)).x;
+            auto rs = ist->mat->rs *
+                      eval_texture(ist->mat->rs_txt, eval_texcoord(ist, ei, uv)).x;
             return rs * rs;
         } else {
-            auto gs =
-                (1 - ist->mat->rs) *
-                eval_texture(ist->mat->rs_txt, eval_texcoord(ist, ei, uv)).w;
+            auto gs = (1 - ist->mat->rs) *
+                      eval_texture(ist->mat->rs_txt, eval_texcoord(ist, ei, uv)).w;
             auto rs = 1 - gs;
             return rs * rs;
         }
@@ -4177,11 +4162,11 @@ float eval_opacity(const instance* ist, int ei, const vec2f& uv) {
 
 // Evaluates the bsdf at a location.
 bsdf eval_bsdf(const instance* ist, int ei, const vec2f& uv) {
-    auto f = bsdf();
-    f.kd = eval_diffuse(ist, ei, uv);
-    f.ks = eval_specular(ist, ei, uv);
-    f.kt = eval_transmission(ist, ei, uv);
-    f.rs = eval_roughness(ist, ei, uv);
+    auto f    = bsdf();
+    f.kd      = eval_diffuse(ist, ei, uv);
+    f.ks      = eval_specular(ist, ei, uv);
+    f.kt      = eval_transmission(ist, ei, uv);
+    f.rs      = eval_roughness(ist, ei, uv);
     f.refract = (ist && ist->mat) ? ist->mat->refract : false;
     if (f.kd != zero3f) {
         f.rs = clamp(f.rs, 0.03f * 0.03f, 1.0f);
@@ -4244,7 +4229,7 @@ vec3f eval_transmission(const material* vol, const vec3f& from,
 
 float sample_distance(const material* vol, const vec3f& from, const vec3f& dir,
     int channel, rng_state& rng) {
-    auto pos = from;
+    auto pos      = from;
     auto majorant = at(vol->vd, channel);
     if (majorant == 0) return maxf;
 
@@ -4278,9 +4263,9 @@ float sample_distance(const instance* ist, const bbox3f& bbox,
     auto scale = bbox.max - bbox.min;
     auto frame = ist->frame;
     auto froml = transform_point_inverse(frame, from) / scale;
-    auto dirl = transform_direction_inverse(frame, dir) / scale;
-    auto ll = length(dirl);
-    auto dist = sample_distance(ist->mat, froml, dirl / ll, channel, rng);
+    auto dirl  = transform_direction_inverse(frame, dir) / scale;
+    auto ll    = length(dirl);
+    auto dist  = sample_distance(ist->mat, froml, dirl / ll, channel, rng);
     return dist * ll;
 }
 
@@ -4290,11 +4275,11 @@ vec3f sample_phase_function(float g, const vec2f& u) {
         cos_theta = 1 - 2 * u.x;
     } else {
         float square = (1 - g * g) / (1 - g + 2 * g * u.x);
-        cos_theta = (1 + g * g - square * square) / (2 * g);
+        cos_theta    = (1 + g * g - square * square) / (2 * g);
     }
 
     auto sin_theta = sqrt(max(0.0f, 1 - cos_theta * cos_theta));
-    auto phi = 2 * pif * u.y;
+    auto phi       = 2 * pif * u.y;
     return {sin_theta * cos(phi), sin_theta * sin(phi), cos_theta};
 }
 
@@ -4327,42 +4312,42 @@ void merge_into(scene* merge_into, scene* merge_from) {
 
 void print_stats(const scene* scn) {
     // using long long instead of uint64_t to avoid printf macros
-    auto num_cameras = (long long)0;
+    auto num_cameras      = (long long)0;
     auto num_shape_groups = (long long)0;
-    auto num_shapes = (long long)0;
-    auto num_instances = (long long)0;
-    auto num_materials = (long long)0;
-    auto num_textures = (long long)0;
+    auto num_shapes       = (long long)0;
+    auto num_instances    = (long long)0;
+    auto num_materials    = (long long)0;
+    auto num_textures     = (long long)0;
     auto num_environments = (long long)0;
-    auto num_nodes = (long long)0;
-    auto num_animations = (long long)0;
+    auto num_nodes        = (long long)0;
+    auto num_animations   = (long long)0;
 
-    auto elem_lines = (long long)0;
+    auto elem_lines     = (long long)0;
     auto elem_triangles = (long long)0;
-    auto vert_pos = (long long)0;
-    auto vert_norm = (long long)0;
-    auto vert_texcoord = (long long)0;
-    auto vert_color = (long long)0;
-    auto vert_radius = (long long)0;
-    auto vert_tangsp = (long long)0;
+    auto vert_pos       = (long long)0;
+    auto vert_norm      = (long long)0;
+    auto vert_texcoord  = (long long)0;
+    auto vert_color     = (long long)0;
+    auto vert_radius    = (long long)0;
+    auto vert_tangsp    = (long long)0;
 
     auto texel_hdr = (long long)0;
     auto texel_ldr = (long long)0;
 
-    auto memory_imgs = (long long)0;
+    auto memory_imgs  = (long long)0;
     auto memory_elems = (long long)0;
     auto memory_verts = (long long)0;
 
     auto bbox = compute_bbox(scn);
 
-    num_cameras = scn->cameras.size();
-    num_shapes = scn->shapes.size();
-    num_materials = scn->materials.size();
-    num_textures = scn->textures.size();
+    num_cameras      = scn->cameras.size();
+    num_shapes       = scn->shapes.size();
+    num_materials    = scn->materials.size();
+    num_textures     = scn->textures.size();
     num_environments = scn->environments.size();
-    num_instances = scn->instances.size();
-    num_nodes = scn->nodes.size();
-    num_animations = scn->animations.size();
+    num_instances    = scn->instances.size();
+    num_nodes        = scn->nodes.size();
+    num_animations   = scn->animations.size();
 
     for (auto shp : scn->shapes) {
         elem_lines += shp->lines.size();
@@ -4505,10 +4490,10 @@ vec3f eval_bsdf(const bsdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
     // transmission (thin sheet)
     if (f.kt != zero3f && dot(n, o) * dot(n, i) < 0) {
         auto ir = (dot(n, o) >= 0) ? reflect(-i, n) : reflect(-i, -n);
-        auto h = normalize(ir + o);
-        auto F = fresnel_schlick(f.ks, h, o);
-        auto D = eval_ggx_dist(f.rs, n, h);
-        auto G = eval_ggx_sm(f.rs, n, o, ir);
+        auto h  = normalize(ir + o);
+        auto F  = fresnel_schlick(f.ks, h, o);
+        auto D  = eval_ggx_dist(f.rs, n, h);
+        auto G  = eval_ggx_sm(f.rs, n, o, ir);
         bsdf += f.kt * (vec3f{1, 1, 1} - F) * D * G /
                 (4 * fabs(dot(n, o)) * fabs(dot(n, ir)));
     }
@@ -4542,7 +4527,7 @@ vec3f eval_delta_brdf(
 vec3f sample_brdf(
     const bsdf& f, const vec3f& n, const vec3f& o, float rnl, const vec2f& rn) {
     if (is_delta_bsdf(f)) return zero3f;
-    auto F = fresnel_schlick(f.ks, n, o);
+    auto F    = fresnel_schlick(f.ks, n, o);
     auto prob = vec3f{max(f.kd * (vec3f{1, 1, 1} - F)), max(F),
         max(f.kt * (vec3f{1, 1, 1} - F))};
     if (prob == zero3f) return zero3f;
@@ -4569,7 +4554,7 @@ vec3f sample_brdf(
         auto hl = sample_ggx(f.rs, rn);
         auto fp = dot(n, o) >= 0 ? make_frame_fromz(zero3f, n) :
                                    make_frame_fromz(zero3f, -n);
-        auto h = transform_direction(fp, hl);
+        auto h  = transform_direction(fp, hl);
         auto ir = reflect(o, h);
         return dot(n, o) >= 0 ? reflect(-ir, -n) : reflect(-ir, n);
     } else {
@@ -4581,7 +4566,7 @@ vec3f sample_brdf(
 vec3f sample_delta_brdf(
     const bsdf& f, const vec3f& n, const vec3f& o, float rnl, const vec2f& rn) {
     if (!is_delta_bsdf(f)) return zero3f;
-    auto F = fresnel_schlick(f.ks, n, o);
+    auto F    = fresnel_schlick(f.ks, n, o);
     auto prob = vec3f{0, max(F), max(f.kt * (vec3f{1, 1, 1} - F))};
     if (prob == zero3f) return zero3f;
     prob /= prob.x + prob.y + prob.z;
@@ -4612,7 +4597,7 @@ vec3f sample_delta_brdf(
 float sample_brdf_pdf(
     const bsdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
     if (is_delta_bsdf(f)) return 0;
-    auto F = fresnel_schlick(f.ks, n, o);
+    auto F    = fresnel_schlick(f.ks, n, o);
     auto prob = vec3f{max(f.kd * (vec3f{1, 1, 1} - F)), max(F),
         max(f.kt * (vec3f{1, 1, 1} - F))};
     if (prob == zero3f) return 0;
@@ -4630,8 +4615,8 @@ float sample_brdf_pdf(
     }
     if (f.kt != zero3f && dot(n, o) * dot(n, i) < 0) {
         auto ir = (dot(n, o) >= 0) ? reflect(-i, n) : reflect(-i, -n);
-        auto h = normalize(ir + o);
-        auto d = sample_ggx_pdf(f.rs, fabs(dot(n, h)));
+        auto h  = normalize(ir + o);
+        auto d  = sample_ggx_pdf(f.rs, fabs(dot(n, h)));
         pdf += prob.z * d / (4 * fabs(dot(o, h)));
     }
 
@@ -4642,7 +4627,7 @@ float sample_brdf_pdf(
 float sample_delta_brdf_pdf(
     const bsdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
     if (!is_delta_bsdf(f)) return 0;
-    auto F = fresnel_schlick(f.ks, n, o);
+    auto F    = fresnel_schlick(f.ks, n, o);
     auto prob = vec3f{0, max(F), max(f.kt * (vec3f{1, 1, 1} - F))};
     if (prob == zero3f) return 0;
     prob /= prob.x + prob.y + prob.z;
@@ -4661,10 +4646,10 @@ float sample_environment_pdf(const environment* env,
     auto txt = env->ke_txt;
     if (!elem_cdf.empty() && txt) {
         auto texcoord = eval_texcoord(env, i);
-        auto i = (int)(texcoord.x * txt->img.size().x);
-        auto j = (int)(texcoord.y * txt->img.size().y);
-        auto idx = j * txt->img.size().x + i;
-        auto prob = sample_discrete_pdf(elem_cdf, idx) / elem_cdf.back();
+        auto i        = (int)(texcoord.x * txt->img.size().x);
+        auto j        = (int)(texcoord.y * txt->img.size().y);
+        auto idx      = j * txt->img.size().x + i;
+        auto prob     = sample_discrete_pdf(elem_cdf, idx) / elem_cdf.back();
         auto angle = (2 * pif / txt->img.size().x) * (pif / txt->img.size().y) *
                      sin(pif * (j + 0.5f) / txt->img.size().y);
         return prob / angle;
@@ -4679,8 +4664,8 @@ vec3f sample_environment(const environment* env,
     auto txt = env->ke_txt;
     if (!elem_cdf.empty() && txt) {
         auto idx = sample_discrete(elem_cdf, rel);
-        auto u = (idx % txt->img.size().x + 0.5f) / txt->img.size().x;
-        auto v = (idx / txt->img.size().x + 0.5f) / txt->img.size().y;
+        auto u   = (idx % txt->img.size().x + 0.5f) / txt->img.size().x;
+        auto v   = (idx / txt->img.size().x + 0.5f) / txt->img.size().y;
         return eval_direction(env, {u, v});
     } else {
         return sample_sphere(ruv);
@@ -4707,13 +4692,13 @@ float sample_light_pdf(const instance* ist, const std::vector<float>& elem_cdf,
 vec3f sample_lights(const trace_lights* lights, const bvh_tree* bvh,
     const vec3f& p, float lrn, float rel, const vec2f& ruv) {
     auto nlights = (int)(lights->lights.size() + lights->environments.size());
-    auto idx = sample_index(nlights, lrn);
+    auto idx     = sample_index(nlights, lrn);
     if (idx < lights->lights.size()) {
-        auto lgt = lights->lights[idx];
+        auto  lgt      = lights->lights[idx];
         auto& elem_cdf = lights->shape_cdf.at(lgt->shp);
         return sample_light(lgt, elem_cdf, p, rel, ruv);
     } else {
-        auto lgt = lights->environments[idx - lights->lights.size()];
+        auto  lgt      = lights->environments[idx - lights->lights.size()];
         auto& elem_cdf = lights->env_cdf.at(lgt);
         return sample_environment(lgt, elem_cdf, rel, ruv);
     }
@@ -4723,14 +4708,14 @@ vec3f sample_lights(const trace_lights* lights, const bvh_tree* bvh,
 float sample_lights_pdf(const scene* scn, const trace_lights* lights,
     const bvh_tree* bvh, const vec3f& p, const vec3f& i) {
     auto nlights = (int)(lights->lights.size() + lights->environments.size());
-    auto pdf = 0.0f;
+    auto pdf     = 0.0f;
     // instances
     for (auto lgt : lights->lights) {
         // get cdf and bvh
-        auto sbvh = bvh->shape_bvhs[bvh->shape_ids.at(lgt->shp)];
+        auto  sbvh     = bvh->shape_bvhs[bvh->shape_ids.at(lgt->shp)];
         auto& elem_cdf = lights->shape_cdf.at(lgt->shp);
         // check all intersection
-        auto ray = make_ray(p, i);
+        auto ray  = make_ray(p, i);
         auto isec = intersect_ray(lgt, sbvh, ray);
         while (isec.ist) {
             // accumulate pdf
@@ -4739,7 +4724,7 @@ float sample_lights_pdf(const scene* scn, const trace_lights* lights,
             pdf += sample_light_pdf(lgt, elem_cdf, p, i, lp, ln) *
                    sample_index_pdf(nlights);
             // continue
-            ray = make_ray(lp, i);
+            ray  = make_ray(lp, i);
             isec = intersect_ray(lgt, sbvh, ray);
         }
     }
@@ -4756,12 +4741,12 @@ float sample_lights_pdf(const scene* scn, const trace_lights* lights,
 vec3f eval_transmission(const scene* scn, const bvh_tree* bvh,
     const vec3f& from, const vec3f& to, int nbounces) {
     auto weight = vec3f{1, 1, 1};
-    auto p = from;
+    auto p      = from;
     for (auto bounce = 0; bounce < nbounces; bounce++) {
-        auto ray = make_segment(p, to);
+        auto ray  = make_segment(p, to);
         auto isec = intersect_ray(scn, bvh, ray);
         if (!isec.ist) break;
-        auto f = eval_bsdf(isec.ist, isec.ei, isec.uv);
+        auto f  = eval_bsdf(isec.ist, isec.ei, isec.uv);
         auto op = eval_opacity(isec.ist, isec.ei, isec.uv);
         weight *= f.kt + vec3f{1 - op, 1 - op, 1 - op};
         if (weight == zero3f) break;
@@ -4785,19 +4770,19 @@ float prob_direct(const bsdf& f) {
 vec3f direct_illumination(const scene* scn, const bvh_tree* bvh,
     const trace_lights* lights, const vec3f& p, int channel,
     std::vector<instance*> mediums, rng_state& rng, float& pdf, vec3f& le) {
-    auto i = zero3f;
+    auto  i      = zero3f;
     vec3f weight = vec3f{1, 1, 1};
 
     auto nlights = (int)(lights->lights.size() + lights->environments.size());
-    auto idx = sample_index(nlights, rand1f(rng));
-    pdf = 1.0 / nlights;
+    auto idx     = sample_index(nlights, rand1f(rng));
+    pdf          = 1.0 / nlights;
     if (idx < lights->lights.size()) {
-        auto lgt = lights->lights[idx];
+        auto  lgt      = lights->lights[idx];
         auto& elem_cdf = lights->shape_cdf.at(lgt->shp);
         i = sample_light(lgt, elem_cdf, p, rand1f(rng), rand2f(rng));
         pdf *= 1.0 / elem_cdf.back();
     } else {
-        auto lgt = lights->environments[idx - lights->lights.size()];
+        auto  lgt      = lights->environments[idx - lights->lights.size()];
         auto& elem_cdf = lights->env_cdf.at(lgt);
         i = sample_environment(lgt, elem_cdf, rand1f(rng), rand2f(rng));
         pdf *= sample_environment_pdf(lgt, elem_cdf, i);
@@ -4811,14 +4796,14 @@ vec3f direct_illumination(const scene* scn, const bvh_tree* bvh,
     auto isec = intersect_ray(scn, bvh, make_ray(p, i));
 
     while (isec.ist) {
-        auto lp = eval_pos(isec.ist, isec.ei, isec.uv);
-        auto ln = eval_shading_norm(isec.ist, isec.ei, isec.uv, -i);
+        auto lp       = eval_pos(isec.ist, isec.ei, isec.uv);
+        auto ln       = eval_shading_norm(isec.ist, isec.ei, isec.uv, -i);
         auto emission = eval_emission(isec.ist, isec.ei, isec.uv);
 
         instance* medium = mediums.back();
         if (medium->mat->vd != zero3f)
-            weight *=
-                eval_transmission(medium->mat, lp, i, isec.dist, channel, rng);
+            weight *= eval_transmission(
+                medium->mat, lp, i, isec.dist, channel, rng);
 
         // Hack: Uncomment this or the result will be biased
         // If mediums refracts, the transmission ray won't reach the sampled
@@ -4837,7 +4822,7 @@ vec3f direct_illumination(const scene* scn, const bvh_tree* bvh,
             break;
         }
 
-        auto ndi = dot(i, ln);
+        auto  ndi       = dot(i, ln);
         float threshold = 0.05;
 
         if (ndi > threshold) {
@@ -4863,8 +4848,8 @@ vec3f direct_illumination(const scene* scn, const bvh_tree* bvh,
             return zero3f;
         }
 
-        isec = intersect_ray(
-            scn, bvh, make_ray(lp, i));  //@Hack: 10? Don't know...
+        isec = intersect_ray(scn, bvh, make_ray(lp, i));  //@Hack: 10? Don't
+                                                          // know...
     }
 
     return i;
@@ -4877,10 +4862,10 @@ vec3f trace_path(const scene* scn, const bvh_tree* bvh,
     if (lights->lights.empty() && lights->environments.empty()) return zero3f;
 
     // initialize
-    auto l = zero3f;
-    auto weight = vec3f{1, 1, 1};
+    auto l        = zero3f;
+    auto weight   = vec3f{1, 1, 1};
     auto emission = true;
-    auto ray = ray_;
+    auto ray      = ray_;
 
     // trace  path
     for (auto bounce = 0; bounce < nbounces; bounce++) {
@@ -4916,8 +4901,8 @@ vec3f trace_path(const scene* scn, const bvh_tree* bvh,
                          sample_lights(lights, bvh, p, rand1f(rng), rand1f(rng),
                              rand2f(rng)) :
                          sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
-            auto isec =
-                intersect_ray_cutout(scn, bvh, make_ray(p, i), rng, nbounces);
+            auto isec = intersect_ray_cutout(
+                scn, bvh, make_ray(p, i), rng, nbounces);
             auto le = (isec.ist) ? eval_emission(isec.ist, isec.ei, isec.uv) :
                                    eval_environment(scn, i);
             auto brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
@@ -4932,13 +4917,13 @@ vec3f trace_path(const scene* scn, const bvh_tree* bvh,
         auto i = zero3f, brdfcos = zero3f;
         auto pdf = 0.0f;
         if (!is_delta_bsdf(f)) {
-            i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
+            i       = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
             brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
-            pdf = sample_brdf_pdf(f, n, o, i);
+            pdf     = sample_brdf_pdf(f, n, o, i);
         } else {
-            i = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
+            i       = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
             brdfcos = eval_delta_brdf(f, n, o, i) * fabs(dot(n, i));
-            pdf = sample_delta_brdf_pdf(f, n, o, i);
+            pdf     = sample_delta_brdf_pdf(f, n, o, i);
         }
 
         // accumulate weight
@@ -4947,7 +4932,7 @@ vec3f trace_path(const scene* scn, const bvh_tree* bvh,
         if (weight == zero3f) break;
 
         // setup next ray
-        ray = make_ray(p, i);
+        ray      = make_ray(p, i);
         emission = is_delta_bsdf(f);
     }
 
@@ -4972,8 +4957,7 @@ vec3f eval_transmission_div_pdf(const vec3f& vd, float dist, int ch) {
 }
 
 // @Hack: air volume properties should be set in the scene struct.
-static instance* air =
-    new instance{"air", {}, nullptr, new material{}, nullptr};
+static instance* air = new instance{"air", {}, nullptr, new material{}, nullptr};
 
 // Iterative volume path tracing.
 vec3f trace_volpath(const scene* scn, const bvh_tree* bvh,
@@ -4983,9 +4967,9 @@ vec3f trace_volpath(const scene* scn, const bvh_tree* bvh,
 
     // initialize
     auto radiance = zero3f;
-    auto weight = vec3f{1, 1, 1};
+    auto weight   = vec3f{1, 1, 1};
     auto emission = true;
-    auto ray = ray_;
+    auto ray      = ray_;
 
 #if 0
     // @Hack: air volume properties should be set in the scene struct.
@@ -5004,16 +4988,16 @@ vec3f trace_volpath(const scene* scn, const bvh_tree* bvh,
 
     // Sample color channel. This won't matter if there are no heterogeneus
     // materials.
-    auto ch = sample_index(3, rand1f(rng));
+    auto ch             = sample_index(3, rand1f(rng));
     auto single_channel = false;
 
     int bounce = 0;
     while (bounce < nbounces) {
-        auto medium = mediums.back();
-        const auto& ve = medium->mat->ve;
-        const auto& va = medium->mat->va;
-        const auto& vd = medium->mat->vd;
-        const auto& vg = medium->mat->vg;
+        auto        medium = mediums.back();
+        const auto& ve     = medium->mat->ve;
+        const auto& va     = medium->mat->va;
+        const auto& vd     = medium->mat->vd;
+        const auto& vg     = medium->mat->vg;
 
         // If medium has color but must use delta tracking, integrate only the
         // sampled spectrum.
@@ -5022,19 +5006,19 @@ vec3f trace_volpath(const scene* scn, const bvh_tree* bvh,
             at(weight, ch) *= 3;
             at(weight, (ch + 1) % 3) = 0;
             at(weight, (ch + 2) % 3) = 0;
-            single_channel = true;
+            single_channel           = true;
         }
 
         // TODO: FIXME REMOVING BBOX
         // Sample distance of next absorption/scattering event in the medium.
         // dist_pdf is unknown due to delta tracking.
-        auto bbox =
-            transform_bbox(medium->frame, bbox3f{{-1, -1, -1}, {1, 1, 1}});
+        auto bbox = transform_bbox(
+            medium->frame, bbox3f{{-1, -1, -1}, {1, 1, 1}});
         auto dist = sample_distance(medium, bbox, ray.o, ray.d, ch, rng);
 
         // Create ray and clamp it to make the intersection faster.
-        ray = make_ray(ray.o, ray.d);
-        ray.tmax = dist;
+        ray       = make_ray(ray.o, ray.d);
+        ray.tmax  = dist;
         auto isec = intersect_ray_cutout(scn, bvh, ray, rng, nbounces);
 
         // @Hack: When isec.ist == nullptr, we must discern if the ray hit
@@ -5091,13 +5075,13 @@ vec3f trace_volpath(const scene* scn, const bvh_tree* bvh,
             vec3f i, brdfcos;
             float pdf = 0;
             if (!is_delta_bsdf(f)) {
-                i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
+                i       = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
                 brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
-                pdf = sample_brdf_pdf(f, n, o, i);
+                pdf     = sample_brdf_pdf(f, n, o, i);
             } else {
-                i = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
+                i       = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
                 brdfcos = eval_delta_brdf(f, n, o, i) * fabs(dot(n, i));
-                pdf = sample_delta_brdf_pdf(f, n, o, i);
+                pdf     = sample_delta_brdf_pdf(f, n, o, i);
             }
             auto ndi = dot(n, i);
             auto ndo = dot(n, o);
@@ -5106,8 +5090,8 @@ vec3f trace_volpath(const scene* scn, const bvh_tree* bvh,
             if (pdf == 0) break;
             weight *= brdfcos / pdf;
             if (weight == zero3f) break;
-            ray.o = p;
-            ray.d = i;
+            ray.o            = p;
+            ray.d            = i;
             bool transmitted = (ndi > 0) != (ndo > 0);
 
             // transmission in medium
@@ -5178,9 +5162,9 @@ vec3f trace_path_naive(const scene* scn, const bvh_tree* bvh,
     if (lights->lights.empty() && lights->environments.empty()) return zero3f;
 
     // initialize
-    auto l = zero3f;
+    auto l      = zero3f;
     auto weight = vec3f{1, 1, 1};
-    auto ray = ray_;
+    auto ray    = ray_;
 
     // trace  path
     for (auto bounce = 0; bounce < nbounces; bounce++) {
@@ -5214,13 +5198,13 @@ vec3f trace_path_naive(const scene* scn, const bvh_tree* bvh,
         auto i = zero3f, brdfcos = zero3f;
         auto pdf = 0.0f;
         if (!is_delta_bsdf(f)) {
-            i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
+            i       = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
             brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
-            pdf = sample_brdf_pdf(f, n, o, i);
+            pdf     = sample_brdf_pdf(f, n, o, i);
         } else {
-            i = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
+            i       = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
             brdfcos = eval_delta_brdf(f, n, o, i) * fabs(dot(n, i));
-            pdf = sample_delta_brdf_pdf(f, n, o, i);
+            pdf     = sample_delta_brdf_pdf(f, n, o, i);
         }
 
         // accumulate weight
@@ -5242,10 +5226,10 @@ vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
     if (lights->lights.empty() && lights->environments.empty()) return zero3f;
 
     // initialize
-    auto l = zero3f;
-    auto weight = vec3f{1, 1, 1};
+    auto l        = zero3f;
+    auto weight   = vec3f{1, 1, 1};
     auto emission = true;
-    auto ray = ray_;
+    auto ray      = ray_;
 
     // trace  path
     for (auto bounce = 0; bounce < nbounces; bounce++) {
@@ -5277,25 +5261,24 @@ vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
 
         // direct
         if (!is_delta_bsdf(f) && !lights->lights.empty()) {
-            auto lgt =
-                lights
-                    ->lights[sample_index(lights->lights.size(), rand1f(rng))];
-            auto& elem_cdf = lights->shape_cdf.at(lgt->shp);
-            auto eid = 0;
-            auto euv = zero2f;
-            std::tie(eid, euv) =
-                sample_shape(lgt->shp, elem_cdf, rand1f(rng), rand2f(rng));
-            auto lp = eval_pos(lgt, eid, euv);
-            auto i = normalize(lp - p);
-            auto ln = eval_shading_norm(lgt, eid, euv, -i);
-            auto isec =
-                intersect_ray_cutout(scn, bvh, make_ray(p, i), rng, nbounces);
+            auto  lgt          = lights->lights[sample_index(
+                lights->lights.size(), rand1f(rng))];
+            auto& elem_cdf     = lights->shape_cdf.at(lgt->shp);
+            auto  eid          = 0;
+            auto  euv          = zero2f;
+            std::tie(eid, euv) = sample_shape(
+                lgt->shp, elem_cdf, rand1f(rng), rand2f(rng));
+            auto lp   = eval_pos(lgt, eid, euv);
+            auto i    = normalize(lp - p);
+            auto ln   = eval_shading_norm(lgt, eid, euv, -i);
+            auto isec = intersect_ray_cutout(
+                scn, bvh, make_ray(p, i), rng, nbounces);
             if (isec.ist == lgt && isec.ei == eid) {
-                auto larea = elem_cdf.back();
-                auto pdf = sample_index_pdf(lights->lights.size()) / larea;
-                auto le = eval_emission(lgt, eid, euv);
+                auto larea   = elem_cdf.back();
+                auto pdf     = sample_index_pdf(lights->lights.size()) / larea;
+                auto le      = eval_emission(lgt, eid, euv);
                 auto brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
-                auto gterm = fabs(dot(ln, i)) / dot(lp - p, lp - p);
+                auto gterm   = fabs(dot(ln, i)) / dot(lp - p, lp - p);
                 if (pdf != 0) l += weight * le * brdfcos * gterm / pdf;
             }
         }
@@ -5304,13 +5287,13 @@ vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
         auto i = zero3f, brdfcos = zero3f;
         auto pdf = 0.0f;
         if (!is_delta_bsdf(f)) {
-            i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
+            i       = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
             brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
-            pdf = sample_brdf_pdf(f, n, o, i);
+            pdf     = sample_brdf_pdf(f, n, o, i);
         } else {
-            i = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
+            i       = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
             brdfcos = eval_delta_brdf(f, n, o, i) * fabs(dot(n, i));
-            pdf = sample_delta_brdf_pdf(f, n, o, i);
+            pdf     = sample_delta_brdf_pdf(f, n, o, i);
         }
 
         // accumulate weight
@@ -5319,7 +5302,7 @@ vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
         if (weight == zero3f) break;
 
         // setup next ray
-        ray = make_ray(p, i);
+        ray      = make_ray(p, i);
         emission = is_delta_bsdf(f);
     }
 
@@ -5334,7 +5317,7 @@ vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
 
     // intersect scene
     auto isec = intersect_ray_cutout(scn, bvh, ray, rng, nbounces);
-    auto l = zero3f;
+    auto l    = zero3f;
 
     // handle environment
     if (!isec.ist) {
@@ -5358,8 +5341,8 @@ vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
                      sample_lights(lights, bvh, p, rand1f(rng), rand1f(rng),
                          rand2f(rng)) :
                      sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
-        auto isec =
-            intersect_ray_cutout(scn, bvh, make_ray(p, i), rng, nbounces);
+        auto isec = intersect_ray_cutout(
+            scn, bvh, make_ray(p, i), rng, nbounces);
         auto le = (isec.ist) ? eval_emission(isec.ist, isec.ei, isec.uv) :
                                eval_environment(scn, i);
         auto brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
@@ -5372,9 +5355,9 @@ vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
 
     // deltas
     if (is_delta_bsdf(f)) {
-        auto i = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
+        auto i       = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
         auto brdfcos = eval_delta_brdf(f, n, o, i) * fabs(dot(n, i));
-        auto pdf = sample_delta_brdf_pdf(f, n, o, i);
+        auto pdf     = sample_delta_brdf_pdf(f, n, o, i);
         l += brdfcos *
              trace_direct(scn, bvh, lights, ray, rng, nbounces - 1, nullptr) /
              pdf;
@@ -5392,7 +5375,7 @@ vec3f trace_direct_nomis(const scene* scn, const bvh_tree* bvh,
 
     // intersect scene
     auto isec = intersect_ray_cutout(scn, bvh, ray, rng, nbounces);
-    auto l = zero3f;
+    auto l    = zero3f;
 
     // handle environment
     if (!isec.ist) {
@@ -5414,41 +5397,41 @@ vec3f trace_direct_nomis(const scene* scn, const bvh_tree* bvh,
     if (!is_delta_bsdf(f) && !lights->lights.empty()) {
         auto lgt =
             lights->lights[sample_index(lights->lights.size(), rand1f(rng))];
-        auto& elem_cdf = lights->shape_cdf.at(lgt->shp);
-        auto eid = 0;
-        auto euv = zero2f;
-        std::tie(eid, euv) =
-            sample_shape(lgt->shp, elem_cdf, rand1f(rng), rand2f(rng));
-        auto lp = eval_pos(lgt, eid, euv);
-        auto i = normalize(lp - p);
-        auto ln = eval_shading_norm(lgt, eid, euv, -i);
-        auto isec =
-            intersect_ray_cutout(scn, bvh, make_ray(p, i), rng, nbounces);
+        auto& elem_cdf     = lights->shape_cdf.at(lgt->shp);
+        auto  eid          = 0;
+        auto  euv          = zero2f;
+        std::tie(eid, euv) = sample_shape(
+            lgt->shp, elem_cdf, rand1f(rng), rand2f(rng));
+        auto lp   = eval_pos(lgt, eid, euv);
+        auto i    = normalize(lp - p);
+        auto ln   = eval_shading_norm(lgt, eid, euv, -i);
+        auto isec = intersect_ray_cutout(
+            scn, bvh, make_ray(p, i), rng, nbounces);
         if (isec.ist == lgt && isec.ei == eid) {
-            auto larea = elem_cdf.back();
-            auto pdf = sample_index_pdf(lights->lights.size()) / larea;
-            auto le = eval_emission(lgt, eid, euv);
+            auto larea   = elem_cdf.back();
+            auto pdf     = sample_index_pdf(lights->lights.size()) / larea;
+            auto le      = eval_emission(lgt, eid, euv);
             auto brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
-            auto gterm = fabs(dot(ln, i)) / dot(lp - p, lp - p);
+            auto gterm   = fabs(dot(ln, i)) / dot(lp - p, lp - p);
             if (pdf != 0) l += le * brdfcos * gterm / pdf;
         }
     }
 
     // environment
     if (!is_delta_bsdf(f) && !lights->environments.empty()) {
-        auto i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
+        auto i       = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
         auto brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
-        auto pdf = sample_brdf_pdf(f, n, o, i);
-        auto le = zero3f;
+        auto pdf     = sample_brdf_pdf(f, n, o, i);
+        auto le      = zero3f;
         for (auto env : scn->environments) le += eval_environment(env, i);
         if (pdf != 0) l += le * brdfcos / pdf;
     }
 
     // deltas
     if (is_delta_bsdf(f)) {
-        auto i = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
+        auto i       = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
         auto brdfcos = eval_delta_brdf(f, n, o, i) * fabs(dot(n, i));
-        auto pdf = sample_delta_brdf_pdf(f, n, o, i);
+        auto pdf     = sample_delta_brdf_pdf(f, n, o, i);
         if (pdf != 0)
             l += brdfcos *
                  trace_direct(
@@ -5468,7 +5451,7 @@ vec3f trace_environment(const scene* scn, const bvh_tree* bvh,
 
     // intersect scene
     auto isec = intersect_ray(scn, bvh, ray);
-    auto l = zero3f;
+    auto l    = zero3f;
 
     // handle environment
     if (!isec.ist) {
@@ -5490,13 +5473,13 @@ vec3f trace_environment(const scene* scn, const bvh_tree* bvh,
     auto i = zero3f, brdfcos = zero3f;
     auto pdf = 0.0f;
     if (!is_delta_bsdf(f)) {
-        i = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
+        i       = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
         brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
-        pdf = sample_brdf_pdf(f, n, o, i);
+        pdf     = sample_brdf_pdf(f, n, o, i);
     } else {
-        i = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
+        i       = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
         brdfcos = eval_delta_brdf(f, n, o, i) * fabs(dot(n, i));
-        pdf = sample_delta_brdf_pdf(f, n, o, i);
+        pdf     = sample_delta_brdf_pdf(f, n, o, i);
     }
 
     // accumulate environment illumination
@@ -5525,7 +5508,7 @@ vec3f trace_eyelight(const scene* scn, const bvh_tree* bvh,
     bool* hit) {
     // intersect scene
     auto isec = intersect_ray_cutout(scn, bvh, ray, rng, nbounces);
-    auto l = zero3f;
+    auto l    = zero3f;
 
     // handle environment
     if (!isec.ist) {
@@ -5684,14 +5667,11 @@ vec3f trace_func(const scene* scn, const bvh_tree* bvh,
         case trace_type::path_naive:
             return trace_path_naive(scn, bvh, lights, ray, rng, nbounces, hit);
         case trace_type::direct_nomis:
-            return trace_direct_nomis(
-                scn, bvh, lights, ray, rng, nbounces, hit);
+            return trace_direct_nomis(scn, bvh, lights, ray, rng, nbounces, hit);
         case trace_type::debug_normal:
-            return trace_debug_normal(
-                scn, bvh, lights, ray, rng, nbounces, hit);
+            return trace_debug_normal(scn, bvh, lights, ray, rng, nbounces, hit);
         case trace_type::debug_albedo:
-            return trace_debug_albedo(
-                scn, bvh, lights, ray, rng, nbounces, hit);
+            return trace_debug_albedo(scn, bvh, lights, ray, rng, nbounces, hit);
         case trace_type::debug_texcoord:
             return trace_debug_texcoord(
                 scn, bvh, lights, ray, rng, nbounces, hit);
@@ -5716,12 +5696,12 @@ vec3f trace_func(const scene* scn, const bvh_tree* bvh,
 vec4f trace_sample(trace_state* state, const scene* scn, const bvh_tree* bvh,
     const trace_lights* lights, const vec2i& ij, const trace_params& params) {
     _trace_npaths += 1;
-    auto cam = scn->cameras.at(params.camid);
+    auto  cam = scn->cameras.at(params.camid);
     auto& rng = state->rng[ij];
-    auto ray =
-        eval_camera_ray(cam, ij, state->img.size(), rand2f(rng), rand2f(rng));
+    auto  ray = eval_camera_ray(
+        cam, ij, state->img.size(), rand2f(rng), rand2f(rng));
     auto hit = false;
-    auto l = trace_func(
+    auto l   = trace_func(
         scn, bvh, lights, params.tracer, ray, rng, params.nbounces, &hit);
     if (!isfinite(l.x) || !isfinite(l.y) || !isfinite(l.z)) {
         printf("NaN detected\n");
@@ -5733,13 +5713,13 @@ vec4f trace_sample(trace_state* state, const scene* scn, const bvh_tree* bvh,
 
 // Init a sequence of random number generators.
 image<rng_state> make_trace_rngs(const vec2i& size, uint64_t seed) {
-    auto rngs = image<rng_state>{size};
-    int rseed = 1301081;  // large prime
+    auto rngs  = image<rng_state>{size};
+    int  rseed = 1301081;  // large prime
     for (auto j = 0; j < rngs.size().y; j++) {
         for (auto i = 0; i < rngs.size().x; i++) {
             rngs[{i, j}] = make_rng(seed, rseed + 1);
-            rseed =
-                (rseed * 1103515245 + 12345) & ((1U << 31) - 1);  // bsd rand
+            rseed = (rseed * 1103515245 + 12345) & ((1U << 31) - 1);  // bsd
+                                                                      // rand
         }
     }
     return rngs;
@@ -5747,14 +5727,14 @@ image<rng_state> make_trace_rngs(const vec2i& size, uint64_t seed) {
 
 // Init trace state
 trace_state* make_trace_state(const scene* scn, const trace_params& params) {
-    auto state = new trace_state();
-    auto cam = scn->cameras[params.camid];
-    auto size = eval_image_size(cam, params.yresolution);
-    state->img = image<vec4f>{size, zero4f};
+    auto state     = new trace_state();
+    auto cam       = scn->cameras[params.camid];
+    auto size      = eval_image_size(cam, params.yresolution);
+    state->img     = image<vec4f>{size, zero4f};
     state->display = image<vec4f>{size, zero4f};
-    state->acc = image<vec4f>{size, zero4f};
+    state->acc     = image<vec4f>{size, zero4f};
     state->samples = image<int>{size, 0};
-    state->rng = make_trace_rngs(size, params.seed);
+    state->rng     = make_trace_rngs(size, params.seed);
     return state;
 }
 
@@ -5787,14 +5767,14 @@ image<vec4f> trace_image4f(const scene* scn, const bvh_tree* bvh,
         for (auto j = 0; j < state->img.size().y; j++) {
             for (auto i = 0; i < state->img.size().x; i++) {
                 for (auto s = 0; s < params.nsamples; s++)
-                    state->img[{i, j}] +=
-                        trace_sample(state, scn, bvh, lights, {i, j}, params);
+                    state->img[{i, j}] += trace_sample(
+                        state, scn, bvh, lights, {i, j}, params);
                 state->img[{i, j}] /= params.nsamples;
             }
         }
     } else {
         auto nthreads = std::thread::hardware_concurrency();
-        auto threads = std::vector<std::thread>();
+        auto threads  = std::vector<std::thread>();
         for (auto tid = 0; tid < nthreads; tid++) {
             threads.push_back(std::thread([=]() {
                 for (auto j = tid; j < state->img.size().y; j += nthreads) {
@@ -5823,16 +5803,17 @@ bool trace_samples(trace_state* state, const scene* scn, const bvh_tree* bvh,
             for (auto i = 0; i < state->img.size().x; i++) {
                 state->img[{i, j}] *= state->sample;
                 for (auto s = 0; s < nbatch; s++)
-                    state->img[{i, j}] +=
-                        trace_sample(state, scn, bvh, lights, {i, j}, params);
+                    state->img[{i, j}] += trace_sample(
+                        state, scn, bvh, lights, {i, j}, params);
                 state->img[{i, j}] /= state->sample + nbatch;
-                state->display[{i, j}] = tonemap_exposuregamma(state->img[{i, j}],
-                    params.exposure, params.gamma, params.filmic);
+                state->display[{i, j}] = tonemap_exposuregamma(
+                    state->img[{i, j}], params.exposure, params.gamma,
+                    params.filmic);
             }
         }
     } else {
         auto nthreads = std::thread::hardware_concurrency();
-        auto threads = std::vector<std::thread>();
+        auto threads  = std::vector<std::thread>();
         for (auto tid = 0; tid < nthreads; tid++) {
             threads.push_back(std::thread([=]() {
                 for (auto j = tid; j < state->img.size().y; j += nthreads) {
@@ -5842,9 +5823,9 @@ bool trace_samples(trace_state* state, const scene* scn, const bvh_tree* bvh,
                             state->img[{i, j}] += trace_sample(
                                 state, scn, bvh, lights, {i, j}, params);
                         state->img[{i, j}] /= state->sample + nbatch;
-                        state->display[{i, j}] =
-                            tonemap_exposuregamma(state->img[{i, j}],
-                                params.exposure, params.gamma, params.filmic);
+                        state->display[{i, j}] = tonemap_exposuregamma(
+                            state->img[{i, j}], params.exposure, params.gamma,
+                            params.filmic);
                     }
                 }
             }));
@@ -5856,23 +5837,22 @@ bool trace_samples(trace_state* state, const scene* scn, const bvh_tree* bvh,
 }
 
 // Starts an anyncrhounous renderer.
-void trace_async_start(trace_state* state, const scene* scn,
-    const bvh_tree* bvh, const trace_lights* lights,
-    const trace_params& params) {
+void trace_async_start(trace_state* state, const scene* scn, const bvh_tree* bvh,
+    const trace_lights* lights, const trace_params& params) {
     // render preview image
     if (params.preview_ratio) {
-        auto pparams = params;
+        auto pparams        = params;
         pparams.yresolution = state->img.size().y / params.preview_ratio;
-        pparams.nsamples = 1;
-        auto pimg = trace_image4f(scn, bvh, lights, pparams);
-        auto pdisplay = tonemap_exposuregamma(
+        pparams.nsamples    = 1;
+        auto pimg           = trace_image4f(scn, bvh, lights, pparams);
+        auto pdisplay       = tonemap_exposuregamma(
             pimg, params.exposure, params.gamma, params.filmic);
         auto pwidth = pimg.size().x, pheight = pimg.size().y;
         for (auto j = 0; j < state->img.size().y; j++) {
             for (auto i = 0; i < state->img.size().x; i++) {
                 auto pif = clamp(i / params.preview_ratio, 0, pwidth - 1),
-                     pj = clamp(j / params.preview_ratio, 0, pheight - 1);
-                state->img[{i, j}] = pimg[{pif, pj}];
+                     pj  = clamp(j / params.preview_ratio, 0, pheight - 1);
+                state->img[{i, j}]     = pimg[{pif, pj}];
                 state->display[{i, j}] = pdisplay[{pif, pj}];
             }
         }
@@ -5889,12 +5869,12 @@ void trace_async_start(trace_state* state, const scene* scn,
                     for (auto i = 0; i < state->img.size().x; i++) {
                         if (state->stop) return;
                         state->img[{i, j}] *= s;
-                        state->img[{i, j}] +=
-                            trace_sample(state, scn, bvh, lights, {i, j}, params);
+                        state->img[{i, j}] += trace_sample(
+                            state, scn, bvh, lights, {i, j}, params);
                         state->img[{i, j}] /= s + 1;
-                        state->display[{i, j}] =
-                            tonemap_exposuregamma(state->img[{i, j}],
-                                params.exposure, params.gamma, params.filmic);
+                        state->display[{i, j}] = tonemap_exposuregamma(
+                            state->img[{i, j}], params.exposure, params.gamma,
+                            params.filmic);
                     }
                 }
             }
@@ -5916,7 +5896,7 @@ std::pair<uint64_t, uint64_t> get_trace_stats() {
     return {_trace_nrays, _trace_npaths};
 }
 void reset_trace_stats() {
-    _trace_nrays = 0;
+    _trace_nrays  = 0;
     _trace_npaths = 0;
 }
 
@@ -5931,7 +5911,7 @@ float specular_exponent_to_roughness(float n) { return sqrtf(2 / (n + 2)); }
 
 // Specular to fresnel eta.
 void specular_fresnel_from_ks(const vec3f& ks, vec3f& es, vec3f& esk) {
-    es = {(1 + sqrt(ks.x)) / (1 - sqrt(ks.x)),
+    es  = {(1 + sqrt(ks.x)) / (1 - sqrt(ks.x)),
         (1 + sqrt(ks.y)) / (1 - sqrt(ks.y)),
         (1 + sqrt(ks.z)) / (1 - sqrt(ks.z))};
     esk = {0, 0, 0};
@@ -5948,7 +5928,7 @@ float specular_to_eta(const vec3f& ks) {
 vec3f fresnel_dielectric(float cosw, const vec3f& eta_) {
     auto eta = eta_;
     if (cosw < 0) {
-        eta = vec3f{1, 1, 1} / eta;
+        eta  = vec3f{1, 1, 1} / eta;
         cosw = -cosw;
     }
 
@@ -5974,21 +5954,21 @@ vec3f fresnel_dielectric(float cosw, const vec3f& eta_) {
 vec3f fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak) {
     if (etak == zero3f) return fresnel_dielectric(cosw, eta);
 
-    cosw = clamp(cosw, (float)-1, (float)1);
-    auto cos2 = cosw * cosw;
-    auto sin2 = clamp(1 - cos2, (float)0, (float)1);
-    auto eta2 = eta * eta;
+    cosw       = clamp(cosw, (float)-1, (float)1);
+    auto cos2  = cosw * cosw;
+    auto sin2  = clamp(1 - cos2, (float)0, (float)1);
+    auto eta2  = eta * eta;
     auto etak2 = etak * etak;
 
-    auto t0 = eta2 - etak2 - vec3f{sin2, sin2, sin2};
+    auto t0         = eta2 - etak2 - vec3f{sin2, sin2, sin2};
     auto a2plusb2_2 = t0 * t0 + 4.0f * eta2 * etak2;
-    auto a2plusb2 =
-        vec3f{sqrt(a2plusb2_2.x), sqrt(a2plusb2_2.y), sqrt(a2plusb2_2.z)};
-    auto t1 = a2plusb2 + vec3f{cos2, cos2, cos2};
+    auto a2plusb2   = vec3f{
+        sqrt(a2plusb2_2.x), sqrt(a2plusb2_2.y), sqrt(a2plusb2_2.z)};
+    auto t1  = a2plusb2 + vec3f{cos2, cos2, cos2};
     auto a_2 = (a2plusb2 + t0) / 2.0f;
-    auto a = vec3f{sqrt(a_2.x), sqrt(a_2.y), sqrt(a_2.z)};
-    auto t2 = 2.0f * a * cosw;
-    auto rs = (t1 - t2) / (t1 + t2);
+    auto a   = vec3f{sqrt(a_2.x), sqrt(a_2.y), sqrt(a_2.z)};
+    auto t2  = 2.0f * a * cosw;
+    auto rs  = (t1 - t2) / (t1 + t2);
 
     auto t3 = vec3f{cos2, cos2, cos2} * a2plusb2 +
               vec3f{sin2, sin2, sin2} * vec3f{sin2, sin2, sin2};
@@ -6013,16 +5993,16 @@ vec3f fresnel_schlick(const vec3f& ks, float cosw, float rs) {
 // Evaluates the GGX pdf
 float sample_ggx_pdf(float rs, float ndh) {
     auto alpha2 = rs * rs;
-    auto di = (ndh * ndh) * (alpha2 - 1) + 1;
-    auto d = alpha2 / (pif * di * di);
+    auto di     = (ndh * ndh) * (alpha2 - 1) + 1;
+    auto d      = alpha2 / (pif * di * di);
     return d * ndh;
 }
 
 // Sample the GGX distribution
 vec3f sample_ggx(float rs, const vec2f& rn) {
     auto tan2 = rs * rs * rn.y / (1 - rn.y);
-    auto rz = sqrt(1 / (tan2 + 1));
-    auto rr = sqrt(1 - rz * rz);
+    auto rz   = sqrt(1 / (tan2 + 1));
+    auto rr   = sqrt(1 - rz * rz);
     auto rphi = 2 * pif * rn.x;
     // set to wh
     auto wh_local = vec3f{rr * cos(rphi), rr * sin(rphi), rz};
@@ -6089,11 +6069,11 @@ void print_integrate_func_test(std::function<float(float)> f, float a, float b,
     auto rng = rng_state();
     printf("nsamples base base-err stratified-err importance-err\n");
     for (auto ns = 10; ns < nsamples; ns += 10) {
-        auto integral_base = integrate_func_base(f, a, b, ns, rng);
+        auto integral_base       = integrate_func_base(f, a, b, ns, rng);
         auto integral_stratified = integrate_func_stratified(f, a, b, ns, rng);
-        auto integral_importance =
-            integrate_func_importance(f, pdf, warp, ns, rng);
-        auto error_base = fabs(integral_base - expected) / expected;
+        auto integral_importance = integrate_func_importance(
+            f, pdf, warp, ns, rng);
+        auto error_base       = fabs(integral_base - expected) / expected;
         auto error_stratified = fabs(integral_stratified - expected) / expected;
         auto error_importance = fabs(integral_importance - expected) / expected;
         printf("%d %g %g %g %g\n", ns, integral_base, error_base,
@@ -6115,7 +6095,7 @@ float integrate_func2_base(std::function<float(vec2f)> f, vec2f a, vec2f b,
 
 float integrate_func2_stratified(std::function<float(vec2f)> f, vec2f a,
     vec2f b, int nsamples, rng_state& rng) {
-    auto integral = 0.0f;
+    auto integral  = 0.0f;
     auto nsamples2 = (int)sqrt(nsamples);
     for (auto i = 0; i < nsamples2; i++) {
         for (auto j = 0; j < nsamples2; j++) {
@@ -6154,11 +6134,11 @@ void print_integrate_func2_test(std::function<float(vec2f)> f, vec2f a, vec2f b,
     auto rng = rng_state();
     printf("nsamples base base-err stratified-err importance-err\n");
     for (auto ns = 10; ns < nsamples; ns += 10) {
-        auto integral_base = integrate_func2_base(f, a, b, ns, rng);
+        auto integral_base       = integrate_func2_base(f, a, b, ns, rng);
         auto integral_stratified = integrate_func2_stratified(f, a, b, ns, rng);
-        auto integral_importance =
-            integrate_func2_importance(f, pdf, warp, ns, rng);
-        auto error_base = fabs(integral_base - expected) / expected;
+        auto integral_importance = integrate_func2_importance(
+            f, pdf, warp, ns, rng);
+        auto error_base       = fabs(integral_base - expected) / expected;
         auto error_stratified = fabs(integral_stratified - expected) / expected;
         auto error_importance = fabs(integral_importance - expected) / expected;
         printf("%d %g %g %g %g\n", ns, integral_base, error_base,

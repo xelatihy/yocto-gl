@@ -72,7 +72,7 @@ uint make_glprogram(const char* vertex, const char* fragment) {
     glBindVertexArray(vao);
     assert(glGetError() == GL_NO_ERROR);
 
-    int errflags;
+    int  errflags;
     char errbuf[10000];
 
     // create vertex
@@ -111,14 +111,12 @@ uint make_glprogram(const char* vertex, const char* fragment) {
     glGetProgramiv(pid, GL_LINK_STATUS, &errflags);
     if (!errflags) {
         glGetProgramInfoLog(pid, 10000, 0, errbuf);
-        throw std::runtime_error(
-            std::string("program not linked\n\n") + errbuf);
+        throw std::runtime_error(std::string("program not linked\n\n") + errbuf);
     }
     glGetProgramiv(pid, GL_VALIDATE_STATUS, &errflags);
     if (!errflags) {
         glGetProgramInfoLog(pid, 10000, 0, errbuf);
-        throw std::runtime_error(
-            std::string("program not linked\n\n") + errbuf);
+        throw std::runtime_error(std::string("program not linked\n\n") + errbuf);
     }
     assert(glGetError() == GL_NO_ERROR);
 
@@ -386,7 +384,7 @@ void draw_glimage(
 
     // initialization
     if (!gl_prog) {
-        auto vert = R"(
+        auto vert   = R"(
             #version 330
             in vec2 texcoord;
             out vec2 frag_texcoord;
@@ -399,7 +397,7 @@ void draw_glimage(
                 frag_texcoord = texcoord;
             }
         )";
-        auto frag = R"(
+        auto frag   = R"(
             #version 330
             in vec2 frag_texcoord;
             out vec4 frag_color;
@@ -408,7 +406,7 @@ void draw_glimage(
                 frag_color = texture(txt, frag_texcoord);
             }
         )";
-        gl_prog = make_glprogram(vert, frag);
+        gl_prog     = make_glprogram(vert, frag);
         gl_texcoord = make_glarraybuffer(
             std::vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}}, false);
         gl_triangles = make_glelementbuffer(
@@ -418,8 +416,7 @@ void draw_glimage(
     // draw
     bind_glprogram(gl_prog);
     set_gluniform_texture(gl_prog, "txt", gl_txt, 0);
-    set_gluniform(
-        gl_prog, "winsize", vec2f{(float)winsize.x, (float)winsize.y});
+    set_gluniform(gl_prog, "winsize", vec2f{(float)winsize.x, (float)winsize.y});
     set_gluniform(gl_prog, "imsize", vec2f{(float)imsize.x, (float)imsize.y});
     set_gluniform(gl_prog, "imcenter", imcenter);
     set_gluniform(gl_prog, "imscale", imscale);
@@ -567,7 +564,7 @@ bool draw_inputtext_glwidget(glwindow* win, const char* lbl, std::string& val) {
     char buf[4096];
     auto num = 0;
     for (auto c : val) buf[num++] = c;
-    buf[num] = 0;
+    buf[num]    = 0;
     auto edited = ImGui::InputText(lbl, buf, sizeof(buf));
     if (edited) val = buf;
     return edited;
@@ -661,8 +658,8 @@ void end_treenode_glwidget(glwindow* win) { ImGui::TreePop(); }
 
 bool begin_selectabletreenode_glwidget(
     glwindow* win, const char* lbl, void*& selection, void* content) {
-    ImGuiTreeNodeFlags node_flags =
-        ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+    ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_OpenOnArrow |
+                                    ImGuiTreeNodeFlags_OpenOnDoubleClick;
     if (selection == content) node_flags |= ImGuiTreeNodeFlags_Selected;
     auto open = ImGui::TreeNodeEx(content, node_flags, "%s", lbl);
     if (ImGui::IsItemClicked()) selection = content;
@@ -671,8 +668,8 @@ bool begin_selectabletreenode_glwidget(
 
 void begin_selectabletreeleaf_glwidget(
     glwindow* win, const char* lbl, void*& selection, void* content) {
-    ImGuiTreeNodeFlags node_flags =
-        ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+    ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_Leaf |
+                                    ImGuiTreeNodeFlags_NoTreePushOnOpen;
     if (selection == content) node_flags |= ImGuiTreeNodeFlags_Selected;
     ImGui::TreeNodeEx(content, node_flags, "%s", lbl);
     if (ImGui::IsItemClicked()) selection = content;
@@ -723,7 +720,7 @@ bool draw_combobox_glwidget(glwindow* win, const char* lbl, int& idx,
 
 bool draw_combobox_glwidget(glwindow* win, const char* lbl, void*& val,
     const std::vector<void*>& vals, const char* (*label)(void*),
-    bool include_null) {
+    bool                      include_null) {
     if (!ImGui::BeginCombo(lbl, (val) ? label(val) : "<none>")) return false;
     auto old_val = val;
     if (include_null) {
