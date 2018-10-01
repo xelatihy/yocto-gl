@@ -1506,7 +1506,7 @@ void to_json(json& js, const shape& val) {
 void from_json_proc(const json& js, shape& val) {
     auto type = js.value("type", ""s);
     if (type == "") return;
-    auto shp = (make_shape_data*)nullptr;
+    auto shp = make_shape_data();
     if (type == "quad") {
         shp = make_quad(js.value("steps", vec2i{1, 1}),
             js.value("size", vec2f{2, 2}), js.value("uvsize", vec2f{1, 1}),
@@ -1572,12 +1572,11 @@ void from_json_proc(const json& js, shape& val) {
     } else if (type == "hairball") {
         auto base =
             make_sphere_cube(32, js.value("size", 2.0f) * 0.8f, 1, true);
-        shp = make_hair(js.value("steps", vec2i{4, 65536}), base->triangles,
-            base->pos, base->norm, base->texcoord,
+        shp = make_hair(js.value("steps", vec2i{4, 65536}), base.triangles,
+            base.pos, base.norm, base.texcoord,
             js.value("length", vec2f{0.2f, 0.2f}),
             js.value("radius", vec2f{0.001f, 0.001f}),
             js.value("noise", vec2f{0, 0}), js.value("clump", vec2f{0, 0}));
-        delete base;
     } else if (type == "hairball_interior") {
         shp = make_sphere_cube(32, js.value("size", 2.0f) * 0.8f, 1, true);
     } else if (type == "suzanne") {
@@ -1586,17 +1585,16 @@ void from_json_proc(const json& js, shape& val) {
         throw std::runtime_error("unknown shape type " + type);
     }
     if (js.value("flipyz", false)) {
-        for (auto& p : shp->pos) p = {p.x, p.z, p.y};
-        for (auto& n : shp->norm) n = {n.x, n.z, n.y};
+        for (auto& p : shp.pos) p = {p.x, p.z, p.y};
+        for (auto& n : shp.norm) n = {n.x, n.z, n.y};
     }
-    val.points = shp->points;
-    val.lines = shp->lines;
-    val.triangles = shp->triangles;
-    val.pos = shp->pos;
-    val.norm = shp->norm;
-    val.texcoord = shp->texcoord;
-    val.radius = shp->radius;
-    delete shp;
+    val.points = shp.points;
+    val.lines = shp.lines;
+    val.triangles = shp.triangles;
+    val.pos = shp.pos;
+    val.norm = shp.norm;
+    val.texcoord = shp.texcoord;
+    val.radius = shp.radius;
     if (val.path == "") val.path = "meshes/" + val.name + ".ply";
 }
 
@@ -1643,7 +1641,7 @@ void to_json(json& js, const subdiv& val) {
 void from_json_proc(const json& js, subdiv& val) {
     auto type = js.value("type", ""s);
     if (type == "") return;
-    auto shp = (make_shape_data*)nullptr;
+    auto shp = make_shape_data();
     if (type == "cube") {
         shp = make_fvcube(js.value("steps", vec3i{1, 1, 1}),
             js.value("size", vec3f{2, 2, 2}),
@@ -1652,20 +1650,19 @@ void from_json_proc(const json& js, subdiv& val) {
         shp = make_fvcube(js.value("steps", vec3i{1, 1, 1}),
             js.value("size", vec3f{2, 2, 2}),
             js.value("uvsize", vec3f{1, 1, 1}));
-        shp->quads_pos.pop_back();
-        shp->quads_norm.pop_back();
-        shp->quads_texcoord.pop_back();
+        shp.quads_pos.pop_back();
+        shp.quads_norm.pop_back();
+        shp.quads_texcoord.pop_back();
     } else if (type == "suzanne") {
         shp = make_suzanne(js.value("size", 2.0f), false);
-        std::swap(shp->quads_pos, shp->quads);
+        std::swap(shp.quads_pos, shp.quads);
     } else {
         throw std::runtime_error("unknown shape type " + type);
     }
-    val.quads_pos = shp->quads_pos;
-    val.pos = shp->pos;
-    val.quads_texcoord = shp->quads_texcoord;
-    val.texcoord = shp->texcoord;
-    delete shp;
+    val.quads_pos = shp.quads_pos;
+    val.pos = shp.pos;
+    val.quads_texcoord = shp.quads_texcoord;
+    val.texcoord = shp.texcoord;
     if (val.path == "") val.path = "meshes/" + val.name + ".obj";
 }
 
@@ -4300,11 +4297,10 @@ scene* load_pbrt_scene(
                 if (jcmd.count("radius"))
                     radius = jcmd.at("radius").get<float>();
                 auto sshp = make_sphere({64, 32}, 2 * radius, {1, 1}, true);
-                shp->pos = sshp->pos;
-                shp->norm = sshp->norm;
-                shp->texcoord = sshp->texcoord;
-                shp->triangles = sshp->triangles;
-                delete sshp;
+                shp->pos = sshp.pos;
+                shp->norm = sshp.norm;
+                shp->texcoord = sshp.texcoord;
+                shp->triangles = sshp.triangles;
             } else if (type == "disk") {
                 shp->name = "disk" + std::to_string(sid++);
                 shp->path = "models/" + shp->name + ".ply";
@@ -4312,11 +4308,10 @@ scene* load_pbrt_scene(
                 if (jcmd.count("radius"))
                     radius = jcmd.at("radius").get<float>();
                 auto sshp = make_disk({32, 16}, 2 * radius, {1, 1}, true);
-                shp->pos = sshp->pos;
-                shp->norm = sshp->norm;
-                shp->texcoord = sshp->texcoord;
-                shp->triangles = sshp->triangles;
-                delete sshp;
+                shp->pos = sshp.pos;
+                shp->norm = sshp.norm;
+                shp->texcoord = sshp.texcoord;
+                shp->triangles = sshp.triangles;
             } else {
                 printf("%s shape not supported\n", type.c_str());
             }
@@ -4390,11 +4385,10 @@ scene* load_pbrt_scene(
                 auto dir = normalize(from - to);
                 auto size = distant_dist * sin(5 * pif / 180);
                 auto sshp = make_quad({1, 1}, {size, size}, {1, 1}, true);
-                shp->pos = sshp->pos;
-                shp->norm = sshp->norm;
-                shp->texcoord = sshp->texcoord;
-                shp->triangles = sshp->triangles;
-                delete sshp;
+                shp->pos = sshp.pos;
+                shp->norm = sshp.norm;
+                shp->texcoord = sshp.texcoord;
+                shp->triangles = sshp.triangles;
                 scn->shapes.push_back(shp);
                 auto mat = new material();
                 mat->name = shp->name;
@@ -4990,13 +4984,13 @@ void normalize_ply_line(char* s) {
 }
 
 // Load ply mesh
-ply_data* load_ply(const std::string& filename) {
+ply_data load_ply(const std::string& filename) {
     auto fs = fopen(filename.c_str(), "rb");
     if (!fs) throw std::runtime_error("could not open file " + filename);
 
     // parse header
     auto ascii = false;
-    auto ply = new ply_data();
+    auto ply = ply_data();
     char line[4096];
     while (fgets(line, sizeof(line), fs)) {
         normalize_ply_line(line);
@@ -5014,7 +5008,7 @@ ply_data* load_ply(const std::string& filename) {
             auto elem = ply_element();
             elem.name = parse_string(ss);
             elem.count = parse_int(ss);
-            ply->elements.push_back(elem);
+            ply.elements.push_back(elem);
         } else if (cmd == "property") {
             auto prop = ply_property();
             auto type = parse_string(ss);
@@ -5036,10 +5030,10 @@ ply_data* load_ply(const std::string& filename) {
                 throw std::runtime_error("unsupported ply type");
             }
             prop.name = parse_string(ss);
-            prop.scalars.resize(ply->elements.back().count);
+            prop.scalars.resize(ply.elements.back().count);
             if (prop.type == ply_type::ply_int_list)
-                prop.lists.resize(ply->elements.back().count);
-            ply->elements.back().properties.push_back(prop);
+                prop.lists.resize(ply.elements.back().count);
+            ply.elements.back().properties.push_back(prop);
         } else if (cmd == "end_header") {
             break;
         } else {
@@ -5048,7 +5042,7 @@ ply_data* load_ply(const std::string& filename) {
     }
 
     // parse content
-    for (auto& elem : ply->elements) {
+    for (auto& elem : ply.elements) {
         for (auto vid = 0; vid < elem.count; vid++) {
             auto ss = (char*)nullptr;
             if (ascii) {
@@ -5121,8 +5115,6 @@ ply_data* load_ply(const std::string& filename) {
     return ply;
 }
 
-#if 1
-
 // Load ply mesh
 void load_ply_mesh(const std::string& filename, std::vector<int>& points,
     std::vector<vec2i>& lines, std::vector<vec3i>& triangles,
@@ -5140,10 +5132,9 @@ void load_ply_mesh(const std::string& filename, std::vector<int>& points,
     triangles.clear();
 
     auto ply = load_ply(filename);
-    if (!ply) throw std::runtime_error("cannot load ply " + filename);
 
     // copy vertex data
-    for (auto& elem : ply->elements) {
+    for (auto& elem : ply.elements) {
         if (elem.name != "vertex") continue;
         auto count = elem.count;
         for (auto& prop : elem.properties) {
@@ -5175,7 +5166,7 @@ void load_ply_mesh(const std::string& filename, std::vector<int>& points,
     }
 
     // copy triangle data
-    for (auto& elem : ply->elements) {
+    for (auto& elem : ply.elements) {
         if (elem.name != "face") continue;
         auto count = elem.count;
         for (auto& prop : elem.properties) {
@@ -5188,12 +5179,7 @@ void load_ply_mesh(const std::string& filename, std::vector<int>& points,
             }
         }
     }
-
-    // cleanup
-    delete ply;
 }
-
-#endif
 
 // Save ply mesh
 void save_ply_mesh(const std::string& filename, const std::vector<int>& points,

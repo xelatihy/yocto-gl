@@ -47,27 +47,12 @@ Please consider this to be just development notes and not any real planning.
         - mcguire
         - gltf
 
-## Example
+## Examples
 
+- bent floor
 - crane subdivs
 - utah teapot
 - bunny embed
-
-## Library
-
-- io
-    - consider json i/o inline
-    - consider tinyobjloader
-    - consider happly library cmu
-- quad
-    - add edge visualization
-    - diamond triangles
-    - verify interpolation for degenerate
-    - verify if we can write interpolation as two triangles
-    - verify sampling for degenerate
-    - add to shape
-    - add to intersect
-    - add to io
 
 ## Trace
 
@@ -144,12 +129,6 @@ Please consider this to be just development notes and not any real planning.
 
 - bent floor
 - 0 roughness
-
-## OpenGL/Trace
-
-- investigate bump map on GPU
-    - <https://www.opengl.org/discussion_boards/showthread.php/162857-Computing-the-tangent-space-in-the-fragment-shader>
-    - <http://jbit.net/~sparky/sfgrad_bump/mm_sfgrad_bump.pdf>
 
 ## BVH
 
