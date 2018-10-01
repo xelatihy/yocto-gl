@@ -44,14 +44,14 @@ int main(int argc, char** argv) {
     // parse command line
     auto parser = make_cmdline_parser(argc, argv, "Process scene", "yscnproc");
     auto notextures =
-        parse_flag(parser, "--notextures", false, "Disable textures.");
+        parse_arg(parser, "--notextures", false, "Disable textures.");
     auto uniform_txt =
-        parse_flag(parser, "--uniform-txt", false, "uniform texture formats");
-    auto build_bvh = parse_flag(parser, "--build-bvh", false, "build bvh");
+        parse_arg(parser, "--uniform-txt", false, "uniform texture formats");
+    auto build_bvh = parse_arg(parser, "--build-bvh", false, "build bvh");
     auto output =
-        parse_string(parser, "--output,-o", "out.json", "output scene", true);
+        parse_arg(parser, "--output,-o", "out.json", "output scene", true);
     auto filename =
-        parse_string(parser, "scene", "scene.json", "input scene", true);
+        parse_arg(parser, "scene", "scene.json", "input scene", true);
     check_cmdline(parser);
 
     // load scene

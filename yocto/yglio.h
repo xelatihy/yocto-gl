@@ -126,30 +126,32 @@ cmdline_parser make_cmdline_parser(int argc, char** argv,
 // check if any error occurred and exit appropriately
 void check_cmdline(cmdline_parser& parser);
 
-// Parse a flag. Name should start with either "--" or "-".
-bool parse_flag(cmdline_parser& parser, const std::string& name, bool def,
+// Parse an int, float, string, vecXX and bool option or positional argument. 
+// Options's names starts with "--" or "-", otherwise they are arguments. 
+// vecXX options use space-separated values but all in one argument
+// (use " or ' from the common line). Booleans are flags. 
+bool parse_arg(cmdline_parser& parser, const std::string& name, bool def,
     const std::string& usage);
-
-// Parse an integer, float, string. If name starts with "--" or "-", then it is
-// an option, otherwise it is a position argument. vecXX options use space-
-// separated values but all in one argument (use " or ' from the common line).
-int parse_int(cmdline_parser& parser, const std::string& name, int def,
+int parse_arg(cmdline_parser& parser, const std::string& name, int def,
     const std::string& usage, bool req = false);
-float parse_float(cmdline_parser& parser, const std::string& name, float def,
+float parse_arg(cmdline_parser& parser, const std::string& name, float def,
     const std::string& usage, bool req = false);
-vec2f parse_vec2f(cmdline_parser& parser, const std::string& name,
+vec2f parse_arg(cmdline_parser& parser, const std::string& name,
     const vec2f& def, const std::string& usage, bool req = false);
-vec3f parse_vec3f(cmdline_parser& parser, const std::string& name,
+vec3f parse_arg(cmdline_parser& parser, const std::string& name,
     const vec3f& def, const std::string& usage, bool req = false);
-std::string parse_string(cmdline_parser& parser, const std::string& name,
-    const std::string& def, const std::string& usage, bool req = false,
-    const std::vector<std::string>& choices = {});
-int parse_enum(cmdline_parser& parser, const std::string& name, int def,
-    const std::string& usage, const std::vector<std::string>& labels,
-    bool req = false);
-std::vector<std::string> parse_strings(cmdline_parser& parser,
+std::string parse_arg(cmdline_parser& parser, const std::string& name,
+    const std::string& def, const std::string& usage, bool req = false);
+std::string parse_arg(cmdline_parser& parser, const std::string& name,
+    const char* def, const std::string& usage, bool req = false);
+// Parse all arguments left on the command line.
+std::vector<std::string> parse_args(cmdline_parser& parser,
     const std::string& name, const std::vector<std::string>& def,
     const std::string& usage, bool req = false);
+// Parse a labeled enum, with enum values that are successive integers.
+int parse_arge(cmdline_parser& parser, const std::string& name, int def,
+    const std::string& usage, const std::vector<std::string>& labels,
+    bool req = false);
 
 }  // namespace ygl
 

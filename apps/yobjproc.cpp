@@ -46,14 +46,14 @@ int main(int argc, char* argv[]) {
     auto parser = make_cmdline_parser(
         argc, argv, "Process obj files directly", "yobjproc");
     auto translation =
-        parse_vec3f(parser, "--translation,-t", zero3f, "translation");
-    auto scale = parse_vec3f(parser, "--scale,-s", vec3f{1, 1, 1}, "scale");
+        parse_arg(parser, "--translation,-t", zero3f, "translation");
+    auto scale = parse_arg(parser, "--scale,-s", vec3f{1, 1, 1}, "scale");
     auto print_info =
-        parse_flag(parser, "--print-info,-i", false, "print obj info");
-    auto output = parse_string(
+        parse_arg(parser, "--print-info,-i", false, "print obj info");
+    auto output = parse_arg(
         parser, "--output,-o", "out.obj", "output obj scene", true);
     auto filename =
-        parse_string(parser, "filename", "img.obj", "input obj filename", true);
+        parse_arg(parser, "filename", "img.obj", "input obj filename", true);
     check_cmdline(parser);
 
     // prepare stats
