@@ -28,175 +28,119 @@
 
 #include "../yocto/ygl.h"
 #include "../yocto/yglio.h"
-#include "CLI11.hpp"
-using namespace std::literals;
-
-auto tracer_names = std::unordered_map<std::string, ygl::trace_func>{
-    {"pathtrace", ygl::trace_path}, {"direct", ygl::trace_direct},
-    {"environment", ygl::trace_environment}, {"eyelight", ygl::trace_eyelight},
-    {"pathtrace-nomis", ygl::trace_path_nomis},
-    {"pathtrace-naive", ygl::trace_path_naive},
-    {"direct-nomis", ygl::trace_direct_nomis},
-    {"debug_normal", ygl::trace_debug_normal},
-    {"debug_albedo", ygl::trace_debug_albedo},
-    {"debug_texcoord", ygl::trace_debug_texcoord},
-    {"debug_frontfacing", ygl::trace_debug_frontfacing},
-    {"debug_diffuse", ygl::trace_debug_diffuse},
-    {"debug_specular", ygl::trace_debug_specular},
-    {"debug_roughness", ygl::trace_debug_roughness}};
+using namespace ygl;
 
 int main(int argc, char* argv[]) {
-    // command line parameters
-    auto filename = "scene.json"s;        // scene filename
-    auto imfilename = "out.hdr"s;         // image output filename
-    auto camid = 0;                       // camera index
-    auto resolution = 512;                // image vertical resolution
-    auto nsamples = 256;                  // image samples
-    auto tracer = "pathtrace"s;           // tracer algorithm
-    auto nbounces = 4;                    // number of bounces
-    auto pixel_clamp = 100.0f;            // pixel clamping
-    auto noparallel = false;              // disable parallel
-    auto seed = ygl::trace_default_seed;  // random seed
-    auto nbatch = 16;                     // batch size
-    auto save_batch = false;              // whether to save bacthes
-    auto exposure = 0.0f;                 // exposure
-    auto gamma = 2.2;                     // gamma
-    auto filmic = false;                  // filmic
-    auto double_sided = false;            // double sided
-    auto add_skyenv = false;              // add environment
-    auto quiet = false;                   // quiet mode
+    // trace options
+    auto params = trace_params();
 
     // parse command line
-    CLI::App parser("Offline path tracing", "ytrace");
-    parser.add_option("--camera", camid, "Camera index.");
-    parser.add_option(
-        "--resolution,-r", resolution, "Image vertical resolution.");
-    parser.add_option("--nsamples,-s", nsamples, "Number of samples.");
-    parser.add_option("--tracer,-t", tracer, "Trace type.")
-        ->check([](const std::string& s) -> std::string {
-            if (tracer_names.find(s) == tracer_names.end())
-                throw CLI::ValidationError("unknown tracer name");
-            return s;
-        });
-    parser.add_option("--nbounces", nbounces, "Maximum number of bounces.");
-    parser.add_option("--pixel-clamp", pixel_clamp, "Final pixel clamping.");
-    parser.add_flag("--noparallel", noparallel, "Disable parallel execution.");
-    parser.add_option("--seed", seed, "Seed for the random number generators.");
-    parser.add_option("--nbatch", nbatch, "Sample batch size.");
-    parser.add_flag("--save-batch", save_batch, "Save images progressively");
-    parser.add_option("--exposure,-e", exposure, "Hdr exposure");
-    parser.add_flag(
-        "--double-sided,-D", double_sided, "Double-sided rendering.");
-    parser.add_flag("--add-skyenv,-E", add_skyenv, "add missing env map");
-    parser.add_flag("--quiet,-q", quiet, "Print only errors messages");
-    parser.add_option("--output-image,-o", imfilename, "Image filename");
-    parser.add_option("scene", filename, "Scene filename")->required(true);
-    try {
-        parser.parse(argc, argv);
-    } catch (const CLI::ParseError& e) { return parser.exit(e); }
+    auto parser =
+        make_cmdline_parser(argc, argv, "Offline path tracing", "ytrace");
+    params.camid = parse_arg(parser, "--camera", 0, "Camera index.");
+    params.yresolution =
+        parse_arg(parser, "--resolution,-r", 512, "Image vertical resolution.");
+    params.nsamples =
+        parse_arg(parser, "--nsamples,-s", 256, "Number of samples.");
+    params.tracer = (trace_type)parse_arge(
+        parser, "--tracer,-t", 0, "Trace type.", trace_type_names);
+    params.nbounces =
+        parse_arg(parser, "--nbounces", 8, "Maximum number of bounces.");
+    params.pixel_clamp =
+        parse_arg(parser, "--pixel-clamp", 100.0f, "Final pixel clamping.");
+    params.noparallel = parse_arg(
+        parser, "--noparallel", false, "Disable parallel execution.");
+    params.seed = parse_arg(
+        parser, "--seed", 13, "Seed for the random number generators.");
+    params.nbatch = parse_arg(parser, "--nbatch,-b", 16, "Samples per batch.");
+    auto save_batch =
+        parse_arg(parser, "--save-batch", false, "Save images progressively");
+    auto exposure = parse_arg(parser, "--exposure,-e", 0.0f, "Hdr exposure");
+    auto gamma = parse_arg(parser, "--gamma,-g", 2.2f, "Hdr gamma");
+    auto filmic = parse_arg(parser, "--filmic", false, "Hdr filmic");
+    auto embree = parse_arg(parser, "--embree", false, "Use Embree ratracer");
+    auto double_sided = parse_arg(
+        parser, "--double-sided,-D", false, "Double-sided rendering.");
+    auto add_skyenv =
+        parse_arg(parser, "--add-skyenv,-E", false, "add missing env map");
+    auto imfilename =
+        parse_arg(parser, "--output-image,-o", "out.hdr", "Image filename");
+    auto filename =
+        parse_arg(parser, "scene", "scene.json", "Scene filename", true);
+    check_cmdline(parser);
 
     // scene loading
-    auto scn = std::shared_ptr<ygl::scene>();
-    if (!quiet) std::cout << "loading scene" << filename << "\n";
-    auto load_start = ygl::get_time();
+    auto scn = (scene*)nullptr;
+    printf("loading scene %s\n", filename.c_str());
+    auto load_start = get_time();
     try {
-        scn = ygl::load_scene(filename);
+        scn = load_scene(filename);
     } catch (const std::exception& e) {
-        std::cout << "cannot load scene " << filename << "\n";
-        std::cout << "error: " << e.what() << "\n";
+        printf("cannot load scene %s\nerror: %s\n", filename.c_str(), e.what());
         exit(1);
     }
-    if (!quiet)
-        std::cout << "loading in "
-                  << ygl::format_duration(ygl::get_time() - load_start) << "\n";
+    printf("loading in %s\n", format_duration(get_time() - load_start).c_str());
 
     // tesselate
-    if (!quiet) std::cout << "tesselating scene elements\n";
-    ygl::update_tesselation(scn);
-
-    // update bbox and transforms
-    ygl::update_transforms(scn);
-    ygl::update_bbox(scn);
+    printf("tesselating scene elements\n");
+    tesselate_subdivs(scn);
 
     // add components
-    if (!quiet) std::cout << "adding scene elements\n";
+    printf("adding scene elements\n");
     if (add_skyenv && scn->environments.empty()) {
-        scn->environments.push_back(ygl::make_sky_environment("sky"));
+        scn->environments.push_back(make_sky_environment("sky"));
         scn->textures.push_back(scn->environments.back()->ke_txt);
     }
     if (double_sided)
         for (auto mat : scn->materials) mat->double_sided = true;
-    if (scn->cameras.empty())
-        scn->cameras.push_back(ygl::make_bbox_camera("<view>", scn->bbox));
-    ygl::add_missing_names(scn);
-    for (auto err : ygl::validate(scn)) std::cout << "warning: " << err << "\n";
+    for (auto& err : validate(scn)) printf("warning: %s\n", err.c_str());
 
     // build bvh
-    if (!quiet) std::cout << "building bvh\n";
-    auto bvh_start = ygl::get_time();
-    ygl::update_bvh(scn);
-    if (!quiet)
-        std::cout << "building bvh in "
-                  << ygl::format_duration(ygl::get_time() - bvh_start) << "\n";
+    printf("building bvh\n");
+    auto bvh_start = get_time();
+    auto bvh = build_bvh(scn, true, embree);
+    printf("building bvh in %s\n",
+        format_duration(get_time() - bvh_start).c_str());
 
     // init renderer
-    if (!quiet) std::cout << "initializing lights\n";
-    ygl::update_lights(scn);
+    printf("initializing lights\n");
+    auto lights = make_trace_lights(scn, params);
 
     // initialize rendering objects
-    if (!quiet) std::cout << "initializing tracer data\n";
-    auto tracef = tracer_names.at(tracer);
-    auto st = ygl::trace_state();
+    printf("initializing tracer data\n");
+    auto state = make_trace_state(scn, params);
 
     // render
-    if (!quiet) std::cout << "rendering image\n";
-    auto render_start = ygl::get_time();
+    printf("rendering image\n");
+    auto render_start = get_time();
     auto done = false;
     while (!done) {
-        if (!quiet)
-            std::cout << "rendering sample " << st.sample << "/" << nsamples
-                      << "\n";
-        auto block_start = ygl::get_time();
-        done = ygl::trace_samples(st, scn, camid, resolution, nsamples, tracef,
-            nbatch, nbounces, pixel_clamp, noparallel, seed);
-        if (!quiet)
-            std::cout << "rendering block in "
-                      << ygl::format_duration(ygl::get_time() - block_start)
-                      << "\n";
+        printf("rendering sample %04d/%04d\n", state->sample, params.nsamples);
+        auto block_start = get_time();
+        done = trace_samples(state, scn, bvh, lights, params);
+        printf("rendering block in %s\n",
+            format_duration(get_time() - block_start).c_str());
         if (save_batch) {
-            auto filename = ygl::replace_extension(
-                imfilename, std::to_string(st.sample) + "." +
-                                ygl::get_extension(imfilename));
-            if (!quiet) std::cout << "saving image " << filename << "\n";
-            if (ygl::is_hdr_filename(filename)) {
-                ygl::save_image(filename, st.img);
-            } else {
-                ygl::save_image(filename,
-                    ygl::tonemap_image(st.img, exposure, gamma, filmic));
-            }
+            auto filename = replace_extension(
+                imfilename, std::to_string(state->sample) + "." +
+                                get_extension(imfilename));
+            printf("saving image %s\n", filename.c_str());
+            save_tonemapped_image(
+                filename, state->img, exposure, gamma, filmic);
         }
     }
-    if (!quiet)
-        std::cout << "rendering image in "
-                  << ygl::format_duration(ygl::get_time() - render_start)
-                  << "\n";
-
-    // stata
-    if (!quiet) {
-        std::cout << "using " << ygl::format_num(ygl::get_trace_stats().first)
-                  << " rays in "
-                  << ygl::format_num(ygl::get_trace_stats().second)
-                  << " paths\n";
-    }
+    printf("rendering image in %s\n",
+        format_duration(get_time() - render_start).c_str());
 
     // save image
-    if (!quiet) std::cout << "saving image " << imfilename << "\n";
-    if (ygl::is_hdr_filename(imfilename)) {
-        ygl::save_image(imfilename, st.img);
-    } else {
-        ygl::save_image(
-            imfilename, ygl::tonemap_image(st.img, exposure, gamma, filmic));
-    }
+    printf("saving image %s\n", imfilename.c_str());
+    save_tonemapped_image(imfilename, state->img, exposure, gamma, filmic);
+
+    // cleanup
+    delete state;
+    delete scn;
+    delete bvh;
+    delete lights;
 
     // done
     return 0;

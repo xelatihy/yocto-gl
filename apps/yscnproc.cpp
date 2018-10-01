@@ -28,8 +28,7 @@
 
 #include "../yocto/ygl.h"
 #include "../yocto/yglio.h"
-#include "CLI11.hpp"
-using namespace std::literals;
+using namespace ygl;
 
 void mkdir(const std::string& dir) {
     if (dir == "" || dir == "." || dir == ".." || dir == "./" || dir == "../")
@@ -42,67 +41,66 @@ void mkdir(const std::string& dir) {
 }
 
 int main(int argc, char** argv) {
-    // command line parameters
-    auto filename = "scene.json"s;
-    auto output = "output.json"s;
-    auto notextures = false;
-    auto uniform_txt = false;
-
-    // command line params
-    CLI::App parser("scene processing utility", "yscnproc");
-    parser.add_flag("--notextures", notextures, "Disable textures.");
-    parser.add_flag("--uniform-txt", uniform_txt, "uniform texture formats");
-    parser.add_option("--output,-o", output, "output scene")->required(true);
-    parser.add_option("scene", filename, "input scene")->required(true);
-    try {
-        parser.parse(argc, argv);
-    } catch (const CLI::ParseError& e) { return parser.exit(e); }
+    // parse command line
+    auto parser = make_cmdline_parser(argc, argv, "Process scene", "yscnproc");
+    auto notextures =
+        parse_arg(parser, "--notextures", false, "Disable textures.");
+    auto uniform_txt =
+        parse_arg(parser, "--uniform-txt", false, "uniform texture formats");
+    auto build_bvh = parse_arg(parser, "--build-bvh", false, "build bvh");
+    auto output =
+        parse_arg(parser, "--output,-o", "out.json", "output scene", true);
+    auto filename =
+        parse_arg(parser, "scene", "scene.json", "input scene", true);
+    check_cmdline(parser);
 
     // load scene
-    auto scn = std::shared_ptr<ygl::scene>();
+    auto scn = (scene*)nullptr;
     try {
-        scn = ygl::load_scene(filename, !notextures);
+        scn = load_scene(filename, !notextures);
     } catch (const std::exception& e) {
-        std::cout << "cannot load scene " << filename << "\n";
-        std::cout << "error: " << e.what() << "\n";
+        printf("cannot load scene %s\n", filename.c_str());
+        printf("error: %s\n", e.what());
         exit(1);
     }
 
     // change texture names
     if (uniform_txt) {
         for (auto txt : scn->textures) {
-            auto ext = ygl::get_extension(txt->path);
-            if (ygl::is_hdr_filename(txt->path)) {
+            auto ext = get_extension(txt->path);
+            if (is_hdr_filename(txt->path)) {
                 if (ext == "hdr" || ext == "exr") continue;
                 if (ext == "pfm")
-                    ygl::replace_extension(filename, "hdr");
+                    replace_extension(filename, "hdr");
                 else
-                    std::cout << "unknown texture format " << ext;
+                    printf("unknown texture format %s\n", ext.c_str());
             } else {
                 if (ext == "png" || ext == "jpg") continue;
                 if (ext == "tga" || ext == "bmp")
-                    ygl::replace_extension(filename, "png");
+                    replace_extension(filename, "png");
                 else
-                    std::cout << "unknown texture format " << ext;
+                    printf("unknown texture format %s\n", ext.c_str());
             }
         }
     }
 
+    // build bvh
+    if (build_bvh) ygl::build_bvh(scn, false);
+
     // make a directory if needed
     try {
-        mkdir(ygl::get_dirname(output));
+        mkdir(get_dirname(output));
     } catch (const std::exception& e) {
-        std::cout << "cannot create directory " << ygl::get_dirname(output)
-                  << "\n";
-        std::cout << "error: " << e.what() << "\n";
+        printf("cannot create directory %s\n", get_dirname(output).c_str());
+        printf("error: %s\n", e.what());
         exit(1);
     }
     // save scene
     try {
-        ygl::save_scene(output, scn);
+        save_scene(output, scn);
     } catch (const std::exception& e) {
-        std::cout << "cannot save scene " << output << "\n";
-        std::cout << "error: " << e.what() << "\n";
+        printf("cannot save scene %s\n", output.c_str());
+        printf("error: %s\n", e.what());
         exit(1);
     }
 

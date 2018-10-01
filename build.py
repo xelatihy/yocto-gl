@@ -7,17 +7,11 @@
 import click, os, platform, markdown, glob, textwrap
 
 def build(target, dirname, buildtype, cmakeopts=''):
-    os.system('mkdir -p build/{dirname}; cd build/{dirname}; cmake ../../ -GNinja -DCMAKE_BUILD_TYPE={buildtype} {cmakeopts}; cmake --build . {target}'.format(target=target, dirname=dirname, buildtype=buildtype, cmakeopts=cmakeopts))
-    os.system('ln -Ffs {dirname} build/latest'.format(dirname=dirname))
+    os.system('mkdir -p build/{dirname}; cd build/{dirname}; cmake ../../ -GNinja -DYOCTO_EMBREE=ON -DCMAKE_BUILD_TYPE={buildtype} {cmakeopts}; cmake --build . {target}'.format(target=target, dirname=dirname, buildtype=buildtype, cmakeopts=cmakeopts))
 
 @click.group()
 def run():
     pass
-
-@run.command()
-@click.argument('target', required=False, default='')
-def latest(target=''):
-    os.system('cd build/latest; cmake --build . {target}'.format(target=target))
 
 @run.command()
 @click.argument('target', required=False, default='')
@@ -44,7 +38,7 @@ def clean():
 
 @run.command()
 def format():
-    for glob in ['yocto/y*.h', 'yocto/y*.cpp', 'apps/y*.cpp']:
+    for glob in ['yocto/y*.h', 'yocto/y*.cpp', 'apps/y*.cpp', 'apps/y*.h']:
         os.system('clang-format -i -style=file ' + glob)
 
 @run.command()
@@ -53,36 +47,28 @@ def formattests():
     from collections import OrderedDict
     for filename in glob.glob('tests/*.json'):
         def fix_proc(js):
-            if isinstance(js, list):
-                return [ fix_proc(j) for j in js ]
-            elif isinstance(js, dict):
-                njs = { k: fix_proc(v) for k, v in js.items() if not k.startswith('!!') }
-                proc = { k[2:]: fix_proc(v) for k, v in js.items() if k.startswith('!!') }
-                if proc: njs['!!proc'] = proc
-                return njs
-            elif isinstance(js, OrderedDict):
-                njs = OrderedDict([ (k, fix_proc(v)) for k, v in js.items() if not k.startswith('!!') ])
-                proc = OrderedDict([ (k[2:], fix_proc(v)) for k, v in js.items() if k.startswith('!!') ])
-                if proc: njs['!!proc'] = proc
-                return njs
-            else:
-                return js
+            for jcam in js["cameras"]:
+                jcam["film"] = [ jcam["width"], jcam["height"] ]
+                del jcam["width"]
+                del jcam["height"]
+            return js
         with open(filename, "rt") as f: js = json.load(f, object_pairs_hook=OrderedDict)
         js = fix_proc(js)
         with open(filename, "wt") as f: json.dump(js, f, indent=4)
 
 @run.command()
 def tests():
-    for ext in ['obj', 'gltf', 'json']:
+    for ext in ['obj', 'gltf', 'json', 'ybin', 'pbrt']:
         os.system(f'rm -rf tests/{ext}; mkdir tests/{ext}')
     for filename in glob.glob('tests/*.json'):
         print(filename)
         basename = os.path.basename(filename).replace('.json','')
-        for ext in ['obj', 'gltf', 'json']:
+        for ext in ['obj', 'gltf', 'json', 'ybin', 'pbrt']:
+            opts = '' if ext != 'ybin' else '--build-bvh'
             os.system(f'mkdir tests/{ext}/{basename}')
             os.system(f'mkdir tests/{ext}/{basename}/textures')
             os.system(f'mkdir tests/{ext}/{basename}/meshes')
-            os.system(f'./bin/yscnproc -o tests/{ext}/{basename}/{basename}.{ext} {filename}')
+            os.system(f'./bin/yscnproc {opts} -o tests/{ext}/{basename}/{basename}.{ext} {filename}')
 
 @run.group()
 def scenes():

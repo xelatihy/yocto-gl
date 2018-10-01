@@ -3,17 +3,37 @@
 This file contains notes on future improvements of Yocto.
 Please consider this to be just development notes and not any real planning.
 
-## next
+## Next features
 
-- tonyobjloader
-- openmp
+- generic
+    - to_string
+    - vec: consider constructors/conversions
+    - cmdline with to_string and parse
+    - min, lerp, clamp
+- move ext files
+- path tracing with pbrt MIS
+- simple renderers for book
+    - simple intersection
+    - eyelight
+    - anti-aliasing
+    - naive path tracing
+    - mirrors / glass
+    - volume ?
+    - product path tracing
+- consider introducing trace_point
+- refactor renderers into smaller pieces for readability
+- direct with deltas
+- split apps
 
-## giacomo
+## Next features
 
-- pbrt import / export
-    - load textures
-    - copy ypbrt code into load_scene
-- volumetric values
+- LUTs
+- tone curve
+    - from web?
+    - no implementation of Photoshop curve
+    - maybe try monotonic spline interpolation
+    - otherwise a simple Bezier with constraints
+    - use lookup tables for this
 
 ## Scene changes
 
@@ -27,16 +47,18 @@ Please consider this to be just development notes and not any real planning.
         - mcguire
         - gltf
 
-## image
+## Example
 
-- tone curve
-- 3D lut
+- crane subdivs
+- utah teapot
+- bunny embed
 
 ## Library
 
 - io
     - consider json i/o inline
     - consider tinyobjloader
+    - consider happly library cmu
 - quad
     - add edge visualization
     - diamond triangles
@@ -75,9 +97,9 @@ Please consider this to be just development notes and not any real planning.
         - triangle
         - line
         - point
-    - line/point parametrization that mnatches pbrt and embree
+    - line/point parametrization that matches pbrt and embree
     - radius in offsetting rays
-        - check embree to avoid 
+        - check embree to avoid
 - bvh
     - sah
     - opacity
@@ -118,7 +140,7 @@ Please consider this to be just development notes and not any real planning.
     - pbrt include parser
 - gltf exports
 
-## Test scenes: simnplify shape generation
+## Test scenes: simplify shape generation
 
 - bent floor
 - 0 roughness
@@ -126,18 +148,18 @@ Please consider this to be just development notes and not any real planning.
 ## OpenGL/Trace
 
 - investigate bump map on GPU
-    - https://www.opengl.org/discussion_boards/showthread.php/162857-Computing-the-tangent-space-in-the-fragment-shader
-    - http://jbit.net/~sparky/sfgrad_bump/mm_sfgrad_bump.pdf
+    - <https://www.opengl.org/discussion_boards/showthread.php/162857-Computing-the-tangent-space-in-the-fragment-shader>
+    - <http://jbit.net/~sparky/sfgrad_bump/mm_sfgrad_bump.pdf>
 
 ## BVH
 
 - SAH based build?
-- simplify build code: can we avoid preallocating nodes?
+- simplify build code: can we avoid pre-allocating nodes?
 - move away from special functions in BVH?
     - always use sort
     - provide a sort buffer
 - add cutout to trace
-- simplify build functions: 
+- simplify build functions
 - maybe put axis with internal
 - simplify partition and nth_element function
     - include wrapper functions
@@ -163,3 +185,14 @@ if /usr/local is not searched:
 For CMake, the following flags will cause the OpenMP::OpenMP_CXX target to
 be set up correctly:
   -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include" -DOpenMP_CXX_LIB_NAMES="omp" -DOpenMP_omp_LIBRARY=/usr/local/opt/libomp/lib/libomp.dylib
+
+## Book
+
+- apps
+    - tonemap
+    - naivetrace
+    - pathtrace
+    - itrace
+- lib
+    - trace.h / trace.cpp
+    - traceio.h / traceio.cpp

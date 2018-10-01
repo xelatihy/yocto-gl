@@ -2,38 +2,66 @@
 // # Yocto/GL: Tiny C++ Library for Physically-Based Rendering
 //
 //
-// Yocto/GL is a collection of utilities for creating a simple path tracer.
-// The list of utilities is described below.
+// Yocto/GL is a collection of utilities for manipukating various graphics 
+// quantities and creating a simple path tracer, The list of utilities is 
+// described below.
+//
+//
+// ## Design Considerations
+//
+// Yocto/GL tries to follow a "data-driven programming model" that makes data
+// explicit. Data is stored in simple structs and access with free functions
+// or directly. All data is public, so we make no attempt at encapsulation.
+// We do this since this makes Yocto/GL easier to extend and quicker to learn,
+// which a more explicit data flow that is easier whrn writing parallel code.
+// Since Yocto/GL is mainly used for research and teaching,
+// explicit data is both more hackable and easier to understand.
+//
+// The use of templates in Yocto was the reason for many refactorings, going
+// from no template to heavy template use. After many changes, we settled
+// on using templates following the established convention in the C++ standard 
+// library.
+//
+// We make use of exception for error reporting. This makes the code
+// cleaner and more in line with the expectation of most other programming
+// languages. At the same time, exception are not as easy to use in C++
+// and are disabled in many libraries. For this reasons, this will likely 
+// change in the future.
+//
+// Finally, we import math symbols from the standard library rather than
+// using the `std::name` pattern into the `ygl` namespace. This makes math code 
+// easier to read, and allows us to override come function implementation when
+// desired.
 //
 //
 // ## Small Vectors and Matrices, Frames, Bounding Boxes and Transforms
 //
 // We provide common operations for small vectors and matrices typically used
-// in graphics. In particular, we support 2-4 dimensional vectors `vec<T, 2>`,
-// `vec<T, 3>`, `vec<T, 4>`.
+// in graphics. In particular, we support 2-4 dimensional vectors `vec2<T>`,
+// `vec3f<T>`, `vec4<T>`.
 //
-// We support 2-4 dimensional generic matrices `mat<T, 2>`, `mat<T, 3>`,
-// `mat<T, 4>`, with matrix-matrix and matrix-vector products, transposes and
+// We support 2-4 dimensional generic matrices `mat2<T>`, `mat3<T>`,
+// `mat4<T>`, with matrix-matrix and matrix-vector products, transposes and
 // inverses. Matrices are stored in column-major ordered and are accessed and
 // constructed by column.
 //
 // To represent transformations, most of the library facilities prefer the use
-// coordinate frames, aka rigid transforms, represented as `frame<T, 2>`,
-// `frame<T, 3>`. The structure store three coordinate axes and the origin.
+// coordinate frames, aka rigid transforms, represented as `frame2<T>`,
+// `frame3<T>`. The structure store three coordinate axes and the origin.
 // This is equivalent to a rigid transform written as a column-major affine
 // matrix. Transform operations are better behaved with this representation.
 //
 // We represent coordinate bounds with axis-aligned bounding boxes with
-// `bbox<T, 1>`, `bbox<T, 2>`, `bbox<T, 3>`, `bbox<T, 4>`, with support for
-// expansion operations for points and otehr bboxes. We provide operations to
-// compute bounds for points, lines, triangles and quads.
+// `bbox1<T>`, `bbox2<T>`, `bbox3<T>`, `bbox4<T>`, with support for
+// expansion operations for points and other bounding boxes. We provide
+// operations to compute bounds for points, lines, triangles and quads.
 //
 // For both matrices and frames we support transform operations for points,
-// vectors and directions (`trasform_point()`, `trasform_vector()`,
-// `trasform_direction()`). For frames we also the support inverse operations
+// vectors and directions (`transform_point()`, `transform_vector()`,
+// `transform_direction()`). For frames we also the support inverse operations
 // (`transform_xxx_inverse()`). Transform matrices and frames can be
 // constructed from basic translation, rotation and scaling, e.g. with
-// `translation_mat<T, 4>()` or `translation_frame<T, 3>()` respectively, etc.
+// `translation_mat()` or `translation_frame()` respectively, etc.
 // For rotation we support axis-angle and quaternions, with slerp.
 //
 //
@@ -41,31 +69,31 @@
 //
 // The library supports basic geomtry functions such as computing
 // line/triangle/quad normals and areas, picking points on triangles
-// and the like. In these functions triangles are parametrized with us written
-// w.r.t the (v1-v0) and (v2-v0) axis respetively. Quads are internally handled
-// as pairs of two triangles v0,v1,v3 and v2,v3,v1, with the u/v coordinates
+// and the like. In these functions triangles are parameterized with us written
+// w.r.t the (p1-p0) and (p2-p0) axis respectively. Quads are internally handled
+// as pairs of two triangles p0,p1,p3 and p2,p3,p1, with the u/v coordinates
 // of the second triangle corrected as 1-u and 1-v to produce a quad
-// parametrization where u and v go from 0 to 1. Degenerate quads with v2==v3
+// parametrization where u and v go from 0 to 1. Degenerate quads with p2==p3
 // represent triangles correctly, an this convention is used throught the
 // library. This is equivalent to Intel's Embree.
 //
 //
 // ## Shape functions
 //
-// We provide a small number of utlities for shape manipulation for index
+// We provide a small number of utilities for shape manipulation for index
 // triangle and quad meshes, indexed line and point sets and indexed beziers.
-// The utlities collected here are written to support a global illujmination
+// The utliities collected here are written to support a global illumination
 // rendering and not for generic geometry processing. We support operation for
 // shape smoothing, shape subdivision (including Catmull-Clark subdivs), and
 // example shape creation.
 //
 // 1. compute line tangents, and triangle and quad areas and normals with
-//    `compute_line_tangents()`, `compute_triangle_normals()`,
-//    `compute_quad_normals()`
-// 2. interpolate values over primitives with `eval_line()`,
-//    `eval_triangle()` and `eval_quad()`
-// 3. evaluate Bezier curves and derivatives with `eval_bezier()` and
-//    `eval_bezier_derivative()`
+//    `line_tangent()`, `triamgle_normal()`, `quad_normal()` and 
+//    `line_length()`, `triangle_area()` and `quad_normal()`
+// 2. interpolate values over primitives with `interpolate_line()`,
+//    `interpolate_triangle()` and `interpolate_quad()`
+// 3. evaluate Bezier curves and derivatives with `interpolate_bezier()` and
+//    `interpolate_bezier_derivative()`
 // 4. compute smooth normals and tangents with `compute_normals()`
 //   `compute_tangents()`
 // 5. compute tangent frames from texture coordinates with
@@ -81,7 +109,7 @@
 // 8. shape sampling with `sample_points()`, `sample_lines()`,
 //    `sample_triangles()`; initialize the sampling CDFs with
 //    `sample_points_cdf()`, `sample_lines_cdf()`, `sample_triangles_cdf()`
-// 9.  samnple a could of point over a surface with `sample_triangles_points()`
+// 9.  sample a could of point over a surface with `sample_triangles_points()`
 // 10. get edges and boundaries with `get_edges()`
 // 11. convert quads to triangles with `convert_quads_to_triangles()`
 // 12. convert face varying to vertex shared representations with
@@ -127,8 +155,8 @@
 // real-time graphics. A scene if represented as transformed instances of
 // shapes. The internal data structure is a two-level BVH, with a BVH for each
 // shape and one top-level BVH for the whole scene. This design support
-// ionstancing for large scenes and easy BVH refitting for interactive
-// applictions.
+// instancing for large scenes and easy BVH refitting for interactive
+// applications.
 //
 // 1. fill the shape or instance data
 // 2. build the BVH with `build_bvh()`
@@ -140,7 +168,7 @@
 // ## Image Utilities
 //
 // Yocto/GL supports a very small set is color and image utilities including
-// color utilitis, example image creation, tonempping, image resizing, and
+// color utilities, example image creation, tone mapping, image resizing, and
 // sunsky procedural images. Yocto/Image is written to support the need of a
 // minimal, but fully-featured, global illumination renderer, rather than the
 // need of generic image editing.
@@ -148,9 +176,10 @@
 // 0. load and save image with Yocto/GLIO
 // 1. create images with `image<T>` data structure
 // 2. resize images with `resize_image()`
-// 3. tonemap images with `tonemap_image()`
-// 5. make various image examples with the `make_XXX_image()` functions
-// 6. create procedural sun-sky images with `make_sunsky_image()`
+// 3. tonemap images with `tonemap_exposuregamma()` that support exposure/gamma
+//    with a filmic curve
+// 5. make various image examples with the `make_XXX_image4f()` functions
+// 6. create procedural sun-sky images with `make_sunsky_image4f()`
 //
 //
 // # Simple scene representation
@@ -171,13 +200,12 @@
 //
 // 1. load a scene with Yocto/GLIO,
 // 2. add missing data with `add_XXX()` functions
-// 3. use `update_bbox()` to compute element bounds
+// 3. use compute_bbox()` to compute element bounds
 // 4. can merge scene together with `merge_into()`
 // 5. make scene elements with `make_XXX()` functions
-// 6. make procedural elements and scenes with `make_proc_XXX()` functions
-// 7. for ray-intersection and closest point queries, a BVH can be created with
+// 8. for ray-intersection and closest point queries, a BVH can be created with
 //    `update_bvh()` and refit with `refit_bvh()`
-// 8. compute interpolated values over scene elements with `eval_XXX()`
+// 9. compute interpolated values over scene elements with `eval_XXX()`
 //    functions
 //
 //
@@ -198,12 +226,11 @@
 // general (you can even more an arbitrary shape sun). For now only the first
 // env is used.
 //
-// 1. prepare the scene for tracing
-//    - build the ray-tracing acceleration structure with `update_bvh()`
-//     - prepare lights for rendering with `update_lights()`
-// 2. create the inmage buffer and random number generators `make_trace_rngs()`
-// 3. render blocks of samples with `trace_samples()`
-// 4. you can also start an asynchronous renderer with `trace_asynch_start()`
+// 1. prepare the ray-tracing acceleration structure with `build_bvh()`
+// 2. prepare lights for rendering with `make_trace_lights()`
+// 3. create the image buffer and random number generators `make_trace_state()`
+// 4. render blocks of samples with `trace_samples()`
+// 5. you can also start an asynchronous renderer with `trace_asynch_start()`
 //
 //
 //
@@ -244,6 +271,10 @@
 #ifndef _YGL_H_
 #define _YGL_H_
 
+#ifndef YGL_EMBREE
+#define YGL_EMBREE 1
+#endif
+
 // -----------------------------------------------------------------------------
 // INCLUDES
 // -----------------------------------------------------------------------------
@@ -251,17 +282,16 @@
 #include <algorithm>  // for std::upper_bound
 #include <cctype>
 #include <cfloat>
-#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <functional>  // for std::hash
-#include <iostream>
 #include <limits>
 #include <string>
 #include <thread>
+#include <atomic>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -271,12 +301,14 @@
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+using std::abs;
 using std::acos;
 using std::asin;
 using std::atan;
 using std::atan2;
 using std::cos;
 using std::exp;
+using std::exp2;
 using std::fabs;
 using std::floor;
 using std::isfinite;
@@ -290,23 +322,41 @@ using std::tan;
 using byte = unsigned char;
 using uint = unsigned int;
 
-// const auto pi_d = 3.14159265358979323846;
-const auto pi = 3.14159265f;
-const auto flt_max = FLT_MAX;
-const auto flt_min = -FLT_MAX;
-const auto flt_eps = FLT_EPSILON;
+template<typename T>
+inline T min(const T& x, const T& y) { return (x < y) ? x : y; }
+template<typename T>
+inline T max(const T& x, const T& y) { return (x > y) ? x : y; }
+template<typename T>
+inline T clamp(const T& x, const T& min_, const T& max_) { return min(max(x, min_), max_); }
+template<typename T, typename T1>
+inline T lerp(const T& a, const T& b, T1 u) { return a * (1 - u) + b * u; }
 
-inline int abs(int x) { return (x < 0) ? -x : x; }
-inline float abs(float x) { return (x < 0) ? -x : x; }
-inline int min(int x, int y) { return (x < y) ? x : y; }
-inline float min(float x, float y) { return (x < y) ? x : y; }
-inline int max(int x, int y) { return (x > y) ? x : y; }
-inline float max(float x, float y) { return (x > y) ? x : y; }
-inline int clamp(int x, int min_, int max_) { return min(max(x, min_), max_); }
-inline float clamp(float x, float min_, float max_) {
-    return min(max(x, min_), max_);
+template <class T>
+const T mint_ = std::numeric_limits<T>::lowest();
+template <class T>
+const T maxt_ = std::numeric_limits<T>::max();
+template <class T>
+const T epst_ = std::numeric_limits<T>::epsilon();
+
+// type limits with simpler interface
+template <typename T>
+inline T mint() {
+    return std::numeric_limits<T>::lowest();
 }
-inline float lerp(float a, float b, float u) { return a * (1 - u) + b * u; }
+template <typename T>
+inline T maxt() {
+    return std::numeric_limits<T>::max();
+}
+template <typename T>
+inline T epst() {
+    return std::numeric_limits<T>::epsilon();
+}
+const auto maxf = maxt<float>();
+const auto epsf = epst<float>();
+
+template <class T>
+const T pi = (T)3.14159265358979323846;
+const auto pif = 3.14159265f;
 
 }  // namespace ygl
 
@@ -316,52 +366,33 @@ inline float lerp(float a, float b, float u) { return a * (1 - u) + b * u; }
 namespace ygl {
 
 // Small size vectors.
-template <typename T, int N>
-struct vec;
-
-// Small size vectors.
 template <typename T>
-struct vec<T, 2> {
-    // constructurs
-    vec() : x{0}, y{0} {}
-    vec(T x_, T y_) : x{x_}, y{y_} {}
-
-    // elements
+struct vec2 {
     T x = 0;
     T y = 0;
 };
 template <typename T>
-struct vec<T, 3> {
-    // constructurs
-    vec() : x{0}, y{0}, z{0} {}
-    vec(T x_, T y_, T z_) : x{x_}, y{y_}, z{z_} {}
-
-    // elements
+struct vec3 {
     T x = 0;
     T y = 0;
     T z = 0;
 };
 template <typename T>
-struct vec<T, 4> {
-    // constructurs
-    vec() : x{0}, y{0}, z{0}, w{0} {}
-    vec(T x_, T y_, T z_, T w_) : x{x_}, y{y_}, z{z_}, w{w_} {}
-
-    // elements
+struct vec4 {
     T x = 0;
     T y = 0;
     T z = 0;
     T w = 0;
 };
 
-// Type aliases
-using vec2f = vec<float, 2>;
-using vec3f = vec<float, 3>;
-using vec4f = vec<float, 4>;
-using vec2i = vec<int, 2>;
-using vec3i = vec<int, 3>;
-using vec4i = vec<int, 4>;
-using vec4b = vec<byte, 4>;
+// Type aliases.
+using vec2f = vec2<float>;
+using vec3f = vec3<float>;
+using vec4f = vec4<float>;
+using vec2i = vec2<int>;
+using vec3i = vec3<int>;
+using vec4i = vec4<int>;
+using vec4b = vec4<byte>;
 
 // Zero vector constants.
 const auto zero2f = vec2f{0, 0};
@@ -372,232 +403,385 @@ const auto zero3i = vec3i{0, 0, 0};
 const auto zero4i = vec4i{0, 0, 0, 0};
 const auto zero4b = vec4b{0, 0, 0, 0};
 
-// Access xyz component of a vec4 typically used for color operation.
+// Access component by index.
 template <typename T>
-inline const vec<T, 3>& xyz(const vec<T, 4>& a) {
-    return (vec<T, 3>&)a;
+inline const T& at(const vec3<T>& v, int i) {
+    return *(&v.x + i);
 }
 template <typename T>
-inline vec<T, 3>& xyz(vec<T, 4>& a) {
-    return (vec<T, 3>&)a;
+inline T& at(vec3<T>& v, int i) {
+    return *(&v.x + i);
+}
+
+// Access xyz component of a vec4 typically used for color operation.
+template <typename T>
+inline vec3<T>& xyz(const vec4<T>& a) {
+    return (vec3<T>&)a;
+}
+template <typename T>
+inline vec3<T>& xyz(vec4<T>& a) {
+    return (vec3<T>&)a;
 }
 
 // Vector comparison operations.
 template <typename T>
-inline bool operator==(const vec<T, 2>& a, const vec<T, 2>& b) {
+inline bool operator==(const vec2<T>& a, const vec2<T>& b) {
     return a.x == b.x && a.y == b.y;
 }
 template <typename T>
-inline bool operator!=(const vec<T, 2>& a, const vec<T, 2>& b) {
+inline bool operator!=(const vec2<T>& a, const vec2<T>& b) {
     return a.x != b.x || a.y != b.y;
 }
+template <typename T, typename T1>
+inline bool operator==(const vec2<T>& a, T1 b) {
+    return a.x == b && a.y == b;
+}
+template <typename T, typename T1>
+inline bool operator!=(const vec2<T>& a, T1 b) {
+    return a.x != b || a.y != b;
+}
 template <typename T>
-inline bool operator==(const vec<T, 3>& a, const vec<T, 3>& b) {
+inline bool operator==(const vec3<T>& a, const vec3<T>& b) {
     return a.x == b.x && a.y == b.y && a.z == b.z;
 }
 template <typename T>
-inline bool operator!=(const vec<T, 3>& a, const vec<T, 3>& b) {
+inline bool operator!=(const vec3<T>& a, const vec3<T>& b) {
     return a.x != b.x || a.y != b.y || a.z != b.z;
 }
+template <typename T, typename T1>
+inline bool operator==(const vec3<T>& a, T1 b) {
+    return a.x == b && a.y == b && a.z == b;
+}
+template <typename T, typename T1>
+inline bool operator!=(const vec3<T>& a, T1 b) {
+    return a.x != b || a.y != b || a.z != b;
+}
 template <typename T>
-inline bool operator==(const vec<T, 4>& a, const vec<T, 4>& b) {
+inline bool operator==(const vec4<T>& a, const vec4<T>& b) {
     return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
 }
 template <typename T>
-inline bool operator!=(const vec<T, 4>& a, const vec<T, 4>& b) {
+inline bool operator!=(const vec4<T>& a, const vec4<T>& b) {
     return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
+}
+template <typename T, typename T1>
+inline bool operator==(const vec4<T>& a, T1 b) {
+    return a.x == b && a.y == b && a.z == b && a.w == b;
+}
+template <typename T, typename T1>
+inline bool operator!=(const vec4<T>& a, T1 b) {
+    return a.x != b || a.y != b || a.z != b || a.w != b;
 }
 
 // Vector operations.
 template <typename T>
-inline vec<T, 2> operator-(const vec<T, 2>& a) {
+inline vec2<T> operator-(const vec2<T>& a) {
     return {-a.x, -a.y};
 }
 template <typename T>
-inline vec<T, 2> operator+(const vec<T, 2>& a, const vec<T, 2>& b) {
+inline vec2<T> operator+(const vec2<T>& a, const vec2<T>& b) {
     return {a.x + b.x, a.y + b.y};
 }
-template <typename T>
-inline vec<T, 2> operator-(const vec<T, 2>& a, const vec<T, 2>& b) {
-    return {a.x - b.x, a.y - b.y};
+template <typename T, typename T1>
+inline vec2<T> operator+(const vec2<T>& a, T1 b) {
+    return {a.x + b, a.y + b};
+}
+template <typename T, typename T1>
+inline vec2<T> operator+(T1 a, const vec2<T>& b) {
+    return {a + b.x, a + b.y};
 }
 template <typename T>
-inline vec<T, 2> operator*(const vec<T, 2>& a, const vec<T, 2>& b) {
+inline vec2<T> operator-(const vec2<T>& a, const vec2<T>& b) {
+    return {a.x - b.x, a.y - b.y};
+}
+template <typename T, typename T1>
+inline vec2<T> operator-(const vec2<T>& a, T1 b) {
+    return {a.x - b, a.y - b};
+}
+template <typename T, typename T1>
+inline vec2<T> operator-(T1 a, const vec2<T>& b) {
+    return {a - b.x, a - b.y};
+}
+template <typename T>
+inline vec2<T> operator*(const vec2<T>& a, const vec2<T>& b) {
     return {a.x * b.x, a.y * b.y};
 }
 template <typename T, typename T1>
-inline vec<T, 2> operator*(const vec<T, 2>& a, T1 b) {
+inline vec2<T> operator*(const vec2<T>& a, T1 b) {
     return {a.x * b, a.y * b};
 }
 template <typename T, typename T1>
-inline vec<T, 2> operator*(T1 a, const vec<T, 2>& b) {
+inline vec2<T> operator*(T1 a, const vec2<T>& b) {
     return {a * b.x, a * b.y};
 }
 template <typename T>
-inline vec<T, 2> operator/(const vec<T, 2>& a, const vec<T, 2>& b) {
+inline vec2<T> operator/(const vec2<T>& a, const vec2<T>& b) {
     return {a.x / b.x, a.y / b.y};
 }
 template <typename T, typename T1>
-inline vec<T, 2> operator/(const vec<T, 2>& a, T1 b) {
+inline vec2<T> operator/(const vec2<T>& a, T1 b) {
     return {a.x / b, a.y / b};
 }
 template <typename T, typename T1>
-inline vec<T, 2> operator/(T1 a, const vec<T, 2>& b) {
+inline vec2<T> operator/(T1 a, const vec2<T>& b) {
     return {a / b.x, a / b.y};
 }
 
 // Vector operations.
 template <typename T>
-inline vec<T, 3> operator+(const vec<T, 3>& a) {
+inline vec3<T> operator+(const vec3<T>& a) {
     return a;
 }
 template <typename T>
-inline vec<T, 3> operator-(const vec<T, 3>& a) {
+inline vec3<T> operator-(const vec3<T>& a) {
     return {-a.x, -a.y, -a.z};
 }
 template <typename T>
-inline vec<T, 3> operator+(const vec<T, 3>& a, const vec<T, 3>& b) {
+inline vec3<T> operator+(const vec3<T>& a, const vec3<T>& b) {
     return {a.x + b.x, a.y + b.y, a.z + b.z};
 }
-template <typename T>
-inline vec<T, 3> operator-(const vec<T, 3>& a, const vec<T, 3>& b) {
-    return {a.x - b.x, a.y - b.y, a.z - b.z};
+template <typename T, typename T1>
+inline vec3<T> operator+(const vec3<T>& a, T1 b) {
+    return {a.x + b, a.y + b, a.z + b};
+}
+template <typename T, typename T1>
+inline vec3<T> operator+(T1 a, const vec3<T>& b) {
+    return {a + b.x, a + b.y, a + b.z};
 }
 template <typename T>
-inline vec<T, 3> operator*(const vec<T, 3>& a, const vec<T, 3>& b) {
+inline vec3<T> operator-(const vec3<T>& a, const vec3<T>& b) {
+    return {a.x - b.x, a.y - b.y, a.z - b.z};
+}
+template <typename T, typename T1>
+inline vec3<T> operator-(const vec3<T>& a, T1 b) {
+    return {a.x - b, a.y - b, a.z - b};
+}
+template <typename T, typename T1>
+inline vec3<T> operator-(T1 a, const vec3<T>& b) {
+    return {a - b.x, a - b.y, a - b.z};
+}
+template <typename T>
+inline vec3<T> operator*(const vec3<T>& a, const vec3<T>& b) {
     return {a.x * b.x, a.y * b.y, a.z * b.z};
 }
 template <typename T, typename T1>
-inline vec<T, 3> operator*(const vec<T, 3>& a, T1 b) {
+inline vec3<T> operator*(const vec3<T>& a, T1 b) {
     return {a.x * b, a.y * b, a.z * b};
 }
 template <typename T, typename T1>
-inline vec<T, 3> operator*(T1 a, const vec<T, 3>& b) {
+inline vec3<T> operator*(T1 a, const vec3<T>& b) {
     return {a * b.x, a * b.y, a * b.z};
 }
 template <typename T>
-inline vec<T, 3> operator/(const vec<T, 3>& a, const vec<T, 3>& b) {
+inline vec3<T> operator/(const vec3<T>& a, const vec3<T>& b) {
     return {a.x / b.x, a.y / b.y, a.z / b.z};
 }
 template <typename T, typename T1>
-inline vec<T, 3> operator/(const vec<T, 3>& a, T1 b) {
+inline vec3<T> operator/(const vec3<T>& a, T1 b) {
     return {a.x / b, a.y / b, a.z / b};
 }
 template <typename T, typename T1>
-inline vec<T, 3> operator/(T1 a, const vec<T, 3>& b) {
+inline vec3<T> operator/(T1 a, const vec3<T>& b) {
     return {a / b.x, a / b.y, a / b.z};
 }
 
 // Vector operations.
 template <typename T>
-inline vec<T, 4> operator-(const vec<T, 4>& a) {
+inline vec4<T> operator-(const vec4<T>& a) {
     return {-a.x, -a.y, -a.z, -a.w};
 }
 template <typename T>
-inline vec<T, 4> operator+(const vec<T, 4>& a, const vec<T, 4>& b) {
+inline vec4<T> operator+(const vec4<T>& a, const vec4<T>& b) {
     return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
 }
-template <typename T>
-inline vec<T, 4> operator-(const vec<T, 4>& a, const vec<T, 4>& b) {
-    return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
+template <typename T, typename T1>
+inline vec4<T> operator+(const vec4<T>& a, T1 b) {
+    return {a.x + b, a.y + b, a.z + b, a.w + b};
+}
+template <typename T, typename T1>
+inline vec4<T> operator+(T1 a, const vec4<T>& b) {
+    return {a + b.x, a + b.y, a + b.z, a + b.w};
 }
 template <typename T>
-inline vec<T, 4> operator*(const vec<T, 4>& a, const vec<T, 4>& b) {
+inline vec4<T> operator-(const vec4<T>& a, const vec4<T>& b) {
+    return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
+}
+template <typename T, typename T1>
+inline vec4<T> operator-(const vec4<T>& a, T1 b) {
+    return {a.x - b, a.y - b, a.z - b, a.w - b};
+}
+template <typename T, typename T1>
+inline vec4<T> operator-(T1 a, const vec4<T>& b) {
+    return {a - b.x, a - b.y, a - b.z, a - b.w};
+}
+template <typename T>
+inline vec4<T> operator*(const vec4<T>& a, const vec4<T>& b) {
     return {a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
 }
 template <typename T, typename T1>
-inline vec<T, 4> operator*(const vec<T, 4>& a, T1 b) {
+inline vec4<T> operator*(const vec4<T>& a, T1 b) {
     return {a.x * b, a.y * b, a.z * b, a.w * b};
 }
 template <typename T, typename T1>
-inline vec<T, 4> operator*(T1 a, const vec<T, 4>& b) {
+inline vec4<T> operator*(T1 a, const vec4<T>& b) {
     return {a * b.x, a * b.y, a * b.z, a * b.w};
 }
 template <typename T>
-inline vec<T, 4> operator/(const vec<T, 4>& a, const vec<T, 4>& b) {
+inline vec4<T> operator/(const vec4<T>& a, const vec4<T>& b) {
     return {a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w};
 }
 template <typename T, typename T1>
-inline vec<T, 4> operator/(const vec<T, 4>& a, T1 b) {
+inline vec4<T> operator/(const vec4<T>& a, T1 b) {
     return {a.x / b, a.y / b, a.z / b, a.w / b};
 }
 template <typename T, typename T1>
-inline vec<T, 4> operator/(T1 a, const vec<T, 4>& b) {
+inline vec4<T> operator/(T1 a, const vec4<T>& b) {
     return {a / b.x, a / b.y, a / b.z, a / b.w};
 }
 
 // Vector assignments
-template <typename T, int N>
-inline vec<T, N>& operator+=(vec<T, N>& a, const vec<T, N>& b) {
+template <typename T>
+inline vec2<T>& operator+=(vec2<T>& a, const vec2<T>& b) {
     return a = a + b;
 }
-template <typename T, int N>
-inline vec<T, N>& operator-=(vec<T, N>& a, const vec<T, N>& b) {
+template <typename T, typename T1>
+inline vec2<T>& operator+=(vec2<T>& a, T1 b) {
+    return a = a + b;
+}
+template <typename T>
+inline vec2<T>& operator-=(vec2<T>& a, const vec2<T>& b) {
     return a = a - b;
 }
-template <typename T, int N, typename T1>
-inline vec<T, N>& operator*=(vec<T, N>& a, const vec<T, N>& b) {
+template <typename T, typename T1>
+inline vec2<T>& operator-=(vec2<T>& a, T1 b) {
+    return a = a - b;
+}
+template <typename T>
+inline vec2<T>& operator*=(vec2<T>& a, const vec2<T>& b) {
     return a = a * b;
 }
-template <typename T, int N, typename T1>
-inline vec<T, N>& operator*=(vec<T, N>& a, T1 b) {
+template <typename T, typename T1>
+inline vec2<T>& operator*=(vec2<T>& a, T1 b) {
     return a = a * b;
 }
-template <typename T, int N>
-inline vec<T, N>& operator/=(vec<T, N>& a, const vec<T, N>& b) {
+template <typename T>
+inline vec2<T>& operator/=(vec2<T>& a, const vec2<T>& b) {
     return a = a / b;
 }
-template <typename T, int N, typename T1>
-inline vec<T, N>& operator/=(vec<T, N>& a, T1 b) {
+template <typename T, typename T1>
+inline vec2<T>& operator/=(vec2<T>& a, T1 b) {
+    return a = a / b;
+}
+
+// Vector assignments
+template <typename T>
+inline vec3<T>& operator+=(vec3<T>& a, const vec3<T>& b) {
+    return a = a + b;
+}
+template <typename T>
+inline vec3<T>& operator-=(vec3<T>& a, const vec3<T>& b) {
+    return a = a - b;
+}
+template <typename T>
+inline vec3<T>& operator*=(vec3<T>& a, const vec3<T>& b) {
+    return a = a * b;
+}
+template <typename T, typename T1>
+inline vec3<T>& operator*=(vec3<T>& a, T1 b) {
+    return a = a * b;
+}
+template <typename T>
+inline vec3<T>& operator/=(vec3<T>& a, const vec3<T>& b) {
+    return a = a / b;
+}
+template <typename T, typename T1>
+inline vec3<T>& operator/=(vec3<T>& a, T1 b) {
+    return a = a / b;
+}
+
+// Vector assignments
+template <typename T>
+inline vec4<T>& operator+=(vec4<T>& a, const vec4<T>& b) {
+    return a = a + b;
+}
+template <typename T>
+inline vec4<T>& operator-=(vec4<T>& a, const vec4<T>& b) {
+    return a = a - b;
+}
+template <typename T>
+inline vec4<T>& operator*=(vec4<T>& a, const vec4<T>& b) {
+    return a = a * b;
+}
+template <typename T, typename T1>
+inline vec4<T>& operator*=(vec4<T>& a, T1 b) {
+    return a = a * b;
+}
+template <typename T>
+inline vec4<T>& operator/=(vec4<T>& a, const vec4<T>& b) {
+    return a = a / b;
+}
+template <typename T, typename T1>
+inline vec4<T>& operator/=(vec4<T>& a, T1 b) {
     return a = a / b;
 }
 
 // Vector products and lengths.
 template <typename T>
-inline float dot(const vec<T, 2>& a, const vec<T, 2>& b) {
+inline T dot(const vec2<T>& a, const vec2<T>& b) {
     return a.x * b.x + a.y * b.y;
 }
 template <typename T>
-inline float dot(const vec<T, 3>& a, const vec<T, 3>& b) {
-    return a.x * b.x + a.y * b.y + a.z * b.z;
+inline T length(const vec2<T>& a) {
+    return sqrt(a.x * a.x + a.y * a.y);
 }
 template <typename T>
-inline float dot(const vec<T, 4>& a, const vec<T, 4>& b) {
-    return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+inline vec2<T> normalize(const vec2<T>& a) {
+    auto l = length(a);
+    return (l) ? a / l : a;
 }
 template <typename T>
-inline float cross(const vec<T, 2>& a, const vec<T, 2>& b) {
+inline T cross(const vec2<T>& a, const vec2<T>& b) {
     return a.x * b.y - a.y * b.x;
 }
 template <typename T>
-inline vec<T, 3> cross(const vec<T, 3>& a, const vec<T, 3>& b) {
+inline T dot(const vec3<T>& a, const vec3<T>& b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+template <typename T>
+inline T length(const vec3<T>& a) {
+    return sqrt(a.x * a.x + a.y * a.y + a.z * a.z);
+}
+template <typename T>
+inline vec3<T> normalize(const vec3<T>& a) {
+    auto l = length(a);
+    return (l) ? a / l : a;
+}
+template <typename T>
+inline vec3<T> cross(const vec3<T>& a, const vec3<T>& b) {
     return {
         a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
 }
-template <typename T, int N>
-inline T length(const vec<T, N>& a) {
-    return sqrt(dot(a, a));
+template <typename T>
+inline T dot(const vec4<T>& a, const vec4<T>& b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 }
-template <typename T, int N>
-inline T length_sqr(const vec<T, N>& a) {
-    return dot(a, a);
+template <typename T>
+inline T length(const vec4<T>& a) {
+    return sqrt(a.x * a.x + a.y * a.y + a.z * a.z + a.w * a.w);
 }
-template <typename T, int N>
-inline vec<T, N> normalize(const vec<T, N>& a) {
-    return length(a) ? a / length(a) : a;
-}
-template <typename T, int N>
-inline T adot(const vec<T, N>& a, const vec<T, N>& b) {
-    return fabs(dot(a, b));
+template <typename T>
+inline vec4<T> normalize(const vec4<T>& a) {
+    auto l = length(a);
+    return (l) ? a / l : a;
 }
 
-// Vecror angles and slerps.
+// Vector angles and slerps.
 template <typename T>
-inline T angle(const vec<T, 3>& a, const vec<T, 3>& b) {
+inline T angle(const vec3<T>& a, const vec3<T>& b) {
     return acos(clamp(dot(normalize(a), normalize(b)), -1.0f, 1.0f));
 }
 template <typename T, typename T1>
-inline vec<T, 4> slerp(const vec<T, 4>& a, const vec<T, 4>& b, T1 u) {
+inline vec4<T> slerp(const vec4<T>& a, const vec4<T>& b, T1 u) {
     // https://en.wikipedia.org/wiki/Slerp
     auto an = normalize(a), bn = normalize(b);
     auto d = dot(an, bn);
@@ -605,121 +789,96 @@ inline vec<T, 4> slerp(const vec<T, 4>& a, const vec<T, 4>& b, T1 u) {
         bn = -bn;
         d = -d;
     }
-    if (d > (T)0.9995) return normalize(an + u * (bn - an));
-    auto th = acos(clamp(d, (T)-1, (T)1));
+    if (d > 0.9995f) return normalize(an + u * (bn - an));
+    auto th = acos(clamp(d, -1.0f, 1.0f));
     if (!th) return an;
     return an * (sin(th * (1 - u)) / sin(th)) + bn * (sin(th * u) / sin(th));
 }
 
 // Orthogonal vectors.
 template <typename T>
-inline vec<T, 3> orthogonal(const vec<T, 3>& v) {
+inline vec3<T> orthogonal(const vec3<T>& v) {
     // http://lolengine.net/blog/2013/09/21/picking-orthogonal-vector-combing-coconuts)
-    return fabs(v.x) > fabs(v.z) ? vec<T, 3>{-v.y, v.x, 0} :
-                                   vec<T, 3>{0, -v.z, v.y};
+    return fabs(v.x) > fabs(v.z) ? vec3<T>{-v.y, v.x, 0} :
+                                   vec3<T>{0, -v.z, v.y};
 }
 template <typename T>
-inline vec<T, 3> orthonormalize(const vec<T, 3>& a, const vec<T, 3>& b) {
+inline vec3<T> orthonormalize(const vec3<T>& a, const vec3<T>& b) {
     return normalize(a - b * dot(a, b));
 }
 
 // Reflected and refracted vector.
 template <typename T>
-inline vec<T, 3> reflect(const vec<T, 3>& w, const vec<T, 3>& n) {
+inline vec3<T> reflect(const vec3<T>& w, const vec3<T>& n) {
     return -w + 2 * dot(n, w) * n;
 }
 template <typename T, typename T1>
-inline vec<T, 3> refract(const vec<T, 3>& w, const vec<T, 3>& n, T1 eta) {
+inline vec3<T> refract(const vec3<T>& w, const vec3<T>& n, T1 eta) {
     // auto k = 1.0 - eta * eta * (1.0 - dot(n, w) * dot(n, w));
-    auto k = 1 - eta * eta * max((T)0, (T)1 - dot(n, w) * dot(n, w));
-    if (k < 0) return vec<T, 3>();  // tir
+    auto k = 1 - eta * eta * max(0.0f, 1 - dot(n, w) * dot(n, w));
+    if (k < 0) return {0, 0, 0};  // tir
     return -w * eta + (eta * dot(n, w) - sqrt(k)) * n;
 }
 
 // Max element and clamp.
-template <typename T, typename T1>
-inline vec<T, 2> clamp(const vec<T, 2>& x, T1 min, T1 max) {
+template <typename T, typename T1, typename T2>
+inline vec2<T> clamp(const vec2<T>& x, T1 min, T2 max) {
     return {clamp(x.x, min, max), clamp(x.y, min, max)};
 }
-template <typename T, typename T1>
-inline vec<T, 3> clamp(const vec<T, 3>& x, T1 min, T1 max) {
+template <typename T, typename T1, typename T2>
+inline vec3<T> clamp(const vec3<T>& x, T1 min, T2 max) {
     return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max)};
 }
-template <typename T, typename T1>
-inline vec<T, 4> clamp(const vec<T, 4>& x, T1 min, T1 max) {
+template <typename T, typename T1, typename T2>
+inline vec4<T> clamp(const vec4<T>& x, T1 min, T2 max) {
     return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max),
         clamp(x.w, min, max)};
 }
 template <typename T>
-inline T max(const vec<T, 2>& a) {
+inline T max(const vec2<T>& a) {
     return max(a.x, a.y);
 }
 template <typename T>
-inline T max(const vec<T, 3>& a) {
+inline T max(const vec3<T>& a) {
     return max(max(a.x, a.y), a.z);
 }
 template <typename T>
-inline T max(const vec<T, 4>& a) {
+inline T max(const vec4<T>& a) {
     return max(max(max(a.x, a.y), a.z), a.w);
 }
 template <typename T>
-inline T min(const vec<T, 2>& a) {
+inline T min(const vec2<T>& a) {
     return min(a.x, a.y);
 }
 template <typename T>
-inline T min(const vec<T, 3>& a) {
+inline T min(const vec3<T>& a) {
     return min(min(a.x, a.y), a.z);
 }
 template <typename T>
-inline T min(const vec<T, 4>& a) {
+inline T min(const vec4<T>& a) {
     return min(min(min(a.x, a.y), a.z), a.w);
 }
 
 // Quaternion operatons represented as xi + yj + zk + w
-const auto identity_quat4f = vec<float, 4>{0, 0, 0, 1};
+const auto identity_quat4f = vec4f{0, 0, 0, 1};
 template <typename T>
-inline vec<T, 4> quat_mul(const vec<T, 4>& a, float b) {
+inline vec4<T> quat_mul(const vec4<T>& a, float b) {
     return {a.x * b, a.y * b, a.z * b, a.w * b};
 }
 template <typename T>
-inline vec<T, 4> quat_mul(const vec<T, 4>& a, const vec<T, 4>& b) {
+inline vec4<T> quat_mul(const vec4<T>& a, const vec4<T>& b) {
     return {a.x * b.w + a.w * b.x + a.y * b.w - a.z * b.y,
         a.y * b.w + a.w * b.y + a.z * b.x - a.x * b.z,
         a.z * b.w + a.w * b.z + a.x * b.y - a.y * b.x,
         a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z};
 }
 template <typename T>
-inline vec<T, 4> quat_conjugate(const vec<T, 4>& a) {
+inline vec4<T> quat_conjugate(const vec4<T>& a) {
     return {-a.x, -a.y, -a.z, a.w};
 }
 template <typename T>
-inline vec<T, 4> quat_inverse(const vec<T, 4>& a) {
-    return quat_conjugate(a) / length_sqr(a);
-}
-
-template <typename T>
-std::ostream& operator<<(std::ostream& os, const vec<T, 2>& a) {
-    return os << a.x << " " << a.y;
-}
-template <typename T>
-std::ostream& operator<<(std::ostream& os, const vec<T, 3>& a) {
-    return os << a.x << " " << a.y << " " << a.z;
-}
-template <typename T>
-std::ostream& operator<<(std::ostream& os, const vec<T, 4>& a) {
-    return os << a.x << " " << a.y << " " << a.z << " " << a.w;
-}
-template <typename T>
-std::istream& operator>>(std::istream& is, vec<T, 2>& a) {
-    return is >> a.x >> a.y;
-}
-template <typename T>
-std::istream& operator>>(std::istream& is, vec<T, 3>& a) {
-    return is >> a.x >> a.y >> a.z;
-}
-template <typename T>
-std::istream& operator>>(std::istream& is, vec<T, 4>& a) {
-    return is >> a.x >> a.y >> a.z >> a.w;
+inline vec4<T> quat_inverse(const vec4<T>& a) {
+    return quat_conjugate(a) / dot(a, a);
 }
 
 }  // namespace ygl
@@ -727,12 +886,34 @@ std::istream& operator>>(std::istream& is, vec<T, 4>& a) {
 namespace std {
 
 // Hash functor for vector for use with unordered_map
-template <typename T, int N>
-struct hash<ygl::vec<T, N>> {
-    size_t operator()(const ygl::vec<T, N>& v) const {
+template <typename T>
+struct hash<ygl::vec2<T>> {
+    size_t operator()(const ygl::vec2<T>& v) const {
         auto vh = hash<T>();
         auto h = (size_t)0;
-        for (auto i = 0; i < N; i++)
+        for (auto i = 0; i < 2; i++)
+            h ^= vh((&v.x)[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        return h;
+    }
+};
+// Hash functor for vector for use with unordered_map
+template <typename T>
+struct hash<ygl::vec3<T>> {
+    size_t operator()(const ygl::vec3<T>& v) const {
+        auto vh = hash<int>();
+        auto h = (size_t)0;
+        for (auto i = 0; i < 3; i++)
+            h ^= vh((&v.x)[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        return h;
+    }
+};
+// Hash functor for vector for use with unordered_map
+template <typename T>
+struct hash<ygl::vec4<T>> {
+    size_t operator()(const ygl::vec4<T>& v) const {
+        auto vh = hash<int>();
+        auto h = (size_t)0;
+        for (auto i = 0; i < 4; i++)
             h ^= vh((&v.x)[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
         return h;
     }
@@ -746,51 +927,29 @@ struct hash<ygl::vec<T, N>> {
 namespace ygl {
 
 // Small Fixed-size square matrices stored in column major format.
-template <typename T, int N>
-struct mat;
-
-// Small Fixed-size square matrices stored in column major format.
 template <typename T>
-struct mat<T, 2> {
-    // constructors
-    mat() : x{1, 0}, y{0, 1} {}
-    mat(const vec<T, 2>& x_, const vec<T, 2>& y_) : x{x_}, y{y_} {}
-
-    // elements
-    vec<T, 2> x = {1, 0};
-    vec<T, 2> y = {0, 1};
+struct mat2 {
+    vec2<T> x = {1, 0};
+    vec2<T> y = {0, 1};
 };
 template <typename T>
-struct mat<T, 3> {
-    // constructors
-    mat() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1} {}
-    mat(const vec<T, 3>& x_, const vec<T, 3>& y_, const vec<T, 3>& z_)
-        : x{x_}, y{y_}, z{z_} {}
-
-    // elements
-    vec<T, 3> x = {1, 0, 0};
-    vec<T, 3> y = {0, 1, 0};
-    vec<T, 3> z = {0, 0, 1};
+struct mat3 {
+    vec3<T> x = {1, 0, 0};
+    vec3<T> y = {0, 1, 0};
+    vec3<T> z = {0, 0, 1};
 };
 template <typename T>
-struct mat<T, 4> {
-    // constructors
-    mat() : x{1, 0, 0, 0}, y{0, 1, 0, 0}, z{0, 0, 1, 0}, w{0, 0, 0, 1} {}
-    mat(const vec<T, 4>& x_, const vec<T, 4>& y_, const vec<T, 4>& z_,
-        const vec<T, 4>& w_)
-        : x{x_}, y{y_}, z{z_}, w{w_} {}
-
-    // elements
-    vec<T, 4> x = {1, 0, 0, 0};
-    vec<T, 4> y = {0, 1, 0, 0};
-    vec<T, 4> z = {0, 0, 1, 0};
-    vec<T, 4> w = {0, 0, 0, 1};
+struct mat4 {
+    vec4<T> x = {1, 0, 0, 0};
+    vec4<T> y = {0, 1, 0, 0};
+    vec4<T> z = {0, 0, 1, 0};
+    vec4<T> w = {0, 0, 0, 1};
 };
 
 // Type aliases.
-using mat2f = mat<float, 2>;
-using mat3f = mat<float, 3>;
-using mat4f = mat<float, 4>;
+using mat2f = mat2<float>;
+using mat3f = mat3<float>;
+using mat4f = mat4<float>;
 
 // Identity matrices constants.
 const auto identity_mat2f = mat2f();
@@ -799,195 +958,182 @@ const auto identity_mat4f = mat4f();
 
 // Matrix comparisons.
 template <typename T>
-inline bool operator==(const mat<T, 2>& a, const mat<T, 2>& b) {
+inline bool operator==(const mat2<T>& a, const mat2<T>& b) {
     return a.x == b.x && a.y == b.y;
 }
 template <typename T>
-inline bool operator!=(const mat<T, 2>& a, const mat<T, 2>& b) {
+inline bool operator!=(const mat2<T>& a, const mat2<T>& b) {
     return !(a == b);
 }
 template <typename T>
-inline bool operator==(const mat<T, 3>& a, const mat<T, 3>& b) {
+inline bool operator==(const mat3<T>& a, const mat3<T>& b) {
     return a.x == b.x && a.y == b.y && a.z == b.z;
 }
 template <typename T>
-inline bool operator!=(const mat<T, 3>& a, const mat<T, 3>& b) {
+inline bool operator!=(const mat3<T>& a, const mat3<T>& b) {
     return !(a == b);
 }
 template <typename T>
-inline bool operator==(const mat<T, 4>& a, const mat<T, 4>& b) {
+inline bool operator==(const mat4<T>& a, const mat4<T>& b) {
     return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
 }
 template <typename T>
-inline bool operator!=(const mat<T, 4>& a, const mat<T, 4>& b) {
+inline bool operator!=(const mat4<T>& a, const mat4<T>& b) {
     return !(a == b);
 }
 
 // Matrix operations.
 template <typename T>
-inline mat<T, 2> operator+(const mat<T, 2>& a, const mat<T, 2>& b) {
+inline mat2<T> operator+(const mat2<T>& a, const mat2<T>& b) {
     return {a.x + b.x, a.y + b.y};
 }
 template <typename T, typename T1>
-inline mat<T, 2> operator*(const mat<T, 2>& a, T1 b) {
+inline mat2<T> operator*(const mat2<T>& a, T1 b) {
     return {a.x * b, a.y * b};
 }
-template <typename T, typename T1>
-inline mat<T, 2> operator/(const mat<T, 2>& a, T1 b) {
-    return {a.x / b, a.y / b};
-}
 template <typename T>
-inline vec<T, 2> operator*(const mat<T, 2>& a, const vec<T, 2>& b) {
+inline vec2<T> operator*(const mat2<T>& a, const vec2f& b) {
     return a.x * b.x + a.y * b.y;
 }
 template <typename T>
-inline vec<T, 2> operator*(const vec<T, 2>& a, const mat<T, 2>& b) {
+inline vec2<T> operator*(const vec2f& a, const mat2<T>& b) {
     return {dot(a, b.x), dot(a, b.y)};
 }
 template <typename T>
-inline mat<T, 2> operator*(const mat<T, 2>& a, const mat<T, 2>& b) {
+inline mat2<T> operator*(const mat2<T>& a, const mat2<T>& b) {
     return {a * b.x, a * b.y};
 }
 
 // Matrix operations.
 template <typename T>
-inline mat<T, 3> operator+(const mat<T, 3>& a, const mat<T, 3>& b) {
+inline mat3<T> operator+(const mat3<T>& a, const mat3<T>& b) {
     return {a.x + b.x, a.y + b.y, a.z + b.z};
 }
 template <typename T, typename T1>
-inline mat<T, 3> operator*(const mat<T, 3>& a, T1 b) {
+inline mat3<T> operator*(const mat3<T>& a, T1 b) {
     return {a.x * b, a.y * b, a.z * b};
 }
-template <typename T, typename T1>
-inline mat<T, 3> operator/(const mat<T, 3>& a, T1 b) {
-    return {a.x / b, a.y / b, a.z / b};
-}
 template <typename T>
-inline vec<T, 3> operator*(const mat<T, 3>& a, const vec<T, 3>& b) {
+inline vec3<T> operator*(const mat3<T>& a, const vec3<T>& b) {
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 template <typename T>
-inline vec<T, 3> operator*(const vec<T, 3>& a, const mat<T, 3>& b) {
+inline vec3f operator*(const vec3f& a, const mat3<T>& b) {
     return {dot(a, b.x), dot(a, b.y), dot(a, b.z)};
 }
 template <typename T>
-inline mat<T, 3> operator*(const mat<T, 3>& a, const mat<T, 3>& b) {
+inline mat3<T> operator*(const mat3<T>& a, const mat3<T>& b) {
     return {a * b.x, a * b.y, a * b.z};
 }
 
 // Matrix operations.
 template <typename T>
-inline mat<T, 4> operator+(const mat<T, 4>& a, const mat<T, 4>& b) {
+inline mat4<T> operator+(const mat4<T>& a, const mat4<T>& b) {
     return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
 }
 template <typename T, typename T1>
-inline mat<T, 4> operator*(const mat<T, 4>& a, T1 b) {
+inline mat4<T> operator*(const mat4<T>& a, T1 b) {
     return {a.x * b, a.y * b, a.z * b, a.w * b};
 }
 template <typename T>
-inline vec<T, 4> operator*(const mat<T, 4>& a, const vec<T, 4>& b) {
+inline vec4<T> operator*(const mat4<T>& a, const vec4<T>& b) {
     return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 }
 template <typename T>
-inline vec<T, 4> operator*(const vec<T, 4>& a, const mat<T, 4>& b) {
+inline vec4<T> operator*(const vec4<T>& a, const mat4<T>& b) {
     return {dot(a, b.x), dot(a, b.y), dot(a, b.z), dot(a, b.w)};
 }
 template <typename T>
-inline mat<T, 4> operator*(const mat<T, 4>& a, const mat<T, 4>& b) {
+inline mat4<T> operator*(const mat4<T>& a, const mat4<T>& b) {
     return {a * b.x, a * b.y, a * b.z, a * b.w};
 }
 
 // Matrix assignments.
-template <typename T, int N>
-inline mat<T, N>& operator+=(mat<T, N>& a, const mat<T, N>& b) {
+template <typename T>
+inline mat2<T>& operator+=(mat2<T>& a, const mat2<T>& b) {
     return a = a + b;
 }
-template <typename T, int N>
-inline mat<T, N>& operator*=(mat<T, N>& a, const mat<T, N>& b) {
+template <typename T>
+inline mat2<T>& operator*=(mat2<T>& a, const mat2<T>& b) {
     return a = a * b;
 }
-template <typename T, int N, typename T1>
-inline mat<T, N>& operator*=(mat<T, N>& a, T1 b) {
+template <typename T, typename T1>
+inline mat2<T>& operator*=(mat2<T>& a, T1 b) {
+    return a = a * b;
+}
+
+// Matrix assignments.
+template <typename T>
+inline mat3<T>& operator+=(mat3<T>& a, const mat3<T>& b) {
+    return a = a + b;
+}
+template <typename T>
+inline mat3<T>& operator*=(mat3<T>& a, const mat3<T>& b) {
+    return a = a * b;
+}
+template <typename T, typename T1>
+inline mat3<T>& operator*=(mat3<T>& a, T1 b) {
+    return a = a * b;
+}
+
+// Matrix assignments.
+template <typename T>
+inline mat4<T>& operator+=(mat4<T>& a, const mat4<T>& b) {
+    return a = a + b;
+}
+template <typename T>
+inline mat4<T>& operator*=(mat4<T>& a, const mat4<T>& b) {
+    return a = a * b;
+}
+template <typename T, typename T1>
+inline mat4<T>& operator*=(mat4<T>& a, float b) {
     return a = a * b;
 }
 
 // Matrix diagonals and transposes.
 template <typename T>
-inline vec<T, 2> diagonal(const mat<T, 2>& a) {
+inline vec2<T> diagonal(const mat2<T>& a) {
     return {a.x.x, a.y.y};
 }
 template <typename T>
-inline vec<T, 3> diagonal(const mat<T, 3>& a) {
+inline vec3<T> diagonal(const mat3<T>& a) {
     return {a.x.x, a.y.y, a.z.z};
 }
 template <typename T>
-inline vec<T, 4> diagonal(const mat<T, 4>& a) {
+inline vec4<T> diagonal(const mat4<T>& a) {
     return {a.x.x, a.y.y, a.z.z, a.w.w};
 }
 template <typename T>
-inline mat<T, 2> transpose(const mat<T, 2>& a) {
-    return {{a.x.x, a.y.x}, {a.x.y, a.y.y}};
-}
+inline mat2<T> transpose(const mat2<T>& a);
 template <typename T>
-inline mat<T, 3> transpose(const mat<T, 3>& a) {
-    return {
-        {a.x.x, a.y.x, a.z.x}, {a.x.y, a.y.y, a.z.y}, {a.x.z, a.y.z, a.z.z}};
-}
+inline mat3<T> transpose(const mat3<T>& a);
 template <typename T>
-inline mat<T, 4> transpose(const mat<T, 4>& a) {
-    return {{a.x.x, a.y.x, a.z.x, a.w.x}, {a.x.y, a.y.y, a.z.y, a.w.y},
-        {a.x.z, a.y.z, a.z.z, a.w.z}, {a.x.w, a.y.w, a.z.w, a.w.w}};
-}
+inline mat4<T> transpose(const mat4<T>& a);
 
 // Matrix adjugates, determinant and inverses.
 template <typename T>
-inline mat<T, 2> adjugate(const mat<T, 2>& a);
+inline mat2<T> adjugate(const mat2<T>& a);
 template <typename T>
-inline mat<T, 3> adjugate(const mat<T, 3>& a);
+inline mat3<T> adjugate(const mat3<T>& a);
 template <typename T>
-inline mat<T, 4> adjugate(const mat<T, 4>& a);
+inline mat4<T> adjugate(const mat4<T>& a);
 template <typename T>
-inline T determinant(const mat<T, 2>& a);
+inline T determinant(const mat2<T>& a);
 template <typename T>
-inline T determinant(const mat<T, 3>& a);
+inline T determinant(const mat3<T>& a);
 template <typename T>
-inline T determinant(const mat<T, 4>& a);
+inline T determinant(const mat4<T>& a);
 template <typename T>
-inline mat<T, 2> inverse(const mat<T, 2>& a) {
+inline mat2<T> inverse(const mat2<T>& a) {
     return adjugate(a) * (1 / determinant(a));
 }
 template <typename T>
-inline mat<T, 3> inverse(const mat<T, 3>& a) {
+inline mat3<T> inverse(const mat3<T>& a) {
     return adjugate(a) * (1 / determinant(a));
 }
 template <typename T>
-inline mat<T, 4> inverse(const mat<T, 4>& a) {
+inline mat4<T> inverse(const mat4<T>& a) {
     return adjugate(a) * (1 / determinant(a));
-}
-
-template <typename T>
-std::ostream& operator<<(std::ostream& os, const mat<T, 2>& a) {
-    return os << a.x << " " << a.y;
-}
-template <typename T>
-std::ostream& operator<<(std::ostream& os, const mat<T, 3>& a) {
-    return os << a.x << " " << a.y << " " << a.z;
-}
-template <typename T>
-std::ostream& operator<<(std::ostream& os, const mat<T, 4>& a) {
-    return os << a.x << " " << a.y << " " << a.z << " " << a.w;
-}
-template <typename T>
-std::istream& operator>>(std::istream& is, mat<T, 2>& a) {
-    return is >> a.x >> a.y;
-}
-template <typename T>
-std::istream& operator>>(std::istream& is, mat<T, 3>& a) {
-    return is >> a.x >> a.y >> a.z;
-}
-template <typename T>
-std::istream& operator>>(std::istream& is, mat<T, 4>& a) {
-    return is >> a.x >> a.y >> a.z >> a.w;
 }
 
 }  // namespace ygl
@@ -998,40 +1144,23 @@ std::istream& operator>>(std::istream& is, mat<T, 4>& a) {
 namespace ygl {
 
 // Rigid frames stored as a column-major affine transform matrix.
-template <typename T, int N>
-struct frame;
-
-// Rigid frames stored as a column-major affine transform matrix.
 template <typename T>
-struct frame<T, 2> {
-    // constructors
-    frame() : x{1, 0}, y{0, 1}, o{0, 0} {}
-    frame(const vec<T, 2>& x_, const vec<T, 2>& y_, const vec<T, 2>& o_)
-        : x{x_}, y{y_}, o{o_} {}
-
-    // elements
-    vec<T, 2> x = {1, 0};
-    vec<T, 2> y = {0, 1};
-    vec<T, 2> o = {0, 0};
+struct frame2 {
+    vec2<T> x = {1, 0};
+    vec2<T> y = {0, 1};
+    vec2<T> o = {0, 0};
 };
 template <typename T>
-struct frame<T, 3> {
-    // constructors
-    frame() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{0, 0, 0} {}
-    frame(const vec<T, 3>& x_, const vec<T, 3>& y_, const vec<T, 3>& z_,
-        const vec<T, 3>& o_)
-        : x{x_}, y{y_}, z{z_}, o{o_} {}
-
-    // elements
-    vec<T, 3> x = {1, 0, 0};
-    vec<T, 3> y = {0, 1, 0};
-    vec<T, 3> z = {0, 0, 1};
-    vec<T, 3> o = {0, 0, 0};
+struct frame3 {
+    vec3<T> x = {1, 0, 0};
+    vec3<T> y = {0, 1, 0};
+    vec3<T> z = {0, 0, 1};
+    vec3<T> o = {0, 0, 0};
 };
 
-// Type aliases
-using frame2f = frame<float, 2>;
-using frame3f = frame<float, 3>;
+// Type aliases.
+using frame2f = frame2<float>;
+using frame3f = frame3<float>;
 
 // Indentity frames.
 const auto identity_frame2f = frame2f{{1, 0}, {0, 1}, {0, 0}};
@@ -1040,15 +1169,15 @@ const auto identity_frame3f =
 
 // Frame construction from axis.
 template <typename T>
-inline frame<T, 3> make_frame_fromz(const vec<T, 3>& o, const vec<T, 3>& z_) {
-    auto z = normalize(z_);
+inline frame3<T> make_frame_fromz(const vec3<T>& o, const vec3<T>& v) {
+    auto z = normalize(v);
     auto x = normalize(orthogonal(z));
     auto y = normalize(cross(z, x));
     return {x, y, z, o};
 }
 template <typename T>
-inline frame<T, 3> make_frame_fromzx(
-    const vec<T, 3>& o, const vec<T, 3>& z_, const vec<T, 3>& x_) {
+inline frame3<T> make_frame_fromzx(
+    const vec3<T>& o, const vec3<T>& z_, const vec3<T>& x_) {
     auto z = normalize(z_);
     auto x = orthonormalize(x_, z);
     auto y = normalize(cross(z, x));
@@ -1057,76 +1186,67 @@ inline frame<T, 3> make_frame_fromzx(
 
 // Frame to matrix conversion.
 template <typename T>
-inline mat<T, 4> frame_to_mat(const frame<T, 3>& a) {
-    return {{a.x.x, a.x.y, a.x.z, 0}, {a.y.x, a.y.y, a.y.z, 0},
-        {a.z.x, a.z.y, a.z.z, 0}, {a.o.x, a.o.y, a.o.z, 1}};
+inline mat4<T> frame_to_mat(const frame3<T>& a) {
+    return {
+        {a.x.x, a.x.y, a.x.z, 0},
+        {a.y.x, a.y.y, a.y.z, 0},
+        {a.z.x, a.z.y, a.z.z, 0},
+        {a.o.x, a.o.y, a.o.z, 1},
+    };
 }
 template <typename T>
-inline frame<T, 3> mat_to_frame(const mat<T, 4>& a) {
-    return {{a.x.x, a.x.y, a.x.z}, {a.y.x, a.y.y, a.y.z}, {a.z.x, a.z.y, a.z.z},
-        {a.w.x, a.w.y, a.w.z}};
+inline frame3<T> mat_to_frame(const mat4<T>& a) {
+    return {
+        {a.x.x, a.x.y, a.x.z},
+        {a.y.x, a.y.y, a.y.z},
+        {a.z.x, a.z.y, a.z.z},
+        {a.w.x, a.w.y, a.w.z},
+    };
 }
 
 // Frame comparisons.
 template <typename T>
-inline bool operator==(const frame<T, 2>& a, const frame<T, 2>& b) {
+inline bool operator==(const frame2<T>& a, const frame2<T>& b) {
     return a.x == b.x && a.y == b.y && a.o == b.o;
 }
 template <typename T>
-inline bool operator!=(const frame<T, 2>& a, const frame<T, 2>& b) {
+inline bool operator!=(const frame2<T>& a, const frame2<T>& b) {
     return !(a == b);
 }
 template <typename T>
-inline bool operator==(const frame<T, 3>& a, const frame<T, 3>& b) {
+inline bool operator==(const frame3<T>& a, const frame3<T>& b) {
     return a.x == b.x && a.y == b.y && a.z == b.z && a.o == b.o;
 }
 template <typename T>
-inline bool operator!=(const frame<T, 3>& a, const frame<T, 3>& b) {
+inline bool operator!=(const frame3<T>& a, const frame3<T>& b) {
     return !(a == b);
 }
 
 // Frame composition, equivalent to affine matrix product.
 template <typename T>
-inline frame<T, 2> operator*(const frame<T, 2>& a, const frame<T, 2>& b) {
-    auto rot = mat<T, 2>{a.x, a.y} * mat<T, 2>{b.x, b.y};
-    auto pos = mat<T, 2>{a.x, a.y} * b.o + a.o;
+inline frame2<T> operator*(const frame2<T>& a, const frame2<T>& b) {
+    auto rot = mat2<T>{a.x, a.y} * mat2<T>{b.x, b.y};
+    auto pos = mat2<T>{a.x, a.y} * b.o + a.o;
     return {rot.x, rot.y, pos};
 }
 template <typename T>
-inline frame<T, 3> operator*(const frame<T, 3>& a, const frame<T, 3>& b) {
-    auto rot = mat<T, 3>{a.x, a.y, a.z} * mat<T, 3>{b.x, b.y, b.z};
-    auto pos = mat<T, 3>{a.x, a.y, a.z} * b.o + a.o;
+inline frame3<T> operator*(const frame3<T>& a, const frame3<T>& b) {
+    auto rot = mat3<T>{a.x, a.y, a.z} * mat3<T>{b.x, b.y, b.z};
+    auto pos = mat3<T>{a.x, a.y, a.z} * b.o + a.o;
     return {rot.x, rot.y, rot.z, pos};
 }
 // Frame inverse, equivalent to rigid affine inverse.
 template <typename T>
-inline frame<T, 2> inverse(const frame<T, 2>& a, bool is_rigid = true) {
-    auto minv = (is_rigid) ? transpose(mat<T, 2>{a.x, a.y}) :
-                             inverse(mat<T, 2>{a.x, a.y});
+inline frame2<T> inverse(const frame2<T>& a, bool is_rigid = true) {
+    auto minv =
+        (is_rigid) ? transpose(mat2<T>{a.x, a.y}) : inverse(mat2<T>{a.x, a.y});
     return {minv.x, minv.y, -(minv * a.o)};
 }
 template <typename T>
-inline frame<T, 3> inverse(const frame<T, 3>& a, bool is_rigid = true) {
-    auto minv = (is_rigid) ? transpose(mat<T, 3>{a.x, a.y, a.z}) :
-                             inverse(mat<T, 3>{a.x, a.y, a.z});
+inline frame3<T> inverse(const frame3<T>& a, bool is_rigid = true) {
+    auto minv = (is_rigid) ? transpose(mat3<T>{a.x, a.y, a.z}) :
+                             inverse(mat3<T>{a.x, a.y, a.z});
     return {minv.x, minv.y, minv.z, -(minv * a.o)};
-}
-
-template <typename T>
-std::ostream& operator<<(std::ostream& os, const frame<T, 2>& a) {
-    return os << a.x << " " << a.y << " " << a.o;
-}
-template <typename T>
-std::ostream& operator<<(std::ostream& os, const frame<T, 3>& a) {
-    return os << a.x << " " << a.y << " " << a.z << " " << a.o;
-}
-template <typename T>
-std::istream& operator>>(std::istream& is, frame<T, 2>& a) {
-    return is >> a.x >> a.y >> a.o;
-}
-template <typename T>
-std::istream& operator>>(std::istream& is, frame<T, 3>& a) {
-    return is >> a.x >> a.y >> a.z >> a.o;
 }
 
 }  // namespace ygl
@@ -1136,86 +1256,39 @@ std::istream& operator>>(std::istream& is, frame<T, 3>& a) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Axis aligned bounding box represented as a min/max vector pairs.
-template <typename T, int N>
-struct bbox;
-
 // Range of values in 1D.
 template <typename T>
-struct bbox<T, 1> {
-    // constructors
-    bbox()
-        : min{std::numeric_limits<T>::max()}
-        , max{std::numeric_limits<T>::lowest()} {}
-    bbox(T min_, T max_) : min{min_}, max{max_} {}
-
-    // elements
-    T min = std::numeric_limits<T>::max();
-    T max = std::numeric_limits<T>::lowest();
+struct bbox1 {
+    T min = maxt<T>();
+    T max = mint<T>();
 };
 
 // Axis aligned bounding box represented as a min/max vector pairs.
 template <typename T>
-struct bbox<T, 2> {
-    // constructors
-    bbox()
-        : min{std::numeric_limits<T>::max(), std::numeric_limits<T>::max()}
-        , max{std::numeric_limits<T>::lowest(),
-              std::numeric_limits<T>::lowest()} {}
-    bbox(const vec<T, 2>& min_, const vec<T, 2>& max_) : min{min_}, max{max_} {}
-
-    // elements
-    vec<T, 2> min = {
-        std::numeric_limits<T>::max(), std::numeric_limits<T>::max()};
-    vec<T, 2> max = {
-        std::numeric_limits<T>::lowest(), std::numeric_limits<T>::lowest()};
+struct bbox2 {
+    vec2<T> min = {maxt<T>(), maxt<T>()};
+    vec2<T> max = {mint<T>(), mint<T>()};
 };
 
 // Axis aligned bounding box represented as a min/max vector pairs.
 template <typename T>
-struct bbox<T, 3> {
-    // constructors
-    bbox()
-        : min{std::numeric_limits<T>::max(), std::numeric_limits<T>::max(),
-              std::numeric_limits<T>::max()}
-        , max{std::numeric_limits<T>::lowest(),
-              std::numeric_limits<T>::lowest(),
-              std::numeric_limits<T>::lowest()} {}
-    bbox(const vec<T, 3>& min_, const vec<T, 3>& max_) : min{min_}, max{max_} {}
-
-    // elements
-    vec<T, 3> min = {std::numeric_limits<T>::max(),
-        std::numeric_limits<T>::max(), std::numeric_limits<T>::max()};
-    vec<T, 3> max = {std::numeric_limits<T>::lowest(),
-        std::numeric_limits<T>::lowest(), std::numeric_limits<T>::lowest()};
+struct bbox3 {
+    vec3<T> min = {maxt<T>(), maxt<T>(), maxt<T>()};
+    vec3<T> max = {mint<T>(), mint<T>(), mint<T>()};
 };
 
 // Axis aligned bounding box represented as a min/max vector pairs.
 template <typename T>
-struct bbox<T, 4> {
-    // constructors
-    bbox()
-        : min{std::numeric_limits<T>::max(), std::numeric_limits<T>::max(),
-              std::numeric_limits<T>::max(), std::numeric_limits<T>::max()}
-        , max{std::numeric_limits<T>::lowest(),
-              std::numeric_limits<T>::lowest(),
-              std::numeric_limits<T>::lowest(),
-              std::numeric_limits<T>::lowest()} {}
-    bbox(const vec<T, 4>& min_, const vec<T, 4>& max_) : min{min_}, max{max_} {}
-
-    vec<T, 4> min = {std::numeric_limits<T>::max(),
-        std::numeric_limits<T>::max(), std::numeric_limits<T>::max(),
-        std::numeric_limits<T>::max()};
-    vec<T, 4> max = {std::numeric_limits<T>::lowest(),
-        std::numeric_limits<T>::lowest(), std::numeric_limits<T>::lowest(),
-        std::numeric_limits<T>::lowest()};
+struct bbox4 {
+    vec4<T> min = {maxt<T>(), maxt<T>(), maxt<T>(), maxt<T>()};
+    vec4<T> max = {mint<T>(), mint<T>(), mint<T>(), mint<T>()};
 };
 
-// Type alias
-using bbox1f = bbox<float, 1>;
-using bbox2f = bbox<float, 2>;
-using bbox3f = bbox<float, 3>;
-using bbox4f = bbox<float, 4>;
+// Type aliases
+using bbox1f = bbox1<float>;
+using bbox2f = bbox2<float>;
+using bbox3f = bbox3<float>;
+using bbox4f = bbox4<float>;
 
 // Empty bbox constant.
 const auto invalid_bbox1f = bbox1f();
@@ -1225,73 +1298,73 @@ const auto invalid_bbox4f = bbox4f();
 
 // Bounding box comparisons.
 template <typename T>
-inline bool operator==(const bbox<T, 1>& a, const bbox<T, 1>& b) {
+inline bool operator==(const bbox1<T>& a, const bbox1<T>& b) {
     return a.min == b.min && a.max == b.max;
 }
 template <typename T>
-inline bool operator!=(const bbox<T, 1>& a, const bbox<T, 1>& b) {
+inline bool operator!=(const bbox1<T>& a, const bbox1<T>& b) {
     return a.min != b.min || a.max != b.max;
 }
 template <typename T>
-inline bool operator==(const bbox<T, 2>& a, const bbox<T, 2>& b) {
+inline bool operator==(const bbox2<T>& a, const bbox2<T>& b) {
     return a.min == b.min && a.max == b.max;
 }
 template <typename T>
-inline bool operator!=(const bbox<T, 2>& a, const bbox<T, 2>& b) {
+inline bool operator!=(const bbox2<T>& a, const bbox2<T>& b) {
     return a.min != b.min || a.max != b.max;
 }
 template <typename T>
-inline bool operator==(const bbox<T, 3>& a, const bbox<T, 3>& b) {
+inline bool operator==(const bbox3<T>& a, const bbox3<T>& b) {
     return a.min == b.min && a.max == b.max;
 }
 template <typename T>
-inline bool operator!=(const bbox<T, 3>& a, const bbox<T, 3>& b) {
+inline bool operator!=(const bbox3<T>& a, const bbox3<T>& b) {
     return a.min != b.min || a.max != b.max;
 }
 template <typename T>
-inline bool operator==(const bbox<T, 4>& a, const bbox<T, 4>& b) {
+inline bool operator==(const bbox4<T>& a, const bbox4<T>& b) {
     return a.min == b.min && a.max == b.max;
 }
 template <typename T>
-inline bool operator!=(const bbox<T, 4>& a, const bbox<T, 4>& b) {
+inline bool operator!=(const bbox4<T>& a, const bbox4<T>& b) {
     return a.min != b.min || a.max != b.max;
 }
 
 // Bounding box expansions with points and other boxes.
 template <typename T>
-inline bbox<T, 1>& operator+=(bbox<T, 1>& a, T b) {
+inline bbox1<T>& operator+=(bbox1<T>& a, T b) {
     a.min = min(a.min, b);
     a.max = max(a.max, b);
     return a;
 }
 template <typename T>
-inline bbox<T, 1>& operator+=(bbox<T, 1>& a, const bbox<T, 1>& b) {
+inline bbox1<T>& operator+=(bbox1<T>& a, const bbox1<T>& b) {
     a.min = min(a.min, b.min);
     a.max = max(a.max, b.max);
     return a;
 }
 // Bounding box expansions with points and other boxes.
 template <typename T>
-inline bbox<T, 2>& operator+=(bbox<T, 2>& a, const vec<T, 2>& b) {
+inline bbox2<T>& operator+=(bbox2<T>& a, const vec2<T>& b) {
     a.min = {min(a.min.x, b.x), min(a.min.y, b.y)};
     a.max = {max(a.max.x, b.x), max(a.max.y, b.y)};
     return a;
 }
 template <typename T>
-inline bbox<T, 2>& operator+=(bbox<T, 2>& a, const bbox<T, 2>& b) {
+inline bbox2<T>& operator+=(bbox2<T>& a, const bbox2<T>& b) {
     a.min = {min(a.min.x, b.min.x), min(a.min.y, b.min.y)};
     a.max = {max(a.max.x, b.max.x), max(a.max.y, b.max.y)};
     return a;
 }
 // Bounding box expansions with points and other boxes.
 template <typename T>
-inline bbox<T, 3>& operator+=(bbox<T, 3>& a, const vec<T, 3>& b) {
+inline bbox3<T>& operator+=(bbox3<T>& a, const vec3<T>& b) {
     a.min = {min(a.min.x, b.x), min(a.min.y, b.y), min(a.min.z, b.z)};
     a.max = {max(a.max.x, b.x), max(a.max.y, b.y), max(a.max.z, b.z)};
     return a;
 }
 template <typename T>
-inline bbox<T, 3>& operator+=(bbox<T, 3>& a, const bbox<T, 3>& b) {
+inline bbox3<T>& operator+=(bbox3<T>& a, const bbox3<T>& b) {
     a.min = {
         min(a.min.x, b.min.x), min(a.min.y, b.min.y), min(a.min.z, b.min.z)};
     a.max = {
@@ -1300,7 +1373,7 @@ inline bbox<T, 3>& operator+=(bbox<T, 3>& a, const bbox<T, 3>& b) {
 }
 // Bounding box expansions with points and other boxes.
 template <typename T>
-inline bbox<T, 4>& operator+=(bbox<T, 4>& a, const vec<T, 4>& b) {
+inline bbox4<T>& operator+=(bbox4<T>& a, const vec4<T>& b) {
     a.min = {min(a.min.x, b.x), min(a.min.y, b.y), min(a.min.z, b.z),
         min(a.min.w, b.w)};
     a.max = {max(a.max.x, b.x), max(a.max.y, b.y), max(a.max.z, b.z),
@@ -1308,7 +1381,7 @@ inline bbox<T, 4>& operator+=(bbox<T, 4>& a, const vec<T, 4>& b) {
     return a;
 }
 template <typename T>
-inline bbox<T, 4>& operator+=(bbox<T, 4>& a, const bbox<T, 4>& b) {
+inline bbox4<T>& operator+=(bbox4<T>& a, const bbox4<T>& b) {
     a.min = {min(a.min.x, b.min.x), min(a.min.y, b.min.y),
         min(a.min.z, b.min.z), min(a.min.w, b.min.w)};
     a.max = {max(a.max.x, b.max.x), max(a.max.y, b.max.y),
@@ -1317,60 +1390,41 @@ inline bbox<T, 4>& operator+=(bbox<T, 4>& a, const bbox<T, 4>& b) {
 }
 
 // Primitive bounds.
-template <typename T, typename T1>
-inline bbox<T, 3> point_bbox(const vec<T, 3>& p, T1 r = 0) {
-    auto bbox = ygl::bbox<T, 3>{};
-    bbox += p - vec<T, 3>{r, r, r};
-    bbox += p + vec<T, 3>{r, r, r};
-    return bbox;
-}
-template <typename T, typename T1>
-inline bbox<T, 3> line_bbox(
-    const vec<T, 3>& v0, const vec<T, 3>& v1, T1 r0 = 0, T1 r1 = 0) {
-    auto bbox = ygl::bbox<T, 3>{};
-    bbox += v0 - vec<T, 3>{r0, r0, r0};
-    bbox += v0 + vec<T, 3>{r0, r0, r0};
-    bbox += v1 - vec<T, 3>{r1, r1, r1};
-    bbox += v1 + vec<T, 3>{r1, r1, r1};
+template <typename T>
+inline bbox3<T> point_bbox(const vec3<T>& p, T r = 0) {
+    auto bbox = bbox3<T>{};
+    bbox += p - vec3f{r, r, r};
+    bbox += p + vec3f{r, r, r};
     return bbox;
 }
 template <typename T>
-inline bbox<T, 3> triangle_bbox(
-    const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2) {
-    auto bbox = ygl::bbox<T, 3>{};
-    bbox += v0;
-    bbox += v1;
-    bbox += v2;
+inline bbox3<T> line_bbox(
+    const vec3<T>& p0, const vec3<T>& p1, T r0 = 0, T r1 = 0) {
+    auto bbox = bbox3<T>{};
+    bbox += p0 - vec3f{r0, r0, r0};
+    bbox += p0 + vec3f{r0, r0, r0};
+    bbox += p1 - vec3f{r1, r1, r1};
+    bbox += p1 + vec3f{r1, r1, r1};
     return bbox;
 }
 template <typename T>
-inline bbox<T, 3> quad_bbox(const vec<T, 3>& v0, const vec<T, 3>& v1,
-    const vec<T, 3>& v2, const vec<T, 3>& v3) {
-    auto bbox = ygl::bbox<T, 3>{};
-    bbox += v0;
-    bbox += v1;
-    bbox += v2;
-    bbox += v3;
+inline bbox3<T> triangle_bbox(
+    const vec3<T>& p0, const vec3<T>& p1, const vec3<T>& p2) {
+    auto bbox = bbox3<T>{};
+    bbox += p0;
+    bbox += p1;
+    bbox += p2;
     return bbox;
 }
 template <typename T>
-inline bbox<T, 3> tetrahedron_bbox(const vec<T, 3>& v0, const vec<T, 3>& v1,
-    const vec<T, 3>& v2, const vec<T, 3>& v3) {
-    auto bbox = ygl::bbox<T, 3>{};
-    bbox += v0;
-    bbox += v1;
-    bbox += v2;
-    bbox += v3;
+inline bbox3<T> quad_bbox(const vec3<T>& p0, const vec3<T>& p1,
+    const vec3<T>& p2, const vec3<T>& p3) {
+    auto bbox = bbox3<T>{};
+    bbox += p0;
+    bbox += p1;
+    bbox += p2;
+    bbox += p3;
     return bbox;
-}
-
-template <typename T, int N>
-std::ostream& operator<<(std::ostream& os, const bbox<T, N>& a) {
-    return os << a.min << " " << a.max;
-}
-template <typename T, int N>
-std::istream& operator>>(std::istream& is, bbox<T, N>& a) {
-    return is >> a.min >> a.max;
 }
 
 }  // namespace ygl
@@ -1381,66 +1435,34 @@ std::istream& operator>>(std::istream& is, bbox<T, N>& a) {
 namespace ygl {
 
 // Rays with origin, direction and min/max t value.
-template <typename T, int N>
-struct ray;
-
-// Rays with origin, direction and min/max t value.
 template <typename T>
-struct ray<T, 2> {
-    // constructors
-    ray() : o{0, 0}, d{0, 1}, tmin{0}, tmax{std::numeric_limits<T>::max()} {}
-    ray(const vec<T, 2>& o_, const vec<T, 2>& d_, T tmin_, T tmax_)
-        : o{o_}, d{d_}, tmin{tmin_}, tmax{tmax_} {}
-
-    // elements
-    vec<T, 2> o = {0, 0};
-    vec<T, 2> d = {0, 1};
+struct ray2 {
+    vec2<T> o = {0, 0};
+    vec2<T> d = {0, 1};
     T tmin = 0;
-    T tmax = std::numeric_limits<T>::max();
+    T tmax = maxt<T>();
+};
+template <typename T>
+struct ray3 {
+    vec3<T> o = {0, 0, 0};
+    vec3<T> d = {0, 0, 1};
+    T tmin = 0;
+    T tmax = maxt<T>();
 };
 
-// Rays with origin, direction and min/max t value.
+// Type aliases.
+using ray2f = ray2<float>;
+using ray3f = ray3<float>;
+
+// Construct a ray from direction or segments using a default epsilon.
 template <typename T>
-struct ray<T, 3> {
-    // constructors
-    ray()
-        : o{0, 0, 0}
-        , d{0, 0, 1}
-        , tmin{0}
-        , tmax{std::numeric_limits<T>::max()} {}
-    ray(const vec<T, 3>& o_, const vec<T, 3>& d_, T tmin_, T tmax_)
-        : o{o_}, d{d_}, tmin{tmin_}, tmax{tmax_} {}
-
-    // elements
-    vec<T, 3> o = {0, 0, 0};
-    vec<T, 3> d = {0, 0, 1};
-    T tmin = 0;
-    T tmax = std::numeric_limits<T>::max();
-};
-
-// Type aliases
-using ray2f = ray<float, 2>;
-using ray3f = ray<float, 3>;
-
-// Construct a ray from dirction or segments using a default epsilon.
-template <typename T, int N>
-inline ray<T, N> make_ray(
-    const vec<T, N>& o, const vec<T, N>& d, T eps = (T)1e-4) {
-    return ray<T, N>{o, d, eps, std::numeric_limits<T>::max()};
+inline ray3<T> make_ray(const vec3<T>& o, const vec3<T>& d, T eps = 1e-4f) {
+    return {o, d, eps, maxt<T>()};
 }
-template <typename T, int N>
-inline ray<T, N> make_segment(
-    const vec<T, N>& p1, const vec<T, N>& p2, T eps = (T)1e-4) {
-    return ray<T, N>{p1, normalize(p2 - p1), eps, length(p2 - p1) - 2 * eps};
-}
-
-template <typename T, int N>
-std::ostream& operator<<(std::ostream& os, const ray<T, N>& a) {
-    return os << a.o << " " << a.d << a.tmin << a.tmax;
-}
-template <typename T, int N>
-std::istream& operator>>(std::istream& is, ray<T, N>& a) {
-    return is >> a.o >> a.d >> a.tmin >> a.tmax;
+template <typename T>
+inline ray3<T> make_segment(
+    const vec3<T>& p1, const vec3<T>& p2, T eps = 1e-4f) {
+    return {p1, normalize(p2 - p1), eps, length(p2 - p1) - 2 * eps};
 }
 
 }  // namespace ygl
@@ -1452,143 +1474,130 @@ namespace ygl {
 
 // Transforms points, vectors and directions by matrices.
 template <typename T>
-inline vec<T, 2> transform_point(const mat<T, 3>& a, const vec<T, 2>& b) {
-    auto tvb = a * vec<T, 3>{b.x, b.y, 1};
-    return vec<T, 2>{tvb.x, tvb.y} / tvb.z;
+inline vec2<T> transform_point(const mat3<T>& a, const vec2<T>& b) {
+    auto tvb = a * vec3f{b.x, b.y, 1};
+    return vec2<T>{tvb.x, tvb.y} / tvb.z;
 }
 template <typename T>
-inline vec<T, 3> transform_point(const mat<T, 4>& a, const vec<T, 3>& b) {
-    auto tvb = a * vec<T, 4>{b.x, b.y, b.z, 1};
-    return vec<T, 3>{tvb.x, tvb.y, tvb.z} / tvb.w;
+inline vec3<T> transform_point(const mat4<T>& a, const vec3<T>& b) {
+    auto tvb = a * vec4f{b.x, b.y, b.z, 1};
+    return vec3<T>{tvb.x, tvb.y, tvb.z} / tvb.w;
 }
 template <typename T>
-inline vec<T, 2> transform_vector(const mat<T, 3>& a, const vec<T, 2>& b) {
-    auto tvb = a * vec<T, 3>{b.x, b.y, 0};
-    return vec<T, 2>{tvb.x, tvb.y} / tvb.z;
+inline vec2<T> transform_vector(const mat3<T>& a, const vec2<T>& b) {
+    auto tvb = a * vec3<T>{b.x, b.y, 0};
+    return vec2<T>{tvb.x, tvb.y} / tvb.z;
 }
 template <typename T>
-inline vec<T, 3> transform_vector(const mat<T, 3>& a, const vec<T, 3>& b) {
+inline vec3<T> transform_vector(const mat3<T>& a, const vec3<T>& b) {
     return a * b;
 }
 template <typename T>
-inline vec<T, 3> transform_vector(const mat<T, 4>& a, const vec<T, 3>& b) {
-    auto tvb = a * vec<T, 4>{b.x, b.y, b.z, 0};
-    return vec<T, 3>{tvb.x, tvb.y, tvb.z};
+inline vec3<T> transform_vector(const mat4<T>& a, const vec3<T>& b) {
+    auto tvb = a * vec4f{b.x, b.y, b.z, 0};
+    return vec3<T>{tvb.x, tvb.y, tvb.z};
 }
 template <typename T>
-inline vec<T, 3> transform_direction(const mat<T, 4>& a, const vec<T, 3>& b) {
+inline vec3<T> transform_direction(const mat4<T>& a, const vec3<T>& b) {
     return normalize(transform_vector(a, b));
 }
 
 // Transforms points, vectors and directions by frames.
 template <typename T>
-inline vec<T, 2> transform_point(const frame<T, 2>& a, const vec<T, 2>& b) {
+inline vec2<T> transform_point(const frame2<T>& a, const vec2<T>& b) {
     return a.x * b.x + a.y * b.y + a.o;
 }
 template <typename T>
-inline vec<T, 3> transform_point(const frame<T, 3>& a, const vec<T, 3>& b) {
+inline vec3<T> transform_point(const frame3<T>& a, const vec3<T>& b) {
     return a.x * b.x + a.y * b.y + a.z * b.z + a.o;
 }
 template <typename T>
-inline vec<T, 2> transform_vector(const frame<T, 2>& a, const vec<T, 2>& b) {
+inline vec2<T> transform_vector(const frame2<T>& a, const vec2<T>& b) {
     return a.x * b.x + a.y * b.y;
 }
 template <typename T>
-inline vec<T, 3> transform_vector(const frame<T, 3>& a, const vec<T, 3>& b) {
+inline vec3<T> transform_vector(const frame3<T>& a, const vec3<T>& b) {
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 template <typename T>
-inline vec<T, 3> transform_direction(const frame<T, 3>& a, const vec<T, 3>& b) {
+inline vec3<T> transform_direction(const frame3<T>& a, const vec3<T>& b) {
     return normalize(transform_vector(a, b));
 }
 
 // Transforms rays and bounding boxes by matrices.
 template <typename T>
-inline ray<T, 3> transform_ray(const frame<T, 3>& a, const ray<T, 3>& b) {
+inline ray3<T> transform_ray(const frame3<T>& a, const ray3<T>& b) {
     return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
 template <typename T>
-inline ray<T, 3> transform_ray(const mat<T, 4>& a, const ray<T, 3>& b) {
+inline ray3<T> transform_ray(const mat4<T>& a, const ray3<T>& b) {
     return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
 template <typename T>
-inline bbox<T, 3> transform_bbox(const frame<T, 3>& a, const bbox<T, 3>& b) {
-    auto corners = {vec<T, 3>{b.min.x, b.min.y, b.min.z},
-        vec<T, 3>{b.min.x, b.min.y, b.max.z},
-        vec<T, 3>{b.min.x, b.max.y, b.min.z},
-        vec<T, 3>{b.min.x, b.max.y, b.max.z},
-        vec<T, 3>{b.max.x, b.min.y, b.min.z},
-        vec<T, 3>{b.max.x, b.min.y, b.max.z},
-        vec<T, 3>{b.max.x, b.max.y, b.min.z},
-        vec<T, 3>{b.max.x, b.max.y, b.max.z}};
-    auto xformed = bbox<T, 3>();
+inline bbox3<T> transform_bbox(const frame3<T>& a, const bbox3<T>& b) {
+    auto corners = {vec3f{b.min.x, b.min.y, b.min.z},
+        vec3f{b.min.x, b.min.y, b.max.z}, vec3f{b.min.x, b.max.y, b.min.z},
+        vec3f{b.min.x, b.max.y, b.max.z}, vec3f{b.max.x, b.min.y, b.min.z},
+        vec3f{b.max.x, b.min.y, b.max.z}, vec3f{b.max.x, b.max.y, b.min.z},
+        vec3f{b.max.x, b.max.y, b.max.z}};
+    auto xformed = bbox3<T>();
     for (auto& corner : corners) xformed += transform_point(a, corner);
     return xformed;
 }
 template <typename T>
-inline bbox<T, 3> transform_bbox(const mat<T, 4>& a, const bbox<T, 3>& b) {
-    auto corners = {vec<T, 3>{b.min.x, b.min.y, b.min.z},
-        vec<T, 3>{b.min.x, b.min.y, b.max.z},
-        vec<T, 3>{b.min.x, b.max.y, b.min.z},
-        vec<T, 3>{b.min.x, b.max.y, b.max.z},
-        vec<T, 3>{b.max.x, b.min.y, b.min.z},
-        vec<T, 3>{b.max.x, b.min.y, b.max.z},
-        vec<T, 3>{b.max.x, b.max.y, b.min.z},
-        vec<T, 3>{b.max.x, b.max.y, b.max.z}};
-    auto xformed = bbox<T, 3>();
+inline bbox3<T> transform_bbox(const mat4<T>& a, const bbox3<T>& b) {
+    auto corners = {vec3f{b.min.x, b.min.y, b.min.z},
+        vec3f{b.min.x, b.min.y, b.max.z}, vec3f{b.min.x, b.max.y, b.min.z},
+        vec3f{b.min.x, b.max.y, b.max.z}, vec3f{b.max.x, b.min.y, b.min.z},
+        vec3f{b.max.x, b.min.y, b.max.z}, vec3f{b.max.x, b.max.y, b.min.z},
+        vec3f{b.max.x, b.max.y, b.max.z}};
+    auto xformed = bbox3<T>();
     for (auto& corner : corners) xformed += transform_point(a, corner);
     return xformed;
 }
 
 // Inverse transforms by frames, assuming they are rigid transforms.
 template <typename T>
-inline vec<T, 2> transform_point_inverse(
-    const frame<T, 2>& a, const vec<T, 2>& b) {
+inline vec2<T> transform_point_inverse(const frame2<T>& a, const vec2<T>& b) {
     return {dot(b - a.o, a.x), dot(b - a.o, a.y)};
 }
 template <typename T>
-inline vec<T, 3> transform_point_inverse(
-    const frame<T, 3>& a, const vec<T, 3>& b) {
+inline vec3f transform_point_inverse(const frame3<T>& a, const vec3f& b) {
     return {dot(b - a.o, a.x), dot(b - a.o, a.y), dot(b - a.o, a.z)};
 }
 template <typename T>
-inline vec<T, 2> transform_vector_inverse(
-    const frame<T, 2>& a, const vec<T, 2>& b) {
+inline vec2<T> transform_vector_inverse(const frame2<T>& a, const vec2<T>& b) {
     return {dot(b, a.x), dot(b, a.y)};
 }
 template <typename T>
-inline vec<T, 3> transform_vector_inverse(
-    const frame<T, 3>& a, const vec<T, 3>& b) {
+inline vec3f transform_vector_inverse(const frame3<T>& a, const vec3f& b) {
     return {dot(b, a.x), dot(b, a.y), dot(b, a.z)};
 }
 template <typename T>
-inline vec<T, 3> transform_direction_inverse(
-    const frame<T, 3>& a, const vec<T, 3>& b) {
+inline vec3f transform_direction_inverse(const frame3<T>& a, const vec3f& b) {
     return normalize(transform_vector_inverse(a, b));
 }
 template <typename T>
-inline ray<T, 3> transform_ray_inverse(
-    const frame<T, 3>& a, const ray<T, 3>& b) {
+inline ray3<T> transform_ray_inverse(const frame3<T>& a, const ray3<T>& b) {
     return {transform_point_inverse(a, b.o),
         transform_direction_inverse(a, b.d), b.tmin, b.tmax};
 }
 template <typename T>
-inline bbox<T, 3> transform_bbox_inverse(
-    const frame<T, 3>& a, const bbox<T, 3>& b) {
+inline bbox3<T> transform_bbox_inverse(const frame3<T>& a, const bbox3<T>& b) {
     return transform_bbox(inverse(a), b);
 }
 
 // Translation, scaling and rotations transforms.
 template <typename T>
-inline frame<T, 3> translation_frame(const vec<T, 3>& a) {
+inline frame3<T> translation_frame(const vec3<T>& a) {
     return {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, a};
 }
 template <typename T>
-inline frame<T, 3> scaling_frame(const vec<T, 3>& a) {
+inline frame3<T> scaling_frame(const vec3<T>& a) {
     return {{a.x, 0, 0}, {0, a.y, 0}, {0, 0, a.z}, {0, 0, 0}};
 }
-template <typename T, typename T1>
-inline frame<T, 3> rotation_frame(const vec<T, 3>& axis, T1 angle) {
+template <typename T>
+inline frame3<T> rotation_frame(const vec3<T>& axis, T angle) {
     auto s = sin(angle), c = cos(angle);
     auto vv = normalize(axis);
     return {{c + (1 - c) * vv.x * vv.x, (1 - c) * vv.x * vv.y + s * vv.z,
@@ -1600,7 +1609,7 @@ inline frame<T, 3> rotation_frame(const vec<T, 3>& axis, T1 angle) {
         {0, 0, 0}};
 }
 template <typename T>
-inline frame<T, 3> rotation_frame(const vec<T, 4>& quat) {
+inline frame3<T> rotation_frame(const vec4<T>& quat) {
     auto v = quat;
     return {{v.w * v.w + v.x * v.x - v.y * v.y - v.z * v.z,
                 (v.x * v.y + v.z * v.w) * 2, (v.z * v.x - v.y * v.w) * 2},
@@ -1612,14 +1621,14 @@ inline frame<T, 3> rotation_frame(const vec<T, 4>& quat) {
         {0, 0, 0}};
 }
 template <typename T>
-inline frame<T, 3> rotation_frame(const mat<T, 3>& rot) {
+inline frame3<T> rotation_frame(const mat3<T>& rot) {
     return {rot.x, rot.y, rot.z, {0, 0, 0}};
 }
 
 // Lookat frame. Z-axis can be inverted with inv_xz.
 template <typename T>
-inline frame<T, 3> lookat_frame(const vec<T, 3>& eye, const vec<T, 3>& center,
-    const vec<T, 3>& up, bool inv_xz = false) {
+inline frame3<T> lookat_frame(const vec3<T>& eye, const vec3<T>& center,
+    const vec3<T>& up, bool inv_xz = false) {
     auto w = normalize(eye - center);
     auto u = normalize(cross(up, w));
     auto v = normalize(cross(w, u));
@@ -1632,35 +1641,35 @@ inline frame<T, 3> lookat_frame(const vec<T, 3>& eye, const vec<T, 3>& center,
 
 // OpenGL frustum, ortho and perspecgive matrices.
 template <typename T>
-inline mat<T, 4> frustum_mat(T l, T r, T b, T t, T n, T f) {
+inline mat4<T> frustum_mat(T l, T r, T b, T t, T n, T f) {
     return {{2 * n / (r - l), 0, 0, 0}, {0, 2 * n / (t - b), 0, 0},
         {(r + l) / (r - l), (t + b) / (t - b), -(f + n) / (f - n), -1},
         {0, 0, -2 * f * n / (f - n), 0}};
 }
 template <typename T>
-inline mat<T, 4> ortho_mat(T l, T r, T b, T t, T n, T f) {
+inline mat4<T> ortho_mat(T l, T r, T b, T t, T n, T f) {
     return {{2 / (r - l), 0, 0, 0}, {0, 2 / (t - b), 0, 0},
         {0, 0, -2 / (f - n), 0},
         {-(r + l) / (r - l), -(t + b) / (t - b), -(f + n) / (f - n), 1}};
 }
 template <typename T>
-inline mat<T, 4> ortho2d_mat(T left, T right, T bottom, T top) {
-    return ortho_mat<T>(left, right, bottom, top, -1, 1);
+inline mat4<T> ortho2d_mat(T left, T right, T bottom, T top) {
+    return ortho_mat(left, right, bottom, top, -1, 1);
 }
 template <typename T>
-inline mat<T, 4> ortho_mat(T xmag, T ymag, T near, T far) {
+inline mat4<T> ortho_mat(T xmag, T ymag, T near, T far) {
     return {{1 / xmag, 0, 0, 0}, {0, 1 / ymag, 0, 0},
         {0, 0, 2 / (near - far), 0}, {0, 0, (far + near) / (near - far), 1}};
 }
 template <typename T>
-inline mat<T, 4> perspective_mat(T fovy, T aspect, T near, T far) {
+inline mat4<T> perspective_mat(T fovy, T aspect, T near, T far) {
     auto tg = tan(fovy / 2);
     return {{1 / (aspect * tg), 0, 0, 0}, {0, 1 / tg, 0, 0},
         {0, 0, (far + near) / (near - far), -1},
         {0, 0, 2 * far * near / (near - far), 0}};
 }
 template <typename T>
-inline mat<T, 4> perspective_mat(T fovy, T aspect, T near) {
+inline mat4<T> perspective_mat(T fovy, T aspect, T near) {
     auto tg = tan(fovy / 2);
     return {{1 / (aspect * tg), 0, 0, 0}, {0, 1 / tg, 0, 0}, {0, 0, -1, -1},
         {0, 0, 2 * near, 0}};
@@ -1668,56 +1677,48 @@ inline mat<T, 4> perspective_mat(T fovy, T aspect, T near) {
 
 // Rotation conversions.
 template <typename T>
-inline std::pair<vec<T, 3>, T> rotation_axisangle(const vec<T, 4>& quat) {
-    return {normalize(vec<T, 3>{quat.x, quat.y, quat.z}), 2 * acos(quat.w)};
-}
-template <typename T, typename T1>
-inline vec<T, 4> rotation_quat(const vec<T, 3>& axis, T1 angle) {
-    auto len = length(axis);
-    if (!len) return {0, 0, 0, 1};
-    return vec<T, 4>{sin(angle / 2) * axis.x / len,
-        sin(angle / 2) * axis.y / len, sin(angle / 2) * axis.z / len,
-        cos(angle / 2)};
+inline std::pair<vec3<T>, T> rotation_axisangle(const vec4<T>& quat) {
+    return {normalize(vec3f{quat.x, quat.y, quat.z}), 2 * acos(quat.w)};
 }
 template <typename T>
-inline vec<T, 4> rotation_quat(const vec<T, 4>& axisangle) {
+inline vec4<T> rotation_quat(const vec3<T>& axis, T angle) {
+    auto len = length(axis);
+    if (!len) return {0, 0, 0, 1};
+    return vec4f{sin(angle / 2) * axis.x / len, sin(angle / 2) * axis.y / len,
+        sin(angle / 2) * axis.z / len, cos(angle / 2)};
+}
+template <typename T>
+inline vec4<T> rotation_quat(const vec4<T>& axisangle) {
     return rotation_quat(
-        vec<T, 3>{axisangle.x, axisangle.y, axisangle.z}, axisangle.w);
+        vec3f{axisangle.x, axisangle.y, axisangle.z}, axisangle.w);
 }
 
 // Turntable and FPS Camera navigation.
-template <typename T, typename T1>
-inline void camera_turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
-    const vec<T, 2>& rotate, T1 dolly, const vec<T, 2>& pan);
-template <typename T, typename T1>
-inline void camera_turntable(frame<T, 3>& frame, float& focus,
-    const vec<T, 2>& rotate, T1 dolly, const vec<T, 2>& pan);
-template <typename T>
+inline void camera_turntable(vec3f& from, vec3f& to, vec3f& up,
+    const vec2f& rotate, float dolly, const vec2f& pan);
+inline void camera_turntable(frame3f& frame, float& focus, const vec2f& rotate,
+    float dolly, const vec2f& pan);
 inline void camera_fps(
-    frame<T, 3>& frame, const vec<T, 3>& transl, const vec<T, 2>& rotate);
+    frame3f& frame, const vec3f& transl, const vec2f& rotate);
 
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
-template <typename T>
-inline vec<int, 2> get_image_coords(const vec<T, 2>& mouse_pos,
-    const frame<T, 2>& frame, const vec<int, 2>& txt_size) {
-    // assume an affine without rotation
-    auto xyf = (mouse_pos - frame.o) / vec2f{frame.x.x, frame.y.y};
+inline vec2i get_image_coords(const vec2f& mouse_pos, const vec2f& center,
+    float scale, const vec2i& txt_size) {
+    auto xyf = (mouse_pos - center) / scale;
     return vec2i{(int)round(xyf.x + txt_size.x / 2.0f),
         (int)round(xyf.y + txt_size.y / 2.0f)};
 }
 
 // Center image and autofit.
-template <typename T>
-inline void center_image(frame<T, 2>& frame, const vec<int, 2>& imsize,
-    const vec<int, 2>& winsize, bool zoom_to_fit) {
+inline void center_image4f(vec2f& center, float& scale, const vec2i& imsize,
+    const vec2i& winsize, bool zoom_to_fit) {
     if (zoom_to_fit) {
-        frame.x.x = frame.y.y =
-            ygl::min(winsize.x / (float)imsize.x, winsize.y / (float)imsize.y);
-        frame.o = {(float)winsize.x / 2, (float)winsize.y / 2};
+        scale = min(winsize.x / (float)imsize.x, winsize.y / (float)imsize.y);
+        center = {(float)winsize.x / 2, (float)winsize.y / 2};
     } else {
-        if (winsize.x >= imsize.x * frame.x.x) frame.o.x = winsize.x / 2;
-        if (winsize.y >= imsize.y * frame.y.y) frame.o.y = winsize.y / 2;
+        if (winsize.x >= imsize.x * scale) center.x = winsize.x / 2;
+        if (winsize.y >= imsize.y * scale) center.y = winsize.y / 2;
     }
 }
 
@@ -1780,130 +1781,99 @@ inline vec3f rand3f(rng_state& rng) {
 namespace ygl {
 
 // Sample an hemispherical direction with uniform distribution.
-template <typename T>
-inline vec<T, 3> sample_hemisphere(const vec<T, 2>& ruv) {
+inline vec3f sample_hemisphere(const vec2f& ruv) {
     auto z = ruv.y;
     auto r = sqrt(1 - z * z);
-    auto phi = 2 * pi * ruv.x;
+    auto phi = 2 * pif * ruv.x;
     return {r * cos(phi), r * sin(phi), z};
 }
-template <typename T>
-inline T sample_hemisphere_pdf(const vec<T, 3>& w) {
-    return (w.z <= 0) ? 0 : 1 / (2 * pi);
+inline float sample_hemisphere_pdf(const vec3f& w) {
+    return (w.z <= 0) ? 0 : 1 / (2 * pif);
 }
 
 // Sample a spherical direction with uniform distribution.
-template <typename T>
-inline vec<T, 3> sample_sphere(const vec<T, 2>& ruv) {
+inline vec3f sample_sphere(const vec2f& ruv) {
     auto z = 2 * ruv.y - 1;
     auto r = sqrt(1 - z * z);
-    auto phi = 2 * pi * ruv.x;
+    auto phi = 2 * pif * ruv.x;
     return {r * cos(phi), r * sin(phi), z};
 }
-template <typename T>
-inline T sample_sphere_pdf(const vec<T, 3>& w) {
-    return 1 / (4 * pi);
-}
+inline float sample_sphere_pdf(const vec3f& w) { return 1 / (4 * pif); }
 
 // Sample spherical coordinates uniformly.
-template <typename T>
-inline vec<T, 2> sample_spherical(const vec<T, 2>& ruv) {
+inline vec2f sample_spherical(const vec2f& ruv) {
     // BUG: FIXME this is not uniform at all!!!!
     return {ruv.x, ruv.y};
 }
-template <typename T>
-inline T sample_spherical_pdf(const vec<T, 2>& w) {
-    return 1 / (4 * pi);
-}
+inline float sample_spherical_pdf(const vec2f& w) { return 1 / (4 * pif); }
 
 // Sample an hemispherical direction with cosine distribution.
-template <typename T>
-inline vec<T, 3> sample_hemisphere_cosine(const vec<T, 2>& ruv) {
+inline vec3f sample_hemisphere_cosine(const vec2f& ruv) {
     auto z = sqrt(ruv.y);
     auto r = sqrt(1 - z * z);
-    auto phi = 2 * pi * ruv.x;
+    auto phi = 2 * pif * ruv.x;
     return {r * cos(phi), r * sin(phi), z};
 }
-template <typename T>
-inline T sample_hemisphere_cosine_pdf(const vec<T, 3>& w) {
-    return (w.z <= 0) ? 0 : w.z / pi;
+inline float sample_hemisphere_cosine_pdf(const vec3f& w) {
+    return (w.z <= 0) ? 0 : w.z / pif;
 }
 
 // Sample an hemispherical direction with cosine power distribution.
-template <typename T>
-inline vec<T, 3> sample_hemisphere_cospower(T n, const vec<T, 2>& ruv) {
+inline vec3f sample_hemisphere_cospower(float n, const vec2f& ruv) {
     auto z = pow(ruv.y, 1 / (n + 1));
     auto r = sqrt(1 - z * z);
-    auto phi = 2 * pi * ruv.x;
+    auto phi = 2 * pif * ruv.x;
     return {r * cos(phi), r * sin(phi), z};
 }
-template <typename T>
-inline float sample_hemisphere_cospower_pdf(T n, const vec<T, 3>& w) {
-    return (w.z <= 0) ? 0 : pow(w.z, n) * (n + 1) / (2 * pi);
+inline float sample_hemisphere_cospower_pdf(float n, const vec3f& w) {
+    return (w.z <= 0) ? 0 : pow(w.z, n) * (n + 1) / (2 * pif);
 }
 
 // Sample a point uniformly on a disk.
-template <typename T>
-inline vec<T, 3> sample_disk(const vec<T, 2>& ruv) {
+inline vec3f sample_disk(const vec2f& ruv) {
     auto r = sqrt(ruv.y);
-    auto phi = 2 * pi * ruv.x;
+    auto phi = 2 * pif * ruv.x;
     return {cos(phi) * r, sin(phi) * r, 0};
 }
-template <typename T>
-inline T sample_disk_pdf() {
-    return 1 / pi;
-}
+inline float sample_disk_pdf() { return 1 / pif; }
 
 // Sample a point uniformly on a cylinder, without caps.
-template <typename T>
-inline vec<T, 3> sample_cylinder(const vec<T, 2>& ruv) {
-    auto phi = 2 * pi * ruv.x;
+inline vec3f sample_cylinder(const vec2f& ruv) {
+    auto phi = 2 * pif * ruv.x;
     return {sin(phi), cos(phi), ruv.y * 2 - 1};
 }
-template <typename T>
-inline T sample_cylinder_pdf() {
-    return 1 / pi;
-}
+inline float sample_cylinder_pdf() { return 1 / pif; }
 
 // Sample a point uniformly on a triangle.
-template <typename T>
-inline vec<T, 2> sample_triangle(const vec<T, 2>& ruv) {
+inline vec2f sample_triangle(const vec2f& ruv) {
     return {1 - sqrt(ruv.x), ruv.y * sqrt(ruv.x)};
 }
-template <typename T>
-inline vec<T, 3> sample_triangle(const vec<T, 3>& v0, const vec<T, 3>& v1,
-    const vec<T, 3>& v2, const vec<T, 2>& ruv) {
+inline vec3f sample_triangle(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec2f& ruv) {
     auto uv = sample_triangle(ruv);
-    return v0 * (1 - uv.x - uv.y) + v1 * uv.x + v2 * uv.y;
+    return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
 }
 // Pdf for uniform triangle sampling, i.e. triangle area.
-template <typename T>
-inline T sample_triangle_pdf(
-    const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2) {
-    return 2 / length(cross(v1 - v0, v2 - v0));
+inline float sample_triangle_pdf(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+    return 2 / length(cross(p1 - p0, p2 - p0));
 }
 
 // Sample an index with uniform distribution.
-template <typename T>
-inline int sample_index(int size, T r) {
+inline int sample_index(int size, float r) {
     return clamp((int)(r * size), 0, size - 1);
 }
-template <typename T>
-inline T sample_index_pdf(int size) {
-    return (T)1 / (T)size;
-}
+inline float sample_index_pdf(int size) { return 1.0f / size; }
 
 // Sample a discrete distribution represented by its cdf.
-template <typename T>
-inline int sample_discrete(const std::vector<T>& cdf, T r) {
-    r = clamp(r * cdf.back(), (T)0.0, cdf.back() - (T)0.00001);
+inline int sample_discrete(const std::vector<float>& cdf, float r) {
+    r = clamp(r * cdf.back(), 0.0f, cdf.back() - 0.00001f);
     auto idx = (int)(std::upper_bound(cdf.data(), cdf.data() + cdf.size(), r) -
                      cdf.data());
     return clamp(idx, 0, (int)cdf.size() - 1);
 }
 // Pdf for uniform discrete distribution sampling.
-template <typename T>
-inline T sample_discrete_pdf(const std::vector<T>& cdf, int idx) {
+inline float sample_discrete_pdf(const std::vector<float>& cdf, int idx) {
     if (idx == 0) return cdf.at(0);
     return cdf.at(idx) - cdf.at(idx - 1);
 }
@@ -1915,20 +1885,20 @@ inline T sample_discrete_pdf(const std::vector<T>& cdf, int idx) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Compute the revised Pelin noise function. Wrap provides a wrapping noise
+// Compute the revised Perlin noise function. Wrap provides a wrapping noise
 // but must be power of two (wraps at 256 anyway). For octave based noise,
 // good values are obtained with octaves=6 (numerber of noise calls),
 // lacunarity=~2.0 (spacing between successive octaves: 2.0 for warpping
 // output), gain=0.5 (relative weighting applied to each successive octave),
 // offset=1.0 (used to invert the ridges).
-inline float perlin_noise(vec3f p, vec3i wrap = zero3i);
-inline float perlin_ridge_noise(vec3f p, float lacunarity = 2.0f,
+float perlin_noise(const vec3f& p, const vec3i& wrap = zero3i);
+float perlin_ridge_noise(const vec3f& p, float lacunarity = 2.0f,
     float gain = 0.5f, float offset = 1.0f, int octaves = 6,
-    vec3i wrap = zero3i);
-inline float perlin_fbm_noise(vec3f p, float lacunarity = 2.0f,
-    float gain = 0.5f, int octaves = 6, vec3i wrap = zero3i);
-inline float perlin_turbulence_noise(vec3f p, float lacunarity = 2.0f,
-    float gain = 0.5f, int octaves = 6, vec3i wrap = zero3i);
+    const vec3i& wrap = zero3i);
+float perlin_fbm_noise(const vec3f& p, float lacunarity = 2.0f,
+    float gain = 0.5f, int octaves = 6, const vec3i& wrap = zero3i);
+float perlin_turbulence_noise(const vec3f& p, float lacunarity = 2.0f,
+    float gain = 0.5f, int octaves = 6, const vec3i& wrap = zero3i);
 
 }  // namespace ygl
 
@@ -1938,58 +1908,50 @@ inline float perlin_turbulence_noise(vec3f p, float lacunarity = 2.0f,
 namespace ygl {
 
 // Line properties.
-template <typename T>
-inline vec<T, 3> line_tangent(const vec<T, 3>& v0, const vec<T, 3>& v1) {
-    return normalize(v1 - v0);
+inline vec3f line_tangent(const vec3f& p0, const vec3f& p1) {
+    return normalize(p1 - p0);
 }
-template <typename T>
-inline T line_length(const vec<T, 3>& v0, const vec<T, 3>& v1) {
-    return length(v1 - v0);
+inline float line_length(const vec3f& p0, const vec3f& p1) {
+    return length(p1 - p0);
 }
 
 // Triangle properties.
-template <typename T>
-inline vec<T, 3> triangle_normal(
-    const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2) {
-    return normalize(cross(v1 - v0, v2 - v0));
+inline vec3f triangle_normal(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+    return normalize(cross(p1 - p0, p2 - p0));
 }
-template <typename T>
-inline T triangle_area(
-    const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2) {
-    return length(cross(v1 - v0, v2 - v0)) / 2;
+inline float triangle_area(const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+    return length(cross(p1 - p0, p2 - p0)) / 2;
 }
 
 // Quad propeties.
-template <typename T>
-inline vec<T, 3> quad_normal(const vec<T, 3>& v0, const vec<T, 3>& v1,
-    const vec<T, 3>& v2, const vec<T, 3>& v3) {
-    return normalize(triangle_normal(v0, v1, v3) + triangle_normal(v2, v3, v1));
+inline vec3f quad_normal(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
+    return normalize(triangle_normal(p0, p1, p3) + triangle_normal(p2, p3, p1));
 }
-template <typename T>
-inline T quad_area(const vec<T, 3>& v0, const vec<T, 3>& v1,
-    const vec<T, 3>& v2, const vec<T, 3>& v3) {
-    return triangle_area(v0, v1, v3) + triangle_area(v2, v3, v1);
+inline float quad_area(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
+    return triangle_area(p0, p1, p3) + triangle_area(p2, p3, p1);
 }
 
 // Triangle tangent and bitangent from uv
-template <typename T>
-inline std::pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(
-    const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2,
-    const vec<T, 2>& uv0, const vec<T, 2>& uv1, const vec<T, 2>& uv2) {
+inline std::pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
+    const vec2f& uv2) {
     // Follows the definition in http://www.terathon.com/code/tangent.html and
     // https://gist.github.com/aras-p/2843984
     // normal points up from texture space
-    auto p = v1 - v0;
-    auto q = v2 - v0;
-    auto s = vec<T, 2>{uv1.x - uv0.x, uv2.x - uv0.x};
-    auto t = vec<T, 2>{uv1.y - uv0.y, uv2.y - uv0.y};
+    auto p = p1 - p0;
+    auto q = p2 - p0;
+    auto s = vec2f{uv1.x - uv0.x, uv2.x - uv0.x};
+    auto t = vec2f{uv1.y - uv0.y, uv2.y - uv0.y};
     auto div = s.x * t.y - s.y * t.x;
 
     if (div != 0) {
-        auto tu = vec<T, 3>{t.y * p.x - t.x * q.x, t.y * p.y - t.x * q.y,
+        auto tu = vec3f{t.y * p.x - t.x * q.x, t.y * p.y - t.x * q.y,
                       t.y * p.z - t.x * q.z} /
                   div;
-        auto tv = vec<T, 3>{s.x * q.x - s.y * p.x, s.x * q.y - s.y * p.y,
+        auto tv = vec3f{s.x * q.x - s.y * p.x, s.x * q.y - s.y * p.y,
                       s.x * q.z - s.y * p.z} /
                   div;
         return {tu, tv};
@@ -1998,121 +1960,40 @@ inline std::pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(
     }
 }
 
-// Copies of point value. Here only for completeness.
-template <typename TT>
-inline TT interpolate_point(const std::vector<TT>& vals, int p) {
-    if (vals.empty()) return TT();
-    return vals[p];
-}
-
-// Interpolates values over a line parametrized from a to b by u. Same as lerp.
-template <typename TT, typename T>
-inline TT interpolate_line(const TT& v0, const TT& v1, T u) {
-    return v0 * (1 - u) + v1 * u;
-}
-template <typename TT, typename T>
-inline TT interpolate_line(
-    const std::vector<TT>& vals, const vec<int, 2>& l, T u) {
-    if (vals.empty()) return TT();
-    return interpolate_line(vals[l.x], vals[l.y], u);
-}
-
-// Interpolates values over a triangle parametrized by u and v along the
-// (v1-v0) and (v2-v0) directions. Same as barycentric interpolation.
-template <typename TT, typename T>
-inline TT interpolate_triangle(
-    const TT& v0, const TT& v1, const TT& v2, const vec<T, 2>& uv) {
-    return v0 * (1 - uv.x - uv.y) + v1 * uv.x + v2 * uv.y;
-}
-template <typename TT, typename T>
-inline TT interpolate_triangle(
-    const std::vector<TT>& vals, const vec<int, 3>& t, const vec<T, 2>& uv) {
-    if (vals.empty()) return TT();
-    return interpolate_triangle(vals[t.x], vals[t.y], vals[t.z], uv);
-}
-// Interpolates values over a quad parametrized by u and v along the
-// (v1-v0) and (v2-v1) directions. Same as bilear interpolation.
-template <typename TT, typename T>
-inline TT interpolate_quad(const TT& v0, const TT& v1, const TT& v2,
-    const TT& v3, const vec<T, 2>& uv) {
-    return v0 * (1 - uv.x) * (1 - uv.y) + v1 * uv.x * (1 - uv.y) +
-           v2 * uv.x * uv.y + v3 * (1 - uv.x) * uv.y;
-}
-template <typename TT, typename T>
-inline TT interpolate_quad(
-    const std::vector<TT>& vals, const vec<int, 4>& q, const vec<T, 2>& uv) {
-    if (vals.empty()) return T();
-    if (q.z == q.w)
-        return interpolate_triangle(vals[q.x], vals[q.y], vals[q.z]);
-    return interpolate_quad(vals[q.x], vals[q.y], vals[q.z], vals[q.w], uv);
-}
-
-// Evaluates the i-th Bernstein polynomial of degree degree at u.
+// Interpolates values over a line parameterized from a to b by u. Same as lerp.
 template <typename T>
-inline T eval_bernstein(T u, int i, int degree) {
-    if (i < 0 or i > degree) return 0;
-    if (degree == 0)
-        return 1;
-    else if (degree == 1) {
-        if (i == 0)
-            return 1 - u;
-        else if (i == 1)
-            return u;
-    } else if (degree == 2) {
-        if (i == 0)
-            return (1 - u) * (1 - u);
-        else if (i == 1)
-            return 2 * u * (1 - u);
-        else if (i == 2)
-            return u * u;
-    } else if (degree == 3) {
-        if (i == 0)
-            return (1 - u) * (1 - u) * (1 - u);
-        else if (i == 1)
-            return 3 * u * (1 - u) * (1 - u);
-        else if (i == 2)
-            return 3 * u * u * (1 - u);
-        else if (i == 3)
-            return u * u * u;
-    } else {
-        return (1 - u) * eval_bernstein(u, i, degree - 1) +
-               u * eval_bernstein(u, i - 1, degree - 1);
-    }
-    return 0;
+inline T interpolate_line(const T& p0, const T& p1, float u) {
+    return p0 * (1 - u) + p1 * u;
 }
-
-// Evaluates the derivative of i-th Bernstein polynomial of degree degree at u.
+// Interpolates values over a triangle parameterized by u and v along the
+// (p1-p0) and (p2-p0) directions. Same as barycentric interpolation.
 template <typename T>
-inline T eval_bernstein_derivative(T u, int i, int degree) {
-    return degree * (eval_bernstein(u, i - 1, degree - 1) -
-                        eval_bernstein(u, i, degree - 1));
+inline T interpolate_triangle(
+    const T& p0, const T& p1, const T& p2, const vec2f& uv) {
+    return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
+}
+// Interpolates values over a quad parameterized by u and v along the
+// (p1-p0) and (p2-p1) directions. Same as bilinear interpolation.
+template <typename T>
+inline T interpolate_quad(
+    const T& p0, const T& p1, const T& p2, const T& p3, const vec2f& uv) {
+    return p0 * (1 - uv.x) * (1 - uv.y) + p1 * uv.x * (1 - uv.y) +
+           p2 * uv.x * uv.y + p3 * (1 - uv.x) * uv.y;
 }
 
 // Interpolates values along a cubic Bezier segment parametrized by u.
 template <typename T>
 inline T interpolate_bezier(
-    const T& v0, const T& v1, const T& v2, const T& v3, float u) {
-    return v0 * (1 - u) * (1 - u) * (1 - u) + v1 * 3 * u * (1 - u) * (1 - u) +
-           v2 * 3 * u * u * (1 - u) + v3 * u * u * u;
-}
-template <typename T>
-inline T interpolate_bezier(const std::vector<T>& vals, vec4i b, float u) {
-    if (vals.empty()) return T();
-    return interpolate_bezier(vals[b.x], vals[b.y], vals[b.z], vals[b.w], u);
+    const T& p0, const T& p1, const T& p2, const T& p3, float u) {
+    return p0 * (1 - u) * (1 - u) * (1 - u) + p1 * 3 * u * (1 - u) * (1 - u) +
+           p2 * 3 * u * u * (1 - u) + p3 * u * u * u;
 }
 // Computes the derivative of a cubic Bezier segment parametrized by u.
 template <typename T>
 inline T interpolate_bezier_derivative(
-    const T& v0, const T& v1, const T& v2, const T& v3, float u) {
-    return (v1 - v0) * 3 * (1 - u) * (1 - u) + (v2 - v1) * 6 * u * (1 - u) +
-           (v3 - v2) * 3 * u * u;
-}
-template <typename T>
-inline T interpolate_bezier_derivative(
-    const std::vector<T>& vals, vec4i b, float u) {
-    if (vals.empty()) return T();
-    return interpolate_bezier_derivative(
-        vals[b.x], vals[b.y], vals[b.z], vals[b.w], u);
+    const T& p0, const T& p1, const T& p2, const T& p3, float u) {
+    return (p1 - p0) * 3 * (1 - u) * (1 - u) + (p2 - p1) * 6 * u * (1 - u) +
+           (p3 - p2) * 3 * u * u;
 }
 
 }  // namespace ygl
@@ -2218,28 +2099,6 @@ std::pair<std::vector<vec4i>, std::vector<T>> subdivide_catmullclark(
     const std::vector<vec4i>& quads, const std::vector<T>& vert,
     bool lock_boundary = false);
 
-// Merge lines between shapes.
-void merge_lines(std::vector<vec2i>& lines, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    const std::vector<vec2i>& lines1, const std::vector<vec3f>& pos1,
-    const std::vector<vec3f>& norm1, const std::vector<vec2f>& texcoord1);
-// Merge triangles between shapes.
-void merge_triangles(std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    const std::vector<vec3i>& triangles1, const std::vector<vec3f>& pos1,
-    const std::vector<vec3f>& norm1, const std::vector<vec2f>& texcoord1);
-// Merge quads between shapes.
-void merge_quads(std::vector<vec4i>& quads, std::vector<vec3f>& pos,
-    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
-    const std::vector<vec4i>& quads1, const std::vector<vec3f>& pos1,
-    const std::vector<vec3f>& norm1, const std::vector<vec2f>& texcoord1);
-// Merge triangles and quads between shapes.
-void merge_faces(std::vector<vec3i>& triangles, std::vector<vec4i>& quads,
-    std::vector<vec3f>& pos, std::vector<vec3f>& norm,
-    std::vector<vec2f>& texcoord, const std::vector<vec3i>& triangles1,
-    const std::vector<vec4i>& quads1, const std::vector<vec3f>& pos1,
-    const std::vector<vec3f>& norm1, const std::vector<vec2f>& texcoord1);
-
 // Weld vertices within a threshold. For noe the implementation is O(n^2).
 std::pair<std::vector<vec3f>, std::vector<int>> weld_vertices(
     const std::vector<vec3f>& pos, float threshold);
@@ -2312,7 +2171,7 @@ inline std::pair<int, vec2f> sample_quads(
 }
 
 // Samples a set of points over a triangle mesh uniformly. Returns pos, norm
-// and tecoord of the sampled points.
+// and texcoord of the sampled points.
 std::tuple<std::vector<vec3f>, std::vector<vec3f>, std::vector<vec2f>>
 sample_triangles_points(const std::vector<vec3i>& triangles,
     const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
@@ -2328,25 +2187,25 @@ namespace ygl {
 // Intersect a ray with a point (approximate).
 // Based on http://geomalgorithms.com/a02-lines.html.
 bool intersect_point(
-    const ray3f& ray, vec3f p, float r, float& dist, vec2f& uv);
+    const ray3f& ray, const vec3f& p, float r, float& dist, vec2f& uv);
 
 // Intersect a ray with a line (approximate).
 // Based on http://geomalgorithms.com/a05-intersect-1.html and
 // http://geomalgorithms.com/a07-distance.html#
 //     dist3D_Segment_to_Segment
-bool intersect_line(const ray3f& ray, const vec3f& v0, const vec3f& v1,
+bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
     float r0, float r1, float& dist, vec2f& uv);
 
 // Intersect a ray with a triangle.
-bool intersect_triangle(const ray3f& ray, const vec3f& v0, const vec3f& v1,
-    const vec3f& v2, float& dist, vec2f& uv);
+bool intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
+    const vec3f& p2, float& dist, vec2f& uv);
 
 // Intersect a ray with a quad represented as two triangles (0,1,3) and
 // (2,3,1), with the uv coordinates of the second triangle corrected by u =
 // 1-u' and v = 1-v' to produce a quad parametrization where u and v go from 0
 // to 1. This is equivalent to Intel's Embree.
-bool intersect_quad(const ray3f& ray, const vec3f& v0, const vec3f& v1,
-    const vec3f& v2, const vec3f& v3, float& dist, vec2f& uv);
+bool intersect_quad(const ray3f& ray, const vec3f& p0, const vec3f& p1,
+    const vec3f& p2, const vec3f& p3, float& dist, vec2f& uv);
 
 // Intersect a ray with a axis-aligned bounding box.
 bool intersect_bbox(const ray3f& ray, const bbox3f& bbox);
@@ -2354,38 +2213,38 @@ bool intersect_bbox(const ray3f& ray, const bbox3f& bbox);
 // Intersect a ray with a axis-aligned bounding box, implemented as
 // "Robust BVH Ray Traversal" by T. Ize published at
 // http://jcgt.org/published/0002/02/02/paper.pdf
-bool intersect_bbox(
-    const ray3f& ray, vec3f ray_dinv, vec3i ray_dsign, const bbox3f& bbox);
+bool intersect_bbox(const ray3f& ray, const vec3f& ray_dinv,
+    const vec3i& ray_dsign, const bbox3f& bbox);
 
 // Check if a point overlaps a position within a max distance.
-bool overlap_point(const vec3f& pos, float dist_max, const vec3f& v0, float r0,
+bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p0, float r0,
     float& dist, vec2f& uv);
 
 // Find closest line point to a position.
-float closestuv_line(const vec3f& pos, const vec3f& v0, const vec3f& v1);
+float closestuv_line(const vec3f& pos, const vec3f& p0, const vec3f& p1);
 
 // Check if a line overlaps a position within a max distance.
-bool overlap_line(const vec3f& pos, float dist_max, const vec3f& v0,
-    const vec3f& v1, float r0, float r1, float& dist, vec2f& uv);
+bool overlap_line(const vec3f& pos, float dist_max, const vec3f& p0,
+    const vec3f& p1, float r0, float r1, float& dist, vec2f& uv);
 
 // Find closest triangle point to a position.
 vec2f closestuv_triangle(
-    const vec3f& pos, const vec3f& v0, const vec3f& v1, const vec3f& v2);
+    const vec3f& pos, const vec3f& p0, const vec3f& p1, const vec3f& p2);
 
 // Check if a triangle overlaps a position within a max distance.
-bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& v0,
-    const vec3f& v1, const vec3f& v2, float r0, float r1, float r2, float& dist,
+bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, float r0, float r1, float r2, float& dist,
     vec2f& uv);
 
 // Check if a quad overlaps a position within a max distance.
-bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& v0,
-    const vec3f& v1, const vec3f& v2, const vec3f& v3, float r0, float r1,
+bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, const vec3f& p3, float r0, float r1,
     float r2, float r3, float& dist, vec2f& uv);
 
-// Check if a bouning box overlaps a position within a max distance.
+// Check if a bounding box overlaps a position within a max distance.
 bool overlap_bbox(const vec3f& pos, float dist_max, const bbox3f& bbox);
 
-// Check if two bouning boxes overlap.
+// Check if two bounding boxes overlap.
 bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2);
 
 }  // namespace ygl
@@ -2394,17 +2253,6 @@ bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2);
 // BVH FOR RAY INTERSECTION AND CLOSEST ELEMENT
 // -----------------------------------------------------------------------------
 namespace ygl {
-
-// Type of BVH node.
-enum struct bvh_node_type : uint8_t {
-    internal,
-    point,
-    line,
-    triangle,
-    quad,
-    vertex,
-    instance
-};
 
 // Maximum number of primitives per BVH node.
 const int bvh_max_prims = 4;
@@ -2415,11 +2263,18 @@ const int bvh_max_prims = 4;
 // indices refer to primitives for leaf nodes or other nodes for internal
 // nodes. See bvh_tree for more details.
 struct bvh_node {
-    bbox3f bbox;                    // bouds
+    bbox3f bbox;                    // bounds
     uint32_t prims[bvh_max_prims];  // primitives
     uint16_t count;                 // number of prims
-    bvh_node_type type;             // node type
+    bool internal;                  // whether it is an internal node or a leaf
     uint8_t split_axis;             // split axis
+};
+
+// Instance for a scene BVH.
+struct bvh_instance {
+    frame3f frame = identity_frame3f;      // frame
+    frame3f frame_inv = identity_frame3f;  // frame inverse
+    int sid = -1;                          // shape index
 };
 
 // BVH tree, stored as a node array. The tree structure is encoded using array
@@ -2442,33 +2297,46 @@ struct bvh_tree {
     std::vector<vec4i> quads;      // Quads for shape BVHs.
 
     // data for instance BVH
-    std::vector<frame3f> ist_frames;                  // instance frames
-    std::vector<frame3f> ist_inv_frames;              // instance inverse frames
-    std::vector<std::shared_ptr<bvh_tree>> ist_bvhs;  // instance shape bvhs
+    std::vector<bvh_instance> instances;  // instances
+    std::vector<bvh_tree*> shape_bvhs;    // shape bvhs
+
+    // optional application specific data to key from a pointer to internal ids
+    std::unordered_map<void*, int> instance_ids;
+    std::unordered_map<void*, int> shape_ids;
 
     // bvh nodes
     std::vector<bvh_node> nodes;  // Internal nodes.
+
+    // Embree opaque data
+    void* embree_bvh = nullptr;
+
+    // cleanup
+    ~bvh_tree();
 };
 
 // Build a BVH from the given set of primitives.
-void build_bvh(const std::shared_ptr<bvh_tree>& bvh, bool equalsize);
+void build_bvh(bvh_tree* bvh, bool high_quality);
 // Update the node bounds for a shape bvh.
-void refit_bvh(const std::shared_ptr<bvh_tree>& bvh);
+void refit_bvh(bvh_tree* bvh);
+
+// Build a BVH from the given set of primitives.
+// Uses Embree if available and requested, otherwise the standard build.
+void build_bvh(bvh_tree* bvh, bool high_quality, bool embree);
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance `dist`, the instance
 // id `iid`, the shape id `sid`, the shape element index `eid` and the
 // shape barycentric coordinates `uv`.
-bool intersect_bvh(const std::shared_ptr<bvh_tree>& bvh, const ray3f& ray,
-    bool find_any, float& dist, int& iid, int& eid, vec2f& uv);
+bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray, bool find_any,
+    float& dist, int& iid, int& eid, vec2f& uv);
 
 // Find a shape element that overlaps a point within a given distance
 // `max_dist`, returning either the closest or any overlap depending on
 // `find_any`. Returns the point distance `dist`, the instance id `iid`, the
 // shape id `sid`, the shape element index `eid` and the shape barycentric
 // coordinates `uv`.
-bool overlap_bvh(const std::shared_ptr<bvh_tree>& bvh, const vec3f& pos,
-    float max_dist, bool find_any, float& dist, int& iid, int& eid, vec2f& uv);
+bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
+    bool find_any, float& dist, int& iid, int& eid, vec2f& uv);
 
 }  // namespace ygl
 
@@ -2497,58 +2365,59 @@ struct make_shape_data {
 
 // Make examples shapes that are not watertight (besides quads).
 // Return (triangles, quads, pos, norm, texcoord)
-make_shape_data make_quad(const vec2i& steps, const vec2f& size,
+make_shape_data* make_quad(const vec2i& steps, const vec2f& size,
     const vec2f& uvsize, bool as_triangles);
-make_shape_data make_quad_stack(const vec3i& steps, const vec3f& size,
+make_shape_data* make_quad_stack(const vec3i& steps, const vec3f& size,
     const vec2f& uvsize, bool as_triangles);
-make_shape_data make_floor(const vec2i& steps, const vec2f& size,
+make_shape_data* make_floor(const vec2i& steps, const vec2f& size,
     const vec2f& uvsize, bool as_triangles);
-make_shape_data make_cube(const vec3i& steps, const vec3f& size,
+make_shape_data* make_cube(const vec3i& steps, const vec3f& size,
     const vec3f& uvsize, bool as_triangles);
-make_shape_data make_cube_rounded(const vec3i& steps, const vec3f& size,
+make_shape_data* make_cube_rounded(const vec3i& steps, const vec3f& size,
     const vec3f& uvsize, float radius, bool as_triangles);
-make_shape_data make_sphere(
+make_shape_data* make_sphere(
     const vec2i& steps, float size, const vec2f& uvsize, bool as_triangles);
-make_shape_data make_sphere_cube(
+make_shape_data* make_sphere_cube(
     int steps, float size, float uvsize, bool as_triangles);
-make_shape_data make_sphere_flipcap(const vec2i& steps, float size,
+make_shape_data* make_sphere_flipcap(const vec2i& steps, float size,
     const vec2f& uvsize, const vec2f& zflip, bool as_triangles);
-make_shape_data make_disk(
+make_shape_data* make_disk(
     const vec2i& steps, float size, const vec2f& uvsize, bool as_triangles);
-make_shape_data make_disk_quad(
+make_shape_data* make_disk_quad(
     int steps, float size, float uvsize, bool as_triangles);
-make_shape_data make_disk_bulged(
+make_shape_data* make_disk_bulged(
     int steps, float size, float uvsize, float height, bool as_triangles);
-make_shape_data make_cylinder_side(const vec2i& steps, const vec2f& size,
+make_shape_data* make_cylinder_side(const vec2i& steps, const vec2f& size,
     const vec2f& uvsize, bool as_triangles);
-make_shape_data make_cylinder(const vec3i& steps, const vec2f& size,
+make_shape_data* make_cylinder(const vec3i& steps, const vec2f& size,
     const vec3f& uvsize, bool as_triangles);
-make_shape_data make_cylinder_rounded(const vec3i& steps, const vec2f& size,
+make_shape_data* make_cylinder_rounded(const vec3i& steps, const vec2f& size,
     const vec3f& uvsize, float radius, bool as_triangles);
-make_shape_data make_geodesic_sphere(
+make_shape_data* make_geodesic_sphere(
     int tesselation, float size, bool as_triangles);
 
 // Make examples shapes with are watertight (good for subdivs).
 // Returns (triangles, quads, pos)
-make_shape_data make_suzanne(float size, bool as_triangles);
-make_shape_data make_cube(const vec3f& size, bool as_triangles);
+make_shape_data* make_suzanne(float size, bool as_triangles);
+make_shape_data* make_cube(const vec3f& size, bool as_triangles);
 
 // Make facevarying example shapes that are watertight (good for subdivs).
-make_shape_data make_fvcube(
+make_shape_data* make_fvcube(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
-make_shape_data make_lines(const vec2i& steps, const vec2f& size,
-    const vec2f& uvsize, vec2f line_radius = {0.001f, 0.001f});
+make_shape_data* make_lines(const vec2i& steps, const vec2f& size,
+    const vec2f& uvsize, const vec2f& line_radius = {0.001f, 0.001f});
 
 // Make point primitives. Returns points, pos, norm, texcoord, radius.
-make_shape_data make_point(float point_radius = 0.001f);
-make_shape_data make_points(int num, float uvsize, float point_radius = 0.001f);
-make_shape_data make_random_points(int num, const vec3f& size, float uvsize,
+make_shape_data* make_point(float point_radius = 0.001f);
+make_shape_data* make_points(
+    int num, float uvsize, float point_radius = 0.001f);
+make_shape_data* make_random_points(int num, const vec3f& size, float uvsize,
     float point_radius = 0.001f, uint64_t seed = 0);
 
 // Make a bezier circle. Returns bezier, pos.
-make_shape_data make_bezier_circle(
+make_shape_data* make_bezier_circle(
     std::vector<vec4i>& beziers, std::vector<vec3f>& pos);
 
 // Make a hair ball around a shape.  Returns lines, pos, norm, texcoord, radius.
@@ -2557,7 +2426,7 @@ make_shape_data make_bezier_circle(
 // noise: noise added to hair (strength/scale)
 // clump: clump added to hair (number/strength)
 // rotation: rotation added to hair (angle/strength)
-make_shape_data make_hair(const vec2i& steps,
+make_shape_data* make_hair(const vec2i& steps,
     const std::vector<vec3i>& striangles, const std::vector<vec3f>& spos,
     const std::vector<vec3f>& snorm, const std::vector<vec2f>& stexcoord,
     const vec2f& length = {0.1f, 0.1f}, const vec2f& rad = {0.001f, 0.001f},
@@ -2565,7 +2434,7 @@ make_shape_data make_hair(const vec2i& steps,
     const vec2f& rotation = zero2f, int seed = 7);
 
 // Helper to concatenated shape data for non-facevarying shapes.
-make_shape_data merge_shape_data(const std::vector<make_shape_data>& shapes);
+make_shape_data* merge_shape_data(const std::vector<make_shape_data*>& shapes);
 
 }  // namespace ygl
 
@@ -2578,48 +2447,37 @@ namespace ygl {
 template <typename T>
 struct image {
     // constructors
-    image() : size{0, 0}, pxl{} {}
-    image(const vec2i& size_, const T& c = T())
-        : size{size_}, pxl(size_.x * size_.y, c) {}
-    image(const vec2i& size_, const std::vector<T>& p) : size{size_}, pxl(p) {}
+    image() : _size{0, 0}, _data() {}
+    image(const vec2i& wh, const T& v = T{})
+        : _size{wh}, _data(wh.x * wh.y, v) {}
+    image(const vec2i& wh, const T* v) : _size{wh}, _data(v, v + wh.x * wh.y) {}
+
+    // size
+    vec2i size() const { return _size; }
+    bool empty() const { return _data.empty(); }
 
     // pixel access
-    T& operator[](const vec2i& ij) { return pxl[ij.y * size.x + ij.x]; }
+    T& operator[](const vec2i& ij) { return _data[ij.y * _size.x + ij.x]; }
     const T& operator[](const vec2i& ij) const {
-        return pxl[ij.y * size.x + ij.x];
+        return _data[ij.y * _size.x + ij.x];
     }
-    T& at(const vec2i& ij) { return pxl.at(ij.y * size.x + ij.x); }
-    const T& at(const vec2i& ij) const { return pxl.at(ij.y * size.x + ij.x); }
+    // T& at(int i, int j) { return _data.at(j * _size.x + i); }
+    // const T& at(int i, int j) const { return _data.at(j * _size.x + i); }
 
-    vec2i size = {0, 0};
-    std::vector<T> pxl = {};
+    // data acess
+    T* data() { return _data.data(); }
+    const T* data() const { return _data.data(); }
+    T* begin() { return _data.data(); }
+    T* end() { return _data.data() + _data.size(); }
+    const T* begin() const { return _data.data(); }
+    const T* end() const { return _data.data() + _data.size(); }
+    const std::vector<T>& dataref() const { return _data; }
+
+    // private data
+   private:
+    vec2i _size = {0, 0};
+    std::vector<T> _data = {};
 };
-
-// Type aliases
-using image4f = image<vec4f>;
-using image4b = image<vec4b>;
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// IMAGE UTILITIES
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-// Conversion from/to floats.
-image4f byte_to_float(const image4b& bt);
-image4b float_to_byte(const image4f& fl);
-
-// Conversion between linear and gamma-encoded images.
-image4f gamma_to_linear(const image4f& srgb, float gamma = 2.2f);
-image4f linear_to_gamma(const image4f& lin, float gamma = 2.2f);
-
-// Apply exposure and filmic tone mapping
-image4f tonemap_image(
-    const image4f& hdr, float exposure, float gamma, bool filmic);
-
-// Resize an image.
-image4f resize_image(const image4f& img, const vec2i& size);
 
 }  // namespace ygl
 
@@ -2659,6 +2517,29 @@ inline vec4f linear_to_gamma(const vec4f& lin, float gamma = 2.2f) {
 inline float luminance(const vec3f& a) { return (a.x + a.y + a.z) / 3; }
 inline float luminance(const vec4f& a) { return (a.x + a.y + a.z) / 3; }
 
+// Fitted ACES tonemapping curve.
+inline float tonemap_filmic_curve(float hdr) {
+    // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
+    // hdr *= 0.6; // brings it back to ACES range
+    return (hdr * hdr * 2.51f + hdr * 0.03f) /
+           (hdr * hdr * 2.43f + hdr * 0.59f + 0.14f);
+}
+// Apply ACES fitted curve.
+inline vec4f tonemap_filmic_curve(const vec4f& hdr) {
+    return {tonemap_filmic_curve(hdr.x), tonemap_filmic_curve(hdr.y),
+        tonemap_filmic_curve(hdr.z), hdr.w};
+}
+
+// Tonemap a color value according to an exposure-gamma tone mapper, with
+// an optional filmic curve.
+inline vec4f tonemap_exposuregamma(
+    const vec4f& hdr, float exposure, float gamma, bool filmic) {
+    auto scale = pow(2.0f, exposure);
+    auto ldr = vec4f{hdr.x * scale, hdr.y * scale, hdr.z * scale, hdr.w};
+    if (filmic) ldr = tonemap_filmic_curve(ldr);
+    return linear_to_gamma(ldr, gamma);
+}
+
 // Converts HSV to RGB.
 vec3f hsv_to_rgb(const vec3f& hsv);
 vec3f rgb_to_hsv(const vec3f& rgb);
@@ -2672,47 +2553,69 @@ vec3f rgb_to_xyz(const vec3f& rgb);
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
+// IMAGE UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Conversion from/to floats.
+image<vec4f> byte_to_float(const image<vec4b>& bt);
+image<vec4b> float_to_byte(const image<vec4f>& fl);
+
+// Conversion between linear and gamma-encoded images.
+image<vec4f> gamma_to_linear(const image<vec4f>& srgb, float gamma = 2.2f);
+image<vec4f> linear_to_gamma(const image<vec4f>& lin, float gamma = 2.2f);
+
+// Apply exposure and filmic tone mapping
+image<vec4f> tonemap_exposuregamma(
+    const image<vec4f>& hdr, float exposure, float gamma, bool filmic);
+
+// Resize an image.
+image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size);
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
 // EXAMPLE IMAGES
 // -----------------------------------------------------------------------------
 namespace ygl {
 
 // Make example images.
-image4f make_grid_image(const vec2i& imsize, int tile = 8,
+image<vec4f> make_grid_image4f(const vec2i& size, int tile = 8,
     const vec4f& c0 = {0.5f, 0.5f, 0.5f, 1},
     const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
-image4f make_checker_image(const vec2i& imsize, int tile = 8,
+image<vec4f> make_checker_image4f(const vec2i& size, int tile = 8,
     const vec4f& c0 = {0.5f, 0.5f, 0.5f, 1},
     const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
-image4f make_bumpdimple_image(const vec2i& imsize, int tile = 8);
-image4f make_ramp_image(
-    const vec2i& imsize, const vec4f& c0, const vec4f& c1, float srgb = false);
-image4f make_gammaramp_image(const vec2i& imsize);
-image4f make_uvramp_image(const vec2i& imsize);
-image4f make_uvgrid_image(
-    const vec2i& imsize, int tile = 8, bool colored = true);
+image<vec4f> make_bumpdimple_image4f(const vec2i& size, int tile = 8);
+image<vec4f> make_ramp_image4f(
+    const vec2i& size, const vec4f& c0, const vec4f& c1, float srgb = false);
+image<vec4f> make_gammaramp_image4f(const vec2i& size);
+image<vec4f> make_uvramp_image4f(const vec2i& size);
+image<vec4f> make_uvgrid_image4f(
+    const vec2i& size, int tile = 8, bool colored = true);
 
 // Comvert a bump map to a normal map.
-image4f bump_to_normal_map(const image4f& img, float scale = 1);
+image<vec4f> bump_to_normal_map(const image<vec4f>& img, float scale = 1);
 
-// Make a sunsky HDR model with sun at theta elevation in [0,pi/2], turbidity
+// Make a sunsky HDR model with sun at theta elevation in [0,pif/2], turbidity
 // in [1.7,10] with or without sun.
-image4f make_sunsky_image(const vec2i& imsize, float thetaSun,
+image<vec4f> make_sunsky_image4f(const vec2i& size, float thetaSun,
     float turbidity = 3, bool has_sun = false,
-    vec3f ground_albedo = {0.7f, 0.7f, 0.7f});
+    const vec3f& ground_albedo = {0.7f, 0.7f, 0.7f});
 // Make an image of multiple lights.
-image4f make_lights_image(const vec2i& imsize, const vec3f& le = {1, 1, 1},
-    int nlights = 4, float langle = pi / 4, float lwidth = pi / 16,
-    float lheight = pi / 16);
+image<vec4f> make_lights_image4f(const vec2i& size, const vec3f& le = {1, 1, 1},
+    int nlights = 4, float langle = pif / 4, float lwidth = pif / 16,
+    float lheight = pif / 16);
 
 // Make a noise image. Wrap works only if both resx and resy are powers of two.
-image4f make_noise_image(
-    const vec2i& imsize, float scale = 1, bool wrap = true);
-image4f make_fbm_image(const vec2i& imsize, float scale = 1,
+image<vec4f> make_noise_image4f(
+    const vec2i& size, float scale = 1, bool wrap = true);
+image<vec4f> make_fbm_image4f(const vec2i& size, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
-image4f make_ridge_image(const vec2i& imsize, float scale = 1,
+image<vec4f> make_ridge_image4f(const vec2i& size, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, float offset = 1.0f,
     int octaves = 6, bool wrap = true);
-image4f make_turbulence_image(const vec2i& imsize, float scale = 1,
+image<vec4f> make_turbulence_image4f(const vec2i& size, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
 
 }  // namespace ygl
@@ -2730,53 +2633,111 @@ inline int eval_keyframed_index(
     return (int)times.size();
 }
 
-// Evalautes a keyframed value using step interpolation.
-template <typename T, typename T1>
+// Evaluates a keyframed value using step interpolation.
+template <typename T>
 inline T eval_keyframed_step(
-    const std::vector<T1>& times, const std::vector<T>& vals, T1 time) {
+    const std::vector<float>& times, const std::vector<T>& vals, float time) {
     if (time <= times.front()) return vals.front();
     if (time >= times.back()) return vals.back();
-    time = clamp(time, times.front(), times.back() - (T1)0.001);
+    time = clamp(time, times.front(), times.back() - 0.001f);
     auto idx = eval_keyframed_index(times, time);
     return vals.at(idx - 1);
 }
 
-// Evalautes a keyframed value using linear interpolation.
-template <typename T, typename T1>
-inline vec<T, 4> eval_keyframed_slerp(
-    const std::vector<T1>& times, const std::vector<vec<T, 4>>& vals, T1 time) {
+// Evaluates a keyframed value using linear interpolation.
+template <typename T>
+inline vec4f eval_keyframed_slerp(const std::vector<float>& times,
+    const std::vector<vec4f>& vals, float time) {
     if (time <= times.front()) return vals.front();
     if (time >= times.back()) return vals.back();
-    time = clamp(time, times.front(), times.back() - (T1)0.001);
+    time = clamp(time, times.front(), times.back() - 0.001f);
     auto idx = eval_keyframed_index(times, time);
     auto t = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
     return slerp(vals.at(idx - 1), vals.at(idx), t);
 }
 
-// Evalautes a keyframed value using linear interpolation.
-template <typename T, typename T1>
+// Evaluates a keyframed value using linear interpolation.
+template <typename T>
 inline T eval_keyframed_linear(
-    const std::vector<T1>& times, const std::vector<T>& vals, T1 time) {
+    const std::vector<float>& times, const std::vector<T>& vals, float time) {
     if (time <= times.front()) return vals.front();
     if (time >= times.back()) return vals.back();
-    time = clamp(time, times.front(), times.back() - (T1)0.001);
+    time = clamp(time, times.front(), times.back() - 0.001f);
     auto idx = eval_keyframed_index(times, time);
     auto t = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
     return vals.at(idx - 1) * (1 - t) + vals.at(idx) * t;
 }
 
-// Evalautes a keyframed value using Bezier interpolation.
-template <typename T, typename T1>
+// Evaluates a keyframed value using Bezier interpolation.
+template <typename T>
 inline T eval_keyframed_bezier(
-    const std::vector<T1>& times, const std::vector<T>& vals, T1 time) {
+    const std::vector<float>& times, const std::vector<T>& vals, float time) {
     if (time <= times.front()) return vals.front();
     if (time >= times.back()) return vals.back();
-    time = clamp(time, times.front(), times.back() - (T1)0.001);
+    time = clamp(time, times.front(), times.back() - 0.001f);
     auto idx = eval_keyframed_index(times, time);
     auto t = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
     return interpolate_bezier(
         vals.at(idx - 3), vals.at(idx - 2), vals.at(idx - 1), vals.at(idx), t);
 }
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// VOLUME TYPE
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Volume container.
+template <typename T>
+struct volume {
+    // constructors
+    volume() : _size{0, 0}, _data() {}
+    volume(const vec3i& size, const T& v = T{})
+        : _size{size}, _data(size.x * size.y, v) {}
+    volume(const vec3i& size, const T* v)
+        : _size{size}, _data(v, v + size.x * size.y * size.z) {}
+
+    // size
+    vec3i size() const { return _size; }
+    bool empty() const { return _data.empty(); }
+
+    // pixel access
+    T& operator[](const vec3i& ijk) {
+        return _data[ijk.z * _size.x * _size.y + ijk.y * _size.x + ijk.x];
+    }
+    const T& operator[](const vec3i& ijk) const {
+        return _data[ijk.z * _size.x * _size.y + ijk.y * _size.x + ijk.x];
+    }
+    // T& at(int i, int j) { return _data.at(ij.z * _size.x * _size.y + j *
+    // _size.x + i); } const T& at(int i, int j) const { return _data.at(ij.z *
+    // _size.x * _size.y + j * _size.x + i); }
+
+    // data acess
+    T* data() { return _data.data(); }
+    const T* data() const { return _data.data(); }
+    T* begin() { return _data.data(); }
+    T* end() { return _data.data() + _data.size(); }
+    const T* begin() const { return _data.data(); }
+    const T* end() const { return _data.data() + _data.size(); }
+    const std::vector<T>& dataref() const { return _data; }
+
+    // private data
+   private:
+    vec3i _size = {0, 0};
+    std::vector<T> _data = {};
+};
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// SCENE DATA
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// make a simple example volume
+volume<float> make_test_volume1f(
+    const vec3i& size, float scale = 10, float exponent = 6);
 
 }  // namespace ygl
 
@@ -2793,30 +2754,36 @@ struct camera {
     std::string name = "";             // name
     frame3f frame = identity_frame3f;  // transform frame
     bool ortho = false;                // orthographic
-    vec2f imsize = {0.036f, 0.024f};   // film width and height (default: 35mm)
+    vec2f film = {0.036f, 0.024f};     // film size (default: 35mm)
     float focal = 0.050f;              // focal length (defaut: 50 mm)
-    float focus = flt_max;             // focal distance (default: infinite)
+    float focus = maxf;                // focal distance (default: infinite)
     float aperture = 0;                // lens aperture
-    float near = 0.01f;                // near plane distance
-    float far = 10000;                 // far plane distance
 };
 
 // Texture containing either an LDR or HDR image.
 struct texture {
     std::string name = "";     // name
     std::string path = "";     // file path
-    image4f img = {};          // image
+    image<vec4f> img = {};     // image
     bool clamp = false;        // clamp textures coordinates
+    bool linear = true;        // use bilinear interpolation
     float scale = 1;           // scale for occ, normal, bumps
     float gamma = 2.2f;        // gamma correction for ldr textures in IO
     bool has_opacity = false;  // check whether alpha != 0
-    uint gl_txt = 0;           // unmanaged data for OpenGL viewer
+};
+
+// Volumetric texture containing either an HDR image.
+struct voltexture {
+    std::string name = "";   // name
+    std::string path = "";   // file path
+    volume<float> vol = {};  // volume
+    bool clamp = false;      // clamp textures coordinates
+    bool linear = true;      // use trilinear interpolation
 };
 
 // Material for surfaces, lines and triangles.
 // For surfaces, uses a microfacet model with thin sheet transmission.
 // The model is based on glTF for compatibility and adapted to OBJ.
-// For lines, uses Kajija-Kay model. For points, a hacked up shading.
 struct material {
     std::string name = "";       // name
     bool base_metallic = false;  // base-metallic parametrization
@@ -2834,16 +2801,25 @@ struct material {
     bool refract = false;  // whether to use use refraction in tranmission
 
     // textures
-    std::shared_ptr<texture> ke_txt;    // emission texture
-    std::shared_ptr<texture> kd_txt;    // diffuse texture
-    std::shared_ptr<texture> ks_txt;    // specular texture
-    std::shared_ptr<texture> kt_txt;    // transmission texture
-    std::shared_ptr<texture> rs_txt;    // roughness texture
-    std::shared_ptr<texture> op_txt;    // opacity texture
-    std::shared_ptr<texture> occ_txt;   // occlusion texture
-    std::shared_ptr<texture> bump_txt;  // bump map texture (heighfield)
-    std::shared_ptr<texture> disp_txt;  // displacement map texture (heighfield)
-    std::shared_ptr<texture> norm_txt;  // normal texture
+    texture* ke_txt = nullptr;    // emission texture
+    texture* kd_txt = nullptr;    // diffuse texture
+    texture* ks_txt = nullptr;    // specular texture
+    texture* kt_txt = nullptr;    // transmission texture
+    texture* rs_txt = nullptr;    // roughness texture
+    texture* op_txt = nullptr;    // opacity texture
+    texture* occ_txt = nullptr;   // occlusion texture
+    texture* bump_txt = nullptr;  // bump map texture (heighfield)
+    texture* disp_txt = nullptr;  // displacement map texture (heighfield)
+    texture* norm_txt = nullptr;  // normal texture
+
+    // volume properties
+    vec3f ve = {0, 0, 0};  // volume emission
+    vec3f va = {0, 0, 0};  // albedo: scattering / (absorption + scattering)
+    vec3f vd = {0, 0, 0};  // density: absorption + scattering
+    float vg = 0;          // phase function shape
+
+    // volume textures
+    voltexture* vd_txt = nullptr;  // density
 };
 
 // Shape data represented as an indexed meshes of elements.
@@ -2864,14 +2840,6 @@ struct shape {
     std::vector<vec4f> color;     // colors
     std::vector<float> radius;    // radia for lines/points
     std::vector<vec4f> tangsp;    // tangent space for triangles
-
-    // computed properties
-    bbox3f bbox = invalid_bbox3f;             // boudning box
-    std::vector<float> elem_cdf = {};         // element cdf for sampling
-    std::shared_ptr<bvh_tree> bvh = nullptr;  // bvh for ray intersection
-    uint gl_pos = 0, gl_norm = 0, gl_texcoord = 0, gl_color = 0, gl_tangsp = 0,
-         gl_points = 0, gl_lines = 0,
-         gl_triangles = 0;  // unmanaged data for OpenGL viewer
 };
 
 // Subdivision surface.
@@ -2899,42 +2867,36 @@ struct subdiv {
 
 // Shape instance.
 struct instance {
-    std::string name;                         // name
-    frame3f frame = identity_frame3f;         // transform frame
-    std::shared_ptr<shape> shp = nullptr;     // shape
-    std::shared_ptr<material> mat = nullptr;  // material
-    std::shared_ptr<subdiv> sbd = nullptr;    // subdivision shape
-
-    // compute properties
-    bbox3f bbox = invalid_bbox3f;  // boudning box
+    std::string name = "";             // name
+    frame3f frame = identity_frame3f;  // transform frame
+    shape* shp = nullptr;              // shape
+    material* mat = nullptr;           // material
+    subdiv* sbd = nullptr;             // subdivision shape
 };
 
-// Envinonment map.
+// Environment map.
 struct environment {
-    std::string name = "";                 // name
-    frame3f frame = identity_frame3f;      // transform frame
-    vec3f ke = {0, 0, 0};                  // emission color
-    std::shared_ptr<texture> ke_txt = {};  // emission texture
-
-    // computed properties
-    std::vector<float> elem_cdf;  // element cdf for sampling
+    std::string name = "";             // name
+    frame3f frame = identity_frame3f;  // transform frame
+    vec3f ke = {0, 0, 0};              // emission color
+    texture* ke_txt = nullptr;         // emission texture
 };
 
 // Node in a transform hierarchy.
 struct node {
-    std::string name = "";                       // name
-    std::shared_ptr<node> parent = nullptr;      // parent
-    frame3f frame = identity_frame3f;            // transform frame
-    vec3f translation = {0, 0, 0};               // translation
-    vec4f rotation = {0, 0, 0, 1};               // rotation
-    vec3f scale = {1, 1, 1};                     // scale
-    std::vector<float> weights = {};             // morph weights
-    std::shared_ptr<camera> cam = nullptr;       // camera
-    std::shared_ptr<instance> ist = nullptr;     // instance
-    std::shared_ptr<environment> env = nullptr;  // environment
+    std::string name = "";             // name
+    node* parent = nullptr;            // parent
+    frame3f local = identity_frame3f;  // transform frame
+    vec3f translation = {0, 0, 0};     // translation
+    vec4f rotation = {0, 0, 0, 1};     // rotation
+    vec3f scale = {1, 1, 1};           // scale
+    std::vector<float> weights = {};   // morph weights
+    camera* cam = nullptr;             // camera
+    instance* ist = nullptr;           // instance
+    environment* env = nullptr;        // environment
 
     // compute properties
-    std::vector<std::weak_ptr<node>> children = {};  // child nodes
+    std::vector<node*> children = {};  // child nodes
 };
 
 // Keyframe type.
@@ -2942,16 +2904,16 @@ enum struct animation_type { linear, step, bezier };
 
 // Keyframe data.
 struct animation {
-    std::string name;                              // name
+    std::string name = "";                         // name
     std::string path = "";                         // path for glTF buffer
-    std::string group;                             // group
+    std::string group = "";                        // group
     animation_type type = animation_type::linear;  // type
     std::vector<float> times;                      // keyframe times
     std::vector<vec3f> translation;                // translation keyframes
     std::vector<vec4f> rotation;                   // rotation keyframes
     std::vector<vec3f> scale;                      // scale keyframes
-    std::vector<std::vector<float>> weights;       // mprph weight keyframes
-    std::vector<std::shared_ptr<node>> targets;    // target nodes
+    std::vector<std::vector<float>> weights;       // morph weight keyframes
+    std::vector<node*> targets;                    // target nodes
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -2962,24 +2924,21 @@ struct animation {
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
 struct scene {
-    std::string name;                                       // name
-    std::vector<std::shared_ptr<camera>> cameras = {};      // cameras
-    std::vector<std::shared_ptr<shape>> shapes = {};        // shapes
-    std::vector<std::shared_ptr<subdiv>> subdivs = {};      // subdivs
-    std::vector<std::shared_ptr<instance>> instances = {};  // instances
-    std::vector<std::shared_ptr<material>> materials = {};  // materials
-    std::vector<std::shared_ptr<texture>> textures = {};    // textures
-    std::vector<std::shared_ptr<environment>> environments =
-        {};  // environments
+    std::string name;                             // name
+    std::vector<camera*> cameras = {};            // cameras
+    std::vector<shape*> shapes = {};              // shapes
+    std::vector<subdiv*> subdivs = {};            // subdivs
+    std::vector<instance*> instances = {};        // instances
+    std::vector<material*> materials = {};        // materials
+    std::vector<texture*> textures = {};          // textures
+    std::vector<environment*> environments = {};  // environments
+    std::vector<voltexture*> voltextures = {};    // volume textures
 
-    std::vector<std::shared_ptr<node>> nodes = {};  // node hierarchy [optional]
-    std::vector<std::shared_ptr<animation>> animations =
-        {};  // animations [optional]
+    std::vector<node*> nodes = {};            // node hierarchy [optional]
+    std::vector<animation*> animations = {};  // animations [optional]
 
-    // compute properties
-    std::vector<std::shared_ptr<instance>> lights;
-    bbox3f bbox = invalid_bbox3f;  // boudning box
-    std::shared_ptr<bvh_tree> bvh = nullptr;
+    // cleanup
+    ~scene();
 };
 
 }  // namespace ygl
@@ -2990,12 +2949,11 @@ struct scene {
 namespace ygl {
 
 // Print scene statistics.
-void print_stats(const std::shared_ptr<scene>& scn);
+void print_stats(const scene* scn);
 
 // Merge scene into one another. Note that the objects are _moved_ from
 // merge_from to merged_into, so merge_from will be empty after this function.
-void merge_into(const std::shared_ptr<scene>& merge_into,
-    std::shared_ptr<scene> merge_from);
+void merge_into(const scene* merge_into, scene* merge_from);
 
 }  // namespace ygl
 
@@ -3004,71 +2962,60 @@ void merge_into(const std::shared_ptr<scene>& merge_into,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Update the normals of a shape.
-void update_normals(const std::shared_ptr<shape>& shp);
-
 // Update node transforms.
-void update_transforms(const std::shared_ptr<scene>& scn, float time = 0,
-    const std::string& anim_group = "");
+void update_transforms(
+    scene* scn, float time = 0, const std::string& anim_group = "");
 // Compute animation range.
 vec2f compute_animation_range(
-    const std::shared_ptr<scene>& scn, const std::string& anim_group = "");
+    const scene* scn, const std::string& anim_group = "");
 
 // Computes shape/scene approximate bounds.
-void udpate_bbox(const std::shared_ptr<shape>& shp);
-void update_bbox(const std::shared_ptr<scene>& scn, bool do_shapes = true);
+bbox3f compute_bbox(const shape* shp);
+bbox3f compute_bbox(const scene* scn);
 
-// Update lights.
-void update_lights(const std::shared_ptr<scene>& scn, bool do_shapes = true,
-    bool do_environments = false);
 // Generate a distribution for sampling a shape uniformly based on area/length.
-void update_shape_cdf(const std::shared_ptr<shape>& shp);
+std::vector<float> compute_shape_cdf(const shape* shp);
 // Generate a distribution for sampling an environment texture uniformly
 // based on angle and texture intensity.
-void update_environment_cdf(std::shared_ptr<environment> env);
+std::vector<float> compute_environment_cdf(const environment* env);
 
 // Updates/refits bvh.
-void update_bvh(const std::shared_ptr<shape>& shp, bool equalsize = false);
-void update_bvh(const std::shared_ptr<scene>& scn, bool do_shapes = true,
-    bool equalsize = false);
-void refit_bvh(const std::shared_ptr<shape>& shp);
-void refit_bvh(const std::shared_ptr<scene>& scn, bool do_shapes = true);
+bvh_tree* build_bvh(const shape* shp, bool high_quality, bool embree = false);
+bvh_tree* build_bvh(const scene* scn, bool high_quality, bool embree = false);
+void refit_bvh(const shape* shp, bvh_tree* bvh);
+void refit_bvh(const scene* scn, bvh_tree* bvh);
 
 // Updates tesselation.
-void update_tesselation(
-    const std::shared_ptr<subdiv>& sbd, std::shared_ptr<shape> shp);
-void update_tesselation(const std::shared_ptr<scene>& scn);
+void tesselate_subdiv(const subdiv* sbd, shape* shp);
+void tesselate_subdivs(scene* scn);
 
 // Add missing names, normals, tangents and hierarchy.
-void add_missing_names(const std::shared_ptr<scene>& scn);
-void add_missing_normals(const std::shared_ptr<scene>& scn);
-void add_missing_tangent_space(const std::shared_ptr<scene>& scn);
-void add_missing_materials(const std::shared_ptr<scene>& scn);
+void add_missing_names(scene* scn);
+void add_missing_normals(scene* scn);
+void add_missing_tangent_space(scene* scn);
+void add_missing_materials(scene* scn);
 // Checks for validity of the scene.
-std::vector<std::string> validate(
-    const std::shared_ptr<scene>& scn, bool skip_textures = false);
+std::vector<std::string> validate(const scene* scn, bool skip_textures = false);
 
 // make camera
-std::shared_ptr<camera> make_bbox_camera(const std::string& name,
-    const bbox3f& bbox, const vec2f& imsize = {0.036f, 0.024f},
-    float focal = 0.050f);
+camera* make_bbox_camera(const std::string& name, const bbox3f& bbox,
+    const vec2f& film = {0.036f, 0.024f}, float focal = 0.050f);
 // make default material
-inline std::shared_ptr<material> make_default_material(
-    const std::string& name) {
-    auto mat = std::make_shared<material>();
+inline material* make_default_material(const std::string& name) {
+    auto mat = new material();
     mat->name = name;
     mat->kd = {0.2f, 0.2f, 0.2f};
     return mat;
 }
 
 // Add a sky environment
-inline std::shared_ptr<environment> make_sky_environment(
-    const std::string& name, float sun_angle = pi / 4) {
-    auto txt = std::make_shared<texture>();
+inline environment* make_sky_environment(
+    const std::string& name, float sun_angle = pif / 4) {
+    auto txt = new texture();
     txt->name = name;
     txt->path = "textures/" + name + ".hdr";
-    txt->img = make_sunsky_image({1024, 512}, sun_angle);
-    auto env = std::make_shared<environment>();
+    txt->img = make_sunsky_image4f({1024, 512}, sun_angle);
+    auto env = new environment();
     env->name = name;
     env->ke = {1, 1, 1};
     env->ke_txt = txt;
@@ -3078,95 +3025,94 @@ inline std::shared_ptr<environment> make_sky_environment(
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
-// INTERSECTION, EVAL AND SAMPLING FUNCTIONS
+// EVALUATION OF SCENE PROPERTIES
 // -----------------------------------------------------------------------------
 namespace ygl {
 
 // Scene intersection.
 struct scene_intersection {
-    std::shared_ptr<instance> ist =
-        nullptr;        // instance or null for no intersection
-    int ei = 0;         // shape element index
-    vec2f uv = zero2f;  // shape element coordinates
-    float dist = 0;     // ray/point distance
+    instance* ist = nullptr;  // instance or null for no intersection
+    int ei = 0;               // shape element index
+    vec2f uv = zero2f;        // shape element coordinates
+    float dist = maxf;        // ray/point distance
 };
 
+// Intersects a ray with an instance. The bvh refers is the shape bvh.
+scene_intersection intersect_ray(const instance* ist, const bvh_tree* sbvh,
+    const ray3f& ray, bool find_any = false);
 // Intersects a ray with the scene.
-scene_intersection intersect_ray(
-    const std::shared_ptr<scene>& scn, const ray3f& ray, bool find_any = false);
+scene_intersection intersect_ray(const scene* scn, const bvh_tree* bvh,
+    const ray3f& ray, bool find_any = false);
 
 // Shape values interpolated using barycentric coordinates.
-vec3f eval_pos(const std::shared_ptr<shape>& shp, int ei, const vec2f& uv);
-vec3f eval_norm(const std::shared_ptr<shape>& shp, int ei, const vec2f& uv);
-vec2f eval_texcoord(const std::shared_ptr<shape>& shp, int ei, const vec2f& uv);
-vec4f eval_color(const std::shared_ptr<shape>& shp, int ei, const vec2f& uv);
-float eval_radius(const std::shared_ptr<shape>& shp, int ei, const vec2f& uv);
-vec4f eval_tangsp(const std::shared_ptr<shape>& shp, int ei, const vec2f& uv);
-vec3f eval_tangsp(const std::shared_ptr<shape>& shp, int ei, const vec2f& uv,
-    bool& left_handed);
+vec3f eval_pos(const shape* shp, int ei, const vec2f& uv);
+vec3f eval_norm(const shape* shp, int ei, const vec2f& uv);
+vec2f eval_texcoord(const shape* shp, int ei, const vec2f& uv);
+vec4f eval_color(const shape* shp, int ei, const vec2f& uv);
+float eval_radius(const shape* shp, int ei, const vec2f& uv);
+vec4f eval_tangsp(const shape* shp, int ei, const vec2f& uv);
+vec3f eval_tangsp(const shape* shp, int ei, const vec2f& uv, bool& left_handed);
 // Shape element values.
-vec3f eval_elem_norm(const std::shared_ptr<shape>& shp, int ei);
-vec4f eval_elem_tangsp(const std::shared_ptr<shape>& shp, int ei);
+vec3f eval_elem_norm(const shape* shp, int ei);
+vec4f eval_elem_tangsp(const shape* shp, int ei);
 
 // Instance values interpolated using barycentric coordinates.
 // Handles defaults if data is missing.
-vec3f eval_pos(const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
-vec3f eval_norm(const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
-vec2f eval_texcoord(
-    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
-vec4f eval_color(const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
-float eval_radius(
-    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
-vec3f eval_tangsp(const std::shared_ptr<instance>& ist, int ei, const vec2f& uv,
-    bool& left_handed);
+vec3f eval_pos(const instance* ist, int ei, const vec2f& uv);
+vec3f eval_norm(const instance* ist, int ei, const vec2f& uv);
+vec2f eval_texcoord(const instance* ist, int ei, const vec2f& uv);
+vec4f eval_color(const instance* ist, int ei, const vec2f& uv);
+float eval_radius(const instance* ist, int ei, const vec2f& uv);
+vec3f eval_tangsp(
+    const instance* ist, int ei, const vec2f& uv, bool& left_handed);
 // Instance element values.
-vec3f eval_elem_norm(const std::shared_ptr<instance>& ist, int ei);
+vec3f eval_elem_norm(const instance* ist, int ei);
 // Shading normals including material perturbations.
 vec3f eval_shading_norm(
-    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv, vec3f o);
+    const instance* ist, int ei, const vec2f& uv, const vec3f& o);
 
 // Environment texture coordinates from the incoming direction.
-vec2f eval_texcoord(const std::shared_ptr<environment>& env, vec3f i);
+vec2f eval_texcoord(const environment* env, const vec3f& i);
 // Evaluate the incoming direction from the uv.
-vec3f eval_direction(const std::shared_ptr<environment>& env, const vec2f& uv);
+vec3f eval_direction(const environment* env, const vec2f& uv);
 // Evaluate the environment emission.
-vec3f eval_environment(const std::shared_ptr<environment>& env, vec3f i);
+vec3f eval_environment(const environment* env, const vec3f& i);
+// Evaluate all environment emission.
+vec3f eval_environment(const scene* scn, const vec3f& i);
 
 // Evaluate a texture.
-vec4f eval_texture(const std::shared_ptr<texture>& txt, const vec2f& texcoord);
+vec4f eval_texture(const texture* txt, const vec2f& texcoord);
+float eval_voltexture(const voltexture* txt, const vec3f& texcoord);
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
-float eval_camera_fovy(const std::shared_ptr<camera>& cam);
-float eval_camera_aspect(const std::shared_ptr<camera>& cam);
-void set_camera_fovy(const std::shared_ptr<camera>& cam, float fovy,
-    float aspect, float width = 0.036f);
-vec2i eval_image_resolution(
-    const std::shared_ptr<camera>& cam, int yresolution);
+float eval_camera_fovy(const camera* cam);
+float eval_camera_aspect(const camera* cam);
+void set_camera_fovy(
+    camera* cam, float fovy, float aspect, float width = 0.036f);
+vec2i eval_image_size(const camera* cam, int yresolution);
 
 // Generates a ray from a camera image coordinate `uv` and lens coordinates
 // `luv`.
-ray3f eval_camera_ray(
-    const std::shared_ptr<camera>& cam, const vec2f& uv, const vec2f& luv);
-// Generates a ray from a camera for pixel coordinates `ij`, the resolution
-// `res`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and
+ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv);
+// Generates a ray from a camera for pixel coordinates `ij`, the image size
+// `imsize`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and
 // the image resolution `res`.
-ray3f eval_camera_ray(const std::shared_ptr<camera>& cam, const vec2i& ij,
-    const vec2i& imsize, const vec2f& puv, const vec2f& luv);
+ray3f eval_camera_ray(const camera* cam, const vec2i& ij, const vec2i& imsize,
+    const vec2f& puv, const vec2f& luv);
+// Generates a ray from a camera for pixel index `idx`, the image size
+// `imsize`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and
+// the image resolution `res`.
+ray3f eval_camera_ray(const camera* cam, int idx, const vec2i& imsize,
+    const vec2f& puv, const vec2f& luv);
 
 // Evaluates material parameters: emission, diffuse, specular, transmission,
 // roughness and opacity.
-vec3f eval_emission(
-    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
-vec3f eval_diffuse(
-    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
-vec3f eval_specular(
-    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
-vec3f eval_transmission(
-    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
-float eval_roughness(
-    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
-float eval_opacity(
-    const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
+vec3f eval_emission(const instance* ist, int ei, const vec2f& uv);
+vec3f eval_diffuse(const instance* ist, int ei, const vec2f& uv);
+vec3f eval_specular(const instance* ist, int ei, const vec2f& uv);
+vec3f eval_transmission(const instance* ist, int ei, const vec2f& uv);
+float eval_roughness(const instance* ist, int ei, const vec2f& uv);
+float eval_opacity(const instance* ist, int ei, const vec2f& uv);
 
 // Material values packed into a convenience structure.
 struct bsdf {
@@ -3176,16 +3122,12 @@ struct bsdf {
     float rs = 1;          // roughness
     bool refract = false;  // whether to use refraction in transmission
 };
-bsdf eval_bsdf(const std::shared_ptr<instance>& ist, int ei, const vec2f& uv);
+bsdf eval_bsdf(const instance* ist, int ei, const vec2f& uv);
 bool is_delta_bsdf(const bsdf& f);
 
-// Sample a shape based on a distribution.
-std::pair<int, vec2f> sample_shape(
-    const std::shared_ptr<shape>& shp, float re, const vec2f& ruv);
-
-// Sample an environment uniformly.
-vec2f sample_environment(
-    const std::shared_ptr<environment>& env, const vec2f& ruv);
+// Check volume properties.
+bool is_volume_homogeneus(const material* vol);
+bool has_volume_color(const material* vol);
 
 }  // namespace ygl
 
@@ -3197,93 +3139,92 @@ namespace ygl {
 // Default trace seed
 const auto trace_default_seed = 961748941;
 
-// Trace evaluation function.
-using trace_func = std::function<vec3f(const std::shared_ptr<scene>& scn,
-    const ray3f& ray, rng_state& rng, int nbounces, bool* hit)>;
+// Type of tracing algorithm to use
+enum struct trace_type {
+    path,               // path tracing
+    volpath,            // volumetric path tracing
+    direct,             // direct illumination
+    environment,        // environment illumination only
+    eyelight,           // eyelight rendering
+    path_nomis,         // path tracer without mis
+    path_naive,         // naive path tracing
+    direct_nomis,       // direct illumition without mis
+    debug_normal,       // debug - normal
+    debug_albedo,       // debug - albedo
+    debug_texcoord,     // debug - texcoord
+    debug_frontfacing,  // debug - faceforward
+    debug_diffuse,      // debug - diffuse
+    debug_specular,     // debug - specular
+    debug_roughness,    // debug - roughness
+};
+
+const auto trace_type_names = std::vector<std::string>{"path", "volpath",
+    "direct", "environment", "eyelight", "path_nomis", "path_naive",
+    "direct_nomis", "debug_normal", "debug_albedo", "debug_texcoord",
+    "debug_frontfacing", "debug_diffuse", "debug_specular", "debug_roughness"};
+
+// Trace options
+struct trace_params {
+    int camid = 0;                         // camera index
+    int yresolution = 256;                 // vertical resolution
+    trace_type tracer = trace_type::path;  // tracer type
+    int nsamples = 256;                    // number of samples
+    int nbounces = 8;                      // max number of bounces
+    float pixel_clamp = 100;               // pixel clamping
+    int nbatch = 16;                       // number of samples per batch
+    bool noparallel = false;               // serial or parallel execution
+    int preview_ratio = 8;                 // preview ratio for asycn rendering
+    float exposure = 0;                    // tone mapping exposure
+    float gamma = 2.2f;                    // tone mapping gamma
+    bool filmic = false;                   // tone mapping filmic
+    int seed = trace_default_seed;         // trace seed
+};
+
+// Trace lights used during rendering.
+struct trace_lights {
+    std::vector<instance*> lights;           // instance lights
+    std::vector<environment*> environments;  // environments lights
+    std::unordered_map<shape*, std::vector<float>> shape_cdf;      // shape cdfs
+    std::unordered_map<environment*, std::vector<float>> env_cdf;  // env cdfs
+};
+
+// Trace data used during rendering. Initialize with `make_trace_state()`
+struct trace_state {
+    image<vec4f> img = {};      // image being rendered
+    image<vec4f> display = {};  // image tone mapped for display
+
+    // internal data used during rendering
+    image<vec4f> acc = {};             // accumulation buffer
+    image<int> samples = {};           // samples per pixel
+    image<rng_state> rng = {};         // random number generators
+    int sample = 0;                    // current sample being rendered
+    std::vector<std::thread> threads;  // threads used during rendering
+    bool stop = false;                 // stop flag for threads
+};
+
+// Initialize lights.
+trace_lights* make_trace_lights(const scene* scn, const trace_params& params);
+
+// Initialize state of the renderer.
+trace_state* make_trace_state(const scene* scn, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
-image4f trace_image(const std::shared_ptr<scene>& scn, int camid,
-    int yresolution, int nsamples, trace_func tracer, int nbounces = 8,
-    float pixel_clamp = 100, bool noparallel = false,
-    int seed = trace_default_seed);
-
-// Progressive trace state
-struct trace_state {
-    image4f img = {};           // computed image
-    image4f acc = {};           // accumulation buffer
-    image<rng_state> rng = {};  // random number generators
-    int sample = 0;             // next sample to render
-};
+image<vec4f> trace_image4f(const scene* scn, const bvh_tree* bvh,
+    const trace_lights* lights, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
-bool trace_samples(trace_state& st, const std::shared_ptr<scene>& scn,
-    int camid, int yresolution, int nsamples, trace_func tracer, int nbatch,
-    int nbounces = 8, float pixel_clamp = 100, bool noparallel = false,
-    int seed = trace_default_seed);
+bool trace_samples(trace_state* state, const scene* scn, const bvh_tree* bvh,
+    const trace_lights* lights, const trace_params& params);
 
-// Asynchronous trace state
-struct trace_async_state {
-    image4f img = {};                       // computed image
-    image4f display = {};                   // display image
-    image4f acc = {};                       // accumulation buffer
-    image<rng_state> rng = {};              // random number generators
-    int sample = 0;                         // next sample to render
-    bool stop_flag = false;                 // stop flag
-    std::vector<std::thread> threads = {};  // rendering threads
-};
-
-// Starts an anyncrhounous renderer.
-void trace_async_start(trace_async_state& st, const std::shared_ptr<scene>& scn,
-    int camid, int yresolution, int nsamples, trace_func tracer, float exposure,
-    float gamma, bool filmic, int preview_ratio, int nbounces = 8,
-    float pixel_clamp = 100, int seed = trace_default_seed);
+// Starts an anyncrhounous renderer. The function will keep a reference to
+// params.
+void trace_async_start(trace_state* state, const scene* scn,
+    const bvh_tree* bvh, const trace_lights* lights,
+    const trace_params& params);
 // Stop the asynchronous renderer.
-void trace_async_stop(trace_async_state& st);
-
-// Trace function - path tracer.
-vec3f trace_path(const std::shared_ptr<scene>& scn, const ray3f& ray,
-    rng_state& rng, int nbounces, bool* hit = nullptr);
-// Trace function - path tracer without mis.
-vec3f trace_path_nomis(const std::shared_ptr<scene>& scn, const ray3f& ray,
-    rng_state& rng, int nbounces, bool* hit = nullptr);
-// Trace function - naive path tracer.
-vec3f trace_path_naive(const std::shared_ptr<scene>& scn, const ray3f& ray,
-    rng_state& rng, int nbounces, bool* hit = nullptr);
-// Trace function - direct illumination.
-vec3f trace_direct(const std::shared_ptr<scene>& scn, const ray3f& ray,
-    rng_state& rng, int nbounces, bool* hit = nullptr);
-// Trace function - direct illumination without mis.
-vec3f trace_direct_nomis(const std::shared_ptr<scene>& scn, const ray3f& ray,
-    rng_state& rng, int nbounces, bool* hit = nullptr);
-// Trace function - pure environment illumination with no shadows.
-vec3f trace_environment(const std::shared_ptr<scene>& scn, const ray3f& ray,
-    rng_state& rng, int nbounces, bool* hit = nullptr);
-// Trace function - eyelight rendering.
-vec3f trace_eyelight(const std::shared_ptr<scene>& scn, const ray3f& ray,
-    rng_state& rng, int nbounces, bool* hit = nullptr);
-// Trace function - normal debug visualization.
-vec3f trace_debug_normal(const std::shared_ptr<scene>& scn, const ray3f& ray,
-    rng_state& rng, int nbounces, bool* hit = nullptr);
-// Trace function - faceforward debug visualization.
-vec3f trace_debug_frontfacing(const std::shared_ptr<scene>& scn,
-    const ray3f& ray, rng_state& rng, int nbounces, bool* hit = nullptr);
-// Trace function - albedo debug visualization.
-vec3f trace_debug_albedo(const std::shared_ptr<scene>& scn, const ray3f& ray,
-    rng_state& rng, int nbounces, bool* hit = nullptr);
-// Trace function - diffuse debug visualization.
-vec3f trace_debug_diffuse(const std::shared_ptr<scene>& scn, const ray3f& ray,
-    rng_state& rng, int nbounces, bool* hit = nullptr);
-// Trace function - specular debug visualization.
-vec3f trace_debug_specular(const std::shared_ptr<scene>& scn, const ray3f& ray,
-    rng_state& rng, int nbounces, bool* hit = nullptr);
-// Trace function - roughness debug visualization.
-vec3f trace_debug_roughness(const std::shared_ptr<scene>& scn, const ray3f& ray,
-    rng_state& rng, int nbounces, bool* hit = nullptr);
-// Trace function - texcoord debug visualization.
-vec3f trace_debug_texcoord(const std::shared_ptr<scene>& scn, const ray3f& ray,
-    rng_state& rng, int nbounces, bool* hit = nullptr);
+void trace_async_stop(trace_state* state);
 
 // Trace statistics for last run used for fine tuning implementation.
 // For now returns number of paths and number of rays.
@@ -3324,37 +3265,9 @@ float sample_ggx_pdf(float rs, float ndh);
 float eval_ggx_dist(float rs, const vec3f& n, const vec3f& h);
 float eval_ggx_sm(float rs, const vec3f& n, const vec3f& o, const vec3f& i);
 
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// TIMER AND FORMAT UTILITIES
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-// get the timer time in nanoseconds
-inline int64_t get_time() {
-    return std::chrono::high_resolution_clock::now().time_since_epoch().count();
-}
-// get duration string from nanoseconds
-inline std::string format_duration(int64_t duration) {
-    auto elapsed = duration / 1000000;  // milliseconds
-    auto hours = (int)(elapsed / 3600000);
-    elapsed %= 3600000;
-    auto mins = (int)(elapsed / 60000);
-    elapsed %= 60000;
-    auto secs = (int)(elapsed / 1000);
-    auto msecs = (int)(elapsed % 1000);
-    char buf[256];
-    sprintf(buf, "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
-    return buf;
-}
-// format a large integer number in human readable form
-inline std::string format_num(uint64_t num) {
-    auto rem = num % 1000;
-    auto div = num / 1000;
-    if (div > 0) return format_num(div) + "," + std::to_string(rem);
-    return std::to_string(rem);
-}
+// Evaluate and sample volume phase function.
+vec3f sample_phase_function(float vg, const vec2f& u);
+float eval_phase_function(float cos_theta, float vg);
 
 }  // namespace ygl
 
@@ -3363,37 +3276,75 @@ inline std::string format_num(uint64_t num) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+// Matrix diagonals and transposes.
+template <typename T>
+inline mat2<T> transpose(const mat2<T>& a) {
+    return {{a.x.x, a.y.x}, {a.x.y, a.y.y}};
+}
+template <typename T>
+inline mat3<T> transpose(const mat3<T>& a) {
+    return {
+        {a.x.x, a.y.x, a.z.x},
+        {a.x.y, a.y.y, a.z.y},
+        {a.x.z, a.y.z, a.z.z},
+    };
+}
+template <typename T>
+inline mat4<T> transpose(const mat4<T>& a) {
+    return {
+        {a.x.x, a.y.x, a.z.x, a.w.x},
+        {a.x.y, a.y.y, a.z.y, a.w.y},
+        {a.x.z, a.y.z, a.z.z, a.w.z},
+        {a.x.w, a.y.w, a.z.w, a.w.w},
+    };
+}
+
 // Matrix adjugates, determinant and inverses.
 template <typename T>
-inline mat<T, 2> adjugate(const mat<T, 2>& a) {
+inline mat2<T> adjugate(const mat2<T>& a) {
     return {{a.y.y, -a.x.y}, {-a.y.x, a.x.x}};
 }
 template <typename T>
-inline mat<T, 3> adjugate(const mat<T, 3>& a) {
-    return {{a.y.y * a.z.z - a.z.y * a.y.z, a.z.y * a.x.z - a.x.y * a.z.z,
-                a.x.y * a.y.z - a.y.y * a.x.z},
-        {a.y.z * a.z.x - a.z.z * a.y.x, a.z.z * a.x.x - a.x.z * a.z.x,
-            a.x.z * a.y.x - a.y.z * a.x.x},
-        {a.y.x * a.z.y - a.z.x * a.y.y, a.z.x * a.x.y - a.x.x * a.z.y,
-            a.x.x * a.y.y - a.y.x * a.x.y}};
+inline mat3<T> adjugate(const mat3<T>& a) {
+    return {
+        {
+            a.y.y * a.z.z - a.z.y * a.y.z,
+            a.z.y * a.x.z - a.x.y * a.z.z,
+            a.x.y * a.y.z - a.y.y * a.x.z,
+        },
+        {
+            a.y.z * a.z.x - a.z.z * a.y.x,
+            a.z.z * a.x.x - a.x.z * a.z.x,
+            a.x.z * a.y.x - a.y.z * a.x.x,
+        },
+        {
+            a.y.x * a.z.y - a.z.x * a.y.y,
+            a.z.x * a.x.y - a.x.x * a.z.y,
+            a.x.x * a.y.y - a.y.x * a.x.y,
+        },
+    };
 }
 template <typename T>
-inline mat<T, 4> adjugate(const mat<T, 4>& a) {
-    return {{a.y.y * a.z.z * a.w.w + a.w.y * a.y.z * a.z.w +
-                    a.z.y * a.w.z * a.y.w - a.y.y * a.w.z * a.z.w -
-                    a.z.y * a.y.z * a.w.w - a.w.y * a.z.z * a.y.w,
-                a.x.y * a.w.z * a.z.w + a.z.y * a.x.z * a.w.w +
-                    a.w.y * a.z.z * a.x.w - a.w.y * a.x.z * a.z.w -
-                    a.z.y * a.w.z * a.x.w - a.x.y * a.z.z * a.w.w,
-                a.x.y * a.y.z * a.w.w + a.w.y * a.x.z * a.y.w +
-                    a.y.y * a.w.z * a.x.w - a.x.y * a.w.z * a.y.w -
-                    a.y.y * a.x.z * a.w.w - a.w.y * a.y.z * a.x.w,
-                a.x.y * a.z.z * a.y.w + a.y.y * a.x.z * a.z.w +
-                    a.z.y * a.y.z * a.x.w - a.x.y * a.y.z * a.z.w -
-                    a.z.y * a.x.z * a.y.w - a.y.y * a.z.z * a.x.w},
-        {a.y.z * a.w.w * a.z.x + a.z.z * a.y.w * a.w.x + a.w.z * a.z.w * a.y.x -
-                a.y.z * a.z.w * a.w.x - a.w.z * a.y.w * a.z.x -
-                a.z.z * a.w.w * a.y.x,
+inline mat4<T> adjugate(const mat4<T>& a) {
+    return {
+        {
+            a.y.y * a.z.z * a.w.w + a.w.y * a.y.z * a.z.w +
+                a.z.y * a.w.z * a.y.w - a.y.y * a.w.z * a.z.w -
+                a.z.y * a.y.z * a.w.w - a.w.y * a.z.z * a.y.w,
+            a.x.y * a.w.z * a.z.w + a.z.y * a.x.z * a.w.w +
+                a.w.y * a.z.z * a.x.w - a.w.y * a.x.z * a.z.w -
+                a.z.y * a.w.z * a.x.w - a.x.y * a.z.z * a.w.w,
+            a.x.y * a.y.z * a.w.w + a.w.y * a.x.z * a.y.w +
+                a.y.y * a.w.z * a.x.w - a.x.y * a.w.z * a.y.w -
+                a.y.y * a.x.z * a.w.w - a.w.y * a.y.z * a.x.w,
+            a.x.y * a.z.z * a.y.w + a.y.y * a.x.z * a.z.w +
+                a.z.y * a.y.z * a.x.w - a.x.y * a.y.z * a.z.w -
+                a.z.y * a.x.z * a.y.w - a.y.y * a.z.z * a.x.w,
+        },
+        {
+            a.y.z * a.w.w * a.z.x + a.z.z * a.y.w * a.w.x +
+                a.w.z * a.z.w * a.y.x - a.y.z * a.z.w * a.w.x -
+                a.w.z * a.y.w * a.z.x - a.z.z * a.w.w * a.y.x,
             a.x.z * a.z.w * a.w.x + a.w.z * a.x.w * a.z.x +
                 a.z.z * a.w.w * a.x.x - a.x.z * a.w.w * a.z.x -
                 a.z.z * a.x.w * a.w.x - a.w.z * a.z.w * a.x.x,
@@ -3402,10 +3353,12 @@ inline mat<T, 4> adjugate(const mat<T, 4>& a) {
                 a.w.z * a.x.w * a.y.x - a.y.z * a.w.w * a.x.x,
             a.x.z * a.y.w * a.z.x + a.z.z * a.x.w * a.y.x +
                 a.y.z * a.z.w * a.x.x - a.x.z * a.z.w * a.y.x -
-                a.y.z * a.x.w * a.z.x - a.z.z * a.y.w * a.x.x},
-        {a.y.w * a.z.x * a.w.y + a.w.w * a.y.x * a.z.y + a.z.w * a.w.x * a.y.y -
-                a.y.w * a.w.x * a.z.y - a.z.w * a.y.x * a.w.y -
-                a.w.w * a.z.x * a.y.y,
+                a.y.z * a.x.w * a.z.x - a.z.z * a.y.w * a.x.x,
+        },
+        {
+            a.y.w * a.z.x * a.w.y + a.w.w * a.y.x * a.z.y +
+                a.z.w * a.w.x * a.y.y - a.y.w * a.w.x * a.z.y -
+                a.z.w * a.y.x * a.w.y - a.w.w * a.z.x * a.y.y,
             a.x.w * a.w.x * a.z.y + a.z.w * a.x.x * a.w.y +
                 a.w.w * a.z.x * a.x.y - a.x.w * a.z.x * a.w.y -
                 a.w.w * a.x.x * a.z.y - a.z.w * a.w.x * a.x.y,
@@ -3414,10 +3367,12 @@ inline mat<T, 4> adjugate(const mat<T, 4>& a) {
                 a.y.w * a.x.x * a.w.y - a.w.w * a.y.x * a.x.y,
             a.x.w * a.z.x * a.y.y + a.y.w * a.x.x * a.z.y +
                 a.z.w * a.y.x * a.x.y - a.x.w * a.y.x * a.z.y -
-                a.z.w * a.x.x * a.y.y - a.y.w * a.z.x * a.x.y},
-        {a.y.x * a.w.y * a.z.z + a.z.x * a.y.y * a.w.z + a.w.x * a.z.y * a.y.z -
-                a.y.x * a.z.y * a.w.z - a.w.x * a.y.y * a.z.z -
-                a.z.x * a.w.y * a.y.z,
+                a.z.w * a.x.x * a.y.y - a.y.w * a.z.x * a.x.y,
+        },
+        {
+            a.y.x * a.w.y * a.z.z + a.z.x * a.y.y * a.w.z +
+                a.w.x * a.z.y * a.y.z - a.y.x * a.z.y * a.w.z -
+                a.w.x * a.y.y * a.z.z - a.z.x * a.w.y * a.y.z,
             a.x.x * a.z.y * a.w.z + a.w.x * a.x.y * a.z.z +
                 a.z.x * a.w.y * a.x.z - a.x.x * a.w.y * a.z.z -
                 a.z.x * a.x.y * a.w.z - a.w.x * a.z.y * a.x.z,
@@ -3426,20 +3381,22 @@ inline mat<T, 4> adjugate(const mat<T, 4>& a) {
                 a.w.x * a.x.y * a.y.z - a.y.x * a.w.y * a.x.z,
             a.x.x * a.y.y * a.z.z + a.z.x * a.x.y * a.y.z +
                 a.y.x * a.z.y * a.x.z - a.x.x * a.z.y * a.y.z -
-                a.y.x * a.x.y * a.z.z - a.z.x * a.y.y * a.x.z}};
+                a.y.x * a.x.y * a.z.z - a.z.x * a.y.y * a.x.z,
+        },
+    };
 }
 template <typename T>
-inline T determinant(const mat<T, 2>& a) {
+inline T determinant(const mat2<T>& a) {
     return a.x.x * a.y.y - a.x.y * a.y.x;
 }
 template <typename T>
-inline T determinant(const mat<T, 3>& a) {
+inline T determinant(const mat3<T>& a) {
     return a.x.x * (a.y.y * a.z.z - a.z.y * a.y.z) +
            a.x.y * (a.y.z * a.z.x - a.z.z * a.y.x) +
            a.x.z * (a.y.x * a.z.y - a.z.x * a.y.y);
 }
 template <typename T>
-inline T determinant(const mat<T, 4>& a) {
+inline T determinant(const mat4<T>& a) {
     return a.x.x * (a.y.y * a.z.z * a.w.w + a.w.y * a.y.z * a.z.w +
                        a.z.y * a.w.z * a.y.w - a.y.y * a.w.z * a.z.w -
                        a.z.y * a.y.z * a.w.w - a.w.y * a.z.z * a.y.w) +
@@ -3462,17 +3419,16 @@ inline T determinant(const mat<T, 4>& a) {
 namespace ygl {
 
 // Turntable for UI navigation.
-template <typename T, typename T1>
-inline void camera_turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
-    const vec<T, 2>& rotate, T1 dolly, const vec<T, 2>& pan) {
+inline void camera_turntable(vec3f& from, vec3f& to, vec3f& up,
+    const vec2f& rotate, float dolly, const vec2f& pan) {
     // rotate if necessary
     if (rotate.x || rotate.y) {
         auto z = normalize(to - from);
         auto lz = length(to - from);
         auto phi = atan2(z.z, z.x) + rotate.x;
         auto theta = acos(z.y) + rotate.y;
-        theta = clamp(theta, (T)0.001, pi - (T)0.001);
-        auto nz = vec<T, 3>{sin(theta) * cos(phi) * lz, cos(theta) * lz,
+        theta = clamp(theta, 0.001f, pif - 0.001f);
+        auto nz = vec3f{sin(theta) * cos(phi) * lz, cos(theta) * lz,
             sin(theta) * sin(phi) * lz};
         from = to - nz;
     }
@@ -3490,7 +3446,7 @@ inline void camera_turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
         auto z = normalize(to - from);
         auto x = normalize(cross(up, z));
         auto y = normalize(cross(z, x));
-        auto t = vec<T, 3>{pan.x * x.x + pan.y * y.x, pan.x * x.y + pan.y * y.y,
+        auto t = vec3f{pan.x * x.x + pan.y * y.x, pan.x * x.y + pan.y * y.y,
             pan.x * x.z + pan.y * y.z};
         from += t;
         to += t;
@@ -3498,16 +3454,15 @@ inline void camera_turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
 }
 
 // Turntable for UI navigation.
-template <typename T, typename T1>
-inline void camera_turntable(frame<T, 3>& frame, float& focus,
-    const vec<T, 2>& rotate, T1 dolly, const vec<T, 2>& pan) {
+inline void camera_turntable(frame3f& frame, float& focus, const vec2f& rotate,
+    float dolly, const vec2f& pan) {
     // rotate if necessary
     if (rotate != zero2f) {
         auto phi = atan2(frame.z.z, frame.z.x) + rotate.x;
         auto theta = acos(frame.z.y) + rotate.y;
-        theta = clamp(theta, (T)0.001, pi - (T)0.001);
+        theta = clamp(theta, 0.001f, pif - 0.001f);
         auto new_z =
-            vec<T, 3>{sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi)};
+            vec3f{sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi)};
         auto new_center = frame.o - frame.z * focus;
         auto new_o = new_center + new_z * focus;
         frame = lookat_frame(new_o, new_center, {0, 1, 0});
@@ -3526,17 +3481,15 @@ inline void camera_turntable(frame<T, 3>& frame, float& focus,
 }
 
 // FPS camera for UI navigation for a frame parametrization.
-template <typename T>
-inline void camera_fps(
-    frame<T, 3>& frame, const vec<T, 3>& transl, const vec<T, 2>& rotate) {
+inline void camera_fps(frame3f& frame, vec3f transl, vec2f rotate) {
     // https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up
-    auto y = vec<T, 3>{0, 1, 0};
+    auto y = vec3f{0, 1, 0};
     auto z = orthonormalize(frame.z, y);
     auto x = cross(y, z);
 
-    auto rot = rotation_frame(vec<T, 3>{1, 0, 0}, rotate.y) *
-               ygl::frame<T, 3>{frame.x, frame.y, frame.z, vec<T, 3>{0, 0, 0}} *
-               rotation_frame(vec<T, 3>{0, 1, 0}, rotate.x);
+    auto rot = rotation_frame(vec3f{1, 0, 0}, rotate.y) *
+               frame3f{frame.x, frame.y, frame.z, vec3f{0, 0, 0}} *
+               rotation_frame(vec3f{0, 1, 0}, rotate.x);
     auto pos = frame.o + transl.x * x + transl.y * y + transl.z * z;
 
     frame = {rot.x, rot.y, rot.z, pos};
